@@ -20,6 +20,17 @@
 
 Detailed description of the location. What does it look like? What's the atmosphere? What makes it unique?
 
+## Questions to Ask
+
+When you're considering creating this place, ask the following to help shape its role in the world and stories:
+
+- **Why does this place exist?**
+- **Why is it still here?**
+- **Why hasn’t it been destroyed yet?**
+- **Who wants control of it right now?**
+- **What terrible problem is hidden underneath?**
+  - Use this to seed hidden hooks, secrets, or ongoing threats that can drive adventures.
+
 ## History
 
 Background and significant historical events related to this location.
