@@ -1,0 +1,36 @@
+# Operating System Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+*~
+
+# Temporary Files
+/tmp/
+*.tmp
+*.temp
+
+# Personal Notes (if you want to keep private notes)
+# Uncomment the following if you want to exclude certain private directories
+# /personal-notes/
+# /dm-secrets/
+
+# Build artifacts (if using any tools to generate PDFs, etc.)
+*.pdf
+*.aux
+*.log
+
+# Node modules (if using any Node.js tools)
+node_modules/
+package-lock.json
