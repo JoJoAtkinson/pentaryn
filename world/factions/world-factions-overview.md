@@ -4,7 +4,6 @@ last-modified: 2025-12-07
 tags: [#world, #faction, #important]
 status: draft
 ---
-
 # World Factions Overview
 
 High-level index of major factions across cultures. Each entry links to a future dedicated document.
@@ -12,6 +11,7 @@ High-level index of major factions across cultures. Each entry links to a future
 ## 🧝‍♀️ Elves
 
 ### 1) Araethilion (AR-ay-THIL-ee-on) — Veiled Crown Theocracy
+
 - People: Elves
 - Theme: False divinity, beautiful tyranny, prosperity built on hidden suffering
 - Government: Theocratic Autocracy under a “living god” and high priestly court
@@ -19,11 +19,12 @@ High-level index of major factions across cultures. Each entry links to a future
 - Demonym: Araethilene (AR-ay-THIL-een)
 - Adjectival form: Araethilion
 - Capital: Aeralithil (AIR-ah-LITH-il)
-- Doc: [araethilion.md](./araethilion.md)
+- Doc: [araethilion.md](./araethilion_.md)
 
 ## 🧑‍🌾 Humans
 
 ### 2) Ardenhaven (AR-den-HAY-vun) — The Haven Realm
+
 - People: Humans (with small halfling/gnome/etc. minorities)
 - Theme: Imperfect hope, post-war recovery, trying to do the right thing
 - Government: Constitutional / Council Monarchy (monarch limited by lords, guilds, temples)
@@ -34,6 +35,7 @@ High-level index of major factions across cultures. Each entry links to a future
 - Doc: [ardenhaven.md](./ardenhaven.md)
 
 ### 3) Calderon Imperium (CAL-der-on im-PEER-ee-um)
+
 - Nickname: "The Ashen Empire" (enemy slang referencing soot-choked factories and scorched-earth campaigns)
 - People: Humans (with subject peoples and slaves/serfs)
 - Theme: Oppressive order, unity by fear, human corruption
@@ -45,6 +47,7 @@ High-level index of major factions across cultures. Each entry links to a future
 - Doc: [calderon-imperium.md](./calderon-imperium.md)
 
 ### 4) Merrowgate (MER-oh-gate) — The City of Bargains
+
 - People: Multi-racial (humans, dwarves, halflings, elves, orcs—no single culture dominates)
 - Theme: Deals and contracts, masks and manipulation, hidden supernatural patronage
 - Government: Merchant Oligarchy / Corrupt Republic (merchant princes, guildmasters, crime lords)
@@ -55,6 +58,7 @@ High-level index of major factions across cultures. Each entry links to a future
 - Doc: [merrowgate.md](./merrowgate.md)
 
 ### 5) Elderholt (EL-der-HOLT) — The Coven Realm
+
 - People: Humans, with witches as a distinct class/order
 - Theme: Protection at a cost, generational sacrifice, stolen childhoods
 - Government: Coven-Feudal (villages owe fealty to local covens under a High Coven / Witch-Queen)
@@ -67,6 +71,7 @@ High-level index of major factions across cultures. Each entry links to a future
 ## ⚒️ Dwarves
 
 ### 6) Dulgarum (DOOL-gah-room) — The Oathbound Holds
+
 - People: Dwarves
 - Theme: Tradition, duty, suffocating loyalty, buried catastrophe
 - Government: Clan Monarchy under a High King/Queen, elected but bound by ancient oaths
@@ -77,6 +82,7 @@ High-level index of major factions across cultures. Each entry links to a future
 - Doc: [dulgarum-oathholds.md](./dulgarum-oathholds.md)
 
 ### 7) Garhammar Trade League (GAR-ham-mar) — The Free Guild-League
+
 - People: Dwarves (heavy use of non-dwarf labor)
 - Theme: Industry and innovation, profit over principle, weaponized neutrality
 - Government: Guild Oligarchy / Trade League (mining, craft, mercantile guilds)
@@ -89,6 +95,7 @@ High-level index of major factions across cultures. Each entry links to a future
 ## 🪓 Orcs
 
 ### 8) Garrok Confederation (GAR-rok) — Western Orc Confederation
+
 - People: Orcs (with some mixed-heritage and warrior allies)
 - Theme: Harsh honor, earned respect, distant but negotiable
 - Government: Tribal Confederation with War Moots; temporary High War-Leader chosen in crisis
@@ -99,6 +106,7 @@ High-level index of major factions across cultures. Each entry links to a future
 - Doc: [garrok-confederation.md](./garrok-confederation.md)
 
 ### 9) Rakthok Horde (RAK-thok) — Eastern Orc Horde
+
 - People: Orcs
 - Theme: Survival, paranoia, spiritual turmoil, blighted homeland
 - Government: Shamanic Warbands guided by a Vision Council that names a Chosen Warlord in crises
@@ -111,6 +119,7 @@ High-level index of major factions across cultures. Each entry links to a future
 ---
 
 Notes
+
 - Naming follows culture rules and the shared proto-root: Elven `aer/ara`, Human `ar/er`, Dwarven `gar/bar/kar`, Orc `gar/rak`.
 - Phonetic spelling provided on first use for unusual names.
 - Create dedicated faction files via the template in `../../templates/faction-template.md`.

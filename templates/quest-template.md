@@ -1,19 +1,19 @@
 # [Quest Name]
 
-**Tags:** `#quest` `#active` or `#completed`  
-**Created:** YYYY-MM-DD  
-**Last Modified:** YYYY-MM-DD  
+**Tags:** `#quest` `#active` or `#completed`
+**Created:** YYYY-MM-DD
+**Last Modified:** YYYY-MM-DD
 **Status:** Active/Completed/Failed/Abandoned
 
 ## Overview
 
-| Attribute | Value |
-|-----------|-------|
-| **Quest Giver** | [NPC Name](../characters/npcs/npc-name.md) |
-| **Type** | Main Quest/Side Quest/Personal Quest |
-| **Level Range** | 1-5 |
-| **Location(s)** | [Location](../world/locations/location-name.md) |
-| **Estimated Duration** | 1 session / Multiple sessions |
+| Attribute                    | Value                                        |
+| ---------------------------- | -------------------------------------------- |
+| **Quest Giver**        | [NPC Name](../characters/npcs/npc-name.md)      |
+| **Type**               | Main Quest/Side Quest/Personal Quest         |
+| **Level Range**        | 1-5                                          |
+| **Location(s)**        | [Location](../world/locations/location-name.md) |
+| **Estimated Duration** | 1 session / Multiple sessions                |
 
 ## Quest Summary
 
@@ -45,38 +45,46 @@ Context and background information. Why is this quest needed? What led to this s
 ## Locations
 
 ### [Location Name](../world/locations/location-name.md)
+
 Description of how this location relates to the quest. What happens here?
 
 ### [Location Name](../world/locations/location-name.md)
+
 Description...
 
 ## Encounters & Challenges
 
 ### Combat Encounters
+
 1. **Encounter Name:** Description, enemies, difficulty
 2. 
 
 ### Skill Challenges
+
 1. **Challenge Name:** Required skills, DC, consequences of failure
 2. 
 
 ### Puzzles
+
 1. **Puzzle Name:** Description, solution, hints
 2. 
 
 ## Quest Progression
 
 ### Stage 1: [Title]
+
 **Status:** Not Started/In Progress/Completed
 
 What needs to happen in this stage. How to progress.
 
 ### Stage 2: [Title]
+
 **Status:** Not Started/In Progress/Completed
 
 Description...
 
 ### Stage 3: [Title]
+
 **Status:** Not Started/In Progress/Completed
 
 Description...
@@ -84,26 +92,32 @@ Description...
 ## Possible Outcomes
 
 ### Success
+
 What happens if the party completes the quest successfully.
 
 ### Partial Success
+
 What happens if they complete some objectives but not all.
 
 ### Failure
+
 Consequences if the quest fails.
 
 ## Rewards
 
 ### Primary Rewards
+
 - Gold: XXX gp
 - Items: [Magic Item](../items/magic-items/item-name.md)
 - Experience: XXX XP
 
 ### Optional Rewards
+
 - Additional rewards for completing optional objectives
 - 
 
 ### Reputation & Consequences
+
 - Faction reputation changes
 - Story impacts
 - Future opportunities or complications
@@ -129,23 +143,28 @@ Different ways the party might approach solving this quest.
 ## DM Notes
 
 ### Preparation Checklist
+
 - [ ] Prepare NPC stats
 - [ ] Prepare encounter maps
 - [ ] Prepare handouts/clues
 - [ ] Prepare item cards
 
 ### Improvisation Guide
+
 Things to keep in mind when running this quest. Flexibility points.
 
 ### Secret Information
+
 Information the party shouldn't know yet.
 
 ## Session Log
 
 ### Session XX (YYYY-MM-DD)
+
 What happened related to this quest during this session.
 
 ### Session XX (YYYY-MM-DD)
+
 Progress made...
 
 ---
