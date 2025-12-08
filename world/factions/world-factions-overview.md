@@ -19,7 +19,7 @@ High-level index of major factions across cultures. Each entry links to a future
 - Demonym: Araethilene (AR-ay-THIL-een)
 - Adjectival form: Araethilion
 - Capital: Aeralithil (AIR-ah-LITH-il)
-- Doc: [Araethilion](./araethilion.md) (to be created)
+- Doc: [araethilion.md](./araethilion.md)
 
 ## 🧑‍🌾 Humans
 
@@ -31,7 +31,7 @@ High-level index of major factions across cultures. Each entry links to a future
 - Demonym: Ardenite (AR-den-ite)
 - Adjectival form: Ardenic (AR-den-ik)
 - Capital: Ardenford
-- Doc: [Ardenhaven](./ardenhaven.md) (to be created)
+- Doc: [ardenhaven.md](./ardenhaven.md)
 
 ### 3) Calderon Imperium (CAL-der-on im-PEER-ee-um)
 - Nickname: "The Ashen Empire" (enemy slang referencing soot-choked factories and scorched-earth campaigns)
@@ -42,7 +42,7 @@ High-level index of major factions across cultures. Each entry links to a future
 - Demonym: Calderonite (cal-DER-on-ite)
 - Adjectival form: Calderonic (cal-der-ON-ik)
 - Capital: Ironstead
-- Doc: [Calderon-Imperium](./calderon-imperium.md) (to be created)
+- Doc: [calderon-imperium.md](./calderon-imperium.md)
 
 ### 4) Merrowgate (MER-oh-gate) — The City of Bargains
 - People: Multi-racial (humans, dwarves, halflings, elves, orcs—no single culture dominates)
@@ -52,7 +52,7 @@ High-level index of major factions across cultures. Each entry links to a future
 - Demonym: Merrowgater (MER-oh-gay-ter)
 - Adjectival form: Merrowgatean (MER-oh-GAY-tee-an)
 - Capital: Merrowgate
-- Doc: [Merrowgate](./merrowgate.md) (to be created)
+- Doc: [merrowgate.md](./merrowgate.md)
 
 ### 5) Elderholt (EL-der-HOLT) — The Coven Realm
 - People: Humans, with witches as a distinct class/order
@@ -62,7 +62,7 @@ High-level index of major factions across cultures. Each entry links to a future
 - Demonym: Elderholter (EL-der-HOLT-er)
 - Adjectival form: Elderholtian (el-der-HOLT-ee-an)
 - Capital: Elderstead
-- Doc: [Elderholt](./elderholt.md) (to be created)
+- Doc: [elderholt.md](./elderholt.md)
 
 ## ⚒️ Dwarves
 
@@ -74,7 +74,7 @@ High-level index of major factions across cultures. Each entry links to a future
 - Demonym: Dulgaran (dool-GAR-an)
 - Adjectival form: Dulgaric (dool-GAR-ik)
 - Capital: Khargun-dur (KHAR-gun-DOOR)
-- Doc: [Dulgarum-Oathholds](./dulgarum-oathholds.md) (to be created)
+- Doc: [dulgarum-oathholds.md](./dulgarum-oathholds.md)
 
 ### 7) Garhammar Trade League (GAR-ham-mar) — The Free Guild-League
 - People: Dwarves (heavy use of non-dwarf labor)
@@ -84,7 +84,7 @@ High-level index of major factions across cultures. Each entry links to a future
 - Demonym: Garhammaran (GAR-ham-MAR-an)
 - Adjectival form: Garhammaran (GAR-ham-MAR-an)
 - Capital: Garhammar
-- Doc: [Garhammar-Trade-League](./garhammar-trade-league.md) (to be created)
+- Doc: [garhammar-trade-league.md](./garhammar-trade-league.md)
 
 ## 🪓 Orcs
 
@@ -96,7 +96,7 @@ High-level index of major factions across cultures. Each entry links to a future
 - Demonym: Garrokan (GAR-uh-kan)
 - Adjectival form: Garrokan (GAR-uh-kan)
 - Capital: Garrok
-- Doc: [Garrok-Confederation](./garrok-confederation.md) (to be created)
+- Doc: [garrok-confederation.md](./garrok-confederation.md)
 
 ### 9) Rakthok Horde (RAK-thok) — Eastern Orc Horde
 - People: Orcs
@@ -106,7 +106,7 @@ High-level index of major factions across cultures. Each entry links to a future
 - Demonym: Rakthoki (rak-THOH-kee)
 - Adjectival form: Rakthok (RAK-thok)
 - Capital: Rakthok
-- Doc: [Rakthok-Horde](./rakthok-horde.md) (to be created)
+- Doc: [rakthok-horde.md](./rakthok-horde.md)
 
 ---
 
