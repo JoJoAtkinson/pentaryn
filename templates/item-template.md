@@ -1,18 +1,18 @@
 # [Item Name]
 
-**Tags:** `#item` `#magic-item` or `#mundane` `#weapon` `#armor` `#artifact`  
-**Created:** YYYY-MM-DD  
+**Tags:** `#item` `#magic-item` or `#mundane` `#weapon` `#armor` `#artifact`
+**Created:** YYYY-MM-DD
 **Last Modified:** YYYY-MM-DD
 
 ## Item Properties
 
-| Attribute | Value |
-|-----------|-------|
-| **Type** | Weapon/Armor/Wondrous Item/Potion/Scroll/etc. |
-| **Rarity** | Common/Uncommon/Rare/Very Rare/Legendary/Artifact |
-| **Attunement** | Required/Not Required |
-| **Value** | XXX gp |
-| **Weight** | XX lbs |
+| Attribute            | Value                                             |
+| -------------------- | ------------------------------------------------- |
+| **Type**       | Weapon/Armor/Wondrous Item/Potion/Scroll/etc.     |
+| **Rarity**     | Common/Uncommon/Rare/Very Rare/Legendary/Artifact |
+| **Attunement** | Required/Not Required                             |
+| **Value**      | XXX gp                                            |
+| **Weight**     | XX lbs                                            |
 
 ## Description
 
@@ -22,7 +22,8 @@ Detailed description of the item's appearance, materials, craftsmanship, and any
 
 ## Properties & Mechanics
 
-### Basic Properties
+###  Basic Properties
+
 - **Damage/AC:** (if weapon or armor)
 - **Range:** (if applicable)
 - **Properties:** (Finesse, Versatile, etc.)
@@ -30,12 +31,15 @@ Detailed description of the item's appearance, materials, craftsmanship, and any
 ### Magic Properties
 
 #### [Property Name]
+
 Description of what this property does. Include:
+
 - Mechanical effects (damage, bonuses, etc.)
 - Usage limitations (charges, once per day, etc.)
 - Duration of effects
 
 #### [Property Name]
+
 Description...
 
 ## Charges (if applicable)
@@ -49,9 +53,11 @@ Description...
 The item's origins and backstory. Who created it? What is its history?
 
 ### Legend
+
 Stories and legends about the item.
 
 ### Creation
+
 - **Creator:** [Name]
 - **Created:** When and where
 - **Purpose:** Why it was made
@@ -67,7 +73,7 @@ How the party obtained this item (or how they could obtain it).
 
 ## Current Owner
 
-**Owner:** [Character Name](../characters/player-characters/character-name.md)  
+**Owner:** [Character Name](../characters/player-characters/character-name.md)
 **Status:** Equipped/Carried/Stored
 
 ## Curse (if applicable)
@@ -77,6 +83,7 @@ If the item is cursed, describe the curse and how it can be removed.
 ## Attunement Details
 
 If attunement is required:
+
 - **Requirements:** Any special requirements (class, race, alignment, etc.)
 - **Attunement Process:** How to attune
 - **Attuned By:** [Character Name]
@@ -88,12 +95,15 @@ Related items or different versions of this item.
 ## DM Notes
 
 ### Balance Notes
+
 Notes about game balance, if this is homebrew.
 
 ### Plot Hooks
+
 Ways this item could be used in the story.
 
 ### Secret Properties
+
 Hidden properties that may be discovered later.
 
 ---
