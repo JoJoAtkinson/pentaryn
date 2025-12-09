@@ -1,0 +1,29 @@
+# Witches of Elderholt
+
+The power of Elderholt's witches comes from what they call **the Voice**. The Voice has no true name and is not worshipped as a god; it is a presence, a force, a well of hidden knowledge. Witches treat it as a dangerous tool—something to bargain with, not to venerate.
+
+In Elderholt, a **witch** is anyone who has learned to hear the Voice and survive the conversation. Through it, they draw the secrets that let them shield villages, break curses, and bend fate. The Voice never gives freely. Every insight, every enchantment, every glimpse of the future has a cost.
+
+
+At the table, that power can wear many different shapes. A witch might be built using the rules for a cleric, warlock, sorcerer, or wizard; the difference is not the spell list but the story of where it comes from. In Elderholt, witches do not pray to gods, swear pacts to named patrons, or study under mortal masters. Instead, the Voice whispers them the patterns, prayers, and bargains they need, and learning those secret ways is what takes the tax. What the Voice chooses to show each witch, and how they survive those lessons, makes every witch's magic a little different.
+
+Witches are not self-made; they are **chosen young**. Girls who are forgotten, given up, or quietly offered to the coven are taken in and raised as witch-children. They are far too young to choose that path for themselves, so the covens test them. If a girl is judged strong in mind and will, she is taken below the city into a sealed ritual chamber the witches call **the Axiom**. The Axiom is an ancient hall of stone and sigils, deep beneath Elderstead, where the Voice is closest and most tightly bound. There, the child undergoes a binding rite that leaves no visible mark but fixes a thread between her and the Voice. From that day on, if she is trained correctly, the Voice will answer when she calls—and fall silent when she does not.
+
+The covens insist only **children** can survive this bond intact. Young minds are flexible, still learning language and self; they can grow around the presence of the Voice without breaking. Adults who attempt the Axiom rite almost always shatter, their sense of self drowned as the Voice floods in and simply wears them like a mask. Such failures become cautionary tales, locked away or quietly unmade. After the binding, witch-children train for years in the covens above, learning to call and silence the Voice at will. Only when a novice can hold the thread steady without breaking does she attempt her first true bargain.
+
+The safest way to touch the Voice is deep within **ancient ruins**. Those old runic halls let the Voice come through more cleanly than the open wilds. Even so, the strongest and clearest place is beneath Elderstead, where Elderholt's capital is built atop a buried, humming lattice of old wards and stones. Witches believe this site to be one of the places the Voice is loudest in the world.
+
+By Elderholt's law and doctrine, the Tithe for witches is taken only from **girls**. Boys grow into men whose anger and pride give the Voice a sharper edge—pushing its whispers toward war and destruction. Whether that belief is truth, superstition, or convenient tradition, no coven in Elderholt will risk binding a son to the Voice.
+
+Most witches describe the Voice not as a single being, but as something that **wears familiar shapes**. To one, it speaks in the tones of a dead lover; to another, as a chorus of children; to a third, as their own voice arguing back. It is not a soul, not a ghost, and not bound to any one form. It is whatever it wishes to be—and whatever the witch most dreads or longs to hear. Their own fears and desires color how the Voice sounds to them.
+
+Over time, the toll the Voice demands pulls witches in different directions. Broadly, two paths emerge:
+
+1. **Ward-Witches** focus on protection and sight. They trade away pieces of themselves to see further and stand longer between their people and the dark. Their skin is etched from toes to scalp with living runes, each line a bargain struck. Constant use of future-sight leaves their eyes permanently changed—glowing a brilliant, unnatural violet, as if reflecting a light only they can see.
+2. **Deep-Witches** either lack the talent for defensive wards or choose to forgo them, pursuing the deepest, darkest secrets the Voice offers. Their bodies bear the mark of every deal: limbs twisted into something half-animal, eyes replaced by ember-bright sigils, shadows that move out of step with their forms. No two "payments" look the same, but all of them are irreversible. These witches prize knowledge and power above safety, and many truly believe their sacrifice is necessary for the greater good.
+
+To an outsider, these two kinds of witches look like they belong to entirely different orders. One group moves like living sigils of protection; the other like walking curses. Among themselves, however, they recognize one another as sisters and kin—all paying different prices, all fighting the same endless war to keep the dark at bay.
+
+The Voice itself holds no grudges and offers no comfort. It does not hate, love, or judge. The relationship between witches and the Voice is like that between a village and a wildfire or a hurricane: utterly impersonal. The Voice does not care that witches mine it for the world's hidden knowledge. It simply takes its due. Like a wildfire that will burn anyone who steps into it, the Voice extracts its tax without malice, pity, or regret.
+
+Before a young witch ever inks the first protective rune into their skin, they are taught the oldest rule: **you never give the Voice a name**. Names are doors and chains both. To name the Voice is to invite it closer, to let it settle into shape—and no witch in Elderholt wants it to be anything more than a distant, voiceless storm on the horizon.
