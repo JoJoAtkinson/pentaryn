@@ -1,0 +1,29 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"editor.fontFamily": "'Helvetica Neue', 'Palatino Linotype', 'Book Antiqua', Palatino, serif",
+		"editor.fontSize": 15,
+		"editor.lineHeight": 1.8,
+		"editor.fontLigatures": false,
+		"editor.wordWrap": "on",
+		"editor.wrappingIndent": "none",
+		"editor.minimap.enabled": false,
+		"editor.renderWhitespace": "none",
+		"workbench.colorTheme": "Default Dark Modern",
+		"[markdown]": {
+			"editor.fontFamily": "'Helvetica Neue', 'Palatino Linotype', 'Book Antiqua', Palatino, serif",
+			"editor.fontSize": 15,
+			"editor.lineHeight": 1.8,
+			"editor.wordWrap": "on",
+			"editor.quickSuggestions": {
+				"other": false,
+				"comments": false,
+				"strings": false
+			}
+		}
+	}
+}

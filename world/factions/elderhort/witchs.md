@@ -4,7 +4,6 @@ The power of Elderholt's witches comes from what they call **the Voice**. The Vo
 
 In Elderholt, a **witch** is anyone who has learned to hear the Voice and survive the conversation. Through it, they draw the secrets that let them shield villages, break curses, and bend fate. The Voice never gives freely. Every insight, every enchantment, every glimpse of the future has a cost.
 
-
 At the table, that power can wear many different shapes. A witch might be built using the rules for a cleric, warlock, sorcerer, or wizard; the difference is not the spell list but the story of where it comes from. In Elderholt, witches do not pray to gods, swear pacts to named patrons, or study under mortal masters. Instead, the Voice whispers them the patterns, prayers, and bargains they need, and learning those secret ways is what takes the tax. What the Voice chooses to show each witch, and how they survive those lessons, makes every witch's magic a little different.
 
 Witches are not self-made; they are **chosen young**. Girls who are forgotten, given up, or quietly offered to the coven are taken in and raised as witch-children. They are far too young to choose that path for themselves, so the covens test them. If a girl is judged strong in mind and will, she is taken below the city into a sealed ritual chamber the witches call **the Axiom**. The Axiom is an ancient hall of stone and sigils, deep beneath Elderstead, where the Voice is closest and most tightly bound. There, the child undergoes a binding rite that leaves no visible mark but fixes a thread between her and the Voice. From that day on, if she is trained correctly, the Voice will answer when she calls—and fall silent when she does not.
@@ -14,6 +13,28 @@ The covens insist only **children** can survive this bond intact. Young minds ar
 The safest way to touch the Voice is deep within **ancient ruins**. Those old runic halls let the Voice come through more cleanly than the open wilds. Even so, the strongest and clearest place is beneath Elderstead, where Elderholt's capital is built atop a buried, humming lattice of old wards and stones. Witches believe this site to be one of the places the Voice is loudest in the world.
 
 By Elderholt's law and doctrine, the Tithe for witches is taken only from **girls**. Boys grow into men whose anger and pride give the Voice a sharper edge—pushing its whispers toward war and destruction. Whether that belief is truth, superstition, or convenient tradition, no coven in Elderholt will risk binding a son to the Voice.
+
+## Witch-Children
+
+Within the covens, witch-children of all ages move through sacred spaces as freely as any elder. They are welcome to sit in council meetings, listen to disputes, and watch rituals unfold as if they were adults. No oaths are demanded of them. No votes are taken from them. No expectations are laid upon their shoulders beyond listening and learning.
+
+The witches believe that **all young children**—not just those bound to covens—can hear faint echoes of the Voice. A farm child might speak a strange phrase at twilight. A merchant's daughter might ask an unsettling question with no context. Most adults dismiss these moments as childish nonsense, but witches pay attention. They know the Voice sometimes touches children who have never been near the Axiom, whispering through them in ways it would never do with adults.
+
+The reason is simple and unbreakable: **young children have no agenda**. Their wants are immediate and formless—warmth, comfort, a familiar voice. They carry no sharp ambitions to twist into bargains, no desperate needs to exploit. When a child speaks something strange, they are not *asking* the Voice for anything. They are simply an open channel, and in that unguarded state, the Voice may flow through without demanding payment in return. The child feels nothing, remembers nothing, and walks away unharmed.
+
+But the moment intention enters the exchange, everything changes.
+
+If a witch asks a child to seek the Voice—to pose a question, to repeat what they hear, to carry a message into the Axiom—the transaction snaps into focus. The child is no longer a passive vessel; they have been made into a petitioner. The witch's intention poisons the well. The Voice does not care that the mouth is small or that the child does not understand what they are doing. It recognizes a bargain when one is offered, and it takes its due as if the petitioner were a full-grown witch.
+
+Every coven in Elderholt knows the stories. Children who were asked for "just one little favor" and returned hollow-eyed, their laughter gone. Children who stopped speaking entirely, or children who simply did not return at all. To use a child as a shield for your own cowardice, to hide behind their innocence to avoid the Voice's price—this is seen as one of the blackest sins a witch can commit.
+
+Among the covens, such an act is spoken of in the same breath as murder, and judged far more harshly. It is not rage or desperation; it is calculated selfishness. The perpetrator knew the cost, knew the risk, and chose to sacrifice someone too young to consent. Those who are caught doing so are stripped of all standing, expelled from coven protections, and in many cases, dragged below to the Axiom itself. There, they are given a final choice: take poison and end their own life for the life they destroyed, or kneel and ask the Voice for judgment. The Voice, as always, answers such requests. And unlike with children, it does not answer gently.
+
+This is why witch-children are welcomed into sacred spaces but never pressed to contribute. If a child at a council meeting blurts something strange—a fragment of prophecy, a nonsense rhyme that cuts too close, a question no one asked—it is received with absolute seriousness. It may be nothing. Or it may be the Voice, giving freely for once. Either way, no witch will ask the child to clarify, to repeat it, or to seek more. The moment you ask, you transform the gift into a transaction, and the child pays the price.
+
+The hope is fragile and carefully guarded: that once in a great while, the Voice will choose to speak through the unguarded honesty of a child, offering one free glimpse of what is hidden—purchased not with years or blood, but with nothing at all.
+
+## The Voice's Nature
 
 Most witches describe the Voice not as a single being, but as something that **wears familiar shapes**. To one, it speaks in the tones of a dead lover; to another, as a chorus of children; to a third, as their own voice arguing back. It is not a soul, not a ghost, and not bound to any one form. It is whatever it wishes to be—and whatever the witch most dreads or longs to hear. Their own fears and desires color how the Voice sounds to them.
 

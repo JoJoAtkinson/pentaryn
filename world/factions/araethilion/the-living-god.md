@@ -109,3 +109,15 @@ Foreign missionaries are treated with polite indifference. They are offered hosp
 Most missionaries leave within weeks, frustrated or heartbroken. A few stay longer, hoping persistence will break through. It never does. Eventually, they are politely reminded that their welcome has limits, and they are escorted to the border.
 
 Clerics can acknowledge other deities without committing heresy—so long as they frame them correctly. Other gods are lesser or distant. They may be powerful in their own realms, but here, on this plane, among mortals, they are absent. Elaerith is not. A cleric might say, "Yes, your god may watch from the heavens, but mine walks the realm. Yes, your god may answer prayers, but mine answers me directly." It is not blasphemy to acknowledge other powers. It is simply truth: none of them are here, and Elaerith is.
+
+---
+
+## For Players
+
+**Make the character you want to play.** If you're unsure how your concept fits into the Divinely Touched, send me a note and we'll figure it out together.
+
+This background offers structure, not a script. Your character can start as a true believer—faithful, obedient, certain in Elaerith's light. That's a compelling story. But remember: **heroes rarely become heroes by staying within the lines.** Growth happens when characters are tested, when certainties crack, when the world demands more than doctrine can answer.
+
+You are not required to play the "ideal cleric" described here. In fact, the most interesting stories often come from characters who struggle with what they've been taught, who ask dangerous questions, who choose compassion over protocol or truth over tradition. The faith has rules. Your character doesn't have to follow them perfectly—or at all, depending on where their journey takes them.
+
+Play someone real. Let them grow. Let them doubt, stumble, rebel, or surprise you. That's where the story lives.
