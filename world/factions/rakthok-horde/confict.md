@@ -14,6 +14,16 @@ These tactics have forced the Rakthok to develop brutal countermeasures: taking 
 
 This, of course, makes the Rakthok appear even more vile and inhuman to outsiders, causing other nations to distance themselves and leaving the Horde more isolated. Worse, it gives the Calderon Imperium perfect justification to continue their raids, framing the orcs as monsters who must be contained at any cost.
 
+## Outside Perception: The Era of Trade
+
+From the wider world's perspective, this age is known as **Era of Trade**. Merchants, diplomats, and scholars speak of open borders, new markets, and carefully negotiated tariffs. The endless bloodshed in Rakthok Horde lands is not reconized as a war at all.
+
+Beyond the Horde, few recognize the conflict as anything more than a distant nuisance. The Calderon Imperium does not officially acknowledge a war; its ledgers and proclamations describe only minor border skirmishes and a “manageable dispute over trade routes.”
+
+Travelers from the Rakthok soon discover the common sentiment in Ardenhaven: the “eastern orcs” are seen as backwards raiders who ought to learn from the more “civilized” western orcs—this despite Ardenhaven’s deep distrust of Calderon itself.
+
+To the Horde, this indifference is madness. A life of burned villages, slaughtered kin, and ceaseless raids is being dismissed as paperwork and tariffs. What the Rakthok know as a generations-long war, the rest of the world treats as a footnote to commerce.
+
 ---
 
 *To understand why the Horde endures despite this isolation, one must look past the battlefield.*
