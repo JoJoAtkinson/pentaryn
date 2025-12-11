@@ -1,3 +1,9 @@
+---
+created: 2025-12-07
+last-modified: 2025-12-07
+tags: ["#world", "#faction", "#elderholt", "#lore"]
+status: active
+---
 # Elderholt — The Coven Realm
 
 **Tags:** `#faction` `#organization` `#government` `#magic`

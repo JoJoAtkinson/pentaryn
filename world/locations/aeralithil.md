@@ -1,7 +1,7 @@
 ---
 created: 2025-12-07
 last-modified: 2025-12-07
-tags: [#world, #location, #important]
+tags: ["#world", "#location", "#important"]
 status: draft
 ---
 

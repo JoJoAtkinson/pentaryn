@@ -1,0 +1,28 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+        "label": "Markdown: Export to PDF",
+        "type": "shell",
+        "command": "pandoc",
+        "args": [
+            "${file}",
+            "--pdf-engine=xelatex",
+            "-V",
+            "mainfont=Baskerville",
+            "-V",
+            "linestretch=1.3",
+            "-V",
+            "classoption=twocolumn",
+            "-V",
+            "geometry:margin=0.7in",
+            "-H",
+            "${workspaceFolder}/.vscode/pandoc-header.tex",
+            "-o",
+            "$HOME/Downloads/${fileBasenameNoExtension}.pdf"
+        ],
+        "group": "build",
+        "problemMatcher": []
+    }
+]
+}

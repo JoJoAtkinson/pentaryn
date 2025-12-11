@@ -1,7 +1,7 @@
 ---
 created: 2025-12-09
 last-modified: 2025-12-09
-tags: [#world, #faction, #elderholt, #witch, #npc, #lore]
+tags: ["#world", "#faction", "#elderholt", "#witch", "#npc", "#lore"]
 status: draft
 ---
 # Silniel (SILL-nee-el) — The Witch-Tree of Elderstead

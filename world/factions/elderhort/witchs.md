@@ -1,10 +1,16 @@
+---
+created: 2025-12-11
+last-modified: 2025-12-11
+tags: ["#world", "#faction", "#elderholt", "#witch", "#lore"]
+status: draft
+---
 # Witches of Elderholt
 
 The power of Elderholt's witches comes from what they call **the Voice**. The Voice has no true name and is not worshipped as a god; it is a presence, a force, a well of hidden knowledge. Witches treat it as a dangerous tool—something to bargain with, not to venerate.
 
 In Elderholt, a **witch** is anyone who has learned to hear the Voice and survive the conversation. Through it, they draw the secrets that let them shield villages, break curses, and bend fate. The Voice never gives freely. Every insight, every enchantment, every glimpse of the future has a cost.
 
-At the table, that power can wear many different shapes. A witch might be built using the rules for a cleric, warlock, sorcerer, or wizard; the difference is not the spell list but the story of where it comes from. In Elderholt, witches do not pray to gods, swear pacts to named patrons, or study under mortal masters. Instead, the Voice whispers them the patterns, prayers, and bargains they need, and learning those secret ways is what takes the tax. What the Voice chooses to show each witch, and how they survive those lessons, makes every witch's magic a little different.
+At the table, that power can wear many different shapes. A witch might be built using the rules for a cleric, warlock, sorcerer, or wizard—but in principle, **any class** could be a witch if the story says they hear the Voice. A battle-scarred fighter who was tithed as a child and never showed much talent for spellcasting is still a witch; she simply lacks the training to raise wards or see what comes next. In Elderholt, witches do not pray to gods, swear pacts to named patrons, or study under mortal masters. Instead, the Voice whispers them the patterns, prayers, and bargains they need, and learning those secret ways is what takes the tax. What the Voice chooses to show each witch, and how they survive those lessons, makes every witch's magic a little different.
 
 Witches are not self-made; they are **chosen young**. Girls who are forgotten, given up, or quietly offered to the coven are taken in and raised as witch-children. They are far too young to choose that path for themselves, so the covens test them. If a girl is judged strong in mind and will, she is taken below the city into a sealed ritual chamber the witches call **the Axiom**. The Axiom is an ancient hall of stone and sigils, deep beneath Elderstead, where the Voice is closest and most tightly bound. There, the child undergoes a binding rite that leaves no visible mark but fixes a thread between her and the Voice. From that day on, if she is trained correctly, the Voice will answer when she calls—and fall silent when she does not.
 
@@ -33,6 +39,35 @@ Among the covens, such an act is spoken of in the same breath as murder, and jud
 This is why witch-children are welcomed into sacred spaces but never pressed to contribute. If a child at a council meeting blurts something strange—a fragment of prophecy, a nonsense rhyme that cuts too close, a question no one asked—it is received with absolute seriousness. It may be nothing. Or it may be the Voice, giving freely for once. Either way, no witch will ask the child to clarify, to repeat it, or to seek more. The moment you ask, you transform the gift into a transaction, and the child pays the price.
 
 The hope is fragile and carefully guarded: that once in a great while, the Voice will choose to speak through the unguarded honesty of a child, offering one free glimpse of what is hidden—purchased not with years or blood, but with nothing at all.
+
+## Classes, Concepts, and Wards at the Table
+
+In rules terms, Elderholt's witches sit on top of whatever class and concept you choose. The **class** determines what kinds of spells and abilities the witch can reasonably learn; the **concept** decides which of those they actually pursue.
+
+- A witch can be of **any class** that fits your story. A battle-scarred fighter with the Voice whispering in her ear is still a witch—she just does not qualify as a Ward-Witch if she never learns protective magic or future-sight.
+- To be a **Ward-Witch** in play, the character needs access to spells or features that can plausibly represent wards and glimpses ahead: alarms, shields, divinations, anything that reads as "seeing the blow before it lands" or "turning aside what should have struck." If your sorcerer only ever learns fire and force, by choice and by theme, she is a witch—but not a Ward-Witch.
+- A **Deep-Witch** can come from the same spell lists as a Ward-Witch and still fall (or leap) into the deep path. Sometimes it is a matter of talent; sometimes it is a matter of **asking for too much**.
+
+From the Voice's perspective, every bargain has a **shape**: what you ask for, and how well you can protect yourself while you ask.
+
+- Think of wards and sight as a kind of **rating** for how safely you can bargain. If your wards and foresight are "level 1" and you reach for a "level 3" boon, the Voice will happily give you what you asked for—and then take payment in the difference.
+- That "missing protection" is where scars and transformations come from. You were only one-third shielded, so the rest has to be paid for in flesh, memory, years, or something stranger.
+
+This means two witches with the **same class and spells** can end up on opposite paths. One plays cautiously within what her wards can bear and slowly becomes a Ward-Witch. The other uses those same spells as the barest fig leaf while she reaches far beyond them and is dragged, deal by deal, into becoming a Deep-Witch.
+
+## Ranks Within the Coven
+
+Although witch-children move freely through coven halls, adult witches still recognize a quiet ladder of experience and sacrifice. These ranks are not uniforms or titles shouted in public, but ways witches understand who has paid what price.
+
+1. **Votary "Threadling"**: A witch-child who has had the thread to the Voice established, but has not yet struck a true bargain. Threadlings are devoted to the service of the coven, running errands, carrying messages, and watching every ritual with wide eyes. Their only connection to the Voice is the thin, humming line forged in the Axiom—no toll yet taken, no debt yet called in.
+
+2. **Tollbearer**: When a witch survives her first true bargain, when the Voice has changed her in a way that cannot be undone, she becomes a Tollbearer. From that moment on, she "bears the toll" and is counted as a full sister of the coven. This is a profound rite of passage, but never a celebration. There are no feasts, no songs—only acknowledgment, respect, and the silent understanding that she has joined the line between Elderholt and everything pressing in from the dark.
+
+3. **Hollowed**: A Hollowed witch has been reshaped by multiple bargains and barely resembles the child who first entered the Axiom. Memories, sensations, even parts of her body may have been traded away—eyes that see only futures, hands that belong half to shadows, a voice that sometimes speaks in another's cadence. Despite this, or because of it, she is stable enough for leadership, feared enough to command respect, and scarred enough to practice restraint.
+
+4. **Elder**: Elders have survived decades of bargaining and stand as living embodiments of sacrifice. Some are monstrous to behold, others eerily untouched, wearing serenity like a mask. All of them are warnings in the shape of women—proof of how far the Voice will go if you keep asking.
+
+Because bargains reshape witches in countless different ways, there are no official insignias, sashes, or badges to mark rank. A Tollbearer might be sent into the wider world with whatever tools or charms were on hand that day, and a Hollowed or Elder may drip with talismans and relics that feel like symbols of station. But in Elderholt, nothing is ever taken at face value: rank is measured not by what you wear, but by the toll the Voice has already taken—and what you are still willing to pay.
 
 ## The Voice's Nature
 

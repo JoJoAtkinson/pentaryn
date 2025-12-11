@@ -5,25 +5,26 @@
 		}
 	],
 	"settings": {
-		"editor.fontFamily": "'Helvetica Neue', 'Palatino Linotype', 'Book Antiqua', Palatino, serif",
-		"editor.fontSize": 15,
-		"editor.lineHeight": 1.8,
-		"editor.fontLigatures": false,
-		"editor.wordWrap": "on",
-		"editor.wrappingIndent": "none",
-		"editor.minimap.enabled": false,
-		"editor.renderWhitespace": "none",
-		"workbench.colorTheme": "Default Dark Modern",
 		"[markdown]": {
 			"editor.fontFamily": "'Helvetica Neue', 'Palatino Linotype', 'Book Antiqua', Palatino, serif",
 			"editor.fontSize": 15,
 			"editor.lineHeight": 1.8,
+			"editor.fontLigatures": false,
+			"editor.wrappingIndent": "none",
+			"editor.minimap.enabled": false,
+			"editor.renderWhitespace": "none",
 			"editor.wordWrap": "on",
 			"editor.quickSuggestions": {
 				"other": false,
 				"comments": false,
 				"strings": false
 			}
-		}
+		},
+		"workbench.colorCustomizations": {
+			"titleBar.activeBackground": "#FFD700", // dark navy/black
+			"titleBar.inactiveBackground": "#FFD700",
+			"titleBar.activeForeground": "#000000", // light text
+			"titleBar.inactiveForeground": "#000000"
+		},
 	}
 }

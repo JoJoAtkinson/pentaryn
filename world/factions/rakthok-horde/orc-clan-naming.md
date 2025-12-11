@@ -1,7 +1,7 @@
 ---
 created: 2025-12-08
 last-modified: 2025-12-08
-tags: [#reference, #naming, #orc, #worldbuilding]
+tags: ["#reference", "#naming", "#orc", "#worldbuilding"]
 status: active
 ---
 # Orc Clan Territory Names — Language Conversion Rules

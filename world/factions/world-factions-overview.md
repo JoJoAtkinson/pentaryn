@@ -1,7 +1,7 @@
 ---
 created: 2025-12-07
 last-modified: 2025-12-07
-tags: [#world, #faction, #important]
+tags: ["#world", "#faction", "#important"]
 status: draft
 ---
 # World Factions Overview
