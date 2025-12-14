@@ -4,7 +4,7 @@ last-modified: 2025-12-09
 tags: ["#world", "#faction", "#elderholt", "#witch", "#npc", "#lore"]
 status: draft
 ---
-# Silniel (SILL-nee-el) — The Witch-Tree of Elderstead
+# Elder Silniel (SILL-nee-el) — The Witch-Tree of Elderstead
 
 In Elderholt, every witch pays a price to the Voice. Silniel is what it looks like when that price is taken **all the way to the roots**.
 

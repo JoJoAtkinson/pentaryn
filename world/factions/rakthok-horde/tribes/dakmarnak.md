@@ -7,15 +7,13 @@ status: draft
 
 # Dakmar'nak Tribe (DAHK-mar-nak)
 
-**Tags:** `#faction` `#tribe` `#rakthok-horde`
-
 ## Identity
 
 | Attribute | Value |
 |-----------|-------|
 | **Type** | Rakthok sub-tribe |
 | **Population** | ~4,200 (1,400 warriors, 2,800 civilians) |
-| **Seat** | [Black Marsh](../../locations/black-marsh.md) |
+| **Seat** | tribe of Black Marsh|
 | **Government** | Fire Council democracy |
 | **Primary Virtue** | Vigilance in defense of land-spirits |
 
@@ -43,8 +41,6 @@ Dakmar'nak politicians remark that the Horde may be the most functional democrac
 
 1. **Council Election:** PCs can influence or observe the selection of a new Fire Council elder after a prophetic death.
 2. **Trade Mission:** A Merrowgate broker seeks the blackening process, forcing negotiators to weigh security against vital imports.
-
----
 
 ## Related Links
 

@@ -7,7 +7,6 @@ import re
 import subprocess
 import sys
 import tempfile
-from turtle import mode
 
 
 """
@@ -68,6 +67,7 @@ def _read_markdown_body(path: pathlib.Path) -> str:
 
 
 _LINK_PATTERN = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+_LIST_ITEM_PATTERN = re.compile(r"^\s*(?:[-*+]|\d+\.)\s+")
 
 
 def _strip_relative_links(markdown: str) -> str:
@@ -77,16 +77,48 @@ def _strip_relative_links(markdown: str) -> str:
         text = match.group(1)
         target = match.group(2).strip()
 
-        # Keep external/anchored links.
-        if target.startswith("#"):
-            return text
-        if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", target):
+        if not _is_relative_link_target(target):
             return match.group(0)
 
-        # Treat everything else (./, ../, bare names, root paths) as relative.
         return text
 
     return _LINK_PATTERN.sub(_replace, markdown)
+
+
+def _is_relative_link_target(target: str) -> bool:
+    target = target.strip()
+    if not target:
+        return False
+    if target.startswith("#"):
+        return False
+    if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", target):
+        return False
+    return True
+
+
+def _drop_list_items_with_relative_links(markdown: str) -> str:
+    """
+    Drop entire list-item lines that include a relative markdown link.
+
+    This primarily targets "Related Links" sections like:
+      - [Thing](../path/to/thing.md)
+    """
+    out: list[str] = []
+    for line in markdown.splitlines(True):
+        if not _LIST_ITEM_PATTERN.match(line):
+            out.append(line)
+            continue
+
+        has_relative_link = False
+        for match in _LINK_PATTERN.finditer(line):
+            if _is_relative_link_target(match.group(2)):
+                has_relative_link = True
+                break
+
+        if not has_relative_link:
+            out.append(line)
+
+    return "".join(out)
 
 
 _HEADING_PATTERN = re.compile(r"^(#{1,6})\s+.*$")
@@ -135,7 +167,8 @@ def _remove_empty_headings(markdown: str) -> str:
         else:
             # Skip this heading and any blank lines that followed it.
             idx = lookahead
-            while out and not out[-1].strip():
+            # Preserve readability by leaving at most one blank line before the next heading.
+            while len(out) >= 2 and not out[-1].strip() and not out[-2].strip():
                 out.pop()
 
     result = "\n".join(out)
@@ -169,8 +202,6 @@ def _adjust_output_path(selected: pathlib.Path, pandoc_args: list[str]) -> list[
 
 
 def _separator_for_mode(mode: str) -> str:
-    print(f"Selected break mode: {mode}", file=sys.stderr)
-
     if mode == "column":
         return "\n\n\\ifdefined\\columnbreak\\columnbreak\\else\\newpage\\fi\n\n"
     if mode == "page":
@@ -210,7 +241,7 @@ def main(argv: list[str]) -> int:
     parser.add_argument(
         "--break-mode",
         choices=["line", "column", "page"],
-        default="page",
+        default="column",
         help="How to separate merged files: horizontal rule (line), column break, or page break.",
     )
     parser.add_argument(
@@ -261,7 +292,10 @@ def main(argv: list[str]) -> int:
             continue
         if not body:
             continue
-        cleaned = _remove_empty_headings(_strip_relative_links(body))
+        cleaned = body
+        cleaned = _drop_list_items_with_relative_links(cleaned)
+        cleaned = _strip_relative_links(cleaned)
+        cleaned = _remove_empty_headings(cleaned)
         if cleaned:
             merged_chunks.append(cleaned)
 

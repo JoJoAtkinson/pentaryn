@@ -4,11 +4,11 @@ last-modified: 2025-12-11
 tags: ["#world", "#faction", "#elderholt", "#witch", "#npc", "#lore"]
 status: draft
 ---
-## Elder Raven the Vital Ascendant (RAY-ven)
+# Elder Raven the Vital Ascendant (RAY-ven)
 
 *Lesson: The Voice can only take what it knows you value.*
 
-### Who She Was
+## Who She Was
 
 Raven was a Deep-Witch, drawn early and irrevocably to necromancy. Where others studied wards or prophecy, Raven sought out places saturated with death—old battlefields, plague pits, forgotten burial vaults—experimenting not with souls, but with **how bodies moved**. How little of a person was required for motion. How obedience could be separated from breath. How flesh failed long before will did.
 
@@ -16,7 +16,7 @@ She hated her body. Not out of vanity, but out of misalignment. It felt loud, in
 
 She was deeply antisocial, avoiding councils and gatherings whenever possible. Yet as her mastery grew, something strange happened.
 
-### What She Sacrificed
+## What She Sacrificed
 
 For every necromantic secret Raven drew from the Voice, her body appeared to thrive.
 
@@ -32,7 +32,7 @@ Among the covens, this anomaly was celebrated. Raven was named an Elder under th
 
 They did not understand that attention itself was the toll.
 
-### The Lich Rite
+## The Lich Rite
 
 Raven understood the Voice better than they did.
 
@@ -90,7 +90,7 @@ Raven had died.
 
 And she had come back—on her own terms.
 
-### How She Appears Now
+## How She Appears Now
 
 Raven’s lich-form is deliberate and restrained. Her bones are smooth and dark, etched with necromantic script so fine it resembles natural grain. A dim violet light burns steadily within her ribcage, where pain once lived. Her eye sockets hold faint embers—sight without sensation.
 
@@ -98,7 +98,7 @@ There is no decay, no stench, no excess. Her presence is finally quiet. Controll
 
 For the first time, she inhabits a form that does not argue with her existence.
 
-### Role in the Covens
+## Role in the Covens
 
 Raven is one of the coven’s greatest necromancers, and when Elderholt faces existential threat, it is Raven who is called. She does not command armies so much as replace them. Dead ground answers her. Fallen enemies rise at her gesture. Sieges end not through attrition, but through inevitability. More than once, Raven has halted an advancing force alone, turning battlefields into silent, obedient bulwarks.
 
@@ -106,7 +106,7 @@ Raven does not train apprentices, not out of secrecy, but out of disinterest. Sh
 
 Raven stands watch not out of loyalty or love, but because defending Elderholt aligns with her own calculus. The land remains. The dead remain useful. And as long as threats continue to rise, so will she.
 
-### Using Raven in Play
+## Using Raven in Play
 
 Raven is ideal when players believe they have found a way to outmaneuver fate.
 
