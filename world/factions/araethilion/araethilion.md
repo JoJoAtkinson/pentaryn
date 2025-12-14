@@ -17,9 +17,27 @@
 
 ## Symbol & Colors
 
-**Symbol:** A veiled crown wreathed in silver vines on a twilight field
+**Symbol:** Nine-Ring Bloom
 **Colors:** Silver, twilight purple, forest green
 **Motto/Slogan:** "Eternal bloom through eternal service."
+
+## Lands & Settlements
+
+### Territory
+
+Araethilion holds the high wooded elevations above most settled lands: not the knife-edged peaks, but the broad shoulders of the mountains where forest and stone interlock. Its canopy is dominated by immense hardwoods—trees of fantastic scale—treated as living temples and boundary-markers.
+
+### Cities & Works
+
+Araethilene settlements are shaped with the mountains rather than carved from them. Stone, soil, and slope are woven into terraces, halls, and towers; the mountains themselves are not hollowed out. This is not dwarven delving—the land remains whole, bent gently to elven will.
+
+### Capital — Aeralithil
+
+From afar, [Aeralithil](../locations/aeralithil.md) is announced by a vast tower rising where forest meets stone. Its lower reaches are partially carved into the mountainside, anchoring it to the land, but its form rejects traditional elven design: the tower is Elaerith’s, and its architecture is treated as godly rather than elven—authority made manifest.
+
+### Borders & Contrast
+
+Araethilion’s heights are distinct from the dwarven deeps: not the same mountain that holds the mines, and not mistaken for one. The elves claim the upper slopes and living forests; the dwarves claim the depths.
 
 ## Mission & Goals
 

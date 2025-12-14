@@ -8,6 +8,7 @@ You need two things installed on your Mac:
 
 1. **Pandoc** – does the Markdown → PDF conversion
 2. **LaTeX engine (`pdflatex`)** – used by Pandoc to actually build the PDF
+3. **uv** – installs/uses Python for the export helper
 
 Install both via Homebrew:
 
@@ -17,9 +18,20 @@ brew install pandoc
 
 # LaTeX (provides pdflatex; large download but simple)
 brew install --cask mactex-no-gui
+
+# uv (Python manager + runner)
+brew install uv
 ```
 
 After installation, restart VS Code so your shell and PATH are up to date.
+
+## Python setup (via uv)
+
+This repo pins Python via `.python-version`. Install it with:
+
+```bash
+uv python install
+```
 
 ## VS Code task configuration
 
@@ -32,8 +44,11 @@ The repo already contains a task in `.vscode/tasks.json`:
     {
       "label": "Markdown: Export to PDF",
       "type": "shell",
-      "command": "pandoc",
+      "command": "uv",
       "args": [
+        "run",
+        "python",
+        "${workspaceFolder}/scripts/pandoc-export.py",
         "${file}",
         "-o",
         "$HOME/Downloads/${fileBasenameNoExtension}.pdf"
@@ -47,8 +62,16 @@ The repo already contains a task in `.vscode/tasks.json`:
 
 What this does:
 - Takes the **currently active file** in the editor
-- Runs `pandoc` on it
+- Builds a temporary merged Markdown file (see below), then runs `pandoc`
 - Writes `~/Downloads/<file-name>.pdf` (overwriting if it exists)
+
+Template safety:
+- Files whose name starts with `__` (e.g. `__elder-template.md`) are skipped.
+- Files with frontmatter `template: true` are also skipped.
+
+Merge behavior:
+- Starts with the active file, then appends all `.md` files in the same folder that sort *after* it by filename.
+- Strips YAML frontmatter from every merged file (so metadata like `created`, `tags`, `status`, etc. doesn’t show up).
 
 ## How to export a PDF
 

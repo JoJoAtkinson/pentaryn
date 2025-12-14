@@ -83,3 +83,31 @@ To an outsider, these two kinds of witches look like they belong to entirely dif
 The Voice itself holds no grudges and offers no comfort. It does not hate, love, or judge. The relationship between witches and the Voice is like that between a village and a wildfire or a hurricane: utterly impersonal. The Voice does not care that witches mine it for the world's hidden knowledge. It simply takes its due. Like a wildfire that will burn anyone who steps into it, the Voice extracts its tax without malice, pity, or regret.
 
 Before a young witch ever inks the first protective rune into their skin, they are taught the oldest rule: **you never give the Voice a name**. Names are doors and chains both. To name the Voice is to invite it closer, to let it settle into shape—and no witch in Elderholt wants it to be anything more than a distant, voiceless storm on the horizon.
+
+
+
+
+
+
+### **Ward-Witch I: of Prudence**
+
+She rearly asks the Voice for anything herself. Instead, she convinces others to do it *for everyone*. A master of coven law and softer lies, she stays impeccably within doctrine while maneuvering her sisters into bargains that conveniently advance her designs. Every toll is taken for “the greater good,” every sacrifice framed as necessary, every benefit somehow hers to direct. No rule is broken, no crime committed—only the spirit of the coven slowly bent out of shape.
+
+Among the elders, she is joked about and quietly feared. Accusing her outright would tear the coven apart, so instead she is treated as a lesson: proof that survival within the rules can still be a kind of corruption.
+
+---
+
+### **Ward-Witch II: Up bringer**
+
+She has never been the strongest voice in the chamber, and she has never wanted to be. Her bargines are modest, and layered through decades of restraint. She asked only for what she could safely hold, and she stopped when she had enough. The price she paid was endurance—because to teach witches, you must survive long enough to watch them make their own mistakes.
+
+She prefers the company of witch-children, listening more than speaking, correcting gently when correction is needed. Power, to her, is not what the Voice gives you, but what you refuse to ask for. If Elderholt has endured this long, it is because someone chose to stay alive, unremarkable, and present—long enough to pass the rules on intact.
+
+---
+
+### **Ward-Witch III: The Unmoored Seer**
+
+She bears no visible wards and no obvious tolls, which unsettles any witch of. Her foresight is so complete that she learned how to ask the Voice without ever reaching beyond her protection. The Voice took nothing—because time itself took everything instead. She no longer lives in the present. Moments arrive out of sequence, days vanish, conversations happen before or after they are meant to.
+
+To outsiders, she seems lucid and calm. To herself, she is constantly re-orienting, asking small questions to determine *when* she is rather than where. Her guidance is invaluable and terrifying: perfectly accurate, but often early, late, or impossible to act upon. The coven listens carefully when she speaks—and prays, silently, that this is one of the moments that still matters.
+

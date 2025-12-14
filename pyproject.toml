@@ -1,0 +1,8 @@
+[project]
+name = "dnd-notes"
+version = "0.0.0"
+description = "Local tooling for exporting Markdown notes to PDF."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+

@@ -4,8 +4,11 @@
     {
         "label": "Markdown: Export to PDF",
         "type": "shell",
-        "command": "pandoc",
+        "command": "uv",
         "args": [
+            "run",
+            "python",
+            "${workspaceFolder}/scripts/pandoc-export.py",
             "${file}",
             "--pdf-engine=xelatex",
             "-V",

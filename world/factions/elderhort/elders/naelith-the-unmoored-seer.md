@@ -1,0 +1,5 @@
+### **Naelith: The Unmoored Seer**
+
+She bears no visible wards and no obvious tolls, which unsettles any witch of age. Her foresight is so complete that she learned how to ask the Voice without ever reaching beyond her protection. The Voice took nothing—because time itself took everything instead. She no longer lives in the present. Moments arrive out of sequence, days vanish, conversations happen before or after they are meant to.
+
+To outsiders, she seems lucid and calm. To herself, she is constantly re-orienting, asking small questions to determine *when* she is rather than where. Her guidance is invaluable and terrifying: perfectly accurate, but often early, late, or impossible to act upon. The coven listens carefully when she speaks—and prays, silently, that this is one of the moments that still matters.

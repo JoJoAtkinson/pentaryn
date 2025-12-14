@@ -33,3 +33,10 @@ Thumbs.db
 # Node modules (if using any Node.js tools)
 node_modules/
 package-lock.json
+
+# Python / uv
+.venv/
+__pycache__/
+*.pyc
+.ruff_cache/
+.pytest_cache/

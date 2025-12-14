@@ -1,3 +1,29 @@
 % Extra layout tweaks for Pandoc-generated PDFs
 \setlength{\columnsep}{1cm}% widen space between columns
 \raggedright% left-align text (no full justification)
+
+% Make pandoc's longtable behave like a normal tabular in two-column docs
+\usepackage{booktabs} % usually already loaded by pandoc, but safe
+
+\usepackage{longtable}
+
+
+\makeatletter
+% Replace longtable with a centered tabular
+\renewenvironment{longtable}{%
+  \begin{center}\begin{tabular}%
+}{%
+  \end{tabular}\end{center}%
+}
+
+% Pandoc's longtable setup uses these; make them no-ops / simple rules
+\renewcommand{\endhead}{}
+\renewcommand{\endfirsthead}{}
+\renewcommand{\endfoot}{}
+\renewcommand{\endlastfoot}{}
+
+% If pandoc uses booktabs-style rules:
+\renewcommand{\toprule}{\hline}
+\renewcommand{\midrule}{\hline}
+\renewcommand{\bottomrule}{\hline}
+\makeatother

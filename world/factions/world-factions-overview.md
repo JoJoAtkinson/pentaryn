@@ -19,7 +19,7 @@ High-level index of major factions across cultures. Each entry links to a future
 - Demonym: Araethilene (AR-ay-THIL-een)
 - Adjectival form: Araethilion
 - Capital: Aeralithil (AIR-ah-LITH-il)
-- Doc: [araethilion.md](./araethilion_.md)
+- Doc: [araethilion.md](./araethilion/araethilion.md)
 
 ## 🧑‍🌾 Humans
 
