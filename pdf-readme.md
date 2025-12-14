@@ -62,7 +62,7 @@ The repo already contains a task in `.vscode/tasks.json`:
 
 What this does:
 - Takes the **currently active file** in the editor
-- Builds a temporary merged Markdown file (see below), then runs `pandoc`
+- Builds a temporary merged Markdown file (see below), then runs `pandoc` with a table of contents
 - Writes `~/Downloads/<file-name>.pdf` (overwriting if it exists)
 
 Template safety:
@@ -72,6 +72,7 @@ Template safety:
 Merge behavior:
 - Starts with the active file, then appends all `.md` files in the same folder that sort *after* it by filename.
 - Strips YAML frontmatter from every merged file (so metadata like `created`, `tags`, `status`, etc. doesn’t show up).
+- Pandoc’s `--toc --toc-depth=2` flags generate a table of contents at the top of the PDF based on headings in the merged file.
 
 ## How to export a PDF
 
