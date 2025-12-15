@@ -10,13 +10,18 @@ This repo is a D&D 5.5e campaign vault. When you create or edit content, follow 
 ## Where things go (high level)
 - Naming Conventions: world/naming_conventions/primary-factions.md
 - Characters: /characters/player-characters, /characters/npcs
-- World: /world/locations, /world/factions, /world/history, /world/lore
+- World: /world/factions, /world/history, /world/lore
 - Sessions: /sessions/notes (new), /sessions/planning (upcoming), /sessions/archive (old)
 - Quests: /quests/active, /quests/completed, /quests/side-quests
 - Items: /items/magic-items, /items/artifacts, /items/mundane
 - Creatures: /creatures/monsters, /creatures/bestiary, /creatures/custom
 - Rules: /rules/house-rules, /rules/references, /rules/mechanics
 - Templates: /templates
+
+## Factions and locations layout
+- Factions live in folders: `world/factions/<faction-slug>/_overview.md`
+- Locations live under their region/faction: `world/factions/<region-slug>/locations/<location>.md`
+- Avoid creating `world/locations/` (locations are tracked inside the relevant faction folder)
 
 ## Naming and formatting
 - Filenames: kebab-case (e.g., location-name.md).

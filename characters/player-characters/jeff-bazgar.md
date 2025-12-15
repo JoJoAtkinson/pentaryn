@@ -50,6 +50,6 @@ He could never convince his brother, however. To Ghorrak, what mattered was the 
 ## Related Links
 
 - [Ghorrak Dakmar'nak](../../world/factions/rakthok-horde/Chosen-Warlord-Ghorrak)
-- [Rakthok Horde](../../world/factions/rakthok-horde/rakthok-horde.md)
-- [Black Marsh](../../world/locations/black-marsh.md)
-- [Calderon Imperium](../../world/factions/calderon-imperium.md)
+- [Rakthok Horde](../../world/factions/rakthok-horde/_overview.md)
+- [Black Marsh](../../world/factions/rakthok-horde/locations/black-marsh.md)
+- [Calderon Imperium](../../world/factions/calderon-imperium/_overview.md)

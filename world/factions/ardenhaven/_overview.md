@@ -12,7 +12,7 @@
 | **Type** | Constitutional Monarchy |
 | **Size** | Regional human realm |
 | **Alignment** | Neutral Good (aspirational) |
-| **Headquarters** | [Ardenford](../locations/ardenford.md) |
+| **Headquarters** | [Ardenford](locations/ardenford.md) |
 | **Founded** | Post-Imperial Wars (exact year TBD) |
 
 ## Symbol & Colors
@@ -110,7 +110,7 @@ Taxes, militia service (voluntary but incentivized), jury duty, respect for the 
 
 ## Locations
 
-### [Headquarters — Ardenford](../locations/ardenford.md)
+### [Headquarters — Ardenford](locations/ardenford.md)
 River-crossing capital and council seat; symbol of resilience and shared governance.
 
 ### Border Fortresses
@@ -122,11 +122,11 @@ Fertile river valleys, mixed forests, and recovering farmland; contested borders
 ## Allies & Enemies
 
 ### Allies
-- **[Garrok Confederation](./garrok-confederation.md):** Recent mutual defense treaties; trade and honor pacts
-- **[Merrowgate](./merrowgate.md):** Trade partner (though Merrowgate plays all sides)
+- **[Garrok Confederation](../garrok-confederation/_overview.md):** Recent mutual defense treaties; trade and honor pacts
+- **[Merrowgate](../merrowgate/_overview.md):** Trade partner (though Merrowgate plays all sides)
 
 ### Rivals
-- **[Calderon Imperium](./calderon-imperium.md):** Competing visions of lawful order; shared but tense border
+- **[Calderon Imperium](../calderon-imperium/_overview.md):** Competing visions of lawful order; shared but tense border
 
 ### Enemies
 - Bandit networks exploiting weak oversight; internal corruption factions
@@ -194,7 +194,7 @@ A major corruption scandal threatens Council unity; an Imperium incursion tests 
 
 ## Related Links
 
-- [Headquarters — Ardenford](../locations/ardenford.md)
-- [Calderon Imperium](./calderon-imperium.md)
-- [Garrok Confederation](./garrok-confederation.md)
-- [Merrowgate](./merrowgate.md)
+- [Headquarters — Ardenford](locations/ardenford.md)
+- [Calderon Imperium](../calderon-imperium/_overview.md)
+- [Garrok Confederation](../garrok-confederation/_overview.md)
+- [Merrowgate](../merrowgate/_overview.md)

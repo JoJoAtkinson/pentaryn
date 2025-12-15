@@ -65,7 +65,7 @@ Located on the main street of Sandpoint, near the town square.
 ## NPCs & Inhabitants
 
 ### Key NPCs
-- **[Gareth Ironwood](../../characters/npcs/example-innkeeper.md):** Owner and innkeeper, former adventurer
+- **[Gareth Ironwood](../../../../characters/npcs/example-innkeeper.md):** Owner and innkeeper, former adventurer
 - **Staff:** 2-3 serving staff, 1 cook, 1 stable hand
 
 ### Demographics
@@ -150,5 +150,5 @@ Use this location for:
 
 ## Related Links
 
-- [Gareth Ironwood](../../characters/npcs/example-innkeeper.md)
-- [Sandpoint](sandpoint.md) *(would link to full town description)*
+- [Gareth Ironwood](../../../../characters/npcs/example-innkeeper.md)
+- Sandpoint *(town description TBD)*

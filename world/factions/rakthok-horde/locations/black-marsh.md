@@ -11,7 +11,7 @@ status: draft
 
 - Culture: Eastern Orc (Rakthok Horde heartlands)
 - Type: Region (cold wetlands)
-- Faction: [Rakthok Horde](../factions/rakthok-horde/rakthok-horde.md)
+- Faction: [Rakthok Horde](../_overview.md)
 
 ## Description
 
@@ -40,7 +40,7 @@ Dense reed beds, knotted mangroves, and slow, coal-dark channels. Hidden sinkhol
 - **Main Exports:** Blackened iron arms, alligator-hide leathers, spirit-etched totems
 - **Main Imports:** Grain, salt, outside lore
 - **Currency:** Favors, ancestor oaths, and occasional Calderon coin seized in raids
-- **Trade Routes:** Hidden pole-boat channels leading toward [Ardenhaven](../factions/ardenhaven.md) and clandestine swaps with Merrowgate factors
+- **Trade Routes:** Hidden pole-boat channels leading toward [Ardenhaven](../../ardenhaven/_overview.md) and clandestine swaps with Merrowgate factors
 
 ## Inhabitants
 
@@ -68,6 +68,6 @@ Quicksilt pits, venomous reeds, and ancestral guardians who ensnare those deemed
 
 ## Related Links
 
-- [Rakthok Horde](../factions/rakthok-horde/rakthok-horde.md)
-- [Dakmar'nak Tribe](../factions/rakthok-horde/dakmarnak-tribe.md)
-- [Calderon Imperium](../factions/calderon-imperium.md)
+- [Rakthok Horde](../_overview.md)
+- [Dakmar'nak Tribe](../tribes/dakmarnak.md)
+- [Calderon Imperium](../../calderon-imperium/_overview.md)

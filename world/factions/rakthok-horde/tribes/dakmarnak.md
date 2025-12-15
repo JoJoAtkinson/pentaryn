@@ -19,7 +19,7 @@ status: draft
 
 ## Overview
 
-The Dakmar'nak stand as the Horde’s engineers and spiritual preservationists. Their society is celebrated for blackened iron craftwork that ignores the marshland rust, and for rigorous civic training that produces literate, worldly warriors. Dakmar'nak honor is earned through elections and battlefield merit, not inheritance—a truth that drives scions like [Bazgar Dakmar'nak](../../../characters/player-characters/jeff-bazgar.md) to prove themselves beyond their lineage.
+The Dakmar'nak stand as the Horde’s engineers and spiritual preservationists. Their society is celebrated for blackened iron craftwork that ignores the marshland rust, and for rigorous civic training that produces literate, worldly warriors. Dakmar'nak honor is earned through elections and battlefield merit, not inheritance—a truth that drives scions like [Bazgar Dakmar'nak](../../../../characters/player-characters/jeff-bazgar.md) to prove themselves beyond their lineage.
 
 ## Governance & Civic Life
 
@@ -44,6 +44,6 @@ Dakmar'nak politicians remark that the Horde may be the most functional democrac
 
 ## Related Links
 
-- [Rakthok Horde](./rakthok-horde.md)
-- [Black Marsh](../../locations/black-marsh.md)
-- [Calderon Imperium](../calderon-imperium.md)
+- [Rakthok Horde](../_overview.md)
+- [Black Marsh](../locations/black-marsh.md)
+- [Calderon Imperium](../../calderon-imperium/_overview.md)

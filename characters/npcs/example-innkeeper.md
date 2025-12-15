@@ -104,5 +104,5 @@ Gareth wants to maintain the Rusty Dragon as the finest establishment in Sandpoi
 
 ## Related Links
 
-- [The Rusty Dragon Inn](../../world/locations/rusty-dragon-inn.md)
-- [Sandpoint](../../world/locations/sandpoint.md)
+- [The Rusty Dragon Inn](../../world/factions/ardenhaven/locations/example-rusty-dragon-inn.md)
+- Sandpoint

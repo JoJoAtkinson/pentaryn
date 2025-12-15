@@ -11,7 +11,7 @@ status: draft
 
 - Culture: Dwarven (Dulgarum — Oathbound Holds)
 - Type: Capital city
-- Faction: [Dulgarum-Oathholds](../factions/dulgarum-oathholds.md)
+- Faction: [Dulgarum-Oathholds](../_overview.md)
 
 ## Description
 Carved into a mountain spine, Khargun-dur’s oath vaults and breachgates seal ancient tunnels. The citadel’s prosperity masks a bleeding, secret war.

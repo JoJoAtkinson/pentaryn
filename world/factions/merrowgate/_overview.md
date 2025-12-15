@@ -12,7 +12,7 @@
 | **Type** | Merchant Oligarchy / Corrupt Republic |
 | **Size** | City-state with regional trade influence |
 | **Alignment** | True Neutral (with Lawful Evil oligarchy) |
-| **Headquarters** | [Merrowgate](../locations/merrowgate.md) |
+| **Headquarters** | [Merrowgate](locations/merrowgate.md) |
 | **Founded** | The Accord of Ledgers (exact year TBD) |
 
 ## Symbol & Colors
@@ -118,7 +118,7 @@ Tariffs on all transactions, adherence to contract law, guild dues, tolerance of
 
 ## Locations
 
-### [Headquarters — Merrowgate](../locations/merrowgate.md)
+### [Headquarters — Merrowgate](locations/merrowgate.md)
 The city itself; canals, counting houses, and masked diplomacy define the capital.
 
 ### Ledger Court
@@ -204,8 +204,8 @@ The Silent Patron demands a "great reckoning" in the form of a citywide contract
 
 ## Related Links
 
-- [Headquarters — Merrowgate](../../locations/merrowgate.md)
-- [Calderon Imperium](../calderon-imperium.md)
-- [Ardenhaven](../ardenhaven.md)
-- [Garhammar Trade League](../garhammar-trade-league.md)
+- [Headquarters — Merrowgate](locations/merrowgate.md)
+- [Calderon Imperium](../calderon-imperium/_overview.md)
+- [Ardenhaven](../ardenhaven/_overview.md)
+- [Garhammar Trade League](../garhammar-trade-league/_overview.md)
 - [Guilds of Merrowgate](./guilds.md)

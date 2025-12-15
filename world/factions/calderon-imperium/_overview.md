@@ -12,7 +12,7 @@
 | **Type** | Imperial Government / Autocracy |
 | **Size** | Continental power |
 | **Alignment** | Lawful Neutral (authoritarian tendencies) |
-| **Headquarters** | [Ironstead](../locations/ironstead.md) |
+| **Headquarters** | [Ironstead](locations/ironstead.md) |
 | **Founded** | The Consolidation Era (exact year TBD) |
 
 ## Symbol & Colors
@@ -112,7 +112,7 @@ Tax, service (civil or military), adherence to edicts and inspections, permit re
 
 ## Locations
 
-### [Headquarters — Ironstead](../locations/ironstead.md)
+### [Headquarters — Ironstead](locations/ironstead.md)
 The Imperium’s iron seat: straight boulevards, edict basilicas, and parade grounds; open borders under unbending rule.
 
 ### Provincial Capitals
@@ -124,10 +124,10 @@ The core heartlands and annexed marches; recognized borders with the Haven Realm
 ## Allies & Enemies
 
 ### Allies
-- **[Garhammar Trade League](./garhammar-trade-league.md):** Arms, engines, and arbitration when profitable
+- **[Garhammar Trade League](../garhammar-trade-league/_overview.md):** Arms, engines, and arbitration when profitable
 
 ### Rivals
-- **[Ardenhaven](./ardenhaven.md):** Competing vision of lawful order with shared frontier
+- **[Ardenhaven](../ardenhaven/_overview.md):** Competing vision of lawful order with shared frontier
 
 ### Enemies
 - Active insurgencies and outlaw cults; hostile foreign warbands when raids cross borders
@@ -194,6 +194,6 @@ An imperial census reform, an anti-necromancy tribunal showdown, and a brink-of-
 
 ## Related Links
 
-- [Headquarters — Ironstead](../locations/ironstead.md)
-- [Garhammar Trade League](./garhammar-trade-league.md)
-- [Ardenhaven](./ardenhaven.md)
+- [Headquarters — Ironstead](locations/ironstead.md)
+- [Garhammar Trade League](../garhammar-trade-league/_overview.md)
+- [Ardenhaven](../ardenhaven/_overview.md)

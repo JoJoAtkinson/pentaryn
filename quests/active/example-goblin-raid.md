@@ -46,7 +46,7 @@ The goblins attack at night, usually around midnight. There are 6-8 goblins in t
 
 ## Key NPCs
 
-- **[Eldon Thornbrook](../../characters/npcs/eldon-thornbrook.md):** Farmer, worried about his family (human, age 45)
+- **Eldon Thornbrook:** Farmer, worried about his family (human, age 45)
 - **Kretch:** Goblin chieftain, cowardly but cunning (will flee if losing)
 - **Goblin Raiders:** 6-8 goblins, poorly equipped but numerous
 
@@ -185,5 +185,5 @@ Quest introduced by Gareth at the Rusty Dragon. Party discussed options but hasn
 ## Related Links
 
 - [Gareth Ironwood](../../characters/npcs/example-innkeeper.md)
-- [The Rusty Dragon Inn](../../world/locations/example-rusty-dragon-inn.md)
-- [Session 01 Notes](../../sessions/notes/session-01-2024-03-15.md)
+- [The Rusty Dragon Inn](../../world/factions/ardenhaven/locations/example-rusty-dragon-inn.md)
+- Session 01 Notes (TBD)

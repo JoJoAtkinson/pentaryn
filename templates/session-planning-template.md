@@ -17,7 +17,7 @@ What do you want to accomplish this session?
 
 Quick summary of what happened last session and where we left off.
 
-- Location: [Location Name](../world/locations/location-name.md)
+- Location: [Location Name](../../world/factions/region-name/locations/location-name.md)
 - Situation: 
 - Cliffhanger: 
 
@@ -26,7 +26,7 @@ Quick summary of what happened last session and where we left off.
 ### Opening Scene
 How the session will start.
 
-**Location:** [Location](../world/locations/location-name.md)  
+**Location:** [Location](../../world/factions/region-name/locations/location-name.md)  
 **Setup:** 
 
 > Read-aloud opening text
@@ -58,7 +58,7 @@ Where you'd like to end if possible.
 ## Prepared Encounters
 
 ### Combat Encounter 1: [Name]
-**Location:** [Location](../world/locations/location-name.md)  
+**Location:** [Location](../../world/factions/region-name/locations/location-name.md)  
 **Trigger:** What causes this encounter  
 **Enemies:**
 - X × [Creature](../creatures/monsters/creature-name.md)
@@ -109,7 +109,7 @@ Where you'd like to end if possible.
 
 ## Locations Used
 
-### [Location Name](../world/locations/location-name.md)
+### [Location Name](../../world/factions/region-name/locations/location-name.md)
 - **Key Features:** Important details to mention
 - **Atmosphere:** Mood and description
 - **Secrets:** Hidden things

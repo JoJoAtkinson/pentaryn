@@ -11,7 +11,7 @@ status: draft
 
 - Culture: Orc (Garrok Confederation)
 - Type: Capital gathering grounds
-- Faction: [Garrok-Confederation](../factions/garrok-confederation.md)
+- Faction: [Garrok-Confederation](../_overview.md)
 
 ## Description
 Garrok is a sprawling mootground where clans erect longhouses during conclaves. Authority is appointed in crisis and dissolved when the threat passes.

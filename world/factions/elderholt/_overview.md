@@ -19,7 +19,7 @@ status: active
 | **Type** | Hidden coven polity / witch enclave |
 | **Size** | Micro-realm (~500 souls) |
 | **Alignment** | True Neutral (protective, terrifying) |
-| **Headquarters** | [Elderstead](../locations/elderstead.md) |
+| **Headquarters** | [Elderstead](locations/elderstead.md) |
 | **Founded** | The Warding Compact (exact year TBD) |
 
 ## What Elderholt Is (And Isn’t)

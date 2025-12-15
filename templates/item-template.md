@@ -66,7 +66,7 @@ Stories and legends about the item.
 
 How the party obtained this item (or how they could obtain it).
 
-- **Location Found:** [Location](../world/locations/location-name.md)
+- **Location Found:** [Location](../world/factions/region-name/locations/location-name.md)
 - **Quest:** [Quest Name](../quests/active/quest-name.md)
 - **Obtained By:** [Character Name](../characters/player-characters/character-name.md)
 - **Date Obtained:** YYYY-MM-DD
@@ -112,4 +112,4 @@ Hidden properties that may be discovered later.
 
 - [Related Quest](../quests/active/quest-name.md)
 - [Creator](../characters/npcs/creator-name.md)
-- [Location Found](../world/locations/location-name.md)
+- [Location Found](../world/factions/region-name/locations/location-name.md)

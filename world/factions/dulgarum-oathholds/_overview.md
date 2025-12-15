@@ -12,7 +12,7 @@
 | **Type** | Clan Monarchy |
 | **Size** | Regional dwarven power |
 | **Alignment** | Lawful Neutral (with Lawful Good aspirations, Lawful Evil enforcement) |
-| **Headquarters** | [Khargun-dur](../locations/khargun-dur.md) |
+| **Headquarters** | [Khargun-dur](locations/khargun-dur.md) |
 | **Founded** | The Binding of Oaths (ancient era) |
 
 ## Symbol & Colors
@@ -110,7 +110,7 @@ Obey the Binding Oaths, serve in the Deep Watch (rotation basis), report heresy 
 
 ## Locations
 
-### [Headquarters — Khargun-dur](../locations/khargun-dur.md)
+### [Headquarters — Khargun-dur](locations/khargun-dur.md)
 Oathforged mountain citadel; breachgates and vaults hide the secret war.
 
 ### The Sealed Depths
@@ -125,7 +125,7 @@ Mountain holds, mining networks, and fortified passes.
 - Surface realms (unknowingly protected by the Dulgaric defense)
 
 ### Rivals
-- **[Garhammar Trade League](./garhammar-trade-league.md):** Seen as oath-breakers who abandoned duty for profit
+- **[Garhammar Trade League](../garhammar-trade-league/_overview.md):** Seen as oath-breakers who abandoned duty for profit
 
 ### Enemies
 - The entity/entities in the deep; insurgents seeking to expose or end the oaths
@@ -192,5 +192,5 @@ A catastrophic breach forces the truth into the open; a faction seeks to end the
 
 ## Related Links
 
-- [Headquarters — Khargun-dur](../locations/khargun-dur.md)
-- [Garhammar Trade League](./garhammar-trade-league.md)
+- [Headquarters — Khargun-dur](locations/khargun-dur.md)
+- [Garhammar Trade League](../garhammar-trade-league/_overview.md)
