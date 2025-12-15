@@ -9,7 +9,7 @@ status: active
 
 The world measures time from the collapse of Ao Sathanum (AY-oh sah-THAH-noom), the ancient empire whose ruins still hum with dangerous magic. Everything is dated from that cataclysm: **1 A.F.** (After the Fall) marks the first year after the empire's destruction.
 
-The current year is **1,327 A.F.**
+The current year is **4,327 A.F.**
 
 The Pentarch Accords—the treaties that ended the Imperial Wars and reshaped the modern world—were signed in **1,200 A.F.**, a mere 127 years ago.
 
