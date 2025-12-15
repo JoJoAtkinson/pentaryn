@@ -1,6 +1,6 @@
 ---
 created: 2025-12-09
-last-modified: 2025-12-09
+last-modified: 2025-12-15
 tags: ["#world", "#faction", "#elderholt", "#witch", "#npc", "#lore"]
 status: draft
 ---
@@ -15,8 +15,6 @@ To outsiders, this is **the Witch-Tree**, a holy symbol or even a goddess of Eld
 > Silniel is a witch.
 > She is also a tree.
 > And those two truths do not contradict.
-
----
 
 ## Who Silniel Was
 
@@ -33,8 +31,6 @@ to shape the **weather of the world**, if only slightly—enough to blunt the wo
 
 The Voice accepted.
 
----
-
 ## The Transformation
 
 Silniel walked into the center of Elderstead and sat down in the bare, packed earth of the square. Witches gathered, expecting a final rite, a great warding, a storm called or dismissed.
@@ -46,8 +42,6 @@ Witnesses say she did not scream. She simply **rooted**.
 Her legs sank into the soil. Her spine arched and split. Fingers elongated into branches; hair became a canopy of leaves. Skin hardened, cracked, and darkened into bark. Her last elven breath exhaled as a warm wind that rolled over the covens and the watching crowds.
 
 When it was done, Silniel’s body was gone. In its place stood the tree that now dominates the city’s heart.
-
----
 
 ## What Silniel Does Now
 
@@ -71,8 +65,6 @@ On **clear, gentle days**, witches leave offerings at her roots:
 
 They speak softly to her, not as worshippers to a goddess, but as **sisters** to one of their own.
 
----
-
 ## Mistaken Divinity
 
 Outsiders almost always misunderstand.
@@ -83,18 +75,16 @@ Travelers and pilgrims see the Witch-Tree, the offerings, and the way witches bo
 - The covens **worship the tree** as a living idol
 - The tree itself is the source of Elderholt’s magic
 
-The witches correct this only rarely.They will say, if pressed:
+The witches correct this only rarely. They will say, if pressed:
 
 > “She is not our god.
 > She is our **sister** who paid more than any of us.”
 
-Among themselves, the covens are careful never to call Silniel a deity.They call her:
+Among themselves, the covens are careful never to call Silniel a deity. They call her:
 
 - **Silniel-of-Roots**
 - **Our Weather-Sister**
 - **The Last Deep Branch**
-
----
 
 ## Silniel and the Witch Paths
 
@@ -118,7 +108,35 @@ Some Deep-Witches leave offerings not for help, but as a promise:
 > “I know the path I walk.
 > When the Voice takes me, let it be for something that matters as much as you.”
 
----
+## What Mentorship Looks Like
+
+Silniel does not speak, and she does not “teach” the way a living mentor does. Her mentorship is an **attunement**: a student learns to notice her influence the way you notice a change in weather pressure—subtle, undeniable, and easy to ignore until you know what it means.
+
+### Root-Sitting (Learning to “Hear” Her)
+
+Witches who seek Silniel’s mentorship spend long hours meditating at her roots. The first sign of connection is not a voice, but a sensation: a quiet *rightness*, a sudden stillness in the mind, a faint coolness behind the eyes, the impression of mist gathering on the edge of thought.
+
+Once the connection is made, it can be found again anywhere in the world—especially in deep meditation. Silniel becomes a presence at the edge of awareness: distant, steady, and always rooted.
+
+### Guidance Without Words
+
+Silniel’s guidance feels like **confirmation or resistance** inside your own reasoning.
+
+- When your thinking is aligned, thoughts settle and straighten, as if a knot has loosened.
+- When you are lying to yourself, or reaching for a shortcut, the mind catches and turns restless—like wind worrying at a door that won’t open.
+
+It is not prophecy. It is not an answer. It is a *sense* of whether you are building your choice on true foundations.
+
+### Dream-Lessons (Transformation)
+
+For witches leaning toward transformation—Silniel’s specialty—solutions often come through sleep. These dreams are **more likely** (and sharper, more useful) when sleeping by her roots, where her presence is strongest and the air itself feels like a spell half-spoken.
+
+### Small Weather Favors
+
+Just as Silniel can shift weather in small ways across great distances, a mentored witch who has learned to “hear” her influence can sometimes reach for that same thread.
+
+In deep meditation—anywhere in the world—you might ask for a mercy: a light misting to cool a brutal summer day, a softened wind, a thin veil of cloud. Silniel may oblige, but only slightly, and never like a service purchased. It feels less like command and more like being allowed to borrow a cup of cool water.
+
 
 ## Silniel in Play (DM Notes)
 
