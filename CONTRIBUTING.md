@@ -24,7 +24,7 @@ Players are encouraged to help with session notes:
 Feel free to expand on your character's backstory:
 
 - Add NPCs from your backstory to `/characters/npcs/`
-- Create locations from your past in `/world/locations/`
+- Create locations from your past in `/world/factions/<region>/locations/`
 - Link them to your character sheet
 
 ## 🎲 For Co-DMs

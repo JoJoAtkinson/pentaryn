@@ -11,7 +11,7 @@ status: draft
 
 - Culture: Human (Calderon Imperium — The Ashen Empire)
 - Type: Capital city
-- Faction: [Calderon Imperium](../factions/calderon-imperium.md)
+- Faction: [Calderon Imperium](../_overview.md)
 
 ## Description
 A vast metropolis of basalt courts and smokestack manufactories, Ashenfall’s throne district overlooks regimented avenues patrolled by secret police and imperial legions.

@@ -11,8 +11,7 @@ This document provides guidance for AI assistants (like GitHub Copilot) on how t
 │   ├── npcs/                  # Non-player characters
 │   └── templates/             # Character templates
 ├── world/
-│   ├── locations/             # Cities, dungeons, regions
-│   ├── factions/              # Organizations and groups
+│   ├── factions/              # Regions, organizations, and their locations
 │   ├── history/               # Historical events and timeline
 │   └── lore/                  # World lore and mythology
 ├── sessions/
@@ -254,7 +253,7 @@ When generating **world** content (files in the `world/` folder), follow these c
 - Include: Stats, backstory, relationships, goals
 
 ### When Creating a Location
-- Location: `/world/locations/`
+- Location: `/world/factions/<region>/locations/`
 - Template: Use `/templates/location-template.md`
 - Include: Description, NPCs, points of interest, hooks
 
@@ -315,7 +314,7 @@ When generating **world** content (files in the `world/` folder), follow these c
 
 When asked to:
 - **Create a character**: Use character template → Save to appropriate characters folder
-- **Add a location**: Use location template → Save to world/locations
+- **Add a location**: Use location template → Save to `world/factions/<region>/locations/`
 - **Record a session**: Use session template → Save to sessions/notes
 - **Add a quest**: Use quest template → Save to quests/active
 - **Add an item**: Use item template → Save to items folder

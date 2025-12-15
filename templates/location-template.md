@@ -64,7 +64,7 @@ Physical features and landscape.
 ## NPCs & Inhabitants
 
 ### Key NPCs
-- **[NPC Name](../characters/npcs/npc-name.md):** Role and description
+- **[NPC Name](../../../../characters/npcs/npc-name.md):** Role and description
 - 
 
 ### Demographics
@@ -72,7 +72,7 @@ Description of the general population and their occupations.
 
 ## Factions & Organizations
 
-- **[Faction Name](../world/factions/faction-name.md):** Influence and presence in this location
+- **[Faction Name](../../faction-name/_overview.md):** Influence and presence in this location
 - 
 
 ## Economy & Trade
@@ -90,7 +90,7 @@ Description of the general population and their occupations.
 
 ## Quests Available Here
 
-- [Quest Name](../quests/active/quest-name.md)
+- [Quest Name](../../../../quests/active/quest-name.md)
 - 
 
 ## Encounters
@@ -132,6 +132,6 @@ Information only for the DM. Secret rooms, hidden treasures, plot developments.
 
 ## Related Links
 
-- [Parent Region](../world/locations/region-name.md)
+- [Parent Region](../_overview.md)
 - [Nearby Location](location-name.md)
-- [Related Quest](../quests/active/quest-name.md)
+- [Related Quest](../../../../quests/active/quest-name.md)

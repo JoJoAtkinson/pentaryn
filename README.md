@@ -101,9 +101,9 @@ This repository is designed to work seamlessly with AI assistants like GitHub Co
 
 Link between documents using relative paths:
 ```markdown
-[Character Name](../characters/npcs/character-name.md)
-[Location](../world/locations/city-name.md)
-[Quest](../quests/active/quest-title.md)
+[Character Name](characters/npcs/character-name.md)
+[Location](world/factions/region-name/locations/city-name.md)
+[Quest](quests/active/quest-title.md)
 ```
 
 ### Tags for Organization
@@ -135,7 +135,7 @@ Use consistent tags in your documents:
 - **Recording a session**: Use `session-notes-template.md` → save to `sessions/notes/`
 - **Planning a session**: Use `session-planning-template.md` → save to `sessions/planning/`
 - **Adding a character**: Use `character-template.md` → save to `characters/npcs/` or `characters/player-characters/`
-- **Creating a location**: Use `location-template.md` → save to `world/locations/`
+- **Creating a location**: Use `location-template.md` → save to `world/factions/<region>/locations/`
 - **Adding a quest**: Use `quest-template.md` → save to `quests/active/`
 - **Adding an item**: Use `item-template.md` → save to appropriate `items/` subdirectory
 

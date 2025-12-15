@@ -103,5 +103,5 @@ Track character growth, important events, and story developments.
 ## Related Links
 
 - [Related Quest](../quests/active/quest-name.md)
-- [Home Location](../world/locations/location-name.md)
-- [Faction](../world/factions/faction-name.md)
+- [Home Location](../../world/factions/region-name/locations/location-name.md)
+- [Faction](../../world/factions/faction-name/_overview.md)

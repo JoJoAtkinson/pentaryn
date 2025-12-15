@@ -157,6 +157,6 @@ Ways to use this creature in your campaign.
 
 ## Related Links
 
-- [Location](../world/locations/location-name.md) - Where this creature dwells
+- [Location](../world/factions/region-name/locations/location-name.md) - Where this creature dwells
 - [Quest](../quests/active/quest-name.md) - Related quest
 - [Lore Document](../world/lore/creature-lore.md)

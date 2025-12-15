@@ -12,7 +12,7 @@
 | **Type**         | Theocratic Autocracy                        |
 | **Size**         | Regional elven power                        |
 | **Alignment**    | Lawful Neutral (with tyrannical undertones) |
-| **Headquarters** | [Aeralithil](../locations/aeralithil.md)       |
+| **Headquarters** | [Aeralithil](locations/aeralithil.md)       |
 | **Founded**      | The Age of First Song (mythic era)          |
 
 ## Symbol & Colors
@@ -33,7 +33,7 @@ Araethilene settlements are shaped with the mountains rather than carved from th
 
 ### Capital — Aeralithil
 
-From afar, [Aeralithil](../locations/aeralithil.md) is announced by a vast tower rising where forest meets stone. Its lower reaches are partially carved into the mountainside, anchoring it to the land, but its form rejects traditional elven design: the tower is Elaerith’s, and its architecture is treated as godly rather than elven—authority made manifest.
+From afar, [Aeralithil](locations/aeralithil.md) is announced by a vast tower rising where forest meets stone. Its lower reaches are partially carved into the mountainside, anchoring it to the land, but its form rejects traditional elven design: the tower is Elaerith’s, and its architecture is treated as godly rather than elven—authority made manifest.
 
 ### Borders & Contrast
 
@@ -143,7 +143,7 @@ Attend seasonal rites and civic ceremonies, serve when summoned to temple or cou
 
 ## Locations
 
-### [Headquarters — Aeralithil](../locations/aeralithil.md)
+### [Headquarters — Aeralithil](locations/aeralithil.md)
 
 Sacred heart-city beneath the Veiled Crown; living temples and songwoven halls mask hidden rites.
 
@@ -245,6 +245,6 @@ A seer’s prophecy reaches critical mass; an inner-ring faction debates looseni
 
 ## Related Links
 
-- [Headquarters — Aeralithil](../locations/aeralithil.md)
+- [Headquarters — Aeralithil](locations/aeralithil.md)
 - [The Living God — Elaerith](./the-living-god.md)
 - [Merrowgate](../merrowgate/_overview.md)

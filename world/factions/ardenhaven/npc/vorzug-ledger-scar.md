@@ -16,7 +16,7 @@ Vorzug is a Dakmar'nak engineer who learned (the hard way) that in Garhammar, a 
 | **Race** | Orc (Dakmar'nak tribe) |
 | **Role** | Bridgewright / smith’s helper / labor advocate |
 | **Alignment** | Neutral Good |
-| **Location** | [Ardenford](../../../locations/ardenford.md) |
+| **Location** | [Ardenford](../locations/ardenford.md) |
 | **Affiliation** | Rakthok Horde (Dakmar'nak); Ardenhaven (resident-in-good-standing, pending) |
 | **Languages** | Orcish (fluent), Common (serviceable), Dwarven (basic; learned from Bazgar) |
 
@@ -74,7 +74,7 @@ When Bazgar moved on, Vorzug stayed. Not out of fear of the war, but because thi
 ## Related Links
 
 - [Bazgar Dakmar'nak](../../../../characters/player-characters/jeff-bazgar.md)
-- [Ardenford](../../../locations/ardenford.md)
-- [Ardenhaven](../../ardenhaven.md)
-- [Garhammar Trade League](../../garhammar-trade-league.md)
+- [Ardenford](../locations/ardenford.md)
+- [Ardenhaven](../_overview.md)
+- [Garhammar Trade League](../../garhammar-trade-league/_overview.md)
 - [Dakmar'nak Tribe](../../rakthok-horde/tribes/dakmarnak.md)

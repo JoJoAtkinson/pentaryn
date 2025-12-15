@@ -11,7 +11,7 @@ status: draft
 
 - Culture: Human (City of Bargains)
 - Type: Capital city
-- Faction: [Merrowgate](../factions/merrowgate.md)
+- Faction: [Merrowgate](../_overview.md)
 
 ## Description
 Canals and counting houses define Merrowgate. Prosperity hums under the Silent Patron’s unseen influence, guiding contracts and civic choices.

@@ -12,7 +12,7 @@
 | **Type** | Tribal Confederation |
 | **Size** | Regional orc power |
 | **Alignment** | Lawful Neutral (with Chaotic Good honor codes) |
-| **Headquarters** | [Garrok](../locations/garrok.md) |
+| **Headquarters** | [Garrok](locations/garrok.md) |
 | **Founded** | The First Moot (ancient era) |
 
 ## Symbol & Colors
@@ -110,7 +110,7 @@ Uphold clan and confederation honor, attend War Moots when summoned, pay blood-p
 
 ## Locations
 
-### [Headquarters — Garrok](../locations/garrok.md)
+### [Headquarters — Garrok](locations/garrok.md)
 Mootgrounds and longhouse courts; authority appointed in crisis, dissolved in peace.
 
 ### Oathfire Pits
@@ -122,7 +122,7 @@ Borderlands, hill-forts, and clan territories along the Ardenic frontier.
 ## Allies & Enemies
 
 ### Allies
-- **[Ardenhaven](./ardenhaven.md):** Recent mutual defense treaties; limited trade
+- **[Ardenhaven](../ardenhaven/_overview.md):** Recent mutual defense treaties; limited trade
 
 ### Rivals
 - Other orc clans outside the confederation; border disputes with Calderon Imperium scouts
@@ -192,6 +192,6 @@ An Imperium incursion tests the Ardenic alliance; a blood-feud splits the confed
 
 ## Related Links
 
-- [Headquarters — Garrok](../locations/garrok.md)
-- [Ardenhaven](./ardenhaven.md)
-- [Rakthok Horde](./rakthok-horde.md)
+- [Headquarters — Garrok](locations/garrok.md)
+- [Ardenhaven](../ardenhaven/_overview.md)
+- [Rakthok Horde](../rakthok-horde/_overview.md)

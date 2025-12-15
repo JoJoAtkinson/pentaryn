@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 import argparse
+import datetime
 import pathlib
 import re
 import subprocess
 import sys
-import tempfile
 
 
 """
@@ -179,25 +179,30 @@ def _remove_empty_headings(markdown: str) -> str:
 
 def _adjust_output_path(selected: pathlib.Path, pandoc_args: list[str]) -> list[str]:
     """
-    If the selected file name starts with '_', rewrite any provided output
-    path to use the parent folder name instead of the file stem. This keeps
-    VS Code tasks simple while allowing folder-based naming for underscored files.
+    Rewrite/insert the output path so exports land in `.output/` with a timestamp.
+
+    - If the selected file name starts with '_', use the parent folder name as the base.
+    - Otherwise, use the selected file stem.
     """
+    repo_root = pathlib.Path(__file__).resolve().parents[1]
+    out_dir = repo_root / ".output"
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    desired_stem = selected.parent.name if selected.name.startswith("_") else selected.stem
+    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    default_output = out_dir / f"{desired_stem}-{timestamp}.pdf"
+
     out_index = None
     for idx, arg in enumerate(pandoc_args):
         if arg in ("-o", "--output"):
             out_index = idx + 1
             break
 
-    if out_index is None or out_index >= len(pandoc_args):
-        return pandoc_args
-
-    original = pathlib.Path(pandoc_args[out_index]).expanduser()
-    desired_stem = selected.parent.name if selected.name.startswith("_") else selected.stem
-    new_output = original.with_name(f"{desired_stem}{original.suffix or '.pdf'}")
-
     updated = list(pandoc_args)
-    updated[out_index] = str(new_output)
+    if out_index is None or out_index >= len(updated):
+        updated.extend(["-o", str(default_output)])
+    else:
+        updated[out_index] = str(default_output)
     return updated
 
 
@@ -268,11 +273,13 @@ def main(argv: list[str]) -> int:
         print(f"Skipping template file: {selected}", file=sys.stderr)
         return 0
 
+    merge_directory = "_" in selected.name
     merged_files: list[pathlib.Path] = [selected]
-    for candidate in _files_below_selected(selected):
-        if _is_template_path(candidate) or _has_template_marker(candidate):
-            continue
-        merged_files.append(candidate)
+    if merge_directory:
+        for candidate in _files_below_selected(selected):
+            if _is_template_path(candidate) or _has_template_marker(candidate):
+                continue
+            merged_files.append(candidate)
 
     unique_files: list[pathlib.Path] = []
     seen: set[pathlib.Path] = set()
@@ -310,29 +317,27 @@ def main(argv: list[str]) -> int:
         sys.stdout.write(merged_markdown)
         return 0
 
-    with tempfile.NamedTemporaryFile(
-        mode="w",
-        encoding="utf-8",
-        suffix=".md",
-        prefix=".pandoc-merged-",
-        dir=str(selected.parent),
-        delete=False,
-    ) as temp_file:
-        temp_path = pathlib.Path(temp_file.name)
-        temp_file.write(merged_markdown)
+    out_path = None
+    for idx, arg in enumerate(pandoc_args):
+        if arg in ("-o", "--output") and idx + 1 < len(pandoc_args):
+            out_path = pathlib.Path(pandoc_args[idx + 1])
+            break
 
-    try:
-        cmd = ["pandoc", str(temp_path), *pandoc_args]
-        completed = subprocess.run(cmd)
-        return int(completed.returncode)
-    finally:
-        if args.keep_merged_md:
-            print(f"Kept merged markdown: {temp_path}", file=sys.stderr)
-        else:
-            try:
-                temp_path.unlink(missing_ok=True)
-            except OSError:
-                pass
+    should_write_merged_md = merge_directory or args.keep_merged_md
+    if should_write_merged_md and out_path is not None:
+        merged_path = out_path.with_suffix(".md")
+        try:
+            merged_path.write_text(merged_markdown, encoding="utf-8")
+            if args.keep_merged_md:
+                print(f"Kept merged markdown: {merged_path}", file=sys.stderr)
+        except OSError as exc:
+            print(f"Failed to write merged markdown: {exc}", file=sys.stderr)
+
+    # Feed Pandoc via stdin to avoid creating temp files next to the source markdown.
+    cmd = ["pandoc", "-f", "markdown", "-", *pandoc_args]
+    completed = subprocess.run(cmd, input=merged_markdown, text=True)
+
+    return int(completed.returncode)
 
 
 if __name__ == "__main__":

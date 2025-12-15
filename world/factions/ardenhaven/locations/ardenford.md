@@ -11,7 +11,7 @@ status: draft
 
 - Culture: Human (Ardenhaven)
 - Type: Capital city
-- Faction: [Ardenhaven](../factions/ardenhaven.md)
+- Faction: [Ardenhaven](../_overview.md)
 
 ## Description
 Set astride a broad ford and stone bridgeworks, Ardenford houses the crown’s palace and the Council Hall where lords, guilds, and temples convene.

@@ -12,7 +12,7 @@
 | **Type** | Guild/Religious Order/Thieves' Guild/Military/Government/etc. |
 | **Size** | Small/Medium/Large/Regional/Continental |
 | **Alignment** | Typical alignment |
-| **Headquarters** | [Location](../locations/location-name.md) |
+| **Headquarters** | [Location](locations/location-name.md) |
 | **Founded** | Year/Era |
 
 ## Symbol & Colors
@@ -110,10 +110,10 @@ What is expected of members.
 
 ## Locations
 
-### [Headquarters](../locations/headquarters-name.md)
+### [Headquarters](locations/headquarters-name.md)
 Description of main base.
 
-### [Outpost Name](../locations/outpost-name.md)
+### [Outpost Name](locations/outpost-name.md)
 Description of secondary location.
 
 ### Territory
@@ -122,15 +122,15 @@ Regions where the faction has presence or control.
 ## Allies & Enemies
 
 ### Allies
-- **[Faction Name](faction-name.md):** Nature of alliance
+- **[Faction Name](../faction-name/_overview.md):** Nature of alliance
 - 
 
 ### Rivals
-- **[Faction Name](faction-name.md):** Source of rivalry
+- **[Faction Name](../faction-name/_overview.md):** Source of rivalry
 - 
 
 ### Enemies
-- **[Faction Name](faction-name.md):** Reason for enmity
+- **[Faction Name](../faction-name/_overview.md):** Reason for enmity
 - 
 
 ## Reputation

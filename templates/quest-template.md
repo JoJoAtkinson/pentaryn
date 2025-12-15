@@ -12,7 +12,7 @@
 | **Quest Giver**        | [NPC Name](../characters/npcs/npc-name.md)      |
 | **Type**               | Main Quest/Side Quest/Personal Quest         |
 | **Level Range**        | 1-5                                          |
-| **Location(s)**        | [Location](../world/locations/location-name.md) |
+| **Location(s)**        | [Location](../world/factions/region-name/locations/location-name.md) |
 | **Estimated Duration** | 1 session / Multiple sessions                |
 
 ## Quest Summary
@@ -44,11 +44,11 @@ Context and background information. Why is this quest needed? What led to this s
 
 ## Locations
 
-### [Location Name](../world/locations/location-name.md)
+### [Location Name](../world/factions/region-name/locations/location-name.md)
 
 Description of how this location relates to the quest. What happens here?
 
-### [Location Name](../world/locations/location-name.md)
+### [Location Name](../world/factions/region-name/locations/location-name.md)
 
 Description...
 
@@ -172,6 +172,6 @@ Progress made...
 ## Related Links
 
 - [Quest Giver](../characters/npcs/npc-name.md)
-- [Primary Location](../world/locations/location-name.md)
-- [Related Faction](../world/factions/faction-name.md)
+- [Primary Location](../world/factions/region-name/locations/location-name.md)
+- [Related Faction](../world/factions/faction-name/_overview.md)
 - [Session Notes](../sessions/notes/session-XX-YYYY-MM-DD.md)

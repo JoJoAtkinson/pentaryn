@@ -249,7 +249,6 @@ These rules describe **how to build names** for different cultures. When generat
 
 - [Location Template](../templates/location-template.md)
 - [Faction Template](../templates/faction-template.md)
-- [Locations](locations/)
-- [Factions](factions/)
+- [Factions (Regions & Locations)](factions/)
 - [History](history/)
 - [Lore](lore/)

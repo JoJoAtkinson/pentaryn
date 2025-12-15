@@ -41,5 +41,5 @@ The people of Kuldrak have a longstanding rivalry with the Dakmar'nak, a dispute
 
 ## Related Links
 
-- [Rakthok Horde](../rakthok-horde.md)
+- [Rakthok Horde](../_overview.md)
 - [Dakmar'nak Tribe](./dakmarnak.md)

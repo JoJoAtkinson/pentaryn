@@ -36,7 +36,7 @@ Choose what you need first:
 
 2. **Create starting location**
    - Copy `/templates/location-template.md`
-   - Save to `/world/locations/starting-town.md`
+   - Save to `/world/factions/ardenhaven/locations/starting-town.md` (or your starting region)
    - Add NPCs and points of interest
 
 3. **Create key NPCs**
@@ -88,7 +88,7 @@ cp templates/character-template.md characters/npcs/bob-the-merchant.md
 # Edit the file and fill in Bob's details
 
 # Link Bob to his shop
-# In Bob's file: [Bob's Shop](../../world/locations/bobs-shop.md)
+# In Bob's file: [Bob's Shop](../../world/factions/ardenhaven/locations/bobs-shop.md)
 ```
 
 ## 🔗 Linking Documents
@@ -96,8 +96,8 @@ cp templates/character-template.md characters/npcs/bob-the-merchant.md
 Use relative paths to link between files:
 
 ```markdown
-From characters/npcs/ to world/locations/:
-[Location Name](../../world/locations/location-name.md)
+From characters/npcs/ to a region location:
+[Location Name](../../world/factions/region-name/locations/location-name.md)
 
 From quests/active/ to characters/npcs/:
 [NPC Name](../../characters/npcs/npc-name.md)
@@ -199,7 +199,7 @@ The AI will follow your repository's structure and conventions.
 
 Check the example files:
 - [Example NPC](characters/npcs/example-innkeeper.md)
-- [Example Location](world/locations/example-rusty-dragon-inn.md)
+- [Example Location](world/factions/ardenhaven/locations/example-rusty-dragon-inn.md)
 - [Example Quest](quests/active/example-goblin-raid.md)
 
 Each template has comments and examples to guide you!

@@ -19,7 +19,7 @@ Brief overview of what happened this session (2-3 sentences).
 
 ### Part 1: [Title/Scene Name]
 
-**Location:** [Location Name](../world/locations/location-name.md)
+**Location:** [Location Name](../../world/factions/region-name/locations/location-name.md)
 
 What happened in this part of the session. Include:
 - Dialogue and interactions
@@ -52,7 +52,7 @@ Continue the narrative...
 
 ## Locations Visited
 
-- **[Location Name](../world/locations/location-name.md):** What happened there
+- **[Location Name](../../world/factions/region-name/locations/location-name.md):** What happened there
 - 
 
 ## Quests Updated
