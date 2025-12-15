@@ -2,7 +2,7 @@
 
 **Tags:** `#faction` `#organization` `#government` `#city-state`  
 **Created:** 2025-12-07  
-**Last Modified:** 2025-12-07  
+**Last Modified:** 2025-12-15  
 **Status:** Active
 
 ## Overview
@@ -30,7 +30,7 @@ Facilitate neutral trade between all factions; maintain open borders for commerc
 Maximize profit for the ruling merchant princes; expand the Silent Patron's influence through binding contracts; control trade routes and information flow; keep all major powers dependent on Merrowgate's neutrality.
 
 ### Methods
-Contract law enforced by guild magistrates; masked diplomacy and espionage; economic leverage and debt bondage; subtle manipulation of civic policy to benefit the Silent Patron's agenda.
+Contract law enforced by guild magistrates; identity trade via the Maskers; enchanted documentation via Scriveners (the Ink); economic leverage and debt bondage; shadow diplomacy via guild brokers (including the Undercurrent); subtle manipulation of civic policy to benefit the Silent Patron's agenda.
 
 ## History
 
@@ -59,6 +59,14 @@ Ward Captains (city districts)
     ↓
 Licensed Traders & Registered Agents
 ```
+
+## The Guild System (In Practice)
+
+Merrowgate’s power isn’t “the city government” versus “the underworld.” The guilds *are* the machinery of law, commerce, and crime—often in the same office.
+
+- **Identity as currency:** the Maskers’ Compact sells faces, names, and legal personhood.
+- **Contracts as sorcery:** the Ink & Sigil (Scriveners) bind agreements so betrayal becomes immediately costly.
+- **Neutrality as leverage:** the Undercurrent moves goods and messages across enemy borders when official diplomacy cannot.
 
 ### Key Leaders
 
@@ -196,7 +204,8 @@ The Silent Patron demands a "great reckoning" in the form of a citywide contract
 
 ## Related Links
 
-- [Headquarters — Merrowgate](../locations/merrowgate.md)
-- [Calderon Imperium](./calderon-imperium.md)
-- [Ardenhaven](./ardenhaven.md)
-- [Garhammar Trade League](./garhammar-trade-league.md)
+- [Headquarters — Merrowgate](../../locations/merrowgate.md)
+- [Calderon Imperium](../calderon-imperium.md)
+- [Ardenhaven](../ardenhaven.md)
+- [Garhammar Trade League](../garhammar-trade-league.md)
+- [Guilds of Merrowgate](./guilds.md)

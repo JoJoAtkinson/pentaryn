@@ -15,3 +15,76 @@ Marwen is trans. She was born male but an early encounter with the Voice led to 
 Marwen wants to be a ward-witch, wants to focus on the sight and defense, stand against the darkness, but her aptitudes and history make her a more natural deep witch. Whether she sticks with her dreams or finds a reason to pursue darker secrets, we will find out through play.
 
 Her initial quest is to explore a set of ruins in the vicinity of Ardenhaven and begin her exploration of the world. She is naturally overly cautious and not used to being on her own. She walks between the shadows of her mother and sister with the grace of one who wants to belong so badly she's afraid to breathe too loudly.
+
+## Marwen's Relationships with the Elders
+
+Marwen has never met The Wayward Witch, only heard stories.
+
+Ishvar the Prudent was one of the most outspoken about Marwen becoming a threadling, actively opposing her initiation. Ishvar has had no direct interactions with the girl but frequently brings her up in conversations, using her as a political chip against Marrith, a fact that has been called out by both Brannith and Calyrix before.
+
+To make matters worse, Naelith the Unmoored Seer has only brought Marwen’s name up once, in a prophecy that spoke of great ruin and destruction. Since then she has deliberately kept her distance and has not elaborated further.
+
+And Raven the Vital Ascendent initially expressed some interest, but found Marwen too fragile and too trusting. Marwen has learned some necromantic theory penned by Raven and witnessed some general instruction to witch-children, but has had no real interactions with her.
+
+She is not close to any of these four.
+
+### Mentor 1: Brannith the Hag
+
+Brannith is exactly what others expect her to be while Marwen was remade because she declared who she was. Brannith immediately recognized that parallel. She did not ask for permission to teach Marwen, one day she simply began to teach.
+
+At the edge of Elderholt there is an old service door, half-rotted and then forgotten. It does not lead anywhere important, this is why Brannith chose it. One day when being sent into the forest, Marwen encountered the Hag looking exactly like she expected her to look: back-bent, wrapped in layers, smelling faintly of smoke and old wool.
+
+“You’re late,” the Elder declared.
+
+Marwen stammered. “I didn’t know—”
+
+“Good,” Brannith croaked. “That’s the point.” She gestured at the door. “Sit.”
+
+And so, Marwen sat in the threshold, the wood cold beneath her, a piece of jagged door frame digging into her shoulder, one foot inside Elderholt and one foot out.
+
+Brannith did not explain. Time passed. A pair of ward-witches glance and keep walking, a child stared until her mother pulls her away. No one intervened, no one asked.
+
+Marwen shifted and the door creaked. “Still here?”  the Hag asked mildly.
+
+“Yes,” Marwen said.
+
+“Why?”
+
+That made the girl hesitate. She wanted to answer, because you told me to but that felt wrong. Instead, she said, “Because I haven’t decided where to be.”
+
+Brannith smiled, far too many teeth showing. It was not a kind smile, but it approved.
+
+Hours passed. Marwen’s legs began to ache, the cold numbing her fingers and face. She became acutely aware of how visible she was, how easy it would be to leave, and how strange it felt not to.
+
+At some point someone threw a comment over their shoulder. “That one the Reborn?” 
+Marwen flinched.
+
+The door shuddered.
+
+Brannith did not look at the speaker, she looked at Marwen. “Say it,” she murmured.
+
+Marwen swallowed. “Yes.” The word burned less than expected. The door settled.
+
+When dusk came, Brannith spoke again. “Most witches learn to choose sides,” she said. “Ward or deep. Safe or dangerous. Wanted or endured.” She tapped the rotting door frame. “You don’t get that luxury. You were remade by saying who you were. That means the world will always expect you to explain yourself again.”
+
+She crouched, locking eyes with the witch-child. “You won’t.”
+
+Brannith opened the door wider. “Stand,” she said.
+
+And Marwen did.
+
+“Step through,” the elder instructed.
+
+“Which side?” Marwen asked.
+
+Brannith smiled. “Exactly.”
+
+Marwen stepped forward, the door closed behind her.
+
+The Hag turned away. “Lesson one,” she called over her shoulder. “If you wait to be welcomed, you will rot in the doorway.”
+
+She paused. “And girl.”
+
+Marwen looked up.
+
+“Next time, they’ll try harder.” Then, Brannith was gone, leaving behind only the door and the quiet certainty that Marwen will never sit at a threshold the same way again.

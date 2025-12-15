@@ -2,7 +2,7 @@
 
 **Tags:** `#faction` `#organization` `#government` `#orcs`
 **Created:** 2025-12-07
-**Last Modified:** 2025-12-07
+**Last Modified:** 2025-12-15
 **Status:** Active
 
 ## Overview
@@ -11,7 +11,7 @@
 | ---------------------- | ------------------------------------------------------ |
 | **Type**         | Nomadic Horde / Theocratic Warband Alliance            |
 | **Size**         | Regional orc power                                     |
-| **Alignment**    | Chaotic good |
+| **Alignment**    | Chaotic Good |
 | **Headquarters** | [Rakthok](../locations/rakthok.md)                        |
 | **Government**   | Fire Council democracy electing a Warlord               |
 | **Founded**      | The Exodus from the Blighted Lands                     |
@@ -51,6 +51,8 @@ Unified during the Exodus when multiple orc tribes fled blighted lands that beca
 ### Current Situation
 
 Desperate and dangerous. The Horde occupies marginal lands near Calderon Imperium borders, launching raids driven by shamanic prophecy and survival necessity. Spiritually adrift; ancestors demand blood and proof of strength. Internally fractured—warbands unified by the Chosen Warlord's visions but plagued by doubt and debate among shamans.
+
+The raids never stopped. The Imperium keeps the border bleeding to harvest its own **Heart-Marked** dead—elite soldiers whose souls can be rebound after death. The Horde’s brutality is, in part, a countermeasure: denial of intact remains and ritual practices meant to keep necromancers from recovering what they came for.
 
 ## Leadership Structure
 
@@ -138,6 +140,13 @@ Follow the Chosen Warlord's commands, participate in raids, honor ancestors thro
 - **Collective Survival:** No single tribe stands alone for long; alliances under a Warlord are essential doctrine to keep the Horde from being isolated and crushed.
 - **Civic Education:** Youth receive instruction in spirit law, geography, and enemy customs, producing literate warriors who can challenge outside narratives about the East.
 
+## Tribes (Player Canon)
+
+The Horde is an alliance of tribes with distinct virtues and rivalries. Notable examples:
+
+- **Dakmar'nak (DAHK-mar-nak):** engineers and spiritual preservationists; blackened iron craft and civic schooling.
+- **Kuldrak'vor (KULL-drak-vor):** a powerful tribe growing withdrawn, claiming to “interpret the Spirits” more strictly than before.
+
 ## Resources & Assets
 
 ### Financial
@@ -186,7 +195,7 @@ Temporary encampments along Calderon Imperium borders; constantly relocated.
 
 ### Enemies
 
-- **[Calderon Imperium](./calderon-imperium.md):** Primary target of raids; existential threat justifying Imperium's undead research
+- **[Calderon Imperium](../calderon-imperium.md):** Primary target of raids; existential threat justifying Imperium's undead research
 
 ## Reputation
 
@@ -237,6 +246,7 @@ Lean into the irony that a Horde branded monstrous may be the most effective dem
 ## Related Links
 
 - [Headquarters — Rakthok](../locations/rakthok.md)
-- [Calderon Imperium](./calderon-imperium.md)
-- [Garrok Confederation](./garrok-confederation.md)
-- [Merrowgate](./merrowgate.md)
+- [Calderon Imperium](../calderon-imperium.md)
+- [Garrok Confederation](../garrok-confederation.md)
+- [Merrowgate](../merrowgate/_overview.md)
+- [The Raids Never Stopped](./confict.md)

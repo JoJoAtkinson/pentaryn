@@ -2,7 +2,7 @@
 
 **Tags:** `#faction` `#organization` `#government` `#elves`
 **Created:** 2025-12-07
-**Last Modified:** 2025-12-07
+**Last Modified:** 2025-12-15
 **Status:** Active
 
 ## Overview
@@ -46,12 +46,10 @@ Araethilion’s heights are distinct from the dwarven deeps: not the same mounta
 Preserve elven culture, arts, and forests; sustain harmony between the divine ruler and the land; ensure prosperity and agelessness for all Araethilene.
 
 ### True Goals
-
-Maintain the life-siphon rite that sustains the "living god's" immortality and the realm's uncanny prosperity; suppress dissidents who threaten to expose or end the system; preserve power through divine mystique.
+Maintain Elaerith’s absolute rule through the Nine Rings of Proximity and the Silver Thread; keep the faithful dependent on her presence and favor; suppress dissidents who threaten to fracture devotion or expose the human cost of Severance and exile.
 
 ### Methods
-
-Ritual blessings and festivals that mask life-force extraction; high priestly propaganda and songwoven indoctrination; exile or "voluntary pilgrimage" for dissenters; subtle magical surveillance in sacred groves.
+The Lifebloom Ritual (binding the Silver Thread); doctrine and songwoven civic ritual; control of access to the courts (proximity as power); exile, Severance, or “voluntary pilgrimage” for dissenters; quiet surveillance via court networks and favored devotees.
 
 ## History
 
@@ -61,9 +59,11 @@ Founded when the First Araethil united scattered elven clans under a single crow
 
 ### Major Events
 
-- **The Veiling Ceremony (Year TBD):** The ruler first adopted the Veiled Crown and began the life-siphon rite.
+- **The Veiling Ceremony (Year TBD):** Elaerith adopted the Veiled Crown and formalized court life around controlled access, proximity, and appointed service.
 - **The Whisper Schism (Year TBD):** Dissident seers fled to form exile enclaves; officially recorded as "voluntary pilgrimages."
 - **The Lifelume Accord (Year TBD):** A pact with neighboring powers to maintain borders in exchange for elven artistry and healing.
+
+> **Note:** Araethilion’s core structure is proximity to Elaerith, not hereditary nobility. Favor can run in families, but authority is granted by closeness and appointment.
 
 ### Current Situation
 
@@ -72,15 +72,14 @@ Thriving on the surface: abundant harvests, renowned arts, and ageless citizens.
 ## Leadership Structure
 
 ### Hierarchy
-
-The Veiled Crown (living god) sits above the High Priestly Court; regional temple-wardens govern districts; ritual-keepers enforce compliance through festivals and blessings.
+Elaerith rules directly; court life and civic authority organize around the Nine Rings of Proximity (those closer to her hold more privilege and influence). Temple-wardens and field clergy carry doctrine outward, but power always points back inward, toward the courts.
 
 ```
 Veiled Crown (Living God)
     ↓
-High Priestly Court
+Nine Rings of Proximity (Court & Civic Order)
     ↓
-Regional Temple-Wardens
+Temple-Wardens & Choir-Sentinels
     ↓
 Ritual-Keepers & Choir-Sentinels
 ```
@@ -118,8 +117,7 @@ Birth as an elf of Araethilion; participation in seasonal blessings; oaths of se
 Agelessness, abundant harvests, access to elven arts and healing, protection from external threats.
 
 ### Obligations
-
-Attend seasonal festivals (where life-force is siphoned), serve in temple rotations, report heresy or dissent, maintain the "eternal harmony."
+Attend seasonal rites and civic ceremonies, serve when summoned to temple or court duty, report major events to the court’s channels, and accept that closeness to Elaerith (and her attention) is the source of privilege.
 
 ## Resources & Assets
 
@@ -161,15 +159,14 @@ Ancient forests and river valleys; borders maintained by natural wards and Vine-
 
 ### Allies
 
-- **[Merrowgate](./merrowgate.md):** Trade partner for enchanted goods
+- **[Merrowgate](../merrowgate/_overview.md):** Trade partner for enchanted goods
 
 ### Rivals
 
 - **Exile Enclaves:** Dissident seers operating beyond borders
 
 ### Enemies
-
-- Any who seek to expose or end the life-siphon rite; external powers threatening elven autonomy
+- Dissidents who undermine devotion or encourage Severance/exile; external powers threatening elven autonomy
 
 ## Reputation
 
@@ -192,8 +189,7 @@ Enigmatic partners; useful for healing and artistry; suspected of hiding dark se
 Seasonal festivals, artisan exports, healing services, songwoven diplomatic envoys.
 
 ### Secret Operations
-
-Life-force siphoning during festivals; surveillance of dissidents; exile and silencing of seers who discover the truth.
+Surveillance of dissidents; control of access to the courts; exile, Severance, and “voluntary pilgrimage” for those who cannot be trusted close to Elaerith.
 
 ### Current Projects
 
@@ -207,7 +203,7 @@ Expanding Lifelume Groves to sustain growing population; containing prophecies f
 
 ### Related Quests
 
-- Investigate why a village's harvest failed despite blessings; uncover localized siphon failures.
+- Investigate why a village’s blessings failed; uncover a severed cleric, a broken rite, or sabotage aimed at making Elaerith look absent.
 
 ## Player Faction Reputation
 
@@ -223,16 +219,16 @@ Expanding Lifelume Groves to sustain growing population; containing prophecies f
 
 ## Secrets & Mysteries
 
-The "living god" is mortal; the Veiled Crown's immortality comes from siphoning tiny amounts of life-force from every elf during festivals.
+Elaerith’s divinity is real, but her rule is maintained through dependence: the Silver Thread, proximity, and the terror of Severance. The closer you stand, the more you are sustained—and the more it would destroy you to be cast out.
 
-Ending the rite would free the people—or collapse the magical infrastructure sustaining the realm's prosperity.
+Severance is not merely punishment; it is a public theology lesson. Those who survive exile are never spoken of again, as if removing them from memory is part of the rite.
 
-Some fear the rite also binds the ruler to an ancient forest entity.
+Some fear the Veiled Crown also binds Elaerith to an ancient forest entity, and that the Nine Rings are as much a cage for her as they are for her people.
 
 ## Plot Hooks
 
-1. A seer seeks proof of the life-siphon rite and requests protection to reveal it publicly.
-2. A harvest festival hides a high ritual with dire costs; the party must decide whether to intervene.
+1. A seer seeks proof that the Silver Thread can be safely unmade, and needs protection to test it.
+2. A regional rite fails and the faithful panic—was it sabotage, absence, or a warning from Elaerith?
 3. An exile enclave requests aid smuggling forbidden prophecies into Aeralithil.
 
 ## DM Notes
@@ -243,11 +239,12 @@ Araethilion should feel beautiful and uncanny—players are drawn in by artistry
 
 ### Future Plans
 
-A seer's prophecy reaches critical mass; a faction within the High Priestly Court debates ending the rite; the Veiled Crown's health mysteriously falters.
+A seer’s prophecy reaches critical mass; an inner-ring faction debates loosening control of travel and proximity; Elaerith’s attention (or health) mysteriously falters.
 
 ---
 
 ## Related Links
 
 - [Headquarters — Aeralithil](../locations/aeralithil.md)
-- [Merrowgate](./merrowgate.md)
+- [The Living God — Elaerith](./the-living-god.md)
+- [Merrowgate](../merrowgate/_overview.md)
