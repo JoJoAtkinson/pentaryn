@@ -1,0 +1,68 @@
+event_id	pov	series	kind	start_year	start_month	start_day	end_year	end_month	end_day	precision	parent_id	factions	tags	title	summary	inherit_truth_date
+imperial-wars	truth	war	war	4150			4199			range		calderon-imperium;ardenhaven	conflict	Imperial Wars	Decades of total war between Calderon legions and the Haven coalition.	
+imperial-wars	public			4150			4199			range				Imperial Wars	State chronicles insist the wars were righteous crusades for order.	
+pentarch-accords	truth		treaty	4200						point		calderon-imperium;ardenhaven;garrok-confederation	conflict;diplomacy	Pentarch Accords	The treaty web that forced Calderon to stand down and formalized modern borders.	
+pentarch-accords	public			4200										Pentarch Accords	Historians teach this as the first time the great powers agreed to open councils.	
+mysterious-barrier	truth		project	4315						ongoing		elderholt;merrowgate	secrets	Elderholt Veil Project	Elderholt shrouds a sea lane with layered wards to mask Axiom pulses.	
+party-first-contract	truth		event	4326	11	12				point		merrowgate	trade;party	The Silent Ledger Job	The party brokered their first major contract inside Merrowgate.	
+party-first-contract	party			4326	11	12								The Silent Ledger Job	We secured Masker credentials and a line of credit at the Ledger Court.	true
+ironstead-first-marches	truth		campaign	4150						circa	imperial-wars	calderon-imperium;ardenhaven	conflict	The First Marches	Calderon legions press west in disciplined columns, forcing Ardenhaven to militarize its councils.	
+ironstead-first-marches	public			4150						circa				The First Marches	The first great marches that began the long border wars.	
+ash-road-engineer-corps	truth		project	4152			4160			range	imperial-wars	calderon-imperium	infrastructure;military	Ash Road Corps	Imperial engineers build rapid roads, bridges, and signal spines to keep the legions supplied.	
+ash-road-engineer-corps	public			4152			4160			range				Ash Road Corps	An imperial works project that reshaped marches and trade routes.	
+battle-of-hawkridge	truth		battle	4156						point	imperial-wars	calderon-imperium;ardenhaven	conflict;battle	Battle of Hawkridge	A hillside clash that ended with Ardenite militia holding the ridge long enough to evacuate farms.	
+battle-of-hawkridge	public			4156						point				Battle of Hawkridge	A hard-fought battle remembered for smoke, mud, and stubborn defense.	
+siege-of-ardenford	truth		siege	4161			4162			range	imperial-wars	calderon-imperium;ardenhaven	conflict;siege	Siege of Ardenford	A failed encirclement that taught Ardenhaven to fight wars of bridges, ferries, and supply denial.	
+siege-of-ardenford	public			4161			4162			range				Siege of Ardenford	The siege that turned Ardenford into a symbol of endurance.	
+merrowgate-neutrality-proclamation	truth		edict	4162						point	imperial-wars	merrowgate;calderon-imperium;ardenhaven	trade;diplomacy	Neutrality Proclamation	Merrowgate declares the port neutral, offering contracts to both sides while forbidding banners in its streets.	
+merrowgate-neutrality-proclamation	public			4162						point				Neutrality Proclamation	Merrowgate claims neutrality and opens its courts to all signatories.	
+garrok-ardenic-treaty	truth		treaty	4165						point	imperial-wars	garrok-confederation;ardenhaven	conflict;diplomacy	The Ardenic Treaties	Garrok and Ardenhaven agree to mutual defense and limited trade under oathfire law.	
+garrok-ardenic-treaty	public			4165						point				The Ardenic Treaties	A treaty that proved oaths could bind stronger than crowns.	
+battle-of-stonebridge	truth		battle	4168						point	imperial-wars	calderon-imperium;ardenhaven	conflict;battle	Battle of Stonebridge	A decisive river crossing where Ardenhaven lost the bridge but bought time for the western refugees.	
+battle-of-stonebridge	public			4168						point				Battle of Stonebridge	The crossing that split the countryside and sent refugees west.	
+winter-levy-riots	truth		event	4171						point	imperial-wars	ardenhaven	unrest	Winter Levy Riots	Food and conscription quotas spark unrest in outlying districts; the Council narrowly avoids a crack-down.	
+winter-levy-riots	public			4171						point				Winter Levy Riots	A winter of hunger and protests remembered in bitter songs.	
+grain-crisis	truth		crisis	4173			4174			range	imperial-wars	ardenhaven;merrowgate	economy;unrest	The Grain Crisis	Smuggling and price spikes nearly collapse winter stores; reformers use the scandal to break a cartel.	
+grain-crisis	public			4173			4174			range				The Grain Crisis	A famine scare and corruption scandal that hardened the Council against profiteers.	
+garhammar-charter-revolt	truth		event	4182						circa	imperial-wars	dulgarum-oathholds;garhammar-trade-league	dwarves;politics	The Charter Revolt	Dissident dwarves fracture from oathbound rule and begin writing charters that treat capital as votes.	
+garhammar-charter-revolt	public			4182						circa				The Charter Revolt	A dwarven split that birthed a charter-led guild polity.	
+garhammar-arms-accords	truth		treaty	4188			4193			range	imperial-wars	garhammar-trade-league;calderon-imperium;ardenhaven	trade;war	The Arms Accords	Garhammar sells arms and machines across enemy lines, profiting from neutrality without innocence.	
+garhammar-arms-accords	public			4188			4193			range				The Arms Accords	Contracts that ensured no side ever fully ran out of steel.	
+ironstead-stalemate	truth		battle	4199						point	imperial-wars	calderon-imperium;ardenhaven	conflict;battle	The Ironstead Stalemate	A final season of blood and mud ends without victory, forcing the first serious ceasefire talks.	
+ironstead-stalemate	public			4199						point				The Ironstead Stalemate	The battle that proved no one could win cleanly.	
+border-survey-commission	truth		project	4201			4203			range		calderon-imperium;ardenhaven;merrowgate	diplomacy;infrastructure	Border Survey Commission	Surveyors and scribes attempt to turn ruined marches into lines on maps and lines in law.	
+border-survey-commission	public			4201			4203			range				Border Survey Commission	A commission that drew new borders and made old ones real.	
+ardenhaven-council-reform	truth		edict	4203						circa		ardenhaven	politics	Council Reforms	The Council expands committee powers and formalizes petitions to prevent wartime emergency rule from becoming permanent.	
+ardenhaven-council-reform	public			4203						circa				Council Reforms	Reforms that promised citizens a stronger voice after the war.	
+calderon-censorate-reform	truth		edict	4206			4208			range		calderon-imperium	law;bureaucracy	Censorate Reform	The Imperium tightens registries and permits, turning paperwork into a weapon as sharp as any spear.	
+calderon-censorate-reform	public			4206			4208			range				Censorate Reform	A sweeping registry reform that made the Imperium more predictable—and harder to evade.	
+merrowgate-forgery-purge	truth		event	4210						point		merrowgate	crime;trade	The Forgery Purge	Merrowgate consolidates identity trade under a single compact; rival forgers vanish into canals and courts.	
+merrowgate-forgery-purge	public			4210						point				The Forgery Purge	A crackdown that ended an era of amateur counterfeiters.	
+merrowgate-silent-compact-renewal	truth		event	4230						circa		merrowgate	secrets;trade	The Silent Compact Renewed	Contracts quietly shift overnight, aligning policy with an unseen hand that the Council refuses to name.	
+merrowgate-silent-compact-renewal	public			4230						circa				The Harbor Charter Renewal	A routine renewal of harbor charters and trade privileges.	
+calderon-silent-cohort-tests	truth		project	4240			4242			range		calderon-imperium	secrets;military	Silent Cohort Trials	A sealed program tests doctrines and arcana meant to suppress panic and dissent with minimal visible force.	
+calderon-silent-cohort-tests	public			4240			4242			range				Cohort Discipline Trials	A modernization cycle focused on drills, logistics, and signal discipline.	
+rakthok-border-raids	truth		event	4245			4247			range		rakthok-horde;calderon-imperium	conflict;raids	Border Raids of 4245	Shamanic visions drive cycles of raids and reprisals along the marches; neither side admits how close it gets to open war.	
+rakthok-border-raids	public			4245			4247			range				Eastern Border Raids	"Years of raids blamed on ""barbarian unrest"" along the eastern marches."	
+dulgarum-breachgate-reinforcement	truth		project	4251			4254			range		dulgarum-oathholds	dwarves;defense	Breachgate Reinforcements	Dulgarum quietly doubles Deep Watch rotations and seals a collapsed gate with new runic stonework.	
+dulgarum-breachgate-reinforcement	public			4251			4254			range				Deep Gate Reinforcements	Dwarven holds invest heavily in fortifications and sealed tunnels.	
+ardenhaven-refugee-resettlement	truth		project	4255			4259			range		ardenhaven	recovery;politics	Refugee Resettlement Program	Ardenhaven creates land grants and work crews to turn camps into towns—slowly, messily, and at cost.	
+ardenhaven-refugee-resettlement	public			4255			4259			range				Refugee Resettlement Program	A long resettlement effort that rebuilt districts and created new tensions.	
+merrowgate-insurance-compact	truth		treaty	4260						circa		merrowgate;garhammar-trade-league;calderon-imperium;ardenhaven	trade;law	The Insurance Compact	"Merrowgate expands risk-ledgers and ""protection"" into formal insurance contracts that bind caravans to the city."	
+merrowgate-insurance-compact	public			4260						circa				The Insurance Compact	A new insurance market that stabilized trade costs across borders.	
+garrok-war-moot-of-borders	truth		event	4265						point		garrok-confederation	orcs;law	War Moot of Borders	A high moot reaffirms compensation law for cross-border incidents, preventing a feud from becoming a war.	
+garrok-war-moot-of-borders	public			4265						point				War Moot of Borders	A moot that settled border grievances under oathfire law.	
+araethilion-lifelume-accord	truth		treaty	4268						circa		araethilion;merrowgate	diplomacy;magic	The Lifelume Accord	Araethilion trades healing and artistry for carefully controlled access to neutral markets.	
+araethilion-lifelume-accord	public			4268						circa				The Lifelume Accord	A trade-and-healing agreement with the veiled forests.	
+elderholt-warding-compact-renewal	truth		ritual	4270						circa		elderholt	magic;wards	Warding Compact Renewal	Elderholt renews old protections in the forest and along the coast as the Axiom grows loud again.	
+elderholt-warding-compact-renewal	public			4270						circa				Forest Wardings Renewed	Sailors report calmer crossings and fewer lights in the pines.	
+merrowgate-canal-tariff-reform	truth		edict	4281						point		merrowgate	trade;law	Canal Tariff Reform	Merrowgate adjusts tariffs to punish smuggling while offering discounts that quietly favor its chosen routes.	
+merrowgate-canal-tariff-reform	public			4281						point				Canal Tariff Reform	A tariff reform that lowered costs for compliant traders.	
+garhammar-arbitration-push	truth		project	4284			4289			range		garhammar-trade-league;merrowgate	trade;law	Arbitration Push	Garhammar expands contract courts and sells neutrality as a service, undercutting rivals with procedure.	
+garhammar-arbitration-push	public			4284			4289			range				Arbitration Push	Garhammar expands its arbitration halls and contract courts.	
+merrowgate-night-auction-of-names	truth		event	4312						circa		merrowgate	crime;secrets	Night Auction of Names	A masked auction sells identities and debt-forgiveness in a single night, shifting a dozen rivalries by dawn.	
+merrowgate-night-auction-of-names	public			4312						circa				Midnight Charity Auction	A lavish masked fundraiser that drew merchants from every shore.	
+party-arrival-ardenford	truth		event	4327	7	12				point		ardenhaven	party	Arrival in Ardenford	The party reaches Ardenford as the Age of Trade matures into complacency.	
+party-arrival-ardenford	party													Arrival in Ardenford	We arrived in Ardenford and got our first real read on the Council politics.	true
+party-border-signal-mission	truth		event	4327	7	18				point		calderon-imperium;ardenhaven	party	Border Signal Mission	The party is tasked with restoring a sabotaged signal tower before a convoy is caught in the dark.	
+party-border-signal-mission	party													Border Signal Mission	We repaired the tower and intercepted messages that felt too organized to be bandits.	true

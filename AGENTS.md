@@ -38,3 +38,11 @@ This repo is a D&D 5.5e campaign vault. When you create or edit content, follow 
 
 ## If Copilot instructions exist
 - Also follow .github/copilot-instructions.md for the full style guide.
+
+## Timeline data & generator
+- Timeline events live in any file named `_history.tsv` (preferred) or `_timeline.tsv` (legacy). Use the header from `world/history/_history.tsv` (tabs between columns).
+- Every `event_id` must have at least one row with `pov=truth` or `pov=public` (never zero). There can only be one row per `(event_id, pov)` across the entire repo.
+- Shared metadata (series/kind/factions/tags/parent links) belongs on the truth row. Other POV rows may only override title, summary, and dates. Set `inherit_truth_date=true` when that POV should reuse the truth start/end.
+- Use the `series` column for chained ranges (ages, dynasties, etc.). If an entry has no `end_*`, it lasts until the next row with the same series.
+- SVG-first workflow: put a `_history.config.toml` in any `world/**` folder to render one or more SVG views for that folder scope (that folder + its subfolders). Run `./venv/bin/python scripts/build_timeline_svg.py`.
+- Legacy workflow: run `./venv/bin/python scripts/generate_timelines.py` (config at `world/history/timeline.config.toml`) to generate Markdown/Mermaid outputs in `world/history/generated/`.

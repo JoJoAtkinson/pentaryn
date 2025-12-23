@@ -1,6 +1,6 @@
 ---
 created: 2025-12-14
-last-modified: 2025-12-14
+last-modified: 2025-12-15
 tags: ["#npc", "#character", "#orc", "#rakthok-horde", "#dakmarnak", "#ardenhaven", "#garhammar-trade-league"]
 status: draft
 ---
@@ -49,27 +49,19 @@ Under League rules, the mistake was simple: no contract, no claim. The foremen g
 
 ### Why He Went to Ardenford (and Why He Stayed)
 
-Vorzug didn’t follow Bazgar to become an adventurer. He followed because he’d learned a new kind of battlefield existed—one made of charters, petitions, and signatures—and the Dakmar'nak are raised to fight with words as well as steel.
+Vorzug didn’t follow Bazgar to become an adventurer. He followed because he’d learned another kind of battlefield existed—one made of span and load, counterweight and tension—and the Dakmar'nak are raised to fight with craft as well as steel.
 
 He came to Ardenford for three honorable reasons:
 
-1. **To make his freedom un-stealable:** Ardenhaven’s courts and Council petitions give him a record that even Garhammar respects. A filed complaint and a stamped writ make it harder for the League to “lose” him again.
-2. **To turn shame into service:** He won’t go home as “the one who was taken.” He’ll go home as “the one who learned their trap.” Until then, he works openly on the Fordspine Bridgeworks, earning coin by building what war broke.
-3. **To carry a message back with proof:** He intends to send the Fire Council copies of Ardenhaven’s charter language and a sworn account of Garhammar’s labor practices—tools the tribe can use to protect future envoys and captured kin.
-
-When Bazgar moved on, Vorzug stayed. Not out of fear of the war, but because this work needed a steady hand, not a sword-arm.
+1. **To learn what makes great works stand:** Ardenford’s towers and bridges aren’t just pride—they’re lessons in how timber and stone carry their own weight. Vorzug wants that knowledge so the Dakmar'nak can build war engines that don’t tear themselves apart when they sling giant boulders.
+2. **To learn without being handed secrets:** He doesn’t expect Ardenford to teach an outsider siegecraft outright. So he takes honest work on the Fordspine Bridgeworks, watches how masters brace spans and set anchors, and practices until the principles are his.
+3. **To make his freedom un-stealable:** Ardenhaven’s courts and Council petitions give him a record that even Garhammar respects. A filed complaint and a stamped writ make it harder for the League to “lose” him again—and gives him standing if anyone tries.
 
 ## Current Role in Ardenford
 
-- Day laborer on bridge repairs who is rapidly becoming the foreman’s “problem-solver” for ironwork that keeps failing in winter damp.
-- A quiet contact for non-humans and refugees trying to navigate Ardenhaven paperwork without getting fleeced.
-- A reluctant interpreter when Garhammar factors visit town; he doesn’t start fights, but he does not let “fine print” pass unchallenged.
+- Finds work as day laborer on bridge repairs who is rapidly becoming the foreman’s “problem-solver” for ironwork that keeps failing in winter damp.
 
 ## Using Vorzug in Play
-
-- **Quest hook:** Vorzug asks the party to escort a sealed petition to the Council Hall after someone tampers with his paperwork.
-- **Complication:** A Garhammar factor arrives with a “corrected” contract and hired muscle to reclaim “lost property.”
-- **Revelation:** Vorzug kept a charcoal rubbing of a labor roster rune-mark that proves a wider pattern of illegal “processing” of non-dwarf travelers.
 
 ## Related Links
 

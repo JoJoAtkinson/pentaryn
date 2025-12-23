@@ -1,6 +1,6 @@
 ---
 created: 2025-12-09
-last-modified: 2025-12-09
+last-modified: 2025-12-22
 tags: ["#reference", "#worldbuilding", "#calendar", "#important"]
 status: active
 ---
@@ -11,7 +11,7 @@ The world measures time from the collapse of Ao Sathanum (AY-oh sah-THAH-noom), 
 
 The current year is **4,327 A.F.**
 
-The Pentarch Accords—the treaties that ended the Imperial Wars and reshaped the modern world—were signed in **1,200 A.F.**, a mere 127 years ago.
+The Pentarch Accords—the treaties that ended the Imperial Wars and reshaped the modern world—were signed in **4,200 A.F.**, a mere 127 years ago.
 
 ---
 
@@ -69,13 +69,13 @@ Dates are written in this order: **Day | Month | Year A.F.**
 **Format:** `[Day] [Month Name] [Year] A.F.`
 
 **Examples:**
-- `15 Veleara 1327 A.F.` — 15th day of Veleara (spring), year 1,327 after the Fall
+- `15 Veleara 4327 A.F.` — 15th day of Veleara (spring), year 4,327 after the Fall
 - `3 Arethum 1200 A.F.` — 3rd day of Arethum (early winter), the year the Accords were signed
 - `28 Aoruvan 1 A.F.` — 28th day of Aoruvan in the first year after Ao Sathanum fell
 
 **Shorthand (for notes/logs):**
-- `15.V.1327` — Month represented by number (Veleara = 2nd month)
-- Or: `15/2/1327` — Day/Month-number/Year
+- `15.V.4327` — Month represented by number (Veleara = 2nd month)
+- Or: `15/2/4327` — Day/Month-number/Year
 
 ---
 
@@ -88,7 +88,7 @@ Dates are written in this order: **Day | Month | Year A.F.**
 
 ### The Accord Day
 - **Date:** 12 Veleara
-- **Meaning:** Celebrates the signing of the Pentarch Accords in 1,200 A.F., ending the Imperial Wars
+- **Meaning:** Celebrates the signing of the Pentarch Accords in 4,200 A.F., ending the Imperial Wars
 - **Observance:** Public readings of treaties; Ardenhaven reads its Charter; feasts and reconciliation rituals
 
 ### The Long Night
@@ -143,7 +143,7 @@ When giving ages or lifespans, use **years** (the same as "A.F." but without the
 - "Elves can live 700 years or more."
 
 When referencing history, always use the A.F. system:
-- "The Imperial Wars ended in 1,200 A.F."
+- "The Imperial Wars ended in 4,200 A.F."
 - "That ruin dates back to at least 800 B.F."
 
 ---
@@ -156,9 +156,9 @@ When referencing history, always use the A.F. system:
 - **~200–400 A.F.** — The Scattering; surviving cultures migrate and establish early settlements
 - **~600 A.F.** — First dwarven holds delved; elven enclaves founded
 - **~900 A.F.** — Rise of early human kingdoms
-- **1,150–1,199 A.F.** — The Imperial Wars; Calderon Imperium expands aggressively
-- **1,200 A.F.** — The Pentarch Accords signed; modern political order established
-- **1,327 A.F.** — Current year
+- **4,150–4,199 A.F.** — The Imperial Wars; Calderon Imperium expands aggressively
+- **4,200 A.F.** — The Pentarch Accords signed; modern political order established
+- **4,327 A.F.** — Current year
 
 ---
 
@@ -167,7 +167,7 @@ When referencing history, always use the A.F. system:
 ### Humans (Ardenhaven, Calderon, Merrowgate, Elderholt)
 - Follow the A.F. calendar exactly
 - Most common folk know the current year as "the 1,327th year since the Fall" or simply "this year"
-- The Accords (1,200 A.F.) are a more emotionally significant date for most living humans
+- The Accords (4,200 A.F.) are a more emotionally significant date for most living humans
 
 ### Elves (Araethilion)
 - Use the same months and A.F. system for external communication
@@ -190,7 +190,7 @@ When referencing history, always use the A.F. system:
 
 The A.F. system is a constant reminder that the current age is built on the ruins of something far older and more powerful. Every time someone writes a date, they acknowledge:
 - **Ao Sathanum fell** — and its magic still lingers
-- **The modern world is young** — barely over a millennium old
+- **The world is old** — over four millennia since the Fall
 - **The Accords are recent** — only 127 years of fragile peace
 
 The ancient month names, still used despite their lost meanings, are a daily invocation of a power no one fully understands—a quiet ritual the living perform without knowing why.
@@ -199,8 +199,8 @@ The ancient month names, still used despite their lost meanings, are a daily inv
 
 ## Quick Reference for DMs
 
-**Current Year:** 1,327 A.F.  
-**Years Since the Accords:** 127 years (signed in 1,200 A.F.)  
+**Current Year:** 4,327 A.F.  
+**Years Since the Accords:** 127 years (signed in 4,200 A.F.)  
 **Current Month (example):** Ulemar (early autumn, month 7)  
 **Days per month:** 30  
 **Days per week (span):** 6  
@@ -208,7 +208,7 @@ The ancient month names, still used despite their lost meanings, are a daily inv
 **Total days per year:** 360
 
 **Sample Date for Campaign Start:**
-- `12 Ulemar 1327 A.F.` — 12th day of Ulemar (early autumn), 1,327th year after the Fall of Ao Sathanum
+- `12 Ulemar 4327 A.F.` — 12th day of Ulemar (early autumn), 4,327th year after the Fall of Ao Sathanum
 
 ---
 

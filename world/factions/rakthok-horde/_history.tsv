@@ -1,0 +1,38 @@
+event_id	pov	series	kind	start_year	start_month	start_day	end_year	end_month	end_day	precision	parent_id	factions	tags	title	summary	inherit_truth_date
+rakthok-emberpeace-tolls	public		event	4277						point		rakthok-horde;calderon-imperium;garhammar-trade-league	trade;diplomacy	Emberpeace Tolls Announced	With the western war declared ended, Imperial clerks reopen the southern routes under “protection fees” paid at spearpoint.	
+
+rakthok-smoke-oath-skirmish	rakthok		battle	4279	3	5				point		rakthok-horde;calderon-imperium	battle;conflict	Smoke-Oath Skirmish	They came with torches and chain-hooks, calling our dead “material.” We met them in the smoke and drove them back into the reeds before the collectors could take a single body.	
+
+rakthok-gravewright-net-broken	rakthok		raid	4282	8	19				point		rakthok-horde;calderon-imperium	raids;conflict	Gravewright Net Broken	They hid their hooks beneath cloth and invoices. We cut the wagon-ropes, split the cages, and fed the fire until no chain could remember a name.	
+
+rakthok-blackroad-caravan	public			4284						point				The Blackroad Heart-Rite	Merchants vanish on the Blackroad; survivors swear the Rakthok tore out hearts and ate them as proof of savage honor.	
+rakthok-blackroad-caravan	rakthok		event	4284						point		rakthok-horde;calderon-imperium;garhammar-trade-league	trade;crime;conflict	The Blackroad Safekeeping Rite	We cut the heart free so the Gravewrights cannot call the dead back into chains; the Imperium came disguised as traders to harvest bodies and excuses.	
+
+rakthok-ashen-wagon-ambush	rakthok		raid	4287	2	11				point		rakthok-horde;calderon-imperium;garhammar-trade-league	raids;crime;conflict	Ashen Wagon Ambush	The “traders” carried bone-saws and prayer-iron. We hit them where the road narrows, spilled the ash, and sent the charter back soaked in river-mud for all leagues to read.	
+
+rakthok-tallow-market-night	public			4290	6	2				point				Tallow Market Heart-Feast	A “simple trade dispute” turns savage: witnesses claim Rakthok raiders tore out caravaners’ hearts and ate them in a frenzy of barbaric honor.	
+rakthok-tallow-market-night	rakthok		event	4290	6	2				point		rakthok-horde;calderon-imperium;garhammar-trade-league	trade;crime;conflict	Tallow Market Shield-Stand	They came in uniforms and smiles, then started killing by ledger. We cut the hearts free so the Gravewrights could not raise them, and we held the market stones until the last wagon burned.	
+
+rakthok-bloodbridge-hold	rakthok		siege	4293	10	14				point		rakthok-horde;calderon-imperium	siege;battle;conflict	Bloodbridge Hold	They wanted a bridge for their wagons of iron and dead. We held the ford in rain and arrows, then broke the scaffold into the current so no wheel could follow.	
+
+rakthok-saltford-ledgers	public			4296						point				Saltford Ledger Dispute	An Imperial “audit” turns bloody; Calderon pamphlets blame Rakthok raiders for attacking inspectors over a minor tariff quarrel.	
+rakthok-saltford-ledgers	rakthok		event	4296						point		rakthok-horde;calderon-imperium;garhammar-trade-league	trade;conflict	Saltford Ford Stand	They came with wagons of ink and chains, marking our dead for transport; we held the ford until dusk and drove them back, then burned the tally-stakes so no name could be used for binding.	
+
+rakthok-sable-wardens-fall	rakthok		battle	4299	4	28				point		rakthok-horde;calderon-imperium	battle;conflict	Sable Wardens Fall	They called it “clearing animals” and dragged our young away in sacks. We fought them in the dark and took our people back, but we still sing for the wardens who did not return.	
+
+rakthok-iron-harvest-break	public			4305	9	7				point				Harvest Road Heart-Raid	Caravans report Rakthok warbands attacking harvest wagons, ripping out hearts and leaving bodies as warnings—proof the Horde cannot be bargained with.	
+rakthok-iron-harvest-break	rakthok		raid	4305	9	7				point		rakthok-horde;calderon-imperium;garhammar-trade-league	raids;trade;conflict	Iron Harvest Break	They worked our kin until they died, then counted the dead as cargo. We broke the fences, carried the living home, and cut the hearts free so no one could be raised into their machine.	
+
+rakthok-boneyards-wake	public			4311						point				Boneyard Wake Raid	Rumor spreads that Rakthok warbands desecrated an Imperial work-camp and displayed hearts on pikes to terrify “civilized folk.”	
+rakthok-boneyards-wake	rakthok		event	4311						point		rakthok-horde;calderon-imperium	raids;crime;conflict	Boneyard Wake Break	We struck the bone-yard to free the taken and scatter the stacked corpses before the engines could wake them; the Imperium calls it “desecration” because it broke their machine.	
+
+rakthok-sundered-urns-night	rakthok		event	4313	12	21				point		rakthok-horde;calderon-imperium	law;crime;conflict	Sundered Urns Night	They dug where we laid our dead and tried to steal the seals that keep names safe. We broke their hands, broke their urns, and broke the script so no chain could find our ancestors.	
+
+rakthok-white-banner-parley	rakthok		event	4318	1	10				point		rakthok-horde;calderon-imperium	diplomacy;crime;conflict	White Banner Parley	They offered ink and peace, then reached for shackles. We cut our envoy free and carved a path home; since then we do not answer white cloth with bare hands.	
+
+rakthok-red-cairn-countermarch	public			4324						point				Red Cairn Countermarch	Calderon officers report an “unprovoked raid” that pushed the frontier markers north; the Rakthok are blamed for refusing peace and hunting traders for sport.	
+rakthok-red-cairn-countermarch	rakthok		event	4324						point		rakthok-horde;calderon-imperium	raids;conflict	Red Cairn Countermarch	Our cairns were opened and our boundary stones moved; we answered with steel, took the ground back, and left no bodies for their collectors—only ash and broken chains.	
+
+rakthok-river-scar-tribunal	public			4326	5	3				point				River-Scar Tribunal	Garhammar arbiters rule the Rakthok at fault for repeated “trade disputes,” citing heart-rituals as proof the Horde is beyond law.	
+rakthok-river-scar-tribunal	rakthok		event	4326	5	3				point		rakthok-horde;calderon-imperium;garhammar-trade-league	law;trade;conflict	River-Scar Tribunal	They tried us in a hall we could not enter, on words we were not allowed to answer. The ruling became a blade; we held the river-scar and bled the patrols until they learned our land is not a ledger.	
+

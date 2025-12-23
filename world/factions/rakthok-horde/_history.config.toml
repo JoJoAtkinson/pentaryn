@@ -1,0 +1,15 @@
+[[views]]
+id = "rakthok"
+title = "Rakthok Horde (Rakthok View)"
+pov = "rakthok"
+tick_scale = "decade"
+tick_spacing_px = 72
+sort_direction = "desc"
+
+[[views]]
+id = "public"
+title = "Rakthok Border (Public View)"
+pov = "public"
+tick_scale = "decade"
+tick_spacing_px = 72
+sort_direction = "desc"

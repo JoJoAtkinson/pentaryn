@@ -47,6 +47,16 @@ He could never convince his brother, however. To Ghorrak, what mattered was the 
 
 ---
 
+## Player Messages
+
+His parents are rice farmers. His brother broke with family tradition to become a warrior (and proved to be amazing at it) and Baz tried to follow in his footsteps when he came of age.
+I think his parents are... okay with it. But not enthusiastic. It's a dangerous life obviously, and they wish their sons weren't on the front lines of the raids. But they aren't controlling and let the boys follow their own destinies.
+(Baz's story isn't really about his relationship with his parents)
+
+Gah, crap, I have to name them now, don't I. Bazrak is his dad. I'll think on his mom. It doesn't really matter, but still I need to have it in case someone asks, lol
+
+Da'kat is his mom
+
 ## Related Links
 
 - [Ghorrak Dakmar'nak](../../world/factions/rakthok-horde/Chosen-Warlord-Ghorrak)

@@ -1,0 +1,6 @@
+<defs>
+  <symbol id="token_default" viewBox="-12 -12 24 24">
+    <circle cx="0" cy="0" r="9" fill="#7a5b3a" />
+    <circle cx="0" cy="0" r="5" fill="#fbf7ef" opacity="0.9" />
+  </symbol>
+</defs>

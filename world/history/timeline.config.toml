@@ -1,0 +1,48 @@
+[[views]]
+id = "master"
+title = "Master Timeline"
+type = "markdown"
+pov = "truth"
+include_povs = ["public", "party"]
+output = "world/history/generated/master-timeline.md"
+
+[[views]]
+id = "master_graph"
+title = "Master Timeline"
+type = "mermaid"
+pov = "truth"
+include_povs = ["public", "party"]
+output = "world/history/generated/master-graph-timeline.md"
+tsv_output = ".output/timelines/master_graph.tsv"
+
+
+[[views]]
+id = "public"
+title = "Public Record — Recent Centuries"
+type = "markdown"
+pov = "public"
+output = "world/history/generated/public-timeline.md"
+range = { last_years = 200 }
+
+[[views]]
+id = "party"
+title = "Party Chronicle"
+type = "markdown"
+pov = "party"
+output = "world/history/generated/party-timeline.md"
+range = { last_years = 100 }
+
+[[views]]
+id = "age-of-trade"
+title = "Age of Trade Overview"
+type = "markdown"
+pov = "public"
+use_event = "age-trade"
+output = "world/history/generated/age-of-trade.md"
+
+[[views]]
+id = "ages-overview"
+title = "Ages of Pentaryn"
+type = "mermaid"
+series = "age"
+output = "world/history/generated/ages-overview.md"

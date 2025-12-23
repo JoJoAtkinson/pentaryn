@@ -9,6 +9,10 @@ Thumbs.db
 *~
 
 .output/
+.artifacts/
+
+.timeline_data/
+output/
 # Editor Files
 .idea/
 *.swp

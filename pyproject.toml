@@ -4,5 +4,19 @@ version = "0.0.0"
 description = "Local tooling for exporting Markdown notes to PDF."
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+  "ipykernel",
+  "pandas",
+  "pillow>=10.0.0",
+  "pytest",
+  "cairosvg",
+]
 
+# Notes on native text layout (RAQM):
+# - On macOS, install native libs first:
+#     brew install libraqm harfbuzz fribidi freetype
+# - Pillow only enables RAQM if it's built from source *after* those libs are installed.
+# - uv config below forces Pillow to build from source (no wheel), allowing RAQM detection.
+
+[tool.uv.pip]
+no-binary = ["pillow"]
