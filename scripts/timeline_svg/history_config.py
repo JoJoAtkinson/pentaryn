@@ -25,10 +25,14 @@ class HistoryView:
 @dataclass(frozen=True)
 class HistoryConfig:
     views: list[HistoryView]
+    present_year: int | None = None
 
 
 def load_history_config(path: Path) -> HistoryConfig:
     raw = tomllib.loads(path.read_text(encoding="utf-8"))
+    present_year = raw.get("present_year")
+    if present_year is not None:
+        present_year = int(present_year)
     views_raw = raw.get("views") or []
     if not isinstance(views_raw, list) or not views_raw:
         raise SystemExit(f"{path}: no [[views]] entries found")
@@ -79,5 +83,4 @@ def load_history_config(path: Path) -> HistoryConfig:
             )
         )
 
-    return HistoryConfig(views=views)
-
+    return HistoryConfig(views=views, present_year=present_year)

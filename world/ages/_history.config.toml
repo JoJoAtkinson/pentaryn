@@ -5,4 +5,3 @@ series = "age"
 tick_scale = "century"
 tick_spacing_px = 72
 sort_direction = "desc"
-

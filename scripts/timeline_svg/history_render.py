@@ -75,6 +75,16 @@ def render_history_scopes(
     if not configs:
         raise SystemExit(f"No _history.config.toml files found under {world_root}")
 
+    # Allow a single "canonical present year" at the world root that all sub-scopes inherit.
+    # Sub-scopes can still override by setting `present_year = ...` in their own config.
+    default_present_year = None
+    world_root_cfg = world_root / "_history.config.toml"
+    if world_root_cfg.exists():
+        try:
+            default_present_year = load_history_config(world_root_cfg).present_year
+        except Exception:
+            default_present_year = None
+
     for config_path in configs:
         scope_root = config_path.parent
         cfg = load_history_config(config_path)
@@ -85,6 +95,9 @@ def render_history_scopes(
         variants = load_tsv_rows(repo_root, sources=sources)
         events = group_events(variants)
         validate_variants(events)
+        present_year = cfg.present_year if cfg.present_year is not None else default_present_year
+        if present_year is None:
+            present_year = max(event.canonical.start.year for event in events.values() if event.canonical.start)
         series_windows = build_series_windows(events)
         age_windows = series_windows.get("age", {})
 
@@ -107,7 +120,7 @@ def render_history_scopes(
                     view_cfg["range"] = view.range
                 if view.use_event:
                     view_cfg["use_event"] = view.use_event
-                start_cutoff, end_cutoff = derive_range_limits(view_cfg, events, series_windows)
+                start_cutoff, end_cutoff = derive_range_limits(view_cfg, events, series_windows, present_year=present_year)
                 entries = collect_events_for_view(
                     events,
                     view_pov=view.pov or "public",
@@ -117,6 +130,16 @@ def render_history_scopes(
                     end_cutoff=end_cutoff,
                 )
                 export_rows = entries
+                # Ensure the time axis covers the configured range (even if no events land exactly on the edges).
+                if start_cutoff is not None:
+                    view_build = replace(view_build, axis_min_year=min(view_build.axis_min_year or 10**9, start_cutoff // 360))
+                if end_cutoff is not None:
+                    view_build = replace(view_build, axis_max_year=max(view_build.axis_max_year or -10**9, end_cutoff // 360))
+
+            # Optionally extend the axis to a declared "present" year so ticks can show e.g. ⋈50 at 4327 even if the latest
+            # dated event in this scope is earlier.
+            if present_year is not None:
+                view_build = replace(view_build, axis_max_year=max(view_build.axis_max_year or -10**9, present_year))
 
             svg_path = scope_root / _default_svg_name(view)
             tsv_path = _debug_tsv_path(repo_root, scope_root, view.id)

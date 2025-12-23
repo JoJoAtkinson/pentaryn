@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sys
+import logging
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -27,6 +28,8 @@ OUTPUT_PNG = Path(".output/timeline.png")
 FONT_PATHS = FontPaths(
     regular="fonts/alegreya/Alegreya[wght].ttf",
     italic="fonts/alegreya/Alegreya-Italic[wght].ttf",
+    symbols="fonts/noto/NotoSansSymbols2-Regular.ttf",
+    runic="fonts/noto/NotoSansRunic-Regular.ttf",
 )
 
 MEASURE = MeasureConfig(title_size=16, summary_size=12, date_size=12, max_summary_lines=3)
@@ -61,10 +64,12 @@ BUILD = BuildConfig(
     connectors=True,
     enable_png_sanity=False,
     age_glyph_years=True,
+    debug_age_glyphs=True,
 )
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     from scripts.timeline_svg import preflight_pillow_raqm
 
     preflight = preflight_pillow_raqm()

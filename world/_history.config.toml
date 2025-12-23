@@ -1,3 +1,5 @@
+present_year = 4327
+
 [[views]]
 id = "master"
 title = "World History (Truth)"
@@ -14,4 +16,3 @@ pov = "public"
 tick_scale = "decade"
 tick_spacing_px = 72
 sort_direction = "desc"
-

@@ -33,7 +33,7 @@ def _font_face_css(fonts: FontPaths) -> str:
     italic_bytes = Path(fonts.italic).read_bytes()
     regular_b64 = base64.b64encode(regular_bytes).decode("ascii")
     italic_b64 = base64.b64encode(italic_bytes).decode("ascii")
-    return (
+    css = (
         "@font-face {\n"
         "  font-family: 'Alegreya';\n"
         "  src: url('data:font/ttf;base64,"
@@ -51,6 +51,36 @@ def _font_face_css(fonts: FontPaths) -> str:
         "  font-weight: 100 900;\n"
         "}\n"
     )
+
+    if fonts.symbols:
+        sym_bytes = Path(fonts.symbols).read_bytes()
+        sym_b64 = base64.b64encode(sym_bytes).decode("ascii")
+        css += (
+            "@font-face {\n"
+            "  font-family: 'Noto Sans Symbols 2';\n"
+            "  src: url('data:font/ttf;base64,"
+            + sym_b64
+            + "') format('truetype');\n"
+            "  font-style: normal;\n"
+            "  font-weight: 400;\n"
+            "}\n"
+        )
+
+    if fonts.runic:
+        runic_bytes = Path(fonts.runic).read_bytes()
+        runic_b64 = base64.b64encode(runic_bytes).decode("ascii")
+        css += (
+            "@font-face {\n"
+            "  font-family: 'Noto Sans Runic';\n"
+            "  src: url('data:font/ttf;base64,"
+            + runic_b64
+            + "') format('truetype');\n"
+            "  font-style: normal;\n"
+            "  font-weight: 400;\n"
+            "}\n"
+        )
+
+    return css
 
 
 def build_timeline_svg(
@@ -148,6 +178,16 @@ def build_timeline_svg(
 
     min_axis = min(e.axis_day for e in events_sorted)
     max_axis = max(e.axis_day for e in events_sorted)
+    days_per_year = 12 * 30
+    if build.axis_min_year is not None:
+        min_axis_override = int(build.axis_min_year) * days_per_year
+        if min_axis_override < min_axis:
+            min_axis = min_axis_override
+    if build.axis_max_year is not None:
+        # Treat an axis bound as an inclusive year bound.
+        max_axis_override = int(build.axis_max_year) * days_per_year + (days_per_year - 1)
+        if max_axis_override > max_axis:
+            max_axis = max_axis_override
     axis_span = max_axis - min_axis
 
     # If tick_scale is explicit, keep spacing between ticks constant by deriving the px/year scale
@@ -186,8 +226,15 @@ def build_timeline_svg(
     ages = None
     if build.age_glyph_years:
         try:
-            ages = AgeIndex.load_global(repo_root)
-        except Exception:
+            ages = AgeIndex.load_global(repo_root, debug=build.debug_age_glyphs)
+        except Exception as exc:
+            import logging
+            import traceback
+
+            logging.getLogger(__name__).error(
+                "Failed to load ages for glyph formatting; falling back to absolute years.\n%s",
+                "".join(traceback.format_exception(exc)),
+            )
             ages = None
     tick_scale = None
     ticks = []

@@ -494,6 +494,8 @@ def derive_range_limits(
     view_cfg: Dict[str, object],
     events: Dict[str, TimelineEvent],
     series_windows: Dict[str, Dict[str, SeriesWindow]],
+    *,
+    present_year: int | None = None,
 ) -> tuple[Optional[int], Optional[int]]:
     start_cutoff = end_cutoff = None
     range_cfg = view_cfg.get("range") or {}
@@ -515,7 +517,7 @@ def derive_range_limits(
         if "end_year" in range_cfg:
             end_cutoff = DateSpec(int(range_cfg["end_year"]), MONTHS_PER_YEAR, DAYS_PER_MONTH).ordinal()
     if isinstance(range_cfg, dict) and "last_years" in range_cfg:
-        max_year = max(event.canonical.start.year for event in events.values() if event.canonical.start)
+        max_year = present_year if present_year is not None else max(event.canonical.start.year for event in events.values() if event.canonical.start)
         span = int(range_cfg["last_years"])
         start_year = max_year - span + 1
         start_cutoff = DateSpec(start_year, 1, 1).ordinal()
@@ -645,7 +647,7 @@ def generate_from_config(
                 raise SystemExit(
                     f"View '{view_id}' requires either a series (for ranges) or a pov (for event timeline) for mermaid output."
                 )
-            start_cutoff, end_cutoff = derive_range_limits(view_cfg, events, series_windows)
+            start_cutoff, end_cutoff = derive_range_limits(view_cfg, events, series_windows, present_year=present_year)
             entries: List[Dict[str, object]] = []
             for event in events.values():
                 variant = resolve_variant_for_view(event, pov)
@@ -717,7 +719,7 @@ def generate_from_config(
         if not pov:
             raise SystemExit(f"View '{view_id}' must define a pov.")
         include_povs = view_cfg.get("include_povs")
-        start_cutoff, end_cutoff = derive_range_limits(view_cfg, events, series_windows)
+        start_cutoff, end_cutoff = derive_range_limits(view_cfg, events, series_windows, present_year=present_year)
         entries = collect_events_for_view(
             events,
             view_pov=pov,

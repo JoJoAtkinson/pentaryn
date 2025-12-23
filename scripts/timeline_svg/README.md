@@ -20,6 +20,7 @@ SVG-first workflow:
 - Put `_history.tsv` (or legacy `_timeline.tsv`) anywhere under `world/`.
 - Put `_history.config.toml` in any `world/**` folder to render SVG views for that folder scope (that folder + subfolders).
 - Running `scripts/build_timeline_svg.py` discovers all `_history.config.toml` files under `world/` and writes SVGs next to them.
+  - Optional: set `present_year = 4327` (or similar) at the top of `world/_history.config.toml` to extend axis/ticks to “now” for all scopes (sub-scope configs inherit it unless they override).
 
 Debug:
 
@@ -81,3 +82,16 @@ If you want changing the scale to shrink/expand the whole timeline, set a fixed 
 - `tick_spacing_px=72` (controls the vertical pixels between ticks)
 
 With a fixed tick scale, the time axis uses a derived `px_per_year` so each tick step is exactly `tick_spacing_px` apart (before any layout “slack” insertions).
+
+## Age glyph year labels
+
+If `BuildConfig.age_glyph_years=true`, tick labels render as `<age-glyph><years-into-age>` using the global age windows in `world/ages/_history.tsv`.
+
+Example:
+
+- `⋈50` means “50 years into the Age of Trade”
+
+To make sure these glyphs render reliably on any machine (and in GitHub), the build embeds:
+
+- `fonts/noto/NotoSansSymbols2-Regular.ttf` (symbols like `⊚ ⟂ ⋂ ⋈`)
+- `fonts/noto/NotoSansRunic-Regular.ttf` (runes like `ᛒ ᛉ ᛏ`)

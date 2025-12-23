@@ -33,9 +33,11 @@ def format_game_tick(axis_day: int, scale: TickScale, *, ages: Optional["AgeInde
     month = remainder // DAYS_PER_MONTH + 1
     day = remainder % DAYS_PER_MONTH + 1
     if scale == "millennium":
-        return str((year // 1000) * 1000)
+        millennium = (year // 1000) * 1000
+        return ages.format_year(millennium) if ages else str(millennium)
     if scale == "century":
-        return str((year // 100) * 100)
+        century = (year // 100) * 100
+        return ages.format_year(century) if ages else str(century)
     if scale == "decade":
         decade = (year // 10) * 10
         return ages.format_year(decade) if ages else str(decade)

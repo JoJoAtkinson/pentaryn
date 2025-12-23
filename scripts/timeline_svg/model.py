@@ -89,6 +89,8 @@ class RendererConfig:
 class FontPaths:
     regular: str
     italic: str
+    symbols: str | None = None
+    runic: str | None = None
 
 
 @dataclass(frozen=True)
@@ -116,3 +118,6 @@ class BuildConfig:
     connectors: bool
     enable_png_sanity: bool
     age_glyph_years: bool = False
+    debug_age_glyphs: bool = False
+    axis_min_year: int | None = None
+    axis_max_year: int | None = None

@@ -179,3 +179,24 @@ def test_fixed_tick_spacing_math_desc() -> None:
     y0 = axis_map.axis_to_y(step_days(scale))
     y1 = axis_map.axis_to_y(0)
     assert abs((y1 - y0) - tick_spacing_px) < 1e-6
+
+
+def test_age_glyph_year_formatting() -> None:
+    from scripts.timeline_svg.ages import AgeIndex, AgeWindow
+    from scripts.timeline_svg.game_time import format_game_tick
+
+    ages = AgeIndex(
+        ages=(
+            AgeWindow(event_id="age-a", title="⟂ Age A", glyph="⟂", start_year=0, end_year=1499),
+            AgeWindow(event_id="age-b", title="ᛏ Age B", glyph="ᛏ", start_year=3950, end_year=4276),
+            AgeWindow(event_id="age-c", title="⋈ Age C", glyph="⋈", start_year=4277, end_year=None),
+        )
+    )
+
+    axis_4275 = 4275 * 360
+    assert format_game_tick(axis_4275, "year", ages=ages) == "ᛏ325"
+
+    axis_4327 = 4327 * 360
+    assert format_game_tick(axis_4327, "decade", ages=ages) == "⋈43"  # 4320 -> 43 years into Age C
+    assert format_game_tick(axis_4327, "century", ages=ages) == "⋈23"  # 4300 -> 23 years into Age C
+    assert format_game_tick(axis_4275, "century", ages=ages) == "ᛏ250"  # 4200 -> 250 years into Age B

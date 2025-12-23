@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from html import escape
+import re
 from pathlib import Path
 
 from .model import BuildConfig, LayoutResult, RendererConfig
@@ -43,12 +44,14 @@ def render_svg(
         .bg { fill: #fbf7ef; }
         .spine { stroke: #a58b6a; stroke-width: 2; }
         .tick { stroke: #a58b6a; stroke-width: 1; opacity: 0.8; }
-        .tick-label { font-family: 'Alegreya', 'Noto Sans Symbols2', 'Noto Sans Symbols', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #5a4634; }
+        .tick-label { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #5a4634; }
+        .tick-glyph { font-family: 'Noto Sans Runic', 'Noto Sans Symbols 2', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; }
+        .tick-number { font-family: 'Alegreya', serif; }
         .token { }
         .connector { stroke: #7a5b3a; stroke-width: 1.5; stroke-linecap: round; opacity: 0.7; }
         .label { fill: #fffaf0; stroke: #cbb08a; stroke-width: 1; }
-        .title { font-family: 'Alegreya', 'Noto Sans Symbols2', 'Noto Sans Symbols', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 16px; font-weight: 700; fill: #2b1f14; }
-        .summary { font-family: 'Alegreya', 'Noto Sans Symbols2', 'Noto Sans Symbols', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #3a2b1f; }
+        .title { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 16px; font-weight: 700; fill: #2b1f14; }
+        .summary { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #3a2b1f; }
         """
     )
     parts.append("]]></style>")
@@ -59,10 +62,18 @@ def render_svg(
 
     # ticks
     parts.append('<g id="ticks">')
+    tick_age_glyphs = {"⊚", "⟂", "ᛒ", "ᛉ", "⋂", "ᛏ", "⋈"}
     for tick in layout.ticks:
         y = tick.y
         parts.append(f'<line class="tick" x1="{spine_x - 6}" y1="{y:.1f}" x2="{spine_x + 6}" y2="{y:.1f}"/>')
-        parts.append(f'<text class="tick-label" x="{spine_x + 10}" y="{y + 4:.1f}">{tick.label}</text>')
+        label = tick.label
+        if label and label[0] in tick_age_glyphs and label[1:].isdigit():
+            glyph, num = label[0], label[1:]
+            parts.append(f'<text class="tick-label" x="{spine_x + 10}" y="{y + 4:.1f}">')
+            parts.append(f'<tspan class="tick-glyph">{escape(glyph)}</tspan><tspan class="tick-number">{escape(num)}</tspan>')
+            parts.append("</text>")
+        else:
+            parts.append(f'<text class="tick-label" x="{spine_x + 10}" y="{y + 4:.1f}">{tick.label}</text>')
     parts.append("</g>")
 
     parts.append('<g id="connectors">')
