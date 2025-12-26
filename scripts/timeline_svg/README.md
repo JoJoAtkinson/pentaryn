@@ -62,12 +62,13 @@ Rendering uses `<use href="#token_default" .../>` for now. Future work can map `
 
 When adding new token shapes/icons, this project pulls icon inspiration from `https://game-icons.net/`.
 
-## Tag icons (canonical tag vocabulary)
+## Tag icons
 
-History events can be tagged (TSV `tags` column). This repo treats tags as a controlled vocabulary:
+History events can be tagged (TSV `tags` column).
 
-- Canonical tag icons live in `scripts/timeline_svg/assets/tags/`.
-- When creating/updating `_history.tsv`, only use tags that have a matching icon filename in that folder (e.g., tag `city-state` → `scripts/timeline_svg/assets/tags/city-state.svg`).
+- Tag icons live in `scripts/timeline_svg/assets/tags/` (optional; missing icons render as an “unknown” marker).
+- Tag appearance (foreground/background/border) is configured in `scripts/timeline_svg/assets/tags/tags.toml`.
+- Tags may also include **faction slugs** (e.g. `rakthok-horde`); when a matching `world/factions/<slug>/icon.svg` exists, the renderer draws that faction icon (larger than normal tag icons).
 
 ## Tick scale
 
@@ -85,6 +86,24 @@ With a fixed tick scale, the time axis uses a derived `px_per_year` so each tick
 
 ## Age glyph year labels
 
+## Faction icons
+
+If a faction slug appears in an event’s `tags`, and that faction has `world/factions/<faction-slug>/icon.svg`, the SVG renderer draws that faction icon in the event’s top-right tag strip.
+
+### Optional styling (`pov_style`)
+
+If a faction folder has an `_history.config.toml`, you can optionally define a `pov_style` table to control the badge colors:
+
+```toml
+[pov_style]
+palette = ["#0b0b0c", "#b87333", "#2aa7a1"]
+foreground = "#fbf7ef"
+background = "#0b0b0c"
+border = "#2aa7a1"
+```
+
+If `pov_style` is absent, the renderer derives a palette from the faction’s `_overview.md` `**Colors:** ...` line as a best-effort fallback.
+
 If `BuildConfig.age_glyph_years=true`, tick labels render as `<age-glyph><years-into-age>` using the global age windows in `world/ages/_history.tsv`.
 
 Example:
@@ -93,5 +112,5 @@ Example:
 
 To make sure these glyphs render reliably on any machine (and in GitHub), the build embeds:
 
-- `fonts/noto/NotoSansSymbols2-Regular.ttf` (symbols like `⊚ ⟂ ⋂ ⋈`)
-- `fonts/noto/NotoSansRunic-Regular.ttf` (runes like `ᛒ ᛉ ᛏ`)
+- `.fonts/noto/NotoSansSymbols2-Regular.ttf` (symbols like `⊚ ⟂ ⋂ ⋈`)
+- `.fonts/noto/NotoSansRunic-Regular.ttf` (runes like `ᛒ ᛉ ᛏ`)

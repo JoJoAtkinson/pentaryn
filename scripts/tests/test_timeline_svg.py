@@ -32,9 +32,12 @@ def _dummy_label() -> LabelLayout:
 def _event(event_id: str, axis_day: int) -> Event:
     return Event(
         event_id=event_id,
+        pov="",
         kind="event",
         title=event_id,
         summary="",
+        factions=[],
+        tags=[],
         start=parse_game_date("0", "", ""),
         axis_day=axis_day,
         lane="left",

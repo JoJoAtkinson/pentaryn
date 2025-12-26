@@ -88,3 +88,17 @@ She paused. “And girl.”
 Marwen looked up.
 
 “Next time, they’ll try harder.” Then, Brannith was gone, leaving behind only the door and the quiet certainty that Marwen will never sit at a threshold the same way again.
+
+
+
+# Plot Hook Summary: 
+
+1. The Wayward Witch: A need drives Marwen to seek out The Wayward Witch, the Elder who never remains in one place for long. Only her voice carries enough weight beyond Elderholt to shape truth into consensus or turn the coven towards action.
+2. Clair: Clair Ashcroft, Marwen’s older sister, walks the world with her sight fully awakened. Her visions come easily and her certainty cuts deeply. Will Clair serve as a guide, a warning, or a mirror to Marwen’s journey?
+3. Visiting Ancient Ruins: The ruins near Ardenhaven. Marwen’s first encounter with ruins that are not the Axiom. What will she find and uncover?
+4. First Bargain or First Wards: The temptation is always there to make that first bargain. Will Marwen stay the course and take on wards by level 6 or will she instead travel the path of the Deep Witch? What will the fate of the Reborn be?
+Earning her identity as a witch: Also by level 6 Marwen has to earn her place as a witch of Elderholt. Others will start to see her as a representative, an omen, or a savior.
+5. Khorin Thar’kar: Marwen is owed a favor. What has become of Khorin all these years later should her path lead her to Dulgarum.
+7. Meeting a Corrupted Witch: Marrith’s crow travels with Marwen. If she encounters a witch who has lost herself will she try to confront them? Seek Marrith’s help? Or empathize with the creature and try to save her? Is such a thing even possible?
+8. Return to Elderholt: When Marwen returns to Elderholt, it will not be as a votary but as a true sister of the coven. The elders will judge what she has become. What will Marwen’s new companions make of her island home and the cast of elders?
+9. Silniel’s Dream: What did Silniel’s dream mean? What was the purpose of climbing to the top of her branches? What does she seek to teach Marwen?

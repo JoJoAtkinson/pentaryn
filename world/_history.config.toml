@@ -3,8 +3,7 @@ present_year = 4327
 [[views]]
 id = "master"
 title = "World History (Truth)"
-pov = "truth"
-include_povs = ["public", "party"]
+tags_none = ["private"]
 tick_scale = "decade"
 tick_spacing_px = 72
 sort_direction = "desc"
@@ -12,7 +11,7 @@ sort_direction = "desc"
 [[views]]
 id = "public"
 title = "World History (Public)"
-pov = "public"
+tags_all = ["public"]
 tick_scale = "decade"
 tick_spacing_px = 72
 sort_direction = "desc"

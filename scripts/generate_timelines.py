@@ -41,3 +41,4 @@ if __name__ == "__main__":
     except Exception as exc:  # pragma: no cover
         print(exc, file=sys.stderr)
         sys.exit(1)
+

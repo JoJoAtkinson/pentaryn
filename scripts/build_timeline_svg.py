@@ -25,11 +25,13 @@ DEFS_FRAGMENT = Path("scripts/timeline_svg/templates/defs_symbols.svgfrag")
 OUTPUT_SVG = Path(".output/timeline.svg")
 OUTPUT_PNG = Path(".output/timeline.png")
 
+FONT_ROOT = Path(".fonts") if Path(".fonts").exists() else Path("fonts")
+
 FONT_PATHS = FontPaths(
-    regular="fonts/alegreya/Alegreya[wght].ttf",
-    italic="fonts/alegreya/Alegreya-Italic[wght].ttf",
-    symbols="fonts/noto/NotoSansSymbols2-Regular.ttf",
-    runic="fonts/noto/NotoSansRunic-Regular.ttf",
+    regular=str(FONT_ROOT / "alegreya" / "Alegreya[wght].ttf"),
+    italic=str(FONT_ROOT / "alegreya" / "Alegreya-Italic[wght].ttf"),
+    symbols=str(FONT_ROOT / "noto" / "NotoSansSymbols2-Regular.ttf"),
+    runic=str(FONT_ROOT / "noto" / "NotoSansRunic-Regular.ttf"),
 )
 
 MEASURE = MeasureConfig(title_size=16, summary_size=12, date_size=12, max_summary_lines=3)

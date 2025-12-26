@@ -8,6 +8,7 @@ Shared timeline generator used by:
 from __future__ import annotations
 
 import csv
+import re
 import textwrap
 from dataclasses import dataclass
 from pathlib import Path
@@ -73,6 +74,11 @@ def parse_bool(value: str) -> bool:
 
 def normalize_field(value: Optional[str]) -> str:
     return (value or "").strip()
+
+
+def split_tokens(value: str) -> list[str]:
+    # Accept either `a;b;c` (canonical) or whitespace-separated `a b c`.
+    return [t for t in re.split(r"[;\s]+", (value or "").strip()) if t]
 
 
 @dataclass
@@ -533,8 +539,10 @@ def collect_events_for_view(
     age_windows: Dict[str, SeriesWindow],
     start_cutoff: Optional[int],
     end_cutoff: Optional[int],
+    tags_any: Optional[List[str]] = None,
 ) -> List[Dict[str, object]]:
     entries: List[Dict[str, object]] = []
+    tags_any = [t for t in (tags_any or []) if str(t).strip()]
     for event in events.values():
         variant = resolve_variant_for_view(event, view_pov)
         if variant is None:
@@ -545,9 +553,15 @@ def collect_events_for_view(
         start, end = dates
         if not date_in_range(start, end, start_cutoff, end_cutoff):
             continue
+        if tags_any:
+            tags = split_tokens(event.canonical.data.get("tags") or "")
+            if not any(t in tags for t in tags_any):
+                continue
         summary = variant.summary or event.canonical.summary
+        tags = split_tokens(event.canonical.data.get("tags") or "")
         entry: Dict[str, object] = {
             "event_id": event.event_id,
+            "pov": variant.pov,
             "title": variant.title or event.canonical.title or event.event_id,
             "summary": summary,
             "kind": event.canonical.data.get("kind") or "event",
@@ -556,10 +570,10 @@ def collect_events_for_view(
             "end": format_mermaid_date(end) if end else "",
             "factions": [
                 faction.strip()
-                for faction in (event.canonical.data.get("factions") or "").split(";")
-                if faction.strip()
+                for faction in split_tokens(event.canonical.data.get("factions") or "")
+                if faction
             ],
-            "tags": [tag.strip() for tag in (event.canonical.data.get("tags") or "").split(";") if tag.strip()],
+            "tags": tags,
             "series_label": event.canonical.data.get("series") or "",
             "perceptions": {},
             "age": compute_age_label(event.canonical.start, age_windows) if event.canonical.start else None,
@@ -647,6 +661,10 @@ def generate_from_config(
                 raise SystemExit(
                     f"View '{view_id}' requires either a series (for ranges) or a pov (for event timeline) for mermaid output."
                 )
+            tags_any = view_cfg.get("tags_any") or []
+            if not isinstance(tags_any, list):
+                raise SystemExit(f"View '{view_id}' tags_any must be a list when provided.")
+            tags_any = [str(t).strip() for t in tags_any if str(t).strip()]
             start_cutoff, end_cutoff = derive_range_limits(view_cfg, events, series_windows, present_year=present_year)
             entries: List[Dict[str, object]] = []
             for event in events.values():
@@ -659,6 +677,10 @@ def generate_from_config(
                 start, end = dates
                 if not date_in_range(start, end, start_cutoff, end_cutoff):
                     continue
+                if tags_any:
+                    tags = split_tokens(event.canonical.data.get("tags") or "")
+                    if not any(t in tags for t in tags_any):
+                        continue
                 entries.append(
                     {
                         "event_id": event.event_id,
@@ -670,10 +692,10 @@ def generate_from_config(
                         "age": compute_age_label(event.canonical.start, age_windows) if event.canonical.start else "",
                         "factions": [
                             faction.strip()
-                            for faction in (event.canonical.data.get("factions") or "").split(";")
-                            if faction.strip()
+                            for faction in split_tokens(event.canonical.data.get("factions") or "")
+                            if faction
                         ],
-                        "tags": [tag.strip() for tag in (event.canonical.data.get("tags") or "").split(";") if tag.strip()],
+                        "tags": split_tokens(event.canonical.data.get("tags") or ""),
                         "sort_key": start.ordinal() if start else 0,
                     }
                 )
@@ -727,6 +749,7 @@ def generate_from_config(
             age_windows=age_windows,
             start_cutoff=start_cutoff,
             end_cutoff=end_cutoff,
+            tags_any=view_cfg.get("tags_any"),  # type: ignore[arg-type]
         )
         if "markdown" in types:
             build_markdown_view(

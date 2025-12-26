@@ -101,4 +101,3 @@ tsv_output = ".output/timelines/v.tsv"
     assert export_path.exists()
     first_line = export_path.read_text(encoding="utf-8").splitlines()[0]
     assert first_line.startswith("event_id\tstart\tend\t")
-

@@ -20,12 +20,15 @@ class ParsedDate:
 @dataclass(frozen=True)
 class EventRow:
     event_id: str
+    pov: str
     kind: str
     start_year: str
     start_month: str
     start_day: str
     title: str
     summary: str
+    factions: list[str]
+    tags: list[str]
 
 
 @dataclass(frozen=True)
@@ -42,9 +45,12 @@ class LabelLayout:
 @dataclass
 class Event:
     event_id: str
+    pov: str
     kind: str
     title: str
     summary: str
+    factions: list[str]
+    tags: list[str]
     start: ParsedDate
     axis_day: int
     lane: Lane
@@ -53,6 +59,7 @@ class Event:
     box_w: float
     box_h: float
     label: LabelLayout
+    badge_pov: str | None = None
 
 
 @dataclass(frozen=True)
@@ -83,6 +90,9 @@ class RendererConfig:
     label_padding_x: int
     label_padding_y: int
     lane_gap_y: int
+    tag_token_size: int = 25
+    tag_token_gap: int = 4
+    tag_token_overlap: int = 6
 
 
 @dataclass(frozen=True)

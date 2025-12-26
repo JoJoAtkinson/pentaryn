@@ -17,23 +17,25 @@ This repo uses TSV-driven history that renders to SVG timelines.
 - Use faction real-world inspiration notes to keep behavior/culture consistent:
   - `../../world/faction-insperation-sorces.md`
 
-## POV model (truth/public/party/etc.)
+## History TSV schema (simplified)
 
-History TSV rows are keyed by `(event_id, pov)` and must be unique across all source TSVs within a scope.
+History entries are **row-based**: each TSV row renders independently (duplicate `event_id` is allowed).
 
-- `pov=truth` and `pov=public` are **not required**. An event may exist only as a faction POV (example: a hidden event with only `pov=rakthok`).
-- Canonical record selection:
-  - If `truth` exists, it becomes canonical.
-  - Else the generator picks a canonical row deterministically (prefers the most “complete” row; non-`public` wins ties).
-- POV rows are intentionally limited: non-canonical POV rows may only override **date fields** and **title/summary** (everything else must match the canonical row or be blank).
-- `inherit_truth_date=true` on a non-canonical row means: in non-public views, the event uses the canonical (truth) dates, but keeps the POV’s description. Public views never inherit truth dates.
-- Public visibility rule: in `pov=public` views, an event is **hidden** unless the event has a `public` row with a `start_*` date.
+- `_history.tsv` columns:
+  - `event_id`
+  - `tags` (semicolon or whitespace separated)
+  - `date` (`YYYY`, `YYYY/MM`, or `YYYY/MM/DD`)
+  - `duration` (integer days; use `0` for point events)
+  - `title`
+  - `summary`
+- Public/private visibility is handled via tags:
+  - tag an entry `public` to include it in public views
+  - tag an entry `private` to exclude it (by default) via `tags_none = ["private"]` in `_history.config.toml`
 
-## Tag rules (hard)
+## Tags + icons
 
-- Timeline event `tags` are **restricted**: you may only use tags that have an icon file in `scripts/timeline_svg/assets/tags/`.
-- The tag string must match the icon filename (without `.svg`) exactly. Example: tag `city-state` → `scripts/timeline_svg/assets/tags/city-state.svg`.
-- If you need a new tag, add an icon for it first (or ask the human to choose one), then use it in `_history.tsv`.
+- Tags may include **faction slugs** (e.g. `rakthok-horde`) to render the faction icon.
+- Other tags may have icons under `scripts/timeline_svg/assets/tags/`; missing icons render as the “unknown” marker.
 
 ## File locations
 

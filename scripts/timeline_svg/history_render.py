@@ -1,22 +1,18 @@
 from __future__ import annotations
 
+import csv
+import re
 from dataclasses import replace
 from pathlib import Path
 from typing import Sequence
 
 from .history_config import HistoryView, load_history_config
+from .model import ParsedDate
 from .model import BuildConfig, FontPaths, MeasureConfig, RendererConfig
 from .pipeline import build_timeline_svg
-from .timeline_generate import (
-    build_series_windows,
-    collect_events_for_view,
-    derive_range_limits,
-    format_mermaid_date,
-    group_events,
-    load_tsv_rows,
-    validate_variants,
-    write_tsv_export,
-)
+from .pov_icons import PovCatalog
+from .time_parse import parse_game_date
+from .game_time import date_to_axis_days
 
 
 def discover_history_configs(world_root: Path) -> list[Path]:
@@ -37,27 +33,146 @@ def _debug_tsv_path(repo_root: Path, scope_root: Path, view_id: str) -> Path:
     return repo_root / ".output" / "history" / rel / f"{view_id}.tsv"
 
 
-def _export_rows_for_series(*, series: str, series_windows: dict[str, dict[str, object]]) -> list[dict[str, object]]:
-    windows: list[object] = list((series_windows.get(series) or {}).values())
-    windows.sort(key=lambda w: w.start.ordinal())  # type: ignore[attr-defined]
-    rows: list[dict[str, object]] = []
-    for win in windows:
-        start = win.start  # type: ignore[attr-defined]
-        end = win.end  # type: ignore[attr-defined]
-        rows.append(
-            {
-                "event_id": win.event_id,  # type: ignore[attr-defined]
-                "start": format_mermaid_date(start),
-                "end": format_mermaid_date(end) if end else "",
-                "title": win.title,  # type: ignore[attr-defined]
-                "summary": "",
-                "kind": series,
-                "age": "",
-                "factions": [],
-                "tags": [],
-            }
-        )
-    return rows
+_DATE_RE = re.compile(r"^(?P<year>\d{1,6})(?:/(?P<month>\d{1,2})(?:/(?P<day>\d{1,2}))?)?$")
+
+
+def _split_tokens(value: str) -> list[str]:
+    return [t for t in re.split(r"[;\s]+", (value or "").strip()) if t]
+
+
+def _normalize_date(date_raw: str) -> tuple[str, ParsedDate]:
+    raw = (date_raw or "").strip()
+    if not raw:
+        raise ValueError("date is required")
+    m = _DATE_RE.match(raw)
+    if not m:
+        raise ValueError(f"Invalid date {date_raw!r} (expected YYYY, YYYY/MM, or YYYY/MM/DD)")
+    year = int(m.group("year"))
+    month_raw = m.group("month")
+    day_raw = m.group("day")
+    if not month_raw:
+        norm = str(year)
+    else:
+        month = int(month_raw)
+        if not day_raw:
+            norm = f"{year}/{month:02d}"
+        else:
+            day = int(day_raw)
+            norm = f"{year}/{month:02d}/{day:02d}"
+    parsed = parse_game_date(norm, "", "")
+    return norm, parsed
+
+
+def _row_axis_day(date: ParsedDate) -> int:
+    return date_to_axis_days(date)
+
+
+def _read_history_rows(path: Path) -> list[dict[str, object]]:
+    """
+    New minimal schema:
+      event_id, tags, date, duration, title, summary
+    """
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle, delimiter="\t")
+        if not reader.fieldnames:
+            raise SystemExit(f"{path}: missing header row")
+        fieldnames = set(reader.fieldnames)
+        required = {"event_id", "date", "title"}
+        if not required.issubset(fieldnames):
+            raise SystemExit(f"{path}: missing required columns: {', '.join(sorted(required - fieldnames))}")
+        if "tags" not in fieldnames:
+            raise SystemExit(f"{path}: missing required column: tags")
+        if "duration" not in fieldnames:
+            raise SystemExit(f"{path}: missing required column: duration")
+
+        rows: list[dict[str, object]] = []
+        for idx, row in enumerate(reader, start=2):
+            if None in row:
+                raise SystemExit(
+                    f"{path}:{idx} has too many columns (tabbing misaligned). Remove extra tab(s) so each row matches the header."
+                )
+            event_id = (row.get("event_id") or "").strip()
+            if not event_id:
+                raise SystemExit(f"{path}:{idx} event_id is required")
+            title = (row.get("title") or "").strip()
+            if not title:
+                raise SystemExit(f"{path}:{idx} title is required")
+            date_norm, parsed_date = _normalize_date(row.get("date") or "")
+            duration_raw = (row.get("duration") or "").strip()
+            if duration_raw == "":
+                duration = 0
+            else:
+                try:
+                    duration = int(duration_raw)
+                except ValueError as exc:
+                    raise SystemExit(f"{path}:{idx} duration must be an integer number of days, got: {duration_raw!r}") from exc
+                if duration < 0:
+                    raise SystemExit(f"{path}:{idx} duration must be >= 0, got: {duration_raw!r}")
+            tags = _split_tokens(row.get("tags") or "")
+            summary = (row.get("summary") or "").strip()
+            rows.append(
+                {
+                    "event_id": event_id,
+                    "title": title,
+                    "summary": summary,
+                    "tags": tags,
+                    "date": parsed_date,
+                    "date_str": date_norm,
+                    "duration": duration,
+                    "file": path,
+                    "line": idx,
+                    "axis_day": _row_axis_day(parsed_date),
+                }
+            )
+        return rows
+
+
+def _write_svg_export(target: Path, rows: list[dict[str, object]]) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = ["event_id", "start", "title", "summary", "kind", "tags", "duration"]
+    with target.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, delimiter="\t", lineterminator="\n")
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(
+                {
+                    "event_id": row.get("event_id", ""),
+                    "start": row.get("date_str", ""),
+                    "title": row.get("title", ""),
+                    "summary": row.get("summary", ""),
+                    "kind": "event",
+                    "tags": ";".join(row.get("tags", []) or []),
+                    "duration": str(row.get("duration", 0) or 0),
+                }
+            )
+
+
+def _tags_match(tags: set[str], *, any_of: list[str] | None, all_of: list[str] | None, none_of: list[str] | None) -> bool:
+    if none_of and any(t in tags for t in none_of):
+        return False
+    if all_of and not all(t in tags for t in all_of):
+        return False
+    if any_of and not any(t in tags for t in any_of):
+        return False
+    return True
+
+
+def _in_range(row: dict[str, object], *, range_cfg: dict[str, object] | None, present_year: int) -> bool:
+    if not range_cfg:
+        return True
+    date: ParsedDate = row["date"]  # type: ignore[assignment]
+    year = int(date.year)
+    start_year = int(range_cfg["start_year"]) if "start_year" in range_cfg else None  # type: ignore[arg-type]
+    end_year = int(range_cfg["end_year"]) if "end_year" in range_cfg else None  # type: ignore[arg-type]
+    if "last_years" in range_cfg:
+        span = int(range_cfg["last_years"])  # type: ignore[arg-type]
+        start_year = max(start_year or -10**9, present_year - span + 1)
+        end_year = min(end_year or 10**9, present_year)
+    if start_year is not None and year < start_year:
+        return False
+    if end_year is not None and year > end_year:
+        return False
+    return True
 
 
 def render_history_scopes(
@@ -85,6 +200,8 @@ def render_history_scopes(
         except Exception:
             default_present_year = None
 
+    pov_catalog = PovCatalog.discover(repo_root=repo_root)
+
     for config_path in configs:
         scope_root = config_path.parent
         cfg = load_history_config(config_path)
@@ -92,14 +209,16 @@ def render_history_scopes(
         if not sources:
             continue
 
-        variants = load_tsv_rows(repo_root, sources=sources)
-        events = group_events(variants)
-        validate_variants(events)
+        scope_pov = scope_root.name
+
+        rows: list[dict[str, object]] = []
+        for src in sources:
+            rows.extend(_read_history_rows(src))
+
         present_year = cfg.present_year if cfg.present_year is not None else default_present_year
         if present_year is None:
-            present_year = max(event.canonical.start.year for event in events.values() if event.canonical.start)
-        series_windows = build_series_windows(events)
-        age_windows = series_windows.get("age", {})
+            # Best-effort "now" for ranges: max year present in rows.
+            present_year = max(int((r["date"].year)) for r in rows) if rows else 0
 
         for view in cfg.views:
             view_build = build
@@ -110,31 +229,15 @@ def render_history_scopes(
             if view.tick_spacing_px is not None:
                 view_build = replace(view_build, tick_spacing_px=int(view.tick_spacing_px))
 
-            if view.series:
-                export_rows = _export_rows_for_series(series=view.series, series_windows=series_windows)  # type: ignore[arg-type]
-            else:
-                view_cfg: dict[str, object] = {"pov": view.pov}
-                if view.include_povs:
-                    view_cfg["include_povs"] = view.include_povs
-                if view.range:
-                    view_cfg["range"] = view.range
-                if view.use_event:
-                    view_cfg["use_event"] = view.use_event
-                start_cutoff, end_cutoff = derive_range_limits(view_cfg, events, series_windows, present_year=present_year)
-                entries = collect_events_for_view(
-                    events,
-                    view_pov=view.pov or "public",
-                    include_povs=view.include_povs,
-                    age_windows=age_windows,  # type: ignore[arg-type]
-                    start_cutoff=start_cutoff,
-                    end_cutoff=end_cutoff,
-                )
-                export_rows = entries
-                # Ensure the time axis covers the configured range (even if no events land exactly on the edges).
-                if start_cutoff is not None:
-                    view_build = replace(view_build, axis_min_year=min(view_build.axis_min_year or 10**9, start_cutoff // 360))
-                if end_cutoff is not None:
-                    view_build = replace(view_build, axis_max_year=max(view_build.axis_max_year or -10**9, end_cutoff // 360))
+            filtered = [
+                r
+                for r in rows
+                if _tags_match(set(r["tags"]), any_of=view.tags_any, all_of=view.tags_all, none_of=view.tags_none)  # type: ignore[arg-type]
+                and _in_range(r, range_cfg=view.range, present_year=int(present_year))
+            ]
+            filtered.sort(key=lambda r: int(r["axis_day"]))  # type: ignore[arg-type]
+            if (view_build.sort_direction or "desc") == "desc":
+                filtered.reverse()
 
             # Optionally extend the axis to a declared "present" year so ticks can show e.g. ⋈50 at 4327 even if the latest
             # dated event in this scope is earlier.
@@ -144,7 +247,7 @@ def render_history_scopes(
             svg_path = scope_root / _default_svg_name(view)
             tsv_path = _debug_tsv_path(repo_root, scope_root, view.id)
             if debug_write_tsv:
-                write_tsv_export(tsv_path, export_rows)
+                _write_svg_export(tsv_path, filtered)
 
             build_timeline_svg(
                 repo_root=repo_root,
@@ -156,4 +259,6 @@ def render_history_scopes(
                 measure=measure,
                 renderer=renderer,
                 build=view_build,
+                pov_catalog=pov_catalog,
+                scope_pov=scope_pov,
             )

@@ -1,9 +1,8 @@
-event_id	pov	series	kind	start_year	start_month	start_day	end_year	end_month	end_day	precision	parent_id	factions	tags	title	summary	inherit_truth_date
-fall-of-the-ancients	public		event	0						point			world;lore	Fall of the Ancient Civilization	The day the world’s impossible cities failed; Year 0 is counted from this collapse.
-
-age-ash-and-silence	public	age	age	0						range			age;world	⟂ Age of Ash & Silence	Survival, famine, and fear of ruins; the world is quiet and broken, and most communities last only a season.
-age-reclamation	public	age	age	1500						range			age;world	ᛒ Age of Reclamation	Writing, law, and agriculture return; proto-kingdoms form and the old roads are found again, half-buried.
-age-crowns	public	age	age	2500						range			age;world	ᛉ Age of Crowns	Dynasties harden into kingdoms; borders are named, faiths codified, and wars are regional rather than world-spanning.
-age-roads	public	age	age	3300						range			age;infrastructure	⋂ Age of Roads	Empires bind territory with bridges, milestones, and waystations—built for marching columns first, commerce second.
-age-conquest	public	age	age	3950						range			age;conflict	ᛏ Age of Conquest	Continental war becomes possible; generations live under levy and siege until exhaustion forces peace.
-age-trade	public	age	age	4277						range			age;trade	⋈ Age of Trade	War ends and coin takes over; the old war-roads are inherited by guilds, charters, and contract courts.
+event_id	tags	date	duration	title	summary
+fall-of-the-ancients	public;world;lore	0	0	Fall of the Ancient Civilization	The day the world’s impossible cities failed; Year 0 is counted from this collapse.
+age-ash-and-silence	public;age;world	0	547500	⟂ Age of Ash & Silence	Survival, famine, and fear of ruins; the world is quiet and broken, and most communities last only a season.
+age-reclamation	public;age;world	1500	365000	ᛒ Age of Reclamation	Writing, law, and agriculture return; proto-kingdoms form and the old roads are found again, half-buried.
+age-crowns	public;age;world	2500	292000	ᛉ Age of Crowns	Dynasties harden into kingdoms; borders are named, faiths codified, and wars are regional rather than world-spanning.
+age-roads	public;age;infrastructure	3300	237250	⋂ Age of Roads	Empires bind territory with bridges, milestones, and waystations—built for marching columns first, commerce second.
+age-conquest	public;age;conflict	3950	119355	ᛏ Age of Conquest	Continental war becomes possible; generations live under levy and siege until exhaustion forces peace.
+age-trade	public;age;trade	4277	0	⋈ Age of Trade	War ends and coin takes over; the old war-roads are inherited by guilds, charters, and contract courts.

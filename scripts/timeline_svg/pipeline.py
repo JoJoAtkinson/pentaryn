@@ -25,7 +25,9 @@ from .tsv_io import read_tsv, write_sample_tsv
 from .validate import assert_valid, validate_layout
 from .wrap import wrap_title_and_summary
 from .svg_render import render_svg
+from .tags import TagCatalog
 from .ages import AgeIndex
+from .pov_icons import PovCatalog
 
 
 def _font_face_css(fonts: FontPaths) -> str:
@@ -94,6 +96,8 @@ def build_timeline_svg(
     measure: MeasureConfig,
     renderer: RendererConfig,
     build: BuildConfig,
+    pov_catalog: PovCatalog | None = None,
+    scope_pov: str | None = None,
 ) -> None:
     if not input_tsv.exists():
         if input_tsv.parent.name == ".timeline_data" and input_tsv.name == "timeline.tsv":
@@ -110,9 +114,12 @@ def build_timeline_svg(
         events.append(
             Event(
                 event_id=row.event_id,
+                pov=row.pov,
                 kind=row.kind,
                 title=row.title,
                 summary=row.summary,
+                factions=row.factions,
+                tags=row.tags,
                 start=start,
                 axis_day=axis_day,
                 lane="left",
@@ -221,7 +228,7 @@ def build_timeline_svg(
         slack_steps=axis_map.slack_steps,
     )
 
-    content_bottom = max(e.y + e.box_h for e in events_sorted) if events_sorted else float(renderer.margin_top)
+    content_bottom = max((e.y + e.box_h) for e in events_sorted) if events_sorted else float(renderer.margin_top)
     height = int(content_bottom + renderer.margin_bottom)
     ages = None
     if build.age_glyph_years:
@@ -255,6 +262,30 @@ def build_timeline_svg(
 
     defs_fragment = defs_fragment_path.read_text(encoding="utf-8")
     extra_css = _font_face_css(fonts) if build.embed_fonts else ""
+
+    # Faction icons (used when faction slugs are included in the tags list).
+    pov_defs = ""
+    faction_tags: set[str] = set()
+    if pov_catalog is not None:
+        for event in events_sorted:
+            event.badge_pov = None
+            for tag in event.tags:
+                if pov_catalog.has_icon(tag):
+                    faction_tags.add(tag)
+        pov_defs = pov_catalog.build_defs(sorted(faction_tags))
+
+    tag_defs = ""
+    try:
+        catalog = TagCatalog.load((repo_root / "scripts" / "timeline_svg" / "assets" / "tags").resolve())
+        used_tags: list[str] = []
+        for event in events_sorted:
+            for tag in event.tags:
+                if tag not in faction_tags:
+                    used_tags.append(tag)
+        tag_defs = catalog.build_defs(used_tags)
+    except Exception:
+        tag_defs = ""
+
     render_svg(
         layout=layout,
         renderer=renderer,
@@ -262,6 +293,9 @@ def build_timeline_svg(
         output_path=output_svg,
         build=build,
         extra_css=extra_css,
+        tags_fragment=tag_defs,
+        povs_fragment=pov_defs,
+        faction_tags=faction_tags,
     )
 
     validation = validate_layout(layout, renderer=renderer)

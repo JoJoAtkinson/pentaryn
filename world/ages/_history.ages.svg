@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="3239" viewBox="0 0 1200 3239">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="3269" viewBox="0 0 1200 3269">
 <style><![CDATA[
 @font-face {
   font-family: 'Alegreya';
@@ -27,6 +27,7 @@
 }
 
 
+        :root { --label-border: #cbb08a; --public-indicator: #ac9575; }
         .bg { fill: #fbf7ef; }
         .spine { stroke: #a58b6a; stroke-width: 2; }
         .tick { stroke: #a58b6a; stroke-width: 1; opacity: 0.8; }
@@ -35,9 +36,10 @@
         .tick-number { font-family: 'Alegreya', serif; }
         .token { }
         .connector { stroke: #7a5b3a; stroke-width: 1.5; stroke-linecap: round; opacity: 0.7; }
-        .label { fill: #fffaf0; stroke: #cbb08a; stroke-width: 1; }
+        .label { fill: #fffaf0; stroke: var(--label-border); stroke-width: 1; }
         .title { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 16px; font-weight: 700; fill: #2b1f14; }
         .summary { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #3a2b1f; }
+        .public-indicator { color: var(--public-indicator); opacity: 0.9; }
         
 ]]></style>
 <rect class="bg" x="0" y="0" width="100%" height="100%"/>
@@ -47,7 +49,50 @@
     <circle cx="0" cy="0" r="5" fill="#fbf7ef" opacity="0.9" />
   </symbol>
 </defs>
-<g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="3199"/></g>
+<defs>
+<symbol id="tag_unknown" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="247.04" fill="#cfcfcf" stroke="#9a9a9a" stroke-width="17.92" />
+  <text x="256" y="346" text-anchor="middle" font-size="300" font-family="Alegreya, serif" fill="#2b1f14">?!</text>
+</symbol>
+<symbol id="tag_public" viewBox="0 0 512 512">
+  <g transform="translate(256.000 256.000) scale(0.8800) translate(-256.000 -256.000)">
+<g class="" transform="translate(0,0)" style=""><path d="M149.688 85.625c-1.234.005-2.465.033-3.72.063-33.913.806-75.48 10.704-127.25 33.718V362.78c60.77-28.82 106.718-37.067 144.22-33.092 33.502 3.55 59.685 16.66 83.562 31.187v-242.97c-23.217-17.744-50.195-30.04-85.97-32a184.47 184.47 0 0 0-10.843-.28zm211.968 0c-3.7-.016-7.322.088-10.844.28-35.773 1.96-62.75 14.256-85.968 32v242.97c23.876-14.527 50.06-27.637 83.562-31.188 37.502-3.974 83.45 4.272 144.22 33.094V119.407c-51.77-23.014-93.337-32.912-127.25-33.72-1.255-.028-2.486-.056-3.72-.06zm5.72 261.78c-1.038-.002-2.074.017-3.095.033-4.808.075-9.43.37-13.905.843-33.932 3.597-59.603 17.976-85.53 34.44v.28c-6.554-1.99-13.02-2.37-19.408-.97-25.566-16.177-51.003-30.202-84.468-33.75-5.595-.592-11.44-.883-17.564-.842-32.04.213-71.833 9.778-124.687 35.937v42.53c60.77-28.823 106.714-37.067 144.218-33.092 18.545 1.965 34.837 6.845 49.75 13.28-4.682 6.064-9.308 13.268-13.875 21.688h117.156c-5.93-8.22-11.798-15.414-17.626-21.56 14.996-6.503 31.39-11.43 50.062-13.408 37.503-3.974 83.448 4.27 144.22 33.094v-42.53c-53.16-26.31-93.115-35.863-125.25-35.97z" fill="currentColor" fill-opacity="1"></path></g>
+  </g>
+</symbol>
+<symbol id="tag_age" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="247.04" fill="#6a4d2d" stroke="#5d4327" stroke-width="17.92" />
+  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
+<path fill="#fbf7ef" d="M92.656 19.188v41.5h331.72v-41.5H92.655zM119.5 79.374V433.53h22.28V79.376H119.5zm46.594 0c3.212 43.324 13.312 82.022 27.78 110.906 17.685 35.304 40.845 54.75 64.064 54.75 23.218 0 46.346-19.446 64.03-54.75 14.47-28.883 24.57-67.58 27.782-110.905H166.094zm209.156 0V433.53h22.28V79.376h-22.28zm-117.313 185.22c-23.218 0-46.378 19.415-64.062 54.717-14.835 29.614-25.098 69.562-28.03 114.22H350c-2.933-44.658-13.197-84.606-28.03-114.22-17.686-35.302-40.814-54.718-64.033-54.718zM92.657 452.218v41.467h331.718V452.22H92.655z"/>
+  </g>
+</symbol>
+<symbol id="tag_trade" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="247.04" fill="#2f6b6b" stroke="#295e5e" stroke-width="17.92" />
+  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
+<path fill="#fbf7ef" d="M287.03 20c-39.133.48-79.73 15.297-117 45.938h80.47v43.188c52.76-29.75 114.592-31.588 163.938.03l-18.188 9.72 64.688 50.72-3.75-83.314-26.407 14.126C395.99 48.792 345.038 20.644 290.907 20a161.464 161.464 0 0 0-3.875 0zm-268 64.625v212.75h212.782V84.625H19.032zm50.282 26.03H205.78v138.939h-18.718v-120.25H69.313v-18.688zm3.344 38.126 90.094 91.845-13.344 13.094-90.094-91.845 13.344-13.094zm206.656 61.75v212.782h212.75v-212.78h-212.75zm50.25 26.064h136.469V375.5h-18.686V255.28h-117.78l-.002-18.686zm3.344 38.094 90.125 91.875-13.342 13.062-90.125-91.844 13.343-13.092zm-278.53 63.656 3.75 83.312 23.312-12.47c60.927 88.637 169.99 106.485 259.625 32.814h-80.439v-43.188c-52.08 29.38-113 31.544-162.03 1.188l20.436-10.938-64.655-50.718z"/>
+  </g>
+</symbol>
+<symbol id="tag_conflict" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="247.04" fill="#6b2f3a" stroke="#5e2933" stroke-width="17.92" />
+  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
+<path fill="#fbf7ef" d="M19.75 14.438c59.538 112.29 142.51 202.35 232.28 292.718l3.626 3.75.063-.062c21.827 21.93 44.04 43.923 66.405 66.25-18.856 14.813-38.974 28.2-59.938 40.312l28.532 28.53 68.717-68.717c42.337 27.636 76.286 63.646 104.094 105.81l28.064-28.06c-42.47-27.493-79.74-60.206-106.03-103.876l68.936-68.938-28.53-28.53c-11.115 21.853-24.413 42.015-39.47 60.593-43.852-43.8-86.462-85.842-130.125-125.47-.224-.203-.432-.422-.656-.625C183.624 122.75 108.515 63.91 19.75 14.437zm471.875 0c-83.038 46.28-154.122 100.78-221.97 161.156l22.814 21.562 56.81-56.812 13.22 13.187-56.438 56.44 24.594 23.186c61.802-66.92 117.6-136.92 160.97-218.72zm-329.53 125.906 200.56 200.53a402.965 402.965 0 0 1-13.405 13.032L148.875 153.53l13.22-13.186zm-76.69 113.28-28.5 28.532 68.907 68.906c-26.29 43.673-63.53 76.414-106 103.907l28.063 28.06c27.807-42.164 61.758-78.174 104.094-105.81l68.718 68.717 28.53-28.53c-20.962-12.113-41.08-25.5-59.937-40.313 17.865-17.83 35.61-35.433 53.157-52.97l-24.843-25.655-55.47 55.467c-4.565-4.238-9.014-8.62-13.374-13.062l55.844-55.844-24.53-25.374c-18.28 17.856-36.602 36.06-55.158 54.594-15.068-18.587-28.38-38.758-39.5-60.625z"/>
+  </g>
+</symbol>
+<symbol id="tag_infrastructure" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="247.04" fill="#5a5a5a" stroke="#4f4f4f" stroke-width="17.92" />
+  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
+<path fill="#fbf7ef" d="M255.063 18.25 209.97 140c-49.033 13.39-90.27 48.118-114.876 94.594h-56.25v93.125h112.5c3.17-59.343 48.313-106.44 103.72-106.44 55.404 0 100.547 47.1 103.717 106.44h112.5v-93.126h-56.25c-24.6-46.47-65.85-81.2-114.874-94.594L255.063 18.25zM38.843 344.313v150.25H151.47v-150.25H38.843zm319.813 0v150.25H471.28v-150.25H358.657z"/>
+  </g>
+</symbol>
+<symbol id="tag_world" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="247.04" fill="#2f3f6b" stroke="#29375e" stroke-width="17.92" />
+  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
+<path fill="#fbf7ef" d="m203.97 23-18.032 4.844 11.656 43.468c-25.837 8.076-50.32 21.653-71.594 40.75L94.53 80.594l-13.218 13.22 31.376 31.374c-19.467 21.125-33.414 45.53-41.813 71.343l-42.313-11.343-4.843 18.063 42.25 11.313c-6.057 27.3-6.157 55.656-.345 83L23.72 308.78l4.843 18.064 41.812-11.22a193.261 193.261 0 0 0 31.25 59.876l-29.97 52.688-16.81 29.593 29.56-16.842 52.657-29.97a193.306 193.306 0 0 0 60.094 31.407l-11.22 41.844 18.033 4.81 11.218-41.905a195.701 195.701 0 0 0 83-.375l11.312 42.28 18.063-4.81-11.344-42.376c25.812-8.4 50.217-22.315 71.342-41.78l31.375 31.373 13.22-13.218-31.47-31.47a193.26 193.26 0 0 0 40.72-71.563l43.53 11.657 4.813-18.063-43.625-11.686a195.693 195.693 0 0 0-.344-82.063l43.97-11.78-4.813-18.063L440.908 197c-6.73-20.866-17.08-40.79-31.032-58.844l29.97-52.656 16.842-29.563-29.593 16.844-52.656 29.97c-17.998-13.875-37.874-24.198-58.657-30.906l11.783-44L309.5 23l-11.78 43.97c-27-5.925-55.02-6.05-82.064-.376L203.97 23zm201.56 85L297.25 298.313l-.75.437-40.844-40.875-148.72 148.72-2.186 1.25 109.125-191.75 41.78 41.78L405.532 108zm-149.686 10.594c21.858 0 43.717 5.166 63.594 15.47l-116.625 66.342-2.22 1.28-1.28 2.22-66.25 116.406c-26.942-52.04-18.616-117.603 25.03-161.25 26.99-26.988 62.38-40.468 97.75-40.468zm122.72 74.594c26.994 52.054 18.67 117.672-25.002 161.343-43.66 43.662-109.263 52.005-161.312 25.033l116.438-66.282 2.25-1.25 1.25-2.25 66.375-116.592z"/>
+  </g>
+</symbol>
+</defs>
+<defs>
+</defs>
+<g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="3229"/></g>
 <g id="ticks">
 <line class="tick" x1="594" y1="3156.2" x2="606" y2="3156.2"/>
 <text class="tick-label" x="610" y="3160.2">
@@ -231,45 +276,137 @@
 </text>
 </g>
 <g id="connectors">
-<line class="connector" x1="600" y1="98.2" x2="552.0" y2="98.2"/>
-<line class="connector" x1="600" y1="333.7" x2="648.0" y2="333.7"/>
-<line class="connector" x1="600" y1="801.7" x2="552.0" y2="801.7"/>
-<line class="connector" x1="600" y1="1377.7" x2="648.0" y2="1377.7"/>
-<line class="connector" x1="600" y1="2097.7" x2="552.0" y2="2097.7"/>
-<line class="connector" x1="600" y1="3177.7" x2="648.0" y2="3177.7"/>
+<line class="connector" x1="600" y1="113.2" x2="552.0" y2="113.2"/>
+<line class="connector" x1="600" y1="348.7" x2="648.0" y2="348.7"/>
+<line class="connector" x1="600" y1="816.7" x2="552.0" y2="816.7"/>
+<line class="connector" x1="600" y1="1392.7" x2="648.0" y2="1392.7"/>
+<line class="connector" x1="600" y1="2112.7" x2="552.0" y2="2112.7"/>
+<line class="connector" x1="600" y1="3192.7" x2="648.0" y2="3192.7"/>
 </g>
 <g id="tokens">
-<use class="token" href="#token_default" x="589.0" y="87.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="322.7" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="790.7" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1366.7" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="2086.7" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="3166.7" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="102.2" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="337.7" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="805.7" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1381.7" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="2101.7" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="3181.7" width="22" height="22"/>
 </g>
 <g id="labels">
-<rect class="label" x="415.2" y="76.7" width="130.8" height="43.0" rx="8" ry="8"/>
-<text class="title" x="431.2" y="105.7">
-<tspan x="431.2" dy="0.0">⋈ Age of Trade</tspan>
+<rect class="label" x="164.4" y="76.7" width="381.6" height="73.0" rx="8" ry="8"/>
+<text class="title" x="180.4" y="105.7">
+<tspan x="180.4" dy="0.0">⋈ Age of Trade</tspan>
 </text>
-<rect class="label" x="654.0" y="312.2" width="154.9" height="43.0" rx="8" ry="8"/>
+<text class="summary" x="180.4" y="123.7">
+<tspan x="180.4" dy="0.0">War ends and coin takes over; the old war-roads are inherited by guilds,</tspan>
+<tspan x="180.4" dy="12.0">charters, and contract courts.</tspan>
+</text>
+<rect class="label" x="654.0" y="312.2" width="409.8" height="73.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="341.2">
 <tspan x="670.0" dy="0.0">ᛏ Age of Conquest</tspan>
 </text>
-<rect class="label" x="413.4" y="780.2" width="132.6" height="43.0" rx="8" ry="8"/>
-<text class="title" x="429.4" y="809.2">
-<tspan x="429.4" dy="0.0">⋂ Age of Roads</tspan>
+<text class="summary" x="670.0" y="359.2">
+<tspan x="670.0" dy="0.0">Continental war becomes possible; generations live under levy and siege until</tspan>
+<tspan x="670.0" dy="12.0">exhaustion forces peace.</tspan>
 </text>
-<rect class="label" x="654.0" y="1356.2" width="143.2" height="43.0" rx="8" ry="8"/>
+<rect class="label" x="144.3" y="780.2" width="401.7" height="73.0" rx="8" ry="8"/>
+<text class="title" x="160.3" y="809.2">
+<tspan x="160.3" dy="0.0">⋂ Age of Roads</tspan>
+</text>
+<text class="summary" x="160.3" y="827.2">
+<tspan x="160.3" dy="0.0">Empires bind territory with bridges, milestones, and waystations—built for</tspan>
+<tspan x="160.3" dy="12.0">marching columns first, commerce second.</tspan>
+</text>
+<rect class="label" x="654.0" y="1356.2" width="416.2" height="73.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1385.2">
 <tspan x="670.0" dy="0.0">ᛉ Age of Crowns</tspan>
 </text>
-<rect class="label" x="370.0" y="2076.2" width="176.0" height="43.0" rx="8" ry="8"/>
-<text class="title" x="386.0" y="2105.2">
-<tspan x="386.0" dy="0.0">ᛒ Age of Reclamation</tspan>
+<text class="summary" x="670.0" y="1403.2">
+<tspan x="670.0" dy="0.0">Dynasties harden into kingdoms; borders are named, faiths codified, and wars</tspan>
+<tspan x="670.0" dy="12.0">are regional rather than world-spanning.</tspan>
 </text>
-<rect class="label" x="654.0" y="3156.2" width="181.8" height="43.0" rx="8" ry="8"/>
+<rect class="label" x="138.2" y="2076.2" width="407.8" height="73.0" rx="8" ry="8"/>
+<text class="title" x="154.2" y="2105.2">
+<tspan x="154.2" dy="0.0">ᛒ Age of Reclamation</tspan>
+</text>
+<text class="summary" x="154.2" y="2123.2">
+<tspan x="154.2" dy="0.0">Writing, law, and agriculture return; proto-kingdoms form and the old roads</tspan>
+<tspan x="154.2" dy="12.0">are found again, half-buried.</tspan>
+</text>
+<rect class="label" x="654.0" y="3156.2" width="399.5" height="73.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="3185.2">
 <tspan x="670.0" dy="0.0">⟂ Age of Ash &amp; Silence</tspan>
 </text>
+<text class="summary" x="670.0" y="3203.2">
+<tspan x="670.0" dy="0.0">Survival, famine, and fear of ruins; the world is quiet and broken, and most</tspan>
+<tspan x="670.0" dy="12.0">communities last only a season.</tspan>
+</text>
+</g>
+<g id="tags">
+<g class="public-indicator" transform="translate(170.4 80.7)">
+<use href="#tag_public" width="12.5" height="12.5"/>
+</g>
+<g transform="translate(509.0 80.7)">
+<title>tag: trade</title>
+<use href="#tag_trade" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(480.0 80.7)">
+<title>tag: age</title>
+<use href="#tag_age" width="25.0" height="25.0"/>
+</g>
+<g class="public-indicator" transform="translate(660.0 316.2)">
+<use href="#tag_public" width="12.5" height="12.5"/>
+</g>
+<g transform="translate(1026.8 316.2)">
+<title>tag: conflict</title>
+<use href="#tag_conflict" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(997.8 316.2)">
+<title>tag: age</title>
+<use href="#tag_age" width="25.0" height="25.0"/>
+</g>
+<g class="public-indicator" transform="translate(150.3 784.2)">
+<use href="#tag_public" width="12.5" height="12.5"/>
+</g>
+<g transform="translate(509.0 784.2)">
+<title>tag: infrastructure</title>
+<use href="#tag_infrastructure" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(480.0 784.2)">
+<title>tag: age</title>
+<use href="#tag_age" width="25.0" height="25.0"/>
+</g>
+<g class="public-indicator" transform="translate(660.0 1360.2)">
+<use href="#tag_public" width="12.5" height="12.5"/>
+</g>
+<g transform="translate(1033.2 1360.2)">
+<title>tag: world</title>
+<use href="#tag_world" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(1004.2 1360.2)">
+<title>tag: age</title>
+<use href="#tag_age" width="25.0" height="25.0"/>
+</g>
+<g class="public-indicator" transform="translate(144.2 2080.2)">
+<use href="#tag_public" width="12.5" height="12.5"/>
+</g>
+<g transform="translate(509.0 2080.2)">
+<title>tag: world</title>
+<use href="#tag_world" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(480.0 2080.2)">
+<title>tag: age</title>
+<use href="#tag_age" width="25.0" height="25.0"/>
+</g>
+<g class="public-indicator" transform="translate(660.0 3160.2)">
+<use href="#tag_public" width="12.5" height="12.5"/>
+</g>
+<g transform="translate(1016.5 3160.2)">
+<title>tag: world</title>
+<use href="#tag_world" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(987.5 3160.2)">
+<title>tag: age</title>
+<use href="#tag_age" width="25.0" height="25.0"/>
+</g>
 </g>
 </svg>

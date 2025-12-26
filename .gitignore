@@ -45,3 +45,7 @@ __pycache__/
 *.pyc
 .ruff_cache/
 .pytest_cache/
+
+# Codex (local)
+.codex/config.toml
+.codex/config.local.toml

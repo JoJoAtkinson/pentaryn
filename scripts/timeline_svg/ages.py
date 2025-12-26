@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import csv
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
 from .game_time import DAYS_PER_MONTH, MONTHS_PER_YEAR
-from .timeline_generate import build_series_windows, group_events, load_tsv_rows, validate_variants
 
 import logging
 
@@ -51,24 +52,56 @@ class AgeIndex:
     @staticmethod
     def load_global(repo_root: Path, *, debug: bool = False) -> "AgeIndex":
         ages_tsv = (repo_root / "world" / "ages" / "_history.tsv").resolve()
-        variants = load_tsv_rows(repo_root, sources=[ages_tsv])
-        events = group_events(variants)
-        validate_variants(events)
-        series_windows = build_series_windows(events)
-        windows = list((series_windows.get("age") or {}).values())
-        windows.sort(key=lambda w: w.start.ordinal())  # type: ignore[attr-defined]
+        if not ages_tsv.exists():
+            return AgeIndex(ages=tuple(), debug=debug)
 
+        with ages_tsv.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle, delimiter="\t")
+            if not reader.fieldnames:
+                raise SystemExit(f"{ages_tsv}: missing header row")
+            fieldnames = set(reader.fieldnames)
+            required = {"event_id", "tags", "date", "title"}
+            if not required.issubset(fieldnames):
+                raise SystemExit(f"{ages_tsv}: missing required columns: {', '.join(sorted(required - fieldnames))}")
+
+            raw_ages: list[AgeWindow] = []
+            date_re = re.compile(r"^(?P<year>\d{1,6})(?:/.*)?$")
+            for idx, row in enumerate(reader, start=2):
+                if None in row:
+                    raise SystemExit(
+                        f"{ages_tsv}:{idx} has too many columns (tabbing misaligned). Remove extra tab(s) so each row matches the header."
+                    )
+                tags = {t for t in re.split(r"[;\s]+", (row.get("tags") or "").strip()) if t}
+                if "age" not in tags:
+                    continue
+                event_id = (row.get("event_id") or "").strip()
+                title = (row.get("title") or "").strip() or event_id
+                date_raw = (row.get("date") or "").strip()
+                m = date_re.match(date_raw)
+                if not m:
+                    raise SystemExit(f"{ages_tsv}:{idx} invalid date {date_raw!r} (expected YYYY or YYYY/MM/DD)")
+                start_year = int(m.group("year"))
+                raw_ages.append(
+                    AgeWindow(
+                        event_id=event_id,
+                        title=title,
+                        glyph=_extract_glyph(title),
+                        start_year=start_year,
+                        end_year=None,
+                    )
+                )
+
+        raw_ages.sort(key=lambda a: a.start_year)
         ages: list[AgeWindow] = []
-        for w in windows:
-            start_year = int(w.start.year)  # type: ignore[attr-defined]
-            end_year = int(w.end.year) if w.end else None  # type: ignore[attr-defined]
-            title = str(w.title)  # type: ignore[attr-defined]
+        for i, age in enumerate(raw_ages):
+            next_age = raw_ages[i + 1] if i + 1 < len(raw_ages) else None
+            end_year = (next_age.start_year - 1) if next_age else None
             ages.append(
                 AgeWindow(
-                    event_id=str(w.event_id),  # type: ignore[attr-defined]
-                    title=title,
-                    glyph=_extract_glyph(title),
-                    start_year=start_year,
+                    event_id=age.event_id,
+                    title=age.title,
+                    glyph=age.glyph,
+                    start_year=age.start_year,
                     end_year=end_year,
                 )
             )

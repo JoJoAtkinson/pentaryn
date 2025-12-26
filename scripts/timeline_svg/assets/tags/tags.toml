@@ -1,0 +1,69 @@
+[defaults]
+# Icons are monochrome and recolored at render time.
+# Use high-contrast pairs: light foreground on darker backgrounds.
+foreground = "#fbf7ef"
+background = "#7a5b3a"
+# Optional: set `border = "none"` to remove strokes entirely.
+
+[tags.age]
+background = "#6a4d2d"
+
+[tags.battle]
+background = "#7a2f2f"
+
+[tags.city-state]
+background = "#3b5b7a"
+
+[tags.conflict]
+background = "#6b2f3a"
+
+[tags.crime]
+background = "#3f3a33"
+
+[tags.diplomacy]
+background = "#2f6b5d"
+
+[tags.economy]
+background = "#6b5a2f"
+
+[tags.faction]
+background = "#4b3a6b"
+
+[tags.government]
+background = "#3a3f6b"
+
+[tags.infrastructure]
+background = "#5a5a5a"
+
+[tags.inspiration]
+background = "#6b3a2f"
+
+[tags.law]
+background = "#2f4f6b"
+
+[tags.location]
+background = "#2f6b3a"
+
+[tags.lore]
+background = "#6b4f2f"
+
+[tags.magic]
+background = "#4f2f6b"
+
+[tags.public]
+foreground = "currentColor"
+background = "#fbf7ef"
+border = "none"
+shape = "none"
+
+[tags.raids]
+background = "#6b2f2f"
+
+[tags.siege]
+background = "#4a4a2a"
+
+[tags.trade]
+background = "#2f6b6b"
+
+[tags.world]
+background = "#2f3f6b"

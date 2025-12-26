@@ -20,18 +20,31 @@ def _render_multiline_text(*, parts: list[str], klass: str, x: float, y0: float,
     return y0 + (len(lines) - 1) * line_h
 
 
+def _tag_symbol_id(tag: str) -> str:
+    safe = re.sub(r"[^a-zA-Z0-9_-]+", "-", (tag or "").strip()).strip("-")
+    return f"tag_{safe}" if safe else "tag_unknown"
+
+def _pov_symbol_id(pov: str) -> str:
+    safe = re.sub(r"[^a-zA-Z0-9_-]+", "-", (pov or "").strip()).strip("-")
+    return f"pov_{safe}" if safe else "pov_unknown"
+
+
 def render_svg(
     *,
     layout: LayoutResult,
     renderer: RendererConfig,
     defs_fragment: str,
+    tags_fragment: str,
+    povs_fragment: str,
     output_path: Path,
     build: BuildConfig,
     extra_css: str,
+    faction_tags: set[str] | None = None,
 ) -> None:
     width = renderer.width
     height = layout.height
     spine_x = layout.spine_x
+    faction_tags = faction_tags or set()
 
     parts: list[str] = []
     parts.append('<?xml version="1.0" encoding="UTF-8"?>')
@@ -41,6 +54,7 @@ def render_svg(
         parts.append(extra_css)
     parts.append(
         """
+        :root { --label-border: #cbb08a; --public-indicator: #ac9575; }
         .bg { fill: #fbf7ef; }
         .spine { stroke: #a58b6a; stroke-width: 2; }
         .tick { stroke: #a58b6a; stroke-width: 1; opacity: 0.8; }
@@ -49,14 +63,19 @@ def render_svg(
         .tick-number { font-family: 'Alegreya', serif; }
         .token { }
         .connector { stroke: #7a5b3a; stroke-width: 1.5; stroke-linecap: round; opacity: 0.7; }
-        .label { fill: #fffaf0; stroke: #cbb08a; stroke-width: 1; }
+        .label { fill: #fffaf0; stroke: var(--label-border); stroke-width: 1; }
         .title { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 16px; font-weight: 700; fill: #2b1f14; }
         .summary { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #3a2b1f; }
+        .public-indicator { color: var(--public-indicator); opacity: 0.9; }
         """
     )
     parts.append("]]></style>")
     parts.append('<rect class="bg" x="0" y="0" width="100%" height="100%"/>')
     parts.append(defs_fragment.strip())
+    if tags_fragment:
+        parts.append(tags_fragment.strip())
+    if povs_fragment:
+        parts.append(povs_fragment.strip())
 
     parts.append(f'<g id="spine"><line class="spine" x1="{spine_x}" y1="{renderer.margin_top}" x2="{spine_x}" y2="{height - renderer.margin_bottom}"/></g>')
 
@@ -106,6 +125,7 @@ def render_svg(
             box_x = spine_x + renderer.spine_to_label_gap
         box_y = event.y
         parts.append(f'<rect class="label" x="{box_x:.1f}" y="{box_y:.1f}" width="{event.box_w:.1f}" height="{event.box_h:.1f}" rx="8" ry="8"/>')
+
         text_x = box_x + renderer.label_padding_x
         cursor_top = box_y + renderer.label_padding_y
         if event.label.title_lines:
@@ -130,6 +150,55 @@ def render_svg(
                     lines=event.label.summary_lines,
                     line_h=event.label.summary_line_h,
                 )
+    parts.append("</g>")
+
+    # tag tokens
+    parts.append('<g id="tags">')
+    tag_size = float(renderer.tag_token_size)
+    tag_gap = float(renderer.tag_token_gap)
+    faction_scale = 1.35
+    for event in layout.events:
+        if not event.tags:
+            continue
+        if event.lane == "left":
+            box_x = spine_x - renderer.spine_to_label_gap - event.box_w
+        else:
+            box_x = spine_x + renderer.spine_to_label_gap
+        box_y = event.y
+        # Always render token cluster at the top-right corner of the label box.
+        # Tags render as small circular icons; faction slugs (when present in tags) render as larger rounded-rect icons.
+        x_right = box_x + event.box_w - 12.0
+        y_row_top = box_y + 4.0
+        gap = max(2.0, tag_gap)
+
+        has_public = "public" in event.tags
+        if has_public:
+            public_size = tag_size * 0.5
+            px = box_x + 6.0
+            py = box_y + 4.0
+            parts.append(f'<g class="public-indicator" transform="translate({px:.1f} {py:.1f})">')
+            parts.append('<use href="#tag_public" width="{:.1f}" height="{:.1f}"/>'.format(public_size, public_size))
+            parts.append("</g>")
+
+        visible_tags = [t for t in event.tags if t and t != "public"]
+        if not visible_tags:
+            continue
+
+        max_size = tag_size * faction_scale if any(t in faction_tags for t in visible_tags) else tag_size
+        for token in reversed(visible_tags):
+            is_faction = token in faction_tags
+            size = tag_size * faction_scale if is_faction else tag_size
+            x_left = x_right - size
+            y_top = y_row_top + (max_size - size) / 2.0
+            icon_id = _pov_symbol_id(token) if is_faction else _tag_symbol_id(token)
+            title_prefix = "faction" if is_faction else "tag"
+            parts.append(f'<g transform="translate({x_left:.1f} {y_top:.1f})">')
+            safe_token = escape(token or "")
+            if token:
+                parts.append(f"<title>{title_prefix}: {safe_token}</title>")
+            parts.append(f'<use href="#{icon_id}" width="{size:.1f}" height="{size:.1f}"/>')
+            parts.append("</g>")
+            x_right = x_left - gap
     parts.append("</g>")
 
     parts.append("</svg>")

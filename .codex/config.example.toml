@@ -1,0 +1,11 @@
+# Example managed block for `~/.codex/config.toml`.
+#
+# This file is safe to commit because it uses placeholders (Codex requires absolute paths).
+
+# BEGIN dnd-scripts mcp (managed)
+[mcp_servers.dnd-scripts]
+command = "/ABS/PATH/TO/venv/bin/python"
+args = ["/ABS/PATH/TO/scripts/mcp/server.py"]
+startup_timeout_sec = 600
+tool_timeout_sec = 600
+# END dnd-scripts mcp (managed)

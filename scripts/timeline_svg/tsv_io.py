@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import re
 from pathlib import Path
 from typing import Iterable
 
@@ -15,6 +16,7 @@ SVG_COLUMNS = [
     "start_day",
     "title",
     "summary",
+    "tags",
 ]
 
 GEN_COLUMNS_MIN = [
@@ -28,11 +30,16 @@ def _parse_start(value: str) -> tuple[str, str, str]:
     raw = (value or "").strip()
     if not raw:
         return "", "", ""
-    parts = [p for p in raw.split("-") if p]
+    sep = "/" if "/" in raw else "-"
+    parts = [p for p in raw.split(sep) if p]
     year = parts[0]
     month = parts[1] if len(parts) >= 2 else ""
     day = parts[2] if len(parts) >= 3 else ""
     return year, month, day
+
+
+def _split_tokens(value: str) -> list[str]:
+    return [t for t in re.split(r"[;\s]+", (value or "").strip()) if t]
 
 
 def read_tsv(path: Path) -> list[EventRow]:
@@ -56,7 +63,12 @@ def read_tsv(path: Path) -> list[EventRow]:
             title = (raw.get("title") or "").strip()
             if not title:
                 raise ValueError(f"{path}:{idx} title is required")
+            pov = (raw.get("pov") or "").strip()
             kind = (raw.get("kind") or "event").strip()
+            tags_raw = (raw.get("tags") or "").strip()
+            tags = _split_tokens(tags_raw)
+            factions_raw = (raw.get("factions") or "").strip()
+            factions = _split_tokens(factions_raw)
             if uses_svg_schema:
                 start_year = (raw.get("start_year") or "").strip()
                 start_month = (raw.get("start_month") or "").strip()
@@ -68,12 +80,15 @@ def read_tsv(path: Path) -> list[EventRow]:
             rows.append(
                 EventRow(
                     event_id=event_id,
+                    pov=pov,
                     kind=kind,
                     start_year=start_year,
                     start_month=start_month,
                     start_day=start_day,
                     title=title,
                     summary=(raw.get("summary") or "").strip(),
+                    factions=factions,
+                    tags=tags,
                 )
             )
         return rows
@@ -94,6 +109,7 @@ def write_sample_tsv(path: Path) -> None:
                     "start_day": "",
                     "title": "Pentarch Accords",
                     "summary": "A web of treaties that ends the worst of the Imperial Wars and redraws borders.",
+                    "tags": "diplomacy;conflict",
                 },
                 {
                     "event_id": "sample-war",
@@ -103,6 +119,7 @@ def write_sample_tsv(path: Path) -> None:
                     "start_day": "",
                     "title": "Imperial Wars",
                     "summary": "Decades of conflict between Calderon’s legions and the Haven coalition.",
+                    "tags": "conflict;siege",
                 },
                 {
                     "event_id": "sample-auction",
@@ -112,6 +129,7 @@ def write_sample_tsv(path: Path) -> None:
                     "start_day": "",
                     "title": "Night Auction of Names",
                     "summary": "A masked auction sells identities and debt-forgiveness; rivalries shift before dawn.",
+                    "tags": "economy;crime",
                 },
                 {
                     "event_id": "sample-job",
@@ -121,6 +139,7 @@ def write_sample_tsv(path: Path) -> None:
                     "start_day": "",
                     "title": "The Silent Ledger Job",
                     "summary": "A first major Merrowgate contract that binds the party into city politics.",
+                    "tags": "trade;economy",
                 },
                 {
                     "event_id": "sample-arrival",
@@ -130,6 +149,7 @@ def write_sample_tsv(path: Path) -> None:
                     "start_day": "12",
                     "title": "Arrival in Ardenford",
                     "summary": "The party reaches Ardenford and meets the Council’s careful optimism.",
+                    "tags": "location",
                 },
                 {
                     "event_id": "sample-sabotage",
@@ -139,6 +159,7 @@ def write_sample_tsv(path: Path) -> None:
                     "start_day": "18",
                     "title": "Border Signal Mission",
                     "summary": "A tower is sabotaged; the convoy must not be caught in the dark.",
+                    "tags": "conflict",
                 },
             ]
         )
