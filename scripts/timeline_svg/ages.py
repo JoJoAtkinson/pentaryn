@@ -59,6 +59,8 @@ class AgeIndex:
             reader = csv.DictReader(handle, delimiter="\t")
             if not reader.fieldnames:
                 raise SystemExit(f"{ages_tsv}: missing header row")
+            # Allow column-aligned headers with spaces.
+            reader.fieldnames = [name.strip() for name in reader.fieldnames]
             fieldnames = set(reader.fieldnames)
             required = {"event_id", "tags", "date", "title"}
             if not required.issubset(fieldnames):

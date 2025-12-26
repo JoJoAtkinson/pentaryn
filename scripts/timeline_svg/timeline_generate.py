@@ -181,6 +181,9 @@ def load_tsv_rows(root: Path, *, sources: Optional[Sequence[Path]] = None) -> Li
     for path in sources:
         with path.open(newline="", encoding="utf-8") as handle:
             reader = csv.DictReader(handle, delimiter="\t")
+            # Allow column-aligned headers with spaces.
+            if reader.fieldnames:
+                reader.fieldnames = [name.strip() for name in reader.fieldnames]
             missing = [field for field in EXPECTED_FIELDS if field not in (reader.fieldnames or [])]
             if missing:
                 raise SystemExit(f"{path}: missing expected columns: {', '.join(missing)}")

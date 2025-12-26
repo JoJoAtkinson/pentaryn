@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="3269" viewBox="0 0 1200 3269">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="3232" viewBox="0 0 1200 3232">
 <style><![CDATA[
 @font-face {
   font-family: 'Alegreya';
@@ -40,6 +40,7 @@
         .label { fill: #fffaf0; stroke: var(--label-border); stroke-width: 1; }
         .title { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 16px; font-weight: 700; fill: #2b1f14; }
         .summary { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #3a2b1f; }
+        .md-bold { font-weight: 700; }
         .public-indicator { color: var(--public-indicator); opacity: 0.9; }
         
 ]]></style>
@@ -93,14 +94,14 @@
 </defs>
 <defs>
 </defs>
-<g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="3229"/></g>
+<g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="3192"/></g>
 <g id="connectors">
-<line class="connector" x1="600" y1="76.7" x2="552.0" y2="113.2"/>
-<line class="connector" x1="600" y1="312.2" x2="648.0" y2="348.7"/>
-<line class="connector" x1="600" y1="780.2" x2="552.0" y2="816.7"/>
-<line class="connector" x1="600" y1="1356.2" x2="648.0" y2="1392.7"/>
-<line class="connector" x1="600" y1="2076.2" x2="552.0" y2="2112.7"/>
-<line class="connector" x1="600" y1="3156.2" x2="648.0" y2="3192.7"/>
+<line class="connector" x1="600" y1="76.7" x2="552.0" y2="76.7"/>
+<line class="connector" x1="600" y1="312.2" x2="648.0" y2="312.2"/>
+<line class="connector" x1="600" y1="780.2" x2="552.0" y2="780.2"/>
+<line class="connector" x1="600" y1="1356.2" x2="648.0" y2="1356.2"/>
+<line class="connector" x1="600" y1="2076.2" x2="552.0" y2="2076.2"/>
+<line class="connector" x1="600" y1="3156.2" x2="648.0" y2="3156.2"/>
 </g>
 <g id="tokens">
 <use class="token" href="#token_default" x="589.0" y="65.7" width="22" height="22"/>
@@ -111,119 +112,119 @@
 <use class="token" href="#token_default" x="589.0" y="3145.2" width="22" height="22"/>
 </g>
 <g id="labels">
-<rect class="label" x="164.4" y="76.7" width="381.6" height="73.0" rx="8" ry="8"/>
-<text class="title" x="180.4" y="105.7">
+<rect class="label" x="164.4" y="40.2" width="381.6" height="73.0" rx="8" ry="8"/>
+<text class="title" x="180.4" y="69.2">
 <tspan x="180.4" dy="0.0">⋈ Age of Trade</tspan>
 </text>
-<text class="summary" x="180.4" y="123.7">
+<text class="summary" x="180.4" y="87.2">
 <tspan x="180.4" dy="0.0">War ends and coin takes over; the old war-roads are inherited by guilds,</tspan>
 <tspan x="180.4" dy="12.0">charters, and contract courts.</tspan>
 </text>
-<rect class="label" x="654.0" y="312.2" width="409.8" height="73.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="341.2">
+<rect class="label" x="654.0" y="275.7" width="409.8" height="73.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="304.7">
 <tspan x="670.0" dy="0.0">ᛏ Age of Conquest</tspan>
 </text>
-<text class="summary" x="670.0" y="359.2">
+<text class="summary" x="670.0" y="322.7">
 <tspan x="670.0" dy="0.0">Continental war becomes possible; generations live under levy and siege until</tspan>
 <tspan x="670.0" dy="12.0">exhaustion forces peace.</tspan>
 </text>
-<rect class="label" x="144.3" y="780.2" width="401.7" height="73.0" rx="8" ry="8"/>
-<text class="title" x="160.3" y="809.2">
+<rect class="label" x="144.3" y="743.7" width="401.7" height="73.0" rx="8" ry="8"/>
+<text class="title" x="160.3" y="772.7">
 <tspan x="160.3" dy="0.0">⋂ Age of Roads</tspan>
 </text>
-<text class="summary" x="160.3" y="827.2">
+<text class="summary" x="160.3" y="790.7">
 <tspan x="160.3" dy="0.0">Empires bind territory with bridges, milestones, and waystations—built for</tspan>
 <tspan x="160.3" dy="12.0">marching columns first, commerce second.</tspan>
 </text>
-<rect class="label" x="654.0" y="1356.2" width="416.2" height="73.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1385.2">
+<rect class="label" x="654.0" y="1319.7" width="416.2" height="73.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1348.7">
 <tspan x="670.0" dy="0.0">ᛉ Age of Crowns</tspan>
 </text>
-<text class="summary" x="670.0" y="1403.2">
+<text class="summary" x="670.0" y="1366.7">
 <tspan x="670.0" dy="0.0">Dynasties harden into kingdoms; borders are named, faiths codified, and wars</tspan>
 <tspan x="670.0" dy="12.0">are regional rather than world-spanning.</tspan>
 </text>
-<rect class="label" x="138.2" y="2076.2" width="407.8" height="73.0" rx="8" ry="8"/>
-<text class="title" x="154.2" y="2105.2">
+<rect class="label" x="138.2" y="2039.7" width="407.8" height="73.0" rx="8" ry="8"/>
+<text class="title" x="154.2" y="2068.7">
 <tspan x="154.2" dy="0.0">ᛒ Age of Reclamation</tspan>
 </text>
-<text class="summary" x="154.2" y="2123.2">
+<text class="summary" x="154.2" y="2086.7">
 <tspan x="154.2" dy="0.0">Writing, law, and agriculture return; proto-kingdoms form and the old roads</tspan>
 <tspan x="154.2" dy="12.0">are found again, half-buried.</tspan>
 </text>
-<rect class="label" x="654.0" y="3156.2" width="399.5" height="73.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="3185.2">
+<rect class="label" x="654.0" y="3119.7" width="399.5" height="73.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="3148.7">
 <tspan x="670.0" dy="0.0">⟂ Age of Ash &amp; Silence</tspan>
 </text>
-<text class="summary" x="670.0" y="3203.2">
+<text class="summary" x="670.0" y="3166.7">
 <tspan x="670.0" dy="0.0">Survival, famine, and fear of ruins; the world is quiet and broken, and most</tspan>
 <tspan x="670.0" dy="12.0">communities last only a season.</tspan>
 </text>
 </g>
 <g id="tags">
-<g class="public-indicator" transform="translate(170.4 80.7)">
+<g class="public-indicator" transform="translate(170.4 44.2)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(509.0 80.7)">
+<g transform="translate(509.0 44.2)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 80.7)">
+<g transform="translate(480.0 44.2)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 316.2)">
+<g class="public-indicator" transform="translate(660.0 279.7)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1026.8 316.2)">
+<g transform="translate(1026.8 279.7)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(997.8 316.2)">
+<g transform="translate(997.8 279.7)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g class="public-indicator" transform="translate(150.3 784.2)">
+<g class="public-indicator" transform="translate(150.3 747.7)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(509.0 784.2)">
+<g transform="translate(509.0 747.7)">
 <title>tag: infrastructure</title>
 <use href="#tag_infrastructure" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 784.2)">
+<g transform="translate(480.0 747.7)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 1360.2)">
+<g class="public-indicator" transform="translate(660.0 1323.7)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1033.2 1360.2)">
+<g transform="translate(1033.2 1323.7)">
 <title>tag: world</title>
 <use href="#tag_world" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1004.2 1360.2)">
+<g transform="translate(1004.2 1323.7)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g class="public-indicator" transform="translate(144.2 2080.2)">
+<g class="public-indicator" transform="translate(144.2 2043.7)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(509.0 2080.2)">
+<g transform="translate(509.0 2043.7)">
 <title>tag: world</title>
 <use href="#tag_world" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 2080.2)">
+<g transform="translate(480.0 2043.7)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 3160.2)">
+<g class="public-indicator" transform="translate(660.0 3123.7)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1016.5 3160.2)">
+<g transform="translate(1016.5 3123.7)">
 <title>tag: world</title>
 <use href="#tag_world" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(987.5 3160.2)">
+<g transform="translate(987.5 3123.7)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>

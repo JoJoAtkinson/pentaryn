@@ -3,14 +3,56 @@ from __future__ import annotations
 from .model import Event
 
 
-def pack_lane(events: list[Event], *, lane_gap_y: float) -> None:
+def pack_lane(events: list[Event], *, lane_gap_y: float, min_y: float = 0.0) -> None:
     lane_events = [e for e in events if e.box_h > 0]
     lane_events.sort(key=lambda e: e.y_target)
-    prev_bottom = None
-    for event in lane_events:
-        if prev_bottom is None:
-            event.y = max(event.y_target, event.y)
-        else:
-            event.y = max(event.y_target, prev_bottom + lane_gap_y)
-        prev_bottom = event.y + event.box_h
+    if not lane_events:
+        return
 
+    # Treat `y_target` as the desired *center* for each label box, then solve a 1D constrained
+    # least-squares problem:
+    #   minimize sum((center_i - target_i)^2)
+    #   subject to center_i - center_{i-1} >= sep_{i-1,i}
+    #
+    # This produces a balanced layout where some connectors can be straight, others tilt up/down.
+    n = len(lane_events)
+    offsets: list[float] = [0.0] * n
+    for idx in range(1, n):
+        prev = lane_events[idx - 1]
+        event = lane_events[idx]
+        sep = (prev.box_h / 2.0) + (event.box_h / 2.0) + lane_gap_y
+        offsets[idx] = offsets[idx - 1] + sep
+
+    # Convert variable separations into a monotone constraint by shifting:
+    #   a_i = center_i - offsets[i]  =>  a_i is nondecreasing.
+    targets = [event.y_target - offsets[idx] for idx, event in enumerate(lane_events)]
+
+    # Pool Adjacent Violators Algorithm (isotonic regression) for nondecreasing sequence.
+    # Each block is (start, end, weight_sum, weighted_target_sum).
+    blocks: list[tuple[int, int, float, float]] = []
+    for idx, target in enumerate(targets):
+        blocks.append((idx, idx, 1.0, float(target)))
+        while len(blocks) >= 2:
+            start1, end1, w1, s1 = blocks[-2]
+            start2, end2, w2, s2 = blocks[-1]
+            avg1 = s1 / w1
+            avg2 = s2 / w2
+            if avg1 <= avg2:
+                break
+            blocks = blocks[:-2] + [(start1, end2, w1 + w2, s1 + s2)]
+
+    adjusted: list[float] = [0.0] * n
+    for start, end, weight_sum, weighted_sum in blocks:
+        avg = weighted_sum / weight_sum
+        for idx in range(start, end + 1):
+            adjusted[idx] = avg
+
+    for idx, event in enumerate(lane_events):
+        center = adjusted[idx] + offsets[idx]
+        event.y = center - (event.box_h / 2.0)
+
+    # Enforce the top bound by applying a uniform downward shift (keeps ordering + spacing).
+    shift_down = min_y - lane_events[0].y
+    if shift_down > 0:
+        for event in lane_events:
+            event.y += shift_down

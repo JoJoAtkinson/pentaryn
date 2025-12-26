@@ -7,13 +7,55 @@ from pathlib import Path
 from .model import BuildConfig, LayoutResult, RendererConfig
 
 
+def _split_md_bold(text: str, *, bold: bool = False) -> tuple[list[tuple[str, bool]], bool]:
+    """
+    Split a line of text into (segment, is_bold) tuples using only the `**bold**` marker.
+
+    This intentionally supports only bold, keeps parsing minimal, and treats any `**` as a toggle.
+    """
+
+    segments: list[tuple[str, bool]] = []
+    buf: list[str] = []
+    i = 0
+    while i < len(text):
+        if text.startswith("**", i):
+            if buf:
+                segments.append(("".join(buf), bold))
+                buf.clear()
+            bold = not bold
+            i += 2
+            continue
+        buf.append(text[i])
+        i += 1
+    if buf:
+        segments.append(("".join(buf), bold))
+    return segments, bold
+
+
 def _render_multiline_text(*, parts: list[str], klass: str, x: float, y0: float, lines: list[str], line_h: float) -> float:
     if not lines:
         return y0
     parts.append(f'<text class="{klass}" x="{x:.1f}" y="{y0:.1f}">')
+    bold = False
     for idx, line in enumerate(lines):
         dy = 0.0 if idx == 0 else float(line_h)
-        parts.append(f'<tspan x="{x:.1f}" dy="{dy:.1f}">{escape(line)}</tspan>')
+        segments, bold = _split_md_bold(line, bold=bold)
+
+        started = False
+        for segment, is_bold in segments:
+            if not segment:
+                continue
+            attrs = []
+            if not started:
+                attrs.append(f'x="{x:.1f}"')
+                attrs.append(f'dy="{dy:.1f}"')
+                started = True
+            if is_bold:
+                attrs.append('class="md-bold"')
+            attr_text = " " + " ".join(attrs) if attrs else ""
+            parts.append(f"<tspan{attr_text}>{escape(segment)}</tspan>")
+        if not started:
+            parts.append(f'<tspan x="{x:.1f}" dy="{dy:.1f}"></tspan>')
     parts.append("</text>")
     if len(lines) == 1:
         return y0
@@ -67,6 +109,7 @@ def render_svg(
         .label { fill: #fffaf0; stroke: var(--label-border); stroke-width: 1; }
         .title { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 16px; font-weight: 700; fill: #2b1f14; }
         .summary { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #3a2b1f; }
+        .md-bold { font-weight: 700; }
         .public-indicator { color: var(--public-indicator); opacity: 0.9; }
         """
     )

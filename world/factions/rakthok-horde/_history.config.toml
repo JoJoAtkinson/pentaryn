@@ -14,3 +14,4 @@ tags_none = ["private"]
 tick_scale = "decade"
 tick_spacing_px = 72
 sort_direction = "desc"
+max_summary_lines = 6

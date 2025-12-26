@@ -76,6 +76,8 @@ def _read_history_rows(path: Path) -> list[dict[str, object]]:
         reader = csv.DictReader(handle, delimiter="\t")
         if not reader.fieldnames:
             raise SystemExit(f"{path}: missing header row")
+        # Allow "pretty" TSV headers that are visually column-aligned with spaces.
+        reader.fieldnames = [name.strip() for name in reader.fieldnames]
         fieldnames = set(reader.fieldnames)
         required = {"event_id", "date", "title"}
         if not required.issubset(fieldnames):
@@ -222,12 +224,15 @@ def render_history_scopes(
 
         for view in cfg.views:
             view_build = build
+            view_measure = measure
             if view.sort_direction:
                 view_build = replace(view_build, sort_direction=view.sort_direction)  # type: ignore[arg-type]
             if view.tick_scale:
                 view_build = replace(view_build, tick_scale=view.tick_scale)  # type: ignore[arg-type]
             if view.tick_spacing_px is not None:
                 view_build = replace(view_build, tick_spacing_px=int(view.tick_spacing_px))
+            if view.max_summary_lines is not None:
+                view_measure = replace(view_measure, max_summary_lines=int(view.max_summary_lines))
 
             filtered = [
                 r
@@ -256,7 +261,7 @@ def render_history_scopes(
                 output_svg=svg_path,
                 output_png=repo_root / "output" / "timeline.png",
                 fonts=fonts,
-                measure=measure,
+                measure=view_measure,
                 renderer=renderer,
                 build=view_build,
                 pov_catalog=pov_catalog,

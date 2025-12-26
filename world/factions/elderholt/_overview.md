@@ -12,6 +12,8 @@ status: active
 **Last Modified:** 2025-12-15
 **Status:** Active
 
+**Colors:** Ash-black, forest green, bone white
+
 ## Overview
 
 | Attribute | Value |

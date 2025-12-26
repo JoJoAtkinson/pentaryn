@@ -47,6 +47,8 @@ def read_tsv(path: Path) -> list[EventRow]:
         reader = csv.DictReader(handle, delimiter="\t")
         if not reader.fieldnames:
             raise ValueError(f"{path} has no header row.")
+        # Allow column-aligned headers with spaces.
+        reader.fieldnames = [name.strip() for name in reader.fieldnames]
         fieldnames = set(reader.fieldnames)
         uses_svg_schema = set(SVG_COLUMNS).issubset(fieldnames)
         uses_gen_schema = set(GEN_COLUMNS_MIN).issubset(fieldnames)

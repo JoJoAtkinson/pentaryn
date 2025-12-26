@@ -30,6 +30,10 @@ def _rel_luminance(hex_color: str) -> float:
 
 def _color_phrase_to_hex(phrase: str) -> str:
     p = (phrase or "").strip().lower()
+    # Accept literal hex, or hex embedded in a longer descriptive phrase like "Noble gold (#e5b54a)".
+    m = re.search(r"#([0-9a-fA-F]{6})", p)
+    if m:
+        return f"#{m.group(1).lower()}"
     # Order matters: match more specific phrases first.
     if "obsidian" in p:
         return "#0b0b0c"
@@ -88,7 +92,7 @@ def _extract_overview_colors(overview_path: Path) -> list[str]:
     if not overview_path.exists():
         return []
     text = overview_path.read_text(encoding="utf-8")
-    match = re.search(r"\\*\\*Colors:\\*\\*\\s*([^\\n]+)", text, flags=re.IGNORECASE)
+    match = re.search(r"\*\*Colors:\*\*\s*([^\n]+)", text, flags=re.IGNORECASE)
     if not match:
         return []
     raw = match.group(1).strip()
@@ -149,6 +153,67 @@ class PovCatalog:
     styles: dict[str, PovStyle]
 
     @staticmethod
+    def _load_global_styles(*, repo_root: Path) -> dict[str, PovStyle]:
+        """
+        Optional global ground truth for POV icon colors:
+          world/factions/faction-colors.toml
+
+        Format:
+          [povs."<slug>"]
+          palette = ["#rrggbb", ...]
+          foreground = "#rrggbb"
+          background = "#rrggbb"
+          border = "#rrggbb"
+        """
+        factions_dir = (repo_root / "world" / "factions").resolve()
+        base_path = (factions_dir / "faction-colors.toml").resolve()
+
+        def _parse(path: Path) -> dict[str, PovStyle]:
+            if not path.exists():
+                return {}
+            raw = tomllib.loads(path.read_text(encoding="utf-8"))
+            povs_raw = raw.get("povs")
+            if not isinstance(povs_raw, dict):
+                return {}
+
+            styles: dict[str, PovStyle] = {}
+            for pov, item in povs_raw.items():
+                if not isinstance(item, dict):
+                    continue
+                palette_raw = item.get("palette")
+                palette: list[str] = []
+                if isinstance(palette_raw, list):
+                    palette = [str(v).strip() for v in palette_raw if str(v).strip()]
+                foreground = str(item.get("foreground") or "").strip()
+                background = str(item.get("background") or "").strip()
+                border_raw = item.get("border")
+                border = str(border_raw).strip() if border_raw is not None else ""
+                if border.strip().lower() in {"none", "transparent"}:
+                    border = ""
+
+                # Accept palette-only entries and derive the rest.
+                if not background:
+                    styles[str(pov)] = _style_from_palette(palette)
+                    continue
+
+                if not foreground:
+                    foreground = "#fbf7ef" if _rel_luminance(background) < 0.62 else "#2b1f14"
+                if not border:
+                    border = darken(background, 0.12)
+                if not palette:
+                    palette = [background]
+
+                styles[str(pov)] = PovStyle(
+                    foreground=foreground,
+                    background=background,
+                    border=border,
+                    palette=palette,
+                )
+            return styles
+
+        return _parse(base_path)
+
+    @staticmethod
     def discover(*, repo_root: Path) -> "PovCatalog":
         factions_dir = repo_root / "world" / "factions"
         icons: dict[str, Path] = {}
@@ -156,12 +221,21 @@ class PovCatalog:
         if not factions_dir.exists():
             return PovCatalog(icons=icons, styles=styles)
 
+        global_styles = PovCatalog._load_global_styles(repo_root=repo_root)
+
         for folder in sorted([p for p in factions_dir.iterdir() if p.is_dir()], key=lambda p: p.name):
             pov = folder.name
             icon_path = folder / "icon.svg"
             if not icon_path.exists():
+                icon_path = folder / "_icon.svg"
+            if not icon_path.exists():
                 continue
             icons[pov] = icon_path
+
+            # Global ground-truth colors win when present.
+            if pov in global_styles:
+                styles[pov] = global_styles[pov]
+                continue
 
             # Optional override for exact colors.
             cfg_style = _load_config_style(folder / "_history.config.toml")
@@ -233,4 +307,3 @@ class PovCatalog:
             "  </g>\n"
             "</symbol>"
         )
-
