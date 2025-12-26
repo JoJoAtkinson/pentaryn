@@ -6,6 +6,20 @@ import sys
 import logging
 from pathlib import Path
 
+MCP_TOOL = {
+    "name": "build_timeline_svg",
+    "description": (
+        "Build/regenerate timeline SVGs from the repo's history TSV files and `world/**/_history.config.toml` views "
+        "using the SVG-first workflow (writes outputs to the configured output paths, e.g. `.output/` and view SVG files)."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": False,
+    },
+    "argv": [],
+}
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))

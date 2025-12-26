@@ -9,6 +9,63 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
+MCP_TOOL = {
+    "tools": [
+        {
+            "name": "year_to_age",
+            "description": (
+                "Convert an A.F. year (e.g. 4150) to an age glyph label (e.g. ᛏ200). "
+                "If the year is negative, it is treated as an offset from the configured present_year (e.g. -50 = present_year-50)."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {"year": {"type": "integer", "description": "A.F. year to convert"}},
+                "required": ["year"],
+                "additionalProperties": False,
+            },
+            "argv": ["--direction", "year_to_age", "--value", "{year}"],
+        },
+        {
+            "name": "age_to_year",
+            "description": (
+                "Convert an age glyph label (e.g. ᛏ200) to an A.F. year (e.g. 4150). "
+                "Negative offsets count back from the end of that age: "
+                "'ᛏ-50' means 50 years before the start of the next age; "
+                "for the current/ongoing age, the end is present_year (so '⋈-50' = present_year-50)."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {"label": {"type": "string", "description": "Age label like 'ᛏ200'"}},
+                "required": ["label"],
+                "additionalProperties": False,
+            },
+            "argv": ["--direction", "age_to_year", "--value", "{label}"],
+        },
+        {
+            "name": "age_convert",
+            "description": (
+                "Auto-detect conversion direction and convert year ⇄ age label. "
+                "Absolute years (e.g. 4150) convert to age labels (e.g. ᛏ200). "
+                "Age labels convert to absolute A.F. years. "
+                "Negative values are special: '-50' resolves to an absolute year (present_year-50), "
+                "and 'ᛏ-50' resolves to an absolute year from the end of the ᛏ age."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "value": {
+                        "type": "string",
+                        "description": "Year like '4150', relative year like '-50', or age label like 'ᛏ200'/'ᛏ-50'",
+                    }
+                },
+                "required": ["value"],
+                "additionalProperties": False,
+            },
+            "argv": ["--direction", "auto", "--value", "{value}"],
+        },
+    ]
+}
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
