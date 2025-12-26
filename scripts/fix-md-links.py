@@ -7,6 +7,27 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
+MCP_TOOL = {
+    "name": "fix_md_links",
+    "description": (
+        "Scan the repo for broken relative Markdown links and suggest fixes (or apply them with write=true). "
+        "Focuses on known repo moves (e.g. faction overviews and locations under faction folders)."
+    ),
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "write": {"type": "boolean", "description": "Write changes to disk (default: false)."},
+            "check_related_links": {
+                "type": "boolean",
+                "description": "Warn if `## Related Links` is not near the end of file (default: false).",
+            },
+        },
+        "additionalProperties": False,
+    },
+    "argv": [],
+    "bool_flags": {"write": "--write", "check_related_links": "--check-related-links"},
+}
+
 
 @dataclass(frozen=True)
 class LinkFix:
