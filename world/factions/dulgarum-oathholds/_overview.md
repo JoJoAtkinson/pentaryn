@@ -18,7 +18,7 @@
 ## Symbol & Colors
 
 **Symbol:** An iron hammer crossed with a sealed gate on a mountain field  
-**Colors:** Granite gray, iron black, bronze trim  
+**Colors:** Noble gold (#e5b54a), deep wine (#531f22)  
 **Motto/Slogan:** "Oaths unto stone, stone unto eternity."
 
 ## Mission & Goals

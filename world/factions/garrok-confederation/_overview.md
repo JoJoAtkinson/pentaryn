@@ -18,7 +18,7 @@
 ## Symbol & Colors
 
 **Symbol:** A crossed axe and spear over a fire-ring  
-**Colors:** Blood red, ash gray, bone white  
+**Colors:** Stone brown (#5c5449), shield red (#730a3a)  
 **Motto/Slogan:** "Honor holds; blood remembers."
 
 ## Mission & Goals

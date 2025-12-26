@@ -72,7 +72,9 @@ BUILD = BuildConfig(
     tick_spacing_px=72,
     embed_fonts=True,
     opt_iters=40,
-    max_displacement_px=80,
+    # Dense decades can otherwise cause extreme axis stretching (large whitespace between ticks/events).
+    # Allow more displacement so events can stack without blowing out the time scale.
+    max_displacement_px=1200,
     max_grow_passes=12,
     slack_fraction=0.45,
     px_per_year=72,
@@ -106,6 +108,14 @@ def main() -> None:
             defs_fragment_path=DEFS_FRAGMENT,
             debug_write_tsv=True,
         )
+
+        # Also write a static legend for icons/symbols so the SVG views are self-explanatory.
+        try:
+            from scripts.build_timeline_key import build_timeline_key
+
+            build_timeline_key(repo_root=REPO_ROOT, output=(REPO_ROOT / "timeline-key.svg"))
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Failed to build timeline key: %s", exc)
         return
 
     input_tsv = INPUT_TSV
@@ -141,6 +151,14 @@ def main() -> None:
         renderer=RENDERER,
         build=BUILD,
     )
+
+    # Also write a static legend for icons/symbols so the SVG views are self-explanatory.
+    try:
+        from scripts.build_timeline_key import build_timeline_key
+
+        build_timeline_key(repo_root=REPO_ROOT, output=(REPO_ROOT / "timeline-key.svg"))
+    except Exception as exc:
+        logging.getLogger(__name__).warning("Failed to build timeline key: %s", exc)
 
 
 if __name__ == "__main__":

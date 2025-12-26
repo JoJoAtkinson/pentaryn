@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import re
 
 from .text_measure import text_width
 
@@ -13,6 +14,21 @@ class WrappedText:
     height: float
 
 
+_BOLD_MARKER_RE = re.compile(r"\*\*")
+
+
+def _strip_bold_markdown(text: str) -> str:
+    """
+    Remove the `**` marker used for bold.
+
+    We keep this intentionally small: no other markdown is supported, and we do not attempt to
+    parse nested/escaped markers. This function exists so wrapping + measuring ignores the marker
+    characters, while the renderer can still interpret them.
+    """
+
+    return _BOLD_MARKER_RE.sub("", text or "")
+
+
 def wrap_lines(text: str, *, max_width: int, font_path: str, font_size: int, font_weight: int | None = None) -> list[str]:
     words = [w for w in text.split() if w]
     if not words:
@@ -21,7 +37,8 @@ def wrap_lines(text: str, *, max_width: int, font_path: str, font_size: int, fon
     current: list[str] = []
     for word in words:
         trial = " ".join(current + [word]) if current else word
-        if current and text_width(trial, font_path, font_size, weight=font_weight) > max_width:
+        trial_visible = _strip_bold_markdown(trial)
+        if current and text_width(trial_visible, font_path, font_size, weight=font_weight) > max_width:
             lines.append(" ".join(current))
             current = [word]
         else:
@@ -66,9 +83,15 @@ def wrap_title_and_summary(
 
     max_line_w = 0.0
     for line in title_lines:
-        max_line_w = max(max_line_w, text_width(line, title_font_path, title_font_size, weight=title_font_weight))
+        max_line_w = max(
+            max_line_w,
+            text_width(_strip_bold_markdown(line), title_font_path, title_font_size, weight=title_font_weight),
+        )
     for line in summary_lines:
-        max_line_w = max(max_line_w, text_width(line, summary_font_path, summary_font_size, weight=summary_font_weight))
+        max_line_w = max(
+            max_line_w,
+            text_width(_strip_bold_markdown(line), summary_font_path, summary_font_size, weight=summary_font_weight),
+        )
 
     height = 0.0
     if title_lines:

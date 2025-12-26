@@ -18,7 +18,7 @@
 ## Symbol & Colors
 
 **Symbol:** A golden gear interlocked with a silver hammer on a black field  
-**Colors:** Gold, silver, industrial black  
+**Colors:** Slate steel (#4a4c5e), guild brass (#8c7c54)  
 **Motto/Slogan:** "Prosperity through freedom."
 
 ## Mission & Goals

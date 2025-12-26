@@ -7,9 +7,9 @@ from .model import Event, SortDirection
 
 def max_displacement(events: list[Event]) -> tuple[float, Event]:
     worst = events[0]
-    worst_push = worst.y - worst.y_target
+    worst_push = (worst.y + (worst.box_h / 2.0)) - worst.y_target
     for event in events:
-        push = event.y - event.y_target
+        push = (event.y + (event.box_h / 2.0)) - event.y_target
         if push > worst_push:
             worst_push = push
             worst = event
@@ -22,6 +22,7 @@ def grow_downward(
     direction: SortDirection,
     lane_gap_y: float,
     opt_iters: int,
+    min_y: float = 0.0,
     max_displacement_px: float,
     max_grow_passes: int,
     slack_fraction: float,
@@ -32,7 +33,12 @@ def grow_downward(
         if worst_push <= max_displacement_px:
             return
 
-        slack = max(8.0, worst_push * slack_fraction)
+        # Only add as much axis slack as needed to bring the worst event back within the
+        # allowed displacement. Using a fraction of the *total* push tends to overshoot
+        # and produces large, unintuitive gaps between ticks/events in dense eras.
+        excess = worst_push - max_displacement_px
+        # Add a small headroom factor (slack_fraction) to reduce the number of grow passes.
+        slack = max(8.0, excess * (1.0 + slack_fraction))
         threshold = worst_event.axis_day
         slack_steps.append((threshold, slack))
         for event in events:
@@ -40,5 +46,5 @@ def grow_downward(
                 event.y_target += slack
 
         for lane in ("left", "right"):
-            pack_lane([e for e in events if e.lane == lane], lane_gap_y=lane_gap_y)
-        refine_layout(events, lane_gap_y=lane_gap_y, opt_iters=opt_iters)
+            pack_lane([e for e in events if e.lane == lane], lane_gap_y=lane_gap_y, min_y=min_y)
+        refine_layout(events, lane_gap_y=lane_gap_y, opt_iters=opt_iters, min_y=min_y)

@@ -18,6 +18,7 @@ class HistoryView:
     tick_scale: Optional[str]
     tick_spacing_px: Optional[int]
     sort_direction: Optional[str]
+    max_summary_lines: Optional[int]
     svg: Optional[str]
 
 
@@ -81,6 +82,11 @@ def load_history_config(path: Path) -> HistoryConfig:
         if tick_spacing_px is not None:
             tick_spacing_px = int(tick_spacing_px)
         sort_direction = (str(item.get("sort_direction")).strip() if item.get("sort_direction") is not None else None) or None
+        max_summary_lines = item.get("max_summary_lines")
+        if max_summary_lines is not None:
+            max_summary_lines = int(max_summary_lines)
+            if max_summary_lines < -1:
+                raise SystemExit(f"{path}: view '{view_id}' max_summary_lines must be -1 (unlimited) or >= 0")
         svg = (str(item.get("svg")).strip() if item.get("svg") is not None else None) or None
 
         views.append(
@@ -94,6 +100,7 @@ def load_history_config(path: Path) -> HistoryConfig:
                 tick_scale=tick_scale,
                 tick_spacing_px=tick_spacing_px,  # type: ignore[arg-type]
                 sort_direction=sort_direction,
+                max_summary_lines=max_summary_lines,  # type: ignore[arg-type]
                 svg=svg,
             )
         )

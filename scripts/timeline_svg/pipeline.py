@@ -222,17 +222,23 @@ def build_timeline_svg(
     if events_sorted:
         for event in events_sorted:
             event.y_target = axis_map.axis_to_y(event.axis_day)
-            event.y = event.y_target
+            event.y = max(float(renderer.margin_top), event.y_target - (event.box_h / 2.0))
 
         for lane in ("left", "right"):
-            pack_lane([e for e in events_sorted if e.lane == lane], lane_gap_y=renderer.lane_gap_y)
-        refine_layout(events_sorted, lane_gap_y=renderer.lane_gap_y, opt_iters=build.opt_iters)
+            pack_lane([e for e in events_sorted if e.lane == lane], lane_gap_y=renderer.lane_gap_y, min_y=float(renderer.margin_top))
+        refine_layout(
+            events_sorted,
+            lane_gap_y=renderer.lane_gap_y,
+            opt_iters=build.opt_iters,
+            min_y=float(renderer.margin_top),
+        )
 
         grow_downward(
             events_sorted,
             direction=build.sort_direction,
             lane_gap_y=renderer.lane_gap_y,
             opt_iters=build.opt_iters,
+            min_y=float(renderer.margin_top),
             max_displacement_px=build.max_displacement_px,
             max_grow_passes=build.max_grow_passes,
             slack_fraction=build.slack_fraction,
