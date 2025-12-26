@@ -108,6 +108,7 @@ class ToolRunner:
     script_path: Path
     argv_template: tuple[str, ...]
     bool_flags: dict[str, str]
+    value_flags: dict[str, str]
 
     def run(self, *, arguments: dict[str, Any]) -> str:
         python = _python_bin()
@@ -134,6 +135,19 @@ class ToolRunner:
                 raise ValueError(f"Argument '{key}' must be a boolean")
             if value:
                 argv.append(self.bool_flags[key])
+
+        for key in sorted(self.value_flags.keys()):
+            if key not in arguments:
+                continue
+            value = arguments.get(key)
+            if value is None:
+                continue
+            if isinstance(value, bool):
+                raise ValueError(f"Argument '{key}' must not be a boolean")
+            rendered = str(value).strip()
+            if not rendered:
+                continue
+            argv.extend([self.value_flags[key], rendered])
 
         proc = subprocess.run(
             [str(python), str(self.script_path), *argv],
@@ -222,12 +236,24 @@ def _tools_from_mcp_tool(*, path: Path, mcp_tool: dict[str, Any]) -> list[ToolRu
                 continue
             bool_flags[key] = flag
 
+        value_flags_raw = entry.get("value_flags") or entry.get("valueFlags") or {}
+        if not isinstance(value_flags_raw, dict):
+            raise ValueError(f"{name}: value_flags must be a dict of argument_name -> flag")
+        value_flags: dict[str, str] = {}
+        for k, v in value_flags_raw.items():
+            key = str(k).strip()
+            flag = str(v).strip()
+            if not key or not flag:
+                continue
+            value_flags[key] = flag
+
         runners.append(
             ToolRunner(
                 tool=Tool(name=name, description=description, input_schema=input_schema),
                 script_path=path,
                 argv_template=tuple(argv_raw),
                 bool_flags=bool_flags,
+                value_flags=value_flags,
             )
         )
     return runners
