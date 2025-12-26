@@ -57,8 +57,9 @@ def render_svg(
         :root { --label-border: #cbb08a; --public-indicator: #ac9575; }
         .bg { fill: #fbf7ef; }
         .spine { stroke: #a58b6a; stroke-width: 2; }
-        .tick { stroke: #a58b6a; stroke-width: 1; opacity: 0.8; }
-        .tick-label { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #5a4634; }
+        .tick { stroke: #a58b6a; stroke-width: 1.8; opacity: 0.95; stroke-linecap: round; }
+        .tick-label { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 14px; font-weight: 700; fill: #5a4634; }
+        .tick-label-outline { fill: none; stroke: #fbf7ef; stroke-width: 4; stroke-linejoin: round; opacity: 0.9; }
         .tick-glyph { font-family: 'Noto Sans Runic', 'Noto Sans Symbols 2', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; }
         .tick-number { font-family: 'Alegreya', serif; }
         .token { }
@@ -79,39 +80,24 @@ def render_svg(
 
     parts.append(f'<g id="spine"><line class="spine" x1="{spine_x}" y1="{renderer.margin_top}" x2="{spine_x}" y2="{height - renderer.margin_bottom}"/></g>')
 
-    # ticks
-    parts.append('<g id="ticks">')
-    tick_age_glyphs = {"⊚", "⟂", "ᛒ", "ᛉ", "⋂", "ᛏ", "⋈"}
-    for tick in layout.ticks:
-        y = tick.y
-        parts.append(f'<line class="tick" x1="{spine_x - 6}" y1="{y:.1f}" x2="{spine_x + 6}" y2="{y:.1f}"/>')
-        label = tick.label
-        if label and label[0] in tick_age_glyphs and label[1:].isdigit():
-            glyph, num = label[0], label[1:]
-            parts.append(f'<text class="tick-label" x="{spine_x + 10}" y="{y + 4:.1f}">')
-            parts.append(f'<tspan class="tick-glyph">{escape(glyph)}</tspan><tspan class="tick-number">{escape(num)}</tspan>')
-            parts.append("</text>")
-        else:
-            parts.append(f'<text class="tick-label" x="{spine_x + 10}" y="{y + 4:.1f}">{tick.label}</text>')
-    parts.append("</g>")
-
     parts.append('<g id="connectors">')
     if build.connectors:
         overlap = float(renderer.connector_into_box_px)
         for event in layout.events:
-            token_y = event.y + event.box_h / 2
+            token_y = float(event.y_target)
+            label_y = event.y + event.box_h / 2
             if event.lane == "left":
                 box_x = spine_x - renderer.spine_to_label_gap - event.box_w
                 x2 = box_x + event.box_w + overlap
             else:
                 box_x = spine_x + renderer.spine_to_label_gap
                 x2 = box_x - overlap
-            parts.append(f'<line class="connector" x1="{spine_x}" y1="{token_y:.1f}" x2="{x2:.1f}" y2="{token_y:.1f}"/>')
+            parts.append(f'<line class="connector" x1="{spine_x}" y1="{token_y:.1f}" x2="{x2:.1f}" y2="{label_y:.1f}"/>')
     parts.append("</g>")
 
     parts.append('<g id="tokens">')
     for event in layout.events:
-        token_y = event.y + event.box_h / 2
+        token_y = float(event.y_target)
         x = spine_x - build.token_size / 2
         y = token_y - build.token_size / 2
         parts.append(f'<use class="token" href="#token_default" x="{x:.1f}" y="{y:.1f}" width="{build.token_size}" height="{build.token_size}"/>')
@@ -199,6 +185,27 @@ def render_svg(
             parts.append(f'<use href="#{icon_id}" width="{size:.1f}" height="{size:.1f}"/>')
             parts.append("</g>")
             x_right = x_left - gap
+    parts.append("</g>")
+
+    # ticks (rendered last so they are never covered by events/labels)
+    parts.append('<g id="ticks">')
+    tick_age_glyphs = {"⊚", "⟂", "ᛒ", "ᛉ", "⋂", "ᛏ", "⋈"}
+    tick_half = 10.0
+    tick_label_x = spine_x + tick_half + 6.0
+    for tick in layout.ticks:
+        y = tick.y
+        parts.append(f'<line class="tick" x1="{spine_x - tick_half:.1f}" y1="{y:.1f}" x2="{spine_x + tick_half:.1f}" y2="{y:.1f}"/>')
+        label = tick.label
+        if label and label[0] in tick_age_glyphs and label[1:].isdigit():
+            glyph, num = label[0], label[1:]
+            for klass in ("tick-label tick-label-outline", "tick-label"):
+                parts.append(f'<text class="{klass}" x="{tick_label_x:.1f}" y="{y + 5:.1f}">')
+                parts.append(f'<tspan class="tick-glyph">{escape(glyph)}</tspan><tspan class="tick-number">{escape(num)}</tspan>')
+                parts.append("</text>")
+        else:
+            safe_label = escape(tick.label or "")
+            parts.append(f'<text class="tick-label tick-label-outline" x="{tick_label_x:.1f}" y="{y + 5:.1f}">{safe_label}</text>')
+            parts.append(f'<text class="tick-label" x="{tick_label_x:.1f}" y="{y + 5:.1f}">{safe_label}</text>')
     parts.append("</g>")
 
     parts.append("</svg>")

@@ -183,18 +183,24 @@ def build_timeline_svg(
             line_gap=float(line_gap),
         )
 
-    min_axis = min(e.axis_day for e in events_sorted)
-    max_axis = max(e.axis_day for e in events_sorted)
     days_per_year = 12 * 30
+    if events_sorted:
+        min_axis = min(e.axis_day for e in events_sorted)
+        max_axis = max(e.axis_day for e in events_sorted)
+    else:
+        # Allow rendering views that match zero events (e.g. tag-filtered views).
+        # Default to a 1-year span unless axis bounds are provided.
+        min_axis = 0
+        max_axis = days_per_year - 1
     if build.axis_min_year is not None:
         min_axis_override = int(build.axis_min_year) * days_per_year
-        if min_axis_override < min_axis:
-            min_axis = min_axis_override
+        min_axis = min(min_axis, min_axis_override)
     if build.axis_max_year is not None:
         # Treat an axis bound as an inclusive year bound.
         max_axis_override = int(build.axis_max_year) * days_per_year + (days_per_year - 1)
-        if max_axis_override > max_axis:
-            max_axis = max_axis_override
+        max_axis = max(max_axis, max_axis_override)
+    if max_axis < min_axis:
+        max_axis = min_axis
     axis_span = max_axis - min_axis
 
     # If tick_scale is explicit, keep spacing between ticks constant by deriving the px/year scale
@@ -206,27 +212,32 @@ def build_timeline_svg(
         step = step_days(fixed_tick_scale)  # days
         years_per_tick = step / 360.0
         px_per_year = build.tick_spacing_px / years_per_tick
+        # Extend the axis down to the previous tick boundary so the first/last decade marker
+        # doesn't disappear when the earliest event is a year or two after the boundary.
+        if build.axis_min_year is None:
+            min_axis = min_axis - (min_axis % step)
 
     axis_map = make_axis_map(build.sort_direction, min_axis=min_axis, max_axis=max_axis, top_y=renderer.margin_top, px_per_year=px_per_year)
 
-    for event in events_sorted:
-        event.y_target = axis_map.axis_to_y(event.axis_day)
-        event.y = event.y_target
+    if events_sorted:
+        for event in events_sorted:
+            event.y_target = axis_map.axis_to_y(event.axis_day)
+            event.y = event.y_target
 
-    for lane in ("left", "right"):
-        pack_lane([e for e in events_sorted if e.lane == lane], lane_gap_y=renderer.lane_gap_y)
-    refine_layout(events_sorted, lane_gap_y=renderer.lane_gap_y, opt_iters=build.opt_iters)
+        for lane in ("left", "right"):
+            pack_lane([e for e in events_sorted if e.lane == lane], lane_gap_y=renderer.lane_gap_y)
+        refine_layout(events_sorted, lane_gap_y=renderer.lane_gap_y, opt_iters=build.opt_iters)
 
-    grow_downward(
-        events_sorted,
-        direction=build.sort_direction,
-        lane_gap_y=renderer.lane_gap_y,
-        opt_iters=build.opt_iters,
-        max_displacement_px=build.max_displacement_px,
-        max_grow_passes=build.max_grow_passes,
-        slack_fraction=build.slack_fraction,
-        slack_steps=axis_map.slack_steps,
-    )
+        grow_downward(
+            events_sorted,
+            direction=build.sort_direction,
+            lane_gap_y=renderer.lane_gap_y,
+            opt_iters=build.opt_iters,
+            max_displacement_px=build.max_displacement_px,
+            max_grow_passes=build.max_grow_passes,
+            slack_fraction=build.slack_fraction,
+            slack_steps=axis_map.slack_steps,
+        )
 
     content_bottom = max((e.y + e.box_h) for e in events_sorted) if events_sorted else float(renderer.margin_top)
     height = int(content_bottom + renderer.margin_bottom)

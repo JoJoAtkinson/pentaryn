@@ -9,16 +9,8 @@ border = "#2aa7a1"
 [[views]]
 id = "rakthok"
 title = "Rakthok Horde (Rakthok View)"
-tags_all = ["rakthok-horde"]
+tags_any = ["rakthok-horde", "calderon-imperium"]
 tags_none = ["private"]
-tick_scale = "decade"
-tick_spacing_px = 72
-sort_direction = "desc"
-
-[[views]]
-id = "public"
-title = "Rakthok Border (Public View)"
-tags_all = ["rakthok-horde", "public"]
 tick_scale = "decade"
 tick_spacing_px = 72
 sort_direction = "desc"
