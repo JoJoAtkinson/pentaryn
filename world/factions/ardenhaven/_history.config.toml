@@ -1,0 +1,17 @@
+[pov_style]
+# Used by the SVG renderer to style this folder's `icon.svg` badge.
+# (If absent, the renderer derives a palette from `_overview.md` as a fallback.)
+palette = ["#0b0b0c", "#b87333", "#2aa7a1"]
+foreground = "#fbf7ef"
+background = "#0b0b0c"
+border = "#2aa7a1"
+
+[[views]]
+id = "rakthok"
+title = "Rakthok Horde (Rakthok View)"
+tags_any = ["ardenhaven"]
+tags_none = ["private"]
+tick_scale = "decade"
+tick_spacing_px = 72
+sort_direction = "desc"
+max_summary_lines = 6
