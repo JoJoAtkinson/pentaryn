@@ -1,17 +1,46 @@
 present_year = 4327
 
 [[views]]
-id = "master"
-title = "World History (Truth)"
-tags_none = ["private"]
-tick_scale = "decade"
+id = "public"
+title = "World History (Public)"
+tags_all = ["public"]
+tick_scale = "century"
 tick_spacing_px = 72
 sort_direction = "desc"
 
 [[views]]
-id = "public"
-title = "World History (Public)"
-tags_all = ["public"]
+id = "merrowgate"
+title = "World History (Merrowgate)"
+tags_any = ["public", "merrowgate"]
 tick_scale = "decade"
+tick_spacing_px = 300
+sort_direction = "desc"
+
+[views.range]
+last_years = 170
+
+
+[[views]]
+id = "elven"
+title = "World History (Elven)"
+tags_any = ["public", "araethilion", "sabriel"]
+tick_scale = "century"
 tick_spacing_px = 72
 sort_direction = "desc"
+max_summary_lines = 6
+
+[views.range]
+last_years = 3500
+
+[[views]]
+id = "Elderholt"
+title = "Elderholt"
+tags_any = ["public", "elderholt"]
+tick_scale = "century"
+tick_spacing_px = 72
+sort_direction = "desc"
+max_summary_lines = 6
+hide_time_measurments = true
+
+[views.range]
+last_years = 400

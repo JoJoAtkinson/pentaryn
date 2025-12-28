@@ -18,7 +18,7 @@ border = '#2f6b3a'
 [povs."calderon-imperium"]
 palette = ['#1a1a1a', '#6b6f78', '#7a2f2f']
 foreground = '#fbf7ef'
-background = '#1a1a1a'
+background = '#3A3F45'
 border = '#541010ff'
 
 [povs."dulgarum-oathholds"]
@@ -29,9 +29,9 @@ border = '#e5b54a'
 
 [povs."elderholt"]
 palette = ['#1a1a1a', '#2f6b3a', '#e8dfcf']
-foreground = '#fbf7ef'
-background = '#2f6b3a'
-border = '#153b1cff'
+foreground = '#fff'
+background = '#000'
+border = '#000'
 
 [povs."garhammar-trade-league"]
 palette = ['#4a4c5e', '#8c7c54']

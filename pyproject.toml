@@ -10,6 +10,7 @@ dependencies = [
   "pillow>=10.0.0",
   "pytest",
   "cairosvg",
+  "chromadb",
 ]
 
 # Notes on native text layout (RAQM):

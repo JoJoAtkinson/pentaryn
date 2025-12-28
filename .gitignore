@@ -50,3 +50,6 @@ __pycache__/
 # Codex (local)
 .codex/config.toml
 .codex/config.local.toml
+
+# Local secrets
+.env

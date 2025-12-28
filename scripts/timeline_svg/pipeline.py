@@ -7,7 +7,7 @@ from .game_time import date_to_axis_days
 from .lane_assign import assign_lanes, sort_events
 from .layout_energy import refine_layout
 from .layout_grow import grow_downward
-from .layout_pack import pack_lane
+from .layout_pack import pack_lane, snap_to_targets_when_clear
 from .model import (
     BuildConfig,
     Event,
@@ -244,6 +244,7 @@ def build_timeline_svg(
             slack_fraction=build.slack_fraction,
             slack_steps=axis_map.slack_steps,
         )
+        snap_to_targets_when_clear(events_sorted, lane_gap_y=renderer.lane_gap_y, min_y=float(renderer.margin_top))
 
     content_bottom = max((e.y + e.box_h) for e in events_sorted) if events_sorted else float(renderer.margin_top)
     height = int(content_bottom + renderer.margin_bottom)

@@ -107,6 +107,7 @@ def render_svg(
         .token { }
         .connector { stroke: #7a5b3a; stroke-width: 1.5; stroke-linecap: round; opacity: 0.7; }
         .label { fill: #fffaf0; stroke: var(--label-border); stroke-width: 1; }
+        .label.changed-id { stroke: #d97900; stroke-width: 3; }
         .title { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 16px; font-weight: 700; fill: #2b1f14; }
         .summary { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #3a2b1f; }
         .md-bold { font-weight: 700; }
@@ -153,7 +154,12 @@ def render_svg(
         else:
             box_x = spine_x + renderer.spine_to_label_gap
         box_y = event.y
-        parts.append(f'<rect class="label" x="{box_x:.1f}" y="{box_y:.1f}" width="{event.box_w:.1f}" height="{event.box_h:.1f}" rx="8" ry="8"/>')
+        label_class = "label"
+        if "changed-id" in (event.tags or []):
+            label_class += " changed-id"
+        parts.append(
+            f'<rect class="{label_class}" x="{box_x:.1f}" y="{box_y:.1f}" width="{event.box_w:.1f}" height="{event.box_h:.1f}" rx="8" ry="8"/>'
+        )
 
         text_x = box_x + renderer.label_padding_x
         cursor_top = box_y + renderer.label_padding_y
@@ -209,7 +215,7 @@ def render_svg(
             parts.append('<use href="#tag_public" width="{:.1f}" height="{:.1f}"/>'.format(public_size, public_size))
             parts.append("</g>")
 
-        visible_tags = [t for t in event.tags if t and t != "public"]
+        visible_tags = [t for t in event.tags if t and t not in {"public", "changed-id"}]
         if not visible_tags:
             continue
 

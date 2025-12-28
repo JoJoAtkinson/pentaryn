@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 import logging
+import os
 from pathlib import Path
 
 MCP_TOOL = {
@@ -83,6 +84,8 @@ BUILD = BuildConfig(
     enable_png_sanity=False,
     age_glyph_years=True,
     debug_age_glyphs=True,
+    highlight_git_id_changes=os.environ.get("TIMELINE_HIGHLIGHT_GIT_ID_CHANGES", "1").strip().lower() not in {"0", "false", "no"},
+    git_base_ref=os.environ.get("TIMELINE_GIT_BASE_REF", "HEAD~1").strip() or "HEAD~1",
 )
 
 

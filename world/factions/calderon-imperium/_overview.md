@@ -1,4 +1,4 @@
-# Calderon Imperium — The Ashen Empire
+# Calderon Imperium — The Iron Imperium
 
 **Tags:** `#faction` `#organization` `#government`  
 **Created:** 2025-12-07  

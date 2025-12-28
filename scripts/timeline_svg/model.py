@@ -131,3 +131,5 @@ class BuildConfig:
     debug_age_glyphs: bool = False
     axis_min_year: int | None = None
     axis_max_year: int | None = None
+    highlight_git_id_changes: bool = False
+    git_base_ref: str = "HEAD~1"

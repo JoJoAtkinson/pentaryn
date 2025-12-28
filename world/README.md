@@ -6,7 +6,6 @@ This directory contains all world-building information for the campaign setting.
 
 - **locations/** - Cities, dungeons, regions, and other places
 - **factions/** - Organizations, guilds, and groups
-- **history/** - Historical events and timelines
 - **lore/** - Mythology, legends, and world lore
 
 ## Creating World Content

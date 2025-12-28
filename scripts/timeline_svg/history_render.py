@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import collections
 import csv
+import os
 import re
+import subprocess
 from dataclasses import replace
 from pathlib import Path
 from typing import Sequence
@@ -129,6 +132,98 @@ def _read_history_rows(path: Path) -> list[dict[str, object]]:
         return rows
 
 
+def _parse_tsv_line(line: str, *, header: list[str]) -> dict[str, str] | None:
+    parts = line.rstrip("\n").split("\t")
+    if len(parts) != len(header):
+        return None
+    return {header[i]: parts[i] for i in range(len(header))}
+
+
+def _row_signature(row: dict[str, str]) -> tuple[str, ...]:
+    # Stable signature for matching "same event, id renamed": all columns except event_id.
+    return tuple(v for k, v in row.items() if k != "event_id")
+
+
+def _changed_ids_from_git_diff(*, diff_text: str, header_line: str) -> set[str]:
+    header = [h.strip() for h in header_line.split("\t")]
+    if not header or "event_id" not in header:
+        return set()
+
+    removed: list[dict[str, str]] = []
+    added: list[dict[str, str]] = []
+    for raw in (diff_text or "").splitlines():
+        if not raw:
+            continue
+        if raw.startswith(("diff ", "index ", "--- ", "+++ ", "@@")):
+            continue
+        if raw[0] not in "+-":
+            continue
+        if raw.startswith("+++ ") or raw.startswith("--- "):
+            continue
+
+        line = raw[1:]
+        # Ignore header row edits; we only care about event rows.
+        if line.strip() == header_line.strip():
+            continue
+        parsed = _parse_tsv_line(line, header=header)
+        if parsed is None:
+            continue
+        if raw[0] == "-":
+            removed.append(parsed)
+        else:
+            added.append(parsed)
+
+    removed_counts = collections.Counter(_row_signature(r) for r in removed)
+    changed_ids: set[str] = set()
+    for row in added:
+        sig = _row_signature(row)
+        if removed_counts.get(sig, 0) <= 0:
+            continue
+        removed_counts[sig] -= 1
+        event_id = (row.get("event_id") or "").strip()
+        if event_id:
+            changed_ids.add(event_id)
+    return changed_ids
+
+
+def _git_changed_event_ids_for_file(*, repo_root: Path, path: Path, base_ref: str) -> set[str]:
+    """
+    Detect event_id renames by comparing the working tree TSV to `base_ref`.
+
+    Heuristic: if a row is removed and a row is added with identical non-event_id columns, then
+    event_id was renamed; returns the *new* (added) event_id(s).
+    """
+    try:
+        rel = path.resolve().relative_to(repo_root.resolve())
+    except ValueError:
+        rel = path
+
+    try:
+        header_line = path.read_text(encoding="utf-8", errors="replace").splitlines()[0]
+    except Exception:
+        return set()
+
+    try:
+        proc = subprocess.run(
+            ["git", "diff", "--unified=0", base_ref, "--", str(rel)],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            env={**os.environ, "PYTHONUTF8": "1"},
+        )
+    except Exception:
+        return set()
+
+    # If base_ref doesn't exist (e.g., first commit), skip.
+    if proc.returncode not in (0, 1):  # 1 means "diffs found"
+        return set()
+    diff = proc.stdout or ""
+    if not diff.strip():
+        return set()
+
+    return _changed_ids_from_git_diff(diff_text=diff, header_line=header_line)
+
+
 def _write_svg_export(target: Path, rows: list[dict[str, object]]) -> None:
     target.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = ["event_id", "start", "title", "summary", "kind", "tags", "duration"]
@@ -213,9 +308,26 @@ def render_history_scopes(
 
         scope_pov = scope_root.name
 
+        changed_ids_by_file: dict[Path, set[str]] = {}
+        if build.highlight_git_id_changes:
+            base_ref = (build.git_base_ref or "HEAD~1").strip() or "HEAD~1"
+            for src in sources:
+                if src.name not in {"_history.tsv", "_timeline.tsv"}:
+                    continue
+                changed_ids_by_file[src] = _git_changed_event_ids_for_file(repo_root=repo_root, path=src, base_ref=base_ref)
+
         rows: list[dict[str, object]] = []
         for src in sources:
-            rows.extend(_read_history_rows(src))
+            file_rows = _read_history_rows(src)
+            file_changed_ids = changed_ids_by_file.get(src)
+            if file_changed_ids:
+                for r in file_rows:
+                    if str(r.get("event_id") or "") in file_changed_ids:
+                        tags = list(r.get("tags") or [])
+                        if "changed-id" not in tags:
+                            tags.append("changed-id")
+                        r["tags"] = tags
+            rows.extend(file_rows)
 
         present_year = cfg.present_year if cfg.present_year is not None else default_present_year
         if present_year is None:

@@ -56,3 +56,40 @@ def pack_lane(events: list[Event], *, lane_gap_y: float, min_y: float = 0.0) -> 
     if shift_down > 0:
         for event in lane_events:
             event.y += shift_down
+
+
+def snap_to_targets_when_clear(events: list[Event], *, lane_gap_y: float, min_y: float = 0.0) -> None:
+    """
+    After global optimization, try to straighten connectors for events that can safely sit at their
+    target position without colliding in their lane.
+
+    This keeps dense timelines packed (where snapping would collide) while allowing isolated events
+    to have perfectly straight connectors.
+    """
+    by_lane: dict[str, list[Event]] = {"left": [], "right": []}
+    for event in events:
+        if event.box_h <= 0:
+            continue
+        if event.lane in by_lane:
+            by_lane[event.lane].append(event)
+
+    for lane_events in by_lane.values():
+        # Stable ordering so results are deterministic.
+        lane_events.sort(key=lambda e: e.y_target)
+        for event in lane_events:
+            desired_top = max(float(min_y), float(event.y_target) - (event.box_h / 2.0))
+            desired_bottom = desired_top + event.box_h
+
+            # Check clearance against current positions of other labels in this lane.
+            clear = True
+            for other in lane_events:
+                if other is event:
+                    continue
+                other_top = other.y
+                other_bottom = other.y + other.box_h
+                # Overlap (with required gap) if intervals intersect.
+                if desired_bottom + lane_gap_y > other_top and other_bottom + lane_gap_y > desired_top:
+                    clear = False
+                    break
+            if clear:
+                event.y = desired_top

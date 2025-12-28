@@ -106,6 +106,10 @@ If `pov_style` is absent, the renderer derives a palette from the faction’s `_
 
 If `BuildConfig.age_glyph_years=true`, tick labels render as `<age-glyph><years-into-age>` using the global age windows in `world/ages/_history.tsv`.
 
+## Highlighting renamed history IDs (git)
+
+When `BuildConfig.highlight_git_id_changes=true`, any `_history.tsv` row whose `event_id` was renamed (detected via `git diff` vs `BuildConfig.git_base_ref`, default `HEAD~1`) renders with an orange outline on its label box.
+
 Example:
 
 - `⋈50` means “50 years into the Age of Trade”
