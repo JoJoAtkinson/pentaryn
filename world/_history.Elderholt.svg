@@ -136,12 +136,12 @@
 <line class="connector" x1="600" y1="159.9" x2="648.0" y2="310.5"/>
 <line class="connector" x1="600" y1="199.9" x2="552.0" y2="427.5"/>
 <line class="connector" x1="600" y1="219.9" x2="648.0" y2="421.5"/>
-<line class="connector" x1="600" y1="439.9" x2="552.0" y2="558.6"/>
+<line class="connector" x1="600" y1="439.9" x2="552.0" y2="552.1"/>
 <line class="connector" x1="600" y1="451.6" x2="648.0" y2="585.0"/>
-<line class="connector" x1="600" y1="459.9" x2="552.0" y2="663.6"/>
+<line class="connector" x1="600" y1="459.9" x2="552.0" y2="657.1"/>
 <line class="connector" x1="600" y1="599.9" x2="648.0" y2="733.3"/>
-<line class="connector" x1="600" y1="739.9" x2="552.0" y2="901.1"/>
-<line class="connector" x1="600" y1="859.9" x2="648.0" y2="859.9"/>
+<line class="connector" x1="600" y1="599.9" x2="552.0" y2="774.1"/>
+<line class="connector" x1="600" y1="739.9" x2="648.0" y2="873.3"/>
 <line class="connector" x1="600" y1="1059.9" x2="552.0" y2="1059.9"/>
 </g>
 <g id="tokens">
@@ -157,8 +157,8 @@
 <use class="token" href="#token_default" x="589.0" y="440.6" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="448.9" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="588.9" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="588.9" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="728.9" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="848.9" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="1048.9" width="22" height="22"/>
 </g>
 <g id="labels">
@@ -200,7 +200,7 @@
 <tspan x="670.0" dy="0.0">Merrowgate hosts the largest international trade conference in history, with</tspan>
 <tspan x="670.0" dy="12.0">representatives from all eight major factions. The city&#x27;s infrastructure strains</tspan>
 <tspan x="670.0" dy="12.0">under the demand, but the resulting trade agreements reshape continental</tspan>
-<tspan x="670.0" dy="12.0">commerce for a generation.</tspan>
+<tspan x="670.0" dy="12.0">commerce for the generations to come.</tspan>
 </text>
 <rect class="label" x="128.5" y="262.0" width="417.5" height="97.0" rx="8" ry="8"/>
 <text class="title" x="144.5" y="291.0">
@@ -243,11 +243,11 @@
 <tspan x="670.0" dy="12.0">follows the path of a ward-witch. Marwen watches with pride and hopes her</tspan>
 <tspan x="670.0" dy="12.0">own runes will someday be worthy of her sister&#x27;s.</tspan>
 </text>
-<rect class="label" x="127.7" y="516.1" width="418.3" height="85.0" rx="8" ry="8"/>
-<text class="title" x="143.7" y="545.1">
+<rect class="label" x="127.7" y="509.6" width="418.3" height="85.0" rx="8" ry="8"/>
+<text class="title" x="143.7" y="538.6">
 <tspan x="143.7" dy="0.0">Naelith&#x27;s Dark Prophecy</tspan>
 </text>
-<text class="summary" x="143.7" y="563.1">
+<text class="summary" x="143.7" y="556.6">
 <tspan x="143.7" dy="0.0">Elder Naelith the Unmoored Seer speaks Marwen&#x27;s name once in prophecy,</tspan>
 <tspan x="143.7" dy="12.0">foretelling great ruin and destruction. She deliberately keeps her distance from</tspan>
 <tspan x="143.7" dy="12.0">the child afterward and refuses to elaborate further on what she foresaw.</tspan>
@@ -262,45 +262,45 @@
 <tspan x="670.0" dy="12.0">what she had been. Ishvar of Prudence actively opposes her initiation. The</tspan>
 <tspan x="670.0" dy="12.0">Axiom recognizes Marwen as its own, and she is accepted.</tspan>
 </text>
-<rect class="label" x="138.3" y="615.1" width="407.7" height="97.0" rx="8" ry="8"/>
-<text class="title" x="154.3" y="644.1">
+<rect class="label" x="138.3" y="608.6" width="407.7" height="97.0" rx="8" ry="8"/>
+<text class="title" x="154.3" y="637.6">
 <tspan x="154.3" dy="0.0">Marwen&#x27;s Rebirth</tspan>
 </text>
-<text class="summary" x="154.3" y="662.1">
+<text class="summary" x="154.3" y="655.6">
 <tspan x="154.3" dy="0.0">A young child experiences a transformative fire that destroys their male form</tspan>
 <tspan x="154.3" dy="12.0">and remakes them as female. The fire was unknowingly started by the child&#x27;s</tspan>
 <tspan x="154.3" dy="12.0">own will through connection to the Voice. Breann&#x27;s child survives, reborn as</tspan>
 <tspan x="154.3" dy="12.0">Marwen Ashcroft.</tspan>
 </text>
-<rect class="label" x="654.0" y="678.8" width="417.2" height="109.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="707.8">
-<tspan x="670.0" dy="0.0">Marrith Judges Elwen</tspan>
-</text>
-<text class="summary" x="670.0" y="725.8">
-<tspan x="670.0" dy="0.0">Elder Marrith the Ashen Measure is forced to execute her own daughter Elwen,</tspan>
-<tspan x="670.0" dy="12.0">a deep-witch who crossed too many lines and could no longer be contained.</tspan>
-<tspan x="670.0" dy="12.0">Marrith draws a circle of pale fire that burns only inward, leaving nothing but</tspan>
-<tspan x="670.0" dy="12.0">ash. This judgment occurs when Breann (Marrith&#x27;s granddaughter) was still a</tspan>
-<tspan x="670.0" dy="12.0">young Votary.</tspan>
-</text>
-<rect class="label changed" x="141.6" y="858.6" width="404.4" height="85.0" rx="8" ry="8"/>
-<text class="title" x="157.6" y="887.6">
-<tspan x="157.6" dy="0.0">The Merrowgate Exchange</tspan>
-</text>
-<text class="summary" x="157.6" y="905.6">
-<tspan x="157.6" dy="0.0">The Banking Consortium opens the world&#x27;s first formal stock exchange,</tspan>
-<tspan x="157.6" dy="12.0">allowing fractional ownership of merchant ventures. The innovation attracts</tspan>
-<tspan x="157.6" dy="12.0">investors from every nation and creates a new class of wealthy speculators.</tspan>
-</text>
-<rect class="label" x="654.0" y="811.4" width="420.0" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="840.4">
+<rect class="label changed" x="654.0" y="684.8" width="420.0" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="713.8">
 <tspan x="670.0" dy="0.0">Hearts Taken on the Nails</tspan>
 </text>
-<text class="summary" x="670.0" y="858.4">
+<text class="summary" x="670.0" y="731.8">
 <tspan x="670.0" dy="0.0">A Calderon caravan is found on the Road of Nails—guards and merchants laid</tspan>
 <tspan x="670.0" dy="12.0">out in a straight line, boots aligned, each with their chest ripped open with the</tspan>
 <tspan x="670.0" dy="12.0">heart removed. The bodies are left where they were laid. The story runs ahead of</tspan>
 <tspan x="670.0" dy="12.0">the carts and crosses every border, told in whispers that never match.</tspan>
+</text>
+<rect class="label" x="128.8" y="719.6" width="417.2" height="109.0" rx="8" ry="8"/>
+<text class="title" x="144.8" y="748.6">
+<tspan x="144.8" dy="0.0">Marrith Judges Elwen</tspan>
+</text>
+<text class="summary" x="144.8" y="766.6">
+<tspan x="144.8" dy="0.0">Elder Marrith the Ashen Measure is forced to execute her own daughter Elwen,</tspan>
+<tspan x="144.8" dy="12.0">a deep-witch who crossed too many lines and could no longer be contained.</tspan>
+<tspan x="144.8" dy="12.0">Marrith draws a circle of pale fire that burns only inward, leaving nothing but</tspan>
+<tspan x="144.8" dy="12.0">ash. This judgment occurs when Breann (Marrith&#x27;s granddaughter) was still a</tspan>
+<tspan x="144.8" dy="12.0">young Votary.</tspan>
+</text>
+<rect class="label" x="654.0" y="830.8" width="404.4" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="859.8">
+<tspan x="670.0" dy="0.0">The Merrowgate Exchange</tspan>
+</text>
+<text class="summary" x="670.0" y="877.8">
+<tspan x="670.0" dy="0.0">The Banking Consortium opens the world&#x27;s first formal stock exchange,</tspan>
+<tspan x="670.0" dy="12.0">allowing fractional ownership of merchant ventures. The innovation attracts</tspan>
+<tspan x="670.0" dy="12.0">investors from every nation and creates a new class of wealthy speculators.</tspan>
 </text>
 <rect class="label" x="164.4" y="1023.4" width="381.6" height="73.0" rx="8" ry="8"/>
 <text class="title" x="180.4" y="1052.4">
@@ -383,11 +383,11 @@
 <title>faction: elderholt</title>
 <use href="#pov_elderholt" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 524.5)">
+<g transform="translate(509.0 518.0)">
 <title>tag: lore</title>
 <use href="#tag_lore" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(471.2 520.1)">
+<g transform="translate(471.2 513.6)">
 <title>faction: elderholt</title>
 <use href="#pov_elderholt" width="33.8" height="33.8"/>
 </g>
@@ -399,51 +399,51 @@
 <title>faction: elderholt</title>
 <use href="#pov_elderholt" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 623.5)">
+<g transform="translate(509.0 617.0)">
 <title>tag: magic</title>
 <use href="#tag_magic" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(471.2 619.1)">
+<g transform="translate(471.2 612.6)">
 <title>faction: elderholt</title>
 <use href="#pov_elderholt" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1034.2 687.2)">
-<title>tag: lore</title>
-<use href="#tag_lore" width="25.0" height="25.0"/>
-</g>
-<g transform="translate(996.5 682.8)">
-<title>faction: elderholt</title>
-<use href="#pov_elderholt" width="33.8" height="33.8"/>
-</g>
-<g class="public-indicator" transform="translate(147.6 862.6)">
+<g class="public-indicator" transform="translate(660.0 688.8)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(509.0 867.0)">
-<title>tag: trade</title>
-<use href="#tag_trade" width="25.0" height="25.0"/>
-</g>
-<g transform="translate(480.0 867.0)">
-<title>tag: economy</title>
-<use href="#tag_economy" width="25.0" height="25.0"/>
-</g>
-<g transform="translate(442.2 862.6)">
-<title>faction: merrowgate</title>
-<use href="#pov_merrowgate" width="33.8" height="33.8"/>
-</g>
-<g class="public-indicator" transform="translate(660.0 815.4)">
-<use href="#tag_public" width="12.5" height="12.5"/>
-</g>
-<g transform="translate(1028.2 815.4)">
+<g transform="translate(1028.2 688.8)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(999.2 819.8)">
+<g transform="translate(999.2 693.2)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(961.5 815.4)">
+<g transform="translate(961.5 688.8)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
+</g>
+<g transform="translate(509.0 728.0)">
+<title>tag: lore</title>
+<use href="#tag_lore" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(471.2 723.6)">
+<title>faction: elderholt</title>
+<use href="#pov_elderholt" width="33.8" height="33.8"/>
+</g>
+<g class="public-indicator" transform="translate(660.0 834.8)">
+<use href="#tag_public" width="12.5" height="12.5"/>
+</g>
+<g transform="translate(1021.4 839.2)">
+<title>tag: trade</title>
+<use href="#tag_trade" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(992.4 839.2)">
+<title>tag: economy</title>
+<use href="#tag_economy" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(954.6 834.8)">
+<title>faction: merrowgate</title>
+<use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
 <g class="public-indicator" transform="translate(170.4 1027.4)">
 <use href="#tag_public" width="12.5" height="12.5"/>
