@@ -85,7 +85,7 @@ BUILD = BuildConfig(
     age_glyph_years=True,
     debug_age_glyphs=True,
     highlight_git_id_changes=os.environ.get("TIMELINE_HIGHLIGHT_GIT_ID_CHANGES", "1").strip().lower() not in {"0", "false", "no"},
-    git_base_ref=os.environ.get("TIMELINE_GIT_BASE_REF", "HEAD~1").strip() or "HEAD~1",
+    git_base_ref=os.environ.get("TIMELINE_GIT_BASE_REF", "HEAD").strip() or "HEAD",
 )
 
 

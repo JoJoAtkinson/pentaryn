@@ -20,12 +20,14 @@ class HistoryView:
     sort_direction: Optional[str]
     max_summary_lines: Optional[int]
     svg: Optional[str]
+    hide_time_measurements: bool = False
 
 
 @dataclass(frozen=True)
 class HistoryConfig:
     views: list[HistoryView]
     present_year: int | None = None
+    hide_time_measurements: bool = False
 
 
 def load_history_config(path: Path) -> HistoryConfig:
@@ -33,6 +35,13 @@ def load_history_config(path: Path) -> HistoryConfig:
     present_year = raw.get("present_year")
     if present_year is not None:
         present_year = int(present_year)
+    hide_time_measurements = raw.get("hide_time_measurements")
+    if hide_time_measurements is None:
+        hide_time_measurements = raw.get("hide_time_measurments")
+    if hide_time_measurements is None:
+        hide_time_measurements = False
+    if not isinstance(hide_time_measurements, bool):
+        raise SystemExit(f"{path}: hide_time_measurements must be a boolean")
     views_raw = raw.get("views") or []
     if not isinstance(views_raw, list) or not views_raw:
         raise SystemExit(f"{path}: no [[views]] entries found")
@@ -88,6 +97,13 @@ def load_history_config(path: Path) -> HistoryConfig:
             if max_summary_lines < -1:
                 raise SystemExit(f"{path}: view '{view_id}' max_summary_lines must be -1 (unlimited) or >= 0")
         svg = (str(item.get("svg")).strip() if item.get("svg") is not None else None) or None
+        view_hide_time = item.get("hide_time_measurements")
+        if view_hide_time is None:
+            view_hide_time = item.get("hide_time_measurments")
+        if view_hide_time is None:
+            view_hide_time = hide_time_measurements
+        if not isinstance(view_hide_time, bool):
+            raise SystemExit(f"{path}: view '{view_id}' hide_time_measurements must be a boolean")
 
         views.append(
             HistoryView(
@@ -102,7 +118,8 @@ def load_history_config(path: Path) -> HistoryConfig:
                 sort_direction=sort_direction,
                 max_summary_lines=max_summary_lines,  # type: ignore[arg-type]
                 svg=svg,
+                hide_time_measurements=view_hide_time,
             )
         )
 
-    return HistoryConfig(views=views, present_year=present_year)
+    return HistoryConfig(views=views, present_year=present_year, hide_time_measurements=hide_time_measurements)

@@ -38,6 +38,7 @@
         .token { }
         .connector { stroke: #7a5b3a; stroke-width: 1.5; stroke-linecap: round; opacity: 0.7; }
         .label { fill: #fffaf0; stroke: var(--label-border); stroke-width: 1; }
+        .label.changed-id, .label.changed { stroke: #d97900; stroke-width: 4; stroke-linejoin: round; }
         .title { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 16px; font-weight: 700; fill: #2b1f14; }
         .summary { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #3a2b1f; }
         .md-bold { font-weight: 700; }
@@ -68,6 +69,8 @@
 <path fill="#fbf7ef" d="M19.75 14.438c59.538 112.29 142.51 202.35 232.28 292.718l3.626 3.75.063-.062c21.827 21.93 44.04 43.923 66.405 66.25-18.856 14.813-38.974 28.2-59.938 40.312l28.532 28.53 68.717-68.717c42.337 27.636 76.286 63.646 104.094 105.81l28.064-28.06c-42.47-27.493-79.74-60.206-106.03-103.876l68.936-68.938-28.53-28.53c-11.115 21.853-24.413 42.015-39.47 60.593-43.852-43.8-86.462-85.842-130.125-125.47-.224-.203-.432-.422-.656-.625C183.624 122.75 108.515 63.91 19.75 14.437zm471.875 0c-83.038 46.28-154.122 100.78-221.97 161.156l22.814 21.562 56.81-56.812 13.22 13.187-56.438 56.44 24.594 23.186c61.802-66.92 117.6-136.92 160.97-218.72zm-329.53 125.906 200.56 200.53a402.965 402.965 0 0 1-13.405 13.032L148.875 153.53l13.22-13.186zm-76.69 113.28-28.5 28.532 68.907 68.906c-26.29 43.673-63.53 76.414-106 103.907l28.063 28.06c27.807-42.164 61.758-78.174 104.094-105.81l68.718 68.717 28.53-28.53c-20.962-12.113-41.08-25.5-59.937-40.313 17.865-17.83 35.61-35.433 53.157-52.97l-24.843-25.655-55.47 55.467c-4.565-4.238-9.014-8.62-13.374-13.062l55.844-55.844-24.53-25.374c-18.28 17.856-36.602 36.06-55.158 54.594-15.068-18.587-28.38-38.758-39.5-60.625z"/>
   </g>
 </symbol>
+<symbol id="tag_changed" viewBox="0 0 512 512"><use href="#tag_unknown" x="0" y="0" width="512" height="512" /></symbol>
+<symbol id="tag_changed-id" viewBox="0 0 512 512"><use href="#tag_unknown" x="0" y="0" width="512" height="512" /></symbol>
 <symbol id="tag_raids" viewBox="0 0 512 512">
   <circle cx="256" cy="256" r="247.04" fill="#6b2f2f" stroke="#5e2929" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
@@ -157,27 +160,27 @@
 <line class="connector" x1="600" y1="500.8" x2="552.0" y2="601.5"/>
 <line class="connector" x1="600" y1="580.0" x2="648.0" y2="595.5"/>
 <line class="connector" x1="600" y1="587.2" x2="552.0" y2="724.5"/>
-<line class="connector" x1="600" y1="608.8" x2="648.0" y2="724.5"/>
+<line class="connector" x1="600" y1="608.8" x2="648.0" y2="718.5"/>
 <line class="connector" x1="600" y1="673.6" x2="552.0" y2="853.5"/>
-<line class="connector" x1="600" y1="680.8" x2="648.0" y2="841.5"/>
-<line class="connector" x1="600" y1="724.0" x2="552.0" y2="976.5"/>
-<line class="connector" x1="600" y1="788.8" x2="648.0" y2="958.5"/>
-<line class="connector" x1="600" y1="796.0" x2="552.0" y2="1093.5"/>
-<line class="connector" x1="600" y1="803.2" x2="648.0" y2="1075.5"/>
-<line class="connector" x1="600" y1="846.4" x2="552.0" y2="1216.5"/>
-<line class="connector" x1="600" y1="896.8" x2="648.0" y2="1180.5"/>
-<line class="connector" x1="600" y1="904.0" x2="552.0" y2="1333.5"/>
-<line class="connector" x1="600" y1="911.2" x2="648.0" y2="1291.5"/>
-<line class="connector" x1="600" y1="911.2" x2="552.0" y2="1456.5"/>
-<line class="connector" x1="600" y1="911.2" x2="648.0" y2="1402.5"/>
+<line class="connector" x1="600" y1="680.8" x2="648.0" y2="829.5"/>
+<line class="connector" x1="600" y1="724.0" x2="552.0" y2="982.5"/>
+<line class="connector" x1="600" y1="788.8" x2="648.0" y2="946.5"/>
+<line class="connector" x1="600" y1="796.0" x2="552.0" y2="1105.5"/>
+<line class="connector" x1="600" y1="803.2" x2="648.0" y2="1063.5"/>
+<line class="connector" x1="600" y1="846.4" x2="552.0" y2="1228.5"/>
+<line class="connector" x1="600" y1="896.8" x2="648.0" y2="1168.5"/>
+<line class="connector" x1="600" y1="904.0" x2="552.0" y2="1345.5"/>
+<line class="connector" x1="600" y1="911.2" x2="648.0" y2="1279.5"/>
+<line class="connector" x1="600" y1="911.2" x2="552.0" y2="1462.5"/>
+<line class="connector" x1="600" y1="911.2" x2="648.0" y2="1390.5"/>
 <line class="connector" x1="600" y1="918.4" x2="552.0" y2="1579.5"/>
-<line class="connector" x1="600" y1="918.4" x2="648.0" y2="1501.5"/>
+<line class="connector" x1="600" y1="918.4" x2="648.0" y2="1489.5"/>
 <line class="connector" x1="600" y1="925.6" x2="552.0" y2="1684.5"/>
-<line class="connector" x1="600" y1="932.8" x2="648.0" y2="1600.5"/>
+<line class="connector" x1="600" y1="932.8" x2="648.0" y2="1588.5"/>
 <line class="connector" x1="600" y1="940.0" x2="552.0" y2="1789.5"/>
-<line class="connector" x1="600" y1="940.0" x2="648.0" y2="1699.5"/>
+<line class="connector" x1="600" y1="940.0" x2="648.0" y2="1687.5"/>
 <line class="connector" x1="600" y1="947.2" x2="552.0" y2="1894.5"/>
-<line class="connector" x1="600" y1="968.8" x2="648.0" y2="1792.5"/>
+<line class="connector" x1="600" y1="968.8" x2="648.0" y2="1780.5"/>
 </g>
 <g id="tokens">
 <use class="token" href="#token_default" x="589.0" y="72.2" width="22" height="22"/>
@@ -224,7 +227,7 @@
 <tspan x="147.0" dy="0.0">The Vision Council gathers around the fire and sets the war-banner in Ghorrak</tspan>
 <tspan x="147.0" dy="12.0">Dakmar’nak’s hands. They name him War Voice.</tspan>
 </text>
-<rect class="label" x="654.0" y="40.0" width="400.5" height="73.0" rx="8" ry="8"/>
+<rect class="label changed-id changed" x="654.0" y="40.0" width="400.5" height="73.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="69.0">
 <tspan x="670.0" dy="0.0">The Buffer Mire Line</tspan>
 </text>
@@ -232,13 +235,13 @@
 <tspan x="670.0" dy="0.0">The Horde establishes a wide buffer zone of traps, false camps, and ambush</tspan>
 <tspan x="670.0" dy="12.0">routes to bleed Calderon patrols before they reach the main camps.</tspan>
 </text>
-<rect class="label" x="139.0" y="127.0" width="407.0" height="73.0" rx="8" ry="8"/>
-<text class="title" x="155.0" y="156.0">
-<tspan x="155.0" dy="0.0">Thrumdun’s Northern Fires Go Out</tspan>
+<rect class="label changed" x="143.2" y="127.0" width="402.8" height="73.0" rx="8" ry="8"/>
+<text class="title" x="159.2" y="156.0">
+<tspan x="159.2" dy="0.0">Thrukdun’s Northern Fires Go Out</tspan>
 </text>
-<text class="summary" x="155.0" y="174.0">
-<tspan x="155.0" dy="0.0">The Thrumdun—the last tribe holding the northern-facing lands—are driven</tspan>
-<tspan x="155.0" dy="12.0">from their territory by sustained raids. Survivors withdraw west.</tspan>
+<text class="summary" x="159.2" y="174.0">
+<tspan x="159.2" dy="0.0">The Thrukdun—the last tribe holding the northern-facing lands—are driven</tspan>
+<tspan x="159.2" dy="12.0">from their territory by sustained raids. Survivors withdraw west.</tspan>
 </text>
 <rect class="label" x="654.0" y="127.0" width="405.7" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="156.0">
@@ -309,16 +312,16 @@
 <tspan x="670.0" dy="12.0">northern trade routes into the Horde. They call it “customs.” Except they no orc</tspan>
 <tspan x="670.0" dy="12.0">is allowed passage; it just an ouright blockade.</tspan>
 </text>
-<rect class="label" x="126.3" y="547.0" width="419.7" height="109.0" rx="8" ry="8"/>
-<text class="title" x="142.3" y="576.0">
-<tspan x="142.3" dy="0.0">Warlord Vorzok Gronmog Death</tspan>
+<rect class="label changed" x="132.9" y="547.0" width="413.1" height="109.0" rx="8" ry="8"/>
+<text class="title" x="148.9" y="576.0">
+<tspan x="148.9" dy="0.0">Warlord Orzok Gronmog Death</tspan>
 </text>
-<text class="summary" x="142.3" y="594.0">
-<tspan x="142.3" dy="0.0">The Imperium tried to build a “clean” gate through the mire, driving posts into</tspan>
-<tspan x="142.3" dy="12.0">sacred mud and calling it civilization. Vorzok Gronmog led the defense in</tspan>
-<tspan x="142.3" dy="12.0">chest-deep water, where every step is a choice between drowning and killing.</tspan>
-<tspan x="142.3" dy="12.0">When the gate collapsed, it buried him; the bog kept him as a guardian, and the</tspan>
-<tspan x="142.3" dy="12.0">Heart-Marked still avoid that crossing.</tspan>
+<text class="summary" x="148.9" y="594.0">
+<tspan x="148.9" dy="0.0">The Imperium tried to build a “clean” gate through the mire, driving posts into</tspan>
+<tspan x="148.9" dy="12.0">sacred mud and calling it civilization. Orzok Gronmog led the defense in</tspan>
+<tspan x="148.9" dy="12.0">chest-deep water, where every step is a choice between drowning and killing.</tspan>
+<tspan x="148.9" dy="12.0">When the gate collapsed, it buried her; the bog kept her as a guardian, and the</tspan>
+<tspan x="148.9" dy="12.0">Heart-Marked still avoid that crossing.</tspan>
 </text>
 <rect class="label" x="654.0" y="535.0" width="419.3" height="121.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="564.0">
@@ -332,29 +335,28 @@
 <tspan x="670.0" dy="12.0">there—hands ruined, chest opened—so the shaman could crawl back to the fire</tspan>
 <tspan x="670.0" dy="12.0">and speak the names of the dead.</tspan>
 </text>
-<rect class="label" x="126.0" y="670.0" width="420.0" height="109.0" rx="8" ry="8"/>
-<text class="title" x="142.0" y="699.0">
-<tspan x="142.0" dy="0.0">Warlord Durzgar Rakthokgar Death</tspan>
+<rect class="label changed" x="127.2" y="670.0" width="418.8" height="109.0" rx="8" ry="8"/>
+<text class="title" x="143.2" y="699.0">
+<tspan x="143.2" dy="0.0">Warlord Durzgar Rakthokgar Death</tspan>
 </text>
-<text class="summary" x="142.0" y="717.0">
-<tspan x="142.0" dy="0.0">The Imperium pushed hard that year—more boots, more iron, more</tspan>
-<tspan x="142.0" dy="12.0">“order”—and the barrier line buckled like wet wood. Durzgar Rakthokgar stood</tspan>
-<tspan x="142.0" dy="12.0">in the breach with two spears and a shattered shield, refusing to let the civilians</tspan>
-<tspan x="142.0" dy="12.0">behind him become numbers in a clerk’s book. When he fell, the warband</tspan>
-<tspan x="142.0" dy="12.0">swore the Spirits leaned in close to hear his last breath.</tspan>
+<text class="summary" x="143.2" y="717.0">
+<tspan x="143.2" dy="0.0">The Imperium pushed hard that year—more boots, more iron, more</tspan>
+<tspan x="143.2" dy="12.0">“order”—and the barrier line buckled like wet wood. Durzgar Rakthokgar stood</tspan>
+<tspan x="143.2" dy="12.0">in the breach with two spears and a shattered shield, refusing to let the</tspan>
+<tspan x="143.2" dy="12.0">innocents behind him become numbers in a clerk’s book. When he fell, the</tspan>
+<tspan x="143.2" dy="12.0">warband swore the Spirits leaned in close to hear his last breath.</tspan>
 </text>
-<rect class="label" x="654.0" y="670.0" width="411.4" height="109.0" rx="8" ry="8"/>
+<rect class="label changed" x="654.0" y="670.0" width="418.7" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="699.0">
-<tspan x="670.0" dy="0.0">Warlord Rokzug Ghorzug Death</tspan>
+<tspan x="670.0" dy="0.0">Warlord Orzak Ghorzug Death</tspan>
 </text>
 <text class="summary" x="670.0" y="717.0">
-<tspan x="670.0" dy="0.0">Rokzug Ghorzug hunted supply carts like a wolf hunts the slow. At the Three</tspan>
-<tspan x="670.0" dy="12.0">Bridges he sprang his trap—fire in the reeds, blades from below—and the line</tspan>
-<tspan x="670.0" dy="12.0">almost broke. The Heart-Marked answered with disciplined crossbow volleys;</tspan>
-<tspan x="670.0" dy="12.0">Rokzug took the bolts meant for his scouts and fell into the river with his axe</tspan>
-<tspan x="670.0" dy="12.0">still raised.</tspan>
+<tspan x="670.0" dy="0.0">Orzak Ghorzug hunted supply carts like a wolf hunts the slow. At the Three</tspan>
+<tspan x="670.0" dy="12.0">Bridges she sprang another trap—fire in the reeds, blades from below—but</tspan>
+<tspan x="670.0" dy="12.0">they were ready. The Heart-Marked answered with disciplined crossbow volleys</tspan>
+<tspan x="670.0" dy="12.0">and turned the ambush into a rout.</tspan>
 </text>
-<rect class="label" x="127.1" y="793.0" width="418.9" height="121.0" rx="8" ry="8"/>
+<rect class="label changed" x="127.1" y="793.0" width="418.9" height="121.0" rx="8" ry="8"/>
 <text class="title" x="143.1" y="822.0">
 <tspan x="143.1" dy="0.0">Warlord Graknak Zhulrog Death</tspan>
 </text>
@@ -364,118 +366,118 @@
 <tspan x="143.1" dy="12.0">anyway—because that is what warlords do when the world changes and the</tspan>
 <tspan x="143.1" dy="12.0">young are watching. They remember him not for the death, but for the moment</tspan>
 <tspan x="143.1" dy="12.0">before it: tusks bared, feet sure on ice, roaring the Ancestors’ names so loudly</tspan>
-<tspan x="143.1" dy="12.0">the frame shook.</tspan>
+<tspan x="143.1" dy="12.0">the frame shook. The ballista never stopped shooting.</tspan>
 </text>
-<rect class="label" x="654.0" y="793.0" width="417.8" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="822.0">
+<rect class="label" x="654.0" y="781.0" width="417.8" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="810.0">
 <tspan x="670.0" dy="0.0">Warlord Zokgar Zharzug Death</tspan>
 </text>
-<text class="summary" x="670.0" y="840.0">
+<text class="summary" x="670.0" y="828.0">
 <tspan x="670.0" dy="0.0">Zokgar Zharzug fought at the narrows, where retreat means drowning. No</tspan>
 <tspan x="670.0" dy="12.0">shields—only spears. When Calderon soldiers tried to cross on bodies, Zokgar</tspan>
 <tspan x="670.0" dy="12.0">went under with them and pulled three down; the crossing failed and the water</tspan>
 <tspan x="670.0" dy="12.0">ran red.</tspan>
 </text>
-<rect class="label" x="136.1" y="928.0" width="409.9" height="97.0" rx="8" ry="8"/>
-<text class="title" x="152.1" y="957.0">
-<tspan x="152.1" dy="0.0">Warlord Bazruk Thrumdun Death</tspan>
+<rect class="label changed" x="129.4" y="928.0" width="416.6" height="109.0" rx="8" ry="8"/>
+<text class="title" x="145.4" y="957.0">
+<tspan x="145.4" dy="0.0">Warlord Uzruk Thrukdun Death</tspan>
 </text>
-<text class="summary" x="152.1" y="975.0">
-<tspan x="152.1" dy="0.0">They called it a ration yard; it was a pen—families lined up like livestock while</tspan>
-<tspan x="152.1" dy="12.0">the Imperium measured hunger in ounces. Bazruk Thrumdun broke the gate</tspan>
-<tspan x="152.1" dy="12.0">and carried children out, shouting names so none were lost in the crush. An</tspan>
-<tspan x="152.1" dy="12.0">arrow took his spine; he still crawled, dragging one last boy to safety.</tspan>
+<text class="summary" x="145.4" y="975.0">
+<tspan x="145.4" dy="0.0">They called it a ration yard; it was a pen—families lined up like livestock while</tspan>
+<tspan x="145.4" dy="12.0">the Imperium measured hunger in ounces. Uzruk Thrukdun sought to break</tspan>
+<tspan x="145.4" dy="12.0">the gate and free her people, but she and her raiders were broken first. As she</tspan>
+<tspan x="145.4" dy="12.0">lay dying the yard captain mocked her failure, only to have his heart cleft by the</tspan>
+<tspan x="145.4" dy="12.0">warlord&#x27;s knife. Even in death the Rakthok fight to win.</tspan>
 </text>
-<rect class="label" x="654.0" y="904.0" width="411.8" height="109.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="933.0">
+<rect class="label" x="654.0" y="892.0" width="411.8" height="109.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="921.0">
 <tspan x="670.0" dy="0.0">Warlord Kragzor Dakmar’nak Death</tspan>
 </text>
-<text class="summary" x="670.0" y="951.0">
+<text class="summary" x="670.0" y="939.0">
 <tspan x="670.0" dy="0.0">Kragzor Dakmar’nak taught the warbands to fight like the marsh—quiet,</tspan>
 <tspan x="670.0" dy="12.0">patient, suddenly everywhere. The night he died, he lured an Imperium patrol</tspan>
 <tspan x="670.0" dy="12.0">into deep water and took the captain’s throat with his own teeth when blades</tspan>
 <tspan x="670.0" dy="12.0">were lost to the swamp. The Heart-Marked never found his body; the</tspan>
 <tspan x="670.0" dy="12.0">Dakmar’nak say he joined the marsh and became its anger.</tspan>
 </text>
-<rect class="label" x="128.6" y="1039.0" width="417.4" height="109.0" rx="8" ry="8"/>
-<text class="title" x="144.6" y="1068.0">
-<tspan x="144.6" dy="0.0">Warlord Nazgath Skorvorg Death</tspan>
+<rect class="label changed" x="128.8" y="1051.0" width="417.2" height="109.0" rx="8" ry="8"/>
+<text class="title" x="144.8" y="1080.0">
+<tspan x="144.8" dy="0.0">Warlord Aznath Skorvorg Death</tspan>
 </text>
-<text class="summary" x="144.6" y="1086.0">
-<tspan x="144.6" dy="0.0">The Imperium answered the Marshfire Push with roadside courts—“justice”</tspan>
-<tspan x="144.6" dy="12.0">while the condemned still breathed. Nazgath Skorvorg charged the scaffold</tspan>
-<tspan x="144.6" dy="12.0">before the sentence, split the magistrate’s table, and dragged prisoners into the</tspan>
-<tspan x="144.6" dy="12.0">mud. He died under spearpoints; the captives lived. The tale is a prayer: when</tspan>
-<tspan x="144.6" dy="12.0">the Heart-Marked bring paper, we bring teeth.</tspan>
+<text class="summary" x="144.8" y="1098.0">
+<tspan x="144.8" dy="0.0">The Imperium answered the Marshfire Push with roadside courts—“justice”</tspan>
+<tspan x="144.8" dy="12.0">while the condemned still breathed. Aznath Skorvorg led a surpise attack</tspan>
+<tspan x="144.8" dy="12.0">against the scaffold, split the magistrate’s table, and shattered the chains of the</tspan>
+<tspan x="144.8" dy="12.0">prisoners. She died under spearpoints, but the captives escaped. The tale is a</tspan>
+<tspan x="144.8" dy="12.0">prayer: when the Heart-Marked bring paper, we bring teeth.</tspan>
 </text>
-<rect class="label" x="654.0" y="1027.0" width="410.8" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1056.0">
+<rect class="label changed" x="654.0" y="1015.0" width="410.8" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1044.0">
 <tspan x="670.0" dy="0.0">Warlord Ug’rok Gronmog Death</tspan>
 </text>
-<text class="summary" x="670.0" y="1074.0">
+<text class="summary" x="670.0" y="1062.0">
 <tspan x="670.0" dy="0.0">Ug’rok Gronmog led the Marshfire Push—bog oil on arrows, reeds lit like</tspan>
 <tspan x="670.0" dy="12.0">torches, war-cries echoing off wet stone. He reached the standard-bearer and</tspan>
 <tspan x="670.0" dy="12.0">ripped the banner free, wrapping it around his fist so it couldn’t be reclaimed.</tspan>
-<tspan x="670.0" dy="12.0">They killed him for it; the banner still burned in the mud for three nights.</tspan>
+<tspan x="670.0" dy="12.0">They killed him for it; both he and the banner sunk into the swamp.</tspan>
 </text>
-<rect class="label" x="137.8" y="1162.0" width="408.2" height="109.0" rx="8" ry="8"/>
-<text class="title" x="153.8" y="1191.0">
+<rect class="label" x="137.8" y="1174.0" width="408.2" height="109.0" rx="8" ry="8"/>
+<text class="title" x="153.8" y="1203.0">
 <tspan x="153.8" dy="0.0">Warlord Ghorzul Morvorg Death</tspan>
 </text>
-<text class="summary" x="153.8" y="1209.0">
+<text class="summary" x="153.8" y="1221.0">
 <tspan x="153.8" dy="0.0">In the Ash Winter the Imperium came with engineers and “clean fire” to burn</tspan>
 <tspan x="153.8" dy="12.0">the marsh open. Ghorzul Morvorg held the gorge mouth with a handful of</tspan>
 <tspan x="153.8" dy="12.0">spears, letting flame take his cloak so his warband could slip away through</tspan>
 <tspan x="153.8" dy="12.0">smoke and reeds. He died blackened and standing—a silhouette against the</tspan>
 <tspan x="153.8" dy="12.0">blaze—so the Horde could breathe and regroup.</tspan>
 </text>
-<rect class="label" x="654.0" y="1138.0" width="418.9" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1167.0">
+<rect class="label" x="654.0" y="1126.0" width="418.9" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1155.0">
 <tspan x="670.0" dy="0.0">The Name “Ironstead”</tspan>
 </text>
-<text class="summary" x="670.0" y="1185.0">
+<text class="summary" x="670.0" y="1173.0">
 <tspan x="670.0" dy="0.0">calderon-imperium declares the new fortress city Ironstead as their capital and</tspan>
 <tspan x="670.0" dy="12.0">future seat, even as the walls remain hungry and incomplete. To the Imperium,</tspan>
 <tspan x="670.0" dy="12.0">a thing is true once it is written; the land is forced to agree later.</tspan>
 </text>
-<rect class="label" x="127.3" y="1285.0" width="418.7" height="97.0" rx="8" ry="8"/>
-<text class="title" x="143.3" y="1314.0">
+<rect class="label" x="127.3" y="1297.0" width="418.7" height="97.0" rx="8" ry="8"/>
+<text class="title" x="143.3" y="1326.0">
 <tspan x="143.3" dy="0.0">Warlord Thrakrok Rakthokgar Death</tspan>
 </text>
-<text class="summary" x="143.3" y="1332.0">
+<text class="summary" x="143.3" y="1344.0">
 <tspan x="143.3" dy="0.0">The Imperium advanced behind a shieldline and hooks, hauling warriors by the</tspan>
 <tspan x="143.3" dy="12.0">throat like cattle for a yard. Thrakrok Rakthokgar refused the capture—charged</tspan>
 <tspan x="143.3" dy="12.0">into the hooks, killed two, and tore a third’s jaw loose before pikeheads found</tspan>
 <tspan x="143.3" dy="12.0">him.</tspan>
 </text>
-<rect class="label" x="654.0" y="1237.0" width="414.9" height="109.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1266.0">
+<rect class="label" x="654.0" y="1225.0" width="414.9" height="109.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1254.0">
 <tspan x="670.0" dy="0.0">Zarkul Dakgar the Forever Cursed</tspan>
 </text>
-<text class="summary" x="670.0" y="1284.0">
+<text class="summary" x="670.0" y="1272.0">
 <tspan x="670.0" dy="0.0">With Dakgar already bleeding out, Zarkul took what little remained and sold it</tspan>
 <tspan x="670.0" dy="12.0">for coin to the garhammar-trade-league. The Imperium used him like a tool</tspan>
 <tspan x="670.0" dy="12.0">and, when the work was done, “paid” him with a knife in the dark. Among the</tspan>
 <tspan x="670.0" dy="12.0">Horde his name is kept only as a curse: proof that gold is softer than mud, and</tspan>
 <tspan x="670.0" dy="12.0">twice as deadly.</tspan>
 </text>
-<rect class="label" x="138.4" y="1396.0" width="407.6" height="121.0" rx="8" ry="8"/>
-<text class="title" x="154.4" y="1425.0">
-<tspan x="154.4" dy="0.0">Warlord Gruknar Dakmar’nak Death</tspan>
+<rect class="label changed" x="147.5" y="1408.0" width="398.5" height="109.0" rx="8" ry="8"/>
+<text class="title" x="163.5" y="1437.0">
+<tspan x="163.5" dy="0.0">Warlord Uruknar Dakmar’nak Death</tspan>
 </text>
-<text class="summary" x="154.4" y="1443.0">
-<tspan x="154.4" dy="0.0">When Ironstead’s foundations cracked into the ancestral barrows, Gruknar</tspan>
-<tspan x="154.4" dy="12.0">Dakmar’nak gathered the mourners and marched into the trench fires.</tspan>
-<tspan x="154.4" dy="12.0">Imperium sappers threw smoke and white lime to blind the charge, and</tspan>
-<tspan x="154.4" dy="12.0">crossbow bolts cracked from the haze. Gruknar died on his knees, hands on a</tspan>
-<tspan x="154.4" dy="12.0">collapsed keystone, holding it up long enough for three families to pull their</tspan>
-<tspan x="154.4" dy="12.0">dead free.</tspan>
+<text class="summary" x="163.5" y="1455.0">
+<tspan x="163.5" dy="0.0">When Ironstead’s foundations cracked into the ancestral barrows, Uruknar</tspan>
+<tspan x="163.5" dy="12.0">Dakmar’nak gathered the mourners and marched into the trench fires.</tspan>
+<tspan x="163.5" dy="12.0">Imperium sappers threw smoke and white lime to blind the charge, and</tspan>
+<tspan x="163.5" dy="12.0">crossbow bolts cracked from the haze. Gruknar died on her knees, and the</tspan>
+<tspan x="163.5" dy="12.0">barrows fell into ruin.</tspan>
 </text>
-<rect class="label" x="654.0" y="1360.0" width="420.0" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1389.0">
+<rect class="label" x="654.0" y="1348.0" width="420.0" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1377.0">
 <tspan x="670.0" dy="0.0">Ironstead Rises on Dakgar Bones</tspan>
 </text>
-<text class="summary" x="670.0" y="1407.0">
+<text class="summary" x="670.0" y="1395.0">
 <tspan x="670.0" dy="0.0">calderon-imperium begins raising their capital-fortress over the barrier ground</tspan>
 <tspan x="670.0" dy="12.0">of the dakgar tribe of the garrok-confederation. They pour foundations through</tspan>
 <tspan x="670.0" dy="12.0">ancestral barrow grounds and call it progress.</tspan>
@@ -490,11 +492,11 @@
 <tspan x="149.5" dy="12.0">guards into the waters allowing the captives to escape. He drowned smiling,</tspan>
 <tspan x="149.5" dy="12.0">fingers locked on the captain’s gorget.</tspan>
 </text>
-<rect class="label" x="654.0" y="1459.0" width="412.7" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1488.0">
+<rect class="label" x="654.0" y="1447.0" width="412.7" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1476.0">
 <tspan x="670.0" dy="0.0">Tribute in Teeth</tspan>
 </text>
-<text class="summary" x="670.0" y="1506.0">
+<text class="summary" x="670.0" y="1494.0">
 <tspan x="670.0" dy="0.0">calderon-imperium erects toll posts and ration yards, demanding “tax” for the</tspan>
 <tspan x="670.0" dy="12.0">crime of surviving on stolen ground. When the Garrok refuse, the Imperium</tspan>
 <tspan x="670.0" dy="12.0">answers with public hangings and private pits—less a war than a harvest.</tspan>
@@ -508,30 +510,30 @@
 <tspan x="155.1" dy="12.0">emptied for labor and “relocation.” Those who flee speak of soldiers with eyes</tspan>
 <tspan x="155.1" dy="12.0">like polished iron—no rage, no mercy, only procedure.</tspan>
 </text>
-<rect class="label" x="654.0" y="1558.0" width="406.1" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1587.0">
+<rect class="label" x="654.0" y="1546.0" width="406.1" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1575.0">
 <tspan x="670.0" dy="0.0">The Road of Nails Through the Marsh</tspan>
 </text>
-<text class="summary" x="670.0" y="1605.0">
+<text class="summary" x="670.0" y="1593.0">
 <tspan x="670.0" dy="0.0">calderon-imperium cuts a causeway into the swamp—trees felled, reeds</tspan>
 <tspan x="670.0" dy="12.0">burned, spirit-shrines trampled flat. Every plank is a promise: they intend to</tspan>
 <tspan x="670.0" dy="12.0">stay, and they intend to make the land obey.</tspan>
 </text>
-<rect class="label" x="126.0" y="1741.0" width="420.0" height="97.0" rx="8" ry="8"/>
+<rect class="label changed" x="126.0" y="1741.0" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="142.0" y="1770.0">
 <tspan x="142.0" dy="0.0">Warlord Kragath Dakgar Death</tspan>
 </text>
 <text class="summary" x="142.0" y="1788.0">
 <tspan x="142.0" dy="0.0">Kragath Dakgar led the charge up wet mortar while Imperium arrows made the</tspan>
 <tspan x="142.0" dy="12.0">air sing. The third shaft didn’t stop him—he bit stone and kept climbing—until</tspan>
-<tspan x="142.0" dy="12.0">a falling block broke his ribs. The young remember his lesson: stone breaks; only</tspan>
-<tspan x="142.0" dy="12.0">a ledger pretends it can’t.</tspan>
+<tspan x="142.0" dy="12.0">a falling block broke his ribs. Stone broke before flesh, but it was not a lesson</tspan>
+<tspan x="142.0" dy="12.0">writ large: the fortress held.</tspan>
 </text>
-<rect class="label" x="654.0" y="1657.0" width="418.0" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1686.0">
+<rect class="label" x="654.0" y="1645.0" width="418.0" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1674.0">
 <tspan x="670.0" dy="0.0">Blood on Unfinished Stone</tspan>
 </text>
-<text class="summary" x="670.0" y="1704.0">
+<text class="summary" x="670.0" y="1692.0">
 <tspan x="670.0" dy="0.0">garrok-confederation strikes back at the calderon-imperium reach, hurling</tspan>
 <tspan x="670.0" dy="12.0">bodies against half-raised walls and wet mortar. Thousands die beneath arrows</tspan>
 <tspan x="670.0" dy="12.0">and falling stone; the Imperium counts the dead as if tallying grain.</tspan>
@@ -545,11 +547,11 @@
 <tspan x="163.3" dy="12.0">drives the orcs deeper into the swamp-lows. They do it with paperwork and</tspan>
 <tspan x="163.3" dy="12.0">spearpoints alike—order written in blood, stamped and filed.</tspan>
 </text>
-<rect class="label" x="654.0" y="1756.0" width="395.6" height="73.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1785.0">
+<rect class="label" x="654.0" y="1744.0" width="395.6" height="73.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1773.0">
 <tspan x="670.0" dy="0.0">The Soulless Measure the Frontier</tspan>
 </text>
-<text class="summary" x="670.0" y="1803.0">
+<text class="summary" x="670.0" y="1791.0">
 <tspan x="670.0" dy="0.0">calderon-imperium surveyors and clerks arrive first—stakes, ink, and cold</tspan>
 <tspan x="670.0" dy="12.0">smiles. They name Garrok soil “unused” and call the living marsh “waste.”</tspan>
 </text>
@@ -702,15 +704,15 @@
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1019.7 674.0)">
+<g transform="translate(1026.9 674.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(990.7 678.4)">
+<g transform="translate(997.9 678.4)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(952.9 674.0)">
+<g transform="translate(960.2 674.0)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
@@ -726,15 +728,15 @@
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1026.0 797.0)">
+<g transform="translate(1026.0 785.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(997.0 801.4)">
+<g transform="translate(997.0 789.4)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(959.3 797.0)">
+<g transform="translate(959.3 785.0)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
@@ -750,110 +752,110 @@
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1020.0 908.0)">
+<g transform="translate(1020.0 896.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(991.0 912.4)">
+<g transform="translate(991.0 900.4)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(953.3 908.0)">
+<g transform="translate(953.3 896.0)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1043.0)">
+<g transform="translate(500.2 1055.0)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 1047.4)">
+<g transform="translate(471.2 1059.4)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 1043.0)">
+<g transform="translate(433.5 1055.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1019.1 1031.0)">
+<g transform="translate(1019.1 1019.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(990.1 1035.4)">
+<g transform="translate(990.1 1023.4)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(952.3 1031.0)">
+<g transform="translate(952.3 1019.0)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1166.0)">
+<g transform="translate(500.2 1178.0)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 1170.4)">
+<g transform="translate(471.2 1182.4)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 1166.0)">
+<g transform="translate(433.5 1178.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1035.9 1146.4)">
+<g transform="translate(1035.9 1134.4)">
 <title>tag: infrastructure</title>
 <use href="#tag_infrastructure" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(998.1 1142.0)">
+<g transform="translate(998.1 1130.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1289.0)">
+<g transform="translate(500.2 1301.0)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 1293.4)">
+<g transform="translate(471.2 1305.4)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 1289.0)">
+<g transform="translate(433.5 1301.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 1241.0)">
+<g class="public-indicator" transform="translate(660.0 1229.0)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1023.1 1241.0)">
+<g transform="translate(1023.1 1229.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(985.4 1241.0)">
+<g transform="translate(985.4 1229.0)">
 <title>faction: garhammar-trade-league</title>
 <use href="#pov_garhammar-trade-league" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(956.4 1245.4)">
+<g transform="translate(956.4 1233.4)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(918.6 1241.0)">
+<g transform="translate(918.6 1229.0)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1400.0)">
+<g transform="translate(500.2 1412.0)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 1404.4)">
+<g transform="translate(471.2 1416.4)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 1400.0)">
+<g transform="translate(433.5 1412.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1037.0 1368.4)">
+<g transform="translate(1037.0 1356.4)">
 <title>tag: infrastructure</title>
 <use href="#tag_infrastructure" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(999.2 1364.0)">
+<g transform="translate(999.2 1352.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
@@ -869,15 +871,15 @@
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1021.0 1463.0)">
+<g transform="translate(1021.0 1451.0)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(992.0 1467.4)">
+<g transform="translate(992.0 1455.4)">
 <title>tag: economy</title>
 <use href="#tag_economy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(954.2 1463.0)">
+<g transform="translate(954.2 1451.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
@@ -893,15 +895,15 @@
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1014.4 1562.0)">
+<g transform="translate(1014.4 1550.0)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(985.4 1566.4)">
+<g transform="translate(985.4 1554.4)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(947.6 1562.0)">
+<g transform="translate(947.6 1550.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
@@ -917,15 +919,15 @@
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1026.2 1661.0)">
+<g transform="translate(1026.2 1649.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(997.2 1665.4)">
+<g transform="translate(997.2 1653.4)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(959.5 1661.0)">
+<g transform="translate(959.5 1649.0)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
@@ -941,15 +943,15 @@
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1003.8 1760.0)">
+<g transform="translate(1003.8 1748.0)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(974.8 1764.4)">
+<g transform="translate(974.8 1752.4)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(937.1 1760.0)">
+<g transform="translate(937.1 1748.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
