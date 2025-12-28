@@ -15,6 +15,7 @@ tags_any = ["public", "merrowgate"]
 tick_scale = "decade"
 tick_spacing_px = 300
 sort_direction = "desc"
+max_summary_lines = 6
 
 [views.range]
 last_years = 170
@@ -36,11 +37,11 @@ last_years = 3500
 id = "Elderholt"
 title = "Elderholt"
 tags_any = ["public", "elderholt"]
-tick_scale = "century"
-tick_spacing_px = 72
+tick_scale = "year"
+tick_spacing_px = 20
 sort_direction = "desc"
 max_summary_lines = 6
-hide_time_measurments = true
+hide_time_measurements = false
 
 [views.range]
-last_years = 400
+last_years = 100

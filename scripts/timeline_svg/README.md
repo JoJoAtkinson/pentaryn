@@ -108,7 +108,11 @@ If `BuildConfig.age_glyph_years=true`, tick labels render as `<age-glyph><years-
 
 ## Highlighting renamed history IDs (git)
 
-When `BuildConfig.highlight_git_id_changes=true`, any `_history.tsv` row whose `event_id` was renamed (detected via `git diff` vs `BuildConfig.git_base_ref`, default `HEAD~1`) renders with an orange outline on its label box.
+When `BuildConfig.highlight_git_id_changes=true`, any `_history.tsv` row that changed (detected via `git diff` vs `BuildConfig.git_base_ref`, default `HEAD`) renders with an orange outline on its label box. This includes edits to the row (e.g. title/summary/date) and `event_id` renames.
+
+## Unknown dates (`???`)
+
+If a `_history.tsv` row has `date = ???` (or `TBD`), it renders at the end of the timeline and gets an `unknown-date` tag icon to indicate the placement is not an authoritative timestamp.
 
 Example:
 

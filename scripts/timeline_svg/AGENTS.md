@@ -24,7 +24,7 @@ History entries are **row-based**: each TSV row renders independently (duplicate
 - `_history.tsv` columns:
   - `event_id`
   - `tags` (semicolon or whitespace separated)
-  - `date` (`YYYY`, `YYYY/MM`, or `YYYY/MM/DD`)
+  - `date` (`YYYY`, `YYYY/MM`, or `YYYY/MM/DD`; use `???` or `TBD` for unknown date, which renders at the end with an `unknown-date` icon)
   - `duration` (integer days; use `0` for point events)
   - `title`
   - `summary`

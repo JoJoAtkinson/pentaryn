@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="2684" viewBox="0 0 1200 2684">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="2170" viewBox="0 0 1200 2170">
 <style><![CDATA[
 @font-face {
   font-family: 'Alegreya';
@@ -38,6 +38,7 @@
         .token { }
         .connector { stroke: #7a5b3a; stroke-width: 1.5; stroke-linecap: round; opacity: 0.7; }
         .label { fill: #fffaf0; stroke: var(--label-border); stroke-width: 1; }
+        .label.changed-id, .label.changed { stroke: #d97900; stroke-width: 4; stroke-linejoin: round; }
         .title { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 16px; font-weight: 700; fill: #2b1f14; }
         .summary { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #3a2b1f; }
         .md-bold { font-weight: 700; }
@@ -61,12 +62,25 @@
 <g class="" transform="translate(0,0)" style=""><path d="M149.688 85.625c-1.234.005-2.465.033-3.72.063-33.913.806-75.48 10.704-127.25 33.718V362.78c60.77-28.82 106.718-37.067 144.22-33.092 33.502 3.55 59.685 16.66 83.562 31.187v-242.97c-23.217-17.744-50.195-30.04-85.97-32a184.47 184.47 0 0 0-10.843-.28zm211.968 0c-3.7-.016-7.322.088-10.844.28-35.773 1.96-62.75 14.256-85.968 32v242.97c23.876-14.527 50.06-27.637 83.562-31.188 37.502-3.974 83.45 4.272 144.22 33.094V119.407c-51.77-23.014-93.337-32.912-127.25-33.72-1.255-.028-2.486-.056-3.72-.06zm5.72 261.78c-1.038-.002-2.074.017-3.095.033-4.808.075-9.43.37-13.905.843-33.932 3.597-59.603 17.976-85.53 34.44v.28c-6.554-1.99-13.02-2.37-19.408-.97-25.566-16.177-51.003-30.202-84.468-33.75-5.595-.592-11.44-.883-17.564-.842-32.04.213-71.833 9.778-124.687 35.937v42.53c60.77-28.823 106.714-37.067 144.218-33.092 18.545 1.965 34.837 6.845 49.75 13.28-4.682 6.064-9.308 13.268-13.875 21.688h117.156c-5.93-8.22-11.798-15.414-17.626-21.56 14.996-6.503 31.39-11.43 50.062-13.408 37.503-3.974 83.448 4.27 144.22 33.094v-42.53c-53.16-26.31-93.115-35.863-125.25-35.97z" fill="currentColor" fill-opacity="1"></path></g>
   </g>
 </symbol>
+<symbol id="tag_diplomacy" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="247.04" fill="#2f6b5d" stroke="#295e51" stroke-width="17.92" />
+  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
+<path fill="#fbf7ef" d="M38.643 17.275 32.215 59.47c20.354 23.085 48.127 40.682 79.195 56-29.677-4.055-58.635-12.142-84.64-24.868-.292 8.613-.584 26.252.896 35.58 23.024 8.994 48.88 14.026 75.95 16.728-23.698 5.377-47.716 7.58-71.425 6.95 2.665 9.36 7.325 22.24 11.26 31.675 22.547-1.977 45.912-7.504 69.36-15.47-18.785 14.27-39.05 26.146-60.185 35.322l28.877 30.056 17.144-9.898-5.978 22.312c6.788 6.61 20.498 15.434 27.56 20.623l13.268-11.662-.338 20.2c19.91 13.99 41.056 12.083 61.15 1.718-.804 6.438-1.308 13.29-1.482 20.56C132.47 314.7 66.666 320.958 70.59 348.222l34.553 6.947-34.108 18.04c1.503 7.398 3.84 15.003 7.73 22.677L120.1 379.56l-27.93 36.666c4.726 6.13 14.61 14.823 20.537 20.515l39.47-46.24-17.962 63.475c6.238 4.326 19.387 9.33 26.273 12.87l43.313-71.076-14.138 80.248c17.225 3.487 20.708 4.81 39.82 3.19l18.186-75.66 20.297 71.852c7.333-2.51 23.21-9.526 29.976-12.664l-11.794-59.3 35.372 45.14c7.232-5.076 18.943-11.587 24.316-17.328l-17.994-37.326 31.973 18.19c25.568-17.19-44.333-57.458-86.944-100.22 6.416-8.725 11.636-17.086 15.786-25.042 19.45 27.668 44.75 39.74 75.84 29.93l-1.176-21.815 16.002 14.943c7.52-4.34 15.072-10.137 22.48-16.166l-6.99-19.133 18.694 8.745c12.732-6.638 22.917-17.1 33.08-27.59-16.19-12.562-32.92-27.903-47.49-40.242 17.74 9.162 38.718 17.52 56.892 23.95 4.27-7.49 12.045-21.063 15.463-28.7-19.626-4.04-39.435-11.263-58.413-20.58 23.383 2.56 45.728 3.05 66.367-1.138 2.805-8.642 9.82-22.678 11.123-30.996-23.616 6.897-49.242 8.78-74.923 7.03 28.832-9.016 55.294-21.066 75.56-39.81L485.69 93c-84.44 76.087-173.95 30.858-210.133 83.916a34.885 34.885 0 0 0-14.932-.56c-14.7-80.695-139.033-53.424-221.982-159.083zM293 226.155l-9.643 45.806-23.623-44.347c10.196 4.382 20.545 8.023 33.266-1.457z"/>
+  </g>
+</symbol>
 <symbol id="tag_trade" viewBox="0 0 512 512">
   <circle cx="256" cy="256" r="247.04" fill="#2f6b6b" stroke="#295e5e" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
 <path fill="#fbf7ef" d="M287.03 20c-39.133.48-79.73 15.297-117 45.938h80.47v43.188c52.76-29.75 114.592-31.588 163.938.03l-18.188 9.72 64.688 50.72-3.75-83.314-26.407 14.126C395.99 48.792 345.038 20.644 290.907 20a161.464 161.464 0 0 0-3.875 0zm-268 64.625v212.75h212.782V84.625H19.032zm50.282 26.03H205.78v138.939h-18.718v-120.25H69.313v-18.688zm3.344 38.126 90.094 91.845-13.344 13.094-90.094-91.845 13.344-13.094zm206.656 61.75v212.782h212.75v-212.78h-212.75zm50.25 26.064h136.469V375.5h-18.686V255.28h-117.78l-.002-18.686zm3.344 38.094 90.125 91.875-13.342 13.062-90.125-91.844 13.343-13.092zm-278.53 63.656 3.75 83.312 23.312-12.47c60.927 88.637 169.99 106.485 259.625 32.814h-80.439v-43.188c-52.08 29.38-113 31.544-162.03 1.188l20.436-10.938-64.655-50.718z"/>
   </g>
 </symbol>
+<symbol id="tag_economy" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="247.04" fill="#6b5a2f" stroke="#5e4f29" stroke-width="17.92" />
+  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
+<path fill="#fbf7ef" d="M410.365 101.005c8.21-22.26 16.21-31.12 20.33-34.45 3.06-2.48 5.73-3.42 7.92-2.81 4 1.13 8.49 7.45 11.88 16.89 10.89 30.34 10 84.28-.93 129.51zm-286 72.92c7.52-31 10.28-66.13 7.77-94.92l-43.6-4.86zm289.46-113-301.2-33.53c-2.5-.28-5.24 1.46-7.11 3-3.67 3-10.42 10.32-17.66 27.64l308.68 34.34c5.16-13.25 11.02-23.89 17.31-31.43zm-228.78 298.71v-70.72l10.76 1.19 42.24 5.18v70.51zm16-40.34a13 13 0 0 0 5.34 10.29l-2.34 24.42 17 1.74-4-25a9.54 9.54 0 0 0 5-9.15 13.64 13.64 0 0 0-11.06-12.59s.17.1.13.1c-5.95-.68-11.07 3.9-10.07 10.1zm53 64.45-85-9.84v-86.72l-1.05-.09a8.14 8.14 0 0 1-7.27 6.71 8 8 0 0 1 5.23 8.9 8 8 0 0 1-8 6.66c8.453 4.004 4.341 16.778-4.86 15.1a8 8 0 0 1-8 13.8 8.01 8.01 0 0 1-12.28 10.29v.09a8 8 0 0 1-3.86 8.37l9.13 5.35v14.25l-12 7.13-12-7.12v-14.26l8.15-4.82a8.21 8.21 0 0 1-5.07-5.92.418.418 0 0 1 0-.1 8 8 0 0 1-15.18-5c-6.851 7.214-18.094-2.065-12.31-10.16-8.346 4.519-16.217-6.676-9.14-13-9.17 2.661-14.453-10.083-6.09-14.69a8 8 0 0 1-3.21-15.67c-9.294-1.047-9.548-14.463-.3-15.86-.669-.164-1.264-.473-1.83-.76l-17.24-1.86.6 167.11 309.18 34.49-.6-165.83-107-13.05zm140.06-164 4.72 1.91.91.58 38.72 4.31-23.26-64.77-12.82 37c-.16.46-3.41 9.8-8.27 20.99zm-208.54-39.74 5 5.49 12.75-11.15 21.45-2.28 16.61 15.35 10.51 8.73 18.54-9.29 3.44.5c.12-.67.25-1.34.38-2 3.08-16.1 7.35-30.16 7.53-30.75l13.39-43.91 16.88 42.71 8.42 21.42 10.66-12.39 22.14-25.73 5.78 33.45 3.29 19.1 17.1-9.64 35.09-19.79-18.48-51.4-247.86-27.61c2.51 34.94-1.85 77.32-12.39 112h2.32l7-12.86h40.46zm-111.29 97.39c7.6 2.1 7.9 12.766.43 15.29 7.737.867 9.802 11.153 3 14.94 7.653-.548 11.614 8.947 5.84 14 7.313-2.115 13.168 6.216 8.7 12.38 6.288-3.518 13.657 2.417 11.56 9.31 4.53-4.723 12.506-2.304 13.65 4.14 2.057-5.713 9.48-7.141 13.51-2.6-1.285-6.404 5.23-11.566 11.17-8.85-4.564-5.77.425-14.123 7.67-12.84-6.419-4.541-3.122-14.648 4.74-14.53-7.316-3.503-5.375-14.415 2.7-15.18a8 8 0 0 1-5.38-8l-76.43-8.26c-.41.19-.746.15-1.16.2zm367.54 139.08-.59-163.86-8.67 7-55.51 46.79.58 162zm-26.23-165.2-24.11-15.27-4.18-1.69c-5.91 11.52-13.39 23-22.66 27.88-5.44 2.88-12.22 4.34-20.16 4.34-11.13 0-24.75-2.91-37.35-8-10-4-23.3-11-30.26-21.34-4.9-7.29-6.64-17.77-5.31-32.92l-21.78 10.93-19-15.8-11.42-10.53-9.16 1-20.45 17.83-11-11.7h-24.21l-17.61 32-5.7-7.2-4.42 4.85-10.76 16.35-12.29 4.91L97.611 256h-12.2l-2.776 6.005 76.9 8.21a8.15 8.15 0 0 1 2-2.9 8 8 0 0 1 10.31-.46 1.657 1.657 0 0 1-.14-.24c-4.955-8.368 6.459-16.62 12.87-9.375 6.412 7.245-3.167 17.571-10.87 11.635a8 8 0 0 1 1.12 2.89l22.62 2.44 168.54 20.57 51.49-43.38zm-28.34-57.73-36.88 20.79-7.14-41.47-28 32.51-18.13-46.11s-16.65 54.58-7 69c7.69 11.45 35.42 22.25 54.33 22.25 5 0 9.43-.76 12.67-2.48 13.8-7.31 30.15-54.49 30.15-54.49zm-317.08 270.8v-.2c0-3.77-8.21-6.83-18.33-6.83-10.12 0-18.33 3.06-18.33 6.83 0 3.21 6 5.9 14 6.63v.2c0 3.77 8.21 6.83 18.33 6.83 10.12 0 18.33-3.06 18.33-6.83-.01-3.21-5.98-5.9-14-6.63zm350 6.63c-10.13 0-18.33 3.06-18.33 6.83s8.21 6.83 18.33 6.83c10.12 0 18.33-3.06 18.33-6.83s-8.25-6.8-18.38-6.8zm40-16.28c-10.13 0-18.33 3.06-18.33 6.83s8.21 6.83 18.33 6.83c10.12 0 18.33-3.06 18.33-6.83s-8.22-6.83-18.34-6.83z"/>
+  </g>
+</symbol>
+<symbol id="tag_changed" viewBox="0 0 512 512"><use href="#tag_unknown" x="0" y="0" width="512" height="512" /></symbol>
 <symbol id="tag_age" viewBox="0 0 512 512">
   <circle cx="256" cy="256" r="247.04" fill="#6a4d2d" stroke="#5d4327" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
@@ -77,6 +91,12 @@
   <circle cx="256" cy="256" r="247.04" fill="#3f3a33" stroke="#37332c" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
 <path fill="#fbf7ef" d="M254.07 19.707c-56.303 28.998-106.297 107.317-122.64 168.707 32.445 2.11 58.63 12.963 78.638 30.848l9.334-10.198c-13.336-13.056-30.596-23.9-52.994-34.707 12.68-31.542 32.01-79.29 56.598-82.07 9.62-1.088 19.92 4.722 31.13 21.068 35.08-58.334 68.394 18.705 87.727 61.002-21.94 11.897-39.132 22.82-52.63 36.024l8.68 9.76c19.68-17.732 45.72-29.358 78.55-31.673C358.24 127.335 311.515 50.14 254.07 19.707zM219.617 144.57c-8.894 0-16.103 3.952-16.103 8.826 0 4.875 7.21 8.827 16.103 8.827 8.894 0 16.106-3.95 16.106-8.827 0-4.874-7.212-8.826-16.106-8.826zm68.965 0c-8.894 0-16.105 3.952-16.105 8.826 0 4.875 7.21 8.827 16.105 8.827 8.894 0 16.106-3.95 16.106-8.827 0-4.874-7.212-8.826-16.106-8.826zm-118.894 70.88a233.216 233.216 0 0 0-6.444 11.52c-25.587 48.98-43.26 123.643-43.896 223.48 32.776 18.89 64.322 31.324 95.707 36.988-35.5-24.36-60.375-80.893-60.375-146.754 0-45.97 12.12-87.39 31.51-116.506a96.185 96.185 0 0 0-16.502-8.727zm168.933.35a98.526 98.526 0 0 0-16.298 8.764c19.24 29.095 31.254 70.354 31.254 116.12 0 65.82-24.844 122.322-60.306 146.707 30.88-5.598 62.44-17.812 95.656-36.947-.638-99.57-18.31-174.163-43.9-223.177a233.816 233.816 0 0 0-6.405-11.467zm-97.665 23.61c7.026 22.543 9.128 45.086.98 67.63h-41.552v18.513c10.057-3.24 20.25-5.39 30.502-6.594.066 50.215 1.313 96.574 19.82 145.435l4.193 11.074 4.485-10.962c19.48-47.615 18.045-95.297 17.933-145.024 10.257 1.333 20.463 3.4 30.545 6.07v-18.515h-41.374c-6.888-22.544-5.932-45.087.803-67.63h-26.335z"/>
+  </g>
+</symbol>
+<symbol id="tag_magic" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="247.04" fill="#4f2f6b" stroke="#45295e" stroke-width="17.92" />
+  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
+<path fill="#fbf7ef" d="M43.72 13.844 18.155 64.97c27.97 13.658 58.89 24.446 91.53 32.436l-89.53 393.438H123.5l41.25-373.438 1.03-9.437 9.44 1.186c52.986 6.706 108.616 6.364 161.56-.594l9.44-1.218 1.06 9.47 41.25 374.03h103.314L402.156 96.75C433.81 88.828 463.8 78.25 491 64.97l-25.53-51.126c-112.422 54.9-309.332 54.9-421.75 0zm286 114.344a658.877 658.877 0 0 1-42.783 3.562c-21.804 10.4-32.54 26.267-35.312 54.406 27.25-30.575 55.034-36.127 81.188-29.906l-3.094-28.063zm-147.44.53-10.03 90.97c8.553-37.432 27.04-73.21 54.875-87.625-15.038-.6-30.02-1.7-44.844-3.344zm64.97 13.313c-34.87 17.008-72.704 109.172-38.156 162.907-23.665 3.18-37.152-6.345-43.406-26l-4.313 39.125c9.257 32.188 30.822 44 56.844 44-12.7 21.47-47.05 23.77-62.94 11.188l-1.655 15.188c10.71 28.704 37.626 43.795 74.344 42.093-18.365 23.685-30.833 24.123-63.064 14 39.07 48.74 103.567 18.582 119.125-31.53 13.896 22.31-2.982 63.977-44.374 67.75 82.914 13.18 105.38-62.936 57.125-124.406 21.172 2.414 47.277 11.1 62.314 38.312l-10.813-98.22c-25.328-31.6-75.52-19.695-66.56-46.373 4.55-13.55 34.584-16.545 42.03 11.093 12.44-41.053-37.255-49.697-52.563-29.78 16.442-29.484 50.19-27.943 69.125-7.157l-5.03-45.5c-33.345-13.155-72.762 8.446-89.188 52.655-12.81-21.176-21.274-66.546 1.156-89.344zm92.03 255.22c9.187 42.963-7.44 81.635-44.81 93l75.217.25L363 429.875c-7.54-14.486-14.178-24.364-23.72-32.625zm-192.467 52.78-4.5 40.845h67.843c-27.745-8.302-48.728-18.543-63.344-40.844z"/>
   </g>
 </symbol>
 <symbol id="tag_conflict" viewBox="0 0 512 512">
@@ -105,6 +125,12 @@
 <path fill="#fbf7ef" d="M261.826 23.342c-2.1.014-4.186.044-6.262.09-116.232 2.562-195.636 54.744-216.322 111.95-11.82 32.69-6.027 67.12 23.305 99.196 19.405 21.22 49.525 41.114 91.818 57.072-12.872-43.693-18.494-87.863-11.482-132.302l.3.047c1.81-10.37 6.832-20.448 14.112-29.23 29.632-35.742 94.642-59.715 158.1-48.42 77.656 13.824 128.62 37.135 158.263 65.618-2.933-26.51-18.825-51.028-43.174-71.595-31.773-26.84-77.54-45.766-122.914-50.266-15.788-1.566-31.05-2.257-45.744-2.16zm23.666 74.465c-47.91-.14-94.163 20.588-113.81 44.287-5.785 6.978-9.38 13.613-10.584 20.13l.246.038c-.25 1.582-.48 3.165-.696 4.748-.01 4.96 1.412 9.884 4.372 14.87 7.767 13.083 29.18 27.893 70.695 38.186 13.2 3.273 25.47 5.01 36.783 5.705l12.764-82.262 9.785 2.246c29.88 6.86 49.564 16.87 60.648 29.853 5.542 6.492 8.828 14.005 9.086 21.674.05 1.447-.01 2.882-.173 4.302 2.764 38.157 1.664 75.476-5.703 111.287 59.32-12.15 102.336-40.655 118.74-71.587 13.41-25.282 11.35-51.275-13.218-77.035-24.568-25.76-73.307-50.04-152.307-64.102-8.828-1.57-17.756-2.313-26.628-2.34zm15.12 68.66-9.23 59.488c5.397-.3 10.47-.875 15.16-1.705 18.506-3.274 31.014-10.577 36.177-17.23 1.707-2.2 2.666-4.21 3.1-6.157-.028-.372-.05-.742-.078-1.115l.274-.02c.073-.61.108-1.214.088-1.818-.098-2.892-1.232-6.198-4.622-10.168-5.937-6.955-19.125-15.1-40.87-21.275zm-142.034 37.21c.62 31.614 7.182 63.427 17.713 95.532 16.043 5.048 33.555 9.58 52.636 13.472 39.913 7.48 77.113 7.98 110.115 3.54 6.515-28.052 8.834-57.48 8.147-87.95-9.52 6.876-22.23 11.698-37.39 14.38-21.557 3.814-48.29 3.063-78.578-4.447-34.638-8.588-58.302-20.168-72.642-34.527zm-129.83 15.538C37.45 404.402 137.104 495.61 258.788 495.61c123.68 0 224.628-104.89 230.415-237.204-37.837 57.903-139.786 95.892-263.777 72.637l-.072-.014-.073-.014c-22.46-4.58-42.96-10.024-61.608-16.205l-1.62.57c-.147-.418-.29-.837-.435-1.255-51.585-17.38-88.692-40.5-112.863-66.934-8.195-8.96-14.842-18.344-20.006-27.975z"/>
   </g>
 </symbol>
+<symbol id="pov_ardenhaven" viewBox="0 0 512 512">
+  <rect x="8.96" y="8.96" width="494.08" height="494.08" rx="92.16" ry="92.16" fill="#3b5b7a" stroke="#2f6b3a" stroke-width="17.92" />
+  <g transform="translate(256.000 256.000) scale(0.7000) translate(-256.000 -256.000)">
+<path fill="#fbf7ef" d="M25 265v71.11c7.526-4.42 17.73-10.278 30-16.98V265H25zm432 0v54.205a1117.058 1117.058 0 0 1 30 16.93V265h-30zm-201.49.28c-39.653.03-99.394 23.28-148.06 46.976-44.553 21.694-76.747 41.37-82.45 44.88V471h110.387c1.88-32.24 13.54-69.11 32.552-99.74 20.797-33.505 51.085-60.252 88.058-60.26 36.985-.008 67.298 26.736 88.12 60.244 19.038 30.635 30.72 67.51 32.603 99.756H487V357.145c-5.72-3.51-38.067-23.218-82.82-44.93-48.875-23.713-108.863-46.962-148.67-46.934z"/>
+  </g>
+</symbol>
 <symbol id="pov_calderon-imperium" viewBox="0 0 512 512">
   <rect x="8.96" y="8.96" width="494.08" height="494.08" rx="92.16" ry="92.16" fill="#3A3F45" stroke="#541010ff" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7000) translate(-256.000 -256.000)">
@@ -130,63 +156,41 @@
   </g>
 </symbol>
 </defs>
-<g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="2644"/></g>
+<g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="2130"/></g>
 <g id="connectors">
 <line class="connector" x1="600" y1="40.6" x2="552.0" y2="88.5"/>
-<line class="connector" x1="600" y1="47.2" x2="648.0" y2="88.5"/>
-<line class="connector" x1="600" y1="56.6" x2="552.0" y2="193.5"/>
-<line class="connector" x1="600" y1="65.2" x2="648.0" y2="193.5"/>
-<line class="connector" x1="600" y1="69.5" x2="552.0" y2="298.5"/>
-<line class="connector" x1="600" y1="75.3" x2="648.0" y2="298.5"/>
-<line class="connector" x1="600" y1="76.7" x2="552.0" y2="409.5"/>
-<line class="connector" x1="600" y1="76.7" x2="648.0" y2="397.5"/>
-<line class="connector" x1="600" y1="81.8" x2="552.0" y2="520.5"/>
-<line class="connector" x1="600" y1="90.4" x2="648.0" y2="496.5"/>
-<line class="connector" x1="600" y1="99.8" x2="552.0" y2="631.5"/>
-<line class="connector" x1="600" y1="109.1" x2="648.0" y2="607.5"/>
-<line class="connector" x1="600" y1="115.6" x2="552.0" y2="736.5"/>
-<line class="connector" x1="600" y1="125.0" x2="648.0" y2="718.5"/>
-<line class="connector" x1="600" y1="127.1" x2="552.0" y2="847.5"/>
-<line class="connector" x1="600" y1="131.4" x2="648.0" y2="823.5"/>
-<line class="connector" x1="600" y1="138.6" x2="552.0" y2="964.5"/>
-<line class="connector" x1="600" y1="145.1" x2="648.0" y2="928.5"/>
-<line class="connector" x1="600" y1="148.7" x2="552.0" y2="1069.5"/>
-<line class="connector" x1="600" y1="312.2" x2="648.0" y2="1045.5"/>
-<line class="connector" x1="600" y1="312.2" x2="552.0" y2="1162.5"/>
-<line class="connector" x1="600" y1="780.2" x2="648.0" y2="1222.2"/>
-<line class="connector" x1="600" y1="780.2" x2="552.0" y2="1294.3"/>
-<line class="connector" x1="600" y1="1211.4" x2="648.0" y2="1555.1"/>
-<line class="connector" x1="600" y1="1283.4" x2="552.0" y2="1679.6"/>
-<line class="connector" x1="600" y1="1318.7" x2="648.0" y2="1672.1"/>
-<line class="connector" x1="600" y1="1320.2" x2="552.0" y2="1790.6"/>
-<line class="connector" x1="600" y1="1356.2" x2="648.0" y2="1356.2"/>
-<line class="connector" x1="600" y1="1356.2" x2="552.0" y2="1889.6"/>
-<line class="connector" x1="600" y1="1359.0" x2="648.0" y2="1888.1"/>
-<line class="connector" x1="600" y1="1431.8" x2="552.0" y2="1431.8"/>
-<line class="connector" x1="600" y1="1467.0" x2="648.0" y2="1993.1"/>
-<line class="connector" x1="600" y1="1467.8" x2="552.0" y2="2087.6"/>
-<line class="connector" x1="600" y1="1624.7" x2="648.0" y2="2098.1"/>
-<line class="connector" x1="600" y1="2076.2" x2="552.0" y2="2590.3"/>
-<line class="connector" x1="600" y1="2076.2" x2="648.0" y2="2518.2"/>
+<line class="connector" x1="600" y1="65.2" x2="648.0" y2="82.5"/>
+<line class="connector" x1="600" y1="69.5" x2="552.0" y2="199.5"/>
+<line class="connector" x1="600" y1="76.7" x2="648.0" y2="187.5"/>
+<line class="connector" x1="600" y1="76.7" x2="552.0" y2="298.5"/>
+<line class="connector" x1="600" y1="127.1" x2="648.0" y2="304.5"/>
+<line class="connector" x1="600" y1="145.1" x2="552.0" y2="397.5"/>
+<line class="connector" x1="600" y1="148.7" x2="648.0" y2="415.5"/>
+<line class="connector" x1="600" y1="312.2" x2="552.0" y2="514.5"/>
+<line class="connector" x1="600" y1="312.2" x2="648.0" y2="508.5"/>
+<line class="connector" x1="600" y1="780.2" x2="552.0" y2="780.2"/>
+<line class="connector" x1="600" y1="780.2" x2="648.0" y2="780.2"/>
+<line class="connector" x1="600" y1="1211.4" x2="552.0" y2="1211.4"/>
+<line class="connector" x1="600" y1="1283.4" x2="648.0" y2="1283.4"/>
+<line class="connector" x1="600" y1="1318.7" x2="552.0" y2="1400.9"/>
+<line class="connector" x1="600" y1="1320.2" x2="648.0" y2="1430.2"/>
+<line class="connector" x1="600" y1="1356.2" x2="552.0" y2="1511.9"/>
+<line class="connector" x1="600" y1="1356.2" x2="648.0" y2="1529.2"/>
+<line class="connector" x1="600" y1="1359.0" x2="552.0" y2="1616.9"/>
+<line class="connector" x1="600" y1="1431.8" x2="648.0" y2="1622.2"/>
+<line class="connector" x1="600" y1="1467.0" x2="552.0" y2="1721.9"/>
+<line class="connector" x1="600" y1="1467.8" x2="648.0" y2="1727.2"/>
+<line class="connector" x1="600" y1="1624.7" x2="552.0" y2="1826.9"/>
+<line class="connector" x1="600" y1="2076.2" x2="648.0" y2="2076.2"/>
+<line class="connector" x1="600" y1="2076.2" x2="552.0" y2="2076.2"/>
 </g>
 <g id="tokens">
 <use class="token" href="#token_default" x="589.0" y="29.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="36.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="45.6" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="54.2" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="58.5" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="64.3" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="65.7" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="65.7" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="70.8" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="79.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="88.8" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="98.1" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="104.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="114.0" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="116.1" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="120.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="127.6" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="134.1" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="137.7" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="301.2" width="22" height="22"/>
@@ -208,366 +212,279 @@
 <use class="token" href="#token_default" x="589.0" y="2065.2" width="22" height="22"/>
 </g>
 <g id="labels">
-<rect class="label" x="140.7" y="40.0" width="405.3" height="97.0" rx="8" ry="8"/>
-<text class="title" x="156.7" y="69.0">
-<tspan x="156.7" dy="0.0">The Covenant Summit</tspan>
+<rect class="label changed" x="137.5" y="40.0" width="408.5" height="97.0" rx="8" ry="8"/>
+<text class="title" x="153.5" y="69.0">
+<tspan x="153.5" dy="0.0">The Covenant Summit</tspan>
 </text>
-<text class="summary" x="156.7" y="87.0">
-<tspan x="156.7" dy="0.0">Merrowgate hosts the largest international trade conference in history, with</tspan>
-<tspan x="156.7" dy="12.0">representatives from all nine major factions. The city&#x27;s infrastructure strains</tspan>
-<tspan x="156.7" dy="12.0">under the demand, but the resulting trade agreements reshape continental</tspan>
-<tspan x="156.7" dy="12.0">commerce for a generation.</tspan>
+<text class="summary" x="153.5" y="87.0">
+<tspan x="153.5" dy="0.0">Merrowgate hosts the largest international trade conference in history, with</tspan>
+<tspan x="153.5" dy="12.0">representatives from all eight major factions. The city&#x27;s infrastructure strains</tspan>
+<tspan x="153.5" dy="12.0">under the demand, but the resulting trade agreements reshape continental</tspan>
+<tspan x="153.5" dy="12.0">commerce for a generation.</tspan>
 </text>
-<rect class="label" x="654.0" y="40.0" width="411.7" height="97.0" rx="8" ry="8"/>
+<rect class="label changed" x="654.0" y="40.0" width="404.4" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="69.0">
-<tspan x="670.0" dy="0.0">The Defensive Pact Network</tspan>
-</text>
-<text class="summary" x="670.0" y="87.0">
-<tspan x="670.0" dy="0.0">As tensions rise between Calderon and Ardenhaven, Merrowgate brokers a</tspan>
-<tspan x="670.0" dy="12.0">complex web of mutual defense agreements that make large-scale war</tspan>
-<tspan x="670.0" dy="12.0">economically catastrophic for all parties. The &quot;Merrowgate Peace&quot; holds for the</tspan>
-<tspan x="670.0" dy="12.0">next decade.</tspan>
-</text>
-<rect class="label" x="126.0" y="151.0" width="420.0" height="85.0" rx="8" ry="8"/>
-<text class="title" x="142.0" y="180.0">
-<tspan x="142.0" dy="0.0">The Insurance Innovation</tspan>
-</text>
-<text class="summary" x="142.0" y="198.0">
-<tspan x="142.0" dy="0.0">Merrowgate introduces &quot;life insurance&quot;—contracts that pay out upon death. The</tspan>
-<tspan x="142.0" dy="12.0">innovation is initially controversial (betting on death?) but becomes wildly</tspan>
-<tspan x="142.0" dy="12.0">popular. Within five years, most middle-class citizens carry policies.</tspan>
-</text>
-<rect class="label" x="654.0" y="151.0" width="404.4" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="180.0">
 <tspan x="670.0" dy="0.0">The Merrowgate Exchange</tspan>
 </text>
-<text class="summary" x="670.0" y="198.0">
+<text class="summary" x="670.0" y="87.0">
 <tspan x="670.0" dy="0.0">The Banking Consortium opens the world&#x27;s first formal stock exchange,</tspan>
 <tspan x="670.0" dy="12.0">allowing fractional ownership of merchant ventures. The innovation attracts</tspan>
 <tspan x="670.0" dy="12.0">investors from every nation and creates a new class of wealthy speculators.</tspan>
 </text>
-<rect class="label" x="126.0" y="250.0" width="420.0" height="97.0" rx="8" ry="8"/>
-<text class="title" x="142.0" y="279.0">
+<rect class="label" x="126.0" y="151.0" width="420.0" height="97.0" rx="8" ry="8"/>
+<text class="title" x="142.0" y="180.0">
 <tspan x="142.0" dy="0.0">Hearts Taken on the Nails</tspan>
 </text>
-<text class="summary" x="142.0" y="297.0">
+<text class="summary" x="142.0" y="198.0">
 <tspan x="142.0" dy="0.0">A Calderon caravan is found on the Road of Nails—guards and merchants laid</tspan>
 <tspan x="142.0" dy="12.0">out in a straight line, boots aligned, each with their chest ripped open with the</tspan>
 <tspan x="142.0" dy="12.0">heart removed. The bodies are left where they were laid. The story runs ahead of</tspan>
 <tspan x="142.0" dy="12.0">the carts and crosses every border, told in whispers that never match.</tspan>
 </text>
-<rect class="label" x="654.0" y="250.0" width="420.0" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="139.0" width="419.6" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="168.0">
+<tspan x="670.0" dy="0.0">Elaerith Sets the Terms of Trade</tspan>
+</text>
+<text class="summary" x="670.0" y="186.0">
+<tspan x="670.0" dy="0.0">As war gave way to contracts and coin, Elaerith announced the Age of Trade</tspan>
+<tspan x="670.0" dy="12.0">with a warning: commerce is conquest in softer robes; she authorized exchange</tspan>
+<tspan x="670.0" dy="12.0">only through sanctioned hands and sworn measures, so that no foreign bargain</tspan>
+<tspan x="670.0" dy="12.0">could seep past the outer ring uncounted, unnamed, or unmade at her word.</tspan>
+</text>
+<rect class="label" x="164.4" y="262.0" width="381.6" height="73.0" rx="8" ry="8"/>
+<text class="title" x="180.4" y="291.0">
+<tspan x="180.4" dy="0.0">⋈ Age of Trade</tspan>
+</text>
+<text class="summary" x="180.4" y="309.0">
+<tspan x="180.4" dy="0.0">War ends and coin takes over; the old war-roads are inherited by guilds,</tspan>
+<tspan x="180.4" dy="12.0">charters, and contract courts.</tspan>
+</text>
+<rect class="label" x="654.0" y="250.0" width="414.9" height="109.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="279.0">
-<tspan x="670.0" dy="0.0">The Covenant Code</tspan>
+<tspan x="670.0" dy="0.0">Zarkul Dakgar the Forever Cursed</tspan>
 </text>
 <text class="summary" x="670.0" y="297.0">
-<tspan x="670.0" dy="0.0">The Scriveners&#x27; Guild publishes the first standardized international contract law</tspan>
-<tspan x="670.0" dy="12.0">code, compiling centuries of precedent. The 3,000-page &quot;Covenant Code&quot;</tspan>
-<tspan x="670.0" dy="12.0">becomes required reading for merchants, diplomats, and lawyers across the</tspan>
-<tspan x="670.0" dy="12.0">known world.</tspan>
+<tspan x="670.0" dy="0.0">With Dakgar already bleeding out, Zarkul took what little remained and sold it</tspan>
+<tspan x="670.0" dy="12.0">for coin to the garhammar-trade-league. The Imperium used him like a tool</tspan>
+<tspan x="670.0" dy="12.0">and, when the work was done, “paid” him with a knife in the dark. Among the</tspan>
+<tspan x="670.0" dy="12.0">Horde his name is kept only as a curse: proof that gold is softer than mud, and</tspan>
+<tspan x="670.0" dy="12.0">twice as deadly.</tspan>
 </text>
-<rect class="label" x="126.4" y="361.0" width="419.6" height="97.0" rx="8" ry="8"/>
-<text class="title" x="142.4" y="390.0">
-<tspan x="142.4" dy="0.0">Elaerith Sets the Terms of Trade</tspan>
+<rect class="label changed" x="161.8" y="349.0" width="384.2" height="97.0" rx="8" ry="8"/>
+<text class="title" x="177.8" y="378.0">
+<tspan x="177.8" dy="0.0">The Scriveners&#x27; Reformation</tspan>
 </text>
-<text class="summary" x="142.4" y="408.0">
-<tspan x="142.4" dy="0.0">As war gave way to contracts and coin, Elaerith announced the Age of Trade</tspan>
-<tspan x="142.4" dy="12.0">with a warning: commerce is conquest in softer robes; she authorized exchange</tspan>
-<tspan x="142.4" dy="12.0">only through sanctioned hands and sworn measures, so that no foreign bargain</tspan>
-<tspan x="142.4" dy="12.0">could seep past the outer ring uncounted, unnamed, or unmade at her word.</tspan>
+<text class="summary" x="177.8" y="396.0">
+<tspan x="177.8" dy="0.0">The Ink unveils new contract-binding enchantments that can enforce</tspan>
+<tspan x="177.8" dy="12.0">agreements across national borders. This innovation makes Merrowgate</tspan>
+<tspan x="177.8" dy="12.0">contracts the gold standard for international trade, tripling the city&#x27;s</tspan>
+<tspan x="177.8" dy="12.0">arbitration revenue within five years.</tspan>
 </text>
-<rect class="label" x="654.0" y="361.0" width="381.6" height="73.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="390.0">
-<tspan x="670.0" dy="0.0">⋈ Age of Trade</tspan>
+<rect class="label changed" x="654.0" y="373.0" width="418.7" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="402.0">
+<tspan x="670.0" dy="0.0">The Charter of Open Waters</tspan>
 </text>
-<text class="summary" x="670.0" y="408.0">
-<tspan x="670.0" dy="0.0">War ends and coin takes over; the old war-roads are inherited by guilds,</tspan>
-<tspan x="670.0" dy="12.0">charters, and contract courts.</tspan>
+<text class="summary" x="670.0" y="420.0">
+<tspan x="670.0" dy="0.0">Merrowgate brokers a historic neutrality pact between Calderon Imperium and</tspan>
+<tspan x="670.0" dy="12.0">Ardenhaven, securing safe passage through its waters for all nations. The treaty</tspan>
+<tspan x="670.0" dy="12.0">establishes Merrowgate as the undisputed arbiter of maritime trade disputes.</tspan>
 </text>
-<rect class="label" x="126.4" y="472.0" width="419.6" height="97.0" rx="8" ry="8"/>
-<text class="title" x="142.4" y="501.0">
-<tspan x="142.4" dy="0.0">The Arbitration Towers</tspan>
+<rect class="label" x="133.4" y="460.0" width="412.6" height="109.0" rx="8" ry="8"/>
+<text class="title" x="149.4" y="489.0">
+<tspan x="149.4" dy="0.0">Elaerith Proclaims the Conquest</tspan>
 </text>
-<text class="summary" x="142.4" y="519.0">
-<tspan x="142.4" dy="0.0">Merrowgate completes seven identical towers around Ledger Court, each</tspan>
-<tspan x="142.4" dy="12.0">dedicated to a different legal tradition (Calderon, Ardenhaven, Dulgarum, etc.).</tspan>
-<tspan x="142.4" dy="12.0">International parties can now resolve disputes under their preferred legal</tspan>
-<tspan x="142.4" dy="12.0">framework, all certified by the Ink.</tspan>
+<text class="summary" x="149.4" y="507.0">
+<tspan x="149.4" dy="0.0">When continental war became the world’s habit, Elaerith named the Age of</tspan>
+<tspan x="149.4" dy="12.0">Conquest and framed it as the inevitable end of those who live by appetite and</tspan>
+<tspan x="149.4" dy="12.0">horizon; within Araethilion, she tightened the rings of court order,</tspan>
+<tspan x="149.4" dy="12.0">strengthened the Choir-Sentinels, and reminded her people that safety is</tspan>
+<tspan x="149.4" dy="12.0">obedience, not distance.</tspan>
 </text>
-<rect class="label" x="654.0" y="448.0" width="401.7" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="477.0">
-<tspan x="670.0" dy="0.0">The Merrowgate Banking Consortium</tspan>
+<rect class="label" x="654.0" y="472.0" width="409.8" height="73.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="501.0">
+<tspan x="670.0" dy="0.0">ᛏ Age of Conquest</tspan>
 </text>
-<text class="summary" x="670.0" y="495.0">
-<tspan x="670.0" dy="0.0">Five of the city&#x27;s largest merchant houses formalize the world&#x27;s first</tspan>
-<tspan x="670.0" dy="12.0">international banking network, offering credit, transfers, and investment</tspan>
-<tspan x="670.0" dy="12.0">services across borders. The consortium becomes more powerful than many</tspan>
-<tspan x="670.0" dy="12.0">nation-states within a generation.</tspan>
+<text class="summary" x="670.0" y="519.0">
+<tspan x="670.0" dy="0.0">Continental war becomes possible; generations live under levy and siege until</tspan>
+<tspan x="670.0" dy="12.0">exhaustion forces peace.</tspan>
 </text>
-<rect class="label" x="127.8" y="583.0" width="418.2" height="97.0" rx="8" ry="8"/>
-<text class="title" x="143.8" y="612.0">
-<tspan x="143.8" dy="0.0">The Neutral Ground Protocol</tspan>
+<rect class="label" x="131.6" y="725.7" width="414.4" height="109.0" rx="8" ry="8"/>
+<text class="title" x="147.6" y="754.7">
+<tspan x="147.6" dy="0.0">Elaerith Warns of the War-Roads</tspan>
 </text>
-<text class="summary" x="143.8" y="630.0">
-<tspan x="143.8" dy="0.0">Following border skirmishes between multiple nations, Merrowgate formalizes</tspan>
-<tspan x="143.8" dy="12.0">its neutrality doctrine: the city guarantees safe haven for diplomatic</tspan>
-<tspan x="143.8" dy="12.0">negotiations regardless of ongoing hostilities. The protocol is tested</tspan>
-<tspan x="143.8" dy="12.0">immediately and holds.</tspan>
+<text class="summary" x="147.6" y="772.7">
+<tspan x="147.6" dy="0.0">With stone roads spreading across the continents, Elaerith introduced the Age</tspan>
+<tspan x="147.6" dy="12.0">of Roads as an age of reaching hands and marching feet; she instructed</tspan>
+<tspan x="147.6" dy="12.0">Araethilion to treat every new causeway as a boundary in disguise, and to</tspan>
+<tspan x="147.6" dy="12.0">answer the world’s bridges with deeper wards, quieter routes, and stricter</tspan>
+<tspan x="147.6" dy="12.0">permission.</tspan>
 </text>
-<rect class="label" x="654.0" y="559.0" width="420.0" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="588.0">
-<tspan x="670.0" dy="0.0">The Merrowgate Standard</tspan>
+<rect class="label" x="654.0" y="743.7" width="401.7" height="73.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="772.7">
+<tspan x="670.0" dy="0.0">⋂ Age of Roads</tspan>
 </text>
-<text class="summary" x="670.0" y="606.0">
-<tspan x="670.0" dy="0.0">The city issues its own currency backed by contracts rather than gold—the</tspan>
-<tspan x="670.0" dy="12.0">&quot;Covenant Mark.&quot; Initial skepticism gives way to acceptance when the currency</tspan>
-<tspan x="670.0" dy="12.0">maintains perfect stability for three years. Other nations begin holding reserves</tspan>
-<tspan x="670.0" dy="12.0">in Marks.</tspan>
+<text class="summary" x="670.0" y="790.7">
+<tspan x="670.0" dy="0.0">Empires bind territory with bridges, milestones, and waystations—built for</tspan>
+<tspan x="670.0" dy="12.0">marching columns first, commerce second.</tspan>
 </text>
-<rect class="label" x="126.9" y="694.0" width="419.1" height="85.0" rx="8" ry="8"/>
-<text class="title" x="142.9" y="723.0">
-<tspan x="142.9" dy="0.0">The Dragon Tithe Treaty</tspan>
+<rect class="label" x="135.3" y="1156.9" width="410.7" height="109.0" rx="8" ry="8"/>
+<text class="title" x="151.3" y="1185.9">
+<tspan x="151.3" dy="0.0">Ordained Companionship</tspan>
 </text>
-<text class="summary" x="142.9" y="741.0">
-<tspan x="142.9" dy="0.0">Merrowgate negotiates an unprecedented insurance system for dragon attacks,</tspan>
-<tspan x="142.9" dy="12.0">pooling risk across all participating nations. The mathematical framework</tspan>
-<tspan x="142.9" dy="12.0">becomes a model for collective security arrangements worldwide.</tspan>
+<text class="summary" x="151.3" y="1203.9">
+<tspan x="151.3" dy="0.0">Observing that Sabriel’s devotion set her apart from all others, Elaerith</tspan>
+<tspan x="151.3" dy="12.0">appointed a single cleric, Aersiliel (AIR-sill-ee-EL), to remain at her side—one</tspan>
+<tspan x="151.3" dy="12.0">voice, one presence, sufficient in place of many—so that Sabriel might know</tspan>
+<tspan x="151.3" dy="12.0">fellowship without dilution, and remain perfectly attended within the grace</tspan>
+<tspan x="151.3" dy="12.0">that had already set her above the rest.</tspan>
 </text>
-<rect class="label" x="654.0" y="670.0" width="418.6" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="699.0">
-<tspan x="670.0" dy="0.0">The Great Tariff Reform</tspan>
+<rect class="label" x="654.0" y="1234.9" width="415.2" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1263.9">
+<tspan x="670.0" dy="0.0">Sabriel&#x27;s Second Transgression</tspan>
 </text>
-<text class="summary" x="670.0" y="717.0">
-<tspan x="670.0" dy="0.0">Merrowgate leads a coalition to standardize trade tariffs across six nations. The</tspan>
-<tspan x="670.0" dy="12.0">year-long negotiation creates a common customs framework that reduces</tspan>
-<tspan x="670.0" dy="12.0">smuggling and increases legitimate trade by 40%. The city&#x27;s influence reaches</tspan>
-<tspan x="670.0" dy="12.0">its zenith.</tspan>
+<text class="summary" x="670.0" y="1281.9">
+<tspan x="670.0" dy="0.0">When Sabriel again misjudged her place, Elaerith intervened with necessary</tspan>
+<tspan x="670.0" dy="12.0">correction, tempered only by maternal mercy; thereafter, Elaerith decreed that</tspan>
+<tspan x="670.0" dy="12.0">the tower would want for nothing, so that Sabriel would never again be misled</tspan>
+<tspan x="670.0" dy="12.0">into believing fulfillment lay beyond what her mother had already perfected.</tspan>
 </text>
-<rect class="label" x="131.1" y="793.0" width="414.9" height="109.0" rx="8" ry="8"/>
-<text class="title" x="147.1" y="822.0">
-<tspan x="147.1" dy="0.0">Zarkul Dakgar the Forever Cursed</tspan>
+<rect class="label" x="128.1" y="1352.4" width="417.9" height="97.0" rx="8" ry="8"/>
+<text class="title" x="144.1" y="1381.4">
+<tspan x="144.1" dy="0.0">Sabriel&#x27;s Second Outing</tspan>
 </text>
-<text class="summary" x="147.1" y="840.0">
-<tspan x="147.1" dy="0.0">With Dakgar already bleeding out, Zarkul took what little remained and sold it</tspan>
-<tspan x="147.1" dy="12.0">for coin to the garhammar-trade-league. The Imperium used him like a tool</tspan>
-<tspan x="147.1" dy="12.0">and, when the work was done, “paid” him with a knife in the dark. Among the</tspan>
-<tspan x="147.1" dy="12.0">Horde his name is kept only as a curse: proof that gold is softer than mud, and</tspan>
-<tspan x="147.1" dy="12.0">twice as deadly.</tspan>
+<text class="summary" x="144.1" y="1399.4">
+<tspan x="144.1" dy="0.0">Returning to the site of her earlier sketch, Sabriel makes a 2nd sketch how time</tspan>
+<tspan x="144.1" dy="12.0">had erased the last traces of that fallen city, the mountain made whole</tspan>
+<tspan x="144.1" dy="12.0">again—confirmation that all things outside Elaerith’s care are ultimately</tspan>
+<tspan x="144.1" dy="12.0">reclaimed by silence.</tspan>
 </text>
-<rect class="label" x="654.0" y="781.0" width="407.0" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="810.0">
-<tspan x="670.0" dy="0.0">The Thousand Ships Insurance</tspan>
+<rect class="label" x="654.0" y="1381.7" width="407.8" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1410.7">
+<tspan x="670.0" dy="0.0">Securing Borders</tspan>
 </text>
-<text class="summary" x="670.0" y="828.0">
-<tspan x="670.0" dy="0.0">Following a devastating hurricane season, Merrowgate guilds establish the</tspan>
-<tspan x="670.0" dy="12.0">world&#x27;s first comprehensive maritime insurance system. Within a decade, no</tspan>
-<tspan x="670.0" dy="12.0">merchant vessel sails without a Merrowgate policy.</tspan>
+<text class="summary" x="670.0" y="1428.7">
+<tspan x="670.0" dy="0.0">After long quiet at the borders, Sabriel sought reassurance through vigilance;</tspan>
+<tspan x="670.0" dy="12.0">with Elaerith’s leave, scouts were sent into the forbidden lands, and Sabriel</tspan>
+<tspan x="670.0" dy="12.0">accompanied them at times, learning firsthand why such realms were never</tspan>
+<tspan x="670.0" dy="12.0">meant to be dwelt upon.</tspan>
 </text>
-<rect class="label" x="132.8" y="916.0" width="413.2" height="97.0" rx="8" ry="8"/>
-<text class="title" x="148.8" y="945.0">
-<tspan x="148.8" dy="0.0">The Garhammar Accords</tspan>
+<rect class="label" x="155.2" y="1463.4" width="390.8" height="97.0" rx="8" ry="8"/>
+<text class="title" x="171.2" y="1492.4">
+<tspan x="171.2" dy="0.0">Elaerith Dismisses Mortal Crowns</tspan>
 </text>
-<text class="summary" x="148.8" y="963.0">
-<tspan x="148.8" dy="0.0">Merrowgate mediates a trade dispute between Garhammar Trade League and</tspan>
-<tspan x="148.8" dy="12.0">Calderon Imperium over arms exports. The resulting framework becomes the</tspan>
-<tspan x="148.8" dy="12.0">template for international weapons trade regulation, cementing Merrowgate&#x27;s</tspan>
-<tspan x="148.8" dy="12.0">role as neutral ground.</tspan>
+<text class="summary" x="171.2" y="1510.4">
+<tspan x="171.2" dy="0.0">As kingdoms rose and titles multiplied abroad, Elaerith named the Age of</tspan>
+<tspan x="171.2" dy="12.0">Crowns for her people and taught them to see such thrones as fleeting</tspan>
+<tspan x="171.2" dy="12.0">ornaments—crowns that must be bargained for, defended, and</tspan>
+<tspan x="171.2" dy="12.0">inherited—unlike the Veiled Crown, which is neither granted nor shared.</tspan>
 </text>
-<rect class="label" x="654.0" y="880.0" width="384.2" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="909.0">
-<tspan x="670.0" dy="0.0">The Scriveners&#x27; Reformation</tspan>
+<rect class="label" x="654.0" y="1492.7" width="416.2" height="73.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1521.7">
+<tspan x="670.0" dy="0.0">ᛉ Age of Crowns</tspan>
 </text>
-<text class="summary" x="670.0" y="927.0">
-<tspan x="670.0" dy="0.0">The Ink unveils new contract-binding enchantments that can enforce</tspan>
-<tspan x="670.0" dy="12.0">agreements across national borders. This innovation makes Merrowgate</tspan>
-<tspan x="670.0" dy="12.0">contracts the gold standard for international trade, tripling the city&#x27;s</tspan>
-<tspan x="670.0" dy="12.0">arbitration revenue within five years.</tspan>
+<text class="summary" x="670.0" y="1539.7">
+<tspan x="670.0" dy="0.0">Dynasties harden into kingdoms; borders are named, faiths codified, and wars</tspan>
+<tspan x="670.0" dy="12.0">are regional rather than world-spanning.</tspan>
 </text>
-<rect class="label" x="127.3" y="1027.0" width="418.7" height="85.0" rx="8" ry="8"/>
-<text class="title" x="143.3" y="1056.0">
-<tspan x="143.3" dy="0.0">The Charter of Open Waters</tspan>
+<rect class="label" x="135.1" y="1574.4" width="410.9" height="85.0" rx="8" ry="8"/>
+<text class="title" x="151.1" y="1603.4">
+<tspan x="151.1" dy="0.0">Sabriel Appointed General</tspan>
 </text>
-<text class="summary" x="143.3" y="1074.0">
-<tspan x="143.3" dy="0.0">Merrowgate brokers a historic neutrality pact between Calderon Imperium and</tspan>
-<tspan x="143.3" dy="12.0">Ardenhaven, securing safe passage through its waters for all nations. The treaty</tspan>
-<tspan x="143.3" dy="12.0">establishes Merrowgate as the undisputed arbiter of maritime trade disputes.</tspan>
+<text class="summary" x="151.1" y="1621.4">
+<tspan x="151.1" dy="0.0">By Elaerith’s will, Sabriel was elevated to general, not as reward but as</tspan>
+<tspan x="151.1" dy="12.0">refinement, entrusted with the shaping of Araethilion’s defenses so she might</tspan>
+<tspan x="151.1" dy="12.0">better understand the weight of order and the cost of neglect.</tspan>
 </text>
-<rect class="label" x="654.0" y="991.0" width="412.6" height="109.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1020.0">
-<tspan x="670.0" dy="0.0">Elaerith Proclaims the Conquest</tspan>
+<rect class="label" x="654.0" y="1579.7" width="420.0" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1608.7">
+<tspan x="670.0" dy="0.0">Sabriel&#x27;s First Transgression</tspan>
 </text>
-<text class="summary" x="670.0" y="1038.0">
-<tspan x="670.0" dy="0.0">When continental war became the world’s habit, Elaerith named the Age of</tspan>
-<tspan x="670.0" dy="12.0">Conquest and framed it as the inevitable end of those who live by appetite and</tspan>
-<tspan x="670.0" dy="12.0">horizon; within Araethilion, she tightened the rings of court order,</tspan>
-<tspan x="670.0" dy="12.0">strengthened the Choir-Sentinels, and reminded her people that safety is</tspan>
-<tspan x="670.0" dy="12.0">obedience, not distance.</tspan>
+<text class="summary" x="670.0" y="1626.7">
+<tspan x="670.0" dy="0.0">Sabriel strayed beyond the ordained borders, stepping into lands not shaped for</tspan>
+<tspan x="670.0" dy="12.0">her keeping; she was retrieved before greater harm could claim her, spared only</tspan>
+<tspan x="670.0" dy="12.0">by Elaerith’s timely awareness and restraint.</tspan>
 </text>
-<rect class="label" x="136.2" y="1126.0" width="409.8" height="73.0" rx="8" ry="8"/>
-<text class="title" x="152.2" y="1155.0">
-<tspan x="152.2" dy="0.0">ᛏ Age of Conquest</tspan>
+<rect class="label changed" x="138.9" y="1673.4" width="407.1" height="97.0" rx="8" ry="8"/>
+<text class="title" x="154.9" y="1702.4">
+<tspan x="154.9" dy="0.0">Sabriel&#x27;s finds Ruins</tspan>
 </text>
-<text class="summary" x="152.2" y="1173.0">
-<tspan x="152.2" dy="0.0">Continental war becomes possible; generations live under levy and siege until</tspan>
-<tspan x="152.2" dy="12.0">exhaustion forces peace.</tspan>
+<text class="summary" x="154.9" y="1720.4">
+<tspan x="154.9" dy="0.0">Sabriel makes a quick sketch of an entire city that clung to the mountainside</tspan>
+<tspan x="154.9" dy="12.0">like a fallen crown—once level, now tipped and broken, its streets and towers</tspan>
+<tspan x="154.9" dy="12.0">half-collapsed and frozen at a steep forty-five-degree lean, as though the</tspan>
+<tspan x="154.9" dy="12.0">mountain itself had rolled onto its side and crushed the life from it.</tspan>
 </text>
-<rect class="label" x="654.0" y="1167.7" width="414.4" height="109.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1196.7">
-<tspan x="670.0" dy="0.0">Elaerith Warns of the War-Roads</tspan>
+<rect class="label" x="654.0" y="1678.7" width="416.1" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1707.7">
+<tspan x="670.0" dy="0.0">Sabriel&#x27;s Outing</tspan>
 </text>
-<text class="summary" x="670.0" y="1214.7">
-<tspan x="670.0" dy="0.0">With stone roads spreading across the continents, Elaerith introduced the Age</tspan>
-<tspan x="670.0" dy="12.0">of Roads as an age of reaching hands and marching feet; she instructed</tspan>
-<tspan x="670.0" dy="12.0">Araethilion to treat every new causeway as a boundary in disguise, and to</tspan>
-<tspan x="670.0" dy="12.0">answer the world’s bridges with deeper wards, quieter routes, and stricter</tspan>
-<tspan x="670.0" dy="12.0">permission.</tspan>
+<text class="summary" x="670.0" y="1725.7">
+<tspan x="670.0" dy="0.0">In her youth, Sabriel wandered the outer edges of Araethilion, mistaking</tspan>
+<tspan x="670.0" dy="12.0">curiosity for calling; there she recorded the remnants of a fallen city, its ruin</tspan>
+<tspan x="670.0" dy="12.0">standing as a quiet lesson in what becomes of worlds that fall beyond Elaerith’s</tspan>
+<tspan x="670.0" dy="12.0">sustaining hand.</tspan>
 </text>
-<rect class="label" x="144.3" y="1257.8" width="401.7" height="73.0" rx="8" ry="8"/>
-<text class="title" x="160.3" y="1286.8">
-<tspan x="160.3" dy="0.0">⋂ Age of Roads</tspan>
+<rect class="label" x="139.6" y="1784.4" width="406.4" height="85.0" rx="8" ry="8"/>
+<text class="title" x="155.6" y="1813.4">
+<tspan x="155.6" dy="0.0">Birth of Sabriel</tspan>
 </text>
-<text class="summary" x="160.3" y="1304.8">
-<tspan x="160.3" dy="0.0">Empires bind territory with bridges, milestones, and waystations—built for</tspan>
-<tspan x="160.3" dy="12.0">marching columns first, commerce second.</tspan>
+<text class="summary" x="155.6" y="1831.4">
+<tspan x="155.6" dy="0.0">Sabriel was born beneath Elaerith’s watchful grace, a child set apart from her</tspan>
+<tspan x="155.6" dy="12.0">first breath, whose coming was proclaimed as a living testament to Elaerith’s</tspan>
+<tspan x="155.6" dy="12.0">favor and careful design.</tspan>
 </text>
-<rect class="label" x="654.0" y="1500.6" width="410.7" height="109.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1529.6">
-<tspan x="670.0" dy="0.0">Ordained Companionship</tspan>
+<rect class="label" x="654.0" y="2021.7" width="408.0" height="109.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="2050.7">
+<tspan x="670.0" dy="0.0">Elaerith Defines Reclamation</tspan>
 </text>
-<text class="summary" x="670.0" y="1547.6">
-<tspan x="670.0" dy="0.0">Observing that Sabriel’s devotion set her apart from all others, Elaerith</tspan>
-<tspan x="670.0" dy="12.0">appointed a single cleric, Aersiliel (AIR-sill-ee-EL), to remain at her side—one</tspan>
-<tspan x="670.0" dy="12.0">voice, one presence, sufficient in place of many—so that Sabriel might know</tspan>
-<tspan x="670.0" dy="12.0">fellowship without dilution, and remain perfectly attended within the grace</tspan>
-<tspan x="670.0" dy="12.0">that had already set her above the rest.</tspan>
+<text class="summary" x="670.0" y="2068.7">
+<tspan x="670.0" dy="0.0">When other peoples began to rebuild, Elaerith proclaimed the Age of</tspan>
+<tspan x="670.0" dy="12.0">Reclamation to Araethilion as a reminder that renewal is not freedom: it is</tspan>
+<tspan x="670.0" dy="12.0">discipline—work done within bounds, memory curated, and every</tspan>
+<tspan x="670.0" dy="12.0">“rediscovered” road treated as proof that the world always returns, in time, to</tspan>
+<tspan x="670.0" dy="12.0">what she already preserves.</tspan>
 </text>
-<rect class="label" x="130.8" y="1631.1" width="415.2" height="97.0" rx="8" ry="8"/>
-<text class="title" x="146.8" y="1660.1">
-<tspan x="146.8" dy="0.0">Sabriel&#x27;s Second Transgression</tspan>
+<rect class="label" x="138.2" y="2039.7" width="407.8" height="73.0" rx="8" ry="8"/>
+<text class="title" x="154.2" y="2068.7">
+<tspan x="154.2" dy="0.0">ᛒ Age of Reclamation</tspan>
 </text>
-<text class="summary" x="146.8" y="1678.1">
-<tspan x="146.8" dy="0.0">When Sabriel again misjudged her place, Elaerith intervened with necessary</tspan>
-<tspan x="146.8" dy="12.0">correction, tempered only by maternal mercy; thereafter, Elaerith decreed that</tspan>
-<tspan x="146.8" dy="12.0">the tower would want for nothing, so that Sabriel would never again be misled</tspan>
-<tspan x="146.8" dy="12.0">into believing fulfillment lay beyond what her mother had already perfected.</tspan>
-</text>
-<rect class="label" x="654.0" y="1623.6" width="417.9" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1652.6">
-<tspan x="670.0" dy="0.0">Sabriel&#x27;s Second Outing</tspan>
-</text>
-<text class="summary" x="670.0" y="1670.6">
-<tspan x="670.0" dy="0.0">Returning to the site of her earlier sketch, Sabriel makes a 2nd sketch how time</tspan>
-<tspan x="670.0" dy="12.0">had erased the last traces of that fallen city, the mountain made whole</tspan>
-<tspan x="670.0" dy="12.0">again—confirmation that all things outside Elaerith’s care are ultimately</tspan>
-<tspan x="670.0" dy="12.0">reclaimed by silence.</tspan>
-</text>
-<rect class="label" x="138.2" y="1742.1" width="407.8" height="97.0" rx="8" ry="8"/>
-<text class="title" x="154.2" y="1771.1">
-<tspan x="154.2" dy="0.0">Securing Borders</tspan>
-</text>
-<text class="summary" x="154.2" y="1789.1">
-<tspan x="154.2" dy="0.0">After long quiet at the borders, Sabriel sought reassurance through vigilance;</tspan>
-<tspan x="154.2" dy="12.0">with Elaerith’s leave, scouts were sent into the forbidden lands, and Sabriel</tspan>
-<tspan x="154.2" dy="12.0">accompanied them at times, learning firsthand why such realms were never</tspan>
-<tspan x="154.2" dy="12.0">meant to be dwelt upon.</tspan>
-</text>
-<rect class="label" x="654.0" y="1307.7" width="390.8" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1336.7">
-<tspan x="670.0" dy="0.0">Elaerith Dismisses Mortal Crowns</tspan>
-</text>
-<text class="summary" x="670.0" y="1354.7">
-<tspan x="670.0" dy="0.0">As kingdoms rose and titles multiplied abroad, Elaerith named the Age of</tspan>
-<tspan x="670.0" dy="12.0">Crowns for her people and taught them to see such thrones as fleeting</tspan>
-<tspan x="670.0" dy="12.0">ornaments—crowns that must be bargained for, defended, and</tspan>
-<tspan x="670.0" dy="12.0">inherited—unlike the Veiled Crown, which is neither granted nor shared.</tspan>
-</text>
-<rect class="label" x="129.8" y="1853.1" width="416.2" height="73.0" rx="8" ry="8"/>
-<text class="title" x="145.8" y="1882.1">
-<tspan x="145.8" dy="0.0">ᛉ Age of Crowns</tspan>
-</text>
-<text class="summary" x="145.8" y="1900.1">
-<tspan x="145.8" dy="0.0">Dynasties harden into kingdoms; borders are named, faiths codified, and wars</tspan>
-<tspan x="145.8" dy="12.0">are regional rather than world-spanning.</tspan>
-</text>
-<rect class="label" x="654.0" y="1845.6" width="410.9" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1874.6">
-<tspan x="670.0" dy="0.0">Sabriel Appointed General</tspan>
-</text>
-<text class="summary" x="670.0" y="1892.6">
-<tspan x="670.0" dy="0.0">By Elaerith’s will, Sabriel was elevated to general, not as reward but as</tspan>
-<tspan x="670.0" dy="12.0">refinement, entrusted with the shaping of Araethilion’s defenses so she might</tspan>
-<tspan x="670.0" dy="12.0">better understand the weight of order and the cost of neglect.</tspan>
-</text>
-<rect class="label" x="126.0" y="1389.3" width="420.0" height="85.0" rx="8" ry="8"/>
-<text class="title" x="142.0" y="1418.3">
-<tspan x="142.0" dy="0.0">Sabriel&#x27;s First Transgression</tspan>
-</text>
-<text class="summary" x="142.0" y="1436.3">
-<tspan x="142.0" dy="0.0">Sabriel strayed beyond the ordained borders, stepping into lands not shaped for</tspan>
-<tspan x="142.0" dy="12.0">her keeping; she was retrieved before greater harm could claim her, spared only</tspan>
-<tspan x="142.0" dy="12.0">by Elaerith’s timely awareness and restraint.</tspan>
-</text>
-<rect class="label" x="654.0" y="1944.6" width="407.1" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1973.6">
-<tspan x="670.0" dy="0.0">Sabriel&#x27;s finds Ruins</tspan>
-</text>
-<text class="summary" x="670.0" y="1991.6">
-<tspan x="670.0" dy="0.0">Sabriel makes a quick sketch of how an entire city clung to the mountainside</tspan>
-<tspan x="670.0" dy="12.0">like a fallen crown—once level, now tipped and broken, its streets and towers</tspan>
-<tspan x="670.0" dy="12.0">half-collapsed and frozen at a steep forty-five-degree lean, as though the</tspan>
-<tspan x="670.0" dy="12.0">mountain itself had rolled onto its side and crushed the life from it.</tspan>
-</text>
-<rect class="label" x="129.9" y="2039.1" width="416.1" height="97.0" rx="8" ry="8"/>
-<text class="title" x="145.9" y="2068.1">
-<tspan x="145.9" dy="0.0">Sabriel&#x27;s Outing</tspan>
-</text>
-<text class="summary" x="145.9" y="2086.1">
-<tspan x="145.9" dy="0.0">In her youth, Sabriel wandered the outer edges of Araethilion, mistaking</tspan>
-<tspan x="145.9" dy="12.0">curiosity for calling; there she recorded the remnants of a fallen city, its ruin</tspan>
-<tspan x="145.9" dy="12.0">standing as a quiet lesson in what becomes of worlds that fall beyond Elaerith’s</tspan>
-<tspan x="145.9" dy="12.0">sustaining hand.</tspan>
-</text>
-<rect class="label" x="654.0" y="2055.6" width="406.4" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="2084.6">
-<tspan x="670.0" dy="0.0">Birth of Sabriel</tspan>
-</text>
-<text class="summary" x="670.0" y="2102.6">
-<tspan x="670.0" dy="0.0">Sabriel was born beneath Elaerith’s watchful grace, a child set apart from her</tspan>
-<tspan x="670.0" dy="12.0">first breath, whose coming was proclaimed as a living testament to Elaerith’s</tspan>
-<tspan x="670.0" dy="12.0">favor and careful design.</tspan>
-</text>
-<rect class="label" x="138.0" y="2535.8" width="408.0" height="109.0" rx="8" ry="8"/>
-<text class="title" x="154.0" y="2564.8">
-<tspan x="154.0" dy="0.0">Elaerith Defines Reclamation</tspan>
-</text>
-<text class="summary" x="154.0" y="2582.8">
-<tspan x="154.0" dy="0.0">When other peoples began to rebuild, Elaerith proclaimed the Age of</tspan>
-<tspan x="154.0" dy="12.0">Reclamation to Araethilion as a reminder that renewal is not freedom: it is</tspan>
-<tspan x="154.0" dy="12.0">discipline—work done within bounds, memory curated, and every</tspan>
-<tspan x="154.0" dy="12.0">“rediscovered” road treated as proof that the world always returns, in time, to</tspan>
-<tspan x="154.0" dy="12.0">what she already preserves.</tspan>
-</text>
-<rect class="label" x="654.0" y="2481.7" width="407.8" height="73.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="2510.7">
-<tspan x="670.0" dy="0.0">ᛒ Age of Reclamation</tspan>
-</text>
-<text class="summary" x="670.0" y="2528.7">
-<tspan x="670.0" dy="0.0">Writing, law, and agriculture return; proto-kingdoms form and the old roads</tspan>
-<tspan x="670.0" dy="12.0">are found again, half-buried.</tspan>
+<text class="summary" x="154.2" y="2086.7">
+<tspan x="154.2" dy="0.0">Writing, law, and agriculture return; proto-kingdoms form and the old roads</tspan>
+<tspan x="154.2" dy="12.0">are found again, half-buried.</tspan>
 </text>
 </g>
 <g id="tags">
-<g class="public-indicator" transform="translate(146.7 44.0)">
+<g class="public-indicator" transform="translate(143.5 44.0)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(500.2 44.0)">
+<g transform="translate(509.0 48.4)">
+<title>tag: economy</title>
+<use href="#tag_economy" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(480.0 48.4)">
+<title>tag: trade</title>
+<use href="#tag_trade" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(451.0 48.4)">
+<title>tag: diplomacy</title>
+<use href="#tag_diplomacy" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(413.2 44.0)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
 <g class="public-indicator" transform="translate(660.0 44.0)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1019.9 44.0)">
+<g transform="translate(1021.4 48.4)">
+<title>tag: trade</title>
+<use href="#tag_trade" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(992.4 48.4)">
+<title>tag: economy</title>
+<use href="#tag_economy" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(954.6 44.0)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
@@ -575,255 +492,206 @@
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
 <g transform="translate(500.2 155.0)">
-<title>faction: merrowgate</title>
-<use href="#pov_merrowgate" width="33.8" height="33.8"/>
-</g>
-<g class="public-indicator" transform="translate(660.0 155.0)">
-<use href="#tag_public" width="12.5" height="12.5"/>
-</g>
-<g transform="translate(1012.6 155.0)">
-<title>faction: merrowgate</title>
-<use href="#pov_merrowgate" width="33.8" height="33.8"/>
-</g>
-<g class="public-indicator" transform="translate(132.0 254.0)">
-<use href="#tag_public" width="12.5" height="12.5"/>
-</g>
-<g transform="translate(500.2 254.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 258.4)">
+<g transform="translate(471.2 159.4)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 254.0)">
+<g transform="translate(433.5 155.0)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
+</g>
+<g transform="translate(1036.6 147.4)">
+<title>tag: age</title>
+<use href="#tag_age" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(998.9 143.0)">
+<title>faction: araethilion</title>
+<use href="#pov_araethilion" width="33.8" height="33.8"/>
+</g>
+<g class="public-indicator" transform="translate(170.4 266.0)">
+<use href="#tag_public" width="12.5" height="12.5"/>
+</g>
+<g transform="translate(509.0 266.0)">
+<title>tag: trade</title>
+<use href="#tag_trade" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(480.0 266.0)">
+<title>tag: age</title>
+<use href="#tag_age" width="25.0" height="25.0"/>
 </g>
 <g class="public-indicator" transform="translate(660.0 254.0)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1028.2 254.0)">
-<title>faction: merrowgate</title>
-<use href="#pov_merrowgate" width="33.8" height="33.8"/>
-</g>
-<g transform="translate(509.0 369.4)">
-<title>tag: age</title>
-<use href="#tag_age" width="25.0" height="25.0"/>
-</g>
-<g transform="translate(471.2 365.0)">
-<title>faction: araethilion</title>
-<use href="#pov_araethilion" width="33.8" height="33.8"/>
-</g>
-<g class="public-indicator" transform="translate(660.0 365.0)">
-<use href="#tag_public" width="12.5" height="12.5"/>
-</g>
-<g transform="translate(998.6 365.0)">
-<title>tag: trade</title>
-<use href="#tag_trade" width="25.0" height="25.0"/>
-</g>
-<g transform="translate(969.6 365.0)">
-<title>tag: age</title>
-<use href="#tag_age" width="25.0" height="25.0"/>
-</g>
-<g class="public-indicator" transform="translate(132.4 476.0)">
-<use href="#tag_public" width="12.5" height="12.5"/>
-</g>
-<g transform="translate(500.2 476.0)">
-<title>faction: merrowgate</title>
-<use href="#pov_merrowgate" width="33.8" height="33.8"/>
-</g>
-<g class="public-indicator" transform="translate(660.0 452.0)">
-<use href="#tag_public" width="12.5" height="12.5"/>
-</g>
-<g transform="translate(1010.0 452.0)">
-<title>faction: merrowgate</title>
-<use href="#pov_merrowgate" width="33.8" height="33.8"/>
-</g>
-<g class="public-indicator" transform="translate(133.8 587.0)">
-<use href="#tag_public" width="12.5" height="12.5"/>
-</g>
-<g transform="translate(500.2 587.0)">
-<title>faction: merrowgate</title>
-<use href="#pov_merrowgate" width="33.8" height="33.8"/>
-</g>
-<g class="public-indicator" transform="translate(660.0 563.0)">
-<use href="#tag_public" width="12.5" height="12.5"/>
-</g>
-<g transform="translate(1028.2 563.0)">
-<title>faction: merrowgate</title>
-<use href="#pov_merrowgate" width="33.8" height="33.8"/>
-</g>
-<g class="public-indicator" transform="translate(132.9 698.0)">
-<use href="#tag_public" width="12.5" height="12.5"/>
-</g>
-<g transform="translate(500.2 698.0)">
-<title>faction: merrowgate</title>
-<use href="#pov_merrowgate" width="33.8" height="33.8"/>
-</g>
-<g class="public-indicator" transform="translate(660.0 674.0)">
-<use href="#tag_public" width="12.5" height="12.5"/>
-</g>
-<g transform="translate(1026.8 674.0)">
-<title>faction: merrowgate</title>
-<use href="#pov_merrowgate" width="33.8" height="33.8"/>
-</g>
-<g class="public-indicator" transform="translate(137.1 797.0)">
-<use href="#tag_public" width="12.5" height="12.5"/>
-</g>
-<g transform="translate(500.2 797.0)">
+<g transform="translate(1023.1 254.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(462.5 797.0)">
+<g transform="translate(985.4 254.0)">
 <title>faction: garhammar-trade-league</title>
 <use href="#pov_garhammar-trade-league" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(433.5 801.4)">
+<g transform="translate(956.4 258.4)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(395.8 797.0)">
+<g transform="translate(918.6 254.0)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 785.0)">
+<g class="public-indicator" transform="translate(167.8 353.0)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1015.2 785.0)">
+<g transform="translate(509.0 357.4)">
+<title>tag: economy</title>
+<use href="#tag_economy" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(480.0 357.4)">
+<title>tag: trade</title>
+<use href="#tag_trade" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(451.0 357.4)">
+<title>tag: magic</title>
+<use href="#tag_magic" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(413.2 353.0)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(138.8 920.0)">
+<g class="public-indicator" transform="translate(660.0 377.0)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(500.2 920.0)">
+<g transform="translate(1027.0 377.0)">
+<title>faction: ardenhaven</title>
+<use href="#pov_ardenhaven" width="33.8" height="33.8"/>
+</g>
+<g transform="translate(989.2 377.0)">
+<title>faction: calderon-imperium</title>
+<use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
+</g>
+<g transform="translate(960.2 381.4)">
+<title>tag: trade</title>
+<use href="#tag_trade" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(931.2 381.4)">
+<title>tag: diplomacy</title>
+<use href="#tag_diplomacy" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(893.5 377.0)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 884.0)">
-<use href="#tag_public" width="12.5" height="12.5"/>
-</g>
-<g transform="translate(992.5 884.0)">
-<title>faction: merrowgate</title>
-<use href="#pov_merrowgate" width="33.8" height="33.8"/>
-</g>
-<g class="public-indicator" transform="translate(133.3 1031.0)">
-<use href="#tag_public" width="12.5" height="12.5"/>
-</g>
-<g transform="translate(500.2 1031.0)">
-<title>faction: merrowgate</title>
-<use href="#pov_merrowgate" width="33.8" height="33.8"/>
-</g>
-<g transform="translate(1029.6 999.4)">
+<g transform="translate(509.0 468.4)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(991.8 995.0)">
+<g transform="translate(471.2 464.0)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(142.2 1130.0)">
+<g class="public-indicator" transform="translate(660.0 476.0)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(509.0 1130.0)">
+<g transform="translate(1026.8 476.0)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 1130.0)">
+<g transform="translate(997.8 476.0)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1031.4 1176.1)">
+<g transform="translate(509.0 734.0)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(993.6 1171.7)">
+<g transform="translate(471.2 729.7)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(150.3 1261.8)">
+<g class="public-indicator" transform="translate(660.0 747.7)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(509.0 1261.8)">
+<g transform="translate(1018.7 747.7)">
 <title>tag: infrastructure</title>
 <use href="#tag_infrastructure" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 1261.8)">
+<g transform="translate(989.7 747.7)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1018.9 1504.6)">
+<g transform="translate(500.2 1160.9)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1635.1)">
+<g transform="translate(1023.4 1238.9)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1026.1 1627.6)">
+<g transform="translate(500.2 1356.4)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1746.1)">
+<g transform="translate(1016.1 1385.7)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1007.8 1316.0)">
+<g transform="translate(509.0 1471.8)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(970.1 1311.7)">
+<g transform="translate(471.2 1467.4)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(135.8 1857.1)">
+<g class="public-indicator" transform="translate(660.0 1496.7)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(509.0 1857.1)">
+<g transform="translate(1033.2 1496.7)">
 <title>tag: world</title>
 <use href="#tag_world" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 1857.1)">
+<g transform="translate(1004.2 1496.7)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1019.1 1849.6)">
+<g transform="translate(500.2 1578.4)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1393.3)">
+<g transform="translate(1028.2 1583.7)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1015.4 1948.6)">
+<g transform="translate(500.2 1677.4)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 2043.1)">
+<g transform="translate(1024.4 1682.7)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1014.6 2059.6)">
+<g transform="translate(500.2 1788.4)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 2544.2)">
+<g transform="translate(1025.0 2030.0)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(471.2 2539.8)">
+<g transform="translate(987.2 2025.7)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 2485.7)">
+<g class="public-indicator" transform="translate(144.2 2043.7)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1024.8 2485.7)">
+<g transform="translate(509.0 2043.7)">
 <title>tag: world</title>
 <use href="#tag_world" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(995.8 2485.7)">
+<g transform="translate(480.0 2043.7)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>

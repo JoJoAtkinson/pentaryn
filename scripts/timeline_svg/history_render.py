@@ -37,16 +37,19 @@ def _debug_tsv_path(repo_root: Path, scope_root: Path, view_id: str) -> Path:
 
 
 _DATE_RE = re.compile(r"^(?P<year>\d{1,6})(?:/(?P<month>\d{1,2})(?:/(?P<day>\d{1,2}))?)?$")
+_UNKNOWN_DATE_SENTINELS = {"???", "TBD", "UNKNOWN"}
 
 
 def _split_tokens(value: str) -> list[str]:
     return [t for t in re.split(r"[;\s]+", (value or "").strip()) if t]
 
 
-def _normalize_date(date_raw: str) -> tuple[str, ParsedDate]:
+def _normalize_date(date_raw: str) -> tuple[str, ParsedDate | None, bool]:
     raw = (date_raw or "").strip()
     if not raw:
         raise ValueError("date is required")
+    if raw.upper() in _UNKNOWN_DATE_SENTINELS:
+        return raw, None, True
     m = _DATE_RE.match(raw)
     if not m:
         raise ValueError(f"Invalid date {date_raw!r} (expected YYYY, YYYY/MM, or YYYY/MM/DD)")
@@ -63,7 +66,7 @@ def _normalize_date(date_raw: str) -> tuple[str, ParsedDate]:
             day = int(day_raw)
             norm = f"{year}/{month:02d}/{day:02d}"
     parsed = parse_game_date(norm, "", "")
-    return norm, parsed
+    return norm, parsed, False
 
 
 def _row_axis_day(date: ParsedDate) -> int:
@@ -102,7 +105,8 @@ def _read_history_rows(path: Path) -> list[dict[str, object]]:
             title = (row.get("title") or "").strip()
             if not title:
                 raise SystemExit(f"{path}:{idx} title is required")
-            date_norm, parsed_date = _normalize_date(row.get("date") or "")
+            date_raw = row.get("date") or ""
+            date_norm, parsed_date, is_unknown_date = _normalize_date(date_raw)
             duration_raw = (row.get("duration") or "").strip()
             if duration_raw == "":
                 duration = 0
@@ -115,6 +119,9 @@ def _read_history_rows(path: Path) -> list[dict[str, object]]:
                     raise SystemExit(f"{path}:{idx} duration must be >= 0, got: {duration_raw!r}")
             tags = _split_tokens(row.get("tags") or "")
             summary = (row.get("summary") or "").strip()
+            # Placeholder date values for unknown dates; they get resolved after present_year is known.
+            if parsed_date is None:
+                parsed_date = ParsedDate(year=0, month=1, day=1)
             rows.append(
                 {
                     "event_id": event_id,
@@ -123,6 +130,7 @@ def _read_history_rows(path: Path) -> list[dict[str, object]]:
                     "tags": tags,
                     "date": parsed_date,
                     "date_str": date_norm,
+                    "date_unknown": is_unknown_date,
                     "duration": duration,
                     "file": path,
                     "line": idx,
@@ -144,10 +152,10 @@ def _row_signature(row: dict[str, str]) -> tuple[str, ...]:
     return tuple(v for k, v in row.items() if k != "event_id")
 
 
-def _changed_ids_from_git_diff(*, diff_text: str, header_line: str) -> set[str]:
+def _git_change_sets_from_diff(*, diff_text: str, header_line: str) -> tuple[set[str], set[str]]:
     header = [h.strip() for h in header_line.split("\t")]
     if not header or "event_id" not in header:
-        return set()
+        return set(), set()
 
     removed: list[dict[str, str]] = []
     added: list[dict[str, str]] = []
@@ -174,7 +182,7 @@ def _changed_ids_from_git_diff(*, diff_text: str, header_line: str) -> set[str]:
             added.append(parsed)
 
     removed_counts = collections.Counter(_row_signature(r) for r in removed)
-    changed_ids: set[str] = set()
+    renamed_ids: set[str] = set()
     for row in added:
         sig = _row_signature(row)
         if removed_counts.get(sig, 0) <= 0:
@@ -182,8 +190,22 @@ def _changed_ids_from_git_diff(*, diff_text: str, header_line: str) -> set[str]:
         removed_counts[sig] -= 1
         event_id = (row.get("event_id") or "").strip()
         if event_id:
-            changed_ids.add(event_id)
-    return changed_ids
+            renamed_ids.add(event_id)
+
+    removed_by_id: dict[str, list[dict[str, str]]] = {}
+    added_by_id: dict[str, list[dict[str, str]]] = {}
+    for r in removed:
+        eid = (r.get("event_id") or "").strip()
+        if eid:
+            removed_by_id.setdefault(eid, []).append(r)
+    for r in added:
+        eid = (r.get("event_id") or "").strip()
+        if eid:
+            added_by_id.setdefault(eid, []).append(r)
+
+    # A "changed row" is modeled as a remove + add for the same event_id.
+    changed_rows = set(removed_by_id.keys()) & set(added_by_id.keys())
+    return renamed_ids, changed_rows
 
 
 def _git_changed_event_ids_for_file(*, repo_root: Path, path: Path, base_ref: str) -> set[str]:
@@ -221,7 +243,40 @@ def _git_changed_event_ids_for_file(*, repo_root: Path, path: Path, base_ref: st
     if not diff.strip():
         return set()
 
-    return _changed_ids_from_git_diff(diff_text=diff, header_line=header_line)
+    renamed_ids, _changed_rows = _git_change_sets_from_diff(diff_text=diff, header_line=header_line)
+    return renamed_ids
+
+
+def _git_changed_rows_for_file(*, repo_root: Path, path: Path, base_ref: str) -> set[str]:
+    try:
+        rel = path.resolve().relative_to(repo_root.resolve())
+    except ValueError:
+        rel = path
+
+    try:
+        header_line = path.read_text(encoding="utf-8", errors="replace").splitlines()[0]
+    except Exception:
+        return set()
+
+    try:
+        proc = subprocess.run(
+            ["git", "diff", "--unified=0", base_ref, "--", str(rel)],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            env={**os.environ, "PYTHONUTF8": "1"},
+        )
+    except Exception:
+        return set()
+
+    if proc.returncode not in (0, 1):
+        return set()
+    diff = proc.stdout or ""
+    if not diff.strip():
+        return set()
+
+    _renamed_ids, changed_rows = _git_change_sets_from_diff(diff_text=diff, header_line=header_line)
+    return changed_rows
 
 
 def _write_svg_export(target: Path, rows: list[dict[str, object]]) -> None:
@@ -308,31 +363,55 @@ def render_history_scopes(
 
         scope_pov = scope_root.name
 
-        changed_ids_by_file: dict[Path, set[str]] = {}
+        renamed_ids_by_file: dict[Path, set[str]] = {}
+        changed_rows_by_file: dict[Path, set[str]] = {}
         if build.highlight_git_id_changes:
             base_ref = (build.git_base_ref or "HEAD~1").strip() or "HEAD~1"
             for src in sources:
                 if src.name not in {"_history.tsv", "_timeline.tsv"}:
                     continue
-                changed_ids_by_file[src] = _git_changed_event_ids_for_file(repo_root=repo_root, path=src, base_ref=base_ref)
+                renamed_ids_by_file[src] = _git_changed_event_ids_for_file(repo_root=repo_root, path=src, base_ref=base_ref)
+                changed_rows_by_file[src] = _git_changed_rows_for_file(repo_root=repo_root, path=src, base_ref=base_ref)
 
         rows: list[dict[str, object]] = []
         for src in sources:
             file_rows = _read_history_rows(src)
-            file_changed_ids = changed_ids_by_file.get(src)
-            if file_changed_ids:
+            file_renamed_ids = renamed_ids_by_file.get(src)
+            file_changed_rows = changed_rows_by_file.get(src)
+            if file_renamed_ids or file_changed_rows:
                 for r in file_rows:
-                    if str(r.get("event_id") or "") in file_changed_ids:
-                        tags = list(r.get("tags") or [])
+                    event_id = str(r.get("event_id") or "")
+                    tags = list(r.get("tags") or [])
+                    if file_changed_rows and event_id in file_changed_rows:
+                        if "changed" not in tags:
+                            tags.append("changed")
+                    if file_renamed_ids and event_id in file_renamed_ids:
                         if "changed-id" not in tags:
                             tags.append("changed-id")
-                        r["tags"] = tags
+                    r["tags"] = tags
             rows.extend(file_rows)
 
         present_year = cfg.present_year if cfg.present_year is not None else default_present_year
         if present_year is None:
             # Best-effort "now" for ranges: max year present in rows.
             present_year = max(int((r["date"].year)) for r in rows) if rows else 0
+
+        # Resolve unknown dates ("???") to a synthetic "end-of-timeline" date.
+        # This is a display hack: it places unknown-date events at the end without claiming a real timestamp.
+        # The `unknown-date` tag provides an explicit visual cue that the timestamp is not authoritative.
+        unknown_date_norm = f"{int(present_year)}/12/30"
+        unknown_parsed = parse_game_date(unknown_date_norm, "", "")
+        unknown_axis = _row_axis_day(unknown_parsed)
+        for r in rows:
+            if not r.get("date_unknown"):
+                continue
+            r["date"] = unknown_parsed
+            r["date_str"] = unknown_date_norm
+            r["axis_day"] = unknown_axis
+            tags = list(r.get("tags") or [])
+            if "unknown-date" not in tags:
+                tags.append("unknown-date")
+            r["tags"] = tags
 
         for view in cfg.views:
             view_build = build
@@ -345,6 +424,8 @@ def render_history_scopes(
                 view_build = replace(view_build, tick_spacing_px=int(view.tick_spacing_px))
             if view.max_summary_lines is not None:
                 view_measure = replace(view_measure, max_summary_lines=int(view.max_summary_lines))
+            if view.hide_time_measurements:
+                view_build = replace(view_build, render_ticks=False)
 
             filtered = [
                 r

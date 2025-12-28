@@ -132,4 +132,4 @@ class BuildConfig:
     axis_min_year: int | None = None
     axis_max_year: int | None = None
     highlight_git_id_changes: bool = False
-    git_base_ref: str = "HEAD~1"
+    git_base_ref: str = "HEAD"
