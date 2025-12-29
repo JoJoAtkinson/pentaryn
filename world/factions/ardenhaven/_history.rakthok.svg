@@ -57,6 +57,41 @@
   <circle cx="256" cy="256" r="247.04" fill="#cfcfcf" stroke="#9a9a9a" stroke-width="17.92" />
   <text x="256" y="346" text-anchor="middle" font-size="300" font-family="Alegreya, serif" fill="#2b1f14">?!</text>
 </symbol>
+<symbol id="tag_government" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="247.04" fill="#3a3f6b" stroke="#33375e" stroke-width="17.92" />
+  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
+<path fill="#fbf7ef" d="m255.594 19.406-15.78 59.125c5.184-.58 10.44-.874 15.78-.874 5.338 0 10.595.293 15.78.875l-15.78-59.124zm0 76.97c-57.894 0-106.156 40.154-118.656 94.186H374.25c-12.5-54.032-60.762-94.187-118.656-94.187zM19.406 209.25v33.53h472.406v-33.53H19.406zM71.5 261.47v159.124h50.406V261.47H71.5zm105.97 0v159.124h50.405V261.47H177.47zm105.936 0v159.124h50.406V261.47h-50.406zm105.938 0v159.124h50.406V261.47h-50.406zm-161.78 177.655-31.658 56.656h120.5l-32.062-56.655h-56.78zm-208.158.156v33.533h167.938l18.72-33.532H19.405zm286.531 0 18.97 33.533h166.906V439.28H305.938z"/>
+  </g>
+</symbol>
+<symbol id="tag_law" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="247.04" fill="#2f4f6b" stroke="#29455e" stroke-width="17.92" />
+  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
+<path fill="#fbf7ef" d="M129.75 24.47 21.625 211.655l55.78 32.188L185.532 56.656 129.75 24.47zm55.97 69.25-75.626 130.874L326.47 349.47l75.592-130.876L185.72 93.72zm83.468.686-11.22 19.438 84.97 49.03 11.25-19.468-85-49zM434.25 200.22 326.156 387.405l55.78 32.188 108.095-187.188-55.78-32.187zm-270.53 76.905-11.282 19.53 84.968 49 11.25-19.5-84.937-49.03zm-3.095 45.844L61.312 494.81h67.157l82.28-142.968-50.125-28.875z"/>
+  </g>
+</symbol>
+<symbol id="tag_lore" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="247.04" fill="#6b4f2f" stroke="#5e4529" stroke-width="17.92" />
+  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
+<path fill="#fbf7ef" d="M492.47 21.938c-82.74-.256-167.442 12.5-242.814 45.093 5.205 13.166 9.578 28.48 13.188 45.532C242.55 97.27 217.167 92.385 194.72 95.5c-46.22 28.432-87.13 66.305-119.44 115.594 25.193 7.756 51.57 22.81 72.845 43.844-31.87-7.045-68.907-5.895-99.188 3-13.743 28.688-25.008 60.48-33.343 95.687 128.71-30.668 130.522 3.514 50.75 140.438 16.877 12.614 42.182 13.77 61.906-1.563C134 267.936 231.43 326.246 254.188 354.562c14.288-40.59 34.77-82.54 62.906-126.468-17.29-14.667-39.21-24.838-63.813-32.375 25.364-5.256 50.91-10.928 74.126-11.22 6.482-.082 12.78.272 18.844 1.156 17.57-24.007 37.408-48.612 59.75-73.97-12.538-6.31-25.476-11.454-38.125-14.967 17.132-5.76 35.274-8.34 52.844-8.157 2.01.02 4.004.095 6 .187 20.07-21.708 41.927-43.976 65.75-66.813zM426.72 47.28c-130.93 65.394-226.626 162.926-281.784 286.25C172.34 184.41 287.048 84.57 426.72 47.28z"/>
+  </g>
+</symbol>
+<symbol id="tag_public" viewBox="0 0 512 512">
+  <g transform="translate(256.000 256.000) scale(0.8800) translate(-256.000 -256.000)">
+<g class="" transform="translate(0,0)" style=""><path d="M149.688 85.625c-1.234.005-2.465.033-3.72.063-33.913.806-75.48 10.704-127.25 33.718V362.78c60.77-28.82 106.718-37.067 144.22-33.092 33.502 3.55 59.685 16.66 83.562 31.187v-242.97c-23.217-17.744-50.195-30.04-85.97-32a184.47 184.47 0 0 0-10.843-.28zm211.968 0c-3.7-.016-7.322.088-10.844.28-35.773 1.96-62.75 14.256-85.968 32v242.97c23.876-14.527 50.06-27.637 83.562-31.188 37.502-3.974 83.45 4.272 144.22 33.094V119.407c-51.77-23.014-93.337-32.912-127.25-33.72-1.255-.028-2.486-.056-3.72-.06zm5.72 261.78c-1.038-.002-2.074.017-3.095.033-4.808.075-9.43.37-13.905.843-33.932 3.597-59.603 17.976-85.53 34.44v.28c-6.554-1.99-13.02-2.37-19.408-.97-25.566-16.177-51.003-30.202-84.468-33.75-5.595-.592-11.44-.883-17.564-.842-32.04.213-71.833 9.778-124.687 35.937v42.53c60.77-28.823 106.714-37.067 144.218-33.092 18.545 1.965 34.837 6.845 49.75 13.28-4.682 6.064-9.308 13.268-13.875 21.688h117.156c-5.93-8.22-11.798-15.414-17.626-21.56 14.996-6.503 31.39-11.43 50.062-13.408 37.503-3.974 83.448 4.27 144.22 33.094v-42.53c-53.16-26.31-93.115-35.863-125.25-35.97z" fill="currentColor" fill-opacity="1"></path></g>
+  </g>
+</symbol>
+<symbol id="tag_infrastructure" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="247.04" fill="#5a5a5a" stroke="#4f4f4f" stroke-width="17.92" />
+  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
+<path fill="#fbf7ef" d="M255.063 18.25 209.97 140c-49.033 13.39-90.27 48.118-114.876 94.594h-56.25v93.125h112.5c3.17-59.343 48.313-106.44 103.72-106.44 55.404 0 100.547 47.1 103.717 106.44h112.5v-93.126h-56.25c-24.6-46.47-65.85-81.2-114.874-94.594L255.063 18.25zM38.843 344.313v150.25H151.47v-150.25H38.843zm319.813 0v150.25H471.28v-150.25H358.657z"/>
+  </g>
+</symbol>
+<symbol id="tag_conflict" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="247.04" fill="#6b2f3a" stroke="#5e2933" stroke-width="17.92" />
+  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
+<path fill="#fbf7ef" d="M19.75 14.438c59.538 112.29 142.51 202.35 232.28 292.718l3.626 3.75.063-.062c21.827 21.93 44.04 43.923 66.405 66.25-18.856 14.813-38.974 28.2-59.938 40.312l28.532 28.53 68.717-68.717c42.337 27.636 76.286 63.646 104.094 105.81l28.064-28.06c-42.47-27.493-79.74-60.206-106.03-103.876l68.936-68.938-28.53-28.53c-11.115 21.853-24.413 42.015-39.47 60.593-43.852-43.8-86.462-85.842-130.125-125.47-.224-.203-.432-.422-.656-.625C183.624 122.75 108.515 63.91 19.75 14.437zm471.875 0c-83.038 46.28-154.122 100.78-221.97 161.156l22.814 21.562 56.81-56.812 13.22 13.187-56.438 56.44 24.594 23.186c61.802-66.92 117.6-136.92 160.97-218.72zm-329.53 125.906 200.56 200.53a402.965 402.965 0 0 1-13.405 13.032L148.875 153.53l13.22-13.186zm-76.69 113.28-28.5 28.532 68.907 68.906c-26.29 43.673-63.53 76.414-106 103.907l28.063 28.06c27.807-42.164 61.758-78.174 104.094-105.81l68.718 68.717 28.53-28.53c-20.962-12.113-41.08-25.5-59.937-40.313 17.865-17.83 35.61-35.433 53.157-52.97l-24.843-25.655-55.47 55.467c-4.565-4.238-9.014-8.62-13.374-13.062l55.844-55.844-24.53-25.374c-18.28 17.856-36.602 36.06-55.158 54.594-15.068-18.587-28.38-38.758-39.5-60.625z"/>
+  </g>
+</symbol>
 <symbol id="tag_economy" viewBox="0 0 512 512">
   <circle cx="256" cy="256" r="247.04" fill="#6b5a2f" stroke="#5e4f29" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
@@ -69,22 +104,11 @@
 <path fill="#fbf7ef" d="M287.03 20c-39.133.48-79.73 15.297-117 45.938h80.47v43.188c52.76-29.75 114.592-31.588 163.938.03l-18.188 9.72 64.688 50.72-3.75-83.314-26.407 14.126C395.99 48.792 345.038 20.644 290.907 20a161.464 161.464 0 0 0-3.875 0zm-268 64.625v212.75h212.782V84.625H19.032zm50.282 26.03H205.78v138.939h-18.718v-120.25H69.313v-18.688zm3.344 38.126 90.094 91.845-13.344 13.094-90.094-91.845 13.344-13.094zm206.656 61.75v212.782h212.75v-212.78h-212.75zm50.25 26.064h136.469V375.5h-18.686V255.28h-117.78l-.002-18.686zm3.344 38.094 90.125 91.875-13.342 13.062-90.125-91.844 13.343-13.092zm-278.53 63.656 3.75 83.312 23.312-12.47c60.927 88.637 169.99 106.485 259.625 32.814h-80.439v-43.188c-52.08 29.38-113 31.544-162.03 1.188l20.436-10.938-64.655-50.718z"/>
   </g>
 </symbol>
-<symbol id="tag_infrastructure" viewBox="0 0 512 512">
-  <circle cx="256" cy="256" r="247.04" fill="#5a5a5a" stroke="#4f4f4f" stroke-width="17.92" />
-  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
-<path fill="#fbf7ef" d="M255.063 18.25 209.97 140c-49.033 13.39-90.27 48.118-114.876 94.594h-56.25v93.125h112.5c3.17-59.343 48.313-106.44 103.72-106.44 55.404 0 100.547 47.1 103.717 106.44h112.5v-93.126h-56.25c-24.6-46.47-65.85-81.2-114.874-94.594L255.063 18.25zM38.843 344.313v150.25H151.47v-150.25H38.843zm319.813 0v150.25H471.28v-150.25H358.657z"/>
-  </g>
-</symbol>
+<symbol id="tag_changed" viewBox="0 0 512 512"><use href="#tag_unknown" x="0" y="0" width="512" height="512" /></symbol>
 <symbol id="tag_diplomacy" viewBox="0 0 512 512">
   <circle cx="256" cy="256" r="247.04" fill="#2f6b5d" stroke="#295e51" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
 <path fill="#fbf7ef" d="M38.643 17.275 32.215 59.47c20.354 23.085 48.127 40.682 79.195 56-29.677-4.055-58.635-12.142-84.64-24.868-.292 8.613-.584 26.252.896 35.58 23.024 8.994 48.88 14.026 75.95 16.728-23.698 5.377-47.716 7.58-71.425 6.95 2.665 9.36 7.325 22.24 11.26 31.675 22.547-1.977 45.912-7.504 69.36-15.47-18.785 14.27-39.05 26.146-60.185 35.322l28.877 30.056 17.144-9.898-5.978 22.312c6.788 6.61 20.498 15.434 27.56 20.623l13.268-11.662-.338 20.2c19.91 13.99 41.056 12.083 61.15 1.718-.804 6.438-1.308 13.29-1.482 20.56C132.47 314.7 66.666 320.958 70.59 348.222l34.553 6.947-34.108 18.04c1.503 7.398 3.84 15.003 7.73 22.677L120.1 379.56l-27.93 36.666c4.726 6.13 14.61 14.823 20.537 20.515l39.47-46.24-17.962 63.475c6.238 4.326 19.387 9.33 26.273 12.87l43.313-71.076-14.138 80.248c17.225 3.487 20.708 4.81 39.82 3.19l18.186-75.66 20.297 71.852c7.333-2.51 23.21-9.526 29.976-12.664l-11.794-59.3 35.372 45.14c7.232-5.076 18.943-11.587 24.316-17.328l-17.994-37.326 31.973 18.19c25.568-17.19-44.333-57.458-86.944-100.22 6.416-8.725 11.636-17.086 15.786-25.042 19.45 27.668 44.75 39.74 75.84 29.93l-1.176-21.815 16.002 14.943c7.52-4.34 15.072-10.137 22.48-16.166l-6.99-19.133 18.694 8.745c12.732-6.638 22.917-17.1 33.08-27.59-16.19-12.562-32.92-27.903-47.49-40.242 17.74 9.162 38.718 17.52 56.892 23.95 4.27-7.49 12.045-21.063 15.463-28.7-19.626-4.04-39.435-11.263-58.413-20.58 23.383 2.56 45.728 3.05 66.367-1.138 2.805-8.642 9.82-22.678 11.123-30.996-23.616 6.897-49.242 8.78-74.923 7.03 28.832-9.016 55.294-21.066 75.56-39.81L485.69 93c-84.44 76.087-173.95 30.858-210.133 83.916a34.885 34.885 0 0 0-14.932-.56c-14.7-80.695-139.033-53.424-221.982-159.083zM293 226.155l-9.643 45.806-23.623-44.347c10.196 4.382 20.545 8.023 33.266-1.457z"/>
-  </g>
-</symbol>
-<symbol id="tag_law" viewBox="0 0 512 512">
-  <circle cx="256" cy="256" r="247.04" fill="#2f4f6b" stroke="#29455e" stroke-width="17.92" />
-  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
-<path fill="#fbf7ef" d="M129.75 24.47 21.625 211.655l55.78 32.188L185.532 56.656 129.75 24.47zm55.97 69.25-75.626 130.874L326.47 349.47l75.592-130.876L185.72 93.72zm83.468.686-11.22 19.438 84.97 49.03 11.25-19.468-85-49zM434.25 200.22 326.156 387.405l55.78 32.188 108.095-187.188-55.78-32.187zm-270.53 76.905-11.282 19.53 84.968 49 11.25-19.5-84.937-49.03zm-3.095 45.844L61.312 494.81h67.157l82.28-142.968-50.125-28.875z"/>
   </g>
 </symbol>
 <symbol id="tag_world" viewBox="0 0 512 512">
@@ -93,27 +117,10 @@
 <path fill="#fbf7ef" d="m203.97 23-18.032 4.844 11.656 43.468c-25.837 8.076-50.32 21.653-71.594 40.75L94.53 80.594l-13.218 13.22 31.376 31.374c-19.467 21.125-33.414 45.53-41.813 71.343l-42.313-11.343-4.843 18.063 42.25 11.313c-6.057 27.3-6.157 55.656-.345 83L23.72 308.78l4.843 18.064 41.812-11.22a193.261 193.261 0 0 0 31.25 59.876l-29.97 52.688-16.81 29.593 29.56-16.842 52.657-29.97a193.306 193.306 0 0 0 60.094 31.407l-11.22 41.844 18.033 4.81 11.218-41.905a195.701 195.701 0 0 0 83-.375l11.312 42.28 18.063-4.81-11.344-42.376c25.812-8.4 50.217-22.315 71.342-41.78l31.375 31.373 13.22-13.218-31.47-31.47a193.26 193.26 0 0 0 40.72-71.563l43.53 11.657 4.813-18.063-43.625-11.686a195.693 195.693 0 0 0-.344-82.063l43.97-11.78-4.813-18.063L440.908 197c-6.73-20.866-17.08-40.79-31.032-58.844l29.97-52.656 16.842-29.563-29.593 16.844-52.656 29.97c-17.998-13.875-37.874-24.198-58.657-30.906l11.783-44L309.5 23l-11.78 43.97c-27-5.925-55.02-6.05-82.064-.376L203.97 23zm201.56 85L297.25 298.313l-.75.437-40.844-40.875-148.72 148.72-2.186 1.25 109.125-191.75 41.78 41.78L405.532 108zm-149.686 10.594c21.858 0 43.717 5.166 63.594 15.47l-116.625 66.342-2.22 1.28-1.28 2.22-66.25 116.406c-26.942-52.04-18.616-117.603 25.03-161.25 26.99-26.988 62.38-40.468 97.75-40.468zm122.72 74.594c26.994 52.054 18.67 117.672-25.002 161.343-43.66 43.662-109.263 52.005-161.312 25.033l116.438-66.282 2.25-1.25 1.25-2.25 66.375-116.592z"/>
   </g>
 </symbol>
-<symbol id="tag_public" viewBox="0 0 512 512">
-  <g transform="translate(256.000 256.000) scale(0.8800) translate(-256.000 -256.000)">
-<g class="" transform="translate(0,0)" style=""><path d="M149.688 85.625c-1.234.005-2.465.033-3.72.063-33.913.806-75.48 10.704-127.25 33.718V362.78c60.77-28.82 106.718-37.067 144.22-33.092 33.502 3.55 59.685 16.66 83.562 31.187v-242.97c-23.217-17.744-50.195-30.04-85.97-32a184.47 184.47 0 0 0-10.843-.28zm211.968 0c-3.7-.016-7.322.088-10.844.28-35.773 1.96-62.75 14.256-85.968 32v242.97c23.876-14.527 50.06-27.637 83.562-31.188 37.502-3.974 83.45 4.272 144.22 33.094V119.407c-51.77-23.014-93.337-32.912-127.25-33.72-1.255-.028-2.486-.056-3.72-.06zm5.72 261.78c-1.038-.002-2.074.017-3.095.033-4.808.075-9.43.37-13.905.843-33.932 3.597-59.603 17.976-85.53 34.44v.28c-6.554-1.99-13.02-2.37-19.408-.97-25.566-16.177-51.003-30.202-84.468-33.75-5.595-.592-11.44-.883-17.564-.842-32.04.213-71.833 9.778-124.687 35.937v42.53c60.77-28.823 106.714-37.067 144.218-33.092 18.545 1.965 34.837 6.845 49.75 13.28-4.682 6.064-9.308 13.268-13.875 21.688h117.156c-5.93-8.22-11.798-15.414-17.626-21.56 14.996-6.503 31.39-11.43 50.062-13.408 37.503-3.974 83.448 4.27 144.22 33.094v-42.53c-53.16-26.31-93.115-35.863-125.25-35.97z" fill="currentColor" fill-opacity="1"></path></g>
-  </g>
-</symbol>
-<symbol id="tag_conflict" viewBox="0 0 512 512">
-  <circle cx="256" cy="256" r="247.04" fill="#6b2f3a" stroke="#5e2933" stroke-width="17.92" />
-  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
-<path fill="#fbf7ef" d="M19.75 14.438c59.538 112.29 142.51 202.35 232.28 292.718l3.626 3.75.063-.062c21.827 21.93 44.04 43.923 66.405 66.25-18.856 14.813-38.974 28.2-59.938 40.312l28.532 28.53 68.717-68.717c42.337 27.636 76.286 63.646 104.094 105.81l28.064-28.06c-42.47-27.493-79.74-60.206-106.03-103.876l68.936-68.938-28.53-28.53c-11.115 21.853-24.413 42.015-39.47 60.593-43.852-43.8-86.462-85.842-130.125-125.47-.224-.203-.432-.422-.656-.625C183.624 122.75 108.515 63.91 19.75 14.437zm471.875 0c-83.038 46.28-154.122 100.78-221.97 161.156l22.814 21.562 56.81-56.812 13.22 13.187-56.438 56.44 24.594 23.186c61.802-66.92 117.6-136.92 160.97-218.72zm-329.53 125.906 200.56 200.53a402.965 402.965 0 0 1-13.405 13.032L148.875 153.53l13.22-13.186zm-76.69 113.28-28.5 28.532 68.907 68.906c-26.29 43.673-63.53 76.414-106 103.907l28.063 28.06c27.807-42.164 61.758-78.174 104.094-105.81l68.718 68.717 28.53-28.53c-20.962-12.113-41.08-25.5-59.937-40.313 17.865-17.83 35.61-35.433 53.157-52.97l-24.843-25.655-55.47 55.467c-4.565-4.238-9.014-8.62-13.374-13.062l55.844-55.844-24.53-25.374c-18.28 17.856-36.602 36.06-55.158 54.594-15.068-18.587-28.38-38.758-39.5-60.625z"/>
-  </g>
-</symbol>
 <symbol id="tag_battle" viewBox="0 0 512 512">
   <circle cx="256" cy="256" r="247.04" fill="#7a2f2f" stroke="#6b2929" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
 <path fill="#fbf7ef" d="M19.75 14.438c59.538 112.29 142.51 202.35 232.28 292.718l3.626 3.75.063-.062c21.827 21.93 44.04 43.923 66.405 66.25-18.856 14.813-38.974 28.2-59.938 40.312l28.532 28.53 68.717-68.717c42.337 27.636 76.286 63.646 104.094 105.81l28.064-28.06c-42.47-27.493-79.74-60.206-106.03-103.876l68.936-68.938-28.53-28.53c-11.115 21.853-24.413 42.015-39.47 60.593-43.852-43.8-86.462-85.842-130.125-125.47-.224-.203-.432-.422-.656-.625C183.624 122.75 108.515 63.91 19.75 14.437zm471.875 0c-83.038 46.28-154.122 100.78-221.97 161.156l22.814 21.562 56.81-56.812 13.22 13.187-56.438 56.44 24.594 23.186c61.802-66.92 117.6-136.92 160.97-218.72zm-329.53 125.906 200.56 200.53a402.965 402.965 0 0 1-13.405 13.032L148.875 153.53l13.22-13.186zm-76.69 113.28-28.5 28.532 68.907 68.906c-26.29 43.673-63.53 76.414-106 103.907l28.063 28.06c27.807-42.164 61.758-78.174 104.094-105.81l68.718 68.717 28.53-28.53c-20.962-12.113-41.08-25.5-59.937-40.313 17.865-17.83 35.61-35.433 53.157-52.97l-24.843-25.655-55.47 55.467c-4.565-4.238-9.014-8.62-13.374-13.062l55.844-55.844-24.53-25.374c-18.28 17.856-36.602 36.06-55.158 54.594-15.068-18.587-28.38-38.758-39.5-60.625z"/>
-  </g>
-</symbol>
-<symbol id="tag_government" viewBox="0 0 512 512">
-  <circle cx="256" cy="256" r="247.04" fill="#3a3f6b" stroke="#33375e" stroke-width="17.92" />
-  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
-<path fill="#fbf7ef" d="m255.594 19.406-15.78 59.125c5.184-.58 10.44-.874 15.78-.874 5.338 0 10.595.293 15.78.875l-15.78-59.124zm0 76.97c-57.894 0-106.156 40.154-118.656 94.186H374.25c-12.5-54.032-60.762-94.187-118.656-94.187zM19.406 209.25v33.53h472.406v-33.53H19.406zM71.5 261.47v159.124h50.406V261.47H71.5zm105.97 0v159.124h50.405V261.47H177.47zm105.936 0v159.124h50.406V261.47h-50.406zm105.938 0v159.124h50.406V261.47h-50.406zm-161.78 177.655-31.658 56.656h120.5l-32.062-56.655h-56.78zm-208.158.156v33.533h167.938l18.72-33.532H19.405zm286.531 0 18.97 33.533h166.906V439.28H305.938z"/>
   </g>
 </symbol>
 </defs>
@@ -139,23 +146,31 @@
 </defs>
 <g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="1658"/></g>
 <g id="connectors">
+<line class="connector" x1="600" y1="76.0" x2="552.0" y2="100.5"/>
+<line class="connector" x1="600" y1="112.0" x2="648.0" y2="112.0"/>
+<line class="connector" x1="600" y1="248.8" x2="552.0" y2="248.8"/>
+<line class="connector" x1="600" y1="361.6" x2="648.0" y2="361.6"/>
 <line class="connector" x1="600" y1="601.6" x2="552.0" y2="601.6"/>
 <line class="connector" x1="600" y1="853.6" x2="648.0" y2="736.3"/>
-<line class="connector" x1="600" y1="957.8" x2="552.0" y2="786.6"/>
+<line class="connector" x1="600" y1="957.8" x2="552.0" y2="811.2"/>
 <line class="connector" x1="600" y1="960.4" x2="648.0" y2="853.3"/>
-<line class="connector" x1="600" y1="962.2" x2="552.0" y2="903.6"/>
+<line class="connector" x1="600" y1="962.2" x2="552.0" y2="928.2"/>
 <line class="connector" x1="600" y1="971.2" x2="648.0" y2="970.3"/>
-<line class="connector" x1="600" y1="988.0" x2="552.0" y2="1014.6"/>
+<line class="connector" x1="600" y1="988.0" x2="552.0" y2="1039.2"/>
 <line class="connector" x1="600" y1="1000.6" x2="648.0" y2="1081.3"/>
-<line class="connector" x1="600" y1="1010.2" x2="552.0" y2="1125.6"/>
+<line class="connector" x1="600" y1="1010.2" x2="552.0" y2="1150.2"/>
 <line class="connector" x1="600" y1="1155.1" x2="648.0" y2="1192.3"/>
-<line class="connector" x1="600" y1="1157.2" x2="552.0" y2="1242.6"/>
+<line class="connector" x1="600" y1="1157.2" x2="552.0" y2="1267.2"/>
 <line class="connector" x1="600" y1="1196.2" x2="648.0" y2="1303.3"/>
-<line class="connector" x1="600" y1="1357.6" x2="552.0" y2="1359.6"/>
+<line class="connector" x1="600" y1="1357.6" x2="552.0" y2="1384.2"/>
 <line class="connector" x1="600" y1="1480.0" x2="648.0" y2="1480.0"/>
 <line class="connector" x1="600" y1="1609.6" x2="552.0" y2="1609.6"/>
 </g>
 <g id="tokens">
+<use class="token" href="#token_default" x="589.0" y="65.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="101.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="237.8" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="350.6" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="590.6" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="842.6" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="946.8" width="22" height="22"/>
@@ -173,7 +188,55 @@
 <use class="token" href="#token_default" x="589.0" y="1598.6" width="22" height="22"/>
 </g>
 <g id="labels">
-<rect class="label" x="132.9" y="553.1" width="413.1" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="128.9" y="40.0" width="417.1" height="121.0" rx="8" ry="8"/>
+<text class="title" x="144.9" y="69.0">
+<tspan x="144.9" dy="0.0">The Ruins Reclamation Act</tspan>
+</text>
+<text class="summary" x="144.9" y="87.0">
+<tspan x="144.9" dy="0.0">Facing vast territorial expansion and countless ancient ruins across former</tspan>
+<tspan x="144.9" dy="12.0">battlefields, the Council of Consuls declares a controversial policy: any treasure</tspan>
+<tspan x="144.9" dy="12.0">or artifacts found in ruins belong to the finder, no questions asked. The</tspan>
+<tspan x="144.9" dy="12.0">government is transparent about their motives—they lack the researchers and</tspan>
+<tspan x="144.9" dy="12.0">resources to explore these sites themselves, and the ruins attract monsters that</tspan>
+<tspan x="144.9" dy="12.0">endanger civilian settlements. By offering legal ownership of findings,</tspan>
+</text>
+<rect class="label" x="654.0" y="51.5" width="411.5" height="121.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="80.5">
+<tspan x="670.0" dy="0.0">The Southern Watch Towers</tspan>
+</text>
+<text class="summary" x="670.0" y="98.5">
+<tspan x="670.0" dy="0.0">The Council of Consuls completes construction of watch towers along the</tspan>
+<tspan x="670.0" dy="12.0">southern border with Calderon. Not out of fear—the Pentarch Accords</tspan>
+<tspan x="670.0" dy="12.0">hold—but as Cold War-style deterrent: &quot;We are ready.&quot; The towers are staffed,</tspan>
+<tspan x="670.0" dy="12.0">supplied, and connected by signal fires. Calderon takes notice. The project</tspan>
+<tspan x="670.0" dy="12.0">demonstrates Ardenhaven&#x27;s maturity as a federation: unified military</tspan>
+<tspan x="670.0" dy="12.0">infrastructure built and maintained across formerly fractious city-states. Two</tspan>
+</text>
+<rect class="label" x="134.5" y="188.3" width="411.5" height="121.0" rx="8" ry="8"/>
+<text class="title" x="150.5" y="217.3">
+<tspan x="150.5" dy="0.0">The Monument Dispute</tspan>
+</text>
+<text class="summary" x="150.5" y="235.3">
+<tspan x="150.5" dy="0.0">Three generations after the war, Ardenhaven&#x27;s city-states cannot agree on how</tspan>
+<tspan x="150.5" dy="12.0">to commemorate the Winter of Graves. Some demand heroic monuments</tspan>
+<tspan x="150.5" dy="12.0">celebrating resilience. Others insist on somber memorials acknowledging</tspan>
+<tspan x="150.5" dy="12.0">mutual suffering with Calderon. One radical faction proposes bulldozing the</tspan>
+<tspan x="150.5" dy="12.0">mass graves and planting wheat—&quot;let the dead feed the living.&quot; The Council of</tspan>
+<tspan x="150.5" dy="12.0">Consuls deadlocks repeatedly. Each city-state builds its own memorial in its</tspan>
+</text>
+<rect class="label" x="654.0" y="301.1" width="411.8" height="121.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="330.1">
+<tspan x="670.0" dy="0.0">The Grain Abundance Accord</tspan>
+</text>
+<text class="summary" x="670.0" y="348.1">
+<tspan x="670.0" dy="0.0">Ardenhaven&#x27;s agricultural output finally exceeds pre-war levels for the first</tspan>
+<tspan x="670.0" dy="12.0">time. The Council of Consuls debates exporting surplus grain to former</tspan>
+<tspan x="670.0" dy="12.0">enemies and neighbors. One city-state—scarred by siege memories—votes</tspan>
+<tspan x="670.0" dy="12.0">against, arguing for strategic reserves. The majority prevails: Ardenhaven</tspan>
+<tspan x="670.0" dy="12.0">becomes the continent&#x27;s breadbasket, choosing prosperity through generosity</tspan>
+<tspan x="670.0" dy="12.0">over isolation. The dissenting city-state accepts the vote but builds its own</tspan>
+</text>
+<rect class="label changed" x="132.9" y="553.1" width="413.1" height="97.0" rx="8" ry="8"/>
 <text class="title" x="148.9" y="582.1">
 <tspan x="148.9" dy="0.0">The Trade Road Prosperity</tspan>
 </text>
@@ -183,7 +246,7 @@
 <tspan x="148.9" dy="12.0">battlefields are farmland again. A new generation knows the war only through</tspan>
 <tspan x="148.9" dy="12.0">their grandparents&#x27; stories and the mass graves that still mark the plains.</tspan>
 </text>
-<rect class="label" x="654.0" y="687.8" width="417.1" height="97.0" rx="8" ry="8"/>
+<rect class="label changed" x="654.0" y="687.8" width="417.1" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="716.8">
 <tspan x="670.0" dy="0.0">The First Trade Caravans</tspan>
 </text>
@@ -193,18 +256,18 @@
 <tspan x="670.0" dy="12.0">coal and iron. The exchange is awkward, stilted, watched by veterans on both</tspan>
 <tspan x="670.0" dy="12.0">sides. But it happens. Commerce begins to replace contempt.</tspan>
 </text>
-<rect class="label" x="135.3" y="732.1" width="410.7" height="109.0" rx="8" ry="8"/>
-<text class="title" x="151.3" y="761.1">
+<rect class="label changed" x="135.3" y="756.7" width="410.7" height="109.0" rx="8" ry="8"/>
+<text class="title" x="151.3" y="785.7">
 <tspan x="151.3" dy="0.0">The Pentarch Accords</tspan>
 </text>
-<text class="summary" x="151.3" y="779.1">
+<text class="summary" x="151.3" y="803.7">
 <tspan x="151.3" dy="0.0">Ardenhaven, Calderon Imperium, and seven other factions sign the Pentarch</tspan>
 <tspan x="151.3" dy="12.0">Accords in Merrowgate. The treaty formally ends the Imperial Wars and</tspan>
 <tspan x="151.3" dy="12.0">establishes the Age of Trade. Borders are recognized, reparations waived, and</tspan>
 <tspan x="151.3" dy="12.0">all signatories pledge to resolve disputes through commerce rather than</tspan>
 <tspan x="151.3" dy="12.0">conquest. The world exhales.</tspan>
 </text>
-<rect class="label" x="654.0" y="798.8" width="404.7" height="109.0" rx="8" ry="8"/>
+<rect class="label changed" x="654.0" y="798.8" width="404.7" height="109.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="827.8">
 <tspan x="670.0" dy="0.0">The Merrowgate Mediation</tspan>
 </text>
@@ -215,17 +278,17 @@
 <tspan x="670.0" dy="12.0">Both sides cling to pride while accepting reality: continuation means mutual</tspan>
 <tspan x="670.0" dy="12.0">destruction.</tspan>
 </text>
-<rect class="label" x="126.0" y="855.1" width="420.0" height="97.0" rx="8" ry="8"/>
-<text class="title" x="142.0" y="884.1">
+<rect class="label changed" x="126.0" y="879.7" width="420.0" height="97.0" rx="8" ry="8"/>
+<text class="title" x="142.0" y="908.7">
 <tspan x="142.0" dy="0.0">The Winter of Graves</tspan>
 </text>
-<text class="summary" x="142.0" y="902.1">
+<text class="summary" x="142.0" y="926.7">
 <tspan x="142.0" dy="0.0">Fighting pauses during the harshest winter in decades. Both sides bury their</tspan>
 <tspan x="142.0" dy="12.0">dead—tens of thousands on each side. Mass graves are dug across the contested</tspan>
 <tspan x="142.0" dy="12.0">territories. Survivors on both sides recognize the war cannot be won by either</tspan>
 <tspan x="142.0" dy="12.0">nation. Whispers of peace begin, though neither government admits defeat.</tspan>
 </text>
-<rect class="label" x="654.0" y="921.8" width="420.0" height="97.0" rx="8" ry="8"/>
+<rect class="label changed" x="654.0" y="921.8" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="950.8">
 <tspan x="670.0" dy="0.0">The Siege of the Granaries</tspan>
 </text>
@@ -235,17 +298,17 @@
 <tspan x="670.0" dy="12.0">mutual exhaustion—neither army has the strength to continue. The granaries</tspan>
 <tspan x="670.0" dy="12.0">are left ruined and empty, a monument to futility.</tspan>
 </text>
-<rect class="label" x="126.0" y="966.1" width="420.0" height="97.0" rx="8" ry="8"/>
-<text class="title" x="142.0" y="995.1">
+<rect class="label changed" x="126.0" y="990.7" width="420.0" height="97.0" rx="8" ry="8"/>
+<text class="title" x="142.0" y="1019.7">
 <tspan x="142.0" dy="0.0">The Plains of Ash</tspan>
 </text>
-<text class="summary" x="142.0" y="1013.1">
+<text class="summary" x="142.0" y="1037.7">
 <tspan x="142.0" dy="0.0">Three months of brutal attrition warfare across the central plains. No heroes, no</tspan>
 <tspan x="142.0" dy="12.0">decisive victories—just endless waves of soldiers meeting in fields of mud and</tspan>
 <tspan x="142.0" dy="12.0">blood. Casualties on both sides are catastrophic. The plains are later named for</tspan>
 <tspan x="142.0" dy="12.0">the funeral pyres that burned for weeks.</tspan>
 </text>
-<rect class="label" x="654.0" y="1032.8" width="416.6" height="97.0" rx="8" ry="8"/>
+<rect class="label changed" x="654.0" y="1032.8" width="416.6" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1061.8">
 <tspan x="670.0" dy="0.0">The Year of Conscription</tspan>
 </text>
@@ -255,38 +318,38 @@
 <tspan x="670.0" dy="12.0">Those with nursing children are exempted; everyone else fights. Entire towns</tspan>
 <tspan x="670.0" dy="12.0">empty. Fields go unplowed. The choice is simple: fight now or lose everything.</tspan>
 </text>
-<rect class="label" x="126.0" y="1077.1" width="420.0" height="97.0" rx="8" ry="8"/>
-<text class="title" x="142.0" y="1106.1">
+<rect class="label changed" x="126.0" y="1101.7" width="420.0" height="97.0" rx="8" ry="8"/>
+<text class="title" x="142.0" y="1130.7">
 <tspan x="142.0" dy="0.0">Calderon&#x27;s Declaration</tspan>
 </text>
-<text class="summary" x="142.0" y="1124.1">
+<text class="summary" x="142.0" y="1148.7">
 <tspan x="142.0" dy="0.0">Calderon Imperium issues formal declaration of conquest: all Ardenhaven lands</tspan>
 <tspan x="142.0" dy="12.0">are claimed as imperial territory, and continued resistance will be met with</tspan>
 <tspan x="142.0" dy="12.0">total war. The language is unambiguous—there will be no negotiated peace,</tspan>
 <tspan x="142.0" dy="12.0">only submission or annihilation. The 7-year war begins.</tspan>
 </text>
-<rect class="label" x="654.0" y="1143.8" width="420.0" height="97.0" rx="8" ry="8"/>
+<rect class="label changed" x="654.0" y="1143.8" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1172.8">
 <tspan x="670.0" dy="0.0">The Compact of Unity</tspan>
 </text>
 <text class="summary" x="670.0" y="1190.8">
-<tspan x="670.0" dy="0.0">5 Ardenhaven city-states sign the Compact of Unity, creating a federated</tspan>
+<tspan x="670.0" dy="0.0">Five Ardenhaven city-states sign the Compact of Unity, creating a federated</tspan>
 <tspan x="670.0" dy="12.0">republic. Each city-state retains internal governance but surrenders</tspan>
 <tspan x="670.0" dy="12.0">war-making power to a unified Council of Consuls. Merrowgate, invited to join,</tspan>
 <tspan x="670.0" dy="12.0">formally declines and declares perpetual neutrality.</tspan>
 </text>
-<rect class="label" x="128.9" y="1188.1" width="417.1" height="109.0" rx="8" ry="8"/>
-<text class="title" x="144.9" y="1217.1">
+<rect class="label changed" x="128.9" y="1212.7" width="417.1" height="109.0" rx="8" ry="8"/>
+<text class="title" x="144.9" y="1241.7">
 <tspan x="144.9" dy="0.0">The Unification Debates</tspan>
 </text>
-<text class="summary" x="144.9" y="1235.1">
+<text class="summary" x="144.9" y="1259.7">
 <tspan x="144.9" dy="0.0">Facing mounting Calderon pressure, Ardenhaven city-states convene</tspan>
 <tspan x="144.9" dy="12.0">emergency talks lasting three months. Bitter debates over sovereignty, military</tspan>
 <tspan x="144.9" dy="12.0">command, taxation, and governance nearly collapse into violence. Ultimately,</tspan>
 <tspan x="144.9" dy="12.0">survival outweighs pride: they agree to act as one federation, preserving local</tspan>
 <tspan x="144.9" dy="12.0">governance but pooling military and diplomatic authority.</tspan>
 </text>
-<rect class="label" x="654.0" y="1254.8" width="417.8" height="97.0" rx="8" ry="8"/>
+<rect class="label changed" x="654.0" y="1254.8" width="417.8" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1283.8">
 <tspan x="670.0" dy="0.0">The Farmland Massacres</tspan>
 </text>
@@ -296,17 +359,17 @@
 <tspan x="670.0" dy="12.0">atrocity galvanizes public opinion—Calderon is no longer seen as a negotiating</tspan>
 <tspan x="670.0" dy="12.0">partner but as an existential threat.</tspan>
 </text>
-<rect class="label" x="128.4" y="1311.1" width="417.6" height="97.0" rx="8" ry="8"/>
-<text class="title" x="144.4" y="1340.1">
+<rect class="label changed" x="128.4" y="1335.7" width="417.6" height="97.0" rx="8" ry="8"/>
+<text class="title" x="144.4" y="1364.7">
 <tspan x="144.4" dy="0.0">The Annexation Crisis</tspan>
 </text>
-<text class="summary" x="144.4" y="1358.1">
+<text class="summary" x="144.4" y="1382.7">
 <tspan x="144.4" dy="0.0">Calderon Imperium legally annexes three southern Ardenhaven towns through</tspan>
 <tspan x="144.4" dy="12.0">coerced treaties and purchased loyalties. The affected city-states appeal to their</tspan>
 <tspan x="144.4" dy="12.0">neighbors for military aid. None respond. This moment becomes a rallying cry</tspan>
 <tspan x="144.4" dy="12.0">in later years: &quot;When they came for the border towns, we stood alone.&quot;</tspan>
 </text>
-<rect class="label" x="654.0" y="1431.5" width="417.0" height="97.0" rx="8" ry="8"/>
+<rect class="label changed" x="654.0" y="1431.5" width="417.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1460.5">
 <tspan x="670.0" dy="0.0">The Failed Unity Talks</tspan>
 </text>
@@ -316,7 +379,7 @@
 <tspan x="670.0" dy="12.0">disputes, and distrust. Each city-state returns home believing they can</tspan>
 <tspan x="670.0" dy="12.0">negotiate separately with Calderon.</tspan>
 </text>
-<rect class="label" x="135.0" y="1561.1" width="411.0" height="97.0" rx="8" ry="8"/>
+<rect class="label changed" x="135.0" y="1561.1" width="411.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="151.0" y="1590.1">
 <tspan x="151.0" dy="0.0">The Border Provocations Begin</tspan>
 </text>
@@ -328,6 +391,78 @@
 </text>
 </g>
 <g id="tags">
+<g class="public-indicator" transform="translate(134.9 44.0)">
+<use href="#tag_public" width="12.5" height="12.5"/>
+</g>
+<g transform="translate(509.0 48.4)">
+<title>tag: lore</title>
+<use href="#tag_lore" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(480.0 48.4)">
+<title>tag: law</title>
+<use href="#tag_law" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(451.0 48.4)">
+<title>tag: government</title>
+<use href="#tag_government" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(413.2 44.0)">
+<title>faction: ardenhaven</title>
+<use href="#pov_ardenhaven" width="33.8" height="33.8"/>
+</g>
+<g class="public-indicator" transform="translate(660.0 55.5)">
+<use href="#tag_public" width="12.5" height="12.5"/>
+</g>
+<g transform="translate(1028.5 59.9)">
+<title>tag: government</title>
+<use href="#tag_government" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(999.5 59.9)">
+<title>tag: infrastructure</title>
+<use href="#tag_infrastructure" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(961.8 55.5)">
+<title>faction: ardenhaven</title>
+<use href="#pov_ardenhaven" width="33.8" height="33.8"/>
+</g>
+<g class="public-indicator" transform="translate(140.5 192.3)">
+<use href="#tag_public" width="12.5" height="12.5"/>
+</g>
+<g transform="translate(509.0 196.7)">
+<title>tag: lore</title>
+<use href="#tag_lore" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(480.0 196.7)">
+<title>tag: conflict</title>
+<use href="#tag_conflict" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(451.0 196.7)">
+<title>tag: government</title>
+<use href="#tag_government" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(413.2 192.3)">
+<title>faction: ardenhaven</title>
+<use href="#pov_ardenhaven" width="33.8" height="33.8"/>
+</g>
+<g class="public-indicator" transform="translate(660.0 305.1)">
+<use href="#tag_public" width="12.5" height="12.5"/>
+</g>
+<g transform="translate(1028.8 309.5)">
+<title>tag: government</title>
+<use href="#tag_government" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(999.8 309.5)">
+<title>tag: trade</title>
+<use href="#tag_trade" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(970.8 309.5)">
+<title>tag: economy</title>
+<use href="#tag_economy" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(933.1 305.1)">
+<title>faction: ardenhaven</title>
+<use href="#pov_ardenhaven" width="33.8" height="33.8"/>
+</g>
 <g transform="translate(509.0 561.5)">
 <title>tag: infrastructure</title>
 <use href="#tag_infrastructure" width="25.0" height="25.0"/>
@@ -343,6 +478,9 @@
 <g transform="translate(413.2 557.1)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
+</g>
+<g class="public-indicator" transform="translate(660.0 691.8)">
+<use href="#tag_public" width="12.5" height="12.5"/>
 </g>
 <g transform="translate(1034.1 696.2)">
 <title>tag: trade</title>
@@ -360,30 +498,30 @@
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(141.3 736.1)">
+<g class="public-indicator" transform="translate(141.3 760.7)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(509.0 740.5)">
+<g transform="translate(509.0 765.0)">
 <title>tag: world</title>
 <use href="#tag_world" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 740.5)">
+<g transform="translate(480.0 765.0)">
 <title>tag: law</title>
 <use href="#tag_law" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(451.0 740.5)">
+<g transform="translate(451.0 765.0)">
 <title>tag: diplomacy</title>
 <use href="#tag_diplomacy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(413.2 736.1)">
+<g transform="translate(413.2 760.7)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(375.5 736.1)">
+<g transform="translate(375.5 760.7)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(337.8 736.1)">
+<g transform="translate(337.8 760.7)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
@@ -403,15 +541,15 @@
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 863.5)">
+<g transform="translate(509.0 888.0)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(471.2 859.1)">
+<g transform="translate(471.2 883.7)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(433.5 859.1)">
+<g transform="translate(433.5 883.7)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
@@ -427,15 +565,15 @@
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 974.5)">
+<g transform="translate(509.0 999.0)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(471.2 970.1)">
+<g transform="translate(471.2 994.7)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(433.5 970.1)">
+<g transform="translate(433.5 994.7)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
@@ -451,21 +589,27 @@
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1081.1)">
+<g class="public-indicator" transform="translate(132.0 1105.7)">
+<use href="#tag_public" width="12.5" height="12.5"/>
+</g>
+<g transform="translate(500.2 1105.7)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 1085.5)">
+<g transform="translate(471.2 1110.0)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 1085.5)">
+<g transform="translate(442.2 1110.0)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(404.5 1081.1)">
+<g transform="translate(404.5 1105.7)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
+</g>
+<g class="public-indicator" transform="translate(660.0 1147.8)">
+<use href="#tag_public" width="12.5" height="12.5"/>
 </g>
 <g transform="translate(1037.0 1152.2)">
 <title>tag: law</title>
@@ -479,15 +623,15 @@
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 1196.5)">
+<g transform="translate(509.0 1221.0)">
 <title>tag: diplomacy</title>
 <use href="#tag_diplomacy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 1196.5)">
+<g transform="translate(480.0 1221.0)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 1192.1)">
+<g transform="translate(442.2 1216.7)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
@@ -507,19 +651,19 @@
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1315.1)">
+<g transform="translate(500.2 1339.7)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 1319.5)">
+<g transform="translate(471.2 1344.0)">
 <title>tag: law</title>
 <use href="#tag_law" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 1319.5)">
+<g transform="translate(442.2 1344.0)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(404.5 1315.1)">
+<g transform="translate(404.5 1339.7)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>

@@ -34,8 +34,8 @@ max_summary_lines = 6
 last_years = 3500
 
 [[views]]
-id = "Elderholt"
-title = "Elderholt"
+id = "elderholt"
+title = "elderholt"
 tags_any = ["public", "elderholt"]
 tick_scale = "year"
 tick_spacing_px = 20

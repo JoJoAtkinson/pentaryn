@@ -69,7 +69,6 @@
 <path fill="#fbf7ef" d="M19.75 14.438c59.538 112.29 142.51 202.35 232.28 292.718l3.626 3.75.063-.062c21.827 21.93 44.04 43.923 66.405 66.25-18.856 14.813-38.974 28.2-59.938 40.312l28.532 28.53 68.717-68.717c42.337 27.636 76.286 63.646 104.094 105.81l28.064-28.06c-42.47-27.493-79.74-60.206-106.03-103.876l68.936-68.938-28.53-28.53c-11.115 21.853-24.413 42.015-39.47 60.593-43.852-43.8-86.462-85.842-130.125-125.47-.224-.203-.432-.422-.656-.625C183.624 122.75 108.515 63.91 19.75 14.437zm471.875 0c-83.038 46.28-154.122 100.78-221.97 161.156l22.814 21.562 56.81-56.812 13.22 13.187-56.438 56.44 24.594 23.186c61.802-66.92 117.6-136.92 160.97-218.72zm-329.53 125.906 200.56 200.53a402.965 402.965 0 0 1-13.405 13.032L148.875 153.53l13.22-13.186zm-76.69 113.28-28.5 28.532 68.907 68.906c-26.29 43.673-63.53 76.414-106 103.907l28.063 28.06c27.807-42.164 61.758-78.174 104.094-105.81l68.718 68.717 28.53-28.53c-20.962-12.113-41.08-25.5-59.937-40.313 17.865-17.83 35.61-35.433 53.157-52.97l-24.843-25.655-55.47 55.467c-4.565-4.238-9.014-8.62-13.374-13.062l55.844-55.844-24.53-25.374c-18.28 17.856-36.602 36.06-55.158 54.594-15.068-18.587-28.38-38.758-39.5-60.625z"/>
   </g>
 </symbol>
-<symbol id="tag_changed" viewBox="0 0 512 512"><use href="#tag_unknown" x="0" y="0" width="512" height="512" /></symbol>
 <symbol id="tag_raids" viewBox="0 0 512 512">
   <circle cx="256" cy="256" r="247.04" fill="#6b2f2f" stroke="#5e2929" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
@@ -226,7 +225,7 @@
 <tspan x="147.0" dy="0.0">The Vision Council gathers around the fire and sets the war-banner in Ghorrak</tspan>
 <tspan x="147.0" dy="12.0">Dakmar’nak’s hands. They name him War Voice.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="40.0" width="400.5" height="73.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="40.0" width="400.5" height="73.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="69.0">
 <tspan x="670.0" dy="0.0">The Buffer Mire Line</tspan>
 </text>
@@ -234,7 +233,7 @@
 <tspan x="670.0" dy="0.0">The Horde establishes a wide buffer zone of traps, false camps, and ambush</tspan>
 <tspan x="670.0" dy="12.0">routes to bleed Calderon patrols before they reach the main camps.</tspan>
 </text>
-<rect class="label changed" x="143.2" y="127.0" width="402.8" height="73.0" rx="8" ry="8"/>
+<rect class="label" x="143.2" y="127.0" width="402.8" height="73.0" rx="8" ry="8"/>
 <text class="title" x="159.2" y="156.0">
 <tspan x="159.2" dy="0.0">Thrukdun&#x27;s Northern Fires Go Out</tspan>
 </text>
@@ -242,7 +241,7 @@
 <tspan x="159.2" dy="0.0">The Thrukdun—the last tribe holding the northern-facing lands—are driven</tspan>
 <tspan x="159.2" dy="12.0">from their territory by sustained raids. Survivors withdraw west.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="127.0" width="405.7" height="85.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="127.0" width="405.7" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="156.0">
 <tspan x="670.0" dy="0.0">Zharzug Join the Morvorg</tspan>
 </text>
@@ -251,7 +250,7 @@
 <tspan x="670.0" dy="12.0">settle alongside the Morvorg, remaining distinct tribes while sharing a joint</tspan>
 <tspan x="670.0" dy="12.0">circle of shamans.</tspan>
 </text>
-<rect class="label changed" x="126.0" y="214.0" width="420.0" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="126.0" y="214.0" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="142.0" y="243.0">
 <tspan x="142.0" dy="0.0">Hearts Taken on the Nails</tspan>
 </text>
@@ -261,7 +260,7 @@
 <tspan x="142.0" dy="12.0">heart removed. The bodies are left where they were laid. The story runs ahead of</tspan>
 <tspan x="142.0" dy="12.0">the carts and crosses every border, told in whispers that never match.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="226.0" width="398.1" height="85.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="226.0" width="398.1" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="255.0">
 <tspan x="670.0" dy="0.0">Morvorg Westward March</tspan>
 </text>
@@ -270,7 +269,7 @@
 <tspan x="670.0" dy="12.0">abandons its northern lands and migrates south, folding its camps into the</tspan>
 <tspan x="670.0" dy="12.0">Horde&#x27;s nearer marches.</tspan>
 </text>
-<rect class="label changed" x="143.1" y="325.0" width="402.9" height="73.0" rx="8" ry="8"/>
+<rect class="label" x="143.1" y="325.0" width="402.9" height="73.0" rx="8" ry="8"/>
 <text class="title" x="159.1" y="354.0">
 <tspan x="159.1" dy="0.0">The Shamans foretell Heart Marked</tspan>
 </text>
@@ -280,7 +279,7 @@
 <tspan>, runes over the foes heart.</tspan>
 <tspan x="159.1" dy="12.0">Calderon mines for there own elite soldiers.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="325.0" width="407.0" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="325.0" width="407.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="354.0">
 <tspan x="670.0" dy="0.0">The Harvest Carts</tspan>
 </text>
@@ -290,7 +289,7 @@
 <tspan x="670.0" dy="12.0">hands—dragging their own dead back behind the walls. They no longer leave</tspan>
 <tspan x="670.0" dy="12.0">bodies for the marsh. They gather them like seed.</tspan>
 </text>
-<rect class="label changed" x="126.0" y="412.0" width="420.0" height="121.0" rx="8" ry="8"/>
+<rect class="label" x="126.0" y="412.0" width="420.0" height="121.0" rx="8" ry="8"/>
 <text class="title" x="142.0" y="441.0">
 <tspan x="142.0" dy="0.0">Warlord Garnak Zhulvorg Death</tspan>
 </text>
@@ -302,7 +301,7 @@
 <tspan x="142.0" dy="12.0">threw as he fell: straight as a vow, wet with blood, aimed at the officer&#x27;s throat</tspan>
 <tspan x="142.0" dy="12.0">like a promise.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="436.0" width="414.8" height="85.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="436.0" width="414.8" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="465.0">
 <tspan x="670.0" dy="0.0">The Northern Wall Chokes Trade</tspan>
 </text>
@@ -311,7 +310,7 @@
 <tspan x="670.0" dy="12.0">northern trade routes into the Horde. They call it &quot;customs.&quot; Except they no orc</tspan>
 <tspan x="670.0" dy="12.0">is allowed passage; it just an ouright blockade.</tspan>
 </text>
-<rect class="label changed" x="133.1" y="547.0" width="412.9" height="109.0" rx="8" ry="8"/>
+<rect class="label" x="133.1" y="547.0" width="412.9" height="109.0" rx="8" ry="8"/>
 <text class="title" x="149.1" y="576.0">
 <tspan x="149.1" dy="0.0">Warlord Orzok Gronmog Death</tspan>
 </text>
@@ -322,7 +321,7 @@
 <tspan x="149.1" dy="12.0">When the gate collapsed, it buried her; the bog kept her as a guardian, and the</tspan>
 <tspan x="149.1" dy="12.0">Heart-Marked still avoid that crossing.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="535.0" width="419.3" height="121.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="535.0" width="419.3" height="121.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="564.0">
 <tspan x="670.0" dy="0.0">Warlord Mogrok Morvorg Death</tspan>
 </text>
@@ -334,7 +333,7 @@
 <tspan x="670.0" dy="12.0">there—hands ruined, chest opened—so the shaman could crawl back to the fire</tspan>
 <tspan x="670.0" dy="12.0">and speak the names of the dead.</tspan>
 </text>
-<rect class="label changed" x="127.9" y="670.0" width="418.1" height="109.0" rx="8" ry="8"/>
+<rect class="label" x="127.9" y="670.0" width="418.1" height="109.0" rx="8" ry="8"/>
 <text class="title" x="143.9" y="699.0">
 <tspan x="143.9" dy="0.0">Warlord Durzgar Rakthokgar Death</tspan>
 </text>
@@ -345,7 +344,7 @@
 <tspan x="143.9" dy="12.0">innocents behind him become numbers in a clerk&#x27;s book. When he fell, the</tspan>
 <tspan x="143.9" dy="12.0">warband swore the Spirits leaned in close to hear his last breath.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="670.0" width="418.7" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="670.0" width="418.7" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="699.0">
 <tspan x="670.0" dy="0.0">Warlord Orzak Ghorzug Death</tspan>
 </text>
@@ -355,7 +354,7 @@
 <tspan x="670.0" dy="12.0">they were ready. The Heart-Marked answered with disciplined crossbow volleys</tspan>
 <tspan x="670.0" dy="12.0">and turned the ambush into a rout.</tspan>
 </text>
-<rect class="label changed" x="127.1" y="793.0" width="418.9" height="121.0" rx="8" ry="8"/>
+<rect class="label" x="127.1" y="793.0" width="418.9" height="121.0" rx="8" ry="8"/>
 <text class="title" x="143.1" y="822.0">
 <tspan x="143.1" dy="0.0">Warlord Graknak Zhulrog Death</tspan>
 </text>
@@ -367,7 +366,7 @@
 <tspan x="143.1" dy="12.0">before it: tusks bared, feet sure on ice, roaring the Ancestors&#x27; names so loudly</tspan>
 <tspan x="143.1" dy="12.0">the frame shook. The ballista never stopped shooting.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="781.0" width="417.8" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="781.0" width="417.8" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="810.0">
 <tspan x="670.0" dy="0.0">Warlord Zokgar Zharzug Death</tspan>
 </text>
@@ -377,7 +376,7 @@
 <tspan x="670.0" dy="12.0">went under with them and pulled three down; the crossing failed and the water</tspan>
 <tspan x="670.0" dy="12.0">ran red.</tspan>
 </text>
-<rect class="label changed" x="129.4" y="928.0" width="416.6" height="109.0" rx="8" ry="8"/>
+<rect class="label" x="129.4" y="928.0" width="416.6" height="109.0" rx="8" ry="8"/>
 <text class="title" x="145.4" y="957.0">
 <tspan x="145.4" dy="0.0">Warlord Uzruk Thrukdun Death</tspan>
 </text>
@@ -388,7 +387,7 @@
 <tspan x="145.4" dy="12.0">lay dying the yard captain mocked her failure, only to have his heart cleft by the</tspan>
 <tspan x="145.4" dy="12.0">warlord&#x27;s knife. Even in death the Rakthok fight to win.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="892.0" width="411.8" height="109.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="892.0" width="411.8" height="109.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="921.0">
 <tspan x="670.0" dy="0.0">Warlord Kragzor Dakmar&#x27;nak Death</tspan>
 </text>
@@ -399,7 +398,7 @@
 <tspan x="670.0" dy="12.0">were lost to the swamp. The Heart-Marked never found his body; the</tspan>
 <tspan x="670.0" dy="12.0">Dakmar&#x27;nak say he joined the marsh and became its anger.</tspan>
 </text>
-<rect class="label changed" x="128.8" y="1051.0" width="417.2" height="109.0" rx="8" ry="8"/>
+<rect class="label" x="128.8" y="1051.0" width="417.2" height="109.0" rx="8" ry="8"/>
 <text class="title" x="144.8" y="1080.0">
 <tspan x="144.8" dy="0.0">Warlord Aznath Skorvorg Death</tspan>
 </text>
@@ -410,7 +409,7 @@
 <tspan x="144.8" dy="12.0">prisoners. She died under spearpoints, but the captives escaped. The tale is a</tspan>
 <tspan x="144.8" dy="12.0">prayer: when the Heart-Marked bring paper, we bring teeth.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="1015.0" width="410.8" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="1015.0" width="410.8" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1044.0">
 <tspan x="670.0" dy="0.0">Warlord Ug&#x27;rok Gronmog Death</tspan>
 </text>
@@ -420,7 +419,7 @@
 <tspan x="670.0" dy="12.0">ripped the banner free, wrapping it around his fist so it couldn&#x27;t be reclaimed.</tspan>
 <tspan x="670.0" dy="12.0">They killed him for it; both he and the banner sunk into the swamp.</tspan>
 </text>
-<rect class="label changed" x="138.6" y="1174.0" width="407.4" height="109.0" rx="8" ry="8"/>
+<rect class="label" x="138.6" y="1174.0" width="407.4" height="109.0" rx="8" ry="8"/>
 <text class="title" x="154.6" y="1203.0">
 <tspan x="154.6" dy="0.0">Warlord Ghorzul Morvorg Death</tspan>
 </text>
@@ -431,7 +430,7 @@
 <tspan x="154.6" dy="12.0">smoke and reeds. He died blackened and standing—a silhouette against the</tspan>
 <tspan x="154.6" dy="12.0">blaze—so the Horde could breathe and regroup.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="1126.0" width="418.9" height="85.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="1126.0" width="418.9" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1155.0">
 <tspan x="670.0" dy="0.0">The Name &quot;Ironstead&quot;</tspan>
 </text>
@@ -440,7 +439,7 @@
 <tspan x="670.0" dy="12.0">future seat, even as the walls remain hungry and incomplete. To the Imperium,</tspan>
 <tspan x="670.0" dy="12.0">a thing is true once it is written; the land is forced to agree later.</tspan>
 </text>
-<rect class="label changed" x="127.3" y="1297.0" width="418.7" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="127.3" y="1297.0" width="418.7" height="97.0" rx="8" ry="8"/>
 <text class="title" x="143.3" y="1326.0">
 <tspan x="143.3" dy="0.0">Warlord Thrakrok Rakthokgar Death</tspan>
 </text>
@@ -450,7 +449,7 @@
 <tspan x="143.3" dy="12.0">into the hooks, killed two, and tore a third&#x27;s jaw loose before pikeheads found</tspan>
 <tspan x="143.3" dy="12.0">him.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="1225.0" width="414.9" height="109.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="1225.0" width="414.9" height="109.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1254.0">
 <tspan x="670.0" dy="0.0">Zarkul Dakgar the Forever Cursed</tspan>
 </text>
@@ -461,7 +460,7 @@
 <tspan x="670.0" dy="12.0">Horde his name is kept only as a curse: proof that gold is softer than mud, and</tspan>
 <tspan x="670.0" dy="12.0">twice as deadly.</tspan>
 </text>
-<rect class="label changed" x="147.5" y="1408.0" width="398.5" height="109.0" rx="8" ry="8"/>
+<rect class="label" x="147.5" y="1408.0" width="398.5" height="109.0" rx="8" ry="8"/>
 <text class="title" x="163.5" y="1437.0">
 <tspan x="163.5" dy="0.0">Warlord Uruknar Dakmar&#x27;nak Death</tspan>
 </text>
@@ -472,7 +471,7 @@
 <tspan x="163.5" dy="12.0">crossbow bolts cracked from the haze. Gruknar died on her knees, and the</tspan>
 <tspan x="163.5" dy="12.0">barrows fell into ruin.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="1348.0" width="420.0" height="85.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="1348.0" width="420.0" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1377.0">
 <tspan x="670.0" dy="0.0">Ironstead Rises on Dakgar Bones</tspan>
 </text>
@@ -481,7 +480,7 @@
 <tspan x="670.0" dy="12.0">of the dakgar tribe of the garrok-confederation. They pour foundations through</tspan>
 <tspan x="670.0" dy="12.0">ancestral barrow grounds and call it progress.</tspan>
 </text>
-<rect class="label changed" x="133.5" y="1531.0" width="412.5" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="133.5" y="1531.0" width="412.5" height="97.0" rx="8" ry="8"/>
 <text class="title" x="149.5" y="1560.0">
 <tspan x="149.5" dy="0.0">Warlord Zor&#x27;gar Zhulvorg Death</tspan>
 </text>
@@ -491,7 +490,7 @@
 <tspan x="149.5" dy="12.0">guards into the waters allowing the captives to escape. He drowned smiling,</tspan>
 <tspan x="149.5" dy="12.0">fingers locked on the captain&#x27;s gorget.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="1447.0" width="411.9" height="85.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="1447.0" width="411.9" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1476.0">
 <tspan x="670.0" dy="0.0">Tribute in Teeth</tspan>
 </text>
@@ -500,7 +499,7 @@
 <tspan x="670.0" dy="12.0">crime of surviving on stolen ground. When the Garrok refuse, the Imperium</tspan>
 <tspan x="670.0" dy="12.0">answers with public hangings and private pits—less a war than a harvest.</tspan>
 </text>
-<rect class="label changed" x="139.9" y="1642.0" width="406.1" height="85.0" rx="8" ry="8"/>
+<rect class="label" x="139.9" y="1642.0" width="406.1" height="85.0" rx="8" ry="8"/>
 <text class="title" x="155.9" y="1671.0">
 <tspan x="155.9" dy="0.0">The Quiet Cull of Dakgar</tspan>
 </text>
@@ -509,7 +508,7 @@
 <tspan x="155.9" dy="12.0">emptied for labor and &quot;relocation.&quot; Those who flee speak of soldiers with eyes</tspan>
 <tspan x="155.9" dy="12.0">like polished iron—no rage, no mercy, only procedure.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="1546.0" width="406.1" height="85.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="1546.0" width="406.1" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1575.0">
 <tspan x="670.0" dy="0.0">The Road of Nails Through the Marsh</tspan>
 </text>
@@ -518,7 +517,7 @@
 <tspan x="670.0" dy="12.0">burned, spirit-shrines trampled flat. Every plank is a promise: they intend to</tspan>
 <tspan x="670.0" dy="12.0">stay, and they intend to make the land obey.</tspan>
 </text>
-<rect class="label changed" x="126.0" y="1741.0" width="420.0" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="126.0" y="1741.0" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="142.0" y="1770.0">
 <tspan x="142.0" dy="0.0">Warlord Kragath Dakgar Death</tspan>
 </text>
@@ -528,7 +527,7 @@
 <tspan x="142.0" dy="12.0">a falling block broke his ribs. Stone broke before flesh, but it was not a lesson</tspan>
 <tspan x="142.0" dy="12.0">writ large: the fortress held.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="1645.0" width="418.0" height="85.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="1645.0" width="418.0" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1674.0">
 <tspan x="670.0" dy="0.0">Blood on Unfinished Stone</tspan>
 </text>
@@ -537,7 +536,7 @@
 <tspan x="670.0" dy="12.0">bodies against half-raised walls and wet mortar. Thousands die beneath arrows</tspan>
 <tspan x="670.0" dy="12.0">and falling stone; the Imperium counts the dead as if tallying grain.</tspan>
 </text>
-<rect class="label changed" x="147.3" y="1852.0" width="398.7" height="85.0" rx="8" ry="8"/>
+<rect class="label" x="147.3" y="1852.0" width="398.7" height="85.0" rx="8" ry="8"/>
 <text class="title" x="163.3" y="1881.0">
 <tspan x="163.3" dy="0.0">The Iron Ledger Takes Our Kin&#x27;s Fields</tspan>
 </text>
@@ -546,7 +545,7 @@
 <tspan x="163.3" dy="12.0">drives the orcs deeper into the swamp-lows. They do it with paperwork and</tspan>
 <tspan x="163.3" dy="12.0">spearpoints alike—order written in blood, stamped and filed.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="1744.0" width="395.6" height="73.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="1744.0" width="395.6" height="73.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1773.0">
 <tspan x="670.0" dy="0.0">The Soulless Measure the Frontier</tspan>
 </text>
