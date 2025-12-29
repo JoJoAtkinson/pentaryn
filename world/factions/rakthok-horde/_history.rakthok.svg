@@ -63,6 +63,7 @@
 <path fill="#fbf7ef" d="m255.594 19.406-15.78 59.125c5.184-.58 10.44-.874 15.78-.874 5.338 0 10.595.293 15.78.875l-15.78-59.124zm0 76.97c-57.894 0-106.156 40.154-118.656 94.186H374.25c-12.5-54.032-60.762-94.187-118.656-94.187zM19.406 209.25v33.53h472.406v-33.53H19.406zM71.5 261.47v159.124h50.406V261.47H71.5zm105.97 0v159.124h50.405V261.47H177.47zm105.936 0v159.124h50.406V261.47h-50.406zm105.938 0v159.124h50.406V261.47h-50.406zm-161.78 177.655-31.658 56.656h120.5l-32.062-56.655h-56.78zm-208.158.156v33.533h167.938l18.72-33.532H19.405zm286.531 0 18.97 33.533h166.906V439.28H305.938z"/>
   </g>
 </symbol>
+<symbol id="tag_changed" viewBox="0 0 512 512"><use href="#tag_unknown" x="0" y="0" width="512" height="512" /></symbol>
 <symbol id="tag_conflict" viewBox="0 0 512 512">
   <circle cx="256" cy="256" r="247.04" fill="#6b2f3a" stroke="#5e2933" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
@@ -145,79 +146,79 @@
 </defs>
 <g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="1937"/></g>
 <g id="connectors">
-<line class="connector" x1="600" y1="83.2" x2="552.0" y2="76.5"/>
-<line class="connector" x1="600" y1="97.6" x2="648.0" y2="76.5"/>
-<line class="connector" x1="600" y1="119.2" x2="552.0" y2="163.5"/>
-<line class="connector" x1="600" y1="205.6" x2="648.0" y2="169.5"/>
-<line class="connector" x1="600" y1="241.6" x2="552.0" y2="262.5"/>
-<line class="connector" x1="600" y1="241.6" x2="648.0" y2="268.5"/>
-<line class="connector" x1="600" y1="270.4" x2="552.0" y2="361.5"/>
-<line class="connector" x1="600" y1="306.4" x2="648.0" y2="373.5"/>
-<line class="connector" x1="600" y1="313.6" x2="552.0" y2="472.5"/>
-<line class="connector" x1="600" y1="313.6" x2="648.0" y2="478.5"/>
-<line class="connector" x1="600" y1="407.2" x2="552.0" y2="601.5"/>
-<line class="connector" x1="600" y1="486.4" x2="648.0" y2="595.5"/>
-<line class="connector" x1="600" y1="493.6" x2="552.0" y2="724.5"/>
-<line class="connector" x1="600" y1="515.2" x2="648.0" y2="718.5"/>
-<line class="connector" x1="600" y1="580.0" x2="552.0" y2="853.5"/>
-<line class="connector" x1="600" y1="587.2" x2="648.0" y2="829.5"/>
-<line class="connector" x1="600" y1="630.4" x2="552.0" y2="982.5"/>
-<line class="connector" x1="600" y1="695.2" x2="648.0" y2="946.5"/>
-<line class="connector" x1="600" y1="702.4" x2="552.0" y2="1105.5"/>
-<line class="connector" x1="600" y1="709.6" x2="648.0" y2="1063.5"/>
-<line class="connector" x1="600" y1="752.8" x2="552.0" y2="1228.5"/>
-<line class="connector" x1="600" y1="803.2" x2="648.0" y2="1168.5"/>
-<line class="connector" x1="600" y1="810.4" x2="552.0" y2="1345.5"/>
-<line class="connector" x1="600" y1="817.6" x2="648.0" y2="1279.5"/>
-<line class="connector" x1="600" y1="817.6" x2="552.0" y2="1462.5"/>
-<line class="connector" x1="600" y1="817.6" x2="648.0" y2="1390.5"/>
-<line class="connector" x1="600" y1="824.8" x2="552.0" y2="1579.5"/>
-<line class="connector" x1="600" y1="824.8" x2="648.0" y2="1489.5"/>
-<line class="connector" x1="600" y1="832.0" x2="552.0" y2="1684.5"/>
-<line class="connector" x1="600" y1="839.2" x2="648.0" y2="1588.5"/>
-<line class="connector" x1="600" y1="846.4" x2="552.0" y2="1789.5"/>
-<line class="connector" x1="600" y1="846.4" x2="648.0" y2="1687.5"/>
-<line class="connector" x1="600" y1="853.6" x2="552.0" y2="1894.5"/>
-<line class="connector" x1="600" y1="875.2" x2="648.0" y2="1780.5"/>
+<line class="connector" x1="600" y1="40.0" x2="552.0" y2="76.5"/>
+<line class="connector" x1="600" y1="162.4" x2="648.0" y2="76.5"/>
+<line class="connector" x1="600" y1="184.0" x2="552.0" y2="163.5"/>
+<line class="connector" x1="600" y1="270.4" x2="648.0" y2="169.5"/>
+<line class="connector" x1="600" y1="306.4" x2="552.0" y2="262.5"/>
+<line class="connector" x1="600" y1="306.4" x2="648.0" y2="268.5"/>
+<line class="connector" x1="600" y1="335.2" x2="552.0" y2="361.5"/>
+<line class="connector" x1="600" y1="371.2" x2="648.0" y2="373.5"/>
+<line class="connector" x1="600" y1="378.4" x2="552.0" y2="472.5"/>
+<line class="connector" x1="600" y1="378.4" x2="648.0" y2="478.5"/>
+<line class="connector" x1="600" y1="472.0" x2="552.0" y2="601.5"/>
+<line class="connector" x1="600" y1="551.2" x2="648.0" y2="595.5"/>
+<line class="connector" x1="600" y1="558.4" x2="552.0" y2="724.5"/>
+<line class="connector" x1="600" y1="580.0" x2="648.0" y2="718.5"/>
+<line class="connector" x1="600" y1="644.8" x2="552.0" y2="853.5"/>
+<line class="connector" x1="600" y1="652.0" x2="648.0" y2="829.5"/>
+<line class="connector" x1="600" y1="695.2" x2="552.0" y2="982.5"/>
+<line class="connector" x1="600" y1="760.0" x2="648.0" y2="946.5"/>
+<line class="connector" x1="600" y1="767.2" x2="552.0" y2="1105.5"/>
+<line class="connector" x1="600" y1="774.4" x2="648.0" y2="1063.5"/>
+<line class="connector" x1="600" y1="817.6" x2="552.0" y2="1228.5"/>
+<line class="connector" x1="600" y1="868.0" x2="648.0" y2="1168.5"/>
+<line class="connector" x1="600" y1="875.2" x2="552.0" y2="1345.5"/>
+<line class="connector" x1="600" y1="882.4" x2="648.0" y2="1279.5"/>
+<line class="connector" x1="600" y1="882.4" x2="552.0" y2="1462.5"/>
+<line class="connector" x1="600" y1="882.4" x2="648.0" y2="1390.5"/>
+<line class="connector" x1="600" y1="889.6" x2="552.0" y2="1579.5"/>
+<line class="connector" x1="600" y1="889.6" x2="648.0" y2="1489.5"/>
+<line class="connector" x1="600" y1="896.8" x2="552.0" y2="1684.5"/>
+<line class="connector" x1="600" y1="904.0" x2="648.0" y2="1588.5"/>
+<line class="connector" x1="600" y1="911.2" x2="552.0" y2="1789.5"/>
+<line class="connector" x1="600" y1="911.2" x2="648.0" y2="1687.5"/>
+<line class="connector" x1="600" y1="918.4" x2="552.0" y2="1894.5"/>
+<line class="connector" x1="600" y1="940.0" x2="648.0" y2="1780.5"/>
 </g>
 <g id="tokens">
-<use class="token" href="#token_default" x="589.0" y="72.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="86.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="108.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="194.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="230.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="230.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="29.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="151.4" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="173.0" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="259.4" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="295.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="302.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="302.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="396.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="475.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="482.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="504.2" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="295.4" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="324.2" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="360.2" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="367.4" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="367.4" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="461.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="540.2" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="547.4" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="569.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="576.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="619.4" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="633.8" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="641.0" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="684.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="691.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="698.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="741.8" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="792.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="799.4" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="749.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="756.2" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="763.4" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="806.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="806.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="806.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="813.8" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="813.8" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="821.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="828.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="835.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="835.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="842.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="857.0" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="864.2" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="871.4" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="871.4" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="871.4" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="878.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="878.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="885.8" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="893.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="900.2" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="900.2" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="907.4" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="929.0" width="22" height="22"/>
 </g>
 <g id="labels">
-<rect class="label" x="131.0" y="40.0" width="415.0" height="73.0" rx="8" ry="8"/>
+<rect class="label changed" x="131.0" y="40.0" width="415.0" height="73.0" rx="8" ry="8"/>
 <text class="title" x="147.0" y="69.0">
 <tspan x="147.0" dy="0.0">Ghorrak Dakmar’nak is Named Warlord</tspan>
 </text>
@@ -449,27 +450,27 @@
 <tspan x="143.3" dy="12.0">into the hooks, killed two, and tore a third&#x27;s jaw loose before pikeheads found</tspan>
 <tspan x="143.3" dy="12.0">him.</tspan>
 </text>
-<rect class="label" x="654.0" y="1225.0" width="414.9" height="109.0" rx="8" ry="8"/>
+<rect class="label changed" x="654.0" y="1225.0" width="418.0" height="109.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1254.0">
 <tspan x="670.0" dy="0.0">Zarkul Dakgar the Forever Cursed</tspan>
 </text>
 <text class="summary" x="670.0" y="1272.0">
-<tspan x="670.0" dy="0.0">With Dakgar already bleeding out, Zarkul took what little remained and sold it</tspan>
-<tspan x="670.0" dy="12.0">for coin to the garhammar-trade-league. The Imperium used him like a tool</tspan>
-<tspan x="670.0" dy="12.0">and, when the work was done, &quot;paid&quot; him with a knife in the dark. Among the</tspan>
-<tspan x="670.0" dy="12.0">Horde his name is kept only as a curse: proof that gold is softer than mud, and</tspan>
-<tspan x="670.0" dy="12.0">twice as deadly.</tspan>
+<tspan x="670.0" dy="0.0">Zarkul Dakgar barters his people&#x27;s land for coin from the Garhammar</tspan>
+<tspan x="670.0" dy="12.0">Trade-League. A dispute arises with the Imperium and the now-displaced orcs,</tspan>
+<tspan x="670.0" dy="12.0">and in the subsequent conflict Zarkul is found dead, knifed in the back. Among</tspan>
+<tspan x="670.0" dy="12.0">the Horde his name is kept only as a curse: proof that gold is softer than mud,</tspan>
+<tspan x="670.0" dy="12.0">and twice as deadly.</tspan>
 </text>
-<rect class="label" x="147.5" y="1408.0" width="398.5" height="109.0" rx="8" ry="8"/>
-<text class="title" x="163.5" y="1437.0">
-<tspan x="163.5" dy="0.0">Warlord Uruknar Dakmar&#x27;nak Death</tspan>
+<rect class="label changed" x="132.2" y="1408.0" width="413.8" height="109.0" rx="8" ry="8"/>
+<text class="title" x="148.2" y="1437.0">
+<tspan x="148.2" dy="0.0">Warlord Uruknar Rakthokgar Death</tspan>
 </text>
-<text class="summary" x="163.5" y="1455.0">
-<tspan x="163.5" dy="0.0">When Ironstead&#x27;s foundations cracked into the ancestral barrows, Uruknar</tspan>
-<tspan x="163.5" dy="12.0">Dakmar&#x27;nak gathered the mourners and marched into the trench fires.</tspan>
-<tspan x="163.5" dy="12.0">Imperium sappers threw smoke and white lime to blind the charge, and</tspan>
-<tspan x="163.5" dy="12.0">crossbow bolts cracked from the haze. Gruknar died on her knees, and the</tspan>
-<tspan x="163.5" dy="12.0">barrows fell into ruin.</tspan>
+<text class="summary" x="148.2" y="1455.0">
+<tspan x="148.2" dy="0.0">When Ironstead set its foundations deep into the old mounds at the north of</tspan>
+<tspan x="148.2" dy="12.0">the swamplands, Uruknar Rakthokgar gathered her raiders and stole into the</tspan>
+<tspan x="148.2" dy="12.0">rising fortress. Imperium sappers threw smoke and white lime to blind the</tspan>
+<tspan x="148.2" dy="12.0">charge, and crossbow bolts cracked from the haze. Gruknar died on her knees,</tspan>
+<tspan x="148.2" dy="12.0">and Ironstead rose up tall.</tspan>
 </text>
 <rect class="label" x="654.0" y="1348.0" width="420.0" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1377.0">
@@ -821,21 +822,24 @@
 <g class="public-indicator" transform="translate(660.0 1229.0)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1023.1 1229.0)">
+<g transform="translate(1026.2 1229.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(985.4 1229.0)">
+<g transform="translate(988.5 1229.0)">
 <title>faction: garhammar-trade-league</title>
 <use href="#pov_garhammar-trade-league" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(956.4 1233.4)">
+<g transform="translate(959.5 1233.4)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(918.6 1229.0)">
+<g transform="translate(921.7 1229.0)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
+</g>
+<g class="public-indicator" transform="translate(138.2 1412.0)">
+<use href="#tag_public" width="12.5" height="12.5"/>
 </g>
 <g transform="translate(500.2 1412.0)">
 <title>faction: rakthok-horde</title>
@@ -955,96 +959,103 @@
 </g>
 </g>
 <g id="ticks">
-<line class="tick" x1="590.0" y1="889.6" x2="610.0" y2="889.6"/>
-<text class="tick-label tick-label-outline" x="616.0" y="894.6">
+<line class="tick" x1="590.0" y1="954.4" x2="610.0" y2="954.4"/>
+<text class="tick-label tick-label-outline" x="616.0" y="959.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">260</tspan>
 </text>
-<text class="tick-label" x="616.0" y="894.6">
+<text class="tick-label" x="616.0" y="959.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">260</tspan>
 </text>
-<line class="tick" x1="590.0" y1="817.6" x2="610.0" y2="817.6"/>
-<text class="tick-label tick-label-outline" x="616.0" y="822.6">
+<line class="tick" x1="590.0" y1="882.4" x2="610.0" y2="882.4"/>
+<text class="tick-label tick-label-outline" x="616.0" y="887.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
 </text>
-<text class="tick-label" x="616.0" y="822.6">
+<text class="tick-label" x="616.0" y="887.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
 </text>
-<line class="tick" x1="590.0" y1="745.6" x2="610.0" y2="745.6"/>
-<text class="tick-label tick-label-outline" x="616.0" y="750.6">
+<line class="tick" x1="590.0" y1="810.4" x2="610.0" y2="810.4"/>
+<text class="tick-label tick-label-outline" x="616.0" y="815.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">280</tspan>
 </text>
-<text class="tick-label" x="616.0" y="750.6">
+<text class="tick-label" x="616.0" y="815.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">280</tspan>
 </text>
-<line class="tick" x1="590.0" y1="673.6" x2="610.0" y2="673.6"/>
-<text class="tick-label tick-label-outline" x="616.0" y="678.6">
+<line class="tick" x1="590.0" y1="738.4" x2="610.0" y2="738.4"/>
+<text class="tick-label tick-label-outline" x="616.0" y="743.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">290</tspan>
 </text>
-<text class="tick-label" x="616.0" y="678.6">
+<text class="tick-label" x="616.0" y="743.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">290</tspan>
 </text>
-<line class="tick" x1="590.0" y1="601.6" x2="610.0" y2="601.6"/>
-<text class="tick-label tick-label-outline" x="616.0" y="606.6">
+<line class="tick" x1="590.0" y1="666.4" x2="610.0" y2="666.4"/>
+<text class="tick-label tick-label-outline" x="616.0" y="671.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">300</tspan>
 </text>
-<text class="tick-label" x="616.0" y="606.6">
+<text class="tick-label" x="616.0" y="671.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">300</tspan>
 </text>
-<line class="tick" x1="590.0" y1="529.6" x2="610.0" y2="529.6"/>
-<text class="tick-label tick-label-outline" x="616.0" y="534.6">
+<line class="tick" x1="590.0" y1="594.4" x2="610.0" y2="594.4"/>
+<text class="tick-label tick-label-outline" x="616.0" y="599.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">310</tspan>
 </text>
-<text class="tick-label" x="616.0" y="534.6">
+<text class="tick-label" x="616.0" y="599.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">310</tspan>
 </text>
-<line class="tick" x1="590.0" y1="457.6" x2="610.0" y2="457.6"/>
-<text class="tick-label tick-label-outline" x="616.0" y="462.6">
+<line class="tick" x1="590.0" y1="522.4" x2="610.0" y2="522.4"/>
+<text class="tick-label tick-label-outline" x="616.0" y="527.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">320</tspan>
 </text>
-<text class="tick-label" x="616.0" y="462.6">
+<text class="tick-label" x="616.0" y="527.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">320</tspan>
 </text>
-<line class="tick" x1="590.0" y1="407.2" x2="610.0" y2="407.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="412.2">
+<line class="tick" x1="590.0" y1="472.0" x2="610.0" y2="472.0"/>
+<text class="tick-label tick-label-outline" x="616.0" y="477.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">0</tspan>
 </text>
-<text class="tick-label" x="616.0" y="412.2">
+<text class="tick-label" x="616.0" y="477.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">0</tspan>
 </text>
-<line class="tick" x1="590.0" y1="335.2" x2="610.0" y2="335.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="340.2">
+<line class="tick" x1="590.0" y1="400.0" x2="610.0" y2="400.0"/>
+<text class="tick-label tick-label-outline" x="616.0" y="405.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">10</tspan>
 </text>
-<text class="tick-label" x="616.0" y="340.2">
+<text class="tick-label" x="616.0" y="405.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">10</tspan>
 </text>
-<line class="tick" x1="590.0" y1="263.2" x2="610.0" y2="263.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="268.2">
+<line class="tick" x1="590.0" y1="328.0" x2="610.0" y2="328.0"/>
+<text class="tick-label tick-label-outline" x="616.0" y="333.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">20</tspan>
 </text>
-<text class="tick-label" x="616.0" y="268.2">
+<text class="tick-label" x="616.0" y="333.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">20</tspan>
 </text>
-<line class="tick" x1="590.0" y1="191.2" x2="610.0" y2="191.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="196.2">
+<line class="tick" x1="590.0" y1="256.0" x2="610.0" y2="256.0"/>
+<text class="tick-label tick-label-outline" x="616.0" y="261.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">30</tspan>
 </text>
-<text class="tick-label" x="616.0" y="196.2">
+<text class="tick-label" x="616.0" y="261.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">30</tspan>
 </text>
-<line class="tick" x1="590.0" y1="119.2" x2="610.0" y2="119.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="124.2">
+<line class="tick" x1="590.0" y1="184.0" x2="610.0" y2="184.0"/>
+<text class="tick-label tick-label-outline" x="616.0" y="189.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">40</tspan>
 </text>
-<text class="tick-label" x="616.0" y="124.2">
+<text class="tick-label" x="616.0" y="189.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">40</tspan>
 </text>
-<line class="tick" x1="590.0" y1="47.2" x2="610.0" y2="47.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="52.2">
+<line class="tick" x1="590.0" y1="112.0" x2="610.0" y2="112.0"/>
+<text class="tick-label tick-label-outline" x="616.0" y="117.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<text class="tick-label" x="616.0" y="52.2">
+<text class="tick-label" x="616.0" y="117.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
+</text>
+<line class="tick" x1="590.0" y1="40.0" x2="610.0" y2="40.0"/>
+<text class="tick-label tick-label-outline" x="616.0" y="45.0">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">60</tspan>
+</text>
+<text class="tick-label" x="616.0" y="45.0">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">60</tspan>
 </text>
 </g>
 </svg>
