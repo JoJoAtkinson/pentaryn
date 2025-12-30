@@ -98,7 +98,6 @@
 <path fill="#fbf7ef" d="M129.75 24.47 21.625 211.655l55.78 32.188L185.532 56.656 129.75 24.47zm55.97 69.25-75.626 130.874L326.47 349.47l75.592-130.876L185.72 93.72zm83.468.686-11.22 19.438 84.97 49.03 11.25-19.468-85-49zM434.25 200.22 326.156 387.405l55.78 32.188 108.095-187.188-55.78-32.187zm-270.53 76.905-11.282 19.53 84.968 49 11.25-19.5-84.937-49.03zm-3.095 45.844L61.312 494.81h67.157l82.28-142.968-50.125-28.875z"/>
   </g>
 </symbol>
-<symbol id="tag_changed-id" viewBox="0 0 512 512"><use href="#tag_unknown" x="0" y="0" width="512" height="512" /></symbol>
 <symbol id="tag_conflict" viewBox="0 0 512 512">
   <circle cx="256" cy="256" r="247.04" fill="#6b2f3a" stroke="#5e2933" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
@@ -129,7 +128,6 @@
 <path fill="#fbf7ef" d="M92.656 19.188v41.5h331.72v-41.5H92.655zM119.5 79.374V433.53h22.28V79.376H119.5zm46.594 0c3.212 43.324 13.312 82.022 27.78 110.906 17.685 35.304 40.845 54.75 64.064 54.75 23.218 0 46.346-19.446 64.03-54.75 14.47-28.883 24.57-67.58 27.782-110.905H166.094zm209.156 0V433.53h22.28V79.376h-22.28zm-117.313 185.22c-23.218 0-46.378 19.415-64.062 54.717-14.835 29.614-25.098 69.562-28.03 114.22H350c-2.933-44.658-13.197-84.606-28.03-114.22-17.686-35.302-40.814-54.718-64.033-54.718zM92.657 452.218v41.467h331.718V452.22H92.655z"/>
   </g>
 </symbol>
-<symbol id="tag_changed" viewBox="0 0 512 512"><use href="#tag_unknown" x="0" y="0" width="512" height="512" /></symbol>
 <symbol id="tag_battle" viewBox="0 0 512 512">
   <circle cx="256" cy="256" r="247.04" fill="#7a2f2f" stroke="#6b2929" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
@@ -304,7 +302,7 @@
 <tspan x="670.0" dy="12.0">transition. No details are provided about the old or new leadership. Clients</tspan>
 <tspan x="670.0" dy="12.0">notice no change in service quality, which somehow makes it more unsettling.</tspan>
 </text>
-<rect class="label changed-id" x="128.9" y="153.0" width="417.1" height="121.0" rx="8" ry="8"/>
+<rect class="label" x="128.9" y="153.0" width="417.1" height="121.0" rx="8" ry="8"/>
 <text class="title" x="144.9" y="182.0">
 <tspan x="144.9" dy="0.0">The Ruins Reclamation Act</tspan>
 </text>
@@ -326,7 +324,7 @@
 <tspan x="670.0" dy="12.0">being co-opted—the guilds offer improved conditions in exchange for</tspan>
 <tspan x="670.0" dy="12.0">continued service. Most accept.</tspan>
 </text>
-<rect class="label changed-id" x="134.5" y="303.0" width="411.5" height="121.0" rx="8" ry="8"/>
+<rect class="label" x="134.5" y="303.0" width="411.5" height="121.0" rx="8" ry="8"/>
 <text class="title" x="150.5" y="332.0">
 <tspan x="150.5" dy="0.0">The Southern Watch Towers</tspan>
 </text>
@@ -396,7 +394,7 @@
 <tspan x="144.5" dy="12.0">agreements voluntarily. The movement gains followers before being crushed by</tspan>
 <tspan x="144.5" dy="12.0">traditionalists. Several radicals are expelled from the city.</tspan>
 </text>
-<rect class="label changed-id" x="654.0" y="896.4" width="411.5" height="121.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="896.4" width="411.5" height="121.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="925.4">
 <tspan x="670.0" dy="0.0">The Monument Dispute</tspan>
 </text>
@@ -446,7 +444,7 @@
 <tspan x="670.0" dy="12.0">inspections, and child welfare oversight. Guilds comply publicly while</tspan>
 <tspan x="670.0" dy="12.0">maintaining private training facilities.</tspan>
 </text>
-<rect class="label changed-id" x="134.2" y="1319.4" width="411.8" height="121.0" rx="8" ry="8"/>
+<rect class="label" x="134.2" y="1319.4" width="411.8" height="121.0" rx="8" ry="8"/>
 <text class="title" x="150.2" y="1348.4">
 <tspan x="150.2" dy="0.0">The Grain Abundance Accord</tspan>
 </text>
@@ -603,7 +601,7 @@
 <tspan x="670.0" dy="12.0">Ledgers. Panic ensues as criminals, spies, and refugees scramble to secure new</tspan>
 <tspan x="670.0" dy="12.0">faces. The Maskers&#x27; Guild spends a week in lockdown before restoring order.</tspan>
 </text>
-<rect class="label changed" x="128.0" y="3191.5" width="418.0" height="109.0" rx="8" ry="8"/>
+<rect class="label" x="128.0" y="3191.5" width="418.0" height="109.0" rx="8" ry="8"/>
 <text class="title" x="144.0" y="3220.5">
 <tspan x="144.0" dy="0.0">Zarkul Dakgar the Forever Cursed</tspan>
 </text>
@@ -614,7 +612,7 @@
 <tspan x="144.0" dy="12.0">the Horde his name is kept only as a curse: proof that gold is softer than mud,</tspan>
 <tspan x="144.0" dy="12.0">and twice as deadly.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="3203.8" width="413.8" height="109.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="3203.8" width="413.8" height="109.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="3232.8">
 <tspan x="670.0" dy="0.0">Warlord Uruknar Rakthokgar Death</tspan>
 </text>
@@ -645,7 +643,7 @@
 <tspan x="670.0" dy="12.0">business advantages. The event becomes a major civic celebration, with</tspan>
 <tspan x="670.0" dy="12.0">elaborate ceremonies and public festivities.</tspan>
 </text>
-<rect class="label changed-id" x="128.9" y="3425.5" width="417.1" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="128.9" y="3425.5" width="417.1" height="97.0" rx="8" ry="8"/>
 <text class="title" x="144.9" y="3454.5">
 <tspan x="144.9" dy="0.0">The First Trade Caravans</tspan>
 </text>
@@ -694,7 +692,7 @@
 <tspan x="155.0" dy="12.0">world&#x27;s first comprehensive maritime insurance system. Within a decade, no</tspan>
 <tspan x="155.0" dy="12.0">merchant vessel sails without a Merrowgate policy.</tspan>
 </text>
-<rect class="label changed-id" x="654.0" y="3802.8" width="410.7" height="109.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="3802.8" width="410.7" height="109.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="3831.8">
 <tspan x="670.0" dy="0.0">The Pentarch Accords</tspan>
 </text>
@@ -726,7 +724,7 @@
 <tspan x="670.0" dy="12.0">apparent suicide, and a convenient scapegoat confession surfaces. The</tspan>
 <tspan x="670.0" dy="12.0">negotiations proceed as scheduled.</tspan>
 </text>
-<rect class="label changed-id" x="126.0" y="4033.9" width="420.0" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="126.0" y="4033.9" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="142.0" y="4062.9">
 <tspan x="142.0" dy="0.0">Calderon&#x27;s Declaration</tspan>
 </text>
@@ -795,7 +793,7 @@
 <tspan x="143.3" dy="12.0">Ardenhaven, securing safe passage through its waters for all nations. The treaty</tspan>
 <tspan x="143.3" dy="12.0">establishes Merrowgate as the undisputed arbiter of maritime trade disputes.</tspan>
 </text>
-<rect class="label changed-id" x="654.0" y="4637.8" width="420.0" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="4637.8" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="4666.8">
 <tspan x="670.0" dy="0.0">The Compact of Unity</tspan>
 </text>

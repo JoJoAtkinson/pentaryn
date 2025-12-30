@@ -1302,7 +1302,7 @@
   - The document includes a section titled “Araethilion — Veiled Crown Theocracy.” (`adhok_notes/meaning-behind-facitons.symbols.md#L3`)
 - `includes_section_ardenhaven_haven_realm`:
   - The document includes a section titled “Ardenhaven — The Haven Realm.” (`adhok_notes/meaning-behind-facitons.symbols.md#L6`)
-- `includes_section_dulgarum_oathbound_holds`:
+- `includes_section_dulgarum_Oathbound_holds`:
   - The document includes a section titled “Dulgarum — The Oathbound Holds.” (`adhok_notes/meaning-behind-facitons.symbols.md#L12`)
 - `includes_section_garrok_confederation_western_orc_confederation`:
   - The document includes a section titled “Garrok Confederation — Western Orc Confederation.” (`adhok_notes/meaning-behind-facitons.symbols.md#L23`)

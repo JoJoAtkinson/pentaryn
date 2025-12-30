@@ -98,7 +98,6 @@
 <path fill="#fbf7ef" d="M492.47 21.938c-82.74-.256-167.442 12.5-242.814 45.093 5.205 13.166 9.578 28.48 13.188 45.532C242.55 97.27 217.167 92.385 194.72 95.5c-46.22 28.432-87.13 66.305-119.44 115.594 25.193 7.756 51.57 22.81 72.845 43.844-31.87-7.045-68.907-5.895-99.188 3-13.743 28.688-25.008 60.48-33.343 95.687 128.71-30.668 130.522 3.514 50.75 140.438 16.877 12.614 42.182 13.77 61.906-1.563C134 267.936 231.43 326.246 254.188 354.562c14.288-40.59 34.77-82.54 62.906-126.468-17.29-14.667-39.21-24.838-63.813-32.375 25.364-5.256 50.91-10.928 74.126-11.22 6.482-.082 12.78.272 18.844 1.156 17.57-24.007 37.408-48.612 59.75-73.97-12.538-6.31-25.476-11.454-38.125-14.967 17.132-5.76 35.274-8.34 52.844-8.157 2.01.02 4.004.095 6 .187 20.07-21.708 41.927-43.976 65.75-66.813zM426.72 47.28c-130.93 65.394-226.626 162.926-281.784 286.25C172.34 184.41 287.048 84.57 426.72 47.28z"/>
   </g>
 </symbol>
-<symbol id="tag_changed-id" viewBox="0 0 512 512"><use href="#tag_unknown" x="0" y="0" width="512" height="512" /></symbol>
 <symbol id="tag_infrastructure" viewBox="0 0 512 512">
   <circle cx="256" cy="256" r="247.04" fill="#5a5a5a" stroke="#4f4f4f" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
@@ -123,7 +122,6 @@
 <path fill="#fbf7ef" d="M254.07 19.707c-56.303 28.998-106.297 107.317-122.64 168.707 32.445 2.11 58.63 12.963 78.638 30.848l9.334-10.198c-13.336-13.056-30.596-23.9-52.994-34.707 12.68-31.542 32.01-79.29 56.598-82.07 9.62-1.088 19.92 4.722 31.13 21.068 35.08-58.334 68.394 18.705 87.727 61.002-21.94 11.897-39.132 22.82-52.63 36.024l8.68 9.76c19.68-17.732 45.72-29.358 78.55-31.673C358.24 127.335 311.515 50.14 254.07 19.707zM219.617 144.57c-8.894 0-16.103 3.952-16.103 8.826 0 4.875 7.21 8.827 16.103 8.827 8.894 0 16.106-3.95 16.106-8.827 0-4.874-7.212-8.826-16.106-8.826zm68.965 0c-8.894 0-16.105 3.952-16.105 8.826 0 4.875 7.21 8.827 16.105 8.827 8.894 0 16.106-3.95 16.106-8.827 0-4.874-7.212-8.826-16.106-8.826zm-118.894 70.88a233.216 233.216 0 0 0-6.444 11.52c-25.587 48.98-43.26 123.643-43.896 223.48 32.776 18.89 64.322 31.324 95.707 36.988-35.5-24.36-60.375-80.893-60.375-146.754 0-45.97 12.12-87.39 31.51-116.506a96.185 96.185 0 0 0-16.502-8.727zm168.933.35a98.526 98.526 0 0 0-16.298 8.764c19.24 29.095 31.254 70.354 31.254 116.12 0 65.82-24.844 122.322-60.306 146.707 30.88-5.598 62.44-17.812 95.656-36.947-.638-99.57-18.31-174.163-43.9-223.177a233.816 233.816 0 0 0-6.405-11.467zm-97.665 23.61c7.026 22.543 9.128 45.086.98 67.63h-41.552v18.513c10.057-3.24 20.25-5.39 30.502-6.594.066 50.215 1.313 96.574 19.82 145.435l4.193 11.074 4.485-10.962c19.48-47.615 18.045-95.297 17.933-145.024 10.257 1.333 20.463 3.4 30.545 6.07v-18.515h-41.374c-6.888-22.544-5.932-45.087.803-67.63h-26.335z"/>
   </g>
 </symbol>
-<symbol id="tag_changed" viewBox="0 0 512 512"><use href="#tag_unknown" x="0" y="0" width="512" height="512" /></symbol>
 <symbol id="tag_battle" viewBox="0 0 512 512">
   <circle cx="256" cy="256" r="247.04" fill="#7a2f2f" stroke="#6b2929" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
@@ -265,7 +263,7 @@
 <tspan x="153.5" dy="12.0">under the demand, but the resulting trade agreements reshape continental</tspan>
 <tspan x="153.5" dy="12.0">commerce for the generations to come.</tspan>
 </text>
-<rect class="label changed-id" x="654.0" y="40.0" width="417.1" height="121.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="40.0" width="417.1" height="121.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="69.0">
 <tspan x="670.0" dy="0.0">The Ruins Reclamation Act</tspan>
 </text>
@@ -277,7 +275,7 @@
 <tspan x="670.0" dy="12.0">resources to explore these sites themselves, and the ruins attract monsters that</tspan>
 <tspan x="670.0" dy="12.0">endanger civilian settlements. By offering legal ownership of findings,</tspan>
 </text>
-<rect class="label changed-id" x="134.5" y="151.0" width="411.5" height="121.0" rx="8" ry="8"/>
+<rect class="label" x="134.5" y="151.0" width="411.5" height="121.0" rx="8" ry="8"/>
 <text class="title" x="150.5" y="180.0">
 <tspan x="150.5" dy="0.0">The Southern Watch Towers</tspan>
 </text>
@@ -299,7 +297,7 @@
 <tspan x="670.0" dy="12.0">heart removed. The bodies are left where they were laid. The story runs ahead of</tspan>
 <tspan x="670.0" dy="12.0">the carts and crosses every border, told in whispers that never match.</tspan>
 </text>
-<rect class="label changed-id" x="134.5" y="286.0" width="411.5" height="121.0" rx="8" ry="8"/>
+<rect class="label" x="134.5" y="286.0" width="411.5" height="121.0" rx="8" ry="8"/>
 <text class="title" x="150.5" y="315.0">
 <tspan x="150.5" dy="0.0">The Monument Dispute</tspan>
 </text>
@@ -320,7 +318,7 @@
 <tspan x="670.0" dy="12.0">allowing fractional ownership of merchant ventures. The innovation attracts</tspan>
 <tspan x="670.0" dy="12.0">investors from every nation and creates a new class of wealthy speculators.</tspan>
 </text>
-<rect class="label changed-id" x="134.2" y="421.0" width="411.8" height="121.0" rx="8" ry="8"/>
+<rect class="label" x="134.2" y="421.0" width="411.8" height="121.0" rx="8" ry="8"/>
 <text class="title" x="150.2" y="450.0">
 <tspan x="150.2" dy="0.0">The Grain Abundance Accord</tspan>
 </text>
@@ -350,7 +348,7 @@
 <tspan x="180.4" dy="0.0">War ends and coin takes over; the old war-roads are inherited by guilds,</tspan>
 <tspan x="180.4" dy="12.0">charters, and contract courts.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="496.0" width="418.0" height="109.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="496.0" width="418.0" height="109.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="525.0">
 <tspan x="670.0" dy="0.0">Zarkul Dakgar the Forever Cursed</tspan>
 </text>
@@ -361,7 +359,7 @@
 <tspan x="670.0" dy="12.0">the Horde his name is kept only as a curse: proof that gold is softer than mud,</tspan>
 <tspan x="670.0" dy="12.0">and twice as deadly.</tspan>
 </text>
-<rect class="label changed" x="132.2" y="643.0" width="413.8" height="109.0" rx="8" ry="8"/>
+<rect class="label" x="132.2" y="643.0" width="413.8" height="109.0" rx="8" ry="8"/>
 <text class="title" x="148.2" y="672.0">
 <tspan x="148.2" dy="0.0">Warlord Uruknar Rakthokgar Death</tspan>
 </text>
@@ -372,7 +370,7 @@
 <tspan x="148.2" dy="12.0">charge, and crossbow bolts cracked from the haze. Gruknar died on her knees,</tspan>
 <tspan x="148.2" dy="12.0">and Ironstead rose up tall.</tspan>
 </text>
-<rect class="label changed-id" x="654.0" y="619.0" width="417.1" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="619.0" width="417.1" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="648.0">
 <tspan x="670.0" dy="0.0">The First Trade Caravans</tspan>
 </text>
@@ -382,7 +380,7 @@
 <tspan x="670.0" dy="12.0">coal and iron. The exchange is awkward, stilted, watched by veterans on both</tspan>
 <tspan x="670.0" dy="12.0">sides. But it happens. Commerce begins to replace contempt.</tspan>
 </text>
-<rect class="label changed-id" x="135.3" y="766.0" width="410.7" height="109.0" rx="8" ry="8"/>
+<rect class="label" x="135.3" y="766.0" width="410.7" height="109.0" rx="8" ry="8"/>
 <text class="title" x="151.3" y="795.0">
 <tspan x="151.3" dy="0.0">The Pentarch Accords</tspan>
 </text>
@@ -393,7 +391,7 @@
 <tspan x="151.3" dy="12.0">all signatories pledge to resolve disputes through commerce rather than</tspan>
 <tspan x="151.3" dy="12.0">conquest. The world exhales.</tspan>
 </text>
-<rect class="label changed-id" x="654.0" y="730.0" width="420.0" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="730.0" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="759.0">
 <tspan x="670.0" dy="0.0">Calderon&#x27;s Declaration</tspan>
 </text>
@@ -422,7 +420,7 @@
 <tspan x="670.0" dy="12.0">Ardenhaven, securing safe passage through its waters for all nations. The treaty</tspan>
 <tspan x="670.0" dy="12.0">establishes Merrowgate as the undisputed arbiter of maritime trade disputes.</tspan>
 </text>
-<rect class="label changed-id" x="126.0" y="1000.0" width="420.0" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="126.0" y="1000.0" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="142.0" y="1029.0">
 <tspan x="142.0" dy="0.0">The Compact of Unity</tspan>
 </text>

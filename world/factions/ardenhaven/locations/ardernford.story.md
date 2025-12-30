@@ -9,7 +9,7 @@ status: complete
 
 > You smell Ardenford before you see it: salt and fish on the wind, tar and canvas, fresh bread and leather, and the cold, clean bite of old stone. Then the city comes into view—no ring of walls, no single crown of a castle—just a sprawling climb of rooftops and ruin-work, rising from the northern sea in three uneven tiers.
 
-Ardenford sits where mountain meets water, built directly atop—and into—the remains of an ancient, unnamed civilization. Weathered foundations decide where streets run; broken columns become doorframes; carved stone is so common that most locals step over it without a second glance. Streams spill down from the eastern ridge, cutting narrow channels through the city before finding the harbor, and the gulls never quite stop screaming.
+Ardenford sits where mountain meets water, built directly atop—and into—the remains of an ancient, unnamed civilization. Weathered foundations decide where streets run; broken columns become doorframes. Streams spill down from the eastern ridge, cutting narrow channels through the city before finding the harbor, and the gulls ensuring their presence is known. 
 
 To outsiders, Ardenford can look like a mistake that somehow survived: streets that refuse to line up, staircases that appear where they have no right to be, buildings pressed shoulder-to-shoulder in mismatched styles. To the people who live here, it is simply home—busy, loud, stubbornly free, and always alive.
 
@@ -59,7 +59,7 @@ What is public is simple: the ruins outside the city are fair game, and the ruin
 
 The Wayward Compass sits where three streets collide at odd angles—an intersection that makes no sense until you’ve lived with it. Its sign, a battered brass compass rose, swings lazily in the sea breeze. The building is stone and timber, grown around an ancient ruin wall that forms one entire side of the common room, carvings worn down to faint geometry.
 
-Inside is warmth and noise: woodsmoke, roasted meat, and the steady hum of too many conversations at once. Heavy tables scarred by decades crowd the floor. A fireplace of massive stone pumps heat into the room. Somewhere, dice clatter—Bones & Blades, the locals will tell you, and then refuse to explain the rules until you sit down with a coin.
+Inside is warmth and noise: woodsmoke, roasted meat, and the steady hum of too many conversations at once. Heavy tables scarred by decades crowd the floor. A fireplace of massive stone pumps heat into the room. Somewhere, dice clatter—Bones & Blades, the locals will tell you, and then refuse to explain the rules until you sit down with a coin or some marks. 
 
 Torren Ashvale owns the place: a retired soldier, graying, competent, with a slight limp and a way of watching the room without making a show of it. The Compass has an unspoken rule—leave your disputes outside—and most people are wise enough to obey. Near the bar a notice board collects requests, bounties, and odd jobs, the sort of work that keeps a city like Ardenford fed and safe.
 
@@ -85,7 +85,7 @@ Merchants and innkeepers tend to love them. Scholars appreciate what they bring 
 
 And always, somewhere in the noise, the same argument resurfaces: if distant ruins are fair game, why not the tunnels under Ardenford? The debate rarely ends in more than bruised pride and spilled ale—but it never really goes away, either.
 
-## Ardenford in 4327 AF
+## Ardenford in ᛏ250
 
 It has been 127 years since the Compact of Unity, 127 years since the Pentarch Accords ended the war, and four years since the Reclamation Act changed who comes to Ardenford and why. The city is optimistic but watchful. Trade expands. New buildings rise on ancient foundations. The markets bustle.
 

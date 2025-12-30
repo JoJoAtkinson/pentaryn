@@ -80,7 +80,6 @@
 <g class="" transform="translate(0,0)" style=""><path d="M149.688 85.625c-1.234.005-2.465.033-3.72.063-33.913.806-75.48 10.704-127.25 33.718V362.78c60.77-28.82 106.718-37.067 144.22-33.092 33.502 3.55 59.685 16.66 83.562 31.187v-242.97c-23.217-17.744-50.195-30.04-85.97-32a184.47 184.47 0 0 0-10.843-.28zm211.968 0c-3.7-.016-7.322.088-10.844.28-35.773 1.96-62.75 14.256-85.968 32v242.97c23.876-14.527 50.06-27.637 83.562-31.188 37.502-3.974 83.45 4.272 144.22 33.094V119.407c-51.77-23.014-93.337-32.912-127.25-33.72-1.255-.028-2.486-.056-3.72-.06zm5.72 261.78c-1.038-.002-2.074.017-3.095.033-4.808.075-9.43.37-13.905.843-33.932 3.597-59.603 17.976-85.53 34.44v.28c-6.554-1.99-13.02-2.37-19.408-.97-25.566-16.177-51.003-30.202-84.468-33.75-5.595-.592-11.44-.883-17.564-.842-32.04.213-71.833 9.778-124.687 35.937v42.53c60.77-28.823 106.714-37.067 144.218-33.092 18.545 1.965 34.837 6.845 49.75 13.28-4.682 6.064-9.308 13.268-13.875 21.688h117.156c-5.93-8.22-11.798-15.414-17.626-21.56 14.996-6.503 31.39-11.43 50.062-13.408 37.503-3.974 83.448 4.27 144.22 33.094v-42.53c-53.16-26.31-93.115-35.863-125.25-35.97z" fill="currentColor" fill-opacity="1"></path></g>
   </g>
 </symbol>
-<symbol id="tag_changed-id" viewBox="0 0 512 512"><use href="#tag_unknown" x="0" y="0" width="512" height="512" /></symbol>
 <symbol id="tag_infrastructure" viewBox="0 0 512 512">
   <circle cx="256" cy="256" r="247.04" fill="#5a5a5a" stroke="#4f4f4f" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
@@ -188,7 +187,7 @@
 <use class="token" href="#token_default" x="589.0" y="1598.6" width="22" height="22"/>
 </g>
 <g id="labels">
-<rect class="label changed-id" x="128.9" y="40.0" width="417.1" height="121.0" rx="8" ry="8"/>
+<rect class="label" x="128.9" y="40.0" width="417.1" height="121.0" rx="8" ry="8"/>
 <text class="title" x="144.9" y="69.0">
 <tspan x="144.9" dy="0.0">The Ruins Reclamation Act</tspan>
 </text>
@@ -200,7 +199,7 @@
 <tspan x="144.9" dy="12.0">resources to explore these sites themselves, and the ruins attract monsters that</tspan>
 <tspan x="144.9" dy="12.0">endanger civilian settlements. By offering legal ownership of findings,</tspan>
 </text>
-<rect class="label changed-id" x="654.0" y="51.5" width="411.5" height="121.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="51.5" width="411.5" height="121.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="80.5">
 <tspan x="670.0" dy="0.0">The Southern Watch Towers</tspan>
 </text>
@@ -212,7 +211,7 @@
 <tspan x="670.0" dy="12.0">demonstrates Ardenhaven&#x27;s maturity as a federation: unified military</tspan>
 <tspan x="670.0" dy="12.0">infrastructure built and maintained across formerly fractious city-states. Two</tspan>
 </text>
-<rect class="label changed-id" x="134.5" y="188.3" width="411.5" height="121.0" rx="8" ry="8"/>
+<rect class="label" x="134.5" y="188.3" width="411.5" height="121.0" rx="8" ry="8"/>
 <text class="title" x="150.5" y="217.3">
 <tspan x="150.5" dy="0.0">The Monument Dispute</tspan>
 </text>
@@ -224,7 +223,7 @@
 <tspan x="150.5" dy="12.0">mass graves and planting wheat—&quot;let the dead feed the living.&quot; The Council of</tspan>
 <tspan x="150.5" dy="12.0">Consuls deadlocks repeatedly. Each city-state builds its own memorial in its</tspan>
 </text>
-<rect class="label changed-id" x="654.0" y="301.1" width="411.8" height="121.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="301.1" width="411.8" height="121.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="330.1">
 <tspan x="670.0" dy="0.0">The Grain Abundance Accord</tspan>
 </text>
@@ -246,7 +245,7 @@
 <tspan x="148.9" dy="12.0">battlefields are farmland again. A new generation knows the war only through</tspan>
 <tspan x="148.9" dy="12.0">their grandparents&#x27; stories and the mass graves that still mark the plains.</tspan>
 </text>
-<rect class="label changed-id" x="654.0" y="687.8" width="417.1" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="687.8" width="417.1" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="716.8">
 <tspan x="670.0" dy="0.0">The First Trade Caravans</tspan>
 </text>
@@ -256,7 +255,7 @@
 <tspan x="670.0" dy="12.0">coal and iron. The exchange is awkward, stilted, watched by veterans on both</tspan>
 <tspan x="670.0" dy="12.0">sides. But it happens. Commerce begins to replace contempt.</tspan>
 </text>
-<rect class="label changed-id" x="135.3" y="756.7" width="410.7" height="109.0" rx="8" ry="8"/>
+<rect class="label" x="135.3" y="756.7" width="410.7" height="109.0" rx="8" ry="8"/>
 <text class="title" x="151.3" y="785.7">
 <tspan x="151.3" dy="0.0">The Pentarch Accords</tspan>
 </text>
@@ -318,7 +317,7 @@
 <tspan x="670.0" dy="12.0">Those with nursing children are exempted; everyone else fights. Entire towns</tspan>
 <tspan x="670.0" dy="12.0">empty. Fields go unplowed. The choice is simple: fight now or lose everything.</tspan>
 </text>
-<rect class="label changed-id" x="126.0" y="1101.7" width="420.0" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="126.0" y="1101.7" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="142.0" y="1130.7">
 <tspan x="142.0" dy="0.0">Calderon&#x27;s Declaration</tspan>
 </text>
@@ -328,7 +327,7 @@
 <tspan x="142.0" dy="12.0">total war. The language is unambiguous—there will be no negotiated peace,</tspan>
 <tspan x="142.0" dy="12.0">only submission or annihilation. The 7-year war begins.</tspan>
 </text>
-<rect class="label changed-id" x="654.0" y="1143.8" width="420.0" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="1143.8" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1172.8">
 <tspan x="670.0" dy="0.0">The Compact of Unity</tspan>
 </text>

@@ -1,0 +1,5 @@
+If you recall, if the marking is ever removed then the curse they are preventing takes hold. Witches tend to lean on permanent means tattooing or magical means. 
+
+The preferred method is to create the ward with henna as it allows the witch to focus on the ask and the magical foresight to prevent the consequences. In short order, to have the ward tattooed by ink or magic. 
+
+If there not a spell for magical tattoos. It is a cantrip, you know it. It is a ritual to cast, at least for wards and how your magic works. That said, some witches opt for ink all the same; how the witch makes the henna forever is where the witch's personality comes into play.  Those preferring ink tend to lean to a want for non glowing symbols. Those preferring magic means either they do not care, or even like being upfront with who they are, and the magic that protect them.

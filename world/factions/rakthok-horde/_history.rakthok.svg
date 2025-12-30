@@ -63,7 +63,6 @@
 <path fill="#fbf7ef" d="m255.594 19.406-15.78 59.125c5.184-.58 10.44-.874 15.78-.874 5.338 0 10.595.293 15.78.875l-15.78-59.124zm0 76.97c-57.894 0-106.156 40.154-118.656 94.186H374.25c-12.5-54.032-60.762-94.187-118.656-94.187zM19.406 209.25v33.53h472.406v-33.53H19.406zM71.5 261.47v159.124h50.406V261.47H71.5zm105.97 0v159.124h50.405V261.47H177.47zm105.936 0v159.124h50.406V261.47h-50.406zm105.938 0v159.124h50.406V261.47h-50.406zm-161.78 177.655-31.658 56.656h120.5l-32.062-56.655h-56.78zm-208.158.156v33.533h167.938l18.72-33.532H19.405zm286.531 0 18.97 33.533h166.906V439.28H305.938z"/>
   </g>
 </symbol>
-<symbol id="tag_changed" viewBox="0 0 512 512"><use href="#tag_unknown" x="0" y="0" width="512" height="512" /></symbol>
 <symbol id="tag_conflict" viewBox="0 0 512 512">
   <circle cx="256" cy="256" r="247.04" fill="#6b2f3a" stroke="#5e2933" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
@@ -218,7 +217,7 @@
 <use class="token" href="#token_default" x="589.0" y="929.0" width="22" height="22"/>
 </g>
 <g id="labels">
-<rect class="label changed" x="131.0" y="40.0" width="415.0" height="73.0" rx="8" ry="8"/>
+<rect class="label" x="131.0" y="40.0" width="415.0" height="73.0" rx="8" ry="8"/>
 <text class="title" x="147.0" y="69.0">
 <tspan x="147.0" dy="0.0">Ghorrak Dakmar’nak is Named Warlord</tspan>
 </text>
@@ -450,7 +449,7 @@
 <tspan x="143.3" dy="12.0">into the hooks, killed two, and tore a third&#x27;s jaw loose before pikeheads found</tspan>
 <tspan x="143.3" dy="12.0">him.</tspan>
 </text>
-<rect class="label changed" x="654.0" y="1225.0" width="418.0" height="109.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="1225.0" width="418.0" height="109.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1254.0">
 <tspan x="670.0" dy="0.0">Zarkul Dakgar the Forever Cursed</tspan>
 </text>
@@ -461,7 +460,7 @@
 <tspan x="670.0" dy="12.0">the Horde his name is kept only as a curse: proof that gold is softer than mud,</tspan>
 <tspan x="670.0" dy="12.0">and twice as deadly.</tspan>
 </text>
-<rect class="label changed" x="132.2" y="1408.0" width="413.8" height="109.0" rx="8" ry="8"/>
+<rect class="label" x="132.2" y="1408.0" width="413.8" height="109.0" rx="8" ry="8"/>
 <text class="title" x="148.2" y="1437.0">
 <tspan x="148.2" dy="0.0">Warlord Uruknar Rakthokgar Death</tspan>
 </text>
