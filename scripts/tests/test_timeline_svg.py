@@ -7,12 +7,13 @@ import pytest
 from scripts.timeline_svg.game_time import date_to_axis_days
 from scripts.timeline_svg.lane_assign import assign_lanes, sort_events
 from scripts.timeline_svg.layout_grow import grow_downward, max_displacement
-from scripts.timeline_svg.layout_pack import pack_lane
+from scripts.timeline_svg.layout_pack import pack_lane, snap_to_targets_when_clear, tighten_upward_gaps
 from scripts.timeline_svg.model import BuildConfig, Event, FontPaths, LabelLayout, RendererConfig
+from scripts.timeline_svg.pipeline import _maybe_expand_axis_to_fill_spine
 from scripts.timeline_svg.text_measure import text_height, text_width
 from scripts.timeline_svg.time_map import make_axis_map
 from scripts.timeline_svg.time_parse import parse_game_date
-from scripts.timeline_svg.ticks import choose_tick_scale, step_days
+from scripts.timeline_svg.ticks import build_ticks, choose_tick_scale, step_days
 from scripts.timeline_svg.tsv_io import read_tsv
 from scripts.timeline_svg.wrap import wrap_lines
 
@@ -159,6 +160,113 @@ def test_grow_reduces_max_displacement_desc() -> None:
     assert after <= 80
 
 
+def test_grow_does_not_compound_slack_in_dense_eras() -> None:
+    # Regression test: avoid repeatedly inserting slack at ever-older thresholds, which explodes
+    # total slack (and pushes ancient events far down) in dense clusters.
+    n = 30
+    max_disp = 80
+    axis_days = [10_000 - i for i in range(n)]
+
+    events = [_event(f"e{i}", axis) for i, axis in enumerate(axis_days)]
+    for e in events:
+        e.lane = "left"
+        e.box_h = 60.0
+
+    axis_map = make_axis_map(
+        "desc",
+        min_axis=min(e.axis_day for e in events),
+        max_axis=max(e.axis_day for e in events),
+        top_y=0.0,
+        px_per_year=1.0,
+    )
+    for e in events:
+        e.y_target = axis_map.axis_to_y(e.axis_day)
+        e.y = e.y_target - (e.box_h / 2.0)
+
+    pack_lane(events, lane_gap_y=10)
+
+    before, _ = max_displacement(events)
+    assert before > max_disp
+    required = before - max_disp
+
+    grow_downward(
+        events,
+        direction="desc",
+        lane_gap_y=10,
+        opt_iters=0,
+        max_displacement_px=max_disp,
+        max_grow_passes=64,
+        slack_fraction=0.0,
+        slack_steps=axis_map.slack_steps,
+    )
+
+    after, _ = max_displacement(events)
+    assert after <= max_disp + 0.5
+
+    total_slack = sum(s for _t, s in axis_map.slack_steps)
+    assert total_slack <= required * 3.0 + 25.0
+
+
+def test_snap_to_targets_does_not_invert_lane_order() -> None:
+    # Regression: snapping should never create a label ordering inversion (which causes connector crossings).
+    #
+    # Construct a case where the middle event cannot snap to its target (it would collide with the first),
+    # but the last event *would* be clear if we ignored ordering. The snap pass must not move the last
+    # event above the middle one.
+    e0 = _event("e0", 0)
+    e1 = _event("e1", 1)
+    e2 = _event("e2", 2)
+    for e in (e0, e1, e2):
+        e.lane = "left"
+        e.box_h = 40.0
+
+    e0.y_target = 100.0
+    e1.y_target = 120.0
+    e2.y_target = 200.0
+
+    # Non-overlapping layout with a big gap before the last event.
+    e0.y = 80.0  # already at target
+    e1.y = 300.0  # pushed down
+    e2.y = 400.0  # older event sits below
+
+    snap_to_targets_when_clear([e0, e1, e2], lane_gap_y=10, min_y=0.0)
+
+    # Ordering by y_target implies e0 (newest) above e1 above e2; snapping must preserve that.
+    assert e0.y + e0.box_h + 10 <= e1.y + 1e-6
+    assert e1.y + e1.box_h + 10 <= e2.y + 1e-6
+
+
+def test_tighten_upward_gaps_pulls_labels_up_without_overshoot() -> None:
+    # Ensure the finalization pass reclaims slack but never moves a label above its point.
+    e0 = _event("e0", 0)
+    e1 = _event("e1", 1)
+    e2 = _event("e2", 2)
+    for e in (e0, e1, e2):
+        e.lane = "left"
+        e.box_h = 40.0
+
+    # Targets (centers).
+    e0.y_target = 100.0
+    e1.y_target = 120.0
+    e2.y_target = 140.0
+
+    # Start with an overly loose layout (large gaps).
+    e0.y = e0.y_target - e0.box_h / 2.0  # on point
+    e1.y = 260.0  # pushed down
+    e2.y = 500.0  # pushed down with extra slack above
+
+    tighten_upward_gaps([e0, e1, e2], lane_gap_y=10, min_y=0.0)
+
+    # Tightened: e1 becomes directly adjacent to e0; e2 becomes directly adjacent to e1.
+    assert abs(e0.y - 80.0) < 1e-6
+    assert abs(e1.y - (e0.y + e0.box_h + 10)) < 1e-6
+    assert abs(e2.y - (e1.y + e1.box_h + 10)) < 1e-6
+
+    # Never overshoot "on point" (top can't go above y_target - h/2).
+    for e in (e0, e1, e2):
+        assert e.y >= (e.y_target - e.box_h / 2.0) - 1e-6
+
+
 def test_choose_tick_scale_century_or_millennium_for_long_spans() -> None:
     # Over ~5000 years, yearly ticks would be unreadable; expect a coarser scale.
     axis_span_days = 360 * 5000
@@ -182,6 +290,46 @@ def test_fixed_tick_spacing_math_desc() -> None:
     y0 = axis_map.axis_to_y(step_days(scale))
     y1 = axis_map.axis_to_y(0)
     assert abs((y1 - y0) - tick_spacing_px) < 1e-6
+
+
+def test_expand_axis_to_fill_spine_updates_end_tick_and_targets() -> None:
+    # Regression: when labels push the required height beyond the axis span, expand tick spacing
+    # so the bottom tick reaches the spine bottom and connectors update via y_target changes.
+    axis_map = make_axis_map("desc", min_axis=0, max_axis=360 * 100, top_y=0.0, px_per_year=1.0)
+    events = [_event("e0", 0), _event("e1", 3600)]
+    for e in events:
+        e.lane = "left"
+        e.box_h = 40.0
+        e.y_target = axis_map.axis_to_y(e.axis_day)
+
+    # Force a layout that extends well below the axis end.
+    events[0].y = 260.0  # bottom -> 300
+    events[1].y = 0.0
+    content_bottom = max(e.y + e.box_h for e in events)
+
+    axis_map2 = _maybe_expand_axis_to_fill_spine(axis_map, events=events, spine_bottom_y=content_bottom, min_gap_px=0.0)
+    assert axis_map2.px_per_day > axis_map.px_per_day
+    assert abs(axis_map2.axis_to_y(axis_map2.min_axis) - content_bottom) < 1e-6
+
+    ticks = build_ticks(axis_map2, scale="decade", tick_min_spacing_px=0)
+    assert abs(max(t.y for t in ticks) - content_bottom) < 1e-6
+
+    for e in events:
+        assert abs(e.y_target - axis_map2.axis_to_y(e.axis_day)) < 1e-6
+
+
+def test_expand_axis_to_fill_spine_accounts_for_slack_steps() -> None:
+    axis_map = make_axis_map("desc", min_axis=0, max_axis=360 * 100, top_y=0.0, px_per_year=1.0)
+    # Inject a slack jump at the oldest boundary (desc: applies at end but not start).
+    axis_map.slack_steps.append((axis_map.min_axis, 80.0))
+
+    events = [_event("e0", 0)]
+    events[0].y_target = axis_map.axis_to_y(events[0].axis_day)
+    events[0].y = 260.0  # bottom -> 300
+    content_bottom = events[0].y + events[0].box_h
+
+    axis_map2 = _maybe_expand_axis_to_fill_spine(axis_map, events=events, spine_bottom_y=content_bottom, min_gap_px=0.0)
+    assert abs(axis_map2.axis_to_y(axis_map2.min_axis) - content_bottom) < 1e-6
 
 
 def test_age_glyph_year_formatting() -> None:

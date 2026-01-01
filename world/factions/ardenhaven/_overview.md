@@ -72,6 +72,15 @@ Local Sheriffs & Mayors
 - **Role:** Moderates debates, coordinates lords/guilds/temples
 - **Description:** Silver-tongued mediator with a reputation for finding compromise
 
+## Notable People (NPCs)
+
+- [Elarion Faenwynd](npc/elarian-faenwynd.md) — Elf archivist/translator at the Concordance Library
+- [Branik Ironweld](npc/branik-ironweld-anvil-and-oar.md) — Weaponsmith at The Anvil & Oar (Lower Tier)
+- [Selise Dawnquill](npc/selise-dawnquill-silverbridge-arcana.md) — Proprietor of Silverbridge Arcana (Upper Tier)
+- [Hesta Briarvein](npc/hesta-briarvein-willowglass-apothecary.md) — Alchemist at Willowglass Apothecary (Middle Tier)
+- [Thorgrim Ledger-Scar](npc/thorgrim-ledger-scar.md) — Dwarven keeper of The Wayward Compass
+- [Vorzug Dakmar'nak](npc/vorzug-ledger-scar.md) — Orc bridgewright and labor advocate
+
 ## Membership
 
 ### Requirements

@@ -73,9 +73,9 @@ BUILD = BuildConfig(
     tick_spacing_px=72,
     embed_fonts=True,
     opt_iters=40,
-    # Dense decades can otherwise cause extreme axis stretching (large whitespace between ticks/events).
-    # Allow more displacement so events can stack without blowing out the time scale.
-    max_displacement_px=1200,
+    # High displacement tolerance keeps ticks static - boxes stack vertically instead.
+    # Dense clusters handled by better packing, not axis growth.
+    max_displacement_px=2400,
     max_grow_passes=12,
     slack_fraction=0.45,
     px_per_year=72,

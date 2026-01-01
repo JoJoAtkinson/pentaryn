@@ -201,14 +201,14 @@ The ancient month names, still used despite their lost meanings, are a daily inv
 
 **Current Year:** 4,327 A.F.  
 **Years Since the Accords:** 127 years (signed in 4,200 A.F.)  
-**Current Month (example):** Ulemar (early autumn, month 7)  
+**Current Month:** Arethum (early winter, month 10)  
 **Days per month:** 30  
 **Days per week (span):** 6  
 **Months per year:** 12  
 **Total days per year:** 360
 
-**Sample Date for Campaign Start:**
-- `12 Ulemar 4327 A.F.` — 12th day of Ulemar (early autumn), 4,327th year after the Fall of Ao Sathanum
+**Current Date:**
+- `15 Arethum 4327 A.F.` — 15th day of Arethum (early winter), 4,327th year after the Fall of Ao Sathanum
 
 ---
 
