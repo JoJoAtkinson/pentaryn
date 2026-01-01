@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="4774" viewBox="0 0 1200 4774">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="4775" viewBox="0 0 1200 4775">
 <style><![CDATA[
 @font-face {
   font-family: 'Alegreya';
@@ -40,6 +40,7 @@
         .label { fill: #fffaf0; stroke: var(--label-border); stroke-width: 1; }
         .label.changed-id, .label.changed { stroke: #d97900; stroke-width: 4; stroke-linejoin: round; }
         .title { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 16px; font-weight: 700; fill: #2b1f14; }
+        .age-label { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 14px; font-weight: 700; fill: #5a4634; }
         .summary { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #3a2b1f; }
         .md-bold { font-weight: 700; }
         .public-indicator { color: var(--public-indicator); opacity: 0.9; }
@@ -173,21 +174,21 @@
   </g>
 </symbol>
 </defs>
-<g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="4734"/></g>
+<g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="4735"/></g>
 <g id="connectors">
 <line class="connector" x1="600" y1="64.9" x2="552.0" y2="88.5"/>
 <line class="connector" x1="600" y1="146.3" x2="648.0" y2="144.4"/>
-<line class="connector" x1="600" y1="189.9" x2="552.0" y2="213.5"/>
+<line class="connector" x1="600" y1="189.9" x2="552.0" y2="211.5"/>
 <line class="connector" x1="600" y1="247.4" x2="648.0" y2="249.4"/>
-<line class="connector" x1="600" y1="339.9" x2="552.0" y2="363.5"/>
+<line class="connector" x1="600" y1="339.9" x2="552.0" y2="346.5"/>
 <line class="connector" x1="600" y1="436.8" x2="648.0" y2="436.8"/>
 <line class="connector" x1="600" y1="534.9" x2="552.0" y2="534.9"/>
 <line class="connector" x1="600" y1="729.9" x2="648.0" y2="728.9"/>
 <line class="connector" x1="600" y1="790.4" x2="552.0" y2="790.4"/>
 <line class="connector" x1="600" y1="879.9" x2="648.0" y2="833.9"/>
-<line class="connector" x1="600" y1="889.9" x2="552.0" y2="913.1"/>
+<line class="connector" x1="600" y1="889.9" x2="552.0" y2="901.4"/>
 <line class="connector" x1="600" y1="909.9" x2="648.0" y2="956.9"/>
-<line class="connector" x1="600" y1="988.2" x2="552.0" y2="1024.1"/>
+<line class="connector" x1="600" y1="988.2" x2="552.0" y2="1012.4"/>
 <line class="connector" x1="600" y1="1089.9" x2="648.0" y2="1089.9"/>
 <line class="connector" x1="600" y1="1184.1" x2="552.0" y2="1184.1"/>
 <line class="connector" x1="600" y1="1312.4" x2="648.0" y2="1307.6"/>
@@ -195,7 +196,7 @@
 <line class="connector" x1="600" y1="1413.8" x2="648.0" y2="1418.6"/>
 <line class="connector" x1="600" y1="1509.9" x2="552.0" y2="1509.9"/>
 <line class="connector" x1="600" y1="1569.9" x2="648.0" y2="1569.9"/>
-<line class="connector" x1="600" y1="1574.9" x2="552.0" y2="1626.8"/>
+<line class="connector" x1="600" y1="1574.9" x2="552.0" y2="1620.9"/>
 <line class="connector" x1="600" y1="1779.9" x2="648.0" y2="1779.9"/>
 <line class="connector" x1="600" y1="2028.1" x2="552.0" y2="2028.1"/>
 <line class="connector" x1="600" y1="2139.9" x2="648.0" y2="2139.9"/>
@@ -213,7 +214,7 @@
 <line class="connector" x1="600" y1="3369.9" x2="648.0" y2="3375.2"/>
 <line class="connector" x1="600" y1="3429.9" x2="552.0" y2="3474.0"/>
 <line class="connector" x1="600" y1="3469.9" x2="648.0" y2="3486.2"/>
-<line class="connector" x1="600" y1="3579.9" x2="552.0" y2="3603.5"/>
+<line class="connector" x1="600" y1="3579.9" x2="552.0" y2="3585.0"/>
 <line class="connector" x1="600" y1="3772.4" x2="648.0" y2="3740.3"/>
 <line class="connector" x1="600" y1="3849.9" x2="552.0" y2="3830.5"/>
 <line class="connector" x1="600" y1="3864.0" x2="648.0" y2="3857.3"/>
@@ -293,6 +294,9 @@
 <tspan x="153.5" dy="12.0">under the demand, but the resulting trade agreements reshape continental</tspan>
 <tspan x="153.5" dy="12.0">commerce for the generations to come.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="133.0">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
+</text>
 <rect class="label" x="654.0" y="101.9" width="413.2" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="130.9">
 <tspan x="670.0" dy="0.0">The Silent Coin Succession</tspan>
@@ -302,17 +306,23 @@
 <tspan x="670.0" dy="12.0">transition. No details are provided about the old or new leadership. Clients</tspan>
 <tspan x="670.0" dy="12.0">notice no change in service quality, which somehow makes it more unsettling.</tspan>
 </text>
-<rect class="label" x="128.9" y="153.0" width="417.1" height="121.0" rx="8" ry="8"/>
-<text class="title" x="144.9" y="182.0">
+<text class="age-label" text-anchor="end" x="1061.2" y="182.9">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">47</tspan>
+</text>
+<rect class="label" x="128.9" y="151.0" width="417.1" height="121.0" rx="8" ry="8"/>
+<text class="title" x="144.9" y="180.0">
 <tspan x="144.9" dy="0.0">The Ruins Reclamation Act</tspan>
 </text>
-<text class="summary" x="144.9" y="200.0">
+<text class="summary" x="144.9" y="198.0">
 <tspan x="144.9" dy="0.0">Facing vast territorial expansion and countless ancient ruins across former</tspan>
 <tspan x="144.9" dy="12.0">battlefields, the Council of Consuls declares a controversial policy: any treasure</tspan>
 <tspan x="144.9" dy="12.0">or artifacts found in ruins belong to the finder, no questions asked. The</tspan>
 <tspan x="144.9" dy="12.0">government is transparent about their motives—they lack the researchers and</tspan>
 <tspan x="144.9" dy="12.0">resources to explore these sites themselves, and the ruins attract monsters that</tspan>
 <tspan x="144.9" dy="12.0">endanger civilian settlements. By offering legal ownership of findings,</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="540.0" y="268.0">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">46</tspan>
 </text>
 <rect class="label" x="654.0" y="200.9" width="418.6" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="229.9">
@@ -324,17 +334,23 @@
 <tspan x="670.0" dy="12.0">being co-opted—the guilds offer improved conditions in exchange for</tspan>
 <tspan x="670.0" dy="12.0">continued service. Most accept.</tspan>
 </text>
-<rect class="label" x="134.5" y="303.0" width="411.5" height="121.0" rx="8" ry="8"/>
-<text class="title" x="150.5" y="332.0">
+<text class="age-label" text-anchor="end" x="1066.6" y="293.9">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">44</tspan>
+</text>
+<rect class="label" x="134.5" y="286.0" width="411.5" height="121.0" rx="8" ry="8"/>
+<text class="title" x="150.5" y="315.0">
 <tspan x="150.5" dy="0.0">The Southern Watch Towers</tspan>
 </text>
-<text class="summary" x="150.5" y="350.0">
+<text class="summary" x="150.5" y="333.0">
 <tspan x="150.5" dy="0.0">The Council of Consuls completes construction of watch towers along the</tspan>
 <tspan x="150.5" dy="12.0">southern border with Calderon. Not out of fear—the Pentarch Accords</tspan>
 <tspan x="150.5" dy="12.0">hold—but as Cold War-style deterrent: &quot;We are ready.&quot; The towers are staffed,</tspan>
 <tspan x="150.5" dy="12.0">supplied, and connected by signal fires. Calderon takes notice. The project</tspan>
 <tspan x="150.5" dy="12.0">demonstrates Ardenhaven&#x27;s maturity as a federation: unified military</tspan>
 <tspan x="150.5" dy="12.0">infrastructure built and maintained across formerly fractious city-states. Two</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="540.0" y="403.0">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">41</tspan>
 </text>
 <rect class="label" x="654.0" y="394.3" width="414.8" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="423.3">
@@ -344,6 +360,9 @@
 <tspan x="670.0" dy="0.0">Merrowgate updates its founding charter for the first time in 200 years,</tspan>
 <tspan x="670.0" dy="12.0">clarifying guild jurisdictions and council powers. The process takes three years</tspan>
 <tspan x="670.0" dy="12.0">of negotiation.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1062.8" y="475.3">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">37</tspan>
 </text>
 <rect class="label" x="133.2" y="486.4" width="412.8" height="97.0" rx="8" ry="8"/>
 <text class="title" x="149.2" y="515.4">
@@ -355,6 +374,9 @@
 <tspan x="149.2" dy="12.0">Scriveners reveal complete backup copies—maintained in a secret location for</tspan>
 <tspan x="149.2" dy="12.0">exactly this contingency.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="579.4">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">34</tspan>
+</text>
 <rect class="label" x="654.0" y="686.4" width="420.0" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="715.4">
 <tspan x="670.0" dy="0.0">The Insurance Innovation</tspan>
@@ -363,6 +385,9 @@
 <tspan x="670.0" dy="0.0">Merrowgate introduces &quot;life insurance&quot;—contracts that pay out upon death. The</tspan>
 <tspan x="670.0" dy="12.0">innovation is initially controversial (betting on death?) but becomes wildly</tspan>
 <tspan x="670.0" dy="12.0">popular. Within five years, most middle-class citizens carry policies.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1068.0" y="767.4">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">28</tspan>
 </text>
 <rect class="label" x="139.5" y="741.9" width="406.5" height="97.0" rx="8" ry="8"/>
 <text class="title" x="155.5" y="770.9">
@@ -374,6 +399,9 @@
 <tspan x="155.5" dy="12.0">debt-free. The benefactor&#x27;s identity is never revealed, but the Silent Vault&#x27;s</tspan>
 <tspan x="155.5" dy="12.0">doors glow golden that night.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="834.9">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">25</tspan>
+</text>
 <rect class="label" x="654.0" y="785.4" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="814.4">
 <tspan x="670.0" dy="0.0">Hearts Taken on the Nails</tspan>
@@ -384,15 +412,21 @@
 <tspan x="670.0" dy="12.0">heart removed. The bodies are left where they were laid. The story runs ahead of</tspan>
 <tspan x="670.0" dy="12.0">the carts and crosses every border, told in whispers that never match.</tspan>
 </text>
-<rect class="label" x="128.5" y="864.6" width="417.5" height="97.0" rx="8" ry="8"/>
-<text class="title" x="144.5" y="893.6">
+<text class="age-label" text-anchor="end" x="1068.0" y="878.4">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">23</tspan>
+</text>
+<rect class="label" x="128.5" y="852.9" width="417.5" height="97.0" rx="8" ry="8"/>
+<text class="title" x="144.5" y="881.9">
 <tspan x="144.5" dy="0.0">The Scriveners&#x27; Schism</tspan>
 </text>
-<text class="summary" x="144.5" y="911.6">
+<text class="summary" x="144.5" y="899.9">
 <tspan x="144.5" dy="0.0">A radical faction of young Scriveners advocates for &quot;contract</tspan>
 <tspan x="144.5" dy="12.0">liberation&quot;—reducing enchantment enforcement and trusting parties to honor</tspan>
 <tspan x="144.5" dy="12.0">agreements voluntarily. The movement gains followers before being crushed by</tspan>
 <tspan x="144.5" dy="12.0">traditionalists. Several radicals are expelled from the city.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="540.0" y="945.9">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">22</tspan>
 </text>
 <rect class="label" x="654.0" y="896.4" width="411.5" height="121.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="925.4">
@@ -406,15 +440,21 @@
 <tspan x="670.0" dy="12.0">mass graves and planting wheat—&quot;let the dead feed the living.&quot; The Council of</tspan>
 <tspan x="670.0" dy="12.0">Consuls deadlocks repeatedly. Each city-state builds its own memorial in its</tspan>
 </text>
-<rect class="label" x="134.9" y="975.6" width="411.1" height="97.0" rx="8" ry="8"/>
-<text class="title" x="150.9" y="1004.6">
+<text class="age-label" text-anchor="end" x="1059.5" y="1013.4">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">22</tspan>
+</text>
+<rect class="label" x="134.9" y="963.9" width="411.1" height="97.0" rx="8" ry="8"/>
+<text class="title" x="150.9" y="992.9">
 <tspan x="150.9" dy="0.0">The Undercurrent Purge</tspan>
 </text>
-<text class="summary" x="150.9" y="1022.6">
+<text class="summary" x="150.9" y="1010.9">
 <tspan x="150.9" dy="0.0">A reformist faction within the city council attempts to shut down the</tspan>
 <tspan x="150.9" dy="12.0">Undercurrent&#x27;s more blatant criminal operations. Within three days, every</tspan>
 <tspan x="150.9" dy="12.0">reformist finds themselves implicated in old scandals or facing financial ruin.</tspan>
 <tspan x="150.9" dy="12.0">The investigation quietly ends.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="540.0" y="1056.9">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">19</tspan>
 </text>
 <rect class="label" x="654.0" y="1047.4" width="404.4" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1076.4">
@@ -425,6 +465,9 @@
 <tspan x="670.0" dy="12.0">allowing fractional ownership of merchant ventures. The innovation attracts</tspan>
 <tspan x="670.0" dy="12.0">investors from every nation and creates a new class of wealthy speculators.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="1052.4" y="1128.4">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">16</tspan>
+</text>
 <rect class="label" x="130.4" y="1141.6" width="415.6" height="85.0" rx="8" ry="8"/>
 <text class="title" x="146.4" y="1170.6">
 <tspan x="146.4" dy="0.0">The Silent Patron&#x27;s Jubilee</tspan>
@@ -433,6 +476,9 @@
 <tspan x="146.4" dy="0.0">Merrowgate celebrates the alleged 500th anniversary of the Silent Patron&#x27;s first</tspan>
 <tspan x="146.4" dy="12.0">appearance (date disputed by historians). The city grants amnesty to minor</tspan>
 <tspan x="146.4" dy="12.0">contract violations and hosts lavish celebrations.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="540.0" y="1222.6">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">12</tspan>
 </text>
 <rect class="label" x="654.0" y="1259.1" width="416.9" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1288.1">
@@ -443,6 +489,9 @@
 <tspan x="670.0" dy="12.0">sweeping changes to Foundling House operations: education standards, health</tspan>
 <tspan x="670.0" dy="12.0">inspections, and child welfare oversight. Guilds comply publicly while</tspan>
 <tspan x="670.0" dy="12.0">maintaining private training facilities.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1064.9" y="1352.1">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">8</tspan>
 </text>
 <rect class="label" x="134.2" y="1319.4" width="411.8" height="121.0" rx="8" ry="8"/>
 <text class="title" x="150.2" y="1348.4">
@@ -456,6 +505,9 @@
 <tspan x="150.2" dy="12.0">becomes the continent&#x27;s breadbasket, choosing prosperity through generosity</tspan>
 <tspan x="150.2" dy="12.0">over isolation. The dissenting city-state accepts the vote but builds its own</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="1436.4">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">6</tspan>
+</text>
 <rect class="label" x="654.0" y="1370.1" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1399.1">
 <tspan x="670.0" dy="0.0">The Canal Murders</tspan>
@@ -465,6 +517,9 @@
 <tspan x="670.0" dy="12.0">with a different guild&#x27;s mark carved into their flesh. The Silent Coin resolves the</tspan>
 <tspan x="670.0" dy="12.0">matter—officially a territorial dispute between smuggling rings, unofficially a</tspan>
 <tspan x="670.0" dy="12.0">warning to guilds overstepping boundaries.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1068.0" y="1463.1">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">5</tspan>
 </text>
 <rect class="label" x="126.0" y="1461.4" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="142.0" y="1490.4">
@@ -476,6 +531,9 @@
 <tspan x="142.0" dy="12.0">becomes required reading for merchants, diplomats, and lawyers across the</tspan>
 <tspan x="142.0" dy="12.0">known world.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="1554.4">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">2</tspan>
+</text>
 <rect class="label" x="654.0" y="1533.4" width="381.6" height="73.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1562.4">
 <tspan x="670.0" dy="0.0">⋈ Age of Trade</tspan>
@@ -484,15 +542,21 @@
 <tspan x="670.0" dy="0.0">War ends and coin takes over; the old war-roads are inherited by guilds,</tspan>
 <tspan x="670.0" dy="12.0">charters, and contract courts.</tspan>
 </text>
-<rect class="label" x="139.4" y="1578.3" width="406.6" height="97.0" rx="8" ry="8"/>
-<text class="title" x="155.4" y="1607.3">
+<text class="age-label" text-anchor="end" x="1029.6" y="1602.4">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">0</tspan>
+</text>
+<rect class="label" x="139.4" y="1572.4" width="406.6" height="97.0" rx="8" ry="8"/>
+<text class="title" x="155.4" y="1601.4">
 <tspan x="155.4" dy="0.0">The All-Guild Festival</tspan>
 </text>
-<text class="summary" x="155.4" y="1625.3">
+<text class="summary" x="155.4" y="1619.4">
 <tspan x="155.4" dy="0.0">Merrowgate establishes an annual festival where all guilds display their</tspan>
 <tspan x="155.4" dy="12.0">services, competing for prestige and new members. The event becomes a</tspan>
 <tspan x="155.4" dy="12.0">combination of carnival, job fair, and barely-disguised intelligence gathering</tspan>
 <tspan x="155.4" dy="12.0">operation.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="540.0" y="1665.4">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">326</tspan>
 </text>
 <rect class="label" x="654.0" y="1731.4" width="419.6" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1760.4">
@@ -504,6 +568,9 @@
 <tspan x="670.0" dy="12.0">International parties can now resolve disputes under their preferred legal</tspan>
 <tspan x="670.0" dy="12.0">framework, all certified by the Ink.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="1067.6" y="1824.4">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">320</tspan>
+</text>
 <rect class="label" x="127.9" y="1985.6" width="418.1" height="85.0" rx="8" ry="8"/>
 <text class="title" x="143.9" y="2014.6">
 <tspan x="143.9" dy="0.0">The Councilor&#x27;s Lottery</tspan>
@@ -512,6 +579,9 @@
 <tspan x="143.9" dy="0.0">In a controversial reform, Merrowgate adds three &quot;lottery seats&quot; to its</tspan>
 <tspan x="143.9" dy="12.0">council—positions filled by random draw from guild members. The first lottery</tspan>
 <tspan x="143.9" dy="12.0">winner is a low-level Scrivener clerk who serves with surprising effectiveness.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="540.0" y="2066.6">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">311</tspan>
 </text>
 <rect class="label" x="654.0" y="2091.4" width="401.7" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="2120.4">
@@ -523,6 +593,9 @@
 <tspan x="670.0" dy="12.0">services across borders. The consortium becomes more powerful than many</tspan>
 <tspan x="670.0" dy="12.0">nation-states within a generation.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="1049.7" y="2184.4">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">308</tspan>
+</text>
 <rect class="label" x="128.9" y="2282.4" width="417.1" height="97.0" rx="8" ry="8"/>
 <text class="title" x="144.9" y="2311.4">
 <tspan x="144.9" dy="0.0">The Face-Broker Accord</tspan>
@@ -532,6 +605,9 @@
 <tspan x="144.9" dy="12.0">ending decades of semi-legal operation. In exchange, brokers must register all</tspan>
 <tspan x="144.9" dy="12.0">identities and pay a percentage to the main guild. Underground operations</tspan>
 <tspan x="144.9" dy="12.0">continue regardless.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="540.0" y="2375.4">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">301</tspan>
 </text>
 <rect class="label" x="654.0" y="2481.4" width="418.2" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="2510.4">
@@ -543,6 +619,9 @@
 <tspan x="670.0" dy="12.0">negotiations regardless of ongoing hostilities. The protocol is tested</tspan>
 <tspan x="670.0" dy="12.0">immediately and holds.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="1066.2" y="2574.4">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">295</tspan>
+</text>
 <rect class="label" x="126.4" y="2550.2" width="419.6" height="85.0" rx="8" ry="8"/>
 <text class="title" x="142.4" y="2579.2">
 <tspan x="142.4" dy="0.0">The Naming Day Ceremony</tspan>
@@ -551,6 +630,9 @@
 <tspan x="142.4" dy="0.0">Merrowgate establishes an annual ceremony where guild-sworn children who</tspan>
 <tspan x="142.4" dy="12.0">have proven themselves receive their &quot;true names&quot;—guild-sanctioned identities</tspan>
 <tspan x="142.4" dy="12.0">that replace their foundling designations. It becomes a celebrated civic holiday.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="540.0" y="2631.2">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">292</tspan>
 </text>
 <rect class="label" x="654.0" y="2676.4" width="400.6" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="2705.4">
@@ -562,6 +644,9 @@
 <tspan x="670.0" dy="12.0">trials are theater—defendants receive light sentences and are quietly</tspan>
 <tspan x="670.0" dy="12.0">compensated by the guild afterward.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="1048.6" y="2769.4">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">288</tspan>
+</text>
 <rect class="label" x="143.2" y="2775.3" width="402.8" height="97.0" rx="8" ry="8"/>
 <text class="title" x="159.2" y="2804.3">
 <tspan x="159.2" dy="0.0">The Silent Coin Revelation</tspan>
@@ -571,6 +656,9 @@
 <tspan x="159.2" dy="12.0">orchestrated his entire career, arranging his success to create leverage over</tspan>
 <tspan x="159.2" dy="12.0">seven other merchant families. The guild neither confirms nor denies. Three</tspan>
 <tspan x="159.2" dy="12.0">other princes quietly retire.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="540.0" y="2868.3">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">285</tspan>
 </text>
 <rect class="label" x="654.0" y="2871.4" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="2900.4">
@@ -582,6 +670,9 @@
 <tspan x="670.0" dy="12.0">maintains perfect stability for three years. Other nations begin holding reserves</tspan>
 <tspan x="670.0" dy="12.0">in Marks.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="1068.0" y="2964.4">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">282</tspan>
+</text>
 <rect class="label" x="129.9" y="2938.9" width="416.1" height="97.0" rx="8" ry="8"/>
 <text class="title" x="145.9" y="2967.9">
 <tspan x="145.9" dy="0.0">The Ledger Court Expansion</tspan>
@@ -592,6 +683,9 @@
 <tspan x="145.9" dy="12.0">enchantments that make lying physically uncomfortable—a Scrivener</tspan>
 <tspan x="145.9" dy="12.0">innovation.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="3031.9">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">279</tspan>
+</text>
 <rect class="label" x="654.0" y="3044.3" width="417.0" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="3073.3">
 <tspan x="670.0" dy="0.0">The Face Market Collapse</tspan>
@@ -600,6 +694,9 @@
 <tspan x="670.0" dy="0.0">A massive data breach exposes hundreds of false identities in the Shadow</tspan>
 <tspan x="670.0" dy="12.0">Ledgers. Panic ensues as criminals, spies, and refugees scramble to secure new</tspan>
 <tspan x="670.0" dy="12.0">faces. The Maskers&#x27; Guild spends a week in lockdown before restoring order.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1065.0" y="3125.3">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">276</tspan>
 </text>
 <rect class="label" x="128.0" y="3191.5" width="418.0" height="109.0" rx="8" ry="8"/>
 <text class="title" x="144.0" y="3220.5">
@@ -612,6 +709,9 @@
 <tspan x="144.0" dy="12.0">the Horde his name is kept only as a curse: proof that gold is softer than mud,</tspan>
 <tspan x="144.0" dy="12.0">and twice as deadly.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="3296.5">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
+</text>
 <rect class="label" x="654.0" y="3203.8" width="413.8" height="109.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="3232.8">
 <tspan x="670.0" dy="0.0">Warlord Uruknar Rakthokgar Death</tspan>
@@ -623,6 +723,9 @@
 <tspan x="670.0" dy="12.0">charge, and crossbow bolts cracked from the haze. Gruknar died on her knees,</tspan>
 <tspan x="670.0" dy="12.0">and Ironstead rose up tall.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="1061.8" y="3308.8">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
+</text>
 <rect class="label" x="129.9" y="3314.5" width="416.1" height="97.0" rx="8" ry="8"/>
 <text class="title" x="145.9" y="3343.5">
 <tspan x="145.9" dy="0.0">The Debt-Child Scandal</tspan>
@@ -632,6 +735,9 @@
 <tspan x="145.9" dy="12.0">Public outrage forces reforms: better housing, education standards, and</tspan>
 <tspan x="145.9" dy="12.0">oversight. Privately, the guilds simply move their harshest training programs</tspan>
 <tspan x="145.9" dy="12.0">underground.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="540.0" y="3407.5">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">269</tspan>
 </text>
 <rect class="label" x="654.0" y="3326.8" width="412.7" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="3355.8">
@@ -643,6 +749,9 @@
 <tspan x="670.0" dy="12.0">business advantages. The event becomes a major civic celebration, with</tspan>
 <tspan x="670.0" dy="12.0">elaborate ceremonies and public festivities.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="1060.7" y="3419.8">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">266</tspan>
+</text>
 <rect class="label" x="128.9" y="3425.5" width="417.1" height="97.0" rx="8" ry="8"/>
 <text class="title" x="144.9" y="3454.5">
 <tspan x="144.9" dy="0.0">The First Trade Caravans</tspan>
@@ -652,6 +761,9 @@
 <tspan x="144.9" dy="12.0">trade caravan crosses the former battlefields. Ardenhaven grain for Calderon</tspan>
 <tspan x="144.9" dy="12.0">coal and iron. The exchange is awkward, stilted, watched by veterans on both</tspan>
 <tspan x="144.9" dy="12.0">sides. But it happens. Commerce begins to replace contempt.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="540.0" y="3518.5">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">265</tspan>
 </text>
 <rect class="label" x="654.0" y="3437.8" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="3466.8">
@@ -663,15 +775,21 @@
 <tspan x="670.0" dy="12.0">when both leaders are found drowned in canal water—a clear message from the</tspan>
 <tspan x="670.0" dy="12.0">Silent Coin.</tspan>
 </text>
-<rect class="label" x="127.4" y="3555.0" width="418.6" height="97.0" rx="8" ry="8"/>
-<text class="title" x="143.4" y="3584.0">
+<text class="age-label" text-anchor="end" x="1068.0" y="3530.8">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">263</tspan>
+</text>
+<rect class="label" x="127.4" y="3536.5" width="418.6" height="97.0" rx="8" ry="8"/>
+<text class="title" x="143.4" y="3565.5">
 <tspan x="143.4" dy="0.0">The Great Tariff Reform</tspan>
 </text>
-<text class="summary" x="143.4" y="3602.0">
+<text class="summary" x="143.4" y="3583.5">
 <tspan x="143.4" dy="0.0">Merrowgate leads a coalition to standardize trade tariffs across six nations. The</tspan>
 <tspan x="143.4" dy="12.0">year-long negotiation creates a common customs framework that reduces</tspan>
 <tspan x="143.4" dy="12.0">smuggling and increases legitimate trade. The city&#x27;s influence reaches its</tspan>
 <tspan x="143.4" dy="12.0">zenith.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="540.0" y="3629.5">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">260</tspan>
 </text>
 <rect class="label" x="654.0" y="3691.8" width="411.7" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="3720.8">
@@ -683,6 +801,9 @@
 <tspan x="670.0" dy="12.0">city&#x27;s primary smuggling coordination network, now operating with official</tspan>
 <tspan x="670.0" dy="12.0">sanction.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="1059.7" y="3784.8">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">253</tspan>
+</text>
 <rect class="label" x="139.0" y="3788.0" width="407.0" height="85.0" rx="8" ry="8"/>
 <text class="title" x="155.0" y="3817.0">
 <tspan x="155.0" dy="0.0">The Thousand Ships Insurance</tspan>
@@ -691,6 +812,9 @@
 <tspan x="155.0" dy="0.0">Following a devastating hurricane season, Merrowgate guilds establish the</tspan>
 <tspan x="155.0" dy="12.0">world&#x27;s first comprehensive maritime insurance system. Within a decade, no</tspan>
 <tspan x="155.0" dy="12.0">merchant vessel sails without a Merrowgate policy.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="540.0" y="3869.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">251</tspan>
 </text>
 <rect class="label" x="654.0" y="3802.8" width="410.7" height="109.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="3831.8">
@@ -703,6 +827,9 @@
 <tspan x="670.0" dy="12.0">all signatories pledge to resolve disputes through commerce rather than</tspan>
 <tspan x="670.0" dy="12.0">conquest. The world exhales.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="1058.7" y="3907.8">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">250</tspan>
+</text>
 <rect class="label" x="141.3" y="3887.0" width="404.7" height="109.0" rx="8" ry="8"/>
 <text class="title" x="157.3" y="3916.0">
 <tspan x="157.3" dy="0.0">The Merrowgate Mediation</tspan>
@@ -714,6 +841,9 @@
 <tspan x="157.3" dy="12.0">Both sides cling to pride while accepting reality: continuation means mutual</tspan>
 <tspan x="157.3" dy="12.0">destruction.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="3992.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">250</tspan>
+</text>
 <rect class="label" x="654.0" y="3925.8" width="417.7" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="3954.8">
 <tspan x="670.0" dy="0.0">The Ledger Court Assassination</tspan>
@@ -723,6 +853,9 @@
 <tspan x="670.0" dy="12.0">Silent Coin resolves the matter within hours—the assassin is found dead of</tspan>
 <tspan x="670.0" dy="12.0">apparent suicide, and a convenient scapegoat confession surfaces. The</tspan>
 <tspan x="670.0" dy="12.0">negotiations proceed as scheduled.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1065.7" y="4018.8">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">248</tspan>
 </text>
 <rect class="label" x="126.0" y="4033.9" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="142.0" y="4062.9">
@@ -734,6 +867,9 @@
 <tspan x="142.0" dy="12.0">total war. The language is unambiguous—there will be no negotiated peace,</tspan>
 <tspan x="142.0" dy="12.0">only submission or annihilation. The 7-year war begins.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="4126.9">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">243</tspan>
+</text>
 <rect class="label" x="654.0" y="4101.4" width="413.2" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="4130.4">
 <tspan x="670.0" dy="0.0">The Garhammar Accords</tspan>
@@ -743,6 +879,9 @@
 <tspan x="670.0" dy="12.0">Calderon Imperium over arms exports. The resulting framework becomes the</tspan>
 <tspan x="670.0" dy="12.0">template for international weapons trade regulation, cementing Merrowgate&#x27;s</tspan>
 <tspan x="670.0" dy="12.0">role as neutral ground.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1061.2" y="4194.4">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">241</tspan>
 </text>
 <rect class="label" x="127.1" y="4191.4" width="418.9" height="97.0" rx="8" ry="8"/>
 <text class="title" x="143.1" y="4220.4">
@@ -754,6 +893,9 @@
 <tspan x="143.1" dy="12.0">true faces revealed before exile. The event serves as a brutal reminder of guild</tspan>
 <tspan x="143.1" dy="12.0">authority.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="4284.4">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">238</tspan>
+</text>
 <rect class="label" x="654.0" y="4265.5" width="396.7" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="4294.5">
 <tspan x="670.0" dy="0.0">The Foundling House Fire</tspan>
@@ -763,6 +905,9 @@
 <tspan x="670.0" dy="12.0">children and three guild trainers. Whispers suggest it was retribution for a</tspan>
 <tspan x="670.0" dy="12.0">failed assassination trained there. The guild quietly rebuilds and tightens</tspan>
 <tspan x="670.0" dy="12.0">security.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1044.7" y="4358.5">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">235</tspan>
 </text>
 <rect class="label" x="161.8" y="4371.4" width="384.2" height="97.0" rx="8" ry="8"/>
 <text class="title" x="177.8" y="4400.4">
@@ -774,6 +919,9 @@
 <tspan x="177.8" dy="12.0">contracts the gold standard for international trade, tripling the city&#x27;s</tspan>
 <tspan x="177.8" dy="12.0">arbitration revenue within five years.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="4464.4">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">232</tspan>
+</text>
 <rect class="label" x="654.0" y="4456.4" width="403.7" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="4485.4">
 <tspan x="670.0" dy="0.0">The Maskers&#x27; Succession Crisis</tspan>
@@ -784,6 +932,9 @@
 <tspan x="670.0" dy="12.0">identity networks. The crisis resolves when the Shadow Ledgers themselves</tspan>
 <tspan x="670.0" dy="12.0">&quot;choose&quot; the winner—later revealed to be the Silent Patron&#x27;s influence.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="1051.7" y="4549.4">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">229</tspan>
+</text>
 <rect class="label" x="127.3" y="4527.4" width="418.7" height="85.0" rx="8" ry="8"/>
 <text class="title" x="143.3" y="4556.4">
 <tspan x="143.3" dy="0.0">The Charter of Open Waters</tspan>
@@ -792,6 +943,9 @@
 <tspan x="143.3" dy="0.0">Merrowgate brokers a historic neutrality pact between Calderon Imperium and</tspan>
 <tspan x="143.3" dy="12.0">Ardenhaven, securing safe passage through its waters for all nations. The treaty</tspan>
 <tspan x="143.3" dy="12.0">establishes Merrowgate as the undisputed arbiter of maritime trade disputes.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="540.0" y="4608.4">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">227</tspan>
 </text>
 <rect class="label" x="654.0" y="4637.8" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="4666.8">
@@ -802,6 +956,9 @@
 <tspan x="670.0" dy="12.0">republic. Each city-state retains internal governance but surrenders</tspan>
 <tspan x="670.0" dy="12.0">war-making power to a unified Council of Consuls. Merrowgate, invited to join,</tspan>
 <tspan x="670.0" dy="12.0">formally declines and declares perpetual neutrality.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1068.0" y="4730.8">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">223</tspan>
 </text>
 </g>
 <g id="tags">
@@ -836,22 +993,22 @@
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(134.9 157.0)">
+<g class="public-indicator" transform="translate(134.9 155.0)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(509.0 161.4)">
+<g transform="translate(509.0 159.4)">
 <title>tag: lore</title>
 <use href="#tag_lore" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 161.4)">
+<g transform="translate(480.0 159.4)">
 <title>tag: law</title>
 <use href="#tag_law" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(451.0 161.4)">
+<g transform="translate(451.0 159.4)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(413.2 157.0)">
+<g transform="translate(413.2 155.0)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
@@ -867,18 +1024,18 @@
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(140.5 307.0)">
+<g class="public-indicator" transform="translate(140.5 290.0)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(509.0 311.4)">
+<g transform="translate(509.0 294.4)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 311.4)">
+<g transform="translate(480.0 294.4)">
 <title>tag: infrastructure</title>
 <use href="#tag_infrastructure" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 307.0)">
+<g transform="translate(442.2 290.0)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
@@ -945,15 +1102,15 @@
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 873.0)">
+<g transform="translate(509.0 861.3)">
 <title>tag: magic</title>
 <use href="#tag_magic" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 873.0)">
+<g transform="translate(480.0 861.3)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 868.6)">
+<g transform="translate(442.2 856.9)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
@@ -976,19 +1133,19 @@
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 984.0)">
+<g transform="translate(509.0 972.3)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 984.0)">
+<g transform="translate(480.0 972.3)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(451.0 984.0)">
+<g transform="translate(451.0 972.3)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(413.2 979.6)">
+<g transform="translate(413.2 967.9)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
@@ -1085,15 +1242,15 @@
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(509.0 1586.7)">
+<g transform="translate(509.0 1580.8)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 1586.7)">
+<g transform="translate(480.0 1580.8)">
 <title>tag: lore</title>
 <use href="#tag_lore" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 1582.3)">
+<g transform="translate(442.2 1576.4)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
@@ -1330,23 +1487,23 @@
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 3563.4)">
+<g transform="translate(509.0 3544.9)">
 <title>tag: law</title>
 <use href="#tag_law" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 3563.4)">
+<g transform="translate(480.0 3544.9)">
 <title>tag: economy</title>
 <use href="#tag_economy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(451.0 3563.4)">
+<g transform="translate(451.0 3544.9)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(422.0 3563.4)">
+<g transform="translate(422.0 3544.9)">
 <title>tag: diplomacy</title>
 <use href="#tag_diplomacy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(384.2 3559.0)">
+<g transform="translate(384.2 3540.5)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>

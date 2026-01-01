@@ -40,6 +40,7 @@
         .label { fill: #fffaf0; stroke: var(--label-border); stroke-width: 1; }
         .label.changed-id, .label.changed { stroke: #d97900; stroke-width: 4; stroke-linejoin: round; }
         .title { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 16px; font-weight: 700; fill: #2b1f14; }
+        .age-label { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 14px; font-weight: 700; fill: #5a4634; }
         .summary { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #3a2b1f; }
         .md-bold { font-weight: 700; }
         .public-indicator { color: var(--public-indicator); opacity: 0.9; }
@@ -146,75 +147,75 @@
 <g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="1937"/></g>
 <g id="connectors">
 <line class="connector" x1="600" y1="40.0" x2="552.0" y2="76.5"/>
-<line class="connector" x1="600" y1="162.4" x2="648.0" y2="76.5"/>
-<line class="connector" x1="600" y1="184.0" x2="552.0" y2="163.5"/>
-<line class="connector" x1="600" y1="270.4" x2="648.0" y2="169.5"/>
-<line class="connector" x1="600" y1="306.4" x2="552.0" y2="262.5"/>
-<line class="connector" x1="600" y1="306.4" x2="648.0" y2="268.5"/>
-<line class="connector" x1="600" y1="335.2" x2="552.0" y2="361.5"/>
-<line class="connector" x1="600" y1="371.2" x2="648.0" y2="373.5"/>
-<line class="connector" x1="600" y1="378.4" x2="552.0" y2="472.5"/>
-<line class="connector" x1="600" y1="378.4" x2="648.0" y2="478.5"/>
-<line class="connector" x1="600" y1="472.0" x2="552.0" y2="601.5"/>
-<line class="connector" x1="600" y1="551.2" x2="648.0" y2="595.5"/>
-<line class="connector" x1="600" y1="558.4" x2="552.0" y2="724.5"/>
-<line class="connector" x1="600" y1="580.0" x2="648.0" y2="718.5"/>
-<line class="connector" x1="600" y1="644.8" x2="552.0" y2="853.5"/>
-<line class="connector" x1="600" y1="652.0" x2="648.0" y2="829.5"/>
-<line class="connector" x1="600" y1="695.2" x2="552.0" y2="982.5"/>
-<line class="connector" x1="600" y1="760.0" x2="648.0" y2="946.5"/>
-<line class="connector" x1="600" y1="767.2" x2="552.0" y2="1105.5"/>
-<line class="connector" x1="600" y1="774.4" x2="648.0" y2="1063.5"/>
-<line class="connector" x1="600" y1="817.6" x2="552.0" y2="1228.5"/>
-<line class="connector" x1="600" y1="868.0" x2="648.0" y2="1168.5"/>
-<line class="connector" x1="600" y1="875.2" x2="552.0" y2="1345.5"/>
-<line class="connector" x1="600" y1="882.4" x2="648.0" y2="1279.5"/>
-<line class="connector" x1="600" y1="882.4" x2="552.0" y2="1462.5"/>
-<line class="connector" x1="600" y1="882.4" x2="648.0" y2="1390.5"/>
-<line class="connector" x1="600" y1="889.6" x2="552.0" y2="1579.5"/>
-<line class="connector" x1="600" y1="889.6" x2="648.0" y2="1489.5"/>
-<line class="connector" x1="600" y1="896.8" x2="552.0" y2="1684.5"/>
-<line class="connector" x1="600" y1="904.0" x2="648.0" y2="1588.5"/>
-<line class="connector" x1="600" y1="911.2" x2="552.0" y2="1789.5"/>
-<line class="connector" x1="600" y1="911.2" x2="648.0" y2="1687.5"/>
-<line class="connector" x1="600" y1="918.4" x2="552.0" y2="1894.5"/>
-<line class="connector" x1="600" y1="940.0" x2="648.0" y2="1780.5"/>
+<line class="connector" x1="600" y1="293.9" x2="648.0" y2="76.5"/>
+<line class="connector" x1="600" y1="338.7" x2="552.0" y2="163.5"/>
+<line class="connector" x1="600" y1="518.0" x2="648.0" y2="169.5"/>
+<line class="connector" x1="600" y1="592.7" x2="552.0" y2="262.5"/>
+<line class="connector" x1="600" y1="592.7" x2="648.0" y2="268.5"/>
+<line class="connector" x1="600" y1="652.4" x2="552.0" y2="361.5"/>
+<line class="connector" x1="600" y1="727.1" x2="648.0" y2="373.5"/>
+<line class="connector" x1="600" y1="742.0" x2="552.0" y2="472.5"/>
+<line class="connector" x1="600" y1="742.0" x2="648.0" y2="478.5"/>
+<line class="connector" x1="600" y1="936.2" x2="552.0" y2="601.5"/>
+<line class="connector" x1="600" y1="1100.5" x2="648.0" y2="595.5"/>
+<line class="connector" x1="600" y1="1115.5" x2="552.0" y2="724.5"/>
+<line class="connector" x1="600" y1="1160.3" x2="648.0" y2="718.5"/>
+<line class="connector" x1="600" y1="1294.7" x2="552.0" y2="853.5"/>
+<line class="connector" x1="600" y1="1309.6" x2="648.0" y2="829.5"/>
+<line class="connector" x1="600" y1="1399.3" x2="552.0" y2="982.5"/>
+<line class="connector" x1="600" y1="1533.7" x2="648.0" y2="946.5"/>
+<line class="connector" x1="600" y1="1548.6" x2="552.0" y2="1105.5"/>
+<line class="connector" x1="600" y1="1563.6" x2="648.0" y2="1063.5"/>
+<line class="connector" x1="600" y1="1653.2" x2="552.0" y2="1228.5"/>
+<line class="connector" x1="600" y1="1757.8" x2="648.0" y2="1168.5"/>
+<line class="connector" x1="600" y1="1772.7" x2="552.0" y2="1345.5"/>
+<line class="connector" x1="600" y1="1787.6" x2="648.0" y2="1279.5"/>
+<line class="connector" x1="600" y1="1787.6" x2="552.0" y2="1462.5"/>
+<line class="connector" x1="600" y1="1787.6" x2="648.0" y2="1390.5"/>
+<line class="connector" x1="600" y1="1802.6" x2="552.0" y2="1579.5"/>
+<line class="connector" x1="600" y1="1802.6" x2="648.0" y2="1489.5"/>
+<line class="connector" x1="600" y1="1817.5" x2="552.0" y2="1684.5"/>
+<line class="connector" x1="600" y1="1832.4" x2="648.0" y2="1588.5"/>
+<line class="connector" x1="600" y1="1847.4" x2="552.0" y2="1789.5"/>
+<line class="connector" x1="600" y1="1847.4" x2="648.0" y2="1687.5"/>
+<line class="connector" x1="600" y1="1862.3" x2="552.0" y2="1894.5"/>
+<line class="connector" x1="600" y1="1907.1" x2="648.0" y2="1780.5"/>
 </g>
 <g id="tokens">
 <use class="token" href="#token_default" x="589.0" y="29.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="151.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="173.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="259.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="295.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="295.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="324.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="360.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="367.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="367.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="461.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="540.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="547.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="569.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="633.8" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="641.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="684.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="749.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="756.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="763.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="806.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="857.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="864.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="871.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="871.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="871.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="878.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="878.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="885.8" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="893.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="900.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="900.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="907.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="929.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="282.9" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="327.7" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="507.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="581.7" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="581.7" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="641.4" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="716.1" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="731.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="731.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="925.2" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1089.5" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1104.5" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1149.3" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1283.7" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1298.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1388.3" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1522.7" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1537.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1552.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1642.2" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1746.8" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1761.7" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1776.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1776.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1776.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1791.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1791.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1806.5" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1821.4" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1836.4" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1836.4" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1851.3" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1896.1" width="22" height="22"/>
 </g>
 <g id="labels">
 <rect class="label" x="131.0" y="40.0" width="415.0" height="73.0" rx="8" ry="8"/>
@@ -225,6 +226,9 @@
 <tspan x="147.0" dy="0.0">The Vision Council gathers around the fire and sets the war-banner in Ghorrak</tspan>
 <tspan x="147.0" dy="12.0">Dakmar’nak’s hands. They name him War Voice.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="109.0">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">60</tspan>
+</text>
 <rect class="label" x="654.0" y="40.0" width="400.5" height="73.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="69.0">
 <tspan x="670.0" dy="0.0">The Buffer Mire Line</tspan>
@@ -232,6 +236,9 @@
 <text class="summary" x="670.0" y="87.0">
 <tspan x="670.0" dy="0.0">The Horde establishes a wide buffer zone of traps, false camps, and ambush</tspan>
 <tspan x="670.0" dy="12.0">routes to bleed Calderon patrols before they reach the main camps.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1048.5" y="109.0">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">43</tspan>
 </text>
 <rect class="label" x="143.2" y="127.0" width="402.8" height="73.0" rx="8" ry="8"/>
 <text class="title" x="159.2" y="156.0">
@@ -241,6 +248,9 @@
 <tspan x="159.2" dy="0.0">The Thrukdun—the last tribe holding the northern-facing lands—are driven</tspan>
 <tspan x="159.2" dy="12.0">from their territory by sustained raids. Survivors withdraw west.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="196.0">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">40</tspan>
+</text>
 <rect class="label" x="654.0" y="127.0" width="405.7" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="156.0">
 <tspan x="670.0" dy="0.0">Zharzug Join the Morvorg</tspan>
@@ -249,6 +259,9 @@
 <tspan x="670.0" dy="0.0">Zharzug territory fails under repeated raids. The Zharzug migrate south and</tspan>
 <tspan x="670.0" dy="12.0">settle alongside the Morvorg, remaining distinct tribes while sharing a joint</tspan>
 <tspan x="670.0" dy="12.0">circle of shamans.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1053.7" y="208.0">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">28</tspan>
 </text>
 <rect class="label" x="126.0" y="214.0" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="142.0" y="243.0">
@@ -260,6 +273,9 @@
 <tspan x="142.0" dy="12.0">heart removed. The bodies are left where they were laid. The story runs ahead of</tspan>
 <tspan x="142.0" dy="12.0">the carts and crosses every border, told in whispers that never match.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="307.0">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">23</tspan>
+</text>
 <rect class="label" x="654.0" y="226.0" width="398.1" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="255.0">
 <tspan x="670.0" dy="0.0">Morvorg Westward March</tspan>
@@ -268,6 +284,9 @@
 <tspan x="670.0" dy="0.0">Morvorg lands become unlivable under relentless Calderon raids. The tribe</tspan>
 <tspan x="670.0" dy="12.0">abandons its northern lands and migrates south, folding its camps into the</tspan>
 <tspan x="670.0" dy="12.0">Horde&#x27;s nearer marches.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1046.1" y="307.0">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">23</tspan>
 </text>
 <rect class="label" x="143.1" y="325.0" width="402.9" height="73.0" rx="8" ry="8"/>
 <text class="title" x="159.1" y="354.0">
@@ -279,6 +298,9 @@
 <tspan>, runes over the foes heart.</tspan>
 <tspan x="159.1" dy="12.0">Calderon mines for there own elite soldiers.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="394.0">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">19</tspan>
+</text>
 <rect class="label" x="654.0" y="325.0" width="407.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="354.0">
 <tspan x="670.0" dy="0.0">The Harvest Carts</tspan>
@@ -288,6 +310,9 @@
 <tspan x="670.0" dy="12.0">fight, black carts come—hooks, chains, salt, and clerks with clean</tspan>
 <tspan x="670.0" dy="12.0">hands—dragging their own dead back behind the walls. They no longer leave</tspan>
 <tspan x="670.0" dy="12.0">bodies for the marsh. They gather them like seed.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1055.0" y="418.0">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">14</tspan>
 </text>
 <rect class="label" x="126.0" y="412.0" width="420.0" height="121.0" rx="8" ry="8"/>
 <text class="title" x="142.0" y="441.0">
@@ -301,6 +326,9 @@
 <tspan x="142.0" dy="12.0">threw as he fell: straight as a vow, wet with blood, aimed at the officer&#x27;s throat</tspan>
 <tspan x="142.0" dy="12.0">like a promise.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="529.0">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">13</tspan>
+</text>
 <rect class="label" x="654.0" y="436.0" width="414.8" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="465.0">
 <tspan x="670.0" dy="0.0">The Northern Wall Chokes Trade</tspan>
@@ -309,6 +337,9 @@
 <tspan x="670.0" dy="0.0">calderon-imperium completes a new wall and checkpoint line, strangling the</tspan>
 <tspan x="670.0" dy="12.0">northern trade routes into the Horde. They call it &quot;customs.&quot; Except they no orc</tspan>
 <tspan x="670.0" dy="12.0">is allowed passage; it just an ouright blockade.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1062.8" y="517.0">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">13</tspan>
 </text>
 <rect class="label" x="133.1" y="547.0" width="412.9" height="109.0" rx="8" ry="8"/>
 <text class="title" x="149.1" y="576.0">
@@ -320,6 +351,9 @@
 <tspan x="149.1" dy="12.0">chest-deep water, where every step is a choice between drowning and killing.</tspan>
 <tspan x="149.1" dy="12.0">When the gate collapsed, it buried her; the bog kept her as a guardian, and the</tspan>
 <tspan x="149.1" dy="12.0">Heart-Marked still avoid that crossing.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="540.0" y="652.0">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">0</tspan>
 </text>
 <rect class="label" x="654.0" y="535.0" width="419.3" height="121.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="564.0">
@@ -333,6 +367,9 @@
 <tspan x="670.0" dy="12.0">there—hands ruined, chest opened—so the shaman could crawl back to the fire</tspan>
 <tspan x="670.0" dy="12.0">and speak the names of the dead.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="1067.3" y="652.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">316</tspan>
+</text>
 <rect class="label" x="127.9" y="670.0" width="418.1" height="109.0" rx="8" ry="8"/>
 <text class="title" x="143.9" y="699.0">
 <tspan x="143.9" dy="0.0">Warlord Durzgar Rakthokgar Death</tspan>
@@ -344,6 +381,9 @@
 <tspan x="143.9" dy="12.0">innocents behind him become numbers in a clerk&#x27;s book. When he fell, the</tspan>
 <tspan x="143.9" dy="12.0">warband swore the Spirits leaned in close to hear his last breath.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="775.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">315</tspan>
+</text>
 <rect class="label" x="654.0" y="670.0" width="418.7" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="699.0">
 <tspan x="670.0" dy="0.0">Warlord Orzak Ghorzug Death</tspan>
@@ -353,6 +393,9 @@
 <tspan x="670.0" dy="12.0">Bridges she sprang another trap—fire in the reeds, blades from below—but</tspan>
 <tspan x="670.0" dy="12.0">they were ready. The Heart-Marked answered with disciplined crossbow volleys</tspan>
 <tspan x="670.0" dy="12.0">and turned the ambush into a rout.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1066.7" y="763.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">312</tspan>
 </text>
 <rect class="label" x="127.1" y="793.0" width="418.9" height="121.0" rx="8" ry="8"/>
 <text class="title" x="143.1" y="822.0">
@@ -366,6 +409,9 @@
 <tspan x="143.1" dy="12.0">before it: tusks bared, feet sure on ice, roaring the Ancestors&#x27; names so loudly</tspan>
 <tspan x="143.1" dy="12.0">the frame shook. The ballista never stopped shooting.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="910.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">303</tspan>
+</text>
 <rect class="label" x="654.0" y="781.0" width="417.8" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="810.0">
 <tspan x="670.0" dy="0.0">Warlord Zokgar Zharzug Death</tspan>
@@ -375,6 +421,9 @@
 <tspan x="670.0" dy="12.0">shields—only spears. When Calderon soldiers tried to cross on bodies, Zokgar</tspan>
 <tspan x="670.0" dy="12.0">went under with them and pulled three down; the crossing failed and the water</tspan>
 <tspan x="670.0" dy="12.0">ran red.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1065.8" y="874.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">302</tspan>
 </text>
 <rect class="label" x="129.4" y="928.0" width="416.6" height="109.0" rx="8" ry="8"/>
 <text class="title" x="145.4" y="957.0">
@@ -387,6 +436,9 @@
 <tspan x="145.4" dy="12.0">lay dying the yard captain mocked her failure, only to have his heart cleft by the</tspan>
 <tspan x="145.4" dy="12.0">warlord&#x27;s knife. Even in death the Rakthok fight to win.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="1033.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">296</tspan>
+</text>
 <rect class="label" x="654.0" y="892.0" width="411.8" height="109.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="921.0">
 <tspan x="670.0" dy="0.0">Warlord Kragzor Dakmar&#x27;nak Death</tspan>
@@ -397,6 +449,9 @@
 <tspan x="670.0" dy="12.0">into deep water and took the captain&#x27;s throat with his own teeth when blades</tspan>
 <tspan x="670.0" dy="12.0">were lost to the swamp. The Heart-Marked never found his body; the</tspan>
 <tspan x="670.0" dy="12.0">Dakmar&#x27;nak say he joined the marsh and became its anger.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1059.8" y="997.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">287</tspan>
 </text>
 <rect class="label" x="128.8" y="1051.0" width="417.2" height="109.0" rx="8" ry="8"/>
 <text class="title" x="144.8" y="1080.0">
@@ -409,6 +464,9 @@
 <tspan x="144.8" dy="12.0">prisoners. She died under spearpoints, but the captives escaped. The tale is a</tspan>
 <tspan x="144.8" dy="12.0">prayer: when the Heart-Marked bring paper, we bring teeth.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="1156.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">286</tspan>
+</text>
 <rect class="label" x="654.0" y="1015.0" width="410.8" height="97.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1044.0">
 <tspan x="670.0" dy="0.0">Warlord Ug&#x27;rok Gronmog Death</tspan>
@@ -418,6 +476,9 @@
 <tspan x="670.0" dy="12.0">torches, war-cries echoing off wet stone. He reached the standard-bearer and</tspan>
 <tspan x="670.0" dy="12.0">ripped the banner free, wrapping it around his fist so it couldn&#x27;t be reclaimed.</tspan>
 <tspan x="670.0" dy="12.0">They killed him for it; both he and the banner sunk into the swamp.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1058.8" y="1108.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">285</tspan>
 </text>
 <rect class="label" x="138.6" y="1174.0" width="407.4" height="109.0" rx="8" ry="8"/>
 <text class="title" x="154.6" y="1203.0">
@@ -430,6 +491,9 @@
 <tspan x="154.6" dy="12.0">smoke and reeds. He died blackened and standing—a silhouette against the</tspan>
 <tspan x="154.6" dy="12.0">blaze—so the Horde could breathe and regroup.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="1279.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">279</tspan>
+</text>
 <rect class="label" x="654.0" y="1126.0" width="418.9" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1155.0">
 <tspan x="670.0" dy="0.0">The Name &quot;Ironstead&quot;</tspan>
@@ -438,6 +502,9 @@
 <tspan x="670.0" dy="0.0">calderon-imperium declares the new fortress city Ironstead as their capital and</tspan>
 <tspan x="670.0" dy="12.0">future seat, even as the walls remain hungry and incomplete. To the Imperium,</tspan>
 <tspan x="670.0" dy="12.0">a thing is true once it is written; the land is forced to agree later.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1066.9" y="1207.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">272</tspan>
 </text>
 <rect class="label" x="127.3" y="1297.0" width="418.7" height="97.0" rx="8" ry="8"/>
 <text class="title" x="143.3" y="1326.0">
@@ -448,6 +515,9 @@
 <tspan x="143.3" dy="12.0">throat like cattle for a yard. Thrakrok Rakthokgar refused the capture—charged</tspan>
 <tspan x="143.3" dy="12.0">into the hooks, killed two, and tore a third&#x27;s jaw loose before pikeheads found</tspan>
 <tspan x="143.3" dy="12.0">him.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="540.0" y="1390.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">271</tspan>
 </text>
 <rect class="label" x="654.0" y="1225.0" width="418.0" height="109.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1254.0">
@@ -460,6 +530,9 @@
 <tspan x="670.0" dy="12.0">the Horde his name is kept only as a curse: proof that gold is softer than mud,</tspan>
 <tspan x="670.0" dy="12.0">and twice as deadly.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="1066.0" y="1330.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
+</text>
 <rect class="label" x="132.2" y="1408.0" width="413.8" height="109.0" rx="8" ry="8"/>
 <text class="title" x="148.2" y="1437.0">
 <tspan x="148.2" dy="0.0">Warlord Uruknar Rakthokgar Death</tspan>
@@ -471,6 +544,9 @@
 <tspan x="148.2" dy="12.0">charge, and crossbow bolts cracked from the haze. Gruknar died on her knees,</tspan>
 <tspan x="148.2" dy="12.0">and Ironstead rose up tall.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="1513.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
+</text>
 <rect class="label" x="654.0" y="1348.0" width="420.0" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1377.0">
 <tspan x="670.0" dy="0.0">Ironstead Rises on Dakgar Bones</tspan>
@@ -479,6 +555,9 @@
 <tspan x="670.0" dy="0.0">calderon-imperium begins raising their capital-fortress over the barrier ground</tspan>
 <tspan x="670.0" dy="12.0">of the dakgar tribe of the garrok-confederation. They pour foundations through</tspan>
 <tspan x="670.0" dy="12.0">ancestral barrow grounds and call it progress.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1068.0" y="1429.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
 </text>
 <rect class="label" x="133.5" y="1531.0" width="412.5" height="97.0" rx="8" ry="8"/>
 <text class="title" x="149.5" y="1560.0">
@@ -490,6 +569,9 @@
 <tspan x="149.5" dy="12.0">guards into the waters allowing the captives to escape. He drowned smiling,</tspan>
 <tspan x="149.5" dy="12.0">fingers locked on the captain&#x27;s gorget.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="1624.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">269</tspan>
+</text>
 <rect class="label" x="654.0" y="1447.0" width="411.9" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1476.0">
 <tspan x="670.0" dy="0.0">Tribute in Teeth</tspan>
@@ -498,6 +580,9 @@
 <tspan x="670.0" dy="0.0">calderon-imperium erects toll posts and ration yards, demanding &quot;tax&quot; for the</tspan>
 <tspan x="670.0" dy="12.0">crime of surviving on stolen ground. When the Garrok refuse, the Imperium</tspan>
 <tspan x="670.0" dy="12.0">answers with public hangings and private pits—less a war than a harvest.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1059.9" y="1528.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">269</tspan>
 </text>
 <rect class="label" x="139.9" y="1642.0" width="406.1" height="85.0" rx="8" ry="8"/>
 <text class="title" x="155.9" y="1671.0">
@@ -508,6 +593,9 @@
 <tspan x="155.9" dy="12.0">emptied for labor and &quot;relocation.&quot; Those who flee speak of soldiers with eyes</tspan>
 <tspan x="155.9" dy="12.0">like polished iron—no rage, no mercy, only procedure.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="1723.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">268</tspan>
+</text>
 <rect class="label" x="654.0" y="1546.0" width="406.1" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1575.0">
 <tspan x="670.0" dy="0.0">The Road of Nails Through the Marsh</tspan>
@@ -516,6 +604,9 @@
 <tspan x="670.0" dy="0.0">calderon-imperium cuts a causeway into the swamp—trees felled, reeds</tspan>
 <tspan x="670.0" dy="12.0">burned, spirit-shrines trampled flat. Every plank is a promise: they intend to</tspan>
 <tspan x="670.0" dy="12.0">stay, and they intend to make the land obey.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1054.1" y="1627.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">267</tspan>
 </text>
 <rect class="label" x="126.0" y="1741.0" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="142.0" y="1770.0">
@@ -527,6 +618,9 @@
 <tspan x="142.0" dy="12.0">a falling block broke his ribs. Stone broke before flesh, but it was not a lesson</tspan>
 <tspan x="142.0" dy="12.0">writ large: the fortress held.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="1834.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">266</tspan>
+</text>
 <rect class="label" x="654.0" y="1645.0" width="418.0" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1674.0">
 <tspan x="670.0" dy="0.0">Blood on Unfinished Stone</tspan>
@@ -535,6 +629,9 @@
 <tspan x="670.0" dy="0.0">garrok-confederation strikes back at the calderon-imperium reach, hurling</tspan>
 <tspan x="670.0" dy="12.0">bodies against half-raised walls and wet mortar. Thousands die beneath arrows</tspan>
 <tspan x="670.0" dy="12.0">and falling stone; the Imperium counts the dead as if tallying grain.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1066.0" y="1726.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">266</tspan>
 </text>
 <rect class="label" x="147.3" y="1852.0" width="398.7" height="85.0" rx="8" ry="8"/>
 <text class="title" x="163.3" y="1881.0">
@@ -545,6 +642,9 @@
 <tspan x="163.3" dy="12.0">drives the orcs deeper into the swamp-lows. They do it with paperwork and</tspan>
 <tspan x="163.3" dy="12.0">spearpoints alike—order written in blood, stamped and filed.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="1933.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">265</tspan>
+</text>
 <rect class="label" x="654.0" y="1744.0" width="395.6" height="73.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1773.0">
 <tspan x="670.0" dy="0.0">The Soulless Measure the Frontier</tspan>
@@ -552,6 +652,9 @@
 <text class="summary" x="670.0" y="1791.0">
 <tspan x="670.0" dy="0.0">calderon-imperium surveyors and clerks arrive first—stakes, ink, and cold</tspan>
 <tspan x="670.0" dy="12.0">smiles. They name Garrok soil &quot;unused&quot; and call the living marsh &quot;waste.&quot;</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1043.6" y="1813.0">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">262</tspan>
 </text>
 </g>
 <g id="tags">
@@ -958,95 +1061,95 @@
 </g>
 </g>
 <g id="ticks">
-<line class="tick" x1="590.0" y1="954.4" x2="610.0" y2="954.4"/>
-<text class="tick-label tick-label-outline" x="616.0" y="959.4">
+<line class="tick" x1="590.0" y1="1937.0" x2="610.0" y2="1937.0"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1942.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">260</tspan>
 </text>
-<text class="tick-label" x="616.0" y="959.4">
+<text class="tick-label" x="616.0" y="1942.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">260</tspan>
 </text>
-<line class="tick" x1="590.0" y1="882.4" x2="610.0" y2="882.4"/>
-<text class="tick-label tick-label-outline" x="616.0" y="887.4">
+<line class="tick" x1="590.0" y1="1787.6" x2="610.0" y2="1787.6"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1792.6">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
 </text>
-<text class="tick-label" x="616.0" y="887.4">
+<text class="tick-label" x="616.0" y="1792.6">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
 </text>
-<line class="tick" x1="590.0" y1="810.4" x2="610.0" y2="810.4"/>
-<text class="tick-label tick-label-outline" x="616.0" y="815.4">
+<line class="tick" x1="590.0" y1="1638.3" x2="610.0" y2="1638.3"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1643.3">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">280</tspan>
 </text>
-<text class="tick-label" x="616.0" y="815.4">
+<text class="tick-label" x="616.0" y="1643.3">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">280</tspan>
 </text>
-<line class="tick" x1="590.0" y1="738.4" x2="610.0" y2="738.4"/>
-<text class="tick-label tick-label-outline" x="616.0" y="743.4">
+<line class="tick" x1="590.0" y1="1488.9" x2="610.0" y2="1488.9"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1493.9">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">290</tspan>
 </text>
-<text class="tick-label" x="616.0" y="743.4">
+<text class="tick-label" x="616.0" y="1493.9">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">290</tspan>
 </text>
-<line class="tick" x1="590.0" y1="666.4" x2="610.0" y2="666.4"/>
-<text class="tick-label tick-label-outline" x="616.0" y="671.4">
+<line class="tick" x1="590.0" y1="1339.5" x2="610.0" y2="1339.5"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1344.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">300</tspan>
 </text>
-<text class="tick-label" x="616.0" y="671.4">
+<text class="tick-label" x="616.0" y="1344.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">300</tspan>
 </text>
-<line class="tick" x1="590.0" y1="594.4" x2="610.0" y2="594.4"/>
-<text class="tick-label tick-label-outline" x="616.0" y="599.4">
+<line class="tick" x1="590.0" y1="1190.1" x2="610.0" y2="1190.1"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1195.1">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">310</tspan>
 </text>
-<text class="tick-label" x="616.0" y="599.4">
+<text class="tick-label" x="616.0" y="1195.1">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">310</tspan>
 </text>
-<line class="tick" x1="590.0" y1="522.4" x2="610.0" y2="522.4"/>
-<text class="tick-label tick-label-outline" x="616.0" y="527.4">
+<line class="tick" x1="590.0" y1="1040.8" x2="610.0" y2="1040.8"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1045.8">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">320</tspan>
 </text>
-<text class="tick-label" x="616.0" y="527.4">
+<text class="tick-label" x="616.0" y="1045.8">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">320</tspan>
 </text>
-<line class="tick" x1="590.0" y1="472.0" x2="610.0" y2="472.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="477.0">
+<line class="tick" x1="590.0" y1="936.2" x2="610.0" y2="936.2"/>
+<text class="tick-label tick-label-outline" x="616.0" y="941.2">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">0</tspan>
 </text>
-<text class="tick-label" x="616.0" y="477.0">
+<text class="tick-label" x="616.0" y="941.2">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">0</tspan>
 </text>
-<line class="tick" x1="590.0" y1="400.0" x2="610.0" y2="400.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="405.0">
+<line class="tick" x1="590.0" y1="786.9" x2="610.0" y2="786.9"/>
+<text class="tick-label tick-label-outline" x="616.0" y="791.9">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">10</tspan>
 </text>
-<text class="tick-label" x="616.0" y="405.0">
+<text class="tick-label" x="616.0" y="791.9">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">10</tspan>
 </text>
-<line class="tick" x1="590.0" y1="328.0" x2="610.0" y2="328.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="333.0">
+<line class="tick" x1="590.0" y1="637.5" x2="610.0" y2="637.5"/>
+<text class="tick-label tick-label-outline" x="616.0" y="642.5">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">20</tspan>
 </text>
-<text class="tick-label" x="616.0" y="333.0">
+<text class="tick-label" x="616.0" y="642.5">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">20</tspan>
 </text>
-<line class="tick" x1="590.0" y1="256.0" x2="610.0" y2="256.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="261.0">
+<line class="tick" x1="590.0" y1="488.1" x2="610.0" y2="488.1"/>
+<text class="tick-label tick-label-outline" x="616.0" y="493.1">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">30</tspan>
 </text>
-<text class="tick-label" x="616.0" y="261.0">
+<text class="tick-label" x="616.0" y="493.1">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">30</tspan>
 </text>
-<line class="tick" x1="590.0" y1="184.0" x2="610.0" y2="184.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="189.0">
+<line class="tick" x1="590.0" y1="338.7" x2="610.0" y2="338.7"/>
+<text class="tick-label tick-label-outline" x="616.0" y="343.7">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">40</tspan>
 </text>
-<text class="tick-label" x="616.0" y="189.0">
+<text class="tick-label" x="616.0" y="343.7">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">40</tspan>
 </text>
-<line class="tick" x1="590.0" y1="112.0" x2="610.0" y2="112.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="117.0">
+<line class="tick" x1="590.0" y1="189.4" x2="610.0" y2="189.4"/>
+<text class="tick-label tick-label-outline" x="616.0" y="194.4">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<text class="tick-label" x="616.0" y="117.0">
+<text class="tick-label" x="616.0" y="194.4">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
 <line class="tick" x1="590.0" y1="40.0" x2="610.0" y2="40.0"/>

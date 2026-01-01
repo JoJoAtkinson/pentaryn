@@ -11,6 +11,8 @@ Thumbs.db
 .output/
 .artifacts/
 
+.history/
+
 .timeline_data/
 output/
 # Editor Files

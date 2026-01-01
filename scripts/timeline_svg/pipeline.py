@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import base64
+import math
 from pathlib import Path
 
 from .game_time import date_to_axis_days
 from .lane_assign import assign_lanes, sort_events
 from .layout_energy import refine_layout
 from .layout_grow import grow_downward
-from .layout_pack import pack_lane, snap_to_targets_when_clear
+from .layout_pack import pack_lane, snap_to_targets_when_clear, tighten_upward_gaps
 from .model import (
     BuildConfig,
     Event,
@@ -85,6 +86,69 @@ def _font_face_css(fonts: FontPaths) -> str:
     return css
 
 
+def _axis_base_y(axis_map: "AxisMap", axis_day: int) -> float:
+    """
+    Compute the y position for an axis_day *without* any slack steps applied.
+
+    Slack steps represent non-linear "growth" inserted to reduce label displacement; when we need
+    the linear component only (to re-derive px/day), we subtract them out via this helper.
+    """
+
+    if axis_map.direction == "desc":
+        return axis_map.top_y + (axis_map.max_axis - axis_day) * axis_map.px_per_day
+    return axis_map.top_y + (axis_day - axis_map.min_axis) * axis_map.px_per_day
+
+
+def _maybe_expand_axis_to_fill_spine(
+    axis_map: "AxisMap",
+    *,
+    events: list[Event],
+    spine_bottom_y: float,
+    min_gap_px: float,
+) -> "AxisMap":
+    """
+    If the label layout forces the SVG taller than the axis span, the spine can extend below the
+    last tick/token, leaving a visually "dead" segment of timeline at the bottom.
+
+    We keep the existing label layout (95% of the work) and *only* expand the time→y mapping so
+    the bottom-most axis boundary lands at the spine bottom. This makes ticks reach the end and
+    updates connector start points (tokens) to match the new spacing, without re-packing labels.
+    """
+
+    axis_span_days = axis_map.max_axis - axis_map.min_axis
+    if axis_span_days <= 0:
+        return axis_map
+
+    axis_end_day = axis_map.min_axis if axis_map.direction == "desc" else axis_map.max_axis
+    axis_end_y = axis_map.axis_to_y(axis_end_day)
+    gap_px = float(spine_bottom_y) - float(axis_end_y)
+    if gap_px <= float(min_gap_px):
+        return axis_map
+
+    # Compute the slack contribution at the end boundary so we can solve for the linear px/day
+    # needed to land the end exactly at `spine_bottom_y`.
+    base_end_y = _axis_base_y(axis_map, axis_end_day)
+    extra_end_y = axis_end_y - base_end_y
+
+    px_per_day_new = (float(spine_bottom_y) - float(axis_map.top_y) - float(extra_end_y)) / float(axis_span_days)
+    if px_per_day_new <= axis_map.px_per_day:
+        return axis_map
+
+    axis_map_new = make_axis_map(
+        axis_map.direction,
+        min_axis=axis_map.min_axis,
+        max_axis=axis_map.max_axis,
+        top_y=axis_map.top_y,
+        px_per_year=px_per_day_new * 360.0,
+    )
+    axis_map_new.slack_steps.extend(axis_map.slack_steps)
+
+    for event in events:
+        event.y_target = axis_map_new.axis_to_y(event.axis_day)
+
+    return axis_map_new
+
+
 def build_timeline_svg(
     *,
     repo_root: Path,
@@ -142,6 +206,21 @@ def build_timeline_svg(
     events_sorted = sort_events(events, build.sort_direction)
     assign_lanes(events_sorted)
 
+    # Load ages for formatting if enabled
+    ages = None
+    if build.age_glyph_years:
+        try:
+            ages = AgeIndex.load_global(repo_root, debug=build.debug_age_glyphs)
+        except Exception as exc:
+            import logging
+            import traceback
+
+            logging.getLogger(__name__).error(
+                "Failed to load ages for glyph formatting; falling back to absolute years.\n%s",
+                "".join(traceback.format_exception(exc)),
+            )
+            ages = None
+
     # Measure + wrap text, compute box sizes.
     title_weight = 700
     summary_weight = 400
@@ -171,6 +250,12 @@ def build_timeline_svg(
         # Safety margin helps prevent sub-pixel rounding / renderer differences.
         box_w = min(float(renderer.label_max_width), content_w + 2 * renderer.label_padding_x + 2)
         box_h = content_h + 2 * renderer.label_padding_y
+        
+        # Compute age label for this event
+        age_label = ""
+        if ages is not None:
+            age_label = ages.format_year(event.start.year)
+        
         event.box_w = box_w
         event.box_h = box_h
         event.label = LabelLayout(
@@ -181,6 +266,7 @@ def build_timeline_svg(
             title_line_h=title_line_h,
             summary_line_h=summary_line_h,
             line_gap=float(line_gap),
+            age_label=age_label,
         )
 
     days_per_year = 12 * 30
@@ -245,22 +331,22 @@ def build_timeline_svg(
             slack_steps=axis_map.slack_steps,
         )
         snap_to_targets_when_clear(events_sorted, lane_gap_y=renderer.lane_gap_y, min_y=float(renderer.margin_top))
+        tighten_upward_gaps(events_sorted, lane_gap_y=renderer.lane_gap_y, min_y=float(renderer.margin_top))
 
     content_bottom = max((e.y + e.box_h) for e in events_sorted) if events_sorted else float(renderer.margin_top)
-    height = int(content_bottom + renderer.margin_bottom)
-    ages = None
-    if build.age_glyph_years:
-        try:
-            ages = AgeIndex.load_global(repo_root, debug=build.debug_age_glyphs)
-        except Exception as exc:
-            import logging
-            import traceback
+    height = int(math.ceil(content_bottom + renderer.margin_bottom))
+    spine_bottom_y = float(height - renderer.margin_bottom)
 
-            logging.getLogger(__name__).error(
-                "Failed to load ages for glyph formatting; falling back to absolute years.\n%s",
-                "".join(traceback.format_exception(exc)),
-            )
-            ages = None
+    # If labels pushed the required height beyond the axis span, expand the tick spacing so the
+    # axis/ticks reach the bottom of the spine instead of ending early and leaving unused timeline.
+    if events_sorted:
+        axis_map = _maybe_expand_axis_to_fill_spine(
+            axis_map,
+            events=events_sorted,
+            spine_bottom_y=spine_bottom_y,
+            min_gap_px=max(30.0, float(renderer.lane_gap_y) * 2.0),
+        )
+    
     tick_scale = None
     ticks = []
     if build.render_ticks:

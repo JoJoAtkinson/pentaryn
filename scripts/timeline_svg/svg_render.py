@@ -109,6 +109,7 @@ def render_svg(
         .label { fill: #fffaf0; stroke: var(--label-border); stroke-width: 1; }
         .label.changed-id, .label.changed { stroke: #d97900; stroke-width: 4; stroke-linejoin: round; }
         .title { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 16px; font-weight: 700; fill: #2b1f14; }
+        .age-label { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 14px; font-weight: 700; fill: #5a4634; }
         .summary { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #3a2b1f; }
         .md-bold { font-weight: 700; }
         .public-indicator { color: var(--public-indicator); opacity: 0.9; }
@@ -176,6 +177,7 @@ def render_svg(
                 line_h=event.label.title_line_h,
             )
             cursor_top += len(event.label.title_lines) * event.label.title_line_h
+            
             if event.label.summary_lines:
                 cursor_top += event.label.line_gap
                 summary_y0 = cursor_top + event.label.summary_line_h
@@ -187,6 +189,21 @@ def render_svg(
                     lines=event.label.summary_lines,
                     line_h=event.label.summary_line_h,
                 )
+        
+        # Render age label in bottom right corner with timeline styling
+        if event.label.age_label:
+            age_x = box_x + event.box_w - renderer.label_padding_x + 10
+            age_y = box_y + event.box_h - renderer.label_padding_y + 10
+            age_label = event.label.age_label
+            # Check if age label has glyph (runic/symbol character) and number
+            tick_age_glyphs = {"⊚", "⟂", "ᛒ", "ᛉ", "⋂", "ᛏ", "⋈"}
+            if age_label and age_label[0] in tick_age_glyphs and len(age_label) > 1 and age_label[1:].replace("-", "").isdigit():
+                glyph, num = age_label[0], age_label[1:]
+                parts.append(f'<text class="age-label" text-anchor="end" x="{age_x:.1f}" y="{age_y:.1f}">')
+                parts.append(f'<tspan class="tick-glyph">{escape(glyph)}</tspan><tspan class="tick-number">{escape(num)}</tspan>')
+                parts.append("</text>")
+            else:
+                parts.append(f'<text class="age-label" text-anchor="end" x="{age_x:.1f}" y="{age_y:.1f}">{escape(age_label)}</text>')
     parts.append("</g>")
 
     # tag tokens

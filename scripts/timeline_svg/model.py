@@ -40,6 +40,7 @@ class LabelLayout:
     title_line_h: float
     summary_line_h: float
     line_gap: float
+    age_label: str = ""
 
 
 @dataclass

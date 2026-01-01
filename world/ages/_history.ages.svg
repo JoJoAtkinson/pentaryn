@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="3232" viewBox="0 0 1200 3232">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="3233" viewBox="0 0 1200 3233">
 <style><![CDATA[
 @font-face {
   font-family: 'Alegreya';
@@ -40,6 +40,7 @@
         .label { fill: #fffaf0; stroke: var(--label-border); stroke-width: 1; }
         .label.changed-id, .label.changed { stroke: #d97900; stroke-width: 4; stroke-linejoin: round; }
         .title { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 16px; font-weight: 700; fill: #2b1f14; }
+        .age-label { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 14px; font-weight: 700; fill: #5a4634; }
         .summary { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #3a2b1f; }
         .md-bold { font-weight: 700; }
         .public-indicator { color: var(--public-indicator); opacity: 0.9; }
@@ -95,22 +96,22 @@
 </defs>
 <defs>
 </defs>
-<g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="3192"/></g>
+<g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="3193"/></g>
 <g id="connectors">
-<line class="connector" x1="600" y1="76.7" x2="552.0" y2="76.7"/>
-<line class="connector" x1="600" y1="312.2" x2="648.0" y2="312.2"/>
-<line class="connector" x1="600" y1="780.2" x2="552.0" y2="780.2"/>
-<line class="connector" x1="600" y1="1356.2" x2="648.0" y2="1356.2"/>
-<line class="connector" x1="600" y1="2076.2" x2="552.0" y2="2076.2"/>
-<line class="connector" x1="600" y1="3156.2" x2="648.0" y2="3156.2"/>
+<line class="connector" x1="600" y1="77.2" x2="552.0" y2="76.7"/>
+<line class="connector" x1="600" y1="315.4" x2="648.0" y2="312.2"/>
+<line class="connector" x1="600" y1="788.9" x2="552.0" y2="780.2"/>
+<line class="connector" x1="600" y1="1371.7" x2="648.0" y2="1356.2"/>
+<line class="connector" x1="600" y1="2100.2" x2="552.0" y2="2076.2"/>
+<line class="connector" x1="600" y1="3193.0" x2="648.0" y2="3156.2"/>
 </g>
 <g id="tokens">
-<use class="token" href="#token_default" x="589.0" y="65.7" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="301.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="769.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1345.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="2065.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="3145.2" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="66.2" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="304.4" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="777.9" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1360.7" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="2089.2" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="3182.0" width="22" height="22"/>
 </g>
 <g id="labels">
 <rect class="label" x="164.4" y="40.2" width="381.6" height="73.0" rx="8" ry="8"/>
@@ -121,6 +122,9 @@
 <tspan x="180.4" dy="0.0">War ends and coin takes over; the old war-roads are inherited by guilds,</tspan>
 <tspan x="180.4" dy="12.0">charters, and contract courts.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="109.2">
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">0</tspan>
+</text>
 <rect class="label" x="654.0" y="275.7" width="409.8" height="73.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="304.7">
 <tspan x="670.0" dy="0.0">ᛏ Age of Conquest</tspan>
@@ -128,6 +132,9 @@
 <text class="summary" x="670.0" y="322.7">
 <tspan x="670.0" dy="0.0">Continental war becomes possible; generations live under levy and siege until</tspan>
 <tspan x="670.0" dy="12.0">exhaustion forces peace.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1057.8" y="344.7">
+<tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">0</tspan>
 </text>
 <rect class="label" x="144.3" y="743.7" width="401.7" height="73.0" rx="8" ry="8"/>
 <text class="title" x="160.3" y="772.7">
@@ -137,6 +144,9 @@
 <tspan x="160.3" dy="0.0">Empires bind territory with bridges, milestones, and waystations—built for</tspan>
 <tspan x="160.3" dy="12.0">marching columns first, commerce second.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="812.7">
+<tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">0</tspan>
+</text>
 <rect class="label" x="654.0" y="1319.7" width="416.2" height="73.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="1348.7">
 <tspan x="670.0" dy="0.0">ᛉ Age of Crowns</tspan>
@@ -144,6 +154,9 @@
 <text class="summary" x="670.0" y="1366.7">
 <tspan x="670.0" dy="0.0">Dynasties harden into kingdoms; borders are named, faiths codified, and wars</tspan>
 <tspan x="670.0" dy="12.0">are regional rather than world-spanning.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1064.2" y="1388.7">
+<tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">0</tspan>
 </text>
 <rect class="label" x="138.2" y="2039.7" width="407.8" height="73.0" rx="8" ry="8"/>
 <text class="title" x="154.2" y="2068.7">
@@ -153,6 +166,9 @@
 <tspan x="154.2" dy="0.0">Writing, law, and agriculture return; proto-kingdoms form and the old roads</tspan>
 <tspan x="154.2" dy="12.0">are found again, half-buried.</tspan>
 </text>
+<text class="age-label" text-anchor="end" x="540.0" y="2108.7">
+<tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">0</tspan>
+</text>
 <rect class="label" x="654.0" y="3119.7" width="399.5" height="73.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="3148.7">
 <tspan x="670.0" dy="0.0">⟂ Age of Ash &amp; Silence</tspan>
@@ -160,6 +176,9 @@
 <text class="summary" x="670.0" y="3166.7">
 <tspan x="670.0" dy="0.0">Survival, famine, and fear of ruins; the world is quiet and broken, and most</tspan>
 <tspan x="670.0" dy="12.0">communities last only a season.</tspan>
+</text>
+<text class="age-label" text-anchor="end" x="1047.5" y="3188.7">
+<tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">0</tspan>
 </text>
 </g>
 <g id="tags">
@@ -231,319 +250,319 @@
 </g>
 </g>
 <g id="ticks">
-<line class="tick" x1="590.0" y1="3156.2" x2="610.0" y2="3156.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="3161.2">
+<line class="tick" x1="590.0" y1="3193.0" x2="610.0" y2="3193.0"/>
+<text class="tick-label tick-label-outline" x="616.0" y="3198.0">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">0</tspan>
 </text>
-<text class="tick-label" x="616.0" y="3161.2">
+<text class="tick-label" x="616.0" y="3198.0">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">0</tspan>
 </text>
-<line class="tick" x1="590.0" y1="3084.2" x2="610.0" y2="3084.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="3089.2">
+<line class="tick" x1="590.0" y1="3120.1" x2="610.0" y2="3120.1"/>
+<text class="tick-label tick-label-outline" x="616.0" y="3125.1">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">100</tspan>
 </text>
-<text class="tick-label" x="616.0" y="3089.2">
+<text class="tick-label" x="616.0" y="3125.1">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">100</tspan>
 </text>
-<line class="tick" x1="590.0" y1="3012.2" x2="610.0" y2="3012.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="3017.2">
+<line class="tick" x1="590.0" y1="3047.3" x2="610.0" y2="3047.3"/>
+<text class="tick-label tick-label-outline" x="616.0" y="3052.3">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">200</tspan>
 </text>
-<text class="tick-label" x="616.0" y="3017.2">
+<text class="tick-label" x="616.0" y="3052.3">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">200</tspan>
 </text>
-<line class="tick" x1="590.0" y1="2940.2" x2="610.0" y2="2940.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="2945.2">
+<line class="tick" x1="590.0" y1="2974.4" x2="610.0" y2="2974.4"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2979.4">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">300</tspan>
 </text>
-<text class="tick-label" x="616.0" y="2945.2">
+<text class="tick-label" x="616.0" y="2979.4">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">300</tspan>
 </text>
-<line class="tick" x1="590.0" y1="2868.2" x2="610.0" y2="2868.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="2873.2">
+<line class="tick" x1="590.0" y1="2901.6" x2="610.0" y2="2901.6"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2906.6">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">400</tspan>
 </text>
-<text class="tick-label" x="616.0" y="2873.2">
+<text class="tick-label" x="616.0" y="2906.6">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">400</tspan>
 </text>
-<line class="tick" x1="590.0" y1="2796.2" x2="610.0" y2="2796.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="2801.2">
+<line class="tick" x1="590.0" y1="2828.7" x2="610.0" y2="2828.7"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2833.7">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">500</tspan>
 </text>
-<text class="tick-label" x="616.0" y="2801.2">
+<text class="tick-label" x="616.0" y="2833.7">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">500</tspan>
 </text>
-<line class="tick" x1="590.0" y1="2724.2" x2="610.0" y2="2724.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="2729.2">
+<line class="tick" x1="590.0" y1="2755.9" x2="610.0" y2="2755.9"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2760.9">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">600</tspan>
 </text>
-<text class="tick-label" x="616.0" y="2729.2">
+<text class="tick-label" x="616.0" y="2760.9">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">600</tspan>
 </text>
-<line class="tick" x1="590.0" y1="2652.2" x2="610.0" y2="2652.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="2657.2">
+<line class="tick" x1="590.0" y1="2683.0" x2="610.0" y2="2683.0"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2688.0">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">700</tspan>
 </text>
-<text class="tick-label" x="616.0" y="2657.2">
+<text class="tick-label" x="616.0" y="2688.0">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">700</tspan>
 </text>
-<line class="tick" x1="590.0" y1="2580.2" x2="610.0" y2="2580.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="2585.2">
+<line class="tick" x1="590.0" y1="2610.2" x2="610.0" y2="2610.2"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2615.2">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">800</tspan>
 </text>
-<text class="tick-label" x="616.0" y="2585.2">
+<text class="tick-label" x="616.0" y="2615.2">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">800</tspan>
 </text>
-<line class="tick" x1="590.0" y1="2508.2" x2="610.0" y2="2508.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="2513.2">
+<line class="tick" x1="590.0" y1="2537.3" x2="610.0" y2="2537.3"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2542.3">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">900</tspan>
 </text>
-<text class="tick-label" x="616.0" y="2513.2">
+<text class="tick-label" x="616.0" y="2542.3">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">900</tspan>
 </text>
-<line class="tick" x1="590.0" y1="2436.2" x2="610.0" y2="2436.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="2441.2">
+<line class="tick" x1="590.0" y1="2464.5" x2="610.0" y2="2464.5"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2469.5">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">1000</tspan>
 </text>
-<text class="tick-label" x="616.0" y="2441.2">
+<text class="tick-label" x="616.0" y="2469.5">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">1000</tspan>
 </text>
-<line class="tick" x1="590.0" y1="2364.2" x2="610.0" y2="2364.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="2369.2">
+<line class="tick" x1="590.0" y1="2391.6" x2="610.0" y2="2391.6"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2396.6">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">1100</tspan>
 </text>
-<text class="tick-label" x="616.0" y="2369.2">
+<text class="tick-label" x="616.0" y="2396.6">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">1100</tspan>
 </text>
-<line class="tick" x1="590.0" y1="2292.2" x2="610.0" y2="2292.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="2297.2">
+<line class="tick" x1="590.0" y1="2318.8" x2="610.0" y2="2318.8"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2323.8">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">1200</tspan>
 </text>
-<text class="tick-label" x="616.0" y="2297.2">
+<text class="tick-label" x="616.0" y="2323.8">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">1200</tspan>
 </text>
-<line class="tick" x1="590.0" y1="2220.2" x2="610.0" y2="2220.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="2225.2">
+<line class="tick" x1="590.0" y1="2245.9" x2="610.0" y2="2245.9"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2250.9">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">1300</tspan>
 </text>
-<text class="tick-label" x="616.0" y="2225.2">
+<text class="tick-label" x="616.0" y="2250.9">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">1300</tspan>
 </text>
-<line class="tick" x1="590.0" y1="2148.2" x2="610.0" y2="2148.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="2153.2">
+<line class="tick" x1="590.0" y1="2173.1" x2="610.0" y2="2173.1"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2178.1">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">1400</tspan>
 </text>
-<text class="tick-label" x="616.0" y="2153.2">
+<text class="tick-label" x="616.0" y="2178.1">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">1400</tspan>
 </text>
-<line class="tick" x1="590.0" y1="2076.2" x2="610.0" y2="2076.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="2081.2">
+<line class="tick" x1="590.0" y1="2100.2" x2="610.0" y2="2100.2"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2105.2">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">0</tspan>
 </text>
-<text class="tick-label" x="616.0" y="2081.2">
+<text class="tick-label" x="616.0" y="2105.2">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">0</tspan>
 </text>
-<line class="tick" x1="590.0" y1="2004.2" x2="610.0" y2="2004.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="2009.2">
+<line class="tick" x1="590.0" y1="2027.4" x2="610.0" y2="2027.4"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2032.4">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">100</tspan>
 </text>
-<text class="tick-label" x="616.0" y="2009.2">
+<text class="tick-label" x="616.0" y="2032.4">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">100</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1932.2" x2="610.0" y2="1932.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1937.2">
+<line class="tick" x1="590.0" y1="1954.5" x2="610.0" y2="1954.5"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1959.5">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">200</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1937.2">
+<text class="tick-label" x="616.0" y="1959.5">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">200</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1860.2" x2="610.0" y2="1860.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1865.2">
+<line class="tick" x1="590.0" y1="1881.7" x2="610.0" y2="1881.7"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1886.7">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">300</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1865.2">
+<text class="tick-label" x="616.0" y="1886.7">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">300</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1788.2" x2="610.0" y2="1788.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1793.2">
+<line class="tick" x1="590.0" y1="1808.8" x2="610.0" y2="1808.8"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1813.8">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">400</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1793.2">
+<text class="tick-label" x="616.0" y="1813.8">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">400</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1716.2" x2="610.0" y2="1716.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1721.2">
+<line class="tick" x1="590.0" y1="1736.0" x2="610.0" y2="1736.0"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1741.0">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">500</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1721.2">
+<text class="tick-label" x="616.0" y="1741.0">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">500</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1644.2" x2="610.0" y2="1644.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1649.2">
+<line class="tick" x1="590.0" y1="1663.1" x2="610.0" y2="1663.1"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1668.1">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">600</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1649.2">
+<text class="tick-label" x="616.0" y="1668.1">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">600</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1572.2" x2="610.0" y2="1572.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1577.2">
+<line class="tick" x1="590.0" y1="1590.3" x2="610.0" y2="1590.3"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1595.3">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">700</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1577.2">
+<text class="tick-label" x="616.0" y="1595.3">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">700</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1500.2" x2="610.0" y2="1500.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1505.2">
+<line class="tick" x1="590.0" y1="1517.4" x2="610.0" y2="1517.4"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1522.4">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">800</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1505.2">
+<text class="tick-label" x="616.0" y="1522.4">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">800</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1428.2" x2="610.0" y2="1428.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1433.2">
+<line class="tick" x1="590.0" y1="1444.6" x2="610.0" y2="1444.6"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1449.6">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">900</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1433.2">
+<text class="tick-label" x="616.0" y="1449.6">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">900</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1356.2" x2="610.0" y2="1356.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1361.2">
+<line class="tick" x1="590.0" y1="1371.7" x2="610.0" y2="1371.7"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1376.7">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">0</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1361.2">
+<text class="tick-label" x="616.0" y="1376.7">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">0</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1284.2" x2="610.0" y2="1284.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1289.2">
+<line class="tick" x1="590.0" y1="1298.9" x2="610.0" y2="1298.9"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1303.9">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">100</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1289.2">
+<text class="tick-label" x="616.0" y="1303.9">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">100</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1212.2" x2="610.0" y2="1212.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1217.2">
+<line class="tick" x1="590.0" y1="1226.0" x2="610.0" y2="1226.0"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1231.0">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">200</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1217.2">
+<text class="tick-label" x="616.0" y="1231.0">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">200</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1140.2" x2="610.0" y2="1140.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1145.2">
+<line class="tick" x1="590.0" y1="1153.2" x2="610.0" y2="1153.2"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1158.2">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">300</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1145.2">
+<text class="tick-label" x="616.0" y="1158.2">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">300</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1068.2" x2="610.0" y2="1068.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1073.2">
+<line class="tick" x1="590.0" y1="1080.3" x2="610.0" y2="1080.3"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1085.3">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">400</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1073.2">
+<text class="tick-label" x="616.0" y="1085.3">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">400</tspan>
 </text>
-<line class="tick" x1="590.0" y1="996.2" x2="610.0" y2="996.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1001.2">
+<line class="tick" x1="590.0" y1="1007.5" x2="610.0" y2="1007.5"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1012.5">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">500</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1001.2">
+<text class="tick-label" x="616.0" y="1012.5">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">500</tspan>
 </text>
-<line class="tick" x1="590.0" y1="924.2" x2="610.0" y2="924.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="929.2">
+<line class="tick" x1="590.0" y1="934.6" x2="610.0" y2="934.6"/>
+<text class="tick-label tick-label-outline" x="616.0" y="939.6">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">600</tspan>
 </text>
-<text class="tick-label" x="616.0" y="929.2">
+<text class="tick-label" x="616.0" y="939.6">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">600</tspan>
 </text>
-<line class="tick" x1="590.0" y1="852.2" x2="610.0" y2="852.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="857.2">
+<line class="tick" x1="590.0" y1="861.8" x2="610.0" y2="861.8"/>
+<text class="tick-label tick-label-outline" x="616.0" y="866.8">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">700</tspan>
 </text>
-<text class="tick-label" x="616.0" y="857.2">
+<text class="tick-label" x="616.0" y="866.8">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">700</tspan>
 </text>
-<line class="tick" x1="590.0" y1="780.2" x2="610.0" y2="780.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="785.2">
+<line class="tick" x1="590.0" y1="788.9" x2="610.0" y2="788.9"/>
+<text class="tick-label tick-label-outline" x="616.0" y="793.9">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">0</tspan>
 </text>
-<text class="tick-label" x="616.0" y="785.2">
+<text class="tick-label" x="616.0" y="793.9">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">0</tspan>
 </text>
-<line class="tick" x1="590.0" y1="708.2" x2="610.0" y2="708.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="713.2">
+<line class="tick" x1="590.0" y1="716.1" x2="610.0" y2="716.1"/>
+<text class="tick-label tick-label-outline" x="616.0" y="721.1">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">100</tspan>
 </text>
-<text class="tick-label" x="616.0" y="713.2">
+<text class="tick-label" x="616.0" y="721.1">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">100</tspan>
 </text>
-<line class="tick" x1="590.0" y1="636.2" x2="610.0" y2="636.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="641.2">
+<line class="tick" x1="590.0" y1="643.2" x2="610.0" y2="643.2"/>
+<text class="tick-label tick-label-outline" x="616.0" y="648.2">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">200</tspan>
 </text>
-<text class="tick-label" x="616.0" y="641.2">
+<text class="tick-label" x="616.0" y="648.2">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">200</tspan>
 </text>
-<line class="tick" x1="590.0" y1="564.2" x2="610.0" y2="564.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="569.2">
+<line class="tick" x1="590.0" y1="570.4" x2="610.0" y2="570.4"/>
+<text class="tick-label tick-label-outline" x="616.0" y="575.4">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">300</tspan>
 </text>
-<text class="tick-label" x="616.0" y="569.2">
+<text class="tick-label" x="616.0" y="575.4">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">300</tspan>
 </text>
-<line class="tick" x1="590.0" y1="492.2" x2="610.0" y2="492.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="497.2">
+<line class="tick" x1="590.0" y1="497.5" x2="610.0" y2="497.5"/>
+<text class="tick-label tick-label-outline" x="616.0" y="502.5">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">400</tspan>
 </text>
-<text class="tick-label" x="616.0" y="497.2">
+<text class="tick-label" x="616.0" y="502.5">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">400</tspan>
 </text>
-<line class="tick" x1="590.0" y1="420.2" x2="610.0" y2="420.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="425.2">
+<line class="tick" x1="590.0" y1="424.7" x2="610.0" y2="424.7"/>
+<text class="tick-label tick-label-outline" x="616.0" y="429.7">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">500</tspan>
 </text>
-<text class="tick-label" x="616.0" y="425.2">
+<text class="tick-label" x="616.0" y="429.7">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">500</tspan>
 </text>
-<line class="tick" x1="590.0" y1="348.2" x2="610.0" y2="348.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="353.2">
+<line class="tick" x1="590.0" y1="351.8" x2="610.0" y2="351.8"/>
+<text class="tick-label tick-label-outline" x="616.0" y="356.8">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">600</tspan>
 </text>
-<text class="tick-label" x="616.0" y="353.2">
+<text class="tick-label" x="616.0" y="356.8">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">600</tspan>
 </text>
-<line class="tick" x1="590.0" y1="312.2" x2="610.0" y2="312.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="317.2">
+<line class="tick" x1="590.0" y1="315.4" x2="610.0" y2="315.4"/>
+<text class="tick-label tick-label-outline" x="616.0" y="320.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">0</tspan>
 </text>
-<text class="tick-label" x="616.0" y="317.2">
+<text class="tick-label" x="616.0" y="320.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">0</tspan>
 </text>
-<line class="tick" x1="590.0" y1="240.2" x2="610.0" y2="240.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="245.2">
+<line class="tick" x1="590.0" y1="242.5" x2="610.0" y2="242.5"/>
+<text class="tick-label tick-label-outline" x="616.0" y="247.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">100</tspan>
 </text>
-<text class="tick-label" x="616.0" y="245.2">
+<text class="tick-label" x="616.0" y="247.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">100</tspan>
 </text>
-<line class="tick" x1="590.0" y1="168.2" x2="610.0" y2="168.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="173.2">
+<line class="tick" x1="590.0" y1="169.7" x2="610.0" y2="169.7"/>
+<text class="tick-label tick-label-outline" x="616.0" y="174.7">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">200</tspan>
 </text>
-<text class="tick-label" x="616.0" y="173.2">
+<text class="tick-label" x="616.0" y="174.7">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">200</tspan>
 </text>
-<line class="tick" x1="590.0" y1="96.2" x2="610.0" y2="96.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="101.2">
+<line class="tick" x1="590.0" y1="96.8" x2="610.0" y2="96.8"/>
+<text class="tick-label tick-label-outline" x="616.0" y="101.8">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">300</tspan>
 </text>
-<text class="tick-label" x="616.0" y="101.2">
+<text class="tick-label" x="616.0" y="101.8">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">300</tspan>
 </text>
-<line class="tick" x1="590.0" y1="76.7" x2="610.0" y2="76.7"/>
-<text class="tick-label tick-label-outline" x="616.0" y="81.7">
+<line class="tick" x1="590.0" y1="77.2" x2="610.0" y2="77.2"/>
+<text class="tick-label tick-label-outline" x="616.0" y="82.2">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">0</tspan>
 </text>
-<text class="tick-label" x="616.0" y="81.7">
+<text class="tick-label" x="616.0" y="82.2">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">0</tspan>
 </text>
 </g>

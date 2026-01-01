@@ -214,8 +214,47 @@ Quiet. Reverent. The smell of old paper and leather bindings. Sunlight streams t
 
 Magister Merrick is a stern woman in her 60s, fiercely protective of the collection but generous with access. She believes knowledge should be shared, not hoarded. Want to read the treaty that ended the war? She'll fetch it for you (with supervision). Researching ruin sites? She'll pull maps and notes from previous explorers. Need a quiet place to think? Find a desk and stay as long as you like.
 
+**Notable Staff:**
+- [Elarion Faenwynd](../npc/elarian-faenwynd.md) — Elf archivist/translator and guest scholar from Araethilion
+
 **Adventurer Relevance:**
 The library maintains records of **known ruin sites**, including reports from adventurers who've returned with findings. Before venturing out, smart adventurers consult the archives to learn what others discovered—and what killed them.
+
+---
+
+### The Anvil & Oar (Weaponsmith)
+
+> **"Harbor air eats fancy steel. Mine’s made to live in it."**
+
+**Location:** Lower Tier, off the harbor lanes  
+**Owner:** [Branik Ironweld](../npc/branik-ironweld-anvil-and-oar.md)  
+**What it is:** Working smithy for weapons, fittings, and repairs
+
+If Ardenford needs spearheads in bulk, a blade re-peened after a bad parry, or a set of armor straps replaced before patrol, this is where it ends up. The forge runs hot, the prices are plain, and Branik’s patience ends the moment someone asks for “a legendary edge for a discount.”
+
+---
+
+### Silverbridge Arcana (Spell Shop)
+
+> **"If you can’t explain what it does, you don’t get to carry it."**
+
+**Location:** Upper Tier, near the Concordance Library  
+**Proprietor:** [Selise Dawnquill](../npc/selise-dawnquill-silverbridge-arcana.md)  
+**What it is:** Arcane supplies, scrolls, and scribing services
+
+Silverbridge Arcana is where adventurers go when they want to be prepared instead of lucky: component pouches, warded document cases, and a small, carefully curated selection of scrolls. Everything comes with a receipt and a warning label.
+
+---
+
+### Willowglass Apothecary (Alchemist)
+
+> **"Hold still. If it stings, that means it’s working—or you’re lying."**
+
+**Location:** Middle Tier, near the Western Market lanes  
+**Proprietor:** [Hesta Briarvein](../npc/hesta-briarvein-willowglass-apothecary.md)  
+**What it is:** Remedies, antitoxins (when stocked), and discreet consults
+
+Willowglass is the kind of place locals visit for damp-cough, dockside cuts, and “I touched something in a ruin and now it itches.” Hesta keeps a professional smile and a private list of symptoms she never wants to see twice.
 
 ---
 
@@ -348,5 +387,3 @@ Ardenford stands at a unique moment in history:
 The city continues to grow, sprawl, and optimize itself through daily use. New buildings rise, incorporating ancient foundations. Trade routes expand. The markets bustle. And beneath it all, the ancient tunnel network waits—guarded, mapped, ready if war ever comes again.
 
 Ardenford is **alive**—chaotic, thriving, and defiantly free.
-
-

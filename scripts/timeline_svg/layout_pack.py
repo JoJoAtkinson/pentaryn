@@ -76,20 +76,65 @@ def snap_to_targets_when_clear(events: list[Event], *, lane_gap_y: float, min_y:
     for lane_events in by_lane.values():
         # Stable ordering so results are deterministic.
         lane_events.sort(key=lambda e: e.y_target)
-        for event in lane_events:
+        for idx, event in enumerate(lane_events):
             desired_top = max(float(min_y), float(event.y_target) - (event.box_h / 2.0))
             desired_bottom = desired_top + event.box_h
 
-            # Check clearance against current positions of other labels in this lane.
-            clear = True
-            for other in lane_events:
-                if other is event:
+            # Only snap if the target position fits between the *current* neighbors in y_target
+            # order. This keeps lane ordering stable and prevents connector crossings (inversions).
+            if idx > 0:
+                prev = lane_events[idx - 1]
+                prev_bottom = prev.y + prev.box_h
+                if desired_top < prev_bottom + lane_gap_y:
                     continue
-                other_top = other.y
-                other_bottom = other.y + other.box_h
-                # Overlap (with required gap) if intervals intersect.
-                if desired_bottom + lane_gap_y > other_top and other_bottom + lane_gap_y > desired_top:
-                    clear = False
-                    break
-            if clear:
-                event.y = desired_top
+            if idx + 1 < len(lane_events):
+                nxt = lane_events[idx + 1]
+                if desired_bottom + lane_gap_y > nxt.y:
+                    continue
+
+            event.y = desired_top
+
+
+def tighten_upward_gaps(events: list[Event], *, lane_gap_y: float, min_y: float = 0.0) -> None:
+    """
+    Finalization pass to reclaim "wasted" vertical space without breaking the layout.
+
+    Why this exists:
+    - `pack_lane()` + `refine_layout()` produce a good non-overlapping layout, but in very dense
+      eras they can leave visible slack gaps above some labels after repeated packing / axis growth.
+    - `snap_to_targets_when_clear()` only straightens *exactly* to `y_target` when safe; it's
+      intentionally conservative to avoid connector crossings, but that means it doesn't reclaim
+      partial slack when an event can't fully snap.
+
+    This pass keeps the existing logic (including snapping), then does a greedy sweep within each
+    lane to move every label *up* as far as it can go:
+    - Stop when the label is "on point" (its center sits on `y_target`), or
+    - Stop when it becomes directly adjacent to the label above (respecting `lane_gap_y`).
+
+    It never moves a label above its target (no overshoot) and never violates the minimum spacing
+    to the label above, so it can't create overlaps or reintroduce connector crossings.
+    """
+
+    by_lane: dict[str, list[Event]] = {"left": [], "right": []}
+    for event in events:
+        if event.box_h <= 0:
+            continue
+        if event.lane in by_lane:
+            by_lane[event.lane].append(event)
+
+    for lane_events in by_lane.values():
+        # Work in y_target order so "above/below" matches chronology within the lane.
+        lane_events.sort(key=lambda e: e.y_target)
+
+        prev_bottom = float(min_y) - float(lane_gap_y)
+        for event in lane_events:
+            min_top = prev_bottom + float(lane_gap_y)
+            desired_top = max(float(min_y), float(event.y_target) - (event.box_h / 2.0))
+
+            # Move up only: bring the box as high as possible while staying on/under its point
+            # and respecting the minimum gap to the previous label in this lane.
+            target_top = max(min_top, desired_top)
+            if target_top < event.y:
+                event.y = target_top
+
+            prev_bottom = event.y + event.box_h

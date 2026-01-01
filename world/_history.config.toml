@@ -1,4 +1,6 @@
 present_year = 4327
+present_month = 10
+present_day = 15
 
 [[views]]
 id = "public"
@@ -40,7 +42,7 @@ tags_any = ["public", "elderholt"]
 tick_scale = "year"
 tick_spacing_px = 20
 sort_direction = "desc"
-max_summary_lines = 6
+max_summary_lines = 8
 hide_time_measurements = false
 
 [views.range]
