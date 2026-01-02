@@ -11,6 +11,8 @@ dependencies = [
   "pytest",
   "cairosvg",
   "chromadb",
+  "whisperx",
+  "torch"
 ]
 
 # Notes on native text layout (RAQM):
