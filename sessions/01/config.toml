@@ -16,7 +16,7 @@ KRIS = "Marwen (player character)"
 JEFF = "Bazgar (player character)"
 
 # Uncertain identifications
-UNKNOWN = "Could be DM or Jeff; DM often voices multiple NPCs with different characterizations"
+UNKNOWN = "Could be DM, Jeff, unlikly to be Nicole or Kristine; DM often voices multiple NPCs with different characterizations"
 
 # Additional context
 notes = """
