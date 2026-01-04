@@ -539,7 +539,7 @@ Configuration is read from sessions/{NN}/config.toml
         return 1
     
     # Extract config values
-    transcript_path = repo_root / config["session"]["transcript"]
+    transcript_path = repo_root / "sessions" / f"{session_num:02d}" / "transcripts.jsonl"
     output_path = repo_root / config["pass1"]["output"]
     batch_size = config["pass1"].get("batch_size", 1000)
     overlap = config["pass1"].get("overlap", 250)

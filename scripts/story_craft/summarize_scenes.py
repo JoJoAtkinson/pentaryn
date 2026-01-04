@@ -583,11 +583,8 @@ Configuration is read from sessions/{NN}/config.toml
         print(f"Have you run Pass 1 (detect_scenes.py) yet?", file=sys.stderr)
         return 1
     
-    # Get transcript path from pass1 metadata
-    with open(pass1_path, 'r') as f:
-        pass1_data = json.load(f)
-    
-    transcript_path = Path(pass1_data["metadata"]["source_transcript"])
+    # Transcript is always at sessions/{NN}/transcripts.jsonl
+    transcript_path = repo_root / "sessions" / f"{session_num:02d}" / "transcripts.jsonl"
     
     if not transcript_path.exists():
         print(f"Error: Source transcript not found: {transcript_path}", file=sys.stderr)

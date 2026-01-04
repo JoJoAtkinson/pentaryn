@@ -2,7 +2,6 @@
 
 [session]
 number = 1
-transcript = "recordings_transcripts/DnD 1.jsonl"
 
 # Recording source affects speaker identification reliability
 # Options: "in-person" (single mic), "discord" (separate recordings), "hybrid"
@@ -14,6 +13,7 @@ recording_source = "in-person"
 NICOLE = "Sabriel (player character)"
 KRIS = "Marwen (player character)" 
 JEFF = "Bazgar (player character)"
+JOE = "Dungeon Master (DM)"
 
 # Uncertain identifications
 UNKNOWN = "Could be DM, Jeff, unlikly to be Nicole or Kristine; DM often voices multiple NPCs with different characterizations"
