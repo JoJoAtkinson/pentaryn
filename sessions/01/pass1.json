@@ -1,0 +1,886 @@
+{
+  "metadata": {
+    "source_transcript": "/Users/joe/GitHub/dnd/sessions/01/transcripts.jsonl",
+    "generated": "2026-01-04T13:26:32.362868",
+    "total_scenes": 30,
+    "model": "gpt-5.2"
+  },
+  "scenes": [
+    {
+      "start_seconds": 120.834,
+      "location": "The Wayward Compass inn/tavern, Ardenford (Middle Tier)",
+      "goal": "Meet other adventurers, get food, and form a party by checking the job/writ board",
+      "npcs_present": [
+        "Thorgrim Ledger-Scar (barkeep)"
+      ],
+      "time_of_day": "morning",
+      "emotional_tone": "casual",
+      "conflict_type": "social",
+      "notes": "Bazgar enters the Wayward Compass, meets Marwen and Sabriel over mixed-up food orders, introduces themselves, and the group decides to take the Border Patrol undead job after reading the writ board.",
+      "requested_resources": [
+        {
+          "keyword": "The Wayward Compass",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford.md",
+          "override": null
+        },
+        {
+          "keyword": "Thorgrim",
+          "requested_path": "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+          "override": null
+        },
+        {
+          "keyword": "Writ Board / Sheep raids / Spiders / Border Patrol — Undead sighting",
+          "requested_path": "world/factions/ardenhaven/quests/writ-board-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "Goblin Raid (Maren Redwick, Redwick Farm)",
+          "requested_path": "world/factions/ardenhaven/quests/goblin-raid-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "Spider Lair (Gareth Thorne, lumber camp, Miller's Creek)",
+          "requested_path": "world/factions/ardenhaven/quests/spider-lair-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "Restless Dead (Renn Caldor, eastern valley, old battlefield)",
+          "requested_path": "world/factions/ardenhaven/quests/restless-dead-cr1.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-001",
+      "end_seconds": 2633.619
+    },
+    {
+      "start_seconds": 2633.619,
+      "location": "Outside Ardenford on the eastern hills/forest trail to the border watchtower",
+      "goal": "Travel to the Eastern Patrol watchtower to contact Renn Caldor about the undead sighting",
+      "npcs_present": [],
+      "time_of_day": "morning",
+      "emotional_tone": "purposeful",
+      "conflict_type": "exploration",
+      "notes": "The party leaves the inn and hikes several hours through the eastern wooded hills toward the watchtower, with Marwen’s crow and ferret Flicker accompanying them.",
+      "requested_resources": [
+        {
+          "keyword": "Ardenford eastern patrol tower / watchtower",
+          "requested_path": "world/factions/ardenhaven/locations",
+          "override": null
+        },
+        {
+          "keyword": "Renn Caldor",
+          "requested_path": "world/factions/ardenhaven/quests/restless-dead-cr1.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-002",
+      "end_seconds": 2977.76
+    },
+    {
+      "start_seconds": 2977.76,
+      "location": "Eastern Patrol watchtower (top observation platform)",
+      "goal": "Receive briefing and directions from Renn Caldor; secure identifying token (medal) for his grandfather among the undead",
+      "npcs_present": [
+        "Renn Caldor"
+      ],
+      "time_of_day": "morning",
+      "emotional_tone": "somber",
+      "conflict_type": "social",
+      "notes": "At the tower, Renn explains the undead walking dead from the old battlefield and his hope his grandfather is among them; Sabriel persuades him to lend his grandfather’s medal for identification and he points out where he sees movement.",
+      "requested_resources": [
+        {
+          "keyword": "Renn Caldor",
+          "requested_path": "world/factions/ardenhaven/quests/restless-dead-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "Calderon Imperium (raised dead during the war)",
+          "requested_path": "world/factions/calderon-imperium/_overview.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-003",
+      "end_seconds": 3999.426
+    },
+    {
+      "start_seconds": 3999.426,
+      "location": "Clifftop/ledge overlooking undead in the eastern valley forest",
+      "goal": "Locate and stop the undead before they reach Ardenford; identify Renn’s grandfather if possible",
+      "npcs_present": [],
+      "time_of_day": "unknown",
+      "emotional_tone": "tense",
+      "conflict_type": "combat",
+      "notes": "The party fights the skeletons from the ledge, chases them through the brush, identifies Renn’s grandfather, and puts him to rest before returning to the tower to bury him and receive payment.",
+      "requested_resources": [
+        {
+          "keyword": "Renn Caldor / grandson / border patrol scout",
+          "requested_path": "world/factions/ardenhaven/quests/restless-dead-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "war medallion / amulet on a chain",
+          "requested_path": "items/README.md",
+          "override": "world/factions/ardenhaven/quests/restless-dead-cr1.md"
+        },
+        {
+          "keyword": "the crow (following Marwen)",
+          "requested_path": "characters/README.md",
+          "override": "world/factions/ardenhaven/quests/restless-dead-cr1.md"
+        }
+      ],
+      "scene_id": "S-004",
+      "end_seconds": 7018.862
+    },
+    {
+      "start_seconds": 7018.862,
+      "location": "Border patrol tower/guard post on the eastern valley approach (mountain path near the tower)",
+      "goal": "Return Corwin’s remains to Renn and complete burial rites; collect payment",
+      "npcs_present": [
+        "Renn Caldor",
+        "tower guards (unnamed)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "somber",
+      "conflict_type": "social",
+      "notes": "The party returns to the tower with the intact body, is guided to a gravesite, helps bury the remains, and Renn thanks and pays them.",
+      "requested_resources": [
+        {
+          "keyword": "Renn Caldor",
+          "requested_path": "world/factions/ardenhaven/quests/restless-dead-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "eastern valley / tower / grave site",
+          "requested_path": "world/factions/ardenhaven/locations",
+          "override": null
+        }
+      ],
+      "scene_id": "S-005",
+      "end_seconds": 7224.162
+    },
+    {
+      "start_seconds": 7224.162,
+      "location": "Near the tower after the burial (resting spot / camp area)",
+      "goal": "Decide next job and plan funding for an expedition; take a short rest and consider goblin raid timing",
+      "npcs_present": [
+        "Renn Caldor (border patrol scout)"
+      ],
+      "time_of_day": "afternoon",
+      "emotional_tone": "casual",
+      "conflict_type": "none",
+      "notes": "The party completes the burial and payment with Renn Caldor, then discusses expedition costs and decides to pursue the goblin raid later that day after a short rest.",
+      "requested_resources": [
+        {
+          "keyword": "Renn Caldor",
+          "requested_path": "world/factions/ardenhaven/quests/restless-dead-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "expedition would be 50 gold each / 100 gold each + a dwarven mountain guide",
+          "requested_path": "quests/README.md",
+          "override": "world/factions/ardenhaven/quests/restless-dead-cr1.md"
+        },
+        {
+          "keyword": "goblins come at dusk / sheep raids",
+          "requested_path": "world/factions/ardenhaven/quests/goblin-raid-cr1.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-006",
+      "end_seconds": 11643.618
+    },
+    {
+      "start_seconds": 11643.618,
+      "location": "Western farmlands near Redwick Farm (outside Ardenford)",
+      "goal": "Meet the sheep farmer and investigate where the goblins are coming from; decide whether to ambush or assault",
+      "npcs_present": [
+        "Maren/Meryn Redwick (sheep farmer; name unclear)"
+      ],
+      "time_of_day": "afternoon",
+      "emotional_tone": "cautious",
+      "conflict_type": "social",
+      "notes": "The party confirms the goblins raid at night from nearby ruins, sets an Alarm as a fallback, and reframes the situation as barter (goblins leaving 'treasures') while persuading the farmer to accept a negotiated solution.",
+      "requested_resources": [
+        {
+          "keyword": "Maren/Meryn Redwick / Redwick Farm / goblin raids / 70 gold",
+          "requested_path": "world/factions/ardenhaven/quests/goblin-raid-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "early winter / months (A-R-E-T-H... RETHOLM?)",
+          "requested_path": "world/calendar-reckoning-of-the-fall.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-007",
+      "end_seconds": 13285.576
+    },
+    {
+      "start_seconds": 13285.576,
+      "location": "Ruins/old keep near the sheep grazing hills (western scrublands)",
+      "goal": "Approach the goblins to negotiate a deal to stop the sheep raids (and return their 'treasures')",
+      "npcs_present": [
+        "Goblins (including a leader/boss with scimitar)",
+        "Maren/Meryn Redwick (off-screen, back at the sheep)"
+      ],
+      "time_of_day": "evening",
+      "emotional_tone": "tense",
+      "conflict_type": "social",
+      "notes": "At sunset the party leaves the farmer and heads into the nearby ruins to speak with goblins, with Bazgar taking point in Orcish while the others hang back and prepare support.",
+      "requested_resources": [
+        {
+          "keyword": "old ruins / keep (where goblins live)",
+          "requested_path": "world/factions/ardenhaven/locations",
+          "override": "world/factions/ardenhaven/locations/ruins-western-scrubland.md"
+        },
+        {
+          "keyword": "goblins",
+          "requested_path": "creatures/README.md",
+          "override": "world/factions/ardenhaven/quests/goblin-raid-cr1.md"
+        }
+      ],
+      "scene_id": "S-008",
+      "end_seconds": 14289.089
+    },
+    {
+      "start_seconds": 14289.089,
+      "location": "Inside the ruins/old keep (goblin-held area)",
+      "goal": "Survive the goblin ambush/fight after negotiations break down",
+      "npcs_present": [
+        "Goblins (multiple; one boss with scimitar)"
+      ],
+      "time_of_day": "evening",
+      "emotional_tone": "chaotic",
+      "conflict_type": "combat",
+      "notes": "The party finishes the goblin fight, with Marwen burning multiple goblins in a cone and Sabriel healing; the last goblin surrenders as a 'pet' and flees.",
+      "requested_resources": [
+        {
+          "keyword": "goblin boss with scimitar / multiple goblins in ruins",
+          "requested_path": "world/factions/ardenhaven/quests/goblin-raid-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "Flicker (familiar) / Blade Ward / Produce Flame / Sacred Flame / Healing Word",
+          "requested_path": "characters/player-characters",
+          "override": null
+        }
+      ],
+      "scene_id": "S-009",
+      "end_seconds": 15719.12
+    },
+    {
+      "start_seconds": 15719.12,
+      "location": "Outside the ruins / returning to Redwick Farm (western farmlands)",
+      "goal": "Report success and collect payment for stopping the goblin raids",
+      "npcs_present": [
+        "Maren Redwick (sheep farmer, quest giver)"
+      ],
+      "time_of_day": "evening",
+      "emotional_tone": "relieved",
+      "conflict_type": "social",
+      "notes": "After the fight, the party discusses proof and returns to the farmer to get paid and receive bonus cheese for returning surviving sheep.",
+      "requested_resources": [
+        {
+          "keyword": "Maren Redwick / 70 gold / two wheels of sharp cheese / harvest festival",
+          "requested_path": "world/factions/ardenhaven/quests/goblin-raid-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "Redwick Farm",
+          "requested_path": "world/factions/ardenhaven/locations",
+          "override": null
+        }
+      ],
+      "scene_id": "S-010",
+      "end_seconds": 15864.333
+    },
+    {
+      "start_seconds": 15864.333,
+      "location": "The Wayward Compass tavern, Ardenford (Middle Tier)",
+      "goal": "Rest, debrief, and plan next day (spider job) while getting to know each other",
+      "npcs_present": [
+        "Thorgrim Ledger-Scar"
+      ],
+      "time_of_day": "night",
+      "emotional_tone": "casual",
+      "conflict_type": "social",
+      "notes": "Back at the tavern, the party orders food, chats with Thorgrim, shares motivations, and agrees to rest and pursue spiders in the morning.",
+      "requested_resources": [
+        {
+          "keyword": "The Wayward Compass",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford.md",
+          "override": null
+        },
+        {
+          "keyword": "Thorgrim Ledger-Scar",
+          "requested_path": "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+          "override": null
+        },
+        {
+          "keyword": "Spider job / spiders tomorrow",
+          "requested_path": "world/factions/ardenhaven/quests/spider-lair-cr1.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-011",
+      "end_seconds": 17300.982
+    },
+    {
+      "start_seconds": 17300.982,
+      "location": "The Wayward Compass tavern, Ardenford (Middle Tier)",
+      "goal": "Avoid/defuse tension after Calderon Imperium traders enter",
+      "npcs_present": [
+        "Calderon Imperium traders (3)"
+      ],
+      "time_of_day": "night",
+      "emotional_tone": "tense",
+      "conflict_type": "social",
+      "notes": "Imperium traders arrive and stare; Bazgar’s mood drops and the party decides to turn in to avoid escalation.",
+      "requested_resources": [
+        {
+          "keyword": "Calderon Imperium traders",
+          "requested_path": "world/factions/calderon-imperium/_overview.md",
+          "override": null
+        },
+        {
+          "keyword": "The Wayward Compass",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-012",
+      "end_seconds": 17419.171
+    },
+    {
+      "start_seconds": 17419.171,
+      "location": "The Wayward Compass tavern (common room floor space)",
+      "goal": "Settle a confrontation with Imperium traders after they trip Bazgar",
+      "npcs_present": [
+        "Thorgrim Ledger-Scar",
+        "Calderon Imperium traders (3)"
+      ],
+      "time_of_day": "night",
+      "emotional_tone": "heated",
+      "conflict_type": "combat",
+      "notes": "Bazgar starts a tavern brawl after being tripped; he knocks out multiple traders and Thorgrim enforces peace with the tavern’s 'free beer' rule.",
+      "requested_resources": [
+        {
+          "keyword": "Thorgrim's tavern rules / 'free beer' peace accord",
+          "requested_path": "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+          "override": null
+        },
+        {
+          "keyword": "Calderon Imperium",
+          "requested_path": "world/factions/calderon-imperium/_overview.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-013",
+      "end_seconds": 18026.804
+    },
+    {
+      "start_seconds": 18026.804,
+      "location": "The Wayward Compass inn rooms / upstairs hallway",
+      "goal": "Complete the night’s rest while preventing Imperium trouble upstairs",
+      "npcs_present": [
+        "Thorgrim Ledger-Scar",
+        "Calderon Imperium traders (drunk, upstairs)"
+      ],
+      "time_of_day": "night",
+      "emotional_tone": "watchful",
+      "conflict_type": "social",
+      "notes": "Sabriel spots drunk Calderon Imperium traders prowling the second-floor hallway and successfully gets past them to alert Thorgrim, who escorts them back to bed without disturbing the party’s rest.",
+      "requested_resources": [
+        {
+          "keyword": "Thorgrim Ledger-Scar",
+          "requested_path": "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+          "override": null
+        },
+        {
+          "keyword": "Calderon Imperium traders",
+          "requested_path": "world/factions/calderon-imperium/_overview.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-014",
+      "end_seconds": 23367.0
+    },
+    {
+      "start_seconds": 23367.0,
+      "location": "The Wayward Compass common room (morning)",
+      "goal": "Gather local intel for a mountain expedition (guides, ruins, shops) by questioning a friendly elf",
+      "npcs_present": [
+        "Elarion Faenwynd"
+      ],
+      "time_of_day": "morning",
+      "emotional_tone": "curious",
+      "conflict_type": "social",
+      "notes": "After the long rest, Marwen approaches a friendly elf (Elarion) who maintains the library’s ruin/rune catalog and gets guidance on ruins, dwarf guides, and where to find a weaponsmith, apothecary, and spell shop.",
+      "requested_resources": [
+        {
+          "keyword": "Elarion (E-L-A-R-I-O-N) / Concordance Library rune catalog ledger",
+          "requested_path": "world/factions/ardenhaven/npc/elarian-faenwynd.md",
+          "override": null
+        },
+        {
+          "keyword": "Concordance Library",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford.md",
+          "override": null
+        },
+        {
+          "keyword": "Oathhold Dwarves / Dulgarum Oathholds",
+          "requested_path": "world/factions/dulgarum-oathholds/_overview.md",
+          "override": null
+        },
+        {
+          "keyword": "Garhammar dwarves (guides are pricier)",
+          "requested_path": "world/factions/garhammar-trade-league/_overview.md",
+          "override": null
+        },
+        {
+          "keyword": "weaponsmith / apothecary / spell shop",
+          "requested_path": "world/factions/ardenhaven/npc",
+          "override": null
+        }
+      ],
+      "scene_id": "S-015",
+      "end_seconds": 26117.506
+    },
+    {
+      "start_seconds": 26117.506,
+      "location": "Western Market (Ardenford, Middle Tier)",
+      "goal": "Meet Gareth Thorne and accept the spider-lair job; learn details and requirements (clear camp, retrieve tools, possibly recover workers)",
+      "npcs_present": [
+        "Gareth Thorne"
+      ],
+      "time_of_day": "morning",
+      "emotional_tone": "businesslike",
+      "conflict_type": "social",
+      "notes": "The party confirms the job details with Gareth Thorne: clear the spider-infested lumber camp, retrieve tools, and ideally bring back the workers (or at least bury them).",
+      "requested_resources": [
+        {
+          "keyword": "Western Market",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford.md",
+          "override": null
+        },
+        {
+          "keyword": "Gareth Thorne",
+          "requested_path": "world/factions/ardenhaven/quests/spider-lair-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "Spider Lair (lumber camp, Miller's Creek, 80 gold)",
+          "requested_path": "world/factions/ardenhaven/quests/spider-lair-cr1.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-016",
+      "end_seconds": 26620.437
+    },
+    {
+      "start_seconds": 26620.437,
+      "location": "Road south from Ardenford toward the lumber camp (forest route past Miller's Creek)",
+      "goal": "Travel to the spider-infested lumber camp and plan approach",
+      "npcs_present": [],
+      "time_of_day": "morning",
+      "emotional_tone": "casual",
+      "conflict_type": "exploration",
+      "notes": "Leaving the market, the party heads into the woods, discusses whether to talk to spiders, and talks about Marwen's crow and Sabriel's pony (Lear).",
+      "requested_resources": [
+        {
+          "keyword": "Miller's Creek",
+          "requested_path": "world/factions/ardenhaven/quests/spider-lair-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "Lear (pony)",
+          "requested_path": "characters/player-characters/nicole-sabriel.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-017",
+      "end_seconds": 27142.347
+    },
+    {
+      "start_seconds": 27142.347,
+      "location": "Abandoned lumber camp (southern forest), covered in webs",
+      "goal": "Clear the camp of spiders, rescue any surviving workers, and secure the tools",
+      "npcs_present": [
+        "Gareth Thorne (mentioned)"
+      ],
+      "time_of_day": "morning",
+      "emotional_tone": "tense",
+      "conflict_type": "combat",
+      "notes": "At the web-covered camp, the party attempts a stealth approach, then negotiates with a giant spider to leave; a spiderling hatches and is killed, eggs are burned, and a worker is stabilized.",
+      "requested_resources": [
+        {
+          "keyword": "Spider Lair / abandoned lumber camp",
+          "requested_path": "world/factions/ardenhaven/quests/spider-lair-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "giant spider",
+          "requested_path": "world/factions/ardenhaven/quests/spider-lair-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "spider eggs / spiderling",
+          "requested_path": "world/factions/ardenhaven/quests/spider-lair-cr1.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-018",
+      "end_seconds": 29330.82
+    },
+    {
+      "start_seconds": 29330.82,
+      "location": "Ardenford (post-job wrap-up, before shopping)",
+      "goal": "Finalize the job outcome (tools/workers), discuss ethics, and confirm payout/favor before heading into town to shop",
+      "npcs_present": [
+        "Gareth Thorne (implied)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "casual",
+      "conflict_type": "social",
+      "notes": "The party debates whether to hunt the spider, talks through ethics, confirms the payout split and the favor owed by Gareth, then transitions into planning their shopping stops.",
+      "requested_resources": [
+        {
+          "keyword": "favor from Gareth Thorne",
+          "requested_path": "world/factions/ardenhaven/quests/spider-lair-cr1.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-019",
+      "end_seconds": 30067.468
+    },
+    {
+      "start_seconds": 30067.468,
+      "location": "Ardenford (Upper Tier) — Silverbridge Arcana (spell shop)",
+      "goal": "Shop for spell scrolls and related arcane supplies; decide purchases and manage party funds",
+      "npcs_present": [
+        "Selise Dawnquill"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "comedic",
+      "conflict_type": "social",
+      "notes": "At the arcane shop, the party rolls up available scrolls, negotiates/learns prices, buys items (including a discounted Sleep scroll), and encounters a dangerous 'customer return' scroll that comes with a waiver.",
+      "requested_resources": [
+        {
+          "keyword": "Silverbridge Arcana",
+          "requested_path": "world/factions/ardenhaven/npc/_arcana_selise-dawnquill-silverbridge.md",
+          "override": null
+        },
+        {
+          "keyword": "Selise Dawnquill",
+          "requested_path": "world/factions/ardenhaven/npc/_arcana_selise-dawnquill-silverbridge.md",
+          "override": null
+        },
+        {
+          "keyword": "Signal Blue ink (luminescent)",
+          "requested_path": "world/factions/ardenhaven/npc/_arcana_selise-dawnquill-silverbridge.md",
+          "override": null
+        },
+        {
+          "keyword": "scroll case of dryglass",
+          "requested_path": "world/factions/ardenhaven/npc/_arcana_selise-dawnquill-silverbridge.md",
+          "override": null
+        },
+        {
+          "keyword": "discounted Sleep scroll (15 gold)",
+          "requested_path": "world/factions/ardenhaven/npc/_arcana_selise-dawnquill-silverbridge.md",
+          "override": null
+        },
+        {
+          "keyword": "dangerous customer return scroll / waiver / 'turned man into goo'",
+          "requested_path": "world/factions/ardenhaven/npc/_arcana_selise-dawnquill-silverbridge.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-020",
+      "end_seconds": 31340.37
+    },
+    {
+      "start_seconds": 31340.37,
+      "location": "Ardenford (Lower Tier) — The Anvil & Oar (weaponsmith)",
+      "goal": "Replace Bazgar’s lost throwing axes and interact with the smith",
+      "npcs_present": [
+        "Branik Ironweld"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "casual",
+      "conflict_type": "social",
+      "notes": "The party visits the harbor-side weaponsmith; Bazgar asks for replacement throwing axes and ends up receiving axes for free as a first-time customer after some confusion about stock.",
+      "requested_resources": [
+        {
+          "keyword": "The Anvil & Oar",
+          "requested_path": "world/factions/ardenhaven/npc/_anvil-and-oar_branik-ironweld.md",
+          "override": null
+        },
+        {
+          "keyword": "Branik Ironweld",
+          "requested_path": "world/factions/ardenhaven/npc/_anvil-and-oar_branik-ironweld.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-021",
+      "end_seconds": 31959.256
+    },
+    {
+      "start_seconds": 31959.256,
+      "location": "Ardenford (Middle Tier) — Willowglass Apothecary",
+      "goal": "Buy adventuring consumables (soap, antitoxin, healing potions) and see what stock is available",
+      "npcs_present": [
+        "Hesta Briarvein"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "light/comedic",
+      "conflict_type": "social",
+      "notes": "At the apothecary, Sabriel negotiates down an attempted overcharge, becomes friendly with Hesta, browses random stock (chalk of warding, antitoxin, alchemist’s fire, smoke pellets, lozenges), and learns healing potions are mostly pre-ordered.",
+      "requested_resources": [
+        {
+          "keyword": "Willowglass Apothecary",
+          "requested_path": "world/factions/ardenhaven/npc/_apothecary_hesta-briarvein-willowglass.md",
+          "override": null
+        },
+        {
+          "keyword": "Hesta Briarvein",
+          "requested_path": "world/factions/ardenhaven/npc/_apothecary_hesta-briarvein-willowglass.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-022",
+      "end_seconds": 32807.944
+    },
+    {
+      "start_seconds": 32807.944,
+      "location": "Ardenford (Middle Tier) — Willowglass Apothecary (back-counter conversation)",
+      "goal": "Figure out how to get healing potions sooner by solving Hesta’s supply bottleneck",
+      "npcs_present": [
+        "Hesta Briarvein"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "pragmatic",
+      "conflict_type": "social",
+      "notes": "The party finishes negotiating with Hesta and learns the distilled alcohol strike at the docks is the key bottleneck for potion supply.",
+      "requested_resources": [
+        {
+          "keyword": "Hesta Briarvein",
+          "requested_path": "world/factions/ardenhaven/npc/_apothecary_hesta-briarvein-willowglass.md",
+          "override": null
+        },
+        {
+          "keyword": "Merrowgate (union on distilled alcohol) / strike",
+          "requested_path": "world/factions/merrowgate/_overview.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-023",
+      "end_seconds": 33400.695
+    },
+    {
+      "start_seconds": 33400.695,
+      "location": "Ardenford (Lower Tier) — Docks / harbor district (picket line near ships)",
+      "goal": "Investigate the Merrowgate alcohol strike and see if it can be resolved (or bypassed) to obtain distilled alcohol for Hesta",
+      "npcs_present": [
+        "striking sailors (unnamed)",
+        "harbor guards (unnamed)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "uncertain",
+      "conflict_type": "social",
+      "notes": "The party arrives at the docks, observes the picket line and guards, briefly considers engaging, then decides they lack the clout/resources and backs off.",
+      "requested_resources": [
+        {
+          "keyword": "docks / harbor district",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford.md",
+          "override": null
+        },
+        {
+          "keyword": "Merrowgate union (distilled alcohol) strike",
+          "requested_path": "world/factions/merrowgate/_overview.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-024",
+      "end_seconds": 34039.464
+    },
+    {
+      "start_seconds": 34039.464,
+      "location": "Ardenford (Upper Tier) — Concordance Library entrance",
+      "goal": "Gain access to the library and decide who will research what",
+      "npcs_present": [
+        "library doorkeeper/attendant (unnamed)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "curious",
+      "conflict_type": "social",
+      "notes": "At the library door, the party learns access is membership-based with a wizard exception; Marwen demonstrates spellcasting/book to get admitted while the others plan to wait nearby.",
+      "requested_resources": [
+        {
+          "keyword": "Concordance Library",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford.md",
+          "override": null
+        },
+        {
+          "keyword": "Elarion Faenwynd (ruin-catalog ledger mentioned as compiler)",
+          "requested_path": "world/factions/ardenhaven/npc/elarian-faenwynd.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-025",
+      "end_seconds": 34444.089
+    },
+    {
+      "start_seconds": 34444.089,
+      "location": "Ardenford (Upper Tier) — outside/near the Concordance Library (coffee/café area)",
+      "goal": "Bazgar and Sabriel discuss the Pentarch Accords and whether Ardenhaven’s governance ties back to the treaty",
+      "npcs_present": [],
+      "time_of_day": "unknown",
+      "emotional_tone": "concerned",
+      "conflict_type": "social",
+      "notes": "Bazgar questions if the Imperium influenced Ardenhaven’s dysfunctional government via the Accords; Sabriel recalls details and concludes it’s unrelated, while warning the Imperium may return.",
+      "requested_resources": [
+        {
+          "keyword": "Pentarch Accords",
+          "requested_path": "/Users/joe/GitHub/dnd/world/factions/world-faction-outsider-perspective.md",
+          "override": null
+        },
+        {
+          "keyword": "Calderon Imperium",
+          "requested_path": "world/factions/calderon-imperium/_overview.md",
+          "override": null
+        },
+        {
+          "keyword": "Ardenhaven government / Council of Consuls",
+          "requested_path": "world/factions/ardenhaven/_overview.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-026",
+      "end_seconds": 34798.111
+    },
+    {
+      "start_seconds": 34798.111,
+      "location": "Ardenford (Upper Tier) — Concordance Library (interior stacks)",
+      "goal": "Marwen researches oldest religions/fallen gods and drow history; identify useful ruin sites",
+      "npcs_present": [
+        "neighboring wizard (unnamed)",
+        "wizard dwarf (unnamed)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "mysterious",
+      "conflict_type": "exploration",
+      "notes": "Marwen finds an uncatalogued blank holy book with conjuration magic, debates and then steals it, then continues research on the drow (their disappearance at Age of Conflict year 0 and the status of Lolth) and broader age-history (Age of Rhodes/Reclamation/Ash and Silence).",
+      "requested_resources": [
+        {
+          "keyword": "drow / Lolth the Spider Queen / purge of the religion",
+          "requested_path": "world/factions/world-faction-outsider-perspective.md",
+          "override": null
+        },
+        {
+          "keyword": "Age of Rhodes / Age of Reclamation / Age of Ash and Silence",
+          "requested_path": "world/calendar-reckoning-of-the-fall.md",
+          "override": null
+        },
+        {
+          "keyword": "Elder Holt (mentioned re: drow disappearance)",
+          "requested_path": "world/factions/world-faction-outsider-perspective.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-027",
+      "end_seconds": 37788.468
+    },
+    {
+      "start_seconds": 37788.468,
+      "location": "Ardenford (Upper Tier) — Concordance Library exit/checkpoint",
+      "goal": "Leave the library without getting caught with contraband (the stolen holy book and other bag contents)",
+      "npcs_present": [
+        "library staff/guard (unnamed)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "tense",
+      "conflict_type": "social",
+      "notes": "As Marwen leaves, library staff insist on checking bags; Marwen talks her way through while revealing bizarre harvested ingredients and avoids being discovered with the uncatalogued book.",
+      "requested_resources": [
+        {
+          "keyword": "Concordance Library rules (bag checks; no food)",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford.md",
+          "override": null
+        },
+        {
+          "keyword": "uncatalogued holy book (stolen from library)",
+          "requested_path": "items/magic-items/uncatalogued-holy-book.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-028",
+      "end_seconds": 37892.322
+    },
+    {
+      "start_seconds": 37892.322,
+      "location": "Ardenford (Upper Tier) — stables / cafe across from the library",
+      "goal": "Regroup after research; discuss Sabriel’s age/credibility and what the ages mean",
+      "npcs_present": [],
+      "time_of_day": "unknown",
+      "emotional_tone": "contemplative",
+      "conflict_type": "social",
+      "notes": "Sabriel takes Lear back to the stables while Bazgar waits nearby and talks with Marwen about whether Sabriel is lying and about the newly learned older ages (Ash and Silence/Reclamation).",
+      "requested_resources": [
+        {
+          "keyword": "Lear (Sabriel’s mount) / stables",
+          "requested_path": "characters/player-characters/nicole-sabriel.md",
+          "override": null
+        },
+        {
+          "keyword": "Age of Ash and Silence / Age of Reclamation",
+          "requested_path": "world/calendar-reckoning-of-the-fall.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-029",
+      "end_seconds": 38238.966
+    },
+    {
+      "start_seconds": 38238.966,
+      "location": "Ardenford (Middle Tier) — The Wayward Compass (common room / dinner table)",
+      "goal": "Regroup for the night; examine Sabriel’s mysterious holy book; finalize plans to rest and seek a dwarf guide before exploring the valley ruin",
+      "npcs_present": [
+        "Thorgrim Ledger-Scar (implied Wayward Compass keeper)"
+      ],
+      "time_of_day": "evening",
+      "emotional_tone": "mysterious",
+      "conflict_type": "social",
+      "notes": "Sabriel confirms the book’s symbol is unknown and the pages erase writing; the party debates valley vs mountain ruins, agrees to start with the valley and look for a dwarf guide in the morning, then winds down for the night.",
+      "requested_resources": [
+        {
+          "keyword": "sunburst symbol on the front cover; blank pages; conjuration magic",
+          "requested_path": "items/magic-items/uncatalogued-holy-book.md",
+          "override": null
+        },
+        {
+          "keyword": "valley ruin (starter ruin) vs mountain ruin (dangerous)",
+          "requested_path": "world/factions/ardenhaven/locations",
+          "override": null
+        },
+        {
+          "keyword": "Oathhold dwarf / dwarf guide",
+          "requested_path": "world/factions/dulgarum-oathholds/_overview.md",
+          "override": null
+        },
+        {
+          "keyword": "The Wayward Compass (regular table / dinner)",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford.md",
+          "override": null
+        },
+        {
+          "keyword": "Thorgrim Ledger-Scar",
+          "requested_path": "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-030",
+      "end_seconds": 40407.442
+    }
+  ]
+}

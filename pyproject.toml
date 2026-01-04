@@ -25,3 +25,10 @@ dependencies = [
 
 [tool.uv.pip]
 no-binary = ["pillow"]
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests as integration tests (uses real API tokens, costs money)",
+]
+testpaths = ["scripts/tests"]
+python_files = ["test_*.py"]

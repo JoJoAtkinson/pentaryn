@@ -47,11 +47,11 @@ folders = [
 output = "sessions/01/pass1.json"
 batch_size = 1000
 overlap = 250
-model = "gpt-4o"
+model = "gpt-5.2"
 
 [pass2]
 output = "sessions/01/pass2.json"
-model = "gpt-4o"
+model = "gpt-5.2"
 # Seconds of transcript context before/after each scene
 context_before = 30.0
 context_after = 30.0

@@ -13,15 +13,36 @@ Usage:
 Arguments are flexible - script will figure out session number and paths.
 """
 
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not installed, will use system env vars
+
 import argparse
 import json
 import os
 import sys
-import tomllib
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from openai import OpenAI
+
+# Add repo root to sys.path for imports
+_SCRIPT_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _SCRIPT_DIR.parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts.story_craft._shared import (
+    REPO_ROOT,
+    discover_latest_session,
+    format_speaker_context,
+    load_jsonl,
+    load_session_config,
+    normalize_speaker_label,
+)
 
 MCP_TOOL = {
     "name": "dnd_pass2",
@@ -49,51 +70,20 @@ MCP_TOOL = {
             "model": {
                 "type": "string",
                 "description": "OpenAI model (default: gpt-4o)",
+                "default": "gpt-4o",
             },
         },
         "required": ["session"],
         "additionalProperties": False,
     },
     "argv": [],
+    "value_flags": {
+        "session": "--session",
+        "pass1": "--pass1",
+        "output": "--output",
+        "model": "--model",
+    },
 }
-
-# Load environment variables from .env file if it exists
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass  # dotenv not installed, will use system env vars
-
-
-def discover_latest_session(repo_root: Path) -> Optional[int]:
-    """Find the highest numbered session folder."""
-    sessions_dir = repo_root / "sessions"
-    if not sessions_dir.exists():
-        return None
-    
-    session_nums = []
-    for item in sessions_dir.iterdir():
-        if item.is_dir():
-            try:
-                num = int(item.name)
-                session_nums.append(num)
-            except ValueError:
-                continue
-    
-    return max(session_nums) if session_nums else None
-
-
-def load_session_config(session_num: int, repo_root: Path) -> Dict[str, Any]:
-    """Load configuration for a specific session."""
-    config_path = repo_root / "sessions" / f"{session_num:02d}" / "config.toml"
-    
-    if not config_path.exists():
-        raise FileNotFoundError(f"Config file not found: {config_path}")
-    
-    with open(config_path, 'rb') as f:
-        config = tomllib.load(f)
-    
-    return config
 
 
 class SceneSummarizer:
@@ -111,14 +101,13 @@ class SceneSummarizer:
             raise ValueError("OPENAI_API_KEY environment variable not set")
         
         self.client = OpenAI(api_key=self.api_key)
+        self._resource_index: Optional[Dict[str, List[Path]]] = None
     
     def load_transcript(self, filepath: Path) -> List[Dict[str, Any]]:
         """Load transcript from JSONL file."""
-        transcript = []
-        with open(filepath, 'r', encoding='utf-8') as f:
-            for line in f:
-                if line.strip():
-                    transcript.append(json.loads(line))
+        transcript = load_jsonl(filepath)
+        for entry in transcript:
+            entry["speaker"] = normalize_speaker_label(entry.get("speaker"))
         return transcript
     
     def load_pass1_results(self, filepath: Path) -> Dict[str, Any]:
@@ -169,6 +158,31 @@ class SceneSummarizer:
             return content
         except Exception as e:
             return f"[Error loading {filepath}: {e}]"
+
+    def build_resource_index(self, repo_root: Path) -> Dict[str, List[Path]]:
+        """Index markdown files by stem for best-effort resource resolution."""
+        if self._resource_index is not None:
+            return self._resource_index
+
+        index: Dict[str, List[Path]] = {}
+        for folder in [
+            repo_root / "world",
+            repo_root / "characters",
+            repo_root / "items",
+            repo_root / "creatures",
+            repo_root / "quests",
+        ]:
+            if not folder.exists():
+                continue
+            for md_file in folder.rglob("*.md"):
+                index.setdefault(md_file.stem, []).append(md_file)
+
+        # Keep stable ordering for deterministic behavior.
+        for stem, paths in index.items():
+            paths.sort(key=lambda p: p.as_posix())
+
+        self._resource_index = index
+        return index
     
     def load_scene_resources(
         self, 
@@ -210,6 +224,14 @@ class SceneSummarizer:
                 # Single file
                 if not full_path.suffix:
                     full_path = full_path.with_suffix('.md')
+
+                if not full_path.exists():
+                    # Best-effort: allow passing just a file stem like "ardenford".
+                    stem = Path(path_to_use).stem
+                    if stem and ("/" not in path_to_use and "\\" not in path_to_use):
+                        candidates = self.build_resource_index(repo_root).get(stem, [])
+                        if len(candidates) == 1:
+                            full_path = candidates[0]
                 
                 content = self.load_resource_file(full_path)
                 resources[f"{keyword} ({path_to_use})"] = content
@@ -220,7 +242,7 @@ class SceneSummarizer:
         """Format transcript entries for inclusion in prompt."""
         lines = []
         for entry in entries:
-            speaker = entry.get("speaker", "UNKNOWN")
+            speaker = normalize_speaker_label(entry.get("speaker"))
             text = entry.get("text", "")
             start = entry.get("start", 0)
             
@@ -429,7 +451,10 @@ Output ONLY valid JSON. No additional commentary.
         transcript_path: Path,
         output_path: Path,
         model: str = "gpt-4o",
-        speaker_context: Optional[str] = None
+        speaker_context: Optional[str] = None,
+        speakers_cfg: Optional[Dict[str, Any]] = None,
+        context_before_seconds: float = 30.0,
+        context_after_seconds: float = 30.0,
     ) -> List[Dict[str, Any]]:
         """
         Main processing loop: summarize all scenes.
@@ -448,8 +473,12 @@ Output ONLY valid JSON. No additional commentary.
         
         print(f"Processing {len(scenes)} scenes...\n")
         
-        repo_root = Path.cwd()
+        repo_root = REPO_ROOT
         summaries = []
+
+        observed_speakers = sorted({e.get("speaker") for e in transcript if e.get("speaker")})
+        if not speaker_context and speakers_cfg is not None:
+            speaker_context = format_speaker_context(speakers_cfg, observed_speakers)
         
         for idx, scene in enumerate(scenes):
             scene_id = scene.get("scene_id", f"S-{idx+1:03d}")
@@ -464,7 +493,9 @@ Output ONLY valid JSON. No additional commentary.
             scene_transcript = self.extract_scene_transcript(
                 transcript,
                 start_seconds,
-                end_seconds
+                end_seconds,
+                context_before_seconds=context_before_seconds,
+                context_after_seconds=context_after_seconds,
             )
             print(f"  Transcript entries: {len(scene_transcript)}")
             
@@ -547,11 +578,26 @@ Configuration is read from sessions/{NN}/config.toml
         type=int,
         help="Session number (default: latest session)"
     )
+    parser.add_argument(
+        "--pass1",
+        type=str,
+        help="Override Pass 1 input path (default: from config)"
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        help="Override Pass 2 output path (default: from config)"
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        help="Override model (default: from config)"
+    )
     
     parsed_args = parser.parse_args()
     
     # Determine session number
-    repo_root = Path.cwd()
+    repo_root = REPO_ROOT
     session_num = parsed_args.session
     
     if session_num is None:
@@ -573,9 +619,12 @@ Configuration is read from sessions/{NN}/config.toml
         return 1
     
     # Extract config values
-    pass1_path = repo_root / config["pass1"]["output"]
-    output_path = repo_root / config["pass2"]["output"]
-    model = config["pass2"].get("model", "gpt-4o")
+    pass1_path = (repo_root / parsed_args.pass1) if parsed_args.pass1 else (repo_root / config["pass1"]["output"])
+    output_path = (repo_root / parsed_args.output) if parsed_args.output else (repo_root / config["pass2"]["output"])
+    model = parsed_args.model if parsed_args.model else config["pass2"].get("model", "gpt-4o")
+
+    context_before = float(config.get("pass2", {}).get("context_before", 30.0))
+    context_after = float(config.get("pass2", {}).get("context_after", 30.0))
     
     # Validate pass1 file
     if not pass1_path.exists():
@@ -600,15 +649,17 @@ Configuration is read from sessions/{NN}/config.toml
     # Create summarizer and process
     try:
         summarizer = SceneSummarizer()
-        
-        speaker_context = config.get("session", {}).get("speakers", {}).get("notes")
+
+        speakers_cfg = config.get("session", {}).get("speakers", {})
         
         summaries = summarizer.process_scenes(
             pass1_path,
             transcript_path,
             output_path,
             model=model,
-            speaker_context=speaker_context
+            speakers_cfg=speakers_cfg,
+            context_before_seconds=context_before,
+            context_after_seconds=context_after,
         )
         
         print(f"\n✓ Successfully summarized {len(summaries)} scenes")

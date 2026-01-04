@@ -7,20 +7,41 @@ Outputs structured JSON with scene metadata and resource requests.
 
 Usage:
     dnd_pass1 --session 1 --transcript "recordings_transcripts/DnD 1.jsonl"
-    dnd_pass1 1 recordings_transcripts/DnD\ 1.jsonl sessions/01/pass1.json
+    dnd_pass1 1 "recordings_transcripts/DnD 1.jsonl" sessions/01/pass1.json
 
 Arguments are flexible - script will figure out session number, transcript path, and output path.
 """
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # dotenv not installed, will use system env vars
 
 import argparse
 import json
 import os
 import sys
-import tomllib
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from openai import OpenAI
+
+# Add repo root to sys.path for imports
+_SCRIPT_DIR = Path(__file__).resolve().parent
+_REPO_ROOT = _SCRIPT_DIR.parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from scripts.story_craft._shared import (
+    REPO_ROOT,
+    discover_latest_session,
+    format_speaker_context,
+    load_jsonl,
+    load_session_config,
+    normalize_speaker_label,
+)
 
 MCP_TOOL = {
     "name": "dnd_pass1",
@@ -47,60 +68,32 @@ MCP_TOOL = {
             "batch_size": {
                 "type": "integer",
                 "description": "Entries per batch (default: 1000)",
+                "default": 1000,
             },
             "overlap": {
                 "type": "integer",
                 "description": "Overlap between batches (default: 250)",
+                "default": 250,
             },
             "model": {
                 "type": "string",
                 "description": "OpenAI model (default: gpt-4o)",
+                "default": "gpt-4o",
             },
         },
         "required": ["session"],
         "additionalProperties": False,
     },
     "argv": [],
+    "value_flags": {
+        "session": "--session",
+        "transcript": "--transcript",
+        "output": "--output",
+        "batch_size": "--batch-size",
+        "overlap": "--overlap",
+        "model": "--model",
+    },
 }
-
-# Load environment variables from .env file if it exists
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass  # dotenv not installed, will use system env vars
-
-
-def discover_latest_session(repo_root: Path) -> Optional[int]:
-    """Find the highest numbered session folder."""
-    sessions_dir = repo_root / "sessions"
-    if not sessions_dir.exists():
-        return None
-    
-    session_nums = []
-    for item in sessions_dir.iterdir():
-        if item.is_dir():
-            try:
-                # Try to parse folder name as number (01, 02, etc.)
-                num = int(item.name)
-                session_nums.append(num)
-            except ValueError:
-                continue
-    
-    return max(session_nums) if session_nums else None
-
-
-def load_session_config(session_num: int, repo_root: Path) -> Dict[str, Any]:
-    """Load configuration for a specific session."""
-    config_path = repo_root / "sessions" / f"{session_num:02d}" / "config.toml"
-    
-    if not config_path.exists():
-        raise FileNotFoundError(f"Config file not found: {config_path}")
-    
-    with open(config_path, 'rb') as f:
-        config = tomllib.load(f)
-    
-    return config
 
 
 class SceneDetector:
@@ -125,28 +118,28 @@ class SceneDetector:
         
     def load_transcript(self, filepath: Path) -> List[Dict[str, Any]]:
         """Load transcript from JSONL file."""
-        transcript = []
-        with open(filepath, 'r', encoding='utf-8') as f:
-            for line in f:
-                if line.strip():
-                    transcript.append(json.loads(line))
+        transcript = load_jsonl(filepath)
+        for entry in transcript:
+            entry["speaker"] = normalize_speaker_label(entry.get("speaker"))
         return transcript
     
-    def build_resource_dict(self, folders: List[Path]) -> Dict[str, str]:
+    def build_resource_list(self, repo_root: Path, folders: List[Path]) -> List[str]:
         """
-        Build a dictionary of available resources from specified folders.
+        Build a list of available resource files from specified folders.
         
-        Returns dict mapping file stems (without .md) to relative paths.
+        Returns list of repo-root-relative `.md` paths.
         """
-        resources = {}
+        resources: list[str] = []
         for folder in folders:
             if not folder.exists():
                 continue
             for md_file in folder.rglob("*.md"):
-                stem = md_file.stem
-                rel_path = str(md_file.relative_to(Path.cwd()))
-                resources[stem] = rel_path
-        return resources
+                try:
+                    rel_path = md_file.relative_to(repo_root).as_posix()
+                except ValueError:
+                    rel_path = str(md_file)
+                resources.append(rel_path)
+        return sorted(set(resources))
     
     def load_context_file(self, filepath: Path) -> str:
         """Load a context file."""
@@ -161,7 +154,7 @@ class SceneDetector:
     def build_system_prompt(
         self, 
         context_files: Dict[str, Path],
-        available_resources: Dict[str, str],
+        available_resources: List[str],
         speaker_context: Optional[str] = None
     ) -> str:
         """
@@ -183,8 +176,8 @@ class SceneDetector:
         
         context_text = "\n\n".join(context_sections) if context_sections else "[No upfront context provided]"
         
-        # Build resource catalog (just file stems for brevity)
-        resource_list = "\n".join(f"- {stem}" for stem in sorted(available_resources.keys()))
+        # Build resource catalog
+        resource_list = "\n".join(f"- {path}" for path in available_resources)
         
         prompt = f"""You are detecting scene boundaries in a D&D session transcript.
 
@@ -219,12 +212,12 @@ Format resource requests as:
 ```json
 {{
   "keyword": "text from transcript",
-  "requested_path": "best-guess-at-filename",
+  "requested_path": "repo-root-relative-path-or-folder",
   "override": null
 }}
 ```
 
-**Available resources** (file stems only, add .md extension):
+**Available resources** (repo-root-relative paths):
 {resource_list}
 
 **IMPORTANT**: 
@@ -258,8 +251,21 @@ For each batch, output JSON:
     ]
   }},
   "new_scenes": [
-    // Only if closing previous scene and starting new one(s)
-    // Same structure as current_scene
+    // Only if closing previous scene and starting new one(s).
+    // Each new scene MUST include start_seconds copied from a transcript line timestamp.
+    {{
+      "start_seconds": 1234.5,
+      "location": "brief location",
+      "goal": "what the party is trying to do",
+      "npcs_present": ["NPC1", "NPC2"],
+      "time_of_day": "morning|afternoon|evening|night|unknown",
+      "emotional_tone": "tense|casual|etc",
+      "conflict_type": "combat|social|exploration|etc",
+      "notes": "one sentence about what's happening",
+      "requested_resources": [
+        {{"keyword": "...", "requested_path": "...", "override": null}}
+      ]
+    }}
   ]
 }}
 ```
@@ -291,6 +297,9 @@ For each batch, output JSON:
 - Goal shifts ("Let's search the library" → "Now we need to find a guide")
 - Combat begins or ends
 - Major topic shifts
+
+## Timestamp Rules
+- When you start a new scene, set `start_seconds` to the EXACT `[1234.5s]` value from the first transcript line of that new scene.
 """
         return prompt
     
@@ -371,7 +380,9 @@ Output your decision as JSON following the format specified in the system prompt
         transcript_path: Path,
         context_files: Dict[str, Path],
         output_path: Path,
-        model: str = "gpt-4o"
+        model: str = "gpt-4o",
+        speakers_cfg: Optional[Dict[str, Any]] = None,
+        repo_root: Path = REPO_ROOT,
     ) -> List[Dict[str, Any]]:
         """
         Main processing loop: detect scenes across the entire transcript.
@@ -382,9 +393,8 @@ Output your decision as JSON following the format specified in the system prompt
         transcript = self.load_transcript(transcript_path)
         print(f"Loaded {len(transcript)} transcript entries")
         
-        # Build resource dictionary
+        # Build resource list
         print("Building resource catalog...")
-        repo_root = Path.cwd()
         resource_folders = [
             repo_root / "world",
             repo_root / "characters",
@@ -392,14 +402,16 @@ Output your decision as JSON following the format specified in the system prompt
             repo_root / "creatures",
             repo_root / "quests"
         ]
-        available_resources = self.build_resource_dict(resource_folders)
+        available_resources = self.build_resource_list(repo_root, resource_folders)
         print(f"Found {len(available_resources)} available resources")
+
+        observed_speakers = sorted({e.get("speaker") for e in transcript if e.get("speaker")})
         
         # Build system prompt
         system_prompt = self.build_system_prompt(
             context_files, 
             available_resources,
-            speaker_context=config.get("session", {}).get("speakers", {}).get("notes")
+            speaker_context=format_speaker_context(speakers_cfg, observed_speakers),
         )
         
         # Process in batches
@@ -413,6 +425,7 @@ Output your decision as JSON following the format specified in the system prompt
             start_idx = batch_num * self.batch_size
             end_idx = min(start_idx + self.batch_size + self.overlap, len(transcript))
             batch = transcript[start_idx:end_idx]
+            batch_start_seconds = [float(e.get("start", 0.0)) for e in batch]
             
             print(f"\nProcessing batch {batch_num + 1}/{total_batches} (entries {start_idx}-{end_idx})...")
             
@@ -442,23 +455,82 @@ Output your decision as JSON following the format specified in the system prompt
                         scene_counter += 1
             
             elif action in ["close_and_start_new", "close_and_start_multiple"]:
+                # Apply any final updates to the scene we're about to close.
+                if current_scene_state and "current_scene" in result:
+                    current_scene_state.update(result["current_scene"])
+
                 # Close current scene
+                raw_new_scenes = result.get("new_scenes", []) or []
+                if not isinstance(raw_new_scenes, list):
+                    raw_new_scenes = []
+
+                # Parse and validate scene transition points
+                new_scenes: list[dict[str, Any]] = []
+                for ns in raw_new_scenes:
+                    if not isinstance(ns, dict):
+                        continue
+                    start_raw = ns.get("start_seconds", ns.get("start"))
+                    try:
+                        start_seconds = float(start_raw)
+                    except (TypeError, ValueError):
+                        continue
+                    # Snap to nearest transcript line start when close (helps when model rounds).
+                    if batch_start_seconds:
+                        nearest = min(batch_start_seconds, key=lambda s: abs(s - start_seconds))
+                        if abs(nearest - start_seconds) <= 5.0:
+                            start_seconds = nearest
+                    ns["start_seconds"] = start_seconds
+                    new_scenes.append(ns)
+
+                new_scenes.sort(key=lambda s: float(s["start_seconds"]))
+
+                # Filter out transitions that go backwards (can happen with overlap).
+                min_allowed = float(current_scene_state.get("start_seconds", -1e18)) + 0.01 if current_scene_state else -1e18
+                filtered: list[dict[str, Any]] = []
+                last_t = -1e18
+                for ns in new_scenes:
+                    t = float(ns["start_seconds"])
+                    if t <= min_allowed:
+                        continue
+                    if t <= last_t + 0.01:
+                        continue
+                    last_t = t
+                    filtered.append(ns)
+
+                if not filtered:
+                    # Can't act on this response; treat it as a continuation update.
+                    if "current_scene" in result:
+                        if current_scene_state:
+                            current_scene_state.update(result["current_scene"])
+                        else:
+                            current_scene_state = result["current_scene"]
+                            current_scene_state["scene_id"] = f"S-{scene_counter:03d}"
+                            current_scene_state["start_seconds"] = batch[0]["start"]
+                            scene_counter += 1
+                    continue
+
+                first_boundary = float(filtered[0]["start_seconds"])
                 if current_scene_state:
-                    current_scene_state["end_seconds"] = batch[0]["start"]  # End at boundary
+                    current_scene_state["end_seconds"] = first_boundary
                     scenes.append(current_scene_state)
-                    print(f"  Closed scene: {current_scene_state['scene_id']}")
+                    print(f"  Closed scene: {current_scene_state['scene_id']} @ {first_boundary:.1f}s")
                 
-                # Start new scene(s)
-                new_scenes = result.get("new_scenes", [])
-                if new_scenes:
-                    for new_scene in new_scenes:
-                        new_scene["scene_id"] = f"S-{scene_counter:03d}"
-                        new_scene["start_seconds"] = batch[0]["start"]
-                        scene_counter += 1
+                # Start new scene(s). Any scene fully contained in this batch is immediately closed
+                # using the next scene's start_seconds.
+                current_scene_state = None
+                for idx_ns, new_scene in enumerate(filtered):
+                    new_scene["scene_id"] = f"S-{scene_counter:03d}"
+                    scene_counter += 1
+
+                    start_seconds = float(new_scene["start_seconds"])
+                    if idx_ns < len(filtered) - 1:
+                        end_seconds = float(filtered[idx_ns + 1]["start_seconds"])
+                        new_scene["end_seconds"] = end_seconds
+                        scenes.append(new_scene)
+                        print(f"  Closed scene: {new_scene['scene_id']} @ {end_seconds:.1f}s")
+                    else:
                         current_scene_state = new_scene
-                        print(f"  Started scene: {new_scene['scene_id']}")
-                else:
-                    current_scene_state = None
+                        print(f"  Started scene: {new_scene['scene_id']} @ {start_seconds:.1f}s")
         
         # Close final scene
         if current_scene_state:
@@ -513,11 +585,36 @@ Configuration is read from sessions/{NN}/config.toml
         type=int,
         help="Session number (default: latest session)"
     )
+    parser.add_argument(
+        "--transcript",
+        type=str,
+        help="Override transcript path (default: sessions/{NN}/transcripts.jsonl)"
+    )
+    parser.add_argument(
+        "--output",
+        type=str,
+        help="Override Pass 1 output path (default: from config)"
+    )
+    parser.add_argument(
+        "--batch-size",
+        type=int,
+        help="Override batch size (default: from config)"
+    )
+    parser.add_argument(
+        "--overlap",
+        type=int,
+        help="Override overlap size (default: from config)"
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        help="Override model (default: from config)"
+    )
     
     parsed_args = parser.parse_args()
     
     # Determine session number
-    repo_root = Path.cwd()
+    repo_root = REPO_ROOT
     session_num = parsed_args.session
     
     if session_num is None:
@@ -539,11 +636,15 @@ Configuration is read from sessions/{NN}/config.toml
         return 1
     
     # Extract config values
-    transcript_path = repo_root / "sessions" / f"{session_num:02d}" / "transcripts.jsonl"
-    output_path = repo_root / config["pass1"]["output"]
-    batch_size = config["pass1"].get("batch_size", 1000)
-    overlap = config["pass1"].get("overlap", 250)
-    model = config["pass1"].get("model", "gpt-4o")
+    transcript_path = (
+        (repo_root / parsed_args.transcript)
+        if parsed_args.transcript
+        else (repo_root / "sessions" / f"{session_num:02d}" / "transcripts.jsonl")
+    )
+    output_path = (repo_root / parsed_args.output) if parsed_args.output else (repo_root / config["pass1"]["output"])
+    batch_size = parsed_args.batch_size if parsed_args.batch_size is not None else config["pass1"].get("batch_size", 1000)
+    overlap = parsed_args.overlap if parsed_args.overlap is not None else config["pass1"].get("overlap", 250)
+    model = parsed_args.model if parsed_args.model else config["pass1"].get("model", "gpt-4o")
     
     # Validate transcript file
     if not transcript_path.exists():
@@ -591,12 +692,16 @@ Configuration is read from sessions/{NN}/config.toml
             batch_size=batch_size,
             overlap=overlap
         )
+
+        speakers_cfg = config.get("session", {}).get("speakers", {})
         
         scenes = detector.process_transcript(
             transcript_path,
             context_files,
             output_path,
-            model=model
+            model=model,
+            speakers_cfg=speakers_cfg,
+            repo_root=repo_root,
         )
         
         print(f"\n✓ Successfully detected {len(scenes)} scenes")
