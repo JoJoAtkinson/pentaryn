@@ -6,6 +6,7 @@
 		}
 	],
 	"settings": {
+		"python.envFile": "${workspaceFolder}/.env",
 		"files.exclude": {
 			"**/.git": true,
 			"**/.svn": true,
