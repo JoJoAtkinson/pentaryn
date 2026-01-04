@@ -17,9 +17,20 @@ Usage:
     python scripts/transcribe_audio.py path/to/folder/*.m4a
 """
 
+#1.31%
+#6.21%...
+
+# ReproducibilityWarning: TensorFloat-32 (TF32) has been disabled as it might lead to reproducibility issues and lower accuracy.
+# It can be re-enabled by calling
+#    >>> import torch
+#    >>> torch.backends.cuda.matmul.allow_tf32 = True
+#    >>> torch.backends.cudnn.allow_tf32 = True
+
 import argparse
 from contextlib import contextmanager
+from datetime import datetime
 import json
+import logging
 import os
 import sys
 import threading
@@ -29,13 +40,47 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 # Check for required packages
+missing_packages = []
 try:
     import whisperx
+except ImportError:
+    missing_packages.append("whisperx")
+
+try:
     import torch
 except ImportError:
-    print("Error: Required packages not installed.", file=sys.stderr)
-    print("Install with: pip install whisperx pyannote.audio torch", file=sys.stderr)
+    missing_packages.append("torch")
+
+try:
+    import pyannote.audio
+except ImportError:
+    missing_packages.append("pyannote.audio")
+
+if missing_packages:
+    print("Error: Required packages not installed:", file=sys.stderr)
+    for pkg in missing_packages:
+        print(f"  - {pkg}", file=sys.stderr)
+    print("\nInstall with: pip install whisperx pyannote.audio torch", file=sys.stderr)
+    print("Or use conda: conda install -c conda-forge whisperx pyannote.audio pytorch", file=sys.stderr)
     sys.exit(1)
+
+
+def _setup_logging(log_dir: Path) -> Path:
+    """Setup logging to both console and file."""
+    log_dir.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_file = log_dir / f"transcribe_{timestamp}.log"
+    
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(message)s',
+        handlers=[
+            logging.FileHandler(log_file, encoding='utf-8'),
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+    return log_file
 
 
 def _format_elapsed(seconds: float) -> str:
@@ -128,6 +173,8 @@ def transcribe_with_diarization(
     hf_token: str | None = None,
     torch_device: str | None = None,
     num_speakers: int | None = 4,
+    min_speakers: int | None = None,
+    max_speakers: int | None = None,
     diarize_heartbeat_secs: float = 15.0,
 ) -> List[Dict[str, Any]]:
     """
@@ -141,6 +188,8 @@ def transcribe_with_diarization(
         hf_token: HuggingFace token for pyannote models
         torch_device: Torch device for alignment/diarization ("cpu", "cuda", or "mps")
         num_speakers: Expected number of speakers (diarization); set to None to auto-detect
+        min_speakers: Minimum number of speakers (overrides num_speakers if set)
+        max_speakers: Maximum number of speakers (overrides num_speakers if set)
         diarize_heartbeat_secs: Print a status line every N seconds during diarization (0 disables)
     
     Returns:
@@ -148,23 +197,37 @@ def transcribe_with_diarization(
     """
     torch_device = torch_device or device
 
-    print(f"Loading Whisper model: {model_size}")
+    logging.info(f"Loading Whisper model: {model_size}")
+    stage_start = time.time()
     # Use Silero VAD by default to avoid PyTorch 2.6+ `weights_only` issues in pyannote VAD checkpoints.
     model = whisperx.load_model(model_size, device, language="en", compute_type=compute_type, vad_method="silero")
+    elapsed = time.time() - stage_start
+    logging.info(f"✓ Model loaded in {int(elapsed//60)}m {int(elapsed%60)}s")
     
-    print(f"Transcribing: {audio_path}")
+    logging.info(f"\nTranscribing: {audio_path}")
     audio = whisperx.load_audio(audio_path)
     try:
         duration_s = float(len(audio)) / 16000.0
-        print(f"Audio duration: ~{duration_s/60.0:.1f} min")
+        logging.info(f"Audio duration: ~{duration_s/60.0:.1f} min")
     except Exception:
         pass
-    print("Running VAD + transcription (first progress update may take a while)...")
-    # Note: WhisperX progress reporting is most accurate with batch_size=1.
-    result = model.transcribe(audio, batch_size=16, print_progress=True, combined_progress=True)
+    logging.info("Running VAD + transcription (first progress update may take a while)...")
+    stage_start = time.time()
+    # Larger batch_size uses more GPU memory but is faster. Reduce if you get OOM errors.
+    # Typical values: 8 (safe), 16 (balanced), 32+ (max speed, needs ~8GB+ VRAM)
+    result = model.transcribe(audio, batch_size=6, print_progress=True, combined_progress=True)
+    elapsed = time.time() - stage_start
+    logging.info(f"✓ Transcription complete in {int(elapsed//60)}m {int(elapsed%60)}s")
+    
+    # Free GPU memory after transcription
+    del model
+    if device == "cuda":
+        torch.cuda.empty_cache()
+        logging.info("GPU memory cleared after transcription")
     
     # Align whisper output for word-level timestamps
-    print("Aligning transcript...")
+    logging.info("\nAligning transcript...")
+    stage_start = time.time()
     model_a, metadata = whisperx.load_align_model(
         language_code=result["language"], device=torch_device
     )
@@ -178,10 +241,18 @@ def transcribe_with_diarization(
         print_progress=True,
         combined_progress=True,
     )
+    elapsed = time.time() - stage_start
+    logging.info(f"✓ Alignment complete in {int(elapsed//60)}m {int(elapsed%60)}s")
+    
+    # Free GPU memory after alignment
+    del model_a, metadata
+    if torch_device == "cuda":
+        torch.cuda.empty_cache()
+        logging.info("GPU memory cleared after alignment")
     
     # Perform speaker diarization
     if hf_token:
-        print("Performing speaker diarization...")
+        logging.info("\nPerforming speaker diarization...")
         # WhisperX moved DiarizationPipeline to whisperx.diarize in newer versions.
         try:
             from whisperx.diarize import DiarizationPipeline  # type: ignore
@@ -194,38 +265,55 @@ def transcribe_with_diarization(
                 )
 
         try:
-            # Force CPU for diarization to avoid MPS compatibility issues
+            # Use GPU for diarization when available (force CPU only for MPS compatibility issues)
             diarize_device = "cpu" if torch_device == "mps" else torch_device
             if diarize_device == "cpu":
-                print("Note: diarization on CPU can be very slow for long recordings.")
-                print("      First run may also download models to ~/.cache/huggingface/hub.")
+                logging.info("Note: diarization on CPU can be very slow for long recordings.")
+            else:
+                logging.info(f"Note: diarization will use {diarize_device.upper()} (faster than CPU).")
+            logging.info("      First run may also download models to ~/.cache/huggingface/hub.")
             with _heartbeat("Loading diarization model", diarize_heartbeat_secs):
                 diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=diarize_device)
         except Exception as e:
-            print(f"\n⚠️  Diarization model loading failed: {e}")
-            print("Common causes:")
-            print("  1. Haven't accepted BOTH model terms:")
-            print("     - https://huggingface.co/pyannote/speaker-diarization-3.1 (click 'Agree and access')")
-            print("     - https://huggingface.co/pyannote/segmentation-3.0 (click 'Agree and access')")
-            print("  2. Invalid HuggingFace token")
-            print("  3. Network connection issues")
-            print("  4. Try clearing cache: rm -rf ~/.cache/huggingface/hub")
-            print("\nContinuing without speaker labels...\n")
+            logging.error(f"\n⚠️  Diarization model loading failed: {e}")
+            logging.info("Common causes:")
+            logging.info("  1. Haven't accepted BOTH model terms:")
+            logging.info("     - https://huggingface.co/pyannote/speaker-diarization-3.1 (click 'Agree and access')")
+            logging.info("     - https://huggingface.co/pyannote/segmentation-3.0 (click 'Agree and access')")
+            logging.info("  2. Invalid HuggingFace token")
+            logging.info("  3. Network connection issues")
+            logging.info("  4. Try clearing cache: rm -rf ~/.cache/huggingface/hub")
+            logging.info("\nContinuing without speaker labels...\n")
             diarize_model = None
         
         if diarize_model:
             try:
-                hint = f"num_speakers={num_speakers}" if num_speakers is not None else "auto speakers"
-                print(f"Running diarization ({hint})... (Ctrl-C to skip diarization)")
-                diarize_kwargs = {"num_speakers": num_speakers} if num_speakers is not None else {}
+                # Build diarization kwargs (min/max_speakers override num_speakers)
+                diarize_kwargs = {}
+                if min_speakers is not None or max_speakers is not None:
+                    if min_speakers is not None:
+                        diarize_kwargs["min_speakers"] = min_speakers
+                    if max_speakers is not None:
+                        diarize_kwargs["max_speakers"] = max_speakers
+                    hint = f"min={min_speakers or 1}, max={max_speakers or '∞'}"
+                elif num_speakers is not None:
+                    diarize_kwargs["num_speakers"] = num_speakers
+                    hint = f"num_speakers={num_speakers}"
+                else:
+                    hint = "auto speakers"
+                
+                logging.info(f"Running diarization ({hint})... (Ctrl-C to skip diarization)")
+                stage_start = time.time()
                 with _heartbeat("Diarization running", diarize_heartbeat_secs):
                     diarize_segments = diarize_model(audio, **diarize_kwargs)
                 result = whisperx.assign_word_speakers(diarize_segments, result)
+                elapsed = time.time() - stage_start
+                logging.info(f"✓ Diarization complete in {int(elapsed//60)}m {int(elapsed%60)}s")
             except KeyboardInterrupt:
-                print("\n⚠️  Diarization interrupted; continuing without speaker labels.\n")
+                logging.warning("\n⚠️  Diarization interrupted; continuing without speaker labels.\n")
     else:
-        print("Warning: No HF_TOKEN provided, skipping speaker diarization")
-        print("Set HF_TOKEN environment variable to enable speaker identification")
+        logging.warning("Warning: No HF_TOKEN provided, skipping speaker diarization")
+        logging.info("Set HF_TOKEN environment variable to enable speaker identification")
     
     # Format output
     segments = []
@@ -407,7 +495,7 @@ def main():
         )
     parser.add_argument(
         "--model-size",
-        default="medium",
+        default="large-v3",
         help="Whisper model size (tiny, base, small, medium, large-v2, large-v3). Default: medium",
     )
     parser.add_argument(
@@ -416,16 +504,22 @@ def main():
         help="Skip speaker diarization even if HF_TOKEN is set (faster).",
     )
     parser.add_argument(
+        "--min-speakers",
+        type=int,
+        default=4,
+        help="Minimum number of speakers (more flexible than --num-speakers).",
+    )
+    parser.add_argument(
+        "--max-speakers",
+        type=int,
+        default=10,
+        help="Maximum number of speakers (more flexible than --num-speakers).",
+    )
+    parser.add_argument(
         "--diarize-heartbeat-secs",
         type=float,
         default=15.0,
         help="Print a status line every N seconds while diarization loads/runs (0 to disable). Default: 15",
-    )
-    parser.add_argument(
-        "--num-speakers",
-        type=int,
-        default=4,
-        help="Expected number of speakers for diarization. Default: 4. Use 0 to auto-detect.",
     )
     parser.add_argument(
         "--output-dir",
@@ -446,49 +540,73 @@ def main():
 
     # Make progress prints show up promptly (especially when output is piped/captured).
     try:
-        sys.stdout.reconfigure(line_buffering=True)
-        sys.stderr.reconfigure(line_buffering=True)
-    except Exception:
+        if hasattr(sys.stdout, 'reconfigure') and hasattr(sys.stderr, 'reconfigure'):
+            sys.stdout.reconfigure(line_buffering=True)  # type: ignore
+            sys.stderr.reconfigure(line_buffering=True)  # type: ignore
+    except (AttributeError, TypeError):
         pass
 
     _configure_torch_safe_globals()
+    
+    # Setup logging
+    log_file = _setup_logging(Path(".output"))
+    logging.info(f"Transcription started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    logging.info(f"Log file: {log_file}\n")
     
     # Get HuggingFace token from environment
     hf_token = os.environ.get("HF_TOKEN")
     if args.no_diarize:
         hf_token = None
-        print("Speaker diarization: disabled (--no-diarize)")
+        logging.info("Speaker diarization: disabled (--no-diarize)")
     elif not hf_token:
-        print("Warning: HF_TOKEN not set. Speaker diarization will be skipped.")
-        print("To enable diarization:")
-        print("  1. Get token: https://huggingface.co/settings/tokens")
-        print("  2. Accept model terms: https://huggingface.co/pyannote/speaker-diarization-3.1")
-        print("  3. Set: export HF_TOKEN='your_token_here'")
-        print()
+        logging.warning("Warning: HF_TOKEN not set. Speaker diarization will be skipped.")
+        logging.info("To enable diarization:")
+        logging.info("  1. Get token: https://huggingface.co/settings/tokens")
+        logging.info("  2. Accept model terms: https://huggingface.co/pyannote/speaker-diarization-3.1")
+        logging.info("  3. Set: export HF_TOKEN='your_token_here'")
+        logging.info("")
     
     # Detect device (WhisperX ASR runs on CPU or CUDA; MPS is not supported by faster-whisper/CTranslate2).
     if torch.cuda.is_available():
         device = "cuda"
         compute_type = "float16"
+        gpu_name = torch.cuda.get_device_name(0)
+        gpu_mem = torch.cuda.get_device_properties(0).total_memory / 1024**3
+        logging.info(f"GPU detected: {gpu_name} ({gpu_mem:.1f} GB VRAM)")
     else:
         if torch.backends.mps.is_available():
-            print("Note: MPS detected, but WhisperX transcription runs on CPU (no MPS support).")
+            logging.info("Note: MPS detected, but WhisperX transcription runs on CPU (no MPS support).")
         device = "cpu"
         compute_type = "int8"
     
     torch_device = device
-    print(f"Using ASR device: {device} (compute_type: {compute_type})")
+    logging.info(f"Using ASR device: {device} (compute_type: {compute_type})")
+    
+    # Print configuration summary
+    logging.info(f"\n{'='*60}")
+    logging.info("Configuration:")
+    logging.info(f"{'='*60}")
+    logging.info(f"  Model size:        {args.model_size}")
+    logging.info(f"  Batch size:        8 (hardcoded)")
+    logging.info(f"  Min speakers:      {args.min_speakers}")
+    logging.info(f"  Max speakers:      {args.max_speakers}")
+    logging.info(f"  Diarization:       {'enabled' if hf_token else 'disabled'}")
+    logging.info(f"  Output directory:  {args.output_dir}")
+    logging.info(f"  Reuse JSONL:       {args.reuse_jsonl}")
+    logging.info(f"  Overwrite:         {args.overwrite}")
+    logging.info(f"  Audio files:       {len(args.audio_files)}")
+    logging.info(f"{'='*60}\n")
     
     # Process each audio file
     audio_files = [Path(arg) for arg in args.audio_files]
     for audio_path in audio_files:
         if not audio_path.exists():
-            print(f"Error: File not found: {audio_path}", file=sys.stderr)
+            logging.error(f"Error: File not found: {audio_path}")
             continue
         
-        print(f"\n{'='*60}")
-        print(f"Processing: {audio_path.name}")
-        print(f"{'='*60}")
+        logging.info(f"\n{'='*60}")
+        logging.info(f"Processing: {audio_path.name}")
+        logging.info(f"{'='*60}")
         
         try:
             # Save outputs
@@ -519,16 +637,28 @@ def main():
                                     "Upgrade whisperx or install diarization dependencies."
                                 )
 
+                        # Build diarization kwargs
+                        diarize_kwargs = {}
+                        if args.min_speakers or args.max_speakers:
+                            if args.min_speakers:
+                                diarize_kwargs["min_speakers"] = args.min_speakers
+                            if args.max_speakers:
+                                diarize_kwargs["max_speakers"] = args.max_speakers
+                            hint = f"min={args.min_speakers or 1}, max={args.max_speakers or '∞'}"
+                        elif args.num_speakers != 0:
+                            diarize_kwargs["num_speakers"] = args.num_speakers
+                            hint = f"num_speakers={args.num_speakers}"
+                        else:
+                            hint = "auto"
+
                         diarize_device = "cpu" if torch_device == "mps" else torch_device
                         if diarize_device == "cpu":
                             print("Note: diarization on CPU can be very slow for long recordings.")
                             print("      First run may also download models to ~/.cache/huggingface/hub.")
                         with _heartbeat("Loading diarization model", args.diarize_heartbeat_secs):
                             diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=diarize_device)
-                        diarize_kwargs = {"num_speakers": (None if args.num_speakers == 0 else args.num_speakers)}
-                        diarize_kwargs = {k: v for k, v in diarize_kwargs.items() if v is not None}
+
                         try:
-                            hint = f"num_speakers={diarize_kwargs.get('num_speakers', 'auto')}"
                             print(f"Running diarization ({hint})... (Ctrl-C to skip diarization)")
                             with _heartbeat("Diarization running", args.diarize_heartbeat_secs):
                                 diarization = diarize_model(audio, **diarize_kwargs)
@@ -546,7 +676,7 @@ def main():
                     if have_speakers:
                         print(f"Skipping (already speaker-labeled): {jsonl_path}")
                         continue
-
+            
             # Full pipeline: transcribe + (optional) diarize
             segments = transcribe_with_diarization(
                 str(audio_path),
@@ -555,7 +685,8 @@ def main():
                 compute_type=compute_type,
                 hf_token=hf_token,
                 torch_device=torch_device,
-                num_speakers=None if args.num_speakers == 0 else args.num_speakers,
+                min_speakers=args.min_speakers,
+                max_speakers=args.max_speakers,
                 diarize_heartbeat_secs=args.diarize_heartbeat_secs,
             )
             
@@ -565,13 +696,18 @@ def main():
             # Also save readable TXT version
             save_transcript(segments, txt_path, format="txt")
             
-            print(f"✓ Completed: {len(segments)} segments")
+            logging.info(f"✓ Completed: {len(segments)} segments")
             
         except Exception as e:
-            print(f"Error processing {audio_path}: {e}", file=sys.stderr)
+            logging.error(f"Error processing {audio_path}: {e}")
             import traceback
-            traceback.print_exc()
+            logging.error(traceback.format_exc())
             continue
+    
+    logging.info(f"\n{'='*60}")
+    logging.info(f"Transcription finished at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    logging.info(f"Log saved to: {log_file}")
+    logging.info(f"{'='*60}")
 
 
 if __name__ == "__main__":
