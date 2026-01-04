@@ -1,0 +1,4 @@
+[submodule "story/the-compass-edge"]
+	path = story/the-compass-edge
+	url = https://github.com/JoJoAtkinson/story-the-compass-edge.git
+	branch = main

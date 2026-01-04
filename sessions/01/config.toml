@@ -11,12 +11,12 @@ recording_source = "in-person"
 [session.speakers]
 # Reliable identifications
 NICOLE = "Sabriel (player character)"
-KRIS = "Marwen (player character)" 
+KRIS = "Marwen (player character)"
 JEFF = "Bazgar (player character)"
 JOE = "Dungeon Master (DM)"
 
 # Uncertain identifications
-UNKNOWN = "Could be DM, Jeff, unlikly to be Nicole or Kristine; DM often voices multiple NPCs with different characterizations"
+UNKNOWN = "Could be DM, Jeff, unlikely to be Nicole or Kristine; DM often voices multiple NPCs with different characterizations"
 
 # Additional context
 notes = """
@@ -55,3 +55,44 @@ model = "gpt-5.2"
 # Seconds of transcript context before/after each scene
 context_before = 30.0
 context_after = 30.0
+
+[pass3]
+# Write player-facing story output into the story submodule (keeps access control separate)
+output = "story/the-compass-edge"
+model = "gpt-5.2"
+temperature = 0.7  # Higher for creative prose (0.0-2.0)
+
+# Chapter numbering + filenames:
+# - Files are written as: 0010-chapter-title.md (numeric prefix leaves insertion room).
+chapter_number_width = 4
+chapter_number_step = 10
+chapter_number_start = 10
+
+# File-splitting algorithm parameters
+max_scenes_per_file = 5  # Readability limit
+time_jump_threshold_seconds = 3600  # 1 hour = chapter break
+
+# Narrative time phrases that trigger chapter breaks
+time_jump_phrases = [
+    "next day",
+    "next morning",
+    "the following day",
+    "hours later",
+    "long rest",
+]
+
+# Tone transitions that suggest chapter breaks
+tone_break_transitions = [
+    ["combat", "casual"],
+    ["tense", "casual"],
+    ["somber", "casual"],
+]
+
+# POV characters for rotating third-person limited perspective
+pov_characters = ["Bazgar", "Sabriel", "Marwen"]
+
+# Character voice notes (used in story generation prompts)
+[pass3.character_voices]
+Bazgar = "Confident, direct, occasional swagger; carries orc heritage but defies stereotypes"
+Sabriel = "Observant, measured, hints of mystery; hides more than she reveals"
+Marwen = "Curious, practical, slightly eccentric; comfortable with the strange"

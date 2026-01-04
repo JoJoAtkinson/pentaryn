@@ -1,0 +1,2459 @@
+{
+  "metadata": {
+    "source_pass1": "/Users/joe/GitHub/dnd/sessions/01/pass1.json",
+    "source_transcript": "/Users/joe/GitHub/dnd/sessions/01/transcripts.jsonl",
+    "generated": "2026-01-04T14:19:34.774489",
+    "total_scenes": 30,
+    "model": "gpt-5.2"
+  },
+  "summaries": [
+    {
+      "start_seconds": 120.834,
+      "location": "The Wayward Compass inn/tavern, Ardenford (Middle Tier)",
+      "goal": "Meet other adventurers, get food, and form a party by checking the job/writ board",
+      "npcs_present": [
+        "Thorgrim Ledger-Scar (barkeep)"
+      ],
+      "time_of_day": "morning",
+      "emotional_tone": "casual",
+      "conflict_type": "social",
+      "notes": "Bazgar enters the Wayward Compass, meets Marwen and Sabriel over mixed-up food orders, introduces themselves, and the group decides to take the Border Patrol undead job after reading the writ board.",
+      "requested_resources": [
+        {
+          "keyword": "The Wayward Compass",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford.md",
+          "override": null
+        },
+        {
+          "keyword": "Thorgrim",
+          "requested_path": "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+          "override": null
+        },
+        {
+          "keyword": "Writ Board / Sheep raids / Spiders / Border Patrol — Undead sighting",
+          "requested_path": "world/factions/ardenhaven/quests/writ-board-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "Goblin Raid (Maren Redwick, Redwick Farm)",
+          "requested_path": "world/factions/ardenhaven/quests/goblin-raid-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "Spider Lair (Gareth Thorne, lumber camp, Miller's Creek)",
+          "requested_path": "world/factions/ardenhaven/quests/spider-lair-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "Restless Dead (Renn Caldor, eastern valley, old battlefield)",
+          "requested_path": "world/factions/ardenhaven/quests/restless-dead-cr1.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-001",
+      "end_seconds": 2633.619,
+      "factual_summary": "In the morning at The Wayward Compass in Ardenford’s Middle Tier, Bazgar (a Rakthok orc from the Dakmarnak) arrived, ordered food, and sized up the room for potential allies. A mix-up with meal orders drew Bazgar, Marwen Ashcroft, and the veiled elf Sabriel together at one table, where they introduced themselves and compared backgrounds and skills. The trio reviewed the inn’s writ board and chose the time-sensitive “Border Patrol — Undead Sighting” job, then asked the barkeep Thorgrim Ledger-Scar for directions to Renn Caldor at the Eastern Patrol watchtower. Sabriel paid Thorgrim to stable their pony (with extra cost for “whole grains”), and the new party set out toward the eastern hills.",
+      "narrative_seed": "Warm smoke and old stone filled the Wayward Compass as a grinning southern orc swaggered in looking for stew—and found, instead, strangers worth betting his life on. A botched set of plates became an excuse to share a table, trade names, and quietly measure one another’s usefulness, until the writ board’s sealed notice about undead on the eastern road pulled them into common purpose. With Thorgrim’s blunt directions and a freshly paid stable fee, the three stepped back into Ardenford’s morning wind and started climbing toward the watchtower.",
+      "key_events": [
+        "Bazgar entered The Wayward Compass, ordered food, and scanned the room for capable adventurers.",
+        "Bazgar, Marwen, and Sabriel were brought together by a mistaken food delivery and shared a table, exchanging introductions and travel origins.",
+        "Sabriel removed their veil to eat, drawing immediate attention from the room due to their striking, unusual elven appearance; they then tried to keep a lower profile.",
+        "The trio examined the writ board postings (sheep raids, spider clearance, and an undead sighting) and agreed to take the Border Patrol undead job first because it was time-sensitive.",
+        "They approached the barkeep, Thorgrim Ledger-Scar, who clarified the contact was Renn Caldor and gave directions to the Eastern Patrol watchtower outside the city.",
+        "Sabriel arranged stabling for their pony at the inn, paying extra for special feed, and the party departed toward the eastern hills."
+      ],
+      "character_moments": {
+        "Bazgar": "Decided he needed a party to fund future ruin-delving, recruited the other two through direct conversation, and pushed the group toward taking paid work immediately.",
+        "Marwen Ashcroft": "Revealed interest in harvesting reagents from dangerous creatures (especially spiders) and signaled she could contribute in non-brute-force ways while remaining cautious about attention and reputation.",
+        "Sabriel": "Chose to remove their veil to eat despite the social risk, then re-covered to avoid drawing attention; also positioned themselves as a healer/patcher and supported taking the urgent undead patrol job.",
+        "Thorgrim Ledger-Scar": "Enforced the inn’s practical, no-nonsense tone—corrected the name confusion, provided clear directions to the Eastern Patrol, and grumbled about elven fussiness while accepting payment for stabling."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Thorgrim Ledger-Scar",
+          "role": "Dwarven barkeep/keeper of The Wayward Compass; gruff but competent",
+          "interaction": "Answered questions about the writ board contact, corrected the mistaken name, gave directions to the Eastern Patrol watchtower, and accepted payment to stable Sabriel’s pony (with extra fee for special feed)."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Writ board notices (Sheep Raids / Spiders / Undead Sighting)",
+          "description": "Posted job notices offering pay for goblin raids, spider clearance, and stopping undead near the eastern valley",
+          "acquisition": "Read from the inn’s writ board; no physical item taken."
+        }
+      ],
+      "information_gained": [
+        "The Wayward Compass maintains a writ board with local contracts, including a sealed Border Patrol notice about 4–5 undead moving toward Ardenford from the eastern valley near an old battlefield.",
+        "Renn Caldor can be found at the Eastern Patrol watchtower outside the city; the easiest route is to gain elevation within the city first (up to the higher tier) before climbing the hill to the tower.",
+        "Two other available jobs were identified: goblins raiding sheep at Redwick Farm (west) and giant spiders infesting an old lumber camp past Miller’s Creek (south), with the spider contact available at Western Market in the mornings."
+      ],
+      "time_passed": "Approximately 45–60 minutes (arrivals, brief meal/introductions, reviewing the writ board, arranging stabling, and departing).",
+      "scene_outcome": "The three PCs formed a tentative party, selected the Border Patrol undead contract, obtained directions from Thorgrim, secured stabling for Sabriel’s pony, and left The Wayward Compass to head toward the Eastern Patrol watchtower (transition to S-002).",
+      "plot_threads": [
+        {
+          "thread": "Border Patrol — Undead sighting near the eastern valley/old battlefield (Renn Caldor contact)",
+          "status": "advanced"
+        },
+        {
+          "thread": "Party formation and shared goal of earning coin to fund future ruin exploration",
+          "status": "introduced"
+        },
+        {
+          "thread": "Lumber camp clearance — giant spiders (potential reagents/harvesting interest)",
+          "status": "introduced"
+        },
+        {
+          "thread": "Sheep raids — goblins at Redwick Farm (west scrublands near old ruins)",
+          "status": "introduced"
+        },
+        {
+          "thread": "Sabriel’s conspicuous appearance and desire to avoid unwanted attention",
+          "status": "introduced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 2633.619,
+      "location": "Outside Ardenford on the eastern hills/forest trail to the border watchtower",
+      "goal": "Travel to the Eastern Patrol watchtower to contact Renn Caldor about the undead sighting",
+      "npcs_present": [],
+      "time_of_day": "morning",
+      "emotional_tone": "purposeful",
+      "conflict_type": "exploration",
+      "notes": "The party leaves the inn and hikes several hours through the eastern wooded hills toward the watchtower, with Marwen’s crow and ferret Flicker accompanying them.",
+      "requested_resources": [
+        {
+          "keyword": "Ardenford eastern patrol tower / watchtower",
+          "requested_path": "world/factions/ardenhaven/locations",
+          "override": null
+        },
+        {
+          "keyword": "Renn Caldor",
+          "requested_path": "world/factions/ardenhaven/quests/restless-dead-cr1.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-002",
+      "end_seconds": 2977.76,
+      "factual_summary": "Bazgar, Marwen, and Sabriel leave Ardenford in the morning and hike east toward the Eastern Patrol watchtower to follow up on the undead sighting job. The route climbs worn hills into increasingly dense forest, and the watchtower—visible at first—disappears behind the canopy as they continue upward. Marwen releases her ferret, Flicker, to scout ahead intermittently, and the party reaches the tower’s stone entry and calls up before entering. They ascend the tight, single-file stairs to the observation platform, where they find Renn Caldor on duty wearing his grandfather’s war medal.",
+      "narrative_seed": "Morning light gives way to shadowed green as the party trades Ardenford’s stone and salt air for a steep forest hike. A lone crow keeps pace overhead while Flicker darts through brush and returns to shoulders like a living compass. The watchtower arrives suddenly—stone rising out of trees—its narrow stair built for defense, leading them up to a waiting scout with grief and duty hanging from a medal at his throat.",
+      "key_events": [
+        "The party departs Ardenford and makes a roughly four-hour hike up the eastern hills toward the Eastern Patrol watchtower, with the forest growing denser near the valley.",
+        "Marwen lets her ferret, Flicker, range ahead as a casual scout; Flicker repeatedly returns to the party and briefly rides on Bazgar’s shoulder.",
+        "The watchtower’s stone wall appears abruptly out of the trees; the party calls up for permission and is invited inside rather than entering unannounced.",
+        "They climb the tower’s narrow, defensive stairs single-file and reach the broad observation platform, spotting Renn Caldor on duty with his grandfather’s war medal prominently worn."
+      ],
+      "character_moments": {
+        "Bazgar": "Shows caution and respect for a military site by calling up to the tower for permission before entering, then warms to Marwen’s ferret when Flicker climbs onto him.",
+        "Marwen Ashcroft": "Reveals she travels with an animal companion—Flicker the ferret—and uses him to scout and lighten the march with small, caring gestures (feeding and talking to him).",
+        "Sabriel": "Keeps pace with the group during the climb and follows the cautious approach of announcing their arrival before entering the watchtower."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Renn Caldor",
+          "role": "Eastern border patrol scout stationed at the watchtower; wears his grandfather’s war medal",
+          "interaction": "The party calls up to request entry for the posted job; Renn (from above) grants permission and meets them on the observation platform."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Flicker",
+          "description": "Marwen’s ferret companion used to scout ahead and ride on shoulders",
+          "acquisition": "Already owned by Marwen; introduced and used during the hike."
+        }
+      ],
+      "information_gained": [
+        "The Eastern Patrol watchtower is positioned for long-range visibility against large forces, but the surrounding forest canopy can conceal approach until close.",
+        "The tower is clearly human-built (bricklike stonework rather than large dwarven blocks) and designed with tight, defensive stairs that force single-file ascent.",
+        "Renn Caldor is confirmed to be on duty at the tower and is identifiable by the war medal he wears on a chain—his grandfather’s medal."
+      ],
+      "time_passed": "Approximately 4 hours of in-game travel (morning hike).",
+      "scene_outcome": "The party successfully reaches the Eastern Patrol watchtower and arrives on the top observation platform, transitioning into direct contact with Renn Caldor for the job briefing.",
+      "plot_threads": [
+        {
+          "thread": "Border Patrol — Undead Sighting: reach the Eastern Patrol watchtower to contact Renn Caldor",
+          "status": "advanced"
+        },
+        {
+          "thread": "Unusual crow shadowing the party during travel",
+          "status": "introduced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 2977.76,
+      "location": "Eastern Patrol watchtower (top observation platform)",
+      "goal": "Receive briefing and directions from Renn Caldor; secure identifying token (medal) for his grandfather among the undead",
+      "npcs_present": [
+        "Renn Caldor"
+      ],
+      "time_of_day": "morning",
+      "emotional_tone": "somber",
+      "conflict_type": "social",
+      "notes": "At the tower, Renn explains the undead walking dead from the old battlefield and his hope his grandfather is among them; Sabriel persuades him to lend his grandfather’s medal for identification and he points out where he sees movement.",
+      "requested_resources": [
+        {
+          "keyword": "Renn Caldor",
+          "requested_path": "world/factions/ardenhaven/quests/restless-dead-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "Calderon Imperium (raised dead during the war)",
+          "requested_path": "world/factions/calderon-imperium/_overview.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-003",
+      "end_seconds": 3999.426,
+      "factual_summary": "On the Eastern Patrol watchtower’s top platform, the party meets border scout Renn Caldor, who explains he believes his long-dead grandfather, Corwin Caldor, may be among recently sighted undead drifting toward Ardenford. Renn describes the undead as war-remnants tied to Calderon Imperium necromancy, often wandering “home” without direction, and asks the party to put them to rest and identify Corwin by his Ridgeward Battalion markings. At Sabriel’s compassionate request, Renn entrusts the party with his grandfather’s war medal as a token to help recognize or reach the undead. Renn points out where he regularly sees movement across the valley and gives instructions on when he’ll be on duty for their return.",
+      "narrative_seed": "Morning light washes the watchtower platform, but Renn Caldor’s grief makes the air feel colder than the wind. He speaks of a battlefield that never truly ended—bones that still try to march home, and a grandmother’s final wish that now rests on strangers’ shoulders. With solemn care, he places a battered war medal into the party’s hands and points toward the valley where the dead still move.",
+      "key_events": [
+        "The party meets Renn Caldor on the observation platform and learns the undead sighting is personal: Renn believes his grandfather Corwin is among them, and he wants the remains properly laid to rest.",
+        "Renn explains the undead are likely a lingering consequence of Calderon Imperium wartime necromancy—fallen soldiers reanimating and wandering toward “home” without orders.",
+        "Sabriel requests to borrow Corwin’s war medal to help identify or calm the undead; Renn removes it and hands it over with ceremonial reverence.",
+        "Renn indicates a specific area across the valley where he frequently sees movement and notes steep cliffs may be trapping the undead there; he also clarifies his guard rotation and when the party can find him again."
+      ],
+      "character_moments": {
+        "Renn Caldor": "Despite being on duty and visibly grief-stricken, Renn chooses trust—handing over his grandfather’s medal and focusing on giving clear directions so Corwin can finally be found and buried.",
+        "Sabriel": "Leads with empathy, proposing the medal as a way to bring a piece of “home” to the wandering dead and securing Renn’s cooperation through compassion rather than authority.",
+        "Bazgar": "Takes a direct, no-nonsense approach—confirming the enemy in the old war and committing to laying Renn’s ancestor to rest, while also probing the Imperium’s use of necromancy.",
+        "Marwen": "Shows practical caution about the watchtower’s staffing and the broader threat, highlighting that the frontier isn’t fully safe even in peacetime."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Renn Caldor",
+          "role": "Border patrol scout and quest giver; grieving grandson seeking Corwin Caldor among the undead",
+          "interaction": "Briefs the party on the undead and their likely origin, provides directions to the sighting area, and entrusts them with Corwin’s war medal to aid identification."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Corwin Caldor’s war medal (Ridgeward Battalion token)",
+          "description": "An old, battle-worn medal worn on a chain; a distinctive identifying token tied to Renn’s grandfather and his unit",
+          "acquisition": "Loaned to the party by Renn Caldor to help identify or reach Corwin among the undead; to be returned"
+        }
+      ],
+      "information_gained": [
+        "The undead are believed to be remnants of Calderon Imperium wartime necromancy; without direction, they tend to wander toward “home.”",
+        "Corwin Caldor served in the Ridgeward Battalion and can be identified by his unit’s markings (the party is told to look for that insignia).",
+        "Renn regularly observes movement across the valley in a particular area; steep cliffs there may be preventing the undead from climbing out, suggesting a likely interception point.",
+        "Renn is the sole guard on an eight-hour rotation and can be found on the same shift the following day if the party returns later."
+      ],
+      "time_passed": "Approximately 15–30 minutes",
+      "scene_outcome": "With the medal in hand and Renn’s directions, the party leaves the watchtower to head toward the valley location where the undead have been seen moving.",
+      "plot_threads": [
+        {
+          "thread": "Restless Dead — stop the undead before they reach Ardenford and identify Corwin Caldor",
+          "status": "advanced"
+        },
+        {
+          "thread": "Calderon Imperium necromancy legacy on the frontier",
+          "status": "introduced"
+        },
+        {
+          "thread": "Renn’s family obligation: fulfill grandmother’s wish to be buried with Corwin",
+          "status": "advanced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 3999.426,
+      "location": "Clifftop/ledge overlooking undead in the eastern valley forest",
+      "goal": "Locate and stop the undead before they reach Ardenford; identify Renn’s grandfather if possible",
+      "npcs_present": [],
+      "time_of_day": "unknown",
+      "emotional_tone": "tense",
+      "conflict_type": "combat",
+      "notes": "The party fights the skeletons from the ledge, chases them through the brush, identifies Renn’s grandfather, and puts him to rest before returning to the tower to bury him and receive payment.",
+      "requested_resources": [
+        {
+          "keyword": "Renn Caldor / grandson / border patrol scout",
+          "requested_path": "world/factions/ardenhaven/quests/restless-dead-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "war medallion / amulet on a chain",
+          "requested_path": "items/README.md",
+          "override": "world/factions/ardenhaven/quests/restless-dead-cr1.md"
+        },
+        {
+          "keyword": "the crow (following Marwen)",
+          "requested_path": "characters/README.md",
+          "override": "world/factions/ardenhaven/quests/restless-dead-cr1.md"
+        }
+      ],
+      "scene_id": "S-004",
+      "end_seconds": 7018.862,
+      "factual_summary": "Guided by Marwen’s attunement to the land (and watched by a lingering crow), the party reached a clifftop overlooking a small group of skeletons moving through dense brush below. They rappelled to a lower ledge and opened fire from range, dropping some undead before the survivors scattered into the forest, forcing a chaotic chase. In the pursuit, Sabriel used magic and Renn’s war medallion to identify and peacefully release Corwin Caldor, while Bazgar and Marwen finished off the remaining skeletons and gathered Corwin’s intact remains for return to the watchtower.",
+      "narrative_seed": "From a wind-battered ledge above the eastern valley, the party watched pale shapes drift through wet undergrowth—soldiers long dead, still walking as if “home” were a direction you could follow. Their first strikes shattered the quiet and sent the undead shambling apart into the trees, turning a clean ambush into a frantic, splintered pursuit. When the medallion finally touched the right skeleton, the violence faltered into something gentler: a moment of recognition, a slackening jaw, and a spirit that seemed to finally let go.",
+      "key_events": [
+        "Marwen led the party to a cliff vantage where they spotted a larger-than-expected group of undead (five skeletons partially obscured by shrubs).",
+        "Bazgar anchored a rope with his climbing kit and coordinated the descent to a mid-ledge, positioning the party for an opening volley.",
+        "The party initiated an ambush from the ledge, destroying one skeleton with radiant magic and dropping another with fire, prompting the remaining undead to scatter into the forest rather than press the fight.",
+        "Sabriel used Fey Step to get down quickly (taking a rough tumble on the rocky slope), then later used it again to propel Bazgar forward to intercept a fleeing skeleton.",
+        "Marwen used Jump to traverse the steep terrain and sprint after a fleeing skeleton, drawing its attention and narrowly avoiding a sword strike before being stabbed in the ensuing melee.",
+        "Sabriel magically compelled one skeleton to collapse and grovel, then confirmed it was Corwin Caldor (the target) and attempted to finish it without destroying the remains.",
+        "Corwin reacted to the war medallion—sadly reaching for it—allowing Sabriel to place it around his neck and release him without further damage to the body.",
+        "Bazgar destroyed another skeleton with a crushing warhammer blow, scattering bones; Marwen later collected useful undead bone fragments from the wreckage.",
+        "With Corwin’s remains intact, the party wrapped and carried the body back toward the watchtower to return him to Renn."
+      ],
+      "character_moments": {
+        "Bazgar": "Took charge of the dangerous descent with rope and climbing kit, then pivoted from battlefield bravado to respect—carefully lifting Corwin’s remains and adjusting his handling to be more reverent.",
+        "Sabriel": "Prioritized identification and mercy over efficiency: tried to locate Corwin, used the medallion as a lure, and ultimately laid the undead to rest by placing the chain on him rather than destroying the body.",
+        "Marwen": "Showed both impulsive courage and practiced ritual magic—racing ahead with Jump, then using a carefully spoken incantation and ash focus to unleash a close-range burst of flame; afterward, she quietly pocketed undead bone for future use."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Corwin Caldor (as undead)",
+          "role": "Renn Caldor’s long-dead grandfather; a Ridgeward Battalion soldier raised as a wandering skeleton",
+          "interaction": "Sabriel identified him, placed Renn’s war medallion on him, and the undead went still as if released; the party then recovered and carried his intact remains."
+        },
+        {
+          "name": "Unidentified crow",
+          "role": "A watchful crow shadowing the party from vantage points (suggested to be the same crow previously seen following Marwen)",
+          "interaction": "Observed the fight from above and reappeared during tense moments; the party noted it but did not engage it directly."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Undead bone fragments (knuckle bone / marrow pieces)",
+          "description": "Bits of shattered skeleton collected for potential later use in spellwork or crafting",
+          "acquisition": "Marwen scavenged them from the skeleton Bazgar smashed and scattered."
+        },
+        {
+          "item": "Corwin Caldor’s remains (intact skeleton/body)",
+          "description": "The recovered remains of Corwin Caldor, suitable for return and burial",
+          "acquisition": "Corwin was released without being destroyed; Bazgar and Sabriel wrapped and carried the body."
+        },
+        {
+          "item": "War medallion on a chain (Renn’s token)",
+          "description": "Renn Caldor’s family war medal used to recognize/reach Corwin",
+          "acquisition": "Already held by the party; Sabriel temporarily placed it on Corwin to help him rest, then retained it for return."
+        }
+      ],
+      "information_gained": [
+        "There were five skeletons in the brush (not four), confirming the undead presence was slightly larger than first sighted from above.",
+        "Corwin Caldor was definitively among the undead; he reacted emotionally to the war medallion, and placing it on him allowed a peaceful release without damaging the remains."
+      ],
+      "time_passed": "Approximately 1–2 hours (descent, ambush, short chase through brush, securing remains, and beginning the return uphill).",
+      "scene_outcome": "The party successfully stopped the undead advance, confirmed and recovered Corwin Caldor’s intact remains, and began the uphill return toward the watchtower to deliver him to Renn.",
+      "plot_threads": [
+        {
+          "thread": "Restless Dead: stop the undead before they reach Ardenford",
+          "status": "resolved"
+        },
+        {
+          "thread": "Identify Renn Caldor’s grandfather among the undead",
+          "status": "resolved"
+        },
+        {
+          "thread": "Proper burial and returning Corwin to Renn",
+          "status": "advanced"
+        },
+        {
+          "thread": "The watchful crow following the party/Marwen",
+          "status": "complicated"
+        }
+      ]
+    },
+    {
+      "start_seconds": 7018.862,
+      "location": "Border patrol tower/guard post on the eastern valley approach (mountain path near the tower)",
+      "goal": "Return Corwin’s remains to Renn and complete burial rites; collect payment",
+      "npcs_present": [
+        "Renn Caldor",
+        "tower guards (unnamed)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "somber",
+      "conflict_type": "social",
+      "notes": "The party returns to the tower with the intact body, is guided to a gravesite, helps bury the remains, and Renn thanks and pays them.",
+      "requested_resources": [
+        {
+          "keyword": "Renn Caldor",
+          "requested_path": "world/factions/ardenhaven/quests/restless-dead-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "eastern valley / tower / grave site",
+          "requested_path": "world/factions/ardenhaven/locations",
+          "override": null
+        }
+      ],
+      "scene_id": "S-005",
+      "end_seconds": 7224.162,
+      "factual_summary": "The party returned to the eastern border patrol tower with Corwin Caldor’s intact remains and reassured the guards they had not burned or destroyed the body. Renn Caldor led them to a solitary, pre-dug gravesite up the mountain path, where the group assisted in the burial—Bazgar with labor and Marwen by magically moving earth. After quiet prayers, Renn thanked them for bringing his grandfather home to be laid to rest and paid the agreed reward plus a bonus for their care.",
+      "narrative_seed": "Cold, wet air clung to the mountain approach as the tower guards met the party with wary relief, eyes flicking to the bundle of bones they carried. At a lonely gravesite above the post, steel and spellwork gave way to silence: a grave filled, a few murmured prayers, and a grieving scout standing over the earth that finally closed a 127-year-old wound. Gold changed hands, but the real weight in the scene was the stillness after duty was done.",
+      "key_events": [
+        "The party arrived back at the border patrol tower and addressed the guards’ concern about the fire and whether Corwin’s remains had been damaged.",
+        "Renn guided the party to an isolated gravesite and accepted Corwin’s remains with a respectful gesture.",
+        "The party helped complete the burial, with Marwen using elemental magic to move and settle the soil while Bazgar assisted physically.",
+        "Renn performed quiet burial prayers, then thanked the party and paid them (reward plus bonus) before returning to the grave to contemplate."
+      ],
+      "character_moments": {
+        "Bazgar": "Took point in speaking with Renn and the guards and helped with the burial work, stepping back when it became clear Renn needed a private moment.",
+        "Marwen": "Used elemental magic to gently and efficiently fill the grave, emphasizing respect and care in the burial rites.",
+        "Sabriel": "Deferred leadership of the conversation to Bazgar, letting the party present a unified, respectful front during the handoff and burial."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Renn Caldor",
+          "role": "Border patrol scout and quest giver; grieving grandson seeking Corwin’s proper burial",
+          "interaction": "Received Corwin’s remains, led the party to the gravesite, conducted prayers, and paid the party with an added bonus for returning the body intact."
+        },
+        {
+          "name": "Tower Guards (unnamed)",
+          "role": "Border patrol guards stationed at the eastern tower",
+          "interaction": "Greeted the party, questioned the use of fire and whether the remains were destroyed, then escorted/allowed passage up to the burial site."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Gold payment (90 gp each)",
+          "description": "Quest reward plus a personal bonus for respectful handling and returning Corwin intact",
+          "acquisition": "Paid directly by Renn Caldor after the burial prayers."
+        }
+      ],
+      "information_gained": [
+        "The tower guards considered it unusual—and noteworthy—that the party did not destroy or burn the remains, implying many groups handle undead with less care.",
+        "Renn had already prepared an isolated gravesite and intended Corwin to rest with his wife per family wishes, underscoring the personal stakes of the job."
+      ],
+      "time_passed": "Approximately 20–40 minutes (arrival, escort to gravesite, burial assistance, prayers, and payment).",
+      "scene_outcome": "With Corwin buried and payment received, Renn withdrew to the gravesite to grieve, while the party turned their attention toward finding further work and funding a future expedition.",
+      "plot_threads": [
+        {
+          "thread": "Restless Dead: Return Corwin Caldor’s remains and complete burial rites",
+          "status": "resolved"
+        },
+        {
+          "thread": "Party finances and planning for a paid expedition into more dangerous terrain",
+          "status": "introduced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 7224.162,
+      "location": "Near the tower after the burial (resting spot / camp area)",
+      "goal": "Decide next job and plan funding for an expedition; take a short rest and consider goblin raid timing",
+      "npcs_present": [
+        "Renn Caldor (border patrol scout)"
+      ],
+      "time_of_day": "afternoon",
+      "emotional_tone": "casual",
+      "conflict_type": "none",
+      "notes": "The party completes the burial and payment with Renn Caldor, then discusses expedition costs and decides to pursue the goblin raid later that day after a short rest.",
+      "requested_resources": [
+        {
+          "keyword": "Renn Caldor",
+          "requested_path": "world/factions/ardenhaven/quests/restless-dead-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "expedition would be 50 gold each / 100 gold each + a dwarven mountain guide",
+          "requested_path": "quests/README.md",
+          "override": "world/factions/ardenhaven/quests/restless-dead-cr1.md"
+        },
+        {
+          "keyword": "goblins come at dusk / sheep raids",
+          "requested_path": "world/factions/ardenhaven/quests/goblin-raid-cr1.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-006",
+      "end_seconds": 11643.618,
+      "factual_summary": "After the burial, the party regrouped near their resting spot by the border tower and discussed what to do next to fund a future mountain expedition. They learned expedition costs: a basic trip runs about 50 gp per person, while a higher, more difficult route costs about 100 gp per person and includes hiring a dwarven mountain guide. The party took a short rest to patch up and recover, then decided to pursue the goblin-raiding job later the same day since the goblins strike at dusk.",
+      "narrative_seed": "With the grave freshly covered and Renn returning to his private grief, the party’s mood turned practical and easygoing as they counted coin and talked ambitions. Over a brief rest and quiet bandaging, they weighed the price of climbing higher into the mountains—better rewards, higher risk—and chose a nearer problem to solve first. As afternoon slid toward evening, they set their sights west, timing their move to meet the goblins at dusk.",
+      "key_events": [
+        "The party discussed funding a future mountain expedition and learned the cost tiers: ~50 gp each for a basic expedition, or ~100 gp each for a higher-mountain expedition that includes a dwarven mountain guide.",
+        "The party took a short rest to recover from earlier injuries and conserve resources for another encounter the same day.",
+        "They chose to tackle the goblin raids next, noting the goblins typically strike at dusk—making the late afternoon timing advantageous."
+      ],
+      "character_moments": {
+        "Bazgar": "Argued in favor of the more expensive, higher-risk expedition option (100 gp each + dwarven guide) for better potential rewards and to help secure rare materials the party wants.",
+        "Marwen": "Focused on practicality—acknowledging they’ll need more paid work to afford an expedition—and helped steer the group toward taking additional jobs first.",
+        "Sabriel": "Emphasized the need to earn more money before major spending and supported the plan to handle goblins now and other work later."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Renn Caldor",
+          "role": "Border patrol scout and quest-giver who just buried his grandfather",
+          "interaction": "He offered a respectful farewell/salute and then withdrew to spend time alone at the gravesite while the party made plans nearby."
+        }
+      ],
+      "loot_and_items": [],
+      "information_gained": [
+        "Expedition pricing was clarified: ~50 gp per person for a basic expedition; ~100 gp per person for a higher-mountain expedition that includes a dwarven mountain guide.",
+        "The goblin raiders are known to strike at dusk, making an afternoon departure potentially ideal for intercepting them."
+      ],
+      "time_passed": "About 1 hour (short rest) plus additional planning time in the afternoon; overall roughly 1–2 hours in-game.",
+      "scene_outcome": "The party finished their rest and finalized a plan to head west toward the farmlands to address the goblin raids timed for dusk.",
+      "plot_threads": [
+        {
+          "thread": "Funding and planning a mountain expedition (basic vs high-mountain route, need for a dwarven guide)",
+          "status": "advanced"
+        },
+        {
+          "thread": "Goblin raids on the western farmlands (dusk attacks on sheep)",
+          "status": "advanced"
+        },
+        {
+          "thread": "Renn Caldor’s grief and closure after Corwin’s burial",
+          "status": "advanced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 11643.618,
+      "location": "Western farmlands near Redwick Farm (outside Ardenford)",
+      "goal": "Meet the sheep farmer and investigate where the goblins are coming from; decide whether to ambush or assault",
+      "npcs_present": [
+        "Maren/Meryn Redwick (sheep farmer; name unclear)"
+      ],
+      "time_of_day": "afternoon",
+      "emotional_tone": "cautious",
+      "conflict_type": "social",
+      "notes": "The party confirms the goblins raid at night from nearby ruins, sets an Alarm as a fallback, and reframes the situation as barter (goblins leaving 'treasures') while persuading the farmer to accept a negotiated solution.",
+      "requested_resources": [
+        {
+          "keyword": "Maren/Meryn Redwick / Redwick Farm / goblin raids / 70 gold",
+          "requested_path": "world/factions/ardenhaven/quests/goblin-raid-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "early winter / months (A-R-E-T-H... RETHOLM?)",
+          "requested_path": "world/calendar-reckoning-of-the-fall.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-007",
+      "end_seconds": 13285.576,
+      "factual_summary": "The party traveled to the western farmlands near Redwick Farm and met the sheep farmer (name unclear in play; Maren/Meryn Redwick). He indicated the goblins were likely coming from the direction of a ruined keep in the rocky scrubland. After examining signs of repeated night raids, the party set a magical alarm as a safeguard and, through a slow but successful conversation, convinced the farmer to consider a negotiated arrangement rather than simple retaliation.",
+      "narrative_seed": "In the brisk afternoon air, the hills west of Ardenford rolled out in quiet greens—too peaceful for a place being bled dry at dusk. The farmer’s wary, slow-spoken answers and the layered tracks in the grass pointed toward a broken keep on the horizon, where something small and hungry kept returning. By sundown, the party had laid a warding line and reframed the raids as a crude attempt at trade—setting the stage for a cautious approach instead of a slaughter.",
+      "key_events": [
+        "The party met Maren/Meryn Redwick in the grazing hills and confirmed the goblin raids are tied to the ruined keep visible in the scrubland.",
+        "The party identified repeated goblin approach routes and signs the raids happen at night while the farmer sleeps, then set an Alarm near the flock as a backup warning.",
+        "Sabriel questioned the farmer about whether the goblins left anything behind and discovered they have been leaving “trash” that is actually meant as payment/treasure from the goblins’ perspective.",
+        "After extended discussion, the party persuaded the farmer to accept a negotiation-based plan (goblins as would-be traders/protectors) rather than insisting on a purely violent solution."
+      ],
+      "character_moments": {
+        "Sabriel": "Took the lead socially, reframing the raids as barter and patiently guiding the farmer to understand the goblins may think they are trading; she also offered him a small blessing once he agreed to the plan.",
+        "Marwen": "Acted cautiously by setting an Alarm ward near the flock as a contingency and shared her conclusions about the goblins’ timing and approach.",
+        "Bazgar": "Pushed for direct action toward the goblins’ suspected source (the keep) and offered to ‘loom’ as intimidation support, but largely let Sabriel handle the delicate negotiation setup."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Maren/Meryn Redwick (name uncertain)",
+          "role": "Sheep farmer at Redwick Farm; quest giver for the goblin raid problem",
+          "interaction": "Explained the raids and pointed the party toward the ruined keep; listened (slowly) as the party proposed a negotiation-based solution and ultimately agreed to try it."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Goblins’ \"treasures\" (junk trade goods)",
+          "description": "A small pile of crude, low-value items the goblins left behind (e.g., old forks/utensils and similar castoffs) that the farmer considered trash but the goblins likely considered payment.",
+          "acquisition": "Collected from the farmer’s area by Marwen to bring along for the upcoming negotiation."
+        }
+      ],
+      "information_gained": [
+        "The goblins’ approach is consistent and repeated over multiple nights, coming from the direction of the ruined keep in the southwest scrubland.",
+        "The raids occur at night while the farmer sleeps; the goblins have not harmed him directly, suggesting avoidance rather than open confrontation.",
+        "The goblins have been leaving items behind as if attempting barter/payment, indicating they may be negotiated with (or believe they are already in a trade relationship).",
+        "The farmer keeps the flock tightly together with the help of a sheepdog and appears to sleep outdoors on a simple bedroll near the grazing area."
+      ],
+      "time_passed": "A few hours (mid-afternoon to shortly after sunset), including time spent investigating tracks and a long, slow-paced conversation with the farmer.",
+      "scene_outcome": "With dusk arriving, the party finalized a plan to approach the ruined keep to negotiate with the goblins, bringing the goblin ‘treasures’ and leaving an Alarm as a safeguard for the flock.",
+      "plot_threads": [
+        {
+          "thread": "Goblin raids on Redwick sheep / 70 gp reward",
+          "status": "advanced"
+        },
+        {
+          "thread": "Source of the raids: ruined keep in the western scrublands",
+          "status": "advanced"
+        },
+        {
+          "thread": "Nonviolent resolution: goblins treating sheep as barter and potential protection arrangement",
+          "status": "introduced"
+        },
+        {
+          "thread": "Safeguarding the flock during negotiations (Alarm ward as contingency)",
+          "status": "introduced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 13285.576,
+      "location": "Ruins/old keep near the sheep grazing hills (western scrublands)",
+      "goal": "Approach the goblins to negotiate a deal to stop the sheep raids (and return their 'treasures')",
+      "npcs_present": [
+        "Goblins (including a leader/boss with scimitar)",
+        "Maren/Meryn Redwick (off-screen, back at the sheep)"
+      ],
+      "time_of_day": "evening",
+      "emotional_tone": "tense",
+      "conflict_type": "social",
+      "notes": "At sunset the party leaves the farmer and heads into the nearby ruins to speak with goblins, with Bazgar taking point in Orcish while the others hang back and prepare support.",
+      "requested_resources": [
+        {
+          "keyword": "old ruins / keep (where goblins live)",
+          "requested_path": "world/factions/ardenhaven/locations",
+          "override": "world/factions/ardenhaven/locations/ruins-western-scrubland.md"
+        },
+        {
+          "keyword": "goblins",
+          "requested_path": "creatures/README.md",
+          "override": "world/factions/ardenhaven/quests/goblin-raid-cr1.md"
+        }
+      ],
+      "scene_id": "S-008",
+      "end_seconds": 14289.089,
+      "factual_summary": "At dusk, the party approached the western scrubland ruins to open negotiations with the goblins responsible for the sheep raids, bringing along the goblins’ collected “treasures” as leverage. Bazgar took point, calling out in Orcish and attempting to speak for the group while the others stayed back and tried to observe from a safer distance. A goblin scout challenged Bazgar’s identity and intentions; Bazgar leaned into a more intimidating, tribal-orc demeanor to be taken seriously. When Bazgar proposed a deal—goblins guard the sheep and receive a sheep as payment instead of raiding—the talks soured, and the goblins shifted toward hostility as the scene tipped into imminent violence.",
+      "narrative_seed": "Evening shadows pooled between the broken stones of the old keep as Bazgar strode forward openly, voice carrying in harsh Orcish across the rubble. A goblin’s head appeared, suspicious and sharp-eyed, circling him like a scavenger testing a larger predator. For a moment, the offer of trade and a new arrangement hung in the cold air—then the goblins’ hunger and mistrust bared their teeth, and the ruins felt less like a meeting ground and more like a trap about to spring.",
+      "key_events": [
+        "The party advanced to the ruined keep at sunset to negotiate, choosing an open approach rather than sneaking, and offering to return goblin “treasures” as part of the deal.",
+        "Bazgar hailed the goblins in Orcish and was met by a wary goblin who questioned why he traveled with humans and whether he was truly an orc.",
+        "Bazgar intimidated the goblin into treating him as a legitimate southern orc rather than a human, shifting his posture and tone to project dominance.",
+        "Bazgar proposed replacing raids with a payment arrangement: the goblins would guard the sheep and be given a sheep rather than stealing them.",
+        "Negotiations deteriorated as goblin hostility escalated, setting the stage for a fight in the ruins."
+      ],
+      "character_moments": {
+        "Bazgar": "Took the lead as translator and negotiator in Orcish, deliberately approaching without overt aggression, then pivoted into a more fearsome, tribal persona to command goblin respect when challenged.",
+        "Sabriel": "Supported the negotiation plan by urging the return of the goblins’ “treasures” to sweeten the offer and coordinated cautious backup while Bazgar went forward.",
+        "Marwen": "Tried to assess what the party knew about goblins and communication, then stayed back to avoid provoking the goblins while still attempting to monitor the situation."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Goblin scout (unnamed)",
+          "role": "Lookout/first contact for the goblin warband at the ruins",
+          "interaction": "Spoke with Bazgar in Orcish, challenged his identity and motives, and reacted with suspicion that helped push negotiations toward conflict."
+        },
+        {
+          "name": "Goblin boss/leader (unnamed, off-screen presence)",
+          "role": "Leader of the goblin group occupying the ruins (implied authority behind the raiding)",
+          "interaction": "Not directly conversed with in this scene, but implied as the power behind the goblins’ stance and looming threat as talks broke down."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Goblins’ “treasures” (mixed junk/loot bundle)",
+          "description": "A bundle of stolen trinkets and goods the party intended to return as bargaining leverage",
+          "acquisition": "Already in the party’s possession at the start of the scene; carried forward to use in negotiation."
+        }
+      ],
+      "information_gained": [
+        "Goblins in this area can communicate in Orcish (and at least one is willing to parley briefly before turning hostile).",
+        "The goblins are highly suspicious of humans but respond to displays of dominance and perceived tribal legitimacy from an orc speaker."
+      ],
+      "time_passed": "Approximately 10–20 minutes",
+      "scene_outcome": "The attempted negotiation at the ruins failed as goblin hostility rose, transitioning directly into the brink of combat inside/around the ruined keep.",
+      "plot_threads": [
+        {
+          "thread": "Negotiate an end to the sheep raids by offering returned ‘treasures’ and a paid guarding arrangement",
+          "status": "complicated"
+        },
+        {
+          "thread": "Establish communication and leverage with the goblin warband at the western scrubland ruins",
+          "status": "advanced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 14289.089,
+      "location": "Inside the ruins/old keep (goblin-held area)",
+      "goal": "Survive the goblin ambush/fight after negotiations break down",
+      "npcs_present": [
+        "Goblins (multiple; one boss with scimitar)"
+      ],
+      "time_of_day": "evening",
+      "emotional_tone": "chaotic",
+      "conflict_type": "combat",
+      "notes": "The party finishes the goblin fight, with Marwen burning multiple goblins in a cone and Sabriel healing; the last goblin surrenders as a 'pet' and flees.",
+      "requested_resources": [
+        {
+          "keyword": "goblin boss with scimitar / multiple goblins in ruins",
+          "requested_path": "world/factions/ardenhaven/quests/goblin-raid-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "Flicker (familiar) / Blade Ward / Produce Flame / Sacred Flame / Healing Word",
+          "requested_path": "characters/player-characters",
+          "override": null
+        }
+      ],
+      "scene_id": "S-009",
+      "end_seconds": 15719.12,
+      "factual_summary": "Inside the goblin-held ruins, negotiations fully collapse when a goblin tries to snatch Bazgar’s axe, triggering an ambush and close-quarters fight. Marwen advances with fire magic while Sabriel supports with radiant magic and healing, and Bazgar holds the front line despite taking a hard hit from a scimitar-wielding goblin boss. Several goblins are killed in the skirmish, and the last surviving goblin attempts to surrender by calling itself a “good pet,” prompting the party to spare it and drive it off. With the immediate threat ended, the party discusses bringing proof of the goblins’ defeat back to the Redwick farm.",
+      "narrative_seed": "Evening shadows and broken walls turn the old keep into a maze of sudden movement—small shapes darting, weapons flashing, and improvised junk swung like clubs. Firelight blooms in Marwen’s hand as Sabriel’s silver radiance drops a goblin where it stands, while Bazgar’s fury and discipline keep the line from collapsing. When the last goblin realizes it’s alone, it grins up through sharp teeth and begs in the only surrender it knows: “Good pet.”",
+      "key_events": [
+        "A goblin attempts to steal Bazgar’s axe, and the ambush erupts into open combat inside the ruins.",
+        "Marwen pushes forward with flame while Sabriel strikes with Sacred Flame and then uses Healing Word to stabilize Marwen after she’s badly hurt.",
+        "A scimitar-wielding goblin boss lands a heavy blow on Bazgar, forcing Bazgar to rally and then cut down the attacker.",
+        "Marwen unleashes a cone of fire that incinerates two goblins at once, swinging the fight decisively in the party’s favor.",
+        "The final goblin surrenders by insisting it is a “good pet,” and Sabriel physically calms the moment by petting it, stopping Bazgar from finishing it off.",
+        "Bazgar warns the surrendered goblin in Orcish to never return; it flees, and Bazgar takes a goblin head as proof for the quest."
+      ],
+      "character_moments": {
+        "Bazgar": "Refuses to be disarmed, fights through being bloodied by the goblin boss, then pulls up short mid-charge when he sees Sabriel petting the surrendering goblin—choosing restraint over momentum before sending it away with a warning.",
+        "Marwen": "Steps into the chaos with flame ready, takes a painful hit, then answers with overwhelming fire that drops multiple goblins and ends the immediate threat.",
+        "Sabriel": "Balances offense and mercy—burns down a goblin with divine radiance, heals Marwen back from the brink, then de-escalates the finale by accepting a clumsy goblin surrender and sparing its life."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Goblin boss (scimitar)",
+          "role": "Leader-type goblin wielding a scimitar, directing/embodying the ambush’s lethality",
+          "interaction": "Engaged Bazgar in melee and wounded him badly before being killed by Bazgar."
+        },
+        {
+          "name": "Goblins (multiple)",
+          "role": "Raiders/ambushers within the ruins, some using improvised weapons and close-quarters tactics",
+          "interaction": "Fought the party in tight corridors and behind low walls; several were killed by Sabriel’s radiant magic, Marwen’s fire, and Bazgar’s axe."
+        },
+        {
+          "name": "Surrendering goblin (“Good pet”)",
+          "role": "Last surviving goblin who attempted to surrender without knowing proper terms",
+          "interaction": "Tried biting at Sabriel’s ankles, failed, then surrendered by calling itself a pet; Sabriel spared it and Bazgar ordered it to leave."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Goblin head (proof)",
+          "description": "A severed goblin head taken as evidence the raiders were dealt with",
+          "acquisition": "Bazgar decapitated one of the dead goblins after the fight to bring back as proof."
+        }
+      ],
+      "information_gained": [
+        "The goblins in these ruins are aggressively hostile toward humans and were willing to escalate immediately once negotiations faltered.",
+        "At least one goblin does not know formal surrender customs and resorts to submissive language (“pet”) as a survival tactic when cornered."
+      ],
+      "time_passed": "Approximately 5–10 minutes",
+      "scene_outcome": "The ambush is survived and the goblin group is effectively broken; one goblin is spared and flees. The party pivots from combat to cleanup and proof-gathering, preparing to leave the ruins and report back.",
+      "plot_threads": [
+        {
+          "thread": "Stop the goblin sheep raids (Redwick Farm job)",
+          "status": "advanced"
+        },
+        {
+          "thread": "Potential surviving goblin witness/loose end (the ‘Good pet’ goblin)",
+          "status": "introduced"
+        },
+        {
+          "thread": "Proof of success for payment/credibility",
+          "status": "advanced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 15719.12,
+      "location": "Outside the ruins / returning to Redwick Farm (western farmlands)",
+      "goal": "Report success and collect payment for stopping the goblin raids",
+      "npcs_present": [
+        "Maren Redwick (sheep farmer, quest giver)"
+      ],
+      "time_of_day": "evening",
+      "emotional_tone": "relieved",
+      "conflict_type": "social",
+      "notes": "After the fight, the party discusses proof and returns to the farmer to get paid and receive bonus cheese for returning surviving sheep.",
+      "requested_resources": [
+        {
+          "keyword": "Maren Redwick / 70 gold / two wheels of sharp cheese / harvest festival",
+          "requested_path": "world/factions/ardenhaven/quests/goblin-raid-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "Redwick Farm",
+          "requested_path": "world/factions/ardenhaven/locations",
+          "override": null
+        }
+      ],
+      "scene_id": "S-010",
+      "end_seconds": 15864.333,
+      "factual_summary": "After clearing the goblin threat, the party returns to Redwick Farm in the evening to report that the raids have ended. They present proof of the goblins’ defeat and confirm that some surviving sheep were recovered and brought back. Maren Redwick pays the agreed reward of 70 gp and, grateful for the returned animals, adds two wheels of sharp cheese and an invitation to the next harvest festival. With the job concluded, the party decides to head back toward town to rest at the tavern.",
+      "narrative_seed": "Evening settles over the western farmlands as the party trudges back to Redwick Farm, bruised but relieved, carrying grim proof that the raiders won’t be coming again. Maren’s tension breaks into grateful relief when she sees her sheep returned, and she presses coin and sharp farmhouse cheese into their hands like a blessing. With the hills quiet again, the group turns their thoughts from blood and stone to warmth, beds, and a tavern hearth in Ardenford.",
+      "key_events": [
+        "Bazgar takes a goblin head as proof to bring back to the quest giver.",
+        "The party returns to Redwick Farm and reports the goblin raids have been stopped.",
+        "Maren Redwick pays out the 70 gp reward to the party.",
+        "Because the party returned surviving sheep, Maren also gives two wheels of sharp cheese and invites them to the next harvest festival.",
+        "The party agrees to head back to the tavern in Ardenford to rest after hours spent on the outskirts."
+      ],
+      "character_moments": {
+        "Bazgar": "Chooses a blunt, practical form of proof—decapitating a goblin corpse and taking the head—underscoring his no-nonsense approach to finishing the job.",
+        "Sabriel": "Pushes for a cleaner proof option (ears) and checks whether any sheep survived, prioritizing the farmer’s losses and a humane resolution.",
+        "Marwen": "Acknowledges the limits of their current magic for preserving remains for divination, passing on the idea despite recognizing it could be useful later."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Maren Redwick",
+          "role": "Sheep farmer and quest giver at Redwick Farm",
+          "interaction": "Receives the party’s report and proof, confirms sheep were returned, pays 70 gp, gifts two wheels of sharp cheese, and invites them to the harvest festival."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "70 gp",
+          "description": "Quest payment for stopping the goblin raids on Redwick Farm",
+          "acquisition": "Paid by Maren Redwick upon the party’s return and report of success."
+        },
+        {
+          "item": "Two wheels of sharp cheese",
+          "description": "Farm-made sharp cheese given as a bonus reward",
+          "acquisition": "Gifted by Maren Redwick because the party returned surviving sheep."
+        }
+      ],
+      "information_gained": [
+        "Returning sheep alive earns additional gratitude and tangible rewards from Maren Redwick (bonus goods and a social invitation).",
+        "The party notes that preserving remains for later divination would be valuable, but they currently lack the magic to do so."
+      ],
+      "time_passed": "About 30–60 minutes (travel back to the farm and a brief debrief/payment exchange).",
+      "scene_outcome": "The goblin-raid job is formally concluded with payment and thanks; the party transitions toward returning to Ardenford to rest at the Wayward Compass.",
+      "plot_threads": [
+        {
+          "thread": "Goblin raids on Redwick Farm",
+          "status": "resolved"
+        },
+        {
+          "thread": "Maren Redwick’s harvest festival invitation",
+          "status": "introduced"
+        },
+        {
+          "thread": "Interest in future divination/forensic preservation of remains",
+          "status": "introduced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 15864.333,
+      "location": "The Wayward Compass tavern, Ardenford (Middle Tier)",
+      "goal": "Rest, debrief, and plan next day (spider job) while getting to know each other",
+      "npcs_present": [
+        "Thorgrim Ledger-Scar"
+      ],
+      "time_of_day": "night",
+      "emotional_tone": "casual",
+      "conflict_type": "social",
+      "notes": "Back at the tavern, the party orders food, chats with Thorgrim, shares motivations, and agrees to rest and pursue spiders in the morning.",
+      "requested_resources": [
+        {
+          "keyword": "The Wayward Compass",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford.md",
+          "override": null
+        },
+        {
+          "keyword": "Thorgrim Ledger-Scar",
+          "requested_path": "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+          "override": null
+        },
+        {
+          "keyword": "Spider job / spiders tomorrow",
+          "requested_path": "world/factions/ardenhaven/quests/spider-lair-cr1.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-011",
+      "end_seconds": 17300.982,
+      "factual_summary": "The party returns to The Wayward Compass for the night, orders dinner, and settles in to rest after the goblin job. Bazgar asks Thorgrim Ledger-Scar for local food recommendations and briefly probes him about Garhammer ties, but Thorgrim shuts the topic down. Over the meal, the party debriefs their success and intentionally shares personal background and motivations, agreeing to rest and tackle the posted spider problem in the morning.",
+      "narrative_seed": "Warm firelight and the murmur of Ardenford’s Middle Tier crowd wrap the Wayward Compass in a lived-in calm as the party finally slows down. Between plates of fresh-caught fish, mutton, bread, and sweet spreads, guarded strangers become something closer to allies—sharing ambitions, old wounds, and reasons for chasing ruins. The night stays easy and conversational… right up until unfamiliar Imperium colors begin to enter the tavern.",
+      "key_events": [
+        "The party arrives at The Wayward Compass, orders a hearty late meal, and settles at a table to unwind and debrief.",
+        "Bazgar speaks with Thorgrim Ledger-Scar for a local cuisine recommendation and asks about Garhammer connections; Thorgrim gives little away and ends the line of questioning.",
+        "Bazgar proposes the group get to know each other better to improve teamwork; the party begins sharing personal details and motivations.",
+        "The group agrees on the plan: rest tonight, then go deal with the spider infestation job in the morning."
+      ],
+      "character_moments": {
+        "Bazgar": "Shifts from pure mission-focus to team-building, openly sharing his ambition to become warlord of his people and explaining the political/spiritual nature of that role; he also tries (unsuccessfully) to read Thorgrim’s ties to Garhammer.",
+        "Sabriel": "Reveals they are a traveling healer from Arathelion (an elven land) and frames their journey as purpose-driven rather than a formal mission, while quietly observing companions’ preferences to personalize their healing magic.",
+        "Marwen": "Admits a personal dislike of fish/seafood despite a fisherman father, shows a strong preference for sweet breads/spreads, and reacts with fascination to string music as if it’s unfamiliar or deeply affecting."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Thorgrim Ledger-Scar",
+          "role": "Dwarven proprietor/keeper of The Wayward Compass; expatriate with guarded Garhammer ties",
+          "interaction": "Serves the party and recommends local dishes; when questioned about Garhammer connections, he denies having any and keeps the conversation closed."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Two wheels of sharp cheese",
+          "description": "Farm-made sharp cheese, travel-friendly rations",
+          "acquisition": "Brought along as part of the party’s recent reward and added to their inventory during the tavern debrief."
+        }
+      ],
+      "information_gained": [
+        "Thorgrim is from Garhammer but is notably nontraditional and unwilling to discuss any ongoing connections, suggesting either privacy or complications.",
+        "Bazgar’s long-term goal is to gain strength, tools, and renown to be chosen as warlord of his people through a shaman-guided, community-driven process tied to both competence and spiritual legitimacy.",
+        "Sabriel is from Arathelion and identifies as a traveler-healer without a formal mission, implying a personal calling rather than a contract-driven life.",
+        "The party’s immediate plan is set: rest at the Compass and take the spider-lair job in the morning."
+      ],
+      "time_passed": "Approximately 2–3 hours (late evening meal, conversation, and planning before turning in).",
+      "scene_outcome": "The scene ends with the party finishing their late-night bonding and settling on tomorrow’s spider job, just as clearly identifiable Imperium traders begin entering the tavern—setting up imminent social tension.",
+      "plot_threads": [
+        {
+          "thread": "Spider Lair job at the abandoned lumber camp",
+          "status": "advanced"
+        },
+        {
+          "thread": "Thorgrim Ledger-Scar’s true ties to Garhammer",
+          "status": "introduced"
+        },
+        {
+          "thread": "Bazgar’s ambition to become warlord and seek outside knowledge/allies against the Imperium",
+          "status": "advanced"
+        },
+        {
+          "thread": "Imperium presence in Ardenford (traders entering the Compass)",
+          "status": "introduced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 17300.982,
+      "location": "The Wayward Compass tavern, Ardenford (Middle Tier)",
+      "goal": "Avoid/defuse tension after Calderon Imperium traders enter",
+      "npcs_present": [
+        "Calderon Imperium traders (3)"
+      ],
+      "time_of_day": "night",
+      "emotional_tone": "tense",
+      "conflict_type": "social",
+      "notes": "Imperium traders arrive and stare; Bazgar’s mood drops and the party decides to turn in to avoid escalation.",
+      "requested_resources": [
+        {
+          "keyword": "Calderon Imperium traders",
+          "requested_path": "world/factions/calderon-imperium/_overview.md",
+          "override": null
+        },
+        {
+          "keyword": "The Wayward Compass",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-012",
+      "end_seconds": 17419.171,
+      "factual_summary": "Three clearly identifiable Calderon Imperium traders entered The Wayward Compass and moved with disciplined, uniform-like coordination, ordering the same food and seating themselves together while watching the party. Bazgar’s mood immediately soured at their presence, and the party chose to head upstairs to avoid escalating tension. As Bazgar passed them, he spat on the floor in their direction, prompting one trader to covertly attempt to trip him as he went by.",
+      "narrative_seed": "The tavern’s warmth tightened into a cold, watchful silence when the Imperium traders filed in—gray-clad, synchronized, and unmistakably foreign in Ardenford’s loose, lived-in chaos. Their eyes lingered on the party like an inspection, and Bazgar’s simmering resentment broke the fragile peace with a small, deliberate insult. The night teetered on the edge of a public incident as the traders answered contempt with a quiet, calculated shove of the foot.",
+      "key_events": [
+        "Three Calderon Imperium traders entered the Wayward Compass, ordered in unison, sat together, and kept watching the party.",
+        "The party decided to turn in early to avoid trouble, but Bazgar spat toward the traders while passing, and one trader attempted to trip him."
+      ],
+      "character_moments": {
+        "Bazgar": "Bazgar’s visible discomfort and hostility toward the Imperium surfaced; despite agreeing to avoid a fight by going upstairs, he still chose to provoke them with a spit as he passed."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Calderon Imperium traders (3)",
+          "role": "Imperium-aligned civilian merchants, identifiable by disciplined conduct and uniform-like gray clothing with black belts",
+          "interaction": "They entered, observed the party from across the room, and responded to Bazgar’s insult by attempting to trip him as he walked past."
+        }
+      ],
+      "loot_and_items": [],
+      "information_gained": [
+        "Imperium civilians are easy to spot by their standardized dress and regimented, in-step behavior even when not military.",
+        "The Imperium traders showed immediate interest in the party, watching them closely and reacting to provocation rather than ignoring it."
+      ],
+      "time_passed": "Approximately 10–15 minutes",
+      "scene_outcome": "The party attempted to disengage by heading upstairs, but the situation escalated at the stairway as an Imperium trader tried to trip Bazgar, setting up an imminent confrontation.",
+      "plot_threads": [
+        {
+          "thread": "Imperium presence in Ardenford and rising tensions with outsiders/adventurers",
+          "status": "introduced"
+        },
+        {
+          "thread": "Bazgar’s personal animosity toward the Calderon Imperium",
+          "status": "advanced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 17419.171,
+      "location": "The Wayward Compass tavern (common room floor space)",
+      "goal": "Settle a confrontation with Imperium traders after they trip Bazgar",
+      "npcs_present": [
+        "Thorgrim Ledger-Scar",
+        "Calderon Imperium traders (3)"
+      ],
+      "time_of_day": "night",
+      "emotional_tone": "heated",
+      "conflict_type": "combat",
+      "notes": "Bazgar starts a tavern brawl after being tripped; he knocks out multiple traders and Thorgrim enforces peace with the tavern’s 'free beer' rule.",
+      "requested_resources": [
+        {
+          "keyword": "Thorgrim's tavern rules / 'free beer' peace accord",
+          "requested_path": "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+          "override": null
+        },
+        {
+          "keyword": "Calderon Imperium",
+          "requested_path": "world/factions/calderon-imperium/_overview.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-013",
+      "end_seconds": 18026.804,
+      "factual_summary": "In the common room of The Wayward Compass, Bazgar is covertly tripped by one of the Calderon Imperium traders and mocked. Bazgar responds by hauling the instigator into the open floor space and starting a bare-knuckle fight under Thorgrim Ledger-Scar’s “no weapons” tavern rule. After Bazgar drops the first trader, the other two jump in, but Bazgar beats them back as well. Thorgrim ends the incident by offering free beer to both sides as a binding peace accord, and the Imperium traders accept.",
+      "narrative_seed": "Night tension snaps into violence as a disciplined Imperium trio turns a petty trip into a public humiliation. Bazgar, refusing steel but not refusing blood, drags the offender into Thorgrim’s deliberately cleared fighting space and answers laughter with fists. When the traders’ friends swarm in, the tavern keeper doesn’t intervene—he waits until the lesson is taught, then seals the room’s fragile order with a silent, mandatory toast: free beer, and the matter dies here.",
+      "key_events": [
+        "A Calderon Imperium trader trips Bazgar as he passes, and the trio laughs at him in the common room.",
+        "Bazgar grabs the instigator and forces him into the tavern’s open floor space to settle it without weapons.",
+        "The instigator attempts a cheap shot from behind, but Bazgar turns the momentum into a full brawl.",
+        "Bazgar knocks out the first trader; the other two Imperium traders rush in and land a few hits before Bazgar drops one and drives the last out of the fight.",
+        "Thorgrim Ledger-Scar offers free beer to both parties as his peace accord; the Imperium traders accept, ending the confrontation inside the tavern."
+      ],
+      "character_moments": {
+        "Bazgar": "Chooses to follow the tavern’s no-weapons culture and settle the insult with fists in the open floor space, then ends it with a pointed warning—implying mutual understanding—before heading upstairs.",
+        "Thorgrim Ledger-Scar": "Enforces his Compass-style order by allowing the weaponless scuffle to play out and then compelling a ceasefire through his “free beer” peace accord, making it clear the dispute cannot be carried beyond his bar.",
+        "Marwen": "Stays out of the brawl, observing the Imperium tension and later focusing on calming, private ritual practice rather than escalating the conflict.",
+        "Sabriel": "Maintains a watchful, disciplined posture—positioning herself as the last to retire and first awake—signaling caution about further Imperium trouble."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Thorgrim Ledger-Scar",
+          "role": "Dwarven owner and keeper of The Wayward Compass; enforcer of the no-weapons rule and tavern peace",
+          "interaction": "Allows the fistfight under his rules, then offers free beer to both sides as a binding peace accord to prevent further retaliation."
+        },
+        {
+          "name": "Calderon Imperium trader (instigator)",
+          "role": "Imperium-aligned trader who initiates the confrontation",
+          "interaction": "Trips Bazgar and mocks him; is dragged into the open floor and knocked out in the ensuing brawl."
+        },
+        {
+          "name": "Calderon Imperium trader (ally 1)",
+          "role": "Imperium-aligned trader who joins the fight",
+          "interaction": "Jumps Bazgar after the instigator goes down; is beaten into submission/knocked out of the fight."
+        },
+        {
+          "name": "Calderon Imperium trader (ally 2)",
+          "role": "Imperium-aligned trader who joins the fight",
+          "interaction": "Joins the two-on-one attempt against Bazgar; fails to turn the tide and is driven out of the fight before accepting Thorgrim’s peace beer."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Free beer (peace accord)",
+          "description": "A complimentary drink offered by Thorgrim as a de facto contract: accepting it ends the dispute inside the tavern and bars further complaint or retaliation stemming from the incident.",
+          "acquisition": "Thorgrim serves it to both Bazgar’s side and the Imperium traders after the fight to seal the peace."
+        }
+      ],
+      "information_gained": [
+        "The Wayward Compass operates on an enforced “no weapons” rule, with Thorgrim tolerating controlled fistfights in the open floor space.",
+        "Thorgrim’s “free beer” functions as a binding peace accord: taking it signals acceptance that the conflict ends in the tavern and should not be pursued afterward.",
+        "The Calderon Imperium traders are coordinated and hostile enough to escalate from provocation to group violence, but they will still submit to local authority and social contracts when outmatched."
+      ],
+      "time_passed": "Approximately 10–20 minutes",
+      "scene_outcome": "The confrontation is settled in the common room with the Imperium traders accepting Thorgrim’s peace beer; Bazgar then leaves the scene and heads upstairs, setting up a tense but temporarily contained night.",
+      "plot_threads": [
+        {
+          "thread": "Imperium hostility toward Bazgar and the party",
+          "status": "complicated"
+        },
+        {
+          "thread": "Thorgrim’s tavern authority and the Compass ‘peace accord’ custom",
+          "status": "introduced"
+        },
+        {
+          "thread": "Risk of Imperium retaliation beyond the tavern’s protections",
+          "status": "introduced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 18026.804,
+      "location": "The Wayward Compass inn rooms / upstairs hallway",
+      "goal": "Complete the night’s rest while preventing Imperium trouble upstairs",
+      "npcs_present": [
+        "Thorgrim Ledger-Scar",
+        "Calderon Imperium traders (drunk, upstairs)"
+      ],
+      "time_of_day": "night",
+      "emotional_tone": "watchful",
+      "conflict_type": "social",
+      "notes": "Sabriel spots drunk Calderon Imperium traders prowling the second-floor hallway and successfully gets past them to alert Thorgrim, who escorts them back to bed without disturbing the party’s rest.",
+      "requested_resources": [
+        {
+          "keyword": "Thorgrim Ledger-Scar",
+          "requested_path": "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+          "override": null
+        },
+        {
+          "keyword": "Calderon Imperium traders",
+          "requested_path": "world/factions/calderon-imperium/_overview.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-014",
+      "end_seconds": 23367.0,
+      "factual_summary": "Upstairs at The Wayward Compass, Sabriel remains awake while the others settle in for the night; Marwyn privately performs a quiet ritual of contemplation over a skeleton rib and bits of grass she collected earlier before turning in. Sabriel notices the drunk Calderon Imperium traders roaming the second-floor hallway and testing doors, clearly looking for trouble. Rather than confront them directly or wake the party, Sabriel slips past them and alerts Thorgrim Ledger-Scar downstairs, who then goes up and pragmatically escorts the traders back to their rooms without further incident.",
+      "narrative_seed": "The inn’s upper hall creaks with late-night footsteps—too many, too unsteady, and too curious at the doors. Sabriel chooses restraint over escalation, letting calm presence and quiet timing do the work of a drawn blade. Thorgrim’s heavy, practiced authority restores order upstairs, and the Wayward Compass settles back into uneasy, watchful silence.",
+      "key_events": [
+        "Marwyn conducts a private, meditative ritual in her room using a skeleton rib and bits of grass gathered earlier, then puts them away with no new insight.",
+        "Sabriel spots the drunk Calderon Imperium traders prowling the upstairs hallway and checking doors.",
+        "Sabriel avoids direct confrontation, passes the traders, and informs Thorgrim Ledger-Scar of the brewing trouble.",
+        "Thorgrim goes upstairs and firmly but quietly shepherds the Imperium traders back to bed, preventing a disturbance and preserving the party’s rest."
+      ],
+      "character_moments": {
+        "Sabriel": "Chooses a nonviolent, low-profile solution—prioritizing the party’s long rest and the inn’s stability by alerting Thorgrim instead of confronting three drunk traders alone.",
+        "Marwyn": "Reveals a cautious, occult-leaning habit: privately reflecting on unsettling finds (the rib and grass) through a personal ritual before sleeping."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Thorgrim Ledger-Scar",
+          "role": "Dwarven owner and keeper of The Wayward Compass; enforcer of house rules and order",
+          "interaction": "Sabriel warns him about the Imperium traders upstairs; Thorgrim intervenes and escorts them back to their rooms without waking other guests."
+        },
+        {
+          "name": "Calderon Imperium traders",
+          "role": "Drunk Imperium merchants staying at the inn; restless and looking for trouble upstairs",
+          "interaction": "They prowl the hallway and test doors; Sabriel avoids engaging them and instead gets Thorgrim to handle them."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Skeleton rib",
+          "description": "A bone fragment previously collected; used as a focus for Marwyn’s private contemplation",
+          "acquisition": "Already possessed from earlier; not acquired in this scene"
+        },
+        {
+          "item": "Bits of grass",
+          "description": "Plant scraps previously collected; laid out with the rib during Marwyn’s ritual",
+          "acquisition": "Already possessed from earlier; not acquired in this scene"
+        }
+      ],
+      "information_gained": [
+        "The Calderon Imperium traders are still restless after the earlier tensions and are willing to cause mischief late at night (prowling the hall and checking doors).",
+        "Thorgrim Ledger-Scar remains awake and actively manages problems in his inn, preferring quiet, pragmatic de-escalation that avoids disturbing other guests."
+      ],
+      "time_passed": "Roughly 15–30 minutes of active time before the inn returns to quiet; the rest of the night proceeds normally.",
+      "scene_outcome": "The potential upstairs incident is defused without a fight, allowing the party to complete their night’s rest and transition into morning.",
+      "plot_threads": [
+        {
+          "thread": "Imperium tension at The Wayward Compass (drunk traders seeking trouble)",
+          "status": "resolved"
+        },
+        {
+          "thread": "Marwyn’s interest in ominous remains (rib and grass) and what they might signify",
+          "status": "advanced"
+        },
+        {
+          "thread": "Thorgrim Ledger-Scar as a stabilizing power and potential ally in Ardenford",
+          "status": "advanced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 23367.0,
+      "location": "The Wayward Compass common room (morning)",
+      "goal": "Gather local intel for a mountain expedition (guides, ruins, shops) by questioning a friendly elf",
+      "npcs_present": [
+        "Elarion Faenwynd"
+      ],
+      "time_of_day": "morning",
+      "emotional_tone": "curious",
+      "conflict_type": "social",
+      "notes": "After the long rest, Marwen approaches a friendly elf (Elarion) who maintains the library’s ruin/rune catalog and gets guidance on ruins, dwarf guides, and where to find a weaponsmith, apothecary, and spell shop.",
+      "requested_resources": [
+        {
+          "keyword": "Elarion (E-L-A-R-I-O-N) / Concordance Library rune catalog ledger",
+          "requested_path": "world/factions/ardenhaven/npc/elarian-faenwynd.md",
+          "override": null
+        },
+        {
+          "keyword": "Concordance Library",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford.md",
+          "override": null
+        },
+        {
+          "keyword": "Oathhold Dwarves / Dulgarum Oathholds",
+          "requested_path": "world/factions/dulgarum-oathholds/_overview.md",
+          "override": null
+        },
+        {
+          "keyword": "Garhammar dwarves (guides are pricier)",
+          "requested_path": "world/factions/garhammar-trade-league/_overview.md",
+          "override": null
+        },
+        {
+          "keyword": "weaponsmith / apothecary / spell shop",
+          "requested_path": "world/factions/ardenhaven/npc",
+          "override": null
+        }
+      ],
+      "scene_id": "S-015",
+      "end_seconds": 26117.506,
+      "factual_summary": "In the morning at The Wayward Compass, Marwyn approaches a friendly elf in the common room and questions him for intel about mounting an expedition into the nearby mountains. The elf introduces himself as Elarion Faenwynd, an archivist tied to the Concordance Library who keeps a rune/ruin catalog ledger, and he offers practical guidance on where to start looking for smaller ruin sites and how to pursue further research through the library. He also points the party toward local suppliers—weapon work, alchemy, and arcane wares—and advises that the most reliable mountain guides are oath-bound dwarves, though they are harder to locate than other options.",
+      "narrative_seed": "Morning light and hearth-warmth fill the Compass as Marwyn simply sits down with a stranger and turns curiosity into opportunity. Elarion Faenwynd—ink-stained, reserved, and quietly confident—proves to be exactly the sort of person who knows how the city’s secrets are filed away, and he answers with the calm precision of someone used to turning questions into expeditions. By the time he returns to his book, the party has directions, leads, and the sense that Ardenford’s chaos can be navigated—if you ask the right person.",
+      "key_events": [
+        "Marwyn initiates a conversation with an elf patron and asks for guidance on arranging a mountain expedition, including guides and ruin leads.",
+        "The elf identifies himself as Elarion Faenwynd of the Concordance Library and explains he maintains the library’s expedition/ruin rune-catalog ledger.",
+        "Elarion gives the party starting directions toward smaller ruin sites in the valley and suggests the Concordance Library as the best place to deepen their research.",
+        "Elarion outlines guide options (including oath-bound dwarves as the most dependable) and provides directions/leads for a weaponsmith, an apothecary/alchemist, and arcane suppliers for scrolls and magical services."
+      ],
+      "character_moments": {
+        "Marwyn": "Leans into her straightforward, socially bold approach—pulling up a chair uninvited and methodically turning the conversation into actionable expedition planning, including taking notes separate from her spellbook.",
+        "Bazgar": "Observes from nearby, surprised that Marwyn’s direct questioning actually produces useful leads without conflict.",
+        "Sabriel": "Is present in the common room early and listens in as the party pivots from general curiosity to concrete preparation needs (supplies, guides, and research access).",
+        "Elarion Faenwynd": "Shows his archivist instincts by probing what the party is truly looking for (runes/ruins) and steering them toward structured research and vetted guidance rather than vague adventuring bravado."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Elarion Faenwynd",
+          "role": "High elf archivist/translator connected to the Concordance Library; maintains a rune/ruin catalog ledger for expeditions",
+          "interaction": "Marwyn questions him for mountain-expedition intel; he answers with guidance on ruin leads, recommends oath-bound dwarven guides, and provides directions to key shops and to the Concordance Library for further research."
+        }
+      ],
+      "loot_and_items": [],
+      "information_gained": [
+        "Elarion Faenwynd is an archivist associated with the Concordance Library and keeps a catalog/ledger of expeditions and rune/ruin information.",
+        "For mountain travel, guide options include ordinary local guides, pricier Garhammar dwarves, and the most reliable (but harder to find) oath-bound dwarves; Elarion recommends seeking the oath-bound option if possible.",
+        "There are smaller ruin sites in the valley that can serve as initial targets; Elarion provides directions and suggests the library as the hub for deeper ruin research.",
+        "The party can acquire expedition supplies in Ardenford via a weaponsmith, an apothecary/alchemist, and arcane vendors who sell scrolls and magical services; Elarion provides directions to these resources."
+      ],
+      "time_passed": "About 20–40 minutes",
+      "scene_outcome": "With directions and recommendations in hand, the party wraps up the conversation; Elarion returns to reading, and the group prepares to move on to their next errands and leads.",
+      "plot_threads": [
+        {
+          "thread": "Securing a dependable mountain guide (ideally an oath-bound dwarf)",
+          "status": "introduced"
+        },
+        {
+          "thread": "Concordance Library research access and Elarion as a scholarly contact",
+          "status": "introduced"
+        },
+        {
+          "thread": "Outfitting for the expedition (weaponsmith, apothecary/alchemist, arcane scroll shop)",
+          "status": "advanced"
+        },
+        {
+          "thread": "Locating and investigating smaller valley ruin sites as a starting point",
+          "status": "introduced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 26117.506,
+      "location": "Western Market (Ardenford, Middle Tier)",
+      "goal": "Meet Gareth Thorne and accept the spider-lair job; learn details and requirements (clear camp, retrieve tools, possibly recover workers)",
+      "npcs_present": [
+        "Gareth Thorne"
+      ],
+      "time_of_day": "morning",
+      "emotional_tone": "businesslike",
+      "conflict_type": "social",
+      "notes": "The party confirms the job details with Gareth Thorne: clear the spider-infested lumber camp, retrieve tools, and ideally bring back the workers (or at least bury them).",
+      "requested_resources": [
+        {
+          "keyword": "Western Market",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford.md",
+          "override": null
+        },
+        {
+          "keyword": "Gareth Thorne",
+          "requested_path": "world/factions/ardenhaven/quests/spider-lair-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "Spider Lair (lumber camp, Miller's Creek, 80 gold)",
+          "requested_path": "world/factions/ardenhaven/quests/spider-lair-cr1.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-016",
+      "end_seconds": 26620.437,
+      "factual_summary": "In the Western Market, the party finds Gareth Thorne at his lumber-order stall and asks about the posted job regarding a spider-infested lumber camp. Gareth explains the camp lies south of Ardenford and that two workers went missing after webbing and drag marks were found; he estimates there are likely 2–3 large spiders, roughly pony-sized. The party accepts the job to clear the camp, retrieve the crew’s tools, and, if possible, recover any surviving workers.",
+      "narrative_seed": "Morning trade hums through the Western Market as Gareth Thorne conducts business with the detached efficiency of a man counting losses in board-feet and coin. He lays out the problem without drama—webbing, silence in the trees, and workers who didn’t come back—then makes it plain what matters: clear the camp and bring his tools home. With the terms set, the party turns from the orderly market square toward the darker work waiting in the southern woods.",
+      "key_events": [
+        "The party locates Gareth Thorne’s lumber-order stall in the Western Market and opens negotiations about the spider-lair job.",
+        "Gareth details the situation: an abandoned lumber camp south of Ardenford, missing workers, heavy webbing/drag marks, and an estimate of 2–3 pony-sized spiders.",
+        "The party confirms the job requirements: clear the camp, retrieve and return the tools to Gareth, and attempt to bring back any surviving workers (or at least deal with the bodies if not)."
+      ],
+      "character_moments": {
+        "Bazgar": "Takes point in addressing Gareth directly and steers the conversation toward actionable details—spider size, numbers, and what proof/retrieval Gareth requires—before committing the group to depart.",
+        "Sabriel": "Questions why local authorities aren’t handling the infestation, highlighting the gap between civic protection and the reliance on hired adventurers; uses her pony as a size reference to gauge the threat.",
+        "Marwyn": "Asks after unusual wood sources while the contract is being discussed, signaling continued interest in materials and supplies even during job intake."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Gareth Thorne",
+          "role": "Forester and lumber contractor; quest giver for the spider-infested lumber camp",
+          "interaction": "The party interviews him for specifics, agrees to clear the camp, and accepts the requirement to return the tools (and ideally the workers) to him in Ardenford."
+        }
+      ],
+      "loot_and_items": [],
+      "information_gained": [
+        "The spider problem is at an abandoned lumber camp south of Ardenford; Gareth believes two workers are missing after he found webbing and drag marks.",
+        "Gareth estimates there are likely 2–3 spiders, about pony-sized, and he prioritizes the recovery and return of the camp’s tools to his market stall."
+      ],
+      "time_passed": "~15–25 minutes",
+      "scene_outcome": "With the job terms clarified and accepted, the party leaves the Western Market to head south toward the lumber camp.",
+      "plot_threads": [
+        {
+          "thread": "Spider-infested lumber camp south of Ardenford (clear camp, retrieve tools, possibly rescue workers)",
+          "status": "advanced"
+        },
+        {
+          "thread": "Ardenford’s reliance on adventurers due to stretched authorities and bureaucracy",
+          "status": "introduced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 26620.437,
+      "location": "Road south from Ardenford toward the lumber camp (forest route past Miller's Creek)",
+      "goal": "Travel to the spider-infested lumber camp and plan approach",
+      "npcs_present": [],
+      "time_of_day": "morning",
+      "emotional_tone": "casual",
+      "conflict_type": "exploration",
+      "notes": "Leaving the market, the party heads into the woods, discusses whether to talk to spiders, and talks about Marwen's crow and Sabriel's pony (Lear).",
+      "requested_resources": [
+        {
+          "keyword": "Miller's Creek",
+          "requested_path": "world/factions/ardenhaven/quests/spider-lair-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "Lear (pony)",
+          "requested_path": "characters/player-characters/nicole-sabriel.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-017",
+      "end_seconds": 27142.347,
+      "factual_summary": "The party leaves Ardenford and travels south along the forest route toward the abandoned lumber camp near Miller's Creek. On the way, they discuss their approach, agreeing this is likely a straight fight and deciding to try sneaking in to set an ambush. Marwen’s eerie crow continues to shadow the group from ahead, prompting uneasy conversation about who it truly serves. Sabriel uses magic to speak with her pony, Lear, warning it to stay back from danger, and as they near the site they spot the camp blanketed in thick webbing like out-of-season snow.",
+      "narrative_seed": "Morning light filters through the trees as the road narrows into quiet forest, and the party’s banter fades into wary planning. A crow keeps appearing ahead like an omen that refuses to be ignored, while Sabriel pauses to reassure Lear in the pony’s own simple certainty. Then the camp comes into view—logs, a cabin silhouette, and a pale drape of webbing over everything, as if winter arrived in the wrong season.",
+      "key_events": [
+        "The party sets out from Ardenford toward the spider-infested lumber camp via the forest route near Miller's Creek.",
+        "They decide their best chance is to approach quietly and attempt to ambush the spiders rather than negotiate.",
+        "Marwen’s crow repeatedly flies ahead and lingers, and Marwen implies it serves a purpose and may be tied to someone else watching.",
+        "Sabriel casts Speak with Animals to talk with Lear the pony, feeds it an apple, and warns it to hang back because of dangerous spiders.",
+        "As they draw close, they see the lumber camp’s logs and structures covered in heavy webbing, resembling snow from a distance."
+      ],
+      "character_moments": {
+        "Bazgar": "Pushes for a stealthy approach and an ambush plan, making clear he’s ready for a fight and open to magical help if it gets him into axe range.",
+        "Marwen": "Reveals discomfort about the ever-present crow, describing it as serving a specific purpose and belonging to someone else, though insisting it is still a friend.",
+        "Sabriel": "Shows protective leadership toward Lear by speaking to it directly, affirming their bond and warning it to stay back from the spider threat."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Lear",
+          "role": "Sabriel’s pony companion",
+          "interaction": "The party feeds Lear an apple; Sabriel speaks with it via magic, receives reassurance about Sabriel, and cautions it to stay back from danger."
+        },
+        {
+          "name": "Marwen’s crow",
+          "role": "An ominous, watchful bird associated with Marwen’s magic and/or an outside observer",
+          "interaction": "It shadows the party by flying ahead and reappearing; the group discusses it uneasily while Marwen downplays concerns and calls it a friend."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Apple",
+          "description": "A piece of fruit used to feed Lear",
+          "acquisition": "Already carried by the party; given to Lear during travel."
+        }
+      ],
+      "information_gained": [
+        "The crow that follows Marwen is not merely a pet; it serves a specific purpose and is implied to be connected to someone else who may be watching.",
+        "From a distance, the lumber camp appears unnaturally blanketed in webbing—so thick it can be mistaken for snow—confirming the infestation is extensive."
+      ],
+      "time_passed": "About 30–60 minutes of travel and conversation (up to the first clear sight of the web-covered camp).",
+      "scene_outcome": "The party reaches visual range of the abandoned lumber camp and confirms it is heavily webbed, transitioning into their imminent approach and confrontation.",
+      "plot_threads": [
+        {
+          "thread": "Clear the spider-infested lumber camp and recover the missing workers/tools",
+          "status": "advanced"
+        },
+        {
+          "thread": "Marwen’s crow and the implication of an external watcher/owner",
+          "status": "introduced"
+        },
+        {
+          "thread": "Sabriel’s bond with Lear and keeping the pony safe during dangerous work",
+          "status": "advanced"
+        },
+        {
+          "thread": "Sabriel’s interest in crafting a flute from a good piece of lumber",
+          "status": "introduced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 27142.347,
+      "location": "Abandoned lumber camp (southern forest), covered in webs",
+      "goal": "Clear the camp of spiders, rescue any surviving workers, and secure the tools",
+      "npcs_present": [
+        "Gareth Thorne (mentioned)"
+      ],
+      "time_of_day": "morning",
+      "emotional_tone": "tense",
+      "conflict_type": "combat",
+      "notes": "At the web-covered camp, the party attempts a stealth approach, then negotiates with a giant spider to leave; a spiderling hatches and is killed, eggs are burned, and a worker is stabilized.",
+      "requested_resources": [
+        {
+          "keyword": "Spider Lair / abandoned lumber camp",
+          "requested_path": "world/factions/ardenhaven/quests/spider-lair-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "giant spider",
+          "requested_path": "world/factions/ardenhaven/quests/spider-lair-cr1.md",
+          "override": null
+        },
+        {
+          "keyword": "spider eggs / spiderling",
+          "requested_path": "world/factions/ardenhaven/quests/spider-lair-cr1.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-018",
+      "end_seconds": 29330.82,
+      "factual_summary": "The party infiltrated the web-choked abandoned lumber camp and found two human-shaped cocoons hanging in the trees, one still moving. Bazgar tried to sneak in first but got snagged in the webbing and drew the attention of a giant spider. Marwen used magic to speak with the spider and, with threats of fire, negotiated it into retreating and leaving the captives behind; a newly hatching spiderling attacked Marwen and was killed, and the remaining eggs were burned. The party cut down the cocoons, confirmed one worker dead and one alive but comatose, stabilized the survivor, secured the camp’s tools, and prepared to return to Ardenford to report to Gareth Thorne.",
+      "narrative_seed": "Morning light hit the camp’s webbing like false snowfall, but the forest around it felt dead-quiet—until the party spotted two cocooned bodies swaying above the ground. Bazgar’s careful approach turned into a tense standoff when the spider noticed him, and Marwen’s calm, unsettling negotiation—backed by conjured flame—drove the predator away without a full battle. Even so, the lair’s hunger lingered in the eggs, and the party left with smoke on the air, one life saved, and uneasy questions about mercy versus safety.",
+      "key_events": [
+        "The party approached the abandoned lumber camp and discovered two cocooned workers hanging in the trees, one apparently still alive.",
+        "Sabriel cast Bless on the group before the approach, preparing them for the spider’s poison and an imminent fight.",
+        "Bazgar attempted to sneak closer but became stuck in webbing, alerting the visible giant spider and forcing a tense face-to-face moment.",
+        "Marwen used Speak with Animals to communicate with the spider and threatened it with fire to force it to abandon the camp and leave the captives.",
+        "A spider egg hatched into an aggressive spiderling near Marwen; Marwen killed it and then burned the remaining eggs to prevent more hatchlings.",
+        "The party cut down and unwrapped the cocoons, finding one worker dead and the other alive but comatose and poisoned; Sabriel stabilized the survivor with divine magic.",
+        "They searched the camp and recovered the lumber crew’s tools from beneath webbing, then loaded the bodies onto a cart pulled by Lear for transport back to town.",
+        "After a perimeter check, the party concluded the immediate threat was gone, though they debated whether the driven-off spider might return or prey elsewhere."
+      ],
+      "character_moments": {
+        "Bazgar": "Took point and tried to execute the planned stealth ambush, but when it failed he adapted quickly—holding position, prioritizing the captive’s rescue, and later admitting the approach wasn’t his best plan.",
+        "Marwen": "Chose negotiation over slaughter, speaking directly to the giant spider and using controlled intimidation (fire) to drive it off; later took a pragmatic stance that the spider was an animal acting on instinct, not a villain.",
+        "Sabriel": "Provided calm, protective leadership—casting Bless before the approach, insisting the living captive be prioritized, and using divine magic to stabilize the poisoned worker; also voiced ethical concerns about whether eliminating the spider would have been the safer long-term choice."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Gareth Thorne",
+          "role": "Forester and lumber contractor who posted the job to clear the camp",
+          "interaction": "Not present in the scene; the party acted with his contract in mind, securing the tools and preparing to return with proof of the outcome."
+        },
+        {
+          "name": "Unnamed surviving lumber worker",
+          "role": "Missing worker found cocooned, comatose and poisoned",
+          "interaction": "Rescued from the webbing, stabilized by Sabriel, and loaded onto a cart for transport back to Ardenford."
+        },
+        {
+          "name": "Unnamed deceased lumber worker",
+          "role": "Missing worker found cocooned and dead",
+          "interaction": "Recovered from the webbing and prepared for transport; the party treated the body as evidence of what happened at the camp."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Quality woodworking tools",
+          "description": "The lumber crew’s valuable tools needed to resume operations (worth about 20 gp to Gareth)",
+          "acquisition": "Recovered by searching the webbed camp and gathering them from under the webbing."
+        },
+        {
+          "item": "Cart (camp equipment)",
+          "description": "A small hauling cart suitable for moving people and gear",
+          "acquisition": "Found on-site and used to transport the workers and recovered items; Lear was hitched to pull it."
+        },
+        {
+          "item": "Spiderling remains (bits/legs)",
+          "description": "Trophies or alchemical components from the killed hatchling",
+          "acquisition": "Marwen killed the spiderling and planned to take pieces from it."
+        }
+      ],
+      "information_gained": [
+        "The camp’s webbing functioned as a sensory network for the spiders, making stealth approaches across the ground difficult and risky.",
+        "At least one giant spider claimed the camp as territory and was willing to bargain; the party drove it off rather than killing it, leaving uncertainty about whether it will return or relocate.",
+        "One missing worker was already dead, but the other was still alive—poisoned and comatose—requiring immediate aid to survive.",
+        "The spider’s egg sacs were present and close enough to hatching that at least one spiderling emerged during the cleanup."
+      ],
+      "time_passed": "About 1–2 hours (approach, confrontation/negotiation, rescue, quick perimeter sweep, and tool recovery).",
+      "scene_outcome": "With the survivor stabilized, the dead recovered, the eggs destroyed, and the tools secured, the party loaded up and prepared to head back to Ardenford to report the job’s outcome and claim payment/favor from Gareth Thorne.",
+      "plot_threads": [
+        {
+          "thread": "Clear the abandoned lumber camp of spiders and secure the lumber tools",
+          "status": "advanced"
+        },
+        {
+          "thread": "Rescue surviving workers from the spider nest",
+          "status": "resolved"
+        },
+        {
+          "thread": "Moral question: drive off threats vs. kill them to prevent future harm",
+          "status": "introduced"
+        },
+        {
+          "thread": "Marwen’s crow’s unclear allegiance and behavior",
+          "status": "complicated"
+        },
+        {
+          "thread": "Risk of the displaced giant spider returning or establishing territory elsewhere",
+          "status": "introduced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 29330.82,
+      "location": "Ardenford (post-job wrap-up, before shopping)",
+      "goal": "Finalize the job outcome (tools/workers), discuss ethics, and confirm payout/favor before heading into town to shop",
+      "npcs_present": [
+        "Gareth Thorne (implied)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "casual",
+      "conflict_type": "social",
+      "notes": "The party debates whether to hunt the spider, talks through ethics, confirms the payout split and the favor owed by Gareth, then transitions into planning their shopping stops.",
+      "requested_resources": [
+        {
+          "keyword": "favor from Gareth Thorne",
+          "requested_path": "world/factions/ardenhaven/quests/spider-lair-cr1.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-019",
+      "end_seconds": 30067.468,
+      "factual_summary": "Back in Ardenford, the party debriefed Gareth Thorne after clearing the abandoned lumber camp and recovering the tools, discussing whether they should have hunted down the retreating spider. Gareth paid out the job reward and added a bonus for the workers they brought back alive, also owing the party a favor for future lumber, furniture, or supplies. The party agreed to track the favor as an owed boon and prepared to head into town to shop, with Marwen expressing interest in visiting the library later.",
+      "narrative_seed": "With the forest job behind them, the group’s victory turned into a low-stakes argument about where “clearing a camp” ends—do you let a predator flee, or finish the hunt? Gareth Thorne kept it blunt and transactional: coin for results, and a practical favor in wood and labor for lives saved. With pockets heavier and a favor banked, the party turned their attention toward Ardenford’s shops and errands.",
+      "key_events": [
+        "The party debated the ethics and practicality of pursuing the retreating spider versus leaving it alone after securing the camp and captives.",
+        "Gareth Thorne paid the agreed reward and provided an additional bonus for the workers returned alive, plus an owed favor for lumber/furniture/supplies.",
+        "The party agreed to record the favor as a future resource and transitioned toward shopping in town."
+      ],
+      "character_moments": {
+        "Bazgar": "Voiced interest in hunting down the spider anyway, even as the group leaned toward not pursuing it.",
+        "Marwen": "Questioned whether the party are 'hunters' and later stated a desire to visit the library after shopping.",
+        "Sabriel": "Clarified that any wood taken was only small pieces, downplaying any ethical concern about scavenging from the camp."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Gareth Thorne",
+          "role": "Forester and lumber contractor; quest giver for the spider-infested lumber camp",
+          "interaction": "Received the party’s report, paid them for clearing the camp and saving workers, and acknowledged owing them a favor redeemable for lumber, furniture, or supplies."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Gold payment (job reward + bonus)",
+          "description": "Coin payout from Gareth for completing the lumber camp job, including an added bonus for workers returned alive and a small extra amount to simplify the split",
+          "acquisition": "Paid by Gareth Thorne upon job completion in Ardenford"
+        },
+        {
+          "item": "Favor owed by Gareth Thorne",
+          "description": "A standing boon for lumber, furniture, or supplies at Gareth’s discretion/at-cost arrangement",
+          "acquisition": "Granted by Gareth Thorne as part of the job’s successful outcome and lives saved"
+        }
+      ],
+      "information_gained": [
+        "Gareth Thorne owes the party a redeemable favor for lumber/furniture/supplies due to the successful rescue outcome.",
+        "The party’s next immediate plan is to go shopping in Ardenford, with a potential library visit afterward."
+      ],
+      "time_passed": "Approximately 10–20 minutes (brief debrief and payout conversation).",
+      "scene_outcome": "The job was formally wrapped up with payment and a recorded favor, and the party moved on toward shopping in town.",
+      "plot_threads": [
+        {
+          "thread": "Spider Lair job resolution (tools recovered, workers returned, Gareth paid)",
+          "status": "resolved"
+        },
+        {
+          "thread": "Gareth Thorne’s owed favor (lumber/furniture/supplies)",
+          "status": "introduced"
+        },
+        {
+          "thread": "Party ethics: whether to pursue and kill the retreating spider",
+          "status": "complicated"
+        }
+      ]
+    },
+    {
+      "start_seconds": 30067.468,
+      "location": "Ardenford (Upper Tier) — Silverbridge Arcana (spell shop)",
+      "goal": "Shop for spell scrolls and related arcane supplies; decide purchases and manage party funds",
+      "npcs_present": [
+        "Selise Dawnquill"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "comedic",
+      "conflict_type": "social",
+      "notes": "At the arcane shop, the party rolls up available scrolls, negotiates/learns prices, buys items (including a discounted Sleep scroll), and encounters a dangerous 'customer return' scroll that comes with a waiver.",
+      "requested_resources": [
+        {
+          "keyword": "Silverbridge Arcana",
+          "requested_path": "world/factions/ardenhaven/npc/_arcana_selise-dawnquill-silverbridge.md",
+          "override": null
+        },
+        {
+          "keyword": "Selise Dawnquill",
+          "requested_path": "world/factions/ardenhaven/npc/_arcana_selise-dawnquill-silverbridge.md",
+          "override": null
+        },
+        {
+          "keyword": "Signal Blue ink (luminescent)",
+          "requested_path": "world/factions/ardenhaven/npc/_arcana_selise-dawnquill-silverbridge.md",
+          "override": null
+        },
+        {
+          "keyword": "scroll case of dryglass",
+          "requested_path": "world/factions/ardenhaven/npc/_arcana_selise-dawnquill-silverbridge.md",
+          "override": null
+        },
+        {
+          "keyword": "discounted Sleep scroll (15 gold)",
+          "requested_path": "world/factions/ardenhaven/npc/_arcana_selise-dawnquill-silverbridge.md",
+          "override": null
+        },
+        {
+          "keyword": "dangerous customer return scroll / waiver / 'turned man into goo'",
+          "requested_path": "world/factions/ardenhaven/npc/_arcana_selise-dawnquill-silverbridge.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-020",
+      "end_seconds": 31340.37,
+      "factual_summary": "The party visited Silverbridge Arcana in Ardenford’s Upper Tier and browsed Selise Dawnquill’s limited selection of spell scrolls and arcane supplies. They discussed budgeting for upcoming needs, with Bazgar offering party funds to help expand their magical options. Sabriel purchased practical adventuring supplies (luminescent ink and a waterproof scroll case), while Marwen bought a discounted Sleep scroll and a Mage Armor scroll, plus materials intended for future spell scribing. The scene’s standout moment was Selise urgently trying to remove a dangerous, dubious “customer return” scroll from the shelf, only for the party to insist on taking it—after signing a sweeping liability waiver and agreeing not to cast it in the shop.",
+      "narrative_seed": "Silverbridge Arcana was spotless, labeled, and aggressively responsible—right up until the party noticed the one item that clearly shouldn’t have been on display. Selise’s calm professionalism cracked into frantic damage control as she tried to confiscate a notorious return scroll tied to a man’s partial transformation into “goo.” The party left with sensible supplies, a couple of bargain scrolls, and one ominous parchment wrapped in paperwork and bad ideas.",
+      "key_events": [
+        "The party reviewed available first-level scrolls for sale (including Identify, Mage Armor, Feather Fall, Silent Image, and Thunderwave) and debated what to buy versus save for other shops and commissions.",
+        "Selise explained the existence of a dangerous “customer return” scroll associated with a failed attempt at ancient magic that left someone partially transformed into goo, and she tried to pull it from the shelves.",
+        "Despite Selise’s refusal to sell it, the party insisted on taking the hazardous scroll; Selise required a broad liability waiver and demanded they not attempt to cast it inside the shop.",
+        "Sabriel bought Signal Blue (luminescent) ink and a dryglass scroll case for protecting documents from water damage.",
+        "Marwen purchased a discounted Sleep scroll, a Mage Armor scroll, and additional wizard components/ink/paper intended to support future spell scribing."
+      ],
+      "character_moments": {
+        "Marwen": "Chose to invest heavily in magical preparedness—buying combat-utility scrolls and scribing supplies—while still trying not to drain the party’s funds completely.",
+        "Sabriel": "Advocated for practical exploration tools (marking ink and waterproof storage) to support rune/ruin delving rather than purely combat purchases.",
+        "Bazgar": "Offered a large personal contribution of gold to fund the party’s magical shopping, prioritizing group success over his own immediate needs."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Selise Dawnquill",
+          "role": "Half-elf arcane vendor and registered scribe; meticulous, waiver-loving shopkeep of Silverbridge Arcana",
+          "interaction": "Sold the party scrolls and supplies, strongly attempted to prevent them from taking a hazardous return scroll, and ultimately allowed them to remove it only after signing an extensive liability waiver and agreeing not to cast it in the shop."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Spell scroll: Sleep (discounted)",
+          "description": "A first-level spell scroll for magically inducing sleep",
+          "acquisition": "Purchased at Silverbridge Arcana at a steep discount"
+        },
+        {
+          "item": "Spell scroll: Mage Armor",
+          "description": "A first-level spell scroll that grants protective magical armor",
+          "acquisition": "Purchased at Silverbridge Arcana"
+        },
+        {
+          "item": "Signal Blue ink",
+          "description": "Faintly luminescent (nonmagical) ink useful for marking paths, notes, or rune observations in low light",
+          "acquisition": "Purchased by Sabriel at Silverbridge Arcana"
+        },
+        {
+          "item": "Dryglass scroll case",
+          "description": "A waterproof protective case intended to keep paper safe even if dropped in water",
+          "acquisition": "Purchased by Sabriel at Silverbridge Arcana"
+        },
+        {
+          "item": "Hazardous customer-return scroll (unidentified/ancient, “goo” incident)",
+          "description": "A battered, much-handled scroll tied to an attempted use of ancient magic that allegedly left a prior user partially transformed into goo; exact spell unknown",
+          "acquisition": "Taken from the shop at Selise’s insistence that it be removed, after the party signed a liability waiver and agreed not to cast it on premises"
+        },
+        {
+          "item": "Wizard scribing supplies (components/ink/paper, bulk purchase)",
+          "description": "Materials intended to support copying spells into a spellbook later",
+          "acquisition": "Purchased by Marwen at Silverbridge Arcana"
+        }
+      ],
+      "information_gained": [
+        "Selise keeps only a curated selection of scrolls accessible for casual purchase; more serious items are controlled and come with strict handling expectations.",
+        "A dangerous, possibly misread or counterfeit “ancient” scroll has circulated as a customer return; its last known use resulted in a victim becoming partially goo-like, and Selise considers it unsafe to sell or even keep on display."
+      ],
+      "time_passed": "Approximately 30–60 minutes",
+      "scene_outcome": "Shopping concluded with purchases made and the hazardous return scroll removed from the shop under waiver; the party decided to continue errands elsewhere, transitioning toward the weaponsmith to replace Bazgar’s lost throwing axes.",
+      "plot_threads": [
+        {
+          "thread": "Hazardous/possibly counterfeit ancient scroll tied to a ‘goo’ transformation",
+          "status": "introduced"
+        },
+        {
+          "thread": "Party budgeting and funding for gear upgrades and future commissions",
+          "status": "advanced"
+        },
+        {
+          "thread": "Preparation for ruin-delving (marking ink, document protection, utility scrolls)",
+          "status": "advanced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 31340.37,
+      "location": "Ardenford (Lower Tier) — The Anvil & Oar (weaponsmith)",
+      "goal": "Replace Bazgar’s lost throwing axes and interact with the smith",
+      "npcs_present": [
+        "Branik Ironweld"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "casual",
+      "conflict_type": "social",
+      "notes": "The party visits the harbor-side weaponsmith; Bazgar asks for replacement throwing axes and ends up receiving axes for free as a first-time customer after some confusion about stock.",
+      "requested_resources": [
+        {
+          "keyword": "The Anvil & Oar",
+          "requested_path": "world/factions/ardenhaven/npc/_anvil-and-oar_branik-ironweld.md",
+          "override": null
+        },
+        {
+          "keyword": "Branik Ironweld",
+          "requested_path": "world/factions/ardenhaven/npc/_anvil-and-oar_branik-ironweld.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-021",
+      "end_seconds": 31959.256,
+      "factual_summary": "The party headed to The Anvil & Oar in Ardenford’s Lower Tier so Bazgar could replace the throwing axes he’d lost. They met Branik Ironweld, a blunt but fair human weaponsmith who initially sized Bazgar up warily, then relaxed once it was clear he was a paying customer. Branik provided Bazgar with replacement throwing axes at no cost, seemingly to save face after a brief mix-up about whether he stocked axes and to encourage repeat business.",
+      "narrative_seed": "Salt air and forge-heat mixed in the cramped harbor-lane smithy as Branik Ironweld paused mid-hammer to eye the party like trouble walking in on purpose. Bazgar’s straightforward request cut through the suspicion, and Branik’s pride did the rest—four clean, practical throwing axes slid across the counter with the unspoken promise that adventurers always come back for more steel.",
+      "key_events": [
+        "The party chose to visit The Anvil & Oar in the Lower Tier to replace Bazgar’s lost throwing axes.",
+        "Branik Ironweld greeted Bazgar with suspicion at first, then agreed to outfit him with replacement throwing axes.",
+        "Branik ultimately gave Bazgar four throwing axes for free, positioning it as a first-time/customer-return incentive and a way to maintain his reputation."
+      ],
+      "character_moments": {
+        "Bazgar": "Prioritized restocking his thrown weapons before shopping elsewhere, showing practical planning despite earlier willingness to spend heavily on party needs.",
+        "Branik Ironweld": "Shifted from guarded to accommodating once he judged the party as legitimate customers, then overcompensated with a free set of axes to preserve professionalism and secure future business."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Branik Ironweld",
+          "role": "Reliable Lower Tier weaponsmith at The Anvil & Oar; practical, anti-flashy “hero blade” craftsman",
+          "interaction": "He questioned Bazgar’s intent and background briefly, then supplied replacement throwing axes and chatted enough to leave the party with local impressions about orcs."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Throwing axes (x4)",
+          "description": "Practical, workmanlike throwing axes suitable for adventuring use",
+          "acquisition": "Provided by Branik Ironweld at The Anvil & Oar as a free first-time/customer-retention gesture after an initial stock misunderstanding"
+        }
+      ],
+      "information_gained": [
+        "Branik’s shop philosophy: he refuses to make flashy, over-designed “hero blades,” favoring reliable, maintainable weapons instead.",
+        "Local lore note: orcs from different regions are described as having different skin tones (the party heard that western and eastern orcs are not the same color), though the exact details remained a bit unclear."
+      ],
+      "time_passed": "Approximately 15–30 minutes",
+      "scene_outcome": "With Bazgar’s throwing axes replaced, the party wrapped up at The Anvil & Oar and moved on toward the apothecary for consumables.",
+      "plot_threads": [
+        {
+          "thread": "Bazgar’s lost throwing axes replaced",
+          "status": "resolved"
+        },
+        {
+          "thread": "Branik Ironweld as a potential recurring contact for weapons, repairs, and harbor gossip",
+          "status": "introduced"
+        },
+        {
+          "thread": "Regional differences among orcs (appearance varies by region)",
+          "status": "introduced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 31959.256,
+      "location": "Ardenford (Middle Tier) — Willowglass Apothecary",
+      "goal": "Buy adventuring consumables (soap, antitoxin, healing potions) and see what stock is available",
+      "npcs_present": [
+        "Hesta Briarvein"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "light/comedic",
+      "conflict_type": "social",
+      "notes": "At the apothecary, Sabriel negotiates down an attempted overcharge, becomes friendly with Hesta, browses random stock (chalk of warding, antitoxin, alchemist’s fire, smoke pellets, lozenges), and learns healing potions are mostly pre-ordered.",
+      "requested_resources": [
+        {
+          "keyword": "Willowglass Apothecary",
+          "requested_path": "world/factions/ardenhaven/npc/_apothecary_hesta-briarvein-willowglass.md",
+          "override": null
+        },
+        {
+          "keyword": "Hesta Briarvein",
+          "requested_path": "world/factions/ardenhaven/npc/_apothecary_hesta-briarvein-willowglass.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-022",
+      "end_seconds": 32807.944,
+      "factual_summary": "The party visited Willowglass Apothecary in Ardenford’s Middle Tier to shop for basic consumables and check on potion availability. Sabriel was initially quoted an absurdly high price for a fancy soap kit, realized she was being stereotyped as wealthy, and negotiated it down while adding extra soaps and an herbal sachet. While browsing, the party learned Hesta had several healing potions set aside behind the counter as pre-ordered stock and that new orders carried a long wait.",
+      "narrative_seed": "Willowglass Apothecary smelled of dried herbs and clean oils, its green-glass bottles catching the light like river glass. Sabriel’s refined presentation nearly got her fleeced for “luxury” soap—until she calmly called the bluff and turned the moment into a shared joke about teaching others to wash properly. Behind Hesta’s polite smile sat a tempting row of healing draughts marked off-limits, hinting that the real problem wasn’t demand—it was supply.",
+      "key_events": [
+        "The party entered Willowglass Apothecary and asked to see what everyday adventuring supplies were available, including soaps and antidote-related items.",
+        "Sabriel was offered an overpriced specialty soap kit, recognized the attempted overcharge, and negotiated the price down while requesting extra basic soaps and an herbal sachet.",
+        "The party browsed the shop’s odd utility stock (including warding chalk, antitoxin, alchemist’s fire, smoke pellets, and cough-drop lozenges).",
+        "They spotted a sizable batch of healing potions behind the counter labeled as not for sale, learning they were already spoken for and that potion orders had a lengthy waiting period."
+      ],
+      "character_moments": {
+        "Sabriel": "She refused to haggle aggressively but firmly called out an attempted overcharge, then leveraged the interaction into genuine rapport with Hesta—enough that Hesta invited her for tea later and treated her as a friend.",
+        "Marwen": "She supported Sabriel’s read on the situation and helped steer the conversation toward practical needs like potion availability and ordering policy.",
+        "Bazgar": "He focused on practical stock and helped prompt the group to browse the apothecary’s useful oddities rather than only mundane goods."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Hesta Briarvein",
+          "role": "Licensed human apothecary/alchemist-healer who runs Willowglass Apothecary",
+          "interaction": "Sold the party soaps and discussed stock; initially tried to upsell/overcharge Sabriel, then relented and warmed to her, offering friendly tea later while keeping pre-ordered healing potions off-limits."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Specialty soap kit",
+          "description": "A curated set of soaps suitable for hair, laundry, and body washing",
+          "acquisition": "Purchased from Hesta after Sabriel negotiated the price down from an attempted overcharge"
+        },
+        {
+          "item": "Herbal sachet",
+          "description": "A small packet of calming or fragrant herbs (used as a bonus add-on to the soap purchase)",
+          "acquisition": "Added to the purchase as part of Sabriel’s negotiated deal"
+        },
+        {
+          "item": "Extra basic lathering soaps",
+          "description": "Simple, practical soap bars intended for everyday cleaning (including laundry)",
+          "acquisition": "Added to the order at Sabriel’s request"
+        }
+      ],
+      "information_gained": [
+        "Willowglass Apothecary carries a rotating selection of practical oddities (e.g., warding chalk, antitoxin, alchemist’s fire, smoke pellets, cough-drop lozenges), suggesting useful consumables beyond mundane remedies.",
+        "Healing potions were visible behind the counter but marked as not for sale because they were pre-ordered; new potion orders required a significant waiting period."
+      ],
+      "time_passed": "About 20–40 minutes",
+      "scene_outcome": "The party completed a small purchase (soap and add-ons), established friendly rapport with Hesta, and ended the scene focused on the restricted healing potions and the shop’s backlog—setting up a deeper conversation about how to get potions sooner.",
+      "plot_threads": [
+        {
+          "thread": "Willowglass healing potion shortage/backlog (pre-ordered stock kept off-limits)",
+          "status": "advanced"
+        },
+        {
+          "thread": "Sabriel’s new relationship with Hesta Briarvein (tea invitation; mutual respect)",
+          "status": "introduced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 32807.944,
+      "location": "Ardenford (Middle Tier) — Willowglass Apothecary (back-counter conversation)",
+      "goal": "Figure out how to get healing potions sooner by solving Hesta’s supply bottleneck",
+      "npcs_present": [
+        "Hesta Briarvein"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "pragmatic",
+      "conflict_type": "social",
+      "notes": "The party finishes negotiating with Hesta and learns the distilled alcohol strike at the docks is the key bottleneck for potion supply.",
+      "requested_resources": [
+        {
+          "keyword": "Hesta Briarvein",
+          "requested_path": "world/factions/ardenhaven/npc/_apothecary_hesta-briarvein-willowglass.md",
+          "override": null
+        },
+        {
+          "keyword": "Merrowgate (union on distilled alcohol) / strike",
+          "requested_path": "world/factions/merrowgate/_overview.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-023",
+      "end_seconds": 33400.695,
+      "factual_summary": "Behind the counter at Willowglass Apothecary, the party offered to help Hesta Briarvein speed up healing potion production by supplying ingredients and assisting with brewing. Hesta explained the true bottleneck is distilled alcohol of sufficient purity, normally shipped in from Merrowgate, but currently unavailable due to a dock strike. She promised to move the party to immediate priority for potions if they either help end the strike or otherwise secure the alcohol, insisting they leave 5 gp per bottle if they acquire it outside normal purchase channels.",
+      "narrative_seed": "Hesta’s patience finally frays in the cramped green-glass glow of Willowglass: it isn’t skill or herbs that are missing, it’s clean spirits—and the docks have decided to stop the city’s medicine on principle. Practical to the bone, she offers the party a simple bargain: fix the strike, or bring her the alcohol and let her pretend she never asked how. With potions on the line and ethics already bending, the group commits to go see what’s happening at the harbor.",
+      "key_events": [
+        "The party proposed helping Hesta catch up on healing potion stock by sourcing ingredients and assisting with basic potion-making.",
+        "Hesta revealed the supply bottleneck is high-purity distilled alcohol from Merrowgate, currently blocked by a dock strike.",
+        "Hesta offered immediate priority on healing potions if the party resolves the strike or obtains the alcohol; if they can’t buy it legally, she instructed them to leave 5 gp per bottle on the crate and not tell her details.",
+        "The party purchased additional supplies (including incense/components for familiar-related needs) and agreed to head to the docks to investigate the strike."
+      ],
+      "character_moments": {
+        "Sabriel": "Took the lead in proposing a practical arrangement with Hesta to accelerate potion access, then committed to handling the docks first (with the library as a secondary plan).",
+        "Marwyn": "Backed the plan to help with brewing and expressed interest in understanding the strike’s cause before resorting to theft.",
+        "Bazgar": "Pushed to go to the ships/docks to address the problem directly, preferring negotiation or action over waiting."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Hesta Briarvein",
+          "role": "Licensed apothecary and alchemist-healer; proprietor of Willowglass Apothecary",
+          "interaction": "Explained her alcohol supply crisis, negotiated terms for prioritizing the party’s healing potion order, and sold them additional supplies while urging them to deal with the dock strike."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Incense and ritual components (familiar materials)",
+          "description": "Incense and related components suitable for familiar-related rituals/material needs",
+          "acquisition": "Purchased from Hesta at Willowglass Apothecary (party paid gold for supplies)."
+        }
+      ],
+      "information_gained": [
+        "Healing potion production is delayed not by labor or herbs, but by a shortage of high-purity distilled alcohol normally imported from Merrowgate.",
+        "A dock strike is preventing access to the alcohol shipments currently at Ardenford’s docks; ending the strike would restore legal purchasing.",
+        "If the party can’t end the strike, Hesta will accept alcohol acquired by other means as long as 5 gp per bottle is left as payment and she isn’t told the details.",
+        "Hesta will bump the party’s healing potion order to immediate priority if they solve the alcohol problem."
+      ],
+      "time_passed": "Approximately 20–40 minutes",
+      "scene_outcome": "The party finalized their arrangement with Hesta and left Willowglass Apothecary intending to go to the docks to investigate the strike blocking Merrowgate alcohol shipments.",
+      "plot_threads": [
+        {
+          "thread": "Willowglass supply bottleneck: obtain high-purity distilled alcohol for healing potion production",
+          "status": "advanced"
+        },
+        {
+          "thread": "Merrowgate dock strike in Ardenford: determine cause and resolve or bypass to access alcohol shipments",
+          "status": "introduced"
+        },
+        {
+          "thread": "Ethical fork: negotiate/resolve labor dispute vs. covert acquisition while leaving payment",
+          "status": "introduced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 33400.695,
+      "location": "Ardenford (Lower Tier) — Docks / harbor district (picket line near ships)",
+      "goal": "Investigate the Merrowgate alcohol strike and see if it can be resolved (or bypassed) to obtain distilled alcohol for Hesta",
+      "npcs_present": [
+        "striking sailors (unnamed)",
+        "harbor guards (unnamed)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "uncertain",
+      "conflict_type": "social",
+      "notes": "The party arrives at the docks, observes the picket line and guards, briefly considers engaging, then decides they lack the clout/resources and backs off.",
+      "requested_resources": [
+        {
+          "keyword": "docks / harbor district",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford.md",
+          "override": null
+        },
+        {
+          "keyword": "Merrowgate union (distilled alcohol) strike",
+          "requested_path": "world/factions/merrowgate/_overview.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-024",
+      "end_seconds": 34039.464,
+      "factual_summary": "The party went to Ardenford’s Lower Tier docks to investigate the Merrowgate-related alcohol shortage and found an active sailors’ picket line demanding better pay, watched over by a few indifferent harbor guards. After briefly considering whether they could meaningfully intervene, they decided they lacked the influence and information to resolve a labor dispute on the spot. A disturbing moment—Marwyn’s crow violently taking down a seagull—spooked the group, and they chose to disengage and head toward the Concordance Library instead.",
+      "narrative_seed": "Salt air and gull-cries hung over the harbor as the party arrived to a looping line of sailors chanting for better wages, their crude signs bobbing while bored guards looked on. The situation felt bigger than a quick fix—until Marwyn’s ever-present crow struck with sudden, brutal precision, dropping a seagull from the sky like an omen. Uneasy and uncertain, the party abandoned the docks and turned their steps uphill toward quieter answers.",
+      "key_events": [
+        "The party reached the docks and observed a sailors’ strike: a picket line with chants for better pay and a small harbor-guard presence monitoring without intervening.",
+        "After assessing the situation and their limited leverage, the party chose not to engage the strikers or guards and instead left the docks for the Concordance Library.",
+        "Marwyn’s crow was seen attacking and downing a seagull, heightening the party’s unease and contributing to their decision to withdraw."
+      ],
+      "character_moments": {
+        "Sabriel": "Tried to startle Marwyn by mimicking the crow’s call with magic, then later voiced skepticism that the party had the clout or tools to solve a wage strike.",
+        "Marwyn": "Initially moved to approach the picket line, but after witnessing her crow’s violent behavior, abruptly chose to leave the docks and push the group toward the library.",
+        "Bazgar": "Framed the dock situation as potentially requiring legal/political leverage rather than adventuring skills and agreed to abandon the attempt for now."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Striking sailors (unnamed)",
+          "role": "Dockworkers/sailors maintaining a picket line demanding better pay",
+          "interaction": "Observed at a distance; the party did not open negotiations or question them."
+        },
+        {
+          "name": "Harbor guards (unnamed)",
+          "role": "Guards assigned to monitor the strike at the docks",
+          "interaction": "Seen watching the picket line; no direct interaction."
+        }
+      ],
+      "loot_and_items": [],
+      "information_gained": [
+        "The dock strike is visibly active at the harbor, centered on demands for better pay, with guards present but not forcefully intervening.",
+        "The party still lacks actionable details (who to talk to, which shipment/ship holds the alcohol, or what terms would end the strike) and would need more leverage or information to proceed."
+      ],
+      "time_passed": "Approximately 15–30 minutes",
+      "scene_outcome": "The party disengaged from the dock strike without taking action and transitioned toward the Concordance Library.",
+      "plot_threads": [
+        {
+          "thread": "Merrowgate distilled alcohol shortage / dock strike blocking potion production",
+          "status": "complicated"
+        },
+        {
+          "thread": "Marwyn’s crow and its ominous behavior",
+          "status": "advanced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 34039.464,
+      "location": "Ardenford (Upper Tier) — Concordance Library entrance",
+      "goal": "Gain access to the library and decide who will research what",
+      "npcs_present": [
+        "library doorkeeper/attendant (unnamed)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "curious",
+      "conflict_type": "social",
+      "notes": "At the library door, the party learns access is membership-based with a wizard exception; Marwen demonstrates spellcasting/book to get admitted while the others plan to wait nearby.",
+      "requested_resources": [
+        {
+          "keyword": "Concordance Library",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford.md",
+          "override": null
+        },
+        {
+          "keyword": "Elarion Faenwynd (ruin-catalog ledger mentioned as compiler)",
+          "requested_path": "world/factions/ardenhaven/npc/elarian-faenwynd.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-025",
+      "end_seconds": 34444.089,
+      "factual_summary": "At the entrance to the Concordance Library on Ardenford’s Upper Tier, the party spoke with a robed doorkeeper who explained the library is public but restricted to “wizards/casters” due to past book thefts, with membership typically granted via a councilor. Marwen demonstrated her unusual magic to satisfy the attendant and was allowed inside to receive a library card from staff. Before splitting up, Sabriel asked Marwen to research the oldest religions and whether any gods have fallen, while Marwen also committed to researching the Ancients and sharing what she learns. Bazgar and Sabriel opted to step away toward a nearby café area while Marwen began her research.",
+      "narrative_seed": "Wind off the ridge gave way to the hush of old stone and guarded knowledge as the party reached the Concordance Library’s doors. A proud, wary attendant explained that access was a privilege—earned, vouched for, and protected from thieves—until Marwen’s strange, not-quite-arcane power unsettled him enough to let her pass. With curiosity buzzing, the group split: one into the stacks for answers about gods and the Ancients, the others drifting toward coffee and a conversation that felt suddenly urgent.",
+      "key_events": [
+        "The library doorkeeper stated the Concordance Library is public but restricted to wizards/casters and members, citing prior thefts and limited guards; councilor sponsorship is the usual path to membership.",
+        "Marwen demonstrated her magic (described as not matching any arcane school the attendant recognized), convincing the doorkeeper to admit her under library policy and direct her to obtain a library card inside.",
+        "The party coordinated research tasks: Sabriel requested information on the oldest religions and the possibility of fallen gods; Marwen affirmed she would also research the Ancients and report back.",
+        "As Marwen entered, the doorkeeper watched her with visible uncertainty; Sabriel briefly used thaumaturgy to rumble the ground and further unsettle him before she and Bazgar moved off toward a nearby café area."
+      ],
+      "character_moments": {
+        "Marwen": "Took the lead socially at the library entrance, used a controlled display of her unusual magic to gain access, and agreed to focus her time on researching the Ancients while also pursuing Sabriel’s questions about ancient faiths and fallen gods.",
+        "Sabriel": "Delegated specific research questions (oldest religions; fallen gods) to Marwen, then mischievously used thaumaturgy to spook the doorkeeper before stepping away with Bazgar.",
+        "Bazgar": "Chose not to pursue entry himself and instead peeled off with Sabriel, intending to have a serious conversation prompted by a ‘chilling realization’ he’d had."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Unnamed library doorkeeper/attendant",
+          "role": "Concordance Library entrance attendant enforcing membership restrictions",
+          "interaction": "Explained access rules and theft concerns; evaluated the party’s eligibility; admitted Marwen after her magical demonstration, then appeared unsettled and suspicious as she went inside."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Library card (pending)",
+          "description": "A membership/identification card issued under Concordance Library policy to admitted patrons",
+          "acquisition": "Not yet obtained on-screen; the doorkeeper stated Marwen would receive it from staff inside after being allowed entry."
+        }
+      ],
+      "information_gained": [
+        "The Concordance Library is considered public but is functionally restricted to wizards/casters and members due to past book thefts and insufficient guards.",
+        "Membership is typically granted through a councilor’s sponsorship/approval, and admitted patrons are issued a library card inside per library policy."
+      ],
+      "time_passed": "Approximately 10–20 minutes",
+      "scene_outcome": "Marwen entered the Concordance Library to begin research, while Bazgar and Sabriel left the entrance area toward a nearby café to talk privately.",
+      "plot_threads": [
+        {
+          "thread": "Research: the Ancients (ruins/ancient civilization) via Concordance Library archives",
+          "status": "advanced"
+        },
+        {
+          "thread": "Research: oldest religions and the existence of fallen gods",
+          "status": "introduced"
+        },
+        {
+          "thread": "Access politics and security at the Concordance Library (membership via councilor; theft concerns)",
+          "status": "introduced"
+        },
+        {
+          "thread": "Bazgar’s ‘chilling realization’ and need to speak with Sabriel",
+          "status": "introduced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 34444.089,
+      "location": "Ardenford (Upper Tier) — outside/near the Concordance Library (coffee/café area)",
+      "goal": "Bazgar and Sabriel discuss the Pentarch Accords and whether Ardenhaven’s governance ties back to the treaty",
+      "npcs_present": [],
+      "time_of_day": "unknown",
+      "emotional_tone": "concerned",
+      "conflict_type": "social",
+      "notes": "Bazgar questions if the Imperium influenced Ardenhaven’s dysfunctional government via the Accords; Sabriel recalls details and concludes it’s unrelated, while warning the Imperium may return.",
+      "requested_resources": [
+        {
+          "keyword": "Pentarch Accords",
+          "requested_path": "/Users/joe/GitHub/dnd/world/factions/world-faction-outsider-perspective.md",
+          "override": null
+        },
+        {
+          "keyword": "Calderon Imperium",
+          "requested_path": "world/factions/calderon-imperium/_overview.md",
+          "override": null
+        },
+        {
+          "keyword": "Ardenhaven government / Council of Consuls",
+          "requested_path": "world/factions/ardenhaven/_overview.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-026",
+      "end_seconds": 34798.111,
+      "factual_summary": "Near a café across from the Concordance Library, Bazgar asked Sabriel about the Pentarch Accords and whether the treaty with the Calderon Imperium could have forced Ardenhaven into its current, dysfunctional-seeming governance. Sabriel recalled that the Accords did not restructure Ardenhaven’s government, and that the realm’s many councils appear to be an internal, organic system rather than an Imperium-imposed condition. The conversation ended with Bazgar insisting the Imperium will return to threaten Ardenhaven again, even if the treaty didn’t dictate their politics.",
+      "narrative_seed": "Over coffee in the Upper Tier’s bustle, Bazgar’s paranoia sharpened into a pointed question: did peace come with hidden chains in the Pentarch Accords? Sabriel, uneasy but composed, dismissed the idea of an Imperium-authored “crappy government” clause—yet the scattered councils and lack of a single voice still felt like a vulnerability. The talk left them with the same sour aftertaste: whatever the treaty said, the Imperium’s patience might not last forever.",
+      "key_events": [
+        "Bazgar questioned Sabriel about the Pentarch Accords and whether the Calderon Imperium could have influenced or mandated Ardenhaven’s post-war governance.",
+        "Sabriel concluded the Accords did not restructure Ardenhaven’s government and identified Ardenford’s governance as many councils operating in parallel rather than a unified central authority.",
+        "Bazgar stated with certainty that the Imperium is preparing to come back, framing Ardenhaven’s political fragmentation as a dangerous weakness."
+      ],
+      "character_moments": {
+        "Bazgar": "Voiced escalating suspicion that treaties can hide coercive political terms and asserted, without hesitation, that the Calderon Imperium will eventually return.",
+        "Sabriel": "Leaned on her familiarity with official texts and bureaucratic patterns to separate treaty terms from Ardenhaven’s internal politics, while still acknowledging operational weaknesses in a fragmented council system."
+      },
+      "npcs_encountered": [],
+      "loot_and_items": [],
+      "information_gained": [
+        "The Pentarch Accords ended the Seven-Year War but did not include terms that directly restructured Ardenhaven’s system of government (at least as Sabriel understands from the text).",
+        "Ardenford/Ardenhaven governance presents as multiple councils and government bodies acting semi-independently rather than a single unified administrative voice, which may hinder operations.",
+        "Bazgar believes the Calderon Imperium has been preparing for a long time and will eventually attempt to press Ardenhaven again, though no concrete evidence is produced in this scene."
+      ],
+      "time_passed": "Approximately 10–20 minutes",
+      "scene_outcome": "The discussion winds down and attention shifts back to the Concordance Library, transitioning to Marwen’s research inside.",
+      "plot_threads": [
+        {
+          "thread": "Pentarch Accords: whether the treaty contains hidden political constraints on Ardenhaven",
+          "status": "resolved"
+        },
+        {
+          "thread": "Ardenhaven governance: fragmentation of councils and its strategic vulnerability",
+          "status": "advanced"
+        },
+        {
+          "thread": "Calderon Imperium threat: suspicion that the Imperium is rearming/preparing to return",
+          "status": "introduced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 34798.111,
+      "location": "Ardenford (Upper Tier) — Concordance Library (interior stacks)",
+      "goal": "Marwen researches oldest religions/fallen gods and drow history; identify useful ruin sites",
+      "npcs_present": [
+        "neighboring wizard (unnamed)",
+        "wizard dwarf (unnamed)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "mysterious",
+      "conflict_type": "exploration",
+      "notes": "Marwen finds an uncatalogued blank holy book with conjuration magic, debates and then steals it, then continues research on the drow (their disappearance at Age of Conflict year 0 and the status of Lolth) and broader age-history (Age of Rhodes/Reclamation/Ash and Silence).",
+      "requested_resources": [
+        {
+          "keyword": "drow / Lolth the Spider Queen / purge of the religion",
+          "requested_path": "world/factions/world-faction-outsider-perspective.md",
+          "override": null
+        },
+        {
+          "keyword": "Age of Rhodes / Age of Reclamation / Age of Ash and Silence",
+          "requested_path": "world/calendar-reckoning-of-the-fall.md",
+          "override": null
+        },
+        {
+          "keyword": "Elder Holt (mentioned re: drow disappearance)",
+          "requested_path": "world/factions/world-faction-outsider-perspective.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-027",
+      "end_seconds": 37788.468,
+      "factual_summary": "Inside the Concordance Library stacks, Marwen learns the library’s access is controlled by magically keyed library cards due to ongoing thefts, with wizards effectively vouched for by their community. She spends her limited time researching Ardenford’s surrounding ruins and the history of the drow, and while searching for information on the world’s oldest religions she discovers an uncatalogued, magically concealed holy book with blank pages. After confirming it radiates conjuration magic, Marwen decides to steal the mysterious book and hide it in her already-stuffed bag.",
+      "narrative_seed": "The Concordance Library feels less like a public archive and more like a guarded vault—quiet aisles, sparse patrons, and a system built to remember who touched what. Marwen’s research turns from orderly scholarship to a stumble into something that shouldn’t be on any shelf: a beautiful holy volume that refuses to show its words. With temptation winning over caution, she slips it away, carrying a secret that may be older—and more dangerous—than the questions that brought her here.",
+      "key_events": [
+        "Marwen is briefed on the Concordance Library’s membership system: magically marked library cards, tightened controls due to book thefts, and a wizard exception based on wizard-to-wizard accountability.",
+        "Marwen consults the ruin catalog and learns of multiple ruin regions: a well-trodden “starter” ruin with low risk/low reward, and a far more lethal site accessed via a deep pit/shaft into the mountain where few return the way they entered; she also learns many city-adjacent ruins are documented but inaccessible and not covered by the Reclamation Act.",
+        "While researching oldest religions for Sabriel, Marwen finds an uncatalogued, ornate holy book whose pages appear blank; she casts Detect Magic and confirms it is magical (conjuration) and feels distinctly divine rather than arcane.",
+        "Marwen researches the drow: public records describe classic drow society (raiders, matron mothers, spider cults) and confirm they vanished at the start of the Age of Conflict; she learns Lolth is believed to still exist, but the disappearance of the drow led to a widespread purge/massacre of Lolth’s surface worshippers, leaving no known active cults in the public record.",
+        "Sabriel shares deeper elven historical framing: the Age of Ash and Silence followed the end of the Ancients, preceding the Age of Reclamation; she shows sketches of a colossal ancient city-ruin that appears to have fallen and later eroded into what is now known as the Lone Mountain."
+      ],
+      "character_moments": {
+        "Marwen": "Faced with an uncatalogued holy book that seems to hide its contents, Marwen gives in to curiosity and temptation, choosing to steal it despite knowing the library’s restrictions exist because of thefts—and despite already carrying suspicious items.",
+        "Sabriel": "Sabriel reveals rare, non-common historical knowledge about the ages before modern records and shares personal sketches of an ancient ruin, grounding the party’s questions about the Ancients in lived experience rather than rumor.",
+        "Bazgar": "Bazgar presses on the broader mystery of how far back reliable history goes and what is truly known about the Ancients, helping frame the library discoveries as part of a much larger gap in the world’s memory."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Unnamed neighboring wizard",
+          "role": "Library patron/wizard consulted during research",
+          "interaction": "Marwen asks about the Ancients’ identity; the wizard confirms no one knows the Ancients’ race and that different peoples project their own origins onto them."
+        },
+        {
+          "name": "Unnamed wizard dwarf",
+          "role": "Dwarven wizard patron in the religion section",
+          "interaction": "Marwen briefly interacts while navigating the religion stacks; the encounter underscores that dwarves can be wizards and that prejudice is a common annoyance even in scholarly spaces."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Uncatalogued holy book (blank-paged, conjuration aura)",
+          "description": "An ornate, divine-leaning book found off-catalog; its pages appear blank, but it radiates conjuration magic and feels like it should contain holy/divine material rather than wizardry.",
+          "acquisition": "Marwen discovers it during library research and secretly steals it by stuffing it into her bag."
+        }
+      ],
+      "information_gained": [
+        "The Concordance Library uses magically keyed library cards to track members; access is restricted due to ongoing thefts, and wizards are granted an exception because the wizard community vouches for its own.",
+        "Ardenford’s ruins are pervasive: ancient structures seem to exist nearly everywhere underground; some sites are heavily explored and safe, while at least one major site requires descending a deep shaft and is notorious for killing adventurers and returning survivors by different routes.",
+        "Public history places the drow’s disappearance at the start of the Age of Conflict; records depict them as a major, hostile Underdark power aligned with classic Lolth-centered society.",
+        "Lolth is believed to still exist, but after the drow vanished there was a major purge/massacre of her religion on the surface; public sources do not confirm any current organized worship.",
+        "Sabriel’s people preserve older age-names beyond common knowledge: the Age of Ash and Silence followed the end of the Ancients and preceded the Age of Reclamation; Sabriel’s sketches identify an ancient fallen city-ruin associated with the Lone Mountain."
+      ],
+      "time_passed": "Several hours (an extended research block within the library, culminating near closing/exit procedures).",
+      "scene_outcome": "The scene ends with Marwen finishing her research and preparing to leave the stacks—now carrying a stolen, uncatalogued holy book—just as library security procedures (bag checks) come into focus.",
+      "plot_threads": [
+        {
+          "thread": "Mysterious uncatalogued holy book with blank pages and conjuration magic",
+          "status": "introduced"
+        },
+        {
+          "thread": "Drow disappearance and the aftermath purge of Lolth worship",
+          "status": "advanced"
+        },
+        {
+          "thread": "Ruin-site leads near Ardenford (safe starter ruin vs deadly deep-shaft ruin; widespread underground ruins)",
+          "status": "advanced"
+        },
+        {
+          "thread": "The Ancients and the pre-Reclamation ages (Age of Ash and Silence; gaps in common historical knowledge)",
+          "status": "complicated"
+        },
+        {
+          "thread": "Library security and theft crackdown (magically keyed cards, membership controls, inspections)",
+          "status": "advanced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 37788.468,
+      "location": "Ardenford (Upper Tier) — Concordance Library exit/checkpoint",
+      "goal": "Leave the library without getting caught with contraband (the stolen holy book and other bag contents)",
+      "npcs_present": [
+        "library staff/guard (unnamed)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "tense",
+      "conflict_type": "social",
+      "notes": "As Marwen leaves, library staff insist on checking bags; Marwen talks her way through while revealing bizarre harvested ingredients and avoids being discovered with the uncatalogued book.",
+      "requested_resources": [
+        {
+          "keyword": "Concordance Library rules (bag checks; no food)",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford.md",
+          "override": null
+        },
+        {
+          "keyword": "uncatalogued holy book (stolen from library)",
+          "requested_path": "items/magic-items/uncatalogued-holy-book.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-028",
+      "end_seconds": 37892.322,
+      "factual_summary": "At the Concordance Library exit checkpoint, staff stop the party for a mandatory bag inspection due to strict library rules and anti-theft measures. To avoid scrutiny of the party’s overstuffed packs (including Marwen’s hidden contraband), Bazgar stalls the search by unloading an absurd assortment of “harvested” materials—most notably a baby spider corpse and a marrow bone—while acting cooperative and apologetic. The staff admonish them for bringing “food” into the library (Bazgar insists it’s ingredients), but ultimately allow them to leave without discovering the stolen holy book.",
+      "narrative_seed": "The library’s quiet reverence snaps into a hard, procedural tension at the doors: hands out, bags forward, no exceptions. Bazgar turns the moment into a grotesque little performance—spider carcass, bones, and sticky odds and ends—burying the real danger under sheer inconvenience and polite persistence. The staff’s irritation rises, but the party slips out into the Upper Tier air with their secret still intact.",
+      "key_events": [
+        "Library staff halt the party at the exit for a routine bag check, reiterating that every bag is searched.",
+        "Bazgar distracts and delays the inspection by unloading unsettling foraged/harvested items (including a baby spider corpse and a marrow bone) and presenting them as non-food “ingredients,” drawing a reprimand about the library’s no-food rule.",
+        "The staff accept the explanation and let the party pass, and the group disperses outside the library—Sabriel leaves to return Lear to the stables while Bazgar waits across the street."
+      ],
+      "character_moments": {
+        "Bazgar": "Keeps his composure under scrutiny and uses a deliberate, cooperative-but-exhausting unpacking routine to blunt the effectiveness of the bag check, prioritizing the group’s safe exit over dignity.",
+        "Marwen": "Stays quiet and lets Bazgar run interference, relying on the distraction to protect her concealed contraband from discovery.",
+        "Sabriel": "Breaks away promptly after the checkpoint, focused on practical responsibilities—returning Lear to the stables—while the others regroup nearby."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Concordance Library checkpoint staff/guard (unnamed)",
+          "role": "Library staff enforcing exit inspections and library rules",
+          "interaction": "They demand to check the party’s bags, scold them for bringing “food,” and ultimately allow them to leave after Bazgar’s prolonged, compliant unpacking."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Uncatalogued Holy Book (Starburst Seal)",
+          "description": "A heavy, plain-covered holy book with a starburst seal; pages appear blank and radiate strong conjuration magic.",
+          "acquisition": "Already stolen earlier and kept concealed through this scene; not discovered during the bag check."
+        },
+        {
+          "item": "Baby spider corpse",
+          "description": "A harvested spider carcass carried among Bazgar’s supplies.",
+          "acquisition": "Already in Bazgar’s bag; produced during the checkpoint search as a distraction."
+        },
+        {
+          "item": "Marrow bone",
+          "description": "A bone carried as a usable ingredient/material.",
+          "acquisition": "Already in Bazgar’s bag; produced during the checkpoint search as part of the stall."
+        },
+        {
+          "item": "Honey and assorted 'ingredients'",
+          "description": "Sticky provisions/materials Bazgar claims are ingredients rather than food.",
+          "acquisition": "Already in Bazgar’s bag; referenced during the staff’s no-food admonishment."
+        }
+      ],
+      "information_gained": [
+        "The Concordance Library enforces mandatory exit bag checks (“we check every bag”), reflecting heightened security and strict rule enforcement.",
+        "The library’s no-food policy is actively policed at the checkpoint, with staff willing to classify questionable items as food at their discretion."
+      ],
+      "time_passed": "Approximately 5–10 minutes",
+      "scene_outcome": "The party successfully clears the library checkpoint without the stolen holy book being found and transitions outside; Sabriel heads to the stables while Bazgar waits across the street to regroup.",
+      "plot_threads": [
+        {
+          "thread": "Smuggling the stolen uncatalogued holy book out of the Concordance Library",
+          "status": "advanced"
+        },
+        {
+          "thread": "Library security crackdown and the risk of being caught with contraband",
+          "status": "complicated"
+        }
+      ]
+    },
+    {
+      "start_seconds": 37892.322,
+      "location": "Ardenford (Upper Tier) — stables / cafe across from the library",
+      "goal": "Regroup after research; discuss Sabriel’s age/credibility and what the ages mean",
+      "npcs_present": [],
+      "time_of_day": "unknown",
+      "emotional_tone": "contemplative",
+      "conflict_type": "social",
+      "notes": "Sabriel takes Lear back to the stables while Bazgar waits nearby and talks with Marwen about whether Sabriel is lying and about the newly learned older ages (Ash and Silence/Reclamation).",
+      "requested_resources": [
+        {
+          "keyword": "Lear (Sabriel’s mount) / stables",
+          "requested_path": "characters/player-characters/nicole-sabriel.md",
+          "override": null
+        },
+        {
+          "keyword": "Age of Ash and Silence / Age of Reclamation",
+          "requested_path": "world/calendar-reckoning-of-the-fall.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-029",
+      "end_seconds": 38238.966,
+      "factual_summary": "After leaving the Concordance Library, Sabriel splits off briefly to return her mount, Lear, to the stables while Bazgar waits in a cafe across the street. Over pastries and a quiet conversation, Bazgar presses Marwen about whether Sabriel is lying and about Sabriel’s claims regarding ancient “ages” (including an “Age of Ash and Silence” and an “Age of Reclamation”). Marwen frames Sabriel less as a liar and more as a hypocrite, and ultimately urges Bazgar to worry less about exact timelines and more about learning to keep an open mind about unfamiliar cultures.",
+      "narrative_seed": "In the cafe’s lull across from the library, Bazgar’s suspicion simmers into questions he can’t quite let go of—how old is Sabriel, and what does it mean if her memories reach into ages no one else even names? Marwen, half-amused and half-wary, offers a softer verdict: not lies, but belief twisted into certainty. The talk ends with the weight of the unknown still on the table, and the party turning back toward regrouping and tomorrow’s need for a guide.",
+      "key_events": [
+        "Sabriel departs to re-stable Lear while Bazgar waits in a cafe across from the library.",
+        "Bazgar questions Marwen about Sabriel’s credibility and the strange historical “ages” Sabriel referenced (including the rumored Age of Ash and Silence and an Age of Reclamation).",
+        "Marwen characterizes Sabriel as a hypocrite rather than a liar and encourages Bazgar to stop fixating on exact age math and stay open-minded about other cultures.",
+        "The group agrees they still need to find a guide for the next day and prepares to reconvene."
+      ],
+      "character_moments": {
+        "Bazgar": "Admits unease about Sabriel’s claims and probes for confirmation about obscure historical ages; also acknowledges he hasn’t been as open-minded as he intended to be while traveling.",
+        "Marwen": "Offers a nuanced read of Sabriel—hypocrisy rather than deception—and redirects the conversation toward practicality and cultural humility.",
+        "Sabriel": "Keeps to responsibilities, briefly separating from the group to return Lear to the stables before rejoining later."
+      },
+      "npcs_encountered": [],
+      "loot_and_items": [
+        {
+          "item": "Half-eaten pastry and mug (cafe table)",
+          "description": "Leftover cafe food/drink used as background during the conversation.",
+          "acquisition": "Already present/consumed during the stop; no meaningful gain."
+        }
+      ],
+      "information_gained": [
+        "Marwen’s assessment: Sabriel doesn’t read as an outright liar, but may be hypocritical—saying what they believe rather than what is strictly true.",
+        "Bazgar reveals Sabriel referenced obscure eras (\"Age of Ash and Silence\" and \"Age of Reclamation\"), which do not match the ages Marwen is familiar with, raising unresolved questions about Sabriel’s true age and historical knowledge.",
+        "Bazgar’s stated age is clarified in conversation (initially 20, then corrected to 25), highlighting differing cultural norms around tracking birthdays."
+      ],
+      "time_passed": "Roughly 20–40 minutes (a short stop to stable Lear and a brief cafe conversation).",
+      "scene_outcome": "The conversation ends without resolving the timeline mystery; the party turns toward regrouping and the practical next step of finding a guide for tomorrow.",
+      "plot_threads": [
+        {
+          "thread": "Sabriel’s true age, credibility, and the meaning of the ancient “ages” she referenced",
+          "status": "advanced"
+        },
+        {
+          "thread": "Party cohesion and trust—how much to question Sabriel versus accept her as she is",
+          "status": "advanced"
+        },
+        {
+          "thread": "Preparations for the next day’s travel/exploration (need to secure a guide)",
+          "status": "introduced"
+        }
+      ]
+    },
+    {
+      "start_seconds": 38238.966,
+      "location": "Ardenford (Middle Tier) — The Wayward Compass (common room / dinner table)",
+      "goal": "Regroup for the night; examine Sabriel’s mysterious holy book; finalize plans to rest and seek a dwarf guide before exploring the valley ruin",
+      "npcs_present": [
+        "Thorgrim Ledger-Scar (implied Wayward Compass keeper)"
+      ],
+      "time_of_day": "evening",
+      "emotional_tone": "mysterious",
+      "conflict_type": "social",
+      "notes": "Sabriel confirms the book’s symbol is unknown and the pages erase writing; the party debates valley vs mountain ruins, agrees to start with the valley and look for a dwarf guide in the morning, then winds down for the night.",
+      "requested_resources": [
+        {
+          "keyword": "sunburst symbol on the front cover; blank pages; conjuration magic",
+          "requested_path": "items/magic-items/uncatalogued-holy-book.md",
+          "override": null
+        },
+        {
+          "keyword": "valley ruin (starter ruin) vs mountain ruin (dangerous)",
+          "requested_path": "world/factions/ardenhaven/locations",
+          "override": null
+        },
+        {
+          "keyword": "Oathhold dwarf / dwarf guide",
+          "requested_path": "world/factions/dulgarum-oathholds/_overview.md",
+          "override": null
+        },
+        {
+          "keyword": "The Wayward Compass (regular table / dinner)",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford.md",
+          "override": null
+        },
+        {
+          "keyword": "Thorgrim Ledger-Scar",
+          "requested_path": "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-030",
+      "end_seconds": 40407.442,
+      "factual_summary": "That evening at The Wayward Compass, Marwen discreetly returns the uncatalogued holy book to Sabriel, warning her to treat it as if it never came from Marwen. Sabriel confirms the book feels unmistakably like it belongs to her, yet it remains completely blank and the starburst seal is unfamiliar even to her religious knowledge. Over dinner, the party debates how aggressively to pursue ruin-delving and agrees to rest, seek a dwarf guide in the morning, and begin with the commonly explored valley ruin as a safer first step.",
+      "narrative_seed": "Warm firelight and tavern noise can’t soften the unease of a book that insists it is Sabriel’s while offering nothing but blank pages. Questions about lost peoples, forbidden magics, and even the nature of gods hang over the table like smoke. By night’s end, they choose caution over ambition—sleep now, find a dwarf guide at dawn, and step into the valley ruins with eyes open.",
+      "key_events": [
+        "Marwen quietly places the mysterious starburst-sealed holy book before Sabriel and insists she keep its transfer secret.",
+        "Sabriel examines the book in private: every page is blank, attempts to write do not persist, and the starburst symbol has no known religious reference to her—despite the strong sense that the book is hers.",
+        "At the dinner table, Marwen questions Sabriel about the drow and their relationship to elves; Sabriel describes them as a \"cousin\" people not counted among Alarith’s beloved children and expresses curiosity about their disappearance.",
+        "The group argues over strategy—Bazgar pushes for riskier, higher-reward ruins, while Marwen and Sabriel advocate starting in the valley; they settle on beginning with the valley ruin and building resources and teamwork.",
+        "They agree to get a good night’s rest and, in the morning, look for an Oathhold/Dulgarum-affiliated dwarf guide (or any competent guide if none can be found)."
+      ],
+      "character_moments": {
+        "Sabriel": "Privately confronts the contradiction of a book that feels divinely hers but offers no text, no recognizable symbol, and no immediate answers; she chooses patience—studying and sitting with it rather than forcing a solution.",
+        "Marwen": "Takes a calculated social risk by handing over a likely-illicit library artifact, then pivots into probing questions about drow history and cautions against dangerous curiosity about ultimate magical power.",
+        "Bazgar": "Reveals his impatience and ambition, arguing that big goals require bigger risks, but ultimately accepts the group’s plan to start smaller and build toward greater ruins."
+      },
+      "npcs_encountered": [
+        {
+          "name": "Thorgrim Ledger-Scar",
+          "role": "Keeper/owner of The Wayward Compass",
+          "interaction": "Present only as the implied tavern host while the party uses their regular dinner table to regroup; no direct exchange is highlighted in this scene."
+        }
+      ],
+      "loot_and_items": [
+        {
+          "item": "Uncatalogued Holy Book (Starburst Seal)",
+          "description": "A heavy, titleless holy book with a sharp starburst seal; pages appear blank to all, writing won’t remain, and it radiates strong conjuration magic while giving Sabriel a powerful sense of ownership.",
+          "acquisition": "Transferred from Marwen to Sabriel at the tavern table (kept discreet)."
+        }
+      ],
+      "information_gained": [
+        "Sabriel confirms the starburst seal is not associated with any symbol or religious reference she recognizes, even though the book feels unquestionably hers.",
+        "The book’s pages remain blank to Sabriel as well, and attempts to write in it do not persist; it is known to radiate strong conjuration magic.",
+        "Sabriel identifies the drow as an elven \"cousin\" people not considered among Alarith’s favored/beloved children, and she does not know why they disappeared."
+      ],
+      "time_passed": "Roughly 2–3 hours (dinner conversation, private examination of the book, and settling in for the night).",
+      "scene_outcome": "The party turns in for the night at The Wayward Compass, resolved to seek a dwarf guide in the morning and begin their exploration with the valley ruin; Sabriel keeps the book and begins a slow, ongoing effort to understand it.",
+      "plot_threads": [
+        {
+          "thread": "Starburst-sealed holy book that \"belongs\" to Sabriel despite blank pages and unknown symbol",
+          "status": "advanced"
+        },
+        {
+          "thread": "What happened to the drow and why they are treated as an unfavored elven branch",
+          "status": "advanced"
+        },
+        {
+          "thread": "Debate over pursuing ultimate magical power and whether mortals can challenge gods",
+          "status": "introduced"
+        },
+        {
+          "thread": "Plan to explore Ardenford’s valley ruins and secure a dwarf guide (ideally Dulgarum/Oathhold-connected)",
+          "status": "advanced"
+        },
+        {
+          "thread": "Sabriel’s time constraint in Ardenford (cannot remain longer than ~6–8 weeks)",
+          "status": "introduced"
+        }
+      ]
+    }
+  ]
+}
