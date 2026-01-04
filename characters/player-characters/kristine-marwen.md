@@ -152,3 +152,23 @@ She chose herself.
 She carries what he gave her.
 
 That is enough. 
+
+## The Unraveling: What They Fear She Will Become
+
+> *This is not prophecy. This is not inevitable. But it is possibility, carved from the same fire that remade her. Naelith the Unmoored Seer spoke once of great ruin and destruction tied to Marwen's name. She never elaborated. Perhaps this is why.*
+
+**If Marwen loses herself.** If the ward-markings fail. If her will fractures and the fire that declared her identity decides to finish what it started. This is what the elders fear. This is what Ishvar whispers about in council. This is the shape of the Reborn when she stops trying to remember who Marwen was.
+
+This is not a vision from the Axiom. It is not a glimpse of the future. It is a warning carved into the threshold between what she wants to become and what her power wants to make her. Every witch who walks the line between ward and deep magic knows this truth: will shapes reality, but reality pushes back. And if you were remade once by saying who you were, what happens when you forget?
+
+---
+
+### The Form That Endures
+
+You do not see her arrive. The first warning is the air itself, thickening, dragging against your breath as if the world has begun to smolder without heat. Shadows buckle and slide where there should be none, folding over one another like something alive and restless beneath a skin of light. Then the shape intrudes, wrong at every edge. A figure that almost resembles a woman, but cannot quite remember how to finish becoming one.
+
+Her eyes are always red now, not bright with fury but dense, like coals buried deep in ash, watching from inside you rather than at you. Her body refuses a single outline. Limbs lengthen, shorten, split, rejoin. Shoulders ripple as if something enormous presses from beneath, testing the limits of her form. Flesh moves like molten glass caught mid-pour, constantly correcting, constantly failing. Across her skin, ward-markings blaze in dull crimson, carved deep as if into stone rather than flesh, throwing off a wavering heat-haze that screams containment. They are not decoration. They are the last argument holding her together.
+
+The ground recoils in her presence. Stone slumps and runs, bark peels and reforms into unfamiliar growths that breathe and twist, the land reshaped into something raw and unfinished. She does not burn the world. She edits it. When she speaks, her voice fractures into a layered chorus, overlapping tones arguing with themselves, pleading and commanding in the same breath. You understand then, with a hollow, animal certainty, that this thing is not hunting you. It is enduring you. And if it ever stops trying to remember what Marwen was, there will be nothing left to stand between the world and the fire that wants to finish becoming real.
+
+A constantly shape-shifting, alien form that literally reshapes the world around her. The danger isn't her burning you, it's her remaking you.

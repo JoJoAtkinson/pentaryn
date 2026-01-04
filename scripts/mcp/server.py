@@ -304,7 +304,17 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
     if not scripts_dir.exists():
         return DiscoveryResult(tools=tuple(), skipped=tuple())
 
-    for path in sorted([p for p in scripts_dir.iterdir() if p.is_file() and p.suffix == ".py"], key=lambda p: p.name):
+    # Recursively discover all .py files in scripts/ and subdirectories
+    # Skip __pycache__ and other special directories
+    all_py_files = [
+        p for p in scripts_dir.rglob("*.py")
+        if p.is_file()
+        and "__pycache__" not in p.parts
+        and not p.name.startswith("_")
+        and p.name != "__init__.py"
+    ]
+    
+    for path in sorted(all_py_files, key=lambda p: str(p.relative_to(scripts_dir))):
         try:
             source = path.read_text(encoding="utf-8")
         except Exception as exc:

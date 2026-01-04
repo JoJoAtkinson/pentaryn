@@ -1,0 +1,57 @@
+# D&D Session 1 Configuration
+
+[session]
+number = 1
+transcript = "recordings_transcripts/DnD 1.jsonl"
+
+# Recording source affects speaker identification reliability
+# Options: "in-person" (single mic), "discord" (separate recordings), "hybrid"
+recording_source = "in-person"
+
+# Speaker identification notes (helps LLM understand speaker labels)
+[session.speakers]
+# Reliable identifications
+NICOLE = "Sabriel (player character)"
+KRIS = "Marwen (player character)" 
+JEFF = "Bazgar (player character)"
+
+# Uncertain identifications
+UNKNOWN = "Could be DM or Jeff; DM often voices multiple NPCs with different characterizations"
+
+# Additional context
+notes = """
+- NICOLE, KRIS, JEFF are confident identifications
+- UNKNOWN is used when speaker unclear (often DM or Jeff)
+- DM voices many NPCs, so single "UNKNOWN" label may represent multiple characters
+- In-person recording makes voice separation difficult
+"""
+
+[context]
+# Upfront context files (relative to repo root)
+files = [
+    "sessions/session_01.md",
+    "characters/player-characters/kristine-marwen.md",
+    "characters/player-characters/nicole-sabriel.md",
+    "characters/player-characters/jeff-bazgar.md",
+    "world/factions/ardenhaven/locations/ardenford.md",
+    "world/factions/ardenhaven/locations/ardernford.story.md",
+]
+
+# Folders to auto-include (all .md files)
+folders = [
+    "world/factions/ardenhaven/npc",
+    "world/factions/ardenhaven/quests",
+]
+
+[pass1]
+output = "sessions/01/pass1.json"
+batch_size = 1000
+overlap = 250
+model = "gpt-4o"
+
+[pass2]
+output = "sessions/01/pass2.json"
+model = "gpt-4o"
+# Seconds of transcript context before/after each scene
+context_before = 30.0
+context_after = 30.0

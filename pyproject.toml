@@ -12,7 +12,9 @@ dependencies = [
   "cairosvg",
   "chromadb",
   "whisperx",
-  "torch"
+  "torch",
+  "openai",
+  "python-dotenv"
 ]
 
 # Notes on native text layout (RAQM):

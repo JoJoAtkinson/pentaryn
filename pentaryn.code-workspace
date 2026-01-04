@@ -19,6 +19,7 @@
 			".codex":true,
 			".github":true,
 			".fonts":true,
+			"**/__pycache__": true
 		},	
 		"[markdown]": {
 			"editor.fontFamily": "'Helvetica Neue', 'Palatino Linotype', 'Book Antiqua', Palatino, serif",
