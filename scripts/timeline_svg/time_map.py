@@ -14,7 +14,7 @@ class AxisMap:
     px_per_day: float
     slack_steps: list[tuple[int, float]]  # (axis_threshold, slack_px)
 
-    def axis_to_y(self, axis_day: int) -> float:
+    def axis_to_y(self, axis_day: float) -> float:
         if self.direction == "desc":
             base = self.top_y + (self.max_axis - axis_day) * self.px_per_day
             extra = sum(slack for threshold, slack in self.slack_steps if axis_day <= threshold)
@@ -33,4 +33,3 @@ def make_axis_map(direction: SortDirection, *, min_axis: int, max_axis: int, top
         px_per_day=px_per_year / 360.0,
         slack_steps=[],
     )
-

@@ -1,9 +1,11 @@
 # Story Craft Pipeline
 
-Three-pass pipeline for converting D&D session transcripts into narrative prose.
+Three-pass pipeline for converting D&D session transcripts into narrative prose, plus timeline generation for world history tracking.
 
 ```
 transcripts.jsonl → [Pass 1] → pass1.json → [Pass 2] → pass2.json → [Pass 3] → story/the-compass-edge/*.md
+                                                             ↓
+                                                      [Timeline] → world/party/the-compass-edge/_history.tsv
 ```
 
 ## Overview
@@ -60,6 +62,25 @@ Converts summaries into flowing narrative prose with:
 - New file on significant tone shift
 - Max 5 scenes per file (readability)
 
+### Timeline Generation
+**Script:** `generate_party_timeline.py`  
+**Input:** Pass 2 summaries  
+**Output:** TSV timeline file + updated world date  
+
+Generates high-level daily event summaries for the party timeline:
+- **10,000 foot view**: Max 3 events per day
+- **Narrative grouping**: Related scenes combined into cohesive beats
+- **Smart prioritization**: Combat, quests, discoveries prioritized over shopping/travel
+- **Month-change events**: Automatic weather transition notices
+- **World date tracking**: Updates `world/_history.config.toml` after session
+
+**Key Features:**
+- Configurable event priority scoring
+- Intelligent scene grouping by narrative arc
+- Month/weather transitions when crossing month boundaries
+- Append mode (add to existing timeline) or clear mode (replace)
+- Manual date override support
+
 ## Quick Start
 
 ### Run Full Pipeline
@@ -73,6 +94,25 @@ Converts summaries into flowing narrative prose with:
 
 # Pass 3: Generate story
 .venv/bin/python scripts/story_craft/generate_story.py --session 1
+
+# Timeline: Generate party history
+.venv/bin/python scripts/story_craft/generate_party_timeline.py --session 1
+```
+
+### Timeline Options
+
+```bash
+# Default: append to existing timeline
+.venv/bin/python scripts/story_craft/generate_party_timeline.py --session 1
+
+# Clear existing timeline first
+.venv/bin/python scripts/story_craft/generate_party_timeline.py --session 1 --clear
+
+# Preview without writing
+.venv/bin/python scripts/story_craft/generate_party_timeline.py --session 1 --dry-run
+
+# Override starting date (YYYY/MM/DD)
+.venv/bin/python scripts/story_craft/generate_party_timeline.py --session 1 --start-date 4327/10/15
 ```
 
 ### Run via MCP Server
@@ -160,6 +200,36 @@ pov_characters = ["Bazgar", "Sabriel", "Marwen"]
 Bazgar = "Confident, direct, occasional swagger; carries orc heritage but defies stereotypes"
 Sabriel = "Observant, measured, hints of mystery; hides more than she reveals"
 Marwen = "Curious, practical, slightly eccentric; comfortable with the strange"
+
+[timeline]
+# Party name (maps to world/party/{party_name}/_history.tsv)
+party_name = "the-compass-edge"
+
+# Event ID prefix for timeline events
+event_id_prefix = "party-compass"
+
+# Maximum events per day (10,000 foot view)
+max_events_per_day = 3
+
+# Phrases that indicate a new day has started
+new_day_indicators = [
+    "next day",
+    "next morning",
+    "following day",
+    "long rest",
+]
+
+# Priority scoring for event importance (higher = more important)
+[timeline.priority_keywords]
+combat = 10
+boss = 10
+death = 9
+revelation = 8
+discovery = 7
+quest = 6
+npc = 5
+travel = 3
+shopping = 2
 ```
 
 **Pass 3 Configurable Parameters:**
@@ -173,6 +243,16 @@ All context-building parameters are configurable per session:
 - **tone_break_transitions**: Tone shifts that suggest natural chapter boundaries
 - **pov_characters**: Characters who get internal thoughts/POV rotation
 - **character_voices**: Personality descriptions used in generation prompts
+
+**Timeline Configurable Parameters:**
+
+All timeline generation parameters are configurable per session:
+
+- **party_name**: Name of party (maps to `world/party/{party_name}/_history.tsv`)
+- **event_id_prefix**: Prefix for event IDs (e.g., `party-compass-001`)
+- **max_events_per_day**: Maximum events per day in timeline (default 3 for 10,000 foot view)
+- **new_day_indicators**: Phrases that signal day boundaries
+- **priority_keywords**: Keyword scoring for event importance (combat=10, travel=3, etc.)
 
 ## File Structure
 
@@ -188,8 +268,12 @@ story/
   the-compass-edge/      # Player-facing story output repo (submodule)
     0010-the-wayward-compass.md
     0020-ruins-in-the-scrubland.md
-    part-01-undead-contract/   # Optional: reader-created arc folders
-      0030-into-the-hills.md
+
+world/
+  party/
+    the-compass-edge/
+      _history.tsv       # Party timeline (TSV format)
+  _history.config.toml   # World date tracker (updated after each session)
 ```
 
 ## Output Formats
@@ -272,6 +356,22 @@ Bazgar grinned. "That'd be me."
 
 ...
 ```
+
+### Timeline Output (_history.tsv)
+
+```tsv
+event_id	tags	date	duration	title	summary
+party-compass-001	party;the-compass-edge	4327/10/15	0	Battle Against the Undead	With Corwin buried and payment received, Renn withdrew to the gravesite to grieve, while the party turned their attention toward finding further work and funding a future expedition.
+party-compass-002	party;the-compass-edge	4327/10/15	0	Combat with Goblins	The goblin-raid job is formally concluded with payment and thanks; the party transitions toward returning to Ardenford to rest at the Wayward Compass.
+party-compass-003	party;the-compass-edge	4327/10/15	0	Confrontation with Imperium Traders	The scene ends with the party finishing their late-night bonding and settling on tomorrow's spider job, just as clearly identifiable Imperium traders begin entering the tavern.
+party-compass-month-4327-11	party;the-compass-edge;world	4327/11/01	0	Month of Morvalos Begins	Deep Cold (midwinter): heavy snows, bitter cold, long nights
+```
+
+**Features:**
+- Max 3 events per day (high-level view)
+- Events on same day share the same date
+- Month-change events automatically inserted with weather descriptions
+- TSV format for easy timeline rendering (compatible with `build_timeline_svg.py`)
 
 ## Testing
 

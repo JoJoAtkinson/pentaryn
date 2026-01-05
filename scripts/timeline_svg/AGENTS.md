@@ -35,7 +35,7 @@ History entries are **row-based**: each TSV row renders independently (duplicate
 ## Tags + icons
 
 - Tags may include **faction slugs** (e.g. `rakthok-horde`) to render the faction icon.
-- Other tags may have icons under `scripts/timeline_svg/assets/tags/`; missing icons render as the “unknown” marker.
+- Other tags may have icons under `scripts/timeline_svg/assets/tags/`; missing icons are omitted (no placeholder).
 
 ## File locations
 

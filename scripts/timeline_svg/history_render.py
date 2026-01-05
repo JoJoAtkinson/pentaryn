@@ -36,7 +36,7 @@ def _debug_tsv_path(repo_root: Path, scope_root: Path, view_id: str) -> Path:
     return repo_root / ".output" / "history" / rel / f"{view_id}.tsv"
 
 
-_DATE_RE = re.compile(r"^(?P<year>\d{1,6})(?:/(?P<month>\d{1,2})(?:/(?P<day>\d{1,2}))?)?$")
+_DATE_RE = re.compile(r"^(?P<year>\d{1,6})(?:/(?P<month>\d{1,2})(?:/(?P<day>\d{1,2})(?:-(?P<hour>\d{1,2}))?)?)?$")
 _UNKNOWN_DATE_SENTINELS = {"???", "TBD", "UNKNOWN"}
 
 
@@ -56,6 +56,7 @@ def _normalize_date(date_raw: str) -> tuple[str, ParsedDate | None, bool]:
     year = int(m.group("year"))
     month_raw = m.group("month")
     day_raw = m.group("day")
+    hour_raw = m.group("hour")
     if not month_raw:
         norm = str(year)
     else:
@@ -64,7 +65,13 @@ def _normalize_date(date_raw: str) -> tuple[str, ParsedDate | None, bool]:
             norm = f"{year}/{month:02d}"
         else:
             day = int(day_raw)
-            norm = f"{year}/{month:02d}/{day:02d}"
+            if hour_raw is not None:
+                hour = int(hour_raw)
+                if hour < 0 or hour > 23:
+                    raise ValueError(f"Invalid hour {hour_raw!r} (expected 0-23)")
+                norm = f"{year}/{month:02d}/{day:02d}-{hour:02d}"
+            else:
+                norm = f"{year}/{month:02d}/{day:02d}"
     parsed = parse_game_date(norm, "", "")
     return norm, parsed, False
 
@@ -345,10 +352,15 @@ def render_history_scopes(
     # Allow a single "canonical present year" at the world root that all sub-scopes inherit.
     # Sub-scopes can still override by setting `present_year = ...` in their own config.
     default_present_year = None
+    default_present_month = None
+    default_present_day = None
     world_root_cfg = world_root / "_history.config.toml"
     if world_root_cfg.exists():
         try:
-            default_present_year = load_history_config(world_root_cfg).present_year
+            root_cfg = load_history_config(world_root_cfg)
+            default_present_year = root_cfg.present_year
+            default_present_month = root_cfg.present_month
+            default_present_day = root_cfg.present_day
         except Exception:
             default_present_year = None
 
@@ -392,6 +404,8 @@ def render_history_scopes(
             rows.extend(file_rows)
 
         present_year = cfg.present_year if cfg.present_year is not None else default_present_year
+        present_month = cfg.present_month if cfg.present_month is not None else default_present_month
+        present_day = cfg.present_day if cfg.present_day is not None else default_present_day
         if present_year is None:
             # Best-effort "now" for ranges: max year present in rows.
             present_year = max(int((r["date"].year)) for r in rows) if rows else 0
@@ -433,14 +447,18 @@ def render_history_scopes(
                 if _tags_match(set(r["tags"]), any_of=view.tags_any, all_of=view.tags_all, none_of=view.tags_none)  # type: ignore[arg-type]
                 and _in_range(r, range_cfg=view.range, present_year=int(present_year))
             ]
-            filtered.sort(key=lambda r: int(r["axis_day"]))  # type: ignore[arg-type]
+            filtered.sort(key=lambda r: float(r["axis_day"]))  # type: ignore[arg-type]
             if (view_build.sort_direction or "desc") == "desc":
                 filtered.reverse()
 
             # Optionally extend the axis to a declared "present" year so ticks can show e.g. ⋈50 at 4327 even if the latest
             # dated event in this scope is earlier.
             if present_year is not None:
-                view_build = replace(view_build, axis_max_year=max(view_build.axis_max_year or -10**9, present_year))
+                if view_build.tick_scale in {"day", "month"} and present_month is not None and present_day is not None:
+                    present_axis = int(date_to_axis_days(ParsedDate(year=int(present_year), month=int(present_month), day=int(present_day))))
+                    view_build = replace(view_build, axis_max_day=max(view_build.axis_max_day or -10**9, present_axis))
+                else:
+                    view_build = replace(view_build, axis_max_year=max(view_build.axis_max_year or -10**9, present_year))
 
             svg_path = scope_root / _default_svg_name(view)
             tsv_path = _debug_tsv_path(repo_root, scope_root, view.id)

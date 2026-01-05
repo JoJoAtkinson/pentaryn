@@ -40,7 +40,7 @@
         .label { fill: #fffaf0; stroke: var(--label-border); stroke-width: 1; }
         .label.changed-id, .label.changed { stroke: #d97900; stroke-width: 4; stroke-linejoin: round; }
         .title { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 16px; font-weight: 700; fill: #2b1f14; }
-        .age-label { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 14px; font-weight: 700; fill: #5a4634; }
+        .date-label { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 14px; font-weight: 700; fill: #5a4634; }
         .summary { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #3a2b1f; }
         .md-bold { font-weight: 700; }
         .public-indicator { color: var(--public-indicator); opacity: 0.9; }
@@ -54,10 +54,6 @@
   </symbol>
 </defs>
 <defs>
-<symbol id="tag_unknown" viewBox="0 0 512 512">
-  <circle cx="256" cy="256" r="247.04" fill="#cfcfcf" stroke="#9a9a9a" stroke-width="17.92" />
-  <text x="256" y="346" text-anchor="middle" font-size="300" font-family="Alegreya, serif" fill="#2b1f14">?!</text>
-</symbol>
 <symbol id="tag_public" viewBox="0 0 512 512">
   <g transform="translate(256.000 256.000) scale(0.8800) translate(-256.000 -256.000)">
 <g class="" transform="translate(0,0)" style=""><path d="M149.688 85.625c-1.234.005-2.465.033-3.72.063-33.913.806-75.48 10.704-127.25 33.718V362.78c60.77-28.82 106.718-37.067 144.22-33.092 33.502 3.55 59.685 16.66 83.562 31.187v-242.97c-23.217-17.744-50.195-30.04-85.97-32a184.47 184.47 0 0 0-10.843-.28zm211.968 0c-3.7-.016-7.322.088-10.844.28-35.773 1.96-62.75 14.256-85.968 32v242.97c23.876-14.527 50.06-27.637 83.562-31.188 37.502-3.974 83.45 4.272 144.22 33.094V119.407c-51.77-23.014-93.337-32.912-127.25-33.72-1.255-.028-2.486-.056-3.72-.06zm5.72 261.78c-1.038-.002-2.074.017-3.095.033-4.808.075-9.43.37-13.905.843-33.932 3.597-59.603 17.976-85.53 34.44v.28c-6.554-1.99-13.02-2.37-19.408-.97-25.566-16.177-51.003-30.202-84.468-33.75-5.595-.592-11.44-.883-17.564-.842-32.04.213-71.833 9.778-124.687 35.937v42.53c60.77-28.823 106.714-37.067 144.218-33.092 18.545 1.965 34.837 6.845 49.75 13.28-4.682 6.064-9.308 13.268-13.875 21.688h117.156c-5.93-8.22-11.798-15.414-17.626-21.56 14.996-6.503 31.39-11.43 50.062-13.408 37.503-3.974 83.448 4.27 144.22 33.094v-42.53c-53.16-26.31-93.115-35.863-125.25-35.97z" fill="currentColor" fill-opacity="1"></path></g>
@@ -233,7 +229,8 @@
 <tspan x="153.5" dy="12.0">representatives from all eight major factions. The city&#x27;s infrastructure strains</tspan>
 <tspan x="153.5" dy="12.0">under the demand, but the resulting trade agreements reshape continental</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="121.0">
+<text class="date-label" text-anchor="end" x="540.0" y="121.0">
+<tspan>Lumaeos — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
 <rect class="label" x="654.0" y="40.0" width="416.6" height="85.0" rx="8" ry="8"/>
@@ -245,7 +242,7 @@
 <tspan x="670.0" dy="12.0">battlefields, the Council of Consuls declares a controversial policy: any treasure</tspan>
 <tspan x="670.0" dy="12.0">or artifacts found in ruins belong to the finder, no questions asked. The</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1064.6" y="121.0">
+<text class="date-label" text-anchor="end" x="1064.6" y="121.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">46</tspan>
 </text>
 <rect class="label" x="137.8" y="139.0" width="408.2" height="85.0" rx="8" ry="8"/>
@@ -257,7 +254,7 @@
 <tspan x="153.8" dy="12.0">southern border with Calderon. Not out of fear—the Pentarch Accords</tspan>
 <tspan x="153.8" dy="12.0">hold—but as Cold War-style deterrent: &quot;We are ready.&quot; The towers are staffed,</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="220.0">
+<text class="date-label" text-anchor="end" x="540.0" y="220.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">41</tspan>
 </text>
 <rect class="label" x="654.0" y="139.0" width="420.0" height="85.0" rx="8" ry="8"/>
@@ -269,7 +266,7 @@
 <tspan x="670.0" dy="12.0">out in a straight line, boots aligned, each with their chest ripped open with the</tspan>
 <tspan x="670.0" dy="12.0">heart removed. The bodies are left where they were laid. The story runs ahead of</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1068.0" y="220.0">
+<text class="date-label" text-anchor="end" x="1068.0" y="220.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">23</tspan>
 </text>
 <rect class="label" x="134.5" y="238.0" width="411.5" height="85.0" rx="8" ry="8"/>
@@ -281,7 +278,7 @@
 <tspan x="150.5" dy="12.0">to commemorate the Winter of Graves. Some demand heroic monuments</tspan>
 <tspan x="150.5" dy="12.0">celebrating resilience. Others insist on somber memorials acknowledging</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="319.0">
+<text class="date-label" text-anchor="end" x="540.0" y="319.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">22</tspan>
 </text>
 <rect class="label" x="654.0" y="238.0" width="404.4" height="85.0" rx="8" ry="8"/>
@@ -293,7 +290,7 @@
 <tspan x="670.0" dy="12.0">allowing fractional ownership of merchant ventures. The innovation attracts</tspan>
 <tspan x="670.0" dy="12.0">investors from every nation and creates a new class of wealthy speculators.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1052.4" y="319.0">
+<text class="date-label" text-anchor="end" x="1052.4" y="319.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">16</tspan>
 </text>
 <rect class="label" x="148.5" y="337.0" width="397.5" height="85.0" rx="8" ry="8"/>
@@ -305,7 +302,8 @@
 <tspan x="164.5" dy="12.0">time. The Council of Consuls debates exporting surplus grain to former</tspan>
 <tspan x="164.5" dy="12.0">enemies and neighbors. One city-state—scarred by siege memories—votes</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="418.0">
+<text class="date-label" text-anchor="end" x="540.0" y="418.0">
+<tspan>Aoruvan — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">6</tspan>
 </text>
 <rect class="label" x="654.0" y="337.0" width="381.6" height="73.0" rx="8" ry="8"/>
@@ -316,7 +314,7 @@
 <tspan x="670.0" dy="0.0">War ends and coin takes over; the old war-roads are inherited by guilds,</tspan>
 <tspan x="670.0" dy="12.0">charters, and contract courts.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1029.6" y="406.0">
+<text class="date-label" text-anchor="end" x="1029.6" y="406.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">0</tspan>
 </text>
 <rect class="label" x="128.0" y="436.0" width="418.0" height="85.0" rx="8" ry="8"/>
@@ -328,7 +326,7 @@
 <tspan x="144.0" dy="12.0">Trade-League. A dispute arises with the Imperium and the now-displaced orcs,</tspan>
 <tspan x="144.0" dy="12.0">and in the subsequent conflict Zarkul is found dead, knifed in the back. Among</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="517.0">
+<text class="date-label" text-anchor="end" x="540.0" y="517.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
 </text>
 <rect class="label" x="654.0" y="424.0" width="408.2" height="85.0" rx="8" ry="8"/>
@@ -340,7 +338,7 @@
 <tspan x="670.0" dy="12.0">the swamplands, Uruknar Rakthokgar gathered her raiders and stole into the</tspan>
 <tspan x="670.0" dy="12.0">rising fortress. Imperium sappers threw smoke and white lime to blind the</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1056.2" y="505.0">
+<text class="date-label" text-anchor="end" x="1056.2" y="505.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
 </text>
 <rect class="label" x="128.9" y="535.0" width="417.1" height="85.0" rx="8" ry="8"/>
@@ -352,7 +350,7 @@
 <tspan x="144.9" dy="12.0">trade caravan crosses the former battlefields. Ardenhaven grain for Calderon</tspan>
 <tspan x="144.9" dy="12.0">coal and iron. The exchange is awkward, stilted, watched by veterans on both</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="616.0">
+<text class="date-label" text-anchor="end" x="540.0" y="616.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">265</tspan>
 </text>
 <rect class="label" x="654.0" y="523.0" width="410.7" height="85.0" rx="8" ry="8"/>
@@ -364,7 +362,8 @@
 <tspan x="670.0" dy="12.0">Accords in Merrowgate. The treaty formally ends the Imperial Wars and</tspan>
 <tspan x="670.0" dy="12.0">establishes the Age of Trade. Borders are recognized, reparations waived, and</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1058.7" y="604.0">
+<text class="date-label" text-anchor="end" x="1058.7" y="604.0">
+<tspan>12 Ulemar — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">250</tspan>
 </text>
 <rect class="label" x="126.0" y="634.0" width="420.0" height="85.0" rx="8" ry="8"/>
@@ -376,7 +375,8 @@
 <tspan x="142.0" dy="12.0">are claimed as imperial territory, and continued resistance will be met with</tspan>
 <tspan x="142.0" dy="12.0">total war. The language is unambiguous—there will be no negotiated peace,</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="715.0">
+<text class="date-label" text-anchor="end" x="540.0" y="715.0">
+<tspan>Thaeorum — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">243</tspan>
 </text>
 <rect class="label" x="654.0" y="622.0" width="384.2" height="85.0" rx="8" ry="8"/>
@@ -388,7 +388,7 @@
 <tspan x="670.0" dy="12.0">agreements across national borders. This innovation makes Merrowgate</tspan>
 <tspan x="670.0" dy="12.0">contracts the gold standard for international trade, tripling the city&#x27;s</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1032.2" y="703.0">
+<text class="date-label" text-anchor="end" x="1032.2" y="703.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">232</tspan>
 </text>
 <rect class="label" x="127.3" y="733.0" width="418.7" height="85.0" rx="8" ry="8"/>
@@ -400,7 +400,7 @@
 <tspan x="143.3" dy="12.0">Ardenhaven, securing safe passage through its waters for all nations. The treaty</tspan>
 <tspan x="143.3" dy="12.0">establishes Merrowgate as the undisputed arbiter of maritime trade disputes.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="814.0">
+<text class="date-label" text-anchor="end" x="540.0" y="814.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">227</tspan>
 </text>
 <rect class="label" x="654.0" y="721.0" width="420.0" height="85.0" rx="8" ry="8"/>
@@ -412,7 +412,8 @@
 <tspan x="670.0" dy="12.0">republic. Each city-state retains internal governance but surrenders</tspan>
 <tspan x="670.0" dy="12.0">war-making power to a unified Council of Consuls. Merrowgate, invited to join,</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1068.0" y="802.0">
+<text class="date-label" text-anchor="end" x="1068.0" y="802.0">
+<tspan>15 Veleara — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">223</tspan>
 </text>
 <rect class="label" x="136.2" y="832.0" width="409.8" height="73.0" rx="8" ry="8"/>
@@ -423,7 +424,7 @@
 <tspan x="152.2" dy="0.0">Continental war becomes possible; generations live under levy and siege until</tspan>
 <tspan x="152.2" dy="12.0">exhaustion forces peace.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="901.0">
+<text class="date-label" text-anchor="end" x="540.0" y="901.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">0</tspan>
 </text>
 <rect class="label" x="654.0" y="820.0" width="401.7" height="73.0" rx="8" ry="8"/>
@@ -434,7 +435,7 @@
 <tspan x="670.0" dy="0.0">Empires bind territory with bridges, milestones, and waystations—built for</tspan>
 <tspan x="670.0" dy="12.0">marching columns first, commerce second.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1049.7" y="889.0">
+<text class="date-label" text-anchor="end" x="1049.7" y="889.0">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">0</tspan>
 </text>
 <rect class="label" x="129.8" y="1319.7" width="416.2" height="73.0" rx="8" ry="8"/>
@@ -445,7 +446,7 @@
 <tspan x="145.8" dy="0.0">Dynasties harden into kingdoms; borders are named, faiths codified, and wars</tspan>
 <tspan x="145.8" dy="12.0">are regional rather than world-spanning.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="1388.7">
+<text class="date-label" text-anchor="end" x="540.0" y="1388.7">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">0</tspan>
 </text>
 <rect class="label" x="654.0" y="2039.7" width="407.8" height="73.0" rx="8" ry="8"/>
@@ -456,7 +457,7 @@
 <tspan x="670.0" dy="0.0">Writing, law, and agriculture return; proto-kingdoms form and the old roads</tspan>
 <tspan x="670.0" dy="12.0">are found again, half-buried.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1055.8" y="2108.7">
+<text class="date-label" text-anchor="end" x="1055.8" y="2108.7">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">0</tspan>
 </text>
 <rect class="label" x="126.0" y="3125.7" width="420.0" height="61.0" rx="8" ry="8"/>
@@ -466,7 +467,7 @@
 <text class="summary" x="142.0" y="3172.7">
 <tspan x="142.0" dy="0.0">The day the world’s impossible cities failed; Year 0 is counted from this collapse.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="3182.7">
+<text class="date-label" text-anchor="end" x="540.0" y="3182.7">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">0</tspan>
 </text>
 <rect class="label" x="654.0" y="3119.7" width="399.5" height="73.0" rx="8" ry="8"/>
@@ -477,7 +478,7 @@
 <tspan x="670.0" dy="0.0">Survival, famine, and fear of ruins; the world is quiet and broken, and most</tspan>
 <tspan x="670.0" dy="12.0">communities last only a season.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1047.5" y="3188.7">
+<text class="date-label" text-anchor="end" x="1047.5" y="3188.7">
 <tspan class="tick-glyph">⟂</tspan><tspan class="tick-number">0</tspan>
 </text>
 </g>

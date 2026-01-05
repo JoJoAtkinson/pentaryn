@@ -4,7 +4,7 @@ import base64
 import math
 from pathlib import Path
 
-from .game_time import date_to_axis_days
+from .game_time import date_to_axis_days, format_game_date_label, month_name, time_of_day_label
 from .lane_assign import assign_lanes, sort_events
 from .layout_energy import refine_layout
 from .layout_grow import grow_downward
@@ -86,7 +86,7 @@ def _font_face_css(fonts: FontPaths) -> str:
     return css
 
 
-def _axis_base_y(axis_map: "AxisMap", axis_day: int) -> float:
+def _axis_base_y(axis_map: "AxisMap", axis_day: float) -> float:
     """
     Compute the y position for an axis_day *without* any slack steps applied.
 
@@ -173,6 +173,20 @@ def build_timeline_svg(
 
     events: list[Event] = []
     for row in rows:
+        has_month = False
+        has_day = False
+        has_hour = False
+        if "/" in row.start_year:
+            parts = [p.strip() for p in row.start_year.split("/") if p.strip()]
+            has_month = len(parts) >= 2
+            has_day = len(parts) >= 3
+            if has_day and "-" in parts[2]:
+                has_hour = True
+        else:
+            has_month = bool(row.start_month)
+            has_day = bool(row.start_day)
+            has_hour = "-" in (row.start_day or "")
+
         start = parse_game_date(row.start_year, row.start_month, row.start_day)
         axis_day = date_to_axis_days(start)
         events.append(
@@ -185,6 +199,9 @@ def build_timeline_svg(
                 factions=row.factions,
                 tags=row.tags,
                 start=start,
+                has_month=has_month,
+                has_day=has_day,
+                has_hour=has_hour,
                 axis_day=axis_day,
                 lane="left",
                 y_target=0.0,
@@ -251,10 +268,20 @@ def build_timeline_svg(
         box_w = min(float(renderer.label_max_width), content_w + 2 * renderer.label_padding_x + 2)
         box_h = content_h + 2 * renderer.label_padding_y
         
-        # Compute age label for this event
-        age_label = ""
-        if ages is not None:
-            age_label = ages.format_year(event.start.year)
+        if event.has_month:
+            year_label = ages.format_year(event.start.year) if ages is not None else str(event.start.year)
+            tod = time_of_day_label(event.start.hour) if event.has_hour else ""
+            if event.has_day:
+                if tod:
+                    date_label = f"{event.start.day} {month_name(event.start.month)}, {tod} — {year_label}"
+                else:
+                    date_label = f"{event.start.day} {month_name(event.start.month)} — {year_label}"
+            else:
+                date_label = f"{month_name(event.start.month)} — {year_label}"
+        elif ages is not None:
+            date_label = ages.format_year(event.start.year)
+        else:
+            date_label = str(event.start.year)
         
         event.box_w = box_w
         event.box_h = box_h
@@ -266,13 +293,15 @@ def build_timeline_svg(
             title_line_h=title_line_h,
             summary_line_h=summary_line_h,
             line_gap=float(line_gap),
-            age_label=age_label,
+            date_label=date_label,
         )
 
     days_per_year = 12 * 30
     if events_sorted:
-        min_axis = min(e.axis_day for e in events_sorted)
-        max_axis = max(e.axis_day for e in events_sorted)
+        min_axis_float = min(e.axis_day for e in events_sorted)
+        max_axis_float = max(e.axis_day for e in events_sorted)
+        min_axis = int(math.floor(min_axis_float))
+        max_axis = int(math.ceil(max_axis_float))
     else:
         # Allow rendering views that match zero events (e.g. tag-filtered views).
         # Default to a 1-year span unless axis bounds are provided.
@@ -285,6 +314,10 @@ def build_timeline_svg(
         # Treat an axis bound as an inclusive year bound.
         max_axis_override = int(build.axis_max_year) * days_per_year + (days_per_year - 1)
         max_axis = max(max_axis, max_axis_override)
+    if build.axis_min_day is not None:
+        min_axis = min(min_axis, int(build.axis_min_day))
+    if build.axis_max_day is not None:
+        max_axis = max(max_axis, int(build.axis_max_day))
     if max_axis < min_axis:
         max_axis = min_axis
     axis_span = max_axis - min_axis
@@ -379,8 +412,10 @@ def build_timeline_svg(
         pov_defs = pov_catalog.build_defs(sorted(faction_tags))
 
     tag_defs = ""
+    tag_icons: set[str] | None = None
     try:
         catalog = TagCatalog.load((repo_root / "scripts" / "timeline_svg" / "assets" / "tags").resolve())
+        tag_icons = catalog.known_tags()
         used_tags: list[str] = []
         for event in events_sorted:
             for tag in event.tags:
@@ -389,6 +424,7 @@ def build_timeline_svg(
         tag_defs = catalog.build_defs(used_tags)
     except Exception:
         tag_defs = ""
+        tag_icons = None
 
     render_svg(
         layout=layout,
@@ -400,6 +436,7 @@ def build_timeline_svg(
         tags_fragment=tag_defs,
         povs_fragment=pov_defs,
         faction_tags=faction_tags,
+        tag_icons=tag_icons,
     )
 
     validation = validate_layout(layout, renderer=renderer)

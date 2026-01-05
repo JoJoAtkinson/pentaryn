@@ -156,20 +156,10 @@ class TagCatalog:
 
         parts: list[str] = []
         parts.append("<defs>")
-        parts.append(self._unknown_symbol())
         for tag in unique:
             icon_path = self.tags_dir / f"{tag}.svg"
             if icon_path.exists():
                 parts.append(self._tag_symbol(tag, icon_path))
-            else:
-                # Emit an alias symbol that renders as the unknown marker, but keeps the per-tag id
-                # so the SVG can still reference `#tag_<tag>` deterministically.
-                symbol_id = self.symbol_id(tag)
-                parts.append(
-                    f'<symbol id="{symbol_id}" viewBox="0 0 512 512">'
-                    '<use href="#tag_unknown" x="0" y="0" width="512" height="512" />'
-                    "</symbol>"
-                )
         parts.append("</defs>")
         return "\n".join(parts)
 
@@ -208,15 +198,5 @@ class TagCatalog:
             "</symbol>"
         )
 
-    def _unknown_symbol(self) -> str:
-        vb_x, vb_y, vb_w, vb_h = 0.0, 0.0, 512.0, 512.0
-        cx = vb_w / 2.0
-        cy = vb_h / 2.0
-        stroke_w = vb_w * 0.035
-        radius = vb_w * 0.5 - (stroke_w / 2.0)
-        return (
-            '<symbol id="tag_unknown" viewBox="0 0 512 512">\n'
-            f'  <circle cx="{cx:g}" cy="{cy:g}" r="{radius:g}" fill="#cfcfcf" stroke="#9a9a9a" stroke-width="{stroke_w:g}" />\n'
-            f'  <text x="{cx:g}" y="{cy + 90:g}" text-anchor="middle" font-size="300" font-family="Alegreya, serif" fill="#2b1f14">?!</text>\n'
-            "</symbol>"
-        )
+    # Note: missing tag icons are intentionally omitted from defs. Renderers may still reference
+    # missing symbols; those tokens should be filtered before render to avoid empty spacing.

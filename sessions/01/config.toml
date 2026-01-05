@@ -96,3 +96,43 @@ pov_characters = ["Bazgar", "Sabriel", "Marwen"]
 Bazgar = "Confident, direct, occasional swagger; carries orc heritage but defies stereotypes"
 Sabriel = "Observant, measured, hints of mystery; hides more than she reveals"
 Marwen = "Curious, practical, slightly eccentric; comfortable with the strange"
+
+[timeline]
+# Party name (maps to world/party/{party_name}/_history.tsv)
+party_name = "the-compass-edge"
+
+# Event ID prefix for timeline events
+event_id_prefix = "party-compass"
+
+# LLM model for generating summaries (optional; if not specified, uses algorithmic summaries)
+model = "gpt-4o-mini"
+temperature = 0.3  # Lower for factual timeline summaries
+
+# Maximum events per day (10,000 foot view)
+max_events_per_day = 3
+
+# Phrases that indicate a new day has started
+new_day_indicators = [
+    "next day",
+    "next morning",
+    "following day",
+    "the following day",
+    "dawn",
+    "sunrise",
+    "long rest",
+    "after resting",
+]
+
+# Priority scoring for event importance (higher = more important)
+[timeline.priority_keywords]
+combat = 10
+boss = 10
+death = 9
+betrayal = 9
+revelation = 8
+discovery = 7
+quest = 6
+npc = 5
+travel = 3
+shopping = 2
+rest = 1

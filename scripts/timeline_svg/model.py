@@ -15,6 +15,7 @@ class ParsedDate:
     year: int
     month: int
     day: int
+    hour: int = 0
 
 
 @dataclass(frozen=True)
@@ -40,7 +41,7 @@ class LabelLayout:
     title_line_h: float
     summary_line_h: float
     line_gap: float
-    age_label: str = ""
+    date_label: str = ""
 
 
 @dataclass
@@ -53,7 +54,10 @@ class Event:
     factions: list[str]
     tags: list[str]
     start: ParsedDate
-    axis_day: int
+    has_month: bool
+    has_day: bool
+    has_hour: bool
+    axis_day: float
     lane: Lane
     y_target: float
     y: float
@@ -132,5 +136,7 @@ class BuildConfig:
     debug_age_glyphs: bool = False
     axis_min_year: int | None = None
     axis_max_year: int | None = None
+    axis_min_day: int | None = None
+    axis_max_day: int | None = None
     highlight_git_id_changes: bool = False
     git_base_ref: str = "HEAD"
