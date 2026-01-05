@@ -54,23 +54,6 @@
   </symbol>
 </defs>
 <defs>
-<symbol id="tag_lore" viewBox="0 0 512 512">
-  <circle cx="256" cy="256" r="247.04" fill="#6b4f2f" stroke="#5e4529" stroke-width="17.92" />
-  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
-<path fill="#fbf7ef" d="M492.47 21.938c-82.74-.256-167.442 12.5-242.814 45.093 5.205 13.166 9.578 28.48 13.188 45.532C242.55 97.27 217.167 92.385 194.72 95.5c-46.22 28.432-87.13 66.305-119.44 115.594 25.193 7.756 51.57 22.81 72.845 43.844-31.87-7.045-68.907-5.895-99.188 3-13.743 28.688-25.008 60.48-33.343 95.687 128.71-30.668 130.522 3.514 50.75 140.438 16.877 12.614 42.182 13.77 61.906-1.563C134 267.936 231.43 326.246 254.188 354.562c14.288-40.59 34.77-82.54 62.906-126.468-17.29-14.667-39.21-24.838-63.813-32.375 25.364-5.256 50.91-10.928 74.126-11.22 6.482-.082 12.78.272 18.844 1.156 17.57-24.007 37.408-48.612 59.75-73.97-12.538-6.31-25.476-11.454-38.125-14.967 17.132-5.76 35.274-8.34 52.844-8.157 2.01.02 4.004.095 6 .187 20.07-21.708 41.927-43.976 65.75-66.813zM426.72 47.28c-130.93 65.394-226.626 162.926-281.784 286.25C172.34 184.41 287.048 84.57 426.72 47.28z"/>
-  </g>
-</symbol>
-<symbol id="tag_party" viewBox="0 0 24 24">
-  <circle cx="12" cy="12" r="11.5" fill="#7a5b3a" stroke="#6b5033" stroke-width="1" />
-  <g transform="translate(12.000 12.000) scale(0.7200) translate(-12.000 -12.000)">
-<g fill="none" stroke="#fbf7ef" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-    <circle cx="9" cy="7" r="4"/>
-    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-  </g>
-  </g>
-</symbol>
 <symbol id="tag_public" viewBox="0 0 512 512">
   <g transform="translate(256.000 256.000) scale(0.8800) translate(-256.000 -256.000)">
 <g class="" transform="translate(0,0)" style=""><path d="M149.688 85.625c-1.234.005-2.465.033-3.72.063-33.913.806-75.48 10.704-127.25 33.718V362.78c60.77-28.82 106.718-37.067 144.22-33.092 33.502 3.55 59.685 16.66 83.562 31.187v-242.97c-23.217-17.744-50.195-30.04-85.97-32a184.47 184.47 0 0 0-10.843-.28zm211.968 0c-3.7-.016-7.322.088-10.844.28-35.773 1.96-62.75 14.256-85.968 32v242.97c23.876-14.527 50.06-27.637 83.562-31.188 37.502-3.974 83.45 4.272 144.22 33.094V119.407c-51.77-23.014-93.337-32.912-127.25-33.72-1.255-.028-2.486-.056-3.72-.06zm5.72 261.78c-1.038-.002-2.074.017-3.095.033-4.808.075-9.43.37-13.905.843-33.932 3.597-59.603 17.976-85.53 34.44v.28c-6.554-1.99-13.02-2.37-19.408-.97-25.566-16.177-51.003-30.202-84.468-33.75-5.595-.592-11.44-.883-17.564-.842-32.04.213-71.833 9.778-124.687 35.937v42.53c60.77-28.823 106.714-37.067 144.218-33.092 18.545 1.965 34.837 6.845 49.75 13.28-4.682 6.064-9.308 13.268-13.875 21.688h117.156c-5.93-8.22-11.798-15.414-17.626-21.56 14.996-6.503 31.39-11.43 50.062-13.408 37.503-3.974 83.448 4.27 144.22 33.094v-42.53c-53.16-26.31-93.115-35.863-125.25-35.97z" fill="currentColor" fill-opacity="1"></path></g>
@@ -98,6 +81,12 @@
   <circle cx="256" cy="256" r="247.04" fill="#3a3f6b" stroke="#33375e" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
 <path fill="#fbf7ef" d="m255.594 19.406-15.78 59.125c5.184-.58 10.44-.874 15.78-.874 5.338 0 10.595.293 15.78.875l-15.78-59.124zm0 76.97c-57.894 0-106.156 40.154-118.656 94.186H374.25c-12.5-54.032-60.762-94.187-118.656-94.187zM19.406 209.25v33.53h472.406v-33.53H19.406zM71.5 261.47v159.124h50.406V261.47H71.5zm105.97 0v159.124h50.405V261.47H177.47zm105.936 0v159.124h50.406V261.47h-50.406zm105.938 0v159.124h50.406V261.47h-50.406zm-161.78 177.655-31.658 56.656h120.5l-32.062-56.655h-56.78zm-208.158.156v33.533h167.938l18.72-33.532H19.405zm286.531 0 18.97 33.533h166.906V439.28H305.938z"/>
+  </g>
+</symbol>
+<symbol id="tag_lore" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="247.04" fill="#6b4f2f" stroke="#5e4529" stroke-width="17.92" />
+  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
+<path fill="#fbf7ef" d="M492.47 21.938c-82.74-.256-167.442 12.5-242.814 45.093 5.205 13.166 9.578 28.48 13.188 45.532C242.55 97.27 217.167 92.385 194.72 95.5c-46.22 28.432-87.13 66.305-119.44 115.594 25.193 7.756 51.57 22.81 72.845 43.844-31.87-7.045-68.907-5.895-99.188 3-13.743 28.688-25.008 60.48-33.343 95.687 128.71-30.668 130.522 3.514 50.75 140.438 16.877 12.614 42.182 13.77 61.906-1.563C134 267.936 231.43 326.246 254.188 354.562c14.288-40.59 34.77-82.54 62.906-126.468-17.29-14.667-39.21-24.838-63.813-32.375 25.364-5.256 50.91-10.928 74.126-11.22 6.482-.082 12.78.272 18.844 1.156 17.57-24.007 37.408-48.612 59.75-73.97-12.538-6.31-25.476-11.454-38.125-14.967 17.132-5.76 35.274-8.34 52.844-8.157 2.01.02 4.004.095 6 .187 20.07-21.708 41.927-43.976 65.75-66.813zM426.72 47.28c-130.93 65.394-226.626 162.926-281.784 286.25C172.34 184.41 287.048 84.57 426.72 47.28z"/>
   </g>
 </symbol>
 <symbol id="tag_law" viewBox="0 0 512 512">
@@ -183,62 +172,60 @@
 </defs>
 <g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="4735"/></g>
 <g id="connectors">
-<line class="connector" x1="600" y1="46.1" x2="552.0" y2="88.5"/>
-<line class="connector" x1="600" y1="64.9" x2="648.0" y2="88.5"/>
-<line class="connector" x1="600" y1="146.3" x2="552.0" y2="193.5"/>
-<line class="connector" x1="600" y1="189.9" x2="648.0" y2="211.5"/>
-<line class="connector" x1="600" y1="247.4" x2="552.0" y2="298.5"/>
-<line class="connector" x1="600" y1="339.9" x2="648.0" y2="346.5"/>
-<line class="connector" x1="600" y1="436.8" x2="552.0" y2="436.8"/>
-<line class="connector" x1="600" y1="534.9" x2="648.0" y2="534.9"/>
-<line class="connector" x1="600" y1="729.9" x2="552.0" y2="729.9"/>
-<line class="connector" x1="600" y1="790.4" x2="648.0" y2="790.4"/>
-<line class="connector" x1="600" y1="879.9" x2="552.0" y2="879.9"/>
-<line class="connector" x1="600" y1="889.9" x2="648.0" y2="901.4"/>
-<line class="connector" x1="600" y1="909.9" x2="552.0" y2="1002.9"/>
-<line class="connector" x1="600" y1="988.2" x2="648.0" y2="1012.4"/>
-<line class="connector" x1="600" y1="1089.9" x2="552.0" y2="1119.9"/>
-<line class="connector" x1="600" y1="1184.1" x2="648.0" y2="1184.1"/>
-<line class="connector" x1="600" y1="1312.4" x2="552.0" y2="1312.4"/>
-<line class="connector" x1="600" y1="1379.9" x2="648.0" y2="1379.9"/>
-<line class="connector" x1="600" y1="1413.8" x2="552.0" y2="1423.4"/>
-<line class="connector" x1="600" y1="1509.9" x2="648.0" y2="1509.9"/>
-<line class="connector" x1="600" y1="1569.9" x2="552.0" y2="1569.9"/>
-<line class="connector" x1="600" y1="1574.9" x2="648.0" y2="1620.9"/>
-<line class="connector" x1="600" y1="1779.9" x2="552.0" y2="1779.9"/>
-<line class="connector" x1="600" y1="2028.1" x2="648.0" y2="2028.1"/>
-<line class="connector" x1="600" y1="2139.9" x2="552.0" y2="2139.9"/>
-<line class="connector" x1="600" y1="2330.9" x2="648.0" y2="2330.9"/>
-<line class="connector" x1="600" y1="2529.9" x2="552.0" y2="2529.9"/>
-<line class="connector" x1="600" y1="2592.8" x2="648.0" y2="2592.8"/>
-<line class="connector" x1="600" y1="2724.9" x2="552.0" y2="2724.9"/>
-<line class="connector" x1="600" y1="2823.8" x2="648.0" y2="2823.8"/>
-<line class="connector" x1="600" y1="2919.9" x2="552.0" y2="2919.9"/>
-<line class="connector" x1="600" y1="2987.4" x2="648.0" y2="2987.4"/>
-<line class="connector" x1="600" y1="3086.8" x2="552.0" y2="3086.8"/>
-<line class="connector" x1="600" y1="3279.9" x2="648.0" y2="3246.0"/>
-<line class="connector" x1="600" y1="3279.9" x2="552.0" y2="3279.9"/>
-<line class="connector" x1="600" y1="3302.4" x2="648.0" y2="3363.0"/>
-<line class="connector" x1="600" y1="3369.9" x2="552.0" y2="3396.9"/>
-<line class="connector" x1="600" y1="3429.9" x2="648.0" y2="3474.0"/>
-<line class="connector" x1="600" y1="3469.9" x2="552.0" y2="3507.9"/>
-<line class="connector" x1="600" y1="3579.9" x2="648.0" y2="3585.0"/>
-<line class="connector" x1="600" y1="3772.4" x2="552.0" y2="3772.4"/>
-<line class="connector" x1="600" y1="3849.9" x2="648.0" y2="3830.5"/>
-<line class="connector" x1="600" y1="3864.0" x2="552.0" y2="3889.4"/>
-<line class="connector" x1="600" y1="3874.9" x2="648.0" y2="3941.5"/>
-<line class="connector" x1="600" y1="3935.6" x2="552.0" y2="4006.4"/>
-<line class="connector" x1="600" y1="4082.4" x2="648.0" y2="4082.4"/>
-<line class="connector" x1="600" y1="4149.9" x2="552.0" y2="4149.9"/>
-<line class="connector" x1="600" y1="4239.9" x2="648.0" y2="4239.9"/>
-<line class="connector" x1="600" y1="4314.0" x2="552.0" y2="4314.0"/>
-<line class="connector" x1="600" y1="4419.9" x2="648.0" y2="4419.9"/>
-<line class="connector" x1="600" y1="4504.9" x2="552.0" y2="4504.9"/>
-<line class="connector" x1="600" y1="4569.9" x2="648.0" y2="4569.9"/>
-<line class="connector" x1="600" y1="4686.2" x2="552.0" y2="4686.2"/>
+<line class="connector" x1="600" y1="64.9" x2="552.0" y2="88.5"/>
+<line class="connector" x1="600" y1="146.3" x2="648.0" y2="144.4"/>
+<line class="connector" x1="600" y1="189.9" x2="552.0" y2="211.5"/>
+<line class="connector" x1="600" y1="247.4" x2="648.0" y2="249.4"/>
+<line class="connector" x1="600" y1="339.9" x2="552.0" y2="346.5"/>
+<line class="connector" x1="600" y1="436.8" x2="648.0" y2="436.8"/>
+<line class="connector" x1="600" y1="534.9" x2="552.0" y2="534.9"/>
+<line class="connector" x1="600" y1="729.9" x2="648.0" y2="728.9"/>
+<line class="connector" x1="600" y1="790.4" x2="552.0" y2="790.4"/>
+<line class="connector" x1="600" y1="879.9" x2="648.0" y2="833.9"/>
+<line class="connector" x1="600" y1="889.9" x2="552.0" y2="901.4"/>
+<line class="connector" x1="600" y1="909.9" x2="648.0" y2="956.9"/>
+<line class="connector" x1="600" y1="988.2" x2="552.0" y2="1012.4"/>
+<line class="connector" x1="600" y1="1089.9" x2="648.0" y2="1089.9"/>
+<line class="connector" x1="600" y1="1184.1" x2="552.0" y2="1184.1"/>
+<line class="connector" x1="600" y1="1312.4" x2="648.0" y2="1307.6"/>
+<line class="connector" x1="600" y1="1379.9" x2="552.0" y2="1379.9"/>
+<line class="connector" x1="600" y1="1413.8" x2="648.0" y2="1418.6"/>
+<line class="connector" x1="600" y1="1509.9" x2="552.0" y2="1509.9"/>
+<line class="connector" x1="600" y1="1569.9" x2="648.0" y2="1569.9"/>
+<line class="connector" x1="600" y1="1574.9" x2="552.0" y2="1620.9"/>
+<line class="connector" x1="600" y1="1779.9" x2="648.0" y2="1779.9"/>
+<line class="connector" x1="600" y1="2028.1" x2="552.0" y2="2028.1"/>
+<line class="connector" x1="600" y1="2139.9" x2="648.0" y2="2139.9"/>
+<line class="connector" x1="600" y1="2330.9" x2="552.0" y2="2330.9"/>
+<line class="connector" x1="600" y1="2529.9" x2="648.0" y2="2529.9"/>
+<line class="connector" x1="600" y1="2592.8" x2="552.0" y2="2592.8"/>
+<line class="connector" x1="600" y1="2724.9" x2="648.0" y2="2724.9"/>
+<line class="connector" x1="600" y1="2823.8" x2="552.0" y2="2823.8"/>
+<line class="connector" x1="600" y1="2919.9" x2="648.0" y2="2919.9"/>
+<line class="connector" x1="600" y1="2987.4" x2="552.0" y2="2987.4"/>
+<line class="connector" x1="600" y1="3086.8" x2="648.0" y2="3086.8"/>
+<line class="connector" x1="600" y1="3279.9" x2="552.0" y2="3246.0"/>
+<line class="connector" x1="600" y1="3279.9" x2="648.0" y2="3258.2"/>
+<line class="connector" x1="600" y1="3302.4" x2="552.0" y2="3363.0"/>
+<line class="connector" x1="600" y1="3369.9" x2="648.0" y2="3375.2"/>
+<line class="connector" x1="600" y1="3429.9" x2="552.0" y2="3474.0"/>
+<line class="connector" x1="600" y1="3469.9" x2="648.0" y2="3486.2"/>
+<line class="connector" x1="600" y1="3579.9" x2="552.0" y2="3585.0"/>
+<line class="connector" x1="600" y1="3772.4" x2="648.0" y2="3740.3"/>
+<line class="connector" x1="600" y1="3849.9" x2="552.0" y2="3830.5"/>
+<line class="connector" x1="600" y1="3864.0" x2="648.0" y2="3857.3"/>
+<line class="connector" x1="600" y1="3874.9" x2="552.0" y2="3941.5"/>
+<line class="connector" x1="600" y1="3935.6" x2="648.0" y2="3974.3"/>
+<line class="connector" x1="600" y1="4082.4" x2="552.0" y2="4082.4"/>
+<line class="connector" x1="600" y1="4149.9" x2="648.0" y2="4149.9"/>
+<line class="connector" x1="600" y1="4239.9" x2="552.0" y2="4239.9"/>
+<line class="connector" x1="600" y1="4314.0" x2="648.0" y2="4314.0"/>
+<line class="connector" x1="600" y1="4419.9" x2="552.0" y2="4419.9"/>
+<line class="connector" x1="600" y1="4504.9" x2="648.0" y2="4504.9"/>
+<line class="connector" x1="600" y1="4569.9" x2="552.0" y2="4569.9"/>
+<line class="connector" x1="600" y1="4686.2" x2="648.0" y2="4686.2"/>
 </g>
 <g id="tokens">
-<use class="token" href="#token_default" x="589.0" y="35.1" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="53.9" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="135.3" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="178.9" width="22" height="22"/>
@@ -293,1502 +280,1476 @@
 <use class="token" href="#token_default" x="589.0" y="4675.2" width="22" height="22"/>
 </g>
 <g id="labels">
-<rect class="label" x="141.7" y="40.0" width="404.3" height="97.0" rx="8" ry="8"/>
-<text class="title" x="157.7" y="69.0">
-<tspan x="157.7" dy="0.0">Shopping and Research at Merrowgate</tspan>
+<rect class="label" x="137.5" y="40.0" width="408.5" height="97.0" rx="8" ry="8"/>
+<text class="title" x="153.5" y="69.0">
+<tspan x="153.5" dy="0.0">The Covenant Summit</tspan>
 </text>
-<text class="summary" x="157.7" y="87.0">
-<tspan x="157.7" dy="0.0">The party completed their shopping at various local shops, acquiring items</tspan>
-<tspan x="157.7" dy="12.0">including a discounted Sleep scroll and replacement throwing axes. Marwen</tspan>
-<tspan x="157.7" dy="12.0">stole an uncatalogued holy book during her research at the Concordance</tspan>
-<tspan x="157.7" dy="12.0">Library, successfully evading detection.</tspan>
+<text class="summary" x="153.5" y="87.0">
+<tspan x="153.5" dy="0.0">Merrowgate hosts the largest international trade conference in history, with</tspan>
+<tspan x="153.5" dy="12.0">representatives from all eight major factions. The city&#x27;s infrastructure strains</tspan>
+<tspan x="153.5" dy="12.0">under the demand, but the resulting trade agreements reshape continental</tspan>
+<tspan x="153.5" dy="12.0">commerce for the generations to come.</tspan>
 </text>
 <text class="date-label" text-anchor="end" x="540.0" y="133.0">
-<tspan>16 Arethum, Afternoon — </tspan>
-<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
-</text>
-<rect class="label" x="654.0" y="40.0" width="408.5" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="69.0">
-<tspan x="670.0" dy="0.0">The Covenant Summit</tspan>
-</text>
-<text class="summary" x="670.0" y="87.0">
-<tspan x="670.0" dy="0.0">Merrowgate hosts the largest international trade conference in history, with</tspan>
-<tspan x="670.0" dy="12.0">representatives from all eight major factions. The city&#x27;s infrastructure strains</tspan>
-<tspan x="670.0" dy="12.0">under the demand, but the resulting trade agreements reshape continental</tspan>
-<tspan x="670.0" dy="12.0">commerce for the generations to come.</tspan>
-</text>
-<text class="date-label" text-anchor="end" x="1056.5" y="133.0">
 <tspan>Lumaeos — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label" x="132.8" y="151.0" width="413.2" height="85.0" rx="8" ry="8"/>
-<text class="title" x="148.8" y="180.0">
-<tspan x="148.8" dy="0.0">The Silent Coin Succession</tspan>
+<rect class="label" x="654.0" y="101.9" width="413.2" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="130.9">
+<tspan x="670.0" dy="0.0">The Silent Coin Succession</tspan>
 </text>
-<text class="summary" x="148.8" y="198.0">
-<tspan x="148.8" dy="0.0">For the first time in living memory, the Silent Coin admits to a leadership</tspan>
-<tspan x="148.8" dy="12.0">transition. No details are provided about the old or new leadership. Clients</tspan>
-<tspan x="148.8" dy="12.0">notice no change in service quality, which somehow makes it more unsettling.</tspan>
+<text class="summary" x="670.0" y="148.9">
+<tspan x="670.0" dy="0.0">For the first time in living memory, the Silent Coin admits to a leadership</tspan>
+<tspan x="670.0" dy="12.0">transition. No details are provided about the old or new leadership. Clients</tspan>
+<tspan x="670.0" dy="12.0">notice no change in service quality, which somehow makes it more unsettling.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="232.0">
+<text class="date-label" text-anchor="end" x="1061.2" y="182.9">
 <tspan>14 Voraela — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">47</tspan>
 </text>
-<rect class="label" x="654.0" y="151.0" width="417.1" height="121.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="180.0">
-<tspan x="670.0" dy="0.0">The Ruins Reclamation Act</tspan>
+<rect class="label" x="128.9" y="151.0" width="417.1" height="121.0" rx="8" ry="8"/>
+<text class="title" x="144.9" y="180.0">
+<tspan x="144.9" dy="0.0">The Ruins Reclamation Act</tspan>
 </text>
-<text class="summary" x="670.0" y="198.0">
-<tspan x="670.0" dy="0.0">Facing vast territorial expansion and countless ancient ruins across former</tspan>
-<tspan x="670.0" dy="12.0">battlefields, the Council of Consuls declares a controversial policy: any treasure</tspan>
-<tspan x="670.0" dy="12.0">or artifacts found in ruins belong to the finder, no questions asked. The</tspan>
-<tspan x="670.0" dy="12.0">government is transparent about their motives—they lack the researchers and</tspan>
-<tspan x="670.0" dy="12.0">resources to explore these sites themselves, and the ruins attract monsters that</tspan>
-<tspan x="670.0" dy="12.0">endanger civilian settlements. By offering legal ownership of findings,</tspan>
+<text class="summary" x="144.9" y="198.0">
+<tspan x="144.9" dy="0.0">Facing vast territorial expansion and countless ancient ruins across former</tspan>
+<tspan x="144.9" dy="12.0">battlefields, the Council of Consuls declares a controversial policy: any treasure</tspan>
+<tspan x="144.9" dy="12.0">or artifacts found in ruins belong to the finder, no questions asked. The</tspan>
+<tspan x="144.9" dy="12.0">government is transparent about their motives—they lack the researchers and</tspan>
+<tspan x="144.9" dy="12.0">resources to explore these sites themselves, and the ruins attract monsters that</tspan>
+<tspan x="144.9" dy="12.0">endanger civilian settlements. By offering legal ownership of findings,</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1065.1" y="268.0">
+<text class="date-label" text-anchor="end" x="540.0" y="268.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">46</tspan>
 </text>
-<rect class="label" x="127.4" y="250.0" width="418.6" height="97.0" rx="8" ry="8"/>
-<text class="title" x="143.4" y="279.0">
-<tspan x="143.4" dy="0.0">The Foundling Uprising</tspan>
+<rect class="label" x="654.0" y="200.9" width="418.6" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="229.9">
+<tspan x="670.0" dy="0.0">The Foundling Uprising</tspan>
 </text>
-<text class="summary" x="143.4" y="297.0">
-<tspan x="143.4" dy="0.0">A group of guild-sworn foundlings demands full citizenship rights and guild</tspan>
-<tspan x="143.4" dy="12.0">membership without debt obligations. The movement gains momentum before</tspan>
-<tspan x="143.4" dy="12.0">being co-opted—the guilds offer improved conditions in exchange for</tspan>
-<tspan x="143.4" dy="12.0">continued service. Most accept.</tspan>
+<text class="summary" x="670.0" y="247.9">
+<tspan x="670.0" dy="0.0">A group of guild-sworn foundlings demands full citizenship rights and guild</tspan>
+<tspan x="670.0" dy="12.0">membership without debt obligations. The movement gains momentum before</tspan>
+<tspan x="670.0" dy="12.0">being co-opted—the guilds offer improved conditions in exchange for</tspan>
+<tspan x="670.0" dy="12.0">continued service. Most accept.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="343.0">
+<text class="date-label" text-anchor="end" x="1066.6" y="293.9">
 <tspan>Veleara — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">44</tspan>
 </text>
-<rect class="label" x="654.0" y="286.0" width="411.5" height="121.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="315.0">
-<tspan x="670.0" dy="0.0">The Southern Watch Towers</tspan>
+<rect class="label" x="134.5" y="286.0" width="411.5" height="121.0" rx="8" ry="8"/>
+<text class="title" x="150.5" y="315.0">
+<tspan x="150.5" dy="0.0">The Southern Watch Towers</tspan>
 </text>
-<text class="summary" x="670.0" y="333.0">
-<tspan x="670.0" dy="0.0">The Council of Consuls completes construction of watch towers along the</tspan>
-<tspan x="670.0" dy="12.0">southern border with Calderon. Not out of fear—the Pentarch Accords</tspan>
-<tspan x="670.0" dy="12.0">hold—but as Cold War-style deterrent: &quot;We are ready.&quot; The towers are staffed,</tspan>
-<tspan x="670.0" dy="12.0">supplied, and connected by signal fires. Calderon takes notice. The project</tspan>
-<tspan x="670.0" dy="12.0">demonstrates Ardenhaven&#x27;s maturity as a federation: unified military</tspan>
-<tspan x="670.0" dy="12.0">infrastructure built and maintained across formerly fractious city-states. Two</tspan>
+<text class="summary" x="150.5" y="333.0">
+<tspan x="150.5" dy="0.0">The Council of Consuls completes construction of watch towers along the</tspan>
+<tspan x="150.5" dy="12.0">southern border with Calderon. Not out of fear—the Pentarch Accords</tspan>
+<tspan x="150.5" dy="12.0">hold—but as Cold War-style deterrent: &quot;We are ready.&quot; The towers are staffed,</tspan>
+<tspan x="150.5" dy="12.0">supplied, and connected by signal fires. Calderon takes notice. The project</tspan>
+<tspan x="150.5" dy="12.0">demonstrates Ardenhaven&#x27;s maturity as a federation: unified military</tspan>
+<tspan x="150.5" dy="12.0">infrastructure built and maintained across formerly fractious city-states. Two</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1059.5" y="403.0">
+<text class="date-label" text-anchor="end" x="540.0" y="403.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">41</tspan>
 </text>
-<rect class="label" x="131.2" y="394.3" width="414.8" height="85.0" rx="8" ry="8"/>
-<text class="title" x="147.2" y="423.3">
-<tspan x="147.2" dy="0.0">The Charter Revision</tspan>
+<rect class="label" x="654.0" y="394.3" width="414.8" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="423.3">
+<tspan x="670.0" dy="0.0">The Charter Revision</tspan>
 </text>
-<text class="summary" x="147.2" y="441.3">
-<tspan x="147.2" dy="0.0">Merrowgate updates its founding charter for the first time in 200 years,</tspan>
-<tspan x="147.2" dy="12.0">clarifying guild jurisdictions and council powers. The process takes three years</tspan>
-<tspan x="147.2" dy="12.0">of negotiation.</tspan>
+<text class="summary" x="670.0" y="441.3">
+<tspan x="670.0" dy="0.0">Merrowgate updates its founding charter for the first time in 200 years,</tspan>
+<tspan x="670.0" dy="12.0">clarifying guild jurisdictions and council powers. The process takes three years</tspan>
+<tspan x="670.0" dy="12.0">of negotiation.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="475.3">
+<text class="date-label" text-anchor="end" x="1062.8" y="475.3">
 <tspan>8 Arethum — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">37</tspan>
 </text>
-<rect class="label" x="654.0" y="486.4" width="412.8" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="515.4">
-<tspan x="670.0" dy="0.0">The Ledger Court Fire</tspan>
+<rect class="label" x="133.2" y="486.4" width="412.8" height="97.0" rx="8" ry="8"/>
+<text class="title" x="149.2" y="515.4">
+<tspan x="149.2" dy="0.0">The Ledger Court Fire</tspan>
 </text>
-<text class="summary" x="670.0" y="533.4">
-<tspan x="670.0" dy="0.0">A devastating fire destroys part of Ledger Court, including archives of</tspan>
-<tspan x="670.0" dy="12.0">thousands of contracts. Panic spreads about lost agreements until the</tspan>
-<tspan x="670.0" dy="12.0">Scriveners reveal complete backup copies—maintained in a secret location for</tspan>
-<tspan x="670.0" dy="12.0">exactly this contingency.</tspan>
+<text class="summary" x="149.2" y="533.4">
+<tspan x="149.2" dy="0.0">A devastating fire destroys part of Ledger Court, including archives of</tspan>
+<tspan x="149.2" dy="12.0">thousands of contracts. Panic spreads about lost agreements until the</tspan>
+<tspan x="149.2" dy="12.0">Scriveners reveal complete backup copies—maintained in a secret location for</tspan>
+<tspan x="149.2" dy="12.0">exactly this contingency.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1060.8" y="579.4">
+<text class="date-label" text-anchor="end" x="540.0" y="579.4">
 <tspan>Ulemar — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">34</tspan>
 </text>
-<rect class="label" x="126.0" y="687.4" width="420.0" height="85.0" rx="8" ry="8"/>
-<text class="title" x="142.0" y="716.4">
-<tspan x="142.0" dy="0.0">The Insurance Innovation</tspan>
+<rect class="label" x="654.0" y="686.4" width="420.0" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="715.4">
+<tspan x="670.0" dy="0.0">The Insurance Innovation</tspan>
 </text>
-<text class="summary" x="142.0" y="734.4">
-<tspan x="142.0" dy="0.0">Merrowgate introduces &quot;life insurance&quot;—contracts that pay out upon death. The</tspan>
-<tspan x="142.0" dy="12.0">innovation is initially controversial (betting on death?) but becomes wildly</tspan>
-<tspan x="142.0" dy="12.0">popular. Within five years, most middle-class citizens carry policies.</tspan>
+<text class="summary" x="670.0" y="733.4">
+<tspan x="670.0" dy="0.0">Merrowgate introduces &quot;life insurance&quot;—contracts that pay out upon death. The</tspan>
+<tspan x="670.0" dy="12.0">innovation is initially controversial (betting on death?) but becomes wildly</tspan>
+<tspan x="670.0" dy="12.0">popular. Within five years, most middle-class citizens carry policies.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="768.4">
+<text class="date-label" text-anchor="end" x="1068.0" y="767.4">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">28</tspan>
 </text>
-<rect class="label" x="654.0" y="741.9" width="406.5" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="770.9">
-<tspan x="670.0" dy="0.0">The Winter Contract</tspan>
+<rect class="label" x="139.5" y="741.9" width="406.5" height="97.0" rx="8" ry="8"/>
+<text class="title" x="155.5" y="770.9">
+<tspan x="155.5" dy="0.0">The Winter Contract</tspan>
 </text>
-<text class="summary" x="670.0" y="788.9">
-<tspan x="670.0" dy="0.0">A mysterious benefactor pays the Scriveners to forgive all small debts (under</tspan>
-<tspan x="670.0" dy="12.0">100 gold) city-wide as a holiday gift. Thousands of poor families are suddenly</tspan>
-<tspan x="670.0" dy="12.0">debt-free. The benefactor&#x27;s identity is never revealed, but the Silent Vault&#x27;s</tspan>
-<tspan x="670.0" dy="12.0">doors glow golden that night.</tspan>
+<text class="summary" x="155.5" y="788.9">
+<tspan x="155.5" dy="0.0">A mysterious benefactor pays the Scriveners to forgive all small debts (under</tspan>
+<tspan x="155.5" dy="12.0">100 gold) city-wide as a holiday gift. Thousands of poor families are suddenly</tspan>
+<tspan x="155.5" dy="12.0">debt-free. The benefactor&#x27;s identity is never revealed, but the Silent Vault&#x27;s</tspan>
+<tspan x="155.5" dy="12.0">doors glow golden that night.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1054.5" y="834.9">
+<text class="date-label" text-anchor="end" x="540.0" y="834.9">
 <tspan>25 Aneumos — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">25</tspan>
 </text>
-<rect class="label" x="126.0" y="831.4" width="420.0" height="97.0" rx="8" ry="8"/>
-<text class="title" x="142.0" y="860.4">
-<tspan x="142.0" dy="0.0">Hearts Taken on the Nails</tspan>
+<rect class="label" x="654.0" y="785.4" width="420.0" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="814.4">
+<tspan x="670.0" dy="0.0">Hearts Taken on the Nails</tspan>
 </text>
-<text class="summary" x="142.0" y="878.4">
-<tspan x="142.0" dy="0.0">A Calderon caravan is found on the Road of Nails—guards and merchants laid</tspan>
-<tspan x="142.0" dy="12.0">out in a straight line, boots aligned, each with their chest ripped open with the</tspan>
-<tspan x="142.0" dy="12.0">heart removed. The bodies are left where they were laid. The story runs ahead of</tspan>
-<tspan x="142.0" dy="12.0">the carts and crosses every border, told in whispers that never match.</tspan>
+<text class="summary" x="670.0" y="832.4">
+<tspan x="670.0" dy="0.0">A Calderon caravan is found on the Road of Nails—guards and merchants laid</tspan>
+<tspan x="670.0" dy="12.0">out in a straight line, boots aligned, each with their chest ripped open with the</tspan>
+<tspan x="670.0" dy="12.0">heart removed. The bodies are left where they were laid. The story runs ahead of</tspan>
+<tspan x="670.0" dy="12.0">the carts and crosses every border, told in whispers that never match.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="924.4">
+<text class="date-label" text-anchor="end" x="1068.0" y="878.4">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">23</tspan>
 </text>
-<rect class="label" x="654.0" y="852.9" width="417.5" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="881.9">
-<tspan x="670.0" dy="0.0">The Scriveners&#x27; Schism</tspan>
+<rect class="label" x="128.5" y="852.9" width="417.5" height="97.0" rx="8" ry="8"/>
+<text class="title" x="144.5" y="881.9">
+<tspan x="144.5" dy="0.0">The Scriveners&#x27; Schism</tspan>
 </text>
-<text class="summary" x="670.0" y="899.9">
-<tspan x="670.0" dy="0.0">A radical faction of young Scriveners advocates for &quot;contract</tspan>
-<tspan x="670.0" dy="12.0">liberation&quot;—reducing enchantment enforcement and trusting parties to honor</tspan>
-<tspan x="670.0" dy="12.0">agreements voluntarily. The movement gains followers before being crushed by</tspan>
-<tspan x="670.0" dy="12.0">traditionalists. Several radicals are expelled from the city.</tspan>
+<text class="summary" x="144.5" y="899.9">
+<tspan x="144.5" dy="0.0">A radical faction of young Scriveners advocates for &quot;contract</tspan>
+<tspan x="144.5" dy="12.0">liberation&quot;—reducing enchantment enforcement and trusting parties to honor</tspan>
+<tspan x="144.5" dy="12.0">agreements voluntarily. The movement gains followers before being crushed by</tspan>
+<tspan x="144.5" dy="12.0">traditionalists. Several radicals are expelled from the city.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1065.5" y="945.9">
+<text class="date-label" text-anchor="end" x="540.0" y="945.9">
 <tspan>Ithraeum — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">22</tspan>
 </text>
-<rect class="label" x="134.5" y="942.4" width="411.5" height="121.0" rx="8" ry="8"/>
-<text class="title" x="150.5" y="971.4">
-<tspan x="150.5" dy="0.0">The Monument Dispute</tspan>
+<rect class="label" x="654.0" y="896.4" width="411.5" height="121.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="925.4">
+<tspan x="670.0" dy="0.0">The Monument Dispute</tspan>
 </text>
-<text class="summary" x="150.5" y="989.4">
-<tspan x="150.5" dy="0.0">Three generations after the war, Ardenhaven&#x27;s city-states cannot agree on how</tspan>
-<tspan x="150.5" dy="12.0">to commemorate the Winter of Graves. Some demand heroic monuments</tspan>
-<tspan x="150.5" dy="12.0">celebrating resilience. Others insist on somber memorials acknowledging</tspan>
-<tspan x="150.5" dy="12.0">mutual suffering with Calderon. One radical faction proposes bulldozing the</tspan>
-<tspan x="150.5" dy="12.0">mass graves and planting wheat—&quot;let the dead feed the living.&quot; The Council of</tspan>
-<tspan x="150.5" dy="12.0">Consuls deadlocks repeatedly. Each city-state builds its own memorial in its</tspan>
+<text class="summary" x="670.0" y="943.4">
+<tspan x="670.0" dy="0.0">Three generations after the war, Ardenhaven&#x27;s city-states cannot agree on how</tspan>
+<tspan x="670.0" dy="12.0">to commemorate the Winter of Graves. Some demand heroic monuments</tspan>
+<tspan x="670.0" dy="12.0">celebrating resilience. Others insist on somber memorials acknowledging</tspan>
+<tspan x="670.0" dy="12.0">mutual suffering with Calderon. One radical faction proposes bulldozing the</tspan>
+<tspan x="670.0" dy="12.0">mass graves and planting wheat—&quot;let the dead feed the living.&quot; The Council of</tspan>
+<tspan x="670.0" dy="12.0">Consuls deadlocks repeatedly. Each city-state builds its own memorial in its</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1059.4">
+<text class="date-label" text-anchor="end" x="1059.5" y="1013.4">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">22</tspan>
 </text>
-<rect class="label" x="654.0" y="963.9" width="411.1" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="992.9">
-<tspan x="670.0" dy="0.0">The Undercurrent Purge</tspan>
+<rect class="label" x="134.9" y="963.9" width="411.1" height="97.0" rx="8" ry="8"/>
+<text class="title" x="150.9" y="992.9">
+<tspan x="150.9" dy="0.0">The Undercurrent Purge</tspan>
 </text>
-<text class="summary" x="670.0" y="1010.9">
-<tspan x="670.0" dy="0.0">A reformist faction within the city council attempts to shut down the</tspan>
-<tspan x="670.0" dy="12.0">Undercurrent&#x27;s more blatant criminal operations. Within three days, every</tspan>
-<tspan x="670.0" dy="12.0">reformist finds themselves implicated in old scandals or facing financial ruin.</tspan>
-<tspan x="670.0" dy="12.0">The investigation quietly ends.</tspan>
+<text class="summary" x="150.9" y="1010.9">
+<tspan x="150.9" dy="0.0">A reformist faction within the city council attempts to shut down the</tspan>
+<tspan x="150.9" dy="12.0">Undercurrent&#x27;s more blatant criminal operations. Within three days, every</tspan>
+<tspan x="150.9" dy="12.0">reformist finds themselves implicated in old scandals or facing financial ruin.</tspan>
+<tspan x="150.9" dy="12.0">The investigation quietly ends.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1059.1" y="1056.9">
+<text class="date-label" text-anchor="end" x="540.0" y="1056.9">
 <tspan>22 Aoruvan — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">19</tspan>
 </text>
-<rect class="label" x="141.6" y="1077.4" width="404.4" height="85.0" rx="8" ry="8"/>
-<text class="title" x="157.6" y="1106.4">
-<tspan x="157.6" dy="0.0">The Merrowgate Exchange</tspan>
+<rect class="label" x="654.0" y="1047.4" width="404.4" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1076.4">
+<tspan x="670.0" dy="0.0">The Merrowgate Exchange</tspan>
 </text>
-<text class="summary" x="157.6" y="1124.4">
-<tspan x="157.6" dy="0.0">The Banking Consortium opens the world&#x27;s first formal stock exchange,</tspan>
-<tspan x="157.6" dy="12.0">allowing fractional ownership of merchant ventures. The innovation attracts</tspan>
-<tspan x="157.6" dy="12.0">investors from every nation and creates a new class of wealthy speculators.</tspan>
+<text class="summary" x="670.0" y="1094.4">
+<tspan x="670.0" dy="0.0">The Banking Consortium opens the world&#x27;s first formal stock exchange,</tspan>
+<tspan x="670.0" dy="12.0">allowing fractional ownership of merchant ventures. The innovation attracts</tspan>
+<tspan x="670.0" dy="12.0">investors from every nation and creates a new class of wealthy speculators.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1158.4">
+<text class="date-label" text-anchor="end" x="1052.4" y="1128.4">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">16</tspan>
 </text>
-<rect class="label" x="654.0" y="1141.6" width="415.6" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1170.6">
-<tspan x="670.0" dy="0.0">The Silent Patron&#x27;s Jubilee</tspan>
+<rect class="label" x="130.4" y="1141.6" width="415.6" height="85.0" rx="8" ry="8"/>
+<text class="title" x="146.4" y="1170.6">
+<tspan x="146.4" dy="0.0">The Silent Patron&#x27;s Jubilee</tspan>
 </text>
-<text class="summary" x="670.0" y="1188.6">
-<tspan x="670.0" dy="0.0">Merrowgate celebrates the alleged 500th anniversary of the Silent Patron&#x27;s first</tspan>
-<tspan x="670.0" dy="12.0">appearance (date disputed by historians). The city grants amnesty to minor</tspan>
-<tspan x="670.0" dy="12.0">contract violations and hosts lavish celebrations.</tspan>
+<text class="summary" x="146.4" y="1188.6">
+<tspan x="146.4" dy="0.0">Merrowgate celebrates the alleged 500th anniversary of the Silent Patron&#x27;s first</tspan>
+<tspan x="146.4" dy="12.0">appearance (date disputed by historians). The city grants amnesty to minor</tspan>
+<tspan x="146.4" dy="12.0">contract violations and hosts lavish celebrations.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1063.6" y="1222.6">
+<text class="date-label" text-anchor="end" x="540.0" y="1222.6">
 <tspan>11 Morvalos — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">12</tspan>
 </text>
-<rect class="label" x="129.1" y="1263.9" width="416.9" height="97.0" rx="8" ry="8"/>
-<text class="title" x="145.1" y="1292.9">
-<tspan x="145.1" dy="0.0">The Foundling Reforms</tspan>
+<rect class="label" x="654.0" y="1259.1" width="416.9" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1288.1">
+<tspan x="670.0" dy="0.0">The Foundling Reforms</tspan>
 </text>
-<text class="summary" x="145.1" y="1310.9">
-<tspan x="145.1" dy="0.0">Under pressure from reformers and rival cities, Merrowgate implements</tspan>
-<tspan x="145.1" dy="12.0">sweeping changes to Foundling House operations: education standards, health</tspan>
-<tspan x="145.1" dy="12.0">inspections, and child welfare oversight. Guilds comply publicly while</tspan>
-<tspan x="145.1" dy="12.0">maintaining private training facilities.</tspan>
+<text class="summary" x="670.0" y="1306.1">
+<tspan x="670.0" dy="0.0">Under pressure from reformers and rival cities, Merrowgate implements</tspan>
+<tspan x="670.0" dy="12.0">sweeping changes to Foundling House operations: education standards, health</tspan>
+<tspan x="670.0" dy="12.0">inspections, and child welfare oversight. Guilds comply publicly while</tspan>
+<tspan x="670.0" dy="12.0">maintaining private training facilities.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1356.9">
+<text class="date-label" text-anchor="end" x="1064.9" y="1352.1">
 <tspan>Saraenos — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">8</tspan>
 </text>
-<rect class="label" x="654.0" y="1319.4" width="411.8" height="121.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1348.4">
-<tspan x="670.0" dy="0.0">The Grain Abundance Accord</tspan>
+<rect class="label" x="134.2" y="1319.4" width="411.8" height="121.0" rx="8" ry="8"/>
+<text class="title" x="150.2" y="1348.4">
+<tspan x="150.2" dy="0.0">The Grain Abundance Accord</tspan>
 </text>
-<text class="summary" x="670.0" y="1366.4">
-<tspan x="670.0" dy="0.0">Ardenhaven&#x27;s agricultural output finally exceeds pre-war levels for the first</tspan>
-<tspan x="670.0" dy="12.0">time. The Council of Consuls debates exporting surplus grain to former</tspan>
-<tspan x="670.0" dy="12.0">enemies and neighbors. One city-state—scarred by siege memories—votes</tspan>
-<tspan x="670.0" dy="12.0">against, arguing for strategic reserves. The majority prevails: Ardenhaven</tspan>
-<tspan x="670.0" dy="12.0">becomes the continent&#x27;s breadbasket, choosing prosperity through generosity</tspan>
-<tspan x="670.0" dy="12.0">over isolation. The dissenting city-state accepts the vote but builds its own</tspan>
+<text class="summary" x="150.2" y="1366.4">
+<tspan x="150.2" dy="0.0">Ardenhaven&#x27;s agricultural output finally exceeds pre-war levels for the first</tspan>
+<tspan x="150.2" dy="12.0">time. The Council of Consuls debates exporting surplus grain to former</tspan>
+<tspan x="150.2" dy="12.0">enemies and neighbors. One city-state—scarred by siege memories—votes</tspan>
+<tspan x="150.2" dy="12.0">against, arguing for strategic reserves. The majority prevails: Ardenhaven</tspan>
+<tspan x="150.2" dy="12.0">becomes the continent&#x27;s breadbasket, choosing prosperity through generosity</tspan>
+<tspan x="150.2" dy="12.0">over isolation. The dissenting city-state accepts the vote but builds its own</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1059.8" y="1436.4">
+<text class="date-label" text-anchor="end" x="540.0" y="1436.4">
 <tspan>Aoruvan — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">6</tspan>
 </text>
-<rect class="label" x="126.0" y="1374.9" width="420.0" height="97.0" rx="8" ry="8"/>
-<text class="title" x="142.0" y="1403.9">
-<tspan x="142.0" dy="0.0">The Canal Murders</tspan>
+<rect class="label" x="654.0" y="1370.1" width="420.0" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1399.1">
+<tspan x="670.0" dy="0.0">The Canal Murders</tspan>
 </text>
-<text class="summary" x="142.0" y="1421.9">
-<tspan x="142.0" dy="0.0">Five guild enforcers are found floating in separate canals over one week, each</tspan>
-<tspan x="142.0" dy="12.0">with a different guild&#x27;s mark carved into their flesh. The Silent Coin resolves the</tspan>
-<tspan x="142.0" dy="12.0">matter—officially a territorial dispute between smuggling rings, unofficially a</tspan>
-<tspan x="142.0" dy="12.0">warning to guilds overstepping boundaries.</tspan>
+<text class="summary" x="670.0" y="1417.1">
+<tspan x="670.0" dy="0.0">Five guild enforcers are found floating in separate canals over one week, each</tspan>
+<tspan x="670.0" dy="12.0">with a different guild&#x27;s mark carved into their flesh. The Silent Coin resolves the</tspan>
+<tspan x="670.0" dy="12.0">matter—officially a territorial dispute between smuggling rings, unofficially a</tspan>
+<tspan x="670.0" dy="12.0">warning to guilds overstepping boundaries.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1467.9">
+<text class="date-label" text-anchor="end" x="1068.0" y="1463.1">
 <tspan>15 Lumaeos — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">5</tspan>
 </text>
-<rect class="label" x="654.0" y="1461.4" width="420.0" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1490.4">
-<tspan x="670.0" dy="0.0">The Covenant Code</tspan>
+<rect class="label" x="126.0" y="1461.4" width="420.0" height="97.0" rx="8" ry="8"/>
+<text class="title" x="142.0" y="1490.4">
+<tspan x="142.0" dy="0.0">The Covenant Code</tspan>
 </text>
-<text class="summary" x="670.0" y="1508.4">
-<tspan x="670.0" dy="0.0">The Scriveners&#x27; Guild publishes the first standardized international contract law</tspan>
-<tspan x="670.0" dy="12.0">code, compiling centuries of precedent. The 3,000-page &quot;Covenant Code&quot;</tspan>
-<tspan x="670.0" dy="12.0">becomes required reading for merchants, diplomats, and lawyers across the</tspan>
-<tspan x="670.0" dy="12.0">known world.</tspan>
+<text class="summary" x="142.0" y="1508.4">
+<tspan x="142.0" dy="0.0">The Scriveners&#x27; Guild publishes the first standardized international contract law</tspan>
+<tspan x="142.0" dy="12.0">code, compiling centuries of precedent. The 3,000-page &quot;Covenant Code&quot;</tspan>
+<tspan x="142.0" dy="12.0">becomes required reading for merchants, diplomats, and lawyers across the</tspan>
+<tspan x="142.0" dy="12.0">known world.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1068.0" y="1554.4">
+<text class="date-label" text-anchor="end" x="540.0" y="1554.4">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">2</tspan>
 </text>
-<rect class="label" x="164.4" y="1533.4" width="381.6" height="73.0" rx="8" ry="8"/>
-<text class="title" x="180.4" y="1562.4">
-<tspan x="180.4" dy="0.0">⋈ Age of Trade</tspan>
+<rect class="label" x="654.0" y="1533.4" width="381.6" height="73.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1562.4">
+<tspan x="670.0" dy="0.0">⋈ Age of Trade</tspan>
 </text>
-<text class="summary" x="180.4" y="1580.4">
-<tspan x="180.4" dy="0.0">War ends and coin takes over; the old war-roads are inherited by guilds,</tspan>
-<tspan x="180.4" dy="12.0">charters, and contract courts.</tspan>
+<text class="summary" x="670.0" y="1580.4">
+<tspan x="670.0" dy="0.0">War ends and coin takes over; the old war-roads are inherited by guilds,</tspan>
+<tspan x="670.0" dy="12.0">charters, and contract courts.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1602.4">
+<text class="date-label" text-anchor="end" x="1029.6" y="1602.4">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">0</tspan>
 </text>
-<rect class="label" x="654.0" y="1572.4" width="406.6" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1601.4">
-<tspan x="670.0" dy="0.0">The All-Guild Festival</tspan>
+<rect class="label" x="139.4" y="1572.4" width="406.6" height="97.0" rx="8" ry="8"/>
+<text class="title" x="155.4" y="1601.4">
+<tspan x="155.4" dy="0.0">The All-Guild Festival</tspan>
 </text>
-<text class="summary" x="670.0" y="1619.4">
-<tspan x="670.0" dy="0.0">Merrowgate establishes an annual festival where all guilds display their</tspan>
-<tspan x="670.0" dy="12.0">services, competing for prestige and new members. The event becomes a</tspan>
-<tspan x="670.0" dy="12.0">combination of carnival, job fair, and barely-disguised intelligence gathering</tspan>
-<tspan x="670.0" dy="12.0">operation.</tspan>
+<text class="summary" x="155.4" y="1619.4">
+<tspan x="155.4" dy="0.0">Merrowgate establishes an annual festival where all guilds display their</tspan>
+<tspan x="155.4" dy="12.0">services, competing for prestige and new members. The event becomes a</tspan>
+<tspan x="155.4" dy="12.0">combination of carnival, job fair, and barely-disguised intelligence gathering</tspan>
+<tspan x="155.4" dy="12.0">operation.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1054.6" y="1665.4">
+<text class="date-label" text-anchor="end" x="540.0" y="1665.4">
 <tspan>31 Arethum — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">326</tspan>
 </text>
-<rect class="label" x="126.4" y="1731.4" width="419.6" height="97.0" rx="8" ry="8"/>
-<text class="title" x="142.4" y="1760.4">
-<tspan x="142.4" dy="0.0">The Arbitration Towers</tspan>
+<rect class="label" x="654.0" y="1731.4" width="419.6" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1760.4">
+<tspan x="670.0" dy="0.0">The Arbitration Towers</tspan>
 </text>
-<text class="summary" x="142.4" y="1778.4">
-<tspan x="142.4" dy="0.0">Merrowgate completes seven identical towers around Ledger Court, each</tspan>
-<tspan x="142.4" dy="12.0">dedicated to a different legal tradition (Calderon, Ardenhaven, Dulgarum, etc.).</tspan>
-<tspan x="142.4" dy="12.0">International parties can now resolve disputes under their preferred legal</tspan>
-<tspan x="142.4" dy="12.0">framework, all certified by the Ink.</tspan>
+<text class="summary" x="670.0" y="1778.4">
+<tspan x="670.0" dy="0.0">Merrowgate completes seven identical towers around Ledger Court, each</tspan>
+<tspan x="670.0" dy="12.0">dedicated to a different legal tradition (Calderon, Ardenhaven, Dulgarum, etc.).</tspan>
+<tspan x="670.0" dy="12.0">International parties can now resolve disputes under their preferred legal</tspan>
+<tspan x="670.0" dy="12.0">framework, all certified by the Ink.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1824.4">
+<text class="date-label" text-anchor="end" x="1067.6" y="1824.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">320</tspan>
 </text>
-<rect class="label" x="654.0" y="1985.6" width="418.1" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="2014.6">
-<tspan x="670.0" dy="0.0">The Councilor&#x27;s Lottery</tspan>
+<rect class="label" x="127.9" y="1985.6" width="418.1" height="85.0" rx="8" ry="8"/>
+<text class="title" x="143.9" y="2014.6">
+<tspan x="143.9" dy="0.0">The Councilor&#x27;s Lottery</tspan>
 </text>
-<text class="summary" x="670.0" y="2032.6">
-<tspan x="670.0" dy="0.0">In a controversial reform, Merrowgate adds three &quot;lottery seats&quot; to its</tspan>
-<tspan x="670.0" dy="12.0">council—positions filled by random draw from guild members. The first lottery</tspan>
-<tspan x="670.0" dy="12.0">winner is a low-level Scrivener clerk who serves with surprising effectiveness.</tspan>
+<text class="summary" x="143.9" y="2032.6">
+<tspan x="143.9" dy="0.0">In a controversial reform, Merrowgate adds three &quot;lottery seats&quot; to its</tspan>
+<tspan x="143.9" dy="12.0">council—positions filled by random draw from guild members. The first lottery</tspan>
+<tspan x="143.9" dy="12.0">winner is a low-level Scrivener clerk who serves with surprising effectiveness.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1066.1" y="2066.6">
+<text class="date-label" text-anchor="end" x="540.0" y="2066.6">
 <tspan>23 Ithraeum — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">311</tspan>
 </text>
-<rect class="label" x="144.3" y="2091.4" width="401.7" height="97.0" rx="8" ry="8"/>
-<text class="title" x="160.3" y="2120.4">
-<tspan x="160.3" dy="0.0">The Merrowgate Banking Consortium</tspan>
+<rect class="label" x="654.0" y="2091.4" width="401.7" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="2120.4">
+<tspan x="670.0" dy="0.0">The Merrowgate Banking Consortium</tspan>
 </text>
-<text class="summary" x="160.3" y="2138.4">
-<tspan x="160.3" dy="0.0">Five of the city&#x27;s largest merchant houses formalize the world&#x27;s first</tspan>
-<tspan x="160.3" dy="12.0">international banking network, offering credit, transfers, and investment</tspan>
-<tspan x="160.3" dy="12.0">services across borders. The consortium becomes more powerful than many</tspan>
-<tspan x="160.3" dy="12.0">nation-states within a generation.</tspan>
+<text class="summary" x="670.0" y="2138.4">
+<tspan x="670.0" dy="0.0">Five of the city&#x27;s largest merchant houses formalize the world&#x27;s first</tspan>
+<tspan x="670.0" dy="12.0">international banking network, offering credit, transfers, and investment</tspan>
+<tspan x="670.0" dy="12.0">services across borders. The consortium becomes more powerful than many</tspan>
+<tspan x="670.0" dy="12.0">nation-states within a generation.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="2184.4">
+<text class="date-label" text-anchor="end" x="1049.7" y="2184.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">308</tspan>
 </text>
-<rect class="label" x="654.0" y="2282.4" width="417.1" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="2311.4">
-<tspan x="670.0" dy="0.0">The Face-Broker Accord</tspan>
+<rect class="label" x="128.9" y="2282.4" width="417.1" height="97.0" rx="8" ry="8"/>
+<text class="title" x="144.9" y="2311.4">
+<tspan x="144.9" dy="0.0">The Face-Broker Accord</tspan>
 </text>
-<text class="summary" x="670.0" y="2329.4">
-<tspan x="670.0" dy="0.0">The Maskers&#x27; Guild officially recognizes Face-Brokers as a legitimate sub-guild,</tspan>
-<tspan x="670.0" dy="12.0">ending decades of semi-legal operation. In exchange, brokers must register all</tspan>
-<tspan x="670.0" dy="12.0">identities and pay a percentage to the main guild. Underground operations</tspan>
-<tspan x="670.0" dy="12.0">continue regardless.</tspan>
+<text class="summary" x="144.9" y="2329.4">
+<tspan x="144.9" dy="0.0">The Maskers&#x27; Guild officially recognizes Face-Brokers as a legitimate sub-guild,</tspan>
+<tspan x="144.9" dy="12.0">ending decades of semi-legal operation. In exchange, brokers must register all</tspan>
+<tspan x="144.9" dy="12.0">identities and pay a percentage to the main guild. Underground operations</tspan>
+<tspan x="144.9" dy="12.0">continue regardless.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1065.1" y="2375.4">
+<text class="date-label" text-anchor="end" x="540.0" y="2375.4">
 <tspan>19 Saraenos — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">301</tspan>
 </text>
-<rect class="label" x="127.8" y="2481.4" width="418.2" height="97.0" rx="8" ry="8"/>
-<text class="title" x="143.8" y="2510.4">
-<tspan x="143.8" dy="0.0">The Neutral Ground Protocol</tspan>
+<rect class="label" x="654.0" y="2481.4" width="418.2" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="2510.4">
+<tspan x="670.0" dy="0.0">The Neutral Ground Protocol</tspan>
 </text>
-<text class="summary" x="143.8" y="2528.4">
-<tspan x="143.8" dy="0.0">Following border skirmishes between multiple nations, Merrowgate formalizes</tspan>
-<tspan x="143.8" dy="12.0">its neutrality doctrine: the city guarantees safe haven for diplomatic</tspan>
-<tspan x="143.8" dy="12.0">negotiations regardless of ongoing hostilities. The protocol is tested</tspan>
-<tspan x="143.8" dy="12.0">immediately and holds.</tspan>
+<text class="summary" x="670.0" y="2528.4">
+<tspan x="670.0" dy="0.0">Following border skirmishes between multiple nations, Merrowgate formalizes</tspan>
+<tspan x="670.0" dy="12.0">its neutrality doctrine: the city guarantees safe haven for diplomatic</tspan>
+<tspan x="670.0" dy="12.0">negotiations regardless of ongoing hostilities. The protocol is tested</tspan>
+<tspan x="670.0" dy="12.0">immediately and holds.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="2574.4">
+<text class="date-label" text-anchor="end" x="1066.2" y="2574.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">295</tspan>
 </text>
-<rect class="label" x="654.0" y="2550.2" width="419.6" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="2579.2">
-<tspan x="670.0" dy="0.0">The Naming Day Ceremony</tspan>
+<rect class="label" x="126.4" y="2550.2" width="419.6" height="85.0" rx="8" ry="8"/>
+<text class="title" x="142.4" y="2579.2">
+<tspan x="142.4" dy="0.0">The Naming Day Ceremony</tspan>
 </text>
-<text class="summary" x="670.0" y="2597.2">
-<tspan x="670.0" dy="0.0">Merrowgate establishes an annual ceremony where guild-sworn children who</tspan>
-<tspan x="670.0" dy="12.0">have proven themselves receive their &quot;true names&quot;—guild-sanctioned identities</tspan>
-<tspan x="670.0" dy="12.0">that replace their foundling designations. It becomes a celebrated civic holiday.</tspan>
+<text class="summary" x="142.4" y="2597.2">
+<tspan x="142.4" dy="0.0">Merrowgate establishes an annual ceremony where guild-sworn children who</tspan>
+<tspan x="142.4" dy="12.0">have proven themselves receive their &quot;true names&quot;—guild-sanctioned identities</tspan>
+<tspan x="142.4" dy="12.0">that replace their foundling designations. It becomes a celebrated civic holiday.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1067.6" y="2631.2">
+<text class="date-label" text-anchor="end" x="540.0" y="2631.2">
 <tspan>27 Morvalos — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">292</tspan>
 </text>
-<rect class="label" x="145.4" y="2676.4" width="400.6" height="97.0" rx="8" ry="8"/>
-<text class="title" x="161.4" y="2705.4">
-<tspan x="161.4" dy="0.0">The Undercurrent Trials</tspan>
+<rect class="label" x="654.0" y="2676.4" width="400.6" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="2705.4">
+<tspan x="670.0" dy="0.0">The Undercurrent Trials</tspan>
 </text>
-<text class="summary" x="161.4" y="2723.4">
-<tspan x="161.4" dy="0.0">Pressure from Calderon Imperium forces Merrowgate to prosecute several</tspan>
-<tspan x="161.4" dy="12.0">Undercurrent operatives for smuggling weapons to the Rakthok Horde. The</tspan>
-<tspan x="161.4" dy="12.0">trials are theater—defendants receive light sentences and are quietly</tspan>
-<tspan x="161.4" dy="12.0">compensated by the guild afterward.</tspan>
+<text class="summary" x="670.0" y="2723.4">
+<tspan x="670.0" dy="0.0">Pressure from Calderon Imperium forces Merrowgate to prosecute several</tspan>
+<tspan x="670.0" dy="12.0">Undercurrent operatives for smuggling weapons to the Rakthok Horde. The</tspan>
+<tspan x="670.0" dy="12.0">trials are theater—defendants receive light sentences and are quietly</tspan>
+<tspan x="670.0" dy="12.0">compensated by the guild afterward.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="2769.4">
+<text class="date-label" text-anchor="end" x="1048.6" y="2769.4">
 <tspan>Ulemar — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">288</tspan>
 </text>
-<rect class="label" x="654.0" y="2775.3" width="402.8" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="2804.3">
-<tspan x="670.0" dy="0.0">The Silent Coin Revelation</tspan>
+<rect class="label" x="143.2" y="2775.3" width="402.8" height="97.0" rx="8" ry="8"/>
+<text class="title" x="159.2" y="2804.3">
+<tspan x="159.2" dy="0.0">The Silent Coin Revelation</tspan>
 </text>
-<text class="summary" x="670.0" y="2822.3">
-<tspan x="670.0" dy="0.0">A dying merchant prince publishes memoirs claiming the Silent Coin</tspan>
-<tspan x="670.0" dy="12.0">orchestrated his entire career, arranging his success to create leverage over</tspan>
-<tspan x="670.0" dy="12.0">seven other merchant families. The guild neither confirms nor denies. Three</tspan>
-<tspan x="670.0" dy="12.0">other princes quietly retire.</tspan>
+<text class="summary" x="159.2" y="2822.3">
+<tspan x="159.2" dy="0.0">A dying merchant prince publishes memoirs claiming the Silent Coin</tspan>
+<tspan x="159.2" dy="12.0">orchestrated his entire career, arranging his success to create leverage over</tspan>
+<tspan x="159.2" dy="12.0">seven other merchant families. The guild neither confirms nor denies. Three</tspan>
+<tspan x="159.2" dy="12.0">other princes quietly retire.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1050.8" y="2868.3">
+<text class="date-label" text-anchor="end" x="540.0" y="2868.3">
 <tspan>14 Lumaeos — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">285</tspan>
 </text>
-<rect class="label" x="126.0" y="2871.4" width="420.0" height="97.0" rx="8" ry="8"/>
-<text class="title" x="142.0" y="2900.4">
-<tspan x="142.0" dy="0.0">The Merrowgate Standard</tspan>
+<rect class="label" x="654.0" y="2871.4" width="420.0" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="2900.4">
+<tspan x="670.0" dy="0.0">The Merrowgate Standard</tspan>
 </text>
-<text class="summary" x="142.0" y="2918.4">
-<tspan x="142.0" dy="0.0">The city issues its own currency backed by contracts rather than gold—the</tspan>
-<tspan x="142.0" dy="12.0">&quot;Covenant Mark.&quot; Initial skepticism gives way to acceptance when the currency</tspan>
-<tspan x="142.0" dy="12.0">maintains perfect stability for three years. Other nations begin holding reserves</tspan>
-<tspan x="142.0" dy="12.0">in Marks.</tspan>
+<text class="summary" x="670.0" y="2918.4">
+<tspan x="670.0" dy="0.0">The city issues its own currency backed by contracts rather than gold—the</tspan>
+<tspan x="670.0" dy="12.0">&quot;Covenant Mark.&quot; Initial skepticism gives way to acceptance when the currency</tspan>
+<tspan x="670.0" dy="12.0">maintains perfect stability for three years. Other nations begin holding reserves</tspan>
+<tspan x="670.0" dy="12.0">in Marks.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="2964.4">
+<text class="date-label" text-anchor="end" x="1068.0" y="2964.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">282</tspan>
 </text>
-<rect class="label" x="654.0" y="2938.9" width="416.1" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="2967.9">
-<tspan x="670.0" dy="0.0">The Ledger Court Expansion</tspan>
+<rect class="label" x="129.9" y="2938.9" width="416.1" height="97.0" rx="8" ry="8"/>
+<text class="title" x="145.9" y="2967.9">
+<tspan x="145.9" dy="0.0">The Ledger Court Expansion</tspan>
 </text>
-<text class="summary" x="670.0" y="2985.9">
-<tspan x="670.0" dy="0.0">Merrowgate constructs a massive new wing of Ledger Court capable of hosting</tspan>
-<tspan x="670.0" dy="12.0">simultaneous international arbitrations. The architecture includes subtle</tspan>
-<tspan x="670.0" dy="12.0">enchantments that make lying physically uncomfortable—a Scrivener</tspan>
-<tspan x="670.0" dy="12.0">innovation.</tspan>
+<text class="summary" x="145.9" y="2985.9">
+<tspan x="145.9" dy="0.0">Merrowgate constructs a massive new wing of Ledger Court capable of hosting</tspan>
+<tspan x="145.9" dy="12.0">simultaneous international arbitrations. The architecture includes subtle</tspan>
+<tspan x="145.9" dy="12.0">enchantments that make lying physically uncomfortable—a Scrivener</tspan>
+<tspan x="145.9" dy="12.0">innovation.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1064.1" y="3031.9">
+<text class="date-label" text-anchor="end" x="540.0" y="3031.9">
 <tspan>Arethum — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">279</tspan>
 </text>
-<rect class="label" x="129.0" y="3044.3" width="417.0" height="85.0" rx="8" ry="8"/>
-<text class="title" x="145.0" y="3073.3">
-<tspan x="145.0" dy="0.0">The Face Market Collapse</tspan>
+<rect class="label" x="654.0" y="3044.3" width="417.0" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="3073.3">
+<tspan x="670.0" dy="0.0">The Face Market Collapse</tspan>
 </text>
-<text class="summary" x="145.0" y="3091.3">
-<tspan x="145.0" dy="0.0">A massive data breach exposes hundreds of false identities in the Shadow</tspan>
-<tspan x="145.0" dy="12.0">Ledgers. Panic ensues as criminals, spies, and refugees scramble to secure new</tspan>
-<tspan x="145.0" dy="12.0">faces. The Maskers&#x27; Guild spends a week in lockdown before restoring order.</tspan>
+<text class="summary" x="670.0" y="3091.3">
+<tspan x="670.0" dy="0.0">A massive data breach exposes hundreds of false identities in the Shadow</tspan>
+<tspan x="670.0" dy="12.0">Ledgers. Panic ensues as criminals, spies, and refugees scramble to secure new</tspan>
+<tspan x="670.0" dy="12.0">faces. The Maskers&#x27; Guild spends a week in lockdown before restoring order.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="3125.3">
+<text class="date-label" text-anchor="end" x="1065.0" y="3125.3">
 <tspan>8 Voraela — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">276</tspan>
 </text>
-<rect class="label" x="654.0" y="3191.5" width="418.0" height="109.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="3220.5">
-<tspan x="670.0" dy="0.0">Zarkul Dakgar the Forever Cursed</tspan>
+<rect class="label" x="128.0" y="3191.5" width="418.0" height="109.0" rx="8" ry="8"/>
+<text class="title" x="144.0" y="3220.5">
+<tspan x="144.0" dy="0.0">Zarkul Dakgar the Forever Cursed</tspan>
 </text>
-<text class="summary" x="670.0" y="3238.5">
-<tspan x="670.0" dy="0.0">Zarkul Dakgar barters his people&#x27;s land for coin from the Garhammar</tspan>
-<tspan x="670.0" dy="12.0">Trade-League. A dispute arises with the Imperium and the now-displaced orcs,</tspan>
-<tspan x="670.0" dy="12.0">and in the subsequent conflict Zarkul is found dead, knifed in the back. Among</tspan>
-<tspan x="670.0" dy="12.0">the Horde his name is kept only as a curse: proof that gold is softer than mud,</tspan>
-<tspan x="670.0" dy="12.0">and twice as deadly.</tspan>
+<text class="summary" x="144.0" y="3238.5">
+<tspan x="144.0" dy="0.0">Zarkul Dakgar barters his people&#x27;s land for coin from the Garhammar</tspan>
+<tspan x="144.0" dy="12.0">Trade-League. A dispute arises with the Imperium and the now-displaced orcs,</tspan>
+<tspan x="144.0" dy="12.0">and in the subsequent conflict Zarkul is found dead, knifed in the back. Among</tspan>
+<tspan x="144.0" dy="12.0">the Horde his name is kept only as a curse: proof that gold is softer than mud,</tspan>
+<tspan x="144.0" dy="12.0">and twice as deadly.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1066.0" y="3296.5">
+<text class="date-label" text-anchor="end" x="540.0" y="3296.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
 </text>
-<rect class="label" x="132.2" y="3225.4" width="413.8" height="109.0" rx="8" ry="8"/>
-<text class="title" x="148.2" y="3254.4">
-<tspan x="148.2" dy="0.0">Warlord Uruknar Rakthokgar Death</tspan>
+<rect class="label" x="654.0" y="3203.8" width="413.8" height="109.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="3232.8">
+<tspan x="670.0" dy="0.0">Warlord Uruknar Rakthokgar Death</tspan>
 </text>
-<text class="summary" x="148.2" y="3272.4">
-<tspan x="148.2" dy="0.0">When Ironstead set its foundations deep into the old mounds at the north of</tspan>
-<tspan x="148.2" dy="12.0">the swamplands, Uruknar Rakthokgar gathered her raiders and stole into the</tspan>
-<tspan x="148.2" dy="12.0">rising fortress. Imperium sappers threw smoke and white lime to blind the</tspan>
-<tspan x="148.2" dy="12.0">charge, and crossbow bolts cracked from the haze. Gruknar died on her knees,</tspan>
-<tspan x="148.2" dy="12.0">and Ironstead rose up tall.</tspan>
+<text class="summary" x="670.0" y="3250.8">
+<tspan x="670.0" dy="0.0">When Ironstead set its foundations deep into the old mounds at the north of</tspan>
+<tspan x="670.0" dy="12.0">the swamplands, Uruknar Rakthokgar gathered her raiders and stole into the</tspan>
+<tspan x="670.0" dy="12.0">rising fortress. Imperium sappers threw smoke and white lime to blind the</tspan>
+<tspan x="670.0" dy="12.0">charge, and crossbow bolts cracked from the haze. Gruknar died on her knees,</tspan>
+<tspan x="670.0" dy="12.0">and Ironstead rose up tall.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="3330.4">
+<text class="date-label" text-anchor="end" x="1061.8" y="3308.8">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
 </text>
-<rect class="label" x="654.0" y="3314.5" width="416.1" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="3343.5">
-<tspan x="670.0" dy="0.0">The Debt-Child Scandal</tspan>
+<rect class="label" x="129.9" y="3314.5" width="416.1" height="97.0" rx="8" ry="8"/>
+<text class="title" x="145.9" y="3343.5">
+<tspan x="145.9" dy="0.0">The Debt-Child Scandal</tspan>
 </text>
-<text class="summary" x="670.0" y="3361.5">
-<tspan x="670.0" dy="0.0">Investigative journalists expose brutal conditions in several Foundling Houses.</tspan>
-<tspan x="670.0" dy="12.0">Public outrage forces reforms: better housing, education standards, and</tspan>
-<tspan x="670.0" dy="12.0">oversight. Privately, the guilds simply move their harshest training programs</tspan>
-<tspan x="670.0" dy="12.0">underground.</tspan>
+<text class="summary" x="145.9" y="3361.5">
+<tspan x="145.9" dy="0.0">Investigative journalists expose brutal conditions in several Foundling Houses.</tspan>
+<tspan x="145.9" dy="12.0">Public outrage forces reforms: better housing, education standards, and</tspan>
+<tspan x="145.9" dy="12.0">oversight. Privately, the guilds simply move their harshest training programs</tspan>
+<tspan x="145.9" dy="12.0">underground.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1064.1" y="3407.5">
+<text class="date-label" text-anchor="end" x="540.0" y="3407.5">
 <tspan>Thaeorum — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">269</tspan>
 </text>
-<rect class="label" x="133.3" y="3348.4" width="412.7" height="97.0" rx="8" ry="8"/>
-<text class="title" x="149.3" y="3377.4">
-<tspan x="149.3" dy="0.0">The New Year Bargain</tspan>
+<rect class="label" x="654.0" y="3326.8" width="412.7" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="3355.8">
+<tspan x="670.0" dy="0.0">The New Year Bargain</tspan>
 </text>
-<text class="summary" x="149.3" y="3395.4">
-<tspan x="149.3" dy="0.0">New tradition is born: Every New Year&#x27;s Eve, the Silent Patron grants one</tspan>
-<tspan x="149.3" dy="12.0">petition to the city. Citizens line up to request favors, from debt forgiveness to</tspan>
-<tspan x="149.3" dy="12.0">business advantages. The event becomes a major civic celebration, with</tspan>
-<tspan x="149.3" dy="12.0">elaborate ceremonies and public festivities.</tspan>
+<text class="summary" x="670.0" y="3373.8">
+<tspan x="670.0" dy="0.0">New tradition is born: Every New Year&#x27;s Eve, the Silent Patron grants one</tspan>
+<tspan x="670.0" dy="12.0">petition to the city. Citizens line up to request favors, from debt forgiveness to</tspan>
+<tspan x="670.0" dy="12.0">business advantages. The event becomes a major civic celebration, with</tspan>
+<tspan x="670.0" dy="12.0">elaborate ceremonies and public festivities.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="3441.4">
+<text class="date-label" text-anchor="end" x="1060.7" y="3419.8">
 <tspan>31 Aneumos — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">266</tspan>
 </text>
-<rect class="label" x="654.0" y="3425.5" width="417.1" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="3454.5">
-<tspan x="670.0" dy="0.0">The First Trade Caravans</tspan>
+<rect class="label" x="128.9" y="3425.5" width="417.1" height="97.0" rx="8" ry="8"/>
+<text class="title" x="144.9" y="3454.5">
+<tspan x="144.9" dy="0.0">The First Trade Caravans</tspan>
 </text>
-<text class="summary" x="670.0" y="3472.5">
-<tspan x="670.0" dy="0.0">Fifteen years after the Pentarch Accords, the first official Ardenhaven-Calderon</tspan>
-<tspan x="670.0" dy="12.0">trade caravan crosses the former battlefields. Ardenhaven grain for Calderon</tspan>
-<tspan x="670.0" dy="12.0">coal and iron. The exchange is awkward, stilted, watched by veterans on both</tspan>
-<tspan x="670.0" dy="12.0">sides. But it happens. Commerce begins to replace contempt.</tspan>
+<text class="summary" x="144.9" y="3472.5">
+<tspan x="144.9" dy="0.0">Fifteen years after the Pentarch Accords, the first official Ardenhaven-Calderon</tspan>
+<tspan x="144.9" dy="12.0">trade caravan crosses the former battlefields. Ardenhaven grain for Calderon</tspan>
+<tspan x="144.9" dy="12.0">coal and iron. The exchange is awkward, stilted, watched by veterans on both</tspan>
+<tspan x="144.9" dy="12.0">sides. But it happens. Commerce begins to replace contempt.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1065.1" y="3518.5">
+<text class="date-label" text-anchor="end" x="540.0" y="3518.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">265</tspan>
 </text>
-<rect class="label" x="126.0" y="3459.4" width="420.0" height="97.0" rx="8" ry="8"/>
-<text class="title" x="142.0" y="3488.4">
-<tspan x="142.0" dy="0.0">The Forgery War</tspan>
+<rect class="label" x="654.0" y="3437.8" width="420.0" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="3466.8">
+<tspan x="670.0" dy="0.0">The Forgery War</tspan>
 </text>
-<text class="summary" x="142.0" y="3506.4">
-<tspan x="142.0" dy="0.0">Two rival Scrivener factions clash over control of document authentication</tspan>
-<tspan x="142.0" dy="12.0">methods. Street fighting erupts between their hired enforcers. The conflict ends</tspan>
-<tspan x="142.0" dy="12.0">when both leaders are found drowned in canal water—a clear message from the</tspan>
-<tspan x="142.0" dy="12.0">Silent Coin.</tspan>
+<text class="summary" x="670.0" y="3484.8">
+<tspan x="670.0" dy="0.0">Two rival Scrivener factions clash over control of document authentication</tspan>
+<tspan x="670.0" dy="12.0">methods. Street fighting erupts between their hired enforcers. The conflict ends</tspan>
+<tspan x="670.0" dy="12.0">when both leaders are found drowned in canal water—a clear message from the</tspan>
+<tspan x="670.0" dy="12.0">Silent Coin.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="3552.4">
+<text class="date-label" text-anchor="end" x="1068.0" y="3530.8">
 <tspan>Ithraeum — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">263</tspan>
 </text>
-<rect class="label" x="654.0" y="3536.5" width="418.6" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="3565.5">
-<tspan x="670.0" dy="0.0">The Great Tariff Reform</tspan>
+<rect class="label" x="127.4" y="3536.5" width="418.6" height="97.0" rx="8" ry="8"/>
+<text class="title" x="143.4" y="3565.5">
+<tspan x="143.4" dy="0.0">The Great Tariff Reform</tspan>
 </text>
-<text class="summary" x="670.0" y="3583.5">
-<tspan x="670.0" dy="0.0">Merrowgate leads a coalition to standardize trade tariffs across six nations. The</tspan>
-<tspan x="670.0" dy="12.0">year-long negotiation creates a common customs framework that reduces</tspan>
-<tspan x="670.0" dy="12.0">smuggling and increases legitimate trade. The city&#x27;s influence reaches its</tspan>
-<tspan x="670.0" dy="12.0">zenith.</tspan>
+<text class="summary" x="143.4" y="3583.5">
+<tspan x="143.4" dy="0.0">Merrowgate leads a coalition to standardize trade tariffs across six nations. The</tspan>
+<tspan x="143.4" dy="12.0">year-long negotiation creates a common customs framework that reduces</tspan>
+<tspan x="143.4" dy="12.0">smuggling and increases legitimate trade. The city&#x27;s influence reaches its</tspan>
+<tspan x="143.4" dy="12.0">zenith.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1066.6" y="3629.5">
+<text class="date-label" text-anchor="end" x="540.0" y="3629.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">260</tspan>
 </text>
-<rect class="label" x="134.3" y="3723.9" width="411.7" height="97.0" rx="8" ry="8"/>
-<text class="title" x="150.3" y="3752.9">
-<tspan x="150.3" dy="0.0">The Undercurrent Expansion</tspan>
+<rect class="label" x="654.0" y="3691.8" width="411.7" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="3720.8">
+<tspan x="670.0" dy="0.0">The Undercurrent Expansion</tspan>
 </text>
-<text class="summary" x="150.3" y="3770.9">
-<tspan x="150.3" dy="0.0">The Undercurrent publicly announces new &quot;trade facilitation services&quot; that</tspan>
-<tspan x="150.3" dy="12.0">operate in gray legal zones. Privately, this marks their transformation into the</tspan>
-<tspan x="150.3" dy="12.0">city&#x27;s primary smuggling coordination network, now operating with official</tspan>
-<tspan x="150.3" dy="12.0">sanction.</tspan>
+<text class="summary" x="670.0" y="3738.8">
+<tspan x="670.0" dy="0.0">The Undercurrent publicly announces new &quot;trade facilitation services&quot; that</tspan>
+<tspan x="670.0" dy="12.0">operate in gray legal zones. Privately, this marks their transformation into the</tspan>
+<tspan x="670.0" dy="12.0">city&#x27;s primary smuggling coordination network, now operating with official</tspan>
+<tspan x="670.0" dy="12.0">sanction.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="3816.9">
+<text class="date-label" text-anchor="end" x="1059.7" y="3784.8">
 <tspan>Saraenos — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">253</tspan>
 </text>
-<rect class="label" x="654.0" y="3788.0" width="407.0" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="3817.0">
-<tspan x="670.0" dy="0.0">The Thousand Ships Insurance</tspan>
+<rect class="label" x="139.0" y="3788.0" width="407.0" height="85.0" rx="8" ry="8"/>
+<text class="title" x="155.0" y="3817.0">
+<tspan x="155.0" dy="0.0">The Thousand Ships Insurance</tspan>
 </text>
-<text class="summary" x="670.0" y="3835.0">
-<tspan x="670.0" dy="0.0">Following a devastating hurricane season, Merrowgate guilds establish the</tspan>
-<tspan x="670.0" dy="12.0">world&#x27;s first comprehensive maritime insurance system. Within a decade, no</tspan>
-<tspan x="670.0" dy="12.0">merchant vessel sails without a Merrowgate policy.</tspan>
+<text class="summary" x="155.0" y="3835.0">
+<tspan x="155.0" dy="0.0">Following a devastating hurricane season, Merrowgate guilds establish the</tspan>
+<tspan x="155.0" dy="12.0">world&#x27;s first comprehensive maritime insurance system. Within a decade, no</tspan>
+<tspan x="155.0" dy="12.0">merchant vessel sails without a Merrowgate policy.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1055.0" y="3869.0">
+<text class="date-label" text-anchor="end" x="540.0" y="3869.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">251</tspan>
 </text>
-<rect class="label" x="135.3" y="3834.9" width="410.7" height="109.0" rx="8" ry="8"/>
-<text class="title" x="151.3" y="3863.9">
-<tspan x="151.3" dy="0.0">The Pentarch Accords</tspan>
+<rect class="label" x="654.0" y="3802.8" width="410.7" height="109.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="3831.8">
+<tspan x="670.0" dy="0.0">The Pentarch Accords</tspan>
 </text>
-<text class="summary" x="151.3" y="3881.9">
-<tspan x="151.3" dy="0.0">Ardenhaven, Calderon Imperium, and seven other factions sign the Pentarch</tspan>
-<tspan x="151.3" dy="12.0">Accords in Merrowgate. The treaty formally ends the Imperial Wars and</tspan>
-<tspan x="151.3" dy="12.0">establishes the Age of Trade. Borders are recognized, reparations waived, and</tspan>
-<tspan x="151.3" dy="12.0">all signatories pledge to resolve disputes through commerce rather than</tspan>
-<tspan x="151.3" dy="12.0">conquest. The world exhales.</tspan>
+<text class="summary" x="670.0" y="3849.8">
+<tspan x="670.0" dy="0.0">Ardenhaven, Calderon Imperium, and seven other factions sign the Pentarch</tspan>
+<tspan x="670.0" dy="12.0">Accords in Merrowgate. The treaty formally ends the Imperial Wars and</tspan>
+<tspan x="670.0" dy="12.0">establishes the Age of Trade. Borders are recognized, reparations waived, and</tspan>
+<tspan x="670.0" dy="12.0">all signatories pledge to resolve disputes through commerce rather than</tspan>
+<tspan x="670.0" dy="12.0">conquest. The world exhales.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="3939.9">
+<text class="date-label" text-anchor="end" x="1058.7" y="3907.8">
 <tspan>12 Ulemar — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">250</tspan>
 </text>
-<rect class="label" x="654.0" y="3887.0" width="404.7" height="109.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="3916.0">
-<tspan x="670.0" dy="0.0">The Merrowgate Mediation</tspan>
+<rect class="label" x="141.3" y="3887.0" width="404.7" height="109.0" rx="8" ry="8"/>
+<text class="title" x="157.3" y="3916.0">
+<tspan x="157.3" dy="0.0">The Merrowgate Mediation</tspan>
 </text>
-<text class="summary" x="670.0" y="3934.0">
-<tspan x="670.0" dy="0.0">Exhausted and bleeding, both Ardenhaven and Calderon Imperium accept</tspan>
-<tspan x="670.0" dy="12.0">Merrowgate&#x27;s offer to mediate peace talks. The negotiations are tense, bitter,</tspan>
-<tspan x="670.0" dy="12.0">and slow. Four months of debate over borders, reparations, and recognition.</tspan>
-<tspan x="670.0" dy="12.0">Both sides cling to pride while accepting reality: continuation means mutual</tspan>
-<tspan x="670.0" dy="12.0">destruction.</tspan>
+<text class="summary" x="157.3" y="3934.0">
+<tspan x="157.3" dy="0.0">Exhausted and bleeding, both Ardenhaven and Calderon Imperium accept</tspan>
+<tspan x="157.3" dy="12.0">Merrowgate&#x27;s offer to mediate peace talks. The negotiations are tense, bitter,</tspan>
+<tspan x="157.3" dy="12.0">and slow. Four months of debate over borders, reparations, and recognition.</tspan>
+<tspan x="157.3" dy="12.0">Both sides cling to pride while accepting reality: continuation means mutual</tspan>
+<tspan x="157.3" dy="12.0">destruction.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1052.7" y="3992.0">
+<text class="date-label" text-anchor="end" x="540.0" y="3992.0">
 <tspan>Lumaeos — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">250</tspan>
 </text>
-<rect class="label" x="128.3" y="3957.9" width="417.7" height="97.0" rx="8" ry="8"/>
-<text class="title" x="144.3" y="3986.9">
-<tspan x="144.3" dy="0.0">The Ledger Court Assassination</tspan>
+<rect class="label" x="654.0" y="3925.8" width="417.7" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="3954.8">
+<tspan x="670.0" dy="0.0">The Ledger Court Assassination</tspan>
 </text>
-<text class="summary" x="144.3" y="4004.9">
-<tspan x="144.3" dy="0.0">A prominent Calderon diplomat is murdered during contract negotiations. The</tspan>
-<tspan x="144.3" dy="12.0">Silent Coin resolves the matter within hours—the assassin is found dead of</tspan>
-<tspan x="144.3" dy="12.0">apparent suicide, and a convenient scapegoat confession surfaces. The</tspan>
-<tspan x="144.3" dy="12.0">negotiations proceed as scheduled.</tspan>
+<text class="summary" x="670.0" y="3972.8">
+<tspan x="670.0" dy="0.0">A prominent Calderon diplomat is murdered during contract negotiations. The</tspan>
+<tspan x="670.0" dy="12.0">Silent Coin resolves the matter within hours—the assassin is found dead of</tspan>
+<tspan x="670.0" dy="12.0">apparent suicide, and a convenient scapegoat confession surfaces. The</tspan>
+<tspan x="670.0" dy="12.0">negotiations proceed as scheduled.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="4050.9">
+<text class="date-label" text-anchor="end" x="1065.7" y="4018.8">
 <tspan>23 Veleara — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">248</tspan>
 </text>
-<rect class="label" x="654.0" y="4033.9" width="420.0" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="4062.9">
-<tspan x="670.0" dy="0.0">Calderon&#x27;s Declaration</tspan>
+<rect class="label" x="126.0" y="4033.9" width="420.0" height="97.0" rx="8" ry="8"/>
+<text class="title" x="142.0" y="4062.9">
+<tspan x="142.0" dy="0.0">Calderon&#x27;s Declaration</tspan>
 </text>
-<text class="summary" x="670.0" y="4080.9">
-<tspan x="670.0" dy="0.0">Calderon Imperium issues formal declaration of conquest: all Ardenhaven lands</tspan>
-<tspan x="670.0" dy="12.0">are claimed as imperial territory, and continued resistance will be met with</tspan>
-<tspan x="670.0" dy="12.0">total war. The language is unambiguous—there will be no negotiated peace,</tspan>
-<tspan x="670.0" dy="12.0">only submission or annihilation. The 7-year war begins.</tspan>
+<text class="summary" x="142.0" y="4080.9">
+<tspan x="142.0" dy="0.0">Calderon Imperium issues formal declaration of conquest: all Ardenhaven lands</tspan>
+<tspan x="142.0" dy="12.0">are claimed as imperial territory, and continued resistance will be met with</tspan>
+<tspan x="142.0" dy="12.0">total war. The language is unambiguous—there will be no negotiated peace,</tspan>
+<tspan x="142.0" dy="12.0">only submission or annihilation. The 7-year war begins.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1068.0" y="4126.9">
+<text class="date-label" text-anchor="end" x="540.0" y="4126.9">
 <tspan>Thaeorum — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">243</tspan>
 </text>
-<rect class="label" x="132.8" y="4101.4" width="413.2" height="97.0" rx="8" ry="8"/>
-<text class="title" x="148.8" y="4130.4">
-<tspan x="148.8" dy="0.0">The Garhammar Accords</tspan>
+<rect class="label" x="654.0" y="4101.4" width="413.2" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="4130.4">
+<tspan x="670.0" dy="0.0">The Garhammar Accords</tspan>
 </text>
-<text class="summary" x="148.8" y="4148.4">
-<tspan x="148.8" dy="0.0">Merrowgate mediates a trade dispute between Garhammar Trade League and</tspan>
-<tspan x="148.8" dy="12.0">Calderon Imperium over arms exports. The resulting framework becomes the</tspan>
-<tspan x="148.8" dy="12.0">template for international weapons trade regulation, cementing Merrowgate&#x27;s</tspan>
-<tspan x="148.8" dy="12.0">role as neutral ground.</tspan>
+<text class="summary" x="670.0" y="4148.4">
+<tspan x="670.0" dy="0.0">Merrowgate mediates a trade dispute between Garhammar Trade League and</tspan>
+<tspan x="670.0" dy="12.0">Calderon Imperium over arms exports. The resulting framework becomes the</tspan>
+<tspan x="670.0" dy="12.0">template for international weapons trade regulation, cementing Merrowgate&#x27;s</tspan>
+<tspan x="670.0" dy="12.0">role as neutral ground.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="4194.4">
+<text class="date-label" text-anchor="end" x="1061.2" y="4194.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">241</tspan>
 </text>
-<rect class="label" x="654.0" y="4191.4" width="418.9" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="4220.4">
-<tspan x="670.0" dy="0.0">The Face-Broker Purge</tspan>
+<rect class="label" x="127.1" y="4191.4" width="418.9" height="97.0" rx="8" ry="8"/>
+<text class="title" x="143.1" y="4220.4">
+<tspan x="143.1" dy="0.0">The Face-Broker Purge</tspan>
 </text>
-<text class="summary" x="670.0" y="4238.4">
-<tspan x="670.0" dy="0.0">The Maskers&#x27; Guild discovers a ring of rogue Face-Brokers selling identities to</tspan>
-<tspan x="670.0" dy="12.0">enemies of the state. Twelve brokers are &quot;unmasked&quot; in a public ceremony, their</tspan>
-<tspan x="670.0" dy="12.0">true faces revealed before exile. The event serves as a brutal reminder of guild</tspan>
-<tspan x="670.0" dy="12.0">authority.</tspan>
+<text class="summary" x="143.1" y="4238.4">
+<tspan x="143.1" dy="0.0">The Maskers&#x27; Guild discovers a ring of rogue Face-Brokers selling identities to</tspan>
+<tspan x="143.1" dy="12.0">enemies of the state. Twelve brokers are &quot;unmasked&quot; in a public ceremony, their</tspan>
+<tspan x="143.1" dy="12.0">true faces revealed before exile. The event serves as a brutal reminder of guild</tspan>
+<tspan x="143.1" dy="12.0">authority.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1066.9" y="4284.4">
+<text class="date-label" text-anchor="end" x="540.0" y="4284.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">238</tspan>
 </text>
-<rect class="label" x="149.3" y="4265.5" width="396.7" height="97.0" rx="8" ry="8"/>
-<text class="title" x="165.3" y="4294.5">
-<tspan x="165.3" dy="0.0">The Foundling House Fire</tspan>
+<rect class="label" x="654.0" y="4265.5" width="396.7" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="4294.5">
+<tspan x="670.0" dy="0.0">The Foundling House Fire</tspan>
 </text>
-<text class="summary" x="165.3" y="4312.5">
-<tspan x="165.3" dy="0.0">A mysterious fire destroys the western Foundling House, killing seventeen</tspan>
-<tspan x="165.3" dy="12.0">children and three guild trainers. Whispers suggest it was retribution for a</tspan>
-<tspan x="165.3" dy="12.0">failed assassination trained there. The guild quietly rebuilds and tightens</tspan>
-<tspan x="165.3" dy="12.0">security.</tspan>
+<text class="summary" x="670.0" y="4312.5">
+<tspan x="670.0" dy="0.0">A mysterious fire destroys the western Foundling House, killing seventeen</tspan>
+<tspan x="670.0" dy="12.0">children and three guild trainers. Whispers suggest it was retribution for a</tspan>
+<tspan x="670.0" dy="12.0">failed assassination trained there. The guild quietly rebuilds and tightens</tspan>
+<tspan x="670.0" dy="12.0">security.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="4358.5">
+<text class="date-label" text-anchor="end" x="1044.7" y="4358.5">
 <tspan>12 Ulemar — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">235</tspan>
 </text>
-<rect class="label" x="654.0" y="4371.4" width="384.2" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="4400.4">
-<tspan x="670.0" dy="0.0">The Scriveners&#x27; Reformation</tspan>
+<rect class="label" x="161.8" y="4371.4" width="384.2" height="97.0" rx="8" ry="8"/>
+<text class="title" x="177.8" y="4400.4">
+<tspan x="177.8" dy="0.0">The Scriveners&#x27; Reformation</tspan>
 </text>
-<text class="summary" x="670.0" y="4418.4">
-<tspan x="670.0" dy="0.0">The Ink unveils new contract-binding enchantments that can enforce</tspan>
-<tspan x="670.0" dy="12.0">agreements across national borders. This innovation makes Merrowgate</tspan>
-<tspan x="670.0" dy="12.0">contracts the gold standard for international trade, tripling the city&#x27;s</tspan>
-<tspan x="670.0" dy="12.0">arbitration revenue within five years.</tspan>
+<text class="summary" x="177.8" y="4418.4">
+<tspan x="177.8" dy="0.0">The Ink unveils new contract-binding enchantments that can enforce</tspan>
+<tspan x="177.8" dy="12.0">agreements across national borders. This innovation makes Merrowgate</tspan>
+<tspan x="177.8" dy="12.0">contracts the gold standard for international trade, tripling the city&#x27;s</tspan>
+<tspan x="177.8" dy="12.0">arbitration revenue within five years.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1032.2" y="4464.4">
+<text class="date-label" text-anchor="end" x="540.0" y="4464.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">232</tspan>
 </text>
-<rect class="label" x="142.3" y="4456.4" width="403.7" height="97.0" rx="8" ry="8"/>
-<text class="title" x="158.3" y="4485.4">
-<tspan x="158.3" dy="0.0">The Maskers&#x27; Succession Crisis</tspan>
+<rect class="label" x="654.0" y="4456.4" width="403.7" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="4485.4">
+<tspan x="670.0" dy="0.0">The Maskers&#x27; Succession Crisis</tspan>
 </text>
-<text class="summary" x="158.3" y="4503.4">
-<tspan x="158.3" dy="0.0">Guild Master Valen Shadeweave dies without naming a successor. Three</tspan>
-<tspan x="158.3" dy="12.0">candidates vie for control of the Maskers&#x27; Guild, each commanding different</tspan>
-<tspan x="158.3" dy="12.0">identity networks. The crisis resolves when the Shadow Ledgers themselves</tspan>
-<tspan x="158.3" dy="12.0">&quot;choose&quot; the winner—later revealed to be the Silent Patron&#x27;s influence.</tspan>
+<text class="summary" x="670.0" y="4503.4">
+<tspan x="670.0" dy="0.0">Guild Master Valen Shadeweave dies without naming a successor. Three</tspan>
+<tspan x="670.0" dy="12.0">candidates vie for control of the Maskers&#x27; Guild, each commanding different</tspan>
+<tspan x="670.0" dy="12.0">identity networks. The crisis resolves when the Shadow Ledgers themselves</tspan>
+<tspan x="670.0" dy="12.0">&quot;choose&quot; the winner—later revealed to be the Silent Patron&#x27;s influence.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="4549.4">
+<text class="date-label" text-anchor="end" x="1051.7" y="4549.4">
 <tspan>Lumaeos — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">229</tspan>
 </text>
-<rect class="label" x="654.0" y="4527.4" width="418.7" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="4556.4">
-<tspan x="670.0" dy="0.0">The Charter of Open Waters</tspan>
+<rect class="label" x="127.3" y="4527.4" width="418.7" height="85.0" rx="8" ry="8"/>
+<text class="title" x="143.3" y="4556.4">
+<tspan x="143.3" dy="0.0">The Charter of Open Waters</tspan>
 </text>
-<text class="summary" x="670.0" y="4574.4">
-<tspan x="670.0" dy="0.0">Merrowgate brokers a historic neutrality pact between Calderon Imperium and</tspan>
-<tspan x="670.0" dy="12.0">Ardenhaven, securing safe passage through its waters for all nations. The treaty</tspan>
-<tspan x="670.0" dy="12.0">establishes Merrowgate as the undisputed arbiter of maritime trade disputes.</tspan>
+<text class="summary" x="143.3" y="4574.4">
+<tspan x="143.3" dy="0.0">Merrowgate brokers a historic neutrality pact between Calderon Imperium and</tspan>
+<tspan x="143.3" dy="12.0">Ardenhaven, securing safe passage through its waters for all nations. The treaty</tspan>
+<tspan x="143.3" dy="12.0">establishes Merrowgate as the undisputed arbiter of maritime trade disputes.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1066.7" y="4608.4">
+<text class="date-label" text-anchor="end" x="540.0" y="4608.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">227</tspan>
 </text>
-<rect class="label" x="126.0" y="4637.8" width="420.0" height="97.0" rx="8" ry="8"/>
-<text class="title" x="142.0" y="4666.8">
-<tspan x="142.0" dy="0.0">The Compact of Unity</tspan>
+<rect class="label" x="654.0" y="4637.8" width="420.0" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="4666.8">
+<tspan x="670.0" dy="0.0">The Compact of Unity</tspan>
 </text>
-<text class="summary" x="142.0" y="4684.8">
-<tspan x="142.0" dy="0.0">Five Ardenhaven city-states sign the Compact of Unity, creating a federated</tspan>
-<tspan x="142.0" dy="12.0">republic. Each city-state retains internal governance but surrenders</tspan>
-<tspan x="142.0" dy="12.0">war-making power to a unified Council of Consuls. Merrowgate, invited to join,</tspan>
-<tspan x="142.0" dy="12.0">formally declines and declares perpetual neutrality.</tspan>
+<text class="summary" x="670.0" y="4684.8">
+<tspan x="670.0" dy="0.0">Five Ardenhaven city-states sign the Compact of Unity, creating a federated</tspan>
+<tspan x="670.0" dy="12.0">republic. Each city-state retains internal governance but surrenders</tspan>
+<tspan x="670.0" dy="12.0">war-making power to a unified Council of Consuls. Merrowgate, invited to join,</tspan>
+<tspan x="670.0" dy="12.0">formally declines and declares perpetual neutrality.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="4730.8">
+<text class="date-label" text-anchor="end" x="1068.0" y="4730.8">
 <tspan>15 Veleara — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">223</tspan>
 </text>
 </g>
 <g id="tags">
-<g transform="translate(509.0 48.4)">
-<title>tag: party</title>
-<use href="#tag_party" width="25.0" height="25.0"/>
-</g>
-<g transform="translate(471.2 44.0)">
-<title>faction: merrowgate</title>
-<use href="#pov_merrowgate" width="33.8" height="33.8"/>
-</g>
-<g transform="translate(442.2 48.4)">
-<title>tag: lore</title>
-<use href="#tag_lore" width="25.0" height="25.0"/>
-</g>
-<g class="public-indicator" transform="translate(660.0 44.0)">
+<g class="public-indicator" transform="translate(143.5 44.0)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1025.5 48.4)">
+<g transform="translate(509.0 48.4)">
 <title>tag: economy</title>
 <use href="#tag_economy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(996.5 48.4)">
+<g transform="translate(480.0 48.4)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(967.5 48.4)">
+<g transform="translate(451.0 48.4)">
 <title>tag: diplomacy</title>
 <use href="#tag_diplomacy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(929.8 44.0)">
+<g transform="translate(413.2 44.0)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
+</g>
+<g transform="translate(1030.2 110.2)">
+<title>tag: lore</title>
+<use href="#tag_lore" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(1001.2 110.2)">
+<title>tag: government</title>
+<use href="#tag_government" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(963.4 105.9)">
+<title>faction: merrowgate</title>
+<use href="#pov_merrowgate" width="33.8" height="33.8"/>
+</g>
+<g class="public-indicator" transform="translate(134.9 155.0)">
+<use href="#tag_public" width="12.5" height="12.5"/>
 </g>
 <g transform="translate(509.0 159.4)">
 <title>tag: lore</title>
 <use href="#tag_lore" width="25.0" height="25.0"/>
 </g>
 <g transform="translate(480.0 159.4)">
-<title>tag: government</title>
-<use href="#tag_government" width="25.0" height="25.0"/>
-</g>
-<g transform="translate(442.2 155.0)">
-<title>faction: merrowgate</title>
-<use href="#pov_merrowgate" width="33.8" height="33.8"/>
-</g>
-<g class="public-indicator" transform="translate(660.0 155.0)">
-<use href="#tag_public" width="12.5" height="12.5"/>
-</g>
-<g transform="translate(1034.1 159.4)">
-<title>tag: lore</title>
-<use href="#tag_lore" width="25.0" height="25.0"/>
-</g>
-<g transform="translate(1005.1 159.4)">
 <title>tag: law</title>
 <use href="#tag_law" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(976.1 159.4)">
+<g transform="translate(451.0 159.4)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(938.3 155.0)">
+<g transform="translate(413.2 155.0)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 258.4)">
+<g transform="translate(1035.6 209.2)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 258.4)">
+<g transform="translate(1006.6 209.2)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 254.0)">
+<g transform="translate(968.8 204.9)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 290.0)">
+<g class="public-indicator" transform="translate(140.5 290.0)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1028.5 294.4)">
+<g transform="translate(509.0 294.4)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(999.5 294.4)">
+<g transform="translate(480.0 294.4)">
 <title>tag: infrastructure</title>
 <use href="#tag_infrastructure" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(961.8 290.0)">
+<g transform="translate(442.2 290.0)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 402.7)">
+<g transform="translate(1031.8 402.7)">
 <title>tag: law</title>
 <use href="#tag_law" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 402.7)">
+<g transform="translate(1002.8 402.7)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 398.3)">
+<g transform="translate(965.0 398.3)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1029.8 494.8)">
+<g transform="translate(509.0 494.8)">
 <title>tag: infrastructure</title>
 <use href="#tag_infrastructure" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1000.8 494.8)">
+<g transform="translate(480.0 494.8)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(963.0 490.4)">
+<g transform="translate(442.2 490.4)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 695.8)">
+<g transform="translate(1037.0 694.8)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 695.8)">
+<g transform="translate(1008.0 694.8)">
 <title>tag: economy</title>
 <use href="#tag_economy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 691.4)">
+<g transform="translate(970.2 690.4)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1023.5 750.3)">
+<g transform="translate(509.0 750.3)">
 <title>tag: magic</title>
 <use href="#tag_magic" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(994.5 750.3)">
+<g transform="translate(480.0 750.3)">
 <title>tag: lore</title>
 <use href="#tag_lore" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(956.7 745.9)">
+<g transform="translate(442.2 745.9)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(132.0 835.4)">
+<g class="public-indicator" transform="translate(660.0 789.4)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(500.2 835.4)">
+<g transform="translate(1028.2 789.4)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 839.8)">
+<g transform="translate(999.2 793.8)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 835.4)">
+<g transform="translate(961.5 789.4)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1034.5 861.3)">
+<g transform="translate(509.0 861.3)">
 <title>tag: magic</title>
 <use href="#tag_magic" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1005.5 861.3)">
+<g transform="translate(480.0 861.3)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(967.7 856.9)">
+<g transform="translate(442.2 856.9)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(140.5 946.4)">
+<g class="public-indicator" transform="translate(660.0 900.4)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(509.0 950.8)">
+<g transform="translate(1028.5 904.8)">
 <title>tag: lore</title>
 <use href="#tag_lore" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 950.8)">
+<g transform="translate(999.5 904.8)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(451.0 950.8)">
+<g transform="translate(970.5 904.8)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(413.2 946.4)">
+<g transform="translate(932.8 900.4)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1028.1 972.3)">
+<g transform="translate(509.0 972.3)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(999.1 972.3)">
+<g transform="translate(480.0 972.3)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(970.1 972.3)">
+<g transform="translate(451.0 972.3)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(932.4 967.9)">
+<g transform="translate(413.2 967.9)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(147.6 1081.4)">
+<g class="public-indicator" transform="translate(660.0 1051.4)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(509.0 1085.8)">
+<g transform="translate(1021.4 1055.8)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 1085.8)">
+<g transform="translate(992.4 1055.8)">
 <title>tag: economy</title>
 <use href="#tag_economy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 1081.4)">
+<g transform="translate(954.6 1051.4)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1032.6 1150.0)">
+<g transform="translate(509.0 1150.0)">
 <title>tag: lore</title>
 <use href="#tag_lore" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(994.9 1145.6)">
+<g transform="translate(471.2 1145.6)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 1272.3)">
+<g transform="translate(1033.9 1267.5)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 1272.3)">
+<g transform="translate(1004.9 1267.5)">
 <title>tag: law</title>
 <use href="#tag_law" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 1267.9)">
+<g transform="translate(967.2 1263.1)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 1323.4)">
+<g class="public-indicator" transform="translate(140.2 1323.4)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1028.8 1327.8)">
+<g transform="translate(509.0 1327.8)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(999.8 1327.8)">
+<g transform="translate(480.0 1327.8)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(970.8 1327.8)">
+<g transform="translate(451.0 1327.8)">
 <title>tag: economy</title>
 <use href="#tag_economy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(933.1 1323.4)">
+<g transform="translate(413.2 1323.4)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 1383.3)">
+<g transform="translate(1037.0 1378.5)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 1383.3)">
+<g transform="translate(1008.0 1378.5)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 1378.9)">
+<g transform="translate(970.2 1374.1)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1037.0 1469.8)">
+<g transform="translate(509.0 1469.8)">
 <title>tag: diplomacy</title>
 <use href="#tag_diplomacy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1008.0 1469.8)">
+<g transform="translate(480.0 1469.8)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(979.0 1469.8)">
+<g transform="translate(451.0 1469.8)">
 <title>tag: law</title>
 <use href="#tag_law" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(941.2 1465.4)">
+<g transform="translate(413.2 1465.4)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(170.4 1537.4)">
+<g class="public-indicator" transform="translate(660.0 1537.4)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(509.0 1537.4)">
+<g transform="translate(998.6 1537.4)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 1537.4)">
+<g transform="translate(969.6 1537.4)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1023.6 1580.8)">
+<g transform="translate(509.0 1580.8)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(994.6 1580.8)">
+<g transform="translate(480.0 1580.8)">
 <title>tag: lore</title>
 <use href="#tag_lore" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(956.8 1576.4)">
+<g transform="translate(442.2 1576.4)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 1739.8)">
+<g transform="translate(1036.6 1739.8)">
 <title>tag: diplomacy</title>
 <use href="#tag_diplomacy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 1739.8)">
+<g transform="translate(1007.6 1739.8)">
 <title>tag: law</title>
 <use href="#tag_law" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(451.0 1739.8)">
+<g transform="translate(978.6 1739.8)">
 <title>tag: infrastructure</title>
 <use href="#tag_infrastructure" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(413.2 1735.4)">
+<g transform="translate(940.9 1735.4)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1035.1 1994.0)">
+<g transform="translate(509.0 1994.0)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(997.4 1989.6)">
+<g transform="translate(471.2 1989.6)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 2099.8)">
+<g transform="translate(1018.7 2099.8)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 2099.8)">
+<g transform="translate(989.7 2099.8)">
 <title>tag: economy</title>
 <use href="#tag_economy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 2095.4)">
+<g transform="translate(952.0 2095.4)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1034.1 2290.8)">
+<g transform="translate(509.0 2290.8)">
 <title>tag: law</title>
 <use href="#tag_law" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1005.1 2290.8)">
+<g transform="translate(480.0 2290.8)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(967.4 2286.4)">
+<g transform="translate(442.2 2286.4)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 2489.8)">
+<g transform="translate(1035.2 2489.8)">
 <title>tag: law</title>
 <use href="#tag_law" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 2489.8)">
+<g transform="translate(1006.2 2489.8)">
 <title>tag: diplomacy</title>
 <use href="#tag_diplomacy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 2485.4)">
+<g transform="translate(968.4 2485.4)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1036.6 2558.6)">
+<g transform="translate(509.0 2558.6)">
 <title>tag: lore</title>
 <use href="#tag_lore" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1007.6 2558.6)">
+<g transform="translate(480.0 2558.6)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(969.8 2554.2)">
+<g transform="translate(442.2 2554.2)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 2680.4)">
+<g transform="translate(1008.9 2680.4)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(462.5 2680.4)">
+<g transform="translate(971.1 2680.4)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(433.5 2684.8)">
+<g transform="translate(942.1 2684.8)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(404.5 2684.8)">
+<g transform="translate(913.1 2684.8)">
 <title>tag: law</title>
 <use href="#tag_law" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(366.8 2680.4)">
+<g transform="translate(875.4 2680.4)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1019.8 2783.7)">
+<g transform="translate(509.0 2783.7)">
 <title>tag: lore</title>
 <use href="#tag_lore" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(990.8 2783.7)">
+<g transform="translate(480.0 2783.7)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(953.0 2779.3)">
+<g transform="translate(442.2 2779.3)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 2879.8)">
+<g transform="translate(1037.0 2879.8)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 2879.8)">
+<g transform="translate(1008.0 2879.8)">
 <title>tag: economy</title>
 <use href="#tag_economy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 2875.4)">
+<g transform="translate(970.2 2875.4)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1033.1 2947.3)">
+<g transform="translate(509.0 2947.3)">
 <title>tag: law</title>
 <use href="#tag_law" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1004.1 2947.3)">
+<g transform="translate(480.0 2947.3)">
 <title>tag: magic</title>
 <use href="#tag_magic" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(975.1 2947.3)">
+<g transform="translate(451.0 2947.3)">
 <title>tag: infrastructure</title>
 <use href="#tag_infrastructure" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(937.3 2942.9)">
+<g transform="translate(413.2 2942.9)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 3052.7)">
+<g transform="translate(1034.0 3052.7)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 3052.7)">
+<g transform="translate(1005.0 3052.7)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 3048.3)">
+<g transform="translate(967.2 3048.3)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 3195.5)">
+<g class="public-indicator" transform="translate(134.0 3195.5)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1026.2 3195.5)">
+<g transform="translate(500.2 3195.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(988.5 3195.5)">
+<g transform="translate(462.5 3195.5)">
 <title>faction: garhammar-trade-league</title>
 <use href="#pov_garhammar-trade-league" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(959.5 3199.9)">
+<g transform="translate(433.5 3199.9)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(921.7 3195.5)">
+<g transform="translate(395.8 3195.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(138.2 3229.4)">
+<g class="public-indicator" transform="translate(660.0 3207.8)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(500.2 3229.4)">
+<g transform="translate(1022.1 3207.8)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 3233.8)">
+<g transform="translate(993.1 3212.1)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 3229.4)">
+<g transform="translate(955.3 3207.8)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1033.1 3322.9)">
+<g transform="translate(509.0 3322.9)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1004.1 3322.9)">
+<g transform="translate(480.0 3322.9)">
 <title>tag: law</title>
 <use href="#tag_law" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(966.3 3318.5)">
+<g transform="translate(442.2 3318.5)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 3356.8)">
+<g transform="translate(1029.7 3335.1)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 3356.8)">
+<g transform="translate(1000.7 3335.1)">
 <title>tag: lore</title>
 <use href="#tag_lore" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 3352.4)">
+<g transform="translate(962.9 3330.8)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 3429.5)">
+<g class="public-indicator" transform="translate(134.9 3429.5)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1034.1 3433.9)">
+<g transform="translate(509.0 3433.9)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1005.1 3433.9)">
+<g transform="translate(480.0 3433.9)">
 <title>tag: economy</title>
 <use href="#tag_economy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(967.3 3429.5)">
+<g transform="translate(442.2 3429.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(929.6 3429.5)">
+<g transform="translate(404.5 3429.5)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 3467.8)">
+<g transform="translate(1037.0 3446.1)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 3467.8)">
+<g transform="translate(1008.0 3446.1)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 3463.4)">
+<g transform="translate(970.2 3441.8)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1035.6 3544.9)">
+<g transform="translate(509.0 3544.9)">
 <title>tag: law</title>
 <use href="#tag_law" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1006.6 3544.9)">
+<g transform="translate(480.0 3544.9)">
 <title>tag: economy</title>
 <use href="#tag_economy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(977.6 3544.9)">
+<g transform="translate(451.0 3544.9)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(948.6 3544.9)">
+<g transform="translate(422.0 3544.9)">
 <title>tag: diplomacy</title>
 <use href="#tag_diplomacy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(910.8 3540.5)">
+<g transform="translate(384.2 3540.5)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 3732.3)">
+<g transform="translate(1028.7 3700.2)">
 <title>tag: economy</title>
 <use href="#tag_economy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 3732.3)">
+<g transform="translate(999.7 3700.2)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 3727.9)">
+<g transform="translate(962.0 3695.8)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1024.0 3796.4)">
+<g transform="translate(509.0 3796.4)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(995.0 3796.4)">
+<g transform="translate(480.0 3796.4)">
 <title>tag: economy</title>
 <use href="#tag_economy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(957.2 3792.0)">
+<g transform="translate(442.2 3792.0)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(141.3 3838.9)">
+<g class="public-indicator" transform="translate(660.0 3806.8)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(509.0 3843.3)">
+<g transform="translate(1027.7 3811.2)">
 <title>tag: world</title>
 <use href="#tag_world" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 3843.3)">
+<g transform="translate(998.7 3811.2)">
 <title>tag: law</title>
 <use href="#tag_law" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(451.0 3843.3)">
+<g transform="translate(969.7 3811.2)">
 <title>tag: diplomacy</title>
 <use href="#tag_diplomacy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(413.2 3838.9)">
+<g transform="translate(931.9 3806.8)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(375.5 3838.9)">
+<g transform="translate(894.2 3806.8)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(337.8 3838.9)">
+<g transform="translate(856.4 3806.8)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1021.7 3895.4)">
+<g transform="translate(509.0 3895.4)">
 <title>tag: diplomacy</title>
 <use href="#tag_diplomacy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(983.9 3891.0)">
+<g transform="translate(471.2 3891.0)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(946.2 3891.0)">
+<g transform="translate(433.5 3891.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(908.4 3891.0)">
+<g transform="translate(395.8 3891.0)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 3961.9)">
+<g transform="translate(1025.9 3929.8)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 3966.3)">
+<g transform="translate(996.9 3934.2)">
 <title>tag: diplomacy</title>
 <use href="#tag_diplomacy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 3966.3)">
+<g transform="translate(967.9 3934.2)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(404.5 3961.9)">
+<g transform="translate(930.2 3929.8)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 4037.9)">
+<g class="public-indicator" transform="translate(132.0 4037.9)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1028.2 4037.9)">
+<g transform="translate(500.2 4037.9)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(999.2 4042.3)">
+<g transform="translate(471.2 4042.3)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(970.2 4042.3)">
+<g transform="translate(442.2 4042.3)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(932.5 4037.9)">
+<g transform="translate(404.5 4037.9)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 4105.4)">
+<g transform="translate(1021.5 4105.4)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(462.5 4105.4)">
+<g transform="translate(983.8 4105.4)">
 <title>faction: garhammar-trade-league</title>
 <use href="#pov_garhammar-trade-league" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(433.5 4109.8)">
+<g transform="translate(954.8 4109.8)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(404.5 4109.8)">
+<g transform="translate(925.8 4109.8)">
 <title>tag: diplomacy</title>
 <use href="#tag_diplomacy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(366.8 4105.4)">
+<g transform="translate(888.0 4105.4)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1035.9 4199.8)">
+<g transform="translate(509.0 4199.8)">
 <title>tag: law</title>
 <use href="#tag_law" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1006.9 4199.8)">
+<g transform="translate(480.0 4199.8)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(977.9 4199.8)">
+<g transform="translate(451.0 4199.8)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(940.2 4195.4)">
+<g transform="translate(413.2 4195.4)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 4273.9)">
+<g transform="translate(1013.7 4273.9)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 4273.9)">
+<g transform="translate(984.7 4273.9)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 4269.5)">
+<g transform="translate(947.0 4269.5)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 4375.4)">
+<g class="public-indicator" transform="translate(167.8 4375.4)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1001.2 4379.8)">
+<g transform="translate(509.0 4379.8)">
 <title>tag: economy</title>
 <use href="#tag_economy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(972.2 4379.8)">
+<g transform="translate(480.0 4379.8)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(943.2 4379.8)">
+<g transform="translate(451.0 4379.8)">
 <title>tag: magic</title>
 <use href="#tag_magic" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(905.5 4375.4)">
+<g transform="translate(413.2 4375.4)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 4464.8)">
+<g transform="translate(1020.7 4464.8)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 4464.8)">
+<g transform="translate(991.7 4464.8)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 4460.4)">
+<g transform="translate(954.0 4460.4)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 4531.4)">
+<g class="public-indicator" transform="translate(133.3 4531.4)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1027.0 4531.4)">
+<g transform="translate(500.2 4531.4)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(989.2 4531.4)">
+<g transform="translate(462.5 4531.4)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(960.2 4535.8)">
+<g transform="translate(433.5 4535.8)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(931.2 4535.8)">
+<g transform="translate(404.5 4535.8)">
 <title>tag: diplomacy</title>
 <use href="#tag_diplomacy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(893.5 4531.4)">
+<g transform="translate(366.8 4531.4)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(132.0 4641.8)">
+<g class="public-indicator" transform="translate(660.0 4641.8)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(509.0 4646.1)">
+<g transform="translate(1037.0 4646.1)">
 <title>tag: law</title>
 <use href="#tag_law" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 4646.1)">
+<g transform="translate(1008.0 4646.1)">
 <title>tag: government</title>
 <use href="#tag_government" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(442.2 4641.8)">
+<g transform="translate(970.2 4641.8)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
