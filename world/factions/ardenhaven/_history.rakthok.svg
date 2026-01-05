@@ -40,7 +40,7 @@
         .label { fill: #fffaf0; stroke: var(--label-border); stroke-width: 1; }
         .label.changed-id, .label.changed { stroke: #d97900; stroke-width: 4; stroke-linejoin: round; }
         .title { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 16px; font-weight: 700; fill: #2b1f14; }
-        .age-label { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 14px; font-weight: 700; fill: #5a4634; }
+        .date-label { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 14px; font-weight: 700; fill: #5a4634; }
         .summary { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #3a2b1f; }
         .md-bold { font-weight: 700; }
         .public-indicator { color: var(--public-indicator); opacity: 0.9; }
@@ -54,10 +54,6 @@
   </symbol>
 </defs>
 <defs>
-<symbol id="tag_unknown" viewBox="0 0 512 512">
-  <circle cx="256" cy="256" r="247.04" fill="#cfcfcf" stroke="#9a9a9a" stroke-width="17.92" />
-  <text x="256" y="346" text-anchor="middle" font-size="300" font-family="Alegreya, serif" fill="#2b1f14">?!</text>
-</symbol>
 <symbol id="tag_government" viewBox="0 0 512 512">
   <circle cx="256" cy="256" r="247.04" fill="#3a3f6b" stroke="#33375e" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
@@ -200,7 +196,7 @@
 <tspan x="144.9" dy="12.0">resources to explore these sites themselves, and the ruins attract monsters that</tspan>
 <tspan x="144.9" dy="12.0">endanger civilian settlements. By offering legal ownership of findings,</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="157.0">
+<text class="date-label" text-anchor="end" x="540.0" y="157.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">46</tspan>
 </text>
 <rect class="label" x="654.0" y="51.5" width="411.5" height="121.0" rx="8" ry="8"/>
@@ -215,7 +211,7 @@
 <tspan x="670.0" dy="12.0">demonstrates Ardenhaven&#x27;s maturity as a federation: unified military</tspan>
 <tspan x="670.0" dy="12.0">infrastructure built and maintained across formerly fractious city-states. Two</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1059.5" y="168.5">
+<text class="date-label" text-anchor="end" x="1059.5" y="168.5">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">41</tspan>
 </text>
 <rect class="label" x="134.5" y="188.3" width="411.5" height="121.0" rx="8" ry="8"/>
@@ -230,7 +226,7 @@
 <tspan x="150.5" dy="12.0">mass graves and planting wheat—&quot;let the dead feed the living.&quot; The Council of</tspan>
 <tspan x="150.5" dy="12.0">Consuls deadlocks repeatedly. Each city-state builds its own memorial in its</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="305.3">
+<text class="date-label" text-anchor="end" x="540.0" y="305.3">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">22</tspan>
 </text>
 <rect class="label" x="654.0" y="301.1" width="411.8" height="121.0" rx="8" ry="8"/>
@@ -245,7 +241,8 @@
 <tspan x="670.0" dy="12.0">becomes the continent&#x27;s breadbasket, choosing prosperity through generosity</tspan>
 <tspan x="670.0" dy="12.0">over isolation. The dissenting city-state accepts the vote but builds its own</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1059.8" y="418.1">
+<text class="date-label" text-anchor="end" x="1059.8" y="418.1">
+<tspan>Aoruvan — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">6</tspan>
 </text>
 <rect class="label" x="132.9" y="553.1" width="413.1" height="97.0" rx="8" ry="8"/>
@@ -258,7 +255,7 @@
 <tspan x="148.9" dy="12.0">battlefields are farmland again. A new generation knows the war only through</tspan>
 <tspan x="148.9" dy="12.0">their grandparents&#x27; stories and the mass graves that still mark the plains.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="646.1">
+<text class="date-label" text-anchor="end" x="540.0" y="646.1">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">300</tspan>
 </text>
 <rect class="label" x="654.0" y="687.8" width="417.1" height="97.0" rx="8" ry="8"/>
@@ -271,7 +268,7 @@
 <tspan x="670.0" dy="12.0">coal and iron. The exchange is awkward, stilted, watched by veterans on both</tspan>
 <tspan x="670.0" dy="12.0">sides. But it happens. Commerce begins to replace contempt.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1065.1" y="780.8">
+<text class="date-label" text-anchor="end" x="1065.1" y="780.8">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">265</tspan>
 </text>
 <rect class="label" x="135.3" y="756.7" width="410.7" height="109.0" rx="8" ry="8"/>
@@ -285,7 +282,8 @@
 <tspan x="151.3" dy="12.0">all signatories pledge to resolve disputes through commerce rather than</tspan>
 <tspan x="151.3" dy="12.0">conquest. The world exhales.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="861.7">
+<text class="date-label" text-anchor="end" x="540.0" y="861.7">
+<tspan>12 Ulemar — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">250</tspan>
 </text>
 <rect class="label" x="654.0" y="798.8" width="404.7" height="109.0" rx="8" ry="8"/>
@@ -299,7 +297,8 @@
 <tspan x="670.0" dy="12.0">Both sides cling to pride while accepting reality: continuation means mutual</tspan>
 <tspan x="670.0" dy="12.0">destruction.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1052.7" y="903.8">
+<text class="date-label" text-anchor="end" x="1052.7" y="903.8">
+<tspan>Lumaeos — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">250</tspan>
 </text>
 <rect class="label" x="126.0" y="879.7" width="420.0" height="97.0" rx="8" ry="8"/>
@@ -312,7 +311,8 @@
 <tspan x="142.0" dy="12.0">territories. Survivors on both sides recognize the war cannot be won by either</tspan>
 <tspan x="142.0" dy="12.0">nation. Whispers of peace begin, though neither government admits defeat.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="972.7">
+<text class="date-label" text-anchor="end" x="540.0" y="972.7">
+<tspan>Aneumos — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">249</tspan>
 </text>
 <rect class="label" x="654.0" y="921.8" width="420.0" height="97.0" rx="8" ry="8"/>
@@ -325,7 +325,8 @@
 <tspan x="670.0" dy="12.0">mutual exhaustion—neither army has the strength to continue. The granaries</tspan>
 <tspan x="670.0" dy="12.0">are left ruined and empty, a monument to futility.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1068.0" y="1014.8">
+<text class="date-label" text-anchor="end" x="1068.0" y="1014.8">
+<tspan>Ithraeum — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">248</tspan>
 </text>
 <rect class="label" x="126.0" y="990.7" width="420.0" height="97.0" rx="8" ry="8"/>
@@ -338,7 +339,8 @@
 <tspan x="142.0" dy="12.0">blood. Casualties on both sides are catastrophic. The plains are later named for</tspan>
 <tspan x="142.0" dy="12.0">the funeral pyres that burned for weeks.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="1083.7">
+<text class="date-label" text-anchor="end" x="540.0" y="1083.7">
+<tspan>Aoruvan — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">246</tspan>
 </text>
 <rect class="label" x="654.0" y="1032.8" width="416.6" height="97.0" rx="8" ry="8"/>
@@ -351,7 +353,8 @@
 <tspan x="670.0" dy="12.0">Those with nursing children are exempted; everyone else fights. Entire towns</tspan>
 <tspan x="670.0" dy="12.0">empty. Fields go unplowed. The choice is simple: fight now or lose everything.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1064.6" y="1125.8">
+<text class="date-label" text-anchor="end" x="1064.6" y="1125.8">
+<tspan>Saraenos — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">244</tspan>
 </text>
 <rect class="label" x="126.0" y="1101.7" width="420.0" height="97.0" rx="8" ry="8"/>
@@ -364,7 +367,8 @@
 <tspan x="142.0" dy="12.0">total war. The language is unambiguous—there will be no negotiated peace,</tspan>
 <tspan x="142.0" dy="12.0">only submission or annihilation. The 7-year war begins.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="1194.7">
+<text class="date-label" text-anchor="end" x="540.0" y="1194.7">
+<tspan>Thaeorum — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">243</tspan>
 </text>
 <rect class="label" x="654.0" y="1143.8" width="420.0" height="97.0" rx="8" ry="8"/>
@@ -377,7 +381,8 @@
 <tspan x="670.0" dy="12.0">war-making power to a unified Council of Consuls. Merrowgate, invited to join,</tspan>
 <tspan x="670.0" dy="12.0">formally declines and declares perpetual neutrality.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1068.0" y="1236.8">
+<text class="date-label" text-anchor="end" x="1068.0" y="1236.8">
+<tspan>15 Veleara — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">223</tspan>
 </text>
 <rect class="label" x="128.9" y="1212.7" width="417.1" height="109.0" rx="8" ry="8"/>
@@ -391,7 +396,8 @@
 <tspan x="144.9" dy="12.0">survival outweighs pride: they agree to act as one federation, preserving local</tspan>
 <tspan x="144.9" dy="12.0">governance but pooling military and diplomatic authority.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="1317.7">
+<text class="date-label" text-anchor="end" x="540.0" y="1317.7">
+<tspan>Morvalos — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">222</tspan>
 </text>
 <rect class="label" x="654.0" y="1254.8" width="417.8" height="97.0" rx="8" ry="8"/>
@@ -404,7 +410,8 @@
 <tspan x="670.0" dy="12.0">atrocity galvanizes public opinion—Calderon is no longer seen as a negotiating</tspan>
 <tspan x="670.0" dy="12.0">partner but as an existential threat.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1065.8" y="1347.8">
+<text class="date-label" text-anchor="end" x="1065.8" y="1347.8">
+<tspan>Voraela — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">217</tspan>
 </text>
 <rect class="label" x="128.4" y="1335.7" width="417.6" height="97.0" rx="8" ry="8"/>
@@ -417,7 +424,7 @@
 <tspan x="144.4" dy="12.0">neighbors for military aid. None respond. This moment becomes a rallying cry</tspan>
 <tspan x="144.4" dy="12.0">in later years: &quot;When they came for the border towns, we stood alone.&quot;</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="1428.7">
+<text class="date-label" text-anchor="end" x="540.0" y="1428.7">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">195</tspan>
 </text>
 <rect class="label" x="654.0" y="1431.5" width="417.0" height="97.0" rx="8" ry="8"/>
@@ -430,7 +437,7 @@
 <tspan x="670.0" dy="12.0">disputes, and distrust. Each city-state returns home believing they can</tspan>
 <tspan x="670.0" dy="12.0">negotiate separately with Calderon.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1065.0" y="1524.5">
+<text class="date-label" text-anchor="end" x="1065.0" y="1524.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">178</tspan>
 </text>
 <rect class="label" x="135.0" y="1561.1" width="411.0" height="97.0" rx="8" ry="8"/>
@@ -443,7 +450,7 @@
 <tspan x="151.0" dy="12.0">quickly escalates to armed skirmishes. The Ardenhaven city-states respond</tspan>
 <tspan x="151.0" dy="12.0">individually, uncoordinated and vulnerable.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="1654.1">
+<text class="date-label" text-anchor="end" x="540.0" y="1654.1">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">160</tspan>
 </text>
 </g>

@@ -40,7 +40,7 @@
         .label { fill: #fffaf0; stroke: var(--label-border); stroke-width: 1; }
         .label.changed-id, .label.changed { stroke: #d97900; stroke-width: 4; stroke-linejoin: round; }
         .title { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 16px; font-weight: 700; fill: #2b1f14; }
-        .age-label { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 14px; font-weight: 700; fill: #5a4634; }
+        .date-label { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 14px; font-weight: 700; fill: #5a4634; }
         .summary { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #3a2b1f; }
         .md-bold { font-weight: 700; }
         .public-indicator { color: var(--public-indicator); opacity: 0.9; }
@@ -54,10 +54,6 @@
   </symbol>
 </defs>
 <defs>
-<symbol id="tag_unknown" viewBox="0 0 512 512">
-  <circle cx="256" cy="256" r="247.04" fill="#cfcfcf" stroke="#9a9a9a" stroke-width="17.92" />
-  <text x="256" y="346" text-anchor="middle" font-size="300" font-family="Alegreya, serif" fill="#2b1f14">?!</text>
-</symbol>
 <symbol id="tag_public" viewBox="0 0 512 512">
   <g transform="translate(256.000 256.000) scale(0.8800) translate(-256.000 -256.000)">
 <g class="" transform="translate(0,0)" style=""><path d="M149.688 85.625c-1.234.005-2.465.033-3.72.063-33.913.806-75.48 10.704-127.25 33.718V362.78c60.77-28.82 106.718-37.067 144.22-33.092 33.502 3.55 59.685 16.66 83.562 31.187v-242.97c-23.217-17.744-50.195-30.04-85.97-32a184.47 184.47 0 0 0-10.843-.28zm211.968 0c-3.7-.016-7.322.088-10.844.28-35.773 1.96-62.75 14.256-85.968 32v242.97c23.876-14.527 50.06-27.637 83.562-31.188 37.502-3.974 83.45 4.272 144.22 33.094V119.407c-51.77-23.014-93.337-32.912-127.25-33.72-1.255-.028-2.486-.056-3.72-.06zm5.72 261.78c-1.038-.002-2.074.017-3.095.033-4.808.075-9.43.37-13.905.843-33.932 3.597-59.603 17.976-85.53 34.44v.28c-6.554-1.99-13.02-2.37-19.408-.97-25.566-16.177-51.003-30.202-84.468-33.75-5.595-.592-11.44-.883-17.564-.842-32.04.213-71.833 9.778-124.687 35.937v42.53c60.77-28.823 106.714-37.067 144.218-33.092 18.545 1.965 34.837 6.845 49.75 13.28-4.682 6.064-9.308 13.268-13.875 21.688h117.156c-5.93-8.22-11.798-15.414-17.626-21.56 14.996-6.503 31.39-11.43 50.062-13.408 37.503-3.974 83.448 4.27 144.22 33.094v-42.53c-53.16-26.31-93.115-35.863-125.25-35.97z" fill="currentColor" fill-opacity="1"></path></g>
@@ -264,7 +260,8 @@
 <tspan x="153.5" dy="12.0">under the demand, but the resulting trade agreements reshape continental</tspan>
 <tspan x="153.5" dy="12.0">commerce for the generations to come.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="133.0">
+<text class="date-label" text-anchor="end" x="540.0" y="133.0">
+<tspan>Lumaeos — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
 <rect class="label" x="654.0" y="40.0" width="417.1" height="121.0" rx="8" ry="8"/>
@@ -279,7 +276,7 @@
 <tspan x="670.0" dy="12.0">resources to explore these sites themselves, and the ruins attract monsters that</tspan>
 <tspan x="670.0" dy="12.0">endanger civilian settlements. By offering legal ownership of findings,</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1065.1" y="157.0">
+<text class="date-label" text-anchor="end" x="1065.1" y="157.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">46</tspan>
 </text>
 <rect class="label" x="134.5" y="151.0" width="411.5" height="121.0" rx="8" ry="8"/>
@@ -294,7 +291,7 @@
 <tspan x="150.5" dy="12.0">demonstrates Ardenhaven&#x27;s maturity as a federation: unified military</tspan>
 <tspan x="150.5" dy="12.0">infrastructure built and maintained across formerly fractious city-states. Two</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="268.0">
+<text class="date-label" text-anchor="end" x="540.0" y="268.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">41</tspan>
 </text>
 <rect class="label" x="654.0" y="175.0" width="420.0" height="97.0" rx="8" ry="8"/>
@@ -307,7 +304,7 @@
 <tspan x="670.0" dy="12.0">heart removed. The bodies are left where they were laid. The story runs ahead of</tspan>
 <tspan x="670.0" dy="12.0">the carts and crosses every border, told in whispers that never match.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1068.0" y="268.0">
+<text class="date-label" text-anchor="end" x="1068.0" y="268.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">23</tspan>
 </text>
 <rect class="label" x="134.5" y="286.0" width="411.5" height="121.0" rx="8" ry="8"/>
@@ -322,7 +319,7 @@
 <tspan x="150.5" dy="12.0">mass graves and planting wheat—&quot;let the dead feed the living.&quot; The Council of</tspan>
 <tspan x="150.5" dy="12.0">Consuls deadlocks repeatedly. Each city-state builds its own memorial in its</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="403.0">
+<text class="date-label" text-anchor="end" x="540.0" y="403.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">22</tspan>
 </text>
 <rect class="label" x="654.0" y="286.0" width="404.4" height="85.0" rx="8" ry="8"/>
@@ -334,7 +331,7 @@
 <tspan x="670.0" dy="12.0">allowing fractional ownership of merchant ventures. The innovation attracts</tspan>
 <tspan x="670.0" dy="12.0">investors from every nation and creates a new class of wealthy speculators.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1052.4" y="367.0">
+<text class="date-label" text-anchor="end" x="1052.4" y="367.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">16</tspan>
 </text>
 <rect class="label" x="134.2" y="421.0" width="411.8" height="121.0" rx="8" ry="8"/>
@@ -349,7 +346,8 @@
 <tspan x="150.2" dy="12.0">becomes the continent&#x27;s breadbasket, choosing prosperity through generosity</tspan>
 <tspan x="150.2" dy="12.0">over isolation. The dissenting city-state accepts the vote but builds its own</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="538.0">
+<text class="date-label" text-anchor="end" x="540.0" y="538.0">
+<tspan>Aoruvan — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">6</tspan>
 </text>
 <rect class="label" x="654.0" y="385.0" width="419.6" height="97.0" rx="8" ry="8"/>
@@ -362,7 +360,7 @@
 <tspan x="670.0" dy="12.0">only through sanctioned hands and sworn measures, so that no foreign bargain</tspan>
 <tspan x="670.0" dy="12.0">could seep past the outer ring uncounted, unnamed, or unmade at her word.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1067.6" y="478.0">
+<text class="date-label" text-anchor="end" x="1067.6" y="478.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">0</tspan>
 </text>
 <rect class="label" x="164.4" y="556.0" width="381.6" height="73.0" rx="8" ry="8"/>
@@ -373,7 +371,7 @@
 <tspan x="180.4" dy="0.0">War ends and coin takes over; the old war-roads are inherited by guilds,</tspan>
 <tspan x="180.4" dy="12.0">charters, and contract courts.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="625.0">
+<text class="date-label" text-anchor="end" x="540.0" y="625.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">0</tspan>
 </text>
 <rect class="label" x="654.0" y="496.0" width="418.0" height="109.0" rx="8" ry="8"/>
@@ -387,7 +385,7 @@
 <tspan x="670.0" dy="12.0">the Horde his name is kept only as a curse: proof that gold is softer than mud,</tspan>
 <tspan x="670.0" dy="12.0">and twice as deadly.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1066.0" y="601.0">
+<text class="date-label" text-anchor="end" x="1066.0" y="601.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
 </text>
 <rect class="label" x="132.2" y="643.0" width="413.8" height="109.0" rx="8" ry="8"/>
@@ -401,7 +399,7 @@
 <tspan x="148.2" dy="12.0">charge, and crossbow bolts cracked from the haze. Gruknar died on her knees,</tspan>
 <tspan x="148.2" dy="12.0">and Ironstead rose up tall.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="748.0">
+<text class="date-label" text-anchor="end" x="540.0" y="748.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
 </text>
 <rect class="label" x="654.0" y="619.0" width="417.1" height="97.0" rx="8" ry="8"/>
@@ -414,7 +412,7 @@
 <tspan x="670.0" dy="12.0">coal and iron. The exchange is awkward, stilted, watched by veterans on both</tspan>
 <tspan x="670.0" dy="12.0">sides. But it happens. Commerce begins to replace contempt.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1065.1" y="712.0">
+<text class="date-label" text-anchor="end" x="1065.1" y="712.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">265</tspan>
 </text>
 <rect class="label" x="135.3" y="766.0" width="410.7" height="109.0" rx="8" ry="8"/>
@@ -428,7 +426,8 @@
 <tspan x="151.3" dy="12.0">all signatories pledge to resolve disputes through commerce rather than</tspan>
 <tspan x="151.3" dy="12.0">conquest. The world exhales.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="871.0">
+<text class="date-label" text-anchor="end" x="540.0" y="871.0">
+<tspan>12 Ulemar — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">250</tspan>
 </text>
 <rect class="label" x="654.0" y="730.0" width="420.0" height="97.0" rx="8" ry="8"/>
@@ -441,7 +440,8 @@
 <tspan x="670.0" dy="12.0">total war. The language is unambiguous—there will be no negotiated peace,</tspan>
 <tspan x="670.0" dy="12.0">only submission or annihilation. The 7-year war begins.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1068.0" y="823.0">
+<text class="date-label" text-anchor="end" x="1068.0" y="823.0">
+<tspan>Thaeorum — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">243</tspan>
 </text>
 <rect class="label" x="161.8" y="889.0" width="384.2" height="97.0" rx="8" ry="8"/>
@@ -454,7 +454,7 @@
 <tspan x="177.8" dy="12.0">contracts the gold standard for international trade, tripling the city&#x27;s</tspan>
 <tspan x="177.8" dy="12.0">arbitration revenue within five years.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="982.0">
+<text class="date-label" text-anchor="end" x="540.0" y="982.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">232</tspan>
 </text>
 <rect class="label" x="654.0" y="841.0" width="418.7" height="85.0" rx="8" ry="8"/>
@@ -466,7 +466,7 @@
 <tspan x="670.0" dy="12.0">Ardenhaven, securing safe passage through its waters for all nations. The treaty</tspan>
 <tspan x="670.0" dy="12.0">establishes Merrowgate as the undisputed arbiter of maritime trade disputes.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1066.7" y="922.0">
+<text class="date-label" text-anchor="end" x="1066.7" y="922.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">227</tspan>
 </text>
 <rect class="label" x="126.0" y="1000.0" width="420.0" height="97.0" rx="8" ry="8"/>
@@ -479,7 +479,8 @@
 <tspan x="142.0" dy="12.0">war-making power to a unified Council of Consuls. Merrowgate, invited to join,</tspan>
 <tspan x="142.0" dy="12.0">formally declines and declares perpetual neutrality.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="1093.0">
+<text class="date-label" text-anchor="end" x="540.0" y="1093.0">
+<tspan>15 Veleara — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">223</tspan>
 </text>
 <rect class="label" x="654.0" y="940.0" width="412.6" height="109.0" rx="8" ry="8"/>
@@ -493,7 +494,7 @@
 <tspan x="670.0" dy="12.0">strengthened the Choir-Sentinels, and reminded her people that safety is</tspan>
 <tspan x="670.0" dy="12.0">obedience, not distance.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1060.6" y="1045.0">
+<text class="date-label" text-anchor="end" x="1060.6" y="1045.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">0</tspan>
 </text>
 <rect class="label" x="136.2" y="1111.0" width="409.8" height="73.0" rx="8" ry="8"/>
@@ -504,7 +505,7 @@
 <tspan x="152.2" dy="0.0">Continental war becomes possible; generations live under levy and siege until</tspan>
 <tspan x="152.2" dy="12.0">exhaustion forces peace.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="1180.0">
+<text class="date-label" text-anchor="end" x="540.0" y="1180.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">0</tspan>
 </text>
 <rect class="label" x="654.0" y="1063.0" width="414.4" height="109.0" rx="8" ry="8"/>
@@ -518,7 +519,7 @@
 <tspan x="670.0" dy="12.0">answer the world’s bridges with deeper wards, quieter routes, and stricter</tspan>
 <tspan x="670.0" dy="12.0">permission.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1062.4" y="1168.0">
+<text class="date-label" text-anchor="end" x="1062.4" y="1168.0">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">0</tspan>
 </text>
 <rect class="label" x="144.3" y="1198.0" width="401.7" height="73.0" rx="8" ry="8"/>
@@ -529,7 +530,7 @@
 <tspan x="160.3" dy="0.0">Empires bind territory with bridges, milestones, and waystations—built for</tspan>
 <tspan x="160.3" dy="12.0">marching columns first, commerce second.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="1267.0">
+<text class="date-label" text-anchor="end" x="540.0" y="1267.0">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">0</tspan>
 </text>
 <rect class="label" x="654.0" y="1186.0" width="410.7" height="109.0" rx="8" ry="8"/>
@@ -543,7 +544,7 @@
 <tspan x="670.0" dy="12.0">fellowship without dilution, and remain perfectly attended within the grace</tspan>
 <tspan x="670.0" dy="12.0">that had already set her above the rest.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1058.7" y="1291.0">
+<text class="date-label" text-anchor="end" x="1058.7" y="1291.0">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">201</tspan>
 </text>
 <rect class="label" x="130.8" y="1285.0" width="415.2" height="97.0" rx="8" ry="8"/>
@@ -556,7 +557,7 @@
 <tspan x="146.8" dy="12.0">the tower would want for nothing, so that Sabriel would never again be misled</tspan>
 <tspan x="146.8" dy="12.0">into believing fulfillment lay beyond what her mother had already perfected.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="1378.0">
+<text class="date-label" text-anchor="end" x="540.0" y="1378.0">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">101</tspan>
 </text>
 <rect class="label" x="654.0" y="1309.0" width="417.9" height="97.0" rx="8" ry="8"/>
@@ -569,7 +570,7 @@
 <tspan x="670.0" dy="12.0">again—confirmation that all things outside Elaerith’s care are ultimately</tspan>
 <tspan x="670.0" dy="12.0">reclaimed by silence.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1065.9" y="1402.0">
+<text class="date-label" text-anchor="end" x="1065.9" y="1402.0">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">52</tspan>
 </text>
 <rect class="label" x="138.2" y="1396.0" width="407.8" height="97.0" rx="8" ry="8"/>
@@ -582,7 +583,7 @@
 <tspan x="154.2" dy="12.0">accompanied them at times, learning firsthand why such realms were never</tspan>
 <tspan x="154.2" dy="12.0">meant to be dwelt upon.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="1489.0">
+<text class="date-label" text-anchor="end" x="540.0" y="1489.0">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">50</tspan>
 </text>
 <rect class="label" x="654.0" y="1420.0" width="390.8" height="97.0" rx="8" ry="8"/>
@@ -595,7 +596,7 @@
 <tspan x="670.0" dy="12.0">ornaments—crowns that must be bargained for, defended, and</tspan>
 <tspan x="670.0" dy="12.0">inherited—unlike the Veiled Crown, which is neither granted nor shared.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1038.8" y="1513.0">
+<text class="date-label" text-anchor="end" x="1038.8" y="1513.0">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">0</tspan>
 </text>
 <rect class="label" x="129.8" y="1507.0" width="416.2" height="73.0" rx="8" ry="8"/>
@@ -606,7 +607,7 @@
 <tspan x="145.8" dy="0.0">Dynasties harden into kingdoms; borders are named, faiths codified, and wars</tspan>
 <tspan x="145.8" dy="12.0">are regional rather than world-spanning.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="1576.0">
+<text class="date-label" text-anchor="end" x="540.0" y="1576.0">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">0</tspan>
 </text>
 <rect class="label" x="654.0" y="1531.0" width="410.9" height="85.0" rx="8" ry="8"/>
@@ -618,7 +619,7 @@
 <tspan x="670.0" dy="12.0">refinement, entrusted with the shaping of Araethilion’s defenses so she might</tspan>
 <tspan x="670.0" dy="12.0">better understand the weight of order and the cost of neglect.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1058.9" y="1612.0">
+<text class="date-label" text-anchor="end" x="1058.9" y="1612.0">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">996</tspan>
 </text>
 <rect class="label" x="126.0" y="1594.0" width="420.0" height="85.0" rx="8" ry="8"/>
@@ -630,7 +631,7 @@
 <tspan x="142.0" dy="12.0">her keeping; she was retrieved before greater harm could claim her, spared only</tspan>
 <tspan x="142.0" dy="12.0">by Elaerith’s timely awareness and restraint.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="1675.0">
+<text class="date-label" text-anchor="end" x="540.0" y="1675.0">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">895</tspan>
 </text>
 <rect class="label" x="654.0" y="1630.0" width="407.1" height="97.0" rx="8" ry="8"/>
@@ -643,7 +644,7 @@
 <tspan x="670.0" dy="12.0">half-collapsed and frozen at a steep forty-five-degree lean, as though the</tspan>
 <tspan x="670.0" dy="12.0">mountain itself had rolled onto its side and crushed the life from it.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1055.1" y="1723.0">
+<text class="date-label" text-anchor="end" x="1055.1" y="1723.0">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">846</tspan>
 </text>
 <rect class="label" x="129.9" y="1693.0" width="416.1" height="97.0" rx="8" ry="8"/>
@@ -656,7 +657,7 @@
 <tspan x="145.9" dy="12.0">standing as a quiet lesson in what becomes of worlds that fall beyond Elaerith’s</tspan>
 <tspan x="145.9" dy="12.0">sustaining hand.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="1786.0">
+<text class="date-label" text-anchor="end" x="540.0" y="1786.0">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">845</tspan>
 </text>
 <rect class="label" x="654.0" y="1741.0" width="406.4" height="85.0" rx="8" ry="8"/>
@@ -668,7 +669,7 @@
 <tspan x="670.0" dy="12.0">first breath, whose coming was proclaimed as a living testament to Elaerith’s</tspan>
 <tspan x="670.0" dy="12.0">favor and careful design.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1054.4" y="1822.0">
+<text class="date-label" text-anchor="end" x="1054.4" y="1822.0">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">627</tspan>
 </text>
 <rect class="label" x="138.0" y="2021.7" width="408.0" height="109.0" rx="8" ry="8"/>
@@ -682,7 +683,7 @@
 <tspan x="154.0" dy="12.0">“rediscovered” road treated as proof that the world always returns, in time, to</tspan>
 <tspan x="154.0" dy="12.0">what she already preserves.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="540.0" y="2126.7">
+<text class="date-label" text-anchor="end" x="540.0" y="2126.7">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">0</tspan>
 </text>
 <rect class="label" x="654.0" y="2039.7" width="407.8" height="73.0" rx="8" ry="8"/>
@@ -693,7 +694,7 @@
 <tspan x="670.0" dy="0.0">Writing, law, and agriculture return; proto-kingdoms form and the old roads</tspan>
 <tspan x="670.0" dy="12.0">are found again, half-buried.</tspan>
 </text>
-<text class="age-label" text-anchor="end" x="1055.8" y="2108.7">
+<text class="date-label" text-anchor="end" x="1055.8" y="2108.7">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">0</tspan>
 </text>
 </g>

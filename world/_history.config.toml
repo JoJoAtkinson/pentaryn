@@ -1,6 +1,6 @@
 present_year = 4327
 present_month = 10
-present_day = 15
+present_day = 16
 
 [[views]]
 id = "public"
@@ -47,3 +47,17 @@ hide_time_measurements = false
 
 [views.range]
 last_years = 100
+
+
+[[views]]
+id = "the-compass-edge"
+title = "The Compass Edge (Party)"
+tags_all = ["party", "the-compass-edge"]
+tick_scale = "day"
+tick_spacing_px = 180
+sort_direction = "desc"
+max_summary_lines = 8
+
+[views.range]
+# Fixed start so early party events never fall off as `present_year` advances.
+start_year = 4327

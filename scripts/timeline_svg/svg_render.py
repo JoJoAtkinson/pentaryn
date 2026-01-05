@@ -82,11 +82,13 @@ def render_svg(
     build: BuildConfig,
     extra_css: str,
     faction_tags: set[str] | None = None,
+    tag_icons: set[str] | None = None,
 ) -> None:
     width = renderer.width
     height = layout.height
     spine_x = layout.spine_x
     faction_tags = faction_tags or set()
+    tag_icons = tag_icons  # None means "unknown, don't filter"
 
     parts: list[str] = []
     parts.append('<?xml version="1.0" encoding="UTF-8"?>')
@@ -109,7 +111,7 @@ def render_svg(
         .label { fill: #fffaf0; stroke: var(--label-border); stroke-width: 1; }
         .label.changed-id, .label.changed { stroke: #d97900; stroke-width: 4; stroke-linejoin: round; }
         .title { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 16px; font-weight: 700; fill: #2b1f14; }
-        .age-label { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 14px; font-weight: 700; fill: #5a4634; }
+        .date-label { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 14px; font-weight: 700; fill: #5a4634; }
         .summary { font-family: 'Alegreya', 'Noto Sans Symbols 2', 'Noto Sans Runic', 'Segoe UI Symbol', 'Apple Symbols', 'DejaVu Sans', serif; font-size: 12px; fill: #3a2b1f; }
         .md-bold { font-weight: 700; }
         .public-indicator { color: var(--public-indicator); opacity: 0.9; }
@@ -190,20 +192,30 @@ def render_svg(
                     line_h=event.label.summary_line_h,
                 )
         
-        # Render age label in bottom right corner with timeline styling
-        if event.label.age_label:
+        # Render date label in bottom right corner with timeline styling
+        if event.label.date_label:
             age_x = box_x + event.box_w - renderer.label_padding_x + 10
             age_y = box_y + event.box_h - renderer.label_padding_y + 10
-            age_label = event.label.age_label
-            # Check if age label has glyph (runic/symbol character) and number
+            date_label = event.label.date_label
+            # If the label contains an age glyph + integer (e.g. "⋈50"), render that token with split spans.
             tick_age_glyphs = {"⊚", "⟂", "ᛒ", "ᛉ", "⋂", "ᛏ", "⋈"}
-            if age_label and age_label[0] in tick_age_glyphs and len(age_label) > 1 and age_label[1:].replace("-", "").isdigit():
-                glyph, num = age_label[0], age_label[1:]
-                parts.append(f'<text class="age-label" text-anchor="end" x="{age_x:.1f}" y="{age_y:.1f}">')
+            matches = []
+            if date_label:
+                matches = list(re.finditer(r"([⊚⟂ᛒᛉ⋂ᛏ⋈])(-?\d+)", date_label))
+            m = matches[-1] if matches else None
+            if m:
+                before = date_label[: m.start()]
+                glyph, num = m.group(1), m.group(2)
+                after = date_label[m.end() :]
+                parts.append(f'<text class="date-label" text-anchor="end" x="{age_x:.1f}" y="{age_y:.1f}">')
+                if before:
+                    parts.append(f"<tspan>{escape(before)}</tspan>")
                 parts.append(f'<tspan class="tick-glyph">{escape(glyph)}</tspan><tspan class="tick-number">{escape(num)}</tspan>')
+                if after:
+                    parts.append(f"<tspan>{escape(after)}</tspan>")
                 parts.append("</text>")
             else:
-                parts.append(f'<text class="age-label" text-anchor="end" x="{age_x:.1f}" y="{age_y:.1f}">{escape(age_label)}</text>')
+                parts.append(f'<text class="date-label" text-anchor="end" x="{age_x:.1f}" y="{age_y:.1f}">{escape(date_label)}</text>')
     parts.append("</g>")
 
     # tag tokens
@@ -226,7 +238,7 @@ def render_svg(
         gap = max(2.0, tag_gap)
 
         has_public = "public" in event.tags
-        if has_public:
+        if has_public and (tag_icons is None or "public" in tag_icons):
             public_size = tag_size * 0.5
             px = box_x + 6.0
             py = box_y + 4.0
@@ -241,6 +253,8 @@ def render_svg(
         max_size = tag_size * faction_scale if any(t in faction_tags for t in visible_tags) else tag_size
         for token in reversed(visible_tags):
             is_faction = token in faction_tags
+            if not is_faction and tag_icons is not None and token not in tag_icons:
+                continue
             size = tag_size * faction_scale if is_faction else tag_size
             x_left = x_right - size
             y_top = y_row_top + (max_size - size) / 2.0

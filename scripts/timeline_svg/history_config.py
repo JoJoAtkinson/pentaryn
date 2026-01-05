@@ -27,6 +27,8 @@ class HistoryView:
 class HistoryConfig:
     views: list[HistoryView]
     present_year: int | None = None
+    present_month: int | None = None
+    present_day: int | None = None
     hide_time_measurements: bool = False
 
 
@@ -35,6 +37,12 @@ def load_history_config(path: Path) -> HistoryConfig:
     present_year = raw.get("present_year")
     if present_year is not None:
         present_year = int(present_year)
+    present_month = raw.get("present_month")
+    if present_month is not None:
+        present_month = int(present_month)
+    present_day = raw.get("present_day")
+    if present_day is not None:
+        present_day = int(present_day)
     hide_time_measurements = raw.get("hide_time_measurements")
     if hide_time_measurements is None:
         hide_time_measurements = raw.get("hide_time_measurments")
@@ -122,4 +130,10 @@ def load_history_config(path: Path) -> HistoryConfig:
             )
         )
 
-    return HistoryConfig(views=views, present_year=present_year, hide_time_measurements=hide_time_measurements)
+    return HistoryConfig(
+        views=views,
+        present_year=present_year,
+        present_month=present_month,
+        present_day=present_day,
+        hide_time_measurements=hide_time_measurements,
+    )

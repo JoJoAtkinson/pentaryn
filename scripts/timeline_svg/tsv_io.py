@@ -30,11 +30,17 @@ def _parse_start(value: str) -> tuple[str, str, str]:
     raw = (value or "").strip()
     if not raw:
         return "", "", ""
+    hour_suffix = ""
+    if re.search(r"-\d{1,2}$", raw):
+        base, hour = raw.rsplit("-", 1)
+        if hour.isdigit():
+            hour_suffix = f"-{int(hour):02d}"
+            raw = base
     sep = "/" if "/" in raw else "-"
     parts = [p for p in raw.split(sep) if p]
     year = parts[0]
     month = parts[1] if len(parts) >= 2 else ""
-    day = parts[2] if len(parts) >= 3 else ""
+    day = (parts[2] if len(parts) >= 3 else "") + hour_suffix if (len(parts) >= 3 and hour_suffix) else (parts[2] if len(parts) >= 3 else "")
     return year, month, day
 
 

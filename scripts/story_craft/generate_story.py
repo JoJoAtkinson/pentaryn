@@ -545,6 +545,41 @@ Begin writing the narrative now:
             print(f"Error calling API: {e}", file=sys.stderr)
             raise
 
+    def estimate_costs(self, num_chapters: int, avg_scenes_per_chapter: float, model: str) -> dict:
+        """Estimate API costs for the generation run."""
+        # Rough token estimates (based on empirical testing)
+        # Prompt per chapter: ~8000-12000 tokens (scene summaries + instructions)
+        # Response per chapter: ~2000-4000 tokens (story prose)
+        prompt_tokens_per_chapter = 10000  # Conservative estimate
+        completion_tokens_per_chapter = 3000  # Conservative estimate
+        
+        # OpenAI pricing (as of 2024-2026, approximate)
+        pricing = {
+            "gpt-4o": {"input": 2.50 / 1_000_000, "output": 10.00 / 1_000_000},
+            "gpt-4o-mini": {"input": 0.150 / 1_000_000, "output": 0.600 / 1_000_000},
+            "gpt-5.2": {"input": 2.50 / 1_000_000, "output": 10.00 / 1_000_000},  # Estimate
+        }
+        
+        model_pricing = pricing.get(model, pricing["gpt-4o"])  # Default to gpt-4o pricing
+        
+        total_prompt_tokens = num_chapters * prompt_tokens_per_chapter
+        total_completion_tokens = num_chapters * completion_tokens_per_chapter
+        
+        input_cost = total_prompt_tokens * model_pricing["input"]
+        output_cost = total_completion_tokens * model_pricing["output"]
+        total_cost = input_cost + output_cost
+        
+        return {
+            "num_chapters": num_chapters,
+            "avg_scenes_per_chapter": avg_scenes_per_chapter,
+            "estimated_prompt_tokens": total_prompt_tokens,
+            "estimated_completion_tokens": total_completion_tokens,
+            "estimated_input_cost": input_cost,
+            "estimated_output_cost": output_cost,
+            "estimated_total_cost": total_cost,
+            "model": model,
+        }
+
     def extract_ending_context(self, prose: str, max_chars: int = 800) -> Optional[str]:
         """Extract a useful ending snippet to help the next chapter start smoothly."""
         text = prose.strip()
@@ -584,7 +619,41 @@ Begin writing the narrative now:
         summaries = pass2_data.get("summaries", [])
         
         print(f"Loaded {len(summaries)} scene summaries")
-        print(f"Output directory: {output_dir}\n")
+        
+        # Pre-calculate how many chapters we'll generate
+        max_scenes = self.config.get("max_scenes_per_file", 5)
+        estimated_chapters = max(1, (len(summaries) + max_scenes - 1) // max_scenes)
+        avg_scenes = len(summaries) / estimated_chapters
+        
+        # Show cost estimate
+        cost_info = self.estimate_costs(estimated_chapters, avg_scenes, model)
+        print(f"\n{'='*60}")
+        print(f"GENERATION PLAN")
+        print(f"{'='*60}")
+        print(f"Scenes to process: {len(summaries)}")
+        print(f"Estimated chapters: {estimated_chapters}")
+        print(f"Avg scenes/chapter: {avg_scenes:.1f}")
+        print(f"Model: {model}")
+        print(f"\nESTIMATED COSTS:")
+        print(f"  Input tokens:  ~{cost_info['estimated_prompt_tokens']:,}")
+        print(f"  Output tokens: ~{cost_info['estimated_completion_tokens']:,}")
+        print(f"  Input cost:    ${cost_info['estimated_input_cost']:.3f}")
+        print(f"  Output cost:   ${cost_info['estimated_output_cost']:.3f}")
+        print(f"  Total cost:    ${cost_info['estimated_total_cost']:.2f}")
+        print(f"\nAPI calls: {estimated_chapters} (one per chapter)")
+        print(f"Output: {output_dir}")
+        print(f"{'='*60}\n")
+        
+        # Prompt for confirmation if cost is high
+        if cost_info["estimated_total_cost"] > 5.0 and sys.stdin.isatty():
+            try:
+                response = input(f"Estimated cost is ${cost_info['estimated_total_cost']:.2f}. Continue? [y/N]: ")
+                if response.lower() not in ["y", "yes"]:
+                    print("Aborted by user.")
+                    return []
+            except (EOFError, KeyboardInterrupt):
+                print("\nAborted by user.")
+                return []
         
         # Create output directory
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -619,9 +688,13 @@ Begin writing the narrative now:
             
             if should_split and current_file_scenes:
                 # Generate prose for current batch
-                print(f"\n=== Generating Chapter {next_chapter_number:0{width}d} ===")
+                chapter_num = len(generated_files) + 1
+                print(f"\n{'='*60}")
+                print(f"Chapter {chapter_num}/{estimated_chapters}: {next_chapter_number:0{width}d}")
+                print(f"{'='*60}")
                 print(f"  Scenes: {[s.get('scene_id') for s in current_file_scenes]}")
                 print(f"  Reason for new file: {reason}")
+                print(f"  Making API call... ", end='', flush=True)
                 
                 suggested_title = self.suggest_chapter_title(current_file_scenes)
                 prompt = self.build_story_prompt(
@@ -631,7 +704,11 @@ Begin writing the narrative now:
                     suggested_title=suggested_title,
                 )
                 
+                import time
+                start_time = time.time()
                 prose = self.generate_prose(prompt, model=model)
+                elapsed = time.time() - start_time
+                print(f"✓ ({elapsed:.1f}s)")
 
                 title = self.extract_title_from_prose(prose) or suggested_title
                 prose = self.ensure_title_heading(prose, title)
@@ -660,8 +737,12 @@ Begin writing the narrative now:
         
         # Generate final file if there are remaining scenes
         if current_file_scenes:
-            print(f"\n=== Generating Chapter {next_chapter_number:0{width}d} (final) ===")
+            chapter_num = len(generated_files) + 1
+            print(f"\n{'='*60}")
+            print(f"Chapter {chapter_num}/{estimated_chapters}: {next_chapter_number:0{width}d} (FINAL)")
+            print(f"{'='*60}")
             print(f"  Scenes: {[s.get('scene_id') for s in current_file_scenes]}")
+            print(f"  Making API call... ", end='', flush=True)
             
             suggested_title = self.suggest_chapter_title(current_file_scenes)
             prompt = self.build_story_prompt(
@@ -671,7 +752,11 @@ Begin writing the narrative now:
                 suggested_title=suggested_title,
             )
             
+            import time
+            start_time = time.time()
             prose = self.generate_prose(prompt, model=model)
+            elapsed = time.time() - start_time
+            print(f"✓ ({elapsed:.1f}s)")
 
             title = self.extract_title_from_prose(prose) or suggested_title
             prose = self.ensure_title_heading(prose, title)
@@ -685,6 +770,10 @@ Begin writing the narrative now:
             
             generated_files.append(filepath)
             print(f"  ✓ Wrote {filepath}")
+        
+        print(f"\n{'='*60}")
+        print(f"COMPLETE: Generated {len(generated_files)} chapter(s)")
+        print(f"{'='*60}")
         
         return generated_files
 
