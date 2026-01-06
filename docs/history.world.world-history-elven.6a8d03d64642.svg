@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="2171" viewBox="0 0 1200 2171">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="17103" viewBox="0 0 1200 17103">
 <style><![CDATA[
 @font-face {
   font-family: 'Alegreya';
@@ -176,78 +176,78 @@
   </g>
 </symbol>
 </defs>
-<g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="2131"/></g>
+<g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="17063"/></g>
 <g id="connectors">
-<line class="connector" x1="600" y1="40.6" x2="552.0" y2="88.5"/>
-<line class="connector" x1="600" y1="43.7" x2="648.0" y2="100.5"/>
-<line class="connector" x1="600" y1="47.4" x2="552.0" y2="211.5"/>
-<line class="connector" x1="600" y1="60.7" x2="648.0" y2="223.5"/>
-<line class="connector" x1="600" y1="61.4" x2="552.0" y2="346.5"/>
-<line class="connector" x1="600" y1="65.9" x2="648.0" y2="328.5"/>
-<line class="connector" x1="600" y1="73.0" x2="552.0" y2="481.5"/>
-<line class="connector" x1="600" y1="77.7" x2="648.0" y2="433.5"/>
-<line class="connector" x1="600" y1="77.7" x2="552.0" y2="592.5"/>
-<line class="connector" x1="600" y1="119.9" x2="648.0" y2="550.5"/>
-<line class="connector" x1="600" y1="119.9" x2="552.0" y2="697.5"/>
-<line class="connector" x1="600" y1="123.5" x2="648.0" y2="667.5"/>
-<line class="connector" x1="600" y1="134.2" x2="552.0" y2="820.5"/>
-<line class="connector" x1="600" y1="139.6" x2="648.0" y2="778.5"/>
-<line class="connector" x1="600" y1="147.9" x2="552.0" y2="937.5"/>
-<line class="connector" x1="600" y1="151.6" x2="648.0" y2="883.5"/>
-<line class="connector" x1="600" y1="154.5" x2="552.0" y2="1048.5"/>
-<line class="connector" x1="600" y1="319.5" x2="648.0" y2="994.5"/>
-<line class="connector" x1="600" y1="319.5" x2="552.0" y2="1147.5"/>
-<line class="connector" x1="600" y1="800.1" x2="648.0" y2="1117.5"/>
-<line class="connector" x1="600" y1="800.1" x2="552.0" y2="1234.5"/>
-<line class="connector" x1="600" y1="1243.0" x2="648.0" y2="1240.5"/>
-<line class="connector" x1="600" y1="1316.9" x2="552.0" y2="1333.5"/>
-<line class="connector" x1="600" y1="1353.2" x2="648.0" y2="1357.5"/>
-<line class="connector" x1="600" y1="1354.6" x2="552.0" y2="1444.5"/>
-<line class="connector" x1="600" y1="1391.6" x2="648.0" y2="1468.5"/>
-<line class="connector" x1="600" y1="1391.6" x2="552.0" y2="1543.5"/>
-<line class="connector" x1="600" y1="1394.6" x2="648.0" y2="1573.5"/>
-<line class="connector" x1="600" y1="1469.2" x2="552.0" y2="1636.5"/>
-<line class="connector" x1="600" y1="1505.5" x2="648.0" y2="1678.5"/>
-<line class="connector" x1="600" y1="1506.2" x2="552.0" y2="1741.5"/>
-<line class="connector" x1="600" y1="1667.4" x2="648.0" y2="1783.5"/>
-<line class="connector" x1="600" y1="2131.0" x2="552.0" y2="2076.2"/>
-<line class="connector" x1="600" y1="2131.0" x2="648.0" y2="2076.2"/>
+<line class="connector" x1="600" y1="45.0" x2="552.0" y2="88.5"/>
+<line class="connector" x1="600" y1="70.1" x2="648.0" y2="100.5"/>
+<line class="connector" x1="600" y1="100.2" x2="552.0" y2="211.5"/>
+<line class="connector" x1="600" y1="208.5" x2="648.0" y2="223.5"/>
+<line class="connector" x1="600" y1="214.5" x2="552.0" y2="346.5"/>
+<line class="connector" x1="600" y1="250.7" x2="648.0" y2="328.5"/>
+<line class="connector" x1="600" y1="308.9" x2="552.0" y2="481.5"/>
+<line class="connector" x1="600" y1="347.0" x2="648.0" y2="433.5"/>
+<line class="connector" x1="600" y1="347.0" x2="552.0" y2="592.5"/>
+<line class="connector" x1="600" y1="690.1" x2="648.0" y2="683.6"/>
+<line class="connector" x1="600" y1="690.1" x2="552.0" y2="697.5"/>
+<line class="connector" x1="600" y1="720.2" x2="648.0" y2="800.6"/>
+<line class="connector" x1="600" y1="807.3" x2="552.0" y2="820.5"/>
+<line class="connector" x1="600" y1="851.1" x2="648.0" y2="911.6"/>
+<line class="connector" x1="600" y1="918.8" x2="552.0" y2="937.5"/>
+<line class="connector" x1="600" y1="948.9" x2="648.0" y2="1016.6"/>
+<line class="connector" x1="600" y1="972.3" x2="552.0" y2="1048.5"/>
+<line class="connector" x1="600" y1="2315.3" x2="648.0" y2="2308.0"/>
+<line class="connector" x1="600" y1="2315.3" x2="552.0" y2="2308.0"/>
+<line class="connector" x1="600" y1="6228.0" x2="648.0" y2="6208.0"/>
+<line class="connector" x1="600" y1="6228.0" x2="552.0" y2="6208.0"/>
+<line class="connector" x1="600" y1="9833.6" x2="648.0" y2="9802.0"/>
+<line class="connector" x1="600" y1="10435.6" x2="552.0" y2="10402.0"/>
+<line class="connector" x1="600" y1="10730.5" x2="648.0" y2="10696.0"/>
+<line class="connector" x1="600" y1="10742.6" x2="552.0" y2="10708.0"/>
+<line class="connector" x1="600" y1="11043.5" x2="648.0" y2="11008.0"/>
+<line class="connector" x1="600" y1="11043.5" x2="552.0" y2="11008.0"/>
+<line class="connector" x1="600" y1="11067.6" x2="648.0" y2="11113.0"/>
+<line class="connector" x1="600" y1="11675.6" x2="552.0" y2="11638.0"/>
+<line class="connector" x1="600" y1="11970.5" x2="648.0" y2="11932.0"/>
+<line class="connector" x1="600" y1="11976.6" x2="552.0" y2="11938.0"/>
+<line class="connector" x1="600" y1="13288.8" x2="648.0" y2="13246.0"/>
+<line class="connector" x1="600" y1="17063.0" x2="552.0" y2="17008.0"/>
+<line class="connector" x1="600" y1="17063.0" x2="648.0" y2="17008.0"/>
 </g>
 <g id="tokens">
-<use class="token" href="#token_default" x="589.0" y="29.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="32.7" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="36.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="49.7" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="50.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="54.9" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="62.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="66.7" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="66.7" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="108.9" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="108.9" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="112.5" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="123.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="128.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="136.9" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="140.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="143.5" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="308.5" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="308.5" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="789.1" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="789.1" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1232.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1305.9" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1342.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1343.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1380.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1380.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1383.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1458.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1494.5" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1495.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1656.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="2120.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="2120.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="34.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="59.1" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="89.2" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="197.5" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="203.5" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="239.7" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="297.9" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="336.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="336.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="679.1" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="679.1" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="709.2" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="796.3" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="840.1" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="907.8" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="937.9" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="961.3" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="2304.3" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="2304.3" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="6217.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="6217.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="9822.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="10424.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="10719.5" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="10731.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="11032.5" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="11032.5" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="11056.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="11664.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="11959.5" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="11965.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="13277.8" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="17052.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="17052.0" width="22" height="22"/>
 </g>
 <g id="labels">
 <rect class="label" x="137.5" y="40.0" width="408.5" height="97.0" rx="8" ry="8"/>
@@ -374,18 +374,18 @@
 <text class="date-label" text-anchor="end" x="540.0" y="625.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">0</tspan>
 </text>
-<rect class="label" x="654.0" y="496.0" width="418.0" height="109.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="525.0">
+<rect class="label" x="654.0" y="629.1" width="418.0" height="109.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="658.1">
 <tspan x="670.0" dy="0.0">Zarkul Dakgar the Forever Cursed</tspan>
 </text>
-<text class="summary" x="670.0" y="543.0">
+<text class="summary" x="670.0" y="676.1">
 <tspan x="670.0" dy="0.0">Zarkul Dakgar barters his people&#x27;s land for coin from the Garhammar</tspan>
 <tspan x="670.0" dy="12.0">Trade-League. A dispute arises with the Imperium and the now-displaced orcs,</tspan>
 <tspan x="670.0" dy="12.0">and in the subsequent conflict Zarkul is found dead, knifed in the back. Among</tspan>
 <tspan x="670.0" dy="12.0">the Horde his name is kept only as a curse: proof that gold is softer than mud,</tspan>
 <tspan x="670.0" dy="12.0">and twice as deadly.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1066.0" y="601.0">
+<text class="date-label" text-anchor="end" x="1066.0" y="734.1">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
 </text>
 <rect class="label" x="132.2" y="643.0" width="413.8" height="109.0" rx="8" ry="8"/>
@@ -402,17 +402,17 @@
 <text class="date-label" text-anchor="end" x="540.0" y="748.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
 </text>
-<rect class="label" x="654.0" y="619.0" width="417.1" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="648.0">
+<rect class="label" x="654.0" y="752.1" width="417.1" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="781.1">
 <tspan x="670.0" dy="0.0">The First Trade Caravans</tspan>
 </text>
-<text class="summary" x="670.0" y="666.0">
+<text class="summary" x="670.0" y="799.1">
 <tspan x="670.0" dy="0.0">Fifteen years after the Pentarch Accords, the first official Ardenhaven-Calderon</tspan>
 <tspan x="670.0" dy="12.0">trade caravan crosses the former battlefields. Ardenhaven grain for Calderon</tspan>
 <tspan x="670.0" dy="12.0">coal and iron. The exchange is awkward, stilted, watched by veterans on both</tspan>
 <tspan x="670.0" dy="12.0">sides. But it happens. Commerce begins to replace contempt.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1065.1" y="712.0">
+<text class="date-label" text-anchor="end" x="1065.1" y="845.1">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">265</tspan>
 </text>
 <rect class="label" x="135.3" y="766.0" width="410.7" height="109.0" rx="8" ry="8"/>
@@ -430,17 +430,17 @@
 <tspan>12 Ulemar — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">250</tspan>
 </text>
-<rect class="label" x="654.0" y="730.0" width="420.0" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="759.0">
+<rect class="label" x="654.0" y="863.1" width="420.0" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="892.1">
 <tspan x="670.0" dy="0.0">Calderon&#x27;s Declaration</tspan>
 </text>
-<text class="summary" x="670.0" y="777.0">
+<text class="summary" x="670.0" y="910.1">
 <tspan x="670.0" dy="0.0">Calderon Imperium issues formal declaration of conquest: all Ardenhaven lands</tspan>
 <tspan x="670.0" dy="12.0">are claimed as imperial territory, and continued resistance will be met with</tspan>
 <tspan x="670.0" dy="12.0">total war. The language is unambiguous—there will be no negotiated peace,</tspan>
 <tspan x="670.0" dy="12.0">only submission or annihilation. The 7-year war begins.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1068.0" y="823.0">
+<text class="date-label" text-anchor="end" x="1068.0" y="956.1">
 <tspan>Thaeorum — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">243</tspan>
 </text>
@@ -457,16 +457,16 @@
 <text class="date-label" text-anchor="end" x="540.0" y="982.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">232</tspan>
 </text>
-<rect class="label" x="654.0" y="841.0" width="418.7" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="870.0">
+<rect class="label" x="654.0" y="974.1" width="418.7" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1003.1">
 <tspan x="670.0" dy="0.0">The Charter of Open Waters</tspan>
 </text>
-<text class="summary" x="670.0" y="888.0">
+<text class="summary" x="670.0" y="1021.1">
 <tspan x="670.0" dy="0.0">Merrowgate brokers a historic neutrality pact between Calderon Imperium and</tspan>
 <tspan x="670.0" dy="12.0">Ardenhaven, securing safe passage through its waters for all nations. The treaty</tspan>
 <tspan x="670.0" dy="12.0">establishes Merrowgate as the undisputed arbiter of maritime trade disputes.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1066.7" y="922.0">
+<text class="date-label" text-anchor="end" x="1066.7" y="1055.1">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">227</tspan>
 </text>
 <rect class="label" x="126.0" y="1000.0" width="420.0" height="97.0" rx="8" ry="8"/>
@@ -483,218 +483,218 @@
 <tspan>15 Veleara — </tspan>
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">223</tspan>
 </text>
-<rect class="label" x="654.0" y="940.0" width="412.6" height="109.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="969.0">
+<rect class="label" x="654.0" y="2253.5" width="412.6" height="109.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="2282.5">
 <tspan x="670.0" dy="0.0">Elaerith Proclaims the Conquest</tspan>
 </text>
-<text class="summary" x="670.0" y="987.0">
+<text class="summary" x="670.0" y="2300.5">
 <tspan x="670.0" dy="0.0">When continental war became the world’s habit, Elaerith named the Age of</tspan>
 <tspan x="670.0" dy="12.0">Conquest and framed it as the inevitable end of those who live by appetite and</tspan>
 <tspan x="670.0" dy="12.0">horizon; within Araethilion, she tightened the rings of court order,</tspan>
 <tspan x="670.0" dy="12.0">strengthened the Choir-Sentinels, and reminded her people that safety is</tspan>
 <tspan x="670.0" dy="12.0">obedience, not distance.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1060.6" y="1045.0">
+<text class="date-label" text-anchor="end" x="1060.6" y="2358.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">0</tspan>
 </text>
-<rect class="label" x="136.2" y="1111.0" width="409.8" height="73.0" rx="8" ry="8"/>
-<text class="title" x="152.2" y="1140.0">
+<rect class="label" x="136.2" y="2271.5" width="409.8" height="73.0" rx="8" ry="8"/>
+<text class="title" x="152.2" y="2300.5">
 <tspan x="152.2" dy="0.0">ᛏ Age of Conquest</tspan>
 </text>
-<text class="summary" x="152.2" y="1158.0">
+<text class="summary" x="152.2" y="2318.5">
 <tspan x="152.2" dy="0.0">Continental war becomes possible; generations live under levy and siege until</tspan>
 <tspan x="152.2" dy="12.0">exhaustion forces peace.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1180.0">
+<text class="date-label" text-anchor="end" x="540.0" y="2340.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">0</tspan>
 </text>
-<rect class="label" x="654.0" y="1063.0" width="414.4" height="109.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1092.0">
+<rect class="label" x="654.0" y="6153.5" width="414.4" height="109.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="6182.5">
 <tspan x="670.0" dy="0.0">Elaerith Warns of the War-Roads</tspan>
 </text>
-<text class="summary" x="670.0" y="1110.0">
+<text class="summary" x="670.0" y="6200.5">
 <tspan x="670.0" dy="0.0">With stone roads spreading across the continents, Elaerith introduced the Age</tspan>
 <tspan x="670.0" dy="12.0">of Roads as an age of reaching hands and marching feet; she instructed</tspan>
 <tspan x="670.0" dy="12.0">Araethilion to treat every new causeway as a boundary in disguise, and to</tspan>
 <tspan x="670.0" dy="12.0">answer the world’s bridges with deeper wards, quieter routes, and stricter</tspan>
 <tspan x="670.0" dy="12.0">permission.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1062.4" y="1168.0">
+<text class="date-label" text-anchor="end" x="1062.4" y="6258.5">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">0</tspan>
 </text>
-<rect class="label" x="144.3" y="1198.0" width="401.7" height="73.0" rx="8" ry="8"/>
-<text class="title" x="160.3" y="1227.0">
+<rect class="label" x="144.3" y="6171.5" width="401.7" height="73.0" rx="8" ry="8"/>
+<text class="title" x="160.3" y="6200.5">
 <tspan x="160.3" dy="0.0">⋂ Age of Roads</tspan>
 </text>
-<text class="summary" x="160.3" y="1245.0">
+<text class="summary" x="160.3" y="6218.5">
 <tspan x="160.3" dy="0.0">Empires bind territory with bridges, milestones, and waystations—built for</tspan>
 <tspan x="160.3" dy="12.0">marching columns first, commerce second.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1267.0">
+<text class="date-label" text-anchor="end" x="540.0" y="6240.5">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">0</tspan>
 </text>
-<rect class="label" x="654.0" y="1186.0" width="410.7" height="109.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1215.0">
+<rect class="label" x="654.0" y="9747.5" width="410.7" height="109.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="9776.5">
 <tspan x="670.0" dy="0.0">Ordained Companionship</tspan>
 </text>
-<text class="summary" x="670.0" y="1233.0">
+<text class="summary" x="670.0" y="9794.5">
 <tspan x="670.0" dy="0.0">Observing that Sabriel’s devotion set her apart from all others, Elaerith</tspan>
 <tspan x="670.0" dy="12.0">appointed a single cleric, Aersiliel (AIR-sill-ee-EL), to remain at her side—one</tspan>
 <tspan x="670.0" dy="12.0">voice, one presence, sufficient in place of many—so that Sabriel might know</tspan>
 <tspan x="670.0" dy="12.0">fellowship without dilution, and remain perfectly attended within the grace</tspan>
 <tspan x="670.0" dy="12.0">that had already set her above the rest.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1058.7" y="1291.0">
+<text class="date-label" text-anchor="end" x="1058.7" y="9852.5">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">201</tspan>
 </text>
-<rect class="label" x="130.8" y="1285.0" width="415.2" height="97.0" rx="8" ry="8"/>
-<text class="title" x="146.8" y="1314.0">
+<rect class="label" x="130.8" y="10353.5" width="415.2" height="97.0" rx="8" ry="8"/>
+<text class="title" x="146.8" y="10382.5">
 <tspan x="146.8" dy="0.0">Sabriel&#x27;s Second Transgression</tspan>
 </text>
-<text class="summary" x="146.8" y="1332.0">
+<text class="summary" x="146.8" y="10400.5">
 <tspan x="146.8" dy="0.0">When Sabriel again misjudged her place, Elaerith intervened with necessary</tspan>
 <tspan x="146.8" dy="12.0">correction, tempered only by maternal mercy; thereafter, Elaerith decreed that</tspan>
 <tspan x="146.8" dy="12.0">the tower would want for nothing, so that Sabriel would never again be misled</tspan>
 <tspan x="146.8" dy="12.0">into believing fulfillment lay beyond what her mother had already perfected.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1378.0">
+<text class="date-label" text-anchor="end" x="540.0" y="10446.5">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">101</tspan>
 </text>
-<rect class="label" x="654.0" y="1309.0" width="417.9" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1338.0">
+<rect class="label" x="654.0" y="10647.5" width="417.9" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="10676.5">
 <tspan x="670.0" dy="0.0">Sabriel&#x27;s Second Outing</tspan>
 </text>
-<text class="summary" x="670.0" y="1356.0">
+<text class="summary" x="670.0" y="10694.5">
 <tspan x="670.0" dy="0.0">Returning to the site of her earlier sketch, Sabriel makes a 2nd sketch how time</tspan>
 <tspan x="670.0" dy="12.0">had erased the last traces of that fallen city, the mountain made whole</tspan>
 <tspan x="670.0" dy="12.0">again—confirmation that all things outside Elaerith’s care are ultimately</tspan>
 <tspan x="670.0" dy="12.0">reclaimed by silence.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1065.9" y="1402.0">
+<text class="date-label" text-anchor="end" x="1065.9" y="10740.5">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">52</tspan>
 </text>
-<rect class="label" x="138.2" y="1396.0" width="407.8" height="97.0" rx="8" ry="8"/>
-<text class="title" x="154.2" y="1425.0">
+<rect class="label" x="138.2" y="10659.5" width="407.8" height="97.0" rx="8" ry="8"/>
+<text class="title" x="154.2" y="10688.5">
 <tspan x="154.2" dy="0.0">Securing Borders</tspan>
 </text>
-<text class="summary" x="154.2" y="1443.0">
+<text class="summary" x="154.2" y="10706.5">
 <tspan x="154.2" dy="0.0">After long quiet at the borders, Sabriel sought reassurance through vigilance;</tspan>
 <tspan x="154.2" dy="12.0">with Elaerith’s leave, scouts were sent into the forbidden lands, and Sabriel</tspan>
 <tspan x="154.2" dy="12.0">accompanied them at times, learning firsthand why such realms were never</tspan>
 <tspan x="154.2" dy="12.0">meant to be dwelt upon.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1489.0">
+<text class="date-label" text-anchor="end" x="540.0" y="10752.5">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label" x="654.0" y="1420.0" width="390.8" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1449.0">
+<rect class="label" x="654.0" y="10959.5" width="390.8" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="10988.5">
 <tspan x="670.0" dy="0.0">Elaerith Dismisses Mortal Crowns</tspan>
 </text>
-<text class="summary" x="670.0" y="1467.0">
+<text class="summary" x="670.0" y="11006.5">
 <tspan x="670.0" dy="0.0">As kingdoms rose and titles multiplied abroad, Elaerith named the Age of</tspan>
 <tspan x="670.0" dy="12.0">Crowns for her people and taught them to see such thrones as fleeting</tspan>
 <tspan x="670.0" dy="12.0">ornaments—crowns that must be bargained for, defended, and</tspan>
 <tspan x="670.0" dy="12.0">inherited—unlike the Veiled Crown, which is neither granted nor shared.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1038.8" y="1513.0">
+<text class="date-label" text-anchor="end" x="1038.8" y="11052.5">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">0</tspan>
 </text>
-<rect class="label" x="129.8" y="1507.0" width="416.2" height="73.0" rx="8" ry="8"/>
-<text class="title" x="145.8" y="1536.0">
+<rect class="label" x="129.8" y="10971.5" width="416.2" height="73.0" rx="8" ry="8"/>
+<text class="title" x="145.8" y="11000.5">
 <tspan x="145.8" dy="0.0">ᛉ Age of Crowns</tspan>
 </text>
-<text class="summary" x="145.8" y="1554.0">
+<text class="summary" x="145.8" y="11018.5">
 <tspan x="145.8" dy="0.0">Dynasties harden into kingdoms; borders are named, faiths codified, and wars</tspan>
 <tspan x="145.8" dy="12.0">are regional rather than world-spanning.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1576.0">
+<text class="date-label" text-anchor="end" x="540.0" y="11040.5">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">0</tspan>
 </text>
-<rect class="label" x="654.0" y="1531.0" width="410.9" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1560.0">
+<rect class="label" x="654.0" y="11070.5" width="410.9" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="11099.5">
 <tspan x="670.0" dy="0.0">Sabriel Appointed General</tspan>
 </text>
-<text class="summary" x="670.0" y="1578.0">
+<text class="summary" x="670.0" y="11117.5">
 <tspan x="670.0" dy="0.0">By Elaerith’s will, Sabriel was elevated to general, not as reward but as</tspan>
 <tspan x="670.0" dy="12.0">refinement, entrusted with the shaping of Araethilion’s defenses so she might</tspan>
 <tspan x="670.0" dy="12.0">better understand the weight of order and the cost of neglect.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1058.9" y="1612.0">
+<text class="date-label" text-anchor="end" x="1058.9" y="11151.5">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">996</tspan>
 </text>
-<rect class="label" x="126.0" y="1594.0" width="420.0" height="85.0" rx="8" ry="8"/>
-<text class="title" x="142.0" y="1623.0">
+<rect class="label" x="126.0" y="11595.5" width="420.0" height="85.0" rx="8" ry="8"/>
+<text class="title" x="142.0" y="11624.5">
 <tspan x="142.0" dy="0.0">Sabriel&#x27;s First Transgression</tspan>
 </text>
-<text class="summary" x="142.0" y="1641.0">
+<text class="summary" x="142.0" y="11642.5">
 <tspan x="142.0" dy="0.0">Sabriel strayed beyond the ordained borders, stepping into lands not shaped for</tspan>
 <tspan x="142.0" dy="12.0">her keeping; she was retrieved before greater harm could claim her, spared only</tspan>
 <tspan x="142.0" dy="12.0">by Elaerith’s timely awareness and restraint.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1675.0">
+<text class="date-label" text-anchor="end" x="540.0" y="11676.5">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">895</tspan>
 </text>
-<rect class="label" x="654.0" y="1630.0" width="407.1" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1659.0">
+<rect class="label" x="654.0" y="11883.5" width="407.1" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="11912.5">
 <tspan x="670.0" dy="0.0">Sabriel&#x27;s finds Ruins</tspan>
 </text>
-<text class="summary" x="670.0" y="1677.0">
+<text class="summary" x="670.0" y="11930.5">
 <tspan x="670.0" dy="0.0">Sabriel makes a quick sketch of an entire city that clung to the mountainside</tspan>
 <tspan x="670.0" dy="12.0">like a fallen crown—once level, now tipped and broken, its streets and towers</tspan>
 <tspan x="670.0" dy="12.0">half-collapsed and frozen at a steep forty-five-degree lean, as though the</tspan>
 <tspan x="670.0" dy="12.0">mountain itself had rolled onto its side and crushed the life from it.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1055.1" y="1723.0">
+<text class="date-label" text-anchor="end" x="1055.1" y="11976.5">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">846</tspan>
 </text>
-<rect class="label" x="129.9" y="1693.0" width="416.1" height="97.0" rx="8" ry="8"/>
-<text class="title" x="145.9" y="1722.0">
+<rect class="label" x="129.9" y="11889.5" width="416.1" height="97.0" rx="8" ry="8"/>
+<text class="title" x="145.9" y="11918.5">
 <tspan x="145.9" dy="0.0">Sabriel&#x27;s Outing</tspan>
 </text>
-<text class="summary" x="145.9" y="1740.0">
+<text class="summary" x="145.9" y="11936.5">
 <tspan x="145.9" dy="0.0">In her youth, Sabriel wandered the outer edges of Araethilion, mistaking</tspan>
 <tspan x="145.9" dy="12.0">curiosity for calling; there she recorded the remnants of a fallen city, its ruin</tspan>
 <tspan x="145.9" dy="12.0">standing as a quiet lesson in what becomes of worlds that fall beyond Elaerith’s</tspan>
 <tspan x="145.9" dy="12.0">sustaining hand.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1786.0">
+<text class="date-label" text-anchor="end" x="540.0" y="11982.5">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">845</tspan>
 </text>
-<rect class="label" x="654.0" y="1741.0" width="406.4" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1770.0">
+<rect class="label" x="654.0" y="13203.5" width="406.4" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="13232.5">
 <tspan x="670.0" dy="0.0">Birth of Sabriel</tspan>
 </text>
-<text class="summary" x="670.0" y="1788.0">
+<text class="summary" x="670.0" y="13250.5">
 <tspan x="670.0" dy="0.0">Sabriel was born beneath Elaerith’s watchful grace, a child set apart from her</tspan>
 <tspan x="670.0" dy="12.0">first breath, whose coming was proclaimed as a living testament to Elaerith’s</tspan>
 <tspan x="670.0" dy="12.0">favor and careful design.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1054.4" y="1822.0">
+<text class="date-label" text-anchor="end" x="1054.4" y="13284.5">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">627</tspan>
 </text>
-<rect class="label" x="138.0" y="2021.7" width="408.0" height="109.0" rx="8" ry="8"/>
-<text class="title" x="154.0" y="2050.7">
+<rect class="label" x="138.0" y="16953.5" width="408.0" height="109.0" rx="8" ry="8"/>
+<text class="title" x="154.0" y="16982.5">
 <tspan x="154.0" dy="0.0">Elaerith Defines Reclamation</tspan>
 </text>
-<text class="summary" x="154.0" y="2068.7">
+<text class="summary" x="154.0" y="17000.5">
 <tspan x="154.0" dy="0.0">When other peoples began to rebuild, Elaerith proclaimed the Age of</tspan>
 <tspan x="154.0" dy="12.0">Reclamation to Araethilion as a reminder that renewal is not freedom: it is</tspan>
 <tspan x="154.0" dy="12.0">discipline—work done within bounds, memory curated, and every</tspan>
 <tspan x="154.0" dy="12.0">“rediscovered” road treated as proof that the world always returns, in time, to</tspan>
 <tspan x="154.0" dy="12.0">what she already preserves.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="2126.7">
+<text class="date-label" text-anchor="end" x="540.0" y="17058.5">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">0</tspan>
 </text>
-<rect class="label" x="654.0" y="2039.7" width="407.8" height="73.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="2068.7">
+<rect class="label" x="654.0" y="16971.5" width="407.8" height="73.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="17000.5">
 <tspan x="670.0" dy="0.0">ᛒ Age of Reclamation</tspan>
 </text>
-<text class="summary" x="670.0" y="2086.7">
+<text class="summary" x="670.0" y="17018.5">
 <tspan x="670.0" dy="0.0">Writing, law, and agriculture return; proto-kingdoms form and the old roads</tspan>
 <tspan x="670.0" dy="12.0">are found again, half-buried.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1055.8" y="2108.7">
+<text class="date-label" text-anchor="end" x="1055.8" y="17040.5">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">0</tspan>
 </text>
 </g>
@@ -839,22 +839,22 @@
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 500.0)">
+<g class="public-indicator" transform="translate(660.0 633.1)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1026.2 500.0)">
+<g transform="translate(1026.2 633.1)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(988.5 500.0)">
+<g transform="translate(988.5 633.1)">
 <title>faction: garhammar-trade-league</title>
 <use href="#pov_garhammar-trade-league" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(959.5 504.4)">
+<g transform="translate(959.5 637.5)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(921.7 500.0)">
+<g transform="translate(921.7 633.1)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
@@ -873,22 +873,22 @@
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 623.0)">
+<g class="public-indicator" transform="translate(660.0 756.1)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1034.1 627.4)">
+<g transform="translate(1034.1 760.5)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1005.1 627.4)">
+<g transform="translate(1005.1 760.5)">
 <title>tag: economy</title>
 <use href="#tag_economy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(967.3 623.0)">
+<g transform="translate(967.3 756.1)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(929.6 623.0)">
+<g transform="translate(929.6 756.1)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
@@ -919,22 +919,22 @@
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 734.0)">
+<g class="public-indicator" transform="translate(660.0 867.1)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1028.2 734.0)">
+<g transform="translate(1028.2 867.1)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(999.2 738.4)">
+<g transform="translate(999.2 871.5)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(970.2 738.4)">
+<g transform="translate(970.2 871.5)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(932.5 734.0)">
+<g transform="translate(932.5 867.1)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
@@ -957,26 +957,26 @@
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 845.0)">
+<g class="public-indicator" transform="translate(660.0 978.1)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1027.0 845.0)">
+<g transform="translate(1027.0 978.1)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(989.2 845.0)">
+<g transform="translate(989.2 978.1)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(960.2 849.4)">
+<g transform="translate(960.2 982.5)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(931.2 849.4)">
+<g transform="translate(931.2 982.5)">
 <title>tag: diplomacy</title>
 <use href="#tag_diplomacy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(893.5 845.0)">
+<g transform="translate(893.5 978.1)">
 <title>faction: merrowgate</title>
 <use href="#pov_merrowgate" width="33.8" height="33.8"/>
 </g>
@@ -995,328 +995,328 @@
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1029.6 948.4)">
+<g transform="translate(1029.6 2261.9)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(991.8 944.0)">
+<g transform="translate(991.8 2257.5)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(142.2 1115.0)">
+<g class="public-indicator" transform="translate(142.2 2275.5)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(509.0 1115.0)">
+<g transform="translate(509.0 2275.5)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 1115.0)">
+<g transform="translate(480.0 2275.5)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1031.4 1071.4)">
+<g transform="translate(1031.4 6161.9)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(993.6 1067.0)">
+<g transform="translate(993.6 6157.5)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(150.3 1202.0)">
+<g class="public-indicator" transform="translate(150.3 6175.5)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(509.0 1202.0)">
+<g transform="translate(509.0 6175.5)">
 <title>tag: infrastructure</title>
 <use href="#tag_infrastructure" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 1202.0)">
+<g transform="translate(480.0 6175.5)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1018.9 1190.0)">
+<g transform="translate(1018.9 9751.5)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1289.0)">
+<g transform="translate(500.2 10357.5)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1026.1 1313.0)">
+<g transform="translate(1026.1 10651.5)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1400.0)">
+<g transform="translate(500.2 10663.5)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1007.8 1428.4)">
+<g transform="translate(1007.8 10967.9)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(970.1 1424.0)">
+<g transform="translate(970.1 10963.5)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(135.8 1511.0)">
+<g class="public-indicator" transform="translate(135.8 10975.5)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(509.0 1511.0)">
+<g transform="translate(509.0 10975.5)">
 <title>tag: world</title>
 <use href="#tag_world" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 1511.0)">
+<g transform="translate(480.0 10975.5)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1019.1 1535.0)">
+<g transform="translate(1019.1 11074.5)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1598.0)">
+<g transform="translate(500.2 11599.5)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1015.4 1634.0)">
+<g transform="translate(1015.4 11887.5)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1697.0)">
+<g transform="translate(500.2 11893.5)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1014.6 1745.0)">
+<g transform="translate(1014.6 13207.5)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 2030.0)">
+<g transform="translate(509.0 16961.9)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(471.2 2025.7)">
+<g transform="translate(471.2 16957.5)">
 <title>faction: araethilion</title>
 <use href="#pov_araethilion" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 2043.7)">
+<g class="public-indicator" transform="translate(660.0 16975.5)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1024.8 2043.7)">
+<g transform="translate(1024.8 16975.5)">
 <title>tag: world</title>
 <use href="#tag_world" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(995.8 2043.7)">
+<g transform="translate(995.8 16975.5)">
 <title>tag: age</title>
 <use href="#tag_age" width="25.0" height="25.0"/>
 </g>
 </g>
 <g id="ticks">
-<line class="tick" x1="590.0" y1="2131.0" x2="610.0" y2="2131.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="2136.0">
+<line class="tick" x1="590.0" y1="17063.0" x2="610.0" y2="17063.0"/>
+<text class="tick-label tick-label-outline" x="616.0" y="17068.0">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">0</tspan>
 </text>
-<text class="tick-label" x="616.0" y="2136.0">
+<text class="tick-label" x="616.0" y="17068.0">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">0</tspan>
 </text>
-<line class="tick" x1="590.0" y1="2057.1" x2="610.0" y2="2057.1"/>
-<text class="tick-label tick-label-outline" x="616.0" y="2062.1">
+<line class="tick" x1="590.0" y1="16461.1" x2="610.0" y2="16461.1"/>
+<text class="tick-label tick-label-outline" x="616.0" y="16466.1">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">100</tspan>
 </text>
-<text class="tick-label" x="616.0" y="2062.1">
+<text class="tick-label" x="616.0" y="16466.1">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">100</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1983.1" x2="610.0" y2="1983.1"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1988.1">
+<line class="tick" x1="590.0" y1="15859.1" x2="610.0" y2="15859.1"/>
+<text class="tick-label tick-label-outline" x="616.0" y="15864.1">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">200</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1988.1">
+<text class="tick-label" x="616.0" y="15864.1">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">200</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1909.2" x2="610.0" y2="1909.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1914.2">
+<line class="tick" x1="590.0" y1="15257.2" x2="610.0" y2="15257.2"/>
+<text class="tick-label tick-label-outline" x="616.0" y="15262.2">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">300</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1914.2">
+<text class="tick-label" x="616.0" y="15262.2">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">300</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1835.2" x2="610.0" y2="1835.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1840.2">
+<line class="tick" x1="590.0" y1="14655.2" x2="610.0" y2="14655.2"/>
+<text class="tick-label tick-label-outline" x="616.0" y="14660.2">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">400</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1840.2">
+<text class="tick-label" x="616.0" y="14660.2">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">400</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1761.3" x2="610.0" y2="1761.3"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1766.3">
+<line class="tick" x1="590.0" y1="14053.3" x2="610.0" y2="14053.3"/>
+<text class="tick-label tick-label-outline" x="616.0" y="14058.3">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">500</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1766.3">
+<text class="tick-label" x="616.0" y="14058.3">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">500</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1687.4" x2="610.0" y2="1687.4"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1692.4">
+<line class="tick" x1="590.0" y1="13451.3" x2="610.0" y2="13451.3"/>
+<text class="tick-label tick-label-outline" x="616.0" y="13456.3">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">600</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1692.4">
+<text class="tick-label" x="616.0" y="13456.3">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">600</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1613.4" x2="610.0" y2="1613.4"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1618.4">
+<line class="tick" x1="590.0" y1="12849.4" x2="610.0" y2="12849.4"/>
+<text class="tick-label tick-label-outline" x="616.0" y="12854.4">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">700</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1618.4">
+<text class="tick-label" x="616.0" y="12854.4">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">700</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1539.5" x2="610.0" y2="1539.5"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1544.5">
+<line class="tick" x1="590.0" y1="12247.4" x2="610.0" y2="12247.4"/>
+<text class="tick-label tick-label-outline" x="616.0" y="12252.4">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">800</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1544.5">
+<text class="tick-label" x="616.0" y="12252.4">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">800</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1465.5" x2="610.0" y2="1465.5"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1470.5">
+<line class="tick" x1="590.0" y1="11645.5" x2="610.0" y2="11645.5"/>
+<text class="tick-label tick-label-outline" x="616.0" y="11650.5">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">900</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1470.5">
+<text class="tick-label" x="616.0" y="11650.5">
 <tspan class="tick-glyph">ᛒ</tspan><tspan class="tick-number">900</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1391.6" x2="610.0" y2="1391.6"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1396.6">
+<line class="tick" x1="590.0" y1="11043.5" x2="610.0" y2="11043.5"/>
+<text class="tick-label tick-label-outline" x="616.0" y="11048.5">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">0</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1396.6">
+<text class="tick-label" x="616.0" y="11048.5">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">0</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1317.7" x2="610.0" y2="1317.7"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1322.7">
+<line class="tick" x1="590.0" y1="10441.6" x2="610.0" y2="10441.6"/>
+<text class="tick-label tick-label-outline" x="616.0" y="10446.6">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">100</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1322.7">
+<text class="tick-label" x="616.0" y="10446.6">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">100</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1243.7" x2="610.0" y2="1243.7"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1248.7">
+<line class="tick" x1="590.0" y1="9839.7" x2="610.0" y2="9839.7"/>
+<text class="tick-label tick-label-outline" x="616.0" y="9844.7">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">200</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1248.7">
+<text class="tick-label" x="616.0" y="9844.7">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">200</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1169.8" x2="610.0" y2="1169.8"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1174.8">
+<line class="tick" x1="590.0" y1="9237.7" x2="610.0" y2="9237.7"/>
+<text class="tick-label tick-label-outline" x="616.0" y="9242.7">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">300</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1174.8">
+<text class="tick-label" x="616.0" y="9242.7">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">300</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1095.9" x2="610.0" y2="1095.9"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1100.9">
+<line class="tick" x1="590.0" y1="8635.8" x2="610.0" y2="8635.8"/>
+<text class="tick-label tick-label-outline" x="616.0" y="8640.8">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">400</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1100.9">
+<text class="tick-label" x="616.0" y="8640.8">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">400</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1021.9" x2="610.0" y2="1021.9"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1026.9">
+<line class="tick" x1="590.0" y1="8033.8" x2="610.0" y2="8033.8"/>
+<text class="tick-label tick-label-outline" x="616.0" y="8038.8">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">500</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1026.9">
+<text class="tick-label" x="616.0" y="8038.8">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">500</tspan>
 </text>
-<line class="tick" x1="590.0" y1="948.0" x2="610.0" y2="948.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="953.0">
+<line class="tick" x1="590.0" y1="7431.9" x2="610.0" y2="7431.9"/>
+<text class="tick-label tick-label-outline" x="616.0" y="7436.9">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">600</tspan>
 </text>
-<text class="tick-label" x="616.0" y="953.0">
+<text class="tick-label" x="616.0" y="7436.9">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">600</tspan>
 </text>
-<line class="tick" x1="590.0" y1="874.0" x2="610.0" y2="874.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="879.0">
+<line class="tick" x1="590.0" y1="6829.9" x2="610.0" y2="6829.9"/>
+<text class="tick-label tick-label-outline" x="616.0" y="6834.9">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">700</tspan>
 </text>
-<text class="tick-label" x="616.0" y="879.0">
+<text class="tick-label" x="616.0" y="6834.9">
 <tspan class="tick-glyph">ᛉ</tspan><tspan class="tick-number">700</tspan>
 </text>
-<line class="tick" x1="590.0" y1="800.1" x2="610.0" y2="800.1"/>
-<text class="tick-label tick-label-outline" x="616.0" y="805.1">
+<line class="tick" x1="590.0" y1="6228.0" x2="610.0" y2="6228.0"/>
+<text class="tick-label tick-label-outline" x="616.0" y="6233.0">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">0</tspan>
 </text>
-<text class="tick-label" x="616.0" y="805.1">
+<text class="tick-label" x="616.0" y="6233.0">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">0</tspan>
 </text>
-<line class="tick" x1="590.0" y1="726.2" x2="610.0" y2="726.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="731.2">
+<line class="tick" x1="590.0" y1="5626.0" x2="610.0" y2="5626.0"/>
+<text class="tick-label tick-label-outline" x="616.0" y="5631.0">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">100</tspan>
 </text>
-<text class="tick-label" x="616.0" y="731.2">
+<text class="tick-label" x="616.0" y="5631.0">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">100</tspan>
 </text>
-<line class="tick" x1="590.0" y1="652.2" x2="610.0" y2="652.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="657.2">
+<line class="tick" x1="590.0" y1="5024.1" x2="610.0" y2="5024.1"/>
+<text class="tick-label tick-label-outline" x="616.0" y="5029.1">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">200</tspan>
 </text>
-<text class="tick-label" x="616.0" y="657.2">
+<text class="tick-label" x="616.0" y="5029.1">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">200</tspan>
 </text>
-<line class="tick" x1="590.0" y1="578.3" x2="610.0" y2="578.3"/>
-<text class="tick-label tick-label-outline" x="616.0" y="583.3">
+<line class="tick" x1="590.0" y1="4422.1" x2="610.0" y2="4422.1"/>
+<text class="tick-label tick-label-outline" x="616.0" y="4427.1">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">300</tspan>
 </text>
-<text class="tick-label" x="616.0" y="583.3">
+<text class="tick-label" x="616.0" y="4427.1">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">300</tspan>
 </text>
-<line class="tick" x1="590.0" y1="504.3" x2="610.0" y2="504.3"/>
-<text class="tick-label tick-label-outline" x="616.0" y="509.3">
+<line class="tick" x1="590.0" y1="3820.2" x2="610.0" y2="3820.2"/>
+<text class="tick-label tick-label-outline" x="616.0" y="3825.2">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">400</tspan>
 </text>
-<text class="tick-label" x="616.0" y="509.3">
+<text class="tick-label" x="616.0" y="3825.2">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">400</tspan>
 </text>
-<line class="tick" x1="590.0" y1="430.4" x2="610.0" y2="430.4"/>
-<text class="tick-label tick-label-outline" x="616.0" y="435.4">
+<line class="tick" x1="590.0" y1="3218.3" x2="610.0" y2="3218.3"/>
+<text class="tick-label tick-label-outline" x="616.0" y="3223.3">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">500</tspan>
 </text>
-<text class="tick-label" x="616.0" y="435.4">
+<text class="tick-label" x="616.0" y="3223.3">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">500</tspan>
 </text>
-<line class="tick" x1="590.0" y1="356.5" x2="610.0" y2="356.5"/>
-<text class="tick-label tick-label-outline" x="616.0" y="361.5">
+<line class="tick" x1="590.0" y1="2616.3" x2="610.0" y2="2616.3"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2621.3">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">600</tspan>
 </text>
-<text class="tick-label" x="616.0" y="361.5">
+<text class="tick-label" x="616.0" y="2621.3">
 <tspan class="tick-glyph">⋂</tspan><tspan class="tick-number">600</tspan>
 </text>
-<line class="tick" x1="590.0" y1="319.5" x2="610.0" y2="319.5"/>
-<text class="tick-label tick-label-outline" x="616.0" y="324.5">
+<line class="tick" x1="590.0" y1="2315.3" x2="610.0" y2="2315.3"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2320.3">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">0</tspan>
 </text>
-<text class="tick-label" x="616.0" y="324.5">
+<text class="tick-label" x="616.0" y="2320.3">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">0</tspan>
 </text>
-<line class="tick" x1="590.0" y1="245.5" x2="610.0" y2="245.5"/>
-<text class="tick-label tick-label-outline" x="616.0" y="250.5">
+<line class="tick" x1="590.0" y1="1713.4" x2="610.0" y2="1713.4"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1718.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">100</tspan>
 </text>
-<text class="tick-label" x="616.0" y="250.5">
+<text class="tick-label" x="616.0" y="1718.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">100</tspan>
 </text>
-<line class="tick" x1="590.0" y1="171.6" x2="610.0" y2="171.6"/>
-<text class="tick-label tick-label-outline" x="616.0" y="176.6">
+<line class="tick" x1="590.0" y1="1111.4" x2="610.0" y2="1111.4"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1116.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">200</tspan>
 </text>
-<text class="tick-label" x="616.0" y="176.6">
+<text class="tick-label" x="616.0" y="1116.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">200</tspan>
 </text>
-<line class="tick" x1="590.0" y1="97.7" x2="610.0" y2="97.7"/>
-<text class="tick-label tick-label-outline" x="616.0" y="102.7">
+<line class="tick" x1="590.0" y1="509.5" x2="610.0" y2="509.5"/>
+<text class="tick-label tick-label-outline" x="616.0" y="514.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">300</tspan>
 </text>
-<text class="tick-label" x="616.0" y="102.7">
+<text class="tick-label" x="616.0" y="514.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">300</tspan>
 </text>
-<line class="tick" x1="590.0" y1="77.7" x2="610.0" y2="77.7"/>
-<text class="tick-label tick-label-outline" x="616.0" y="82.7">
+<line class="tick" x1="590.0" y1="347.0" x2="610.0" y2="347.0"/>
+<text class="tick-label tick-label-outline" x="616.0" y="352.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">0</tspan>
 </text>
-<text class="tick-label" x="616.0" y="82.7">
+<text class="tick-label" x="616.0" y="352.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">0</tspan>
 </text>
 </g>

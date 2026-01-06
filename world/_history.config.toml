@@ -43,7 +43,7 @@ id = "elven"
 title = "World History (Elven)"
 tags_any = ["public", "araethilion", "sabriel"]
 tick_scale = "century"
-tick_spacing_px = 72
+tick_spacing_px = 600
 sort_direction = "desc"
 max_summary_lines = 6
 
