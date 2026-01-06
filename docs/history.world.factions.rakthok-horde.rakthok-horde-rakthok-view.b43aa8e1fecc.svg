@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1977" viewBox="0 0 1200 1977">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="3424" viewBox="0 0 1200 3424">
 <style><![CDATA[
 @font-face {
   font-family: 'Alegreya';
@@ -140,78 +140,78 @@
   </g>
 </symbol>
 </defs>
-<g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="1937"/></g>
+<g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="3384"/></g>
 <g id="connectors">
 <line class="connector" x1="600" y1="40.0" x2="552.0" y2="76.5"/>
-<line class="connector" x1="600" y1="293.9" x2="648.0" y2="76.5"/>
-<line class="connector" x1="600" y1="338.7" x2="552.0" y2="163.5"/>
-<line class="connector" x1="600" y1="518.0" x2="648.0" y2="169.5"/>
-<line class="connector" x1="600" y1="592.7" x2="552.0" y2="262.5"/>
-<line class="connector" x1="600" y1="592.7" x2="648.0" y2="268.5"/>
-<line class="connector" x1="600" y1="652.4" x2="552.0" y2="361.5"/>
-<line class="connector" x1="600" y1="727.1" x2="648.0" y2="373.5"/>
-<line class="connector" x1="600" y1="742.0" x2="552.0" y2="472.5"/>
-<line class="connector" x1="600" y1="742.0" x2="648.0" y2="478.5"/>
-<line class="connector" x1="600" y1="936.2" x2="552.0" y2="601.5"/>
-<line class="connector" x1="600" y1="1100.5" x2="648.0" y2="595.5"/>
-<line class="connector" x1="600" y1="1115.5" x2="552.0" y2="724.5"/>
-<line class="connector" x1="600" y1="1160.3" x2="648.0" y2="718.5"/>
-<line class="connector" x1="600" y1="1294.7" x2="552.0" y2="853.5"/>
-<line class="connector" x1="600" y1="1309.6" x2="648.0" y2="829.5"/>
-<line class="connector" x1="600" y1="1399.3" x2="552.0" y2="982.5"/>
-<line class="connector" x1="600" y1="1533.7" x2="648.0" y2="946.5"/>
-<line class="connector" x1="600" y1="1548.6" x2="552.0" y2="1105.5"/>
-<line class="connector" x1="600" y1="1563.6" x2="648.0" y2="1063.5"/>
-<line class="connector" x1="600" y1="1653.2" x2="552.0" y2="1228.5"/>
-<line class="connector" x1="600" y1="1757.8" x2="648.0" y2="1168.5"/>
-<line class="connector" x1="600" y1="1772.7" x2="552.0" y2="1345.5"/>
-<line class="connector" x1="600" y1="1787.6" x2="648.0" y2="1279.5"/>
-<line class="connector" x1="600" y1="1787.6" x2="552.0" y2="1462.5"/>
-<line class="connector" x1="600" y1="1787.6" x2="648.0" y2="1390.5"/>
-<line class="connector" x1="600" y1="1802.6" x2="552.0" y2="1579.5"/>
-<line class="connector" x1="600" y1="1802.6" x2="648.0" y2="1489.5"/>
-<line class="connector" x1="600" y1="1817.5" x2="552.0" y2="1684.5"/>
-<line class="connector" x1="600" y1="1832.4" x2="648.0" y2="1588.5"/>
-<line class="connector" x1="600" y1="1847.4" x2="552.0" y2="1789.5"/>
-<line class="connector" x1="600" y1="1847.4" x2="648.0" y2="1687.5"/>
-<line class="connector" x1="600" y1="1862.3" x2="552.0" y2="1894.5"/>
-<line class="connector" x1="600" y1="1907.1" x2="648.0" y2="1780.5"/>
+<line class="connector" x1="600" y1="487.6" x2="648.0" y2="465.0"/>
+<line class="connector" x1="600" y1="566.6" x2="552.0" y2="540.0"/>
+<line class="connector" x1="600" y1="882.6" x2="648.0" y2="840.0"/>
+<line class="connector" x1="600" y1="1014.2" x2="552.0" y2="965.0"/>
+<line class="connector" x1="600" y1="1014.2" x2="648.0" y2="965.0"/>
+<line class="connector" x1="600" y1="1119.6" x2="552.0" y2="1065.0"/>
+<line class="connector" x1="600" y1="1251.2" x2="648.0" y2="1150.0"/>
+<line class="connector" x1="600" y1="1277.5" x2="552.0" y2="1215.0"/>
+<line class="connector" x1="600" y1="1277.5" x2="648.0" y2="1255.0"/>
+<line class="connector" x1="600" y1="1619.8" x2="552.0" y2="1540.0"/>
+<line class="connector" x1="600" y1="1909.5" x2="648.0" y2="1803.5"/>
+<line class="connector" x1="600" y1="1935.8" x2="552.0" y2="1840.0"/>
+<line class="connector" x1="600" y1="2014.8" x2="648.0" y2="1926.5"/>
+<line class="connector" x1="600" y1="2251.8" x2="552.0" y2="2140.0"/>
+<line class="connector" x1="600" y1="2278.1" x2="648.0" y2="2165.0"/>
+<line class="connector" x1="600" y1="2436.1" x2="552.0" y2="2315.0"/>
+<line class="connector" x1="600" y1="2673.1" x2="648.0" y2="2484.3"/>
+<line class="connector" x1="600" y1="2699.4" x2="552.0" y2="2552.0"/>
+<line class="connector" x1="600" y1="2725.7" x2="648.0" y2="2601.3"/>
+<line class="connector" x1="600" y1="2883.7" x2="552.0" y2="2675.0"/>
+<line class="connector" x1="600" y1="3068.0" x2="648.0" y2="2706.3"/>
+<line class="connector" x1="600" y1="3094.4" x2="552.0" y2="2792.0"/>
+<line class="connector" x1="600" y1="3120.7" x2="648.0" y2="2817.3"/>
+<line class="connector" x1="600" y1="3120.7" x2="552.0" y2="2909.0"/>
+<line class="connector" x1="600" y1="3120.7" x2="648.0" y2="2928.3"/>
+<line class="connector" x1="600" y1="3147.0" x2="552.0" y2="3026.0"/>
+<line class="connector" x1="600" y1="3147.0" x2="648.0" y2="3027.3"/>
+<line class="connector" x1="600" y1="3173.4" x2="552.0" y2="3131.0"/>
+<line class="connector" x1="600" y1="3199.7" x2="648.0" y2="3126.3"/>
+<line class="connector" x1="600" y1="3226.0" x2="552.0" y2="3236.0"/>
+<line class="connector" x1="600" y1="3226.0" x2="648.0" y2="3225.3"/>
+<line class="connector" x1="600" y1="3252.3" x2="552.0" y2="3341.0"/>
+<line class="connector" x1="600" y1="3331.3" x2="648.0" y2="3318.3"/>
 </g>
 <g id="tokens">
 <use class="token" href="#token_default" x="589.0" y="29.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="282.9" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="327.7" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="507.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="581.7" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="581.7" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="641.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="716.1" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="731.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="731.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="925.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1089.5" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1104.5" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1149.3" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1283.7" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1298.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1388.3" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1522.7" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1537.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1552.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1642.2" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1746.8" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1761.7" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1776.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1776.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1776.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1791.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1791.6" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1806.5" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1821.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1836.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1836.4" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1851.3" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1896.1" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="476.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="555.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="871.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1003.2" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1003.2" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1108.6" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1240.2" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1266.5" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1266.5" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1608.8" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1898.5" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1924.8" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="2003.8" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="2240.8" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="2267.1" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="2425.1" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="2662.1" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="2688.4" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="2714.7" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="2872.7" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="3057.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="3083.4" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="3109.7" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="3109.7" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="3109.7" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="3136.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="3136.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="3162.4" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="3188.7" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="3215.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="3215.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="3241.3" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="3320.3" width="22" height="22"/>
 </g>
 <g id="labels">
 <rect class="label" x="131.0" y="40.0" width="415.0" height="73.0" rx="8" ry="8"/>
@@ -225,96 +225,96 @@
 <text class="date-label" text-anchor="end" x="540.0" y="109.0">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">60</tspan>
 </text>
-<rect class="label" x="654.0" y="40.0" width="400.5" height="73.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="69.0">
+<rect class="label" x="654.0" y="428.5" width="400.5" height="73.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="457.5">
 <tspan x="670.0" dy="0.0">The Buffer Mire Line</tspan>
 </text>
-<text class="summary" x="670.0" y="87.0">
+<text class="summary" x="670.0" y="475.5">
 <tspan x="670.0" dy="0.0">The Horde establishes a wide buffer zone of traps, false camps, and ambush</tspan>
 <tspan x="670.0" dy="12.0">routes to bleed Calderon patrols before they reach the main camps.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1048.5" y="109.0">
+<text class="date-label" text-anchor="end" x="1048.5" y="497.5">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">43</tspan>
 </text>
-<rect class="label" x="143.2" y="127.0" width="402.8" height="73.0" rx="8" ry="8"/>
-<text class="title" x="159.2" y="156.0">
+<rect class="label" x="143.2" y="503.5" width="402.8" height="73.0" rx="8" ry="8"/>
+<text class="title" x="159.2" y="532.5">
 <tspan x="159.2" dy="0.0">Thrukdun&#x27;s Northern Fires Go Out</tspan>
 </text>
-<text class="summary" x="159.2" y="174.0">
+<text class="summary" x="159.2" y="550.5">
 <tspan x="159.2" dy="0.0">The Thrukdun—the last tribe holding the northern-facing lands—are driven</tspan>
 <tspan x="159.2" dy="12.0">from their territory by sustained raids. Survivors withdraw west.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="196.0">
+<text class="date-label" text-anchor="end" x="540.0" y="572.5">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">40</tspan>
 </text>
-<rect class="label" x="654.0" y="127.0" width="405.7" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="156.0">
+<rect class="label" x="654.0" y="797.5" width="405.7" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="826.5">
 <tspan x="670.0" dy="0.0">Zharzug Join the Morvorg</tspan>
 </text>
-<text class="summary" x="670.0" y="174.0">
+<text class="summary" x="670.0" y="844.5">
 <tspan x="670.0" dy="0.0">Zharzug territory fails under repeated raids. The Zharzug migrate south and</tspan>
 <tspan x="670.0" dy="12.0">settle alongside the Morvorg, remaining distinct tribes while sharing a joint</tspan>
 <tspan x="670.0" dy="12.0">circle of shamans.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1053.7" y="208.0">
+<text class="date-label" text-anchor="end" x="1053.7" y="878.5">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">28</tspan>
 </text>
-<rect class="label" x="126.0" y="214.0" width="420.0" height="97.0" rx="8" ry="8"/>
-<text class="title" x="142.0" y="243.0">
+<rect class="label" x="126.0" y="916.5" width="420.0" height="97.0" rx="8" ry="8"/>
+<text class="title" x="142.0" y="945.5">
 <tspan x="142.0" dy="0.0">Hearts Taken on the Nails</tspan>
 </text>
-<text class="summary" x="142.0" y="261.0">
+<text class="summary" x="142.0" y="963.5">
 <tspan x="142.0" dy="0.0">A Calderon caravan is found on the Road of Nails—guards and merchants laid</tspan>
 <tspan x="142.0" dy="12.0">out in a straight line, boots aligned, each with their chest ripped open with the</tspan>
 <tspan x="142.0" dy="12.0">heart removed. The bodies are left where they were laid. The story runs ahead of</tspan>
 <tspan x="142.0" dy="12.0">the carts and crosses every border, told in whispers that never match.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="307.0">
+<text class="date-label" text-anchor="end" x="540.0" y="1009.5">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">23</tspan>
 </text>
-<rect class="label" x="654.0" y="226.0" width="398.1" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="255.0">
+<rect class="label" x="654.0" y="922.5" width="398.1" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="951.5">
 <tspan x="670.0" dy="0.0">Morvorg Westward March</tspan>
 </text>
-<text class="summary" x="670.0" y="273.0">
+<text class="summary" x="670.0" y="969.5">
 <tspan x="670.0" dy="0.0">Morvorg lands become unlivable under relentless Calderon raids. The tribe</tspan>
 <tspan x="670.0" dy="12.0">abandons its northern lands and migrates south, folding its camps into the</tspan>
 <tspan x="670.0" dy="12.0">Horde&#x27;s nearer marches.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1046.1" y="307.0">
+<text class="date-label" text-anchor="end" x="1046.1" y="1003.5">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">23</tspan>
 </text>
-<rect class="label" x="143.1" y="325.0" width="402.9" height="73.0" rx="8" ry="8"/>
-<text class="title" x="159.1" y="354.0">
+<rect class="label" x="143.1" y="1028.5" width="402.9" height="73.0" rx="8" ry="8"/>
+<text class="title" x="159.1" y="1057.5">
 <tspan x="159.1" dy="0.0">The Shamans foretell Heart Marked</tspan>
 </text>
-<text class="summary" x="159.1" y="372.0">
+<text class="summary" x="159.1" y="1075.5">
 <tspan x="159.1" dy="0.0">Shamans read the signs: </tspan>
 <tspan class="md-bold">identifies Heart-Mraked</tspan>
 <tspan>, runes over the foes heart.</tspan>
 <tspan x="159.1" dy="12.0">Calderon mines for there own elite soldiers.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="394.0">
+<text class="date-label" text-anchor="end" x="540.0" y="1097.5">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">19</tspan>
 </text>
-<rect class="label" x="654.0" y="325.0" width="407.0" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="354.0">
+<rect class="label" x="654.0" y="1101.5" width="407.0" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1130.5">
 <tspan x="670.0" dy="0.0">The Harvest Carts</tspan>
 </text>
-<text class="summary" x="670.0" y="372.0">
+<text class="summary" x="670.0" y="1148.5">
 <tspan x="670.0" dy="0.0">The Imperium stops chasing us into reeds and sinkholes. Instead, after every</tspan>
 <tspan x="670.0" dy="12.0">fight, black carts come—hooks, chains, salt, and clerks with clean</tspan>
 <tspan x="670.0" dy="12.0">hands—dragging their own dead back behind the walls. They no longer leave</tspan>
 <tspan x="670.0" dy="12.0">bodies for the marsh. They gather them like seed.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1055.0" y="418.0">
+<text class="date-label" text-anchor="end" x="1055.0" y="1194.5">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">14</tspan>
 </text>
-<rect class="label" x="126.0" y="412.0" width="420.0" height="121.0" rx="8" ry="8"/>
-<text class="title" x="142.0" y="441.0">
+<rect class="label" x="126.0" y="1154.5" width="420.0" height="121.0" rx="8" ry="8"/>
+<text class="title" x="142.0" y="1183.5">
 <tspan x="142.0" dy="0.0">Warlord Garnak Zhulvorg Death</tspan>
 </text>
-<text class="summary" x="142.0" y="459.0">
+<text class="summary" x="142.0" y="1201.5">
 <tspan x="142.0" dy="0.0">Garnak Zhulvorg led the late-season push when food was thin and tempers</tspan>
 <tspan x="142.0" dy="12.0">thinner, because doing nothing felt like dying slowly. He broke their line long</tspan>
 <tspan x="142.0" dy="12.0">enough to reclaim a cart of stolen winter grain—and then the Heart-Marked</tspan>
@@ -322,40 +322,40 @@
 <tspan x="142.0" dy="12.0">threw as he fell: straight as a vow, wet with blood, aimed at the officer&#x27;s throat</tspan>
 <tspan x="142.0" dy="12.0">like a promise.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="529.0">
+<text class="date-label" text-anchor="end" x="540.0" y="1271.5">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">13</tspan>
 </text>
-<rect class="label" x="654.0" y="436.0" width="414.8" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="465.0">
+<rect class="label" x="654.0" y="1212.5" width="414.8" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1241.5">
 <tspan x="670.0" dy="0.0">The Northern Wall Chokes Trade</tspan>
 </text>
-<text class="summary" x="670.0" y="483.0">
+<text class="summary" x="670.0" y="1259.5">
 <tspan x="670.0" dy="0.0">calderon-imperium completes a new wall and checkpoint line, strangling the</tspan>
 <tspan x="670.0" dy="12.0">northern trade routes into the Horde. They call it &quot;customs.&quot; Except they no orc</tspan>
 <tspan x="670.0" dy="12.0">is allowed passage; it just an ouright blockade.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1062.8" y="517.0">
+<text class="date-label" text-anchor="end" x="1062.8" y="1293.5">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">13</tspan>
 </text>
-<rect class="label" x="133.1" y="547.0" width="412.9" height="109.0" rx="8" ry="8"/>
-<text class="title" x="149.1" y="576.0">
+<rect class="label" x="133.1" y="1485.5" width="412.9" height="109.0" rx="8" ry="8"/>
+<text class="title" x="149.1" y="1514.5">
 <tspan x="149.1" dy="0.0">Warlord Orzok Gronmog Death</tspan>
 </text>
-<text class="summary" x="149.1" y="594.0">
+<text class="summary" x="149.1" y="1532.5">
 <tspan x="149.1" dy="0.0">The Imperium tried to build a &quot;clean&quot; gate through the mire, driving posts into</tspan>
 <tspan x="149.1" dy="12.0">sacred mud and calling it civilization. Orzok Gronmog led the defense in</tspan>
 <tspan x="149.1" dy="12.0">chest-deep water, where every step is a choice between drowning and killing.</tspan>
 <tspan x="149.1" dy="12.0">When the gate collapsed, it buried her; the bog kept her as a guardian, and the</tspan>
 <tspan x="149.1" dy="12.0">Heart-Marked still avoid that crossing.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="652.0">
+<text class="date-label" text-anchor="end" x="540.0" y="1590.5">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">0</tspan>
 </text>
-<rect class="label" x="654.0" y="535.0" width="419.3" height="121.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="564.0">
+<rect class="label" x="654.0" y="1743.0" width="419.3" height="121.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1772.0">
 <tspan x="670.0" dy="0.0">Warlord Mogrok Morvorg Death</tspan>
 </text>
-<text class="summary" x="670.0" y="582.0">
+<text class="summary" x="670.0" y="1790.0">
 <tspan x="670.0" dy="0.0">Mogrok Morvorg led a night counter-raid against the Imperium&#x27;s siege lines,</tspan>
 <tspan x="670.0" dy="12.0">cutting ropes and slitting throats with the same practiced calm. When the</tspan>
 <tspan x="670.0" dy="12.0">Heart-Marked tried to drag a captive shaman away on hooks, Mogrok threw</tspan>
@@ -363,41 +363,41 @@
 <tspan x="670.0" dy="12.0">there—hands ruined, chest opened—so the shaman could crawl back to the fire</tspan>
 <tspan x="670.0" dy="12.0">and speak the names of the dead.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1067.3" y="652.0">
+<text class="date-label" text-anchor="end" x="1067.3" y="1860.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">316</tspan>
 </text>
-<rect class="label" x="127.9" y="670.0" width="418.1" height="109.0" rx="8" ry="8"/>
-<text class="title" x="143.9" y="699.0">
+<rect class="label" x="127.9" y="1785.5" width="418.1" height="109.0" rx="8" ry="8"/>
+<text class="title" x="143.9" y="1814.5">
 <tspan x="143.9" dy="0.0">Warlord Durzgar Rakthokgar Death</tspan>
 </text>
-<text class="summary" x="143.9" y="717.0">
+<text class="summary" x="143.9" y="1832.5">
 <tspan x="143.9" dy="0.0">The Imperium pushed hard that year—more boots, more iron, more</tspan>
 <tspan x="143.9" dy="12.0">&quot;order&quot;—and the barrier line buckled like wet wood. Durzgar Rakthokgar stood</tspan>
 <tspan x="143.9" dy="12.0">in the breach with two spears and a shattered shield, refusing to let the</tspan>
 <tspan x="143.9" dy="12.0">innocents behind him become numbers in a clerk&#x27;s book. When he fell, the</tspan>
 <tspan x="143.9" dy="12.0">warband swore the Spirits leaned in close to hear his last breath.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="775.0">
+<text class="date-label" text-anchor="end" x="540.0" y="1890.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">315</tspan>
 </text>
-<rect class="label" x="654.0" y="670.0" width="418.7" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="699.0">
+<rect class="label" x="654.0" y="1878.0" width="418.7" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1907.0">
 <tspan x="670.0" dy="0.0">Warlord Orzak Ghorzug Death</tspan>
 </text>
-<text class="summary" x="670.0" y="717.0">
+<text class="summary" x="670.0" y="1925.0">
 <tspan x="670.0" dy="0.0">Orzak Ghorzug hunted supply carts like a wolf hunts the slow. At the Three</tspan>
 <tspan x="670.0" dy="12.0">Bridges she sprang another trap—fire in the reeds, blades from below—but</tspan>
 <tspan x="670.0" dy="12.0">they were ready. The Heart-Marked answered with disciplined crossbow volleys</tspan>
 <tspan x="670.0" dy="12.0">and turned the ambush into a rout.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1066.7" y="763.0">
+<text class="date-label" text-anchor="end" x="1066.7" y="1971.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">312</tspan>
 </text>
-<rect class="label" x="127.1" y="793.0" width="418.9" height="121.0" rx="8" ry="8"/>
-<text class="title" x="143.1" y="822.0">
+<rect class="label" x="127.1" y="2079.5" width="418.9" height="121.0" rx="8" ry="8"/>
+<text class="title" x="143.1" y="2108.5">
 <tspan x="143.1" dy="0.0">Warlord Graknak Zhulrog Death</tspan>
 </text>
-<text class="summary" x="143.1" y="840.0">
+<text class="summary" x="143.1" y="2126.5">
 <tspan x="143.1" dy="0.0">The Imperium brought a runed ballista to the lake shore, and its frost-rimed</tspan>
 <tspan x="143.1" dy="12.0">bolt cracked armor like spirit-bone. Graknak Zhulrog charged</tspan>
 <tspan x="143.1" dy="12.0">anyway—because that is what warlords do when the world changes and the</tspan>
@@ -405,251 +405,251 @@
 <tspan x="143.1" dy="12.0">before it: tusks bared, feet sure on ice, roaring the Ancestors&#x27; names so loudly</tspan>
 <tspan x="143.1" dy="12.0">the frame shook. The ballista never stopped shooting.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="910.0">
+<text class="date-label" text-anchor="end" x="540.0" y="2196.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">303</tspan>
 </text>
-<rect class="label" x="654.0" y="781.0" width="417.8" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="810.0">
+<rect class="label" x="654.0" y="2116.5" width="417.8" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="2145.5">
 <tspan x="670.0" dy="0.0">Warlord Zokgar Zharzug Death</tspan>
 </text>
-<text class="summary" x="670.0" y="828.0">
+<text class="summary" x="670.0" y="2163.5">
 <tspan x="670.0" dy="0.0">Zokgar Zharzug fought at the narrows, where retreat means drowning. No</tspan>
 <tspan x="670.0" dy="12.0">shields—only spears. When Calderon soldiers tried to cross on bodies, Zokgar</tspan>
 <tspan x="670.0" dy="12.0">went under with them and pulled three down; the crossing failed and the water</tspan>
 <tspan x="670.0" dy="12.0">ran red.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1065.8" y="874.0">
+<text class="date-label" text-anchor="end" x="1065.8" y="2209.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">302</tspan>
 </text>
-<rect class="label" x="129.4" y="928.0" width="416.6" height="109.0" rx="8" ry="8"/>
-<text class="title" x="145.4" y="957.0">
+<rect class="label" x="129.4" y="2260.5" width="416.6" height="109.0" rx="8" ry="8"/>
+<text class="title" x="145.4" y="2289.5">
 <tspan x="145.4" dy="0.0">Warlord Uzruk Thrukdun Death</tspan>
 </text>
-<text class="summary" x="145.4" y="975.0">
+<text class="summary" x="145.4" y="2307.5">
 <tspan x="145.4" dy="0.0">They called it a ration yard; it was a pen—families lined up like livestock while</tspan>
 <tspan x="145.4" dy="12.0">the Imperium measured hunger in ounces. Uzruk Thrukdun sought to break</tspan>
 <tspan x="145.4" dy="12.0">the gate and free her people, but she and her raiders were broken first. As she</tspan>
 <tspan x="145.4" dy="12.0">lay dying the yard captain mocked her failure, only to have his heart cleft by the</tspan>
 <tspan x="145.4" dy="12.0">warlord&#x27;s knife. Even in death the Rakthok fight to win.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1033.0">
+<text class="date-label" text-anchor="end" x="540.0" y="2365.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">296</tspan>
 </text>
-<rect class="label" x="654.0" y="892.0" width="411.8" height="109.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="921.0">
+<rect class="label" x="654.0" y="2429.8" width="411.8" height="109.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="2458.8">
 <tspan x="670.0" dy="0.0">Warlord Kragzor Dakmar&#x27;nak Death</tspan>
 </text>
-<text class="summary" x="670.0" y="939.0">
+<text class="summary" x="670.0" y="2476.8">
 <tspan x="670.0" dy="0.0">Kragzor Dakmar&#x27;nak taught the warbands to fight like the marsh—quiet,</tspan>
 <tspan x="670.0" dy="12.0">patient, suddenly everywhere. The night he died, he lured an Imperium patrol</tspan>
 <tspan x="670.0" dy="12.0">into deep water and took the captain&#x27;s throat with his own teeth when blades</tspan>
 <tspan x="670.0" dy="12.0">were lost to the swamp. The Heart-Marked never found his body; the</tspan>
 <tspan x="670.0" dy="12.0">Dakmar&#x27;nak say he joined the marsh and became its anger.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1059.8" y="997.0">
+<text class="date-label" text-anchor="end" x="1059.8" y="2534.8">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">287</tspan>
 </text>
-<rect class="label" x="128.8" y="1051.0" width="417.2" height="109.0" rx="8" ry="8"/>
-<text class="title" x="144.8" y="1080.0">
+<rect class="label" x="128.8" y="2497.5" width="417.2" height="109.0" rx="8" ry="8"/>
+<text class="title" x="144.8" y="2526.5">
 <tspan x="144.8" dy="0.0">Warlord Aznath Skorvorg Death</tspan>
 </text>
-<text class="summary" x="144.8" y="1098.0">
+<text class="summary" x="144.8" y="2544.5">
 <tspan x="144.8" dy="0.0">The Imperium answered the Marshfire Push with roadside courts—&quot;justice&quot;</tspan>
 <tspan x="144.8" dy="12.0">while the condemned still breathed. Aznath Skorvorg led a surpise attack</tspan>
 <tspan x="144.8" dy="12.0">against the scaffold, split the magistrate&#x27;s table, and shattered the chains of the</tspan>
 <tspan x="144.8" dy="12.0">prisoners. She died under spearpoints, but the captives escaped. The tale is a</tspan>
 <tspan x="144.8" dy="12.0">prayer: when the Heart-Marked bring paper, we bring teeth.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1156.0">
+<text class="date-label" text-anchor="end" x="540.0" y="2602.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">286</tspan>
 </text>
-<rect class="label" x="654.0" y="1015.0" width="410.8" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1044.0">
+<rect class="label" x="654.0" y="2552.8" width="410.8" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="2581.8">
 <tspan x="670.0" dy="0.0">Warlord Ug&#x27;rok Gronmog Death</tspan>
 </text>
-<text class="summary" x="670.0" y="1062.0">
+<text class="summary" x="670.0" y="2599.8">
 <tspan x="670.0" dy="0.0">Ug&#x27;rok Gronmog led the Marshfire Push—bog oil on arrows, reeds lit like</tspan>
 <tspan x="670.0" dy="12.0">torches, war-cries echoing off wet stone. He reached the standard-bearer and</tspan>
 <tspan x="670.0" dy="12.0">ripped the banner free, wrapping it around his fist so it couldn&#x27;t be reclaimed.</tspan>
 <tspan x="670.0" dy="12.0">They killed him for it; both he and the banner sunk into the swamp.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1058.8" y="1108.0">
+<text class="date-label" text-anchor="end" x="1058.8" y="2645.8">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">285</tspan>
 </text>
-<rect class="label" x="138.6" y="1174.0" width="407.4" height="109.0" rx="8" ry="8"/>
-<text class="title" x="154.6" y="1203.0">
+<rect class="label" x="138.6" y="2620.5" width="407.4" height="109.0" rx="8" ry="8"/>
+<text class="title" x="154.6" y="2649.5">
 <tspan x="154.6" dy="0.0">Warlord Ghorzul Morvorg Death</tspan>
 </text>
-<text class="summary" x="154.6" y="1221.0">
+<text class="summary" x="154.6" y="2667.5">
 <tspan x="154.6" dy="0.0">In the Ash Winter the Imperium came with engineers and &quot;clean fire&quot; to burn</tspan>
 <tspan x="154.6" dy="12.0">the marsh open. Ghorzul Morvorg held the gorge mouth with a handful of</tspan>
 <tspan x="154.6" dy="12.0">spears, letting flame take his cloak so his warband could slip away through</tspan>
 <tspan x="154.6" dy="12.0">smoke and reeds. He died blackened and standing—a silhouette against the</tspan>
 <tspan x="154.6" dy="12.0">blaze—so the Horde could breathe and regroup.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1279.0">
+<text class="date-label" text-anchor="end" x="540.0" y="2725.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">279</tspan>
 </text>
-<rect class="label" x="654.0" y="1126.0" width="418.9" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1155.0">
+<rect class="label" x="654.0" y="2663.8" width="418.9" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="2692.8">
 <tspan x="670.0" dy="0.0">The Name &quot;Ironstead&quot;</tspan>
 </text>
-<text class="summary" x="670.0" y="1173.0">
+<text class="summary" x="670.0" y="2710.8">
 <tspan x="670.0" dy="0.0">calderon-imperium declares the new fortress city Ironstead as their capital and</tspan>
 <tspan x="670.0" dy="12.0">future seat, even as the walls remain hungry and incomplete. To the Imperium,</tspan>
 <tspan x="670.0" dy="12.0">a thing is true once it is written; the land is forced to agree later.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1066.9" y="1207.0">
+<text class="date-label" text-anchor="end" x="1066.9" y="2744.8">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">272</tspan>
 </text>
-<rect class="label" x="127.3" y="1297.0" width="418.7" height="97.0" rx="8" ry="8"/>
-<text class="title" x="143.3" y="1326.0">
+<rect class="label" x="127.3" y="2743.5" width="418.7" height="97.0" rx="8" ry="8"/>
+<text class="title" x="143.3" y="2772.5">
 <tspan x="143.3" dy="0.0">Warlord Thrakrok Rakthokgar Death</tspan>
 </text>
-<text class="summary" x="143.3" y="1344.0">
+<text class="summary" x="143.3" y="2790.5">
 <tspan x="143.3" dy="0.0">The Imperium advanced behind a shieldline and hooks, hauling warriors by the</tspan>
 <tspan x="143.3" dy="12.0">throat like cattle for a yard. Thrakrok Rakthokgar refused the capture—charged</tspan>
 <tspan x="143.3" dy="12.0">into the hooks, killed two, and tore a third&#x27;s jaw loose before pikeheads found</tspan>
 <tspan x="143.3" dy="12.0">him.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1390.0">
+<text class="date-label" text-anchor="end" x="540.0" y="2836.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">271</tspan>
 </text>
-<rect class="label" x="654.0" y="1225.0" width="418.0" height="109.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1254.0">
+<rect class="label" x="654.0" y="2762.8" width="418.0" height="109.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="2791.8">
 <tspan x="670.0" dy="0.0">Zarkul Dakgar the Forever Cursed</tspan>
 </text>
-<text class="summary" x="670.0" y="1272.0">
+<text class="summary" x="670.0" y="2809.8">
 <tspan x="670.0" dy="0.0">Zarkul Dakgar barters his people&#x27;s land for coin from the Garhammar</tspan>
 <tspan x="670.0" dy="12.0">Trade-League. A dispute arises with the Imperium and the now-displaced orcs,</tspan>
 <tspan x="670.0" dy="12.0">and in the subsequent conflict Zarkul is found dead, knifed in the back. Among</tspan>
 <tspan x="670.0" dy="12.0">the Horde his name is kept only as a curse: proof that gold is softer than mud,</tspan>
 <tspan x="670.0" dy="12.0">and twice as deadly.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1066.0" y="1330.0">
+<text class="date-label" text-anchor="end" x="1066.0" y="2867.8">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
 </text>
-<rect class="label" x="132.2" y="1408.0" width="413.8" height="109.0" rx="8" ry="8"/>
-<text class="title" x="148.2" y="1437.0">
+<rect class="label" x="132.2" y="2854.5" width="413.8" height="109.0" rx="8" ry="8"/>
+<text class="title" x="148.2" y="2883.5">
 <tspan x="148.2" dy="0.0">Warlord Uruknar Rakthokgar Death</tspan>
 </text>
-<text class="summary" x="148.2" y="1455.0">
+<text class="summary" x="148.2" y="2901.5">
 <tspan x="148.2" dy="0.0">When Ironstead set its foundations deep into the old mounds at the north of</tspan>
 <tspan x="148.2" dy="12.0">the swamplands, Uruknar Rakthokgar gathered her raiders and stole into the</tspan>
 <tspan x="148.2" dy="12.0">rising fortress. Imperium sappers threw smoke and white lime to blind the</tspan>
 <tspan x="148.2" dy="12.0">charge, and crossbow bolts cracked from the haze. Gruknar died on her knees,</tspan>
 <tspan x="148.2" dy="12.0">and Ironstead rose up tall.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1513.0">
+<text class="date-label" text-anchor="end" x="540.0" y="2959.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
 </text>
-<rect class="label" x="654.0" y="1348.0" width="420.0" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1377.0">
+<rect class="label" x="654.0" y="2885.8" width="420.0" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="2914.8">
 <tspan x="670.0" dy="0.0">Ironstead Rises on Dakgar Bones</tspan>
 </text>
-<text class="summary" x="670.0" y="1395.0">
+<text class="summary" x="670.0" y="2932.8">
 <tspan x="670.0" dy="0.0">calderon-imperium begins raising their capital-fortress over the barrier ground</tspan>
 <tspan x="670.0" dy="12.0">of the dakgar tribe of the garrok-confederation. They pour foundations through</tspan>
 <tspan x="670.0" dy="12.0">ancestral barrow grounds and call it progress.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1068.0" y="1429.0">
+<text class="date-label" text-anchor="end" x="1068.0" y="2966.8">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
 </text>
-<rect class="label" x="133.5" y="1531.0" width="412.5" height="97.0" rx="8" ry="8"/>
-<text class="title" x="149.5" y="1560.0">
+<rect class="label" x="133.5" y="2977.5" width="412.5" height="97.0" rx="8" ry="8"/>
+<text class="title" x="149.5" y="3006.5">
 <tspan x="149.5" dy="0.0">Warlord Zor&#x27;gar Zhulvorg Death</tspan>
 </text>
-<text class="summary" x="149.5" y="1578.0">
+<text class="summary" x="149.5" y="3024.5">
 <tspan x="149.5" dy="0.0">Zor&#x27;gar Zhulvorg hit the toll yards at dawn. When their captain tried to retreat</tspan>
 <tspan x="149.5" dy="12.0">with prisoners, Zor&#x27;gar caught him, and dragged him, his wagon, and his</tspan>
 <tspan x="149.5" dy="12.0">guards into the waters allowing the captives to escape. He drowned smiling,</tspan>
 <tspan x="149.5" dy="12.0">fingers locked on the captain&#x27;s gorget.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1624.0">
+<text class="date-label" text-anchor="end" x="540.0" y="3070.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">269</tspan>
 </text>
-<rect class="label" x="654.0" y="1447.0" width="411.9" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1476.0">
+<rect class="label" x="654.0" y="2984.8" width="411.9" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="3013.8">
 <tspan x="670.0" dy="0.0">Tribute in Teeth</tspan>
 </text>
-<text class="summary" x="670.0" y="1494.0">
+<text class="summary" x="670.0" y="3031.8">
 <tspan x="670.0" dy="0.0">calderon-imperium erects toll posts and ration yards, demanding &quot;tax&quot; for the</tspan>
 <tspan x="670.0" dy="12.0">crime of surviving on stolen ground. When the Garrok refuse, the Imperium</tspan>
 <tspan x="670.0" dy="12.0">answers with public hangings and private pits—less a war than a harvest.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1059.9" y="1528.0">
+<text class="date-label" text-anchor="end" x="1059.9" y="3065.8">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">269</tspan>
 </text>
-<rect class="label" x="139.9" y="1642.0" width="406.1" height="85.0" rx="8" ry="8"/>
-<text class="title" x="155.9" y="1671.0">
+<rect class="label" x="139.9" y="3088.5" width="406.1" height="85.0" rx="8" ry="8"/>
+<text class="title" x="155.9" y="3117.5">
 <tspan x="155.9" dy="0.0">The Quiet Cull of Dakgar</tspan>
 </text>
-<text class="summary" x="155.9" y="1689.0">
+<text class="summary" x="155.9" y="3135.5">
 <tspan x="155.9" dy="0.0">the Imperium&#x27;s &quot;pacifications&quot; begin: night raids, bound captives, villages</tspan>
 <tspan x="155.9" dy="12.0">emptied for labor and &quot;relocation.&quot; Those who flee speak of soldiers with eyes</tspan>
 <tspan x="155.9" dy="12.0">like polished iron—no rage, no mercy, only procedure.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1723.0">
+<text class="date-label" text-anchor="end" x="540.0" y="3169.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">268</tspan>
 </text>
-<rect class="label" x="654.0" y="1546.0" width="406.1" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1575.0">
+<rect class="label" x="654.0" y="3083.8" width="406.1" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="3112.8">
 <tspan x="670.0" dy="0.0">The Road of Nails Through the Marsh</tspan>
 </text>
-<text class="summary" x="670.0" y="1593.0">
+<text class="summary" x="670.0" y="3130.8">
 <tspan x="670.0" dy="0.0">calderon-imperium cuts a causeway into the swamp—trees felled, reeds</tspan>
 <tspan x="670.0" dy="12.0">burned, spirit-shrines trampled flat. Every plank is a promise: they intend to</tspan>
 <tspan x="670.0" dy="12.0">stay, and they intend to make the land obey.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1054.1" y="1627.0">
+<text class="date-label" text-anchor="end" x="1054.1" y="3164.8">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">267</tspan>
 </text>
-<rect class="label" x="126.0" y="1741.0" width="420.0" height="97.0" rx="8" ry="8"/>
-<text class="title" x="142.0" y="1770.0">
+<rect class="label" x="126.0" y="3187.5" width="420.0" height="97.0" rx="8" ry="8"/>
+<text class="title" x="142.0" y="3216.5">
 <tspan x="142.0" dy="0.0">Warlord Kragath Dakgar Death</tspan>
 </text>
-<text class="summary" x="142.0" y="1788.0">
+<text class="summary" x="142.0" y="3234.5">
 <tspan x="142.0" dy="0.0">Kragath Dakgar led the charge up wet mortar while Imperium arrows made the</tspan>
 <tspan x="142.0" dy="12.0">air sing. The third shaft didn&#x27;t stop him—he bit stone and kept climbing—until</tspan>
 <tspan x="142.0" dy="12.0">a falling block broke his ribs. Stone broke before flesh, but it was not a lesson</tspan>
 <tspan x="142.0" dy="12.0">writ large: the fortress held.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1834.0">
+<text class="date-label" text-anchor="end" x="540.0" y="3280.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">266</tspan>
 </text>
-<rect class="label" x="654.0" y="1645.0" width="418.0" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1674.0">
+<rect class="label" x="654.0" y="3182.8" width="418.0" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="3211.8">
 <tspan x="670.0" dy="0.0">Blood on Unfinished Stone</tspan>
 </text>
-<text class="summary" x="670.0" y="1692.0">
+<text class="summary" x="670.0" y="3229.8">
 <tspan x="670.0" dy="0.0">garrok-confederation strikes back at the calderon-imperium reach, hurling</tspan>
 <tspan x="670.0" dy="12.0">bodies against half-raised walls and wet mortar. Thousands die beneath arrows</tspan>
 <tspan x="670.0" dy="12.0">and falling stone; the Imperium counts the dead as if tallying grain.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1066.0" y="1726.0">
+<text class="date-label" text-anchor="end" x="1066.0" y="3263.8">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">266</tspan>
 </text>
-<rect class="label" x="147.3" y="1852.0" width="398.7" height="85.0" rx="8" ry="8"/>
-<text class="title" x="163.3" y="1881.0">
+<rect class="label" x="147.3" y="3298.5" width="398.7" height="85.0" rx="8" ry="8"/>
+<text class="title" x="163.3" y="3327.5">
 <tspan x="163.3" dy="0.0">The Iron Ledger Takes Our Kin&#x27;s Fields</tspan>
 </text>
-<text class="summary" x="163.3" y="1899.0">
+<text class="summary" x="163.3" y="3345.5">
 <tspan x="163.3" dy="0.0">calderon-imperium seizes great swaths of garrok-confederation land and</tspan>
 <tspan x="163.3" dy="12.0">drives the orcs deeper into the swamp-lows. They do it with paperwork and</tspan>
 <tspan x="163.3" dy="12.0">spearpoints alike—order written in blood, stamped and filed.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1933.0">
+<text class="date-label" text-anchor="end" x="540.0" y="3379.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">265</tspan>
 </text>
-<rect class="label" x="654.0" y="1744.0" width="395.6" height="73.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1773.0">
+<rect class="label" x="654.0" y="3281.8" width="395.6" height="73.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="3310.8">
 <tspan x="670.0" dy="0.0">The Soulless Measure the Frontier</tspan>
 </text>
-<text class="summary" x="670.0" y="1791.0">
+<text class="summary" x="670.0" y="3328.8">
 <tspan x="670.0" dy="0.0">calderon-imperium surveyors and clerks arrive first—stakes, ink, and cold</tspan>
 <tspan x="670.0" dy="12.0">smiles. They name Garrok soil &quot;unused&quot; and call the living marsh &quot;waste.&quot;</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1043.6" y="1813.0">
+<text class="date-label" text-anchor="end" x="1043.6" y="3350.8">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">262</tspan>
 </text>
 </g>
@@ -662,490 +662,490 @@
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1008.7 44.0)">
+<g transform="translate(1008.7 432.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(979.7 48.4)">
+<g transform="translate(979.7 436.9)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(942.0 44.0)">
+<g transform="translate(942.0 432.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 131.0)">
+<g transform="translate(500.2 507.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 135.4)">
+<g transform="translate(471.2 511.9)">
 <title>tag: raids</title>
 <use href="#tag_raids" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 131.0)">
+<g transform="translate(433.5 507.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1014.0 131.0)">
+<g transform="translate(1014.0 801.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(985.0 135.4)">
+<g transform="translate(985.0 805.9)">
 <title>tag: raids</title>
 <use href="#tag_raids" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(947.2 131.0)">
+<g transform="translate(947.2 801.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(132.0 218.0)">
+<g class="public-indicator" transform="translate(132.0 920.5)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(500.2 218.0)">
+<g transform="translate(500.2 920.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 222.4)">
+<g transform="translate(471.2 924.9)">
 <title>tag: trade</title>
 <use href="#tag_trade" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 218.0)">
+<g transform="translate(433.5 920.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1006.3 230.0)">
+<g transform="translate(1006.3 926.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(977.3 234.4)">
+<g transform="translate(977.3 930.9)">
 <title>tag: raids</title>
 <use href="#tag_raids" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(939.6 230.0)">
+<g transform="translate(939.6 926.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(509.0 333.4)">
+<g transform="translate(509.0 1036.9)">
 <title>tag: inspiration</title>
 <use href="#tag_inspiration" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(471.2 329.0)">
+<g transform="translate(471.2 1032.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1024.0 333.4)">
+<g transform="translate(1024.0 1109.9)">
 <title>tag: lore</title>
 <use href="#tag_lore" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(986.2 329.0)">
+<g transform="translate(986.2 1105.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 416.0)">
+<g transform="translate(500.2 1158.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 420.4)">
+<g transform="translate(471.2 1162.9)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 416.0)">
+<g transform="translate(433.5 1158.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1023.0 440.0)">
+<g transform="translate(1023.0 1216.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(994.0 444.4)">
+<g transform="translate(994.0 1220.9)">
 <title>tag: economy</title>
 <use href="#tag_economy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(956.3 440.0)">
+<g transform="translate(956.3 1216.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 551.0)">
+<g transform="translate(500.2 1489.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 555.4)">
+<g transform="translate(471.2 1493.9)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 551.0)">
+<g transform="translate(433.5 1489.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1027.5 539.0)">
+<g transform="translate(1027.5 1747.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(998.5 543.4)">
+<g transform="translate(998.5 1751.4)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(960.8 539.0)">
+<g transform="translate(960.8 1747.0)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 674.0)">
+<g transform="translate(500.2 1789.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 678.4)">
+<g transform="translate(471.2 1793.9)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 674.0)">
+<g transform="translate(433.5 1789.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1026.9 674.0)">
+<g transform="translate(1026.9 1882.0)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(997.9 678.4)">
+<g transform="translate(997.9 1886.4)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(960.2 674.0)">
+<g transform="translate(960.2 1882.0)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 797.0)">
+<g transform="translate(500.2 2083.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 801.4)">
+<g transform="translate(471.2 2087.9)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 797.0)">
+<g transform="translate(433.5 2083.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1026.0 785.0)">
+<g transform="translate(1026.0 2120.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(997.0 789.4)">
+<g transform="translate(997.0 2124.9)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(959.3 785.0)">
+<g transform="translate(959.3 2120.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 932.0)">
+<g transform="translate(500.2 2264.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 936.4)">
+<g transform="translate(471.2 2268.9)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 932.0)">
+<g transform="translate(433.5 2264.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1020.0 896.0)">
+<g transform="translate(1020.0 2433.8)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(991.0 900.4)">
+<g transform="translate(991.0 2438.2)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(953.3 896.0)">
+<g transform="translate(953.3 2433.8)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1055.0)">
+<g transform="translate(500.2 2501.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 1059.4)">
+<g transform="translate(471.2 2505.9)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 1055.0)">
+<g transform="translate(433.5 2501.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1019.1 1019.0)">
+<g transform="translate(1019.1 2556.8)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(990.1 1023.4)">
+<g transform="translate(990.1 2561.2)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(952.3 1019.0)">
+<g transform="translate(952.3 2556.8)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1178.0)">
+<g transform="translate(500.2 2624.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 1182.4)">
+<g transform="translate(471.2 2628.9)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 1178.0)">
+<g transform="translate(433.5 2624.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1035.9 1134.4)">
+<g transform="translate(1035.9 2672.2)">
 <title>tag: infrastructure</title>
 <use href="#tag_infrastructure" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(998.1 1130.0)">
+<g transform="translate(998.1 2667.8)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1301.0)">
+<g transform="translate(500.2 2747.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 1305.4)">
+<g transform="translate(471.2 2751.9)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 1301.0)">
+<g transform="translate(433.5 2747.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(660.0 1229.0)">
+<g class="public-indicator" transform="translate(660.0 2766.8)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(1026.2 1229.0)">
+<g transform="translate(1026.2 2766.8)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(988.5 1229.0)">
+<g transform="translate(988.5 2766.8)">
 <title>faction: garhammar-trade-league</title>
 <use href="#pov_garhammar-trade-league" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(959.5 1233.4)">
+<g transform="translate(959.5 2771.2)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(921.7 1229.0)">
+<g transform="translate(921.7 2766.8)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g class="public-indicator" transform="translate(138.2 1412.0)">
+<g class="public-indicator" transform="translate(138.2 2858.5)">
 <use href="#tag_public" width="12.5" height="12.5"/>
 </g>
-<g transform="translate(500.2 1412.0)">
+<g transform="translate(500.2 2858.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 1416.4)">
+<g transform="translate(471.2 2862.9)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 1412.0)">
+<g transform="translate(433.5 2858.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1037.0 1356.4)">
+<g transform="translate(1037.0 2894.2)">
 <title>tag: infrastructure</title>
 <use href="#tag_infrastructure" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(999.2 1352.0)">
+<g transform="translate(999.2 2889.8)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1535.0)">
+<g transform="translate(500.2 2981.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 1539.4)">
+<g transform="translate(471.2 2985.9)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 1535.0)">
+<g transform="translate(433.5 2981.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1020.2 1451.0)">
+<g transform="translate(1020.2 2988.8)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(991.2 1455.4)">
+<g transform="translate(991.2 2993.2)">
 <title>tag: economy</title>
 <use href="#tag_economy" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(953.4 1451.0)">
+<g transform="translate(953.4 2988.8)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1646.0)">
+<g transform="translate(500.2 3092.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 1650.4)">
+<g transform="translate(471.2 3096.9)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 1646.0)">
+<g transform="translate(433.5 3092.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1014.4 1550.0)">
+<g transform="translate(1014.4 3087.8)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(985.4 1554.4)">
+<g transform="translate(985.4 3092.2)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(947.6 1550.0)">
+<g transform="translate(947.6 3087.8)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1745.0)">
+<g transform="translate(500.2 3191.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 1749.4)">
+<g transform="translate(471.2 3195.9)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 1745.0)">
+<g transform="translate(433.5 3191.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1026.2 1649.0)">
+<g transform="translate(1026.2 3186.8)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(997.2 1653.4)">
+<g transform="translate(997.2 3191.2)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(959.5 1649.0)">
+<g transform="translate(959.5 3186.8)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(500.2 1856.0)">
+<g transform="translate(500.2 3302.5)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 1860.4)">
+<g transform="translate(471.2 3306.9)">
 <title>tag: conflict</title>
 <use href="#tag_conflict" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(433.5 1856.0)">
+<g transform="translate(433.5 3302.5)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(1003.8 1748.0)">
+<g transform="translate(1003.8 3285.8)">
 <title>faction: rakthok-horde</title>
 <use href="#pov_rakthok-horde" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(974.8 1752.4)">
+<g transform="translate(974.8 3290.2)">
 <title>tag: crime</title>
 <use href="#tag_crime" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(937.1 1748.0)">
+<g transform="translate(937.1 3285.8)">
 <title>faction: calderon-imperium</title>
 <use href="#pov_calderon-imperium" width="33.8" height="33.8"/>
 </g>
 </g>
 <g id="ticks">
-<line class="tick" x1="590.0" y1="1937.0" x2="610.0" y2="1937.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1942.0">
+<line class="tick" x1="590.0" y1="3384.0" x2="610.0" y2="3384.0"/>
+<text class="tick-label tick-label-outline" x="616.0" y="3389.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">260</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1942.0">
+<text class="tick-label" x="616.0" y="3389.0">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">260</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1787.6" x2="610.0" y2="1787.6"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1792.6">
+<line class="tick" x1="590.0" y1="3120.7" x2="610.0" y2="3120.7"/>
+<text class="tick-label tick-label-outline" x="616.0" y="3125.7">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1792.6">
+<text class="tick-label" x="616.0" y="3125.7">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">270</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1638.3" x2="610.0" y2="1638.3"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1643.3">
+<line class="tick" x1="590.0" y1="2857.4" x2="610.0" y2="2857.4"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2862.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">280</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1643.3">
+<text class="tick-label" x="616.0" y="2862.4">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">280</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1488.9" x2="610.0" y2="1488.9"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1493.9">
+<line class="tick" x1="590.0" y1="2594.1" x2="610.0" y2="2594.1"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2599.1">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">290</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1493.9">
+<text class="tick-label" x="616.0" y="2599.1">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">290</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1339.5" x2="610.0" y2="1339.5"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1344.5">
+<line class="tick" x1="590.0" y1="2330.8" x2="610.0" y2="2330.8"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2335.8">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">300</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1344.5">
+<text class="tick-label" x="616.0" y="2335.8">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">300</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1190.1" x2="610.0" y2="1190.1"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1195.1">
+<line class="tick" x1="590.0" y1="2067.5" x2="610.0" y2="2067.5"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2072.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">310</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1195.1">
+<text class="tick-label" x="616.0" y="2072.5">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">310</tspan>
 </text>
-<line class="tick" x1="590.0" y1="1040.8" x2="610.0" y2="1040.8"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1045.8">
+<line class="tick" x1="590.0" y1="1804.2" x2="610.0" y2="1804.2"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1809.2">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">320</tspan>
 </text>
-<text class="tick-label" x="616.0" y="1045.8">
+<text class="tick-label" x="616.0" y="1809.2">
 <tspan class="tick-glyph">ᛏ</tspan><tspan class="tick-number">320</tspan>
 </text>
-<line class="tick" x1="590.0" y1="936.2" x2="610.0" y2="936.2"/>
-<text class="tick-label tick-label-outline" x="616.0" y="941.2">
+<line class="tick" x1="590.0" y1="1619.8" x2="610.0" y2="1619.8"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1624.8">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">0</tspan>
 </text>
-<text class="tick-label" x="616.0" y="941.2">
+<text class="tick-label" x="616.0" y="1624.8">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">0</tspan>
 </text>
-<line class="tick" x1="590.0" y1="786.9" x2="610.0" y2="786.9"/>
-<text class="tick-label tick-label-outline" x="616.0" y="791.9">
+<line class="tick" x1="590.0" y1="1356.5" x2="610.0" y2="1356.5"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1361.5">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">10</tspan>
 </text>
-<text class="tick-label" x="616.0" y="791.9">
+<text class="tick-label" x="616.0" y="1361.5">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">10</tspan>
 </text>
-<line class="tick" x1="590.0" y1="637.5" x2="610.0" y2="637.5"/>
-<text class="tick-label tick-label-outline" x="616.0" y="642.5">
+<line class="tick" x1="590.0" y1="1093.2" x2="610.0" y2="1093.2"/>
+<text class="tick-label tick-label-outline" x="616.0" y="1098.2">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">20</tspan>
 </text>
-<text class="tick-label" x="616.0" y="642.5">
+<text class="tick-label" x="616.0" y="1098.2">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">20</tspan>
 </text>
-<line class="tick" x1="590.0" y1="488.1" x2="610.0" y2="488.1"/>
-<text class="tick-label tick-label-outline" x="616.0" y="493.1">
+<line class="tick" x1="590.0" y1="829.9" x2="610.0" y2="829.9"/>
+<text class="tick-label tick-label-outline" x="616.0" y="834.9">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">30</tspan>
 </text>
-<text class="tick-label" x="616.0" y="493.1">
+<text class="tick-label" x="616.0" y="834.9">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">30</tspan>
 </text>
-<line class="tick" x1="590.0" y1="338.7" x2="610.0" y2="338.7"/>
-<text class="tick-label tick-label-outline" x="616.0" y="343.7">
+<line class="tick" x1="590.0" y1="566.6" x2="610.0" y2="566.6"/>
+<text class="tick-label tick-label-outline" x="616.0" y="571.6">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">40</tspan>
 </text>
-<text class="tick-label" x="616.0" y="343.7">
+<text class="tick-label" x="616.0" y="571.6">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">40</tspan>
 </text>
-<line class="tick" x1="590.0" y1="189.4" x2="610.0" y2="189.4"/>
-<text class="tick-label tick-label-outline" x="616.0" y="194.4">
+<line class="tick" x1="590.0" y1="303.3" x2="610.0" y2="303.3"/>
+<text class="tick-label tick-label-outline" x="616.0" y="308.3">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<text class="tick-label" x="616.0" y="194.4">
+<text class="tick-label" x="616.0" y="308.3">
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
 <line class="tick" x1="590.0" y1="40.0" x2="610.0" y2="40.0"/>
