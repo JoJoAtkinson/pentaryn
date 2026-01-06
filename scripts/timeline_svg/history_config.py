@@ -20,6 +20,7 @@ class HistoryView:
     sort_direction: Optional[str]
     max_summary_lines: Optional[int]
     svg: Optional[str]
+    svg_access: Optional[str] = None
     hide_time_measurements: bool = False
 
 
@@ -30,6 +31,10 @@ class HistoryConfig:
     present_month: int | None = None
     present_day: int | None = None
     hide_time_measurements: bool = False
+    svg_output_dir: str | None = None
+    svg_public_template: str | None = None
+    svg_private_template: str | None = None
+    svg_access_default: str | None = None
 
 
 def load_history_config(path: Path) -> HistoryConfig:
@@ -50,6 +55,29 @@ def load_history_config(path: Path) -> HistoryConfig:
         hide_time_measurements = False
     if not isinstance(hide_time_measurements, bool):
         raise SystemExit(f"{path}: hide_time_measurements must be a boolean")
+
+    svg_output_dir = raw.get("svg_output_dir")
+    if svg_output_dir is not None and not isinstance(svg_output_dir, str):
+        raise SystemExit(f"{path}: svg_output_dir must be a string")
+    svg_output_dir = (svg_output_dir or "").strip() or None
+
+    svg_public_template = raw.get("svg_public_template")
+    if svg_public_template is not None and not isinstance(svg_public_template, str):
+        raise SystemExit(f"{path}: svg_public_template must be a string")
+    svg_public_template = (svg_public_template or "").strip() or None
+
+    svg_private_template = raw.get("svg_private_template")
+    if svg_private_template is not None and not isinstance(svg_private_template, str):
+        raise SystemExit(f"{path}: svg_private_template must be a string")
+    svg_private_template = (svg_private_template or "").strip() or None
+
+    svg_access_default = raw.get("svg_access_default")
+    if svg_access_default is not None and not isinstance(svg_access_default, str):
+        raise SystemExit(f"{path}: svg_access_default must be a string")
+    svg_access_default = (svg_access_default or "").strip().lower() or None
+    if svg_access_default is not None and svg_access_default not in {"legacy", "public", "private"}:
+        raise SystemExit(f"{path}: svg_access_default must be one of: legacy, public, private")
+
     views_raw = raw.get("views") or []
     if not isinstance(views_raw, list) or not views_raw:
         raise SystemExit(f"{path}: no [[views]] entries found")
@@ -105,6 +133,9 @@ def load_history_config(path: Path) -> HistoryConfig:
             if max_summary_lines < -1:
                 raise SystemExit(f"{path}: view '{view_id}' max_summary_lines must be -1 (unlimited) or >= 0")
         svg = (str(item.get("svg")).strip() if item.get("svg") is not None else None) or None
+        svg_access = (str(item.get("svg_access")).strip().lower() if item.get("svg_access") is not None else None) or None
+        if svg_access is not None and svg_access not in {"legacy", "public", "private"}:
+            raise SystemExit(f"{path}: view '{view_id}' svg_access must be one of: legacy, public, private")
         view_hide_time = item.get("hide_time_measurements")
         if view_hide_time is None:
             view_hide_time = item.get("hide_time_measurments")
@@ -126,6 +157,7 @@ def load_history_config(path: Path) -> HistoryConfig:
                 sort_direction=sort_direction,
                 max_summary_lines=max_summary_lines,  # type: ignore[arg-type]
                 svg=svg,
+                svg_access=svg_access,
                 hide_time_measurements=view_hide_time,
             )
         )
@@ -136,4 +168,8 @@ def load_history_config(path: Path) -> HistoryConfig:
         present_month=present_month,
         present_day=present_day,
         hide_time_measurements=hide_time_measurements,
+        svg_output_dir=svg_output_dir,
+        svg_public_template=svg_public_template,
+        svg_private_template=svg_private_template,
+        svg_access_default=svg_access_default,
     )

@@ -2,15 +2,29 @@ present_year = 4327
 present_month = 10
 present_day = 16
 
+# SVG output naming for publishing.
+# - `svg_access = "public"`  → uses `svg_public_template`
+# - `svg_access = "private"` → uses `svg_private_template` (stable hash-based name)
+# Templates are relative to this config's folder (so `../docs/...` writes into the Pages site).
+svg_output_dir = "docs"
+svg_access_default = "public"
+
+# Templates are relative to `svg_output_dir` (repo-root relative).
+# Use `{scope}` to avoid collisions across multiple `_history.config.toml` scopes.
+svg_public_template = "history.{scope}.{id}.svg"
+svg_private_template = "history.{scope}.{title_slug}.{hash}.svg"
+
 [[views]]
 id = "public"
 title = "World History (Public)"
 tags_all = ["public"]
+svg = "history.public.svg"
 tick_scale = "century"
 tick_spacing_px = 72
 sort_direction = "desc"
 
 [[views]]
+svg_access = "private"
 id = "merrowgate"
 title = "World History (Merrowgate)"
 tags_any = ["public", "merrowgate"]
@@ -24,6 +38,7 @@ last_years = 170
 
 
 [[views]]
+svg_access = "private"
 id = "elven"
 title = "World History (Elven)"
 tags_any = ["public", "araethilion", "sabriel"]
@@ -36,6 +51,7 @@ max_summary_lines = 6
 last_years = 3500
 
 [[views]]
+svg_access = "private"
 id = "elderholt"
 title = "elderholt"
 tags_any = ["public", "elderholt"]
@@ -50,9 +66,11 @@ last_years = 100
 
 
 [[views]]
+svg_access = "public"
 id = "the-compass-edge"
 title = "The Compass Edge (Party)"
 tags_all = ["party", "the-compass-edge"]
+svg = "history.the-compass-edge.svg"
 tick_scale = "day"
 tick_spacing_px = 180
 sort_direction = "desc"

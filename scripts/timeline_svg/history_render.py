@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import collections
 import csv
+import hashlib
 import os
 import re
 import subprocess
@@ -9,7 +10,7 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Sequence
 
-from .history_config import HistoryView, load_history_config
+from .history_config import HistoryConfig, HistoryView, load_history_config
 from .model import ParsedDate
 from .model import BuildConfig, FontPaths, MeasureConfig, RendererConfig
 from .pipeline import build_timeline_svg
@@ -42,6 +43,156 @@ _UNKNOWN_DATE_SENTINELS = {"???", "TBD", "UNKNOWN"}
 
 def _split_tokens(value: str) -> list[str]:
     return [t for t in re.split(r"[;\s]+", (value or "").strip()) if t]
+
+
+def _slugify_filename_part(value: str) -> str:
+    raw = (value or "").strip()
+    if not raw:
+        return "timeline"
+    raw = raw.replace("&", " and ")
+    raw = re.sub(r"[^a-zA-Z0-9]+", "-", raw)
+    raw = re.sub(r"-{2,}", "-", raw).strip("-")
+    return raw.lower() or "timeline"
+
+
+def _write_svg_viewer_html(*, target: Path, title: str, svg_filename: str) -> None:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    safe_title = (title or "").strip() or "Timeline"
+    safe_svg = (svg_filename or "").strip()
+    if not safe_svg:
+        raise ValueError("svg_filename is required")
+
+    target.write_text(
+        f"""<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{safe_title}</title>
+    <style>
+      body {{
+        margin: 0;
+        height: 100vh;
+        overflow: hidden;
+        background: #fbf7ef;
+      }}
+      #controls {{
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        display: flex;
+        gap: 8px;
+        z-index: 10;
+      }}
+      #controls button {{
+        padding: 6px 10px;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+        border-radius: 6px;
+        background: white;
+        cursor: pointer;
+      }}
+      #viewport {{
+        height: 100%;
+        width: 100%;
+        overflow: auto;
+        padding: 24px;
+        box-sizing: border-box;
+      }}
+      #content {{
+        display: inline-block;
+        transform: scale(var(--scale, 1));
+        transform-origin: 0 0;
+      }}
+      #timeline {{
+        display: block;
+        height: auto;
+        max-width: none;
+      }}
+    </style>
+  </head>
+  <body>
+    <div id="controls">
+      <button id="zoomOut" type="button">−</button>
+      <button id="zoomIn" type="button">+</button>
+      <button id="zoomReset" type="button">Reset</button>
+      <button id="zoomFit" type="button">Fit</button>
+    </div>
+    <div id="viewport">
+      <div id="content">
+        <img id="timeline" src="./{safe_svg}" alt="{safe_title}" />
+      </div>
+    </div>
+    <script>
+      const viewport = document.getElementById("viewport");
+      const content = document.getElementById("content");
+      const img = document.getElementById("timeline");
+
+      const MIN_SCALE = 0.2;
+      const MAX_SCALE = 6;
+      const SCALE_STEP = 1.15;
+
+      let scale = 1;
+      function setScale(nextScale, anchor) {{
+        const clamped = Math.max(MIN_SCALE, Math.min(MAX_SCALE, nextScale));
+        if (clamped === scale) return;
+
+        const rect = viewport.getBoundingClientRect();
+        const anchorX = (anchor?.x ?? rect.width / 2) - rect.left;
+        const anchorY = (anchor?.y ?? rect.height / 2) - rect.top;
+
+        const contentX = (viewport.scrollLeft + anchorX) / scale;
+        const contentY = (viewport.scrollTop + anchorY) / scale;
+
+        scale = clamped;
+        content.style.setProperty("--scale", String(scale));
+
+        viewport.scrollLeft = contentX * scale - anchorX;
+        viewport.scrollTop = contentY * scale - anchorY;
+      }}
+
+      function zoomIn(anchor) {{
+        setScale(scale * SCALE_STEP, anchor);
+      }}
+      function zoomOut(anchor) {{
+        setScale(scale / SCALE_STEP, anchor);
+      }}
+      function reset() {{
+        setScale(1);
+      }}
+      function fitToWidth() {{
+        const availableWidth = Math.max(1, viewport.clientWidth - 48);
+        const naturalWidth = img.naturalWidth || img.width || 1;
+        setScale(availableWidth / naturalWidth);
+        viewport.scrollTop = 0;
+        viewport.scrollLeft = 0;
+      }}
+
+      document.getElementById("zoomIn").addEventListener("click", () => zoomIn());
+      document.getElementById("zoomOut").addEventListener("click", () => zoomOut());
+      document.getElementById("zoomReset").addEventListener("click", reset);
+      document.getElementById("zoomFit").addEventListener("click", fitToWidth);
+
+      viewport.addEventListener(
+        "wheel",
+        (e) => {{
+          if (!e.ctrlKey) return;
+          e.preventDefault();
+          const anchor = {{ x: e.clientX, y: e.clientY }};
+          if (e.deltaY < 0) zoomIn(anchor);
+          else zoomOut(anchor);
+        }},
+        {{ passive: false }}
+      );
+
+      img.addEventListener("load", () => {{
+        fitToWidth();
+      }});
+    </script>
+  </body>
+</html>
+""",
+        encoding="utf-8",
+    )
 
 
 def _normalize_date(date_raw: str) -> tuple[str, ParsedDate | None, bool]:
@@ -354,6 +505,10 @@ def render_history_scopes(
     default_present_year = None
     default_present_month = None
     default_present_day = None
+    default_svg_output_dir = None
+    default_svg_public_template = None
+    default_svg_private_template = None
+    default_svg_access_default = None
     world_root_cfg = world_root / "_history.config.toml"
     if world_root_cfg.exists():
         try:
@@ -361,10 +516,59 @@ def render_history_scopes(
             default_present_year = root_cfg.present_year
             default_present_month = root_cfg.present_month
             default_present_day = root_cfg.present_day
+            default_svg_output_dir = root_cfg.svg_output_dir
+            default_svg_public_template = root_cfg.svg_public_template
+            default_svg_private_template = root_cfg.svg_private_template
+            default_svg_access_default = root_cfg.svg_access_default
         except Exception:
             default_present_year = None
 
     pov_catalog = PovCatalog.discover(repo_root=repo_root)
+
+    def resolve_svg_path(*, scope_root: Path, cfg_path: Path, cfg: "HistoryConfig", view: HistoryView) -> Path:
+        output_dir = cfg.svg_output_dir or default_svg_output_dir
+        base_dir = (repo_root / output_dir) if output_dir else scope_root
+
+        if view.svg:
+            return base_dir / view.svg
+
+        access = (view.svg_access or cfg.svg_access_default or default_svg_access_default or "legacy").strip().lower()
+        if access == "legacy":
+            return base_dir / _default_svg_name(view)
+
+        try:
+            scope_rel = scope_root.resolve().relative_to(repo_root.resolve()).as_posix()
+        except ValueError:
+            scope_rel = scope_root.as_posix()
+        scope_slug = scope_rel.strip("/").replace("/", ".") or "root"
+        digest_input = f"{scope_rel}:{view.id}".encode("utf-8", errors="replace")
+        stable_hash = hashlib.sha1(digest_input).hexdigest()[:12]
+        title_slug = _slugify_filename_part(view.title or view.id)
+
+        if access == "public":
+            template = cfg.svg_public_template or default_svg_public_template or f"history.{{id}}.svg"
+        elif access == "private":
+            template = cfg.svg_private_template or default_svg_private_template or f"history.{{hash}}.svg"
+        else:
+            raise SystemExit(f"{cfg_path}: view '{view.id}' svg_access must be one of: legacy, public, private")
+
+        try:
+            rendered = template.format(
+                id=view.id,
+                hash=stable_hash,
+                scope=scope_slug,
+                title=title_slug,
+                title_slug=title_slug,
+            )
+        except Exception as exc:
+            raise SystemExit(
+                f"{cfg_path}: view '{view.id}' invalid svg_*_template: {exc} (supported placeholders: {{id}}, {{hash}}, {{scope}}, {{title_slug}})"
+            ) from exc
+        rendered = str(rendered).strip()
+        if not rendered:
+            raise SystemExit(f"{cfg_path}: view '{view.id}' svg_*_template produced an empty path")
+
+        return base_dir / rendered
 
     for config_path in configs:
         scope_root = config_path.parent
@@ -460,7 +664,7 @@ def render_history_scopes(
                 else:
                     view_build = replace(view_build, axis_max_year=max(view_build.axis_max_year or -10**9, present_year))
 
-            svg_path = scope_root / _default_svg_name(view)
+            svg_path = resolve_svg_path(scope_root=scope_root, cfg_path=config_path, cfg=cfg, view=view)
             tsv_path = _debug_tsv_path(repo_root, scope_root, view.id)
             if debug_write_tsv:
                 _write_svg_export(tsv_path, filtered)
@@ -478,3 +682,13 @@ def render_history_scopes(
                 pov_catalog=pov_catalog,
                 scope_pov=scope_pov,
             )
+
+            # Convenience for sharing: if the SVG output is "published" (public/private),
+            # also write a sibling HTML viewer with zoom controls.
+            resolved_access = (view.svg_access or cfg.svg_access_default or default_svg_access_default or "legacy").strip().lower()
+            if resolved_access in {"public", "private"}:
+                try:
+                    html_path = svg_path.with_suffix(".html")
+                    _write_svg_viewer_html(target=html_path, title=view.title, svg_filename=svg_path.name)
+                except Exception as exc:
+                    raise SystemExit(f"{config_path}: failed to write HTML viewer for view '{view.id}': {exc}") from exc

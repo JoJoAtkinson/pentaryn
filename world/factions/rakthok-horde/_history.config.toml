@@ -9,6 +9,7 @@ border = "#2aa7a1"
 [[views]]
 id = "rakthok"
 title = "Rakthok Horde (Rakthok View)"
+svg_access = "private"
 tags_any = ["rakthok-horde", "calderon-imperium"]
 tags_none = ["private"]
 tick_scale = "decade"

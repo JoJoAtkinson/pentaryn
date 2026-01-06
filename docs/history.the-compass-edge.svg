@@ -120,7 +120,7 @@
 <tspan>16 Arethum, Afternoon — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label changed" x="654.0" y="83.5" width="406.1" height="85.0" rx="8" ry="8"/>
+<rect class="label" x="654.0" y="83.5" width="406.1" height="85.0" rx="8" ry="8"/>
 <text class="title" x="670.0" y="112.5">
 <tspan x="670.0" dy="0.0">Confrontation with Giant Spider</tspan>
 </text>
