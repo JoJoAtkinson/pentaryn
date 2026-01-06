@@ -7,19 +7,121 @@
     <style>
       body {
         margin: 0;
-        padding: 24px;
-        display: flex;
-        justify-content: center;
+        height: 100vh;
+        overflow: hidden;
         background: #fbf7ef;
       }
-      img {
+      #controls {
+        position: fixed;
+        top: 12px;
+        right: 12px;
+        display: flex;
+        gap: 8px;
+        z-index: 10;
+      }
+      #controls button {
+        padding: 6px 10px;
+        border: 1px solid rgba(0, 0, 0, 0.2);
+        border-radius: 6px;
+        background: white;
+        cursor: pointer;
+      }
+      #viewport {
+        height: 100%;
         width: 100%;
-        max-width: 1200px;
+        overflow: auto;
+        padding: 24px;
+        box-sizing: border-box;
+      }
+      #content {
+        display: inline-block;
+        transform: scale(var(--scale, 1));
+        transform-origin: 0 0;
+      }
+      #timeline {
+        display: block;
         height: auto;
+        max-width: none;
       }
     </style>
   </head>
   <body>
-    <img src="./history.the-compass-edge.svg" alt="The Compass Edge timeline" />
+    <div id="controls">
+      <button id="zoomOut" type="button">−</button>
+      <button id="zoomIn" type="button">+</button>
+      <button id="zoomReset" type="button">Reset</button>
+      <button id="zoomFit" type="button">Fit</button>
+    </div>
+    <div id="viewport">
+      <div id="content">
+        <img id="timeline" src="./history.the-compass-edge.svg" alt="The Compass Edge timeline" />
+      </div>
+    </div>
+    <script>
+      const viewport = document.getElementById("viewport");
+      const content = document.getElementById("content");
+      const img = document.getElementById("timeline");
+
+      const MIN_SCALE = 0.2;
+      const MAX_SCALE = 6;
+      const SCALE_STEP = 1.15;
+
+      let scale = 1;
+      function setScale(nextScale, anchor) {
+        const clamped = Math.max(MIN_SCALE, Math.min(MAX_SCALE, nextScale));
+        if (clamped === scale) return;
+
+        const rect = viewport.getBoundingClientRect();
+        const anchorX = (anchor?.x ?? rect.width / 2) - rect.left;
+        const anchorY = (anchor?.y ?? rect.height / 2) - rect.top;
+
+        const contentX = (viewport.scrollLeft + anchorX) / scale;
+        const contentY = (viewport.scrollTop + anchorY) / scale;
+
+        scale = clamped;
+        content.style.setProperty("--scale", String(scale));
+
+        viewport.scrollLeft = contentX * scale - anchorX;
+        viewport.scrollTop = contentY * scale - anchorY;
+      }
+
+      function zoomIn(anchor) {
+        setScale(scale * SCALE_STEP, anchor);
+      }
+      function zoomOut(anchor) {
+        setScale(scale / SCALE_STEP, anchor);
+      }
+      function reset() {
+        setScale(1);
+      }
+      function fitToWidth() {
+        const availableWidth = Math.max(1, viewport.clientWidth - 48);
+        const naturalWidth = img.naturalWidth || img.width || 1;
+        setScale(availableWidth / naturalWidth);
+        viewport.scrollTop = 0;
+        viewport.scrollLeft = 0;
+      }
+
+      document.getElementById("zoomIn").addEventListener("click", () => zoomIn());
+      document.getElementById("zoomOut").addEventListener("click", () => zoomOut());
+      document.getElementById("zoomReset").addEventListener("click", reset);
+      document.getElementById("zoomFit").addEventListener("click", fitToWidth);
+
+      viewport.addEventListener(
+        "wheel",
+        (e) => {
+          if (!e.ctrlKey) return;
+          e.preventDefault();
+          const anchor = { x: e.clientX, y: e.clientY };
+          if (e.deltaY < 0) zoomIn(anchor);
+          else zoomOut(anchor);
+        },
+        { passive: false }
+      );
+
+      img.addEventListener("load", () => {
+        fitToWidth();
+      });
+    </script>
   </body>
 </html>
