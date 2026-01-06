@@ -15,6 +15,10 @@ Thumbs.db
 
 .timeline_data/
 output/
+# Generated timeline SVGs should publish into `docs/` (Pages), not under `world/`.
+world/**/_history.*.svg
+world/**/_timeline.*.svg
+
 # Editor Files
 .idea/
 *.swp

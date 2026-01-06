@@ -21,6 +21,13 @@ SVG-first workflow:
 - Put `_history.config.toml` in any `world/**` folder to render SVG views for that folder scope (that folder + subfolders).
 - Running `scripts/build_timeline_svg.py` discovers all `_history.config.toml` files under `world/` and writes SVGs next to them.
   - Optional: set `present_year = 4327` (or similar) at the top of `world/_history.config.toml` to extend axis/ticks to “now” for all scopes (sub-scope configs inherit it unless they override).
+  - Optional: per-view SVG naming for publishing/obfuscation:
+    - Set `svg_output_dir = "docs"` to write *all* rendered SVGs into a single folder (repo-root relative). Sub-scopes inherit this from `world/_history.config.toml` by default.
+    - Set `svg_access_default = "public"` (or `private`) to control the default behavior for views that don’t specify `svg_access`.
+    - Set `svg_access = "public"` to name the file from the view id (no leading underscore by default).
+    - Set `svg_access = "private"` to name the file using a stable hash (so it’s not easily guessable).
+    - Customize output patterns with `svg_public_template` / `svg_private_template` at the config root. Templates are relative to `svg_output_dir` (or the config folder if unset) and support `{id}`, `{hash}`, `{scope}`, `{title_slug}`.
+    - When `svg_access` is `public` or `private`, the renderer also writes a sibling HTML viewer (`.html`) next to the SVG for easy sharing (includes zoom controls).
 
 Debug:
 
