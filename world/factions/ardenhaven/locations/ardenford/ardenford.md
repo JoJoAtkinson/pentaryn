@@ -1,6 +1,6 @@
 ---
 created: 2025-12-07
-last-modified: 2025-12-29
+last-modified: 2026-01-10
 tags: ["#world", "#location", "#capital", "#ardenford"]
 status: complete
 ---
@@ -103,7 +103,7 @@ The Council of Consuls **rotates their meetings** between different keeps to avo
 
 ### Named Keeps 
 
-**Harrowick Keep**
+**[Harrowick Keep](harrowick-keep.md)**
 - **Location:** Upper Tier, northeastern edge
 - **Purpose:** Military command and training center
 - **Owner:** Funded by the federal government post-war
@@ -227,10 +227,12 @@ The library maintains records of **known ruin sites**, including reports from ad
 > **"Harbor air eats fancy steel. Mine’s made to live in it."**
 
 **Location:** Lower Tier, off the harbor lanes  
-**Owner:** [Branik Ironweld](../npc/branik-ironweld-anvil-and-oar.md)  
+**Owner:** Branik Ironweld  
 **What it is:** Working smithy for weapons, fittings, and repairs
 
 If Ardenford needs spearheads in bulk, a blade re-peened after a bad parry, or a set of armor straps replaced before patrol, this is where it ends up. The forge runs hot, the prices are plain, and Branik’s patience ends the moment someone asks for “a legendary edge for a discount.”
+
+**Full location:** [The Anvil & Oar](shops/the-anvil-and-oar.md)
 
 ---
 
@@ -239,10 +241,53 @@ If Ardenford needs spearheads in bulk, a blade re-peened after a bad parry, or a
 > **"If you can’t explain what it does, you don’t get to carry it."**
 
 **Location:** Upper Tier, near the Concordance Library  
-**Proprietor:** [Selise Dawnquill](../npc/selise-dawnquill-silverbridge-arcana.md)  
+**Proprietor:** Selise Dawnquill (seh-LEESS dawn-KWILL)  
 **What it is:** Arcane supplies, scrolls, and scribing services
 
 Silverbridge Arcana is where adventurers go when they want to be prepared instead of lucky: component pouches, warded document cases, and a small, carefully curated selection of scrolls. Everything comes with a receipt and a warning label.
+
+**Full location:** [Silverbridge Arcana](shops/silverbridge-arcana.md)
+
+---
+
+### Willowglass Apothecary
+
+> **"Hold still. Tell me the truth. Then we fix it."**
+
+**Location:** Middle Tier, near the Western Market lanes  
+**Proprietor:** Hesta (HESS-tuh) Briarvein (BRY-ur-vayn)  
+**What it is:** Alchemy, salves, draughts, and discreet consultations
+
+Willowglass is where half the Middle Tier goes for the problems they don’t want to explain in public. The window bottles are green, the shop smells like dried herbs, and the vials catch light like river glass.
+
+**Full location:** [Willowglass Apothecary](shops/willowglass-apothecary.md)
+
+---
+
+### Thar'kar Taproom — The Valley Guidehouse
+
+> **"You want a guide? Go east. Don’t waste their time."**
+
+**Location:** Eastern edge of Ardenford, on the road toward the eastern valley approaches  
+**What it is:** Dwarven taproom and the city’s informal hiring spot for valley guides and porters
+
+Not an inn—no beds, no lingering. Just mugs, stew, and dwarves who know the valley well enough to tell you when your plan is going to get you killed.
+
+**Full location:** [Thar'kar Taproom](shops/tharkar-taproom.md)
+
+---
+
+
+
+### [The Leafscript Cabinet](leafscript-cabinet.md) (Elven Curios)
+
+> **"If the leaf-strokes are wrong, I won’t sell it. If they’re right, I won’t stop talking about it."**
+
+**Location:** Upper Tier, scholar-and-scribe lanes near the Concordance Library  
+**Proprietors:** Khorin Bar’dur (KOH-rin BAR-door) and Thessa Kraghammar (THESS-ah KRAG-ham-mer)  
+**What it is:** Worldly curios with an elven focus—especially quality staves and language work
+
+A small, meticulous shop where labels are written twice (Common and careful elven script) and every item comes with a story—whether you asked for it or not. If you need an **elven-made quarterstaff or walking staff**, this is the most reliable place in Ardenford to start.
 
 ---
 

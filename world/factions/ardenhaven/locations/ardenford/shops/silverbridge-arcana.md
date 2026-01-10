@@ -1,37 +1,36 @@
 ---
 created: 2026-01-01
-last-modified: 2026-01-01
-tags: ["#npc", "#character", "#ardenhaven", "#ardenford", "#magic", "#shop", "#spellcasting"]
+last-modified: 2026-01-10
+tags: ["#location", "#ardenhaven", "#ardenford", "#shop", "#magic", "#spellcasting"]
 status: draft
 ---
 
-# Selise Dawnquill (seh-LEESS dawn-KWILL) — Silverbridge Arcana
+# Silverbridge Arcana
 
-An impeccably polite shopkeep with the gaze of someone who has read too many disaster reports and decided to prevent the next one.
+A clean, well-lit storefront that smells of wax, vellum, and faint ozone. Everything has a label. Everything has a waiver.
+
+## Proprietor
+
+Selise Dawnquill (seh-LEESS dawn-KWILL).
 
 ## Identity
 
 | Attribute | Value |
 |---|---|
-| **Race** | Half-Elf |
-| **Role** | Arcane vendor / scribe |
-| **Alignment** | Neutral Good |
-| **Location** | [Ardenford](../locations/ardenford.md) (Upper Tier, a short walk from the Concordance Library) |
+| **Type** | Arcane vendor / scribe |
+| **Location** | [Ardenford](../ardenford.md) (Upper Tier, a short walk from the Concordance Library) |
 | **Affiliation** | Ardenhaven (registered scribe; charter-compliant) |
-| **Languages** | Common, Elvish, Draconic (reading) |
 
-## The Shop: Silverbridge Arcana
-
-A clean, well-lit storefront that smells of wax, vellum, and faint ozone. Everything has a label. Everything has a waiver.
+## Shop Offerings
 
 - **Sells:** Spell scrolls (limited selection), inks, paper, quills, component pouches, focus repair, warded cases, reference pamphlets.
 - **Services:** Copying mundane documents; verifying seals; identifying “obvious” magical hazards (for a fee and a signature).
 
-### Random Finds (Spell-Counter Stock)
+## Random Finds (Spell-Counter Stock)
 
 When the party “browses the counter,” roll on one table (or pick). Selise keeps only a few items on open display; anything more serious comes from behind the counter with a signature, a receipt, and (sometimes) a refusal.
 
-#### Level 1 (d20) — common, curated for “prepared, not reckless”
+### Level 1 (d20) — common, curated for “prepared, not reckless”
 
 | d20 | Find |
 |---:|---|
@@ -56,7 +55,7 @@ When the party “browses the counter,” roll on one table (or pick). Selise ke
 | 19 | **Customer return:** a slightly singed scroll sleeve at a discount, with a story. |
 | 20 | **Shelf oddity:** a “lesson scroll” that explains a spell but does not cast it. |
 
-#### Level 2 (d12) — uncommon, behind the counter
+### Level 2 (d12) — uncommon, behind the counter
 
 | d12 | Find |
 |---:|---|
@@ -73,7 +72,7 @@ When the party “browses the counter,” roll on one table (or pick). Selise ke
 | 11 | **Library referral chit:** legitimate paperwork that opens a door (briefly). |
 | 12 | **“Waiver bundle”:** pre-written forms for hazardous purchases (Selise is pleased). |
 
-#### Level 3 (d8) — rare-ish, usually by request
+### Level 3 (d8) — rare-ish, usually by request
 
 | d8 | Find |
 |---:|---|
@@ -86,7 +85,7 @@ When the party “browses the counter,” roll on one table (or pick). Selise ke
 | 7 | **Scribe’s midnight ink (1 dose):** writing fades after a day unless sealed. |
 | 8 | **Tamper bell-charm:** rings softly if a case/sleeve is opened without the key. |
 
-#### Level 4 (d6) — very rare in the shop
+### Level 4 (d6) — very rare in the shop
 
 | d6 | Find |
 |---:|---|
@@ -97,7 +96,7 @@ When the party “browses the counter,” roll on one table (or pick). Selise ke
 | 5 | **Runic stencil plates:** precise templates for repeating a symbol consistently. |
 | 6 | **Library-only sleeve:** sealed with charter wax; “do not open without authorization.” |
 
-#### Level 5 (d4) — almost never on the shelf
+### Level 5 (d4) — almost never on the shelf
 
 | d4 | Find |
 |---:|---|
@@ -106,20 +105,20 @@ When the party “browses the counter,” roll on one table (or pick). Selise ke
 | 3 | **True-name ink (one dose):** writing burns slightly; attracts attention if misused. |
 | 4 | **“Not for retail” case:** sealed and addressed to someone else (and Selise knows it). |
 
-## Personality
+## Selise (Quick Notes)
 
 - **Traits:** Calm, precise, unfailingly courteous.
 - **Ideals:** Magic is a civic responsibility, not a private thrill.
 - **Bonds:** Maintains a standing agreement with the Concordance Library for controlled access to reference texts.
 - **Flaws:** Keeps customers at arm’s length; will refuse service if she thinks you’re reckless—even if you can pay.
 
-## Using Selise in Play
+## Using in Play
 
 - **Quest hook:** A batch of counterfeit scrolls is circulating in the Lower Tier. Selise wants them stopped quietly before the Council turns it into a crackdown.
 - **What she knows:** Which adventuring parties file reports with the library, who buys anti-undead supplies, and which “harmless trinkets” keep showing up from the same ruin site.
 
 ## Related Links
 
-- [Ardenford](../locations/ardenford.md)
-- [Ardenhaven](../_overview.md)
-- [Elarion Faenwynd](elarian-faenwynd.md)
+- [Ardenford](../ardenford.md)
+- [Ardenhaven](../../_overview.md)
+- [Elarion Faenwynd](../../npc/elarian-faenwynd.md)
