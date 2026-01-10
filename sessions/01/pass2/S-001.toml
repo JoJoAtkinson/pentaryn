@@ -1,0 +1,152 @@
+start_seconds = 120.834
+location = "The Wayward Compass inn/tavern, Ardenford (Middle Tier)"
+goal = "Meet other adventurers, get food, and form a party by checking the job/writ board"
+npcs_present = [
+    "Thorgrim Ledger-Scar (barkeep)",
+]
+time_of_day = "morning"
+emotional_tone = "casual"
+conflict_type = "social"
+notes = """Bazgar enters the Wayward Compass, meets Marwen and Sabriel over mixed-up food orders, introduces
+themselves, and the group decides to take the Border Patrol undead job after reading the writ board."""
+scene_id = "S-001"
+end_seconds = 2633.619
+summary = """Bazgar, a Rakthok half-orc warrior, arrives at the Wayward Compass and sizes up the room. He notices
+two other capable-looking patrons—Marwen Ashcroft and a veiled traveler who later introduces
+themself as Sabriel. A mix-up with food orders draws them together at one table, where they exchange
+introductions and discuss needing coin. They review the writ board’s three jobs (goblin sheep raids,
+giant spiders at a lumber camp, and an undead sighting for the border patrol) and agree to pursue
+the time-sensitive undead report first. They confirm directions with the barkeep Thorgrim and
+arrange stabling for Sabriel’s pony before setting out toward the eastern patrol watchtower."""
+outcome = """After choosing the border patrol undead job, the newly formed group leaves the Wayward Compass and
+heads out of the city toward the eastern watchtower."""
+
+[[requested_resources]]
+keyword = "The Wayward Compass"
+requested_path = "world/factions/ardenhaven/locations/ardenford.md"
+
+[[requested_resources]]
+keyword = "Thorgrim"
+requested_path = "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md"
+
+[[requested_resources]]
+keyword = "Writ Board / Sheep raids / Spiders / Border Patrol — Undead sighting"
+requested_path = "world/factions/ardenhaven/quests/writ-board-cr1.md"
+
+[[requested_resources]]
+keyword = "Goblin Raid (Maren Redwick, Redwick Farm)"
+requested_path = "world/factions/ardenhaven/quests/goblin-raid-cr1.md"
+
+[[requested_resources]]
+keyword = "Spider Lair (Gareth Thorne, lumber camp, Miller's Creek)"
+requested_path = "world/factions/ardenhaven/quests/spider-lair-cr1.md"
+
+[[requested_resources]]
+keyword = "Restless Dead (Renn Caldor, eastern valley, old battlefield)"
+requested_path = "world/factions/ardenhaven/quests/restless-dead-cr1.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.74
+speculation_level = "low"
+
+[location_intelligence]
+name = "The Wayward Compass inn/tavern, Ardenford (Middle Tier)"
+known_details = [
+    "A writ/job board is mounted on the wall with multiple postings for adventurers.",
+    "The common room has tables around an open central area intended to keep scuffles from breaking furniture.",
+    "The barkeep is a dwarf named Thorgrim Ledger-Scar.",
+    "The Wayward Compass is located in Ardenford’s Middle Tier.",
+]
+inferred_details = [
+    "The party uses the Compass as a hiring/meetup point because it attracts adventurers looking for work.",
+]
+confidence = 0.88
+
+[[key_events]]
+summary = "Bazgar enters and surveys the tavern, then connects with two other adventurers."
+details = "Bazgar arrives armed and armored, scans the room for potential allies, and spots Marwen watching him and a veiled traveler seated alone at a large table."
+
+[[key_events]]
+summary = "Food-order mix-up brings the three together."
+details = "Their meals arrive incorrectly, prompting them to bring the dishes back and then sit together to share and talk."
+
+[[key_events]]
+summary = "Introductions and quick party formation."
+details = "Bazgar introduces himself as Bazgar, son of Bazrak, of the Dakmarnak; Marwen gives her name as Marwen Ashcroft; the veiled traveler introduces themself as Sabriel and briefly removes the veil before re-covering while traveling."
+
+[[key_events]]
+summary = "They read and compare the writ board notices."
+details = "The group reviews three posted jobs: goblins raiding sheep at Redwick Farm (70 gp), giant spiders at an old lumber camp near Miller’s Creek (80 gp), and an undead sighting in the eastern valley (75 gp) with instructions to inquire with Renn Caldor via the bar."
+
+[[key_events]]
+summary = "They choose the border patrol undead job and get directions."
+details = "They decide the undead report is time-sensitive and ask the barkeep for Renn Caldor’s location; Thorgrim points them to an eastern patrol tower and suggests approaching from higher elevation before leaving the city."
+
+[[key_events]]
+summary = "Sabriel arranges stabling for a pony."
+details = "Sabriel pays Thorgrim for stabling and additional care requirements for their pony, after which Thorgrim takes the animal around back while grumbling."
+
+[character_beats]
+Bazgar = "Direct and pragmatic; seeks allies and pushes the group toward paid work to fund future ruin\ndelving."
+"Marwen Ashcroft" = "Observant and cautious; assesses Bazgar on entry and later expresses interest in ruins and pooling\nresources."
+Sabriel = "Reserved and attention-averse; keeps a veil on in public, reveals their name, and focuses on\npractical needs like stabling and healing."
+
+[[npcs]]
+name = "Thorgrim Ledger-Scar"
+role = "Barkeep/innkeeper of the Wayward Compass"
+interaction = "Serves food, clarifies his name when the notice references 'Torren,' gives directions to Renn Caldor’s eastern patrol tower, and takes payment to stable Sabriel’s pony."
+
+[[loot]]
+item = "None"
+context = "No items were acquired; only payments for food/stabling occurred."
+
+[[information]]
+summary = "Writ board jobs available at the Wayward Compass."
+details = "Three notices are read aloud: (1) Sheep raids—goblins taking ewes near west scrublands/old ruins; meet Maren Redwick at Redwick Farm; 70 gp. (2) Lumber camp clearance—giant spiders at an old camp past Miller’s Creek; ask Gareth Thorne at Western Market (mornings only); 80 gp. (3) Border patrol—undead sighting in eastern valley near an old battlefield; inquire with Renn Caldor via the bar; 75 gp."
+
+[[information]]
+summary = "How to reach Renn Caldor."
+details = "Thorgrim indicates Renn works with the eastern patrol and can be found at a patrol/watchtower on the eastern side; the group will need to leave the city and climb up, with the easiest route starting from higher elevation within the city."
+
+[atmosphere]
+mood = "casual"
+lighting = "morning indoor tavern light"
+sounds = "general tavern conversation and movement"
+
+[grounding]
+transcript_timestamps = [
+    92.0,
+    267.0,
+    600.0,
+    1030.0,
+    1310.0,
+    1740.0,
+    2230.0,
+    2640.0,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/ardenford.md",
+    "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+    "world/factions/ardenhaven/quests/writ-board-cr1.md",
+]
+inferred_content = [
+    "That the open central floor is specifically intended for scuffles without breaking furniture (implied by dialogue about leaving the middle open for fights).",
+    "That the group’s decision constitutes a 'newly formed party' (they agree to take a job together and leave as a group).",
+]
+
+[[plot_threads]]
+thread = "Border Patrol — Undead Sighting (Renn Caldor)"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Lumber Camp Clearance — Spiders (Gareth Thorne)"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Sheep Raids — Goblins (Maren Redwick)"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Ruin delving expedition (needs funding/resources)"
+status = "introduced"

@@ -17,7 +17,7 @@ def discover_latest_session(repo_root: Path = REPO_ROOT) -> Optional[int]:
 
     session_nums: list[int] = []
     for item in sessions_dir.iterdir():
-        if not item.is_dir():
+        if not item.is_dir(): 
             continue
         try:
             session_nums.append(int(item.name))

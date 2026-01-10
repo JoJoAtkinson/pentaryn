@@ -6,7 +6,7 @@ status: draft
 ---
 
 # Favorable 
-jeff-bazgar -- he knows of her 
+jeff-bazgar -- he knows of him 
 
 # Branik Ironweld — The Anvil & Oar
 

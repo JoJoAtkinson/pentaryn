@@ -24,10 +24,12 @@ import argparse
 import json
 import os
 import sys
+import textwrap
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from openai import OpenAI
+import tomlkit
 
 # Add repo root to sys.path for imports
 _SCRIPT_DIR = Path(__file__).resolve().parent
@@ -102,6 +104,116 @@ class SceneSummarizer:
         
         self.client = OpenAI(api_key=self.api_key)
         self._resource_index: Optional[Dict[str, List[Path]]] = None
+    
+    @staticmethod
+    def wrap_text(text: str, max_length: int = 100) -> str:
+        """
+        Wrap text to maximum line length for readable TOML output.
+        Preserves paragraph breaks and wraps long lines naturally.
+        
+        Args:
+            text: Text to wrap
+            max_length: Maximum characters per line
+            
+        Returns:
+            Wrapped text with newlines
+        """
+        if not text or len(text) <= max_length:
+            return text
+        
+        # Split into paragraphs first
+        paragraphs = text.split('\n')
+        wrapped_paragraphs = []
+        
+        for para in paragraphs:
+            if not para.strip():
+                wrapped_paragraphs.append('')
+                continue
+            
+            # Wrap each paragraph
+            wrapped = textwrap.fill(
+                para,
+                width=max_length,
+                break_long_words=False,
+                break_on_hyphens=False
+            )
+            wrapped_paragraphs.append(wrapped)
+        
+        return '\n'.join(wrapped_paragraphs)
+    
+    @staticmethod
+    def format_scene_for_toml(scene: Dict[str, Any], max_line_length: int = 100) -> Dict[str, Any]:
+        """
+        Format scene data for human-readable TOML output.
+        Wraps long strings to reasonable line lengths.
+        Removes None values and empty structures.
+        
+        Args:
+            scene: Scene data dictionary
+            max_line_length: Maximum characters per line for text fields
+            
+        Returns:
+            Formatted scene dictionary
+        """
+        formatted = {}
+        
+        # Text fields to wrap
+        text_fields = [
+            'summary', 'outcome', 'notes',
+            'factual_summary', 'narrative_seed', 'scene_outcome'  # Legacy fields
+        ]
+        
+        # List-of-string fields to wrap individual items
+        list_text_fields = [
+            'key_events', 'information', 'information_gained'
+        ]
+        
+        def clean_value(value):
+            """Remove None values and empty structures recursively."""
+            if value is None:
+                return None
+            elif isinstance(value, dict):
+                cleaned = {k: clean_value(v) for k, v in value.items() if v is not None}
+                return cleaned if cleaned else None
+            elif isinstance(value, list):
+                cleaned = [clean_value(item) for item in value if item is not None]
+                return cleaned if cleaned else None
+            else:
+                return value
+        
+        for key, value in scene.items():
+            if value is None:
+                continue
+                
+            if key in text_fields and isinstance(value, str):
+                formatted[key] = SceneSummarizer.wrap_text(value, max_line_length)
+            elif key in list_text_fields and isinstance(value, list):
+                formatted[key] = [
+                    SceneSummarizer.wrap_text(item, max_line_length) if isinstance(item, str) else item
+                    for item in value
+                ]
+            elif key == 'character_beats' and isinstance(value, dict):
+                # Wrap character beat descriptions
+                formatted[key] = {
+                    char: SceneSummarizer.wrap_text(desc, max_line_length) if isinstance(desc, str) else desc
+                    for char, desc in value.items()
+                }
+            elif key == 'requested_resources' and isinstance(value, list):
+                # Clean up requested_resources to remove None values in override fields
+                cleaned_resources = []
+                for resource in value:
+                    if isinstance(resource, dict):
+                        cleaned = {k: v for k, v in resource.items() if v is not None}
+                        if cleaned:
+                            cleaned_resources.append(cleaned)
+                if cleaned_resources:
+                    formatted[key] = cleaned_resources
+            else:
+                cleaned = clean_value(value)
+                if cleaned is not None:
+                    formatted[key] = cleaned
+        
+        return formatted
     
     def load_transcript(self, filepath: Path) -> List[Dict[str, Any]]:
         """Load transcript from JSONL file."""
@@ -317,8 +429,6 @@ class SceneSummarizer:
 
 {prev_text}
 
-{next_text}
-
 # Resources for This Scene
 
 {resource_text}
@@ -335,88 +445,145 @@ class SceneSummarizer:
 
 # Your Task
 
-Provide a comprehensive summary of THIS scene only. Do NOT summarize previous or future scenes.
+Provide a concise, grounded summary of THIS scene only. Do NOT summarize previous or future scenes.
 
 ## Output Format (JSON)
 
 ```json
 {{
   "scene_id": "{scene_id}",
-  "factual_summary": "2-4 sentence factual summary of what happened",
-  "narrative_seed": "2-3 sentence narrative-style summary with atmosphere and tone",
-  "key_events": [
-    "Specific event 1",
-    "Specific event 2"
-  ],
-  "character_moments": {{
-    "Character Name": "Important character moment or decision"
+  
+  "confidence": {{
+    "factual_accuracy": 0.85,
+    "completeness": 0.70,
+    "speculation_level": "low"
   }},
-  "npcs_encountered": [
+  
+  "location_intelligence": {{
+    "name": "Location name from scene",
+    "known_details": ["detail from transcript", "detail from resources"],
+    "inferred_details": ["logical inference not directly stated"],
+    "confidence": 0.85
+  }},
+  
+  "summary": "Brief factual recap of what happened in this scene",
+  "outcome": "How this scene ended or transitioned",
+  
+  "key_events": [
+    {{
+      "summary": "Brief event summary",
+      "details": "Longer description of what happened"
+    }}
+  ],
+  
+  "character_beats": {{
+    "Character Name": "brief action or trait shown"
+  }},
+  
+  "npcs": [
     {{
       "name": "NPC name",
-      "role": "Brief role/description",
-      "interaction": "How party interacted with them"
+      "role": "Brief role",
+      "interaction": "How party interacted"
     }}
   ],
-  "loot_and_items": [
+  
+  "loot": [
     {{
       "item": "Item name",
-      "description": "What it is",
-      "acquisition": "How it was obtained"
+      "context": "Brief context"
     }}
   ],
-  "information_gained": [
-    "Important piece of information 1",
-    "Important piece of information 2"
+  
+  "information": [
+    {{
+      "summary": "Brief info summary",
+      "details": "Full details and context"
+    }}
   ],
-  "time_passed": "Estimate of in-game time for this scene",
-  "scene_outcome": "How this scene ended or transitioned",
+  
+  "atmosphere": {{
+    "mood": "tense/calm/urgent/etc",
+    "lighting": "brief lighting description",
+    "sounds": "brief sound description"
+  }},
+  
+  "grounding": {{
+    "transcript_timestamps": [2633.619, 2977.76],
+    "resource_refs": ["file.md"],
+    "inferred_content": ["what was logically inferred"]
+  }},
+  
   "plot_threads": [
     {{
-      "thread": "Plot thread name/description",
+      "thread": "Plot thread name",
       "status": "introduced|advanced|resolved|complicated"
     }}
   ]
 }}
 ```
 
-## Important Guidelines
+## Confidence Scoring (REQUIRED)
 
-1. **Focus on in-game content only**
-   - Ignore out-of-character (OOC) chat
-   - Ignore dice rolls and mechanical discussions
-   - Ignore rules clarifications
-   - Focus on narrative events and character actions
-   
-   ### ❌ IGNORE (Out-of-Character):
-   - "I rolled a 15 on perception"
-   - "Should we take a break?"
-   - "That's a cool magic item!"
-   - "I think the DM is hinting at something"
-   - "Can I use my reaction here?"
-   - "Sorry, I was muted"
-   - Rules discussions, table talk, mechanics clarifications
-   - Dice roll results and modifiers
-   - Player commentary about the game itself
+Rate each scene:
+- **factual_accuracy** (0-1): How well does source material support your claims?
+- **completeness** (0-1): Did you capture the full scene or is context missing?
+- **speculation_level**: "low" (mostly transcript), "medium" (some inference), "high" (significant interpretation)
 
-2. **Be specific and detailed**
-   - Include exact names, places, and items mentioned
-   - Capture important dialogue or character reactions
-   - Note decisions made and their reasoning
+## Location Intelligence (REQUIRED)
 
-3. **Maintain both factual and narrative perspectives**
-   - Factual summary: clinical, clear, objective
-   - Narrative seed: atmospheric, evocative, story-ready
+For each location, separate:
+- **known_details**: ONLY from transcript or resource documents
+- **inferred_details**: Logical but not explicitly stated
+- **confidence**: How certain are you about this location (0-1)
 
-4. **Cross-reference with resources**
-   - Use provided context to enrich details
-   - Correct any misidentifications
-   - Add relevant lore connections
+## Brevity Guidelines (IMPORTANT)
 
-5. **Preserve uncertainty**
-   - If the party doesn't know something, reflect that
-   - Mark mysteries and unanswered questions
-   - Note suspicions vs confirmations
+Write concisely without sacrificing accuracy:
+- **summary**: Focus on core actions and outcomes
+- **outcome**: Single clear sentence
+- **key_events**: Action-focused bullets, avoid lengthy descriptions
+- **character_beats**: One key trait/action per PC, not full paragraphs
+- **atmosphere**: Evocative but brief sensory notes
+
+Avoid wordiness:
+- Skip filler phrases ("in order to", "proceeded to", "began to")
+- Use active voice ("party entered" not "party was entering")
+- Eliminate redundancy between fields
+- Don't repeat information from previous summaries
+
+## Grounding Rules (CRITICAL)
+
+For EVERY claim in your summary:
+1. Check if it's directly from transcript → cite timestamp range
+2. Check if it's from resources → note which file
+3. If neither → add to `inferred_content` list
+
+Mark inferences clearly:
+- If you're filling gaps or interpreting, acknowledge it
+- If transcript is unclear, lower confidence scores
+- Don't invent dialogue, NPC actions, or sensory details not in source
+
+## Forbidden Behaviors (NEVER DO THIS)
+
+❌ **Do NOT invent NPC dialogue** not in transcript  
+❌ **Do NOT add sensory details** (smells, textures, colors) unless explicitly mentioned  
+❌ **Do NOT describe emotions or motivations** unless stated by characters  
+❌ **Do NOT repeat the same information** across multiple fields  
+❌ **Do NOT include out-of-character content**:
+   - Dice rolls ("I rolled a 15")
+   - Table talk ("Should we take a break?")
+   - Player commentary ("That's a cool item!")
+   - Rules discussions ("Can I use my reaction?")
+   - Technical issues ("Sorry, I was muted")
+
+## Required Guidelines
+
+1. **In-game narrative only** - filter OOC completely
+2. **Specific and concrete** - use exact names, places, items from transcript
+3. **Preserve uncertainty** - if party doesn't know, say so
+4. **Cross-reference resources** - correct misidentifications using provided docs
+5. **Separate facts from inference** - use grounding and inferred_content fields
 
 Output ONLY valid JSON. No additional commentary.
 """
@@ -434,7 +601,7 @@ Output ONLY valid JSON. No additional commentary.
                 messages=[
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.4,
+                temperature=0.2,  # Lower temperature for more focused, less verbose output
                 response_format={"type": "json_object"}
             )
             
@@ -455,18 +622,31 @@ Output ONLY valid JSON. No additional commentary.
         speakers_cfg: Optional[Dict[str, Any]] = None,
         context_before_seconds: float = 30.0,
         context_after_seconds: float = 30.0,
+        max_line_length: int = 100,
+        scene_filter: Optional[List[int]] = None,
     ) -> List[Dict[str, Any]]:
         """
         Main processing loop: summarize all scenes.
         
         Args:
             speaker_context: Optional speaker identification guidance
+            max_line_length: Maximum line length for text wrapping in TOML
+            scene_filter: Optional list of scene indices to process (0-indexed)
         
         Returns list of scene summaries.
         """
+        # Store max_line_length for later use
+        self._max_line_length = max_line_length
+        
         print(f"Loading Pass 1 results from {pass1_path}...")
         pass1_data = self.load_pass1_results(pass1_path)
         scenes = pass1_data.get("scenes", [])
+        
+        # Apply scene filter if provided
+        if scene_filter is not None:
+            original_count = len(scenes)
+            scenes = [scenes[i] for i in scene_filter if i < len(scenes)]
+            print(f"Filtered to {len(scenes)} scene(s) (from {original_count} total)")
         
         print(f"Loading transcript from {transcript_path}...")
         transcript = self.load_transcript(transcript_path)
@@ -530,23 +710,83 @@ Output ONLY valid JSON. No additional commentary.
             summaries.append(full_summary)
             print(f"  ✓ Complete\n")
         
-        # Save results
-        print(f"Saving {len(summaries)} scene summaries to {output_path}...")
-        output_path.parent.mkdir(parents=True, exist_ok=True)
+        # Save results as TOML files in output directory
+        print(f"Saving {len(summaries)} scene summaries to {output_path}/...")
+        output_path.mkdir(parents=True, exist_ok=True)
         
-        output_data = {
-            "metadata": {
-                "source_pass1": str(pass1_path),
-                "source_transcript": str(transcript_path),
-                "generated": datetime.now().isoformat(),
-                "total_scenes": len(summaries),
-                "model": model
-            },
-            "summaries": summaries
-        }
+        # Save metadata file
+        metadata_file = output_path / "_metadata.toml"
+        metadata = tomlkit.document()
+        metadata_section = tomlkit.table()
+        metadata_section["source_pass1"] = str(pass1_path)
+        metadata_section["source_transcript"] = str(transcript_path)
+        metadata_section["generated"] = datetime.now().isoformat()
+        metadata_section["total_scenes"] = len(summaries)
+        metadata_section["model"] = model
+        metadata["metadata"] = metadata_section
         
-        with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(output_data, f, indent=2, ensure_ascii=False)
+        with open(metadata_file, 'w', encoding='utf-8') as f:
+            f.write(tomlkit.dumps(metadata))
+        print(f"  ✓ Saved metadata to {metadata_file.name}")
+        
+        # Get max line length from config
+        max_line_length = context_before_seconds  # Placeholder, will be passed properly
+        if hasattr(self, '_max_line_length'):
+            max_line_length = self._max_line_length
+        else:
+            max_line_length = 100  # Default
+        
+        # Save each scene as individual TOML file
+        for idx, scene_data in enumerate(summaries):
+            scene_id = scene_data.get('scene_id', f'S-{idx+1:03d}')
+            scene_file = output_path / f"{scene_id}.toml"
+            
+            # Format for human readability
+            formatted_scene = self.format_scene_for_toml(scene_data, max_line_length)
+            
+            # Top-level fields that should use multi-line strings
+            multiline_fields = {
+                'summary', 'outcome', 'notes', 
+                'factual_summary', 'narrative_seed', 'scene_outcome'  # Legacy fields
+            }
+            
+            # Helper to recursively format all arrays as multiline
+            def format_arrays_recursive(obj):
+                """Recursively format all arrays to be multiline."""
+                if isinstance(obj, dict):
+                    result = {}
+                    for k, v in obj.items():
+                        result[k] = format_arrays_recursive(v)
+                    return result
+                elif isinstance(obj, list):
+                    # Check if this is an array of tables (list of dicts)
+                    if all(isinstance(item, dict) for item in obj):
+                        # Array of tables - format each dict recursively
+                        return [format_arrays_recursive(item) for item in obj]
+                    else:
+                        # Simple array - make it multiline
+                        arr = tomlkit.array()
+                        arr.multiline(True)
+                        for item in obj:
+                            arr.append(format_arrays_recursive(item))
+                        return arr
+                else:
+                    return obj
+            
+            # Convert to tomlkit document for better formatting
+            doc = tomlkit.document()
+            for key, value in formatted_scene.items():
+                # Use multiline strings ONLY for specific top-level text fields
+                if key in multiline_fields and isinstance(value, str) and '\n' in value:
+                    doc[key] = tomlkit.string(value, multiline=True)
+                else:
+                    # Format all arrays recursively
+                    doc[key] = format_arrays_recursive(value)
+            
+            with open(scene_file, 'w', encoding='utf-8') as f:
+                f.write(tomlkit.dumps(doc))
+            
+            print(f"  ✓ Saved {scene_file.name}")
         
         print(f"✓ Scene summarization complete!")
         return summaries
@@ -593,6 +833,16 @@ Configuration is read from sessions/{NN}/config.toml
         type=str,
         help="Override model (default: from config)"
     )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        help="Process only the first N scenes (for testing)"
+    )
+    parser.add_argument(
+        "--scenes",
+        type=str,
+        help="Process specific scenes (e.g., '1', '1-3', '1,3,5')"
+    )
     
     parsed_args = parser.parse_args()
     
@@ -625,6 +875,7 @@ Configuration is read from sessions/{NN}/config.toml
 
     context_before = float(config.get("pass2", {}).get("context_before", 30.0))
     context_after = float(config.get("pass2", {}).get("context_after", 30.0))
+    max_line_length = int(config.get("pass2", {}).get("max_line_length", 100))
     
     # Validate pass1 file
     if not pass1_path.exists():
@@ -639,11 +890,27 @@ Configuration is read from sessions/{NN}/config.toml
         print(f"Error: Source transcript not found: {transcript_path}", file=sys.stderr)
         return 1
     
+    # Parse scene selection arguments
+    scene_filter = None
+    if parsed_args.limit:
+        scene_filter = list(range(parsed_args.limit))
+        print(f"Limiting to first {parsed_args.limit} scene(s)")
+    elif parsed_args.scenes:
+        scene_filter = []
+        for part in parsed_args.scenes.split(','):
+            if '-' in part:
+                start, end = map(int, part.split('-'))
+                scene_filter.extend(range(start - 1, end))  # Convert to 0-indexed
+            else:
+                scene_filter.append(int(part) - 1)  # Convert to 0-indexed
+        print(f"Processing scenes: {parsed_args.scenes}")
+    
     print(f"Session: {session_num}")
     print(f"Config: sessions/{session_num:02d}/config.toml")
     print(f"Pass 1 input: {pass1_path}")
     print(f"Transcript: {transcript_path}")
-    print(f"Output: {output_path}")
+    print(f"Output: {output_path}/ (TOML files)")
+    print(f"Max line length: {max_line_length}")
     print()
     
     # Create summarizer and process
@@ -660,10 +927,12 @@ Configuration is read from sessions/{NN}/config.toml
             speakers_cfg=speakers_cfg,
             context_before_seconds=context_before,
             context_after_seconds=context_after,
+            max_line_length=max_line_length,
+            scene_filter=scene_filter,
         )
         
         print(f"\n✓ Successfully summarized {len(summaries)} scenes")
-        print(f"✓ Output saved to: {output_path}")
+        print(f"✓ Output saved to: {output_path}/")
         
     except Exception as e:
         print(f"\n✗ Error: {e}", file=sys.stderr)

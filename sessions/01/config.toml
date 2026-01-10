@@ -50,11 +50,13 @@ overlap = 250
 model = "gpt-5.2"
 
 [pass2]
-output = "sessions/01/pass2.json"
+output = "sessions/01/pass2"  # Folder path (not .json)
 model = "gpt-5.2"
 # Seconds of transcript context before/after each scene
 context_before = 30.0
 context_after = 30.0
+# Maximum line length for text wrapping in TOML output
+max_line_length = 100
 
 [pass3]
 # Write player-facing story output into the story submodule (keeps access control separate)

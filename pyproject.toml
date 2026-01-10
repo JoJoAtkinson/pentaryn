@@ -14,7 +14,8 @@ dependencies = [
   "whisperx",
   "torch",
   "openai",
-  "python-dotenv"
+  "python-dotenv",
+  "tomlkit"
 ]
 
 # Notes on native text layout (RAQM):
