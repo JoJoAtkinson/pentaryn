@@ -1282,9 +1282,39 @@ Configuration is read from sessions/{NN}/config.toml
     pc_dir = REPO_ROOT / "characters" / "player-characters"
     if pc_dir.exists():
         narrative_files = sorted(pc_dir.glob("*.narrative.md"))
-        print(f"  - {len(narrative_files)} narrative file(s) available in characters/player-characters/")
-        for nf in narrative_files:
-            print(f"    • {nf.name}")
+        print(f"  Available files: {len(narrative_files)} narrative file(s) in characters/player-characters/")
+        
+        # Show which POV characters will match to which files
+        def extract_heading_token(markdown: str) -> str:
+            match = re.search(r"(?m)^#\s+(.+)$", markdown)
+            if not match:
+                return ""
+            heading = match.group(1).strip()
+            heading = heading.split("(", 1)[0].strip()
+            token = (heading.split()[:1] or [""])[0].strip()
+            return token
+        
+        voice_by_token = {}
+        for narrative_path in narrative_files:
+            try:
+                pc_text = narrative_path.read_text(encoding="utf-8")
+                token = extract_heading_token(pc_text)
+                if token:
+                    voice_by_token[token.lower()] = narrative_path
+            except Exception:
+                continue
+        
+        print(f"  Character matching:")
+        for char in pov_chars:
+            char_name = str(char).strip()
+            if not char_name:
+                continue
+            token = char_name.split()[0].lower()
+            found = voice_by_token.get(token)
+            if found:
+                print(f"    ✓ {char_name} → {found.name}")
+            else:
+                print(f"    ❌ {char_name} (no matching file)")
     else:
         print(f"  ⚠ No character directory found at {pc_dir}")
     
