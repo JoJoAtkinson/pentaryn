@@ -1,0 +1,28 @@
+# Azure ML audio transcription requirements
+# GPU-enabled packages for NVIDIA T4
+
+# Core ML packages
+torch==2.1.0
+torchaudio==2.1.0
+torchvision==0.16.0
+
+# WhisperX and dependencies
+# Using latest whisperx (3.1.5+) for compatibility with faster-whisper 1.0+
+whisperx
+openai-whisper
+faster-whisper
+transformers<4.46
+pyannote.audio
+
+# Additional dependencies
+pandas
+numpy<2
+scipy
+librosa
+soundfile
+ffmpeg-python
+
+# Azure ML SDK
+azure-ai-ml
+azure-storage-blob
+azure-identity

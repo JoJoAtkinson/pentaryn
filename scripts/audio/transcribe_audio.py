@@ -199,8 +199,8 @@ def transcribe_with_diarization(
 
     logging.info(f"Loading Whisper model: {model_size}")
     stage_start = time.time()
-    # Use Silero VAD by default to avoid PyTorch 2.6+ `weights_only` issues in pyannote VAD checkpoints.
-    model = whisperx.load_model(model_size, device, language="en", compute_type=compute_type, vad_method="silero")
+    # Note: vad_method parameter not available in all WhisperX versions
+    model = whisperx.load_model(model_size, device, language="en", compute_type=compute_type)
     elapsed = time.time() - stage_start
     logging.info(f"✓ Model loaded in {int(elapsed//60)}m {int(elapsed%60)}s")
     
@@ -215,7 +215,7 @@ def transcribe_with_diarization(
     stage_start = time.time()
     # Larger batch_size uses more GPU memory but is faster. Reduce if you get OOM errors.
     # Typical values: 8 (safe), 16 (balanced), 32+ (max speed, needs ~8GB+ VRAM)
-    result = model.transcribe(audio, batch_size=6, print_progress=True, combined_progress=True)
+    result = model.transcribe(audio, batch_size=32, print_progress=True, combined_progress=True)
     elapsed = time.time() - stage_start
     logging.info(f"✓ Transcription complete in {int(elapsed//60)}m {int(elapsed%60)}s")
     
@@ -587,7 +587,7 @@ def main():
     logging.info("Configuration:")
     logging.info(f"{'='*60}")
     logging.info(f"  Model size:        {args.model_size}")
-    logging.info(f"  Batch size:        8 (hardcoded)")
+    logging.info(f"  Batch size:        32 (hardcoded)")
     logging.info(f"  Min speakers:      {args.min_speakers}")
     logging.info(f"  Max speakers:      {args.max_speakers}")
     logging.info(f"  Diarization:       {'enabled' if hf_token else 'disabled'}")

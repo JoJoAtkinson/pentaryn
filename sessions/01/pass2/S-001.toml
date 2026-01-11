@@ -23,7 +23,7 @@ heads out of the city toward the eastern watchtower."""
 
 [[requested_resources]]
 keyword = "The Wayward Compass"
-requested_path = "world/factions/ardenhaven/locations/ardenford.md"
+requested_path = "world/factions/ardenhaven/locations/ardenford/ardenford.md"
 
 [[requested_resources]]
 keyword = "Thorgrim"
@@ -31,19 +31,19 @@ requested_path = "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md"
 
 [[requested_resources]]
 keyword = "Writ Board / Sheep raids / Spiders / Border Patrol — Undead sighting"
-requested_path = "world/factions/ardenhaven/quests/writ-board-cr1.md"
+requested_path = "world/factions/ardenhaven/quests/writ-board-cr1/_board.md"
 
 [[requested_resources]]
 keyword = "Goblin Raid (Maren Redwick, Redwick Farm)"
-requested_path = "world/factions/ardenhaven/quests/goblin-raid-cr1.md"
+requested_path = "world/factions/ardenhaven/quests/writ-board-cr1/goblin-raid-cr1.md"
 
 [[requested_resources]]
 keyword = "Spider Lair (Gareth Thorne, lumber camp, Miller's Creek)"
-requested_path = "world/factions/ardenhaven/quests/spider-lair-cr1.md"
+requested_path = "world/factions/ardenhaven/quests/writ-board-cr1/spider-lair-cr1.md"
 
 [[requested_resources]]
 keyword = "Restless Dead (Renn Caldor, eastern valley, old battlefield)"
-requested_path = "world/factions/ardenhaven/quests/restless-dead-cr1.md"
+requested_path = "world/factions/ardenhaven/quests/writ-board-cr1/restless-dead-cr1.md"
 
 [confidence]
 factual_accuracy = 0.86
@@ -69,11 +69,11 @@ details = "Bazgar arrives armed and armored, scans the room for potential allies
 
 [[key_events]]
 summary = "Food-order mix-up brings the three together."
-details = "Their meals arrive incorrectly, prompting them to bring the dishes back and then sit together to share and talk."
+details = "Their meals arrive incorrectly, prompting them to bring the dishes back and then sit together to share and talk. Sabriel’s order is a spring salad with artichoke hearts. Marwen’s order is a beef stew with a marrow bone sticking out of it like a gristly monument and bread with honey and jam. Bazgar’s order is the beef stew. Bazgar receives Sabriel’s order by mistake. Sabriel receives Marwen’s. Marwen receives Bazgar’s. After all coming to Thorgrim over the mix-up, Sabriel suggests the three of them share their meals with one another and they join the same table."
 
 [[key_events]]
 summary = "Introductions and quick party formation."
-details = "Bazgar introduces himself as Bazgar, son of Bazrak, of the Dakmarnak; Marwen gives her name as Marwen Ashcroft; the veiled traveler introduces themself as Sabriel and briefly removes the veil before re-covering while traveling."
+details = "Bazgar introduces himself as Bazgar, son of Bazrak, of the Dakmarnak; Marwen gives her name as Marwen Ashcroft; the veiled traveler introduces themself as Sabriel and briefly removes the veil before re-covering while traveling. Marwen and Bazgar each express an interest in exploring the ancient ruins and decide they could work on this goal together and Sabriel decides to tag along. We learn that Bazgar is a warrior of his tribe. Sabriel shares that they are a healer. Marwen is vague and explains she knows some magic but overly avoids sharing."
 
 [[key_events]]
 summary = "They read and compare the writ board notices."
@@ -84,8 +84,8 @@ summary = "They choose the border patrol undead job and get directions."
 details = "They decide the undead report is time-sensitive and ask the barkeep for Renn Caldor’s location; Thorgrim points them to an eastern patrol tower and suggests approaching from higher elevation before leaving the city."
 
 [[key_events]]
-summary = "Sabriel arranges stabling for a pony."
-details = "Sabriel pays Thorgrim for stabling and additional care requirements for their pony, after which Thorgrim takes the animal around back while grumbling."
+summary = "Sabriel arranges stabling for their pony whose name is Lear."
+details = "Sabriel pays Thorgrim for stabling and additional care requirements for their pony, after which Thorgrim takes the animal around back while grumbling. One gold piece is paid for stabling and one due to Lear’s preference for whole grain oats only."
 
 [character_beats]
 Bazgar = "Direct and pragmatic; seeks allies and pushes the group toward paid work to fund future ruin\ndelving."
