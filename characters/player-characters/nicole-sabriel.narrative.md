@@ -3,7 +3,7 @@
 **Tags:** `#pc` `#player-character` `#araethilion` `#elven`  
 **Player:** Nicole  
 **Created:** 2026-01-08  
-**Last Modified:** 2026-01-08
+**Last Modified:** 2026-01-11
 
 ---
 
@@ -12,13 +12,17 @@
 **Pronouns:** they/them
 **Heritage:** Elven (Araethilion lineage)  
 **Class/Background:** Former General, TODO: specify current class  
-**Age:** Approximately 2000 years old
+**Age:** Approximately 2,500 years old
 
 ---
 
 ## Appearance & Physical Presence
 
-TODO: Describe how Sabriel looks and moves through the world in 2-3 paragraphs. Include overall build, height, physical presence, facial features, hair, eyes, distinctive marks or scars, how they carry themselves (likely with the bearing of a former general), typical clothing style, and any sensory details.
+Sabriel is slender and unassuming, standing at a height of 5'9". By default, they carry an easy, confident air—graceful and naturally still, comfortable in any environment. They tend to fall to the back of the party and observe, allowing others to step forward and take action first. This watchful patience speaks to their years of experience and the hard-earned wisdom of a fallen general.
+
+Sabriel's face could be considered perfection to an elf: high, sharp features and skin that is unblemished and fair. However, they are warm and perpetually amused, their expression of humor contrasting sharply with their cold and aloof kin. Their eyes are a dark, almost black, holding depths of experience earned over millennia.
+
+Their hair changes color with their mood—most often, it is a soft green jade, long and straight. They wear it half down and half tied back with thread or ribbon. Their traveler's clothes are simple and white, practical for the road. When occasion demands, they still possess robes of office with fine embroidery, remnants of their former rank.
 
 ---
 
@@ -28,13 +32,71 @@ TODO: Describe how Sabriel looks and moves through the world in 2-3 paragraphs. 
 
 Sabriel has a tendency toward faulty judgment and errs on the side of radical thoughts, which eventually alienated half of their peers. Despite their failures, they maintain their status as someone close to the goddess Elaerith.
 
-TODO: Expand on emotional temperament, typical mood, sense of humor, how they handle stress or conflict (especially given their military background and fall from grace), social tendencies with those who don't remember their past failures, fears, insecurities (especially around repeating past mistakes), current strengths, and moral compass.
+**Emotional Temperament & Typical Mood**
+
+Sabriel's temperament is best understood through contrasts. Compared to their elven kin, they would be considered impulsive—but measured against the party and the wider world, they are remarkably slow and deliberate in their decision-making. They don't get upset easily, maintaining an even keel through most situations. Their typical mood is contemplative and optimistic, always observing, often taking a supporting role rather than stepping forward to lead.
+
+**Sense of Humor**
+
+Sabriel's sense of humor is perpetual. They're always looking for amusement in everyday situations—this is how they've managed to stay sane over such a long lifetime. They see humor in just about anything, though not necessarily in a dark way. Their view on finding humor in tragedies remains uncertain; time will tell how their levity holds up in the face of true darkness.
+
+**Handling Stress & Conflict**
+
+Sabriel has a fairly high stress tolerance—things don't disturb them very much. When faced with stress, they tend toward avoidance; after all, they did seek to run away from the stressful situation at home. 
+
+When it comes to conflict, particularly violent conflict, Sabriel will actively avoid it due to their prior military background. They have developed a distaste for violence and unnecessary life-taking. That doesn't mean they're incapable of it—they simply require stronger motivations to engage. The capability remains; the willingness has been tempered by experience and regret.
+
+**Social Tendencies**
+
+Sabriel is fairly amicable and looks to make friends, especially since they feel like they didn't have that many before. Whether this perception matches reality is unclear, but it shapes how they engage with others. Among those who don't know their past, they find freedom to be seen for who they are now rather than who they failed to be.
+
+**Fears**
+
+Sabriel's greatest fear is internal and complicated: they fear there is no real reason for Elaerith to love them. Even though logically they understand that being chosen as a favorite isn't something they earned—that favoritism isn't necessarily merited—the fear persists. They're fairly self-aware about this paradox.
+
+The relationship with Elaerith is codependent, at least on Sabriel's part. They certainly want to be loved by their goddess, but they fear they may not actually be, or fear being discarded someday. The cruel irony is that their actions—their restlessness, their radical thoughts, their tendency toward faulty judgment—will likely lead them down that very path to being discarded. And they know it.
+
+**Insecurities**
+
+TODO: To be discovered through play.
+
+**Current Strengths & Moral Compass**
+
+Sabriel possesses a very even temperament and is more inclined to do good than to do bad. Their moral compass, shaped by 2,500 years of life and hard lessons, points toward compassion tempered by pragmatism.
+
+TODO: This section will expand as Sabriel's character develops through play.
 
 ---
 
 ## Voice & Manner of Speaking
 
-TODO: Describe how Sabriel communicates. Include speech patterns (formal military bearing? defensive? humble now?), vocabulary level, favorite expressions, tone of voice, verbal quirks or habits, and how they express emotion through words. How does someone speak after years of being kept confined yet still favored?
+**Speech Patterns & Pace**
+
+Sabriel speaks in carefully chosen phrases with a noticeable delay in their responses. They think fairly slowly—not a particularly intelligent character—and prefer to consider their words before speaking. This manifests as a deliberate, measured way of speaking, though currently (just weeks after their escape) they're running at a higher energy level than usual, speaking faster due to excitement over new experiences and people.
+
+From their military background, they've retained the habit of conveying information efficiently rather than being long-winded. They get to the point, but they take their time getting there.
+
+**Vocabulary Level**
+
+Sabriel has a very broad range of vocabulary through sheer exposure over 2,500 years, but they don't necessarily have deep understanding of complex words. They know many words; they don't always grasp the full nuance of all of them.
+
+**Tone & Demeanor**
+
+Their tone of voice is soft and conciliatory—not aggressive in the slightest. They're not pushy, though they do have more backbone than a customer service worker. They'll speak their mind and stand up for their opinions, but they won't force the issue. In verbal arguments, they often let people think what they want to think rather than pressing their point.
+
+Sabriel is a humble character now, not a prideful one. This humility comes through in how they speak.
+
+**Verbal Quirks & Habits**
+
+Sabriel has trouble moving quickly between conversational subjects. Often, they'll bring up a point or respond to something after everyone else has already moved on to the next topic. This can create moments of social awkwardness as they're still processing the previous discussion while the party has shifted gears.
+
+**Expressing Emotion**
+
+Sabriel has no conflict expressing their emotions plainly. If they're upset, they'll simply state it: "That upsets me." However, their tone won't necessarily match the emotion they're describing—they might say they're upset without sounding particularly upset. Their emotional expression is more declarative than demonstrative.
+
+**Current State**
+
+Years of confinement haven't de-socialized Sabriel—they've always had people to talk to. However, being just weeks out from their escape, there's a high level of energy and excitement still coming through. They're thrilled to see new things and meet new people, which makes them communicate a bit faster than their natural baseline. This heightened state will likely settle over time as the novelty fades and they find their true rhythm again.
 
 ---
 
@@ -113,7 +175,7 @@ They have experience with security assessment, early warning systems, and defens
 
 Their "radical thoughts" suggest unconventional strategic thinking, which may be either a strength or a dangerous tendency depending on application.
 
-TODO: Describe specific combat abilities, magical capabilities if any, tactical expertise, and how these skills reflect who they are as a person after 2000 years of life and their time in confinement.
+TODO: Describe specific combat abilities, magical capabilities if any, tactical expertise, and how these skills reflect who they are as a person after 2,500 years of life and their time in confinement.
 
 ---
 
@@ -129,7 +191,7 @@ Sabriel values understanding threats and taking proactive measures (ordering sco
 
 They maintain devotion to Elaerith despite not understanding why she continues to favor them.
 
-TODO: Expand on their worldview after 2000 years, religious beliefs beyond devotion to Elaerith, political or social beliefs (what made their thoughts "radical"?), what lines they won't cross now after their failures, and how their experiences shape their decisions. Have they become more cautious, or does the restlessness still drive them?
+TODO: Expand on their worldview after 2,500 years, religious beliefs beyond devotion to Elaerith, political or social beliefs (what made their thoughts "radical"?), what lines they won't cross now after their failures, and how their experiences shape their decisions. Have they become more cautious, or does the restlessness still drive them?
 
 ---
 

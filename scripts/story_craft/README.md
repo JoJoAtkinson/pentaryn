@@ -195,11 +195,10 @@ tone_break_transitions = [
 # POV characters for rotating third-person limited perspective
 pov_characters = ["Bazgar", "Sabriel", "Marwen"]
 
-# Character voice notes (used in story generation prompts)
-[pass3.character_voices]
-Bazgar = "Confident, direct, occasional swagger; carries orc heritage but defies stereotypes"
-Sabriel = "Observant, measured, hints of mystery; hides more than she reveals"
-Marwen = "Curious, practical, slightly eccentric; comfortable with the strange"
+# Character voice (used in story generation prompts)
+# Sourced from player character narrative sheets:
+# - `characters/player-characters/*.narrative.md`
+# - section: "## Voice & Manner of Speaking"
 
 [timeline]
 # Party name (maps to world/party/{party_name}/_history.tsv)
@@ -242,7 +241,7 @@ All context-building parameters are configurable per session:
 - **time_jump_phrases**: List of narrative phrases that indicate time jumps
 - **tone_break_transitions**: Tone shifts that suggest natural chapter boundaries
 - **pov_characters**: Characters who get internal thoughts/POV rotation
-- **character_voices**: Personality descriptions used in generation prompts
+- **Character voice**: Sourced from PC narrative sheets (`characters/player-characters/*.narrative.md`) to avoid drift
 
 **Timeline Configurable Parameters:**
 

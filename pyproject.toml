@@ -15,7 +15,10 @@ dependencies = [
   "torch",
   "openai",
   "python-dotenv",
-  "tomlkit"
+  "tomlkit",
+  "azure-ai-ml",
+  "azure-identity",
+  "azure-storage-blob"
 ]
 
 # Notes on native text layout (RAQM):

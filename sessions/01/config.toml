@@ -29,12 +29,8 @@ notes = """
 [context]
 # Upfront context files (relative to repo root)
 files = [
-    "sessions/session_01.md",
-    "characters/player-characters/kristine-marwen.md",
-    "characters/player-characters/nicole-sabriel.md",
-    "characters/player-characters/jeff-bazgar.md",
-    "world/factions/ardenhaven/locations/ardenford.md",
-    "world/factions/ardenhaven/locations/ardernford.story.md",
+    "world/factions/ardenhaven/locations/ardenford/ardenford.md",
+    "world/factions/ardenhaven/locations/ardenford/ardernford.story.md",
 ]
 
 # Folders to auto-include (all .md files)
@@ -50,7 +46,7 @@ overlap = 250
 model = "gpt-5.2"
 
 [pass2]
-output = "sessions/01/pass2"  # Folder path (not .json)
+output = "sessions/01/pass2"
 model = "gpt-5.2"
 # Seconds of transcript context before/after each scene
 context_before = 30.0
@@ -59,6 +55,9 @@ context_after = 30.0
 max_line_length = 100
 
 [pass3]
+# CRITICAL: output MUST point to story/the-compass-edge
+# This is a git submodule/repo used for publishing player-facing story content.
+# Do NOT change this path without understanding the git submodule structure.
 # Write player-facing story output into the story submodule (keeps access control separate)
 output = "story/the-compass-edge"
 model = "gpt-5.2"
@@ -93,11 +92,8 @@ tone_break_transitions = [
 # POV characters for rotating third-person limited perspective
 pov_characters = ["Bazgar", "Sabriel", "Marwen"]
 
-# Character voice notes (used in story generation prompts)
-[pass3.character_voices]
-Bazgar = "Confident, direct, occasional swagger; carries orc heritage but defies stereotypes"
-Sabriel = "Observant, measured, hints of mystery; hides more than she reveals"
-Marwen = "Curious, practical, slightly eccentric; comfortable with the strange"
+# Character voice is sourced from PC narrative files under `characters/player-characters/*.narrative.md`.
+# Avoid duplicating voice notes here to prevent drift.
 
 [timeline]
 # Party name (maps to world/party/{party_name}/_history.tsv)
