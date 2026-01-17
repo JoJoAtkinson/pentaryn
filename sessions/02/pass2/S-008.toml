@@ -1,0 +1,129 @@
+start_seconds = 9595.07
+location = "Deeper in the underground ruins (unknown corridor/room), away from the broken bridge"
+goal = "regroup, hide from Mara, and take a short rest while figuring out how to get out and what to do about Mara"
+npcs_present = [
+    "Cinder (talking crow)",
+    "Mara (offscreen, nearby threat)",
+    "Elder Marith (mentioned)",
+]
+time_of_day = "unknown"
+emotional_tone = "tense"
+conflict_type = "none"
+notes = """After escaping the chasm area, the party retreats deeper into the ruins, sets an Alarm, and takes a
+short rest while discussing sending Cinder to Elder Marith for help and the danger Mara poses."""
+scene_id = "S-008"
+end_seconds = 9819.201
+summary = """The party retreats deeper into the ruins to regroup and take a short rest. They decide to send
+Cinder back to the sky to contact Elder Marrith for help dealing with Mara and what happened to
+Sabriel. During the rest, an Alarm is set down the hallway as an early warning. Sabriel unexpectedly
+rejoins the group, confused but alive, and explains the enemy can teleport (and that she can’t do
+that kind of long-distance teleportation)."""
+outcome = "The scene ends with Sabriel reunited with the party as they remain hidden and on alert in the ruins."
+
+[[requested_resources]]
+keyword = "Elder Marith"
+requested_path = "world/factions/elderholt/elders"
+
+[[requested_resources]]
+keyword = "Cinder"
+requested_path = "characters/README.md"
+
+[[requested_resources]]
+keyword = "Alarm"
+requested_path = "items/README.md"
+
+[[requested_resources]]
+keyword = "deep in the ruins"
+requested_path = "world/factions/ardenhaven/locations/stone-breach-ruins"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.68
+speculation_level = "low"
+
+[location_intelligence]
+name = "Deeper in the underground ruins (unknown corridor/room), away from the broken bridge"
+known_details = [
+    "The party moves deeper into the ruins and stops to rest, but they do not know exactly where they are (159:55-160:10).",
+    "They are in a tunnel/hallway area (161:21-161:29).",
+]
+inferred_details = [
+    "They choose a defensible stopping point off a hallway so they can set a warning and avoid pursuit.",
+]
+confidence = 0.8
+
+[[key_events]]
+summary = "Decision to send Cinder to Elder Marrith"
+details = "The party concludes there’s nothing they can do immediately about Mara nearby and decides to send the crow (Cinder) back to the sky to reach Elder Marrith, trusting Marrith to handle it and calling it the best they can do for Sabriel (159:27-159:47)."
+
+[[key_events]]
+summary = "Party pushes deeper and stops to rest"
+details = "They move deeper into the ruins, unsure of their exact location, and find a place to stop and lick their wounds (159:55-160:10)."
+
+[[key_events]]
+summary = "Cinder speaks as a normal crow"
+details = "When addressed, Cinder’s speech is described as a crow voice rather than a magical-sounding voice, and it insults the party (160:58-161:16)."
+
+[[key_events]]
+summary = "Alarm is placed as a warning"
+details = "One party member sets an Alarm down the hallway to receive a mental alert if something approaches (161:29-161:57)."
+
+[[key_events]]
+summary = "Sabriel returns unexpectedly"
+details = "Sabriel arrives during/after the rest, triggering surprise and questions about how she escaped; she notes the enemy can teleport and clarifies she can’t teleport that far herself (163:39-164:05)."
+
+[character_beats]
+Bazgar = "Reacted with relief and immediately embraced Sabriel when she reappeared (163:39-163:46)."
+Marwen = "Engaged with Cinder’s insults and treated the crow as an active (and annoying) participant\n(160:17-160:18)."
+Sabriel = "Returned confused but alive; clarified limits on her own teleportation (163:49-164:05)."
+
+[[npcs]]
+name = "Cinder"
+role = "Talking crow messenger"
+interaction = "Spoke in a normal crow voice, insulted the party, and was tasked with going back to the sky to contact Elder Marrith (159:36-159:47, 160:58-161:16)."
+
+[[npcs]]
+name = "Mara"
+role = "Nearby offscreen threat"
+interaction = "Discussed as an immediate danger the party can’t directly address right now (159:27-159:36)."
+
+[[loot]]
+item = "Alarm (spell)"
+context = "Cast and placed down the hallway to provide a mental warning if something approaches (161:29-161:57)."
+
+[[information]]
+summary = "Elder Marrith is contacted for help"
+details = "The party decides to send Cinder to Elder Marrith, expressing trust that she will handle the situation and framing it as their best option regarding Sabriel (159:39-159:47)."
+
+[[information]]
+summary = "The enemy can teleport"
+details = "When asked how she got out, Sabriel indicates the enemy can teleport; she also states she cannot teleport that far herself (163:54-164:05)."
+
+[atmosphere]
+mood = "tense"
+lighting = "not specified"
+sounds = "echoing crow voice; conversation in a tunnel/hallway (160:58-161:29)"
+
+[grounding]
+transcript_timestamps = [
+    9567,
+    9845,
+]
+resource_refs = [
+    "world/factions/elderholt/elders/marrith-the-ashen-measure.md",
+]
+inferred_content = [
+    "They chose a defensible rest spot off a hallway to better avoid pursuit.",
+]
+
+[[plot_threads]]
+thread = "Get help from Elder Marrith"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Avoid Mara while regrouping in the ruins"
+status = "advanced"
+
+[[plot_threads]]
+thread = "How Sabriel survived/escaped"
+status = "advanced"

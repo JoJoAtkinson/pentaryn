@@ -1,0 +1,142 @@
+start_seconds = 8025.972
+location = "Surface camp near the ruins/valley road"
+goal = "Meet Elder Marith about Mara and decide next steps after the handoff"
+npcs_present = [
+    "Elder Marith",
+    "Cinder (crow familiar/companion)",
+    "Kargrimdur (dwarf guide)",
+]
+time_of_day = "unknown"
+emotional_tone = "mysterious_then_comedic_then_practical"
+conflict_type = "social"
+notes = """The party waits at camp, chats about loot and travelers, then Elder Marith arrives via Cinder; she
+confirms Mara is lost with no return, has a brief argument with the crow, leaves Cinder with Marwen,
+and the party discusses returning to the city to resupply."""
+scene_id = "S-005"
+end_seconds = 9831.41
+summary = """While waiting at their surface camp, the party spots a crow that turns out to be Elder Marith’s
+familiar, Cinder. Elder Marith arrives—an older woman covered in glowing amber runic glyphs—and
+questions the party about Mara. Marwen explains Mara sealed herself in a nearby ruin; Marith
+confirms that when a witch is “lost,” the witch becomes the power, with only limited constraint
+remaining, and that there is no coming back. A comedic argument follows between Marith and Cinder
+about Cinder’s name and independence, ending with Marith leaving Cinder in the party’s care. The
+party then discusses resupplying in the city and choosing their next destination."""
+outcome = """Elder Marith departs to handle Mara’s situation, and Cinder remains with the party as they decide to
+return to the city to resupply."""
+
+[[requested_resources]]
+keyword = "Kargrimdur (guide) / Kargum Durr (city)"
+requested_path = "world/factions/dulgarum-oathholds/locations/khargun-dur.md"
+
+[[requested_resources]]
+keyword = "Calderon Imperium / Ironside travelers"
+requested_path = "world/factions/calderon-imperium/_overview.md"
+
+[[requested_resources]]
+keyword = "Cinder (crow familiar/companion)"
+requested_path = "characters/npcs"
+
+[[requested_resources]]
+keyword = "mountain ruins / expedition cost (100 each)"
+requested_path = "world/factions/ardenhaven/locations"
+
+[[requested_resources]]
+keyword = "writ board / job board"
+requested_path = "world/factions/ardenhaven/quests"
+
+[[requested_resources]]
+keyword = "Vorzog (Bazgar's contact)"
+requested_path = "world/factions/ardenhaven/npc/vorzug-ledger-scar.md"
+
+[confidence]
+factual_accuracy = 0.88
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Surface camp near the ruins/valley road"
+known_details = [
+    "The party is waiting at camp when a crow flies over and perches nearby (crow later identified as Cinder) (transcript ~133:45-134:08).",
+    "Elder Marith arrives at the camp and is then led toward the nearby ruin where Mara sealed herself off (transcript ~135:33-139:35).",
+]
+inferred_details = [
+    "The camp is close enough to the ruin that the party can guide Elder Marith there on foot shortly after she arrives.",
+]
+confidence = 0.84
+
+[[key_events]]
+summary = "Cinder is identified and offended"
+details = "A crow appears at camp; Bazgar addresses it as “Marith’s crow,” prompting the crow to respond and then become annoyed at being treated like property rather than a named companion (transcript ~133:45-135:04)."
+
+[[key_events]]
+summary = "Elder Marith arrives and is briefed on Mara"
+details = "Elder Marith arrives, described as upright and severe-looking, with glowing amber glyphs covering visible skin. She asks where Mara is, and Marwen leads her toward the ruin where Mara sealed herself off (transcript ~135:33-139:35)."
+
+[[key_events]]
+summary = "Marith explains what it means for a witch to be 'lost'"
+details = "In response to Marwen’s questions, Marith explains it’s impossible for the witch to control the state once lost; when someone is lost, they become the power and are no more, though there can be enough remaining to provide some constraint, which may make things easier. Marith confirms there is no coming back (transcript ~140:42-143:03)."
+
+[[key_events]]
+summary = "Cinder and Marith argue; Cinder joins the party"
+details = "As Marith tries to collect her crow, Cinder refuses and argues about being named—claiming Marwen named him while Marith only called him “crow.” Marith, frustrated, hands Cinder over to Marwen to look after, and Marwen welcomes Cinder to the group (transcript ~143:03-145:45)."
+
+[[key_events]]
+summary = "Next steps: resupply and plan travel"
+details = "After Marith leaves, the party discusses provisions and decides they likely need to return to the city to resupply before choosing their next destination (transcript ~145:56-146:36)."
+
+[character_beats]
+Marwen = "Shows deference to Elder Marith and presses for clarity about Mara’s condition and the nature of\nbeing 'lost' (transcript ~138:13-143:03)."
+Bazgar = "Provokes Cinder with a teasing question and then apologizes when it backfires (transcript\n~134:19-135:04)."
+Sabriel = "Mirrors Marwen’s respectful posture toward Elder Marith and expresses admiration for her (transcript\n~138:28-147:03)."
+
+[[npcs]]
+name = "Elder Marith"
+role = "Elder witch / authority figure"
+interaction = "Arrives at camp, questions the party about Mara, explains the implications of a witch being 'lost,' then leaves Cinder with the party (transcript ~135:33-145:13)."
+
+[[npcs]]
+name = "Cinder"
+role = "Crow familiar/companion"
+interaction = "Initially appears as an ordinary crow, reacts to being called 'Marith’s crow,' argues with Marith about being named, and ends up staying with the party (transcript ~133:45-145:45)."
+
+[[npcs]]
+name = "Kargrimdur"
+role = "Dwarf guide"
+interaction = "Not directly involved in the scene’s on-screen interactions in the provided transcript."
+
+[[information]]
+summary = "What it means for a witch to be 'lost'"
+details = "Marith states that once a witch is lost, the witch cannot control it; the person becomes the power and is no more. However, there can be enough remaining to impose some constraint, which may make the situation easier to handle. Marith confirms there is no coming back (transcript ~140:42-143:03)."
+
+[[information]]
+summary = "Cinder’s naming and independence"
+details = "Cinder claims Marwen named him, while Marith only called him 'crow' (his species), leading to a dispute that ends with Marith leaving Cinder in the party’s care (transcript ~143:39-145:13)."
+
+[atmosphere]
+mood = "mysterious then comedic then practical"
+lighting = "not stated"
+sounds = "crow vocalizations during the exchange with Bazgar and Elder Marith (transcript ~134:31-134:34, ~143:39-144:19)"
+
+[grounding]
+transcript_timestamps = [
+    7997,
+    9211,
+]
+resource_refs = [
+    "world/factions/dulgarum-oathholds/locations/khargun-dur.md",
+]
+inferred_content = [
+    "The camp is close enough to the ruin to reach on foot shortly after Marith arrives.",
+]
+
+[[plot_threads]]
+thread = "Mara’s sealed-off state and Elder Marith’s response"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Cinder’s status with the party"
+status = "resolved"
+
+[[plot_threads]]
+thread = "Return to the city to resupply and choose next destination"
+status = "introduced"

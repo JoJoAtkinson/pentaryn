@@ -1,0 +1,130 @@
+start_seconds = 7224.162
+location = "Near the tower after the burial (resting spot / camp area)"
+goal = "Decide next job and plan funding for an expedition; take a short rest and consider goblin raid timing"
+npcs_present = [
+    "Renn Caldor (border patrol scout)",
+]
+time_of_day = "afternoon"
+emotional_tone = "casual"
+conflict_type = "none"
+notes = """The party completes the burial and payment with Renn Caldor, then discusses expedition costs and
+decides to pursue the goblin raid later that day after a short rest."""
+scene_id = "S-006"
+end_seconds = 11643.618
+summary = """After the burial, the party takes a short rest and discusses how to fund a future mountain
+expedition. They learn expedition pricing (50 gp each for a lower-tier trip; 100 gp each for a
+higher-tier trip that includes a dwarven mountain guide) and decide they need more paid work before
+committing. With spiders only available in the morning, they choose to pursue goblins that raid at
+dusk and head west into farmland outside Ardenford to meet a sheepherder named Murren Redbrick."""
+outcome = """The scene ends as the party arrives in the western farmland and makes contact with Murren Redbrick
+about the goblin raids."""
+
+[[requested_resources]]
+keyword = "Renn Caldor"
+requested_path = "world/factions/ardenhaven/quests/restless-dead-cr1.md"
+
+[[requested_resources]]
+keyword = "expedition would be 50 gold each / 100 gold each + a dwarven mountain guide"
+requested_path = "quests/README.md"
+override = "world/factions/ardenhaven/quests/restless-dead-cr1.md"
+
+[[requested_resources]]
+keyword = "goblins come at dusk / sheep raids"
+requested_path = "world/factions/ardenhaven/quests/goblin-raid-cr1.md"
+
+[confidence]
+factual_accuracy = 0.82
+completeness = 0.62
+speculation_level = "low"
+
+[location_intelligence]
+name = "Camp/resting spot near the tower (after the burial), then western farmland outside Ardenford"
+known_details = [
+    "The party rests near the gravesite/tower area after the burial and discusses next work and expedition costs (119:54-123:40).",
+    "They later head west into farmland about two miles from Ardenford (194:03-194:20).",
+]
+inferred_details = [
+    "The camp/rest spot is close enough to the gravesite that Renn can return there to contemplate.",
+]
+confidence = 0.78
+
+[[key_events]]
+summary = "Expedition costs clarified"
+details = "The party learns a mid-tier expedition costs 50 gp per person, while a higher mountain expedition costs 100 gp per person and includes a dwarven mountain guide (120:39-121:31)."
+
+[[key_events]]
+summary = "Short rest taken"
+details = "The party agrees to a short rest to recover and conserve resources before taking on another job (122:07-123:05)."
+
+[[key_events]]
+summary = "Next job chosen: goblins at dusk"
+details = "They note spiders are a morning-only option, while goblins raid at dusk, making the late afternoon timing favorable; they plan to handle goblins today, then long rest, then attempt spiders in the morning if still available (123:20-123:38, 189:41-189:50)."
+
+[[key_events]]
+summary = "Travel to the raid area and meet the client"
+details = "The party heads west into farmland roughly two miles from Ardenford and meets Murren Redbrick, a stereotypical sheepherder with a hooked cane (194:03-194:32)."
+
+[character_beats]
+Bazgar = "Advocates for the more expensive expedition option to improve rewards and support Morrowind’s need\nfor spider parts (121:32-121:45)."
+Marwen = "Supports taking additional jobs to fund the expedition and agrees to the goblin plan (120:34-120:38,\n123:40-123:42)."
+Sabriel = "Pushes for completing multiple missions to build funds and helps settle the plan order\n(124:36-124:43, 189:52-189:59)."
+
+[[npcs]]
+name = "Renn Caldor"
+role = "Border patrol scout"
+interaction = "Acknowledges the party’s help with a respectful salute and returns to the gravesite to contemplate (120:01-120:24)."
+
+[[npcs]]
+name = "Murren Redbrick"
+role = "Sheepherder / quest contact for raids"
+interaction = "Met by the party in the western farmland as they arrive to address goblin raids (194:20-194:32)."
+
+[[loot]]
+item = "90 gold"
+context = "The party references having 90 gold available (119:54-119:57)."
+
+[[information]]
+summary = "Expedition pricing and options"
+details = "Lower/mid-tier expedition: 50 gp per person; higher mountain sites: 100 gp per person and includes a dwarven mountain guide (120:39-121:31)."
+
+[[information]]
+summary = "Job timing constraints"
+details = "Spiders are only available in the morning, while goblins raid at dusk, shaping the party’s schedule (123:20-123:38)."
+
+[[information]]
+summary = "Raid area location"
+details = "The goblin-raid-related farmland is west of Ardenford, about two miles out (194:03-194:20)."
+
+[atmosphere]
+mood = "calm"
+lighting = "afternoon daylight"
+sounds = "not specified in transcript"
+
+[grounding]
+transcript_timestamps = [
+    119.54,
+    121.31,
+    122.07,
+    123.38,
+    189.41,
+    194.32,
+]
+resource_refs = [
+    "world/factions/ardenhaven/quests/restless-dead-cr1.md (missing)",
+    "world/factions/ardenhaven/quests/goblin-raid-cr1.md (missing)",
+]
+inferred_content = [
+    "Camp/resting spot is close to the gravesite/tower area based on Renn returning to the gravesite after saluting.",
+]
+
+[[plot_threads]]
+thread = "Fund a mountain expedition"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Goblin sheep raids at dusk"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Morning spider job for parts"
+status = "advanced"

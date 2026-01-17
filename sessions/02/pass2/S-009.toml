@@ -1,0 +1,142 @@
+start_seconds = 9819.201
+location = "Same resting spot deeper in the ruins"
+goal = "debrief what happened, assess Sabriel’s strange return, and investigate the blank holy book / silver-thread connection"
+npcs_present = [
+    "Cinder (talking crow)",
+    "Elder Marith (mentioned)",
+    "Mara (discussed)",
+]
+time_of_day = "unknown"
+emotional_tone = "mysterious"
+conflict_type = "social"
+notes = """Sabriel reunites with the group after apparently 'teleporting' back; they examine the blank book and
+discuss Sabriel’s failed goodbye to Alaris and the unsettling 'off-brand' magical feeling."""
+scene_id = "S-009"
+end_seconds = 10174.933
+summary = """Sabriel unexpectedly returns to the party alive and confused. While the group debriefs, Sabriel
+examines the blank holy book and describes a troubling, "off-brand" feeling tied both to the book
+and to what happened during their disappearance. Sabriel says they tried to reach out to Alaris to
+say goodbye but received no answer, and the party connects the book to these events while also
+voicing concern about Sister Mara’s condition."""
+outcome = """The scene ends with the party still unsure what brought Sabriel back, with the book remaining blank
+and the group newly focused on Mara being "not well.""""
+
+[[requested_resources]]
+keyword = "Alaris"
+requested_path = "characters/README.md"
+
+[[requested_resources]]
+keyword = "blank book / holy book"
+requested_path = "items/magic-items/uncatalogued-holy-book.md"
+
+[[requested_resources]]
+keyword = "Cinder"
+requested_path = "characters/README.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.68
+speculation_level = "low"
+
+[location_intelligence]
+name = "Same resting spot deeper in the ruins"
+known_details = [
+    "The party is resting when Sabriel returns and the group talks (transcript 163:19-170:02).",
+]
+inferred_details = [
+    "The group has some kind of alarm/guard posture set up at their resting area, since they discuss an alarm and being greeted with weapons if someone approaches (transcript 163:19-163:39).",
+]
+confidence = 0.8
+
+[[key_events]]
+summary = "Sabriel reunites with the party"
+details = "The group realizes Sabriel is not dead and greets them; Sabriel remains confused about how they returned (transcript 163:39-164:12)."
+
+[[key_events]]
+summary = "Sabriel re-examines the blank holy book"
+details = "During the rest, Sabriel looks at the book again; it remains completely blank and frustrating (transcript 164:23-164:43)."
+
+[[key_events]]
+summary = "Silver-thread/connection feels present but unresponsive"
+details = "Sabriel checks the \"silver\" connection and gets the sense it isn’t closed power-wise, but there is no answer (transcript 164:43-164:53)."
+
+[[key_events]]
+summary = "Sabriel describes an \"off-brand\" wrongness tied to the book and recent events"
+details = "Sabriel feels the book is theirs in an inexplicable way, yet it feels familiar-but-wrong; the same \"off-brand\" feeling is said to apply to both the book and what happened to Sabriel (transcript 165:03-166:11)."
+
+[[key_events]]
+summary = "Sabriel names Alaris and explains the unanswered goodbye"
+details = "Sabriel says they reached out to Alaris to say goodbye, got no answer, and then was suddenly back with the party; they add that \"something\" happened even though no one answered (transcript 167:06-168:03, 169:07-169:16)."
+
+[[key_events]]
+summary = "The party questions Sister Mara’s state"
+details = "Bazgar asks what happened with Sister Mara; Sabriel states Mara is not well and that there’s not much of her left (transcript 169:34-170:02)."
+
+[character_beats]
+Sabriel = "Returns confused and stoic, admits Alaris did not answer, and fixates on the book feeling wrong yet\nbelonging to them (transcript 163:49-168:08)."
+Bazgar = "Presses for explanations, asks to inspect the book, and questions what happened with Sister Mara\n(transcript 168:08-168:29, 169:34-169:38)."
+Marwen = "Is referenced as the one who originally took the book; otherwise not clearly active in this excerpt\n(transcript 167:56-168:03; item file ownership history)."
+
+[[npcs]]
+name = "Cinder"
+role = "Talking crow (present per scene context)"
+interaction = "No clear spoken interaction captured in this transcript excerpt."
+
+[[npcs]]
+name = "Elder Marith"
+role = "Mentioned NPC (per scene context)"
+interaction = "Not referenced in this transcript excerpt."
+
+[[npcs]]
+name = "Mara"
+role = "Discussed figure (\"Sister Mara\")"
+interaction = "Discussed as being \"not well\" with \"not much of her left\" (transcript 169:34-170:02)."
+
+[[loot]]
+item = "Uncatalogued Holy Book (Starburst Seal)"
+context = "Sabriel examines it again; it remains blank, and the party discusses trying different light sources (transcript 164:23-164:43, 168:11-168:32; items/magic-items/uncatalogued-holy-book.md)."
+
+[[information]]
+summary = "The holy book remains blank and resists marking"
+details = "When checked during the rest, the book is still completely blank; the group considers testing different lighting (moonlight/daylight/starlight) (transcript 164:37-164:43, 168:21-168:32; items/magic-items/uncatalogued-holy-book.md)."
+
+[[information]]
+summary = "Sabriel senses a familiar-but-wrong connection around the book and their return"
+details = "Sabriel feels pulled toward the book and \"knows\" it is theirs without knowing why, but it feels like an illicit \"off-brand\" version; the same wrongness is said to apply to what happened to Sabriel (transcript 165:03-166:11)."
+
+[[information]]
+summary = "Alaris did not answer Sabriel’s farewell"
+details = "Sabriel says they reached out to Alaris to say goodbye, received no answer, and then was back with the party; they clarify that no one answered, though something occurred (transcript 167:35-168:03, 169:07-169:16)."
+
+[[information]]
+summary = "Sister Mara is in a diminished state"
+details = "Sabriel states Mara is \"not well\" and that there is \"not much of her left\" (transcript 169:58-170:02)."
+
+[atmosphere]
+mood = "mysterious and unsettled"
+lighting = "moonlight is mentioned as a light source previously tried on the book (transcript 168:29-168:32)"
+sounds = "No specific ambient sounds described in the excerpt"
+
+[grounding]
+transcript_timestamps = [
+    9791.0,
+    10202.0,
+]
+resource_refs = [
+    "items/magic-items/uncatalogued-holy-book.md",
+]
+inferred_content = [
+    "The resting spot likely has a planned alarm/defensive setup based on discussion of an alarm and being greeted with weapons.",
+]
+
+[[plot_threads]]
+thread = "Sabriel’s unexplained return and Alaris’s silence"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Uncatalogued Holy Book (Starburst Seal) and the silver-thread connection"
+status = "complicated"
+
+[[plot_threads]]
+thread = "Sister Mara’s condition"
+status = "introduced"

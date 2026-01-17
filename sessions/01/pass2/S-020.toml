@@ -1,0 +1,143 @@
+start_seconds = 30067.468
+location = "Ardenford (Upper Tier) — Silverbridge Arcana (spell shop)"
+goal = "Shop for spell scrolls and related arcane supplies; decide purchases and manage party funds"
+npcs_present = [
+    "Selise Dawnquill",
+]
+time_of_day = "unknown"
+emotional_tone = "comedic"
+conflict_type = "social"
+notes = """At the arcane shop, the party rolls up available scrolls, negotiates/learns prices, buys items
+(including a discounted Sleep scroll), and encounters a dangerous 'customer return' scroll that
+comes with a waiver."""
+scene_id = "S-020"
+end_seconds = 31340.37
+summary = """At Silverbridge Arcana, the party browsed a limited daily selection of spell scrolls and adventuring
+supplies, found a steeply discounted Sleep scroll, and got drawn into a comedic standoff over a
+dangerous returned scroll that previously turned someone into goo. They also priced and purchased
+luminescent ink and a waterproof dryglass scroll case, while juggling party funds and accepting
+(then later returning) a large gold loan offer from Bazgar."""
+outcome = """After completing purchases and securing the dangerous scroll under a waiver, the party left
+Silverbridge Arcana and headed toward a weaponsmith (Anvil and Ore)."""
+
+[[requested_resources]]
+keyword = "Silverbridge Arcana"
+requested_path = "world/factions/ardenhaven/npc/_arcana_selise-dawnquill-silverbridge.md"
+
+[[requested_resources]]
+keyword = "Selise Dawnquill"
+requested_path = "world/factions/ardenhaven/npc/_arcana_selise-dawnquill-silverbridge.md"
+
+[[requested_resources]]
+keyword = "Signal Blue ink (luminescent)"
+requested_path = "world/factions/ardenhaven/npc/_arcana_selise-dawnquill-silverbridge.md"
+
+[[requested_resources]]
+keyword = "scroll case of dryglass"
+requested_path = "world/factions/ardenhaven/npc/_arcana_selise-dawnquill-silverbridge.md"
+
+[[requested_resources]]
+keyword = "discounted Sleep scroll (15 gold)"
+requested_path = "world/factions/ardenhaven/npc/_arcana_selise-dawnquill-silverbridge.md"
+
+[[requested_resources]]
+keyword = "dangerous customer return scroll / waiver / 'turned man into goo'"
+requested_path = "world/factions/ardenhaven/npc/_arcana_selise-dawnquill-silverbridge.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Ardenford (Upper Tier) — Silverbridge Arcana"
+known_details = [
+    "A spell shop where the party can buy spell scrolls available that day: Identify, Mage Armor, Feather Fall, Silent Image, Thunderwave (from the shop’s selection discussed in-scene).",
+    "Selise Dawnquill is the shopkeeper; she is described as a half-elf and is extremely reluctant to let the party handle a dangerous returned scroll.",
+    "Signal blue (luminescent) ink is sold here (10 gp standard; 15 gp for a more premium version).",
+    "A dryglass scroll case is sold here (5 gp standard; 10 gp premium).",
+]
+inferred_details = [
+    "The shop keeps most scroll stock behind the counter and/or in organized bins, given the way Selise retrieves and adjusts tags.",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Daily scroll selection and discount find"
+details = "The shop’s available scroll options were identified (including Identify, Mage Armor, Feather Fall, Silent Image, and Thunderwave), and the party discovered a one-time discounted Sleep scroll priced at 15 gp."
+
+[[key_events]]
+summary = "Dangerous returned scroll incident"
+details = "Selise explained a returned ancient scroll had harmed a prior user (turning them into goo), tried to remove it from the shelves, but the party insisted on examining it; Selise produced a liability waiver and ultimately let them take the scroll away on the condition it not be opened or cast in the shop."
+
+[[key_events]]
+summary = "Supplies purchased and funds managed"
+details = "Sabriel bought signal blue luminescent ink and a dryglass scroll case; another party member bought Mage Armor and the discounted Sleep scroll and also purchased wizard components intended for later scribing. Bazgar offered significant gold to support the purchases, but the party decided to hold off and return the money for now."
+
+[character_beats]
+Bazgar = "Offers party funds freely to support more magic and future success."
+Sabriel = "Prioritizes practical exploration tools, buying luminescent ink and a waterproof scroll case."
+Marwen = "Weighs party spell overlap and resource limits while discussing scroll usefulness."
+
+[[npcs]]
+name = "Selise Dawnquill"
+role = "Spell shopkeeper (wizard) at Silverbridge Arcana"
+interaction = "Sold scrolls and supplies; warned the party about a dangerous returned scroll, required a waiver, and insisted it not be opened or cast inside the shop."
+
+[[loot]]
+item = "Spell scroll: Sleep (discounted)"
+context = "Purchased for 15 gp as a one-time discounted find."
+
+[[loot]]
+item = "Spell scroll: Mage Armor"
+context = "Purchased from Silverbridge Arcana’s available stock."
+
+[[loot]]
+item = "Signal blue ink (luminescent)"
+context = "Purchased as an exploration marking tool."
+
+[[loot]]
+item = "Scroll case of dryglass"
+context = "Purchased as a waterproof container for documents/scrolls."
+
+[[loot]]
+item = "Returned ancient scroll (dangerous; waiver required)"
+context = "Taken from the shop after Selise refused to sell it normally and required a liability waiver; previously associated with turning a user into goo."
+
+[[information]]
+summary = "Silverbridge Arcana’s scroll availability is limited and rotates"
+details = "Only a subset of scrolls were available for purchase that day, and discounts were described as one-time opportunities that would change on future visits."
+
+[[information]]
+summary = "The returned scroll is hazardous and poorly understood"
+details = "Selise described it as an ancient spell no one can properly learn; the last user did not come back intact and became goo, complicating healing attempts, prompting Selise to treat it as unsafe to sell."
+
+[[information]]
+summary = "Prices for key supplies"
+details = "Signal blue luminescent ink was quoted at 10 gp (or 15 gp for a premium version), and a dryglass scroll case at 5 gp (or 10 gp premium)."
+
+[atmosphere]
+mood = "comedic, wary"
+lighting = "unknown"
+sounds = "unknown"
+
+[grounding]
+transcript_timestamps = [
+    30038.0,
+    31346.0,
+]
+inferred_content = [
+    "Shop keeps most scroll stock behind the counter/organized bins (inferred from retrieval and tag removal behavior).",
+]
+
+[[plot_threads]]
+thread = "Dangerous returned ancient scroll (goo incident)"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Party provisioning for ruins (scrolls, ink, protective case)"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Budgeting for a dwarven commission (100 gp set aside)"
+status = "advanced"

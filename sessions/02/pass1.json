@@ -1,0 +1,339 @@
+{
+  "metadata": {
+    "source_transcript": "/Users/joe/GitHub/dnd/sessions/02/transcripts.jsonl",
+    "generated": "2026-01-16T15:18:38.245038",
+    "total_scenes": 10,
+    "model": "gpt-5.2"
+  },
+  "scenes": [
+    {
+      "start_seconds": 21.842,
+      "location": "Ardenford (city streets / seeking a guide)",
+      "goal": "find and hire an Oathhold dwarf sherpa/guide for the valley ruins",
+      "npcs_present": [
+        "Archivist Elarion Faenwynd (mentioned)",
+        "Gorgondor/Kargromdor (Oathhold dwarf guide)"
+      ],
+      "time_of_day": "morning",
+      "emotional_tone": "focused",
+      "conflict_type": "social",
+      "notes": "The party follows up on the archivist’s request and locates an Oathhold dwarf guide at a dwarven bar, negotiating terms and earning his cautious agreement.",
+      "requested_resources": [
+        {
+          "keyword": "Archivist",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/concordance-library/archivist-elarian-faenwynd.md",
+          "override": null
+        },
+        {
+          "keyword": "Oathhold Dwarf",
+          "requested_path": "world/factions/dulgarum-oathholds/_overview.md",
+          "override": null
+        },
+        {
+          "keyword": "sherpa / guide",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/shops/tharkar-taproom-sherpa-for-hire.md",
+          "override": null
+        },
+        {
+          "keyword": "The stone bird",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/shops",
+          "override": null
+        }
+      ],
+      "scene_id": "S-001",
+      "end_seconds": 2031.806
+    },
+    {
+      "start_seconds": 2031.806,
+      "location": "Travel from Ardenford into the valley (forest, streams, mountain ridge)",
+      "goal": "travel with the hired guide toward the valley ruins and learn survival/ruin expectations",
+      "npcs_present": [
+        "Kargromdor (Oathhold dwarf guide)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "mysterious",
+      "conflict_type": "exploration",
+      "notes": "A time jump covers two days of travel; the guide teaches about threats, dwarven beliefs, and the party builds trust while moving toward the ruin entrance.",
+      "requested_resources": [
+        {
+          "keyword": "Valley of Ruin / valley ruins",
+          "requested_path": "world/factions/ardenhaven/locations/stone-breach-ruins/valley-ruins.md",
+          "override": null
+        },
+        {
+          "keyword": "spiders",
+          "requested_path": "creatures/custom/underground-ruins-monsters.md",
+          "override": null
+        },
+        {
+          "keyword": "ooze",
+          "requested_path": "creatures/custom/underground-ruins-monsters.md",
+          "override": null
+        },
+        {
+          "keyword": "glowing ink",
+          "requested_path": "items/README.md",
+          "override": null
+        },
+        {
+          "keyword": "Dolgorim / Dahlgrim (dwarven people/place)",
+          "requested_path": "world/factions/dulgarum-oathholds/locations",
+          "override": null
+        }
+      ],
+      "scene_id": "S-002",
+      "end_seconds": 3546.605
+    },
+    {
+      "start_seconds": 3546.605,
+      "location": "Campsite outside town (night, during travel)",
+      "goal": "examine the dangerous ancient spell scroll safely",
+      "npcs_present": [],
+      "time_of_day": "night",
+      "emotional_tone": "uneasy",
+      "conflict_type": "puzzle",
+      "notes": "During the first night of travel, Marwen privately studies the scroll that previously turned someone into goo and realizes it’s a higher-level destructive ancient spell.",
+      "requested_resources": [
+        {
+          "keyword": "scroll that I turned a man into goo",
+          "requested_path": "items/README.md",
+          "override": null
+        },
+        {
+          "keyword": "Ancient (language / writing)",
+          "requested_path": "world/README.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-003",
+      "end_seconds": 3687.389
+    },
+    {
+      "start_seconds": 3687.389,
+      "location": "Ruin entrance crack/cavern in dense forest (valley ruins)",
+      "goal": "enter and explore the ruins while the guide watches the pony outside",
+      "npcs_present": [
+        "Kargromdor (stays outside)",
+        "Lear (pony)",
+        "crow (animal/companion)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "tense",
+      "conflict_type": "exploration",
+      "notes": "The party reaches a hidden crack leading down into ancient tunnels; they set lights, navigate, and choose a modified human-made passage deeper inside.",
+      "requested_resources": [
+        {
+          "keyword": "valley ruins",
+          "requested_path": "world/factions/ardenhaven/locations/stone-breach-ruins/valley-ruins.md",
+          "override": null
+        },
+        {
+          "keyword": "Lear (pony)",
+          "requested_path": "characters/players_notes.md",
+          "override": null
+        },
+        {
+          "keyword": "crow",
+          "requested_path": "characters/players_notes.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-004",
+      "end_seconds": 4572.586
+    },
+    {
+      "start_seconds": 4572.586,
+      "location": "Underground chamber (herbalist/witch-like workspace) within the ruins",
+      "goal": "investigate the chamber and determine who uses it / what is being made",
+      "npcs_present": [
+        "unknown witch/occupant (not yet seen)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "mysterious",
+      "conflict_type": "exploration",
+      "notes": "They find a cozy round room full of herbs, potions, labeled trinkets, and the repeated name 'MARA'; evidence suggests someone was here very recently (warm teacup).",
+      "requested_resources": [
+        {
+          "keyword": "MARA",
+          "requested_path": "characters/npcs",
+          "override": null
+        },
+        {
+          "keyword": "potions / herbs / witch setup",
+          "requested_path": "items/README.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-005",
+      "end_seconds": 5068.62
+    },
+    {
+      "start_seconds": 5068.62,
+      "location": "Underground witch-workroom chamber (ruins), at the only exit tunnel",
+      "goal": "escape the centipede-bodied 'Mara' and avoid being captured/consumed",
+      "npcs_present": [
+        "Mara (centipede-bodied witch entity)",
+        "crow"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "tense",
+      "conflict_type": "combat",
+      "notes": "The party tries to placate Mara with tea and distractions, then breaks into a running escape as combat starts and Mara pursues Marwen specifically.",
+      "requested_resources": [
+        {
+          "keyword": "Mara",
+          "requested_path": "world/factions/elderholt/npcs",
+          "override": null
+        },
+        {
+          "keyword": "crow",
+          "requested_path": "creatures/README.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-006",
+      "end_seconds": 7638.562
+    },
+    {
+      "start_seconds": 7638.562,
+      "location": "Underground cavern opening with a narrow, damaged rope bridge over a deep chasm",
+      "goal": "cross the unsafe bridge and get farther into the cave network to escape Mara",
+      "npcs_present": [
+        "Mara (pursuing, offscreen/approaching)",
+        "crow"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "panic",
+      "conflict_type": "exploration",
+      "notes": "The party’s desperate bridge crossing culminates in the bridge fully snapping; Bazgar and Marwyn swing into the wall and take heavy damage while Mara reaches the chasm edge and paces, unable to cross.",
+      "requested_resources": [
+        {
+          "keyword": "huge cave... long, narrow bridge across a deep, deep chasm",
+          "requested_path": "world/factions/ardenhaven/locations/stone-breach-ruins",
+          "override": null
+        },
+        {
+          "keyword": "Mara... large centipede body... hundreds of legs",
+          "requested_path": "world/factions/elderholt/npcs",
+          "override": null
+        },
+        {
+          "keyword": "crow... Cinder",
+          "requested_path": "characters/README.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-007",
+      "end_seconds": 9595.07
+    },
+    {
+      "start_seconds": 9595.07,
+      "location": "Deeper in the underground ruins (unknown corridor/room), away from the broken bridge",
+      "goal": "regroup, hide from Mara, and take a short rest while figuring out how to get out and what to do about Mara",
+      "npcs_present": [
+        "Cinder (talking crow)",
+        "Mara (offscreen, nearby threat)",
+        "Elder Marith (mentioned)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "tense",
+      "conflict_type": "none",
+      "notes": "After escaping the chasm area, the party retreats deeper into the ruins, sets an Alarm, and takes a short rest while discussing sending Cinder to Elder Marith for help and the danger Mara poses.",
+      "requested_resources": [
+        {
+          "keyword": "Elder Marith",
+          "requested_path": "world/factions/elderholt/elders",
+          "override": null
+        },
+        {
+          "keyword": "Cinder",
+          "requested_path": "characters/README.md",
+          "override": null
+        },
+        {
+          "keyword": "Alarm",
+          "requested_path": "items/README.md",
+          "override": null
+        },
+        {
+          "keyword": "deep in the ruins",
+          "requested_path": "world/factions/ardenhaven/locations/stone-breach-ruins",
+          "override": null
+        }
+      ],
+      "scene_id": "S-008",
+      "end_seconds": 9819.201
+    },
+    {
+      "start_seconds": 9819.201,
+      "location": "Same resting spot deeper in the ruins",
+      "goal": "debrief what happened, assess Sabriel’s strange return, and investigate the blank holy book / silver-thread connection",
+      "npcs_present": [
+        "Cinder (talking crow)",
+        "Elder Marith (mentioned)",
+        "Mara (discussed)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "mysterious",
+      "conflict_type": "social",
+      "notes": "Sabriel reunites with the group after apparently 'teleporting' back; they examine the blank book and discuss Sabriel’s failed goodbye to Alaris and the unsettling 'off-brand' magical feeling.",
+      "requested_resources": [
+        {
+          "keyword": "Alaris",
+          "requested_path": "characters/README.md",
+          "override": null
+        },
+        {
+          "keyword": "blank book / holy book",
+          "requested_path": "items/magic-items/uncatalogued-holy-book.md",
+          "override": null
+        },
+        {
+          "keyword": "Cinder",
+          "requested_path": "characters/README.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-009",
+      "end_seconds": 10174.933
+    },
+    {
+      "start_seconds": 10174.933,
+      "location": "Same resting spot deeper in the ruins",
+      "goal": "understand what Mara is and decide on next steps (escape, warn others, seek Elder Marith’s help)",
+      "npcs_present": [
+        "Cinder (talking crow)",
+        "Mara",
+        "Elder Marith (mentioned)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "grim",
+      "conflict_type": "social",
+      "notes": "Marwyn explains Mara is a dangerous Elderholt witch who has gone too far ('deep witch'), describes ward witches vs deep witches and the cost of bargains, and the party agrees they must find a way out and get help.",
+      "requested_resources": [
+        {
+          "keyword": "Mara is... a witch of Elder Holt",
+          "requested_path": "world/factions/elderholt/witchs.md",
+          "override": null
+        },
+        {
+          "keyword": "ward witches / deep witches",
+          "requested_path": "world/factions/elderholt/witchs.md",
+          "override": null
+        },
+        {
+          "keyword": "Elder Marith, the Ashen Merger",
+          "requested_path": "world/factions/elderholt/elders/marrith-the-ashen-measure.md",
+          "override": null
+        },
+        {
+          "keyword": "Cinder (crow familiar/construct)",
+          "requested_path": "characters/README.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-010",
+      "end_seconds": 11047.795
+    }
+  ]
+}

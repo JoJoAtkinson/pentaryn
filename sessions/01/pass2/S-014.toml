@@ -1,0 +1,106 @@
+start_seconds = 18026.804
+location = "The Wayward Compass inn rooms / upstairs hallway"
+goal = "Complete the night’s rest while preventing Imperium trouble upstairs"
+npcs_present = [
+    "Thorgrim Ledger-Scar",
+    "Calderon Imperium traders (drunk, upstairs)",
+]
+time_of_day = "night"
+emotional_tone = "watchful"
+conflict_type = "social"
+notes = """Sabriel spots drunk Calderon Imperium traders prowling the second-floor hallway and successfully
+gets past them to alert Thorgrim, who escorts them back to bed without disturbing the party’s rest."""
+scene_id = "S-014"
+end_seconds = 23367.0
+summary = """During the night at The Wayward Compass, Sabriel noticed drunk Calderon Imperium traders prowling
+the second-floor hallway and trying doors. Rather than confront them directly or wake the party, she
+calmly walked past them, went to Thorgrim Ledger-Scar, and warned him. Thorgrim went upstairs and
+pragmatically guided the traders back to their rooms, preventing further disturbance."""
+outcome = """The potential upstairs incident was defused by Thorgrim, allowing the party’s rest to continue
+uninterrupted."""
+
+[[requested_resources]]
+keyword = "Thorgrim Ledger-Scar"
+requested_path = "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md"
+
+[[requested_resources]]
+keyword = "Calderon Imperium traders"
+requested_path = "world/factions/calderon-imperium/_overview.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "The Wayward Compass inn rooms / upstairs hallway"
+known_details = [
+    "The inn’s upstairs is a single hallway reached by a step up",
+    "Drunk Calderon Imperium traders were on the second floor opening doors and looking for trouble",
+    "Thorgrim Ledger-Scar is the owner/keeper of The Wayward Compass",
+]
+inferred_details = [
+    "Thorgrim was downstairs/at the bar when alerted, since Sabriel went to get him without waking the other guests",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Sabriel spots trouble upstairs"
+details = "While awake, Sabriel observed drunk Calderon Imperium traders on the second floor opening a door and moving along the hallway as if searching for someone or something."
+
+[[key_events]]
+summary = "Sabriel slips past the traders and alerts Thorgrim"
+details = "Sabriel walked into the hallway and passed the traders without provoking them, then went to inform Thorgrim Ledger-Scar that guests were restless upstairs."
+
+[[key_events]]
+summary = "Thorgrim intervenes without escalating"
+details = "Thorgrim went upstairs and, without disrupting other guests, helped the traders back to bed; they complied and the situation ended."
+
+[character_beats]
+Sabriel = "Chooses a low-escalation approach—bypasses the drunk traders and delegates enforcement to Thorgrim."
+Marwyn = "Keeps a cautious routine in her room, including setting an alarm on her door before sleeping."
+Bazgar = "Turns in for the night and remains asleep through the disturbance."
+
+[[npcs]]
+name = "Thorgrim Ledger-Scar"
+role = "Innkeeper and enforcer of order at The Wayward Compass"
+interaction = "Sabriel warned him about the restless traders; he went upstairs and escorted them back to their rooms."
+
+[[npcs]]
+name = "Calderon Imperium traders"
+role = "Drunk guests causing potential trouble upstairs"
+interaction = "They paused when Sabriel passed them and later listened to Thorgrim and returned to bed."
+
+[[information]]
+summary = "Imperium traders were prowling the upstairs hall"
+details = "Sabriel saw drunk Calderon Imperium traders on the second floor opening at least one door and moving about as if looking for trouble."
+
+[[information]]
+summary = "The upstairs layout is simple and exposed"
+details = "The inn’s upstairs is described as a single hallway reached by a step up, meaning anyone moving through it likely has to pass others in the corridor."
+
+[atmosphere]
+mood = "watchful"
+lighting = "not specified"
+sounds = "noisy movement from drunk guests in the upstairs hallway"
+
+[grounding]
+transcript_timestamps = [
+    300.0,
+    305.0,
+]
+resource_refs = [
+    "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+    "world/factions/calderon-imperium/_overview.md",
+]
+inferred_content = [
+    "Thorgrim being downstairs/at the bar when alerted (implied by Sabriel going to 'the barkeep' after passing the upstairs hall).",
+]
+
+[[plot_threads]]
+thread = "Imperium presence causing friction at The Wayward Compass"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Thorgrim Ledger-Scar as a stabilizing local authority"
+status = "introduced"

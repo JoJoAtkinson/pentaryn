@@ -1,0 +1,111 @@
+start_seconds = 26620.437
+location = "Road south from Ardenford toward the lumber camp (forest route past Miller's Creek)"
+goal = "Travel to the spider-infested lumber camp and plan approach"
+time_of_day = "morning"
+emotional_tone = "casual"
+conflict_type = "exploration"
+notes = """Leaving the market, the party heads into the woods, discusses whether to talk to spiders, and talks
+about Marwen's crow and Sabriel's pony (Lear)."""
+scene_id = "S-017"
+end_seconds = 27142.347
+summary = """While traveling through the woods toward the lumber camp, the party discusses whether to communicate
+with spiders and clarifies priorities: deal with the spider problem first, then shopping. Marwen
+explains the difference between her companion parrot and a crow that serves a specific purpose and
+seems judgmental. The group meets Sabriel’s pony, Lear; Marwen uses Speak with Animals to talk with
+Lear, who praises Sabriel and agrees to stay back from danger. The party agrees on a stealthy
+approach and reaches sight of the lumber camp, finding it blanketed in webbing over logs and a
+cabin."""
+outcome = """The scene ends as the party arrives within view of the web-covered lumber camp and prepares to
+approach."""
+
+[[requested_resources]]
+keyword = "Miller's Creek"
+requested_path = "world/factions/ardenhaven/quests/spider-lair-cr1.md"
+
+[[requested_resources]]
+keyword = "Lear (pony)"
+requested_path = "characters/player-characters/nicole-sabriel.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Road south from Ardenford toward the lumber camp (forest route past Miller's Creek)"
+known_details = [
+    "The party travels into the woods toward the spider-infested lumber camp.",
+    "As they near the camp, they can see stacks of logs and a cabin, with everything covered in webbing that looks like snow from a distance.",
+]
+inferred_details = [
+    "They are approaching the camp from the forest route rather than arriving directly by road.",
+]
+confidence = 0.84
+
+[[key_events]]
+summary = "Party debates talking to spiders and sets plan priorities"
+details = "On the way into the woods, the group briefly considers whether to talk to the spiders, then reaffirms they are heading to the lumber camp to handle the spider situation before doing shopping and hiring help later."
+
+[[key_events]]
+summary = "Marwen explains the crow’s role"
+details = "Marwen distinguishes the crow (serving a specific purpose and tied to someone else) from Flicker the parrot (a companion), and the party notes the crow’s unsettling, judgmental presence."
+
+[[key_events]]
+summary = "Marwen speaks with Lear the pony"
+details = "Sabriel introduces Lear; Marwen casts Speak with Animals, offers Lear an apple, asks what Lear thinks of Sabriel, and warns Lear to stay back because of dangerous spiders. Lear agrees."
+
+[[key_events]]
+summary = "Approach plan: sneak and ambush"
+details = "Bazgar proposes sneaking in quietly and trying to ambush the spiders; Marwen offers to use magic to help Bazgar reach spiders if they are in the trees."
+
+[[key_events]]
+summary = "First sight of the lumber camp’s infestation"
+details = "From a distance the webbing resembles early snow; closer in, the party sees stacks of logs and a cabin with webbing everywhere."
+
+[character_beats]
+Sabriel = "Mentions wanting a nice piece of wood from the camp to make a flute; introduces and cares for Lear."
+Marwen = "Keeps a purposeful, unsettling crow separate from her companion Flicker; uses Speak with Animals to\ncoordinate with Lear."
+Bazgar = "Pushes for a stealthy approach and ambush tactics against the spiders."
+
+[[npcs]]
+name = "Lear"
+role = "Sabriel’s pony"
+interaction = "Given apples and spoken to via Speak with Animals; agrees to stay back from the spider danger."
+
+[[information]]
+summary = "The lumber camp is heavily webbed"
+details = "As the party nears, webbing is visible from afar (mistaken for snow at first) and covers the camp structures and log stacks."
+
+[[information]]
+summary = "Marwen’s crow is not simply a pet"
+details = "Marwen states the crow serves a specific purpose and is associated with someone else, contrasting it with Flicker the parrot as a true companion."
+
+[atmosphere]
+mood = "casual"
+lighting = "morning"
+sounds = "forest travel; a crow present overhead"
+
+[grounding]
+transcript_timestamps = [
+    443.4,
+    452.42,
+]
+resource_refs = [
+    "world/factions/ardenhaven/quests/spider-lair-cr1.md (missing)",
+    "characters/player-characters/nicole-sabriel.md",
+]
+inferred_content = [
+    "Approaching via the forest route rather than a direct road arrival (implied by 'off into the woods' and travel narration).",
+]
+
+[[plot_threads]]
+thread = "Spider-infested lumber camp"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Marwen’s crow and its true allegiance/purpose"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Sabriel crafting a flute from camp wood"
+status = "introduced"

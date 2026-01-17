@@ -1,0 +1,114 @@
+start_seconds = 17419.171
+location = "The Wayward Compass tavern (common room floor space)"
+goal = "Settle a confrontation with Imperium traders after they trip Bazgar"
+npcs_present = [
+    "Thorgrim Ledger-Scar",
+    "Calderon Imperium traders (3)",
+]
+time_of_day = "night"
+emotional_tone = "heated"
+conflict_type = "combat"
+notes = """Bazgar starts a tavern brawl after being tripped; he knocks out multiple traders and Thorgrim
+enforces peace with the tavern’s 'free beer' rule."""
+scene_id = "S-013"
+end_seconds = 18026.804
+summary = """As the party heads upstairs for the night, Bazgar spits toward three Calderon Imperium traders; one
+trips him and the group laughs. Bazgar drags the instigator to the open floor and a fistfight breaks
+out, escalating when the other traders join in. Bazgar knocks the traders down, then leaves for his
+room, and Thorgrim enforces peace by offering free beer that functions as a binding “it ends here”
+accord."""
+outcome = """The brawl ends without weapons, the Imperium traders accept Thorgrim’s free-beer peace, and the
+party turns in for the night."""
+
+[[requested_resources]]
+keyword = "Thorgrim's tavern rules / 'free beer' peace accord"
+requested_path = "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md"
+
+[[requested_resources]]
+keyword = "Calderon Imperium"
+requested_path = "world/factions/calderon-imperium/_overview.md"
+
+[confidence]
+factual_accuracy = 0.9
+completeness = 0.78
+speculation_level = "low"
+
+[location_intelligence]
+name = "The Wayward Compass tavern (common room floor space)"
+known_details = [
+    "The confrontation happens in the tavern’s common room, with an open central floor where patrons can fight (Transcript 290:13-294:19).",
+    "Thorgrim allows scuffles as long as no weapons are drawn, and uses “free beer” as a peace accord (world/factions/ardenhaven/npc/thorgrim-ledger-scar.md).",
+]
+inferred_details = [
+    "The open floor is intentionally kept clear to prevent damage and contain fights.",
+]
+confidence = 0.87
+
+[[key_events]]
+summary = "Imperium traders trip Bazgar on the way upstairs"
+details = "Bazgar spits on the floor toward the Imperium traders; one attempts to trip him, and Bazgar falls as they laugh (Transcript 290:19-291:27)."
+
+[[key_events]]
+summary = "Bazgar initiates a tavern-floor fistfight"
+details = "Bazgar grabs the trader who tripped him and brings him to the center of the tavern; the trader takes a cheap shot from behind, then Bazgar throws him down and continues the fight (Transcript 291:42-294:11)."
+
+[[key_events]]
+summary = "Fight escalates to multiple opponents; Bazgar wins"
+details = "After Bazgar drops the first trader, two others jump in; Bazgar takes some hits, recovers, and knocks the remaining traders out of the fight (Transcript 294:53-297:16)."
+
+[[key_events]]
+summary = "Thorgrim imposes the “free beer” peace accord"
+details = "Thorgrim watches the scuffle, then gives the Imperium traders free beer as the tavern’s peace mechanism; accepting it ends the dispute and prevents further complaints outside the bar (Transcript 294:11-294:24, 297:26-298:31; world/factions/ardenhaven/npc/thorgrim-ledger-scar.md)."
+
+[[key_events]]
+summary = "Night winds down; Marwen performs a quiet ritual"
+details = "After the confrontation, the party goes to their rooms; Marwen lays out a skeleton rib and bits of grass, meditates over them briefly, then puts them away and sleeps (Transcript 299:47-300:38)."
+
+[character_beats]
+Bazgar = "Follows the tavern’s no-weapons norm and settles the insult with a controlled but decisive fistfight\n(Transcript 291:35-297:20)."
+Marwen = "Privately meditates over a skeleton rib and gathered grass before sleeping (Transcript\n300:26-300:38)."
+Sabriel = "Keeps watchful habits, staying up later and rising earlier than the others (Transcript\n299:47-300:05)."
+
+[[npcs]]
+name = "Thorgrim Ledger-Scar"
+role = "Tavern owner and enforcer of house rules"
+interaction = "Allows the fistfight to play out under the no-weapons rule, then offers free beer to force a peace accord (Transcript 294:11-294:24, 297:26-298:31; world/factions/ardenhaven/npc/thorgrim-ledger-scar.md)."
+
+[[npcs]]
+name = "Calderon Imperium traders (3)"
+role = "Antagonistic patrons"
+interaction = "Trip Bazgar and then fight him; after being beaten, they accept Thorgrim’s free beer to end the conflict (Transcript 290:19-291:27, 294:53-298:31)."
+
+[[loot]]
+item = "Free beer (peace accord)"
+context = "Thorgrim provides free beer to the Imperium traders as the tavern’s mechanism to end disputes (Transcript 297:26-298:31; world/factions/ardenhaven/npc/thorgrim-ledger-scar.md)."
+
+[[information]]
+summary = "The Wayward Compass resolves fights via a “free beer” contract"
+details = "Thorgrim’s practice is that accepting the offered beer ends the matter and prevents further retaliation or complaints beyond the tavern; refusal implies further trouble and removal (Transcript 297:26-298:31; world/factions/ardenhaven/npc/thorgrim-ledger-scar.md)."
+
+[atmosphere]
+mood = "heated"
+lighting = "not specified"
+sounds = "laughter at Bazgar’s fall and the noise of a fistfight drawing attention from patrons (Transcript 291:27, 294:11-294:16)."
+
+[grounding]
+transcript_timestamps = [
+    290.13,
+    300.38,
+]
+resource_refs = [
+    "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+    "world/factions/calderon-imperium/_overview.md",
+]
+inferred_content = [
+    "The open floor being intentionally kept clear to contain fights (implied by Thorgrim’s described practice and the scene using the center floor).",
+]
+
+[[plot_threads]]
+thread = "Tension with Calderon Imperium traders in Ardenford"
+status = "complicated"
+
+[[plot_threads]]
+thread = "Thorgrim’s tavern-rule enforcement and ‘free beer’ peace system"
+status = "advanced"

@@ -1,0 +1,98 @@
+start_seconds = 26117.506
+location = "Western Market (Ardenford, Middle Tier)"
+goal = "Meet Gareth Thorne and accept the spider-lair job; learn details and requirements (clear camp, retrieve tools, possibly recover workers)"
+npcs_present = [
+    "Gareth Thorne",
+]
+time_of_day = "morning"
+emotional_tone = "businesslike"
+conflict_type = "social"
+notes = """The party confirms the job details with Gareth Thorne: clear the spider-infested lumber camp,
+retrieve tools, and ideally bring back the workers (or at least bury them)."""
+scene_id = "S-016"
+end_seconds = 26620.437
+summary = """The party meets Gareth Thorne at his wood shop in the Western Market and discusses a spider
+infestation at a lumber camp south of town. Gareth explains the camp is overrun by pony-sized
+spiders and that two workers are missing. He hires the party to clear the camp and recover the
+camp’s tools, with the added request to bring back any surviving workers if possible."""
+outcome = "The party accepts the job parameters and heads out toward the woods/lumber camp."
+
+[[requested_resources]]
+keyword = "Western Market"
+requested_path = "world/factions/ardenhaven/locations/ardenford.md"
+
+[[requested_resources]]
+keyword = "Gareth Thorne"
+requested_path = "world/factions/ardenhaven/quests/spider-lair-cr1.md"
+
+[[requested_resources]]
+keyword = "Spider Lair (lumber camp, Miller's Creek, 80 gold)"
+requested_path = "world/factions/ardenhaven/quests/spider-lair-cr1.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Western Market (Ardenford, Middle Tier)"
+known_details = [
+    "Gareth Thorne operates a shop in the Western Market selling assorted wood via orders/shipping rather than take-home stock",
+    "The meeting happens in the morning",
+]
+inferred_details = [
+    "The shop functions like a showroom/order desk for lumber rather than a retail yard",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Party finds Gareth Thorne’s lumber shop"
+details = "They locate Gareth in the Western Market at a wood shop that displays lumber samples and takes orders for delivery rather than selling the displayed wood directly."
+
+[[key_events]]
+summary = "Gareth briefs the spider problem"
+details = "Gareth describes a lumber camp south of town as infested with spiders and says he believes he lost two workers there; he estimates there may be two or three spiders."
+
+[[key_events]]
+summary = "Job requirements clarified"
+details = "Gareth asks the party to clear the camp and retrieve the camp’s tools, bringing the tools back to him; if the workers can be saved, he wants them brought back as well."
+
+[character_beats]
+Bazgar = "Takes point in speaking with Gareth and asks practical questions about the spiders and tool\nretrieval."
+Marwen = "Asks about unusually colored wood while the job is being discussed."
+Sabriel = "Presses on why authorities aren’t handling the problem and helps size the spiders by comparing them\nto her pony."
+
+[[npcs]]
+name = "Gareth Thorne"
+role = "Lumber merchant/employer for the spider-lair job"
+interaction = "Explains the infestation, missing workers, and insists the party return the camp’s tools to him after clearing the site."
+
+[[information]]
+summary = "Spider threat details"
+details = "The infestation is at a lumber camp south of town; Gareth thinks two workers were lost and estimates there are likely 2–3 spiders, about the size of a pony."
+
+[[information]]
+summary = "Primary objective: tools and camp clearance"
+details = "Gareth prioritizes getting the camp cleared and the tools recovered and returned to him so work can resume; recovering workers is requested if possible."
+
+[atmosphere]
+mood = "businesslike"
+lighting = "morning"
+sounds = "not specified in transcript"
+
+[grounding]
+transcript_timestamps = [
+    26117.0,
+    26648.0,
+]
+inferred_content = [
+    "The shop being a 'showroom/order desk' is inferred from the description that the displayed wood is not what customers take home.",
+]
+
+[[plot_threads]]
+thread = "Spider infestation at the lumber camp south of Ardenford"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Recover missing lumber workers (if alive) and return tools"
+status = "introduced"

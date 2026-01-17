@@ -1,0 +1,135 @@
+start_seconds = 38238.966
+location = "Ardenford (Middle Tier) — The Wayward Compass (common room / dinner table)"
+goal = "Regroup for the night; examine Sabriel’s mysterious holy book; finalize plans to rest and seek a dwarf guide before exploring the valley ruin"
+npcs_present = [
+    "Thorgrim Ledger-Scar (implied Wayward Compass keeper)",
+]
+time_of_day = "evening"
+emotional_tone = "mysterious"
+conflict_type = "social"
+notes = """Sabriel confirms the book’s symbol is unknown and the pages erase writing; the party debates valley
+vs mountain ruins, agrees to start with the valley and look for a dwarf guide in the morning, then
+winds down for the night."""
+scene_id = "S-030"
+end_seconds = 40407.442
+summary = """At dinner in The Wayward Compass, Marwen discreetly hands Sabriel the mysterious holy book found in
+the Concordance Library. Sabriel immediately feels it is "hers" despite not recognizing the
+sunburst-like symbol and later confirms the pages are blank and refuse to hold writing; the only
+clear read is that the book radiates conjuration magic. The group also discusses what Marwen learned
+about local ruins, debates whether to start with the safer valley ruin or push toward more dangerous
+sites, and agrees to rest and seek a dwarf guide in the morning."""
+outcome = """The party ends the night with plans to sleep, then search for a dwarf guide and begin with the
+recommended valley ruin."""
+
+[[requested_resources]]
+keyword = "sunburst symbol on the front cover; blank pages; conjuration magic"
+requested_path = "items/magic-items/uncatalogued-holy-book.md"
+
+[[requested_resources]]
+keyword = "valley ruin (starter ruin) vs mountain ruin (dangerous)"
+requested_path = "world/factions/ardenhaven/locations"
+
+[[requested_resources]]
+keyword = "Oathhold dwarf / dwarf guide"
+requested_path = "world/factions/dulgarum-oathholds/_overview.md"
+
+[[requested_resources]]
+keyword = "The Wayward Compass (regular table / dinner)"
+requested_path = "world/factions/ardenhaven/locations/ardenford.md"
+
+[[requested_resources]]
+keyword = "Thorgrim Ledger-Scar"
+requested_path = "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Ardenford (Middle Tier) — The Wayward Compass (common room / dinner table)"
+known_details = [
+    "The party regroups at their regular table for dinner at The Wayward Compass.",
+    "They plan to rest for the night and look for a dwarf guide in the morning.",
+    "Sabriel chooses not to open the book at the table and instead examines it privately afterward.",
+]
+inferred_details = [
+    "The conversation happens in a semi-public tavern setting before Sabriel retires to a private room to investigate the book.",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Marwen gives Sabriel the uncatalogued holy book"
+details = "Marwen produces the book and places it before Sabriel, urging discretion; Sabriel immediately senses it belongs to her despite not recognizing it."
+
+[[key_events]]
+summary = "Sabriel investigates the book and finds no readable contents"
+details = "Sabriel opens the book later and finds every page blank; attempts to write do not persist, and she cannot identify the cover symbol through religious knowledge."
+
+[[key_events]]
+summary = "The party debates ruin strategy and sets a timeline"
+details = "Marwen argues for starting at the commonly explored valley ruin to build experience and resources; Bazgar pushes to advance faster toward higher-risk ruins, but ultimately concedes to starting smaller. They agree they should not remain in Ardenford longer than roughly six to eight weeks if traveling together."
+
+[[key_events]]
+summary = "Plan to hire a dwarf guide"
+details = "They decide to get a good night’s rest and look for a dwarf guide in the morning, ideally someone who could later guide them to more dangerous mountain sites."
+
+[character_beats]
+Sabriel = "Treats the book as a long-term mystery; feels ownership without understanding and becomes frustrated\nby the lack of answers."
+Marwen = "Acts cautiously and discreetly; shares research about ruins and advocates a safer, methodical\napproach."
+Bazgar = "Pushes for ambitious, faster progress toward dangerous ruins but accepts the group’s more cautious\nplan."
+
+[[npcs]]
+name = "Thorgrim Ledger-Scar"
+role = "Keeper of The Wayward Compass (implied presence)"
+interaction = "No direct interaction is captured in the scene; the party uses the tavern as their meeting place."
+
+[[loot]]
+item = "Uncatalogued Holy Book (Starburst Seal)"
+context = "Marwen hands the book to Sabriel at dinner; Sabriel keeps it and examines it privately."
+
+[[information]]
+summary = "The book is blank, resists writing, and is tied to conjuration magic"
+details = "Sabriel confirms the pages appear blank throughout and that writing does not remain; the only identified magical aspect is a conjuration aura, while the sunburst/starburst cover symbol remains unrecognized."
+
+[[information]]
+summary = "Recommended ruin progression"
+details = "Marwen reports that the valley ruin is a common starting point and has been picked over, while other ruins in the forest or mountain are riskier and have a reputation for adventurers not returning."
+
+[[information]]
+summary = "Next-day plan: find a dwarf guide"
+details = "The party agrees to rest and then seek a dwarf guide in the morning, ideally someone who could later help with more dangerous expeditions."
+
+[atmosphere]
+mood = "mysterious, tense"
+lighting = "evening indoors"
+sounds = "tavern dinner conversation"
+
+[grounding]
+transcript_timestamps = [
+    637.42,
+    661.28,
+]
+resource_refs = [
+    "items/magic-items/uncatalogued-holy-book.md",
+]
+inferred_content = [
+    "That Sabriel examined the book in a private room rather than at the table (implied by her stated intent to do so).",
+    "That the valley ruin discussed corresponds to the commonly explored local starting ruin (the transcript references a recommended valley ruin but does not name a specific site).",
+]
+
+[[plot_threads]]
+thread = "Starburst-sealed holy book (blank pages, conjuration aura, sense of ownership)"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Ruin exploration plan (valley first vs. mountain/forest later)"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Hiring a dwarf guide (ideally Oathhold/Dulgarum-affiliated)"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Questions about drow and divine relationships (Alarith vs. Lolth)"
+status = "complicated"

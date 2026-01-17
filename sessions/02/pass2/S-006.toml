@@ -1,0 +1,125 @@
+start_seconds = 5068.62
+location = "Underground witch-workroom chamber (ruins), at the only exit tunnel"
+goal = "escape the centipede-bodied 'Mara' and avoid being captured/consumed"
+npcs_present = [
+    "Mara (centipede-bodied witch entity)",
+    "crow",
+]
+time_of_day = "unknown"
+emotional_tone = "tense"
+conflict_type = "combat"
+notes = """The party tries to placate Mara with tea and distractions, then breaks into a running escape as
+combat starts and Mara pursues Marwen specifically."""
+scene_id = "S-006"
+end_seconds = 7638.562
+summary = """At the chamber’s only exit, the party hears many legs approaching and is confronted by Mara, a
+human-headed, centipede-bodied witch entity. Mara offers jasmine tea and fixates on Marwen as a
+“sister,” while the party uses politeness and distraction to slip toward the tunnel. When the escape
+attempt is noticed, Mara’s demeanor shifts; she warns Sabriel to leave, then the party breaks into a
+running retreat down the tunnel as Mara pursues, largely ignoring Bazgar and focusing on Marwen. The
+party uses movement, disengagement, and obstacles to gain distance and reach the end of the tunnel
+segment."""
+outcome = """The party escapes the immediate chamber-and-tunnel engagement, reaching a larger cavern approach
+that ends this chase segment."""
+
+[[requested_resources]]
+keyword = "Mara"
+requested_path = "world/factions/elderholt/npcs"
+
+[[requested_resources]]
+keyword = "crow"
+requested_path = "creatures/README.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.74
+speculation_level = "low"
+
+[location_intelligence]
+name = "Underground witch-workroom chamber (ruins), at the only exit tunnel"
+known_details = [
+    "The chamber has a single exit tunnel; a fork exists down the tunnel but reaching it requires moving toward the oncoming threat (84:42-84:56).",
+    "The party transitions from the chamber into a tunnel while fleeing (94:38-94:50).",
+    "The encounter begins at the chamber entrance/doorway and continues into the tunnel (104:00-104:28).",
+]
+inferred_details = [
+    "The chamber is part-workroom/part-ruin with scattered broken furniture used as incidental terrain.",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Mara arrives at the only exit and engages the party socially"
+details = "A centipede-bodied entity with a human head enters from the exit tunnel, introduces herself as Mara, and offers jasmine tea; the party plays along while looking for a chance to leave."
+
+[[key_events]]
+summary = "The party attempts a quiet withdrawal using distraction"
+details = "Marwen stealths toward the doorway while Sabriel keeps Mara’s attention by offering to do her hair; Bazgar’s movement causes a loud break that draws attention."
+
+[[key_events]]
+summary = "Mara warns Sabriel and the party bolts into the tunnel"
+details = "Mara’s expression changes and she tells Sabriel to go; the party immediately retreats into the tunnel at a run."
+
+[[key_events]]
+summary = "Chase-combat in the tunnel as Mara closes distance"
+details = "Sabriel attempts to command Mara to halt but Mara resists and becomes more hostile; Bazgar tries to strike but his weapon shatters against Mara’s shell, and Mara continues to pursue Marwen while ignoring Bazgar. Marwen disengages and uses jump-enhanced movement while carrying the crow; Bazgar uses caltrops to slow pursuit as the group pushes to the end of the tunnel segment."
+
+[character_beats]
+Marwen = "Keeps composure under pressure, uses stealth and mobility magic to escape, and grabs the crow while\nfleeing."
+Sabriel = "Uses calm social engagement and a hair-fixing distraction, then tries a command spell before\ncommitting to the retreat."
+Bazgar = "Acts as rear-guard, attempts to fight to buy time, then shifts to escape tactics and drops caltrops\nwhile pushing forward."
+
+[[npcs]]
+name = "Mara"
+role = "Centipede-bodied witch entity blocking/pursuing the only exit"
+interaction = "Offers tea and calls Marwen 'sister,' then pursues the party into the tunnel while focusing on Marwen and largely ignoring Bazgar."
+
+[[npcs]]
+name = "Crow"
+role = "Companion/observer present at the doorway and during the retreat"
+interaction = "Initially petrified and silent, then flutters at Mara and is ultimately carried by Marwen during the escape."
+
+[[loot]]
+item = "Bazgar’s caltrops (expended)"
+context = "Dropped in the tunnel to hinder Mara’s pursuit during the escape."
+
+[[information]]
+summary = "Mara identifies herself repeatedly and shows fractured speech"
+details = "Mara cycles through 'I am Mara / We are Mara' while making tea, suggesting a divided or unstable identity."
+
+[[information]]
+summary = "Mara can sense witches and is fixated on Marwen"
+details = "Mara calls Marwen 'sister' and the party notes she can 'sense' her sisters; Mara’s pursuit behavior prioritizes Marwen over the others."
+
+[[information]]
+summary = "Illusions are unlikely to work on Mara"
+details = "Marwen assesses that vision-based illusion magic likely won’t fool Mara and chooses mobility instead."
+
+[atmosphere]
+mood = "tense, urgent"
+lighting = "The tunnel mouth is lit enough for Mara’s head and body to come into view from darkness."
+sounds = "A rapid chattering of many legs on rock; Mara’s voice echoes harshly in the enclosed tunnel."
+
+[grounding]
+transcript_timestamps = [
+    5040,
+    7670,
+]
+resource_refs = [
+    "world/factions/elderholt/npcs/broken-witch-concept.md",
+    "crow (creatures/README.md)",
+]
+inferred_content = [
+    "The chamber contains scattered broken furniture used as terrain (implied by references to broken chair/furniture and a piece of axe embedding in furniture).",
+]
+
+[[plot_threads]]
+thread = "Mara’s fractured identity and connection to 'the Voice'"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Marwen being recognized as a 'sister' by corrupted witches"
+status = "complicated"
+
+[[plot_threads]]
+thread = "Escape route through the ruins’ only tunnel and its fork"
+status = "advanced"

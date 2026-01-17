@@ -1,0 +1,144 @@
+start_seconds = 2031.806
+location = "Travel from Ardenford into the valley (forest, streams, mountain ridge)"
+goal = "travel with the hired guide toward the valley ruins and learn survival/ruin expectations"
+npcs_present = [
+    "Kargromdor (Oathhold dwarf guide)",
+]
+time_of_day = "unknown"
+emotional_tone = "mysterious"
+conflict_type = "exploration"
+notes = """A time jump covers two days of travel; the guide teaches about threats, dwarven beliefs, and the
+party builds trust while moving toward the ruin entrance."""
+scene_id = "S-002"
+end_seconds = 3546.605
+summary = """The party traveled for two days from Ardenford into a stream-cut valley beneath a long mountain
+range. Along the way, their dwarf guide Kargromdor identified a major cave route to his people on
+the mountain’s eastern side and answered questions about what dangers and valuables to expect in
+ancient ruins. Through conversation and shared camp time, the party improved trust with Kargromdor
+and learned key Oathhold cultural beliefs about oaths, stone, and religion."""
+outcome = """The journey continued with Kargromdor more willing to trust the party’s intentions, as the group
+prepared for deeper ruin exploration."""
+
+[[requested_resources]]
+keyword = "Valley of Ruin / valley ruins"
+requested_path = "world/factions/ardenhaven/locations/stone-breach-ruins/valley-ruins.md"
+
+[[requested_resources]]
+keyword = "spiders"
+requested_path = "creatures/custom/underground-ruins-monsters.md"
+
+[[requested_resources]]
+keyword = "ooze"
+requested_path = "creatures/custom/underground-ruins-monsters.md"
+
+[[requested_resources]]
+keyword = "glowing ink"
+requested_path = "items/README.md"
+
+[[requested_resources]]
+keyword = "Dolgorim / Dahlgrim (dwarven people/place)"
+requested_path = "world/factions/dulgarum-oathholds/locations"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Travel from Ardenford into the valley (forest, streams, mountain ridge)"
+known_details = [
+    "The party traveled up hills into dense forest and down into a valley with many streams joining into a strong flow (33:51-34:12).",
+    "To the east, enormous mountains were visible, described as littered with old dwarven caves and ruins stretching from northern to southern peaks (34:12-34:36).",
+    "Kargromdor pointed out a large cave entrance on the mountain face and said it leads through to the eastern side where his people live (35:39-36:16).",
+]
+inferred_details = [
+    "The group is moving toward the valley ruins while using the mountain ridge and streams as navigation landmarks.",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Two-day descent into the valley beneath the mountains"
+details = "The party moved through dense forest into a valley where many streams gathered into a strong flow, with a vast mountain range to the east marked by old caves and ruins (33:51-34:36, 35:35-35:39)."
+
+[[key_events]]
+summary = "Kargromdor identified a cave route to his people"
+details = "Kargromdor pointed out a large cave entrance on the mountain face and stated it leads to the eastern side of the mountains where his people live; he also described travel time as much longer by land than by going through the tunnel route (35:39-37:11)."
+
+[[key_events]]
+summary = "Ruin expectations: threats and motivations"
+details = "Kargromdor warned that ruins may hold the dead, oozes formed by lingering magic, and hostile rival adventurers; he said most seek magical items, sometimes mundane-seeming enchantments, sometimes destructive tools, and that many hope for a rare, powerful “payday” find (38:11-41:56)."
+
+[[key_events]]
+summary = "Intentions clarified; trust improved"
+details = "When questioned about seeking ruin power, Kargromdor stated he sought understanding—standing in the ruin to listen and “read the room.” The party affirmed a learning-focused purpose, which improved his favor and trust (42:05-43:57)."
+
+[[key_events]]
+summary = "Oathhold culture and religion explained"
+details = "The party learned Oathhold dwarves prioritize spoken word over written contracts, believe they came from stone and return to stone, and treat the mountain itself as a temple; they keep shrines rather than large temples and avoid government endorsement of a single deity (47:05-47:55, 49:12-49:33, 56:54-57:30)."
+
+[[key_events]]
+summary = "Dwarven regional tension noted"
+details = "Kargromdor begrudgingly referred to other dwarves as “cousins,” contrasting his people living within the earth with southern dwarves who mine for trade and use contract labor (35:02-35:21, 55:43-56:36)."
+
+[character_beats]
+Bazgar = "Worked to prove reliability and improve Kargromdor’s trust through consistent conduct during travel\nand camp (44:18-47:08)."
+Sabriel = "Built rapport with Kargromdor and asked about dwarven beliefs, learning their stone-origin worldview\nand temple-less religious practice (48:07-49:33, 50:04-57:30)."
+Marwen = "Stayed focused on understanding the magic behind recovered ruin items and how such power is\nrepurposed (39:21-41:26)."
+
+[[npcs]]
+name = "Kargromdor"
+role = "Oathhold dwarf guide"
+interaction = "Guided the party through the valley route, pointed out a cave path to his people, outlined ruin threats and treasure motives, and gradually extended trust as the party emphasized learning over destructive power (35:39-36:16, 38:11-43:57, 47:05-57:30)."
+
+[[information]]
+summary = "Ruin threats in the region"
+details = "Kargromdor warned of the dead in ruins, oozes formed by lingering magic, and conflict with other adventurers who may claim territory; he also mentioned spiders being more common on the other side of the mountains (38:11-39:14)."
+
+[[information]]
+summary = "What people seek in ruins"
+details = "He described ruin finds as magical items ranging from odd minor enchantments to destructive tools, and said many seek rare artifacts with immense power, believing deeper ruins may hold such technology (39:27-42:03)."
+
+[[information]]
+summary = "Oathhold dwarven values"
+details = "Oathhold culture centers on the value of one’s spoken word; reliance on written contracts is viewed as a sign that a person’s word is worthless (47:05-47:55)."
+
+[[information]]
+summary = "Oathhold beliefs about stone and worship"
+details = "They believe dwarves come from stone and return to stone; they have shrines rather than large temples, and consider the mountain itself their temple, avoiding state selection of a single deity (49:12-49:33, 56:54-57:30)."
+
+[[information]]
+summary = "Dwarven regional differences"
+details = "Kargromdor contrasted his people—who live within and with the earth and do not focus on selling resources—with southern dwarves who mine for trade and rely on contract labor; he referred to them begrudgingly as “cousins” (35:02-35:21, 55:43-56:36)."
+
+[atmosphere]
+mood = "mysterious"
+lighting = "not specified"
+sounds = "running streams and flowing water implied by the many streams collecting into a strong flow (33:58-34:12)"
+
+[grounding]
+transcript_timestamps = [
+    2011.0,
+    3570.0,
+]
+resource_refs = [
+    "creatures/custom/underground-ruins-monsters.md",
+]
+inferred_content = [
+    "The group is moving toward the valley ruins while using the mountain ridge and streams as navigation landmarks.",
+]
+
+[[plot_threads]]
+thread = "Reaching the valley ruins with Kargromdor’s guidance"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Kargromdor’s trust in the party’s intentions (learning vs. power-seeking)"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Ruin ecology and hazards (dead, oozes, spiders, rival adventurers)"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Oathhold dwarven culture and tension with southern dwarves"
+status = "introduced"

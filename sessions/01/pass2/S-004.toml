@@ -1,0 +1,138 @@
+start_seconds = 3999.426
+location = "Clifftop/ledge overlooking undead in the eastern valley forest"
+goal = "Locate and stop the undead before they reach Ardenford; identify Renn’s grandfather if possible"
+time_of_day = "unknown"
+emotional_tone = "tense"
+conflict_type = "combat"
+notes = """The party fights the skeletons from the ledge, chases them through the brush, identifies Renn’s
+grandfather, and puts him to rest before returning to the tower to bury him and receive payment."""
+scene_id = "S-004"
+end_seconds = 7018.862
+summary = """From a cliff above the eastern valley forest, the party locates a small group of undead moving
+through dense brush. They descend to a ledge, ambush the undead, and quickly destroy two. The
+remaining undead scatter into the trees; the party gives chase, splitting up. Sabriel uses magic to
+force one skeleton to grovel, identifies it as Renn’s grandfather, and places the war medallion on
+it, which visibly calms the undead and lets it collapse into true death. The party gathers the
+intact body to return it to the tower, while Marwen—wounded by a sword thrust during the
+chase—collects a bone from another destroyed skeleton."""
+outcome = """Combat ends with Renn’s grandfather’s remains recovered intact, and the party heads back uphill
+toward the tower/guards with the body."""
+
+[[requested_resources]]
+keyword = "Renn Caldor / grandson / border patrol scout"
+requested_path = "world/factions/ardenhaven/quests/restless-dead-cr1.md"
+
+[[requested_resources]]
+keyword = "war medallion / amulet on a chain"
+requested_path = "items/README.md"
+override = "world/factions/ardenhaven/quests/restless-dead-cr1.md"
+
+[[requested_resources]]
+keyword = "the crow (following Marwen)"
+requested_path = "characters/README.md"
+override = "world/factions/ardenhaven/quests/restless-dead-cr1.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.74
+speculation_level = "low"
+
+[location_intelligence]
+name = "Clifftop ledge overlooking the eastern valley forest"
+known_details = [
+    "The party spots 4–5 undead below through dense brush from a high cliff, then climbs down to a midway ledge and later to the forest floor",
+    "The terrain is steep/rocky enough that sliding causes scrapes and a hard fall; climbing is possible without a rope but still requires climbing",
+    "The forest is wet/cold enough that stray fire doesn’t spread into a major blaze",
+]
+inferred_details = [
+    "The midway ledge provides a ranged firing position before the party descends to pursue fleeing undead",
+]
+confidence = 0.87
+
+[[key_events]]
+summary = "Rope descent to a firing ledge above the undead"
+details = "After spotting several undead below the cliff through heavy shrubs, Bazgar anchors a rope and coordinates the group down to a midway ledge to engage from range."
+
+[[key_events]]
+summary = "Ambush kills two undead; the rest flee into the forest"
+details = "The party opens with ranged attacks from the ledge, destroying one skeleton with radiant magic and dropping another with fire; the remaining undead scatter and hobble away through the trees."
+
+[[key_events]]
+summary = "Chaotic pursuit splits the party"
+details = "Sabriel teleports down and falls prone on the rocky slope; Bazgar climbs down quickly; Marwen uses a jump spell to descend and sprints ahead, ending up closest to a fleeing skeleton."
+
+[[key_events]]
+summary = "Marwen is attacked during the chase"
+details = "Marwen closes with a skeleton and is stabbed by its sword; she retaliates with a cone of flame that the skeleton partially avoids."
+
+[[key_events]]
+summary = "Sabriel stops a skeleton and confirms it is the grandfather"
+details = "Sabriel compels a fleeing skeleton to grovel, then inspects it and learns it is the one they were seeking (Renn’s grandfather)."
+
+[[key_events]]
+summary = "War medallion laid to rest the grandfather’s undead body"
+details = "Sabriel places the war medallion on the undead’s neck; it reaches for it clumsily, then visibly relaxes and collapses into true death, leaving the body intact for retrieval."
+
+[[key_events]]
+summary = "Body recovered; party prepares to return to the tower"
+details = "Bazgar carefully lifts and carries the intact body (wrapped with Sabriel’s robe), while Marwen pockets a bone from another destroyed skeleton; they head back toward the tower where guards note seeing fire below."
+
+[character_beats]
+Bazgar = "Takes point on logistics and combat, then shifts to respectful handling of the recovered body."
+Sabriel = "Uses control magic and the war medallion to identify and peacefully end the grandfather’s undeath."
+Marwen = "Acts impulsively in the chase, gets stabbed, then relies on practiced spellwork and\nopportunistically collects undead bone."
+
+[[npcs]]
+name = "Tower guards (unnamed)"
+role = "Ardenford/Ardenhaven watch at the tower"
+interaction = "Greet the party on return and question the visible fire and whether remains were destroyed."
+
+[[loot]]
+item = "Undead bone (knuckle bone / bone fragment)"
+context = "Marwen collects a bone from a destroyed skeleton to keep for later use."
+
+[[information]]
+summary = "There were five undead, not four"
+details = "Initial sighting from above was unclear (4–5), but once the chase began it was confirmed there were five total."
+
+[[information]]
+summary = "Renn’s grandfather was among the undead and could be laid to rest with the medallion"
+details = "Sabriel identifies the groveling skeleton as the grandfather; placing the war medallion on it causes a visible calm and the undead collapses into true death, leaving an intact body."
+
+[[information]]
+summary = "The undead behavior was startled and inconsistent"
+details = "Rather than fighting to the death, the undead scatter and flee; one shows moments of unpredictability (sometimes sluggish, sometimes quick), and the grandfather reacts sadly/instinctively to the medallion."
+
+[atmosphere]
+mood = "tense"
+lighting = "unknown"
+sounds = "A crow repeatedly caws nearby during the fight and chase"
+
+[grounding]
+transcript_timestamps = [
+    3969,
+    7020,
+]
+resource_refs = [
+    "world/factions/ardenhaven/quests/restless-dead-cr1.md (missing in provided resources)",
+]
+inferred_content = [
+    "The midway ledge functions as a deliberate ranged firing position before pursuit (implied by positioning and actions, not explicitly labeled as such).",
+    "Exact identity of 'tower' as Ardenford/Ardenhaven outpost is inferred from scene goal/context; transcript only calls it 'the tower'.",
+]
+
+[[plot_threads]]
+thread = "Restless Dead: stop the undead before they reach Ardenford"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Renn’s grandfather: identify and recover remains"
+status = "resolved"
+
+[[plot_threads]]
+thread = "War medallion’s significance to the undead"
+status = "introduced"
+
+[[plot_threads]]
+thread = "The crow following the party"
+status = "complicated"

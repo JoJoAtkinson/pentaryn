@@ -1,0 +1,86 @@
+start_seconds = 3546.605
+location = "Campsite outside town (night, during travel)"
+goal = "examine the dangerous ancient spell scroll safely"
+time_of_day = "night"
+emotional_tone = "uneasy"
+conflict_type = "puzzle"
+notes = """During the first night of travel, Marwen privately studies the scroll that previously turned someone
+into goo and realizes it’s a higher-level destructive ancient spell."""
+scene_id = "S-003"
+end_seconds = 3687.389
+summary = """During the night at camp outside town, Morrowind steps away from the others to carefully study the
+scroll that previously turned a man into goo. He determines it is an Ancient-written, high-powered
+destructive spell intended to kill, far beyond the party’s usual magic, and he puts it away for
+later study."""
+outcome = """Morrowind re-stows the scroll safely, and the narration shifts back to the party’s travel toward a
+newly revealed ground-level crack leading down to ruins."""
+
+[[requested_resources]]
+keyword = "scroll that I turned a man into goo"
+requested_path = "items/README.md"
+
+[[requested_resources]]
+keyword = "Ancient (language / writing)"
+requested_path = "world/README.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Campsite outside town (night, during travel)"
+known_details = [
+    "The party camps outside of town on the first night of travel.",
+    "Morrowind moves a short distance away from camp later in the night to examine a dangerous scroll.",
+]
+inferred_details = [
+    "The scroll is kept secured and separated from other scrolls to avoid accidental use.",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Morrowind examines the lethal Ancient scroll"
+details = "Away from camp, Morrowind inspects the scroll without attempting to cast it and confirms it is a powerful destructive spell meant as a weapon, written in Ancient spell-script that is especially difficult to interpret."
+
+[[key_events]]
+summary = "Scroll is secured to prevent mix-ups"
+details = "After learning it is dangerous and beyond the party’s current capability, Morrowind rolls the scroll back up and stores it separately from a sleep scroll to avoid confusing them."
+
+[character_beats]
+Morrowind = "Acts cautiously by studying the scroll without casting and then storing it safely."
+Bazgar = "No direct action in this scene beyond being present in the exchange."
+
+[[loot]]
+item = "Scroll that turned a man into goo"
+context = "Reviewed at night; identified as an Ancient-written, high-powered destructive spell and then re-stowed separately from other scrolls."
+
+[[information]]
+summary = "The scroll is a powerful lethal spell written in Ancient spell-script"
+details = "The scroll is confirmed to be a destructive weapon-like spell intended to kill, not a minor spell, and its Ancient spell-writing is notably difficult to decipher even for someone who knows Ancient."
+
+[atmosphere]
+mood = "uneasy"
+lighting = "night"
+sounds = "not specified"
+
+[grounding]
+transcript_timestamps = [
+    3543,
+    3710,
+]
+resource_refs = [
+    "items/README.md",
+    "world/README.md",
+]
+inferred_content = [
+    "That storing the scroll separately is specifically to prevent accidental casting; the transcript states separation and concern about mixing them up, but not the exact method of securing it.",
+]
+
+[[plot_threads]]
+thread = "Safely understanding the Ancient lethal scroll"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Reaching the ruins via a crack/opening in the ground"
+status = "introduced"

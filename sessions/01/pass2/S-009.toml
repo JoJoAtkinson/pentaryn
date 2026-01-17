@@ -1,0 +1,129 @@
+start_seconds = 14289.089
+location = "Inside the ruins/old keep (goblin-held area)"
+goal = "Survive the goblin ambush/fight after negotiations break down"
+npcs_present = [
+    "Goblins (multiple; one boss with scimitar)",
+]
+time_of_day = "evening"
+emotional_tone = "chaotic"
+conflict_type = "combat"
+notes = """The party finishes the goblin fight, with Marwen burning multiple goblins in a cone and Sabriel
+healing; the last goblin surrenders as a 'pet' and flees."""
+scene_id = "S-009"
+end_seconds = 15719.12
+summary = """Negotiations collapse into an ambush inside the ruins when a goblin tries to take Bazgar’s axe.
+Bazgar fights back as more goblins rush in from cover. Marwen warns Sabriel and uses Flicker to
+distract an attacker, then is quickly overwhelmed and injured. Sabriel drops one goblin with radiant
+magic and draws another away from Marwen. Bazgar recovers and kills his attacker, while Marwen
+unleashes a burst of fire that kills two goblins at once. Sabriel heals Marwen, and the last goblin
+surrenders; Bazgar lets it flee. The party then discusses taking proof of the fight back to the
+farmer, and Bazgar takes a goblin head as evidence."""
+outcome = """The ambush is survived; most goblins are killed, one surrenders and is released, and the party
+prepares to leave with proof."""
+
+[[requested_resources]]
+keyword = "goblin boss with scimitar / multiple goblins in ruins"
+requested_path = "world/factions/ardenhaven/quests/goblin-raid-cr1.md"
+
+[[requested_resources]]
+keyword = "Flicker (familiar) / Blade Ward / Produce Flame / Sacred Flame / Healing Word"
+requested_path = "characters/player-characters"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.74
+speculation_level = "low"
+
+[location_intelligence]
+name = "Inside the ruins/old keep (goblin-held area)"
+known_details = [
+    "Broken interior spaces with low walls that block goblins' line of sight but not the taller PCs' (approx. 247:33-248:01, 256:09-256:13)",
+    "Multiple goblins were positioned around corners and behind cover within the ruins (approx. 241:18-242:15, 248:57-249:01)",
+]
+inferred_details = [
+    "Tight corridors/rooms create frequent ambush angles and force short-range engagements",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Ambush triggers when a goblin goes for Bazgar’s weapon"
+details = "A goblin attempts to steal Bazgar’s axe, prompting Bazgar to swing and the situation to turn into open combat (approx. 238:09-239:13)."
+
+[[key_events]]
+summary = "Marwen warns Sabriel and uses Flicker to create an opening"
+details = "Marwen alerts Sabriel that negotiations are failing and has Flicker harry a goblin to set up Bazgar with an opening (approx. 239:51-241:09)."
+
+[[key_events]]
+summary = "Sabriel kills a goblin with radiant magic and pulls pressure off Marwen"
+details = "Sabriel targets a goblin near Marwen with Sacred Flame, killing it, then repositions to draw another goblin’s attention away from Marwen (approx. 242:57-244:34, 247:39-248:01)."
+
+[[key_events]]
+summary = "Marwen is hurt, then incinerates two goblins"
+details = "Marwen is struck and left badly hurt, then uses a 15-foot cone of fire to kill two goblins in front of her (approx. 246:11-250:06, 253:39-254:25)."
+
+[[key_events]]
+summary = "Bazgar stabilizes himself and cuts down a goblin"
+details = "After being wounded by the goblin boss’s scimitar, Bazgar recovers and kills the goblin threatening him, then moves toward his allies (approx. 250:25-252:34)."
+
+[[key_events]]
+summary = "Last goblin surrenders and is released"
+details = "A remaining goblin abandons the fight and tries to surrender by calling itself a “pet.” Sabriel accepts the surrender, and Bazgar stops short of killing it and orders it to leave; it flees (approx. 256:46-261:02)."
+
+[character_beats]
+Bazgar = "Refuses to be disarmed, fights aggressively, then restrains himself when he sees Sabriel accept a\nsurrender (approx. 238:16-239:13, 259:48-261:02)."
+Marwen = "Uses Flicker tactically, takes heavy hits, then turns the fight with a decisive fire blast (approx.\n239:51-241:09, 246:11-250:06, 253:39-254:25)."
+Sabriel = "Prioritizes protecting allies with radiant magic and healing, and chooses mercy when an enemy\nsurrenders (approx. 242:57-244:34, 254:52-255:19, 256:46-261:02)."
+
+[[npcs]]
+name = "Goblin boss (scimitar)"
+role = "Leader/stronger goblin combatant"
+interaction = "Engages Bazgar directly and wounds him with a scimitar before being driven off/defeated as the fight ends (approx. 250:25-251:01)."
+
+[[npcs]]
+name = "Goblins (multiple)"
+role = "Ambushers/raiders in the ruins"
+interaction = "Attack from cover with improvised weapons and bites; several are killed by Sabriel’s radiant magic and Marwen’s fire (approx. 241:18-250:06, 253:39-254:25)."
+
+[[npcs]]
+name = "Surrendering goblin"
+role = "Last surviving combatant"
+interaction = "Attempts to surrender by calling itself a “pet”; Sabriel accepts and Bazgar allows it to flee (approx. 256:46-261:02)."
+
+[[loot]]
+item = "Goblin head (taken as proof)"
+context = "Bazgar decapitates a goblin corpse to bring evidence back (approx. 262:08-262:14)."
+
+[[information]]
+summary = "Goblins are positioned to ambush within the ruins"
+details = "The party realizes goblins had been moving in from other positions and using the ruins’ cover and walls to close in (approx. 245:46-246:05)."
+
+[[information]]
+summary = "The last goblin’s “pet” claim is a surrender attempt"
+details = "Sabriel reads the goblin’s behavior as fear and surrender rather than a literal request to be kept as a pet (approx. 257:30-258:11)."
+
+[atmosphere]
+mood = "chaotic and urgent"
+lighting = "dim interior with intermittent light from Marwen’s flame magic"
+sounds = "close-quarters scuffling, improvised weapon strikes, and bursts of fire"
+
+[grounding]
+transcript_timestamps = [
+    238.09,
+    262.27,
+]
+resource_refs = [
+    "world/factions/ardenhaven/quests/goblin-raid-cr1.md (missing/unavailable)",
+]
+inferred_content = [
+    "The ruins’ layout creates tight, ambush-friendly lanes (inferred from repeated wall/cover interactions and line-of-sight blocking).",
+    "Lighting described as dim beyond spell light (inferred from reliance on produced flame/light discussion).",
+    "Sounds described generally (inferred from combat actions; not explicitly narrated).",
+]
+
+[[plot_threads]]
+thread = "Goblin threat in the ruins/old keep"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Bring proof back to the farmer"
+status = "introduced"

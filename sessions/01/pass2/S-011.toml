@@ -1,0 +1,138 @@
+start_seconds = 15864.333
+location = "The Wayward Compass tavern, Ardenford (Middle Tier)"
+goal = "Rest, debrief, and plan next day (spider job) while getting to know each other"
+npcs_present = [
+    "Thorgrim Ledger-Scar",
+]
+time_of_day = "night"
+emotional_tone = "casual"
+conflict_type = "social"
+notes = """Back at the tavern, the party orders food, chats with Thorgrim, shares motivations, and agrees to
+rest and pursue spiders in the morning."""
+scene_id = "S-011"
+end_seconds = 17300.982
+summary = """Back at The Wayward Compass, the party orders dinner and settles in for the night. Bazgar asks
+Thorgrim Ledger-Scar for local food recommendations and briefly probes his Garhammer connections,
+but Thorgrim shuts the topic down. Over the meal, the group debriefs their successful day, agrees to
+rest, and shares personal background and motivations—Bazgar’s ambition to become warlord of the
+Rakthoth, Marwen’s desire for knowledge from the ruins and to follow her sister’s path, and
+Sabriel’s origin in Arathelion and identity as a traveling healer—while also noting small
+preferences like food and music tastes."""
+outcome = """The night winds down with plans to sleep at the tavern and handle the spider job in the morning, as
+unfamiliar Imperium traders enter the bar."""
+
+[[requested_resources]]
+keyword = "The Wayward Compass"
+requested_path = "world/factions/ardenhaven/locations/ardenford.md"
+
+[[requested_resources]]
+keyword = "Thorgrim Ledger-Scar"
+requested_path = "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md"
+
+[[requested_resources]]
+keyword = "Spider job / spiders tomorrow"
+requested_path = "world/factions/ardenhaven/quests/spider-lair-cr1.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.68
+speculation_level = "low"
+
+[location_intelligence]
+name = "The Wayward Compass tavern, Ardenford (Middle Tier)"
+known_details = [
+    "Thorgrim is the tavern keeper/owner and serves food and bread to the party (transcript 266:43-269:00).",
+    "Thorgrim is a dwarf originally from Garhammer (transcript 270:22-270:37).",
+    "Thorgrim is owner and keeper of The Wayward Compass in Ardenford’s Middle Tier (world/factions/ardenhaven/npc/thorgrim-ledger-scar.md).",
+]
+inferred_details = [
+    "The party is seated together at a table in the common room while ordering dinner and talking.",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Dinner orders and tavern interaction with Thorgrim"
+details = "Bazgar asks Thorgrim for the tavern’s best local meal; the party orders fish, mutton/lamb, and extra bread (transcript 266:43-269:00)."
+
+[[key_events]]
+summary = "Bazgar questions Thorgrim about Garhammer ties"
+details = "Bazgar notices the emblem on Thorgrim’s shield and asks if he still has cousins or connections in Garhammer; Thorgrim answers that he does not (transcript 270:22-271:10)."
+
+[[key_events]]
+summary = "Party debrief and agreement to rest before spiders"
+details = "Bazgar frames the day as a successful proof-of-concept for working together and suggests getting to know each other; the group agrees to rest tonight and deal with spiders in the morning (transcript 271:19-272:26, 281:40-282:10)."
+
+[[key_events]]
+summary = "Personal sharing: goals, origins, and preferences"
+details = "Bazgar shares his swamp origin and goal of becoming warlord of the Rakthoth, describing how leadership is chosen and why his people struggle against the Imperium; Marwen says she seeks knowledge from the library/ruins and to grow like her sister did; Sabriel shares being from Arathelion/Arathelion (corrected to Arathelion/Arathelion pronunciation as Arathelion/Arathelion in-play) and describes traveling as a healer (transcript 272:57-280:12, 280:12-281:26, 284:32-286:04)."
+
+[[key_events]]
+summary = "Imperium traders arrive"
+details = "Late in the conversation, three clearly marked Imperium traders enter the tavern (transcript 288:12-288:50)."
+
+[character_beats]
+Bazgar = "Seeks local cuisine, probes Thorgrim’s background, and openly states his ambition to become warlord\nwhile trying to build party cohesion."
+Marwen = "Reveals she’s not fond of fish, is drawn to sweet spreads and string music, and states a\nknowledge-driven reason for exploring ruins tied to her sister."
+Sabriel = "Observes companions’ preferences for future healing words and shares a subdued introduction as a\ntraveling healer from Arathelion."
+
+[[npcs]]
+name = "Thorgrim Ledger-Scar"
+role = "Tavern owner/keeper"
+interaction = "Takes the party’s food orders and answers questions about his Garhammer origin while denying current connections there."
+
+[[loot]]
+item = "Two wheels of sharp cheese"
+context = "Added to party inventory earlier in the scene’s opening moments (transcript 263:55-264:08)."
+
+[[information]]
+summary = "Thorgrim is from Garhammer but claims no remaining ties"
+details = "When asked directly about cousins or connections in Garhammer, Thorgrim says no (transcript 270:22-271:10)."
+
+[[information]]
+summary = "Bazgar’s long-term goal and political context"
+details = "Bazgar states he wants to become warlord of the Rakthoth and explains that shamans and the people guide selection; he also describes difficulty leaving home due to the Imperium and a single pass through Garhammer (transcript 274:33-279:44)."
+
+[[information]]
+summary = "Marwen’s motivation for ruins and family tie"
+details = "Marwen says she wants knowledge from the library/ruins, that her magic runs in her family, and that her sister began her journey here (transcript 274:13-274:26, 280:12-280:49)."
+
+[[information]]
+summary = "Sabriel’s origin and role"
+details = "Sabriel says they are from Arathelion and describes themself as a traveler and healer rather than someone on a specific mission (transcript 284:32-285:55, 287:53-288:10)."
+
+[[information]]
+summary = "Imperium presence in the tavern"
+details = "Three Imperium traders enter, visibly identifiable by their uniform-like appearance (transcript 288:12-288:50)."
+
+[atmosphere]
+mood = "calm, conversational"
+lighting = "not specified"
+sounds = "a musician with string instruments is implied as possible entertainment; Marwen reacts strongly when such music plays (transcript 282:41-283:08)."
+
+[grounding]
+transcript_timestamps = [
+    263.55,
+    288.5,
+]
+resource_refs = [
+    "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+]
+inferred_content = [
+    "The party is seated together at a table in the common room while ordering and talking.",
+]
+
+[[plot_threads]]
+thread = "Spider job (tomorrow)"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Thorgrim’s Garhammer connections"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Imperium presence in Ardenford"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Ruins/library expedition motivations"
+status = "advanced"

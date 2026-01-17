@@ -1,0 +1,117 @@
+start_seconds = 34039.464
+location = "Ardenford (Upper Tier) — Concordance Library entrance"
+goal = "Gain access to the library and decide who will research what"
+npcs_present = [
+    "library doorkeeper/attendant (unnamed)",
+]
+time_of_day = "unknown"
+emotional_tone = "curious"
+conflict_type = "social"
+notes = """At the library door, the party learns access is membership-based with a wizard exception; Marwen
+demonstrates spellcasting/book to get admitted while the others plan to wait nearby."""
+scene_id = "S-025"
+end_seconds = 34444.089
+summary = """At the Concordance Library entrance, the party learns the "public" library only admits
+wizards/casters due to prior thefts and limited guards, with membership usually granted by a
+councilman. One party member demonstrates unusual magic to satisfy the attendant and is allowed
+inside to receive a library card, while the others decide to leave and regroup later, with Sabriel
+requesting research topics (oldest religions, fallen gods, and the Ancients). As the researcher
+enters, the attendant remains visibly unsettled, and Sabriel briefly uses thaumaturgy to rumble the
+ground under him before the group moves on and Bazgar starts a serious conversation with Sabriel
+about the Pentarch Accords."""
+outcome = """One character enters the library to research while the others depart to regroup later, transitioning
+into Bazgar speaking with Sabriel about the Pentarch Accords."""
+
+[[requested_resources]]
+keyword = "Concordance Library"
+requested_path = "world/factions/ardenhaven/locations/ardenford.md"
+
+[[requested_resources]]
+keyword = "Elarion Faenwynd (ruin-catalog ledger mentioned as compiler)"
+requested_path = "world/factions/ardenhaven/npc/elarian-faenwynd.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Ardenford (Upper Tier) — Concordance Library entrance"
+known_details = [
+    "A robed attendant/doorkeeper stands at the front door holding a book (wizard-like appearance).",
+    "The library is described as public but restricted to casters/wizards; entry is controlled due to past book theft.",
+    "Membership is typically granted by a councilman; entrants must demonstrate they qualify as a wizard/caster.",
+]
+inferred_details = [
+    "The party is stopped at the threshold and must negotiate/qualify before being allowed inside.",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Library access restrictions explained"
+details = "The doorkeeper confirms the library is for wizards/casters only, citing stolen books and insufficient guards; membership is usually issued by a councilman as a trust measure for wizards. (567:46–569:04)"
+
+[[key_events]]
+summary = "Research tasks assigned"
+details = "The party agrees the qualifying member should go in and look things up; Sabriel asks for information on the oldest religions and whether there have been fallen gods, and Marwen asks to learn whatever is found about the Ancients. They plan to meet later at the Wayward Compass. (569:13–571:30)"
+
+[[key_events]]
+summary = "Magic demonstration grants entry"
+details = "The entrant shows a book/magic; the attendant notes it doesn't match any arcane school he knows but accepts it as sufficient and allows entry, saying someone inside will provide a library card. (571:42–572:44)"
+
+[[key_events]]
+summary = "Attendant is rattled; party leaves"
+details = "The attendant watches the entrant closely, seeming unsure what she is; Sabriel uses thaumaturgy to create a brief ground rumble under his feet, unsettling him, and the others move off to get a drink/coffee. (572:47–573:54)"
+
+[[key_events]]
+summary = "Bazgar raises the Pentarch Accords"
+details = "As they depart, Bazgar begins a conversation with Sabriel about the Pentarch Accords treaty between the local powers and the Imperium. (573:59–574:20)"
+
+[character_beats]
+Bazgar = "Questions the system and pivots to a serious discussion about the Pentarch Accords."
+Sabriel = "Delegates research questions (old religions, fallen gods) and uses thaumaturgy to unsettle the\ndoorkeeper."
+Marwen = "Prioritizes learning about the Ancients and asks to be updated on findings."
+"Unnamed entrant (party member)" = "Takes point on gaining entry and agrees to research requested topics."
+
+[[npcs]]
+name = "Unnamed library doorkeeper/attendant"
+role = "Gatekeeper for Concordance Library access"
+interaction = "Explains wizard-only policy and theft concerns, evaluates a magic demonstration, grants entry, and is briefly unsettled by thaumaturgy."
+
+[[information]]
+summary = "Concordance Library is restricted despite being 'public'"
+details = "The attendant says the library is public in the sense that wizards/casters may use it, but access is restricted to members/qualified casters because books were stolen and there aren't enough guards; membership is typically granted by a councilman. (567:46–568:59)"
+
+[[information]]
+summary = "Research leads requested by the party"
+details = "Sabriel asks for information on the world's oldest religions and whether any gods have fallen; Marwen asks for any findings about the Ancients; the entrant also expresses interest in researching the Ancients and other topics. (570:26–571:12)"
+
+[[information]]
+summary = "Attendant recognizes unusual magic"
+details = "During the entry check, the attendant remarks that the magic shown isn't from any arcane school he knows, but still deems it sufficient for entry. (571:59–572:23)"
+
+[atmosphere]
+mood = "curious, mildly tense at the checkpoint"
+lighting = "unknown"
+sounds = "brief rumble from thaumaturgy under the attendant's feet"
+
+[grounding]
+transcript_timestamps = [
+    567.15,
+    574.32,
+]
+inferred_content = [
+    "The 'unnamed entrant' is treated as a party member distinct from Bazgar/Sabriel/Marwen, but the transcript speaker labels are unclear about exactly who enters.",
+]
+
+[[plot_threads]]
+thread = "Access to Concordance Library / obtaining a library card"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Research: oldest religions, fallen gods, and the Ancients"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Pentarch Accords and relations with the Imperium"
+status = "introduced"

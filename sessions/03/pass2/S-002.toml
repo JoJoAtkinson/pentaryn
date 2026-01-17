@@ -1,0 +1,111 @@
+start_seconds = 5488.928
+location = "Underground cavern: rocky shore beside an underground stream with multiple tunnels and an upward climb"
+goal = "Recover from the water escape and find a safe route upward/out"
+npcs_present = [
+    "Cinder (crow familiar/companion)",
+]
+time_of_day = "unknown"
+emotional_tone = "relieved_but_wary"
+conflict_type = "exploration"
+notes = """After being swept through a tunnel, the party reaches a cavern shore, identifies an upward path, and
+climbs to a higher plateau where faint daylight is visible far above."""
+scene_id = "S-002"
+end_seconds = 5836.255
+summary = """After being swept through underground water, the party reaches a rocky shore in a cavern with
+branching tunnels and identifies a clear upward route. Bazgar climbs first on wet rock, secures a
+rope, and the group reaches a higher plateau where they spot faint light and a small waterfall far
+above, indicating a possible way out—though the final ascent looks extremely dangerous."""
+outcome = """The scene ends with the party assessing a ~120-foot, high-risk vertical climb toward distant light
+while considering ways to scout or illuminate it."""
+
+[[requested_resources]]
+keyword = "underground waterways / cavern with tunnels and an upward path"
+requested_path = "world/factions/ardenhaven/locations/stone-breach-ruins/valley-ruins-rooms.md"
+
+[[requested_resources]]
+keyword = "Cinder (crow familiar/companion)"
+requested_path = "characters/README.md"
+
+[confidence]
+factual_accuracy = 0.9
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Underground cavern shore beside an underground stream (Stone-breach/Valley Ruins underground chambers area)"
+known_details = [
+    "The party is jostled by the water and takes minor damage, then drags themselves onto a rocky shore as the cavern opens up (transcript 91:02-91:52).",
+    "Water continues onward into more underground waterways (transcript 91:45-91:52).",
+    "There are multiple tunnels, an upstream option, and one clear path upward (transcript 92:40-92:57).",
+    "The climb is wet, with imperfect handholds and sometimes vertical (transcript 94:05-94:18).",
+    "From a higher plateau, they see what looks like a dead end until they spot light far above and a small, steady waterfall from an opening to the outside (transcript 95:16-95:47).",
+    "The upward route to the light is straight up and about 120 feet; a fall would likely be fatal (transcript 96:00-96:23, 97:10-97:13).",
+    "The Valley Ruins resource describes modular underground chambers connected by corridors and vertical movement between levels (world/factions/ardenhaven/locations/stone-breach-ruins/valley-ruins-rooms.md).",
+]
+inferred_details = [
+    "This cavern functions as a junction/hub area connecting waterways to multiple ruin passages, with the upward climb likely leading toward an exit or higher ruin level.",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Washed out onto a rocky shore"
+details = "The party takes minor damage from being jostled in the water, then pulls themselves onto a rocky shore as the cavern opens up and the water continues into further underground waterways."
+
+[[key_events]]
+summary = "Finds routes: tunnels, upstream, and a clear upward path"
+details = "They observe multiple tunnel options, including an upstream route, but focus on the most obvious path leading upward."
+
+[[key_events]]
+summary = "Bazgar completes a difficult climb and sets a rope"
+details = "Bazgar climbs first despite wet, imperfect, sometimes vertical handholds, then lowers a rope so the others can follow without needing additional checks."
+
+[[key_events]]
+summary = "Spots distant light and a small waterfall far above"
+details = "From the next plateau, they notice faint light and a small but steady trickle of water falling from a high opening that appears to connect to the outside; the remaining climb is straight up, about 120 feet, and a slip could be fatal."
+
+[[key_events]]
+summary = "Attempts to involve Cinder for scouting"
+details = "Marwen considers whether Cinder could fly out near the falling water, but Cinder ignores the request and seems to have an attitude."
+
+[character_beats]
+Bazgar = "Takes point, chooses the upward route, and leads a hazardous climb while setting a rope for the\nothers."
+Marwen = "Avoids the climb without assistance and looks for alternative solutions (rope/magic/scouting)."
+Sabriel = "Expresses discomfort with being underground and suggests using Light on a ribbon to help send Cinder\nto illuminate/scout."
+
+[[npcs]]
+name = "Cinder"
+role = "Crow companion/familiar"
+interaction = "Marwen tries to direct Cinder to fly out/scout near the waterfall; Cinder ignores her."
+
+[[information]]
+summary = "A possible exit is visible far above"
+details = "The party sees faint light and an opening to the outside roughly 120 feet up, with a small steady waterfall; reaching it requires a dangerous vertical climb where a fall could be deadly."
+
+[[information]]
+summary = "The cavern is a branching junction"
+details = "From the rocky shore, they can see multiple tunnels and an upstream option, but one path upward stands out as the clearest route."
+
+[atmosphere]
+mood = "relieved but wary"
+lighting = "Dim cavern light with a faint sheen of daylight visible far above"
+sounds = "Running water and a small, steady waterfall"
+
+[grounding]
+transcript_timestamps = [
+    5462,
+    5866,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/stone-breach-ruins/valley-ruins-rooms.md",
+]
+inferred_content = [
+    "The cavern acts as a junction/hub connecting waterways to ruin passages and the upward climb likely leads toward an exit or higher level.",
+]
+
+[[plot_threads]]
+thread = "Find a safe route upward/out of the underground waterways"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Use Cinder to scout/assist navigation"
+status = "complicated"

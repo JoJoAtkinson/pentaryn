@@ -1,0 +1,123 @@
+start_seconds = 2977.76
+location = "Eastern Patrol watchtower (top observation platform)"
+goal = "Receive briefing and directions from Renn Caldor; secure identifying token (medal) for his grandfather among the undead"
+npcs_present = [
+    "Renn Caldor",
+]
+time_of_day = "morning"
+emotional_tone = "somber"
+conflict_type = "social"
+notes = """At the tower, Renn explains the undead walking dead from the old battlefield and his hope his
+grandfather is among them; Sabriel persuades him to lend his grandfather’s medal for identification
+and he points out where he sees movement."""
+scene_id = "S-003"
+end_seconds = 3999.426
+summary = """On the watchtower’s top platform, the party meets border patrolman Renn Caldor, who explains he is
+searching for his grandfather—likely among the wandering undead left from Calderon Imperium
+necromancy during the war—and asks the party to help identify and recover him so he can be buried.
+The party persuades Renn to lend them his grandfather’s war medal as an identifying token, receives
+directions to a spot across the valley where undead are often seen trapped below steep cliffs, and
+then heads out, using magic to navigate to the cliff edge where several undead are visible below."""
+outcome = """The party leaves the watchtower with the borrowed medal and reaches a cliff overlooking multiple
+undead, preparing to engage from above."""
+
+[[requested_resources]]
+keyword = "Renn Caldor"
+requested_path = "world/factions/ardenhaven/quests/restless-dead-cr1.md"
+
+[[requested_resources]]
+keyword = "Calderon Imperium (raised dead during the war)"
+requested_path = "world/factions/calderon-imperium/_overview.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Eastern Patrol watchtower (top observation platform)"
+known_details = [
+    "The top opens into a wide observation area with a view over a valley (49:07-49:22).",
+    "The position is hard for an army to approach, though one or two people could sneak up (49:20-49:30).",
+]
+inferred_details = [
+    "The tower is positioned to monitor movement in the valley and nearby forest approaches.",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Party meets Renn Caldor at the watchtower"
+details = "Renn, a border patrolman wearing an old, battle-worn war medal on a chain, greets the party and confirms he summoned them for help (49:30-50:08, 52:12-53:08)."
+
+[[key_events]]
+summary = "Renn explains the undead situation and his request"
+details = "Renn says his grandmother’s last wish was to be buried with his grandfather, who fell defending the area during the war; he believes the grandfather may now be among the wandering dead that drift homeward without direction (53:39-55:23)."
+
+[[key_events]]
+summary = "Medal is loaned as an identifying token"
+details = "Renn identifies his grandfather as part of the Ridgeward Battalion and agrees to lend the medal so the party can use it to help identify the correct undead (56:02-57:40)."
+
+[[key_events]]
+summary = "Directions and watch schedule established"
+details = "Renn points out a recurring area of movement across the valley where undead appear stuck below steep cliffs, and tells the party he will be on duty during his shift and again the next day if they return later (58:26-59:21)."
+
+[[key_events]]
+summary = "Party navigates to the undead"
+details = "After leaving, the party discusses Calderon Imperium necromancy and then uses magic-assisted tracking/communication with animals to find the cliff; from above they spot four or five undead below in brush (59:26-60:01, 64:21-66:41)."
+
+[character_beats]
+Bazgar = "Confirms the Calderon Imperium commonly employs necromancers and treats the mission pragmatically\n(59:35-60:01)."
+Sabriel = "Uses compassion to secure the loan of the medal and supports the group with guidance magic\n(56:16-57:17, 65:15-65:35)."
+Marwen = "Takes the lead on wilderness navigation by ritually using Speak with Animals to locate the undead\n(64:21-66:41)."
+
+[[npcs]]
+name = "Renn Caldor"
+role = "Border patrol watchtower guard seeking his grandfather’s remains"
+interaction = "Briefs the party on the undead and the war context, lends his grandfather’s medal, and points them toward a likely undead cluster across the valley (52:32-59:21)."
+
+[[loot]]
+item = "Ridgeward Battalion war medal (borrowed)"
+context = "Loaned by Renn as an identifying token to help locate his grandfather among the undead; to be returned (56:02-57:40)."
+
+[[information]]
+summary = "Undead originate from wartime necromancy and residual magic"
+details = "Renn explains the Calderon Imperium used raised dead during the war; afterward, reanimated or residually affected fallen sometimes rise and wander toward home without orders, requiring others to put them back to rest (54:39-55:26)."
+
+[[information]]
+summary = "Likely undead location and terrain constraint"
+details = "Renn regularly sees movement across the valley near steep cliffs; he believes undead are trapped there because they cannot climb up in their condition (58:33-58:52)."
+
+[[information]]
+summary = "Renn’s duty schedule"
+details = "Renn states his rotations are every eight hours and he will be present during his shift and again the next day if the party returns later (57:45-59:21)."
+
+[atmosphere]
+mood = "somber"
+lighting = "morning"
+sounds = "not specified in transcript"
+
+[grounding]
+transcript_timestamps = [
+    2947,
+    4024,
+]
+resource_refs = [
+    "world/factions/calderon-imperium/_overview.md",
+    "world/factions/ardenhaven/quests/restless-dead-cr1.md (missing)",
+]
+inferred_content = [
+    "The tower’s primary function is monitoring valley/forest approaches (implied by observation platform and Renn spotting movement).",
+    "The party is preparing to fight from above at the cliff edge (implied by reaching an overlook and discussing approach from above).",
+]
+
+[[plot_threads]]
+thread = "Recover Renn Caldor’s grandfather (and bury him with Renn’s grandmother)"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Wandering undead caused by Calderon Imperium necromancy"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Undead cluster trapped below steep cliffs across the valley"
+status = "advanced"

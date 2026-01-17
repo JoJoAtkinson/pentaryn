@@ -1,0 +1,136 @@
+start_seconds = 7638.562
+location = "Underground cavern opening with a narrow, damaged rope bridge over a deep chasm"
+goal = "cross the unsafe bridge and get farther into the cave network to escape Mara"
+npcs_present = [
+    "Mara (pursuing, offscreen/approaching)",
+    "crow",
+]
+time_of_day = "unknown"
+emotional_tone = "panic"
+conflict_type = "exploration"
+notes = """The party’s desperate bridge crossing culminates in the bridge fully snapping; Bazgar and Marwyn
+swing into the wall and take heavy damage while Mara reaches the chasm edge and paces, unable to
+cross."""
+scene_id = "S-007"
+end_seconds = 9595.07
+summary = """The party reached a cavern split by a deep chasm with a damaged rope bridge as Mara approached from
+behind. Bazgar carried Marwen onto the bridge, but the planks repeatedly failed; the crow helped
+secure a grappling hook/line to the far side as a safety. When the bridge finally snapped, Bazgar
+and Marwen swung on the rope into the wall, took injuries, then climbed back up on their side while
+Sabriel remained separated on the far side. Mara arrived at the chasm’s edge but did not spot
+Sabriel below/near the wall, pacing and screeching while the party tried to stay hidden and regroup."""
+outcome = """With the bridge destroyed and the party split, Bazgar and Marwen climbed up and moved deeper into
+the ruins while Sabriel stayed concealed on the opposite side as Mara searched the chasm edge."""
+
+[[requested_resources]]
+keyword = "huge cave... long, narrow bridge across a deep, deep chasm"
+requested_path = "world/factions/ardenhaven/locations/stone-breach-ruins"
+
+[[requested_resources]]
+keyword = "Mara... large centipede body... hundreds of legs"
+requested_path = "world/factions/elderholt/npcs"
+
+[[requested_resources]]
+keyword = "crow... Cinder"
+requested_path = "characters/README.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Underground cavern opening with a narrow, damaged rope bridge over a deep chasm"
+known_details = [
+    "A tunnel opens into a huge cave with a long, narrow rope bridge spanning a deep chasm; several planks are missing, leaving holes in the bridge (transcript 127:18-128:40).",
+    "On the far side is a ledge leading into deeper tunnel mazes/cave network (transcript 127:47-128:40).",
+    "The bridge’s ropes seem intact while the boards are failing/breaking under weight (transcript 138:09-138:20).",
+]
+inferred_details = [
+    "The chasm is wide enough that a fall would likely be fatal without a safety line, based on the party prioritizing ropes and the described swing distance.",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Cavern opens onto broken rope bridge over chasm"
+details = "The tunnel opened into a large cavern with a narrow rope bridge spanning a deep chasm; missing boards created gaps, and the far side led into deeper tunnels (transcript 127:18-128:40)."
+
+[[key_events]]
+summary = "Bazgar attempts a fast crossing while carrying Marwen"
+details = "Bazgar picked up Marwen and rushed onto the bridge; planks broke under him, forcing him to grab the rope and continue despite the bridge rocking and deteriorating (transcript 130:12-134:15)."
+
+[[key_events]]
+summary = "Crow secures a safety line to the far side"
+details = "Bazgar called to the crow to take a hook to the far side; the crow carried it across and lashed it securely, creating a safety line tied to Marwen (transcript 136:14-137:13)."
+
+[[key_events]]
+summary = "Sabriel crosses carefully but cannot reunite before collapse"
+details = "Sabriel moved onto the bridge cautiously, using the ropes/edges to distribute weight, advancing partway while the bridge continued to fail behind Bazgar (transcript 137:49-139:18)."
+
+[[key_events]]
+summary = "Bridge snaps; Bazgar and Marwen swing into the wall and are injured"
+details = "As Bazgar tried to finish the crossing with Marwen, the bridge broke and a rope line snapped; Bazgar and Marwen ended up swinging like a pendulum into the wall, taking significant damage, and Marwen’s knife/gear jabbed into her during the impact (transcript 145:40-152:02)."
+
+[[key_events]]
+summary = "Mara reaches the chasm edge but doesn’t see Sabriel"
+details = "Mara’s centipede-like shadow and many legs appeared near the tunnel mouth; after the bridge collapse she paced and screeched at the chasm edge, apparently unsure how to proceed, while Sabriel remained unseen (transcript 142:11-143:38, 152:32-154:31)."
+
+[[key_events]]
+summary = "Bazgar and Marwen climb back up; party remains split"
+details = "Using the remaining rope, Bazgar climbed back up with Marwen; from their position they could see Sabriel was alive but separated across the chasm with no bridge (transcript 153:11-154:12)."
+
+[character_beats]
+Bazgar = "Took risks to move Marwen across, coordinated the crow to secure a safety line, and absorbed the\nworst of the impact when the bridge collapsed."
+Marwen = "Stayed close to Bazgar for safety, prepared a fire cantrip to sabotage the bridge if Mara stepped\nonto it, and chose to hold onto Bazgar during the swing."
+Sabriel = "Crossed cautiously using the ropes, then stayed still/hidden when Mara arrived and avoided engaging\ndirectly."
+
+[[npcs]]
+name = "Mara"
+role = "Pursuer (centipede-like presence)"
+interaction = "Approached the chasm after the bridge collapsed, paced and screeched at the edge, but did not detect Sabriel (transcript 142:11-143:38, 152:32-154:31)."
+
+[[npcs]]
+name = "Crow"
+role = "Ally/companion with unusual competence"
+interaction = "Carried a hook/line to the far side and secured it, enabling Bazgar and Marwen to survive the bridge collapse (transcript 136:14-137:13)."
+
+[[loot]]
+item = "Grappling hook/rope line (secured to far side)"
+context = "Used as a safety line during the bridge crossing attempt; the crow anchored it on the far side (transcript 136:14-137:13)."
+
+[[information]]
+summary = "Bridge failure pattern"
+details = "The ropes held while the wooden boards/planks failed, creating holes and eventually causing the bridge to collapse (transcript 128:27-128:40, 138:09-138:20, 145:40-148:47)."
+
+[[information]]
+summary = "Mara’s approach signaled by shadow and many legs"
+details = "Before Mara came into view, the party saw the light from her direction go dark and a looming centipede-like shadow with many legs stretching along the cave floor, indicating she was just around the corner (transcript 142:11-143:38)."
+
+[atmosphere]
+mood = "urgent"
+lighting = "Dim cavern; light from Mara’s direction was briefly blocked as she approached (transcript 142:11-142:35)."
+sounds = "Bridge creaking/breaking implied by repeated plank failures; Mara screeched at the chasm edge (transcript 130:12-134:15, 152:32-152:57)."
+
+[grounding]
+transcript_timestamps = [
+    7618.0,
+    9617.0,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/stone-breach-ruins/valley-ruins-rooms.md",
+]
+inferred_content = [
+    "The chasm’s lethality is inferred from the party’s emphasis on safety lines and the described swing distance rather than explicitly stated damage outcomes beyond the swing impact.",
+]
+
+[[plot_threads]]
+thread = "Escape from Mara into the deeper cave network"
+status = "complicated"
+
+[[plot_threads]]
+thread = "Crossing the unsafe bridge"
+status = "resolved"
+
+[[plot_threads]]
+thread = "Party split across the chasm (Sabriel separated)"
+status = "introduced"

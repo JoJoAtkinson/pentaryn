@@ -1,0 +1,113 @@
+start_seconds = 33400.695
+location = "Ardenford (Lower Tier) — Docks / harbor district (picket line near ships)"
+goal = "Investigate the Merrowgate alcohol strike and see if it can be resolved (or bypassed) to obtain distilled alcohol for Hesta"
+npcs_present = [
+    "striking sailors (unnamed)",
+    "harbor guards (unnamed)",
+]
+time_of_day = "unknown"
+emotional_tone = "uncertain"
+conflict_type = "social"
+notes = """The party arrives at the docks, observes the picket line and guards, briefly considers engaging,
+then decides they lack the clout/resources and backs off."""
+scene_id = "S-024"
+end_seconds = 34039.464
+summary = """At Ardenford’s docks, the party finds striking sailors picketing and chanting for better pay while
+guards passively observe. After briefly considering engaging with the strike, the group decides they
+lack the leverage to resolve it and withdraws, heading instead toward the Concordance Library."""
+outcome = """The party leaves the dock strike unresolved and transitions to the Concordance Library, where a
+wizard-like figure is stationed at the entrance."""
+
+[[requested_resources]]
+keyword = "docks / harbor district"
+requested_path = "world/factions/ardenhaven/locations/ardenford.md"
+
+[[requested_resources]]
+keyword = "Merrowgate union (distilled alcohol) strike"
+requested_path = "world/factions/merrowgate/_overview.md"
+
+[confidence]
+factual_accuracy = 0.82
+completeness = 0.68
+speculation_level = "low"
+
+[location_intelligence]
+name = "Ardenford (Lower Tier) — Docks / harbor district (picket line near ships)"
+known_details = [
+    "The party arrives at the docks and sees a picket line of sailors chanting for better pay.",
+    "A few guards are present, monitoring but not actively intervening.",
+    "Seagulls are audible at the docks.",
+]
+inferred_details = [
+    "The strike is preventing normal loading/unloading, complicating access to cargo such as distilled alcohol.",
+]
+confidence = 0.83
+
+[[key_events]]
+summary = "Strike observed at the docks"
+details = "The party reaches the harbor district and sees sailors on a picket line demanding better pay, with guards nearby who appear uninterested in taking action."
+
+[[key_events]]
+summary = "Party opts out of intervening"
+details = "After discussing whether they can meaningfully affect the situation, the party decides not to engage with the strike and departs."
+
+[[key_events]]
+summary = "Crow kills a seagull"
+details = "Marwyn’s crow is seen taking down a seagull, prompting the party to move away from the docks and continue on."
+
+[[key_events]]
+summary = "Arrival at the Concordance Library"
+details = "The party reaches the Concordance Library and notices a wizard-like person at the front entrance."
+
+[character_beats]
+Sabriel = "Tries to startle Marwyn with a crow-call illusion, then supports leaving the strike alone."
+Marwyn = "Moves toward the picket line but quickly pivots to leaving after the crow’s behavior draws\nattention."
+Bazgar = "Assesses the strike as outside the party’s skill set and deprioritizes solving it."
+
+[[npcs]]
+name = "Striking sailors (unnamed)"
+role = "Picketing dockworkers"
+interaction = "Observed from nearby; the party does not negotiate with them."
+
+[[npcs]]
+name = "Harbor guards (unnamed)"
+role = "Dock security/peacekeepers"
+interaction = "Seen monitoring the strike; no direct interaction."
+
+[[npcs]]
+name = "Wizard-like person at the Concordance Library (unnamed)"
+role = "Figure stationed at the library entrance"
+interaction = "Spotted as the party arrives; no conversation occurs in this scene."
+
+[[information]]
+summary = "The dock strike is about pay"
+details = "The sailors’ chants and signs indicate they are striking for better pay; guards are present but not escalating the situation."
+
+[[information]]
+summary = "No clear lead on the alcohol shipment at the docks"
+details = "The party does not identify a specific ship or point of access for the distilled alcohol during this visit."
+
+[atmosphere]
+mood = "uncertain"
+lighting = "unknown"
+sounds = "seagulls and chanting from the picket line"
+
+[grounding]
+transcript_timestamps = [
+    556.38,
+    567.46,
+]
+resource_refs = [
+    "world/factions/merrowgate/_overview.md",
+]
+inferred_content = [
+    "The strike likely disrupts cargo access and complicates obtaining distilled alcohol.",
+]
+
+[[plot_threads]]
+thread = "Merrowgate distilled alcohol strike (access to alcohol for Hesta)"
+status = "complicated"
+
+[[plot_threads]]
+thread = "Concordance Library inquiry"
+status = "introduced"

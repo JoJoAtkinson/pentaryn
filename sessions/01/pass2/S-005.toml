@@ -1,0 +1,114 @@
+start_seconds = 7018.862
+location = "Border patrol tower/guard post on the eastern valley approach (mountain path near the tower)"
+goal = "Return Corwin’s remains to Renn and complete burial rites; collect payment"
+npcs_present = [
+    "Renn Caldor",
+    "tower guards (unnamed)",
+]
+time_of_day = "unknown"
+emotional_tone = "somber"
+conflict_type = "social"
+notes = """The party returns to the tower with the intact body, is guided to a gravesite, helps bury the
+remains, and Renn thanks and pays them."""
+scene_id = "S-005"
+end_seconds = 7224.162
+summary = """The party returns to the border patrol tower with Corwin’s remains, reassures the guards they did
+not destroy the body, and accompanies a guard up the mountain to a prepared gravesite. They help
+complete the burial—using shovels and magic to fill the grave—then step back while Renn Caldor says
+quiet prayers. Renn thanks them for bringing his grandfather home and pays them 90 gp each for
+returning the body intact."""
+outcome = """Corwin is buried at the mountain gravesite, the party is paid, and Renn remains at the grave while
+the party turns to discussing potential future work/expeditions."""
+
+[[requested_resources]]
+keyword = "Renn Caldor"
+requested_path = "world/factions/ardenhaven/quests/restless-dead-cr1.md"
+
+[[requested_resources]]
+keyword = "eastern valley / tower / grave site"
+requested_path = "world/factions/ardenhaven/locations"
+
+[confidence]
+factual_accuracy = 0.9
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Border patrol tower/guard post on the eastern valley approach (mountain path near the tower)"
+known_details = [
+    "The party returns to the tower and is met by guards who mention seeing a fire below (transcript ~116:58-117:07).",
+    "A guard leads the party further up the mountain to a lone gravesite with an already-dug grave (transcript ~117:50-118:06).",
+]
+inferred_details = [
+    "The gravesite is close enough to the tower to be reached on foot as part of the guard post’s patrol area.",
+]
+confidence = 0.86
+
+[[key_events]]
+summary = "Return to the tower with the remains"
+details = "Guards greet the party at the tower, comment they saw a fire below, and the party confirms it was put out and that Corwin’s remains were not destroyed (transcript ~116:58-117:33)."
+
+[[key_events]]
+summary = "Escort to a prepared gravesite"
+details = "A guard transitions duty and leads the party further up the mountain to a lone gravesite with an already-dug grave, takes the body with a respectful gesture, and places it into the grave (transcript ~117:50-118:12)."
+
+[[key_events]]
+summary = "Burial completed with help and magic"
+details = "Party members assist with the burial; one uses Elementalism to move dirt and quickly fill the grave. Afterward, they receive a signal to step back while Renn performs prayers (transcript ~118:20-119:08)."
+
+[[key_events]]
+summary = "Thanks and payment"
+details = "Renn thanks the party for bringing his grandfather back to rest with his wife and pays them 75 gp each plus 15 gp each for returning the body in one piece (90 gp each total), then returns to contemplate at the gravesite (transcript ~119:24-120:24)."
+
+[character_beats]
+Bazgar = "Takes point in the conversation with Renn and helps with the burial when prompted (transcript\n~118:52-119:16)."
+Sabriel = "Supports returning the body promptly and defers lead speaker role to Bazgar (transcript\n~116:49-116:53, 119:11-119:16)."
+Marwen = "Helps with the burial work alongside the others (transcript ~118:20-118:35)."
+
+[[npcs]]
+name = "Renn Caldor"
+role = "Quest giver / grieving family member"
+interaction = "Receives Corwin’s remains, performs prayers, thanks the party, and pays them 90 gp each (transcript ~119:24-120:24)."
+
+[[npcs]]
+name = "Tower guards (unnamed)"
+role = "Border patrol guards"
+interaction = "Greet the party, ask about the fire and whether the remains were destroyed, then escort them to the gravesite and handle the body for burial (transcript ~116:58-118:12)."
+
+[[loot]]
+item = "90 gp each"
+context = "Payment from Renn: 75 gp each plus 15 gp each bonus for returning the body intact (transcript ~119:41-119:57)."
+
+[[information]]
+summary = "Fire was noticed from the tower"
+details = "Guards mention seeing a fire below; the party states they put it out and it did not spread (transcript ~117:03-117:16)."
+
+[[information]]
+summary = "Burial site was prepared in advance"
+details = "The gravesite is described as alone, with an already-dug grave ready for the body (transcript ~117:50-118:06)."
+
+[[information]]
+summary = "Expedition costs discussed"
+details = "After payment, the party discusses funding an expedition; they learn a mid-tier expedition would cost about 50 gp each, with more expensive options higher in the mountains and cheaper lower options (transcript ~120:24-120:52)."
+
+[atmosphere]
+mood = "somber"
+lighting = "not specified"
+sounds = "quiet prayers at the gravesite (transcript ~119:02-119:08)"
+
+[grounding]
+transcript_timestamps = [
+    6989.0,
+    7252.0,
+]
+inferred_content = [
+    "The gravesite being within the tower’s immediate patrol area (not explicitly stated, inferred from the escort up the mountain).",
+]
+
+[[plot_threads]]
+thread = "Return Corwin’s remains and complete burial rites"
+status = "resolved"
+
+[[plot_threads]]
+thread = "Finding/funding an expedition into the mountains"
+status = "introduced"

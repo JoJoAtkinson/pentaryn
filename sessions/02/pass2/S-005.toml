@@ -1,0 +1,125 @@
+start_seconds = 4572.586
+location = "Underground chamber (herbalist/witch-like workspace) within the ruins"
+goal = "investigate the chamber and determine who uses it / what is being made"
+npcs_present = [
+    "unknown witch/occupant (not yet seen)",
+]
+time_of_day = "unknown"
+emotional_tone = "mysterious"
+conflict_type = "exploration"
+notes = """They find a cozy round room full of herbs, potions, labeled trinkets, and the repeated name 'MARA';
+evidence suggests someone was here very recently (warm teacup)."""
+scene_id = "S-005"
+end_seconds = 5068.62
+summary = """Bazgar cautiously enters a cozy-feeling underground round chamber set up like a messy
+herbalist/witch workspace. The party inspects the materials and finds a curated cache of odd
+components and a ritual groove, plus a cracked mirror marked with the letters “M-A-R-A” in many
+different handwritings. Signs indicate someone was here very recently, and as they process what the
+room implies, a many-legged creature (or swarm) begins crawling down the only tunnel exit toward
+them."""
+outcome = """The scene ends with the party realizing the tunnel is being approached by something with many legs,
+and a crow is sent to warn someone."""
+
+[[requested_resources]]
+keyword = "MARA"
+requested_path = "characters/npcs"
+
+[[requested_resources]]
+keyword = "potions / herbs / witch setup"
+requested_path = "items/README.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Underground chamber (herbalist/witch-like workspace) within the ruins"
+known_details = [
+    "A large round room that feels oddly cozy/warm like a campfire",
+    "Filled with scattered, disorganized tables, pots, herbs, and potion-making materials",
+    "Contains an organized archive of small items (keys, teeth, buttons, coins, ring fragments, broken holy symbols) with mixed-quality labels",
+    "A shallow ritual groove stained black from years of use",
+    "A cracked mirror positioned to face the inside of the cave",
+    "Bone chimes; rolls of ash; dried berries; rusted knives; cracked teacups",
+    "Only one exit back through the tunnel; a fork exists down that tunnel",
+]
+inferred_details = [
+    "The chamber is actively used as a ritual/ingredient workspace rather than an abandoned storeroom",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Party discovers a witch-like workspace"
+details = "Inside a large round chamber, the group finds herbs, potions, tables, and many containers scattered in a disorganized workspace that nonetheless feels strangely cozy."
+
+[[key_events]]
+summary = "Inspection reveals ritual components and markings"
+details = "They find an archive of small items (keys, teeth, buttons, coins, ring fragments, broken holy symbols) with inconsistent labeling, a black-stained ritual groove, and a cracked mirror facing inward with “M-A-R-A” written in many different handwritings."
+
+[[key_events]]
+summary = "Evidence of recent use"
+details = "A teacup is discovered still warm, indicating the occupant was present recently."
+
+[[key_events]]
+summary = "Threat approaches via the only exit"
+details = "They hear something crawling down the tunnel they came from—described as a thousand little legs chattering on rock—while noting the tunnel is the only way out (with a fork further down)."
+
+[character_beats]
+Bazgar = "Leads the entry, calls the party up, and reacts with surprise at the magical-looking setup."
+Marwen = "Tries to identify what kind of practitioner uses the chamber and whether it connects to someone she\nknows (Claire)."
+Sabriel = "Supports the investigation and participates in assessing the room’s signs of recent activity."
+
+[[npcs]]
+name = "Unknown witch/occupant"
+role = "Unseen user of the chamber"
+interaction = "Not encountered directly; the party finds evidence of their work and recent presence."
+
+[[information]]
+summary = "The chamber belongs to a witch-like practitioner"
+details = "The materials present are identified as ritual/witchcraft-style ingredients and tools rather than a typical wizard’s spellbook-based workshop; no spellbooks or notebooks are found."
+
+[[information]]
+summary = "The occupant was here recently"
+details = "A teacup is still warm, strongly suggesting recent presence."
+
+[[information]]
+summary = "“M-A-R-A” is a significant clue"
+details = "The letters “M-A-R-A” appear on a cracked mirror in many different handwritings, implying repeated use or multiple contributors, though the meaning is not determined in-scene."
+
+[[information]]
+summary = "The room is a potential trap point"
+details = "There is only one known exit back through the tunnel, and something is approaching from that direction."
+
+[atmosphere]
+mood = "mysterious, turning tense"
+lighting = "not specified"
+sounds = "chattering of many small legs crawling on rock; bone chimes present"
+
+[grounding]
+transcript_timestamps = [
+    4549,
+    5096,
+]
+resource_refs = [
+    "items/README.md",
+]
+inferred_content = [
+    "That the chamber is actively used as a ritual/ingredient workspace rather than merely containing old supplies (inferred from warm teacup and maintained archives).",
+]
+
+[[plot_threads]]
+thread = "Who is using the underground witch-workspace?"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Meaning/identity behind “M-A-R-A” markings"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Approaching many-legged threat in the tunnel"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Connection to Claire (Marwen’s lead)"
+status = "complicated"

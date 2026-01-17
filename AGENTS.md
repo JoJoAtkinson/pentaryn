@@ -7,6 +7,25 @@ This repo is a D&D 5.5e campaign vault. When you create or edit content, follow 
 - Prefer small, focused changes. Keep files readable and linkable.
 - Use relative links between docs.
 
+## Golden rule: prefer MCP tools
+
+When a request maps to an existing MCP tool, **use the MCP tool instead of running ad-hoc scripts**.
+
+Examples of MCP tools in this repo include (non-exhaustive):
+- `dnd_pass1`, `dnd_pass2`, `dnd_pass3`
+- `build_timeline_svg`, `build_timeline_key`
+- `fix_md_links`
+- `pandoc_export_pdf`
+- `lore_inconsistency_report`
+- age/year conversion helpers
+
+## If no tool clearly applies
+
+If you can’t confidently map the request to a single MCP tool:
+
+1. Ask which command/tool the user wants to run.
+2. Offer a short shortlist of the most relevant options (max 3–5) with 1-line descriptions.
+
 ## Where things go (high level)
 - Naming Conventions: world/naming_conventions/primary-factions.md
 - Characters: /characters/player-characters, /characters/npcs

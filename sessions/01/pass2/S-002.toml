@@ -1,0 +1,103 @@
+start_seconds = 2633.619
+location = "Outside Ardenford on the eastern hills/forest trail to the border watchtower"
+goal = "Travel to the Eastern Patrol watchtower to contact Renn Caldor about the undead sighting"
+time_of_day = "morning"
+emotional_tone = "purposeful"
+conflict_type = "exploration"
+notes = """The party leaves the inn and hikes several hours through the eastern wooded hills toward the
+watchtower, with Marwen’s crow and ferret Flicker accompanying them."""
+scene_id = "S-002"
+end_seconds = 2977.76
+summary = """The party hikes from Ardenford through the eastern wooded hills to the Eastern Patrol watchtower.
+Along the way, Marwen releases her ferret, Flicker, to scout ahead and interact with the group.
+Reaching the human-built tower, Bazgar calls up to announce their arrival for the job; they are
+granted entry and climb single-file to the top, where they meet a border patrolman wearing his
+grandfather’s war medal."""
+outcome = """The scene ends with the party arriving at the top of the watchtower and coming face-to-face with the
+on-duty border patrolman (Renn Caldor, implied by context)."""
+
+[[requested_resources]]
+keyword = "Ardenford eastern patrol tower / watchtower"
+requested_path = "world/factions/ardenhaven/locations"
+
+[[requested_resources]]
+keyword = "Renn Caldor"
+requested_path = "world/factions/ardenhaven/quests/restless-dead-cr1.md"
+
+[confidence]
+factual_accuracy = 0.9
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Eastern Patrol watchtower (eastern hills/forest trail outside Ardenford)"
+known_details = [
+    "The party leaves Ardenford and hikes up worn-down hills toward a watchtower positioned for long sightlines against approaching forces (transcript 44:03-44:44).",
+    "The eastern side is heavily forested; as they approach, the tower drops out of view under the tree canopy until they reach it (transcript 44:44-47:52).",
+    "The tower is clearly human-built stonework with an opening and stairs leading up; the stairway is tight and forces single-file movement (transcript 47:52-49:07).",
+    "At the top is an observation area with wide visibility over the valley (transcript 49:07-49:30).",
+]
+inferred_details = [
+    "The watchtower is close enough to Ardenford to be reached in a half-day hike (~4 hours), suggesting it is part of the town's nearby border patrol infrastructure.",
+]
+confidence = 0.86
+
+[[key_events]]
+summary = "Hike to the eastern watchtower"
+details = "The party leaves the city and treks uphill through worn hills into denser forest; the canopy obscures the tower until they suddenly reach its stone wall (transcript 44:03-47:52)."
+
+[[key_events]]
+summary = "Marwen introduces Flicker the ferret"
+details = "Marwen lets her ferret wander ahead and return; she names him Flicker and briefly lets him climb onto another party member’s shoulder before he settles in (transcript 46:01-47:28)."
+
+[[key_events]]
+summary = "Entry and ascent"
+details = "Bazgar calls up to request entry rather than entering unannounced; a voice from above permits them to come in, and they climb the narrow stairs single-file to the observation platform (transcript 48:30-49:30)."
+
+[[key_events]]
+summary = "Border patrolman sighted at the top"
+details = "At the top, they see a human patrolman in his 30s wearing a Border Patrol outfit and prominently displaying his grandfather’s war medal on a chain (transcript 49:30-49:59)."
+
+[character_beats]
+Bazgar = "Calls up to the tower to request entry before climbing."
+Marwen = "Uses her ferret, Flicker, as a roaming scout/companion and shares him with the group."
+Sabriel = "No distinct in-character action captured in this excerpt."
+
+[[npcs]]
+name = "Renn Caldor (implied)"
+role = "On-duty border patrolman at the watchtower"
+interaction = "Grants the party permission to enter after they call up; is seen at the top wearing a Border Patrol outfit and a war medal (transcript 48:30-49:59)."
+
+[[information]]
+summary = "The eastern approach is heavily forested and conceals the tower near the end"
+details = "The DM contrasts the eastern border’s dense trees with other terrain; the canopy blocks the party’s view of the tower until they are close (transcript 44:44-47:52)."
+
+[[information]]
+summary = "The tower is human-built and defensible"
+details = "The stonework is described as human construction (smaller, bricklike blocks compared to dwarven large blocks), with a narrow stair designed to limit attackers to single-file (transcript 47:52-49:07)."
+
+[[information]]
+summary = "The patrolman wears a family war medal"
+details = "The border patrolman prominently wears his grandfather’s war medal on a chain (transcript 49:47-49:59)."
+
+[atmosphere]
+mood = "purposeful"
+lighting = "morning (per scene context)"
+sounds = "No specific ambient sounds described in the transcript excerpt"
+
+[grounding]
+transcript_timestamps = [
+    2607,
+    2999,
+]
+inferred_content = [
+    "Identifying the border patrolman as Renn Caldor is inferred from the scene goal/context; the transcript does not clearly state his name.",
+]
+
+[[plot_threads]]
+thread = "Contact Renn Caldor about the undead sighting"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Unusual crow following the party"
+status = "advanced"

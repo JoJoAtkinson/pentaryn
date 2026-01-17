@@ -1,0 +1,158 @@
+start_seconds = 10174.933
+location = "Same resting spot deeper in the ruins"
+goal = "understand what Mara is and decide on next steps (escape, warn others, seek Elder Marith’s help)"
+npcs_present = [
+    "Cinder (talking crow)",
+    "Mara",
+    "Elder Marith (mentioned)",
+]
+time_of_day = "unknown"
+emotional_tone = "grim"
+conflict_type = "social"
+notes = """Marwyn explains Mara is a dangerous Elderholt witch who has gone too far ('deep witch'), describes
+ward witches vs deep witches and the cost of bargains, and the party agrees they must find a way out
+and get help."""
+scene_id = "S-010"
+end_seconds = 11047.795
+summary = """While resting deeper in the ruins, the party presses for answers about Sister Mara. They learn Mara
+is a witch of Elderholt who has gone dangerously wrong, and that Cinder is a crow tied to Elder
+Marith meant to guide them to help if they can reach open sky. Marwen explains Elderholt’s witch
+tradition of bargains and the split between ward-witches and deep-witches, warning that Mara’s power
+is unpredictable and could be catastrophic. The party agrees they must find a way out and considers
+seeking Elder Marith’s aid while marking the area as unsafe."""
+outcome = """The scene ends with the party committed to escaping the ruins and using Cinder to reach Elder Marith
+for help dealing with Mara."""
+
+[[requested_resources]]
+keyword = "Mara is... a witch of Elder Holt"
+requested_path = "world/factions/elderholt/witchs.md"
+
+[[requested_resources]]
+keyword = "ward witches / deep witches"
+requested_path = "world/factions/elderholt/witchs.md"
+
+[[requested_resources]]
+keyword = "Elder Marith, the Ashen Merger"
+requested_path = "world/factions/elderholt/elders/marrith-the-ashen-measure.md"
+
+[[requested_resources]]
+keyword = "Cinder (crow familiar/construct)"
+requested_path = "characters/README.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.68
+speculation_level = "low"
+
+[location_intelligence]
+name = "Resting spot deeper in the ruins"
+known_details = [
+    "The party is deep in the ruins and needs to find a way out (179:42-179:57).",
+    "They discuss needing to get back to open sky so Cinder can lead them to Elder Marith (170:33-170:43).",
+    "A nearby tunnel was closed off/changed in a way the party attributes to Mara’s power (175:33-175:49).",
+    "Ancient ruins are described (in lore) as places where the Voice comes through more cleanly (world/factions/elderholt/witchs.md).",
+]
+inferred_details = [
+    "The group is paused in a relatively defensible nook or chamber suitable for a short rest.",
+    "The ruins’ proximity to the Voice may be contributing to Mara’s unpredictability.",
+]
+confidence = 0.84
+
+[[key_events]]
+summary = "Mara identified as a dangerous Elderholt witch"
+details = "The group states that Mara is not well, that there is “not much of her left,” and that she needs to be put down, but they are not capable of doing it alone (169:58-170:15)."
+
+[[key_events]]
+summary = "Cinder revealed as Elder Marith’s crow and a lifeline"
+details = "They identify the crow as Cinder, from Elder Marith, and say that if they can reach open sky, Cinder should know the way back to her (170:19-170:43)."
+
+[[key_events]]
+summary = "Warning about Mara’s unpredictable, potentially massive power"
+details = "They describe Mara as capable of “potentially anything,” including appearing to devour them or bringing the mountain down, emphasizing unpredictability (170:54-171:10)."
+
+[[key_events]]
+summary = "Marwen explains ward-witches vs deep-witches and the cost of bargains"
+details = "Marwen explains that their tradition involves necessary exchanges, with two paths: ward-witches who use markings/wards and restraint, and deep-witches who can bargain away enough of themselves that they stop being who they were and “belong to it” (172:15-174:32)."
+
+[[key_events]]
+summary = "Mara’s ‘free’ gift and the altered tunnel"
+details = "Marwen notes Mara seemed to get something “for free,” and connects it to the tunnel being closed/possibly never existing depending on what Mara asked for (175:20-175:49)."
+
+[[key_events]]
+summary = "Next steps: escape and warn/mark the area"
+details = "They state a need to mark the territory as unsafe for others until Mara is dealt with, and the party reiterates they must find a way out of the ruins (170:43-170:48; 179:42-179:57)."
+
+[character_beats]
+Sabriel = "Questions whether Mara is a god and pushes for practical escape planning (171:10-171:13;\n179:42-179:57)."
+Bazgar = "Demands clarity about what they faced and frames the danger as power with a cost (169:34-169:38;\n176:19-176:35)."
+Marwen = "Explains Elderholt witch lore, distinguishes ward- vs deep-witches, and admits she is a very young\nwitch on her first time away from home (171:43-171:54; 172:15-174:32)."
+
+[[npcs]]
+name = "Cinder"
+role = "Elder Marith’s crow familiar/construct and guide"
+interaction = "Identified as belonging to Elder Marith; the party plans to use Cinder to find her once they reach open sky, and Marwen shushes the bird when it gets annoying (170:19-170:43; 179:33-179:42)."
+
+[[npcs]]
+name = "Mara"
+role = "Deep-witch gone wrong (threat)"
+interaction = "Discussed as needing to be put down; described as unpredictable and potentially catastrophic (169:58-170:15; 170:54-171:10)."
+
+[[npcs]]
+name = "Elder Marith (the Ashen Measure)"
+role = "Elder ward-witch and potential solution"
+interaction = "Mentioned as Cinder’s witch and the person they may seek for help dealing with Mara (170:19-170:43; 178:01-178:07)."
+
+[[information]]
+summary = "Mara is a witch of Elderholt, not a god"
+details = "When asked if Mara is a god, the response is no; she is identified as a witch of Elderholt (171:10-171:15)."
+
+[[information]]
+summary = "Elderholt witches use bargains with a force Marwen won’t name"
+details = "Marwen describes necessary exchanges/bargains and refuses to speak plainly about what the power is, emphasizing that every exchange has an equal measure and that powerful magic carries a high cost (172:15-172:39; 174:40-175:04; 176:19-176:35)."
+
+[[information]]
+summary = "Two paths: ward-witches vs deep-witches"
+details = "Marwen outlines ward-witches as restrained and marked/warded, while deep-witches risk bargaining away their identity until they no longer remain what they were (172:45-173:17; 173:25-174:32)."
+
+[[information]]
+summary = "Cinder was given for exactly these circumstances"
+details = "Marwen says an elder gave her Cinder for situations involving a deep-witch who has gone too far, with guidance to hide, run, and try not to die (178:31-179:22)."
+
+[[information]]
+summary = "The tunnel’s closure may be reality-altering and tied to Mara’s request"
+details = "Marwen suggests the blocked tunnel may no longer exist, may never have existed, or may be a wall, depending on what Mara asked for (175:33-175:49)."
+
+[atmosphere]
+mood = "grim and urgent"
+lighting = "unknown"
+sounds = "Cinder’s intermittent crow behavior and pecking punctuates the conversation (178:52-179:02)."
+
+[grounding]
+transcript_timestamps = [
+    169.34,
+    179.57,
+]
+resource_refs = [
+    "world/factions/elderholt/witchs.md",
+    "world/factions/elderholt/elders/marrith-the-ashen-measure.md",
+]
+inferred_content = [
+    "The resting spot is a defensible nook/chamber suitable for a short rest.",
+    "The ruins’ closeness to the Voice may be contributing to Mara’s instability.",
+]
+
+[[plot_threads]]
+thread = "Deal with Sister Mara (deep-witch gone wrong)"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Escape the ruins to open sky"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Seek Elder Marith’s help via Cinder"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Mark/warn others that the area is unsafe"
+status = "introduced"

@@ -1,7 +1,7 @@
-# D&D Session 1 Configuration
+# D&D Session 2 Configuration
 
 [session]
-# Session number is auto-detected from folder name (sessions/01 = session 1)
+# Session number is auto-detected from folder name (sessions/02 = session 2)
 
 # Recording source affects speaker identification reliability
 # Options: "in-person" (single mic), "discord" (separate recordings), "hybrid"

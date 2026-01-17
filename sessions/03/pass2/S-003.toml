@@ -1,0 +1,138 @@
+start_seconds = 5836.255
+location = "Upper cave plateau beneath a vertical shaft to the surface (light and small waterfall visible ~120 ft up)"
+goal = "Figure out how to escape the cave safely and get help (rope) via Cinder"
+npcs_present = [
+    "Cinder (crow familiar/companion)",
+    "Kargrimdur (dwarf guide, offscreen—being summoned)",
+]
+time_of_day = "unknown"
+emotional_tone = "tense_planning"
+conflict_type = "puzzle"
+notes = """The party debates risky climbing versus waiting, negotiates with an offended Cinder, and sends the
+crow with a note to fetch Kargrimdur and rope."""
+scene_id = "S-003"
+end_seconds = 6737.242
+summary = """On an upper cave plateau beneath a ~120-foot shaft with a small waterfall, the party debates escape
+options. They consider climbing with a kit and pitons, improvising extra rope by cutting and weaving
+ceremonial robes, and sending Cinder to fetch outside help. After smoothing over tension with the
+crow, they write a note and send Cinder out to find Kargrimdur and bring rope, warning about Mara."""
+outcome = """Cinder successfully exits the shaft with the note to summon Kargrimdur, and after several hours the
+dwarf’s voice is heard calling down to them."""
+
+[[requested_resources]]
+keyword = "Kargrimdur (dwarf guide)"
+requested_path = "characters/npcs"
+
+[[requested_resources]]
+keyword = "climbing kit / pitons / rope length problem"
+requested_path = "items/README.md"
+
+[[requested_resources]]
+keyword = "Mara (centipede witch) threat still unresolved"
+requested_path = "world/factions/elderholt/npcs/broken-loss-witches/centipede.md"
+
+[confidence]
+factual_accuracy = 0.9
+completeness = 0.78
+speculation_level = "low"
+
+[location_intelligence]
+name = "Upper cave plateau beneath a vertical shaft to the surface"
+known_details = [
+    "A vertical climb to the surface is about 120 feet",
+    "A small waterfall runs down the shaft",
+    "Fish are visible/available in the water below",
+    "Cinder can’t fly straight up and instead hops between ledges to gain height before exiting",
+]
+inferred_details = [
+    "The shaft is difficult to climb directly due to height and water, making a rope/anchoring plan necessary",
+]
+confidence = 0.86
+
+[[key_events]]
+summary = "Escape planning around a 120-foot shaft"
+details = "The party confirms the shaft is roughly 120 feet up and discusses solutions: climbing, waiting for help, or combining existing rope with improvised rope from clothing."
+
+[[key_events]]
+summary = "Cinder refuses commands until treated as an independent ally"
+details = "Cinder initially ignores the party when spoken to as if owned; after being addressed more respectfully and persuaded, the crow agrees to help and asks what is needed."
+
+[[key_events]]
+summary = "Improvised rope is proposed but deemed risky"
+details = "Sabriel offers to cannibalize ceremonial robes into rope; the DM estimates it could yield roughly 40 feet but warns it may not safely arrest a fall."
+
+[[key_events]]
+summary = "Climbing kit and piton plan discussed"
+details = "Bazgar proposes using pitons and a climbing kit to reduce fall risk, noting the logistical issue of needing someone behind to remove pitons as they ascend."
+
+[[key_events]]
+summary = "Cinder sent to Kargrimdur with a written note"
+details = "The party writes a message (placed in a waterproof case) asking Kargrimdur to bring rope and follow/meet the crow, including a warning about Mara; Cinder climbs out via ledges and flies off."
+
+[[key_events]]
+summary = "Waiting and regrouping"
+details = "While waiting for help, Sabriel finishes crafting a new axe handle for Bazgar; after several hours, they hear Kargrimdur calling down from above."
+
+[character_beats]
+Marwen = "Negotiates with Cinder and organizes sending a written message for rescue."
+Sabriel = "Suggests practical magical/gear solutions and crafts an improved axe handle while waiting."
+Bazgar = "Focuses on a technical climbing-and-piton plan and pushes for a safer, structured ascent."
+
+[[npcs]]
+name = "Cinder"
+role = "Crow companion/messenger"
+interaction = "Initially resists being treated as property, then agrees to carry a note and flies out of the shaft to summon Kargrimdur."
+
+[[npcs]]
+name = "Kargrimdur"
+role = "Dwarf guide (rescuer)"
+interaction = "Summoned via Cinder’s note; later heard calling down to the party from above."
+
+[[loot]]
+item = "Axe handle (newly crafted)"
+context = "Sabriel completes a replacement handle for Bazgar’s axe while the party waits for help."
+
+[[information]]
+summary = "Shaft height and environmental constraints"
+details = "The climb to the surface is about 120 feet and a small waterfall runs down the shaft, influencing the party’s escape planning."
+
+[[information]]
+summary = "Survival possibility if stranded"
+details = "Fish are present in the water, implying the party could survive in the cave with effort, though it would be unpleasant."
+
+[[information]]
+summary = "Improvised rope estimate and risk"
+details = "Cutting and weaving ceremonial robes could produce about 40 feet of rope, but it may not be reliable for catching a fall."
+
+[atmosphere]
+mood = "tense_planning"
+lighting = "Light is visible from the surface opening above the shaft"
+sounds = "Waterfall noise in the shaft; later, Kargrimdur’s voice echoes down"
+
+[grounding]
+transcript_timestamps = [
+    5819.0,
+    6743.0,
+]
+resource_refs = [
+    "items/README.md",
+]
+inferred_content = [
+    "The shaft is difficult to climb directly due to height and water, making a rope/anchoring plan necessary",
+]
+
+[[plot_threads]]
+thread = "Escape the cave via the 120-foot shaft"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Get outside help/rope via Cinder"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Mara threat"
+status = "complicated"
+
+[[plot_threads]]
+thread = "Climbing kit/pitons as a fallback escape method"
+status = "introduced"

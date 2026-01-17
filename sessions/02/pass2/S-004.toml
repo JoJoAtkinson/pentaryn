@@ -1,0 +1,133 @@
+start_seconds = 3687.389
+location = "Ruin entrance crack/cavern in dense forest (valley ruins)"
+goal = "enter and explore the ruins while the guide watches the pony outside"
+npcs_present = [
+    "Kargromdor (stays outside)",
+    "Lear (pony)",
+    "crow (animal/companion)",
+]
+time_of_day = "unknown"
+emotional_tone = "tense"
+conflict_type = "exploration"
+notes = """The party reaches a hidden crack leading down into ancient tunnels; they set lights, navigate, and
+choose a modified human-made passage deeper inside."""
+scene_id = "S-004"
+end_seconds = 4572.586
+summary = """The party reaches a hidden crack entrance to the valley ruins. They ask Kargromdor to stay outside
+with Lear, then enter the dark tunnels with magical light. Inside, they navigate ancient corridors
+and find a human-modified entrance leading to a split where one direction shows a dim light. Bazgar
+scouts ahead and discovers a round chamber filled with scattered herbs, potions, tables, and pots."""
+outcome = """The scene ends with the party arriving at the threshold of a large, cluttered chamber that appears
+to be used for mixing or storing herbs and potions."""
+
+[[requested_resources]]
+keyword = "valley ruins"
+requested_path = "world/factions/ardenhaven/locations/stone-breach-ruins/valley-ruins.md"
+
+[[requested_resources]]
+keyword = "Lear (pony)"
+requested_path = "characters/players_notes.md"
+
+[[requested_resources]]
+keyword = "crow"
+requested_path = "characters/players_notes.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Ruin entrance crack/cavern in dense forest (valley ruins)"
+known_details = [
+    "A dwarf guide leads the party through dense forest to a crack-like opening in the ground that leads down to ruins (transcript 61:27-62:03).",
+    "A stream runs adjacent to the opening where Kargromdor sits with Lear (transcript 62:33-62:55).",
+    "Inside, the passage transitions from a tight crack/tunnel into ancient stonework corridors with twisting hallways and broken stairwells, mixed with cave-like shattered sections (transcript 66:29-69:12).",
+    "A notable entrance/doorway appears that looks modified after the original ancient construction and appears human-made (transcript 70:56-74:03).",
+]
+inferred_details = [
+    "The crack serves as a concealed or hard-to-spot access point into the valley ruins due to dense forest cover.",
+]
+confidence = 0.84
+
+[[key_events]]
+summary = "Kargromdor stays outside with Lear"
+details = "At the crack entrance, the party asks Kargromdor to remain outside and watch Lear; he settles by the nearby stream with the pony while the party prepares to descend (transcript 62:06-62:55)."
+
+[[key_events]]
+summary = "The crow shows unusual awareness and follows into the ruins"
+details = "The crow reacts in a distinctly human-like way (eye/head-roll) and then alternates between perching on a party member and hopping along as they enter the tunnel (transcript 63:45-67:40)."
+
+[[key_events]]
+summary = "The party lights their way and enters the ancient corridors"
+details = "In total darkness, the party uses magical light sources (including casting light on the crow) and proceeds into twisting ancient hallways and broken stairwells mixed with cave-like sections (transcript 66:29-69:12, 67:46-68:06)."
+
+[[key_events]]
+summary = "They choose a human-modified entrance and follow a corridor to a split"
+details = "They identify a doorway/entrance that looks modified after the fact and human-made, then proceed down a long corridor that ends at a split: one direction has a dim light, the other continues into darkness (transcript 70:56-74:40)."
+
+[[key_events]]
+summary = "Bazgar scouts the lit direction and finds a cluttered chamber"
+details = "Bazgar advances cautiously toward the light and finds a large round room containing scattered, disorganized herbs, potions, tables, and pots (transcript 75:31-76:34)."
+
+[character_beats]
+"Bazgar (Jeff)" = "Takes point and scouts ahead cautiously toward the dim light."
+"Sabriel (Nicole)" = "Entrusts Lear to Kargromdor, says a careful goodbye, and uses magic to provide light (including on\nthe crow)."
+"Marwen (Kristine)" = "Keeps an eye on the crow and follows the group into the ruins."
+
+[[npcs]]
+name = "Kargromdor"
+role = "Guide who leads the party to the entrance and stays outside"
+interaction = "Agrees to remain outside with Lear by the stream while the party explores (transcript 62:06-62:55)."
+
+[[npcs]]
+name = "Lear"
+role = "Pony left outside"
+interaction = "Stays with Kargromdor; Sabriel gives Lear a brief goodbye before entering (transcript 62:33-63:16)."
+
+[[npcs]]
+name = "crow"
+role = "Animal/companion accompanying the party"
+interaction = "Displays uncanny, human-like reactions; follows into the tunnels; Sabriel casts light on it to illuminate the way (transcript 63:45-68:06)."
+
+[[information]]
+summary = "The ruins appear to be buried and broken into caves"
+details = "The ancient structures and stairwells look mashed together with cave-like shattered sections, suggesting the ruins were not originally built as part of a cave system but ended up buried/collapsed into one (transcript 68:57-69:36)."
+
+[[information]]
+summary = "A human-made modification exists within the ancient ruins"
+details = "The party spots an entrance that stands out as modified after the original construction; on inspection it appears human-made rather than ancient (transcript 70:56-74:03)."
+
+[[information]]
+summary = "A dim light source is visible deeper inside"
+details = "At the end of the modified corridor, the path splits: one direction shows a dim light while the other remains dark, implying activity or a light source ahead (transcript 74:20-74:40)."
+
+[atmosphere]
+mood = "tense"
+lighting = "Outside daylight is implied; inside is total darkness broken by magical light and a dim light deeper in (transcript 66:29-66:42, 74:28-74:40)."
+sounds = "A stream runs beside the entrance (transcript 62:33-62:55)."
+
+[grounding]
+transcript_timestamps = [
+    3687,
+    4594,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/stone-breach-ruins/valley-ruins.md",
+    "characters/players_notes.md",
+]
+inferred_content = [
+    "The crack is concealed/hard to spot due to dense forest cover.",
+]
+
+[[plot_threads]]
+thread = "Explore the valley ruins via the crack entrance while Kargromdor watches Lear"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Crow’s unusual intelligence/awareness"
+status = "complicated"
+
+[[plot_threads]]
+thread = "Human-modified doorway inside ancient ruins"
+status = "introduced"
