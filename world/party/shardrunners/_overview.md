@@ -35,15 +35,15 @@ They want money, but they want the *hit* too: the rush of a sealed door, the sna
 
 | Name | Ancestry | Origin | Class | Level | Alignment | Background | Party Role | Notes |
 |---|---|---|---|---:|---|---|---|---|
-| Jax Rill | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Sorcerer | 3 | Chaotic Neutral | Gambler | Damage / distraction | Always double-or-nothing |
-| Nell Copper | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Rogue | 2 | Chaotic Neutral | Smuggler | Infiltration / getaway | If there’s a lock, she’s already on it |
+| Ravenholt | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Sorcerer | 3 | Chaotic Neutral | Gambler | Damage / distraction | Always double-or-nothing |
+| Torford | Human | [Thorndale](../../factions/ardenhaven/locations/thorndale.md) | Rogue | 2 | Chaotic Neutral | Smuggler | Infiltration / getaway | If there's a lock, she's already on it |
 | Fizzbit Tangle | Gnome | [Merrowgate](../../factions/merrowgate/_overview.md) | Artificer | 4 | Chaotic Neutral | Tinkerer | Gear / bankroll | Pays up front, takes a quiet cut |
-| Sera Wren | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Cleric | 2 | Lawful Neutral | Street medic | Heals / prevents spirals | The only one who writes plans down |
-| Ugra of Dakmar'nak | Orc | [Rakthok](../../factions/rakthok-horde/_overview.md) | Druid | 3 | Chaotic Good | Spirit-seeker | Omens / wards | **Wild card:** hates the greed, needs the access |
+| Oakwick | Human | [Calstead](../../factions/ardenhaven/locations/calstead.md) | Cleric | 2 | Lawful Neutral | Village healer | Heals / prevents spirals | The only one who writes plans down |
+| Ug'nak of Rak'thokhar | Orc | [Rakthok](../../factions/rakthok-horde/_overview.md) | Druid | 3 | Chaotic Good | Spirit-seeker | Omens / wards | **Wild card:** hates the greed, needs the access |
 
 ### Exceptions & Notes
 
-- **Rare origin:** Ugra is Rakthoki. Politics and paranoia make her presence unusual; she claims a vision forced her west.
+- **Rare origin:** Ug'nak is Rakthoki. Politics and paranoia make her presence unusual; she claims a vision forced her west.
 
 ---
 

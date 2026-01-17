@@ -35,15 +35,15 @@ They’re here for profit, but not chaos: document finds, sell through legal cha
 
 | Name | Ancestry | Origin | Class | Level | Alignment | Background | Party Role | Notes |
 |---|---|---|---|---:|---|---|---|---|
-| Edric Holt | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Ranger | 3 | Lawful Neutral | City warden | Captain / scout | Treats delving like patrol work |
-| Lysa Quill | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Bard | 2 | Lawful Neutral | Notary | Face / record-keeper | The receipts are *her* weapon |
-| Kelda Thrumbar | Dwarf | [Dulgarum](../../factions/dulgarum-oathholds/_overview.md) | Fighter | 4 | Lawful Neutral | Oathbound guard | Security / carry | Doesn’t joke. Doesn’t need to. |
+| Ironholt | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Ranger | 3 | Lawful Neutral | City warden | Captain / scout | Treats delving like patrol work |
+| Glendale | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Bard | 2 | Lawful Neutral | Notary | Face / record-keeper | The receipts are *her* weapon |
+| Thrumgar | Dwarf | [Dulgarum](../../factions/dulgarum-oathholds/_overview.md) | Fighter | 4 | Lawful Neutral | Oathbound guard | Security / carry | Doesn't joke. Doesn't need to. |
 | Suri Copperpin | Gnome | [Merrowgate](../../factions/merrowgate/_overview.md) | Wizard | 2 | True Neutral | Map-scrivener | Survey / arcana | Lives for measurements and margins |
-| Toby Redwick | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Rogue | 2 | Chaotic Neutral | Farmhand-turned-burglar | Locks / “creative entry” | **Wild card:** hates rules, loves payouts |
+| Redwick | Human | [Calstead](../../factions/ardenhaven/locations/calstead.md) | Rogue | 2 | Chaotic Neutral | Farmhand-turned-burglar | Locks / "creative entry" | **Wild card:** hates rules, loves payouts |
 
 ### Exceptions & Notes
 
-- Toby’s on the charter because *someone* has to open doors; everyone pretends not to see how he does it.
+- Redwick's on the charter because *someone* has to open doors; everyone pretends not to see how he does it.
 
 ---
 

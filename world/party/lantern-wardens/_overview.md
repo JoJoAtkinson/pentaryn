@@ -35,11 +35,11 @@ They want coin like anyone else, but their pitch is *public safety*: clear hazar
 
 | Name | Ancestry | Origin | Class | Level | Alignment | Background | Party Role | Notes |
 |---|---|---|---|---:|---|---|---|---|
-| Tessa Marlow | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Fighter | 3 | Neutral Good | Militia sergeant | Captain / shield | Practical, steady under pressure |
-| Bram Holloway | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Cleric | 2 | Lawful Good | Acolyte | Healer / mediator | Believes “loot is fine if it saves lives” |
-| Brunna Khargrim | Dwarf | [Dulgarum](../../factions/dulgarum-oathholds/_overview.md) | Fighter | 3 | Lawful Neutral | Oathbound guard | Front line / logistics | Treats the vow like a contract |
+| Wolfridge | Human | [Ironridge](../../factions/ardenhaven/locations/ironridge.md) | Fighter | 3 | Neutral Good | Mine guard | Captain / shield | Practical, steady under pressure |
+| Brightford | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Cleric | 2 | Lawful Good | Acolyte | Healer / mediator | Believes "loot is fine if it saves lives" |
+| Khargrim-dun | Dwarf | [Dulgarum](../../factions/dulgarum-oathholds/_overview.md) | Fighter | 3 | Lawful Neutral | Oathbound guard | Front line / logistics | Treats the vow like a contract |
 | Pipwick Thistle | Gnome | [Merrowgate](../../factions/merrowgate/_overview.md) | Rogue | 2 | Chaotic Good | Locksmith-urchin | Scout / locks | Talks fast; hands faster |
-| Lucan Varro | Human | [Calderon Imperium](../../factions/calderon-imperium/_overview.md) | Wizard | 4 | Lawful Neutral | Registry clerk (defector) | Arcana / translation | **Wild card:** disciplined, guarded, useful |
+| Lucan Varro | Human | [Calderon Imperium](../../factions/calderon-imperium/_overview.md) | Wizard | 4 | Lawful Neutral | Registry clerk (defector) | Arcana / translation | **Wild card:** disciplined, guarded, useful (Calderon naming) |
 
 ### Exceptions & Notes
 
