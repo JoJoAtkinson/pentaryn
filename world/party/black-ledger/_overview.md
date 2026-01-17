@@ -8,6 +8,15 @@ status: active
 
 > Clean contracts, dirty hands: they keep accounts in ink that never washes off.
 
+## Roster
+| Name | Ancestry | Origin | Class | Level | Alignment | Background | Party Role | Notes |
+|---|---|---|---|---|---|---|---|---|
+| [Merrowlyn](members/merrowlyn.md) | Human | [Merrowgate](../../factions/merrowgate/_overview.md) | Rogue | 4 | Lawful Evil | Guild fixer | Boss / planner | Contracts, leverage, and escape routes |
+| [Ardenwick](members/ardenwick.md) | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Fighter | 3 | Neutral Evil | Deserter | Muscle / enforcer | Keeps the "ledger" honest |
+| [Thornholt](members/thornholt.md) | Human | [Elderholt](../../factions/elderholt/_overview.md) | Warlock | 3 | Lawful Evil | Coven debtor | Occult / curses | Knows what sells, and what bites |
+| [Barkar-dun](members/barkar-dun.md) | Dwarf | [Garhammar](../../factions/garhammar-trade-league/_overview.md) | Artificer | 2 | Lawful Neutral | Guild engineer | Wards / tools | **Wild card:** not cruel, just trapped in debt |
+| [Zor'gar](members/zor-gar.md) | Orc | [Garrok](../../factions/garrok-confederation/_overview.md) | Barbarian | 3 | Neutral Evil | Oathbreaker | Breach / intimidation | Laughs at “honor,” respects payment |
+
 ## Overview
 
 | Attribute | Value |
@@ -31,19 +40,10 @@ Money is the point. They’re built to turn artifacts into coin fast: appraise, 
 - Each member is complicit in at least one crime the others can prove.
 - The crew moves like a machine: faster than “honest” parties, because they don’t stop to help.
 
-## Roster
-
-| Name | Ancestry | Origin | Class | Level | Alignment | Background | Party Role | Notes |
-|---|---|---|---|---:|---|---|---|---|
-| [Vessa Kain](members/vessa-kain.md) | Human | [Merrowgate](../../factions/merrowgate/_overview.md) | Rogue | 4 | Lawful Evil | Guild fixer | Boss / planner | Contracts, leverage, and escape routes |
-| [Orren Pike](members/orren-pike.md) | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Fighter | 3 | Neutral Evil | Deserter | Muscle / enforcer | Keeps the “ledger” honest |
-| [Maela Thorn](members/maela-thorn.md) | Human | [Elderholt](../../factions/elderholt/_overview.md) | Warlock | 3 | Lawful Evil | Coven debtor | Occult / curses | Knows what sells, and what bites |
-| [Grek Bar'Kar](members/grek-bar-kar.md) | Dwarf | [Garhammar](../../factions/garhammar-trade-league/_overview.md) | Artificer | 2 | Lawful Neutral | Guild engineer | Wards / tools | **Wild card:** not cruel, just trapped in debt |
-| [Zor'gar](members/zor-gar.md) | Orc | [Garrok](../../factions/garrok-confederation/_overview.md) | Barbarian | 3 | Neutral Evil | Oathbreaker | Breach / intimidation | Laughs at “honor,” respects payment |
 
 ### Exceptions & Notes
 
-- Grek Bar'Kar stays because leaving means the guild repossesses everything he owns—and Vessa knows where he sleeps.
+- Barkar-dun stays because leaving means the guild repossesses everything he owns—and Merrowlyn knows where he sleeps.
 
 ---
 

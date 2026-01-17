@@ -59,7 +59,7 @@ MCP_TOOLS = [
             "Returns complete details: abilities, saves, skills, resistances, attacks, special abilities. "
             "Use when you need the complete stat block for running an encounter."
         ),
-        "argv": ["--mcp-tool", "get_monster_details"],
+        "argv": ["--mcp-tool", "get_monster_details", "{slug}"],
         "input_schema": {
             "type": "object",
             "properties": {
@@ -111,7 +111,7 @@ MCP_TOOLS = [
             "Returns complete spell info including higher level effects and material components. "
             "Use when players cast spells or you need exact wording for rules."
         ),
-        "argv": ["--mcp-tool", "get_spell_details"],
+        "argv": ["--mcp-tool", "get_spell_details", "{key}"],
         "input_schema": {
             "type": "object",
             "properties": {
@@ -275,7 +275,7 @@ MCP_TOOLS = [
             "Returns rule text from the 2014 SRD (note: 2024 rules not yet available in Open5e API). "
             "Use after searching to get complete rule descriptions."
         ),
-        "argv": ["--mcp-tool", "get_rule_section"],
+        "argv": ["--mcp-tool", "get_rule_section", "{slug}"],
         "input_schema": {
             "type": "object",
             "properties": {
@@ -334,11 +334,11 @@ def search_spells(
     """Search spells with optional filters."""
     params = {"limit": limit}
     if name:
-        params["search"] = name
+        params["name__icontains"] = name
     if level is not None:
         params["level"] = level
     if school:
-        params["school"] = school
+        params["school__key"] = school
     
     return api_get("/v2/spells/", params)
 
