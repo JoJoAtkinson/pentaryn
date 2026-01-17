@@ -1,0 +1,107 @@
+start_seconds = 15719.12
+location = "Outside the ruins / returning to Redwick Farm (western farmlands)"
+goal = "Report success and collect payment for stopping the goblin raids"
+npcs_present = [
+    "Maren Redwick (sheep farmer, quest giver)",
+]
+time_of_day = "evening"
+emotional_tone = "relieved"
+conflict_type = "social"
+notes = """After the fight, the party discusses proof and returns to the farmer to get paid and receive bonus
+cheese for returning surviving sheep."""
+scene_id = "S-010"
+end_seconds = 15864.333
+summary = """After defeating the goblins, the party discusses bringing proof (Bazgar takes a goblin head) and
+confirms most stolen sheep were eaten, though some survived. They return to Redwick Farm, report
+success, and receive 70 gp, two wheels of sharp cheese, and an invitation to the harvest festival."""
+outcome = "With payment collected and sheep returned, the party decides to head back toward the tavern."
+
+[[requested_resources]]
+keyword = "Maren Redwick / 70 gold / two wheels of sharp cheese / harvest festival"
+requested_path = "world/factions/ardenhaven/quests/goblin-raid-cr1.md"
+
+[[requested_resources]]
+keyword = "Redwick Farm"
+requested_path = "world/factions/ardenhaven/locations"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Redwick Farm (western farmlands)"
+known_details = [
+    "The party returns to the farmer to report the goblin problem resolved and receive payment (transcript 263:35-264:02).",
+    "Redwick Farm is in the Grassy Foothills west of Ardenford (world/factions/ardenhaven/locations/grassy-foothills.md).",
+]
+inferred_details = [
+    "The handoff and conversation happen at the farmstead itself rather than on the road nearby.",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Party gathers proof of the goblins' defeat"
+details = "Bazgar decapitates a goblin corpse to bring back as proof after negotiations failed but the mission succeeded (transcript 261:52-262:14)."
+
+[[key_events]]
+summary = "Sheep status confirmed"
+details = "The group establishes that goblins ate most of the sheep, but later clarifies that some sheep were alive and were returned to the farmer (transcript 262:27-262:37, 263:51-263:56)."
+
+[[key_events]]
+summary = "Quest turn-in and rewards"
+details = "Back at the farm, Maren Redwick pays 70 gold (split among the party), gives two wheels of sharp cheese, and invites them to the next harvest festival (transcript 263:35-264:02)."
+
+[character_beats]
+Bazgar = "Insists on tangible proof, taking a goblin head; keeps a grim, boastful tone about the fight."
+Sabriel = "Pushes for practical proof (ears) and focuses on explaining the outcome to the farmer."
+
+[[npcs]]
+name = "Maren Redwick"
+role = "Sheep farmer and quest giver"
+interaction = "Receives the party's report and returned sheep; pays them 70 gp, gives cheese, and invites them to the harvest festival (transcript 263:35-264:02)."
+
+[[loot]]
+item = "70 gp"
+context = "Payment from Maren Redwick for stopping the goblin raids (transcript 263:35-263:43)."
+
+[[loot]]
+item = "Two wheels of sharp cheese"
+context = "Gift from Maren Redwick after the party returned surviving sheep (transcript 263:51-264:10)."
+
+[[information]]
+summary = "Negotiation attempt failed, goblin threat ended"
+details = "The party states negotiations failed but the mission succeeded and the goblins will no longer take sheep (transcript 261:52-261:56, 263:26-263:34)."
+
+[[information]]
+summary = "Most stolen sheep were already eaten"
+details = "They find only bones/remains in the goblin area, though some sheep survived overall and were returned (transcript 262:27-262:37, 263:51-263:56)."
+
+[[information]]
+summary = "Harvest festival invitation"
+details = "Maren invites the party to the next harvest festival as thanks (transcript 264:00-264:02)."
+
+[atmosphere]
+mood = "relieved"
+lighting = "evening"
+sounds = "not specified in transcript"
+
+[grounding]
+transcript_timestamps = [
+    261.52,
+    264.54,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/grassy-foothills.md",
+]
+inferred_content = [
+    "The reward exchange occurs at the farmstead itself (not explicitly stated, but implied by 'get back' to the farmer).",
+]
+
+[[plot_threads]]
+thread = "Goblin raids on Redwick Farm"
+status = "resolved"
+
+[[plot_threads]]
+thread = "Harvest festival at Redwick Farm / western farmlands"
+status = "introduced"

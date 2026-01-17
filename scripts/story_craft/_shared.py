@@ -28,12 +28,37 @@ def discover_latest_session(repo_root: Path = REPO_ROOT) -> Optional[int]:
 
 
 def load_session_config(session_num: int, repo_root: Path = REPO_ROOT) -> dict[str, Any]:
-    """Load configuration for a specific session."""
-    config_path = repo_root / "sessions" / f"{session_num:02d}" / "config.toml"
+    """Load configuration for a specific session.
+    
+    Automatically resolves relative paths in config to be relative to the session folder.
+    Validates or auto-corrects session number in config to match folder.
+    """
+    session_folder = repo_root / "sessions" / f"{session_num:02d}"
+    config_path = session_folder / "config.toml"
     if not config_path.exists():
         raise FileNotFoundError(f"Config file not found: {config_path}")
+    
     with config_path.open("rb") as f:
-        return tomllib.load(f)
+        config = tomllib.load(f)
+    
+    # Auto-correct session number if it doesn't match folder
+    config_session_num = config.get("session", {}).get("number")
+    if config_session_num != session_num:
+        if config_session_num is not None:
+            print(f"Warning: config.toml says session {config_session_num} but folder is {session_num:02d}/ - using folder number")
+        config.setdefault("session", {})["number"] = session_num
+    
+    # Resolve relative output paths to be relative to session folder
+    for pass_name in ["pass1", "pass2", "pass3", "timeline"]:
+        if pass_name not in config:
+            continue
+        
+        output_value = config[pass_name].get("output")
+        if output_value and "/" not in output_value and "\\" not in output_value:
+            # Simple filename without path separators - make it relative to session folder
+            config[pass_name]["output"] = f"sessions/{session_num:02d}/{output_value}"
+    
+    return config
 
 
 def normalize_speaker_label(value: Any) -> str:

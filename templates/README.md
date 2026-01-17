@@ -10,6 +10,8 @@ This directory contains all templates used for creating consistent content throu
 - **[location-template.md](location-template.md)** - For cities, dungeons, and other places
 - **[session-notes-template.md](session-notes-template.md)** - For recording session recaps
 - **[session-planning-template.md](session-planning-template.md)** - For preparing upcoming sessions
+- **[party-template.md](party-template.md)** - For party overview + state tracking
+- **[party-member-abilities-template.md](party-member-abilities-template.md)** - For per-member ability pages (under a party folder)
 - **[quest-template.md](quest-template.md)** - For adventures and missions
 - **[item-template.md](item-template.md)** - For equipment and magic items
 - **[creature-template.md](creature-template.md)** - For monsters and creatures

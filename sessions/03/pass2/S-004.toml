@@ -1,0 +1,146 @@
+start_seconds = 6737.242
+location = "Cave base/plateau camp while waiting for rescue"
+goal = "Wait safely for Kargrimdur’s rope and later for Elder Marith; rest, regroup, and prepare warnings"
+npcs_present = [
+    "Kargrimdur (dwarf guide)",
+    "Cinder (crow familiar/companion)",
+]
+time_of_day = "unknown"
+emotional_tone = "cautious_casual"
+conflict_type = "none"
+notes = """Hours pass; Kargrimdur drops a secured rope and helps the party climb out, then they decide to camp
+for days to a week, eat rations, recover (long rest), and discuss the ruins and witch lore while
+travelers occasionally pass."""
+scene_id = "S-004"
+end_seconds = 8025.972
+summary = """While waiting in the cave, Sabriel finishes a replacement axe handle for Bazgar, turning the weapon
+into a nonmagical masterwork axe with improved accuracy. Kargrimdur returns, guided by Cinder’s
+information, and lowers a rope so the party can climb out to the surface. The group decides to camp
+in the valley for up to a week, planning to post warnings about the dangerous witch-like presence in
+the ruins and to wait for Elder Marith; they rest, share what they learned, and keep watch as
+occasional travelers pass by."""
+outcome = """The party settles into a multi-day camp in the valley to wait for Elder Marith, and on the fifth day
+they spot a crow that might be Cinder."""
+
+[[requested_resources]]
+keyword = "Kargrimdur (dwarf guide) and pony"
+requested_path = "characters/npcs"
+
+[[requested_resources]]
+keyword = "Calderon Imperium travelers mentioned"
+requested_path = "world/factions/calderon-imperium/_overview.md"
+
+[[requested_resources]]
+keyword = "gems worth 300 gp each"
+requested_path = "items/README.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Cave base/plateau camp in a valley near the ruins"
+known_details = [
+    "The party waits for several hours in the cave, eats rations, and makes themselves comfortable",
+    "Kargrimdur drops a secured rope into the cave and the party climbs up to the surface where he and a pony are waiting",
+    "The group camps in the valley for days; few travelers pass through because the route is not wagon-friendly and has difficult river travel",
+    "On the fifth day, a crow flies overhead and perches; the party is unsure if it is Cinder",
+]
+inferred_details = [
+    "The camp is positioned near the cave/ruins entrance so the party can warn passersby and wait for Elder Marith’s arrival",
+]
+confidence = 0.84
+
+[[key_events]]
+summary = "Sabriel completes Bazgar’s axe handle"
+details = "During the wait, Sabriel finishes crafting a new handle, and Bazgar’s axe is treated as masterwork (nonmagical) granting +1 to attack rolls."
+
+[[key_events]]
+summary = "Kargrimdur secures a rope and extracts the party"
+details = "Kargrimdur calls down, confirms the crow told him the party’s location, and drops a rope; the party climbs up safely to the surface where Kargrimdur and a pony are waiting, with Cinder absent and reportedly seeking help."
+
+[[key_events]]
+summary = "Party chooses to camp and prepare warnings"
+details = "Marwen insists on placing warning markings and maintaining vigilance (including using Alarm while camping), and the party agrees to wait rather than move on, expecting Elder Marith may take about a week to arrive."
+
+[[key_events]]
+summary = "Debrief about the witch threat and the ruins"
+details = "The party discusses that the witch-like entity could leave but remains sealed behind the blocked tunnel and stays close to an undefined 'it'; they also speculate about the purpose of the meditation room and the hostile guardians."
+
+[[key_events]]
+summary = "Travelers pass; party avoids Imperium contact"
+details = "A small number of travelers pass through the valley; Bazgar offers casual greetings generally but pointedly does not greet travelers identified as being from the Calderon Imperium."
+
+[character_beats]
+Sabriel = "Uses downtime to craft an exceptionally well-balanced axe handle and later questions why the witch\nstays in the ruins."
+Bazgar = "Accepts the upgraded axe, supports waiting for proper resolution, and withholds courtesy from\nCalderon Imperium travelers."
+Marwen = "Prioritizes safety by planning warning markings and maintaining ongoing camp security while awaiting\nElder Marith."
+
+[[npcs]]
+name = "Kargrimdur"
+role = "Dwarf guide/rescuer"
+interaction = "Returns after being informed by Cinder, drops a secured rope to help the party climb out, and provides brief updates about Cinder seeking help."
+
+[[npcs]]
+name = "Cinder"
+role = "Crow companion/familiar"
+interaction = "Not present in camp; reported by Kargrimdur to have gone to get help, and later a crow is seen that may or may not be Cinder."
+
+[[loot]]
+item = "Two gems (300 gp each)"
+context = "The party confirms they recovered two gems, each valued at 300 gp without haggling."
+
+[[loot]]
+item = "Masterwork axe (nonmagical, +1 to attack rolls)"
+context = "Result of Sabriel’s crafted handle and balancing work on Bazgar’s axe."
+
+[[loot]]
+item = "Monster fragment (unidentified piece)"
+context = "Marwen reveals she took a piece from one of the minor monsters, intending to craft something from it."
+
+[[information]]
+summary = "Cinder can communicate and relayed the party’s location"
+details = "Kargrimdur says 'the bird told me so' and later notes the crow had to go get help; the party remarks they did not initially realize the crow could talk."
+
+[[information]]
+summary = "Elder Marith may take about a week to arrive"
+details = "Marwen estimates it might be a week before Elder Marith can get there, shaping the party’s decision to camp and post warnings."
+
+[[information]]
+summary = "The valley route is low-traffic and difficult for transport"
+details = "Few travelers pass because there is no easy wagon route; river travel is also difficult due to mountains and waterfalls requiring portage."
+
+[[information]]
+summary = "The witch-like danger is tied to an undefined 'it' and naming/defining it is risky"
+details = "Marwen explains she cannot define 'it' and implies that breaking certain rules (like giving it a name) can change a witch; the party infers the entity stays close to 'it' in the ruins."
+
+[atmosphere]
+mood = "cautious_casual"
+lighting = "unknown"
+sounds = "Kargrimdur’s voice echoing down into the cave; intermittent quiet broken by occasional passing travelers and a crow overhead"
+
+[grounding]
+transcript_timestamps = [
+    11150,
+    13408,
+]
+inferred_content = [
+    "The camp is positioned near the cave/ruins entrance specifically to warn others and await Elder Marith (implied by their plans, not explicitly stated as exact placement).",
+]
+
+[[plot_threads]]
+thread = "Report and contain the witch-like threat in the ruins"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Await Elder Marith’s arrival for assistance"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Cinder’s independent actions and unclear whereabouts"
+status = "complicated"
+
+[[plot_threads]]
+thread = "Questions about the ruins’ purpose and hostile guardians"
+status = "advanced"

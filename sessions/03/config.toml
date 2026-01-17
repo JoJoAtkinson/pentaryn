@@ -1,7 +1,6 @@
 # D&D Session 1 Configuration
 
 [session]
-# Session number is auto-detected from folder name (sessions/01 = session 1)
 
 # Recording source affects speaker identification reliability
 # Options: "in-person" (single mic), "discord" (separate recordings), "hybrid"
@@ -15,15 +14,9 @@ KRIS = "Marwen (player character)"
 JEFF = "Bazgar (player character)"
 JOE = "Dungeon Master (DM)"
 
-# Uncertain identifications
-UNKNOWN = "Could be DM, Jeff, unlikely to be Nicole or Kristine; DM often voices multiple NPCs with different characterizations"
-
 # Additional context
 notes = """
-- NICOLE, KRIS, JEFF are confident identifications
-- UNKNOWN is used when speaker unclear (often DM or Jeff)
-- DM voices many NPCs, so single "UNKNOWN" label may represent multiple characters
-- In-person recording makes voice separation difficult
+- each player has their own recording; so speaker identification is absolutely correct.
 """
 
 [context]

@@ -1,0 +1,145 @@
+start_seconds = 23367.0
+location = "The Wayward Compass common room (morning)"
+goal = "Gather local intel for a mountain expedition (guides, ruins, shops) by questioning a friendly elf"
+npcs_present = [
+    "Elarion Faenwynd",
+]
+time_of_day = "morning"
+emotional_tone = "curious"
+conflict_type = "social"
+notes = """After the long rest, Marwen approaches a friendly elf (Elarion) who maintains the library’s
+ruin/rune catalog and gets guidance on ruins, dwarf guides, and where to find a weaponsmith,
+apothecary, and spell shop."""
+scene_id = "S-015"
+end_seconds = 26117.506
+summary = """In the morning at The Wayward Compass, Marwen approaches a friendly elf, Elarion Faenwynd, and
+questions him for intel to prepare a mountain expedition. Elarion identifies himself as the
+Concordance Library’s rune-catalog ledger keeper, gives directions to small ruins at the bottom of
+the valley, explains the main categories of potential mountain guides (including oath-bound dwarves
+as the most reliable and Garhammar guides as pricier), warns about a dwarven naming/wording
+sensitivity around “Oathholds,” and provides directions to local services like a weaponsmith, an
+alchemist, and shops selling spell scrolls."""
+outcome = """The conversation ends with Elarion returning to his reading, and the party prepares to follow up
+later at the Concordance Library and pursue the leads for guides and shops."""
+
+[[requested_resources]]
+keyword = "Elarion (E-L-A-R-I-O-N) / Concordance Library rune catalog ledger"
+requested_path = "world/factions/ardenhaven/npc/elarian-faenwynd.md"
+
+[[requested_resources]]
+keyword = "Concordance Library"
+requested_path = "world/factions/ardenhaven/locations/ardenford.md"
+
+[[requested_resources]]
+keyword = "Oathhold Dwarves / Dulgarum Oathholds"
+requested_path = "world/factions/dulgarum-oathholds/_overview.md"
+
+[[requested_resources]]
+keyword = "Garhammar dwarves (guides are pricier)"
+requested_path = "world/factions/garhammar-trade-league/_overview.md"
+
+[[requested_resources]]
+keyword = "weaponsmith / apothecary / spell shop"
+requested_path = "world/factions/ardenhaven/npc"
+
+[confidence]
+factual_accuracy = 0.84
+completeness = 0.68
+speculation_level = "low"
+
+[location_intelligence]
+name = "The Wayward Compass common room"
+known_details = [
+    "The party speaks with a friendly elf in the tavern common room in the morning.",
+    "The tavern is The Wayward Compass.",
+    "The elf says he maintains the rune catalog ledger for the Concordance Library.",
+]
+inferred_details = [
+    "The common room is open for breakfast/morning patrons, making it a good place to find locals willing to talk.",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Marwen initiates a friendly contact for expedition intel"
+details = "Marwen sits with Elarion and asks where to find dwarven guides and what options exist for a mountain expedition; Elarion responds as a knowledgeable local tied to the library."
+
+[[key_events]]
+summary = "Elarion points to valley ruins and library resources"
+details = "After briefly inspecting Marwen’s spellbook, Elarion directs the party to “small ones” (ruins) at the bottom of the valley and indicates there are relevant books that can guide them there."
+
+[[key_events]]
+summary = "Guide options clarified: native, oath-bound, and Garhammar"
+details = "Elarion outlines three broad guide types: local/native guides (less capable), oath-bound dwarves (harder to find but more dependable), and Garhammar dwarves (more expensive)."
+
+[[key_events]]
+summary = "Local shopping leads provided"
+details = "Elarion gives directions to a weaponsmith, an alchemist, and multiple spell/scroll shops, noting the city layout is disorganized enough that Marwen needs to write the directions down."
+
+[[key_events]]
+summary = "Concordance Library named as follow-up location"
+details = "Marwen confirms the library’s name (Concordance Library) and that Elarion is often there, setting up a later visit."
+
+[character_beats]
+Marwen = "Takes charge socially, asks structured questions, and writes down directions in a separate notebook."
+Sabriel = "Listens in and supports the expedition-planning focus."
+Bazgar = "Observes the interaction from nearby, letting Marwen handle the questioning."
+
+[[npcs]]
+name = "Elarion Faenwynd"
+role = "Elf librarian/ledger-keeper (rune catalog) at the Concordance Library"
+interaction = "Answers the party’s questions about mountain guides, ruins, and local shops; agrees they may see him at the library later."
+
+[[information]]
+summary = "Where to research and who Elarion is"
+details = "Elarion says he maintains the rune catalog ledger for the Concordance Library and can help with expedition-related information there."
+
+[[information]]
+summary = "Ruins lead"
+details = "Elarion indicates there are small ruins at the bottom of the valley and provides directions and a book reference that can get the party there."
+
+[[information]]
+summary = "Guide categories and recommendation"
+details = "Elarion describes three guide options: native/local guides (not as good), oath-bound dwarves (harder to find but more reliable), and Garhammar dwarves (pricier). He recommends oath-bound dwarves if possible."
+
+[[information]]
+summary = "Terminology warning about dwarves"
+details = "Elarion warns that saying “Oathholds” incorrectly (adding an “s” sound) can offend dwarves, who may interpret it as implying slavery."
+
+[[information]]
+summary = "Shopping leads"
+details = "Elarion provides directions to a weaponsmith, an alchemist, and spell/scroll shops; the directions are complex due to the city’s lack of clear districts."
+
+[atmosphere]
+mood = "curious"
+lighting = "morning"
+sounds = "tavern conversation and quiet reading"
+
+[grounding]
+transcript_timestamps = [
+    389.27,
+    407.55,
+]
+resource_refs = [
+    "world/factions/dulgarum-oathholds/_overview.md",
+    "world/factions/garhammar-trade-league/_overview.md",
+    "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+]
+inferred_content = [
+    "That the Wayward Compass common room is active with morning patrons and suitable for gathering intel (implied by setting and interaction, not explicitly stated).",
+]
+
+[[plot_threads]]
+thread = "Hire a mountain guide (oath-bound dwarves vs Garhammar vs locals)"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Investigate valley ruins via Concordance Library references"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Locate local suppliers (weaponsmith, alchemist, spell scroll shop)"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Visit the Concordance Library and consult Elarion"
+status = "introduced"

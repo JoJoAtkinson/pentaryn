@@ -1,0 +1,126 @@
+start_seconds = 13285.576
+location = "Ruins/old keep near the sheep grazing hills (western scrublands)"
+goal = "Approach the goblins to negotiate a deal to stop the sheep raids (and return their 'treasures')"
+npcs_present = [
+    "Goblins (including a leader/boss with scimitar)",
+    "Maren/Meryn Redwick (off-screen, back at the sheep)",
+]
+time_of_day = "evening"
+emotional_tone = "tense"
+conflict_type = "social"
+notes = """At sunset the party leaves the farmer and heads into the nearby ruins to speak with goblins, with
+Bazgar taking point in Orcish while the others hang back and prepare support."""
+scene_id = "S-008"
+end_seconds = 14289.089
+summary = """After sunset, the party approaches the old keep ruins to negotiate with the goblins over the sheep
+raids. Bazgar takes the lead because he can speak Orcish, calls out to the goblins, and is allowed
+to approach while the others hang back. The goblins question why he travels with humans and doubt he
+is truly an orc; Bazgar intimidates them into accepting him as a southern orc. He proposes a deal:
+stop taking sheep and instead guard the flock in exchange for being given sheep. The goblins reject
+the negotiation and the situation turns hostile as a goblin tries to take Bazgar’s axe, prompting
+Bazgar to strike."""
+outcome = """Negotiations collapse and the scene transitions into combat when a goblin attempts to seize Bazgar’s
+weapon and Bazgar attacks."""
+
+[[requested_resources]]
+keyword = "old ruins / keep (where goblins live)"
+requested_path = "world/factions/ardenhaven/locations"
+override = "world/factions/ardenhaven/locations/ruins-western-scrubland.md"
+
+[[requested_resources]]
+keyword = "goblins"
+requested_path = "creatures/README.md"
+override = "world/factions/ardenhaven/quests/goblin-raid-cr1.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.68
+speculation_level = "low"
+
+[location_intelligence]
+name = "Western Scrubland Ruins (Old Keep)"
+known_details = [
+    "The party approaches the ruins after sunset to speak with the goblins.",
+    "The ruins are the remains of a small keep with low, crumbling stone foundations and a hidden cave entrance on the western edge.",
+]
+inferred_details = [
+    "The party is negotiating from outside the ruins while Bazgar advances closer to the goblins to speak for the group.",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Party advances to the ruins to parley"
+details = "The group heads into the ruins at night intending to offer the goblins their “treasures” back and propose a new arrangement to stop the sheep raids."
+
+[[key_events]]
+summary = "Bazgar opens talks in Orcish while others stay back"
+details = "Bazgar calls out in Orcish to propose a trade; the goblins respond from cover and challenge the presence of humans, leading the party to keep distance while Bazgar approaches to speak."
+
+[[key_events]]
+summary = "Bazgar establishes dominance and credibility"
+details = "When the goblins accuse Bazgar of being human and question him, he uses intimidation and looming body language to convince them he is an orc from the south."
+
+[[key_events]]
+summary = "Deal proposed: guard sheep for payment"
+details = "Bazgar tells the goblins to stop stealing sheep and instead guard the sheep, earning sheep as payment rather than raiding."
+
+[[key_events]]
+summary = "Talks break and violence starts"
+details = "A goblin attempts to steal Bazgar’s axe; Bazgar refuses and attacks, initiating combat."
+
+[character_beats]
+Bazgar = "Takes point as translator and enforcer, using intimidation to control the parley before drawing\nsteel when crossed."
+Sabriel = "Supports the negotiation plan by providing the goblins’ returned “treasures” and encourages Bazgar\nto sweeten the offer."
+Marwen = "Uses a familiar (Flicker) to observe Bazgar’s meeting from a distance and coordinate if things go\nbad."
+
+[[npcs]]
+name = "Goblin lookout/spokesgoblin (unnamed)"
+role = "First goblin to respond and challenge the party"
+interaction = "Speaks with Bazgar in Orcish, questions his identity and the humans, then escalates toward hostility."
+
+[[npcs]]
+name = "Goblins (group, including a boss/leader implied by scene context)"
+role = "Raiders occupying the ruins"
+interaction = "Hear Bazgar’s proposal but do not accept the deal; one attempts to take Bazgar’s weapon, triggering a fight."
+
+[[loot]]
+item = "Goblins’ “treasures” (returned goblin junk/stolen goods, unspecified)"
+context = "Carried by the party as an offering to support the negotiation."
+
+[[information]]
+summary = "Goblins speak Orcish/Orcish dialect"
+details = "The party learns the goblins communicate in Orcish (or an Orcish dialect), making Bazgar the natural spokesperson."
+
+[[information]]
+summary = "Goblins were trading sheep for “treasures” and keeping the angry human away"
+details = "In the exchange with Bazgar, the goblins frame their raids as taking sheep and giving “treasures,” and indicate the raids are meant to keep an angry human away."
+
+[atmosphere]
+mood = "tense"
+lighting = "night/dim light after sunset"
+sounds = "raised voices calling across the ruins in Orcish"
+
+[grounding]
+transcript_timestamps = [
+    13255,
+    13916,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/ruins-western-scrubland.md",
+]
+inferred_content = [
+    "That the goblins are speaking from cover/within the ruins rather than openly standing in the open (implied by 'head poke up' and distance).",
+    "That the goblin group includes a leader/boss present in the broader encounter (scene context lists a leader, but the transcript segment does not clearly identify them in this moment).",
+]
+
+[[plot_threads]]
+thread = "Stop the sheep raids via negotiation"
+status = "complicated"
+
+[[plot_threads]]
+thread = "Return stolen goods/\"treasures\" to secure peace"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Goblins at the western scrubland ruins"
+status = "complicated"

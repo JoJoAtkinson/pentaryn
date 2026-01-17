@@ -1,0 +1,103 @@
+start_seconds = 31340.37
+location = "Ardenford (Lower Tier) — The Anvil & Oar (weaponsmith)"
+goal = "Replace Bazgar’s lost throwing axes and interact with the smith"
+npcs_present = [
+    "Branik Ironweld",
+]
+time_of_day = "unknown"
+emotional_tone = "casual"
+conflict_type = "social"
+notes = """The party visits the harbor-side weaponsmith; Bazgar asks for replacement throwing axes and ends up
+receiving axes for free as a first-time customer after some confusion about stock."""
+scene_id = "S-021"
+end_seconds = 31959.256
+summary = """Bazgar goes to The Anvil & Oar to replace the throwing axes he previously lost. The smith, Branik
+Ironweld, is briefly startled by Bazgar’s appearance but agrees to do business when gold is
+mentioned. After some back-and-forth about what the shop carries, Branik provides Bazgar with
+replacement throwing axes and the party learns a small detail about regional orc coloration."""
+outcome = "With axes replaced, the group leaves the weaponsmith and heads toward Willowgrass Apothecary."
+
+[[requested_resources]]
+keyword = "The Anvil & Oar"
+requested_path = "world/factions/ardenhaven/npc/_anvil-and-oar_branik-ironweld.md"
+
+[[requested_resources]]
+keyword = "Branik Ironweld"
+requested_path = "world/factions/ardenhaven/npc/_anvil-and-oar_branik-ironweld.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Ardenford (Lower Tier) — The Anvil & Oar"
+known_details = [
+    "A weaponsmith shop described as a reliable working weaponsmith",
+    "The shop sells practical gear like spearheads, short swords, axes, daggers, crossbows, repair work, and simple armor/fitting",
+    "The smith has a stated rule against making flashy, over-designed “Hero Blades”",
+]
+inferred_details = [
+    "It is a walk-in storefront/workshop where the smith works at a forge/anvil",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Bazgar chooses the weaponsmith to replace lost axes"
+details = "Bazgar prioritizes visiting The Anvil & Oar to replace the hand axes he threw and never recovered."
+
+[[key_events]]
+summary = "Branik explains his stance on “Hero Blades” and what he sells"
+details = "The shop is framed as practical and reliable, with a hard rule against flashy, over-designed “Hero Blades,” while still offering common weapons and services."
+
+[[key_events]]
+summary = "Branik supplies replacement throwing axes"
+details = "After initially acting as if axes might not be the right request, Branik ultimately provides Bazgar with replacement throwing axes (ending with Bazgar receiving four)."
+
+[[key_events]]
+summary = "Party learns a note about orc appearance by region"
+details = "In conversation, it comes up that western orcs are not the same color as eastern orcs; the western orcs are described as olive/grayish."
+
+[character_beats]
+Bazgar = "Focuses on restocking his signature throwing weapons and negotiates with the smith."
+Sabriel = "Contributes regional knowledge about orcs from travel experience."
+Marwen = "Stays in the background during the purchase."
+
+[[npcs]]
+name = "Branik Ironweld"
+role = "Weaponsmith at The Anvil & Oar"
+interaction = "Sells/provides replacement throwing axes to Bazgar; discusses shop policies and makes small talk that reveals regional differences in orc coloration."
+
+[[loot]]
+item = "Throwing axes (4)"
+context = "Provided by Branik as replacements for Bazgar’s lost axes."
+
+[[information]]
+summary = "The Anvil & Oar avoids “Hero Blades”"
+details = "Branik’s shop emphasizes reliable, maintainable weapons and refuses to make flashy, over-designed “Hero Blades” associated with bragging rather than practical use."
+
+[[information]]
+summary = "Western vs. eastern orc coloration differs"
+details = "The group learns that western orcs are not the same color as eastern orcs; western orcs are described as olive/grayish."
+
+[atmosphere]
+mood = "calm"
+lighting = "unknown"
+sounds = "hammering from the smith at work"
+
+[grounding]
+transcript_timestamps = [
+    31314,
+    31965,
+]
+inferred_content = [
+    "The shop functions as a walk-in forge/workshop space (implied by the smith hammering when they enter).",
+]
+
+[[plot_threads]]
+thread = "Replace Bazgar’s lost throwing axes"
+status = "resolved"
+
+[[plot_threads]]
+thread = "Establish relationship with Branik Ironweld / The Anvil & Oar"
+status = "introduced"

@@ -1,0 +1,136 @@
+start_seconds = 27142.347
+location = "Abandoned lumber camp (southern forest), covered in webs"
+goal = "Clear the camp of spiders, rescue any surviving workers, and secure the tools"
+npcs_present = [
+    "Gareth Thorne (mentioned)",
+]
+time_of_day = "morning"
+emotional_tone = "tense"
+conflict_type = "combat"
+notes = """At the web-covered camp, the party attempts a stealth approach, then negotiates with a giant spider
+to leave; a spiderling hatches and is killed, eggs are burned, and a worker is stabilized."""
+scene_id = "S-018"
+end_seconds = 29330.82
+summary = """The party approached a web-choked lumber camp and spotted two cocooned workers and a giant spider.
+Bazgar tried to sneak in to reach the victims but got stuck in the webs and drew the spider’s
+attention. Rather than immediately fighting, the party used magic to communicate and intimidate the
+spider into leaving the camp. While checking the egg cluster afterward, a spiderling hatched and
+attacked, but it was quickly killed and the remaining eggs were burned. The party cut down both
+cocooned workers—one stable, one near death—and Sabriel used magic to stabilize the critical
+survivor. They searched the camp, confirmed no other spiders were present, recovered the camp’s
+tools, and prepared to transport the rescued workers back to Gareth Thorne for payment."""
+outcome = """The camp was made safe enough to evacuate two workers and recover tools, with the main spider driven
+off rather than slain."""
+
+[[requested_resources]]
+keyword = "Spider Lair / abandoned lumber camp"
+requested_path = "world/factions/ardenhaven/quests/spider-lair-cr1.md"
+
+[[requested_resources]]
+keyword = "giant spider"
+requested_path = "world/factions/ardenhaven/quests/spider-lair-cr1.md"
+
+[[requested_resources]]
+keyword = "spider eggs / spiderling"
+requested_path = "world/factions/ardenhaven/quests/spider-lair-cr1.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Abandoned lumber camp (southern forest), covered in webs"
+known_details = [
+    "Stacks of logs and a cabin are present, with webs blanketing the area",
+    "Two cocooned bodies hang from trees; one is moving",
+    "A giant spider is visible in the camp",
+]
+inferred_details = [
+    "The webs form a territorial hunting/feeding area for at least one spider",
+]
+confidence = 0.87
+
+[[key_events]]
+summary = "Webbed camp discovered with two cocooned workers and a spider"
+details = "The party identified the lumber camp structures (logs and cabin) covered in webs and saw two cocooned bodies hanging from trees, one still moving, with a giant spider nearby."
+
+[[key_events]]
+summary = "Bazgar’s stealth approach fails when he gets stuck"
+details = "Bazgar attempted to sneak close using cover but became stuck in the webbing and was noticed by the spider, forcing the party to improvise."
+
+[[key_events]]
+summary = "Negotiation and intimidation drive the spider away"
+details = "Using Speak with Animals and threats of fire, the party pressured the spider to abandon the camp and leave the cocooned bodies behind; the spider offered eggs as a trade but ultimately withdrew."
+
+[[key_events]]
+summary = "Spiderling hatches; eggs destroyed"
+details = "While inspecting the eggs, a spiderling hatched and attacked but was killed; the remaining eggs were burned to prevent further hatchlings."
+
+[[key_events]]
+summary = "Workers rescued and stabilized; tools recovered"
+details = "The party unwrapped both cocoons: one worker was fine, the other was comatose and needed immediate help; Sabriel stabilized him with magic. They then searched and recovered the camp’s tools and did a perimeter check, finding no additional spiders."
+
+[character_beats]
+Bazgar = "Took point to rescue the cocooned worker but blundered into the webs and had to adapt."
+Sabriel = "Provided protective magic (Bless) and stabilized the critically injured worker."
+Marwen = "Used Speak with Animals and fire intimidation to force the spider to retreat; dealt with the hatched\nspiderling and destroyed the eggs."
+
+[[npcs]]
+name = "Gareth Thorne"
+role = "Quest contact/employer (mentioned)"
+interaction = "The party planned to return the rescued workers and recovered tools to him and expected payment and a favor."
+
+[[loot]]
+item = "Lumber camp tools"
+context = "Recovered from the webbed camp after searching."
+
+[[loot]]
+item = "Spiderling parts (legs/bits)"
+context = "Taken after killing the hatched spiderling."
+
+[[loot]]
+item = "Spider webbing (some collected)"
+context = "Discussed as being saved/collected while clearing the camp."
+
+[[information]]
+summary = "Spider venom is dangerous"
+details = "The party identified that the spiders’ poison is extremely strong, influencing their decision to use Bless and be cautious."
+
+[[information]]
+summary = "Two workers survived in cocoons"
+details = "One cocooned worker was fine after being cut down; the other was comatose and required immediate stabilization."
+
+[[information]]
+summary = "Payment terms for the job"
+details = "The party learned they would receive 80 gold each plus an additional 20 gold per living worker saved (two saved), and Gareth Thorne would owe them a favor involving furniture, lumber, or supplies."
+
+[atmosphere]
+mood = "tense"
+lighting = "morning"
+sounds = "A crow was present and vocalized nearby during the standoff."
+
+[grounding]
+transcript_timestamps = [
+    452.22,
+    489.17,
+]
+resource_refs = [
+    "world/factions/ardenhaven/quests/spider-lair-cr1.md (not found)",
+]
+inferred_content = [
+    "Webs functioning as a territorial hunting/feeding zone (implied by spider behavior and blanket coverage, not explicitly stated as territory mechanics).",
+    "Exact method of transporting workers back (cart use is stated, but the return trip itself is implied as next step).",
+]
+
+[[plot_threads]]
+thread = "Clear the abandoned lumber camp of spiders and rescue workers"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Fate of the driven-off giant spider (possible return or tracking)"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Gareth Thorne’s reward and favor for the party"
+status = "advanced"

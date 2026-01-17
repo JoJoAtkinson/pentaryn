@@ -1,0 +1,121 @@
+start_seconds = 31959.256
+location = "Ardenford (Middle Tier) — Willowglass Apothecary"
+goal = "Buy adventuring consumables (soap, antitoxin, healing potions) and see what stock is available"
+npcs_present = [
+    "Hesta Briarvein",
+]
+time_of_day = "unknown"
+emotional_tone = "light/comedic"
+conflict_type = "social"
+notes = """At the apothecary, Sabriel negotiates down an attempted overcharge, becomes friendly with Hesta,
+browses random stock (chalk of warding, antitoxin, alchemist’s fire, smoke pellets, lozenges), and
+learns healing potions are mostly pre-ordered."""
+scene_id = "S-022"
+end_seconds = 32807.944
+summary = """The party visits Willowglass Apothecary to shop for consumables. Sabriel negotiates down an
+attempted overcharge on a soap kit, buys soap (plus an herbal sachet), and becomes friendly with the
+apothecary, Hesta Briarvein, who invites her for tea later. The party checks available odd supplies
+and asks about healing potions, learning that potion orders have a waiting period due to a shortage
+of high-purity distilled alcohol from Merrill Gate because of a strike."""
+outcome = """The scene ends with Hesta explaining the potion backlog is caused by a strike disrupting access to
+purified distilled alcohol needed for brewing."""
+
+[[requested_resources]]
+keyword = "Willowglass Apothecary"
+requested_path = "world/factions/ardenhaven/npc/_apothecary_hesta-briarvein-willowglass.md"
+
+[[requested_resources]]
+keyword = "Hesta Briarvein"
+requested_path = "world/factions/ardenhaven/npc/_apothecary_hesta-briarvein-willowglass.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Ardenford (Middle Tier) — Willowglass Apothecary"
+known_details = [
+    "The apothecary sells soaps, salves, incenses, antidotes/basic healing drops (when stocked), and offers discrete consultation, poison triage, and ingredient appraisals.",
+    "The shop has limited antitoxin, alchemist’s fire, smoke pellets, soot leaf lozenges, and “Chalk of Warding.”",
+    "A batch of healing potions is visible behind the counter with a “do not sell” label, apparently already ordered.",
+]
+inferred_details = [
+    "The shop is experiencing supply-chain delays affecting potion production.",
+]
+confidence = 0.88
+
+[[key_events]]
+summary = "Soap purchase and negotiation"
+details = "Sabriel asks for specialty soaps; the apothecary initially quotes an inflated price, but Sabriel calls it out and buys the kit at a much lower price, adding an herbal sachet as part of the deal."
+
+[[key_events]]
+summary = "Browsing apothecary stock"
+details = "The party learns the shop carries items like Chalk of Warding, limited antitoxin, alchemist’s fire, smoke pellets, and soot leaf lozenges."
+
+[[key_events]]
+summary = "Healing potion availability and constraints"
+details = "The party spots healing potions marked not for sale and asks about ordering; Hesta says there is a waiting period and explains the bottleneck is a strike affecting supply of purified distilled alcohol from Merrill Gate."
+
+[[key_events]]
+summary = "Sabriel befriends Hesta"
+details = "After the soap interaction, Sabriel and Hesta warm to each other; Hesta invites Sabriel to have tea later (explicitly not romantic)."
+
+[character_beats]
+Sabriel = "Spots an attempted overcharge, negotiates firmly, and builds rapport with Hesta."
+Marwen = "Supports the idea of helping with potion-making/ingredients to move up the order line."
+Bazgar = "Engages with the shop’s practical inventory and the party’s supply needs."
+
+[[npcs]]
+name = "Hesta Briarvein"
+role = "Apothecary proprietor"
+interaction = "Sells soap and other supplies, is called out for overpricing, becomes friendly with Sabriel, and explains potion delays due to a strike affecting distilled alcohol supplies."
+
+[[loot]]
+item = "Soap kit"
+context = "Purchased after negotiation; included an herbal sachet as part of the deal."
+
+[[loot]]
+item = "Additional basic lathering soaps"
+context = "Requested to help teach someone about using soap."
+
+[[information]]
+summary = "Potion orders are delayed"
+details = "Healing potions visible in the shop are labeled not for sale and appear pre-ordered; new orders have a waiting period."
+
+[[information]]
+summary = "Supply shortage cause"
+details = "Hesta says potion production is constrained because a union controlling purified distilled alcohol from Merrill Gate is on strike, limiting access to a required ingredient."
+
+[[information]]
+summary = "Shop services and typical goods"
+details = "Willowglass Apothecary sells soaps, salves, incenses, antidotes/basic healing drops (when stocked), and offers discrete consultation, poison triage, and ingredient appraisals; it also carries items like antitoxin, alchemist’s fire, smoke pellets, soot leaf lozenges, and Chalk of Warding."
+
+[atmosphere]
+mood = "light/comedic"
+lighting = "unknown"
+sounds = "unknown"
+
+[grounding]
+transcript_timestamps = [
+    31930.0,
+    32830.0,
+]
+resource_refs = [
+    "world/factions/ardenhaven/npc/_apothecary_hesta-briarvein-willowglass.md (missing/unavailable)",
+]
+inferred_content = [
+    "The shop is experiencing broader supply-chain disruption (inferred from the strike and waiting period explanation).",
+]
+
+[[plot_threads]]
+thread = "Healing potion backlog at Willowglass Apothecary"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Merrill Gate distilled-alcohol strike affecting supplies"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Sabriel’s new relationship with Hesta Briarvein (tea invitation)"
+status = "introduced"

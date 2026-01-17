@@ -1,0 +1,94 @@
+start_seconds = 17300.982
+location = "The Wayward Compass tavern, Ardenford (Middle Tier)"
+goal = "Avoid/defuse tension after Calderon Imperium traders enter"
+npcs_present = [
+    "Calderon Imperium traders (3)",
+]
+time_of_day = "night"
+emotional_tone = "tense"
+conflict_type = "social"
+notes = """Imperium traders arrive and stare; Bazgar’s mood drops and the party decides to turn in to avoid
+escalation."""
+scene_id = "S-012"
+end_seconds = 17419.171
+summary = """Three clearly identifiable Calderon Imperium traders enter the Wayward Compass and conduct
+themselves in a uniform, coordinated way—ordering the same drink and seating themselves opposite the
+party while staring. Bazgar’s mood visibly sours, and the group decides to turn in for the night,
+but as they pass, Baz spits on the floor toward them, prompting one trader to attempt to trip him."""
+outcome = "The scene ends as a trader moves to trip Baz while the party is heading upstairs to their rooms."
+
+[[requested_resources]]
+keyword = "Calderon Imperium traders"
+requested_path = "world/factions/calderon-imperium/_overview.md"
+
+[[requested_resources]]
+keyword = "The Wayward Compass"
+requested_path = "world/factions/ardenhaven/locations/ardenford.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.68
+speculation_level = "low"
+
+[location_intelligence]
+name = "The Wayward Compass tavern, Ardenford (Middle Tier)"
+known_details = [
+    "At night, three Calderon Imperium traders enter the bar wearing straight gray clothing with black belts and moving in an organized, in-step way (they are not military; no galea/helmet) (transcript 288:14-288:50).",
+    "The traders walk to the bar together, order the same drink, then sit on the opposite side while watching the party (transcript 289:27-289:44).",
+    "The party has rooms upstairs and must pass the traders to reach them (transcript 290:13-290:19).",
+]
+inferred_details = [
+    "The tavern has a bar area and an upstairs lodging level.",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Imperium traders arrive and draw attention"
+details = "Three Calderon Imperium traders enter, identifiable by their gray clothing, black belts, and regimented manner; they order the same thing and sit together on the opposite side, repeatedly looking at the party (transcript 288:14-289:44)."
+
+[[key_events]]
+summary = "Party opts to avoid escalation by going upstairs"
+details = "With tension rising, the party decides to turn in early and head to their rooms upstairs (transcript 290:02-290:19)."
+
+[[key_events]]
+summary = "Baz provokes and a trader retaliates"
+details = "As the party passes the traders, Baz spits on the floor in their direction; one trader responds by trying to trip him as he goes by (transcript 290:19-290:27)."
+
+[character_beats]
+Bazgar = "Visibly drops in mood at the traders’ arrival, then spits toward them while passing (transcript\n289:46-289:51, 290:19-290:21)."
+Sabriel = "Present during the tense arrival; no distinct action beyond being watched (transcript\n288:14-289:44)."
+Marwen = "Present during the tense arrival; no distinct action beyond moving to turn in (transcript\n290:02-290:19)."
+
+[[npcs]]
+name = "Calderon Imperium traders (3)"
+role = "Imperium-aligned civilian traders"
+interaction = "They enter in a coordinated manner, watch the party, and one attempts to trip Baz after he spits toward them (transcript 288:14-290:27)."
+
+[[information]]
+summary = "Imperium civilians are easy to spot and behave uniformly"
+details = "The traders are described as wearing straight gray clothing with black belts and moving in step; they are not military (no helmet/galea), but still appear organized and uniform in behavior, including ordering the same drink (transcript 288:26-289:35)."
+
+[atmosphere]
+mood = "tense"
+lighting = "not stated"
+sounds = "not stated"
+
+[grounding]
+transcript_timestamps = [
+    17294.0,
+    17448.0,
+]
+resource_refs = [
+    "world/factions/calderon-imperium/_overview.md",
+]
+inferred_content = [
+    "The tavern has a bar area and an upstairs lodging level.",
+]
+
+[[plot_threads]]
+thread = "Imperium presence in Ardenford"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Tavern confrontation with Imperium traders"
+status = "complicated"

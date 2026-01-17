@@ -1,0 +1,114 @@
+start_seconds = 34444.089
+location = "Ardenford (Upper Tier) — outside/near the Concordance Library (coffee/café area)"
+goal = "Bazgar and Sabriel discuss the Pentarch Accords and whether Ardenhaven’s governance ties back to the treaty"
+time_of_day = "unknown"
+emotional_tone = "concerned"
+conflict_type = "social"
+notes = """Bazgar questions if the Imperium influenced Ardenhaven’s dysfunctional government via the Accords;
+Sabriel recalls details and concludes it’s unrelated, while warning the Imperium may return."""
+scene_id = "S-026"
+end_seconds = 34798.111
+summary = """Near the Concordance Library, Bazgar asks Sabriel about the Pentarch Accords and whether
+Ardenhaven’s messy, multi-council governance was imposed by the Calderon Imperium through the
+treaty. Sabriel recalls the Accords’ text well enough to say the Imperium did not restructure
+Ardenhaven’s government via the treaty, and she frames Ardenhaven’s governance as many councils
+acting independently under a shared system. Bazgar remains convinced the Imperium will eventually
+return, and the group turns toward using the library, learning they’ll need library cards."""
+outcome = """The conversation ends with the party moving to use the Concordance Library and obtaining library
+cards."""
+
+[[requested_resources]]
+keyword = "Pentarch Accords"
+requested_path = "/Users/joe/GitHub/dnd/world/factions/world-faction-outsider-perspective.md"
+
+[[requested_resources]]
+keyword = "Calderon Imperium"
+requested_path = "world/factions/calderon-imperium/_overview.md"
+
+[[requested_resources]]
+keyword = "Ardenhaven government / Council of Consuls"
+requested_path = "world/factions/ardenhaven/_overview.md"
+
+[confidence]
+factual_accuracy = 0.9
+completeness = 0.74
+speculation_level = "low"
+
+[location_intelligence]
+name = "Ardenford (Upper Tier) — outside/near the Concordance Library (café area)"
+known_details = [
+    "The party heads to a café/coffee spot across from the library area before going into the Concordance Library.",
+    "The Concordance Library requires library cards to access information.",
+]
+inferred_details = [
+    "They are in a public plaza or street-adjacent area near the library where a café is available.",
+]
+confidence = 0.86
+
+[[key_events]]
+summary = "Bazgar raises concerns about the Pentarch Accords shaping Ardenhaven’s government."
+details = "Bazgar asks Sabriel if the treaty between Ardenhaven and the Imperium could have required or caused Ardenhaven’s current ineffective governance structure."
+
+[[key_events]]
+summary = "Sabriel recalls the treaty text and rejects the idea of imposed governance."
+details = "Sabriel indicates she’s familiar with the Accords’ text and concludes it did not mandate a governmental restructuring; she attributes Ardenhaven’s structure to its own internal political makeup rather than Imperium design."
+
+[[key_events]]
+summary = "They assess Ardenhaven’s governance as fragmented and debate centralized authority."
+details = "The group discusses how Ardenhaven appears to operate through multiple councils and government buildings rather than a single unified voice, with differing views on whether that is a strength or an operational weakness."
+
+[[key_events]]
+summary = "Bazgar warns the Imperium will come back; the party pivots to research."
+details = "Bazgar states he believes the Imperium will return at some point. The group then focuses on using the Concordance Library and learns access is managed via library cards."
+
+[character_beats]
+Bazgar = "Presses Sabriel for treaty specifics and asserts the Imperium will return."
+Sabriel = "Leans on document knowledge to answer precisely and separates treaty terms from Ardenhaven’s\ninternal politics."
+Marwen = "Suggests a coffee stop and reacts to the library’s access restrictions."
+
+[[loot]]
+item = "Library card"
+context = "The party is issued library cards to access the Concordance Library."
+
+[[information]]
+summary = "The Pentarch Accords did not impose Ardenhaven’s current government structure."
+details = "Sabriel’s recollection of the treaty text indicates Ardenhaven’s fragmented, multi-council governance was not a requirement written into the Accords with the Imperium."
+
+[[information]]
+summary = "Ardenhaven’s governance appears to be many councils operating under a shared system."
+details = "Based on what they observe around the city (multiple government buildings and administrative presence), Ardenhaven functions as multiple councils acting independently rather than a single centralized authority."
+
+[[information]]
+summary = "The Concordance Library is accessible via library cards."
+details = "The party learns the library’s information is open to all, but only with library cards, and they are able to obtain them."
+
+[atmosphere]
+mood = "concerned"
+lighting = "unknown"
+sounds = "busy with people"
+
+[grounding]
+transcript_timestamps = [
+    34416.0,
+    34826.0,
+]
+resource_refs = [
+    "world/factions/world-faction-outsider-perspective.md",
+    "world/factions/ardenhaven/_overview.md",
+    "world/factions/calderon-imperium/_overview.md",
+]
+inferred_content = [
+    "The café is in a plaza/street-adjacent area near the library (implied by planning to go across from the library).",
+]
+
+[[plot_threads]]
+thread = "Whether the Pentarch Accords shaped Ardenhaven’s governance"
+status = "resolved"
+
+[[plot_threads]]
+thread = "Fear of renewed Calderon Imperium aggression"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Research at the Concordance Library"
+status = "introduced"

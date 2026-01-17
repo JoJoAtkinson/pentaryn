@@ -13,7 +13,8 @@ This document provides guidance for AI assistants (like GitHub Copilot) on how t
 ├── world/
 │   ├── factions/              # Regions, organizations, and their locations
 │   ├── history/               # Historical events and timeline
-│   └── lore/                  # World lore and mythology
+│   ├── lore/                  # World lore and mythology
+│   └── party/                 # Parties (overview/state), members, and party timeline TSVs
 ├── sessions/
 │   ├── notes/                 # Session recaps
 │   ├── planning/              # Upcoming session plans
@@ -44,6 +45,14 @@ This document provides guidance for AI assistants (like GitHub Copilot) on how t
 - For characters: `firstname-lastname.md` or `character-title.md`
 - For locations: `location-name.md`
 - For sessions: `session-XX-YYYY-MM-DD.md` (e.g., `session-01-2024-03-15.md`)
+
+### Parties
+
+- Party folders live at `world/party/<party-slug>/`
+- Party overview/state doc: `world/party/<party-slug>/_overview.md`
+- Party timeline (TSV): `world/party/<party-slug>/_history.tsv`
+- Optional member ability pages: `world/party/<party-slug>/members/<member-slug>.md`
+- Party creation defaults: `world/party/_party-creation-rules.md`
 
 ### World Naming Conventions (for LLMs)
 

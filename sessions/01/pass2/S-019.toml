@@ -1,0 +1,111 @@
+start_seconds = 29330.82
+location = "Ardenford (post-job wrap-up, before shopping)"
+goal = "Finalize the job outcome (tools/workers), discuss ethics, and confirm payout/favor before heading into town to shop"
+npcs_present = [
+    "Gareth Thorne (implied)",
+]
+time_of_day = "unknown"
+emotional_tone = "casual"
+conflict_type = "social"
+notes = """The party debates whether to hunt the spider, talks through ethics, confirms the payout split and
+the favor owed by Gareth, then transitions into planning their shopping stops."""
+scene_id = "S-019"
+end_seconds = 30067.468
+summary = """The party wraps up the job outcome in Ardenford, briefly debates the ethics of hunting down the
+spider (deciding not to pursue it for now), then finalizes payment: 80 gp each plus a bonus for two
+workers saved, rounded to an even split. They also secure and record a favor owed by Gareth Thorne,
+described as furniture, lumber, or supplies, before transitioning toward shopping in town."""
+outcome = """With gold distributed and the favor noted, the group turns from the job wrap-up to planning their
+shopping stops (including interest in spell scrolls and a library visit)."""
+
+[[requested_resources]]
+keyword = "favor from Gareth Thorne"
+requested_path = "world/factions/ardenhaven/quests/spider-lair-cr1.md"
+
+[confidence]
+factual_accuracy = 0.78
+completeness = 0.62
+speculation_level = "low"
+
+[location_intelligence]
+name = "Ardenford"
+known_details = [
+    "Scene takes place in Ardenford during a post-job wrap-up before shopping",
+    "The party discusses whether to chase down a spider and decides not to as the current plan",
+    "Payout is calculated and distributed, and a favor from Gareth Thorne is recorded",
+]
+inferred_details = [
+    "The party is meeting or settling accounts with Gareth Thorne (or his operation) immediately after completing a job board task",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Decision not to pursue the spider"
+details = "During an ethics discussion, the group is asked if they will chase the spider; the stated plan is no, though one party member expresses interest in doing so."
+
+[[key_events]]
+summary = "Job payout calculated and evenly split"
+details = "Payment is clarified as 80 gp each, plus 20 gp per live worker saved; with two workers saved, an extra 40 gp is added to the party total and then rounded with an extra 5 gp to make an even split of 95 gp each."
+
+[[key_events]]
+summary = "Favor from Gareth Thorne confirmed and recorded"
+details = "The party is told Gareth Thorne owes them a favor, framed as providing furniture, lumber, or supplies; they decide to write it down in their inventory for later use."
+
+[[key_events]]
+summary = "Transition to shopping plans"
+details = "After confirming the job is complete, the party shifts focus to spending their money, with particular interest in a shop selling spell scrolls and a request to visit a library later."
+
+[character_beats]
+Bazgar = "Says he would like to chase the spider, but does not push the group into it; helps ensure the favor\nis recorded."
+Marwen = "Questions whether the party are 'hunters' and later expresses interest in visiting the library."
+Sabriel = "Downplays taking small pieces of lumber and supports tracking the favor in the party inventory."
+
+[[npcs]]
+name = "Gareth Thorne"
+role = "Job patron / lumber contact owing a favor"
+interaction = "Party finalizes payout terms connected to saved workers and records a favor he owes (furniture/lumber/supplies)."
+
+[[loot]]
+item = "95 gp each"
+context = "Final split of the job payout after adding the worker-saved bonus and rounding with an extra 5 gp."
+
+[[loot]]
+item = "Favor owed by Gareth Thorne"
+context = "Recorded as a future claim for furniture, lumber, or supplies."
+
+[[information]]
+summary = "Payout structure clarified"
+details = "Each party member receives 80 gp base pay, plus 20 gp per live worker saved; two workers were saved, adding 40 gp total, then the total is rounded so each receives 95 gp."
+
+[[information]]
+summary = "Nature of the favor"
+details = "Gareth Thorne’s favor is described as providing furniture, lumber, or supplies; the party plans to hold it for later rather than cashing it in immediately."
+
+[atmosphere]
+mood = "casual"
+lighting = "unknown"
+sounds = "unknown"
+
+[grounding]
+transcript_timestamps = [
+    29281.0,
+    30094.0,
+]
+resource_refs = [
+    "world/factions/ardenhaven/quests/spider-lair-cr1.md (not found)",
+]
+inferred_content = [
+    "That the wrap-up occurs directly with Gareth Thorne (he is implied, but the transcript does not clearly show him speaking).",
+]
+
+[[plot_threads]]
+thread = "Spider pursuit / ethics of hunting it down"
+status = "complicated"
+
+[[plot_threads]]
+thread = "Gareth Thorne favor (lumber/furniture/supplies)"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Shopping in Ardenford (spell scrolls, library visit)"
+status = "advanced"

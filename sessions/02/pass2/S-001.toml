@@ -1,0 +1,133 @@
+start_seconds = 21.842
+location = "Ardenford (city streets / seeking a guide)"
+goal = "find and hire an Oathhold dwarf sherpa/guide for the valley ruins"
+npcs_present = [
+    "Archivist Elarion Faenwynd (mentioned)",
+    "Gorgondor/Kargromdor (Oathhold dwarf guide)",
+]
+time_of_day = "morning"
+emotional_tone = "focused"
+conflict_type = "social"
+notes = """The party follows up on the archivist’s request and locates an Oathhold dwarf guide at a dwarven
+bar, negotiating terms and earning his cautious agreement."""
+scene_id = "S-001"
+end_seconds = 2031.806
+summary = """In morning streets of Ardenford, the party followed the archivist’s general instruction to find an
+Oathhold dwarf guide and located a dwarven guidehouse/bar called The Stone Bird. Inside, they
+identified an Oathhold dwarf (Kargromdor/Gorgondor) sitting alone and approached him to hire him as
+a guide for the Valley of Ruins. After initial reluctance, he agreed to take them under specific
+payment terms and limits on responsibility, then began leading them out toward the valley while
+offering practical survival guidance for the eastern ridge routes."""
+outcome = """The party successfully hired Kargromdor as their guide and departed Ardenford with him toward the
+valley approaches."""
+
+[[requested_resources]]
+keyword = "Archivist"
+requested_path = "world/factions/ardenhaven/locations/ardenford/concordance-library/archivist-elarian-faenwynd.md"
+
+[[requested_resources]]
+keyword = "Oathhold Dwarf"
+requested_path = "world/factions/dulgarum-oathholds/_overview.md"
+
+[[requested_resources]]
+keyword = "sherpa / guide"
+requested_path = "world/factions/ardenhaven/locations/ardenford/shops/tharkar-taproom-sherpa-for-hire.md"
+
+[[requested_resources]]
+keyword = "The stone bird"
+requested_path = "world/factions/ardenhaven/locations/ardenford/shops"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "The Stone Bird (dwarven bar/guidehouse in Ardenford, east side)"
+known_details = [
+    "The party searched Ardenford in the morning for an Oathhold dwarf guide for the valley ruins (transcript ~00:21-00:53).",
+    "They found a dwarven bar where guides can be hired and met the Oathhold dwarf there (transcript ~04:46-05:22).",
+    "The bar was described as a place where dwarves gather for contractual guide work (transcript ~05:15-05:22).",
+]
+inferred_details = [
+    "This location functions like Thar'kar Taproom (a dwarven-run guidehouse on Ardenford’s eastern edge) but was named differently in play as 'The Stone Bird'.",
+]
+confidence = 0.78
+
+[[key_events]]
+summary = "Party locates an Oathhold guidehouse and identifies a likely guide"
+details = "Using their familiarity with Oathhold dwarves, the party found a dwarven bar/guidehouse (The Stone Bird) and picked out an Oathhold dwarf who was sitting alone rather than mingling with other dwarves offering contract work (transcript ~04:46-06:38)."
+
+[[key_events]]
+summary = "Negotiation with Kargromdor"
+details = "Marwen and Bazgar introduced the Compass Edge and asked to hire the dwarf’s services for the Valley of Ruins; he initially dismissed them and suggested hiring someone else, but they emphasized wanting a longer-term partner who would help them learn to explore safely (transcript ~23:05-26:48)."
+
+[[key_events]]
+summary = "Agreement reached with payment terms"
+details = "Kargromdor agreed to guide them, stating he would only go so far and would not be able to save them from extreme mistakes. He required payment with some up front and the remainder upon safe return, with a stated adjustment tied to who survives; the party agreed and paid (transcript ~27:17-30:44)."
+
+[[key_events]]
+summary = "Departure and guidance benefits established"
+details = "Kargromdor checked whether they had food and supplies, then led them out of the city and down toward the valley, explaining that his instruction would make nature/survival-related efforts on the eastern ridge easier (transcript ~32:04-34:12)."
+
+[character_beats]
+"Marwen Ashcroft" = "Took point on finding and persuading an Oathhold dwarf guide, framing the hire as a long-term\npartnership (transcript ~00:21-00:53, ~25:38-26:48)."
+Bazgar = "Used Dwarven and backed the pitch by emphasizing friendship/partnership rather than a purely paid\ncontract (transcript ~26:40-26:48)."
+Sabriel = "Hung back initially to avoid complicating the negotiation, then joined, paid their share, and\nassessed the guide’s reaction (transcript ~06:38-06:51, ~29:51-31:21)."
+
+[[npcs]]
+name = "Kargromdor (also referred to as Gorgondor)"
+role = "Oathhold dwarf guide/sherpa for valley routes"
+interaction = "Initially dismissive, then agreed to guide the party under clear limits and split-payment terms; accepted Sabriel as part of the group and began leading them toward the valley (transcript ~23:25-34:12)."
+
+[[npcs]]
+name = "Elarion Faenwynd"
+role = "Archivist (mentioned)"
+interaction = "Referenced as the person who told the party to find an Oathhold dwarf guide, but without providing a specific lead (transcript ~00:38-00:53; resource: world/factions/ardenhaven/locations/ardenford/concordance-library/archivist-elarian-faenwynd.md)."
+
+[[loot]]
+item = "Gold (guide fee, 50 gp each for the valley route)"
+context = "The party agreed to pay Kargromdor for guiding them down into the valley; the stated cost for this route was 50 gp per person (transcript ~29:21-29:33)."
+
+[[information]]
+summary = "Where to hire valley guides in Ardenford"
+details = "The party learned (and used) that there is a dwarven bar/guidehouse where guides gather specifically for this kind of work (named The Stone Bird in play) (transcript ~04:54-05:22)."
+
+[[information]]
+summary = "Kargromdor’s motivation and boundaries"
+details = "Kargromdor stated he guides to keep people from losing their souls in the mountains, but warned he would only go so far and could not save clients from extreme foolishness (transcript ~25:14-27:57)."
+
+[[information]]
+summary = "Mechanical/travel benefit from hiring Kargromdor"
+details = "Because Kargromdor is teaching them how to survive on the eastern ridge routes, nature/survival-related checks tied to that area become easier, and his presence may remove the need for some checks unless he is absent or incapacitated (transcript ~32:39-33:21)."
+
+[atmosphere]
+mood = "focused"
+lighting = "not specified"
+sounds = "not specified"
+
+[grounding]
+transcript_timestamps = [
+    21,
+    53,
+    286,
+    412,
+    1385,
+    2088,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/ardenford/concordance-library/archivist-elarian-faenwynd.md",
+    "world/factions/ardenhaven/locations/ardenford/shops/tharkar-taproom-sherpa-for-hire.md",
+    "world/factions/dulgarum-oathholds/_overview.md",
+]
+inferred_content = [
+    "The Stone Bird is treated as the session’s in-play equivalent of the setting’s established dwarven guidehouse (Thar'kar Taproom), since both serve the same function and are described similarly, but the transcript uses a different name.",
+]
+
+[[plot_threads]]
+thread = "Hire an Oathhold dwarf guide for the Valley of Ruins"
+status = "resolved"
+
+[[plot_threads]]
+thread = "Build a working relationship with a guide for future mountain/ruin expeditions"
+status = "introduced"

@@ -1,0 +1,124 @@
+start_seconds = 11643.618
+location = "Western farmlands near Redwick Farm (outside Ardenford)"
+goal = "Meet the sheep farmer and investigate where the goblins are coming from; decide whether to ambush or assault"
+npcs_present = [
+    "Maren/Meryn Redwick (sheep farmer; name unclear)",
+]
+time_of_day = "afternoon"
+emotional_tone = "cautious"
+conflict_type = "social"
+notes = """The party confirms the goblins raid at night from nearby ruins, sets an Alarm as a fallback, and
+reframes the situation as barter (goblins leaving 'treasures') while persuading the farmer to accept
+a negotiated solution."""
+scene_id = "S-007"
+end_seconds = 13285.576
+summary = """The party met the sheep farmer (name unclear, Maren/Meryn/Marwyn) in the western farmlands and
+questioned him about goblin raids. He indicated a distant keep-like ruin as the likely source. The
+party found repeated goblin tracks showing the raids happen at night and that goblins have been
+leaving behind items the farmer considers trash. The party reframed the situation as goblins
+attempting barter and convinced the farmer to consider a negotiated arrangement, then prepared to
+approach the ruins."""
+outcome = """With an alarm set as a safeguard and the farmer tentatively on board with a negotiation approach,
+the party set off toward the nearby ruins/keep to confront the goblins."""
+
+[[requested_resources]]
+keyword = "Maren/Meryn Redwick / Redwick Farm / goblin raids / 70 gold"
+requested_path = "world/factions/ardenhaven/quests/goblin-raid-cr1.md"
+
+[[requested_resources]]
+keyword = "early winter / months (A-R-E-T-H... RETHOLM?)"
+requested_path = "world/calendar-reckoning-of-the-fall.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Western farmlands near Ardenford (near Redwick Farm)"
+known_details = [
+    "About two miles west of Ardenford, in open farmland with long sightlines over plains",
+    "A hill where a sheep farmer tends a flock kept close together with a sheepdog nearby",
+    "A distant structure resembling a keep/ruins is visible in the direction the farmer indicates",
+    "Season is early winter (Arethum)",
+]
+inferred_details = [
+    "The keep/ruins is likely the goblins' staging area or lair, based on tracks and the farmer's pointing",
+]
+confidence = 0.84
+
+[[key_events]]
+summary = "Contacted the sheep farmer and confirmed the job terms"
+details = "The party approached the shepherd and discussed the goblin problem and the posted reward (70 gold). The farmer pointed them toward a distant keep-like ruin as the suspected origin."
+
+[[key_events]]
+summary = "Identified raid pattern and direction via tracks"
+details = "The party located layered goblin tracks from multiple days leading between the grazing hill and the direction of the keep, indicating regular nighttime sheep snatching."
+
+[[key_events]]
+summary = "Set a magical alarm as a fallback defense"
+details = "Marwen set an audible alarm near the flock to warn the farmer and party if goblins slipped past or returned while they were away."
+
+[[key_events]]
+summary = "Discovered goblins were leaving 'treasures' behind"
+details = "The party learned the goblins had been leaving behind small items (e.g., old utensils/tools) that the farmer dismissed as trash, suggesting the goblins believed they were trading rather than purely stealing."
+
+[[key_events]]
+summary = "Convinced the farmer to try a negotiation framing"
+details = "Sabriel guided the farmer through the idea that the goblins might be offering barter/protection value, getting him to accept presenting a deal to the goblins instead of only pursuing violence."
+
+[character_beats]
+Bazgar = "Took point on the direct approach, favoring going to the goblins rather than waiting for an ambush."
+Marwen = "Used careful preparation and caution by placing an audible alarm to protect the flock while the\nparty investigated."
+Sabriel = "Led the social solution, interpreting the goblins' behavior as barter and patiently bringing the\nfarmer around to negotiation."
+
+[[npcs]]
+name = "Maren/Meryn/Marwyn Redwick (name unclear)"
+role = "Sheep farmer and quest-giver"
+interaction = "Explained the goblin problem, pointed out the distant keep-like ruins, and was persuaded to consider a negotiated arrangement once the party reframed the goblins' actions as attempted trade."
+
+[[loot]]
+item = "Assorted goblin 'junk' (old forks/utensils, old knife, similar items)"
+context = "Items the goblins left behind as supposed payment; the party gathered them to potentially return during negotiations."
+
+[[information]]
+summary = "Goblins likely operate from a nearby keep-like ruin"
+details = "The farmer pointed toward a distant keep/ruins, and the party later confirmed goblin tracks leading in that direction."
+
+[[information]]
+summary = "Raids occur at night and repeat regularly"
+details = "Multiple days of tracks indicated repeated nighttime visits to snatch sheep while the farmer slept."
+
+[[information]]
+summary = "Goblins may believe they are bartering"
+details = "The goblins left behind items they seemed to value as 'treasures,' which the farmer treated as trash, implying a crude trade attempt rather than simple predation."
+
+[atmosphere]
+mood = "cautious"
+lighting = "afternoon fading to sunset"
+sounds = "quiet grazing flock with minimal activity; a sleeping sheepdog nearby"
+
+[grounding]
+transcript_timestamps = [
+    194.03,
+    221.26,
+]
+resource_refs = [
+    "world/calendar-reckoning-of-the-fall.md",
+]
+inferred_content = [
+    "That the keep/ruins is the goblins' lair (the party suspects this based on pointing and tracks, but it is not definitively confirmed in-scene).",
+    "That the gathered goblin items will be used as part of the negotiation (the party states intent to give treasures back, but the actual exchange does not occur in this scene).",
+]
+
+[[plot_threads]]
+thread = "Goblin raids on Redwick sheep"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Possible nonviolent resolution (barter/protection deal with goblins)"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Investigate the keep-like ruins as the goblin source"
+status = "advanced"

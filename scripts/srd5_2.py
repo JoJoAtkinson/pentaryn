@@ -178,7 +178,7 @@ MCP_TOOLS = [
             "Returns class features, hit dice, proficiencies, spell progression. "
             "Use for character creation help or answering player questions about class abilities."
         ),
-        "argv": ["--mcp-tool", "get_class_info"],
+        "argv": ["--mcp-tool", "get_class_info", "{slug}"],
         "input_schema": {
             "type": "object",
             "properties": {
@@ -498,6 +498,68 @@ def main():
     """Handle both MCP tool calls via flags and CLI usage."""
     import sys
     
+    # Handle MCP tool invocation format FIRST: --mcp-tool <name> <arg1> <arg2> ...
+    if len(sys.argv) >= 3 and sys.argv[1] == "--mcp-tool":
+        tool_name = sys.argv[2]
+        
+        # Map tool names to functions
+        tool_functions = {
+            "search_monsters": search_monsters,
+            "get_monster_details": get_monster_details,
+            "search_spells": search_spells,
+            "get_spell_details": get_spell_details,
+            "list_conditions": list_conditions,
+            "search_magic_items": search_magic_items,
+            "get_class_info": get_class_info,
+            "search_weapons": search_weapons,
+            "search_armor": search_armor,
+            "search_rules": search_rules,
+            "get_rule_section": get_rule_section,
+        }
+        
+        if tool_name not in tool_functions:
+            print(f"Error: Unknown tool: {tool_name}", file=sys.stderr)
+            sys.exit(1)
+        
+        # Handle different argument patterns based on tool
+        try:
+            if tool_name in ["get_monster_details", "get_spell_details", "get_rule_section"]:
+                # These tools expect: --mcp-tool <tool_name> <slug_or_key>
+                if len(sys.argv) < 4:
+                    print(f"Error: {tool_name} requires a slug/key argument", file=sys.stderr)
+                    sys.exit(1)
+                arg_name = "slug" if tool_name in ["get_monster_details", "get_rule_section"] else "key"
+                result = tool_functions[tool_name](**{arg_name: sys.argv[3]})
+            elif tool_name == "get_class_info":
+                # get_class_info expects: --mcp-tool get_class_info <slug>
+                if len(sys.argv) < 4:
+                    print(f"Error: get_class_info requires a slug argument", file=sys.stderr)
+                    sys.exit(1)
+                result = get_class_info(slug=sys.argv[3])
+            else:
+                # Other tools might use JSON or no args
+                args_json = sys.argv[3] if len(sys.argv) > 3 and not sys.argv[3].startswith("--") else "{}"
+                try:
+                    args = json.loads(args_json)
+                except json.JSONDecodeError as e:
+                    print(f"Error: Invalid JSON arguments: {e}", file=sys.stderr)
+                    sys.exit(1)
+                result = tool_functions[tool_name](**args)
+            
+            # Output result as JSON
+            print(json.dumps(result, indent=2, ensure_ascii=False))
+            sys.exit(0)
+            
+        except requests.HTTPError as e:
+            print(f"API Error: {e.response.status_code} - {e.response.text}", file=sys.stderr)
+            sys.exit(1)
+        except TypeError as e:
+            print(f"Error: Invalid arguments for {tool_name}: {e}", file=sys.stderr)
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+    
     # Handle CLI with flags (from MCP server value_flags)
     args_dict = {}
     i = 1
@@ -555,58 +617,6 @@ def main():
             sys.exit(1)
         except requests.HTTPError as e:
             print(f"API Error: {e.response.status_code} - {e.response.text}", file=sys.stderr)
-            sys.exit(1)
-        except Exception as e:
-            print(f"Error: {e}", file=sys.stderr)
-            sys.exit(1)
-    
-    # Handle MCP tool invocation format: --mcp-tool <name> <json>
-    if len(sys.argv) >= 3 and sys.argv[1] == "--mcp-tool":
-        tool_name = sys.argv[2]
-        
-        # Check if JSON is on command line (for manual testing)
-        if len(sys.argv) > 3 and not sys.argv[3].startswith("--"):
-            args_json = sys.argv[3]
-        else:
-            # No JSON provided
-            args_json = "{}"
-        
-        try:
-            args = json.loads(args_json)
-        except json.JSONDecodeError as e:
-            print(f"Error: Invalid JSON arguments: {e}", file=sys.stderr)
-            sys.exit(1)
-        
-        try:
-            # Map tool names to functions
-            tool_functions = {
-                "search_monsters": search_monsters,
-                "get_monster_details": get_monster_details,
-                "search_spells": search_spells,
-                "get_spell_details": get_spell_details,
-                "list_conditions": list_conditions,
-                "search_magic_items": search_magic_items,
-                "get_class_info": get_class_info,
-                "search_weapons": search_weapons,
-                "search_armor": search_armor,
-                "search_rules": search_rules,
-                "get_rule_section": get_rule_section,
-            }
-            
-            if tool_name not in tool_functions:
-                print(f"Error: Unknown tool: {tool_name}", file=sys.stderr)
-                sys.exit(1)
-            
-            # Call the function and output JSON result
-            result = tool_functions[tool_name](**args)
-            print(json.dumps(result, indent=2, ensure_ascii=False))
-            sys.exit(0)
-            
-        except requests.HTTPError as e:
-            print(f"API Error: {e.response.status_code} - {e.response.text}", file=sys.stderr)
-            sys.exit(1)
-        except TypeError as e:
-            print(f"Error: Invalid arguments for {tool_name}: {e}", file=sys.stderr)
             sys.exit(1)
         except Exception as e:
             print(f"Error: {e}", file=sys.stderr)

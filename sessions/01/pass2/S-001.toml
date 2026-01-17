@@ -11,19 +11,19 @@ notes = """Bazgar enters the Wayward Compass, meets Marwen and Sabriel over mixe
 themselves, and the group decides to take the Border Patrol undead job after reading the writ board."""
 scene_id = "S-001"
 end_seconds = 2633.619
-summary = """Bazgar, a Rakthok half-orc warrior, arrives at the Wayward Compass and sizes up the room. He notices
-two other capable-looking patrons—Marwen Ashcroft and a veiled traveler who later introduces
-themself as Sabriel. A mix-up with food orders draws them together at one table, where they exchange
-introductions and discuss needing coin. They review the writ board’s three jobs (goblin sheep raids,
-giant spiders at a lumber camp, and an undead sighting for the border patrol) and agree to pursue
-the time-sensitive undead report first. They confirm directions with the barkeep Thorgrim and
-arrange stabling for Sabriel’s pony before setting out toward the eastern patrol watchtower."""
-outcome = """After choosing the border patrol undead job, the newly formed group leaves the Wayward Compass and
-heads out of the city toward the eastern watchtower."""
+summary = """Bazgar, a Rakthok orc from the Dakmarnak, arrives at The Wayward Compass and sizes up the room for
+potential allies. He meets Marwen Ashcroft and the veiled elf Sabriel (who introduces themself as
+Saru at first). A mix-up with food orders brings them together at one table, and when Sabriel
+removes their veil, the room stares at their striking appearance. The trio reviews the writ board,
+discusses available jobs, and agrees to pursue the time-sensitive Border Patrol request about undead
+sighted near an old battlefield. They confirm directions with the barkeep Thorgrim and arrange
+stabling for Sabriel’s pony before setting out toward the eastern patrol tower."""
+outcome = """After choosing the Border Patrol undead-sighting job and getting directions from Thorgrim, the new
+party leaves the inn and heads toward the eastern watchtower."""
 
 [[requested_resources]]
 keyword = "The Wayward Compass"
-requested_path = "world/factions/ardenhaven/locations/ardenford/ardenford.md"
+requested_path = "world/factions/ardenhaven/locations/ardenford.md"
 
 [[requested_resources]]
 keyword = "Thorgrim"
@@ -31,122 +31,113 @@ requested_path = "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md"
 
 [[requested_resources]]
 keyword = "Writ Board / Sheep raids / Spiders / Border Patrol — Undead sighting"
-requested_path = "world/factions/ardenhaven/quests/writ-board-cr1/_board.md"
+requested_path = "world/factions/ardenhaven/quests/writ-board-cr1.md"
 
 [[requested_resources]]
 keyword = "Goblin Raid (Maren Redwick, Redwick Farm)"
-requested_path = "world/factions/ardenhaven/quests/writ-board-cr1/goblin-raid-cr1.md"
+requested_path = "world/factions/ardenhaven/quests/goblin-raid-cr1.md"
 
 [[requested_resources]]
 keyword = "Spider Lair (Gareth Thorne, lumber camp, Miller's Creek)"
-requested_path = "world/factions/ardenhaven/quests/writ-board-cr1/spider-lair-cr1.md"
+requested_path = "world/factions/ardenhaven/quests/spider-lair-cr1.md"
 
 [[requested_resources]]
 keyword = "Restless Dead (Renn Caldor, eastern valley, old battlefield)"
-requested_path = "world/factions/ardenhaven/quests/writ-board-cr1/restless-dead-cr1.md"
+requested_path = "world/factions/ardenhaven/quests/restless-dead-cr1.md"
 
 [confidence]
 factual_accuracy = 0.86
-completeness = 0.74
+completeness = 0.72
 speculation_level = "low"
 
 [location_intelligence]
 name = "The Wayward Compass inn/tavern, Ardenford (Middle Tier)"
 known_details = [
-    "A writ/job board is mounted on the wall with multiple postings for adventurers.",
-    "The common room has tables around an open central area intended to keep scuffles from breaking furniture.",
-    "The barkeep is a dwarf named Thorgrim Ledger-Scar.",
-    "The Wayward Compass is located in Ardenford’s Middle Tier.",
+    "The common room keeps an open space in the middle, with tables around the outside (used for scuffles without breaking furniture).",
+    "A large writ/job board is mounted on the wall with multiple postings.",
+    "Thorgrim Ledger-Scar is the owner/keeper of The Wayward Compass in Ardenford’s Middle Tier.",
 ]
 inferred_details = [
-    "The party uses the Compass as a hiring/meetup point because it attracts adventurers looking for work.",
+    "The Compass is a common meeting point for adventurers/outsiders looking for work and companions.",
 ]
-confidence = 0.88
+confidence = 0.85
 
 [[key_events]]
-summary = "Bazgar enters and surveys the tavern, then connects with two other adventurers."
-details = "Bazgar arrives armed and armored, scans the room for potential allies, and spots Marwen watching him and a veiled traveler seated alone at a large table."
+summary = "Bazgar enters and seeks allies"
+details = "Bazgar arrives armed and armored, orders food, and scans the tavern for capable adventurers, noticing Marwen and a veiled traveler (Sabriel)."
 
 [[key_events]]
-summary = "Food-order mix-up brings the three together."
-details = "Their meals arrive incorrectly, prompting them to bring the dishes back and then sit together to share and talk. Sabriel’s order is a spring salad with artichoke hearts. Marwen’s order is a beef stew with a marrow bone sticking out of it like a gristly monument and bread with honey and jam. Bazgar’s order is the beef stew. Bazgar receives Sabriel’s order by mistake. Sabriel receives Marwen’s. Marwen receives Bazgar’s. After all coming to Thorgrim over the mix-up, Sabriel suggests the three of them share their meals with one another and they join the same table."
+summary = "Food mix-up brings the group together"
+details = "The three discover their meals were swapped; they bring the dishes back to the bar, then decide to sit together and talk."
 
 [[key_events]]
-summary = "Introductions and quick party formation."
-details = "Bazgar introduces himself as Bazgar, son of Bazrak, of the Dakmarnak; Marwen gives her name as Marwen Ashcroft; the veiled traveler introduces themself as Sabriel and briefly removes the veil before re-covering while traveling. Marwen and Bazgar each express an interest in exploring the ancient ruins and decide they could work on this goal together and Sabriel decides to tag along. We learn that Bazgar is a warrior of his tribe. Sabriel shares that they are a healer. Marwen is vague and explains she knows some magic but overly avoids sharing."
+summary = "Introductions and Sabriel’s reveal"
+details = "Bazgar introduces himself; Marwen gives her name; the veiled traveler initially gives the name Saru, later identified as Sabriel. When Sabriel removes their veil to eat, patrons visibly stare and stumble, and Sabriel tries to reduce attention by positioning behind Bazgar."
 
 [[key_events]]
-summary = "They read and compare the writ board notices."
-details = "The group reviews three posted jobs: goblins raiding sheep at Redwick Farm (70 gp), giant spiders at an old lumber camp near Miller’s Creek (80 gp), and an undead sighting in the eastern valley (75 gp) with instructions to inquire with Renn Caldor via the bar."
+summary = "Writ board reviewed; job selected"
+details = "They read postings for goblin raids on sheep (Redwick Farm), giant spiders at an old lumber camp (Miller’s Creek), and an undead sighting tied to the Border Patrol. After discussing capabilities and urgency, they vote to take the Border Patrol undead job first."
 
 [[key_events]]
-summary = "They choose the border patrol undead job and get directions."
-details = "They decide the undead report is time-sensitive and ask the barkeep for Renn Caldor’s location; Thorgrim points them to an eastern patrol tower and suggests approaching from higher elevation before leaving the city."
-
-[[key_events]]
-summary = "Sabriel arranges stabling for their pony whose name is Lear."
-details = "Sabriel pays Thorgrim for stabling and additional care requirements for their pony, after which Thorgrim takes the animal around back while grumbling. One gold piece is paid for stabling and one due to Lear’s preference for whole grain oats only."
+summary = "Thorgrim provides directions; pony stabled"
+details = "At the bar, they learn the barkeep is Thorgrim (not “Torin”) and get directions to find Ren Kaldor at the eastern patrol tower. Sabriel pays for stabling and special feed for their pony, and Thorgrim takes the animal around back while grumbling."
 
 [character_beats]
-Bazgar = "Direct and pragmatic; seeks allies and pushes the group toward paid work to fund future ruin\ndelving."
-"Marwen Ashcroft" = "Observant and cautious; assesses Bazgar on entry and later expresses interest in ruins and pooling\nresources."
-Sabriel = "Reserved and attention-averse; keeps a veil on in public, reveals their name, and focuses on\npractical needs like stabling and healing."
+Bazgar = "Confident, direct, and party-focused; pushes for taking paid work to fund a future ruin expedition."
+"Marwen Ashcroft" = "Observant and pragmatic; interested in harvesting reagents (especially from spiders) and open to\npooling funds for ruins later."
+Sabriel = "Cautious about attention (keeps veil on in public), identifies as a healer, and supports taking the\nurgent Border Patrol job."
 
 [[npcs]]
 name = "Thorgrim Ledger-Scar"
-role = "Barkeep/innkeeper of the Wayward Compass"
-interaction = "Serves food, clarifies his name when the notice references 'Torren,' gives directions to Renn Caldor’s eastern patrol tower, and takes payment to stable Sabriel’s pony."
+role = "Barkeep/owner of The Wayward Compass"
+interaction = "Serves food (with a mix-up), clarifies his name, points the party to Ren Kaldor’s location at the eastern patrol tower, and accepts payment to stable Sabriel’s pony."
 
 [[loot]]
 item = "None"
-context = "No items were acquired; only payments for food/stabling occurred."
+context = "No items were acquired; only food was served and stabling was paid for."
 
 [[information]]
-summary = "Writ board jobs available at the Wayward Compass."
-details = "Three notices are read aloud: (1) Sheep raids—goblins taking ewes near west scrublands/old ruins; meet Maren Redwick at Redwick Farm; 70 gp. (2) Lumber camp clearance—giant spiders at an old camp past Miller’s Creek; ask Gareth Thorne at Western Market (mornings only); 80 gp. (3) Border patrol—undead sighting in eastern valley near an old battlefield; inquire with Renn Caldor via the bar; 75 gp."
+summary = "Writ board jobs available"
+details = "Postings include: goblins raiding sheep near old ruins west of town (Redwick Farm); giant spiders at an old lumber camp near Miller’s Creek; and a Border Patrol request to stop undead seen in an eastern valley near an old battlefield."
 
 [[information]]
-summary = "How to reach Renn Caldor."
-details = "Thorgrim indicates Renn works with the eastern patrol and can be found at a patrol/watchtower on the eastern side; the group will need to leave the city and climb up, with the easiest route starting from higher elevation within the city."
+summary = "Where to find Ren Kaldor"
+details = "Thorgrim says Ren Kaldor works at the Eastern Patrol; the party must leave the city and climb to a patrol/watchtower on the eastern side, easiest by getting to a higher loft/tier before exiting."
 
 [atmosphere]
-mood = "casual"
-lighting = "morning indoor tavern light"
-sounds = "general tavern conversation and movement"
+mood = "casual, lightly comedic, then purposeful"
+lighting = "morning"
+sounds = "tavern chatter; a crow caws as the group departs"
 
 [grounding]
 transcript_timestamps = [
     92.0,
-    267.0,
-    600.0,
-    1030.0,
-    1310.0,
-    1740.0,
-    2230.0,
-    2640.0,
+    2687.0,
 ]
 resource_refs = [
-    "world/factions/ardenhaven/locations/ardenford.md",
     "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
-    "world/factions/ardenhaven/quests/writ-board-cr1.md",
 ]
 inferred_content = [
-    "That the open central floor is specifically intended for scuffles without breaking furniture (implied by dialogue about leaving the middle open for fights).",
-    "That the group’s decision constitutes a 'newly formed party' (they agree to take a job together and leave as a group).",
+    "The Compass being a common adventurer/outsider hub (implied by party seeking allies and presence of a writ board).",
+    "The exact identity of the crow’s connection (only that Marwen notices it and it follows as they leave).",
 ]
 
 [[plot_threads]]
-thread = "Border Patrol — Undead Sighting (Renn Caldor)"
+thread = "Forming a party in Ardenford"
 status = "advanced"
 
 [[plot_threads]]
-thread = "Lumber Camp Clearance — Spiders (Gareth Thorne)"
+thread = "Border Patrol: undead sighting near the old battlefield (Ren Kaldor)"
 status = "introduced"
 
 [[plot_threads]]
-thread = "Sheep Raids — Goblins (Maren Redwick)"
+thread = "Giant spiders at Miller’s Creek lumber camp"
 status = "introduced"
 
 [[plot_threads]]
-thread = "Ruin delving expedition (needs funding/resources)"
+thread = "Goblin raids on Redwick Farm sheep"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Bazgar’s planned ruin expedition (needs funding and someone who can read ancient text)"
 status = "introduced"

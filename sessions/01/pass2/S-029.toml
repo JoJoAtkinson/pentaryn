@@ -1,0 +1,111 @@
+start_seconds = 37892.322
+location = "Ardenford (Upper Tier) — stables / cafe across from the library"
+goal = "Regroup after research; discuss Sabriel’s age/credibility and what the ages mean"
+time_of_day = "unknown"
+emotional_tone = "contemplative"
+conflict_type = "social"
+notes = """Sabriel takes Lear back to the stables while Bazgar waits nearby and talks with Marwen about whether
+Sabriel is lying and about the newly learned older ages (Ash and Silence/Reclamation)."""
+scene_id = "S-029"
+end_seconds = 38238.966
+summary = """After leaving the library, Sabriel departs to return Lear to the stables while Vasgar waits in a
+cafe across the street. Vasgar questions another party member about whether Sabriel is lying and
+asks about obscure historical ages (including an “Age of Ash and Silence”) to gauge how old Sabriel
+might be. The other party member argues the exact numbers may not matter, encourages keeping an open
+mind about cultures, and they briefly compare their own age before deciding to regroup and continue
+preparations for tomorrow (including finding a guide)."""
+outcome = """The group moves to regroup (back toward the tavern) and shifts focus to practical next steps for
+tomorrow, with a mention of checking Sabriel’s drawing of the Lone Mountain."""
+
+[[requested_resources]]
+keyword = "Lear (Sabriel’s mount) / stables"
+requested_path = "characters/player-characters/nicole-sabriel.md"
+
+[[requested_resources]]
+keyword = "Age of Ash and Silence / Age of Reclamation"
+requested_path = "world/calendar-reckoning-of-the-fall.md"
+
+[confidence]
+factual_accuracy = 0.84
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Ardenford (Upper Tier) — cafe across from the library / nearby stables"
+known_details = [
+    "The library does not allow food (repeatedly stated).",
+    "Sabriel (Nicole) leaves to take Lear back to the stables.",
+    "Vasgar is waiting in a cafe across the street, staring off into the distance.",
+]
+inferred_details = [
+    "The conversation about Sabriel’s age happens in/near the cafe while regrouping after the library visit.",
+]
+confidence = 0.86
+
+[[key_events]]
+summary = "Sabriel leaves to stable Lear; Vasgar waits at the cafe"
+details = "Sabriel says she needs to return Lear to the stables and will see the others tomorrow; Vasgar is described as waiting in a cafe across the street, staring into the distance."
+
+[[key_events]]
+summary = "Vasgar probes Sabriel’s credibility and age via historical “ages”"
+details = "Vasgar asks if Sabriel is a liar; the other party member calls Sabriel a hypocrite rather than a liar. Vasgar brings up the “Age of Ash and Silence” and asks how far back the other person’s knowledge of ages goes, then asks how old they think Sabriel is and whether Sabriel’s claimed age places her before known ages."
+
+[[key_events]]
+summary = "Perspective shift: numbers may not matter; open-mindedness emphasized"
+details = "The other party member questions whether the exact age/length of ages matters, suggests focusing on Sabriel as a person, and frames the situation as a chance to learn each other’s cultures with an “open mind.” Vasgar agrees and reflects on needing to be more understanding."
+
+[[key_events]]
+summary = "Regrouping and next steps mentioned"
+details = "They mention needing to find a guide for tomorrow, and Vasgar expresses interest in seeing Sabriel’s drawing of the Lone Mountain as they move to meet up with the others."
+
+[character_beats]
+Sabriel = "Leaves the group briefly to return Lear to the stables."
+Vasgar = "Expresses doubt about Sabriel’s claims and seeks context by asking about ancient ages and lifespans."
+Marwen = "Suggests regrouping back at the tavern (briefly interjects)."
+"Unidentified party member (unclear speaker)" = "Labels Sabriel a hypocrite (not a liar) and urges an open-minded approach to cultural differences."
+
+[[information]]
+summary = "Library rule: no food"
+details = "The group reiterates that food is not allowed in the library, joking about “spoon ingredients” and honey."
+
+[[information]]
+summary = "Vasgar has heard of several historical “ages,” but not the “Age of Ash and Silence”"
+details = "When asked, the other party member says they have not heard of the “Age of Ash and Silence,” and references other ages they do know (e.g., Age of Trade and Age of Conquest), implying the “Ash and Silence” age is beyond their familiar historical framework."
+
+[[information]]
+summary = "Uncertainty about how long “ages” last and what that implies for Sabriel’s age"
+details = "They discuss that ages may not be uniform in length (one age being described as hundreds of years, possibly much longer), making it hard to translate Sabriel’s statements into a precise timeline."
+
+[[information]]
+summary = "Vasgar’s age stated inconsistently"
+details = "Vasgar answers “20,” then corrects to “25,” and the other party member notes they track birthdays."
+
+[atmosphere]
+mood = "contemplative"
+lighting = "not stated"
+sounds = "not stated"
+
+[grounding]
+transcript_timestamps = [
+    631.05,
+    637.48,
+]
+resource_refs = [
+    "characters/player-characters/nicole-sabriel.md",
+    "world/calendar-reckoning-of-the-fall.md",
+]
+inferred_content = [
+    "The age/credibility discussion occurs while seated in or immediately around the cafe (the transcript implies this but does not explicitly restate the exact seating/location during the whole exchange).",
+]
+
+[[plot_threads]]
+thread = "Sabriel’s true age and credibility (Age of Ash and Silence / Age of Reclamation claims)"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Preparations for tomorrow (finding a guide)"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Sabriel’s drawing of the Lone Mountain"
+status = "introduced"

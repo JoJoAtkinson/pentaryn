@@ -1,0 +1,152 @@
+start_seconds = 34798.111
+location = "Ardenford (Upper Tier) — Concordance Library (interior stacks)"
+goal = "Marwen researches oldest religions/fallen gods and drow history; identify useful ruin sites"
+npcs_present = [
+    "neighboring wizard (unnamed)",
+    "wizard dwarf (unnamed)",
+]
+time_of_day = "unknown"
+emotional_tone = "mysterious"
+conflict_type = "exploration"
+notes = """Marwen finds an uncatalogued blank holy book with conjuration magic, debates and then steals it,
+then continues research on the drow (their disappearance at Age of Conflict year 0 and the status of
+Lolth) and broader age-history (Age of Rhodes/Reclamation/Ash and Silence)."""
+scene_id = "S-027"
+end_seconds = 37788.468
+summary = """Marwen gains access to the Concordance Library and uses limited time in the stacks to research
+regional ruin sites, the drow and their disappearance, and the fate of Lolth’s worship. While
+researching “oldest religions,” she discovers an uncatalogued holy-looking book with blank pages
+that radiates conjuration magic, and she covertly takes it. The group also clarifies that little is
+known about the Ancients’ race, and that deep history is organized into named Ages, with common
+knowledge only reaching back to the Age of Rhodes."""
+outcome = """The scene ends as Marwen attempts to leave the library while staff begin checking bags, putting her
+stolen, uncatalogued book at risk of discovery."""
+
+[[requested_resources]]
+keyword = "drow / Lolth the Spider Queen / purge of the religion"
+requested_path = "world/factions/world-faction-outsider-perspective.md"
+
+[[requested_resources]]
+keyword = "Age of Rhodes / Age of Reclamation / Age of Ash and Silence"
+requested_path = "world/calendar-reckoning-of-the-fall.md"
+
+[[requested_resources]]
+keyword = "Elder Holt (mentioned re: drow disappearance)"
+requested_path = "world/factions/world-faction-outsider-perspective.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Ardenford (Upper Tier) — Concordance Library (interior stacks)"
+known_details = [
+    "Entry requires a library card/membership due to past book theft; wizards have an exception/fast access via the local wizard community vouching for them (579:58-582:23).",
+    "The library is very large and feels sparse at scale; it contains both wizards and ordinary citizens with cards (582:33-582:46).",
+    "Library cards carry a simple magical enchantment tied to the holder’s identity (582:48-582:57).",
+]
+inferred_details = [
+    "Security is active and includes bag checks when leaving (629:54-629:59).",
+]
+confidence = 0.88
+
+[[key_events]]
+summary = "Library access and rules established"
+details = "Marwen learns the Concordance Library requires tracked membership because of theft; wizards can gain access more easily because the wizard community vouches for its own (579:58-582:23)."
+
+[[key_events]]
+summary = "Ruin research identifies higher-risk sites and the scale of underground ruins"
+details = "Marwen consults a ruin catalog and learns some sites are heavily explored and low-reward, while another entrance leads to a deep pit descending into less-explored ruins where adventurers often do not return; she also learns ruins are widespread underground, especially hidden by forests and requiring long travel within (586:52-590:56)."
+
+[[key_events]]
+summary = "Uncatalogued holy book found and taken"
+details = "While researching religions, Marwen finds a book not in the catalog; its pages appear blank. She uses detect magic and determines it is magical (conjuration) and feels like a divine/holy text rather than a wizard’s book, then decides to stash it in her bag (593:38-594:43, 600:48-601:16, 602:52-603:23)."
+
+[[key_events]]
+summary = "Drow history: disappearance, Lolth, and purge"
+details = "Marwen researches the drow: public record says they simply disappeared, marking the start of the Age of Conflict; their society matches classic drow tropes (raids, matron mothers, spider worship). Lolth is believed to still exist, but active worship is not evidenced in the text; after the drow vanished, a major purge of the religion occurred, described as massacre-like with many deaths (603:30-604:39, 608:20-609:25, 611:09-613:25)."
+
+[[key_events]]
+summary = "Ancients remain obscure; Ages and deep-time context discussed"
+details = "A neighboring wizard confirms no one knows what race the Ancients were. Later, the group discusses that common historical knowledge reaches back to the Age of Rhodes, while older Ages exist for scholars; Sabriel references the Age of Reclamation and an earlier Age of Ash and Silence tied to the end of the Ancient Empire (584:57-585:23, 614:28-615:33, 617:31-619:08)."
+
+[character_beats]
+Marwen = "Methodical researcher who takes a risk by stealing an uncatalogued, magically-concealed holy book."
+Sabriel = "Provides long-view historical framing (Reclamation/Ash and Silence) and presses for clarity on how\nAges are declared."
+Bazgar = "Pushes big-picture questions about the Ancients and the limits of common historical knowledge."
+
+[[npcs]]
+name = "Neighboring wizard (unnamed)"
+role = "Library patron/scholar"
+interaction = "Answers Marwen’s question that no one knows the Ancients’ race (584:57-585:23)."
+
+[[npcs]]
+name = "Wizard dwarf (unnamed)"
+role = "Library patron/scholar"
+interaction = "Directs Marwen to the religion section and briefly interacts when she reacts to seeing a dwarf wizard (591:43-592:17)."
+
+[[loot]]
+item = "Uncatalogued holy book with blank pages (magical)"
+context = "Found during religion research; radiates conjuration magic; Marwen hides it in her bag (593:38-594:43, 600:48-601:16, 602:52-603:23)."
+
+[[information]]
+summary = "Concordance Library membership is tracked due to theft"
+details = "Access requires a library card with a simple identity-linked enchantment; wizards can gain access via their community vouching for them (579:58-582:57)."
+
+[[information]]
+summary = "Ruin landscape around Ardenford"
+details = "Some ruins are well-explored and used by novice adventurers; another major site involves a deep pit into the mountain and is poorly explored with high mortality; ruins are pervasive underground, with forest regions hiding many and field ruins often requiring long internal travel and risk of getting lost (586:52-590:56)."
+
+[[information]]
+summary = "Ancients’ race is unknown"
+details = "No definitive evidence remains; different peoples claim the Ancients were like themselves, but the library contact states no one knows (584:57-585:23)."
+
+[[information]]
+summary = "Drow disappearance and Lolth’s status"
+details = "Public record: the drow vanished abruptly, marking the start of the Age of Conflict; their culture aligns with classic drow raider/spider-worship tropes. Lolth is believed to still exist, but the text does not identify active worshippers; after the drow vanished, a widespread purge of the religion occurred with many deaths (603:30-604:39, 608:20-609:25, 611:09-613:25)."
+
+[[information]]
+summary = "Historical Ages: Rhodes, Reclamation, Ash and Silence"
+details = "Common knowledge reaches back to the Age of Rhodes; older Ages exist in scholarship. Sabriel references the Age of Reclamation (rebuilding era) and an earlier Age of Ash and Silence associated with the end of the Ancient Empire/Ancients (614:28-615:33, 617:31-619:08)."
+
+[atmosphere]
+mood = "mysterious, cautious"
+lighting = "not stated"
+sounds = "not stated"
+
+[grounding]
+transcript_timestamps = [
+    579.58,
+    582.57,
+    586.52,
+    590.56,
+    593.38,
+    603.23,
+    613.25,
+    619.08,
+    629.59,
+]
+resource_refs = [
+    "world/factions/world-faction-outsider-perspective.md",
+    "world/calendar-reckoning-of-the-fall.md",
+]
+inferred_content = [
+    "Bag checks imply active anti-theft security at exits; the transcript states bags are checked but does not detail procedures beyond that (629:54-629:59).",
+]
+
+[[plot_threads]]
+thread = "Uncatalogued holy book with conjuration magic"
+status = "introduced"
+
+[[plot_threads]]
+thread = "High-risk deep-pit ruin site near Ardenford"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Drow disappearance and the purge of Lolth’s worship"
+status = "advanced"
+
+[[plot_threads]]
+thread = "What the Ancients were and what ended their empire (Ash and Silence)"
+status = "complicated"

@@ -752,24 +752,32 @@ Output ONLY valid JSON. No additional commentary.
             
             # Helper to recursively format all arrays as multiline
             def format_arrays_recursive(obj):
-                """Recursively format all arrays to be multiline."""
-                if isinstance(obj, dict):
+                """Recursively format all arrays to be multiline, skipping None values."""
+                if obj is None:
+                    return None  # Will be filtered out by caller
+                elif isinstance(obj, dict):
                     result = {}
                     for k, v in obj.items():
-                        result[k] = format_arrays_recursive(v)
-                    return result
+                        formatted_v = format_arrays_recursive(v)
+                        if formatted_v is not None:  # Skip None values
+                            result[k] = formatted_v
+                    return result if result else None
                 elif isinstance(obj, list):
                     # Check if this is an array of tables (list of dicts)
                     if all(isinstance(item, dict) for item in obj):
                         # Array of tables - format each dict recursively
-                        return [format_arrays_recursive(item) for item in obj]
+                        formatted_items = [format_arrays_recursive(item) for item in obj]
+                        # Filter out None values
+                        return [item for item in formatted_items if item is not None]
                     else:
                         # Simple array - make it multiline
                         arr = tomlkit.array()
                         arr.multiline(True)
                         for item in obj:
-                            arr.append(format_arrays_recursive(item))
-                        return arr
+                            formatted_item = format_arrays_recursive(item)
+                            if formatted_item is not None:  # Skip None values
+                                arr.append(formatted_item)
+                        return arr if len(arr) > 0 else None
                 else:
                     return obj
             
@@ -781,7 +789,9 @@ Output ONLY valid JSON. No additional commentary.
                     doc[key] = tomlkit.string(value, multiline=True)
                 else:
                     # Format all arrays recursively
-                    doc[key] = format_arrays_recursive(value)
+                    formatted_value = format_arrays_recursive(value)
+                    if formatted_value is not None:  # Only add non-None values
+                        doc[key] = formatted_value
             
             with open(scene_file, 'w', encoding='utf-8') as f:
                 f.write(tomlkit.dumps(doc))

@@ -1,0 +1,113 @@
+start_seconds = 32807.944
+location = "Ardenford (Middle Tier) — Willowglass Apothecary (back-counter conversation)"
+goal = "Figure out how to get healing potions sooner by solving Hesta’s supply bottleneck"
+npcs_present = [
+    "Hesta Briarvein",
+]
+time_of_day = "unknown"
+emotional_tone = "pragmatic"
+conflict_type = "social"
+notes = """The party finishes negotiating with Hesta and learns the distilled alcohol strike at the docks is
+the key bottleneck for potion supply."""
+scene_id = "S-023"
+end_seconds = 33400.695
+summary = """At Willowglass Apothecary, the party offers to help Hesta by making potions and sourcing
+ingredients, but Hesta identifies the real bottleneck: high-purity distilled alcohol shipments from
+Merrowgate are unavailable due to a dockside strike. She tells them the alcohol is on ships at the
+docks and promises to prioritize their healing potion order if they get the alcohol—either by ending
+the strike and buying it normally, or by acquiring it discreetly while leaving 5 gp per bottle. The
+party buys familiar-related components and decides to go investigate the strike at the docks before
+heading to the library."""
+outcome = """The party leaves Willowglass Apothecary and heads to the docks to look into the Merrowgate alcohol
+strike."""
+
+[[requested_resources]]
+keyword = "Hesta Briarvein"
+requested_path = "world/factions/ardenhaven/npc/_apothecary_hesta-briarvein-willowglass.md"
+
+[[requested_resources]]
+keyword = "Merrowgate (union on distilled alcohol) / strike"
+requested_path = "world/factions/merrowgate/_overview.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Ardenford (Middle Tier) — Willowglass Apothecary (back-counter conversation)"
+known_details = [
+    "Hesta explains she can’t keep up on healing potions because a union supplying high-purity distilled alcohol from Merrowgate is on strike, and the alcohol is sitting on ships at the docks",
+    "Hesta offers to move the party to “immediate” on her potion list if they secure the distilled alcohol",
+]
+inferred_details = [
+    "The conversation happens at or behind Hesta’s counter while the party is shopping/negotiating for supplies",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Hesta identifies the supply bottleneck"
+details = "When the party offers potion-making help, Hesta says production isn’t the issue; she needs high-purity distilled alcohol from Merrowgate, but the union is on strike and the supply is stuck on ships at the docks. (546:47–547:43)"
+
+[[key_events]]
+summary = "Hesta sets terms and incentives"
+details = "Hesta offers to bump the party to immediate priority for potions if they secure the alcohol. If they end the strike, she’ll buy it normally and give them a discount; if not, she won’t ask how they got it, but insists they leave 5 gp per bottle on the crate. (548:33–549:39)"
+
+[[key_events]]
+summary = "Party purchases familiar components"
+details = "Before leaving, the party buys incense and other classic materials for making a familiar, paying 10 gp as quoted. (551:21–552:10)"
+
+[[key_events]]
+summary = "Decision: docks first, library later"
+details = "The party discusses options (negotiation vs. theft vs. other) and agrees to go check the docks and learn why the strike is happening, then go to the library afterward. (552:56–555:43)"
+
+[character_beats]
+Sabriel = "Pushes for a practical fix to potion access and agrees to try resolving the dock situation first.\n(546:19–546:47, 555:36–555:43)"
+Marwen = "Supports investigating the strike to resolve it rather than defaulting to theft. (554:47–554:56)"
+Bazgar = "Advocates checking the ships/strike directly and frames it as a problem to solve before resorting to\nstealing. (549:45–549:48, 554:35–554:43)"
+
+[[npcs]]
+name = "Hesta Briarvein"
+role = "Apothecary managing healing potion supply"
+interaction = "Explains the Merrowgate alcohol strike bottleneck, offers priority/discount terms, and sells familiar components. (546:47–549:39, 551:21–552:10)"
+
+[[loot]]
+item = "Incense and familiar-making components"
+context = "Purchased from Hesta as classic materials for making a familiar; price quoted as 10 gp. (551:21–552:10)"
+
+[[information]]
+summary = "Healing potion shortage cause"
+details = "Hesta’s healing potion supply is constrained by lack of high-purity distilled alcohol shipped from Merrowgate; the supplying union is on strike and the alcohol is currently on ships at the docks. (546:47–547:43)"
+
+[[information]]
+summary = "How to get potions sooner"
+details = "If the party secures the distilled alcohol, Hesta will move them to immediate priority for potions; if the strike ends, she can buy it normally (with a discount to the party), otherwise she wants 5 gp per bottle left on the crate and doesn’t want details. (548:33–549:39)"
+
+[atmosphere]
+mood = "pragmatic"
+lighting = "unknown"
+sounds = "Seagulls are heard as the party arrives at the docks at the end of the scene. (556:38–556:44)"
+
+[grounding]
+transcript_timestamps = [
+    32779.0,
+    33425.0,
+]
+resource_refs = [
+    "world/factions/merrowgate/_overview.md",
+]
+inferred_content = [
+    "The back-counter setting implies a private shop-side negotiation while shopping, though the transcript doesn’t explicitly describe the counter area.",
+]
+
+[[plot_threads]]
+thread = "Merrowgate distilled alcohol strike blocking healing potion production"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Secure faster access to healing potions via helping Hesta"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Investigate docks/ships to resolve or bypass the strike"
+status = "introduced"

@@ -1,0 +1,116 @@
+start_seconds = 37788.468
+location = "Ardenford (Upper Tier) — Concordance Library exit/checkpoint"
+goal = "Leave the library without getting caught with contraband (the stolen holy book and other bag contents)"
+npcs_present = [
+    "library staff/guard (unnamed)",
+]
+time_of_day = "unknown"
+emotional_tone = "tense"
+conflict_type = "social"
+notes = """As Marwen leaves, library staff insist on checking bags; Marwen talks her way through while
+revealing bizarre harvested ingredients and avoids being discovered with the uncatalogued book."""
+scene_id = "S-028"
+end_seconds = 37892.322
+summary = """At the Concordance Library exit, staff insist on checking the party’s bags. One party member stalls
+the search by unloading odd contents (including a baby spider corpse, a marrow bone, and honey) and
+talks their way through the inspection enough to be waved on, though staff reprimand them for
+bringing 'food' into the library. Sabriel leaves to return Lear to the stables while Bazgar waits
+across the street at a cafe."""
+outcome = """The group gets past the checkpoint with a warning about the library’s food rule, and the scene
+shifts toward the street/cafe outside."""
+
+[[requested_resources]]
+keyword = "Concordance Library rules (bag checks; no food)"
+requested_path = "world/factions/ardenhaven/locations/ardenford.md"
+
+[[requested_resources]]
+keyword = "uncatalogued holy book (stolen from library)"
+requested_path = "items/magic-items/uncatalogued-holy-book.md"
+
+[confidence]
+factual_accuracy = 0.78
+completeness = 0.62
+speculation_level = "low"
+
+[location_intelligence]
+name = "Ardenford (Upper Tier) — Concordance Library exit/checkpoint"
+known_details = [
+    "Library staff/guard stop the party at the exit and say they check every bag.",
+    "A staff member enforces a 'no food in the library' rule.",
+]
+inferred_details = [
+    "This is a controlled exit point where patrons are searched before leaving.",
+]
+confidence = 0.83
+
+[[key_events]]
+summary = "Library staff initiate bag checks at the exit."
+details = "As the party tries to leave, staff/guards stop them and state they need to check bags and that every bag is checked."
+
+[[key_events]]
+summary = "A party member distracts/stalls by unpacking unsettling items."
+details = "They pull out a baby spider corpse and a marrow bone, offer to keep unloading because it will take a while, and the staff ultimately tell them to take items back and move along."
+
+[[key_events]]
+summary = "Staff enforce the no-food rule."
+details = "Staff call the bag contents 'food' (including honey) and warn that no food is allowed in the library, ending with a 'next time' admonishment."
+
+[[key_events]]
+summary = "Sabriel departs separately; Bazgar is outside."
+details = "Sabriel says she needs to re-stable Lear and leaves, while Bazgar is described as waiting across the street in a cafe, staring off into the distance."
+
+[character_beats]
+Sabriel = "Leaves promptly to return Lear to the stables."
+Marwen = "Questions why someone would keep the spider corpse instead of throwing it away."
+Bazgar = "Waits across the street at a cafe, detached and quiet."
+
+[[npcs]]
+name = "Unnamed library staff/guard"
+role = "Exit checkpoint staff enforcing library rules"
+interaction = "Stops the party for bag checks, waves them on after the awkward unpacking, and warns them about the no-food policy."
+
+[[loot]]
+item = "Baby spider corpse"
+context = "Pulled from a bag during the checkpoint search."
+
+[[loot]]
+item = "Marrow bone"
+context = "Pulled from a bag during the checkpoint search."
+
+[[loot]]
+item = "Honey"
+context = "Mentioned as being in the bag; cited during the no-food warning."
+
+[[loot]]
+item = "Uncatalogued Holy Book (Starburst Seal)"
+context = "Contraband the party is trying not to get caught with while leaving the library (carried by Sabriel per item record)."
+
+[[information]]
+summary = "Concordance Library checks bags and bans food."
+details = "Staff state they check every bag at the exit and reiterate a 'no food in the library' rule, treating the party’s carried ingredients as food and warning them for next time."
+
+[atmosphere]
+mood = "tense"
+lighting = "unknown"
+sounds = "brief silence during the checkpoint exchange; conversation at the exit"
+
+[grounding]
+transcript_timestamps = [
+    629.48,
+    632.01,
+]
+resource_refs = [
+    "items/magic-items/uncatalogued-holy-book.md",
+]
+inferred_content = [
+    "That the exit is a controlled checkpoint area beyond what is explicitly said ('We need to check your bags' implies a checkpoint).",
+    "That the uncatalogued holy book is still present as contraband during this scene; the transcript does not explicitly mention it being seen or hidden during the search.",
+]
+
+[[plot_threads]]
+thread = "Smuggling the uncatalogued holy book out of the Concordance Library"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Library scrutiny and enforcement (bag checks / no-food rule)"
+status = "introduced"

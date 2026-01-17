@@ -1,0 +1,147 @@
+start_seconds = 2990.544
+location = "Deeper ruins: preserved marble chamber with shallow pool, runic rubble, and embedded gems"
+goal = "Barricade against pursuit, assess the room’s hazards/treasure, and find a way forward"
+npcs_present = [
+    "Cinder (crow familiar/companion)",
+    "Mara (witch/centipede, pursuing—offscreen)",
+]
+time_of_day = "unknown"
+emotional_tone = "tense"
+conflict_type = "combat"
+notes = """The party finishes the construct fight, investigates the pool’s purpose and mechanism, then releases
+the drain to escape as Mara’s scratching approaches."""
+scene_id = "S-001"
+end_seconds = 5488.928
+summary = """The party entered a preserved marble chamber with a shallow ritual pool, barricaded the door, and
+assessed hazards and treasure. When Marwen approached the runic rubble, it animated into a construct
+and was quickly destroyed. The group identified the room as a meditation pool, harvested gems,
+discovered a latched plug in the pool’s center, and—hearing pursuit at the door—released all four
+latches to drain the pool and escape down an underwater chute to a lower cavern."""
+outcome = """They escaped the chamber via the drained pool, riding a subterranean water channel to a rocky shore
+deeper underground."""
+
+[[requested_resources]]
+keyword = "runic rubble / construct (animated rocks)"
+requested_path = "creatures/custom/underground-ruins-monsters.md"
+
+[[requested_resources]]
+keyword = "gems embedded around the pool / “pool gem”"
+requested_path = "items/README.md"
+
+[[requested_resources]]
+keyword = "Mara (centipede witch)"
+requested_path = "world/factions/elderholt/npcs/broken-loss-witches/centipede.md"
+
+[[requested_resources]]
+keyword = "meditation pool / ritual pool"
+requested_path = "world/factions/ardenhaven/locations/stone-breach-ruins/valley-ruins-rooms.md"
+
+[confidence]
+factual_accuracy = 0.9
+completeness = 0.78
+speculation_level = "low"
+
+[location_intelligence]
+name = "Deeper ruins: Ritual Pool chamber"
+known_details = [
+    "A preserved, elegant marble chamber with a shallow pool in the center (transcript ~55:29-56:23)",
+    "Runic rubble piles sit around the room; approaching one causes it to animate (transcript ~53:40-54:03, 58:35-59:15)",
+    "Valuable gems are embedded around the pool above the waterline and can be pried out (transcript ~54:10-54:53)",
+    "The pool is shallow (about 1.5–2 feet deep) and can be stood in (transcript ~71:40-71:47)",
+    "A stone plug/drain in the pool’s center is held by four latches; releasing them drops the plug and drains the water downward (transcript ~76:09-78:23, 87:16-87:33)",
+    "This chamber matches the 'Ritual Pool' room concept (world/factions/ardenhaven/locations/stone-breach-ruins/valley-ruins-rooms.md)",
+]
+inferred_details = [
+    "The chamber’s pool mechanism functions as a hidden escape route to a lower waterway.",
+]
+confidence = 0.88
+
+[[key_events]]
+summary = "Barricaded the chamber door"
+details = "After entering the room, the party blocked and wedged the door shut using available objects, leaving themselves temporarily sealed inside. (transcript ~52:01-53:23)"
+
+[[key_events]]
+summary = "Runic rubble animated and was destroyed"
+details = "Marwen’s approach triggered a runic rubble pile to coalesce with visible energy lines; the party attacked during its formation and Bazgar finished it off as it tried to move away. Marwen determined proximity triggered it and pocketed a runed stone fragment. (transcript ~58:35-59:15, 60:14-64:42, 68:20-69:10, 70:19-71:23)"
+
+[[key_events]]
+summary = "Gems harvested from the pool edge"
+details = "Marwen confirmed the embedded gems did not radiate magic, and the party began prying them out as portable treasure. (transcript ~57:31-58:21, 71:47-72:35, 82:49-83:01)"
+
+[[key_events]]
+summary = "Room identified as a meditation/ritual pool"
+details = "Sabriel found legible runes indicating the pool’s meditative purpose and noted worn sitting impressions around the pool’s perimeter. (transcript ~73:57-74:43)"
+
+[[key_events]]
+summary = "Discovered and used the four-latch drain plug to escape pursuit"
+details = "Sabriel spotted a central stone plug with four latches; when scratching and many legs were heard at the door, the party coordinated (including Cinder on a latch) to release all four at once, dropping the plug and draining the pool. They chose to go with the rushing water, endured the chute, and emerged in a lower cavern. (transcript ~76:09-78:23, 83:32-83:48, 86:02-87:33, 88:18-91:45)"
+
+[character_beats]
+Marwen = "Detected the runic rubble’s magic, helped destroy it, identified proximity as the trigger, and kept\na runed stone fragment."
+Bazgar = "Took point in melee against the animated rubble, then focused on harvesting gems and testing the\npool’s plug mechanism."
+Sabriel = "Interpreted the chamber’s runes as a meditation pool and discovered the central plug and latches\nthat became the escape route."
+Cinder = "Assisted by taking position on a latch during the coordinated release."
+
+[[npcs]]
+name = "Cinder"
+role = "Familiar/companion"
+interaction = "Directed to help with the fourth latch during the escape. (transcript ~86:54-87:06)"
+
+[[npcs]]
+name = "Mara"
+role = "Pursuer (offscreen)"
+interaction = "Not directly seen; the party reacted to imminent pursuit at the door. (scene context; transcript indicates pursuit via sounds ~83:32-83:48)"
+
+[[loot]]
+item = "Pool gem"
+context = "Pried from the pool’s edge; at least two were collected during the scene. (transcript ~72:15-72:35, 82:49-83:01)"
+
+[[loot]]
+item = "Runed stone fragment (from destroyed rubble construct)"
+context = "Marwen pocketed a piece of the animated runic rubble after examining it. (transcript ~71:11-71:23)"
+
+[[information]]
+summary = "Runic rubble activates by proximity"
+details = "After examining the destroyed construct, Marwen concluded it animated due to her presence/approach rather than being struck first. (transcript ~70:19-71:07)"
+
+[[information]]
+summary = "The chamber is a meditation/ritual pool"
+details = "Sabriel found runes indicating the pool’s purpose and observed worn sitting impressions around the pool’s perimeter from repeated use. (transcript ~73:57-74:43)"
+
+[[information]]
+summary = "The pool hides a drain plug secured by four latches"
+details = "Sabriel spotted a central plug-like stone with four latches; releasing them drops the plug and drains the pool downward, creating an escape route. (transcript ~76:09-78:23, 87:16-87:33)"
+
+[atmosphere]
+mood = "tense, urgent"
+lighting = "not specified"
+sounds = "echoing movement in the chamber; later, loud scratching of many legs against the barricaded door. (transcript ~83:32-83:48)"
+
+[grounding]
+transcript_timestamps = [
+    2990,
+    5514,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/stone-breach-ruins/valley-ruins-rooms.md",
+    "creatures/custom/underground-ruins-monsters.md",
+]
+inferred_content = [
+    "That the drain/plug mechanism is intentionally designed as an escape route rather than incidental ruin plumbing.",
+]
+
+[[plot_threads]]
+thread = "Escape from Mara’s pursuit"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Ancient ritual pool and its mechanisms"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Runic rubble constructs as proximity-triggered guardians"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Harvesting valuable embedded gems for resources"
+status = "advanced"
