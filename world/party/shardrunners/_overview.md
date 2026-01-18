@@ -35,7 +35,7 @@ They want money, but they want the *hit* too: the rush of a sealed door, the sna
 
 | Name | Ancestry | Origin | Class | Level | Alignment | Background | Party Role | Notes |
 |---|---|---|---|---:|---|---|---|---|
-| Ravenholt | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Sorcerer | 3 | Chaotic Neutral | Gambler | Damage / distraction | Always double-or-nothing |
+| Cassian | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Sorcerer | 3 | Chaotic Neutral | Gambler | Damage / distraction | Always double-or-nothing |
 | Torford | Human | [Thorndale](../../factions/ardenhaven/locations/thorndale.md) | Rogue | 2 | Chaotic Neutral | Smuggler | Infiltration / getaway | If there's a lock, she's already on it |
 | Fizzbit Tangle | Gnome | [Merrowgate](../../factions/merrowgate/_overview.md) | Artificer | 4 | Chaotic Neutral | Tinkerer | Gear / bankroll | Pays up front, takes a quiet cut |
 | Oakwick | Human | [Calstead](../../factions/ardenhaven/locations/calstead.md) | Cleric | 2 | Lawful Neutral | Village healer | Heals / prevents spirals | The only one who writes plans down |

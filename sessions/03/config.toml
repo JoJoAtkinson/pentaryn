@@ -47,6 +47,11 @@ context_after = 30.0
 # Maximum line length for text wrapping in TOML output
 max_line_length = 100
 
+[summary]
+model = "gpt-5.2"
+temperature = 0.7
+prompts = ["bardic-dm", "elric-chronicler"]
+
 [pass3]
 # CRITICAL: output MUST point to story/the-compass-edge
 # This is a git submodule/repo used for publishing player-facing story content.
@@ -96,7 +101,7 @@ party_name = "the-compass-edge"
 event_id_prefix = "party-compass"
 
 # LLM model for generating summaries (optional; if not specified, uses algorithmic summaries)
-model = "gpt-4o-mini"
+model = "gpt-5.2"
 temperature = 0.3  # Lower for factual timeline summaries
 
 # Maximum events per day (10,000 foot view)
