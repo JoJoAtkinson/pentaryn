@@ -95,6 +95,11 @@ pov_characters = ["Bazgar", "Sabriel", "Marwen"]
 # Character voice is sourced from PC narrative files under `characters/player-characters/*.narrative.md`.
 # Avoid duplicating voice notes here to prevent drift.
 
+[summary]
+model = "gpt-5.2"
+temperature = 0.7
+prompts = ["bardic-dm", "elric-chronicler"]
+
 [timeline]
 # Party name (maps to world/party/{party_name}/_history.tsv)
 party_name = "the-compass-edge"
@@ -103,7 +108,7 @@ party_name = "the-compass-edge"
 event_id_prefix = "party-compass"
 
 # LLM model for generating summaries (optional; if not specified, uses algorithmic summaries)
-model = "gpt-4o-mini"
+model = "gpt-5.2"
 temperature = 0.3  # Lower for factual timeline summaries
 
 # Maximum events per day (10,000 foot view)

@@ -20,6 +20,9 @@ status: active
 | **Background** | Coven debtor |
 | **Party Role** | Occult / curses |
 
+## Binding Book 
+Her spell book has two little fire demonds that dancing in a ciricle when she casts spells. 
+
 ## Spellwork (Warlock 3)
 
 > *Her magic is paperwork with teeth.*
@@ -32,10 +35,14 @@ status: active
 | **Pact slots** | `2` slots (cast at **2nd level**) |
 | **Typical tells** | Blackened ink under the nails; whispered clauses; a sigil written, then blotted |
 
+-- 2 level spell of a favor 
+
 ### Cantrips (at-will)
 
 - **Eldritch Blast** — her “collection notice.”
 - **Minor Illusion** — false omens, forged “signs,” and misdirection.
+  - Hits with force energy (1 beam at level 1, 2 at 5th, 3 at 11th, 4 at 17th); each beam makes its own ranged spell attack (120 ft) for 1d10 force damage. Agonizing Blast adds Cha to each beam if she ever takes it.
+  - Minor Illusion can create either a sound or an image (not both) within 30 ft; it lasts 1 minute and doesn’t require concentration, perfect for fake ledger notes or a rumbling warning.
 
 ### Spells known (pick 4; cast using pact slots)
 
@@ -43,6 +50,10 @@ status: active
 - **Hex** — the debt becomes a weakness.
 - **Invisibility** — leave before the conversation turns violent.
 - **Suggestion** — contracts, gently enforced.
+  - Armor of Agathys is a 1st-level self-only spell (1 action, 1 hour duration) that grants 5 temporary hit points and deals 5 cold damage to any creature that hits her with a melee attack while the temp HP remain (scales +5 per higher slot).
+  - Hex (1st-level, bonus action, concentration up to 1 hour) curses a target for 1d6 necrotic extra damage on every hit and gives disadvantage on ability checks of a chosen ability; the curse can jump to a new target with a bonus action if the first drops to 0 HP.
+  - Invisibility (2nd-level, 1 action, concentration up to 1 hour) makes a creature she touches invisible until it attacks or casts a spell, letting Maela slip away or rearrange the scene without being seen.
+  - Suggestion (2nd-level, 1 action, concentration up to 8 hours) forces a creature that fails a Wisdom save to follow a reasonable-sounding command (e.g., “leave this room,” “hand over the ledger”) for the duration.
 
 ### Optional swaps (if you want her sharper in a given scene)
 

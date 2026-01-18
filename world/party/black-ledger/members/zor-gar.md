@@ -48,6 +48,13 @@ status: active
 | **Primal Path – Berserker** | Frenzy (bonus-action attack while raging, exhaustion after each rage ends) |
 | **Equipment** | Maul, pair of handaxes, reinforced cloak, grenades of rending metal |
 
+## Weapon Stats
+
+| Weapon | Attack Bonus | Damage | Rage Bonus | Notes |
+|---|---|---|---|---|
+| Maul | +5 (Str +3, prof +2) | 2d6 + 3 | +2 damage while raging (2d6 + 5 total) | Heavy, two-handed, martial; Frenzy bonus attack uses the same damage roll when raging. |
+| Handaxe (melee/throw) | +5 | 1d6 + 3 | +2 damage while raging (1d6 + 5 total) | Light, thrown 20/60 ft; dual-wielding lets him trade off bonus-action attacks if needed. |
+
 ### Notes
 
 - Reckless Attack trades defense for more chances to land a maul, especially when he activates Frenzy.

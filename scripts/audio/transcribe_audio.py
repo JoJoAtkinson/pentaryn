@@ -176,6 +176,7 @@ def transcribe_with_diarization(
     min_speakers: int | None = None,
     max_speakers: int | None = None,
     diarize_heartbeat_secs: float = 15.0,
+    diarize_device: str = "cpu",
 ) -> List[Dict[str, Any]]:
     """
     Transcribe audio file with speaker diarization.
@@ -191,6 +192,7 @@ def transcribe_with_diarization(
         min_speakers: Minimum number of speakers (overrides num_speakers if set)
         max_speakers: Maximum number of speakers (overrides num_speakers if set)
         diarize_heartbeat_secs: Print a status line every N seconds during diarization (0 disables)
+        diarize_device: Device for diarization ("cpu" or "cuda"); cpu is safer for long recordings
     
     Returns:
         List of segments with speaker, text, start, and end times
@@ -265,15 +267,16 @@ def transcribe_with_diarization(
                 )
 
         try:
-            # Use GPU for diarization when available (force CPU only for MPS compatibility issues)
-            diarize_device = "cpu" if torch_device == "mps" else torch_device
-            if diarize_device == "cpu":
-                logging.info("Note: diarization on CPU can be very slow for long recordings.")
+            # Force CPU for MPS since it's not supported; otherwise use specified device
+            actual_diarize_device = "cpu" if torch_device == "mps" else diarize_device
+            if actual_diarize_device == "cpu":
+                logging.info("Note: diarization on CPU avoids out-of-memory errors on long recordings.")
+                logging.info("      (Use --diarize-device cuda for short recordings if you have sufficient VRAM)")
             else:
-                logging.info(f"Note: diarization will use {diarize_device.upper()} (faster than CPU).")
+                logging.info(f"Note: diarization will use {actual_diarize_device.upper()} (faster but may OOM on long recordings).")
             logging.info("      First run may also download models to ~/.cache/huggingface/hub.")
             with _heartbeat("Loading diarization model", diarize_heartbeat_secs):
-                diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=diarize_device)
+                diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=actual_diarize_device)
         except Exception as e:
             logging.error(f"\n⚠️  Diarization model loading failed: {e}")
             logging.info("Common causes:")
@@ -522,6 +525,12 @@ def main():
         help="Print a status line every N seconds while diarization loads/runs (0 to disable). Default: 15",
     )
     parser.add_argument(
+        "--diarize-device",
+        choices=["cpu", "cuda"],
+        default="cpu",
+        help="Device for speaker diarization. cpu=safe for long recordings, cuda=faster but may OOM. Default: cpu",
+    )
+    parser.add_argument(
         "--output-dir",
         default="recordings_transcripts",
         help="Directory for output files. Default: recordings_transcripts",
@@ -651,12 +660,16 @@ def main():
                         else:
                             hint = "auto"
 
-                        diarize_device = "cpu" if torch_device == "mps" else torch_device
-                        if diarize_device == "cpu":
-                            print("Note: diarization on CPU can be very slow for long recordings.")
-                            print("      First run may also download models to ~/.cache/huggingface/hub.")
+                        # Force CPU for MPS; otherwise use specified device
+                        actual_diarize_device = "cpu" if torch_device == "mps" else args.diarize_device
+                        if actual_diarize_device == "cpu":
+                            print("Note: diarization on CPU avoids out-of-memory errors on long recordings.")
+                            print("      (Use --diarize-device cuda for short recordings if you have sufficient VRAM)")
+                        else:
+                            print(f"Note: diarization will use {actual_diarize_device.upper()} (faster but may OOM on long recordings).")
+                        print("      First run may also download models to ~/.cache/huggingface/hub.")
                         with _heartbeat("Loading diarization model", args.diarize_heartbeat_secs):
-                            diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=diarize_device)
+                            diarize_model = DiarizationPipeline(use_auth_token=hf_token, device=actual_diarize_device)
 
                         try:
                             print(f"Running diarization ({hint})... (Ctrl-C to skip diarization)")
@@ -688,6 +701,7 @@ def main():
                 min_speakers=args.min_speakers,
                 max_speakers=args.max_speakers,
                 diarize_heartbeat_secs=args.diarize_heartbeat_secs,
+                diarize_device=args.diarize_device,
             )
             
             # Save JSONL (primary format)

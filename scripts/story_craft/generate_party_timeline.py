@@ -124,6 +124,41 @@ def add_days_in_world(year: int, month: int, day: int, days_to_add: int) -> tupl
     return (new_year, new_month, new_day)
 
 
+def get_last_timeline_date(output_path: Path) -> tuple[int, int, int] | None:
+    """
+    Read the last date from an existing timeline TSV.
+    Returns (year, month, day) or None if file doesn't exist or is empty.
+    """
+    if not output_path.exists():
+        return None
+    
+    last_date = None
+    with open(output_path, "r", encoding="utf-8") as f:
+        reader = csv.DictReader(f, delimiter="\t")
+        for row in reader:
+            date_str = row.get("date", "").strip()
+            if not date_str:
+                continue
+            # Parse date: YYYY/MM/DD-HH or YYYY/MM/DD
+            date_part = date_str.split("-")[0]
+            parts = date_part.split("/")
+            if len(parts) == 3:
+                try:
+                    year = int(parts[0])
+                    month = int(parts[1])
+                    day = int(parts[2])
+                    # Check duration to see if this event spans multiple days
+                    duration = int(row.get("duration", "0") or "0")
+                    if duration > 0:
+                        # Advance by duration to get the actual end date
+                        year, month, day = add_days_in_world(year, month, day, duration)
+                    last_date = (year, month, day)
+                except (ValueError, IndexError):
+                    continue
+    
+    return last_date
+
+
 def load_world_present_date(world_config_path: Path) -> tuple[int, int, int]:
     """
     Load the world's current date from `world/_history.config.toml`.
@@ -169,6 +204,112 @@ def find_next_event_counter(output_path: Path, event_prefix: str) -> int:
             except ValueError:
                 continue
     return best + 1
+
+
+def extract_downtime_days_llm(scene: dict, config: dict) -> int:
+    """
+    Use LLM to extract the number of downtime days from a scene's text.
+    Returns 0 if no multi-day period detected, otherwise returns the number of days.
+    """
+    if not OPENAI_AVAILABLE:
+        return 0
+    
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return 0
+    
+    text = f"Notes: {scene.get('notes', '')}\nSummary: {scene.get('summary', '')}\nOutcome: {scene.get('outcome', '')}"
+    
+    prompt = f"""Analyze this D&D scene description and determine EXACTLY how many days pass during this scene.
+
+SCENE TEXT:
+{text}
+
+CRITICAL INSTRUCTIONS:
+1. Look for explicit time periods: "two days of travel", "camp for a week", "on the fifth day", etc.
+2. "days to a week" = return 7
+3. "on the fifth day" = return 5 (they waited 5 days)
+4. "two days of travel" = return 2
+5. "about a week" or "for a week" = return 7
+6. "multi-day camp" with "on the fifth day" = return 5
+7. If only hours pass (not days), return 0
+8. If the text says "several days" without a number, return 3
+
+Return ONLY a single integer (0 if same day, or the number of days if multiple). No explanation."""
+    
+    try:
+        client = OpenAI(api_key=api_key)
+        model = config.get("model", "gpt-4o-mini")
+        
+        response = client.chat.completions.create(
+            model=model,
+            temperature=0.1,  # Low temperature for consistent extraction
+            messages=[
+                {"role": "system", "content": "You are a precise time duration extractor. Return only integers."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        
+        result = response.choices[0].message.content.strip()
+        # Parse the integer
+        days = int(result)
+        return max(0, days)  # Ensure non-negative
+        
+    except Exception as e:
+        print(f"  ⚠️  LLM time extraction failed: {e}, falling back to regex")
+        return 0
+
+
+def extract_downtime_days_regex(scene: dict) -> int:
+    """
+    Fallback regex-based extraction of downtime days.
+    Returns 0 if no multi-day period detected, otherwise returns the number of days.
+    """
+    text = f"{scene.get('notes', '')} {scene.get('summary', '')} {scene.get('outcome', '')}".lower()
+    
+    import re
+    
+    # Check for specific durations (ordered by specificity - most specific first)
+    patterns = [
+        (r'on\s+the\s+fifth\s+day', 5),
+        (r'on\s+the\s+(\w+)\s+day', lambda m: {'first': 1, 'second': 2, 'third': 3, 'fourth': 4, 'fifth': 5, 'sixth': 6, 'seventh': 7}.get(m.group(1), 0)),
+        (r'(?:for|over|camp(?:ed|ing)?|wait(?:ed|ing)?|stay(?:ed|ing)?)\s+(?:up\s+to\s+)?(?:days\s+to\s+)?a\s+week', 7),
+        (r'(?:for|over|about|roughly|approximately)\s+(?:two|2)\s+days', 2),
+        (r'(?:for|over|about|roughly|approximately)\s+(?:three|3)\s+days', 3),
+        (r'(?:for|over|about|roughly|approximately)\s+(?:four|4)\s+days', 4),
+        (r'(?:for|over|about|roughly|approximately)\s+(?:five|5)\s+days', 5),
+        (r'(?:for|over|about|roughly|approximately)\s+(?:six|6)\s+days', 6),
+        (r'(?:for|over|about|roughly|approximately)\s+(?:seven|7)\s+days', 7),
+        (r'(?:two|2)\s+days\s+(?:of\s+)?(?:travel|journey)', 2),
+        (r'(?:three|3)\s+days\s+(?:of\s+)?(?:travel|journey)', 3),
+        (r'fortnight|(?:fourteen|14)\s+days', 14),
+    ]
+    
+    for pattern, days in patterns:
+        match = re.search(pattern, text)
+        if match:
+            if callable(days):
+                result = days(match)
+                if result > 0:
+                    return result
+            else:
+                return days
+    
+    return 0
+
+
+def extract_downtime_days(scene: dict, config: dict, use_llm: bool = False) -> int:
+    """
+    Extract the number of downtime days from a scene.
+    Uses LLM if available and use_llm=True, otherwise falls back to regex.
+    """
+    if use_llm:
+        days = extract_downtime_days_llm(scene, config)
+        if days > 0:
+            return days
+        # LLM returned 0 or failed, try regex as fallback
+    
+    return extract_downtime_days_regex(scene)
 
 
 def group_scenes_by_day(summaries: list[dict], config: dict) -> dict:
@@ -472,7 +613,11 @@ def generate_event_summary_from_beat(scenes: list[dict]) -> str:
     # Fallback
     key_events = scenes[0].get("key_events", [])
     if key_events:
-        summary = " ".join(key_events[:2])
+        # key_events might be list of strings or list of dicts
+        if isinstance(key_events[0], dict):
+            summary = " ".join(str(e.get("details", "")) for e in key_events[:2])
+        else:
+            summary = " ".join(str(e) for e in key_events[:2])
         if len(summary) > 300:
             summary = summary[:297] + "..."
         return summary
@@ -703,7 +848,8 @@ def write_timeline_events(
     output_path: Path,
     clear_existing: bool,
     available_tags: set[str],
-    available_factions: set[str]
+    available_factions: set[str],
+    use_llm: bool = False,
 ) -> tuple[int, int, int]:
     """
     Write events to timeline TSV file.
@@ -731,6 +877,15 @@ def write_timeline_events(
             day_scenes = day_payload["scenes"]
             day_hours = assign_hours_for_day(day_events, day_scenes)
             
+            # Check for multi-day downtime in this day's scenes
+            downtime_days = 0
+            for scene in day_scenes:
+                days = extract_downtime_days(scene, timeline_config, use_llm=use_llm)
+                if days > downtime_days:
+                    downtime_days = days
+                    if days > 0:
+                        print(f"  └─ Detected {days}-day period in scene {scene.get('scene_id', 'unknown')}")
+            
             # Check for month change
             if month != current_month:
                 month_info = get_month_info(month)
@@ -746,7 +901,7 @@ def write_timeline_events(
                 current_month = month
             
             # Write day's events
-            for event, hour in zip(day_events, day_hours):
+            for idx, (event, hour) in enumerate(zip(day_events, day_hours)):
                 event_id = f"{event_prefix}-{event_counter:03d}"
                 tags = generate_event_tags(
                     event["title"],
@@ -759,12 +914,17 @@ def write_timeline_events(
                 title = event["title"]
                 summary = event["summary"]
                 
-                f.write(f"{event_id}\t{tags}\t{date_str}\t0\t{title}\t{summary}\n")
+                # Only apply duration to the LAST event if this is a multi-day period
+                is_last_event = (idx == len(day_events) - 1)
+                duration = downtime_days if (is_last_event and downtime_days > 1) else 0
+                
+                f.write(f"{event_id}\t{tags}\t{date_str}\t{duration}\t{title}\t{summary}\n")
                 event_counter += 1
             
-            # Advance to next day
+            # Advance to next day (or multiple days if downtime period)
             if day_num < max(events_by_day.keys()):
-                year, month, day = add_days_in_world(year, month, day, 1)
+                days_to_advance = max(1, downtime_days)
+                year, month, day = add_days_in_world(year, month, day, days_to_advance)
     
     return (year, month, day)
 
@@ -828,18 +988,27 @@ def main():
     party_name = timeline_config.get("party_name", "unknown-party")
     event_prefix = timeline_config.get("event_id_prefix", "party")
     
-    # Load Pass 2 output
-    pass2_path = session_dir / "pass2.json"
-    if not pass2_path.exists():
-        print(f"Error: Pass 2 output not found at {pass2_path}")
+    # Load Pass 2 output (folder with TOML files)
+    pass2_dir = session_dir / "pass2"
+    if not pass2_dir.exists():
+        print(f"Error: Pass 2 output not found at {pass2_dir}")
         print("Run Pass 2 first: python scripts/story_craft/summarize_scenes.py --session N")
         return 1
     
     print(f"Loading session {args.session} data...")
-    with open(pass2_path) as f:
-        pass2_data = json.load(f)
+    summaries = []
     
-    summaries = pass2_data.get("summaries", [])
+    # Load all scene TOML files (S-*.toml)
+    scene_files = sorted(pass2_dir.glob("S-*.toml"))
+    if not scene_files:
+        print(f"No scene files found in {pass2_dir}")
+        return 1
+    
+    for scene_file in scene_files:
+        with open(scene_file, "rb") as f:
+            scene_data = tomllib.load(f)
+            summaries.append(scene_data)
+    
     if not summaries:
         print("No summaries found in Pass 2 output")
         return 1
@@ -852,11 +1021,26 @@ def main():
     print(f"  Found {len(available_factions)} valid factions")
     
     # Determine start date
+    output_path = repo_root / "world" / "party" / party_name / "_history.tsv"
+    
     if args.start_date:
         parts = args.start_date.split("/")
         start_date = (int(parts[0]), int(parts[1]), int(parts[2]))
         print(f"Using override start date: {args.start_date}")
+    elif not args.clear and output_path.exists():
+        # When appending (not clearing), continue from the last date in the timeline
+        last_date = get_last_timeline_date(output_path)
+        if last_date:
+            # Start the next day after the last event
+            start_date = add_days_in_world(*last_date, 1)
+            print(f"Continuing from existing timeline: {start_date[0]}/{start_date[1]:02d}/{start_date[2]:02d}")
+        else:
+            # Fallback to world config if timeline is empty
+            world_config_path = repo_root / "world" / "_history.config.toml"
+            start_date = load_world_present_date(world_config_path)
+            print(f"Using world present date: {start_date[0]}/{start_date[1]:02d}/{start_date[2]:02d}")
     else:
+        # When clearing or file doesn't exist, use world config date
         world_config_path = repo_root / "world" / "_history.config.toml"
         start_date = load_world_present_date(world_config_path)
         print(f"Using world present date: {start_date[0]}/{start_date[1]:02d}/{start_date[2]:02d}")
@@ -899,21 +1083,16 @@ def main():
         for event in day_events:
             print(f"    - {event['title']}")
     
-    # Calculate final date
-    num_days = len(events_by_day)
-    final_date = add_days_in_world(*start_date, num_days - 1)
-    print(f"\nFinal date: {final_date[0]}/{final_date[1]:02d}/{final_date[2]:02d}")
-    
     total_events = sum(len(payload["events"]) for payload in events_by_day.values())
-    print(f"Generated {total_events} total events across {num_days} days")
+    print(f"Generated {total_events} total events across {len(events_by_day)} days")
     
     if args.dry_run:
         print("\n[DRY RUN] Would write events but --dry-run specified")
         return 0
     
-    # Write timeline
+    # Write timeline (returns the actual final date accounting for multi-day periods)
     output_path = repo_root / "world" / "party" / party_name / "_history.tsv"
-    write_timeline_events(
+    final_date = write_timeline_events(
         events_by_day,
         start_date,
         party_name,
@@ -922,9 +1101,11 @@ def main():
         output_path,
         args.clear,
         available_tags,
-        available_factions
+        available_factions,
+        use_llm=use_llm,
     )
     print(f"✓ Wrote {total_events} events to {output_path}")
+    print(f"✓ Final date: {final_date[0]}/{final_date[1]:02d}/{final_date[2]:02d}")
     
     # Update world date
     world_config_path = repo_root / "world" / "_history.config.toml"
