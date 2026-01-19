@@ -1,0 +1,103 @@
+start_seconds = 70.154
+location = "The Wayward Compass (Middle Tier, Ardenford) — writ board area"
+goal = "Review writ board and choose a job"
+npcs_present = [
+    "Zorgar (orc, other adventuring party)",
+    "short human handler/boss (name unknown)",
+    "Thorgrim Ledger-Scar (barkeep, later)",
+]
+time_of_day = "morning"
+emotional_tone = "comedic"
+conflict_type = "social"
+notes = """Party browses the writ board; Bazgar gets shoved aside by an orc (Zorgar), escalating into a brief
+confrontation that is interrupted by a short human who controls/ushers Zorgar back inside."""
+scene_id = "S-001"
+end_seconds = 311.897
+summary = """In the Wayward Compass, the party gathers at the writ board to look over available jobs. As they
+read, an orc adventurer (Zor’gar) crowds Bazgar aside to view the postings. Bazgar tries to shove
+back but gets knocked down and dismissed, then challenges the orc to take it outside. The orc
+immediately escalates into a fight as soon as they step out."""
+outcome = """The scene transitions from choosing a job at the writ board to an imminent brawl outside after
+Bazgar challenges Zor’gar."""
+
+[[requested_resources]]
+keyword = "The Wayward Compass"
+requested_path = "world/factions/ardenhaven/locations/ardenford/ardenford.md"
+
+[[requested_resources]]
+keyword = "Thorgrim Ledger-Scar"
+requested_path = "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md"
+
+[[requested_resources]]
+keyword = "Zorgar"
+requested_path = "world/party/black-ledger/members/zor-gar.md"
+
+[confidence]
+factual_accuracy = 0.72
+completeness = 0.55
+speculation_level = "medium"
+
+[location_intelligence]
+name = "The Wayward Compass (Middle Tier, Ardenford) — writ board area"
+known_details = [
+    "The party starts at the Wayward Compass looking at the writ board.",
+    "The Wayward Compass is an inn/tavern in Ardenford’s Middle Tier with a job/writ board used by adventurers.",
+]
+inferred_details = [
+    "The writ board is inside the common room near the bar (typical placement; not stated in transcript).",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Party reviews the writ board for work."
+details = "The group opens the session standing at the Wayward Compass writ board, reacting to the posted jobs while deciding what to take."
+
+[[key_events]]
+summary = "Zor’gar shoves in and provokes Bazgar."
+details = "A large orc pushes Bazgar aside to read the board; Bazgar responds by trying to shove back but is knocked down and ignored."
+
+[[key_events]]
+summary = "Bazgar challenges Zor’gar; fight starts outside."
+details = "Bazgar calls for taking the dispute to the center/outside; once outside, the orc attacks immediately without waiting."
+
+[character_beats]
+Bazgar = "Responds to being crowded at the writ board by physically challenging the offender and taking it\noutside."
+Marwyn = "Shows apprehension while scanning the postings (notably a stolen book notice is mentioned)."
+Sabriel = "Is present at the writ board with the others but does not drive the confrontation in this scene."
+
+[[npcs]]
+name = "Zor'gar"
+role = "Orc adventurer from another party"
+interaction = "Crowds Bazgar away from the writ board, knocks him down when Bazgar shoves back, then attacks immediately once outside."
+
+[[information]]
+summary = "A stolen book job is among the postings."
+details = "While describing reactions at the writ board, a posting about a stolen book is specifically referenced."
+
+[atmosphere]
+mood = "comedic, confrontational"
+lighting = "morning"
+sounds = "not specified in transcript"
+
+[grounding]
+transcript_timestamps = [
+    70.0,
+    322.0,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/ardenford/ardenford.md",
+    "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+    "world/party/black-ledger/members/zor-gar.md",
+]
+inferred_content = [
+    "Exact placement of the writ board within the Compass common room is not stated; assumed typical tavern placement.",
+    "The transcript’s speaker labels are all UNKNOWN, so attribution of specific lines to specific PCs is inferred from context.",
+]
+
+[[plot_threads]]
+thread = "Choosing a writ-board job"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Conflict with Zor’gar / rival adventurers"
+status = "introduced"

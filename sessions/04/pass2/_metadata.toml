@@ -1,0 +1,6 @@
+[metadata]
+source_pass1 = "/Users/joe/GitHub/dnd/sessions/04/pass1.json"
+source_transcript = "/Users/joe/GitHub/dnd/sessions/04/transcripts.jsonl"
+generated = "2026-01-19T18:27:34.897547"
+total_scenes = 20
+model = "gpt-5.2"

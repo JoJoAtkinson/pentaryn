@@ -1,0 +1,108 @@
+start_seconds = 311.897
+location = "Outside The Wayward Compass (street just outside the inn)"
+goal = "Settle Bazgar vs Zorgar honor dispute"
+npcs_present = [
+    "Zorgar (orc, other adventuring party)",
+    "short human handler/boss (name unknown)",
+]
+time_of_day = "morning"
+emotional_tone = "tense"
+conflict_type = "combat"
+notes = """Zorgar attacks immediately outside; Bazgar fights back, knocks him prone, and the short human
+intervenes to stop the fight and bring Zorgar back inside."""
+scene_id = "S-002"
+end_seconds = 1110.861
+summary = """Bazgar steps outside The Wayward Compass to settle an honor dispute with the orc Zor’gar. Zor’gar
+attacks immediately and without ceremony. After trading blows, Bazgar manages to hook Zor’gar’s leg,
+knock him prone, and draw blood, embarrassing him. A short, well-dressed human who appears to be
+Zor’gar’s handler orders him to stop; Zor’gar glares but complies, stows his weapon, and is ushered
+back inside."""
+outcome = "The duel is cut short by Zor’gar’s handler, and both parties disengage and return inside the inn."
+
+[[requested_resources]]
+keyword = "Zorgar"
+requested_path = "world/party/black-ledger/members/zor-gar.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Outside The Wayward Compass (street just outside the inn)"
+known_details = [
+    "The confrontation happens immediately after stepping out the inn door into the street",
+    "Others remain near/at the inn’s writ board while the fight occurs nearby",
+]
+inferred_details = [
+    "The fight is close enough to the entrance that bystanders can watch while staying at/near the doorway",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Honor dispute turns into an immediate street fight"
+details = "Outside the inn, Zor’gar does not wait for formalities and swings as soon as Bazgar steps out, forcing an initiative-based exchange rather than a surprise ambush."
+
+[[key_events]]
+summary = "Bazgar identifies Zor’gar’s origin and reads the opening attack"
+details = "Bazgar recognizes Zor’gar as being from Grok/Garrok by appearance and anticipates the swing from his body movement, though not fast enough to act first."
+
+[[key_events]]
+summary = "Zor’gar draws blood while holding back his main weapon"
+details = "Zor’gar lands a hit that draws blood, but keeps a larger maul on his back and fights with a smaller axe instead, which Bazgar interprets as insulting."
+
+[[key_events]]
+summary = "Bazgar topples Zor’gar and embarrasses him"
+details = "Bazgar recovers, then successfully sweeps/hooks Zor’gar’s leg and shoulder-checks him down, dealing damage and leaving him prone briefly."
+
+[[key_events]]
+summary = "Handler asserts control and ends the fight"
+details = "A short human—clearly the authority figure—calls out and stops Zor’gar from continuing; Zor’gar stows his axe, leans in to sniff Bazgar, then is ushered back into the inn despite visible resentment."
+
+[character_beats]
+Bazgar = "Treats the clash as an honor matter, then turns the tide by humiliating Zor’gar with a takedown\nbefore disengaging."
+Sabriel = "Stays focused on the writ board and does not intervene in the duel."
+Marwen = "Keeps situational awareness near the doorway and later urges Sabriel to stop blocking the writ board\nline."
+
+[[npcs]]
+name = "Zor'gar"
+role = "Orc rival combatant from another adventuring party"
+interaction = "Attacks Bazgar immediately outside the inn, trades blows, is knocked prone, then is ordered to stop and escorted back inside."
+
+[[npcs]]
+name = "Unknown short human handler/boss"
+role = "Zor’gar’s apparent handler/authority figure"
+interaction = "Interrupts the fight, asserts control over Zor’gar, and ushers him back into the inn while acknowledging the meeting."
+
+[[information]]
+summary = "Zor’gar’s origin is identified"
+details = "Bazgar recognizes Zor’gar as being from Grok/Garrok based on his olive skin."
+
+[[information]]
+summary = "Zor’gar is under someone else’s authority"
+details = "A short, organized human is clearly the boss; Zor’gar complies with his command to stop fighting and go back inside."
+
+[atmosphere]
+mood = "tense"
+lighting = "morning"
+sounds = "weapons drawn and a brief shouted command from the handler"
+
+[grounding]
+transcript_timestamps = [
+    282.0,
+    1110.0,
+]
+resource_refs = [
+    "world/party/black-ledger/members/zor-gar.md",
+]
+inferred_content = [
+    "The fight occurring close enough to the entrance for bystanders to remain at/near the doorway while observing",
+]
+
+[[plot_threads]]
+thread = "Bazgar vs Zor’gar honor dispute"
+status = "complicated"
+
+[[plot_threads]]
+thread = "The Black Ledger’s internal hierarchy (handler controlling Zor’gar)"
+status = "introduced"

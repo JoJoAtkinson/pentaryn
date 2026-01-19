@@ -1,0 +1,124 @@
+start_seconds = 15596.658
+location = "Wayward Compass (back room/basement holding area)"
+goal = "Hide and secure the captured assassin while arranging an interrogation and contacting authorities"
+npcs_present = [
+    "Thorgrim Ledger-Scar",
+    "assassin (prisoner)",
+]
+time_of_day = "unknown"
+emotional_tone = "tense"
+conflict_type = "social"
+notes = """The party carts the injured assassin to the Wayward Compass, gets Thorgrim's help with a back room,
+and prepares to interrogate before summoning the authorities."""
+scene_id = "S-019"
+end_seconds = 15724.049
+summary = """The party returned to the Wayward Compass with their captured assassin and requested a private space
+to hold the prisoner until authorities could be contacted. Thorgrim agreed and directed them to use
+a back area. After moving the prisoner, the group avoided immediately summoning officials to buy
+time, while Sabriel spoke with a priestly traveler named Brightford and learned how to find the
+Temporals' local temples by following lantern symbols around town."""
+outcome = """The assassin was placed in a back holding area, and the scene shifted to gathering information and
+stalling before contacting authorities."""
+
+[[requested_resources]]
+keyword = "Wayward Compass"
+requested_path = "world/factions/ardenhaven/locations/ardenford/shops/wayward-compass.md"
+
+[[requested_resources]]
+keyword = "Thorgrim Ledger-Scar"
+requested_path = "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md"
+
+[[requested_resources]]
+keyword = "poison vials (exact poison that was used against you)"
+requested_path = "items/README.md"
+
+[confidence]
+factual_accuracy = 0.78
+completeness = 0.62
+speculation_level = "medium"
+
+[location_intelligence]
+name = "Wayward Compass (back room/basement holding area)"
+known_details = [
+    "The party brought the captured assassin back to the Wayward Compass and asked Thorgrim for a spare room/space to hold someone until authorities arrive. (transcript ~259:56-260:33)",
+    "Thorgrim indicated a space in back could be used. (transcript ~260:28-260:40)",
+    "The Wayward Compass is a discreet courier service in Ardenford with a busy back room and runners coming and going. (world/factions/ardenhaven/locations/ardenford/shops/wayward-compass.md)",
+]
+inferred_details = [
+    "The prisoner was secured out of public view (likely downstairs/back) to avoid attention while the party delayed contacting authorities.",
+]
+confidence = 0.83
+
+[[key_events]]
+summary = "Thorgrim provides a holding space"
+details = "At the Wayward Compass, the party asked Thorgrim Ledger-Scar for a spare room/space to hold a captive until the authorities arrived; he agreed and indicated they could use a back area. (transcript ~260:11-260:40)"
+
+[[key_events]]
+summary = "Prisoner moved to the basement/back area"
+details = "The party took the captured assassin into the basement/back holding area rather than keeping them in the main bar. (transcript ~261:32-261:33)"
+
+[[key_events]]
+summary = "Decision to delay contacting authorities"
+details = "The party discussed not fetching the authorities immediately because they wanted time first. (transcript ~261:44-261:51)"
+
+[[key_events]]
+summary = "Sabriel learns how to locate the Temporals"
+details = "Sabriel approached Brightford (a priestly figure marked by a lantern symbol) and was told to follow lanterns in town to eventually reach one of the Temporals' temples, where someone could explain local beliefs and customs. (transcript ~260:14-262:13)"
+
+[character_beats]
+Sabriel = "Approached Brightford and asked about local faiths, learning how to find the Temporals' temples via\nlantern symbols. (transcript ~260:14-262:13)"
+Marwen = "Helped get the captive back to the Wayward Compass; was noted as bloodstained when approaching\nThorgrim. (transcript ~260:28-260:40)"
+Bazgar = "Present at the Wayward Compass with the group; no distinct in-scene action clearly attributed in the\ntranscript beyond the party regrouping. (transcript ~262:04-262:25)"
+
+[[npcs]]
+name = "Thorgrim Ledger-Scar"
+role = "Owner/keeper of the Wayward Compass"
+interaction = "Granted the party use of a back/basement space to hold their captive and implicitly covered for them when asked about being seen. (transcript ~260:11-261:10)"
+
+[[npcs]]
+name = "Assassin (prisoner)"
+role = "Captured suspect"
+interaction = "Transported back to the Wayward Compass and placed in a basement/back holding area. (transcript ~259:56-261:33)"
+
+[[npcs]]
+name = "Brightford"
+role = "Priestly traveler associated with the Temporals (lantern symbol)"
+interaction = "Spoke with Sabriel about faith; explained that lantern signs in town can lead to the Temporals' temples and that their temples are modest but open. (transcript ~260:14-262:13)"
+
+[[loot]]
+item = "1 gp"
+context = "A party member paid Thorgrim a gold piece after he said they were never seen. (transcript ~261:03-261:10)"
+
+[[information]]
+summary = "How to find the Temporals' temples in Ardenford"
+details = "Brightford said to look for lanterns in town and follow them to eventually reach one of the Temporals' temples; the temples are not big or lavish, and whoever is there can explain beliefs and customs. (transcript ~261:27-262:13)"
+
+[atmosphere]
+mood = "tense"
+lighting = "unknown"
+sounds = "unknown"
+
+[grounding]
+transcript_timestamps = [
+    15568.0,
+    15733.0,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/ardenford/shops/wayward-compass.md",
+    "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+]
+inferred_content = [
+    "The prisoner was secured out of public view specifically to avoid attention while the party delayed contacting authorities.",
+]
+
+[[plot_threads]]
+thread = "Interrogate/hand over the captured assassin"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Contacting authorities in Ardenford"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Finding the Temporals' temple(s) via lantern symbols"
+status = "introduced"

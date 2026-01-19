@@ -1,0 +1,140 @@
+start_seconds = 14889.987
+location = "Gray District (Mr. Finch's home, post-fight)"
+goal = "Prevent Mr. Finch from killing the captured assassin and decide how to interrogate/turn him in as evidence to clear the party's names"
+npcs_present = [
+    "Mr. Finch",
+    "assassin (captured, unconscious)",
+]
+time_of_day = "unknown"
+emotional_tone = "urgent"
+conflict_type = "social"
+notes = """The party stabilizes the downed assassin and physically/magically stops Mr. Finch from executing
+him, then decides to move the prisoner for questioning."""
+scene_id = "S-018"
+end_seconds = 15596.658
+summary = """After the fight, the party discovers their travel pack was heat-damaged (a book got very hot) and
+turns to questioning the captured assassin. Mr. Finch attempts to execute the unconscious prisoner
+with a sword, forcing the party to physically intervene and magically compel him to stop. Finch
+breaks down crying, and the party debates how to extract information and use the assassin as
+evidence to clear their names, concluding they should move the prisoner to the Wayward Compass and
+involve authorities while keeping control of the interrogation."""
+outcome = """The party prevents Finch from killing the assassin, confiscates the assassin’s weapons and poison,
+and transports the unconscious prisoner under a tarp in Finch’s cart toward the Wayward Compass to
+hold him while summoning authorities."""
+
+[[requested_resources]]
+keyword = "Mr. Finch"
+requested_path = "characters/npcs"
+
+[[requested_resources]]
+keyword = "Gray District / Grey District"
+requested_path = "world/factions/ardenhaven/locations/ardenford/gray-district.md"
+
+[confidence]
+factual_accuracy = 0.84
+completeness = 0.68
+speculation_level = "low"
+
+[location_intelligence]
+name = "Gray District (Mr. Finch's home, post-fight)"
+known_details = [
+    "The scene takes place at Finch's home immediately after capturing an assassin; Finch is present with a sword and the assassin is unconscious.",
+    "The Gray District is a quiet, orderly enclave of Calderon Imperium refugees inside Ardenford, shaped by fear of Imperium reprisals.",
+    "The district has no formal leadership and residents avoid attention and politics.",
+]
+inferred_details = [
+    "Finch's home is within the Gray District and close enough to move a prisoner across town using a small cart.",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Party notices heat damage in their pack"
+details = "While regrouping, the party finds damage in their travel pack: a book appears to have gotten extremely hot, prompting talk of making gear fireproof."
+
+[[key_events]]
+summary = "Finch tries to execute the captive; party stops him"
+details = "Finch approaches the unconscious assassin with a sword intending to kill him. A party member grapples/interferes to prevent a clean killing blow; Finch still lands a sloppy strike that injures the assassin but doesn’t finish him. Another party member uses Command to force Finch to stop, after which Finch collapses into tears."
+
+[[key_events]]
+summary = "Ethics and feasibility of interrogation discussed"
+details = "The party considers turning the assassin over to local authorities but realizes serious information likely can’t be obtained without coercive magical means, raising an ethical dilemma; Sabriel refuses to participate in unethical interrogation."
+
+[[key_events]]
+summary = "Plan to move prisoner and notify authorities"
+details = "They decide to keep the assassin as their prisoner temporarily, move him to the Wayward Compass, stand guard, and send word for authorities to meet them there so the assassin can serve as evidence to clear the party’s names."
+
+[[key_events]]
+summary = "Evidence collected from the assassin"
+details = "They remove the assassin’s weapons and find two vials of the same poison previously used against the party, debating whether to keep it or turn it over as evidence."
+
+[[key_events]]
+summary = "Transport arranged using Finch’s cart"
+details = "The party uses Finch’s cart (covered with a tarp) to move the unconscious assassin across town, aiming to keep the prisoner out of public view."
+
+[character_beats]
+Bazgar = "Spots Finch about to kill the prisoner and moves to intervene; pushes for practical control of the\nsituation."
+Sabriel = "Draws a firm ethical line against coercive interrogation and focuses on healing/stabilizing and\nlawful handling."
+Marwen = "Uses threatening magic display to try to intimidate Finch into standing down, but it fails due to\nFinch’s emotional state."
+
+[[npcs]]
+name = "Mr. Finch"
+role = "Host/victim seeking vengeance"
+interaction = "Attempts to execute the unconscious assassin; is physically restrained/checked and then magically compelled to stop; breaks down crying."
+
+[[npcs]]
+name = "Captured assassin"
+role = "Unconscious prisoner and key evidence"
+interaction = "Injured by Finch’s attempted execution; stripped of weapons and found carrying poison; transported as a captive for later questioning/turn-in."
+
+[[loot]]
+item = "Two vials of poison"
+context = "Found on the assassin; identified as the same poison used against the party."
+
+[[loot]]
+item = "Rapier"
+context = "Confiscated from the assassin as evidence/for safety."
+
+[[loot]]
+item = "Dagger"
+context = "Confiscated from the assassin as evidence/for safety."
+
+[[loot]]
+item = "Crossbow"
+context = "Confiscated from the assassin as evidence/for safety."
+
+[[information]]
+summary = "Authorities likely can’t extract serious intel"
+details = "From the party’s assessment, local authorities are unlikely to have the means or willingness to interrogate the assassin effectively; meaningful information would require magical coercion, creating an ethical dilemma."
+
+[[information]]
+summary = "Prisoner is key to clearing the party’s names"
+details = "The party explicitly treats the captured assassin as their “ticket” to proving innocence, so they prioritize keeping him alive and controllable until authorities can be involved."
+
+[atmosphere]
+mood = "urgent and tense"
+lighting = "unknown"
+sounds = "Finch crying after being forced to stop"
+
+[grounding]
+transcript_timestamps = [
+    247.41,
+    260.17,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/ardenford/gray-district.md",
+]
+inferred_content = [
+    "Finch's home being close enough to the Wayward Compass for a quick cart transfer is inferred from the decision to wheel the prisoner across town without additional travel complications described.",
+]
+
+[[plot_threads]]
+thread = "Clear the party’s names using the captured assassin as evidence"
+status = "advanced"
+
+[[plot_threads]]
+thread = "How to interrogate the assassin (ethical vs effective methods)"
+status = "complicated"
+
+[[plot_threads]]
+thread = "Calderon Imperium activity in Ardenford/Gray District"
+status = "introduced"

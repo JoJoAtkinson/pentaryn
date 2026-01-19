@@ -1,0 +1,141 @@
+start_seconds = 4683.549
+location = "Loan shark's room (The Shades, second floor)"
+goal = "Intervene in the loan shark confrontation and prevent excessive violence / secure loan cancellation"
+npcs_present = [
+    "Zorgar (orc, other adventuring party)",
+    "short human handler/boss (name unknown)",
+    "other adventurers (dwarf + 2 humans, one caster/warlock)",
+    "loan shark victim (name unknown)",
+]
+time_of_day = "morning"
+emotional_tone = "alarming"
+conflict_type = "combat"
+notes = """The confrontation escalates into a brief fight with the rival party; the warlock is dropped, the
+rogue calls Zorgar off, and the rival party withdraws, leaving the loan shark badly injured."""
+scene_id = "S-009"
+end_seconds = 8168.475
+summary = """The party kicked into the loan shark’s upstairs room and found Zor'gar and several adventurers
+brutalizing a lone, unguarded loan shark who was already begging to cancel the debt. The Black
+Ledger tried to stop the beating; negotiations failed and a fight broke out. Bazgar engaged Zor'gar
+near a window while a hidden crossbowman repeatedly shot Bazgar in the legs, and Marwen and Sabriel
+traded spells with the group’s robed caster. Sabriel’s Guiding Bolt and Marwen’s Witch Bolt dropped
+the caster, and Sabriel leveraged that to force the opposing party to call off Zor'gar and withdraw.
+After they left, the party stabilized the loan shark to prevent him from dying from his injuries."""
+outcome = """The opposing adventuring party disengaged and left after being pressured to stop, and the loan shark
+was stabilized so he wouldn’t bleed out."""
+
+[[requested_resources]]
+keyword = "Zorgar"
+requested_path = "world/party/black-ledger/members/zor-gar.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.74
+speculation_level = "low"
+
+[location_intelligence]
+name = "Loan shark's room (The Shades, second floor)"
+known_details = [
+    "Second-story room with a front door and multiple windows; a couch sits along one wall (map described at the table)",
+    "Zor'gar and his party are inside with a badly beaten loan shark who is pleading to cancel the loan",
+]
+inferred_details = [
+    "The room is part of a rougher establishment (The Shades) where violence can occur without immediate guards intervening",
+]
+confidence = 0.83
+
+[[key_events]]
+summary = "Door breach reveals ongoing torture"
+details = "The party burst into the room and saw Zor'gar holding and choking a bloodied loan shark who was crying that he would cancel the loan, while other adventurers watched or looted without intervening."
+
+[[key_events]]
+summary = "Combat starts; Bazgar tries to control Zor'gar by the window"
+details = "Bazgar attacked Zor'gar and attempted to use forced movement toward a window; Zor'gar dropped the loan shark during the scuffle and fought Bazgar with punches rather than drawing a weapon."
+
+[[key_events]]
+summary = "Hidden crossbow pressure on Bazgar"
+details = "A small, nonchalant adventurer repeatedly used a hand crossbow from the sidelines, landing painful shots into Bazgar’s calves while otherwise acting uninvolved."
+
+[[key_events]]
+summary = "Caster duel swings the fight"
+details = "Sabriel hit the robed caster with Guiding Bolt, and Marwen’s Witch Bolt damage finished the caster, dropping him to the ground."
+
+[[key_events]]
+summary = "De-escalation via hostage-style leverage"
+details = "Sabriel warned the crossbowman that their caster was dying and offered to save him if they ended the fight; the crossbowman ordered Zor'gar to stop and administered a potion to the downed caster before the group withdrew."
+
+[[key_events]]
+summary = "Aftermath: loan shark stabilized"
+details = "With the attackers gone, the party ensured the loan shark would not die from his injuries by stabilizing him."
+
+[character_beats]
+Sabriel = "Tried to compel Zor'gar to stop, then pivoted to healing and a decisive Guiding Bolt before\nnegotiating the ceasefire."
+Marwen = "Prepared for violence with protective magic, then committed to a caster duel that dropped the enemy\nspellcaster."
+Bazgar = "Charged into melee despite being outnumbered, focused on controlling Zor'gar’s position near a\nwindow, and endured repeated crossbow shots."
+
+[[npcs]]
+name = "Zor'gar"
+role = "Orc enforcer/adventurer (The Black Ledger, other party member)"
+interaction = "Was confronted while choking the loan shark; fought Bazgar with fists and stopped when ordered by his handler."
+
+[[npcs]]
+name = "Short human handler/boss (name unknown; later implied to have a feminine-sounding name)"
+role = "Leader/handler of the opposing adventurers"
+interaction = "Tried to smooth-talk the party into leaving and framed the beating as a paid job; did not directly fight in the exchange shown."
+
+[[npcs]]
+name = "Rogue/crossbowman (name unknown)"
+role = "Sneaky ranged attacker in the opposing party"
+interaction = "Shot Bazgar with a hand crossbow while acting detached; later accepted Sabriel’s leverage and called Zor'gar off."
+
+[[npcs]]
+name = "Robed caster/warlock (name unknown)"
+role = "Opposing spellcaster"
+interaction = "Fired Eldritch Blast and cast Suggestion; was dropped by Guiding Bolt + Witch Bolt and then revived with a potion by an ally."
+
+[[npcs]]
+name = "Loan shark victim (name unknown)"
+role = "Debt-holder being assaulted"
+interaction = "Pleaded to cancel the loan; was dropped during the fight and later stabilized by the party."
+
+[[npcs]]
+name = "Dwarf and armored human on couch (names unknown)"
+role = "Opposing party members who stayed uninvolved"
+interaction = "Watched without joining the fight and only got up as the group withdrew."
+
+[[information]]
+summary = "The loan shark had no guards"
+details = "When the party assessed the room, it was confirmed the loan shark was alone aside from the attacking adventurers—no guards or bodies present."
+
+[[information]]
+summary = "Opposing party behavior suggests internal rules/reputation concerns"
+details = "Two members remained uninvolved on the couch, and the group ultimately disengaged rather than escalate once their caster went down and a ceasefire was offered."
+
+[atmosphere]
+mood = "alarming, tense"
+lighting = "daylight through multiple windows"
+sounds = "cries for mercy, impacts from blows, spellcasting bursts"
+
+[grounding]
+transcript_timestamps = [
+    4670.0,
+    5760.0,
+]
+resource_refs = [
+    "world/party/black-ledger/members/zor-gar.md",
+]
+inferred_content = [
+    "That The Shades is a rough establishment where violence can occur without immediate intervention (implied by context, not explicitly stated).",
+]
+
+[[plot_threads]]
+thread = "Stopping the loan shark beating / preventing a killing"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Rival adventuring party conflict (Zor'gar’s group vs the PCs)"
+status = "complicated"
+
+[[plot_threads]]
+thread = "Loan cancellation outcome"
+status = "complicated"

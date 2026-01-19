@@ -1,0 +1,115 @@
+start_seconds = 12802.236
+location = "Ardenford streets (en route in the city)"
+goal = "Avoid being spotted by Ersal/Ersilio and her escort while continuing the murder investigation plan"
+npcs_present = [
+    "Ersal / Ersilio (companion cleric; elf)",
+    "dwarven guards (escort)",
+]
+time_of_day = "unknown"
+emotional_tone = "tense"
+conflict_type = "exploration"
+notes = """While moving through town, the party spots Ersal/Ersilio with guards causing a commotion and quickly
+ducks into side alleys to avoid being seen."""
+scene_id = "S-016"
+end_seconds = 13237.148
+summary = """While moving through Ardenford, the party unexpectedly spots their companion cleric Ersal/Ersilio in
+conspicuous robes with a four-dwarf escort. Fearing recognition and possible confinement for the elf
+PC, the group quickly diverts into side alleys to avoid being seen. After slipping past, they
+refocus on their murder-investigation plan: stake out the next intended victim’s home, with some
+party members approaching to warn the target while others provide hidden perimeter security."""
+outcome = """The party successfully avoids Ersal/Ersilio’s escort by ducking into side alleys and commits to a
+stakeout plan for the next target, Billy Billingson (also referred to as Mr. Finch)."""
+
+[[requested_resources]]
+keyword = "Ersal / Ersilio (companion cleric)"
+requested_path = "characters/npcs"
+
+[[requested_resources]]
+keyword = "Ardenford"
+requested_path = "world/factions/ardenhaven/locations/ardenford/ardenford.md"
+
+[confidence]
+factual_accuracy = 0.78
+completeness = 0.62
+speculation_level = "low"
+
+[location_intelligence]
+name = "Ardenford streets (en route in the city)"
+known_details = [
+    "The party is walking along a main street/aisle in Ardenford when they spot Ersal/Ersilio in the street with four dwarven guards, causing a traffic jam-like slowdown.",
+    "Ardenford is a sprawling capital with chaotic, non-grid streets across multiple tiers.",
+]
+inferred_details = [
+    "This occurs in a busier thoroughfare where an elf in fine robes and an escort would be highly visible.",
+]
+confidence = 0.84
+
+[[key_events]]
+summary = "Ersal/Ersilio appears in public with an escort"
+details = "The party sees Ersal/Ersilio looking lost in the street, dressed in fine robes and accompanied by four dwarven guards, drawing attention and slowing foot traffic."
+
+[[key_events]]
+summary = "Party evades being spotted"
+details = "To avoid recognition, the group hides and peels off into side alleys; the DM indicates no roll is needed because the escorted elf stands out dramatically."
+
+[[key_events]]
+summary = "Murder investigation plan is reaffirmed"
+details = "The party decides to move quickly: identify the next victim and stake out their residence to catch whoever attacks, debating whether to warn the target directly and how to position watchers."
+
+[[key_events]]
+summary = "Contact with the next target begins"
+details = "Two party members approach the next target—named Billy Billingson and addressed as Mr. Finch—to warn him he may be in danger; he immediately worries whether he is in trouble with the law."
+
+[character_beats]
+Sabriel = "Plans to help with the stakeout and supports approaching the target while coordinating coverage."
+Marwyn = "Takes point on speaking to the next target and framing the warning as help."
+Bazgar = "Acts as physical cover during the evasive maneuver and is assigned to perimeter/backup where\nblending in is hard."
+
+[[npcs]]
+name = "Ersal / Ersilio"
+role = "Companion cleric (elf) traveling with an escort"
+interaction = "Spotted unexpectedly; the party avoids contact by slipping into side alleys."
+
+[[npcs]]
+name = "Dwarven guards"
+role = "Escort soldiers accompanying Ersal/Ersilio"
+interaction = "No direct interaction; their presence raises the perceived risk of the party being detained."
+
+[[npcs]]
+name = "Billy Billingson (\"Mr. Finch\")"
+role = "Identified next potential victim in the murder case"
+interaction = "Approached by party members and warned he may be in danger; he expresses concern about legal trouble."
+
+[[information]]
+summary = "Ersal/Ersilio is already in Ardenford with an escort"
+details = "The party learns their companion cleric has arrived in the city and is moving publicly with four dwarven guards, making avoidance urgent."
+
+[[information]]
+summary = "The next stakeout target is identified"
+details = "The party names the next person to protect as Billy Billingson, also addressed as Mr. Finch, and plans to stake out his home to catch the attacker."
+
+[atmosphere]
+mood = "tense"
+lighting = "unknown"
+sounds = "street bustle implied by the described slowdown/traffic jam"
+
+[grounding]
+transcript_timestamps = [
+    212.55,
+    221.06,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/ardenford/ardenford.md",
+]
+inferred_content = [
+    "That the scene is on a busy thoroughfare (inferred from the described attention/slowdown).",
+    "That the elf PC fears confinement specifically due to prior disobedience (stated generally, but exact legal context is not detailed).",
+]
+
+[[plot_threads]]
+thread = "Avoid Ersal/Ersilio and escort while operating in Ardenford"
+status = "complicated"
+
+[[plot_threads]]
+thread = "Murder investigation via protective stakeout of the next target"
+status = "advanced"

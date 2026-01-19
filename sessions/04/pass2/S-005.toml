@@ -1,0 +1,141 @@
+start_seconds = 2143.246
+location = "Calderwick's flower shop (Grey District, Ardenford)"
+goal = "Confront Calderwick about the writ and complete the nonlethal 'beat-up' job"
+npcs_present = [
+    "Calderwick (flower vendor)",
+]
+time_of_day = "morning"
+emotional_tone = "tense"
+conflict_type = "combat"
+notes = """Calderwick panics and flees out the back; Bazgar chases and grapples him, then the party calms him
+down and negotiates a staged beating so they can collect the reward without him fleeing town."""
+scene_id = "S-005"
+end_seconds = 3380.851
+summary = """The party entered Calderwick’s flower shop to confront him about a writ, but Calderwick panicked and
+fled out the back. Bazgar chased, caught, and grappled him; Marwen attempted to calm him with a
+flower signifying peaceful intentions and later succeeded after the group brought him back inside.
+Calderwick insisted the writ meant the Imperium was after him, but he claimed to be only a flower
+seller and seemed genuinely confused. The party negotiated a cut of the payout in exchange for
+letting them complete the nonlethal beating, then struck him just enough to count as “beat up,” took
+a bouquet as proof, and left to collect payment from the barkeep named in the writ."""
+outcome = """Calderwick was nonlethally roughed up, the party took a bouquet as proof, and they headed to the
+tavern/barkeep to collect the promised payment (transcript ~52:09-56:36)."""
+
+[[requested_resources]]
+keyword = "Calderwick"
+requested_path = "characters/npcs"
+
+[[requested_resources]]
+keyword = "Grey District"
+requested_path = "world/factions/ardenhaven/locations/ardenford/gray-district.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.74
+speculation_level = "low"
+
+[location_intelligence]
+name = "Calderwick's flower shop (Grey District, Ardenford)"
+known_details = [
+    "The shop is entered directly by opening the door (no knocking) (transcript ~35:34-35:43).",
+    "Calderwick wears crisp, neat gray clothing reminiscent of a uniform (transcript ~35:43-36:12).",
+    "The shop has a back door leading to a slightly elevated exterior with steps/ledge (transcript ~37:33-38:06).",
+    "The Grey District is notably orderly and quiet compared to the rest of Ardenford (world/factions/ardenhaven/locations/ardenford/gray-district.md).",
+]
+inferred_details = [
+    "The shop likely has a small upstairs living/storage area, since Calderwick runs upstairs to pack (transcript ~47:31-48:10).",
+]
+confidence = 0.9
+
+[[key_events]]
+summary = "Calderwick bolts on sight; chase begins"
+details = "When the party entered, Calderwick reacted with shock, threw scissors, and ran for the back door, prompting initiative and a pursuit (transcript ~35:43-37:33)."
+
+[[key_events]]
+summary = "Bazgar catches and restrains Calderwick"
+details = "Bazgar vaulted the interior barrier/banister area to close distance and grappled Calderwick outside near the back exit, preventing escape (transcript ~38:24-39:37)."
+
+[[key_events]]
+summary = "Marwen closes the shop and de-escalates"
+details = "Marwen flipped the sign to “closed,” checked that no one was watching, urged bringing Calderwick inside, then used a louder voice and a flower gesture to finally calm him enough to end the fight (transcript ~42:40-44:47)."
+
+[[key_events]]
+summary = "Writ discussion: Imperium fear and confusion"
+details = "Calderwick identified the writ as “Imperium” and assumed it meant death or imprisonment, while the party pointed out it specified nonlethal instructions; Calderwick claimed he was a nobody who only sold flowers and did not know why he was targeted (transcript ~47:24-51:53)."
+
+[[key_events]]
+summary = "Negotiation and completion of the nonlethal job"
+details = "The party proposed simply fulfilling the writ’s nonlethal “beat-up” requirement; Calderwick demanded a share, and after tense back-and-forth the party hit him enough to leave visible but non-permanent injuries (transcript ~52:09-55:22)."
+
+[[key_events]]
+summary = "Proof taken; party leaves to get paid"
+details = "Calderwick allowed them to take flowers as proof as long as they didn’t ruin his arrangements; the party left to return to the barkeep named in the writ to receive the gold (transcript ~55:51-56:36)."
+
+[character_beats]
+Bazgar = "Immediately pursued and physically restrained Calderwick, prioritizing control over lethal harm\n(transcript ~36:54-45:19)."
+Marwen = "Tried nonviolent de-escalation (flower symbolism, closing the shop, controlling attention) and\nsuccessfully ended the fight (transcript ~41:18-44:47)."
+Sabriel = "Used thaumaturgy to amplify her voice during the attempt to calm Calderwick (transcript\n~44:11-44:29)."
+
+[[npcs]]
+name = "Calderwick"
+role = "Flower vendor in the Grey District"
+interaction = "Fled in panic, was grappled and brought back inside, then negotiated and endured a nonlethal beating; provided flowers as proof (transcript ~35:43-56:03)."
+
+[[npcs]]
+name = "Thorgrim"
+role = "Barkeep holding payment for the writ"
+interaction = "Handed over a heavy bag of gold as payment upon proof of completion (bouquet) (transcript ~56:20-56:41)."
+
+[[loot]]
+item = "Bouquet of flowers (proof of completion)"
+context = "Taken from Calderwick’s shop as proof for the barkeep/payment (transcript ~55:51-56:24)."
+
+[[loot]]
+item = "Bag of gold (writ payment)"
+context = "Given by Thorgrim after the party returned with proof (transcript ~56:31-56:41)."
+
+[[information]]
+summary = "Calderwick identifies the writ as connected to the Imperium"
+details = "Calderwick recognized the writ as “Imperium” and believed it implied lethal consequences despite the nonlethal wording; he began packing to flee (transcript ~47:24-48:10)."
+
+[[information]]
+summary = "Calderwick claims he doesn’t know why he’s targeted"
+details = "He stated he only sells flowers, wasn’t important in the Imperium, and seemed genuinely confused when questioned (transcript ~47:02-49:00)."
+
+[[information]]
+summary = "The writ implies multiple hirers"
+details = "The party noticed the writ used “we” (e.g., payment left with the barkeep), suggesting a group commissioned the job rather than a single person (transcript ~49:16-49:35)."
+
+[[information]]
+summary = "Grey District context: residents are former Imperium"
+details = "Calderwick stated that in the Grey District “we’re all Imperial,” aligning with the district’s refugee/expat identity and its orderly character (transcript ~46:10-46:19; gray-district.md)."
+
+[atmosphere]
+mood = "tense, escalating into controlled intimidation"
+lighting = "morning"
+sounds = "brief scuffle and struggle during the chase and grapple; otherwise quiet enough that no bystanders noticed"
+
+[grounding]
+transcript_timestamps = [
+    2120.0,
+    3401.0,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/ardenford/gray-district.md",
+]
+inferred_content = [
+    "The shop has an upstairs living/storage area (inferred from Calderwick running upstairs to pack).",
+    "No bystanders noticed implies the immediate area was not crowded at that moment (based on DM stating no one noticed).",
+]
+
+[[plot_threads]]
+thread = "Who commissioned the writ against Calderwick (group implied by 'we')"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Imperium fear and the Grey District’s relationship to it"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Nonlethal enforcement jobs via writs and payment through a barkeep"
+status = "introduced"

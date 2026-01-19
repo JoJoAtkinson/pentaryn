@@ -1,0 +1,114 @@
+start_seconds = 3380.851
+location = "The Wayward Compass (Middle Tier, Ardenford) — bar with Thorgrim"
+goal = "Collect payment for the Calderwick writ and decide next steps"
+npcs_present = [
+    "Thorgrim Ledger-Scar",
+]
+time_of_day = "morning"
+emotional_tone = "casual"
+conflict_type = "social"
+notes = """Party returns to Thorgrim to receive the bag of gold; they learn the writ likely came through a
+'fixer' (bounty office intermediary) and choose to pursue the Anvil & Oar job next; they arrange to
+send 90 gp to Calderwick via messenger."""
+scene_id = "S-006"
+end_seconds = 3630.339
+summary = """The party returns to The Wayward Compass in the morning, hands Thorgrim a bouquet, and completes the
+Calderwick writ. Thorgrim pays them a bag of gold (120 gp). When asked who posted the writ and
+whether it was tied to the Imperium, Thorgrim explains the posting came through a third-party
+“fixer”/bounty office and offers to identify his fixer, who would know the original client. The
+party decides not to pursue the fixer lead immediately, sends 90 gp to the flower shop as an
+apology, and chooses to head to Brannock/Anvil and Ore next."""
+outcome = """With payment collected and a possible fixer lead noted, the party leaves to follow up on the Anvil
+and Ore/Brannock matter (58:06-59:33)."""
+
+[[requested_resources]]
+keyword = "Thorgrim Ledger-Scar"
+requested_path = "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md"
+
+[[requested_resources]]
+keyword = "fixer (bounty office intermediary)"
+requested_path = "world/factions/ardenhaven/quests"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "The Wayward Compass (Middle Tier, Ardenford)"
+known_details = [
+    "The party returns to Thorgrim at the bar to turn in the completed writ and receive payment (56:15-56:41).",
+    "Thorgrim Ledger-Scar is the owner/keeper of The Wayward Compass (world/factions/ardenhaven/npc/thorgrim-ledger-scar.md).",
+]
+inferred_details = [
+    "This exchange happens at Thorgrim's bar counter inside the tavern.",
+]
+confidence = 0.88
+
+[[key_events]]
+summary = "Turn-in and payment at The Wayward Compass"
+details = "The party returns to Thorgrim, gives him a bouquet, and receives a hefty bag of gold for completing the Calderwick writ (56:20-56:41; 58:33-58:41)."
+
+[[key_events]]
+summary = "Inquiry about the writ’s origin"
+details = "Asked whether the writ was personal or anti-Imperium, Thorgrim explains postings are often handled by intermediaries; a “fixer”/bounty office distributes writs and would know the original source (56:41-57:49)."
+
+[[key_events]]
+summary = "Party chooses next steps and makes amends"
+details = "The party debates following the fixer lead versus helping with the Anvil and Ore situation, opts to go help there first, and arranges for a messenger to send 90 gp to the flower shop as an apology (57:49-59:04)."
+
+[character_beats]
+Sabriel = "Supports practical cleanup by agreeing to send an apology payment to the flower shop (58:47-59:04)."
+Marwen = "Shows interest in whether the writ connects to Imperial activity and presses for context\n(56:41-57:58)."
+Bazgar = "Stays focused on urgent follow-up, voting to go to Brannock/Anvil and Ore (59:17-59:33)."
+
+[[npcs]]
+name = "Thorgrim Ledger-Scar"
+role = "Tavern owner and writ/payment contact"
+interaction = "Receives the party’s turn-in (and bouquet), pays out 120 gp, and explains the writ was posted via a fixer/bounty office rather than directly by the original client (56:20-58:41)."
+
+[[loot]]
+item = "120 gp (bag of gold)"
+context = "Payment from Thorgrim for completion of the Calderwick writ (58:33-58:41)."
+
+[[information]]
+summary = "Writ postings are routed through a fixer/bounty office"
+details = "Thorgrim says writs can be posted by third parties; a fixer/bounty office circulates postings to bars, and Thorgrim can name his fixer, who would know who commissioned the original bounty (56:54-57:49)."
+
+[[information]]
+summary = "Thorgrim does not judge how the job was handled"
+details = "When the party notes they left the target alive and mostly unharmed, Thorgrim responds that he doesn’t judge clients/customers (58:11-58:26)."
+
+[atmosphere]
+mood = "casual"
+lighting = "not stated"
+sounds = "not stated"
+
+[grounding]
+transcript_timestamps = [
+    3375.0,
+    3595.0,
+]
+resource_refs = [
+    "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+]
+inferred_content = [
+    "That the exchange occurs at the bar counter inside the tavern (implied by 'bar' and returning to Thorgrim).",
+    "Attributing specific lines to specific PCs is inferred from context because all speakers are labeled UNKNOWN.",
+]
+
+[[plot_threads]]
+thread = "Calderwick writ payment"
+status = "resolved"
+
+[[plot_threads]]
+thread = "Who commissioned the writ / possible Imperium connection"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Fixer/bounty office lead"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Anvil and Ore / Brannock follow-up"
+status = "advanced"

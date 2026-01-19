@@ -1,0 +1,111 @@
+start_seconds = 1110.861
+location = "The Wayward Compass (Middle Tier, Ardenford) — at a table after selecting a writ"
+goal = "Decide which writ(s) to pursue and plan route"
+time_of_day = "morning"
+emotional_tone = "casual"
+conflict_type = "none"
+notes = """Party selects the Calderwick 'beat-up' writ (120 gp per hand) and debates etiquette of removing
+writs; they decide to pursue Calderwick first, then check on Branik/Brannick at the Anvil & Oar."""
+scene_id = "S-003"
+end_seconds = 1764.415
+summary = """At their table in the Wayward Compass, the party compared available writs and debated the ethics and
+logistics of a non-lethal “beat up Calderwick” contract (120 gp per hand). They also considered
+helping Branik Ironweld at The Anvil & Oar and briefly noted a missing-library-book concern, but
+ultimately prioritized the Calderwick job, deciding to pull that writ from the board and head to
+Calderwick’s address in the Gray District."""
+outcome = """The party committed to pursuing the Calderwick writ first and set off toward the Gray District
+location."""
+
+[[requested_resources]]
+keyword = "Calderwick (beat-up writ, 120 gp per hand)"
+requested_path = "world/factions/ardenhaven/quests"
+
+[[requested_resources]]
+keyword = "The Anvil & Oar"
+requested_path = "world/factions/ardenhaven/locations/ardenford/shops/the-anvil-and-oar.md"
+
+[[requested_resources]]
+keyword = "Grey District"
+requested_path = "world/factions/ardenhaven/locations/ardenford/gray-district.md"
+
+[confidence]
+factual_accuracy = 0.78
+completeness = 0.62
+speculation_level = "medium"
+
+[location_intelligence]
+name = "The Wayward Compass (Middle Tier, Ardenford) — at a table after selecting a writ"
+known_details = [
+    "The party discussed whether it is customary to remove a writ from the board and decided the Calderwick beat-up job seemed like one that should be pulled to reduce duplicate takers.",
+    "They identified Calderwick as being in the Gray District (Middle Tier).",
+    "They identified The Anvil & Oar as being outside the Middle Tier/trading district area rather than right by the Gray District.",
+    "The Gray District is a quiet, orderly enclave of Calderon refugees within Ardenford (resource).",
+]
+inferred_details = [
+    "They are seated at their usual table in the Wayward Compass while comparing writ options and planning a route before heading out.",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Writ selection and ethics debate"
+details = "The group weighed the high-paying, non-lethal Calderwick beat-up writ against lower-paying help for Branik at The Anvil & Oar, questioning why Calderwick needed to be beaten and agreeing they could ask him once found."
+
+[[key_events]]
+summary = "Decision on removing writs from the board"
+details = "They clarified that not all postings should be removed, but agreed the Calderwick job seemed like a one-and-done contract where pulling the note would reduce the chance multiple crews take it."
+
+[[key_events]]
+summary = "Route planning: Gray District first"
+details = "They confirmed Calderwick is in the Gray District (Middle Tier) and that The Anvil & Oar is elsewhere (trading district/outskirts), then chose to go to Calderwick’s listed address first."
+
+[character_beats]
+Sabriel = "Chose the high-paying Calderwick writ despite moral uncertainty, emphasizing the non-lethal terms."
+Marwen = "Voiced discomfort about beating someone up without knowing the circumstances but agreed to follow\nBazgar’s lead."
+Bazgar = "Pushed for taking the Calderwick job first and framed it as acceptable given the non-lethal\ninstructions."
+
+[[loot]]
+item = "Calderwick writ (physical note)"
+context = "The party took/pulled the Calderwick posting to pursue it first."
+
+[[information]]
+summary = "Calderwick’s location"
+details = "Calderwick is located in the Gray District, which is in Ardenford’s Middle Tier."
+
+[[information]]
+summary = "The Anvil & Oar location and proprietor"
+details = "The Anvil & Oar is Branik Ironweld’s weaponsmith shop; it is not right by the Gray District and is described in resources as being in Ardenford’s Lower Tier near the harbor lanes."
+
+[[information]]
+summary = "Writ-board etiquette"
+details = "Not all writs are meant to be removed; some postings can be left up for multiple takers, but one-off jobs may reasonably be pulled to prevent duplicates."
+
+[atmosphere]
+mood = "casual, pragmatic"
+lighting = "morning"
+sounds = "not specified in transcript"
+
+[grounding]
+transcript_timestamps = [
+    1088.0,
+    1780.0,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/ardenford/shops/the-anvil-and-oar.md",
+    "world/factions/ardenhaven/locations/ardenford/gray-district.md",
+]
+inferred_content = [
+    "That the discussion occurred while seated at their usual table in the Wayward Compass (scene context implies this; transcript references returning to a customary table but does not name the inn in the captured segment).",
+    "That they physically departed immediately after deciding (the transcript transitions into travel description, but the exact moment of leaving is not cleanly bounded due to transcript discontinuity).",
+]
+
+[[plot_threads]]
+thread = "Beat up Calderwick (non-lethal) for 120 gp per hand"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Branik Ironweld needs help at The Anvil & Oar"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Missing book from the library"
+status = "introduced"

@@ -1,0 +1,153 @@
+start_seconds = 3630.339
+location = "The Anvil & Oar smithy (Ardenford, likely Lower Tier/harbor outskirts)"
+goal = "Investigate Branik/Brannick's writ about his daughter's loan shark and reduce the predatory interest"
+npcs_present = [
+    "Branik Ironweld (or Brannick; smith)",
+    "Branik/Brannick's daughter (name unresolved)",
+    "loan shark (name unresolved; initially 'Vessa Kane' then corrected)",
+    "Zorgar (mentioned as prior party on the job)",
+    "short human handler/boss (mentioned)",
+]
+time_of_day = "morning"
+emotional_tone = "concerned"
+conflict_type = "social"
+notes = """The smith explains his daughter took a 420 gp loan now near 1000 due to extreme interest; he wants
+intimidation/negotiation (not murder) and notes another adventuring party (including Zorgar) already
+went but hasn't returned; he provides directions to a dense shady area."""
+scene_id = "S-007"
+end_seconds = 4433.657
+summary = """The party visits Branik Ironweld at The Anvil & Oar about his posted writ: his daughter took a 420
+gp loan and is now being charged predatory interest, pushing the debt toward 1,000 gp. Branik asks
+the party to make the interest “reasonable” (not forgive the loan and not kill the lender) and
+provides directions to the lender’s location in a dense, shady part of the Lower Tier. Branik also
+mentions a previous adventuring group went to handle it and hasn’t returned."""
+outcome = """The party heads to the loan shark’s building in the maze-like, shady district and hears screams from
+inside as they arrive."""
+
+[[requested_resources]]
+keyword = "The Anvil & Oar / Branik Ironweld"
+requested_path = "world/factions/ardenhaven/locations/ardenford/shops/the-anvil-and-oar.md"
+
+[[requested_resources]]
+keyword = "loan shark (name unresolved; 'Vessa Kane' corrected)"
+requested_path = "characters/npcs"
+
+[confidence]
+factual_accuracy = 0.82
+completeness = 0.68
+speculation_level = "low"
+
+[location_intelligence]
+name = "The Anvil & Oar smithy (Ardenford)"
+known_details = [
+    "Branik/Brannick is a smith advertising arms and initially assumes the party might be there to repair/replace an axe (transcript ~60:30-60:57).",
+    "Shop is in Ardenford’s Lower Tier near the harbor lanes (resource: world/factions/ardenhaven/locations/ardenford/shops/the-anvil-and-oar.md).",
+    "Proprietor is Branik Ironweld (resource: world/factions/ardenhaven/locations/ardenford/shops/the-anvil-and-oar.md).",
+]
+inferred_details = [
+    "The conversation happens inside the smithy’s public-facing work area/counter space.",
+]
+confidence = 0.86
+
+[[key_events]]
+summary = "Branik explains the debt problem and what he wants changed."
+details = "Branik says his daughter agreed to a loan, but the lender’s terms are unethical—described as extreme interest (framed as effectively adding huge amounts daily). He wants the interest reduced to something reasonable; intimidation is acceptable, but he does not want the lender killed or the loan erased (transcript ~61:06-63:34)."
+
+[[key_events]]
+summary = "Loan amount and current debt are established."
+details = "Branik states the original loan was 420 gp and that the amount owed has climbed to nearly 1,000 gp (transcript ~64:00-64:06)."
+
+[[key_events]]
+summary = "Branik confirms multiple writ postings and a prior party."
+details = "He acknowledges posting multiple notices and says another group took the job earlier but hasn’t come back yet; he can describe them but doesn’t know their names (transcript ~64:37-65:27, ~72:03-73:15)."
+
+[[key_events]]
+summary = "Directions to the lender’s area are given."
+details = "Branik provides a small map and describes the destination as a dense, hard-to-navigate area where shady businesses thrive because it’s easy to get lost and disappear from authorities (transcript ~65:29-66:19)."
+
+[[key_events]]
+summary = "Loan shark name is uncertain; daughter name is resolved via resources."
+details = "A name (“Vessa Kane”) is initially given for the loan shark, then immediately retracted as incorrect; the lender’s true name remains unknown in-scene. The daughter’s name is also debated at the table, but the campaign resource lists her as Helen Ironweld (transcript ~66:19-67:06; resource: world/factions/ardenhaven/locations/ardenford/shops/the-anvil-and-oar.md)."
+
+[[key_events]]
+summary = "Arrival at the lender’s building."
+details = "The party navigates the messy, shady district (getting lost despite instructions) and, upon approaching the building, hears screams coming from inside (transcript ~73:51-74:20)."
+
+[character_beats]
+Sabriel = "Pushes toward direct confrontation/violence as a response to predatory interest (transcript\n~64:08-64:11)."
+Marwen = "Frames the situation as a contract trap designed to fleece someone indefinitely (transcript\n~64:30-64:37)."
+Bazgar = "Reacts with blunt physical-threat humor toward high interest rates (transcript ~63:13-63:31)."
+
+[[npcs]]
+name = "Branik Ironweld"
+role = "Weaponsmith; quest-giver"
+interaction = "Explains his daughter’s loan situation, asks the party to reduce the interest ethically, provides directions/map, and describes a missing prior adventuring group (transcript ~60:30-66:19, ~72:03-73:15; resource: world/factions/ardenhaven/locations/ardenford/shops/the-anvil-and-oar.md)."
+
+[[npcs]]
+name = "Helen Ironweld"
+role = "Branik’s daughter; debtor"
+interaction = "Discussed as the person who took the loan; not directly present in the scene (transcript ~61:22-62:30; resource: world/factions/ardenhaven/locations/ardenford/shops/the-anvil-and-oar.md)."
+
+[[npcs]]
+name = "Unknown loan shark"
+role = "Predatory lender"
+interaction = "Named incorrectly as “Vessa Kane” then corrected as not that; location is provided but the party has not met them yet (transcript ~66:19-67:06)."
+
+[[npcs]]
+name = "Zorgar (mentioned)"
+role = "Member of prior adventuring party"
+interaction = "Referenced as part of the earlier group that went to handle the job; not present (transcript ~72:03-73:15)."
+
+[[npcs]]
+name = "Short human handler/boss (mentioned)"
+role = "Member of prior adventuring party"
+interaction = "Described as a short human associated with a big orc; not present (transcript ~72:03-72:20)."
+
+[[information]]
+summary = "Branik’s requested resolution parameters."
+details = "Branik wants the interest reduced to a reasonable level; intimidation is acceptable, but he explicitly does not want the lender killed or the loan forgiven (transcript ~62:30-62:44)."
+
+[[information]]
+summary = "Debt figures."
+details = "Original loan: 420 gp; current amount owed: nearly 1,000 gp (transcript ~64:00-64:06)."
+
+[[information]]
+summary = "Destination is a hard-to-police district."
+details = "Branik describes the lender’s area as dense and easy to get lost in, enabling shady businesses to evade authorities; he provides a map/directions (transcript ~65:29-66:19)."
+
+[[information]]
+summary = "Prior adventuring party may be involved or in trouble."
+details = "Branik says another group took the job earlier and hasn’t returned; he can only describe them (including a short human, a big orc, plus others) and mentions a dwarf and caster-type among them (transcript ~64:50-65:27, ~72:03-73:15)."
+
+[[information]]
+summary = "Loan shark name is not confirmed."
+details = "The name “Vessa Kane” is stated, then immediately retracted as incorrect; the lender’s actual name remains unknown (transcript ~66:19-67:06)."
+
+[atmosphere]
+mood = "concerned, tense"
+lighting = "morning"
+sounds = "screams heard from inside the destination building"
+
+[grounding]
+transcript_timestamps = [
+    3608,
+    4460,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/ardenford/shops/the-anvil-and-oar.md",
+]
+inferred_content = [
+    "Conversation likely occurred at the smithy’s counter/work area (not explicitly described).",
+]
+
+[[plot_threads]]
+thread = "Reduce predatory interest on Helen Ironweld’s loan"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Identify and confront the loan shark in the Lower Tier"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Missing prior adventuring party (including Zorgar)"
+status = "introduced"

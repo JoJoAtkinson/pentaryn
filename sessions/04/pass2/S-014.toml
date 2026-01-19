@@ -1,0 +1,128 @@
+start_seconds = 11145.164
+location = "Lord Mayor Ranwald's office/keep (central Ardenford)"
+goal = "Clear their names by explaining the writ arrangement and secure time to investigate the real killer"
+npcs_present = [
+    "Lord Mayor Ranwald",
+    "two investigators/guards (unnamed)",
+]
+time_of_day = "night"
+emotional_tone = "tense"
+conflict_type = "social"
+notes = """The party is brought before Lord Mayor Ranwald, presents the printed writ, and is released on the
+condition they investigate the Gray District disappearances and prove whether the Imperium is
+involved."""
+scene_id = "S-014"
+end_seconds = 11964.187
+summary = """Escorted into Lord Mayor Ranwald’s fortified office-keep at night, the party is accused of murdering
+Kaldrick after admitting they beat him up. They present a writ authorizing the beating and explain
+the payment split and messenger witness. Ranwald notes the writ is unusually printed and says the
+party looks guilty but lacks a clear motive; he suggests that proving an Imperium connection to Gray
+District disappearances would clear them. He releases them to investigate, warning he will prosecute
+if they fail to produce the real culprit."""
+outcome = """Ranwald returns the writ and lets the party go, contingent on them finding evidence of the true
+killer (ideally tied to the Imperium)."""
+
+[[requested_resources]]
+keyword = "Lord Mayor Ranwald"
+requested_path = "characters/npcs"
+
+[[requested_resources]]
+keyword = "Gray District disappearances"
+requested_path = "world/factions/ardenhaven/locations/ardenford/gray-district.md"
+
+[[requested_resources]]
+keyword = "Calderon Imperium (Imperium)"
+requested_path = "world/factions/calderon-imperium/_overview.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Lord Mayor Ranwald's office/keep (central Ardenford)"
+known_details = [
+    "Ranwald’s office is inside a fortified keep where his home and office are effectively the same space (nighttime meeting)",
+    "The keep is brick, square, and utilitarian rather than elegant; it’s arranged to project power (statues of armored figures, staged halls)",
+    "Guards/investigators escort the party through soldier-ready entry areas and up to a grand hall with Ranwald at a desk handling paperwork",
+]
+inferred_details = [
+    "The party is being treated as suspects under guard supervision (kept at distance; writ is carried to the mayor rather than handed directly)",
+]
+confidence = 0.87
+
+[[key_events]]
+summary = "Party brought before Ranwald as murder suspects"
+details = "Two guards/investigators escort the party through Ranwald’s keep and present them as responsible for beating Kaldrick and likely murdering him; Ranwald demands they answer for themselves."
+
+[[key_events]]
+summary = "Writ produced and arrangement explained"
+details = "The party admits to the beating but denies murder, stating it was an agreed arrangement and that they paid Kaldrick his cut via a messenger; they show the writ, which a guard delivers to Ranwald for inspection."
+
+[[key_events]]
+summary = "Ranwald frames conditional exoneration around Imperium involvement"
+details = "Ranwald acknowledges the writ makes the beating plausible and says motive for murder is unclear, but notes disappearances in the Gray District; he says proving the Imperium is behind it would remove doubt and clear the party."
+
+[[key_events]]
+summary = "Released with a threat and investigative leads"
+details = "Ranwald returns the writ and frees the party, instructing them to report culprits and warning he will 'find' them if they don’t; the party leaves discussing leads like the middleman/fixer and the writ’s unusual printing."
+
+[character_beats]
+Sabriel = "Supports the group’s push to investigate and secure an agreement to find the truth behind the\nkilling."
+Marwen = "Helps present the writ and emphasizes compliance and the existence of a messenger witness."
+Bazgar = "Openly admits to the beating while denying murder, reinforcing the party’s account of the\narrangement."
+
+[[npcs]]
+name = "Lord Mayor Ranwald"
+role = "City council leader/magistrate handling the investigation"
+interaction = "Questions the party, reviews the writ, offers conditional leniency if they can prove an Imperium link, then releases them with a warning."
+
+[[npcs]]
+name = "Unnamed investigators/guards (2)"
+role = "Escort and security"
+interaction = "Bring the party in, prevent them from approaching Ranwald directly, and handle the writ transfer."
+
+[[information]]
+summary = "Gray District has a history of disappearances"
+details = "Ranwald states there has been a history of people disappearing in the Gray District, though he claims he has no evidence the Calderon Imperium is responsible."
+
+[[information]]
+summary = "Printed writ is unusual"
+details = "Ranwald (and later the party) note the writ is 'nicely printed' and stands out as the only printed-by-press writ compared to typical handwritten notices, implying a rarer origin."
+
+[[information]]
+summary = "Ranwald’s conditional deal"
+details = "Ranwald says proving the Imperium is behind the killing/disappearances would convince him the party is innocent; otherwise he will prosecute when they stop being useful to the investigation."
+
+[atmosphere]
+mood = "tense"
+lighting = "night (interior lighting not specified)"
+sounds = "quiet administrative setting implied by paperwork and guard presence (no specific sounds stated)"
+
+[grounding]
+transcript_timestamps = [
+    185.45,
+    193.36,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/ardenford/gray-district.md",
+]
+inferred_content = [
+    "The party is treated as suspects under controlled movement because a guard stops them from approaching and carries the writ to Ranwald.",
+]
+
+[[plot_threads]]
+thread = "Clear the party’s name in Kaldrick’s murder"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Gray District disappearances and possible Calderon Imperium involvement"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Origin of the unusually printed writ (printing press lead)"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Identify the middleman/fixer connected to the writ posting"
+status = "introduced"
