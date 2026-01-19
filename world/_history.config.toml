@@ -1,6 +1,6 @@
 present_year = 4327
 present_month = 10
-present_day = 21
+present_day = 27
 
 # SVG output naming for publishing.
 # - `svg_access = "public"`  → uses `svg_public_template`

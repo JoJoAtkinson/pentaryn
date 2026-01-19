@@ -1,0 +1,137 @@
+start_seconds = 10170.478
+location = "Wayward Compass (tavern/inn in Ardenford)"
+goal = "Review the new writ/notice about Calderwick being murdered; identify the messenger witness and decide next steps"
+npcs_present = [
+    "Thorgrim Ledger-Scar",
+    "Barnaby (messenger; named here)",
+    "Calderwick (victim; mentioned)",
+]
+time_of_day = "evening"
+emotional_tone = "tense"
+conflict_type = "social"
+notes = """Back at the Wayward Compass, the party realizes a new posting claims Calderwick was murdered,
+discusses Barnaby as a witness, and Marwen shares an Identify vision about an orb/tower tied to the
+blank book."""
+scene_id = "S-012"
+end_seconds = 10805.723
+summary = """At the Wayward Compass, the party reviews a new notice stating Calderwick was murdered and worries
+they could be blamed because they were involved with the job. They identify the messenger witness as
+Barnaby and decide to secure him quickly, getting his address from Thorgrim. Before leaving, Marwen
+glimpses a large reddish stone in Thorgrim’s study and probes him about it; Thorgrim denies what it
+is and refuses to share sourcing information."""
+outcome = """The party leaves the Wayward Compass with Barnaby’s address, intending to reach him before
+authorities or other threats do."""
+
+[[requested_resources]]
+keyword = "Wayward Compass / Thorgrim Ledger-Scar"
+requested_path = "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md"
+
+[[requested_resources]]
+keyword = "Black Ledger (party name)"
+requested_path = "world/party/black-ledger/_overview.md"
+
+[[requested_resources]]
+keyword = "Gray District"
+requested_path = "world/factions/ardenhaven/locations/ardenford/gray-district.md"
+
+[[requested_resources]]
+keyword = "uncatalogued holy book / Identify vision (tower + orb)"
+requested_path = "items/magic-items/uncatalogued-holy-book.md"
+
+[confidence]
+factual_accuracy = 0.82
+completeness = 0.68
+speculation_level = "low"
+
+[location_intelligence]
+name = "Wayward Compass"
+known_details = [
+    "The party is at the Wayward Compass and discusses a new writ/notice about Calderwick being murdered.",
+    "Thorgrim has a private study/room off the common area; its door is left slightly open and then shut.",
+    "Thorgrim is the owner/keeper of the Wayward Compass.",
+]
+inferred_details = [
+    "The notice is likely posted/available in the tavern where bounties and writs are handled.",
+]
+confidence = 0.86
+
+[[key_events]]
+summary = "Party reacts to Calderwick murder notice"
+details = "They note the notice says Calderwick was killed yesterday morning and discuss that they were present around that time and did not do it, but fear suspicion due to their connection to the job and Thorgrim’s payment."
+
+[[key_events]]
+summary = "Messenger witness identified as Barnaby"
+details = "They establish the messenger’s name as Barnaby and treat him as a potential witness to their innocence."
+
+[[key_events]]
+summary = "Thorgrim provides Barnaby’s address"
+details = "Thorgrim writes down where Barnaby can be found; the party considers bringing Barnaby back to the Wayward Compass for protection."
+
+[[key_events]]
+summary = "Marwen spots a hidden item in Thorgrim’s study"
+details = "With the study door slightly open, Marwen sees a large reddish stone on Thorgrim’s desk; when questioned, Thorgrim closes the door and denies it is rhodonite, and Marwen reads that he is lying and withholding information about obtaining it."
+
+[character_beats]
+Marwen = "Pushes Thorgrim about the reddish stone in his study and clocks that he is lying/withholding."
+Sabriel = "Focuses on the practical risk of being blamed and the need to secure a witness."
+Bazgar = "Treats Barnaby as a key witness and supports moving quickly to protect/secure him."
+Ardenwick = "Joins the group’s concern about legal trouble and prioritizes next steps to avoid blame."
+Thornholt = "Aligns with the group’s plan to locate the messenger witness and avoid escalating conflict with\nThorgrim."
+Barkar-dun = "Stays pragmatic about not antagonizing Thorgrim, given the party’s reliance on the Wayward Compass."
+
+[[npcs]]
+name = "Thorgrim Ledger-Scar"
+role = "Tavern keeper / party contact"
+interaction = "Provides Barnaby’s address; shuts down questions about the reddish stone in his study and denies it is rhodonite."
+
+[[npcs]]
+name = "Barnaby"
+role = "Messenger witness (not present on-screen)"
+interaction = "Discussed as a witness who saw Calderwick alive; party plans to contact and possibly shelter him."
+
+[[npcs]]
+name = "Calderwick"
+role = "Murder victim (mentioned)"
+interaction = "Referenced via the new notice/writ stating he was murdered."
+
+[[information]]
+summary = "Calderwick was reportedly murdered yesterday morning"
+details = "The new notice/writ states the murder occurred yesterday morning, which alarms the party because of their recent involvement around that timeframe."
+
+[[information]]
+summary = "Messenger witness is named Barnaby; address obtained"
+details = "Thorgrim identifies the messenger as Barnaby and provides a written address so the party can find him."
+
+[[information]]
+summary = "Thorgrim is hiding knowledge about a reddish stone (rhodonite suspected)"
+details = "Marwen sees a large reddish stone in Thorgrim’s study; Thorgrim denies it is rhodonite and implies he will not help source it, while Marwen reads that he actually knows more."
+
+[atmosphere]
+mood = "tense"
+lighting = "evening"
+sounds = "quiet, low-voiced discussion in the tavern"
+
+[grounding]
+transcript_timestamps = [
+    169.01,
+    180.31,
+]
+resource_refs = [
+    "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+]
+inferred_content = [
+    "That the notice is physically posted/handled within the Wayward Compass rather than elsewhere in town.",
+    "That all listed party members were present in the scene (the transcript does not clearly attribute every line to a specific PC).",
+]
+
+[[plot_threads]]
+thread = "Calderwick murder fallout / clearing suspicion"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Barnaby the messenger as witness (and potential target)"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Thorgrim’s hidden dealings (rhodonite/red stone in study)"
+status = "introduced"

@@ -1,0 +1,113 @@
+start_seconds = 10805.723
+location = "Barnaby's house / street nearby in Ardenford"
+goal = "Contact Barnaby and learn what happened to Calderwick; avoid being blamed for the murder"
+npcs_present = [
+    "Barnaby",
+    "two investigators/guards (unnamed)",
+    "Calderwick (mentioned)",
+]
+time_of_day = "evening"
+emotional_tone = "tense"
+conflict_type = "social"
+notes = """Approaching Barnaby, the party finds two investigators already questioning him; after a failed
+attempt to convince them, the party is placed under arrest and agrees to go in for questioning."""
+scene_id = "S-013"
+end_seconds = 11145.164
+summary = """In the evening near Barnaby’s house, the party spots Barnaby speaking with two investigators. The
+investigators approach, and the party tries to explain they were sending gold to Calderwick and had
+a writ indicating someone wanted Calderwick beaten up, not killed. The investigators remain
+suspicious, declare the party under arrest, and the party chooses to go with them for questioning."""
+outcome = "The party is taken into custody and escorted to the Lord Mayor’s office/home for questioning."
+
+[[requested_resources]]
+keyword = "Barnaby (messenger)"
+requested_path = "characters/npcs"
+
+[[requested_resources]]
+keyword = "Calderwick (murder victim / writ target)"
+requested_path = "quests/active"
+
+[confidence]
+factual_accuracy = 0.8
+completeness = 0.6
+speculation_level = "low"
+
+[location_intelligence]
+name = "Barnaby's house / street nearby in Ardenford"
+known_details = [
+    "The party approaches Barnaby and sees two official-looking investigators/guards speaking with him outside his house.",
+    "After noticing the party, the two investigators/guards end their talk with Barnaby and approach the party.",
+]
+inferred_details = [
+    "Barnaby was being questioned as part of the investigation into Calderwick's death.",
+]
+confidence = 0.8
+
+[[key_events]]
+summary = "Party approaches Barnaby during an active investigation"
+details = "The party arrives near Barnaby’s house and sees him talking with two official investigators/guards; the party decides to approach rather than wait."
+
+[[key_events]]
+summary = "Party presents their explanation and writ"
+details = "When confronted, the party states a messenger was meant to deliver gold to Calderwick and shows a writ indicating the job was to beat Calderwick up, not kill him."
+
+[[key_events]]
+summary = "Investigators arrest the party"
+details = "The investigators interpret the party as suspicious and place them under arrest; after a brief decision point, the party complies and goes with them."
+
+[[key_events]]
+summary = "Escort to the Lord Mayor’s office"
+details = "The investigators take the party to the Lord Mayor’s office, described as a fortified home/keep near the city center."
+
+[character_beats]
+Sabriel = "Pushes for cooperating with the investigators and going in for questioning."
+Bazgar = "Initially bristles at the confrontation but backs down and complies."
+Marwen = "Defers to the others’ lead and goes along with the arrest."
+
+[[npcs]]
+name = "Barnaby"
+role = "Local contact/witness being questioned"
+interaction = "Seen speaking with investigators; no direct conversation with the party occurs before the investigators intervene."
+
+[[npcs]]
+name = "Two investigators/guards (unnamed)"
+role = "Law enforcement investigators"
+interaction = "Question the party, reject their explanation as suspicious, arrest them, and escort them to the Lord Mayor."
+
+[[loot]]
+item = "Writ/paper about a job to beat up Calderwick"
+context = "Shown to the investigators as part of the party’s attempt to explain their involvement."
+
+[[information]]
+summary = "Calderwick is confirmed dead by the investigators"
+details = "The investigators state Calderwick was murdered, prompting the party to argue the writ specified beating him up rather than killing him."
+
+[[information]]
+summary = "The party was connected to a gold delivery to Calderwick"
+details = "The party claims a messenger was supposed to deliver gold to Calderwick, which they cite as inconsistent with murdering him."
+
+[atmosphere]
+mood = "tense"
+lighting = "evening"
+sounds = "street-side conversation interrupted by an official confrontation"
+
+[grounding]
+transcript_timestamps = [
+    180.05,
+    186.11,
+]
+inferred_content = [
+    "That Barnaby’s questioning was specifically about Calderwick’s murder (implied by investigators’ presence and topic, but not explicitly stated as Barnaby’s statement).",
+]
+
+[[plot_threads]]
+thread = "Calderwick’s murder investigation"
+status = "complicated"
+
+[[plot_threads]]
+thread = "Clear the party’s name / avoid blame"
+status = "complicated"
+
+[[plot_threads]]
+thread = "Contact Barnaby to learn what happened"
+status = "complicated"

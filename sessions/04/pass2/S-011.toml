@@ -1,0 +1,148 @@
+start_seconds = 8470.529
+location = "Leafscript Cabinet (Upper Tier shop in Ardenford)"
+goal = "Shop for a replacement staff and jewelry/spell components; ask about the strange metal-covered blank book"
+npcs_present = [
+    "Leafscript Cabinet dwarf shopkeeper (husband; name not given)",
+    "Leafscript Cabinet dwarf shopkeeper's wife (name not given)",
+]
+time_of_day = "afternoon"
+emotional_tone = "casual"
+conflict_type = "social"
+notes = """The party visits the Leafscript Cabinet, trades elven robes/ink pen for an ancient nonmagical
+walking stick staff, buys earrings and a 100gp pearl component, and learns the shopkeeper can't
+identify the metal-covered blank book without text."""
+scene_id = "S-011"
+end_seconds = 10170.478
+summary = """In the afternoon, the party shopped at the Leafscript Cabinet. Sabriel replaced their staff by
+trading away valuable elven personal items to the dwarf shopkeeper, who was fixated on elven
+craftsmanship. Sabriel also showed the shopkeeper the strange metal-covered blank book, but he did
+not recognize it as elven and suggested returning if its original text could be revealed. Meanwhile,
+Marwen browsed jewelry, purchasing a pearl suitable as a spell component and a pair of earrings,
+then arranged for Sabriel to pierce her ears later."""
+outcome = """The party finished purchases and left the Leafscript Cabinet, planning to regroup later and continue
+their day’s errands."""
+
+[[requested_resources]]
+keyword = "Leafscript Cabinet"
+requested_path = "world/factions/ardenhaven/locations/ardenford/shops/leafscript-cabinet.md"
+
+[[requested_resources]]
+keyword = "Varshel's walking stick (spelled variously: Varshel/Vesithael)"
+requested_path = "items/magic-items/vesithael-walking-stick.md"
+
+[[requested_resources]]
+keyword = "uncatalogued holy book (blank pages, metal cover)"
+requested_path = "items/magic-items/uncatalogued-holy-book.md"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Leafscript Cabinet (Upper Tier shop in Ardenford)"
+known_details = [
+    "Tidy, high-end shop with multiple elves and humans present, plus two dwarf proprietors (one male, one female).",
+    "The male dwarf proprietor is enthusiastic about elven craft and talks at length about an ancient staff; the female dwarf handles the interaction more practically.",
+    "Shop carries elven staves and other expensive items; some items are priced in the thousands of gold.",
+    "The shop is named Leafscript Cabinet and is run by Khorin Bar’dur and Thessa Kraghammar.",
+]
+inferred_details = [
+    "The staff rack is arranged to keep the rarest/oldest pieces physically out of easy reach as a security measure.",
+]
+confidence = 0.87
+
+[[key_events]]
+summary = "Sabriel finds an ancient elven staff and negotiates a trade"
+details = "Sabriel examined the staff selection and focused on an especially old staff kept high and out of reach. The male dwarf proprietor enthusiastically described its provenance and tried to buy Sabriel’s elven robes; Sabriel negotiated an even trade by offering the robes and a hand-carved ink pen in exchange for the staff."
+
+[[key_events]]
+summary = "The shopkeeper cannot identify the metal-covered blank book"
+details = "Sabriel presented the strange blank book with a metal cover. The shopkeeper did not recognize it as elven, noting that metal book covers and blank pages without elven script did not fit his expectations, and advised bringing it back if the original writing could be made to appear."
+
+[[key_events]]
+summary = "Marwen buys jewelry and a pearl spell component"
+details = "While Sabriel negotiated, Marwen shopped for jewelry, buying a pearl worth about 100 gp for spellcasting needs and selecting a pair of earrings."
+
+[[key_events]]
+summary = "Marwen barters with a carved flute to offset costs"
+details = "Marwen offered a hand-carved elven-style flute to the shopkeeper, who valued it modestly; the barter reduced the effective cost of her purchases."
+
+[[key_events]]
+summary = "Marwen asks Sabriel to pierce her ears"
+details = "After choosing earrings, Marwen asked Sabriel to pierce her ears as previously discussed, and Sabriel agreed to do it that evening."
+
+[character_beats]
+Sabriel = "Leverages elven heritage items to secure a rare staff and probes the shopkeeper for insight on the\nmysterious blank book."
+Marwen = "Focuses on practical spell components and personal adornment, using barter to manage costs."
+Bazgar = "Present but not central to the shop negotiations; largely observes during the shopping."
+
+[[npcs]]
+name = "Khorin Bar’dur"
+role = "Leafscript Cabinet co-owner; elven-craft enthusiast"
+interaction = "Explained the ancient staff’s background, attempted to purchase Sabriel’s elven robes, accepted a trade for the staff, and dismissed the metal-covered blank book as non-elven (or untraceable)."
+
+[[npcs]]
+name = "Thessa Kraghammar"
+role = "Leafscript Cabinet co-owner; practical business partner"
+interaction = "Directed Sabriel to speak with her husband about the staff and subtly kept the transaction grounded while he fixated on elven details."
+
+[[loot]]
+item = "Vesithael's Walking Stick (referred to in play as “Varshel’s walking stick”)"
+context = "Acquired by Sabriel via trade (robes + carved ink pen) as a replacement staff."
+
+[[loot]]
+item = "Pearl (100 gp spell component)"
+context = "Purchased by Marwen for upcoming spellcasting needs."
+
+[[loot]]
+item = "Pair of earrings"
+context = "Purchased by Marwen as non-magical jewelry."
+
+[[information]]
+summary = "Leafscript Cabinet stocks high-end elven artifacts"
+details = "The shop carries items ranging up to thousands of gold and is positioned as a place to return for stronger magical equipment later."
+
+[[information]]
+summary = "The blank book does not read as elven craft to the shopkeeper"
+details = "Khorin found the metal cover and lack of visible script inconsistent with elven bookmaking and could not trace it to elven origin; he suggested returning if the book’s original words could be revealed."
+
+[[information]]
+summary = "The acquired staff is extremely old despite being treated as non-magical in the moment"
+details = "The staff was described as very old (from the Reclamation Age) and in pristine condition; Sabriel recognized the maker’s significance more than the shopkeeper did."
+
+[atmosphere]
+mood = "calm, conversational"
+lighting = "not specified"
+sounds = "shop conversation; a printing-press ink smell is mentioned later in the transcript but not part of this shop scene"
+
+[grounding]
+transcript_timestamps = [
+    8444,
+    9720,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/ardenford/shops/leafscript-cabinet.md",
+    "items/magic-items/vesithael-walking-stick.md",
+    "items/magic-items/uncatalogued-holy-book.md",
+]
+inferred_content = [
+    "The staff rack’s top placement functioning as a deliberate security measure (implied by being out of reach and described as such).",
+    "Bazgar’s limited participation in negotiations (he is present in the broader shopping sequence but not shown driving actions in the shop segment).",
+]
+
+[[plot_threads]]
+thread = "Replacement staff for Sabriel"
+status = "resolved"
+
+[[plot_threads]]
+thread = "Mystery of the metal-covered blank holy book (starburst seal)"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Marwen’s preparation for spellcasting (pearl component)"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Marwen ear piercing arrangement with Sabriel"
+status = "introduced"

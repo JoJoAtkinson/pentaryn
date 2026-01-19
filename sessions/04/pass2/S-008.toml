@@ -1,0 +1,108 @@
+start_seconds = 4433.657
+location = "The Shades (shady dense district in Ardenford) — approaching loan shark's building"
+goal = "Reach the loan shark and stop/resolve the situation (find missing adventuring party, negotiate interest)"
+npcs_present = [
+    "Zorgar (present inside, other party)",
+    "short human handler/boss (present inside, name unknown)",
+    "other adventurers (dwarf + 2 humans, one caster)",
+    "loan shark victim (name unknown)",
+]
+time_of_day = "morning"
+emotional_tone = "tense"
+conflict_type = "exploration"
+notes = """Party navigates the maze-like, trash-smelling district newly named 'The Shades' and hears screams
+from a second-floor building reached by old steps and a weak bridge."""
+scene_id = "S-008"
+end_seconds = 4683.549
+summary = """The party navigates the maze-like district known as The Shades to reach the loan shark’s building.
+After climbing unstable steps and crossing a weak bridge to a second-floor structure, they hear
+screams from inside. Bazgar kicks the door down and sees Zorgar and several other adventurers
+already inside."""
+outcome = """The scene ends immediately after the forced entry, with the other adventuring party revealed inside
+the loan shark’s building."""
+
+[[requested_resources]]
+keyword = "The Shades"
+requested_path = "world/factions/ardenhaven/locations/ardenford/shades-distract.md"
+
+[confidence]
+factual_accuracy = 0.78
+completeness = 0.62
+speculation_level = "low"
+
+[location_intelligence]
+name = "The Shades (Ardenford) — outside/approach to the loan shark’s building"
+known_details = [
+    "The district is called “The Shades.”",
+    "The area is dense and maze-like; the party gets lost even with instructions.",
+    "Buildings are built into ruins and stacked with bridges and networks connecting levels.",
+    "Alleyways are extremely narrow (sometimes single-file).",
+    "There is a general smell of trash.",
+    "The target building is on a second floor, reached by old steps and a weak bridge.",
+    "Screams are heard from inside behind a closed door.",
+]
+inferred_details = [
+    "The loan shark’s operation is located in an upper-level room/hut accessed via the bridge.",
+]
+confidence = 0.86
+
+[[key_events]]
+summary = "Travel through The Shades to the target building"
+details = "The party pushes through a disorganized, ruin-built district of narrow alleys and multi-level bridges, getting turned around despite directions, until they locate the building they were seeking."
+
+[[key_events]]
+summary = "Screams heard from within"
+details = "At the second-floor door of the loan shark’s building, the party hears screams coming from inside."
+
+[[key_events]]
+summary = "Bazgar breaches the door and spots the other party"
+details = "Bazgar kicks the door down; inside are Zorgar and multiple other adventurers (including a dwarf and humans), indicating the situation is already in progress."
+
+[character_beats]
+Bazgar = "Acts decisively by kicking in the door upon hearing screams."
+Sabriel = "No clear in-character action captured in this scene transcript segment."
+Marwen = "No clear in-character action captured in this scene transcript segment."
+
+[[npcs]]
+name = "Zorgar"
+role = "Member of another adventuring party (seen inside)"
+interaction = "The party sees him when the door is kicked in; no direct exchange is captured."
+
+[[npcs]]
+name = "Unidentified adventurers (dwarf + humans)"
+role = "Other adventuring party members inside the building"
+interaction = "Revealed visually upon entry; no direct interaction captured."
+
+[[information]]
+summary = "The district is formally named"
+details = "The DM names the shady, dense district “The Shades,” distinguishing it from other parts of town."
+
+[[information]]
+summary = "The loan shark’s building is hard to access"
+details = "It sits on an upper level reached by old steps and a weak bridge, reinforcing how vertical and obstructed the district is."
+
+[atmosphere]
+mood = "tense"
+lighting = "not stated"
+sounds = "screams coming from inside the building"
+
+[grounding]
+transcript_timestamps = [
+    4411.0,
+    4690.0,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/ardenford/shades-distract.md",
+]
+inferred_content = [
+    "That the second-floor room/hut accessed by the bridge is the loan shark’s specific operating space (implied by the party’s goal and the described approach, but not explicitly stated in the transcript).",
+    "Exact count/composition of the other party beyond what’s loosely listed (the transcript is inconsistent about numbers).",
+]
+
+[[plot_threads]]
+thread = "Confront the loan shark / resolve the debt situation"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Find the missing adventuring party"
+status = "advanced"

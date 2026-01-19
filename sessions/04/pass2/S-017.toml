@@ -1,0 +1,124 @@
+start_seconds = 13237.148
+location = "Gray District (outside and inside Mr. Finch's home)"
+goal = "Warn/protect the next target and set a stakeout to catch the murderer/assassin"
+npcs_present = [
+    "Mr. Finch (target)",
+    "assassin (unnamed rogue)",
+]
+time_of_day = "unknown"
+emotional_tone = "tense"
+conflict_type = "combat"
+notes = """Sabriel and Marwen warn Mr. Finch and are invited inside; during the stakeout they discover an
+assassin already hiding upstairs, leading to a fight and the assassin being incapacitated."""
+scene_id = "S-017"
+end_seconds = 14889.987
+summary = """Marwyn and Sabriel contacted Mr. Finch in the Gray District, warned him he was a likely target, and
+convinced him to let them protect him while they staked out his home. When Marwyn noticed a hidden
+intruder already inside the upstairs bedroom, the party coordinated positions to cut off escape
+routes. Bazgar confronted the assassin in the closet, and after a brief fight the assassin tried to
+flee through the window but was dropped and knocked unconscious by Sabriel’s radiant blast, leaving
+the party with a captured would-be killer and Mr. Finch still alive."""
+outcome = """The assassin was incapacitated outside the bedroom window area, and the party prepared to question
+him and/or turn him over to authorities while keeping Mr. Finch safe."""
+
+[[requested_resources]]
+keyword = "Gray District"
+requested_path = "world/factions/ardenhaven/locations/ardenford/gray-district.md"
+
+[[requested_resources]]
+keyword = "Mr. Finch"
+requested_path = "characters/npcs"
+
+[[requested_resources]]
+keyword = "assassin (rogue in black)"
+requested_path = "characters/npcs"
+
+[[requested_resources]]
+keyword = "printed writs targeting Gray District residents"
+requested_path = "quests"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Gray District (outside and inside Mr. Finch's home)"
+known_details = [
+    "The party approached Mr. Finch at his home in the Gray District and warned him he was in danger.",
+    "Mr. Finch let the party inside and offered them space to stay overnight (only one room upstairs).",
+    "The Gray District is notably quiet, orderly, and shaped by Calderon refugees’ fear of being noticed.",
+    "Residents of the Gray District avoid politics and keep to themselves out of lingering fear of Imperium-style reprisals.",
+]
+inferred_details = [
+    "The home had an upstairs bedroom with a closet and a window that could be used as an entry/escape route.",
+]
+confidence = 0.85
+
+[[key_events]]
+summary = "Mr. Finch warned and secured"
+details = "The party identified Mr. Finch, explained disappearances in the Gray District, showed official authority, and persuaded him to allow them to stay close and protect him rather than flee."
+
+[[key_events]]
+summary = "Assassin discovered inside the house"
+details = "As the party moved to set up for the night, Marwyn spotted a shadowy figure already hiding upstairs and quietly alerted the others instead of immediately raising alarm."
+
+[[key_events]]
+summary = "Ambush and close-quarters fight in the bedroom"
+details = "Bazgar entered via the bedroom window and forced the assassin out of hiding (from the closet), initiating combat while the others moved to support and block exits."
+
+[[key_events]]
+summary = "Assassin attempts escape; Sabriel stops him"
+details = "The assassin disengaged and tried to escape through the window, striking Marwyn in the process, but Sabriel landed a powerful radiant hit aimed to stop the getaway, dropping the assassin unconscious rather than letting him escape."
+
+[character_beats]
+Marwyn = "Kept composure after spotting the hidden intruder and coordinated the party’s response; attempted to\nphysically stop the fleeing assassin and was wounded by a poisoned strike."
+Sabriel = "Stayed focused on protecting the target and ended the escape attempt with a decisive radiant spell\nthat incapacitated the assassin."
+Bazgar = "Took point in the bedroom, dragged the assassin out of hiding, and pressured him with heavy melee\nattacks to prevent a clean escape."
+
+[[npcs]]
+name = "Mr. Finch"
+role = "Potential next target in the Gray District"
+interaction = "Was warned of danger, allowed the party into his home, and permitted them to stay overnight while they set a protective stakeout."
+
+[[npcs]]
+name = "Unnamed assassin (rogue)"
+role = "Intruder/assassin targeting Mr. Finch"
+interaction = "Was discovered hiding upstairs, fought the party, attempted to flee through the window, and was ultimately incapacitated and left in the party’s custody."
+
+[[information]]
+summary = "Mr. Finch feared political trouble and wanted to avoid attention"
+details = "Mr. Finch indicated he avoids politics and initially worried the party’s approach meant legal trouble, reinforcing the Gray District’s culture of silence and fear around disappearances."
+
+[[information]]
+summary = "The assassin was already inside before the stakeout fully began"
+details = "The party learned the threat had penetrated the home ahead of time, suggesting the killer/assassin operates with planning and stealth rather than opportunistic street attacks."
+
+[atmosphere]
+mood = "tense"
+lighting = "Interior bedroom visibility was improved by conjured flame/light during the fight."
+sounds = "Quiet stakeout broken by sudden close-quarters struggle and impacts as the assassin tried to escape through the window."
+
+[grounding]
+transcript_timestamps = [
+    13244.0,
+    14898.0,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/ardenford/gray-district.md",
+]
+inferred_content = [
+    "The upstairs room used for the confrontation is treated as the bedroom based on repeated references to 'the bedroom' and the presence of a closet and window; exact layout beyond those elements is not fully described.",
+]
+
+[[plot_threads]]
+thread = "Gray District disappearances / Imperium-linked assassination campaign"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Clearing the party’s name by catching the real culprit"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Interrogating the captured assassin for leads"
+status = "introduced"

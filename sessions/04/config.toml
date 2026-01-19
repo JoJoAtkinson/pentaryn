@@ -7,23 +7,41 @@
 # Options: "in-person" (single mic), "discord" (separate recordings), "hybrid"
 recording_source = "in-person"
 
+
 # Speaker identification notes (helps LLM understand speaker labels)
 [session.speakers]
-# Reliable identifications
-NICOLE = "Sabriel (player character)"
-KRIS = "Marwen (player character)"
-JEFF = "Bazgar (player character)"
-JOE = "Dungeon Master (DM)"
+# All speakers labeled as UNKNOWN due to poor diarization quality
+# Speaker identification must be inferred from context by LLM
 
-# Uncertain identifications
-UNKNOWN = "Could be DM, Jeff, unlikely to be Nicole or Kristine; DM often voices multiple NPCs with different characterizations"
+UNKNOWN = "Could be any of the 4 participants - see notes below for context"
 
-# Additional context
+# Additional context for LLM speaker identification
 notes = """
-- NICOLE, KRIS, JEFF are confident identifications
-- UNKNOWN is used when speaker unclear (often DM or Jeff)
-- DM voices many NPCs, so single "UNKNOWN" label may represent multiple characters
-- In-person recording makes voice separation difficult
+CRITICAL: All speakers in this transcript are labeled UNKNOWN because automatic 
+diarization was unable to reliably separate voices. The LLM must infer speaker 
+identity from conversational context.
+
+4 PARTICIPANTS:
+1. Nicole - plays Sabriel (female cleric/healer character)
+2. Kris - plays Marwen (female witch character from Elderholt)  
+3. Jeff - plays Bazgar (male dwarf barbarian character)
+4. Joe - Dungeon Master (narrates story, voices all NPCs, describes scenes)
+
+SPEAKER IDENTIFICATION CLUES:
+- Joe (DM): Narrates environmental descriptions ("You see...", "The room is..."), 
+  speaks for multiple NPCs, asks "What do you do?", describes dice results, 
+  significantly more talkative than any player
+  
+- Nicole (Sabriel): Speaks as Sabriel in first person ("I heal...", "I cast..."),
+  mentions healing/clerics/divine magic, references Alaris connection
+  
+- Kris (Marwen): Speaks as Marwen in first person, mentions witches/Elderholt,
+  discusses ward-witches vs deep-witches, references magical bargains or Elder Marith
+  
+- Jeff (Bazgar): Speaks as Bazgar in first person, mentions barbarian abilities/rage,
+  dwarf-related references, throwing axes, physical combat
+
+In-person recording with single microphone makes voice separation very difficult.
 """
 
 [context]

@@ -1,0 +1,123 @@
+start_seconds = 15724.049
+location = "Wayward Compass (common room, meeting the Black Ledger)"
+goal = "Hire the Black Ledger warlock to magically compel answers from the assassin"
+npcs_present = [
+    "Vessa (Black Ledger lead)",
+    "Maela (Black Ledger warlock)",
+    "Zor-gar (Black Ledger member, mentioned/present)",
+]
+time_of_day = "unknown"
+emotional_tone = "wary"
+conflict_type = "social"
+notes = """This chunk no longer contains the Wayward Compass/Black Ledger negotiation; it has moved fully into
+a ruins encounter."""
+scene_id = "S-020"
+end_seconds = 15902.462
+summary = """A party member approaches the Black Ledger in the Wayward Compass common room and asks to hire their
+warlock, Maela, to help interrogate a captured assassin about whether the Calderon Imperium has
+broader interests in Ardenford and why killings are happening in the Gray Quarter. Vessa initially
+moves to treat it as a contract matter, but Maela steps in directly and negotiates her own terms,
+rejecting a generic favor and instead asking for a favor involving the party’s wizard friend."""
+outcome = """Negotiations end with Maela naming her price (a favor tied to the party’s wizard friend), with no
+agreement shown finalized in the transcript segment."""
+
+[[requested_resources]]
+keyword = "Black Ledger"
+requested_path = "world/party/black-ledger/_overview.md"
+
+[[requested_resources]]
+keyword = "Vessa"
+requested_path = "world/party/black-ledger/members/vessa.md"
+
+[[requested_resources]]
+keyword = "Maela"
+requested_path = "world/party/black-ledger/members/maela.md"
+
+[[requested_resources]]
+keyword = "Zor-gar / Zurgar"
+requested_path = "world/party/black-ledger/members/zor-gar.md"
+
+[confidence]
+factual_accuracy = 0.78
+completeness = 0.62
+speculation_level = "low"
+
+[location_intelligence]
+name = "Wayward Compass (common room)"
+known_details = [
+    "The Black Ledger are in a bar/common-room space, gathered to the side and throwing daggers into wood like a target (262:04-262:14).",
+    "Vessa is identified as the lead of the Black Ledger (262:37-262:55; world/party/black-ledger/members/vessa.md).",
+]
+inferred_details = [
+    "This bar is the Wayward Compass common room referenced by the scene context.",
+]
+confidence = 0.8
+
+[[key_events]]
+summary = "Party contacts the Black Ledger at the bar"
+details = "The Black Ledger are seen relaxing together, throwing daggers at a wooden target; Vessa notices the approaching party member and checks whether Zor'gar has noticed them yet (262:04-262:50)."
+
+[[key_events]]
+summary = "Request to hire Maela for magical coercion/interrogation"
+details = "The party member asks to hire the Ledger’s warlock (identified as Maela) for help compelling answers from an assassin they have discovered/captured, specifically about the Calderon Imperium’s interests and the motive for murders in the Gray Quarter (263:25-264:46)."
+
+[[key_events]]
+summary = "Maela overrides Vessa and sets terms"
+details = "Vessa starts to move toward a contract-style response, but Maela stands, asserts she can handle herself, and engages directly; when offered payment or a favor, she refuses a generic favor and instead demands a favor involving the party’s wizard friend (264:02-265:01)."
+
+[character_beats]
+Vessa = "Treats the approach as business and moves toward formal contract handling before being cut off\n(264:02-264:19)."
+Maela = "Asserts independence from Vessa’s control and negotiates directly, rejecting a vague favor and\nnaming a specific leverage point (264:09-265:01)."
+"Zor'gar" = "Present/mentioned as someone Vessa checks for awareness of the party member’s approach\n(262:37-262:50)."
+
+[[npcs]]
+name = "Vessa Kain"
+role = "Black Ledger lead / dealmaker"
+interaction = "Acknowledges the approach and begins to frame the request as a contract matter before Maela takes over (262:37-264:09)."
+
+[[npcs]]
+name = "Maela Thorn"
+role = "Black Ledger warlock / occult services"
+interaction = "Questions why she should help, then rejects a generic favor and asks for a favor involving the party’s wizard friend (264:46-265:01)."
+
+[[npcs]]
+name = "Zor'gar"
+role = "Black Ledger member / intimidation"
+interaction = "Not directly engaged; Vessa checks whether he has noticed the approaching party member (262:37-262:50)."
+
+[[information]]
+summary = "Assassin and Gray Quarter murders tied to larger questions"
+details = "The party states they have discovered an assassin and want to learn whether the Calderon Imperium has bigger interests in the area or is targeting dissidents, and why murders are occurring in the Gray Quarter/Gray District (264:19-264:46)."
+
+[[information]]
+summary = "Maela’s demanded payment is leverage, not a vague favor"
+details = "Maela refuses an open-ended favor arrangement and instead requests a favor involving the party’s wizard friend (264:55-265:01)."
+
+[atmosphere]
+mood = "wary"
+lighting = "not stated"
+sounds = "daggers thudding into wood as the Ledger throws at a target (262:04-262:14)"
+
+[grounding]
+transcript_timestamps = [
+    262.04,
+    265.01,
+]
+resource_refs = [
+    "world/party/black-ledger/_overview.md",
+    "world/party/black-ledger/members/vessa.md",
+    "world/party/black-ledger/members/maela.md",
+    "world/party/black-ledger/members/zor-gar.md",
+]
+inferred_content = [
+    "The bar/common-room described is the Wayward Compass common room (scene context label; not spoken in transcript).",
+    "The party’s intent is to use Maela specifically for magical compulsion (scene goal; transcript only states hiring her services to get answers).",
+]
+
+[[plot_threads]]
+thread = "Compel the assassin to reveal who hired them and why (Calderon Imperium / Gray Quarter murders)"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Black Ledger leverage: Maela demands a favor tied to the party’s wizard friend"
+status = "introduced"

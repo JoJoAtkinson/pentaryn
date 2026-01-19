@@ -1,0 +1,607 @@
+{
+  "metadata": {
+    "source_transcript": "/Users/joe/GitHub/dnd/sessions/04/transcripts.jsonl",
+    "generated": "2026-01-19T18:17:40.871490",
+    "total_scenes": 20,
+    "model": "gpt-5.2"
+  },
+  "scenes": [
+    {
+      "start_seconds": 70.154,
+      "location": "The Wayward Compass (Middle Tier, Ardenford) — writ board area",
+      "goal": "Review writ board and choose a job",
+      "npcs_present": [
+        "Zorgar (orc, other adventuring party)",
+        "short human handler/boss (name unknown)",
+        "Thorgrim Ledger-Scar (barkeep, later)"
+      ],
+      "time_of_day": "morning",
+      "emotional_tone": "comedic",
+      "conflict_type": "social",
+      "notes": "Party browses the writ board; Bazgar gets shoved aside by an orc (Zorgar), escalating into a brief confrontation that is interrupted by a short human who controls/ushers Zorgar back inside.",
+      "requested_resources": [
+        {
+          "keyword": "The Wayward Compass",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/ardenford.md",
+          "override": null
+        },
+        {
+          "keyword": "Thorgrim Ledger-Scar",
+          "requested_path": "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+          "override": null
+        },
+        {
+          "keyword": "Zorgar",
+          "requested_path": "world/party/black-ledger/members/zor-gar.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-001",
+      "end_seconds": 311.897
+    },
+    {
+      "start_seconds": 311.897,
+      "location": "Outside The Wayward Compass (street just outside the inn)",
+      "goal": "Settle Bazgar vs Zorgar honor dispute",
+      "npcs_present": [
+        "Zorgar (orc, other adventuring party)",
+        "short human handler/boss (name unknown)"
+      ],
+      "time_of_day": "morning",
+      "emotional_tone": "tense",
+      "conflict_type": "combat",
+      "notes": "Zorgar attacks immediately outside; Bazgar fights back, knocks him prone, and the short human intervenes to stop the fight and bring Zorgar back inside.",
+      "requested_resources": [
+        {
+          "keyword": "Zorgar",
+          "requested_path": "world/party/black-ledger/members/zor-gar.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-002",
+      "end_seconds": 1110.861
+    },
+    {
+      "start_seconds": 1110.861,
+      "location": "The Wayward Compass (Middle Tier, Ardenford) — at a table after selecting a writ",
+      "goal": "Decide which writ(s) to pursue and plan route",
+      "npcs_present": [],
+      "time_of_day": "morning",
+      "emotional_tone": "casual",
+      "conflict_type": "none",
+      "notes": "Party selects the Calderwick 'beat-up' writ (120 gp per hand) and debates etiquette of removing writs; they decide to pursue Calderwick first, then check on Branik/Brannick at the Anvil & Oar.",
+      "requested_resources": [
+        {
+          "keyword": "Calderwick (beat-up writ, 120 gp per hand)",
+          "requested_path": "world/factions/ardenhaven/quests",
+          "override": null
+        },
+        {
+          "keyword": "The Anvil & Oar",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/shops/the-anvil-and-oar.md",
+          "override": null
+        },
+        {
+          "keyword": "Grey District",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/gray-district.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-003",
+      "end_seconds": 1764.415
+    },
+    {
+      "start_seconds": 1764.415,
+      "location": "Ardenford streets en route to the Grey District",
+      "goal": "Travel to Calderwick's location to complete the writ",
+      "npcs_present": [],
+      "time_of_day": "morning",
+      "emotional_tone": "mysterious",
+      "conflict_type": "exploration",
+      "notes": "DM describes Ardenford's maze-like layout; the party reaches the unusually orderly Grey District and locates Calderwick's flower shop.",
+      "requested_resources": [
+        {
+          "keyword": "Ardenford",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/ardenford.md",
+          "override": null
+        },
+        {
+          "keyword": "Grey District",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/gray-district.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-004",
+      "end_seconds": 2143.246
+    },
+    {
+      "start_seconds": 2143.246,
+      "location": "Calderwick's flower shop (Grey District, Ardenford)",
+      "goal": "Confront Calderwick about the writ and complete the nonlethal 'beat-up' job",
+      "npcs_present": [
+        "Calderwick (flower vendor)"
+      ],
+      "time_of_day": "morning",
+      "emotional_tone": "tense",
+      "conflict_type": "combat",
+      "notes": "Calderwick panics and flees out the back; Bazgar chases and grapples him, then the party calms him down and negotiates a staged beating so they can collect the reward without him fleeing town.",
+      "requested_resources": [
+        {
+          "keyword": "Calderwick",
+          "requested_path": "characters/npcs",
+          "override": null
+        },
+        {
+          "keyword": "Grey District",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/gray-district.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-005",
+      "end_seconds": 3380.851
+    },
+    {
+      "start_seconds": 3380.851,
+      "location": "The Wayward Compass (Middle Tier, Ardenford) — bar with Thorgrim",
+      "goal": "Collect payment for the Calderwick writ and decide next steps",
+      "npcs_present": [
+        "Thorgrim Ledger-Scar"
+      ],
+      "time_of_day": "morning",
+      "emotional_tone": "casual",
+      "conflict_type": "social",
+      "notes": "Party returns to Thorgrim to receive the bag of gold; they learn the writ likely came through a 'fixer' (bounty office intermediary) and choose to pursue the Anvil & Oar job next; they arrange to send 90 gp to Calderwick via messenger.",
+      "requested_resources": [
+        {
+          "keyword": "Thorgrim Ledger-Scar",
+          "requested_path": "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+          "override": null
+        },
+        {
+          "keyword": "fixer (bounty office intermediary)",
+          "requested_path": "world/factions/ardenhaven/quests",
+          "override": null
+        }
+      ],
+      "scene_id": "S-006",
+      "end_seconds": 3630.339
+    },
+    {
+      "start_seconds": 3630.339,
+      "location": "The Anvil & Oar smithy (Ardenford, likely Lower Tier/harbor outskirts)",
+      "goal": "Investigate Branik/Brannick's writ about his daughter's loan shark and reduce the predatory interest",
+      "npcs_present": [
+        "Branik Ironweld (or Brannick; smith)",
+        "Branik/Brannick's daughter (name unresolved)",
+        "loan shark (name unresolved; initially 'Vessa Kane' then corrected)",
+        "Zorgar (mentioned as prior party on the job)",
+        "short human handler/boss (mentioned)"
+      ],
+      "time_of_day": "morning",
+      "emotional_tone": "concerned",
+      "conflict_type": "social",
+      "notes": "The smith explains his daughter took a 420 gp loan now near 1000 due to extreme interest; he wants intimidation/negotiation (not murder) and notes another adventuring party (including Zorgar) already went but hasn't returned; he provides directions to a dense shady area.",
+      "requested_resources": [
+        {
+          "keyword": "The Anvil & Oar / Branik Ironweld",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/shops/the-anvil-and-oar.md",
+          "override": null
+        },
+        {
+          "keyword": "loan shark (name unresolved; 'Vessa Kane' corrected)",
+          "requested_path": "characters/npcs",
+          "override": null
+        }
+      ],
+      "scene_id": "S-007",
+      "end_seconds": 4433.657
+    },
+    {
+      "start_seconds": 4433.657,
+      "location": "The Shades (shady dense district in Ardenford) — approaching loan shark's building",
+      "goal": "Reach the loan shark and stop/resolve the situation (find missing adventuring party, negotiate interest)",
+      "npcs_present": [
+        "Zorgar (present inside, other party)",
+        "short human handler/boss (present inside, name unknown)",
+        "other adventurers (dwarf + 2 humans, one caster)",
+        "loan shark victim (name unknown)"
+      ],
+      "time_of_day": "morning",
+      "emotional_tone": "tense",
+      "conflict_type": "exploration",
+      "notes": "Party navigates the maze-like, trash-smelling district newly named 'The Shades' and hears screams from a second-floor building reached by old steps and a weak bridge.",
+      "requested_resources": [
+        {
+          "keyword": "The Shades",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/shades-distract.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-008",
+      "end_seconds": 4683.549
+    },
+    {
+      "start_seconds": 4683.549,
+      "location": "Loan shark's room (The Shades, second floor)",
+      "goal": "Intervene in the loan shark confrontation and prevent excessive violence / secure loan cancellation",
+      "npcs_present": [
+        "Zorgar (orc, other adventuring party)",
+        "short human handler/boss (name unknown)",
+        "other adventurers (dwarf + 2 humans, one caster/warlock)",
+        "loan shark victim (name unknown)"
+      ],
+      "time_of_day": "morning",
+      "emotional_tone": "alarming",
+      "conflict_type": "combat",
+      "notes": "The confrontation escalates into a brief fight with the rival party; the warlock is dropped, the rogue calls Zorgar off, and the rival party withdraws, leaving the loan shark badly injured.",
+      "requested_resources": [
+        {
+          "keyword": "Zorgar",
+          "requested_path": "world/party/black-ledger/members/zor-gar.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-009",
+      "end_seconds": 8168.475
+    },
+    {
+      "start_seconds": 8168.475,
+      "location": "Leaving the loan shark building / back in Ardenford streets (exact route unclear)",
+      "goal": "Report back to Brannick/Branik, collect payment, then rest and plan shopping",
+      "npcs_present": [
+        "Brannick/Branik (quest-giver; off-screen)",
+        "loan shark victim (off-screen, stabilized/left behind)"
+      ],
+      "time_of_day": "morning",
+      "emotional_tone": "relieved",
+      "conflict_type": "none",
+      "notes": "The party stabilizes the loan shark victim, returns to Branik/Brannick for payment, and decides to rest and do errands in town.",
+      "requested_resources": [
+        {
+          "keyword": "Brannick / Branik Ironweld",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/shops/the-anvil-and-oar.md",
+          "override": null
+        },
+        {
+          "keyword": "uncatalogued holy book",
+          "requested_path": "items/magic-items/uncatalogued-holy-book.md",
+          "override": null
+        },
+        {
+          "keyword": "shopping for a new staff",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/shops/leafscript-cabinet.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-010",
+      "end_seconds": 8470.529
+    },
+    {
+      "start_seconds": 8470.529,
+      "location": "Leafscript Cabinet (Upper Tier shop in Ardenford)",
+      "goal": "Shop for a replacement staff and jewelry/spell components; ask about the strange metal-covered blank book",
+      "npcs_present": [
+        "Leafscript Cabinet dwarf shopkeeper (husband; name not given)",
+        "Leafscript Cabinet dwarf shopkeeper's wife (name not given)"
+      ],
+      "time_of_day": "afternoon",
+      "emotional_tone": "casual",
+      "conflict_type": "social",
+      "notes": "The party visits the Leafscript Cabinet, trades elven robes/ink pen for an ancient nonmagical walking stick staff, buys earrings and a 100gp pearl component, and learns the shopkeeper can't identify the metal-covered blank book without text.",
+      "requested_resources": [
+        {
+          "keyword": "Leafscript Cabinet",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/shops/leafscript-cabinet.md",
+          "override": null
+        },
+        {
+          "keyword": "Varshel's walking stick (spelled variously: Varshel/Vesithael)",
+          "requested_path": "items/magic-items/vesithael-walking-stick.md",
+          "override": null
+        },
+        {
+          "keyword": "uncatalogued holy book (blank pages, metal cover)",
+          "requested_path": "items/magic-items/uncatalogued-holy-book.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-011",
+      "end_seconds": 10170.478
+    },
+    {
+      "start_seconds": 10170.478,
+      "location": "Wayward Compass (tavern/inn in Ardenford)",
+      "goal": "Review the new writ/notice about Calderwick being murdered; identify the messenger witness and decide next steps",
+      "npcs_present": [
+        "Thorgrim Ledger-Scar",
+        "Barnaby (messenger; named here)",
+        "Calderwick (victim; mentioned)"
+      ],
+      "time_of_day": "evening",
+      "emotional_tone": "tense",
+      "conflict_type": "social",
+      "notes": "Back at the Wayward Compass, the party realizes a new posting claims Calderwick was murdered, discusses Barnaby as a witness, and Marwen shares an Identify vision about an orb/tower tied to the blank book.",
+      "requested_resources": [
+        {
+          "keyword": "Wayward Compass / Thorgrim Ledger-Scar",
+          "requested_path": "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+          "override": null
+        },
+        {
+          "keyword": "Black Ledger (party name)",
+          "requested_path": "world/party/black-ledger/_overview.md",
+          "override": null
+        },
+        {
+          "keyword": "Gray District",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/gray-district.md",
+          "override": null
+        },
+        {
+          "keyword": "uncatalogued holy book / Identify vision (tower + orb)",
+          "requested_path": "items/magic-items/uncatalogued-holy-book.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-012",
+      "end_seconds": 10805.723
+    },
+    {
+      "start_seconds": 10805.723,
+      "location": "Barnaby's house / street nearby in Ardenford",
+      "goal": "Contact Barnaby and learn what happened to Calderwick; avoid being blamed for the murder",
+      "npcs_present": [
+        "Barnaby",
+        "two investigators/guards (unnamed)",
+        "Calderwick (mentioned)"
+      ],
+      "time_of_day": "evening",
+      "emotional_tone": "tense",
+      "conflict_type": "social",
+      "notes": "Approaching Barnaby, the party finds two investigators already questioning him; after a failed attempt to convince them, the party is placed under arrest and agrees to go in for questioning.",
+      "requested_resources": [
+        {
+          "keyword": "Barnaby (messenger)",
+          "requested_path": "characters/npcs",
+          "override": null
+        },
+        {
+          "keyword": "Calderwick (murder victim / writ target)",
+          "requested_path": "quests/active",
+          "override": null
+        }
+      ],
+      "scene_id": "S-013",
+      "end_seconds": 11145.164
+    },
+    {
+      "start_seconds": 11145.164,
+      "location": "Lord Mayor Ranwald's office/keep (central Ardenford)",
+      "goal": "Clear their names by explaining the writ arrangement and secure time to investigate the real killer",
+      "npcs_present": [
+        "Lord Mayor Ranwald",
+        "two investigators/guards (unnamed)"
+      ],
+      "time_of_day": "night",
+      "emotional_tone": "tense",
+      "conflict_type": "social",
+      "notes": "The party is brought before Lord Mayor Ranwald, presents the printed writ, and is released on the condition they investigate the Gray District disappearances and prove whether the Imperium is involved.",
+      "requested_resources": [
+        {
+          "keyword": "Lord Mayor Ranwald",
+          "requested_path": "characters/npcs",
+          "override": null
+        },
+        {
+          "keyword": "Gray District disappearances",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/gray-district.md",
+          "override": null
+        },
+        {
+          "keyword": "Calderon Imperium (Imperium)",
+          "requested_path": "world/factions/calderon-imperium/_overview.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-014",
+      "end_seconds": 11964.187
+    },
+    {
+      "start_seconds": 11964.187,
+      "location": "Thar'kar Taproom (guidehouse/taproom in Ardenford)",
+      "goal": "Find the writ-board fixer and learn who printed/posted the suspicious printed writ",
+      "npcs_present": [
+        "Mokdor (writ-board contact/fixer; dwarf)"
+      ],
+      "time_of_day": "night",
+      "emotional_tone": "tense",
+      "conflict_type": "social",
+      "notes": "The party intimidates Mokdor into cooperating; he identifies a single source for the printed writs (a human in a mountain hut east-south) and provides additional printed Gray District writs.",
+      "requested_resources": [
+        {
+          "keyword": "Thar'kar Taproom",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/shops/tharkar-taproom-sherpa-for-hire.md",
+          "override": null
+        },
+        {
+          "keyword": "Mokdor",
+          "requested_path": "characters/npcs",
+          "override": null
+        },
+        {
+          "keyword": "Gray District",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/gray-district.md",
+          "override": null
+        },
+        {
+          "keyword": "printed writs / printing press (human in mountain hut east-south)",
+          "requested_path": "world/factions/ardenhaven/locations",
+          "override": null
+        }
+      ],
+      "scene_id": "S-015",
+      "end_seconds": 12802.236
+    },
+    {
+      "start_seconds": 12802.236,
+      "location": "Ardenford streets (en route in the city)",
+      "goal": "Avoid being spotted by Ersal/Ersilio and her escort while continuing the murder investigation plan",
+      "npcs_present": [
+        "Ersal / Ersilio (companion cleric; elf)",
+        "dwarven guards (escort)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "tense",
+      "conflict_type": "exploration",
+      "notes": "While moving through town, the party spots Ersal/Ersilio with guards causing a commotion and quickly ducks into side alleys to avoid being seen.",
+      "requested_resources": [
+        {
+          "keyword": "Ersal / Ersilio (companion cleric)",
+          "requested_path": "characters/npcs",
+          "override": null
+        },
+        {
+          "keyword": "Ardenford",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/ardenford.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-016",
+      "end_seconds": 13237.148
+    },
+    {
+      "start_seconds": 13237.148,
+      "location": "Gray District (outside and inside Mr. Finch's home)",
+      "goal": "Warn/protect the next target and set a stakeout to catch the murderer/assassin",
+      "npcs_present": [
+        "Mr. Finch (target)",
+        "assassin (unnamed rogue)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "tense",
+      "conflict_type": "combat",
+      "notes": "Sabriel and Marwen warn Mr. Finch and are invited inside; during the stakeout they discover an assassin already hiding upstairs, leading to a fight and the assassin being incapacitated.",
+      "requested_resources": [
+        {
+          "keyword": "Gray District",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/gray-district.md",
+          "override": null
+        },
+        {
+          "keyword": "Mr. Finch",
+          "requested_path": "characters/npcs",
+          "override": null
+        },
+        {
+          "keyword": "assassin (rogue in black)",
+          "requested_path": "characters/npcs",
+          "override": null
+        },
+        {
+          "keyword": "printed writs targeting Gray District residents",
+          "requested_path": "quests",
+          "override": null
+        }
+      ],
+      "scene_id": "S-017",
+      "end_seconds": 14889.987
+    },
+    {
+      "start_seconds": 14889.987,
+      "location": "Gray District (Mr. Finch's home, post-fight)",
+      "goal": "Prevent Mr. Finch from killing the captured assassin and decide how to interrogate/turn him in as evidence to clear the party's names",
+      "npcs_present": [
+        "Mr. Finch",
+        "assassin (captured, unconscious)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "urgent",
+      "conflict_type": "social",
+      "notes": "The party stabilizes the downed assassin and physically/magically stops Mr. Finch from executing him, then decides to move the prisoner for questioning.",
+      "requested_resources": [
+        {
+          "keyword": "Mr. Finch",
+          "requested_path": "characters/npcs",
+          "override": null
+        },
+        {
+          "keyword": "Gray District / Grey District",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/gray-district.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-018",
+      "end_seconds": 15596.658
+    },
+    {
+      "start_seconds": 15596.658,
+      "location": "Wayward Compass (back room/basement holding area)",
+      "goal": "Hide and secure the captured assassin while arranging an interrogation and contacting authorities",
+      "npcs_present": [
+        "Thorgrim Ledger-Scar",
+        "assassin (prisoner)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "tense",
+      "conflict_type": "social",
+      "notes": "The party carts the injured assassin to the Wayward Compass, gets Thorgrim's help with a back room, and prepares to interrogate before summoning the authorities.",
+      "requested_resources": [
+        {
+          "keyword": "Wayward Compass",
+          "requested_path": "world/factions/ardenhaven/locations/ardenford/shops/wayward-compass.md",
+          "override": null
+        },
+        {
+          "keyword": "Thorgrim Ledger-Scar",
+          "requested_path": "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
+          "override": null
+        },
+        {
+          "keyword": "poison vials (exact poison that was used against you)",
+          "requested_path": "items/README.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-019",
+      "end_seconds": 15724.049
+    },
+    {
+      "start_seconds": 15724.049,
+      "location": "Wayward Compass (common room, meeting the Black Ledger)",
+      "goal": "Hire the Black Ledger warlock to magically compel answers from the assassin",
+      "npcs_present": [
+        "Vessa (Black Ledger lead)",
+        "Maela (Black Ledger warlock)",
+        "Zor-gar (Black Ledger member, mentioned/present)"
+      ],
+      "time_of_day": "unknown",
+      "emotional_tone": "wary",
+      "conflict_type": "social",
+      "notes": "This chunk no longer contains the Wayward Compass/Black Ledger negotiation; it has moved fully into a ruins encounter.",
+      "requested_resources": [
+        {
+          "keyword": "Black Ledger",
+          "requested_path": "world/party/black-ledger/_overview.md",
+          "override": null
+        },
+        {
+          "keyword": "Vessa",
+          "requested_path": "world/party/black-ledger/members/vessa.md",
+          "override": null
+        },
+        {
+          "keyword": "Maela",
+          "requested_path": "world/party/black-ledger/members/maela.md",
+          "override": null
+        },
+        {
+          "keyword": "Zor-gar / Zurgar",
+          "requested_path": "world/party/black-ledger/members/zor-gar.md",
+          "override": null
+        }
+      ],
+      "scene_id": "S-020",
+      "end_seconds": 15902.462
+    }
+  ]
+}

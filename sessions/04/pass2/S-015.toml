@@ -1,0 +1,125 @@
+start_seconds = 11964.187
+location = "Thar'kar Taproom (guidehouse/taproom in Ardenford)"
+goal = "Find the writ-board fixer and learn who printed/posted the suspicious printed writ"
+npcs_present = [
+    "Mokdor (writ-board contact/fixer; dwarf)",
+]
+time_of_day = "night"
+emotional_tone = "tense"
+conflict_type = "social"
+notes = """The party intimidates Mokdor into cooperating; he identifies a single source for the printed writs
+(a human in a mountain hut east-south) and provides additional printed Gray District writs."""
+scene_id = "S-015"
+end_seconds = 12802.236
+summary = """At night in Thar'kar Taproom, the party confronted Mokdor, the writ-board fixer, about a suspicious
+printed writ connected to Calderwick’s murder. After initial refusal to reveal sources, Mokdor
+relented and identified a recurring client: a human man operating from a hut in the mountains who
+supplies vague, printed writs that often target people in the Gray District. Mokdor also provided
+the party with another current printed writ from the same source."""
+outcome = """The party left with additional printed writ evidence and discussed either staking out the intended
+target or going after the mountain-based printer."""
+
+[[requested_resources]]
+keyword = "Thar'kar Taproom"
+requested_path = "world/factions/ardenhaven/locations/ardenford/shops/tharkar-taproom-sherpa-for-hire.md"
+
+[[requested_resources]]
+keyword = "Mokdor"
+requested_path = "characters/npcs"
+
+[[requested_resources]]
+keyword = "Gray District"
+requested_path = "world/factions/ardenhaven/locations/ardenford/gray-district.md"
+
+[[requested_resources]]
+keyword = "printed writs / printing press (human in mountain hut east-south)"
+requested_path = "world/factions/ardenhaven/locations"
+
+[confidence]
+factual_accuracy = 0.86
+completeness = 0.72
+speculation_level = "low"
+
+[location_intelligence]
+name = "Thar'kar Taproom"
+known_details = [
+    "A dwarven-run taproom where dwarves drink and guides/sherpas can be found (transcript ~199:24-199:37)",
+    "Mokdor is present at a table drinking ale (transcript ~199:42-199:48)",
+    "Not an inn; primarily a bar and a place to find valley guides (world/factions/ardenhaven/locations/ardenford/shops/tharkar-taproom-sherpa-for-hire.md)",
+]
+inferred_details = [
+    "The party chose Thar'kar specifically because it’s a reliable place to find dwarven contacts tied to local work and postings.",
+]
+confidence = 0.9
+
+[[key_events]]
+summary = "Party challenges Mokdor over the printed writ"
+details = "The party presented the printed posting and pressed Mokdor for who submitted it; he initially refused, citing ethics and not answering to the Lord Mayor (transcript ~200:36-201:16)."
+
+[[key_events]]
+summary = "Mokdor agrees to cooperate"
+details = "After the party escalated the pressure, Mokdor agreed he couldn’t allow death threats on his writ-board and began answering questions about the job and its origin (transcript ~202:44-203:11)."
+
+[[key_events]]
+summary = "Source of the printed writ identified"
+details = "Mokdor stated only one person submits printed writs like that: a human man who lives in a mountain hut; Mokdor doesn’t know his name but recognizes the distinctive printed format and vague wording (transcript ~203:59-204:33)."
+
+[[key_events]]
+summary = "Gray District pattern revealed and more evidence obtained"
+details = "When asked, Mokdor confirmed these printed writs are associated with the Gray District, and he produced another current printed writ from the same source for the party to take (transcript ~204:37-205:17)."
+
+[character_beats]
+Sabriel = "Helped drive the questioning toward patterns and locations, specifically asking about Gray District\nconnections."
+Marwen = "Took point on speaking with Mokdor and presenting the printed writ for identification."
+Bazgar = "Applied direct pressure to force cooperation and framed the writ-board as becoming a murder problem."
+
+[[npcs]]
+name = "Mokdor"
+role = "Writ-board contact/fixer"
+interaction = "Initially refused to reveal sources, then identified the likely printer as a mountain-hut human and handed over another printed writ."
+
+[[loot]]
+item = "Additional printed writ (Gray District-related)"
+context = "Mokdor produced another current printed writ from the same source and gave it to the party (transcript ~205:11-205:17)."
+
+[[information]]
+summary = "The suspicious writ was printed by a consistent source"
+details = "Mokdor recognized the format and said only one person submits printed writs like that: a human man operating out of a hut in the mountains; Mokdor does not know his name because he avoids collecting names (transcript ~203:59-204:59)."
+
+[[information]]
+summary = "Printed writs show a Gray District targeting pattern"
+details = "When prompted, Mokdor confirmed the printed jobs are tied to the Gray District, implying a recurring focus on that area (transcript ~204:37-204:44)."
+
+[[information]]
+summary = "The Calderwick job was framed as non-lethal but preceded a murder"
+details = "Mokdor recalled the job as someone wanting Calderwick 'roughed up,' and noted that shortly after, Calderwick was murdered (transcript ~202:57-203:08)."
+
+[atmosphere]
+mood = "tense"
+lighting = "night"
+sounds = "taproom conversation and drinking implied by the setting and Mokdor having an ale"
+
+[grounding]
+transcript_timestamps = [
+    11964,
+    12317,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/ardenford/shops/tharkar-taproom-sherpa-for-hire.md",
+    "world/factions/ardenhaven/locations/ardenford/gray-district.md",
+]
+inferred_content = [
+    "The party chose Thar'kar specifically because it’s a reliable place to find dwarven contacts tied to local work and postings.",
+]
+
+[[plot_threads]]
+thread = "Who printed/posted the suspicious printed writ"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Gray District targeted by vague printed writs"
+status = "introduced"
+
+[[plot_threads]]
+thread = "Calderwick murder investigation"
+status = "advanced"

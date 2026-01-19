@@ -527,8 +527,8 @@ def main():
     parser.add_argument(
         "--diarize-device",
         choices=["cpu", "cuda"],
-        default="cpu",
-        help="Device for speaker diarization. cpu=safe for long recordings, cuda=faster but may OOM. Default: cpu",
+        default="cuda",
+        help="Device for speaker diarization. cpu=safe for long recordings, cuda=faster but may OOM. Default: cuda",
     )
     parser.add_argument(
         "--output-dir",

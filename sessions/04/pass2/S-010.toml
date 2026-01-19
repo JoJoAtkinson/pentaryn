@@ -1,0 +1,124 @@
+start_seconds = 8168.475
+location = "Leaving the loan shark building / back in Ardenford streets (exact route unclear)"
+goal = "Report back to Brannick/Branik, collect payment, then rest and plan shopping"
+npcs_present = [
+    "Brannick/Branik (quest-giver; off-screen)",
+    "loan shark victim (off-screen, stabilized/left behind)",
+]
+time_of_day = "morning"
+emotional_tone = "relieved"
+conflict_type = "none"
+notes = """The party stabilizes the loan shark victim, returns to Branik/Brannick for payment, and decides to
+rest and do errands in town."""
+scene_id = "S-010"
+end_seconds = 8470.529
+summary = """After stabilizing the loan shark victim and leaving the scene, the party decides to report back to
+Branik Ironweld. Branik pays them 70 gold each for handling the problem and ensuring his daughter
+won’t be bothered again. With payment in hand, the group plans a short rest and
+shopping—specifically replacing a staff and looking for leads or resources to help understand the
+strange holy book—then heads into a tidy Upper Tier shop consistent with the Leafscript Cabinet."""
+outcome = """The party gets paid by Branik and transitions into downtime: one member takes a short rest while the
+others begin shopping, entering a tidy shop to start those purchases."""
+
+[[requested_resources]]
+keyword = "Brannick / Branik Ironweld"
+requested_path = "world/factions/ardenhaven/locations/ardenford/shops/the-anvil-and-oar.md"
+
+[[requested_resources]]
+keyword = "uncatalogued holy book"
+requested_path = "items/magic-items/uncatalogued-holy-book.md"
+
+[[requested_resources]]
+keyword = "shopping for a new staff"
+requested_path = "world/factions/ardenhaven/locations/ardenford/shops/leafscript-cabinet.md"
+
+[confidence]
+factual_accuracy = 0.78
+completeness = 0.62
+speculation_level = "low"
+
+[location_intelligence]
+name = "Ardenford streets, then The Leafscript Cabinet (Upper Tier)"
+known_details = [
+    "The party leaves the loan shark situation behind and heads back through town to report to Branik/Brannick.",
+    "They later enter a tidy shop with several elves, several humans, and two dwarves; a dwarf shopkeeper speaks to an elf in an upbeat tone.",
+    "The Leafscript Cabinet is an Upper Tier shop near the Concordance Library that sells elven staves and curios.",
+]
+inferred_details = [
+    "The tidy shop entered is The Leafscript Cabinet, based on the described clientele and the party’s stated intent to replace a staff.",
+]
+confidence = 0.72
+
+[[key_events]]
+summary = "Loan shark victim stabilized and party departs"
+details = "The group confirms the victim is stabilized (no longer dying) and leaves the area to return to town and report their results."
+
+[[key_events]]
+summary = "Report to Branik and collect payment"
+details = "They inform Branik Ironweld the situation is handled and receive the promised payment of 70 gp per person; Branik expresses relief that his daughter will not be pestered again."
+
+[[key_events]]
+summary = "Downtime planning: rest and shopping"
+details = "The party discusses taking a short rest (using a public bench) and then shopping, including replacing a broken/missing staff and seeking items or help to learn more about the blank, magical holy book."
+
+[[key_events]]
+summary = "Enter a tidy shop to begin purchases"
+details = "They arrive at a neat shop with mixed clientele (elves and many humans) and two dwarves; the dwarf proprietor is mid-conversation with an elf in an upbeat tone."
+
+[character_beats]
+Sabriel = "Uses simple divine magic to stabilize the injured victim and later focuses on shopping to support\nthe group’s investigation (including the strange book)."
+Marwen = "Supports the plan to follow leads quickly and helps steer the group toward practical next steps\nafter the job."
+Bazgar = "Prioritizes recovery after the fight, taking a short rest while others shop."
+
+[[npcs]]
+name = "Branik Ironweld"
+role = "Quest-giver weaponsmith (The Anvil & Oar proprietor)"
+interaction = "Receives the party’s report and pays them 70 gp each for resolving the issue involving his daughter."
+
+[[npcs]]
+name = "Unidentified shopkeeper (likely Khorin Bar’dur)"
+role = "Shop proprietor"
+interaction = "Seen speaking with an elf as the party enters; no direct conversation is captured in this scene."
+
+[[loot]]
+item = "70 gp each"
+context = "Payment from Branik Ironweld for completing the job and ensuring his daughter won’t be harassed."
+
+[[information]]
+summary = "Branik’s job considered complete and paid"
+details = "Branik accepts that the deed is done and pays the party as promised, satisfied that his daughter will not be pestered again."
+
+[[information]]
+summary = "Next steps set: rest and gear/investigation shopping"
+details = "The party agrees to recover briefly and then shop, including replacing a staff and pursuing resources to better understand the uncatalogued, blank holy book."
+
+[atmosphere]
+mood = "relieved"
+lighting = "morning"
+sounds = "not specified"
+
+[grounding]
+transcript_timestamps = [
+    8142.0,
+    8460.0,
+]
+resource_refs = [
+    "world/factions/ardenhaven/locations/ardenford/shops/the-anvil-and-oar.md",
+    "world/factions/ardenhaven/locations/ardenford/shops/leafscript-cabinet.md",
+    "items/magic-items/uncatalogued-holy-book.md",
+]
+inferred_content = [
+    "The tidy shop entered is identified as The Leafscript Cabinet based on the party’s stated need for a replacement staff and the shop description, but the transcript does not name it explicitly.",
+]
+
+[[plot_threads]]
+thread = "Branik’s daughter and the loan shark harassment"
+status = "resolved"
+
+[[plot_threads]]
+thread = "Replace Sabriel’s staff"
+status = "advanced"
+
+[[plot_threads]]
+thread = "Uncatalogued Holy Book (Starburst Seal) investigation"
+status = "advanced"
