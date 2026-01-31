@@ -215,7 +215,7 @@
 <use class="token" href="#token_default" x="589.0" y="1335.0" width="22" height="22"/>
 </g>
 <g id="labels">
-<rect class="label changed" x="126.0" y="40.0" width="420.0" height="97.0" rx="8" ry="8"/>
+<rect class="label" x="126.0" y="40.0" width="420.0" height="97.0" rx="8" ry="8"/>
 <text class="title" x="142.0" y="69.0">
 <tspan x="142.0" dy="0.0">Marwyn Warned of Mara</tspan>
 </text>
