@@ -10,9 +10,9 @@ status: draft
 
 ## At a Glance
 
-- **What it is:** A Neogi hive-city built into a flooded cistern-chasm beneath the Deep Fall Ruins; part silk-works, part slave-market, part salvage dock.
+- **What it is:** A Neogi hive-city built into a flooded cistern-chasm beneath the Deep Fall Ruins; part silk-works, part salvage dock.
 - **Tone:** Transactional, cruel, and *alien*—everything is measured in debt, chains, and silk.
-- **Naming note:** Neogi names follow the `K'azz'jak'n`-style rules in `../../../../../naming_conventions/primary-factions.md`.
+- **Naming note:** Neogi names follow the `K'azz'jak'n`-style rules in `../../../../naming_conventions/primary-factions.md`.
 
 ## Getting There
 
