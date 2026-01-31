@@ -315,7 +315,7 @@ When generating **world** content (files in the `world/` folder), follow these c
 7. **Neogi Names**
 
    - Tone: alien, sibilant, insectile; the name should feel *hissed*, not spoken.
-   - Culture note: Neogi are slavers and traders with a harsh, hierarchical culture; their language (`K'azz'jak'n`) is sibilant-heavy and apostrophe-marked.
+   - Culture note: Neogi are widely misunderstood—harmless (if unsettling), deeply communal, and intensely *transactional* without being cruel. Their language (`K'azz'jak'n`) is sibilant-heavy and apostrophe-marked; outsiders often mistake “nest-ledger” formality for malice.
    - Structure (default): `2–4 morphemes` split by apostrophes. Keep it compact; avoid “heroic” flow.
    - Avoid: human geography suffixes (`-ford`, `-haven`, etc.), long vowel chains, “pretty” vowel pairs (`ae`, `ia`, `io`, `ui`), and dwarven-style hyphenated weight-suffixes (`-dur`, `-kar`, etc.) unless you explicitly want a *borrowed* name.
 

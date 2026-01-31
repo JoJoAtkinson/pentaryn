@@ -16,6 +16,7 @@ status: active
 - [Derro Open Names](derro-open-names.md)
 - [Derro Foe Party: The Shardclaws](derro-foe-party-01-the-shardclaws/_overview.md)
 - [Derro Foe Party: The Gloomcinders](derro-foe-party-02-the-gloomcinders/_overview.md)
+- [Derro Foe Party: The Glass Choir](derro-foe-party-03-the-glass-choir/_overview.md)
 
 ## Sites
 
@@ -25,3 +26,7 @@ status: active
 ## NPCs
 
 - [Dulgor-grum](npcs/dulgor-grum.md)
+- [Ivar Calder](npcs/ivar-calder.md)
+- [Sivren Coilfin](npcs/sivren-coilfin.md)
+- [Moksel-dum](npcs/moksel-dum.md)
+- [Drakzul-dur](npcs/drakzul-dur.md)
