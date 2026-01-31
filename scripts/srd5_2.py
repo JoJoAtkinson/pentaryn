@@ -24,6 +24,13 @@ MCP_TOOLS = [
             "Use for combat prep, encounter building, or quick reference during sessions."
         ),
         "argv": ["--mcp-tool", "search_monsters"],
+        "value_flags": {
+            "name": "--name",
+            "cr": "--cr",
+            "type": "--type",
+            "size": "--size",
+            "limit": "--limit",
+        },
         "input_schema": {
             "type": "object",
             "properties": {
@@ -80,6 +87,12 @@ MCP_TOOLS = [
             "Use for player/NPC spell lookups, spell prep, or answering rule questions."
         ),
         "argv": ["--mcp-tool", "search_spells"],
+        "value_flags": {
+            "name": "--name",
+            "level": "--level",
+            "school": "--school",
+            "limit": "--limit",
+        },
         "input_schema": {
             "type": "object",
             "properties": {
@@ -132,6 +145,9 @@ MCP_TOOLS = [
             "Use during combat when you need to look up condition effects quickly."
         ),
         "argv": ["--mcp-tool", "list_conditions"],
+        "value_flags": {
+            "name": "--name",
+        },
         "input_schema": {
             "type": "object",
             "properties": {
@@ -151,6 +167,11 @@ MCP_TOOLS = [
             "Use for treasure generation, loot tables, or item identification."
         ),
         "argv": ["--mcp-tool", "search_magic_items"],
+        "value_flags": {
+            "name": "--name",
+            "rarity": "--rarity",
+            "limit": "--limit",
+        },
         "input_schema": {
             "type": "object",
             "properties": {
@@ -199,6 +220,10 @@ MCP_TOOLS = [
             "Use for equipment shopping or NPC armament."
         ),
         "argv": ["--mcp-tool", "search_weapons"],
+        "value_flags": {
+            "name": "--name",
+            "limit": "--limit",
+        },
         "input_schema": {
             "type": "object",
             "properties": {
@@ -223,6 +248,10 @@ MCP_TOOLS = [
             "Use for equipment shopping or determining NPC armor class."
         ),
         "argv": ["--mcp-tool", "search_armor"],
+        "value_flags": {
+            "name": "--name",
+            "limit": "--limit",
+        },
         "input_schema": {
             "type": "object",
             "properties": {
@@ -246,7 +275,7 @@ MCP_TOOLS = [
             "Returns rule text from the 2014 SRD (note: 2024 rules not yet available in Open5e API). "
             "Use for quick reference on combat rules, conditions, ability checks, and general mechanics."
         ),
-        "argv": [],
+        "argv": ["--mcp-tool", "search_rules"],
         "value_flags": {
             "query": "--query",
             "limit": "--limit"
@@ -497,6 +526,34 @@ def format_rule_section(section: dict[str, Any]) -> str:
 def main():
     """Handle both MCP tool calls via flags and CLI usage."""
     import sys
+
+    def _parse_flag_args(tokens: list[str]) -> dict[str, Any]:
+        """Parse --key value style args into a dict for MCP tool calls."""
+        out: dict[str, Any] = {}
+        i = 0
+        while i < len(tokens):
+            token = tokens[i]
+            if not token.startswith("--"):
+                i += 1
+                continue
+            key = token[2:]
+            # --flag value
+            if i + 1 < len(tokens) and not tokens[i + 1].startswith("--"):
+                out[key] = tokens[i + 1]
+                i += 2
+                continue
+            # --flag (boolean)
+            out[key] = True
+            i += 1
+
+        # Basic type coercions for common args
+        for int_key in ("limit", "level"):
+            if int_key in out and isinstance(out[int_key], str):
+                try:
+                    out[int_key] = int(out[int_key])
+                except ValueError:
+                    pass
+        return out
     
     # Handle MCP tool invocation format FIRST: --mcp-tool <name> <arg1> <arg2> ...
     if len(sys.argv) >= 3 and sys.argv[1] == "--mcp-tool":
@@ -537,13 +594,18 @@ def main():
                     sys.exit(1)
                 result = get_class_info(slug=sys.argv[3])
             else:
-                # Other tools might use JSON or no args
-                args_json = sys.argv[3] if len(sys.argv) > 3 and not sys.argv[3].startswith("--") else "{}"
-                try:
-                    args = json.loads(args_json)
-                except json.JSONDecodeError as e:
-                    print(f"Error: Invalid JSON arguments: {e}", file=sys.stderr)
-                    sys.exit(1)
+                # Other tools may pass args as JSON (single argument) or as flags (--key value)
+                if len(sys.argv) <= 3:
+                    args = {}
+                elif sys.argv[3].startswith("--"):
+                    args = _parse_flag_args(sys.argv[3:])
+                else:
+                    args_json = sys.argv[3]
+                    try:
+                        args = json.loads(args_json)
+                    except json.JSONDecodeError as e:
+                        print(f"Error: Invalid JSON arguments: {e}", file=sys.stderr)
+                        sys.exit(1)
                 result = tool_functions[tool_name](**args)
             
             # Output result as JSON

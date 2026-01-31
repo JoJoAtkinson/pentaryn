@@ -21,19 +21,25 @@ When generating **world** content (files in the `world/` folder), follow these c
    - Tone: grounded, practical, often geography-based.
    - Structure: `base syllable(s)` + `geography suffix`.
    - Proto-root mutation: `ar` → `ar` or `er` inside the name.
-   - Avoid: double vowels, apostrophes, overly melodic sounds.
+   - Avoid: elven-style vowel pairs (`ae`, `ia`, `io`, `ui`), long vowel chains, apostrophes, overly melodic sounds.
+   - **Regional note:** Human naming varies by realm. Use the rules below for most human place-names/surnames; use the **Elderholt** protocol for Elderholtian personal names (witch-adjacent).
 
-   **Base Syllables (pick 1-2):**
-   `Ar`, `Arden`, `Stone`, `Red`, `Dun`, `Cal`, `Tor`, `Mer`, `Bren`, `Ash`, `Oak`, `Raven`, `Thorn`, `Glen`, `Wolf`, `Iron`, `Hawk`, `Bright`
+   **Core Roots (pick 1):**
+   `Ar`, `Arden`, `Ash`, `Bren`, `Bright`, `Cal`, `Dun`, `Glen`, `Hawk`, `Iron`, `Mer`, `Oak`, `Raven`, `Red`, `Stone`, `Thorn`, `Tor`, `Wolf`
+
+   **Prefix Modifiers (optional, pick 0-1):**
+   `North`, `South`, `East`, `West`, `High`, `Low`, `Old`, `New`, `Far`, `Near`, `Black`, `White`, `Grey`, `Gold`, `Silver`, `Frost`, `Mist`, `Storm`, `Sun`, `Star`, `Crow`, `Fox`, `Hart`, `Pine`, `Rose`
 
    **Geography Suffixes:**
-   `-ford`, `-wick`, `-gate`, `-mouth`, `-har`, `-stead`, `-holt`, `-march`, `-haven`, `-dale`, `-ridge`, `-ton`, `-bridge`
+   `-ford`, `-wick`, `-gate`, `-mouth`, `-har`, `-stead`, `-holt`, `-march`, `-haven`, `-dale`, `-ridge`, `-ton`, `-bridge`, `-croft`, `-field`, `-mill`, `-barrow`, `-watch`, `-keep`, `-cross`, `-wall`, `-hold`, `-port`, `-point`, `-pass`, `-fall`, `-crest`, `-cliff`, `-hollow`, `-hearth`, `-yard`, `-market`, `-way`, `-run`, `-bank`, `-fen`, `-moor`, `-wood`
 
    **Construction Steps:**
 
-   1. Pick 1-2 base syllables (prefer 1 for simplicity)
-   2. Add geography suffix
-   3. Check that proto-root `ar`/`er` appears if using ancient connection
+   1. Pick 1 core root (prefer 1 for simplicity)
+   2. Optional: add 1 prefix modifier (especially for surnames and settlements)
+   3. Add a geography suffix
+   4. If generating a set of names, rotate suffix types (don’t reuse the same suffix over and over)
+   5. Check that proto-root `ar`/`er` appears if using ancient connection
 
    **Examples:**
 
@@ -48,6 +54,94 @@ When generating **world** content (files in the `world/` folder), follow these c
    - `Aealithford` (elven vowel pairs)
    - `Kragwick` (harsh orc consonants)
    - `Ardenthil` (elven suffix)
+
+   **Elderholt Naming (Human & Witch-Adjacent)**
+
+   Use for personal names from **Elderholt (EL-der-HOLT)** and its surrounding villages: human-rooted, restrained, and quietly haunted by coven culture. (Setting context: [Elderholt overview](../factions/elderholt/_overview.md).)
+
+   - Tone: intimate, not geographic; burdened, not heroic; eerie without melodrama.
+   - Prefer 2–3 syllables (2 is the “default heartbeat”).
+   - Names should pass the “mouth test” (say it twice; if you stumble, simplify).
+
+   **Sound palette (aim for contrast):**
+
+   - Include at least one **soft** consonant: `l r w m n v s th`
+   - Include at least one **firm** consonant: `k t d b g p x c`
+   - Avoid 3+ liquid sounds in a row (`r l w`) across syllables.
+
+   **Vowel contrast:**
+
+   - Use at least **two different vowels** (`a e i o u`).
+   - Repeat a vowel only on purpose (to imply obsession, power, instability, or heavy Voice-touched drift).
+
+   | Vowel | Feel |
+   | --- | --- |
+   | `a` | grounded, physical |
+   | `e` | alert, precise |
+   | `i` | sharp, uncanny |
+   | `o` | ancient, heavy |
+   | `u` | distant, strange |
+
+   **Endings (pick one based on role):**
+
+   - Commonfolk / unthreaded: `-en`, `-in`, `-an`, `-er`, `-el`, `-yn`, `-ren`, `-den`
+   - Coven-grown / elders: `-ith`, `-or`, `-ir`, `-reth`, `-var`, `-dren`
+   - Deep-Witch / Voice-touched (rare): `-rix`, `-yrr`, `-yx`, `-eth`, `-aeth` (use only when you *want* it to read as not-quite-human)
+
+   **Uniqueness guardrails (avoid “name drift”):**
+
+   - Before finalizing, check for duplicates and near-duplicates in `world/naming_conventions/character-registry.tsv` and Elderholt lore docs.
+   - Don’t reuse the same **root + ending** pair as a prominent name. Example: avoid `mar` + `wen` (too close to **Marwen**) and `mar` + `rith` (too close to **Marrith**).
+
+   **Keep it readable (and keep it human):**
+
+   - Avoid strong cross-culture signatures **unless** you intend the name to read as “borrowed,” “elder,” or “Voice-touched.”
+     - Elven markers to avoid: `ae`, `ia`, `io`, `ui`, `-ael`, `-thil`, `-il`
+     - Dwarven markers to avoid: `kh`, `gr`, `dr`, `br`, `-dur`, `-kar`
+     - Orc markers to avoid: `kr`, `ug`, `zor`, `-gar`, `-rok`
+     - Ancient markers to avoid: central pure `ar` as the whole core, obvious palindromes, `-os/-um/-eum`, excessive vowel chains
+
+   **Proto-roots (emotional, not geographic; optional building blocks):**
+
+   | Root | Feeling |
+   | --- | --- |
+   | `mar` | burn, remain, rebirth |
+   | `bre` | shelter, breath, binding |
+   | `row` | memory, persistence |
+   | `cal` | fracture, division |
+   | `ar` | endurance, ash |
+   | `wen` | longing, hope |
+   | `rith` | restraint, oath |
+   | `lyn` | listening, watchfulness |
+   | `nel` | growth, waiting |
+   | `nor` | cold patience, watchful quiet |
+   | `tav` | duty, restlessness, wandering service |
+   | `sel` | silence, inwardness |
+   | `var` | vow, burden |
+   | `rin` | vigilance, listening |
+   | `den` | shelter, hearth |
+   | `rix` | transformation, cost |
+
+   **Common drift/mutation (keep subtle):**
+
+   - `mar` → `mar / mer / mor`
+   - `bre` → `bre / bri`
+   - `cal` → `cal / kel`
+   - `wen` → `wen / win`
+   - `rith` → `rith / rit`
+   - `row` → `row / ro`
+
+   **Examples (baseline Elderholt):**
+
+   - `Brenor` (BREH-nor)
+   - `Kelrith` (KELL-rith)
+   - `Kelric` (KELL-rik)
+   - `Silreth` (SILL-reth)
+   - `Norben` (NOR-ben)
+   - `Norren` (NOR-ren)
+   - `Tavren` (TAV-ren)
+   - `Calyrix` (CAL-ee-riks)
+
 3. **Elven Names**
 
    - Tone: melodic, flowing, vowel-rich.
@@ -217,3 +311,49 @@ When generating **world** content (files in the `world/` folder), follow these c
    - `Stoneatheon` (literal geography)
    - `Krag-os` (harsh orc consonants)
    - `Merroweum` (human-style base)
+
+7. **Neogi Names**
+
+   - Tone: alien, sibilant, insectile; the name should feel *hissed*, not spoken.
+   - Culture note: Neogi are slavers and traders with a harsh, hierarchical culture; their language (`K'azz'jak'n`) is sibilant-heavy and apostrophe-marked.
+   - Structure (default): `2–4 morphemes` split by apostrophes. Keep it compact; avoid “heroic” flow.
+   - Avoid: human geography suffixes (`-ford`, `-haven`, etc.), long vowel chains, “pretty” vowel pairs (`ae`, `ia`, `io`, `ui`), and dwarven-style hyphenated weight-suffixes (`-dur`, `-kar`, etc.) unless you explicitly want a *borrowed* name.
+
+   **Sound palette (required):**
+
+   - Include at least one **sibilant cluster**: `s`, `ss`, `sh`, `z`, `zh`, `x`
+   - Include at least one **hard stop**: `k`, `q`, `g`, `t`, `kz`, `k'`
+   - Prefer short vowels: `a`, `i`, `u` (use `e/o` sparingly)
+
+   **Forms:**
+
+   - Personal name: `core` + `'` + `bite` (rank/role marker)
+   - Clutch/house: `core` + `'` + `core` (often harsher and longer than personal names)
+   - Ritual/deity reference: allow longer strings and extra apostrophes (but still avoid vowel chains)
+
+   **Core morphemes (pick 1–2):**
+   `kazz`, `zhak`, `ssak`, `zix`, `kith`, `vrul`, `qath`, `xul`, `graz`, `jakh`, `thru`, `skra`, `zul`
+
+   **“Bite” markers (pick 1):**
+   `-ix`, `-ul`, `-za`, `-zha`, `-k`, `-q`, `-th`, `-kz`
+
+   **Construction Steps:**
+
+   1. Pick 1–2 core morphemes (keep each 1 syllable if possible).
+   2. Join with `'` (apostrophe) to force the staccato/glottal feel.
+   3. Append a bite marker (or add a final clipped consonant).
+   4. If it starts to look like a human/elf/dwarf/orc name, regenerate.
+
+   **Examples (personal):**
+
+   - `Kazz'vrulix` (KAZH-vrul-IKS)
+   - `Zhak'ssak` (ZHAK-ssak)
+   - `Xul'kithq` (ZULL-kithk)
+   - `Qath'zhul` (KATH-zhull)
+   - `Skra'jakhkz` (SKRA-jakh-kz)
+
+   **Examples (places/titles):**
+
+   - `Ssak'vash` (ssak-VASH) — market/auction
+   - `Kazz'gru` (KAZH-groo) — pit/cistern
+   - `Zhakh'sik` (ZHAK-sik) — silk-works/hatchery
