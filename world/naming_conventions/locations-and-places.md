@@ -236,7 +236,7 @@ These rules describe **how to build location names** for different cultures. Whe
 
 ### Neogi Location Naming Rules
 
-- **Tone:** alien, sibilant, and transactional; place names sound like they belong on ledgers and slave tags.
+- **Tone:** alien, sibilant, and transactional; place names sound like they belong on nest-ledgers, trade chits, and web-maps.
 - **Structure (default):** `core` + `'` + `function` (+ optional `'` + `ownership`).
 - **Avoid:** human geography suffixes (`-ford`, `-haven`, etc.), “pretty” elven vowel pairs (`ae`, `ia`, `io`, `ui`), and dwarven hyphen-suffix patterns (`-dur`, `-kar`, etc.) unless it’s intentionally borrowed.
 
@@ -247,7 +247,7 @@ These rules describe **how to build location names** for different cultures. Whe
 `vash` (market/auction), `gru` (pit/cistern), `sik` (silkworks), `hath` (hatchery), `drak` (dock/berth), `keth` (gate), `thru` (tunnel), `zha` (shrine)
 
 **Ownership tags (optional, pick 0–1):**
-`ka'jk` (god-marked), `zxl` (house-mark), `thrall` (chattel pen), `ix` (enforcer post)
+`ka'jk` (shrine-mark), `zxl` (house-mark), `teth` (tether-ledger), `ix` (warden post)
 
 **Examples:**
 - `Kazz'gru` (KAZH-groo)
