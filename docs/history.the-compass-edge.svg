@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="2443" viewBox="0 0 1200 2443">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="2623" viewBox="0 0 1200 2623">
 <style><![CDATA[
 @font-face {
   font-family: 'Alegreya';
@@ -65,6 +65,12 @@
   </g>
   </g>
 </symbol>
+<symbol id="tag_battle" viewBox="0 0 512 512">
+  <circle cx="256" cy="256" r="247.04" fill="#7a2f2f" stroke="#6b2929" stroke-width="17.92" />
+  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
+<path fill="#fbf7ef" d="M19.75 14.438c59.538 112.29 142.51 202.35 232.28 292.718l3.626 3.75.063-.062c21.827 21.93 44.04 43.923 66.405 66.25-18.856 14.813-38.974 28.2-59.938 40.312l28.532 28.53 68.717-68.717c42.337 27.636 76.286 63.646 104.094 105.81l28.064-28.06c-42.47-27.493-79.74-60.206-106.03-103.876l68.936-68.938-28.53-28.53c-11.115 21.853-24.413 42.015-39.47 60.593-43.852-43.8-86.462-85.842-130.125-125.47-.224-.203-.432-.422-.656-.625C183.624 122.75 108.515 63.91 19.75 14.437zm471.875 0c-83.038 46.28-154.122 100.78-221.97 161.156l22.814 21.562 56.81-56.812 13.22 13.187-56.438 56.44 24.594 23.186c61.802-66.92 117.6-136.92 160.97-218.72zm-329.53 125.906 200.56 200.53a402.965 402.965 0 0 1-13.405 13.032L148.875 153.53l13.22-13.186zm-76.69 113.28-28.5 28.532 68.907 68.906c-26.29 43.673-63.53 76.414-106 103.907l28.063 28.06c27.807-42.164 61.758-78.174 104.094-105.81l68.718 68.717 28.53-28.53c-20.962-12.113-41.08-25.5-59.937-40.313 17.865-17.83 35.61-35.433 53.157-52.97l-24.843-25.655-55.47 55.467c-4.565-4.238-9.014-8.62-13.374-13.062l55.844-55.844-24.53-25.374c-18.28 17.856-36.602 36.06-55.158 54.594-15.068-18.587-28.38-38.758-39.5-60.625z"/>
+  </g>
+</symbol>
 <symbol id="tag_location" viewBox="0 0 512 512">
   <circle cx="256" cy="256" r="247.04" fill="#2f6b3a" stroke="#295e33" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
@@ -75,12 +81,6 @@
   <circle cx="256" cy="256" r="247.04" fill="#6b4f2f" stroke="#5e4529" stroke-width="17.92" />
   <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
 <path fill="#fbf7ef" d="M492.47 21.938c-82.74-.256-167.442 12.5-242.814 45.093 5.205 13.166 9.578 28.48 13.188 45.532C242.55 97.27 217.167 92.385 194.72 95.5c-46.22 28.432-87.13 66.305-119.44 115.594 25.193 7.756 51.57 22.81 72.845 43.844-31.87-7.045-68.907-5.895-99.188 3-13.743 28.688-25.008 60.48-33.343 95.687 128.71-30.668 130.522 3.514 50.75 140.438 16.877 12.614 42.182 13.77 61.906-1.563C134 267.936 231.43 326.246 254.188 354.562c14.288-40.59 34.77-82.54 62.906-126.468-17.29-14.667-39.21-24.838-63.813-32.375 25.364-5.256 50.91-10.928 74.126-11.22 6.482-.082 12.78.272 18.844 1.156 17.57-24.007 37.408-48.612 59.75-73.97-12.538-6.31-25.476-11.454-38.125-14.967 17.132-5.76 35.274-8.34 52.844-8.157 2.01.02 4.004.095 6 .187 20.07-21.708 41.927-43.976 65.75-66.813zM426.72 47.28c-130.93 65.394-226.626 162.926-281.784 286.25C172.34 184.41 287.048 84.57 426.72 47.28z"/>
-  </g>
-</symbol>
-<symbol id="tag_battle" viewBox="0 0 512 512">
-  <circle cx="256" cy="256" r="247.04" fill="#7a2f2f" stroke="#6b2929" stroke-width="17.92" />
-  <g transform="translate(256.000 256.000) scale(0.7200) translate(-256.000 -256.000)">
-<path fill="#fbf7ef" d="M19.75 14.438c59.538 112.29 142.51 202.35 232.28 292.718l3.626 3.75.063-.062c21.827 21.93 44.04 43.923 66.405 66.25-18.856 14.813-38.974 28.2-59.938 40.312l28.532 28.53 68.717-68.717c42.337 27.636 76.286 63.646 104.094 105.81l28.064-28.06c-42.47-27.493-79.74-60.206-106.03-103.876l68.936-68.938-28.53-28.53c-11.115 21.853-24.413 42.015-39.47 60.593-43.852-43.8-86.462-85.842-130.125-125.47-.224-.203-.432-.422-.656-.625C183.624 122.75 108.515 63.91 19.75 14.437zm471.875 0c-83.038 46.28-154.122 100.78-221.97 161.156l22.814 21.562 56.81-56.812 13.22 13.187-56.438 56.44 24.594 23.186c61.802-66.92 117.6-136.92 160.97-218.72zm-329.53 125.906 200.56 200.53a402.965 402.965 0 0 1-13.405 13.032L148.875 153.53l13.22-13.186zm-76.69 113.28-28.5 28.532 68.907 68.906c-26.29 43.673-63.53 76.414-106 103.907l28.063 28.06c27.807-42.164 61.758-78.174 104.094-105.81l68.718 68.717 28.53-28.53c-20.962-12.113-41.08-25.5-59.937-40.313 17.865-17.83 35.61-35.433 53.157-52.97l-24.843-25.655-55.47 55.467c-4.565-4.238-9.014-8.62-13.374-13.062l55.844-55.844-24.53-25.374c-18.28 17.856-36.602 36.06-55.158 54.594-15.068-18.587-28.38-38.758-39.5-60.625z"/>
   </g>
 </symbol>
 </defs>
@@ -98,438 +98,499 @@
   </g>
 </symbol>
 </defs>
-<g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="2403"/></g>
+<g id="spine"><line class="spine" x1="600" y1="40" x2="600" y2="2583"/></g>
 <g id="connectors">
-<line class="connector" x1="600" y1="122.5" x2="552.0" y2="88.5"/>
-<line class="connector" x1="600" y1="137.5" x2="648.0" y2="137.5"/>
-<line class="connector" x1="600" y1="152.5" x2="552.0" y2="193.5"/>
-<line class="connector" x1="600" y1="1195.0" x2="648.0" y2="1195.0"/>
-<line class="connector" x1="600" y1="1675.0" x2="552.0" y2="1662.0"/>
-<line class="connector" x1="600" y1="1720.0" x2="648.0" y2="1688.5"/>
-<line class="connector" x1="600" y1="1735.0" x2="552.0" y2="1755.0"/>
-<line class="connector" x1="600" y1="1750.0" x2="648.0" y2="1781.5"/>
-<line class="connector" x1="600" y1="1915.0" x2="552.0" y2="1881.8"/>
-<line class="connector" x1="600" y1="1930.0" x2="648.0" y2="1928.5"/>
-<line class="connector" x1="600" y1="1952.5" x2="552.0" y2="1992.8"/>
-<line class="connector" x1="600" y1="2080.0" x2="648.0" y2="2033.5"/>
-<line class="connector" x1="600" y1="2110.0" x2="552.0" y2="2109.5"/>
-<line class="connector" x1="600" y1="2132.5" x2="648.0" y2="2144.5"/>
-<line class="connector" x1="600" y1="2215.0" x2="552.0" y2="2208.5"/>
-<line class="connector" x1="600" y1="2267.5" x2="648.0" y2="2255.5"/>
-<line class="connector" x1="600" y1="2290.0" x2="552.0" y2="2307.5"/>
-<line class="connector" x1="600" y1="2312.5" x2="648.0" y2="2360.5"/>
+<line class="connector" x1="600" y1="137.5" x2="552.0" y2="137.5"/>
+<line class="connector" x1="600" y1="145.0" x2="648.0" y2="145.0"/>
+<line class="connector" x1="600" y1="302.5" x2="552.0" y2="266.5"/>
+<line class="connector" x1="600" y1="302.5" x2="648.0" y2="271.0"/>
+<line class="connector" x1="600" y1="317.5" x2="552.0" y2="353.5"/>
+<line class="connector" x1="600" y1="332.5" x2="648.0" y2="364.0"/>
+<line class="connector" x1="600" y1="1375.0" x2="552.0" y2="1375.0"/>
+<line class="connector" x1="600" y1="1855.0" x2="648.0" y2="1838.5"/>
+<line class="connector" x1="600" y1="1900.0" x2="552.0" y2="1868.5"/>
+<line class="connector" x1="600" y1="1915.0" x2="648.0" y2="1931.5"/>
+<line class="connector" x1="600" y1="1930.0" x2="552.0" y2="1961.5"/>
+<line class="connector" x1="600" y1="2095.0" x2="648.0" y2="2058.3"/>
+<line class="connector" x1="600" y1="2110.0" x2="552.0" y2="2108.5"/>
+<line class="connector" x1="600" y1="2132.5" x2="648.0" y2="2169.3"/>
+<line class="connector" x1="600" y1="2260.0" x2="552.0" y2="2213.5"/>
+<line class="connector" x1="600" y1="2290.0" x2="648.0" y2="2286.0"/>
+<line class="connector" x1="600" y1="2312.5" x2="552.0" y2="2324.5"/>
+<line class="connector" x1="600" y1="2395.0" x2="648.0" y2="2385.0"/>
+<line class="connector" x1="600" y1="2447.5" x2="552.0" y2="2435.5"/>
+<line class="connector" x1="600" y1="2470.0" x2="648.0" y2="2484.0"/>
+<line class="connector" x1="600" y1="2492.5" x2="552.0" y2="2540.5"/>
 </g>
 <g id="tokens">
-<use class="token" href="#token_default" x="589.0" y="111.5" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="126.5" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="141.5" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1184.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1664.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1709.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1724.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1739.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="134.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="291.5" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="291.5" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="306.5" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="321.5" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1364.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1844.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="1889.0" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="1904.0" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="1919.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="1941.5" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="2069.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="2084.0" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="2099.0" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="2121.5" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="2204.0" width="22" height="22"/>
-<use class="token" href="#token_default" x="589.0" y="2256.5" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="2249.0" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="2279.0" width="22" height="22"/>
 <use class="token" href="#token_default" x="589.0" y="2301.5" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="2384.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="2436.5" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="2459.0" width="22" height="22"/>
+<use class="token" href="#token_default" x="589.0" y="2481.5" width="22" height="22"/>
 </g>
 <g id="labels">
-<rect class="label" x="139.7" y="40.0" width="406.3" height="97.0" rx="8" ry="8"/>
-<text class="title" x="155.7" y="69.0">
-<tspan x="155.7" dy="0.0">Assassin Unmasked at Finch House</tspan>
+<rect class="label" x="126.0" y="89.0" width="420.0" height="97.0" rx="8" ry="8"/>
+<text class="title" x="142.0" y="118.0">
+<tspan x="142.0" dy="0.0">Chain Warden Avoided; Fizz Bit Recruited</tspan>
 </text>
-<text class="summary" x="155.7" y="87.0">
-<tspan x="155.7" dy="0.0">The party avoided Ersal/Ersilio’s guards in town, then warned Mr. Finch and</tspan>
-<tspan x="155.7" dy="12.0">discovered an assassin hiding upstairs. They incapacitated and stabilized the</tspan>
-<tspan x="155.7" dy="12.0">attacker, stopped Finch from executing him, and moved the prisoner to the</tspan>
-<tspan x="155.7" dy="12.0">Wayward Compass for questioning.</tspan>
+<text class="summary" x="142.0" y="136.0">
+<tspan x="142.0" dy="0.0">The party spotted a chain-construct guarding an ancient house and managed to</tspan>
+<tspan x="142.0" dy="12.0">sneak past it. During their escape they found Fizz Bit, a stranded gnome</tspan>
+<tspan x="142.0" dy="12.0">wizard; he agreed to split loot 50/50 in exchange for being saved and joined the</tspan>
+<tspan x="142.0" dy="12.0">party.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="133.0">
+<text class="date-label" text-anchor="end" x="540.0" y="182.0">
+<tspan>28 Arethum, Midday — </tspan>
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
+</text>
+<rect class="label" x="654.0" y="108.5" width="403.9" height="73.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="137.5">
+<tspan x="670.0" dy="0.0">Derro&#x27;s Warm Welcome</tspan>
+</text>
+<text class="summary" x="670.0" y="155.5">
+<tspan x="670.0" dy="0.0">The party was ambushed by a derro foe-party; they party defeats them; there</tspan>
+<tspan x="670.0" dy="12.0">leader retrated into the water passage.</tspan>
+</text>
+<text class="date-label" text-anchor="end" x="1051.9" y="177.5">
+<tspan>28 Arethum, Morning — </tspan>
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
+</text>
+<rect class="label changed" x="140.2" y="230.0" width="405.8" height="73.0" rx="8" ry="8"/>
+<text class="title" x="156.2" y="259.0">
+<tspan x="156.2" dy="0.0">Aersiliel</tspan>
+</text>
+<text class="summary" x="156.2" y="277.0">
+<tspan x="156.2" dy="0.0">The party avoided Aersiliel and her guards in town. Sabriel meets and greets,</tspan>
+<tspan x="156.2" dy="12.0">Aersiliel shared Elaerith&#x27;s displeasure.</tspan>
+</text>
+<text class="date-label" text-anchor="end" x="540.0" y="299.0">
 <tspan>27 Arethum, Midday — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label" x="654.0" y="101.0" width="396.8" height="73.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="130.0">
-<tspan x="670.0" dy="0.0">Arrested, Then Commissioned by Ranwald</tspan>
+<rect class="label changed" x="654.0" y="228.5" width="402.2" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="257.5">
+<tspan x="670.0" dy="0.0">Framed</tspan>
 </text>
-<text class="summary" x="670.0" y="148.0">
-<tspan x="670.0" dy="0.0">The party fought off a rival adventuring group in The Shades, stabilized the</tspan>
-<tspan x="670.0" dy="12.0">injured loan shark, and returned for payment.</tspan>
+<text class="summary" x="670.0" y="275.5">
+<tspan x="670.0" dy="0.0">The party learned they were framed for the the murder of Calderwick; They</tspan>
+<tspan x="670.0" dy="12.0">prove their innocence to Lord Mayor Ranwald; they learn The Imperium was</tspan>
+<tspan x="670.0" dy="12.0">invovled.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1044.8" y="170.0">
+<text class="date-label" text-anchor="end" x="1050.2" y="309.5">
 <tspan>27 Arethum, Midday — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label" x="136.2" y="151.0" width="409.8" height="85.0" rx="8" ry="8"/>
-<text class="title" x="152.2" y="180.0">
-<tspan x="152.2" dy="0.0">Calderwick Writ and Orc Brawl</tspan>
+<rect class="label changed" x="130.4" y="317.0" width="415.6" height="73.0" rx="8" ry="8"/>
+<text class="title" x="146.4" y="346.0">
+<tspan x="146.4" dy="0.0">Meeting the Black Ledger</tspan>
 </text>
-<text class="summary" x="152.2" y="198.0">
-<tspan x="152.2" dy="0.0">At the writ board, Bazgar fought off an orc attacker before a short human</tspan>
-<tspan x="152.2" dy="12.0">intervened. The party tracked down Calderwick, staged a beating to claim the</tspan>
-<tspan x="152.2" dy="12.0">reward, and collected gold from Thorgrim.</tspan>
+<text class="summary" x="146.4" y="364.0">
+<tspan x="146.4" dy="0.0">The party fought off the Black Ledger in The Shades, stabilized the injured loan</tspan>
+<tspan x="146.4" dy="12.0">shark, and returned for payment.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="232.0">
+<text class="date-label" text-anchor="end" x="540.0" y="386.0">
+<tspan>27 Arethum, Midday — </tspan>
+<tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
+</text>
+<rect class="label changed" x="654.0" y="327.5" width="389.2" height="73.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="356.5">
+<tspan x="670.0" dy="0.0">Bazger makes friends</tspan>
+</text>
+<text class="summary" x="670.0" y="374.5">
+<tspan x="670.0" dy="0.0">At the writ board, Bazgar fought off an orc attacker before a short human</tspan>
+<tspan x="670.0" dy="12.0">intervened. Two members of the Blacker Ledger.</tspan>
+</text>
+<text class="date-label" text-anchor="end" x="1037.2" y="396.5">
 <tspan>27 Arethum, Morning — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label" x="654.0" y="1152.5" width="419.4" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1181.5">
-<tspan x="670.0" dy="0.0">Elder Marith Arrived via Cinder</tspan>
+<rect class="label changed" x="132.0" y="1332.5" width="414.0" height="85.0" rx="8" ry="8"/>
+<text class="title" x="148.0" y="1361.5">
+<tspan x="148.0" dy="0.0">Elder Marith Arrives</tspan>
 </text>
-<text class="summary" x="670.0" y="1199.5">
-<tspan x="670.0" dy="0.0">The party waited at camp as Elder Marith arrived on Cinder and confirmed</tspan>
-<tspan x="670.0" dy="12.0">Mara was lost with no return. She argued briefly with the crow, then left Cinder</tspan>
-<tspan x="670.0" dy="12.0">with Marwen.</tspan>
+<text class="summary" x="148.0" y="1379.5">
+<tspan x="148.0" dy="0.0">The party waited at camp as Elder Marith arrived on Cinder and confirmed</tspan>
+<tspan x="148.0" dy="12.0">Mara was lost with no return. Cinder choose to continue to serve Marwen over</tspan>
+<tspan x="148.0" dy="12.0">returning with Marith.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1067.4" y="1233.5">
+<text class="date-label" text-anchor="end" x="540.0" y="1413.5">
 <tspan>21 Arethum, Afternoon — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label" x="132.4" y="1619.5" width="413.6" height="85.0" rx="8" ry="8"/>
-<text class="title" x="148.4" y="1648.5">
-<tspan x="148.4" dy="0.0">Rope Escape and Extended Camp</tspan>
+<rect class="label changed" x="654.0" y="1796.0" width="413.6" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1825.0">
+<tspan x="670.0" dy="0.0">Rope Escape and Extended Camp</tspan>
 </text>
-<text class="summary" x="148.4" y="1666.5">
-<tspan x="148.4" dy="0.0">After hours passed, Kargrimdur lowered a secured rope and helped the party</tspan>
-<tspan x="148.4" dy="12.0">climb out. They then camped for several days to a week, ate rations, completed</tspan>
-<tspan x="148.4" dy="12.0">long rests, and watched occasional travelers pass.</tspan>
+<text class="summary" x="670.0" y="1843.0">
+<tspan x="670.0" dy="0.0">After hours passed, Kargrimdur lowered a secured rope and helped the party</tspan>
+<tspan x="670.0" dy="12.0">climb out. They then camped for several days to a week, ate rations, completed</tspan>
+<tspan x="670.0" dy="12.0">long rests, and watched occasional travelers pass.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1700.5">
+<text class="date-label" text-anchor="end" x="1061.6" y="1877.0">
 <tspan>18 Arethum, Night — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label" x="654.0" y="1652.0" width="397.3" height="73.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1681.0">
-<tspan x="670.0" dy="0.0">Cinder Appeased, Crow Dispatched</tspan>
+<rect class="label changed" x="148.7" y="1832.0" width="397.3" height="73.0" rx="8" ry="8"/>
+<text class="title" x="164.7" y="1861.0">
+<tspan x="164.7" dy="0.0">Cinder Appeased, Crow Dispatched</tspan>
 </text>
-<text class="summary" x="670.0" y="1699.0">
-<tspan x="670.0" dy="0.0">The party negotiated with an offended Cinder and restored working terms.</tspan>
-<tspan x="670.0" dy="12.0">They sent the crow with a note to fetch Kargrimdur and rope.</tspan>
+<text class="summary" x="164.7" y="1879.0">
+<tspan x="164.7" dy="0.0">The party negotiated with an offended Cinder and restored working terms.</tspan>
+<tspan x="164.7" dy="12.0">They sent the crow with a note to fetch Kargrimdur and rope.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1045.3" y="1721.0">
+<text class="date-label" text-anchor="end" x="540.0" y="1901.0">
 <tspan>18 Arethum, Afternoon — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label" x="128.2" y="1718.5" width="417.8" height="73.0" rx="8" ry="8"/>
-<text class="title" x="144.2" y="1747.5">
-<tspan x="144.2" dy="0.0">Climb Toward Faint Daylight</tspan>
+<rect class="label changed" x="654.0" y="1895.0" width="417.8" height="73.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="1924.0">
+<tspan x="670.0" dy="0.0">Climb Toward Faint Daylight</tspan>
 </text>
-<text class="summary" x="144.2" y="1765.5">
-<tspan x="144.2" dy="0.0">Swept through a tunnel, the party reached a cavern shore and found an upward</tspan>
-<tspan x="144.2" dy="12.0">path. They climbed to a higher plateau where faint daylight shone far above.</tspan>
+<text class="summary" x="670.0" y="1942.0">
+<tspan x="670.0" dy="0.0">Swept through a tunnel, the party reached a cavern shore and found an upward</tspan>
+<tspan x="670.0" dy="12.0">path. They climbed to a higher plateau where faint daylight shone far above.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1787.5">
+<text class="date-label" text-anchor="end" x="1065.8" y="1964.0">
 <tspan>18 Arethum, Afternoon — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label" x="654.0" y="1739.0" width="414.3" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1768.0">
-<tspan x="670.0" dy="0.0">Pool Mechanism Unlocked and Drained</tspan>
+<rect class="label changed" x="131.7" y="1919.0" width="414.3" height="85.0" rx="8" ry="8"/>
+<text class="title" x="147.7" y="1948.0">
+<tspan x="147.7" dy="0.0">Pool Mechanism Unlocked and Drained</tspan>
 </text>
-<text class="summary" x="670.0" y="1786.0">
-<tspan x="670.0" dy="0.0">After defeating the construct, the party investigated the pool’s purpose and</tspan>
-<tspan x="670.0" dy="12.0">workings. As Mara’s scratching drew near, they released the drain and escaped</tspan>
-<tspan x="670.0" dy="12.0">through the opening.</tspan>
+<text class="summary" x="147.7" y="1966.0">
+<tspan x="147.7" dy="0.0">After defeating the construct, the party investigated the pool’s purpose and</tspan>
+<tspan x="147.7" dy="12.0">workings. As Mara’s scratching drew near, they released the drain and escaped</tspan>
+<tspan x="147.7" dy="12.0">through the opening.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1062.3" y="1820.0">
+<text class="date-label" text-anchor="end" x="540.0" y="2000.0">
 <tspan>18 Arethum, Midday — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label" x="126.0" y="1833.3" width="420.0" height="97.0" rx="8" ry="8"/>
-<text class="title" x="142.0" y="1862.3">
-<tspan x="142.0" dy="0.0">Marwyn Warned of Mara</tspan>
+<rect class="label changed" x="654.0" y="2009.8" width="420.0" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="2038.8">
+<tspan x="670.0" dy="0.0">Marwyn Warned of Mara</tspan>
 </text>
-<text class="summary" x="142.0" y="1880.3">
-<tspan x="142.0" dy="0.0">Marwyn revealed Mara was a dangerous Elderholt deep witch and explained the</tspan>
-<tspan x="142.0" dy="12.0">difference between ward witches and deep witches and the cost of their</tspan>
-<tspan x="142.0" dy="12.0">bargains. The party accepted the danger and agreed they needed to escape and</tspan>
-<tspan x="142.0" dy="12.0">seek help.</tspan>
+<text class="summary" x="670.0" y="2056.8">
+<tspan x="670.0" dy="0.0">Marwyn revealed Mara was a dangerous Elderholt deep witch and explained the</tspan>
+<tspan x="670.0" dy="12.0">difference between ward witches and deep witches and the cost of their</tspan>
+<tspan x="670.0" dy="12.0">bargains. The party accepted the danger and agreed they needed to escape and</tspan>
+<tspan x="670.0" dy="12.0">seek help.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="1926.3">
+<text class="date-label" text-anchor="end" x="1068.0" y="2102.8">
 <tspan>17 Arethum, Afternoon — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label" x="654.0" y="1886.0" width="415.3" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="1915.0">
-<tspan x="670.0" dy="0.0">Alarmed Rest and Sabriel’s Return</tspan>
+<rect class="label changed" x="130.7" y="2066.0" width="415.3" height="85.0" rx="8" ry="8"/>
+<text class="title" x="146.7" y="2095.0">
+<tspan x="146.7" dy="0.0">Alarmed Rest and Sabriel’s Return</tspan>
 </text>
-<text class="summary" x="670.0" y="1933.0">
-<tspan x="670.0" dy="0.0">The party retreated deeper into the ruins, set an Alarm, and took a short rest.</tspan>
-<tspan x="670.0" dy="12.0">Sabriel rejoined them after seemingly teleporting back, and they examined the</tspan>
-<tspan x="670.0" dy="12.0">blank book and noted its unsettling, off-brand magical feel.</tspan>
+<text class="summary" x="146.7" y="2113.0">
+<tspan x="146.7" dy="0.0">The party retreated deeper into the ruins, set an Alarm, and took a short rest.</tspan>
+<tspan x="146.7" dy="12.0">Sabriel rejoined them after seemingly teleporting back, and they examined the</tspan>
+<tspan x="146.7" dy="12.0">blank book and noted its unsettling, off-brand magical feel.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1063.3" y="1967.0">
+<text class="date-label" text-anchor="end" x="540.0" y="2147.0">
 <tspan>17 Arethum, Midday — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label" x="133.4" y="1944.3" width="412.6" height="97.0" rx="8" ry="8"/>
-<text class="title" x="149.4" y="1973.3">
-<tspan x="149.4" dy="0.0">Mara’s Chase Through the Tunnels</tspan>
+<rect class="label changed" x="654.0" y="2120.8" width="412.6" height="97.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="2149.8">
+<tspan x="670.0" dy="0.0">Mara’s Chase Through the Tunnels</tspan>
 </text>
-<text class="summary" x="149.4" y="1991.3">
-<tspan x="149.4" dy="0.0">The party hired an Oathhold dwarf guide and reached hidden ancient tunnels,</tspan>
-<tspan x="149.4" dy="12.0">finding a recently used room marked “MARA.” Mara attacked and pursued</tspan>
-<tspan x="149.4" dy="12.0">Marwen; the party fled as the bridge snapped, injuring Bazgar and Marwyn</tspan>
-<tspan x="149.4" dy="12.0">while Mara halted at the chasm.</tspan>
+<text class="summary" x="670.0" y="2167.8">
+<tspan x="670.0" dy="0.0">The party hired an Oathhold dwarf guide and reached hidden ancient tunnels,</tspan>
+<tspan x="670.0" dy="12.0">finding a recently used room marked “MARA.” Mara attacked and pursued</tspan>
+<tspan x="670.0" dy="12.0">Marwen; the party fled as the bridge snapped, injuring Bazgar and Marwyn</tspan>
+<tspan x="670.0" dy="12.0">while Mara halted at the chasm.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="2037.3">
+<text class="date-label" text-anchor="end" x="1060.6" y="2213.8">
 <tspan>17 Arethum, Morning — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label" x="654.0" y="1985.0" width="417.3" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="2014.0">
-<tspan x="670.0" dy="0.0">Shopping and Research in Ardenhaven</tspan>
+<rect class="label changed" x="128.7" y="2165.0" width="417.3" height="97.0" rx="8" ry="8"/>
+<text class="title" x="144.7" y="2194.0">
+<tspan x="144.7" dy="0.0">Shopping and Research in Ardenhaven</tspan>
 </text>
-<text class="summary" x="670.0" y="2032.0">
-<tspan x="670.0" dy="0.0">The party completed their shopping in Ardenford’s local shops, acquiring items</tspan>
-<tspan x="670.0" dy="12.0">including a discounted Sleep scroll and replacement throwing axes. Marwen</tspan>
-<tspan x="670.0" dy="12.0">stole an uncatalogued holy book during her research at the Concordance</tspan>
-<tspan x="670.0" dy="12.0">Library, successfully evading detection.</tspan>
+<text class="summary" x="144.7" y="2212.0">
+<tspan x="144.7" dy="0.0">The party completed their shopping in Ardenford’s local shops, acquiring items</tspan>
+<tspan x="144.7" dy="12.0">including a discounted Sleep scroll and replacement throwing axes. Marwen</tspan>
+<tspan x="144.7" dy="12.0">stole an uncatalogued holy book during her research at the Concordance</tspan>
+<tspan x="144.7" dy="12.0">Library, successfully evading detection.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1065.3" y="2078.0">
+<text class="date-label" text-anchor="end" x="540.0" y="2258.0">
 <tspan>16 Arethum, Afternoon — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label" x="139.9" y="2067.0" width="406.1" height="85.0" rx="8" ry="8"/>
-<text class="title" x="155.9" y="2096.0">
-<tspan x="155.9" dy="0.0">Confrontation with Giant Spider</tspan>
+<rect class="label changed" x="654.0" y="2243.5" width="406.1" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="2272.5">
+<tspan x="670.0" dy="0.0">Confrontation with Giant Spider</tspan>
 </text>
-<text class="summary" x="155.9" y="2114.0">
-<tspan x="155.9" dy="0.0">The party stealthily approached a web-covered camp, negotiated with a giant</tspan>
-<tspan x="155.9" dy="12.0">spider, and killed a hatching spiderling. After stabilizing a worker, they</tspan>
-<tspan x="155.9" dy="12.0">destroyed the spider eggs, and prepared to return to Ardenford for payment.</tspan>
+<text class="summary" x="670.0" y="2290.5">
+<tspan x="670.0" dy="0.0">The party stealthily approached a web-covered camp, negotiated with a giant</tspan>
+<tspan x="670.0" dy="12.0">spider, and killed a hatching spiderling. After stabilizing a worker, they</tspan>
+<tspan x="670.0" dy="12.0">destroyed the spider eggs, and prepared to return to Ardenford for payment.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="2148.0">
+<text class="date-label" text-anchor="end" x="1054.1" y="2324.5">
 <tspan>16 Arethum, Midday — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label" x="654.0" y="2096.0" width="419.6" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="2125.0">
-<tspan x="670.0" dy="0.0">Consultation with Elarion the Elf</tspan>
+<rect class="label changed" x="126.4" y="2276.0" width="419.6" height="97.0" rx="8" ry="8"/>
+<text class="title" x="142.4" y="2305.0">
+<tspan x="142.4" dy="0.0">Consultation with Elarion the Elf</tspan>
 </text>
-<text class="summary" x="670.0" y="2143.0">
-<tspan x="670.0" dy="0.0">Marwen approached Elarion, the elf librarian, to seek guidance on ruins, dwarf</tspan>
-<tspan x="670.0" dy="12.0">guides, and local shops. With valuable directions and recommendations</tspan>
-<tspan x="670.0" dy="12.0">received, the party concluded their conversation and prepared to continue their</tspan>
-<tspan x="670.0" dy="12.0">errands.</tspan>
+<text class="summary" x="142.4" y="2323.0">
+<tspan x="142.4" dy="0.0">Marwen approached Elarion, the elf librarian, to seek guidance on ruins, dwarf</tspan>
+<tspan x="142.4" dy="12.0">guides, and local shops. With valuable directions and recommendations</tspan>
+<tspan x="142.4" dy="12.0">received, the party concluded their conversation and prepared to continue their</tspan>
+<tspan x="142.4" dy="12.0">errands.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1067.6" y="2189.0">
+<text class="date-label" text-anchor="end" x="540.0" y="2369.0">
 <tspan>16 Arethum, Morning — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label" x="126.0" y="2166.0" width="420.0" height="85.0" rx="8" ry="8"/>
-<text class="title" x="142.0" y="2195.0">
-<tspan x="142.0" dy="0.0">Tavern Brawl with Imperium Traders</tspan>
+<rect class="label changed" x="654.0" y="2342.5" width="420.0" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="2371.5">
+<tspan x="670.0" dy="0.0">Tavern Brawl with Imperium Traders</tspan>
 </text>
-<text class="summary" x="142.0" y="2213.0">
-<tspan x="142.0" dy="0.0">After a late-night bonding session, the party faced escalating tensions with</tspan>
-<tspan x="142.0" dy="12.0">Imperium traders. Bazgar initiated a brawl, knocking out several traders before</tspan>
-<tspan x="142.0" dy="12.0">Thorgrim enforced peace with free beer, allowing the party to rest undisturbed.</tspan>
+<text class="summary" x="670.0" y="2389.5">
+<tspan x="670.0" dy="0.0">After a late-night bonding session, the party faced escalating tensions with</tspan>
+<tspan x="670.0" dy="12.0">Imperium traders. Bazgar initiated a brawl, knocking out several traders before</tspan>
+<tspan x="670.0" dy="12.0">Thorgrim enforced peace with free beer, allowing the party to rest undisturbed.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="2247.0">
+<text class="date-label" text-anchor="end" x="1068.0" y="2423.5">
 <tspan>15 Arethum, Night — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label" x="654.0" y="2207.0" width="413.2" height="97.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="2236.0">
-<tspan x="670.0" dy="0.0">Goblin Raid Resolution</tspan>
+<rect class="label changed" x="132.8" y="2387.0" width="413.2" height="97.0" rx="8" ry="8"/>
+<text class="title" x="148.8" y="2416.0">
+<tspan x="148.8" dy="0.0">Goblin Raid Resolution</tspan>
 </text>
-<text class="summary" x="670.0" y="2254.0">
-<tspan x="670.0" dy="0.0">The party defeated the goblin ambush, with Marwen incinerating several foes</tspan>
-<tspan x="670.0" dy="12.0">and Sabriel providing healing. They spared one goblin who fled, then returned</tspan>
-<tspan x="670.0" dy="12.0">to the farmer to receive payment and bonus cheese for the rescued sheep,</tspan>
-<tspan x="670.0" dy="12.0">concluding the job.</tspan>
+<text class="summary" x="148.8" y="2434.0">
+<tspan x="148.8" dy="0.0">The party defeated the goblin ambush, with Marwen incinerating several foes</tspan>
+<tspan x="148.8" dy="12.0">and Sabriel providing healing. They spared one goblin who fled, then returned</tspan>
+<tspan x="148.8" dy="12.0">to the farmer to receive payment and bonus cheese for the rescued sheep,</tspan>
+<tspan x="148.8" dy="12.0">concluding the job.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1061.2" y="2300.0">
+<text class="date-label" text-anchor="end" x="540.0" y="2480.0">
 <tspan>15 Arethum, Afternoon — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label" x="136.3" y="2265.0" width="409.7" height="85.0" rx="8" ry="8"/>
-<text class="title" x="152.3" y="2294.0">
-<tspan x="152.3" dy="0.0">Resting Corwin Caldor</tspan>
+<rect class="label changed" x="654.0" y="2441.5" width="409.7" height="85.0" rx="8" ry="8"/>
+<text class="title" x="670.0" y="2470.5">
+<tspan x="670.0" dy="0.0">Resting Corwin Caldor</tspan>
 </text>
-<text class="summary" x="152.3" y="2312.0">
-<tspan x="152.3" dy="0.0">The party fought off skeletons, identified Renn’s grandfather, Corwin Caldor,</tspan>
-<tspan x="152.3" dy="12.0">and successfully returned his intact remains to the watchtower. After burying</tspan>
-<tspan x="152.3" dy="12.0">him, they received payment from Renn before seeking further work.</tspan>
+<text class="summary" x="670.0" y="2488.5">
+<tspan x="670.0" dy="0.0">The party fought off skeletons, identified Renn’s grandfather, Corwin Caldor,</tspan>
+<tspan x="670.0" dy="12.0">and successfully returned his intact remains to the watchtower. After burying</tspan>
+<tspan x="670.0" dy="12.0">him, they received payment from Renn before seeking further work.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="540.0" y="2346.0">
+<text class="date-label" text-anchor="end" x="1057.7" y="2522.5">
 <tspan>15 Arethum, Midday — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
-<rect class="label" x="654.0" y="2318.0" width="412.7" height="85.0" rx="8" ry="8"/>
-<text class="title" x="670.0" y="2347.0">
-<tspan x="670.0" dy="0.0">The Compass Edge Forms</tspan>
+<rect class="label changed" x="133.3" y="2498.0" width="412.7" height="85.0" rx="8" ry="8"/>
+<text class="title" x="149.3" y="2527.0">
+<tspan x="149.3" dy="0.0">The Compass Edge Forms</tspan>
 </text>
-<text class="summary" x="670.0" y="2365.0">
-<tspan x="670.0" dy="0.0">Bazgar, Sabriel, and Marwen first met at the Wayward Compass in Ardenford,</tspan>
-<tspan x="670.0" dy="12.0">traded names and first impressions, and agreed to take their first contract</tspan>
-<tspan x="670.0" dy="12.0">together.</tspan>
+<text class="summary" x="149.3" y="2545.0">
+<tspan x="149.3" dy="0.0">Bazgar, Sabriel, and Marwen first met at the Wayward Compass in Ardenford,</tspan>
+<tspan x="149.3" dy="12.0">traded names and first impressions, and agreed to take their first contract</tspan>
+<tspan x="149.3" dy="12.0">together.</tspan>
 </text>
-<text class="date-label" text-anchor="end" x="1060.7" y="2399.0">
+<text class="date-label" text-anchor="end" x="540.0" y="2579.0">
 <tspan>15 Arethum, Morning — </tspan>
 <tspan class="tick-glyph">⋈</tspan><tspan class="tick-number">50</tspan>
 </text>
 </g>
 <g id="tags">
-<g transform="translate(509.0 44.0)">
+<g transform="translate(509.0 93.0)">
+<title>tag: party</title>
+<use href="#tag_party" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(1020.9 112.5)">
+<title>tag: battle</title>
+<use href="#tag_battle" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(991.9 112.5)">
+<title>tag: party</title>
+<use href="#tag_party" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(509.0 234.0)">
 <title>tag: lore</title>
 <use href="#tag_lore" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 44.0)">
+<g transform="translate(480.0 234.0)">
 <title>tag: location</title>
 <use href="#tag_location" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(451.0 44.0)">
+<g transform="translate(451.0 234.0)">
 <title>tag: party</title>
 <use href="#tag_party" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1013.8 105.0)">
+<g transform="translate(1019.2 232.5)">
+<title>tag: party</title>
+<use href="#tag_party" width="25.0" height="25.0"/>
+</g>
+<g transform="translate(509.0 321.0)">
 <title>tag: lore</title>
 <use href="#tag_lore" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(984.8 105.0)">
+<g transform="translate(480.0 321.0)">
 <title>tag: party</title>
 <use href="#tag_party" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(509.0 155.0)">
+<g transform="translate(1006.2 331.5)">
 <title>tag: party</title>
 <use href="#tag_party" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1036.4 1156.5)">
+<g transform="translate(509.0 1336.5)">
 <title>tag: party</title>
 <use href="#tag_party" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(509.0 1623.5)">
+<g transform="translate(1030.6 1800.0)">
 <title>tag: lore</title>
 <use href="#tag_lore" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 1623.5)">
+<g transform="translate(1001.6 1800.0)">
 <title>tag: party</title>
 <use href="#tag_party" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1014.3 1656.0)">
+<g transform="translate(509.0 1836.0)">
 <title>tag: party</title>
 <use href="#tag_party" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(509.0 1722.5)">
+<g transform="translate(1034.8 1899.0)">
 <title>tag: party</title>
 <use href="#tag_party" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1031.3 1743.0)">
+<g transform="translate(509.0 1923.0)">
 <title>tag: party</title>
 <use href="#tag_party" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(500.2 1837.3)">
+<g transform="translate(1028.2 2013.8)">
 <title>faction: elderholt</title>
 <use href="#pov_elderholt" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(471.2 1841.6)">
+<g transform="translate(999.2 2018.1)">
 <title>tag: party</title>
 <use href="#tag_party" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1032.3 1890.0)">
+<g transform="translate(509.0 2070.0)">
 <title>tag: party</title>
 <use href="#tag_party" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(509.0 1948.3)">
+<g transform="translate(1029.6 2124.8)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(480.0 1948.3)">
+<g transform="translate(1000.6 2124.8)">
 <title>tag: party</title>
 <use href="#tag_party" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1034.3 1993.4)">
+<g transform="translate(509.0 2173.4)">
 <title>tag: party</title>
 <use href="#tag_party" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(996.6 1989.0)">
+<g transform="translate(471.2 2169.0)">
 <title>faction: ardenhaven</title>
 <use href="#pov_ardenhaven" width="33.8" height="33.8"/>
 </g>
-<g transform="translate(967.6 1993.4)">
+<g transform="translate(442.2 2173.4)">
 <title>tag: lore</title>
 <use href="#tag_lore" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(509.0 2071.0)">
+<g transform="translate(1023.1 2247.5)">
 <title>tag: party</title>
 <use href="#tag_party" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1036.6 2100.0)">
+<g transform="translate(509.0 2280.0)">
 <title>tag: party</title>
 <use href="#tag_party" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(509.0 2170.0)">
+<g transform="translate(1037.0 2346.5)">
 <title>tag: party</title>
 <use href="#tag_party" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1030.2 2211.0)">
+<g transform="translate(509.0 2391.0)">
 <title>tag: party</title>
 <use href="#tag_party" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1001.2 2211.0)">
+<g transform="translate(480.0 2391.0)">
 <title>tag: battle</title>
 <use href="#tag_battle" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(509.0 2269.0)">
+<g transform="translate(1026.7 2445.5)">
 <title>tag: party</title>
 <use href="#tag_party" width="25.0" height="25.0"/>
 </g>
-<g transform="translate(1029.7 2322.0)">
+<g transform="translate(509.0 2502.0)">
 <title>tag: party</title>
 <use href="#tag_party" width="25.0" height="25.0"/>
 </g>
 </g>
 <g id="ticks">
+<line class="tick" x1="590.0" y1="2560.0" x2="610.0" y2="2560.0"/>
+<text class="tick-label tick-label-outline" x="616.0" y="2565.0">Are 15</text>
+<text class="tick-label" x="616.0" y="2565.0">Are 15</text>
 <line class="tick" x1="590.0" y1="2380.0" x2="610.0" y2="2380.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="2385.0">Are 15</text>
-<text class="tick-label" x="616.0" y="2385.0">Are 15</text>
+<text class="tick-label tick-label-outline" x="616.0" y="2385.0">Are 16</text>
+<text class="tick-label" x="616.0" y="2385.0">Are 16</text>
 <line class="tick" x1="590.0" y1="2200.0" x2="610.0" y2="2200.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="2205.0">Are 16</text>
-<text class="tick-label" x="616.0" y="2205.0">Are 16</text>
+<text class="tick-label tick-label-outline" x="616.0" y="2205.0">Are 17</text>
+<text class="tick-label" x="616.0" y="2205.0">Are 17</text>
 <line class="tick" x1="590.0" y1="2020.0" x2="610.0" y2="2020.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="2025.0">Are 17</text>
-<text class="tick-label" x="616.0" y="2025.0">Are 17</text>
+<text class="tick-label tick-label-outline" x="616.0" y="2025.0">Are 18</text>
+<text class="tick-label" x="616.0" y="2025.0">Are 18</text>
 <line class="tick" x1="590.0" y1="1840.0" x2="610.0" y2="1840.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1845.0">Are 18</text>
-<text class="tick-label" x="616.0" y="1845.0">Are 18</text>
+<text class="tick-label tick-label-outline" x="616.0" y="1845.0">Are 19</text>
+<text class="tick-label" x="616.0" y="1845.0">Are 19</text>
 <line class="tick" x1="590.0" y1="1660.0" x2="610.0" y2="1660.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1665.0">Are 19</text>
-<text class="tick-label" x="616.0" y="1665.0">Are 19</text>
+<text class="tick-label tick-label-outline" x="616.0" y="1665.0">Are 20</text>
+<text class="tick-label" x="616.0" y="1665.0">Are 20</text>
 <line class="tick" x1="590.0" y1="1480.0" x2="610.0" y2="1480.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1485.0">Are 20</text>
-<text class="tick-label" x="616.0" y="1485.0">Are 20</text>
+<text class="tick-label tick-label-outline" x="616.0" y="1485.0">Are 21</text>
+<text class="tick-label" x="616.0" y="1485.0">Are 21</text>
 <line class="tick" x1="590.0" y1="1300.0" x2="610.0" y2="1300.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1305.0">Are 21</text>
-<text class="tick-label" x="616.0" y="1305.0">Are 21</text>
+<text class="tick-label tick-label-outline" x="616.0" y="1305.0">Are 22</text>
+<text class="tick-label" x="616.0" y="1305.0">Are 22</text>
 <line class="tick" x1="590.0" y1="1120.0" x2="610.0" y2="1120.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="1125.0">Are 22</text>
-<text class="tick-label" x="616.0" y="1125.0">Are 22</text>
+<text class="tick-label tick-label-outline" x="616.0" y="1125.0">Are 23</text>
+<text class="tick-label" x="616.0" y="1125.0">Are 23</text>
 <line class="tick" x1="590.0" y1="940.0" x2="610.0" y2="940.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="945.0">Are 23</text>
-<text class="tick-label" x="616.0" y="945.0">Are 23</text>
+<text class="tick-label tick-label-outline" x="616.0" y="945.0">Are 24</text>
+<text class="tick-label" x="616.0" y="945.0">Are 24</text>
 <line class="tick" x1="590.0" y1="760.0" x2="610.0" y2="760.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="765.0">Are 24</text>
-<text class="tick-label" x="616.0" y="765.0">Are 24</text>
+<text class="tick-label tick-label-outline" x="616.0" y="765.0">Are 25</text>
+<text class="tick-label" x="616.0" y="765.0">Are 25</text>
 <line class="tick" x1="590.0" y1="580.0" x2="610.0" y2="580.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="585.0">Are 25</text>
-<text class="tick-label" x="616.0" y="585.0">Are 25</text>
+<text class="tick-label tick-label-outline" x="616.0" y="585.0">Are 26</text>
+<text class="tick-label" x="616.0" y="585.0">Are 26</text>
 <line class="tick" x1="590.0" y1="400.0" x2="610.0" y2="400.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="405.0">Are 26</text>
-<text class="tick-label" x="616.0" y="405.0">Are 26</text>
+<text class="tick-label tick-label-outline" x="616.0" y="405.0">Are 27</text>
+<text class="tick-label" x="616.0" y="405.0">Are 27</text>
 <line class="tick" x1="590.0" y1="220.0" x2="610.0" y2="220.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="225.0">Are 27</text>
-<text class="tick-label" x="616.0" y="225.0">Are 27</text>
+<text class="tick-label tick-label-outline" x="616.0" y="225.0">Are 28</text>
+<text class="tick-label" x="616.0" y="225.0">Are 28</text>
 <line class="tick" x1="590.0" y1="40.0" x2="610.0" y2="40.0"/>
-<text class="tick-label tick-label-outline" x="616.0" y="45.0">Are 28</text>
-<text class="tick-label" x="616.0" y="45.0">Are 28</text>
+<text class="tick-label tick-label-outline" x="616.0" y="45.0">Are 29</text>
+<text class="tick-label" x="616.0" y="45.0">Are 29</text>
 </g>
 </svg>
