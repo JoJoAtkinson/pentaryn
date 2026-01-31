@@ -30,3 +30,4 @@ status: active
 - [Sivren Coilfin](npcs/sivren-coilfin.md)
 - [Moksel-dum](npcs/moksel-dum.md)
 - [Drakzul-dur](npcs/drakzul-dur.md)
+- [Fizz Bit](npcs/fizz-bit.md)
