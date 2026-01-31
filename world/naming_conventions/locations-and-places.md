@@ -36,18 +36,23 @@ These rules describe **how to build location names** for different cultures. Whe
 - **Tone:** grounded, practical, often geography-based.
 - **Structure:** `base syllable(s)` + `geography suffix`.
 - **Proto-root mutation:** `ar` → `ar` or `er` inside the name.
-- **Avoid:** double vowels, apostrophes, overly melodic sounds.
+- **Avoid:** elven-style vowel pairs (`ae`, `ia`, `io`, `ui`), long vowel chains, apostrophes, overly melodic sounds.
 
-**Base Syllables (pick 1-2):**
-`Ar`, `Arden`, `Stone`, `Red`, `Dun`, `Cal`, `Tor`, `Mer`, `Bren`, `Ash`, `Oak`, `Raven`, `Thorn`, `Glen`, `Wolf`, `Iron`, `Hawk`, `Bright`
+**Core Roots (pick 1):**
+`Ar`, `Arden`, `Ash`, `Bren`, `Bright`, `Cal`, `Dun`, `Glen`, `Hawk`, `Iron`, `Mer`, `Oak`, `Raven`, `Red`, `Stone`, `Thorn`, `Tor`, `Wolf`
+
+**Prefix Modifiers (optional, pick 0-1):**
+`North`, `South`, `East`, `West`, `High`, `Low`, `Old`, `New`, `Far`, `Near`, `Black`, `White`, `Grey`, `Gold`, `Silver`, `Frost`, `Mist`, `Storm`, `Sun`, `Star`, `Crow`, `Fox`, `Hart`, `Pine`, `Rose`
 
 **Geography Suffixes:**
-`-ford`, `-wick`, `-gate`, `-mouth`, `-har`, `-stead`, `-holt`, `-march`, `-haven`, `-dale`, `-ridge`, `-ton`, `-bridge`
+`-ford`, `-wick`, `-gate`, `-mouth`, `-har`, `-stead`, `-holt`, `-march`, `-haven`, `-dale`, `-ridge`, `-ton`, `-bridge`, `-croft`, `-field`, `-mill`, `-barrow`, `-watch`, `-keep`, `-cross`, `-wall`, `-hold`, `-port`, `-point`, `-pass`, `-fall`, `-crest`, `-cliff`, `-hollow`, `-hearth`, `-yard`, `-market`, `-way`, `-run`, `-bank`, `-fen`, `-moor`, `-wood`
 
 **Construction Steps:**
-1. Pick 1-2 base syllables (prefer 1 for simplicity)
-2. Add geography suffix
-3. Check that proto-root `ar`/`er` appears if using ancient connection
+1. Pick 1 core root (prefer 1 for simplicity)
+2. Optional: add 1 prefix modifier
+3. Add a geography suffix
+4. If generating a set of names, rotate suffix types (don’t reuse the same suffix over and over)
+5. Check that proto-root `ar`/`er` appears if using ancient connection
 
 **Examples:**
 - `Arden` + `-ford` = `Ardenford`
@@ -226,3 +231,27 @@ These rules describe **how to build location names** for different cultures. Whe
 - `Stoneatheon` (literal geography)
 - `Krag-os` (harsh orc consonants)
 - `Merroweum` (human-style base)
+
+---
+
+### Neogi Location Naming Rules
+
+- **Tone:** alien, sibilant, and transactional; place names sound like they belong on ledgers and slave tags.
+- **Structure (default):** `core` + `'` + `function` (+ optional `'` + `ownership`).
+- **Avoid:** human geography suffixes (`-ford`, `-haven`, etc.), “pretty” elven vowel pairs (`ae`, `ia`, `io`, `ui`), and dwarven hyphen-suffix patterns (`-dur`, `-kar`, etc.) unless it’s intentionally borrowed.
+
+**Core morphemes (pick 1):**
+`kazz`, `zhak`, `ssak`, `qath`, `xul`, `zix`, `skra`, `zul`, `kith`
+
+**Function morphemes (pick 1):**
+`vash` (market/auction), `gru` (pit/cistern), `sik` (silkworks), `hath` (hatchery), `drak` (dock/berth), `keth` (gate), `thru` (tunnel), `zha` (shrine)
+
+**Ownership tags (optional, pick 0–1):**
+`ka'jk` (god-marked), `zxl` (house-mark), `thrall` (chattel pen), `ix` (enforcer post)
+
+**Examples:**
+- `Kazz'gru` (KAZH-groo)
+- `Ssak'vash` (ssak-VASH)
+- `Qath'thru` (KATH-throo)
+- `Xul'drak` (ZULL-drak)
+- `Zhak'sik'ka'jk` (ZHAK-sik kah-JIK)
