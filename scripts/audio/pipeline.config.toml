@@ -9,8 +9,10 @@ session_id = ""
 subscription_id = "7593eb4d-6c88-49cb-a4c8-fbe209e62151"
 resource_group = "AtJoseph-rg"
 workspace_name = "joe-ml-sandbox"
-compute_target = "gpu-transcribe"
+compute_target_gpu = "gpu-transcribe"  # GPU compute for Steps 1-4
+compute_target_cpu = "cpu-preprocess"  # CPU compute for Step 0 (FFmpeg)
 environment_name = "whisperx-gpu"
+hf_auth_token = ""  # Loaded from .env or environment variable
 
 [preprocess]
 enabled = true
@@ -22,6 +24,8 @@ true_peak_db = -1.5
 highpass_hz = 80
 two_pass = true
 output_format = "flac"
+parallel_tracks = 0  # Chunk workers per track (0 = auto CPU count)
+progress_interval_seconds = 15
 
 [transcription]
 model = "large-v3"

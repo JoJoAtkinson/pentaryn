@@ -1,9 +1,13 @@
 """Audio utilities for loading, processing, and chunking audio files."""
 
+import logging
 import subprocess
+import time
 from pathlib import Path
 from typing import Optional, Tuple, List
 import numpy as np
+
+logger = logging.getLogger(__name__)
 
 
 def load_audio(
@@ -133,6 +137,9 @@ def normalize_audio_ffmpeg(
     highpass_hz: Optional[int] = 80,
     two_pass: bool = True,
     output_format: str = "flac",
+    duration_seconds: Optional[float] = None,
+    progress_interval_seconds: int = 0,
+    progress_label: Optional[str] = None,
 ) -> None:
     """
     Normalize audio using FFmpeg loudnorm filter (EBU R128).
@@ -152,6 +159,9 @@ def normalize_audio_ffmpeg(
     output_path.parent.mkdir(parents=True, exist_ok=True)
     
     if two_pass:
+        pass1_start = time.time()
+        label = f" [{progress_label}]" if progress_label else ""
+        logger.info(f"FFmpeg loudnorm pass 1/2{label}: measuring loudness")
         # First pass: measure loudness
         measure_cmd = [
             "ffmpeg", "-i", str(input_path),
@@ -165,6 +175,8 @@ def normalize_audio_ffmpeg(
             text=True,
             check=True,
         )
+        pass1_elapsed = time.time() - pass1_start
+        logger.info(f"FFmpeg loudnorm pass 1/2{label} complete in {pass1_elapsed/60:.2f} min")
         
         # Parse measured values from stderr (FFmpeg logs to stderr)
         import json
@@ -179,13 +191,14 @@ def normalize_audio_ffmpeg(
             input_tp = measured.get("input_tp", str(true_peak_db))
             input_thresh = measured.get("input_thresh", "-70.0")
             target_offset = measured.get("target_offset", "0.0")
-            
+
             # Second pass: apply normalization with measured values
-            filter_parts = [
-                f"loudnorm=I={loudnorm_target_lufs}:LRA={loudnorm_range_lu}:TP={true_peak_db}",
-                f":measured_I={input_i}:measured_LRA={input_lra}:measured_TP={input_tp}",
-                f":measured_thresh={input_thresh}:offset={target_offset}:linear=true",
-            ]
+            loudnorm_filter = (
+                f"loudnorm=I={loudnorm_target_lufs}:LRA={loudnorm_range_lu}:TP={true_peak_db}"
+                f":measured_I={input_i}:measured_LRA={input_lra}:measured_TP={input_tp}"
+                f":measured_thresh={input_thresh}:offset={target_offset}:linear=true"
+            )
+            filter_parts = [loudnorm_filter]
         else:
             # Fallback to single-pass if JSON parsing fails
             filter_parts = [
@@ -203,13 +216,29 @@ def normalize_audio_ffmpeg(
     
     filter_chain = ",".join(filter_parts)
     
+    progress_args: list[str] = []
+    if progress_interval_seconds and duration_seconds and duration_seconds > 0:
+        progress_args = [
+            "-progress",
+            "pipe:1",
+            "-nostats",
+            "-loglevel",
+            "error",
+        ]
+
     # Build final command
     cmd = [
-        "ffmpeg", "-y",  # Overwrite output
-        "-i", str(input_path),
-        "-af", filter_chain,
-        "-ar", str(sample_rate),
-        "-ac", str(channels),
+        "ffmpeg",
+        "-y",  # Overwrite output
+        *progress_args,
+        "-i",
+        str(input_path),
+        "-af",
+        filter_chain,
+        "-ar",
+        str(sample_rate),
+        "-ac",
+        str(channels),
     ]
     
     if output_format == "flac":
@@ -218,5 +247,103 @@ def normalize_audio_ffmpeg(
         cmd.extend(["-c:a", "pcm_s16le"])
     
     cmd.append(str(output_path))
+
+    if progress_interval_seconds and duration_seconds and duration_seconds > 0:
+        pass2_start = time.time()
+        label = f" [{progress_label}]" if progress_label else ""
+        logger.info(f"FFmpeg loudnorm pass 2/2{label}: applying normalization")
+
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        last_log = 0.0
+        out_time_ms = 0
+        try:
+            assert process.stdout is not None
+            for line in process.stdout:
+                line = line.strip()
+                if line.startswith("out_time_ms="):
+                    try:
+                        out_time_ms = int(line.split("=", 1)[1])
+                    except ValueError:
+                        continue
+                    now = time.time()
+                    if now - last_log >= progress_interval_seconds:
+                        percent = min(100.0, (out_time_ms / 1_000_000) / duration_seconds * 100.0)
+                        label = f"{progress_label} " if progress_label else ""
+                        logger.info(f"Progress: {label}{percent:.1f}%")
+                        last_log = now
+                elif line.startswith("progress=") and line.endswith("end"):
+                    break
+        finally:
+            stdout, stderr = process.communicate()
+
+        if process.returncode != 0:
+            raise RuntimeError(f"ffmpeg failed: {stderr or stdout}")
+        pass2_elapsed = time.time() - pass2_start
+        logger.info(f"FFmpeg loudnorm pass 2/2{label} complete in {pass2_elapsed/60:.2f} min")
+        return
+
+    try:
+        pass2_start = time.time()
+        label = f" [{progress_label}]" if progress_label else ""
+        logger.info(f"FFmpeg loudnorm pass 2/2{label}: applying normalization")
+        subprocess.run(cmd, check=True, capture_output=True)
+        pass2_elapsed = time.time() - pass2_start
+        logger.info(f"FFmpeg loudnorm pass 2/2{label} complete in {pass2_elapsed/60:.2f} min")
+    except subprocess.CalledProcessError as exc:
+        stderr = exc.stderr.decode("utf-8", errors="replace") if exc.stderr else ""
+        raise RuntimeError(f"ffmpeg failed: {stderr}") from exc
+
+
+def configure_torch_safe_globals() -> None:
+    """
+    Configure PyTorch 2.6+ safe_globals to allow pyannote and Lightning checkpoints.
     
-    subprocess.run(cmd, check=True, capture_output=True)
+    PyTorch 2.6+ defaults `torch.load(weights_only=True)`, which rejects some
+    pyannote/Lightning checkpoints unless certain classes are allowlisted.
+    """
+    try:
+        import torch.serialization
+        import torch.torch_version
+    except Exception:
+        return
+
+    safe_globals = []
+    
+    # Add OmegaConf classes (for Lightning checkpoints)
+    try:
+        from omegaconf import DictConfig, ListConfig  # type: ignore
+        safe_globals.extend([DictConfig, ListConfig])
+    except Exception:
+        pass
+    
+    # Add TorchVersion (required by pyannote models)
+    try:
+        safe_globals.append(torch.torch_version.TorchVersion)
+    except Exception:
+        pass
+    
+    # Add pyannote classes (required for speaker diarization models)
+    try:
+        import pyannote.audio.core.task as task_module
+        from pyannote.audio.core.model import Model
+        from pyannote.audio.core.pipeline import Pipeline
+        # Add all task classes
+        task_classes = [getattr(task_module, name) for name in dir(task_module) 
+                       if isinstance(getattr(task_module, name), type)]
+        safe_globals.extend(task_classes)
+        safe_globals.extend([Model, Pipeline])
+    except Exception:
+        pass
+
+    # Register all safe globals
+    if safe_globals:
+        try:
+            torch.serialization.add_safe_globals(safe_globals)
+        except Exception:
+            # Older torch versions may not have add_safe_globals
+            pass

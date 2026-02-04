@@ -50,12 +50,11 @@ workspace_name = "your-workspace"
 ### Process a Single Recording
 
 ```bash
-# Full pipeline (Steps 0-1 currently implemented)
-python -m scripts.audio.pipeline.orchestrator \
-  --audio sessions/04/Session_04.m4a \
+# Full Azure ML pipeline (Steps 0–4 + local Step 5)
+python scripts/audio/orchestrator.py sessions/05 \
   --config scripts/audio/pipeline.config.toml
 
-# Output: .output/Session_04/
+# Output: sessions/05/outputs/ and sessions/05/final/
 ```
 
 ### Run Individual Steps
@@ -95,9 +94,8 @@ python -m scripts.audio.pipeline.transcription.transcribe \
 - Clean embeddings → auto DB update
 
 ```bash
-python -m scripts.audio.pipeline.orchestrator \
-  --audio sessions/06/tracks/ \
-  --audio-mode discord_multitrack
+# session_dir/audio/ contains per-speaker tracks
+python scripts/audio/orchestrator.py sessions/06
 ```
 
 ### Mode B: Table Single Mic
@@ -106,9 +104,8 @@ python -m scripts.audio.pipeline.orchestrator \
 - Room-mix embeddings → manual DB review
 
 ```bash
-python -m scripts.audio.pipeline.orchestrator \
-  --audio sessions/04/Session_04.m4a \
-  --audio-mode table_single_mic
+# session_dir/audio.<ext> is a single recording
+python scripts/audio/orchestrator.py sessions/04
 ```
 
 ## Output Structure
@@ -192,7 +189,7 @@ uv pip install whisperx
 - Common utilities (audio, file, logging, Azure)
 - Step 0: Audio preprocessing with FFmpeg
 - Step 1: Transcription with WhisperX + chunking
-- Basic orchestrator for sequential execution
+- Azure ML pipeline orchestrator (`scripts/audio/orchestrator.py`)
 
 ### 🚧 In Progress (Stubs Created)
 - Step 2: Diarization with pyannote.audio
@@ -209,30 +206,31 @@ uv pip install whisperx
 3. **Implement Step 3**: Add emotion analysis
 4. **Implement Step 4**: Add speaker embeddings
 5. **Implement Step 5**: Add post-processing
-6. **Azure ML Integration**: Submit jobs to cloud
+6. **Azure ML Pipeline**: Add Steps 2–4 as Azure jobs + wire local Step 5
 
 ## Examples
 
 ### Process Recent Session
 ```bash
-python -m scripts.audio.pipeline.orchestrator \
-  --audio sessions/04/Session_04.m4a \
-  --output .output/Session_04
+python scripts/audio/orchestrator.py sessions/04 \
+  --config scripts/audio/pipeline.config.toml
 ```
 
-### Run Specific Steps
+### Run Step 0/1 Locally (Debug)
 ```bash
-# Just normalize and transcribe
-python -m scripts.audio.pipeline.orchestrator \
-  --audio sessions/04/Session_04.m4a \
-  --steps 0 1
-```
+# Step 0
+python -m scripts.audio.pipeline.preprocess.normalize \
+  --audio sessions/04/audio.m4a \
+  --output .output/Session_04/preprocess \
+  --config scripts/audio/pipeline.config.toml
 
-### Use GPU for Transcription
-```bash
-python -m scripts.audio.pipeline.orchestrator \
-  --audio sessions/04/Session_04.m4a \
-  --device cuda
+# Step 1
+python -m scripts.audio.pipeline.transcription.transcribe \
+  --audio .output/Session_04/preprocess \
+  --output .output/Session_04/transcription \
+  --config scripts/audio/pipeline.config.toml \
+  --audio-mode table_single_mic \
+  --device cpu
 ```
 
 ## Support

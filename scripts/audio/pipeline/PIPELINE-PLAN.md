@@ -680,6 +680,8 @@ config.diarization.max_speakers = 4      # Know exact speaker count
 
 **Verdict**: Use Azure ML Pipeline for production. Fresh environment per step prevents memory issues and enables granular debugging.
 
+**Current implementation note (February 4, 2026)**: `scripts/audio/orchestrator.py` submits an **Azure ML pipeline job** for Steps 0–4 and downloads outputs for local Step 5 post-processing. The legacy `scripts/audio/pipeline/orchestrator.py` (local/stepwise Azure command jobs) has been removed.
+
 #### Implementation: `orchestrator.py`
 
 ```python
@@ -738,40 +740,10 @@ def audio_pipeline(audio_file: Input, config_file: Input, speaker_db: Input):
     }
 ```
 
-### Fallback: Orchestrator Script (Azure ML Jobs)
+### Legacy (Removed): Per-step Azure Command Jobs
 
-For simpler setup, use sequential job submission:
-
-```python
-# pipeline/orchestrator.py (simple version)
-def run_pipeline(audio_path: str, config: PipelineConfig):
-    """Submit each step as separate Azure ML job, wait for completion."""
-    ml_client = get_ml_client(config)
-    
-    # Step 0
-    job0 = submit_preprocess_job(ml_client, audio_path, config)
-    wait_for_completion(job0)
-    
-    # Step 1
-    job1 = submit_transcription_job(ml_client, job0.outputs.normalized_audio, config)
-    wait_for_completion(job1)
-    
-    # Step 2
-    job2 = submit_diarization_job(ml_client, job0.outputs.normalized_audio, job1.outputs, config)
-    wait_for_completion(job2)
-    
-    # Steps 3 & 4 (parallel)
-    job3 = submit_emotion_job(ml_client, job0.outputs.normalized_audio, job1.outputs, config)
-    job4 = submit_embedding_job(ml_client, job0.outputs.normalized_audio, job2.outputs, config, speaker_db_path=config.speaker_embedding.database_path)
-    wait_for_completion(job3)
-    wait_for_completion(job4)
-    
-    # Step 5
-    job5 = submit_postprocess_job(ml_client, job1.outputs, job2.outputs, job3.outputs, job4.outputs, config)
-    wait_for_completion(job5)
-    
-    return job5.outputs, job4.outputs.speaker_db_delta
-```
+The per-step Azure command-job orchestrator (`scripts/audio/pipeline/orchestrator.py`) was removed on February 4, 2026.  
+For step-specific runs, call the individual step modules directly (see Local Testing below).
 
 ---
 
@@ -784,6 +756,7 @@ def run_pipeline(audio_path: str, config: PipelineConfig):
 **Alignment guarantee**: Discord multitrack files are aligned to a shared zero-time start.
 
 **Enrollment note**: Any Mode A session can serve as an enrollment run (not just the first session). Clean-close-mic embeddings are always accepted into the DB.
+In other words: **Mode A should always run Step 4 (Speaker Embeddings)** so the database keeps improving over time.
 
 ### Canonical Name Normalization
 
@@ -930,41 +903,24 @@ Provide a helper export that maps to legacy fields (`speaker`, `text`, `start`, 
 # Test individual steps
 python -m pipeline.1_transcription.transcribe --audio Session_04.m4a --audio-mode table_single_mic --output .output/Session_04/1_transcription/
 python -m pipeline.2_diarization.diarize --audio Session_04.m4a --audio-mode table_single_mic --transcription .output/Session_04/1_transcription/raw_segments.jsonl --output .output/Session_04/2_diarization/
-
-# Test full pipeline locally (slow, no GPU)
-python -m pipeline.orchestrator --audio Session_04.m4a --config pipeline.config.toml --mode local
 ```
 
 ### Azure ML Deployment
 
 ```bash
-# Submit full pipeline to Azure ML
-python -m pipeline.orchestrator \
-  --audio Session_04.m4a \
-  --config pipeline.config.toml \
-  --mode azure \
-  --wait
+# Submit full Azure ML pipeline (Steps 0–4) and download outputs for local Step 5
+python scripts/audio/orchestrator.py sessions/05 \
+  --config scripts/audio/pipeline.config.toml
 
-# Submit without waiting (check Azure ML Studio for progress)
-python -m pipeline.orchestrator \
-  --audio Session_04.m4a \
-  --config pipeline.config.toml \
-  --mode azure \
+# Fire-and-forget submission
+python scripts/audio/orchestrator.py sessions/05 \
+  --config scripts/audio/pipeline.config.toml \
   --no-wait
 
-# Run specific step only
-python -m pipeline.orchestrator \
-  --audio Session_04.m4a \
-  --config pipeline.config.toml \
-  --mode azure \
-  --step 3_emotion
-
-# Run preprocess only
-python -m pipeline.orchestrator \
-  --audio Session_04.m4a \
-  --config pipeline.config.toml \
-  --mode local \
-  --step 0_preprocess
+# Download outputs but skip local post-processing
+python scripts/audio/orchestrator.py sessions/05 \
+  --config scripts/audio/pipeline.config.toml \
+  --skip-postprocess
 ```
 
 ### CLI Arguments
@@ -973,56 +929,45 @@ python -m pipeline.orchestrator \
 orchestrator.py arguments:
 
 Required:
-  --audio AUDIO              Path to audio file (Mode B) or track directory (Mode A)
-  --config CONFIG            Path to pipeline.config.toml
+  session_dir               Path to session directory (contains audio/ or audio.<ext>)
 
 Optional:
-  --audio-mode {auto,discord_multitrack,table_single_mic}
-  --mode {local,azure}       Run locally or on Azure ML (default: azure)
-  --wait                     Wait for completion (default: True)
-  --no-wait                  Submit and exit
-  --step STEP                Run single step (e.g., "0_preprocess", "2_diarization")
-  --force                    Overwrite existing outputs
-  --cleanup                  Remove intermediate files after success
-  --output-dir DIR           Override output directory
-  --log-level LEVEL          Logging level (default: INFO)
+  --config CONFIG            Path to pipeline.config.toml
+  --no-wait                  Submit pipeline and exit without monitoring
+  --skip-postprocess         Skip local Step 5 post-processing
 ```
 
 ### Example Workflows
 
 **Standard workflow**:
 ```bash
-# Process new session (Mode B)
-python -m pipeline.orchestrator --audio sessions/05/Session_05.m4a --config pipeline.config.toml
+# Mode B: session_dir/audio.<ext>
+python scripts/audio/orchestrator.py sessions/05 --config scripts/audio/pipeline.config.toml
 
-# Process multitrack session (Mode A)
-python -m pipeline.orchestrator --audio sessions/06/tracks/ --config pipeline.config.toml --audio-mode discord_multitrack
+# Mode A: session_dir/audio/ contains per-speaker files
+python scripts/audio/orchestrator.py sessions/06 --config scripts/audio/pipeline.config.toml
 
-# Output: sessions/05/.output/Session_05/5_postprocess/final.jsonl
+# Outputs:
+# - sessions/05/outputs/...
+# - sessions/05/final/...
 ```
 
 **Incremental workflow** (re-run step after fixing bug):
 ```bash
-# Re-run emotion analysis only
-python -m pipeline.orchestrator \
-  --audio sessions/05/Session_05.m4a \
-  --config pipeline.config.toml \
-  --step 3_emotion \
-  --force
-
-# Re-run postprocess to merge updated emotions
-python -m pipeline.orchestrator \
-  --audio sessions/05/Session_05.m4a \
-  --config pipeline.config.toml \
-  --step 5_postprocess \
-  --force
+# Re-run transcription locally using existing preprocess outputs
+python -m scripts.audio.pipeline.transcription.transcribe \
+  --audio .output/Session_05/preprocess \
+  --output .output/Session_05/transcription \
+  --config scripts/audio/pipeline.config.toml \
+  --audio-mode table_single_mic \
+  --device cpu
 ```
 
 **Batch processing**:
 ```bash
 # Process multiple sessions
-for session in sessions/*/Session_*.m4a; do
-  python -m pipeline.orchestrator --audio "$session" --config pipeline.config.toml --no-wait
+for session in sessions/*; do
+  python scripts/audio/orchestrator.py "$session" --config scripts/audio/pipeline.config.toml
 done
 
 # Check all jobs in Azure ML Studio
@@ -1249,7 +1194,7 @@ done
 **Goal**: Tie all steps together
 
 **Tasks**:
-1. Implement `pipeline/orchestrator.py`
+1. Extend `scripts/audio/orchestrator.py` (Azure ML pipeline runner)
 2. Add config parsing (`pipeline/config.py`)
 3. Create Azure ML pipeline definition
 4. Add CLI argument parsing

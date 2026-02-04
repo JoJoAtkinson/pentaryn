@@ -62,6 +62,22 @@
       const content = document.getElementById("content");
       const img = document.getElementById("timeline");
 
+      // Set a cache-busting query on the SVG image.
+      // Tries a HEAD request to get a Last-Modified or ETag header to use as the version.
+      // Falls back to Date.now() if unavailable or on error.
+      async function setVersionedImgSrc() {
+        const svgPath = './history.the-compass-edge.svg';
+        try {
+          const res = await fetch(svgPath, { method: 'HEAD', cache: 'no-cache' });
+          let v = res.headers.get('last-modified') || res.headers.get('etag');
+          if (!v) v = String(Date.now());
+          img.src = svgPath + '?v=' + encodeURIComponent(v);
+        } catch (err) {
+          img.src = svgPath + '?v=' + String(Date.now());
+        }
+      }
+      setVersionedImgSrc();
+
       const MIN_SCALE = 0.2;
       const MAX_SCALE = 6;
       const SCALE_STEP = 1.15;

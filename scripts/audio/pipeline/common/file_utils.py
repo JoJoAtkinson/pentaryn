@@ -3,6 +3,7 @@
 import json
 from pathlib import Path
 from typing import List, Dict, Any, Optional
+import re
 
 
 def read_jsonl(path: Path) -> List[Dict[str, Any]]:
@@ -92,6 +93,8 @@ def get_session_id_from_path(audio_path: Path) -> str:
     Examples:
         Session_04.m4a -> Session_04
         sessions/05/Session_05.m4a -> Session_05
+        sessions/03/recording.m4a -> Session_03
+        sessions/03/tracks/ -> Session_03
         
     Args:
         audio_path: Path to audio file
@@ -99,6 +102,16 @@ def get_session_id_from_path(audio_path: Path) -> str:
     Returns:
         Session ID
     """
+    parts = list(audio_path.parts)
+
+    # Common layout: sessions/<NN>/...
+    # (Works for both file paths and directories like sessions/03/tracks)
+    for idx, part in enumerate(parts):
+        if part.lower() == "sessions" and idx + 1 < len(parts):
+            maybe_num = parts[idx + 1]
+            if re.fullmatch(r"\d{1,3}", maybe_num):
+                return f"Session_{int(maybe_num):02d}"
+
     # Try to extract from filename
     stem = audio_path.stem
     
@@ -109,6 +122,12 @@ def get_session_id_from_path(audio_path: Path) -> str:
     # Check parent directory
     if audio_path.parent.name.startswith("Session_"):
         return audio_path.parent.name
+
+    # If the immediate folder is numeric (e.g., "03"), treat as Session_03
+    if re.fullmatch(r"\d{1,3}", audio_path.name):
+        return f"Session_{int(audio_path.name):02d}"
+    if re.fullmatch(r"\d{1,3}", audio_path.parent.name):
+        return f"Session_{int(audio_path.parent.name):02d}"
     
     # Fallback: use stem
     return stem

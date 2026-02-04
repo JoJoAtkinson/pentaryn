@@ -1,9 +1,10 @@
-"""Step 3: Emotion Analysis (stub - needs implementation)."""
+"""Step 3: Emotion Analysis"""
 
-# TODO: Implement emotion analysis with WavLM
-# - Load speaker turns from diarization
-# - Extract audio features per turn
-# - Run dimensional emotion model (arousal/valence/dominance)
-# - Write emotion_scores.jsonl
+__all__ = ["EmotionAnalyzer", "derive_emotion_label"]
 
-__all__ = []
+
+def __getattr__(name: str):
+    if name in __all__:
+        from .analyze import EmotionAnalyzer, derive_emotion_label
+        return {"EmotionAnalyzer": EmotionAnalyzer, "derive_emotion_label": derive_emotion_label}[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

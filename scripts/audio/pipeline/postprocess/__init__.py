@@ -1,10 +1,6 @@
-"""Step 5: Post-processing (stub - needs implementation)."""
+"""Step 5: Post-Processing"""
 
-# TODO: Implement post-processing and validation
-# - Load all intermediate results
-# - Merge by global time (owned-interval stitching)
-# - Apply canonical names and global voice IDs
-# - Validate completeness
-# - Write final.jsonl
+from .merge import TranscriptMerger
+from .validate import TranscriptValidator
 
-__all__ = []
+__all__ = ["TranscriptMerger", "TranscriptValidator"]
