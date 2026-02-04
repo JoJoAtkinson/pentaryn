@@ -45,8 +45,6 @@ logger = get_step_logger("emotion")
 _BYTES_IN_MIB = 1024 * 1024
 
 
-logger.info('attempt wed feb 4 -- 2 ')
-
 # Import WavLMWrapper at module level (requires vox-profile in sys.path via Dockerfile)
 try:
     from src.model.emotion.wavlm_emotion_dim import WavLMWrapper
@@ -269,50 +267,28 @@ class EmotionAnalyzer:
         total_segments = len(audio_segments)
         progress_next = 10 if log_progress else 101
         
-        # Process in batches
-        for i in range(0, total_segments, self.batch_size):
-            batch = audio_segments[i:i + self.batch_size]
+        # IMPORTANT: WavLMWrapper has a bug in batch processing - it creates
+        # attention_mask with shape [1, seq_len] instead of [batch_size, seq_len].
+        # Workaround: process one sample at a time (batch_size=1 effectively).
+        for i in range(0, total_segments, 1):
+            seg = audio_segments[i]
             
-            # Pad batch to same length (required for batching)
-            max_len = max(seg.shape[0] for seg in batch)
-            max_len = min(max_len, self.max_audio_length)  # Cap at model max
+            # Prepare single sample with proper shape [1, samples]
+            seg_len = min(seg.shape[0], self.max_audio_length)
+            input_tensor = torch.zeros(1, seg_len, device=self.device)
+            input_tensor[0, :seg_len] = seg[:seg_len].to(self.device)
             
-            batch_tensor = torch.zeros(len(batch), max_len, device=self.device)
-            for j, seg in enumerate(batch):
-                length = min(seg.shape[0], max_len)
-                batch_tensor[j, :length] = seg[:length].to(self.device)
+            # Forward pass (single sample to avoid batching bug)
+            arousal, valence, dominance = self.model(input_tensor)
             
-            # Debug logging for shape investigation
-            logger.info(f"DEBUG: batch_tensor.shape = {batch_tensor.shape}, dtype = {batch_tensor.dtype}, device = {batch_tensor.device}")
-            logger.info(f"DEBUG: batch_tensor min = {batch_tensor.min().item():.4f}, max = {batch_tensor.max().item():.4f}")
-            logger.info(f"DEBUG: Non-zero samples per item: {[(batch_tensor[j] != 0).sum().item() for j in range(len(batch))]}")
+            # Append result
+            results.append({
+                "arousal": float(arousal[0].cpu().item()),
+                "valence": float(valence[0].cpu().item()),
+                "dominance": float(dominance[0].cpu().item()),
+            })
             
-            # Create attention mask manually (1 for real audio, 0 for padding)
-            # This may be needed for proper batch processing
-            attention_mask = torch.zeros(len(batch), max_len, dtype=torch.long, device=self.device)
-            for j, seg in enumerate(batch):
-                length = min(seg.shape[0], max_len)
-                attention_mask[j, :length] = 1
-            logger.info(f"DEBUG: attention_mask.shape = {attention_mask.shape}, sum per item = {attention_mask.sum(dim=1).tolist()}")
-            
-            # Forward pass through WavLMWrapper
-            # Try passing attention_mask explicitly
-            try:
-                arousal, valence, dominance = self.model(batch_tensor, attention_mask=attention_mask)
-            except TypeError:
-                # Model doesn't accept attention_mask parameter
-                logger.warning("Model doesn't accept attention_mask, trying without...")
-                arousal, valence, dominance = self.model(batch_tensor)
-            
-            # Convert to list of dicts
-            for j in range(len(batch)):
-                results.append({
-                    "arousal": float(arousal[j].cpu().item()),
-                    "valence": float(valence[j].cpu().item()),
-                    "dominance": float(dominance[j].cpu().item()),
-                })
-            
-            completed = min(i + self.batch_size, total_segments)
+            completed = i + 1
             if log_progress:
                 percent = int(completed * 100 / total_segments) if total_segments else 100
                 if percent >= progress_next or completed == total_segments:
@@ -705,6 +681,8 @@ def main():
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     
+    logger.info('attempt wed feb 4 -- 3 ')
+
     start_time = time.time()
     try:
         # Validate CUDA environment if using GPU
