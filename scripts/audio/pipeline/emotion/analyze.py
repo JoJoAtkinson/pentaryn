@@ -22,7 +22,7 @@ import logging
 import os
 import sys
 import time
-import site
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -41,6 +41,27 @@ from pipeline.common.file_utils import get_session_id_from_path
 from pipeline.common.manifest_utils import build_manifest, should_skip, write_manifest
 
 logger = get_step_logger("emotion")
+
+_BYTES_IN_MIB = 1024 * 1024
+
+
+logger.info('attempt wed feb 4 -- 1 ')
+
+# Import WavLMWrapper at module level (requires vox-profile in sys.path via Dockerfile)
+try:
+    from src.model.emotion.wavlm_emotion_dim import WavLMWrapper
+    _WAVLM_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"WavLMWrapper import failed: {e}")
+    _WAVLM_AVAILABLE = False
+    WavLMWrapper = None
+
+
+def _format_bytes(num_bytes: int) -> str:
+    """Human-readable byte count for logs."""
+    if num_bytes < _BYTES_IN_MIB:
+        return f"{num_bytes / 1024:.1f} KiB"
+    return f"{num_bytes / _BYTES_IN_MIB:.1f} MiB"
 
 
 class EmotionAnalyzer:
@@ -65,13 +86,12 @@ class EmotionAnalyzer:
         logger.info(f"Initializing emotion analyzer on {self.device}")
         logger.info(f"Model: {model_name}")
         
-        # Import the WavLMWrapper class from vox-profile package
-        # Note: vox-profile repo is cloned to /opt/vox-profile in Dockerfile
-        # The repo is added to sys.path via .pth file
-        load_start = time.time()
-
-        from src.model.emotion.wavlm_emotion_dim import WavLMWrapper
+        if not _WAVLM_AVAILABLE or WavLMWrapper is None:
+            raise ImportError(
+                "WavLMWrapper not available. Ensure vox-profile is installed and in sys.path."
+            )
         
+        load_start = time.time()
         try:
             self.model = WavLMWrapper.from_pretrained(model_name).to(self.device)
             self.model.eval()
@@ -85,6 +105,82 @@ class EmotionAnalyzer:
         self.max_audio_length = 15 * self.sample_rate  # 15 seconds max
         logger.info(f"Target sample rate: {self.sample_rate} Hz")
         logger.info(f"Max audio length: {self.max_audio_length / self.sample_rate:.1f}s")
+
+    def _load_audio_full(self, audio_path: Path) -> Tuple[torch.Tensor, int]:
+        """
+        Load the entire audio file into memory (CPU) and return a mono waveform.
+
+        This avoids extremely slow per-segment decoder startup/seek costs when
+        extracting thousands of short segments.
+        """
+        logger.info(f"Loading audio into memory: {audio_path}")
+        load_start = time.time()
+        waveform, sr = torchaudio.load(str(audio_path))
+
+        # Convert to mono once at load-time.
+        if waveform.ndim == 2 and waveform.shape[0] > 1:
+            waveform = waveform.mean(dim=0, keepdim=True)
+        if waveform.ndim == 2:
+            waveform = waveform.squeeze(0)
+
+        # Resample once (cheaper than per-segment resampling).
+        if sr != self.sample_rate:
+            logger.info(f"Resampling {audio_path.name}: {sr} Hz -> {self.sample_rate} Hz")
+            resampler = torchaudio.transforms.Resample(sr, self.sample_rate)
+            waveform = resampler(waveform.unsqueeze(0)).squeeze(0)
+            sr = self.sample_rate
+
+        waveform = waveform.contiguous()
+
+        mem_bytes = int(waveform.numel() * waveform.element_size())
+        duration_s = waveform.shape[0] / float(sr) if sr else 0.0
+        logger.info(
+            f"✓ Loaded {audio_path.name}: {duration_s/60:.1f} min, "
+            f"{waveform.shape[0]:,} samples @ {sr} Hz, {_format_bytes(mem_bytes)} "
+            f"in {format_elapsed_time(time.time() - load_start)}"
+        )
+        return waveform, sr
+
+    def _extract_segment_from_waveform(
+        self,
+        waveform: torch.Tensor,
+        sr: int,
+        start_time: float,
+        end_time: float,
+        target_duration: Optional[float] = None,
+    ) -> Optional[torch.Tensor]:
+        """Slice a segment from an in-memory waveform and normalize it."""
+        try:
+            segment_duration = end_time - start_time
+            if target_duration is None:
+                target_duration = min(
+                    segment_duration, self.max_audio_length / self.sample_rate
+                )
+
+            frame_offset = int(start_time * sr)
+            num_frames = int(target_duration * sr)
+            if num_frames <= 0:
+                return None
+            if frame_offset < 0:
+                frame_offset = 0
+
+            end_frame = frame_offset + num_frames
+            segment = waveform[frame_offset:end_frame]
+            if segment.numel() == 0:
+                return None
+
+            # Normalize per segment (matches previous behavior).
+            peak = segment.abs().max()
+            segment = segment / (peak + 1e-8)
+
+            # Ensure we don't exceed model max length.
+            if segment.shape[0] > self.max_audio_length:
+                segment = segment[: self.max_audio_length]
+
+            return segment
+        except Exception as e:
+            logger.error(f"Failed to slice segment {start_time:.2f}-{end_time:.2f}: {e}")
+            return None
     
     def extract_segment_audio(
         self,
@@ -149,6 +245,7 @@ class EmotionAnalyzer:
     def analyze_segments(
         self,
         audio_segments: List[torch.Tensor],
+        log_progress: bool = True,
     ) -> List[Dict[str, float]]:
         """
         Analyze emotion for audio segments in batch.
@@ -170,7 +267,7 @@ class EmotionAnalyzer:
         
         results = []
         total_segments = len(audio_segments)
-        progress_next = 10
+        progress_next = 10 if log_progress else 101
         
         # Process in batches
         for i in range(0, total_segments, self.batch_size):
@@ -198,10 +295,13 @@ class EmotionAnalyzer:
                 })
             
             completed = min(i + self.batch_size, total_segments)
-            percent = int(completed * 100 / total_segments) if total_segments else 100
-            if percent >= progress_next or completed == total_segments:
-                logger.info(f"Emotion inference progress: {percent}% ({completed}/{total_segments} segments)")
-                progress_next += 10
+            if log_progress:
+                percent = int(completed * 100 / total_segments) if total_segments else 100
+                if percent >= progress_next or completed == total_segments:
+                    logger.info(
+                        f"Emotion inference progress: {percent}% ({completed}/{total_segments} segments)"
+                    )
+                    progress_next += 10
         
         return results
     
@@ -238,9 +338,15 @@ class EmotionAnalyzer:
             Number of segments successfully analyzed
         """
         logger.info(f"Loading diarization from {diarization_path}")
-        
+        logger.info(
+            f"CPU cores: {os.cpu_count() or 'unknown'}; "
+            f"torch threads: {torch.get_num_threads()}; "
+            f"device: {self.device}"
+        )
+
         # Load diarization segments
-        segments = []
+        diarization_load_start = time.time()
+        segments: List[dict] = []
         with open(diarization_path, "r") as f:
             for line_num, line in enumerate(f, start=1):
                 try:
@@ -248,14 +354,17 @@ class EmotionAnalyzer:
                     segments.append(seg)
                 except json.JSONDecodeError as e:
                     logger.warning(f"Skipping invalid JSON at line {line_num}: {e}")
-        
+        logger.info(
+            f"Diarization load took {format_elapsed_time(time.time() - diarization_load_start)}"
+        )
         logger.info(f"Loaded {len(segments)} speaker turns from diarization")
-        
+
         # Filter segments by duration
-        valid_segments = []
+        filter_start = time.time()
+        valid_segments: List[dict] = []
         skipped_too_short = 0
         truncated = 0
-        
+
         for seg in segments:
             duration = seg["end"] - seg["start"]
             if duration < min_segment_duration:
@@ -266,23 +375,25 @@ class EmotionAnalyzer:
                 seg = {**seg, "end": seg["start"] + max_segment_duration}
                 truncated += 1
             valid_segments.append(seg)
-        
+
+        logger.info(f"Segment filtering took {format_elapsed_time(time.time() - filter_start)}")
         logger.info(f"Filtered to {len(valid_segments)} valid segments")
         if skipped_too_short:
-            logger.info(f"  - Skipped {skipped_too_short} segments (< {min_segment_duration}s)")
+            logger.info(
+                f"  - Skipped {skipped_too_short} segments (< {min_segment_duration}s)"
+            )
         if truncated:
             logger.info(f"  - Truncated {truncated} segments (> {max_segment_duration}s)")
-        
+
         # Build track file lookup for multitrack mode
-        track_files = {}
+        track_scan_start = time.time()
+        track_files: Dict[str, Path] = {}
         if tracks_dir:
-            logger.info("Loading multitrack audio files...")
+            logger.info("Discovering multitrack audio files...")
             if not tracks_dir.exists():
                 raise FileNotFoundError(f"Tracks directory not found: {tracks_dir}")
-            
+
             for track_file in tracks_dir.glob(f"*.{output_format}"):
-                # Map track filename (without extension) to full path
-                # Store lowercase key for case-insensitive lookup
                 track_key = track_file.stem.lower()
                 track_files[track_key] = track_file
                 logger.debug(f"  Registered track: {track_key} -> {track_file.name}")
@@ -292,100 +403,178 @@ class EmotionAnalyzer:
                     f"No {output_format} files found in tracks directory: {tracks_dir}"
                 )
 
-            logger.info(f"Loaded {len(track_files)} track files")
+            logger.info(f"Discovered {len(track_files)} track files")
             logger.debug(f"Available track keys: {sorted(track_files.keys())}")
+        logger.info(f"Track discovery took {format_elapsed_time(time.time() - track_scan_start)}")
 
-        # Extract audio segments from source files
-        logger.info("Extracting audio segments for emotion analysis...")
-        extract_start = time.time()
-        audio_segments = []
-        valid_indices = []  # Track which segments succeeded (0-indexed into valid_segments)
-        total_segments = len(valid_segments)
-        progress_next = 10
-        skipped_missing_audio = 0
-        
-        for i, seg in enumerate(valid_segments):
-            # Determine which audio file to use for this segment
-            segment_audio_path = audio_path
-            
-            if tracks_dir:
-                # Multitrack mode: look up the specific track file for this speaker
-                speaker_key = seg.get("speaker") or seg.get("speaker_id") or seg.get("track")
-                
-                # Clean up speaker key if it has TRACK_ prefix
-                if speaker_key and speaker_key.startswith("TRACK_"):
-                    speaker_key = speaker_key.replace("TRACK_", "", 1)
-                
-                if speaker_key:
-                    # Case-insensitive lookup
-                    segment_audio_path = track_files.get(str(speaker_key).lower())
-                    
-                if segment_audio_path is None:
-                    skipped_missing_audio += 1
-                    available_preview = list(track_files.keys())[:3]
-                    logger.warning(
-                        f"Segment {i+1}/{total_segments}: no track file found for speaker '{speaker_key}' "
-                        f"(available tracks: {available_preview}...)"
-                    )
-                    continue
-                else:
-                    logger.debug(f"Segment {i+1}: using track {segment_audio_path.name} for speaker '{speaker_key}'")
+        # Pre-load audio into memory to avoid extremely slow per-segment file access.
+        preload_start = time.time()
+        loaded_tracks: Dict[str, Tuple[torch.Tensor, int]] = {}
+        single_waveform: Optional[torch.Tensor] = None
+        single_sr: Optional[int] = None
+        total_audio_mem_bytes = 0
 
-            # Extract the audio segment
-            audio = self.extract_segment_audio(
-                segment_audio_path,
-                seg["start"],
-                seg["end"],
-                target_duration=min(seg["end"] - seg["start"], max_segment_duration),
-            )
-            
-            if audio is not None:
-                audio_segments.append(audio)
-                valid_indices.append(i)
-            else:
-                logger.debug(f"Segment {i+1}: audio extraction failed")
-            
-            # Progress logging
-            current = i + 1
-            percent = int(current * 100 / total_segments) if total_segments else 100
-            if percent >= progress_next or current == total_segments:
-                logger.info(f"Extraction progress: {percent}% ({current}/{total_segments} segments)")
-                progress_next += 10
-        
-        logger.info(f"Successfully extracted {len(audio_segments)}/{total_segments} segments")
-        if skipped_missing_audio:
-            logger.warning(f"Skipped {skipped_missing_audio} segments due to missing track audio")
-        if len(audio_segments) == 0:
-            raise RuntimeError("No audio segments extracted - cannot proceed with emotion analysis")
-        logger.info(f"Audio extraction took {format_elapsed_time(time.time() - extract_start)}")
-        
-        # Analyze emotion
-        logger.info("Analyzing emotion...")
-        analyze_start = time.time()
-        emotion_results = self.analyze_segments(audio_segments)
-        logger.info(f"Emotion inference took {format_elapsed_time(time.time() - analyze_start)}")
-        
-        # Merge emotion results with diarization data
-        logger.info("Writing emotion results to output file...")
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        with open(output_path, "w") as f:
-            for idx, emotion in zip(valid_indices, emotion_results):
-                seg = valid_segments[idx]
-                speaker_key = seg.get("speaker") or seg.get("speaker_id") or seg.get("track")
-                output_record = {
-                    "start": seg["start"],
-                    "end": seg["end"],
-                    "speaker": speaker_key,
-                    "arousal": emotion["arousal"],
-                    "valence": emotion["valence"],
-                    "dominance": emotion["dominance"],
+        if tracks_dir:
+            logger.info(f"Preloading {len(track_files)} track files into memory...")
+            # Limit to 4 workers max - I/O bound tasks don't benefit from too many threads
+            max_workers = min(len(track_files), 4, os.cpu_count() or 1)
+            max_workers = max(1, max_workers)
+            logger.info(f"Audio preload workers: {max_workers}")
+
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = {
+                    executor.submit(self._load_audio_full, path): key
+                    for key, path in track_files.items()
                 }
-                f.write(json.dumps(output_record) + "\n")
+                for fut in as_completed(futures):
+                    key = futures[fut]
+                    waveform, sr = fut.result()
+                    loaded_tracks[key] = (waveform, sr)
+                    total_audio_mem_bytes += int(waveform.numel() * waveform.element_size())
+        else:
+            logger.info(f"Preloading single audio file into memory: {audio_path}")
+            single_waveform, single_sr = self._load_audio_full(audio_path)
+            total_audio_mem_bytes = int(single_waveform.numel() * single_waveform.element_size())
+
+        logger.info(
+            f"Audio preload took {format_elapsed_time(time.time() - preload_start)} "
+            f"(total in-memory audio: {_format_bytes(total_audio_mem_bytes)})"
+        )
+
+        # Stream segments through: extract -> infer -> write
+        logger.info("Processing segments (extract -> infer -> write)...")
+        process_start = time.time()
+        extract_total_s = 0.0
+        infer_total_s = 0.0
+        write_total_s = 0.0
+
+        total_segments = len(valid_segments)
+        progress_next = 5
+        last_progress_log = time.time()
+        skipped_missing_audio = 0
+        skipped_extract_failed = 0
+        analyzed = 0
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(output_path, "w") as f:
+            for batch_start in range(0, total_segments, self.batch_size):
+                batch_end = min(batch_start + self.batch_size, total_segments)
+                batch_indices: List[int] = []
+                batch_audio: List[torch.Tensor] = []
+
+                # Extract batch audio (in-memory slicing)
+                batch_extract_start = time.time()
+                for i in range(batch_start, batch_end):
+                    seg = valid_segments[i]
+
+                    waveform = single_waveform
+                    sr = single_sr
+
+                    if tracks_dir:
+                        speaker_key = seg.get("speaker") or seg.get("speaker_id") or seg.get("track")
+                        if speaker_key and str(speaker_key).startswith("TRACK_"):
+                            speaker_key = str(speaker_key).replace("TRACK_", "", 1)
+                        if speaker_key:
+                            loaded = loaded_tracks.get(str(speaker_key).lower())
+                            if loaded is not None:
+                                waveform, sr = loaded
+
+                        if waveform is None or sr is None:
+                            skipped_missing_audio += 1
+                            continue
+
+                    assert waveform is not None and sr is not None
+
+                    audio = self._extract_segment_from_waveform(
+                        waveform=waveform,
+                        sr=sr,
+                        start_time=seg["start"],
+                        end_time=seg["end"],
+                        target_duration=min(seg["end"] - seg["start"], max_segment_duration),
+                    )
+                    if audio is None:
+                        skipped_extract_failed += 1
+                        continue
+
+                    batch_indices.append(i)
+                    batch_audio.append(audio)
+
+                extract_total_s += time.time() - batch_extract_start
+
+                if batch_audio:
+                    # Inference on this batch
+                    batch_infer_start = time.time()
+                    emotions = self.analyze_segments(batch_audio, log_progress=False)
+                    infer_total_s += time.time() - batch_infer_start
+
+                    # Write outputs for this batch
+                    batch_write_start = time.time()
+                    for idx, emotion in zip(batch_indices, emotions):
+                        seg = valid_segments[idx]
+                        speaker_key = seg.get("speaker") or seg.get("speaker_id") or seg.get("track")
+                        output_record = {
+                            "start": seg["start"],
+                            "end": seg["end"],
+                            "speaker": speaker_key,
+                            "arousal": emotion["arousal"],
+                            "valence": emotion["valence"],
+                            "dominance": emotion["dominance"],
+                        }
+                        f.write(json.dumps(output_record) + "\n")
+                    write_total_s += time.time() - batch_write_start
+
+                    analyzed += len(emotions)
+
+                # Progress logging (time-based + % based) so long runs don't appear "hung".
+                processed = batch_end
+                percent = int(processed * 100 / total_segments) if total_segments else 100
+                now = time.time()
+                if percent >= progress_next or (now - last_progress_log) >= 60 or processed == total_segments:
+                    elapsed = now - process_start
+                    rate = processed / elapsed if elapsed > 0 else 0.0
+                    remaining = total_segments - processed
+                    eta_s = (remaining / rate) if rate > 0 else None
+                    eta_str = format_elapsed_time(eta_s) if eta_s is not None else "unknown"
+                    logger.info(
+                        f"Progress: {percent}% ({processed}/{total_segments} segments), "
+                        f"analyzed={analyzed}, skipped_missing_audio={skipped_missing_audio}, "
+                        f"skipped_extract_failed={skipped_extract_failed}, "
+                        f"rate={rate:.2f} seg/s, ETA={eta_str}"
+                    )
+                    progress_next += 5
+                    last_progress_log = now
+
+        if analyzed == 0:
+            raise RuntimeError("No audio segments analyzed - cannot write emotion outputs")
+
+        # Clear loaded audio from memory
+        loaded_tracks.clear()
+        if single_waveform is not None:
+            del single_waveform
         
-        logger.info(f"✓ Wrote {len(emotion_results)} emotion records to {output_path}")
-        logger.info(f"Summary: {len(segments)} input turns -> {len(valid_segments)} valid -> {len(emotion_results)} analyzed")
-        return len(emotion_results)
+        logger.info(f"✓ Wrote {analyzed} emotion records to {output_path}")
+        logger.info(
+            f"Timing breakdown: "
+            f"preload={format_elapsed_time(time.time() - preload_start)}, "
+            f"extract={format_elapsed_time(extract_total_s)}, "
+            f"infer={format_elapsed_time(infer_total_s)}, "
+            f"write={format_elapsed_time(write_total_s)}, "
+            f"total={format_elapsed_time(time.time() - process_start)}"
+        )
+        
+        # Resource usage summary
+        if self.device == "cuda" and torch.cuda.is_available():
+            gpu_mem_allocated = torch.cuda.memory_allocated() / _BYTES_IN_MIB
+            gpu_mem_reserved = torch.cuda.memory_reserved() / _BYTES_IN_MIB
+            logger.info(
+                f"GPU memory: {gpu_mem_allocated:.1f} MiB allocated, "
+                f"{gpu_mem_reserved:.1f} MiB reserved"
+            )
+        
+        logger.info(
+            f"Summary: {len(segments)} input turns -> {len(valid_segments)} valid -> {analyzed} analyzed"
+        )
+        return analyzed
 
 
 def derive_emotion_label(arousal: float, valence: float, dominance: float) -> str:
@@ -469,8 +658,8 @@ def main():
     parser.add_argument(
         "--min-duration",
         type=float,
-        default=0.5,
-        help="Min segment duration in seconds (default: 0.5)",
+        default=3.0,
+        help="Min segment duration in seconds (default: 3.0, model trained on 3-15s)",
     )
     parser.add_argument(
         "--max-duration",
@@ -663,7 +852,7 @@ def main():
             config=config,
         )
 
-        if should_skip(args.output_dir, manifest, [output_path]):
+        if should_skip(output_dir, manifest, [output_path]):
             logger.info(f"✓ Existing emotion output found (manifest match), skipping: {output_path}")
             return
         
@@ -714,7 +903,7 @@ def main():
         )
 
         logger.info(f"Emotion analysis complete: {num_analyzed} segments")
-        write_manifest(args.output_dir, manifest)
+        write_manifest(output_dir, manifest)
         
         # Cleanup
         del analyzer
