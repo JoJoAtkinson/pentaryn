@@ -45,7 +45,7 @@ logger = get_step_logger("emotion")
 _BYTES_IN_MIB = 1024 * 1024
 
 
-logger.info('attempt wed feb 4 -- 1 ')
+logger.info('attempt wed feb 4 -- 2 ')
 
 # Import WavLMWrapper at module level (requires vox-profile in sys.path via Dockerfile)
 try:
