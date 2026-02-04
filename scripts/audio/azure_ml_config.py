@@ -21,7 +21,7 @@ MODELS_FOLDER = "models"  # For caching HuggingFace models
 
 # Environment configuration
 ENVIRONMENT_NAME = "whisperx-gpu"
-ENVIRONMENT_VERSION = "8"  # Increment when requirements change
+ENVIRONMENT_VERSION = "15"  # Increment when requirements change
 
 # Job configuration
 EXPERIMENT_NAME = "audio-transcription"

@@ -3,7 +3,8 @@
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Literal
-import toml
+import os
+import tomlkit as toml
 
 
 @dataclass
@@ -22,8 +23,17 @@ class AzureConfig:
     subscription_id: str = ""
     resource_group: str = ""
     workspace_name: str = ""
-    compute_target: str = "gpu-transcribe"
+    compute_target: str = "gpu-transcribe"  # Legacy: use compute_target_gpu instead
+    compute_target_gpu: Optional[str] = None  # GPU compute for Steps 1-4
+    compute_target_cpu: str = "cpu-preprocess"  # CPU compute for Step 0
     environment_name: str = "whisperx-gpu"
+    hf_auth_token: str = ""  # HuggingFace token for pyannote/transformers
+    
+    def __post_init__(self):
+        """Set compute_target_gpu from compute_target if not provided."""
+        if self.compute_target_gpu is None:
+            self.compute_target_gpu = self.compute_target
+
 
 
 @dataclass
@@ -38,6 +48,8 @@ class PreprocessConfig:
     highpass_hz: int = 80
     two_pass: bool = True
     output_format: Literal["flac", "wav"] = "flac"
+    parallel_tracks: int = 0  # Chunk workers per track (0 = auto CPU count)
+    progress_interval_seconds: int = 15
 
 
 @dataclass
@@ -149,11 +161,29 @@ class PipelineConfig:
             # Return default config if file doesn't exist
             return cls()
         
-        data = toml.load(path)
+        with open(path, "r") as f:
+            data = toml.load(f)
+        
+        # Load HF_AUTH_TOKEN from environment if not in config
+        azure_config = data.get("azure", {})
+        if not azure_config.get("hf_auth_token"):
+            # Try to load from root .env file
+            env_path = Path(__file__).parent.parent.parent.parent / ".env"
+            if env_path.exists():
+                with open(env_path) as f:
+                    for line in f:
+                        line = line.strip()
+                        if line.startswith("HF_AUTH_TOKEN=") or line.startswith("HF_TOKEN="):
+                            key, value = line.split("=", 1)
+                            azure_config["hf_auth_token"] = value.strip().strip('"').strip("'")
+                            break
+            # Fallback to environment variable
+            if not azure_config.get("hf_auth_token"):
+                azure_config["hf_auth_token"] = os.environ.get("HF_AUTH_TOKEN") or os.environ.get("HF_TOKEN", "")
         
         return cls(
             pipeline=PipelineMetadata(**data.get("pipeline", {})),
-            azure=AzureConfig(**data.get("azure", {})),
+            azure=AzureConfig(**azure_config),
             preprocess=PreprocessConfig(**data.get("preprocess", {})),
             transcription=TranscriptionConfig(**data.get("transcription", {})),
             diarization=DiarizationConfig(**data.get("diarization", {})),

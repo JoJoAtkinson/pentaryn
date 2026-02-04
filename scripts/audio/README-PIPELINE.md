@@ -10,14 +10,14 @@
 5. **Step 1: Transcription** - WhisperX with chunking support (Mode A & B)
 
 ### 🚧 In Progress
-The following modules have been scaffolded and need full implementation:
+The following modules need full implementation:
 
-- **Step 2: Diarization** - pyannote.audio speaker identification
-- **Step 3: Emotion** - WavLM-based emotion analysis
-- **Step 4: Speaker Embeddings** - ECAPA embeddings + cross-session matching
-- **Step 5: Post-processing** - Merge all metadata + validation
-- **Orchestrator** - Pipeline controller for sequential execution
-- **Speaker Database** - Persistent speaker embedding storage
+- **Step 2: Diarization** - pyannote.audio speaker identification (Azure ML - GPU)
+- **Step 3: Emotion** - WavLM-based emotion analysis (Azure ML - GPU)
+- **Step 4: Speaker Embeddings** - ECAPA embeddings + cross-session matching (Azure ML - GPU)
+- **Step 5: Post-processing** - Merge all metadata + validation (Local execution)
+- **Azure ML Workflow** - Separate compute per step (CPU for Step 0, GPU for Steps 1-4)
+- **Environment Handling** - Load HF_TOKEN from root .env, pass to Azure jobs
 
 ## Quick Start
 
@@ -51,26 +51,30 @@ python -m scripts.audio.pipeline.1_transcription.transcribe \
   --device cpu
 ```
 
-### 4. Run Full Pipeline (When Orchestrator Complete)
+### 4. Run Full Pipeline (Azure ML)
 
 ```bash
-python -m scripts.audio.pipeline.orchestrator \
-  --audio sessions/04/Session_04.m4a \
-  --config scripts/audio/pipeline.config.toml \
-  --mode local
+python scripts/audio/orchestrator.py sessions/05 \
+  --config scripts/audio/pipeline.config.toml
 ```
 
 ## Architecture Overview
 
 ```
-Raw Audio → [0_preprocess] → [1_transcription] → [2_diarization] → 
-[3_emotion] → [4_speaker_embedding] → [5_postprocess] → final.jsonl
+Raw Audio → [0_preprocess (CPU)] → [1_transcription (GPU)] → [2_diarization (GPU)] → 
+           [3_emotion (GPU)] ← parallel → [4_speaker_embedding (GPU)] → [5_postprocess (local)] → final.jsonl
 ```
+
+**Correct Step Order for Mode B:**
+- Sequential: 0 (CPU) → 1 (GPU) → 2 (GPU)
+- Parallel: [3 (GPU), 4 (GPU)] (both depend on Step 2)
+- Final: 5 (Local) (depends on Steps 3 & 4)
 
 ### Mode A: Multitrack (Discord)
 - Track-based speaker identity (trusted from filenames)
-- No diarization needed
-- Clean close-mic embeddings update DB automatically
+- Skips Step 2 (no diarization ML needed—uses track-based adapter)
+- Clean close-mic embeddings auto-update DB
+- Order: 0 (CPU) → 1 (GPU) → [3 (GPU), 4 (GPU)] → 5 (Local)
 
 ### Mode B: Single Mic (Table Recording)
 - Diarization assigns session-local speaker IDs
@@ -82,25 +86,40 @@ Raw Audio → [0_preprocess] → [1_transcription] → [2_diarization] →
 
 ```
 scripts/audio/
+├── orchestrator.py             ✅ Azure ML pipeline runner
 ├── pipeline/
 │   ├── __init__.py
-│   ├── config.py                    ✅ Complete
+│   ├── config.py                    ✅ Complete (adding HF_TOKEN loading)
 │   ├── common/
-│   │   ├── audio_utils.py          ✅ Complete
+│   │   ├── audio_utils.py          ✅ Complete (adding safe_globals)
 │   │   ├── file_utils.py           ✅ Complete
-│   │   ├── logging_utils.py        ✅ Complete
-│   │   └── azure_utils.py          ✅ Complete
-│   ├── 0_preprocess/
+│   │   ├── logging_utils.py        ✅ Complete (adding heartbeat)
+│   │   └── azure_utils.py          ✅ Complete (adding CUDA validation)
+│   ├── preprocess/
 │   │   ├── normalize.py            ✅ Complete
+│   │   ├── job.py                  🚧 Needed (CPU compute definition)
 │   │   └── README.md               ✅ Complete
-│   ├── 1_transcription/
+│   ├── transcription/
 │   │   ├── transcribe.py           ✅ Complete
+│   │   ├── job.py                  🚧 Needed (GPU compute definition)
 │   │   └── README.md               🚧 Needed
-│   ├── 2_diarization/              🚧 Needs implementation
-│   ├── 3_emotion/                  🚧 Needs implementation
-│   ├── 4_speaker_embedding/        🚧 Needs implementation
-│   ├── 5_postprocess/              🚧 Needs implementation
-│   └── orchestrator.py             🚧 Needs implementation
+│   ├── diarization/
+│   │   ├── diarize.py              🚧 Needs implementation
+│   │   ├── job.py                  🚧 Needed (GPU compute definition)
+│   │   └── README.md               🚧 Needed
+│   ├── emotion/
+│   │   ├── analyze.py              🚧 Needs implementation
+│   │   ├── job.py                  🚧 Needed (GPU compute definition)
+│   │   └── README.md               🚧 Needed
+│   ├── speaker_embedding/
+│   │   ├── extract.py              🚧 Needs implementation
+│   │   ├── match.py                🚧 Needs implementation
+│   │   ├── job.py                  🚧 Needed (GPU compute definition)
+│   │   └── README.md               🚧 Needed
+│   ├── postprocess/
+│   │   ├── merge.py                🚧 Needs implementation
+│   │   ├── validate.py             🚧 Needs implementation
+│   │   └── README.md               🚧 Needed
 ├── speaker_db/
 │   ├── embeddings.json             🚧 Needs schema
 │   └── README.md                   🚧 Needed
@@ -110,13 +129,35 @@ scripts/audio/
 
 ## Next Steps
 
-1. **Implement Step 2**: Diarization module with pyannote.audio
-2. **Implement Step 3**: Emotion analysis with WavLM
-3. **Implement Step 4**: Speaker embedding extraction and matching
-4. **Implement Step 5**: Post-processing and validation
-5. **Create Orchestrator**: Sequential pipeline controller
-6. **Create Speaker DB**: Schema and persistence layer
-7. **Testing**: End-to-end tests with sample audio
+1. **Add utilities from existing code**: CUDA validation, PyTorch safe_globals, heartbeat logging
+2. **Create Azure ML job definitions**: job.py for Steps 0-4 with compute assignments
+3. **Implement Step 2**: Diarization with Mode A adapter and Mode B ML pipeline
+4. **Implement Step 4**: Speaker embeddings with Mode A auto-update and Mode B matching
+5. **Implement Step 3**: Emotion analysis (can parallelize with Step 4)
+6. **Implement Step 5**: Post-processing merger and validation
+7. **Extend Azure ML Pipeline**: Add Steps 2–4 as pipeline jobs + local Step 5 wiring
+8. **Testing**: End-to-end tests with Mode A and Mode B audio
+
+## Azure ML Compute Architecture
+
+**Each step runs on fresh compute instance with clean memory:**
+
+- **Step 0 (Preprocess)**: CPU compute (`Standard_D4s_v3`) - FFmpeg doesn't use GPU, saves costs
+- **Step 1 (Transcription)**: GPU compute (`gpu-transcribe` / `Standard_NC4as_T4_v3`) - WhisperX
+- **Step 2 (Diarization)**: GPU compute (`gpu-transcribe`) - pyannote.audio (CPU fallback for long recordings)
+- **Step 3 (Emotion)**: GPU compute (`gpu-transcribe`) - WavLM
+- **Step 4 (Speaker Embedding)**: GPU compute (`gpu-transcribe`) - SpeechBrain ECAPA
+- **Step 5 (Post-processing)**: Local execution (no Azure job) - Pure Python merging
+
+**Benefits:**
+- Fresh memory per step prevents OOM errors
+- Granular debugging: re-run failed steps individually
+- Parallel execution: Steps 3 & 4 run simultaneously after Step 2
+- Cost optimization: CPU-only for normalization
+
+**Environment Variables:**
+- `HF_AUTH_TOKEN` loaded from root `.env` file
+- Passed to Azure ML jobs for pyannote.audio and transformers authentication
 
 ## Configuration
 

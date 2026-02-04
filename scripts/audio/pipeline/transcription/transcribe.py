@@ -5,14 +5,22 @@ from typing import List, Dict, Any, Optional, Tuple
 import argparse
 import sys
 import json
+import time
 
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from pipeline.config import PipelineConfig
-from pipeline.common.logging_utils import setup_logging, get_step_logger
-from pipeline.common.file_utils import write_jsonl, ensure_dir, read_json, write_json
+from pipeline.common.logging_utils import setup_logging, get_step_logger, format_elapsed_time
+from pipeline.common.file_utils import (
+    write_jsonl,
+    ensure_dir,
+    read_json,
+    write_json,
+    get_session_id_from_path,
+)
 from pipeline.common.audio_utils import load_audio, get_audio_duration, chunk_audio
+from pipeline.common.manifest_utils import build_manifest, should_skip, write_manifest
 
 
 logger = get_step_logger("transcription")
@@ -42,15 +50,26 @@ def transcribe_audio(
         )
     
     logger.info(f"Loading Whisper model: {config.transcription.model}")
-    model = whisperx.load_model(
-        config.transcription.model,
-        device=device,
-        compute_type=config.transcription.compute_type,
-        language=config.transcription.language,
-    )
+    model_load_start = time.time()
+    try:
+        model = whisperx.load_model(
+            config.transcription.model,
+            device=device,
+            compute_type=config.transcription.compute_type,
+            language=config.transcription.language,
+        )
+    except Exception as e:
+        logger.error(f"Failed to load Whisper model: {e}")
+        raise RuntimeError(f"Whisper model loading failed. Check device={device} and model={config.transcription.model}") from e
+    logger.info(f"✓ Whisper model loaded in {format_elapsed_time(time.time() - model_load_start)}")
+    
+    logger.info(f"Loading audio: {audio_path.name}")
+    audio_load_start = time.time()
+    audio = whisperx.load_audio(str(audio_path))
+    logger.info(f"✓ Audio loaded in {format_elapsed_time(time.time() - audio_load_start)}")
     
     logger.info(f"Transcribing {audio_path.name}...")
-    audio = whisperx.load_audio(str(audio_path))
+    transcribe_start = time.time()
     
     result = model.transcribe(
         audio,
@@ -58,12 +77,35 @@ def transcribe_audio(
         language=config.transcription.language,
     )
     
-    # Perform forced alignment for word-level timestamps
-    logger.info("Performing forced alignment...")
-    model_a, metadata = whisperx.load_align_model(
-        language_code=config.transcription.language,
-        device=device,
+    if not result.get("segments"):
+        logger.warning("Transcription produced no segments. Check audio quality or file duration.")
+    
+    # Detect language if auto was specified
+    detected_language = result.get("language", config.transcription.language)
+    if detected_language and detected_language != config.transcription.language:
+        logger.info(f"Language detected: {detected_language}")
+    
+    logger.info(
+        f"✓ Transcription complete in {format_elapsed_time(time.time() - transcribe_start)} "
+        f"({len(result.get('segments', []))} segments)"
     )
+    
+    # Perform forced alignment for word-level timestamps
+    logger.info("Loading alignment model...")
+    align_load_start = time.time()
+    try:
+        model_a, metadata = whisperx.load_align_model(
+            language_code=detected_language or "en",
+            device=device,
+        )
+    except Exception as e:
+        logger.error(f"Failed to load alignment model for language '{detected_language}': {e}")
+        logger.warning("Returning transcription without word-level alignment")
+        return result
+    logger.info(f"✓ Alignment model loaded in {format_elapsed_time(time.time() - align_load_start)}")
+    
+    logger.info("Performing forced alignment...")
+    align_start = time.time()
     
     result = whisperx.align(
         result["segments"],
@@ -73,6 +115,7 @@ def transcribe_audio(
         device,
         return_char_alignments=False,
     )
+    logger.info(f"✓ Forced alignment complete in {format_elapsed_time(time.time() - align_start)}")
     
     return result
 
@@ -203,6 +246,7 @@ def transcribe_mode_a(
         device: Device to use
     """
     logger.info("Mode A: Transcribing multitrack audio")
+    mode_start = time.time()
     
     # Find all normalized tracks
     track_files = sorted(tracks_dir.glob(f"*.{config.preprocess.output_format}"))
@@ -210,11 +254,15 @@ def transcribe_mode_a(
     if not track_files:
         raise ValueError(f"No normalized tracks found in {tracks_dir}")
     
+    total_tracks = len(track_files)
+    progress_next = 10
     all_segments = []
     
-    for track_file in track_files:
+    for idx, track_file in enumerate(track_files, start=1):
         track_name = track_file.stem
-        logger.info(f"Transcribing track: {track_name}")
+        percent = int(idx * 100 / total_tracks) if total_tracks else 100
+        logger.info(f"Transcribing track {idx}/{total_tracks} ({percent}%): {track_name}")
+        track_start = time.time()
         
         result = transcribe_audio(track_file, config, device)
         
@@ -227,11 +275,20 @@ def transcribe_mode_a(
         )
         
         all_segments.extend(segments)
+        logger.info(
+            f"✓ Track {track_name} complete in {format_elapsed_time(time.time() - track_start)} "
+            f"({len(segments)} segments)"
+        )
+        
+        if percent >= progress_next or idx == total_tracks:
+            logger.info(f"Mode A progress: {percent}% ({idx}/{total_tracks} tracks)")
+            progress_next += 10
     
     # Write all segments to single JSONL file
     output_file = output_dir / "raw_segments.jsonl"
     write_jsonl(all_segments, output_file)
     logger.info(f"✓ Wrote {len(all_segments)} segments to {output_file}")
+    logger.info(f"✓ Mode A transcription complete in {format_elapsed_time(time.time() - mode_start)}")
 
 
 def transcribe_mode_b(
@@ -251,6 +308,7 @@ def transcribe_mode_b(
         device: Device to use
     """
     logger.info("Mode B: Transcribing single-mic audio")
+    mode_start = time.time()
     
     # Check if chunking is needed
     duration = get_audio_duration(audio_file)
@@ -267,23 +325,34 @@ def transcribe_mode_b(
         logger.info("Audio exceeds chunk duration, will process in chunks")
         
         # Create chunks manifest
+        chunk_manifest_start = time.time()
         chunks = create_chunks(audio_file, config)
+        logger.info(f"✓ Chunk manifest created in {format_elapsed_time(time.time() - chunk_manifest_start)}")
         manifest_file = output_dir / "chunks_manifest.json"
         write_json({"chunks": chunks}, manifest_file)
         logger.info(f"✓ Wrote chunks manifest to {manifest_file}")
         
         # Load full audio once
+        audio_load_start = time.time()
         audio, sr = load_audio(audio_file, sample_rate=config.preprocess.sample_rate)
+        logger.info(f"✓ Loaded audio in {format_elapsed_time(time.time() - audio_load_start)}")
         
         # Transcribe each chunk
-        for chunk_info in chunks:
+        total_chunks = len(chunks)
+        progress_next = 10
+        for idx, chunk_info in enumerate(chunks, start=1):
             chunk_id = chunk_info["chunk_id"]
             start_time = chunk_info["start_time"]
             end_time = chunk_info["end_time"]
             owned_start = chunk_info["owned_start"]
             owned_end = chunk_info["owned_end"]
             
-            logger.info(f"Processing chunk {chunk_id}/{len(chunks)}: {start_time:.2f}s - {end_time:.2f}s")
+            percent = int(idx * 100 / total_chunks) if total_chunks else 100
+            logger.info(
+                f"Processing chunk {chunk_id}/{total_chunks} ({percent}%): "
+                f"{start_time:.2f}s - {end_time:.2f}s"
+            )
+            chunk_start = time.time()
             
             # Extract chunk audio
             start_sample = int(start_time * sr)
@@ -295,38 +364,49 @@ def transcribe_mode_b(
             chunk_file = output_dir / f"chunk_{chunk_id}.wav"
             sf.write(str(chunk_file), chunk_audio, sr)
             
-            # Transcribe chunk
-            result = transcribe_audio(chunk_file, config, device)
-            
-            # Process segments
-            segments = process_segments_for_output(
-                segments=result.get("segments", []),
-                chunk_id=chunk_id,
-                track=None,
-                global_offset=start_time,
-            )
-            
-            # Filter segments to owned interval
-            if config.transcription.owned_interval_stitching:
-                filtered_segments = []
-                for seg in segments:
-                    # Check if segment midpoint falls in owned interval
-                    midpoint = (seg["start"] + seg["end"]) / 2
-                    if owned_start <= midpoint <= owned_end:
-                        filtered_segments.append(seg)
+            try:
+                # Transcribe chunk
+                result = transcribe_audio(chunk_file, config, device)
                 
-                logger.info(f"Chunk {chunk_id}: {len(segments)} total, {len(filtered_segments)} in owned interval")
-                all_segments.extend(filtered_segments)
-            else:
-                all_segments.extend(segments)
+                # Process segments
+                segments = process_segments_for_output(
+                    segments=result.get("segments", []),
+                    chunk_id=chunk_id,
+                    track=None,
+                    global_offset=start_time,
+                )
+                
+                # Filter segments to owned interval
+                if config.transcription.owned_interval_stitching:
+                    filtered_segments = []
+                    for seg in segments:
+                        # Check if segment midpoint falls in owned interval
+                        midpoint = (seg["start"] + seg["end"]) / 2
+                        if owned_start <= midpoint <= owned_end:
+                            filtered_segments.append(seg)
+                    
+                    logger.info(f"Chunk {chunk_id}: {len(segments)} total, {len(filtered_segments)} in owned interval")
+                    all_segments.extend(filtered_segments)
+                else:
+                    all_segments.extend(segments)
+                
+                logger.info(
+                    f"✓ Chunk {chunk_id} complete in {format_elapsed_time(time.time() - chunk_start)} "
+                    f"({len(segments)} segments)"
+                )
+            finally:
+                # Clean up temporary chunk file even if transcription fails
+                chunk_file.unlink(missing_ok=True)
             
-            # Clean up temporary chunk file
-            chunk_file.unlink()
+            if percent >= progress_next or idx == total_chunks:
+                logger.info(f"Mode B progress: {percent}% ({idx}/{total_chunks} chunks)")
+                progress_next += 10
     
     else:
         # Process entire file at once
         logger.info("Processing audio without chunking")
         
+        file_start = time.time()
         result = transcribe_audio(audio_file, config, device)
         
         # Process segments
@@ -338,11 +418,16 @@ def transcribe_mode_b(
         )
         
         all_segments = segments
+        logger.info(
+            f"✓ Single-pass transcription complete in {format_elapsed_time(time.time() - file_start)} "
+            f"({len(segments)} segments)"
+        )
     
     # Write all segments
     output_file = output_dir / "raw_segments.jsonl"
     write_jsonl(all_segments, output_file)
     logger.info(f"✓ Wrote {len(all_segments)} segments to {output_file}")
+    logger.info(f"✓ Mode B transcription complete in {format_elapsed_time(time.time() - mode_start)}")
 
 
 def transcribe(
@@ -365,7 +450,34 @@ def transcribe(
     Returns:
         Dictionary with transcription results
     """
+    step_start = time.time()
     ensure_dir(output_dir)
+    output_file = output_dir / "raw_segments.jsonl"
+    session_id = get_session_id_from_path(output_dir)
+    logger.info(f"Starting transcription step (mode: {audio_mode}, device: {device})")
+    if audio_mode == "discord_multitrack":
+        tracks_dir = audio_path / "normalized_tracks"
+        track_files = sorted(tracks_dir.glob(f"*.{config.preprocess.output_format}"))
+        manifest = build_manifest(
+            step="transcription",
+            session_id=session_id,
+            input_files=track_files,
+            config=config,
+            extra={"audio_mode": audio_mode, "device": device},
+        )
+    else:
+        audio_file = audio_path / f"normalized.{config.preprocess.output_format}"
+        manifest = build_manifest(
+            step="transcription",
+            session_id=session_id,
+            input_files=[audio_file],
+            config=config,
+            extra={"audio_mode": audio_mode, "device": device},
+        )
+
+    if should_skip(output_dir, manifest, [output_file]):
+        logger.info(f"✓ Existing transcription found (manifest match), skipping: {output_file}")
+        return {"status": "skipped", "reason": "output_exists", "output": str(output_file)}
     
     if audio_mode == "discord_multitrack":
         # Expect tracks directory from Step 0
@@ -374,6 +486,8 @@ def transcribe(
             raise ValueError(f"Expected normalized tracks directory: {tracks_dir}")
         
         transcribe_mode_a(tracks_dir, output_dir, config, device)
+        write_manifest(output_dir, manifest)
+        logger.info(f"✓ Transcription step complete in {format_elapsed_time(time.time() - step_start)}")
         return {"status": "success", "mode": "discord_multitrack"}
     
     else:  # table_single_mic
@@ -383,6 +497,8 @@ def transcribe(
             raise ValueError(f"Expected normalized audio file: {audio_file}")
         
         transcribe_mode_b(audio_file, output_dir, config, device)
+        write_manifest(output_dir, manifest)
+        logger.info(f"✓ Transcription step complete in {format_elapsed_time(time.time() - step_start)}")
         return {"status": "success", "mode": "table_single_mic"}
 
 

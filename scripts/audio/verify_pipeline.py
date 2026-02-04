@@ -27,7 +27,7 @@ def main():
     print("\n📦 Core Infrastructure:")
     all_good &= check_file(pipeline / "__init__.py")
     all_good &= check_file(pipeline / "config.py")
-    all_good &= check_file(pipeline / "orchestrator.py")
+    all_good &= check_file(base / "orchestrator.py")
     all_good &= check_file(base / "pipeline.config.toml")
     
     # Common utilities

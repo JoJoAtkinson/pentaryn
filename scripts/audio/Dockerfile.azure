@@ -18,5 +18,9 @@ RUN apt-get update && apt-get install -y \
 COPY requirements-azure.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
+# Clone vox-profile for emotion analysis (package has broken install, need source)
+RUN git clone https://github.com/tiantiaf0627/vox-profile-release.git /opt/vox-profile \
+    && echo "/opt/vox-profile" > /opt/miniconda/lib/python3.10/site-packages/vox-profile-path.pth
+
 # Verify CUDA installation
 RUN python -c "import torch; print('CUDA available:', torch.cuda.is_available())"
