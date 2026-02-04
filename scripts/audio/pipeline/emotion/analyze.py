@@ -282,9 +282,27 @@ class EmotionAnalyzer:
                 length = min(seg.shape[0], max_len)
                 batch_tensor[j, :length] = seg[:length].to(self.device)
             
+            # Debug logging for shape investigation
+            logger.info(f"DEBUG: batch_tensor.shape = {batch_tensor.shape}, dtype = {batch_tensor.dtype}, device = {batch_tensor.device}")
+            logger.info(f"DEBUG: batch_tensor min = {batch_tensor.min().item():.4f}, max = {batch_tensor.max().item():.4f}")
+            logger.info(f"DEBUG: Non-zero samples per item: {[(batch_tensor[j] != 0).sum().item() for j in range(len(batch))]}")
+            
+            # Create attention mask manually (1 for real audio, 0 for padding)
+            # This may be needed for proper batch processing
+            attention_mask = torch.zeros(len(batch), max_len, dtype=torch.long, device=self.device)
+            for j, seg in enumerate(batch):
+                length = min(seg.shape[0], max_len)
+                attention_mask[j, :length] = 1
+            logger.info(f"DEBUG: attention_mask.shape = {attention_mask.shape}, sum per item = {attention_mask.sum(dim=1).tolist()}")
+            
             # Forward pass through WavLMWrapper
-            # Returns: arousal, valence, dominance tensors
-            arousal, valence, dominance = self.model(batch_tensor)
+            # Try passing attention_mask explicitly
+            try:
+                arousal, valence, dominance = self.model(batch_tensor, attention_mask=attention_mask)
+            except TypeError:
+                # Model doesn't accept attention_mask parameter
+                logger.warning("Model doesn't accept attention_mask, trying without...")
+                arousal, valence, dominance = self.model(batch_tensor)
             
             # Convert to list of dicts
             for j in range(len(batch)):
