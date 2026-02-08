@@ -11,6 +11,8 @@ Thumbs.db
 .output/
 .artifacts/
 
+sessions/**/outputs
+
 .history/
 
 .timeline_data/

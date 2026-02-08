@@ -1,0 +1,1 @@
+{"session_id": "05", "status": "merge_complete", "stats": {"total_words": 41608, "total_duration_seconds": 18913.742, "unique_speakers": 4, "words_per_speaker": {"joe": 18063, "jeff": 11128, "kristine": 7867, "nicole": 4550}, "words_with_speaker_id": 0, "words_with_emotion": 41608, "coverage": {"speaker_id": 0.0, "emotion": 1.0}}}
