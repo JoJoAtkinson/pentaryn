@@ -1,6 +1,6 @@
 ---
 created: 2026-01-17
-last-modified: 2026-01-17
+last-modified: 2026-03-14
 tags: ["#world", "#party", "#black-ledger", "#member"]
 status: active
 ---
@@ -15,12 +15,12 @@ status: active
 | **Party** | [The Black Ledger](../_overview.md) |
 | **Ancestry** | Orc |
 | **Origin** | [Garrok](../../../factions/garrok-confederation/_overview.md) |
-| **Class / Level** | Barbarian 3 |
+| **Class / Level** | Barbarian 4 |
 | **Alignment** | Neutral Evil |
 | **Background** | Oathbreaker |
 | **Party Role** | Breach / intimidation |
 
-## Class Build (Barbarian 3)
+## Class Build (Barbarian 4)
 
 > “Rage settles debts quicker than a ledger ever could.”
 
@@ -29,21 +29,22 @@ status: active
 - **Reckless Attack:** Opens attacks with advantage, trading defense for more consistent hits and maximizing the Ledger’s intimidation.
 - **Danger Sense:** Advantage on visible Dex saves keeps him from getting surprised by traps or backstabs while he’s the charging force.
 - **Primal Path – Berserker:** Frenzy lets him swing again with a bonus action (exhaustion after rage ends), matching his “never stop until the job is done” persona.
+- **Ability Score Improvement:** Raises Strength to `18`, making every charge and follow-through feel like a debt being collected with interest.
 - **Equipment & Tactics:** Carries a maul, grenades of rending metal, and a reinforced shielded cloak separately. Charges doorways, uses Rage/ Frenzy to push through crowd control, and lets Orren clean up any precision work.
 
 ## Combat Stats
 
-> These values let Barbarian 3 stay “monster” on the front line while the ledger writes the invoice for fear.
+> These values let Barbarian 4 stay “monster” on the front line while the ledger writes the invoice for fear.
 
 | Trait | Value |
 |---|---|
-| **HP** | `35` (3d12; 12 + 2 × (avg. 7 + 3) with Con 16) |
-| **Hit Dice** | 3d12 |
+| **HP** | `45` (4d12; 12 + 3 x (avg. 7 + 3) with Con 16) |
+| **Hit Dice** | 4d12 |
 | **AC** | `15` (Unarmored Defense: 10 + Dex 14 + Con 16) |
 | **Speed** | 30 ft |
-| **Ability mods** | Str 16 (+3), Dex 14 (+2), Con 16 (+3), Int 8 (−1), Wis 12 (+1), Cha 10 (+0) |
-| **Saving Throws** | Strength +5, Constitution +5 |
-| **Skills / Tools** | Athletics +5, Intimidation +2 |
+| **Ability mods** | Str 18 (+4), Dex 14 (+2), Con 16 (+3), Int 8 (−1), Wis 12 (+1), Cha 10 (+0) |
+| **Saving Throws** | Strength +6, Constitution +5 |
+| **Skills / Tools** | Athletics +6, Intimidation +2 |
 | **Rage** | 3/day; +2 damage bonus, resistance to bludgeoning/piercing/slashing while raging |
 | **Primal Path – Berserker** | Frenzy (bonus-action attack while raging, exhaustion after each rage ends) |
 | **Equipment** | Maul, pair of handaxes, reinforced cloak, grenades of rending metal |
@@ -52,8 +53,8 @@ status: active
 
 | Weapon | Attack Bonus | Damage | Rage Bonus | Notes |
 |---|---|---|---|---|
-| Maul | +5 (Str +3, prof +2) | 2d6 + 3 | +2 damage while raging (2d6 + 5 total) | Heavy, two-handed, martial; Frenzy bonus attack uses the same damage roll when raging. |
-| Handaxe (melee/throw) | +5 | 1d6 + 3 | +2 damage while raging (1d6 + 5 total) | Light, thrown 20/60 ft; dual-wielding lets him trade off bonus-action attacks if needed. |
+| Maul | +6 (Str +4, prof +2) | 2d6 + 4 | +2 damage while raging (2d6 + 6 total) | Heavy, two-handed, martial; Frenzy bonus attack uses the same damage roll when raging. |
+| Handaxe (melee/throw) | +6 | 1d6 + 4 | +2 damage while raging (1d6 + 6 total) | Light, thrown 20/60 ft; dual-wielding lets him trade off bonus-action attacks if needed. |
 
 ### Notes
 
