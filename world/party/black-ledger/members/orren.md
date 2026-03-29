@@ -1,6 +1,6 @@
 ---
 created: 2026-01-17
-last-modified: 2026-01-17
+last-modified: 2026-03-14
 tags: ["#world", "#party", "#black-ledger", "#member"]
 status: active
 ---
@@ -10,17 +10,17 @@ status: active
 
 ## Snapshot
 
-| Attribute | Value |
-|---|---|
-| **Party** | [The Black Ledger](../_overview.md) |
-| **Ancestry** | Human |
-| **Origin** | [Ardenhaven](../../../factions/ardenhaven/_overview.md) |
-| **Class / Level** | Fighter 3 |
-| **Alignment** | Neutral Evil |
-| **Background** | Deserter |
-| **Party Role** | Muscle / enforcer |
+| Attribute               | Value                                                |
+| ----------------------- | ---------------------------------------------------- |
+| **Party**         | [The Black Ledger](../_overview.md)                     |
+| **Ancestry**      | Human                                                |
+| **Origin**        | [Ardenhaven](../../../factions/ardenhaven/_overview.md) |
+| **Class / Level** | Fighter 4                                            |
+| **Alignment**     | Neutral Evil                                         |
+| **Background**    | Deserter                                             |
+| **Party Role**    | Muscle / enforcer                                    |
 
-## Class Build (Fighter 3)
+## Class Build (Fighter 4)
 
 > “Keep to the plan and keep them in range.”
 
@@ -28,27 +28,28 @@ status: active
 - **Second Wind:** Bonus action to regain `1d10 + level` HP once per short rest—he uses this when a scrape would otherwise slow the ledger’s pace.
 - **Action Surge:** Once per short rest, he can take an extra action, letting him close, shove, grapple, or land a heavy finish before a mark escapes.
 - **Martial Archetype:** *Champion* — favors brutal efficiency: improved crit range (19–20) and later Remarkable Athlete growth make him a walking threat and a steady guard.
+- **Ability Score Improvement:** Raises Strength to sharpen his finishing power and make his intimidation physical, not theatrical.
 - **Gear lane:** prefers a well-balanced longsword/bastard weapon for finishing blows, a light crossbow for distance, and studded armor with a reinforced cloak (adds intimidation plus cover).
 - **Tactics:** positions himself to contest exits, uses Action Surge to end the fight on his terms, and keeps favor with the ledger by not taking unnecessary hits (Second Wind buys him time to keep the ledger’s ledger balanced).
 
 ## Combat Stats
 
-> Brutal precision—these stats assume Fighter 3 with the given physical spread.
+> Brutal precision—these stats assume Fighter 4 with the given physical spread.
 
-| Trait | Value |
-|---|---|
-| **HP** | `28` (3d10; 10 + 2 × (avg. 6 + 2) with Con 14) |
-| **Hit Dice** | 3d10 |
-| **AC** | `18` (Studded armor + Dueling, shield carried when he isn’t using his blade) |
-| **Speed** | 30 ft |
-| **Ability mods** | Str 16 (+3), Dex 12 (+1), Con 14 (+2), Int 10 (+0), Wis 11 (+0), Cha 9 (−1) |
-| **Saving Throws** | Strength +5, Constitution +4 |
-| **Skills / Tools** | Athletics +5, Intimidation +1 |
-| **Equipment** | Longsword (dueling), light crossbow, handaxe, shield, ledger-branded cloak |
+| Trait                    | Value                                                                           |
+| ------------------------ | ------------------------------------------------------------------------------- |
+| **HP**             | `36` (4d10; 10 + 3 x (avg. 6 + 2) with Con 14)                                |
+| **Hit Dice**       | 4d10                                                                            |
+| **AC**             | `18` (Studded armor + Dueling, shield carried when he isn’t using his blade) |
+| **Speed**          | 30 ft                                                                           |
+| **Ability mods**   | Str 18 (+4), Dex 12 (+1), Con 14 (+2), Int 10 (+0), Wis 11 (+0), Cha 9 (−1)    |
+| **Saving Throws**  | Strength +6, Constitution +4                                                    |
+| **Skills / Tools** | Athletics +6, Intimidation +1                                                   |
+| **Equipment**      | Longsword (dueling), light crossbow, handaxe, shield, ledger-branded cloak      |
 
 ### Notes
 
-- Action Surge opens a second attack or shove before the enemy flees; Second Wind keeps him standing in the doorway.
+- Action Surge opens a second attack or shove before the enemy flees; Second Wind now restores `1d10 + 4` HP and keeps him standing in the doorway.
 
 ## Public Profile
 

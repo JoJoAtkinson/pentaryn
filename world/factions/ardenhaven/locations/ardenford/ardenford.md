@@ -26,6 +26,10 @@ The city formed where the mountains meet the sea, built directly atop—and into
 
 The salt air from the northern sea mingles with the smell of fresh bread, leather tanneries, and the ever-present hint of old stone. Streams cascade down from the old ridge to the east, cutting through the city in narrow channels before emptying into the harbor. The city's heartbeat is constant—carts rattling over uneven cobblestones, market vendors calling prices, the distant clang of smithies, children's laughter echoing between buildings, and always, always, the cry of gulls circling above the docks.
 
+### Seasonal Life
+
+- **[The Bridgefire of Morvalos](bridgefire-of-morvalos.md):** Ardenford's midwinter observance — ten thousand people marching south by candlelight to watch a volunteer run across an open field and burn a bridge the city spent all year building. They do it to remember a real battle. They do it because they would do it again.
+
 ---
 
 ## Geography & Layout
@@ -291,8 +295,20 @@ A small, meticulous shop where labels are written twice (Common and careful elve
 
 ---
 
-### Willowglass Apothecary (Alchemist)
+### The Still Page (Tea Shop)
 
+> **"Sit down. It steeps when it's ready."**
+
+**Location:** Upper Tier, a narrow storefront on the lane between the Concordance Library and the scribe quarter  
+**Proprietor:** Pell Orvaine (PELL or-VAYN)  
+**What it is:** Tea, warm seats, and nothing that needs to be explained
+
+Pell spent thirty years as a copying clerk at the Concordance Library before his eyesight forced him out. He opened the Still Page because he couldn't make himself move away from the building. The shop is small — four tables, a bench by the window, a short counter — and serves scholars, early-morning archivists, and anyone who needs somewhere quiet to sit with a cup and think. Pell knows most of the library staff by first name and keeps their preferred blends waiting.
+
+**Full location:** [The Still Page](shops/the-still-page.md)
+
+---
+### Willowglass Apothecary (Alchemist)
 > **"Hold still. If it stings, that means it’s working—or you’re lying."**
 
 **Location:** Middle Tier, near the Western Market lanes  

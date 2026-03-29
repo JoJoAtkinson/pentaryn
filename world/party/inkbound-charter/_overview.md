@@ -10,16 +10,16 @@ status: active
 
 ## Overview
 
-| Attribute | Value |
-|---|---|
-| **Party Slug** | `inkbound-charter` |
-| **Alignment / Ethos** | Lawful Neutral |
-| **Personality Type** | Professionals (process-driven, cautious, detail-obsessed) |
-| **Level Range** | 2–4 |
-| **Home Base** | [Ardenford](../../factions/ardenhaven/locations/ardenford/ardenford.md) |
-| **Primary Target** | [Western Scrubland Ruins](../../factions/ardenhaven/locations/ruins-western-scrubland.md) (survey + salvage) |
-| **Loot Policy** | Signed shares, receipts, and a locked “finds box” until appraisal |
-| **Rulebook** | [Party & Member Creation Rules](../_party-creation-rules.md) |
+| Attribute                   | Value                                                                                                     |
+| --------------------------- | --------------------------------------------------------------------------------------------------------- |
+| **Party Slug**        | `inkbound-charter`                                                                                      |
+| **Alignment / Ethos** | Lawful Neutral                                                                                            |
+| **Personality Type**  | Professionals (process-driven, cautious, detail-obsessed)                                                 |
+| **Level Range**       | 2–4                                                                                                      |
+| **Home Base**         | [Ardenford](../../factions/ardenhaven/locations/ardenford/ardenford.md)                                      |
+| **Primary Target**    | [Western Scrubland Ruins](../../factions/ardenhaven/locations/ruins-western-scrubland.md) (survey + salvage) |
+| **Loot Policy**       | Signed shares, receipts, and a locked “finds box” until appraisal                                       |
+| **Rulebook**          | [Party &amp; Member Creation Rules](../_party-creation-rules.md)                                             |
 
 ## Why They Delve
 
@@ -33,13 +33,13 @@ They’re here for profit, but not chaos: document finds, sell through legal cha
 
 ## Roster
 
-| Name | Ancestry | Origin | Class | Level | Alignment | Background | Party Role | Notes |
-|---|---|---|---|---:|---|---|---|---|
-| Ironholt | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Ranger | 3 | Lawful Neutral | City warden | Captain / scout | Treats delving like patrol work |
-| Glendale | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Bard | 2 | Lawful Neutral | Notary | Face / record-keeper | The receipts are *her* weapon |
-| Thrumgar | Dwarf | [Dulgarum](../../factions/dulgarum-oathholds/_overview.md) | Fighter | 4 | Lawful Neutral | Oathbound guard | Security / carry | Doesn't joke. Doesn't need to. |
-| Suri Copperpin | Gnome | [Merrowgate](../../factions/merrowgate/_overview.md) | Wizard | 2 | True Neutral | Map-scrivener | Survey / arcana | Lives for measurements and margins |
-| Redwick | Human | [Calstead](../../factions/ardenhaven/locations/calstead.md) | Rogue | 2 | Chaotic Neutral | Farmhand-turned-burglar | Locks / "creative entry" | **Wild card:** hates rules, loves payouts |
+| Name           | Ancestry | Origin                                                   | Class   | Level | Alignment       | Background              | Party Role               | Notes                                                     |
+| -------------- | -------- | -------------------------------------------------------- | ------- | ----: | --------------- | ----------------------- | ------------------------ | --------------------------------------------------------- |
+| Ironholt       | Human    | [Ardenhaven](../../factions/ardenhaven/_overview.md)        | Ranger  |     3 | Lawful Neutral  | City warden             | Captain / scout          | Treats delving like patrol work                           |
+| Glendale       | Human    | [Ardenhaven](../../factions/ardenhaven/_overview.md)        | Bard    |     2 | Lawful Neutral  | Notary                  | Face / record-keeper     | The receipts are*her* weapon                            |
+| Thrumgar       | Dwarf    | [Dulgarum](../../factions/dulgarum-oathholds/_overview.md)  | Fighter |     4 | Lawful Neutral  | Oathbound guard         | Security / carry         | Doesn't joke. Doesn't need to.                            |
+| Suri Copperpin | Gnome    | [Merrowgate](../../factions/merrowgate/_overview.md)        | Wizard  |     2 | True Neutral    | Map-scrivener           | Survey / arcana          | Lives for measurements and margins                        |
+| Redwick        | Human    | [Calstead](../../factions/ardenhaven/locations/calstead.md) | Rogue   |     2 | Chaotic Neutral | Farmhand-turned-burglar | Locks / "creative entry" | **Wild card:** hates rules, loves payouts -- mute  |
 
 ### Exceptions & Notes
 
@@ -49,6 +49,6 @@ They’re here for profit, but not chaos: document finds, sell through legal cha
 
 ## Related Links
 
-- [Party & Member Creation Rules](../_party-creation-rules.md)
+- [Party &amp; Member Creation Rules](../_party-creation-rules.md)
 - [Ardenford](../../factions/ardenhaven/locations/ardenford/ardenford.md)
 - [Western Scrubland Ruins](../../factions/ardenhaven/locations/ruins-western-scrubland.md)
