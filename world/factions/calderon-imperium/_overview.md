@@ -64,6 +64,11 @@ Legion Cohorts & Civil Bureaus
 
 ### Key Leaders
 
+#### [Emperor Quintus Calderon](npcs/quintus-calderon.md) (QWIN-tus cal-DAIR-on)
+- **Title:** Emperor of the Calderon Imperium
+- **Role:** Supreme head of state; final authority on all edicts
+- **Description:** A dynast who governs as the living extension of institutional will — composed, unhurried, impeccably correct
+
 #### High Censor (Name TBD)
 - **Title:** High Censor of the Imperium
 - **Role:** Oversees registries, audits, and internal security
