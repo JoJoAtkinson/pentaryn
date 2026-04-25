@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import ast
+import importlib.util
 import json
 import os
 import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -101,6 +102,7 @@ class Tool:
     name: str
     description: str
     input_schema: dict[str, Any]
+    annotations: Optional[dict[str, Any]] = None
 
 @dataclass(frozen=True)
 class ToolRunner:
@@ -109,8 +111,26 @@ class ToolRunner:
     argv_template: tuple[str, ...]
     bool_flags: dict[str, str]
     value_flags: dict[str, str]
+    handler: Optional[Callable[..., Any]] = None
 
     def run(self, *, arguments: dict[str, Any]) -> str:
+        # In-process dispatch when the script exposes MCP_HANDLERS — skips subprocess startup
+        # and lets the script's module-level state (e.g. cached HTTP sessions) persist across calls.
+        if self.handler is not None:
+            try:
+                result = self.handler(**arguments)
+            except TypeError as exc:
+                raise ValueError(f"Invalid arguments for {self.tool.name}: {exc}") from exc
+            if isinstance(result, str):
+                return result
+            return json.dumps(result, indent=2, ensure_ascii=False)
+
+        # TODO: add per-tool subprocess timeout (e.g. via MCP_TOOL["timeout"]) so a hung
+        # script can't lock the tool slot indefinitely.
+        # TODO: pass stderr through on success too — useful warnings are currently swallowed
+        # unless the script exits non-zero.
+        # TODO: replace token.format(**fmt_args) below with explicit {name} substitution so
+        # values containing literal `{` or `}` don't break argv construction.
         python = _python_bin()
         argv: list[str] = []
         fmt_args: dict[str, str] = {}
@@ -166,6 +186,18 @@ class ToolRunner:
 class DiscoveryResult:
     tools: tuple[ToolRunner, ...]
     skipped: tuple[tuple[Path, str], ...]
+
+
+def _load_script_module(path: Path) -> Any:
+    """Import a script as a module so we can read MCP_HANDLERS off it."""
+    spec_name = f"_mcp_script_{path.stem}"
+    spec = importlib.util.spec_from_file_location(spec_name, path)
+    if spec is None or spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec_name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def _extract_mcp_tool_literal(source: str, *, path: Path) -> dict[str, Any] | None:
@@ -258,6 +290,8 @@ def _tools_from_mcp_tool(*, path: Path, mcp_tool: dict[str, Any]) -> list[ToolRu
             raise ValueError("tool name cannot be empty")
         description = str(entry.get("description") or "").strip()
         input_schema = _normalize_input_schema(entry.get("input_schema") if "input_schema" in entry else entry.get("inputSchema"))
+        annotations_raw = entry.get("annotations")
+        annotations = annotations_raw if isinstance(annotations_raw, dict) and annotations_raw else None
 
         argv_raw = entry.get("argv") or []
         if not isinstance(argv_raw, list) or not all(isinstance(a, str) for a in argv_raw):
@@ -287,7 +321,7 @@ def _tools_from_mcp_tool(*, path: Path, mcp_tool: dict[str, Any]) -> list[ToolRu
 
         runners.append(
             ToolRunner(
-                tool=Tool(name=name, description=description, input_schema=input_schema),
+                tool=Tool(name=name, description=description, input_schema=input_schema, annotations=annotations),
                 script_path=path,
                 argv_template=tuple(argv_raw),
                 bool_flags=bool_flags,
@@ -298,6 +332,10 @@ def _tools_from_mcp_tool(*, path: Path, mcp_tool: dict[str, Any]) -> list[ToolRu
 
 
 def discover_tools(*, repo_root: Path) -> DiscoveryResult:
+    # TODO: cache discovery output keyed on (path, mtime) to skip AST re-parse
+    # for unchanged files on server restart.
+    # TODO: add streaming progress notifications for slow subprocess-dispatched tools
+    # (dnd_pass*, pandoc_export_pdf, build_timeline_*) via MCP `notifications/progress`.
     scripts_dir = (repo_root / "scripts").resolve()
     skipped: list[tuple[Path, str]] = []
     runners: list[ToolRunner] = []
@@ -306,12 +344,14 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
 
     # Recursively discover all .py files in scripts/ and subdirectories
     # Skip __pycache__ and other special directories
+    server_dir = (scripts_dir / "mcp").resolve()
     all_py_files = [
         p for p in scripts_dir.rglob("*.py")
         if p.is_file()
         and "__pycache__" not in p.parts
         and not p.name.startswith("_")
         and p.name != "__init__.py"
+        and server_dir not in p.resolve().parents
     ]
     
     for path in sorted(all_py_files, key=lambda p: str(p.relative_to(scripts_dir))):
@@ -320,19 +360,64 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
         except Exception as exc:
             skipped.append((path, f"unreadable: {exc}"))
             continue
+        # Two discovery paths:
+        # - Scripts with MCP_HANDLERS get imported as modules; MCP_TOOLS is read
+        #   from the imported namespace (so it can use shared dicts, helper calls, etc.).
+        # - Scripts without MCP_HANDLERS use the safer AST literal_eval path
+        #   (no execution at discovery time).
+        handlers: Optional[dict[str, Any]] = None
+        if "MCP_HANDLERS" in source:
+            try:
+                module = _load_script_module(path)
+            except Exception as exc:
+                skipped.append((path, f"in-process import failed: {exc}"))
+                continue
+            if module is None:
+                skipped.append((path, "in-process import returned None"))
+                continue
+            tools_attr = getattr(module, "MCP_TOOLS", None)
+            tool_attr = getattr(module, "MCP_TOOL", None)
+            if isinstance(tools_attr, list):
+                literal: Optional[dict[str, Any]] = {"tools": tools_attr}
+            elif isinstance(tools_attr, dict):
+                literal = tools_attr
+            elif isinstance(tool_attr, dict):
+                literal = tool_attr
+            else:
+                skipped.append((path, "module imported but no usable MCP_TOOLS/MCP_TOOL attribute"))
+                continue
+            handlers_attr = getattr(module, "MCP_HANDLERS", None)
+            handlers = handlers_attr if isinstance(handlers_attr, dict) else None
+        else:
+            try:
+                literal = _extract_mcp_tool_literal(source, path=path)
+            except Exception as exc:
+                skipped.append((path, str(exc)))
+                continue
+            if literal is None:
+                skipped.append((path, "no MCP_TOOL"))
+                continue
+
         try:
-            literal = _extract_mcp_tool_literal(source, path=path)
-        except Exception as exc:
-            skipped.append((path, str(exc)))
-            continue
-        if literal is None:
-            skipped.append((path, "no MCP_TOOL"))
-            continue
-        try:
-            runners.extend(_tools_from_mcp_tool(path=path, mcp_tool=literal))
+            new_runners = _tools_from_mcp_tool(path=path, mcp_tool=literal)
         except Exception as exc:
             skipped.append((path, f"invalid MCP_TOOL: {exc}"))
             continue
+
+        if handlers is not None:
+            new_runners = [
+                ToolRunner(
+                    tool=r.tool,
+                    script_path=r.script_path,
+                    argv_template=r.argv_template,
+                    bool_flags=r.bool_flags,
+                    value_flags=r.value_flags,
+                    handler=handlers.get(r.tool.name),
+                )
+                for r in new_runners
+            ]
+
+        runners.extend(new_runners)
 
     # Enforce globally-unique tool names.
     by_name: dict[str, ToolRunner] = {}
@@ -353,7 +438,8 @@ def _print_list_tools(result: DiscoveryResult) -> int:
         sys.stdout.write("- (none)\n")
     for r in tools:
         desc = r.tool.description.splitlines()[0].strip() if r.tool.description else ""
-        sys.stdout.write(f"- {r.tool.name} ({r.script_path.relative_to(REPO_ROOT)}): {desc}\n")
+        mode = "in-process" if r.handler is not None else "subprocess"
+        sys.stdout.write(f"- {r.tool.name} [{mode}] ({r.script_path.relative_to(REPO_ROOT)}): {desc}\n")
     sys.stdout.write("\nSkipped scripts:\n")
     if not skipped:
         sys.stdout.write("- (none)\n")
@@ -393,12 +479,17 @@ def main() -> int:
                 continue
 
             if method == "tools/list":
-                result = {
-                    "tools": [
-                        {"name": t.name, "description": t.description, "inputSchema": t.input_schema}
-                        for t in tools
-                    ]
-                }
+                tool_payload = []
+                for t in tools:
+                    entry: dict[str, Any] = {
+                        "name": t.name,
+                        "description": t.description,
+                        "inputSchema": t.input_schema,
+                    }
+                    if t.annotations:
+                        entry["annotations"] = t.annotations
+                    tool_payload.append(entry)
+                result = {"tools": tool_payload}
                 if msg_id is not None:
                     _write_message({"jsonrpc": "2.0", "id": msg_id, "result": result})
                 continue

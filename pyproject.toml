@@ -3,22 +3,17 @@ name = "dnd-notes"
 version = "0.0.0"
 description = "Local tooling for exporting Markdown notes to PDF."
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.14"
 dependencies = [
   "ipykernel",
   "pandas",
-  "pillow>=10.0.0",
+  "pillow>=12.2.0",
   "pytest",
   "cairosvg",
   "chromadb",
-  "whisperx",
-  "torch",
-  "openai",
   "python-dotenv",
   "tomlkit",
-  "azure-ai-ml",
-  "azure-identity",
-  "azure-storage-blob"
+  "requests-cache>=1.3.1"
 ]
 
 # Notes on native text layout (RAQM):

@@ -1,757 +1,1000 @@
 #!/usr/bin/env python3
 """
-Open5e API integration for D&D 5e SRD content.
-Provides MCP tools for accessing monsters, spells, magic items, conditions, and more.
+Open5e v2 API integration for D&D 5e SRD content (and beyond).
+
+Provides MCP tools for monsters, spells, items, conditions, rules, backgrounds,
+species, feats, and a universal cross-type search. Uses /v2/ endpoints, which
+include both the 2014 SRD (srd-2014) and the 2024 SRD 5.2 (srd-2024) — the
+latter is the rules basis for D&D 5.5e.
+
+Common source keys for the `source` parameter:
+  srd-2024  → 2024 SRD 5.2 (5.5e). Default choice for current play.
+  srd-2014  → 2014 SRD 5.1.
+  tob       → Tome of Beasts (Kobold Press).
+  a5e-ag    → Adventurer's Guide (Level Up: Advanced 5E).
+  open5e    → Open5e Originals.
 
 Import as: from scripts.srd5_2 import search_monsters, search_spells, etc.
 """
 
 from __future__ import annotations
 
-import requests
-from typing import Optional, Any
 import json
+import sys
+from pathlib import Path
+from typing import Any, Optional
+
+import requests
+from requests.adapters import HTTPAdapter
+from requests_cache import CachedSession
+from urllib3.util.retry import Retry
+
 
 BASE_URL = "https://api.open5e.com"
 
-# MCP Tool Definitions
-MCP_TOOLS = [
-    {
-        "name": "search_monsters",
-        "description": (
-            "Search D&D 5e monsters by name or filter by CR, type, size. "
-            "Returns detailed stat blocks including AC, HP, abilities, attacks, and special abilities. "
-            "Use for combat prep, encounter building, or quick reference during sessions."
-        ),
-        "argv": ["--mcp-tool", "search_monsters"],
-        "value_flags": {
-            "name": "--name",
-            "cr": "--cr",
-            "type": "--type",
-            "size": "--size",
-            "limit": "--limit",
-        },
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "Monster name to search for (partial match, case-insensitive)"
-                },
-                "cr": {
-                    "type": "string",
-                    "description": "Challenge Rating (e.g., '1', '1/2', '5', '20')"
-                },
-                "type": {
-                    "type": "string",
-                    "description": "Creature type (e.g., 'beast', 'dragon', 'undead', 'aberration')"
-                },
-                "size": {
-                    "type": "string",
-                    "description": "Size category (Tiny, Small, Medium, Large, Huge, Gargantuan)"
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "Maximum results to return (default 10)",
-                    "default": 10
-                }
-            },
-            "additionalProperties": False
-        }
-    },
-    {
-        "name": "get_monster_details",
-        "description": (
-            "Get full stat block for a specific monster by its slug. "
-            "Returns complete details: abilities, saves, skills, resistances, attacks, special abilities. "
-            "Use when you need the complete stat block for running an encounter."
-        ),
-        "argv": ["--mcp-tool", "get_monster_details", "{slug}"],
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "slug": {
-                    "type": "string",
-                    "description": "Monster slug (e.g., 'goblin', 'adult-red-dragon', 'beholder')"
-                }
-            },
-            "required": ["slug"],
-            "additionalProperties": False
-        }
-    },
-    {
-        "name": "search_spells",
-        "description": (
-            "Search D&D 5e spells by name, level, school, or class. "
-            "Returns spell details: level, casting time, range, components, duration, description. "
-            "Use for player/NPC spell lookups, spell prep, or answering rule questions."
-        ),
-        "argv": ["--mcp-tool", "search_spells"],
-        "value_flags": {
-            "name": "--name",
-            "level": "--level",
-            "school": "--school",
-            "limit": "--limit",
-        },
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "Spell name to search for (partial match, case-insensitive)"
-                },
-                "level": {
-                    "type": "integer",
-                    "description": "Spell level (0-9, where 0 is cantrip)"
-                },
-                "school": {
-                    "type": "string",
-                    "description": "School of magic (abjuration, conjuration, divination, enchantment, evocation, illusion, necromancy, transmutation)"
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "Maximum results to return (default 10)",
-                    "default": 10
-                }
-            },
-            "additionalProperties": False
-        }
-    },
-    {
-        "name": "get_spell_details",
-        "description": (
-            "Get full details for a specific spell by its key. "
-            "Returns complete spell info including higher level effects and material components. "
-            "Use when players cast spells or you need exact wording for rules."
-        ),
-        "argv": ["--mcp-tool", "get_spell_details", "{key}"],
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "key": {
-                    "type": "string",
-                    "description": "Spell key (e.g., 'o5e_fireball', 'o5e_shield')"
-                }
-            },
-            "required": ["key"],
-            "additionalProperties": False
-        }
-    },
-    {
-        "name": "list_conditions",
-        "description": (
-            "List all D&D 5e conditions (blinded, charmed, frightened, etc.). "
-            "Returns condition names and descriptions. "
-            "Use during combat when you need to look up condition effects quickly."
-        ),
-        "argv": ["--mcp-tool", "list_conditions"],
-        "value_flags": {
-            "name": "--name",
-        },
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "Filter by condition name (optional, partial match)"
-                }
-            },
-            "additionalProperties": False
-        }
-    },
-    {
-        "name": "search_magic_items",
-        "description": (
-            "Search D&D 5e magic items by name or rarity. "
-            "Returns item descriptions, rarity, attunement requirements. "
-            "Use for treasure generation, loot tables, or item identification."
-        ),
-        "argv": ["--mcp-tool", "search_magic_items"],
-        "value_flags": {
-            "name": "--name",
-            "rarity": "--rarity",
-            "limit": "--limit",
-        },
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "Item name to search for (partial match, case-insensitive)"
-                },
-                "rarity": {
-                    "type": "string",
-                    "description": "Rarity (common, uncommon, rare, very rare, legendary, artifact)"
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "Maximum results to return (default 10)",
-                    "default": 10
-                }
-            },
-            "additionalProperties": False
-        }
-    },
-    {
-        "name": "get_class_info",
-        "description": (
-            "Get detailed information about a D&D 5e class. "
-            "Returns class features, hit dice, proficiencies, spell progression. "
-            "Use for character creation help or answering player questions about class abilities."
-        ),
-        "argv": ["--mcp-tool", "get_class_info", "{slug}"],
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "slug": {
-                    "type": "string",
-                    "description": "Class slug (e.g., 'fighter', 'wizard', 'rogue', 'cleric')"
-                }
-            },
-            "required": ["slug"],
-            "additionalProperties": False
-        }
-    },
-    {
-        "name": "search_weapons",
-        "description": (
-            "Search D&D 5e weapons by name or properties. "
-            "Returns weapon damage, properties, cost, weight. "
-            "Use for equipment shopping or NPC armament."
-        ),
-        "argv": ["--mcp-tool", "search_weapons"],
-        "value_flags": {
-            "name": "--name",
-            "limit": "--limit",
-        },
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "Weapon name to search for (partial match)"
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "Maximum results to return (default 10)",
-                    "default": 10
-                }
-            },
-            "additionalProperties": False
-        }
-    },
-    {
-        "name": "search_armor",
-        "description": (
-            "Search D&D 5e armor by name or type. "
-            "Returns AC, cost, weight, strength requirements, stealth disadvantage. "
-            "Use for equipment shopping or determining NPC armor class."
-        ),
-        "argv": ["--mcp-tool", "search_armor"],
-        "value_flags": {
-            "name": "--name",
-            "limit": "--limit",
-        },
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "Armor name to search for (partial match)"
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "Maximum results to return (default 10)",
-                    "default": 10
-                }
-            },
-            "additionalProperties": False
-        }
-    },
-    {
-        "name": "search_rules",
-        "description": (
-            "Search D&D 5e rules sections by keyword (e.g., 'grapple', 'cover', 'surprise', 'concentration'). "
-            "Returns rule text from the 2014 SRD (note: 2024 rules not yet available in Open5e API). "
-            "Use for quick reference on combat rules, conditions, ability checks, and general mechanics."
-        ),
-        "argv": ["--mcp-tool", "search_rules"],
-        "value_flags": {
-            "query": "--query",
-            "limit": "--limit"
-        },
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "query": {
-                    "type": "string",
-                    "description": "Search term for rules (e.g., 'grapple', 'opportunity attack', 'cover', 'hiding')"
-                },
-                "limit": {
-                    "type": "integer",
-                    "description": "Maximum results to return (default 5)",
-                    "default": 5
-                }
-            },
-            "required": ["query"],
-            "additionalProperties": False
-        }
-    },
-    {
-        "name": "get_rule_section",
-        "description": (
-            "Get full text of a specific rules section by its slug (e.g., 'attacking', 'conditions', 'cover'). "
-            "Returns rule text from the 2014 SRD (note: 2024 rules not yet available in Open5e API). "
-            "Use after searching to get complete rule descriptions."
-        ),
-        "argv": ["--mcp-tool", "get_rule_section", "{slug}"],
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "slug": {
-                    "type": "string",
-                    "description": "Section slug (e.g., 'attacking', 'conditions', 'cover', 'spellcasting')"
-                }
-            },
-            "required": ["slug"],
-            "additionalProperties": False
-        }
-    }
-]
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_CACHE_DIR = _REPO_ROOT / ".cache"
+_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+# Bumping cache_name forces a fresh SQLite — old v1 responses are discarded
+# automatically on first call after the v2 migration.
+_CACHE_NAME = "srd5_2_v2"
+
+_session: Optional[CachedSession] = None
 
 
-def api_get(endpoint: str, params: Optional[dict[str, Any]] = None) -> dict[str, Any]:
-    """Make GET request to Open5e API."""
+def _get_session() -> CachedSession:
+    global _session
+    if _session is not None:
+        return _session
+    session = CachedSession(
+        cache_name=str(_CACHE_DIR / _CACHE_NAME),
+        backend="sqlite",
+        expire_after=60 * 60 * 24 * 30,  # 30 days
+        allowable_methods=("GET",),
+    )
+    retry = Retry(
+        total=3,
+        backoff_factor=0.5,
+        status_forcelist=(500, 502, 503, 504),
+        allowed_methods=("GET",),
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    _session = session
+    return session
+
+
+def _api_get(endpoint: str, params: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+    """GET an open5e endpoint via the cached, retrying session."""
     url = f"{BASE_URL}{endpoint}"
-    response = requests.get(url, params=params or {})
+    response = _get_session().get(url, params=params or {}, timeout=10)
     response.raise_for_status()
     return response.json()
 
+
+def _build_query(
+    *,
+    name: Optional[str] = None,
+    match: str = "partial",
+    source: Optional[str] = None,
+    fields: Optional[str] = None,
+    exclude: Optional[str] = None,
+    ordering: Optional[str] = None,
+    limit: int = 10,
+    extra: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    """Compose v2 query params, applied uniformly across search tools."""
+    params: dict[str, Any] = {"limit": limit}
+    if name:
+        params["name__iexact" if match == "exact" else "name__icontains"] = name
+    if source:
+        params["document__key__in"] = source
+    if fields:
+        params["fields"] = fields
+    if exclude:
+        params["exclude"] = exclude
+    if ordering:
+        params["ordering"] = ordering
+    if extra:
+        params.update(extra)
+    return params
+
+
+# --- Creatures (formerly v1 monsters) -----------------------------------------
 
 def search_monsters(
     name: Optional[str] = None,
     cr: Optional[str] = None,
     type: Optional[str] = None,
     size: Optional[str] = None,
-    limit: int = 10
+    source: Optional[str] = None,
+    match: str = "partial",
+    fields: Optional[str] = None,
+    exclude: Optional[str] = None,
+    ordering: Optional[str] = None,
+    limit: int = 10,
 ) -> dict[str, Any]:
-    """Search monsters with optional filters."""
-    params = {"limit": limit}
-    if name:
-        params["search"] = name
-    if cr:
-        params["challenge_rating"] = cr
+    extra: dict[str, Any] = {}
+    if cr is not None:
+        extra["challenge_rating"] = cr
     if type:
-        params["type"] = type
+        extra["type__key"] = type
     if size:
-        params["size"] = size
-    
-    return api_get("/v1/monsters/", params)
+        extra["size__key"] = size
+    params = _build_query(
+        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        ordering=ordering, limit=limit, extra=extra,
+    )
+    return _api_get("/v2/creatures/", params)
 
 
-def get_monster_details(slug: str) -> dict[str, Any]:
-    """Get full monster stat block by slug."""
-    return api_get(f"/v1/monsters/{slug}/")
+def get_monster_details(key: str) -> dict[str, Any]:
+    return _api_get(f"/v2/creatures/{key}/")
 
+
+# --- Spells -------------------------------------------------------------------
 
 def search_spells(
     name: Optional[str] = None,
     level: Optional[int] = None,
     school: Optional[str] = None,
-    limit: int = 10
+    source: Optional[str] = None,
+    match: str = "partial",
+    fields: Optional[str] = None,
+    exclude: Optional[str] = None,
+    ordering: Optional[str] = None,
+    limit: int = 10,
 ) -> dict[str, Any]:
-    """Search spells with optional filters."""
-    params = {"limit": limit}
-    if name:
-        params["name__icontains"] = name
+    extra: dict[str, Any] = {}
     if level is not None:
-        params["level"] = level
+        extra["level"] = level
     if school:
-        params["school__key"] = school
-    
-    return api_get("/v2/spells/", params)
+        extra["school__key"] = school
+    params = _build_query(
+        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        ordering=ordering, limit=limit, extra=extra,
+    )
+    return _api_get("/v2/spells/", params)
 
 
 def get_spell_details(key: str) -> dict[str, Any]:
-    """Get full spell details by key."""
-    return api_get(f"/v2/spells/{key}/")
+    return _api_get(f"/v2/spells/{key}/")
 
 
-def list_conditions(name: Optional[str] = None) -> dict[str, Any]:
-    """List all conditions, optionally filtered by name."""
-    params = {}
-    if name:
-        params["search"] = name
-    
-    return api_get("/v2/conditions/", params)
+# --- Conditions ---------------------------------------------------------------
 
+def list_conditions(
+    name: Optional[str] = None,
+    source: Optional[str] = None,
+    match: str = "partial",
+    fields: Optional[str] = None,
+    exclude: Optional[str] = None,
+    limit: int = 25,
+) -> dict[str, Any]:
+    params = _build_query(
+        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        limit=limit,
+    )
+    return _api_get("/v2/conditions/", params)
+
+
+# --- Magic items --------------------------------------------------------------
 
 def search_magic_items(
     name: Optional[str] = None,
     rarity: Optional[str] = None,
-    limit: int = 10
+    source: Optional[str] = None,
+    match: str = "partial",
+    fields: Optional[str] = None,
+    exclude: Optional[str] = None,
+    ordering: Optional[str] = None,
+    limit: int = 10,
 ) -> dict[str, Any]:
-    """Search magic items with optional filters."""
-    params = {"limit": limit}
-    if name:
-        params["search"] = name
+    extra: dict[str, Any] = {}
     if rarity:
-        params["rarity"] = rarity
-    
-    return api_get("/v1/magicitems/", params)
+        extra["rarity__key"] = rarity
+    params = _build_query(
+        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        ordering=ordering, limit=limit, extra=extra,
+    )
+    return _api_get("/v2/magicitems/", params)
 
 
-def get_class_info(slug: str) -> dict[str, Any]:
-    """Get detailed class information."""
-    return api_get(f"/v1/classes/{slug}/")
+def get_magic_item(key: str) -> dict[str, Any]:
+    return _api_get(f"/v2/magicitems/{key}/")
 
 
-def search_weapons(name: Optional[str] = None, limit: int = 10) -> dict[str, Any]:
-    """Search weapons by name."""
-    params = {"limit": limit}
-    if name:
-        params["search"] = name
-    
-    return api_get("/v2/weapons/", params)
+# --- Mundane items / equipment -----------------------------------------------
+
+def search_items(
+    name: Optional[str] = None,
+    category: Optional[str] = None,
+    source: Optional[str] = None,
+    match: str = "partial",
+    fields: Optional[str] = None,
+    exclude: Optional[str] = None,
+    ordering: Optional[str] = None,
+    limit: int = 10,
+) -> dict[str, Any]:
+    extra: dict[str, Any] = {}
+    if category:
+        extra["category__key"] = category
+    params = _build_query(
+        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        ordering=ordering, limit=limit, extra=extra,
+    )
+    return _api_get("/v2/items/", params)
 
 
-def search_armor(name: Optional[str] = None, limit: int = 10) -> dict[str, Any]:
-    """Search armor by name."""
-    params = {"limit": limit}
-    if name:
-        params["search"] = name
-    
-    return api_get("/v2/armor/", params)
+def get_item(key: str) -> dict[str, Any]:
+    return _api_get(f"/v2/items/{key}/")
 
 
-def search_rules(query: str, limit: int = 5) -> dict[str, Any]:
-    """Search rules sections by keyword."""
-    params = {"search": query, "limit": limit}
-    result = api_get("/v1/sections/", params)
-    return result
+# --- Classes ------------------------------------------------------------------
+
+def search_classes(
+    name: Optional[str] = None,
+    source: Optional[str] = None,
+    match: str = "partial",
+    fields: Optional[str] = None,
+    exclude: Optional[str] = None,
+    ordering: Optional[str] = None,
+    limit: int = 10,
+) -> dict[str, Any]:
+    params = _build_query(
+        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        ordering=ordering, limit=limit,
+    )
+    return _api_get("/v2/classes/", params)
 
 
-def get_rule_section(slug: str) -> dict[str, Any]:
-    """Get full rules section by slug."""
-    return api_get(f"/v1/sections/{slug}/")
+def get_class_info(key: str) -> dict[str, Any]:
+    return _api_get(f"/v2/classes/{key}/")
 
 
-def format_monster(monster: dict[str, Any], full: bool = False) -> str:
-    """Format monster data for display."""
-    output = []
-    output.append(f"**{monster['name']}**")
-    output.append(f"{monster['size']} {monster['type']}, {monster['alignment']}")
-    output.append(f"**CR:** {monster['challenge_rating']}")
-    output.append("")
-    output.append(f"**AC:** {monster['armor_class']} ({monster.get('armor_desc', 'natural armor')})")
-    output.append(f"**HP:** {monster['hit_points']} ({monster['hit_dice']})")
-    output.append(f"**Speed:** {', '.join(f'{k} {v} ft.' for k, v in monster['speed'].items())}")
-    output.append("")
-    output.append(f"**STR** {monster['strength']} | **DEX** {monster['dexterity']} | **CON** {monster['constitution']} | **INT** {monster['intelligence']} | **WIS** {monster['wisdom']} | **CHA** {monster['charisma']}")
-    
-    if full:
-        output.append("")
-        if monster.get('senses'):
-            output.append(f"**Senses:** {monster['senses']}")
-        if monster.get('languages'):
-            output.append(f"**Languages:** {monster['languages']}")
-        
-        if monster.get('special_abilities'):
-            output.append("\n**Special Abilities:**")
-            for ability in monster['special_abilities']:
-                output.append(f"*{ability['name']}.* {ability['desc']}")
-        
-        if monster.get('actions'):
-            output.append("\n**Actions:**")
-            for action in monster['actions']:
-                output.append(f"*{action['name']}.* {action['desc']}")
-    
-    return "\n".join(output)
+# --- Weapons / armor ---------------------------------------------------------
+
+def search_weapons(
+    name: Optional[str] = None,
+    source: Optional[str] = None,
+    match: str = "partial",
+    fields: Optional[str] = None,
+    exclude: Optional[str] = None,
+    ordering: Optional[str] = None,
+    limit: int = 10,
+) -> dict[str, Any]:
+    params = _build_query(
+        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        ordering=ordering, limit=limit,
+    )
+    return _api_get("/v2/weapons/", params)
 
 
-def format_spell(spell: dict[str, Any]) -> str:
-    """Format spell data for display."""
-    output = []
-    output.append(f"**{spell['name']}**")
-    
-    level = spell['level']
-    school = spell.get('school', {}).get('name', 'Unknown')
-    if level == 0:
-        output.append(f"{school} cantrip")
-    else:
-        output.append(f"Level {level} {school}")
-    
-    output.append(f"**Casting Time:** {spell.get('casting_time', 'Unknown')}")
-    output.append(f"**Range:** {spell.get('range_text', 'Unknown')}")
-    
-    components = []
-    if spell.get('verbal'):
-        components.append("V")
-    if spell.get('somatic'):
-        components.append("S")
-    if spell.get('material'):
-        mat = "M"
-        if spell.get('material_specified'):
-            mat += f" ({spell['material_specified']})"
-        components.append(mat)
-    output.append(f"**Components:** {', '.join(components)}")
-    
-    output.append(f"**Duration:** {spell.get('duration', 'Unknown')}")
-    if spell.get('concentration'):
-        output[-1] += " (Concentration)"
-    
-    output.append("")
-    output.append(spell.get('desc', ''))
-    
-    if spell.get('higher_level'):
-        output.append(f"\n**At Higher Levels:** {spell['higher_level']}")
-    
-    return "\n".join(output)
+def search_armor(
+    name: Optional[str] = None,
+    source: Optional[str] = None,
+    match: str = "partial",
+    fields: Optional[str] = None,
+    exclude: Optional[str] = None,
+    ordering: Optional[str] = None,
+    limit: int = 10,
+) -> dict[str, Any]:
+    params = _build_query(
+        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        ordering=ordering, limit=limit,
+    )
+    return _api_get("/v2/armor/", params)
 
 
-def format_rule_section(section: dict[str, Any]) -> str:
-    """Format rules section data for display."""
-    output = []
-    output.append(f"**{section['name']}**")
-    
-    if section.get('parent'):
-        output.append(f"*Section: {section['parent']}*")
-    
-    output.append("")
-    output.append(section.get('desc', ''))
-    
-    return "\n".join(output)
+# --- Rules (formerly v1 sections) --------------------------------------------
+
+def search_rules(
+    query: Optional[str] = None,
+    source: Optional[str] = None,
+    fields: Optional[str] = None,
+    exclude: Optional[str] = None,
+    ordering: Optional[str] = None,
+    limit: int = 5,
+) -> dict[str, Any]:
+    params: dict[str, Any] = {"limit": limit}
+    if query:
+        params["search"] = query
+    if source:
+        params["document__key__in"] = source
+    if fields:
+        params["fields"] = fields
+    if exclude:
+        params["exclude"] = exclude
+    if ordering:
+        params["ordering"] = ordering
+    return _api_get("/v2/rules/", params)
 
 
-def main():
-    """Handle both MCP tool calls via flags and CLI usage."""
-    import sys
+def get_rule_section(key: str) -> dict[str, Any]:
+    return _api_get(f"/v2/rules/{key}/")
 
-    def _parse_flag_args(tokens: list[str]) -> dict[str, Any]:
-        """Parse --key value style args into a dict for MCP tool calls."""
-        out: dict[str, Any] = {}
-        i = 0
-        while i < len(tokens):
-            token = tokens[i]
-            if not token.startswith("--"):
-                i += 1
-                continue
-            key = token[2:]
-            # --flag value
-            if i + 1 < len(tokens) and not tokens[i + 1].startswith("--"):
-                out[key] = tokens[i + 1]
-                i += 2
-                continue
-            # --flag (boolean)
-            out[key] = True
+
+# --- Backgrounds / Species / Feats -------------------------------------------
+
+def search_backgrounds(
+    name: Optional[str] = None,
+    source: Optional[str] = None,
+    match: str = "partial",
+    fields: Optional[str] = None,
+    exclude: Optional[str] = None,
+    ordering: Optional[str] = None,
+    limit: int = 10,
+) -> dict[str, Any]:
+    params = _build_query(
+        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        ordering=ordering, limit=limit,
+    )
+    return _api_get("/v2/backgrounds/", params)
+
+
+def get_background(key: str) -> dict[str, Any]:
+    return _api_get(f"/v2/backgrounds/{key}/")
+
+
+def search_species(
+    name: Optional[str] = None,
+    source: Optional[str] = None,
+    match: str = "partial",
+    fields: Optional[str] = None,
+    exclude: Optional[str] = None,
+    ordering: Optional[str] = None,
+    limit: int = 10,
+) -> dict[str, Any]:
+    params = _build_query(
+        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        ordering=ordering, limit=limit,
+    )
+    return _api_get("/v2/species/", params)
+
+
+def get_species(key: str) -> dict[str, Any]:
+    return _api_get(f"/v2/species/{key}/")
+
+
+def search_feats(
+    name: Optional[str] = None,
+    source: Optional[str] = None,
+    match: str = "partial",
+    fields: Optional[str] = None,
+    exclude: Optional[str] = None,
+    ordering: Optional[str] = None,
+    limit: int = 10,
+) -> dict[str, Any]:
+    params = _build_query(
+        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        ordering=ordering, limit=limit,
+    )
+    return _api_get("/v2/feats/", params)
+
+
+def get_feat(key: str) -> dict[str, Any]:
+    return _api_get(f"/v2/feats/{key}/")
+
+
+# --- Class spell lists (only path: deprecated v1 endpoint, but still works) --
+
+def get_spell_list(class_slug: str) -> dict[str, Any]:
+    """Class -> list of spell slugs. Uses /v1/spelllist/ (v2 has no equivalent)."""
+    return _api_get(f"/v1/spelllist/{class_slug}/")
+
+
+# --- Universal cross-type search ---------------------------------------------
+
+def search_srd(query: str, limit: int = 10) -> dict[str, Any]:
+    """Search all object types in one call (/v2/search/). Returns mixed results
+    with `object_model` indicating type and `highlighted` snippets."""
+    return _api_get("/v2/search/", {"query": query, "limit": limit})
+
+
+# --- Tool definitions for the MCP server -------------------------------------
+
+# Common annotations for read-only, cached, external-API tools.
+_RO_OPEN_WORLD = {
+    "readOnlyHint": True,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": True,
+}
+
+# Reusable param descriptions for the SRD search tools.
+_PARAM_SOURCE = {
+    "type": "string",
+    "description": (
+        "Filter by source document key (e.g., 'srd-2024' for D&D 5.5e SRD, "
+        "'srd-2014' for 5e 2014 SRD, 'tob' for Tome of Beasts, 'a5e-ag', 'open5e'). "
+        "Comma-separate to combine: 'srd-2024,srd-2014'."
+    ),
+}
+_PARAM_MATCH = {
+    "type": "string",
+    "enum": ["partial", "exact"],
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "default": "partial",
+}
+_PARAM_FIELDS = {
+    "type": "string",
+    "description": (
+        "Comma-separated list of top-level fields to include in the response "
+        "(server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'."
+    ),
+}
+_PARAM_EXCLUDE = {
+    "type": "string",
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+}
+_PARAM_ORDERING = {
+    "type": "string",
+    "description": (
+        "Sort by field name; prefix with '-' for descending. Examples: 'name', "
+        "'-challenge_rating', 'level'."
+    ),
+}
+_PARAM_LIMIT = {"type": "integer", "description": "Max results (default varies by tool).", "default": 10}
+
+
+def _common_search_value_flags() -> dict[str, str]:
+    return {
+        "name": "--name",
+        "source": "--source",
+        "match": "--match",
+        "fields": "--fields",
+        "exclude": "--exclude",
+        "ordering": "--ordering",
+        "limit": "--limit",
+    }
+
+
+MCP_TOOLS = [
+    {
+        "name": "search_monsters",
+        "description": (
+            "Search D&D creatures (/v2/creatures/) by name, CR, type, size, or source. "
+            "Returns full stat blocks. Includes 2024 SRD content (filter source='srd-2024' for 5.5e play). "
+            "Name match is partial by default; pass match='exact' for an exact name. "
+            "If you already know the key (e.g., 'srd-2024_goblin-warrior'), use get_monster_details. "
+            "Examples: search_monsters(cr='1/4', type='humanoid', source='srd-2024'); "
+            "search_monsters(name='dragon', size='large', ordering='-challenge_rating')."
+        ),
+        "annotations": {"title": "Search Creatures (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "search_monsters"],
+        "value_flags": {**_common_search_value_flags(), "cr": "--cr", "type": "--type", "size": "--size"},
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Creature name (partial unless match='exact')."},
+                "cr": {"type": "string", "description": "Challenge rating (e.g., '1', '1/2', '5')."},
+                "type": {"type": "string", "description": "Creature type key (e.g., 'beast', 'dragon', 'undead')."},
+                "size": {"type": "string", "description": "Size key: 'tiny', 'small', 'medium', 'large', 'huge', 'gargantuan'."},
+                "source": _PARAM_SOURCE,
+                "match": _PARAM_MATCH,
+                "fields": _PARAM_FIELDS,
+                "exclude": _PARAM_EXCLUDE,
+                "ordering": _PARAM_ORDERING,
+                "limit": _PARAM_LIMIT,
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_monster_details",
+        "description": (
+            "Get one creature by exact key (e.g., 'srd-2024_goblin-warrior', 'tob_abominable-beauty'). "
+            "Use after search_monsters to fetch a single full record fast. "
+            "For fuzzy/partial-name lookup, use search_monsters."
+        ),
+        "annotations": {"title": "Get Creature Details (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "get_monster_details", "{key}"],
+        "input_schema": {
+            "type": "object",
+            "properties": {"key": {"type": "string", "description": "Creature key (v2)."}},
+            "required": ["key"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "search_spells",
+        "description": (
+            "Search spells (/v2/spells/) by name, level, school, or source. Returns full spell entries. "
+            "Filter source='srd-2024' for 5.5e content. "
+            "Examples: search_spells(level=3, school='evocation', source='srd-2024'); search_spells(name='shield', match='exact')."
+        ),
+        "annotations": {"title": "Search Spells (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "search_spells"],
+        "value_flags": {**_common_search_value_flags(), "level": "--level", "school": "--school"},
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Spell name."},
+                "level": {"type": "integer", "description": "Spell level (0=cantrip, 1-9)."},
+                "school": {"type": "string", "description": "School key (evocation, abjuration, conjuration, divination, enchantment, illusion, necromancy, transmutation)."},
+                "source": _PARAM_SOURCE,
+                "match": _PARAM_MATCH,
+                "fields": _PARAM_FIELDS,
+                "exclude": _PARAM_EXCLUDE,
+                "ordering": _PARAM_ORDERING,
+                "limit": _PARAM_LIMIT,
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_spell_details",
+        "description": (
+            "Get one spell by exact key (e.g., 'srd-2024_fireball', 'a5e-ag_fireball'). "
+            "Use after search_spells when you have a key and want a fast single-record fetch."
+        ),
+        "annotations": {"title": "Get Spell Details (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "get_spell_details", "{key}"],
+        "input_schema": {
+            "type": "object",
+            "properties": {"key": {"type": "string", "description": "Spell key (v2)."}},
+            "required": ["key"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "list_conditions",
+        "description": (
+            "List conditions (/v2/conditions/). Pass `name` to filter (substring); omit for all. "
+            "Note: the standard 5e conditions (blinded, charmed, frightened, grappled, etc.) live under "
+            "source='core' — there's no srd-2024 source for conditions. a5e-ag has extras like Bloodied. "
+            "Use during combat for quick condition-effect lookup."
+        ),
+        "annotations": {"title": "List Conditions (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "list_conditions"],
+        "value_flags": {"name": "--name", "source": "--source", "match": "--match", "fields": "--fields", "exclude": "--exclude", "limit": "--limit"},
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Filter by condition name (substring unless match='exact')."},
+                "source": _PARAM_SOURCE,
+                "match": _PARAM_MATCH,
+                "fields": _PARAM_FIELDS,
+                "exclude": _PARAM_EXCLUDE,
+                "limit": {"type": "integer", "description": "Max results (default 25).", "default": 25},
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "search_magic_items",
+        "description": (
+            "Search magic items (/v2/magicitems/) by name, rarity, or source. "
+            "Examples: search_magic_items(rarity='legendary', source='srd-2024'); search_magic_items(name='cloak')."
+        ),
+        "annotations": {"title": "Search Magic Items (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "search_magic_items"],
+        "value_flags": {**_common_search_value_flags(), "rarity": "--rarity"},
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Item name."},
+                "rarity": {"type": "string", "description": "Rarity key (common, uncommon, rare, very-rare, legendary, artifact)."},
+                "source": _PARAM_SOURCE,
+                "match": _PARAM_MATCH,
+                "fields": _PARAM_FIELDS,
+                "exclude": _PARAM_EXCLUDE,
+                "ordering": _PARAM_ORDERING,
+                "limit": _PARAM_LIMIT,
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_magic_item",
+        "description": "Get one magic item by exact key (e.g., 'srd-2024_adamantine-armor-breastplate').",
+        "annotations": {"title": "Get Magic Item (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "get_magic_item", "{key}"],
+        "input_schema": {
+            "type": "object",
+            "properties": {"key": {"type": "string", "description": "Magic item key."}},
+            "required": ["key"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "search_items",
+        "description": (
+            "Search mundane items / equipment (/v2/items/) — not magic items. "
+            "Filter by category (key) for armor/weapon/adventuring-gear etc. "
+            "Examples: search_items(name='rope'); search_items(category='adventuring-gear', source='srd-2024')."
+        ),
+        "annotations": {"title": "Search Mundane Items (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "search_items"],
+        "value_flags": {**_common_search_value_flags(), "category": "--category"},
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Item name."},
+                "category": {"type": "string", "description": "Category key (e.g., 'weapon', 'armor', 'adventuring-gear')."},
+                "source": _PARAM_SOURCE,
+                "match": _PARAM_MATCH,
+                "fields": _PARAM_FIELDS,
+                "exclude": _PARAM_EXCLUDE,
+                "ordering": _PARAM_ORDERING,
+                "limit": _PARAM_LIMIT,
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_item",
+        "description": "Get one mundane item by exact key (e.g., 'srd-2024_acid').",
+        "annotations": {"title": "Get Item (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "get_item", "{key}"],
+        "input_schema": {
+            "type": "object",
+            "properties": {"key": {"type": "string", "description": "Item key."}},
+            "required": ["key"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "search_classes",
+        "description": (
+            "Search classes & archetypes (/v2/classes/). Returns class features and progression. "
+            "Use for character creation help."
+        ),
+        "annotations": {"title": "Search Classes (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "search_classes"],
+        "value_flags": _common_search_value_flags(),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Class name."},
+                "source": _PARAM_SOURCE,
+                "match": _PARAM_MATCH,
+                "fields": _PARAM_FIELDS,
+                "exclude": _PARAM_EXCLUDE,
+                "ordering": _PARAM_ORDERING,
+                "limit": _PARAM_LIMIT,
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_class_info",
+        "description": "Get one class by exact key (e.g., 'srd-2024_fighter'). Returns full features and progression.",
+        "annotations": {"title": "Get Class Info (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "get_class_info", "{key}"],
+        "input_schema": {
+            "type": "object",
+            "properties": {"key": {"type": "string", "description": "Class key."}},
+            "required": ["key"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "search_weapons",
+        "description": "Search weapons (/v2/weapons/). Returns damage, properties, cost, weight.",
+        "annotations": {"title": "Search Weapons (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "search_weapons"],
+        "value_flags": _common_search_value_flags(),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Weapon name."},
+                "source": _PARAM_SOURCE,
+                "match": _PARAM_MATCH,
+                "fields": _PARAM_FIELDS,
+                "exclude": _PARAM_EXCLUDE,
+                "ordering": _PARAM_ORDERING,
+                "limit": _PARAM_LIMIT,
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "search_armor",
+        "description": "Search armor (/v2/armor/). Returns AC, weight, strength req, stealth disadvantage.",
+        "annotations": {"title": "Search Armor (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "search_armor"],
+        "value_flags": _common_search_value_flags(),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Armor name."},
+                "source": _PARAM_SOURCE,
+                "match": _PARAM_MATCH,
+                "fields": _PARAM_FIELDS,
+                "exclude": _PARAM_EXCLUDE,
+                "ordering": _PARAM_ORDERING,
+                "limit": _PARAM_LIMIT,
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "search_rules",
+        "description": (
+            "Search rules sections (/v2/rules/) by keyword. Includes 2014 AND 2024 SRD content "
+            "(filter source='srd-2024' for 5.5e). "
+            "If you already know the section key, use get_rule_section."
+        ),
+        "annotations": {"title": "Search Rules (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "search_rules"],
+        "value_flags": {"query": "--query", "source": "--source", "fields": "--fields", "exclude": "--exclude", "ordering": "--ordering", "limit": "--limit"},
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Search term (e.g., 'grapple', 'opportunity attack', 'cover')."},
+                "source": _PARAM_SOURCE,
+                "fields": _PARAM_FIELDS,
+                "exclude": _PARAM_EXCLUDE,
+                "ordering": _PARAM_ORDERING,
+                "limit": {"type": "integer", "description": "Max results (default 5).", "default": 5},
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_rule_section",
+        "description": "Get one rules section by exact key (e.g., 'srd-2024_d20-tests_ability-checks').",
+        "annotations": {"title": "Get Rule Section (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "get_rule_section", "{key}"],
+        "input_schema": {
+            "type": "object",
+            "properties": {"key": {"type": "string", "description": "Rule section key."}},
+            "required": ["key"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "search_backgrounds",
+        "description": "Search character backgrounds (/v2/backgrounds/) — Acolyte, Sage, Soldier, etc.",
+        "annotations": {"title": "Search Backgrounds (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "search_backgrounds"],
+        "value_flags": _common_search_value_flags(),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Background name."},
+                "source": _PARAM_SOURCE,
+                "match": _PARAM_MATCH,
+                "fields": _PARAM_FIELDS,
+                "exclude": _PARAM_EXCLUDE,
+                "ordering": _PARAM_ORDERING,
+                "limit": _PARAM_LIMIT,
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_background",
+        "description": "Get one background by exact key (e.g., 'a5e-ag_acolyte').",
+        "annotations": {"title": "Get Background (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "get_background", "{key}"],
+        "input_schema": {
+            "type": "object",
+            "properties": {"key": {"type": "string", "description": "Background key."}},
+            "required": ["key"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "search_species",
+        "description": (
+            "Search character species (/v2/species/) — Elf, Dwarf, Human, etc. "
+            "Replaces the v1 'races' endpoint."
+        ),
+        "annotations": {"title": "Search Species (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "search_species"],
+        "value_flags": _common_search_value_flags(),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Species name."},
+                "source": _PARAM_SOURCE,
+                "match": _PARAM_MATCH,
+                "fields": _PARAM_FIELDS,
+                "exclude": _PARAM_EXCLUDE,
+                "ordering": _PARAM_ORDERING,
+                "limit": _PARAM_LIMIT,
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_species",
+        "description": "Get one species by exact key (e.g., 'srd-2024_elf').",
+        "annotations": {"title": "Get Species (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "get_species", "{key}"],
+        "input_schema": {
+            "type": "object",
+            "properties": {"key": {"type": "string", "description": "Species key."}},
+            "required": ["key"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "search_feats",
+        "description": "Search feats (/v2/feats/) — Great Weapon Master, Lucky, etc.",
+        "annotations": {"title": "Search Feats (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "search_feats"],
+        "value_flags": _common_search_value_flags(),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string", "description": "Feat name."},
+                "source": _PARAM_SOURCE,
+                "match": _PARAM_MATCH,
+                "fields": _PARAM_FIELDS,
+                "exclude": _PARAM_EXCLUDE,
+                "ordering": _PARAM_ORDERING,
+                "limit": _PARAM_LIMIT,
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_feat",
+        "description": "Get one feat by exact key (e.g., 'a5e-ag_ace-driver').",
+        "annotations": {"title": "Get Feat (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "get_feat", "{key}"],
+        "input_schema": {
+            "type": "object",
+            "properties": {"key": {"type": "string", "description": "Feat key."}},
+            "required": ["key"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_spell_list",
+        "description": (
+            "Get all spell slugs available to a class (e.g., 'wizard', 'cleric', 'bard'). "
+            "Returns a list of spell slugs you can chain into get_spell_details. "
+            "Note: uses /v1/spelllist/ (deprecated, but only path) and v1-style spell slugs."
+        ),
+        "annotations": {"title": "Get Class Spell List", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "get_spell_list", "{class_slug}"],
+        "input_schema": {
+            "type": "object",
+            "properties": {"class_slug": {"type": "string", "description": "Class slug (e.g., 'bard', 'cleric', 'druid', 'paladin', 'ranger', 'sorcerer', 'warlock', 'wizard')."}},
+            "required": ["class_slug"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "search_srd",
+        "description": (
+            "Universal cross-type search (/v2/search/) — searches monsters, spells, items, rules, "
+            "backgrounds, etc. all in one call. Best when you don't know which tool to use, "
+            "or when checking whether a term exists in any category. "
+            "Returns results with `object_model` indicating the type and `highlighted` snippets. "
+            "Chain into the type-specific get_* tool using the returned `object_pk` as the key."
+        ),
+        "annotations": {"title": "Universal SRD Search", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "search_srd"],
+        "value_flags": {"query": "--query", "limit": "--limit"},
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Free-text search across all D&D resources."},
+                "limit": _PARAM_LIMIT,
+            },
+            "required": ["query"],
+            "additionalProperties": False,
+        },
+    },
+]
+
+
+# In-process dispatch: server.py imports this module, reads MCP_HANDLERS,
+# and calls these directly (no subprocess startup, shared cached session).
+MCP_HANDLERS = {
+    "search_monsters": search_monsters,
+    "get_monster_details": get_monster_details,
+    "search_spells": search_spells,
+    "get_spell_details": get_spell_details,
+    "list_conditions": list_conditions,
+    "search_magic_items": search_magic_items,
+    "get_magic_item": get_magic_item,
+    "search_items": search_items,
+    "get_item": get_item,
+    "search_classes": search_classes,
+    "get_class_info": get_class_info,
+    "search_weapons": search_weapons,
+    "search_armor": search_armor,
+    "search_rules": search_rules,
+    "get_rule_section": get_rule_section,
+    "search_backgrounds": search_backgrounds,
+    "get_background": get_background,
+    "search_species": search_species,
+    "get_species": get_species,
+    "search_feats": search_feats,
+    "get_feat": get_feat,
+    "get_spell_list": get_spell_list,
+    "search_srd": search_srd,
+}
+
+
+# --- Subprocess fallback (kept for compatibility; in-process is preferred) ---
+
+def _parse_flag_args(tokens: list[str]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    i = 0
+    while i < len(tokens):
+        token = tokens[i]
+        if not token.startswith("--"):
             i += 1
-
-        # Basic type coercions for common args
-        for int_key in ("limit", "level"):
-            if int_key in out and isinstance(out[int_key], str):
-                try:
-                    out[int_key] = int(out[int_key])
-                except ValueError:
-                    pass
-        return out
-    
-    # Handle MCP tool invocation format FIRST: --mcp-tool <name> <arg1> <arg2> ...
-    if len(sys.argv) >= 3 and sys.argv[1] == "--mcp-tool":
-        tool_name = sys.argv[2]
-        
-        # Map tool names to functions
-        tool_functions = {
-            "search_monsters": search_monsters,
-            "get_monster_details": get_monster_details,
-            "search_spells": search_spells,
-            "get_spell_details": get_spell_details,
-            "list_conditions": list_conditions,
-            "search_magic_items": search_magic_items,
-            "get_class_info": get_class_info,
-            "search_weapons": search_weapons,
-            "search_armor": search_armor,
-            "search_rules": search_rules,
-            "get_rule_section": get_rule_section,
-        }
-        
-        if tool_name not in tool_functions:
-            print(f"Error: Unknown tool: {tool_name}", file=sys.stderr)
-            sys.exit(1)
-        
-        # Handle different argument patterns based on tool
-        try:
-            if tool_name in ["get_monster_details", "get_spell_details", "get_rule_section"]:
-                # These tools expect: --mcp-tool <tool_name> <slug_or_key>
-                if len(sys.argv) < 4:
-                    print(f"Error: {tool_name} requires a slug/key argument", file=sys.stderr)
-                    sys.exit(1)
-                arg_name = "slug" if tool_name in ["get_monster_details", "get_rule_section"] else "key"
-                result = tool_functions[tool_name](**{arg_name: sys.argv[3]})
-            elif tool_name == "get_class_info":
-                # get_class_info expects: --mcp-tool get_class_info <slug>
-                if len(sys.argv) < 4:
-                    print(f"Error: get_class_info requires a slug argument", file=sys.stderr)
-                    sys.exit(1)
-                result = get_class_info(slug=sys.argv[3])
-            else:
-                # Other tools may pass args as JSON (single argument) or as flags (--key value)
-                if len(sys.argv) <= 3:
-                    args = {}
-                elif sys.argv[3].startswith("--"):
-                    args = _parse_flag_args(sys.argv[3:])
-                else:
-                    args_json = sys.argv[3]
-                    try:
-                        args = json.loads(args_json)
-                    except json.JSONDecodeError as e:
-                        print(f"Error: Invalid JSON arguments: {e}", file=sys.stderr)
-                        sys.exit(1)
-                result = tool_functions[tool_name](**args)
-            
-            # Output result as JSON
-            print(json.dumps(result, indent=2, ensure_ascii=False))
-            sys.exit(0)
-            
-        except requests.HTTPError as e:
-            print(f"API Error: {e.response.status_code} - {e.response.text}", file=sys.stderr)
-            sys.exit(1)
-        except TypeError as e:
-            print(f"Error: Invalid arguments for {tool_name}: {e}", file=sys.stderr)
-            sys.exit(1)
-        except Exception as e:
-            print(f"Error: {e}", file=sys.stderr)
-            sys.exit(1)
-    
-    # Handle CLI with flags (from MCP server value_flags)
-    args_dict = {}
-    i = 1
-    while i < len(sys.argv):
-        arg = sys.argv[i]
-        if arg.startswith('--') and i + 1 < len(sys.argv):
-            flag_name = arg[2:]  # Remove '--'
-            flag_value = sys.argv[i + 1]
-            
-            # Convert to appropriate type
-            if flag_value.isdigit():
-                args_dict[flag_name] = int(flag_value)
-            elif flag_value.lower() in ('true', 'false'):
-                args_dict[flag_name] = flag_value.lower() == 'true'
-            else:
-                args_dict[flag_name] = flag_value
+            continue
+        key = token[2:]
+        if i + 1 < len(tokens) and not tokens[i + 1].startswith("--"):
+            out[key] = tokens[i + 1]
             i += 2
         else:
+            out[key] = True
             i += 1
-    
-    # If we got flags, execute the corresponding function
-    if args_dict:
-        # Infer which function based on the flags present
-        if 'query' in args_dict:
-            # search_rules or search_monsters or search_spells, etc.
-            if 'cr' in args_dict or 'type' in args_dict or 'size' in args_dict:
-                func = search_monsters
-            elif 'level' in args_dict or 'school' in args_dict:
-                func = search_spells
-            elif 'rarity' in args_dict:
-                func = search_magic_items
-            else:
-                # Default to search_rules for generic query
-                func = search_rules
-        elif 'slug' in args_dict:
-            func = get_rule_section
-        elif 'key' in args_dict:
-            func = get_spell_details
-        elif 'name' in args_dict:
-            # Could be any search function, default to monsters
-            if 'rarity' in args_dict:
-                func = search_magic_items
-            else:
-                func = search_monsters
-        else:
-            print("Error: Unable to determine function from arguments", file=sys.stderr)
-            sys.exit(1)
-        
+    for int_key in ("limit", "level"):
+        if int_key in out and isinstance(out[int_key], str):
+            try:
+                out[int_key] = int(out[int_key])
+            except ValueError:
+                pass
+    return out
+
+
+def main() -> int:
+    if len(sys.argv) >= 3 and sys.argv[1] == "--mcp-tool":
+        tool_name = sys.argv[2]
+        handler = MCP_HANDLERS.get(tool_name)
+        if handler is None:
+            print(f"Error: Unknown tool: {tool_name}", file=sys.stderr)
+            return 1
         try:
-            result = func(**args_dict)
+            single_arg_tools = {
+                "get_monster_details": "key",
+                "get_spell_details": "key",
+                "get_magic_item": "key",
+                "get_item": "key",
+                "get_class_info": "key",
+                "get_rule_section": "key",
+                "get_background": "key",
+                "get_species": "key",
+                "get_feat": "key",
+                "get_spell_list": "class_slug",
+            }
+            if tool_name in single_arg_tools:
+                if len(sys.argv) < 4:
+                    print(f"Error: {tool_name} requires an argument", file=sys.stderr)
+                    return 1
+                kwargs = {single_arg_tools[tool_name]: sys.argv[3]}
+            else:
+                rest = sys.argv[3:]
+                if rest and rest[0].startswith("--"):
+                    kwargs = _parse_flag_args(rest)
+                elif rest:
+                    try:
+                        kwargs = json.loads(rest[0])
+                    except json.JSONDecodeError as exc:
+                        print(f"Error: Invalid JSON arguments: {exc}", file=sys.stderr)
+                        return 1
+                else:
+                    kwargs = {}
+            result = handler(**kwargs)
             print(json.dumps(result, indent=2, ensure_ascii=False))
-            sys.exit(0)
-        except TypeError as e:
-            print(f"Error: Invalid arguments: {e}", file=sys.stderr)
-            sys.exit(1)
-        except requests.HTTPError as e:
-            print(f"API Error: {e.response.status_code} - {e.response.text}", file=sys.stderr)
-            sys.exit(1)
-        except Exception as e:
-            print(f"Error: {e}", file=sys.stderr)
-            sys.exit(1)
-    
-    # CLI usage
-    if len(sys.argv) < 2:
-        print("Usage: srd5_2.py <command> [args]")
-        print("\nCommands:")
-        print("  monster <name>    - Search for a monster")
-        print("  spell <name>      - Search for a spell")
-        print("  condition         - List all conditions")
-        print("  item <name>       - Search for a magic item")
-        print("  rule <keyword>    - Search for rules (e.g., 'grapple', 'cover')")
-        sys.exit(1)
-    
-    command = sys.argv[1]
-    
-    try:
-        if command == "monster" and len(sys.argv) > 2:
-            name = " ".join(sys.argv[2:])
-            result = search_monsters(name=name, limit=5)
-            print(f"Found {result['count']} monsters:\n")
-            for monster in result['results']:
-                print(format_monster(monster))
-                print("\n" + "="*60 + "\n")
-        
-        elif command == "spell" and len(sys.argv) > 2:
-            name = " ".join(sys.argv[2:])
-            result = search_spells(name=name, limit=5)
-            print(f"Found {result['count']} spells:\n")
-            for spell in result['results']:
-                print(format_spell(spell))
-                print("\n" + "="*60 + "\n")
-        
-        elif command == "condition":
-            result = list_conditions()
-            print(f"Found {result['count']} conditions:\n")
-            for condition in result['results']:
-                print(f"**{condition['name']}**")
-                for desc in condition.get('descriptions', []):
-                    print(desc['desc'])
-                print()
-        
-        elif command == "item" and len(sys.argv) > 2:
-            name = " ".join(sys.argv[2:])
-            result = search_magic_items(name=name, limit=5)
-            print(f"Found {result['count']} magic items:\n")
-            for item in result['results']:
-                print(f"**{item['name']}** ({item['rarity']})")
-                print(f"*{item['type']}*")
-                print(f"\n{item['desc']}\n")
-                print("="*60 + "\n")
-        
-        elif command == "rule" and len(sys.argv) > 2:
-            query = " ".join(sys.argv[2:])
-            result = search_rules(query=query, limit=5)
-            print(f"Found {result['count']} rule sections:\n")
-            for section in result['results']:
-                print(format_rule_section(section))
-                print("\n" + "="*60 + "\n")
-        
-        else:
-            print(f"Unknown command: {command}")
-            sys.exit(1)
-    
-    except requests.HTTPError as e:
-        print(f"API Error: {e}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"Error: {e}")
-        sys.exit(1)
+            return 0
+        except requests.HTTPError as exc:
+            print(f"API Error: {exc.response.status_code} - {exc.response.text}", file=sys.stderr)
+            return 1
+        except TypeError as exc:
+            print(f"Error: Invalid arguments for {tool_name}: {exc}", file=sys.stderr)
+            return 1
+        except Exception as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+
+    print("Usage: srd5_2.py --mcp-tool <tool_name> [args]", file=sys.stderr)
+    print(f"Available tools: {', '.join(sorted(MCP_HANDLERS.keys()))}", file=sys.stderr)
+    return 1
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
