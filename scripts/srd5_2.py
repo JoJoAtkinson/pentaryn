@@ -22,6 +22,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from dataclasses import dataclass
 from typing import Any, Optional
 
 import requests
@@ -102,17 +103,35 @@ def _build_query(
     return params
 
 
-# Default multi-source filters applied when the caller doesn't pass `source`.
-# Comma-separated lists are also priority lists — earlier sources come first
-# in the response after client-side sort.
-DEFAULT_SOURCE_SRD = "srd-2024,srd-2014"
-DEFAULT_SOURCE_CONDITIONS = "core,a5e-ag"
+# Default ranking when the caller doesn't pass `source`. No filter is applied —
+# all sources are searched — but results are sorted in three tiers: `prefer`
+# first, `demote` last, everything else in between. Combined with dedupe-keeping-
+# first, this yields "latest canonical, third-party fallback, 2014 only if
+# nothing else has it" without hiding obscure-source hits behind a hard filter.
+@dataclass(frozen=True)
+class PrioritySpec:
+    prefer: tuple[str, ...] = ()
+    demote: tuple[str, ...] = ()
 
 
-def _apply_default_source(source: Optional[str], default: str) -> str:
-    """Return user-supplied source if set (including empty string for 'no filter'),
-    else the default. Distinguishing None from '' lets callers explicitly opt out."""
-    return default if source is None else source
+DEFAULT_PRIORITY_SRD = PrioritySpec(prefer=("srd-2024",), demote=("srd-2014",))
+DEFAULT_PRIORITY_CONDITIONS = PrioritySpec(prefer=("core", "a5e-ag"))
+
+
+def _resolve_source(
+    source: Optional[str], default: PrioritySpec
+) -> tuple[Optional[str], PrioritySpec]:
+    """Map the caller's `source` arg into (filter, priority_spec).
+    - source=None  → no filter, default priority
+    - source=""    → no filter, no priority sort (raw API order)
+    - source="x"   → filter to x (single-source spec, sort is a no-op)
+    - source="x,y" → filter to x,y; rank x first, y second (user order wins)"""
+    if source is None:
+        return None, default
+    if source == "":
+        return None, PrioritySpec()
+    keys = tuple(k.strip() for k in source.split(",") if k.strip())
+    return source, PrioritySpec(prefer=keys)
 
 
 def _doc_key(entry: dict[str, Any]) -> str:
@@ -126,29 +145,71 @@ def _doc_key(entry: dict[str, Any]) -> str:
     return ""
 
 
-def _sort_by_source_preference(results: list[dict[str, Any]], priority: str) -> list[dict[str, Any]]:
-    """Stable sort: results whose document.key matches the first source in
-    `priority` come first, then the second, etc. Unknown sources sort last."""
-    keys = [k.strip() for k in priority.split(",") if k.strip()]
-    if not keys:
-        return results
-    rank = {key: i for i, key in enumerate(keys)}
-    fallback = len(keys)
-    return sorted(results, key=lambda item: rank.get(_doc_key(item), fallback))
+def _rank_by_spec(key: str, spec: PrioritySpec) -> tuple[int, int]:
+    """3-tier rank: 0=prefer, 1=middle, 2=demote. Sub-rank preserves listed order
+    within each tier so the sort is fully deterministic."""
+    if key in spec.prefer:
+        return (0, spec.prefer.index(key))
+    if key in spec.demote:
+        return (2, spec.demote.index(key))
+    return (1, 0)
 
 
-def _maybe_sort_results(response: dict[str, Any], source: str) -> dict[str, Any]:
-    """If the response is a list-of-results envelope and `source` is multi-valued,
-    reorder results client-side by source priority. Returns a shallow copy with
-    a new `results` list — never mutates the original (and so never the cache)."""
-    if not source or "," not in source:
-        return response
+def _sort_by_priority(
+    results: list[dict[str, Any]], spec: PrioritySpec
+) -> list[dict[str, Any]]:
+    """Stable sort by spec. Empty spec is a no-op (preserves API order)."""
+    if not spec.prefer and not spec.demote:
+        return list(results)
+    return sorted(results, key=lambda item: _rank_by_spec(_doc_key(item), spec))
+
+
+def _dedupe_by_name(
+    results: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """Stable dedupe keeping the first occurrence of each name (case-folded,
+    trimmed). Items missing a name are kept (they can't be safely collapsed).
+    Returns (kept, dropped_keys). Run *after* the priority sort so the surviving
+    entry is the highest-priority one."""
+    seen: set[str] = set()
+    kept: list[dict[str, Any]] = []
+    dropped: list[str] = []
+    for item in results:
+        if not isinstance(item, dict):
+            kept.append(item)
+            continue
+        name = (item.get("name") or "").strip().casefold()
+        if not name:
+            kept.append(item)
+            continue
+        if name in seen:
+            dropped.append(str(item.get("key") or ""))
+            continue
+        seen.add(name)
+        kept.append(item)
+    return kept, dropped
+
+
+def _apply_priority_and_dedupe(
+    response: dict[str, Any], spec: PrioritySpec, dedupe: bool
+) -> dict[str, Any]:
+    """Sort response.results by priority, then optionally dedupe by name. Returns
+    a shallow copy with a new `results` list — never mutates the cached response.
+    When dedupe drops items, their keys are surfaced as `dropped_variants` so the
+    caller can still fetch them explicitly via the matching `get_*` tool."""
     if not isinstance(response, dict):
         return response
     results = response.get("results")
     if not isinstance(results, list):
         return response
-    return {**response, "results": _sort_by_source_preference(results, source)}
+    ranked = _sort_by_priority(results, spec)
+    if not dedupe:
+        return {**response, "results": ranked}
+    kept, dropped = _dedupe_by_name(ranked)
+    out = {**response, "results": kept}
+    if dropped:
+        out["dropped_variants"] = dropped
+    return out
 
 
 # --- Creatures (formerly v1 monsters) -----------------------------------------
@@ -164,8 +225,9 @@ def search_monsters(
     exclude: Optional[str] = None,
     ordering: Optional[str] = None,
     limit: int = 10,
+    dedupe: bool = True,
 ) -> dict[str, Any]:
-    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
+    filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
     extra: dict[str, Any] = {}
     if cr is not None:
         extra["challenge_rating"] = cr
@@ -174,10 +236,10 @@ def search_monsters(
     if size:
         extra["size__key"] = size
     params = _build_query(
-        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit, extra=extra,
     )
-    return _maybe_sort_results(_api_get("/v2/creatures/", params), source)
+    return _apply_priority_and_dedupe(_api_get("/v2/creatures/", params), spec, dedupe)
 
 
 def get_monster_details(key: str) -> dict[str, Any]:
@@ -196,18 +258,19 @@ def search_spells(
     exclude: Optional[str] = None,
     ordering: Optional[str] = None,
     limit: int = 10,
+    dedupe: bool = True,
 ) -> dict[str, Any]:
-    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
+    filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
     extra: dict[str, Any] = {}
     if level is not None:
         extra["level"] = level
     if school:
         extra["school__key"] = school
     params = _build_query(
-        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit, extra=extra,
     )
-    return _maybe_sort_results(_api_get("/v2/spells/", params), source)
+    return _apply_priority_and_dedupe(_api_get("/v2/spells/", params), spec, dedupe)
 
 
 def get_spell_details(key: str) -> dict[str, Any]:
@@ -223,13 +286,14 @@ def list_conditions(
     fields: Optional[str] = None,
     exclude: Optional[str] = None,
     limit: int = 25,
+    dedupe: bool = True,
 ) -> dict[str, Any]:
-    source = _apply_default_source(source, DEFAULT_SOURCE_CONDITIONS)
+    filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_CONDITIONS)
     params = _build_query(
-        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
         limit=limit,
     )
-    return _maybe_sort_results(_api_get("/v2/conditions/", params), source)
+    return _apply_priority_and_dedupe(_api_get("/v2/conditions/", params), spec, dedupe)
 
 
 # --- Magic items --------------------------------------------------------------
@@ -243,16 +307,17 @@ def search_magic_items(
     exclude: Optional[str] = None,
     ordering: Optional[str] = None,
     limit: int = 10,
+    dedupe: bool = True,
 ) -> dict[str, Any]:
-    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
+    filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
     extra: dict[str, Any] = {}
     if rarity:
         extra["rarity__key"] = rarity
     params = _build_query(
-        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit, extra=extra,
     )
-    return _maybe_sort_results(_api_get("/v2/magicitems/", params), source)
+    return _apply_priority_and_dedupe(_api_get("/v2/magicitems/", params), spec, dedupe)
 
 
 def get_magic_item(key: str) -> dict[str, Any]:
@@ -270,16 +335,17 @@ def search_items(
     exclude: Optional[str] = None,
     ordering: Optional[str] = None,
     limit: int = 10,
+    dedupe: bool = True,
 ) -> dict[str, Any]:
-    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
+    filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
     extra: dict[str, Any] = {}
     if category:
         extra["category__key"] = category
     params = _build_query(
-        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit, extra=extra,
     )
-    return _maybe_sort_results(_api_get("/v2/items/", params), source)
+    return _apply_priority_and_dedupe(_api_get("/v2/items/", params), spec, dedupe)
 
 
 def get_item(key: str) -> dict[str, Any]:
@@ -296,13 +362,14 @@ def search_classes(
     exclude: Optional[str] = None,
     ordering: Optional[str] = None,
     limit: int = 10,
+    dedupe: bool = True,
 ) -> dict[str, Any]:
-    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
+    filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
     params = _build_query(
-        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit,
     )
-    return _maybe_sort_results(_api_get("/v2/classes/", params), source)
+    return _apply_priority_and_dedupe(_api_get("/v2/classes/", params), spec, dedupe)
 
 
 def get_class_info(key: str) -> dict[str, Any]:
@@ -319,13 +386,14 @@ def search_weapons(
     exclude: Optional[str] = None,
     ordering: Optional[str] = None,
     limit: int = 10,
+    dedupe: bool = True,
 ) -> dict[str, Any]:
-    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
+    filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
     params = _build_query(
-        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit,
     )
-    return _maybe_sort_results(_api_get("/v2/weapons/", params), source)
+    return _apply_priority_and_dedupe(_api_get("/v2/weapons/", params), spec, dedupe)
 
 
 def search_armor(
@@ -336,13 +404,14 @@ def search_armor(
     exclude: Optional[str] = None,
     ordering: Optional[str] = None,
     limit: int = 10,
+    dedupe: bool = True,
 ) -> dict[str, Any]:
-    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
+    filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
     params = _build_query(
-        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit,
     )
-    return _maybe_sort_results(_api_get("/v2/armor/", params), source)
+    return _apply_priority_and_dedupe(_api_get("/v2/armor/", params), spec, dedupe)
 
 
 # --- Rules (formerly v1 sections) --------------------------------------------
@@ -357,17 +426,19 @@ def search_rules(
 ) -> dict[str, Any]:
     if not query or not str(query).strip():
         raise ValueError("search_rules requires a non-empty `query` keyword.")
-    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
+    filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
     params: dict[str, Any] = {"limit": limit, "search": query}
-    if source:
-        params["document__key__in"] = source
+    if filter_source:
+        params["document__key__in"] = filter_source
     if fields:
         params["fields"] = fields
     if exclude:
         params["exclude"] = exclude
     if ordering:
         params["ordering"] = ordering
-    return _maybe_sort_results(_api_get("/v2/rules/", params), source)
+    # Rule sections share generic names ("Combat", "Cover") across sources without
+    # being true duplicates — sort by priority but never dedupe.
+    return _apply_priority_and_dedupe(_api_get("/v2/rules/", params), spec, dedupe=False)
 
 
 def get_rule_section(key: str) -> dict[str, Any]:
@@ -384,13 +455,14 @@ def search_backgrounds(
     exclude: Optional[str] = None,
     ordering: Optional[str] = None,
     limit: int = 10,
+    dedupe: bool = True,
 ) -> dict[str, Any]:
-    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
+    filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
     params = _build_query(
-        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit,
     )
-    return _maybe_sort_results(_api_get("/v2/backgrounds/", params), source)
+    return _apply_priority_and_dedupe(_api_get("/v2/backgrounds/", params), spec, dedupe)
 
 
 def get_background(key: str) -> dict[str, Any]:
@@ -405,13 +477,14 @@ def search_species(
     exclude: Optional[str] = None,
     ordering: Optional[str] = None,
     limit: int = 10,
+    dedupe: bool = True,
 ) -> dict[str, Any]:
-    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
+    filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
     params = _build_query(
-        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit,
     )
-    return _maybe_sort_results(_api_get("/v2/species/", params), source)
+    return _apply_priority_and_dedupe(_api_get("/v2/species/", params), spec, dedupe)
 
 
 def get_species(key: str) -> dict[str, Any]:
@@ -426,13 +499,14 @@ def search_feats(
     exclude: Optional[str] = None,
     ordering: Optional[str] = None,
     limit: int = 10,
+    dedupe: bool = True,
 ) -> dict[str, Any]:
-    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
+    filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
     params = _build_query(
-        name=name, match=match, source=source, fields=fields, exclude=exclude,
+        name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit,
     )
-    return _maybe_sort_results(_api_get("/v2/feats/", params), source)
+    return _apply_priority_and_dedupe(_api_get("/v2/feats/", params), spec, dedupe)
 
 
 def get_feat(key: str) -> dict[str, Any]:
@@ -501,6 +575,17 @@ _PARAM_ORDERING = {
     ),
 }
 _PARAM_LIMIT = {"type": "integer", "description": "Max results (default varies by tool).", "default": 10}
+_PARAM_DEDUPE = {
+    "type": "boolean",
+    "description": (
+        "When true (default), collapse same-name entries across sources, keeping the "
+        "highest-priority one. Dropped keys are surfaced in the response's "
+        "`dropped_variants` field so they remain reachable via the matching get_* tool. "
+        "Pass false to see every variant (rarely needed; this tool is not designed for "
+        "edition comparison)."
+    ),
+    "default": True,
+}
 
 
 def _common_search_value_flags() -> dict[str, str]:
@@ -520,15 +605,19 @@ MCP_TOOLS = [
         "name": "search_monsters",
         "description": (
             "Search D&D creatures (/v2/creatures/) by name, CR, type, size, or source. "
-            "Returns full stat blocks. Includes 2024 SRD content (filter source='srd-2024' for 5.5e play). "
+            "Returns full stat blocks. Default behavior: searches all sources, ranks "
+            "srd-2024 first, third-party (tob, a5e-ag, open5e) middle, srd-2014 last; "
+            "same-name duplicates are collapsed (dropped keys surfaced in `dropped_variants`). "
+            "NOT designed for edition comparison — for 2014 vs 2024 side-by-side, pass "
+            "source='srd-2014,srd-2024' AND dedupe=false. "
             "Name match is partial by default; pass match='exact' for an exact name. "
             "If you already know the key (e.g., 'srd-2024_goblin-warrior'), use get_monster_details. "
-            "Examples: search_monsters(cr='1/4', type='humanoid', source='srd-2024'); "
+            "Examples: search_monsters(cr='1/4', type='humanoid'); "
             "search_monsters(name='dragon', size='large', ordering='-challenge_rating')."
         ),
         "annotations": {"title": "Search Creatures (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_monsters"],
-        "value_flags": {**_common_search_value_flags(), "cr": "--cr", "type": "--type", "size": "--size"},
+        "value_flags": {**_common_search_value_flags(), "cr": "--cr", "type": "--type", "size": "--size", "dedupe": "--dedupe"},
         "input_schema": {
             "type": "object",
             "properties": {
@@ -542,6 +631,7 @@ MCP_TOOLS = [
                 "exclude": _PARAM_EXCLUDE,
                 "ordering": _PARAM_ORDERING,
                 "limit": _PARAM_LIMIT,
+                "dedupe": _PARAM_DEDUPE,
             },
             "additionalProperties": False,
         },
@@ -566,12 +656,15 @@ MCP_TOOLS = [
         "name": "search_spells",
         "description": (
             "Search spells (/v2/spells/) by name, level, school, or source. Returns full spell entries. "
-            "Filter source='srd-2024' for 5.5e content. "
-            "Examples: search_spells(level=3, school='evocation', source='srd-2024'); search_spells(name='shield', match='exact')."
+            "Default behavior: searches all sources, ranks srd-2024 first, third-party "
+            "(tob, a5e-ag, open5e) middle, srd-2014 last; same-name duplicates are collapsed "
+            "(dropped keys surfaced in `dropped_variants`). NOT designed for edition comparison — "
+            "for 2014 vs 2024 side-by-side, pass source='srd-2014,srd-2024' AND dedupe=false. "
+            "Examples: search_spells(level=3, school='evocation'); search_spells(name='shield', match='exact')."
         ),
         "annotations": {"title": "Search Spells (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_spells"],
-        "value_flags": {**_common_search_value_flags(), "level": "--level", "school": "--school"},
+        "value_flags": {**_common_search_value_flags(), "level": "--level", "school": "--school", "dedupe": "--dedupe"},
         "input_schema": {
             "type": "object",
             "properties": {
@@ -584,6 +677,7 @@ MCP_TOOLS = [
                 "exclude": _PARAM_EXCLUDE,
                 "ordering": _PARAM_ORDERING,
                 "limit": _PARAM_LIMIT,
+                "dedupe": _PARAM_DEDUPE,
             },
             "additionalProperties": False,
         },
@@ -607,13 +701,15 @@ MCP_TOOLS = [
         "name": "list_conditions",
         "description": (
             "List conditions (/v2/conditions/). Pass `name` to filter (substring); omit for all. "
-            "Note: the standard 5e conditions (blinded, charmed, frightened, grappled, etc.) live under "
-            "source='core' — there's no srd-2024 source for conditions. a5e-ag has extras like Bloodied. "
+            "Standard 5e conditions (blinded, charmed, frightened, grappled, etc.) live under "
+            "source='core' — there's no srd-2024 source for conditions; a5e-ag has extras like Bloodied. "
+            "Default behavior: searches all sources, ranks core first then a5e-ag; same-name duplicates "
+            "are collapsed (dropped keys surfaced in `dropped_variants`). "
             "Use during combat for quick condition-effect lookup."
         ),
         "annotations": {"title": "List Conditions (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "list_conditions"],
-        "value_flags": {"name": "--name", "source": "--source", "match": "--match", "fields": "--fields", "exclude": "--exclude", "limit": "--limit"},
+        "value_flags": {"name": "--name", "source": "--source", "match": "--match", "fields": "--fields", "exclude": "--exclude", "limit": "--limit", "dedupe": "--dedupe"},
         "input_schema": {
             "type": "object",
             "properties": {
@@ -623,6 +719,7 @@ MCP_TOOLS = [
                 "fields": _PARAM_FIELDS,
                 "exclude": _PARAM_EXCLUDE,
                 "limit": {"type": "integer", "description": "Max results (default 25).", "default": 25},
+                "dedupe": _PARAM_DEDUPE,
             },
             "additionalProperties": False,
         },
@@ -631,11 +728,14 @@ MCP_TOOLS = [
         "name": "search_magic_items",
         "description": (
             "Search magic items (/v2/magicitems/) by name, rarity, or source. "
-            "Examples: search_magic_items(rarity='legendary', source='srd-2024'); search_magic_items(name='cloak')."
+            "Default behavior: searches all sources, ranks srd-2024 first, third-party "
+            "(tob, a5e-ag, open5e) middle, srd-2014 last; same-name duplicates are collapsed "
+            "(dropped keys surfaced in `dropped_variants`). Not for edition comparison. "
+            "Examples: search_magic_items(rarity='legendary'); search_magic_items(name='cloak')."
         ),
         "annotations": {"title": "Search Magic Items (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_magic_items"],
-        "value_flags": {**_common_search_value_flags(), "rarity": "--rarity"},
+        "value_flags": {**_common_search_value_flags(), "rarity": "--rarity", "dedupe": "--dedupe"},
         "input_schema": {
             "type": "object",
             "properties": {
@@ -647,6 +747,7 @@ MCP_TOOLS = [
                 "exclude": _PARAM_EXCLUDE,
                 "ordering": _PARAM_ORDERING,
                 "limit": _PARAM_LIMIT,
+                "dedupe": _PARAM_DEDUPE,
             },
             "additionalProperties": False,
         },
@@ -668,11 +769,14 @@ MCP_TOOLS = [
         "description": (
             "Search mundane items / equipment (/v2/items/) — not magic items. "
             "Filter by category (key) for armor/weapon/adventuring-gear etc. "
-            "Examples: search_items(name='rope'); search_items(category='adventuring-gear', source='srd-2024')."
+            "Default behavior: searches all sources, ranks srd-2024 first, third-party middle, "
+            "srd-2014 last; same-name duplicates collapsed (dropped keys in `dropped_variants`). "
+            "Not for edition comparison. "
+            "Examples: search_items(name='rope'); search_items(category='adventuring-gear')."
         ),
         "annotations": {"title": "Search Mundane Items (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_items"],
-        "value_flags": {**_common_search_value_flags(), "category": "--category"},
+        "value_flags": {**_common_search_value_flags(), "category": "--category", "dedupe": "--dedupe"},
         "input_schema": {
             "type": "object",
             "properties": {
@@ -684,6 +788,7 @@ MCP_TOOLS = [
                 "exclude": _PARAM_EXCLUDE,
                 "ordering": _PARAM_ORDERING,
                 "limit": _PARAM_LIMIT,
+                "dedupe": _PARAM_DEDUPE,
             },
             "additionalProperties": False,
         },
@@ -704,11 +809,13 @@ MCP_TOOLS = [
         "name": "search_classes",
         "description": (
             "Search classes & archetypes (/v2/classes/). Returns class features and progression. "
+            "Default behavior: searches all sources, ranks srd-2024 first, third-party middle, "
+            "srd-2014 last; same-name duplicates collapsed (dropped keys in `dropped_variants`). "
             "Use for character creation help."
         ),
         "annotations": {"title": "Search Classes (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_classes"],
-        "value_flags": _common_search_value_flags(),
+        "value_flags": {**_common_search_value_flags(), "dedupe": "--dedupe"},
         "input_schema": {
             "type": "object",
             "properties": {
@@ -719,6 +826,7 @@ MCP_TOOLS = [
                 "exclude": _PARAM_EXCLUDE,
                 "ordering": _PARAM_ORDERING,
                 "limit": _PARAM_LIMIT,
+                "dedupe": _PARAM_DEDUPE,
             },
             "additionalProperties": False,
         },
@@ -737,10 +845,14 @@ MCP_TOOLS = [
     },
     {
         "name": "search_weapons",
-        "description": "Search weapons (/v2/weapons/). Returns damage, properties, cost, weight.",
+        "description": (
+            "Search weapons (/v2/weapons/). Returns damage, properties, cost, weight. "
+            "Default behavior: searches all sources, ranks srd-2024 first, third-party middle, "
+            "srd-2014 last; same-name duplicates collapsed (dropped keys in `dropped_variants`)."
+        ),
         "annotations": {"title": "Search Weapons (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_weapons"],
-        "value_flags": _common_search_value_flags(),
+        "value_flags": {**_common_search_value_flags(), "dedupe": "--dedupe"},
         "input_schema": {
             "type": "object",
             "properties": {
@@ -751,16 +863,21 @@ MCP_TOOLS = [
                 "exclude": _PARAM_EXCLUDE,
                 "ordering": _PARAM_ORDERING,
                 "limit": _PARAM_LIMIT,
+                "dedupe": _PARAM_DEDUPE,
             },
             "additionalProperties": False,
         },
     },
     {
         "name": "search_armor",
-        "description": "Search armor (/v2/armor/). Returns AC, weight, strength req, stealth disadvantage.",
+        "description": (
+            "Search armor (/v2/armor/). Returns AC, weight, strength req, stealth disadvantage. "
+            "Default behavior: searches all sources, ranks srd-2024 first, third-party middle, "
+            "srd-2014 last; same-name duplicates collapsed (dropped keys in `dropped_variants`)."
+        ),
         "annotations": {"title": "Search Armor (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_armor"],
-        "value_flags": _common_search_value_flags(),
+        "value_flags": {**_common_search_value_flags(), "dedupe": "--dedupe"},
         "input_schema": {
             "type": "object",
             "properties": {
@@ -771,6 +888,7 @@ MCP_TOOLS = [
                 "exclude": _PARAM_EXCLUDE,
                 "ordering": _PARAM_ORDERING,
                 "limit": _PARAM_LIMIT,
+                "dedupe": _PARAM_DEDUPE,
             },
             "additionalProperties": False,
         },
@@ -813,10 +931,14 @@ MCP_TOOLS = [
     },
     {
         "name": "search_backgrounds",
-        "description": "Search character backgrounds (/v2/backgrounds/) — Acolyte, Sage, Soldier, etc.",
+        "description": (
+            "Search character backgrounds (/v2/backgrounds/) — Acolyte, Sage, Soldier, etc. "
+            "Default behavior: searches all sources, ranks srd-2024 first, third-party middle, "
+            "srd-2014 last; same-name duplicates collapsed (dropped keys in `dropped_variants`)."
+        ),
         "annotations": {"title": "Search Backgrounds (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_backgrounds"],
-        "value_flags": _common_search_value_flags(),
+        "value_flags": {**_common_search_value_flags(), "dedupe": "--dedupe"},
         "input_schema": {
             "type": "object",
             "properties": {
@@ -827,6 +949,7 @@ MCP_TOOLS = [
                 "exclude": _PARAM_EXCLUDE,
                 "ordering": _PARAM_ORDERING,
                 "limit": _PARAM_LIMIT,
+                "dedupe": _PARAM_DEDUPE,
             },
             "additionalProperties": False,
         },
@@ -847,11 +970,13 @@ MCP_TOOLS = [
         "name": "search_species",
         "description": (
             "Search character species (/v2/species/) — Elf, Dwarf, Human, etc. "
-            "Replaces the v1 'races' endpoint."
+            "Replaces the v1 'races' endpoint. "
+            "Default behavior: searches all sources, ranks srd-2024 first, third-party middle, "
+            "srd-2014 last; same-name duplicates collapsed (dropped keys in `dropped_variants`)."
         ),
         "annotations": {"title": "Search Species (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_species"],
-        "value_flags": _common_search_value_flags(),
+        "value_flags": {**_common_search_value_flags(), "dedupe": "--dedupe"},
         "input_schema": {
             "type": "object",
             "properties": {
@@ -862,6 +987,7 @@ MCP_TOOLS = [
                 "exclude": _PARAM_EXCLUDE,
                 "ordering": _PARAM_ORDERING,
                 "limit": _PARAM_LIMIT,
+                "dedupe": _PARAM_DEDUPE,
             },
             "additionalProperties": False,
         },
@@ -880,10 +1006,14 @@ MCP_TOOLS = [
     },
     {
         "name": "search_feats",
-        "description": "Search feats (/v2/feats/) — Great Weapon Master, Lucky, etc.",
+        "description": (
+            "Search feats (/v2/feats/) — Great Weapon Master, Lucky, etc. "
+            "Default behavior: searches all sources, ranks srd-2024 first, third-party middle, "
+            "srd-2014 last; same-name duplicates collapsed (dropped keys in `dropped_variants`)."
+        ),
         "annotations": {"title": "Search Feats (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_feats"],
-        "value_flags": _common_search_value_flags(),
+        "value_flags": {**_common_search_value_flags(), "dedupe": "--dedupe"},
         "input_schema": {
             "type": "object",
             "properties": {
@@ -894,6 +1024,7 @@ MCP_TOOLS = [
                 "exclude": _PARAM_EXCLUDE,
                 "ordering": _PARAM_ORDERING,
                 "limit": _PARAM_LIMIT,
+                "dedupe": _PARAM_DEDUPE,
             },
             "additionalProperties": False,
         },
@@ -1003,6 +1134,9 @@ def _parse_flag_args(tokens: list[str]) -> dict[str, Any]:
                 out[int_key] = int(out[int_key])
             except ValueError:
                 pass
+    for bool_key in ("dedupe",):
+        if bool_key in out and isinstance(out[bool_key], str):
+            out[bool_key] = out[bool_key].strip().lower() not in ("false", "0", "no", "off")
     return out
 
 
