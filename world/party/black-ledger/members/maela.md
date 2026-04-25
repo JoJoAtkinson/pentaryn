@@ -1,3 +1,7 @@
+```
+
+```
+
 ---
 created: 2026-01-17
 last-modified: 2026-03-14
@@ -8,32 +12,35 @@ status: active
 
 > “Curses are just contracts the soul didn’t read.”
 
-## Snapshot
+Pack with Vorgrin, the demon lord
 
-| Attribute | Value |
-|---|---|
-| **Party** | [The Black Ledger](../_overview.md) |
-| **Ancestry** | Human |
-| **Origin** | [Elderholt](../../../factions/elderholt/_overview.md) |
-| **Class / Level** | Warlock 4 |
-| **Alignment** | Lawful Evil |
-| **Background** | Coven debtor |
-| **Party Role** | Occult / curses |
+#### Snapshot
 
-## Binding Book 
+| Attribute               | Value                                              |
+| ----------------------- | -------------------------------------------------- |
+| **Party**         | [The Black Ledger](../_overview.md)                   |
+| **Ancestry**      | Human                                              |
+| **Origin**        | [Elderholt](../../../factions/elderholt/_overview.md) |
+| **Class / Level** | Warlock 4                                          |
+| **Alignment**     | Lawful Evil                                        |
+| **Background**    | Coven debtor                                       |
+| **Party Role**    | Occult / curses                                    |
+
+## Binding Book
+
 Her spellbook has two little fire-demons that dance in a circle when she casts.
 
 ## Spellwork (Warlock 4)
 
 > *Her magic is paperwork with teeth.*
 
-| Spellcasting | Notes |
-|---|---|
-| **Ability** | Charisma |
-| **Spell save DC** | `8 + proficiency bonus + CHA mod` |
-| **Spell attack** | `proficiency bonus + CHA mod` |
-| **Pact slots** | `2` slots (cast at **2nd level**) |
-| **Spells known** | `5` |
+| Spellcasting            | Notes                                                                           |
+| ----------------------- | ------------------------------------------------------------------------------- |
+| **Ability**       | Charisma                                                                        |
+| **Spell save DC** | `8 + proficiency bonus + CHA mod`                                             |
+| **Spell attack**  | `proficiency bonus + CHA mod`                                                 |
+| **Pact slots**    | `2` slots (cast at **2nd level**)                                       |
+| **Spells known**  | `5`                                                                           |
 | **Typical tells** | Blackened ink under the nails; whispered clauses; a sigil written, then blotted |
 
 ### Cantrips (at-will)
@@ -73,17 +80,17 @@ Her spellbook has two little fire-demons that dance in a circle when she casts.
 
 > HP, saves, and proficiencies assume average rolls for a Warlock 4 with the following mental focus and defenses.
 
-| Trait | Value |
-|---|---|
-| **HP** | `31` (4d8; 8 + 3 x (avg. 5 + 2) with Con 14) |
-| **Hit Dice** | 4d8 |
-| **AC** | `13` (Mage Armor, Dex 12) |
-| **Speed** | 30 ft |
-| **Ability mods** | Str 8 (−1), Dex 12 (+1), Con 14 (+2), Int 13 (+1), Wis 10 (+0), Cha 18 (+4) |
-| **Saving Throws** | Wisdom +2 (Proficiency + Wisdom), Charisma +6 |
-| **Skills / Tools** | Arcana +3, Deception +6, Insight +2, Investigation +3 |
-| **Spellcasting** | Spell save DC 14, Spell attack +6 (CHA-based) |
-| **Equipment** | Quarterstaff (focus), dagger, components pouch, scroll of minor runes |
+| Trait                    | Value                                                                        |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| **HP**             | `31` (4d8; 8 + 3 x (avg. 5 + 2) with Con 14)                               |
+| **Hit Dice**       | 4d8                                                                          |
+| **AC**             | `13` (Mage Armor, Dex 12)                                                  |
+| **Speed**          | 30 ft                                                                        |
+| **Ability mods**   | Str 8 (−1), Dex 12 (+1), Con 14 (+2), Int 13 (+1), Wis 10 (+0), Cha 18 (+4) |
+| **Saving Throws**  | Wisdom +2 (Proficiency + Wisdom), Charisma +6                                |
+| **Skills / Tools** | Arcana +3, Deception +6, Insight +2, Investigation +3                        |
+| **Spellcasting**   | Spell save DC 14, Spell attack +6 (CHA-based)                                |
+| **Equipment**      | Quarterstaff (focus), dagger, components pouch, scroll of minor runes        |
 
 ### Notes
 
