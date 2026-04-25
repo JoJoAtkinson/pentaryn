@@ -10,13 +10,16 @@ Run `/Users/joe/GitHub/dnd/.venv/bin/python scripts/mcp/server.py --list-tools` 
 
 ## MCP usage hints — `dnd-scripts` server
 
-### SRD lookups (in-process, disk-cached)
+### SRD lookups (in-process, disk-cached, v2)
 
-- `search_*` tools (monsters, spells, magic items, weapons, armor, rules) return **full entries inline**, not summaries. You usually don't need to chain `search_X → get_X_details`.
-- Use `get_*_details` only when you already know the slug/key — it's a faster single-record path.
-- **Name search is loose:** `search_monsters(name='goblin')` matches monsters whose *lore text* mentions goblins, not just goblin-named monsters. For exact matches use `get_monster_details(slug='goblin')`.
-- For `search_rules` vs `get_rule_section`: search for keyword discovery, get for full text once you have the slug.
-- Open5e mixes SRD with third-party sources (Tome of Beasts, Kobold Press). If a result's `document__slug` is `wotc-srd`, it's official 5e SRD.
+- `search_*` tools return **full entries inline**, not summaries. You usually don't need to chain `search_X → get_X_details`.
+- `get_*_details` tools take a v2 **`key`** (e.g., `'srd-2024_goblin-warrior'`, `'srd-2024_fireball'`) — not a v1 slug. Use after a search when you have the key and want a single-record fast fetch.
+- **Name search is by name only:** `search_monsters(name='goblin')` does case-insensitive substring matching on the **name field** (via `name__icontains`); it does *not* match against lore/description text. Pass `match='exact'` for exact-name lookups.
+- **Default source filter** for SRD search tools is `'srd-2024,srd-2014'` — prefers 5.5e content, falls back to 2014. Pass an explicit `source='...'` (single key, comma-separated list, or empty string for no filter) to override.
+- **Conditions live under `'core'` and `'a5e-ag'`**, not `'srd-2024'`. `list_conditions` defaults to `'core,a5e-ag'`.
+- For `search_rules` vs `get_rule_section`: search needs a `query` (required) for keyword discovery; get fetches full text once you have the key.
+- `get_spell_list` returns v1-style spell **slugs** (e.g., `'fireball'`); these don't match v2 spell **keys** (e.g., `'srd-2024_fireball'`). To chain into `get_spell_details`, first call `search_spells(name=slug, match='exact')` and use the returned `key`.
+- For local lore (NPCs, factions, sessions, free-text vault search), use the `lore.py` tools: `search_npcs`, `get_npc`, `get_faction_overview`, `last_session_summary`, `find_lore`. These read the repo directly — no API.
 
 ### Campaign-time math (in-process, mtime-checked)
 

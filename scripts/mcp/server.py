@@ -200,6 +200,24 @@ def _load_script_module(path: Path) -> Any:
     return module
 
 
+def _has_top_level_assignment(source: str, name: str) -> bool:
+    """True if `name` is assigned at module top-level. Avoids false positives
+    from comments, docstrings, or string literals that merely mention the name."""
+    try:
+        module = ast.parse(source)
+    except SyntaxError:
+        return False
+    for node in module.body:
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == name:
+                    return True
+        elif isinstance(node, ast.AnnAssign):
+            if isinstance(node.target, ast.Name) and node.target.id == name:
+                return True
+    return False
+
+
 def _extract_mcp_tool_literal(source: str, *, path: Path) -> dict[str, Any] | None:
     if "MCP_TOOL" not in source:
         return None
@@ -361,12 +379,15 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
             skipped.append((path, f"unreadable: {exc}"))
             continue
         # Two discovery paths:
-        # - Scripts with MCP_HANDLERS get imported as modules; MCP_TOOLS is read
-        #   from the imported namespace (so it can use shared dicts, helper calls, etc.).
-        # - Scripts without MCP_HANDLERS use the safer AST literal_eval path
-        #   (no execution at discovery time).
+        # - Scripts with a top-level MCP_HANDLERS assignment get imported as
+        #   modules; MCP_TOOLS is read from the imported namespace (so it can
+        #   use shared dicts, helper calls, etc.).
+        # - Other scripts use the safer AST literal_eval path (no execution at
+        #   discovery time).
+        # AST-based check (not substring) so a comment or string mentioning
+        # `MCP_HANDLERS` doesn't trigger a module import.
         handlers: Optional[dict[str, Any]] = None
-        if "MCP_HANDLERS" in source:
+        if _has_top_level_assignment(source, "MCP_HANDLERS"):
             try:
                 module = _load_script_module(path)
             except Exception as exc:

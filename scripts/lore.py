@@ -325,7 +325,7 @@ MCP_TOOLS = [
             "All filters are case-insensitive substring matches; pass any subset. "
             "`type` is 'PC' or 'NPC'. `affiliation` searches the Notes column "
             "(e.g., 'Black Ledger', 'Shardrunners', 'Inkbound'). "
-            "Examples: search_npcs(faction='Elderholt'), search_npcs(affiliation='Black Ledger'), "
+            "Examples: search_npcs(origin='Elderholt'), search_npcs(affiliation='Black Ledger'), "
             "search_npcs(race='Derro')."
         ),
         "annotations": {"title": "Search Campaign NPCs", **_RO_LOCAL},
