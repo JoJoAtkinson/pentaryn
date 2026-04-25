@@ -16,8 +16,9 @@ codex-install: codex-config
 codex-uninstall:
 	$(PY) scripts/mcp/manage_codex_config.py --uninstall
 
-add-dnd-mpc:
-	claude mcp add dnd-scripts --scope local -- $(ROOT)/.venv/bin/python $(ROOT)/scripts/mcp/server.py
+.PHONY: add-dnd-mcp
+add-dnd-mcp:
+	claude mcp add dnd-scripts --scope local -- $(abspath $(PY)) $(ROOT)/scripts/mcp/server.py
 
 suggested-code-extensions:
 	code --install-extension foam.foam-vscode \

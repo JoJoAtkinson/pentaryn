@@ -102,6 +102,55 @@ def _build_query(
     return params
 
 
+# Default multi-source filters applied when the caller doesn't pass `source`.
+# Comma-separated lists are also priority lists — earlier sources come first
+# in the response after client-side sort.
+DEFAULT_SOURCE_SRD = "srd-2024,srd-2014"
+DEFAULT_SOURCE_CONDITIONS = "core,a5e-ag"
+
+
+def _apply_default_source(source: Optional[str], default: str) -> str:
+    """Return user-supplied source if set (including empty string for 'no filter'),
+    else the default. Distinguishing None from '' lets callers explicitly opt out."""
+    return default if source is None else source
+
+
+def _doc_key(entry: dict[str, Any]) -> str:
+    """Extract a source key from a result, handling both shapes open5e returns
+    (nested {key, name, ...} object on creatures/spells; bare string on rules)."""
+    doc = entry.get("document") if isinstance(entry, dict) else None
+    if isinstance(doc, dict):
+        return str(doc.get("key") or "")
+    if isinstance(doc, str):
+        return doc
+    return ""
+
+
+def _sort_by_source_preference(results: list[dict[str, Any]], priority: str) -> list[dict[str, Any]]:
+    """Stable sort: results whose document.key matches the first source in
+    `priority` come first, then the second, etc. Unknown sources sort last."""
+    keys = [k.strip() for k in priority.split(",") if k.strip()]
+    if not keys:
+        return results
+    rank = {key: i for i, key in enumerate(keys)}
+    fallback = len(keys)
+    return sorted(results, key=lambda item: rank.get(_doc_key(item), fallback))
+
+
+def _maybe_sort_results(response: dict[str, Any], source: str) -> dict[str, Any]:
+    """If the response is a list-of-results envelope and `source` is multi-valued,
+    reorder results client-side by source priority. Returns a shallow copy with
+    a new `results` list — never mutates the original (and so never the cache)."""
+    if not source or "," not in source:
+        return response
+    if not isinstance(response, dict):
+        return response
+    results = response.get("results")
+    if not isinstance(results, list):
+        return response
+    return {**response, "results": _sort_by_source_preference(results, source)}
+
+
 # --- Creatures (formerly v1 monsters) -----------------------------------------
 
 def search_monsters(
@@ -116,6 +165,7 @@ def search_monsters(
     ordering: Optional[str] = None,
     limit: int = 10,
 ) -> dict[str, Any]:
+    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
     extra: dict[str, Any] = {}
     if cr is not None:
         extra["challenge_rating"] = cr
@@ -127,7 +177,7 @@ def search_monsters(
         name=name, match=match, source=source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit, extra=extra,
     )
-    return _api_get("/v2/creatures/", params)
+    return _maybe_sort_results(_api_get("/v2/creatures/", params), source)
 
 
 def get_monster_details(key: str) -> dict[str, Any]:
@@ -147,6 +197,7 @@ def search_spells(
     ordering: Optional[str] = None,
     limit: int = 10,
 ) -> dict[str, Any]:
+    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
     extra: dict[str, Any] = {}
     if level is not None:
         extra["level"] = level
@@ -156,7 +207,7 @@ def search_spells(
         name=name, match=match, source=source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit, extra=extra,
     )
-    return _api_get("/v2/spells/", params)
+    return _maybe_sort_results(_api_get("/v2/spells/", params), source)
 
 
 def get_spell_details(key: str) -> dict[str, Any]:
@@ -173,11 +224,12 @@ def list_conditions(
     exclude: Optional[str] = None,
     limit: int = 25,
 ) -> dict[str, Any]:
+    source = _apply_default_source(source, DEFAULT_SOURCE_CONDITIONS)
     params = _build_query(
         name=name, match=match, source=source, fields=fields, exclude=exclude,
         limit=limit,
     )
-    return _api_get("/v2/conditions/", params)
+    return _maybe_sort_results(_api_get("/v2/conditions/", params), source)
 
 
 # --- Magic items --------------------------------------------------------------
@@ -192,6 +244,7 @@ def search_magic_items(
     ordering: Optional[str] = None,
     limit: int = 10,
 ) -> dict[str, Any]:
+    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
     extra: dict[str, Any] = {}
     if rarity:
         extra["rarity__key"] = rarity
@@ -199,7 +252,7 @@ def search_magic_items(
         name=name, match=match, source=source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit, extra=extra,
     )
-    return _api_get("/v2/magicitems/", params)
+    return _maybe_sort_results(_api_get("/v2/magicitems/", params), source)
 
 
 def get_magic_item(key: str) -> dict[str, Any]:
@@ -218,6 +271,7 @@ def search_items(
     ordering: Optional[str] = None,
     limit: int = 10,
 ) -> dict[str, Any]:
+    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
     extra: dict[str, Any] = {}
     if category:
         extra["category__key"] = category
@@ -225,7 +279,7 @@ def search_items(
         name=name, match=match, source=source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit, extra=extra,
     )
-    return _api_get("/v2/items/", params)
+    return _maybe_sort_results(_api_get("/v2/items/", params), source)
 
 
 def get_item(key: str) -> dict[str, Any]:
@@ -243,11 +297,12 @@ def search_classes(
     ordering: Optional[str] = None,
     limit: int = 10,
 ) -> dict[str, Any]:
+    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
     params = _build_query(
         name=name, match=match, source=source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit,
     )
-    return _api_get("/v2/classes/", params)
+    return _maybe_sort_results(_api_get("/v2/classes/", params), source)
 
 
 def get_class_info(key: str) -> dict[str, Any]:
@@ -265,11 +320,12 @@ def search_weapons(
     ordering: Optional[str] = None,
     limit: int = 10,
 ) -> dict[str, Any]:
+    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
     params = _build_query(
         name=name, match=match, source=source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit,
     )
-    return _api_get("/v2/weapons/", params)
+    return _maybe_sort_results(_api_get("/v2/weapons/", params), source)
 
 
 def search_armor(
@@ -281,26 +337,28 @@ def search_armor(
     ordering: Optional[str] = None,
     limit: int = 10,
 ) -> dict[str, Any]:
+    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
     params = _build_query(
         name=name, match=match, source=source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit,
     )
-    return _api_get("/v2/armor/", params)
+    return _maybe_sort_results(_api_get("/v2/armor/", params), source)
 
 
 # --- Rules (formerly v1 sections) --------------------------------------------
 
 def search_rules(
-    query: Optional[str] = None,
+    query: str,
     source: Optional[str] = None,
     fields: Optional[str] = None,
     exclude: Optional[str] = None,
     ordering: Optional[str] = None,
     limit: int = 5,
 ) -> dict[str, Any]:
-    params: dict[str, Any] = {"limit": limit}
-    if query:
-        params["search"] = query
+    if not query or not str(query).strip():
+        raise ValueError("search_rules requires a non-empty `query` keyword.")
+    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
+    params: dict[str, Any] = {"limit": limit, "search": query}
     if source:
         params["document__key__in"] = source
     if fields:
@@ -309,7 +367,7 @@ def search_rules(
         params["exclude"] = exclude
     if ordering:
         params["ordering"] = ordering
-    return _api_get("/v2/rules/", params)
+    return _maybe_sort_results(_api_get("/v2/rules/", params), source)
 
 
 def get_rule_section(key: str) -> dict[str, Any]:
@@ -327,11 +385,12 @@ def search_backgrounds(
     ordering: Optional[str] = None,
     limit: int = 10,
 ) -> dict[str, Any]:
+    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
     params = _build_query(
         name=name, match=match, source=source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit,
     )
-    return _api_get("/v2/backgrounds/", params)
+    return _maybe_sort_results(_api_get("/v2/backgrounds/", params), source)
 
 
 def get_background(key: str) -> dict[str, Any]:
@@ -347,11 +406,12 @@ def search_species(
     ordering: Optional[str] = None,
     limit: int = 10,
 ) -> dict[str, Any]:
+    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
     params = _build_query(
         name=name, match=match, source=source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit,
     )
-    return _api_get("/v2/species/", params)
+    return _maybe_sort_results(_api_get("/v2/species/", params), source)
 
 
 def get_species(key: str) -> dict[str, Any]:
@@ -367,11 +427,12 @@ def search_feats(
     ordering: Optional[str] = None,
     limit: int = 10,
 ) -> dict[str, Any]:
+    source = _apply_default_source(source, DEFAULT_SOURCE_SRD)
     params = _build_query(
         name=name, match=match, source=source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit,
     )
-    return _api_get("/v2/feats/", params)
+    return _maybe_sort_results(_api_get("/v2/feats/", params), source)
 
 
 def get_feat(key: str) -> dict[str, Any]:
@@ -407,9 +468,12 @@ _RO_OPEN_WORLD = {
 _PARAM_SOURCE = {
     "type": "string",
     "description": (
-        "Filter by source document key (e.g., 'srd-2024' for D&D 5.5e SRD, "
-        "'srd-2014' for 5e 2014 SRD, 'tob' for Tome of Beasts, 'a5e-ag', 'open5e'). "
-        "Comma-separate to combine: 'srd-2024,srd-2014'."
+        "Filter by source document key. Comma-separated values both filter AND "
+        "set priority order — earlier sources are listed first in results. "
+        "Default for SRD tools is 'srd-2024,srd-2014' (prefer 5.5e content, fall back "
+        "to 5e 2014). Pass an empty string to disable the filter entirely (returns from "
+        "all sources). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), "
+        "'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'."
     ),
 }
 _PARAM_MATCH = {
@@ -731,6 +795,7 @@ MCP_TOOLS = [
                 "ordering": _PARAM_ORDERING,
                 "limit": {"type": "integer", "description": "Max results (default 5).", "default": 5},
             },
+            "required": ["query"],
             "additionalProperties": False,
         },
     },

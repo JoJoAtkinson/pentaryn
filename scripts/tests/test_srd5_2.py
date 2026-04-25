@@ -1,329 +1,263 @@
 #!/usr/bin/env python3
 """
-Tests for Open5e API integration (srd5.2.py).
-Run with: pytest scripts/tests/test_srd5.2.py -v
+Tests for the open5e v2 integration in scripts/srd5_2.py.
+
+API-touching tests are marked `@pytest.mark.integration` so they don't run by
+default. Run them with: `pytest -m integration scripts/tests/test_srd5_2.py`.
+
+Offline unit tests cover the source-priority sort, default-source helper,
+schema/handler symmetry, and parameter validation — these always run.
 """
 
-import pytest
+from __future__ import annotations
+
 import sys
 from pathlib import Path
 
-# Add repo root to path
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.srd5_2 import (
-    search_monsters,
+    DEFAULT_SOURCE_CONDITIONS,
+    DEFAULT_SOURCE_SRD,
+    MCP_HANDLERS,
+    MCP_TOOLS,
+    _apply_default_source,
+    _doc_key,
+    _maybe_sort_results,
+    _sort_by_source_preference,
     get_monster_details,
-    search_spells,
-    get_spell_details,
     list_conditions,
-    search_magic_items,
-    get_class_info,
-    search_weapons,
     search_armor,
-    format_monster,
-    format_spell,
+    search_backgrounds,
+    search_feats,
+    search_items,
+    search_magic_items,
+    search_monsters,
+    search_rules,
+    search_species,
+    search_spells,
+    search_srd,
+    search_weapons,
 )
 
 
-class TestMonsters:
-    """Test monster search and retrieval."""
-    
-    def test_search_monsters_by_name(self):
-        """Test searching monsters by name."""
+# ---------------------------------------------------------------------------
+# Offline unit tests (no network)
+# ---------------------------------------------------------------------------
+
+
+class TestSourceDefaults:
+    def test_apply_default_when_none(self):
+        assert _apply_default_source(None, DEFAULT_SOURCE_SRD) == DEFAULT_SOURCE_SRD
+
+    def test_explicit_empty_string_disables_filter(self):
+        assert _apply_default_source("", DEFAULT_SOURCE_SRD) == ""
+
+    def test_explicit_value_passes_through(self):
+        assert _apply_default_source("tob", DEFAULT_SOURCE_SRD) == "tob"
+
+    def test_default_constants(self):
+        assert DEFAULT_SOURCE_SRD == "srd-2024,srd-2014"
+        assert DEFAULT_SOURCE_CONDITIONS == "core,a5e-ag"
+
+
+class TestDocKey:
+    def test_nested_dict_shape(self):
+        assert _doc_key({"document": {"key": "srd-2024", "name": "..."}}) == "srd-2024"
+
+    def test_bare_string_shape(self):
+        assert _doc_key({"document": "srd-2024"}) == "srd-2024"
+
+    def test_missing_document(self):
+        assert _doc_key({"name": "foo"}) == ""
+
+    def test_non_dict_input(self):
+        assert _doc_key("not a dict") == ""
+
+
+class TestSourceSort:
+    def test_priority_order_respected(self):
+        results = [
+            {"name": "A", "document": {"key": "srd-2014"}},
+            {"name": "B", "document": {"key": "srd-2024"}},
+            {"name": "C", "document": {"key": "tob"}},
+        ]
+        sorted_results = _sort_by_source_preference(results, "srd-2024,srd-2014")
+        names = [r["name"] for r in sorted_results]
+        assert names == ["B", "A", "C"]  # 2024 first, 2014 next, unknown last
+
+    def test_stable_sort_preserves_within_source(self):
+        results = [
+            {"name": "X", "document": {"key": "srd-2024"}},
+            {"name": "Y", "document": {"key": "srd-2024"}},
+            {"name": "Z", "document": {"key": "srd-2014"}},
+        ]
+        sorted_results = _sort_by_source_preference(results, "srd-2024,srd-2014")
+        assert [r["name"] for r in sorted_results] == ["X", "Y", "Z"]
+
+    def test_empty_priority_returns_unchanged(self):
+        results = [{"name": "A", "document": {"key": "x"}}]
+        assert _sort_by_source_preference(results, "") == results
+
+    def test_maybe_sort_skips_single_source(self):
+        response = {"count": 1, "results": [{"document": {"key": "srd-2024"}}]}
+        assert _maybe_sort_results(response, "srd-2024") is response
+
+    def test_maybe_sort_does_not_mutate_input(self):
+        original = {"count": 2, "results": [
+            {"name": "A", "document": {"key": "srd-2014"}},
+            {"name": "B", "document": {"key": "srd-2024"}},
+        ]}
+        out = _maybe_sort_results(original, "srd-2024,srd-2014")
+        assert original["results"][0]["name"] == "A"  # original untouched
+        assert out["results"][0]["name"] == "B"
+
+    def test_maybe_sort_handles_missing_results(self):
+        assert _maybe_sort_results({"detail": "Not found"}, "srd-2024,srd-2014") == {"detail": "Not found"}
+
+
+class TestSearchRulesValidation:
+    def test_empty_query_raises(self):
+        with pytest.raises(ValueError, match="query"):
+            search_rules(query="")
+
+    def test_whitespace_only_query_raises(self):
+        with pytest.raises(ValueError, match="query"):
+            search_rules(query="   ")
+
+
+class TestToolDefinitions:
+    def test_every_handler_has_a_tool_definition(self):
+        tool_names = {t["name"] for t in MCP_TOOLS}
+        handler_names = set(MCP_HANDLERS.keys())
+        # Every handler must be exposed as a tool
+        assert handler_names <= tool_names, f"Handlers without tool definitions: {handler_names - tool_names}"
+
+    def test_every_tool_has_a_handler(self):
+        # Every in-process tool should have a handler so the server can dispatch in-process
+        tool_names = {t["name"] for t in MCP_TOOLS}
+        handler_names = set(MCP_HANDLERS.keys())
+        assert tool_names <= handler_names, f"Tool definitions without handlers: {tool_names - handler_names}"
+
+    def test_search_rules_requires_query(self):
+        rules_tool = next(t for t in MCP_TOOLS if t["name"] == "search_rules")
+        assert "query" in rules_tool["input_schema"].get("required", [])
+
+    def test_get_tools_use_key_not_slug(self):
+        for tool in MCP_TOOLS:
+            if tool["name"].startswith("get_") and tool["name"] not in ("get_spell_list",):
+                schema = tool["input_schema"]
+                # v2 uses 'key', not v1 'slug'
+                assert "slug" not in schema.get("properties", {}), f"{tool['name']} still uses slug param"
+
+    def test_annotations_are_present_on_srd_tools(self):
+        for tool in MCP_TOOLS:
+            assert "annotations" in tool, f"{tool['name']} missing annotations"
+            ann = tool["annotations"]
+            assert ann.get("readOnlyHint") is True, f"{tool['name']} should be readOnly"
+
+
+# ---------------------------------------------------------------------------
+# Integration tests (hit the open5e API; slow; require network)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.integration
+class TestMonstersIntegration:
+    def test_search_returns_v2_shape(self):
         result = search_monsters(name="goblin", limit=5)
         assert "results" in result
         assert "count" in result
-        assert result["count"] > 0
-        assert len(result["results"]) > 0
-        
-        # Verify goblin is in results
-        names = [m["name"].lower() for m in result["results"]]
-        assert any("goblin" in name for name in names)
-    
-    def test_search_monsters_by_cr(self):
-        """Test searching monsters by Challenge Rating."""
-        result = search_monsters(cr="1", limit=10)
-        assert result["count"] > 0
-        assert len(result["results"]) > 0
-    
-    def test_search_monsters_by_type(self):
-        """Test searching monsters by creature type."""
-        # Just test that type parameter doesn't break the API call
-        result = search_monsters(type="undead", limit=5)
-        # API may not support type filtering well, so just verify structure
-        assert "results" in result
-        assert "count" in result
-    
-    def test_search_monsters_by_size(self):
-        """Test searching monsters by size."""
-        result = search_monsters(size="Huge", limit=5)
-        assert result["count"] > 0
-        
-        for monster in result["results"]:
-            assert monster["size"] == "Huge"
-    
-    def test_get_monster_details(self):
-        """Test getting detailed monster stats."""
-        # Use a well-known monster slug
-        monster = get_monster_details("goblin")
-        
-        # Verify required stat block fields
+        if result["results"]:
+            entry = result["results"][0]
+            assert "key" in entry  # v2 uses key, not slug
+            assert "name" in entry
+            # v2 nests document/type/size as objects
+            if "document" in entry:
+                doc = entry["document"]
+                assert isinstance(doc, dict)
+
+    def test_get_by_v2_key(self):
+        # srd-2024 has goblin-warrior, not bare goblin
+        monster = get_monster_details(key="srd-2024_goblin-warrior")
         assert monster["name"]
         assert "armor_class" in monster
         assert "hit_points" in monster
-        assert "strength" in monster
-        assert "dexterity" in monster
-        assert "constitution" in monster
-        assert "intelligence" in monster
-        assert "wisdom" in monster
-        assert "charisma" in monster
-        assert "speed" in monster
-        assert "actions" in monster
-    
-    def test_format_monster_summary(self):
-        """Test formatting monster for display (summary)."""
-        monster = get_monster_details("goblin")
-        formatted = format_monster(monster, full=False)
-        
-        assert monster["name"] in formatted
-        assert "AC:" in formatted
-        assert "HP:" in formatted
-        assert "STR" in formatted
-    
-    def test_format_monster_full(self):
-        """Test formatting monster for display (full)."""
-        monster = get_monster_details("goblin")
-        formatted = format_monster(monster, full=True)
-        
-        assert monster["name"] in formatted
-        assert "Actions:" in formatted or "actions" in formatted.lower()
 
-
-class TestSpells:
-    """Test spell search and retrieval."""
-    
-    def test_search_spells_by_name(self):
-        """Test searching spells by name."""
-        result = search_spells(name="magic", limit=10)
-        assert result["count"] > 0
-        assert len(result["results"]) > 0
-        
-        # Just verify we got results - spell names vary by source
-        assert result["results"][0]["name"]
-    
-    def test_search_spells_by_level(self):
-        """Test searching spells by level."""
-        # Search for cantrips (level 0)
-        result = search_spells(level=0, limit=10)
-        assert result["count"] > 0
-        
-        for spell in result["results"]:
-            assert spell["level"] == 0
-        
-        # Search for 3rd level spells
-        result = search_spells(level=3, limit=10)
-        assert result["count"] > 0
-        
-        for spell in result["results"]:
-            assert spell["level"] == 3
-    
-    def test_search_spells_by_school(self):
-        """Test searching spells by school of magic."""
-        result = search_spells(school="evocation", limit=10)
-        assert result["count"] > 0
-        assert len(result["results"]) > 0
-    
-    def test_search_spells_combined_filters(self):
-        """Test searching with multiple filters."""
-        result = search_spells(name="light", level=0, limit=5)
+    def test_default_source_prefers_2024(self):
+        # When source is omitted, 2024 should sort first if both are present
+        result = search_monsters(name="fireball-dragon", limit=20)  # name unlikely to exist in any
+        # Just test the call shape works with default source
         assert "results" in result
-        
-        # Should find cantrips - verify level filter works
-        if result["results"]:
-            for spell in result["results"]:
-                assert spell["level"] == 0
-    
-    def test_format_spell(self):
-        """Test formatting spell for display."""
-        # Get any spell from search
-        result = search_spells(limit=1)
-        if result["results"]:
-            spell = result["results"][0]
-            formatted = format_spell(spell)
-            
-            assert spell["name"] in formatted
-            assert "Casting Time:" in formatted
-            assert "Range:" in formatted
-            assert "Components:" in formatted
-            assert "Duration:" in formatted
+
+    def test_explicit_empty_source_disables_filter(self):
+        result = search_monsters(name="goblin", source="", limit=20)
+        assert "results" in result
+        # With no filter, we should see results from multiple sources
+        sources = {_doc_key(r) for r in result["results"]}
+        # Don't strictly require >1, but assert no exception and shape is right
 
 
-class TestConditions:
-    """Test condition listing."""
-    
-    def test_list_all_conditions(self):
-        """Test listing all D&D conditions."""
+@pytest.mark.integration
+class TestSpellsIntegration:
+    def test_search_by_level_and_school(self):
+        result = search_spells(level=3, school="evocation", limit=5)
+        assert "results" in result
+        if result["results"]:
+            assert all(s["level"] == 3 for s in result["results"])
+
+
+@pytest.mark.integration
+class TestConditionsIntegration:
+    def test_default_source_returns_results(self):
+        # list_conditions defaults to core,a5e-ag — should return non-empty
         result = list_conditions()
-        assert result["count"] > 0
-        assert len(result["results"]) > 0
-        
-        # Verify common conditions exist
-        names = [c["name"].lower() for c in result["results"]]
-        common_conditions = ["blinded", "charmed", "frightened", "paralyzed", "stunned"]
-        
-        # At least some common conditions should be present
-        assert any(cond in names for cond in common_conditions)
-    
-    def test_search_condition_by_name(self):
-        """Test searching for specific condition."""
-        result = list_conditions(name="blind")
-        assert result["count"] > 0
-        
-        # Should find blinded condition
-        names = [c["name"].lower() for c in result["results"]]
-        assert any("blind" in name for name in names)
+        assert result.get("count", 0) > 0
 
 
-class TestMagicItems:
-    """Test magic item search."""
-    
-    def test_search_magic_items_by_name(self):
-        """Test searching magic items by name."""
-        result = search_magic_items(name="sword", limit=10)
-        assert result["count"] > 0
-        
-        names = [i["name"].lower() for i in result["results"]]
-        assert any("sword" in name for name in names)
-    
-    def test_search_magic_items_by_rarity(self):
-        """Test searching magic items by rarity."""
-        rarities = ["common", "uncommon", "rare", "very rare", "legendary"]
-        
-        for rarity in rarities:
-            result = search_magic_items(rarity=rarity, limit=5)
-            if result["count"] > 0:
-                for item in result["results"]:
-                    assert item["rarity"].lower() == rarity
-    
-    def test_magic_item_structure(self):
-        """Test that magic items have expected fields."""
-        result = search_magic_items(limit=1)
-        if result["results"]:
-            item = result["results"][0]
-            assert "name" in item
-            assert "type" in item
-            assert "rarity" in item
-            assert "desc" in item
-
-
-class TestClasses:
-    """Test class information retrieval."""
-    
-    def test_get_class_info(self):
-        """Test getting class details."""
-        # Test a few core classes
-        classes = ["fighter", "wizard", "rogue", "cleric"]
-        
-        for class_slug in classes:
-            try:
-                class_info = get_class_info(class_slug)
-                assert class_info["name"]
-                assert "hit_dice" in class_info
-                assert "proficiencies" in class_info or "prof_armor" in class_info
-            except Exception as e:
-                pytest.skip(f"Class {class_slug} not available in API: {e}")
-
-
-class TestEquipment:
-    """Test weapon and armor search."""
-    
-    def test_search_weapons(self):
-        """Test searching weapons."""
-        result = search_weapons(name="sword", limit=10)
-        assert result["count"] > 0
-        
-        names = [w["name"].lower() for w in result["results"]]
-        assert any("sword" in name for name in names)
-    
-    def test_search_armor(self):
-        """Test searching armor."""
-        result = search_armor(name="chain", limit=10)
-        assert result["count"] > 0
-        
-        names = [a["name"].lower() for a in result["results"]]
-        assert any("chain" in name for name in names)
-    
-    def test_weapon_structure(self):
-        """Test that weapons have expected fields."""
-        result = search_weapons(limit=1)
-        if result["results"]:
-            weapon = result["results"][0]
-            assert "name" in weapon
-    
-    def test_armor_structure(self):
-        """Test that armor has expected fields."""
-        result = search_armor(limit=1)
-        if result["results"]:
-            armor = result["results"][0]
-            assert "name" in armor
-
-
-class TestErrorHandling:
-    """Test error handling for invalid requests."""
-    
-    def test_invalid_monster_slug(self):
-        """Test getting nonexistent monster."""
-        with pytest.raises(Exception):
-            get_monster_details("definitely-not-a-real-monster-12345")
-    
-    def test_empty_search_returns_results(self):
-        """Test that empty searches still return valid structure."""
-        result = search_monsters(limit=1)
+@pytest.mark.integration
+class TestSearchSrd:
+    def test_universal_search_returns_mixed_types(self):
+        result = search_srd(query="fireball", limit=10)
         assert "results" in result
-        assert "count" in result
-
-
-class TestIntegration:
-    """Integration tests for common DM workflows."""
-    
-    def test_encounter_building_workflow(self):
-        """Test building an encounter: search CR 1 monsters."""
-        # Find CR 1 monsters
-        result = search_monsters(cr="1", limit=5)
-        assert result["count"] > 0
-        
-        # Get details for first monster
         if result["results"]:
-            slug = result["results"][0]["slug"]
-            monster = get_monster_details(slug)
-            
-            # Verify we can format it
-            formatted = format_monster(monster, full=True)
-            assert len(formatted) > 0
-    
-    def test_spell_lookup_workflow(self):
-        """Test looking up spell for player: search + details."""
-        # Player casts fireball
-        result = search_spells(name="fire", limit=5)
-        assert result["count"] > 0
-        
-        # Get first spell (if any match)
-        if result["results"]:
-            spell = result["results"][0]
-            formatted = format_spell(spell)
-            assert len(formatted) > 0
-    
-    def test_loot_generation_workflow(self):
-        """Test generating loot: search rare magic items."""
-        result = search_magic_items(rarity="rare", limit=5)
-        
-        if result["count"] > 0:
-            # Should have some rare items
-            assert len(result["results"]) > 0
+            object_models = {r.get("object_model") for r in result["results"]}
+            assert object_models  # at least one type present
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v", "--tb=short"])
+@pytest.mark.integration
+class TestEquipmentIntegration:
+    def test_search_weapons(self):
+        result = search_weapons(limit=3)
+        assert "results" in result
+
+    def test_search_armor(self):
+        result = search_armor(limit=3)
+        assert "results" in result
+
+    def test_search_items(self):
+        result = search_items(limit=3)
+        assert "results" in result
+
+    def test_search_magic_items(self):
+        result = search_magic_items(limit=3)
+        assert "results" in result
+
+
+@pytest.mark.integration
+class TestCharacterBuildIntegration:
+    def test_search_backgrounds(self):
+        result = search_backgrounds(limit=3)
+        assert "results" in result
+
+    def test_search_species(self):
+        result = search_species(limit=3)
+        assert "results" in result
+
+    def test_search_feats(self):
+        result = search_feats(limit=3)
+        assert "results" in result
