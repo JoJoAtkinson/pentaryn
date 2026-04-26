@@ -88,7 +88,15 @@ _FRONTMATTER_RE = re.compile(r"^---\s*\n(?P<body>.*?)\n---\s*\n?", re.DOTALL)
 
 
 def _split_frontmatter(text: str) -> tuple[dict[str, Any], str]:
-    """Return (frontmatter_dict, body). Frontmatter dict is best-effort YAML-lite."""
+    """Return (frontmatter_dict, body). Frontmatter parsing is YAML-lite:
+    - `key: value` → string value (quotes stripped)
+    - `key: [a, b, c]` or `key: ["a", "b"]` → list (parsed as JSON, with single
+      quotes coerced to double; falls back to comma-split if JSON fails). The
+      vault's dominant tag style is `tags: ["#world", "#faction"]`, so this
+      matters.
+    Multi-line YAML lists (`key:\n  - a\n  - b`) are NOT supported; only ~2
+    files use that form.
+    """
     m = _FRONTMATTER_RE.match(text)
     if not m:
         return {}, text
@@ -99,7 +107,24 @@ def _split_frontmatter(text: str) -> tuple[dict[str, Any], str]:
         if ":" not in line:
             continue
         key, _, value = line.partition(":")
-        fm[key.strip()] = value.strip().strip('"').strip("'")
+        key = key.strip()
+        value = value.strip()
+        if value.startswith("[") and value.endswith("]"):
+            # Inline array — try JSON parse, then a coerced variant, then split.
+            try:
+                fm[key] = json.loads(value)
+                continue
+            except json.JSONDecodeError:
+                pass
+            try:
+                fm[key] = json.loads(value.replace("'", '"'))
+                continue
+            except json.JSONDecodeError:
+                pass
+            inner = value[1:-1].strip()
+            fm[key] = [s.strip().strip('"').strip("'") for s in inner.split(",") if s.strip()]
+        else:
+            fm[key] = value.strip('"').strip("'")
     return fm, text[m.end():]
 
 
@@ -111,23 +136,73 @@ def _slugify(name: str) -> str:
 
 
 def _find_npc_file(name: str) -> Optional[Path]:
-    """Search common NPC/PC locations for a markdown file matching this name."""
+    """Search common NPC/PC locations for a markdown file matching this name.
+
+    Patterns cover:
+      - PCs:                    characters/player-characters/*<slug>*.md
+      - Central NPCs:           characters/npcs/<slug>.md
+      - Faction NPC folders:    world/factions/*/npcs/(**/)<slug>.md
+      - Faction sub-org folders world/factions/*/<sub>/(<slug>.md|*<slug>*.md)
+                                (e.g. elderholt/elders/, rakthok-horde/tribes/)
+      - Location-level NPCs:    world/factions/*/locations/**/(npcs/)<slug>.md
+                                AND world/factions/*/locations/**/<*<slug>*>.md
+                                (covers files like
+                                 .../ardenford/concordance-library/archivist-elarian-faenwynd.md
+                                 — no /npcs/ subdir, compound filename)
+      - Party members:          world/party/*/members/*<slug>*.md
+
+    Substring globs are used where filenames commonly compound the slug with
+    titles/locations (e.g. `archivist-elarian-faenwynd`,
+    `selise-dawnquill-silverbridge-arcana`); exact globs where the convention
+    is `<slug>.md`. Matches are deduped; ties broken by shortest path
+    (preferring the most-canonical home).
+    """
     slug = _slugify(name)
     if not slug:
         return None
     candidates: list[Path] = []
-    # Player characters use first-name-last-name slugs but also <player>-<character>.md
+    # PCs (compound slugs)
     candidates.extend(_PCS_DIR.glob(f"*{slug}*.md"))
+    # Central NPCs (exact)
     candidates.extend(_NPCS_DIR.glob(f"{slug}.md"))
+    # Faction NPC folders — exact + nested
     candidates.extend(_REPO_ROOT.glob(f"world/factions/*/npcs/{slug}.md"))
     candidates.extend(_REPO_ROOT.glob(f"world/factions/*/npcs/**/{slug}.md"))
-    candidates.extend(_REPO_ROOT.glob(f"world/factions/*/locations/*/npcs/{slug}.md"))
-    # Skip narrative variants when a primary file is also present
-    primary = [p for p in candidates if not p.name.endswith(".narrative.md")]
-    chosen = primary or candidates
+    # Faction sub-org folders (elders/, tribes/, etc.) — both exact and substring
+    candidates.extend(_REPO_ROOT.glob(f"world/factions/*/*/{slug}.md"))
+    candidates.extend(_REPO_ROOT.glob(f"world/factions/*/*/*{slug}*.md"))
+    # Location-level NPCs at any depth, with or without /npcs/ subdir
+    candidates.extend(_REPO_ROOT.glob(f"world/factions/*/locations/**/npcs/{slug}.md"))
+    candidates.extend(_REPO_ROOT.glob(f"world/factions/*/locations/**/{slug}.md"))
+    candidates.extend(_REPO_ROOT.glob(f"world/factions/*/locations/**/*{slug}*.md"))
+    # Party members
+    candidates.extend(_REPO_ROOT.glob(f"world/party/*/members/{slug}.md"))
+    candidates.extend(_REPO_ROOT.glob(f"world/party/*/members/*{slug}*.md"))
+    # Dedupe (a single file may match multiple globs)
+    seen: set[Path] = set()
+    deduped: list[Path] = []
+    for p in candidates:
+        if p not in seen:
+            seen.add(p)
+            deduped.append(p)
+    # Skip narrative/sidecar variants when a primary file is also present
+    primary = [p for p in deduped if not _is_sidecar(p, deduped)]
+    chosen = primary or deduped
     if not chosen:
         return None
-    return sorted(chosen, key=lambda p: len(p.parts))[0]
+    return sorted(chosen, key=lambda p: (len(p.parts), len(p.name)))[0]
+
+
+def _is_sidecar(p: Path, all_candidates: list[Path]) -> bool:
+    """A file is a sidecar if its name has a secondary suffix
+    (e.g., `dan-fletcher.narrative.md`) and a primary peer
+    (`dan-fletcher.md`) exists in the same directory among candidates."""
+    name = p.name
+    if name.count(".") < 2 or not name.endswith(".md"):
+        return False
+    parent = p.parent
+    primary_name = name.split(".", 1)[0] + ".md"
+    return any(c.parent == parent and c.name == primary_name for c in all_candidates)
 
 
 # --- Tool implementations ----------------------------------------------------
@@ -163,8 +238,23 @@ def search_npcs(
 
 
 def get_npc(name: str) -> dict[str, Any]:
-    """Look up an NPC/PC by name. Returns the registry row plus any matching
-    markdown file (frontmatter + body). If no .md file is found, just the row."""
+    """Look up an NPC/PC by name. Returns the registry row + matching markdown
+    file (frontmatter + body) if either is found.
+
+    Match priority:
+      1. Registry: exact name → prefix → substring (case-insensitive)
+      2. If registry empty, falls back to file-system search (`_find_npc_file`)
+         using the user's name as a slug. This finds vault NPCs that aren't
+         in `character-registry.tsv` (e.g., NPCs defined only as a markdown
+         file under a faction location).
+
+    Returns:
+      {"registry": <row|None>, "matched_count": int, "file": {...}|absent,
+       "other_matches": [...]?}
+
+    Raises ValueError ONLY when neither the registry nor the file system has
+    any match.
+    """
     rows = _load_registry()
     name_lower = name.lower().strip()
     # Prefer exact match, then prefix, then substring
@@ -172,13 +262,19 @@ def get_npc(name: str) -> dict[str, Any]:
     prefix = [r for r in rows if r.name.lower().startswith(name_lower)] if not exact else []
     contains = [r for r in rows if name_lower in r.name.lower()] if not (exact or prefix) else []
     candidates = exact or prefix or contains
-    if not candidates:
-        raise ValueError(f"No registry entry found for {name!r}")
-    row = candidates[0]
-    out: dict[str, Any] = {"registry": row.to_dict(), "matched_count": len(candidates)}
-    if len(candidates) > 1:
-        out["other_matches"] = [r.name for r in candidates[1:5]]
-    md_path = _find_npc_file(row.name)
+
+    out: dict[str, Any] = {"registry": None, "matched_count": len(candidates)}
+
+    if candidates:
+        row = candidates[0]
+        out["registry"] = row.to_dict()
+        if len(candidates) > 1:
+            out["other_matches"] = [r.name for r in candidates[1:5]]
+        md_path = _find_npc_file(row.name)
+    else:
+        # No registry entry — fall back to file-system search by user-given name.
+        md_path = _find_npc_file(name)
+
     if md_path is not None and md_path.exists():
         text = md_path.read_text(encoding="utf-8")
         fm, body = _split_frontmatter(text)
@@ -187,6 +283,12 @@ def get_npc(name: str) -> dict[str, Any]:
             "frontmatter": fm,
             "body": body.strip(),
         }
+
+    if not candidates and "file" not in out:
+        raise ValueError(
+            f"No registry entry or markdown file found for {name!r}. "
+            f"Try `find_lore(query={name!r})` for free-text search."
+        )
     return out
 
 
@@ -270,7 +372,13 @@ def find_lore(
     if not roots:
         roots = [_REPO_ROOT]
 
-    skip_dirs = {".git", ".venv", "venv", "__pycache__", ".history", ".cache", ".output", ".artifacts", "node_modules"}
+    skip_dirs = {
+        ".git", ".venv", "venv", "__pycache__", ".history", ".cache",
+        ".output", ".artifacts", "node_modules",
+        # Local-only working directory; gitignored. Includes meta-noise
+        # (procedure docs, runner logs) that pollutes campaign searches.
+        "temp",
+    }
     needle = query if case_sensitive else query.lower()
 
     hits: list[dict[str, Any]] = []
@@ -326,7 +434,11 @@ MCP_TOOLS = [
             "`type` is 'PC' or 'NPC'. `affiliation` searches the Notes column "
             "(e.g., 'Black Ledger', 'Shardrunners', 'Inkbound'). "
             "Examples: search_npcs(origin='Elderholt'), search_npcs(affiliation='Black Ledger'), "
-            "search_npcs(race='Derro')."
+            "search_npcs(race='Derro'). "
+            "QUIRK: the registry is incomplete relative to the vault — many NPCs exist "
+            "as markdown files under world/factions/ without a registry row. "
+            "`search_npcs` will MISS those. For coverage, also try `find_lore(query=...)` "
+            "or `get_npc(name=...)` (which now falls back to file search)."
         ),
         "annotations": {"title": "Search Campaign NPCs", **_RO_LOCAL},
         "argv": ["--mcp-tool", "search_npcs"],
@@ -354,11 +466,18 @@ MCP_TOOLS = [
     {
         "name": "get_npc",
         "description": (
-            "Get a campaign NPC or PC by name. Returns the registry row and, if a markdown file "
-            "exists for them (PC under characters/player-characters/, NPC under any "
-            "world/factions/<faction>/npcs/<name>.md or characters/npcs/), the file's frontmatter and body. "
-            "Match priority: exact > prefix > substring. "
-            "If multiple matches, returns the first plus a list of the other matched names."
+            "Get a campaign NPC or PC by name. Returns:\n"
+            "  {registry: <row|None>, matched_count: int, file?: {path, frontmatter, body}, other_matches?: [...]}\n"
+            "Resolution order:\n"
+            "  1. Registry (character-registry.tsv) — exact > prefix > substring (case-insensitive).\n"
+            "  2. If no registry match, falls back to file-system search across the vault: "
+            "characters/{player-characters,npcs}/, world/factions/*/npcs/(**/), "
+            "world/factions/*/locations/**/(npcs/), world/factions/*/(elders|tribes)/, "
+            "world/party/*/members/. Substring filename match is used for compound slugs.\n"
+            "Raises ValueError ONLY when both registry and file system come up empty. "
+            "QUIRK: with the file-fallback path, `registry` may be None — always check it. "
+            "QUIRK: many real campaign NPCs (e.g., Elarian Faenwynd, Naelith, Khargrom-dur) live "
+            "as files only, with no registry row. The fallback finds them; `search_npcs` will not."
         ),
         "annotations": {"title": "Get NPC / PC details", **_RO_LOCAL},
         "argv": ["--mcp-tool", "get_npc", "{name}"],
@@ -376,7 +495,13 @@ MCP_TOOLS = [
             "Returns frontmatter and full body text. "
             "Available faction slugs: araethilion, ardenhaven, calderon-imperium, "
             "dulgarum-oathholds, elderholt, garhammar-trade-league, garrok-confederation, "
-            "merrowgate, rakthok-horde."
+            "merrowgate, rakthok-horde. "
+            "QUIRK: this only reads the top-level _overview.md. It does NOT traverse into "
+            "world/factions/<slug>/locations/ or npcs/. The overview's body may MENTION "
+            "places and people by name, but to enumerate them use "
+            "`find_lore(query='...', paths='world/factions/<slug>')` or shell out to a "
+            "directory listing. There is no `get_location` tool — locations are not "
+            "first-class in the tool surface."
         ),
         "annotations": {"title": "Get Faction Overview", **_RO_LOCAL},
         "argv": ["--mcp-tool", "get_faction_overview", "{slug}"],
@@ -411,7 +536,14 @@ MCP_TOOLS = [
             "Optional `paths` parameter restricts the search to subdirectories "
             "(comma-separated, e.g., 'world/factions,characters'). "
             "Returns matched files with surrounding snippets — fast triage tool when you need to find "
-            "any mention of a name/place/concept across the whole vault."
+            "any mention of a name/place/concept across the whole vault. "
+            "QUIRK: returns AT MOST ONE snippet per file (the first match). If a name appears in 5 "
+            "places within one file, you'll see one snippet. Use the file path + open the file for "
+            "full context if needed. "
+            "QUIRK: skips common build/cache dirs (.git, .venv, __pycache__, .cache, .output, "
+            ".history, .artifacts, node_modules, temp). The 'temp' skip avoids the gitignored "
+            "scratch directory. Other gitignored paths (e.g., sessions/**/outputs) are NOT skipped "
+            "automatically."
         ),
         "annotations": {"title": "Find Lore (text search)", **_RO_LOCAL},
         "argv": ["--mcp-tool", "find_lore"],
