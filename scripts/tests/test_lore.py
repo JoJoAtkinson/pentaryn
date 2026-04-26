@@ -24,6 +24,7 @@ from scripts import lore as lore_module
 from scripts.lore import (
     MCP_HANDLERS,
     MCP_TOOLS,
+    _parse_flag_args,
     _slugify,
     _split_frontmatter,
 )
@@ -300,6 +301,188 @@ class TestRegistryMtimeCache:
 # ---------------------------------------------------------------------------
 # Tool / handler symmetry
 # ---------------------------------------------------------------------------
+
+
+class TestSplitFrontmatterMarkdown:
+    """Markdown-style metadata fallback (R2). Tags must always be a list."""
+
+    def test_backticked_tags_parse_to_list(self):
+        text = "**Tags:** `#faction` `#elven`\n**Status:** Active\n"
+        fm, _ = _split_frontmatter(text)
+        assert fm["tags"] == ["#faction", "#elven"]
+        assert fm["status"] == "Active"
+
+    def test_bare_tags_still_parse_to_list(self):
+        # When the author skipped backticks, fallback to whitespace/comma split.
+        text = "**Tags:** faction politics elven\n"
+        fm, _ = _split_frontmatter(text)
+        assert isinstance(fm["tags"], list)
+        assert fm["tags"] == ["faction", "politics", "elven"]
+
+    def test_comma_separated_tags(self):
+        text = "**Tags:** faction, politics, elven\n"
+        fm, _ = _split_frontmatter(text)
+        assert isinstance(fm["tags"], list)
+        assert "faction" in fm["tags"]
+
+
+class TestSearchNpcsValidation:
+    def test_negative_limit_rejected(self, fake_vault):
+        with pytest.raises(ValueError, match="limit must be a positive integer"):
+            lore_module.search_npcs(limit=-1)
+
+    def test_zero_limit_rejected(self, fake_vault):
+        with pytest.raises(ValueError, match="limit must be a positive integer"):
+            lore_module.search_npcs(limit=0)
+
+    def test_bool_limit_rejected(self, fake_vault):
+        # bool is a subclass of int; reject explicitly so True doesn't
+        # masquerade as 1 from a parser-without-value scenario.
+        with pytest.raises(ValueError, match="limit must be a positive integer"):
+            lore_module.search_npcs(limit=True)
+
+
+class TestFindLoreValidation:
+    def test_negative_limit_rejected(self, fake_vault):
+        with pytest.raises(ValueError, match="limit must be a positive integer"):
+            lore_module.find_lore(query="x", limit=-1)
+
+    def test_zero_limit_rejected(self, fake_vault):
+        with pytest.raises(ValueError, match="limit must be a positive integer"):
+            lore_module.find_lore(query="x", limit=0)
+
+    def test_bool_limit_rejected(self, fake_vault):
+        with pytest.raises(ValueError, match="limit must be a positive integer"):
+            lore_module.find_lore(query="x", limit=True)
+
+    def test_negative_context_chars_rejected(self, fake_vault):
+        with pytest.raises(ValueError, match="context_chars"):
+            lore_module.find_lore(query="x", context_chars=-1)
+
+    def test_overlapping_paths_dedupe(self, fake_vault, tmp_path):
+        # 'world,world/factions' should not double-count files inside factions.
+        result = lore_module.find_lore(
+            query="Calderon", paths="world,world/factions", limit=20
+        )
+        paths = [h["path"] for h in result["results"]]
+        assert len(paths) == len(set(paths))
+
+
+class TestGetFactionOverviewValidation:
+    def test_none_slug_rejected(self, fake_vault):
+        with pytest.raises(ValueError, match="slug must be a string"):
+            lore_module.get_faction_overview(None)  # type: ignore[arg-type]
+
+    def test_int_slug_rejected(self, fake_vault):
+        with pytest.raises(ValueError, match="slug must be a string"):
+            lore_module.get_faction_overview(5)  # type: ignore[arg-type]
+
+    def test_empty_slug_rejected(self, fake_vault):
+        with pytest.raises(ValueError, match="slug is empty"):
+            lore_module.get_faction_overview("")
+
+    def test_case_canonicalized(self, fake_vault):
+        # Capital input resolves identically to lowercase across platforms.
+        a = lore_module.get_faction_overview("calderon-imperium")
+        b = lore_module.get_faction_overview("Calderon-Imperium")
+        assert a["body"] == b["body"]
+
+
+class TestParseFlagArgs:
+    """CLI flag parser — exercised here because main()/_parse_flag_args
+    is the path where R6-review findings #1 and #2 lived."""
+
+    def test_value_flag_basic(self):
+        out = _parse_flag_args(
+            ["--query", "foo", "--limit", "5"],
+            value_flag_keys={"query", "limit"},
+            bool_flag_keys=set(),
+        )
+        assert out == {"query": "foo", "limit": 5}
+
+    def test_value_flag_missing_value_raises(self):
+        # Pre-fix this silently set limit=True (a bool that'd act as 1
+        # downstream and trigger early-return after one hit in find_lore).
+        with pytest.raises(ValueError, match="--limit requires a value"):
+            _parse_flag_args(
+                ["--query", "foo", "--limit"],
+                value_flag_keys={"query", "limit"},
+                bool_flag_keys=set(),
+            )
+
+    def test_bool_flag_bare_is_true(self):
+        out = _parse_flag_args(
+            ["--case-sensitive"],
+            value_flag_keys=set(),
+            bool_flag_keys={"case_sensitive"},
+        )
+        assert out == {"case_sensitive": True}
+
+    def test_bool_flag_explicit_false(self):
+        # Pre-fix this set case_sensitive='false' (a non-empty truthy string),
+        # which find_lore evaluated as case-sensitive — opposite of intent.
+        out = _parse_flag_args(
+            ["--query", "foo", "--case-sensitive", "false"],
+            value_flag_keys={"query"},
+            bool_flag_keys={"case_sensitive"},
+        )
+        assert out["case_sensitive"] is False
+        assert out["query"] == "foo"
+
+    def test_bool_flag_explicit_true_variants(self):
+        for variant in ("true", "True", "1", "yes", "on"):
+            out = _parse_flag_args(
+                ["--case-sensitive", variant],
+                value_flag_keys=set(),
+                bool_flag_keys={"case_sensitive"},
+            )
+            assert out["case_sensitive"] is True, f"variant {variant!r}"
+
+    def test_bool_flag_explicit_false_variants(self):
+        for variant in ("false", "False", "0", "no", "off"):
+            out = _parse_flag_args(
+                ["--case-sensitive", variant],
+                value_flag_keys=set(),
+                bool_flag_keys={"case_sensitive"},
+            )
+            assert out["case_sensitive"] is False, f"variant {variant!r}"
+
+    def test_legacy_no_context_remains_permissive(self):
+        # When called without flag-set context (existing direct callers,
+        # external scripts), the parser stays permissive: bare flag → True.
+        out = _parse_flag_args(["--something"])
+        assert out == {"something": True}
+
+    def test_int_keys_coerced_from_string(self):
+        out = _parse_flag_args(
+            ["--limit", "42", "--session", "3"],
+            value_flag_keys={"limit", "session"},
+            bool_flag_keys=set(),
+        )
+        assert out == {"limit": 42, "session": 3}
+
+
+class TestFindNpcFileShortSlugGuard:
+    """Substring globs over-match on short slugs; gate behind a length guard."""
+
+    def test_short_slug_does_not_overmatch(self, fake_vault, tmp_path):
+        # Add a faction NPC file whose name contains 'ar' as a substring.
+        # _find_npc_file('Ar') must not return it via substring-glob.
+        npc = tmp_path / "world" / "factions" / "calderon-imperium" / "npcs" / "ardilonius.md"
+        npc.write_text("---\ntags: [\"#npc\"]\n---\n# Ardilonius\n", encoding="utf-8")
+        # Slug for 'Ar' is 'ar' (2 chars, below the minimum substring length).
+        # Substring globs are skipped, so no file should be returned.
+        result = lore_module._find_npc_file("Ar")
+        assert result is None
+
+    def test_long_slug_still_finds_compound_filenames(self, fake_vault, tmp_path):
+        # 4+ char slug should still find compound-name files via substring.
+        npc = tmp_path / "world" / "factions" / "ardenhaven" / "locations" / "ardenford" / "concordance-library" / "archivist-elara-windward.md"
+        npc.parent.mkdir(parents=True, exist_ok=True)
+        npc.write_text("---\ntags: [\"#npc\"]\n---\n# Elara Windward\n", encoding="utf-8")
+        result = lore_module._find_npc_file("Elara")
+        assert result is not None
+        assert "elara" in result.name.lower()
 
 
 class TestToolDefinitions:
