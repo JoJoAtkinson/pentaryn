@@ -1849,8 +1849,17 @@ MCP_TOOLS = [
         "name": "search_weapons",
         "description": (
             "Search weapons (/v2/weapons/). Returns damage, properties, cost, weight. "
-            "Default behavior: searches all sources, ranks srd-2024 first, third-party middle, "
-            "srd-2014 last; same-name duplicates collapsed (dropped keys in `dropped_variants`)."
+            "Default ranks srd-2024 first, third-party middle, srd-2014 last; same-name "
+            "duplicates collapsed. "
+            "BOOLEAN FLAG SPARSENESS WARNING: is_finesse / is_versatile / is_light / "
+            "is_two_handed / is_thrown are SPARSELY POPULATED. Roughly half of weapons have "
+            "each flag set explicitly to True OR False; the rest are null. Solo filters "
+            "(e.g. is_versatile=True alone) are reliable. COMBINED boolean filters silently "
+            "OVER-EXCLUDE — e.g. is_versatile=True AND is_two_handed=False returns ~1 result "
+            "because most versatile weapons have is_two_handed=null, not False. "
+            "Reliable ground truth for properties is each weapon's `properties` array (look "
+            "for properties[i].property.name like 'Finesse', 'Versatile', 'Two-Handed'). For "
+            "comprehensive property queries, fetch a wide list and grep client-side."
         ),
         "annotations": {"title": "Search Weapons (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_weapons"],
