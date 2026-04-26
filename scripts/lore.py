@@ -33,6 +33,12 @@ _PCS_DIR = _REPO_ROOT / "characters" / "player-characters"
 _NPCS_DIR = _REPO_ROOT / "characters" / "npcs"
 _SESSIONS_DIR = _REPO_ROOT / "sessions"
 
+# `_find_npc_file` uses substring globs (`*<slug>*.md`) for compound-slug
+# filenames. Short slugs over-match (slug "ar" matches archivist-*, etc.),
+# so substring globs only fire when the slug is at least this long. Exact
+# globs (`<slug>.md`) run regardless.
+_MIN_SUBSTRING_SLUG_LEN = 4
+
 
 # --- Registry cache (mtime-checked) ------------------------------------------
 
@@ -85,22 +91,94 @@ def _load_registry() -> tuple[NpcRow, ...]:
 # --- Markdown helpers --------------------------------------------------------
 
 _FRONTMATTER_RE = re.compile(r"^---\s*\n(?P<body>.*?)\n---\s*\n?", re.DOTALL)
+# Markdown-style metadata used by faction _overview.md files and several other
+# documents that pre-date the YAML-frontmatter convention. Example:
+#   **Tags:** `#faction` `#organization`
+#   **Created:** 2025-12-07
+#   **Last Modified:** 2025-12-15
+#   **Status:** Active
+# In the wild the colon usually sits INSIDE the bold marks (`**Tags:**`),
+# but sometimes outside (`**Tags**:`). Tolerate both.
+_MD_META_RE = re.compile(
+    r"^\*\*(?P<key>Tags|Created|Last[ -]?Modified|Status):?\*\*\s*:?\s*(?P<value>.*)$",
+    re.IGNORECASE,
+)
+_MD_TAG_TOKEN_RE = re.compile(r"`(#?[A-Za-z0-9_/\-]+)`")
 
 
 def _split_frontmatter(text: str) -> tuple[dict[str, Any], str]:
-    """Return (frontmatter_dict, body). Frontmatter dict is best-effort YAML-lite."""
+    """Return (frontmatter_dict, body). Two formats supported:
+
+    (A) YAML frontmatter (between `---` fences), YAML-lite:
+        - `key: value` → string value (quotes stripped)
+        - `key: [a, b, c]` or `key: ["a", "b"]` → list (parsed as JSON, with
+          single quotes coerced to double; falls back to comma-split if JSON
+          fails). The vault's dominant tag style is `tags: ["#a", "#b"]`.
+        Multi-line YAML lists (`key:\\n  - a\\n  - b`) are NOT supported;
+        only ~2 files in the vault use that form.
+
+    (B) Markdown-style metadata (no YAML fences), used by ~50 vault files
+        including most faction _overview.md docs:
+            **Tags:** `#faction` `#organization`
+            **Created:** 2025-12-07
+            **Status:** Active
+        These are scanned in the first 30 lines of the body. `Tags` parses
+        backtick-wrapped tokens into a list. The body is returned unchanged
+        (the markdown-style metadata IS body content, just lifted into the
+        frontmatter dict for caller convenience).
+
+    Returns ({}, text) only if neither format is present.
+    """
     m = _FRONTMATTER_RE.match(text)
-    if not m:
-        return {}, text
-    fm: dict[str, Any] = {}
-    for line in m.group("body").splitlines():
-        if not line.strip() or line.lstrip().startswith("#"):
+    if m:
+        fm: dict[str, Any] = {}
+        for line in m.group("body").splitlines():
+            if not line.strip() or line.lstrip().startswith("#"):
+                continue
+            if ":" not in line:
+                continue
+            key, _, value = line.partition(":")
+            key = key.strip()
+            value = value.strip()
+            if value.startswith("[") and value.endswith("]"):
+                try:
+                    fm[key] = json.loads(value)
+                    continue
+                except json.JSONDecodeError:
+                    pass
+                try:
+                    fm[key] = json.loads(value.replace("'", '"'))
+                    continue
+                except json.JSONDecodeError:
+                    pass
+                inner = value[1:-1].strip()
+                fm[key] = [s.strip().strip('"').strip("'") for s in inner.split(",") if s.strip()]
+            else:
+                fm[key] = value.strip('"').strip("'")
+        return fm, text[m.end():]
+
+    # No YAML frontmatter — try markdown-style metadata in the first 30 lines.
+    fm = {}
+    for line in text.splitlines()[:30]:
+        mm = _MD_META_RE.match(line.strip())
+        if not mm:
             continue
-        if ":" not in line:
-            continue
-        key, _, value = line.partition(":")
-        fm[key.strip()] = value.strip().strip('"').strip("'")
-    return fm, text[m.end():]
+        key = mm.group("key").strip().lower().replace(" ", "-").replace("_", "-")
+        if key == "last-modified" or key == "lastmodified":
+            key = "last-modified"
+        value = mm.group("value").strip()
+        if key == "tags":
+            # Always return a list, per the documented contract. Backtick-
+            # wrapped tokens (`#world` `#faction`) are the canonical form;
+            # if the author wrote bare tokens (`#world #faction` or
+            # `world, faction`), split on whitespace/commas as a fallback.
+            tokens = _MD_TAG_TOKEN_RE.findall(value)
+            if not tokens:
+                tokens = [t.strip() for t in re.split(r"[,\s]+", value) if t.strip()]
+            fm[key] = tokens
+        else:
+            fm[key] = value
+    return fm, text
 
 
 def _slugify(name: str) -> str:
@@ -111,23 +189,85 @@ def _slugify(name: str) -> str:
 
 
 def _find_npc_file(name: str) -> Optional[Path]:
-    """Search common NPC/PC locations for a markdown file matching this name."""
+    """Search common NPC/PC locations for a markdown file matching this name.
+
+    Patterns cover:
+      - PCs:                    characters/player-characters/*<slug>*.md
+      - Central NPCs:           characters/npcs/<slug>.md
+      - Faction NPC folders:    world/factions/*/npcs/(**/)<slug>.md
+      - Faction sub-org folders world/factions/*/<sub>/(<slug>.md|*<slug>*.md)
+                                (e.g. elderholt/elders/, rakthok-horde/tribes/)
+      - Location-level NPCs:    world/factions/*/locations/**/(npcs/)<slug>.md
+                                AND world/factions/*/locations/**/<*<slug>*>.md
+                                (covers files like
+                                 .../ardenford/concordance-library/archivist-elarian-faenwynd.md
+                                 — no /npcs/ subdir, compound filename)
+      - Party members:          world/party/*/members/*<slug>*.md
+
+    Substring globs are used where filenames commonly compound the slug with
+    titles/locations (e.g. `archivist-elarian-faenwynd`,
+    `selise-dawnquill-silverbridge-arcana`); exact globs where the convention
+    is `<slug>.md`. Matches are deduped; ties broken by shortest path
+    (preferring the most-canonical home).
+    """
     slug = _slugify(name)
     if not slug:
         return None
+    # Substring globs (`*<slug>*.md`) over-match on short slugs: with a
+    # 2-char slug like "ar", `*ar*.md` matches archivist-*.md,
+    # araethilion-*.md, etc., and the shortest-path tiebreak might pick the
+    # wrong file. Gate substring globs behind a minimum slug length;
+    # exact-match globs run regardless.
+    use_substring = len(slug) >= _MIN_SUBSTRING_SLUG_LEN
     candidates: list[Path] = []
-    # Player characters use first-name-last-name slugs but also <player>-<character>.md
-    candidates.extend(_PCS_DIR.glob(f"*{slug}*.md"))
+    # PCs — compound slugs are the convention; substring is necessary here.
+    if use_substring:
+        candidates.extend(_PCS_DIR.glob(f"*{slug}*.md"))
+    else:
+        candidates.extend(_PCS_DIR.glob(f"{slug}.md"))
+    # Central NPCs (exact)
     candidates.extend(_NPCS_DIR.glob(f"{slug}.md"))
+    # Faction NPC folders — exact + nested
     candidates.extend(_REPO_ROOT.glob(f"world/factions/*/npcs/{slug}.md"))
     candidates.extend(_REPO_ROOT.glob(f"world/factions/*/npcs/**/{slug}.md"))
-    candidates.extend(_REPO_ROOT.glob(f"world/factions/*/locations/*/npcs/{slug}.md"))
-    # Skip narrative variants when a primary file is also present
-    primary = [p for p in candidates if not p.name.endswith(".narrative.md")]
-    chosen = primary or candidates
+    # Faction sub-org folders (elders/, tribes/, etc.)
+    candidates.extend(_REPO_ROOT.glob(f"world/factions/*/*/{slug}.md"))
+    if use_substring:
+        candidates.extend(_REPO_ROOT.glob(f"world/factions/*/*/*{slug}*.md"))
+    # Location-level NPCs at any depth, with or without /npcs/ subdir
+    candidates.extend(_REPO_ROOT.glob(f"world/factions/*/locations/**/npcs/{slug}.md"))
+    candidates.extend(_REPO_ROOT.glob(f"world/factions/*/locations/**/{slug}.md"))
+    if use_substring:
+        candidates.extend(_REPO_ROOT.glob(f"world/factions/*/locations/**/*{slug}*.md"))
+    # Party members
+    candidates.extend(_REPO_ROOT.glob(f"world/party/*/members/{slug}.md"))
+    if use_substring:
+        candidates.extend(_REPO_ROOT.glob(f"world/party/*/members/*{slug}*.md"))
+    # Dedupe (a single file may match multiple globs)
+    seen: set[Path] = set()
+    deduped: list[Path] = []
+    for p in candidates:
+        if p not in seen:
+            seen.add(p)
+            deduped.append(p)
+    # Skip narrative/sidecar variants when a primary file is also present
+    primary = [p for p in deduped if not _is_sidecar(p, deduped)]
+    chosen = primary or deduped
     if not chosen:
         return None
-    return sorted(chosen, key=lambda p: len(p.parts))[0]
+    return sorted(chosen, key=lambda p: (len(p.parts), len(p.name)))[0]
+
+
+def _is_sidecar(p: Path, all_candidates: list[Path]) -> bool:
+    """A file is a sidecar if its name has a secondary suffix
+    (e.g., `dan-fletcher.narrative.md`) and a primary peer
+    (`dan-fletcher.md`) exists in the same directory among candidates."""
+    name = p.name
+    if name.count(".") < 2 or not name.endswith(".md"):
+        return False
+    parent = p.parent
+    primary_name = name.split(".", 1)[0] + ".md"
+    return any(c.parent == parent and c.name == primary_name for c in all_candidates)
 
 
 # --- Tool implementations ----------------------------------------------------
@@ -142,7 +282,14 @@ def search_npcs(
 ) -> dict[str, Any]:
     """Filter the character-registry.tsv. All filters are case-insensitive substring
     matches; pass any subset. `affiliation` matches the free-form Notes column
-    (e.g., 'Black Ledger', 'Shardrunners'). `type` is 'PC' or 'NPC'."""
+    (e.g., 'Black Ledger', 'Shardrunners'). `type` is 'PC' or 'NPC'.
+
+    `limit` must be a positive integer. Negative values would produce
+    surprising slice semantics (`matched[:-1]` drops the last result), so
+    they're rejected explicitly.
+    """
+    if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
+        raise ValueError(f"limit must be a positive integer (got {limit!r})")
     rows = _load_registry()
 
     def matches(row: NpcRow) -> bool:
@@ -163,8 +310,24 @@ def search_npcs(
 
 
 def get_npc(name: str) -> dict[str, Any]:
-    """Look up an NPC/PC by name. Returns the registry row plus any matching
-    markdown file (frontmatter + body). If no .md file is found, just the row."""
+    """Look up an NPC/PC by name. Returns the registry row + matching markdown
+    file (frontmatter + body) if either is found.
+
+    Match priority:
+      1. Registry: exact name → prefix → substring (case-insensitive)
+      2. If there is no registry match for the requested name, falls back to
+         file-system search (`_find_npc_file`) using the user's name as a
+         slug. This finds vault NPCs that aren't in `character-registry.tsv`
+         (e.g., NPCs defined only as a markdown file under a faction
+         location).
+
+    Returns:
+      {"registry": <row|None>, "matched_count": int, "file": {...}|absent,
+       "other_matches": [...]?}
+
+    Raises ValueError ONLY when neither the registry nor the file system has
+    any match.
+    """
     rows = _load_registry()
     name_lower = name.lower().strip()
     # Prefer exact match, then prefix, then substring
@@ -172,13 +335,19 @@ def get_npc(name: str) -> dict[str, Any]:
     prefix = [r for r in rows if r.name.lower().startswith(name_lower)] if not exact else []
     contains = [r for r in rows if name_lower in r.name.lower()] if not (exact or prefix) else []
     candidates = exact or prefix or contains
-    if not candidates:
-        raise ValueError(f"No registry entry found for {name!r}")
-    row = candidates[0]
-    out: dict[str, Any] = {"registry": row.to_dict(), "matched_count": len(candidates)}
-    if len(candidates) > 1:
-        out["other_matches"] = [r.name for r in candidates[1:5]]
-    md_path = _find_npc_file(row.name)
+
+    out: dict[str, Any] = {"registry": None, "matched_count": len(candidates)}
+
+    if candidates:
+        row = candidates[0]
+        out["registry"] = row.to_dict()
+        if len(candidates) > 1:
+            out["other_matches"] = [r.name for r in candidates[1:5]]
+        md_path = _find_npc_file(row.name)
+    else:
+        # No registry entry — fall back to file-system search by user-given name.
+        md_path = _find_npc_file(name)
+
     if md_path is not None and md_path.exists():
         text = md_path.read_text(encoding="utf-8")
         fm, body = _split_frontmatter(text)
@@ -187,12 +356,28 @@ def get_npc(name: str) -> dict[str, Any]:
             "frontmatter": fm,
             "body": body.strip(),
         }
+
+    if not candidates and "file" not in out:
+        raise ValueError(
+            f"No registry entry or markdown file found for {name!r}. "
+            f"Try `find_lore(query={name!r})` for free-text search."
+        )
     return out
 
 
 def get_faction_overview(slug: str) -> dict[str, Any]:
-    """Return the faction's _overview.md (frontmatter + body)."""
-    path = _FACTIONS_DIR / slug / "_overview.md"
+    """Return the faction's _overview.md (frontmatter + body).
+
+    The slug is canonicalized to lowercase before lookup so behavior is
+    identical on case-insensitive macOS/Windows filesystems and case-sensitive
+    Linux. ('Ardenhaven' and 'ardenhaven' both resolve.)
+    """
+    if not isinstance(slug, str):
+        raise ValueError(f"slug must be a string (got {type(slug).__name__})")
+    canonical = slug.lower().strip()
+    if not canonical:
+        raise ValueError("slug is empty")
+    path = _FACTIONS_DIR / canonical / "_overview.md"
     if not path.exists():
         available = sorted(p.name for p in _FACTIONS_DIR.iterdir() if p.is_dir())
         raise ValueError(f"No overview for {slug!r}. Available factions: {', '.join(available)}")
@@ -200,7 +385,7 @@ def get_faction_overview(slug: str) -> dict[str, Any]:
     fm, body = _split_frontmatter(text)
     return {
         "path": str(path.relative_to(_REPO_ROOT)),
-        "slug": slug,
+        "slug": canonical,
         "frontmatter": fm,
         "body": body.strip(),
     }
@@ -209,7 +394,23 @@ def get_faction_overview(slug: str) -> dict[str, Any]:
 def last_session_summary(session: Optional[int] = None) -> dict[str, Any]:
     """List all notes from a numbered session folder (default: highest-numbered).
     Returns each notes file's path and a short preview (first 600 chars). Pass
-    `session=N` to fetch session N specifically."""
+    `session=N` to fetch session N specifically.
+
+    Behavior:
+      - `session=None` (default): the highest-numbered session folder, regardless
+        of whether it has notes.
+      - `session=N`: that specific folder. If it exists but has no notes/ subdir
+        or no .md files inside, returns `notes_count=0` (no error). This is the
+        normal case for sessions that have only audio.m4a or are placeholder
+        folders.
+
+    Accepts int or numeric string for `session` (string is coerced via int()).
+    """
+    if isinstance(session, str):
+        try:
+            session = int(session)
+        except ValueError:
+            raise ValueError(f"`session` must be an integer (got {session!r})")
     sessions = sorted(
         (p for p in _SESSIONS_DIR.iterdir() if p.is_dir() and p.name.isdigit()),
         key=lambda p: int(p.name),
@@ -254,9 +455,19 @@ def find_lore(
 ) -> dict[str, Any]:
     """Substring search across vault markdown. `paths` is an optional
     comma-separated list of subpaths to restrict the search (e.g.,
-    'world/factions,characters'). Returns matched files with snippets."""
+    'world/factions,characters'). Returns matched files with snippets.
+
+    `limit` must be a positive integer; `context_chars` must be a non-negative
+    integer. Bool inputs (e.g., the `True` you'd get from a flag-without-value
+    in the CLI parser) are rejected explicitly so they don't masquerade as
+    integer 1.
+    """
     if not query:
         raise ValueError("query is required")
+    if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
+        raise ValueError(f"limit must be a positive integer (got {limit!r})")
+    if not isinstance(context_chars, int) or isinstance(context_chars, bool) or context_chars < 0:
+        raise ValueError(f"context_chars must be a non-negative integer (got {context_chars!r})")
 
     roots: list[Path] = []
     if paths:
@@ -265,12 +476,28 @@ def find_lore(
             if not p:
                 continue
             full = (_REPO_ROOT / p).resolve()
-            if full.exists() and _REPO_ROOT in full.parents or full == _REPO_ROOT:
+            if (full.exists() and _REPO_ROOT in full.parents) or full == _REPO_ROOT:
                 roots.append(full)
     if not roots:
         roots = [_REPO_ROOT]
+    # Drop nested roots: if `paths='world,world/factions'`, walking both
+    # would yield the same file twice. Sort by depth and keep only roots
+    # that aren't descendants of an already-kept root.
+    roots = sorted(set(roots), key=lambda p: len(p.parts))
+    deduped: list[Path] = []
+    for r in roots:
+        if any(other == r or other in r.parents for other in deduped):
+            continue
+        deduped.append(r)
+    roots = deduped
 
-    skip_dirs = {".git", ".venv", "venv", "__pycache__", ".history", ".cache", ".output", ".artifacts", "node_modules"}
+    skip_dirs = {
+        ".git", ".venv", "venv", "__pycache__", ".history", ".cache",
+        ".output", ".artifacts", "node_modules",
+        # Local-only working directory; gitignored. Includes meta-noise
+        # (procedure docs, runner logs) that pollutes campaign searches.
+        "temp",
+    }
     needle = query if case_sensitive else query.lower()
 
     hits: list[dict[str, Any]] = []
@@ -326,7 +553,11 @@ MCP_TOOLS = [
             "`type` is 'PC' or 'NPC'. `affiliation` searches the Notes column "
             "(e.g., 'Black Ledger', 'Shardrunners', 'Inkbound'). "
             "Examples: search_npcs(origin='Elderholt'), search_npcs(affiliation='Black Ledger'), "
-            "search_npcs(race='Derro')."
+            "search_npcs(race='Derro'). "
+            "QUIRK: the registry is incomplete relative to the vault — many NPCs exist "
+            "as markdown files under world/factions/ without a registry row. "
+            "`search_npcs` will MISS those. For coverage, also try `find_lore(query=...)` "
+            "or `get_npc(name=...)` (which now falls back to file search)."
         ),
         "annotations": {"title": "Search Campaign NPCs", **_RO_LOCAL},
         "argv": ["--mcp-tool", "search_npcs"],
@@ -354,11 +585,18 @@ MCP_TOOLS = [
     {
         "name": "get_npc",
         "description": (
-            "Get a campaign NPC or PC by name. Returns the registry row and, if a markdown file "
-            "exists for them (PC under characters/player-characters/, NPC under any "
-            "world/factions/<faction>/npcs/<name>.md or characters/npcs/), the file's frontmatter and body. "
-            "Match priority: exact > prefix > substring. "
-            "If multiple matches, returns the first plus a list of the other matched names."
+            "Get a campaign NPC or PC by name. Returns:\n"
+            "  {registry: <row|None>, matched_count: int, file?: {path, frontmatter, body}, other_matches?: [...]}\n"
+            "Resolution order:\n"
+            "  1. Registry (character-registry.tsv) — exact > prefix > substring (case-insensitive).\n"
+            "  2. If no registry match, falls back to file-system search across the vault: "
+            "characters/{player-characters,npcs}/, world/factions/*/npcs/(**/), "
+            "world/factions/*/locations/**/(npcs/), world/factions/*/(elders|tribes)/, "
+            "world/party/*/members/. Substring filename match is used for compound slugs.\n"
+            "Raises ValueError ONLY when both registry and file system come up empty. "
+            "QUIRK: with the file-fallback path, `registry` may be None — always check it. "
+            "QUIRK: many real campaign NPCs (e.g., Elarian Faenwynd, Naelith, Khargrom-dur) live "
+            "as files only, with no registry row. The fallback finds them; `search_npcs` will not."
         ),
         "annotations": {"title": "Get NPC / PC details", **_RO_LOCAL},
         "argv": ["--mcp-tool", "get_npc", "{name}"],
@@ -376,7 +614,18 @@ MCP_TOOLS = [
             "Returns frontmatter and full body text. "
             "Available faction slugs: araethilion, ardenhaven, calderon-imperium, "
             "dulgarum-oathholds, elderholt, garhammar-trade-league, garrok-confederation, "
-            "merrowgate, rakthok-horde."
+            "merrowgate, rakthok-horde. "
+            "Slug input is canonicalized to lowercase, so 'Ardenhaven' and 'ardenhaven' "
+            "both resolve identically on every platform. "
+            "Frontmatter parsing handles both YAML (`---`-fenced) and the markdown-style "
+            "`**Tags:** \\`#a\\` \\`#b\\` / **Created:** ... / **Status:** ...` form used "
+            "by 8 of 9 faction overviews. `frontmatter['tags']` is always a list when present. "
+            "QUIRK: this only reads the top-level _overview.md. It does NOT traverse into "
+            "world/factions/<slug>/locations/ or npcs/. The overview's body may MENTION "
+            "places and people by name, but to enumerate them use "
+            "`find_lore(query='...', paths='world/factions/<slug>')` or shell out to a "
+            "directory listing. There is no `get_location` tool — locations are not "
+            "first-class in the tool surface."
         ),
         "annotations": {"title": "Get Faction Overview", **_RO_LOCAL},
         "argv": ["--mcp-tool", "get_faction_overview", "{slug}"],
@@ -393,7 +642,13 @@ MCP_TOOLS = [
             "List notes from a numbered session folder. By default returns the highest-numbered "
             "session (the most recent). Pass `session=N` for a specific session number. "
             "Returns each note's path, frontmatter, and a 600-char preview — useful for session "
-            "prep / recall without dumping every full note into context."
+            "prep / recall without dumping every full note into context. "
+            "QUIRK: many session folders contain only audio (audio.m4a) and have no notes/ "
+            "subdir; for those `notes_count` is 0 and `notes` is empty — NOT an error. "
+            "QUIRK: For cross-session NPC callbacks, use `find_lore(query='<name>', "
+            "paths='sessions')` instead of iterating session by session. The vault also has a "
+            "parallel narrative tree under `story/` (e.g., `story/the-compass-edge/`) with "
+            "session summaries written from in-character perspectives."
         ),
         "annotations": {"title": "Last Session Notes", **_RO_LOCAL},
         "argv": ["--mcp-tool", "last_session_summary"],
@@ -411,7 +666,22 @@ MCP_TOOLS = [
             "Optional `paths` parameter restricts the search to subdirectories "
             "(comma-separated, e.g., 'world/factions,characters'). "
             "Returns matched files with surrounding snippets — fast triage tool when you need to find "
-            "any mention of a name/place/concept across the whole vault."
+            "any mention of a name/place/concept across the whole vault. "
+            "QUIRK: this is a raw substring match. There is NO word-boundary tokenization. "
+            "Bare query 'writ' will match 'write', 'written', 'writer', 'rewrite', and many more. "
+            "Disambiguate by using a longer phrase ('writ board', 'Posted by'), the surrounding "
+            "punctuation/syntax ('writ-', '\"Write '), or a unique nearby word. "
+            "QUIRK: substring match is case-insensitive (by default) but punctuation-sensitive. "
+            "'CR-1' does not match 'cr1' or 'CR: 1'. Vault conventions often diverge between "
+            "slugs/tags ('cr1', 'restless-dead-cr1') and body prose ('CR: 1', 'Restless Dead'). "
+            "When a query returns 0 hits, try the slug form, the dashed form, and the spaced form. "
+            "QUIRK: returns AT MOST ONE snippet per file (the first match). If a name appears in 5 "
+            "places within one file, you'll see one snippet. Use the file path + open the file for "
+            "full context if needed. "
+            "QUIRK: skips common build/cache dirs (.git, .venv, __pycache__, .cache, .output, "
+            ".history, .artifacts, node_modules, temp). The 'temp' skip avoids the gitignored "
+            "scratch directory. Other gitignored paths (e.g., sessions/**/outputs) are NOT skipped "
+            "automatically."
         ),
         "annotations": {"title": "Find Lore (text search)", **_RO_LOCAL},
         "argv": ["--mcp-tool", "find_lore"],
@@ -449,7 +719,29 @@ MCP_HANDLERS = {
 
 # --- Subprocess fallback ----------------------------------------------------
 
-def _parse_flag_args(tokens: list[str]) -> dict[str, Any]:
+_BOOL_TRUE = {"true", "1", "yes", "y", "on"}
+_BOOL_FALSE = {"false", "0", "no", "n", "off"}
+
+
+def _parse_flag_args(
+    tokens: list[str],
+    *,
+    bool_flag_keys: Optional[set[str]] = None,
+    value_flag_keys: Optional[set[str]] = None,
+) -> dict[str, Any]:
+    """Parse `--key value` and `--bool-flag` style argv into a dict.
+
+    When `bool_flag_keys` and `value_flag_keys` are supplied (the tool's
+    declared flag set), the parser is stricter:
+      - A bare value flag (no following value) raises ValueError. Pre-fix,
+        this silently set `key=True`, which is an int subclass and would
+        masquerade as a positive integer downstream.
+      - A bool flag followed by a literal "true"/"false"/"1"/"0"/"yes"/"no"
+        consumes that token and converts to a real bool. Pre-fix, the
+        non-empty string was carried through and treated as truthy.
+      - A bare bool flag (no following value) defaults to True.
+    Without those sets, the parser is permissive (legacy behavior).
+    """
     out: dict[str, Any] = {}
     i = 0
     while i < len(tokens):
@@ -458,12 +750,37 @@ def _parse_flag_args(tokens: list[str]) -> dict[str, Any]:
             i += 1
             continue
         key = token[2:].replace("-", "_")
-        if i + 1 < len(tokens) and not tokens[i + 1].startswith("--"):
-            out[key] = tokens[i + 1]
+        next_token = tokens[i + 1] if i + 1 < len(tokens) else None
+        next_is_value = next_token is not None and not next_token.startswith("--")
+
+        if bool_flag_keys is not None and key in bool_flag_keys:
+            # A bool flag may consume the next token if it's a clear
+            # true/false literal; otherwise treat it as bare → True.
+            if next_is_value and next_token is not None and next_token.lower() in _BOOL_TRUE:
+                out[key] = True
+                i += 2
+            elif next_is_value and next_token is not None and next_token.lower() in _BOOL_FALSE:
+                out[key] = False
+                i += 2
+            else:
+                out[key] = True
+                i += 1
+        elif value_flag_keys is not None and key in value_flag_keys:
+            if not next_is_value or next_token is None:
+                raise ValueError(f"--{token[2:]} requires a value")
+            out[key] = next_token
             i += 2
         else:
-            out[key] = True
-            i += 1
+            # Permissive fallback for unknown keys (e.g., the parser is
+            # called with no flag-set context, as in the existing direct
+            # callers and tests).
+            if next_is_value and next_token is not None:
+                out[key] = next_token
+                i += 2
+            else:
+                out[key] = True
+                i += 1
+
     for int_key in ("limit", "session", "context_chars"):
         if int_key in out and isinstance(out[int_key], str):
             try:
@@ -490,7 +807,17 @@ def main() -> int:
             else:
                 rest = sys.argv[3:]
                 if rest and rest[0].startswith("--"):
-                    kwargs = _parse_flag_args(rest)
+                    # Look up the tool's declared flag sets so the parser can
+                    # treat bool/value flags correctly (true/false coercion;
+                    # error on missing values).
+                    tool_def = next((t for t in MCP_TOOLS if t["name"] == tool_name), {})
+                    value_flag_keys = set((tool_def.get("value_flags") or {}).keys())
+                    bool_flag_keys = set((tool_def.get("bool_flags") or {}).keys())
+                    kwargs = _parse_flag_args(
+                        rest,
+                        value_flag_keys=value_flag_keys,
+                        bool_flag_keys=bool_flag_keys,
+                    )
                 elif rest:
                     try:
                         kwargs = json.loads(rest[0])
