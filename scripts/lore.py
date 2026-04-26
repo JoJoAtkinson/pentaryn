@@ -315,10 +315,11 @@ def get_npc(name: str) -> dict[str, Any]:
 
     Match priority:
       1. Registry: exact name → prefix → substring (case-insensitive)
-      2. If registry empty, falls back to file-system search (`_find_npc_file`)
-         using the user's name as a slug. This finds vault NPCs that aren't
-         in `character-registry.tsv` (e.g., NPCs defined only as a markdown
-         file under a faction location).
+      2. If there is no registry match for the requested name, falls back to
+         file-system search (`_find_npc_file`) using the user's name as a
+         slug. This finds vault NPCs that aren't in `character-registry.tsv`
+         (e.g., NPCs defined only as a markdown file under a faction
+         location).
 
     Returns:
       {"registry": <row|None>, "matched_count": int, "file": {...}|absent,
