@@ -126,13 +126,18 @@ def _resolve_source(
     - source="" / whitespace / "," → no filter, no priority sort (raw API order)
     - source="x"         → filter to x (single-source spec, sort is a no-op)
     - source="x,y"       → filter to x,y; rank x first, y second (user order wins)
+
+    Whitespace around comma-separated keys is stripped for both the filter and
+    the priority spec, so 'srd-2024, srd-2014' and 'srd-2024,srd-2014' behave
+    identically (Open5e tolerates the padded form, but we send the cleaned one
+    to keep filter and ranking in lockstep).
     """
     if source is None:
         return None, default
     keys = tuple(k.strip() for k in source.split(",") if k.strip())
     if not keys:
         return None, PrioritySpec()
-    return source, PrioritySpec(prefer=keys)
+    return ",".join(keys), PrioritySpec(prefer=keys)
 
 
 def _doc_key(entry: dict[str, Any]) -> str:
@@ -213,13 +218,79 @@ def _apply_priority_and_dedupe(
     return out
 
 
+# --- Filter helpers ----------------------------------------------------------
+# These are the building blocks every search_* function uses to translate Pythonic
+# kwargs into Open5e v2 query params. Open5e's filterset is Django-style: a field
+# `foo` with comparators uses `foo__lt`, `foo__lte`, `foo__gt`, `foo__gte`, and a
+# multi-value filter uses `foo__in` with a comma-separated string. Booleans accept
+# Python True/False (requests serializes to "True"/"False", which the API accepts).
+
+def _add_range(
+    extra: dict[str, Any],
+    base: str,
+    lo: Optional[float] = None,
+    hi: Optional[float] = None,
+) -> None:
+    """Inclusive numeric range: maps (lo, hi) to base__gte / base__lte."""
+    if lo is not None:
+        extra[f"{base}__gte"] = lo
+    if hi is not None:
+        extra[f"{base}__lte"] = hi
+
+
+def _add_bool(extra: dict[str, Any], key: str, value: Optional[bool]) -> None:
+    """Add boolean filter only when explicitly set (None means 'don't filter')."""
+    if value is not None:
+        extra[key] = value
+
+
+def _add_keys(extra: dict[str, Any], keys: Optional[str]) -> None:
+    """Batch-fetch by a comma-separated list of record keys (key__in)."""
+    if keys:
+        extra["key__in"] = keys
+
+
+def _add_has_fields(
+    extra: dict[str, Any], comma_list: Optional[str], template: str
+) -> None:
+    """For the Open5e `__isnull` boolean trick: a comma list of field names becomes
+    a series of `template.format(field)__isnull=False` filters. Used for matching
+    creatures that have specific saving throws or skill proficiencies."""
+    if not comma_list:
+        return
+    for f in (s.strip() for s in comma_list.split(",")):
+        if f:
+            extra[template.format(f) + "__isnull"] = False
+
+
 # --- Creatures (formerly v1 monsters) -----------------------------------------
 
 def search_monsters(
     name: Optional[str] = None,
     cr: Optional[str] = None,
+    cr_min: Optional[float] = None,
+    cr_max: Optional[float] = None,
     type: Optional[str] = None,
     size: Optional[str] = None,
+    ac_min: Optional[int] = None,
+    ac_max: Optional[int] = None,
+    strength_min: Optional[int] = None,
+    strength_max: Optional[int] = None,
+    dexterity_min: Optional[int] = None,
+    dexterity_max: Optional[int] = None,
+    constitution_min: Optional[int] = None,
+    constitution_max: Optional[int] = None,
+    intelligence_min: Optional[int] = None,
+    intelligence_max: Optional[int] = None,
+    wisdom_min: Optional[int] = None,
+    wisdom_max: Optional[int] = None,
+    charisma_min: Optional[int] = None,
+    charisma_max: Optional[int] = None,
+    passive_perception_min: Optional[int] = None,
+    passive_perception_max: Optional[int] = None,
+    has_saves: Optional[str] = None,
+    has_skills: Optional[str] = None,
+    keys: Optional[str] = None,
     source: Optional[str] = None,
     match: str = "partial",
     fields: Optional[str] = None,
@@ -232,10 +303,26 @@ def search_monsters(
     extra: dict[str, Any] = {}
     if cr is not None:
         extra["challenge_rating"] = cr
+    _add_range(extra, "challenge_rating", cr_min, cr_max)
     if type:
-        extra["type__key"] = type
+        # Open5e's /v2/creatures/ filterset uses bare `type` and `size` (not the
+        # __key suffix that other endpoints use — it's inconsistent per-endpoint).
+        extra["type"] = type
     if size:
-        extra["size__key"] = size
+        extra["size"] = size
+    _add_range(extra, "armor_class", ac_min, ac_max)
+    _add_range(extra, "ability_score_strength", strength_min, strength_max)
+    _add_range(extra, "ability_score_dexterity", dexterity_min, dexterity_max)
+    _add_range(extra, "ability_score_constitution", constitution_min, constitution_max)
+    _add_range(extra, "ability_score_intelligence", intelligence_min, intelligence_max)
+    _add_range(extra, "ability_score_wisdom", wisdom_min, wisdom_max)
+    _add_range(extra, "ability_score_charisma", charisma_min, charisma_max)
+    _add_range(extra, "passive_perception", passive_perception_min, passive_perception_max)
+    # `has_saves='dexterity,wisdom'` finds creatures with proficiency in those saves
+    # (i.e. saving_throw_X is not null). Same trick for skills.
+    _add_has_fields(extra, has_saves, "saving_throw_{}")
+    _add_has_fields(extra, has_skills, "skill_bonus_{}")
+    _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit, extra=extra,
@@ -252,7 +339,19 @@ def get_monster_details(key: str) -> dict[str, Any]:
 def search_spells(
     name: Optional[str] = None,
     level: Optional[int] = None,
+    level_min: Optional[int] = None,
+    level_max: Optional[int] = None,
     school: Optional[str] = None,
+    classes: Optional[str] = None,
+    concentration: Optional[bool] = None,
+    verbal: Optional[bool] = None,
+    somatic: Optional[bool] = None,
+    material: Optional[bool] = None,
+    material_consumed: Optional[bool] = None,
+    casting_time: Optional[str] = None,
+    range_min: Optional[int] = None,
+    range_max: Optional[int] = None,
+    keys: Optional[str] = None,
     source: Optional[str] = None,
     match: str = "partial",
     fields: Optional[str] = None,
@@ -265,8 +364,28 @@ def search_spells(
     extra: dict[str, Any] = {}
     if level is not None:
         extra["level"] = level
+    _add_range(extra, "level", level_min, level_max)
     if school:
+        # /v2/spells/ uses school__key (not bare `school`) — opposite of creatures.
         extra["school__key"] = school
+    if classes:
+        # `classes` accepts a comma list of FULL class keys (with source prefix:
+        # 'srd-2024_wizard,srd-2024_sorcerer'). Open5e's classes__key__in does
+        # NOT match bare 'wizard'; the prefix is required. Use search_classes to
+        # discover keys if needed. Multiple values are OR'd.
+        extra["classes__key__in"] = classes
+    _add_bool(extra, "concentration", concentration)
+    _add_bool(extra, "verbal", verbal)
+    _add_bool(extra, "somatic", somatic)
+    _add_bool(extra, "material", material)
+    _add_bool(extra, "material_consumed", material_consumed)
+    if casting_time:
+        # Enum keys: 'action', 'bonusaction', 'reaction', '1minute', '10minutes',
+        # '1hour', '8hours', '12hours', '24hours', '1week'. Unusual fields like '8hours'
+        # come from ritual / long-cast spells.
+        extra["casting_time"] = casting_time
+    _add_range(extra, "range", range_min, range_max)
+    _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit, extra=extra,
@@ -282,6 +401,7 @@ def get_spell_details(key: str) -> dict[str, Any]:
 
 def list_conditions(
     name: Optional[str] = None,
+    keys: Optional[str] = None,
     source: Optional[str] = None,
     match: str = "partial",
     fields: Optional[str] = None,
@@ -290,9 +410,11 @@ def list_conditions(
     dedupe: bool = True,
 ) -> dict[str, Any]:
     filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_CONDITIONS)
+    extra: dict[str, Any] = {}
+    _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        limit=limit,
+        limit=limit, extra=extra,
     )
     return _apply_priority_and_dedupe(_api_get("/v2/conditions/", params), spec, dedupe)
 
@@ -302,6 +424,21 @@ def list_conditions(
 def search_magic_items(
     name: Optional[str] = None,
     rarity: Optional[str] = None,
+    rarities: Optional[str] = None,
+    requires_attunement: Optional[bool] = None,
+    cost_min: Optional[float] = None,
+    cost_max: Optional[float] = None,
+    weight_min: Optional[float] = None,
+    weight_max: Optional[float] = None,
+    is_weapon: Optional[bool] = None,
+    is_armor: Optional[bool] = None,
+    is_light: Optional[bool] = None,
+    is_versatile: Optional[bool] = None,
+    is_thrown: Optional[bool] = None,
+    is_finesse: Optional[bool] = None,
+    is_two_handed: Optional[bool] = None,
+    desc_contains: Optional[str] = None,
+    keys: Optional[str] = None,
     source: Optional[str] = None,
     match: str = "partial",
     fields: Optional[str] = None,
@@ -313,7 +450,24 @@ def search_magic_items(
     filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
     extra: dict[str, Any] = {}
     if rarity:
-        extra["rarity__key"] = rarity
+        # /v2/magicitems/ filterset expects bare `rarity` (not __key — see search_monsters).
+        extra["rarity"] = rarity
+    if rarities:
+        # `rarities='rare,very-rare,legendary'` — multiple at once via `rarity__in`.
+        extra["rarity__in"] = rarities
+    _add_bool(extra, "requires_attunement", requires_attunement)
+    _add_range(extra, "cost", cost_min, cost_max)
+    _add_range(extra, "weight", weight_min, weight_max)
+    _add_bool(extra, "is_weapon", is_weapon)
+    _add_bool(extra, "is_armor", is_armor)
+    _add_bool(extra, "is_light", is_light)
+    _add_bool(extra, "is_versatile", is_versatile)
+    _add_bool(extra, "is_thrown", is_thrown)
+    _add_bool(extra, "is_finesse", is_finesse)
+    _add_bool(extra, "is_two_handed", is_two_handed)
+    if desc_contains:
+        extra["desc__icontains"] = desc_contains
+    _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit, extra=extra,
@@ -330,6 +484,20 @@ def get_magic_item(key: str) -> dict[str, Any]:
 def search_items(
     name: Optional[str] = None,
     category: Optional[str] = None,
+    categories: Optional[str] = None,
+    cost_min: Optional[float] = None,
+    cost_max: Optional[float] = None,
+    weight_min: Optional[float] = None,
+    weight_max: Optional[float] = None,
+    is_weapon: Optional[bool] = None,
+    is_armor: Optional[bool] = None,
+    is_light: Optional[bool] = None,
+    is_versatile: Optional[bool] = None,
+    is_thrown: Optional[bool] = None,
+    is_finesse: Optional[bool] = None,
+    is_two_handed: Optional[bool] = None,
+    desc_contains: Optional[str] = None,
+    keys: Optional[str] = None,
     source: Optional[str] = None,
     match: str = "partial",
     fields: Optional[str] = None,
@@ -341,7 +509,22 @@ def search_items(
     filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
     extra: dict[str, Any] = {}
     if category:
-        extra["category__key"] = category
+        # /v2/items/ filterset expects bare `category` (not __key — see search_monsters).
+        extra["category"] = category
+    if categories:
+        extra["category__in"] = categories
+    _add_range(extra, "cost", cost_min, cost_max)
+    _add_range(extra, "weight", weight_min, weight_max)
+    _add_bool(extra, "is_weapon", is_weapon)
+    _add_bool(extra, "is_armor", is_armor)
+    _add_bool(extra, "is_light", is_light)
+    _add_bool(extra, "is_versatile", is_versatile)
+    _add_bool(extra, "is_thrown", is_thrown)
+    _add_bool(extra, "is_finesse", is_finesse)
+    _add_bool(extra, "is_two_handed", is_two_handed)
+    if desc_contains:
+        extra["desc__icontains"] = desc_contains
+    _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
         ordering=ordering, limit=limit, extra=extra,
@@ -357,6 +540,9 @@ def get_item(key: str) -> dict[str, Any]:
 
 def search_classes(
     name: Optional[str] = None,
+    subclass_of: Optional[str] = None,
+    is_subclass: Optional[bool] = None,
+    keys: Optional[str] = None,
     source: Optional[str] = None,
     match: str = "partial",
     fields: Optional[str] = None,
@@ -366,9 +552,15 @@ def search_classes(
     dedupe: bool = True,
 ) -> dict[str, Any]:
     filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
+    extra: dict[str, Any] = {}
+    if subclass_of:
+        # `subclass_of='srd-2024_fighter'` returns Eldritch Knight, Battle Master, etc.
+        extra["subclass_of"] = subclass_of
+    _add_bool(extra, "is_subclass", is_subclass)
+    _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit,
+        ordering=ordering, limit=limit, extra=extra,
     )
     return _apply_priority_and_dedupe(_api_get("/v2/classes/", params), spec, dedupe)
 
@@ -381,6 +573,13 @@ def get_class_info(key: str) -> dict[str, Any]:
 
 def search_weapons(
     name: Optional[str] = None,
+    is_light: Optional[bool] = None,
+    is_versatile: Optional[bool] = None,
+    is_thrown: Optional[bool] = None,
+    is_finesse: Optional[bool] = None,
+    is_two_handed: Optional[bool] = None,
+    damage_dice: Optional[str] = None,
+    keys: Optional[str] = None,
     source: Optional[str] = None,
     match: str = "partial",
     fields: Optional[str] = None,
@@ -390,15 +589,33 @@ def search_weapons(
     dedupe: bool = True,
 ) -> dict[str, Any]:
     filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
+    extra: dict[str, Any] = {}
+    _add_bool(extra, "is_light", is_light)
+    _add_bool(extra, "is_versatile", is_versatile)
+    _add_bool(extra, "is_thrown", is_thrown)
+    _add_bool(extra, "is_finesse", is_finesse)
+    _add_bool(extra, "is_two_handed", is_two_handed)
+    if damage_dice:
+        # Comma list of dice strings, e.g. '1d8,1d10' (matches via damage_dice__in).
+        extra["damage_dice__in"] = damage_dice
+    _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit,
+        ordering=ordering, limit=limit, extra=extra,
     )
     return _apply_priority_and_dedupe(_api_get("/v2/weapons/", params), spec, dedupe)
 
 
 def search_armor(
     name: Optional[str] = None,
+    ac_base_min: Optional[int] = None,
+    ac_base_max: Optional[int] = None,
+    ac_add_dexmod: Optional[bool] = None,
+    ac_cap_dexmod: Optional[int] = None,
+    grants_stealth_disadvantage: Optional[bool] = None,
+    strength_required_min: Optional[int] = None,
+    strength_required_max: Optional[int] = None,
+    keys: Optional[str] = None,
     source: Optional[str] = None,
     match: str = "partial",
     fields: Optional[str] = None,
@@ -408,9 +625,18 @@ def search_armor(
     dedupe: bool = True,
 ) -> dict[str, Any]:
     filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
+    extra: dict[str, Any] = {}
+    _add_range(extra, "ac_base", ac_base_min, ac_base_max)
+    _add_bool(extra, "ac_add_dexmod", ac_add_dexmod)
+    if ac_cap_dexmod is not None:
+        # Medium armor caps Dex bonus to AC at 2; this filter finds armor with that exact cap.
+        extra["ac_cap_dexmod"] = ac_cap_dexmod
+    _add_bool(extra, "grants_stealth_disadvantage", grants_stealth_disadvantage)
+    _add_range(extra, "strength_score_required", strength_required_min, strength_required_max)
+    _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit,
+        ordering=ordering, limit=limit, extra=extra,
     )
     return _apply_priority_and_dedupe(_api_get("/v2/armor/", params), spec, dedupe)
 
@@ -419,6 +645,7 @@ def search_armor(
 
 def search_rules(
     query: str,
+    keys: Optional[str] = None,
     source: Optional[str] = None,
     fields: Optional[str] = None,
     exclude: Optional[str] = None,
@@ -431,6 +658,8 @@ def search_rules(
     params: dict[str, Any] = {"limit": limit, "search": query}
     if filter_source:
         params["document__key__in"] = filter_source
+    if keys:
+        params["key__in"] = keys
     if fields:
         params["fields"] = fields
     if exclude:
@@ -450,6 +679,7 @@ def get_rule_section(key: str) -> dict[str, Any]:
 
 def search_backgrounds(
     name: Optional[str] = None,
+    keys: Optional[str] = None,
     source: Optional[str] = None,
     match: str = "partial",
     fields: Optional[str] = None,
@@ -459,9 +689,11 @@ def search_backgrounds(
     dedupe: bool = True,
 ) -> dict[str, Any]:
     filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
+    extra: dict[str, Any] = {}
+    _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit,
+        ordering=ordering, limit=limit, extra=extra,
     )
     return _apply_priority_and_dedupe(_api_get("/v2/backgrounds/", params), spec, dedupe)
 
@@ -472,6 +704,9 @@ def get_background(key: str) -> dict[str, Any]:
 
 def search_species(
     name: Optional[str] = None,
+    subspecies_of: Optional[str] = None,
+    is_subspecies: Optional[bool] = None,
+    keys: Optional[str] = None,
     source: Optional[str] = None,
     match: str = "partial",
     fields: Optional[str] = None,
@@ -481,9 +716,18 @@ def search_species(
     dedupe: bool = True,
 ) -> dict[str, Any]:
     filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
+    extra: dict[str, Any] = {}
+    if subspecies_of:
+        # `subspecies_of='srd-2024_elf'` returns High Elf, Wood Elf, etc.
+        extra["subspecies_of__key"] = subspecies_of
+    if is_subspecies is not None:
+        # The schema exposes this as `subspecies_of__isnull`; True here means
+        # "is a subspecies" so we invert.
+        extra["subspecies_of__isnull"] = not is_subspecies
+    _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit,
+        ordering=ordering, limit=limit, extra=extra,
     )
     return _apply_priority_and_dedupe(_api_get("/v2/species/", params), spec, dedupe)
 
@@ -494,6 +738,7 @@ def get_species(key: str) -> dict[str, Any]:
 
 def search_feats(
     name: Optional[str] = None,
+    keys: Optional[str] = None,
     source: Optional[str] = None,
     match: str = "partial",
     fields: Optional[str] = None,
@@ -503,9 +748,11 @@ def search_feats(
     dedupe: bool = True,
 ) -> dict[str, Any]:
     filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
+    extra: dict[str, Any] = {}
+    _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit,
+        ordering=ordering, limit=limit, extra=extra,
     )
     return _apply_priority_and_dedupe(_api_get("/v2/feats/", params), spec, dedupe)
 
@@ -517,16 +764,384 @@ def get_feat(key: str) -> dict[str, Any]:
 # --- Class spell lists (only path: deprecated v1 endpoint, but still works) --
 
 def get_spell_list(class_slug: str) -> dict[str, Any]:
-    """Class -> list of spell slugs. Uses /v1/spelllist/ (v2 has no equivalent)."""
+    """Class -> list of v1 spell **slugs** (e.g. 'fireball'). Uses /v1/spelllist/.
+    NOTE: the returned slugs do NOT match v2 keys (e.g. 'srd-2024_fireball'), so
+    you can't pass them straight into get_spell_details. To resolve, either:
+    (a) preferred — call search_spells(classes='srd-2024_<class>') for v2-native
+    results with full keys, or (b) for each slug, call
+    search_spells(name=slug, match='exact') and use the returned `key`."""
     return _api_get(f"/v1/spelllist/{class_slug}/")
 
 
 # --- Universal cross-type search ---------------------------------------------
 
-def search_srd(query: str, limit: int = 10) -> dict[str, Any]:
+def search_srd(
+    query: str,
+    limit: int = 10,
+    vector: Optional[bool] = None,
+    fuzzy: Optional[bool] = None,
+    strict: Optional[bool] = None,
+    object_model: Optional[str] = None,
+    document_pk: Optional[str] = None,
+) -> dict[str, Any]:
     """Search all object types in one call (/v2/search/). Returns mixed results
-    with `object_model` indicating type and `highlighted` snippets."""
-    return _api_get("/v2/search/", {"query": query, "limit": limit})
+    with `object_model` indicating type and `highlighted` snippets.
+
+    - vector=True enables semantic / embedding-based search against name+description
+      (great for "creatures that breathe fire" style queries that lack exact keywords).
+    - fuzzy=True allows individual-word fuzzy matches in name fields only.
+    - strict=True returns only explicitly-requested object types.
+    - object_model filters to one type (e.g. 'creature', 'spell', 'magicitem',
+      'rule', 'background', 'species', 'feat', 'item', 'condition').
+    - document_pk filters to a single source (document key/slug).
+    """
+    if not query or not str(query).strip():
+        raise ValueError("search_srd requires a non-empty `query` keyword.")
+    params: dict[str, Any] = {"query": query, "limit": limit}
+    _add_bool(params, "vector", vector)
+    _add_bool(params, "fuzzy", fuzzy)
+    _add_bool(params, "strict", strict)
+    if object_model:
+        params["object_model"] = object_model
+    if document_pk:
+        params["document_pk"] = document_pk
+    return _api_get("/v2/search/", params)
+
+
+# --- Environments (biome / location tags) -----------------------------------
+
+def search_environments(
+    name: Optional[str] = None,
+    keys: Optional[str] = None,
+    source: Optional[str] = None,
+    match: str = "partial",
+    fields: Optional[str] = None,
+    exclude: Optional[str] = None,
+    ordering: Optional[str] = None,
+    limit: int = 25,
+    dedupe: bool = True,
+) -> dict[str, Any]:
+    """Search /v2/environments/ — biome / location tags (Arctic, Forest, Swamp,
+    Underdark, Astral Plane, etc.). Each entry has `aquatic`/`planar`/`interior`
+    boolean flags in the response payload (not filterable). Useful for picking
+    themed encounters."""
+    filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
+    extra: dict[str, Any] = {}
+    _add_keys(extra, keys)
+    params = _build_query(
+        name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
+        ordering=ordering, limit=limit, extra=extra,
+    )
+    return _apply_priority_and_dedupe(_api_get("/v2/environments/", params), spec, dedupe)
+
+
+def get_environment(key: str) -> dict[str, Any]:
+    return _api_get(f"/v2/environments/{key}/")
+
+
+# --- Creature sets (pre-built encounter groups) ------------------------------
+
+def search_creaturesets(
+    name: Optional[str] = None,
+    keys: Optional[str] = None,
+    source: Optional[str] = None,
+    match: str = "partial",
+    fields: Optional[str] = None,
+    exclude: Optional[str] = None,
+    ordering: Optional[str] = None,
+    limit: int = 25,
+    dedupe: bool = True,
+) -> dict[str, Any]:
+    """Search /v2/creaturesets/ — curated groupings of creatures (e.g. 'Common
+    Mounts', 'Goblin Warband'). Each entry's response includes a `creatures` list
+    of keys you can chain into get_monster_details."""
+    filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
+    extra: dict[str, Any] = {}
+    _add_keys(extra, keys)
+    params = _build_query(
+        name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
+        ordering=ordering, limit=limit, extra=extra,
+    )
+    return _apply_priority_and_dedupe(_api_get("/v2/creaturesets/", params), spec, dedupe)
+
+
+def get_creatureset(key: str) -> dict[str, Any]:
+    return _api_get(f"/v2/creaturesets/{key}/")
+
+
+# --- Item sets (coordinated mundane / magical collections) -------------------
+
+def search_itemsets(
+    name: Optional[str] = None,
+    keys: Optional[str] = None,
+    source: Optional[str] = None,
+    match: str = "partial",
+    fields: Optional[str] = None,
+    exclude: Optional[str] = None,
+    ordering: Optional[str] = None,
+    limit: int = 25,
+    dedupe: bool = True,
+) -> dict[str, Any]:
+    """Search /v2/itemsets/ — bundles like 'Arcane Focuses', 'Burglar's Pack',
+    artifact suites. Each entry's response includes an `items` list of keys you
+    can chain into get_item / get_magic_item."""
+    filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
+    extra: dict[str, Any] = {}
+    _add_keys(extra, keys)
+    params = _build_query(
+        name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
+        ordering=ordering, limit=limit, extra=extra,
+    )
+    return _apply_priority_and_dedupe(_api_get("/v2/itemsets/", params), spec, dedupe)
+
+
+def get_itemset(key: str) -> dict[str, Any]:
+    return _api_get(f"/v2/itemsets/{key}/")
+
+
+# --- Rulesets (structured rule chapters; coarser than /v2/rules/) ------------
+
+def search_rulesets(
+    name: Optional[str] = None,
+    keys: Optional[str] = None,
+    source: Optional[str] = None,
+    match: str = "partial",
+    fields: Optional[str] = None,
+    exclude: Optional[str] = None,
+    ordering: Optional[str] = None,
+    limit: int = 10,
+    dedupe: bool = False,
+) -> dict[str, Any]:
+    """Search /v2/rulesets/ — top-level rule chapters ('Combat', 'Spellcasting',
+    'Equipment'). Each entry has a `rules` list pointing into /v2/rules/ subsections.
+    Coarser than search_rules. Defaults to dedupe=False since chapter names are
+    intentionally shared across editions."""
+    filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
+    extra: dict[str, Any] = {}
+    _add_keys(extra, keys)
+    params = _build_query(
+        name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
+        ordering=ordering, limit=limit, extra=extra,
+    )
+    return _apply_priority_and_dedupe(_api_get("/v2/rulesets/", params), spec, dedupe)
+
+
+def get_ruleset(key: str) -> dict[str, Any]:
+    return _api_get(f"/v2/rulesets/{key}/")
+
+
+# --- Small enum-like list endpoints ------------------------------------------
+# These return small fixed sets — no per-record get_* needed. Each accepts an
+# optional `name`/`keys`/`source` filter and follows the priority+dedupe pattern.
+
+def _generic_list(
+    endpoint: str,
+    name: Optional[str],
+    keys: Optional[str],
+    source: Optional[str],
+    match: str,
+    fields: Optional[str],
+    exclude: Optional[str],
+    limit: int,
+    dedupe: bool,
+    extra: Optional[dict[str, Any]] = None,
+    spec_default: PrioritySpec = DEFAULT_PRIORITY_SRD,
+) -> dict[str, Any]:
+    """Shared body for the small list_* endpoints. Endpoints with no documented
+    filters (gamesystems, itemcategories, itemrarities, skills, publishers,
+    licenses) silently ignore unknown params, so passing name= is harmless even
+    when not officially supported."""
+    filter_source, spec = _resolve_source(source, spec_default)
+    extras: dict[str, Any] = dict(extra) if extra else {}
+    _add_keys(extras, keys)
+    params = _build_query(
+        name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
+        limit=limit, extra=extras,
+    )
+    return _apply_priority_and_dedupe(_api_get(endpoint, params), spec, dedupe)
+
+
+def list_abilities(name: Optional[str] = None, keys: Optional[str] = None,
+                   source: Optional[str] = None, match: str = "partial",
+                   fields: Optional[str] = None, exclude: Optional[str] = None,
+                   limit: int = 25, dedupe: bool = True) -> dict[str, Any]:
+    """List /v2/abilities/ — six core ability scores (str/dex/con/int/wis/cha).
+    Each entry has descriptions and the skills it governs."""
+    return _generic_list("/v2/abilities/", name, keys, source, match, fields, exclude, limit, dedupe)
+
+
+def list_alignments(name: Optional[str] = None, keys: Optional[str] = None,
+                    source: Optional[str] = None, match: str = "partial",
+                    fields: Optional[str] = None, exclude: Optional[str] = None,
+                    limit: int = 25, dedupe: bool = True) -> dict[str, Any]:
+    """List /v2/alignments/ — Lawful Good through Chaotic Evil + True Neutral.
+    Each entry has `morality`, `societal_attitude`, descriptions."""
+    return _generic_list("/v2/alignments/", name, keys, source, match, fields, exclude, limit, dedupe)
+
+
+def list_creaturetypes(name: Optional[str] = None, keys: Optional[str] = None,
+                       source: Optional[str] = None, match: str = "partial",
+                       fields: Optional[str] = None, exclude: Optional[str] = None,
+                       limit: int = 25, dedupe: bool = True) -> dict[str, Any]:
+    """List /v2/creaturetypes/ — Aberration, Beast, Celestial, Construct, Dragon,
+    Elemental, Fey, Fiend, Giant, Humanoid, Monstrosity, Ooze, Plant, Undead.
+    Discoverable enum: pass `key` from results into search_monsters(type=...)."""
+    return _generic_list("/v2/creaturetypes/", name, keys, source, match, fields, exclude, limit, dedupe)
+
+
+def list_damagetypes(name: Optional[str] = None, keys: Optional[str] = None,
+                     source: Optional[str] = None, match: str = "partial",
+                     fields: Optional[str] = None, exclude: Optional[str] = None,
+                     limit: int = 25, dedupe: bool = True) -> dict[str, Any]:
+    """List /v2/damagetypes/ — acid, bludgeoning, cold, fire, force, lightning,
+    necrotic, piercing, poison, psychic, radiant, slashing, thunder."""
+    return _generic_list("/v2/damagetypes/", name, keys, source, match, fields, exclude, limit, dedupe)
+
+
+def list_sizes(name: Optional[str] = None, keys: Optional[str] = None,
+               source: Optional[str] = None, match: str = "partial",
+               fields: Optional[str] = None, exclude: Optional[str] = None,
+               limit: int = 25, dedupe: bool = True) -> dict[str, Any]:
+    """List /v2/sizes/ — Tiny, Small, Medium, Large, Huge, Gargantuan (+ Colossal
+    in some sources). Each entry has space_diameter and suggested_hit_dice.
+    Discoverable enum: pass `key` from results into search_monsters(size=...)."""
+    return _generic_list("/v2/sizes/", name, keys, source, match, fields, exclude, limit, dedupe)
+
+
+def list_skills(name: Optional[str] = None, keys: Optional[str] = None,
+                source: Optional[str] = None, match: str = "partial",
+                fields: Optional[str] = None, exclude: Optional[str] = None,
+                limit: int = 25, dedupe: bool = True) -> dict[str, Any]:
+    """List /v2/skills/ — Acrobatics, Animal Handling, Arcana, …, Survival. Each
+    entry links to its governing ability."""
+    return _generic_list("/v2/skills/", name, keys, source, match, fields, exclude, limit, dedupe)
+
+
+def list_spellschools(name: Optional[str] = None, keys: Optional[str] = None,
+                      source: Optional[str] = None, match: str = "partial",
+                      fields: Optional[str] = None, exclude: Optional[str] = None,
+                      limit: int = 25, dedupe: bool = True) -> dict[str, Any]:
+    """List /v2/spellschools/ — Abjuration, Conjuration, Divination, Enchantment,
+    Evocation, Illusion, Necromancy, Transmutation. Pass `key` into
+    search_spells(school=...)."""
+    return _generic_list("/v2/spellschools/", name, keys, source, match, fields, exclude, limit, dedupe)
+
+
+def list_itemcategories(name: Optional[str] = None, keys: Optional[str] = None,
+                        source: Optional[str] = None, match: str = "partial",
+                        fields: Optional[str] = None, exclude: Optional[str] = None,
+                        limit: int = 50, dedupe: bool = True) -> dict[str, Any]:
+    """List /v2/itemcategories/ — Adventuring Gear, Arcane Focus, Heavy Armor,
+    Martial Weapon, Tool, etc. Pass `key` into search_items(category=...)."""
+    return _generic_list("/v2/itemcategories/", name, keys, source, match, fields, exclude, limit, dedupe)
+
+
+def list_itemrarities(name: Optional[str] = None, keys: Optional[str] = None,
+                      source: Optional[str] = None, match: str = "partial",
+                      fields: Optional[str] = None, exclude: Optional[str] = None,
+                      limit: int = 25, dedupe: bool = True) -> dict[str, Any]:
+    """List /v2/itemrarities/ — Common, Uncommon, Rare, Very Rare, Legendary,
+    Artifact. Each has a `rank` integer (lower = more common). Pass `key` into
+    search_magic_items(rarity=...)."""
+    return _generic_list("/v2/itemrarities/", name, keys, source, match, fields, exclude, limit, dedupe)
+
+
+def list_languages(name: Optional[str] = None, keys: Optional[str] = None,
+                   is_exotic: Optional[bool] = None, is_secret: Optional[bool] = None,
+                   source: Optional[str] = None, match: str = "partial",
+                   fields: Optional[str] = None, exclude: Optional[str] = None,
+                   limit: int = 50, dedupe: bool = True) -> dict[str, Any]:
+    """List /v2/languages/ — Common, Dwarvish, Elvish, Abyssal, Druidic, etc.
+    Filter: is_exotic (True for Abyssal/Celestial/Deep Speech/etc), is_secret
+    (True for Druidic, Thieves' Cant). Each entry tracks `script_language`."""
+    extra: dict[str, Any] = {}
+    _add_bool(extra, "is_exotic", is_exotic)
+    _add_bool(extra, "is_secret", is_secret)
+    return _generic_list("/v2/languages/", name, keys, source, match, fields, exclude, limit, dedupe, extra)
+
+
+def list_weaponproperties(name: Optional[str] = None, keys: Optional[str] = None,
+                          type: Optional[str] = None,
+                          source: Optional[str] = None, match: str = "partial",
+                          fields: Optional[str] = None, exclude: Optional[str] = None,
+                          limit: int = 50, dedupe: bool = True) -> dict[str, Any]:
+    """List /v2/weaponproperties/ — Ammunition, Finesse, Heavy, Light, Loading,
+    Reach, Special, Thrown, Two-Handed, Versatile, plus a5e/etc additions.
+    Filter `type` for melee/ranged groupings."""
+    extra: dict[str, Any] = {}
+    if type:
+        extra["type"] = type
+    return _generic_list("/v2/weaponproperties/", name, keys, source, match, fields, exclude, limit, dedupe, extra)
+
+
+def list_gamesystems(name: Optional[str] = None, keys: Optional[str] = None,
+                     fields: Optional[str] = None, exclude: Optional[str] = None,
+                     limit: int = 25) -> dict[str, Any]:
+    """List /v2/gamesystems/ — '5e-2014', '5e-2024', 'a5e' (Level Up). Each entry
+    has a content_prefix used internally. No source filter (gamesystems ARE the
+    source roots)."""
+    params: dict[str, Any] = {"limit": limit}
+    if name:
+        params["name"] = name
+    if keys:
+        params["key__in"] = keys
+    if fields:
+        params["fields"] = fields
+    if exclude:
+        params["exclude"] = exclude
+    return _api_get("/v2/gamesystems/", params)
+
+
+def list_publishers(name: Optional[str] = None, keys: Optional[str] = None,
+                    fields: Optional[str] = None, exclude: Optional[str] = None,
+                    limit: int = 25) -> dict[str, Any]:
+    """List /v2/publishers/ — WotC, Kobold Press, EN Publishing, Open5e, etc.
+    Pure metadata; mostly useful for attribution and source-filter discovery."""
+    params: dict[str, Any] = {"limit": limit}
+    if name:
+        params["name"] = name
+    if keys:
+        params["key__in"] = keys
+    if fields:
+        params["fields"] = fields
+    if exclude:
+        params["exclude"] = exclude
+    return _api_get("/v2/publishers/", params)
+
+
+def list_licenses(name: Optional[str] = None, keys: Optional[str] = None,
+                  fields: Optional[str] = None, exclude: Optional[str] = None,
+                  limit: int = 25) -> dict[str, Any]:
+    """List /v2/licenses/ — CC-BY 4.0, ORC, OGL etc. Legal metadata for content
+    attribution. Rarely needed at the table."""
+    params: dict[str, Any] = {"limit": limit}
+    if name:
+        params["name"] = name
+    if keys:
+        params["key__in"] = keys
+    if fields:
+        params["fields"] = fields
+    if exclude:
+        params["exclude"] = exclude
+    return _api_get("/v2/licenses/", params)
+
+
+def list_documents(name: Optional[str] = None, keys: Optional[str] = None,
+                   gamesystem: Optional[str] = None, publisher: Optional[str] = None,
+                   limit: int = 50) -> dict[str, Any]:
+    """List /v2/documents/ — every source document we can filter by, with their
+    keys (srd-2024, tob, a5e-ag, etc.). Use this to discover the exact `source`
+    string accepted by every search_* tool."""
+    params: dict[str, Any] = {"limit": limit}
+    if name:
+        params["name"] = name
+    if keys:
+        params["key__in"] = keys
+    if gamesystem:
+        params["gamesystem"] = gamesystem
+    if publisher:
+        params["publisher"] = publisher
+    return _api_get("/v2/documents/", params)
 
 
 # --- Tool definitions for the MCP server -------------------------------------
@@ -545,10 +1160,13 @@ _PARAM_SOURCE = {
     "description": (
         "Filter by source document key. Comma-separated values both filter AND "
         "set priority order — earlier sources are listed first in results. "
-        "Default for SRD tools is 'srd-2024,srd-2014' (prefer 5.5e content, fall back "
-        "to 5e 2014). Pass an empty string to disable the filter entirely (returns from "
-        "all sources). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), "
-        "'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'."
+        "Default behavior (no source passed): NO hard filter — searches every "
+        "source, then ranks results into three tiers (srd-2024 first, srd-2014 "
+        "last, everything else in between). Pass an empty string ('') to disable "
+        "BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', "
+        "'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's "
+        "Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to "
+        "discover every available key."
     ),
 }
 _PARAM_MATCH = {
@@ -587,6 +1205,48 @@ _PARAM_DEDUPE = {
     ),
     "default": True,
 }
+_PARAM_KEYS = {
+    "type": "string",
+    "description": (
+        "Batch-fetch by exact record keys: a comma list (e.g. "
+        "'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP "
+        "round-trip instead of N. Combine with `fields` to keep the response compact."
+    ),
+}
+
+
+def _bool_param(description: str) -> dict:
+    return {"type": "boolean", "description": description}
+
+
+def _int_param(description: str) -> dict:
+    return {"type": "integer", "description": description}
+
+
+def _num_param(description: str) -> dict:
+    return {"type": "number", "description": description}
+
+
+def _str_param(description: str) -> dict:
+    return {"type": "string", "description": description}
+
+
+# Reusable schema chunks for groups of related new params.
+_ABILITY_SCORE_PROPS = {
+    f"{ab}_{b}": _int_param(f"{ab.title()} score {'minimum' if b == 'min' else 'maximum'} (inclusive).")
+    for ab in ("strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma")
+    for b in ("min", "max")
+}
+
+_WEAPON_PROPERTY_BOOLS = {
+    "is_weapon": _bool_param("Filter to entries flagged as weapons."),
+    "is_armor": _bool_param("Filter to entries flagged as armor."),
+    "is_light": _bool_param("Light weapons only."),
+    "is_versatile": _bool_param("Versatile weapons only."),
+    "is_thrown": _bool_param("Thrown weapons only."),
+    "is_finesse": _bool_param("Finesse weapons only."),
+    "is_two_handed": _bool_param("Two-handed weapons only."),
+}
 
 
 def _common_search_value_flags() -> dict[str, str]:
@@ -618,14 +1278,34 @@ MCP_TOOLS = [
         ),
         "annotations": {"title": "Search Creatures (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_monsters"],
-        "value_flags": {**_common_search_value_flags(), "cr": "--cr", "type": "--type", "size": "--size", "dedupe": "--dedupe"},
+        "value_flags": {
+            **_common_search_value_flags(),
+            "cr": "--cr", "cr_min": "--cr_min", "cr_max": "--cr_max",
+            "type": "--type", "size": "--size",
+            "ac_min": "--ac_min", "ac_max": "--ac_max",
+            **{f"{ab}_{b}": f"--{ab}_{b}" for ab in ("strength", "dexterity", "constitution", "intelligence", "wisdom", "charisma") for b in ("min", "max")},
+            "passive_perception_min": "--passive_perception_min",
+            "passive_perception_max": "--passive_perception_max",
+            "has_saves": "--has_saves", "has_skills": "--has_skills",
+            "keys": "--keys", "dedupe": "--dedupe",
+        },
         "input_schema": {
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "Creature name (partial unless match='exact')."},
-                "cr": {"type": "string", "description": "Challenge rating (e.g., '1', '1/2', '5')."},
-                "type": {"type": "string", "description": "Creature type key (e.g., 'beast', 'dragon', 'undead')."},
-                "size": {"type": "string", "description": "Size key: 'tiny', 'small', 'medium', 'large', 'huge', 'gargantuan'."},
+                "name": _str_param("Creature name (partial unless match='exact')."),
+                "cr": _str_param("Exact challenge rating (e.g., '1', '1/2', '5'). Use cr_min/cr_max for ranges."),
+                "cr_min": _num_param("CR minimum (inclusive). Pair with cr_max for ranged encounter prep."),
+                "cr_max": _num_param("CR maximum (inclusive)."),
+                "type": _str_param("Creature type key (e.g., 'beast', 'dragon', 'undead'). Use list_creaturetypes to discover keys."),
+                "size": _str_param("Size key: 'tiny','small','medium','large','huge','gargantuan'. Use list_sizes."),
+                "ac_min": _int_param("Armor Class minimum (inclusive)."),
+                "ac_max": _int_param("Armor Class maximum (inclusive)."),
+                **_ABILITY_SCORE_PROPS,
+                "passive_perception_min": _int_param("Passive Perception minimum."),
+                "passive_perception_max": _int_param("Passive Perception maximum."),
+                "has_saves": _str_param("Comma list of saves the creature must have proficiency in (e.g. 'dexterity,wisdom'). Maps to saving_throw_X__isnull=false."),
+                "has_skills": _str_param("Comma list of skills the creature must have a bonus in (e.g. 'stealth,perception'). Maps to skill_bonus_X__isnull=false."),
+                "keys": _PARAM_KEYS,
                 "source": _PARAM_SOURCE,
                 "match": _PARAM_MATCH,
                 "fields": _PARAM_FIELDS,
@@ -666,13 +1346,35 @@ MCP_TOOLS = [
         ),
         "annotations": {"title": "Search Spells (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_spells"],
-        "value_flags": {**_common_search_value_flags(), "level": "--level", "school": "--school", "dedupe": "--dedupe"},
+        "value_flags": {
+            **_common_search_value_flags(),
+            "level": "--level", "level_min": "--level_min", "level_max": "--level_max",
+            "school": "--school", "classes": "--classes",
+            "concentration": "--concentration",
+            "verbal": "--verbal", "somatic": "--somatic",
+            "material": "--material", "material_consumed": "--material_consumed",
+            "casting_time": "--casting_time",
+            "range_min": "--range_min", "range_max": "--range_max",
+            "keys": "--keys", "dedupe": "--dedupe",
+        },
         "input_schema": {
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "Spell name."},
-                "level": {"type": "integer", "description": "Spell level (0=cantrip, 1-9)."},
-                "school": {"type": "string", "description": "School key (evocation, abjuration, conjuration, divination, enchantment, illusion, necromancy, transmutation)."},
+                "name": _str_param("Spell name."),
+                "level": _int_param("Exact spell level (0=cantrip, 1-9). Use level_min/level_max for ranges."),
+                "level_min": _int_param("Spell level minimum (inclusive). E.g. level_min=1, level_max=3 for low-tier."),
+                "level_max": _int_param("Spell level maximum (inclusive)."),
+                "school": _str_param("School key (evocation, abjuration, conjuration, divination, enchantment, illusion, necromancy, transmutation). Use list_spellschools to discover."),
+                "classes": _str_param("Comma list of FULL class keys WITH source prefix (e.g. 'srd-2024_wizard,srd-2024_sorcerer'). Bare 'wizard' will NOT match — Open5e requires the source-prefixed key. Use search_classes to discover keys. Multiple values are OR'd."),
+                "concentration": _bool_param("True for concentration spells, False to exclude them."),
+                "verbal": _bool_param("Filter by Verbal component requirement."),
+                "somatic": _bool_param("Filter by Somatic component requirement."),
+                "material": _bool_param("Filter by Material component requirement."),
+                "material_consumed": _bool_param("Filter by spells that consume their material component."),
+                "casting_time": _str_param("Casting time key: 'action', 'bonusaction', 'reaction', '1minute', '10minutes', '1hour', '8hours', '12hours', '24hours', '1week'."),
+                "range_min": _int_param("Range minimum in feet (inclusive)."),
+                "range_max": _int_param("Range maximum in feet (inclusive)."),
+                "keys": _PARAM_KEYS,
                 "source": _PARAM_SOURCE,
                 "match": _PARAM_MATCH,
                 "fields": _PARAM_FIELDS,
@@ -711,11 +1413,12 @@ MCP_TOOLS = [
         ),
         "annotations": {"title": "List Conditions (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "list_conditions"],
-        "value_flags": {"name": "--name", "source": "--source", "match": "--match", "fields": "--fields", "exclude": "--exclude", "limit": "--limit", "dedupe": "--dedupe"},
+        "value_flags": {"name": "--name", "keys": "--keys", "source": "--source", "match": "--match", "fields": "--fields", "exclude": "--exclude", "limit": "--limit", "dedupe": "--dedupe"},
         "input_schema": {
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "Filter by condition name (substring unless match='exact')."},
+                "name": _str_param("Filter by condition name (substring unless match='exact')."),
+                "keys": _PARAM_KEYS,
                 "source": _PARAM_SOURCE,
                 "match": _PARAM_MATCH,
                 "fields": _PARAM_FIELDS,
@@ -737,12 +1440,30 @@ MCP_TOOLS = [
         ),
         "annotations": {"title": "Search Magic Items (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_magic_items"],
-        "value_flags": {**_common_search_value_flags(), "rarity": "--rarity", "dedupe": "--dedupe"},
+        "value_flags": {
+            **_common_search_value_flags(),
+            "rarity": "--rarity", "rarities": "--rarities",
+            "requires_attunement": "--requires_attunement",
+            "cost_min": "--cost_min", "cost_max": "--cost_max",
+            "weight_min": "--weight_min", "weight_max": "--weight_max",
+            **{k: f"--{k}" for k in _WEAPON_PROPERTY_BOOLS},
+            "desc_contains": "--desc_contains",
+            "keys": "--keys", "dedupe": "--dedupe",
+        },
         "input_schema": {
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "Item name."},
-                "rarity": {"type": "string", "description": "Rarity key (common, uncommon, rare, very-rare, legendary, artifact)."},
+                "name": _str_param("Item name."),
+                "rarity": _str_param("Single rarity key: common, uncommon, rare, very-rare, legendary, artifact. Use list_itemrarities."),
+                "rarities": _str_param("Comma list of rarities (e.g. 'rare,very-rare,legendary'). Filters via rarity__in."),
+                "requires_attunement": _bool_param("True for attunement-required items only; False to exclude attunement items."),
+                "cost_min": _num_param("Cost minimum in gp (inclusive)."),
+                "cost_max": _num_param("Cost maximum in gp (inclusive)."),
+                "weight_min": _num_param("Weight minimum in lbs (inclusive)."),
+                "weight_max": _num_param("Weight maximum in lbs (inclusive)."),
+                **_WEAPON_PROPERTY_BOOLS,
+                "desc_contains": _str_param("Case-insensitive substring search in item description text."),
+                "keys": _PARAM_KEYS,
                 "source": _PARAM_SOURCE,
                 "match": _PARAM_MATCH,
                 "fields": _PARAM_FIELDS,
@@ -778,12 +1499,28 @@ MCP_TOOLS = [
         ),
         "annotations": {"title": "Search Mundane Items (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_items"],
-        "value_flags": {**_common_search_value_flags(), "category": "--category", "dedupe": "--dedupe"},
+        "value_flags": {
+            **_common_search_value_flags(),
+            "category": "--category", "categories": "--categories",
+            "cost_min": "--cost_min", "cost_max": "--cost_max",
+            "weight_min": "--weight_min", "weight_max": "--weight_max",
+            **{k: f"--{k}" for k in _WEAPON_PROPERTY_BOOLS},
+            "desc_contains": "--desc_contains",
+            "keys": "--keys", "dedupe": "--dedupe",
+        },
         "input_schema": {
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "Item name."},
-                "category": {"type": "string", "description": "Category key (e.g., 'weapon', 'armor', 'adventuring-gear')."},
+                "name": _str_param("Item name."),
+                "category": _str_param("Single category key (e.g., 'weapon', 'armor', 'adventuring-gear'). Use list_itemcategories to discover."),
+                "categories": _str_param("Comma list of category keys (e.g. 'weapon,armor'). Filters via category__in."),
+                "cost_min": _num_param("Cost minimum in gp."),
+                "cost_max": _num_param("Cost maximum in gp."),
+                "weight_min": _num_param("Weight minimum in lbs."),
+                "weight_max": _num_param("Weight maximum in lbs."),
+                **_WEAPON_PROPERTY_BOOLS,
+                "desc_contains": _str_param("Case-insensitive substring search in item description text."),
+                "keys": _PARAM_KEYS,
                 "source": _PARAM_SOURCE,
                 "match": _PARAM_MATCH,
                 "fields": _PARAM_FIELDS,
@@ -813,15 +1550,23 @@ MCP_TOOLS = [
             "Search classes & archetypes (/v2/classes/). Returns class features and progression. "
             "Default behavior: searches all sources, ranks srd-2024 first, third-party middle, "
             "srd-2014 last; same-name duplicates collapsed (dropped keys in `dropped_variants`). "
-            "Use for character creation help."
+            "Use subclass_of='srd-2024_fighter' to fetch a class's subclasses, or is_subclass=True "
+            "to list only subclasses across all parents."
         ),
         "annotations": {"title": "Search Classes (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_classes"],
-        "value_flags": {**_common_search_value_flags(), "dedupe": "--dedupe"},
+        "value_flags": {
+            **_common_search_value_flags(),
+            "subclass_of": "--subclass_of", "is_subclass": "--is_subclass",
+            "keys": "--keys", "dedupe": "--dedupe",
+        },
         "input_schema": {
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "Class name."},
+                "name": _str_param("Class name."),
+                "subclass_of": _str_param("Parent class key (e.g. 'srd-2024_fighter') — returns its subclasses."),
+                "is_subclass": _bool_param("True for subclasses only; False for parent classes only."),
+                "keys": _PARAM_KEYS,
                 "source": _PARAM_SOURCE,
                 "match": _PARAM_MATCH,
                 "fields": _PARAM_FIELDS,
@@ -854,11 +1599,24 @@ MCP_TOOLS = [
         ),
         "annotations": {"title": "Search Weapons (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_weapons"],
-        "value_flags": {**_common_search_value_flags(), "dedupe": "--dedupe"},
+        "value_flags": {
+            **_common_search_value_flags(),
+            "is_light": "--is_light", "is_versatile": "--is_versatile",
+            "is_thrown": "--is_thrown", "is_finesse": "--is_finesse",
+            "is_two_handed": "--is_two_handed", "damage_dice": "--damage_dice",
+            "keys": "--keys", "dedupe": "--dedupe",
+        },
         "input_schema": {
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "Weapon name."},
+                "name": _str_param("Weapon name."),
+                "is_light": _bool_param("Light weapons only."),
+                "is_versatile": _bool_param("Versatile weapons only."),
+                "is_thrown": _bool_param("Thrown weapons only."),
+                "is_finesse": _bool_param("Finesse weapons only."),
+                "is_two_handed": _bool_param("Two-handed weapons only."),
+                "damage_dice": _str_param("Comma list of damage-dice strings (e.g. '1d8,1d10'). Filters via damage_dice__in."),
+                "keys": _PARAM_KEYS,
                 "source": _PARAM_SOURCE,
                 "match": _PARAM_MATCH,
                 "fields": _PARAM_FIELDS,
@@ -879,11 +1637,27 @@ MCP_TOOLS = [
         ),
         "annotations": {"title": "Search Armor (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_armor"],
-        "value_flags": {**_common_search_value_flags(), "dedupe": "--dedupe"},
+        "value_flags": {
+            **_common_search_value_flags(),
+            "ac_base_min": "--ac_base_min", "ac_base_max": "--ac_base_max",
+            "ac_add_dexmod": "--ac_add_dexmod", "ac_cap_dexmod": "--ac_cap_dexmod",
+            "grants_stealth_disadvantage": "--grants_stealth_disadvantage",
+            "strength_required_min": "--strength_required_min",
+            "strength_required_max": "--strength_required_max",
+            "keys": "--keys", "dedupe": "--dedupe",
+        },
         "input_schema": {
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "Armor name."},
+                "name": _str_param("Armor name."),
+                "ac_base_min": _int_param("Base AC minimum (inclusive)."),
+                "ac_base_max": _int_param("Base AC maximum (inclusive)."),
+                "ac_add_dexmod": _bool_param("True for armor that adds Dex modifier (light/medium); False for heavy."),
+                "ac_cap_dexmod": _int_param("Exact Dex-modifier cap (e.g. 2 for medium armor)."),
+                "grants_stealth_disadvantage": _bool_param("True for armor that imposes stealth disadvantage."),
+                "strength_required_min": _int_param("Strength score requirement minimum."),
+                "strength_required_max": _int_param("Strength score requirement maximum."),
+                "keys": _PARAM_KEYS,
                 "source": _PARAM_SOURCE,
                 "match": _PARAM_MATCH,
                 "fields": _PARAM_FIELDS,
@@ -904,11 +1678,12 @@ MCP_TOOLS = [
         ),
         "annotations": {"title": "Search Rules (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_rules"],
-        "value_flags": {"query": "--query", "source": "--source", "fields": "--fields", "exclude": "--exclude", "ordering": "--ordering", "limit": "--limit"},
+        "value_flags": {"query": "--query", "keys": "--keys", "source": "--source", "fields": "--fields", "exclude": "--exclude", "ordering": "--ordering", "limit": "--limit"},
         "input_schema": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "Search term (e.g., 'grapple', 'opportunity attack', 'cover')."},
+                "query": _str_param("Search term (e.g., 'grapple', 'opportunity attack', 'cover'). NOTE: Open5e keyword relevance is weak for short common words — try search_srd with vector=true for semantic matching."),
+                "keys": _PARAM_KEYS,
                 "source": _PARAM_SOURCE,
                 "fields": _PARAM_FIELDS,
                 "exclude": _PARAM_EXCLUDE,
@@ -940,11 +1715,12 @@ MCP_TOOLS = [
         ),
         "annotations": {"title": "Search Backgrounds (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_backgrounds"],
-        "value_flags": {**_common_search_value_flags(), "dedupe": "--dedupe"},
+        "value_flags": {**_common_search_value_flags(), "keys": "--keys", "dedupe": "--dedupe"},
         "input_schema": {
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "Background name."},
+                "name": _str_param("Background name."),
+                "keys": _PARAM_KEYS,
                 "source": _PARAM_SOURCE,
                 "match": _PARAM_MATCH,
                 "fields": _PARAM_FIELDS,
@@ -978,11 +1754,18 @@ MCP_TOOLS = [
         ),
         "annotations": {"title": "Search Species (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_species"],
-        "value_flags": {**_common_search_value_flags(), "dedupe": "--dedupe"},
+        "value_flags": {
+            **_common_search_value_flags(),
+            "subspecies_of": "--subspecies_of", "is_subspecies": "--is_subspecies",
+            "keys": "--keys", "dedupe": "--dedupe",
+        },
         "input_schema": {
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "Species name."},
+                "name": _str_param("Species name."),
+                "subspecies_of": _str_param("Parent species key (e.g. 'srd-2024_elf') — returns its subspecies."),
+                "is_subspecies": _bool_param("True for subspecies only; False for parent species only."),
+                "keys": _PARAM_KEYS,
                 "source": _PARAM_SOURCE,
                 "match": _PARAM_MATCH,
                 "fields": _PARAM_FIELDS,
@@ -1015,11 +1798,12 @@ MCP_TOOLS = [
         ),
         "annotations": {"title": "Search Feats (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_feats"],
-        "value_flags": {**_common_search_value_flags(), "dedupe": "--dedupe"},
+        "value_flags": {**_common_search_value_flags(), "keys": "--keys", "dedupe": "--dedupe"},
         "input_schema": {
             "type": "object",
             "properties": {
-                "name": {"type": "string", "description": "Feat name."},
+                "name": _str_param("Feat name."),
+                "keys": _PARAM_KEYS,
                 "source": _PARAM_SOURCE,
                 "match": _PARAM_MATCH,
                 "fields": _PARAM_FIELDS,
@@ -1046,9 +1830,13 @@ MCP_TOOLS = [
     {
         "name": "get_spell_list",
         "description": (
-            "Get all spell slugs available to a class (e.g., 'wizard', 'cleric', 'bard'). "
-            "Returns a list of spell slugs you can chain into get_spell_details. "
-            "Note: uses /v1/spelllist/ (deprecated, but only path) and v1-style spell slugs."
+            "Get all v1 spell slugs available to a class (e.g., 'wizard', 'cleric', 'bard'). "
+            "Uses /v1/spelllist/ (deprecated; v2 has no equivalent) and returns v1-style slugs "
+            "like 'fireball'. CAUTION: these slugs do NOT match v2 keys ('srd-2024_fireball'), "
+            "so you cannot pass them directly into get_spell_details. PREFERRED ALTERNATIVE: "
+            "use search_spells(classes='srd-2024_wizard') — returns full v2 keys and richer "
+            "metadata in one call. If you must use this tool, resolve slugs to v2 keys via "
+            "search_spells(name=slug, match='exact')."
         ),
         "annotations": {"title": "Get Class Spell List", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "get_spell_list", "{class_slug}"],
@@ -1070,16 +1858,273 @@ MCP_TOOLS = [
         ),
         "annotations": {"title": "Universal SRD Search", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_srd"],
-        "value_flags": {"query": "--query", "limit": "--limit"},
+        "value_flags": {
+            "query": "--query", "limit": "--limit",
+            "vector": "--vector", "fuzzy": "--fuzzy", "strict": "--strict",
+            "object_model": "--object_model", "document_pk": "--document_pk",
+        },
         "input_schema": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "Free-text search across all D&D resources."},
+                "query": _str_param("Free-text search across all D&D resources."),
                 "limit": _PARAM_LIMIT,
+                "vector": _bool_param("Enable semantic / embedding search against name+description. Best for queries like 'creatures that breathe fire' that lack exact keywords."),
+                "fuzzy": _bool_param("Allow per-word fuzzy matches in name fields only."),
+                "strict": _bool_param("Return only explicitly-requested object types."),
+                "object_model": _str_param("Restrict to one type: 'creature', 'spell', 'magicitem', 'item', 'rule', 'background', 'species', 'feat', 'condition', 'class'."),
+                "document_pk": _str_param("Restrict to a single document key (e.g. 'srd-2024')."),
             },
             "required": ["query"],
             "additionalProperties": False,
         },
+    },
+    # --- Tier 2: new endpoints (environments, creaturesets, itemsets, rulesets,
+    # discoverable enums, source/license metadata). One MCP_TOOLS entry per Python
+    # function, kept compact — most share the standard search-tool shape.
+    {
+        "name": "search_environments",
+        "description": (
+            "Search /v2/environments/ — biome / location tags (Arctic, Forest, Swamp, "
+            "Underdark, Astral Plane, etc.). Each entry has aquatic/planar/interior "
+            "boolean fields in the response. Use this when a player goes off-rails to a "
+            "specific biome and you need themed flavor on demand."
+        ),
+        "annotations": {"title": "Search Environments (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "search_environments"],
+        "value_flags": {**_common_search_value_flags(), "keys": "--keys", "dedupe": "--dedupe"},
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": _str_param("Environment name (partial unless match='exact')."),
+                "keys": _PARAM_KEYS,
+                "source": _PARAM_SOURCE, "match": _PARAM_MATCH,
+                "fields": _PARAM_FIELDS, "exclude": _PARAM_EXCLUDE,
+                "ordering": _PARAM_ORDERING, "limit": _PARAM_LIMIT,
+                "dedupe": _PARAM_DEDUPE,
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_environment",
+        "description": "Get one environment by exact key (e.g. 'srd-2024_swamp'). Returns description plus aquatic/planar/interior flags.",
+        "annotations": {"title": "Get Environment (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "get_environment", "{key}"],
+        "input_schema": {"type": "object", "properties": {"key": _str_param("Environment key.")}, "required": ["key"], "additionalProperties": False},
+    },
+    {
+        "name": "search_creaturesets",
+        "description": (
+            "Search /v2/creaturesets/ — pre-built creature groupings (e.g. 'Goblin Warband', "
+            "'Common Mounts'). Response includes a `creatures` list of keys to chain into "
+            "get_monster_details (or batch via search_monsters keys=...)."
+        ),
+        "annotations": {"title": "Search Creature Sets (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "search_creaturesets"],
+        "value_flags": {**_common_search_value_flags(), "keys": "--keys", "dedupe": "--dedupe"},
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": _str_param("Creature-set name."),
+                "keys": _PARAM_KEYS,
+                "source": _PARAM_SOURCE, "match": _PARAM_MATCH,
+                "fields": _PARAM_FIELDS, "exclude": _PARAM_EXCLUDE,
+                "ordering": _PARAM_ORDERING, "limit": _PARAM_LIMIT,
+                "dedupe": _PARAM_DEDUPE,
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_creatureset",
+        "description": "Get one creature-set by key. Includes the full creatures list.",
+        "annotations": {"title": "Get Creature Set (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "get_creatureset", "{key}"],
+        "input_schema": {"type": "object", "properties": {"key": _str_param("Creature-set key.")}, "required": ["key"], "additionalProperties": False},
+    },
+    {
+        "name": "search_itemsets",
+        "description": (
+            "Search /v2/itemsets/ — bundles like 'Arcane Focuses', 'Burglar's Pack', "
+            "magic-item suites. Response includes an `items` list to chain into get_item / "
+            "get_magic_item (or batch via search_items keys=...)."
+        ),
+        "annotations": {"title": "Search Item Sets (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "search_itemsets"],
+        "value_flags": {**_common_search_value_flags(), "keys": "--keys", "dedupe": "--dedupe"},
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": _str_param("Item-set name."),
+                "keys": _PARAM_KEYS,
+                "source": _PARAM_SOURCE, "match": _PARAM_MATCH,
+                "fields": _PARAM_FIELDS, "exclude": _PARAM_EXCLUDE,
+                "ordering": _PARAM_ORDERING, "limit": _PARAM_LIMIT,
+                "dedupe": _PARAM_DEDUPE,
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_itemset",
+        "description": "Get one item-set by key. Includes the full items list.",
+        "annotations": {"title": "Get Item Set (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "get_itemset", "{key}"],
+        "input_schema": {"type": "object", "properties": {"key": _str_param("Item-set key.")}, "required": ["key"], "additionalProperties": False},
+    },
+    {
+        "name": "search_rulesets",
+        "description": (
+            "Search /v2/rulesets/ — top-level rule chapters ('Combat', 'Spellcasting', "
+            "'Equipment'). Coarser than search_rules. Each ruleset has a `rules` list "
+            "pointing into /v2/rules/ subsections. Defaults to dedupe=False because "
+            "chapter names intentionally repeat across editions."
+        ),
+        "annotations": {"title": "Search Rulesets (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "search_rulesets"],
+        "value_flags": {**_common_search_value_flags(), "keys": "--keys", "dedupe": "--dedupe"},
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "name": _str_param("Ruleset (chapter) name."),
+                "keys": _PARAM_KEYS,
+                "source": _PARAM_SOURCE, "match": _PARAM_MATCH,
+                "fields": _PARAM_FIELDS, "exclude": _PARAM_EXCLUDE,
+                "ordering": _PARAM_ORDERING, "limit": _PARAM_LIMIT,
+                "dedupe": _PARAM_DEDUPE,
+            },
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "get_ruleset",
+        "description": "Get one ruleset chapter by key (e.g. 'srd-2024_combat'). Returns the full chapter.",
+        "annotations": {"title": "Get Ruleset (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "get_ruleset", "{key}"],
+        "input_schema": {"type": "object", "properties": {"key": _str_param("Ruleset key.")}, "required": ["key"], "additionalProperties": False},
+    },
+    # --- Discoverable enum endpoints. These are short fixed lists — useful for the
+    # LLM to validate filter values before searching (e.g., 'is "elemental" a valid
+    # creature type?' → list_creaturetypes).
+    {
+        "name": "list_abilities",
+        "description": "List /v2/abilities/ — six core ability scores (str, dex, con, int, wis, cha). Each entry includes governing skills.",
+        "annotations": {"title": "List Abilities (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "list_abilities"],
+        "value_flags": {"name": "--name", "keys": "--keys", "source": "--source", "match": "--match", "fields": "--fields", "exclude": "--exclude", "limit": "--limit", "dedupe": "--dedupe"},
+        "input_schema": {"type": "object", "properties": {"name": _str_param("Ability name."), "keys": _PARAM_KEYS, "source": _PARAM_SOURCE, "match": _PARAM_MATCH, "fields": _PARAM_FIELDS, "exclude": _PARAM_EXCLUDE, "limit": _PARAM_LIMIT, "dedupe": _PARAM_DEDUPE}, "additionalProperties": False},
+    },
+    {
+        "name": "list_alignments",
+        "description": "List /v2/alignments/ — Lawful Good through Chaotic Evil + True Neutral. Each entry has morality + societal_attitude axes.",
+        "annotations": {"title": "List Alignments (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "list_alignments"],
+        "value_flags": {"name": "--name", "keys": "--keys", "source": "--source", "match": "--match", "fields": "--fields", "exclude": "--exclude", "limit": "--limit", "dedupe": "--dedupe"},
+        "input_schema": {"type": "object", "properties": {"name": _str_param("Alignment name."), "keys": _PARAM_KEYS, "source": _PARAM_SOURCE, "match": _PARAM_MATCH, "fields": _PARAM_FIELDS, "exclude": _PARAM_EXCLUDE, "limit": _PARAM_LIMIT, "dedupe": _PARAM_DEDUPE}, "additionalProperties": False},
+    },
+    {
+        "name": "list_creaturetypes",
+        "description": "List /v2/creaturetypes/ — Aberration, Beast, Celestial, Construct, Dragon, Elemental, Fey, Fiend, Giant, Humanoid, Monstrosity, Ooze, Plant, Undead. Pass returned `key` into search_monsters(type=...).",
+        "annotations": {"title": "List Creature Types (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "list_creaturetypes"],
+        "value_flags": {"name": "--name", "keys": "--keys", "source": "--source", "match": "--match", "fields": "--fields", "exclude": "--exclude", "limit": "--limit", "dedupe": "--dedupe"},
+        "input_schema": {"type": "object", "properties": {"name": _str_param("Creature-type name."), "keys": _PARAM_KEYS, "source": _PARAM_SOURCE, "match": _PARAM_MATCH, "fields": _PARAM_FIELDS, "exclude": _PARAM_EXCLUDE, "limit": _PARAM_LIMIT, "dedupe": _PARAM_DEDUPE}, "additionalProperties": False},
+    },
+    {
+        "name": "list_damagetypes",
+        "description": "List /v2/damagetypes/ — acid, bludgeoning, cold, fire, force, lightning, necrotic, piercing, poison, psychic, radiant, slashing, thunder.",
+        "annotations": {"title": "List Damage Types (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "list_damagetypes"],
+        "value_flags": {"name": "--name", "keys": "--keys", "source": "--source", "match": "--match", "fields": "--fields", "exclude": "--exclude", "limit": "--limit", "dedupe": "--dedupe"},
+        "input_schema": {"type": "object", "properties": {"name": _str_param("Damage-type name."), "keys": _PARAM_KEYS, "source": _PARAM_SOURCE, "match": _PARAM_MATCH, "fields": _PARAM_FIELDS, "exclude": _PARAM_EXCLUDE, "limit": _PARAM_LIMIT, "dedupe": _PARAM_DEDUPE}, "additionalProperties": False},
+    },
+    {
+        "name": "list_sizes",
+        "description": "List /v2/sizes/ — Tiny through Gargantuan (+ Colossal in some sources). Each entry has space_diameter and suggested_hit_dice. Pass `key` into search_monsters(size=...).",
+        "annotations": {"title": "List Sizes (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "list_sizes"],
+        "value_flags": {"name": "--name", "keys": "--keys", "source": "--source", "match": "--match", "fields": "--fields", "exclude": "--exclude", "limit": "--limit", "dedupe": "--dedupe"},
+        "input_schema": {"type": "object", "properties": {"name": _str_param("Size name."), "keys": _PARAM_KEYS, "source": _PARAM_SOURCE, "match": _PARAM_MATCH, "fields": _PARAM_FIELDS, "exclude": _PARAM_EXCLUDE, "limit": _PARAM_LIMIT, "dedupe": _PARAM_DEDUPE}, "additionalProperties": False},
+    },
+    {
+        "name": "list_skills",
+        "description": "List /v2/skills/ — Acrobatics through Survival. Each entry links to its governing ability. Useful for has_skills= validation in search_monsters.",
+        "annotations": {"title": "List Skills (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "list_skills"],
+        "value_flags": {"name": "--name", "keys": "--keys", "source": "--source", "match": "--match", "fields": "--fields", "exclude": "--exclude", "limit": "--limit", "dedupe": "--dedupe"},
+        "input_schema": {"type": "object", "properties": {"name": _str_param("Skill name."), "keys": _PARAM_KEYS, "source": _PARAM_SOURCE, "match": _PARAM_MATCH, "fields": _PARAM_FIELDS, "exclude": _PARAM_EXCLUDE, "limit": _PARAM_LIMIT, "dedupe": _PARAM_DEDUPE}, "additionalProperties": False},
+    },
+    {
+        "name": "list_spellschools",
+        "description": "List /v2/spellschools/ — Abjuration, Conjuration, Divination, Enchantment, Evocation, Illusion, Necromancy, Transmutation. Pass `key` into search_spells(school=...).",
+        "annotations": {"title": "List Spell Schools (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "list_spellschools"],
+        "value_flags": {"name": "--name", "keys": "--keys", "source": "--source", "match": "--match", "fields": "--fields", "exclude": "--exclude", "limit": "--limit", "dedupe": "--dedupe"},
+        "input_schema": {"type": "object", "properties": {"name": _str_param("School name."), "keys": _PARAM_KEYS, "source": _PARAM_SOURCE, "match": _PARAM_MATCH, "fields": _PARAM_FIELDS, "exclude": _PARAM_EXCLUDE, "limit": _PARAM_LIMIT, "dedupe": _PARAM_DEDUPE}, "additionalProperties": False},
+    },
+    {
+        "name": "list_itemcategories",
+        "description": "List /v2/itemcategories/ — Adventuring Gear, Arcane Focus, Heavy Armor, Martial Weapon, Tool, etc. Pass `key` into search_items(category=...).",
+        "annotations": {"title": "List Item Categories (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "list_itemcategories"],
+        "value_flags": {"name": "--name", "keys": "--keys", "source": "--source", "match": "--match", "fields": "--fields", "exclude": "--exclude", "limit": "--limit", "dedupe": "--dedupe"},
+        "input_schema": {"type": "object", "properties": {"name": _str_param("Category name."), "keys": _PARAM_KEYS, "source": _PARAM_SOURCE, "match": _PARAM_MATCH, "fields": _PARAM_FIELDS, "exclude": _PARAM_EXCLUDE, "limit": _PARAM_LIMIT, "dedupe": _PARAM_DEDUPE}, "additionalProperties": False},
+    },
+    {
+        "name": "list_itemrarities",
+        "description": "List /v2/itemrarities/ — Common through Artifact. Each has a `rank` integer. Pass `key` into search_magic_items(rarity=...).",
+        "annotations": {"title": "List Item Rarities (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "list_itemrarities"],
+        "value_flags": {"name": "--name", "keys": "--keys", "source": "--source", "match": "--match", "fields": "--fields", "exclude": "--exclude", "limit": "--limit", "dedupe": "--dedupe"},
+        "input_schema": {"type": "object", "properties": {"name": _str_param("Rarity name."), "keys": _PARAM_KEYS, "source": _PARAM_SOURCE, "match": _PARAM_MATCH, "fields": _PARAM_FIELDS, "exclude": _PARAM_EXCLUDE, "limit": _PARAM_LIMIT, "dedupe": _PARAM_DEDUPE}, "additionalProperties": False},
+    },
+    {
+        "name": "list_languages",
+        "description": "List /v2/languages/ — Common, Dwarvish, Elvish, Abyssal, Druidic, Thieves' Cant, etc. Filter is_exotic=True for non-standard, is_secret=True for hidden languages.",
+        "annotations": {"title": "List Languages (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "list_languages"],
+        "value_flags": {"name": "--name", "keys": "--keys", "is_exotic": "--is_exotic", "is_secret": "--is_secret", "source": "--source", "match": "--match", "fields": "--fields", "exclude": "--exclude", "limit": "--limit", "dedupe": "--dedupe"},
+        "input_schema": {"type": "object", "properties": {"name": _str_param("Language name."), "keys": _PARAM_KEYS, "is_exotic": _bool_param("True for exotic languages (Abyssal, Celestial, Deep Speech, etc.)."), "is_secret": _bool_param("True for secret languages (Druidic, Thieves' Cant)."), "source": _PARAM_SOURCE, "match": _PARAM_MATCH, "fields": _PARAM_FIELDS, "exclude": _PARAM_EXCLUDE, "limit": _PARAM_LIMIT, "dedupe": _PARAM_DEDUPE}, "additionalProperties": False},
+    },
+    {
+        "name": "list_weaponproperties",
+        "description": "List /v2/weaponproperties/ — Ammunition, Finesse, Heavy, Light, Loading, Reach, Special, Thrown, Two-Handed, Versatile, plus a5e additions. Filter `type` for melee/ranged groupings.",
+        "annotations": {"title": "List Weapon Properties (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "list_weaponproperties"],
+        "value_flags": {"name": "--name", "keys": "--keys", "type": "--type", "source": "--source", "match": "--match", "fields": "--fields", "exclude": "--exclude", "limit": "--limit", "dedupe": "--dedupe"},
+        "input_schema": {"type": "object", "properties": {"name": _str_param("Property name."), "keys": _PARAM_KEYS, "type": _str_param("Weapon-property grouping (e.g. 'melee', 'ranged')."), "source": _PARAM_SOURCE, "match": _PARAM_MATCH, "fields": _PARAM_FIELDS, "exclude": _PARAM_EXCLUDE, "limit": _PARAM_LIMIT, "dedupe": _PARAM_DEDUPE}, "additionalProperties": False},
+    },
+    {
+        "name": "list_gamesystems",
+        "description": "List /v2/gamesystems/ — '5e-2014', '5e-2024', 'a5e' (Level Up). Useful for filtering search calls via document__gamesystem__key (advanced).",
+        "annotations": {"title": "List Gamesystems (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "list_gamesystems"],
+        "value_flags": {"name": "--name", "keys": "--keys", "fields": "--fields", "exclude": "--exclude", "limit": "--limit"},
+        "input_schema": {"type": "object", "properties": {"name": _str_param("Gamesystem name."), "keys": _PARAM_KEYS, "fields": _PARAM_FIELDS, "exclude": _PARAM_EXCLUDE, "limit": _PARAM_LIMIT}, "additionalProperties": False},
+    },
+    {
+        "name": "list_publishers",
+        "description": "List /v2/publishers/ — WotC, Kobold Press, EN Publishing, etc. Mostly attribution metadata.",
+        "annotations": {"title": "List Publishers (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "list_publishers"],
+        "value_flags": {"name": "--name", "keys": "--keys", "fields": "--fields", "exclude": "--exclude", "limit": "--limit"},
+        "input_schema": {"type": "object", "properties": {"name": _str_param("Publisher name."), "keys": _PARAM_KEYS, "fields": _PARAM_FIELDS, "exclude": _PARAM_EXCLUDE, "limit": _PARAM_LIMIT}, "additionalProperties": False},
+    },
+    {
+        "name": "list_licenses",
+        "description": "List /v2/licenses/ — CC-BY 4.0, ORC, OGL. Legal metadata; rarely needed at the table.",
+        "annotations": {"title": "List Licenses (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "list_licenses"],
+        "value_flags": {"name": "--name", "keys": "--keys", "fields": "--fields", "exclude": "--exclude", "limit": "--limit"},
+        "input_schema": {"type": "object", "properties": {"name": _str_param("License name."), "keys": _PARAM_KEYS, "fields": _PARAM_FIELDS, "exclude": _PARAM_EXCLUDE, "limit": _PARAM_LIMIT}, "additionalProperties": False},
+    },
+    {
+        "name": "list_documents",
+        "description": "List /v2/documents/ — every source document (srd-2024, tob, a5e-ag, etc.). Use this to discover the exact `source` string accepted by every search_* tool.",
+        "annotations": {"title": "List Documents (SRD/v2)", **_RO_OPEN_WORLD},
+        "argv": ["--mcp-tool", "list_documents"],
+        "value_flags": {"name": "--name", "keys": "--keys", "gamesystem": "--gamesystem", "publisher": "--publisher", "limit": "--limit"},
+        "input_schema": {"type": "object", "properties": {"name": _str_param("Document name."), "keys": _PARAM_KEYS, "gamesystem": _str_param("Filter to a gamesystem key (e.g. '5e-2024')."), "publisher": _str_param("Filter to a publisher key."), "limit": _PARAM_LIMIT}, "additionalProperties": False},
     },
 ]
 
@@ -1110,6 +2155,30 @@ MCP_HANDLERS = {
     "get_feat": get_feat,
     "get_spell_list": get_spell_list,
     "search_srd": search_srd,
+    # Tier 2: new endpoints
+    "search_environments": search_environments,
+    "get_environment": get_environment,
+    "search_creaturesets": search_creaturesets,
+    "get_creatureset": get_creatureset,
+    "search_itemsets": search_itemsets,
+    "get_itemset": get_itemset,
+    "search_rulesets": search_rulesets,
+    "get_ruleset": get_ruleset,
+    "list_abilities": list_abilities,
+    "list_alignments": list_alignments,
+    "list_creaturetypes": list_creaturetypes,
+    "list_damagetypes": list_damagetypes,
+    "list_sizes": list_sizes,
+    "list_skills": list_skills,
+    "list_spellschools": list_spellschools,
+    "list_itemcategories": list_itemcategories,
+    "list_itemrarities": list_itemrarities,
+    "list_languages": list_languages,
+    "list_weaponproperties": list_weaponproperties,
+    "list_gamesystems": list_gamesystems,
+    "list_publishers": list_publishers,
+    "list_licenses": list_licenses,
+    "list_documents": list_documents,
 }
 
 
@@ -1130,15 +2199,39 @@ def _parse_flag_args(tokens: list[str]) -> dict[str, Any]:
         else:
             out[key] = True
             i += 1
-    for int_key in ("limit", "level"):
+    int_keys = (
+        "limit", "level", "level_min", "level_max",
+        "ac_min", "ac_max", "ac_base_min", "ac_base_max", "ac_cap_dexmod",
+        "passive_perception_min", "passive_perception_max",
+        "strength_min", "strength_max", "dexterity_min", "dexterity_max",
+        "constitution_min", "constitution_max", "intelligence_min", "intelligence_max",
+        "wisdom_min", "wisdom_max", "charisma_min", "charisma_max",
+        "strength_required_min", "strength_required_max",
+        "range_min", "range_max",
+    )
+    for int_key in int_keys:
         if int_key in out and isinstance(out[int_key], str):
             try:
                 out[int_key] = int(out[int_key])
             except ValueError:
                 pass
+    float_keys = ("cr_min", "cr_max", "cost_min", "cost_max", "weight_min", "weight_max")
+    for f_key in float_keys:
+        if f_key in out and isinstance(out[f_key], str):
+            try:
+                out[f_key] = float(out[f_key])
+            except ValueError:
+                pass
     # Boolean flags from CLI come in as strings; only explicit falsy values flip
     # to False (any unrecognized string stays truthy, matching the function default).
-    for bool_key in ("dedupe",):
+    bool_keys = (
+        "dedupe", "concentration", "verbal", "somatic", "material", "material_consumed",
+        "requires_attunement", "is_weapon", "is_armor", "is_light", "is_versatile",
+        "is_thrown", "is_finesse", "is_two_handed", "is_subclass", "is_subspecies",
+        "is_exotic", "is_secret", "ac_add_dexmod", "grants_stealth_disadvantage",
+        "vector", "fuzzy", "strict",
+    )
+    for bool_key in bool_keys:
         if bool_key in out and isinstance(out[bool_key], str):
             out[bool_key] = out[bool_key].strip().lower() not in ("false", "0", "no", "off")
     return out
@@ -1163,6 +2256,10 @@ def main() -> int:
                 "get_species": "key",
                 "get_feat": "key",
                 "get_spell_list": "class_slug",
+                "get_environment": "key",
+                "get_creatureset": "key",
+                "get_itemset": "key",
+                "get_ruleset": "key",
             }
             if tool_name in single_arg_tools:
                 if len(sys.argv) < 4:

@@ -8,6 +8,8 @@ import json
 import os
 import subprocess
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -16,6 +18,42 @@ from typing import Any, Callable, Optional
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PROTOCOL_VERSION = "2025-06-18"
 _TRANSPORT_MODE: Optional[str] = None  # "jsonl" | "lsp"
+
+# Concurrent dispatch: tool calls go to a thread pool so a batch of cold
+# (cache-miss) HTTP fetches doesn't run end-to-end serially. The stdin loop is
+# still single-threaded — only `tools/call` is parallelized; initialize and
+# tools/list stay inline because they're sub-millisecond. _STDOUT_LOCK
+# serializes byte writes so concurrent JSON-RPC responses don't interleave.
+# Pool size is tunable via DND_MCP_MAX_WORKERS (default 8 — Open5e tolerates
+# this comfortably and SQLite's per-connection locking handles the rest).
+_STDOUT_LOCK = threading.Lock()
+
+
+def _safe_int_env(name: str, default: int) -> int:
+    """Parse an env var as int, falling back to `default` on missing or invalid
+    input. Avoids crashing the server at import time on a typo (e.g. 'eight')."""
+    raw = os.environ.get(name)
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        # Stay on stderr so JSON-RPC stdout isn't polluted.
+        print(f"warn: invalid {name}={raw!r}, using default {default}", file=sys.stderr)
+        return default
+
+
+_DEFAULT_MAX_WORKERS = max(1, _safe_int_env("DND_MCP_MAX_WORKERS", 8))
+# Hard cap on in-flight tool calls to prevent a fast sender from queueing
+# unbounded work. `tools/call` requests beyond this limit get an immediate
+# JSON-RPC error rather than silently piling up. Default = 4× workers, leaving
+# headroom for short bursts without letting them grow without bound.
+_INFLIGHT_LIMIT = max(_DEFAULT_MAX_WORKERS * 4, 32)
+_inflight_slots = threading.Semaphore(_INFLIGHT_LIMIT)
+# Per-call wall-clock cap on subprocess tools — a hung child would otherwise pin
+# its worker forever. Bypass with DND_MCP_TOOL_TIMEOUT=<seconds>; raise it for
+# slow generators (e.g. PDF export) or set <=0 to disable (NOT recommended).
+_TOOL_TIMEOUT_SEC = _safe_int_env("DND_MCP_TOOL_TIMEOUT", 60)
 
 
 def _python_bin() -> Path:
@@ -87,14 +125,42 @@ def _read_message() -> Optional[dict[str, Any]]:
 
 
 def _write_message(payload: dict[str, Any]) -> None:
+    """Serialize a JSON-RPC envelope to stdout. Holds _STDOUT_LOCK so concurrent
+    worker threads can't interleave bytes mid-message."""
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    if _TRANSPORT_MODE == "jsonl":
-        sys.stdout.buffer.write(body + b"\n")
+    with _STDOUT_LOCK:
+        if _TRANSPORT_MODE == "jsonl":
+            sys.stdout.buffer.write(body + b"\n")
+            sys.stdout.buffer.flush()
+            return
+        sys.stdout.buffer.write(f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"))
+        sys.stdout.buffer.write(body)
         sys.stdout.buffer.flush()
-        return
-    sys.stdout.buffer.write(f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"))
-    sys.stdout.buffer.write(body)
-    sys.stdout.buffer.flush()
+
+
+def _run_call_worker(msg_id: Any, runner: "ToolRunner", arguments: dict[str, Any]) -> None:
+    """Execute one tools/call in a worker thread. Catches every exception so a
+    failing handler can never crash the server — converts to a JSON-RPC error.
+    Notifications (msg_id is None) are silently completed with no response.
+    Always releases the inflight semaphore in `finally` so admission control
+    can't leak slots even if the handler explodes."""
+    try:
+        out = runner.run(arguments=arguments)
+        if msg_id is not None:
+            _write_message({
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "result": {"content": [{"type": "text", "text": out}]},
+            })
+    except Exception as exc:
+        if msg_id is not None:
+            _write_message({
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "error": {"code": -32000, "message": str(exc)},
+            })
+    finally:
+        _inflight_slots.release()
 
 
 @dataclass(frozen=True)
@@ -169,13 +235,30 @@ class ToolRunner:
                 continue
             argv.extend([self.value_flags[key], rendered])
 
-        proc = subprocess.run(
-            [str(python), str(self.script_path), *argv],
-            cwd=str(REPO_ROOT),
-            env={**os.environ, "PYTHONUTF8": "1"},
-            capture_output=True,
-            text=True,
-        )
+        # Wall-clock timeout protects against a hung child pinning a worker
+        # forever; subprocess.run raises subprocess.TimeoutExpired on overrun
+        # and DOES kill the child (the wait happens in the subprocess module).
+        # _TOOL_TIMEOUT_SEC <= 0 means "no timeout" — opt-in only via env.
+        timeout = _TOOL_TIMEOUT_SEC if _TOOL_TIMEOUT_SEC > 0 else None
+        try:
+            proc = subprocess.run(
+                [str(python), str(self.script_path), *argv],
+                cwd=str(REPO_ROOT),
+                env={**os.environ, "PYTHONUTF8": "1"},
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raw = exc.stderr
+            if isinstance(raw, (bytes, bytearray, memoryview)):
+                stderr = bytes(raw).decode("utf-8", errors="replace")
+            else:
+                stderr = str(raw) if raw else ""
+            raise RuntimeError(
+                f"{self.script_path.name} exceeded {timeout}s timeout (set DND_MCP_TOOL_TIMEOUT to adjust). "
+                f"stderr: {stderr.strip()[:300]}"
+            ) from exc
         if proc.returncode != 0:
             msg = (proc.stderr or proc.stdout or "").strip() or f"{self.script_path.name} exited with {proc.returncode}"
             raise RuntimeError(msg)
@@ -478,6 +561,28 @@ def main() -> int:
     tools = tuple(r.tool for r in runners)
     runner_by_name = {r.tool.name: r for r in runners}
 
+    # Worker pool for tools/call dispatch. Cold (cache-miss) HTTP fetches now
+    # overlap; a batch of 6 fresh queries that took ~3s serially can finish in
+    # ~500ms in parallel. Cached calls don't notice the difference.
+    executor = ThreadPoolExecutor(
+        max_workers=_DEFAULT_MAX_WORKERS,
+        thread_name_prefix="dnd-mcp",
+    )
+
+    try:
+        return _serve_loop(tools, runner_by_name, executor)
+    finally:
+        # On stdin EOF, finish in-flight tool calls before exiting so we don't
+        # truncate a response mid-write. Bounded by the per-call HTTP timeout
+        # (~10s in srd5_2), so worst-case shutdown delay is small.
+        executor.shutdown(wait=True)
+
+
+def _serve_loop(
+    tools: tuple["Tool", ...],
+    runner_by_name: dict[str, "ToolRunner"],
+    executor: ThreadPoolExecutor,
+) -> int:
     while True:
         msg = _read_message()
         if msg is None:
@@ -516,6 +621,9 @@ def main() -> int:
                 continue
 
             if method == "tools/call":
+                # Validate sync (so shape/lookup errors return in-order via the
+                # outer except), then dispatch the actual handler to a worker so
+                # concurrent calls overlap their HTTP latency.
                 tool_name = str(params.get("name") or "")
                 arguments = params.get("arguments") or {}
                 if not isinstance(arguments, dict):
@@ -523,10 +631,24 @@ def main() -> int:
                 runner = runner_by_name.get(tool_name)
                 if runner is None:
                     raise ValueError(f"Unknown tool: {tool_name}")
-                out = runner.run(arguments=arguments)
-                result = {"content": [{"type": "text", "text": out}]}
-                if msg_id is not None:
-                    _write_message({"jsonrpc": "2.0", "id": msg_id, "result": result})
+                # Admission control: refuse new work past the in-flight cap so a
+                # fast sender can't pile up unbounded queue depth (memory + tail
+                # latency). Slot is released by the worker in its finally clause.
+                if not _inflight_slots.acquire(blocking=False):
+                    if msg_id is not None:
+                        _write_message({
+                            "jsonrpc": "2.0",
+                            "id": msg_id,
+                            "error": {
+                                "code": -32000,
+                                "message": (
+                                    f"Server busy: {_INFLIGHT_LIMIT} in-flight tool calls. "
+                                    "Retry after some complete."
+                                ),
+                            },
+                        })
+                    continue
+                executor.submit(_run_call_worker, msg_id, runner, arguments)
                 continue
 
             # Ignore notifications like "initialized".
