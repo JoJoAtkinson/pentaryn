@@ -358,7 +358,23 @@ def get_faction_overview(slug: str) -> dict[str, Any]:
 def last_session_summary(session: Optional[int] = None) -> dict[str, Any]:
     """List all notes from a numbered session folder (default: highest-numbered).
     Returns each notes file's path and a short preview (first 600 chars). Pass
-    `session=N` to fetch session N specifically."""
+    `session=N` to fetch session N specifically.
+
+    Behavior:
+      - `session=None` (default): the highest-numbered session folder, regardless
+        of whether it has notes.
+      - `session=N`: that specific folder. If it exists but has no notes/ subdir
+        or no .md files inside, returns `notes_count=0` (no error). This is the
+        normal case for sessions that have only audio.m4a or are placeholder
+        folders.
+
+    Accepts int or numeric string for `session` (string is coerced via int()).
+    """
+    if isinstance(session, str):
+        try:
+            session = int(session)
+        except ValueError:
+            raise ValueError(f"`session` must be an integer (got {session!r})")
     sessions = sorted(
         (p for p in _SESSIONS_DIR.iterdir() if p.is_dir() and p.name.isdigit()),
         key=lambda p: int(p.name),
@@ -570,7 +586,13 @@ MCP_TOOLS = [
             "List notes from a numbered session folder. By default returns the highest-numbered "
             "session (the most recent). Pass `session=N` for a specific session number. "
             "Returns each note's path, frontmatter, and a 600-char preview — useful for session "
-            "prep / recall without dumping every full note into context."
+            "prep / recall without dumping every full note into context. "
+            "QUIRK: many session folders contain only audio (audio.m4a) and have no notes/ "
+            "subdir; for those `notes_count` is 0 and `notes` is empty — NOT an error. "
+            "QUIRK: For cross-session NPC callbacks, use `find_lore(query='<name>', "
+            "paths='sessions')` instead of iterating session by session. The vault also has a "
+            "parallel narrative tree under `story/` (e.g., `story/the-compass-edge/`) with "
+            "session summaries written from in-character perspectives."
         ),
         "annotations": {"title": "Last Session Notes", **_RO_LOCAL},
         "argv": ["--mcp-tool", "last_session_summary"],
