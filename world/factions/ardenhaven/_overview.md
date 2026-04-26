@@ -74,8 +74,8 @@ Local Sheriffs & Mayors
 
 ## Notable People (NPCs)
 
-- [Elarion Faenwynd](npc/elarian-faenwynd.md) — Elf archivist/translator at the Concordance Library
-- [Branik Ironweld](npc/branik-ironweld-anvil-and-oar.md) — Weaponsmith at The Anvil & Oar (Lower Tier)
+- [Elarion Faenwynd](locations/ardenford/concordance-library/archivist-elarian-faenwynd.md) — Elf archivist/translator at the Concordance Library
+- [Branik Ironweld](locations/ardenford/shops/the-anvil-and-oar.md) — Weaponsmith at The Anvil & Oar (Lower Tier)
 - [Selise Dawnquill](npcs/selise-dawnquill-silverbridge-arcana.md) — Proprietor of Silverbridge Arcana (Upper Tier)
 - [Hesta Briarvein](npcs/hesta-briarvein-willowglass-apothecary.md) — Alchemist at Willowglass Apothecary (Middle Tier)
 - [Thorgrim Ledger-Scar](npcs/thorgrim-ledger-scar.md) — Dwarven keeper of The Wayward Compass
