@@ -63,6 +63,29 @@ to anything server-side. Verify behavior empirically when in doubt.
 7) For free-text 'classes that know X' queries: search_srd(object_model='X',
    vector=True) is the working path. Per-endpoint search_* tools only do
    structured field filters (CR, level, rarity, etc.), not keyword search.
+
+8) `cost` and `weight` on /v2/magicitems/ are usually '0.00' / '0.000' —
+   Open5e doesn't carry priced data for most magic items (rarity is the
+   pricing proxy). Don't surface 0-cost as truth at a magic shop; map rarity
+   to standard DMG ranges (common ~50gp, uncommon ~500gp, rare ~5000gp,
+   very-rare ~50000gp, legendary ~200000gp+) for in-fiction prices.
+
+9) /v2/conditions/ entries use `descriptions` (PLURAL) — a list of per-
+   source variant dicts (each with desc/document/gamesystem). There is no
+   top-level `desc`. Navigate descriptions[i].desc and pick the variant
+   matching your gamesystem ('5e-2014', '5e-2024', 'a5e').
+
+10) Filter values that look like fractions ('1/4', '1/2') get sent as
+    URL-encoded strings and rejected with HTTP 400. The challenge_rating
+    field stores numbers (0.25, 0.5). search_monsters auto-converts via
+    _parse_cr; if you add other fraction-style filters, do the same.
+
+11) When using fields= to trim list responses: `_build_query` auto-appends
+    `document` because the priority sort & dedupe both read `document.key`
+    via `_doc_key`. Without it, every entry's tier collapses to 1 and
+    dedupe keeps whichever entry the API returned first — silently picking
+    the wrong winner. The auto-merge costs ~70 chars/entry and prevents
+    silent corruption.
 """
 
 from __future__ import annotations
@@ -201,7 +224,16 @@ def _build_query(
     if source:
         params["document__key__in"] = source
     if fields:
-        params["fields"] = fields
+        # AUTO-MERGE: priority sort + dedupe both read entry['document']['key']
+        # via _doc_key. If the caller's `fields=` excludes 'document', the sort
+        # silently picks the wrong winner (every entry's tier collapses to 1).
+        # Append `document` so trimmed responses still rank correctly. Caller
+        # pays a small extra-bytes cost (~70 chars per entry) but gets correct
+        # priority ordering — the alternative is silent data corruption.
+        field_list = [f.strip() for f in fields.split(",") if f.strip()]
+        if "document" not in field_list:
+            field_list.append("document")
+        params["fields"] = ",".join(field_list)
     if exclude:
         params["exclude"] = exclude
     if ordering:
@@ -358,6 +390,23 @@ def _add_keys(extra: dict[str, Any], keys: Optional[str]) -> None:
         extra["key__in"] = keys
 
 
+def _parse_cr(cr: Optional[str]) -> Optional[str]:
+    """Accept human-readable CR fractions ('1/4', '1/2', '1/8') or decimals
+    ('0.25', '1', '5'). Open5e's challenge_rating field is stored as a number,
+    so it rejects raw '1/4' with HTTP 400. Convert here to a decimal string.
+    Returns the input unchanged if it doesn't look like a fraction."""
+    if cr is None:
+        return None
+    s = str(cr).strip()
+    if "/" in s:
+        try:
+            num, denom = s.split("/", 1)
+            return str(float(num) / float(denom))
+        except (ValueError, ZeroDivisionError):
+            return s  # let the API reject with a clearer error
+    return s
+
+
 def _add_has_fields(
     extra: dict[str, Any], comma_list: Optional[str], template: str
 ) -> None:
@@ -410,7 +459,8 @@ def search_monsters(
     filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
     extra: dict[str, Any] = {}
     if cr is not None:
-        extra["challenge_rating"] = cr
+        # Open5e wants a decimal — '1/4' fails as 400. _parse_cr handles fractions.
+        extra["challenge_rating"] = _parse_cr(cr)
     _add_range(extra, "challenge_rating", cr_min, cr_max)
     if type:
         # Open5e's /v2/creatures/ filterset uses bare `type` and `size` (not the
@@ -1466,7 +1516,7 @@ MCP_TOOLS = [
             "type": "object",
             "properties": {
                 "name": _str_param("Creature name (partial unless match='exact')."),
-                "cr": _str_param("Exact challenge rating (e.g., '1', '1/2', '5'). Use cr_min/cr_max for ranges."),
+                "cr": _str_param("Exact challenge rating. Accepts fractions ('1/4', '1/2', '1/8') OR decimals ('0.25', '5'); fractions are converted to decimals internally because Open5e's API only accepts numeric form. Use cr_min/cr_max for ranges."),
                 "cr_min": _num_param("CR minimum (inclusive). Pair with cr_max for ranged encounter prep."),
                 "cr_max": _num_param("CR maximum (inclusive)."),
                 "type": _str_param("Creature type key (e.g., 'beast', 'dragon', 'undead'). Use list_creaturetypes to discover keys."),
@@ -1577,12 +1627,14 @@ MCP_TOOLS = [
     {
         "name": "list_conditions",
         "description": (
-            "List conditions (/v2/conditions/). Pass `name` to filter (substring); omit for all. "
-            "Standard 5e conditions (blinded, charmed, frightened, grappled, etc.) live under "
-            "source='core' — there's no srd-2024 source for conditions; a5e-ag has extras like Bloodied. "
-            "Default behavior: searches all sources, ranks core first then a5e-ag; same-name duplicates "
-            "are collapsed (dropped keys surfaced in `dropped_variants`). "
-            "Use during combat for quick condition-effect lookup."
+            "List conditions (/v2/conditions/). Pass `name` to filter; omit for all. "
+            "Standard 5e conditions (blinded, charmed, grappled, etc.) live under source='core'; "
+            "a5e-ag has extras like Bloodied. Default ranks core first then a5e-ag; same-name "
+            "duplicates collapsed (dropped keys in `dropped_variants`). "
+            "RESPONSE SHAPE: each entry has a `descriptions` (PLURAL) list of per-source variants "
+            "— each variant carries its own `desc`, `document`, `gamesystem` keys. There's NO "
+            "single top-level `desc` field. To read the rules text, navigate descriptions[i].desc "
+            "and pick the variant matching the gamesystem you're running."
         ),
         "annotations": {"title": "List Conditions (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "list_conditions"],
@@ -1606,9 +1658,11 @@ MCP_TOOLS = [
         "name": "search_magic_items",
         "description": (
             "Search magic items (/v2/magicitems/) by name, rarity, or source. "
-            "Default behavior: searches all sources, ranks srd-2024 first, third-party "
-            "(tob, a5e-ag, open5e) middle, srd-2014 last; same-name duplicates are collapsed "
-            "(dropped keys surfaced in `dropped_variants`). Not for edition comparison. "
+            "Default ranks srd-2024 first, third-party (tob, a5e-ag, open5e) middle, srd-2014 "
+            "last; same-name duplicates collapsed (dropped keys in `dropped_variants`). "
+            "DATA NOTE: `cost` and `weight` are typically 0 on Open5e — pricing data isn't "
+            "carried for most items. Use rarity as the price proxy (common ~50gp, uncommon "
+            "~500gp, rare ~5000gp, very-rare ~50000gp, legendary ~200000gp+). "
             "Examples: search_magic_items(rarity='legendary'); search_magic_items(name='cloak')."
         ),
         "annotations": {"title": "Search Magic Items (SRD/v2)", **_RO_OPEN_WORLD},
