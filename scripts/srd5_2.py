@@ -86,6 +86,33 @@ to anything server-side. Verify behavior empirically when in doubt.
     dedupe keeps whichever entry the API returned first — silently picking
     the wrong winner. The auto-merge costs ~70 chars/entry and prevents
     silent corruption.
+
+12) Creature → environment is asymmetric. /v2/creaturesets/<key>/ detail
+    responses include `environments: [{name, key}]` per creature, AND
+    /v2/creatures/<key>/ detail responses do too. But:
+      a) /v2/creatures/?environments__key=X is silently ignored (cosmetic,
+         not actually wired server-side).
+      b) /v2/creatures/?fields=key,name,environments returns environments=[]
+         on the LIST response — only the detail endpoint populates them.
+    To filter creatures by environment, the only working paths are:
+      - search_srd(query='<biome> creatures', vector=True) — semantic match
+      - get_creatureset for curated themed groups (limited)
+      - bulk-fetch creature DETAILS and grep .environments client-side
+    Don't expose `environment=` as a search_monsters param — it would
+    silently fail.
+
+13) `keys=` filter silently drops missing keys. /v2/<endpoint>/?key__in=A,B,C
+    returns whichever subset of {A,B,C} exists, with no error or
+    'missing' indicator. Caller must diff requested vs. returned. Common
+    cause: assuming `srd-2024_X` exists when X is only in srd-2014 (e.g.
+    Acolyte, Thug, Commoner exist as `srd_*` not `srd-2024_*`).
+
+14) get_creatureset / get_itemset / get_ruleset return FULL embedded
+    content. get_creatureset('common-mounts') = 9 creatures with complete
+    stat blocks (31kb). get_ruleset('srd-2024_combat') = 10 sub-rules with
+    full text. get_itemset('arcane-focuses') = 5 item refs. These are
+    high-value 'whole chapter / encounter set' fetches when applicable —
+    cheaper and more curated than search_X(keys=...) for the same content.
 """
 
 from __future__ import annotations
@@ -1458,7 +1485,11 @@ _PARAM_KEYS = {
     "description": (
         "Batch-fetch by exact record keys: a comma list (e.g. "
         "'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP "
-        "round-trip instead of N. Combine with `fields` to keep the response compact."
+        "round-trip instead of N. Combine with `fields` to keep the response compact. "
+        "MISSING KEYS ARE SILENTLY DROPPED: if you request 12 keys and Open5e only has 10, "
+        "you get 10 results with no error or 'not found' field. Diff the requested set "
+        "against the returned `key` values to detect missing entries — common cause is "
+        "assuming 'srd-2024_X' exists when X is in srd-2014 only."
     ),
 }
 
@@ -2188,9 +2219,13 @@ MCP_TOOLS = [
     {
         "name": "search_creaturesets",
         "description": (
-            "Search /v2/creaturesets/ — pre-built creature groupings (e.g. 'Goblin Warband', "
-            "'Common Mounts'). Response includes a `creatures` list of keys to chain into "
-            "get_monster_details (or batch via search_monsters keys=...)."
+            "Search /v2/creaturesets/ — pre-built creature groupings (e.g. 'Common Mounts'). "
+            "List response gives keys + names; pair with get_creatureset for the FULL payload: "
+            "every creature's complete stat block embedded inline (Common Mounts = 9 full stat "
+            "blocks, ~31kb in one call). Each embedded creature also has its `environments` "
+            "array populated — useful for biome themes when /v2/creatures/?environments__key= "
+            "is non-functional (see module docstring quirk #12). For ad-hoc creature batches "
+            "use search_monsters(keys=...); for curated themed groups, this is cheaper."
         ),
         "annotations": {"title": "Search Creature Sets (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_creaturesets"],
