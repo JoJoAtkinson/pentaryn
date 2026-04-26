@@ -416,8 +416,8 @@ After Pass 1, review `pass1.json` and correct resource paths:
 ```json
 {
   "keyword": "Thorgrim",
-  "requested_path": "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md",
-  "override": "world/factions/ardenhaven/npc/thorgrim-ledger-scar.md"
+  "requested_path": "world/factions/ardenhaven/npcs/thorgrim-ledger-scar.md",
+  "override": "world/factions/ardenhaven/npcs/thorgrim-ledger-scar.md"
 }
 ```
 
