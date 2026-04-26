@@ -21,14 +21,17 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.srd5_2 import (
-    DEFAULT_SOURCE_CONDITIONS,
-    DEFAULT_SOURCE_SRD,
+    DEFAULT_PRIORITY_CONDITIONS,
+    DEFAULT_PRIORITY_SRD,
     MCP_HANDLERS,
     MCP_TOOLS,
-    _apply_default_source,
+    PrioritySpec,
+    _apply_priority_and_dedupe,
+    _dedupe_by_name,
     _doc_key,
-    _maybe_sort_results,
-    _sort_by_source_preference,
+    _rank_by_spec,
+    _resolve_source,
+    _sort_by_priority,
     get_monster_details,
     list_conditions,
     search_armor,
@@ -50,19 +53,41 @@ from scripts.srd5_2 import (
 # ---------------------------------------------------------------------------
 
 
-class TestSourceDefaults:
-    def test_apply_default_when_none(self):
-        assert _apply_default_source(None, DEFAULT_SOURCE_SRD) == DEFAULT_SOURCE_SRD
+class TestResolveSource:
+    def test_none_returns_default_priority_no_filter(self):
+        filt, spec = _resolve_source(None, DEFAULT_PRIORITY_SRD)
+        assert filt is None
+        assert spec == DEFAULT_PRIORITY_SRD
 
-    def test_explicit_empty_string_disables_filter(self):
-        assert _apply_default_source("", DEFAULT_SOURCE_SRD) == ""
+    def test_empty_string_returns_no_filter_no_priority(self):
+        filt, spec = _resolve_source("", DEFAULT_PRIORITY_SRD)
+        assert filt is None
+        assert spec == PrioritySpec()  # empty prefer/demote
 
-    def test_explicit_value_passes_through(self):
-        assert _apply_default_source("tob", DEFAULT_SOURCE_SRD) == "tob"
+    def test_whitespace_only_treated_as_empty(self):
+        # Regression: whitespace-only source used to leak " " into the API filter
+        for src in ("   ", ",", " , ", " ,, "):
+            filt, spec = _resolve_source(src, DEFAULT_PRIORITY_SRD)
+            assert filt is None, f"{src!r} should disable the filter"
+            assert spec == PrioritySpec()
 
-    def test_default_constants(self):
-        assert DEFAULT_SOURCE_SRD == "srd-2024,srd-2014"
-        assert DEFAULT_SOURCE_CONDITIONS == "core,a5e-ag"
+    def test_single_source_passes_through(self):
+        filt, spec = _resolve_source("tob", DEFAULT_PRIORITY_SRD)
+        assert filt == "tob"
+        assert spec.prefer == ("tob",)
+        assert spec.demote == ()
+
+    def test_multi_source_user_order_wins(self):
+        filt, spec = _resolve_source("srd-2014,srd-2024", DEFAULT_PRIORITY_SRD)
+        assert filt == "srd-2014,srd-2024"
+        # User explicitly listed 2014 first → 2014 wins priority over 2024
+        assert spec.prefer == ("srd-2014", "srd-2024")
+        assert spec.demote == ()
+
+    def test_default_priority_constants(self):
+        assert DEFAULT_PRIORITY_SRD.prefer == ("srd-2024",)
+        assert DEFAULT_PRIORITY_SRD.demote == ("srd-2014",)
+        assert DEFAULT_PRIORITY_CONDITIONS.prefer == ("core", "a5e-ag")
 
 
 class TestDocKey:
@@ -79,45 +104,133 @@ class TestDocKey:
         assert _doc_key("not a dict") == ""
 
 
-class TestSourceSort:
-    def test_priority_order_respected(self):
-        results = [
-            {"name": "A", "document": {"key": "srd-2014"}},
-            {"name": "B", "document": {"key": "srd-2024"}},
-            {"name": "C", "document": {"key": "tob"}},
-        ]
-        sorted_results = _sort_by_source_preference(results, "srd-2024,srd-2014")
-        names = [r["name"] for r in sorted_results]
-        assert names == ["B", "A", "C"]  # 2024 first, 2014 next, unknown last
+class TestRankBySpec:
+    SPEC = PrioritySpec(prefer=("srd-2024",), demote=("srd-2014",))
 
-    def test_stable_sort_preserves_within_source(self):
+    def test_prefer_tier(self):
+        assert _rank_by_spec("srd-2024", self.SPEC) == (0, 0)
+
+    def test_demote_tier(self):
+        assert _rank_by_spec("srd-2014", self.SPEC) == (2, 0)
+
+    def test_middle_tier(self):
+        assert _rank_by_spec("tob", self.SPEC) == (1, 0)
+
+    def test_prefer_sub_rank_preserves_listed_order(self):
+        spec = PrioritySpec(prefer=("a", "b", "c"))
+        assert _rank_by_spec("a", spec) == (0, 0)
+        assert _rank_by_spec("b", spec) == (0, 1)
+        assert _rank_by_spec("c", spec) == (0, 2)
+
+
+class TestSortByPriority:
+    def test_three_tier_ordering(self):
+        results = [
+            {"name": "old", "document": {"key": "srd-2014"}},
+            {"name": "third", "document": {"key": "tob"}},
+            {"name": "new", "document": {"key": "srd-2024"}},
+        ]
+        spec = PrioritySpec(prefer=("srd-2024",), demote=("srd-2014",))
+        sorted_results = _sort_by_priority(results, spec)
+        assert [r["name"] for r in sorted_results] == ["new", "third", "old"]
+
+    def test_stable_within_tier(self):
         results = [
             {"name": "X", "document": {"key": "srd-2024"}},
             {"name": "Y", "document": {"key": "srd-2024"}},
-            {"name": "Z", "document": {"key": "srd-2014"}},
         ]
-        sorted_results = _sort_by_source_preference(results, "srd-2024,srd-2014")
-        assert [r["name"] for r in sorted_results] == ["X", "Y", "Z"]
+        out = _sort_by_priority(results, PrioritySpec(prefer=("srd-2024",)))
+        assert [r["name"] for r in out] == ["X", "Y"]
 
-    def test_empty_priority_returns_unchanged(self):
+    def test_empty_spec_returns_copy_unchanged(self):
         results = [{"name": "A", "document": {"key": "x"}}]
-        assert _sort_by_source_preference(results, "") == results
+        out = _sort_by_priority(results, PrioritySpec())
+        assert out == results
+        assert out is not results  # function returns a fresh list
 
-    def test_maybe_sort_skips_single_source(self):
-        response = {"count": 1, "results": [{"document": {"key": "srd-2024"}}]}
-        assert _maybe_sort_results(response, "srd-2024") is response
 
-    def test_maybe_sort_does_not_mutate_input(self):
-        original = {"count": 2, "results": [
-            {"name": "A", "document": {"key": "srd-2014"}},
-            {"name": "B", "document": {"key": "srd-2024"}},
+class TestDedupeByName:
+    def test_collapses_same_name_keeping_first(self):
+        ranked = [
+            {"name": "Fireball", "key": "srd-2024_fireball"},
+            {"name": "Fireball", "key": "srd-2014_fireball"},
+            {"name": "Magic Missile", "key": "srd-2024_magic-missile"},
+        ]
+        kept, dropped = _dedupe_by_name(ranked)
+        assert [k["key"] for k in kept] == ["srd-2024_fireball", "srd-2024_magic-missile"]
+        assert dropped == ["srd-2014_fireball"]
+
+    def test_case_insensitive_collapse(self):
+        ranked = [{"name": "Fireball", "key": "a"}, {"name": "FIREBALL", "key": "b"}]
+        kept, dropped = _dedupe_by_name(ranked)
+        assert [k["key"] for k in kept] == ["a"]
+        assert dropped == ["b"]
+
+    def test_whitespace_trimmed_before_compare(self):
+        ranked = [{"name": "Fireball", "key": "a"}, {"name": "  Fireball  ", "key": "b"}]
+        kept, dropped = _dedupe_by_name(ranked)
+        assert dropped == ["b"]
+
+    def test_missing_name_kept_not_collapsed(self):
+        ranked = [{"key": "a"}, {"key": "b"}, {"name": "X", "key": "c"}]
+        kept, dropped = _dedupe_by_name(ranked)
+        assert len(kept) == 3
+        assert dropped == []
+
+    def test_non_dict_kept(self):
+        ranked = ["not a dict", {"name": "X", "key": "x"}]
+        kept, dropped = _dedupe_by_name(ranked)
+        assert kept == ["not a dict", {"name": "X", "key": "x"}]
+        assert dropped == []
+
+
+class TestApplyPriorityAndDedupe:
+    def test_full_pipeline(self):
+        response = {
+            "count": 3,
+            "results": [
+                {"name": "Fireball", "key": "srd-2014_fireball", "document": {"key": "srd-2014"}},
+                {"name": "Fireball", "key": "srd-2024_fireball", "document": {"key": "srd-2024"}},
+                {"name": "Magic Missile", "key": "srd-2024_magic-missile", "document": {"key": "srd-2024"}},
+            ],
+        }
+        out = _apply_priority_and_dedupe(response, DEFAULT_PRIORITY_SRD, dedupe=True)
+        # Sort puts srd-2024 first, then dedupe drops the srd-2014 Fireball
+        assert [r["key"] for r in out["results"]] == ["srd-2024_fireball", "srd-2024_magic-missile"]
+        assert out["dropped_variants"] == ["srd-2014_fireball"]
+
+    def test_dedupe_false_preserves_all(self):
+        response = {
+            "results": [
+                {"name": "Fireball", "key": "srd-2014_fireball", "document": {"key": "srd-2014"}},
+                {"name": "Fireball", "key": "srd-2024_fireball", "document": {"key": "srd-2024"}},
+            ],
+        }
+        out = _apply_priority_and_dedupe(response, DEFAULT_PRIORITY_SRD, dedupe=False)
+        assert len(out["results"]) == 2
+        assert "dropped_variants" not in out
+
+    def test_does_not_mutate_input(self):
+        original = {"results": [
+            {"name": "A", "key": "srd-2014_a", "document": {"key": "srd-2014"}},
+            {"name": "B", "key": "srd-2024_b", "document": {"key": "srd-2024"}},
         ]}
-        out = _maybe_sort_results(original, "srd-2024,srd-2014")
-        assert original["results"][0]["name"] == "A"  # original untouched
-        assert out["results"][0]["name"] == "B"
+        snapshot = [r["key"] for r in original["results"]]
+        _ = _apply_priority_and_dedupe(original, DEFAULT_PRIORITY_SRD, dedupe=True)
+        assert [r["key"] for r in original["results"]] == snapshot
 
-    def test_maybe_sort_handles_missing_results(self):
-        assert _maybe_sort_results({"detail": "Not found"}, "srd-2024,srd-2014") == {"detail": "Not found"}
+    def test_handles_missing_results(self):
+        assert _apply_priority_and_dedupe({"detail": "Not found"}, DEFAULT_PRIORITY_SRD, True) == {"detail": "Not found"}
+
+    def test_handles_non_dict(self):
+        assert _apply_priority_and_dedupe("not a dict", DEFAULT_PRIORITY_SRD, True) == "not a dict"
+
+    def test_dropped_variants_omitted_when_nothing_dropped(self):
+        response = {"results": [
+            {"name": "Unique", "key": "srd-2024_unique", "document": {"key": "srd-2024"}},
+        ]}
+        out = _apply_priority_and_dedupe(response, DEFAULT_PRIORITY_SRD, dedupe=True)
+        assert "dropped_variants" not in out
 
 
 class TestSearchRulesValidation:

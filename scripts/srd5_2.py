@@ -122,15 +122,16 @@ def _resolve_source(
     source: Optional[str], default: PrioritySpec
 ) -> tuple[Optional[str], PrioritySpec]:
     """Map the caller's `source` arg into (filter, priority_spec).
-    - source=None  → no filter, default priority
-    - source=""    → no filter, no priority sort (raw API order)
-    - source="x"   → filter to x (single-source spec, sort is a no-op)
-    - source="x,y" → filter to x,y; rank x first, y second (user order wins)"""
+    - source=None        → no filter, default priority
+    - source="" / whitespace / "," → no filter, no priority sort (raw API order)
+    - source="x"         → filter to x (single-source spec, sort is a no-op)
+    - source="x,y"       → filter to x,y; rank x first, y second (user order wins)
+    """
     if source is None:
         return None, default
-    if source == "":
-        return None, PrioritySpec()
     keys = tuple(k.strip() for k in source.split(",") if k.strip())
+    if not keys:
+        return None, PrioritySpec()
     return source, PrioritySpec(prefer=keys)
 
 
@@ -659,7 +660,8 @@ MCP_TOOLS = [
             "Default behavior: searches all sources, ranks srd-2024 first, third-party "
             "(tob, a5e-ag, open5e) middle, srd-2014 last; same-name duplicates are collapsed "
             "(dropped keys surfaced in `dropped_variants`). NOT designed for edition comparison — "
-            "for 2014 vs 2024 side-by-side, pass source='srd-2014,srd-2024' AND dedupe=false. "
+            "for example, Fireball's damage formula differs between 2014 and 2024; default dedupe=true "
+            "returns only the prefer-ranked one. For side-by-side, pass source='srd-2014,srd-2024' AND dedupe=false. "
             "Examples: search_spells(level=3, school='evocation'); search_spells(name='shield', match='exact')."
         ),
         "annotations": {"title": "Search Spells (SRD/v2)", **_RO_OPEN_WORLD},
@@ -1134,6 +1136,8 @@ def _parse_flag_args(tokens: list[str]) -> dict[str, Any]:
                 out[int_key] = int(out[int_key])
             except ValueError:
                 pass
+    # Boolean flags from CLI come in as strings; only explicit falsy values flip
+    # to False (any unrecognized string stays truthy, matching the function default).
     for bool_key in ("dedupe",):
         if bool_key in out and isinstance(out[bool_key], str):
             out[bool_key] = out[bool_key].strip().lower() not in ("false", "0", "no", "off")
