@@ -3,18 +3,57 @@
 from __future__ import annotations
 
 import ast
+import importlib.util
 import json
 import os
 import subprocess
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 PROTOCOL_VERSION = "2025-06-18"
 _TRANSPORT_MODE: Optional[str] = None  # "jsonl" | "lsp"
+
+# Concurrent dispatch: tool calls go to a thread pool so a batch of cold
+# (cache-miss) HTTP fetches doesn't run end-to-end serially. The stdin loop is
+# still single-threaded — only `tools/call` is parallelized; initialize and
+# tools/list stay inline because they're sub-millisecond. _STDOUT_LOCK
+# serializes byte writes so concurrent JSON-RPC responses don't interleave.
+# Pool size is tunable via DND_MCP_MAX_WORKERS (default 8 — Open5e tolerates
+# this comfortably and SQLite's per-connection locking handles the rest).
+_STDOUT_LOCK = threading.Lock()
+
+
+def _safe_int_env(name: str, default: int) -> int:
+    """Parse an env var as int, falling back to `default` on missing or invalid
+    input. Avoids crashing the server at import time on a typo (e.g. 'eight')."""
+    raw = os.environ.get(name)
+    if not raw:
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        # Stay on stderr so JSON-RPC stdout isn't polluted.
+        print(f"warn: invalid {name}={raw!r}, using default {default}", file=sys.stderr)
+        return default
+
+
+_DEFAULT_MAX_WORKERS = max(1, _safe_int_env("DND_MCP_MAX_WORKERS", 8))
+# Hard cap on in-flight tool calls to prevent a fast sender from queueing
+# unbounded work. `tools/call` requests beyond this limit get an immediate
+# JSON-RPC error rather than silently piling up. Default = 4× workers, leaving
+# headroom for short bursts without letting them grow without bound.
+_INFLIGHT_LIMIT = max(_DEFAULT_MAX_WORKERS * 4, 32)
+_inflight_slots = threading.Semaphore(_INFLIGHT_LIMIT)
+# Per-call wall-clock cap on subprocess tools — a hung child would otherwise pin
+# its worker forever. Bypass with DND_MCP_TOOL_TIMEOUT=<seconds>; raise it for
+# slow generators (e.g. PDF export) or set <=0 to disable (NOT recommended).
+_TOOL_TIMEOUT_SEC = _safe_int_env("DND_MCP_TOOL_TIMEOUT", 60)
 
 
 def _python_bin() -> Path:
@@ -86,14 +125,42 @@ def _read_message() -> Optional[dict[str, Any]]:
 
 
 def _write_message(payload: dict[str, Any]) -> None:
+    """Serialize a JSON-RPC envelope to stdout. Holds _STDOUT_LOCK so concurrent
+    worker threads can't interleave bytes mid-message."""
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
-    if _TRANSPORT_MODE == "jsonl":
-        sys.stdout.buffer.write(body + b"\n")
+    with _STDOUT_LOCK:
+        if _TRANSPORT_MODE == "jsonl":
+            sys.stdout.buffer.write(body + b"\n")
+            sys.stdout.buffer.flush()
+            return
+        sys.stdout.buffer.write(f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"))
+        sys.stdout.buffer.write(body)
         sys.stdout.buffer.flush()
-        return
-    sys.stdout.buffer.write(f"Content-Length: {len(body)}\r\n\r\n".encode("ascii"))
-    sys.stdout.buffer.write(body)
-    sys.stdout.buffer.flush()
+
+
+def _run_call_worker(msg_id: Any, runner: "ToolRunner", arguments: dict[str, Any]) -> None:
+    """Execute one tools/call in a worker thread. Catches every exception so a
+    failing handler can never crash the server — converts to a JSON-RPC error.
+    Notifications (msg_id is None) are silently completed with no response.
+    Always releases the inflight semaphore in `finally` so admission control
+    can't leak slots even if the handler explodes."""
+    try:
+        out = runner.run(arguments=arguments)
+        if msg_id is not None:
+            _write_message({
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "result": {"content": [{"type": "text", "text": out}]},
+            })
+    except Exception as exc:
+        if msg_id is not None:
+            _write_message({
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "error": {"code": -32000, "message": str(exc)},
+            })
+    finally:
+        _inflight_slots.release()
 
 
 @dataclass(frozen=True)
@@ -101,6 +168,7 @@ class Tool:
     name: str
     description: str
     input_schema: dict[str, Any]
+    annotations: Optional[dict[str, Any]] = None
 
 @dataclass(frozen=True)
 class ToolRunner:
@@ -109,8 +177,26 @@ class ToolRunner:
     argv_template: tuple[str, ...]
     bool_flags: dict[str, str]
     value_flags: dict[str, str]
+    handler: Optional[Callable[..., Any]] = None
 
     def run(self, *, arguments: dict[str, Any]) -> str:
+        # In-process dispatch when the script exposes MCP_HANDLERS — skips subprocess startup
+        # and lets the script's module-level state (e.g. cached HTTP sessions) persist across calls.
+        if self.handler is not None:
+            try:
+                result = self.handler(**arguments)
+            except TypeError as exc:
+                raise ValueError(f"Invalid arguments for {self.tool.name}: {exc}") from exc
+            if isinstance(result, str):
+                return result
+            return json.dumps(result, indent=2, ensure_ascii=False)
+
+        # TODO: add per-tool subprocess timeout (e.g. via MCP_TOOL["timeout"]) so a hung
+        # script can't lock the tool slot indefinitely.
+        # TODO: pass stderr through on success too — useful warnings are currently swallowed
+        # unless the script exits non-zero.
+        # TODO: replace token.format(**fmt_args) below with explicit {name} substitution so
+        # values containing literal `{` or `}` don't break argv construction.
         python = _python_bin()
         argv: list[str] = []
         fmt_args: dict[str, str] = {}
@@ -149,13 +235,30 @@ class ToolRunner:
                 continue
             argv.extend([self.value_flags[key], rendered])
 
-        proc = subprocess.run(
-            [str(python), str(self.script_path), *argv],
-            cwd=str(REPO_ROOT),
-            env={**os.environ, "PYTHONUTF8": "1"},
-            capture_output=True,
-            text=True,
-        )
+        # Wall-clock timeout protects against a hung child pinning a worker
+        # forever; subprocess.run raises subprocess.TimeoutExpired on overrun
+        # and DOES kill the child (the wait happens in the subprocess module).
+        # _TOOL_TIMEOUT_SEC <= 0 means "no timeout" — opt-in only via env.
+        timeout = _TOOL_TIMEOUT_SEC if _TOOL_TIMEOUT_SEC > 0 else None
+        try:
+            proc = subprocess.run(
+                [str(python), str(self.script_path), *argv],
+                cwd=str(REPO_ROOT),
+                env={**os.environ, "PYTHONUTF8": "1"},
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raw = exc.stderr
+            if isinstance(raw, (bytes, bytearray, memoryview)):
+                stderr = bytes(raw).decode("utf-8", errors="replace")
+            else:
+                stderr = str(raw) if raw else ""
+            raise RuntimeError(
+                f"{self.script_path.name} exceeded {timeout}s timeout (set DND_MCP_TOOL_TIMEOUT to adjust). "
+                f"stderr: {stderr.strip()[:300]}"
+            ) from exc
         if proc.returncode != 0:
             msg = (proc.stderr or proc.stdout or "").strip() or f"{self.script_path.name} exited with {proc.returncode}"
             raise RuntimeError(msg)
@@ -166,6 +269,36 @@ class ToolRunner:
 class DiscoveryResult:
     tools: tuple[ToolRunner, ...]
     skipped: tuple[tuple[Path, str], ...]
+
+
+def _load_script_module(path: Path) -> Any:
+    """Import a script as a module so we can read MCP_HANDLERS off it."""
+    spec_name = f"_mcp_script_{path.stem}"
+    spec = importlib.util.spec_from_file_location(spec_name, path)
+    if spec is None or spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _has_top_level_assignment(source: str, name: str) -> bool:
+    """True if `name` is assigned at module top-level. Avoids false positives
+    from comments, docstrings, or string literals that merely mention the name."""
+    try:
+        module = ast.parse(source)
+    except SyntaxError:
+        return False
+    for node in module.body:
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == name:
+                    return True
+        elif isinstance(node, ast.AnnAssign):
+            if isinstance(node.target, ast.Name) and node.target.id == name:
+                return True
+    return False
 
 
 def _extract_mcp_tool_literal(source: str, *, path: Path) -> dict[str, Any] | None:
@@ -258,6 +391,8 @@ def _tools_from_mcp_tool(*, path: Path, mcp_tool: dict[str, Any]) -> list[ToolRu
             raise ValueError("tool name cannot be empty")
         description = str(entry.get("description") or "").strip()
         input_schema = _normalize_input_schema(entry.get("input_schema") if "input_schema" in entry else entry.get("inputSchema"))
+        annotations_raw = entry.get("annotations")
+        annotations = annotations_raw if isinstance(annotations_raw, dict) and annotations_raw else None
 
         argv_raw = entry.get("argv") or []
         if not isinstance(argv_raw, list) or not all(isinstance(a, str) for a in argv_raw):
@@ -287,7 +422,7 @@ def _tools_from_mcp_tool(*, path: Path, mcp_tool: dict[str, Any]) -> list[ToolRu
 
         runners.append(
             ToolRunner(
-                tool=Tool(name=name, description=description, input_schema=input_schema),
+                tool=Tool(name=name, description=description, input_schema=input_schema, annotations=annotations),
                 script_path=path,
                 argv_template=tuple(argv_raw),
                 bool_flags=bool_flags,
@@ -298,6 +433,10 @@ def _tools_from_mcp_tool(*, path: Path, mcp_tool: dict[str, Any]) -> list[ToolRu
 
 
 def discover_tools(*, repo_root: Path) -> DiscoveryResult:
+    # TODO: cache discovery output keyed on (path, mtime) to skip AST re-parse
+    # for unchanged files on server restart.
+    # TODO: add streaming progress notifications for slow subprocess-dispatched tools
+    # (dnd_pass*, pandoc_export_pdf, build_timeline_*) via MCP `notifications/progress`.
     scripts_dir = (repo_root / "scripts").resolve()
     skipped: list[tuple[Path, str]] = []
     runners: list[ToolRunner] = []
@@ -306,12 +445,14 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
 
     # Recursively discover all .py files in scripts/ and subdirectories
     # Skip __pycache__ and other special directories
+    server_dir = (scripts_dir / "mcp").resolve()
     all_py_files = [
         p for p in scripts_dir.rglob("*.py")
         if p.is_file()
         and "__pycache__" not in p.parts
         and not p.name.startswith("_")
         and p.name != "__init__.py"
+        and server_dir not in p.resolve().parents
     ]
     
     for path in sorted(all_py_files, key=lambda p: str(p.relative_to(scripts_dir))):
@@ -320,19 +461,67 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
         except Exception as exc:
             skipped.append((path, f"unreadable: {exc}"))
             continue
+        # Two discovery paths:
+        # - Scripts with a top-level MCP_HANDLERS assignment get imported as
+        #   modules; MCP_TOOLS is read from the imported namespace (so it can
+        #   use shared dicts, helper calls, etc.).
+        # - Other scripts use the safer AST literal_eval path (no execution at
+        #   discovery time).
+        # AST-based check (not substring) so a comment or string mentioning
+        # `MCP_HANDLERS` doesn't trigger a module import.
+        handlers: Optional[dict[str, Any]] = None
+        if _has_top_level_assignment(source, "MCP_HANDLERS"):
+            try:
+                module = _load_script_module(path)
+            except Exception as exc:
+                skipped.append((path, f"in-process import failed: {exc}"))
+                continue
+            if module is None:
+                skipped.append((path, "in-process import returned None"))
+                continue
+            tools_attr = getattr(module, "MCP_TOOLS", None)
+            tool_attr = getattr(module, "MCP_TOOL", None)
+            if isinstance(tools_attr, list):
+                literal: Optional[dict[str, Any]] = {"tools": tools_attr}
+            elif isinstance(tools_attr, dict):
+                literal = tools_attr
+            elif isinstance(tool_attr, dict):
+                literal = tool_attr
+            else:
+                skipped.append((path, "module imported but no usable MCP_TOOLS/MCP_TOOL attribute"))
+                continue
+            handlers_attr = getattr(module, "MCP_HANDLERS", None)
+            handlers = handlers_attr if isinstance(handlers_attr, dict) else None
+        else:
+            try:
+                literal = _extract_mcp_tool_literal(source, path=path)
+            except Exception as exc:
+                skipped.append((path, str(exc)))
+                continue
+            if literal is None:
+                skipped.append((path, "no MCP_TOOL"))
+                continue
+
         try:
-            literal = _extract_mcp_tool_literal(source, path=path)
-        except Exception as exc:
-            skipped.append((path, str(exc)))
-            continue
-        if literal is None:
-            skipped.append((path, "no MCP_TOOL"))
-            continue
-        try:
-            runners.extend(_tools_from_mcp_tool(path=path, mcp_tool=literal))
+            new_runners = _tools_from_mcp_tool(path=path, mcp_tool=literal)
         except Exception as exc:
             skipped.append((path, f"invalid MCP_TOOL: {exc}"))
             continue
+
+        if handlers is not None:
+            new_runners = [
+                ToolRunner(
+                    tool=r.tool,
+                    script_path=r.script_path,
+                    argv_template=r.argv_template,
+                    bool_flags=r.bool_flags,
+                    value_flags=r.value_flags,
+                    handler=handlers.get(r.tool.name),
+                )
+                for r in new_runners
+            ]
+
+        runners.extend(new_runners)
 
     # Enforce globally-unique tool names.
     by_name: dict[str, ToolRunner] = {}
@@ -353,7 +542,8 @@ def _print_list_tools(result: DiscoveryResult) -> int:
         sys.stdout.write("- (none)\n")
     for r in tools:
         desc = r.tool.description.splitlines()[0].strip() if r.tool.description else ""
-        sys.stdout.write(f"- {r.tool.name} ({r.script_path.relative_to(REPO_ROOT)}): {desc}\n")
+        mode = "in-process" if r.handler is not None else "subprocess"
+        sys.stdout.write(f"- {r.tool.name} [{mode}] ({r.script_path.relative_to(REPO_ROOT)}): {desc}\n")
     sys.stdout.write("\nSkipped scripts:\n")
     if not skipped:
         sys.stdout.write("- (none)\n")
@@ -371,6 +561,28 @@ def main() -> int:
     tools = tuple(r.tool for r in runners)
     runner_by_name = {r.tool.name: r for r in runners}
 
+    # Worker pool for tools/call dispatch. Cold (cache-miss) HTTP fetches now
+    # overlap; a batch of 6 fresh queries that took ~3s serially can finish in
+    # ~500ms in parallel. Cached calls don't notice the difference.
+    executor = ThreadPoolExecutor(
+        max_workers=_DEFAULT_MAX_WORKERS,
+        thread_name_prefix="dnd-mcp",
+    )
+
+    try:
+        return _serve_loop(tools, runner_by_name, executor)
+    finally:
+        # On stdin EOF, finish in-flight tool calls before exiting so we don't
+        # truncate a response mid-write. Bounded by the per-call HTTP timeout
+        # (~10s in srd5_2), so worst-case shutdown delay is small.
+        executor.shutdown(wait=True)
+
+
+def _serve_loop(
+    tools: tuple["Tool", ...],
+    runner_by_name: dict[str, "ToolRunner"],
+    executor: ThreadPoolExecutor,
+) -> int:
     while True:
         msg = _read_message()
         if msg is None:
@@ -393,17 +605,25 @@ def main() -> int:
                 continue
 
             if method == "tools/list":
-                result = {
-                    "tools": [
-                        {"name": t.name, "description": t.description, "inputSchema": t.input_schema}
-                        for t in tools
-                    ]
-                }
+                tool_payload = []
+                for t in tools:
+                    entry: dict[str, Any] = {
+                        "name": t.name,
+                        "description": t.description,
+                        "inputSchema": t.input_schema,
+                    }
+                    if t.annotations:
+                        entry["annotations"] = t.annotations
+                    tool_payload.append(entry)
+                result = {"tools": tool_payload}
                 if msg_id is not None:
                     _write_message({"jsonrpc": "2.0", "id": msg_id, "result": result})
                 continue
 
             if method == "tools/call":
+                # Validate sync (so shape/lookup errors return in-order via the
+                # outer except), then dispatch the actual handler to a worker so
+                # concurrent calls overlap their HTTP latency.
                 tool_name = str(params.get("name") or "")
                 arguments = params.get("arguments") or {}
                 if not isinstance(arguments, dict):
@@ -411,10 +631,24 @@ def main() -> int:
                 runner = runner_by_name.get(tool_name)
                 if runner is None:
                     raise ValueError(f"Unknown tool: {tool_name}")
-                out = runner.run(arguments=arguments)
-                result = {"content": [{"type": "text", "text": out}]}
-                if msg_id is not None:
-                    _write_message({"jsonrpc": "2.0", "id": msg_id, "result": result})
+                # Admission control: refuse new work past the in-flight cap so a
+                # fast sender can't pile up unbounded queue depth (memory + tail
+                # latency). Slot is released by the worker in its finally clause.
+                if not _inflight_slots.acquire(blocking=False):
+                    if msg_id is not None:
+                        _write_message({
+                            "jsonrpc": "2.0",
+                            "id": msg_id,
+                            "error": {
+                                "code": -32000,
+                                "message": (
+                                    f"Server busy: {_INFLIGHT_LIMIT} in-flight tool calls. "
+                                    "Retry after some complete."
+                                ),
+                            },
+                        })
+                    continue
+                executor.submit(_run_call_worker, msg_id, runner, arguments)
                 continue
 
             # Ignore notifications like "initialized".
