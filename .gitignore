@@ -12,6 +12,8 @@ Thumbs.db
 .artifacts/
 .cache/
 
+temp
+
 sessions/**/outputs
 
 .history/
