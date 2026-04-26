@@ -85,47 +85,88 @@ def _load_registry() -> tuple[NpcRow, ...]:
 # --- Markdown helpers --------------------------------------------------------
 
 _FRONTMATTER_RE = re.compile(r"^---\s*\n(?P<body>.*?)\n---\s*\n?", re.DOTALL)
+# Markdown-style metadata used by faction _overview.md files and several other
+# documents that pre-date the YAML-frontmatter convention. Example:
+#   **Tags:** `#faction` `#organization`
+#   **Created:** 2025-12-07
+#   **Last Modified:** 2025-12-15
+#   **Status:** Active
+# In the wild the colon usually sits INSIDE the bold marks (`**Tags:**`),
+# but sometimes outside (`**Tags**:`). Tolerate both.
+_MD_META_RE = re.compile(
+    r"^\*\*(?P<key>Tags|Created|Last[ -]?Modified|Status):?\*\*\s*:?\s*(?P<value>.*)$",
+    re.IGNORECASE,
+)
+_MD_TAG_TOKEN_RE = re.compile(r"`(#?[A-Za-z0-9_/\-]+)`")
 
 
 def _split_frontmatter(text: str) -> tuple[dict[str, Any], str]:
-    """Return (frontmatter_dict, body). Frontmatter parsing is YAML-lite:
-    - `key: value` → string value (quotes stripped)
-    - `key: [a, b, c]` or `key: ["a", "b"]` → list (parsed as JSON, with single
-      quotes coerced to double; falls back to comma-split if JSON fails). The
-      vault's dominant tag style is `tags: ["#world", "#faction"]`, so this
-      matters.
-    Multi-line YAML lists (`key:\n  - a\n  - b`) are NOT supported; only ~2
-    files use that form.
+    """Return (frontmatter_dict, body). Two formats supported:
+
+    (A) YAML frontmatter (between `---` fences), YAML-lite:
+        - `key: value` → string value (quotes stripped)
+        - `key: [a, b, c]` or `key: ["a", "b"]` → list (parsed as JSON, with
+          single quotes coerced to double; falls back to comma-split if JSON
+          fails). The vault's dominant tag style is `tags: ["#a", "#b"]`.
+        Multi-line YAML lists (`key:\\n  - a\\n  - b`) are NOT supported;
+        only ~2 files in the vault use that form.
+
+    (B) Markdown-style metadata (no YAML fences), used by ~50 vault files
+        including most faction _overview.md docs:
+            **Tags:** `#faction` `#organization`
+            **Created:** 2025-12-07
+            **Status:** Active
+        These are scanned in the first 30 lines of the body. `Tags` parses
+        backtick-wrapped tokens into a list. The body is returned unchanged
+        (the markdown-style metadata IS body content, just lifted into the
+        frontmatter dict for caller convenience).
+
+    Returns ({}, text) only if neither format is present.
     """
     m = _FRONTMATTER_RE.match(text)
-    if not m:
-        return {}, text
-    fm: dict[str, Any] = {}
-    for line in m.group("body").splitlines():
-        if not line.strip() or line.lstrip().startswith("#"):
-            continue
-        if ":" not in line:
-            continue
-        key, _, value = line.partition(":")
-        key = key.strip()
-        value = value.strip()
-        if value.startswith("[") and value.endswith("]"):
-            # Inline array — try JSON parse, then a coerced variant, then split.
-            try:
-                fm[key] = json.loads(value)
+    if m:
+        fm: dict[str, Any] = {}
+        for line in m.group("body").splitlines():
+            if not line.strip() or line.lstrip().startswith("#"):
                 continue
-            except json.JSONDecodeError:
-                pass
-            try:
-                fm[key] = json.loads(value.replace("'", '"'))
+            if ":" not in line:
                 continue
-            except json.JSONDecodeError:
-                pass
-            inner = value[1:-1].strip()
-            fm[key] = [s.strip().strip('"').strip("'") for s in inner.split(",") if s.strip()]
+            key, _, value = line.partition(":")
+            key = key.strip()
+            value = value.strip()
+            if value.startswith("[") and value.endswith("]"):
+                try:
+                    fm[key] = json.loads(value)
+                    continue
+                except json.JSONDecodeError:
+                    pass
+                try:
+                    fm[key] = json.loads(value.replace("'", '"'))
+                    continue
+                except json.JSONDecodeError:
+                    pass
+                inner = value[1:-1].strip()
+                fm[key] = [s.strip().strip('"').strip("'") for s in inner.split(",") if s.strip()]
+            else:
+                fm[key] = value.strip('"').strip("'")
+        return fm, text[m.end():]
+
+    # No YAML frontmatter — try markdown-style metadata in the first 30 lines.
+    fm = {}
+    for line in text.splitlines()[:30]:
+        mm = _MD_META_RE.match(line.strip())
+        if not mm:
+            continue
+        key = mm.group("key").strip().lower().replace(" ", "-").replace("_", "-")
+        if key == "last-modified" or key == "lastmodified":
+            key = "last-modified"
+        value = mm.group("value").strip()
+        if key == "tags":
+            tokens = _MD_TAG_TOKEN_RE.findall(value)
+            fm[key] = tokens if tokens else value
         else:
-            fm[key] = value.strip('"').strip("'")
-    return fm, text[m.end():]
+            fm[key] = value
+    return fm, text
 
 
 def _slugify(name: str) -> str:
@@ -293,8 +334,14 @@ def get_npc(name: str) -> dict[str, Any]:
 
 
 def get_faction_overview(slug: str) -> dict[str, Any]:
-    """Return the faction's _overview.md (frontmatter + body)."""
-    path = _FACTIONS_DIR / slug / "_overview.md"
+    """Return the faction's _overview.md (frontmatter + body).
+
+    The slug is canonicalized to lowercase before lookup so behavior is
+    identical on case-insensitive macOS/Windows filesystems and case-sensitive
+    Linux. ('Ardenhaven' and 'ardenhaven' both resolve.)
+    """
+    canonical = slug.lower().strip() if slug else slug
+    path = _FACTIONS_DIR / canonical / "_overview.md"
     if not path.exists():
         available = sorted(p.name for p in _FACTIONS_DIR.iterdir() if p.is_dir())
         raise ValueError(f"No overview for {slug!r}. Available factions: {', '.join(available)}")
@@ -302,7 +349,7 @@ def get_faction_overview(slug: str) -> dict[str, Any]:
     fm, body = _split_frontmatter(text)
     return {
         "path": str(path.relative_to(_REPO_ROOT)),
-        "slug": slug,
+        "slug": canonical,
         "frontmatter": fm,
         "body": body.strip(),
     }
@@ -496,6 +543,11 @@ MCP_TOOLS = [
             "Available faction slugs: araethilion, ardenhaven, calderon-imperium, "
             "dulgarum-oathholds, elderholt, garhammar-trade-league, garrok-confederation, "
             "merrowgate, rakthok-horde. "
+            "Slug input is canonicalized to lowercase, so 'Ardenhaven' and 'ardenhaven' "
+            "both resolve identically on every platform. "
+            "Frontmatter parsing handles both YAML (`---`-fenced) and the markdown-style "
+            "`**Tags:** \\`#a\\` \\`#b\\` / **Created:** ... / **Status:** ...` form used "
+            "by 8 of 9 faction overviews. `frontmatter['tags']` is always a list when present. "
             "QUIRK: this only reads the top-level _overview.md. It does NOT traverse into "
             "world/factions/<slug>/locations/ or npcs/. The overview's body may MENTION "
             "places and people by name, but to enumerate them use "
