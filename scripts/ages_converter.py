@@ -15,7 +15,8 @@ MCP_TOOL = {
             "name": "year_to_age",
             "description": (
                 "Convert an A.F. year (e.g. 4150) to an age glyph label (e.g. ᛏ200). "
-                "If the year is negative, it is treated as an offset from the configured present_year (e.g. -50 = present_year-50)."
+                "If the year is negative, it is treated as an offset from the configured present_year (e.g. -50 = present_year-50). "
+                "For free-form input that might already be a label, prefer age_convert."
             ),
             "input_schema": {
                 "type": "object",
@@ -31,7 +32,8 @@ MCP_TOOL = {
                 "Convert an age glyph label (e.g. ᛏ200) to an A.F. year (e.g. 4150). "
                 "Negative offsets count back from the end of that age: "
                 "'ᛏ-50' means 50 years before the start of the next age; "
-                "for the current/ongoing age, the end is present_year (so '⋈-50' = present_year-50)."
+                "for the current/ongoing age, the end is present_year (so '⋈-50' = present_year-50). "
+                "For free-form input that might already be a year, prefer age_convert."
             ),
             "input_schema": {
                 "type": "object",
@@ -48,7 +50,8 @@ MCP_TOOL = {
                 "Absolute years (e.g. 4150) convert to age labels (e.g. ᛏ200). "
                 "Age labels convert to absolute A.F. years. "
                 "Negative values are special: '-50' resolves to an absolute year (present_year-50), "
-                "and 'ᛏ-50' resolves to an absolute year from the end of the ᛏ age."
+                "and 'ᛏ-50' resolves to an absolute year from the end of the ᛏ age. "
+                "Default choice when you don't know whether the input is a year or a label."
             ),
             "input_schema": {
                 "type": "object",
@@ -169,6 +172,60 @@ def convert_auto(*, value: str, index: AgeIndex, present_year: int | None) -> st
     raise ValueError(
         f"Unrecognized input: {value!r} (expected a year like '4150', a relative year like '-50', or an age label like 'ᛏ200')"
     )
+
+
+# --- In-process state for MCP_HANDLERS dispatch ----------------------------------
+# Cache (AgeIndex, present_year) keyed on the mtimes of the files they're loaded from.
+# Each call stats both files (sub-millisecond) and rebuilds only when one has changed,
+# so editing the TSV / TOML in VSCode is picked up automatically without a server restart.
+
+_AGES_TSV_PATH = REPO_ROOT / "world" / "ages" / "_history.tsv"
+_HISTORY_CONFIG_PATH = REPO_ROOT / "world" / "_history.config.toml"
+
+_age_state_cache: tuple[tuple[float, float], AgeIndex, int | None] | None = None
+
+
+def _mtime_or_zero(path: Path) -> float:
+    try:
+        return path.stat().st_mtime
+    except FileNotFoundError:
+        return 0.0
+
+
+def _get_age_state() -> tuple[AgeIndex, int | None]:
+    global _age_state_cache
+    key = (_mtime_or_zero(_AGES_TSV_PATH), _mtime_or_zero(_HISTORY_CONFIG_PATH))
+    if _age_state_cache is not None and _age_state_cache[0] == key:
+        return _age_state_cache[1], _age_state_cache[2]
+    index = AgeIndex.load_global(REPO_ROOT, debug=False)
+    present_year = _load_present_year(REPO_ROOT)
+    _age_state_cache = (key, index, present_year)
+    return index, present_year
+
+
+def mcp_year_to_age(year: int) -> str:
+    index, present_year = _get_age_state()
+    return year_to_age(year=_resolve_relative_year(int(year), present_year), index=index)
+
+
+def mcp_age_to_year(label: str) -> str:
+    index, present_year = _get_age_state()
+    parsed = _parse_age_label(label)
+    if parsed is None:
+        raise ValueError(f"Expected an age label like 'ᛏ200', got: {label!r}")
+    return str(age_to_year(label=parsed, index=index, present_year=present_year))
+
+
+def mcp_age_convert(value: str) -> str:
+    index, present_year = _get_age_state()
+    return convert_auto(value=value, index=index, present_year=present_year)
+
+
+MCP_HANDLERS = {
+    "year_to_age": mcp_year_to_age,
+    "age_to_year": mcp_age_to_year,
+    "age_convert": mcp_age_convert,
+}
 
 
 def main(argv: list[str]) -> int:
