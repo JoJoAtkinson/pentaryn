@@ -249,4 +249,4 @@ Lean into the irony that a Horde branded monstrous may be the most effective dem
 - [Calderon Imperium](../calderon-imperium/_overview.md)
 - [Garrok Confederation](../garrok-confederation/_overview.md)
 - [Merrowgate](../merrowgate/_overview.md)
-- [The Raids Never Stopped](./confict.md)
+- [The Raids Never Stopped](./conflict.md)
