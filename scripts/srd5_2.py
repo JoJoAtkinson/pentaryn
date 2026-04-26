@@ -337,25 +337,50 @@ def _dedupe_by_name(
 
 
 def _apply_priority_and_dedupe(
-    response: dict[str, Any], spec: PrioritySpec, dedupe: bool
+    response: dict[str, Any],
+    spec: PrioritySpec,
+    dedupe: bool,
+    final_limit: Optional[int] = None,
 ) -> dict[str, Any]:
     """Sort response.results by priority, then optionally dedupe by name. Returns
     a shallow copy with a new `results` list — never mutates the cached response.
     When dedupe drops items, their keys are surfaced as `dropped_variants` so the
-    caller can still fetch them explicitly via the matching `get_*` tool."""
+    caller can still fetch them explicitly via the matching `get_*` tool.
+
+    `final_limit` truncates AFTER dedupe — used by callers that oversample
+    server-side (e.g. limit*3) so high-priority winners aren't truncated off
+    the API's page before we can rank them. Without it, an API that returned
+    10 entries alphabetically (all a5e-ag) would dedupe within those 10 and
+    never see srd-2024 entries that exist beyond the page boundary.
+    """
     if not isinstance(response, dict):
         return response
     results = response.get("results")
     if not isinstance(results, list):
         return response
     ranked = _sort_by_priority(results, spec)
-    if not dedupe:
-        return {**response, "results": ranked}
-    kept, dropped = _dedupe_by_name(ranked)
+    if dedupe:
+        kept, dropped = _dedupe_by_name(ranked)
+    else:
+        kept, dropped = ranked, []
+    if final_limit is not None and len(kept) > final_limit:
+        kept = kept[:final_limit]
     out = {**response, "results": kept}
     if dropped:
         out["dropped_variants"] = dropped
     return out
+
+
+def _dedupe_overhead(limit: int, dedupe: bool, *, cap: int = 200) -> int:
+    """Oversampling factor for dedupe correctness. When dedupe is on, we fetch
+    ~3x the user's requested page so cross-edition duplicates don't push the
+    higher-priority winners off the API's page before _sort_by_priority can
+    rank them. Cap prevents 200-entry user limits from triggering 600-entry
+    API requests; Open5e tolerates 200 comfortably but going higher hits
+    diminishing returns."""
+    if not dedupe:
+        return limit
+    return min(max(limit * 3, 30), cap)
 
 
 # --- Filter helpers ----------------------------------------------------------
@@ -483,10 +508,10 @@ def search_monsters(
     _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit, extra=extra,
+        ordering=ordering, limit=_dedupe_overhead(limit, dedupe), extra=extra,
         endpoint="/v2/creatures/",
     )
-    return _apply_priority_and_dedupe(_api_get("/v2/creatures/", params), spec, dedupe)
+    return _apply_priority_and_dedupe(_api_get("/v2/creatures/", params), spec, dedupe, final_limit=limit)
 
 
 def get_monster_details(key: str) -> dict[str, Any]:
@@ -547,10 +572,10 @@ def search_spells(
     _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit, extra=extra,
+        ordering=ordering, limit=_dedupe_overhead(limit, dedupe), extra=extra,
         endpoint="/v2/spells/",
     )
-    return _apply_priority_and_dedupe(_api_get("/v2/spells/", params), spec, dedupe)
+    return _apply_priority_and_dedupe(_api_get("/v2/spells/", params), spec, dedupe, final_limit=limit)
 
 
 def get_spell_details(key: str) -> dict[str, Any]:
@@ -574,10 +599,10 @@ def list_conditions(
     _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        limit=limit, extra=extra,
+        limit=_dedupe_overhead(limit, dedupe), extra=extra,
         endpoint="/v2/conditions/",
     )
-    return _apply_priority_and_dedupe(_api_get("/v2/conditions/", params), spec, dedupe)
+    return _apply_priority_and_dedupe(_api_get("/v2/conditions/", params), spec, dedupe, final_limit=limit)
 
 
 # --- Magic items --------------------------------------------------------------
@@ -631,10 +656,10 @@ def search_magic_items(
     _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit, extra=extra,
+        ordering=ordering, limit=_dedupe_overhead(limit, dedupe), extra=extra,
         endpoint="/v2/magicitems/",
     )
-    return _apply_priority_and_dedupe(_api_get("/v2/magicitems/", params), spec, dedupe)
+    return _apply_priority_and_dedupe(_api_get("/v2/magicitems/", params), spec, dedupe, final_limit=limit)
 
 
 def get_magic_item(key: str) -> dict[str, Any]:
@@ -689,10 +714,10 @@ def search_items(
     _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit, extra=extra,
+        ordering=ordering, limit=_dedupe_overhead(limit, dedupe), extra=extra,
         endpoint="/v2/items/",
     )
-    return _apply_priority_and_dedupe(_api_get("/v2/items/", params), spec, dedupe)
+    return _apply_priority_and_dedupe(_api_get("/v2/items/", params), spec, dedupe, final_limit=limit)
 
 
 def get_item(key: str) -> dict[str, Any]:
@@ -723,10 +748,10 @@ def search_classes(
     _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit, extra=extra,
+        ordering=ordering, limit=_dedupe_overhead(limit, dedupe), extra=extra,
         endpoint="/v2/classes/",
     )
-    return _apply_priority_and_dedupe(_api_get("/v2/classes/", params), spec, dedupe)
+    return _apply_priority_and_dedupe(_api_get("/v2/classes/", params), spec, dedupe, final_limit=limit)
 
 
 def get_class_info(key: str) -> dict[str, Any]:
@@ -765,10 +790,10 @@ def search_weapons(
     _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit, extra=extra,
+        ordering=ordering, limit=_dedupe_overhead(limit, dedupe), extra=extra,
         endpoint="/v2/weapons/",
     )
-    return _apply_priority_and_dedupe(_api_get("/v2/weapons/", params), spec, dedupe)
+    return _apply_priority_and_dedupe(_api_get("/v2/weapons/", params), spec, dedupe, final_limit=limit)
 
 
 def search_armor(
@@ -801,10 +826,10 @@ def search_armor(
     _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit, extra=extra,
+        ordering=ordering, limit=_dedupe_overhead(limit, dedupe), extra=extra,
         endpoint="/v2/armor/",
     )
-    return _apply_priority_and_dedupe(_api_get("/v2/armor/", params), spec, dedupe)
+    return _apply_priority_and_dedupe(_api_get("/v2/armor/", params), spec, dedupe, final_limit=limit)
 
 
 # --- Rules (formerly v1 sections) --------------------------------------------
@@ -841,7 +866,7 @@ def search_rules(
         if fields: params["fields"] = fields
         if exclude: params["exclude"] = exclude
         if ordering: params["ordering"] = ordering
-        return _apply_priority_and_dedupe(_api_get("/v2/rules/", params), spec, dedupe=False)
+        return _apply_priority_and_dedupe(_api_get("/v2/rules/", params), spec, dedupe=False, final_limit=limit)
 
     # Step 1: relevance-ranked rule keys via /v2/search/.
     search_params: dict[str, Any] = {
@@ -909,10 +934,10 @@ def search_backgrounds(
     _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit, extra=extra,
+        ordering=ordering, limit=_dedupe_overhead(limit, dedupe), extra=extra,
         endpoint="/v2/backgrounds/",
     )
-    return _apply_priority_and_dedupe(_api_get("/v2/backgrounds/", params), spec, dedupe)
+    return _apply_priority_and_dedupe(_api_get("/v2/backgrounds/", params), spec, dedupe, final_limit=limit)
 
 
 def get_background(key: str) -> dict[str, Any]:
@@ -944,10 +969,10 @@ def search_species(
     _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit, extra=extra,
+        ordering=ordering, limit=_dedupe_overhead(limit, dedupe), extra=extra,
         endpoint="/v2/species/",
     )
-    return _apply_priority_and_dedupe(_api_get("/v2/species/", params), spec, dedupe)
+    return _apply_priority_and_dedupe(_api_get("/v2/species/", params), spec, dedupe, final_limit=limit)
 
 
 def get_species(key: str) -> dict[str, Any]:
@@ -970,10 +995,10 @@ def search_feats(
     _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit, extra=extra,
+        ordering=ordering, limit=_dedupe_overhead(limit, dedupe), extra=extra,
         endpoint="/v2/feats/",
     )
-    return _apply_priority_and_dedupe(_api_get("/v2/feats/", params), spec, dedupe)
+    return _apply_priority_and_dedupe(_api_get("/v2/feats/", params), spec, dedupe, final_limit=limit)
 
 
 def get_feat(key: str) -> dict[str, Any]:
@@ -1049,10 +1074,10 @@ def search_environments(
     _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit, extra=extra,
+        ordering=ordering, limit=_dedupe_overhead(limit, dedupe), extra=extra,
         endpoint="/v2/environments/",
     )
-    return _apply_priority_and_dedupe(_api_get("/v2/environments/", params), spec, dedupe)
+    return _apply_priority_and_dedupe(_api_get("/v2/environments/", params), spec, dedupe, final_limit=limit)
 
 
 def get_environment(key: str) -> dict[str, Any]:
@@ -1080,10 +1105,10 @@ def search_creaturesets(
     _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit, extra=extra,
+        ordering=ordering, limit=_dedupe_overhead(limit, dedupe), extra=extra,
         endpoint="/v2/creaturesets/",
     )
-    return _apply_priority_and_dedupe(_api_get("/v2/creaturesets/", params), spec, dedupe)
+    return _apply_priority_and_dedupe(_api_get("/v2/creaturesets/", params), spec, dedupe, final_limit=limit)
 
 
 def get_creatureset(key: str) -> dict[str, Any]:
@@ -1111,10 +1136,10 @@ def search_itemsets(
     _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit, extra=extra,
+        ordering=ordering, limit=_dedupe_overhead(limit, dedupe), extra=extra,
         endpoint="/v2/itemsets/",
     )
-    return _apply_priority_and_dedupe(_api_get("/v2/itemsets/", params), spec, dedupe)
+    return _apply_priority_and_dedupe(_api_get("/v2/itemsets/", params), spec, dedupe, final_limit=limit)
 
 
 def get_itemset(key: str) -> dict[str, Any]:
@@ -1143,10 +1168,10 @@ def search_rulesets(
     _add_keys(extra, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        ordering=ordering, limit=limit, extra=extra,
+        ordering=ordering, limit=_dedupe_overhead(limit, dedupe), extra=extra,
         endpoint="/v2/rulesets/",
     )
-    return _apply_priority_and_dedupe(_api_get("/v2/rulesets/", params), spec, dedupe)
+    return _apply_priority_and_dedupe(_api_get("/v2/rulesets/", params), spec, dedupe, final_limit=limit)
 
 
 def get_ruleset(key: str) -> dict[str, Any]:
@@ -1179,9 +1204,9 @@ def _generic_list(
     _add_keys(extras, keys)
     params = _build_query(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
-        limit=limit, extra=extras, endpoint=endpoint,
+        limit=_dedupe_overhead(limit, dedupe), extra=extras, endpoint=endpoint,
     )
-    return _apply_priority_and_dedupe(_api_get(endpoint, params), spec, dedupe)
+    return _apply_priority_and_dedupe(_api_get(endpoint, params), spec, dedupe, final_limit=limit)
 
 
 def list_abilities(name: Optional[str] = None, keys: Optional[str] = None,
@@ -1565,6 +1590,9 @@ MCP_TOOLS = [
             "(dropped keys surfaced in `dropped_variants`). NOT designed for edition comparison — "
             "for example, Fireball's damage formula differs between 2014 and 2024; default dedupe=true "
             "returns only the prefer-ranked one. For side-by-side, pass source='srd-2014,srd-2024' AND dedupe=false. "
+            "RITUAL CAVEAT: spell.ritual exists on detail responses but Open5e does NOT honor "
+            "it as a list filter. To find rituals, fetch a level=N page and grep "
+            "results[i].ritual==True client-side. "
             "Examples: search_spells(level=3, school='evocation'); search_spells(name='shield', match='exact')."
         ),
         "annotations": {"title": "Search Spells (SRD/v2)", **_RO_OPEN_WORLD},
@@ -1905,7 +1933,11 @@ MCP_TOOLS = [
             "relevance. Pass vector=true for semantic matching ('what does cover do' finds the "
             "cover section without exact keyword overlap). Includes 2014 AND 2024 SRD content; "
             "filter source='srd-2024' for 5.5e only. If you already know the section key, use "
-            "get_rule_section instead."
+            "get_rule_section instead. "
+            "SCOPE: only searches /v2/rules/ sections — for condition mechanics (Exhaustion, "
+            "Paralyzed, etc.) use list_conditions(name='X', match='exact'); for creature "
+            "traits use search_monsters + grep. A query like 'cold exhaustion' may return 0 "
+            "because the Exhaustion condition lives in /v2/conditions/, not /v2/rules/."
         ),
         "annotations": {"title": "Search Rules (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_rules"],
