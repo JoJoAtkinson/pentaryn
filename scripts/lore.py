@@ -33,6 +33,12 @@ _PCS_DIR = _REPO_ROOT / "characters" / "player-characters"
 _NPCS_DIR = _REPO_ROOT / "characters" / "npcs"
 _SESSIONS_DIR = _REPO_ROOT / "sessions"
 
+# `_find_npc_file` uses substring globs (`*<slug>*.md`) for compound-slug
+# filenames. Short slugs over-match (slug "ar" matches archivist-*, etc.),
+# so substring globs only fire when the slug is at least this long. Exact
+# globs (`<slug>.md`) run regardless.
+_MIN_SUBSTRING_SLUG_LEN = 4
+
 
 # --- Registry cache (mtime-checked) ------------------------------------------
 
@@ -162,8 +168,14 @@ def _split_frontmatter(text: str) -> tuple[dict[str, Any], str]:
             key = "last-modified"
         value = mm.group("value").strip()
         if key == "tags":
+            # Always return a list, per the documented contract. Backtick-
+            # wrapped tokens (`#world` `#faction`) are the canonical form;
+            # if the author wrote bare tokens (`#world #faction` or
+            # `world, faction`), split on whitespace/commas as a fallback.
             tokens = _MD_TAG_TOKEN_RE.findall(value)
-            fm[key] = tokens if tokens else value
+            if not tokens:
+                tokens = [t.strip() for t in re.split(r"[,\s]+", value) if t.strip()]
+            fm[key] = tokens
         else:
             fm[key] = value
     return fm, text
@@ -201,24 +213,36 @@ def _find_npc_file(name: str) -> Optional[Path]:
     slug = _slugify(name)
     if not slug:
         return None
+    # Substring globs (`*<slug>*.md`) over-match on short slugs: with a
+    # 2-char slug like "ar", `*ar*.md` matches archivist-*.md,
+    # araethilion-*.md, etc., and the shortest-path tiebreak might pick the
+    # wrong file. Gate substring globs behind a minimum slug length;
+    # exact-match globs run regardless.
+    use_substring = len(slug) >= _MIN_SUBSTRING_SLUG_LEN
     candidates: list[Path] = []
-    # PCs (compound slugs)
-    candidates.extend(_PCS_DIR.glob(f"*{slug}*.md"))
+    # PCs — compound slugs are the convention; substring is necessary here.
+    if use_substring:
+        candidates.extend(_PCS_DIR.glob(f"*{slug}*.md"))
+    else:
+        candidates.extend(_PCS_DIR.glob(f"{slug}.md"))
     # Central NPCs (exact)
     candidates.extend(_NPCS_DIR.glob(f"{slug}.md"))
     # Faction NPC folders — exact + nested
     candidates.extend(_REPO_ROOT.glob(f"world/factions/*/npcs/{slug}.md"))
     candidates.extend(_REPO_ROOT.glob(f"world/factions/*/npcs/**/{slug}.md"))
-    # Faction sub-org folders (elders/, tribes/, etc.) — both exact and substring
+    # Faction sub-org folders (elders/, tribes/, etc.)
     candidates.extend(_REPO_ROOT.glob(f"world/factions/*/*/{slug}.md"))
-    candidates.extend(_REPO_ROOT.glob(f"world/factions/*/*/*{slug}*.md"))
+    if use_substring:
+        candidates.extend(_REPO_ROOT.glob(f"world/factions/*/*/*{slug}*.md"))
     # Location-level NPCs at any depth, with or without /npcs/ subdir
     candidates.extend(_REPO_ROOT.glob(f"world/factions/*/locations/**/npcs/{slug}.md"))
     candidates.extend(_REPO_ROOT.glob(f"world/factions/*/locations/**/{slug}.md"))
-    candidates.extend(_REPO_ROOT.glob(f"world/factions/*/locations/**/*{slug}*.md"))
+    if use_substring:
+        candidates.extend(_REPO_ROOT.glob(f"world/factions/*/locations/**/*{slug}*.md"))
     # Party members
     candidates.extend(_REPO_ROOT.glob(f"world/party/*/members/{slug}.md"))
-    candidates.extend(_REPO_ROOT.glob(f"world/party/*/members/*{slug}*.md"))
+    if use_substring:
+        candidates.extend(_REPO_ROOT.glob(f"world/party/*/members/*{slug}*.md"))
     # Dedupe (a single file may match multiple globs)
     seen: set[Path] = set()
     deduped: list[Path] = []
@@ -258,7 +282,14 @@ def search_npcs(
 ) -> dict[str, Any]:
     """Filter the character-registry.tsv. All filters are case-insensitive substring
     matches; pass any subset. `affiliation` matches the free-form Notes column
-    (e.g., 'Black Ledger', 'Shardrunners'). `type` is 'PC' or 'NPC'."""
+    (e.g., 'Black Ledger', 'Shardrunners'). `type` is 'PC' or 'NPC'.
+
+    `limit` must be a positive integer. Negative values would produce
+    surprising slice semantics (`matched[:-1]` drops the last result), so
+    they're rejected explicitly.
+    """
+    if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
+        raise ValueError(f"limit must be a positive integer (got {limit!r})")
     rows = _load_registry()
 
     def matches(row: NpcRow) -> bool:
@@ -340,7 +371,11 @@ def get_faction_overview(slug: str) -> dict[str, Any]:
     identical on case-insensitive macOS/Windows filesystems and case-sensitive
     Linux. ('Ardenhaven' and 'ardenhaven' both resolve.)
     """
-    canonical = slug.lower().strip() if slug else slug
+    if not isinstance(slug, str):
+        raise ValueError(f"slug must be a string (got {type(slug).__name__})")
+    canonical = slug.lower().strip()
+    if not canonical:
+        raise ValueError("slug is empty")
     path = _FACTIONS_DIR / canonical / "_overview.md"
     if not path.exists():
         available = sorted(p.name for p in _FACTIONS_DIR.iterdir() if p.is_dir())
@@ -419,9 +454,19 @@ def find_lore(
 ) -> dict[str, Any]:
     """Substring search across vault markdown. `paths` is an optional
     comma-separated list of subpaths to restrict the search (e.g.,
-    'world/factions,characters'). Returns matched files with snippets."""
+    'world/factions,characters'). Returns matched files with snippets.
+
+    `limit` must be a positive integer; `context_chars` must be a non-negative
+    integer. Bool inputs (e.g., the `True` you'd get from a flag-without-value
+    in the CLI parser) are rejected explicitly so they don't masquerade as
+    integer 1.
+    """
     if not query:
         raise ValueError("query is required")
+    if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
+        raise ValueError(f"limit must be a positive integer (got {limit!r})")
+    if not isinstance(context_chars, int) or isinstance(context_chars, bool) or context_chars < 0:
+        raise ValueError(f"context_chars must be a non-negative integer (got {context_chars!r})")
 
     roots: list[Path] = []
     if paths:
@@ -430,10 +475,20 @@ def find_lore(
             if not p:
                 continue
             full = (_REPO_ROOT / p).resolve()
-            if full.exists() and _REPO_ROOT in full.parents or full == _REPO_ROOT:
+            if (full.exists() and _REPO_ROOT in full.parents) or full == _REPO_ROOT:
                 roots.append(full)
     if not roots:
         roots = [_REPO_ROOT]
+    # Drop nested roots: if `paths='world,world/factions'`, walking both
+    # would yield the same file twice. Sort by depth and keep only roots
+    # that aren't descendants of an already-kept root.
+    roots = sorted(set(roots), key=lambda p: len(p.parts))
+    deduped: list[Path] = []
+    for r in roots:
+        if any(other == r or other in r.parents for other in deduped):
+            continue
+        deduped.append(r)
+    roots = deduped
 
     skip_dirs = {
         ".git", ".venv", "venv", "__pycache__", ".history", ".cache",
@@ -663,7 +718,29 @@ MCP_HANDLERS = {
 
 # --- Subprocess fallback ----------------------------------------------------
 
-def _parse_flag_args(tokens: list[str]) -> dict[str, Any]:
+_BOOL_TRUE = {"true", "1", "yes", "y", "on"}
+_BOOL_FALSE = {"false", "0", "no", "n", "off"}
+
+
+def _parse_flag_args(
+    tokens: list[str],
+    *,
+    bool_flag_keys: Optional[set[str]] = None,
+    value_flag_keys: Optional[set[str]] = None,
+) -> dict[str, Any]:
+    """Parse `--key value` and `--bool-flag` style argv into a dict.
+
+    When `bool_flag_keys` and `value_flag_keys` are supplied (the tool's
+    declared flag set), the parser is stricter:
+      - A bare value flag (no following value) raises ValueError. Pre-fix,
+        this silently set `key=True`, which is an int subclass and would
+        masquerade as a positive integer downstream.
+      - A bool flag followed by a literal "true"/"false"/"1"/"0"/"yes"/"no"
+        consumes that token and converts to a real bool. Pre-fix, the
+        non-empty string was carried through and treated as truthy.
+      - A bare bool flag (no following value) defaults to True.
+    Without those sets, the parser is permissive (legacy behavior).
+    """
     out: dict[str, Any] = {}
     i = 0
     while i < len(tokens):
@@ -672,12 +749,37 @@ def _parse_flag_args(tokens: list[str]) -> dict[str, Any]:
             i += 1
             continue
         key = token[2:].replace("-", "_")
-        if i + 1 < len(tokens) and not tokens[i + 1].startswith("--"):
-            out[key] = tokens[i + 1]
+        next_token = tokens[i + 1] if i + 1 < len(tokens) else None
+        next_is_value = next_token is not None and not next_token.startswith("--")
+
+        if bool_flag_keys is not None and key in bool_flag_keys:
+            # A bool flag may consume the next token if it's a clear
+            # true/false literal; otherwise treat it as bare → True.
+            if next_is_value and next_token is not None and next_token.lower() in _BOOL_TRUE:
+                out[key] = True
+                i += 2
+            elif next_is_value and next_token is not None and next_token.lower() in _BOOL_FALSE:
+                out[key] = False
+                i += 2
+            else:
+                out[key] = True
+                i += 1
+        elif value_flag_keys is not None and key in value_flag_keys:
+            if not next_is_value or next_token is None:
+                raise ValueError(f"--{token[2:]} requires a value")
+            out[key] = next_token
             i += 2
         else:
-            out[key] = True
-            i += 1
+            # Permissive fallback for unknown keys (e.g., the parser is
+            # called with no flag-set context, as in the existing direct
+            # callers and tests).
+            if next_is_value and next_token is not None:
+                out[key] = next_token
+                i += 2
+            else:
+                out[key] = True
+                i += 1
+
     for int_key in ("limit", "session", "context_chars"):
         if int_key in out and isinstance(out[int_key], str):
             try:
@@ -704,7 +806,17 @@ def main() -> int:
             else:
                 rest = sys.argv[3:]
                 if rest and rest[0].startswith("--"):
-                    kwargs = _parse_flag_args(rest)
+                    # Look up the tool's declared flag sets so the parser can
+                    # treat bool/value flags correctly (true/false coercion;
+                    # error on missing values).
+                    tool_def = next((t for t in MCP_TOOLS if t["name"] == tool_name), {})
+                    value_flag_keys = set((tool_def.get("value_flags") or {}).keys())
+                    bool_flag_keys = set((tool_def.get("bool_flags") or {}).keys())
+                    kwargs = _parse_flag_args(
+                        rest,
+                        value_flag_keys=value_flag_keys,
+                        bool_flag_keys=bool_flag_keys,
+                    )
                 elif rest:
                     try:
                         kwargs = json.loads(rest[0])
