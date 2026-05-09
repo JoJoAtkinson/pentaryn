@@ -387,16 +387,26 @@ MCP_TOOLS = [
         "name": "roll_dice",
         "description": (
             "Roll D&D dice using cached quantum random numbers from ANU quantumnumbers API. "
-            "Fetches batches of 1024 uint16 numbers and caches locally to minimize API calls. "
-            "Respects 1 request/second rate limit. Falls back to random.org on failure. "
-            "Numbers persist to disk across restarts—never reuses a number. "
-            "Supports standard D&D dice: d4, d6, d8, d10, d12, d20, and d100. "
-            "Returns a JSON object with: the individual rolls (rolls), the modifier applied (modifier), "
-            "and the final total (total). "
-            "Example: roll_dice(num_dice=3, dice_size=20, modifier=2) rolls 3d20+2 and returns "
-            "{\"rolls\": [15, 8, 19], \"modifier\": 2, \"total\": 44}."
+            "Returns a JSON object with a ready-to-paste 'narrative' field plus full structured "
+            "breakdown for verification.\n\n"
+            "QUANTUM MARKER: When the narrative starts with the ⚛️ atom emoji, the rolls came from "
+            "the quantumnumbers API (true quantum random). No marker means the request fell back to "
+            "random.org — same dice, but pseudo-true rather than quantum. The 'source' JSON field "
+            "always confirms which one was used.\n\n"
+            "DICE GLYPHS: Each die appears in the narrative as a private-use Unicode codepoint "
+            "(U+E000 d4, U+E001 d6, U+E002 d8, U+E003 d10, U+E004 d12, U+E005 d20). When the user "
+            "has the dnd-dice.ttf font loaded, these render as custom dice images. The codes prove "
+            "rolls are real, not hallucinated.\n\n"
+            "BONUSES vs MODIFIER:\n"
+            "  - bonuses=[2,3,4]: per-die bonuses, one per roll. e.g., two attacks with +3 and +5: "
+            "bonuses=[3, 5].\n"
+            "  - modifier=5: flat bonus added to the final total only.\n"
+            "  - Both can combine: roll_dice(3, 6, bonuses=[2,2,2], modifier=1) for a sneak-attack "
+            "damage style roll.\n\n"
+            "Supports d4, d6, d8, d10, d12, d20, d100. "
+            "For Haiku-grade speed: just paste the 'narrative' field — no further reasoning needed."
         ),
-        "annotations": {"title": "Roll D&D Dice (Quantum Cached)", **_RO_LOCAL},
+        "annotations": {"title": "Roll D&D Dice (Quantum + Custom Font)", **_RO_LOCAL},
         "input_schema": {
             "type": "object",
             "properties": {
@@ -411,9 +421,17 @@ MCP_TOOLS = [
                     "enum": [4, 6, 8, 10, 12, 20, 100],
                     "description": "Number of sides on each die (d4, d6, d8, d10, d12, d20, d100).",
                 },
+                "bonuses": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "description": (
+                        "Optional per-die bonuses, one integer per die. Length must equal num_dice. "
+                        "Example: bonuses=[3, 5] for two attacks at +3 and +5. Omit for no per-die bonuses."
+                    ),
+                },
                 "modifier": {
                     "type": "integer",
-                    "description": "Bonus or penalty to add to the total (default 0, range: -1000 to +1000).",
+                    "description": "Flat bonus or penalty added to the final total only (default 0, range: -1000 to +1000).",
                     "default": 0,
                     "minimum": -1000,
                     "maximum": 1000,
