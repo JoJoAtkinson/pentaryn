@@ -136,9 +136,11 @@ async def _fetch_from_quantumnumbers(count: int = 1024) -> list[int] | None:
         response = await client.get(
             api_url,
             params={
-                "apiKey": api_key,
                 "type": "uint16",
                 "length": count,
+            },
+            headers={
+                "x-api-key": api_key,
             },
         )
         response.raise_for_status()
