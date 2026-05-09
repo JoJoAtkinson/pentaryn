@@ -78,7 +78,10 @@ Download from [emoji.gg](https://emoji.gg) (Cruxoflux artist set):
 | `d6.png` | https://emoji.gg/emoji/d6 | U+E001 |
 | `d8.png` | https://emoji.gg/emoji/d8 | U+E002 |
 | `d10.png` | https://emoji.gg/emoji/d10 | U+E003 |
-| `d20.png` | https://emoji.gg/emoji/d20 | U+E004 |
+| `d12.png` | https://emoji.gg/emoji/d12 | U+E004 |
+| `d20.png` | https://emoji.gg/emoji/d20 | U+E005 |
+
+PNGs should be RGBA (transparent background). Source resolution doesn't matter — `build_dice_font.py` resizes everything to 128x128 with transparent padding before embedding.
 
 ## Rebuilding the font
 
@@ -204,19 +207,41 @@ GLYPH_MAP: dict[str, int] = {
     "d6": 0xE001,
     "d8": 0xE002,
     "d10": 0xE003,
-    "d20": 0xE004,
+    "d12": 0xE004,
+    "d20": 0xE005,
 }
 
-# Bitmap strike size (pixels per em)
+# Bitmap strike size (pixels per em). The TTF embeds PNGs at this size; the
+# terminal scales down to whatever font size the user has configured.
 _STRIKE_PPEM = 128
 _UNITS_PER_EM = 1024
+_TARGET_SIZE = 128  # Each PNG is normalized to this square
 
 
-def _load_png(path: Path) -> bytes:
-    """Read a PNG file and return its raw bytes."""
+def _normalize_png(path: Path) -> bytes:
+    """Read a PNG, resize to a centered _TARGET_SIZE square with transparent padding,
+    return as PNG bytes. Source PNGs from emoji.gg vary in aspect ratio; this ensures
+    every glyph occupies the same square box in the font."""
+    from PIL import Image
+    import io
+    
     if not path.exists():
         raise FileNotFoundError(f"Required PNG not found: {path}")
-    return path.read_bytes()
+    
+    img = Image.open(path).convert("RGBA")
+    
+    # Scale to fit inside _TARGET_SIZE x _TARGET_SIZE while preserving aspect ratio
+    img.thumbnail((_TARGET_SIZE, _TARGET_SIZE), Image.LANCZOS)
+    
+    # Center on a transparent _TARGET_SIZE x _TARGET_SIZE canvas
+    canvas = Image.new("RGBA", (_TARGET_SIZE, _TARGET_SIZE), (0, 0, 0, 0))
+    offset_x = (_TARGET_SIZE - img.width) // 2
+    offset_y = (_TARGET_SIZE - img.height) // 2
+    canvas.paste(img, (offset_x, offset_y), img)
+    
+    buf = io.BytesIO()
+    canvas.save(buf, format="PNG", optimize=True)
+    return buf.getvalue()
 
 
 def build_font(source_dir: Path, output_path: Path) -> None:
@@ -275,7 +300,7 @@ def build_font(source_dir: Path, output_path: Path) -> None:
     strike.glyphs = {}
     
     for die_name in GLYPH_MAP:
-        png_bytes = _load_png(source_dir / f"{die_name}.png")
+        png_bytes = _normalize_png(source_dir / f"{die_name}.png")
         sbix_glyph = SbixGlyph(
             graphicType="png ",
             glyphName=die_name,
@@ -332,32 +357,40 @@ git commit -m "feat(fonts): add TTF builder script for dice font from PNGs"
 
 ---
 
-## Task 3: Generate the actual font from user-supplied PNGs
+## Task 3: Copy PNGs from Downloads, generate the font
 
 **Files:**
-- Read: `fonts/source-images/d4.png, d6.png, d8.png, d10.png, d20.png` (user-provided)
+- Copy from: `~/Downloads/d{4,6,8,10,12,20}.png`
+- Create: `fonts/source-images/d{4,6,8,10,12,20}.png`
 - Create: `fonts/dnd-dice.ttf`
 
-**Note:** This task requires the user to have placed the 5 PNG files in `fonts/source-images/`. If files are missing, ask user to download from emoji.gg before continuing.
+- [ ] **Step 1: Copy the 6 dice PNGs from Downloads**
 
-- [ ] **Step 1: Verify all required PNGs are present**
+Run:
+```bash
+mkdir -p fonts/source-images
+for d in d4 d6 d8 d10 d12 d20; do
+  cp ~/Downloads/$d.png fonts/source-images/$d.png
+done
+```
+Expected: silent success
+
+- [ ] **Step 2: Verify all 6 PNGs are present**
 
 Run: `ls fonts/source-images/*.png`
-Expected: `d4.png`, `d6.png`, `d8.png`, `d10.png`, `d20.png`
+Expected: `d4.png`, `d6.png`, `d8.png`, `d10.png`, `d12.png`, `d20.png`
 
-If any are missing, STOP and ask the user to download from emoji.gg.
-
-- [ ] **Step 2: Build the TTF**
+- [ ] **Step 3: Build the TTF**
 
 Run: `.venv/bin/python scripts/build_dice_font.py`
 Expected: Prints "Built /path/to/fonts/dnd-dice.ttf from /path/to/fonts/source-images"
 
-- [ ] **Step 3: Verify TTF is valid**
+- [ ] **Step 4: Verify TTF is valid**
 
 Run: `.venv/bin/python -c "from fontTools.ttLib import TTFont; f = TTFont('fonts/dnd-dice.ttf'); print('Glyphs:', f.getGlyphOrder())"`
-Expected: Output includes `.notdef`, `d4`, `d6`, `d8`, `d10`, `d20`
+Expected: Output includes `.notdef`, `d4`, `d6`, `d8`, `d10`, `d12`, `d20`
 
-- [ ] **Step 4: Commit the font**
+- [ ] **Step 5: Commit the font**
 
 ```bash
 git add fonts/dnd-dice.ttf fonts/source-images/*.png
@@ -378,16 +411,18 @@ In `scripts/dnd_roller.py`, after the imports block (around line 25), add:
 ```python
 # Private-use Unicode codepoints mapped to dice glyphs.
 # These render as custom dice when terminal has dnd-dice.ttf loaded.
+# Using chr(0xE0xx) keeps the source readable instead of embedding raw PUA bytes.
 _DICE_GLYPHS: dict[int, str] = {
-    4: "",
-    6: "",
-    8: "",
-    10: "",
-    20: "",
-    100: "",  # d100 = two d10s side-by-side
+    4: chr(0xE000),    # d4
+    6: chr(0xE001),    # d6
+    8: chr(0xE002),    # d8
+    10: chr(0xE003),   # d10
+    12: chr(0xE004),   # d12
+    20: chr(0xE005),   # d20
+    100: chr(0xE003) + chr(0xE003),  # d100 = two d10 glyphs side-by-side
 }
-# Note: d12 has no glyph yet — falls through to "d12" text label
-_DICE_FALLBACK_LABELS: dict[int, str] = {12: "d12"}
+# Plain-text fallback labels (used by dice_code field for non-glyphed dice).
+_DICE_FALLBACK_LABELS: dict[int, str] = {}
 
 # Quantum marker: prefixed to narrative when source is quantumnumbers API
 _QUANTUM_MARKER = "⚛️"  # ⚛️
@@ -667,7 +702,7 @@ def test_narrative_includes_dice_glyph():
     """Narrative includes the private-use codepoint for the die size."""
     _seed_cache([14, 11, 17], source="random_org")
     result = json.loads(dnd_roller.roll_dice(num_dice=3, dice_size=20))
-    assert "" in result["narrative"]  # d20 glyph
+    assert chr(0xE005) in result["narrative"]  # d20 glyph rendered
 
 
 def test_dice_notation_field():
@@ -771,8 +806,7 @@ async def _roll_dice_async(
         "modifier": modifier,
         "total_raw": total_raw,
         "total_with_bonuses": total_with_bonuses,
-        "dice_code": f"U+{ord(_DICE_GLYPHS.get(dice_size, _DICE_FALLBACK_LABELS.get(dice_size, '?'))[0]):04X}"
-            if dice_size in _DICE_GLYPHS else None,
+        "dice_code": _dice_code_for_size(dice_size),
         "dice_notation": _build_dice_notation(num_dice, dice_size, modifier),
     }
 ```
@@ -787,6 +821,19 @@ def _glyph_for_die(dice_size: int) -> str:
     if dice_size in _DICE_GLYPHS:
         return _DICE_GLYPHS[dice_size]
     return _DICE_FALLBACK_LABELS.get(dice_size, f"d{dice_size}")
+
+
+def _dice_code_for_size(dice_size: int) -> str | None:
+    """Return a human-readable Unicode code reference for the die's primary glyph,
+    or None if the die has no PUA glyph (e.g., a future die added before its image).
+    For d100 (two d10 glyphs), returns the d10 codepoint with a 'x2' suffix."""
+    if dice_size not in _DICE_GLYPHS:
+        return None
+    glyph = _DICE_GLYPHS[dice_size]
+    if len(glyph) == 1:
+        return f"U+{ord(glyph):04X}"
+    # Multi-glyph (e.g., d100 = two d10s)
+    return f"U+{ord(glyph[0]):04X} x{len(glyph)}"
 
 
 def _build_narrative(
