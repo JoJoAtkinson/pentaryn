@@ -230,10 +230,79 @@ async def _pop_numbers(count: int) -> tuple[list[int], str]:
     return numbers, source
 
 
+def _glyph_for_die(dice_size: int) -> str:
+    """Return the private-use glyph for a die size, falling back to text label."""
+    if dice_size in _DICE_GLYPHS:
+        return _DICE_GLYPHS[dice_size]
+    return _DICE_FALLBACK_LABELS.get(dice_size, f"d{dice_size}")
+
+
+def _dice_code_for_size(dice_size: int) -> str | None:
+    """Return a human-readable Unicode code reference for the die's primary glyph,
+    or None if the die has no PUA glyph (e.g., a future die added before its image).
+    For d100 (two d10 glyphs), returns the d10 codepoint with a 'x2' suffix."""
+    if dice_size not in _DICE_GLYPHS:
+        return None
+    glyph = _DICE_GLYPHS[dice_size]
+    if len(glyph) == 1:
+        return f"U+{ord(glyph):04X}"
+    return f"U+{ord(glyph[0]):04X} x{len(glyph)}"
+
+
+def _build_narrative(
+    dice_size: int,
+    rolls: list[int],
+    bonuses: list[int],
+    modifier: int,
+    total: int,
+    source: str,
+) -> str:
+    """Build the human-readable narrative string with optional quantum marker.
+
+    Examples:
+      "⚛️ <d20>(15+2) <d20>(12+2) <d20>(18+2) = 51"  (quantum, with bonuses)
+      "<d6>(3) <d6>(5) <d6>(2) = 10"                   (random.org fallback, no bonuses)
+    """
+    glyph = _glyph_for_die(dice_size)
+
+    parts: list[str] = []
+    for roll, bonus in zip(rolls, bonuses):
+        if bonus:
+            sign = "+" if bonus >= 0 else ""
+            parts.append(f"{glyph}({roll}{sign}{bonus})")
+        else:
+            parts.append(f"{glyph}({roll})")
+
+    body = " ".join(parts)
+
+    if modifier:
+        sign = "+" if modifier >= 0 else ""
+        body += f" {sign}{modifier}"
+
+    body += f" = {total}"
+
+    if source == "quantumnumbers":
+        return f"{_QUANTUM_MARKER} {body}"
+    return body
+
+
+def _build_dice_notation(num_dice: int, dice_size: int, modifier: int) -> str:
+    """Build standard D&D dice notation: '3d20+5', '1d8', '2d6-1'."""
+    base = f"{num_dice}d{dice_size}"
+    if modifier > 0:
+        return f"{base}+{modifier}"
+    if modifier < 0:
+        return f"{base}{modifier}"  # negative already has sign
+    return base
+
+
 async def _roll_dice_async(
-    num_dice: int, dice_size: int, modifier: int = 0
+    num_dice: int,
+    dice_size: int,
+    bonuses: list[int] | None = None,
+    modifier: int = 0,
 ) -> dict[str, Any]:
-    """Roll D&D dice asynchronously."""
+    """Roll D&D dice asynchronously with per-die bonuses and total modifier."""
     if not isinstance(num_dice, int) or not (1 <= num_dice <= 100):
         raise ValueError("num_dice must be an integer between 1 and 100")
     if dice_size not in (4, 6, 8, 10, 12, 20, 100):
@@ -243,23 +312,53 @@ async def _roll_dice_async(
     if not isinstance(modifier, int) or not (-1000 <= modifier <= 1000):
         raise ValueError("modifier must be an integer between -1000 and 1000")
 
-    # Fetch random numbers
-    raw_numbers, _source = await _pop_numbers(num_dice)
+    if bonuses is None:
+        bonuses_list: list[int] = [0] * num_dice
+    else:
+        if not isinstance(bonuses, list) or not all(isinstance(b, int) for b in bonuses):
+            raise ValueError("bonuses must be a list of integers or None")
+        if len(bonuses) != num_dice:
+            raise ValueError(
+                f"bonuses length ({len(bonuses)}) must match num_dice ({num_dice})"
+            )
+        bonuses_list = bonuses
 
-    # Apply modulo to get dice values (1 to dice_size)
+    raw_numbers, source = await _pop_numbers(num_dice)
+
     rolls = [num % dice_size + 1 for num in raw_numbers]
-    total = sum(rolls) + modifier
+    rolls_with_bonuses = [r + b for r, b in zip(rolls, bonuses_list)]
+    total_raw = sum(rolls)
+    total_with_bonuses = sum(rolls_with_bonuses) + modifier
 
     return {
+        "narrative": _build_narrative(
+            dice_size=dice_size,
+            rolls=rolls,
+            bonuses=bonuses_list,
+            modifier=modifier,
+            total=total_with_bonuses,
+            source=source,
+        ),
+        "source": source,
         "rolls": rolls,
+        "bonuses": bonuses_list,
+        "rolls_with_bonuses": rolls_with_bonuses,
         "modifier": modifier,
-        "total": total,
+        "total_raw": total_raw,
+        "total_with_bonuses": total_with_bonuses,
+        "dice_code": _dice_code_for_size(dice_size),
+        "dice_notation": _build_dice_notation(num_dice, dice_size, modifier),
     }
 
 
-def roll_dice(num_dice: int, dice_size: int, modifier: int = 0) -> str:
+def roll_dice(
+    num_dice: int,
+    dice_size: int,
+    bonuses: list[int] | None = None,
+    modifier: int = 0,
+) -> str:
     """
-    Roll D&D dice using cached quantum random numbers.
+    Roll D&D dice with per-die bonuses and total modifier.
 
     Fetches batches of 1024 uint16 values from ANU quantumnumbers API,
     caches them locally, and serves rolls from cache. Falls back to
@@ -268,13 +367,15 @@ def roll_dice(num_dice: int, dice_size: int, modifier: int = 0) -> str:
     Args:
         num_dice: Number of dice to roll (1-100).
         dice_size: Sides per die: 4, 6, 8, 10, 12, 20, or 100.
-        modifier: Optional modifier to add to the total (default 0).
+        bonuses: Per-die bonuses [2, 2, 2] or None. Length must match num_dice.
+        modifier: Bonus or penalty added to the final total only (default 0).
 
     Returns:
-        JSON string with keys: rolls (list), modifier (int), total (int).
+        JSON string with: narrative, source, rolls, bonuses, rolls_with_bonuses,
+        total_raw, total_with_bonuses, dice_code, dice_notation.
     """
-    result = asyncio.run(_roll_dice_async(num_dice, dice_size, modifier))
-    return json.dumps(result, indent=2)
+    result = asyncio.run(_roll_dice_async(num_dice, dice_size, bonuses, modifier))
+    return json.dumps(result, indent=2, ensure_ascii=False)
 
 
 # Initialize cache on module load
