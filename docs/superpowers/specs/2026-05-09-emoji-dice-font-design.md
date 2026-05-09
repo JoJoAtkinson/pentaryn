@@ -19,39 +19,50 @@ Integrate a custom emoji font library for D&D dice (d4–d20 + d100 as two d10s)
 
 ## Architecture
 
-### 1. Font Library (`./fonts/dnd-dice.ttf`)
+### 1. Custom Dice Font (`./fonts/dnd-dice.ttf`)
 
 - **Location:** `/Users/joe/GitHub/dnd/fonts/` (checked into repo)
-- **Contents:** Custom emoji font with glyphs for:
-  - `d4` → emoji representation (e.g., ⚂ or custom glyph)
-  - `d6` → emoji representation (e.g., ⚃)
-  - `d8` → emoji representation (e.g., ⚄)
-  - `d10` → emoji representation (e.g., ⚅)
-  - `d12` → emoji representation (e.g., custom or ⚀)
-  - `d20` → emoji representation (e.g., custom or ⚁)
-  - `d100` → display as two d10 emoji (percentile-style)
+- **Unicode Mapping:** Private Use Area (U+E000–U+E006):
+  - `U+E000` → d4 glyph (custom design/image)
+  - `U+E001` → d6 glyph
+  - `U+E002` → d8 glyph
+  - `U+E003` → d10 glyph
+  - `U+E004` → d12 glyph
+  - `U+E005` → d20 glyph
+  - `U+E006` → d100 glyph (or two d10s)
 
-- **Creation:** Download/source emoji for each die, bundle into TTF using fonttools or similar
-- **Format:** TrueType font (widely supported, small file size)
+- **Design Process:**
+  1. Source or design dice imagery (6+ images: d4, d6, d8, d10, d12, d20, optionally d100)
+  2. Create TTF font file with those images mapped to private-use Unicode points
+  3. Use fonttools or FontForge to build the font
+  4. Place `dnd-dice.ttf` in `/fonts/`
+
+- **Why Private Use Area:** No conflicts with standard Unicode, guaranteed to only render with your custom font, fallback shows raw codes if font unavailable
 
 ### 2. MCP Output Format
 
-Returns JSON with narrative ready for LLM + structured data for auditing:
+Returns JSON with narrative using private-use Unicode codes + structured data for auditing:
 
 ```json
 {
-  "narrative": "⚴(15+2) ⚵(12+2) ⚶(18+2) = 51",
+  "narrative": "(15+2) (12+2) (18+2) = 51",
   "rolls": [15, 12, 18],
   "bonuses": [2, 2, 2],
   "rolls_with_bonuses": [17, 14, 20],
   "total_raw": 45,
   "total_with_bonuses": 51,
-  "emoji": "⚴",
+  "dice_code": "U+E005",
   "dice_notation": "3d20+2"
 }
 ```
 
-**Rationale for Haiku:** Structured JSON is compact and unambiguous. Haiku can grab the `narrative` field and paste directly into game text without parsing prose + JSON. Raw fields available for edge cases.
+**How it works:**
+- `` (d20) renders as your custom d20 glyph when terminal has `dnd-dice.ttf` loaded
+- Without the font, shows as `🬅` or fallback character (still readable, but undecorated)
+- LLM grabs narrative and pastes; terminal renders with custom font
+- Raw rolls available if needed
+
+**Rationale for Haiku:** Structured JSON is compact. Haiku can grab the `narrative` field (which contains private-use codes) and paste directly. Terminal rendering with custom font happens automatically.
 
 ### 3. MCP Function Signature
 
@@ -153,18 +164,25 @@ Or via `.claude/` if per-project:
 - ✅ Full audit trail available in JSON for edge cases
 - ✅ Font is version-controlled in repo
 
-## Emoji Selection Strategy
+## Font Creation Strategy
 
-Use existing Unicode die face emoji where available, with fallbacks:
-- `d4` → ⚂ (Unicode U+2682, white die)
-- `d6` → ⚃ (Unicode U+2683)
-- `d8` → ⚄ (Unicode U+2684)
-- `d10` → ⚅ (Unicode U+2685)
-- `d12` → 🎲 (dice emoji, U+1F3B2) if die-specific unavailable
-- `d20` → ⚁ (Unicode U+2681)
-- `d100` → two ⚅ side-by-side (e.g., "⚅⚅")
+**Dice Imagery:**
+- Source or design 6+ images: d4, d6, d8, d10, d12, d20 (and optionally d100)
+- Options:
+  - Download polyhedral dice vector art from sites like Thenounproject, Flaticon, or OpenGameArt
+  - Commission or design custom dice icons
+  - Use D&D dice photos/3D renders
+  - Choose a consistent visual style (outlined, filled, realistic, stylized, etc.)
 
-**Tool:** Use fonttools (Python) to bundle existing emoji into TTF, or source pre-built emoji font and extract/configure for these glyphs only.
+**Font Creation Tool:**
+- **fonttools (Python):** `pip install fonttools` → programmatically create TTF with custom glyphs mapped to private-use Unicode
+- **FontForge (GUI):** Open-source font editor, drag-and-drop imagery into private-use slots
+- **Online tools:** Google Fonts API or similar services for quick TTF generation (if offering pre-designed dice)
+
+**Recommended approach:** 
+1. Source 6 PNG/SVG dice images (clear, consistent style)
+2. Use fonttools + Python to map to U+E000–U+E006 and generate TTF
+3. Test in terminal to ensure rendering is clear
 
 ## Terminal Configuration Strategy
 
