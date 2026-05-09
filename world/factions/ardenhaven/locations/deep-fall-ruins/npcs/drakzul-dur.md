@@ -1,12 +1,14 @@
 ---
 created: 2026-01-31
 last-modified: 2026-01-31
-tags: ["#world", "#npc", "#ardenhaven", "#deep-fall-ruins", "#derro", "#fungus", "#combat"]
-status: draft
+tags: ["#world", "#npc", "#ardenhaven", "#deep-fall-ruins", "#shroom-derro", "#fungus", "#combat", "#dead"]
+status: dead
 ---
-# Drakzul-dur (DRAK-zull-door) — Red Spore Leader (Pusher)
+# Drakzul-dur (DRAK-zull-door) — Red Spore Leader (Pusher) [KILLED]
 
 Drakzul-dur’s eyes are empty hollows. He smiles anyway, like it’s normal.
+
+*Status: The red spore leader was killed in campaign play.*
 
 He is not cruel. He is not hateful.
 
