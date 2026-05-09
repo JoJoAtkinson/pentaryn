@@ -62,7 +62,29 @@ Returns JSON with narrative using private-use Unicode codes + structured data fo
 - LLM grabs narrative and pastes; terminal renders with custom font
 - Raw rolls available if needed
 
-**Rationale for Haiku:** Structured JSON is compact. Haiku can grab the `narrative` field (which contains private-use codes) and paste directly. Terminal rendering with custom font happens automatically.
+**Quantum Marker:**
+- Prefix `⚛️` appears in narrative **only** when source is `quantumnumbers` API
+- No prefix if fallback to `random_org` (human can see at a glance which source was used)
+- `source` field in JSON always indicates: `"quantumnumbers"` or `"random_org"`
+- LLM knows from MCP description what `⚛️` means, but doesn't need to reason about it
+
+**Example with quantum:**
+```json
+{
+  "narrative": "⚛️ (15+2) (12+2) (18+2) = 51",
+  "source": "quantumnumbers"
+}
+```
+
+**Example with fallback:**
+```json
+{
+  "narrative": "(15+2) (12+2) (18+2) = 51",
+  "source": "random_org"
+}
+```
+
+**Rationale for Haiku:** Structured JSON is compact. Haiku can grab the `narrative` field and paste directly. The `⚛️` marker provides human transparency without requiring LLM logic.
 
 ### 3. MCP Function Signature
 
@@ -164,25 +186,18 @@ Or via `.claude/` if per-project:
 - ✅ Full audit trail available in JSON for edge cases
 - ✅ Font is version-controlled in repo
 
-## Font Creation Strategy
+## Emoji Selection Strategy
 
-**Dice Imagery:**
-- Source or design 6+ images: d4, d6, d8, d10, d12, d20 (and optionally d100)
-- Options:
-  - Download polyhedral dice vector art from sites like Thenounproject, Flaticon, or OpenGameArt
-  - Commission or design custom dice icons
-  - Use D&D dice photos/3D renders
-  - Choose a consistent visual style (outlined, filled, realistic, stylized, etc.)
+Use existing Unicode die face emoji where available, with fallbacks:
+- `d4` → ⚂ (Unicode U+2682, white die)
+- `d6` → ⚃ (Unicode U+2683)
+- `d8` → ⚄ (Unicode U+2684)
+- `d10` → ⚅ (Unicode U+2685)
+- `d12` → 🎲 (dice emoji, U+1F3B2) if die-specific unavailable
+- `d20` → ⚁ (Unicode U+2681)
+- `d100` → two ⚅ side-by-side (e.g., "⚅⚅")
 
-**Font Creation Tool:**
-- **fonttools (Python):** `pip install fonttools` → programmatically create TTF with custom glyphs mapped to private-use Unicode
-- **FontForge (GUI):** Open-source font editor, drag-and-drop imagery into private-use slots
-- **Online tools:** Google Fonts API or similar services for quick TTF generation (if offering pre-designed dice)
-
-**Recommended approach:** 
-1. Source 6 PNG/SVG dice images (clear, consistent style)
-2. Use fonttools + Python to map to U+E000–U+E006 and generate TTF
-3. Test in terminal to ensure rendering is clear
+**Tool:** Use fonttools (Python) to bundle existing emoji into TTF, or source pre-built emoji font and extract/configure for these glyphs only.
 
 ## Terminal Configuration Strategy
 
