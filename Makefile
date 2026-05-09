@@ -34,14 +34,14 @@ alt-to-mactex:
 	# MacTeX is a large download and installation, so we can use BasicTeX as an alternative for LaTeX support in the MCP.
 	brew install --cask basictex
 
-	sudo tlmgr update --self
-	sudo tlmgr install \
+	sudo /usr/local/texlive/2026basic/bin/universal-darwin/tlmgr update --self
+	sudo /usr/local/texlive/2026basic/bin/universal-darwin/tlmgr install \
 		fontspec unicode-math \
 		geometry setspace parskip \
 		hyperref bookmark xurl \
 		microtype upquote \
 		fancyvrb framed \
-		booktabs longtable \
+		booktabs longtable tabulary \
 		xcolor ulem \
 		selnolig etoolbox
 

@@ -14,8 +14,25 @@ This directory contains all templates used for creating consistent content throu
 - **[party-member-abilities-template.md](party-member-abilities-template.md)** - For per-member ability pages (under a party folder)
 - **[quest-template.md](quest-template.md)** - For adventures and missions
 - **[item-template.md](item-template.md)** - For equipment and magic items
-- **[creature-template.md](creature-template.md)** - For monsters and creatures
+- **[creature-template.md](creature-template.md)** - For monsters and creatures (lore & reference)
+- **[creature-combat-ready-template.md](creature-combat-ready-template.md)** - For NPCs and creatures you'll run in combat (battle-optimized)
 - **[faction-template.md](faction-template.md)** - For organizations and groups
+
+## Creature Template Choice
+
+**Use `creature-template.md` for:**
+- Generic/reference creatures
+- Vanilla monsters from official books
+- Creatures that won't see combat
+- Lore entries and bestiary items
+
+**Use `creature-combat-ready-template.md` for:**
+- Custom NPCs you'll run in combat
+- Boss fights and major encounters
+- Creatures with tactics and behavior
+- Anything designed for YOUR table
+
+The combat-ready template prioritizes AC/HP/defenses at the top and relegates flavor to the bottom, so you can glance and play.
 
 ## How to Use Templates
 

@@ -309,14 +309,14 @@ def _apply_pdf_defaults(pandoc_args: list[str]) -> list[str]:
     if not has_prefix("--toc-depth"):
         updated.append("--toc-depth=2")
     if not has_prefix("--pdf-engine"):
-        updated.append("--pdf-engine=xelatex")
+        updated.append("--pdf-engine=pdflatex")
 
     # Variables (keep simple; don't try to dedupe pairs aggressively).
     vars_defaults = [
         ("mainfont", "Baskerville"),
         ("linestretch", "1.3"),
-        ("classoption", "twocolumn"),
-        ("geometry:margin", "0.7in"),
+        ("classoption", "onecolumn"),
+        ("geometry:margin", "0.5in"),
     ]
     existing_vars = set()
     for idx, arg in enumerate(updated):

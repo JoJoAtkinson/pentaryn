@@ -4,14 +4,12 @@
 
 % Make pandoc's longtable behave like a normal tabular in two-column docs
 \usepackage{booktabs} % usually already loaded by pandoc, but safe
-
 \usepackage{longtable}
-
 
 \makeatletter
 % Replace longtable with a centered tabular
 \renewenvironment{longtable}{%
-  \begin{center}\begin{tabular}%
+  \begin{center}\small\begin{tabular}%
 }{%
   \end{tabular}\end{center}%
 }
@@ -27,3 +25,8 @@
 \renewcommand{\midrule}{\hline}
 \renewcommand{\bottomrule}{\hline}
 \makeatother
+
+% Allow table columns to wrap and shrink
+\renewcommand{\arraystretch}{1.2}
+\setlength{\parindent}{0pt}
+\setlength{\tabcolsep}{2pt}  % reduce column padding from default 6pt

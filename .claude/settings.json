@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python plan/lint.py)",
+      "Bash(copilot *)",
+      "Bash(python plan/trace.py)",
+      "Bash(curl *)",
+      "Bash(python /tmp/validate_plan.py)",
+      "mcp__dnd-scripts__*"
+    ]
+  }
+}
