@@ -1,0 +1,200 @@
+"""Action chip grid — clickable action cards for the active NPC.
+
+Each chip shows action name + a verb hint. Clicking emits `chip_clicked(action_name)`.
+USED actions render greyed-out and don't emit on click. Sorted by `priority`
+descending (higher priority → top-left), with `scope: "global"` actions
+visually segregated at the bottom of the grid.
+
+The grid uses a 2-column flow layout (configurable via cols arg).
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import (
+    QFrame,
+    QGridLayout,
+    QLabel,
+    QSizePolicy,
+    QVBoxLayout,
+    QWidget,
+)
+
+
+class ActionChip(QFrame):
+    """One clickable action card. Emits clicked(action_name) on press."""
+
+    clicked = Signal(str)  # action name
+
+    def __init__(
+        self,
+        action_name: str,
+        verbs: list[str],
+        is_used: bool = False,
+        is_global: bool = False,
+        meta: str | None = None,  # e.g. "range 30/60 ft" or "recharge 5+"
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.action_name = action_name
+        self.is_used = is_used
+        self.is_global = is_global
+
+        self.setObjectName("ActionChip")
+        self.setFrameShape(QFrame.Shape.StyledPanel)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        self.setCursor(Qt.CursorShape.PointingHandCursor if not is_used else Qt.CursorShape.ArrowCursor)
+        self.setProperty("used", is_used)
+        self.setProperty("global_action", is_global)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(8, 6, 8, 6)
+        layout.setSpacing(2)
+
+        name_label = QLabel(self._format_name())
+        name_label.setObjectName("ActionChipName")
+        name_label.setStyleSheet("font-weight: 600; color: #ffffff;")
+        layout.addWidget(name_label)
+
+        verbs_text = ", ".join(verbs[:5])  # cap to first 5 to keep chip tight
+        if meta:
+            verbs_text = f"{verbs_text} · {meta}" if verbs_text else meta
+        if verbs_text:
+            verbs_label = QLabel(verbs_text)
+            verbs_label.setObjectName("ActionChipVerbs")
+            verbs_label.setStyleSheet("color: #6c8eba; font-size: 10px;")
+            verbs_label.setWordWrap(True)
+            layout.addWidget(verbs_label)
+
+        # Visual state for used
+        if is_used:
+            self.setStyleSheet("ActionChip { background: #14171b; }")
+            name_label.setStyleSheet("font-weight: 600; color: #6c8eba; text-decoration: line-through;")
+
+    def _format_name(self) -> str:
+        # snake_case → Title Case for display
+        return self.action_name.replace("_", " ").title()
+
+    def mousePressEvent(self, event) -> None:  # noqa: N802 (Qt API)
+        if event.button() == Qt.MouseButton.LeftButton and not self.is_used:
+            self.clicked.emit(self.action_name)
+        super().mousePressEvent(event)
+
+
+class ActionChipGrid(QWidget):
+    """Container that arranges ActionChip widgets in a 2-column grid.
+    Per-NPC actions render first; global actions go in a second labeled section."""
+
+    chip_clicked = Signal(str)  # forwards the clicked chip's action name
+
+    def __init__(self, cols: int = 2, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._cols = cols
+        self._layout = QVBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
+        self._layout.setSpacing(8)
+        self._chips: list[ActionChip] = []
+
+    def set_actions(
+        self,
+        actions: list[dict[str, Any]],
+        used_actions: set[str] | None = None,
+    ) -> None:
+        """Populate the grid from a list of action summary dicts.
+
+        Each dict needs: `action` (str), `verbs` (list[str]). Optional:
+        `priority` (int, higher = first), `scope` (str, "global" segregates),
+        `range`, `area`, `recharge`, `prerequisite` (any of these surface as
+        meta text under the verbs).
+        """
+        used_actions = used_actions or set()
+        # Clear existing chips
+        while self._layout.count():
+            item = self._layout.takeAt(0)
+            if w := item.widget():
+                w.deleteLater()
+        self._chips.clear()
+
+        per_npc: list[dict[str, Any]] = []
+        globals_: list[dict[str, Any]] = []
+        for a in actions:
+            if a.get("scope") == "global":
+                globals_.append(a)
+            else:
+                per_npc.append(a)
+
+        # Sort each bucket by priority descending; ties by action name ascending.
+        def _sort_key(a: dict[str, Any]) -> tuple[int, str]:
+            return (-int(a.get("priority", 0)), a.get("action", ""))
+        per_npc.sort(key=_sort_key)
+        globals_.sort(key=_sort_key)
+
+        # Render per-NPC actions first
+        if per_npc:
+            self._add_grid_section(per_npc, used_actions, label=None)
+
+        # Then a separator + globals
+        if globals_:
+            if per_npc:
+                divider = QLabel("— Global actions —")
+                divider.setStyleSheet("color: #6c8eba; font-size: 10px; padding-top: 8px;")
+                divider.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self._layout.addWidget(divider)
+            self._add_grid_section(globals_, used_actions, label=None, is_global=True)
+
+        self._layout.addStretch(1)
+
+    def _add_grid_section(
+        self,
+        items: list[dict[str, Any]],
+        used: set[str],
+        label: str | None,
+        is_global: bool = False,
+    ) -> None:
+        grid_host = QWidget(self)
+        grid = QGridLayout(grid_host)
+        grid.setContentsMargins(0, 0, 0, 0)
+        grid.setSpacing(6)
+
+        for i, a in enumerate(items):
+            r, c = divmod(i, self._cols)
+            meta = (
+                a.get("range")
+                or a.get("area")
+                or self._format_trigger(a.get("trigger"))
+                or a.get("prerequisite")
+            )
+            if a.get("recharge") is not None:
+                meta = f"recharge {a['recharge']}+" if meta is None else f"{meta} · recharge {a['recharge']}+"
+            chip = ActionChip(
+                action_name=a["action"],
+                verbs=a.get("verbs", []),
+                is_used=a["action"] in used,
+                is_global=is_global,
+                meta=meta,
+                parent=grid_host,
+            )
+            chip.clicked.connect(self.chip_clicked.emit)
+            self._chips.append(chip)
+            grid.addWidget(chip, r, c)
+
+        self._layout.addWidget(grid_host)
+
+    def chips(self) -> list[ActionChip]:
+        """Test-only: return the rendered chip widgets in render order."""
+        return list(self._chips)
+
+    @staticmethod
+    def _format_trigger(trig) -> str | None:
+        """Render an action's `trigger` block as a chip-meta string.
+        Accepts either the new `{scope, event, match}` dict shape or the
+        legacy free-form string. None → returns None (no meta added)."""
+        if trig is None:
+            return None
+        if isinstance(trig, dict):
+            scope = trig.get("scope", "self")
+            match = trig.get("match", "")
+            return f"trigger ({scope}): {match}" if match else f"trigger ({scope})"
+        return f"trigger: {trig}"

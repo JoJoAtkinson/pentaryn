@@ -67,3 +67,6 @@ __pycache__/
 
 # Combat-runner per-encounter auto-memory (per-machine state)
 combat-runner/.memory/
+
+# Combat-runner scenario-test metrics (per-run output, machine-local)
+combat-runner/tests/.metrics/

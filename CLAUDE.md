@@ -34,6 +34,12 @@ Run `/Users/joe/GitHub/dnd/.venv/bin/python scripts/mcp/server.py --list-tools` 
 - `lore_inconsistency_report` → indexes the whole vault; expensive, ask before running.
 - `fix_md_links` → defaults to dry-run; pass `write=true` only after reviewing the proposed changes.
 
+## Combat Runner — the default at-table tool
+
+For running combat live at the table, use the **PySide6 GUI** at `combat-runner/gui/` (`make combat-gui` or `python -m combat-runner.gui.app`). It's tab-per-NPC, sigil-driven (`-18` damage, `+10` heal, `@prone` for conditions, verb-fuzzy-match for actions), with a live red/green HP overlay, declarative reactions, mob support (segmented HP bar, `m<n>` targeting), universal actions (Push/Grapple/Dodge/etc.), and the LLM as a meta-controller for everything else. See [`combat-runner/gui/README.md`](combat-runner/gui/README.md) for the full sigil cheat-sheet, architecture, and headless-testing notes.
+
+The old Haiku-Claude-Code CLI launcher at `combat-runner/launch.py` is still around as a fallback but the GUI is the snappy default.
+
 ## Combat NPCs (`#combat-runner` tag)
 
 A combat-runner NPC is **one .md file + one or more rows in the central actions DB** at `combat-runner/actions.jsonl`:

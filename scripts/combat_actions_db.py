@@ -87,6 +87,32 @@ def _atomic_write(records: list[dict]) -> None:
 
 _VALID_TYPES = {"multiattack", "single_attack", "area", "utility", "reaction"}
 
+# Mirror of gui.event_bus.EventKind. Duplicated here so this stdlib-only module
+# stays import-free of the GUI package — the GUI re-checks at runtime anyway.
+_VALID_TRIGGER_EVENTS = {
+    "damage", "heal", "condition_applied", "condition_removed",
+    "action_executed", "spell_cast", "round_advanced",
+    "death", "bloodied", "note",
+}
+_VALID_TRIGGER_SCOPES = {"self", "global"}
+
+
+def _validate_trigger(trig: Any) -> list[str]:
+    """Validate an optional `trigger: {scope, event, match}` block."""
+    errors: list[str] = []
+    if not isinstance(trig, dict):
+        return ["trigger must be a dict with keys scope, event, match"]
+    scope = trig.get("scope")
+    if scope not in _VALID_TRIGGER_SCOPES:
+        errors.append(f"trigger.scope must be one of {sorted(_VALID_TRIGGER_SCOPES)}, got {scope!r}")
+    event = trig.get("event")
+    if event not in _VALID_TRIGGER_EVENTS:
+        errors.append(f"trigger.event must be one of {sorted(_VALID_TRIGGER_EVENTS)}, got {event!r}")
+    match = trig.get("match")
+    if not isinstance(match, str) or not match.strip():
+        errors.append("trigger.match must be a non-empty string")
+    return errors
+
 
 def validate_spec(spec: dict) -> list[str]:
     """Return a list of error messages for a spec (empty list = valid)."""
@@ -100,6 +126,18 @@ def validate_spec(spec: dict) -> list[str]:
         errors.append("verbs must be a list")
     if "narration" not in spec or not isinstance(spec.get("narration"), str):
         errors.append("narration is required and must be a string")
+
+    # Optional trigger block — works on any action type (reaction uses it to
+    # auto-fire; non-reaction actions can also declare triggers for future
+    # automation hooks like "auto-cast Shield when targeted by attack").
+    if "trigger" in spec:
+        errors.extend(_validate_trigger(spec["trigger"]))
+
+    # Optional scope field — when "global", this action is appended to every
+    # NPC's action surface (Push, Grapple, Dodge, etc.). Default is per-NPC.
+    if "scope" in spec:
+        if spec["scope"] not in ("self", "global"):
+            errors.append(f"scope must be 'self' or 'global', got {spec['scope']!r}")
 
     if t in ("multiattack", "single_attack"):
         attacks = spec.get("attacks")
@@ -197,20 +235,27 @@ def get(npc: str, action_or_verb: str) -> dict | None:
 def list_actions(
     npc: str | None = None,
     npcs: list[str] | None = None,
+    include_globals: bool = True,
 ) -> list[dict]:
     """Return lightweight summaries of every matching action.
 
     Filter by single npc, or by a list of npc slugs (encounter use case).
+    By default also include any rows whose `scope == "global"` (universal
+    actions like Push/Grapple/Dodge). Pass `include_globals=False` to suppress.
     Each summary contains: npc, action, type, verbs, narration_preview, range,
-    area, recharge, prerequisite. NOT the full attack/damage spec — that's
-    behind get() / combat_action_run.
+    area, recharge, prerequisite, trigger, scope. NOT the full attack/damage
+    spec — that's behind get() / combat_action_run.
     """
     records = read_all()
-    if npc:
-        records = [r for r in records if r.get("npc") == npc]
-    if npcs:
-        wanted = set(npcs)
-        records = [r for r in records if r.get("npc") in wanted]
+    if npc or npcs:
+        wanted = {npc} if npc else set(npcs or ())
+        kept = []
+        for r in records:
+            if r.get("npc") in wanted:
+                kept.append(r)
+            elif include_globals and r.get("scope") == "global":
+                kept.append(r)
+        records = kept
 
     summaries = []
     for r in records:
@@ -224,7 +269,7 @@ def list_actions(
             "verbs": r.get("verbs", []),
             "narration_preview": narration,
         }
-        for opt in ("range", "area", "recharge", "prerequisite", "trigger"):
+        for opt in ("range", "area", "recharge", "prerequisite", "trigger", "scope"):
             if opt in r:
                 summary[opt] = r[opt]
         summaries.append(summary)
@@ -267,7 +312,11 @@ def format_ready_reference(npcs: list[str]) -> str:
             if "prerequisite" in a:
                 tags.append(f"req: {a['prerequisite']}")
             if "trigger" in a:
-                tags.append(f"trigger: {a['trigger']}")
+                trig = a["trigger"]
+                if isinstance(trig, dict):
+                    tags.append(f"trigger ({trig.get('scope', 'self')}): {trig.get('match', '')}")
+                else:
+                    tags.append(f"trigger: {trig}")
             tag_str = f"  ({'; '.join(tags)})" if tags else ""
             lines.append(f"- **`{a['action']}`** — verbs: {verbs}{tag_str}")
     return "\n".join(lines) + "\n"
