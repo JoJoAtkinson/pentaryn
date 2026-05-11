@@ -1,5 +1,15 @@
 # Combat-Ready Creature Template
 
+> **DEPRECATED — do not use for new combat NPCs.**
+>
+> This template predates the `#combat-runner` system. It produces a human-readable stat block but is **not** structured for the launcher (`combat-runner/launch.py`) or the Haiku table runner — it has no verb table, no `[I ROLL]` / `[ASK PLAYER]` markers, no roll-ahead pattern, no recharge state tracking.
+>
+> **For any NPC you intend to run in combat, use [`npc-combat-runner-template.md`](npc-combat-runner-template.md) instead.** That template, plus the shared rules in [`npc-combat-protocol.md`](npc-combat-protocol.md), is what the runner expects.
+>
+> Kept here only for reference / for hand-run encounters that bypass the runner. New work should not start from this file.
+
+---
+
 **Use this template for:** NPCs and creatures you'll run in combat. Optimized for quick glancing during play, not for reference or lore.
 
 **Do NOT use this for:** Lore creatures, vanilla monsters from official books, or creatures that won't see combat. Use `creature-template.md` instead.

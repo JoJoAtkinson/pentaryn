@@ -64,3 +64,6 @@ __pycache__/
 
 # Local secrets
 .env
+
+# Combat-runner per-encounter auto-memory (per-machine state)
+combat-runner/.memory/

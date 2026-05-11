@@ -8,5 +8,8 @@
       "Bash(python /tmp/validate_plan.py)",
       "mcp__dnd-scripts__*"
     ]
+  },
+  "enabledPlugins": {
+    "discord@claude-plugins-official": true
   }
 }

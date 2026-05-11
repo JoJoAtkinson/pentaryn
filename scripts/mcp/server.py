@@ -153,6 +153,15 @@ def _run_call_worker(msg_id: Any, runner: "ToolRunner", arguments: dict[str, Any
                 "result": {"content": [{"type": "text", "text": out}]},
             })
     except Exception as exc:
+        # Surface the full traceback to stderr (the MCP client sees only the
+        # short error message via JSON-RPC, but mid-fight debugging benefits
+        # from the real stack — Claude Code's MCP logs capture stderr).
+        import traceback as _tb
+        sys.stderr.write(
+            f"\n[mcp-server] tool {runner.tool.name!r} crashed:\n"
+            f"{_tb.format_exc()}\n"
+        )
+        sys.stderr.flush()
         if msg_id is not None:
             _write_message({
                 "jsonrpc": "2.0",
@@ -299,6 +308,27 @@ def _has_top_level_assignment(source: str, name: str) -> bool:
             if isinstance(node.target, ast.Name) and node.target.id == name:
                 return True
     return False
+
+
+def _read_top_level_string_list(source: str, name: str) -> list[str]:
+    """If `name` is assigned at module top-level to a literal list of strings,
+    return that list. Otherwise return []. Used by the group filter to peek at
+    MCP_GROUPS without importing the module (which would defeat the speedup)."""
+    try:
+        module = ast.parse(source)
+    except SyntaxError:
+        return []
+    for node in module.body:
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == name:
+                    try:
+                        value = ast.literal_eval(node.value)
+                    except (ValueError, SyntaxError):
+                        return []
+                    if isinstance(value, list) and all(isinstance(v, str) for v in value):
+                        return value
+    return []
 
 
 def _extract_mcp_tool_literal(source: str, *, path: Path) -> dict[str, Any] | None:
@@ -455,12 +485,26 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
         and server_dir not in p.resolve().parents
     ]
     
+    # Optional group filter: when DND_MCP_TOOLS_GROUP is set, only load modules
+    # whose top-level MCP_GROUPS list contains that group name. Massively cuts
+    # cold-start latency by skipping unrelated heavy imports (chromadb, pandas,
+    # etc.) when only a focused tool surface is needed (e.g. combat-runner).
+    # Modules without a MCP_GROUPS declaration are skipped when a filter is active.
+    group_filter = os.environ.get("DND_MCP_TOOLS_GROUP", "").strip()
+
     for path in sorted(all_py_files, key=lambda p: str(p.relative_to(scripts_dir))):
         try:
             source = path.read_text(encoding="utf-8")
         except Exception as exc:
             skipped.append((path, f"unreadable: {exc}"))
             continue
+
+        if group_filter:
+            module_groups = _read_top_level_string_list(source, "MCP_GROUPS")
+            if group_filter not in module_groups:
+                skipped.append((path, f"group filter excludes (DND_MCP_TOOLS_GROUP={group_filter!r}, module groups={module_groups})"))
+                continue
+
         # Two discovery paths:
         # - Scripts with a top-level MCP_HANDLERS assignment get imported as
         #   modules; MCP_TOOLS is read from the imported namespace (so it can
