@@ -7,14 +7,25 @@ Respects 1 request/second rate limit. Falls back to random.org on failure.
 Numbers are persisted to disk to survive restarts—never reuses a number.
 
 Tools exposed:
-  - roll_dice — roll one or more D&D dice with an optional modifier
+  - roll_dice            — roll one or more D&D dice with an optional modifier
+  - log_combat_event     — append a non-roll event to a Markdown log file
+  - roll_combat_action   — run a pre-defined combat action (multi-roll, one MCP call)
+  - combat_action_upsert — author/edit a combat action (validates spec)
+  - combat_actions_list  — inspect actions in the DB
 """
 
 from __future__ import annotations
 
+# Tags this module for the MCP server's optional group filter (DND_MCP_TOOLS_GROUP).
+# When the combat-runner launcher sets the env var to "combat", only modules
+# carrying "combat" in MCP_GROUPS are loaded — massive cold-start speed-up
+# because heavy unrelated modules (lore, etc.) are skipped entirely.
+MCP_GROUPS = ["combat", "all"]
+
 import asyncio
 import json
 import os
+import re
 import struct
 import time
 from pathlib import Path
@@ -22,6 +33,11 @@ from typing import Any
 
 import httpx
 import requests
+
+# (Combat-action specs are now stored in `combat-runner/actions.jsonl` and
+# accessed via the `combat_actions_db` module — see `_execute_combat_action_async`
+# below. No registry env var needed; the launcher writes the DB and the MCP
+# server reads it directly.)
 
 try:
     from dotenv import load_dotenv
@@ -38,17 +54,21 @@ _RO_LOCAL = {
     "openWorldHint": False,
 }
 
-# Private-use Unicode codepoints mapped to dice glyphs.
-# These render as custom dice when terminal has dnd-dice.ttf loaded.
-# Using chr(0xE0xx) keeps the source readable instead of embedding raw PUA bytes.
+# Unicode codepoints mapped to dice glyphs. We hijack rarely-used Wide
+# pictographs (U+1F518–U+1F51D — RADIO BUTTON / BACK / END / ON / SOON / TOP)
+# because they're East Asian Width=Wide so terminals give them a 2-cell box,
+# which matches our 1em-square bitmap. (Previously used Alchemical Symbols
+# U+1F700+ which are EAW=Neutral and rendered incorrectly in xterm.js.)
+# Claude Code's TUI strips PUA codepoints (issue #49270) but renders these
+# via normal font fallback when 'DnD Dice' is first in the terminal's fontFamily.
 _DICE_GLYPHS: dict[int, str] = {
-    4: chr(0xE000),    # d4
-    6: chr(0xE001),    # d6
-    8: chr(0xE002),    # d8
-    10: chr(0xE003),   # d10
-    12: chr(0xE004),   # d12
-    20: chr(0xE005),   # d20
-    100: chr(0xE003) + chr(0xE003),  # d100 = two d10 glyphs side-by-side
+    4: chr(0x1F518),    # d4
+    6: chr(0x1F519),    # d6
+    8: chr(0x1F51A),    # d8
+    10: chr(0x1F51B),   # d10
+    12: chr(0x1F51C),   # d12
+    20: chr(0x1F51D),   # d20
+    100: chr(0x1F51B) + chr(0x1F51B),  # d100 = two d10 glyphs side-by-side
 }
 # Plain-text fallback labels (used by dice_code field for non-glyphed dice).
 _DICE_FALLBACK_LABELS: dict[int, str] = {}
@@ -248,7 +268,7 @@ def _glyph_for_die(dice_size: int) -> str:
 
 def _dice_code_for_size(dice_size: int) -> str | None:
     """Return a human-readable Unicode code reference for the die's primary glyph,
-    or None if the die has no PUA glyph (e.g., a future die added before its image).
+    or None if the die has no glyph mapping (e.g., a future die added before its image).
     For d100 (two d10 glyphs), returns the d10 codepoint with a 'x2' suffix."""
     if dice_size not in _DICE_GLYPHS:
         return None
@@ -305,11 +325,35 @@ def _build_dice_notation(num_dice: int, dice_size: int, modifier: int) -> str:
     return base
 
 
+def _append_log_entry(log_path: str, description: str, narrative: str) -> None:
+    r"""Append a structured roll entry to a Markdown log file. Best-effort.
+
+    Format: ``- `YYYY-MM-DD HH:MM:SS` — **<description>** — <narrative>``
+    The narrative already includes the total (e.g. ` = 44`), so we don't
+    re-append it. Creates parent directory and a header line if the file is fresh.
+    Never raises — logging failures must not break a roll.
+    """
+    from datetime import datetime as _dt
+    try:
+        p = Path(log_path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        fresh = not p.exists() or p.stat().st_size == 0
+        ts = _dt.now().strftime("%Y-%m-%d %H:%M:%S")
+        with open(p, "a", encoding="utf-8") as f:
+            if fresh:
+                f.write("# Combat log\n\n")
+            f.write(f"- `{ts}` — **{description}** — {narrative}\n")
+    except OSError:
+        pass
+
+
 async def _roll_dice_async(
     num_dice: int,
     dice_size: int,
     bonuses: list[int] | None = None,
     modifier: int = 0,
+    description: str | None = None,
+    log_path: str | None = None,
 ) -> dict[str, Any]:
     """Roll D&D dice asynchronously with per-die bonuses and total modifier."""
     if not isinstance(num_dice, int) or not (1 <= num_dice <= 100):
@@ -339,15 +383,23 @@ async def _roll_dice_async(
     total_raw = sum(rolls)
     total_with_bonuses = sum(rolls_with_bonuses) + modifier
 
+    narrative = _build_narrative(
+        dice_size=dice_size,
+        rolls=rolls,
+        bonuses=bonuses_list,
+        modifier=modifier,
+        total=total_with_bonuses,
+        source=source,
+    )
+
+    # Auto-log if both description and log_path are provided.
+    logged = False
+    if description and log_path:
+        _append_log_entry(log_path, description, narrative)
+        logged = True
+
     return {
-        "narrative": _build_narrative(
-            dice_size=dice_size,
-            rolls=rolls,
-            bonuses=bonuses_list,
-            modifier=modifier,
-            total=total_with_bonuses,
-            source=source,
-        ),
+        "narrative": narrative,
         "source": source,
         "rolls": rolls,
         "bonuses": bonuses_list,
@@ -357,6 +409,7 @@ async def _roll_dice_async(
         "total_with_bonuses": total_with_bonuses,
         "dice_code": _dice_code_for_size(dice_size),
         "dice_notation": _build_dice_notation(num_dice, dice_size, modifier),
+        "logged": logged,
     }
 
 
@@ -365,6 +418,8 @@ def roll_dice(
     dice_size: int,
     bonuses: list[int] | None = None,
     modifier: int = 0,
+    description: str | None = None,
+    log_path: str | None = None,
 ) -> str:
     """
     Roll D&D dice with per-die bonuses and total modifier.
@@ -378,42 +433,394 @@ def roll_dice(
         dice_size: Sides per die: 4, 6, 8, 10, 12, 20, or 100.
         bonuses: Per-die bonuses [2, 2, 2] or None. Length must match num_dice.
         modifier: Bonus or penalty added to the final total only (default 0).
+        description: Optional context for this roll (e.g., "Multiattack on Brann").
+            When passed with log_path, the roll auto-appends to the log file.
+        log_path: Optional path to a Markdown log file. When passed with
+            description, the roll is logged as a timestamped entry. Logging is
+            best-effort and never breaks the roll.
 
     Returns:
         JSON string with: narrative, source, rolls, bonuses, rolls_with_bonuses,
-        total_raw, total_with_bonuses, dice_code, dice_notation.
+        total_raw, total_with_bonuses, dice_code, dice_notation, logged.
     """
-    result = asyncio.run(_roll_dice_async(num_dice, dice_size, bonuses, modifier))
+    result = asyncio.run(
+        _roll_dice_async(num_dice, dice_size, bonuses, modifier, description, log_path)
+    )
     return json.dumps(result, indent=2, ensure_ascii=False)
+
+
+def log_combat_event(
+    log_path: str,
+    description: str,
+    kind: str | None = None,
+    details: str | None = None,
+) -> str:
+    r"""Append a non-roll combat event (monster death, phase change, DM note, etc.)
+    to a Markdown log file. Best-effort — never raises.
+
+    Format: ``- `YYYY-MM-DD HH:MM:SS` — [<kind>] **<description>** — <details>``
+    Creates the parent directory and a `# Combat log` header on first write.
+
+    Args:
+        log_path: Absolute path to the encounter's log file.
+        description: Short event summary (e.g. "Glacier Stalker bloodied").
+        kind: Optional event tag for structured filtering ("death", "note",
+            "phase", "turn-start", "event", etc.).
+        details: Optional longer detail appended after the description.
+
+    Returns: JSON object with `logged` (bool) and either `path` or `error`.
+    """
+    from datetime import datetime as _dt
+    try:
+        p = Path(log_path)
+        p.parent.mkdir(parents=True, exist_ok=True)
+        fresh = not p.exists() or p.stat().st_size == 0
+        ts = _dt.now().strftime("%Y-%m-%d %H:%M:%S")
+        prefix = f"[{kind}] " if kind else ""
+        suffix = f" — {details}" if details else ""
+        with open(p, "a", encoding="utf-8") as f:
+            if fresh:
+                f.write("# Combat log\n\n")
+            f.write(f"- `{ts}` — {prefix}**{description}**{suffix}\n")
+        return json.dumps({"logged": True, "path": str(p)})
+    except OSError as e:
+        return json.dumps({"logged": False, "error": str(e)})
+
+
+# ───────────────────────── combat-action runner ─────────────────────────
+# A "combat action" is a structured spec stored in `combat-runner/actions.jsonl`
+# (a flat JSONL DB; see scripts/combat_actions_db.py). The launcher prepares a
+# "Ready actions" reference at boot from the DB and injects it into Haiku's
+# system prompt. At the table, Haiku calls roll_combat_action and the dispatcher
+# below executes every roll in-process (one MCP call), returning a formatted reply.
+# Authoring is via combat_action_upsert / combat_actions_list (Opus path).
+
+# Import the DB module by path (sibling file in scripts/).
+from importlib import import_module as _import_module
+import sys as _sys
+from pathlib import Path as _Path
+_SCRIPTS_DIR = _Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in _sys.path:
+    _sys.path.insert(0, str(_SCRIPTS_DIR))
+combat_actions_db = _import_module("combat_actions_db")
+
+_DICE_RE = re.compile(r"^\s*(\d+)\s*[dD]\s*(\d+)\s*$")
+
+
+def _parse_dice_spec(spec: str) -> tuple[int, int]:
+    """Parse 'NdM' notation into (num, size)."""
+    m = _DICE_RE.match(spec)
+    if not m:
+        raise ValueError(f"Invalid dice spec: {spec!r} (expected 'NdM', e.g. '2d6')")
+    return int(m.group(1)), int(m.group(2))
+
+
+async def _execute_combat_action_async(
+    npc: str,
+    action_name: str,
+    spec: dict,
+    log_path: str | None,
+) -> dict:
+    """Execute a structured action spec; return formatted reply + metadata."""
+    action_type = spec.get("type", "single_attack")
+    narration = spec.get("narration", "")
+    prereq = spec.get("prerequisite")
+    pre_save = spec.get("pre_save")
+
+    lines: list[str] = []
+    title = action_name.replace("_", " ").title()
+
+    # Header line
+    if "range" in spec:
+        lines.append(f"**{title}** — range {spec['range']}")
+    elif "area" in spec:
+        lines.append(f"**{title}** ({spec['area']})")
+    else:
+        lines.append(f"**{title}**")
+    lines.append("")
+
+    if prereq:
+        lines.append(f"_Prereq:_ {prereq}")
+        lines.append("")
+
+    if pre_save:
+        lines.append(f"[ASKING PLAYER: {pre_save}]")
+        lines.append("")
+
+    # ── attack-style (multiattack or single) ──
+    if action_type in ("multiattack", "single_attack"):
+        attacks = spec.get("attacks", [])
+        if not attacks:
+            return {"error": "no attacks defined for this action"}
+
+        # ONE batched to-hit roll for all attacks
+        to_hit_bonuses = [int(a.get("to_hit_bonus", 0)) for a in attacks]
+        to_hit_result = await _roll_dice_async(
+            num_dice=len(attacks),
+            dice_size=20,
+            bonuses=to_hit_bonuses,
+            modifier=0,
+            description=f"{npc} {action_name} to-hits",
+            log_path=log_path,
+        )
+
+        # One damage roll per attack — fire them concurrently with asyncio.gather.
+        # Each await calls _pop_numbers which contends a single fetch lock, but
+        # under a warm in-memory cache that's a fast critical section; gather
+        # still wins ~50-200ms per multiattack vs. sequential await.
+        async def _roll_attack_damage(atk: dict) -> dict:
+            num, size = _parse_dice_spec(atk["damage"])
+            mod = int(atk.get("damage_modifier", 0))
+            return await _roll_dice_async(
+                num_dice=num,
+                dice_size=size,
+                bonuses=None,
+                modifier=mod,
+                description=f"{npc} {atk['name']} damage",
+                log_path=log_path,
+            )
+
+        damage_results: list[dict] = await asyncio.gather(
+            *(_roll_attack_damage(a) for a in attacks)
+        )
+
+        # Compact paired table — per-attack rider inlined ("if HIT: DC 15 ...")
+        # so the DM sees the conditional save right next to the to-hit it depends on.
+        lines.append("```")
+        for i, atk in enumerate(attacks):
+            to_hit = to_hit_result["rolls_with_bonuses"][i]
+            dmg_total = damage_results[i]["total_with_bonuses"]
+            dmg_type = atk.get("damage_type", "")
+            line = f"{atk['name']:<10s} to-hit {to_hit:>3d} / dmg {dmg_total:>3d} {dmg_type}"
+            if atk.get("rider_on_hit"):
+                line += f"   → if HIT: {atk['rider_on_hit']}"
+            lines.append(line)
+        lines.append("```")
+
+        # Verbatim quantum narratives — DM can visually confirm the ⚛️ marker
+        # appears (proves rolls came from the quantum source, not random.org
+        # fallback). The dice glyphs use the custom DnD-dice font and are
+        # readable when that font is the terminal's primary fontFamily.
+        lines.append(f"_to-hits:_ {to_hit_result['narrative']}")
+        for i, atk in enumerate(attacks):
+            lines.append(f"_{atk['name']} dmg:_ {damage_results[i]['narrative']}")
+
+        if narration:
+            lines.append("")
+            lines.append(f"*{narration}*")
+
+    # ── area / save-based ──
+    elif action_type == "area":
+        damage = spec.get("damage", {})
+        save = spec.get("save", {})
+        num, size = _parse_dice_spec(damage["dice"])
+        mod = int(damage.get("modifier", 0))
+        dmg = await _roll_dice_async(
+            num_dice=num,
+            dice_size=size,
+            modifier=mod,
+            description=f"{npc} {action_name} damage",
+            log_path=log_path,
+        )
+        full = dmg["total_with_bonuses"]
+        on_save = save.get("on_save", "half")
+        savers_take = full // 2 if on_save == "half" else 0
+
+        lines.append(f"Damage: **{full} {damage.get('type', '')}**  ({dmg['narrative']})")
+        lines.append("")
+        lines.append(
+            f"[ASKING PLAYER: each creature in {spec.get('area', 'area')} rolls "
+            f"DC {save.get('dc', '?')} {save.get('ability', '?')} save — "
+            f"failers take {full}, savers take {savers_take}]"
+        )
+        if "recharge" in spec:
+            lines.append("")
+            lines.append(
+                f"_(Mark {action_name} USED — recharge die at start of next "
+                f"turn, recovers on {spec['recharge']}+)_"
+            )
+        lines.append("")
+        if narration:
+            lines.append(f"*{narration}*")
+
+    # ── utility (single non-attack roll OR no-roll buff/instant effect) ──
+    elif action_type == "utility":
+        roll = spec.get("roll")
+        effect = spec.get("effect")
+        if isinstance(roll, dict) and "dice" in roll:
+            # Roll path: NPC makes a check (Stealth, Counterspell ability check, etc.)
+            num, size = _parse_dice_spec(roll["dice"])
+            mod = int(roll.get("modifier", 0))
+            result = await _roll_dice_async(
+                num_dice=num,
+                dice_size=size,
+                modifier=mod,
+                description=f"{npc} {action_name}: {roll.get('label', 'roll')}",
+                log_path=log_path,
+            )
+            lines.append(
+                f"{roll.get('label', 'Result')}: **{result['total_with_bonuses']}**"
+                f"  ({result['narrative']})"
+            )
+            if "notes" in roll:
+                lines.append("")
+                lines.append(f"_{roll['notes']}_")
+        elif isinstance(effect, str) and effect.strip():
+            # No-roll path: buff or instantaneous effect (Mage Armor, Shield,
+            # Misty Step, etc.). Just print the effect and the narration.
+            lines.append(effect.strip())
+        else:
+            return {"error": "utility action has neither roll.dice nor effect text"}
+        lines.append("")
+        if narration:
+            lines.append(f"*{narration}*")
+
+    # ── reaction (auto-trigger; damage rolled upfront, attacker saves) ──
+    elif action_type == "reaction":
+        damage = spec.get("damage", {})
+        save = spec.get("attacker_save", {})
+        num, size = _parse_dice_spec(damage["dice"])
+        mod = int(damage.get("modifier", 0))
+        dmg = await _roll_dice_async(
+            num_dice=num,
+            dice_size=size,
+            modifier=mod,
+            description=f"{npc} {action_name} damage",
+            log_path=log_path,
+        )
+        lines.append(
+            f"Damage rolled: **{dmg['total_with_bonuses']} {damage.get('type', '')}**"
+            f"  ({dmg['narrative']})"
+        )
+        lines.append("")
+        lines.append(
+            f"[ASKING PLAYER: attacker rolls DC {save.get('dc', '?')} "
+            f"{save.get('ability', '?')} save — fail = full damage, "
+            f"success = {save.get('on_save', 'no damage')}]"
+        )
+        lines.append("")
+        lines.append(f"_(Reaction USED — refreshes at start of {npc}'s next turn)_")
+        lines.append("")
+        if narration:
+            lines.append(f"*{narration}*")
+
+    else:
+        return {"error": f"unknown action type: {action_type!r}"}
+
+    return {
+        "output": "\n".join(lines),
+        "action_type": action_type,
+        "logged": log_path is not None,
+    }
+
+
+def roll_combat_action(
+    npc: str,
+    action: str,
+    log_path: str | None = None,
+) -> str:
+    """Run a structured combat action for an NPC in one MCP call.
+
+    Looks up the action in `combat-runner/actions.jsonl` (flat DB). `action` can
+    be the action name OR a verb (resolved via the action's `verbs` list).
+
+    Returns: JSON with `output` (Markdown reply, print verbatim), `action_type`,
+    `logged`, `resolved_action`. On error: JSON with `error` and helpful
+    diagnostic fields (available_npcs / available_actions / verb_index).
+    """
+    record = combat_actions_db.get(npc, action)
+    if record is None:
+        # Build helpful diagnostics
+        all_records = combat_actions_db.read_all()
+        available_npcs = sorted({r.get("npc") for r in all_records if r.get("npc")})
+        if npc not in available_npcs:
+            return json.dumps({
+                "error": f"NPC '{npc}' not in actions DB",
+                "available_npcs": available_npcs,
+            })
+        npc_actions = [r for r in all_records if r.get("npc") == npc]
+        return json.dumps({
+            "error": f"Action or verb '{action}' not found for {npc}",
+            "available_actions": sorted(r.get("action") for r in npc_actions),
+            "verb_index": {r.get("action"): r.get("verbs", []) for r in npc_actions},
+        })
+
+    resolved = record["action"]
+    # Build the spec dict from the record (drop bookkeeping fields)
+    spec = {k: v for k, v in record.items() if k not in ("npc", "action", "updated_at")}
+    try:
+        result = asyncio.run(_execute_combat_action_async(npc, resolved, spec, log_path))
+        result["resolved_action"] = resolved
+        return json.dumps(result, ensure_ascii=False)
+    except Exception as e:
+        import traceback
+        return json.dumps({
+            "error": f"Action execution failed: {e}",
+            "trace": traceback.format_exc(),
+        })
+
+
+def combat_action_upsert(npc: str, action: str, spec: dict) -> str:
+    """Add or replace one (npc, action) entry in the actions DB.
+
+    Validates the spec; raises ValueError on bad input. Persists atomically.
+    Returns JSON with `ok`, `npc`, `action`, `updated_at`. On error: JSON with `error`.
+    """
+    try:
+        record = combat_actions_db.upsert(npc, action, spec)
+        return json.dumps({
+            "ok": True,
+            "npc": record["npc"],
+            "action": record["action"],
+            "updated_at": record["updated_at"],
+        })
+    except ValueError as e:
+        return json.dumps({"ok": False, "error": str(e)})
+
+
+def combat_actions_list(
+    npc: str | None = None,
+    npcs: list[str] | None = None,
+) -> str:
+    """List action summaries from the DB.
+
+    Filter by single npc, or by a list of npc slugs (encounter use case). Returns
+    lightweight summaries — verbs, narration preview, type, range/area/recharge —
+    not the full attack/damage spec. Use `roll_combat_action` to execute.
+    """
+    summaries = combat_actions_db.list_actions(npc=npc, npcs=npcs)
+    return json.dumps({"count": len(summaries), "actions": summaries}, ensure_ascii=False)
 
 
 # Initialize cache on module load
 _load_cache()
 
 
+_RW_LOCAL = {
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": False,
+    "openWorldHint": False,
+}
+
+
 MCP_TOOLS = [
     {
         "name": "roll_dice",
         "description": (
-            "Roll D&D dice using cached quantum random numbers from ANU quantumnumbers API. "
-            "Returns a JSON object with a ready-to-paste 'narrative' field plus full structured "
+            "Roll D&D dice and return a JSON object with a 'narrative' field plus a structured "
             "breakdown for verification.\n\n"
-            "QUANTUM MARKER: When the narrative starts with the ⚛️ atom emoji, the rolls came from "
-            "the quantumnumbers API (true quantum random). No marker means the request fell back to "
-            "random.org — same dice, but pseudo-true rather than quantum. The 'source' JSON field "
-            "always confirms which one was used.\n\n"
-            "DICE GLYPHS: Each die appears in the narrative as a private-use Unicode codepoint "
-            "(U+E000 d4, U+E001 d6, U+E002 d8, U+E003 d10, U+E004 d12, U+E005 d20). When the user "
-            "has the dnd-dice.ttf font loaded, these render as custom dice images. The codes prove "
-            "rolls are real, not hallucinated.\n\n"
+            "Begin your reply with the 'narrative' field VERBATIM — copy the exact characters, "
+            "including any leading symbols and the dice glyphs between the parentheses. "
+            "Do not paraphrase or describe what the leading symbol means; just include it as-is. "
+            "After the narrative you may add commentary if it adds value.\n\n"
             "BONUSES vs MODIFIER:\n"
             "  - bonuses=[2,3,4]: per-die bonuses, one per roll. e.g., two attacks with +3 and +5: "
             "bonuses=[3, 5].\n"
             "  - modifier=5: flat bonus added to the final total only.\n"
             "  - Both can combine: roll_dice(3, 6, bonuses=[2,2,2], modifier=1) for a sneak-attack "
             "damage style roll.\n\n"
-            "Supports d4, d6, d8, d10, d12, d20, d100. "
-            "For Haiku-grade speed: just paste the 'narrative' field — no further reasoning needed."
+            "Supports d4, d6, d8, d10, d12, d20, d100."
         ),
         "annotations": {"title": "Roll D&D Dice (Quantum + Custom Font)", **_RO_LOCAL},
         "input_schema": {
@@ -445,14 +852,202 @@ MCP_TOOLS = [
                     "minimum": -1000,
                     "maximum": 1000,
                 },
+                "description": {
+                    "type": "string",
+                    "description": (
+                        "Optional human-readable context for this roll, e.g. 'Multiattack on Brann (AC 18)' "
+                        "or 'Glacial Roar damage'. When provided alongside log_path, the roll is appended "
+                        "as a timestamped Markdown bullet to the log file, freeing the LLM from having to "
+                        "Write a log entry separately. Use this on every action roll to build an automatic "
+                        "session log. Skip for administrative rolls (recharge dice, passive stealth)."
+                    ),
+                },
+                "log_path": {
+                    "type": "string",
+                    "description": (
+                        "Optional absolute path to a Markdown log file. When provided alongside description, "
+                        "the roll is appended as `- \\`<timestamp>\\` — **<description>** — <narrative> = **<total>**`. "
+                        "The file's parent directory is created if missing; a `# Combat log` header is added "
+                        "on first write. Logging is best-effort — failures never break the roll."
+                    ),
+                },
             },
             "required": ["num_dice", "dice_size"],
+            "additionalProperties": False,
+        },
+    },
+    {
+        "name": "log_combat_event",
+        "description": (
+            "Append a non-roll combat event to a Markdown log file. Use for monster deaths, "
+            "phase transitions (bloodied, enraged, fleeing), DM notes, or anything worth "
+            "recording in the encounter log that isn't a dice roll. Rolls themselves should "
+            "use roll_dice with the description+log_path args (which auto-logs the roll). "
+            "This tool is for everything else.\n\n"
+            "Format: appends a timestamped Markdown bullet to the log file. Creates parent "
+            "directory and a `# Combat log` header on first write. Best-effort — failures "
+            "never break the call."
+        ),
+        "annotations": {"title": "Log Combat Event", **_RW_LOCAL},
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "log_path": {
+                    "type": "string",
+                    "description": (
+                        "Absolute path to the encounter's Markdown log file. The combat-runner "
+                        "launcher provides this in the encounter's Memory section."
+                    ),
+                },
+                "description": {
+                    "type": "string",
+                    "description": (
+                        "Short event description, e.g. 'Glacier Stalker bloodied', 'Stalker flees', "
+                        "'Players notice the snowdrift wobble'."
+                    ),
+                },
+                "kind": {
+                    "type": "string",
+                    "description": (
+                        "Optional event tag for structured filtering: 'death', 'note', 'phase', "
+                        "'turn-start', 'session-start', 'session-end', 'event'."
+                    ),
+                },
+                "details": {
+                    "type": "string",
+                    "description": (
+                        "Optional longer detail string. Appended after the description, separated "
+                        "by an em-dash."
+                    ),
+                },
+            },
+            "required": ["log_path", "description"],
             "additionalProperties": False,
         },
     },
 ]
 
 
+MCP_TOOLS.append({
+    "name": "roll_combat_action",
+    "description": (
+        "Run a pre-defined combat action for an NPC in a SINGLE MCP call. Action specs live "
+        "in `combat-runner/actions.jsonl` (flat JSONL DB); this tool looks up the requested "
+        "(npc, action) row and executes every roll (attacks, damage, saves, reactions, "
+        "recharge tracking) in one shot, then returns a fully-formatted Markdown reply ready "
+        "to print verbatim.\n\n"
+        "Prefer this over multiple `roll_dice` calls when running an NPC turn — it's faster "
+        "and the formatting is deterministic.\n\n"
+        "ARGS:\n"
+        "  npc: NPC slug (e.g. 'glacier-stalker').\n"
+        "  action: Action name OR a verb the NPC's verb table maps to one (e.g. 'multiattack' "
+        "or 'attack' or 'breath'). Verbs are resolved automatically via the per-action "
+        "`verbs` list in the registry.\n"
+        "  log_path: Optional log file path (provided by the launcher in the session "
+        "context). When set, every internal roll auto-logs.\n\n"
+        "RETURNS: JSON with `output` (Markdown reply — print this verbatim, the verbatim "
+        "quantum narratives are already inside it), `action_type`, `logged`, "
+        "`resolved_action`. On error: `error` plus `available_npcs` / `available_actions` / "
+        "`verb_index` for diagnosis."
+    ),
+    "annotations": {"title": "Run Combat Action (preprocessed)", **_RW_LOCAL},
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "npc": {
+                "type": "string",
+                "description": "NPC slug (the filename stem of the NPC's .md file, e.g. 'glacier-stalker').",
+            },
+            "action": {
+                "type": "string",
+                "description": (
+                    "Action name (e.g. 'multiattack', 'frozen_bile') OR a verb the NPC's "
+                    "verb table maps to one (e.g. 'attack', 'breath', 'pounce'). The tool "
+                    "resolves verbs automatically."
+                ),
+            },
+            "log_path": {
+                "type": "string",
+                "description": (
+                    "Optional log file path. When set, every internal roll is auto-logged "
+                    "to it via the same pipeline as roll_dice."
+                ),
+            },
+        },
+        "required": ["npc", "action"],
+        "additionalProperties": False,
+    },
+})
+
+
+MCP_TOOLS.append({
+    "name": "combat_action_upsert",
+    "description": (
+        "Add or replace a combat action in the actions DB (`combat-runner/actions.jsonl`). "
+        "Use this from your authoring session (Opus) to define new NPC actions. The "
+        "combat-runner launcher reads the DB at boot and injects a 'Ready actions' "
+        "reference into the at-table Haiku session.\n\n"
+        "ARGS:\n"
+        "  npc: NPC slug (e.g. 'glacier-stalker'). Should match the NPC's .md file stem.\n"
+        "  action: Action name in snake_case (e.g. 'multiattack', 'frozen_bile').\n"
+        "  spec: The action specification dict. See `templates/npc-combat-runner-template.md` "
+        "for the schema by action type. Required keys: `type` (one of multiattack, "
+        "single_attack, area, utility, reaction), `narration`. Type-specific keys for "
+        "attacks/damage/save/etc.\n\n"
+        "RETURNS: JSON with `ok`, `npc`, `action`, `updated_at` on success. On validation "
+        "failure: `ok: false` and `error` describing the problem."
+    ),
+    "annotations": {"title": "Upsert Combat Action (authoring)", **_RW_LOCAL},
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "npc": {"type": "string", "description": "NPC slug."},
+            "action": {"type": "string", "description": "Action name (snake_case)."},
+            "spec": {
+                "type": "object",
+                "description": "Action specification — see template for schema.",
+            },
+        },
+        "required": ["npc", "action", "spec"],
+        "additionalProperties": False,
+    },
+})
+
+
+MCP_TOOLS.append({
+    "name": "combat_actions_list",
+    "description": (
+        "List lightweight summaries of every action in the DB. Filter by a single NPC "
+        "or a list of NPC slugs (the encounter use case). Returns verbs, narration "
+        "preview, type, range/area/recharge — but NOT the full attack/damage spec. "
+        "Use this from authoring sessions to inspect what's defined; for at-the-table "
+        "execution, use `roll_combat_action`.\n\n"
+        "ARGS:\n"
+        "  npc: Optional single NPC slug filter.\n"
+        "  npcs: Optional list of NPC slugs (e.g. all NPCs in an encounter).\n\n"
+        "RETURNS: JSON with `count` and `actions` (list of summary dicts)."
+    ),
+    "annotations": {"title": "List Combat Actions (read-only)", **_RO_LOCAL},
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "npc": {"type": "string", "description": "Filter by single NPC slug."},
+            "npcs": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Filter by a list of NPC slugs.",
+            },
+        },
+        "required": [],
+        "additionalProperties": False,
+    },
+})
+
+
 MCP_HANDLERS = {
     "roll_dice": roll_dice,
+    "log_combat_event": log_combat_event,
+    "roll_combat_action": roll_combat_action,
+    "combat_action_upsert": combat_action_upsert,
+    "combat_actions_list": combat_actions_list,
 }

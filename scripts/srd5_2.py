@@ -67,7 +67,13 @@ to anything server-side. Verify behavior empirically when in doubt.
 
 from __future__ import annotations
 
+# Tags this module for the MCP server's optional group filter (DND_MCP_TOOLS_GROUP).
+# Loaded for "combat" because at-table rule lookups (search_rules, list_conditions,
+# search_spells, get_monster_details) are essential for adjudicating edge cases.
+MCP_GROUPS = ["combat", "all"]
+
 import json
+import os
 import sys
 from pathlib import Path
 from dataclasses import dataclass
@@ -2472,6 +2478,23 @@ def main() -> int:
     print("Usage: srd5_2.py --mcp-tool <tool_name> [args]", file=sys.stderr)
     print(f"Available tools: {', '.join(sorted(MCP_HANDLERS.keys()))}", file=sys.stderr)
     return 1
+
+
+# ── Combat-runner SRD tool subset ─────────────────────────────────────────────
+# When DND_MCP_TOOLS_GROUP=combat, prune the SRD surface to only what's actually
+# useful for at-table rule adjudication. This shrinks the tool-definition
+# prefix sent to Haiku, lowering both per-turn input-token cost and TTFT.
+# Authoring sessions (no env var, full SRD) still get everything.
+_COMBAT_SRD_TOOLS = {
+    "search_rules",
+    "get_rule_section",
+    "list_conditions",
+    "search_spells",
+    "get_spell_details",
+}
+if os.environ.get("DND_MCP_TOOLS_GROUP") == "combat":
+    MCP_TOOLS = [t for t in MCP_TOOLS if t["name"] in _COMBAT_SRD_TOOLS]
+    MCP_HANDLERS = {k: v for k, v in MCP_HANDLERS.items() if k in _COMBAT_SRD_TOOLS}
 
 
 if __name__ == "__main__":
