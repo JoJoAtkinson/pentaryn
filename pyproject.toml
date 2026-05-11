@@ -16,7 +16,10 @@ dependencies = [
   "requests-cache>=1.3.1",
   "fonttools>=4.50.0",
   "anthropic>=0.100.0",
-  "pexpect>=4.9.0"
+  "pexpect>=4.9.0",
+  "PySide6>=6.7",
+  "qt-material>=2.14",
+  "pytest-qt>=4.4"
 ]
 
 # Notes on native text layout (RAQM):
@@ -31,6 +34,7 @@ no-binary = ["pillow"]
 [tool.pytest.ini_options]
 markers = [
     "integration: marks tests as integration tests (uses real API tokens, costs money)",
+    "scenario: combat-runner end-to-end scenario tests (full GUI boot, ergonomics metrics; deselect with `-m 'not scenario'`)",
 ]
-testpaths = ["scripts/tests"]
+testpaths = ["scripts/tests", "combat-runner/tests"]
 python_files = ["test_*.py"]
