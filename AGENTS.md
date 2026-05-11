@@ -36,6 +36,7 @@ If you can’t confidently map the request to a single MCP tool:
 - Creatures: /creatures/monsters, /creatures/bestiary, /creatures/custom
 - Rules: /rules/house-rules, /rules/references, /rules/mechanics
 - Templates: /templates
+- Staging: /staging — drafts/WIP. Move to a permanent home once polished; don't link to files here from canonical lore.
 
 ## Factions and locations layout
 - Factions live in folders: `world/factions/<faction-slug>/_overview.md`

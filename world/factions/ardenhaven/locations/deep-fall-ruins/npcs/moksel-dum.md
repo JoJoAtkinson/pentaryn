@@ -1,7 +1,7 @@
 ---
 created: 2026-01-31
 last-modified: 2026-01-31
-tags: ["#world", "#npc", "#ardenhaven", "#deep-fall-ruins", "#derro", "#fungus", "#combat"]
+tags: ["#world", "#npc", "#ardenhaven", "#deep-fall-ruins", "#shroom-derro", "#fungus", "#combat"]
 status: draft
 ---
 # Moksel-dum (MOK-sell-dum) — Green Spore Leader (Defender)

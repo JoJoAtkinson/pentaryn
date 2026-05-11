@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.dnd.combat-build-daemon</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/joe/GitHub/dnd/combat-runner/daemon/build-daemon.sh</string>
+    </array>
+
+    <!-- Fire every hour at :07 to avoid the :00 spike (matches the session cron). -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Minute</key>
+        <integer>7</integer>
+    </dict>
+
+    <!-- Also fire once immediately when launchd loads us (gets us going). -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Don't fight other instances if a fire takes longer than an hour. -->
+    <key>ThrottleInterval</key>
+    <integer>300</integer>
+
+    <!-- Surface stderr/stdout in case our wrapper logging fails. -->
+    <key>StandardOutPath</key>
+    <string>/Users/joe/GitHub/dnd/combat-runner/daemon/logs/launchd.stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/joe/GitHub/dnd/combat-runner/daemon/logs/launchd.stderr.log</string>
+
+    <!-- Inherit the user's PATH so `claude` is findable. -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    </dict>
+</dict>
+</plist>

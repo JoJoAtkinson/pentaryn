@@ -34,6 +34,52 @@ Run `/Users/joe/GitHub/dnd/.venv/bin/python scripts/mcp/server.py --list-tools` 
 - `lore_inconsistency_report` → indexes the whole vault; expensive, ask before running.
 - `fix_md_links` → defaults to dry-run; pass `write=true` only after reviewing the proposed changes.
 
+## Combat Runner — the default at-table tool
+
+For running combat live at the table, use the **PySide6 GUI** at `combat-runner/gui/` (`make combat-gui` or `python -m combat-runner.gui.app`). It's tab-per-NPC, sigil-driven (`-18` damage, `+10` heal, `@prone` for conditions, verb-fuzzy-match for actions), with a live red/green HP overlay, declarative reactions, mob support (segmented HP bar, `m<n>` targeting), universal actions (Push/Grapple/Dodge/etc.), and the LLM as a meta-controller for everything else. See [`combat-runner/gui/README.md`](combat-runner/gui/README.md) for the full sigil cheat-sheet, architecture, and headless-testing notes.
+
+The old Haiku-Claude-Code CLI launcher at `combat-runner/launch.py` is still around as a fallback but the GUI is the snappy default.
+
+## Combat NPCs (`#combat-runner` tag)
+
+A combat-runner NPC is **one .md file + one or more rows in the central actions DB** at `combat-runner/actions.jsonl`:
+
+- **`<slug>.md`** — human-readable stat sheet under `world/.../npcs/`. Status line, start-of-turn checklist, tactics, description. The `#combat-runner` frontmatter tag is what the launcher discovers. The .md does NOT contain a verb table or roll mechanics — that lives in the DB.
+- **DB rows** — composite key `(npc_slug, action_name)`. Authored via the **`combat_action_upsert`** MCP tool (validates the spec before writing — malformed input bounces with a specific error). One row per action.
+
+The shared operating protocol is at [`templates/npc-combat-protocol.md`](templates/npc-combat-protocol.md). Authoring template is at [`templates/npc-combat-runner-template.md`](templates/npc-combat-runner-template.md) (covers the .md + the spec schemas for `combat_action_upsert`).
+
+### Encounter folder convention (how the runner discovers things)
+
+The launcher (`combat-runner/launch.py`) finds encounters by:
+
+1. Scanning every `world/**/*.md` for the literal string `#combat-runner` in the first ~30 lines.
+2. From each tagged NPC file, walking the parent path **upward past any directory named `npcs`**. The first non-`npcs` directory is the **encounter root**.
+3. Pre-loading **every `.md` file** under that encounter root (recursive, excluding `image/`, `.history/`, `.cache/`, `.output/`) into the Haiku session's context.
+4. Querying the actions DB for every action belonging to the discovered NPC slugs, then injecting a compact "Ready actions" reference into the system prompt so Haiku knows what verbs and actions are callable.
+
+That means:
+
+- An NPC at `world/factions/<faction>/locations/<encounter>/npcs/<slug>.md` belongs to encounter `<encounter>`. Its DB rows are keyed by `npc=<slug>`.
+- Anything you drop in `<encounter>/` alongside the `npcs/` folder (e.g. `_overview.md`, `terrain.md`, `hooks.md`) becomes Haiku scene context. Use this — Haiku will not go read referenced files.
+- The encounter NAME shown in the launcher is the folder name (kebab-case slug).
+
+### Creating or extending a `#combat-runner` NPC (Opus, do this)
+
+When Joe asks for a new combat NPC ("make me a CR3 frost yeti for mountin-pass", "add an NPC to <encounter>"):
+
+1. **Use [`templates/npc-combat-runner-template.md`](templates/npc-combat-runner-template.md)** as the canonical starting point. It documents the .md skeleton + the spec dict shape per action type, with concrete examples.
+2. **Do NOT use `templates/creature-combat-ready-template.md`** — deprecated for combat-runner NPCs.
+3. Save the .md at `world/.../<encounter-name>/npcs/<slug>.md`. Create the encounter folder + `npcs/` subfolder if needed.
+4. If creating a **new encounter**, also drop a short `_overview.md` at the encounter root — terrain, light, hazards, hooks — Haiku gets it as scene context.
+5. The .md frontmatter MUST include `#combat-runner` in the `tags` array (literal string, with the hash). Without it, discovery skips the NPC.
+6. **Author each action with `combat_action_upsert`.** The tool validates the spec on write — type must be one of `multiattack | single_attack | area | utility | reaction`, required fields per type are checked. Bad spec → `{"ok": false, "error": "..."}` and the DB doesn't change. Good spec → row written, DB sorted, ready for the next launcher run.
+7. **Pre-compute every roll**: `to_hit_bonus`, `damage_modifier`, save DCs are baked in. No ability-score derivations. PC saves and skill checks become `[ASK PLAYER]` — express them as `rider_on_hit` (per-attack rider), `pre_save` (before-attack save), or `area.save` / `reaction.attacker_save`.
+8. For SRD-derived creatures, use `search_monsters(name=...)` to pull canonical stats before shaping into the template.
+9. After upserting all actions, **run `python scripts/combat_actions_db.py validate`** — every DB row should pass. `... list --npc <slug>` to confirm the actions are in.
+
+Reference exemplar: [`world/factions/garhammar-trade-league/locations/mountin-pass/npcs/glacier-stalker.md`](world/factions/garhammar-trade-league/locations/mountin-pass/npcs/glacier-stalker.md). Its DB rows in [`combat-runner/actions.jsonl`](combat-runner/actions.jsonl) cover all six action types — multiattack, single_attack, area (with recharge), multiattack-with-prereq (Pounce), utility, reaction.
+
 ## Don't read these directories
 
 Build artifacts and caches — high token cost, zero signal:
