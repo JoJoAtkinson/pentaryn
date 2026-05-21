@@ -1,0 +1,14 @@
+{
+  "id": "party-of-two-cross-fire",
+  "title": "Stalker takes melee damage \u2192 rime_reflex trigger surfaces \u2192 DM passes",
+  "encounter": "mountin-pass",
+  "click_count": 0,
+  "keystrokes": 4,
+  "tab_switches": 1,
+  "reaction_prompts": 1,
+  "watch_suggestions_observed": 0,
+  "llm_fallback_count": 0,
+  "errors": [],
+  "passed": true,
+  "duration_ms": 551
+}

@@ -25,10 +25,14 @@ class Suggestion:
     `slug` is the human-readable label rendered on the button (max ~50 chars).
     `action_name` is what gets dispatched on click (must match an action in the
     DB for the current NPC, otherwise dispatch falls through to LLM).
+    `target_npc` is an optional sticky target injected by the watch system —
+    when set, the dispatched action gets logged with "→ {target}" so the DM
+    knows which ally the broadcast suggestion was tied to.
     """
 
     slug: str
     action_name: str
+    target_npc: str | None = None
 
 
 class SuggestionBar(QWidget):

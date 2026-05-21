@@ -1,0 +1,14 @@
+{
+  "id": "gnoll-pack-segments",
+  "title": "Gnoll pack mob \u2014 segments drain right-to-left, then explicit m1 override",
+  "encounter": "mountin-pass",
+  "click_count": 0,
+  "keystrokes": 15,
+  "tab_switches": 1,
+  "reaction_prompts": 0,
+  "watch_suggestions_observed": 0,
+  "llm_fallback_count": 0,
+  "errors": [],
+  "passed": true,
+  "duration_ms": 264
+}

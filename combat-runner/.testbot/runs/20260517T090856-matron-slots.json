@@ -1,0 +1,20 @@
+{
+  "id": "matron-slots",
+  "title": "Matron uses moonbeam \u2014 slot decrements, chip greys out",
+  "encounter": "gar-vally",
+  "click_count": 0,
+  "keystrokes": 5,
+  "tab_switches": 1,
+  "reaction_prompts": 0,
+  "watch_suggestions_observed": 0,
+  "llm_fallback_count": 0,
+  "errors": [
+    {
+      "type": "TestbotFailure",
+      "message": "assert_slot on matron-of-the-valley.moonbeam: expected 0, got <unset>",
+      "traceback": "Traceback (most recent call last):\n  File \"/Users/joe/GitHub/dnd/combat-runner/testbot/run_one_scenario.py\", line 158, in _run_scenario\n    raise TestbotFailure(\n    ...<2 lines>...\n    )\nTestbotFailure: assert_slot on matron-of-the-valley.moonbeam: expected 0, got <unset>\n"
+    }
+  ],
+  "passed": false,
+  "duration_ms": 577
+}

@@ -81,6 +81,35 @@ For a reaction-style action, include a `trigger` block:
 
 `scope: "self"` fires only when this NPC is the event's subject. `scope: "global"` fires regardless (Counterspell). `match` is a human-readable description — the matcher uses tag-keyword pre-filtering (damage-type keywords are strict; modifier keywords like `melee`/`ranged` are ambiguous on miss so the DM still gets a medium-confidence prompt).
 
+For a **broadcast-watch suggestion** (action pops to the top of this NPC's suggestion bar when an event fires somewhere else), include a `watch` block:
+
+```json
+{
+  "watch": {
+    "event": "bloodied",
+    "scope": "ally",
+    "priority": 20
+  }
+}
+```
+
+`scope: "ally"` fires when a different in-play NPC is the subject (healer reacts to ally going bloodied). `scope: "self"` fires when this NPC IS the subject (Aelric reacts to his own paralysis). `scope: "any"` fires regardless. Optional `match` further filters by condition name (`condition_applied` events) or damage type (`damage` events). The suggestion auto-prunes when the underlying state recovers (target heals back above half / dies / loses the condition).
+
+## Sigil cheat sheet (the at-table syntax)
+
+| You type            | Effect                                                        |
+|---------------------|---------------------------------------------------------------|
+| `attack` / verb     | Fuzzy match → run action                                      |
+| `-18` / `-18 fire`  | Damage (typed/untyped). Live red overlay.                     |
+| `+10`               | Heal. Live green overlay.                                     |
+| `m2 -5`             | Target mob member 2 explicitly                                |
+| `@prone`            | Toggle condition (idempotent)                                 |
+| `@stun 5`           | Apply condition for N rounds (auto-decrements on round)       |
+| `@`                 | Open the condition autocomplete popup                         |
+| `note ...`          | Log entry; never hits the LLM                                 |
+| `/reorder a b c`    | Reorder tabs by slug                                          |
+| anything else       | Routed to the LLM meta-controller                             |
+
 ## Universal / global actions
 
 `scope: "global"` rows in `actions.jsonl` are appended to every NPC's action grid. The starter set (Push, Grapple, Shove Prone, Disengage, Dodge, Dash, Help, Hide) lives under the sentinel `npc: "_global"`. See `scripts/combat_actions_db.py:list_actions` for the discovery rule.

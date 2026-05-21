@@ -14,6 +14,7 @@ For v0.2 onward, LLM controller wiring + suggestion bar will be plugged in via
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -23,6 +24,7 @@ from PySide6.QtCore import Qt, QEvent, Signal
 from PySide6.QtGui import QAction, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
+    QFileDialog,
     QLabel,
     QMainWindow,
     QMessageBox,
@@ -33,18 +35,23 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .state import deserialize_encounter, serialize_encounter
+
 from .event_bus import (
     Event,
     EventBus,
     TriggerMatch,
     TriggerMatcher,
+    WatchMatcher,
     collect_triggers_from_db,
+    collect_watches_from_db,
     round_event,
 )
 from .npc_tab import NPCTab
 from .state import EncounterState, NPCState
 from .suggestion_driver import SuggestionDriver
 from .widgets.reaction_prompt import ReactionPromptDialog
+from .widgets.srd_panel import build_srd_dock
 from .widgets.suggestion_bar import Suggestion
 
 
@@ -78,6 +85,10 @@ class MainWindow(QMainWindow):
         self._build_menu()
         self._build_central()
         self._wire_shortcuts()
+        # SRD lookup dock — hidden by default, toggle via View menu (Ctrl+/)
+        self._srd_dock = build_srd_dock(self)
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._srd_dock)
+        self._srd_dock.hide()
 
     # ─────────── UI scaffolding ───────────
 
@@ -85,6 +96,15 @@ class MainWindow(QMainWindow):
         menu_bar = self.menuBar()
 
         file_menu = menu_bar.addMenu("File")
+        save_action = QAction("Save snapshot…", self)
+        save_action.setShortcut(QKeySequence("Ctrl+S"))
+        save_action.triggered.connect(self._save_snapshot)
+        file_menu.addAction(save_action)
+        load_action = QAction("Load snapshot…", self)
+        load_action.setShortcut(QKeySequence("Ctrl+O"))
+        load_action.triggered.connect(self._load_snapshot)
+        file_menu.addAction(load_action)
+        file_menu.addSeparator()
         quit_action = QAction("Close window", self)
         quit_action.setShortcut(QKeySequence.StandardKey.Close)
         quit_action.triggered.connect(self.close)
@@ -95,6 +115,11 @@ class MainWindow(QMainWindow):
         switch_action.setShortcut(QKeySequence("Ctrl+E"))
         switch_action.triggered.connect(self.encounter_switch_requested.emit)
         encounter_menu.addAction(switch_action)
+        encounter_menu.addSeparator()
+        add_from_srd_action = QAction("Add NPC from SRD…", self)
+        add_from_srd_action.setShortcut(QKeySequence("Ctrl+N"))
+        add_from_srd_action.triggered.connect(self._open_srd_import)
+        encounter_menu.addAction(add_from_srd_action)
 
         view_menu = menu_bar.addMenu("View")
         prev_tab = QAction("Previous tab", self)
@@ -105,6 +130,11 @@ class MainWindow(QMainWindow):
         next_tab.setShortcut(QKeySequence("Ctrl+Tab"))
         next_tab.triggered.connect(lambda: self._cycle_tab(1))
         view_menu.addAction(next_tab)
+        view_menu.addSeparator()
+        toggle_srd = QAction("Toggle SRD search panel", self)
+        toggle_srd.setShortcut(QKeySequence("Ctrl+/"))
+        toggle_srd.triggered.connect(self._toggle_srd_dock)
+        view_menu.addAction(toggle_srd)
 
         help_menu = menu_bar.addMenu("Help")
         about = QAction("About Combat Runner", self)
@@ -145,12 +175,18 @@ class MainWindow(QMainWindow):
         # flow to _on_event below, which surfaces a ReactionPromptDialog when
         # any declared trigger matches.
         self.event_bus = EventBus()
-        triggers = collect_triggers_from_db(
-            self._db, [n.slug for n in self.encounter_state.npcs]
-        )
+        npc_slugs = [n.slug for n in self.encounter_state.npcs]
+        triggers = collect_triggers_from_db(self._db, npc_slugs)
+        watches = collect_watches_from_db(self._db, npc_slugs)
         self.trigger_matcher = TriggerMatcher(triggers)
+        self.watch_matcher = WatchMatcher(watches)
         self._handling_event = False  # re-entry guard for the trigger pipeline
+        # Watch-driven suggestions per tab. Persist across LLM refreshes so a
+        # "Heal Aelric" suggestion sticks until either the action fires or the
+        # event becomes stale (e.g. Aelric is no longer bloodied).
+        self._watch_suggestions: dict[int, list[Suggestion]] = {}
         self.event_bus.subscribe_all(self._on_event)
+        self.event_bus.subscribe_all(self._on_event_for_watch)
 
         self._tab_action_surfaces: dict[int, list[dict]] = {}
         for tab_idx, npc in enumerate(self.encounter_state.npcs):
@@ -225,6 +261,9 @@ class MainWindow(QMainWindow):
             tab = self.tabs.widget(i)
             if isinstance(tab, NPCTab):
                 self.tabs.setTabText(i, self._tab_title(tab.npc_state))
+        # Auto-save after every state mutation. Crash recovery is the goal —
+        # the most expensive accidental loss is half an hour of combat tracking.
+        self._auto_save()
         # Kick off per-tab suggestion fetches in the background (no-op if no LLM)
         self._fire_suggestion_refresh()
 
@@ -259,15 +298,46 @@ class MainWindow(QMainWindow):
             return None
 
     def _on_suggestions_ready(self, tab_idx: int, suggestions) -> None:
-        tab = self.tabs.widget(tab_idx)
-        if isinstance(tab, NPCTab):
-            tab.set_suggestions(suggestions)
+        if not hasattr(self, "_llm_suggestions_by_tab"):
+            self._llm_suggestions_by_tab: dict[int, list] = {}
+        self._llm_suggestions_by_tab[tab_idx] = list(suggestions)
+        # Re-render the combined bar — watches first, then LLM picks.
+        self._refresh_suggestions_for_tab(tab_idx)
+        # Stale-watch cleanup: drop watch suggestions whose target NPC is no
+        # longer bloodied / dead. Keeps the bar honest.
+        self._prune_watch_suggestions(tab_idx)
 
     def _on_suggestion_failed(self, tab_idx: int, error: str) -> None:
-        tab = self.tabs.widget(tab_idx)
-        if isinstance(tab, NPCTab):
-            tab.set_suggestions([])  # clear the loading hint
+        if not hasattr(self, "_llm_suggestions_by_tab"):
+            self._llm_suggestions_by_tab = {}
+        self._llm_suggestions_by_tab[tab_idx] = []
+        self._refresh_suggestions_for_tab(tab_idx)
         self.statusBar().showMessage(f"Suggestion fetch failed (tab {tab_idx}): {error}", 4000)
+
+    def _prune_watch_suggestions(self, tab_idx: int) -> None:
+        """Remove watch suggestions whose triggering condition no longer holds.
+        Currently checks: targeted NPC is no longer bloodied (HP > half)."""
+        bucket = self._watch_suggestions.get(tab_idx, [])
+        if not bucket:
+            return
+        kept: list[Suggestion] = []
+        for sug in bucket:
+            if sug.target_npc is None:
+                kept.append(sug)
+                continue
+            target_npc = next(
+                (n for n in self.encounter_state.npcs if n.slug == sug.target_npc),
+                None,
+            )
+            # Drop if the target is dead OR no longer bloodied (recovered).
+            if target_npc is None or target_npc.is_dead:
+                continue
+            if not target_npc.is_bloodied:
+                continue
+            kept.append(sug)
+        if len(kept) != len(bucket):
+            self._watch_suggestions[tab_idx] = kept
+            self._refresh_suggestions_for_tab(tab_idx)
 
     def _cycle_tab(self, direction: int) -> None:
         if self.tabs.count() == 0:
@@ -299,6 +369,151 @@ class MainWindow(QMainWindow):
                 continue
             self.tabs.addTab(tab, self._tab_title(npc))
         self.statusBar().showMessage(f"Reordered: {' → '.join(n.slug for n in self.encounter_state.npcs)}", 4000)
+
+    # ─────────── snapshot save/load ───────────
+
+    def _auto_save_path(self) -> Path:
+        """Per-encounter auto-save file. Lives under combat-runner/.memory/
+        which is already gitignored."""
+        return _REPO_ROOT / "combat-runner" / ".memory" / self.encounter_state.name / "auto-save.json"
+
+    def _auto_save(self) -> None:
+        """Persist current state to the auto-save slot. Best-effort: a write
+        failure shouldn't crash the GUI mid-fight."""
+        try:
+            path = self._auto_save_path()
+            path.parent.mkdir(parents=True, exist_ok=True)
+            blob = serialize_encounter(self.encounter_state)
+            path.write_text(json.dumps(blob, indent=2), encoding="utf-8")
+        except (OSError, ValueError) as exc:
+            self.statusBar().showMessage(f"auto-save failed: {exc}", 4000)
+
+    def _save_snapshot(self) -> None:
+        """Explicit Save snapshot → file dialog under .memory/<encounter>/."""
+        default_dir = self._auto_save_path().parent
+        default_dir.mkdir(parents=True, exist_ok=True)
+        ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+        default_path = str(default_dir / f"snapshot-{ts}.json")
+        path, _ = QFileDialog.getSaveFileName(self, "Save snapshot", default_path, "JSON (*.json)")
+        if not path:
+            return
+        try:
+            blob = serialize_encounter(self.encounter_state)
+            Path(path).write_text(json.dumps(blob, indent=2), encoding="utf-8")
+            self.statusBar().showMessage(f"Saved {Path(path).name}", 4000)
+        except (OSError, ValueError) as exc:
+            QMessageBox.warning(self, "Save failed", str(exc))
+
+    def _load_snapshot(self) -> None:
+        """Load a snapshot file and replace the current encounter state.
+        Replaces every tab's NPCState in-place so widget identity is preserved;
+        falls back to a full rebuild if NPC slugs differ."""
+        default_dir = self._auto_save_path().parent
+        path, _ = QFileDialog.getOpenFileName(self, "Load snapshot", str(default_dir), "JSON (*.json)")
+        if not path:
+            return
+        try:
+            blob = json.loads(Path(path).read_text(encoding="utf-8"))
+            restored = deserialize_encounter(blob)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            QMessageBox.warning(self, "Load failed", str(exc))
+            return
+
+        # If NPC slug set matches, do an in-place patch (preserves tabs, log views, etc.)
+        cur_slugs = {n.slug for n in self.encounter_state.npcs}
+        new_slugs = {n.slug for n in restored.npcs}
+        if cur_slugs != new_slugs:
+            QMessageBox.warning(
+                self, "Mismatched encounter",
+                f"Snapshot NPCs ({sorted(new_slugs)}) don't match this encounter "
+                f"({sorted(cur_slugs)}). Switch encounters first or pick a matching snapshot.",
+            )
+            return
+
+        # In-place patch
+        by_slug = {n.slug: n for n in restored.npcs}
+        for npc in self.encounter_state.npcs:
+            src = by_slug[npc.slug]
+            npc.max_hp = src.max_hp
+            npc.member_hp = list(src.member_hp)
+            npc.count = src.count
+            npc.conditions = set(src.conditions)
+            npc.condition_durations = dict(src.condition_durations)
+            npc.reaction_used = src.reaction_used
+            npc.bonus_used = src.bonus_used
+            npc.recharges = dict(src.recharges)
+            npc.turn_taken_this_round = src.turn_taken_this_round
+        self.encounter_state.round_num = restored.round_num
+        self.round_btn.setText(self._round_btn_text())
+        for i in range(self.tabs.count()):
+            t = self.tabs.widget(i)
+            if isinstance(t, NPCTab):
+                t.refresh()
+        self.statusBar().showMessage(f"Loaded {Path(path).name} (round {restored.round_num})", 5000)
+
+    # ─────────── watch / broadcast suggestions ───────────
+
+    def _on_event_for_watch(self, event: Event) -> None:
+        """Run the watch matcher on every event. For each match, append a
+        deterministic suggestion to the owning NPC's bar so the DM sees
+        'Cure Wounds → Aelric' the moment Aelric drops to bloodied.
+
+        Also prunes stale suggestions (e.g. target is no longer bloodied)
+        so the heal suggestion disappears once Aelric is back above half."""
+        # Prune first — covers the case where this event is a heal that just
+        # un-bloodied somebody.
+        for tab_idx in list(self._watch_suggestions.keys()):
+            self._prune_watch_suggestions(tab_idx)
+
+        matches = self.watch_matcher.find_matches(event)
+        if not matches:
+            return
+        for m in matches:
+            tab_idx = self._tab_index_for_slug(m.watch.npc_slug)
+            if tab_idx is None:
+                continue
+            target_name = self._npc_display_name(m.target_npc) if m.target_npc else None
+            display_action = m.watch.action_name.replace("_", " ").title()
+            slug = (
+                f"{display_action} → {target_name}" if target_name else display_action
+            )
+            sug = Suggestion(
+                slug=slug,
+                action_name=m.watch.action_name,
+                target_npc=m.target_npc,
+            )
+            bucket = self._watch_suggestions.setdefault(tab_idx, [])
+            # Dedupe by (action, target) so a repeated bloodied event doesn't
+            # stack duplicate suggestions
+            key = (sug.action_name, sug.target_npc)
+            if not any((s.action_name, s.target_npc) == key for s in bucket):
+                bucket.insert(0, sug)  # newest on top
+            # Push to the suggestion bar (combined with LLM ones below)
+            self._refresh_suggestions_for_tab(tab_idx)
+
+    def _refresh_suggestions_for_tab(self, tab_idx: int) -> None:
+        """Push the current combined (watch + LLM) suggestion list onto a tab.
+        Watch suggestions always come first."""
+        tab = self.tabs.widget(tab_idx)
+        if not isinstance(tab, NPCTab):
+            return
+        watch_subs = list(self._watch_suggestions.get(tab_idx, []))
+        llm_subs = getattr(self, "_llm_suggestions_by_tab", {}).get(tab_idx, [])
+        combined = watch_subs + llm_subs
+        tab.set_suggestions(combined[:5])
+
+    def _tab_index_for_slug(self, slug: str) -> int | None:
+        for i in range(self.tabs.count()):
+            t = self.tabs.widget(i)
+            if isinstance(t, NPCTab) and t.npc_state.slug == slug:
+                return i
+        return None
+
+    def _npc_display_name(self, slug: str) -> str:
+        for npc in self.encounter_state.npcs:
+            if npc.slug == slug:
+                return npc.name
+        return slug
 
     # ─────────── event bus + trigger handling ───────────
 
@@ -407,6 +622,34 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(msg, 5000)
 
     # ─────────── help ───────────
+
+    def _open_srd_import(self) -> None:
+        """Encounter → Add NPC from SRD… dialog. After import the user has to
+        Switch encounters to pick up the new NPC (we don't hot-reload yet)."""
+        from .widgets.srd_monster_import import SrdMonsterImportDialog
+        dlg = SrdMonsterImportDialog(default_encounter_root=self.encounter_state.root, parent=self)
+
+        def _after_import(slug: str, md_path: str) -> None:
+            QMessageBox.information(
+                self, "Re-launch needed",
+                f"Imported {slug}. Switch encounters (Ctrl+E) and re-launch "
+                f"to add a tab for the new NPC.",
+            )
+
+        dlg.imported.connect(_after_import)
+        dlg.exec()
+
+    def _toggle_srd_dock(self) -> None:
+        """Show/hide the SRD search dock + focus the input when shown."""
+        if self._srd_dock.isVisible():
+            self._srd_dock.hide()
+        else:
+            self._srd_dock.show()
+            self._srd_dock.raise_()
+            # Focus the input box
+            panel = self._srd_dock.widget()
+            if panel is not None and hasattr(panel, "input"):
+                panel.input.setFocus()
 
     def _show_about(self) -> None:
         QMessageBox.information(

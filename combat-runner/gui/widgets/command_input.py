@@ -59,7 +59,7 @@ class CommandInput(QLineEdit):
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setPlaceholderText("attack · -18 · +10 · @prone · m3 -5 · note ... · /reorder ...")
+        self.setPlaceholderText("attack · -18 · +10 · @prone · @stun 5 · m3 -5 · note ... · /reorder ...")
         self.setObjectName("CommandInput")
         self.setMinimumHeight(34)
 
