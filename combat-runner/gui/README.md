@@ -7,7 +7,7 @@ PySide6 + qt-material desktop app for running D&D 5.5e combat at the table. Each
 ```bash
 make combat-gui
 # or
-./.venv/bin/python -m combat-runner.gui.app
+PYTHONPATH=combat-runner ./.venv/bin/python -m gui.app
 ```
 
 Then pick an encounter from the dialog, adjust per-NPC counts, click Launch.

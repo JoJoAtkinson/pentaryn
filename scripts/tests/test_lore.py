@@ -207,6 +207,20 @@ class TestGetNpc:
         with pytest.raises(ValueError, match="No registry entry"):
             lore_module.get_npc("Nobody Atall")
 
+    def test_empty_name_raises(self, fake_vault):
+        # An empty name would make `"" in row.name` True for every row and
+        # return an arbitrary NPC — reject it up front like the siblings do.
+        with pytest.raises(ValueError, match="non-empty name"):
+            lore_module.get_npc("")
+
+    def test_whitespace_name_raises(self, fake_vault):
+        with pytest.raises(ValueError, match="non-empty name"):
+            lore_module.get_npc("   ")
+
+    def test_non_string_name_raises(self, fake_vault):
+        with pytest.raises(ValueError, match="must be a string"):
+            lore_module.get_npc(None)  # type: ignore[arg-type]
+
 
 class TestGetFactionOverview:
     def test_known_faction(self, fake_vault):
@@ -234,6 +248,15 @@ class TestLastSessionSummary:
     def test_unknown_session_raises(self, fake_vault):
         with pytest.raises(ValueError, match="not found"):
             lore_module.last_session_summary(session=999)
+
+    def test_missing_sessions_dir_raises_clean_error(self, fake_vault, tmp_path, monkeypatch):
+        # A missing sessions/ should surface a friendly ValueError, not a
+        # raw FileNotFoundError leaking an absolute path.
+        monkeypatch.setattr(
+            lore_module, "_SESSIONS_DIR", tmp_path / "no" / "such" / "sessions"
+        )
+        with pytest.raises(ValueError, match="sessions directory not found"):
+            lore_module.last_session_summary()
 
 
 class TestFindLore:
@@ -277,6 +300,30 @@ class TestFindLore:
     def test_empty_query_raises(self, fake_vault):
         with pytest.raises(ValueError, match="query"):
             lore_module.find_lore(query="")
+
+    def test_truncated_false_when_matches_equal_limit_exactly(self, fake_vault, tmp_path):
+        # Exactly `limit` matches, and that was the last one — `truncated`
+        # must be False (no off-by-one false positive).
+        spam_dir = tmp_path / "spam"
+        spam_dir.mkdir()
+        for i in range(3):
+            (spam_dir / f"f{i}.md").write_text("edgetoken99 here\n", encoding="utf-8")
+        result = lore_module.find_lore(query="edgetoken99", limit=3)
+        assert len(result["results"]) == 3
+        assert result["count"] == 3
+        assert result["truncated"] is False
+
+    def test_truncated_true_when_more_than_limit(self, fake_vault, tmp_path):
+        # Genuinely more matches than `limit` — `truncated` is True and
+        # results are capped at `limit`.
+        spam_dir = tmp_path / "spam"
+        spam_dir.mkdir()
+        for i in range(5):
+            (spam_dir / f"f{i}.md").write_text("edgetoken99 here\n", encoding="utf-8")
+        result = lore_module.find_lore(query="edgetoken99", limit=3)
+        assert len(result["results"]) == 3
+        assert result["count"] == 3
+        assert result["truncated"] is True
 
 
 class TestRegistryMtimeCache:
@@ -386,6 +433,29 @@ class TestGetFactionOverviewValidation:
         a = lore_module.get_faction_overview("calderon-imperium")
         b = lore_module.get_faction_overview("Calderon-Imperium")
         assert a["body"] == b["body"]
+
+    def test_traversal_slug_with_slash_rejected(self, fake_vault):
+        # A slug containing a path separator must not traverse out of
+        # world/factions/.
+        with pytest.raises(ValueError, match="invalid faction slug"):
+            lore_module.get_faction_overview("../../sessions/private")
+
+    def test_traversal_slug_simple_subpath_rejected(self, fake_vault):
+        with pytest.raises(ValueError, match="invalid faction slug"):
+            lore_module.get_faction_overview("a/b")
+
+    def test_dot_prefixed_slug_rejected(self, fake_vault):
+        with pytest.raises(ValueError, match="invalid faction slug"):
+            lore_module.get_faction_overview("../foo")
+
+    def test_missing_factions_dir_raises_clean_error(self, fake_vault, tmp_path, monkeypatch):
+        # A missing world/factions/ should surface a friendly ValueError,
+        # not a raw FileNotFoundError leaking an absolute path.
+        monkeypatch.setattr(
+            lore_module, "_FACTIONS_DIR", tmp_path / "no" / "such" / "factions"
+        )
+        with pytest.raises(ValueError, match="factions directory not found"):
+            lore_module.get_faction_overview("calderon-imperium")
 
 
 class TestParseFlagArgs:

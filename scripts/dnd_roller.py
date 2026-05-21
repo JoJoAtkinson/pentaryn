@@ -27,6 +27,7 @@ import json
 import os
 import re
 import struct
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -39,18 +40,45 @@ import requests
 # below. No registry env var needed; the launcher writes the DB and the MCP
 # server reads it directly.)
 
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+
 try:
     from dotenv import load_dotenv
-    _REPO_ROOT = Path(__file__).resolve().parents[1]
     load_dotenv(dotenv_path=_REPO_ROOT / ".env", override=False)
 except ImportError:
     pass
+
+
+def _confined_log_path(log_path: str) -> Path:
+    """Resolve a caller-supplied log path and assert it stays inside the repo.
+
+    Combat logs legitimately only ever live under the repo (world/,
+    combat-runner/, etc.). Rejecting absolute escapes and ../ traversal stops
+    an LLM-typo'd or injected path from writing junk anywhere on disk. The
+    path must also end in `.md`. Raises ValueError on a bad path."""
+    raw = Path(log_path)
+    p = (raw if raw.is_absolute() else _REPO_ROOT / raw).resolve()
+    if p != _REPO_ROOT and _REPO_ROOT not in p.parents:
+        raise ValueError(f"log_path must stay inside the repo: {log_path!r}")
+    if p.suffix.lower() != ".md":
+        raise ValueError(f"log_path must be a .md file: {log_path!r}")
+    return p
 
 
 _RO_LOCAL = {
     "readOnlyHint": True,
     "destructiveHint": False,
     "idempotentHint": True,
+    "openWorldHint": False,
+}
+
+# Read-write annotation: tools that append to a file on disk. roll_dice uses
+# this (not _RO_LOCAL) because with description+log_path set it writes a log
+# line — not read-only, not idempotent (each call appends).
+_RW_LOCAL = {
+    "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": False,
     "openWorldHint": False,
 }
 
@@ -70,8 +98,6 @@ _DICE_GLYPHS: dict[int, str] = {
     20: chr(0x1F51D),   # d20
     100: chr(0x1F51B) + chr(0x1F51B),  # d100 = two d10 glyphs side-by-side
 }
-# Plain-text fallback labels (used by dice_code field for non-glyphed dice).
-_DICE_FALLBACK_LABELS: dict[int, str] = {}
 
 # Quantum marker: prefixed to narrative when source is quantumnumbers API
 _QUANTUM_MARKER = "⚛️"  # ⚛️
@@ -167,7 +193,12 @@ async def _fetch_from_quantumnumbers(count: int = 1024) -> list[int] | None:
         data = response.json()
         _last_fetch_time = time.time()
         return data.get("data", [])
-    except Exception:
+    except (httpx.HTTPError, httpx.TimeoutException, ValueError, KeyError) as exc:
+        # Narrow to network/parse faults — a bare `except Exception` would mask
+        # real bugs (typos, changed API shape) as "network down".
+        sys.stderr.write(
+            f"[dnd_roller] quantum fetch failed, falling back: {exc!r}\n"
+        )
         return None
 
 
@@ -190,7 +221,11 @@ def _fetch_from_random_org_sync(count: int) -> list[int]:
         response.raise_for_status()
         rolls = [int(line.strip()) for line in response.text.strip().split("\n")]
         return rolls
-    except Exception:
+    except (requests.RequestException, ValueError) as exc:
+        # ValueError covers int() on a non-numeric body (random.org error/quota
+        # HTML page) — an expected upstream-degradation case. Narrowed from a
+        # bare `except Exception` so real bugs surface instead of being masked.
+        sys.stderr.write(f"[dnd_roller] random.org fetch failed: {exc!r}\n")
         return []
 
 
@@ -260,10 +295,10 @@ async def _pop_numbers(count: int) -> tuple[list[int], str]:
 
 
 def _glyph_for_die(dice_size: int) -> str:
-    """Return the private-use glyph for a die size, falling back to text label."""
+    """Return the dice glyph for a die size, falling back to a plain 'dN' label."""
     if dice_size in _DICE_GLYPHS:
         return _DICE_GLYPHS[dice_size]
-    return _DICE_FALLBACK_LABELS.get(dice_size, f"d{dice_size}")
+    return f"d{dice_size}"
 
 
 def _dice_code_for_size(dice_size: int) -> str | None:
@@ -335,7 +370,7 @@ def _append_log_entry(log_path: str, description: str, narrative: str) -> None:
     """
     from datetime import datetime as _dt
     try:
-        p = Path(log_path)
+        p = _confined_log_path(log_path)
         p.parent.mkdir(parents=True, exist_ok=True)
         fresh = not p.exists() or p.stat().st_size == 0
         ts = _dt.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -343,7 +378,7 @@ def _append_log_entry(log_path: str, description: str, narrative: str) -> None:
             if fresh:
                 f.write("# Combat log\n\n")
             f.write(f"- `{ts}` — **{description}** — {narrative}\n")
-    except OSError:
+    except (OSError, ValueError):
         pass
 
 
@@ -472,7 +507,7 @@ def log_combat_event(
     """
     from datetime import datetime as _dt
     try:
-        p = Path(log_path)
+        p = _confined_log_path(log_path)
         p.parent.mkdir(parents=True, exist_ok=True)
         fresh = not p.exists() or p.stat().st_size == 0
         ts = _dt.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -483,7 +518,7 @@ def log_combat_event(
                 f.write("# Combat log\n\n")
             f.write(f"- `{ts}` — {prefix}**{description}**{suffix}\n")
         return json.dumps({"logged": True, "path": str(p)})
-    except OSError as e:
+    except (OSError, ValueError) as e:
         return json.dumps({"logged": False, "error": str(e)})
 
 
@@ -504,15 +539,28 @@ if str(_SCRIPTS_DIR) not in _sys.path:
     _sys.path.insert(0, str(_SCRIPTS_DIR))
 combat_actions_db = _import_module("combat_actions_db")
 
-_DICE_RE = re.compile(r"^\s*(\d+)\s*[dD]\s*(\d+)\s*$")
+# 'NdM' with no leading zeros — the regex itself rejects '0d6', '03d06', etc.
+_DICE_RE = re.compile(r"^\s*([1-9]\d*)\s*[dD]\s*([1-9]\d*)\s*$")
 
 
 def _parse_dice_spec(spec: str) -> tuple[int, int]:
-    """Parse 'NdM' notation into (num, size)."""
+    """Parse 'NdM' notation into (num, size), enforcing the runner's bounds.
+
+    Count must be 1-100; die size must be a standard die (4/6/8/10/12/20/100).
+    Rejects '0d6', '2d0', '1000d6', '2d5', leading zeros, and non-NdM garbage
+    at parse time rather than crashing one layer deeper in _roll_dice_async."""
     m = _DICE_RE.match(spec)
     if not m:
         raise ValueError(f"Invalid dice spec: {spec!r} (expected 'NdM', e.g. '2d6')")
-    return int(m.group(1)), int(m.group(2))
+    num, size = int(m.group(1)), int(m.group(2))
+    if not (1 <= num <= 100):
+        raise ValueError(f"Invalid dice spec {spec!r}: count must be 1-100, got {num}")
+    if size not in (4, 6, 8, 10, 12, 20, 100):
+        raise ValueError(
+            f"Invalid dice spec {spec!r}: die size must be one of "
+            f"4/6/8/10/12/20/100, got d{size}"
+        )
+    return num, size
 
 
 async def _execute_combat_action_async(
@@ -543,6 +591,18 @@ async def _execute_combat_action_async(
         lines.append(f"_Prereq:_ {prereq}")
         lines.append("")
 
+    # Surface `slots` charge tracking. The MCP runner has no persistent
+    # per-encounter state to decrement, so it cannot auto-track charges — but
+    # it must not silently drop the field either. Print a visible reminder so
+    # the DM tracks the count by hand.
+    slots = spec.get("slots")
+    if isinstance(slots, dict) and "count" in slots:
+        lines.append(
+            f"_(Limited use — {slots['count']} charge(s), refresh "
+            f"{slots.get('refresh', '?')}. Track by hand: mark one used.)_"
+        )
+        lines.append("")
+
     if pre_save:
         lines.append(f"[ASKING PLAYER: {pre_save}]")
         lines.append("")
@@ -571,7 +631,7 @@ async def _execute_combat_action_async(
         async def _roll_attack_damage(atk: dict) -> dict:
             num, size = _parse_dice_spec(atk["damage"])
             mod = int(atk.get("damage_modifier", 0))
-            return await _roll_dice_async(
+            base = await _roll_dice_async(
                 num_dice=num,
                 dice_size=size,
                 bonuses=None,
@@ -579,6 +639,28 @@ async def _execute_combat_action_async(
                 description=f"{npc} {atk['name']} damage",
                 log_path=log_path,
             )
+            # Optional `extra_damage: {dice, modifier?, type}` rider — roll it,
+            # fold the result into the attack's total, and stash it for the
+            # output loop so the DM sees the breakdown.
+            extra = atk.get("extra_damage")
+            if isinstance(extra, dict) and "dice" in extra:
+                en, es = _parse_dice_spec(extra["dice"])
+                ex = await _roll_dice_async(
+                    num_dice=en,
+                    dice_size=es,
+                    bonuses=None,
+                    modifier=int(extra.get("modifier", 0)),
+                    description=f"{npc} {atk['name']} extra damage",
+                    log_path=log_path,
+                )
+                base = {
+                    **base,
+                    "total_with_bonuses": base["total_with_bonuses"]
+                    + ex["total_with_bonuses"],
+                    "extra_damage": ex,
+                    "extra_damage_type": extra.get("type", ""),
+                }
+            return base
 
         damage_results: list[dict] = await asyncio.gather(
             *(_roll_attack_damage(a) for a in attacks)
@@ -589,13 +671,35 @@ async def _execute_combat_action_async(
         lines.append("```")
         for i, atk in enumerate(attacks):
             to_hit = to_hit_result["rolls_with_bonuses"][i]
-            dmg_total = damage_results[i]["total_with_bonuses"]
+            dmg_res = damage_results[i]
+            dmg_total = dmg_res["total_with_bonuses"]
             dmg_type = atk.get("damage_type", "")
             line = f"{atk['name']:<10s} to-hit {to_hit:>3d} / dmg {dmg_total:>3d} {dmg_type}"
+            extra_res = dmg_res.get("extra_damage")
+            if extra_res:
+                etype = dmg_res.get("extra_damage_type", "")
+                line += (
+                    f"  (incl +{extra_res['total_with_bonuses']} {etype}"
+                    " extra_damage)"
+                )
             if atk.get("rider_on_hit"):
                 line += f"   → if HIT: {atk['rider_on_hit']}"
             lines.append(line)
         lines.append("```")
+
+        # apply_condition_on_hit riders — the runner can't roll PC saves, so
+        # emit a clear DM-instruction line per attack that carries one.
+        for atk in attacks:
+            cfg = atk.get("apply_condition_on_hit")
+            if isinstance(cfg, dict):
+                dur = cfg.get("duration_rounds")
+                dur_str = f" for {dur} round(s)" if dur else ""
+                lines.append(
+                    f"[ASK PLAYER: on a HIT, {atk['name']} target rolls a "
+                    f"DC {cfg.get('save_dc', '?')} "
+                    f"{str(cfg.get('save_ability', '?')).upper()} save — "
+                    f"on fail, apply {cfg.get('condition', '?')}{dur_str}]"
+                )
 
         # Verbatim quantum narratives — DM can visually confirm the ⚛️ marker
         # appears (proves rolls came from the quantum source, not random.org
@@ -604,6 +708,11 @@ async def _execute_combat_action_async(
         lines.append(f"_to-hits:_ {to_hit_result['narrative']}")
         for i, atk in enumerate(attacks):
             lines.append(f"_{atk['name']} dmg:_ {damage_results[i]['narrative']}")
+            extra_res = damage_results[i].get("extra_damage")
+            if extra_res:
+                lines.append(
+                    f"_{atk['name']} extra dmg:_ {extra_res['narrative']}"
+                )
 
         if narration:
             lines.append("")
@@ -677,6 +786,27 @@ async def _execute_combat_action_async(
 
     # ── reaction (auto-trigger; damage rolled upfront, attacker saves) ──
     elif action_type == "reaction":
+        # reaction_kind ∈ {damage, movement, buff}. movement/buff carry no
+        # damage block — just print the effect, mirroring the utility no-roll
+        # path. (validate_spec accepts these; the runner must honor them.)
+        reaction_kind = spec.get("reaction_kind", "damage")
+        if reaction_kind in ("movement", "buff"):
+            effect = spec.get("effect", "")
+            if isinstance(effect, str) and effect.strip():
+                lines.append(effect.strip())
+            lines.append("")
+            lines.append(
+                f"_(Reaction USED — refreshes at start of {npc}'s next turn)_"
+            )
+            lines.append("")
+            if narration:
+                lines.append(f"*{narration}*")
+            return {
+                "output": "\n".join(lines),
+                "action_type": action_type,
+                "logged": log_path is not None,
+            }
+
         damage = spec.get("damage", {})
         save = spec.get("attacker_save", {})
         num, size = _parse_dice_spec(damage["dice"])
@@ -753,10 +883,20 @@ def roll_combat_action(
         result["resolved_action"] = resolved
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
+        # Full traceback to stderr only (captured by the MCP host's logs); the
+        # client gets a clean, path-free message — a traceback in the tool
+        # result leaks abs paths and burns ~1k tokens mid-combat.
         import traceback
+        sys.stderr.write(
+            f"[roll_combat_action] {npc}/{resolved} failed:\n"
+            f"{traceback.format_exc()}\n"
+        )
         return json.dumps({
-            "error": f"Action execution failed: {e}",
-            "trace": traceback.format_exc(),
+            "error": (
+                f"roll_combat_action failed for {npc}/{resolved}: {e}. "
+                f"The stored spec is malformed — re-author it with "
+                f"combat_action_upsert (check dice strings are 'NdM')."
+            ),
         })
 
 
@@ -774,7 +914,7 @@ def combat_action_upsert(npc: str, action: str, spec: dict) -> str:
             "action": record["action"],
             "updated_at": record["updated_at"],
         })
-    except ValueError as e:
+    except (ValueError, TypeError, AttributeError, KeyError) as e:
         return json.dumps({"ok": False, "error": str(e)})
 
 
@@ -796,14 +936,6 @@ def combat_actions_list(
 _load_cache()
 
 
-_RW_LOCAL = {
-    "readOnlyHint": False,
-    "destructiveHint": False,
-    "idempotentHint": False,
-    "openWorldHint": False,
-}
-
-
 MCP_TOOLS = [
     {
         "name": "roll_dice",
@@ -822,7 +954,9 @@ MCP_TOOLS = [
             "damage style roll.\n\n"
             "Supports d4, d6, d8, d10, d12, d20, d100."
         ),
-        "annotations": {"title": "Roll D&D Dice (Quantum + Custom Font)", **_RO_LOCAL},
+        # roll_dice writes to disk when description+log_path are supplied
+        # (see _append_log_entry) — not read-only / not idempotent in that mode.
+        "annotations": {"title": "Roll D&D Dice (Quantum + Custom Font)", **_RW_LOCAL},
         "input_schema": {
             "type": "object",
             "properties": {
@@ -865,10 +999,11 @@ MCP_TOOLS = [
                 "log_path": {
                     "type": "string",
                     "description": (
-                        "Optional absolute path to a Markdown log file. When provided alongside description, "
-                        "the roll is appended as `- \\`<timestamp>\\` — **<description>** — <narrative> = **<total>**`. "
-                        "The file's parent directory is created if missing; a `# Combat log` header is added "
-                        "on first write. Logging is best-effort — failures never break the roll."
+                        "Optional path to a Markdown log file inside the repo. When provided alongside "
+                        "description, the roll is appended as `- \\`<timestamp>\\` — **<description>** — "
+                        "<narrative>` (the narrative already contains ` = <total>`). The file's parent "
+                        "directory is created if missing; a `# Combat log` header is added on first write. "
+                        "Logging is best-effort — failures never break the roll."
                     ),
                 },
             },

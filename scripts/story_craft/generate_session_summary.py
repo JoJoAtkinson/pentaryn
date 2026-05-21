@@ -59,7 +59,6 @@ MCP_TOOL = {
                 "description": "Session number (e.g., 1, 2, 3)",
             },
         },
-        "required": ["session"],
         "additionalProperties": False,
     },
     "argv": [],

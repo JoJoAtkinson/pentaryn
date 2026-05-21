@@ -31,16 +31,24 @@ def _parse_start(value: str) -> tuple[str, str, str]:
     if not raw:
         return "", "", ""
     hour_suffix = ""
-    if re.search(r"-\d{1,2}$", raw):
-        base, hour = raw.rsplit("-", 1)
-        if hour.isdigit():
-            hour_suffix = f"-{int(hour):02d}"
+    # A trailing "-NN" is an hour ONLY when removing it still leaves a complete
+    # year-month-day. For a plain "YYYY-MM-DD" the trailing "-DD" is the day,
+    # not an hour — so check the base has 3+ date components before stripping.
+    match = re.search(r"-(\d{1,2})$", raw)
+    if match:
+        base = raw[: match.start()]
+        base_sep = "/" if "/" in base else "-"
+        base_parts = [p for p in base.split(base_sep) if p]
+        if len(base_parts) >= 3:
+            hour_suffix = f"-{int(match.group(1)):02d}"
             raw = base
     sep = "/" if "/" in raw else "-"
     parts = [p for p in raw.split(sep) if p]
-    year = parts[0]
+    year = parts[0] if parts else ""
     month = parts[1] if len(parts) >= 2 else ""
-    day = (parts[2] if len(parts) >= 3 else "") + hour_suffix if (len(parts) >= 3 and hour_suffix) else (parts[2] if len(parts) >= 3 else "")
+    day = parts[2] if len(parts) >= 3 else ""
+    if day and hour_suffix:
+        day = day + hour_suffix
     return year, month, day
 
 

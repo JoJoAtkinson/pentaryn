@@ -164,7 +164,10 @@ def _split_frontmatter(text: str) -> tuple[dict[str, Any], str]:
         if not mm:
             continue
         key = mm.group("key").strip().lower().replace(" ", "-").replace("_", "-")
-        if key == "last-modified" or key == "lastmodified":
+        # After the .replace() calls the only non-canonical form left is
+        # "lastmodified" (from "LastModified"); "last-modified" is already
+        # canonical, so only the collapsed case needs handling.
+        if key == "lastmodified":
             key = "last-modified"
         value = mm.group("value").strip()
         if key == "tags":
@@ -328,8 +331,12 @@ def get_npc(name: str) -> dict[str, Any]:
     Raises ValueError ONLY when neither the registry nor the file system has
     any match.
     """
-    rows = _load_registry()
+    if not isinstance(name, str):
+        raise ValueError(f"get_npc: name must be a string (got {type(name).__name__})")
     name_lower = name.lower().strip()
+    if not name_lower:
+        raise ValueError("get_npc requires a non-empty name")
+    rows = _load_registry()
     # Prefer exact match, then prefix, then substring
     exact = [r for r in rows if r.name.lower() == name_lower]
     prefix = [r for r in rows if r.name.lower().startswith(name_lower)] if not exact else []
@@ -377,8 +384,20 @@ def get_faction_overview(slug: str) -> dict[str, Any]:
     canonical = slug.lower().strip()
     if not canonical:
         raise ValueError("slug is empty")
+    # Confine the slug to a single directory name under world/factions/.
+    # Without this, slug="../../sessions/private" traverses out of the
+    # factions tree and reads any file literally named _overview.md.
+    if "/" in canonical or "\\" in canonical or canonical.startswith("."):
+        raise ValueError(f"invalid faction slug: {slug!r}")
     path = _FACTIONS_DIR / canonical / "_overview.md"
+    if _FACTIONS_DIR.resolve() not in path.resolve().parents:
+        raise ValueError(f"invalid faction slug: {slug!r}")
     if not path.exists():
+        if not _FACTIONS_DIR.exists():
+            raise ValueError(
+                "factions directory not found under the repo (expected "
+                "world/factions/) — repo layout issue, not a bad slug."
+            )
         available = sorted(p.name for p in _FACTIONS_DIR.iterdir() if p.is_dir())
         raise ValueError(f"No overview for {slug!r}. Available factions: {', '.join(available)}")
     text = path.read_text(encoding="utf-8")
@@ -411,8 +430,17 @@ def last_session_summary(session: Optional[int] = None) -> dict[str, Any]:
             session = int(session)
         except ValueError:
             raise ValueError(f"`session` must be an integer (got {session!r})")
+    if not _SESSIONS_DIR.exists():
+        raise ValueError(
+            "sessions directory not found under the repo (expected sessions/) "
+            "— repo layout issue, not a bad argument."
+        )
     sessions = sorted(
-        (p for p in _SESSIONS_DIR.iterdir() if p.is_dir() and p.name.isdigit()),
+        # `str.isdigit()` accepts Unicode digits (superscripts, numerals) that
+        # `int()` rejects; `isascii() and isdecimal()` is the exact predicate
+        # for "parseable as a base-10 int" — keeps the int() sort key total.
+        (p for p in _SESSIONS_DIR.iterdir()
+         if p.is_dir() and p.name.isascii() and p.name.isdecimal()),
         key=lambda p: int(p.name),
     )
     if not sessions:
@@ -529,8 +557,11 @@ def find_lore(
                         "snippet": snippet,
                     }
                 )
-                if len(hits) >= limit:
-                    return {"count": len(hits), "results": hits, "truncated": True}
+                # Probe one past the limit so `truncated` is exact: if the
+                # limit-th hit is the last match in the vault, we report
+                # truncated=False rather than guessing there are more.
+                if len(hits) > limit:
+                    return {"count": limit, "results": hits[:limit], "truncated": True}
     return {"count": len(hits), "results": hits, "truncated": False}
 
 
@@ -577,7 +608,7 @@ MCP_TOOLS = [
                 "origin": {"type": "string", "description": "Origin/faction (substring of Origin column)."},
                 "affiliation": {"type": "string", "description": "Affiliation in Notes (e.g., 'Black Ledger')."},
                 "type": {"type": "string", "enum": ["PC", "NPC"], "description": "Player character or non-player character."},
-                "limit": {"type": "integer", "description": "Max results (default 25).", "default": 25},
+                "limit": {"type": "integer", "description": "Max results (default 25).", "default": 25, "minimum": 1},
             },
             "additionalProperties": False,
         },
@@ -591,7 +622,8 @@ MCP_TOOLS = [
             "  1. Registry (character-registry.tsv) — exact > prefix > substring (case-insensitive).\n"
             "  2. If no registry match, falls back to file-system search across the vault: "
             "characters/{player-characters,npcs}/, world/factions/*/npcs/(**/), "
-            "world/factions/*/locations/**/(npcs/), world/factions/*/(elders|tribes)/, "
+            "world/factions/*/locations/**/(npcs/), world/factions/*/<any-subfolder>/ "
+            "(elders, tribes, quests, etc.), "
             "world/party/*/members/. Substring filename match is used for compound slugs.\n"
             "Raises ValueError ONLY when both registry and file system come up empty. "
             "QUIRK: with the file-fallback path, `registry` may be None — always check it. "
@@ -698,8 +730,8 @@ MCP_TOOLS = [
                 "query": {"type": "string", "description": "Substring to search for."},
                 "paths": {"type": "string", "description": "Optional subpaths to restrict (comma-separated)."},
                 "case_sensitive": {"type": "boolean", "default": False},
-                "limit": {"type": "integer", "default": 25, "description": "Max hits to return."},
-                "context_chars": {"type": "integer", "default": 200, "description": "Snippet window size."},
+                "limit": {"type": "integer", "default": 25, "minimum": 1, "description": "Max hits to return."},
+                "context_chars": {"type": "integer", "default": 200, "minimum": 0, "description": "Snippet window size."},
             },
             "required": ["query"],
             "additionalProperties": False,
