@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.dnd.combat-testbot</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/joe/GitHub/dnd/combat-runner/testbot/run-fire.sh</string>
+    </array>
+    <key>StartInterval</key>
+    <integer>1800</integer>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/joe/GitHub/dnd/combat-runner/.testbot/launchd-stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/joe/GitHub/dnd/combat-runner/.testbot/launchd-stderr.log</string>
+    <key>WorkingDirectory</key>
+    <string>/Users/joe/GitHub/dnd</string>
+</dict>
+</plist>

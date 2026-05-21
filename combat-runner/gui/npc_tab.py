@@ -32,7 +32,16 @@ from PySide6.QtWidgets import (
 )
 
 from .dispatcher import Dispatcher, InputKind, ParsedInput
-from .event_bus import EventBus, condition_event, damage_event, heal_event
+from .event_bus import (
+    Event,
+    EventBus,
+    action_event,
+    bloodied_event,
+    condition_event,
+    damage_event,
+    death_event,
+    heal_event,
+)
 from .state import NPCState
 from .widgets.action_chips import ActionChipGrid
 from .widgets.command_input import CommandInput
@@ -140,6 +149,8 @@ class NPCTab(QWidget):
         self.log_path = Path(log_path)
         self.dispatcher = Dispatcher()
         self.event_bus = event_bus
+        if self.event_bus is not None:
+            self.event_bus.subscribe("round_advanced", self._on_round_event)
 
         self._build_ui()
         self._refresh()
@@ -210,6 +221,9 @@ class NPCTab(QWidget):
 
         self.action_grid = ActionChipGrid(cols=2)
         self.action_grid.chip_clicked.connect(self._on_chip_clicked)
+        self.action_grid.show_narration_requested.connect(self._on_show_narration)
+        self.action_grid.toggle_used_requested.connect(self._on_toggle_used)
+        self.action_grid.edit_spec_requested.connect(self._on_edit_spec)
         layout.addWidget(self.action_grid)
 
         layout.addStretch(1)
@@ -272,7 +286,14 @@ class NPCTab(QWidget):
         self.conditions_label.setText(self._conditions_text())
         # Action chips with USED set
         used = {a for a, st in s.recharges.items() if st == "USED"}
-        self.action_grid.set_actions(self.actions, used_actions=used)
+        # An action with slots=0 also renders as USED (greyed-out, not clickable)
+        for a in self.actions:
+            slot_cfg = a.get("slots") or {}
+            if isinstance(slot_cfg, dict) and slot_cfg.get("count"):
+                remaining = s.slots_remaining.get(a["action"], slot_cfg["count"])
+                if remaining <= 0:
+                    used.add(a["action"])
+        self.action_grid.set_actions(self.actions, used_actions=used, slot_remaining=dict(s.slots_remaining))
         # Inform command input of HP context for live preview
         self.input.update_context(s.member_hp, s.max_hp)
 
@@ -298,7 +319,11 @@ class NPCTab(QWidget):
         s = self.npc_state
         chips: list[str] = []
         for c in sorted(s.conditions):
-            chips.append(f"[{c}]")
+            duration = s.condition_durations.get(c)
+            if duration is not None and duration > 0:
+                chips.append(f"[{c} · {duration}r]")
+            else:
+                chips.append(f"[{c}]")
         if s.reaction_used:
             chips.append("[reaction used]")
         for action, status in s.recharges.items():
@@ -317,6 +342,60 @@ class NPCTab(QWidget):
         parsed = ParsedInput(kind=InputKind.ACTION, raw=action_name, action_name=action_name)
         self._handle_parsed(parsed)
 
+    def _on_show_narration(self, action_name: str) -> None:
+        """Right-click → Show full narration. Pulls the full row from the DB
+        (action summaries truncate at 80 chars) and dumps it in the log."""
+        action = next((a for a in self.actions if a.get("action") == action_name), None)
+        narration = (action or {}).get("narration_preview") or ""
+        # Try the underlying DB for full text if the summary truncated it
+        if narration.endswith("..."):
+            try:
+                from PySide6.QtCore import QCoreApplication  # noqa: F401
+                # Lazy import the DB to get the full row
+                import importlib.util, sys
+                from pathlib import Path
+                scripts_dir = Path(__file__).resolve().parents[2] / "scripts"
+                if str(scripts_dir) not in sys.path:
+                    sys.path.insert(0, str(scripts_dir))
+                db = importlib.import_module("combat_actions_db")
+                full = db.get(self.npc_state.slug, action_name)
+                if full and isinstance(full.get("narration"), str):
+                    narration = full["narration"]
+            except Exception:
+                pass
+        if not narration:
+            narration = "(no narration on this action)"
+        from PySide6.QtWidgets import QMessageBox
+        QMessageBox.information(self, action_name.replace("_", " ").title(), narration)
+
+    def _on_toggle_used(self, action_name: str) -> None:
+        """Right-click → manually flip the recharge/USED state. Useful when
+        the DM realises they mis-counted a recharge slot."""
+        current = self.npc_state.recharges.get(action_name)
+        if current == "USED":
+            self.npc_state.mark_action_available(action_name)
+            self._append_log(f"<span style='color:#66bb6a'>{action_name} → AVAILABLE</span>")
+        else:
+            self.npc_state.mark_action_used(action_name)
+            self._append_log(f"<span style='color:#6c8eba'>{action_name} → USED</span>")
+        self._refresh()
+        self.state_changed.emit()
+
+    def _on_edit_spec(self, action_name: str) -> None:
+        """Right-click → Edit spec. Editor dialog is a future enhancement; for
+        now just point the user at the file + the MCP tool."""
+        from PySide6.QtWidgets import QMessageBox
+        QMessageBox.information(
+            self,
+            "Edit spec",
+            f"In-app spec editing is on the roadmap. For now, edit "
+            f"`combat-runner/actions.jsonl` directly or call:\n\n"
+            f"  combat_action_upsert(npc='{self.npc_state.slug}', "
+            f"action='{action_name}', spec={{...}})\n\n"
+            f"Then run `python scripts/combat_actions_db.py validate` "
+            f"and re-launch the encounter to pick up changes.",
+        )
+
     def _handle_parsed(self, parsed: ParsedInput) -> None:
         if parsed.kind is InputKind.ACTION:
             self._run_action(parsed.action_name)
@@ -325,7 +404,7 @@ class NPCTab(QWidget):
         elif parsed.kind is InputKind.HEAL:
             self._apply_heal(parsed.amount, parsed.member)
         elif parsed.kind is InputKind.CONDITION:
-            self._toggle_condition(parsed.condition, parsed.condition_target)
+            self._toggle_condition(parsed.condition, parsed.condition_target, parsed.condition_duration)
         elif parsed.kind is InputKind.CONDITION_MENU:
             self._append_log("(condition autocomplete menu — handled by widget in v0.2)")
         elif parsed.kind is InputKind.NOTE:
@@ -372,8 +451,22 @@ class NPCTab(QWidget):
         if action_entry and action_entry.get("type") == "reaction":
             self.npc_state.reaction_used = True
 
+        # Decrement slot counter (streamline #6). Initialize from slots.count
+        # on first use; clamp at 0.
+        slot_cfg = (action_entry or {}).get("slots") or {}
+        if isinstance(slot_cfg, dict) and slot_cfg.get("count"):
+            current = self.npc_state.slots_remaining.get(action_name, slot_cfg["count"])
+            new = max(0, current - 1)
+            self.npc_state.slots_remaining[action_name] = new
+            self._append_log(
+                f"<span style='color:#6c8eba'>{action_name} slots: {new}/{slot_cfg['count']} remaining</span>"
+            )
+
         self._refresh()
         self.state_changed.emit()
+        if self.event_bus is not None:
+            atype = (action_entry or {}).get("type") or ""
+            self.event_bus.emit(action_event(self.npc_state.slug, action_name, tags=(atype,) if atype else ()))
 
     def _apply_damage(self, amount: int, member: int | None, dtype: str | None) -> None:
         result = self.npc_state.apply_damage(amount, member=member)
@@ -395,6 +488,12 @@ class NPCTab(QWidget):
             # No melee/range info from the sigil; matcher falls to medium-confidence,
             # which is fine — the DM still sees the reaction prompt.
             self.event_bus.emit(damage_event(self.npc_state.slug, amount, damage_type=dtype))
+            # Broadcasts: bloodied (transition only) + death. These drive the
+            # watch system (allies can react with "heal X" suggestions etc.).
+            if result.get("became_bloodied"):
+                self.event_bus.emit(bloodied_event(self.npc_state.slug))
+            if result.get("killed"):
+                self.event_bus.emit(death_event(self.npc_state.slug))
 
     def _apply_heal(self, amount: int, member: int | None) -> None:
         result = self.npc_state.apply_heal(amount, member=member)
@@ -411,9 +510,14 @@ class NPCTab(QWidget):
         if self.event_bus is not None:
             self.event_bus.emit(heal_event(self.npc_state.slug, amount))
 
-    def _toggle_condition(self, cond: str, target_hint: str | None) -> None:
-        is_present = self.npc_state.toggle_condition(cond)
-        suffix = f" (target hint: {target_hint})" if target_hint else ""
+    def _toggle_condition(self, cond: str, target_hint: str | None, duration: int | None = None) -> None:
+        is_present = self.npc_state.toggle_condition(cond, duration=duration)
+        suffix_parts = []
+        if target_hint:
+            suffix_parts.append(f"target: {target_hint}")
+        if is_present and duration:
+            suffix_parts.append(f"{duration} rounds")
+        suffix = f" ({'; '.join(suffix_parts)})" if suffix_parts else ""
         verb = "applied" if is_present else "removed"
         self._append_log(f"<span style='color:#ff9800'>{verb} condition: {cond}</span>{suffix}")
         self._refresh()
@@ -469,6 +573,42 @@ class NPCTab(QWidget):
         rather than a single `<pre>` so it actually looks like a combat log.
         """
         self.log_view.append(_render_action_markdown(plain_text))
+        self._scroll_log_to_bottom()
+
+    def _on_round_event(self, event: Event) -> None:
+        """Append a visual divider to this tab's combat log when the round
+        advances, AND tick down any active condition durations. Conditions
+        that expire (hit 0 rounds remaining) are auto-removed and logged."""
+        round_num = event.payload.get("round_num", "?")
+        divider = (
+            f'<div style="margin:10px 0 6px 0; padding:4px 8px; '
+            f'background:#1e2530; border-left:3px solid #66bb6a; '
+            f'color:#66bb6a; font-weight:bold; letter-spacing:0.05em;">'
+            f'── Round {round_num} ──</div>'
+        )
+        self.log_view.append(divider)
+        # Tick durations; log expirations
+        expired = self.npc_state.tick_condition_durations()
+        for cond in expired:
+            self._append_log(
+                f"<span style='color:#ffb74d'>condition expired: {cond}</span>"
+            )
+            if self.event_bus is not None:
+                self.event_bus.emit(condition_event(self.npc_state.slug, cond, applied=False))
+        # Refresh per-round slots (streamline #6)
+        refreshed_actions: list[str] = []
+        for action in self.actions:
+            slot_cfg = action.get("slots") or {}
+            if isinstance(slot_cfg, dict) and slot_cfg.get("refresh") == "round":
+                action_name = action.get("action")
+                if action_name and self.npc_state.slots_remaining.get(action_name, slot_cfg["count"]) < slot_cfg["count"]:
+                    self.npc_state.slots_remaining[action_name] = slot_cfg["count"]
+                    refreshed_actions.append(action_name)
+        for n in refreshed_actions:
+            self._append_log(f"<span style='color:#66bb6a'>{n} slots refreshed</span>")
+        if expired or refreshed_actions:
+            self._refresh()
+            self.state_changed.emit()
         self._scroll_log_to_bottom()
 
     def _scroll_log_to_bottom(self) -> None:

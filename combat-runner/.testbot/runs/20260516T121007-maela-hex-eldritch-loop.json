@@ -1,0 +1,14 @@
+{
+  "id": "maela-hex-eldritch-loop",
+  "title": "Maela hexes target, then 2 rounds of Eldritch Blast \u2014 hex extra damage shouldn't double-apply",
+  "encounter": "black-ledger",
+  "click_count": 1,
+  "keystrokes": 16,
+  "tab_switches": 1,
+  "reaction_prompts": 0,
+  "watch_suggestions_observed": 0,
+  "llm_fallback_count": 0,
+  "errors": [],
+  "passed": true,
+  "duration_ms": 776
+}

@@ -59,6 +59,7 @@ class ParsedInput:
     # CONDITION
     condition: str | None = None
     condition_target: str | None = None  # e.g. "tenza" in "@grappled tenza"
+    condition_duration: int | None = None  # rounds; from `@stun 5`
     # NOTE
     note_text: str | None = None
     # REORDER
@@ -77,7 +78,10 @@ _HEAL_RE = re.compile(r"^\+(\d+)$")
 # result that the UI then logs as "HP 0/max".
 _MOB_DAMAGE_RE = re.compile(r"^m([1-9]\d*)\s+-(\d+)(?:\s+(\w+))?$", re.IGNORECASE)
 _MOB_HEAL_RE = re.compile(r"^m([1-9]\d*)\s+\+(\d+)$", re.IGNORECASE)
+# `@stun 5` or `@grappled tenza` or just `@prone`. The trailing token is
+# numeric → duration in rounds; otherwise → a free-form target hint.
 _CONDITION_RE = re.compile(r"^@(\w[\w-]*)(?:\s+(.+))?$")
+_CONDITION_DURATION_RE = re.compile(r"^\d+$")
 _CONDITION_MENU_RE = re.compile(r"^@$")
 _NOTE_RE = re.compile(r"^note\s+(.+)$", re.IGNORECASE)
 _REORDER_RE = re.compile(r"^/reorder\s+(.+)$", re.IGNORECASE)
@@ -172,7 +176,13 @@ class Dispatcher:
         if m := _CONDITION_RE.match(s):
             result.kind = InputKind.CONDITION
             result.condition = m.group(1).strip().lower()
-            result.condition_target = (m.group(2) or "").strip() or None
+            trailing = (m.group(2) or "").strip() or None
+            # If the trailing token is a bare integer, treat it as duration;
+            # otherwise it's the target hint (`@grappled tenza`).
+            if trailing and _CONDITION_DURATION_RE.match(trailing):
+                result.condition_duration = int(trailing)
+            else:
+                result.condition_target = trailing
             return result
 
         if m := _MOB_DAMAGE_RE.match(s):

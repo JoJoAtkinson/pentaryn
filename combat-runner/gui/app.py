@@ -82,6 +82,81 @@ def build_encounter_state(
     )
 
 
+def _parse_stat_table(text: str) -> dict | None:
+    """Parse a Markdown stat-block table of the form:
+        | **AC** | **HP** | **Speed** |
+        |--------|--------|-----------|
+        | 15 (...) | 27 (5d8+5) | 40 ft. |
+    Cell ordering can be `AC HP Speed` or `HP AC Speed`. Extracts the leading
+    integer from each cell (5e tables usually wrap with parenthetical detail).
+    Returns a dict with any of `max_hp, ac, speed, cr` that were parseable,
+    or None if no table was found.
+
+    Also tries to pull Challenge / CR from a second row (`| **Challenge** | 1 (200 XP) |`).
+    """
+    import re as _re
+    rows = text.splitlines()
+    out: dict[str, int | str] = {}
+    # Look for the header row containing both **HP** and **AC**
+    for i, line in enumerate(rows):
+        if "**AC**" in line and "**HP**" in line:
+            # Column index map
+            header_cells = [c.strip() for c in line.strip("|").split("|")]
+            try:
+                idx_ac = next(j for j, c in enumerate(header_cells) if "**AC**" in c)
+                idx_hp = next(j for j, c in enumerate(header_cells) if "**HP**" in c)
+                idx_speed = next((j for j, c in enumerate(header_cells) if "**Speed**" in c), -1)
+            except StopIteration:
+                continue
+            # Skip the |---|---| separator row, find the data row
+            for di in range(i + 1, min(i + 4, len(rows))):
+                if "---" in rows[di]:
+                    continue
+                data_cells = [c.strip() for c in rows[di].strip("|").split("|")]
+                if len(data_cells) <= max(idx_ac, idx_hp):
+                    continue
+                ac_match = _re.search(r"\d+", data_cells[idx_ac])
+                hp_match = _re.search(r"\d+", data_cells[idx_hp])
+                if ac_match:
+                    out["ac"] = int(ac_match.group(0))
+                if hp_match:
+                    out["max_hp"] = int(hp_match.group(0))
+                if idx_speed >= 0 and idx_speed < len(data_cells):
+                    out["speed"] = data_cells[idx_speed]
+                break
+            break
+    # Challenge row anywhere in the file
+    chal = _re.search(r"\*\*Challenge\*\*\s*\|\s*([\d/.]+)", text)
+    if chal:
+        out["cr"] = chal.group(1)
+
+    # Streamline #2 (variant): row-per-stat layout — the black-ledger members
+    # use one row per attribute: `| **HP** | `21` (3d8) |` etc. Match each
+    # individually if the column-style detector above didn't find what we need.
+    def _row(label: str) -> _re.Match | None:
+        # Look for `| **HP** | <value> |` row anywhere
+        return _re.search(rf"^\s*\|\s*\*\*{label}\*\*\s*\|\s*([^|]+?)\s*\|", text, _re.MULTILINE)
+
+    if "max_hp" not in out:
+        m = _row("HP")
+        if m:
+            num = _re.search(r"\d+", m.group(1))
+            if num:
+                out["max_hp"] = int(num.group(0))
+    if "ac" not in out:
+        m = _row("AC")
+        if m:
+            num = _re.search(r"\d+", m.group(1))
+            if num:
+                out["ac"] = int(num.group(0))
+    if "speed" not in out:
+        m = _row("Speed")
+        if m:
+            out["speed"] = m.group(1).strip(" `")
+
+    return out or None
+
+
 def _parse_npc_details(md_path: Path, slug: str, name: str) -> dict:
     """Best-effort parse of the NPC's status line and frontmatter to extract
     max_hp / ac / speed / cr / immunities. Falls back to safe defaults if the
@@ -105,6 +180,21 @@ def _parse_npc_details(md_path: Path, slug: str, name: str) -> dict:
     speed_match = re.search(r"\*\*Speed\*\*\s*([^*]+?)\s*\*\*", text)
     cr_match = re.search(r"\*\*CR\*\*\s*([\d/.]+)", text)
     immunity_match = re.search(r"\*\*([A-Za-z]+)\s+immunity\*\*", text)
+
+    # Streamline #2: Markdown-table stat blocks (legacy / SRD-style).
+    # Look for "| **AC** | **HP** | **Speed** |" rows followed by the data row.
+    # Only applies when the status-line regexes didn't match — never override.
+    if not (hp_match and ac_match):
+        table_stats = _parse_stat_table(text)
+        if table_stats:
+            if not hp_match and "max_hp" in table_stats:
+                hp_match = type("M", (), {"group": lambda _, n: str(table_stats["max_hp"])})()
+            if not ac_match and "ac" in table_stats:
+                ac_match = type("M", (), {"group": lambda _, n: str(table_stats["ac"])})()
+            if not speed_match and "speed" in table_stats:
+                speed_match = type("M", (), {"group": lambda _, n: table_stats["speed"]})()
+            if not cr_match and "cr" in table_stats:
+                cr_match = type("M", (), {"group": lambda _, n: table_stats["cr"]})()
 
     out = dict(defaults)
     if hp_match:

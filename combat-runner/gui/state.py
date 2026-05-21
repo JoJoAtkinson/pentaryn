@@ -60,12 +60,22 @@ class NPCState:
 
     # Conditions (set; order doesn't matter except for display).
     conditions: set[str] = field(default_factory=set)
+    # Optional countdown per condition. Missing key = indefinite. Integer
+    # values are decremented on round advance; when they hit 0 the condition
+    # auto-removes. Manual removal (toggle off) clears the entry too — so a
+    # mid-fight "remove paralysis" spell works regardless of duration.
+    condition_durations: dict[str, int] = field(default_factory=dict)
 
     # Reaction lifecycle (one reaction per NPC per round).
     reaction_used: bool = False
 
     # Recharge-ability tracking: action_name → "AVAILABLE" | "USED".
     recharges: dict[str, str] = field(default_factory=dict)
+    # Per-action slot counters (streamline #6). Authoritative for "Once per day",
+    # "3/day", etc. Map: action_name → remaining_count. Missing key = either
+    # the action has no `slots` block OR the encounter just started (refilled).
+    # MainWindow initializes these from the action DB on encounter launch.
+    slots_remaining: dict[str, int] = field(default_factory=dict)
 
     # Action chips that are USED for the current turn (e.g. bonus actions).
     # Refreshed at start of NPC's turn (or at round advance via the meta-controller).
@@ -130,17 +140,20 @@ class NPCState:
             return {"member": None, "before": 0, "after": 0, "killed": False, "skipped": "no alive members"}
 
         before = self.member_hp[target_idx]
+        was_bloodied = self.is_bloodied
         after = max(0, before - amount)
         self.member_hp[target_idx] = after
         killed = before > 0 and after == 0
         # Auto-apply 'bloodied' marker on the NPC (whole-NPC threshold)
         if self.is_bloodied:
             self.conditions.add("bloodied")
+        became_bloodied = (not was_bloodied) and self.is_bloodied
         return {
             "member": target_idx + 1,  # 1-indexed for display
             "before": before,
             "after": after,
             "killed": killed,
+            "became_bloodied": became_bloodied,
         }
 
     def apply_heal(self, amount: int, member: int | None = None) -> dict[str, Any]:
@@ -197,31 +210,54 @@ class NPCState:
 
     # ──── conditions ────
 
-    def add_condition(self, name: str) -> bool:
-        """Returns True if newly added, False if already present."""
+    def add_condition(self, name: str, duration: int | None = None) -> bool:
+        """Returns True if newly added, False if already present (in which
+        case the existing duration is *not* overwritten — caller should call
+        set_condition_duration explicitly to refresh).
+        `duration=None` means indefinite (no auto-decrement)."""
         name = name.lower().strip()
         if not name:
             return False
         if name in self.conditions:
             return False
         self.conditions.add(name)
+        if duration is not None and duration > 0:
+            self.condition_durations[name] = int(duration)
         return True
 
     def remove_condition(self, name: str) -> bool:
         name = name.lower().strip()
         if name in self.conditions:
             self.conditions.discard(name)
+            self.condition_durations.pop(name, None)
             return True
         return False
 
-    def toggle_condition(self, name: str) -> bool:
-        """Toggle a condition; returns the new state (True=present)."""
+    def toggle_condition(self, name: str, duration: int | None = None) -> bool:
+        """Toggle a condition; returns the new state (True=present).
+        `duration` only applies when applying (not removing); ignored on toggle-off."""
         name = name.lower().strip()
         if name in self.conditions:
             self.conditions.discard(name)
+            self.condition_durations.pop(name, None)
             return False
         self.conditions.add(name)
+        if duration is not None and duration > 0:
+            self.condition_durations[name] = int(duration)
         return True
+
+    def tick_condition_durations(self) -> list[str]:
+        """Decrement every numeric duration by 1. Conditions that hit 0 are
+        auto-removed. Returns the list of conditions that expired this tick
+        (so the UI can log them)."""
+        expired: list[str] = []
+        for name in list(self.condition_durations.keys()):
+            self.condition_durations[name] -= 1
+            if self.condition_durations[name] <= 0:
+                expired.append(name)
+                self.condition_durations.pop(name, None)
+                self.conditions.discard(name)
+        return expired
 
     # ──── lifecycle ────
 
@@ -334,9 +370,11 @@ def _serialize_npc(npc: NPCState) -> dict[str, Any]:
         "count": npc.count,
         "member_hp": list(npc.member_hp),
         "conditions": sorted(npc.conditions),
+        "condition_durations": dict(npc.condition_durations),
         "reaction_used": npc.reaction_used,
         "bonus_used": npc.bonus_used,
         "recharges": dict(npc.recharges),
+        "slots_remaining": dict(npc.slots_remaining),
         "turn_taken_this_round": npc.turn_taken_this_round,
     }
 
@@ -370,9 +408,11 @@ def _deserialize_npc(d: dict[str, Any]) -> NPCState:
         count=int(d.get("count", 1) or 1),
         member_hp=list(d.get("member_hp", [])) or [],
         conditions=set(d.get("conditions", []) or []),
+        condition_durations={k: int(v) for k, v in (d.get("condition_durations", {}) or {}).items() if isinstance(v, (int, float))},
         reaction_used=bool(d.get("reaction_used", False)),
         bonus_used=bool(d.get("bonus_used", False)),
         recharges=dict(d.get("recharges", {}) or {}),
+        slots_remaining={k: int(v) for k, v in (d.get("slots_remaining", {}) or {}).items() if isinstance(v, (int, float))},
         turn_taken_this_round=bool(d.get("turn_taken_this_round", False)),
     )
     # Belt-and-suspenders: post-construction sanity check (should be unreachable

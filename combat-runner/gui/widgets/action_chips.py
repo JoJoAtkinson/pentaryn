@@ -13,10 +13,13 @@ from __future__ import annotations
 from typing import Any
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QAction
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
     QLabel,
+    QMenu,
+    QMessageBox,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -27,6 +30,11 @@ class ActionChip(QFrame):
     """One clickable action card. Emits clicked(action_name) on press."""
 
     clicked = Signal(str)  # action name
+    # Right-click context-menu signals — listened to by NPCTab so the heavy
+    # lifting (DB lookup, dialog construction) stays out of this widget.
+    show_narration_requested = Signal(str)  # action_name
+    toggle_used_requested = Signal(str)     # action_name
+    edit_spec_requested = Signal(str)       # action_name
 
     def __init__(
         self,
@@ -35,12 +43,16 @@ class ActionChip(QFrame):
         is_used: bool = False,
         is_global: bool = False,
         meta: str | None = None,  # e.g. "range 30/60 ft" or "recharge 5+"
+        narration: str | None = None,
+        action_type: str | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.action_name = action_name
         self.is_used = is_used
         self.is_global = is_global
+        self.narration = narration or ""
+        self.action_type = action_type or ""
 
         self.setObjectName("ActionChip")
         self.setFrameShape(QFrame.Shape.StyledPanel)
@@ -82,12 +94,40 @@ class ActionChip(QFrame):
             self.clicked.emit(self.action_name)
         super().mousePressEvent(event)
 
+    def contextMenuEvent(self, event) -> None:  # noqa: N802 (Qt API)
+        """Right-click → small actions menu. Lets the DM peek at the full
+        narration without firing the action, manually flip the USED state
+        for recharge-y actions, or jump to the spec editor (deferred — emits
+        a signal for the host to handle)."""
+        menu = QMenu(self)
+
+        if self.narration:
+            show_narr = QAction("Show full narration", menu)
+            show_narr.triggered.connect(lambda: self.show_narration_requested.emit(self.action_name))
+            menu.addAction(show_narr)
+
+        toggle_label = "Mark AVAILABLE" if self.is_used else "Mark USED"
+        toggle_used = QAction(toggle_label, menu)
+        toggle_used.triggered.connect(lambda: self.toggle_used_requested.emit(self.action_name))
+        menu.addAction(toggle_used)
+
+        menu.addSeparator()
+        edit = QAction("Edit spec…", menu)
+        edit.triggered.connect(lambda: self.edit_spec_requested.emit(self.action_name))
+        menu.addAction(edit)
+
+        menu.exec(event.globalPos())
+
 
 class ActionChipGrid(QWidget):
     """Container that arranges ActionChip widgets in a 2-column grid.
     Per-NPC actions render first; global actions go in a second labeled section."""
 
     chip_clicked = Signal(str)  # forwards the clicked chip's action name
+    # Context-menu forward signals
+    show_narration_requested = Signal(str)
+    toggle_used_requested = Signal(str)
+    edit_spec_requested = Signal(str)
 
     def __init__(self, cols: int = 2, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -96,11 +136,13 @@ class ActionChipGrid(QWidget):
         self._layout.setContentsMargins(0, 0, 0, 0)
         self._layout.setSpacing(8)
         self._chips: list[ActionChip] = []
+        self._slot_remaining_by_action: dict[str, int] = {}
 
     def set_actions(
         self,
         actions: list[dict[str, Any]],
         used_actions: set[str] | None = None,
+        slot_remaining: dict[str, int] | None = None,
     ) -> None:
         """Populate the grid from a list of action summary dicts.
 
@@ -110,6 +152,7 @@ class ActionChipGrid(QWidget):
         meta text under the verbs).
         """
         used_actions = used_actions or set()
+        self._slot_remaining_by_action = slot_remaining or {}
         # Clear existing chips
         while self._layout.count():
             item = self._layout.takeAt(0)
@@ -168,14 +211,27 @@ class ActionChipGrid(QWidget):
             )
             if a.get("recharge") is not None:
                 meta = f"recharge {a['recharge']}+" if meta is None else f"{meta} · recharge {a['recharge']}+"
+            # Slot indicator (streamline #6). The grid receives the per-action
+            # remaining-slot count via `slot_remaining_by_action`; falls back
+            # to slots.count for the "starting" display.
+            slot_cfg = a.get("slots") or {}
+            if isinstance(slot_cfg, dict) and slot_cfg.get("count"):
+                remaining = self._slot_remaining_by_action.get(a["action"], slot_cfg["count"])
+                slot_str = f"{remaining}/{slot_cfg['count']} {slot_cfg.get('refresh', 'long_rest').replace('_', ' ')}"
+                meta = slot_str if meta is None else f"{meta} · {slot_str}"
             chip = ActionChip(
                 action_name=a["action"],
                 verbs=a.get("verbs", []),
                 is_used=a["action"] in used,
                 is_global=is_global,
                 meta=meta,
+                narration=a.get("narration_preview") or a.get("narration"),
+                action_type=a.get("type"),
                 parent=grid_host,
             )
+            chip.show_narration_requested.connect(self.show_narration_requested.emit)
+            chip.toggle_used_requested.connect(self.toggle_used_requested.emit)
+            chip.edit_spec_requested.connect(self.edit_spec_requested.emit)
             chip.clicked.connect(self.chip_clicked.emit)
             self._chips.append(chip)
             grid.addWidget(chip, r, c)

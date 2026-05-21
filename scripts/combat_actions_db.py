@@ -97,6 +97,101 @@ _VALID_TRIGGER_EVENTS = {
 _VALID_TRIGGER_SCOPES = {"self", "global"}
 
 
+_VALID_WATCH_SCOPES = {"self", "ally", "any"}
+_VALID_SLOT_REFRESH = {"long_rest", "short_rest", "encounter", "round", "turn"}
+
+
+def _validate_apply_condition_on_hit(cfg: Any) -> list[str]:
+    """Structured rider: `apply_condition_on_hit: {condition, save_dc, save_ability,
+    duration_rounds?}`. When the attack hits, the target makes the named save;
+    on fail, the condition (with optional duration) gets applied. The runner
+    emits a clear DM-instruction line for now (it can't roll PC saves); the
+    DM applies via `@<cond> <duration>` on the target's tab."""
+    errors: list[str] = []
+    if not isinstance(cfg, dict):
+        return ["apply_condition_on_hit must be a dict"]
+    cond = cfg.get("condition")
+    if not isinstance(cond, str) or not cond.strip():
+        errors.append("apply_condition_on_hit.condition must be a non-empty string")
+    save_dc = cfg.get("save_dc")
+    if not isinstance(save_dc, int) or save_dc <= 0:
+        errors.append("apply_condition_on_hit.save_dc must be a positive int")
+    save_ability = cfg.get("save_ability")
+    if not isinstance(save_ability, str) or save_ability.lower() not in {
+        "str", "dex", "con", "int", "wis", "cha",
+    }:
+        errors.append("apply_condition_on_hit.save_ability must be one of str/dex/con/int/wis/cha")
+    if "duration_rounds" in cfg and not (isinstance(cfg["duration_rounds"], int) and cfg["duration_rounds"] > 0):
+        errors.append("apply_condition_on_hit.duration_rounds must be a positive int")
+    return errors
+
+
+def _validate_slots(cfg: Any) -> list[str]:
+    """First-class per-day / per-encounter slot tracking. Schema:
+        slots: {count: int, refresh: "long_rest"|"short_rest"|"encounter"|"round"|"turn"}
+    Display shows `2/2` on the chip; click decrements; round_advanced refreshes
+    if refresh=='round'; encounter-start refreshes the rest. Replaces the
+    free-text 'Once per day' / '3/day' patterns scattered through prereq lines."""
+    errors: list[str] = []
+    if not isinstance(cfg, dict):
+        return ["slots must be a dict with count + refresh"]
+    count = cfg.get("count")
+    if not isinstance(count, int) or count <= 0:
+        errors.append("slots.count must be a positive int")
+    refresh = cfg.get("refresh")
+    if refresh not in _VALID_SLOT_REFRESH:
+        errors.append(f"slots.refresh must be one of {sorted(_VALID_SLOT_REFRESH)}, got {refresh!r}")
+    return errors
+
+
+def _validate_attack_entry(atk: Any, i: int) -> list[str]:
+    """Per-attack validation, extracted so it can be reused for nested checks.
+    Recognizes optional `extra_damage: {dice, modifier?, type}` (streamline #5)
+    and optional `apply_condition_on_hit` (streamline #7)."""
+    errors: list[str] = []
+    if not isinstance(atk, dict):
+        return [f"attacks[{i}] must be a dict"]
+    for k in ("name", "to_hit_bonus", "damage", "damage_type"):
+        if k not in atk:
+            errors.append(f"attacks[{i}] missing required key {k!r}")
+    if "extra_damage" in atk:
+        extra = atk["extra_damage"]
+        if not isinstance(extra, dict):
+            errors.append(f"attacks[{i}].extra_damage must be a dict with dice + type")
+        else:
+            for k in ("dice", "type"):
+                if k not in extra:
+                    errors.append(f"attacks[{i}].extra_damage missing {k!r}")
+    if "apply_condition_on_hit" in atk:
+        errors.extend(
+            f"attacks[{i}].apply_condition_on_hit: {e}"
+            for e in _validate_apply_condition_on_hit(atk["apply_condition_on_hit"])
+        )
+    return errors
+
+
+def _validate_watch(watch: Any) -> list[str]:
+    """Validate an optional `watch: {event, match, scope, priority}` block.
+    Watches drive deterministic suggestions on the owning NPC's bar when a
+    matching event fires anywhere on the bus."""
+    errors: list[str] = []
+    if not isinstance(watch, dict):
+        return ["watch must be a dict with keys event, match, scope"]
+    event = watch.get("event")
+    if event not in _VALID_TRIGGER_EVENTS:
+        errors.append(f"watch.event must be one of {sorted(_VALID_TRIGGER_EVENTS)}, got {event!r}")
+    scope = watch.get("scope", "ally")
+    if scope not in _VALID_WATCH_SCOPES:
+        errors.append(f"watch.scope must be one of {sorted(_VALID_WATCH_SCOPES)}, got {scope!r}")
+    match = watch.get("match", "")
+    if not isinstance(match, str):
+        errors.append("watch.match must be a string (empty string = no sub-filter)")
+    priority = watch.get("priority", 10)
+    if not isinstance(priority, int):
+        errors.append("watch.priority must be an integer")
+    return errors
+
+
 def _validate_trigger(trig: Any) -> list[str]:
     """Validate an optional `trigger: {scope, event, match}` block."""
     errors: list[str] = []
@@ -139,15 +234,22 @@ def validate_spec(spec: dict) -> list[str]:
         if spec["scope"] not in ("self", "global"):
             errors.append(f"scope must be 'self' or 'global', got {spec['scope']!r}")
 
+    # Optional watch block — broadcasts events from other tabs surface this
+    # action as a high-priority suggestion on the owning NPC's bar.
+    if "watch" in spec:
+        errors.extend(_validate_watch(spec["watch"]))
+
+    # Optional slots field — first-class per-day / per-encounter charge tracking.
+    if "slots" in spec:
+        errors.extend(_validate_slots(spec["slots"]))
+
     if t in ("multiattack", "single_attack"):
         attacks = spec.get("attacks")
         if not isinstance(attacks, list) or not attacks:
             errors.append(f"{t} requires non-empty attacks list")
         else:
             for i, atk in enumerate(attacks):
-                for k in ("name", "to_hit_bonus", "damage", "damage_type"):
-                    if k not in atk:
-                        errors.append(f"attacks[{i}] missing required key {k!r}")
+                errors.extend(_validate_attack_entry(atk, i))
     elif t == "area":
         for k in ("damage", "save"):
             if k not in spec:
@@ -168,10 +270,23 @@ def validate_spec(spec: dict) -> list[str]:
         if not (has_roll or has_effect):
             errors.append("utility requires either roll.dice or non-empty effect text")
     elif t == "reaction":
-        if "damage" not in spec or "dice" not in spec.get("damage", {}):
-            errors.append("reaction requires damage.dice")
-        if "attacker_save" not in spec:
-            errors.append("reaction requires attacker_save")
+        # Reactions come in three flavors:
+        #   (a) damage  — classic counterstrike: needs damage.dice + attacker_save
+        #   (b) movement — Incorporeal Escape, Misty Step: needs `effect` text
+        #   (c) buff    — Shield, Bless: needs `effect` text
+        # We disambiguate by `reaction_kind` (defaults to "damage" for back-compat).
+        kind = spec.get("reaction_kind", "damage")
+        if kind == "damage":
+            if "damage" not in spec or "dice" not in spec.get("damage", {}):
+                errors.append("reaction (kind=damage) requires damage.dice")
+            if "attacker_save" not in spec:
+                errors.append("reaction (kind=damage) requires attacker_save")
+        elif kind in ("movement", "buff"):
+            has_effect = isinstance(spec.get("effect"), str) and bool(spec["effect"].strip())
+            if not has_effect:
+                errors.append(f"reaction (kind={kind}) requires a non-empty effect text")
+        else:
+            errors.append(f"reaction_kind must be one of damage/movement/buff, got {kind!r}")
 
     return errors
 
@@ -202,6 +317,44 @@ def upsert(npc: str, action: str, spec: dict) -> dict:
         records.append(record)
     _atomic_write(records)
     return record
+
+
+def upsert_many(entries: Iterable[tuple[str, str, dict]]) -> list[dict]:
+    """Bulk version of upsert. One read + one write for N records, instead of
+    N read+write cycles. `entries` is an iterable of (npc, action, spec) tuples.
+    Validates EVERY spec before writing — if any one fails, NOTHING is written.
+    Returns the list of persisted records (in input order)."""
+    pending: list[tuple[str, str, dict]] = []
+    errors: list[str] = []
+    for i, (npc, action, spec) in enumerate(entries):
+        if not npc or not action:
+            errors.append(f"entry[{i}]: npc and action are required")
+            continue
+        spec_errors = validate_spec(spec)
+        if spec_errors:
+            errors.append(f"entry[{i}] ({npc}.{action}): {'; '.join(spec_errors)}")
+            continue
+        pending.append((npc, action, spec))
+    if errors:
+        raise ValueError(f"upsert_many: {len(errors)} invalid entries:\n  - " + "\n  - ".join(errors))
+
+    records = read_all()
+    by_key: dict[tuple[str, str], int] = {
+        (r.get("npc", ""), r.get("action", "")): i for i, r in enumerate(records)
+    }
+    now = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    persisted: list[dict] = []
+    for npc, action, spec in pending:
+        record = {"npc": npc, "action": action, **spec, "updated_at": now}
+        key = (npc, action)
+        if key in by_key:
+            records[by_key[key]] = record
+        else:
+            by_key[key] = len(records)
+            records.append(record)
+        persisted.append(record)
+    _atomic_write(records)
+    return persisted
 
 
 def delete(npc: str, action: str) -> bool:
@@ -269,7 +422,7 @@ def list_actions(
             "verbs": r.get("verbs", []),
             "narration_preview": narration,
         }
-        for opt in ("range", "area", "recharge", "prerequisite", "trigger", "scope"):
+        for opt in ("range", "area", "recharge", "prerequisite", "trigger", "scope", "watch"):
             if opt in r:
                 summary[opt] = r[opt]
         summaries.append(summary)

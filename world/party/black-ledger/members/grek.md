@@ -1,7 +1,7 @@
 ---
 created: 2026-01-17
 last-modified: 2026-03-14
-tags: ["#world", "#party", "#black-ledger", "#member"]
+tags: ["#world", "#party", "#black-ledger", "#member", "#combat-runner"]
 status: active
 ---
 # Grek Bar'Kar (GREK bar-KAR)

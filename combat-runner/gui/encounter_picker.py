@@ -28,6 +28,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QSpinBox,
+    QTextBrowser,
     QVBoxLayout,
     QWidget,
 )
@@ -76,11 +77,30 @@ def _find_tagged_files() -> list[Path]:
     return matches
 
 
+_DISCOVERY_FOLDER_NAMES = ("npcs", "members")
+
+
 def _walk_to_encounter_root(npc_path: Path) -> Path:
+    """Walk upward from a combat-runner-tagged file to the encounter folder.
+
+    Supports both `npcs/` (monsters) and `members/` (PC-side characters like
+    the black-ledger). Also supports nested grouping under either folder:
+      <root>/npcs/<slug>.md                    → root
+      <root>/npcs/gnolls/<slug>.md             → root (walks past gnolls/ AND npcs/)
+      <root>/members/<slug>.md                 → root (party characters)
+      <root>/npcs/wave1/<slug>.md              → root
+
+    Strategy: walk up until we find a directory whose name is in
+    `_DISCOVERY_FOLDER_NAMES`; its parent is the encounter root."""
     p = npc_path.parent
-    while p.name == "npcs":
-        p = p.parent
-    return p
+    cursor = p
+    found_parent: Path | None = None
+    while cursor != cursor.parent:  # stop at filesystem root
+        if cursor.name in _DISCOVERY_FOLDER_NAMES:
+            found_parent = cursor.parent
+            break
+        cursor = cursor.parent
+    return found_parent if found_parent is not None else p
 
 
 def _parse_default_count(md_path: Path) -> int:
@@ -174,13 +194,14 @@ class EncounterPicker(QDialog):
         left.addWidget(QLabel("<b>Encounters</b> (most recent first)"))
         self.list_widget = QListWidget()
         self.list_widget.setMinimumWidth(220)
-        self.list_widget.currentRowChanged.connect(self._on_select)
+        # NOTE: defer `currentRowChanged` connection + setCurrentRow(0) until
+        # the right pane is built (see end of this method). `setCurrentRow`
+        # fires the signal synchronously, which would AttributeError on
+        # `self.encounter_title` if the right pane doesn't exist yet.
         for enc in self.encounters:
             mtime_str = datetime.fromtimestamp(enc.latest_mtime, tz=timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M")
             item = QListWidgetItem(f"{enc.name}\n  {len(enc.npcs)} NPC{'s' if len(enc.npcs) != 1 else ''} · {mtime_str}")
             self.list_widget.addItem(item)
-        if self.encounters:
-            self.list_widget.setCurrentRow(0)
         left.addWidget(self.list_widget, 1)
         left_panel = QFrame()
         left_panel.setLayout(left)
@@ -195,6 +216,18 @@ class EncounterPicker(QDialog):
         self.encounter_root = QLabel("")
         self.encounter_root.setStyleSheet("color: #6c8eba; font-size: 10px; padding-bottom: 8px;")
         right.addWidget(self.encounter_root)
+
+        # Preview pane: shows the encounter's _overview.md (terrain, hooks,
+        # initial DM notes) when one exists. Big at-table win — DM-recall is
+        # the #1 time-sink at session start.
+        self.overview_view = QTextBrowser()
+        self.overview_view.setOpenExternalLinks(False)
+        self.overview_view.setStyleSheet(
+            "background: #14171b; color: #b8bdc4; border: 1px solid #2a2f38; "
+            "font-size: 11px; padding: 6px;"
+        )
+        self.overview_view.setMaximumHeight(160)
+        right.addWidget(self.overview_view)
 
         right.addWidget(QLabel("<b>Per-NPC counts</b>"))
         self.counts_form_host = QWidget()
@@ -211,9 +244,35 @@ class EncounterPicker(QDialog):
         right.addWidget(buttons)
         root.addLayout(right, 1)
 
-        # If we have an encounter pre-selected, populate the right pane
+        # Now that the right pane exists, it's safe to wire the list-selection
+        # signal and pre-select row 0 (which fires _on_select synchronously).
+        self.list_widget.currentRowChanged.connect(self._on_select)
         if self.encounters:
+            self.list_widget.setCurrentRow(0)
             self._on_select(0)
+
+    # ─────────── helpers ───────────
+
+    @staticmethod
+    def _load_overview(enc: DiscoveredEncounter) -> str | None:
+        """Look for `_overview.md` at the encounter root and return its body
+        with the frontmatter stripped. Returns None if missing/unreadable."""
+        path = enc.root / "_overview.md"
+        if not path.exists():
+            return None
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError:
+            return None
+        # Strip leading `---` frontmatter block
+        if text.startswith("---"):
+            end = text.find("---", 3)
+            if end > 0:
+                text = text[end + 3:].lstrip("\n")
+        # Cap to a few hundred chars so the preview pane isn't a wall of text
+        if len(text) > 1200:
+            text = text[:1200].rstrip() + "\n\n*(truncated — open the file for the rest)*"
+        return text
 
     # ─────────── selection handling ───────────
 
@@ -223,6 +282,9 @@ class EncounterPicker(QDialog):
         enc = self.encounters[row]
         self.encounter_title.setText(f"<b>{enc.name}</b>")
         self.encounter_root.setText(str(enc.root.relative_to(_REPO_ROOT)))
+
+        # Load _overview.md if present (terrain / hooks / DM notes)
+        self.overview_view.setMarkdown(self._load_overview(enc) or "*(no _overview.md at this encounter root)*")
 
         # Rebuild count form
         while self.counts_form.rowCount() > 0:

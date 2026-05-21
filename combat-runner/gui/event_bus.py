@@ -76,10 +76,6 @@ def condition_event(npc_slug: str, condition: str, applied: bool) -> Event:
     )
 
 
-def action_event(npc_slug: str, action_name: str) -> Event:
-    return Event(kind="action_executed", subject_npc=npc_slug, payload={"action": action_name})
-
-
 def spell_cast_event(caster: str, spell_name: str, target_npc: str | None = None, range_ft: int | None = None, spell_level: int | None = None) -> Event:
     # `caster` is the entity that cast the spell — could be "PC" if external.
     # `subject_npc` is set to the TARGET (so self-scope triggers on the target work);
@@ -104,6 +100,28 @@ def round_event(round_num: int) -> Event:
 
 def note_event(text: str) -> Event:
     return Event(kind="note", subject_npc=None, payload={"text": text})
+
+
+def bloodied_event(npc_slug: str) -> Event:
+    """Emitted exactly once per NPC, when it crosses the half-HP threshold
+    downward. Watchers (allied healers) use this to surface 'heal X' on the
+    suggestion bar without the DM having to ask."""
+    return Event(kind="bloodied", subject_npc=npc_slug, payload={})
+
+
+def death_event(npc_slug: str) -> Event:
+    return Event(kind="death", subject_npc=npc_slug, payload={})
+
+
+def action_event(npc_slug: str, action_name: str, tags: tuple[str, ...] = ()) -> Event:
+    """Emitted after an action runs. `tags` typically includes the action
+    type ('spell', 'damage:fire', etc.) so spell-counter watches can match."""
+    return Event(
+        kind="action_executed",
+        subject_npc=npc_slug,
+        tags=tags,
+        payload={"action": action_name},
+    )
 
 
 # ─────────── bus ───────────
@@ -343,3 +361,113 @@ def collect_triggers_from_db(db_module: Any, npcs_in_play: Iterable[str]) -> lis
             except (KeyError, TypeError, ValueError) as exc:
                 logger.warning("malformed trigger on %s.%s: %s", slug, entry.get("action"), exc)
     return triggers
+
+# ─────────── watch / broadcast / suggest ───────────
+#
+# Triggers fire reactions. Watches surface SUGGESTIONS — they push an action to
+# the top of a watching NPC's suggestion bar when a relevant event happens
+# elsewhere. The DM still has to click; this just front-loads the option.
+#
+# Example: Aelric has a 'cure_wounds' action with watch:
+#     {event: 'bloodied', scope: 'ally'}
+# When the Glacier Stalker drops below half HP, the event bus emits a
+# 'bloodied' event with subject_npc='glacier-stalker'. The watch matcher sees
+# that 'aelric-frostweaver' has a cure_wounds action watching for ally bloodied,
+# and pushes 'Cure Wounds → glacier-stalker' to Aelric's suggestion bar.
+
+
+@dataclass(frozen=True)
+class WatchSpec:
+    """Parsed `watch` block from an action's row in actions.jsonl.
+
+    Schema:
+      event: one of EventKind (`bloodied`, `condition_applied`, `damage`, ...)
+      match: optional sub-filter (condition name for condition_applied, damage
+             type for damage, etc.). Empty/None means "any".
+      scope: "self" | "ally" | "any"
+        self  → only fires when this action's NPC IS the event subject
+        ally  → only fires when a *different* in-play NPC is the subject
+        any   → fires regardless of subject (use sparingly)
+      priority: higher = appears earlier in the suggestion bar (default 10).
+    """
+
+    event: EventKind
+    match: str
+    scope: Literal["self", "ally", "any"]
+    npc_slug: str        # which NPC owns this action (so we know whose bar to push to)
+    action_name: str
+    priority: int = 10
+
+
+@dataclass(frozen=True)
+class WatchMatch:
+    watch: WatchSpec
+    event: Event
+    target_npc: str | None  # the event's subject — gets inlined in the suggestion slug
+
+
+class WatchMatcher:
+    """Index of WatchSpecs by event kind. On every emitted event, returns the
+    list of watches that should surface as suggestions on their owning NPC's bar."""
+
+    def __init__(self, watches: Iterable[WatchSpec]) -> None:
+        self._by_event: dict[str, list[WatchSpec]] = {}
+        for w in watches:
+            self._by_event.setdefault(w.event, []).append(w)
+
+    def find_matches(self, event: Event) -> list[WatchMatch]:
+        candidates = self._by_event.get(event.kind, [])
+        matches: list[WatchMatch] = []
+        for w in candidates:
+            # Scope gate
+            if w.scope == "self" and event.subject_npc != w.npc_slug:
+                continue
+            if w.scope == "ally":
+                # Ally = a different in-play NPC. Event must have a subject.
+                if event.subject_npc is None or event.subject_npc == w.npc_slug:
+                    continue
+            # "any" passes through.
+
+            # Match sub-filter
+            if w.match:
+                m = w.match.lower().strip()
+                # condition_applied / condition_removed: payload['condition'] equality
+                if event.kind in ("condition_applied", "condition_removed"):
+                    cond = str(event.payload.get("condition", "")).lower()
+                    if cond != m:
+                        continue
+                # damage: any tag must include the match string
+                elif event.kind == "damage":
+                    if not any(m in t for t in event.tags):
+                        continue
+                # other event kinds: substring against tags or payload values
+                else:
+                    haystack = " ".join(event.tags) + " " + " ".join(str(v) for v in event.payload.values())
+                    if m not in haystack.lower():
+                        continue
+            matches.append(WatchMatch(watch=w, event=event, target_npc=event.subject_npc))
+        # Sort by descending priority so callers can take the top N
+        matches.sort(key=lambda x: -x.watch.priority)
+        return matches
+
+
+def collect_watches_from_db(db_module: Any, npcs_in_play: Iterable[str]) -> list[WatchSpec]:
+    """Walk actions for each in-play NPC and collect any `watch` blocks."""
+    out: list[WatchSpec] = []
+    for slug in npcs_in_play:
+        for entry in db_module.list_actions(npc=slug):
+            w = entry.get("watch")
+            if not isinstance(w, dict):
+                continue
+            try:
+                out.append(WatchSpec(
+                    event=w.get("event", "damage"),
+                    match=str(w.get("match", "")).strip(),
+                    scope=w.get("scope", "ally"),
+                    npc_slug=slug,
+                    action_name=entry["action"],
+                    priority=int(w.get("priority", 10)),
+                ))
+            except (KeyError, TypeError, ValueError) as exc:
+                logger.warning("malformed watch on %s.%s: %s", slug, entry.get("action"), exc)
+    return out
