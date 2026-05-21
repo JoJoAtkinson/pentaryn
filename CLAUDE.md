@@ -15,7 +15,7 @@ Run `/Users/joe/GitHub/dnd/.venv/bin/python scripts/mcp/server.py --list-tools` 
 - `search_*` tools return **full entries inline**, not summaries. You usually don't need to chain `search_X → get_X_details`.
 - `get_*_details` tools take a v2 **`key`** (e.g., `'srd-2024_goblin-warrior'`, `'srd-2024_fireball'`) — not a v1 slug. Use after a search when you have the key and want a single-record fast fetch.
 - **Name search is by name only:** `search_monsters(name='goblin')` does case-insensitive substring matching on the **name field** (via `name__icontains`); it does *not* match against lore/description text. Pass `match='exact'` for exact-name lookups.
-- **Default source filter** for SRD search tools is `'srd-2024,srd-2014'` — prefers 5.5e content, falls back to 2014. Pass an explicit `source='...'` (single key, comma-separated list, or empty string for no filter) to override.
+- **No default source filter** for SRD search tools. With `source` unset, all sources are searched; results are *ranked* (srd-2024 first, third-party middle, srd-2014 last) but nothing is hidden. Pass an explicit `source='...'` (single key or comma-separated list) to hard-filter; pass `''` for no filter and no priority sort (raw API order).
 - **Conditions live under `'core'` and `'a5e-ag'`**, not `'srd-2024'`. `list_conditions` defaults to `'core,a5e-ag'`.
 - For `search_rules` vs `get_rule_section`: search needs a `query` (required) for keyword discovery; get fetches full text once you have the key.
 - `get_spell_list` returns v1-style spell **slugs** (e.g., `'fireball'`); these don't match v2 spell **keys** (e.g., `'srd-2024_fireball'`). To chain into `get_spell_details`, first call `search_spells(name=slug, match='exact')` and use the returned `key`.
@@ -36,7 +36,7 @@ Run `/Users/joe/GitHub/dnd/.venv/bin/python scripts/mcp/server.py --list-tools` 
 
 ## Combat Runner — the default at-table tool
 
-For running combat live at the table, use the **PySide6 GUI** at `combat-runner/gui/` (`make combat-gui` or `python -m combat-runner.gui.app`). It's tab-per-NPC, sigil-driven (`-18` damage, `+10` heal, `@prone` for conditions, verb-fuzzy-match for actions), with a live red/green HP overlay, declarative reactions, mob support (segmented HP bar, `m<n>` targeting), universal actions (Push/Grapple/Dodge/etc.), and the LLM as a meta-controller for everything else. See [`combat-runner/gui/README.md`](combat-runner/gui/README.md) for the full sigil cheat-sheet, architecture, and headless-testing notes.
+For running combat live at the table, use the **PySide6 GUI** at `combat-runner/gui/` (`make combat-gui`). It's tab-per-NPC, sigil-driven (`-18` damage, `+10` heal, `@prone` for conditions, verb-fuzzy-match for actions), with a live red/green HP overlay, declarative reactions, mob support (segmented HP bar, `m<n>` targeting), universal actions (Push/Grapple/Dodge/etc.), and the LLM as a meta-controller for everything else. See [`combat-runner/gui/README.md`](combat-runner/gui/README.md) for the full sigil cheat-sheet, architecture, and headless-testing notes.
 
 The old Haiku-Claude-Code CLI launcher at `combat-runner/launch.py` is still around as a fallback but the GUI is the snappy default.
 
@@ -78,7 +78,7 @@ When Joe asks for a new combat NPC ("make me a CR3 frost yeti for mountin-pass",
 8. For SRD-derived creatures, use `search_monsters(name=...)` to pull canonical stats before shaping into the template.
 9. After upserting all actions, **run `python scripts/combat_actions_db.py validate`** — every DB row should pass. `... list --npc <slug>` to confirm the actions are in.
 
-Reference exemplar: [`world/factions/garhammar-trade-league/locations/mountin-pass/npcs/glacier-stalker.md`](world/factions/garhammar-trade-league/locations/mountin-pass/npcs/glacier-stalker.md). Its DB rows in [`combat-runner/actions.jsonl`](combat-runner/actions.jsonl) cover all six action types — multiattack, single_attack, area (with recharge), multiattack-with-prereq (Pounce), utility, reaction.
+Reference exemplar: [`world/factions/garhammar-trade-league/locations/mountin-pass/npcs/glacier-stalker.md`](world/factions/garhammar-trade-league/locations/mountin-pass/npcs/glacier-stalker.md). Its DB rows in [`combat-runner/actions.jsonl`](combat-runner/actions.jsonl) exercise every action type — multiattack (including a multiattack-with-prereq, Pounce), single_attack, area (with recharge), utility, reaction.
 
 ## Don't read these directories
 

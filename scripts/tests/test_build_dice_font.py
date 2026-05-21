@@ -12,10 +12,10 @@ def test_glyph_map_has_required_dice():
     assert required_dice.issubset(GLYPH_MAP.keys())
 
 
-def test_glyph_map_uses_private_use_area():
-    """Verify all glyphs map to Unicode Private Use Area (U+E000-U+F8FF)."""
+def test_glyph_map_uses_emoji_block():
+    """Verify all glyphs map to the Unicode emoji block (U+1F000-U+1FAFF)."""
     for die_name, codepoint in GLYPH_MAP.items():
-        assert 0xE000 <= codepoint <= 0xF8FF, f"{die_name} codepoint {hex(codepoint)} not in PUA"
+        assert 0x1F000 <= codepoint <= 0x1FAFF, f"{die_name} codepoint {hex(codepoint)} not in emoji block"
 
 
 def test_build_font_creates_ttf(tmp_path: Path):

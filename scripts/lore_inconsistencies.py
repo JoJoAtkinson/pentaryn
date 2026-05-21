@@ -85,7 +85,7 @@ MCP_TOOL = {
             },
             "skip_multi_valued": {
                 "type": "boolean",
-                "description": "Don't skip multi-valued attributes like 'npcs' or 'quests' (default: false).",
+                "description": "Skip multi-valued attributes like 'npcs'/'quests' when comparing (default: false — they are included).",
             },
             "print_report": {"type": "boolean", "description": "Print the report to stdout (default: false)."},
             "multi_valued_attrs": {
@@ -1240,7 +1240,10 @@ def main(argv: list[str] | None = None) -> int:
             seen.add(key)
             entities.append(eid)
 
-    persist_dir = str((REPO_ROOT / args.persist_dir).resolve())
+    persist_dir_path = (REPO_ROOT / args.persist_dir).resolve()
+    if persist_dir_path != REPO_ROOT and not persist_dir_path.is_relative_to(REPO_ROOT):
+        raise SystemExit(f"--persist-dir must stay inside the repo: {args.persist_dir!r}")
+    persist_dir = str(persist_dir_path)
     os.makedirs(persist_dir, exist_ok=True)
 
     collection_name = args.collection.strip()
@@ -1460,6 +1463,8 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     output_path = (REPO_ROOT / args.output).resolve()
+    if not output_path.is_relative_to(REPO_ROOT):
+        raise SystemExit(f"--output must stay inside the repo: {args.output!r}")
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(report, encoding="utf-8")
 

@@ -15,7 +15,10 @@ MCP_TOOL = {
             "name": "year_to_age",
             "description": (
                 "Convert an A.F. year (e.g. 4150) to an age glyph label (e.g. ᛏ200). "
-                "If the year is negative, it is treated as an offset from the configured present_year (e.g. -50 = present_year-50). "
+                "If the year is negative it is FIRST resolved to an absolute year "
+                "(offset from present_year, e.g. -50 → present_year-50), then that "
+                "year is converted to a label — so this tool always returns a LABEL, "
+                "never a bare year. (age_convert('-50'), by contrast, returns the year.) "
                 "For free-form input that might already be a label, prefer age_convert."
             ),
             "input_schema": {
@@ -145,7 +148,19 @@ def year_to_age(*, year: int, index: AgeIndex) -> str:
 def age_to_year(*, label: ParsedAgeLabel, index: AgeIndex, present_year: int | None) -> int:
     age_idx, age = _age_by_glyph(label, index)
     if label.offset >= 0:
-        return age.start_year + label.offset
+        year = age.start_year + label.offset
+        if age.end_year is not None and year > age.end_year:
+            raise ValueError(
+                f"Offset {label.offset} past the end of age {label.glyph!r} "
+                f"(spans {age.start_year}-{age.end_year}; max offset "
+                f"{age.end_year - age.start_year})"
+            )
+        if age.end_year is None and present_year is not None and year > present_year:
+            raise ValueError(
+                f"Offset {label.offset} past present_year {present_year} for the "
+                f"current/ongoing age {label.glyph!r} (starts {age.start_year})"
+            )
+        return year
 
     next_age = index.ages[age_idx + 1] if age_idx + 1 < len(index.ages) else None
     if next_age is not None:
@@ -157,7 +172,13 @@ def age_to_year(*, label: ParsedAgeLabel, index: AgeIndex, present_year: int | N
                 "and is required to resolve negative offsets for the current/ongoing age"
             )
         end_boundary_year = present_year
-    return end_boundary_year + label.offset
+    year = end_boundary_year + label.offset
+    if year < age.start_year:
+        raise ValueError(
+            f"Negative offset {label.offset} reaches before the start of age "
+            f"{label.glyph!r} ({age.start_year})"
+        )
+    return year
 
 
 def convert_auto(*, value: str, index: AgeIndex, present_year: int | None) -> str:

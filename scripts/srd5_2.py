@@ -32,10 +32,12 @@ to anything server-side. Verify behavior empirically when in doubt.
 
 2) name__icontains is documented on SOME endpoints but not others. Endpoints
    that only declare name__contains silently drop name__icontains. See
-   _ENDPOINT_NAME_FORMS for the per-endpoint map. The 9 endpoints with
-   neither form (gamesystems, publishers, licenses, itemcategories,
-   itemrarities, skills, itemsets, languages, documents) don't support
-   partial-name match server-side at all — list-all + client-side filter.
+   _ENDPOINT_NAME_FORMS for the per-endpoint map. Endpoints with no usable
+   form for the requested match mode (e.g. /v2/weapons/ and /v2/armor/ have
+   no partial form; gamesystems/itemcategories/itemrarities/skills have
+   neither) can't filter `name` server-side. `_search_endpoint` handles this
+   transparently: it over-fetches the full list and filters by name in Python,
+   so callers always get name filtering regardless of endpoint support.
 
 3) Filter field names are inconsistent across endpoints:
      /v2/creatures/  → bare `type`, `size`, `challenge_rating` (NOT __key)
@@ -72,6 +74,8 @@ from __future__ import annotations
 # search_spells, get_monster_details) are essential for adjudicating edge cases.
 MCP_GROUPS = ["combat", "all"]
 
+import functools
+import inspect
 import json
 import os
 import sys
@@ -122,11 +126,48 @@ def _get_session() -> CachedSession:
 
 
 def _api_get(endpoint: str, params: Optional[dict[str, Any]] = None) -> dict[str, Any]:
-    """GET an open5e endpoint via the cached, retrying session."""
+    """GET an open5e endpoint via the cached, retrying session.
+
+    Transport faults are converted to caller-actionable ``ValueError``s here —
+    below the MCP dispatch fork — so the in-process and subprocess paths surface
+    identical, useful errors. A raw ``requests`` exception (which leaks the
+    upstream URL and reads like an internal crash) must never reach the client.
+    """
     url = f"{BASE_URL}{endpoint}"
-    response = _get_session().get(url, params=params or {}, timeout=10)
-    response.raise_for_status()
-    return response.json()
+    try:
+        response = _get_session().get(url, params=params or {}, timeout=10)
+    except requests.Timeout as exc:
+        raise ValueError(
+            f"SRD API timed out after 10s on {endpoint} — Open5e is slow or "
+            f"unreachable; retry shortly."
+        ) from exc
+    except requests.ConnectionError as exc:
+        raise ValueError(
+            f"SRD API unreachable for {endpoint} — check network connectivity."
+        ) from exc
+    if response.status_code == 404:
+        raise ValueError(
+            f"SRD API: no record at {endpoint} (HTTP 404). If this came from a "
+            f"get_*_details call, the key is wrong — re-run the matching "
+            f"search_* tool to obtain a valid key."
+        )
+    if response.status_code >= 500:
+        raise ValueError(
+            f"SRD API error HTTP {response.status_code} on {endpoint} "
+            f"(upstream Open5e fault) — retry shortly."
+        )
+    if response.status_code >= 400:
+        raise ValueError(
+            f"SRD API rejected the request (HTTP {response.status_code}) on {endpoint} "
+            f"— likely a bad argument (e.g. an unsupported filter value)."
+        )
+    try:
+        return response.json()
+    except ValueError as exc:  # json.JSONDecodeError is a ValueError subclass
+        raise ValueError(
+            f"SRD API returned a non-JSON response (HTTP {response.status_code}) "
+            f"on {endpoint} — upstream is degraded; retry shortly."
+        ) from exc
 
 
 # Per-endpoint name-filter forms. Mapped by EMPIRICALLY probing each endpoint
@@ -332,6 +373,65 @@ def _apply_priority_and_dedupe(
     return out
 
 
+# Endpoints whose Open5e filterset has no server-side name form (None in
+# _ENDPOINT_NAME_FORMS — e.g. /v2/weapons/, /v2/armor/, /v2/skills/) can't match
+# `name` server-side; the param is silently ignored. For those we over-fetch the
+# whole list and filter in Python. Every such endpoint is a small reference table
+# (weapons 75, armor 25, skills 20, ...), each returned by Open5e in a single
+# page well under this limit — so one over-fetch is cheap and disk-cached.
+_CLIENT_FILTER_FETCH_LIMIT = 1000
+
+
+def _server_name_form(endpoint: str, match: str) -> Optional[str]:
+    """The query param Open5e uses to filter `name` on this endpoint for the
+    given match mode, or None when it can't filter name server-side."""
+    partial_form, exact_form = _ENDPOINT_NAME_FORMS.get(endpoint, _DEFAULT_NAME_FORMS)
+    return exact_form if match == "exact" else partial_form
+
+
+def _matches_name(entry: Any, needle_casefold: str, match: str) -> bool:
+    """Case-insensitive name predicate for client-side filtering."""
+    candidate = (entry.get("name") or "").casefold() if isinstance(entry, dict) else ""
+    return candidate == needle_casefold if match == "exact" else needle_casefold in candidate
+
+
+def _search_endpoint(
+    endpoint: str,
+    params: dict[str, Any],
+    *,
+    spec: PrioritySpec,
+    dedupe: bool,
+    name: Optional[str] = None,
+    match: str = "partial",
+    limit: int = 10,
+) -> dict[str, Any]:
+    """Fetch + finalize a search/list query. When the endpoint can filter `name`
+    server-side, this is `_api_get` + `_apply_priority_and_dedupe`. When it can't
+    (server form is None), over-fetch the full list, filter by name in Python,
+    rank + dedupe, then truncate to `limit` so paging never hides a match."""
+    if not name or _server_name_form(endpoint, match) is not None:
+        return _apply_priority_and_dedupe(_api_get(endpoint, params), spec, dedupe)
+    response = _api_get(endpoint, {**params, "limit": _CLIENT_FILTER_FETCH_LIMIT})
+    results = response.get("results")
+    if isinstance(results, list):
+        needle = name.casefold()
+        kept = [r for r in results if _matches_name(r, needle, match)]
+        response = {**response, "results": kept, "count": len(kept)}
+    finalized = _apply_priority_and_dedupe(response, spec, dedupe)
+    fin_results = finalized.get("results")
+    if isinstance(fin_results, list) and len(fin_results) > limit:
+        # Truncate to `limit` and keep `count` honest: it was set to the exact
+        # post-name-filter match count above, but after the slice the response
+        # carries only `limit` items, so a `len(results) == count` caller would
+        # otherwise be misled.
+        finalized = {
+            **finalized,
+            "results": fin_results[:limit],
+            "count": min(finalized.get("count", limit), limit),
+        }
+    return finalized
+
+
 # --- Filter helpers ----------------------------------------------------------
 # These are the building blocks every search_* function uses to translate Pythonic
 # kwargs into Open5e v2 query params. Open5e's filterset is Django-style: a field
@@ -379,6 +479,20 @@ def _add_has_fields(
 
 # --- Creatures (formerly v1 monsters) -----------------------------------------
 
+def _normalize_cr(cr: str) -> str:
+    """Open5e's `challenge_rating` filter wants a decimal value. Accept the
+    natural D&D fraction form ('1/8', '1/4', '1/2') and convert it — otherwise
+    Open5e answers a fraction with HTTP 400. Non-fraction input is returned as-is."""
+    cr = cr.strip()
+    if "/" in cr:
+        num, _, den = cr.partition("/")
+        try:
+            return str(float(num) / float(den))
+        except (ValueError, ZeroDivisionError):
+            return cr
+    return cr
+
+
 def search_monsters(
     name: Optional[str] = None,
     cr: Optional[str] = None,
@@ -416,7 +530,7 @@ def search_monsters(
     filter_source, spec = _resolve_source(source, DEFAULT_PRIORITY_SRD)
     extra: dict[str, Any] = {}
     if cr is not None:
-        extra["challenge_rating"] = cr
+        extra["challenge_rating"] = _normalize_cr(cr)
     _add_range(extra, "challenge_rating", cr_min, cr_max)
     if type:
         # Open5e's /v2/creatures/ filterset uses bare `type` and `size` (not the
@@ -724,7 +838,10 @@ def search_weapons(
         ordering=ordering, limit=limit, extra=extra,
         endpoint="/v2/weapons/",
     )
-    return _apply_priority_and_dedupe(_api_get("/v2/weapons/", params), spec, dedupe)
+    return _search_endpoint(
+        "/v2/weapons/", params, spec=spec, dedupe=dedupe,
+        name=name, match=match, limit=limit,
+    )
 
 
 def search_armor(
@@ -760,7 +877,10 @@ def search_armor(
         ordering=ordering, limit=limit, extra=extra,
         endpoint="/v2/armor/",
     )
-    return _apply_priority_and_dedupe(_api_get("/v2/armor/", params), spec, dedupe)
+    return _search_endpoint(
+        "/v2/armor/", params, spec=spec, dedupe=dedupe,
+        name=name, match=match, limit=limit,
+    )
 
 
 # --- Rules (formerly v1 sections) --------------------------------------------
@@ -771,7 +891,6 @@ def search_rules(
     source: Optional[str] = None,
     fields: Optional[str] = None,
     exclude: Optional[str] = None,
-    ordering: Optional[str] = None,
     limit: int = 5,
     vector: Optional[bool] = None,
 ) -> dict[str, Any]:
@@ -781,6 +900,13 @@ def search_rules(
     sorted by relevance (the order /v2/search/ returned). Pass vector=True for
     semantic / embedding-based matching ('what does cover do' → cover rules
     section even without exact word match).
+
+    `source` accepts a single key or a comma-separated list. /v2/search/ (the
+    relevance step) only accepts one `document_pk`: when exactly one source is
+    given, the search step is scoped to it; for a multi-source list the search
+    step runs unscoped and the Step-2 /v2/rules/ `document__key__in` filter does
+    the narrowing — so multi-source rule searches are honored, not silently
+    collapsed to the first key.
 
     `keys` short-circuits the search and goes straight to /v2/rules/?key__in=…
     for direct key fetch.
@@ -796,7 +922,6 @@ def search_rules(
             params["document__key__in"] = filter_source
         if fields: params["fields"] = fields
         if exclude: params["exclude"] = exclude
-        if ordering: params["ordering"] = ordering
         return _apply_priority_and_dedupe(_api_get("/v2/rules/", params), spec, dedupe=False)
 
     # Step 1: relevance-ranked rule keys via /v2/search/.
@@ -806,7 +931,14 @@ def search_rules(
     if vector is not None:
         search_params["vector"] = vector
     if filter_source:
-        search_params["document_pk"] = filter_source.split(",")[0]  # /v2/search/ takes one doc
+        # /v2/search/ only accepts a single document_pk. When the caller scoped
+        # to exactly ONE source, pass it. For a multi-source list, leave Step 1
+        # unscoped — scoping it to the first key would silently drop rule
+        # sections that exist only in the other listed sources. Step 2's
+        # `document__key__in` filter narrows the final result set instead.
+        source_keys = filter_source.split(",")
+        if len(source_keys) == 1:
+            search_params["document_pk"] = source_keys[0]
     search_resp = _api_get("/v2/search/", search_params)
     rule_keys = [
         str(r.get("object_pk")) for r in search_resp.get("results", [])
@@ -824,19 +956,18 @@ def search_rules(
     full = _api_get("/v2/rules/", detail_params)
 
     # Preserve the relevance order from /v2/search/ — /v2/rules/?key__in=…
-    # returns alphabetically by default, which discards the ranking.
+    # returns alphabetically by default, which discards the ranking. Also set
+    # `count` to the materialised result length: the result set is fully in
+    # memory and bounded by `limit`, and the Step-2 `document__key__in` filter
+    # can drop keys Step 1 produced — so `full["count"]` from /v2/rules/ is a
+    # third, unrelated number. `len(results)` is the only honest value.
     if isinstance(full.get("results"), list):
         order = {k: i for i, k in enumerate(rule_keys)}
-        full = {**full, "results": sorted(
+        ranked = sorted(
             full["results"],
             key=lambda r: order.get(str(r.get("key", "")), len(rule_keys)),
-        )}
-
-    if ordering:
-        # If the caller asked for a specific ordering, honor it (overrides
-        # relevance). We just pass through; the API didn't sort, so we'd need
-        # to fetch with ordering=, but this is rare — keep simple for now.
-        pass
+        )
+        full = {**full, "results": ranked, "count": len(ranked)}
 
     # Don't dedupe rules — same-name sections across editions cover the same
     # topic in different words, not true duplicates.
@@ -1137,7 +1268,10 @@ def _generic_list(
         name=name, match=match, source=filter_source, fields=fields, exclude=exclude,
         limit=limit, extra=extras, endpoint=endpoint,
     )
-    return _apply_priority_and_dedupe(_api_get(endpoint, params), spec, dedupe)
+    return _search_endpoint(
+        endpoint, params, spec=spec, dedupe=dedupe,
+        name=name, match=match, limit=limit,
+    )
 
 
 def list_abilities(name: Optional[str] = None, keys: Optional[str] = None,
@@ -1856,12 +1990,15 @@ MCP_TOOLS = [
             "?search= is non-functional on Open5e. Returns full rule records sorted by "
             "relevance. Pass vector=true for semantic matching ('what does cover do' finds the "
             "cover section without exact keyword overlap). Includes 2014 AND 2024 SRD content; "
-            "filter source='srd-2024' for 5.5e only. If you already know the section key, use "
-            "get_rule_section instead."
+            "filter source='srd-2024' for 5.5e only. `source` also accepts a comma-separated "
+            "list (e.g. 'srd-2024,srd-2014'): a single key scopes the relevance search step, "
+            "a multi-key list runs that step unscoped and narrows the final results to those "
+            "sources — so no listed source is silently dropped. If you already know the "
+            "section key, use get_rule_section instead."
         ),
         "annotations": {"title": "Search Rules (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_rules"],
-        "value_flags": {"query": "--query", "keys": "--keys", "vector": "--vector", "source": "--source", "fields": "--fields", "exclude": "--exclude", "ordering": "--ordering", "limit": "--limit"},
+        "value_flags": {"query": "--query", "keys": "--keys", "vector": "--vector", "source": "--source", "fields": "--fields", "exclude": "--exclude", "limit": "--limit"},
         "input_schema": {
             "type": "object",
             "properties": {
@@ -1871,7 +2008,6 @@ MCP_TOOLS = [
                 "source": _PARAM_SOURCE,
                 "fields": _PARAM_FIELDS,
                 "exclude": _PARAM_EXCLUDE,
-                "ordering": _PARAM_ORDERING,
                 "limit": {"type": "integer", "description": "Max results (default 5).", "default": 5},
             },
             "required": ["query"],
@@ -2313,9 +2449,48 @@ MCP_TOOLS = [
 ]
 
 
+# `query` alias for name-filter search tools ---------------------------------
+# The free-text tools (search_rules, search_srd) take a `query` param; the
+# name-filter tools take `name`. Callers — LLMs especially — reflexively reach
+# for `query` on every search_* tool, which raises an unexpected-kwarg error.
+# We accept `query` as an alias for `name` at the MCP dispatch boundary so the
+# foot-gun disappears, without renaming the semantically-correct `name` param.
+_QUERY_ALIAS_PARAM = {
+    "type": "string",
+    "description": (
+        "Alias for `name` — case-insensitive substring match on the name field. "
+        "Provided because the free-text search_rules/search_srd tools use `query`; "
+        "prefer `name` directly. Ignored if `name` is also given."
+    ),
+}
+
+
+def _accepts_query_alias(fn: Any) -> bool:
+    """True for name-filter search tools that should also accept `query`. Tools
+    that take `query` natively (search_rules, search_srd) and key-only get_*
+    tools (no `name` param) are left untouched."""
+    try:
+        params = inspect.signature(fn).parameters
+    except (ValueError, TypeError):
+        return False
+    return "name" in params and "query" not in params
+
+
+def _with_query_alias(fn):
+    """Translate a `query=` kwarg into `name=` unless `name` is already set."""
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):
+        if "query" in kwargs:
+            aliased = kwargs.pop("query")
+            if kwargs.get("name") is None and aliased is not None:
+                kwargs["name"] = aliased
+        return fn(*args, **kwargs)
+    return wrapper
+
+
 # In-process dispatch: server.py imports this module, reads MCP_HANDLERS,
 # and calls these directly (no subprocess startup, shared cached session).
-MCP_HANDLERS = {
+_RAW_MCP_HANDLERS = {
     "search_monsters": search_monsters,
     "get_monster_details": get_monster_details,
     "search_spells": search_spells,
@@ -2364,6 +2539,21 @@ MCP_HANDLERS = {
     "list_licenses": list_licenses,
     "list_documents": list_documents,
 }
+
+# Wrap name-filter handlers so they also accept `query` as an alias for `name`.
+MCP_HANDLERS = {
+    tool_name: (_with_query_alias(fn) if _accepts_query_alias(fn) else fn)
+    for tool_name, fn in _RAW_MCP_HANDLERS.items()
+}
+
+# Advertise the `query` alias in the schema of every tool whose handler accepts
+# it, so the alias is discoverable and survives strict additionalProperties.
+for _tool in MCP_TOOLS:
+    _raw_fn = _RAW_MCP_HANDLERS.get(_tool["name"])
+    if _raw_fn is not None and _accepts_query_alias(_raw_fn):
+        _props = _tool.get("input_schema", {}).get("properties")
+        if _props is not None and "query" not in _props:
+            _props["query"] = dict(_QUERY_ALIAS_PARAM)
 
 
 # --- Subprocess fallback (kept for compatibility; in-process is preferred) ---

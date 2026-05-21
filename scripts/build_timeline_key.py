@@ -24,6 +24,7 @@ MCP_TOOL = {
         "additionalProperties": False,
     },
     "argv": [],
+    "value_flags": {"output": "--output"},
 }
 
 REPO_ROOT = Path(__file__).resolve().parents[1]

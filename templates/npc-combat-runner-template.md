@@ -147,12 +147,18 @@ The tool validates the spec; malformed input gets a specific error (`{"ok": fals
 {
   "type": "reaction",
   "verbs": [],
-  "trigger": "<auto-trigger condition, e.g. 'hit in melee within 5 ft'>",
+  "trigger": {"scope": "self", "event": "damage",
+              "match": "hit by a melee attack within 5 ft"},
   "narration": "<flavor>",
   "damage": {"dice": "1d8", "type": "cold"},
   "attacker_save": {"dc": 15, "ability": "Con", "on_save": "no damage"}
 }
 ```
+`trigger` MUST be a dict: `scope` is `"self"` or `"global"`; `event` is one of
+`damage | heal | condition_applied | condition_removed | action_executed |
+spell_cast | round_advanced | death | bloodied | note`; `match` is a non-empty
+descriptor string. (For a non-damage reaction, set `"reaction_kind": "movement"`
+or `"buff"` and provide an `"effect": "<text>"` instead of a `damage` block.)
 
 ---
 

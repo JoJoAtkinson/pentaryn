@@ -26,6 +26,10 @@ from pathlib import Path
 
 import pytest
 
+# The story_craft pipeline hard-depends on the optional `openai` package.
+# Skip the whole module (rather than erroring at collection) when it's absent.
+pytest.importorskip("openai")
+
 # Mark all tests in this file as integration tests
 pytestmark = pytest.mark.integration
 

@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 import tempfile
 from datetime import datetime, timezone
@@ -87,6 +88,39 @@ def _atomic_write(records: list[dict]) -> None:
 
 _VALID_TYPES = {"multiattack", "single_attack", "area", "utility", "reaction"}
 
+# A dice string must be 'NdM' — the only form the runner's _parse_dice_spec
+# accepts. No leading zeros, no inline +N modifier, no flat numbers. The bounds
+# (count 1-100, die size in the standard set) mirror _roll_dice_async /
+# _parse_dice_spec exactly: NO spec may pass validate_spec that the runner
+# cannot execute.
+_DICE_SPEC_RE = re.compile(r"^\s*([1-9]\d*)\s*[dD]\s*([1-9]\d*)\s*$")
+_VALID_DIE_SIZES = (4, 6, 8, 10, 12, 20, 100)
+
+
+def _validate_dice(value: Any, where: str) -> list[str]:
+    """Validate a single dice string against the runner's NdM grammar + bounds.
+
+    Returns a list of error messages (empty = valid). Rejects non-strings,
+    non-NdM forms (flat numbers, inline modifiers, garbage), leading zeros,
+    out-of-range counts (1-100), and non-standard die sizes."""
+    if not isinstance(value, str):
+        return [f"{where} must be an 'NdM' dice string (e.g. '2d6'), got {type(value).__name__}"]
+    m = _DICE_SPEC_RE.match(value)
+    if not m:
+        return [
+            f"{where} must be an 'NdM' dice string with no leading zeros, "
+            f"no inline modifier, and no flat numbers (e.g. '2d6'), got {value!r}"
+        ]
+    count, size = int(m.group(1)), int(m.group(2))
+    if not (1 <= count <= 100):
+        return [f"{where}: dice count must be 1-100, got {count} in {value!r}"]
+    if size not in _VALID_DIE_SIZES:
+        return [
+            f"{where}: die size must be one of {list(_VALID_DIE_SIZES)}, "
+            f"got d{size} in {value!r}"
+        ]
+    return []
+
 # Mirror of gui.event_bus.EventKind. Duplicated here so this stdlib-only module
 # stays import-free of the GUI package — the GUI re-checks at runtime anyway.
 _VALID_TRIGGER_EVENTS = {
@@ -129,9 +163,10 @@ def _validate_apply_condition_on_hit(cfg: Any) -> list[str]:
 def _validate_slots(cfg: Any) -> list[str]:
     """First-class per-day / per-encounter slot tracking. Schema:
         slots: {count: int, refresh: "long_rest"|"short_rest"|"encounter"|"round"|"turn"}
-    Display shows `2/2` on the chip; click decrements; round_advanced refreshes
-    if refresh=='round'; encounter-start refreshes the rest. Replaces the
-    free-text 'Once per day' / '3/day' patterns scattered through prereq lines."""
+    The GUI tracks the charge chip; the MCP `roll_combat_action` runner does not
+    decrement it (no persistent per-encounter state) but DOES surface it as a
+    visible '(slots: N/N, refresh ...)' line so the DM tracks it by hand — so a
+    spec carrying `slots` is still executable."""
     errors: list[str] = []
     if not isinstance(cfg, dict):
         return ["slots must be a dict with count + refresh"]
@@ -154,6 +189,8 @@ def _validate_attack_entry(atk: Any, i: int) -> list[str]:
     for k in ("name", "to_hit_bonus", "damage", "damage_type"):
         if k not in atk:
             errors.append(f"attacks[{i}] missing required key {k!r}")
+    if "damage" in atk:
+        errors.extend(_validate_dice(atk["damage"], f"attacks[{i}].damage"))
     if "extra_damage" in atk:
         extra = atk["extra_damage"]
         if not isinstance(extra, dict):
@@ -162,6 +199,10 @@ def _validate_attack_entry(atk: Any, i: int) -> list[str]:
             for k in ("dice", "type"):
                 if k not in extra:
                     errors.append(f"attacks[{i}].extra_damage missing {k!r}")
+            if "dice" in extra:
+                errors.extend(
+                    _validate_dice(extra["dice"], f"attacks[{i}].extra_damage.dice")
+                )
     if "apply_condition_on_hit" in atk:
         errors.extend(
             f"attacks[{i}].apply_condition_on_hit: {e}"
@@ -212,6 +253,8 @@ def _validate_trigger(trig: Any) -> list[str]:
 def validate_spec(spec: dict) -> list[str]:
     """Return a list of error messages for a spec (empty list = valid)."""
     errors: list[str] = []
+    if not isinstance(spec, dict):
+        return [f"spec must be a JSON object, got {type(spec).__name__}"]
     t = spec.get("type")
     if t not in _VALID_TYPES:
         errors.append(f"type must be one of {sorted(_VALID_TYPES)}, got {t!r}")
@@ -254,12 +297,20 @@ def validate_spec(spec: dict) -> list[str]:
         for k in ("damage", "save"):
             if k not in spec:
                 errors.append(f"area requires {k!r}")
-        if "damage" in spec and "dice" not in spec["damage"]:
-            errors.append("area.damage requires 'dice'")
+        if "damage" in spec:
+            if not isinstance(spec["damage"], dict):
+                errors.append("area.damage must be an object")
+            elif "dice" not in spec["damage"]:
+                errors.append("area.damage requires 'dice'")
+            else:
+                errors.extend(_validate_dice(spec["damage"]["dice"], "area.damage.dice"))
         if "save" in spec:
-            for k in ("dc", "ability"):
-                if k not in spec["save"]:
-                    errors.append(f"area.save requires {k!r}")
+            if not isinstance(spec["save"], dict):
+                errors.append("area.save must be an object")
+            else:
+                for k in ("dc", "ability"):
+                    if k not in spec["save"]:
+                        errors.append(f"area.save requires {k!r}")
     elif t == "utility":
         # Utility actions are either (a) a single roll the NPC makes (Stealth,
         # Counterspell check, etc.) or (b) a no-roll buff / instantaneous effect
@@ -269,6 +320,8 @@ def validate_spec(spec: dict) -> list[str]:
         has_effect = isinstance(spec.get("effect"), str) and bool(spec["effect"].strip())
         if not (has_roll or has_effect):
             errors.append("utility requires either roll.dice or non-empty effect text")
+        if has_roll:
+            errors.extend(_validate_dice(spec["roll"]["dice"], "utility.roll.dice"))
     elif t == "reaction":
         # Reactions come in three flavors:
         #   (a) damage  — classic counterstrike: needs damage.dice + attacker_save
@@ -277,8 +330,11 @@ def validate_spec(spec: dict) -> list[str]:
         # We disambiguate by `reaction_kind` (defaults to "damage" for back-compat).
         kind = spec.get("reaction_kind", "damage")
         if kind == "damage":
-            if "damage" not in spec or "dice" not in spec.get("damage", {}):
+            damage = spec.get("damage")
+            if not isinstance(damage, dict) or "dice" not in damage:
                 errors.append("reaction (kind=damage) requires damage.dice")
+            else:
+                errors.extend(_validate_dice(damage["dice"], "reaction.damage.dice"))
             if "attacker_save" not in spec:
                 errors.append("reaction (kind=damage) requires attacker_save")
         elif kind in ("movement", "buff"):
