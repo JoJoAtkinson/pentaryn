@@ -720,25 +720,53 @@ class LLMController:
     REVIEW_SYSTEM_PROMPT = (
         "You are an at-table D&D 5.5e combat reviewer. A DM just typed a command; "
         "the fast path already applied the deterministic effect. You are given the "
-        "REAL applied delta — for every affected combatant, its before→after HP and "
-        "conditions — plus each target's damage immunities, and a roster of every "
-        "combatant in the fight (id, name, pc/npc). Your job:\n"
-        "  1. Verify the applied delta was correct. Check the damage type against the "
-        "     target's immunities (listed) and resistances (infer from the creature's "
-        "     name/type — resistances are not in the data). If the target is IMMUNE, "
-        "     the damage should have been 0; if RESISTANT, halved.\n"
-        "  2. Sanity-check the magnitude — damage far exceeding a target's max HP, or "
-        "     a heal pushing past max HP, is suspect.\n"
-        "  3. Check targeting/allegiance against the roster: a heal landing on an "
-        "     enemy, or damage landing on an allied PC, is likely a wrong-target "
-        "     mistake worth flagging.\n"
-        "  4. If something is wrong, call apply_command (or set_hp) to revise it, then "
-        "     reply with one short sentence explaining the correction. It will be "
-        "     logged as '⟳ review: <your text>'.\n"
-        "  5. If the command is free-form ('33 is taunted'), interpret it: prefer "
+        "ACTOR who acted (with allegiance), the RAW command typed, the RAW amount "
+        "the DM entered (before any cap), the REAL applied delta — for every "
+        "affected combatant, its before→after HP and conditions (with remaining "
+        "durations) — plus each target's damage immunities, an id-resolution flag, "
+        "and a roster of every combatant (id, name, kind pc/npc). Judge the "
+        "ORIGINAL COMMAND + CONTEXT, not just the applied delta. Your job:\n"
+        "  1. IMMUNITY/RESISTANCE. Check the damage type against the target's "
+        "     listed immunities AND standard 5e type-based immunities you infer "
+        "     from the creature's name/type — the listed field may be incomplete. "
+        "     Apply your own D&D knowledge: undead are immune to poison and "
+        "     (by convention) necrotic; constructs/golems are immune to poison; "
+        "     elementals are immune to their element; fiends/demons resist "
+        "     cold/fire/lightning; etc. If the target is IMMUNE the damage should "
+        "     have been 0; if RESISTANT, halved.\n"
+        "  2. MAGNITUDE. Sanity-check the RAW amount the DM typed against the "
+        "     target's max HP. A raw amount many times the target's max HP (e.g. "
+        "     an 80 or 700 on a 32-HP target) is a likely typo and must be FLAGGED "
+        "     even if HP only dropped to 0 / the heal capped harmlessly — the "
+        "     clean delta does not excuse the absurd input.\n"
+        "  3. ALLEGIANCE. Use the roster `kind`. Damaging an ally/PC (a kind=pc "
+        "     combatant), or healing an enemy, is likely a wrong-target mistake — "
+        "     flag it UNLESS the recent log shows it is intentional (a charmed "
+        "     attacker, a sacrifice, friendly-fire the DM narrated). For a "
+        "     multi-target command: an all-ENEMY multi-hit (AoE) is normal and "
+        "     correct — NEVER flag it. Flag a multi-target command ONLY when its "
+        "     target set INCLUDES an ally/PC (friendly fire).\n"
+        "  4. RAW-COMMAND SCAN. Read the raw command string. If it lists 2+ "
+        "     damage-type tags (e.g. 'fire necrotic'), the parser silently kept "
+        "     only one — flag the ambiguity. If it used an id that did not "
+        "     cleanly resolve (the id-resolution flag is set), flag that the "
+        "     command referenced an unrecognised id.\n"
+        "  5. DURATIONS. Flag an implausible condition duration — a duration "
+        "     beyond ~10 rounds (e.g. frightened for 90 rounds) is almost "
+        "     certainly a mistyped amount.\n"
+        "  6. WRONG-TARGET NO-OPS. If the command itself looks wrong (heal on an "
+        "     enemy, damage on an already-dead combatant, malformed id) emit a "
+        "     short advisory line EVEN IF the applied delta is a clean zero/no-op. "
+        "     A clean no-op delta does not excuse a wrong command.\n"
+        "  7. If a state value is genuinely wrong, call apply_command (or set_hp) "
+        "     to revise it. Then reply with ONE short sentence — for an advisory "
+        "     with no correction, just the sentence. Do NOT prefix your text with "
+        "     '⟳ review:' — the logger adds that.\n"
+        "  8. If the command is free-form ('33 is taunted'), interpret it: prefer "
         "     add_condition for condition-like input, else add_log_entry.\n"
-        "  6. If the applied delta looks correct, stay silent (return no text, no "
-        "     tools). Never block on uncertainty — if unsure, stay silent.\n"
+        "  9. If the command and its delta are both correct, stay silent (return "
+        "     no text, no tools). Never block on uncertainty — if genuinely "
+        "     unsure AND the command looks fine, stay silent.\n"
         "Be concise. Prefer a single corrective tool call. One sentence if you speak."
     )
 
@@ -807,6 +835,8 @@ class LLMController:
         applied_direction: str | None,
         applied_amount: int | None,
         log_tail: str,
+        raw_amount: int | None = None,
+        id_fallbacks: list[dict] | None = None,
     ) -> str:
         """Build the review `user_msg` — the full context payload.
 
@@ -814,12 +844,22 @@ class LLMController:
 
         ``affected`` — one dict per combatant the command actually mutated, each
         with: name, id, kind, hp_before, hp_after, max_hp, conditions_before,
-        conditions_after, immunities. This is the REAL before→after delta the
-        fast path produced, so the review knows exactly what happened.
+        conditions_after, immunities, and optionally ``durations_after`` (a
+        ``{condition: rounds}`` map) so the review can flag implausible
+        durations. This is the REAL before→after delta the fast path produced.
 
         ``roster`` — every combatant in the fight (id, name, kind) so the review
         can catch wrong-target / wrong-allegiance mistakes (healed an enemy,
         damaged an ally).
+
+        ``raw_amount`` — the number the DM literally typed, BEFORE any cap/clamp.
+        Distinct from ``applied_amount`` (the delta the fast path actually
+        applied). An absurd ``raw_amount`` should be flagged even when the
+        applied delta capped harmlessly.
+
+        ``id_fallbacks`` — list of ``{"token": <typed id>, "resolved_to": <id>}``
+        for any target id that did not cleanly resolve (e.g. ``0`` → actor-self,
+        or an unrecognised id). Empty / None means every id resolved cleanly.
         """
         actor_desc = (
             f"{actor.get('name', '?')} "
@@ -830,16 +870,34 @@ class LLMController:
         else:
             applied_desc = "(no scalar amount — see per-target HP delta below)"
 
+        if raw_amount is not None and raw_amount != applied_amount:
+            raw_amount_desc = (
+                f"Raw amount typed by DM (before cap/clamp): {raw_amount}"
+                f" — sanity-check this against target max HP\n"
+            )
+        elif raw_amount is not None:
+            raw_amount_desc = f"Raw amount typed by DM: {raw_amount}\n"
+        else:
+            raw_amount_desc = ""
+
         target_lines: list[str] = []
         for t in affected:
             imm = t.get("immunities") or []
             imm_desc = ", ".join(imm) if imm else "none listed"
             cond_before = t.get("conditions_before", [])
             cond_after = t.get("conditions_after", [])
+            durations = t.get("durations_after") or {}
+            if durations:
+                dur_desc = ", ".join(
+                    f"{c}={r}rd" for c, r in sorted(durations.items())
+                )
+                cond_after_desc = f"{cond_after} (durations: {dur_desc})"
+            else:
+                cond_after_desc = f"{cond_after}"
             cond_desc = (
                 f"conditions {cond_before}"
-                if cond_before == cond_after
-                else f"conditions {cond_before}→{cond_after}"
+                if cond_before == cond_after and not durations
+                else f"conditions {cond_before}→{cond_after_desc}"
             )
             target_lines.append(
                 f"  - {t.get('name', '?')} (id={t.get('id', '?')}, "
@@ -860,15 +918,48 @@ class LLMController:
         ]
         roster_block = "\n".join(roster_lines) if roster_lines else "  (empty)"
 
+        if id_fallbacks:
+            fb_lines = [
+                f"  - typed id {fb.get('token', '?')!r} did not cleanly "
+                f"resolve — fell back to id {fb.get('resolved_to', '?')!r}"
+                for fb in id_fallbacks
+            ]
+            fallback_block = (
+                "Id-resolution fallbacks (a typed id was malformed / "
+                "unrecognised — confirm the DM intended this target):\n"
+                + "\n".join(fb_lines) + "\n"
+            )
+        else:
+            fallback_block = ""
+
         return (
             f"Actor (who acted): {actor_desc}\n"
             f"Command typed: {raw!r}\n"
+            f"{raw_amount_desc}"
             f"Fast path applied: {applied_desc}\n"
+            f"{fallback_block}"
             f"Affected combatants (before→after — this is what the fast path "
             f"actually did):\n{targets_block}\n"
             f"Full combatant roster:\n{roster_block}\n"
             f"Recent log:\n{log_tail}"
         )
+
+    # Cap on review tool-call iterations. A thorough immunity / magnitude
+    # check legitimately needs 4–6 round-trips; 7 leaves headroom. On a
+    # cap-hit the last assistant text is RETURNED (not discarded) — see
+    # `_chat_loop` — so a correction emitted before the cap still survives.
+    REVIEW_MAX_ITERATIONS = 7
+
+    @staticmethod
+    def _strip_review_prefix(text: str) -> str:
+        """Strip a leading '⟳ review:' (or a bare leading '⟳') the model may
+        have emitted, so `_tool_add_log_entry` doesn't double-prefix the line
+        (G10 — '⟳ review: ⟳ review: …')."""
+        stripped = text.lstrip()
+        for prefix in ("⟳ review:", "⟳review:", "⟳"):
+            if stripped.startswith(prefix):
+                return stripped[len(prefix):].lstrip()
+        return text
 
     def review_command(
         self,
@@ -880,6 +971,8 @@ class LLMController:
         applied_amount: int | None,
         log_tail: str,
         dispatch_fn: Callable[[list[Any]], list[dict[str, Any]]] | None = None,
+        raw_amount: int | None = None,
+        id_fallbacks: list[dict] | None = None,
     ) -> "RunResult":
         """Async review of an already-applied command. Blocking — run off-thread.
 
@@ -889,9 +982,15 @@ class LLMController:
         review writes a sentence it is appended to the combat log with a
         `⟳ review:` prefix.
 
-        ``affected`` carries the REAL before→after HP/conditions for every
-        target the command mutated; ``roster`` carries every combatant's
-        id/name/kind so the review can reason about allegiance.
+        ``affected`` carries the REAL before→after HP/conditions (with
+        durations) for every target the command mutated; ``roster`` carries
+        every combatant's id/name/kind so the review can reason about
+        allegiance. ``raw_amount`` is the number the DM literally typed (before
+        cap); ``id_fallbacks`` flags any id that did not cleanly resolve.
+
+        On a tool-loop cap-hit the last assistant text is returned (not
+        discarded), so a correction the model emitted before the cap still
+        gets logged.
         """
         client = self._ensure_client()
         if client is None:
@@ -900,6 +999,7 @@ class LLMController:
         user_msg = self.build_review_user_msg(
             raw, actor, affected, roster,
             applied_direction, applied_amount, log_tail,
+            raw_amount=raw_amount, id_fallbacks=id_fallbacks,
         )
 
         messages = [{"role": "user", "content": user_msg}]
@@ -907,11 +1007,16 @@ class LLMController:
             client, messages,
             system_override=self.REVIEW_SYSTEM_PROMPT,
             dispatch_fn=dispatch_fn,
-            max_iterations=4,
+            max_iterations=self.REVIEW_MAX_ITERATIONS,
             tools_override=self._review_tools,
         )
-        if result.text and not result.error:
-            _tool_add_log_entry(self._bundle, f"⟳ review: {result.text}", kind="review")
+        # Log the review line whenever the model spoke — even on a cap-hit,
+        # where `result.error` is set but `result.text` carries a usable
+        # correction (G1). Strip any '⟳ review:' the model self-prefixed (G10).
+        if result.text:
+            clean = self._strip_review_prefix(result.text)
+            if clean:
+                _tool_add_log_entry(self._bundle, f"⟳ review: {clean}", kind="review")
         return result
 
     def dispatch_tool_uses(self, tool_uses: list[Any]) -> list[dict[str, Any]]:
@@ -1135,12 +1240,19 @@ class LLMController:
             break
         if hit_cap:
             logger.warning(
-                "LLM tool loop reached iteration cap (%d); response may be incomplete",
+                "LLM tool loop reached iteration cap (%d); returning last "
+                "assistant text (any tool calls already made stand)",
                 iteration_cap,
             )
+            # G1: do NOT discard. The model may have emitted a correct
+            # correction in an earlier turn (and its tool calls already
+            # mutated state) — return the last assistant text so the review
+            # line still gets logged. `error` is set so callers that need to
+            # know the loop was truncated still can, but `text` is the
+            # authoritative result.
             return RunResult(
                 text=final_text,
                 tool_calls=list(self._run_tool_calls),
-                error=f"reached tool-loop iteration cap ({iteration_cap}); response may be partial",
+                error=f"reached tool-loop iteration cap ({iteration_cap}); returned last partial response",
             )
         return RunResult(text=final_text, tool_calls=list(self._run_tool_calls))

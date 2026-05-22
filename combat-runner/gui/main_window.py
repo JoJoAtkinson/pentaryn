@@ -167,6 +167,8 @@ class _LLMReviewWorker(_LLMWorkerBase):
         affected: list[dict], roster: list[dict],
         applied_direction: str | None, applied_amount: int | None,
         log_tail: str, signals: _LLMWorkerSignals,
+        raw_amount: int | None = None,
+        id_fallbacks: list[dict] | None = None,
     ) -> None:
         super().__init__(controller, signals)
         self._raw = raw_command
@@ -176,6 +178,8 @@ class _LLMReviewWorker(_LLMWorkerBase):
         self._direction = applied_direction
         self._amount = applied_amount
         self._log_tail = log_tail
+        self._raw_amount = raw_amount
+        self._id_fallbacks = id_fallbacks or []
 
     def run(self) -> None:
         try:
@@ -188,6 +192,8 @@ class _LLMReviewWorker(_LLMWorkerBase):
                 applied_amount=self._amount,
                 log_tail=self._log_tail,
                 dispatch_fn=self._marshalled_dispatch,
+                raw_amount=self._raw_amount,
+                id_fallbacks=self._id_fallbacks,
             )
         except Exception as exc:  # noqa: BLE001
             from .llm_controller import RunResult  # local: cycle-breaker (llm_controller → main_window)
@@ -1521,6 +1527,7 @@ class MainWindow(QMainWindow):
                 return {
                     "hp": sum(nd.get("member_hp", []) or []),
                     "conditions": sorted(nd.get("conditions", []) or []),
+                    "condition_durations": dict(nd.get("condition_durations", {}) or {}),
                 }
         return None
 
@@ -1586,6 +1593,9 @@ class MainWindow(QMainWindow):
                 "max_hp": t.max_total_hp,
                 "conditions_before": before_state.get("conditions", []),
                 "conditions_after": sorted(t.conditions),
+                # G7: per-condition remaining durations so the review can flag
+                # an implausible duration (e.g. frightened for 90 rounds).
+                "durations_after": dict(t.condition_durations),
                 # GAP 2: immunities so the review can catch immunity errors.
                 "immunities": list(t.immunities),
             })
@@ -1607,6 +1617,29 @@ class MainWindow(QMainWindow):
                 applied_direction = eff.amount_tags.get("direction", "damage")
                 applied_amount = eff.amount
                 break
+
+        # G5: the RAW amount the DM literally typed, before the fast path
+        # capped/clamped it. The parser does not clamp, so this equals the
+        # first amount effect's `amount`; passing it distinctly lets the
+        # review sanity-check the typed number against target max HP even
+        # when the applied HP delta capped harmlessly.
+        raw_amount: int | None = applied_amount
+
+        # G8: flag any target id that did not cleanly resolve. A raw token of
+        # "0" resolves to the actor (self-fallback); any other token that maps
+        # to no combatant is a malformed-id fallback. `cmd.target_ids` carries
+        # the raw typed tokens; `_resolve_targets` already mapped them.
+        id_fallbacks: list[dict] = []
+        if not getattr(cmd, "use_current", False):
+            actor_id = actor.id if actor else ""
+            for token in getattr(cmd, "target_ids", []) or []:
+                if token == "0":
+                    id_fallbacks.append({
+                        "token": token,
+                        "resolved_to": actor_id or "(actor)",
+                    })
+                elif self.encounter_state.combatant_by_id(token) is None:
+                    id_fallbacks.append({"token": token, "resolved_to": "(unresolved)"})
 
         log_tail = self._last_log_tail(self.encounter_state.log_path, lines=8)
 
@@ -1635,6 +1668,8 @@ class MainWindow(QMainWindow):
             applied_amount=applied_amount,
             log_tail=log_tail or "",
             signals=signals,
+            raw_amount=raw_amount,
+            id_fallbacks=id_fallbacks,
         )
         self._llm_pool.start(worker)
 

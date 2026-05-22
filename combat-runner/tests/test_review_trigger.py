@@ -314,3 +314,103 @@ def test_noop_command_does_not_enqueue_review(window):
     assert enqueue_calls == [], (
         f"No-op command (empty target set) must not enqueue review, got {enqueue_calls}"
     )
+
+
+# ─────────── G3/G7/G8: enriched payload from _enqueue_review ───────────
+
+
+def _capture_controller(window):
+    """Attach a FakeController that records the review_command kwargs."""
+    captured: dict = {}
+
+    class FakeController:
+        def review_command(self, **kw):
+            captured.update(kw)
+            from gui.llm_controller import RunResult
+            return RunResult()
+
+    window._llm_controller = FakeController()
+    return captured
+
+
+def test_enqueue_review_carries_actor_and_per_combatant_kind(window):
+    """G2/G3 — the payload carries the acting combatant and each combatant's
+    allegiance (kind) so the review can reason about friendly fire."""
+    captured = _capture_controller(window)
+
+    cmd = parse("2 10 melee")
+    window._on_command(cmd)
+    window._llm_pool.waitForDone(5000)
+
+    assert captured, "review_command was never called"
+    # Actor is explicit with a kind.
+    assert captured["actor"]["id"] == "1"
+    assert "kind" in captured["actor"]
+    # Each affected combatant carries its kind.
+    assert all("kind" in a for a in captured["affected"])
+    # Roster carries kind for every combatant.
+    assert all("kind" in r for r in captured["roster"])
+
+
+def test_enqueue_review_carries_raw_amount(window):
+    """G5 — the raw amount the DM typed is passed distinctly."""
+    captured = _capture_controller(window)
+
+    cmd = parse("2 25 melee")
+    window._on_command(cmd)
+    window._llm_pool.waitForDone(5000)
+
+    assert captured, "review_command was never called"
+    assert captured["raw_amount"] == 25
+
+
+def test_enqueue_review_carries_condition_durations(window):
+    """G7 — each affected target's condition durations ride in `affected`."""
+    captured = _capture_controller(window)
+
+    # Pre-seed an implausible duration on the target, then issue a mutating
+    # command so _enqueue_review snapshots the live condition_durations map.
+    target = window.encounter_state.combatant_by_id("2")
+    target.condition_durations["frightened"] = 90
+    target.conditions.add("frightened")
+
+    cmd = parse("2 @prone")
+    window._on_command(cmd)
+    window._llm_pool.waitForDone(5000)
+
+    assert captured, "review_command was never called"
+    affected = captured["affected"]
+    a = next(x for x in affected if x["id"] == "2")
+    assert "durations_after" in a
+    assert a["durations_after"].get("frightened") == 90
+
+
+def test_enqueue_review_flags_malformed_id_fallback(window):
+    """G8 — a command using id `0` (resolves to actor-self) surfaces an
+    id-resolution fallback flag in the payload."""
+    captured = _capture_controller(window)
+
+    cmd = parse("0 @bloodied")
+    assert cmd.target_ids == ["0"], f"precondition: {cmd.target_ids}"
+    window._on_command(cmd)
+    window._llm_pool.waitForDone(5000)
+
+    assert captured, "review_command was never called"
+    fallbacks = captured.get("id_fallbacks") or []
+    assert any(fb["token"] == "0" for fb in fallbacks), (
+        f"id 0 must be flagged as a fallback, got {fallbacks}"
+    )
+
+
+def test_enqueue_review_no_id_fallback_for_clean_ids(window):
+    """G8 — a command with a valid explicit id carries no fallback flag."""
+    captured = _capture_controller(window)
+
+    cmd = parse("2 10 melee")
+    window._on_command(cmd)
+    window._llm_pool.waitForDone(5000)
+
+    assert captured, "review_command was never called"
+    assert not (captured.get("id_fallbacks") or []), (
+        "a clean valid id must not be flagged as a fallback"
+    )
