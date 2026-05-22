@@ -508,6 +508,36 @@ def serialize_encounter(es: EncounterState) -> dict[str, Any]:
     }
 
 
+def _deserialize_pending(entry: Any) -> Any:
+    """Rebuild a serialized pending-effect entry into a ``PendingEffect``.
+
+    ``serialize_encounter`` emits each ``PendingEffect`` as a dict; without
+    this step they would round-trip as raw dicts and crash ``apply_hit`` /
+    ``dataclasses.asdict`` later. The ``PendingEffect`` import is local to
+    avoid an import cycle (``history.py`` imports ``state.py``).
+
+    Entries that are already ``PendingEffect`` instances pass through. A dict
+    missing any required key raises ``ValueError``.
+    """
+    from gui.history import PendingEffect
+
+    if isinstance(entry, PendingEffect):
+        return entry
+    if isinstance(entry, dict):
+        required = ("combatant_id", "full_amount", "applied_amount", "kind")
+        for key in required:
+            if key not in entry:
+                raise ValueError(f"pending_effect dict missing required key {key!r}")
+        return PendingEffect(
+            combatant_id=str(entry["combatant_id"]),
+            full_amount=int(entry["full_amount"]),
+            applied_amount=int(entry["applied_amount"]),
+            kind=str(entry["kind"]),
+            resolved=bool(entry.get("resolved", False)),
+        )
+    raise ValueError(f"pending_effect entry must be a dict or PendingEffect, got {type(entry).__name__}")
+
+
 def deserialize_encounter(d: dict[str, Any]) -> EncounterState:
     """Reconstruct an EncounterState from a serialized dict. Raises on any
     validation failure; callers should catch and present the error to the LLM."""
@@ -530,7 +560,9 @@ def deserialize_encounter(d: dict[str, Any]) -> EncounterState:
         active_tab_index=int(d.get("active_tab_index", 0)),
         created_at=created,
         current_target=list(d.get("current_target", []) or []),
-        pending_effects=list(d.get("pending_effects", []) or []),
+        pending_effects=[
+            _deserialize_pending(e) for e in (d.get("pending_effects", []) or [])
+        ],
     )
     if es.active_tab_index < 0 or es.active_tab_index >= len(es.npcs):
         # Clamp rather than raise (LLM-friendly).

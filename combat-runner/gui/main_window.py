@@ -686,42 +686,13 @@ class MainWindow(QMainWindow):
             )
             return
 
-        # In-place patch — copy every NPCState field from the snapshot so new
-        # fields (e.g. in_melee, pinned_notes) can never silently drift.
-        #
-        # Fields intentionally NOT restored:
-        #   slug  — identity key, must match the existing NPC to reach this path
-        #   name  — display name lives on the tab widget, not worth stomping
-        #   kind  — pc/npc distinction is structural, not mid-combat state
-        #   id    — combatant id is assigned at launch, not per-snapshot
-        #   max_hp — base stat; an in-combat temp-HP change would be in member_hp
-        #   ac, speed, cr, immunities — static stats, not combat state
-        _SKIP_FIELDS = frozenset({
-            "slug", "name", "kind", "id",
-            "max_hp", "ac", "speed", "cr", "immunities",
-        })
-        by_slug = {n.slug: n for n in restored.npcs}
-        for npc in self.encounter_state.npcs:
-            src = by_slug[npc.slug]
-            for f in dataclasses.fields(NPCState):
-                if f.name in _SKIP_FIELDS:
-                    continue
-                val = getattr(src, f.name)
-                # Copy mutable containers so live state isn't aliased to the
-                # deserialized snapshot object (which will be GC'd shortly).
-                if isinstance(val, list):
-                    val = list(val)
-                elif isinstance(val, dict):
-                    val = dict(val)
-                elif isinstance(val, set):
-                    val = set(val)
-                setattr(npc, f.name, val)
-        self.encounter_state.round_num = restored.round_num
-        self.round_btn.setText(self._round_btn_text())
-        for i in range(self.tabs.count()):
-            t = self.tabs.widget(i)
-            if isinstance(t, NPCTab):
-                t.refresh()
+        # Full in-place restore — NPC fields, round_num, current_target,
+        # pending_effects, active_tab_index, and the targeting arrow — via the
+        # shared helper (also used by `_apply_undo`). Static stats (slug, kind,
+        # id, max_hp, ac, …) are copied too, but for a matching-slug snapshot
+        # they are identical to the live values, so the copy is a no-op.
+        self._restore_encounter_state(restored)
+        self._repaint_all_tabs()
         self.statusBar().showMessage(f"Loaded {Path(path).name} (round {restored.round_num})", 5000)
 
     # ─────────── watch / broadcast suggestions ───────────
@@ -1023,15 +994,36 @@ class MainWindow(QMainWindow):
             return
 
         # Snapshot BEFORE any mutation so `undo` can restore this exact state.
+        # Invariant: exactly ONE snapshot per *mutating* `_on_command` — the
+        # double-`undo()` logic in `_apply_undo` depends on it. We snapshot
+        # eagerly here, then discard it below if the command turned out to be a
+        # genuine no-op (e.g. an unknown-condition `command`). A bare
+        # `set_target` IS a mutating command per the spec (it changes
+        # `current_target`) — it is kept undoable, so its snapshot is retained.
+        before = serialize_encounter(self.encounter_state)
         self.undo_stack.snapshot(self.encounter_state)
+
+        # A command containing an `undo` effect mutates the undo stack itself;
+        # never discard its snapshot (the state-diff check would be unreliable
+        # once `_apply_undo` has rewritten the stack).
+        has_undo_effect = cmd.kind == "command" and any(
+            e.kind == "undo" for e in cmd.effects
+        )
 
         if cmd.kind == "set_target":
             self._handle_set_target(cmd)
+        elif cmd.kind == "command":
+            self._handle_command(cmd)
+        else:
             return
 
-        if cmd.kind == "command":
-            self._handle_command(cmd)
-            return
+        # Discard the snapshot if nothing actually changed — keeps the
+        # one-snapshot-per-mutation invariant. `set_target` and `undo`-bearing
+        # commands are always treated as mutating.
+        if cmd.kind != "set_target" and not has_undo_effect:
+            after = serialize_encounter(self.encounter_state)
+            if after == before:
+                self.undo_stack.discard_last()
 
     def _resolve_targets(self, cmd: ParsedCommand) -> list[str]:
         """Resolve a ParsedCommand's <who> into concrete combatant id strings.
@@ -1120,20 +1112,19 @@ class MainWindow(QMainWindow):
         self._refresh_target_arrow()
         self._auto_save()
 
-    def _apply_undo(self) -> None:
-        """Pop the undo stack and swap the restored state in."""
-        # The current command's own pre-snapshot is on top; discard it so
-        # `undo` reverts the PREVIOUS command, not this no-op one.
-        self.undo_stack.undo()
-        restored = self.undo_stack.undo()
-        if restored is None:
-            self._append_to_active_tab(
-                "<span style='color:#ff9800'>nothing to undo</span>"
-            )
-            return
-        # Patch the live EncounterState's NPC field values in place so tab
-        # widgets (which hold references to the live NPCState objects) stay
-        # valid. Slugs are stable, so match by slug.
+    def _restore_encounter_state(self, restored: EncounterState) -> None:
+        """Fully swap a restored EncounterState into the live one.
+
+        Shared by `_apply_undo` and `_load_snapshot`. Patches NPC field values
+        in place (so tab widgets, which hold references to the live NPCState
+        objects, stay valid — match by slug), then restores the cross-tab
+        state: `round_num`, `current_target`, `pending_effects`, and
+        `active_tab_index` (bounds-checked). Finally refreshes the targeting
+        arrow so a restored `current_target` repaints correctly.
+
+        Callers are responsible for repainting tabs and any caller-specific
+        skip-field policy on the NPC patch (this helper copies every field).
+        """
         by_slug = {n.slug: n for n in restored.npcs}
         for npc in self.encounter_state.npcs:
             src = by_slug.get(npc.slug)
@@ -1151,9 +1142,28 @@ class MainWindow(QMainWindow):
         self.encounter_state.round_num = restored.round_num
         self.encounter_state.current_target = list(restored.current_target)
         self.encounter_state.pending_effects = list(restored.pending_effects)
+        # Restore the active tab (part of EncounterState; bounds-checked since
+        # the restored index may exceed the current tab count).
+        idx = restored.active_tab_index
+        if 0 <= idx < self.tabs.count():
+            self.encounter_state.active_tab_index = idx
+            self.tabs.setCurrentIndex(idx)
         self.round_btn.setText(self._round_btn_text())
-        self._repaint_all_tabs()
         self._refresh_target_arrow()
+
+    def _apply_undo(self) -> None:
+        """Pop the undo stack and swap the restored state in."""
+        # The current command's own pre-snapshot is on top; discard it so
+        # `undo` reverts the PREVIOUS command, not this no-op one.
+        self.undo_stack.undo()
+        restored = self.undo_stack.undo()
+        if restored is None:
+            self._append_to_active_tab(
+                "<span style='color:#ff9800'>nothing to undo</span>"
+            )
+            return
+        self._restore_encounter_state(restored)
+        self._repaint_all_tabs()
         self._append_to_active_tab(
             "<span style='color:#66bb6a'>↶ undo — reverted last command</span>"
         )

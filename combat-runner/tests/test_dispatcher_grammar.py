@@ -85,3 +85,43 @@ def test_condition_at_escape_hatch():
 
 def test_garbage_is_unparseable():
     assert parse("hello there friend").kind == "unparseable"
+
+
+# ─── bounds checks (A1-H2 / A2-H4) ────────────────────────────────────────
+
+def test_amount_at_upper_bound_parses():
+    c = parse("2 1000 fire")
+    assert c.kind == "command" and _eff(c, 0).amount == 1000
+
+
+def test_amount_over_bound_is_unparseable():
+    """A fat-fingered `2 999999 fire` must NOT silently nuke a combatant —
+    route it to the LLM fallback instead."""
+    c = parse("2 999999 fire")
+    assert c.kind == "unparseable"
+    assert c.effects == []
+
+
+def test_amount_zero_is_unparseable():
+    # 0 damage is below the sane minimum of 1.
+    assert parse("2 0 fire").kind == "unparseable"
+
+
+def test_duration_at_upper_bound_parses():
+    c = parse("3 100 stun")
+    assert c.kind == "command" and _eff(c, 0).duration == 100
+
+
+def test_duration_over_bound_is_unparseable():
+    c = parse("3 999999 stun")
+    assert c.kind == "unparseable"
+    assert c.effects == []
+
+
+def test_duration_zero_still_parses_as_condition():
+    """`3 0 stun` is a valid 'default duration' spelling — NOT rejected by the
+    bounds check. effects.py normalizes the 0 to 1 round."""
+    c = parse("3 0 stun")
+    assert c.kind == "command"
+    e = _eff(c, 0)
+    assert e.kind == "condition" and e.condition == "stun" and e.duration == 0

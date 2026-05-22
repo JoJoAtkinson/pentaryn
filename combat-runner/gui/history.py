@@ -32,3 +32,16 @@ class UndoStack:
         if not self._snapshots:
             return None
         return deserialize_encounter(self._snapshots.pop())
+
+    def discard_last(self) -> None:
+        """Drop the most recent snapshot without rebuilding it.
+
+        Used to undo a `snapshot()` call for a command that turned out to be a
+        no-op — keeping the invariant 'one snapshot per *mutating* command'.
+        """
+        if self._snapshots:
+            self._snapshots.pop()
+
+    def peek(self) -> dict | None:
+        """Return the most recent snapshot dict (not popped). None if empty."""
+        return self._snapshots[-1] if self._snapshots else None

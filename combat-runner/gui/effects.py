@@ -159,7 +159,11 @@ def _apply_condition(
         return [f"warn: unknown condition {effect.condition!r}"]
 
     # duration to apply when toggling ON.  Default is 1 round.
-    applied_duration = effect.duration if effect.duration is not None else 1
+    # A duration of None OR <= 0 (e.g. a parsed `3 0 stun`) is treated as the
+    # 1-round default — toggle_condition's `> 0` guard would otherwise drop a
+    # 0 silently and make the condition permanent.
+    _dur = effect.duration
+    applied_duration = _dur if (_dur is not None and _dur > 0) else 1
 
     for cid in target_ids:
         combatant = state.combatant_by_id(cid)
