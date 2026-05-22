@@ -13,6 +13,8 @@ Sigil-first, fast-path-friendly:
   note ...        → DM log entry (no LLM)
   /reorder a b c  → reorder tabs
   /quit | /exit   → close session (handled by main window)
+  44 10 fire      → directed damage to combatant id 44 with type tag
+  44              → jump to combatant id 44's tab
   <free form>     → fall through to LLM
 
 All parsing is regex-based; no LLM call from this module. The dispatcher
@@ -266,8 +268,7 @@ class Dispatcher:
         rest = tokens[1:]  # everything after the id
 
         # Optional mob member: m<n>
-        if rest and _DIRECTED_MOB_RE.match(rest[0]):
-            m = _DIRECTED_MOB_RE.match(rest[0])
+        if rest and (m := _DIRECTED_MOB_RE.match(rest[0])):
             result.target_member = int(m.group(1))
             rest = rest[1:]
 
@@ -276,14 +277,14 @@ class Dispatcher:
             result.kind = InputKind.JUMP
             return result
 
-        # Amount must be a positive integer
+        # Amount must be a non-negative integer (0 is valid)
         try:
             result.amount = int(rest[0])
             if result.amount < 0:
                 raise ValueError
-        except (ValueError, IndexError):
+        except ValueError:
             result.kind = InputKind.UNKNOWN
-            result.raw = s
+            result.target_id = None
             return result
 
         rest = rest[1:]
