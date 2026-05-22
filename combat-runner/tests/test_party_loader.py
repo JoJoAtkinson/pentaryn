@@ -40,6 +40,12 @@ def test_missing_file_raises(tmp_path):
     with pytest.raises(ValueError, match="Cannot read"):
         load_party_config(tmp_path / "nonexistent.yml")
 
+def test_empty_id_raises(tmp_path):
+    p = tmp_path / "bad.yml"
+    p.write_text('party: X\nplayers:\n  - { name: Y, id: "", max_hp: 10, ac: 12 }\n')
+    with pytest.raises(ValueError, match="empty id"):
+        load_party_config(p)
+
 def test_real_roster_file():
     """The committed world/party/black-ledger/roster loads correctly."""
     repo_root = Path(__file__).resolve().parents[2]

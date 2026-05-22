@@ -174,6 +174,8 @@ def load_party_config(path: Path) -> dict:
         missing = required_keys - set(p.keys())
         if missing:
             raise ValueError(f"{path}: player {i} missing keys: {missing}")
+        if not str(p.get("id", "")).strip():
+            raise ValueError(f"{path}: player {i} has an empty id")
         if not isinstance(p.get("max_hp"), int):
             raise ValueError(f"{path}: player {i} max_hp must be an integer")
         if not isinstance(p.get("ac"), int):
