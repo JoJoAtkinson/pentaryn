@@ -95,35 +95,54 @@ def _apply_amount(
             fragments.append(f"warn: no combatant with id {cid!r}")
             continue
 
-        if is_heal:
-            delta = combatant.apply_heal(effect.amount, member=effect.member)
+        # Resolve the member list to iterate over.
+        # members is None  → default routing (one call, member=None).
+        # members == []    → all alive members (AoE: full amount to each).
+        # members == [1,2] → explicit set (full amount to each listed member).
+        members = effect.members
+        if members is None:
+            member_targets: list[int | None] = [None]
+        elif members == []:
+            member_targets = list(combatant.alive_member_indices())  # type: ignore[assignment]
+            if not member_targets:
+                fragments.append(
+                    f"warn: {combatant.name}: no alive members to target"
+                )
+                continue
         else:
-            delta = combatant.apply_damage(effect.amount, member=effect.member)
+            member_targets = list(members)  # type: ignore[assignment]
 
-        # A skipped result (out-of-range mob member, dead member, no alive
-        # members) is a no-op: surface it as a warning so the caller does NOT
-        # treat it as an applied effect (e.g. fires no bus events).
-        if delta.get("skipped"):
-            member_label = f" m{effect.member}" if effect.member is not None else ""
-            fragments.append(
-                f"warn: {combatant.name}{member_label}: no such target "
-                f"({delta['skipped']})"
-            )
-            continue
+        for member in member_targets:
+            if is_heal:
+                delta = combatant.apply_heal(effect.amount, member=member)
+            else:
+                delta = combatant.apply_damage(effect.amount, member=member)
 
-        before, after = delta.get("before", 0), delta.get("after", 0)
-        if is_heal:
-            fragments.append(
-                f"{combatant.name} healed {effect.amount} "
-                f"({before} → {after} HP)"
-            )
-        else:
-            tag_str = f" [{damage_type}]" if damage_type else ""
-            suffix = " (killed)" if delta.get("killed") else ""
-            fragments.append(
-                f"{combatant.name} took {effect.amount}{tag_str} damage "
-                f"({before} → {after} HP){suffix}"
-            )
+            # A skipped result (out-of-range mob member, dead member, no alive
+            # members) is a no-op: surface it as a warning so the caller does NOT
+            # treat it as an applied effect (e.g. fires no bus events).
+            if delta.get("skipped"):
+                member_label = f" m{member}" if member is not None else ""
+                fragments.append(
+                    f"warn: {combatant.name}{member_label}: no such target "
+                    f"({delta['skipped']})"
+                )
+                continue
+
+            before, after = delta.get("before", 0), delta.get("after", 0)
+            member_label = f" m{member}" if member is not None else ""
+            if is_heal:
+                fragments.append(
+                    f"{combatant.name}{member_label} healed {effect.amount} "
+                    f"({before} → {after} HP)"
+                )
+            else:
+                tag_str = f" [{damage_type}]" if damage_type else ""
+                suffix = " (killed)" if delta.get("killed") else ""
+                fragments.append(
+                    f"{combatant.name}{member_label} took {effect.amount}{tag_str} damage "
+                    f"({before} → {after} HP){suffix}"
+                )
 
     return fragments
 
@@ -174,11 +193,28 @@ def _apply_condition(
             {},
         )
 
-    # duration to apply when toggling ON.  Default is 1 round.
-    # A duration of None OR <= 0 (e.g. a parsed `3 0 stun`) is treated as the
-    # 1-round default — toggle_condition's `> 0` guard would otherwise drop a
-    # 0 silently and make the condition permanent.
+    # CHANGE 2 — reject member-scoped conditions.
+    # `m2 prone` is not supported: conditions apply to the whole mob/tab.
+    # If effect.members is not None, an m<...> modifier was attached.
+    if effect.members is not None:
+        return (
+            [
+                f"warn: conditions apply to the whole mob — "
+                f"drop the m<n> (e.g. just '{effect.condition}')"
+            ],
+            {},
+        )
+
+    # CHANGE 3 — duration refresh vs. toggle-off semantics.
+    # When a duration is given: ALWAYS ensure the condition is present with that
+    # duration.  If already present, REFRESH the duration (don't toggle off).
+    # When no duration is given (bare condition word): keep the classic toggle.
     _dur = effect.duration
+    has_duration = _dur is not None
+
+    # Normalize: a duration of 0 or None (no number given) uses the 1-round
+    # default for "add with duration" path.  For the toggle-off path it doesn't
+    # matter.
     applied_duration = _dur if (_dur is not None and _dur > 0) else 1
 
     for cid in target_ids:
@@ -187,13 +223,31 @@ def _apply_condition(
             fragments.append(f"warn: no combatant with id {cid!r}")
             continue
 
-        now_active = combatant.toggle_condition(canonical, duration=applied_duration)
-        per_target_applied[cid] = now_active
-        if now_active:
-            dur_str = f" ({applied_duration}r)" if applied_duration else ""
-            fragments.append(f"{combatant.name} → {canonical}{dur_str}")
+        if has_duration:
+            # Duration given → ensure condition is present with this duration.
+            if canonical in combatant.conditions:
+                # Already present: REFRESH the duration (don't remove it).
+                combatant.condition_durations[canonical] = applied_duration
+                now_active = True
+                per_target_applied[cid] = True
+                dur_str = f" ({applied_duration}r)"
+                fragments.append(f"{combatant.name} → {canonical}{dur_str} (refreshed)")
+            else:
+                # Not present: add it with the duration.
+                combatant.add_condition(canonical, duration=applied_duration)
+                now_active = True
+                per_target_applied[cid] = True
+                dur_str = f" ({applied_duration}r)"
+                fragments.append(f"{combatant.name} → {canonical}{dur_str}")
         else:
-            fragments.append(f"{combatant.name} ← {canonical} removed")
+            # No duration given → classic toggle behavior.
+            now_active = combatant.toggle_condition(canonical, duration=applied_duration)
+            per_target_applied[cid] = now_active
+            if now_active:
+                dur_str = f" ({applied_duration}r)" if applied_duration else ""
+                fragments.append(f"{combatant.name} → {canonical}{dur_str}")
+            else:
+                fragments.append(f"{combatant.name} ← {canonical} removed")
 
     return fragments, per_target_applied
 
