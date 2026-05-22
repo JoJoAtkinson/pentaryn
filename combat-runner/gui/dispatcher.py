@@ -30,9 +30,9 @@ import re
 from .command_model import Effect, ParsedCommand
 from .command_tags import resolve_tags
 from .state import canonicalize_condition
+from .targeting import _ALL_DIGITS as _NUMBER_RE
 from .targeting import classify_who
 
-_NUMBER_RE = re.compile(r"^\d+$")
 _MOB_RE = re.compile(r"^m([1-9]\d*)$", re.IGNORECASE)
 
 # Sane bounds — a fat-fingered `2 999999 fire` or a giant condition duration is
