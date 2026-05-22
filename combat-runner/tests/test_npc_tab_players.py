@@ -241,6 +241,57 @@ def test_mixed_notes_only_public_shown(qtbot, pc_state):
 
 
 # ─────────────────────────────────────────────────────
+# Fix 1: Disengage-active Retreat clears in_melee
+# ─────────────────────────────────────────────────────
+
+def test_retreat_disengage_active_clears_in_melee(qtbot, pc_state):
+    """Retreat while _disengaging is set must clear in_melee even though no
+    move_away event fires (the early-return path)."""
+    from gui.event_bus import EventBus
+    from gui.npc_tab import NPCTab
+
+    bus = EventBus()
+    received = []
+    bus.subscribe("move_away", received.append)
+
+    pc_state.in_melee = True
+    pc_state.pinned_notes = ["_disengaging"]
+    tab = NPCTab(npc_state=pc_state, actions=[], log_path=Path("/tmp/log.md"),
+                 event_bus=bus)
+    qtbot.addWidget(tab)
+
+    tab._player_action_retreat()
+
+    assert pc_state.in_melee is False, "Disengage-active Retreat must set in_melee=False"
+    assert received == [], "Disengage-active Retreat must not fire move_away event"
+
+
+# ─────────────────────────────────────────────────────
+# Generic player actions emit state_changed / write log
+# ─────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("action_name", ["Attack", "Dash", "Help", "Hide", "Ready"])
+def test_generic_player_action_emits_state_changed(qtbot, pc_state, action_name):
+    """Generic player actions (Attack, Dash, Help, Hide, Ready) go through
+    _on_player_action, emit state_changed, and write a log line without error."""
+    from gui.npc_tab import NPCTab
+
+    tab = NPCTab(npc_state=pc_state, actions=[], log_path=Path("/tmp/log.md"))
+    qtbot.addWidget(tab)
+
+    state_changed_count = []
+    tab.state_changed.connect(lambda: state_changed_count.append(1))
+
+    tab._on_player_action(action_name)
+
+    assert len(state_changed_count) == 1, (
+        f"{action_name}: expected state_changed to fire exactly once"
+    )
+    log_html = tab.log_view.toHtml()
+    assert action_name in log_html, f"{action_name}: expected action name in combat log"
+
+
+# ─────────────────────────────────────────────────────
 # NPC tabs must not regress
 # ─────────────────────────────────────────────────────
 
