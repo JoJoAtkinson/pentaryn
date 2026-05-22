@@ -221,12 +221,18 @@ def test_noop_command_does_not_enqueue_review(window):
     )
     assert cmd.use_current is True, "Precondition: leading-space grammar must use_current"
 
-    before_serialized = window.encounter_state.npcs[0].hp
+    before_hp = window.encounter_state.npcs[0].hp
+    before_stack_depth = len(window.undo_stack._snapshots)
 
     window._on_command(cmd)
 
     # State unchanged — no target resolved, no HP moved.
-    assert window.encounter_state.npcs[0].hp == before_serialized
+    assert window.encounter_state.npcs[0].hp == before_hp
+    # No-op: the eager snapshot must have been discarded (discard_last called).
+    assert len(window.undo_stack._snapshots) == before_stack_depth, (
+        f"No-op command must not leave an undo snapshot; "
+        f"stack depth was {before_stack_depth}, now {len(window.undo_stack._snapshots)}"
+    )
     assert enqueue_calls == [], (
         f"No-op command (empty target set) must not enqueue review, got {enqueue_calls}"
     )
