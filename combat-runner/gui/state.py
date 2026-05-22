@@ -602,6 +602,7 @@ def _deserialize_pending(entry: Any) -> Any:
         for key in required:
             if key not in entry:
                 raise ValueError(f"pending_effect dict missing required key {key!r}")
+        raw_member = entry.get("member")
         return PendingEffect(
             combatant_id=str(entry["combatant_id"]),
             full_amount=int(entry["full_amount"]),
@@ -610,6 +611,7 @@ def _deserialize_pending(entry: Any) -> Any:
             resolved=bool(entry.get("resolved", False)),
             source=str(entry.get("source", "")),
             round=int(entry.get("round", 0)),
+            member=int(raw_member) if raw_member is not None else None,
         )
     raise ValueError(f"pending_effect entry must be a dict or PendingEffect, got {type(entry).__name__}")
 

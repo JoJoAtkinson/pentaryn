@@ -2,7 +2,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from gui.state import EncounterState, deserialize_encounter, serialize_encounter
+
+from .state import EncounterState, deserialize_encounter, serialize_encounter
+
+# Maximum number of undo snapshots retained; older snapshots are evicted FIFO.
+_DEFAULT_UNDO_CAP = 50
 
 
 @dataclass
@@ -21,12 +25,13 @@ class PendingEffect:
     resolved: bool = False
     source: str = ""     # action name that created this pending effect
     round: int = 0       # encounter round the effect was created in
+    member: int | None = None  # mob-member index (1-indexed) the effect targets
 
 
 class UndoStack:
     """Memento undo: a LIFO of full encounter snapshots (serialized dicts)."""
 
-    def __init__(self, cap: int = 50) -> None:
+    def __init__(self, cap: int = _DEFAULT_UNDO_CAP) -> None:
         self._cap = cap
         self._snapshots: list[dict] = []
 

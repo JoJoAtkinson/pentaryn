@@ -11,15 +11,9 @@ combatant id strings (no ``"0"`` / ``use_current`` placeholders).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from gui.state import EncounterState, NPCState, canonicalize_condition
-from gui.command_model import Effect
-from gui.history import PendingEffect
-
-if TYPE_CHECKING:
-    pass  # actor type hint only; NPCState already imported above
-
+from .command_model import Effect
+from .history import PendingEffect
+from .state import EncounterState, NPCState, canonicalize_condition
 
 # ─── public API ──────────────────────────────────────────────────────────────
 
@@ -258,6 +252,7 @@ def apply_uncertain_damage(
             resolved=False,
             source=source,
             round=state.round_num if round_num is None else round_num,
+            member=member,
         )
     )
     return fragments
@@ -332,7 +327,7 @@ def apply_hit(
 
         remaining = pending.full_amount - pending.applied_amount
         if remaining > 0:
-            delta = combatant.apply_damage(remaining)
+            delta = combatant.apply_damage(remaining, member=pending.member)
             before, after = delta.get("before", 0), delta.get("after", 0)
             suffix = " (killed)" if delta.get("killed") else ""
             fragments.append(
