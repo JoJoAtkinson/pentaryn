@@ -1052,6 +1052,25 @@ class MainWindow(QMainWindow):
             after = serialize_encounter(self.encounter_state)
             if after == before:
                 self.undo_stack.discard_last()
+            else:
+                # Re-wire: the old npc_tab dispatch path emitted review_needed
+                # for every state-changing command. That signal path was removed
+                # with the grammar rewrite. Call _enqueue_review directly here
+                # so the always-on async LLM review fires on every real mutation.
+                # Undo commands are excluded (reviewing a revert has no value).
+                if not has_undo_effect:
+                    actor = self.encounter_state.active_npc
+                    ids = self._resolve_targets(cmd)
+                    target = (
+                        self.encounter_state.combatant_by_id(ids[0])
+                        if ids else None
+                    ) or actor
+                    if target is not None:
+                        self._enqueue_review(
+                            cmd.raw, actor, target,
+                            applied_direction=None,
+                            applied_amount=None,
+                        )
 
     def _resolve_targets(self, cmd: ParsedCommand) -> list[str]:
         """Resolve a ParsedCommand's <who> into concrete combatant id strings.
