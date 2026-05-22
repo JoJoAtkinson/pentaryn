@@ -16,10 +16,9 @@ from __future__ import annotations
 
 import re
 
-from PySide6.QtCore import Qt, Signal, QStringListModel
+from PySide6.QtCore import QStringListModel, Qt, Signal
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QCompleter, QLineEdit, QWidget
-
 
 # Standard 5e conditions + a few we track ourselves (bloodied, dodging).
 # Sorted alphabetically; user types `@b` and gets blinded / bloodied.

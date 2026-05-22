@@ -20,12 +20,11 @@ import sys
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
-from PySide6.QtCore import Qt, QEvent, QObject, QRunnable, QThreadPool, Signal
+from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal
 from PySide6.QtGui import QAction, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
-    QApplication,
     QFileDialog,
     QLabel,
     QMainWindow,
@@ -36,8 +35,6 @@ from PySide6.QtWidgets import (
     QToolBar,
     QWidget,
 )
-
-from .state import deserialize_encounter, serialize_encounter
 
 from .event_bus import (
     Event,
@@ -50,12 +47,11 @@ from .event_bus import (
     round_event,
 )
 from .npc_tab import NPCTab
-from .state import EncounterState, NPCState
+from .state import EncounterState, NPCState, deserialize_encounter, serialize_encounter
 from .suggestion_driver import SuggestionDriver
 from .widgets.reaction_prompt import ReactionPromptDialog
 from .widgets.srd_panel import build_srd_dock
 from .widgets.suggestion_bar import Suggestion
-
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -985,7 +981,7 @@ class MainWindow(QMainWindow):
         # Fire events
         if self.event_bus:
             if direction == "damage":
-                from .event_bus import damage_event, bloodied_event, death_event
+                from .event_bus import bloodied_event, damage_event, death_event
                 self.event_bus.emit(damage_event(
                     target.slug, amount, damage_type=dtype,
                     melee=(delivery == "melee"), ranged=(delivery == "ranged"),

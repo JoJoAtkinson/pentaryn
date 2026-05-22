@@ -34,7 +34,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _EXCLUDED_PATH_PARTS = {".history", ".cache", ".output", "image", "images"}
 _COMBAT_TAG = "#combat-runner"

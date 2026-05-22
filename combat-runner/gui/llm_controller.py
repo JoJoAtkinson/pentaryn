@@ -27,7 +27,7 @@ import json
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from .state import (
     EncounterState,
@@ -36,7 +36,6 @@ from .state import (
     state_schema,
 )
 from .widgets.suggestion_bar import Suggestion
-
 
 logger = logging.getLogger(__name__)
 

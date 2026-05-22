@@ -19,7 +19,6 @@ from PySide6.QtWidgets import (
     QGridLayout,
     QLabel,
     QMenu,
-    QMessageBox,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
