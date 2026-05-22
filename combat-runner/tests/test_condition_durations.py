@@ -19,7 +19,7 @@ def test_parses_num_before_condition_as_duration():
     assert c.kind == "command"
     eff = c.effects[0]
     assert eff.kind == "condition"
-    assert eff.condition == "stun"
+    assert eff.condition == "stunned"
     assert eff.duration == 5
 
 

@@ -36,7 +36,7 @@ def test_amount_with_tags():
 def test_condition_with_duration():
     c = parse("3 2 stun")
     e = _eff(c, 0)
-    assert e.kind == "condition" and e.condition == "stun" and e.duration == 2
+    assert e.kind == "condition" and e.condition == "stunned" and e.duration == 2
 
 
 def test_condition_no_duration_defaults_none():
@@ -124,4 +124,54 @@ def test_duration_zero_still_parses_as_condition():
     c = parse("3 0 stun")
     assert c.kind == "command"
     e = _eff(c, 0)
-    assert e.kind == "condition" and e.condition == "stun" and e.duration == 0
+    assert e.kind == "condition" and e.condition == "stunned" and e.duration == 0
+
+
+# ─── single-canonicalization table (fix for condition-drift bug) ────────────
+
+
+def test_charm_parses_to_canonical():
+    """`3 charm` must parse with the canonical name 'charmed', not 'charm'."""
+    c = parse("3 charm")
+    assert c.kind == "command"
+    e = _eff(c, 0)
+    assert e.kind == "condition" and e.condition == "charmed"
+
+
+def test_deafen_parses_to_canonical():
+    """`3 deafen` must parse with the canonical name 'deafened', not 'deafen'."""
+    c = parse("3 deafen")
+    assert c.kind == "command"
+    e = _eff(c, 0)
+    assert e.kind == "condition" and e.condition == "deafened"
+
+
+def test_stun_parses_to_canonical():
+    """`3 stun` must parse with the canonical name 'stunned'."""
+    c = parse("3 stun")
+    assert c.kind == "command"
+    e = _eff(c, 0)
+    assert e.kind == "condition" and e.condition == "stunned"
+
+
+def test_prone_parses_to_canonical():
+    """`3 prone` parses to the full canonical name 'prone' (unchanged)."""
+    c = parse("3 prone")
+    assert c.kind == "command"
+    e = _eff(c, 0)
+    assert e.kind == "condition" and e.condition == "prone"
+
+
+def test_grapple_parses_to_canonical():
+    """`3 grapple` must parse with the canonical name 'grappled'."""
+    c = parse("3 grapple")
+    assert c.kind == "command"
+    e = _eff(c, 0)
+    assert e.kind == "condition" and e.condition == "grappled"
+
+
+def test_at_notacondition_is_unparseable():
+    """`@notacondition` with the @ sigil but unknown word must be unparseable,
+    not a silent no-op (the @ sigil signals explicit condition intent)."""
+    c = parse("3 @notacondition")
+    assert c.kind == "unparseable"

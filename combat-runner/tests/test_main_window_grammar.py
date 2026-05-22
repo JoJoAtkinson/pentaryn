@@ -238,3 +238,68 @@ def test_unparseable_routes_to_llm_fallback(window):
     finally:
         window._on_llm_fallback = orig  # type: ignore
     assert received and "do something weird" in received[0]
+
+
+# ─────────────────────────── condition canonicalization ─────────────────────
+
+
+def test_charm_applies_via_grammar(window):
+    """`1 charm` must apply the 'charmed' condition (not silently fail)."""
+    window.tabs.setCurrentIndex(0)
+    _submit(window, "1 charm")
+    one = window.encounter_state.combatant_by_id("1")
+    assert "charmed" in one.conditions
+
+
+def test_deafen_applies_via_grammar(window):
+    """`1 deafen` must apply the 'deafened' condition (not silently fail)."""
+    window.tabs.setCurrentIndex(0)
+    _submit(window, "1 deafen")
+    one = window.encounter_state.combatant_by_id("1")
+    assert "deafened" in one.conditions
+
+
+def test_stun_applies_via_grammar(window):
+    """`1 stun` must apply the 'stunned' condition."""
+    window.tabs.setCurrentIndex(0)
+    _submit(window, "1 stun")
+    one = window.encounter_state.combatant_by_id("1")
+    assert "stunned" in one.conditions
+
+
+def test_prone_applies_via_grammar(window):
+    """`1 prone` must apply the 'prone' condition."""
+    window.tabs.setCurrentIndex(0)
+    _submit(window, "1 prone")
+    one = window.encounter_state.combatant_by_id("1")
+    assert "prone" in one.conditions
+
+
+def test_grapple_applies_via_grammar(window):
+    """`1 grapple` must apply the 'grappled' condition."""
+    window.tabs.setCurrentIndex(0)
+    _submit(window, "1 grapple")
+    one = window.encounter_state.combatant_by_id("1")
+    assert "grappled" in one.conditions
+
+
+def test_unknown_condition_does_not_fire_bus_event(window):
+    """An unrecognized condition must NOT fire a bus event (A2-H2).
+
+    The event bus is None in a plain MainWindow (no encounter wiring), so we
+    verify indirectly: the condition must not be in the combatant's set, and
+    no exception is raised.
+    """
+    window.tabs.setCurrentIndex(0)
+    one = window.encounter_state.combatant_by_id("1")
+    conditions_before = set(one.conditions)
+
+    # Inject an Effect with a bad condition name directly through the command
+    # path, bypassing the parser (the parser would route to unparseable first).
+    from gui.command_model import Effect, ParsedCommand
+    bad_cmd = ParsedCommand(kind="command", raw="test", target_ids=["1"])
+    bad_cmd.effects = [Effect(kind="condition", condition="notacondition")]
+    window._handle_command(bad_cmd)
+
+    # Condition must not have been applied.
+    assert one.conditions == conditions_before
