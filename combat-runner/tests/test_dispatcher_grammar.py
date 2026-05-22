@@ -234,3 +234,34 @@ def test_note_does_not_collide_with_who_stream():
     # "note" is not a condition or dmg-tag; it's an action token
     assert c.kind == "command"
     assert c.effects[0].kind == "action" and c.effects[0].action_token == "note"
+
+
+# ─── signed / float amount edge cases (M3 — ported from old test_dispatcher_directed.py) ─
+
+
+def test_signed_positive_amount_is_unparseable():
+    """`2 +5 fire` — signed amounts must NOT silently parse as damage; they must
+    route to the LLM fallback so the user gets a parse error rather than a
+    half-applied effect.  (These were carefully covered in the deleted
+    test_dispatcher_directed.py; re-added here under the new grammar.)"""
+    c = parse("2 +5 fire")
+    assert c.kind == "unparseable", (
+        f"Signed amount '+5' should be unparseable, got kind={c.kind!r}"
+    )
+
+
+def test_signed_negative_amount_is_unparseable():
+    """`2 -5 fire` — signed amounts must NOT silently parse as damage."""
+    c = parse("2 -5 fire")
+    assert c.kind == "unparseable", (
+        f"Signed amount '-5' should be unparseable, got kind={c.kind!r}"
+    )
+
+
+def test_float_amount_is_unparseable():
+    """`2 12.5 fire` — fractional amounts must NOT be silently truncated;
+    they must route to the LLM fallback."""
+    c = parse("2 12.5 fire")
+    assert c.kind == "unparseable", (
+        f"Float amount '12.5' should be unparseable, got kind={c.kind!r}"
+    )

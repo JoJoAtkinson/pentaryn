@@ -356,3 +356,88 @@ def test_quit_via_slash_command(window, qtbot):
     finally:
         window.close = original_close
     assert closed == [True]
+
+
+# ─────────────────────────── delivery: melee → in_melee (M1) ────────────────
+
+
+def test_melee_delivery_sets_in_melee_on_actor_and_target(window):
+    """'2 10 melee' must set in_melee=True on both the actor (tab-0) and
+    the target (combatant id 2).  This reproduces the behaviour that was in
+    the old _on_directed_command but was not ported to _handle_command."""
+    actor = window.encounter_state.combatant_by_id("1")
+    target = window.encounter_state.combatant_by_id("2")
+    actor.in_melee = False
+    target.in_melee = False
+
+    window.tabs.setCurrentIndex(0)   # actor is combatant 1 at tab 0
+    _submit(window, "2 10 melee")
+
+    assert target.in_melee is True, "melee-tagged damage must set in_melee on the target"
+    assert actor.in_melee is True, "melee-tagged damage must set in_melee on the actor"
+
+
+def test_ranged_delivery_does_not_set_in_melee(window):
+    """'2 10 ranged' must NOT set in_melee on either the actor or the target."""
+    actor = window.encounter_state.combatant_by_id("1")
+    target = window.encounter_state.combatant_by_id("2")
+    actor.in_melee = False
+    target.in_melee = False
+
+    window.tabs.setCurrentIndex(0)
+    _submit(window, "2 10 ranged")
+
+    assert target.in_melee is False, "ranged delivery must not set in_melee on the target"
+    assert actor.in_melee is False, "ranged delivery must not set in_melee on the actor"
+
+
+def test_untagged_damage_does_not_set_in_melee(window):
+    """Plain damage with no delivery tag ('2 10 dmg') must not set in_melee."""
+    actor = window.encounter_state.combatant_by_id("1")
+    target = window.encounter_state.combatant_by_id("2")
+    actor.in_melee = False
+    target.in_melee = False
+
+    window.tabs.setCurrentIndex(0)
+    _submit(window, "2 10 dmg")
+
+    assert target.in_melee is False
+    assert actor.in_melee is False
+
+
+# ─────────── compound command end-to-end (both effects land) ─────────────────
+
+
+def test_compound_damage_and_condition_both_land(window):
+    """'2 9 bludge 1 prone' — both the 9 bludgeoning damage AND the prone
+    condition must land on combatant id 2 from a single _on_command call."""
+    two = window.encounter_state.combatant_by_id("2")
+    hp_before = two.hp
+    window.tabs.setCurrentIndex(0)
+
+    _submit(window, "2 9 bludge 1 prone")
+
+    # Damage must have been applied.
+    assert two.hp == hp_before - 9, (
+        f"Expected hp {hp_before - 9}, got {two.hp}"
+    )
+    # Condition must also have been applied.
+    assert "prone" in two.conditions, (
+        f"Expected 'prone' in conditions, got {two.conditions}"
+    )
+
+
+def test_compound_undo_reverts_both_effects(window):
+    """After a compound damage+condition command, undo must revert both."""
+    two = window.encounter_state.combatant_by_id("2")
+    hp_before = two.hp
+    window.tabs.setCurrentIndex(0)
+
+    _submit(window, "2 9 bludge 1 prone")
+    assert two.hp == hp_before - 9
+    assert "prone" in two.conditions
+
+    _submit(window, "undo")
+
+    assert window.encounter_state.combatant_by_id("2").hp == hp_before
+    assert "prone" not in window.encounter_state.combatant_by_id("2").conditions
