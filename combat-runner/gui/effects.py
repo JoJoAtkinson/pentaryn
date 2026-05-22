@@ -13,41 +13,12 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from gui.state import STANDARD_CONDITIONS, EncounterState, NPCState
+from gui.state import EncounterState, NPCState, canonicalize_condition
 from gui.command_model import Effect
 from gui.history import PendingEffect
 
 if TYPE_CHECKING:
     pass  # actor type hint only; NPCState already imported above
-
-# ─── condition alias table ───────────────────────────────────────────────────
-# Maps grammar shorthand → canonical STANDARD_CONDITIONS name.
-# Only the stem needs listing; full names that are already in STANDARD_CONDITIONS
-# pass through unchanged.
-_CONDITION_ALIASES: dict[str, str] = {
-    "stun": "stunned",
-    "frighten": "frightened",
-    "grapple": "grappled",
-    "poison": "poisoned",
-    "blind": "blinded",
-    "restrain": "restrained",
-    "petrify": "petrified",
-    "paralyze": "paralyzed",
-    "incapacitate": "incapacitated",
-}
-
-_KNOWN_CONDITIONS: frozenset[str] = frozenset(STANDARD_CONDITIONS)
-
-
-def _resolve_condition(word: str) -> str | None:
-    """Return the canonical condition name for *word*, or None if unknown."""
-    w = word.lower().strip()
-    if w in _KNOWN_CONDITIONS:
-        return w
-    aliased = _CONDITION_ALIASES.get(w)
-    if aliased and aliased in _KNOWN_CONDITIONS:
-        return aliased
-    return None
 
 
 # ─── public API ──────────────────────────────────────────────────────────────
@@ -147,16 +118,39 @@ def _apply_amount(
 
 # ─── condition ───────────────────────────────────────────────────────────────
 
+# Sentinel used to signal that _apply_condition did nothing because the
+# condition name was unrecognized. The caller (main_window) checks for this
+# sentinel so it does NOT fire the condition bus event or auto-save.
+_CONDITION_UNKNOWN_SENTINEL = "skipped:unknown_condition"
+
+
 def _apply_condition(
     state: EncounterState,
     effect: Effect,
     target_ids: list[str],
 ) -> list[str]:
+    """Apply or toggle a condition effect.
+
+    If ``effect.condition`` is not a recognized catalog name the function
+    returns a list containing ``_CONDITION_UNKNOWN_SENTINEL`` (a ``warn:``
+    string that also carries the sentinel marker), so the caller can
+    distinguish an unknown-condition no-op from a real condition toggle.  This
+    prevents spurious bus events and auto-saves.
+
+    Since the dispatcher now stores the canonical name in ``Effect.condition``
+    (after calling ``canonicalize_condition``), an unknown condition here
+    indicates a bug or an LLM-authored effect with a bad name — fail loud.
+    """
     fragments: list[str] = []
-    canonical = _resolve_condition(effect.condition)
+    canonical = canonicalize_condition(effect.condition)
 
     if canonical is None:
-        return [f"warn: unknown condition {effect.condition!r}"]
+        # Fail loud: surface a warning AND return the sentinel so the caller
+        # knows not to fire bus events or save.
+        return [
+            f"warn: {_CONDITION_UNKNOWN_SENTINEL}: unknown condition "
+            f"{effect.condition!r}"
+        ]
 
     # duration to apply when toggling ON.  Default is 1 round.
     # A duration of None OR <= 0 (e.g. a parsed `3 0 stun`) is treated as the

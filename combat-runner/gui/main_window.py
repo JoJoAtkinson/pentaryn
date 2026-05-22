@@ -48,7 +48,7 @@ from .event_bus import (
     round_event,
 )
 from .command_model import Effect, ParsedCommand
-from .effects import apply_effect, apply_hit
+from .effects import _CONDITION_UNKNOWN_SENTINEL, apply_effect, apply_hit
 from .history import UndoStack
 from .npc_tab import NPCTab
 from .state import EncounterState, NPCState, deserialize_encounter, serialize_encounter
@@ -1106,7 +1106,14 @@ class MainWindow(QMainWindow):
                 ]
                 self._emit_amount_events(effect, changed)
             elif effect.kind == "condition":
-                self._emit_condition_events(effect, ids)
+                # Only fire bus events when the condition actually applied.
+                # If _apply_condition returned the sentinel (unknown condition),
+                # fragments will contain it and we must NOT fire or auto-save.
+                condition_applied = not any(
+                    _CONDITION_UNKNOWN_SENTINEL in frag for frag in fragments
+                )
+                if condition_applied:
+                    self._emit_condition_events(effect, ids)
 
         self._repaint_all_tabs()
         self._refresh_target_arrow()

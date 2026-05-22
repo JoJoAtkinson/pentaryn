@@ -39,6 +39,81 @@ STANDARD_CONDITIONS: tuple[str, ...] = (
     "bloodied",  # auto-applied at HP <= half max
 )
 
+# Single authoritative alias table: any accepted spelling → canonical name.
+# Full catalog names canonicalize to themselves (handled in
+# canonicalize_condition directly). Short forms and common variants live here.
+_CONDITION_ALIAS_TABLE: dict[str, str] = {
+    # blinded
+    "blind": "blinded",
+    # charmed
+    "charm": "charmed",
+    # deafened
+    "deafen": "deafened",
+    "deaf": "deafened",
+    # frightened
+    "frighten": "frightened",
+    "fear": "frightened",
+    # grappled
+    "grapple": "grappled",
+    # incapacitated
+    "incapacitate": "incapacitated",
+    "incap": "incapacitated",
+    # invisible
+    "invis": "invisible",
+    # paralyzed
+    "paralyze": "paralyzed",
+    "paralyze": "paralyzed",
+    "para": "paralyzed",
+    # petrified
+    "petrify": "petrified",
+    "petra": "petrified",
+    # poisoned
+    "poison": "poisoned",
+    # prone — full name is already 5 chars, no short needed; listed for alias
+    # completeness (the loop below covers it via STANDARD_CONDITIONS identity)
+    # restrained
+    "restrain": "restrained",
+    # stunned
+    "stun": "stunned",
+    # unconscious
+    "unconscious": "unconscious",
+    "uncon": "unconscious",
+    "ko": "unconscious",
+    # App-specific
+    # NOTE: "dodge" is intentionally NOT aliased to "dodging" here — "dodge"
+    # is also a valid combat action verb name and the disambiguation must favour
+    # the action (bare words that aren't recognized conditions stay as action
+    # tokens). The full name "dodging" is already in STANDARD_CONDITIONS and
+    # resolves via the identity branch.
+    "conc": "concentrating",
+    "concentrate": "concentrating",
+    "blood": "bloodied",
+}
+
+
+# Pre-built frozenset for O(1) catalog lookups.
+_STANDARD_CONDITIONS_SET: frozenset[str] = frozenset(STANDARD_CONDITIONS)
+
+
+def canonicalize_condition(word: str) -> str | None:
+    """Return the canonical STANDARD_CONDITIONS name for *word*, or None.
+
+    Accepts full catalog names (identity) and any short form listed in
+    ``_CONDITION_ALIAS_TABLE``. Case-insensitive; surrounding whitespace is
+    stripped.  Returns ``None`` for unrecognized words.
+
+    This is the SINGLE source of truth for condition recognition. Both
+    ``dispatcher.py`` (parser) and ``effects.py`` (apply) use this function so
+    they can never drift.
+    """
+    w = word.lower().strip()
+    if not w:
+        return None
+    # Full catalog names resolve to themselves.
+    if w in _STANDARD_CONDITIONS_SET:
+        return w
+    return _CONDITION_ALIAS_TABLE.get(w)
+
 
 # ─────────────────────────── NPC state ───────────────────────────
 

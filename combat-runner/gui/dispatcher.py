@@ -29,7 +29,7 @@ import re
 
 from .command_model import Effect, ParsedCommand
 from .command_tags import resolve_tags
-from .state import STANDARD_CONDITIONS
+from .state import canonicalize_condition
 from .targeting import classify_who
 
 _NUMBER_RE = re.compile(r"^\d+$")
@@ -81,17 +81,12 @@ def _strip_at(token: str) -> tuple[str, bool]:
 
 
 def _is_condition(token: str) -> bool:
-    """True if `token` (after stripping a leading '@') names a condition.
-
-    Matches an entry of STANDARD_CONDITIONS by prefix so short forms like
-    `stun` -> `stunned` are accepted; normalization to the catalog name
-    happens later in effects.py, not here.
+    """True if `token` (after stripping a leading '@') canonicalizes to a known
+    condition.  Uses ``canonicalize_condition`` — the single source of truth —
+    so dispatcher and effects can never drift.
     """
     word, _ = _strip_at(token)
-    word = word.lower()
-    if not word:
-        return False
-    return any(c == word or c.startswith(word) for c in STANDARD_CONDITIONS)
+    return canonicalize_condition(word) is not None
 
 
 def parse(raw: str) -> ParsedCommand:
@@ -179,9 +174,15 @@ def parse(raw: str) -> ParsedCommand:
 
             if nxt is not None and _is_condition(nxt):
                 word, forced = _strip_at(nxt)
+                canonical = canonicalize_condition(word)
+                # canonicalize_condition returning None here is impossible
+                # (_is_condition already passed), but handle gracefully.
+                if canonical is None:
+                    ok = False
+                    break
                 effects.append(Effect(
                     kind="condition",
-                    condition=word.lower(),
+                    condition=canonical,
                     duration=number,
                     forced_condition=forced,
                 ))
@@ -196,9 +197,13 @@ def parse(raw: str) -> ParsedCommand:
         # a condition word with no preceding number.
         if _is_condition(tok):
             word, forced = _strip_at(tok)
+            canonical = canonicalize_condition(word)
+            if canonical is None:
+                ok = False
+                break
             effects.append(Effect(
                 kind="condition",
-                condition=word.lower(),
+                condition=canonical,
                 duration=None,
                 forced_condition=forced,
             ))

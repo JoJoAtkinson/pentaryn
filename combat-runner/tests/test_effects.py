@@ -1,7 +1,7 @@
 from pathlib import Path
 from gui.state import EncounterState, NPCState
 from gui.command_model import Effect
-from gui.effects import apply_effect
+from gui.effects import _CONDITION_UNKNOWN_SENTINEL, apply_effect
 
 def _es():
     es = EncounterState(name="t", root=Path("."), log_path=Path("log.md"))
@@ -65,3 +65,38 @@ def test_amount_multi_target():
                  target_ids=["1", "2"], actor=None)
     assert es.combatant_by_id("1").hp == 46
     assert es.combatant_by_id("2").hp == 29
+
+
+# ─── single-canonicalization table (fix for condition-drift bug) ────────────
+
+
+def test_charm_applies_canonical_condition():
+    """`condition='charm'` must apply 'charmed' (not fail silently)."""
+    es = _es()
+    fragments = apply_effect(es, Effect(kind="condition", condition="charm", duration=2),
+                             target_ids=["2"], actor=None)
+    npc = es.combatant_by_id("2")
+    assert "charmed" in npc.conditions
+    assert not any(_CONDITION_UNKNOWN_SENTINEL in f for f in fragments)
+
+
+def test_deafen_applies_canonical_condition():
+    """`condition='deafen'` must apply 'deafened' (not fail silently)."""
+    es = _es()
+    fragments = apply_effect(es, Effect(kind="condition", condition="deafen", duration=1),
+                             target_ids=["2"], actor=None)
+    npc = es.combatant_by_id("2")
+    assert "deafened" in npc.conditions
+    assert not any(_CONDITION_UNKNOWN_SENTINEL in f for f in fragments)
+
+
+def test_unknown_condition_returns_sentinel():
+    """An unrecognized condition name must return the sentinel fragment
+    (not silently do nothing with a generic warn string)."""
+    es = _es()
+    fragments = apply_effect(es, Effect(kind="condition", condition="notacondition"),
+                             target_ids=["2"], actor=None)
+    assert any(_CONDITION_UNKNOWN_SENTINEL in f for f in fragments)
+    # The condition must NOT have been applied.
+    npc = es.combatant_by_id("2")
+    assert "notacondition" not in npc.conditions
