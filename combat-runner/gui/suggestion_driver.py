@@ -27,9 +27,7 @@ from typing import Any, Callable
 
 from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal
 
-from .state import NPCState
 from .widgets.suggestion_bar import Suggestion
-
 
 logger = logging.getLogger(__name__)
 

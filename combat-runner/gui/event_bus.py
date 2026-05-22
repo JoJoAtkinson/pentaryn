@@ -22,7 +22,6 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Iterable, Literal
 
-
 logger = logging.getLogger(__name__)
 
 

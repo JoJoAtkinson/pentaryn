@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal
+from PySide6.QtCore import QObject, QRunnable, QThreadPool, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -48,7 +48,6 @@ from .widgets.action_chips import ActionChipGrid
 from .widgets.command_input import CommandInput
 from .widgets.hp_bar import HPBar
 from .widgets.suggestion_bar import Suggestion, SuggestionBar
-
 
 # Lazy import of the dice/action runner — scripts/dnd_roller.py is the
 # authoritative implementation. Importing on first use keeps the GUI launch
@@ -505,10 +504,12 @@ class NPCTab(QWidget):
         # Try the underlying DB for full text if the summary truncated it
         if narration.endswith("..."):
             try:
-                from PySide6.QtCore import QCoreApplication  # noqa: F401
                 # Lazy import the DB to get the full row
-                import importlib.util, sys
+                import importlib.util
+                import sys
                 from pathlib import Path
+
+                from PySide6.QtCore import QCoreApplication  # noqa: F401
                 scripts_dir = Path(__file__).resolve().parents[2] / "scripts"
                 if str(scripts_dir) not in sys.path:
                     sys.path.insert(0, str(scripts_dir))

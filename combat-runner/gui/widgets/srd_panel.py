@@ -33,7 +33,6 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
 

@@ -14,7 +14,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterator
 
-
 # ─────────────────────────── condition catalog ───────────────────────────
 # D&D 5.5e standard conditions plus a few app-specific markers (dodging,
 # grappling-target). The GUI uses this list to populate the @ autocomplete.

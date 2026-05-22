@@ -12,10 +12,9 @@ Pure PySide6 — no business logic. Reads state externally via `set_state()`.
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, QRect, QSize
+from PySide6.QtCore import QRect, QSize
 from PySide6.QtGui import QColor, QPainter, QPaintEvent
 from PySide6.QtWidgets import QWidget
-
 
 # qt-material dark theme palette (dark_blue.xml accent: #448aff).
 _COLOR_BG = QColor("#14171b")

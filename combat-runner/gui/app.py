@@ -18,7 +18,6 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from PySide6.QtCore import Qt
 from PySide6.QtGui import QFontDatabase
 from PySide6.QtWidgets import QApplication, QMessageBox
 
@@ -41,7 +40,6 @@ except ImportError:
 from .encounter_picker import DiscoveredEncounter, EncounterPicker, load_party_config
 from .main_window import MainWindow
 from .state import EncounterState, NPCState, assign_combatant_ids
-
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 
