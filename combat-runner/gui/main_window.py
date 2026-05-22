@@ -304,14 +304,21 @@ class MainWindow(QMainWindow):
                 npc.slots_remaining.setdefault(action_name, count)
 
     def _wire_shortcuts(self) -> None:
-        # Cmd+1 .. Cmd+9 jump directly to that tab index
-        for i in range(1, 10):
-            sc = QShortcut(QKeySequence(f"Ctrl+{i}"), self)
-            sc.activated.connect(lambda idx=i - 1: self._jump_to_tab(idx))
+        # Ctrl+1 .. Ctrl+9 jump to the tab whose combatant has that permanent id
+        for digit in "123456789":
+            sc = QShortcut(QKeySequence(f"Ctrl+{digit}"), self)
+            sc.activated.connect(lambda d=digit: self._jump_to_combatant_by_id(d))
 
         # Tab key (when no widget consumes it) cycles forward
         # Note: in normal Qt, Tab is focus traversal — we intercept on the window
         # only when the focused widget isn't a QLineEdit/QTextEdit.
+
+    def _jump_to_combatant_by_id(self, combatant_id: str) -> None:
+        """Switch to the tab for the combatant with this permanent id."""
+        for i, npc in enumerate(self.encounter_state.npcs):
+            if npc.id == combatant_id:
+                self.tabs.setCurrentIndex(i)
+                return
 
     # ─────────── round counter ───────────
 
@@ -347,9 +354,10 @@ class MainWindow(QMainWindow):
     # ─────────── tab management ───────────
 
     def _tab_title(self, npc: NPCState) -> str:
+        id_prefix = f"{npc.id} · " if npc.id else ""
         if npc.count > 1:
-            return f"{npc.name} ×{npc.count}  {npc.hp}/{npc.max_total_hp}"
-        return f"{npc.name}  {npc.hp}/{npc.max_total_hp}"
+            return f"{id_prefix}{npc.name} ×{npc.count}  {npc.hp}/{npc.max_total_hp}"
+        return f"{id_prefix}{npc.name}  {npc.hp}/{npc.max_total_hp}"
 
     def _on_tab_changed(self, idx: int) -> None:
         self.encounter_state.active_tab_index = idx
