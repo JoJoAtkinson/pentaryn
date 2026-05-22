@@ -36,6 +36,26 @@ SLASH_COMMANDS = (
 )
 
 
+class _LastTokenCompleter(QCompleter):
+    """QCompleter whose completion prefix is the LAST whitespace-delimited
+    token of the line edit, not the whole string.
+
+    A plain QCompleter attached to a QLineEdit auto-sets its completionPrefix
+    to the entire text. That works for single-token sigils (`@bl`, `/quit`)
+    but breaks directed-command tag typeahead: the line is `3 12 f` while the
+    candidates are bare tags (`fire`, `cold`, …) — the whole-line prefix
+    matches nothing and the popup never shows.
+
+    Overriding `splitPath` to return just the trailing token fixes tag
+    completion without disturbing the `@`/`/` cases (those inputs have no
+    spaces, so the last token IS the whole string).
+    """
+
+    def splitPath(self, path: str) -> list[str]:  # noqa: N802 (Qt API)
+        tokens = path.rsplit(" ", 1)
+        return [tokens[-1]]
+
+
 # Match the dispatcher patterns we need for live preview (keep narrow — only
 # damage/heal trigger preview).
 _PREVIEW_RE = re.compile(
@@ -73,7 +93,7 @@ class CommandInput(QLineEdit):
         # runs when the popup is hidden.
         self._condition_model = QStringListModel(["@" + c for c in CONDITIONS], self)
         self._slash_model = QStringListModel(list(SLASH_COMMANDS), self)
-        self._completer = QCompleter(self._condition_model, self)
+        self._completer = _LastTokenCompleter(self._condition_model, self)
         self._completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self._completer.setFilterMode(Qt.MatchFlag.MatchStartsWith)
         self._completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
@@ -175,26 +195,28 @@ class CommandInput(QLineEdit):
                 # Everything after id + amount are tag tokens. The last token is the
                 # partial prefix being typed; completed tokens are all but the last.
                 # If text ends with a space, all tokens are complete — pass them all.
+                # Determine where tags start (after id + [m<n>] + amount).
+                structural = 2  # id + amount
+                has_mob = (
+                    len(tokens) >= 2
+                    and tokens[1].lower().startswith("m")
+                    and tokens[1][1:].isdigit()
+                )
+                if has_mob:
+                    structural = 3  # id + m<n> + amount
                 if text.endswith(" "):
-                    completed_tokens = tokens[2:]  # skip id + amount (or id + m<n> + amount)
-                    # Adjust for mob target: id m<n> amount → skip 3 tokens
-                    # Already handled since we pass tokens after the first two structural
-                    # tokens, but we need to detect if tokens[1] is m<n>.
-                    if len(tokens) >= 2 and tokens[1].lower().startswith("m") and tokens[1][1:].isdigit():
-                        completed_tokens = tokens[3:]
-                    partial = ""
+                    # Every token typed so far is complete.
+                    completed_tokens = tokens[structural:]
                 else:
-                    # Last token is the partial; everything before it (after id/amount) is complete
-                    # Determine where tags start (after id + [m<n>] + amount)
-                    structural = 2  # id + amount
-                    if len(tokens) >= 2 and tokens[1].lower().startswith("m") and tokens[1][1:].isdigit():
-                        structural = 3  # id + m<n> + amount
+                    # Last token is the partial being typed; the rest are complete.
                     tag_tokens = tokens[structural:]
                     completed_tokens = tag_tokens[:-1] if tag_tokens else []
-                    partial = m.group(2).lower()
+                # Feed the completer the full applicable pool. The
+                # _LastTokenCompleter's splitPath() narrows the completion
+                # prefix to the trailing partial token, so the popup filters
+                # `fire`/`force`/… against `f` rather than the whole line.
                 candidates = hint_pool(completed_tokens)
-                filtered = [c for c in candidates if c.startswith(partial)]
-                model = QStringListModel(filtered, self)
+                model = QStringListModel(candidates, self)
                 self._completer.setModel(model)
             else:
                 # Hide popup for non-sigil text
