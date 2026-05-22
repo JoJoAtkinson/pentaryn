@@ -342,14 +342,19 @@ def main() -> int:
 
     # Main loop: show picker → build window → on close, optionally re-open picker
     current_window: MainWindow | None = None
-    picker = EncounterPicker()
+    picker = EncounterPicker(party_config=_party_config)
 
-    def _launch(encounter: DiscoveredEncounter, counts: dict[str, int]) -> None:
+    def _launch(
+        encounter: DiscoveredEncounter,
+        counts: dict[str, int],
+        party_config: dict | None,
+        player_selections: dict,
+    ) -> None:
         nonlocal current_window
         try:
             current_window = build_main_window(encounter, counts,
-                                               party_config=_party_config,
-                                               player_selections=None)
+                                               party_config=party_config,
+                                               player_selections=player_selections)
         except Exception as exc:
             QMessageBox.critical(None, "Launch failed", f"{exc}")
             picker.show()
@@ -362,7 +367,7 @@ def main() -> int:
         if current_window is not None:
             current_window.close()
             current_window = None
-        new_picker = EncounterPicker()
+        new_picker = EncounterPicker(party_config=_party_config)
         new_picker.launched.connect(_launch)
         new_picker.show()
 
