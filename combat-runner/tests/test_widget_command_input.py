@@ -132,3 +132,23 @@ def test_tag_hint_pool_activates_after_directed_prefix(qtbot):
     model = inp._completer.model()
     strings = [model.data(model.index(i)) for i in range(model.rowCount())]
     assert any("fire" in s for s in strings)
+
+
+def test_tag_hint_works_for_second_tag(qtbot):
+    from gui.widgets.command_input import CommandInput
+    widget = CommandInput()
+    qtbot.addWidget(widget)
+    widget.setText("3 12 fire m")   # first tag complete, typing second
+    model = widget._completer.model()
+    strings = [model.data(model.index(i)) for i in range(model.rowCount())]
+    assert any("melee" in s for s in strings)
+
+
+def test_tag_hint_after_first_tag_excludes_filled_type_facet(qtbot):
+    from gui.widgets.command_input import CommandInput
+    widget = CommandInput()
+    qtbot.addWidget(widget)
+    widget.setText("3 12 fire ")    # type facet filled, cursor on next tag
+    model = widget._completer.model()
+    strings = [model.data(model.index(i)) for i in range(model.rowCount())]
+    assert not any(s == "cold" for s in strings)   # type facet already filled

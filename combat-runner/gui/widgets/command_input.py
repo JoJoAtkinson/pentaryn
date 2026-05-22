@@ -151,7 +151,7 @@ class CommandInput(QLineEdit):
 
     # Matches a directed-command prefix: <repeated-digit id> [m<n>] <amount> <partial-tag>
     # Groups: (1) the repeating digit (structural), (2) the partial tag token (may be empty).
-    _TAG_HINT_RE = re.compile(r'^(\d)\1*\s+(?:m\d+\s+)?\d+\s+(\w*)$', re.IGNORECASE)
+    _TAG_HINT_RE = re.compile(r'^(\d)\1*\s+(?:m\d+\s+)?\d+(?:\s+\w+)*\s+(\w*)$', re.IGNORECASE)
 
     def _update_completer_model(self, text: str) -> None:
         """Swap the completer's candidate list based on the leading sigil.
