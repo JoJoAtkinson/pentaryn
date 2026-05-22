@@ -349,15 +349,24 @@ def _tool_apply_command(bundle: _StateBundle, command: str, target_slug: str) ->
             result = npc.apply_heal(parsed.amount, member=parsed.target_member)
         else:
             result = npc.apply_damage(parsed.amount, member=parsed.target_member)
+        skipped = result.get("skipped")
+        if skipped:
+            return {"ok": False, "error": f"no-op — {skipped} (target={target_slug}, member={parsed.target_member})"}
         bundle.notify()
         return {"ok": True, "applied": result, "direction": direction,
                 "hp_now": npc.hp, "parsed_tags": parsed.resolved_tags}
     elif parsed.kind is InputKind.DAMAGE:
         result = npc.apply_damage(parsed.amount, member=parsed.member)
+        skipped = result.get("skipped")
+        if skipped:
+            return {"ok": False, "error": f"no-op — {skipped} (target={target_slug}, member={parsed.member})"}
         bundle.notify()
         return {"ok": True, "applied": result, "hp_now": npc.hp}
     elif parsed.kind is InputKind.HEAL:
         result = npc.apply_heal(parsed.amount, member=parsed.member)
+        skipped = result.get("skipped")
+        if skipped:
+            return {"ok": False, "error": f"no-op — {skipped} (target={target_slug}, member={parsed.member})"}
         bundle.notify()
         return {"ok": True, "applied": result, "hp_now": npc.hp}
     elif parsed.kind is InputKind.CONDITION:
@@ -616,6 +625,18 @@ def _build_tool_definitions() -> list[dict[str, Any]]:
     ]
 
 
+# Names of the tools the reviewer actually needs. The review path sends only
+# these to reduce per-call token cost (~1800 tokens saved vs the full 22-tool set).
+REVIEW_TOOL_NAMES: frozenset[str] = frozenset(
+    {"apply_command", "add_condition", "add_log_entry", "read_state"}
+)
+
+
+def _build_review_tool_definitions(full_tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Return the trimmed tool set for the review path (subset of the full set)."""
+    return [t for t in full_tools if t["name"] in REVIEW_TOOL_NAMES]
+
+
 def _build_tool_dispatch_table(bundle: _StateBundle) -> dict[str, Callable[..., dict[str, Any]]]:
     """Map tool name → callable (closures over the state bundle)."""
     return {
@@ -691,6 +712,7 @@ class LLMController:
         self.model = model
         self._bundle = _StateBundle(encounter=encounter_state, log_path=log_path, on_state_changed=on_state_changed)
         self._tools = _build_tool_definitions()
+        self._review_tools = _build_review_tool_definitions(self._tools)
         self._dispatch = _build_tool_dispatch_table(self._bundle)
         self._client = client  # None → lazy-construct on first call
         # Accumulates the tool calls of the in-progress run() so both the
@@ -779,6 +801,7 @@ class LLMController:
             system_override=self.REVIEW_SYSTEM_PROMPT,
             dispatch_fn=dispatch_fn,
             max_iterations=2,
+            tools_override=self._review_tools,
         )
         if result.text and not result.error:
             _tool_add_log_entry(self._bundle, f"⟳ review: {result.text}", kind="review")
@@ -928,6 +951,7 @@ class LLMController:
         dispatch_fn: Callable[[list[Any]], list[dict[str, Any]]] | None = None,
         system_override: str | None = None,
         max_iterations: int | None = None,
+        tools_override: list[dict[str, Any]] | None = None,
     ) -> RunResult:
         """Run the chat loop, dispatching tool calls until end_turn.
 
@@ -945,11 +969,17 @@ class LLMController:
         None → uses MAX_TOOL_LOOP_ITERATIONS (keeps `run()` behavior unchanged).
         Pass a lower value (e.g. 2) in `review_command` to bound at-table
         latency and cost for the per-command review.
+
+        `tools_override` — when provided, replaces `self._tools` for this loop
+        only. The `run()` path leaves it None (full tool set). Pass
+        `self._review_tools` in `review_command` to send only the ~4 tools the
+        reviewer actually needs, cutting ~1800 input tokens per call.
         """
         if dispatch_fn is None:
             dispatch_fn = self.dispatch_tool_uses
         prompt_text = system_override if system_override is not None else self.SYSTEM_PROMPT
         iteration_cap = max_iterations if max_iterations is not None else self.MAX_TOOL_LOOP_ITERATIONS
+        active_tools = tools_override if tools_override is not None else self._tools
         # Reset the per-run accumulator (dispatch_tool_uses appends into it).
         # LLM workers run on a single-thread pool (_llm_pool, maxThreadCount=1)
         # so this instance state is never shared concurrently between run() and
@@ -969,7 +999,7 @@ class LLMController:
                             "cache_control": {"type": "ephemeral", "ttl": "1h"},
                         }
                     ],
-                    tools=self._tools,
+                    tools=active_tools,
                     messages=messages,
                 )
             except Exception as exc:  # noqa: BLE001

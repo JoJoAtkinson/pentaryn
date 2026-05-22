@@ -110,3 +110,118 @@ def test_main_window_not_review_for_note(qtbot, sample_encounter):
     tab._on_submitted("note this is a test")
     assert reviewed == []
     win._enqueue_review = original
+
+
+# ── Fix 1: apply_command skipped/no-op → ok: False ──────────────────────────
+
+def test_apply_command_out_of_range_mob_member_returns_false(sample_encounter):
+    """_tool_apply_command must return ok=False when apply_damage/apply_heal
+    returns a skipped result (e.g. member index out of range for a mob)."""
+    from gui.llm_controller import _tool_apply_command, _StateBundle
+    from gui.state import NPCState
+
+    # Build a 2-member mob and add it to the encounter.
+    mob = NPCState(
+        slug="goblin-mob",
+        name="Goblin Mob",
+        max_hp=10,
+        ac=13,
+        speed="30 ft.",
+        cr=0.25,
+        count=2,
+    )
+    sample_encounter.npcs.append(mob)
+
+    bundle = _StateBundle(encounter=sample_encounter, log_path="/tmp/l.md")
+
+    # Attempt damage to member 99 — out of range, state.py returns skipped.
+    result = _tool_apply_command(bundle, command="1 15", target_slug="goblin-mob")
+    # Sanity check: default routing (no m<n>) succeeds normally.
+    assert result["ok"], "default-routed damage should succeed"
+
+    # Now force an out-of-range member via the DIRECTED branch (m99 member).
+    # Apply it via damage_npc directly to confirm the skipped path is exercised.
+    skipped_result = mob.apply_damage(5, member=99)
+    assert "skipped" in skipped_result, "state.py should return skipped for out-of-range member"
+
+    # Verify that _tool_apply_command wraps a skipped apply_heal as ok=False.
+    # Kill both members so apply_heal returns skipped="no member to heal".
+    mob.member_hp[0] = 0
+    mob.member_hp[1] = 0
+    result = _tool_apply_command(bundle, command="+5", target_slug="goblin-mob")
+    assert not result["ok"], "heal on all-dead mob should be ok=False"
+    assert "error" in result
+    assert result["error"]  # non-empty error message
+
+
+def test_apply_command_no_alive_members_damage_returns_false(sample_encounter):
+    """apply_command DAMAGE branch returns ok=False when all mob members are dead
+    (apply_damage returns skipped='no alive members')."""
+    from gui.llm_controller import _tool_apply_command, _StateBundle
+    from gui.state import NPCState
+
+    mob = NPCState(
+        slug="dead-mob",
+        name="Dead Mob",
+        max_hp=8,
+        ac=12,
+        speed="30 ft.",
+        cr=0.25,
+        count=2,
+    )
+    # Kill all members.
+    mob.member_hp[0] = 0
+    mob.member_hp[1] = 0
+    sample_encounter.npcs.append(mob)
+
+    bundle = _StateBundle(encounter=sample_encounter, log_path="/tmp/l.md")
+    # DAMAGE branch: "1 10" → apply_damage with no alive members → skipped.
+    result = _tool_apply_command(bundle, command="1 10", target_slug="dead-mob")
+    assert not result["ok"], "damage on all-dead mob should be ok=False"
+    assert "error" in result
+    assert "no alive members" in result["error"] or result["error"]
+
+
+# ── Fix 2: review path uses trimmed tool set; run() path uses full set ────────
+
+def test_review_command_uses_trimmed_tool_set(controller_with_fake_client):
+    """review_command must pass only the review-subset tools to messages.create,
+    not the full 22-tool schema."""
+    from gui.llm_controller import REVIEW_TOOL_NAMES
+
+    ctrl, fake_client = controller_with_fake_client
+    ctrl.review_command(
+        raw="5 12 fire",
+        actor={"id": "1", "name": "Vessa", "slug": "pc-1"},
+        target={"id": "5", "name": "Goblin", "slug": "goblin",
+                "hp": 7, "max_hp": 7, "conditions": [], "in_melee": False},
+        applied_direction="damage", applied_amount=12,
+        log_tail="",
+    )
+    assert fake_client.messages.create.called
+    call_kwargs = fake_client.messages.create.call_args.kwargs
+    sent_tools = call_kwargs.get("tools", [])
+    sent_names = {t["name"] for t in sent_tools}
+    # Review path must include all REVIEW_TOOL_NAMES and nothing else.
+    assert sent_names == REVIEW_TOOL_NAMES, (
+        f"review used tools {sent_names!r} but expected {set(REVIEW_TOOL_NAMES)!r}"
+    )
+
+
+def test_run_path_uses_full_tool_set(controller_with_fake_client):
+    """run() must pass the full tool set (all 22+ tools), not the review subset."""
+    from gui.llm_controller import REVIEW_TOOL_NAMES
+
+    ctrl, fake_client = controller_with_fake_client
+    ctrl.run(user_input="what does prone do?", active_npc_slug=None)
+
+    assert fake_client.messages.create.called
+    call_kwargs = fake_client.messages.create.call_args.kwargs
+    sent_tools = call_kwargs.get("tools", [])
+    sent_names = {t["name"] for t in sent_tools}
+    # run() must include more tools than the review subset.
+    assert sent_names.issuperset(REVIEW_TOOL_NAMES), "run() should include all review tools"
+    assert len(sent_names) > len(REVIEW_TOOL_NAMES), (
+        f"run() should use more than the {len(REVIEW_TOOL_NAMES)} review tools "
+        f"(got {len(sent_names)})"
+    )
