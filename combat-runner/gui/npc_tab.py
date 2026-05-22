@@ -727,8 +727,14 @@ class NPCTab(QWidget):
 
     # ─────────── action execution ───────────
 
-    def _run_action(self, action_name: str) -> None:
-        """Call scripts.dnd_roller.roll_combat_action and append its output."""
+    def _run_action(self, action_name: str) -> dict | None:
+        """Call scripts.dnd_roller.roll_combat_action and append its output.
+
+        Returns the parsed result dict (including the structured ``rolls``
+        sidecar) so an external caller — the directed-command lifecycle in
+        MainWindow — can route save-bearing damage through
+        ``apply_uncertain_damage``. Returns ``None`` on an error / exception.
+        """
         roller = _get_roller()
         try:
             result_json = roller.roll_combat_action(
@@ -739,7 +745,7 @@ class NPCTab(QWidget):
             result = json.loads(result_json)
         except Exception as exc:
             self._append_log(f"<span style='color:#ff5252'>ERROR running {action_name}: {exc}</span>")
-            return
+            return None
         finally:
             # The roll just consumed numbers from the dice cache. Top it back
             # up off-thread now so the *next* roll never blocks the UI thread.
@@ -747,7 +753,7 @@ class NPCTab(QWidget):
 
         if "error" in result:
             self._append_log(f"<span style='color:#ff5252'>{result['error']}</span>")
-            return
+            return None
 
         output = result.get("output", "")
         self._append_log(
@@ -782,6 +788,7 @@ class NPCTab(QWidget):
         if self.event_bus is not None:
             atype = (action_entry or {}).get("type") or ""
             self.event_bus.emit(action_event(self.npc_state.slug, action_name, tags=(atype,) if atype else ()))
+        return result
 
     def _apply_damage(self, amount: int, member: int | None, dtype: str | None) -> None:
         result = self.npc_state.apply_damage(amount, member=member)
@@ -958,10 +965,16 @@ class NPCTab(QWidget):
         (e.g. via round advance, LLM tool call, etc.)."""
         self._refresh()
 
-    def run_action_externally(self, action_name: str) -> None:
+    def run_action_externally(self, action_name: str) -> dict | None:
         """Public hook so MainWindow can fire a matched reaction in this tab
-        (e.g. after the user clicks TRIGGER in the reaction prompt dialog)."""
-        self._run_action(action_name)
+        (e.g. after the user clicks TRIGGER in the reaction prompt dialog).
+
+        Returns the parsed ``roll_combat_action`` result dict (with the
+        structured ``rolls`` sidecar) so the directed-command lifecycle can
+        route save-bearing damage through ``apply_uncertain_damage``.
+        ``None`` on error.
+        """
+        return self._run_action(action_name)
 
     def set_suggestions(self, suggestions: list[Suggestion]) -> None:
         """Main window calls this after the LLM controller returns suggestions

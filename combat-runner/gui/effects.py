@@ -183,6 +183,9 @@ def apply_uncertain_damage(
     full_amount: int,
     kind: str,
     on_save: str,
+    *,
+    source: str = "",
+    round_num: int | None = None,
 ) -> list[str]:
     """Apply the minimum (assumed) damage and record a PendingEffect.
 
@@ -205,6 +208,12 @@ def apply_uncertain_damage(
         ``"save"`` or ``"attack"``.
     on_save:
         ``"half"`` (half damage on save) or ``"none"`` (no damage on save).
+    source:
+        Short label (typically the action name) recorded on the
+        ``PendingEffect`` so a later ``hit`` / marker can name it.
+    round_num:
+        The encounter round the effect was created in.  Defaults to
+        ``state.round_num`` when not given.
 
     Returns
     -------
@@ -242,8 +251,35 @@ def apply_uncertain_damage(
             applied_amount=applied,
             kind=kind,
             resolved=False,
+            source=source,
+            round=state.round_num if round_num is None else round_num,
         )
     )
+    return fragments
+
+
+def clear_stale_pending(state: EncounterState, current_round: int) -> list[str]:
+    """Resolve any unresolved ``PendingEffect`` created in a prior round.
+
+    A pending effect that survives to a new round is stale — the spec (§4)
+    treats "do nothing" as the minimum outcome (a successful save / a miss), so
+    a stale unresolved effect simply stays at its applied minimum and is marked
+    ``resolved`` so it no longer shows the unresolved marker.
+
+    Returns human-readable log fragments, one per cleared effect.
+    """
+    fragments: list[str] = []
+    for pe in state.pending_effects:
+        if pe.resolved:
+            continue
+        if pe.round < current_round:
+            pe.resolved = True
+            combatant = state.combatant_by_id(pe.combatant_id)
+            name = combatant.name if combatant is not None else pe.combatant_id
+            label = f" ({pe.source})" if pe.source else ""
+            fragments.append(
+                f"{name}: unresolved effect{label} expired — assumed save/miss"
+            )
     return fragments
 
 

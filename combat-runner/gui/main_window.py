@@ -452,6 +452,14 @@ class MainWindow(QMainWindow):
         cannot drift — the LLM `advance_round` / `set_round` tools call back
         into this via the `on_round_advanced` hook wired in set_llm_controller.
         """
+        # A pending effect from a prior round is stale — resolve it (the
+        # default "do nothing" outcome is a successful save / a miss). This
+        # also clears its unresolved marker. Spec §4.
+        from .effects import clear_stale_pending
+        stale = clear_stale_pending(
+            self.encounter_state, self.encounter_state.round_num
+        )
+        self._log_fragments(stale)
         # Refresh every tab; recharge rolls handled by each tab's start-of-turn,
         # but we trigger them here for round-button convenience.
         for i in range(self.tabs.count()):
@@ -459,6 +467,7 @@ class MainWindow(QMainWindow):
             if isinstance(tab, NPCTab):
                 tab.refresh()
         self.round_btn.setText(self._round_btn_text())
+        self._refresh_pending_markers()
         self.statusBar().showMessage(f"Round → {self.encounter_state.round_num}", 3000)
         # Surface the round change as an event so condition durations tick
         # (NPCTab._on_round_event) and any "at start of round X" triggers fire.
@@ -469,9 +478,28 @@ class MainWindow(QMainWindow):
 
     def _tab_title(self, npc: NPCState) -> str:
         id_prefix = f"{npc.id} · " if npc.id else ""
+        # Minimal unresolved-effect marker (spec §6): a trailing " ?" when this
+        # combatant has an unresolved PendingEffect. Cleared automatically once
+        # the effect resolves (via `hit` or round-advance stale-clear), because
+        # every repaint path re-derives the title through this method.
+        suffix = " ?" if self._has_unresolved_pending(npc) else ""
         if npc.count > 1:
-            return f"{id_prefix}{npc.name} ×{npc.count}  {npc.hp}/{npc.max_total_hp}"
-        return f"{id_prefix}{npc.name}  {npc.hp}/{npc.max_total_hp}"
+            return f"{id_prefix}{npc.name} ×{npc.count}  {npc.hp}/{npc.max_total_hp}{suffix}"
+        return f"{id_prefix}{npc.name}  {npc.hp}/{npc.max_total_hp}{suffix}"
+
+    def _has_unresolved_pending(self, npc: NPCState) -> bool:
+        """True if *npc* has an unresolved PendingEffect (drives the tab marker)."""
+        return any(
+            pe.combatant_id == npc.id and not pe.resolved
+            for pe in self.encounter_state.pending_effects
+        )
+
+    def _refresh_pending_markers(self) -> None:
+        """Re-title every tab so the unresolved-effect marker reflects state."""
+        for i in range(self.tabs.count()):
+            tab = self.tabs.widget(i)
+            if isinstance(tab, NPCTab):
+                self.tabs.setTabText(i, self._tab_title(tab.npc_state))
 
     def _on_tab_changed(self, idx: int) -> None:
         self.encounter_state.active_tab_index = idx
@@ -1207,12 +1235,50 @@ class MainWindow(QMainWindow):
                     f"{combatant.name}</span>"
                 )
                 continue
-            # TODO(Task-8 lifecycle): an action carrying a `save` block should
-            # route its damage through apply_uncertain_damage so the default
-            # outcome is "saved" and a later `hit` upgrades it. roll_combat_action
-            # currently applies the action's damage as certain; revisit when the
-            # action-execution path exposes its save spec.
-            tab.run_action_externally(action_name)
+            # Run the action — `run_action_externally` returns the parsed
+            # roll_combat_action result, including the structured `rolls`
+            # sidecar. A save-bearing or attack-roll action's damage is
+            # *uncertain*: route it through apply_uncertain_damage so the
+            # default outcome is "saved"/"miss" and a later `hit` upgrades it
+            # (spec §4). A no-save no-attack-roll action carries no `rolls`
+            # damage and stays as printed text.
+            result = tab.run_action_externally(action_name)
+            self._route_uncertain_damage(result, cid, action_name)
+
+    def _route_uncertain_damage(
+        self, result: dict | None, combatant_id: str, action_name: str
+    ) -> None:
+        """Apply a rolled action's uncertain damage via the didn't-land lifecycle.
+
+        Reads the structured ``rolls`` sidecar from a ``roll_combat_action``
+        result. For a ``save``- or ``attack``-kind roll it applies the assumed
+        minimum and records a ``PendingEffect`` (spec §4). A no-roll action
+        (``rolls`` empty/absent) is a no-op here — it carries no HP damage.
+        """
+        if not isinstance(result, dict):
+            return
+        rolls = result.get("rolls") or {}
+        if not isinstance(rolls, dict) or not rolls:
+            return
+        kind = rolls.get("kind")
+        full_amount = rolls.get("damage_total")
+        if kind not in ("save", "attack") or not isinstance(full_amount, int):
+            return
+        # Normalize on_save: the actions DB uses "half" / "no damage";
+        # apply_uncertain_damage expects "half" / "none".
+        on_save_raw = str(rolls.get("on_save", "none")).strip().lower()
+        on_save = "half" if on_save_raw == "half" else "none"
+        from .effects import apply_uncertain_damage
+        fragments = apply_uncertain_damage(
+            self.encounter_state,
+            combatant_id,
+            full_amount,
+            kind=kind,
+            on_save=on_save,
+            source=action_name,
+        )
+        self._log_fragments(fragments)
+        self._refresh_pending_markers()
 
     @staticmethod
     def _resolve_action_token(token: str, actions: list[dict]) -> str | None:

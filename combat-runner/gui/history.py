@@ -7,12 +7,20 @@ from gui.state import EncounterState, deserialize_encounter, serialize_encounter
 
 @dataclass
 class PendingEffect:
-    """An applied-but-unconfirmed effect, kept so `hit` can upgrade it."""
+    """An applied-but-unconfirmed effect, kept so `hit` can upgrade it.
+
+    `source` is a short label (the action name) so `apply_hit`'s match is
+    unambiguous and the log/marker can name what is unresolved. `round` is the
+    encounter round the effect was created in — a pending effect from a prior
+    round is stale and is auto-cleared on round advance (spec §4).
+    """
     combatant_id: str
     full_amount: int
     applied_amount: int
     kind: str            # "save" | "attack"
     resolved: bool = False
+    source: str = ""     # action name that created this pending effect
+    round: int = 0       # encounter round the effect was created in
 
 
 class UndoStack:
