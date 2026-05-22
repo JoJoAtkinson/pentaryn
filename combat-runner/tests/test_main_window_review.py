@@ -145,7 +145,13 @@ def test_out_of_range_mob_member_logs_error(window, qtbot):
 
     actor_tab = window.tabs.widget(0)
     log_html = actor_tab.log_view.toHtml()
-    assert "no such target" in log_html or "m99" in log_html
+    # The warning must name the real reason — "no such target" — not just echo
+    # the command back.  The permissive `or "m99"` fallback was removed to
+    # prevent a regressed message from passing just because the token appears
+    # in the command echo (M2 tighten).
+    assert "no such target" in log_html, (
+        f"Expected 'no such target' in log; got snippet: {log_html[-300:]!r}"
+    )
 
 
 def test_out_of_range_mob_member_fires_no_damage_event(window, qtbot):
@@ -182,7 +188,9 @@ def test_dead_mob_member_heal_skipped_logs_error(window, qtbot):
 
     actor_tab = window.tabs.widget(0)
     log_html = actor_tab.log_view.toHtml()
-    assert "no such target" in log_html or "m1" in log_html
+    assert "no such target" in log_html, (
+        f"Expected 'no such target' in log; got snippet: {log_html[-300:]!r}"
+    )
     # m1 HP must stay 0 — the skip prevented any mutation.
     assert mob.member_hp[0] == 0
 

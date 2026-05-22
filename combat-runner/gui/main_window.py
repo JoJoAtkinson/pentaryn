@@ -1170,6 +1170,15 @@ class MainWindow(QMainWindow):
                     and c.hp != hp_before.get(cid)
                 ]
                 self._emit_amount_events(effect, changed)
+                # A melee-tagged delivery sets in_melee on all targets AND the
+                # actor (restored from old _on_directed_command behaviour).
+                if effect.amount_tags.get("delivery") == "melee":
+                    for cid in ids:
+                        target_c = self.encounter_state.combatant_by_id(cid)
+                        if target_c is not None:
+                            target_c.in_melee = True
+                    if actor is not None:
+                        actor.in_melee = True
             elif effect.kind == "condition":
                 # Only fire bus events when the condition actually applied.
                 # If _apply_condition returned the sentinel (unknown condition),

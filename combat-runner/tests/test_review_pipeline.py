@@ -85,20 +85,35 @@ def test_apply_command_unknown_npc_returns_error(sample_encounter):
     assert "not found" in result["error"]
 
 
-def test_main_window_enqueues_review_for_state_commands(qtbot, sample_encounter):
-    """When a tab emits review_needed, MainWindow starts a review worker IF an
-    LLM controller is wired. With no controller, the enqueue is a no-op."""
+def test_main_window_enqueues_review_no_op_without_controller(qtbot, sample_encounter):
+    """With no LLM controller wired, _enqueue_review is a safe no-op.
+
+    This is NOT a test that review is triggered (test_review_trigger.py covers
+    that); it verifies the guard-clause — _llm_controller absent → no worker
+    spawned, no crash, no inflight signals added.
+    """
     from gui.main_window import MainWindow
     sample_encounter.npcs[0].id = "1"
     win = MainWindow(sample_encounter)
     qtbot.addWidget(win)
-    # With no LLM controller, _enqueue_review is a no-op (no crash).
+    # No controller attached — _enqueue_review must return silently.
+    before_inflight = len(win._inflight_llm_signals)
     win._enqueue_review("−18", sample_encounter.npcs[0], sample_encounter.npcs[0],
                         applied_direction="damage", applied_amount=18)
+    # No new workers should be in-flight since there is no controller.
+    assert len(win._inflight_llm_signals) == before_inflight
 
 
 def test_main_window_not_review_for_note(qtbot, sample_encounter):
-    """note commands must not enqueue review."""
+    """note commands must NOT enqueue a review.
+
+    Since the async LLM review pipeline was re-wired (fix 4, commit 8dff4e0),
+    _enqueue_review IS now a live code path that fires after every real
+    state-mutating command.  This test verifies that note commands (which return
+    early in _on_command before any mutation / review gate) are excluded — i.e.
+    the patch below will actually catch a regression if a future change
+    accidentally routes notes through the mutation path.
+    """
     from gui.main_window import MainWindow
     sample_encounter.npcs[0].id = "1"
     win = MainWindow(sample_encounter)
@@ -108,7 +123,9 @@ def test_main_window_not_review_for_note(qtbot, sample_encounter):
     win._enqueue_review = lambda *a, **kw: reviewed.append(1)
     tab = win.tabs.widget(0)
     tab._on_submitted("note this is a test")
-    assert reviewed == []
+    assert reviewed == [], (
+        "note command must not trigger _enqueue_review (not a state mutation)"
+    )
     win._enqueue_review = original
 
 
