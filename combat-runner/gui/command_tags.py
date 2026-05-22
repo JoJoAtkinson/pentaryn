@@ -43,13 +43,25 @@ TAG_FACETS: dict[str, dict] = {
     },
 }
 
-# Build reverse alias map at module load: alias/canonical → (facet, canonical)
-_ALIAS_MAP: dict[str, tuple[str, str]] = {}
-for _facet, _spec in TAG_FACETS.items():
-    for _canonical, _vspec in _spec["values"].items():
-        _ALIAS_MAP[_canonical] = (_facet, _canonical)
-        for _alias in _vspec.get("aliases", []):
-            _ALIAS_MAP[_alias] = (_facet, _canonical)
+# Fail loudly at module load if a required facet has no default — the token
+# loop relies on pre-seeded defaults; a missing one would silently break things.
+for _f, _s in TAG_FACETS.items():
+    if _s.get("required") and not _s.get("default"):
+        raise ValueError(f"TAG_FACETS[{_f!r}]: required facet must have a default")
+
+
+def _build_alias_map() -> dict[str, tuple[str, str]]:
+    """Build reverse alias map: alias/canonical → (facet, canonical)."""
+    m: dict[str, tuple[str, str]] = {}
+    for facet, spec in TAG_FACETS.items():
+        for canonical, vspec in spec["values"].items():
+            m[canonical] = (facet, canonical)
+            for alias in vspec.get("aliases", []):
+                m[alias] = (facet, canonical)
+    return m
+
+
+_ALIAS_MAP = _build_alias_map()
 
 
 def resolve_tags(tokens: list[str]) -> tuple[dict[str, str], list[str]]:
@@ -92,12 +104,14 @@ def resolve_tags(tokens: list[str]) -> tuple[dict[str, str], list[str]]:
         # Rule 2: replace existing value in same facet
         resolved[facet] = canonical
 
-    # Apply default for required facets not yet set
-    for facet, spec in TAG_FACETS.items():
-        if spec.get("required") and facet not in resolved:
-            default = spec.get("default")
-            if default:
-                resolved[facet] = default
+    # Cleanup pass: strip any facet whose applies_when no longer holds against
+    # the final resolved state. This handles cases where a later token changes
+    # the facet that an earlier facet depends on (e.g. ["melee", "heal"] must
+    # not retain delivery=melee once direction=heal).
+    for facet in list(resolved.keys()):
+        applies_when = TAG_FACETS.get(facet, {}).get("applies_when", {})
+        if not all(resolved.get(af) == av for af, av in applies_when.items()):
+            del resolved[facet]
 
     return resolved, errors
 
