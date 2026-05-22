@@ -578,6 +578,12 @@ async def _execute_combat_action_async(
     lines: list[str] = []
     title = action_name.replace("_", " ").title()
 
+    # Structured roll metadata for non-MCP callers (e.g. the combat-runner GUI's
+    # didn't-land lifecycle). The Markdown `output` is unchanged — this is an
+    # additive sidecar. Populated per-branch below; an empty dict means the
+    # action carried no rolled damage / save (auto-hit utility, etc.).
+    rolls: dict = {}
+
     # Header line
     if "range" in spec:
         lines.append(f"**{title}** — range {spec['range']}")
@@ -666,6 +672,14 @@ async def _execute_combat_action_async(
             *(_roll_attack_damage(a) for a in attacks)
         )
 
+        # Structured sidecar: an attack-roll action lands 0 until confirmed
+        # `hit`. `damage_total` is the sum of every attack's rolled damage.
+        rolls = {
+            "kind": "attack",
+            "damage_total": sum(d["total_with_bonuses"] for d in damage_results),
+            "on_save": "none",
+        }
+
         # Compact paired table — per-attack rider inlined ("if HIT: DC 15 ...")
         # so the DM sees the conditional save right next to the to-hit it depends on.
         lines.append("```")
@@ -734,6 +748,15 @@ async def _execute_combat_action_async(
         full = dmg["total_with_bonuses"]
         on_save = save.get("on_save", "half")
         savers_take = full // 2 if on_save == "half" else 0
+
+        rolls = {
+            "kind": "save",
+            "damage_total": full,
+            "damage_type": damage.get("type", ""),
+            "on_save": on_save,
+            "save_dc": save.get("dc"),
+            "save_ability": save.get("ability"),
+        }
 
         lines.append(f"Damage: **{full} {damage.get('type', '')}**  ({dmg['narrative']})")
         lines.append("")
@@ -805,6 +828,7 @@ async def _execute_combat_action_async(
                 "output": "\n".join(lines),
                 "action_type": action_type,
                 "logged": log_path is not None,
+                "rolls": rolls,
             }
 
         damage = spec.get("damage", {})
@@ -818,6 +842,14 @@ async def _execute_combat_action_async(
             description=f"{npc} {action_name} damage",
             log_path=log_path,
         )
+        rolls = {
+            "kind": "save",
+            "damage_total": dmg["total_with_bonuses"],
+            "damage_type": damage.get("type", ""),
+            "on_save": save.get("on_save", "no damage"),
+            "save_dc": save.get("dc"),
+            "save_ability": save.get("ability"),
+        }
         lines.append(
             f"Damage rolled: **{dmg['total_with_bonuses']} {damage.get('type', '')}**"
             f"  ({dmg['narrative']})"
@@ -841,6 +873,7 @@ async def _execute_combat_action_async(
         "output": "\n".join(lines),
         "action_type": action_type,
         "logged": log_path is not None,
+        "rolls": rolls,
     }
 
 
@@ -855,8 +888,10 @@ def roll_combat_action(
     be the action name OR a verb (resolved via the action's `verbs` list).
 
     Returns: JSON with `output` (Markdown reply, print verbatim), `action_type`,
-    `logged`, `resolved_action`. On error: JSON with `error` and helpful
-    diagnostic fields (available_npcs / available_actions / verb_index).
+    `logged`, `resolved_action`, and `rolls` (structured roll sidecar for the
+    GUI's didn't-land lifecycle — `{kind, damage_total, on_save, ...}`, or `{}`
+    for a no-roll action). On error: JSON with `error` and helpful diagnostic
+    fields (available_npcs / available_actions / verb_index).
     """
     record = combat_actions_db.get(npc, action)
     if record is None:

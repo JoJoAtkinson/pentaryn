@@ -283,3 +283,67 @@ def test_extra_damage_folded_into_total(monkeypatch, tmp_path):
     assert "error" not in result
     assert "extra_damage" in result["output"]
     assert "fire" in result["output"]
+
+
+def test_area_action_emits_save_rolls_sidecar(monkeypatch, tmp_path):
+    """An area/save action returns a structured `rolls` sidecar for the GUI's
+    didn't-land lifecycle, alongside the unchanged Markdown `output`."""
+    _seed_cache([3, 5, 2, 6], source="random_org")
+    result = _run_action(
+        monkeypatch, tmp_path, "frost-mage", "ice_storm",
+        {
+            "type": "area",
+            "area": "20-ft radius",
+            "narration": "hail",
+            "damage": {"dice": "4d6", "type": "cold"},
+            "save": {"dc": 15, "ability": "Dex", "on_save": "half"},
+        },
+    )
+    assert "error" not in result
+    rolls = result["rolls"]
+    assert rolls["kind"] == "save"
+    assert rolls["on_save"] == "half"
+    assert rolls["save_dc"] == 15
+    assert isinstance(rolls["damage_total"], int)
+    # The Markdown output is unchanged — still carries the at-table reminder.
+    assert "ASKING PLAYER" in result["output"]
+
+
+def test_attack_action_emits_attack_rolls_sidecar(monkeypatch, tmp_path):
+    """A single_attack action returns a `rolls` sidecar with kind=attack."""
+    _seed_cache([10, 5, 0, 0], source="random_org")
+    result = _run_action(
+        monkeypatch, tmp_path, "knight", "longsword",
+        {
+            "type": "single_attack",
+            "narration": "swing",
+            "attacks": [
+                {
+                    "name": "Longsword",
+                    "to_hit_bonus": 5,
+                    "damage": "1d8",
+                    "damage_modifier": 3,
+                    "damage_type": "slashing",
+                }
+            ],
+        },
+    )
+    assert "error" not in result
+    rolls = result["rolls"]
+    assert rolls["kind"] == "attack"
+    assert rolls["on_save"] == "none"
+    assert isinstance(rolls["damage_total"], int)
+
+
+def test_utility_action_emits_empty_rolls_sidecar(monkeypatch, tmp_path):
+    """A no-roll utility action carries an empty `rolls` sidecar (no HP damage)."""
+    result = _run_action(
+        monkeypatch, tmp_path, "mage", "mage_armor",
+        {
+            "type": "utility",
+            "narration": "shimmer",
+            "effect": "AC becomes 13 + Dex.",
+        },
+    )
+    assert "error" not in result
+    assert result["rolls"] == {}

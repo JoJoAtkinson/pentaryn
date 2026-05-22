@@ -1,6 +1,6 @@
 # Combat Runner GUI
 
-PySide6 + qt-material desktop app for running D&D 5.5e combat at the table. Each combatant (NPC or PC) gets its own tab; you type sigils into the command bar; the LLM reviews every state-changing command asynchronously so mistakes surface quickly and are undoable in natural language.
+PySide6 + qt-material desktop app for running D&D 5.5e combat at the table. Each combatant (NPC or PC) gets its own tab; you type `<who> <stream>` commands into the command bar; the LLM reviews every state-changing command asynchronously so mistakes surface quickly and are undoable in natural language.
 
 ## Launch
 
@@ -18,7 +18,7 @@ Then pick an encounter from the dialog, adjust per-NPC counts (and per-player HP
 
 - Python 3.13+ (3.14 recommended)
 - macOS, Linux, Windows
-- `ANTHROPIC_API_KEY` env var (or `.env` file at repo root) — optional. Without it, the fast-path sigils still work; LLM fallback, suggestions, **and the always-on async review** are all disabled. The app is fully functional without a key.
+- `ANTHROPIC_API_KEY` env var (or `.env` file at repo root) — optional. Without it, the fast-path grammar commands still work; LLM fallback, suggestions, **and the always-on async review** are all disabled. The app is fully functional without a key.
 
 ## Combatant ids
 
@@ -35,39 +35,68 @@ tier 3 (three keypresses):111 222 … 000
 - A mob has **one id**; its individual members are addressed with `m<n>` (e.g. `44 m2`).
 - Only uniform-digit strings are valid ids: `44` yes, `45` no. The parser rejects non-uniform numbers and routes them to the LLM.
 
-## Command sigils (typed into a tab's command bar)
+## Command grammar — `<who> <stream>`
 
-### Self-target sigils (apply to the active tab's combatant)
+Every command is **`<who> <stream>`**. The first character picks the target;
+the rest is a left-to-right stream of effects. Anything the grammar can't parse
+is routed to the LLM meta-controller.
 
-| Sigil               | Effect                                                                   |
-|---------------------|--------------------------------------------------------------------------|
-| `attack` / verb     | Fuzzy-match an action verb → run it via `roll_combat_action` (NPC only)  |
-| `-18`               | Damage. Live red overlay on the HP bar while typing                      |
-| `-18 fire`          | Damage with type (tag — checked against reaction triggers)               |
-| `+10`               | Heal. Live green overlay                                                  |
-| `m2 -5`             | Damage member 2 of a mob (override default routing to highest alive)     |
-| `@prone`            | Toggle a condition on this combatant (idempotent)                        |
-| `@`                 | (Alone) Open the condition autocomplete menu                             |
-| `note ...`          | Log entry. Never hits the LLM. Use this for free-form annotation.       |
-| `/reorder a b c`    | Reorder tabs by slug                                                     |
-| `/quit`             | Close the window                                                         |
-| Anything else        | Routed to the LLM meta-controller (with full state-mutation tool access) |
+### `<who>` — the target slot
 
-### Directed commands (apply to any combatant from any tab)
+| Form                | Resolves to                                                          |
+|---------------------|----------------------------------------------------------------------|
+| leading digit-run   | explicit target(s). A digit string splits into same-digit **runs**: `2` → {2}, `123` → {1,2,3}, `2233` → {22,33} |
+| `0`                 | **self** — the active tab's combatant (combinable: `0123` → {self,1,2,3}) |
+| leading whitespace  | the **current target** (the sticky set)                              |
+| leading sigil/word  | also the current target (no explicit `<who>`)                        |
+
+A `<who>` token **alone** (digits, nothing after) sets the sticky current
+target, jumps to that tab, and logs *"Marwen is now the target."*
+
+### `<stream>` — effects
+
+A number's meaning is set by the **token immediately after it**:
+
+| Pattern                  | Meaning                              | Example              |
+|--------------------------|--------------------------------------|----------------------|
+| `<num> <dmg-tag…>`       | a damage / heal **amount**           | `2 8 melee slash`    |
+| `<num> <condition>`      | the condition's **duration** (rounds)| `3 2 stun`           |
+| `<num>` then nothing     | an **action #** (panel hotkey)       | `2 2`                |
+| `<condition>` no number  | the condition, **default 1 round**   | `3 prone`            |
+| `<verb>`                 | an **action by name** (fuzzy-matched)| `3 tail-sweep`       |
+| `m<n>`                   | mob-member modifier on the next amount | `7 m3 6 melee`     |
+| `hit`                    | upgrade a pending effect to a full hit | `13 hit` · `␣hit`  |
+| `undo`                   | revert the last command              | `undo`               |
+| a damage-tag with **no** number | **error → routed to the LLM** | `2 melee` ✗          |
+
+- **Damage-tags** = damage types (`fire`, `slash`, …), delivery (`melee`,
+  `ranged`), direction (`dmg`, `heal`). Numbers always come before their tag.
+- **Compound effects chain:** `4 9 bludge 1 prone` = 9 bludgeoning damage **and**
+  prone for 1 round.
+- **`@` is an optional escape hatch:** `@prone` forces the condition reading for
+  the rare word that collides with an action verb.
+
+### Cheat-sheet
 
 ```
-<id> <amount> [tags…]    — damage or heal any combatant by id
-<id> m<n> <amount> [tags…] — target mob member n within that combatant's mob
-<id>                     — bare id alone jumps to that combatant's tab
+<who>  = digit-run (2, 123, 2233) · leading space = current target · 0 = self
+<who> alone                 -> set sticky target, jump tab
+<who> <num>                 -> action #num
+<who> <num> <dmg-tags…>     -> amount, qualified      (2 10 melee slash)
+<who> <num> <condition>     -> condition, num = duration (3 2 stun)
+<who> <condition>           -> condition, default 1 round
+<who> <verb>                -> action by name (fuzzy)
+compound:  4 9 bludge 1 prone   -> 9 bludgeoning dmg + prone 1 round
+hit   -> upgrade effect to full hit (13 hit · ␣hit)
+undo  -> revert last command
+@cond -> force the condition reading
 ```
 
-Examples:
-- `5 18 fire melee` — deal 18 fire melee damage to combatant #5
-- `22 10 heal` — heal combatant #22 for 10 HP
-- `44 m2 7` — deal 7 damage to mob member 2 of combatant #44
-- `3` — jump to combatant #3's tab
+The **active tab** is logged as the actor. A red ▼ targeting arrow paints on
+every current-target tab (never on the actor's own tab — so `0`/self shows no
+arrow). The arrow follows drag-reorder for free.
 
-The **active tab** at the time of entry is logged as the actor: `Vessa → #5: 18 fire`.
+Click an action chip in the grid to run it without typing.
 
 #### Tag vocabulary
 
@@ -77,9 +106,7 @@ Tags follow a **faceted** model. Only one value per facet is active at a time; a
 |------------|-----------------------------------------------------------------------------------------------------|------------------------------|
 | `direction`| `damage` (`dmg`, `dam`) · `heal` (`healing`, `hp`)                                                 | Default: `damage`            |
 | `delivery` | `melee` · `ranged` (`rng`)                                                                          | Dropped if direction = heal  |
-| `type`     | `fire` · `cold` · `acid` · `lightning` · `poison` · `necrotic` · `radiant` · `thunder` · `force` · `psychic` · `piercing` · `slashing` · `bludgeoning` | Dropped if direction = heal  |
-
-Click an action chip in the grid to run it without typing.
+| `type`     | `fire` · `cold` · `acid` · `lightning` · `poison` · `necrotic` · `radiant` · `thunder` · `force` · `psychic` · `piercing` (`pierce`) · `slashing` (`slash`) · `bludgeoning` (`bludge`, `bludgeon`) | Dropped if direction = heal  |
 
 ## Keyboard
 
@@ -128,7 +155,7 @@ When a party is loaded, each active player gets their own tab (title: `id · nam
 - **Cast** opens a dialog for spell name + level and fires a `spell_cast` event (can trigger NPC counterspell reactions).
 - **Disengage** sets the `_disengaging` internal flag so the next **Retreat** suppresses the opportunity-attack prompt.
 - **Retreat** fires a `move_away` event; if the player is `in_melee` and has not Disengaged, the DM gets a prompt to apply an opportunity attack.
-- **Dodge, Dash, Help, Hide, Ready** log a line. They are not wired to typed verbs — only chip clicks work (verb fuzzy-match for player actions was descoped; typed text falls to the LLM).
+- **Dodge, Dash, Help, Hide, Ready** log a line. They are reachable both by chip click and by typing the verb against the PC (`0 dodge`, `0 disengage`) — a PC tab fuzzy-matches the verb against its generic action set before the global utility actions.
 
 ## LLM review (always-on, async)
 
@@ -136,18 +163,23 @@ Every state-changing command (directed or self-target) also triggers an **asynch
 
 Key points for DMs:
 
-- **The `⟳ review:` lines arrive after a delay** — sometimes 5–30 seconds after a fast burst of commands. This is normal, not a bug. The fast-path sigils always resolve immediately; the review is an annotation layer.
-- **`ANTHROPIC_API_KEY` is required for reviews.** Without a key the review silently no-ops; all sigils and the LLM fallback still work. See Requirements above.
+- **The `⟳ review:` lines arrive after a delay** — sometimes 5–30 seconds after a fast burst of commands. This is normal, not a bug. Grammar commands always resolve immediately; the review is an annotation layer.
+- **`ANTHROPIC_API_KEY` is required for reviews.** Without a key the review silently no-ops; all grammar commands and the LLM fallback still work. See Requirements above.
 - **Reviews cost real API tokens** (Haiku model, ~$0.15–0.75 for a 4-hour session of typical volume). There is no per-session call counter in the UI.
 - **`note …` never hits the LLM** — use it for free-form log entries that should not trigger a review.
 
 ## Architecture quick-tour
 
 - `app.py` — `QApplication` boot + qt-material theme + `build_main_window(encounter, counts, with_llm=True, party_config=…, player_selections=…)` (set `with_llm=False` in tests to bypass the LLM SDK)
-- `main_window.py` — owns `EncounterState`, the `QTabWidget`, the round button, the `EventBus`, the `TriggerMatcher`, and the `SuggestionDriver`. Routes directed commands and wires the async review.
-- `npc_tab.py` — one tab per combatant (NPC or PC). Composes `HPBar`, action area (DB-driven chip grid for NPCs; generic chip row for PCs), `CommandInput`, `SuggestionBar`. Dispatches input through `Dispatcher`.
+- `main_window.py` — owns `EncounterState`, the `QTabWidget` (with the `CombatTabBar` targeting-arrow tab bar), the round button, the `EventBus`, the `TriggerMatcher`, the `UndoStack`, and the `SuggestionDriver`. `_on_command(ParsedCommand)` snapshots, resolves targets, applies each effect, emits bus events, and refreshes the arrow.
+- `npc_tab.py` — one tab per combatant (NPC or PC). Composes `HPBar`, action area (DB-driven chip grid for NPCs; generic chip row for PCs), `CommandInput`, `SuggestionBar`. `_on_submitted` parses the input and emits `command_requested(ParsedCommand)` for the main window to dispatch.
 - `command_tags.py` — pure-Python faceted tag taxonomy (`resolve_tags`, `hint_pool`). No Qt.
-- `dispatcher.py` — sigil regex + fuzzy verb match + directed-command parser. Returns a `ParsedInput` with `kind ∈ {DAMAGE, HEAL, CONDITION, ACTION, DIRECTED, JUMP, NOTE, …}`.
+- `dispatcher.py` — the `<who> <stream>` grammar parser. `parse(raw) -> ParsedCommand` (`kind ∈ {command, set_target, unparseable}`). Pure Python, no Qt.
+- `command_model.py` — the `Effect` / `ParsedCommand` dataclasses (the dispatcher → main_window contract).
+- `effects.py` — `apply_effect` / `apply_hit` / `apply_uncertain_damage`: the authoritative `Effect` → `EncounterState` mutation point.
+- `history.py` — `UndoStack` (memento full-state snapshots) + `PendingEffect` records.
+- `targeting.py` — pure `<who>`-token logic (`classify_who`, `split_runs`).
+- `widgets/combat_tab_bar.py` — `QTabBar` subclass that paints the red ▼ targeting arrow on every current-target tab (excluding the actor's tab).
 - `state.py` — `NPCState` (generic combatant) + `EncounterState` dataclasses. JSON-serializable for the LLM boundary. Includes `kind`, `id`, `in_melee`, `pinned_notes` fields.
 - `event_bus.py` — typed pub/sub + `TriggerMatcher` for declarative reactions. Event kinds include `damage`, `heal`, `condition_applied`, `condition_removed`, `action_executed`, `spell_cast`, `move_away`, `bloodied`, `death`, `round_advanced`.
 - `llm_controller.py` — Anthropic SDK wrapper. Tool surface mirrors every state mutation. Also runs the async review worker.
@@ -195,32 +227,28 @@ For a **broadcast-watch suggestion** (action pops to the top of this NPC's sugge
 
 `scope: "ally"` fires when a different in-play NPC is the subject (healer reacts to ally going bloodied). `scope: "self"` fires when this NPC IS the subject (Aelric reacts to his own paralysis). `scope: "any"` fires regardless. Optional `match` further filters by condition name (`condition_applied` events) or damage type (`damage` events). The suggestion auto-prunes when the underlying state recovers (target heals back above half / dies / loses the condition).
 
-## Sigil cheat sheet (the at-table syntax)
+## Grammar cheat sheet (the at-table syntax)
 
-**Self-target** (applies to the active tab):
+Every command is `<who> <stream>` — see the **Command grammar** section above
+for the full rules. Worked examples:
 
-| You type            | Effect                                                        |
-|---------------------|---------------------------------------------------------------|
-| `attack` / verb     | Fuzzy match → run action (NPC tabs only)                      |
-| `-18` / `-18 fire`  | Damage (typed/untyped). Live red overlay.                     |
-| `+10`               | Heal. Live green overlay.                                     |
-| `m2 -5`             | Target mob member 2 explicitly                                |
-| `@prone`            | Toggle condition (idempotent)                                 |
-| `@stun 5`           | Apply condition for N rounds (auto-decrements on round)       |
-| `@`                 | Open the condition autocomplete popup                         |
-| `note ...`          | Log entry; never hits the LLM                                 |
-| `/reorder a b c`    | Reorder tabs by slug                                          |
-| anything else       | Routed to the LLM meta-controller                             |
-
-**Directed** (applies to any combatant, from any tab):
-
-| You type              | Effect                                                      |
-|-----------------------|-------------------------------------------------------------|
-| `5 18 fire melee`     | Deal 18 fire melee damage to combatant #5                   |
-| `22 10 heal`          | Heal combatant #22 for 10                                   |
-| `44 m2 7`             | Damage mob member 2 of combatant #44 for 7                  |
-| `3`                   | Jump to combatant #3's tab                                  |
-| `44`                  | Jump to combatant #44's tab                                 |
+| You type                | Effect                                                      |
+|-------------------------|-------------------------------------------------------------|
+| `2 8 melee slash`       | 8 melee slashing damage to combatant #2                     |
+| `2 2`                   | Target #2, run action #2 (panel hotkey)                     |
+| `3 tail-sweep`          | Target #3, run an action by name (fuzzy)                    |
+| `123 3`                 | Run action #3 against all of {1,2,3}                        |
+| `6 12 heal`             | Heal combatant #6 by 12                                     |
+| `7 m3 6 melee`          | 6 melee damage to mob member 3 of combatant #7              |
+| `0` / `0 2`             | Self (jump to own tab) / self, run action #2 (self-buff)    |
+| `0123`                  | Target {self, 1, 2, 3}                                      |
+| `3 2 stun`              | Stun combatant #3 for 2 rounds                              |
+| `4 9 bludge 1 prone`    | 9 bludgeoning damage **and** prone for 1 round (compound)   |
+| `␣12 heal`              | Heal the **current target** by 12 (leading space)           |
+| `3` (alone)             | Set #3 as the sticky current target, jump to its tab        |
+| `13 hit`                | Upgrade the pending effect on #1 and #3 to a full hit       |
+| `undo`                  | Revert the last command (memento undo)                      |
+| anything off-grammar    | Routed to the LLM meta-controller                           |
 
 ## Universal / global actions
 
@@ -251,5 +279,5 @@ Scenario metrics land in `combat-runner/tests/.metrics/<scenario>-<ts>.json` (gi
 | LLM fallback errors with "client not initialized"      | Same — set the env var or `.env` at repo root                                |
 | No `⟳ review:` lines appear after commands             | Same — `ANTHROPIC_API_KEY` not set; review no-ops without it                 |
 | `⟳ review:` lines arrive 20–40s after commands         | Normal — the review queue is single-threaded and serialized; a burst of fast commands stacks up behind each other |
-| Directed command falls through to LLM unexpectedly     | Check the id: `45` is invalid (non-uniform digits); only `44`, `4`, `444` etc. are valid ids |
+| Command falls through to LLM unexpectedly              | A damage-tag with no leading number (`2 melee`) is intentionally an error → LLM. Use `2 8 melee`. Remember `45` is **two** targets {4,5}, not one id `45` — same-digit runs make a single id (`44`) |
 | Crashes on em-dash / unicode chars                      | Known PySide6 issue; ASCII only in test inputs                               |

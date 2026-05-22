@@ -28,10 +28,11 @@ def test_npc_pinned_notes_default_empty():
 def test_id_alphabet_order():
     from gui.state import _id_alphabet
     gen = _id_alphabet()
-    first = [next(gen) for _ in range(12)]
-    assert first[:10] == ["1","2","3","4","5","6","7","8","9","0"]
-    assert first[10] == "11"
-    assert first[11] == "22"
+    first = [next(gen) for _ in range(11)]
+    # '0' is excluded so it remains free as the 'self' token
+    assert first[:9] == ["1","2","3","4","5","6","7","8","9"]
+    assert first[9] == "11"
+    assert first[10] == "22"
 
 def test_assign_ids_fills_empty():
     n1, n2 = _npc(), _npc()

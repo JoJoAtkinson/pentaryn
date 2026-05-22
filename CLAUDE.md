@@ -36,7 +36,7 @@ Run `/Users/joe/GitHub/dnd/.venv/bin/python scripts/mcp/server.py --list-tools` 
 
 ## Combat Runner — the default at-table tool
 
-For running combat live at the table, use the **PySide6 GUI** at `combat-runner/gui/` (`make combat-gui`). It's tab-per-combatant (NPCs **and** PCs), sigil-driven (`-18` damage, `+10` heal, `@prone` for conditions, verb-fuzzy-match for NPC actions), with a directed-command grammar (`<id> <amount> <tags…>`) for targeting any combatant from any tab, permanent repeated-digit combatant ids, a live red/green HP overlay, declarative reactions, mob support (segmented HP bar, `m<n>` targeting), universal actions (Push/Grapple/Dodge/etc.), always-on async LLM review (`⟳ review:` log lines), and player tabs with generic action chips. See [`combat-runner/gui/README.md`](combat-runner/gui/README.md) for the full sigil cheat-sheet, party roster schema, architecture, and headless-testing notes.
+For running combat live at the table, use the **PySide6 GUI** at `combat-runner/gui/` (`make combat-gui`). It's tab-per-combatant (NPCs **and** PCs), using a `<who> <stream>` grammar (`2 8 melee` for 8 melee damage to #2, `2 2` for action #2, `3 prone` for conditions, `3 tail-sweep` for fuzzy action-by-name), with permanent repeated-digit combatant ids, a live HP overlay, declarative reactions, mob support (`m<n>` targeting), universal actions, always-on async LLM review (`⟳ review:` log lines), `note <text>` for LLM-free log entries, `/reorder` and `/quit` slash commands, and player tabs with generic action chips. See [`combat-runner/gui/README.md`](combat-runner/gui/README.md) for the full grammar cheat-sheet, party roster schema, architecture, and headless-testing notes.
 
 The old Haiku-Claude-Code CLI launcher at `combat-runner/launch.py` is still around as a fallback (NPC-only, no player support) but the GUI is the snappy default.
 
@@ -46,7 +46,7 @@ Player characters are first-class combatants in the GUI: each active player gets
 
 - **File:** `world/party/<party>/combat-roster.yml`
 - **Schema:** `party: <name>`, `players: [{name, id, max_hp, ac}]`
-- **`id` must be a repeated-digit string** (`"1"`, `"22"`, `"333"` …) — non-uniform ids cannot be addressed by the directed-command grammar.
+- **`id` must be a repeated-digit string** (`"1"`, `"22"`, `"333"` …) — non-uniform ids cannot be addressed by the `<who> <stream>` grammar.
 - Load at launch: `python -m gui.app --party world/party/black-ledger/combat-roster.yml`
 - See [`combat-runner/gui/README.md`](combat-runner/gui/README.md) for the full schema, picker UI, and player tab details.
 

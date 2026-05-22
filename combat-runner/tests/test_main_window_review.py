@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 import pytest
 from PySide6.QtCore import Qt
 
-from gui.dispatcher import Dispatcher
+from gui.dispatcher import parse
 from gui.main_window import MainWindow
 from gui.state import EncounterState, NPCState, serialize_encounter
 
@@ -132,33 +132,39 @@ def test_snapshot_restores_in_melee_false(window, tmp_path, monkeypatch):
 
 def test_out_of_range_mob_member_logs_error(window, qtbot):
     """A directed damage to m99 (out of range for a 3-member mob) should log
-    a red error on the actor tab.
+    a warning on the actor tab.
 
-    Directed mob-member syntax: '<target_id> m<n> <amount>'
-    e.g. '2 m99 10' means: target combatant #2, member 99, 10 damage.
+    Mob-member grammar: '<target_id> m<n> <amount> <dmg-tag>'
+    e.g. '2 m99 10 dmg' means: target combatant #2, member 99, 10 damage.
     """
     window.tabs.setCurrentIndex(0)  # actor is tab 0
 
-    parsed = Dispatcher().parse("2 m99 10")
-    assert parsed.target_member == 99, "precondition: parser must set target_member"
-    window._on_directed_command(parsed)
+    cmd = parse("2 m99 10 dmg")
+    assert cmd.effects[0].member == 99, "precondition: parser sets member on the amount"
+    window._on_command(cmd)
 
     actor_tab = window.tabs.widget(0)
     log_html = actor_tab.log_view.toHtml()
-    assert "no such mob member" in log_html or "m99" in log_html
+    # The warning must name the real reason — "no such target" — not just echo
+    # the command back.  The permissive `or "m99"` fallback was removed to
+    # prevent a regressed message from passing just because the token appears
+    # in the command echo (M2 tighten).
+    assert "no such target" in log_html, (
+        f"Expected 'no such target' in log; got snippet: {log_html[-300:]!r}"
+    )
 
 
 def test_out_of_range_mob_member_fires_no_damage_event(window, qtbot):
-    """A skipped directed command must not emit any event on the bus."""
+    """A skipped command must not emit any damage/heal event on the bus."""
     events_received: list = []
     window.event_bus.subscribe_all(events_received.append)
 
     window.tabs.setCurrentIndex(0)
-    parsed = Dispatcher().parse("2 m99 10")
-    window._on_directed_command(parsed)
+    window._on_command(parse("2 m99 10 dmg"))
 
-    # No event should have been emitted for this skipped command.
-    assert not events_received, f"Unexpected events: {[e.kind for e in events_received]}"
+    # No damage/heal event should have been emitted for this skipped command.
+    kinds = [e.kind for e in events_received]
+    assert "damage" not in kinds and "heal" not in kinds, f"Unexpected events: {kinds}"
 
 
 def test_out_of_range_mob_member_does_not_change_hp(window):
@@ -167,27 +173,24 @@ def test_out_of_range_mob_member_does_not_change_hp(window):
     before_hp = mob.hp
 
     window.tabs.setCurrentIndex(0)
-    parsed = Dispatcher().parse("2 m99 8")
-    window._on_directed_command(parsed)
+    window._on_command(parse("2 m99 8 dmg"))
 
     assert mob.hp == before_hp
 
 
 def test_dead_mob_member_heal_skipped_logs_error(window, qtbot):
-    """Healing a dead member (m1 when m1 is dead) returns skipped → should log error."""
+    """Healing a dead member (m1 when m1 is dead) returns skipped → logs a warning."""
     mob = window.encounter_state.npcs[1]
-    # Kill m1 directly.
-    mob.member_hp[0] = 0
+    mob.member_hp[0] = 0  # kill m1 directly
 
     window.tabs.setCurrentIndex(0)
-    # Healing a dead member → apply_heal returns {"skipped": "dead member"}
-    parsed = Dispatcher().parse("2 m1 5 heal")
-    window._on_directed_command(parsed)
+    window._on_command(parse("2 m1 5 heal"))
 
     actor_tab = window.tabs.widget(0)
     log_html = actor_tab.log_view.toHtml()
-    # Should log a skip message, not a normal heal line.
-    assert "no such mob member" in log_html or "skipped" in log_html.lower() or "m1" in log_html
+    assert "no such target" in log_html, (
+        f"Expected 'no such target' in log; got snippet: {log_html[-300:]!r}"
+    )
     # m1 HP must stay 0 — the skip prevented any mutation.
     assert mob.member_hp[0] == 0
 
@@ -198,8 +201,7 @@ def test_valid_mob_member_still_applies_damage(window):
     before_m2 = mob.member_hp[1]
 
     window.tabs.setCurrentIndex(0)
-    parsed = Dispatcher().parse("2 m2 5")
-    window._on_directed_command(parsed)
+    window._on_command(parse("2 m2 5 dmg"))
 
     assert mob.member_hp[1] == before_m2 - 5
 
