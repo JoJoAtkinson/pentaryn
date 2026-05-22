@@ -719,16 +719,27 @@ class LLMController:
 
     REVIEW_SYSTEM_PROMPT = (
         "You are an at-table D&D 5.5e combat reviewer. A DM just typed a command; "
-        "the fast path already applied the deterministic effect. Your job:\n"
-        "  1. Verify the effect was correct (check resistances, immunities, tags).\n"
-        "  2. If the target has a resistance or immunity that changes the result, "
-        "     call apply_command or set_hp to revise it, then reply with "
-        "     '⟳ review: <short explanation>'.\n"
-        "  3. If the command is free-form ('33 is taunted'), interpret it: "
-        "     prefer add_condition for condition-like input, else add_log_entry.\n"
-        "  4. If everything looks correct, stay silent (return no text, no tools).\n"
-        "  5. Never block on uncertainty — if you're unsure, stay silent.\n"
-        "Be concise. One tool call maximum. One sentence if you say anything."
+        "the fast path already applied the deterministic effect. You are given the "
+        "REAL applied delta — for every affected combatant, its before→after HP and "
+        "conditions — plus each target's damage immunities, and a roster of every "
+        "combatant in the fight (id, name, pc/npc). Your job:\n"
+        "  1. Verify the applied delta was correct. Check the damage type against the "
+        "     target's immunities (listed) and resistances (infer from the creature's "
+        "     name/type — resistances are not in the data). If the target is IMMUNE, "
+        "     the damage should have been 0; if RESISTANT, halved.\n"
+        "  2. Sanity-check the magnitude — damage far exceeding a target's max HP, or "
+        "     a heal pushing past max HP, is suspect.\n"
+        "  3. Check targeting/allegiance against the roster: a heal landing on an "
+        "     enemy, or damage landing on an allied PC, is likely a wrong-target "
+        "     mistake worth flagging.\n"
+        "  4. If something is wrong, call apply_command (or set_hp) to revise it, then "
+        "     reply with one short sentence explaining the correction. It will be "
+        "     logged as '⟳ review: <your text>'.\n"
+        "  5. If the command is free-form ('33 is taunted'), interpret it: prefer "
+        "     add_condition for condition-like input, else add_log_entry.\n"
+        "  6. If the applied delta looks correct, stay silent (return no text, no "
+        "     tools). Never block on uncertainty — if unsure, stay silent.\n"
+        "Be concise. Prefer a single corrective tool call. One sentence if you speak."
     )
 
     def __init__(
@@ -787,11 +798,84 @@ class LLMController:
         ]
         return self._chat_loop(client, messages, dispatch_fn=dispatch_fn)
 
+    @staticmethod
+    def build_review_user_msg(
+        raw: str,
+        actor: dict,
+        affected: list[dict],
+        roster: list[dict],
+        applied_direction: str | None,
+        applied_amount: int | None,
+        log_tail: str,
+    ) -> str:
+        """Build the review `user_msg` — the full context payload.
+
+        Pure helper, no I/O, so tests can assert the context shape directly.
+
+        ``affected`` — one dict per combatant the command actually mutated, each
+        with: name, id, kind, hp_before, hp_after, max_hp, conditions_before,
+        conditions_after, immunities. This is the REAL before→after delta the
+        fast path produced, so the review knows exactly what happened.
+
+        ``roster`` — every combatant in the fight (id, name, kind) so the review
+        can catch wrong-target / wrong-allegiance mistakes (healed an enemy,
+        damaged an ally).
+        """
+        actor_desc = (
+            f"{actor.get('name', '?')} "
+            f"(id={actor.get('id', '?')}, kind={actor.get('kind', '?')})"
+        )
+        if applied_direction:
+            applied_desc = f"{applied_direction} {applied_amount}"
+        else:
+            applied_desc = "(no scalar amount — see per-target HP delta below)"
+
+        target_lines: list[str] = []
+        for t in affected:
+            imm = t.get("immunities") or []
+            imm_desc = ", ".join(imm) if imm else "none listed"
+            cond_before = t.get("conditions_before", [])
+            cond_after = t.get("conditions_after", [])
+            cond_desc = (
+                f"conditions {cond_before}"
+                if cond_before == cond_after
+                else f"conditions {cond_before}→{cond_after}"
+            )
+            target_lines.append(
+                f"  - {t.get('name', '?')} (id={t.get('id', '?')}, "
+                f"kind={t.get('kind', '?')}): "
+                f"HP {t.get('hp_before', '?')}→{t.get('hp_after', '?')}"
+                f"/{t.get('max_hp', '?')}, {cond_desc}, "
+                f"damage immunities: {imm_desc}; "
+                f"resistances: unknown — infer from creature type/name"
+            )
+        targets_block = (
+            "\n".join(target_lines) if target_lines
+            else "  (no combatant HP/conditions changed)"
+        )
+
+        roster_lines = [
+            f"  - id={c.get('id', '?')} {c.get('name', '?')} [{c.get('kind', '?')}]"
+            for c in roster
+        ]
+        roster_block = "\n".join(roster_lines) if roster_lines else "  (empty)"
+
+        return (
+            f"Actor (who acted): {actor_desc}\n"
+            f"Command typed: {raw!r}\n"
+            f"Fast path applied: {applied_desc}\n"
+            f"Affected combatants (before→after — this is what the fast path "
+            f"actually did):\n{targets_block}\n"
+            f"Full combatant roster:\n{roster_block}\n"
+            f"Recent log:\n{log_tail}"
+        )
+
     def review_command(
         self,
         raw: str,
         actor: dict,
-        target: dict,
+        affected: list[dict],
+        roster: list[dict],
         applied_direction: str | None,
         applied_amount: int | None,
         log_tail: str,
@@ -800,31 +884,22 @@ class LLMController:
         """Async review of an already-applied command. Blocking — run off-thread.
 
         The fast path has already applied the deterministic effect; this asks
-        the model to verify it (resistances/immunities/free-form intent) and,
-        if anything is wrong, revise via tools. If the review writes a sentence
-        it is appended to the combat log with a `⟳ review:` prefix.
+        the model to verify it (resistances/immunities/over-damage/wrong-target
+        /free-form intent) and, if anything is wrong, revise via tools. If the
+        review writes a sentence it is appended to the combat log with a
+        `⟳ review:` prefix.
+
+        ``affected`` carries the REAL before→after HP/conditions for every
+        target the command mutated; ``roster`` carries every combatant's
+        id/name/kind so the review can reason about allegiance.
         """
         client = self._ensure_client()
         if client is None:
             return RunResult(error="no API key")
 
-        actor_desc = f"{actor.get('name', '?')} (id={actor.get('id', '?')})"
-        target_desc = (
-            f"{target.get('name', '?')} (id={target.get('id', '?')}, "
-            f"HP {target.get('hp', '?')}/{target.get('max_hp', '?')}, "
-            f"conditions={target.get('conditions', [])}, "
-            f"in_melee={target.get('in_melee', False)})"
-        )
-        applied_desc = (
-            f"{applied_direction} {applied_amount}"
-            if applied_direction else "(fast path: no direct mutation)"
-        )
-        user_msg = (
-            f"Actor: {actor_desc}\n"
-            f"Target: {target_desc}\n"
-            f"Command typed: {raw!r}\n"
-            f"Fast path applied: {applied_desc}\n"
-            f"Recent log:\n{log_tail}"
+        user_msg = self.build_review_user_msg(
+            raw, actor, affected, roster,
+            applied_direction, applied_amount, log_tail,
         )
 
         messages = [{"role": "user", "content": user_msg}]
@@ -832,7 +907,7 @@ class LLMController:
             client, messages,
             system_override=self.REVIEW_SYSTEM_PROMPT,
             dispatch_fn=dispatch_fn,
-            max_iterations=2,
+            max_iterations=4,
             tools_override=self._review_tools,
         )
         if result.text and not result.error:

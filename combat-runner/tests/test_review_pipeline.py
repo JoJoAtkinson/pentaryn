@@ -34,13 +34,25 @@ def controller_with_fake_client(sample_encounter):
     return ctrl, fake_client
 
 
+def _affected(**over):
+    """Build one affected-target dict with sensible defaults."""
+    base = {
+        "id": "5", "name": "Goblin", "slug": "goblin", "kind": "npc",
+        "hp_before": 7, "hp_after": 0, "max_hp": 7,
+        "conditions_before": [], "conditions_after": [],
+        "immunities": [],
+    }
+    base.update(over)
+    return base
+
+
 def test_review_command_calls_api(controller_with_fake_client):
     ctrl, fake_client = controller_with_fake_client
     ctrl.review_command(
         raw="5 12 fire",
-        actor={"id": "1", "name": "Vessa", "slug": "pc-1"},
-        target={"id": "5", "name": "Goblin", "slug": "goblin",
-                "hp": 7, "max_hp": 7, "conditions": [], "in_melee": False},
+        actor={"id": "1", "name": "Vessa", "slug": "pc-1", "kind": "pc"},
+        affected=[_affected(hp_before=7, hp_after=0)],
+        roster=[{"id": "5", "name": "Goblin", "kind": "npc"}],
         applied_direction="damage", applied_amount=12,
         log_tail="",
     )
@@ -50,12 +62,88 @@ def test_review_command_calls_api(controller_with_fake_client):
 def test_review_silent_returns_no_error(controller_with_fake_client):
     ctrl, _ = controller_with_fake_client
     result = ctrl.review_command(
-        raw="5 12", actor={"id": "1", "name": "A", "slug": "a"},
-        target={"id": "5", "name": "B", "slug": "b",
-                "hp": 10, "max_hp": 10, "conditions": [], "in_melee": False},
+        raw="5 12", actor={"id": "1", "name": "A", "slug": "a", "kind": "npc"},
+        affected=[_affected(name="B", hp_before=10, hp_after=-2, max_hp=10)],
+        roster=[{"id": "5", "name": "B", "kind": "npc"}],
         applied_direction="damage", applied_amount=12, log_tail="",
     )
     assert result.error is None
+
+
+# ── GAP coverage: the review user_msg now carries real context ────────────────
+
+def test_review_user_msg_contains_before_after_hp():
+    """GAP 1 — the review context shows the real before→after HP delta."""
+    from gui.llm_controller import LLMController
+
+    msg = LLMController.build_review_user_msg(
+        raw="2 80 melee",
+        actor={"id": "1", "name": "Vessa", "kind": "pc"},
+        affected=[_affected(name="Marwen", id="2", hp_before=32, hp_after=0, max_hp=32)],
+        roster=[{"id": "2", "name": "Marwen", "kind": "npc"}],
+        applied_direction="damage", applied_amount=80, log_tail="",
+    )
+    assert "32→0" in msg, msg
+    assert "damage 80" in msg
+
+
+def test_review_user_msg_contains_immunities():
+    """GAP 2 — each target's damage immunities appear in the context."""
+    from gui.llm_controller import LLMController
+
+    msg = LLMController.build_review_user_msg(
+        raw="2 30 fire",
+        actor={"id": "1", "name": "Mage", "kind": "pc"},
+        affected=[_affected(name="Fire Elemental", id="2",
+                            hp_before=50, hp_after=20,
+                            immunities=["fire", "poison"])],
+        roster=[{"id": "2", "name": "Fire Elemental", "kind": "npc"}],
+        applied_direction="damage", applied_amount=30, log_tail="",
+    )
+    assert "fire" in msg and "poison" in msg
+    assert "immunities" in msg.lower()
+    # resistances are not in the data — the context must say so.
+    assert "resistances" in msg.lower()
+
+
+def test_review_user_msg_contains_all_targets():
+    """GAP 3 — a multi-target command lists ALL its targets, not just the first."""
+    from gui.llm_controller import LLMController
+
+    msg = LLMController.build_review_user_msg(
+        raw="123 fireball",
+        actor={"id": "9", "name": "Mage", "kind": "pc"},
+        affected=[
+            _affected(name="Goblin A", id="1", hp_before=10, hp_after=0),
+            _affected(name="Goblin B", id="2", hp_before=12, hp_after=2),
+            _affected(name="Goblin C", id="3", hp_before=8, hp_after=0),
+        ],
+        roster=[
+            {"id": "1", "name": "Goblin A", "kind": "npc"},
+            {"id": "2", "name": "Goblin B", "kind": "npc"},
+            {"id": "3", "name": "Goblin C", "kind": "npc"},
+        ],
+        applied_direction=None, applied_amount=None, log_tail="",
+    )
+    assert "Goblin A" in msg and "Goblin B" in msg and "Goblin C" in msg
+
+
+def test_review_user_msg_contains_roster():
+    """GAP 4 — the full combatant roster (id/name/pc-vs-npc) is in the context."""
+    from gui.llm_controller import LLMController
+
+    msg = LLMController.build_review_user_msg(
+        raw="7 20 heal",
+        actor={"id": "1", "name": "Cleric", "kind": "pc"},
+        affected=[_affected(name="Orc", id="7", hp_before=10, hp_after=30)],
+        roster=[
+            {"id": "1", "name": "Cleric", "kind": "pc"},
+            {"id": "7", "name": "Orc", "kind": "npc"},
+        ],
+        applied_direction="heal", applied_amount=20, log_tail="",
+    )
+    assert "Cleric" in msg and "[pc]" in msg
+    assert "Orc" in msg and "[npc]" in msg
 
 
 def test_apply_command_tool_heals_npc(sample_encounter):
@@ -92,14 +180,17 @@ def test_main_window_enqueues_review_no_op_without_controller(qtbot, sample_enco
     that); it verifies the guard-clause — _llm_controller absent → no worker
     spawned, no crash, no inflight signals added.
     """
+    from gui.dispatcher import parse
     from gui.main_window import MainWindow
+    from gui.state import serialize_encounter
     sample_encounter.npcs[0].id = "1"
     win = MainWindow(sample_encounter)
     qtbot.addWidget(win)
     # No controller attached — _enqueue_review must return silently.
     before_inflight = len(win._inflight_llm_signals)
-    win._enqueue_review("−18", sample_encounter.npcs[0], sample_encounter.npcs[0],
-                        applied_direction="damage", applied_amount=18)
+    snap = serialize_encounter(sample_encounter)
+    win._enqueue_review(parse("1 18 dmg"), sample_encounter.npcs[0], ["1"],
+                        snap, snap)
     # No new workers should be in-flight since there is no controller.
     assert len(win._inflight_llm_signals) == before_inflight
 
@@ -207,9 +298,9 @@ def test_review_command_uses_trimmed_tool_set(controller_with_fake_client):
     ctrl, fake_client = controller_with_fake_client
     ctrl.review_command(
         raw="5 12 fire",
-        actor={"id": "1", "name": "Vessa", "slug": "pc-1"},
-        target={"id": "5", "name": "Goblin", "slug": "goblin",
-                "hp": 7, "max_hp": 7, "conditions": [], "in_melee": False},
+        actor={"id": "1", "name": "Vessa", "slug": "pc-1", "kind": "pc"},
+        affected=[_affected(hp_before=7, hp_after=0)],
+        roster=[{"id": "5", "name": "Goblin", "kind": "npc"}],
         applied_direction="damage", applied_amount=12,
         log_tail="",
     )

@@ -163,14 +163,16 @@ class _LLMReviewWorker(_LLMWorkerBase):
     """
 
     def __init__(
-        self, controller: Any, raw_command: str, actor: dict, target: dict,
+        self, controller: Any, raw_command: str, actor: dict,
+        affected: list[dict], roster: list[dict],
         applied_direction: str | None, applied_amount: int | None,
         log_tail: str, signals: _LLMWorkerSignals,
     ) -> None:
         super().__init__(controller, signals)
         self._raw = raw_command
         self._actor = actor
-        self._target = target
+        self._affected = affected
+        self._roster = roster
         self._direction = applied_direction
         self._amount = applied_amount
         self._log_tail = log_tail
@@ -180,7 +182,8 @@ class _LLMReviewWorker(_LLMWorkerBase):
             result = self._controller.review_command(
                 raw=self._raw,
                 actor=self._actor,
-                target=self._target,
+                affected=self._affected,
+                roster=self._roster,
                 applied_direction=self._direction,
                 applied_amount=self._amount,
                 log_tail=self._log_tail,
@@ -1087,16 +1090,11 @@ class MainWindow(QMainWindow):
                 if not has_undo_effect:
                     actor = self.encounter_state.active_npc
                     ids = self._resolve_targets(cmd)
-                    target = (
-                        self.encounter_state.combatant_by_id(ids[0])
-                        if ids else None
-                    ) or actor
-                    if target is not None:
-                        self._enqueue_review(
-                            cmd.raw, actor, target,
-                            applied_direction=None,
-                            applied_amount=None,
-                        )
+                    # Hand the review the REAL before→after delta: `before` is
+                    # the pre-command serialized snapshot (captured above for
+                    # undo); `after` is the post-command snapshot. Every
+                    # resolved target is reviewed, not just the first.
+                    self._enqueue_review(cmd, actor, ids, before, after)
 
     def _resolve_targets(self, cmd: ParsedCommand) -> list[str]:
         """Resolve a ParsedCommand's <who> into concrete combatant id strings.
@@ -1457,41 +1455,107 @@ class MainWindow(QMainWindow):
         if current is not None and hasattr(current, "_append_log"):
             current._append_log(html)
 
+    @staticmethod
+    def _npc_before_state(before_snapshot: dict, npc_id: str) -> dict | None:
+        """Pull the pre-command HP + conditions for `npc_id` out of a serialized
+        encounter snapshot. Returns None if no combatant with that id is found.
+
+        HP is the sum of `member_hp` (the snapshot stores per-member HP, not the
+        computed total) so it matches `NPCState.hp` for both single creatures
+        and mobs.
+        """
+        for nd in before_snapshot.get("npcs", []):
+            if nd.get("id") == npc_id:
+                return {
+                    "hp": sum(nd.get("member_hp", []) or []),
+                    "conditions": sorted(nd.get("conditions", []) or []),
+                }
+        return None
+
     def _enqueue_review(
-        self, raw_command: str, actor, target, *,
-        applied_direction: str | None, applied_amount: int | None,
+        self, cmd, actor, ids: list[str], before: dict, after: dict,
     ) -> None:
         """Enqueue an async LLM review for any state-changing command.
         No-ops if no LLM controller is wired.
 
-        Stale-review mitigation: we record the target's HP at enqueue time.
-        When the review result arrives (_on_review_finished), if the target's HP
-        has changed in the meantime we downgrade any mutation to advisory — the
-        review text is logged as a note rather than applied as a state change.
-        This prevents a late-returning review from clobbering a more-recent
-        command's result under rapid at-table input.
+        The review receives the REAL before→after delta: for every resolved
+        target id, its HP/conditions in `before` (the pre-command snapshot) vs.
+        the current live state, plus the target's immunities and a compact
+        roster of every combatant. `before`/`after` are serialized encounter
+        snapshots from `_on_command` (captured for undo / no-op detection).
+
+        Stale-review mitigation: we record the first target's HP at enqueue
+        time. When the review result arrives (_on_review_finished), if that
+        HP has changed in the meantime we downgrade any mutation to advisory —
+        the review text is logged as a note rather than applied as a state
+        change. This prevents a late-returning review from clobbering a
+        more-recent command's result under rapid at-table input.
         """
         controller = getattr(self, "_llm_controller", None)
         if controller is None:
             return
 
-        # Snapshot HP at enqueue to detect stale reviews later.
-        hp_at_enqueue = target.hp
+        # Resolve the live target NPCStates. Fall back to the actor when the
+        # command carried no explicit targets (e.g. a self-affecting command).
+        targets: list = []
+        for cid in ids:
+            c = self.encounter_state.combatant_by_id(cid)
+            if c is not None and all(c is not t for t in targets):
+                targets.append(c)
+        if not targets and actor is not None:
+            targets = [actor]
+        if not targets:
+            return
+
+        # The stale-review HP guard tracks the first target.
+        primary = targets[0]
+        hp_at_enqueue = primary.hp
 
         actor_snapshot = {
             "id": actor.id if actor else None,
             "name": actor.name if actor else "?",
             "slug": actor.slug if actor else None,
+            "kind": actor.kind if actor else "?",
         }
-        target_snapshot = {
-            "id": target.id,
-            "name": target.name,
-            "slug": target.slug,
-            "hp": hp_at_enqueue,
-            "max_hp": target.max_total_hp,
-            "conditions": sorted(target.conditions),
-            "in_melee": target.in_melee,
-        }
+
+        # GAP 1 + 3: build one affected-entry per target, each carrying the
+        # real before→after HP/conditions. `before` is the pre-command
+        # snapshot; current live state is the "after".
+        affected: list[dict] = []
+        for t in targets:
+            before_state = self._npc_before_state(before, t.id) or {}
+            affected.append({
+                "id": t.id,
+                "name": t.name,
+                "slug": t.slug,
+                "kind": t.kind,
+                "hp_before": before_state.get("hp", t.hp),
+                "hp_after": t.hp,
+                "max_hp": t.max_total_hp,
+                "conditions_before": before_state.get("conditions", []),
+                "conditions_after": sorted(t.conditions),
+                # GAP 2: immunities so the review can catch immunity errors.
+                "immunities": list(t.immunities),
+            })
+
+        # GAP 4: compact roster of every combatant — id / name / kind — so the
+        # review can catch wrong-target / wrong-allegiance mistakes.
+        roster = [
+            {"id": n.id, "name": n.name, "kind": n.kind}
+            for n in self.encounter_state.npcs
+        ]
+
+        # GAP 1: the real applied scalar — direction + amount from the first
+        # amount effect of the command (None for pure condition commands; the
+        # per-target HP delta in `affected` still tells the story).
+        applied_direction: str | None = None
+        applied_amount: int | None = None
+        for eff in getattr(cmd, "effects", []):
+            if eff.kind == "amount":
+                applied_direction = eff.amount_tags.get("direction", "damage")
+                applied_amount = eff.amount
+                break
+
         log_tail = self._last_log_tail(self.encounter_state.log_path, lines=8)
 
         signals = _LLMWorkerSignals()
@@ -1500,7 +1564,7 @@ class MainWindow(QMainWindow):
         )
         self._inflight_llm_signals.add(signals)
         signals.finished.connect(
-            lambda result, rt=target, hp_snap=hp_at_enqueue:
+            lambda result, rt=primary, hp_snap=hp_at_enqueue:
                 self._on_review_finished(result, rt, hp_snap),
             Qt.ConnectionType.QueuedConnection,
         )
@@ -1511,9 +1575,10 @@ class MainWindow(QMainWindow):
 
         worker = _LLMReviewWorker(
             controller=controller,
-            raw_command=raw_command,
+            raw_command=getattr(cmd, "raw", str(cmd)),
             actor=actor_snapshot,
-            target=target_snapshot,
+            affected=affected,
+            roster=roster,
             applied_direction=applied_direction,
             applied_amount=applied_amount,
             log_tail=log_tail or "",

@@ -63,11 +63,14 @@ def window(qtbot, tmp_path):
 
 
 def test_damage_command_enqueues_review(window):
-    """A damage command that changes HP triggers _enqueue_review."""
+    """A damage command that changes HP triggers _enqueue_review.
+
+    New signature: _enqueue_review(cmd, actor, ids, before, after).
+    """
     enqueue_calls: list[tuple] = []
 
-    def fake_enqueue(raw, actor, target, *, applied_direction, applied_amount):
-        enqueue_calls.append((raw, actor, target, applied_direction, applied_amount))
+    def fake_enqueue(cmd, actor, ids, before, after):
+        enqueue_calls.append((cmd, actor, ids, before, after))
 
     window._enqueue_review = fake_enqueue
 
@@ -75,17 +78,16 @@ def test_damage_command_enqueues_review(window):
     window._on_command(cmd)
 
     assert len(enqueue_calls) == 1, f"Expected 1 enqueue call, got {enqueue_calls}"
-    raw, actor, target, direction, amount = enqueue_calls[0]
-    assert raw == "2 10 dmg"
+    got_cmd, actor, ids, before, after = enqueue_calls[0]
+    assert got_cmd.raw == "2 10 dmg"
     # actor is the active NPC (id=1)
     assert actor is not None
     assert actor.id == "1"
-    # target is combatant id=2
-    assert target is not None
-    assert target.id == "2"
-    # direction and amount are None (passed through as-is from the new path)
-    assert direction is None
-    assert amount is None
+    # ids resolves to combatant id=2
+    assert ids == ["2"]
+    # before / after are serialized encounter snapshots (dicts)
+    assert isinstance(before, dict) and isinstance(after, dict)
+    assert before != after, "snapshot diff should be non-empty for a real mutation"
 
 
 def test_heal_command_enqueues_review(window):
@@ -95,8 +97,8 @@ def test_heal_command_enqueues_review(window):
 
     enqueue_calls: list[tuple] = []
 
-    def fake_enqueue(raw, actor, target, *, applied_direction, applied_amount):
-        enqueue_calls.append((raw, actor, target))
+    def fake_enqueue(cmd, actor, ids, before, after):
+        enqueue_calls.append((cmd, actor, ids))
 
     window._enqueue_review = fake_enqueue
 
@@ -104,17 +106,17 @@ def test_heal_command_enqueues_review(window):
     window._on_command(cmd)
 
     assert len(enqueue_calls) == 1, f"Expected 1 enqueue call, got {enqueue_calls}"
-    _, actor, target = enqueue_calls[0]
+    _, actor, ids = enqueue_calls[0]
     assert actor.id == "1"
-    assert target.id == "2"
+    assert ids == ["2"]
 
 
 def test_condition_command_enqueues_review(window):
     """A condition command that changes state triggers _enqueue_review."""
     enqueue_calls: list[tuple] = []
 
-    def fake_enqueue(raw, actor, target, *, applied_direction, applied_amount):
-        enqueue_calls.append((raw, actor, target))
+    def fake_enqueue(cmd, actor, ids, before, after):
+        enqueue_calls.append((cmd, actor, ids))
 
     window._enqueue_review = fake_enqueue
 
@@ -123,9 +125,9 @@ def test_condition_command_enqueues_review(window):
     window._on_command(cmd)
 
     assert len(enqueue_calls) == 1, f"Expected 1 enqueue call, got {enqueue_calls}"
-    _, actor, target = enqueue_calls[0]
+    _, actor, ids = enqueue_calls[0]
     assert actor.id == "1"
-    assert target.id == "2"
+    assert ids == ["2"]
 
 
 # ─────────── non-mutating commands do NOT enqueue a review ───────────
@@ -135,8 +137,8 @@ def test_set_target_does_not_enqueue_review(window):
     """set_target (bare '<id>') must NOT trigger _enqueue_review."""
     enqueue_calls: list[tuple] = []
 
-    def fake_enqueue(raw, actor, target, *, applied_direction, applied_amount):
-        enqueue_calls.append((raw,))
+    def fake_enqueue(cmd, actor, ids, before, after):
+        enqueue_calls.append((cmd,))
 
     window._enqueue_review = fake_enqueue
 
@@ -151,8 +153,8 @@ def test_unparseable_does_not_enqueue_review(window, monkeypatch):
     """An unparseable command (LLM fallback path) must NOT trigger _enqueue_review."""
     enqueue_calls: list[tuple] = []
 
-    def fake_enqueue(raw, actor, target, *, applied_direction, applied_amount):
-        enqueue_calls.append((raw,))
+    def fake_enqueue(cmd, actor, ids, before, after):
+        enqueue_calls.append((cmd,))
 
     window._enqueue_review = fake_enqueue
 
@@ -175,8 +177,8 @@ def test_noop_unknown_condition_does_not_enqueue_review(window, monkeypatch):
     """
     enqueue_calls: list[tuple] = []
 
-    def fake_enqueue(raw, actor, target, *, applied_direction, applied_amount):
-        enqueue_calls.append((raw,))
+    def fake_enqueue(cmd, actor, ids, before, after):
+        enqueue_calls.append((cmd,))
 
     window._enqueue_review = fake_enqueue
     window._on_llm_fallback = lambda *a, **kw: None
@@ -194,6 +196,81 @@ def test_noop_unknown_condition_does_not_enqueue_review(window, monkeypatch):
     )
 
 
+# ─────────── _enqueue_review hands the controller real context ───────────
+
+
+def test_enqueue_review_passes_real_applied_delta(window):
+    """_enqueue_review must call review_command with the REAL before→after
+    delta + immunities + roster — not applied_direction=None / target-only.
+
+    Mocked controller — no live API.
+    """
+    captured: dict = {}
+
+    class FakeController:
+        def review_command(self, **kw):
+            captured.update(kw)
+            from gui.llm_controller import RunResult
+            return RunResult()
+
+    window._llm_controller = FakeController()
+
+    # Give the target an immunity so GAP 2 is exercised.
+    target = window.encounter_state.combatant_by_id("2")
+    target.immunities = ("fire",)
+
+    cmd = parse("2 10 fire")
+    window._on_command(cmd)
+    # Drain the single-thread LLM pool so the worker finishes.
+    window._llm_pool.waitForDone(5000)
+
+    assert captured, "review_command was never called"
+    # GAP 1: real applied direction + amount, not None.
+    assert captured["applied_direction"] == "damage"
+    assert captured["applied_amount"] == 10
+    # GAP 1 + 3: affected carries before→after HP.
+    affected = captured["affected"]
+    assert len(affected) == 1
+    a = affected[0]
+    assert a["id"] == "2"
+    assert a["hp_before"] == 40
+    assert a["hp_after"] == 30
+    # GAP 2: immunities are present.
+    assert "fire" in a["immunities"]
+    # GAP 4: roster lists every combatant with kind.
+    roster_ids = {r["id"] for r in captured["roster"]}
+    assert roster_ids == {"1", "2"}
+    assert all("kind" in r and "name" in r for r in captured["roster"])
+
+
+def test_enqueue_review_multi_target_includes_all(window, tmp_path):
+    """GAP 3 — a multi-target command puts ALL targets in `affected`."""
+    # Add a third combatant so we can target two at once.
+    extra = _npc("Extra", "3", 30)
+    window.encounter_state.npcs.append(extra)
+
+    captured: dict = {}
+
+    class FakeController:
+        def review_command(self, **kw):
+            captured.update(kw)
+            from gui.llm_controller import RunResult
+            return RunResult()
+
+    window._llm_controller = FakeController()
+
+    cmd = parse("23 8 fire")  # targets combatants 2 and 3
+    assert cmd.target_ids == ["2", "3"], f"precondition: {cmd.target_ids}"
+    window._on_command(cmd)
+    window._llm_pool.waitForDone(5000)
+
+    assert captured, "review_command was never called"
+    affected_ids = {a["id"] for a in captured["affected"]}
+    assert affected_ids == {"2", "3"}, (
+        f"multi-target command must review all targets, got {affected_ids}"
+    )
+
+
 def test_noop_command_does_not_enqueue_review(window):
     """A genuine no-op *command* must NOT trigger _enqueue_review.
 
@@ -207,8 +284,8 @@ def test_noop_command_does_not_enqueue_review(window):
     """
     enqueue_calls: list[tuple] = []
 
-    def fake_enqueue(raw, actor, target, *, applied_direction, applied_amount):
-        enqueue_calls.append((raw,))
+    def fake_enqueue(cmd, actor, ids, before, after):
+        enqueue_calls.append((cmd,))
 
     window._enqueue_review = fake_enqueue
 
