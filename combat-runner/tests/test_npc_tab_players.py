@@ -262,3 +262,39 @@ def test_pc_tab_refresh_does_not_crash(qtbot, pc_state):
     qtbot.addWidget(tab)
     # Should not raise
     tab._refresh()
+
+
+# ─────────────────────────────────────────────────────
+# Actor attribution in combat log (Change 7)
+# ─────────────────────────────────────────────────────
+
+def test_damage_log_includes_actor_name(qtbot, npc_state):
+    """After a damage sigil, the combat log must contain the NPC's name as a prefix."""
+    from gui.npc_tab import NPCTab
+
+    tab = NPCTab(npc_state=npc_state, actions=[], log_path=Path("/tmp/log.md"))
+    qtbot.addWidget(tab)
+
+    tab._apply_damage(3, None, None)
+
+    log_html = tab.log_view.toHtml()
+    assert npc_state.name in log_html, (
+        f"Expected actor name '{npc_state.name}' in combat log after damage"
+    )
+
+
+def test_heal_log_includes_actor_name(qtbot, npc_state):
+    """After a heal sigil, the combat log must contain the NPC's name as a prefix."""
+    from gui.npc_tab import NPCTab
+
+    # Damage first so there is HP to restore
+    npc_state.apply_damage(4)
+    tab = NPCTab(npc_state=npc_state, actions=[], log_path=Path("/tmp/log.md"))
+    qtbot.addWidget(tab)
+
+    tab._apply_heal(2, None)
+
+    log_html = tab.log_view.toHtml()
+    assert npc_state.name in log_html, (
+        f"Expected actor name '{npc_state.name}' in combat log after heal"
+    )
