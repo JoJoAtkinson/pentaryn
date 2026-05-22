@@ -166,16 +166,45 @@ def test_unparseable_does_not_enqueue_review(window, monkeypatch):
     assert enqueue_calls == [], f"unparseable must not enqueue review, got {enqueue_calls}"
 
 
-def test_noop_command_does_not_enqueue_review(window):
-    """A command that changes nothing (true no-op) must NOT trigger _enqueue_review.
+def test_noop_unknown_condition_does_not_enqueue_review(window, monkeypatch):
+    """An unknown @condition (unparseable path) must NOT trigger _enqueue_review.
 
-    Applying prone to a combatant that already has prone is a no-op — state
-    unchanged, so undo snapshot is discarded and review is skipped.
+    `parse("2 @totally_unknown_condition_xyz")` returns kind="unparseable" because
+    Fix 2 made unknown forced-condition tokens unparseable. This test verifies the
+    unparseable path does not enqueue, complementing test_unparseable_does_not_enqueue_review.
     """
-    # Pre-apply prone to target so the next toggle is a no-op (removes it).
-    # Actually, toggling OFF prone would change state. So we need a condition
-    # that the parser rejects — an unknown condition.
-    # Use a clearly unknown condition string to produce a no-op sentinel.
+    enqueue_calls: list[tuple] = []
+
+    def fake_enqueue(raw, actor, target, *, applied_direction, applied_amount):
+        enqueue_calls.append((raw,))
+
+    window._enqueue_review = fake_enqueue
+    window._on_llm_fallback = lambda *a, **kw: None
+
+    cmd = parse("2 @totally_unknown_condition_xyz")
+    assert cmd.kind == "unparseable", (
+        f"Precondition: expected unparseable, got {cmd.kind!r}"
+    )
+    before_hp = window.encounter_state.combatant_by_id("2").hp
+    window._on_command(cmd)
+
+    assert window.encounter_state.combatant_by_id("2").hp == before_hp
+    assert enqueue_calls == [], (
+        f"unparseable command must not enqueue review, got {enqueue_calls}"
+    )
+
+
+def test_noop_command_does_not_enqueue_review(window):
+    """A genuine no-op *command* must NOT trigger _enqueue_review.
+
+    `" 7 fire"` (leading space) parses as kind="command", use_current=True with no
+    explicit target ids. When encounter_state.current_target is empty (the default),
+    _resolve_targets returns [] and _handle_command applies nothing — state is
+    unchanged, the undo snapshot is discarded, and review must be skipped.
+
+    This guards the `after == before` review gate in _on_command: if that gate were
+    broken so a no-op command DID enqueue review, this test would catch it.
+    """
     enqueue_calls: list[tuple] = []
 
     def fake_enqueue(raw, actor, target, *, applied_direction, applied_amount):
@@ -183,15 +212,21 @@ def test_noop_command_does_not_enqueue_review(window):
 
     window._enqueue_review = fake_enqueue
 
-    # An unknown condition produces a CONDITION_UNKNOWN_SENTINEL in fragments
-    # and leaves state unchanged. The state diff check in _on_command then
-    # discards the snapshot — and must NOT enqueue a review.
-    cmd = parse("2 @totally_unknown_condition_xyz")
-    before_hp = window.encounter_state.combatant_by_id("2").hp
+    # Precondition: no current_target set so the command resolves to empty ids.
+    window.encounter_state.current_target = []
+
+    cmd = parse(" 7 fire")
+    assert cmd.kind == "command", (
+        f"Precondition: expected command, got {cmd.kind!r}"
+    )
+    assert cmd.use_current is True, "Precondition: leading-space grammar must use_current"
+
+    before_serialized = window.encounter_state.npcs[0].hp
+
     window._on_command(cmd)
 
-    # HP unchanged, conditions unchanged (unknown condition was rejected).
-    assert window.encounter_state.combatant_by_id("2").hp == before_hp
+    # State unchanged — no target resolved, no HP moved.
+    assert window.encounter_state.npcs[0].hp == before_serialized
     assert enqueue_calls == [], (
-        f"No-op command must not enqueue review, got {enqueue_calls}"
+        f"No-op command (empty target set) must not enqueue review, got {enqueue_calls}"
     )

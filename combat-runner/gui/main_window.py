@@ -1289,10 +1289,15 @@ class MainWindow(QMainWindow):
             # (spec §4). A no-save no-attack-roll action carries no `rolls`
             # damage and stays as printed text.
             result = tab.run_action_externally(action_name)
-            self._route_uncertain_damage(result, cid, action_name)
+            self._route_uncertain_damage(result, cid, action_name, member=effect.member)
 
     def _route_uncertain_damage(
-        self, result: dict | None, combatant_id: str, action_name: str
+        self,
+        result: dict | None,
+        combatant_id: str,
+        action_name: str,
+        *,
+        member: int | None = None,
     ) -> None:
         """Apply a rolled action's uncertain damage via the didn't-land lifecycle.
 
@@ -1322,6 +1327,7 @@ class MainWindow(QMainWindow):
             kind=kind,
             on_save=on_save,
             source=action_name,
+            member=member,
         )
         self._log_fragments(fragments)
         self._refresh_pending_markers()
