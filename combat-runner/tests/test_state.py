@@ -317,3 +317,62 @@ def test_state_schema_has_expected_top_level_keys():
     assert "constraints" in schema
     assert "npcs" in schema["EncounterState"]
     assert "member_hp" in schema["NPCState"]
+
+
+# ─── pending_effects round-trip (A3-H1) ───────────────────────────────────
+
+def test_pending_effects_round_trip_as_pending_effect_instances():
+    """serialize → deserialize must rebuild PendingEffect dataclasses, not
+    leave raw dicts (which would crash apply_hit / dataclasses.asdict)."""
+    from gui.history import PendingEffect
+
+    es = EncounterState(name="t", root=Path("."), log_path=Path("log.md"))
+    es.npcs.append(NPCState(slug="g", name="Goblin", max_hp=10, ac=12,
+                            speed="30", cr=1, id="2"))
+    es.pending_effects.append(
+        PendingEffect(combatant_id="2", full_amount=18,
+                      applied_amount=9, kind="save", resolved=False)
+    )
+
+    blob = serialize_encounter(es)
+    # serialized form is a plain dict (json-safe)
+    assert isinstance(blob["pending_effects"][0], dict)
+
+    restored = deserialize_encounter(blob)
+    assert len(restored.pending_effects) == 1
+    pe = restored.pending_effects[0]
+    assert isinstance(pe, PendingEffect)
+    assert pe.combatant_id == "2"
+    assert pe.full_amount == 18
+    assert pe.applied_amount == 9
+    assert pe.kind == "save"
+    assert pe.resolved is False
+
+
+def test_pending_effects_round_trip_via_json():
+    """A JSON serialize/parse cycle (the real undo/load path) still yields
+    PendingEffect instances."""
+    import json
+
+    from gui.history import PendingEffect
+
+    es = EncounterState(name="t", root=Path("."), log_path=Path("log.md"))
+    es.npcs.append(NPCState(slug="g", name="Goblin", max_hp=10, ac=12,
+                            speed="30", cr=1, id="2"))
+    es.pending_effects.append(
+        PendingEffect(combatant_id="2", full_amount=12, applied_amount=0,
+                      kind="attack", resolved=True)
+    )
+    restored = deserialize_encounter(json.loads(json.dumps(serialize_encounter(es))))
+    assert all(isinstance(p, PendingEffect) for p in restored.pending_effects)
+    assert restored.pending_effects[0].resolved is True
+
+
+def test_deserialize_pending_effect_missing_key_raises():
+    bad = {
+        "name": "x", "root": "/tmp", "log_path": "/tmp/log.md",
+        "npcs": [],
+        "pending_effects": [{"combatant_id": "2", "full_amount": 5}],  # missing keys
+    }
+    with pytest.raises(ValueError, match="pending_effect dict missing"):
+        deserialize_encounter(bad)

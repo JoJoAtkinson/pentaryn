@@ -122,6 +122,73 @@ def test_undo_restores_prior_hp(window):
     assert restored.hp == before
 
 
+def test_undo_restores_active_tab_index(window):
+    """Undo restores `active_tab_index` and the visible tab (A3-H2 / A4-H1).
+
+    A directed command from tab 0 that jumps to a target tab must, after
+    `undo`, return focus to the pre-command tab."""
+    window.tabs.setCurrentIndex(0)
+    # A directed set_target jumps the active tab to the target.
+    _submit(window, "3")  # set_target id 3 -> jumps to tab 2
+    assert window.tabs.currentIndex() == 2
+    # Now a damage command from a different tab.
+    window.tabs.setCurrentIndex(1)
+    _submit(window, "1 5 slash")
+    # undo should revert the damage AND restore the active tab to index 1.
+    _submit(window, "undo")
+    assert window.tabs.currentIndex() == 1
+    assert window.encounter_state.active_tab_index == 1
+
+
+def test_undo_restores_current_target(window):
+    """Undo restores `current_target` (A3-H2)."""
+    window.tabs.setCurrentIndex(0)
+    _submit(window, "2 5 slash")  # sets current_target to ['2']
+    assert window.encounter_state.current_target == ["2"]
+    _submit(window, "3 5 slash")  # retargets current_target to ['3']
+    assert window.encounter_state.current_target == ["3"]
+    _submit(window, "undo")  # reverts the retarget+damage
+    assert window.encounter_state.current_target == ["2"]
+
+
+# ─────────────────────────── undo-snapshot discipline ───────────────────────
+
+
+def test_noop_command_does_not_snapshot(window):
+    """A `command` whose effects all no-op (here: a use-current damage command
+    with no current target set) must NOT leave an undo snapshot behind
+    (A2 #4) — so a following `undo` reverts the real prior command."""
+    one = window.encounter_state.combatant_by_id("1")
+    before = one.hp
+    window.tabs.setCurrentIndex(0)
+    assert window.encounter_state.current_target == []
+    _submit(window, "1 5 slash")  # real, mutating command (also sets target ['1'])
+    assert one.hp == before - 5
+    # Clear the sticky target so the next use-current command resolves to [].
+    window.encounter_state.current_target = []
+    depth_after_real = len(window.undo_stack._snapshots)
+    # A leading-space (use-current) damage command with no current target:
+    # parses as kind="command", reaches _handle_command, mutates nothing ->
+    # the eager snapshot must be discarded.
+    _submit(window, " 7 fire")
+    assert len(window.undo_stack._snapshots) == depth_after_real
+    # A single undo reverts the real damage, not a phantom no-op step.
+    _submit(window, "undo")
+    assert window.encounter_state.combatant_by_id("1").hp == before
+
+
+def test_set_target_remains_undoable(window):
+    """A bare `set_target` IS a mutating command per the spec — it keeps its
+    snapshot, so `undo` reverts the retarget."""
+    window.tabs.setCurrentIndex(0)
+    _submit(window, "2")  # current_target -> ['2']
+    assert window.encounter_state.current_target == ["2"]
+    _submit(window, "3")  # current_target -> ['3']
+    assert window.encounter_state.current_target == ["3"]
+    _submit(window, "undo")  # reverts the second set_target
+    assert window.encounter_state.current_target == ["2"]
+
+
 # ─────────────────────────── multi-target ───────────────────────────
 
 

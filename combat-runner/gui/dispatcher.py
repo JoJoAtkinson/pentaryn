@@ -35,6 +35,28 @@ from .targeting import classify_who
 _NUMBER_RE = re.compile(r"^\d+$")
 _MOB_RE = re.compile(r"^m([1-9]\d*)$", re.IGNORECASE)
 
+# Sane bounds — a fat-fingered `2 999999 fire` or a giant condition duration is
+# almost certainly a typo. Out-of-range commands route to `unparseable` so the
+# LLM fallback lets the DM clarify rather than silently nuking a combatant.
+_AMOUNT_MIN, _AMOUNT_MAX = 1, 1000
+_DURATION_MAX = 100
+
+
+def _effects_in_bounds(effects: list[Effect]) -> bool:
+    """True if every amount / condition-duration in *effects* is within range."""
+    for eff in effects:
+        if eff.kind == "amount":
+            if not (_AMOUNT_MIN <= eff.amount <= _AMOUNT_MAX):
+                return False
+        elif eff.kind == "condition":
+            # duration is None (default applied later) or an explicit int.
+            # `0` is NOT out-of-range: `3 0 stun` is a valid "default duration"
+            # spelling that effects.py normalizes to 1 round. Only a duration
+            # ABOVE the cap (a giant typo) is rejected here.
+            if eff.duration is not None and eff.duration > _DURATION_MAX:
+                return False
+    return True
+
 
 def _is_damage_tag(token: str) -> bool:
     """True if `token` is a recognized damage-tag (type / delivery / direction).
@@ -204,6 +226,13 @@ def parse(raw: str) -> ParsedCommand:
         i += 1
 
     if not ok or not effects:
+        cmd.kind = "unparseable"
+        cmd.effects = []
+        return cmd
+
+    # Reject implausible amounts / durations — route to the LLM so the DM can
+    # clarify rather than applying an obviously-mistyped command.
+    if not _effects_in_bounds(effects):
         cmd.kind = "unparseable"
         cmd.effects = []
         return cmd

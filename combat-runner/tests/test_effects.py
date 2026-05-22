@@ -41,6 +41,22 @@ def test_condition_toggles_off():
                  target_ids=["2"], actor=None)
     assert "prone" not in es.combatant_by_id("2").conditions
 
+def test_condition_duration_zero_treated_as_one_round():
+    """`3 0 stun` parses to duration=0; effects.py must normalize that to the
+    1-round default so the condition expires (not become permanent)."""
+    es = _es()
+    apply_effect(es, Effect(kind="condition", condition="stun", duration=0),
+                 target_ids=["2"], actor=None)
+    npc = es.combatant_by_id("2")
+    assert "stunned" in npc.conditions
+    # A duration of 1 must be recorded — NOT a missing key (which is permanent).
+    assert npc.condition_durations.get("stunned") == 1
+    # ...and it expires on the next round tick.
+    expired = npc.tick_condition_durations()
+    assert "stunned" in expired
+    assert "stunned" not in npc.conditions
+
+
 def test_amount_multi_target():
     es = _es()
     es.npcs.append(NPCState(slug="b", name="Bazgar", max_hp=49, ac=18, speed="30",
