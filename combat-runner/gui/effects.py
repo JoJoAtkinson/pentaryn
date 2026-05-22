@@ -114,15 +114,28 @@ def _apply_amount(
 
         if is_heal:
             delta = combatant.apply_heal(effect.amount, member=effect.member)
-            before, after = delta.get("before", 0), delta.get("after", 0)
+        else:
+            delta = combatant.apply_damage(effect.amount, member=effect.member)
+
+        # A skipped result (out-of-range mob member, dead member, no alive
+        # members) is a no-op: surface it as a warning so the caller does NOT
+        # treat it as an applied effect (e.g. fires no bus events).
+        if delta.get("skipped"):
+            member_label = f" m{effect.member}" if effect.member is not None else ""
+            fragments.append(
+                f"warn: {combatant.name}{member_label}: no such target "
+                f"({delta['skipped']})"
+            )
+            continue
+
+        before, after = delta.get("before", 0), delta.get("after", 0)
+        if is_heal:
             fragments.append(
                 f"{combatant.name} healed {effect.amount} "
                 f"({before} → {after} HP)"
             )
         else:
             tag_str = f" [{damage_type}]" if damage_type else ""
-            delta = combatant.apply_damage(effect.amount, member=effect.member)
-            before, after = delta.get("before", 0), delta.get("after", 0)
             suffix = " (killed)" if delta.get("killed") else ""
             fragments.append(
                 f"{combatant.name} took {effect.amount}{tag_str} damage "

@@ -56,13 +56,13 @@ def test_tab_title_shows_hp(mountin_pass_window):
 
 
 def test_damage_via_command_input_updates_state(mountin_pass_window, qtbot):
-    """Type `-18` in the active tab's input → state HP drops."""
+    """Self-target damage `0 18 dmg` (0 = the active combatant) → HP drops."""
     win = mountin_pass_window
     tab = win.tabs.widget(0)
     assert isinstance(tab, NPCTab)
     starting_hp = tab.npc_state.hp
 
-    qtbot.keyClicks(tab.input, "-18")
+    qtbot.keyClicks(tab.input, "0 18 dmg")
     qtbot.keyClick(tab.input, Qt.Key.Key_Return)
 
     assert tab.npc_state.hp == starting_hp - 18
@@ -74,47 +74,25 @@ def test_heal_via_command_input_updates_state(mountin_pass_window, qtbot):
     tab.npc_state.apply_damage(30)
     starting_hp = tab.npc_state.hp
 
-    qtbot.keyClicks(tab.input, "+10")
+    qtbot.keyClicks(tab.input, "0 10 heal")
     qtbot.keyClick(tab.input, Qt.Key.Key_Return)
 
     assert tab.npc_state.hp == starting_hp + 10
 
 
-def test_condition_toggle_via_at_sigil(mountin_pass_window, qtbot):
+def test_condition_toggle_via_self_target(mountin_pass_window, qtbot):
+    """`0 prone` toggles the prone condition on the active combatant."""
     win = mountin_pass_window
     tab = win.tabs.widget(0)
     assert "prone" not in tab.npc_state.conditions
 
-    qtbot.keyClicks(tab.input, "@prone")
+    qtbot.keyClicks(tab.input, "0 prone")
     qtbot.keyClick(tab.input, Qt.Key.Key_Return)
     assert "prone" in tab.npc_state.conditions
 
-    qtbot.keyClicks(tab.input, "@prone")
+    qtbot.keyClicks(tab.input, "0 prone")
     qtbot.keyClick(tab.input, Qt.Key.Key_Return)
     assert "prone" not in tab.npc_state.conditions
-
-
-def test_note_command_only_logs_no_state_change(mountin_pass_window, qtbot):
-    win = mountin_pass_window
-    tab = win.tabs.widget(0)
-    starting_hp = tab.npc_state.hp
-
-    qtbot.keyClicks(tab.input, "note check positioning")
-    qtbot.keyClick(tab.input, Qt.Key.Key_Return)
-
-    assert tab.npc_state.hp == starting_hp
-
-
-def test_reorder_command_emits_signal(mountin_pass_window, qtbot):
-    win = mountin_pass_window
-    tab = win.tabs.widget(0)
-    received = []
-    tab.reorder_requested.connect(received.append)
-
-    qtbot.keyClicks(tab.input, "/reorder glacier-stalker")
-    qtbot.keyClick(tab.input, Qt.Key.Key_Return)
-
-    assert received == [["glacier-stalker"]]
 
 
 def test_action_chip_click_runs_action(mountin_pass_window, qtbot):

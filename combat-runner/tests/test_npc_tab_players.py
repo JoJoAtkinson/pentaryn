@@ -5,7 +5,7 @@ Verifies that:
 - NPC tabs still render the action grid as before
 - Player action chip handlers mutate state correctly (Dodge, Disengage, Retreat)
 - Retreat + Disengage suppresses OA event; bare Retreat fires move_away
-- directed_command_requested signal fires when the user types a directed command
+- command_requested signal fires when the user submits a command
 - pinned_notes (public) appear in the status strip; private (_-prefixed) do not
 """
 
@@ -152,40 +152,42 @@ def test_retreat_clears_in_melee(qtbot, pc_state):
 
 
 # ─────────────────────────────────────────────────────
-# directed_command_requested signal
+# command_requested signal
 # ─────────────────────────────────────────────────────
 
 def test_directed_command_emits_signal(qtbot, pc_state):
-    """Typing a directed command (e.g. '3 12 fire') should emit directed_command_requested."""
+    """Typing a directed command (e.g. '3 12 fire') emits command_requested
+    carrying a `command`-kind ParsedCommand targeting id 3."""
     from gui.npc_tab import NPCTab
 
     tab = NPCTab(npc_state=pc_state, actions=[], log_path=Path("/tmp/log.md"))
     qtbot.addWidget(tab)
 
     received = []
-    tab.directed_command_requested.connect(received.append)
+    tab.command_requested.connect(received.append)
 
-    # Simulate user submitting a directed damage command: "3 12 fire"
     tab._on_submitted("3 12 fire")
 
     assert len(received) == 1
-    assert received[0].target_id == "3"
+    assert received[0].kind == "command"
+    assert received[0].target_ids == ["3"]
 
 
-def test_jump_command_emits_directed_signal(qtbot, pc_state):
-    """Bare id (e.g. '3') is a JUMP command; must also emit directed_command_requested."""
+def test_jump_command_emits_command_signal(qtbot, pc_state):
+    """A bare id ('3') is a set_target command; it also emits command_requested."""
     from gui.npc_tab import NPCTab
 
     tab = NPCTab(npc_state=pc_state, actions=[], log_path=Path("/tmp/log.md"))
     qtbot.addWidget(tab)
 
     received = []
-    tab.directed_command_requested.connect(received.append)
+    tab.command_requested.connect(received.append)
 
     tab._on_submitted("3")
 
     assert len(received) == 1
-    assert received[0].target_id == "3"
+    assert received[0].kind == "set_target"
+    assert received[0].target_ids == ["3"]
 
 
 # ─────────────────────────────────────────────────────
@@ -394,70 +396,55 @@ def test_disengaging_flag_cleared_on_round_advance(qtbot, pc_state):
 # Fix 3 — verb fuzzy-match for player actions
 # ─────────────────────────────────────────────────────
 
-def test_typing_dodge_on_pc_tab_triggers_dodge(qtbot, pc_state):
-    """Typing 'dodge' on a PC tab must trigger the Dodge action (dodging condition),
-    not fall through to the LLM."""
-    from gui.npc_tab import NPCTab
+def _pc_window(qtbot, tmp_path, pc_state):
+    """Single-PC MainWindow — player actions resolve through MainWindow._on_command."""
+    from gui.main_window import MainWindow
+    from gui.state import EncounterState
 
-    tab = NPCTab(npc_state=pc_state, actions=[], log_path=Path("/tmp/log.md"))
-    qtbot.addWidget(tab)
-
-    llm_calls = []
-    tab.llm_fallback_requested.connect(lambda text, parsed: llm_calls.append(text))
-
-    tab._on_submitted("dodge")
-
-    assert "dodging" in pc_state.conditions, (
-        "Typing 'dodge' on a PC tab must apply the dodging condition"
+    es = EncounterState(
+        name="t", root=Path(tmp_path), log_path=Path(tmp_path) / "c.md",
+        npcs=[pc_state],
     )
-    assert llm_calls == [], "Player verb fuzzy-match must not fall through to LLM"
+    win = MainWindow(es)
+    qtbot.addWidget(win)
+    return win
 
 
-def test_typing_disengage_on_pc_tab_sets_flag(qtbot, pc_state):
-    """Typing 'disengage' (lowercase, exact match) triggers the Disengage action."""
-    from gui.npc_tab import NPCTab
+def test_typing_dodge_on_pc_tab_triggers_dodge(qtbot, tmp_path, pc_state):
+    """`0 dodge` on a PC tab triggers the Dodge action (dodging condition)."""
+    win = _pc_window(qtbot, tmp_path, pc_state)
+    win.tabs.currentWidget()._on_submitted("0 dodge")
+    assert "dodging" in pc_state.conditions, (
+        "'0 dodge' on a PC tab must apply the dodging condition"
+    )
 
-    tab = NPCTab(npc_state=pc_state, actions=[], log_path=Path("/tmp/log.md"))
-    qtbot.addWidget(tab)
 
-    tab._on_submitted("disengage")
-
+def test_typing_disengage_on_pc_tab_sets_flag(qtbot, tmp_path, pc_state):
+    """`0 disengage` (exact match) triggers the Disengage action."""
+    win = _pc_window(qtbot, tmp_path, pc_state)
+    win.tabs.currentWidget()._on_submitted("0 disengage")
     assert "_disengaging" in pc_state.pinned_notes
 
 
-def test_typing_attack_prefix_on_pc_tab(qtbot, pc_state):
-    """Typing 'att' (prefix of 'Attack') triggers the Attack action on a PC tab."""
-    from gui.npc_tab import NPCTab
-
-    tab = NPCTab(npc_state=pc_state, actions=[], log_path=Path("/tmp/log.md"))
-    qtbot.addWidget(tab)
-
-    state_changed = []
-    tab.state_changed.connect(lambda: state_changed.append(1))
-
-    tab._on_submitted("att")
-
-    assert state_changed, "Prefix match 'att' → Attack must trigger state_changed"
+def test_typing_attack_prefix_on_pc_tab(qtbot, tmp_path, pc_state):
+    """`0 att` (prefix of 'Attack') triggers the Attack action on a PC tab."""
+    win = _pc_window(qtbot, tmp_path, pc_state)
+    tab = win.tabs.currentWidget()
+    tab._on_submitted("0 att")
     log_html = tab.log_view.toHtml()
     assert "Attack" in log_html
 
 
 def test_npc_tab_verb_match_unaffected(qtbot, npc_state, sample_actions):
-    """Fuzzy-match of DB actions on NPC tabs must still work (no regression)."""
-    from gui.npc_tab import NPCTab
+    """Fuzzy-match of DB actions on NPC tabs must still resolve via the grammar."""
+    from gui.dispatcher import parse
+    from gui.main_window import MainWindow
 
-    tab = NPCTab(npc_state=npc_state, actions=sample_actions, log_path=Path("/tmp/log.md"))
-    qtbot.addWidget(tab)
-
-    # 'snow_vanish' is a utility action with verb 'vanish'. Typing it on an NPC
-    # tab should still go through ACTION → _run_action, which may error (no real
-    # DB backend) — we just verify it doesn't hit the LLM fallback.
-    llm_calls = []
-    tab.llm_fallback_requested.connect(lambda text, parsed: llm_calls.append(text))
-
-    # 'pounce' is an exact action name in sample_actions — it should parse as ACTION
-    from gui.dispatcher import Dispatcher, InputKind
-    d = Dispatcher()
-    p = d.parse("pounce", available_actions=sample_actions)
-    assert p.kind is InputKind.ACTION
-    assert llm_calls == []  # dispatcher never touches llm
+    # 'pounce' is an exact action name in sample_actions — it should parse as
+    # a command carrying an action effect.
+    c = parse("pounce")
+    assert c.kind == "command"
+    assert c.effects[0].kind == "action"
+    assert c.effects[0].action_token == "pounce"
+    # The action token resolves against the DB action surface.
+    assert MainWindow._resolve_action_token("pounce", sample_actions) == "pounce"

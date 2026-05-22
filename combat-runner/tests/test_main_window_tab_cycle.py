@@ -111,7 +111,7 @@ def test_can_type_command_after_tab_cycle(window, qtbot):
     start_hp = bravo_tab.npc_state.hp
 
     focused = QApplication.focusWidget()
-    qtbot.keyClicks(focused, "-7")
+    qtbot.keyClicks(focused, "0 7 dmg")  # '0' = the active combatant (bravo)
     qtbot.keyClick(focused, Qt.Key.Key_Return)
 
     assert bravo_tab.npc_state.hp == start_hp - 7

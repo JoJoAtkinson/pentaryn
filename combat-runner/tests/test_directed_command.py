@@ -1,16 +1,15 @@
-"""Tests for MainWindow._on_directed_command (Task 4.1/4.2 fast path).
+"""Tests for MainWindow._on_command — the <who> <stream> grammar fast path.
 
-All tests use a two-NPC EncounterState (actor + target) and call
-_on_directed_command directly with a ParsedInput built via the dispatcher.
-No LLM controller is wired so _enqueue_review is a no-op and no network
-traffic occurs.
+All tests use a two-NPC EncounterState (actor + target) and call `_on_command`
+directly with a `ParsedCommand` built via `gui.dispatcher.parse`. No LLM
+controller is wired so the review path is a no-op and no network traffic occurs.
 """
 
 from __future__ import annotations
 
 import pytest
 
-from gui.dispatcher import Dispatcher
+from gui.dispatcher import parse
 from gui.main_window import MainWindow
 from gui.state import EncounterState, NPCState
 
@@ -19,23 +18,14 @@ from gui.state import EncounterState, NPCState
 def two_npc_encounter(tmp_path):
     """Two-NPC encounter: actor (id='1') and target (id='2')."""
     actor = NPCState(
-        slug="pc-rogue",
-        name="Vessa",
-        max_hp=40,
-        ac=15,
-        speed="30 ft.",
-        cr=0.0,
-        kind="pc",
+        slug="pc-rogue", name="Vessa", max_hp=40, ac=15,
+        speed="30 ft.", cr=0.0, kind="pc",
     )
     actor.id = "1"
 
     target = NPCState(
-        slug="goblin-grunt",
-        name="Goblin Grunt",
-        max_hp=30,
-        ac=13,
-        speed="30 ft.",
-        cr=0.25,
+        slug="goblin-grunt", name="Goblin Grunt", max_hp=30, ac=13,
+        speed="30 ft.", cr=0.25,
     )
     target.id = "2"
 
@@ -55,121 +45,87 @@ def window(qtbot, two_npc_encounter):
     return win
 
 
-# ─────────────────────────────────────────────────────────────────────
-# Test 1: DIRECTED damage reduces target HP and logs an actor-attributed line
-# ─────────────────────────────────────────────────────────────────────
+# ─────────── directed damage ───────────
+
 
 def test_directed_damage_reduces_target_hp(window):
-    """A directed damage command '2 12' should subtract 12 from target HP."""
+    """A directed damage command '2 12 dmg' subtracts 12 from target HP."""
     target = window.encounter_state.npcs[1]
     starting_hp = target.hp
 
-    parsed = Dispatcher().parse("2 12")
-    assert parsed.target_id == "2"
-
-    window._on_directed_command(parsed)
+    cmd = parse("2 12 dmg")
+    assert cmd.kind == "command" and cmd.target_ids == ["2"]
+    window._on_command(cmd)
 
     assert target.hp == starting_hp - 12
 
 
-def test_directed_damage_logs_actor_attributed_line(window, qtbot):
-    """The log line on the actor tab should mention the actor name and target id."""
-    # Switch to actor's tab (index 0) so _append_to_active_tab writes there.
-    window.tabs.setCurrentIndex(0)
-
-    parsed = Dispatcher().parse("2 8")
-    window._on_directed_command(parsed)
-
-    actor_tab = window.tabs.widget(0)
-    log_text = actor_tab.log_view.toHtml()
-    # Expect actor name ('Vessa') and target id ('#2') in the log
-    assert "Vessa" in log_text
-    assert "#2" in log_text
-
-
-# ─────────────────────────────────────────────────────────────────────
-# Test 2: delivery==melee sets in_melee on both actor and target
-# ─────────────────────────────────────────────────────────────────────
-
-def test_melee_delivery_sets_in_melee_on_actor_and_target(window):
-    """'2 10 melee' should set in_melee=True on both the actor and the target."""
-    actor = window.encounter_state.npcs[0]
-    target = window.encounter_state.npcs[1]
-    actor.in_melee = False
-    target.in_melee = False
-
-    # Make actor's tab active so actor resolution works
-    window.tabs.setCurrentIndex(0)
-    parsed = Dispatcher().parse("2 10 melee")
-    window._on_directed_command(parsed)
-
-    assert target.in_melee is True
-    assert actor.in_melee is True
-
-
-def test_ranged_delivery_does_not_set_in_melee(window):
-    """'2 10 ranged' should NOT set in_melee on either combatant."""
-    actor = window.encounter_state.npcs[0]
-    target = window.encounter_state.npcs[1]
-    actor.in_melee = False
-    target.in_melee = False
-
-    window.tabs.setCurrentIndex(0)
-    parsed = Dispatcher().parse("2 10 ranged")
-    window._on_directed_command(parsed)
-
-    assert target.in_melee is False
-    assert actor.in_melee is False
-
-
-# ─────────────────────────────────────────────────────────────────────
-# Test 3: JUMP focuses the target tab
-# ─────────────────────────────────────────────────────────────────────
-
-def test_jump_focuses_target_tab(window):
-    """A bare id '2' (JUMP kind) should switch to the target's tab (index 1)."""
-    window.tabs.setCurrentIndex(0)
-    parsed = Dispatcher().parse("2")
-    assert parsed.kind.value == "jump"
-
-    window._on_directed_command(parsed)
-
-    assert window.tabs.currentIndex() == 1
-
-
-def test_jump_to_first_combatant_focuses_index_zero(window):
-    """Bare id '1' should focus index 0 (actor's own tab)."""
-    window.tabs.setCurrentIndex(1)
-    parsed = Dispatcher().parse("1")
-    window._on_directed_command(parsed)
-    assert window.tabs.currentIndex() == 0
-
-
-# ─────────────────────────────────────────────────────────────────────
-# Test 4: unknown target id does not crash
-# ─────────────────────────────────────────────────────────────────────
-
-def test_unknown_target_id_does_not_crash(window):
-    """A directed command pointing to an id not in the encounter falls back
-    gracefully: no exception, no HP change."""
+def test_directed_damage_with_type_tag(window):
+    """'2 8 slash' applies 8 damage qualified by slashing type."""
     target = window.encounter_state.npcs[1]
     starting_hp = target.hp
 
-    # id '9' does not exist in the two-NPC encounter
-    parsed = Dispatcher().parse("9 15")
-    window._on_directed_command(parsed)  # should not raise
+    window.tabs.setCurrentIndex(0)
+    window._on_command(parse("2 8 slash"))
 
-    # Target HP is unchanged
+    assert target.hp == starting_hp - 8
+
+
+def test_directed_heal_increases_target_hp(window):
+    """'2 6 heal' heals combatant 2 by 6."""
+    target = window.encounter_state.npcs[1]
+    target.member_hp[0] = 10
+    window._on_command(parse("2 6 heal"))
+    assert target.hp == 16
+
+
+# ─────────── set_target / jump ───────────
+
+
+def test_set_target_jumps_to_target_tab(window):
+    """A bare id '2' sets the sticky target and jumps to its tab (index 1)."""
+    window.tabs.setCurrentIndex(0)
+    cmd = parse("2")
+    assert cmd.kind == "set_target"
+    window._on_command(cmd)
+    assert window.tabs.currentIndex() == 1
+    assert window.encounter_state.current_target == ["2"]
+
+
+def test_set_target_to_first_combatant_focuses_index_zero(window):
+    """Bare id '1' focuses index 0 (actor's own tab)."""
+    window.tabs.setCurrentIndex(1)
+    window._on_command(parse("1"))
+    assert window.tabs.currentIndex() == 0
+
+
+# ─────────── condition ───────────
+
+
+def test_directed_condition_applies(window):
+    """'2 prone' toggles the prone condition on combatant 2."""
+    target = window.encounter_state.npcs[1]
+    window._on_command(parse("2 prone"))
+    assert "prone" in target.conditions
+
+
+# ─────────── unknown target ───────────
+
+
+def test_unknown_target_id_does_not_crash(window):
+    """A command pointing to an id not in the encounter falls back gracefully:
+    no exception, no HP change."""
+    target = window.encounter_state.npcs[1]
+    starting_hp = target.hp
+
+    window._on_command(parse("9 15 dmg"))  # id 9 does not exist
+
     assert target.hp == starting_hp
 
 
-def test_unknown_target_id_logs_error_on_actor_tab(window, qtbot):
-    """When the target id is unknown, an error span should appear in the active tab log."""
-    window.tabs.setCurrentIndex(0)
-    parsed = Dispatcher().parse("9 15")
-    window._on_directed_command(parsed)
-
-    actor_tab = window.tabs.widget(0)
-    log_text = actor_tab.log_view.toHtml()
-    # The method logs 'unknown combatant id: #9' in a red error span
-    assert "unknown combatant id" in log_text or "9" in log_text
+def test_unparseable_routes_without_crash(window):
+    """An unparseable command routes to the LLM fallback without crashing."""
+    received: list = []
+    window._on_llm_fallback = lambda text, parsed=None: received.append(text)  # type: ignore
+    window._on_command(parse("2 melee"))  # damage-tag with no number -> unparseable
+    assert received

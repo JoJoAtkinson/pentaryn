@@ -102,20 +102,20 @@ def test_segmented_hp_bar_renders_three_segments(gnoll_window):
 
 
 def test_damage_via_command_input_targets_highest_alive_member(gnoll_window, qtbot):
-    """Type `-8` in the gnoll tab → member 3 drops to 14."""
+    """Self-target damage `0 8 dmg` routes to the highest alive member (m3)."""
     from PySide6.QtCore import Qt
     tab = _gnoll_tab(gnoll_window)
     gnoll_window.tabs.setCurrentWidget(tab)
-    qtbot.keyClicks(tab.input, "-8")
+    qtbot.keyClicks(tab.input, "0 8 dmg")
     qtbot.keyClick(tab.input, Qt.Key.Key_Return)
     assert tab.npc_state.member_hp == [22, 22, 14]
 
 
 def test_explicit_member_sigil_overrides_default(gnoll_window, qtbot):
-    """Type `m1 -5` → member 1 drops to 17."""
+    """`0 m1 5 dmg` targets mob member 1 explicitly → member 1 drops to 17."""
     from PySide6.QtCore import Qt
     tab = _gnoll_tab(gnoll_window)
     gnoll_window.tabs.setCurrentWidget(tab)
-    qtbot.keyClicks(tab.input, "m1 -5")
+    qtbot.keyClicks(tab.input, "0 m1 5 dmg")
     qtbot.keyClick(tab.input, Qt.Key.Key_Return)
     assert tab.npc_state.member_hp == [17, 22, 22]
