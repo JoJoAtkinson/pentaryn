@@ -200,6 +200,11 @@ def _render_action_markdown(text: str) -> str:
     return "".join(out)
 
 
+_PLAYER_ACTIONS = [
+    "Cast", "Attack", "Dodge", "Dash", "Disengage", "Help", "Hide", "Ready", "Retreat"
+]
+
+
 class NPCTab(QWidget):
     """One combat tab for one NPC instance."""
 
@@ -216,6 +221,15 @@ class NPCTab(QWidget):
 
     # Emitted on `/quit`.
     quit_requested = Signal()
+
+    # Emitted when the dispatcher routes a DIRECTED or JUMP command (Phase 1).
+    # MainWindow handles tab switching + applies the damage to the target tab.
+    directed_command_requested = Signal(object)  # ParsedInput(kind=DIRECTED or JUMP)
+
+    # Emitted after any state-changing command completes. Carries the raw input
+    # text + a snapshot of the tab's NPCState. Callers can use this to build an
+    # audit trail or show a per-command review prompt.
+    review_needed = Signal(str, object)  # (raw_command, npc_state snapshot)
 
     def __init__(
         self,
@@ -305,22 +319,21 @@ class NPCTab(QWidget):
         self.conditions_label.setWordWrap(True)
         layout.addWidget(self.conditions_label)
 
-        # Action chip grid
-        chips_header = QLabel("Actions (click or type)")
-        chips_header.setStyleSheet("color: #6c8eba; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; padding-top: 8px;")
-        layout.addWidget(chips_header)
-
-        self.action_grid = ActionChipGrid(cols=2)
-        self.action_grid.chip_clicked.connect(self._on_chip_clicked)
-        self.action_grid.show_narration_requested.connect(self._on_show_narration)
-        self.action_grid.toggle_used_requested.connect(self._on_toggle_used)
-        self.action_grid.edit_spec_requested.connect(self._on_edit_spec)
-        layout.addWidget(self.action_grid)
+        # ── kind-aware action area ──
+        if self.npc_state.kind == "pc":
+            self._build_player_action_area(layout)
+        else:
+            self._build_npc_action_area(layout)
 
         layout.addStretch(1)
 
         # Start-turn manual override button
-        self.start_turn_btn = QPushButton("Start NPC's turn (refresh reaction + recharges)")
+        btn_label = (
+            "Start player's turn"
+            if self.npc_state.kind == "pc"
+            else "Start NPC's turn (refresh reaction + recharges)"
+        )
+        self.start_turn_btn = QPushButton(btn_label)
         self.start_turn_btn.setStyleSheet(
             "padding: 6px 10px; background: #2a2f38; color: #d6dade; "
             "border: 1px solid #448aff; border-radius: 4px; font-size: 11px;"
@@ -329,6 +342,49 @@ class NPCTab(QWidget):
         layout.addWidget(self.start_turn_btn)
 
         return panel
+
+    def _build_npc_action_area(self, layout: QVBoxLayout) -> None:
+        """Builds the DB-driven action chip grid (NPC-only path)."""
+        chips_header = QLabel("Actions (click or type)")
+        chips_header.setStyleSheet(
+            "color: #6c8eba; font-size: 10px; text-transform: uppercase; "
+            "letter-spacing: 0.1em; padding-top: 8px;"
+        )
+        layout.addWidget(chips_header)
+        self.action_grid = ActionChipGrid(cols=2)
+        self.action_grid.chip_clicked.connect(self._on_chip_clicked)
+        self.action_grid.show_narration_requested.connect(self._on_show_narration)
+        self.action_grid.toggle_used_requested.connect(self._on_toggle_used)
+        self.action_grid.edit_spec_requested.connect(self._on_edit_spec)
+        layout.addWidget(self.action_grid)
+
+    def _build_player_action_area(self, layout: QVBoxLayout) -> None:
+        """Builds the generic player action chip row (PC-only path)."""
+        # Set action_grid to None so _refresh won't try to call grid methods
+        self.action_grid = None  # type: ignore[assignment]
+
+        chips_header = QLabel("Actions")
+        chips_header.setStyleSheet(
+            "color: #6c8eba; font-size: 10px; text-transform: uppercase; "
+            "letter-spacing: 0.1em; padding-top: 8px;"
+        )
+        layout.addWidget(chips_header)
+
+        row_widget = QWidget()
+        row_layout = QHBoxLayout(row_widget)
+        row_layout.setContentsMargins(0, 0, 0, 0)
+        row_layout.setSpacing(4)
+        for action_name in _PLAYER_ACTIONS:
+            btn = QPushButton(action_name)
+            btn.setFixedHeight(28)
+            btn.setStyleSheet(
+                "padding: 2px 8px; background: #1e2530; color: #d6dade; "
+                "border: 1px solid #3a4253; border-radius: 4px; font-size: 11px;"
+            )
+            btn.clicked.connect(lambda checked=False, a=action_name: self._on_player_action(a))
+            row_layout.addWidget(btn)
+        row_layout.addStretch(1)
+        layout.addWidget(row_widget)
 
     def _build_console_panel(self) -> QWidget:
         panel = QWidget()
@@ -375,16 +431,17 @@ class NPCTab(QWidget):
         self.status_label.setText(self._status_text())
         self.hp_bar.set_state(s.member_hp, s.max_hp)
         self.conditions_label.setText(self._conditions_text())
-        # Action chips with USED set
-        used = {a for a, st in s.recharges.items() if st == "USED"}
-        # An action with slots=0 also renders as USED (greyed-out, not clickable)
-        for a in self.actions:
-            slot_cfg = a.get("slots") or {}
-            if isinstance(slot_cfg, dict) and slot_cfg.get("count"):
-                remaining = s.slots_remaining.get(a["action"], slot_cfg["count"])
-                if remaining <= 0:
-                    used.add(a["action"])
-        self.action_grid.set_actions(self.actions, used_actions=used, slot_remaining=dict(s.slots_remaining))
+        if self.action_grid is not None:  # NPC-only
+            # Action chips with USED set
+            used = {a for a, st in s.recharges.items() if st == "USED"}
+            # An action with slots=0 also renders as USED (greyed-out, not clickable)
+            for a in self.actions:
+                slot_cfg = a.get("slots") or {}
+                if isinstance(slot_cfg, dict) and slot_cfg.get("count"):
+                    remaining = s.slots_remaining.get(a["action"], slot_cfg["count"])
+                    if remaining <= 0:
+                        used.add(a["action"])
+            self.action_grid.set_actions(self.actions, used_actions=used, slot_remaining=dict(s.slots_remaining))
         # Inform command input of HP context for live preview
         self.input.update_context(s.member_hp, s.max_hp)
 
@@ -404,7 +461,14 @@ class NPCTab(QWidget):
     def _status_text(self) -> str:
         s = self.npc_state
         hp_text = f"<b>HP</b> {s.hp}/{s.max_total_hp}"
-        return f"{hp_text} · <b>AC</b> {s.ac} · <b>Speed</b> {s.speed}"
+        parts = [f"{hp_text} · <b>AC</b> {s.ac} · <b>Speed</b> {s.speed}"]
+        public_notes = [n for n in s.pinned_notes if not n.startswith("_")]
+        if public_notes:
+            parts.append(" · ".join(public_notes))
+        return "  ".join(parts)
+
+    def _actor_prefix(self) -> str:
+        return self.npc_state.name
 
     def _conditions_text(self) -> str:
         s = self.npc_state
@@ -487,15 +551,115 @@ class NPCTab(QWidget):
             f"and re-launch the encounter to pick up changes.",
         )
 
+    # ─────────── player action handlers (PC-only path) ───────────
+
+    def _on_player_action(self, action_name: str) -> None:
+        """Handle a generic player action chip click."""
+        name = self.npc_state.name
+        if action_name == "Cast":
+            self._player_action_cast()
+        elif action_name == "Retreat":
+            self._player_action_retreat()
+        elif action_name == "Disengage":
+            self._append_log(f"<span style='color:#66bb6a'>{name}: Disengage</span>")
+            # Suppress the next OA prompt — flag stored on state for one command
+            self.npc_state.pinned_notes = [
+                n for n in self.npc_state.pinned_notes if n != "_disengaging"
+            ]
+            self.npc_state.pinned_notes.append("_disengaging")
+            self._refresh()
+            self.state_changed.emit()
+        elif action_name == "Dodge":
+            self.npc_state.add_condition("dodging")
+            self._append_log(f"<span style='color:#66bb6a'>{name}: Dodge — dodging condition applied</span>")
+            self._refresh()
+            self.state_changed.emit()
+            if self.event_bus is not None:
+                from .event_bus import condition_event
+                self.event_bus.emit(condition_event(self.npc_state.slug, "dodging", applied=True))
+        else:
+            # Attack, Dash, Help, Hide, Ready — log a line
+            self._append_log(f"<span style='color:#b8bdc4'>{name}: {action_name}</span>")
+            self.state_changed.emit()
+
+    def _player_action_cast(self) -> None:
+        """Prompt for spell name + level, then fire spell_cast event."""
+        from PySide6.QtWidgets import QDialog, QDialogButtonBox, QFormLayout, QLineEdit, QSpinBox
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Cast a Spell")
+        form = QFormLayout(dlg)
+        spell_input = QLineEdit()
+        spell_input.setPlaceholderText("e.g. Fireball")
+        level_spin = QSpinBox()
+        level_spin.setRange(0, 9)
+        level_spin.setValue(1)
+        form.addRow("Spell name:", spell_input)
+        form.addRow("Spell level:", level_spin)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(dlg.accept)
+        buttons.rejected.connect(dlg.reject)
+        form.addRow(buttons)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        spell_name = spell_input.text().strip()
+        if not spell_name:
+            return
+        level = level_spin.value()
+        level_str = (
+            f"{level}{'st' if level == 1 else 'nd' if level == 2 else 'rd' if level == 3 else 'th'}"
+        )
+        self._append_log(
+            f"<span style='color:#ce93d8'>{self.npc_state.name}: casts {spell_name} ({level_str})</span>"
+        )
+        if self.event_bus is not None:
+            from .event_bus import spell_cast_event
+            self.event_bus.emit(spell_cast_event(
+                caster=self.npc_state.id or self.npc_state.slug,
+                spell_name=spell_name,
+                spell_level=level,
+            ))
+        self.state_changed.emit()
+
+    def _player_action_retreat(self) -> None:
+        """Log Retreat and fire move_away event (main window handles OA prompt)."""
+        name = self.npc_state.name
+        # Check and clear _disengaging flag
+        if "_disengaging" in self.npc_state.pinned_notes:
+            self.npc_state.pinned_notes = [
+                n for n in self.npc_state.pinned_notes if n != "_disengaging"
+            ]
+            self._append_log(
+                f"<span style='color:#66bb6a'>{name}: Retreat (Disengage active — no OA)</span>"
+            )
+            self._refresh()
+            self.state_changed.emit()
+            return
+        self._append_log(f"<span style='color:#ff9800'>{name}: Retreat</span>")
+        if self.event_bus is not None and self.npc_state.in_melee:
+            from .event_bus import move_away_event
+            self.event_bus.emit(move_away_event(
+                combatant_id=self.npc_state.id,
+                combatant_slug=self.npc_state.slug,
+            ))
+        self.npc_state.in_melee = False
+        self._refresh()
+        self.state_changed.emit()
+
     def _handle_parsed(self, parsed: ParsedInput) -> None:
         if parsed.kind is InputKind.ACTION:
             self._run_action(parsed.action_name)
+            self.review_needed.emit(parsed.raw, self.npc_state)
         elif parsed.kind is InputKind.DAMAGE:
             self._apply_damage(parsed.amount, parsed.member, parsed.damage_type)
+            self.review_needed.emit(parsed.raw, self.npc_state)
         elif parsed.kind is InputKind.HEAL:
             self._apply_heal(parsed.amount, parsed.member)
+            self.review_needed.emit(parsed.raw, self.npc_state)
         elif parsed.kind is InputKind.CONDITION:
             self._toggle_condition(parsed.condition, parsed.condition_target, parsed.condition_duration)
+            self.review_needed.emit(parsed.raw, self.npc_state)
         elif parsed.kind is InputKind.CONDITION_MENU:
             self._append_log("(condition autocomplete menu — handled by widget in v0.2)")
         elif parsed.kind is InputKind.NOTE:
@@ -504,6 +668,9 @@ class NPCTab(QWidget):
             self.reorder_requested.emit(parsed.reorder_slugs)
         elif parsed.kind is InputKind.QUIT:
             self.quit_requested.emit()
+        elif parsed.kind in (InputKind.DIRECTED, InputKind.JUMP):
+            self.directed_command_requested.emit(parsed)
+            return  # MainWindow handles fast path
         else:
             # AMBIGUOUS or UNKNOWN → LLM fallback (main window owns the controller)
             self.llm_fallback_requested.emit(parsed.raw, parsed)
