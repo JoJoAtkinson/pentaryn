@@ -39,6 +39,8 @@ class InputKind(Enum):
     NOTE = "note"            # `note <text>` — log only, no LLM
     REORDER = "reorder"      # `/reorder <slug...>` — tab order
     QUIT = "quit"            # `/quit` | `/exit`
+    DIRECTED = "directed"   # `<id> <amount> [<tags…>]` — target a specific combatant
+    JUMP = "jump"           # `<id>` alone → focus that combatant's tab
     AMBIGUOUS = "ambiguous"  # fuzzy match found 2+ — caller routes to LLM
     UNKNOWN = "unknown"      # nothing matched — caller routes to LLM
 
@@ -64,6 +66,11 @@ class ParsedInput:
     note_text: str | None = None
     # REORDER
     reorder_slugs: list[str] = field(default_factory=list)
+    # DIRECTED / JUMP
+    target_id: str | None = None      # the repeated-digit id label
+    target_member: int | None = None  # optional mob member within target (m<n>)
+    resolved_tags: dict = field(default_factory=dict)  # facet→canonical from resolve_tags
+    tag_errors: list[str] = field(default_factory=list)  # unrecognized tokens
 
 
 # ─────────────────────────── Regex patterns ───────────────────────────
@@ -86,6 +93,11 @@ _CONDITION_MENU_RE = re.compile(r"^@$")
 _NOTE_RE = re.compile(r"^note\s+(.+)$", re.IGNORECASE)
 _REORDER_RE = re.compile(r"^/reorder\s+(.+)$", re.IGNORECASE)
 _QUIT_RE = re.compile(r"^/(quit|exit)$", re.IGNORECASE)
+
+# A valid combatant id: one digit repeated 1-N times. "44" ok, "45" invalid.
+_REPEATED_DIGIT_RE = re.compile(r'^(\d)\1*$')
+# Optional mob-member target within a directed command: m2
+_DIRECTED_MOB_RE = re.compile(r'^m([1-9]\d*)$', re.IGNORECASE)
 
 
 def _fuzzy_match_actions(
@@ -152,6 +164,10 @@ class Dispatcher:
 
         if not s:
             return result
+
+        # Directed command: starts with a digit
+        if s[0].isdigit():
+            return self._parse_directed(s)
 
         # 1) Sigil patterns — exact regex (fastest)
         if m := _QUIT_RE.match(s):
@@ -222,4 +238,64 @@ class Dispatcher:
                 return result
 
         # 3) Nothing matched — caller falls through to LLM
+        return result
+
+    def _parse_directed(self, s: str) -> ParsedInput:
+        """Parse a directed command: <id> [m<n>] [<amount>] [<tags…>]
+        or bare <id> (no amount) → JUMP.
+        """
+        from .command_tags import resolve_tags  # lazy import keeps module lightweight
+
+        result = ParsedInput(kind=InputKind.UNKNOWN, raw=s)
+        tokens = s.split()
+        if not tokens:
+            return result
+
+        id_token = tokens[0]
+        if not _REPEATED_DIGIT_RE.match(id_token):
+            # "45" or other non-uniform number — not a directed command, fall through
+            return result  # UNKNOWN → caller routes to LLM
+
+        # Bare id alone → JUMP (focus that combatant's tab)
+        if len(tokens) == 1:
+            result.kind = InputKind.JUMP
+            result.target_id = id_token
+            return result
+
+        result.target_id = id_token
+        rest = tokens[1:]  # everything after the id
+
+        # Optional mob member: m<n>
+        if rest and _DIRECTED_MOB_RE.match(rest[0]):
+            m = _DIRECTED_MOB_RE.match(rest[0])
+            result.target_member = int(m.group(1))
+            rest = rest[1:]
+
+        if not rest:
+            # id + optional mob only — treat as JUMP to that id
+            result.kind = InputKind.JUMP
+            return result
+
+        # Amount must be a positive integer
+        try:
+            result.amount = int(rest[0])
+            if result.amount < 0:
+                raise ValueError
+        except (ValueError, IndexError):
+            result.kind = InputKind.UNKNOWN
+            result.raw = s
+            return result
+
+        rest = rest[1:]
+
+        # Remaining tokens are tags — resolve through faceted taxonomy
+        resolved, errors = resolve_tags(rest)
+        result.resolved_tags = resolved
+        result.tag_errors = errors
+        result.kind = InputKind.DIRECTED
+
+        # Derive damage_type from resolved tags for back-compat with existing
+        # event_bus callers that look at damage_type directly.
+        result.damage_type = resolved.get("type")
+
         return result
