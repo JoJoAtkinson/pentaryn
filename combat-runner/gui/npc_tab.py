@@ -736,6 +736,10 @@ class NPCTab(QWidget):
             return
 
         output = result.get("output", "")
+        self._append_log(
+            f"<span style='color:#8a8f96'>{self._actor_prefix()}:</span> "
+            f"<span style='color:#6c8eba'>{action_name.replace('_', ' ')}</span>"
+        )
         self._append_log_pre(output)
 
         # Bookkeeping: area actions with `recharge` mark themselves USED.
@@ -776,6 +780,7 @@ class NPCTab(QWidget):
         dtype_str = f" {dtype}" if dtype else ""
         suffix = " · **killed**" if result.get("killed") else ""
         self._append_log(
+            f"<span style='color:#8a8f96'>{self._actor_prefix()}:</span> "
             f"<span style='color:#ff5252'>−{amount}{dtype_str}</span> "
             f"{member_str} → HP {result['after']}/{self.npc_state.max_hp}{suffix}"
         )
@@ -799,6 +804,7 @@ class NPCTab(QWidget):
             return
         member_str = f"m{result['member']}" if self.npc_state.count > 1 and result.get("member") else ""
         self._append_log(
+            f"<span style='color:#8a8f96'>{self._actor_prefix()}:</span> "
             f"<span style='color:#66bb6a'>+{amount}</span> {member_str} "
             f"→ HP {result['after']}/{self.npc_state.max_hp}"
         )
@@ -816,7 +822,10 @@ class NPCTab(QWidget):
             suffix_parts.append(f"{duration} rounds")
         suffix = f" ({'; '.join(suffix_parts)})" if suffix_parts else ""
         verb = "applied" if is_present else "removed"
-        self._append_log(f"<span style='color:#ff9800'>{verb} condition: {cond}</span>{suffix}")
+        self._append_log(
+            f"<span style='color:#8a8f96'>{self._actor_prefix()}:</span> "
+            f"<span style='color:#ff9800'>{verb} condition: {cond}</span>{suffix}"
+        )
         self._refresh()
         self.state_changed.emit()
         if self.event_bus is not None:
