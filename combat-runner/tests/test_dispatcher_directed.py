@@ -69,7 +69,8 @@ def test_mob_member_in_directed():
 
 def test_mob_m0_not_parsed_as_member():
     p = D.parse("44 m0 5")
-    assert p.target_member != 0
+    assert p.target_member is None
+    assert p.kind is InputKind.UNKNOWN
 
 def test_bare_id_is_jump():
     p = D.parse("3")
@@ -97,3 +98,22 @@ def test_note_unchanged():
 def test_quit_unchanged():
     p = D.parse("/quit")
     assert p.kind is InputKind.QUIT
+
+def test_jump_with_mob_preserves_member():
+    p = D.parse("44 m3")
+    assert p.kind is InputKind.JUMP
+    assert p.target_id == "44"
+    assert p.target_member == 3
+
+def test_word_where_amount_expected_is_unknown():
+    p = D.parse("44 fire")
+    assert p.kind is InputKind.UNKNOWN
+
+def test_float_amount_is_unknown():
+    p = D.parse("44 12.5")
+    assert p.kind is InputKind.UNKNOWN
+
+def test_single_zero_id_is_valid_directed():
+    p = D.parse("0 5")
+    assert p.kind is InputKind.DIRECTED
+    assert p.target_id == "0"
