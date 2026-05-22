@@ -654,6 +654,32 @@ class NPCTab(QWidget):
         self.state_changed.emit()
 
     def _handle_parsed(self, parsed: ParsedInput) -> None:
+        # Fix 3: for PC tabs, fuzzy-match the input against _PLAYER_ACTIONS
+        # before falling through to the LLM. The dispatcher's fuzzy matcher
+        # only searches DB actions; PCs have none. We apply the same
+        # tightest-first ordering (exact → prefix → substring) inline here.
+        if (
+            parsed.kind in (InputKind.UNKNOWN, InputKind.AMBIGUOUS)
+            and self.npc_state.kind == "pc"
+        ):
+            q = parsed.raw.lower().strip()
+            # Tightest-first: exact → prefix → substring (case-insensitive)
+            player_match: str | None = None
+            exact = [a for a in _PLAYER_ACTIONS if a.lower() == q]
+            if exact:
+                player_match = exact[0]
+            else:
+                prefix = [a for a in _PLAYER_ACTIONS if a.lower().startswith(q)]
+                if len(prefix) == 1:
+                    player_match = prefix[0]
+                elif not prefix:
+                    sub = [a for a in _PLAYER_ACTIONS if q in a.lower()]
+                    if len(sub) == 1:
+                        player_match = sub[0]
+            if player_match is not None:
+                self._on_player_action(player_match)
+                return
+
         if parsed.kind is InputKind.ACTION:
             self._run_action(parsed.action_name)
             self.review_needed.emit(parsed.raw, self.npc_state)
@@ -900,6 +926,11 @@ class NPCTab(QWidget):
             f'── Round {round_num} ──</div>'
         )
         self.log_view.append(divider)
+        # Clear any stale _disengaging flag. The flag is only valid for the
+        # current turn (Disengage → immediate Retreat). If the round rolls over
+        # without the player having Retreated, the protection has lapsed.
+        if "_disengaging" in self.npc_state.pinned_notes:
+            self._clear_disengaging()
         # Tick durations; log expirations
         expired = self.npc_state.tick_condition_durations()
         for cond in expired:

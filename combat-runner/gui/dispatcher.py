@@ -277,9 +277,18 @@ class Dispatcher:
             result.kind = InputKind.JUMP
             return result
 
-        # Amount must be a non-negative integer (0 is valid)
+        # Amount must be an *unsigned* integer (0 is valid).
+        # A leading '+' or '-' makes the token look signed; directed commands
+        # carry direction via tags (e.g. `heal`), not a sign. Reject signed
+        # amounts so `44 +5` and `44 -5` route to the LLM instead of silently
+        # being parsed as 5 damage.
+        amount_token = rest[0]
+        if amount_token and amount_token[0] in ("+", "-"):
+            result.kind = InputKind.UNKNOWN
+            result.target_id = None
+            return result
         try:
-            result.amount = int(rest[0])
+            result.amount = int(amount_token)
             if result.amount < 0:
                 raise ValueError
         except ValueError:
