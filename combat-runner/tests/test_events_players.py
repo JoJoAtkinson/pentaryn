@@ -27,19 +27,6 @@ def pc_npc():
     )
 
 
-@pytest.fixture
-def npc_with_attack():
-    from gui.state import NPCState
-    return NPCState(
-        slug="goblin",
-        name="Goblin",
-        max_hp=7,
-        ac=13,
-        speed="30 ft.",
-        cr=0.25,
-    )
-
-
 def test_pc_bloodied_event_fires(qtbot, pc_npc):
     from gui.event_bus import EventBus
     from gui.npc_tab import NPCTab

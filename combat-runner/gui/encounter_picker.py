@@ -6,7 +6,8 @@ Discovers encounters using the SAME rule as `combat-runner/launch.py`:
 
 The dialog shows discovered encounters sorted by most-recent NPC-file mtime.
 Selecting an encounter expands a per-NPC count panel; the user adjusts counts
-and clicks Launch. Emits `launched(encounter_dict, counts_dict)` on Launch.
+and clicks Launch. Emits `launched(encounter, counts, party_config, player_selections)`
+on Launch.
 """
 
 from __future__ import annotations
@@ -138,9 +139,6 @@ def _parse_name(md_path: Path) -> str:
             if m:
                 return m.group(1).strip().strip('"').strip("'")
     return md_path.stem.replace("-", " ").title()
-
-
-import yaml as _yaml  # stdlib fallback handled below
 
 
 def load_party_config(path: Path) -> dict:
@@ -371,7 +369,7 @@ class EncounterPicker(QDialog):
         return text
 
     def _rebuild_players_section(self) -> None:
-        from PySide6.QtWidgets import QCheckBox, QHBoxLayout
+        from PySide6.QtWidgets import QCheckBox
         self._player_checks: dict[str, Any] = {}   # id → QCheckBox
         self._player_hp_spins: dict[str, QSpinBox] = {}  # id → QSpinBox
         while self._player_form.rowCount() > 0:

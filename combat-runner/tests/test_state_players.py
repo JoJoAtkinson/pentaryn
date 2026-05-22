@@ -77,7 +77,6 @@ def test_serialization_round_trips_new_fields():
 
 def test_old_snapshot_without_new_fields_deserializes():
     """Back-compat: a snapshot that has no kind/id/in_melee/pinned_notes loads ok."""
-    import json
     blob = {
         "name": "t", "root": "/t", "log_path": "/t/l.md",
         "npcs": [{"slug": "x", "name": "X", "max_hp": 10, "ac": 12,

@@ -313,7 +313,14 @@ class EncounterState:
         return None
 
     def combatant_by_id(self, combatant_id: str) -> NPCState | None:
-        """Look up a combatant by its permanent id label. Returns first match."""
+        """Look up a combatant by its permanent id label. Returns first match.
+
+        Returns None immediately for an empty string — unassigned combatants
+        all have ``id == ""`` so matching on an empty key would return an
+        arbitrary unassigned combatant rather than a meaningful result.
+        """
+        if not combatant_id:
+            return None
         for npc in self.npcs:
             if npc.id == combatant_id:
                 return npc
