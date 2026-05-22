@@ -7,6 +7,16 @@ from gui.state import (
 )
 from gui.effects import apply_uncertain_damage, apply_hit, clear_stale_pending
 
+
+def _mob_es():
+    """Encounter state with a 3-member mob (each member 20 HP, total 60 HP)."""
+    es = EncounterState(name="t", root=Path("."), log_path=Path("log.md"))
+    mob = NPCState(slug="pack", name="Pack", max_hp=20, ac=13, speed="30",
+                   cr=1, kind="npc", id="9", count=3)
+    # __post_init__ fires automatically; mob.member_hp == [20, 20, 20]
+    es.npcs.append(mob)
+    return es
+
 def _es():
     es = EncounterState(name="t", root=Path("."), log_path=Path("log.md"))
     es.npcs.append(NPCState(slug="m", name="Marwen", max_hp=32, ac=15, speed="30",
@@ -97,3 +107,50 @@ def test_pending_effect_source_round_round_trip():
     assert p.round == 4
     assert p.kind == "attack"
     assert p.full_amount == 18
+
+
+# ─── mob-member threading ────────────────────────────────────────────────────
+
+
+def test_uncertain_damage_mob_member_applies_to_named_member():
+    """apply_uncertain_damage(member=3) applies assumed damage to member 3, not default."""
+    es = _mob_es()
+    mob = es.combatant_by_id("9")
+    assert mob.member_hp == [20, 20, 20]  # precondition
+
+    # A save-half area action vs mob member 3: minimum (half) should hit member 3.
+    apply_uncertain_damage(
+        es, "9", full_amount=10, kind="save", on_save="half", source="fireball", member=3
+    )
+
+    # Applied half (5) goes to member 3 (index 2), not the default routing.
+    assert mob.member_hp[0] == 20, "member 1 must be untouched"
+    assert mob.member_hp[1] == 20, "member 2 must be untouched"
+    assert mob.member_hp[2] == 15, "member 3 must take 5 (half of 10)"
+
+    # One PendingEffect recorded.
+    assert len(es.pending_effects) == 1
+    assert es.pending_effects[0].full_amount == 10
+    assert es.pending_effects[0].applied_amount == 5
+    assert es.pending_effects[0].resolved is False
+
+
+def test_uncertain_damage_mob_member_hit_upgrades_named_member():
+    """After apply_uncertain_damage(member=3), apply_hit upgrades member 3, not default."""
+    es = _mob_es()
+    mob = es.combatant_by_id("9")
+
+    apply_uncertain_damage(
+        es, "9", full_amount=10, kind="save", on_save="half", source="fireball", member=3
+    )
+    # Precondition: only member 3 was touched so far.
+    assert mob.member_hp == [20, 20, 15]
+
+    # DM rules the save failed — apply the remaining 5 to confirm the hit.
+    apply_hit(es, ["9"])
+
+    # Member 3 should now have 10 HP (20 - 5 initial - 5 upgrade).
+    assert mob.member_hp[0] == 20, "member 1 must be untouched after hit"
+    assert mob.member_hp[1] == 20, "member 2 must be untouched after hit"
+    assert mob.member_hp[2] == 10, "member 3 must have taken full 10 damage"
+    assert es.pending_effects[0].resolved is True

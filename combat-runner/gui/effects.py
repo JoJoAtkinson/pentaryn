@@ -186,6 +186,7 @@ def apply_uncertain_damage(
     *,
     source: str = "",
     round_num: int | None = None,
+    member: int | None = None,
 ) -> list[str]:
     """Apply the minimum (assumed) damage and record a PendingEffect.
 
@@ -214,6 +215,10 @@ def apply_uncertain_damage(
     round_num:
         The encounter round the effect was created in.  Defaults to
         ``state.round_num`` when not given.
+    member:
+        Mob member index (1-indexed, from the ``m<n>`` grammar sigil).  When
+        set, damage is applied to that specific mob member rather than the
+        default highest-numbered alive member.
 
     Returns
     -------
@@ -233,7 +238,7 @@ def apply_uncertain_damage(
         applied = 0
 
     if applied > 0:
-        delta = combatant.apply_damage(applied)
+        delta = combatant.apply_damage(applied, member=member)
         before, after = delta.get("before", 0), delta.get("after", 0)
         fragments.append(
             f"{combatant.name} took {applied} (assumed save) damage "

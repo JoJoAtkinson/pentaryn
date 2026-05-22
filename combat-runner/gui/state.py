@@ -62,7 +62,6 @@ _CONDITION_ALIAS_TABLE: dict[str, str] = {
     "invis": "invisible",
     # paralyzed
     "paralyze": "paralyzed",
-    "paralyze": "paralyzed",
     "para": "paralyzed",
     # petrified
     "petrify": "petrified",
