@@ -335,6 +335,39 @@ def _tool_get_spell_details(key: str) -> dict[str, Any]:
         return {"ok": False, "error": f"get_spell_details failed: {exc}"}
 
 
+def _tool_apply_command(bundle: _StateBundle, command: str, target_slug: str) -> dict[str, Any]:
+    """Validate and apply a command string via the same dispatcher path the DM uses."""
+    from .dispatcher import Dispatcher, InputKind
+    d = Dispatcher()
+    parsed = d.parse(command)
+    npc = _find_npc(bundle.encounter, target_slug)
+    if npc is None:
+        return {"ok": False, "error": f"NPC not found: {target_slug}"}
+    if parsed.kind is InputKind.DIRECTED:
+        direction = parsed.resolved_tags.get("direction", "damage")
+        if direction == "heal":
+            result = npc.apply_heal(parsed.amount)
+        else:
+            result = npc.apply_damage(parsed.amount)
+        bundle.notify()
+        return {"ok": True, "applied": result, "direction": direction,
+                "hp_now": npc.hp, "parsed_tags": parsed.resolved_tags}
+    elif parsed.kind is InputKind.DAMAGE:
+        result = npc.apply_damage(parsed.amount)
+        bundle.notify()
+        return {"ok": True, "applied": result, "hp_now": npc.hp}
+    elif parsed.kind is InputKind.HEAL:
+        result = npc.apply_heal(parsed.amount)
+        bundle.notify()
+        return {"ok": True, "applied": result, "hp_now": npc.hp}
+    elif parsed.kind is InputKind.CONDITION:
+        npc.add_condition(parsed.condition)
+        bundle.notify()
+        return {"ok": True, "condition_added": parsed.condition}
+    else:
+        return {"ok": False, "error": f"command did not parse as actionable: kind={parsed.kind.value}"}
+
+
 def _build_tool_definitions() -> list[dict[str, Any]]:
     """Return the Anthropic tool definitions in the format the SDK expects."""
     return [
@@ -491,6 +524,25 @@ def _build_tool_definitions() -> list[dict[str, Any]]:
             "description": "Read the current encounter state as JSON. Includes every NPC's HP, conditions, recharges, etc.",
             "input_schema": {"type": "object", "properties": {}},
         },
+        {
+            "name": "apply_command",
+            "description": (
+                "Run a command string through the same parser the dispatcher uses "
+                "and apply its effect to the encounter state. "
+                "Use this when the review determines the fast-path result was wrong "
+                "or when interpreting a free-form command (e.g. '33 is taunted'). "
+                "The command is validated identically to DM-typed input. "
+                "Returns the parsed result and any errors."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "command": {"type": "string", "description": "Command string, e.g. '3 12 fire' or '5 10 heal'"},
+                    "target_slug": {"type": "string", "description": "NPC slug for the target (required to route the effect)"},
+                },
+                "required": ["command", "target_slug"],
+            },
+        },
         # ─── SRD lookups (in-process — no MCP transport) ────────────────────
         {
             "name": "roll_dice",
@@ -582,6 +634,7 @@ def _build_tool_dispatch_table(bundle: _StateBundle) -> dict[str, Callable[..., 
         "add_log_entry": lambda **kw: _tool_add_log_entry(bundle, **kw),
         "get_state_schema": lambda **kw: _tool_get_state_schema(bundle, **kw),
         "read_state": lambda **kw: _tool_read_state(bundle, **kw),
+        "apply_command": lambda **kw: _tool_apply_command(bundle, **kw),
         # SRD lookups (stateless — no bundle needed)
         "roll_dice": lambda **kw: _tool_roll_dice(**kw),
         "list_conditions": lambda **kw: _tool_list_conditions(**kw),
@@ -609,6 +662,20 @@ class LLMController:
         "  3. After tool calls, return ONE short sentence summarizing the result OR the rule text the user asked for.\n"
         "If the input is a typo'd verb (e.g. 'stallker attaccck'), prefer running the matched action via the existing dispatcher path — just report what you think they meant, don't call tools.\n"
         "If the input is a tactics question ('what should it do?'), consult the NPC's tactics section in your context and suggest concrete actions; don't call action-execution tools unless the user explicitly says to."
+    )
+
+    REVIEW_SYSTEM_PROMPT = (
+        "You are an at-table D&D 5.5e combat reviewer. A DM just typed a command; "
+        "the fast path already applied the deterministic effect. Your job:\n"
+        "  1. Verify the effect was correct (check resistances, immunities, tags).\n"
+        "  2. If the target has a resistance or immunity that changes the result, "
+        "     call apply_command or set_hp to revise it, then reply with "
+        "     '⟳ review: <short explanation>'.\n"
+        "  3. If the command is free-form ('33 is taunted'), interpret it: "
+        "     prefer add_condition for condition-like input, else add_log_entry.\n"
+        "  4. If everything looks correct, stay silent (return no text, no tools).\n"
+        "  5. Never block on uncertainty — if you're unsure, stay silent.\n"
+        "Be concise. One tool call maximum. One sentence if you say anything."
     )
 
     def __init__(
@@ -665,6 +732,56 @@ class LLMController:
             }
         ]
         return self._chat_loop(client, messages, dispatch_fn=dispatch_fn)
+
+    def review_command(
+        self,
+        raw: str,
+        actor: dict,
+        target: dict,
+        applied_direction: str | None,
+        applied_amount: int | None,
+        log_tail: str,
+        dispatch_fn: Callable[[list[Any]], list[dict[str, Any]]] | None = None,
+    ) -> "RunResult":
+        """Async review of an already-applied command. Blocking — run off-thread.
+
+        The fast path has already applied the deterministic effect; this asks
+        the model to verify it (resistances/immunities/free-form intent) and,
+        if anything is wrong, revise via tools. If the review writes a sentence
+        it is appended to the combat log with a `⟳ review:` prefix.
+        """
+        client = self._ensure_client()
+        if client is None:
+            return RunResult(error="no API key")
+
+        actor_desc = f"{actor.get('name', '?')} (id={actor.get('id', '?')})"
+        target_desc = (
+            f"{target.get('name', '?')} (id={target.get('id', '?')}, "
+            f"HP {target.get('hp', '?')}/{target.get('max_hp', '?')}, "
+            f"conditions={target.get('conditions', [])}, "
+            f"in_melee={target.get('in_melee', False)})"
+        )
+        applied_desc = (
+            f"{applied_direction} {applied_amount}"
+            if applied_direction else "(fast path: no direct mutation)"
+        )
+        user_msg = (
+            f"Actor: {actor_desc}\n"
+            f"Target: {target_desc}\n"
+            f"Command typed: {raw!r}\n"
+            f"Fast path applied: {applied_desc}\n"
+            f"Recent log:\n{log_tail}"
+        )
+
+        messages = [{"role": "user", "content": user_msg}]
+        result = self._chat_loop(
+            client, messages,
+            system_override=self.REVIEW_SYSTEM_PROMPT,
+            dispatch_fn=dispatch_fn,
+        )
+        if result.text and not result.error:
+            _tool_add_log_entry(self._bundle, f"⟳ review: {result.text}", kind="review")
+        return result
 
     def dispatch_tool_uses(self, tool_uses: list[Any]) -> list[dict[str, Any]]:
         """Dispatch a batch of tool_use blocks against the live state, returning
@@ -808,6 +925,7 @@ class LLMController:
         client: Any,
         messages: list[dict[str, Any]],
         dispatch_fn: Callable[[list[Any]], list[dict[str, Any]]] | None = None,
+        system_override: str | None = None,
     ) -> RunResult:
         """Run the chat loop, dispatching tool calls until end_turn.
 
@@ -816,9 +934,14 @@ class LLMController:
         `dispatch_tool_uses`). The GUI passes a `dispatch_fn` that marshals the
         dispatch onto the Qt main thread so the loop itself can run on a worker
         thread without freezing the window.
+
+        `system_override` — when provided, replaces `SYSTEM_PROMPT` for this
+        loop only (used by `review_command`). The `run()` path leaves it None
+        and keeps using `SYSTEM_PROMPT`.
         """
         if dispatch_fn is None:
             dispatch_fn = self.dispatch_tool_uses
+        prompt_text = system_override if system_override is not None else self.SYSTEM_PROMPT
         # Reset the per-run accumulator (dispatch_tool_uses appends into it).
         self._run_tool_calls = []
         final_text = ""
@@ -831,7 +954,7 @@ class LLMController:
                     system=[
                         {
                             "type": "text",
-                            "text": self.SYSTEM_PROMPT,
+                            "text": prompt_text,
                             "cache_control": {"type": "ephemeral", "ttl": "1h"},
                         }
                     ],
