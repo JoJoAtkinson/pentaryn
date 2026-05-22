@@ -79,6 +79,7 @@ class CommandInput(QLineEdit):
         # runs when the popup is hidden.
         self._condition_model = QStringListModel(["@" + c for c in CONDITIONS], self)
         self._slash_model = QStringListModel(list(SLASH_COMMANDS), self)
+        self._tag_hint_model = QStringListModel([], self)  # reused per keystroke (GUI-10)
         self._completer = _LastTokenCompleter(self._condition_model, self)
         self._completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self._completer.setFilterMode(Qt.MatchFlag.MatchStartsWith)
@@ -157,9 +158,9 @@ class CommandInput(QLineEdit):
 
     # ─────────── autocomplete popup ───────────
 
-    # Matches a directed-command prefix: <repeated-digit id> [m<n>] <amount> <partial-tag>
-    # Groups: (1) the repeating digit (structural), (2) the partial tag token (may be empty).
-    _TAG_HINT_RE = re.compile(r'^(\d)\1*\s+(?:m\d+\s+)?\d+(?:\s+\w+)*\s+(\w*)$', re.IGNORECASE)
+    # Matches a directed-command prefix: <digit-run id> [m<n>] <amount> <partial-tag>
+    # Groups: (1) the digit run (structural), (2) the partial tag token (may be empty).
+    _TAG_HINT_RE = re.compile(r'^(\d+)\s+(?:m\d+\s+)?\d+(?:\s+\w+)*\s+(\w*)$', re.IGNORECASE)
 
     def _update_completer_model(self, text: str) -> None:
         """Swap the completer's candidate list based on the leading sigil.
@@ -205,8 +206,8 @@ class CommandInput(QLineEdit):
                 # prefix to the trailing partial token, so the popup filters
                 # `fire`/`force`/… against `f` rather than the whole line.
                 candidates = hint_pool(completed_tokens)
-                model = QStringListModel(candidates, self)
-                self._completer.setModel(model)
+                self._tag_hint_model.setStringList(candidates)
+                self._completer.setModel(self._tag_hint_model)
             else:
                 # Hide popup for non-sigil text
                 popup = self._completer.popup()

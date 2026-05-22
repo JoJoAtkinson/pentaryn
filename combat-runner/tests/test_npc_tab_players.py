@@ -322,13 +322,25 @@ def test_pc_tab_refresh_does_not_crash(qtbot, pc_state):
 # ─────────────────────────────────────────────────────
 
 def test_damage_log_includes_actor_name(qtbot, npc_state):
-    """After a damage sigil, the combat log must contain the NPC's name as a prefix."""
+    """After a damage effect, the combat log must contain the NPC's name.
+
+    Ported from _apply_damage to effects.apply_effect (the production path).
+    The fragment produced by apply_effect already contains the NPC name.
+    """
+    from gui.command_model import Effect
+    from gui.effects import apply_effect
     from gui.npc_tab import NPCTab
+    from gui.state import EncounterState
+
+    npc_state.id = "9"  # assign a stable id so combatant_by_id can resolve it
+    state = EncounterState(name="test", root=Path("/tmp"), log_path=Path("/tmp/log.md"), npcs=[npc_state])
+    effect = Effect(kind="amount", amount=3)
+    fragments = apply_effect(state, effect, target_ids=["9"], actor=None)
 
     tab = NPCTab(npc_state=npc_state, actions=[], log_path=Path("/tmp/log.md"))
     qtbot.addWidget(tab)
-
-    tab._apply_damage(3, None, None)
+    for frag in fragments:
+        tab._append_log(frag)
 
     log_html = tab.log_view.toHtml()
     assert npc_state.name in log_html, (
@@ -337,15 +349,26 @@ def test_damage_log_includes_actor_name(qtbot, npc_state):
 
 
 def test_heal_log_includes_actor_name(qtbot, npc_state):
-    """After a heal sigil, the combat log must contain the NPC's name as a prefix."""
+    """After a heal effect, the combat log must contain the NPC's name.
+
+    Ported from _apply_heal to effects.apply_effect (the production path).
+    """
+    from gui.command_model import Effect
+    from gui.effects import apply_effect
     from gui.npc_tab import NPCTab
+    from gui.state import EncounterState
 
     # Damage first so there is HP to restore
     npc_state.apply_damage(4)
+    npc_state.id = "9"  # assign a stable id so combatant_by_id can resolve it
+    state = EncounterState(name="test", root=Path("/tmp"), log_path=Path("/tmp/log.md"), npcs=[npc_state])
+    effect = Effect(kind="amount", amount=2, amount_tags={"direction": "heal"})
+    fragments = apply_effect(state, effect, target_ids=["9"], actor=None)
+
     tab = NPCTab(npc_state=npc_state, actions=[], log_path=Path("/tmp/log.md"))
     qtbot.addWidget(tab)
-
-    tab._apply_heal(2, None)
+    for frag in fragments:
+        tab._append_log(frag)
 
     log_html = tab.log_view.toHtml()
     assert npc_state.name in log_html, (
