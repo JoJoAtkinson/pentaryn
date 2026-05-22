@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 
 # ─────────────────────────── condition catalog ───────────────────────────
@@ -77,6 +77,13 @@ class NPCState:
     # this dict from the action DB at encounter construction, so every
     # slots-bearing action is present (at full count) before its first use.
     slots_remaining: dict[str, int] = field(default_factory=dict)
+
+    # Player-as-combatant fields (Task 1.1). All have defaults so existing NPC
+    # callers need no changes.
+    kind: str = "npc"            # "npc" or "pc"
+    id: str = ""                 # permanent repeated-digit label ("1", "22", etc.)
+    in_melee: bool = False       # set True when actor/target of a melee-tagged command
+    pinned_notes: list[str] = field(default_factory=list)  # free-form tracked state
 
     # Action chips that are USED for the current turn (e.g. bonus actions).
     # Refreshed at start of NPC's turn (or at round advance via the meta-controller).
@@ -305,6 +312,13 @@ class EncounterState:
                 return npc
         return None
 
+    def combatant_by_id(self, combatant_id: str) -> NPCState | None:
+        """Look up a combatant by its permanent id label. Returns first match."""
+        for npc in self.npcs:
+            if npc.id == combatant_id:
+                return npc
+        return None
+
     def npc_by_tab_index(self, idx: int) -> NPCState | None:
         if 0 <= idx < len(self.npcs):
             return self.npcs[idx]
@@ -352,6 +366,38 @@ class EncounterState:
             self.active_tab_index = 0
 
 
+# ─────────────────────────── ID alphabet ───────────────────────────
+
+def _id_alphabet() -> Iterator[str]:
+    """Yields: '1','2',...,'9','0', '11','22',...,'99','00', '111',... indefinitely."""
+    digit = 1
+    while True:
+        for d in "1234567890":
+            yield d * digit
+        digit += 1
+
+
+def assign_combatant_ids(npcs: list[NPCState], reserved: set[str] | None = None) -> None:
+    """Assign permanent id labels to any combatant whose id is empty "".
+    Skips labels already claimed by reserved (e.g. player ids from party config).
+    Mutates npcs in place; idempotent for combatants that already have an id.
+    """
+    reserved = reserved or set()
+    taken = {n.id for n in npcs if n.id} | reserved
+    gen = _id_alphabet()
+
+    def _next_free() -> str:
+        while True:
+            label = next(gen)
+            if label not in taken:
+                taken.add(label)
+                return label
+
+    for npc in npcs:
+        if not npc.id:
+            npc.id = _next_free()
+
+
 # ─────────────────────────── Serialization (LLM boundary) ───────────────────────────
 # Used by the LLM meta-controller. Internal mutations skip this layer for speed.
 # When the LLM asks for `update_state_json(patch)`, the caller rebuilds an
@@ -377,6 +423,10 @@ def _serialize_npc(npc: NPCState) -> dict[str, Any]:
         "recharges": dict(npc.recharges),
         "slots_remaining": dict(npc.slots_remaining),
         "turn_taken_this_round": npc.turn_taken_this_round,
+        "kind": npc.kind,
+        "id": npc.id,
+        "in_melee": npc.in_melee,
+        "pinned_notes": list(npc.pinned_notes),
     }
 
 
@@ -415,6 +465,10 @@ def _deserialize_npc(d: dict[str, Any]) -> NPCState:
         recharges=dict(d.get("recharges", {}) or {}),
         slots_remaining={k: int(v) for k, v in (d.get("slots_remaining", {}) or {}).items() if isinstance(v, (int, float))},
         turn_taken_this_round=bool(d.get("turn_taken_this_round", False)),
+        kind=str(d.get("kind", "npc")),
+        id=str(d.get("id", "")),
+        in_melee=bool(d.get("in_melee", False)),
+        pinned_notes=list(d.get("pinned_notes", []) or []),
     )
     # Belt-and-suspenders: post-construction sanity check (should be unreachable
     # given the pre-check above, but defends against future regressions).
@@ -493,11 +547,16 @@ def state_schema() -> dict[str, Any]:
             "bonus_used": "bool (true if bonus action spent this turn)",
             "recharges": "dict of {action_name: 'USED'|'AVAILABLE'}",
             "turn_taken_this_round": "bool",
+            "kind": "string ('npc' or 'pc')",
+            "id": "string (permanent repeated-digit combatant label; '' = unassigned)",
+            "in_melee": "bool (true if this combatant is currently in melee engagement)",
+            "pinned_notes": "list of strings (free-form tracked state shown on the tab)",
         },
         "constraints": [
             "len(npcs[i].member_hp) must equal npcs[i].count",
             "0 <= active_tab_index < len(npcs)",
             "round_num >= 1",
             "max_hp > 0; ac > 0",
+            "id must be '' or a repeated-digit string",
         ],
     }
