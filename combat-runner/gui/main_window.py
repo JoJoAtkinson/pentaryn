@@ -24,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import QEvent, QObject, QRunnable, Qt, QThreadPool, Signal
-from PySide6.QtGui import QAction, QKeySequence, QShortcut
+from PySide6.QtGui import QAction, QColor, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -517,14 +517,18 @@ class MainWindow(QMainWindow):
 
     def _tab_title(self, npc: NPCState) -> str:
         id_prefix = f"{npc.id} · " if npc.id else ""
+        # A dead combatant gets a 💀 prefix and `_repaint_all_tabs` grays its
+        # tab text — but the tab stays clickable so the DM can still select it
+        # (e.g. to revive). For a mob, `npc.is_dead` is "every member dead".
+        dead_prefix = "💀 " if npc.is_dead else ""
         # Minimal unresolved-effect marker (spec §6): a trailing " ?" when this
         # combatant has an unresolved PendingEffect. Cleared automatically once
         # the effect resolves (via `hit` or round-advance stale-clear), because
         # every repaint path re-derives the title through this method.
         suffix = " ?" if self._has_unresolved_pending(npc) else ""
         if npc.count > 1:
-            return f"{id_prefix}{npc.name} ×{npc.count}  {npc.hp}/{npc.max_total_hp}{suffix}"
-        return f"{id_prefix}{npc.name}  {npc.hp}/{npc.max_total_hp}{suffix}"
+            return f"{dead_prefix}{id_prefix}{npc.name} ×{npc.count}  {npc.hp}/{npc.max_total_hp}{suffix}"
+        return f"{dead_prefix}{id_prefix}{npc.name}  {npc.hp}/{npc.max_total_hp}{suffix}"
 
     def _has_unresolved_pending(self, npc: NPCState) -> bool:
         """True if *npc* has an unresolved PendingEffect (drives the tab marker)."""
@@ -669,10 +673,20 @@ class MainWindow(QMainWindow):
             self._refresh_suggestions_for_tab(tab_key)
 
     def _cycle_tab(self, direction: int) -> None:
-        if self.tabs.count() == 0:
+        """Move the active tab one step in `direction` (+1 next, -1 prev),
+        SKIPPING any dead combatants — turn order rolls past them. A direct
+        click still selects a dead tab (e.g. to revive). If everyone is dead,
+        the active tab stays where it is rather than infinite-looping."""
+        count = self.tabs.count()
+        if count == 0:
             return
-        new_idx = (self.tabs.currentIndex() + direction) % self.tabs.count()
-        self.tabs.setCurrentIndex(new_idx)
+        new_idx = (self.tabs.currentIndex() + direction) % count
+        for _ in range(count):
+            tab = self.tabs.widget(new_idx)
+            if isinstance(tab, NPCTab) and not tab.npc_state.is_dead:
+                self.tabs.setCurrentIndex(new_idx)
+                return
+            new_idx = (new_idx + direction) % count
 
     def _handle_reorder_request(self, new_slugs: list[str]) -> None:
         """Handle `/reorder slug1 slug2 ...` from any tab."""
@@ -1595,12 +1609,22 @@ class MainWindow(QMainWindow):
                 tab._append_log(html)
 
     def _repaint_all_tabs(self) -> None:
-        """Refresh every tab widget + re-title it (HP shows in the title)."""
+        """Refresh every tab widget + re-title it (HP shows in the title) and
+        gray the title of any dead combatant's tab."""
+        bar = self.tabs.tabBar()
+        # An invalid QColor() restores the palette default — used for live
+        # combatants. A fixed gray indicates "out of the fight".
+        dead_color = QColor("#6c6c6c")
+        live_color = QColor()
         for i in range(self.tabs.count()):
             tab = self.tabs.widget(i)
             if isinstance(tab, NPCTab):
                 tab.refresh()
                 self.tabs.setTabText(i, self._tab_title(tab.npc_state))
+                if bar is not None:
+                    bar.setTabTextColor(
+                        i, dead_color if tab.npc_state.is_dead else live_color
+                    )
 
     def _push_current_target_to_inputs(self) -> None:
         """Push each combatant's own sticky target to its tab's command input.

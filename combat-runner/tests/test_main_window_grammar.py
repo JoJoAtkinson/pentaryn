@@ -301,6 +301,37 @@ def test_arrow_never_on_actor_tab(window):
     assert 0 not in window.tabs.tabBar().arrow_indices()
 
 
+def test_dead_combatant_tab_is_grayed_and_skull_prefixed(window):
+    """A dead combatant's tab shows a 💀 prefix and is grayed out — but the
+    tab stays clickable so the DM can still select it (e.g. to revive)."""
+    target = window.encounter_state.combatant_by_id("2")
+    target.apply_damage(target.max_hp)         # drop to 0
+    assert target.is_dead
+    window._repaint_all_tabs()
+    assert "💀" in window.tabs.tabText(1)
+    # And the tab text is grayed.
+    from PySide6.QtGui import QColor
+    assert window.tabs.tabBar().tabTextColor(1) == QColor("#6c6c6c")
+    # Clicking it still works (selectable for revive).
+    window.tabs.setCurrentIndex(1)
+    assert window.tabs.currentIndex() == 1
+
+
+def test_cycle_tab_skips_dead_combatants(window):
+    """Ctrl+Tab / Ctrl+Shift+Tab cycle past dead combatants — turn order rolls
+    past them. Direct selection still works (covered above)."""
+    # Kill the middle two; cycling from tab 0 should land on tab 3 (alive).
+    window.encounter_state.combatant_by_id("2").apply_damage(99)
+    window.encounter_state.combatant_by_id("3").apply_damage(99)
+    window._repaint_all_tabs()
+    window.tabs.setCurrentIndex(0)
+    window._cycle_tab(1)
+    assert window.tabs.currentIndex() == 3
+    # Reverse-cycle from 3 also skips the dead ones, landing on 0.
+    window._cycle_tab(-1)
+    assert window.tabs.currentIndex() == 0
+
+
 def test_target_is_sticky_per_actor(window):
     """Each combatant remembers its own target — switching tabs doesn't
     clobber. Tab to a fresh combatant → no target; tab back → remembered."""
