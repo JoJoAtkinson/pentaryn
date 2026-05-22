@@ -36,9 +36,9 @@ TAG_FACETS: dict[str, dict] = {
             "thunder":   {},
             "force":     {},
             "psychic":   {},
-            "piercing":  {},
-            "slashing":  {},
-            "bludgeoning": {},
+            "piercing":    {"aliases": ["pierce"]},
+            "slashing":    {"aliases": ["slash"]},
+            "bludgeoning": {"aliases": ["bludge", "bludgeon"]},
         },
     },
 }
