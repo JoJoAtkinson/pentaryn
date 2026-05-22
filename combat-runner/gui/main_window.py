@@ -13,6 +13,7 @@ For v0.2 onward, LLM controller wiring + suggestion bar will be plugged in via
 
 from __future__ import annotations
 
+import dataclasses
 import importlib.util
 import json
 import sys
@@ -82,21 +83,18 @@ class _LLMWorkerSignals(QObject):
     finished = Signal(object)  # (RunResult)
 
 
-class _LLMRunWorker(QRunnable):
-    """Runs one `LLMController.run` off the GUI thread.
+class _LLMWorkerBase(QRunnable):
+    """Shared scaffolding for off-thread LLM workers.
 
-    The network round-trips (`messages.create`) run here. Tool dispatch — which
-    mutates live GUI state and touches widgets — is marshalled back to the GUI
-    thread: the worker emits `dispatch_requested` (a QueuedConnection signal)
-    and blocks on a threading.Event until the GUI-thread slot fills the result.
+    Holds the common __init__ setup (controller ref, signals, autoDelete) and
+    the `_marshalled_dispatch` helper that shuttles tool-call batches back to
+    the GUI thread via a QueuedConnection signal + blocking threading.Event.
+    Both `_LLMRunWorker` and `_LLMReviewWorker` subclass this.
     """
 
-    def __init__(self, controller: Any, text: str, active_npc_slug: str | None,
-                 signals: _LLMWorkerSignals) -> None:
+    def __init__(self, controller: Any, signals: _LLMWorkerSignals) -> None:
         super().__init__()
         self._controller = controller
-        self._text = text
-        self._slug = active_npc_slug
         self._signals = signals
         self.setAutoDelete(True)
 
@@ -112,6 +110,22 @@ class _LLMRunWorker(QRunnable):
             raise RuntimeError(holder["error"])
         return holder.get("result", [])
 
+
+class _LLMRunWorker(_LLMWorkerBase):
+    """Runs one `LLMController.run` off the GUI thread.
+
+    The network round-trips (`messages.create`) run here. Tool dispatch — which
+    mutates live GUI state and touches widgets — is marshalled back to the GUI
+    thread: the worker emits `dispatch_requested` (a QueuedConnection signal)
+    and blocks on a threading.Event until the GUI-thread slot fills the result.
+    """
+
+    def __init__(self, controller: Any, text: str, active_npc_slug: str | None,
+                 signals: _LLMWorkerSignals) -> None:
+        super().__init__(controller, signals)
+        self._text = text
+        self._slug = active_npc_slug
+
     def run(self) -> None:
         try:
             result = self._controller.run(
@@ -125,7 +139,7 @@ class _LLMRunWorker(QRunnable):
         self._signals.finished.emit(result)
 
 
-class _LLMReviewWorker(QRunnable):
+class _LLMReviewWorker(_LLMWorkerBase):
     """Off-thread LLM review of an already-applied command.
 
     Mirrors `_LLMRunWorker`: the network round-trips run on the worker thread,
@@ -138,26 +152,13 @@ class _LLMReviewWorker(QRunnable):
         applied_direction: str | None, applied_amount: int | None,
         log_tail: str, signals: _LLMWorkerSignals,
     ) -> None:
-        super().__init__()
-        self._controller = controller
+        super().__init__(controller, signals)
         self._raw = raw_command
         self._actor = actor
         self._target = target
         self._direction = applied_direction
         self._amount = applied_amount
         self._log_tail = log_tail
-        self._signals = signals
-        self.setAutoDelete(True)
-
-    def _marshalled_dispatch(self, tool_uses: list[Any]) -> list[dict[str, Any]]:
-        """Hand the tool batch to the GUI thread and block until it finishes."""
-        holder: dict[str, Any] = {}
-        done = threading.Event()
-        self._signals.dispatch_requested.emit(tool_uses, holder, done)
-        done.wait()
-        if "error" in holder:
-            raise RuntimeError(holder["error"])
-        return holder.get("result", [])
 
     def run(self) -> None:
         try:
@@ -606,20 +607,36 @@ class MainWindow(QMainWindow):
             )
             return
 
-        # In-place patch
+        # In-place patch — copy every NPCState field from the snapshot so new
+        # fields (e.g. in_melee, pinned_notes) can never silently drift.
+        #
+        # Fields intentionally NOT restored:
+        #   slug  — identity key, must match the existing NPC to reach this path
+        #   name  — display name lives on the tab widget, not worth stomping
+        #   kind  — pc/npc distinction is structural, not mid-combat state
+        #   id    — combatant id is assigned at launch, not per-snapshot
+        #   max_hp — base stat; an in-combat temp-HP change would be in member_hp
+        #   ac, speed, cr, immunities — static stats, not combat state
+        _SKIP_FIELDS = frozenset({
+            "slug", "name", "kind", "id",
+            "max_hp", "ac", "speed", "cr", "immunities",
+        })
         by_slug = {n.slug: n for n in restored.npcs}
         for npc in self.encounter_state.npcs:
             src = by_slug[npc.slug]
-            npc.max_hp = src.max_hp
-            npc.member_hp = list(src.member_hp)
-            npc.count = src.count
-            npc.conditions = set(src.conditions)
-            npc.condition_durations = dict(src.condition_durations)
-            npc.reaction_used = src.reaction_used
-            npc.bonus_used = src.bonus_used
-            npc.recharges = dict(src.recharges)
-            npc.slots_remaining = dict(src.slots_remaining)
-            npc.turn_taken_this_round = src.turn_taken_this_round
+            for f in dataclasses.fields(NPCState):
+                if f.name in _SKIP_FIELDS:
+                    continue
+                val = getattr(src, f.name)
+                # Copy mutable containers so live state isn't aliased to the
+                # deserialized snapshot object (which will be GC'd shortly).
+                if isinstance(val, list):
+                    val = list(val)
+                elif isinstance(val, dict):
+                    val = dict(val)
+                elif isinstance(val, set):
+                    val = set(val)
+                setattr(npc, f.name, val)
         self.encounter_state.round_num = restored.round_num
         self.round_btn.setText(self._round_btn_text())
         for i in range(self.tabs.count()):
@@ -922,6 +939,17 @@ class MainWindow(QMainWindow):
         else:
             result = target.apply_damage(amount, member=member)
 
+        # If apply_damage / apply_heal skipped (e.g. member index out of range,
+        # no alive members, or dead member targeted), log a clear error and bail.
+        # Do NOT fire damage/heal/bloodied/death events — nothing actually changed.
+        if result.get("skipped"):
+            member_label = f" m{member}" if member is not None else ""
+            self._append_to_active_tab(
+                f"<span style='color:#ff5252'>#{parsed.target_id}{member_label}: "
+                f"no such mob member ({result['skipped']})</span>"
+            )
+            return
+
         # Set in_melee on both actor and target if delivery==melee
         if delivery == "melee":
             target.in_melee = True
@@ -994,10 +1022,21 @@ class MainWindow(QMainWindow):
         applied_direction: str | None, applied_amount: int | None,
     ) -> None:
         """Enqueue an async LLM review for any state-changing command.
-        No-ops if no LLM controller is wired."""
+        No-ops if no LLM controller is wired.
+
+        Stale-review mitigation: we record the target's HP at enqueue time.
+        When the review result arrives (_on_review_finished), if the target's HP
+        has changed in the meantime we downgrade any mutation to advisory — the
+        review text is logged as a note rather than applied as a state change.
+        This prevents a late-returning review from clobbering a more-recent
+        command's result under rapid at-table input.
+        """
         controller = getattr(self, "_llm_controller", None)
         if controller is None:
             return
+
+        # Snapshot HP at enqueue to detect stale reviews later.
+        hp_at_enqueue = target.hp
 
         actor_snapshot = {
             "id": actor.id if actor else None,
@@ -1008,7 +1047,7 @@ class MainWindow(QMainWindow):
             "id": target.id,
             "name": target.name,
             "slug": target.slug,
-            "hp": target.hp,
+            "hp": hp_at_enqueue,
             "max_hp": target.max_total_hp,
             "conditions": sorted(target.conditions),
             "in_melee": target.in_melee,
@@ -1021,7 +1060,8 @@ class MainWindow(QMainWindow):
         )
         self._inflight_llm_signals.add(signals)
         signals.finished.connect(
-            lambda result, rt=target: self._on_review_finished(result, rt),
+            lambda result, rt=target, hp_snap=hp_at_enqueue:
+                self._on_review_finished(result, rt, hp_snap),
             Qt.ConnectionType.QueuedConnection,
         )
         signals.finished.connect(
@@ -1041,8 +1081,34 @@ class MainWindow(QMainWindow):
         )
         self._llm_pool.start(worker)
 
-    def _on_review_finished(self, result, target_npc) -> None:
-        """GUI-thread slot: review returned. Refresh tabs."""
+    def _on_review_finished(self, result, target_npc, hp_at_enqueue: int | None = None) -> None:
+        """GUI-thread slot: review returned. Refresh tabs.
+
+        If the target's HP changed since enqueue (rapid commands), the review
+        is downgraded to advisory: any mutation is skipped and the review text
+        is logged as a note so the DM can still read it without it clobbering
+        the newer state.
+        """
+        state_changed = (
+            hp_at_enqueue is not None and target_npc.hp != hp_at_enqueue
+        )
+
+        if state_changed and not result.error and result.text:
+            # Advisory path — log the review text without mutating state.
+            advisory_html = (
+                f"<span style='color:#90a4ae'>⟳ review (advisory — state changed since): "
+                f"{result.text[:200]}</span>"
+            )
+            # Append to the tab that owns this NPC.
+            for i in range(self.tabs.count()):
+                t = self.tabs.widget(i)
+                if hasattr(t, "npc_state") and t.npc_state is target_npc:
+                    if hasattr(t, "_append_log"):
+                        t._append_log(advisory_html)
+                    break
+            self.llm_run_finished.emit(result)
+            return
+
         for i in range(self.tabs.count()):
             t = self.tabs.widget(i)
             if hasattr(t, "refresh"):
