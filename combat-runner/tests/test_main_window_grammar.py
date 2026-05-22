@@ -441,3 +441,28 @@ def test_compound_undo_reverts_both_effects(window):
 
     assert window.encounter_state.combatant_by_id("2").hp == hp_before
     assert "prone" not in window.encounter_state.combatant_by_id("2").conditions
+
+
+# ─────────────────────────── 0=self token end-to-end ────────────────────────
+
+
+def test_zero_self_token_applies_damage_to_active_combatant(window):
+    """'0 5 fire' submitted from a known active tab must damage the active
+    combatant by 5.
+
+    The `0` token is the self-targeting shorthand: it resolves to the active
+    combatant's id via `_resolve_targets`. This test guards the full
+    _resolve_targets('0') → active-id → apply_damage path end-to-end.
+    """
+    # Tab 0 is combatant id 1 (NPCState "One", 40 hp).
+    window.tabs.setCurrentIndex(0)
+    one = window.encounter_state.combatant_by_id("1")
+    hp_before = one.hp
+
+    _submit(window, "0 5 fire")
+
+    assert window.encounter_state.combatant_by_id("1").hp == hp_before - 5, (
+        f"'0 5 fire' from tab 0 must apply 5 damage to the active combatant "
+        f"(id '1'); hp was {hp_before}, now "
+        f"{window.encounter_state.combatant_by_id('1').hp}"
+    )
