@@ -220,11 +220,6 @@ class NPCTab(QWidget):
     # snapshotting, target resolution, effect application, and the LLM fallback.
     command_requested = Signal(object)  # ParsedCommand
 
-    # Emitted after any state-changing command completes. Carries the raw input
-    # text + a snapshot of the tab's NPCState. Callers can use this to build an
-    # audit trail or show a per-command review prompt.
-    review_needed = Signal(str, object)  # (raw_command, npc_state snapshot)
-
     def __init__(
         self,
         npc_state: NPCState,
