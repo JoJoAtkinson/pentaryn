@@ -389,6 +389,56 @@ def test_review_user_msg_carries_id_fallback_flag():
     assert "fallback" in msg.lower() or "resolve" in msg.lower()
 
 
+def test_review_user_msg_omits_id_block_when_no_fallbacks():
+    """PART-1 — a valid command (no id fallbacks) produces a payload with NO
+    id-resolution block at all, so the reviewer cannot reach for it as a
+    catch-all. Covers both the None default and an explicit empty list."""
+    from gui.llm_controller import LLMController
+
+    for fallbacks in (None, []):
+        msg = LLMController.build_review_user_msg(
+            raw="3 14 heal",
+            actor={"id": "1", "name": "Cleric", "kind": "pc"},
+            affected=[_affected(name="Sabriel", id="3", kind="pc",
+                                hp_before=24, hp_after=38, max_hp=38)],
+            roster=[{"id": "3", "name": "Sabriel", "kind": "pc"}],
+            applied_direction="heal", applied_amount=14, log_tail="",
+            id_fallbacks=fallbacks,
+        )
+        assert "id-resolution" not in msg.lower(), fallbacks
+        assert "fallback" not in msg.lower(), fallbacks
+
+
+def test_review_user_msg_includes_id_block_when_fallback_present():
+    """PART-1 — a genuinely malformed id (the fallback list is non-empty) still
+    renders the id-resolution block so the real case keeps being flagged."""
+    from gui.llm_controller import LLMController
+
+    msg = LLMController.build_review_user_msg(
+        raw="0 buff",
+        actor={"id": "1", "name": "Bazgar", "kind": "pc"},
+        affected=[_affected(name="Bazgar", id="1", kind="pc")],
+        roster=[{"id": "1", "name": "Bazgar", "kind": "pc"}],
+        applied_direction=None, applied_amount=None, log_tail="",
+        id_fallbacks=[{"token": "0", "resolved_to": "1"}],
+    )
+    assert "id-resolution fallbacks" in msg.lower()
+    assert "'0'" in msg or "token 0" in msg.lower()
+
+
+def test_review_prompt_gates_id_resolution_flag_to_block_presence():
+    """PART-1 — the prompt's id-resolution clause must be opt-in: it only fires
+    when the fallback block is present, and must forbid the catch-all use."""
+    from gui.llm_controller import LLMController
+
+    prompt = LLMController.REVIEW_SYSTEM_PROMPT.lower()
+    # The clause is conditioned on the block being present in the payload.
+    assert "id-resolution fallbacks' block" in prompt
+    assert "if that block is absent" in prompt
+    # And it explicitly forbids the catch-all behaviour the regression showed.
+    assert "catch-all" in prompt
+
+
 def test_review_prompt_has_allegiance_gated_multitarget_rule():
     """G2 — the prompt must say an all-enemy AoE is correct and only flag a
     multi-target command that includes an ally/PC."""
