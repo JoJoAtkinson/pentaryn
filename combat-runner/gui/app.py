@@ -13,6 +13,7 @@ Designed so the launch flow can also be invoked headlessly for testing via
 
 from __future__ import annotations
 
+import argparse
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -37,9 +38,9 @@ except ImportError:
     _QT_MATERIAL_AVAILABLE = False
 
 
-from .encounter_picker import DiscoveredEncounter, EncounterPicker
+from .encounter_picker import DiscoveredEncounter, EncounterPicker, load_party_config
 from .main_window import MainWindow
-from .state import EncounterState, NPCState
+from .state import EncounterState, NPCState, assign_combatant_ids
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -48,16 +49,49 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 # ─────────── headless-friendly construction helpers (used by tests) ───────────
 
 def build_encounter_state(
-    encounter: DiscoveredEncounter, counts: dict[str, int]
+    encounter: DiscoveredEncounter,
+    counts: dict[str, int],
+    party_config: dict | None = None,
+    player_selections: dict[str, dict] | None = None,
 ) -> EncounterState:
-    """Build the EncounterState from picker output. Pure construction — no UI."""
+    """Build the EncounterState from picker output. Pure construction — no UI.
+
+    party_config: parsed output of load_party_config (if --party supplied).
+    player_selections: {player_id: {current_hp: int, included: bool}} from picker UI.
+    """
     # Per-session log file mirrors the existing CLI scheme.
     timestamp = datetime.now(timezone.utc).astimezone().strftime("%Y-%m-%d_%H-%M-%S")
     mem_dir = _REPO_ROOT / "combat-runner" / ".memory" / encounter.name
     mem_dir.mkdir(parents=True, exist_ok=True)
     log_path = mem_dir / f"log-{timestamp}.md"
 
-    npcs: list[NPCState] = []
+    combatants: list[NPCState] = []
+
+    # 1. Build PC combatants from party config
+    reserved_ids: set[str] = set()
+    if party_config:
+        player_selections = player_selections or {}
+        for player in party_config.get("players", []):
+            pid = str(player["id"])
+            sel = player_selections.get(pid, {})
+            if not sel.get("included", True):
+                continue  # player sat this combat out
+            current_hp = sel.get("current_hp", player["max_hp"])
+            pc = NPCState(
+                slug=f"pc-{pid}",
+                name=player["name"],
+                max_hp=player["max_hp"],
+                ac=player["ac"],
+                speed="30 ft.",  # PCs have no stored speed; placeholder
+                cr=0.0,
+                kind="pc",
+                id=pid,
+                member_hp=[current_hp],
+            )
+            combatants.append(pc)
+            reserved_ids.add(pid)
+
+    # 2. Build NPC combatants
     for picker_npc in encounter.npcs:
         count = counts.get(picker_npc.slug, 1)
         # Extract more details from the .md frontmatter for HP/AC/etc.
@@ -72,13 +106,16 @@ def build_encounter_state(
             immunities=details["immunities"],
             count=count,
         )
-        npcs.append(npc_state)
+        combatants.append(npc_state)
+
+    # 3. Assign permanent ids (skipping player-reserved labels)
+    assign_combatant_ids(combatants, reserved=reserved_ids)
 
     return EncounterState(
         name=encounter.name,
         root=encounter.root,
         log_path=log_path,
-        npcs=npcs,
+        npcs=combatants,
     )
 
 
@@ -218,15 +255,25 @@ def _parse_npc_details(md_path: Path, slug: str, name: str) -> dict:
     return out
 
 
-def build_main_window(encounter: DiscoveredEncounter, counts: dict[str, int], with_llm: bool = True) -> MainWindow:
+def build_main_window(
+    encounter: DiscoveredEncounter,
+    counts: dict[str, int],
+    with_llm: bool = True,
+    party_config: dict | None = None,
+    player_selections: dict[str, dict] | None = None,
+) -> MainWindow:
     """Build a MainWindow ready to show. Used by both `main()` and tests.
 
     If `ANTHROPIC_API_KEY` is set AND `with_llm` is True, an LLM meta-controller
     is constructed and plugged in. Scenario tests pass `with_llm=False` to keep
     the QThreadPool free of real Anthropic SDK clients (otherwise SSL contexts
     pile up across many tests and segfault).
+
+    party_config: parsed output of load_party_config (if --party supplied).
+    player_selections: {player_id: {current_hp: int, included: bool}} from picker UI.
     """
-    es = build_encounter_state(encounter, counts)
+    es = build_encounter_state(encounter, counts, party_config=party_config,
+                               player_selections=player_selections)
     win = MainWindow(es)
     # Plug in LLM controller. The on_state_changed callback walks every tab and
     # refreshes from the live state — that's how LLM tool calls (set_hp, etc.)
@@ -272,6 +319,20 @@ def _load_dice_font() -> None:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(prog="combat-gui", add_help=False)
+    parser.add_argument("--party", metavar="PATH", default=None,
+                        help="Path to a combat-roster.yml (party config)")
+    args, _ = parser.parse_known_args()
+
+    _party_config: dict | None = None
+    if args.party:
+        try:
+            _party_config = load_party_config(Path(args.party))
+        except ValueError as exc:
+            # Boot can't fail — warn and continue without party
+            import logging
+            logging.getLogger(__name__).warning("party config load failed: %s", exc)
+
     app = QApplication(sys.argv)
     app.setApplicationName("Combat Runner")
     _load_dice_font()
@@ -286,7 +347,9 @@ def main() -> int:
     def _launch(encounter: DiscoveredEncounter, counts: dict[str, int]) -> None:
         nonlocal current_window
         try:
-            current_window = build_main_window(encounter, counts)
+            current_window = build_main_window(encounter, counts,
+                                               party_config=_party_config,
+                                               player_selections=None)
         except Exception as exc:
             QMessageBox.critical(None, "Launch failed", f"{exc}")
             picker.show()
