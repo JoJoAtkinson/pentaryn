@@ -38,6 +38,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .action_numbering import GLOBAL_ACTION_BASE, panel_number, resolve_panel_number
 from .command_model import Effect, ParsedCommand
 from .effects import (
     _CONDITION_UNKNOWN_SENTINEL,
@@ -342,6 +343,18 @@ class MainWindow(QMainWindow):
         self._tab_action_surfaces: dict[int, list[dict]] = {}
         for npc in self.encounter_state.npcs:
             actions = self._db.list_actions(npc=npc.slug)
+            # Canonical action order: the NPC's own actions first, global /
+            # universal actions after — so the monster's special abilities get
+            # the low hotkey numbers (1, 2, …) the DM reaches for most. Within
+            # each group, higher `priority` first, then name. This single
+            # ordering drives BOTH the panel hotkey numbers
+            # (`_resolve_action_token` indexes this list) and the chip grid, so
+            # a chip's displayed number is exactly what the DM types.
+            actions.sort(key=lambda a: (
+                1 if a.get("scope") == "global" else 0,
+                -int(a.get("priority") or 0),
+                a.get("action", ""),
+            ))
             # Seed per-action slot counters so every NPC starts the encounter
             # with its limited-use actions at full charge. Without this the
             # `slots_remaining` dict is empty until the first use, and
@@ -795,12 +808,12 @@ class MainWindow(QMainWindow):
         llm_subs = getattr(self, "_llm_suggestions_by_tab", {}).get(tab_key, [])
         combined = watch_subs + llm_subs
 
-        # Annotate each suggestion with its panel number (1-based position in
-        # the action surface — same ordering _resolve_action_token uses for
-        # digit tokens).  Actions not in the surface get panel_number=None.
+        # Annotate each suggestion with its panel hotkey number (1, 2, … for
+        # NPC-specific actions; 111, 112, … for globals — see action_numbering).
+        # Actions not in the surface get panel_number=None.
         action_surface = self._tab_action_surfaces.get(tab_key, [])
         action_index: dict[str, int] = {
-            a["action"]: i + 1
+            a["action"]: panel_number(action_surface, i)
             for i, a in enumerate(action_surface)
             if a.get("action")
         }
@@ -1156,21 +1169,22 @@ class MainWindow(QMainWindow):
         return resolved
 
     def _handle_set_target(self, cmd: ParsedCommand) -> None:
-        """A bare <who> — set the sticky current target and jump to its tab."""
+        """A bare <who> — set the sticky current target.
+
+        Does NOT switch tabs: the active tab is the ACTOR, and you set a target
+        in order to then act on it from the actor's tab. The target's tab gets
+        the red ▼ arrow instead (drawn on every current-target tab, never on
+        the actor's own). Staying put also keeps the "now the target" log line
+        on the actor's tab where the DM is looking.
+        """
         ids = self._resolve_targets(cmd)
         self.encounter_state.current_target = list(ids)
         names = []
-        first_idx: int | None = None
         for cid in ids:
             combatant = self.encounter_state.combatant_by_id(cid)
             if combatant is None:
                 continue
             names.append(combatant.name)
-            idx = self.encounter_state.npcs.index(combatant)
-            if first_idx is None:
-                first_idx = idx
-        if first_idx is not None:
-            self.tabs.setCurrentIndex(first_idx)
         self._refresh_target_arrow()
         self._push_current_target_to_inputs()
         if names:
@@ -1363,10 +1377,21 @@ class MainWindow(QMainWindow):
             action_name = self._resolve_action_token(token, actions)
             if action_name is None:
                 if token.isdigit():
-                    n = len(actions)
+                    npc_n = sum(1 for a in actions if a.get("scope") != "global")
+                    glob_n = sum(1 for a in actions if a.get("scope") == "global")
+                    spans = []
+                    if npc_n:
+                        spans.append(f"1-{npc_n}")
+                    if glob_n:
+                        last = GLOBAL_ACTION_BASE + glob_n - 1
+                        spans.append(
+                            f"{GLOBAL_ACTION_BASE}-{last}"
+                            if glob_n > 1 else str(GLOBAL_ACTION_BASE)
+                        )
+                    rng = " or ".join(spans) or "none"
                     self._append_to_active_tab(
                         f"<span style='color:#ff9800'>action #{token} out of range "
-                        f"(1-{n}) on {actor.name}</span>"
+                        f"({rng}) on {actor.name}</span>"
                     )
                 else:
                     self._append_to_active_tab(
@@ -1450,18 +1475,17 @@ class MainWindow(QMainWindow):
     def _resolve_action_token(token: str, actions: list[dict]) -> str | None:
         """Resolve an `action_token` against an NPC's action surface.
 
-        A digit string is a 1-based panel index. Otherwise the token is
-        matched via ``matching.fuzzy_match_one`` (5-strategy tightest-first:
-        exact → verbs alias → prefix → substring → difflib). Returns the
-        canonical action name, or None.
+        A digit string is a panel hotkey number — 1, 2, 3, … for NPC-specific
+        actions, 111, 112, … for global ones (see `action_numbering`).
+        Otherwise the token is matched via ``matching.fuzzy_match_one``
+        (5-strategy tightest-first: exact → verbs alias → prefix → substring →
+        difflib). Returns the canonical action name, or None.
         """
         if not actions:
             return None
         if token.isdigit():
-            idx = int(token) - 1
-            if 0 <= idx < len(actions):
-                return actions[idx].get("action")
-            return None
+            action = resolve_panel_number(actions, int(token))
+            return action.get("action") if action else None
         names = [a.get("action", "") for a in actions if a.get("action")]
         aliases = {a.get("action", ""): a.get("verbs") or [] for a in actions if a.get("action")}
         return fuzzy_match_one(token, names, aliases=aliases)

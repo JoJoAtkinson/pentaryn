@@ -39,7 +39,8 @@ Determined by the command's **first character**:
   also the current target (no explicit `<who>`).
 
 A `<who>` token **alone** (digits, nothing after) sets the sticky current target
-and jumps to that tab, logging e.g. *"Marwen is now the target."*
+and logs e.g. *"Marwen is now the target."* It does **not** switch tabs — the
+active tab is the actor; the target's tab gets the ▼ arrow (see §6, §10).
 
 **Accepted limitation:** you cannot bare-digit-target id `2` and id `22` together
 (their runs merge into `222`, a single id). Rare — use two commands or the prompt.
@@ -72,8 +73,9 @@ by the tag immediately after it:**
 
 ### 2.3 Actions
 
-- **By number:** `<who> <n>` — `n` indexes the active NPC's numbered left-panel
-  actions.
+- **By number:** `<who> <n>` — `n` is a left-panel hotkey number. The active
+  NPC's own actions number 1, 2, 3, …; global/universal actions get fixed
+  numbers from 111 (see §10). Each chip displays its number.
 - **By name:** `<who> <verb>` — fuzzy-matched against the active NPC's actions
   (the "I don't recall the number" fallback).
 - **Untargeted:** a leading sigil/word stream (no `<who>`) → action at the
@@ -103,7 +105,7 @@ by the tag immediately after it:**
 
 ```
 <who>  = digit-run (2, 123, 2233) · leading sigil/word = current target · 0 = self
-<who> alone                 -> set sticky target, jump tab
+<who> alone                 -> set sticky target (no tab switch)
 <who> <num>                 -> action #num
 <who> <num> <dmg-tags…>     -> amount, qualified      (2 10 melee slash)
 <who> <num> <condition>     -> condition, num = duration (3 2 stun)
@@ -260,6 +262,13 @@ They diverge from the design above; this section is the authoritative record.
 - **Suggestion-panel numbers** — each left-panel action suggestion shows its
   1-based hotkey number.
 - **`bloodied` cannot be set as a DM condition** — it is auto-tracked from HP.
+- **A bare `set_target` does not switch tabs.** The active tab is the actor;
+  you set a target to then act on it from the actor's tab. The target's tab
+  gets the ▼ arrow, and the "now the target" log line stays on the actor's tab.
+- **Action panel numbering.** Each action chip shows its hotkey number. An
+  NPC's own actions number 1, 2, 3, …; global/universal actions get fixed
+  numbers from 111 (`111`, `112`, …) — the same on every combatant's tab, and
+  clear of any NPC's 1..N so the ranges never collide. (`gui/action_numbering`.)
 
 ## 11. Open Items
 

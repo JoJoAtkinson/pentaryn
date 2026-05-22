@@ -50,7 +50,8 @@ is routed to the LLM meta-controller.
 | leading sigil/word  | the **current target** (the sticky set) — no explicit `<who>`        |
 
 A `<who>` token **alone** (digits, nothing after) sets the sticky current
-target, jumps to that tab, and logs *"Marwen is now the target."*
+target and logs *"Marwen is now the target."* It does **not** switch tabs —
+the active tab stays on the actor; the target's tab gets the ▼ arrow.
 
 > A leading **Space** on an empty command box is a GUI convenience, not a
 > grammar token: it auto-inserts the current-target id(s) and a space. The
@@ -65,7 +66,7 @@ A number's meaning is set by the **token immediately after it**:
 |--------------------------|--------------------------------------|----------------------|
 | `<num> <dmg-tag…>`       | a damage / heal **amount**           | `2 8 melee slash`    |
 | `<num> <condition>`      | the condition's **duration** (rounds)| `3 2 stun`           |
-| `<num>` then nothing     | an **action #** (panel hotkey)       | `2 2`                |
+| `<num>` then nothing     | an **action #** (panel hotkey)       | `2 2` · `2 111`      |
 | `<condition>` no number  | the condition, **default 1 round**   | `3 prone`            |
 | `<verb>`                 | an **action by name** (fuzzy-matched)| `3 tail-sweep`       |
 | `m<n>` / `m12` / `m`     | mob-member modifier on the next amount/condition (one member / digit-run set / `m` alone = all alive) | `7 m3 6 melee` · `7 m12 6 fire` |
@@ -87,7 +88,7 @@ A number's meaning is set by the **token immediately after it**:
 
 ```
 <who>  = digit-run (2, 123, 2233) · 0 = self · leading sigil/word = current target
-<who> alone                 -> set sticky target, jump tab
+<who> alone                 -> set sticky target (no tab switch)
 <who> <num>                 -> action #num
 <who> <num> <dmg-tags…>     -> amount, qualified      (2 10 melee slash)
 <who> <num> <condition>     -> condition, num = duration (3 2 stun)
@@ -105,6 +106,15 @@ every current-target tab (never on the actor's own tab — so `0`/self shows no
 arrow). The arrow follows drag-reorder for free.
 
 Click an action chip in the grid to run it without typing.
+
+#### Action numbers
+
+Every action chip shows its **panel hotkey number**. The NPC's own actions are
+numbered **1, 2, 3, …** (its special abilities — what you reach for most).
+Global / universal actions (Push, Grapple, Dodge, …) get **fixed numbers from
+111** — `111`, `112`, `113`, … — *the same on every combatant's tab*. So `2 1`
+is "actor's action #1 on target 2" and `2 111` is "actor's first global action
+on target 2", and the 111+ range never collides with an NPC's `1..N`.
 
 #### Tag vocabulary
 
@@ -253,7 +263,7 @@ for the full rules. Worked examples:
 | `3 2 stun`              | Stun combatant #3 for 2 rounds                              |
 | `4 9 bludge 1 prone`    | 9 bludgeoning damage **and** prone for 1 round (compound)   |
 | ` 12 heal`              | Heal the **current target** by 12 (leading sigil/word; Space on an empty box prefills the id) |
-| `3` (alone)             | Set #3 as the sticky current target, jump to its tab        |
+| `3` (alone)             | Set #3 as the sticky current target (no tab switch)         |
 | `13 hit`                | Upgrade the pending effect on #1 and #3 to a full hit       |
 | `undo`                  | Revert the last command (memento undo)                      |
 | anything off-grammar    | Routed to the LLM meta-controller                           |

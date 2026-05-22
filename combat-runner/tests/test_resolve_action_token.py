@@ -273,6 +273,26 @@ def test_resolve_digit_zero_returns_none():
     assert result is None
 
 
+def test_resolve_global_actions_use_fixed_111_numbers():
+    """Global actions resolve by the fixed 111, 112, … hotkey numbers — the
+    same on every NPC's tab — while NPC-specific actions keep 1, 2, ….  The
+    surface is canonically ordered: NPC-specific first, then globals."""
+    surface = [
+        {"action": "multiattack", "verbs": []},
+        {"action": "frozen_bile", "verbs": []},
+        {"action": "push", "verbs": [], "scope": "global"},
+        {"action": "grapple", "verbs": [], "scope": "global"},
+    ]
+    # NPC-specific: 1, 2.
+    assert MainWindow._resolve_action_token("1", surface) == "multiattack"
+    assert MainWindow._resolve_action_token("2", surface) == "frozen_bile"
+    # Globals: fixed 111, 112 — NOT 3, 4.
+    assert MainWindow._resolve_action_token("111", surface) == "push"
+    assert MainWindow._resolve_action_token("112", surface) == "grapple"
+    assert MainWindow._resolve_action_token("3", surface) is None
+    assert MainWindow._resolve_action_token("113", surface) is None
+
+
 def test_resolve_empty_actions_returns_none():
     """_resolve_action_token returns None when the action surface is empty."""
     assert MainWindow._resolve_action_token("multiattack", []) is None

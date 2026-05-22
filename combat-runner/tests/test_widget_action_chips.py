@@ -24,21 +24,29 @@ def test_used_chip_does_not_emit_clicked(qtbot):
     assert received == []
 
 
-def test_grid_renders_per_npc_then_global(qtbot):
+def test_grid_renders_in_given_order_and_numbers_chips(qtbot):
+    """The grid renders chips in the order given (the caller supplies the
+    canonical surface order) and labels each with its panel hotkey number.
+    NPC-specific actions number 1, 2, …; global actions segregate under the
+    divider on the fixed 111, 112, … numbers."""
     grid = ActionChipGrid(cols=2)
     qtbot.addWidget(grid)
+    # Canonical order as the caller supplies it: NPC-specific first, globals last.
     actions = [
-        {"action": "push", "verbs": ["push"], "scope": "global", "priority": 0},
-        {"action": "multiattack", "verbs": ["attack"], "priority": 10},
-        {"action": "vanish", "verbs": ["hide"], "priority": 5},
-        {"action": "dodge", "verbs": ["dodge"], "scope": "global", "priority": 0},
+        {"action": "multiattack", "verbs": ["attack"]},
+        {"action": "vanish", "verbs": ["hide"]},
+        {"action": "push", "verbs": ["push"], "scope": "global"},
+        {"action": "dodge", "verbs": ["dodge"], "scope": "global"},
     ]
     grid.set_actions(actions)
     chips = grid.chips()
-    # Per-NPC actions render first (sorted by priority desc): multiattack, vanish
-    # Then globals: dodge, push (alpha tiebreak)
     rendered_order = [c.action_name for c in chips]
-    assert rendered_order == ["multiattack", "vanish", "dodge", "push"]
+    assert rendered_order == ["multiattack", "vanish", "push", "dodge"]
+    # NPC actions number 1, 2; globals get the fixed 111, 112.
+    assert [c.number for c in chips] == [1, 2, 111, 112]
+    # The number is shown on the chip's name label.
+    assert chips[0]._format_name() == "1 · Multiattack"
+    assert chips[2]._format_name() == "111 · Push"
 
 
 def test_grid_forwards_chip_click_signal(qtbot):

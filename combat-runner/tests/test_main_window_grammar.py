@@ -78,14 +78,14 @@ def test_directed_damage(window):
 
 
 def test_set_target_sets_current_target_and_arrow(window):
-    """'2' sets current_target to ['2']; the arrow shows on tab 2 once the
-    actor is viewing a different tab (it is never drawn on the actor tab)."""
+    """'2' sets current_target to ['2'] WITHOUT switching tabs — the active
+    tab stays on the actor, and the red ▼ arrow appears on the target's tab."""
     window.tabs.setCurrentIndex(0)
     _submit(window, "2")
     assert window.encounter_state.current_target == ["2"]
-    # set_target jumps to the target tab — which becomes the actor, so no
-    # arrow there. Switch back to a different tab and the arrow appears.
-    window.tabs.setCurrentIndex(0)
+    # No tab switch — the actor's tab (0) is still active.
+    assert window.tabs.currentIndex() == 0
+    # The arrow appears on the target's tab (combatant id 2 at index 1).
     assert 1 in window.tabs.tabBar().arrow_indices()
 
 
@@ -160,19 +160,17 @@ def test_undo_restores_prior_hp(window):
 
 
 def test_undo_restores_active_tab_index(window):
-    """Undo restores `active_tab_index` and the visible tab (A3-H2 / A4-H1).
+    """Undo restores `active_tab_index` and the visible tab.
 
-    A directed command from tab 0 that jumps to a target tab must, after
-    `undo`, return focus to the pre-command tab."""
-    window.tabs.setCurrentIndex(0)
-    # A directed set_target jumps the active tab to the target.
-    _submit(window, "3")  # set_target id 3 -> jumps to tab 2
-    assert window.tabs.currentIndex() == 2
-    # Now a damage command from a different tab.
+    A mutating command snapshots the active tab; after the DM moves to a
+    different tab, `undo` must return focus to the pre-command tab."""
+    # A mutating command from tab 1 snapshots active_tab_index = 1.
     window.tabs.setCurrentIndex(1)
     _submit(window, "1 5 slash")
-    # undo should revert the damage AND restore the active tab to index 1.
+    # The DM moves to a different tab, then undoes.
+    window.tabs.setCurrentIndex(2)
     _submit(window, "undo")
+    # undo reverts the damage AND restores the active tab to index 1.
     assert window.tabs.currentIndex() == 1
     assert window.encounter_state.active_tab_index == 1
 
@@ -266,7 +264,7 @@ def test_arrow_never_on_actor_tab(window):
 def test_arrow_on_targeted_tab(window):
     """Targeting non-actor combatants shows the arrow on each targeted tab."""
     window.tabs.setCurrentIndex(0)
-    _submit(window, "23")  # set_target {2,3} -> tabs 1 and 2; jumps to tab 1
+    _submit(window, "23")  # set_target {2,3} -> arrows on tabs 1 and 2
     # Move the actor off a targeted tab so both arrows are visible.
     window.tabs.setCurrentIndex(3)
     arrows = window.tabs.tabBar().arrow_indices()
