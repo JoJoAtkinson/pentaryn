@@ -471,6 +471,37 @@ def test_review_prompt_has_magnitude_and_noop_rules():
     assert "no-op" in prompt
 
 
+def test_review_prompt_explains_didnt_land_lifecycle():
+    """The prompt teaches the reviewer the didn't-land/`hit` lifecycle so it
+    never flags a still-pending effect as 'damage not applied'."""
+    from gui.llm_controller import LLMController
+
+    prompt = LLMController.REVIEW_SYSTEM_PROMPT.lower()
+    assert "lifecycle" in prompt
+    assert "pending effect" in prompt
+    assert "damage not applied" in prompt
+
+
+def test_review_user_msg_renders_pending_effects():
+    """An unresolved pending effect is surfaced per target so the reviewer
+    does not mistake an action's still-pending damage for lost damage."""
+    from gui.llm_controller import LLMController
+
+    msg = LLMController.build_review_user_msg(
+        raw="2 frost-ray",
+        actor={"id": "4", "name": "Aelric", "kind": "npc"},
+        affected=[_affected(name="Bazgar", id="2", kind="pc",
+                            hp_before=49, hp_after=49, max_hp=49,
+                            pending=[{"full": 14, "applied": 0,
+                                      "kind": "attack", "source": "frost ray"}])],
+        roster=[{"id": "2", "name": "Bazgar", "kind": "pc"}],
+        applied_direction=None, applied_amount=None, log_tail="",
+    )
+    assert "PENDING" in msg
+    assert "14" in msg
+    assert "frost ray" in msg
+
+
 def test_strip_review_prefix_removes_double_sigil():
     """A leading '⟳ review:' the model emits is stripped so the logger
     does not double-prefix."""

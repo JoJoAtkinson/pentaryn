@@ -726,7 +726,17 @@ class LLMController:
         "durations) — plus each target's damage immunities, optionally an "
         "id-resolution-fallbacks block (present ONLY when a typed id did not "
         "cleanly resolve), and a roster of every combatant (id, name, kind "
-        "pc/npc). Judge the "
+        "pc/npc), and any PENDING effects on each target.\n"
+        "LIFECYCLE: an attack- or save-based action applies the MINIMUM "
+        "outcome immediately — 0 HP for an attack roll (a miss until the DM "
+        "resolves it), or the save outcome for a save — and records the "
+        "remainder as a PENDING effect the DM resolves later by typing `hit`. "
+        "A pending effect shown in the payload is the intended didn't-land "
+        "lifecycle, NOT lost or unapplied damage: NEVER flag a pending effect "
+        "as 'damage not applied' or 'damage missing', and NEVER apply it "
+        "yourself. A `hit` command merely resolves an existing pending "
+        "effect — its HP drop is expected, not an error.\n"
+        "Judge the "
         "ORIGINAL COMMAND + CONTEXT, not just the applied delta. Your job:\n"
         "  1. IMMUNITY/RESISTANCE. Check the damage type against the target's "
         "     listed immunities AND standard 5e type-based immunities you infer "
@@ -736,12 +746,14 @@ class LLMController:
         "     elementals are immune to their element; fiends/demons resist "
         "     cold/fire/lightning; etc. If the target is IMMUNE the damage should "
         "     have been 0; if RESISTANT, halved.\n"
-        "  2. MAGNITUDE. Sanity-check the applied amount against the target's "
-        "     max HP (shown on each affected-combatant line). An amount many "
-        "     times the target's max HP (e.g. an 80 or 700 on a 32-HP target) "
-        "     is a likely typo and must be FLAGGED even if HP only dropped to "
-        "     0 / the heal capped harmlessly — the clean delta does not excuse "
-        "     the absurd input.\n"
+        "  2. MAGNITUDE. Sanity-check the applied amount — and any PENDING "
+        "     amount — against the target's max HP (shown on each "
+        "     affected-combatant line). An amount many times the target's max "
+        "     HP (e.g. an 80 or 700 on a 32-HP target) is a likely typo and "
+        "     must be FLAGGED even if HP only dropped to 0 / the heal capped "
+        "     harmlessly — the clean delta does not excuse the absurd input. "
+        "     (A pending amount that is plausible is NOT a problem — see "
+        "     LIFECYCLE.)\n"
         "  3. ALLEGIANCE. Use the roster `kind`. Damaging an ally/PC (a kind=pc "
         "     combatant), or healing an enemy, is likely a wrong-target mistake — "
         "     flag it UNLESS the recent log shows it is intentional (a charmed "
@@ -859,9 +871,11 @@ class LLMController:
 
         ``affected`` — one dict per combatant the command actually mutated, each
         with: name, id, kind, hp_before, hp_after, max_hp, conditions_before,
-        conditions_after, immunities, and optionally ``durations_after`` (a
+        conditions_after, immunities, optionally ``durations_after`` (a
         ``{condition: rounds}`` map) so the review can flag implausible
-        durations. This is the REAL before→after delta the fast path produced.
+        durations, and ``pending`` (a list of unresolved didn't-land-lifecycle
+        effects awaiting `hit`). This is the REAL before→after delta the fast
+        path produced.
 
         ``roster`` — every combatant in the fight (id, name, kind) so the review
         can catch wrong-target / wrong-allegiance mistakes (healed an enemy,
@@ -914,6 +928,19 @@ class LLMController:
                 f"damage immunities: {imm_desc}; "
                 f"resistances: unknown — infer from creature type/name"
             )
+            pending = t.get("pending") or []
+            if pending:
+                pend_descs = [
+                    f"{p.get('full', '?')} from '{p.get('source') or '?'}' "
+                    f"({p.get('kind', '?')} roll, {p.get('applied', 0)} applied "
+                    f"so far)"
+                    for p in pending
+                ]
+                target_lines.append(
+                    "      PENDING (didn't-land lifecycle — intended, NOT lost "
+                    "damage; the DM resolves it with `hit`): "
+                    + "; ".join(pend_descs)
+                )
         targets_block = (
             "\n".join(target_lines) if target_lines
             else "  (no combatant HP/conditions changed)"

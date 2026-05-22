@@ -1711,6 +1711,19 @@ class MainWindow(QMainWindow):
         affected: list[dict] = []
         for t in targets:
             before_state = self._npc_before_state(before, t.id) or {}
+            # Unresolved pending effects on this target — the didn't-land
+            # lifecycle. The review must see these so it does NOT mistake an
+            # action's still-pending damage for "damage not applied".
+            pending = [
+                {
+                    "full": pe.full_amount,
+                    "applied": pe.applied_amount,
+                    "kind": pe.kind,
+                    "source": pe.source,
+                }
+                for pe in self.encounter_state.pending_effects
+                if pe.combatant_id == t.id and not pe.resolved
+            ]
             affected.append({
                 "id": t.id,
                 "name": t.name,
@@ -1726,6 +1739,8 @@ class MainWindow(QMainWindow):
                 "durations_after": dict(t.condition_durations),
                 # Immunities so the review can catch immunity errors.
                 "immunities": list(t.immunities),
+                # Pending (didn't-land lifecycle) effects awaiting `hit`.
+                "pending": pending,
             })
 
         # Compact roster of every combatant — id / name / kind — so the review
