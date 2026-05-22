@@ -140,6 +140,86 @@ def _parse_name(md_path: Path) -> str:
     return md_path.stem.replace("-", " ").title()
 
 
+import yaml as _yaml  # stdlib fallback handled below
+
+
+def load_party_config(path: Path) -> dict:
+    """Load a combat-roster.yml and return its parsed dict.
+
+    Returns a dict with keys 'party' (str) and 'players' (list of dicts).
+    Each player dict has: name, id, max_hp, ac (all required).
+    Raises ValueError on schema validation failure.
+    """
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as e:
+        raise ValueError(f"Cannot read party config {path}: {e}") from e
+
+    try:
+        import yaml
+        data = yaml.safe_load(text)
+    except Exception:
+        # Fallback: manual YAML for the simple key: value format used here
+        data = _parse_simple_roster_yaml(text)
+
+    if not isinstance(data, dict):
+        raise ValueError(f"{path}: expected a mapping at top level")
+    players = data.get("players", [])
+    if not isinstance(players, list):
+        raise ValueError(f"{path}: 'players' must be a list")
+    required_keys = {"name", "id", "max_hp", "ac"}
+    for i, p in enumerate(players):
+        if not isinstance(p, dict):
+            raise ValueError(f"{path}: player {i} is not a mapping")
+        missing = required_keys - set(p.keys())
+        if missing:
+            raise ValueError(f"{path}: player {i} missing keys: {missing}")
+        if not isinstance(p.get("max_hp"), int):
+            raise ValueError(f"{path}: player {i} max_hp must be an integer")
+        if not isinstance(p.get("ac"), int):
+            raise ValueError(f"{path}: player {i} ac must be an integer")
+    return data
+
+
+def _parse_simple_roster_yaml(text: str) -> dict:
+    """Minimal YAML-compatible parser for the combat-roster.yml format.
+    Only handles: party: str, players: list of inline dicts.
+    Used when the PyYAML library is not installed."""
+    import re
+    out: dict = {}
+    lines = text.splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        m = re.match(r'^party:\s*(.+)$', line)
+        if m:
+            out["party"] = m.group(1).strip().strip('"').strip("'")
+            i += 1
+            continue
+        if line.strip() == "players:":
+            players = []
+            i += 1
+            while i < len(lines) and lines[i].startswith("  "):
+                entry_line = lines[i].strip().lstrip("- ").strip("{").strip("}")
+                # Parse `key: value` pairs separated by commas
+                player: dict = {}
+                for kv in re.split(r',\s*', entry_line):
+                    km = re.match(r'(\w+):\s*"?([^"]*)"?', kv.strip())
+                    if km:
+                        k, v = km.group(1), km.group(2)
+                        if k in ("max_hp", "ac"):
+                            player[k] = int(v)
+                        else:
+                            player[k] = v
+                if player:
+                    players.append(player)
+                i += 1
+            out["players"] = players
+            continue
+        i += 1
+    return out
+
+
 def discover_encounters() -> list[DiscoveredEncounter]:
     """Returns all discovered encounters, sorted by most-recent NPC mtime (newest first)."""
     npc_files = _find_tagged_files()
