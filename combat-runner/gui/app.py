@@ -326,11 +326,11 @@ def main() -> int:
 
     _party_config: dict | None = None
     if args.party:
+        import logging
         try:
             _party_config = load_party_config(Path(args.party))
         except ValueError as exc:
             # Boot can't fail — warn and continue without party
-            import logging
             logging.getLogger(__name__).warning("party config load failed: %s", exc)
 
     app = QApplication(sys.argv)

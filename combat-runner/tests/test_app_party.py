@@ -94,3 +94,37 @@ def test_npc_ids_skip_player_ids(minimal_encounter, party_config):
     npc_ids = {n.id for n in es.npcs if n.kind == "npc"}
     assert "1" not in npc_ids
     assert "2" not in npc_ids
+
+
+def test_pc_hp_defaults_to_max_when_selection_has_no_current_hp(minimal_encounter, party_config):
+    from gui.app import build_encounter_state
+    es = build_encounter_state(
+        minimal_encounter, {},
+        party_config=party_config,
+        player_selections={"1": {"included": True}},  # no current_hp key
+    )
+    vessa = next(n for n in es.npcs if n.id == "1")
+    assert vessa.member_hp == [31]
+
+
+def test_empty_players_list_builds_no_pcs(minimal_encounter):
+    from gui.app import build_encounter_state
+    es = build_encounter_state(minimal_encounter, {},
+                               party_config={"party": "Empty", "players": []})
+    assert [n for n in es.npcs if n.kind == "pc"] == []
+
+
+def test_pcs_precede_npcs_in_turn_order(minimal_encounter, party_config):
+    """PCs are the leftmost tabs — appended before NPCs."""
+    from gui.app import build_encounter_state
+    from gui.encounter_picker import DiscoveredNPC
+    npc_md = minimal_encounter.root / "npcs" / "goblin.md"
+    npc_md.parent.mkdir(parents=True, exist_ok=True)
+    npc_md.write_text("---\nname: Goblin\nmax_hp: 7\nac: 13\n---\n**HP** 7 **AC** 13\n")
+    enc2 = minimal_encounter.__class__(
+        name="test-enc", root=minimal_encounter.root,
+        npcs=[DiscoveredNPC(slug="goblin", name="Goblin", md_path=npc_md)],
+        latest_mtime=0.0,
+    )
+    es = build_encounter_state(enc2, {"goblin": 1}, party_config=party_config)
+    assert es.npcs[0].kind == "pc"
