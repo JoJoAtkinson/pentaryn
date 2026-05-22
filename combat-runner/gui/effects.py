@@ -193,9 +193,9 @@ def _apply_condition(
             {},
         )
 
-    # CHANGE 2 — reject member-scoped conditions.
-    # `m2 prone` is not supported: conditions apply to the whole mob/tab.
-    # If effect.members is not None, an m<...> modifier was attached.
+    # Reject member-scoped conditions: `m2 prone` is not supported — conditions
+    # apply to the whole mob/tab. If effect.members is not None, an m<...>
+    # modifier was attached.
     if effect.members is not None:
         return (
             [
@@ -205,7 +205,18 @@ def _apply_condition(
             {},
         )
 
-    # CHANGE 3 — duration refresh vs. toggle-off semantics.
+    # `bloodied` is an auto-managed marker — state.py applies and clears it from
+    # the HP-at-or-below-half threshold. A DM cannot meaningfully toggle it or
+    # pin a duration on it (the next HP change overrides either), so reject the
+    # command rather than letting the refresh path strand a stale duration.
+    if canonical == "bloodied":
+        return (
+            ["warn: 'bloodied' is auto-tracked from HP — it can't be set "
+             "directly"],
+            {},
+        )
+
+    # Duration refresh vs. toggle-off semantics.
     # When a duration is given: ALWAYS ensure the condition is present with that
     # duration.  If already present, REFRESH the duration (don't toggle off).
     # When no duration is given (bare condition word): keep the classic toggle.

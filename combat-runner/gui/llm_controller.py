@@ -720,8 +720,8 @@ class LLMController:
     REVIEW_SYSTEM_PROMPT = (
         "You are an at-table D&D 5.5e combat reviewer. A DM just typed a command; "
         "the fast path already applied the deterministic effect. You are given the "
-        "ACTOR who acted (with allegiance), the RAW command typed, the RAW amount "
-        "the DM entered (before any cap), the REAL applied delta — for every "
+        "ACTOR who acted (with allegiance), the RAW command typed, the applied "
+        "amount — for every "
         "affected combatant, its before→after HP and conditions (with remaining "
         "durations) — plus each target's damage immunities, optionally an "
         "id-resolution-fallbacks block (present ONLY when a typed id did not "
@@ -736,11 +736,12 @@ class LLMController:
         "     elementals are immune to their element; fiends/demons resist "
         "     cold/fire/lightning; etc. If the target is IMMUNE the damage should "
         "     have been 0; if RESISTANT, halved.\n"
-        "  2. MAGNITUDE. Sanity-check the RAW amount the DM typed against the "
-        "     target's max HP. A raw amount many times the target's max HP (e.g. "
-        "     an 80 or 700 on a 32-HP target) is a likely typo and must be FLAGGED "
-        "     even if HP only dropped to 0 / the heal capped harmlessly — the "
-        "     clean delta does not excuse the absurd input.\n"
+        "  2. MAGNITUDE. Sanity-check the applied amount against the target's "
+        "     max HP (shown on each affected-combatant line). An amount many "
+        "     times the target's max HP (e.g. an 80 or 700 on a 32-HP target) "
+        "     is a likely typo and must be FLAGGED even if HP only dropped to "
+        "     0 / the heal capped harmlessly — the clean delta does not excuse "
+        "     the absurd input.\n"
         "  3. ALLEGIANCE. Use the roster `kind`. Damaging an ally/PC (a kind=pc "
         "     combatant), or healing an enemy, is likely a wrong-target mistake — "
         "     flag it UNLESS the recent log shows it is intentional (a charmed "
@@ -849,7 +850,6 @@ class LLMController:
         applied_direction: str | None,
         applied_amount: int | None,
         log_tail: str,
-        raw_amount: int | None = None,
         id_fallbacks: list[dict] | None = None,
         action: dict | None = None,
     ) -> str:
@@ -867,16 +867,11 @@ class LLMController:
         can catch wrong-target / wrong-allegiance mistakes (healed an enemy,
         damaged an ally).
 
-        ``raw_amount`` — the number the DM literally typed, BEFORE any cap/clamp.
-        Distinct from ``applied_amount`` (the delta the fast path actually
-        applied). An absurd ``raw_amount`` should be flagged even when the
-        applied delta capped harmlessly.
-
         ``id_fallbacks`` — list of ``{"token": <typed id>, "resolved_to": <id>}``
         for any target id that did not cleanly resolve (e.g. ``0`` → actor-self,
         or an unrecognised id). Empty / None means every id resolved cleanly.
 
-        ``action`` — CHANGE A: optional dict with keys ``name``, ``panel``
+        ``action`` — optional dict with keys ``name``, ``panel``
         (1-based panel number or None), and ``spec`` (the raw action record).
         When present, a ``Action run:`` line is rendered so the reviewer can
         see what the command actually resolved to instead of an opaque token
@@ -891,16 +886,6 @@ class LLMController:
             applied_desc = f"{applied_direction} {applied_amount}"
         else:
             applied_desc = "(no scalar amount — see per-target HP delta below)"
-
-        if raw_amount is not None and raw_amount != applied_amount:
-            raw_amount_desc = (
-                f"Raw amount typed by DM (before cap/clamp): {raw_amount}"
-                f" — sanity-check this against target max HP\n"
-            )
-        elif raw_amount is not None:
-            raw_amount_desc = f"Raw amount typed by DM: {raw_amount}\n"
-        else:
-            raw_amount_desc = ""
 
         target_lines: list[str] = []
         for t in affected:
@@ -954,7 +939,7 @@ class LLMController:
         else:
             fallback_block = ""
 
-        # CHANGE A: "Action run" line — present only for action invocations.
+        # "Action run" line — present only for action invocations.
         if action is not None:
             action_name = action.get("name", "?")
             panel = action.get("panel")
@@ -1004,7 +989,6 @@ class LLMController:
         return (
             f"Actor (who acted): {actor_desc}\n"
             f"Command typed: {raw!r}\n"
-            f"{raw_amount_desc}"
             f"{action_line}"
             f"Fast path applied: {applied_desc}\n"
             f"{fallback_block}"
@@ -1041,7 +1025,6 @@ class LLMController:
         applied_amount: int | None,
         log_tail: str,
         dispatch_fn: Callable[[list[Any]], list[dict[str, Any]]] | None = None,
-        raw_amount: int | None = None,
         id_fallbacks: list[dict] | None = None,
         action: dict | None = None,
     ) -> "RunResult":
@@ -1056,8 +1039,7 @@ class LLMController:
         ``affected`` carries the REAL before→after HP/conditions (with
         durations) for every target the command mutated; ``roster`` carries
         every combatant's id/name/kind so the review can reason about
-        allegiance. ``raw_amount`` is the number the DM literally typed (before
-        cap); ``id_fallbacks`` flags any id that did not cleanly resolve.
+        allegiance. ``id_fallbacks`` flags any id that did not cleanly resolve.
 
         On a tool-loop cap-hit the last assistant text is returned (not
         discarded), so a correction the model emitted before the cap still
@@ -1070,7 +1052,7 @@ class LLMController:
         user_msg = self.build_review_user_msg(
             raw, actor, affected, roster,
             applied_direction, applied_amount, log_tail,
-            raw_amount=raw_amount, id_fallbacks=id_fallbacks,
+            id_fallbacks=id_fallbacks,
             action=action,
         )
 
@@ -1084,7 +1066,7 @@ class LLMController:
         )
         # Log the review line whenever the model spoke — even on a cap-hit,
         # where `result.error` is set but `result.text` carries a usable
-        # correction (G1). Strip any '⟳ review:' the model self-prefixed (G10).
+        # correction. Strip any '⟳ review:' the model self-prefixed.
         if result.text:
             clean = self._strip_review_prefix(result.text)
             if clean:
@@ -1316,7 +1298,7 @@ class LLMController:
                 "assistant text (any tool calls already made stand)",
                 iteration_cap,
             )
-            # G1: do NOT discard. The model may have emitted a correct
+            # Do NOT discard. The model may have emitted a correct
             # correction in an earlier turn (and its tool calls already
             # mutated state) — return the last assistant text so the review
             # line still gets logged. `error` is set so callers that need to

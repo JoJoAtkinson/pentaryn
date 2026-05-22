@@ -1,6 +1,7 @@
 # Combat Runner — At-Table Command Grammar Overhaul
 
-**Status:** Design — approved via a 20-example walkthrough, 2026-05-22
+**Status:** Implemented (2026-05-22). **Superseded in part** — see §10
+"Post-design decisions" for the follow-up changes that diverge from this design.
 **Component:** `combat-runner/gui/`
 **Author:** Joe + Claude (brainstorming session)
 
@@ -31,7 +32,9 @@ Determined by the command's **first character**:
   `2233` → {22,33}; `122333` → {1,22,333}).
 - **`0`** → **self** — the acting combatant (the active tab). Combinable inside a
   run sequence: `0123` → {self, 1, 2, 3}.
-- **Leading whitespace** → the **current target** (whatever is sticky).
+- **Leading whitespace** is stripped before parsing — it is not a grammar
+  token. (The GUI command box converts a leading Space on an empty box into a
+  current-target id autocomplete; see §11.)
 - **Leading sigil or word** (`-`, `+`, `@`, or a bare word like `prone`/`hit`) →
   also the current target (no explicit `<who>`).
 
@@ -62,6 +65,8 @@ by the tag immediately after it:**
   A damage-tag that begins a group with **no** leading number is the error case
   above — the DM meant to type an amount.
 - **Numbers always come before their tag.** No before-*or*-after flexibility.
+- **`poison` is not a damage type.** By DM decision (see §10) `poison` always
+  parses as the `poisoned` *condition*; poison-typed damage is not expressible.
 - **Compound effects chain in one command:** `4 9 bludge 1 prone` = 9 bludgeoning
   damage **and** prone for 1 round.
 
@@ -71,7 +76,8 @@ by the tag immediately after it:**
   actions.
 - **By name:** `<who> <verb>` — fuzzy-matched against the active NPC's actions
   (the "I don't recall the number" fallback).
-- **Untargeted:** ` <n>` / ` <verb>` (leading space) → action at the current target.
+- **Untargeted:** a leading sigil/word stream (no `<who>`) → action at the
+  current target. (A leading Space is a GUI prefill, not parser input — see §11.)
 - An action is **self-contained** — it rolls its own damage and applies its own
   riders (conditions, etc.). It is never tagged in the command.
 
@@ -82,8 +88,9 @@ by the tag immediately after it:**
 - **Optional duration** as a number before the word: `3 2 stun` = stun 2 rounds.
   No number → default 1 round.
 - **`@` is an optional escape hatch**, never required: `@prone` *forces* the
-  condition reading for the rare case a word collides with an action verb; bare
-  `@` opens the condition picker.
+  condition reading for the rare case a word collides with an action verb.
+  (Bare `@` is currently `unparseable` — a condition picker is a known unbuilt
+  gap, see §11.)
 
 ### 2.5 Resolution & correction
 
@@ -95,7 +102,7 @@ by the tag immediately after it:**
 ### 2.6 Cheat-sheet
 
 ```
-<who>  = digit-run (2, 123, 2233) · leading space = current target · 0 = self
+<who>  = digit-run (2, 123, 2233) · leading sigil/word = current target · 0 = self
 <who> alone                 -> set sticky target, jump tab
 <who> <num>                 -> action #num
 <who> <num> <dmg-tags…>     -> amount, qualified      (2 10 melee slash)
@@ -103,9 +110,9 @@ by the tag immediately after it:**
 <who> <condition>           -> condition, default 1 round
 <who> <verb>                -> action by name (fuzzy)
 compound:  4 9 bludge 1 prone   -> 9 bludgeoning dmg + prone 1 round
-hit   -> upgrade effect to full hit (13 hit · ␣hit)
+hit   -> upgrade effect to full hit (13 hit · ' hit' for the current target)
 undo  -> revert last command
-@cond -> optional: force the condition reading;  bare @ -> condition picker
+@cond -> optional: force the condition reading
 ```
 
 ## 3. Target Model
@@ -177,9 +184,11 @@ path; LLM = long tail.
 
 ## 8. Components & Data Flow
 
-- **`dispatcher.py`** — rewritten parser. `parse()` → `ParsedCommand{ target_ids:
-  list[str], effects: list[Effect] }`, where `Effect` is one of `ActionRef`,
-  `Amount`, `Condition`, `Resolution` (hit), `Undo`. Pure Python, no Qt.
+- **`dispatcher.py`** — the parser; `parse()` → `ParsedCommand`. Pure Python, no Qt.
+- **`command_model.py`** *(new)* — the `Effect` / `ParsedCommand` dataclasses.
+  `Effect` is one dataclass tagged by `kind ∈ {action, amount, condition, hit,
+  undo}` (not five subclasses) and carries a `members: list[int] | None` field
+  for the `m<...>` mob-member modifier.
 - **`targeting.py`** *(new, pure)* — digit-run splitting, `<who>` resolution,
   current-target store helpers.
 - **`command_tags.py`** — tag taxonomy; add damage-type aliases (`slash`, `pierce`,
@@ -225,17 +234,46 @@ per-action undo inverses · before-or-after number placement · a fully-general
 "every tag takes a number, default 1" (damage-type/delivery tags are pure
 qualifiers; default-1 for an amount is a footgun) · a floating overlay arrow.
 
-## 11. Open Items (settle before / during planning)
+### Post-design decisions (2026-05-22 follow-up)
 
-- **Leading-space visibility:** the leading-space current-target form is invisible.
-  Recommended mitigation — the command box shows a visible "current-target" cue
-  when the input starts with a space. Not yet locked.
-- **Damage-tag alias spelling:** finalize the alias list (`bludge` vs `bludgeon`,
-  etc.).
-- **Standalone `-N` / `+N`:** keep as a quick current-target shorthand, or drop now
-  that the tag form supersedes them? Lean: keep as shorthand.
-- **Pending-effect marker:** exact visual, and the precise round-advance
-  auto-clear timing.
+Changes made after this spec was approved, during implementation and review.
+They diverge from the design above; this section is the authoritative record.
+
+- **`poison` → `poisoned` condition, not a damage type.** Poison-typed damage
+  is not expressible; `2 8 poison` is *poisoned for 8 rounds*.
+- **Leading Space → GUI autocomplete, not a grammar token.** The parser strips
+  all whitespace; a leading Space on an empty command box auto-inserts the
+  current-target id(s). The current target is reached in the grammar by a
+  leading sigil/word only.
+- **Multi-member mob targeting:** `m<n>` / `m12` (digit-run set) / `m` alone
+  (all alive members) — `Effect.members: list[int] | None`.
+- **Member-scoped conditions are rejected** at the applier — conditions apply
+  to the whole mob/tab.
+- **An `m<...>` modifier before an action / `hit` / `undo` is `unparseable`** —
+  the mob-member selector only scopes an amount or a condition.
+- **The didn't-land / `hit` lifecycle is wired end to end** — actions run on
+  the actor's tab and route uncertain damage to the target id.
+- **Input normalization:** digit→letter glue (`8melee` → `8 melee`),
+  internal-whitespace collapse, single trailing-punctuation strip.
+- **Action context fed to the LLM reviewer** — the resolved action name/spec
+  rides into the review payload.
+- **Suggestion-panel numbers** — each left-panel action suggestion shows its
+  1-based hotkey number.
+- **`bloodied` cannot be set as a DM condition** — it is auto-tracked from HP.
+
+## 11. Open Items
+
+- **Leading-space visibility:** *RESOLVED* — the leading Space became a GUI
+  command-box autocomplete on an empty box (`command_input.py`); it is no
+  longer a grammar token.
+- **Damage-tag alias spelling:** *RESOLVED* — alias list finalized in
+  `command_tags.py` (`bludge`/`bludgeon`, `pierce`, `slash`, …).
+- **Standalone `-N` / `+N`:** *RESOLVED* — dropped; the `<num> <tag>` amount
+  form supersedes them.
+- **Pending-effect marker:** *RESOLVED* — an unresolved pending effect appends
+  a `" ?"` suffix to the tab title; round-advance auto-clears stale markers.
+- **Condition picker:** bare `@` currently parses as `unparseable` — a
+  condition picker was specified (§2.4) but not built. Known gap.
 
 ## Appendix — Worked examples (from the 20-example walkthrough)
 
@@ -243,8 +281,9 @@ qualifiers; default-1 for an amount is a footgun) · a floating overlay arrow.
 2 8 melee slash   target 2, 8 melee slashing damage
 2 2               target 2, run action #2
 123 3             targets {1,2,3}, run action #3
-2 save  ->  13 hit   (lifecycle: default=saved; `hit` the failures)
-␣1                current target, action #1
+13 hit            lifecycle: an uncertain effect applies the minimum (a
+                  save/miss); `hit` upgrades the failures (here #1 and #3)
+ 1                current target, action #1   (Space on an empty box prefills)
 undo              revert the last command
 3 tail-sweep      target 3, action by name
 6 12 heal         heal combatant 6 by 12
@@ -254,5 +293,5 @@ undo              revert the last command
 0123              targets {self,1,2,3}
 3 2 stun          stun combatant 3 for 2 rounds
 4 9 bludge 1 prone   9 bludgeoning damage + prone 1 round  (compound)
-␣12 heal          heal the current target by 12
+ 12 heal          heal the current target by 12
 ```

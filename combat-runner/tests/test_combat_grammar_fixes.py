@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-# ─── CHANGE B — digit→letter glue normalization ─────────────────────────────
+# ─── Digit→letter glue normalization ─────────────────────────────
 
 
 def test_digit_glue_2_8melee_parsed_same_as_2_8_melee():
@@ -72,7 +72,7 @@ def test_digit_glue_skipped_for_slash_commands():
     assert "slug8b" in c.reorder_slugs
 
 
-# ─── CHANGE C — whitespace + trailing-punctuation normalization ──────────────
+# ─── Whitespace + trailing-punctuation normalization ──────────────
 
 
 def test_trailing_period_stripped():
@@ -121,7 +121,7 @@ def test_leading_trailing_spaces_stripped():
     assert c.target_ids == ["2"]
 
 
-# ─── CHANGE A — action context in review payload ────────────────────────────
+# ─── Action context in review payload ────────────────────────────
 
 
 def test_build_review_user_msg_includes_action_run_line():

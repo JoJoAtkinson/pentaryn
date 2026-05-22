@@ -167,7 +167,6 @@ class _LLMReviewWorker(_LLMWorkerBase):
         affected: list[dict], roster: list[dict],
         applied_direction: str | None, applied_amount: int | None,
         log_tail: str, signals: _LLMWorkerSignals,
-        raw_amount: int | None = None,
         id_fallbacks: list[dict] | None = None,
         action: dict | None = None,
     ) -> None:
@@ -179,9 +178,8 @@ class _LLMReviewWorker(_LLMWorkerBase):
         self._direction = applied_direction
         self._amount = applied_amount
         self._log_tail = log_tail
-        self._raw_amount = raw_amount
         self._id_fallbacks = id_fallbacks or []
-        self._action = action  # CHANGE A: resolved action info (name + spec)
+        self._action = action  # resolved action info (name + spec)
 
     def run(self) -> None:
         try:
@@ -194,7 +192,6 @@ class _LLMReviewWorker(_LLMWorkerBase):
                 applied_amount=self._amount,
                 log_tail=self._log_tail,
                 dispatch_fn=self._marshalled_dispatch,
-                raw_amount=self._raw_amount,
                 id_fallbacks=self._id_fallbacks,
                 action=self._action,
             )
@@ -382,9 +379,9 @@ class MainWindow(QMainWindow):
         # Rolling buffer of the last 10 raw command strings (newest last).
         # Populated by _on_command; passed to the LLM fallback for context.
         self._recent_commands: list[str] = []
-        # CHANGE A: action info captured by _apply_action_effect and consumed
-        # once by _on_command when calling _enqueue_review.  None when the
-        # most-recent command was NOT an action invocation.
+        # Action info captured by _apply_action_effect and consumed once by
+        # _on_command when calling _enqueue_review. None when the most-recent
+        # command was NOT an action invocation.
         self._pending_action_info: dict | None = None
 
         # Status bar at the bottom for transient messages
@@ -1061,9 +1058,12 @@ class MainWindow(QMainWindow):
 
         # --- out-of-band commands (no LLM, no snapshot) ---
         if cmd.kind == "note":
-            self._append_to_active_tab(
-                f"<span style='color:#90caf9'>📝 {cmd.note_text}</span>"
-            )
+            # A bare `note` with no text is a degenerate fat-finger — no-op it
+            # rather than logging an empty entry.
+            if cmd.note_text:
+                self._append_to_active_tab(
+                    f"<span style='color:#90caf9'>📝 {cmd.note_text}</span>"
+                )
             return
 
         if cmd.kind == "reorder":
@@ -1127,8 +1127,8 @@ class MainWindow(QMainWindow):
                 if not has_undo_effect:
                     actor = self.encounter_state.active_npc
                     ids = self._resolve_targets(cmd)
-                    # CHANGE A: consume the action info captured during
-                    # _handle_command (None for non-action commands).
+                    # Consume the action info captured during _handle_command
+                    # (None for non-action commands).
                     action_info = self._pending_action_info
                     self._pending_action_info = None
                     # Hand the review the REAL before→after delta: `before` is
@@ -1141,8 +1141,9 @@ class MainWindow(QMainWindow):
     def _resolve_targets(self, cmd: ParsedCommand) -> list[str]:
         """Resolve a ParsedCommand's <who> into concrete combatant id strings.
 
-        ``"0"`` resolves to the active combatant's id; ``use_current`` resolves
-        to ``encounter_state.current_target``.
+        An all-zero id (``"0"``, ``"00"`` — a same-digit run never splits)
+        resolves to the active combatant's id; ``use_current`` resolves to
+        ``encounter_state.current_target``.
         """
         if cmd.use_current:
             return list(self.encounter_state.current_target)
@@ -1150,7 +1151,8 @@ class MainWindow(QMainWindow):
         active_id = active.id if active else ""
         resolved: list[str] = []
         for cid in cmd.target_ids:
-            resolved.append(active_id if cid == "0" else cid)
+            is_self = bool(cid) and set(cid) == {"0"}
+            resolved.append(active_id if is_self else cid)
         return resolved
 
     def _handle_set_target(self, cmd: ParsedCommand) -> None:
@@ -1170,6 +1172,7 @@ class MainWindow(QMainWindow):
         if first_idx is not None:
             self.tabs.setCurrentIndex(first_idx)
         self._refresh_target_arrow()
+        self._push_current_target_to_inputs()
         if names:
             label = ", ".join(names)
             verb = "is" if len(names) == 1 else "are"
@@ -1179,7 +1182,7 @@ class MainWindow(QMainWindow):
 
     def _handle_command(self, cmd: ParsedCommand) -> None:
         """Apply a `kind == "command"` ParsedCommand's effects."""
-        # CHANGE A: reset per-command action info before applying effects.
+        # Reset per-command action info before applying effects.
         self._pending_action_info = None
         ids = self._resolve_targets(cmd)
         # Zero resolved targets — e.g. an untargeted `prone`/`hit` with no
@@ -1194,6 +1197,7 @@ class MainWindow(QMainWindow):
         # it also updates the current target.
         if cmd.target_ids and not cmd.use_current:
             self.encounter_state.current_target = list(ids)
+            self._push_current_target_to_inputs()
 
         actor = self.encounter_state.active_npc
 
@@ -1286,11 +1290,18 @@ class MainWindow(QMainWindow):
         self.encounter_state.current_target = list(restored.current_target)
         self.encounter_state.pending_effects = list(restored.pending_effects)
         # Restore the active tab (part of EncounterState; bounds-checked since
-        # the restored index may exceed the current tab count).
+        # the restored index may exceed the current tab count). If it is out of
+        # range — a tab was closed between snapshot and restore — clamp into
+        # range rather than leaving a stale pointer (parity with
+        # `deserialize_encounter`).
         idx = restored.active_tab_index
         if 0 <= idx < self.tabs.count():
             self.encounter_state.active_tab_index = idx
             self.tabs.setCurrentIndex(idx)
+        elif self.tabs.count() > 0:
+            clamped = max(0, min(idx, self.tabs.count() - 1))
+            self.encounter_state.active_tab_index = clamped
+            self.tabs.setCurrentIndex(clamped)
         self.round_btn.setText(self._round_btn_text())
         self._refresh_target_arrow()
 
@@ -1333,11 +1344,6 @@ class MainWindow(QMainWindow):
         if not isinstance(actor_tab, NPCTab):
             return
 
-        # Member routing: a list `Effect.members` ([] = all alive members of
-        # the target) drives one apply_uncertain_damage call per member; None
-        # is the single-call default.
-        members = effect.members
-
         for cid in target_ids:
             combatant = self.encounter_state.combatant_by_id(cid)
             if combatant is None:
@@ -1368,9 +1374,10 @@ class MainWindow(QMainWindow):
                         f"{actor.name}</span>"
                     )
                 continue
-            # CHANGE A: capture the resolved action name + a compact spec
-            # summary so the review payload can include "Action run: …".
-            # Find the matching spec dict and build a brief description.
+            # Capture the resolved action name + a compact spec summary so the
+            # review payload can include an "Action run: …" line. Written once
+            # per target; the action token is identical across every target of
+            # a command, so this is last-write-wins of the same value.
             action_spec = next(
                 (a for a in actions if a.get("action") == action_name), None
             )
@@ -1393,18 +1400,11 @@ class MainWindow(QMainWindow):
             # (spec §4). A no-save no-attack-roll action carries no `rolls`
             # damage and stays as printed text.
             result = actor_tab.run_action_externally(action_name)
-            # Resolve the per-member list this target gets the uncertain
-            # damage applied to. `members is None` → one call with member=None.
-            if members is None:
-                member_targets: list[int | None] = [None]
-            elif members == []:
-                member_targets = list(combatant.alive_member_indices())
-            else:
-                member_targets = list(members)
-            for member in member_targets:
-                self._route_uncertain_damage(
-                    result, cid, action_name, member=member
-                )
+            # An action is never scoped to a single mob member — the parser
+            # rejects an `m<n>` modifier before an action token. Uncertain
+            # damage routes to the target combatant with default member
+            # routing (highest-numbered alive member for a mob).
+            self._route_uncertain_damage(result, cid, action_name)
 
     def _route_uncertain_damage(
         self,
@@ -1536,6 +1536,21 @@ class MainWindow(QMainWindow):
                 tab.refresh()
                 self.tabs.setTabText(i, self._tab_title(tab.npc_state))
 
+    def _push_current_target_to_inputs(self) -> None:
+        """Push the sticky current target to every tab's command input.
+
+        A leading-Space autocomplete reads each input's cached target id(s).
+        `NPCTab.refresh()` already pushes it, but a bare `set_target` and a
+        sticky-targeted command change `current_target` without refreshing
+        every tab — so push it directly here so Space works from any tab
+        immediately, not only after the next incidental refresh.
+        """
+        ct = list(self.encounter_state.current_target)
+        for i in range(self.tabs.count()):
+            tab = self.tabs.widget(i)
+            if isinstance(tab, NPCTab):
+                tab.input.set_current_target(ct)
+
     def _refresh_target_arrow(self) -> None:
         """Map `current_target` ids → tab indices and update the tab bar arrow.
 
@@ -1576,7 +1591,6 @@ class MainWindow(QMainWindow):
                 return {
                     "hp": sum(nd.get("member_hp", []) or []),
                     "conditions": sorted(nd.get("conditions", []) or []),
-                    "condition_durations": dict(nd.get("condition_durations", {}) or {}),
                 }
         return None
 
@@ -1627,9 +1641,9 @@ class MainWindow(QMainWindow):
             "kind": actor.kind if actor else "?",
         }
 
-        # GAP 1 + 3: build one affected-entry per target, each carrying the
-        # real before→after HP/conditions. `before` is the pre-command
-        # snapshot; current live state is the "after".
+        # Build one affected-entry per target, each carrying the real
+        # before→after HP/conditions. `before` is the pre-command snapshot;
+        # current live state is the "after".
         affected: list[dict] = []
         for t in targets:
             before_state = self._npc_before_state(before, t.id) or {}
@@ -1643,22 +1657,22 @@ class MainWindow(QMainWindow):
                 "max_hp": t.max_total_hp,
                 "conditions_before": before_state.get("conditions", []),
                 "conditions_after": sorted(t.conditions),
-                # G7: per-condition remaining durations so the review can flag
-                # an implausible duration (e.g. frightened for 90 rounds).
+                # Per-condition remaining durations so the review can flag an
+                # implausible duration (e.g. frightened for 90 rounds).
                 "durations_after": dict(t.condition_durations),
-                # GAP 2: immunities so the review can catch immunity errors.
+                # Immunities so the review can catch immunity errors.
                 "immunities": list(t.immunities),
             })
 
-        # GAP 4: compact roster of every combatant — id / name / kind — so the
-        # review can catch wrong-target / wrong-allegiance mistakes.
+        # Compact roster of every combatant — id / name / kind — so the review
+        # can catch wrong-target / wrong-allegiance mistakes.
         roster = [
             {"id": n.id, "name": n.name, "kind": n.kind}
             for n in self.encounter_state.npcs
         ]
 
-        # GAP 1: the real applied scalar — direction + amount from the first
-        # amount effect of the command (None for pure condition commands; the
+        # The real applied scalar — direction + amount from the first amount
+        # effect of the command (None for pure condition commands; the
         # per-target HP delta in `affected` still tells the story).
         applied_direction: str | None = None
         applied_amount: int | None = None
@@ -1668,17 +1682,10 @@ class MainWindow(QMainWindow):
                 applied_amount = eff.amount
                 break
 
-        # G5: the RAW amount the DM literally typed, before the fast path
-        # capped/clamped it. The parser does not clamp, so this equals the
-        # first amount effect's `amount`; passing it distinctly lets the
-        # review sanity-check the typed number against target max HP even
-        # when the applied HP delta capped harmlessly.
-        raw_amount: int | None = applied_amount
-
-        # G8: flag any target id that did not cleanly resolve. A raw token of
-        # "0" resolves to the actor (self-fallback); any other token that maps
-        # to no combatant is a malformed-id fallback. `cmd.target_ids` carries
-        # the raw typed tokens; `_resolve_targets` already mapped them.
+        # Flag any target id that did not cleanly resolve. A raw token of "0"
+        # resolves to the actor (self-fallback); any other token that maps to
+        # no combatant is a malformed-id fallback. `cmd.target_ids` carries the
+        # raw typed tokens; `_resolve_targets` already mapped them.
         id_fallbacks: list[dict] = []
         if not getattr(cmd, "use_current", False):
             actor_id = actor.id if actor else ""
@@ -1718,9 +1725,8 @@ class MainWindow(QMainWindow):
             applied_amount=applied_amount,
             log_tail=log_tail or "",
             signals=signals,
-            raw_amount=raw_amount,
             id_fallbacks=id_fallbacks,
-            action=action_info,  # CHANGE A: resolved action context
+            action=action_info,  # resolved action context
         )
         self._llm_pool.start(worker)
 

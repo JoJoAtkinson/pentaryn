@@ -287,13 +287,14 @@ def test_note_case_insensitive():
     assert c.note_text == "hello world"
 
 
-def test_note_requires_text():
-    """Bare `note` with no trailing text is not a `note` command — it falls
-    through to the `<who> <stream>` grammar as an action-by-name token
-    (against the current sticky target). It does NOT route to the LLM note path."""
+def test_bare_note_is_an_empty_note():
+    """Bare `note` with no trailing text parses as a `note` command with empty
+    text — not as an action-by-name token. An empty note is a degenerate input
+    the GUI treats as a no-op; the point is that a fat-fingered `note` never
+    becomes a bogus action lookup."""
     c = parse("note")
-    # Not a note — treated as a bare action token
-    assert c.kind != "note"
+    assert c.kind == "note"
+    assert c.note_text == ""
 
 
 def test_reorder_parses_slugs():

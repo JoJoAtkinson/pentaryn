@@ -95,6 +95,7 @@ def test_save_action_creates_pending_and_applies_minimum(window):
     assert pending[0].resolved is False
     assert pending[0].full_amount == 20
     assert pending[0].source == "stub_blast"
+    assert pending[0].round == window.encounter_state.round_num
 
 
 def test_hit_upgrades_pending_to_full(window):

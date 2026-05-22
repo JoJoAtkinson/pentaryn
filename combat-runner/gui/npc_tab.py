@@ -431,8 +431,9 @@ class NPCTab(QWidget):
         self.input.update_context(s.member_hp, s.max_hp)
         # Inform command input of the current sticky target so a leading-Space
         # keystroke can auto-insert the target id(s). The encounter state lives
-        # on the parent MainWindow.
-        mw = self.parent()
+        # on the top-level MainWindow — `self.parent()` is the QTabWidget's
+        # internal QStackedWidget, so use `self.window()` to reach the window.
+        mw = self.window()
         enc = getattr(mw, "encounter_state", None)
         if enc is not None:
             self.input.set_current_target(list(enc.current_target))

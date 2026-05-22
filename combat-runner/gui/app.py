@@ -251,9 +251,9 @@ def _parse_npc_details(md_path: Path, slug: str, name: str) -> dict:
     immunities: list[str] = []
     if immunity_match:
         immunities.append(immunity_match.group(1).lower())
-    # G4(b): fold in standard 5e creature-type-derived damage immunities so the
-    # LLM review sees them structured rather than having to infer from the
-    # name. We scan the stat sheet for a creature-type keyword. The review
+    # Fold in standard 5e creature-type-derived damage immunities so the LLM
+    # review sees them structured rather than having to infer from the name.
+    # We scan the stat sheet for a creature-type keyword. The review
     # prompt still applies its own type-knowledge as a backstop — this just
     # makes the common cases (undead/construct) reliable.
     type_immunities = {

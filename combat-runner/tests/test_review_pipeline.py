@@ -73,7 +73,7 @@ def test_review_silent_returns_no_error(controller_with_fake_client):
 # ── GAP coverage: the review user_msg now carries real context ────────────────
 
 def test_review_user_msg_contains_before_after_hp():
-    """GAP 1 — the review context shows the real before→after HP delta."""
+    """The review context shows the real before→after HP delta."""
     from gui.llm_controller import LLMController
 
     msg = LLMController.build_review_user_msg(
@@ -88,7 +88,7 @@ def test_review_user_msg_contains_before_after_hp():
 
 
 def test_review_user_msg_contains_immunities():
-    """GAP 2 — each target's damage immunities appear in the context."""
+    """Each target's damage immunities appear in the context."""
     from gui.llm_controller import LLMController
 
     msg = LLMController.build_review_user_msg(
@@ -107,7 +107,7 @@ def test_review_user_msg_contains_immunities():
 
 
 def test_review_user_msg_contains_all_targets():
-    """GAP 3 — a multi-target command lists ALL its targets, not just the first."""
+    """A multi-target command lists ALL its targets, not just the first."""
     from gui.llm_controller import LLMController
 
     msg = LLMController.build_review_user_msg(
@@ -129,7 +129,7 @@ def test_review_user_msg_contains_all_targets():
 
 
 def test_review_user_msg_contains_roster():
-    """GAP 4 — the full combatant roster (id/name/pc-vs-npc) is in the context."""
+    """The full combatant roster (id/name/pc-vs-npc) is in the context."""
     from gui.llm_controller import LLMController
 
     msg = LLMController.build_review_user_msg(
@@ -333,12 +333,14 @@ def test_run_path_uses_full_tool_set(controller_with_fake_client):
     )
 
 
-# ── G1-G10: enriched payload + prompt + pipeline ──────────────────────────────
+# ── Enriched payload + prompt + pipeline ──────────────────────────────
 
 
-def test_review_user_msg_carries_raw_amount():
-    """G5 — the RAW amount the DM typed appears distinctly in the context, even
-    when it differs from the applied delta."""
+def test_review_user_msg_carries_applied_amount_and_max_hp():
+    """An absurd amount stays reviewable: the applied amount and each target's
+    max HP both render, so the prompt's magnitude rule can flag e.g. 700 on a
+    32-HP target. There is no separate `raw_amount` field — the parser rejects
+    out-of-range amounts outright, so the applied amount IS the typed amount."""
     from gui.llm_controller import LLMController
 
     msg = LLMController.build_review_user_msg(
@@ -348,14 +350,13 @@ def test_review_user_msg_carries_raw_amount():
                             hp_before=32, hp_after=32, max_hp=32)],
         roster=[{"id": "2", "name": "Marwen", "kind": "pc"}],
         applied_direction="heal", applied_amount=700, log_tail="",
-        raw_amount=700,
     )
-    assert "700" in msg
-    assert "raw amount" in msg.lower()
+    assert "700" in msg              # the applied (== typed) amount
+    assert "32" in msg               # target max HP — the magnitude anchor
 
 
 def test_review_user_msg_carries_condition_durations():
-    """G7 — per-condition remaining durations appear in the context."""
+    """Per-condition remaining durations appear in the context."""
     from gui.llm_controller import LLMController
 
     msg = LLMController.build_review_user_msg(
@@ -374,7 +375,7 @@ def test_review_user_msg_carries_condition_durations():
 
 
 def test_review_user_msg_carries_id_fallback_flag():
-    """G8 — an id that did not cleanly resolve is surfaced in the context."""
+    """An id that did not cleanly resolve is surfaced in the context."""
     from gui.llm_controller import LLMController
 
     msg = LLMController.build_review_user_msg(
@@ -390,7 +391,7 @@ def test_review_user_msg_carries_id_fallback_flag():
 
 
 def test_review_user_msg_omits_id_block_when_no_fallbacks():
-    """PART-1 — a valid command (no id fallbacks) produces a payload with NO
+    """A valid command (no id fallbacks) produces a payload with NO
     id-resolution block at all, so the reviewer cannot reach for it as a
     catch-all. Covers both the None default and an explicit empty list."""
     from gui.llm_controller import LLMController
@@ -410,7 +411,7 @@ def test_review_user_msg_omits_id_block_when_no_fallbacks():
 
 
 def test_review_user_msg_includes_id_block_when_fallback_present():
-    """PART-1 — a genuinely malformed id (the fallback list is non-empty) still
+    """A genuinely malformed id (the fallback list is non-empty) still
     renders the id-resolution block so the real case keeps being flagged."""
     from gui.llm_controller import LLMController
 
@@ -427,7 +428,7 @@ def test_review_user_msg_includes_id_block_when_fallback_present():
 
 
 def test_review_prompt_gates_id_resolution_flag_to_block_presence():
-    """PART-1 — the prompt's id-resolution clause must be opt-in: it only fires
+    """The prompt's id-resolution clause must be opt-in: it only fires
     when the fallback block is present, and must forbid the catch-all use."""
     from gui.llm_controller import LLMController
 
@@ -440,7 +441,7 @@ def test_review_prompt_gates_id_resolution_flag_to_block_presence():
 
 
 def test_review_prompt_has_allegiance_gated_multitarget_rule():
-    """G2 — the prompt must say an all-enemy AoE is correct and only flag a
+    """The prompt must say an all-enemy AoE is correct and only flag a
     multi-target command that includes an ally/PC."""
     from gui.llm_controller import LLMController
 
@@ -451,7 +452,7 @@ def test_review_prompt_has_allegiance_gated_multitarget_rule():
 
 
 def test_review_prompt_has_type_immunity_and_undead_rule():
-    """G4 — the prompt instructs the review to apply type-based immunities and
+    """The prompt instructs the review to apply type-based immunities and
     names undead → necrotic explicitly."""
     from gui.llm_controller import LLMController
 
@@ -460,18 +461,18 @@ def test_review_prompt_has_type_immunity_and_undead_rule():
     assert "construct" in prompt
 
 
-def test_review_prompt_has_raw_amount_and_noop_rules():
-    """G5 + G6 — prompt flags absurd raw amounts and wrong-target no-ops."""
+def test_review_prompt_has_magnitude_and_noop_rules():
+    """The prompt flags absurd amounts (magnitude rule) and wrong-target
+    no-ops (a clean no-op delta does not excuse a wrong command)."""
     from gui.llm_controller import LLMController
 
     prompt = LLMController.REVIEW_SYSTEM_PROMPT.lower()
-    assert "raw amount" in prompt
-    # G6: a clean no-op delta does not excuse a wrong command
+    assert "applied amount" in prompt
     assert "no-op" in prompt
 
 
 def test_strip_review_prefix_removes_double_sigil():
-    """G10 — a leading '⟳ review:' the model emits is stripped so the logger
+    """A leading '⟳ review:' the model emits is stripped so the logger
     does not double-prefix."""
     from gui.llm_controller import LLMController
 
@@ -482,7 +483,7 @@ def test_strip_review_prefix_removes_double_sigil():
 
 
 def test_review_logs_no_double_prefix(controller_with_fake_client, tmp_path):
-    """G10 — end-to-end: when the model self-prefixes '⟳ review:', the logged
+    """End-to-end: when the model self-prefixes '⟳ review:', the logged
     line carries the sigil exactly once."""
     from gui.llm_controller import LLMController
 
@@ -514,7 +515,7 @@ def test_review_logs_no_double_prefix(controller_with_fake_client, tmp_path):
 
 
 def test_chat_loop_returns_last_text_on_cap_hit(controller_with_fake_client):
-    """G1 — on a tool-loop cap-hit, the last assistant text is RETURNED (not
+    """On a tool-loop cap-hit, the last assistant text is RETURNED (not
     discarded). A correction emitted before the cap survives."""
     from gui.llm_controller import LLMController
     import pathlib
@@ -556,7 +557,7 @@ def test_chat_loop_returns_last_text_on_cap_hit(controller_with_fake_client):
 
 
 def test_review_max_iterations_is_seven():
-    """G1 — the review iteration cap was raised to 7."""
+    """The review iteration cap was raised to 7."""
     from gui.llm_controller import LLMController
 
     assert LLMController.REVIEW_MAX_ITERATIONS == 7

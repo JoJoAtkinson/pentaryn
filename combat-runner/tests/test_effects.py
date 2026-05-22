@@ -102,7 +102,7 @@ def test_unknown_condition_returns_sentinel():
     assert "notacondition" not in npc.conditions
 
 
-# ─── CHANGE 1: Effect.members member-loop ────────────────────────────────────
+# ─── Effect.members member-loop ──────────────────────────────────────────────
 
 
 def _mob_es():
@@ -161,7 +161,7 @@ def test_members_explicit_heal():
     assert mob.member_hp[2] == 20
 
 
-# ─── CHANGE 2: reject member-scoped conditions ───────────────────────────────
+# ─── Reject member-scoped conditions ─────────────────────────────────────────
 
 
 def test_member_scoped_condition_is_rejected():
@@ -203,7 +203,7 @@ def test_bare_condition_no_members_applies_normally():
     assert "prone" in es.combatant_by_id("2").conditions
 
 
-# ─── CHANGE 3: condition duration refresh, not toggle-off ────────────────────
+# ─── Condition duration refresh, not toggle-off ──────────────────────────────
 
 
 def test_duration_refresh_while_stunned():

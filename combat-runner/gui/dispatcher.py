@@ -8,8 +8,9 @@ Grammar (see docs/superpowers/specs/2026-05-22-combat-command-grammar-design.md)
     <who> <stream>
 
   <who>  — the first token. A leading digit string is an explicit target
-           (digit-run split); leading whitespace / sigil / word resolves to
-           the current sticky target.
+           (digit-run split); a leading sigil / word resolves to the current
+           sticky target. (Whitespace is stripped before parsing — a leading
+           Space is consumed by the GUI command box as a target autocomplete.)
   <stream> — a left-to-right sequence of effect groups:
        undo / hit              -> bare-word effects
        <num> <dmg-tag…>        -> an `amount` group, qualified by tags
@@ -45,7 +46,7 @@ _DURATION_MAX = 100
 
 # Sigil-first patterns for out-of-band commands that can't be confused with
 # the `<who> <stream>` grammar: they start with a literal keyword or `/`.
-_NOTE_RE = re.compile(r"^note\s+(.+)$", re.IGNORECASE)
+_NOTE_RE = re.compile(r"^note(?:\s+(.+))?$", re.IGNORECASE)
 _REORDER_RE = re.compile(r"^/reorder\s+(.+)$", re.IGNORECASE)
 _QUIT_RE = re.compile(r"^/(quit|exit)$", re.IGNORECASE)
 
@@ -119,38 +120,45 @@ def parse(raw: str) -> ParsedCommand:
     """Parse a raw command string into a `ParsedCommand`."""
     raw = raw or ""
 
-    # CHANGE C (all inputs): collapse runs of internal whitespace; strip
-    # leading/trailing whitespace.  We do this on the raw string BEFORE
-    # checking out-of-band sigils so the note/slash paths also benefit from
-    # clean boundaries.
+    # Collapse runs of internal whitespace and strip the ends. Done on the raw
+    # string BEFORE the out-of-band sigil checks so the note/slash paths also
+    # get clean token boundaries.
     raw = re.sub(r"\s+", " ", raw).strip()
 
     # Out-of-band sigil forms — checked BEFORE the `<who>` path so they are
     # never accidentally routed to the LLM. These forms are unambiguous:
-    # a leading `note ` or `/` cannot start a valid `<who> <stream>` command.
-    s = raw  # already stripped
-    if m := _NOTE_RE.match(s):
-        return ParsedCommand(kind="note", raw=raw, note_text=m.group(1).strip())
-    if m := _REORDER_RE.match(s):
+    # a leading `note` or `/` cannot start a valid `<who> <stream>` command.
+    if m := _NOTE_RE.match(raw):
+        return ParsedCommand(
+            kind="note", raw=raw, note_text=(m.group(1) or "").strip())
+    if m := _REORDER_RE.match(raw):
         slugs = [tok for tok in re.split(r"\s+", m.group(1).strip()) if tok]
         return ParsedCommand(kind="reorder", raw=raw, reorder_slugs=slugs)
-    if _QUIT_RE.match(s):
+    if _QUIT_RE.match(raw):
         return ParsedCommand(kind="quit", raw=raw)
+    # A leading `/` that matched none of the slash commands above is a mistyped
+    # slash command (`/qut`, `/quit5`) — never a valid `<who> <stream>`. Route
+    # it straight to `unparseable` rather than letting it fall through and be
+    # mis-read as an action verb.
+    if raw.startswith("/"):
+        return ParsedCommand(kind="unparseable", raw=raw)
 
-    # CHANGE C (non-note/slash): strip a single trailing sentence-punctuation
-    # char (`.`, `,`, `;`) so `2 8 melee.` parses like `2 8 melee`.
-    # Applied AFTER the note/slash check so note text is left verbatim.
-    raw = re.sub(r"[.,;]$", "", raw)
+    # Strip a single trailing sentence-punctuation char (`.`, `,`, `;`) so
+    # `2 8 melee.` parses like `2 8 melee`. Applied AFTER the note/slash checks
+    # so note text is left verbatim.
+    body = re.sub(r"[.,;]$", "", raw)
 
-    # CHANGE B: insert a space at every digit→letter boundary so that a
-    # missing-space typo like `8melee` becomes `8 melee`.  Only applies when
-    # the raw input is not a note or slash command (those were already returned
-    # above).  Letter→digit boundaries (e.g. the `m3` mob sigil) are NOT split.
-    raw = re.sub(r"(?<=\d)(?=[A-Za-z])", " ", raw)
+    # Insert a space at every digit→letter boundary so a missing-space typo
+    # like `8melee` becomes `8 melee`. Letter→digit boundaries (e.g. the `m3`
+    # mob sigil) are deliberately NOT split. This glue is single-direction: a
+    # chained typo like `8melee3prone` is only half-corrected and still ends up
+    # unparseable — the `m3`-preservation rule makes a fully-general fix
+    # impossible.
+    body = re.sub(r"(?<=\d)(?=[A-Za-z])", " ", body)
 
-    tokens = raw.split()
+    tokens = body.split()
 
-    cmd = ParsedCommand(kind="unparseable", raw=raw)
+    cmd = ParsedCommand(kind="unparseable", raw=body)
 
     if not tokens:
         return cmd
@@ -193,16 +201,28 @@ def parse(raw: str) -> ParsedCommand:
         # m<n> / m<digits> / m — mob-member modifier on the next effect.
         if (m := _MOB_RE.match(tok)) is not None:
             pending_members = _mob_members(m.group(1))
+            # A `0` member (from `m0` / `m00`) is invalid — members are
+            # 1-indexed. Route to the LLM rather than silently no-op it.
+            if any(mem < 1 for mem in pending_members):
+                ok = False
+                break
             i += 1
             continue
 
-        # bare words: undo / hit
+        # bare words: undo / hit. Neither can carry an `m<n>` mob-member
+        # selector — if one is pending, the command is off-grammar -> LLM.
         low = tok.lower()
         if low == "undo":
+            if pending_members is not None:
+                ok = False
+                break
             effects.append(Effect(kind="undo"))
             i += 1
             continue
         if low == "hit":
+            if pending_members is not None:
+                ok = False
+                break
             effects.append(Effect(kind="hit"))
             i += 1
             continue
@@ -239,8 +259,8 @@ def parse(raw: str) -> ParsedCommand:
                     ok = False
                     break
                 # Carry any pending member selection onto the condition so the
-                # applier (fix agent 2) can REJECT member-scoped conditions —
-                # the parser only carries the info, it never rejects here.
+                # applier can reject member-scoped conditions — the parser only
+                # carries the info, it never rejects here.
                 effects.append(Effect(
                     kind="condition",
                     condition=canonical,
@@ -252,7 +272,17 @@ def parse(raw: str) -> ParsedCommand:
                 i += 2
                 continue
 
-            # nothing / another number after -> action by number.
+            # nothing / another token after -> action by number. Three inputs
+            # route to the LLM instead of firing a wrong action: a second bare
+            # number (`2 5 3` is ambiguous), action `0` (panel hotkeys are
+            # 1-based), and a pending `m<n>` modifier (an action cannot be
+            # scoped to a single mob member).
+            if pending_members is not None:
+                ok = False
+                break
+            if number <= 0 or (nxt is not None and _NUMBER_RE.match(nxt)):
+                ok = False
+                break
             effects.append(Effect(kind="action", action_token=tok))
             i += 1
             continue
@@ -292,6 +322,10 @@ def parse(raw: str) -> ParsedCommand:
         # action-by-name is a single verb: it is only valid as the sole token
         # of the stream. Two bare words in a row don't chain (-> LLM).
         if n != 1:
+            ok = False
+            break
+        # An action cannot carry an `m<n>` mob-member selector -> LLM.
+        if pending_members is not None:
             ok = False
             break
         effects.append(Effect(kind="action", action_token=tok))

@@ -244,7 +244,7 @@ def test_enqueue_review_passes_real_applied_delta(window):
 
 
 def test_enqueue_review_multi_target_includes_all(window, tmp_path):
-    """GAP 3 — a multi-target command puts ALL targets in `affected`."""
+    """A multi-target command puts ALL targets in `affected`."""
     # Add a third combatant so we can target two at once.
     extra = _npc("Extra", "3", 30)
     window.encounter_state.npcs.append(extra)
@@ -334,7 +334,7 @@ def _capture_controller(window):
 
 
 def test_enqueue_review_carries_actor_and_per_combatant_kind(window):
-    """G2/G3 — the payload carries the acting combatant and each combatant's
+    """The payload carries the acting combatant and each combatant's
     allegiance (kind) so the review can reason about friendly fire."""
     captured = _capture_controller(window)
 
@@ -352,8 +352,8 @@ def test_enqueue_review_carries_actor_and_per_combatant_kind(window):
     assert all("kind" in r for r in captured["roster"])
 
 
-def test_enqueue_review_carries_raw_amount(window):
-    """G5 — the raw amount the DM typed is passed distinctly."""
+def test_enqueue_review_carries_applied_amount(window):
+    """The applied (== typed) amount rides into the review payload."""
     captured = _capture_controller(window)
 
     cmd = parse("2 25 melee")
@@ -361,11 +361,11 @@ def test_enqueue_review_carries_raw_amount(window):
     window._llm_pool.waitForDone(5000)
 
     assert captured, "review_command was never called"
-    assert captured["raw_amount"] == 25
+    assert captured["applied_amount"] == 25
 
 
 def test_enqueue_review_carries_condition_durations(window):
-    """G7 — each affected target's condition durations ride in `affected`."""
+    """Each affected target's condition durations ride in `affected`."""
     captured = _capture_controller(window)
 
     # Pre-seed an implausible duration on the target, then issue a mutating
@@ -386,11 +386,11 @@ def test_enqueue_review_carries_condition_durations(window):
 
 
 def test_enqueue_review_flags_malformed_id_fallback(window):
-    """G8 — a command using id `0` (resolves to actor-self) surfaces an
+    """A command using id `0` (resolves to actor-self) surfaces an
     id-resolution fallback flag in the payload."""
     captured = _capture_controller(window)
 
-    cmd = parse("0 @bloodied")
+    cmd = parse("0 @prone")
     assert cmd.target_ids == ["0"], f"precondition: {cmd.target_ids}"
     window._on_command(cmd)
     window._llm_pool.waitForDone(5000)
@@ -402,8 +402,30 @@ def test_enqueue_review_flags_malformed_id_fallback(window):
     )
 
 
+def test_enqueue_review_flags_unresolved_id_fallback(window):
+    """A genuinely malformed id — one that maps to no combatant — is surfaced
+    as an `(unresolved)` id-resolution fallback. The command must also mutate
+    at least one valid target so the review actually fires (a whole-command
+    no-op correctly skips review)."""
+    captured = _capture_controller(window)
+
+    # `13` run-splits to ids {1, 3}: id 1 exists (its HP mutates → review
+    # fires), id 3 does not exist (the malformed-id fallback under test).
+    cmd = parse("13 8 fire")
+    assert cmd.target_ids == ["1", "3"], f"precondition: {cmd.target_ids}"
+    window._on_command(cmd)
+    window._llm_pool.waitForDone(5000)
+
+    assert captured, "review_command was never called"
+    fallbacks = captured.get("id_fallbacks") or []
+    assert any(
+        fb["token"] == "3" and fb["resolved_to"] == "(unresolved)"
+        for fb in fallbacks
+    ), f"id 3 must be flagged as unresolved, got {fallbacks}"
+
+
 def test_enqueue_review_no_id_fallback_for_clean_ids(window):
-    """G8 — a command with a valid explicit id carries no fallback flag."""
+    """A command with a valid explicit id carries no fallback flag."""
     captured = _capture_controller(window)
 
     cmd = parse("2 10 melee")

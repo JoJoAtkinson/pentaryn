@@ -89,6 +89,34 @@ def test_set_target_sets_current_target_and_arrow(window):
     assert 1 in window.tabs.tabBar().arrow_indices()
 
 
+def test_set_target_propagates_to_command_inputs(window):
+    """A bare `set_target` pushes the new current target into EVERY tab's
+    command input so a leading-Space autocomplete works from any tab.
+
+    Regression: the input was wired to the current target via a wrong-parent
+    lookup (`self.parent()` → the QTabWidget's QStackedWidget, not the
+    MainWindow), so `set_current_target` was never called and Space always
+    reported 'no target'."""
+    window.tabs.setCurrentIndex(0)
+    _submit(window, "2")
+    for i in range(window.tabs.count()):
+        tab = window.tabs.widget(i)
+        assert tab.input._current_target_ids == ["2"], (
+            f"tab {i} input did not receive the current target"
+        )
+
+
+def test_sticky_targeted_command_propagates_to_command_inputs(window):
+    """A command carrying explicit target ids (`3 8 slash`) is sticky — it
+    updates current_target and that change reaches every tab's input too."""
+    window.tabs.setCurrentIndex(0)
+    _submit(window, "3 8 slash")
+    assert window.encounter_state.current_target == ["3"]
+    for i in range(window.tabs.count()):
+        tab = window.tabs.widget(i)
+        assert tab.input._current_target_ids == ["3"]
+
+
 # ─────────────────────────── current-target action ───────────────────────────
 
 
