@@ -72,9 +72,10 @@ class NPCState:
     # Recharge-ability tracking: action_name → "AVAILABLE" | "USED".
     recharges: dict[str, str] = field(default_factory=dict)
     # Per-action slot counters (streamline #6). Authoritative for "Once per day",
-    # "3/day", etc. Map: action_name → remaining_count. Missing key = either
-    # the action has no `slots` block OR the encounter just started (refilled).
-    # MainWindow initializes these from the action DB on encounter launch.
+    # "3/day", etc. Map: action_name → remaining_count. A missing key means the
+    # action has no `slots` block. MainWindow._seed_slots_remaining pre-fills
+    # this dict from the action DB at encounter construction, so every
+    # slots-bearing action is present (at full count) before its first use.
     slots_remaining: dict[str, int] = field(default_factory=dict)
 
     # Action chips that are USED for the current turn (e.g. bonus actions).

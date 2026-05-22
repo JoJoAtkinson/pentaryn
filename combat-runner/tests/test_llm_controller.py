@@ -148,6 +148,60 @@ def test_set_round_tool_rolls_back(encounter):
     assert encounter.round_num == 3
 
 
+def test_advance_round_tool_ticks_condition_durations(encounter):
+    """Regression for Fix C: the LLM advance_round tool used to bump the round
+    counter without ticking condition durations (the GUI button does). A
+    1-round condition must expire after one LLM advance_round."""
+    stalker = next(n for n in encounter.npcs if n.slug == "stalker")
+    stalker.add_condition("frightened", duration=1)
+    assert "frightened" in stalker.conditions
+
+    fake = FakeAnthropicClient([
+        FakeResponse(
+            content=[FakeContent(type="tool_use", name="advance_round", id="t1", input={})],
+            stop_reason="tool_use",
+        ),
+        FakeResponse(content=[FakeContent(type="text", text="Round advanced.")], stop_reason="end_turn"),
+    ])
+    ctrl = LLMController(encounter, log_path=str(encounter.log_path), client=fake)
+    ctrl.run("next round")
+    assert encounter.round_num == 2
+    # Duration ticked to 0 → condition auto-removed.
+    assert "frightened" not in stalker.conditions
+
+
+def test_set_round_forward_ticks_durations_but_rollback_does_not(encounter):
+    """Fix C: set_round moving the counter forward ticks durations; rolling it
+    back (mis-click correction) must NOT consume condition timers."""
+    stalker = next(n for n in encounter.npcs if n.slug == "stalker")
+
+    # Roll-back case: round 5 → 3 should not tick.
+    encounter.set_round(5)
+    stalker.add_condition("poisoned", duration=2)
+    fake_back = FakeAnthropicClient([
+        FakeResponse(
+            content=[FakeContent(type="tool_use", name="set_round", id="t1", input={"round_num": 3})],
+            stop_reason="tool_use",
+        ),
+        FakeResponse(content=[FakeContent(type="text", text="ok")], stop_reason="end_turn"),
+    ])
+    LLMController(encounter, log_path=str(encounter.log_path), client=fake_back).run("back to round 3")
+    assert encounter.round_num == 3
+    assert stalker.condition_durations.get("poisoned") == 2  # untouched
+
+    # Forward case: round 3 → 4 should tick once.
+    fake_fwd = FakeAnthropicClient([
+        FakeResponse(
+            content=[FakeContent(type="tool_use", name="set_round", id="t2", input={"round_num": 4})],
+            stop_reason="tool_use",
+        ),
+        FakeResponse(content=[FakeContent(type="text", text="ok")], stop_reason="end_turn"),
+    ])
+    LLMController(encounter, log_path=str(encounter.log_path), client=fake_fwd).run("forward to 4")
+    assert encounter.round_num == 4
+    assert stalker.condition_durations.get("poisoned") == 1
+
+
 def test_unknown_npc_returns_error(encounter):
     fake = FakeAnthropicClient([
         FakeResponse(

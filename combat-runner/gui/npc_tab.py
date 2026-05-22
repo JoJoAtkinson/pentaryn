@@ -13,6 +13,7 @@ action-execution helper).
 
 from __future__ import annotations
 
+import asyncio
 import importlib.util
 import json
 import re
@@ -20,7 +21,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -53,6 +54,87 @@ from .widgets.suggestion_bar import Suggestion, SuggestionBar
 # authoritative implementation. Importing on first use keeps the GUI launch
 # snappy (chromadb etc. is heavy at import time even if we don't need it).
 _dnd_roller = None
+
+
+# ───────── slot refresh-mode semantics ─────────
+#
+# A combat action's `slots` block declares a `refresh` mode. The validator
+# (scripts/combat_actions_db.py) accepts: round | turn | encounter |
+# short_rest | long_rest. The shipped data only uses `round`, `short_rest`
+# and `long_rest`, but we honor all five here so new data never silently
+# fails to refill.
+#
+# Pragmatic at-the-table semantics for a per-encounter tool:
+#   - `round` / `turn`  → refill at the start of every round (mid-combat).
+#   - `encounter`/`short_rest`/`long_rest` → these recharge on a rest, which
+#     the table normally takes BEFORE a fresh combat. So they arrive full at
+#     encounter start (seeded by app/state) and must NOT refill mid-encounter.
+#
+# `_ROUND_REFRESH_MODES` is the set whose slots the round-event handler is
+# allowed to top up. Anything outside it is intentionally left untouched.
+_ROUND_REFRESH_MODES = frozenset({"round", "turn"})
+
+
+# ───────── background dice-cache pre-warm ─────────
+
+# Keep the disk-backed quantum-RNG cache above this many numbers. A typical
+# combat action burns well under a dozen; staying above the low-water mark
+# means the synchronous roll on the UI thread always hits a warm cache and
+# never has to do a (blocking) network fetch.
+_CACHE_LOW_WATER = 64
+# Target fill level for a pre-warm fetch — a full quantum batch is 1024.
+_CACHE_REFILL_TARGET = 256
+
+# Shared thread pool for cache pre-warm workers. One global pool (not one per
+# tab) so N tabs don't spawn N redundant fetches; capped at a single thread so
+# concurrent fetches can't race on the roller's module-level cache list.
+_PREWARM_POOL: QThreadPool | None = None
+# Set while a pre-warm worker is in flight, so we don't queue duplicates.
+_PREWARM_IN_FLIGHT = False
+
+
+def _prewarm_pool() -> QThreadPool:
+    global _PREWARM_POOL
+    if _PREWARM_POOL is None:
+        _PREWARM_POOL = QThreadPool()
+        _PREWARM_POOL.setMaxThreadCount(1)
+    return _PREWARM_POOL
+
+
+class _PrewarmSignals(QObject):
+    """Signals for a cache pre-warm worker. A QRunnable can't own signals, so
+    they live on this QObject (mirrors suggestion_driver._WorkerSignals)."""
+
+    done = Signal(bool)  # success flag — emitted on the GUI thread
+
+
+class _CachePrewarmWorker(QRunnable):
+    """Off-thread top-up of the dnd_roller quantum-RNG cache.
+
+    Runs `_ensure_numbers` (async) inside a private event loop on a worker
+    thread. If the network is unavailable the roller falls back to local RNG
+    internally; either way this never blocks the UI thread. The synchronous
+    roll path stays synchronous — it just always finds a warm cache.
+    """
+
+    def __init__(self, target: int, signals: _PrewarmSignals) -> None:
+        super().__init__()
+        self._target = target
+        self._signals = signals
+        self.setAutoDelete(True)
+
+    def run(self) -> None:  # executes on a pool worker thread
+        ok = False
+        try:
+            roller = _get_roller()
+            ok = bool(asyncio.run(roller._ensure_numbers(self._target)))
+        except Exception:  # noqa: BLE001 — offline / fetch failure must not crash
+            ok = False
+        try:
+            self._signals.done.emit(ok)
+        except RuntimeError:
+            # Signals object already torn down (app closing) — nothing to do.
+            pass
 
 
 def _get_roller():
@@ -152,8 +234,17 @@ class NPCTab(QWidget):
         if self.event_bus is not None:
             self.event_bus.subscribe("round_advanced", self._on_round_event)
 
+        # Signals object for cache pre-warm workers. Parented to `self` so it
+        # is torn down with the tab; workers emit `done` back here.
+        self._prewarm_signals = _PrewarmSignals(self)
+        self._prewarm_signals.done.connect(self._on_prewarm_done)
+
         self._build_ui()
         self._refresh()
+
+        # Cold-boot warm-up: top up the dice cache off-thread now, so the
+        # first roll of the session never has to fetch on the UI thread.
+        self._maybe_prewarm_cache()
 
     # ─────────── UI construction ───────────
 
@@ -418,6 +509,41 @@ class NPCTab(QWidget):
             self.llm_fallback_requested.emit(parsed.raw, parsed)
             self._append_log(f"<span style='color:#6c8eba'>(routing to LLM: {parsed.raw!r})</span>")
 
+    # ─────────── dice-cache pre-warm ───────────
+
+    def _cache_level(self) -> int | None:
+        """Current number of cached random numbers, or None if unknown
+        (roller not importable). Reads the roller's module-level cache list."""
+        try:
+            roller = _get_roller()
+            return len(roller._number_cache)
+        except Exception:  # noqa: BLE001
+            return None
+
+    def _maybe_prewarm_cache(self) -> None:
+        """If the dice cache has run low, top it up on a background thread.
+
+        Keeps the synchronous roll on the UI thread fast: by the time the next
+        roll happens the cache is warm, so `roll_combat_action` never has to
+        do a (blocking, ~1s rate-limited / ~10s timeout) network fetch. Safe
+        to call liberally — it no-ops when the cache is healthy or a pre-warm
+        is already in flight.
+        """
+        global _PREWARM_IN_FLIGHT
+        if _PREWARM_IN_FLIGHT:
+            return
+        level = self._cache_level()
+        if level is None or level >= _CACHE_LOW_WATER:
+            return
+        _PREWARM_IN_FLIGHT = True
+        worker = _CachePrewarmWorker(_CACHE_REFILL_TARGET, self._prewarm_signals)
+        _prewarm_pool().start(worker)
+
+    def _on_prewarm_done(self, ok: bool) -> None:  # noqa: ARG002 — slot signature
+        """Pre-warm worker finished (success or graceful offline fallback)."""
+        global _PREWARM_IN_FLIGHT
+        _PREWARM_IN_FLIGHT = False
+
     # ─────────── action execution ───────────
 
     def _run_action(self, action_name: str) -> None:
@@ -433,6 +559,10 @@ class NPCTab(QWidget):
         except Exception as exc:
             self._append_log(f"<span style='color:#ff5252'>ERROR running {action_name}: {exc}</span>")
             return
+        finally:
+            # The roll just consumed numbers from the dice cache. Top it back
+            # up off-thread now so the *next* roll never blocks the UI thread.
+            self._maybe_prewarm_cache()
 
         if "error" in result:
             self._append_log(f"<span style='color:#ff5252'>{result['error']}</span>")
@@ -595,15 +725,25 @@ class NPCTab(QWidget):
             )
             if self.event_bus is not None:
                 self.event_bus.emit(condition_event(self.npc_state.slug, cond, applied=False))
-        # Refresh per-round slots (streamline #6)
+        # Refresh per-round slots (streamline #6).
+        #
+        # Only `round`/`turn` refresh modes refill on a round event. The
+        # rest-based modes (`encounter`/`short_rest`/`long_rest`) recharge on
+        # a rest, not mid-combat — they arrive full at encounter start and are
+        # intentionally left alone here. See `_ROUND_REFRESH_MODES` above.
         refreshed_actions: list[str] = []
         for action in self.actions:
             slot_cfg = action.get("slots") or {}
-            if isinstance(slot_cfg, dict) and slot_cfg.get("refresh") == "round":
-                action_name = action.get("action")
-                if action_name and self.npc_state.slots_remaining.get(action_name, slot_cfg["count"]) < slot_cfg["count"]:
-                    self.npc_state.slots_remaining[action_name] = slot_cfg["count"]
-                    refreshed_actions.append(action_name)
+            if not isinstance(slot_cfg, dict):
+                continue
+            refresh_mode = slot_cfg.get("refresh")
+            count = slot_cfg.get("count")
+            if not count or refresh_mode not in _ROUND_REFRESH_MODES:
+                continue
+            action_name = action.get("action")
+            if action_name and self.npc_state.slots_remaining.get(action_name, count) < count:
+                self.npc_state.slots_remaining[action_name] = count
+                refreshed_actions.append(action_name)
         for n in refreshed_actions:
             self._append_log(f"<span style='color:#66bb6a'>{n} slots refreshed</span>")
         if expired or refreshed_actions:
