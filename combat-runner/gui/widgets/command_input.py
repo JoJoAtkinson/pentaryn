@@ -1,10 +1,10 @@
-"""Command input widget — sigil-aware text field with live preview signals.
+"""Command input widget — grammar-aware text field with live preview signals.
 
 Reads as the user types, emits:
   preview_changed(member_idx: int, projected_hp: int | None)
-      Fired on every keystroke when the active text is a `-N` or `+N` (or
-      mob-targeted variant). Projected_hp is None when no preview should
-      be shown (cleared).
+      Fired on every keystroke when the active text is a parseable amount
+      effect in the new `<who> <stream>` grammar. Projected_hp is None
+      when no preview should be shown (cleared).
   submitted(text: str)
       Fired on Return/Enter. Caller parses and dispatches.
 
@@ -56,29 +56,15 @@ class _LastTokenCompleter(QCompleter):
         return [tokens[-1]]
 
 
-# Match the dispatcher patterns we need for live preview (keep narrow — only
-# damage/heal trigger preview).
-_PREVIEW_RE = re.compile(
-    r"""
-    ^
-    (?:m(?P<member>[1-9]\d*)\s+)?  # optional mob target (1-indexed; reject m0)
-    (?P<sign>[-+])(?P<amount>\d+)  # damage (-) or heal (+)
-    (?:\s+\w+)?                    # optional damage type
-    $
-    """,
-    re.VERBOSE | re.IGNORECASE,
-)
-
-
 class CommandInput(QLineEdit):
-    """qt-material-themed input with sigil-aware live preview."""
+    """Grammar-aware input with live HP preview for the `<who> <stream>` grammar."""
 
     preview_changed = Signal(object, object)  # (member_idx_or_None, projected_hp_or_None)
     submitted = Signal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setPlaceholderText("attack · -18 · +10 · @prone · @stun 5 · m3 -5 · note ... · /reorder ...")
+        self.setPlaceholderText("2 8 melee · 2 2 · 3 prone · note ... · /reorder ...")
         self.setObjectName("CommandInput")
         self.setMinimumHeight(34)
 
@@ -124,46 +110,49 @@ class CommandInput(QLineEdit):
     # ─────────── live preview ───────────
 
     def _on_text_changed(self, text: str) -> None:
-        """On every keystroke, see if the text describes a damage or heal
-        that we should preview. Emit `preview_changed`."""
-        m = _PREVIEW_RE.match(text.strip())
-        if not m:
+        """On every keystroke, check whether the text is an amount effect in the
+        new `<who> <stream>` grammar. If so, emit a preview; otherwise clear it.
+
+        Uses `dispatcher.parse()` directly so the preview and the parser can
+        never diverge: if the dispatcher wouldn't apply the command, the
+        overlay won't fire.
+        """
+        from ..dispatcher import parse
+
+        cmd = parse(text)
+        if cmd.kind != "command" or len(cmd.effects) != 1:
+            self.preview_changed.emit(None, None)
+            return
+        eff = cmd.effects[0]
+        if eff.kind != "amount":
             self.preview_changed.emit(None, None)
             return
 
-        amount = int(m.group("amount"))
-        sign = m.group("sign")
-        member_arg = m.group("member")
+        amount = eff.amount
+        is_heal = eff.amount_tags.get("direction") == "heal"
 
-        # Determine target member (0-indexed)
-        if member_arg:
-            target_idx = int(member_arg) - 1
+        # Determine target member (0-indexed). `eff.member` is 1-indexed from
+        # `m<n>` in the stream; None means default routing.
+        if eff.member is not None:
+            target_idx = eff.member - 1
             if not (0 <= target_idx < self._member_count):
                 # Out-of-range target → no preview (parser will catch it on submit)
                 self.preview_changed.emit(None, None)
                 return
         else:
-            # Default routing matches state.NPCState._resolve_*_target rules
-            if sign == "-":
-                # damage → highest-numbered alive
-                alive = [i for i, h in enumerate(self._member_hp) if h > 0]
-                if not alive:
-                    self.preview_changed.emit(None, None)
-                    return
-                target_idx = alive[-1]
-            else:
-                # heal → lowest-numbered alive
-                alive = [i for i, h in enumerate(self._member_hp) if h > 0]
-                if not alive:
-                    self.preview_changed.emit(None, None)
-                    return
-                target_idx = alive[0]
+            alive = [i for i, h in enumerate(self._member_hp) if h > 0]
+            if not alive:
+                self.preview_changed.emit(None, None)
+                return
+            # Match state.NPCState default-routing rules:
+            # damage → highest-numbered alive; heal → lowest-numbered alive.
+            target_idx = alive[0] if is_heal else alive[-1]
 
         current = self._member_hp[target_idx]
-        if sign == "-":
-            projected = max(0, current - amount)
-        else:
+        if is_heal:
             projected = min(self._max_hp_per_member, current + amount)
+        else:
+            projected = max(0, current - amount)
         self.preview_changed.emit(target_idx, projected)
 
     # ─────────── autocomplete popup ───────────

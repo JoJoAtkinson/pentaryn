@@ -41,6 +41,12 @@ _MOB_RE = re.compile(r"^m([1-9]\d*)$", re.IGNORECASE)
 _AMOUNT_MIN, _AMOUNT_MAX = 1, 1000
 _DURATION_MAX = 100
 
+# Sigil-first patterns for out-of-band commands that can't be confused with
+# the `<who> <stream>` grammar: they start with a literal keyword or `/`.
+_NOTE_RE = re.compile(r"^note\s+(.+)$", re.IGNORECASE)
+_REORDER_RE = re.compile(r"^/reorder\s+(.+)$", re.IGNORECASE)
+_QUIT_RE = re.compile(r"^/(quit|exit)$", re.IGNORECASE)
+
 
 def _effects_in_bounds(effects: list[Effect]) -> bool:
     """True if every amount / condition-duration in *effects* is within range."""
@@ -92,6 +98,19 @@ def _is_condition(token: str) -> bool:
 def parse(raw: str) -> ParsedCommand:
     """Parse a raw command string into a `ParsedCommand`."""
     raw = raw or ""
+
+    # Out-of-band sigil forms — checked BEFORE the `<who>` path so they are
+    # never accidentally routed to the LLM. These forms are unambiguous:
+    # a leading `note ` or `/` cannot start a valid `<who> <stream>` command.
+    s = raw.strip()
+    if m := _NOTE_RE.match(s):
+        return ParsedCommand(kind="note", raw=raw, note_text=m.group(1).strip())
+    if m := _REORDER_RE.match(s):
+        slugs = [tok for tok in re.split(r"\s+", m.group(1).strip()) if tok]
+        return ParsedCommand(kind="reorder", raw=raw, reorder_slugs=slugs)
+    if _QUIT_RE.match(s):
+        return ParsedCommand(kind="quit", raw=raw)
+
     use_current = bool(raw) and raw[0].isspace()
     tokens = raw.split()
 

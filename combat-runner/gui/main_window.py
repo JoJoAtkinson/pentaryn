@@ -997,6 +997,9 @@ class MainWindow(QMainWindow):
 
         Routes by `cmd.kind`:
           * ``unparseable`` → the LLM fallback path (raw text).
+          * ``note``        → append a DM-only log entry; no LLM, no review.
+          * ``reorder``     → call `_handle_reorder_request`; no LLM, no review.
+          * ``quit``        → close the window.
           * ``set_target``  → resolve `target_ids`, set `current_target`,
                               jump to the first target tab, refresh the arrow.
           * ``command``     → snapshot, resolve targets, apply each Effect,
@@ -1007,6 +1010,21 @@ class MainWindow(QMainWindow):
             self._recent_commands.append(cmd.raw)
             if len(self._recent_commands) > 10:
                 self._recent_commands = self._recent_commands[-10:]
+
+        # --- out-of-band commands (no LLM, no snapshot) ---
+        if cmd.kind == "note":
+            self._append_to_active_tab(
+                f"<span style='color:#90caf9'>📝 {cmd.note_text}</span>"
+            )
+            return
+
+        if cmd.kind == "reorder":
+            self._handle_reorder_request(cmd.reorder_slugs)
+            return
+
+        if cmd.kind == "quit":
+            self.close()
+            return
 
         if cmd.kind == "unparseable":
             from .llm_controller import build_correction_context

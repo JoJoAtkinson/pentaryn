@@ -24,7 +24,7 @@ class Effect:
     # kind in ("hit", "undo") -> no extra fields
 
 
-CommandKind = Literal["command", "set_target", "unparseable"]
+CommandKind = Literal["command", "set_target", "unparseable", "note", "reorder", "quit"]
 
 
 @dataclass
@@ -34,3 +34,8 @@ class ParsedCommand:
     target_ids: list[str] = field(default_factory=list)  # explicit ids; may contain "0"
     use_current: bool = False           # True when <who> resolved to the current target
     effects: list[Effect] = field(default_factory=list)
+    # kind == "note"
+    note_text: str = ""
+    # kind == "reorder"
+    reorder_slugs: list[str] = field(default_factory=list)
+    # kind in ("quit",) -> no extra fields
