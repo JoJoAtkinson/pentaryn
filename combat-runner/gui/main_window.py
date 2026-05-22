@@ -16,6 +16,7 @@ from __future__ import annotations
 import dataclasses
 import importlib.util
 import json
+import os
 import sys
 import threading
 from datetime import datetime
@@ -37,19 +38,32 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .command_model import Effect, ParsedCommand
+from .effects import (
+    _CONDITION_UNKNOWN_SENTINEL,
+    apply_condition_effect,
+    apply_effect,
+    apply_hit,
+    apply_uncertain_damage,
+    clear_stale_pending,
+)
 from .event_bus import (
     Event,
     EventBus,
     TriggerMatch,
     TriggerMatcher,
     WatchMatcher,
+    bloodied_event,
     collect_triggers_from_db,
     collect_watches_from_db,
+    condition_event,
+    damage_event,
+    death_event,
+    heal_event,
     round_event,
 )
-from .command_model import Effect, ParsedCommand
-from .effects import _CONDITION_UNKNOWN_SENTINEL, apply_effect, apply_hit
 from .history import UndoStack
+from .matching import fuzzy_match_one
 from .npc_tab import NPCTab
 from .state import EncounterState, NPCState, deserialize_encounter, serialize_encounter
 from .suggestion_driver import SuggestionDriver
@@ -135,7 +149,7 @@ class _LLMRunWorker(_LLMWorkerBase):
                 dispatch_fn=self._marshalled_dispatch,
             )
         except Exception as exc:  # noqa: BLE001
-            from .llm_controller import RunResult
+            from .llm_controller import RunResult  # local: cycle-breaker (llm_controller → main_window)
             result = RunResult(error=f"LLM worker crashed: {exc}")
         self._signals.finished.emit(result)
 
@@ -173,7 +187,7 @@ class _LLMReviewWorker(_LLMWorkerBase):
                 dispatch_fn=self._marshalled_dispatch,
             )
         except Exception as exc:  # noqa: BLE001
-            from .llm_controller import RunResult
+            from .llm_controller import RunResult  # local: cycle-breaker (llm_controller → main_window)
             result = RunResult(error=f"review crashed: {exc}")
         self._signals.finished.emit(result)
 
@@ -455,7 +469,6 @@ class MainWindow(QMainWindow):
         # A pending effect from a prior round is stale — resolve it (the
         # default "do nothing" outcome is a successful save / a miss). This
         # also clears its unresolved marker. Spec §4.
-        from .effects import clear_stale_pending
         stale = clear_stale_pending(
             self.encounter_state, self.encounter_state.round_num
         )
@@ -525,7 +538,7 @@ class MainWindow(QMainWindow):
         npc = npcs.pop(from_idx)
         npcs.insert(to_idx, npc)
         self.encounter_state.active_tab_index = self.tabs.currentIndex()
-        # Tab indices shifted — re-map current_target ids onto the new layout.
+        # Indices shifted — repaint the targeting arrow against the new layout.
         self._refresh_target_arrow()
 
     def _on_tab_state_changed(self) -> None:
@@ -628,10 +641,6 @@ class MainWindow(QMainWindow):
             return
         new_idx = (self.tabs.currentIndex() + direction) % self.tabs.count()
         self.tabs.setCurrentIndex(new_idx)
-
-    def _jump_to_tab(self, idx: int) -> None:
-        if 0 <= idx < self.tabs.count():
-            self.tabs.setCurrentIndex(idx)
 
     def _handle_reorder_request(self, new_slugs: list[str]) -> None:
         """Handle `/reorder slug1 slug2 ...` from any tab."""
@@ -864,7 +873,6 @@ class MainWindow(QMainWindow):
         Auto-PASS when running under the offscreen Qt platform (i.e. headless
         test runs) so blocking modals can't deadlock pytest. The real GUI runs
         under cocoa/xcb/etc. and uses the full dialog."""
-        import os
         if os.environ.get("QT_QPA_PLATFORM") == "offscreen":
             return None
         dlg = ReactionPromptDialog(event_summary=summary, matches=rows, parent=self)
@@ -1027,7 +1035,7 @@ class MainWindow(QMainWindow):
             return
 
         if cmd.kind == "unparseable":
-            from .llm_controller import build_correction_context
+            from .llm_controller import build_correction_context  # local: cycle-breaker (llm_controller → main_window)
             correction_ctx = build_correction_context(
                 state_dict=serialize_encounter(self.encounter_state),
                 recent_commands=self._recent_commands,
@@ -1150,10 +1158,23 @@ class MainWindow(QMainWindow):
                 fragments = apply_hit(self.encounter_state, ids)
                 self._log_fragments(fragments)
                 continue
-            # amount / condition → effects.apply_effect.
+            # amount → effects.apply_effect.
             # Snapshot HP per-target first so skipped no-ops (out-of-range mob
             # member etc.) emit no bus events — only targets whose HP actually
             # moved get a damage/heal event.
+            # condition → apply_condition_effect, which also returns the
+            # authoritative per-target applied/removed direction.
+            if effect.kind == "condition":
+                fragments, cond_direction = apply_condition_effect(
+                    self.encounter_state, effect, target_ids=ids
+                )
+                self._log_fragments(fragments)
+                # Only fire bus events when at least one condition was toggled.
+                # If _apply_condition returned the sentinel (unknown condition),
+                # fragments will contain it and we must NOT fire or auto-save.
+                if not any(_CONDITION_UNKNOWN_SENTINEL in frag for frag in fragments):
+                    self._emit_condition_events(effect, ids, cond_direction)
+                continue
             hp_before = {
                 cid: c.hp
                 for cid in ids
@@ -1179,15 +1200,6 @@ class MainWindow(QMainWindow):
                             target_c.in_melee = True
                     if actor is not None:
                         actor.in_melee = True
-            elif effect.kind == "condition":
-                # Only fire bus events when the condition actually applied.
-                # If _apply_condition returned the sentinel (unknown condition),
-                # fragments will contain it and we must NOT fire or auto-save.
-                condition_applied = not any(
-                    _CONDITION_UNKNOWN_SENTINEL in frag for frag in fragments
-                )
-                if condition_applied:
-                    self._emit_condition_events(effect, ids)
 
         self._repaint_all_tabs()
         self._refresh_target_arrow()
@@ -1276,10 +1288,17 @@ class MainWindow(QMainWindow):
             actions = self._tab_action_surfaces.get(id(tab), [])
             action_name = self._resolve_action_token(token, actions)
             if action_name is None:
-                self._append_to_active_tab(
-                    f"<span style='color:#ff9800'>no action {token!r} on "
-                    f"{combatant.name}</span>"
-                )
+                if token.isdigit():
+                    n = len(actions)
+                    self._append_to_active_tab(
+                        f"<span style='color:#ff9800'>action #{token} out of range "
+                        f"(1-{n}) on {combatant.name}</span>"
+                    )
+                else:
+                    self._append_to_active_tab(
+                        f"<span style='color:#ff9800'>no action {token!r} on "
+                        f"{combatant.name}</span>"
+                    )
                 continue
             # Run the action — `run_action_externally` returns the parsed
             # roll_combat_action result, including the structured `rolls`
@@ -1319,7 +1338,6 @@ class MainWindow(QMainWindow):
         # apply_uncertain_damage expects "half" / "none".
         on_save_raw = str(rolls.get("on_save", "none")).strip().lower()
         on_save = "half" if on_save_raw == "half" else "none"
-        from .effects import apply_uncertain_damage
         fragments = apply_uncertain_damage(
             self.encounter_state,
             combatant_id,
@@ -1337,8 +1355,8 @@ class MainWindow(QMainWindow):
         """Resolve an `action_token` against an NPC's action surface.
 
         A digit string is a 1-based panel index. Otherwise the token is
-        matched, tightest-first: exact action-name → exact `verbs` alias →
-        unique prefix → unique substring → closest difflib match. Returns the
+        matched via ``matching.fuzzy_match_one`` (5-strategy tightest-first:
+        exact → verbs alias → prefix → substring → difflib). Returns the
         canonical action name, or None.
         """
         if not actions:
@@ -1348,44 +1366,14 @@ class MainWindow(QMainWindow):
             if 0 <= idx < len(actions):
                 return actions[idx].get("action")
             return None
-        q = token.lower().strip()
         names = [a.get("action", "") for a in actions if a.get("action")]
-        norm = {n: n.lower().replace("_", " ") for n in names}
-
-        exact = [n for n in names if norm[n] == q or n.lower() == q]
-        if exact:
-            return exact[0]
-        # Exact match against an action's authored `verbs` aliases
-        # (e.g. 'grab' → the grapple action's verbs list).
-        for a in actions:
-            verbs = [v.lower() for v in (a.get("verbs") or [])]
-            if q in verbs and a.get("action"):
-                return a["action"]
-        prefix = [n for n in names if norm[n].startswith(q) or n.lower().startswith(q)]
-        if len(prefix) == 1:
-            return prefix[0]
-        if not prefix:
-            sub = [n for n in names if q in norm[n] or q in n.lower()]
-            if len(sub) == 1:
-                return sub[0]
-        # Last resort: closest difflib match (handles abbreviations / typos
-        # like 'grab' → 'grapple', 'attaccck' → 'attack'). The 0.5 cutoff is
-        # deliberately loose — exact/prefix/substring already caught the easy
-        # cases, so this only fires for genuine near-misses.
-        import difflib
-        close = difflib.get_close_matches(q, [norm[n] for n in names], n=1, cutoff=0.5)
-        if close:
-            for n in names:
-                if norm[n] == close[0]:
-                    return n
-        return None
+        aliases = {a.get("action", ""): a.get("verbs") or [] for a in actions if a.get("action")}
+        return fuzzy_match_one(token, names, aliases=aliases)
 
     def _emit_amount_events(self, effect: Effect, target_ids: list[str]) -> None:
         """Fire damage/heal/bloodied/death events for an applied amount."""
         if self.event_bus is None:
             return
-        from .event_bus import bloodied_event, damage_event, death_event, heal_event
-
         is_heal = effect.amount_tags.get("direction") == "heal"
         dtype = effect.amount_tags.get("type")
         delivery = effect.amount_tags.get("delivery")
@@ -1405,19 +1393,26 @@ class MainWindow(QMainWindow):
                 if combatant.is_dead:
                     self.event_bus.emit(death_event(combatant.slug))
 
-    def _emit_condition_events(self, effect: Effect, target_ids: list[str]) -> None:
-        """Fire condition_applied / condition_removed events."""
+    def _emit_condition_events(
+        self,
+        effect: Effect,
+        target_ids: list[str],
+        direction: dict[str, bool],
+    ) -> None:
+        """Fire condition_applied / condition_removed events.
+
+        ``direction`` is a ``{combatant_id: now_active}`` dict returned
+        directly by ``apply_condition_effect`` — the authoritative toggle
+        direction from ``toggle_condition``, not re-derived from a substring
+        scan of ``combatant.conditions``.
+        """
         if self.event_bus is None:
             return
-        from .event_bus import condition_event
         for cid in target_ids:
             combatant = self.encounter_state.combatant_by_id(cid)
             if combatant is None:
                 continue
-            applied = any(
-                effect.condition in c or c == effect.condition
-                for c in combatant.conditions
-            )
+            applied = direction.get(cid, False)
             self.event_bus.emit(
                 condition_event(combatant.slug, effect.condition, applied=applied)
             )
@@ -1569,7 +1564,7 @@ class MainWindow(QMainWindow):
     def _open_srd_import(self) -> None:
         """Encounter → Add NPC from SRD… dialog. After import the user has to
         Switch encounters to pick up the new NPC (we don't hot-reload yet)."""
-        from .widgets.srd_monster_import import SrdMonsterImportDialog
+        from .widgets.srd_monster_import import SrdMonsterImportDialog  # local: optional heavy dialog, not always needed
         dlg = SrdMonsterImportDialog(default_encounter_root=self.encounter_state.root, parent=self)
 
         def _after_import(slug: str, md_path: str) -> None:

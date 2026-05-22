@@ -51,13 +51,31 @@ def apply_effect(
     if kind == "amount":
         return _apply_amount(state, effect, target_ids)
     if kind == "condition":
-        return _apply_condition(state, effect, target_ids)
+        fragments, _ = _apply_condition(state, effect, target_ids)
+        return fragments
     if kind in ("action", "hit", "undo"):
         raise NotImplementedError(
             f"apply_effect: kind={kind!r} is not handled here — "
             "use the dedicated handler (Tasks 8 / 10)."
         )
     raise ValueError(f"apply_effect: unknown effect kind {kind!r}")
+
+
+def apply_condition_effect(
+    state: EncounterState,
+    effect: Effect,
+    *,
+    target_ids: list[str],
+) -> tuple[list[str], dict[str, bool]]:
+    """Like ``apply_effect`` for condition effects, but also returns a
+    ``per_target_applied`` dict mapping each combatant id to the direction
+    (``True`` = condition applied, ``False`` = removed).
+
+    Used by ``MainWindow._handle_command`` so ``_emit_condition_events`` can
+    fire the authoritative direction instead of re-deriving it from a
+    substring scan of ``combatant.conditions``.
+    """
+    return _apply_condition(state, effect, target_ids)
 
 
 # ─── amount ──────────────────────────────────────────────────────────────────
@@ -122,8 +140,14 @@ def _apply_condition(
     state: EncounterState,
     effect: Effect,
     target_ids: list[str],
-) -> list[str]:
+) -> tuple[list[str], dict[str, bool]]:
     """Apply or toggle a condition effect.
+
+    Returns ``(fragments, per_target_applied)`` where ``per_target_applied``
+    maps each combatant id to the authoritative applied/removed direction
+    (``True`` = condition just applied, ``False`` = removed).  The direction
+    comes directly from ``toggle_condition``'s return value — no re-inspection
+    of ``combatant.conditions`` needed.
 
     If ``effect.condition`` is not a recognized catalog name the function
     returns a list containing ``_CONDITION_UNKNOWN_SENTINEL`` (a ``warn:``
@@ -136,15 +160,19 @@ def _apply_condition(
     indicates a bug or an LLM-authored effect with a bad name — fail loud.
     """
     fragments: list[str] = []
+    per_target_applied: dict[str, bool] = {}
     canonical = canonicalize_condition(effect.condition)
 
     if canonical is None:
         # Fail loud: surface a warning AND return the sentinel so the caller
         # knows not to fire bus events or save.
-        return [
-            f"warn: {_CONDITION_UNKNOWN_SENTINEL}: unknown condition "
-            f"{effect.condition!r}"
-        ]
+        return (
+            [
+                f"warn: {_CONDITION_UNKNOWN_SENTINEL}: unknown condition "
+                f"{effect.condition!r}"
+            ],
+            {},
+        )
 
     # duration to apply when toggling ON.  Default is 1 round.
     # A duration of None OR <= 0 (e.g. a parsed `3 0 stun`) is treated as the
@@ -160,13 +188,14 @@ def _apply_condition(
             continue
 
         now_active = combatant.toggle_condition(canonical, duration=applied_duration)
+        per_target_applied[cid] = now_active
         if now_active:
             dur_str = f" ({applied_duration}r)" if applied_duration else ""
             fragments.append(f"{combatant.name} → {canonical}{dur_str}")
         else:
             fragments.append(f"{combatant.name} ← {canonical} removed")
 
-    return fragments
+    return fragments, per_target_applied
 
 
 # ─── uncertain damage + hit upgrade ──────────────────────────────────────────

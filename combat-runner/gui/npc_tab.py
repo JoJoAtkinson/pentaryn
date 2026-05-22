@@ -38,12 +38,9 @@ from .event_bus import (
     Event,
     EventBus,
     action_event,
-    bloodied_event,
     condition_event,
-    damage_event,
-    death_event,
-    heal_event,
 )
+from .matching import fuzzy_match_one
 from .state import NPCState
 from .widgets.action_chips import ActionChipGrid
 from .widgets.command_input import CommandInput
@@ -581,7 +578,6 @@ class NPCTab(QWidget):
             self._refresh()
             self.state_changed.emit()
             if self.event_bus is not None:
-                from .event_bus import condition_event
                 self.event_bus.emit(condition_event(self.npc_state.slug, "dodging", applied=True))
         else:
             # Attack, Dash, Help, Hide, Ready — log a line
@@ -659,27 +655,16 @@ class NPCTab(QWidget):
         """For a PC tab, fuzzy-match `token` against `_PLAYER_ACTIONS` and run
         it. Returns True if a unique match was found and run, else False.
 
-        Tightest-first ordering: exact → unique prefix → unique substring
-        (all case-insensitive). NPC tabs always return False (their action
-        resolution goes through MainWindow against the DB action surface).
+        Tightest-first ordering (via ``matching.fuzzy_match_one``): exact →
+        unique prefix → unique substring → difflib. NPC tabs always return
+        False (their action resolution goes through MainWindow against the DB
+        action surface).
         """
         if self.npc_state.kind != "pc":
             return False
-        q = token.lower().strip()
-        if not q:
+        if not token.strip():
             return False
-        player_match: str | None = None
-        exact = [a for a in _PLAYER_ACTIONS if a.lower() == q]
-        if exact:
-            player_match = exact[0]
-        else:
-            prefix = [a for a in _PLAYER_ACTIONS if a.lower().startswith(q)]
-            if len(prefix) == 1:
-                player_match = prefix[0]
-            elif not prefix:
-                sub = [a for a in _PLAYER_ACTIONS if q in a.lower()]
-                if len(sub) == 1:
-                    player_match = sub[0]
+        player_match = fuzzy_match_one(token, list(_PLAYER_ACTIONS))
         if player_match is None:
             return False
         self._on_player_action(player_match)
@@ -784,68 +769,6 @@ class NPCTab(QWidget):
             atype = (action_entry or {}).get("type") or ""
             self.event_bus.emit(action_event(self.npc_state.slug, action_name, tags=(atype,) if atype else ()))
         return result
-
-    def _apply_damage(self, amount: int, member: int | None, dtype: str | None) -> None:
-        result = self.npc_state.apply_damage(amount, member=member)
-        if result.get("skipped"):
-            # Mirror heal's guard so an invalid member index or "no alive
-            # members" path doesn't log a bogus "HP 0/max" line.
-            self._append_log(f"<span style='color:#6c8eba'>damage {amount} skipped: {result['skipped']}</span>")
-            return
-        member_str = f"m{result['member']}" if self.npc_state.count > 1 and result.get("member") else ""
-        dtype_str = f" {dtype}" if dtype else ""
-        suffix = " · **killed**" if result.get("killed") else ""
-        self._append_log(
-            f"<span style='color:#8a8f96'>{self._actor_prefix()}:</span> "
-            f"<span style='color:#ff5252'>−{amount}{dtype_str}</span> "
-            f"{member_str} → HP {result['after']}/{self.npc_state.max_hp}{suffix}"
-        )
-        self._refresh()
-        self.state_changed.emit()
-        if self.event_bus is not None:
-            # No melee/range info from the sigil; matcher falls to medium-confidence,
-            # which is fine — the DM still sees the reaction prompt.
-            self.event_bus.emit(damage_event(self.npc_state.slug, amount, damage_type=dtype))
-            # Broadcasts: bloodied (transition only) + death. These drive the
-            # watch system (allies can react with "heal X" suggestions etc.).
-            if result.get("became_bloodied"):
-                self.event_bus.emit(bloodied_event(self.npc_state.slug))
-            if result.get("killed"):
-                self.event_bus.emit(death_event(self.npc_state.slug))
-
-    def _apply_heal(self, amount: int, member: int | None) -> None:
-        result = self.npc_state.apply_heal(amount, member=member)
-        if result.get("skipped"):
-            self._append_log(f"<span style='color:#6c8eba'>heal {amount} skipped: {result['skipped']}</span>")
-            return
-        member_str = f"m{result['member']}" if self.npc_state.count > 1 and result.get("member") else ""
-        self._append_log(
-            f"<span style='color:#8a8f96'>{self._actor_prefix()}:</span> "
-            f"<span style='color:#66bb6a'>+{amount}</span> {member_str} "
-            f"→ HP {result['after']}/{self.npc_state.max_hp}"
-        )
-        self._refresh()
-        self.state_changed.emit()
-        if self.event_bus is not None:
-            self.event_bus.emit(heal_event(self.npc_state.slug, amount))
-
-    def _toggle_condition(self, cond: str, target_hint: str | None, duration: int | None = None) -> None:
-        is_present = self.npc_state.toggle_condition(cond, duration=duration)
-        suffix_parts = []
-        if target_hint:
-            suffix_parts.append(f"target: {target_hint}")
-        if is_present and duration:
-            suffix_parts.append(f"{duration} rounds")
-        suffix = f" ({'; '.join(suffix_parts)})" if suffix_parts else ""
-        verb = "applied" if is_present else "removed"
-        self._append_log(
-            f"<span style='color:#8a8f96'>{self._actor_prefix()}:</span> "
-            f"<span style='color:#ff9800'>{verb} condition: {cond}</span>{suffix}"
-        )
-        self._refresh()
-        self.state_changed.emit()
-        if self.event_bus is not None:
-            self.event_bus.emit(condition_event(self.npc_state.slug, cond, applied=is_present))
 
     def _on_start_turn(self) -> None:
         """Manual turn-start: refresh reaction + recharges for THIS NPC only."""
