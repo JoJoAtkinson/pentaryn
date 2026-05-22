@@ -553,6 +553,12 @@ class NPCTab(QWidget):
 
     # ─────────── player action handlers (PC-only path) ───────────
 
+    def _clear_disengaging(self) -> None:
+        """Remove the private _disengaging flag from pinned_notes."""
+        self.npc_state.pinned_notes = [
+            n for n in self.npc_state.pinned_notes if n != "_disengaging"
+        ]
+
     def _on_player_action(self, action_name: str) -> None:
         """Handle a generic player action chip click."""
         name = self.npc_state.name
@@ -563,9 +569,7 @@ class NPCTab(QWidget):
         elif action_name == "Disengage":
             self._append_log(f"<span style='color:#66bb6a'>{name}: Disengage</span>")
             # Suppress the next OA prompt — flag stored on state for one command
-            self.npc_state.pinned_notes = [
-                n for n in self.npc_state.pinned_notes if n != "_disengaging"
-            ]
+            self._clear_disengaging()
             self.npc_state.pinned_notes.append("_disengaging")
             self._refresh()
             self.state_changed.emit()
@@ -607,9 +611,12 @@ class NPCTab(QWidget):
         if not spell_name:
             return
         level = level_spin.value()
-        level_str = (
-            f"{level}{'st' if level == 1 else 'nd' if level == 2 else 'rd' if level == 3 else 'th'}"
-        )
+        # Level 0 is a cantrip — avoid the awkward "0th" ordinal.
+        if level == 0:
+            level_str = "cantrip"
+        else:
+            ordinal_suffix = "st" if level == 1 else "nd" if level == 2 else "rd" if level == 3 else "th"
+            level_str = f"{level}{ordinal_suffix}"
         self._append_log(
             f"<span style='color:#ce93d8'>{self.npc_state.name}: casts {spell_name} ({level_str})</span>"
         )
@@ -627,9 +634,8 @@ class NPCTab(QWidget):
         name = self.npc_state.name
         # Check and clear _disengaging flag
         if "_disengaging" in self.npc_state.pinned_notes:
-            self.npc_state.pinned_notes = [
-                n for n in self.npc_state.pinned_notes if n != "_disengaging"
-            ]
+            self._clear_disengaging()
+            self.npc_state.in_melee = False
             self._append_log(
                 f"<span style='color:#66bb6a'>{name}: Retreat (Disengage active — no OA)</span>"
             )
@@ -640,7 +646,7 @@ class NPCTab(QWidget):
         if self.event_bus is not None and self.npc_state.in_melee:
             from .event_bus import move_away_event
             self.event_bus.emit(move_away_event(
-                combatant_id=self.npc_state.id,
+                combatant_id=self.npc_state.id or self.npc_state.slug,
                 combatant_slug=self.npc_state.slug,
             ))
         self.npc_state.in_melee = False
@@ -663,6 +669,7 @@ class NPCTab(QWidget):
         elif parsed.kind is InputKind.CONDITION_MENU:
             self._append_log("(condition autocomplete menu — handled by widget in v0.2)")
         elif parsed.kind is InputKind.NOTE:
+            # NOTE intentionally does not emit review_needed — notes never hit the LLM (spec §4)
             self._append_log(f"📝 note: {parsed.note_text}")
         elif parsed.kind is InputKind.REORDER:
             self.reorder_requested.emit(parsed.reorder_slugs)
