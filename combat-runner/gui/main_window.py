@@ -1307,7 +1307,9 @@ class MainWindow(QMainWindow):
                     val = set(val)
                 setattr(npc, f.name, val)
         self.encounter_state.round_num = restored.round_num
-        self.encounter_state.current_target = list(restored.current_target)
+        # `current_target` is per-actor now (stored on each NPCState as
+        # `target_ids`) — the field-copy loop above already restored it for
+        # every npc, no separate top-level restore needed.
         self.encounter_state.pending_effects = list(restored.pending_effects)
         # Restore the active tab (part of EncounterState; bounds-checked since
         # the restored index may exceed the current tab count). If it is out of
@@ -1601,19 +1603,16 @@ class MainWindow(QMainWindow):
                 self.tabs.setTabText(i, self._tab_title(tab.npc_state))
 
     def _push_current_target_to_inputs(self) -> None:
-        """Push the sticky current target to every tab's command input.
+        """Push each combatant's own sticky target to its tab's command input.
 
-        A leading-Space autocomplete reads each input's cached target id(s).
-        `NPCTab.refresh()` already pushes it, but a bare `set_target` and a
-        sticky-targeted command change `current_target` without refreshing
-        every tab — so push it directly here so Space works from any tab
-        immediately, not only after the next incidental refresh.
+        Targets are per-actor (stored on `NPCState.target_ids`), so each tab's
+        leading-Space autocomplete prefills the target THAT combatant is
+        focused on — not a single encounter-wide value.
         """
-        ct = list(self.encounter_state.current_target)
         for i in range(self.tabs.count()):
             tab = self.tabs.widget(i)
             if isinstance(tab, NPCTab):
-                tab.input.set_current_target(ct)
+                tab.input.set_current_target(list(tab.npc_state.target_ids))
 
     def _refresh_target_arrow(self) -> None:
         """Map `current_target` ids → tab indices and update the tab bar arrow.

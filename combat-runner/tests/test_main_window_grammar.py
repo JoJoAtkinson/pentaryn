@@ -124,32 +124,37 @@ def test_set_target_sets_current_target_and_arrow(window):
     assert 1 in window.tabs.tabBar().arrow_indices()
 
 
-def test_set_target_propagates_to_command_inputs(window):
-    """A bare `set_target` pushes the new current target into EVERY tab's
-    command input so a leading-Space autocomplete works from any tab.
+def test_set_target_writes_active_combatants_target(window):
+    """A bare `set_target` writes the ACTIVE combatant's `target_ids` and the
+    active tab's command input picks it up for leading-Space autocomplete.
+    Other tabs keep their own (still-empty) targets — targets are per-actor.
 
-    Regression: the input was wired to the current target via a wrong-parent
-    lookup (`self.parent()` → the QTabWidget's QStackedWidget, not the
-    MainWindow), so `set_current_target` was never called and Space always
-    reported 'no target'."""
+    Regression: the input was wired via a wrong-parent lookup
+    (`self.parent()` → the QTabWidget's QStackedWidget), so `set_current_target`
+    was never called and Space always reported 'no target'."""
     window.tabs.setCurrentIndex(0)
     _submit(window, "2")
-    for i in range(window.tabs.count()):
-        tab = window.tabs.widget(i)
-        assert tab.input._current_target_ids == ["2"], (
-            f"tab {i} input did not receive the current target"
-        )
+    actor_tab = window.tabs.widget(0)
+    assert actor_tab.npc_state.target_ids == ["2"]
+    assert actor_tab.input._current_target_ids == ["2"]
+    # Another combatant (no target set) still has empty target_ids.
+    other_tab = window.tabs.widget(2)
+    assert other_tab.npc_state.target_ids == []
+    assert other_tab.input._current_target_ids == []
 
 
-def test_sticky_targeted_command_propagates_to_command_inputs(window):
-    """A command carrying explicit target ids (`3 8 slash`) is sticky — it
-    updates current_target and that change reaches every tab's input too."""
+def test_sticky_targeted_command_writes_active_combatants_target(window):
+    """A directed command like `3 8 slash` is sticky on the ACTOR — it sets
+    the active combatant's target_ids (and its input), not every tab's."""
     window.tabs.setCurrentIndex(0)
     _submit(window, "3 8 slash")
+    actor_tab = window.tabs.widget(0)
     assert window.encounter_state.current_target == ["3"]
-    for i in range(window.tabs.count()):
-        tab = window.tabs.widget(i)
-        assert tab.input._current_target_ids == ["3"]
+    assert actor_tab.npc_state.target_ids == ["3"]
+    assert actor_tab.input._current_target_ids == ["3"]
+    # A different combatant's tab is not touched.
+    other_tab = window.tabs.widget(1)
+    assert other_tab.npc_state.target_ids == []
 
 
 # ─────────────────────────── current-target action ───────────────────────────
@@ -296,14 +301,31 @@ def test_arrow_never_on_actor_tab(window):
     assert 0 not in window.tabs.tabBar().arrow_indices()
 
 
-def test_arrow_on_targeted_tab(window):
-    """Targeting non-actor combatants shows the arrow on each targeted tab."""
+def test_target_is_sticky_per_actor(window):
+    """Each combatant remembers its own target — switching tabs doesn't
+    clobber. Tab to a fresh combatant → no target; tab back → remembered."""
+    window.tabs.setCurrentIndex(0)             # active = One
+    _submit(window, "2")                       # One.target_ids = ["2"]
+    assert window.encounter_state.current_target == ["2"]
+    # Switch to a fresh combatant — its target is empty.
+    window.tabs.setCurrentIndex(1)             # active = Two (no target)
+    assert window.encounter_state.current_target == []
+    # Switch back — One still remembers its target.
     window.tabs.setCurrentIndex(0)
-    _submit(window, "23")  # set_target {2,3} -> arrows on tabs 1 and 2
-    # Move the actor off a targeted tab so both arrows are visible.
-    window.tabs.setCurrentIndex(3)
+    assert window.encounter_state.current_target == ["2"]
+
+
+def test_arrow_on_targeted_tab(window):
+    """The ▼ arrow shows on the active combatant's target tabs (never on the
+    actor's own). Targets are per-actor — switching to a fresh combatant
+    clears the arrows."""
+    window.tabs.setCurrentIndex(0)
+    _submit(window, "23")  # active=One sets its target to {2,3}
     arrows = window.tabs.tabBar().arrow_indices()
-    assert arrows == {1, 2}
+    assert arrows == {1, 2}     # arrows on the target tabs
+    # Switching to a fresh combatant (with no target set) clears the arrows.
+    window.tabs.setCurrentIndex(3)
+    assert window.tabs.tabBar().arrow_indices() == set()
 
 
 # ─────────────────────────── LLM fallback ───────────────────────────
