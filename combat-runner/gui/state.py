@@ -9,6 +9,7 @@ the dispatcher / event bus can mutate state without dragging in the GUI layer.
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -302,6 +303,10 @@ class EncounterState:
     round_num: int = 1
     active_tab_index: int = 0
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    current_target: list[str] = field(default_factory=list)
+    # Typed as plain list to avoid an import cycle; PendingEffect is defined in history.py.
+    # Serialize via dataclasses.asdict if entries are dataclasses; round-trip as list[dict].
+    pending_effects: list = field(default_factory=list)
 
     def npc_by_slug(self, slug: str) -> NPCState | None:
         # Slugs aren't guaranteed unique when the user spawns duplicates;
@@ -375,10 +380,11 @@ class EncounterState:
 # ─────────────────────────── ID alphabet ───────────────────────────
 
 def _id_alphabet() -> Iterator[str]:
-    """Yields: '1','2',...,'9','0', '11','22',...,'99','00', '111',... indefinitely."""
+    """Yields: '1','2',...,'9', '11','22',...,'99', '111',... indefinitely.
+    '0' is intentionally excluded so it remains free as the future 'self' token."""
     digit = 1
     while True:
-        for d in "1234567890":
+        for d in "123456789":
             yield d * digit
         digit += 1
 
@@ -485,6 +491,10 @@ def _deserialize_npc(d: dict[str, Any]) -> NPCState:
 
 def serialize_encounter(es: EncounterState) -> dict[str, Any]:
     """Full encounter state as a plain dict. Safe to json.dumps."""
+    serialized_pending = [
+        dataclasses.asdict(e) if dataclasses.is_dataclass(e) and not isinstance(e, type) else e
+        for e in es.pending_effects
+    ]
     return {
         "name": es.name,
         "root": str(es.root),
@@ -493,6 +503,8 @@ def serialize_encounter(es: EncounterState) -> dict[str, Any]:
         "active_tab_index": es.active_tab_index,
         "created_at": es.created_at.isoformat() if es.created_at else None,
         "npcs": [_serialize_npc(n) for n in es.npcs],
+        "current_target": list(es.current_target),
+        "pending_effects": serialized_pending,
     }
 
 
@@ -517,6 +529,8 @@ def deserialize_encounter(d: dict[str, Any]) -> EncounterState:
         round_num=int(d.get("round_num", 1)),
         active_tab_index=int(d.get("active_tab_index", 0)),
         created_at=created,
+        current_target=list(d.get("current_target", []) or []),
+        pending_effects=list(d.get("pending_effects", []) or []),
     )
     if es.active_tab_index < 0 or es.active_tab_index >= len(es.npcs):
         # Clamp rather than raise (LLM-friendly).
