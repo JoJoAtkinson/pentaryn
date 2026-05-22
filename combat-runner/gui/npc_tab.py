@@ -492,12 +492,19 @@ class NPCTab(QWidget):
         self.command_requested.emit(cmd)
 
     def _on_chip_clicked(self, action_name: str) -> None:
-        """Clicking an action chip is equivalent to typing the action name —
-        an action effect against the active (this) tab's combatant."""
+        """Clicking an action chip is equivalent to typing the action name as
+        a bare verb: the ACTOR (this tab) runs the action, aimed at the
+        current sticky target.
+
+        It must NOT carry this tab's own combatant as `target_ids` — that
+        would make every NPC's attack land on itself, and (since a directed
+        command sets the sticky target) silently retarget the encounter onto
+        the actor. `use_current=True` aims the action at whatever target is
+        set, exactly as typing the verb does."""
         cmd = ParsedCommand(
             kind="command",
             raw=action_name,
-            target_ids=[self.npc_state.id] if self.npc_state.id else [],
+            use_current=True,
             effects=[Effect(kind="action", action_token=action_name)],
         )
         self.command_requested.emit(cmd)

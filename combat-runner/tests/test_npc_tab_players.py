@@ -190,6 +190,33 @@ def test_jump_command_emits_command_signal(qtbot, pc_state):
     assert received[0].target_ids == ["3"]
 
 
+def test_chip_click_aims_at_current_target_not_self(qtbot, npc_state):
+    """Clicking an action chip emits a `use_current` command with NO explicit
+    target — the actor's action aims at the sticky current target.
+
+    Regression: it used to carry `target_ids=[this tab's NPC]`, so every NPC's
+    attack landed on itself (and silently retargeted the encounter onto the
+    actor, since a directed command sets the sticky target)."""
+    from gui.npc_tab import NPCTab
+
+    npc_state.id = "2"
+    tab = NPCTab(npc_state=npc_state, actions=[], log_path=Path("/tmp/log.md"))
+    qtbot.addWidget(tab)
+
+    received = []
+    tab.command_requested.connect(received.append)
+
+    tab._on_chip_clicked("frost_ray")
+
+    assert len(received) == 1
+    cmd = received[0]
+    assert cmd.kind == "command"
+    assert cmd.use_current is True
+    assert cmd.target_ids == []          # never the tab's own combatant
+    assert cmd.effects[0].kind == "action"
+    assert cmd.effects[0].action_token == "frost_ray"
+
+
 # ─────────────────────────────────────────────────────
 # pinned_notes in status strip
 # ─────────────────────────────────────────────────────

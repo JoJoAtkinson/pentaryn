@@ -70,7 +70,7 @@ A number's meaning is set by the **token immediately after it**:
 | `<condition>` no number  | the condition, **default 1 round**   | `3 prone`            |
 | `<verb>`                 | an **action by name** (fuzzy-matched)| `3 tail-sweep`       |
 | `m<n>` / `m12` / `m`     | mob-member modifier on the next amount/condition (one member / digit-run set / `m` alone = all alive) | `7 m3 6 melee` · `7 m12 6 fire` |
-| `hit`                    | upgrade a pending effect to a full hit | `13 hit` · ` hit`  |
+| `hit` (or `hits`)        | upgrade a pending effect to a full hit | `13 hit` · ` hit`  |
 | `undo`                   | revert the last command              | `undo`               |
 | a damage-tag with **no** number | **error → routed to the LLM** | `2 melee` ✗          |
 

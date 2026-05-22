@@ -81,6 +81,13 @@ def test_hit_and_undo():
     assert parse("undo").effects[0].kind == "undo"
 
 
+def test_hits_is_an_alias_for_hit():
+    """`hits` (plural) resolves a pending effect exactly like `hit` — a common
+    typo that should not fall through to a fuzzy action-by-name lookup."""
+    assert _eff(parse("13 hits"), 0).kind == "hit"
+    assert _eff(parse("hits"), 0).kind == "hit"
+
+
 def test_damage_tag_without_number_is_unparseable():
     assert parse("2 melee").kind == "unparseable"
 

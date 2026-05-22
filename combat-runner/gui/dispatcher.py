@@ -12,7 +12,7 @@ Grammar (see docs/superpowers/specs/2026-05-22-combat-command-grammar-design.md)
            sticky target. (Whitespace is stripped before parsing — a leading
            Space is consumed by the GUI command box as a target autocomplete.)
   <stream> — a left-to-right sequence of effect groups:
-       undo / hit              -> bare-word effects
+       undo / hit (or hits)    -> bare-word effects
        <num> <dmg-tag…>        -> an `amount` group, qualified by tags
        <num> <condition>       -> a `condition`, num = duration
        <num>                   -> an `action` (panel hotkey number)
@@ -219,7 +219,7 @@ def parse(raw: str) -> ParsedCommand:
             effects.append(Effect(kind="undo"))
             i += 1
             continue
-        if low == "hit":
+        if low in ("hit", "hits"):
             if pending_members is not None:
                 ok = False
                 break
