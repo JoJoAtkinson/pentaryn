@@ -38,9 +38,11 @@ def test_s4_condition_toggle_idempotent(scenario):
 
     tab = scenario.tab_for("glacier-stalker")
     assert "prone" not in tab.npc_state.conditions
-    scenario.type_command("@prone")
+    # New grammar: '0 prone' — 0 = self (active tab's NPC), bare condition word toggles it.
+    # '@' is an optional escape hatch; bare 'prone' is equivalent when no verb collision.
+    scenario.type_command("0 prone")
     assert "prone" in tab.npc_state.conditions
-    scenario.type_command("@prone")
+    scenario.type_command("0 prone")
     assert "prone" not in tab.npc_state.conditions
 
 

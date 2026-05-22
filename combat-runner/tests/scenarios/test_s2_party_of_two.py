@@ -32,9 +32,10 @@ def test_s2_party_of_two_with_cross_reactions(scenario):
 
     # Round 1 — Aelric takes a hit (PC's enemy AOE collateral, w/e). Damage
     # event matches aelric.shield's self-damage trigger; harness auto-fires.
+    # New grammar: '0 <amount> dmg' — 0 = self (active tab's NPC).
     scenario.switch_to("aelric-frostweaver")
     aelric_start = aelric.npc_state.hp
-    scenario.type_command("-10")
+    scenario.type_command("0 10 dmg")
     assert aelric.npc_state.hp == aelric_start - 10
 
     # The Shield reaction is a `utility` with `effect` text — no automatic
@@ -56,7 +57,7 @@ def test_s2_party_of_two_with_cross_reactions(scenario):
     # Aelric's reaction stays USED for this round.
 
     scenario.switch_to("glacier-stalker")
-    scenario.type_command("-15")
+    scenario.type_command("0 15 dmg")
     assert stalker.npc_state.hp == 84 - 15  # stalker took 15
 
     # The Stalker has rime_reflex (damage self-trigger) — that prompts too,
