@@ -65,3 +65,29 @@ def test_hint_pool_includes_aliases():
     pool = hint_pool([])
     assert "dmg" in pool
     assert "hp" in pool
+
+
+def test_later_direction_overrides_earlier_delivery():
+    resolved, _ = resolve_tags(["melee", "heal"])
+    assert "delivery" not in resolved
+
+
+def test_later_direction_overrides_earlier_type():
+    resolved, _ = resolve_tags(["fire", "heal"])
+    assert "type" not in resolved
+
+
+def test_uppercase_token_normalises():
+    resolved, _ = resolve_tags(["FIRE"])
+    assert resolved.get("type") == "fire"
+
+
+def test_explicit_damage_keeps_type_applicable():
+    resolved, _ = resolve_tags(["heal", "damage", "fire"])
+    assert resolved["direction"] == "damage"
+    assert resolved.get("type") == "fire"
+
+
+def test_hint_pool_after_direction_override_includes_type():
+    pool = hint_pool(["heal", "damage"])
+    assert "fire" in pool
