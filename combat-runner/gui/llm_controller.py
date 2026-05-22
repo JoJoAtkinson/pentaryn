@@ -759,7 +759,10 @@ class LLMController:
         "     failure' as a catch-all for an unfamiliar token, prose effect, or "
         "     novel verb. When the block IS present, flag that the command "
         "     referenced an unrecognised id, naming the exact token from the "
-        "     block.\n"
+        "     block. ACTION INVOCATIONS: if an 'Action run:' line is present, "
+        "     the command was a valid action invocation — judge the action's "
+        "     effect (damage, save DC, type) and do NOT flag the command as "
+        "     malformed or unrecognised.\n"
         "  5. DURATIONS. Flag an implausible condition duration — a duration "
         "     beyond ~10 rounds (e.g. frightened for 90 rounds) is almost "
         "     certainly a mistyped amount.\n"
@@ -848,6 +851,7 @@ class LLMController:
         log_tail: str,
         raw_amount: int | None = None,
         id_fallbacks: list[dict] | None = None,
+        action: dict | None = None,
     ) -> str:
         """Build the review `user_msg` — the full context payload.
 
@@ -871,6 +875,13 @@ class LLMController:
         ``id_fallbacks`` — list of ``{"token": <typed id>, "resolved_to": <id>}``
         for any target id that did not cleanly resolve (e.g. ``0`` → actor-self,
         or an unrecognised id). Empty / None means every id resolved cleanly.
+
+        ``action`` — CHANGE A: optional dict with keys ``name``, ``panel``
+        (1-based panel number or None), and ``spec`` (the raw action record).
+        When present, a ``Action run:`` line is rendered so the reviewer can
+        see what the command actually resolved to instead of an opaque token
+        like ``5 3``.  When absent (command was NOT an action invocation),
+        nothing is rendered and the reviewer must NOT flag it as malformed.
         """
         actor_desc = (
             f"{actor.get('name', '?')} "
@@ -943,10 +954,58 @@ class LLMController:
         else:
             fallback_block = ""
 
+        # CHANGE A: "Action run" line — present only for action invocations.
+        if action is not None:
+            action_name = action.get("name", "?")
+            panel = action.get("panel")
+            panel_str = f"(#{panel})" if panel is not None else ""
+            spec = action.get("spec") or {}
+            atype = spec.get("type", "?")
+            # Build a compact effect summary from the spec.
+            summary_parts: list[str] = [atype]
+            atk = spec.get("attack") or {}
+            if atk:
+                dmg = atk.get("damage_dice", "")
+                mod = atk.get("damage_modifier", 0)
+                mod_str = f"+{mod}" if mod >= 0 else str(mod)
+                hits = atk.get("num_attacks", 1)
+                if dmg:
+                    summary_parts.append(f"{hits}x {dmg}{mod_str}")
+            ma = spec.get("multiattack") or {}
+            if ma:
+                sub = ma.get("attacks") or []
+                if sub:
+                    # Each sub has damage_dice + damage_modifier.
+                    parts2 = []
+                    for s in sub:
+                        dd = s.get("damage_dice", "")
+                        dm2 = s.get("damage_modifier", 0)
+                        dm2_str = f"+{dm2}" if dm2 >= 0 else str(dm2)
+                        if dd:
+                            parts2.append(f"{dd}{dm2_str}")
+                    if parts2:
+                        summary_parts.append(f"{len(parts2)}x {', '.join(parts2)}")
+            area = spec.get("area") or {}
+            if area:
+                save_dc = area.get("save_dc")
+                save_ab = area.get("save_ability", "")
+                if save_dc:
+                    summary_parts.append(f"DC {save_dc} {save_ab} save")
+                dmg2 = area.get("damage_dice", "")
+                if dmg2:
+                    summary_parts.append(dmg2)
+            action_line = (
+                f"Action run: {action_name} {panel_str}"
+                f" — {', '.join(summary_parts)}\n"
+            )
+        else:
+            action_line = ""
+
         return (
             f"Actor (who acted): {actor_desc}\n"
             f"Command typed: {raw!r}\n"
             f"{raw_amount_desc}"
+            f"{action_line}"
             f"Fast path applied: {applied_desc}\n"
             f"{fallback_block}"
             f"Affected combatants (before→after — this is what the fast path "
@@ -984,6 +1043,7 @@ class LLMController:
         dispatch_fn: Callable[[list[Any]], list[dict[str, Any]]] | None = None,
         raw_amount: int | None = None,
         id_fallbacks: list[dict] | None = None,
+        action: dict | None = None,
     ) -> "RunResult":
         """Async review of an already-applied command. Blocking — run off-thread.
 
@@ -1011,6 +1071,7 @@ class LLMController:
             raw, actor, affected, roster,
             applied_direction, applied_amount, log_tail,
             raw_amount=raw_amount, id_fallbacks=id_fallbacks,
+            action=action,
         )
 
         messages = [{"role": "user", "content": user_msg}]

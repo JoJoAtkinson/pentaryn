@@ -65,11 +65,11 @@ def window(qtbot, tmp_path):
 def test_damage_command_enqueues_review(window):
     """A damage command that changes HP triggers _enqueue_review.
 
-    New signature: _enqueue_review(cmd, actor, ids, before, after).
+    New signature: _enqueue_review(cmd, actor, ids, before, after, **kwargs).
     """
     enqueue_calls: list[tuple] = []
 
-    def fake_enqueue(cmd, actor, ids, before, after):
+    def fake_enqueue(cmd, actor, ids, before, after, **kwargs):
         enqueue_calls.append((cmd, actor, ids, before, after))
 
     window._enqueue_review = fake_enqueue
@@ -97,7 +97,7 @@ def test_heal_command_enqueues_review(window):
 
     enqueue_calls: list[tuple] = []
 
-    def fake_enqueue(cmd, actor, ids, before, after):
+    def fake_enqueue(cmd, actor, ids, before, after, **kwargs):
         enqueue_calls.append((cmd, actor, ids))
 
     window._enqueue_review = fake_enqueue
@@ -115,7 +115,7 @@ def test_condition_command_enqueues_review(window):
     """A condition command that changes state triggers _enqueue_review."""
     enqueue_calls: list[tuple] = []
 
-    def fake_enqueue(cmd, actor, ids, before, after):
+    def fake_enqueue(cmd, actor, ids, before, after, **kwargs):
         enqueue_calls.append((cmd, actor, ids))
 
     window._enqueue_review = fake_enqueue

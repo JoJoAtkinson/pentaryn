@@ -119,10 +119,16 @@ def parse(raw: str) -> ParsedCommand:
     """Parse a raw command string into a `ParsedCommand`."""
     raw = raw or ""
 
+    # CHANGE C (all inputs): collapse runs of internal whitespace; strip
+    # leading/trailing whitespace.  We do this on the raw string BEFORE
+    # checking out-of-band sigils so the note/slash paths also benefit from
+    # clean boundaries.
+    raw = re.sub(r"\s+", " ", raw).strip()
+
     # Out-of-band sigil forms — checked BEFORE the `<who>` path so they are
     # never accidentally routed to the LLM. These forms are unambiguous:
     # a leading `note ` or `/` cannot start a valid `<who> <stream>` command.
-    s = raw.strip()
+    s = raw  # already stripped
     if m := _NOTE_RE.match(s):
         return ParsedCommand(kind="note", raw=raw, note_text=m.group(1).strip())
     if m := _REORDER_RE.match(s):
@@ -130,6 +136,17 @@ def parse(raw: str) -> ParsedCommand:
         return ParsedCommand(kind="reorder", raw=raw, reorder_slugs=slugs)
     if _QUIT_RE.match(s):
         return ParsedCommand(kind="quit", raw=raw)
+
+    # CHANGE C (non-note/slash): strip a single trailing sentence-punctuation
+    # char (`.`, `,`, `;`) so `2 8 melee.` parses like `2 8 melee`.
+    # Applied AFTER the note/slash check so note text is left verbatim.
+    raw = re.sub(r"[.,;]$", "", raw)
+
+    # CHANGE B: insert a space at every digit→letter boundary so that a
+    # missing-space typo like `8melee` becomes `8 melee`.  Only applies when
+    # the raw input is not a note or slash command (those were already returned
+    # above).  Letter→digit boundaries (e.g. the `m3` mob sigil) are NOT split.
+    raw = re.sub(r"(?<=\d)(?=[A-Za-z])", " ", raw)
 
     tokens = raw.split()
 

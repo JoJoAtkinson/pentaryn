@@ -169,6 +169,7 @@ class _LLMReviewWorker(_LLMWorkerBase):
         log_tail: str, signals: _LLMWorkerSignals,
         raw_amount: int | None = None,
         id_fallbacks: list[dict] | None = None,
+        action: dict | None = None,
     ) -> None:
         super().__init__(controller, signals)
         self._raw = raw_command
@@ -180,6 +181,7 @@ class _LLMReviewWorker(_LLMWorkerBase):
         self._log_tail = log_tail
         self._raw_amount = raw_amount
         self._id_fallbacks = id_fallbacks or []
+        self._action = action  # CHANGE A: resolved action info (name + spec)
 
     def run(self) -> None:
         try:
@@ -194,6 +196,7 @@ class _LLMReviewWorker(_LLMWorkerBase):
                 dispatch_fn=self._marshalled_dispatch,
                 raw_amount=self._raw_amount,
                 id_fallbacks=self._id_fallbacks,
+                action=self._action,
             )
         except Exception as exc:  # noqa: BLE001
             from .llm_controller import RunResult  # local: cycle-breaker (llm_controller → main_window)
@@ -379,6 +382,10 @@ class MainWindow(QMainWindow):
         # Rolling buffer of the last 10 raw command strings (newest last).
         # Populated by _on_command; passed to the LLM fallback for context.
         self._recent_commands: list[str] = []
+        # CHANGE A: action info captured by _apply_action_effect and consumed
+        # once by _on_command when calling _enqueue_review.  None when the
+        # most-recent command was NOT an action invocation.
+        self._pending_action_info: dict | None = None
 
         # Status bar at the bottom for transient messages
         self.setStatusBar(QStatusBar(self))
@@ -1101,11 +1108,16 @@ class MainWindow(QMainWindow):
                 if not has_undo_effect:
                     actor = self.encounter_state.active_npc
                     ids = self._resolve_targets(cmd)
+                    # CHANGE A: consume the action info captured during
+                    # _handle_command (None for non-action commands).
+                    action_info = self._pending_action_info
+                    self._pending_action_info = None
                     # Hand the review the REAL before→after delta: `before` is
                     # the pre-command serialized snapshot (captured above for
                     # undo); `after` is the post-command snapshot. Every
                     # resolved target is reviewed, not just the first.
-                    self._enqueue_review(cmd, actor, ids, before, after)
+                    self._enqueue_review(cmd, actor, ids, before, after,
+                                         action_info=action_info)
 
     def _resolve_targets(self, cmd: ParsedCommand) -> list[str]:
         """Resolve a ParsedCommand's <who> into concrete combatant id strings.
@@ -1148,6 +1160,8 @@ class MainWindow(QMainWindow):
 
     def _handle_command(self, cmd: ParsedCommand) -> None:
         """Apply a `kind == "command"` ParsedCommand's effects."""
+        # CHANGE A: reset per-command action info before applying effects.
+        self._pending_action_info = None
         ids = self._resolve_targets(cmd)
         # Zero resolved targets — e.g. an untargeted `prone`/`hit` with no
         # current target set. Don't silently no-op: tell the DM (UX finding F3).
@@ -1335,6 +1349,22 @@ class MainWindow(QMainWindow):
                         f"{actor.name}</span>"
                     )
                 continue
+            # CHANGE A: capture the resolved action name + a compact spec
+            # summary so the review payload can include "Action run: …".
+            # Find the matching spec dict and build a brief description.
+            action_spec = next(
+                (a for a in actions if a.get("action") == action_name), None
+            )
+            if action_spec is not None:
+                panel_n = next(
+                    (i + 1 for i, a in enumerate(actions) if a.get("action") == action_name),
+                    None,
+                )
+                self._pending_action_info = {
+                    "name": action_name,
+                    "panel": panel_n,
+                    "spec": action_spec,
+                }
             # Run the action on the ACTOR's tab — `run_action_externally`
             # returns the parsed roll_combat_action result, including the
             # structured `rolls` sidecar. A save-bearing or attack-roll
@@ -1533,6 +1563,7 @@ class MainWindow(QMainWindow):
 
     def _enqueue_review(
         self, cmd, actor, ids: list[str], before: dict, after: dict,
+        action_info: dict | None = None,
     ) -> None:
         """Enqueue an async LLM review for any state-changing command.
         No-ops if no LLM controller is wired.
@@ -1670,6 +1701,7 @@ class MainWindow(QMainWindow):
             signals=signals,
             raw_amount=raw_amount,
             id_fallbacks=id_fallbacks,
+            action=action_info,  # CHANGE A: resolved action context
         )
         self._llm_pool.start(worker)
 
