@@ -75,7 +75,63 @@ def test_damage_tag_without_number_is_unparseable():
 
 def test_mob_member_attaches_to_amount():
     e = _eff(parse("7 m3 6 melee"), 0)
-    assert e.kind == "amount" and e.amount == 6 and e.member == 3
+    assert e.kind == "amount" and e.amount == 6 and e.members == [3]
+
+
+# ─── multi-member mob targeting (mob BUG-1) ────────────────────────────────
+
+
+def test_mob_single_digit_member():
+    """`m3` -> a one-member list [3]."""
+    e = _eff(parse("7 m3 6 melee"), 0)
+    assert e.members == [3]
+
+
+def test_mob_multi_digit_member_set():
+    """`m12` is a digit-run member SET [1,2] — NOT 'member 12'."""
+    e = _eff(parse("7 m12 6 melee"), 0)
+    assert e.members == [1, 2]
+
+
+def test_mob_multi_digit_non_adjacent_set():
+    """`m13` -> members [1,3]."""
+    e = _eff(parse("7 m13 6 melee"), 0)
+    assert e.members == [1, 3]
+
+
+def test_mob_repeated_digit_run_is_one_member():
+    """`m11` is a single repeated-digit run -> member [11] (split_runs rule)."""
+    e = _eff(parse("7 m11 6 melee"), 0)
+    assert e.members == [11]
+
+
+def test_mob_m_alone_is_all_members():
+    """`m` with no digits -> [] -> ALL alive members."""
+    e = _eff(parse("7 m 6 melee"), 0)
+    assert e.members == []
+
+
+def test_no_mob_modifier_members_is_none():
+    """No `m` token at all -> members is None (default routing)."""
+    e = _eff(parse("7 6 melee"), 0)
+    assert e.members is None
+
+
+def test_mob_member_carried_on_condition():
+    """`7 m2 prone` — the parser must CARRY members onto the condition effect
+    (so the applier can reject member-scoped conditions). It does NOT reject."""
+    c = parse("7 m2 prone")
+    assert c.kind == "command"
+    e = _eff(c, 0)
+    assert e.kind == "condition" and e.condition == "prone"
+    assert e.members == [2]
+
+
+def test_mob_member_carried_on_condition_with_duration():
+    """`7 m2 3 stun` — members carried onto a duration-qualified condition."""
+    e = _eff(parse("7 m2 3 stun"), 0)
+    assert e.kind == "condition" and e.condition == "stunned" and e.duration == 3
+    assert e.members == [2]
 
 
 def test_condition_at_escape_hatch():
@@ -168,6 +224,33 @@ def test_grapple_parses_to_canonical():
     assert c.kind == "command"
     e = _eff(c, 0)
     assert e.kind == "condition" and e.condition == "grappled"
+
+
+def test_poison_bare_is_condition():
+    """`3 poison` — bare `poison` is the poisoned CONDITION, not a damage type."""
+    c = parse("3 poison")
+    assert c.kind == "command"
+    e = _eff(c, 0)
+    assert e.kind == "condition" and e.condition == "poisoned"
+    assert e.duration is None
+
+
+def test_poison_with_number_is_condition_duration():
+    """`3 2 poison` — `poison` is a condition, so the number is a DURATION
+    (poisoned for 2 rounds), NOT 2 poison-typed damage."""
+    c = parse("3 2 poison")
+    assert c.kind == "command"
+    e = _eff(c, 0)
+    assert e.kind == "condition" and e.condition == "poisoned" and e.duration == 2
+
+
+def test_poison_for_eight_rounds_not_eight_damage():
+    """`2 8 poison` parses as poisoned-for-8-rounds — NOT 8 damage."""
+    c = parse("2 8 poison")
+    assert c.kind == "command"
+    e = _eff(c, 0)
+    assert e.kind == "condition", "poison must be a condition, not an amount"
+    assert e.condition == "poisoned" and e.duration == 8
 
 
 def test_at_notacondition_is_unparseable():

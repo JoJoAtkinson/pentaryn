@@ -17,7 +17,7 @@ Grammar (see docs/superpowers/specs/2026-05-22-combat-command-grammar-design.md)
        <num>                   -> an `action` (panel hotkey number)
        <condition>             -> a `condition`, default duration
        <verb>                  -> an `action` by name
-       m<n>                    -> mob-member modifier on the next amount
+       m<n> / m<digits> / m    -> mob-member modifier on the next effect
        <dmg-tag> with no num    -> unparseable (the DM meant an amount)
 
 Anything that doesn't fit -> `kind="unparseable"` (the caller routes to LLM).
@@ -31,9 +31,11 @@ from .command_model import Effect, ParsedCommand
 from .command_tags import resolve_tags
 from .state import canonicalize_condition
 from .targeting import _ALL_DIGITS as _NUMBER_RE
-from .targeting import classify_who
+from .targeting import classify_who, split_runs
 
-_MOB_RE = re.compile(r"^m([1-9]\d*)$", re.IGNORECASE)
+# Mob-member modifier. `m` alone -> all alive members; `m<digits>` -> a member
+# selection (digit-run split, see `_mob_members`).
+_MOB_RE = re.compile(r"^m(\d*)$", re.IGNORECASE)
 
 # Sane bounds — a fat-fingered `2 999999 fire` or a giant condition duration is
 # almost certainly a typo. Out-of-range commands route to `unparseable` so the
@@ -95,6 +97,24 @@ def _is_condition(token: str) -> bool:
     return canonicalize_condition(word) is not None
 
 
+def _mob_members(digits: str) -> list[int]:
+    """Convert the digit-run of an `m<digits>` modifier into a member list.
+
+    Contract (mirrors `Effect.members`):
+      ""    -> []          `m` alone -> all alive members
+      "3"   -> [3]         single digit -> member 3
+      "12"  -> [1, 2]      multi-digit -> digit-run split (targeting.split_runs)
+      "11"  -> [11]        a repeated-digit run is ONE member id
+      "122" -> [1, 22]     mixed runs -> [1, 22]
+
+    Reuses `targeting.split_runs` so member selection follows the same
+    digit-run rule the `<who>` slot uses for combatant ids.
+    """
+    if not digits:
+        return []
+    return [int(run) for run in split_runs(digits)]
+
+
 def parse(raw: str) -> ParsedCommand:
     """Parse a raw command string into a `ParsedCommand`."""
     raw = raw or ""
@@ -143,7 +163,9 @@ def parse(raw: str) -> ParsedCommand:
 
     # 3) Walk the <stream> left to right.
     effects: list[Effect] = []
-    pending_member: int | None = None
+    # Pending mob-member selection from an `m<...>` modifier. `None` = none
+    # seen; otherwise a list per the `Effect.members` contract ([] = all).
+    pending_members: list[int] | None = None
     i = 0
     n = len(stream)
     ok = True
@@ -151,9 +173,9 @@ def parse(raw: str) -> ParsedCommand:
     while i < n:
         tok = stream[i]
 
-        # m<n> — mob-member modifier on the next amount effect.
+        # m<n> / m<digits> / m — mob-member modifier on the next effect.
         if (m := _MOB_RE.match(tok)) is not None:
-            pending_member = int(m.group(1))
+            pending_members = _mob_members(m.group(1))
             i += 1
             continue
 
@@ -185,9 +207,9 @@ def parse(raw: str) -> ParsedCommand:
                     kind="amount",
                     amount=number,
                     amount_tags=resolved,
-                    member=pending_member,
+                    members=pending_members,
                 ))
-                pending_member = None
+                pending_members = None
                 i = j
                 continue
 
@@ -199,12 +221,17 @@ def parse(raw: str) -> ParsedCommand:
                 if canonical is None:
                     ok = False
                     break
+                # Carry any pending member selection onto the condition so the
+                # applier (fix agent 2) can REJECT member-scoped conditions —
+                # the parser only carries the info, it never rejects here.
                 effects.append(Effect(
                     kind="condition",
                     condition=canonical,
                     duration=number,
                     forced_condition=forced,
+                    members=pending_members,
                 ))
+                pending_members = None
                 i += 2
                 continue
 
@@ -220,12 +247,16 @@ def parse(raw: str) -> ParsedCommand:
             if canonical is None:
                 ok = False
                 break
+            # Carry any pending member selection onto the condition so the
+            # applier can reject member-scoped conditions (see above).
             effects.append(Effect(
                 kind="condition",
                 condition=canonical,
                 duration=None,
                 forced_condition=forced,
+                members=pending_members,
             ))
+            pending_members = None
             i += 1
             continue
 
