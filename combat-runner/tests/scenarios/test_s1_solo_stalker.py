@@ -36,23 +36,24 @@ def test_s1_solo_stalker_five_turns(scenario):
     # Round 1: PC swings — Stalker takes 22 damage. Rime Reflex is declared
     # as a self-trigger on damage; the harness's prompt handler auto-PASSes
     # but counts the prompt.
-    scenario.type_command("-22")
+    # New grammar: '0 <amount> <dmg-tag>' — 0 = self (active tab's NPC).
+    scenario.type_command("0 22 dmg")
     assert stalker_tab.npc_state.hp == 62
 
     scenario.advance_round()
     # Round 2: 18 more damage
-    scenario.type_command("-18")
+    scenario.type_command("0 18 dmg")
     assert stalker_tab.npc_state.hp == 44
 
     scenario.advance_round()
     # Round 3: PC crits — 30 damage. Stalker is bloodied.
-    scenario.type_command("-30")
+    scenario.type_command("0 30 dmg")
     assert stalker_tab.npc_state.hp == 14
     assert stalker_tab.npc_state.is_bloodied
 
     scenario.advance_round()
     # Round 4: 14 damage — Stalker dies
-    scenario.type_command("-14")
+    scenario.type_command("0 14 dmg")
     assert stalker_tab.npc_state.hp == 0
     assert stalker_tab.npc_state.is_dead
 
@@ -61,7 +62,7 @@ def test_s1_solo_stalker_five_turns(scenario):
     # regression that doubles the click count is caught.
     m = scenario.metrics
     assert m.click_count <= 8       # 3 round-advance clicks (target ≤ 12 incl. potential extra clicks)
-    assert m.keystroke_count <= 30  # 4 × ~5 chars (incl. `-` and digits)
+    assert m.keystroke_count <= 50  # 4 × ~9 chars ("0 22 dmg" + Enter) — new grammar is more explicit
     assert m.llm_fallback_count == 0
     assert m.turns_taken == 4
     assert m.rounds_advanced == 3
