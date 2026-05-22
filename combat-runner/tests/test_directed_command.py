@@ -126,6 +126,6 @@ def test_unknown_target_id_does_not_crash(window):
 def test_unparseable_routes_without_crash(window):
     """An unparseable command routes to the LLM fallback without crashing."""
     received: list = []
-    window._on_llm_fallback = lambda text, parsed=None: received.append(text)  # type: ignore
+    window._on_llm_fallback = lambda text, parsed=None, **kw: received.append(text)  # type: ignore
     window._on_command(parse("2 melee"))  # damage-tag with no number -> unparseable
     assert received
