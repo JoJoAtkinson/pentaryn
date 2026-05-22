@@ -117,3 +117,33 @@ def test_single_zero_id_is_valid_directed():
     p = D.parse("0 5")
     assert p.kind is InputKind.DIRECTED
     assert p.target_id == "0"
+
+
+# ─────────────────────────────────────────────────────
+# Fix 1 — signed amount must not parse as directed damage
+# ─────────────────────────────────────────────────────
+
+def test_signed_plus_amount_is_unknown():
+    """`44 +5` must NOT parse as DIRECTED; it routes to the LLM."""
+    p = D.parse("44 +5")
+    assert p.kind is InputKind.UNKNOWN, (
+        "A '+N' amount token is ambiguous (heal sigil vs directed); "
+        "directed commands must use unsigned amounts."
+    )
+    # target_id must be cleared so MainWindow doesn't partially handle it
+    assert p.target_id is None
+
+
+def test_signed_minus_amount_is_unknown():
+    """`44 -5` must NOT parse as DIRECTED (negative amount → LLM)."""
+    p = D.parse("44 -5")
+    assert p.kind is InputKind.UNKNOWN
+    assert p.target_id is None
+
+
+def test_unsigned_amount_still_parses():
+    """`44 5` (no sign) must still parse as a valid DIRECTED command."""
+    p = D.parse("44 5")
+    assert p.kind is InputKind.DIRECTED
+    assert p.target_id == "44"
+    assert p.amount == 5

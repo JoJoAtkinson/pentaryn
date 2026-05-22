@@ -349,3 +349,115 @@ def test_heal_log_includes_actor_name(qtbot, npc_state):
     assert npc_state.name in log_html, (
         f"Expected actor name '{npc_state.name}' in combat log after heal"
     )
+
+
+# ─────────────────────────────────────────────────────
+# Fix 2 — _disengaging flag clears on round advance
+# ─────────────────────────────────────────────────────
+
+def test_disengaging_flag_cleared_on_round_advance(qtbot, pc_state):
+    """A stale _disengaging flag must be cleared when the round advances,
+    so a future Retreat in the next round correctly fires an OA event."""
+    from gui.event_bus import Event, EventBus
+    from gui.npc_tab import NPCTab
+
+    bus = EventBus()
+    received = []
+    bus.subscribe("move_away", received.append)
+
+    pc_state.in_melee = True
+    tab = NPCTab(npc_state=pc_state, actions=[], log_path=Path("/tmp/log.md"),
+                 event_bus=bus)
+    qtbot.addWidget(tab)
+
+    # Player Disengages but does NOT Retreat this turn
+    tab._on_player_action("Disengage")
+    assert "_disengaging" in pc_state.pinned_notes, "Flag should be set after Disengage"
+
+    # Round advances (DM clicks next round)
+    round_event = Event(kind="round_advanced", payload={"round_num": 2})
+    tab._on_round_event(round_event)
+
+    assert "_disengaging" not in pc_state.pinned_notes, (
+        "_disengaging flag must be cleared on round advance"
+    )
+
+    # Retreat in the NEW round should now fire the OA event (no stale protection)
+    pc_state.in_melee = True  # player is still in melee
+    tab._on_player_action("Retreat")
+    assert len(received) == 1, (
+        "Retreat after round advance must fire move_away (stale Disengage expired)"
+    )
+
+
+# ─────────────────────────────────────────────────────
+# Fix 3 — verb fuzzy-match for player actions
+# ─────────────────────────────────────────────────────
+
+def test_typing_dodge_on_pc_tab_triggers_dodge(qtbot, pc_state):
+    """Typing 'dodge' on a PC tab must trigger the Dodge action (dodging condition),
+    not fall through to the LLM."""
+    from gui.npc_tab import NPCTab
+
+    tab = NPCTab(npc_state=pc_state, actions=[], log_path=Path("/tmp/log.md"))
+    qtbot.addWidget(tab)
+
+    llm_calls = []
+    tab.llm_fallback_requested.connect(lambda text, parsed: llm_calls.append(text))
+
+    tab._on_submitted("dodge")
+
+    assert "dodging" in pc_state.conditions, (
+        "Typing 'dodge' on a PC tab must apply the dodging condition"
+    )
+    assert llm_calls == [], "Player verb fuzzy-match must not fall through to LLM"
+
+
+def test_typing_disengage_on_pc_tab_sets_flag(qtbot, pc_state):
+    """Typing 'disengage' (lowercase, exact match) triggers the Disengage action."""
+    from gui.npc_tab import NPCTab
+
+    tab = NPCTab(npc_state=pc_state, actions=[], log_path=Path("/tmp/log.md"))
+    qtbot.addWidget(tab)
+
+    tab._on_submitted("disengage")
+
+    assert "_disengaging" in pc_state.pinned_notes
+
+
+def test_typing_attack_prefix_on_pc_tab(qtbot, pc_state):
+    """Typing 'att' (prefix of 'Attack') triggers the Attack action on a PC tab."""
+    from gui.npc_tab import NPCTab
+
+    tab = NPCTab(npc_state=pc_state, actions=[], log_path=Path("/tmp/log.md"))
+    qtbot.addWidget(tab)
+
+    state_changed = []
+    tab.state_changed.connect(lambda: state_changed.append(1))
+
+    tab._on_submitted("att")
+
+    assert state_changed, "Prefix match 'att' → Attack must trigger state_changed"
+    log_html = tab.log_view.toHtml()
+    assert "Attack" in log_html
+
+
+def test_npc_tab_verb_match_unaffected(qtbot, npc_state, sample_actions):
+    """Fuzzy-match of DB actions on NPC tabs must still work (no regression)."""
+    from gui.npc_tab import NPCTab
+
+    tab = NPCTab(npc_state=npc_state, actions=sample_actions, log_path=Path("/tmp/log.md"))
+    qtbot.addWidget(tab)
+
+    # 'snow_vanish' is a utility action with verb 'vanish'. Typing it on an NPC
+    # tab should still go through ACTION → _run_action, which may error (no real
+    # DB backend) — we just verify it doesn't hit the LLM fallback.
+    llm_calls = []
+    tab.llm_fallback_requested.connect(lambda text, parsed: llm_calls.append(text))
+
+    # 'pounce' is an exact action name in sample_actions — it should parse as ACTION
+    from gui.dispatcher import Dispatcher, InputKind
+    d = Dispatcher()
+    p = d.parse("pounce", available_actions=sample_actions)
+    assert p.kind is InputKind.ACTION
+    assert llm_calls == []  # dispatcher never touches llm
