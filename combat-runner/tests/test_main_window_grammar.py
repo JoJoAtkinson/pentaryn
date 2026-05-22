@@ -74,6 +74,41 @@ def test_directed_damage(window):
     assert two.hp == before - 8
 
 
+def test_directed_damage_logs_on_target_tab(window):
+    """A directed damage command logs the hit on the TARGET's own tab, not
+    only the actor's view — so a combatant's tab shows what happened to it."""
+    window.tabs.setCurrentIndex(0)             # actor = One (tab 0)
+    _submit(window, "2 8 slash")               # target = combatant id 2 (tab 1)
+    target_log = window.tabs.widget(1).log_view.toPlainText()
+    assert "Two took 8" in target_log, target_log
+    # The actor's own tab still has it too.
+    actor_log = window.tabs.widget(0).log_view.toPlainText()
+    assert "Two took 8" in actor_log
+
+
+def test_pc_tabs_get_no_llm_suggestions(window, monkeypatch):
+    """Player-character tabs are skipped by the LLM suggestion refresh — only
+    the DM's monsters get next-action suggestions; players decide their own
+    turns."""
+    class _FakeController:
+        def suggest_next_actions(self, *a, **kw):
+            return []
+
+    window._llm_controller = _FakeController()
+    requested: list = []
+    monkeypatch.setattr(
+        window._suggestion_driver, "request_for_tab",
+        lambda key, fetcher: requested.append(key),
+    )
+    window._fire_suggestion_refresh()
+
+    pc_tab = window.tabs.widget(3)          # Actor PC (id 4)
+    assert pc_tab.npc_state.kind == "pc"
+    assert id(pc_tab) not in requested, "PC tab must not get an LLM suggestion fetch"
+    npc_tab = window.tabs.widget(0)          # an NPC
+    assert id(npc_tab) in requested, "NPC tabs still get suggestions"
+
+
 # ─────────────────────────── set_target ───────────────────────────
 
 

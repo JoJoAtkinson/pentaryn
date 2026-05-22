@@ -596,21 +596,27 @@ class MainWindow(QMainWindow):
         controller = getattr(self, "_llm_controller", None)
         if controller is None:
             return
-        # Show "thinking…" hint on every tab; results replace it
+        # Show "thinking…" hint on every NPC tab; results replace it.
+        # Player characters are skipped: players decide their own turns, so a
+        # PC tab never gets LLM "next action" suggestions — the suggester is
+        # for the DM's monsters only.
         for i in range(self.tabs.count()):
             tab = self.tabs.widget(i)
-            if isinstance(tab, NPCTab):
-                tab.show_suggestions_loading()
-                # Bind everything the worker needs via closure
-                npc_state = tab.npc_state
-                action_surface = self._tab_action_surfaces.get(id(tab), [])
-                log_path = self.encounter_state.log_path
+            if not isinstance(tab, NPCTab):
+                continue
+            if tab.npc_state.kind == "pc":
+                continue
+            tab.show_suggestions_loading()
+            # Bind everything the worker needs via closure
+            npc_state = tab.npc_state
+            action_surface = self._tab_action_surfaces.get(id(tab), [])
+            log_path = self.encounter_state.log_path
 
-                def fetcher(controller=controller, npc=npc_state, surface=action_surface, lp=log_path):
-                    log_tail = self._last_log_tail(lp, lines=10)
-                    return controller.suggest_next_actions(npc, surface, log_tail)
+            def fetcher(controller=controller, npc=npc_state, surface=action_surface, lp=log_path):
+                log_tail = self._last_log_tail(lp, lines=10)
+                return controller.suggest_next_actions(npc, surface, log_tail)
 
-                self._suggestion_driver.request_for_tab(id(tab), fetcher)
+            self._suggestion_driver.request_for_tab(id(tab), fetcher)
 
     @staticmethod
     def _last_log_tail(log_path, lines: int = 10) -> str | None:
@@ -1224,7 +1230,7 @@ class MainWindow(QMainWindow):
                 continue
             if effect.kind == "hit":
                 fragments = apply_hit(self.encounter_state, ids)
-                self._log_fragments(fragments, actor=actor)
+                self._log_fragments(fragments, actor=actor, target_ids=ids)
                 continue
             # amount → effects.apply_effect.
             # Snapshot HP per-target first so skipped no-ops (out-of-range mob
@@ -1236,7 +1242,7 @@ class MainWindow(QMainWindow):
                 fragments, cond_direction = apply_condition_effect(
                     self.encounter_state, effect, target_ids=ids
                 )
-                self._log_fragments(fragments, actor=actor)
+                self._log_fragments(fragments, actor=actor, target_ids=ids)
                 # Only fire bus events when at least one condition was toggled.
                 # If _apply_condition returned the sentinel (unknown condition),
                 # fragments will contain it and we must NOT fire or auto-save.
@@ -1251,7 +1257,7 @@ class MainWindow(QMainWindow):
             fragments = apply_effect(
                 self.encounter_state, effect, target_ids=ids, actor=actor
             )
-            self._log_fragments(fragments, actor=actor)
+            self._log_fragments(fragments, actor=actor, target_ids=ids)
             if effect.kind == "amount":
                 changed = [
                     cid for cid in ids
@@ -1468,7 +1474,10 @@ class MainWindow(QMainWindow):
             source=action_name,
             member=member,
         )
-        self._log_fragments(fragments, actor=self.encounter_state.active_npc)
+        self._log_fragments(
+            fragments, actor=self.encounter_state.active_npc,
+            target_ids=[combatant_id],
+        )
         self._refresh_pending_markers()
 
     @staticmethod
@@ -1537,8 +1546,28 @@ class MainWindow(QMainWindow):
                 condition_event(combatant.slug, effect.condition, applied=applied)
             )
 
-    def _log_fragments(self, fragments: list[str], actor: NPCState | None = None) -> None:
-        """Append effect log fragments to the active tab's log view.
+    def _tab_for_combatant(self, cid: str) -> "NPCTab | None":
+        """The NPCTab whose combatant has id `cid`, or None."""
+        combatant = self.encounter_state.combatant_by_id(cid)
+        if combatant is None:
+            return None
+        try:
+            idx = self.encounter_state.npcs.index(combatant)
+        except ValueError:
+            return None
+        tab = self.tabs.widget(idx)
+        return tab if isinstance(tab, NPCTab) else None
+
+    def _log_fragments(
+        self,
+        fragments: list[str],
+        actor: NPCState | None = None,
+        target_ids: list[str] | None = None,
+    ) -> None:
+        """Append effect log fragments to the active tab's log view — and, for
+        each affected combatant in `target_ids`, to that combatant's own tab
+        log too, so a hit shows up on the victim's log, not only the actor's
+        view.
 
         When *actor* is given, each non-warning fragment is prefixed with the
         acting combatant's name (`Gnoll → Marwen: -8 melee`) so the log names
@@ -1546,11 +1575,22 @@ class MainWindow(QMainWindow):
         unprefixed — they are about the command, not an actor's deed.
         """
         actor_prefix = f"{actor.name} → " if actor is not None else ""
+        current = self.tabs.currentWidget()
+        # Affected combatants' own tabs — but never the active tab (it already
+        # receives every fragment) and never twice.
+        target_tabs: list[NPCTab] = []
+        for cid in target_ids or []:
+            tab = self._tab_for_combatant(cid)
+            if tab is not None and tab is not current and tab not in target_tabs:
+                target_tabs.append(tab)
         for frag in fragments:
             is_warn = frag.startswith("warn:")
             colour = "#ff5252" if is_warn else "#b8bdc4"
             text = frag if is_warn else f"{actor_prefix}{frag}"
-            self._append_to_active_tab(f"<span style='color:{colour}'>{text}</span>")
+            html = f"<span style='color:{colour}'>{text}</span>"
+            self._append_to_active_tab(html)
+            for tab in target_tabs:
+                tab._append_log(html)
 
     def _repaint_all_tabs(self) -> None:
         """Refresh every tab widget + re-title it (HP shows in the title)."""
