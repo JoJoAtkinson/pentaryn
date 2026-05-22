@@ -256,12 +256,14 @@ def discover_encounters() -> list[DiscoveredEncounter]:
 class EncounterPicker(QDialog):
     """Modal dialog: pick an encounter + set per-NPC count, then Launch."""
 
-    launched = Signal(object, dict)  # (DiscoveredEncounter, {slug: count})
+    launched = Signal(object, dict, object, dict)
+    # (DiscoveredEncounter, counts_dict, party_config_or_None, player_selections_dict)
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, parent: QWidget | None = None, party_config: dict | None = None) -> None:
         super().__init__(parent)
         self.setWindowTitle("Combat Runner — Pick an encounter")
         self.setMinimumSize(640, 480)
+        self.party_config = party_config
 
         self.encounters = discover_encounters()
         self._build_ui()
@@ -317,6 +319,18 @@ class EncounterPicker(QDialog):
         self.counts_form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
         right.addWidget(self.counts_form_host, 1)
 
+        # Players section (shown only when party_config is set)
+        if self.party_config:
+            right.addWidget(QLabel("<b>Players</b>"))
+            self._player_widget = QWidget()
+            self._player_form = QFormLayout(self._player_widget)
+            self._player_form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
+            right.addWidget(self._player_widget)
+            self._rebuild_players_section()
+        else:
+            self._player_checks: dict[str, Any] = {}
+            self._player_hp_spins: dict[str, QSpinBox] = {}
+
         # Buttons
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
         self.launch_btn = buttons.addButton("Launch", QDialogButtonBox.ButtonRole.AcceptRole)
@@ -356,6 +370,30 @@ class EncounterPicker(QDialog):
             text = text[:1200].rstrip() + "\n\n*(truncated — open the file for the rest)*"
         return text
 
+    def _rebuild_players_section(self) -> None:
+        from PySide6.QtWidgets import QCheckBox, QHBoxLayout
+        self._player_checks: dict[str, Any] = {}   # id → QCheckBox
+        self._player_hp_spins: dict[str, QSpinBox] = {}  # id → QSpinBox
+        while self._player_form.rowCount() > 0:
+            self._player_form.removeRow(0)
+        for player in (self.party_config or {}).get("players", []):
+            pid = str(player["id"])
+            row_widget = QWidget()
+            row_layout = QHBoxLayout(row_widget)
+            row_layout.setContentsMargins(0, 0, 0, 0)
+            check = QCheckBox()
+            check.setChecked(True)
+            spin = QSpinBox()
+            spin.setRange(0, player["max_hp"])
+            spin.setValue(player["max_hp"])
+            row_layout.addWidget(check)
+            row_layout.addWidget(spin)
+            row_layout.addStretch(1)
+            label_text = f"{player['name']}  (#{pid}, max {player['max_hp']})"
+            self._player_form.addRow(QLabel(label_text), row_widget)
+            self._player_checks[pid] = check
+            self._player_hp_spins[pid] = spin
+
     # ─────────── selection handling ───────────
 
     def _on_select(self, row: int) -> None:
@@ -389,5 +427,11 @@ class EncounterPicker(QDialog):
             return
         enc = self.encounters[row]
         counts = {slug: spin.value() for slug, spin in self._count_spinboxes.items()}
-        self.launched.emit(enc, counts)
+        player_selections: dict[str, dict] = {}
+        for pid, check in self._player_checks.items():
+            player_selections[pid] = {
+                "included": check.isChecked(),
+                "current_hp": self._player_hp_spins[pid].value(),
+            }
+        self.launched.emit(enc, counts, self.party_config, player_selections)
         self.accept()
