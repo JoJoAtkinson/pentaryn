@@ -125,6 +125,57 @@ class _LLMRunWorker(QRunnable):
         self._signals.finished.emit(result)
 
 
+class _LLMReviewWorker(QRunnable):
+    """Off-thread LLM review of an already-applied command.
+
+    Mirrors `_LLMRunWorker`: the network round-trips run on the worker thread,
+    tool dispatch is marshalled back to the GUI thread via `dispatch_requested`
+    and a blocking threading.Event.
+    """
+
+    def __init__(
+        self, controller: Any, raw_command: str, actor: dict, target: dict,
+        applied_direction: str | None, applied_amount: int | None,
+        log_tail: str, signals: _LLMWorkerSignals,
+    ) -> None:
+        super().__init__()
+        self._controller = controller
+        self._raw = raw_command
+        self._actor = actor
+        self._target = target
+        self._direction = applied_direction
+        self._amount = applied_amount
+        self._log_tail = log_tail
+        self._signals = signals
+        self.setAutoDelete(True)
+
+    def _marshalled_dispatch(self, tool_uses: list[Any]) -> list[dict[str, Any]]:
+        """Hand the tool batch to the GUI thread and block until it finishes."""
+        holder: dict[str, Any] = {}
+        done = threading.Event()
+        self._signals.dispatch_requested.emit(tool_uses, holder, done)
+        done.wait()
+        if "error" in holder:
+            raise RuntimeError(holder["error"])
+        return holder.get("result", [])
+
+    def run(self) -> None:
+        try:
+            result = self._controller.review_command(
+                raw=self._raw,
+                actor=self._actor,
+                target=self._target,
+                applied_direction=self._direction,
+                applied_amount=self._amount,
+                log_tail=self._log_tail,
+                dispatch_fn=self._marshalled_dispatch,
+            )
+        except Exception as exc:  # noqa: BLE001
+            from .llm_controller import RunResult
+            result = RunResult(error=f"review crashed: {exc}")
+        self._signals.finished.emit(result)
+
+
 class MainWindow(QMainWindow):
     """Top-level combat window."""
 
@@ -271,6 +322,8 @@ class MainWindow(QMainWindow):
             tab.reorder_requested.connect(self._handle_reorder_request)
             tab.quit_requested.connect(self.close)
             tab.llm_fallback_requested.connect(self._on_llm_fallback)
+            tab.directed_command_requested.connect(self._on_directed_command)
+            tab.review_needed.connect(self._on_review_needed)
             self.tabs.addTab(tab, self._tab_title(npc))
 
         # Background suggestion driver — fires after every state_changed signal.
@@ -779,6 +832,176 @@ class MainWindow(QMainWindow):
         else:
             msg = result.text[:120] if result.text else f"LLM ran {len(result.tool_calls)} tool(s)"
             self.statusBar().showMessage(msg, 5000)
+        self.llm_run_finished.emit(result)
+
+    # ─────────── directed commands + LLM review ───────────
+
+    def _on_directed_command(self, parsed) -> None:
+        """Fast path for directed commands: apply effect to target, log on actor
+        tab, refresh target tab, then enqueue LLM review."""
+        from .dispatcher import InputKind
+
+        actor = self.encounter_state.active_npc
+        actor_name = actor.name if actor else "?"
+
+        # JUMP: just focus the target tab
+        if parsed.kind is InputKind.JUMP:
+            target = self.encounter_state.combatant_by_id(parsed.target_id)
+            if target is not None:
+                idx = self.encounter_state.npcs.index(target)
+                self.tabs.setCurrentIndex(idx)
+            return
+
+        if parsed.kind is not InputKind.DIRECTED:
+            return
+
+        # Resolve target
+        target = self.encounter_state.combatant_by_id(parsed.target_id)
+        if target is None:
+            # Unknown id — log error on actor tab and enqueue LLM fallback
+            self._append_to_active_tab(
+                f"<span style='color:#ff5252'>unknown combatant id: #{parsed.target_id}</span>"
+            )
+            self._on_llm_fallback(parsed.raw, parsed)
+            return
+
+        direction = parsed.resolved_tags.get("direction", "damage")
+        amount = parsed.amount
+        dtype = parsed.resolved_tags.get("type")
+        delivery = parsed.resolved_tags.get("delivery")
+        member = parsed.target_member
+
+        # Apply fast-path effect
+        if direction == "heal":
+            result = target.apply_heal(amount, member=member)
+        else:
+            result = target.apply_damage(amount, member=member)
+
+        # Set in_melee on both actor and target if delivery==melee
+        if delivery == "melee":
+            target.in_melee = True
+            if actor is not None:
+                actor.in_melee = True
+
+        # Build log line on the ACTOR's tab
+        dtype_str = f" {dtype}" if dtype else ""
+        delivery_str = f" ({delivery})" if delivery else ""
+        if direction == "damage":
+            suffix = " · **killed**" if result.get("killed") else ""
+            log_html = (
+                f"<span style='color:#8a8f96'>{actor_name} → #{parsed.target_id}:</span> "
+                f"<span style='color:#ff5252'>−{amount}{dtype_str}{delivery_str}</span>"
+                f" → HP {result.get('after', '?')}/{target.max_total_hp}{suffix}"
+            )
+        else:
+            log_html = (
+                f"<span style='color:#8a8f96'>{actor_name} → #{parsed.target_id}:</span> "
+                f"<span style='color:#66bb6a'>+{amount}</span>"
+                f" → HP {result.get('after', '?')}/{target.max_total_hp}"
+            )
+        self._append_to_active_tab(log_html)
+
+        # Refresh target tab + update its title
+        target_idx = self.encounter_state.npcs.index(target)
+        target_tab = self.tabs.widget(target_idx)
+        if hasattr(target_tab, "refresh"):
+            target_tab.refresh()
+        self.tabs.setTabText(target_idx, self._tab_title(target))
+        self._auto_save()
+
+        # Fire events
+        if self.event_bus:
+            if direction == "damage":
+                from .event_bus import damage_event, bloodied_event, death_event
+                self.event_bus.emit(damage_event(
+                    target.slug, amount, damage_type=dtype,
+                    melee=(delivery == "melee"), ranged=(delivery == "ranged"),
+                ))
+                if result.get("became_bloodied"):
+                    self.event_bus.emit(bloodied_event(target.slug))
+                if result.get("killed"):
+                    self.event_bus.emit(death_event(target.slug))
+            else:
+                from .event_bus import heal_event
+                self.event_bus.emit(heal_event(target.slug, amount))
+
+        # Enqueue LLM review
+        if parsed.tag_errors:
+            # Unknown tags → full LLM fallback (may be free-form intent)
+            self._on_llm_fallback(parsed.raw, parsed)
+        else:
+            self._enqueue_review(parsed.raw, actor, target, applied_direction=direction,
+                                 applied_amount=amount)
+
+    def _append_to_active_tab(self, html: str) -> None:
+        """Append an HTML line to the currently-active tab's log view."""
+        current = self.tabs.currentWidget()
+        if current is not None and hasattr(current, "_append_log"):
+            current._append_log(html)
+
+    def _on_review_needed(self, raw_command: str, actor_npc) -> None:
+        """Route regular (self-targeting) command to the LLM review queue."""
+        self._enqueue_review(raw_command, actor_npc, actor_npc, applied_direction=None,
+                             applied_amount=None)
+
+    def _enqueue_review(
+        self, raw_command: str, actor, target, *,
+        applied_direction: str | None, applied_amount: int | None,
+    ) -> None:
+        """Enqueue an async LLM review for any state-changing command.
+        No-ops if no LLM controller is wired."""
+        controller = getattr(self, "_llm_controller", None)
+        if controller is None:
+            return
+
+        actor_snapshot = {
+            "id": actor.id if actor else None,
+            "name": actor.name if actor else "?",
+            "slug": actor.slug if actor else None,
+        }
+        target_snapshot = {
+            "id": target.id,
+            "name": target.name,
+            "slug": target.slug,
+            "hp": target.hp,
+            "max_hp": target.max_total_hp,
+            "conditions": sorted(target.conditions),
+            "in_melee": target.in_melee,
+        }
+        log_tail = self._last_log_tail(self.encounter_state.log_path, lines=8)
+
+        signals = _LLMWorkerSignals()
+        signals.dispatch_requested.connect(
+            self._on_llm_dispatch_requested, Qt.ConnectionType.QueuedConnection
+        )
+        signals.finished.connect(
+            lambda result, rt=target: self._on_review_finished(result, rt),
+            Qt.ConnectionType.QueuedConnection,
+        )
+        self._llm_run_signals = signals  # keep reference
+
+        worker = _LLMReviewWorker(
+            controller=controller,
+            raw_command=raw_command,
+            actor=actor_snapshot,
+            target=target_snapshot,
+            applied_direction=applied_direction,
+            applied_amount=applied_amount,
+            log_tail=log_tail or "",
+            signals=signals,
+        )
+        self._llm_pool.start(worker)
+
+    def _on_review_finished(self, result, target_npc) -> None:
+        """GUI-thread slot: review returned. Refresh tabs."""
+        for i in range(self.tabs.count()):
+            t = self.tabs.widget(i)
+            if hasattr(t, "refresh"):
+                t.refresh()
+            if hasattr(t, "npc_state") and t.npc_state is target_npc:
+                self.tabs.setTabText(i, self._tab_title(target_npc))
+        if result.error:
+            self.statusBar().showMessage(f"review error: {result.error}", 3000)
         self.llm_run_finished.emit(result)
 
     # ─────────── help ───────────
