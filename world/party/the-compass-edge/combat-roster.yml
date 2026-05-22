@@ -1,0 +1,10 @@
+# Combat roster for The Compass Edge — loaded by the combat-runner GUI:
+#   python -m gui.app --party world/party/the-compass-edge/combat-roster.yml
+# Each player gets a tab + a permanent repeated-digit id for directed commands.
+# max_hp / ac are Level-5 ESTIMATES (the PC files carry no combat stats yet) —
+# replace with exact sheet values when available.
+party: The Compass Edge
+players:
+  - { name: Bazgar,  id: "1", max_hp: 49, ac: 18 }   # Orc Fighter (Battlemaster) — chain shirt + shield
+  - { name: Marwen,  id: "2", max_hp: 32, ac: 15 }   # Wizard (d6) — Mage Armor (13) + Dex 14
+  - { name: Sabriel, id: "3", max_hp: 44, ac: 19 }   # divine martial — heavy armor + shield

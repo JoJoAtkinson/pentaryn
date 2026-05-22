@@ -22,9 +22,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal
+from PySide6.QtCore import QEvent, QObject, QRunnable, Qt, QThreadPool, Signal
 from PySide6.QtGui import QAction, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
+    QApplication,
     QFileDialog,
     QLabel,
     QMainWindow,
@@ -272,6 +273,11 @@ class MainWindow(QMainWindow):
         self.tabs.setMovable(True)  # drag-drop reorder, native
         self.tabs.setTabsClosable(False)  # we don't want accidental close mid-fight
         self.tabs.currentChanged.connect(self._on_tab_changed)
+        # A native drag reflows QTabWidget widget indices but NOT
+        # encounter_state.npcs. Mirror the move so npcs[i] always tracks
+        # tabs.widget(i) — otherwise active_npc (indexed by tab position) and
+        # directed-command tab refreshes resolve the wrong combatant.
+        self.tabs.tabBar().tabMoved.connect(self._on_tab_moved)
         self.setCentralWidget(self.tabs)
 
         # Load action surface (DB) once, filter per-NPC. Stash for per-tab
@@ -364,9 +370,52 @@ class MainWindow(QMainWindow):
             sc = QShortcut(QKeySequence(f"Ctrl+{digit}"), self)
             sc.activated.connect(lambda d=digit: self._jump_to_combatant_by_id(d))
 
-        # Tab key (when no widget consumes it) cycles forward
-        # Note: in normal Qt, Tab is focus traversal — we intercept on the window
-        # only when the focused widget isn't a QLineEdit/QTextEdit.
+        # Tab / Shift+Tab cycle the active combatant tab (turn order = left-to-
+        # right tab order). Qt's focus framework consumes Tab for focus
+        # traversal *inside* the focused QLineEdit before a QShortcut or the
+        # window's keyPressEvent would ever see it — so a plain
+        # `QShortcut(Qt.Key_Tab)` never fires. The robust interception point is
+        # an application-level event filter that catches the KeyPress before
+        # focus traversal runs. We scope it to events belonging to this window.
+        app = QApplication.instance()
+        if app is not None:
+            app.installEventFilter(self)
+
+    def eventFilter(self, obj, event) -> bool:  # noqa: N802 (Qt API)
+        """Intercept Tab / Shift+Tab anywhere in this window and cycle the
+        active combatant tab instead of doing Qt focus traversal. Focus is kept
+        on the active tab's command input so the DM can keep typing."""
+        if event.type() == QEvent.Type.KeyPress and event.key() in (
+            Qt.Key.Key_Tab, Qt.Key.Key_Backtab,
+        ):
+            # Only act for events targeted at a widget inside this window.
+            widget = obj if isinstance(obj, QWidget) else None
+            if widget is not None and widget.window() is self:
+                # Don't steal Tab while an autocomplete popup is open — the
+                # command input uses Tab to accept a completion.
+                current = self.tabs.currentWidget() if hasattr(self, "tabs") else None
+                inp = getattr(current, "input", None)
+                completer = getattr(inp, "completer", None)
+                if completer is not None:
+                    popup = inp.completer().popup()
+                    if popup is not None and popup.isVisible():
+                        return False
+                backward = (
+                    event.key() == Qt.Key.Key_Backtab
+                    or bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+                )
+                self._cycle_tab(-1 if backward else 1)
+                self._focus_active_command_input()
+                return True  # consume — no focus traversal
+        return super().eventFilter(obj, event)
+
+    def _focus_active_command_input(self) -> None:
+        """Put keyboard focus on the active tab's command input so the DM can
+        keep typing commands after a Tab cycle."""
+        current = self.tabs.currentWidget() if hasattr(self, "tabs") else None
+        inp = getattr(current, "input", None)
+        if inp is not None:
+            inp.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def _jump_to_combatant_by_id(self, combatant_id: str) -> None:
         """Switch to the tab for the combatant with this permanent id."""
@@ -416,6 +465,25 @@ class MainWindow(QMainWindow):
 
     def _on_tab_changed(self, idx: int) -> None:
         self.encounter_state.active_tab_index = idx
+        # Keep keyboard focus on the (new) active tab's command input so the DM
+        # can keep typing commands no matter how the tab was switched.
+        self._focus_active_command_input()
+
+    def _on_tab_moved(self, from_idx: int, to_idx: int) -> None:
+        """Mirror a native QTabBar drag-reorder into encounter_state.npcs.
+
+        QTabWidget reflows its widget indices on a native drag but never
+        touches the npcs list. Keeping the two in lock-step preserves the
+        invariant npcs[i] ⇄ tabs.widget(i) that active_npc and the
+        directed-command tab refresh both rely on. active_tab_index is kept
+        pointed at the same combatant the user is currently viewing.
+        """
+        npcs = self.encounter_state.npcs
+        if not (0 <= from_idx < len(npcs)) or not (0 <= to_idx < len(npcs)):
+            return
+        npc = npcs.pop(from_idx)
+        npcs.insert(to_idx, npc)
+        self.encounter_state.active_tab_index = self.tabs.currentIndex()
 
     def _on_tab_state_changed(self) -> None:
         # Refresh tab titles (HP changes show in title)
@@ -1177,6 +1245,12 @@ class MainWindow(QMainWindow):
         if bundle is not None:
             bundle.on_round_advanced = lambda _round: self._apply_round_change()
         self._fire_suggestion_refresh()
+
+    def showEvent(self, event) -> None:  # noqa: N802 (Qt API)
+        """Put initial keyboard focus on the active tab's command input so the
+        DM can type commands the moment the window appears."""
+        super().showEvent(event)
+        self._focus_active_command_input()
 
     def closeEvent(self, event) -> None:  # noqa: N802 (Qt API)
         """Drain the suggestion + LLM thread pools before closing."""

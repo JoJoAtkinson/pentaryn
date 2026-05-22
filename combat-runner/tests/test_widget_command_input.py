@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
-
 from gui.widgets.command_input import CommandInput
+from PySide6.QtCore import Qt
+from PySide6.QtTest import QTest
 
 
 def test_typing_damage_emits_preview(qtbot):
@@ -152,3 +152,50 @@ def test_tag_hint_after_first_tag_excludes_filled_type_facet(qtbot):
     model = widget._completer.model()
     strings = [model.data(model.index(i)) for i in range(model.rowCount())]
     assert not any(s == "cold" for s in strings)   # type facet already filled
+
+
+def test_tag_typeahead_popup_shows_while_typing_directed_command(qtbot):
+    """Regression: typing a partial tag after `<id> <amount> ` must surface the
+    completer popup with the applicable hint_pool candidates.
+
+    Previously the completer matched the whole line (`3 12 f`) against the
+    bare tag candidates (`fire`, `cold`, …); nothing started with `3 12 f`
+    so `completionCount()` was 0 and the popup never appeared, even though
+    the model was swapped correctly. The _LastTokenCompleter narrows
+    matching to the trailing partial token (`f`).
+    """
+    inp = CommandInput()
+    qtbot.addWidget(inp)
+    inp.show()
+    qtbot.waitExposed(inp)
+    QTest.keyClicks(inp, "3 12 f")
+
+    completer = inp._completer
+    # splitPath() narrows matching to the trailing token, so the completer
+    # finds the `f...` tags rather than matching the whole line against none.
+    completions = {
+        completer.completionModel().index(i, 0).data()
+        for i in range(completer.completionCount())
+    }
+    assert "fire" in completions
+    assert "force" in completions
+    # The popup itself is visible to the DM.
+    assert completer.popup().isVisible()
+
+
+def test_tag_typeahead_popup_shows_for_second_tag(qtbot):
+    """A partial second tag after a completed first tag also pops the popup,
+    scoped to the still-open facets (delivery applies, type already filled)."""
+    inp = CommandInput()
+    qtbot.addWidget(inp)
+    inp.show()
+    qtbot.waitExposed(inp)
+    QTest.keyClicks(inp, "3 12 fire m")
+
+    completer = inp._completer
+    completions = {
+        completer.completionModel().index(i, 0).data()
+        for i in range(completer.completionCount())
+    }
+    assert "melee" in completions  # delivery facet still open
+    assert completer.popup().isVisible()
