@@ -39,6 +39,10 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _EXCLUDED_PATH_PARTS = {".history", ".cache", ".output", "image", "images"}
 _COMBAT_TAG = "#combat-runner"
 _FRONTMATTER_COUNT_RE = re.compile(r"^count\s*:\s*(\d+)\s*$", re.MULTILINE)
+# Valid player id: one digit repeated one or more times (e.g. "1", "44", "333").
+# Mirrors the dispatcher's _REPEATED_DIGIT_RE — defined locally to keep
+# load_party_config dependency-light (no import from dispatcher.py).
+_PLAYER_ID_RE = re.compile(r"^(\d)\1*$")
 
 
 @dataclass
@@ -166,6 +170,7 @@ def load_party_config(path: Path) -> dict:
     if not isinstance(players, list):
         raise ValueError(f"{path}: 'players' must be a list")
     required_keys = {"name", "id", "max_hp", "ac"}
+    seen_ids: set[str] = set()
     for i, p in enumerate(players):
         if not isinstance(p, dict):
             raise ValueError(f"{path}: player {i} is not a mapping")
@@ -178,6 +183,15 @@ def load_party_config(path: Path) -> dict:
             raise ValueError(f"{path}: player {i} max_hp must be an integer")
         if not isinstance(p.get("ac"), int):
             raise ValueError(f"{path}: player {i} ac must be an integer")
+        pid = str(p["id"])
+        if not _PLAYER_ID_RE.match(pid):
+            raise ValueError(
+                f"{path}: player {i} id {pid!r} must be a repeated-digit string"
+                f" (e.g. '1', '44', '333')"
+            )
+        if pid in seen_ids:
+            raise ValueError(f"{path}: duplicate player id {pid!r}")
+        seen_ids.add(pid)
     return data
 
 

@@ -46,6 +46,38 @@ def test_empty_id_raises(tmp_path):
     with pytest.raises(ValueError, match="empty id"):
         load_party_config(p)
 
+def test_non_repeated_digit_id_raises(tmp_path):
+    """An id like '12' that is not a repeated-digit string must be rejected."""
+    p = tmp_path / "bad.yml"
+    p.write_text('party: X\nplayers:\n  - { name: Y, id: "12", max_hp: 10, ac: 12 }\n')
+    with pytest.raises(ValueError, match="repeated-digit"):
+        load_party_config(p)
+
+def test_duplicate_id_raises(tmp_path):
+    """Two players sharing the same id must be rejected."""
+    p = tmp_path / "dup.yml"
+    p.write_text(textwrap.dedent("""\
+        party: X
+        players:
+          - { name: A, id: "1", max_hp: 10, ac: 12 }
+          - { name: B, id: "1", max_hp: 20, ac: 14 }
+    """))
+    with pytest.raises(ValueError, match="duplicate"):
+        load_party_config(p)
+
+def test_valid_repeated_digit_ids_load(tmp_path):
+    """Ids '1', '2', '3' are valid repeated-digit strings and must load fine."""
+    p = tmp_path / "ok.yml"
+    p.write_text(textwrap.dedent("""\
+        party: Test Party
+        players:
+          - { name: A, id: "1", max_hp: 30, ac: 14 }
+          - { name: B, id: "2", max_hp: 25, ac: 15 }
+          - { name: C, id: "3", max_hp: 40, ac: 16 }
+    """))
+    data = load_party_config(p)
+    assert len(data["players"]) == 3
+
 def test_real_roster_file():
     """The committed world/party/black-ledger/roster loads correctly."""
     repo_root = Path(__file__).resolve().parents[2]
