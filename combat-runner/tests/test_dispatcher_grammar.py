@@ -175,3 +175,62 @@ def test_at_notacondition_is_unparseable():
     not a silent no-op (the @ sigil signals explicit condition intent)."""
     c = parse("3 @notacondition")
     assert c.kind == "unparseable"
+
+
+# ─── out-of-band commands: note / reorder / quit (C3-F1/F2/F3) ─────────────
+
+def test_note_parses_to_note_kind():
+    """`note <text>` must parse to kind='note', NOT route to LLM."""
+    c = parse("note the wizard is concentrating")
+    assert c.kind == "note"
+    assert c.note_text == "the wizard is concentrating"
+
+
+def test_note_case_insensitive():
+    c = parse("Note hello world")
+    assert c.kind == "note"
+    assert c.note_text == "hello world"
+
+
+def test_note_requires_text():
+    """Bare `note` with no trailing text is not a `note` command — it falls
+    through to the `<who> <stream>` grammar as an action-by-name token
+    (against the current sticky target). It does NOT route to the LLM note path."""
+    c = parse("note")
+    # Not a note — treated as a bare action token
+    assert c.kind != "note"
+
+
+def test_reorder_parses_slugs():
+    c = parse("/reorder goblin-a goblin-b troll")
+    assert c.kind == "reorder"
+    assert c.reorder_slugs == ["goblin-a", "goblin-b", "troll"]
+
+
+def test_reorder_case_insensitive():
+    c = parse("/Reorder slug-a slug-b")
+    assert c.kind == "reorder"
+    assert c.reorder_slugs == ["slug-a", "slug-b"]
+
+
+def test_quit_parses():
+    c = parse("/quit")
+    assert c.kind == "quit"
+
+
+def test_exit_parses():
+    c = parse("/exit")
+    assert c.kind == "quit"
+
+
+def test_quit_case_insensitive():
+    c = parse("/QUIT")
+    assert c.kind == "quit"
+
+
+def test_note_does_not_collide_with_who_stream():
+    """A `2 note` command is NOT a note — it's a normal action-by-name attempt."""
+    c = parse("2 note")
+    # "note" is not a condition or dmg-tag; it's an action token
+    assert c.kind == "command"
+    assert c.effects[0].kind == "action" and c.effects[0].action_token == "note"

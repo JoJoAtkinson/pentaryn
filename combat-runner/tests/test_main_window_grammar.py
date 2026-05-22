@@ -303,3 +303,56 @@ def test_unknown_condition_does_not_fire_bus_event(window):
 
     # Condition must not have been applied.
     assert one.conditions == conditions_before
+
+
+# ─────────────────────── out-of-band commands (C3-F1/F2/F3) ───────────────
+
+
+def test_note_does_not_route_to_llm(window):
+    """`note <text>` must NOT go to the LLM fallback — it's a free log entry.
+
+    Verify: no LLM controller needed, HP state unchanged, and the command
+    is accepted without error.
+    """
+    window.tabs.setCurrentIndex(0)
+    one = window.encounter_state.combatant_by_id("1")
+    hp_before = one.hp
+
+    _submit(window, "note the wizard is concentrating on fog cloud")
+
+    # No state change — note is log-only.
+    assert one.hp == hp_before
+
+
+def test_reorder_via_slash_command(window):
+    """`/reorder` from the command bar calls _handle_reorder_request."""
+    # Get the current slug order.
+    original_order = [n.slug for n in window.encounter_state.npcs]
+    if len(original_order) < 2:
+        pytest.skip("need >=2 NPCs to exercise reorder")
+
+    # Reverse the order.
+    reversed_order = list(reversed(original_order))
+    _submit(window, f"/reorder {' '.join(reversed_order)}")
+
+    new_order = [n.slug for n in window.encounter_state.npcs]
+    assert new_order == reversed_order
+
+
+def test_quit_via_slash_command(window, qtbot):
+    """`/quit` closes the window — routed through _on_command."""
+    from gui.command_model import ParsedCommand
+    cmd = ParsedCommand(kind="quit", raw="/quit")
+    # We can't call _submit (which would try to close the real window in a test),
+    # so directly call _on_command and verify the window becomes invisible or
+    # receives a close event.  The simplest safe check: no exception is raised,
+    # and the window handles the quit kind without routing to LLM.
+    # We mock close() to avoid destroying the test window.
+    closed = []
+    original_close = window.close
+    window.close = lambda: closed.append(True)
+    try:
+        window._on_command(cmd)
+    finally:
+        window.close = original_close
+    assert closed == [True]

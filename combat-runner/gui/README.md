@@ -1,6 +1,6 @@
 # Combat Runner GUI
 
-PySide6 + qt-material desktop app for running D&D 5.5e combat at the table. Each combatant (NPC or PC) gets its own tab; you type sigils into the command bar; the LLM reviews every state-changing command asynchronously so mistakes surface quickly and are undoable in natural language.
+PySide6 + qt-material desktop app for running D&D 5.5e combat at the table. Each combatant (NPC or PC) gets its own tab; you type `<who> <stream>` commands into the command bar; the LLM reviews every state-changing command asynchronously so mistakes surface quickly and are undoable in natural language.
 
 ## Launch
 
@@ -18,7 +18,7 @@ Then pick an encounter from the dialog, adjust per-NPC counts (and per-player HP
 
 - Python 3.13+ (3.14 recommended)
 - macOS, Linux, Windows
-- `ANTHROPIC_API_KEY` env var (or `.env` file at repo root) — optional. Without it, the fast-path sigils still work; LLM fallback, suggestions, **and the always-on async review** are all disabled. The app is fully functional without a key.
+- `ANTHROPIC_API_KEY` env var (or `.env` file at repo root) — optional. Without it, the fast-path grammar commands still work; LLM fallback, suggestions, **and the always-on async review** are all disabled. The app is fully functional without a key.
 
 ## Combatant ids
 
@@ -163,8 +163,8 @@ Every state-changing command (directed or self-target) also triggers an **asynch
 
 Key points for DMs:
 
-- **The `⟳ review:` lines arrive after a delay** — sometimes 5–30 seconds after a fast burst of commands. This is normal, not a bug. The fast-path sigils always resolve immediately; the review is an annotation layer.
-- **`ANTHROPIC_API_KEY` is required for reviews.** Without a key the review silently no-ops; all sigils and the LLM fallback still work. See Requirements above.
+- **The `⟳ review:` lines arrive after a delay** — sometimes 5–30 seconds after a fast burst of commands. This is normal, not a bug. Grammar commands always resolve immediately; the review is an annotation layer.
+- **`ANTHROPIC_API_KEY` is required for reviews.** Without a key the review silently no-ops; all grammar commands and the LLM fallback still work. See Requirements above.
 - **Reviews cost real API tokens** (Haiku model, ~$0.15–0.75 for a 4-hour session of typical volume). There is no per-session call counter in the UI.
 - **`note …` never hits the LLM** — use it for free-form log entries that should not trigger a review.
 
