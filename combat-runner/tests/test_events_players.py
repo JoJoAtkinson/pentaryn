@@ -27,41 +27,34 @@ def pc_npc():
     )
 
 
-def test_pc_bloodied_event_fires(qtbot, pc_npc):
-    from gui.event_bus import EventBus
-    from gui.npc_tab import NPCTab
+def _window_for(qtbot, tmp_path, pc_npc):
+    """Build a single-PC MainWindow — damage now flows through MainWindow._on_command."""
+    from gui.main_window import MainWindow
+    from gui.state import EncounterState
 
-    bus = EventBus()
-    received = []
-    bus.subscribe("bloodied", received.append)
-    tab = NPCTab(
-        npc_state=pc_npc,
-        actions=[],
-        log_path=Path("/tmp/log.md"),
-        event_bus=bus,
+    es = EncounterState(
+        name="t", root=Path(tmp_path), log_path=Path(tmp_path) / "c.md", npcs=[pc_npc],
     )
-    qtbot.addWidget(tab)
-    # 31 - 20 = 11, which is <= 15 (half of 31) → bloodied
-    tab._on_submitted("-20")
+    win = MainWindow(es)
+    qtbot.addWidget(win)
+    return win
+
+
+def test_pc_bloodied_event_fires(qtbot, tmp_path, pc_npc):
+    win = _window_for(qtbot, tmp_path, pc_npc)
+    received = []
+    win.event_bus.subscribe("bloodied", received.append)
+    # 31 - 20 = 11, which is <= 15 (half of 31) → bloodied. '0' = the active combatant.
+    win.tabs.currentWidget()._on_submitted("0 20 dmg")
     assert len(received) == 1
     assert received[0].subject_npc == "pc-1"
 
 
-def test_pc_death_event_fires(qtbot, pc_npc):
-    from gui.event_bus import EventBus
-    from gui.npc_tab import NPCTab
-
-    bus = EventBus()
+def test_pc_death_event_fires(qtbot, tmp_path, pc_npc):
+    win = _window_for(qtbot, tmp_path, pc_npc)
     received = []
-    bus.subscribe("death", received.append)
-    tab = NPCTab(
-        npc_state=pc_npc,
-        actions=[],
-        log_path=Path("/tmp/log.md"),
-        event_bus=bus,
-    )
-    qtbot.addWidget(tab)
-    tab._on_submitted("-100")
+    win.event_bus.subscribe("death", received.append)
+    win.tabs.currentWidget()._on_submitted("0 100 dmg")
     assert len(received) == 1
 
 

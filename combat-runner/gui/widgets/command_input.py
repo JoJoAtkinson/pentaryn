@@ -1,10 +1,10 @@
-"""Command input widget — sigil-aware text field with live preview signals.
+"""Command input widget — grammar-aware text field with live preview signals.
 
 Reads as the user types, emits:
   preview_changed(member_idx: int, projected_hp: int | None)
-      Fired on every keystroke when the active text is a `-N` or `+N` (or
-      mob-targeted variant). Projected_hp is None when no preview should
-      be shown (cleared).
+      Fired on every keystroke when the active text is a parseable amount
+      effect in the new `<who> <stream>` grammar. Projected_hp is None
+      when no preview should be shown (cleared).
   submitted(text: str)
       Fired on Return/Enter. Caller parses and dispatches.
 
@@ -36,29 +36,35 @@ SLASH_COMMANDS = (
 )
 
 
-# Match the dispatcher patterns we need for live preview (keep narrow — only
-# damage/heal trigger preview).
-_PREVIEW_RE = re.compile(
-    r"""
-    ^
-    (?:m(?P<member>[1-9]\d*)\s+)?  # optional mob target (1-indexed; reject m0)
-    (?P<sign>[-+])(?P<amount>\d+)  # damage (-) or heal (+)
-    (?:\s+\w+)?                    # optional damage type
-    $
-    """,
-    re.VERBOSE | re.IGNORECASE,
-)
+class _LastTokenCompleter(QCompleter):
+    """QCompleter whose completion prefix is the LAST whitespace-delimited
+    token of the line edit, not the whole string.
+
+    A plain QCompleter attached to a QLineEdit auto-sets its completionPrefix
+    to the entire text. That works for single-token sigils (`@bl`, `/quit`)
+    but breaks directed-command tag typeahead: the line is `3 12 f` while the
+    candidates are bare tags (`fire`, `cold`, …) — the whole-line prefix
+    matches nothing and the popup never shows.
+
+    Overriding `splitPath` to return just the trailing token fixes tag
+    completion without disturbing the `@`/`/` cases (those inputs have no
+    spaces, so the last token IS the whole string).
+    """
+
+    def splitPath(self, path: str) -> list[str]:  # noqa: N802 (Qt API)
+        tokens = path.rsplit(" ", 1)
+        return [tokens[-1]]
 
 
 class CommandInput(QLineEdit):
-    """qt-material-themed input with sigil-aware live preview."""
+    """Grammar-aware input with live HP preview for the `<who> <stream>` grammar."""
 
     preview_changed = Signal(object, object)  # (member_idx_or_None, projected_hp_or_None)
     submitted = Signal(str)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
-        self.setPlaceholderText("attack · -18 · +10 · @prone · @stun 5 · m3 -5 · note ... · /reorder ...")
+        self.setPlaceholderText("2 8 melee · 2 2 · 3 prone · note ... · /reorder ...")
         self.setObjectName("CommandInput")
         self.setMinimumHeight(34)
 
@@ -73,7 +79,7 @@ class CommandInput(QLineEdit):
         # runs when the popup is hidden.
         self._condition_model = QStringListModel(["@" + c for c in CONDITIONS], self)
         self._slash_model = QStringListModel(list(SLASH_COMMANDS), self)
-        self._completer = QCompleter(self._condition_model, self)
+        self._completer = _LastTokenCompleter(self._condition_model, self)
         self._completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self._completer.setFilterMode(Qt.MatchFlag.MatchStartsWith)
         self._completer.setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
@@ -104,46 +110,49 @@ class CommandInput(QLineEdit):
     # ─────────── live preview ───────────
 
     def _on_text_changed(self, text: str) -> None:
-        """On every keystroke, see if the text describes a damage or heal
-        that we should preview. Emit `preview_changed`."""
-        m = _PREVIEW_RE.match(text.strip())
-        if not m:
+        """On every keystroke, check whether the text is an amount effect in the
+        new `<who> <stream>` grammar. If so, emit a preview; otherwise clear it.
+
+        Uses `dispatcher.parse()` directly so the preview and the parser can
+        never diverge: if the dispatcher wouldn't apply the command, the
+        overlay won't fire.
+        """
+        from ..dispatcher import parse
+
+        cmd = parse(text)
+        if cmd.kind != "command" or len(cmd.effects) != 1:
+            self.preview_changed.emit(None, None)
+            return
+        eff = cmd.effects[0]
+        if eff.kind != "amount":
             self.preview_changed.emit(None, None)
             return
 
-        amount = int(m.group("amount"))
-        sign = m.group("sign")
-        member_arg = m.group("member")
+        amount = eff.amount
+        is_heal = eff.amount_tags.get("direction") == "heal"
 
-        # Determine target member (0-indexed)
-        if member_arg:
-            target_idx = int(member_arg) - 1
+        # Determine target member (0-indexed). `eff.member` is 1-indexed from
+        # `m<n>` in the stream; None means default routing.
+        if eff.member is not None:
+            target_idx = eff.member - 1
             if not (0 <= target_idx < self._member_count):
                 # Out-of-range target → no preview (parser will catch it on submit)
                 self.preview_changed.emit(None, None)
                 return
         else:
-            # Default routing matches state.NPCState._resolve_*_target rules
-            if sign == "-":
-                # damage → highest-numbered alive
-                alive = [i for i, h in enumerate(self._member_hp) if h > 0]
-                if not alive:
-                    self.preview_changed.emit(None, None)
-                    return
-                target_idx = alive[-1]
-            else:
-                # heal → lowest-numbered alive
-                alive = [i for i, h in enumerate(self._member_hp) if h > 0]
-                if not alive:
-                    self.preview_changed.emit(None, None)
-                    return
-                target_idx = alive[0]
+            alive = [i for i, h in enumerate(self._member_hp) if h > 0]
+            if not alive:
+                self.preview_changed.emit(None, None)
+                return
+            # Match state.NPCState default-routing rules:
+            # damage → highest-numbered alive; heal → lowest-numbered alive.
+            target_idx = alive[0] if is_heal else alive[-1]
 
         current = self._member_hp[target_idx]
-        if sign == "-":
-            projected = max(0, current - amount)
-        else:
+        if is_heal:
             projected = min(self._max_hp_per_member, current + amount)
+        else:
+            projected = max(0, current - amount)
         self.preview_changed.emit(target_idx, projected)
 
     # ─────────── autocomplete popup ───────────
@@ -175,26 +184,28 @@ class CommandInput(QLineEdit):
                 # Everything after id + amount are tag tokens. The last token is the
                 # partial prefix being typed; completed tokens are all but the last.
                 # If text ends with a space, all tokens are complete — pass them all.
+                # Determine where tags start (after id + [m<n>] + amount).
+                structural = 2  # id + amount
+                has_mob = (
+                    len(tokens) >= 2
+                    and tokens[1].lower().startswith("m")
+                    and tokens[1][1:].isdigit()
+                )
+                if has_mob:
+                    structural = 3  # id + m<n> + amount
                 if text.endswith(" "):
-                    completed_tokens = tokens[2:]  # skip id + amount (or id + m<n> + amount)
-                    # Adjust for mob target: id m<n> amount → skip 3 tokens
-                    # Already handled since we pass tokens after the first two structural
-                    # tokens, but we need to detect if tokens[1] is m<n>.
-                    if len(tokens) >= 2 and tokens[1].lower().startswith("m") and tokens[1][1:].isdigit():
-                        completed_tokens = tokens[3:]
-                    partial = ""
+                    # Every token typed so far is complete.
+                    completed_tokens = tokens[structural:]
                 else:
-                    # Last token is the partial; everything before it (after id/amount) is complete
-                    # Determine where tags start (after id + [m<n>] + amount)
-                    structural = 2  # id + amount
-                    if len(tokens) >= 2 and tokens[1].lower().startswith("m") and tokens[1][1:].isdigit():
-                        structural = 3  # id + m<n> + amount
+                    # Last token is the partial being typed; the rest are complete.
                     tag_tokens = tokens[structural:]
                     completed_tokens = tag_tokens[:-1] if tag_tokens else []
-                    partial = m.group(2).lower()
+                # Feed the completer the full applicable pool. The
+                # _LastTokenCompleter's splitPath() narrows the completion
+                # prefix to the trailing partial token, so the popup filters
+                # `fire`/`force`/… against `f` rather than the whole line.
                 candidates = hint_pool(completed_tokens)
-                filtered = [c for c in candidates if c.startswith(partial)]
-                model = QStringListModel(filtered, self)
+                model = QStringListModel(candidates, self)
                 self._completer.setModel(model)
             else:
                 # Hide popup for non-sigil text

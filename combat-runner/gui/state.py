@@ -9,6 +9,7 @@ the dispatcher / event bus can mutate state without dragging in the GUI layer.
 
 from __future__ import annotations
 
+import dataclasses
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -37,6 +38,80 @@ STANDARD_CONDITIONS: tuple[str, ...] = (
     "concentrating",
     "bloodied",  # auto-applied at HP <= half max
 )
+
+# Single authoritative alias table: any accepted spelling → canonical name.
+# Full catalog names canonicalize to themselves (handled in
+# canonicalize_condition directly). Short forms and common variants live here.
+_CONDITION_ALIAS_TABLE: dict[str, str] = {
+    # blinded
+    "blind": "blinded",
+    # charmed
+    "charm": "charmed",
+    # deafened
+    "deafen": "deafened",
+    "deaf": "deafened",
+    # frightened
+    "frighten": "frightened",
+    "fear": "frightened",
+    # grappled
+    "grapple": "grappled",
+    # incapacitated
+    "incapacitate": "incapacitated",
+    "incap": "incapacitated",
+    # invisible
+    "invis": "invisible",
+    # paralyzed
+    "paralyze": "paralyzed",
+    "para": "paralyzed",
+    # petrified
+    "petrify": "petrified",
+    "petra": "petrified",
+    # poisoned
+    "poison": "poisoned",
+    # prone — full name is already 5 chars, no short needed; listed for alias
+    # completeness (the loop below covers it via STANDARD_CONDITIONS identity)
+    # restrained
+    "restrain": "restrained",
+    # stunned
+    "stun": "stunned",
+    # unconscious
+    "unconscious": "unconscious",
+    "uncon": "unconscious",
+    "ko": "unconscious",
+    # App-specific
+    # NOTE: "dodge" is intentionally NOT aliased to "dodging" here — "dodge"
+    # is also a valid combat action verb name and the disambiguation must favour
+    # the action (bare words that aren't recognized conditions stay as action
+    # tokens). The full name "dodging" is already in STANDARD_CONDITIONS and
+    # resolves via the identity branch.
+    "conc": "concentrating",
+    "concentrate": "concentrating",
+    "blood": "bloodied",
+}
+
+
+# Pre-built frozenset for O(1) catalog lookups.
+_STANDARD_CONDITIONS_SET: frozenset[str] = frozenset(STANDARD_CONDITIONS)
+
+
+def canonicalize_condition(word: str) -> str | None:
+    """Return the canonical STANDARD_CONDITIONS name for *word*, or None.
+
+    Accepts full catalog names (identity) and any short form listed in
+    ``_CONDITION_ALIAS_TABLE``. Case-insensitive; surrounding whitespace is
+    stripped.  Returns ``None`` for unrecognized words.
+
+    This is the SINGLE source of truth for condition recognition. Both
+    ``dispatcher.py`` (parser) and ``effects.py`` (apply) use this function so
+    they can never drift.
+    """
+    w = word.lower().strip()
+    if not w:
+        return None
+    # Full catalog names resolve to themselves.
+    if w in _STANDARD_CONDITIONS_SET:
+        return w
+    return _CONDITION_ALIAS_TABLE.get(w)
 
 
 # ─────────────────────────── NPC state ───────────────────────────
@@ -302,6 +377,10 @@ class EncounterState:
     round_num: int = 1
     active_tab_index: int = 0
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    current_target: list[str] = field(default_factory=list)
+    # Typed as plain list to avoid an import cycle; PendingEffect is defined in history.py.
+    # Serialize via dataclasses.asdict if entries are dataclasses; round-trip as list[dict].
+    pending_effects: list = field(default_factory=list)
 
     def npc_by_slug(self, slug: str) -> NPCState | None:
         # Slugs aren't guaranteed unique when the user spawns duplicates;
@@ -375,10 +454,11 @@ class EncounterState:
 # ─────────────────────────── ID alphabet ───────────────────────────
 
 def _id_alphabet() -> Iterator[str]:
-    """Yields: '1','2',...,'9','0', '11','22',...,'99','00', '111',... indefinitely."""
+    """Yields: '1','2',...,'9', '11','22',...,'99', '111',... indefinitely.
+    '0' is intentionally excluded so it remains free as the future 'self' token."""
     digit = 1
     while True:
-        for d in "1234567890":
+        for d in "123456789":
             yield d * digit
         digit += 1
 
@@ -485,6 +565,10 @@ def _deserialize_npc(d: dict[str, Any]) -> NPCState:
 
 def serialize_encounter(es: EncounterState) -> dict[str, Any]:
     """Full encounter state as a plain dict. Safe to json.dumps."""
+    serialized_pending = [
+        dataclasses.asdict(e) if dataclasses.is_dataclass(e) and not isinstance(e, type) else e
+        for e in es.pending_effects
+    ]
     return {
         "name": es.name,
         "root": str(es.root),
@@ -493,7 +577,41 @@ def serialize_encounter(es: EncounterState) -> dict[str, Any]:
         "active_tab_index": es.active_tab_index,
         "created_at": es.created_at.isoformat() if es.created_at else None,
         "npcs": [_serialize_npc(n) for n in es.npcs],
+        "current_target": list(es.current_target),
+        "pending_effects": serialized_pending,
     }
+
+
+def _deserialize_pending(entry: Any) -> Any:
+    """Rebuild a serialized pending-effect entry into a ``PendingEffect``.
+
+    ``serialize_encounter`` emits each ``PendingEffect`` as a dict; without
+    this step they would round-trip as raw dicts and crash ``apply_hit`` /
+    ``dataclasses.asdict`` later. The ``PendingEffect`` import is local to
+    avoid an import cycle (``history.py`` imports ``state.py``).
+
+    Entries that are already ``PendingEffect`` instances pass through. A dict
+    missing any required key raises ``ValueError``.
+    """
+    from gui.history import PendingEffect
+
+    if isinstance(entry, PendingEffect):
+        return entry
+    if isinstance(entry, dict):
+        required = ("combatant_id", "full_amount", "applied_amount", "kind")
+        for key in required:
+            if key not in entry:
+                raise ValueError(f"pending_effect dict missing required key {key!r}")
+        return PendingEffect(
+            combatant_id=str(entry["combatant_id"]),
+            full_amount=int(entry["full_amount"]),
+            applied_amount=int(entry["applied_amount"]),
+            kind=str(entry["kind"]),
+            resolved=bool(entry.get("resolved", False)),
+            source=str(entry.get("source", "")),
+            round=int(entry.get("round", 0)),
+        )
+    raise ValueError(f"pending_effect entry must be a dict or PendingEffect, got {type(entry).__name__}")
 
 
 def deserialize_encounter(d: dict[str, Any]) -> EncounterState:
@@ -517,6 +635,10 @@ def deserialize_encounter(d: dict[str, Any]) -> EncounterState:
         round_num=int(d.get("round_num", 1)),
         active_tab_index=int(d.get("active_tab_index", 0)),
         created_at=created,
+        current_target=list(d.get("current_target", []) or []),
+        pending_effects=[
+            _deserialize_pending(e) for e in (d.get("pending_effects", []) or [])
+        ],
     )
     if es.active_tab_index < 0 or es.active_tab_index >= len(es.npcs):
         # Clamp rather than raise (LLM-friendly).

@@ -22,9 +22,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, Signal
+from PySide6.QtCore import QEvent, QObject, QRunnable, Qt, QThreadPool, Signal
 from PySide6.QtGui import QAction, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
+    QApplication,
     QFileDialog,
     QLabel,
     QMainWindow,
@@ -46,9 +47,13 @@ from .event_bus import (
     collect_watches_from_db,
     round_event,
 )
+from .command_model import Effect, ParsedCommand
+from .effects import _CONDITION_UNKNOWN_SENTINEL, apply_effect, apply_hit
+from .history import UndoStack
 from .npc_tab import NPCTab
 from .state import EncounterState, NPCState, deserialize_encounter, serialize_encounter
 from .suggestion_driver import SuggestionDriver
+from .widgets.combat_tab_bar import CombatTabBar
 from .widgets.reaction_prompt import ReactionPromptDialog
 from .widgets.srd_panel import build_srd_dock
 from .widgets.suggestion_bar import Suggestion
@@ -185,6 +190,9 @@ class MainWindow(QMainWindow):
     def __init__(self, encounter_state: EncounterState, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.encounter_state = encounter_state
+        # Memento undo stack — every state-mutating command snapshots onto it
+        # before applying, and an `undo` effect pops + restores it.
+        self.undo_stack = UndoStack()
 
         self.setWindowTitle(f"Combat Runner — {encounter_state.name}")
         self.resize(1100, 720)
@@ -269,9 +277,17 @@ class MainWindow(QMainWindow):
 
     def _build_central(self) -> None:
         self.tabs = QTabWidget()
+        # CombatTabBar paints the red ▼ targeting arrow. Installed before any
+        # tab is added so tabRect()/count() are valid for the first paint.
+        self.tabs.setTabBar(CombatTabBar())
         self.tabs.setMovable(True)  # drag-drop reorder, native
         self.tabs.setTabsClosable(False)  # we don't want accidental close mid-fight
         self.tabs.currentChanged.connect(self._on_tab_changed)
+        # A native drag reflows QTabWidget widget indices but NOT
+        # encounter_state.npcs. Mirror the move so npcs[i] always tracks
+        # tabs.widget(i) — otherwise active_npc (indexed by tab position) and
+        # directed-command tab refreshes resolve the wrong combatant.
+        self.tabs.tabBar().tabMoved.connect(self._on_tab_moved)
         self.setCentralWidget(self.tabs)
 
         # Load action surface (DB) once, filter per-NPC. Stash for per-tab
@@ -317,11 +333,8 @@ class MainWindow(QMainWindow):
             )
             self._tab_action_surfaces[id(tab)] = actions
             tab.state_changed.connect(self._on_tab_state_changed)
-            tab.reorder_requested.connect(self._handle_reorder_request)
             tab.quit_requested.connect(self.close)
-            tab.llm_fallback_requested.connect(self._on_llm_fallback)
-            tab.directed_command_requested.connect(self._on_directed_command)
-            tab.review_needed.connect(self._on_review_needed)
+            tab.command_requested.connect(self._on_command)
             self.tabs.addTab(tab, self._tab_title(npc))
 
         # Background suggestion driver — fires after every state_changed signal.
@@ -340,6 +353,9 @@ class MainWindow(QMainWindow):
         # strong reference; we keep them here too so the QObjects aren't GC'd
         # while the worker thread holds them across network round-trips.
         self._inflight_llm_signals: set = set()
+        # Rolling buffer of the last 10 raw command strings (newest last).
+        # Populated by _on_command; passed to the LLM fallback for context.
+        self._recent_commands: list[str] = []
 
         # Status bar at the bottom for transient messages
         self.setStatusBar(QStatusBar(self))
@@ -364,9 +380,52 @@ class MainWindow(QMainWindow):
             sc = QShortcut(QKeySequence(f"Ctrl+{digit}"), self)
             sc.activated.connect(lambda d=digit: self._jump_to_combatant_by_id(d))
 
-        # Tab key (when no widget consumes it) cycles forward
-        # Note: in normal Qt, Tab is focus traversal — we intercept on the window
-        # only when the focused widget isn't a QLineEdit/QTextEdit.
+        # Tab / Shift+Tab cycle the active combatant tab (turn order = left-to-
+        # right tab order). Qt's focus framework consumes Tab for focus
+        # traversal *inside* the focused QLineEdit before a QShortcut or the
+        # window's keyPressEvent would ever see it — so a plain
+        # `QShortcut(Qt.Key_Tab)` never fires. The robust interception point is
+        # an application-level event filter that catches the KeyPress before
+        # focus traversal runs. We scope it to events belonging to this window.
+        app = QApplication.instance()
+        if app is not None:
+            app.installEventFilter(self)
+
+    def eventFilter(self, obj, event) -> bool:  # noqa: N802 (Qt API)
+        """Intercept Tab / Shift+Tab anywhere in this window and cycle the
+        active combatant tab instead of doing Qt focus traversal. Focus is kept
+        on the active tab's command input so the DM can keep typing."""
+        if event.type() == QEvent.Type.KeyPress and event.key() in (
+            Qt.Key.Key_Tab, Qt.Key.Key_Backtab,
+        ):
+            # Only act for events targeted at a widget inside this window.
+            widget = obj if isinstance(obj, QWidget) else None
+            if widget is not None and widget.window() is self:
+                # Don't steal Tab while an autocomplete popup is open — the
+                # command input uses Tab to accept a completion.
+                current = self.tabs.currentWidget() if hasattr(self, "tabs") else None
+                inp = getattr(current, "input", None)
+                completer = getattr(inp, "completer", None)
+                if completer is not None:
+                    popup = inp.completer().popup()
+                    if popup is not None and popup.isVisible():
+                        return False
+                backward = (
+                    event.key() == Qt.Key.Key_Backtab
+                    or bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+                )
+                self._cycle_tab(-1 if backward else 1)
+                self._focus_active_command_input()
+                return True  # consume — no focus traversal
+        return super().eventFilter(obj, event)
+
+    def _focus_active_command_input(self) -> None:
+        """Put keyboard focus on the active tab's command input so the DM can
+        keep typing commands after a Tab cycle."""
+        current = self.tabs.currentWidget() if hasattr(self, "tabs") else None
+        inp = getattr(current, "input", None)
+        if inp is not None:
+            inp.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def _jump_to_combatant_by_id(self, combatant_id: str) -> None:
         """Switch to the tab for the combatant with this permanent id."""
@@ -393,6 +452,14 @@ class MainWindow(QMainWindow):
         cannot drift — the LLM `advance_round` / `set_round` tools call back
         into this via the `on_round_advanced` hook wired in set_llm_controller.
         """
+        # A pending effect from a prior round is stale — resolve it (the
+        # default "do nothing" outcome is a successful save / a miss). This
+        # also clears its unresolved marker. Spec §4.
+        from .effects import clear_stale_pending
+        stale = clear_stale_pending(
+            self.encounter_state, self.encounter_state.round_num
+        )
+        self._log_fragments(stale)
         # Refresh every tab; recharge rolls handled by each tab's start-of-turn,
         # but we trigger them here for round-button convenience.
         for i in range(self.tabs.count()):
@@ -400,6 +467,7 @@ class MainWindow(QMainWindow):
             if isinstance(tab, NPCTab):
                 tab.refresh()
         self.round_btn.setText(self._round_btn_text())
+        self._refresh_pending_markers()
         self.statusBar().showMessage(f"Round → {self.encounter_state.round_num}", 3000)
         # Surface the round change as an event so condition durations tick
         # (NPCTab._on_round_event) and any "at start of round X" triggers fire.
@@ -410,12 +478,55 @@ class MainWindow(QMainWindow):
 
     def _tab_title(self, npc: NPCState) -> str:
         id_prefix = f"{npc.id} · " if npc.id else ""
+        # Minimal unresolved-effect marker (spec §6): a trailing " ?" when this
+        # combatant has an unresolved PendingEffect. Cleared automatically once
+        # the effect resolves (via `hit` or round-advance stale-clear), because
+        # every repaint path re-derives the title through this method.
+        suffix = " ?" if self._has_unresolved_pending(npc) else ""
         if npc.count > 1:
-            return f"{id_prefix}{npc.name} ×{npc.count}  {npc.hp}/{npc.max_total_hp}"
-        return f"{id_prefix}{npc.name}  {npc.hp}/{npc.max_total_hp}"
+            return f"{id_prefix}{npc.name} ×{npc.count}  {npc.hp}/{npc.max_total_hp}{suffix}"
+        return f"{id_prefix}{npc.name}  {npc.hp}/{npc.max_total_hp}{suffix}"
+
+    def _has_unresolved_pending(self, npc: NPCState) -> bool:
+        """True if *npc* has an unresolved PendingEffect (drives the tab marker)."""
+        return any(
+            pe.combatant_id == npc.id and not pe.resolved
+            for pe in self.encounter_state.pending_effects
+        )
+
+    def _refresh_pending_markers(self) -> None:
+        """Re-title every tab so the unresolved-effect marker reflects state."""
+        for i in range(self.tabs.count()):
+            tab = self.tabs.widget(i)
+            if isinstance(tab, NPCTab):
+                self.tabs.setTabText(i, self._tab_title(tab.npc_state))
 
     def _on_tab_changed(self, idx: int) -> None:
         self.encounter_state.active_tab_index = idx
+        # The actor tab changed — re-evaluate which tabs show the targeting
+        # arrow (the arrow is never painted on the active/actor tab).
+        self._refresh_target_arrow()
+        # Keep keyboard focus on the (new) active tab's command input so the DM
+        # can keep typing commands no matter how the tab was switched.
+        self._focus_active_command_input()
+
+    def _on_tab_moved(self, from_idx: int, to_idx: int) -> None:
+        """Mirror a native QTabBar drag-reorder into encounter_state.npcs.
+
+        QTabWidget reflows its widget indices on a native drag but never
+        touches the npcs list. Keeping the two in lock-step preserves the
+        invariant npcs[i] ⇄ tabs.widget(i) that active_npc and the
+        directed-command tab refresh both rely on. active_tab_index is kept
+        pointed at the same combatant the user is currently viewing.
+        """
+        npcs = self.encounter_state.npcs
+        if not (0 <= from_idx < len(npcs)) or not (0 <= to_idx < len(npcs)):
+            return
+        npc = npcs.pop(from_idx)
+        npcs.insert(to_idx, npc)
+        self.encounter_state.active_tab_index = self.tabs.currentIndex()
+        # Tab indices shifted — re-map current_target ids onto the new layout.
+        self._refresh_target_arrow()
 
     def _on_tab_state_changed(self) -> None:
         # Refresh tab titles (HP changes show in title)
@@ -603,42 +714,13 @@ class MainWindow(QMainWindow):
             )
             return
 
-        # In-place patch — copy every NPCState field from the snapshot so new
-        # fields (e.g. in_melee, pinned_notes) can never silently drift.
-        #
-        # Fields intentionally NOT restored:
-        #   slug  — identity key, must match the existing NPC to reach this path
-        #   name  — display name lives on the tab widget, not worth stomping
-        #   kind  — pc/npc distinction is structural, not mid-combat state
-        #   id    — combatant id is assigned at launch, not per-snapshot
-        #   max_hp — base stat; an in-combat temp-HP change would be in member_hp
-        #   ac, speed, cr, immunities — static stats, not combat state
-        _SKIP_FIELDS = frozenset({
-            "slug", "name", "kind", "id",
-            "max_hp", "ac", "speed", "cr", "immunities",
-        })
-        by_slug = {n.slug: n for n in restored.npcs}
-        for npc in self.encounter_state.npcs:
-            src = by_slug[npc.slug]
-            for f in dataclasses.fields(NPCState):
-                if f.name in _SKIP_FIELDS:
-                    continue
-                val = getattr(src, f.name)
-                # Copy mutable containers so live state isn't aliased to the
-                # deserialized snapshot object (which will be GC'd shortly).
-                if isinstance(val, list):
-                    val = list(val)
-                elif isinstance(val, dict):
-                    val = dict(val)
-                elif isinstance(val, set):
-                    val = set(val)
-                setattr(npc, f.name, val)
-        self.encounter_state.round_num = restored.round_num
-        self.round_btn.setText(self._round_btn_text())
-        for i in range(self.tabs.count()):
-            t = self.tabs.widget(i)
-            if isinstance(t, NPCTab):
-                t.refresh()
+        # Full in-place restore — NPC fields, round_num, current_target,
+        # pending_effects, active_tab_index, and the targeting arrow — via the
+        # shared helper (also used by `_apply_undo`). Static stats (slug, kind,
+        # id, max_hp, ac, …) are copied too, but for a matching-slug snapshot
+        # they are identical to the live values, so the copy is a no-op.
+        self._restore_encounter_state(restored)
+        self._repaint_all_tabs()
         self.statusBar().showMessage(f"Loaded {Path(path).name} (round {restored.round_num})", 5000)
 
     # ─────────── watch / broadcast suggestions ───────────
@@ -828,7 +910,7 @@ class MainWindow(QMainWindow):
             return f"Round → {event.payload.get('round_num', '?')}"
         return f"event: {event.kind} on {event.subject_npc}"
 
-    def _on_llm_fallback(self, text: str, parsed) -> None:
+    def _on_llm_fallback(self, text: str, parsed, correction_ctx: dict | None = None) -> None:
         """Route fallback input to the LLM controller if one's been wired.
 
         The LLM call (up to 10 blocking network round-trips, 2-40s) runs on a
@@ -836,13 +918,29 @@ class MainWindow(QMainWindow):
         working on other tabs while it thinks. Tool calls mutate live widgets,
         so they are marshalled back to this (the GUI) thread via
         `_on_llm_dispatch_requested`. A "thinking…" status message stays up for
-        the duration."""
+        the duration.
+
+        ``correction_ctx`` — optional enriched context dict (assembled by
+        ``build_correction_context``) injected as a JSON preamble in the text
+        sent to the LLM so it can reason about encounter state, recent command
+        history, and unconfirmed pending effects.
+        """
         controller = getattr(self, "_llm_controller", None)
         if controller is None:
             self.statusBar().showMessage(f"LLM fallback (no controller): {text!r}", 5000)
             return
         active_npc = self.encounter_state.active_npc
         active_slug = active_npc.slug if active_npc is not None else None
+
+        # When enriched context is available, prepend it as a compact JSON
+        # section so the model can use state/history for fuzzy corrections.
+        llm_text = text
+        if correction_ctx is not None:
+            try:
+                ctx_json = json.dumps(correction_ctx, ensure_ascii=False)
+                llm_text = f"[correction_context]{ctx_json}[/correction_context]\n{text}"
+            except (TypeError, ValueError):
+                pass  # malformed context — fall back to plain text
 
         # Persistent (no timeout) thinking indicator — cleared by the finished slot.
         self.statusBar().showMessage(f"LLM thinking about: {text!r} …")
@@ -861,7 +959,7 @@ class MainWindow(QMainWindow):
             lambda _result, s=signals: self._inflight_llm_signals.discard(s),
             Qt.ConnectionType.QueuedConnection,
         )
-        worker = _LLMRunWorker(controller, text, active_slug, signals)
+        worker = _LLMRunWorker(controller, llm_text, active_slug, signals)
         self._llm_pool.start(worker)
 
     def _on_llm_dispatch_requested(self, tool_uses, holder, done) -> None:
@@ -892,126 +990,477 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(msg, 5000)
         self.llm_run_finished.emit(result)
 
-    # ─────────── directed commands + LLM review ───────────
+    # ─────────── command grammar dispatch ───────────
 
-    def _on_directed_command(self, parsed) -> None:
-        """Fast path for directed commands: apply effect to target, log on actor
-        tab, refresh target tab, then enqueue LLM review."""
-        from .dispatcher import InputKind
+    def _on_command(self, cmd: ParsedCommand) -> None:
+        """Handle a parsed `<who> <stream>` command from any tab.
+
+        Routes by `cmd.kind`:
+          * ``unparseable`` → the LLM fallback path (raw text).
+          * ``note``        → append a DM-only log entry; no LLM, no review.
+          * ``reorder``     → call `_handle_reorder_request`; no LLM, no review.
+          * ``quit``        → close the window.
+          * ``set_target``  → resolve `target_ids`, set `current_target`,
+                              jump to the first target tab, refresh the arrow.
+          * ``command``     → snapshot, resolve targets, apply each Effect,
+                              emit bus events, repaint, refresh the arrow.
+        """
+        # Record every raw command string for LLM context (rolling window of 10).
+        if cmd.raw:
+            self._recent_commands.append(cmd.raw)
+            if len(self._recent_commands) > 10:
+                self._recent_commands = self._recent_commands[-10:]
+
+        # --- out-of-band commands (no LLM, no snapshot) ---
+        if cmd.kind == "note":
+            self._append_to_active_tab(
+                f"<span style='color:#90caf9'>📝 {cmd.note_text}</span>"
+            )
+            return
+
+        if cmd.kind == "reorder":
+            self._handle_reorder_request(cmd.reorder_slugs)
+            return
+
+        if cmd.kind == "quit":
+            self.close()
+            return
+
+        if cmd.kind == "unparseable":
+            from .llm_controller import build_correction_context
+            correction_ctx = build_correction_context(
+                state_dict=serialize_encounter(self.encounter_state),
+                recent_commands=self._recent_commands,
+                pending=[
+                    dataclasses.asdict(p)
+                    for p in self.encounter_state.pending_effects
+                ],
+            )
+            self._on_llm_fallback(cmd.raw, cmd, correction_ctx=correction_ctx)
+            return
+
+        # Snapshot BEFORE any mutation so `undo` can restore this exact state.
+        # Invariant: exactly ONE snapshot per *mutating* `_on_command` — the
+        # double-`undo()` logic in `_apply_undo` depends on it. We snapshot
+        # eagerly here, then discard it below if the command turned out to be a
+        # genuine no-op (e.g. an unknown-condition `command`). A bare
+        # `set_target` IS a mutating command per the spec (it changes
+        # `current_target`) — it is kept undoable, so its snapshot is retained.
+        before = serialize_encounter(self.encounter_state)
+        self.undo_stack.snapshot(self.encounter_state)
+
+        # A command containing an `undo` effect mutates the undo stack itself;
+        # never discard its snapshot (the state-diff check would be unreliable
+        # once `_apply_undo` has rewritten the stack).
+        has_undo_effect = cmd.kind == "command" and any(
+            e.kind == "undo" for e in cmd.effects
+        )
+
+        if cmd.kind == "set_target":
+            self._handle_set_target(cmd)
+        elif cmd.kind == "command":
+            self._handle_command(cmd)
+        else:
+            return
+
+        # Discard the snapshot if nothing actually changed — keeps the
+        # one-snapshot-per-mutation invariant. `set_target` and `undo`-bearing
+        # commands are always treated as mutating.
+        if cmd.kind != "set_target" and not has_undo_effect:
+            after = serialize_encounter(self.encounter_state)
+            if after == before:
+                self.undo_stack.discard_last()
+            else:
+                # Re-wire: the old npc_tab dispatch path emitted review_needed
+                # for every state-changing command. That signal path was removed
+                # with the grammar rewrite. Call _enqueue_review directly here
+                # so the always-on async LLM review fires on every real mutation.
+                # Undo commands are excluded (reviewing a revert has no value).
+                if not has_undo_effect:
+                    actor = self.encounter_state.active_npc
+                    ids = self._resolve_targets(cmd)
+                    target = (
+                        self.encounter_state.combatant_by_id(ids[0])
+                        if ids else None
+                    ) or actor
+                    if target is not None:
+                        self._enqueue_review(
+                            cmd.raw, actor, target,
+                            applied_direction=None,
+                            applied_amount=None,
+                        )
+
+    def _resolve_targets(self, cmd: ParsedCommand) -> list[str]:
+        """Resolve a ParsedCommand's <who> into concrete combatant id strings.
+
+        ``"0"`` resolves to the active combatant's id; ``use_current`` resolves
+        to ``encounter_state.current_target``.
+        """
+        if cmd.use_current:
+            return list(self.encounter_state.current_target)
+        active = self.encounter_state.active_npc
+        active_id = active.id if active else ""
+        resolved: list[str] = []
+        for cid in cmd.target_ids:
+            resolved.append(active_id if cid == "0" else cid)
+        return resolved
+
+    def _handle_set_target(self, cmd: ParsedCommand) -> None:
+        """A bare <who> — set the sticky current target and jump to its tab."""
+        ids = self._resolve_targets(cmd)
+        self.encounter_state.current_target = list(ids)
+        names = []
+        first_idx: int | None = None
+        for cid in ids:
+            combatant = self.encounter_state.combatant_by_id(cid)
+            if combatant is None:
+                continue
+            names.append(combatant.name)
+            idx = self.encounter_state.npcs.index(combatant)
+            if first_idx is None:
+                first_idx = idx
+        if first_idx is not None:
+            self.tabs.setCurrentIndex(first_idx)
+        self._refresh_target_arrow()
+        if names:
+            label = ", ".join(names)
+            verb = "is" if len(names) == 1 else "are"
+            self._append_to_active_tab(
+                f"<span style='color:#6c8eba'>{label} {verb} now the target</span>"
+            )
+
+    def _handle_command(self, cmd: ParsedCommand) -> None:
+        """Apply a `kind == "command"` ParsedCommand's effects."""
+        ids = self._resolve_targets(cmd)
+        # A command carrying explicit target_ids (not use_current) is sticky:
+        # it also updates the current target.
+        if cmd.target_ids and not cmd.use_current:
+            self.encounter_state.current_target = list(ids)
 
         actor = self.encounter_state.active_npc
-        actor_name = actor.name if actor else "?"
 
-        # JUMP: just focus the target tab
-        if parsed.kind is InputKind.JUMP:
-            target = self.encounter_state.combatant_by_id(parsed.target_id)
-            if target is not None:
-                idx = self.encounter_state.npcs.index(target)
-                self.tabs.setCurrentIndex(idx)
-            return
-
-        if parsed.kind is not InputKind.DIRECTED:
-            return
-
-        # Resolve target
-        target = self.encounter_state.combatant_by_id(parsed.target_id)
-        if target is None:
-            # Unknown id — log error on actor tab and enqueue LLM fallback
-            self._append_to_active_tab(
-                f"<span style='color:#ff5252'>unknown combatant id: #{parsed.target_id}</span>"
+        for effect in cmd.effects:
+            if effect.kind == "undo":
+                self._apply_undo()
+                continue
+            if effect.kind == "action":
+                self._apply_action_effect(effect, ids)
+                continue
+            if effect.kind == "hit":
+                fragments = apply_hit(self.encounter_state, ids)
+                self._log_fragments(fragments)
+                continue
+            # amount / condition → effects.apply_effect.
+            # Snapshot HP per-target first so skipped no-ops (out-of-range mob
+            # member etc.) emit no bus events — only targets whose HP actually
+            # moved get a damage/heal event.
+            hp_before = {
+                cid: c.hp
+                for cid in ids
+                if (c := self.encounter_state.combatant_by_id(cid)) is not None
+            }
+            fragments = apply_effect(
+                self.encounter_state, effect, target_ids=ids, actor=actor
             )
-            self._on_llm_fallback(parsed.raw, parsed)
-            return
+            self._log_fragments(fragments)
+            if effect.kind == "amount":
+                changed = [
+                    cid for cid in ids
+                    if (c := self.encounter_state.combatant_by_id(cid)) is not None
+                    and c.hp != hp_before.get(cid)
+                ]
+                self._emit_amount_events(effect, changed)
+                # A melee-tagged delivery sets in_melee on all targets AND the
+                # actor (restored from old _on_directed_command behaviour).
+                if effect.amount_tags.get("delivery") == "melee":
+                    for cid in ids:
+                        target_c = self.encounter_state.combatant_by_id(cid)
+                        if target_c is not None:
+                            target_c.in_melee = True
+                    if actor is not None:
+                        actor.in_melee = True
+            elif effect.kind == "condition":
+                # Only fire bus events when the condition actually applied.
+                # If _apply_condition returned the sentinel (unknown condition),
+                # fragments will contain it and we must NOT fire or auto-save.
+                condition_applied = not any(
+                    _CONDITION_UNKNOWN_SENTINEL in frag for frag in fragments
+                )
+                if condition_applied:
+                    self._emit_condition_events(effect, ids)
 
-        direction = parsed.resolved_tags.get("direction", "damage")
-        amount = parsed.amount
-        dtype = parsed.resolved_tags.get("type")
-        delivery = parsed.resolved_tags.get("delivery")
-        member = parsed.target_member
-
-        # Apply fast-path effect
-        if direction == "heal":
-            result = target.apply_heal(amount, member=member)
-        else:
-            result = target.apply_damage(amount, member=member)
-
-        # If apply_damage / apply_heal skipped (e.g. member index out of range,
-        # no alive members, or dead member targeted), log a clear error and bail.
-        # Do NOT fire damage/heal/bloodied/death events — nothing actually changed.
-        if result.get("skipped"):
-            member_label = f" m{member}" if member is not None else ""
-            self._append_to_active_tab(
-                f"<span style='color:#ff5252'>#{parsed.target_id}{member_label}: "
-                f"no such mob member ({result['skipped']})</span>"
-            )
-            return
-
-        # Set in_melee on both actor and target if delivery==melee
-        if delivery == "melee":
-            target.in_melee = True
-            if actor is not None:
-                actor.in_melee = True
-
-        # Build log line on the ACTOR's tab
-        dtype_str = f" {dtype}" if dtype else ""
-        delivery_str = f" ({delivery})" if delivery else ""
-        if direction == "damage":
-            suffix = " · <b>killed</b>" if result.get("killed") else ""
-            log_html = (
-                f"<span style='color:#8a8f96'>{actor_name} → #{parsed.target_id}:</span> "
-                f"<span style='color:#ff5252'>−{amount}{dtype_str}{delivery_str}</span>"
-                f" → HP {result.get('after', '?')}/{target.max_total_hp}{suffix}"
-            )
-        else:
-            log_html = (
-                f"<span style='color:#8a8f96'>{actor_name} → #{parsed.target_id}:</span> "
-                f"<span style='color:#66bb6a'>+{amount}</span>"
-                f" → HP {result.get('after', '?')}/{target.max_total_hp}"
-            )
-        self._append_to_active_tab(log_html)
-
-        # Refresh target tab + update its title
-        target_idx = self.encounter_state.npcs.index(target)
-        target_tab = self.tabs.widget(target_idx)
-        if hasattr(target_tab, "refresh"):
-            target_tab.refresh()
-        self.tabs.setTabText(target_idx, self._tab_title(target))
+        self._repaint_all_tabs()
+        self._refresh_target_arrow()
         self._auto_save()
 
-        # Fire events
-        if self.event_bus:
-            if direction == "damage":
-                from .event_bus import bloodied_event, damage_event, death_event
+    def _restore_encounter_state(self, restored: EncounterState) -> None:
+        """Fully swap a restored EncounterState into the live one.
+
+        Shared by `_apply_undo` and `_load_snapshot`. Patches NPC field values
+        in place (so tab widgets, which hold references to the live NPCState
+        objects, stay valid — match by slug), then restores the cross-tab
+        state: `round_num`, `current_target`, `pending_effects`, and
+        `active_tab_index` (bounds-checked). Finally refreshes the targeting
+        arrow so a restored `current_target` repaints correctly.
+
+        Callers are responsible for repainting tabs and any caller-specific
+        skip-field policy on the NPC patch (this helper copies every field).
+        """
+        by_slug = {n.slug: n for n in restored.npcs}
+        for npc in self.encounter_state.npcs:
+            src = by_slug.get(npc.slug)
+            if src is None:
+                continue
+            for f in dataclasses.fields(NPCState):
+                val = getattr(src, f.name)
+                if isinstance(val, list):
+                    val = list(val)
+                elif isinstance(val, dict):
+                    val = dict(val)
+                elif isinstance(val, set):
+                    val = set(val)
+                setattr(npc, f.name, val)
+        self.encounter_state.round_num = restored.round_num
+        self.encounter_state.current_target = list(restored.current_target)
+        self.encounter_state.pending_effects = list(restored.pending_effects)
+        # Restore the active tab (part of EncounterState; bounds-checked since
+        # the restored index may exceed the current tab count).
+        idx = restored.active_tab_index
+        if 0 <= idx < self.tabs.count():
+            self.encounter_state.active_tab_index = idx
+            self.tabs.setCurrentIndex(idx)
+        self.round_btn.setText(self._round_btn_text())
+        self._refresh_target_arrow()
+
+    def _apply_undo(self) -> None:
+        """Pop the undo stack and swap the restored state in."""
+        # The current command's own pre-snapshot is on top; discard it so
+        # `undo` reverts the PREVIOUS command, not this no-op one.
+        self.undo_stack.undo()
+        restored = self.undo_stack.undo()
+        if restored is None:
+            self._append_to_active_tab(
+                "<span style='color:#ff9800'>nothing to undo</span>"
+            )
+            return
+        self._restore_encounter_state(restored)
+        self._repaint_all_tabs()
+        self._append_to_active_tab(
+            "<span style='color:#66bb6a'>↶ undo — reverted last command</span>"
+        )
+
+    def _apply_action_effect(self, effect: Effect, target_ids: list[str]) -> None:
+        """Resolve an action token (panel number or fuzzy name) and run it.
+
+        The action runs against each resolved target combatant via that tab's
+        `run_action_externally` — the action rolls its own damage and applies
+        its own riders.
+        """
+        token = effect.action_token
+        for cid in target_ids:
+            combatant = self.encounter_state.combatant_by_id(cid)
+            if combatant is None:
+                self._append_to_active_tab(
+                    f"<span style='color:#ff5252'>unknown combatant id: #{cid}</span>"
+                )
+                continue
+            idx = self.encounter_state.npcs.index(combatant)
+            tab = self.tabs.widget(idx)
+            if not isinstance(tab, NPCTab):
+                continue
+            # PC tabs: the generic player-action chips (Dodge → dodging
+            # condition, Disengage → _disengaging flag, etc.) carry richer
+            # behavior than the generic global utility actions, so they win.
+            if tab.npc_state.kind == "pc" and tab.try_player_action(token):
+                continue
+            actions = self._tab_action_surfaces.get(id(tab), [])
+            action_name = self._resolve_action_token(token, actions)
+            if action_name is None:
+                self._append_to_active_tab(
+                    f"<span style='color:#ff9800'>no action {token!r} on "
+                    f"{combatant.name}</span>"
+                )
+                continue
+            # Run the action — `run_action_externally` returns the parsed
+            # roll_combat_action result, including the structured `rolls`
+            # sidecar. A save-bearing or attack-roll action's damage is
+            # *uncertain*: route it through apply_uncertain_damage so the
+            # default outcome is "saved"/"miss" and a later `hit` upgrades it
+            # (spec §4). A no-save no-attack-roll action carries no `rolls`
+            # damage and stays as printed text.
+            result = tab.run_action_externally(action_name)
+            self._route_uncertain_damage(result, cid, action_name, member=effect.member)
+
+    def _route_uncertain_damage(
+        self,
+        result: dict | None,
+        combatant_id: str,
+        action_name: str,
+        *,
+        member: int | None = None,
+    ) -> None:
+        """Apply a rolled action's uncertain damage via the didn't-land lifecycle.
+
+        Reads the structured ``rolls`` sidecar from a ``roll_combat_action``
+        result. For a ``save``- or ``attack``-kind roll it applies the assumed
+        minimum and records a ``PendingEffect`` (spec §4). A no-roll action
+        (``rolls`` empty/absent) is a no-op here — it carries no HP damage.
+        """
+        if not isinstance(result, dict):
+            return
+        rolls = result.get("rolls") or {}
+        if not isinstance(rolls, dict) or not rolls:
+            return
+        kind = rolls.get("kind")
+        full_amount = rolls.get("damage_total")
+        if kind not in ("save", "attack") or not isinstance(full_amount, int):
+            return
+        # Normalize on_save: the actions DB uses "half" / "no damage";
+        # apply_uncertain_damage expects "half" / "none".
+        on_save_raw = str(rolls.get("on_save", "none")).strip().lower()
+        on_save = "half" if on_save_raw == "half" else "none"
+        from .effects import apply_uncertain_damage
+        fragments = apply_uncertain_damage(
+            self.encounter_state,
+            combatant_id,
+            full_amount,
+            kind=kind,
+            on_save=on_save,
+            source=action_name,
+            member=member,
+        )
+        self._log_fragments(fragments)
+        self._refresh_pending_markers()
+
+    @staticmethod
+    def _resolve_action_token(token: str, actions: list[dict]) -> str | None:
+        """Resolve an `action_token` against an NPC's action surface.
+
+        A digit string is a 1-based panel index. Otherwise the token is
+        matched, tightest-first: exact action-name → exact `verbs` alias →
+        unique prefix → unique substring → closest difflib match. Returns the
+        canonical action name, or None.
+        """
+        if not actions:
+            return None
+        if token.isdigit():
+            idx = int(token) - 1
+            if 0 <= idx < len(actions):
+                return actions[idx].get("action")
+            return None
+        q = token.lower().strip()
+        names = [a.get("action", "") for a in actions if a.get("action")]
+        norm = {n: n.lower().replace("_", " ") for n in names}
+
+        exact = [n for n in names if norm[n] == q or n.lower() == q]
+        if exact:
+            return exact[0]
+        # Exact match against an action's authored `verbs` aliases
+        # (e.g. 'grab' → the grapple action's verbs list).
+        for a in actions:
+            verbs = [v.lower() for v in (a.get("verbs") or [])]
+            if q in verbs and a.get("action"):
+                return a["action"]
+        prefix = [n for n in names if norm[n].startswith(q) or n.lower().startswith(q)]
+        if len(prefix) == 1:
+            return prefix[0]
+        if not prefix:
+            sub = [n for n in names if q in norm[n] or q in n.lower()]
+            if len(sub) == 1:
+                return sub[0]
+        # Last resort: closest difflib match (handles abbreviations / typos
+        # like 'grab' → 'grapple', 'attaccck' → 'attack'). The 0.5 cutoff is
+        # deliberately loose — exact/prefix/substring already caught the easy
+        # cases, so this only fires for genuine near-misses.
+        import difflib
+        close = difflib.get_close_matches(q, [norm[n] for n in names], n=1, cutoff=0.5)
+        if close:
+            for n in names:
+                if norm[n] == close[0]:
+                    return n
+        return None
+
+    def _emit_amount_events(self, effect: Effect, target_ids: list[str]) -> None:
+        """Fire damage/heal/bloodied/death events for an applied amount."""
+        if self.event_bus is None:
+            return
+        from .event_bus import bloodied_event, damage_event, death_event, heal_event
+
+        is_heal = effect.amount_tags.get("direction") == "heal"
+        dtype = effect.amount_tags.get("type")
+        delivery = effect.amount_tags.get("delivery")
+        for cid in target_ids:
+            combatant = self.encounter_state.combatant_by_id(cid)
+            if combatant is None:
+                continue
+            if is_heal:
+                self.event_bus.emit(heal_event(combatant.slug, effect.amount))
+            else:
                 self.event_bus.emit(damage_event(
-                    target.slug, amount, damage_type=dtype,
+                    combatant.slug, effect.amount, damage_type=dtype,
                     melee=(delivery == "melee"), ranged=(delivery == "ranged"),
                 ))
-                if result.get("became_bloodied"):
-                    self.event_bus.emit(bloodied_event(target.slug))
-                if result.get("killed"):
-                    self.event_bus.emit(death_event(target.slug))
-            else:
-                from .event_bus import heal_event
-                self.event_bus.emit(heal_event(target.slug, amount))
+                if combatant.is_bloodied:
+                    self.event_bus.emit(bloodied_event(combatant.slug))
+                if combatant.is_dead:
+                    self.event_bus.emit(death_event(combatant.slug))
 
-        # Enqueue LLM review
-        if parsed.tag_errors:
-            # Unknown tags → full LLM fallback (may be free-form intent)
-            self._on_llm_fallback(parsed.raw, parsed)
-        else:
-            self._enqueue_review(parsed.raw, actor, target, applied_direction=direction,
-                                 applied_amount=amount)
+    def _emit_condition_events(self, effect: Effect, target_ids: list[str]) -> None:
+        """Fire condition_applied / condition_removed events."""
+        if self.event_bus is None:
+            return
+        from .event_bus import condition_event
+        for cid in target_ids:
+            combatant = self.encounter_state.combatant_by_id(cid)
+            if combatant is None:
+                continue
+            applied = any(
+                effect.condition in c or c == effect.condition
+                for c in combatant.conditions
+            )
+            self.event_bus.emit(
+                condition_event(combatant.slug, effect.condition, applied=applied)
+            )
+
+    def _log_fragments(self, fragments: list[str]) -> None:
+        """Append effect log fragments to the active tab's log view."""
+        for frag in fragments:
+            colour = "#ff5252" if frag.startswith("warn:") else "#b8bdc4"
+            self._append_to_active_tab(f"<span style='color:{colour}'>{frag}</span>")
+
+    def _repaint_all_tabs(self) -> None:
+        """Refresh every tab widget + re-title it (HP shows in the title)."""
+        for i in range(self.tabs.count()):
+            tab = self.tabs.widget(i)
+            if isinstance(tab, NPCTab):
+                tab.refresh()
+                self.tabs.setTabText(i, self._tab_title(tab.npc_state))
+
+    def _refresh_target_arrow(self) -> None:
+        """Map `current_target` ids → tab indices and update the tab bar arrow.
+
+        The active tab is passed as the actor so the arrow is never painted on
+        the actor's own tab (CombatTabBar excludes it).
+        """
+        bar = self.tabs.tabBar()
+        if not isinstance(bar, CombatTabBar):
+            return
+        targeted: set[int] = set()
+        for cid in self.encounter_state.current_target:
+            combatant = self.encounter_state.combatant_by_id(cid)
+            if combatant is None:
+                continue
+            try:
+                targeted.add(self.encounter_state.npcs.index(combatant))
+            except ValueError:
+                continue
+        bar.set_targeting(targeted, self.tabs.currentIndex())
 
     def _append_to_active_tab(self, html: str) -> None:
         """Append an HTML line to the currently-active tab's log view."""
         current = self.tabs.currentWidget()
         if current is not None and hasattr(current, "_append_log"):
             current._append_log(html)
-
-    def _on_review_needed(self, raw_command: str, actor_npc) -> None:
-        """Route regular (self-targeting) command to the LLM review queue."""
-        self._enqueue_review(raw_command, actor_npc, actor_npc, applied_direction=None,
-                             applied_amount=None)
 
     def _enqueue_review(
         self, raw_command: str, actor, target, *,
@@ -1150,15 +1599,15 @@ class MainWindow(QMainWindow):
             self,
             "About Combat Runner",
             "<h3>dnd-combat GUI</h3>"
-            "<p>At-table NPC runner for D&amp;D 5.5e.</p>"
-            "<p>Type sigils in the command bar:</p>"
+            "<p>At-table combat runner for D&amp;D 5.5e.</p>"
+            "<p>Commands are <code>&lt;who&gt; &lt;stream&gt;</code>:</p>"
             "<ul>"
-            "<li><code>attack</code> — fuzzy verb match → run action</li>"
-            "<li><code>-18</code> / <code>+10</code> — damage / heal (live preview)</li>"
-            "<li><code>m3 -5</code> — damage mob member 3</li>"
-            "<li><code>@prone</code> — toggle condition</li>"
-            "<li><code>note ...</code> — log entry (no LLM)</li>"
-            "<li><code>/reorder a b c</code> — reorder tabs</li>"
+            "<li><code>2 8 melee slash</code> — 8 melee slashing damage to #2</li>"
+            "<li><code>2 2</code> — run action #2 against #2</li>"
+            "<li><code>3 tail-sweep</code> — run an action by name</li>"
+            "<li><code>3 2 stun</code> — stun #3 for 2 rounds</li>"
+            "<li><code>0 …</code> — target self · <code>123 …</code> — multi-target</li>"
+            "<li><code>undo</code> — revert the last command</li>"
             "</ul>",
         )
 
@@ -1177,6 +1626,12 @@ class MainWindow(QMainWindow):
         if bundle is not None:
             bundle.on_round_advanced = lambda _round: self._apply_round_change()
         self._fire_suggestion_refresh()
+
+    def showEvent(self, event) -> None:  # noqa: N802 (Qt API)
+        """Put initial keyboard focus on the active tab's command input so the
+        DM can type commands the moment the window appears."""
+        super().showEvent(event)
+        self._focus_active_command_input()
 
     def closeEvent(self, event) -> None:  # noqa: N802 (Qt API)
         """Drain the suggestion + LLM thread pools before closing."""
