@@ -36,6 +36,7 @@ If you can’t confidently map the request to a single MCP tool:
 - Creatures: /creatures/monsters, /creatures/bestiary, /creatures/custom
 - Rules: /rules/house-rules, /rules/references, /rules/mechanics
 - Templates: /templates
+- Staging: /staging — drafts/WIP. Move to a permanent home once polished; don't link to files here from canonical lore.
 
 ## Factions and locations layout
 - Factions live in folders: `world/factions/<faction-slug>/_overview.md`
@@ -55,9 +56,6 @@ If you can’t confidently map the request to a single MCP tool:
 - For complex names, include pronunciation on first mention:
   Name (PHONETIC) with CAPS for stressed syllables.
 
-## If Copilot instructions exist
-- Also follow .github/copilot-instructions.md for the full style guide.
-
 ## Timeline data & generator
 - Timeline events live in any file named `_history.tsv` (preferred) or `_timeline.tsv` (legacy). Use the header from `world/history/_history.tsv` (tabs between columns).
 - `_history.tsv` minimal schema:
@@ -68,5 +66,4 @@ If you can’t confidently map the request to a single MCP tool:
   - `title`
   - `summary`
 - Duplicate `event_id` rows are allowed and will render as separate entries (use tags like `public` / `private` instead of POV variants).
-- SVG-first workflow: put a `_history.config.toml` in any `world/**` folder to render one or more SVG views for that folder scope (that folder + its subfolders). Run `./venv/bin/python scripts/build_timeline_svg.py`.
-- Legacy workflow: run `./venv/bin/python scripts/generate_timelines.py` (config at `world/history/timeline.config.toml`) to generate Markdown/Mermaid outputs in `world/history/generated/`.
+- SVG-first workflow: put a `_history.config.toml` in any `world/**` folder to render one or more SVG views for that folder scope (that folder + its subfolders). Use the `build_timeline_svg` MCP tool (or run `./.venv/bin/python scripts/build_timeline_svg.py`).

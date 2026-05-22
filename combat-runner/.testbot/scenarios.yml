@@ -1,0 +1,179 @@
+# Curated combat-scenario seeds for the testbot.
+#
+# Each scenario is a SHORT, deterministic playthrough script. The testbot
+# picks one per fire (round-robin via `combat-runner/.testbot/run-counter`),
+# adapts it to existing NPCs (or imports new ones via the SRD wizard
+# programmatically), runs it headlessly through the scenario harness,
+# and logs metrics + any bugs.
+#
+# Format per scenario:
+#   id: unique short id
+#   title: human label
+#   encounter: which combat-runner encounter to spawn (mountin-pass / gar-vally / black-ledger)
+#   prelude: text the testbot writes to the log (DM-flavor narration)
+#   turns: ordered list of operations
+#     - {kind: "type", tab: "<slug>", text: "<sigil or verb>"}
+#     - {kind: "click_round"}
+#     - {kind: "switch_tab", slug: "<slug>"}
+#     - {kind: "assert_hp", slug: "<slug>", expected: <int>}
+#     - {kind: "expect_watch", slug: "<observer-slug>", action_name: "<...>"}
+#     - {kind: "no_crash"}                  # implicit; verifies nothing exploded
+#   targets:
+#     max_click_count: 25
+#     max_llm_fallback: 0
+#     min_turns: 1
+
+scenarios:
+  - id: stalker-solo-bloodied
+    title: Solo Glacier Stalker — bring to bloodied, verify cure_wounds suggestion fires on Aelric
+    encounter: mountin-pass
+    prelude: |
+      The Stalker emerges from the snow drift. Aelric is 30 ft behind, hands frost-rimed.
+    turns:
+      - {kind: switch_tab, slug: glacier-stalker}
+      - {kind: type, tab: glacier-stalker, text: "-50"}
+      - {kind: assert_hp, slug: glacier-stalker, expected: 34}
+      - {kind: expect_watch, slug: aelric-frostweaver, action_name: cure_wounds}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0
+
+  - id: gnoll-pack-segments
+    title: Gnoll pack mob — segments drain right-to-left, then explicit m1 override
+    encounter: mountin-pass
+    prelude: |
+      Three gnolls of the pack close in on the wizard. Fireball is loaded.
+    turns:
+      - {kind: switch_tab, slug: gnoll-pack}
+      - {kind: type, tab: gnoll-pack, text: "-22"}        # kill m3
+      - {kind: type, tab: gnoll-pack, text: "-15"}        # m2 to 7
+      - {kind: type, tab: gnoll-pack, text: "m1 -22"}     # kill m1
+      - {kind: assert_member_hp, slug: gnoll-pack, expected: [0, 7, 0]}
+    targets:
+      max_click_count: 5
+
+  - id: matron-slots
+    title: Matron uses moonbeam — slot decrements, chip greys out
+    encounter: gar-vally
+    prelude: |
+      The matron rises from the fire-pit. Three runners flank her.
+    turns:
+      - {kind: switch_tab, slug: matron-of-the-valley}
+      - {kind: type, tab: matron-of-the-valley, text: "moon"}
+      - {kind: assert_slot, slug: matron-of-the-valley, action: moonbeam, remaining: 0}
+    targets:
+      max_click_count: 5
+
+  - id: condition-duration-tick
+    title: Apply paralyzed for 3 rounds; advance 3 rounds; condition auto-removed
+    encounter: mountin-pass
+    prelude: |
+      Aelric burns a 3rd-level slot — Hold Person on the Stalker.
+    turns:
+      - {kind: switch_tab, slug: glacier-stalker}
+      - {kind: type, tab: glacier-stalker, text: "@paralyzed 3"}
+      - {kind: assert_condition, slug: glacier-stalker, condition: paralyzed, remaining: 3}
+      - {kind: click_round}
+      - {kind: click_round}
+      - {kind: click_round}
+      - {kind: assert_no_condition, slug: glacier-stalker, condition: paralyzed}
+    targets:
+      max_click_count: 8
+
+  - id: orren-action-surge
+    title: Orren burns Action Surge — slot count 0/1, refresh on long_rest only
+    encounter: black-ledger
+    prelude: |
+      Orren steps in for the kill — and for a heartbeat, time doubles.
+    turns:
+      - {kind: switch_tab, slug: orren}
+      - {kind: type, tab: orren, text: "surge"}
+      - {kind: assert_slot, slug: orren, action: action_surge, remaining: 0}
+    targets:
+      max_click_count: 5
+
+  - id: vessa-sneak-attack
+    title: Vessa shortsword + sneak — verify extra_damage applies to roller output
+    encounter: black-ledger
+    prelude: |
+      Vessa drifts behind the target. The shortsword tip glints.
+    turns:
+      - {kind: switch_tab, slug: vessa}
+      - {kind: type, tab: vessa, text: "stab"}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0
+
+  - id: vessa-uncanny-dodge
+    title: Vessa takes damage — Uncanny Dodge reaction surfaces (movement/buff kind)
+    encounter: black-ledger
+    prelude: |
+      An arrow finds Vessa's flank.
+    turns:
+      - {kind: switch_tab, slug: vessa}
+      - {kind: type, tab: vessa, text: "-10"}
+    targets:
+      max_click_count: 5
+
+  - id: zorgar-rage-frenzy
+    title: Zor'gar enters rage, then frenzy — slot decrement + greataxe combo
+    encounter: black-ledger
+    prelude: |
+      Zor'gar bares his teeth. The greataxe is heavy in his hands.
+    turns:
+      - {kind: switch_tab, slug: zor-gar}
+      - {kind: type, tab: zor-gar, text: "rage"}
+      - {kind: assert_slot, slug: zor-gar, action: rage, remaining: 2}
+      - {kind: type, tab: zor-gar, text: "axe"}
+    targets:
+      max_click_count: 5
+
+  - id: maela-hex-eldritch-loop
+    title: Maela hexes target, then 2 rounds of Eldritch Blast — hex extra damage shouldn't double-apply
+    encounter: black-ledger
+    prelude: |
+      Maela whispers the hex. Her patron's name buzzes in the target's ear.
+    turns:
+      - {kind: switch_tab, slug: maela}
+      - {kind: type, tab: maela, text: "hex"}
+      - {kind: type, tab: maela, text: "blast"}
+      - {kind: click_round}
+      - {kind: type, tab: maela, text: "blast"}
+    targets:
+      max_click_count: 6
+
+  - id: ancestor-stir-frightened-cascade
+    title: Ancestor-Stir claws → frightened condition → wail recharge cycle
+    encounter: gar-vally
+    prelude: |
+      The matron is dead. The pact is broken. Something OLDER rises.
+    turns:
+      - {kind: switch_tab, slug: ancestor-stir}
+      - {kind: type, tab: ancestor-stir, text: "claws"}
+      - {kind: type, tab: ancestor-stir, text: "wail"}
+      - {kind: click_round}
+    targets:
+      max_click_count: 8
+
+  - id: party-of-two-cross-fire
+    title: Stalker takes melee damage → rime_reflex trigger surfaces → DM passes
+    encounter: mountin-pass
+    prelude: |
+      The Stalker bites a PC; the PC's barbarian counter-charges.
+    turns:
+      - {kind: switch_tab, slug: glacier-stalker}
+      - {kind: type, tab: glacier-stalker, text: "-15"}
+    targets:
+      max_click_count: 4
+      reaction_prompts_min: 1
+
+  - id: aelric-counterspell-watch
+    title: Spell-cast event globally triggers Aelric's counterspell trigger
+    encounter: mountin-pass
+    prelude: |
+      A wandering wizard begins to weave the air. Aelric narrows his eyes.
+    turns:
+      - {kind: emit_spell_cast, caster: "PC:Lyric", spell: "Fireball", target: glacier-stalker, level: 3}
+    targets:
+      max_click_count: 0
+      reaction_prompts_min: 1

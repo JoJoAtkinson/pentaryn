@@ -1,0 +1,365 @@
+<h2>Combat window — proposed layout</h2>
+<p class="subtitle">qt-material dark · sheet on left · command/state on right · tab per monster instance · 3 suggested actions above the input</p>
+
+<style>
+  .mockup-window {
+    background: #1e2026;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #2a2f38;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    margin: 20px 0;
+    font-family: -apple-system, "SF Pro", "Helvetica Neue", sans-serif;
+    color: #d6dade;
+  }
+  .menubar {
+    background: #14171b;
+    padding: 6px 14px;
+    font-size: 12px;
+    color: #8a8f96;
+    border-bottom: 1px solid #2a2f38;
+    display: flex;
+    gap: 18px;
+  }
+  .menubar span { cursor: default; }
+  .menubar span.has-menu::after { content: " ▾"; font-size: 9px; opacity: 0.6; }
+  .tabbar {
+    background: #181b21;
+    display: flex;
+    border-bottom: 1px solid #2a2f38;
+    padding: 0 8px;
+    gap: 2px;
+  }
+  .tab {
+    padding: 10px 18px;
+    font-size: 13px;
+    color: #8a8f96;
+    cursor: pointer;
+    border-right: 1px solid #2a2f38;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tab.active {
+    background: #1e2026;
+    color: #ffffff;
+    border-bottom: 2px solid #448aff;
+    margin-bottom: -1px;
+  }
+  .tab .badge {
+    font-size: 10px;
+    background: #2a2f38;
+    padding: 2px 6px;
+    border-radius: 8px;
+    color: #d6dade;
+  }
+  .tab .hp-mini {
+    font-size: 11px;
+    color: #6c8eba;
+    font-variant-numeric: tabular-nums;
+  }
+  .tab.bloodied .hp-mini { color: #ff5252; }
+  .body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 480px;
+  }
+  .sheet, .console {
+    padding: 16px 20px;
+    overflow: hidden;
+  }
+  .sheet { border-right: 1px solid #2a2f38; }
+  .npc-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 4px;
+  }
+  .npc-sub {
+    font-size: 11px;
+    color: #8a8f96;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .stat-line {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: #b8bdc4;
+    padding: 10px 12px;
+    background: #14171b;
+    border-radius: 4px;
+    border-left: 3px solid #448aff;
+  }
+  .stat-line b { color: #ffffff; }
+  .hp-bar {
+    background: #2a2f38;
+    border-radius: 3px;
+    height: 6px;
+    margin-top: 6px;
+    margin-bottom: 18px;
+    overflow: hidden;
+  }
+  .hp-bar .fill {
+    background: #ff5252;
+    height: 100%;
+    width: 67%;
+    transition: width 0.3s;
+  }
+  .section-h {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #6c8eba;
+    margin: 14px 0 8px;
+    font-weight: 600;
+  }
+  .actions-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+  }
+  .action-chip {
+    background: #181b21;
+    border: 1px solid #2a2f38;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .action-chip:hover { border-color: #448aff; background: #1e2530; }
+  .action-chip .name { color: #ffffff; font-weight: 600; font-size: 13px; }
+  .action-chip .verbs { color: #6c8eba; font-size: 10px; margin-top: 2px; }
+  .action-chip.used { opacity: 0.4; background: #14171b; }
+  .action-chip.used .name::after { content: " · USED"; color: #ff5252; font-weight: normal; }
+  .conditions { margin-top: 16px; }
+  .pill {
+    display: inline-block;
+    background: #ff5252;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    margin-right: 6px;
+    font-weight: 600;
+  }
+  .pill.cond { background: #ff9800; }
+  .pill.recharge { background: #2a2f38; color: #b8bdc4; }
+  .console-area {
+    background: #14171b;
+    border-radius: 4px;
+    padding: 12px;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    color: #b8bdc4;
+    flex-grow: 1;
+    overflow-y: auto;
+    max-height: 320px;
+    line-height: 1.5;
+  }
+  .console-area .ts { color: #6c8eba; }
+  .console-area .ev { color: #ffd54f; }
+  .console-area .hp-loss { color: #ff5252; font-weight: 600; }
+  .console-area .narration { color: #d6dade; font-style: italic; }
+  .console-area .dice { color: #66bb6a; }
+  .suggestions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .suggest-btn {
+    flex: 1;
+    background: #1e2530;
+    border: 1px solid #448aff;
+    color: #ffffff;
+    padding: 8px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    text-align: left;
+    transition: background 0.15s;
+  }
+  .suggest-btn:hover { background: #2a3550; }
+  .suggest-btn .label { color: #448aff; font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .suggest-btn .name { font-weight: 600; margin-top: 2px; }
+  .input-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .input-bar {
+    flex: 1;
+    background: #1e2026;
+    border: 1px solid #2a2f38;
+    border-bottom: 2px solid #448aff;
+    color: #ffffff;
+    padding: 10px 12px;
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 13px;
+    border-radius: 4px 4px 0 0;
+  }
+  .send-btn {
+    background: #448aff;
+    color: white;
+    border: none;
+    padding: 0 18px;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .state-strip {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    margin-bottom: 10px;
+    color: #b8bdc4;
+  }
+  .state-strip .hp-text { font-size: 14px; font-weight: 600; color: #ffffff; }
+  .state-strip .hp-text.bloodied { color: #ff5252; }
+</style>
+
+<div class="mockup-window">
+  <div class="menubar">
+    <span class="has-menu">File</span>
+    <span class="has-menu">Encounter</span>
+    <span class="has-menu">View</span>
+    <span class="has-menu">Help</span>
+    <span style="margin-left: auto; color: #6c8eba;">mountin-pass · 2 NPCs · round 3</span>
+  </div>
+  <div class="tabbar">
+    <div class="tab active">
+      <span>Glacier Stalker</span>
+      <span class="hp-mini bloodied">56/84</span>
+    </div>
+    <div class="tab">
+      <span>Aelric Frostweaver</span>
+      <span class="hp-mini">38/38</span>
+    </div>
+    <div class="tab">
+      <span>Glacier Stalker</span>
+      <span class="badge">2</span>
+      <span class="hp-mini">84/84</span>
+    </div>
+    <div class="tab" style="color:#448aff;cursor:pointer;">＋</div>
+  </div>
+  <div class="body">
+    <!-- LEFT: monster sheet -->
+    <div class="sheet">
+      <div class="npc-title">Glacier Stalker</div>
+      <div class="npc-sub">CR 5 · ambush predator · cold immunity</div>
+      <div class="state-strip">
+        <span>HP <span class="hp-text bloodied">56 / 84</span> · AC 16 · Speed 50 ft. (climb 40)</span>
+        <span>Round 3 · Turn 1</span>
+      </div>
+      <div class="hp-bar"><div class="fill"></div></div>
+      <div>
+        <span class="pill cond">Grappling Tenza</span>
+        <span class="pill recharge">Glacial Roar · recharge 5+</span>
+      </div>
+
+      <div class="section-h">Actions (click or type)</div>
+      <div class="actions-grid">
+        <div class="action-chip">
+          <div class="name">Multiattack</div>
+          <div class="verbs">attack, swing, claw, bite, melee</div>
+        </div>
+        <div class="action-chip">
+          <div class="name">Frozen Bile</div>
+          <div class="verbs">ranged, spit, bile · 30/60 ft</div>
+        </div>
+        <div class="action-chip used">
+          <div class="name">Glacial Roar</div>
+          <div class="verbs">breath, cone · DC 15 Con · 8d6 cold</div>
+        </div>
+        <div class="action-chip">
+          <div class="name">Pounce</div>
+          <div class="verbs">leap, charge · req 20 ft straight</div>
+        </div>
+        <div class="action-chip">
+          <div class="name">Snow Vanish</div>
+          <div class="verbs">vanish, hide · bonus action</div>
+        </div>
+        <div class="action-chip">
+          <div class="name">Rime Reflex</div>
+          <div class="verbs">⚡ reaction · auto on melee hit</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: command console + state -->
+    <div class="console">
+      <div class="section-h">Combat log</div>
+      <div class="console-area">
+        <div><span class="ts">T1·R2</span> <span class="ev">Multiattack on Brann</span> · <span class="dice">⚛️ to-hits 23/14/16</span> · dmg <span class="dice">11/9/14</span></div>
+        <div><span class="narration">"It lunges, raking with two crystalline claws..."</span></div>
+        <div><span class="ts">T2·R2</span> Brann hits stalker → <span class="hp-loss">-14</span> (HP 70)</div>
+        <div><span class="ts">T3·R2</span> Rime Reflex auto-fire · attacker save?</div>
+        <div><span class="ts">T1·R3</span> <span class="ev">Pounce on Tenza</span> · prone save? · <span class="dice">to-hits 19/22/8</span></div>
+        <div><span class="narration">"Coils, then explodes off the ice..."</span></div>
+        <div><span class="ts">T2·R3</span> Tenza failed grapple → <span style="color:#ff9800">grappled</span></div>
+        <div><span class="ts">T3·R3</span> Lyric magic missile → <span class="hp-loss">-14</span> (HP 56)</div>
+      </div>
+
+      <div class="suggestions">
+        <div class="suggest-btn">
+          <div class="label">Suggested · 1</div>
+          <div class="name">Multiattack on Tenza</div>
+          <div style="color:#8a8f96;font-size:10px;margin-top:2px;">advantage on bite (grappled)</div>
+        </div>
+        <div class="suggest-btn">
+          <div class="label">Suggested · 2</div>
+          <div class="name">Frozen Bile on Lyric</div>
+          <div style="color:#8a8f96;font-size:10px;margin-top:2px;">30 ft. range · low AC target</div>
+        </div>
+        <div class="suggest-btn">
+          <div class="label">Suggested · 3</div>
+          <div class="name">Snow Vanish</div>
+          <div style="color:#8a8f96;font-size:10px;margin-top:2px;">bloodied · break LOS, retreat</div>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <input class="input-bar" placeholder="attack | -18 | grappled tenza | ?what should it do" value="attack ten" />
+        <button class="send-btn">↵</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>Does this layout feel right?</h3>
+
+<div class="options">
+  <div class="option" data-choice="ship" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Ship as drawn</h3>
+      <p>Tab bar · top menu for encounters · 50/50 split sheet/console · suggestions above input. Move on to action display details.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="tweak-ratio" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Adjust the split</h3>
+      <p>Sheet should be wider (more room for actions/stats) — maybe 60% sheet / 40% console. Or the opposite.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="alt-layout" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Different arrangement</h3>
+      <p>Show me alternatives: console-on-top with sheet below, or single-column with collapsible sections, etc.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="rework" onclick="toggleSelect(this)">
+    <div class="letter">D</div>
+    <div class="content">
+      <h3>Concrete tweaks</h3>
+      <p>I have specific changes (move suggestions, change HP bar style, add/remove a panel, etc.) — I'll describe in chat.</p>
+    </div>
+  </div>
+</div>
