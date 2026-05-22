@@ -125,7 +125,7 @@ def _validate_dice(value: Any, where: str) -> list[str]:
 # stays import-free of the GUI package — the GUI re-checks at runtime anyway.
 _VALID_TRIGGER_EVENTS = {
     "damage", "heal", "condition_applied", "condition_removed",
-    "action_executed", "spell_cast", "round_advanced",
+    "action_executed", "spell_cast", "move_away", "round_advanced",
     "death", "bloodied", "note",
 }
 _VALID_TRIGGER_SCOPES = {"self", "global"}

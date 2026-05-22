@@ -285,6 +285,16 @@ def test_valid_trigger_events_set_matches_event_kind_literal():
     assert _VALID_TRIGGER_EVENTS == set(get_args(EventKind))
 
 
+def test_move_away_event_kind_accepted(sample_npc):
+    from gui.event_bus import EventBus, move_away_event
+    bus = EventBus()
+    received = []
+    bus.subscribe("move_away", received.append)
+    bus.emit(move_away_event("3", sample_npc.slug))
+    assert len(received) == 1
+    assert received[0].payload["combatant_id"] == "3"
+
+
 def test_collect_triggers_from_db_handles_missing_trigger_field():
     """If an action doesn't declare a `trigger` block, it shouldn't appear in
     the trigger list."""
