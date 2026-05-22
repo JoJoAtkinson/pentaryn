@@ -43,6 +43,33 @@ DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 SUGGESTION_MODEL = "claude-haiku-4-5-20251001"  # could swap to a smaller/faster model later
 
 
+# ─────────── pure helpers ───────────
+
+def build_correction_context(
+    state_dict: dict,
+    recent_commands: list[str],
+    pending: list[dict],
+) -> dict:
+    """Assemble the enriched context payload sent to the LLM fallback.
+
+    Pure function — no side effects, no I/O, easily unit-tested.
+
+    Returns a dict with three keys:
+      ``state``           — the serialized EncounterState (as produced by
+                            ``serialize_encounter``).
+      ``recent_commands`` — a list of the last N raw command strings (newest
+                            last), so the model can reason about history.
+      ``pending``         — the serialized ``pending_effects`` list (dicts
+                            from ``dataclasses.asdict``), enabling undo and
+                            fuzzy correction of unconfirmed effects.
+    """
+    return {
+        "state": state_dict,
+        "recent_commands": list(recent_commands),
+        "pending": list(pending),
+    }
+
+
 # ─────────── result types ───────────
 
 @dataclass

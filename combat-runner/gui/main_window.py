@@ -353,6 +353,9 @@ class MainWindow(QMainWindow):
         # strong reference; we keep them here too so the QObjects aren't GC'd
         # while the worker thread holds them across network round-trips.
         self._inflight_llm_signals: set = set()
+        # Rolling buffer of the last 10 raw command strings (newest last).
+        # Populated by _on_command; passed to the LLM fallback for context.
+        self._recent_commands: list[str] = []
 
         # Status bar at the bottom for transient messages
         self.setStatusBar(QStatusBar(self))
@@ -908,7 +911,7 @@ class MainWindow(QMainWindow):
             return f"Round → {event.payload.get('round_num', '?')}"
         return f"event: {event.kind} on {event.subject_npc}"
 
-    def _on_llm_fallback(self, text: str, parsed) -> None:
+    def _on_llm_fallback(self, text: str, parsed, correction_ctx: dict | None = None) -> None:
         """Route fallback input to the LLM controller if one's been wired.
 
         The LLM call (up to 10 blocking network round-trips, 2-40s) runs on a
@@ -916,13 +919,29 @@ class MainWindow(QMainWindow):
         working on other tabs while it thinks. Tool calls mutate live widgets,
         so they are marshalled back to this (the GUI) thread via
         `_on_llm_dispatch_requested`. A "thinking…" status message stays up for
-        the duration."""
+        the duration.
+
+        ``correction_ctx`` — optional enriched context dict (assembled by
+        ``build_correction_context``) injected as a JSON preamble in the text
+        sent to the LLM so it can reason about encounter state, recent command
+        history, and unconfirmed pending effects.
+        """
         controller = getattr(self, "_llm_controller", None)
         if controller is None:
             self.statusBar().showMessage(f"LLM fallback (no controller): {text!r}", 5000)
             return
         active_npc = self.encounter_state.active_npc
         active_slug = active_npc.slug if active_npc is not None else None
+
+        # When enriched context is available, prepend it as a compact JSON
+        # section so the model can use state/history for fuzzy corrections.
+        llm_text = text
+        if correction_ctx is not None:
+            try:
+                ctx_json = json.dumps(correction_ctx, ensure_ascii=False)
+                llm_text = f"[correction_context]{ctx_json}[/correction_context]\n{text}"
+            except (TypeError, ValueError):
+                pass  # malformed context — fall back to plain text
 
         # Persistent (no timeout) thinking indicator — cleared by the finished slot.
         self.statusBar().showMessage(f"LLM thinking about: {text!r} …")
@@ -941,7 +960,7 @@ class MainWindow(QMainWindow):
             lambda _result, s=signals: self._inflight_llm_signals.discard(s),
             Qt.ConnectionType.QueuedConnection,
         )
-        worker = _LLMRunWorker(controller, text, active_slug, signals)
+        worker = _LLMRunWorker(controller, llm_text, active_slug, signals)
         self._llm_pool.start(worker)
 
     def _on_llm_dispatch_requested(self, tool_uses, holder, done) -> None:
@@ -984,10 +1003,23 @@ class MainWindow(QMainWindow):
           * ``command``     → snapshot, resolve targets, apply each Effect,
                               emit bus events, repaint, refresh the arrow.
         """
+        # Record every raw command string for LLM context (rolling window of 10).
+        if cmd.raw:
+            self._recent_commands.append(cmd.raw)
+            if len(self._recent_commands) > 10:
+                self._recent_commands = self._recent_commands[-10:]
+
         if cmd.kind == "unparseable":
-            # Task 11 enriches this with state/history context; for now just
-            # route the raw text to the existing LLM fallback.
-            self._on_llm_fallback(cmd.raw, cmd)
+            from .llm_controller import build_correction_context
+            correction_ctx = build_correction_context(
+                state_dict=serialize_encounter(self.encounter_state),
+                recent_commands=self._recent_commands,
+                pending=[
+                    dataclasses.asdict(p)
+                    for p in self.encounter_state.pending_effects
+                ],
+            )
+            self._on_llm_fallback(cmd.raw, cmd, correction_ctx=correction_ctx)
             return
 
         # Snapshot BEFORE any mutation so `undo` can restore this exact state.

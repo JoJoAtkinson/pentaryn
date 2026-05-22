@@ -164,7 +164,7 @@ def test_unparseable_routes_to_llm_fallback(window):
     received: list = []
     # _on_llm_fallback is the fallback entry point; spy on it.
     orig = window._on_llm_fallback
-    window._on_llm_fallback = lambda text, parsed=None: received.append(text)  # type: ignore
+    window._on_llm_fallback = lambda text, parsed=None, **kw: received.append(text)  # type: ignore
     try:
         window.tabs.setCurrentIndex(0)
         _submit(window, "do something weird")
