@@ -1,0 +1,5 @@
+party: Black Ledger
+players:
+  - { name: Vessa, id: "1", max_hp: 31, ac: 15 }
+  - { name: Orren, id: "2", max_hp: 40, ac: 17 }
+  - { name: Grek,  id: "3", max_hp: 33, ac: 16 }

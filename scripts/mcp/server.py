@@ -10,7 +10,7 @@ import subprocess
 import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Optional
 
@@ -27,6 +27,10 @@ _TRANSPORT_MODE: Optional[str] = None  # "jsonl" | "lsp"
 # Pool size is tunable via DND_MCP_MAX_WORKERS (default 8 — Open5e tolerates
 # this comfortably and SQLite's per-connection locking handles the rest).
 _STDOUT_LOCK = threading.Lock()
+
+# Sentinel returned by _read_message for a malformed-but-recoverable frame: the
+# serve loop should skip it and keep reading, NOT treat it as EOF (which `None` means).
+_SKIP_MESSAGE: dict[str, Any] = {}
 
 
 def _safe_int_env(name: str, default: int) -> int:
@@ -57,11 +61,9 @@ _TOOL_TIMEOUT_SEC = _safe_int_env("DND_MCP_TOOL_TIMEOUT", 60)
 
 
 def _python_bin() -> Path:
-    for candidate in (
-        REPO_ROOT / ".venv" / "bin" / "python",
-    ):
-        if candidate.exists():
-            return candidate
+    candidate = REPO_ROOT / ".venv" / "bin" / "python"
+    if candidate.exists():
+        return candidate
     return Path(sys.executable)
 
 
@@ -90,7 +92,13 @@ def _read_message() -> Optional[dict[str, Any]]:
     stripped = first.strip()
     if stripped.startswith(b"{") or stripped.startswith(b"["):
         _TRANSPORT_MODE = _TRANSPORT_MODE or "jsonl"
-        return json.loads(stripped.decode("utf-8"))
+        try:
+            return json.loads(stripped.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            # Reject one garbage JSONL line rather than crashing the serve loop.
+            sys.stderr.write(f"[mcp-server] discarding malformed JSONL message: {exc}\n")
+            sys.stderr.flush()
+            return _SKIP_MESSAGE
 
     _TRANSPORT_MODE = _TRANSPORT_MODE or "lsp"
 
@@ -113,15 +121,25 @@ def _read_message() -> Optional[dict[str, Any]]:
 
     length_raw = headers.get("content-length")
     if not length_raw:
+        sys.stderr.write("[mcp-server] LSP frame missing Content-Length — closing.\n")
+        sys.stderr.flush()
         return None
     try:
         length = int(length_raw)
     except ValueError:
+        sys.stderr.write(f"[mcp-server] LSP frame has non-integer Content-Length {length_raw!r} — closing.\n")
+        sys.stderr.flush()
         return None
     body = _read_exact(sys.stdin.buffer, length)
     if not body:
         return None
-    return json.loads(body.decode("utf-8"))
+    try:
+        return json.loads(body.decode("utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        # Reject one garbage LSP body rather than crashing the serve loop.
+        sys.stderr.write(f"[mcp-server] discarding malformed LSP message body: {exc}\n")
+        sys.stderr.flush()
+        return _SKIP_MESSAGE
 
 
 def _write_message(payload: dict[str, Any]) -> None:
@@ -153,6 +171,15 @@ def _run_call_worker(msg_id: Any, runner: "ToolRunner", arguments: dict[str, Any
                 "result": {"content": [{"type": "text", "text": out}]},
             })
     except Exception as exc:
+        # Surface the full traceback to stderr (the MCP client sees only the
+        # short error message via JSON-RPC, but mid-fight debugging benefits
+        # from the real stack — Claude Code's MCP logs capture stderr).
+        import traceback as _tb
+        sys.stderr.write(
+            f"\n[mcp-server] tool {runner.tool.name!r} crashed:\n"
+            f"{_tb.format_exc()}\n"
+        )
+        sys.stderr.flush()
         if msg_id is not None:
             _write_message({
                 "jsonrpc": "2.0",
@@ -191,10 +218,6 @@ class ToolRunner:
                 return result
             return json.dumps(result, indent=2, ensure_ascii=False)
 
-        # TODO: add per-tool subprocess timeout (e.g. via MCP_TOOL["timeout"]) so a hung
-        # script can't lock the tool slot indefinitely.
-        # TODO: pass stderr through on success too — useful warnings are currently swallowed
-        # unless the script exits non-zero.
         # TODO: replace token.format(**fmt_args) below with explicit {name} substitution so
         # values containing literal `{` or `}` don't break argv construction.
         python = _python_bin()
@@ -207,9 +230,19 @@ class ToolRunner:
                 fmt_args[key] = json.dumps(value, ensure_ascii=False)
         try:
             for token in self.argv_template:
-                rendered = token.format(**fmt_args).strip()
-                if rendered:
-                    argv.append(rendered)
+                # A bare placeholder ('{name}') always emits exactly one argv entry,
+                # even when the value is empty — otherwise an empty value would drop
+                # the token and orphan a preceding flag, misaligning the rest of argv.
+                is_placeholder = (
+                    token.startswith("{")
+                    and token.endswith("}")
+                    and token.count("{") == 1
+                )
+                rendered = token.format(**fmt_args)
+                if is_placeholder:
+                    argv.append(rendered.strip())
+                elif rendered.strip():
+                    argv.append(rendered.strip())
         except KeyError as exc:
             raise ValueError(f"Missing required argument: {exc.args[0]}") from exc
 
@@ -262,7 +295,16 @@ class ToolRunner:
         if proc.returncode != 0:
             msg = (proc.stderr or proc.stdout or "").strip() or f"{self.script_path.name} exited with {proc.returncode}"
             raise RuntimeError(msg)
-        return (proc.stdout or "").strip()
+        out = (proc.stdout or "").strip()
+        warn = (proc.stderr or "").strip()
+        if warn:
+            # Success-path stderr is real diagnostic signal (e.g. a malformed DB
+            # line was skipped). Surface it so the caller isn't handed a silently
+            # short result. Kept after stdout so machine parsers can split on it.
+            if out:
+                return f"{out}\n\n[warnings from {self.script_path.name}]\n{warn}"
+            return f"[warnings from {self.script_path.name}]\n{warn}"
+        return out
 
 
 @dataclass(frozen=True)
@@ -299,6 +341,27 @@ def _has_top_level_assignment(source: str, name: str) -> bool:
             if isinstance(node.target, ast.Name) and node.target.id == name:
                 return True
     return False
+
+
+def _read_top_level_string_list(source: str, name: str) -> list[str]:
+    """If `name` is assigned at module top-level to a literal list of strings,
+    return that list. Otherwise return []. Used by the group filter to peek at
+    MCP_GROUPS without importing the module (which would defeat the speedup)."""
+    try:
+        module = ast.parse(source)
+    except SyntaxError:
+        return []
+    for node in module.body:
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id == name:
+                    try:
+                        value = ast.literal_eval(node.value)
+                    except (ValueError, SyntaxError):
+                        return []
+                    if isinstance(value, list) and all(isinstance(v, str) for v in value):
+                        return value
+    return []
 
 
 def _extract_mcp_tool_literal(source: str, *, path: Path) -> dict[str, Any] | None:
@@ -455,12 +518,26 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
         and server_dir not in p.resolve().parents
     ]
     
+    # Optional group filter: when DND_MCP_TOOLS_GROUP is set, only load modules
+    # whose top-level MCP_GROUPS list contains that group name. Massively cuts
+    # cold-start latency by skipping unrelated heavy imports (chromadb, pandas,
+    # etc.) when only a focused tool surface is needed (e.g. combat-runner).
+    # Modules without a MCP_GROUPS declaration are skipped when a filter is active.
+    group_filter = os.environ.get("DND_MCP_TOOLS_GROUP", "").strip()
+
     for path in sorted(all_py_files, key=lambda p: str(p.relative_to(scripts_dir))):
         try:
             source = path.read_text(encoding="utf-8")
         except Exception as exc:
             skipped.append((path, f"unreadable: {exc}"))
             continue
+
+        if group_filter:
+            module_groups = _read_top_level_string_list(source, "MCP_GROUPS")
+            if group_filter not in module_groups:
+                skipped.append((path, f"group filter excludes (DND_MCP_TOOLS_GROUP={group_filter!r}, module groups={module_groups})"))
+                continue
+
         # Two discovery paths:
         # - Scripts with a top-level MCP_HANDLERS assignment get imported as
         #   modules; MCP_TOOLS is read from the imported namespace (so it can
@@ -509,17 +586,19 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
             continue
 
         if handlers is not None:
-            new_runners = [
-                ToolRunner(
-                    tool=r.tool,
-                    script_path=r.script_path,
-                    argv_template=r.argv_template,
-                    bool_flags=r.bool_flags,
-                    value_flags=r.value_flags,
-                    handler=handlers.get(r.tool.name),
-                )
-                for r in new_runners
-            ]
+            # The module declared MCP_HANDLERS, so each tool is meant to be
+            # dispatched in-process. A tool with no matching handler entry would
+            # otherwise register with handler=None and silently fall through to
+            # the subprocess path against a script that has no CLI for it —
+            # route it to `skipped` instead of registering it half-wired.
+            rewired: list[ToolRunner] = []
+            for r in new_runners:
+                h = handlers.get(r.tool.name)
+                if h is None:
+                    skipped.append((path, f"tool {r.tool.name!r} has no MCP_HANDLERS entry"))
+                    continue
+                rewired.append(replace(r, handler=h))
+            new_runners = rewired
 
         runners.extend(new_runners)
 
@@ -557,6 +636,16 @@ def main() -> int:
         return _print_list_tools(discover_tools(repo_root=REPO_ROOT))
 
     discovery = discover_tools(repo_root=REPO_ROOT)
+    if discovery.skipped:
+        # A running client only sees discovery.tools via tools/list; the skip
+        # set (import failure, duplicate name, missing handler, …) is otherwise
+        # invisible. Emit it to stderr so it lands in the MCP host's server log.
+        sys.stderr.write(
+            f"[mcp-server] {len(discovery.skipped)} script(s) skipped at discovery:\n"
+        )
+        for path, reason in discovery.skipped:
+            sys.stderr.write(f"  - {path.name}: {reason}\n")
+        sys.stderr.flush()
     runners = discovery.tools
     tools = tuple(r.tool for r in runners)
     runner_by_name = {r.tool.name: r for r in runners}
@@ -587,6 +676,9 @@ def _serve_loop(
         msg = _read_message()
         if msg is None:
             return 0
+        if msg is _SKIP_MESSAGE:
+            # A malformed frame was logged and discarded — keep serving.
+            continue
 
         method = msg.get("method")
         msg_id = msg.get("id")

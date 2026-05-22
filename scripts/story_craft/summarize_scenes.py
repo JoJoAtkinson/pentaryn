@@ -75,7 +75,6 @@ MCP_TOOL = {
                 "default": "gpt-4o",
             },
         },
-        "required": ["session"],
         "additionalProperties": False,
     },
     "argv": [],

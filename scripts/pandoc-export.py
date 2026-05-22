@@ -309,14 +309,14 @@ def _apply_pdf_defaults(pandoc_args: list[str]) -> list[str]:
     if not has_prefix("--toc-depth"):
         updated.append("--toc-depth=2")
     if not has_prefix("--pdf-engine"):
-        updated.append("--pdf-engine=xelatex")
+        updated.append("--pdf-engine=pdflatex")
 
     # Variables (keep simple; don't try to dedupe pairs aggressively).
     vars_defaults = [
         ("mainfont", "Baskerville"),
         ("linestretch", "1.3"),
-        ("classoption", "twocolumn"),
-        ("geometry:margin", "0.7in"),
+        ("classoption", "onecolumn"),
+        ("geometry:margin", "0.5in"),
     ]
     existing_vars = set()
     for idx, arg in enumerate(updated):
@@ -398,7 +398,20 @@ def main(argv: list[str]) -> int:
 
     args, pandoc_args = parser.parse_known_args(argv[1:])
 
-    selected = pathlib.Path(args.input_file).expanduser()
+    # Confinement: caller-supplied paths must stay inside the repo or ~/Downloads
+    # (the documented default output sink). Rejects absolute escapes and ../ traversal.
+    _repo_root = pathlib.Path(__file__).resolve().parents[1]
+    _downloads = pathlib.Path(os.path.expanduser("~/Downloads")).resolve()
+
+    def _confine(path: pathlib.Path, *, what: str) -> pathlib.Path:
+        resolved = path.resolve()
+        if resolved.is_relative_to(_repo_root) or resolved.is_relative_to(_downloads):
+            return resolved
+        raise SystemExit(
+            f"{what} must stay inside the repo or ~/Downloads: {path}"
+        )
+
+    selected = _confine(pathlib.Path(args.input_file).expanduser(), what="input_file")
     header_tex: pathlib.Path | None = pathlib.Path(args.header_tex).expanduser() if args.header_tex else None
     if args.pdf_defaults and header_tex is None:
         default_header = pathlib.Path(__file__).resolve().parents[1] / ".vscode" / "pandoc-header.tex"
@@ -420,6 +433,8 @@ def main(argv: list[str]) -> int:
             forced_output = output_dir / f"{selected.stem}.pdf"
         elif output_name is not None:
             forced_output = pathlib.Path(os.path.expanduser("~/Downloads")) / output_name
+    if forced_output is not None:
+        forced_output = _confine(forced_output, what="output path")
 
     if args.pdf_defaults:
         pandoc_args = _apply_pdf_defaults(list(pandoc_args))

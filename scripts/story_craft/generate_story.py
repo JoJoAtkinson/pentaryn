@@ -50,7 +50,7 @@ from scripts.story_craft._shared import (
 )
 
 MCP_TOOL = {
-    "name": "dnd_pass3",
+    "name": "dnd_story_prose",
     "description": (
         "Generate story prose from D&D session scene summaries. "
         "Reads Pass 2 summaries and creates flowing narrative chapters with intelligent "
