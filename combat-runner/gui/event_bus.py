@@ -35,6 +35,7 @@ EventKind = Literal[
     "condition_removed", # condition removed
     "action_executed",   # NPC ran a roll_combat_action
     "spell_cast",        # PC or NPC cast a spell (DM-tagged event)
+    "move_away",         # combatant retreated while in_melee=True
     "round_advanced",    # round counter incremented
     "death",             # NPC HP reached 0
     "bloodied",          # NPC dropped at or below half HP
@@ -111,6 +112,16 @@ def bloodied_event(npc_slug: str) -> Event:
 
 def death_event(npc_slug: str) -> Event:
     return Event(kind="death", subject_npc=npc_slug, payload={})
+
+
+def move_away_event(combatant_id: str, combatant_slug: str) -> Event:
+    """Fired when a combatant retreats while in_melee=True.
+    Main window listens and shows the OA prompt."""
+    return Event(
+        kind="move_away",
+        subject_npc=combatant_slug,
+        payload={"combatant_id": combatant_id},
+    )
 
 
 def action_event(npc_slug: str, action_name: str, tags: tuple[str, ...] = ()) -> Event:
