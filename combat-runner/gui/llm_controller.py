@@ -368,7 +368,6 @@ def _tool_apply_command(bundle: _StateBundle, command: str, target_slug: str) ->
     `condition` effect to the named NPC. Action / hit / undo effects are not
     applied here (they need GUI context) — they report ``ok=False``.
     """
-    from .command_model import Effect  # noqa: F401  (imported for clarity)
     from .dispatcher import parse as parse_command
     from .effects import apply_effect
 
