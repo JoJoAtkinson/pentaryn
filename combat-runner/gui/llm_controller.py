@@ -335,45 +335,52 @@ def _tool_get_spell_details(key: str) -> dict[str, Any]:
 
 
 def _tool_apply_command(bundle: _StateBundle, command: str, target_slug: str) -> dict[str, Any]:
-    """Validate and apply a command string via the same dispatcher path the DM uses."""
-    from .dispatcher import Dispatcher, InputKind
-    d = Dispatcher()
-    parsed = d.parse(command)
+    """Validate and apply a command string via the same grammar parser the DM uses.
+
+    Parses the raw command into a `ParsedCommand` and applies each `amount` /
+    `condition` effect to the named NPC. Action / hit / undo effects are not
+    applied here (they need GUI context) — they report ``ok=False``.
+    """
+    from .command_model import Effect  # noqa: F401  (imported for clarity)
+    from .dispatcher import parse as parse_command
+    from .effects import apply_effect
+
+    parsed = parse_command(command)
     npc = _find_npc(bundle.encounter, target_slug)
     if npc is None:
         return {"ok": False, "error": f"NPC not found: {target_slug}"}
-    if parsed.kind is InputKind.DIRECTED:
-        direction = parsed.resolved_tags.get("direction", "damage")
-        if direction == "heal":
-            result = npc.apply_heal(parsed.amount, member=parsed.target_member)
-        else:
-            result = npc.apply_damage(parsed.amount, member=parsed.target_member)
-        skipped = result.get("skipped")
-        if skipped:
-            return {"ok": False, "error": f"no-op — {skipped} (target={target_slug}, member={parsed.target_member})"}
-        bundle.notify()
-        return {"ok": True, "applied": result, "direction": direction,
-                "hp_now": npc.hp, "parsed_tags": parsed.resolved_tags}
-    elif parsed.kind is InputKind.DAMAGE:
-        result = npc.apply_damage(parsed.amount, member=parsed.member)
-        skipped = result.get("skipped")
-        if skipped:
-            return {"ok": False, "error": f"no-op — {skipped} (target={target_slug}, member={parsed.member})"}
-        bundle.notify()
-        return {"ok": True, "applied": result, "hp_now": npc.hp}
-    elif parsed.kind is InputKind.HEAL:
-        result = npc.apply_heal(parsed.amount, member=parsed.member)
-        skipped = result.get("skipped")
-        if skipped:
-            return {"ok": False, "error": f"no-op — {skipped} (target={target_slug}, member={parsed.member})"}
-        bundle.notify()
-        return {"ok": True, "applied": result, "hp_now": npc.hp}
-    elif parsed.kind is InputKind.CONDITION:
-        npc.add_condition(parsed.condition)
-        bundle.notify()
-        return {"ok": True, "condition_added": parsed.condition}
-    else:
-        return {"ok": False, "error": f"command did not parse as actionable: kind={parsed.kind.value}"}
+    if parsed.kind == "unparseable":
+        return {"ok": False, "error": f"command did not parse: {command!r}"}
+    if not parsed.effects:
+        return {"ok": False, "error": f"command carries no applicable effects: {command!r}"}
+
+    for effect in parsed.effects:
+        if effect.kind in ("action", "hit", "undo"):
+            return {"ok": False,
+                    "error": f"effect kind {effect.kind!r} cannot be applied via apply_command"}
+
+    # apply_effect resolves targets via combatant_by_id; ensure the target NPC
+    # has an id for the duration of the call (it may be unassigned in tests).
+    restore_id = npc.id
+    if not npc.id:
+        npc.id = "__apply_command_target__"
+    try:
+        applied: list[str] = []
+        for effect in parsed.effects:
+            fragments = apply_effect(
+                bundle.encounter, effect, target_ids=[npc.id], actor=None
+            )
+            applied.extend(fragments)
+    finally:
+        npc.id = restore_id
+
+    # A fragment beginning with "warn:" means a skipped no-op (out-of-range
+    # mob member, dead member, no alive members) — surface it as ok=False.
+    skipped = [f for f in applied if f.startswith("warn:")]
+    if skipped:
+        return {"ok": False, "error": "; ".join(skipped)}
+    bundle.notify()
+    return {"ok": True, "applied": applied, "hp_now": npc.hp}
 
 
 def _build_tool_definitions() -> list[dict[str, Any]]:

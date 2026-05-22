@@ -37,13 +37,18 @@ _MOB_RE = re.compile(r"^m([1-9]\d*)$", re.IGNORECASE)
 
 
 def _is_damage_tag(token: str) -> bool:
-    """True if `token` resolves to at least one damage facet with no errors."""
+    """True if `token` is a recognized damage-tag (type / delivery / direction).
+
+    `resolve_tags` seeds the required `direction` facet with its default and
+    reports unknown tokens via `errors`, so a real tag is one that resolves
+    with no errors. The bare direction tokens `dmg` / `dam` resolve to exactly
+    the default `{"direction": "damage"}` — they are still real tags (spec
+    §2.2 lists `dmg` as a damage-tag), so we accept them explicitly.
+    """
     resolved, errors = resolve_tags([token])
     if errors:
         return False
-    # resolve_tags seeds the required `direction` facet with its default even
-    # for unknown input, so a real tag must contribute a non-default facet.
-    return bool(resolved) and resolved != {"direction": "damage"}
+    return bool(resolved)
 
 
 def _strip_at(token: str) -> tuple[str, bool]:

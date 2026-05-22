@@ -80,22 +80,25 @@ def test_action_chips_segregates_globals(qtbot):
     assert divider_labels, "expected a 'Global actions' divider label"
 
 
-def test_dispatcher_resolves_global_verb(qtbot):
-    """Typing `dodge` in a stalker tab should match the global dodge action,
-    not need an LLM fallback."""
-    from gui.dispatcher import Dispatcher, InputKind
+def test_grammar_resolves_global_verb(qtbot):
+    """Typing `dodge` parses as an action effect; the token resolves against
+    the glacier-stalker action surface to the global `dodge` action."""
+    from gui.dispatcher import parse
+    from gui.main_window import MainWindow
 
     actions = list_actions(npc="glacier-stalker")
-    d = Dispatcher()
-    parsed = d.parse("dodge", available_actions=actions)
-    assert parsed.kind is InputKind.ACTION
-    assert parsed.action_name == "dodge"
+    c = parse("dodge")
+    assert c.kind == "command"
+    assert c.effects[0].kind == "action" and c.effects[0].action_token == "dodge"
+    assert MainWindow._resolve_action_token("dodge", actions) == "dodge"
 
 
-def test_dispatcher_resolves_grapple_verb(qtbot):
-    from gui.dispatcher import Dispatcher, InputKind
+def test_grammar_resolves_grapple_verb(qtbot):
+    """`grab` fuzzy-matches the `grapple` action on aelric-frostweaver."""
+    from gui.dispatcher import parse
+    from gui.main_window import MainWindow
+
     actions = list_actions(npc="aelric-frostweaver")
-    d = Dispatcher()
-    parsed = d.parse("grab", available_actions=actions)
-    assert parsed.kind is InputKind.ACTION
-    assert parsed.action_name == "grapple"
+    c = parse("grab")
+    assert c.kind == "command" and c.effects[0].kind == "action"
+    assert MainWindow._resolve_action_token("grab", actions) == "grapple"

@@ -1,41 +1,45 @@
 """Condition-duration tests.
 
-`@stun 5` applies stunned for 5 rounds; round_advanced ticks it down; on the
-5th tick the condition auto-removes with a log entry. Manual `@stun` toggle-off
-mid-duration also clears the timer (covers the "cured by a spell" case).
+In the `<who> <stream>` grammar a condition's duration is a number written
+BEFORE the condition word: `5 stun` = stun for 5 rounds. A bare condition word
+defaults to 1 round. round_advanced ticks the timer down; on the final tick the
+condition auto-removes. Manual toggle-off mid-duration also clears the timer
+(the "cured by a spell" case).
 """
 
 from __future__ import annotations
 
-from gui.dispatcher import Dispatcher, InputKind
+from gui.dispatcher import parse
 from gui.state import NPCState
 
 
-def test_dispatcher_parses_at_stun_5_as_condition_with_duration():
-    d = Dispatcher()
-    p = d.parse("@stun 5")
-    assert p.kind is InputKind.CONDITION
-    assert p.condition == "stun"
-    assert p.condition_duration == 5
-    assert p.condition_target is None
+def test_parses_num_before_condition_as_duration():
+    """`3 5 stun` — target 3, stun for 5 rounds (number before condition word)."""
+    c = parse("3 5 stun")
+    assert c.kind == "command"
+    eff = c.effects[0]
+    assert eff.kind == "condition"
+    assert eff.condition == "stun"
+    assert eff.duration == 5
 
 
-def test_dispatcher_at_grappled_with_target_is_unchanged():
-    """Trailing non-numeric token still parses as target hint, not duration."""
-    d = Dispatcher()
-    p = d.parse("@grappled tenza")
-    assert p.kind is InputKind.CONDITION
-    assert p.condition == "grappled"
-    assert p.condition_duration is None
-    assert p.condition_target == "tenza"
+def test_bare_condition_has_no_explicit_duration():
+    """A bare condition word leaves duration None — caller applies the 1-round default."""
+    c = parse("3 prone")
+    eff = c.effects[0]
+    assert eff.kind == "condition"
+    assert eff.condition == "prone"
+    assert eff.duration is None
 
 
-def test_dispatcher_bare_at_condition_no_duration():
-    d = Dispatcher()
-    p = d.parse("@prone")
-    assert p.kind is InputKind.CONDITION
-    assert p.condition_duration is None
-    assert p.condition_target is None
+def test_forced_condition_with_at_escape_hatch():
+    """`@prone` forces the condition reading; duration still None for a bare word."""
+    c = parse("3 @prone")
+    eff = c.effects[0]
+    assert eff.kind == "condition"
+    assert eff.condition == "prone"
+    assert eff.duration is None
+    assert eff.forced_condition is True
 
 
 def test_apply_condition_with_duration():

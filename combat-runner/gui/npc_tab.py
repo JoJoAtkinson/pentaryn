@@ -5,10 +5,10 @@ panel (right: combat log + input). Per-NPC state lives in `self.npc_state`
 (a `gui.state.NPCState`).
 
 This module is the thinnest possible wiring between the widgets and the state.
-Dispatch logic (parsing user input → state mutations + log writes) is delegated
-to `gui.dispatcher.Dispatcher`. The actual roll mechanics still happen in
-`scripts.dnd_roller.roll_combat_action` (called via the dispatcher's
-action-execution helper).
+Command parsing is delegated to `gui.dispatcher.parse`, which returns a
+`ParsedCommand`; the tab forwards it to `MainWindow._on_command` via the
+`command_requested` signal. The actual roll mechanics still happen in
+`scripts.dnd_roller.roll_combat_action`.
 """
 
 from __future__ import annotations
@@ -32,7 +32,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .dispatcher import Dispatcher, InputKind, ParsedInput
+from .command_model import Effect, ParsedCommand
+from .dispatcher import parse as parse_command
 from .event_bus import (
     Event,
     EventBus,
@@ -211,19 +212,13 @@ class NPCTab(QWidget):
     # The main window listens to update tab titles + fire suggestion refresh.
     state_changed = Signal()
 
-    # Emitted when the dispatcher routes input to the LLM fallback path.
-    # The main window owns the LLM controller; the tab just signals.
-    llm_fallback_requested = Signal(str, object)  # (input_text, parsed_input)
-
-    # Emitted when the user types `/reorder` — main window applies it.
-    reorder_requested = Signal(list)  # list of slugs
-
     # Emitted on `/quit`.
     quit_requested = Signal()
 
-    # Emitted when the dispatcher routes a DIRECTED or JUMP command (Phase 1).
-    # MainWindow handles tab switching + applies the damage to the target tab.
-    directed_command_requested = Signal(object)  # ParsedInput(kind=DIRECTED or JUMP)
+    # Emitted on every command submit. Carries the parsed `ParsedCommand`
+    # (kind ∈ command|set_target|unparseable). MainWindow._on_command handles
+    # snapshotting, target resolution, effect application, and the LLM fallback.
+    command_requested = Signal(object)  # ParsedCommand
 
     # Emitted after any state-changing command completes. Carries the raw input
     # text + a snapshot of the tab's NPCState. Callers can use this to build an
@@ -242,7 +237,6 @@ class NPCTab(QWidget):
         self.npc_state = npc_state
         self.actions = actions  # action summaries from combat_actions_db.list_actions
         self.log_path = Path(log_path)
-        self.dispatcher = Dispatcher()
         self.event_bus = event_bus
         if self.event_bus is not None:
             self.event_bus.subscribe("round_advanced", self._on_round_event)
@@ -488,13 +482,25 @@ class NPCTab(QWidget):
     # ─────────── input handling ───────────
 
     def _on_submitted(self, text: str) -> None:
-        parsed = self.dispatcher.parse(text, available_actions=self.actions)
-        self._handle_parsed(parsed)
+        """Parse a raw command and hand the ParsedCommand to MainWindow.
+
+        All dispatch — snapshotting, target resolution, effect application,
+        the LLM fallback — happens in MainWindow._on_command. The tab is just
+        the input surface.
+        """
+        cmd = parse_command(text)
+        self.command_requested.emit(cmd)
 
     def _on_chip_clicked(self, action_name: str) -> None:
-        """Clicking an action chip is equivalent to typing the action name."""
-        parsed = ParsedInput(kind=InputKind.ACTION, raw=action_name, action_name=action_name)
-        self._handle_parsed(parsed)
+        """Clicking an action chip is equivalent to typing the action name —
+        an action effect against the active (this) tab's combatant."""
+        cmd = ParsedCommand(
+            kind="command",
+            raw=action_name,
+            target_ids=[self.npc_state.id] if self.npc_state.id else [],
+            effects=[Effect(kind="action", action_token=action_name)],
+        )
+        self.command_requested.emit(cmd)
 
     def _on_show_narration(self, action_name: str) -> None:
         """Right-click → Show full narration. Pulls the full row from the DB
@@ -654,61 +660,35 @@ class NPCTab(QWidget):
         self._refresh()
         self.state_changed.emit()
 
-    def _handle_parsed(self, parsed: ParsedInput) -> None:
-        # Fix 3: for PC tabs, fuzzy-match the input against _PLAYER_ACTIONS
-        # before falling through to the LLM. The dispatcher's fuzzy matcher
-        # only searches DB actions; PCs have none. We apply the same
-        # tightest-first ordering (exact → prefix → substring) inline here.
-        if (
-            parsed.kind in (InputKind.UNKNOWN, InputKind.AMBIGUOUS)
-            and self.npc_state.kind == "pc"
-        ):
-            q = parsed.raw.lower().strip()
-            # Tightest-first: exact → prefix → substring (case-insensitive)
-            player_match: str | None = None
-            exact = [a for a in _PLAYER_ACTIONS if a.lower() == q]
-            if exact:
-                player_match = exact[0]
-            else:
-                prefix = [a for a in _PLAYER_ACTIONS if a.lower().startswith(q)]
-                if len(prefix) == 1:
-                    player_match = prefix[0]
-                elif not prefix:
-                    sub = [a for a in _PLAYER_ACTIONS if q in a.lower()]
-                    if len(sub) == 1:
-                        player_match = sub[0]
-            if player_match is not None:
-                self._on_player_action(player_match)
-                return
+    def try_player_action(self, token: str) -> bool:
+        """For a PC tab, fuzzy-match `token` against `_PLAYER_ACTIONS` and run
+        it. Returns True if a unique match was found and run, else False.
 
-        if parsed.kind is InputKind.ACTION:
-            self._run_action(parsed.action_name)
-            self.review_needed.emit(parsed.raw, self.npc_state)
-        elif parsed.kind is InputKind.DAMAGE:
-            self._apply_damage(parsed.amount, parsed.member, parsed.damage_type)
-            self.review_needed.emit(parsed.raw, self.npc_state)
-        elif parsed.kind is InputKind.HEAL:
-            self._apply_heal(parsed.amount, parsed.member)
-            self.review_needed.emit(parsed.raw, self.npc_state)
-        elif parsed.kind is InputKind.CONDITION:
-            self._toggle_condition(parsed.condition, parsed.condition_target, parsed.condition_duration)
-            self.review_needed.emit(parsed.raw, self.npc_state)
-        elif parsed.kind is InputKind.CONDITION_MENU:
-            self._append_log("(condition autocomplete menu — handled by widget in v0.2)")
-        elif parsed.kind is InputKind.NOTE:
-            # NOTE intentionally does not emit review_needed — notes never hit the LLM (spec §4)
-            self._append_log(f"📝 note: {parsed.note_text}")
-        elif parsed.kind is InputKind.REORDER:
-            self.reorder_requested.emit(parsed.reorder_slugs)
-        elif parsed.kind is InputKind.QUIT:
-            self.quit_requested.emit()
-        elif parsed.kind in (InputKind.DIRECTED, InputKind.JUMP):
-            self.directed_command_requested.emit(parsed)
-            return  # MainWindow handles fast path
+        Tightest-first ordering: exact → unique prefix → unique substring
+        (all case-insensitive). NPC tabs always return False (their action
+        resolution goes through MainWindow against the DB action surface).
+        """
+        if self.npc_state.kind != "pc":
+            return False
+        q = token.lower().strip()
+        if not q:
+            return False
+        player_match: str | None = None
+        exact = [a for a in _PLAYER_ACTIONS if a.lower() == q]
+        if exact:
+            player_match = exact[0]
         else:
-            # AMBIGUOUS or UNKNOWN → LLM fallback (main window owns the controller)
-            self.llm_fallback_requested.emit(parsed.raw, parsed)
-            self._append_log(f"<span style='color:#6c8eba'>(routing to LLM: {parsed.raw!r})</span>")
+            prefix = [a for a in _PLAYER_ACTIONS if a.lower().startswith(q)]
+            if len(prefix) == 1:
+                player_match = prefix[0]
+            elif not prefix:
+                sub = [a for a in _PLAYER_ACTIONS if q in a.lower()]
+                if len(sub) == 1:
+                    player_match = sub[0]
+        if player_match is None:
+            return False
+        self._on_player_action(player_match)
+        return True
 
     # ─────────── dice-cache pre-warm ───────────
 
@@ -994,6 +974,6 @@ class NPCTab(QWidget):
     # ─────────── internal: suggestion click ───────────
 
     def _on_suggestion_chosen(self, action_name: str) -> None:
-        """Treat a suggestion-button click as instant fast-path dispatch."""
-        parsed = ParsedInput(kind=InputKind.ACTION, raw=action_name, action_name=action_name)
-        self._handle_parsed(parsed)
+        """Treat a suggestion-button click as an action against this tab's
+        combatant — the same path as an action chip click."""
+        self._on_chip_clicked(action_name)

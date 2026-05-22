@@ -63,7 +63,7 @@ def test_apply_command_tool_heals_npc(sample_encounter):
     npc = sample_encounter.npcs[0]
     npc.apply_damage(50)  # 84 → 34 HP
     bundle = _StateBundle(encounter=sample_encounter, log_path="/tmp/l.md")
-    result = _tool_apply_command(bundle, command="+10", target_slug=npc.slug)
+    result = _tool_apply_command(bundle, command="1 10 heal", target_slug=npc.slug)
     assert result["ok"]
     assert npc.hp == 44
 
@@ -72,7 +72,7 @@ def test_apply_command_tool_damages_npc(sample_encounter):
     from gui.llm_controller import _tool_apply_command, _StateBundle
     npc = sample_encounter.npcs[0]
     bundle = _StateBundle(encounter=sample_encounter, log_path="/tmp/l.md")
-    result = _tool_apply_command(bundle, command="1 20", target_slug=npc.slug)
+    result = _tool_apply_command(bundle, command="1 20 dmg", target_slug=npc.slug)
     assert result["ok"]
     assert npc.hp == 64  # 84 - 20
 
@@ -80,7 +80,7 @@ def test_apply_command_tool_damages_npc(sample_encounter):
 def test_apply_command_unknown_npc_returns_error(sample_encounter):
     from gui.llm_controller import _tool_apply_command, _StateBundle
     bundle = _StateBundle(encounter=sample_encounter, log_path="/tmp/l.md")
-    result = _tool_apply_command(bundle, command="1 5", target_slug="no-such-npc")
+    result = _tool_apply_command(bundle, command="1 5 dmg", target_slug="no-such-npc")
     assert not result["ok"]
     assert "not found" in result["error"]
 
@@ -134,21 +134,19 @@ def test_apply_command_out_of_range_mob_member_returns_false(sample_encounter):
 
     bundle = _StateBundle(encounter=sample_encounter, log_path="/tmp/l.md")
 
-    # Attempt damage to member 99 — out of range, state.py returns skipped.
-    result = _tool_apply_command(bundle, command="1 15", target_slug="goblin-mob")
-    # Sanity check: default routing (no m<n>) succeeds normally.
+    # Sanity check: default-routed damage (no m<n>) succeeds normally.
+    result = _tool_apply_command(bundle, command="1 15 dmg", target_slug="goblin-mob")
     assert result["ok"], "default-routed damage should succeed"
 
-    # Now force an out-of-range member via the DIRECTED branch (m99 member).
-    # Apply it via damage_npc directly to confirm the skipped path is exercised.
-    skipped_result = mob.apply_damage(5, member=99)
-    assert "skipped" in skipped_result, "state.py should return skipped for out-of-range member"
+    # An out-of-range member m99 is a skipped no-op → ok=False.
+    result = _tool_apply_command(bundle, command="1 m99 5 dmg", target_slug="goblin-mob")
+    assert not result["ok"], "out-of-range mob member should be ok=False"
 
     # Verify that _tool_apply_command wraps a skipped apply_heal as ok=False.
     # Kill both members so apply_heal returns skipped="no member to heal".
     mob.member_hp[0] = 0
     mob.member_hp[1] = 0
-    result = _tool_apply_command(bundle, command="+5", target_slug="goblin-mob")
+    result = _tool_apply_command(bundle, command="1 5 heal", target_slug="goblin-mob")
     assert not result["ok"], "heal on all-dead mob should be ok=False"
     assert "error" in result
     assert result["error"]  # non-empty error message
@@ -175,8 +173,8 @@ def test_apply_command_no_alive_members_damage_returns_false(sample_encounter):
     sample_encounter.npcs.append(mob)
 
     bundle = _StateBundle(encounter=sample_encounter, log_path="/tmp/l.md")
-    # DAMAGE branch: "1 10" → apply_damage with no alive members → skipped.
-    result = _tool_apply_command(bundle, command="1 10", target_slug="dead-mob")
+    # DAMAGE branch: "1 10 dmg" → apply_damage with no alive members → skipped.
+    result = _tool_apply_command(bundle, command="1 10 dmg", target_slug="dead-mob")
     assert not result["ok"], "damage on all-dead mob should be ok=False"
     assert "error" in result
     assert "no alive members" in result["error"] or result["error"]

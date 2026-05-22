@@ -6,13 +6,13 @@ drag reflows the QTabWidget's *widget indices* but does NOT touch
 `npcs[i]` ⇄ `tabs.widget(i)`:
 
   * `EncounterState.active_npc` → `npcs[active_tab_index]` (active_tab_index is a
-    Qt widget index) — so after a drag-reorder the directed-command actor was
-    the wrong combatant.
-  * `_on_directed_command` → `tabs.widget(npcs.index(target))` — so the target's
+    Qt widget index) — so after a drag-reorder the command actor was the wrong
+    combatant.
+  * the command handler → `tabs.widget(npcs.index(target))` — so the target's
     tab refresh / re-title hit the wrong tab.
 
 The fix mirrors a native `tabMoved` into `encounter_state.npcs`, keeping the
-two orderings consistent (the same invariant `/reorder` already maintains).
+two orderings consistent.
 """
 
 from __future__ import annotations
@@ -21,7 +21,7 @@ import pathlib
 
 import pytest
 
-from gui.dispatcher import Dispatcher
+from gui.dispatcher import parse
 from gui.main_window import MainWindow
 from gui.state import EncounterState, NPCState
 
@@ -101,27 +101,25 @@ def test_directed_command_targets_correct_pc_after_native_drag(party_window):
     marwen_before = marwen.hp
     bazgar_before = bazgar.hp
 
-    parsed = Dispatcher().parse("2 5 melee")
-    assert parsed.target_id == "2"
-    assert parsed.target_member is None      # not a mob member
+    cmd = parse("2 5 melee")
+    assert cmd.kind == "command" and cmd.target_ids == ["2"]
 
-    win._on_directed_command(parsed)
+    win._on_command(cmd)
 
     # Damage landed on Marwen (id '2'), Bazgar untouched.
     assert marwen.hp == marwen_before - 5
     assert bazgar.hp == bazgar_before
 
-    # Log line is on the actor's (Aelric's) visible tab, attributed to Aelric.
+    # The command's log line is on the actor's (Aelric's) visible tab.
     actor_tab = win.tabs.currentWidget()
     assert actor_tab.npc_state.name == "Aelric"
     log_html = actor_tab.log_view.toHtml()
-    assert "Aelric" in log_html
-    assert "#2" in log_html
+    assert "Marwen" in log_html
 
 
 def test_directed_refresh_hits_correct_target_tab_after_native_drag(party_window):
-    """After a native drag, _on_directed_command must refresh/re-title the
-    target's *own* tab, not whatever widget sits at npcs.index(target)."""
+    """After a native drag, _on_command must refresh/re-title the target's
+    *own* tab, not whatever widget sits at npcs.index(target)."""
     win = party_window
     es = win.encounter_state
     marwen = es.combatant_by_id("2")
@@ -129,8 +127,7 @@ def test_directed_refresh_hits_correct_target_tab_after_native_drag(party_window
     win.tabs.tabBar().moveTab(3, 0)   # divergence between npcs list & tab order
     win.tabs.setCurrentIndex(0)
 
-    parsed = Dispatcher().parse("2 7")
-    win._on_directed_command(parsed)
+    win._on_command(parse("2 7 dmg"))
 
     # The tab whose title now reflects Marwen's reduced HP is genuinely
     # Marwen's tab.
