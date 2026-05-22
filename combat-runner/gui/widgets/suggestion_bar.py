@@ -28,11 +28,16 @@ class Suggestion:
     `target_npc` is an optional sticky target injected by the watch system —
     when set, the dispatched action gets logged with "→ {target}" so the DM
     knows which ally the broadcast suggestion was tied to.
+    `panel_number` is the 1-based position of this action in the NPC's numbered
+    left-panel action list — the same index `_resolve_action_token` uses for
+    digit tokens. When set, the suggestion button displays it so the DM knows
+    which number to type. None when the action isn't on the numbered panel.
     """
 
     slug: str
     action_name: str
     target_npc: str | None = None
+    panel_number: int | None = None
 
 
 class SuggestionBar(QWidget):
@@ -63,7 +68,7 @@ class SuggestionBar(QWidget):
             return
 
         for s in suggestions:
-            btn = QPushButton(self._format_slug(s.slug))
+            btn = QPushButton(self._format_slug(s.slug, s.panel_number))
             btn.setObjectName("SuggestionButton")
             btn.setStyleSheet(
                 "QPushButton {"
@@ -117,9 +122,11 @@ class SuggestionBar(QWidget):
         self._layout.addWidget(spacer)
 
     @staticmethod
-    def _format_slug(slug: str) -> str:
+    def _format_slug(slug: str, panel_number: int | None = None) -> str:
         # Keep slugs tight; truncate with ellipsis past ~70 chars
         s = slug.strip()
         if len(s) > 70:
             s = s[:67] + "…"
+        if panel_number is not None:
+            s = f"{panel_number} · {s}"
         return s

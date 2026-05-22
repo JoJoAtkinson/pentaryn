@@ -797,7 +797,26 @@ class MainWindow(QMainWindow):
         watch_subs = list(self._watch_suggestions.get(tab_key, []))
         llm_subs = getattr(self, "_llm_suggestions_by_tab", {}).get(tab_key, [])
         combined = watch_subs + llm_subs
-        tab.set_suggestions(combined[:5])
+
+        # Annotate each suggestion with its panel number (1-based position in
+        # the action surface — same ordering _resolve_action_token uses for
+        # digit tokens).  Actions not in the surface get panel_number=None.
+        action_surface = self._tab_action_surfaces.get(tab_key, [])
+        action_index: dict[str, int] = {
+            a["action"]: i + 1
+            for i, a in enumerate(action_surface)
+            if a.get("action")
+        }
+        annotated = [
+            Suggestion(
+                slug=s.slug,
+                action_name=s.action_name,
+                target_npc=s.target_npc,
+                panel_number=action_index.get(s.action_name),
+            )
+            for s in combined
+        ]
+        tab.set_suggestions(annotated[:5])
 
     def _tab_key_for_slug(self, slug: str) -> int | None:
         """Return the stable tab key — id(NPCTab) — for the first tab whose NPC

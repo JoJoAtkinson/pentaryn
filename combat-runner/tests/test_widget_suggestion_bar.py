@@ -80,3 +80,38 @@ def test_long_slug_is_truncated(qtbot):
     rendered = bar.current_suggestions()[0]
     assert len(rendered) <= 72  # 67 + ellipsis + slack
     assert rendered.endswith("…")
+
+
+def test_panel_number_shown_in_button_label(qtbot):
+    """Suggestions with a panel_number show '<n> · <slug>' on the button."""
+    bar = SuggestionBar()
+    qtbot.addWidget(bar)
+    bar.set_suggestions([
+        Suggestion(slug="Cleave", action_name="cleave", panel_number=3),
+        Suggestion(slug="Multiattack", action_name="multiattack", panel_number=1),
+    ])
+    labels = bar.current_suggestions()
+    assert labels[0] == "3 · Cleave"
+    assert labels[1] == "1 · Multiattack"
+
+
+def test_no_panel_number_shows_slug_only(qtbot):
+    """Suggestions without a panel_number show just the slug (no prefix)."""
+    bar = SuggestionBar()
+    qtbot.addWidget(bar)
+    bar.set_suggestions([
+        Suggestion(slug="Reactive Strike", action_name="reactive_strike", panel_number=None),
+    ])
+    labels = bar.current_suggestions()
+    assert labels[0] == "Reactive Strike"
+
+
+def test_panel_number_with_long_slug_truncates_slug_then_prefixes(qtbot):
+    """Panel number is prepended after slug truncation, so it's always visible."""
+    bar = SuggestionBar()
+    qtbot.addWidget(bar)
+    long_slug = "y" * 200
+    bar.set_suggestions([Suggestion(slug=long_slug, action_name="a", panel_number=2)])
+    rendered = bar.current_suggestions()[0]
+    assert rendered.startswith("2 · ")
+    assert rendered.endswith("…")
