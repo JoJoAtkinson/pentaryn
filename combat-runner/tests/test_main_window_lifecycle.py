@@ -110,6 +110,38 @@ def test_hit_upgrades_pending_to_full(window):
     assert window.encounter_state.pending_effects[0].resolved is True
 
 
+def test_save_explicitly_resolves_pending_with_no_further_damage(window):
+    """`save` is the explicit lifecycle counterpart of `hit`: it marks the
+    pending effect resolved at the already-applied minimum, applies NO further
+    HP, and logs the outcome on the target's tab — so the DM can confirm "the
+    save was successful" instead of relying on a silent round-advance clear."""
+    _stub_action(window, on_save="half", damage_total=20)
+    one = window.encounter_state.combatant_by_id("1")
+    window.tabs.setCurrentIndex(2)
+    _submit(window, "1 1")              # half (10) applied; pending=20/half
+    assert one.hp == 30
+    _submit(window, "1 save")           # explicit save resolution
+    assert one.hp == 30                 # NO further HP change
+    assert window.encounter_state.pending_effects[0].resolved is True
+    target_log = window.tabs.widget(0).log_view.toPlainText()
+    assert "saved" in target_log
+
+
+def test_miss_resolves_pending_for_attack_kind(window):
+    """`miss` on an attack-kind pending resolves it as a miss (no further
+    damage) and logs '— … missed' on the target's tab."""
+    _stub_action(window, on_save="none", damage_total=14, kind="attack")
+    one = window.encounter_state.combatant_by_id("1")
+    window.tabs.setCurrentIndex(2)
+    _submit(window, "1 1")              # attack: 0 applied; pending=14/attack
+    assert one.hp == 40
+    _submit(window, "1 miss")
+    assert one.hp == 40                 # still no HP change
+    assert window.encounter_state.pending_effects[0].resolved is True
+    target_log = window.tabs.widget(0).log_view.toPlainText()
+    assert "missed" in target_log
+
+
 def test_hit_wrong_target_does_not_upgrade(window):
     """`hit` against a combatant with nothing pending is a harmless warning."""
     _stub_action(window, on_save="half", damage_total=20)

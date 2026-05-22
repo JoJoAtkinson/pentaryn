@@ -88,6 +88,19 @@ def test_hits_is_an_alias_for_hit():
     assert _eff(parse("hits"), 0).kind == "hit"
 
 
+def test_save_and_miss_parse_as_save_resolution():
+    """`save` / `saved` / `miss` / `missed` all parse as a `save` resolution
+    effect — the lifecycle counterpart of `hit` for confirming the assumed
+    minimum (already applied) and logging the outcome explicitly."""
+    for word in ("save", "saved", "miss", "missed"):
+        c = parse(word)
+        assert _eff(c, 0).kind == "save", word
+    # With a leading <who> the resolution applies per-target.
+    c = parse("13 save")
+    assert c.target_ids == ["1", "3"]
+    assert _eff(c, 0).kind == "save"
+
+
 def test_damage_tag_without_number_is_unparseable():
     assert parse("2 melee").kind == "unparseable"
 

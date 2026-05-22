@@ -99,7 +99,12 @@ by the tag immediately after it:**
 - **`hit`** — upgrade an effect to a full hit (see §4). Per-target: `13 hit`;
   or ` hit` for the whole current target.
 - **`undo`** — revert the last command (see §5).
-- `save` / `miss` are **not commands** — they are the default outcome (§4).
+- **`save` / `miss`** — the explicit lifecycle counterpart of `hit`: confirm
+  the assumed minimum (already applied at action time), mark the pending
+  effect resolved, and log the outcome ("Bazgar saved against frost ray").
+  Doing nothing also works — the assumed-minimum is applied either way and
+  round-advance auto-clears — but the explicit verb gives the DM a log line.
+  Per-target like `hit`: `13 save` resolves combatants 1 and 3.
 
 ### 2.6 Cheat-sheet
 
@@ -142,8 +147,10 @@ resolved: bool}` — and shows an **"unresolved" marker**.
 - **`hit`** upgrades the pending effect on the targeted combatant(s) to the **full**
   amount (applies the remainder), and clears the marker. `13 hit` upgrades 1 and 3;
   ` hit` upgrades the whole current target.
-- Doing nothing = the minimum already applied = a successful save / a miss. So
-  `save` and `miss` need no command.
+- Doing nothing = the minimum already applied = a successful save / a miss
+  (round-advance auto-clears the pending record). The DM can also type
+  **`save`** or **`miss`** to explicitly resolve and log the outcome (the
+  lifecycle counterpart of `hit` — no further HP change, just confirmation).
 - The marker also auto-clears on round advance (a stale unresolved effect).
 
 **Raw DM-typed damage** (`2 10 melee`) is *certain* — applied in full immediately,

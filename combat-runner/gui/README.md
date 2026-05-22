@@ -73,6 +73,7 @@ A number's meaning is set by the **token immediately after it**:
 | `<verb>`                 | an **action by name** (fuzzy-matched)| `3 tail-sweep`       |
 | `m<n>` / `m12` / `m`     | mob-member modifier on the next amount/condition (one member / digit-run set / `m` alone = all alive) | `7 m3 6 melee` · `7 m12 6 fire` |
 | `hit` (or `hits`)        | upgrade a pending effect to a full hit | `13 hit` · ` hit`  |
+| `save` / `miss`          | explicit "no further damage" — log the save / miss outcome | `1 save` · ` miss` |
 | `undo`                   | revert the last command              | `undo`               |
 | a damage-tag with **no** number | **error → routed to the LLM** | `2 melee` ✗          |
 
@@ -98,6 +99,7 @@ A number's meaning is set by the **token immediately after it**:
 <who> <verb>                -> action by name (fuzzy)
 compound:  4 9 bludge 1 prone   -> 9 bludgeoning dmg + prone 1 round
 hit   -> upgrade effect to full hit (13 hit · ' hit' for the current target)
+save  -> explicitly resolve a pending effect as save/miss (no further damage)
 undo  -> revert last command
 @cond -> force the condition reading
 (Space on an empty command box prefills the current-target id(s).)

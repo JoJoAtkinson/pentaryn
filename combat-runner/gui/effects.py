@@ -435,3 +435,53 @@ def apply_hit(
         pending.resolved = True
 
     return fragments
+
+
+def apply_save_resolve(
+    state: EncounterState,
+    target_ids: list[str],
+) -> list[str]:
+    """Resolve each target's latest unresolved PendingEffect as a save / miss.
+
+    No further HP is applied — the minimum was already applied when the action
+    fired (0 for an attack, the save outcome for a save). This call simply
+    marks the pending record resolved and emits a log line, so the DM can
+    explicitly confirm the outcome instead of relying on round-advance
+    auto-clear.
+
+    Mirrors `apply_hit`'s "latest unresolved per id" rule. A `warn:` fragment
+    is appended for any id that has nothing pending.
+    """
+    fragments: list[str] = []
+    for cid in target_ids:
+        pending = None
+        for pe in reversed(state.pending_effects):
+            if pe.combatant_id == cid and not pe.resolved:
+                pending = pe
+                break
+        if pending is None:
+            fragments.append(f"warn: nothing pending for {cid}")
+            continue
+        combatant = state.combatant_by_id(cid)
+        if combatant is None:
+            fragments.append(f"warn: no combatant with id {cid!r}")
+            pending.resolved = True
+            continue
+        pending.resolved = True
+        src = pending.source or "the pending effect"
+        if pending.kind == "save":
+            applied = pending.applied_amount
+            full = pending.full_amount
+            if applied > 0:
+                fragments.append(
+                    f"{combatant.name} saved against {src} "
+                    f"(took {applied} of {full} — no further damage)"
+                )
+            else:
+                fragments.append(
+                    f"{combatant.name} saved against {src} (no damage)"
+                )
+        else:
+            fragments.append(f"{combatant.name} — {src} missed")
+
+    return fragments

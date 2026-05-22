@@ -45,6 +45,7 @@ from .effects import (
     apply_condition_effect,
     apply_effect,
     apply_hit,
+    apply_save_resolve,
     apply_uncertain_damage,
     clear_stale_pending,
 )
@@ -1245,6 +1246,12 @@ class MainWindow(QMainWindow):
             if effect.kind == "hit":
                 fragments = apply_hit(self.encounter_state, ids)
                 self._log_fragments(fragments, actor=actor, target_ids=ids)
+                self._refresh_pending_markers()
+                continue
+            if effect.kind == "save":
+                fragments = apply_save_resolve(self.encounter_state, ids)
+                self._log_fragments(fragments, actor=actor, target_ids=ids)
+                self._refresh_pending_markers()
                 continue
             # amount → effects.apply_effect.
             # Snapshot HP per-target first so skipped no-ops (out-of-range mob

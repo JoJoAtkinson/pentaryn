@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Literal
 
-EffectKind = Literal["action", "amount", "condition", "hit", "undo"]
+EffectKind = Literal["action", "amount", "condition", "hit", "save", "undo"]
 
 
 @dataclass
@@ -29,7 +29,9 @@ class Effect:
     condition: str = ""
     duration: int | None = None         # None -> caller applies default (1 round)
     forced_condition: bool = False      # True when written with the @ escape hatch
-    # kind in ("hit", "undo") -> no extra fields
+    # kind in ("hit", "save", "undo") -> no extra fields
+    # `save` resolves a pending effect as a save/miss — confirms the assumed
+    # minimum (already applied) and marks the pending record resolved + logs.
 
 
 CommandKind = Literal["command", "set_target", "unparseable", "note", "reorder", "quit"]
