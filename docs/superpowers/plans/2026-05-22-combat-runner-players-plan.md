@@ -2594,3 +2594,25 @@ two agents if desired, but their tests both require Phase 1 to be complete.
    (one `if`/`else`) and two helper methods. The rest of the file is unchanged.
    This is consistent with the spec's note: "the kind-branch is contained to the
    action-area builder only."
+
+---
+
+## Known follow-ups (post-merge review)
+
+Sourced from the 10-agent review (2026-05-22). Items addressed in the current
+fix round (snapshot field-drop, roster id validation, skipped-result handling,
+signed-amount reject, `_disengaging` lifecycle, stale-review clobber, schema
+trim, `_LLMWorkerBase` extraction, verb fuzzy-match, ruff cleanup, and docs) are
+**not** listed here. The following remain genuinely open:
+
+| ID | Severity | Item | Suggested location |
+|----|----------|------|--------------------|
+| **F1** | Medium | **Latent double-OA-prompt:** if a `move_away` *reaction* is ever authored in `actions.jsonl`, the retreat path fires both the deterministic OA prompt in `_on_move_away_event` and the authored reaction. No such NPC reaction exists today — purely latent. | `# TODO(combat-players):` at `main_window._on_move_away_event` |
+| **F2** | Medium | **`review_needed` fires after a failed `_run_action`:** a no-op or failed action still enqueues a paid LLM review. The review receives stale/incorrect context. | `# TODO(combat-players):` at the `_run_action`/`review_needed` emit site in `npc_tab.py` |
+| **F3** | High | **No end-to-end test for the directed-command signal chain:** the `NPCTab.directed_command_requested` → `MainWindow._on_directed_command` apply seam has no integration test. A `test_directed_command.py` covering at least one DIRECTED→apply→log cycle is needed. | New `combat-runner/tests/test_directed_command.py` |
+| **F4** | Medium | **`Ctrl+0` not wired:** the shortcut loop in `main_window.py` iterates `"123456789"`, so the combatant holding id `"0"` (the 10th single-press id) has no keyboard jump shortcut. Either wire `Ctrl+0` or keep the documented gap. | `main_window._wire_shortcuts` |
+| **F5** | High | **Spec §7 divergence — player-action verb fuzzy-match not delivered:** spec §7 says generic player actions are "also reachable by verb fuzzy-match". PC tabs are constructed with `actions=[]`, so typed verbs fall through to the LLM; only chip clicks work. Either wire a player-action verb table or update spec §7 to reflect the descope. | spec §7 annotation + optional `npc_tab._build_player_action_area` wiring |
+| **F6** | High | **Review tool schema is too wide:** the ~2,100-token full tool schema ships on every async review call; ~90% of tools are irrelevant to a single-command review. Build a narrow 4-tool review schema and anchor the prompt-cache breakpoint on its last tool. | `llm_controller.py` review prompt construction |
+| **F7** | High | **Review queue unbounded and single-threaded:** after a fast burst of commands, `⟳ review:` lines land 20–40s stale. Add per-target debounce/coalesce, a queue depth cap, and a status-bar depth indicator. | `llm_controller.py` / `main_window.py` review enqueue |
+| **F8** | High | **`_LLMReviewWorker` / `_LLMRunWorker` are near-clones:** ~50 lines duplicated including an identical `_marshalled_dispatch`. Extract a `_LLMWorkerBase` and make `_run_tool_calls` a local of `_chat_loop` to remove the implicit single-pool-invariant shared-state assumption. | `llm_controller.py` |
+| **F9** | Medium | **Stale-review `set_hp` clobber:** the review worker freezes target HP in a snapshot at enqueue time; `set_hp` writes absolute values. A late-returning review can silently undo a newer manual HP edit. Apply revisions as a delta, or stamp with a state-generation counter. Zero test coverage on the revision path. | `llm_controller.py` review application path + `# TODO(combat-players):` |

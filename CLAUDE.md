@@ -36,9 +36,19 @@ Run `/Users/joe/GitHub/dnd/.venv/bin/python scripts/mcp/server.py --list-tools` 
 
 ## Combat Runner — the default at-table tool
 
-For running combat live at the table, use the **PySide6 GUI** at `combat-runner/gui/` (`make combat-gui`). It's tab-per-NPC, sigil-driven (`-18` damage, `+10` heal, `@prone` for conditions, verb-fuzzy-match for actions), with a live red/green HP overlay, declarative reactions, mob support (segmented HP bar, `m<n>` targeting), universal actions (Push/Grapple/Dodge/etc.), and the LLM as a meta-controller for everything else. See [`combat-runner/gui/README.md`](combat-runner/gui/README.md) for the full sigil cheat-sheet, architecture, and headless-testing notes.
+For running combat live at the table, use the **PySide6 GUI** at `combat-runner/gui/` (`make combat-gui`). It's tab-per-combatant (NPCs **and** PCs), sigil-driven (`-18` damage, `+10` heal, `@prone` for conditions, verb-fuzzy-match for NPC actions), with a directed-command grammar (`<id> <amount> <tags…>`) for targeting any combatant from any tab, permanent repeated-digit combatant ids, a live red/green HP overlay, declarative reactions, mob support (segmented HP bar, `m<n>` targeting), universal actions (Push/Grapple/Dodge/etc.), always-on async LLM review (`⟳ review:` log lines), and player tabs with generic action chips. See [`combat-runner/gui/README.md`](combat-runner/gui/README.md) for the full sigil cheat-sheet, party roster schema, architecture, and headless-testing notes.
 
-The old Haiku-Claude-Code CLI launcher at `combat-runner/launch.py` is still around as a fallback but the GUI is the snappy default.
+The old Haiku-Claude-Code CLI launcher at `combat-runner/launch.py` is still around as a fallback (NPC-only, no player support) but the GUI is the snappy default.
+
+## Combat PCs / party roster
+
+Player characters are first-class combatants in the GUI: each active player gets their own tab and is addressable by a permanent repeated-digit id. PCs are **not** authored as `.md` files and have **no entries** in `actions.jsonl`. They come from a party roster YAML:
+
+- **File:** `world/party/<party>/combat-roster.yml`
+- **Schema:** `party: <name>`, `players: [{name, id, max_hp, ac}]`
+- **`id` must be a repeated-digit string** (`"1"`, `"22"`, `"333"` …) — non-uniform ids cannot be addressed by the directed-command grammar.
+- Load at launch: `python -m gui.app --party world/party/black-ledger/combat-roster.yml`
+- See [`combat-runner/gui/README.md`](combat-runner/gui/README.md) for the full schema, picker UI, and player tab details.
 
 ## Combat NPCs (`#combat-runner` tag)
 
