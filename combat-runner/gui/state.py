@@ -609,6 +609,8 @@ def _deserialize_pending(entry: Any) -> Any:
             applied_amount=int(entry["applied_amount"]),
             kind=str(entry["kind"]),
             resolved=bool(entry.get("resolved", False)),
+            source=str(entry.get("source", "")),
+            round=int(entry.get("round", 0)),
         )
     raise ValueError(f"pending_effect entry must be a dict or PendingEffect, got {type(entry).__name__}")
 
