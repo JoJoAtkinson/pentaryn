@@ -301,6 +301,7 @@ class MainWindow(QMainWindow):
         self._watch_suggestions: dict[int, list[Suggestion]] = {}
         self.event_bus.subscribe_all(self._on_event)
         self.event_bus.subscribe_all(self._on_event_for_watch)
+        self.event_bus.subscribe("move_away", self._on_move_away_event)
 
         self._tab_action_surfaces: dict[int, list[dict]] = {}
         for npc in self.encounter_state.npcs:
@@ -709,6 +710,43 @@ class MainWindow(QMainWindow):
         self._handling_event = True
         try:
             self._show_reaction_prompt(event, matches)
+        finally:
+            self._handling_event = False
+
+    def _on_move_away_event(self, event: Event) -> None:
+        """When a combatant retreats while in_melee, prompt for opportunity attack.
+
+        Any NPC (kind=="npc") that is alive and hasn't used their reaction is a
+        candidate, provided they have at least one attack-type action. The DM can
+        always dismiss the prompt to skip the OA."""
+        if self._handling_event:
+            return
+        retreating_slug = event.subject_npc or "?"
+        retreating_name = self._npc_display_name(retreating_slug)
+        combatant_id = event.payload.get("combatant_id", "?")
+        summary = f"{retreating_name} (#{combatant_id}) retreated — opportunity attack?"
+        # Collect NPC candidates: alive, reaction not yet used, has an attack action.
+        candidates = []
+        for npc in self.encounter_state.npcs:
+            if npc.kind != "npc":
+                continue
+            if npc.is_dead or npc.reaction_used:
+                continue
+            tab_key = self._tab_key_for_slug(npc.slug)
+            actions = self._tab_action_surfaces.get(tab_key, []) if tab_key is not None else []
+            atk = next(
+                (a for a in actions if a.get("type") in ("single_attack", "multiattack")),
+                None,
+            )
+            if atk:
+                candidates.append((npc.slug, atk["action"], "melee opportunity attack", 0.8))
+        if not candidates:
+            return
+        self._handling_event = True
+        try:
+            choice = self._reaction_prompt_handler(summary, candidates)
+            if choice is not None and choice.triggered:
+                self._fire_matched_reaction(choice.npc_slug, choice.action_name)
         finally:
             self._handling_event = False
 
