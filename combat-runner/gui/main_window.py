@@ -338,6 +338,10 @@ class MainWindow(QMainWindow):
         # thread → at most one fallback in flight at a time.
         self._llm_pool = QThreadPool(self)
         self._llm_pool.setMaxThreadCount(1)
+        # Set of in-flight _LLMWorkerSignals objects. Each worker holds its own
+        # strong reference; we keep them here too so the QObjects aren't GC'd
+        # while the worker thread holds them across network round-trips.
+        self._inflight_llm_signals: set = set()
 
         # Status bar at the bottom for transient messages
         self.setStatusBar(QStatusBar(self))
@@ -798,11 +802,14 @@ class MainWindow(QMainWindow):
         signals.dispatch_requested.connect(
             self._on_llm_dispatch_requested, Qt.ConnectionType.QueuedConnection
         )
+        self._inflight_llm_signals.add(signals)
         signals.finished.connect(
             self._on_llm_finished, Qt.ConnectionType.QueuedConnection
         )
-        # Keep a reference so the signals QObject isn't GC'd mid-run.
-        self._llm_run_signals = signals
+        signals.finished.connect(
+            lambda _result, s=signals: self._inflight_llm_signals.discard(s),
+            Qt.ConnectionType.QueuedConnection,
+        )
         worker = _LLMRunWorker(controller, text, active_slug, signals)
         self._llm_pool.start(worker)
 
@@ -887,7 +894,7 @@ class MainWindow(QMainWindow):
         dtype_str = f" {dtype}" if dtype else ""
         delivery_str = f" ({delivery})" if delivery else ""
         if direction == "damage":
-            suffix = " · **killed**" if result.get("killed") else ""
+            suffix = " · <b>killed</b>" if result.get("killed") else ""
             log_html = (
                 f"<span style='color:#8a8f96'>{actor_name} → #{parsed.target_id}:</span> "
                 f"<span style='color:#ff5252'>−{amount}{dtype_str}{delivery_str}</span>"
@@ -974,11 +981,15 @@ class MainWindow(QMainWindow):
         signals.dispatch_requested.connect(
             self._on_llm_dispatch_requested, Qt.ConnectionType.QueuedConnection
         )
+        self._inflight_llm_signals.add(signals)
         signals.finished.connect(
             lambda result, rt=target: self._on_review_finished(result, rt),
             Qt.ConnectionType.QueuedConnection,
         )
-        self._llm_run_signals = signals  # keep reference
+        signals.finished.connect(
+            lambda _result, s=signals: self._inflight_llm_signals.discard(s),
+            Qt.ConnectionType.QueuedConnection,
+        )
 
         worker = _LLMReviewWorker(
             controller=controller,

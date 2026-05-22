@@ -346,18 +346,18 @@ def _tool_apply_command(bundle: _StateBundle, command: str, target_slug: str) ->
     if parsed.kind is InputKind.DIRECTED:
         direction = parsed.resolved_tags.get("direction", "damage")
         if direction == "heal":
-            result = npc.apply_heal(parsed.amount)
+            result = npc.apply_heal(parsed.amount, member=parsed.target_member)
         else:
-            result = npc.apply_damage(parsed.amount)
+            result = npc.apply_damage(parsed.amount, member=parsed.target_member)
         bundle.notify()
         return {"ok": True, "applied": result, "direction": direction,
                 "hp_now": npc.hp, "parsed_tags": parsed.resolved_tags}
     elif parsed.kind is InputKind.DAMAGE:
-        result = npc.apply_damage(parsed.amount)
+        result = npc.apply_damage(parsed.amount, member=parsed.member)
         bundle.notify()
         return {"ok": True, "applied": result, "hp_now": npc.hp}
     elif parsed.kind is InputKind.HEAL:
-        result = npc.apply_heal(parsed.amount)
+        result = npc.apply_heal(parsed.amount, member=parsed.member)
         bundle.notify()
         return {"ok": True, "applied": result, "hp_now": npc.hp}
     elif parsed.kind is InputKind.CONDITION:
@@ -778,6 +778,7 @@ class LLMController:
             client, messages,
             system_override=self.REVIEW_SYSTEM_PROMPT,
             dispatch_fn=dispatch_fn,
+            max_iterations=2,
         )
         if result.text and not result.error:
             _tool_add_log_entry(self._bundle, f"⟳ review: {result.text}", kind="review")
@@ -926,6 +927,7 @@ class LLMController:
         messages: list[dict[str, Any]],
         dispatch_fn: Callable[[list[Any]], list[dict[str, Any]]] | None = None,
         system_override: str | None = None,
+        max_iterations: int | None = None,
     ) -> RunResult:
         """Run the chat loop, dispatching tool calls until end_turn.
 
@@ -938,15 +940,24 @@ class LLMController:
         `system_override` — when provided, replaces `SYSTEM_PROMPT` for this
         loop only (used by `review_command`). The `run()` path leaves it None
         and keeps using `SYSTEM_PROMPT`.
+
+        `max_iterations` — optional cap on tool-call iterations. Defaults to
+        None → uses MAX_TOOL_LOOP_ITERATIONS (keeps `run()` behavior unchanged).
+        Pass a lower value (e.g. 2) in `review_command` to bound at-table
+        latency and cost for the per-command review.
         """
         if dispatch_fn is None:
             dispatch_fn = self.dispatch_tool_uses
         prompt_text = system_override if system_override is not None else self.SYSTEM_PROMPT
+        iteration_cap = max_iterations if max_iterations is not None else self.MAX_TOOL_LOOP_ITERATIONS
         # Reset the per-run accumulator (dispatch_tool_uses appends into it).
+        # LLM workers run on a single-thread pool (_llm_pool, maxThreadCount=1)
+        # so this instance state is never shared concurrently between run() and
+        # review_command() calls.
         self._run_tool_calls = []
         final_text = ""
         hit_cap = True  # cleared when the loop exits normally via stop_reason
-        for _iteration in range(self.MAX_TOOL_LOOP_ITERATIONS):
+        for _iteration in range(iteration_cap):
             try:
                 resp = client.messages.create(
                     model=self.model,
@@ -988,11 +999,11 @@ class LLMController:
         if hit_cap:
             logger.warning(
                 "LLM tool loop reached iteration cap (%d); response may be incomplete",
-                self.MAX_TOOL_LOOP_ITERATIONS,
+                iteration_cap,
             )
             return RunResult(
                 text=final_text,
                 tool_calls=list(self._run_tool_calls),
-                error=f"reached tool-loop iteration cap ({self.MAX_TOOL_LOOP_ITERATIONS}); response may be partial",
+                error=f"reached tool-loop iteration cap ({iteration_cap}); response may be partial",
             )
         return RunResult(text=final_text, tool_calls=list(self._run_tool_calls))
