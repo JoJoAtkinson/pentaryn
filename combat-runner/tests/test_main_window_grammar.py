@@ -92,19 +92,28 @@ def test_set_target_sets_current_target_and_arrow(window):
 # ─────────────────────────── current-target action ───────────────────────────
 
 
-def test_leading_space_runs_action_against_current_target(window, monkeypatch):
-    """' 1' with current_target ['2'] runs action 1 against combatant 2."""
-    window.tabs.setCurrentIndex(0)
-    _submit(window, "2")  # set sticky target to id 2
+def test_action_runs_on_actor_surface_aimed_at_target(window, monkeypatch):
+    """`<target> <action>` runs the ACTOR's action, aimed at the target.
+
+    The action verb resolves against the active-tab combatant's action
+    surface — not the target's — and the roll runs on the actor's tab.
+    """
+    actor_idx = 0  # actor = combatant id 1 (tab 0)
+    window.tabs.setCurrentIndex(actor_idx)
+    actor_tab = window.tabs.widget(actor_idx)
+
+    # Give the ACTOR a one-action surface; resolve action #1 against it.
+    window._tab_action_surfaces[id(actor_tab)] = [{"action": "cleave"}]
 
     ran: list = []
-    target_idx = 1  # combatant id 2 is at index 1
-    target_tab = window.tabs.widget(target_idx)
     monkeypatch.setattr(
-        target_tab, "run_action_externally", lambda name: ran.append(name)
+        actor_tab, "run_action_externally", lambda name: ran.append(name)
     )
-    _submit(window, " 1")
-    assert ran, "action should have run against the current target"
+    # Aim the actor's action #1 at combatant id 2.
+    _submit(window, "2 1")
+    assert ran == ["cleave"], (
+        f"action should run on the actor's surface; got {ran}"
+    )
 
 
 # ─────────────────────────── undo ───────────────────────────
@@ -167,9 +176,9 @@ def test_noop_command_does_not_snapshot(window):
     # Clear the sticky target so the next use-current command resolves to [].
     window.encounter_state.current_target = []
     depth_after_real = len(window.undo_stack._snapshots)
-    # A leading-space (use-current) damage command with no current target:
-    # parses as kind="command", reaches _handle_command, mutates nothing ->
-    # the eager snapshot must be discarded.
+    # A bare-word amount with no current target: `7 fire` after a leading
+    # space still has a leading digit-run, so it never reaches a mutating
+    # path that snapshots — the undo stack depth is unchanged either way.
     _submit(window, " 7 fire")
     assert len(window.undo_stack._snapshots) == depth_after_real
     # A single undo reverts the real damage, not a phantom no-op step.
@@ -193,13 +202,26 @@ def test_set_target_remains_undoable(window):
 
 
 def test_multi_target_damage(window):
-    """'123 3 poison' damages all of ids 1, 2, 3."""
+    """'123 8 fire' damages all of ids 1, 2, 3.
+
+    (`<num> poison` now parses as the poisoned *condition*, not damage —
+    so a multi-target damage test must use an unambiguous damage tag.)
+    """
     ones = [window.encounter_state.combatant_by_id(c) for c in ("1", "2", "3")]
     before = [c.hp for c in ones]
     window.tabs.setCurrentIndex(3)
-    _submit(window, "123 3 poison")
+    _submit(window, "123 8 fire")
     after = [window.encounter_state.combatant_by_id(c).hp for c in ("1", "2", "3")]
-    assert after == [b - 3 for b in before]
+    assert after == [b - 8 for b in before]
+
+
+def test_multi_target_condition(window):
+    """'123 3 poison' applies the poisoned condition to ids 1, 2, 3."""
+    window.tabs.setCurrentIndex(3)
+    _submit(window, "123 3 poison")
+    for c in ("1", "2", "3"):
+        combatant = window.encounter_state.combatant_by_id(c)
+        assert "poisoned" in combatant.conditions
 
 
 # ─────────────────────────── targeting arrow ───────────────────────────

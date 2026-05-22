@@ -140,7 +140,7 @@ def test_out_of_range_mob_member_logs_error(window, qtbot):
     window.tabs.setCurrentIndex(0)  # actor is tab 0
 
     cmd = parse("2 m99 10 dmg")
-    assert cmd.effects[0].member == 99, "precondition: parser sets member on the amount"
+    assert cmd.effects[0].members == [99], "precondition: parser sets members on the amount"
     window._on_command(cmd)
 
     actor_tab = window.tabs.widget(0)

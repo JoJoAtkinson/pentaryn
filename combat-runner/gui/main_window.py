@@ -1016,6 +1016,11 @@ class MainWindow(QMainWindow):
           * ``command``     → snapshot, resolve targets, apply each Effect,
                               emit bus events, repaint, refresh the arrow.
         """
+        # Empty / whitespace-only input is a no-op — a stray Enter must never
+        # parse, snapshot, or spawn an LLM fallback round-trip (UX finding F1).
+        if not (cmd.raw or "").strip():
+            return
+
         # Record every raw command string for LLM context (rolling window of 10).
         if cmd.raw:
             self._recent_commands.append(cmd.raw)
@@ -1138,6 +1143,14 @@ class MainWindow(QMainWindow):
     def _handle_command(self, cmd: ParsedCommand) -> None:
         """Apply a `kind == "command"` ParsedCommand's effects."""
         ids = self._resolve_targets(cmd)
+        # Zero resolved targets — e.g. an untargeted `prone`/`hit` with no
+        # current target set. Don't silently no-op: tell the DM (UX finding F3).
+        # `undo` carries no target and is exempt — it operates on the stack.
+        if not ids and not any(e.kind == "undo" for e in cmd.effects):
+            self._append_to_active_tab(
+                "<span style='color:#ff9800'>no current target — set one first</span>"
+            )
+            return
         # A command carrying explicit target_ids (not use_current) is sticky:
         # it also updates the current target.
         if cmd.target_ids and not cmd.use_current:
@@ -1154,7 +1167,7 @@ class MainWindow(QMainWindow):
                 continue
             if effect.kind == "hit":
                 fragments = apply_hit(self.encounter_state, ids)
-                self._log_fragments(fragments)
+                self._log_fragments(fragments, actor=actor)
                 continue
             # amount → effects.apply_effect.
             # Snapshot HP per-target first so skipped no-ops (out-of-range mob
@@ -1166,7 +1179,7 @@ class MainWindow(QMainWindow):
                 fragments, cond_direction = apply_condition_effect(
                     self.encounter_state, effect, target_ids=ids
                 )
-                self._log_fragments(fragments)
+                self._log_fragments(fragments, actor=actor)
                 # Only fire bus events when at least one condition was toggled.
                 # If _apply_condition returned the sentinel (unknown condition),
                 # fragments will contain it and we must NOT fire or auto-save.
@@ -1181,7 +1194,7 @@ class MainWindow(QMainWindow):
             fragments = apply_effect(
                 self.encounter_state, effect, target_ids=ids, actor=actor
             )
-            self._log_fragments(fragments)
+            self._log_fragments(fragments, actor=actor)
             if effect.kind == "amount":
                 changed = [
                     cid for cid in ids
@@ -1262,11 +1275,30 @@ class MainWindow(QMainWindow):
     def _apply_action_effect(self, effect: Effect, target_ids: list[str]) -> None:
         """Resolve an action token (panel number or fuzzy name) and run it.
 
-        The action runs against each resolved target combatant via that tab's
-        `run_action_externally` — the action rolls its own damage and applies
-        its own riders.
+        An action belongs to the ACTOR — the active-tab combatant — not to
+        whoever it is aimed at. ``<target-id> <action>`` runs the *actor's*
+        action and aims it at the named target(s): the verb is resolved on the
+        actor's action surface, the action rolls on the actor's tab, and any
+        uncertain damage / `PendingEffect` is keyed to the *target* combatant
+        so a follow-up ``<target> hit`` resolves it correctly.
         """
         token = effect.action_token
+        actor = self.encounter_state.active_npc
+        if actor is None:
+            self._append_to_active_tab(
+                "<span style='color:#ff5252'>no active combatant to act</span>"
+            )
+            return
+        actor_idx = self.encounter_state.npcs.index(actor)
+        actor_tab = self.tabs.widget(actor_idx)
+        if not isinstance(actor_tab, NPCTab):
+            return
+
+        # Member routing: a list `Effect.members` ([] = all alive members of
+        # the target) drives one apply_uncertain_damage call per member; None
+        # is the single-call default.
+        members = effect.members
+
         for cid in target_ids:
             combatant = self.encounter_state.combatant_by_id(cid)
             if combatant is None:
@@ -1274,39 +1306,50 @@ class MainWindow(QMainWindow):
                     f"<span style='color:#ff5252'>unknown combatant id: #{cid}</span>"
                 )
                 continue
-            idx = self.encounter_state.npcs.index(combatant)
-            tab = self.tabs.widget(idx)
-            if not isinstance(tab, NPCTab):
-                continue
+
             # PC tabs: the generic player-action chips (Dodge → dodging
             # condition, Disengage → _disengaging flag, etc.) carry richer
-            # behavior than the generic global utility actions, so they win.
-            if tab.npc_state.kind == "pc" and tab.try_player_action(token):
+            # behavior than the generic global utility actions. When the ACTOR
+            # is a PC, route the action through the PC's player-action chips.
+            if actor.kind == "pc" and actor_tab.try_player_action(token):
                 continue
-            actions = self._tab_action_surfaces.get(id(tab), [])
+
+            actions = self._tab_action_surfaces.get(id(actor_tab), [])
             action_name = self._resolve_action_token(token, actions)
             if action_name is None:
                 if token.isdigit():
                     n = len(actions)
                     self._append_to_active_tab(
                         f"<span style='color:#ff9800'>action #{token} out of range "
-                        f"(1-{n}) on {combatant.name}</span>"
+                        f"(1-{n}) on {actor.name}</span>"
                     )
                 else:
                     self._append_to_active_tab(
                         f"<span style='color:#ff9800'>no action {token!r} on "
-                        f"{combatant.name}</span>"
+                        f"{actor.name}</span>"
                     )
                 continue
-            # Run the action — `run_action_externally` returns the parsed
-            # roll_combat_action result, including the structured `rolls`
-            # sidecar. A save-bearing or attack-roll action's damage is
-            # *uncertain*: route it through apply_uncertain_damage so the
-            # default outcome is "saved"/"miss" and a later `hit` upgrades it
+            # Run the action on the ACTOR's tab — `run_action_externally`
+            # returns the parsed roll_combat_action result, including the
+            # structured `rolls` sidecar. A save-bearing or attack-roll
+            # action's damage is *uncertain*: route it through
+            # apply_uncertain_damage keyed to the TARGET so the default
+            # outcome is "saved"/"miss" and a later `<target> hit` upgrades it
             # (spec §4). A no-save no-attack-roll action carries no `rolls`
             # damage and stays as printed text.
-            result = tab.run_action_externally(action_name)
-            self._route_uncertain_damage(result, cid, action_name, member=effect.member)
+            result = actor_tab.run_action_externally(action_name)
+            # Resolve the per-member list this target gets the uncertain
+            # damage applied to. `members is None` → one call with member=None.
+            if members is None:
+                member_targets: list[int | None] = [None]
+            elif members == []:
+                member_targets = list(combatant.alive_member_indices())
+            else:
+                member_targets = list(members)
+            for member in member_targets:
+                self._route_uncertain_damage(
+                    result, cid, action_name, member=member
+                )
 
     def _route_uncertain_damage(
         self,
@@ -1345,7 +1388,7 @@ class MainWindow(QMainWindow):
             source=action_name,
             member=member,
         )
-        self._log_fragments(fragments)
+        self._log_fragments(fragments, actor=self.encounter_state.active_npc)
         self._refresh_pending_markers()
 
     @staticmethod
@@ -1415,11 +1458,20 @@ class MainWindow(QMainWindow):
                 condition_event(combatant.slug, effect.condition, applied=applied)
             )
 
-    def _log_fragments(self, fragments: list[str]) -> None:
-        """Append effect log fragments to the active tab's log view."""
+    def _log_fragments(self, fragments: list[str], actor: NPCState | None = None) -> None:
+        """Append effect log fragments to the active tab's log view.
+
+        When *actor* is given, each non-warning fragment is prefixed with the
+        acting combatant's name (`Gnoll → Marwen: -8 melee`) so the log names
+        who acted, not just who was affected (UX Theme 9). Warnings are left
+        unprefixed — they are about the command, not an actor's deed.
+        """
+        actor_prefix = f"{actor.name} → " if actor is not None else ""
         for frag in fragments:
-            colour = "#ff5252" if frag.startswith("warn:") else "#b8bdc4"
-            self._append_to_active_tab(f"<span style='color:{colour}'>{frag}</span>")
+            is_warn = frag.startswith("warn:")
+            colour = "#ff5252" if is_warn else "#b8bdc4"
+            text = frag if is_warn else f"{actor_prefix}{frag}"
+            self._append_to_active_tab(f"<span style='color:{colour}'>{text}</span>")
 
     def _repaint_all_tabs(self) -> None:
         """Refresh every tab widget + re-title it (HP shows in the title)."""

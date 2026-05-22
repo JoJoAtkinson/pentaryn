@@ -52,10 +52,22 @@ def test_compound_amount_then_condition():
     assert _eff(c, 1).duration == 1
 
 
-def test_use_current_leading_space():
-    c = parse(" 1")
+def test_use_current_bare_word():
+    # A bare-word stream (no leading digit-run <who>) resolves to the current
+    # sticky target. A literal leading space is never seen by the parser — the
+    # GUI consumes it as a current-target autocomplete before parse() runs.
+    c = parse("prone")
     assert c.use_current is True
-    assert _eff(c, 0).kind == "action" and _eff(c, 0).action_token == "1"
+    assert _eff(c, 0).kind == "condition" and _eff(c, 0).condition == "prone"
+
+
+def test_leading_space_no_longer_special():
+    # The leading-whitespace use_current rule was removed; ` 1` parses exactly
+    # like `1` — an explicit set_target on combatant 1.
+    c = parse(" 1")
+    assert c.kind == "set_target"
+    assert c.target_ids == ["1"]
+    assert c.use_current is False
 
 
 def test_self_token():

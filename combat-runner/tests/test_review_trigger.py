@@ -274,9 +274,10 @@ def test_enqueue_review_multi_target_includes_all(window, tmp_path):
 def test_noop_command_does_not_enqueue_review(window):
     """A genuine no-op *command* must NOT trigger _enqueue_review.
 
-    `" 7 fire"` (leading space) parses as kind="command", use_current=True with no
-    explicit target ids. When encounter_state.current_target is empty (the default),
-    _resolve_targets returns [] and _handle_command applies nothing — state is
+    `"prone"` (a bare-word condition) parses as kind="command", use_current=True
+    with no explicit target ids. When encounter_state.current_target is empty
+    (the default), _resolve_targets returns [] and _handle_command applies
+    nothing (it logs a 'no current target' warning and returns) — state is
     unchanged, the undo snapshot is discarded, and review must be skipped.
 
     This guards the `after == before` review gate in _on_command: if that gate were
@@ -292,11 +293,11 @@ def test_noop_command_does_not_enqueue_review(window):
     # Precondition: no current_target set so the command resolves to empty ids.
     window.encounter_state.current_target = []
 
-    cmd = parse(" 7 fire")
+    cmd = parse("prone")
     assert cmd.kind == "command", (
         f"Precondition: expected command, got {cmd.kind!r}"
     )
-    assert cmd.use_current is True, "Precondition: leading-space grammar must use_current"
+    assert cmd.use_current is True, "Precondition: bare-word grammar must use_current"
 
     before_hp = window.encounter_state.npcs[0].hp
     before_stack_depth = len(window.undo_stack._snapshots)

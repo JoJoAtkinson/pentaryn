@@ -429,6 +429,13 @@ class NPCTab(QWidget):
             self.action_grid.set_actions(self.actions, used_actions=used, slot_remaining=dict(s.slots_remaining))
         # Inform command input of HP context for live preview
         self.input.update_context(s.member_hp, s.max_hp)
+        # Inform command input of the current sticky target so a leading-Space
+        # keystroke can auto-insert the target id(s). The encounter state lives
+        # on the parent MainWindow.
+        mw = self.parent()
+        enc = getattr(mw, "encounter_state", None)
+        if enc is not None:
+            self.input.set_current_target(list(enc.current_target))
 
     def _title_text(self) -> str:
         s = self.npc_state

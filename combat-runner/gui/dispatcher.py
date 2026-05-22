@@ -131,7 +131,6 @@ def parse(raw: str) -> ParsedCommand:
     if _QUIT_RE.match(s):
         return ParsedCommand(kind="quit", raw=raw)
 
-    use_current = bool(raw) and raw[0].isspace()
     tokens = raw.split()
 
     cmd = ParsedCommand(kind="unparseable", raw=raw)
@@ -139,20 +138,21 @@ def parse(raw: str) -> ParsedCommand:
     if not tokens:
         return cmd
 
-    # 1) <who> — the first token. Leading whitespace means the whole input is
-    # the <stream> and <who> resolves to the current sticky target.
-    if use_current:
-        stream = tokens
+    # 1) <who> — the first token. A leading digit-run is an explicit target;
+    # a leading sigil / bare word means the whole input is the <stream> and
+    # <who> resolves to the current sticky target. (A literal leading space is
+    # never seen here — the GUI consumes it as a current-target autocomplete
+    # before the string reaches the parser.)
+    use_current = False
+    who = classify_who(tokens[0])
+    if who.mode == "explicit":
+        cmd.target_ids = who.ids
+        stream = tokens[1:]
     else:
-        who = classify_who(tokens[0])
-        if who.mode == "explicit":
-            cmd.target_ids = who.ids
-            stream = tokens[1:]
-        else:
-            # current target (leading sigil / word). The first token is part
-            # of the <stream>, not a consumed <who>.
-            use_current = True
-            stream = tokens
+        # current target (leading sigil / word). The first token is part
+        # of the <stream>, not a consumed <who>.
+        use_current = True
+        stream = tokens
 
     # 2) <who> alone -> set the sticky target.
     if not stream:

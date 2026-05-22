@@ -145,6 +145,46 @@ def test_escape_clears_field(qtbot):
     assert inp.text() == ""
 
 
+def test_leading_space_inserts_current_target_id(qtbot):
+    """Space as the first keystroke on an empty box auto-inserts the current
+    target id + a trailing space (UX finding F2)."""
+    inp = CommandInput()
+    qtbot.addWidget(inp)
+    inp.set_current_target(["2"])
+    qtbot.keyClick(inp, Qt.Key.Key_Space)
+    assert inp.text() == "2 "
+
+
+def test_leading_space_inserts_multi_target_ids(qtbot):
+    """A multi-target current set inserts the concatenated digit run."""
+    inp = CommandInput()
+    qtbot.addWidget(inp)
+    inp.set_current_target(["1", "2", "3"])
+    qtbot.keyClick(inp, Qt.Key.Key_Space)
+    assert inp.text() == "123 "
+
+
+def test_leading_space_no_target_inserts_nothing(qtbot):
+    """With no current target, Space inserts nothing and shows a hint."""
+    inp = CommandInput()
+    qtbot.addWidget(inp)
+    inp.set_current_target([])
+    qtbot.keyClick(inp, Qt.Key.Key_Space)
+    assert inp.text() == ""
+    assert "no target" in inp.placeholderText()
+
+
+def test_mid_input_space_is_a_normal_separator(qtbot):
+    """A space typed when the box is non-empty is a plain separator."""
+    inp = CommandInput()
+    qtbot.addWidget(inp)
+    inp.set_current_target(["2"])
+    qtbot.keyClicks(inp, "2")
+    qtbot.keyClick(inp, Qt.Key.Key_Space)
+    qtbot.keyClicks(inp, "8")
+    assert inp.text() == "2 8"
+
+
 def test_mob_target_out_of_range_clears_preview(qtbot):
     """An m<n> that exceeds the member count clears the preview."""
     inp = CommandInput()
