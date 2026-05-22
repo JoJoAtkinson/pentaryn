@@ -149,11 +149,16 @@ class CommandInput(QLineEdit):
 
     # ─────────── autocomplete popup ───────────
 
+    # Matches a directed-command prefix: <repeated-digit id> [m<n>] <amount> <partial-tag>
+    # Groups: (1) the repeating digit (structural), (2) the partial tag token (may be empty).
+    _TAG_HINT_RE = re.compile(r'^(\d)\1*\s+(?:m\d+\s+)?\d+\s+(\w*)$', re.IGNORECASE)
+
     def _update_completer_model(self, text: str) -> None:
         """Swap the completer's candidate list based on the leading sigil.
 
         - `@` (or `@<partial>`) → conditions list (each candidate prefixed `@`)
         - `/` (or `/<partial>`) → slash commands
+        - directed command prefix (`<id> [m<n>] <amount> <partial-tag>`) → tag hints
         - anything else → hide popup
         """
         if text.startswith("@"):
@@ -163,10 +168,40 @@ class CommandInput(QLineEdit):
             if self._completer.model() is not self._slash_model:
                 self._completer.setModel(self._slash_model)
         else:
-            # Hide popup for non-sigil text
-            popup = self._completer.popup()
-            if popup is not None and popup.isVisible():
-                popup.hide()
+            m = self._TAG_HINT_RE.match(text.strip())
+            if m:
+                from ..command_tags import hint_pool
+                tokens = text.strip().split()
+                # tokens[0] = id, tokens[1] = amount (or m<n>), tokens[2] = amount if m<n>
+                # Everything after id + amount are tag tokens. The last token is the
+                # partial prefix being typed; completed tokens are all but the last.
+                # If text ends with a space, all tokens are complete — pass them all.
+                if text.endswith(" "):
+                    completed_tokens = tokens[2:]  # skip id + amount (or id + m<n> + amount)
+                    # Adjust for mob target: id m<n> amount → skip 3 tokens
+                    # Already handled since we pass tokens after the first two structural
+                    # tokens, but we need to detect if tokens[1] is m<n>.
+                    if len(tokens) >= 2 and tokens[1].lower().startswith("m") and tokens[1][1:].isdigit():
+                        completed_tokens = tokens[3:]
+                    partial = ""
+                else:
+                    # Last token is the partial; everything before it (after id/amount) is complete
+                    # Determine where tags start (after id + [m<n>] + amount)
+                    structural = 2  # id + amount
+                    if len(tokens) >= 2 and tokens[1].lower().startswith("m") and tokens[1][1:].isdigit():
+                        structural = 3  # id + m<n> + amount
+                    tag_tokens = tokens[structural:]
+                    completed_tokens = tag_tokens[:-1] if tag_tokens else []
+                    partial = m.group(2).lower()
+                candidates = hint_pool(completed_tokens)
+                filtered = [c for c in candidates if c.startswith(partial)]
+                model = QStringListModel(filtered, self)
+                self._completer.setModel(model)
+            else:
+                # Hide popup for non-sigil text
+                popup = self._completer.popup()
+                if popup is not None and popup.isVisible():
+                    popup.hide()
 
     # ─────────── submit + history ───────────
 

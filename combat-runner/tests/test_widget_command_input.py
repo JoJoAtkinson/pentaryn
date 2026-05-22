@@ -123,3 +123,12 @@ def test_mob_target_out_of_range_clears_preview(qtbot):
     qtbot.keyClicks(inp, "m99 -5")
     # Should emit (None, None) — out-of-range
     assert (None, None) in captured
+
+
+def test_tag_hint_pool_activates_after_directed_prefix(qtbot):
+    inp = CommandInput()
+    qtbot.addWidget(inp)
+    inp.setText("3 12 f")
+    model = inp._completer.model()
+    strings = [model.data(model.index(i)) for i in range(model.rowCount())]
+    assert any("fire" in s for s in strings)
