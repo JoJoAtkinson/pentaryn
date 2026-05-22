@@ -54,9 +54,11 @@ target and logs *"Marwen is now the target."* It does **not** switch tabs —
 the active tab stays on the actor; the target's tab gets the ▼ arrow.
 
 > A leading **Space** on an empty command box is a GUI convenience, not a
-> grammar token: it auto-inserts the current-target id(s) and a space. The
-> parser itself strips all whitespace — the current target is reached by a
-> leading sigil/word.
+> grammar token: it auto-inserts the active combatant's sticky-target id(s)
+> and a space. With no target set it prefills `0 ` (self), so the DM sees
+> the self-target before submitting and can accept or edit it. The parser
+> itself strips all whitespace — the current target is reached by a leading
+> sigil/word.
 
 ### `<stream>` — effects
 

@@ -164,14 +164,15 @@ def test_leading_space_inserts_multi_target_ids(qtbot):
     assert inp.text() == "123 "
 
 
-def test_leading_space_no_target_inserts_nothing(qtbot):
-    """With no current target, Space inserts nothing and shows a hint."""
+def test_leading_space_no_target_prefills_self(qtbot):
+    """With no current target, Space prefills `0 ` (self) so the DM sees the
+    self-target in the box before submitting — they can accept it (for a
+    self-buff) or edit it."""
     inp = CommandInput()
     qtbot.addWidget(inp)
     inp.set_current_target([])
     qtbot.keyClick(inp, Qt.Key.Key_Space)
-    assert inp.text() == ""
-    assert "no target" in inp.placeholderText()
+    assert inp.text() == "0 "
 
 
 def test_mid_input_space_is_a_normal_separator(qtbot):

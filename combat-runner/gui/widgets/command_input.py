@@ -267,13 +267,14 @@ class CommandInput(QLineEdit):
         # Leading Space on an EMPTY box → auto-insert the current target's
         # id(s) + a trailing space, so the DM can type `<space>8 melee` and
         # have it hit the sticky target. Mid-input space is a normal
-        # separator (unchanged). With no current target, insert nothing and
-        # show a transient "no target" hint in the placeholder.
+        # separator (unchanged). With NO current target, prefill `0 ` (self)
+        # — the DM sees the self-target in the box before submitting and can
+        # accept it (e.g. for a self-buff) or edit it.
         if event.key() == Qt.Key.Key_Space and not self.text():
             if self._current_target_ids:
                 self.setText("".join(self._current_target_ids) + " ")
             else:
-                self.setPlaceholderText("no target — set one with '<id>' first")
+                self.setText("0 ")
             return
         # Up/Down browse history
         if event.key() == Qt.Key.Key_Up and self._history:
