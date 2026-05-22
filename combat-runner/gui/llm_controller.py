@@ -67,10 +67,19 @@ class _StateBundle:
     encounter: EncounterState
     log_path: str
     on_state_changed: Callable[[], None] | None = None
+    # Invoked after a round-changing tool (advance_round / set_round) so the
+    # GUI can run the SAME round-advance side effects the round button does —
+    # most importantly ticking condition durations on every NPC. Wired by
+    # MainWindow.set_llm_controller; None in headless / unit-test contexts.
+    on_round_advanced: Callable[[int], None] | None = None
 
     def notify(self) -> None:
         if self.on_state_changed is not None:
             self.on_state_changed()
+
+    def notify_round_advanced(self) -> None:
+        if self.on_round_advanced is not None:
+            self.on_round_advanced(self.encounter.round_num)
 
 
 # ─────────── tool surface ───────────
@@ -172,14 +181,36 @@ def _tool_refresh_reaction(bundle: _StateBundle, npc_slug: str) -> dict[str, Any
     return {"ok": True}
 
 
+def _apply_round_side_effects(bundle: _StateBundle) -> None:
+    """Run the same round-advance side effects the GUI round button triggers.
+
+    If a GUI round-advance callback is wired, defer to it (it emits the
+    `round_advanced` bus event, which ticks condition durations + logs round
+    dividers — keeping LLM and button behavior identical). In headless /
+    unit-test contexts no callback is wired, so tick durations directly here
+    instead, so condition timers still advance."""
+    if bundle.on_round_advanced is not None:
+        bundle.notify_round_advanced()
+    else:
+        for npc in bundle.encounter.npcs:
+            npc.tick_condition_durations()
+
+
 def _tool_set_round(bundle: _StateBundle, round_num: int) -> dict[str, Any]:
+    prev = bundle.encounter.round_num
     bundle.encounter.set_round(round_num)
+    # Only tick durations when the round actually moves forward — set_round is
+    # also used to roll the counter *back* after a mis-click, which must not
+    # consume condition timers.
+    if bundle.encounter.round_num > prev:
+        _apply_round_side_effects(bundle)
     bundle.notify()
     return {"ok": True, "round_num": bundle.encounter.round_num}
 
 
 def _tool_advance_round(bundle: _StateBundle) -> dict[str, Any]:
     bundle.encounter.advance_round()
+    _apply_round_side_effects(bundle)
     bundle.notify()
     return {"ok": True, "round_num": bundle.encounter.round_num}
 
@@ -595,15 +626,33 @@ class LLMController:
         self._tools = _build_tool_definitions()
         self._dispatch = _build_tool_dispatch_table(self._bundle)
         self._client = client  # None → lazy-construct on first call
+        # Accumulates the tool calls of the in-progress run() so both the
+        # in-process and marshalled dispatch paths feed the same RunResult.
+        self._run_tool_calls: list[dict[str, Any]] = []
 
     # ─────────── public API ───────────
 
-    def run(self, user_input: str, active_npc_slug: str | None = None) -> RunResult:
+    def run(
+        self,
+        user_input: str,
+        active_npc_slug: str | None = None,
+        dispatch_fn: Callable[[list[Any]], list[dict[str, Any]]] | None = None,
+    ) -> RunResult:
         """Send the user's input to Haiku with the full tool surface. Blocking.
 
         Returns a RunResult with the model's text reply and any tool calls
         it dispatched. State mutations are already applied by the time this
         returns (in-process tool dispatch).
+
+        `dispatch_fn` — optional. When the chat loop hits a `tool_use` block,
+        it normally dispatches the tools in-process on the calling thread. The
+        GUI runs `run()` on a worker thread (so the network round-trips don't
+        freeze the window) but the tools mutate live widgets, which is only
+        safe on the Qt main thread. The GUI therefore passes a `dispatch_fn`
+        that marshals the dispatch onto the main thread and blocks the worker
+        until it completes. `dispatch_fn` receives the list of tool_use blocks
+        and must return the list of tool_result dicts (and is responsible for
+        appending to `self._run_tool_calls` so RunResult.tool_calls is filled).
         """
         client = self._ensure_client()
         if client is None:
@@ -615,7 +664,33 @@ class LLMController:
                 "content": self._build_user_message(user_input, active_npc_slug),
             }
         ]
-        return self._chat_loop(client, messages)
+        return self._chat_loop(client, messages, dispatch_fn=dispatch_fn)
+
+    def dispatch_tool_uses(self, tool_uses: list[Any]) -> list[dict[str, Any]]:
+        """Dispatch a batch of tool_use blocks against the live state, returning
+        the tool_result dicts. Mutates `EncounterState` and fires GUI refresh
+        callbacks — MUST run on the Qt main thread when used from the GUI.
+
+        Each dispatched call is also recorded in `self._run_tool_calls` so the
+        enclosing `run()` can report them in RunResult.tool_calls.
+        """
+        tool_results: list[dict[str, Any]] = []
+        for tu in tool_uses:
+            handler = self._dispatch.get(tu.name)
+            if handler is None:
+                result = {"ok": False, "error": f"unknown tool: {tu.name}"}
+            else:
+                try:
+                    result = handler(**dict(tu.input))
+                except Exception as exc:  # noqa: BLE001
+                    result = {"ok": False, "error": f"{tu.name} crashed: {exc}"}
+            self._run_tool_calls.append({"name": tu.name, "input": dict(tu.input), "result": result})
+            tool_results.append({
+                "type": "tool_result",
+                "tool_use_id": tu.id,
+                "content": json.dumps(result),
+            })
+        return tool_results
 
     def suggest_next_actions(
         self,
@@ -728,9 +803,24 @@ class LLMController:
 
     MAX_TOOL_LOOP_ITERATIONS = 10
 
-    def _chat_loop(self, client: Any, messages: list[dict[str, Any]]) -> RunResult:
-        """Run the chat loop, dispatching tool calls until end_turn."""
-        all_tool_calls: list[dict[str, Any]] = []
+    def _chat_loop(
+        self,
+        client: Any,
+        messages: list[dict[str, Any]],
+        dispatch_fn: Callable[[list[Any]], list[dict[str, Any]]] | None = None,
+    ) -> RunResult:
+        """Run the chat loop, dispatching tool calls until end_turn.
+
+        Only the `messages.create` network round-trips run here; tool dispatch
+        is delegated to `dispatch_fn` (defaults to in-process
+        `dispatch_tool_uses`). The GUI passes a `dispatch_fn` that marshals the
+        dispatch onto the Qt main thread so the loop itself can run on a worker
+        thread without freezing the window.
+        """
+        if dispatch_fn is None:
+            dispatch_fn = self.dispatch_tool_uses
+        # Reset the per-run accumulator (dispatch_tool_uses appends into it).
+        self._run_tool_calls = []
         final_text = ""
         hit_cap = True  # cleared when the loop exits normally via stop_reason
         for _iteration in range(self.MAX_TOOL_LOOP_ITERATIONS):
@@ -750,7 +840,7 @@ class LLMController:
                 )
             except Exception as exc:  # noqa: BLE001
                 logger.warning("LLM run call failed: %s", exc)
-                return RunResult(error=str(exc))
+                return RunResult(text=final_text, tool_calls=list(self._run_tool_calls), error=str(exc))
 
             text_parts: list[str] = []
             tool_uses: list[Any] = []
@@ -764,22 +854,7 @@ class LLMController:
                 final_text = "\n".join(text_parts).strip()
 
             if resp.stop_reason == "tool_use" and tool_uses:
-                tool_results: list[dict[str, Any]] = []
-                for tu in tool_uses:
-                    handler = self._dispatch.get(tu.name)
-                    if handler is None:
-                        result = {"ok": False, "error": f"unknown tool: {tu.name}"}
-                    else:
-                        try:
-                            result = handler(**dict(tu.input))
-                        except Exception as exc:  # noqa: BLE001
-                            result = {"ok": False, "error": f"{tu.name} crashed: {exc}"}
-                    all_tool_calls.append({"name": tu.name, "input": dict(tu.input), "result": result})
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": tu.id,
-                        "content": json.dumps(result),
-                    })
+                tool_results = dispatch_fn(tool_uses)
                 messages.append({"role": "assistant", "content": resp.content})
                 messages.append({"role": "user", "content": tool_results})
                 continue
@@ -794,7 +869,7 @@ class LLMController:
             )
             return RunResult(
                 text=final_text,
-                tool_calls=all_tool_calls,
+                tool_calls=list(self._run_tool_calls),
                 error=f"reached tool-loop iteration cap ({self.MAX_TOOL_LOOP_ITERATIONS}); response may be partial",
             )
-        return RunResult(text=final_text, tool_calls=all_tool_calls)
+        return RunResult(text=final_text, tool_calls=list(self._run_tool_calls))

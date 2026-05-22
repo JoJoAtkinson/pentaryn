@@ -31,6 +31,14 @@ dependencies = [
 [tool.uv.pip]
 no-binary = ["pillow"]
 
+[tool.ruff]
+line-length = 100
+target-version = "py314"
+
+[tool.ruff.lint]
+# Conservative, low-noise rule set: pycodestyle errors, pyflakes, import sorting.
+select = ["E", "F", "I"]
+
 [tool.pytest.ini_options]
 markers = [
     "integration: marks tests as integration tests (uses real API tokens, costs money)",

@@ -16,11 +16,12 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+import threading
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
-from PySide6.QtCore import Qt, QEvent, Signal
+from PySide6.QtCore import Qt, QEvent, QObject, QRunnable, QThreadPool, Signal
 from PySide6.QtGui import QAction, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
@@ -69,11 +70,69 @@ def _load_actions_db():
     return mod
 
 
+class _LLMWorkerSignals(QObject):
+    """Signals for the off-thread LLM fallback run. Lives on a QObject so it
+    can carry queued cross-thread connections; the worker is a QRunnable."""
+
+    # Emitted from the worker thread when the chat loop needs to dispatch a
+    # batch of tool calls. The slot (on the GUI thread) must dispatch them,
+    # store the result via the holder, and set the threading.Event so the
+    # worker can resume. Connected with Qt.QueuedConnection.
+    dispatch_requested = Signal(object, object, object)  # (tool_uses, holder, event)
+    finished = Signal(object)  # (RunResult)
+
+
+class _LLMRunWorker(QRunnable):
+    """Runs one `LLMController.run` off the GUI thread.
+
+    The network round-trips (`messages.create`) run here. Tool dispatch — which
+    mutates live GUI state and touches widgets — is marshalled back to the GUI
+    thread: the worker emits `dispatch_requested` (a QueuedConnection signal)
+    and blocks on a threading.Event until the GUI-thread slot fills the result.
+    """
+
+    def __init__(self, controller: Any, text: str, active_npc_slug: str | None,
+                 signals: _LLMWorkerSignals) -> None:
+        super().__init__()
+        self._controller = controller
+        self._text = text
+        self._slug = active_npc_slug
+        self._signals = signals
+        self.setAutoDelete(True)
+
+    def _marshalled_dispatch(self, tool_uses: list[Any]) -> list[dict[str, Any]]:
+        """Hand the tool batch to the GUI thread and block until it finishes."""
+        holder: dict[str, Any] = {}
+        done = threading.Event()
+        self._signals.dispatch_requested.emit(tool_uses, holder, done)
+        done.wait()
+        if "error" in holder:
+            # Re-raise on the worker thread so the chat loop's own try/except
+            # records a clean RunResult error instead of hanging.
+            raise RuntimeError(holder["error"])
+        return holder.get("result", [])
+
+    def run(self) -> None:
+        try:
+            result = self._controller.run(
+                self._text,
+                active_npc_slug=self._slug,
+                dispatch_fn=self._marshalled_dispatch,
+            )
+        except Exception as exc:  # noqa: BLE001
+            from .llm_controller import RunResult
+            result = RunResult(error=f"LLM worker crashed: {exc}")
+        self._signals.finished.emit(result)
+
+
 class MainWindow(QMainWindow):
     """Top-level combat window."""
 
     # Signaled when the user picks Encounter→Switch encounter… from the menu.
     encounter_switch_requested = Signal()
+    # Emitted on the GUI thread once an off-thread LLM fallback run completes
+    # (carries the RunResult). Primarily a test seam for the threaded path.
+    llm_run_finished = Signal(object)
 
     def __init__(self, encounter_state: EncounterState, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -181,6 +240,10 @@ class MainWindow(QMainWindow):
         self.trigger_matcher = TriggerMatcher(triggers)
         self.watch_matcher = WatchMatcher(watches)
         self._handling_event = False  # re-entry guard for the trigger pipeline
+        # Per-tab structures are keyed on a STABLE tab identity — id(NPCTab) —
+        # not the positional tab index. /reorder shuffles indices but never
+        # destroys the NPCTab widgets, so id() stays valid and an in-flight
+        # suggestion worker can never deliver to the wrong NPC after a reorder.
         # Watch-driven suggestions per tab. Persist across LLM refreshes so a
         # "Heal Aelric" suggestion sticks until either the action fires or the
         # event becomes stale (e.g. Aelric is no longer bloodied).
@@ -189,9 +252,13 @@ class MainWindow(QMainWindow):
         self.event_bus.subscribe_all(self._on_event_for_watch)
 
         self._tab_action_surfaces: dict[int, list[dict]] = {}
-        for tab_idx, npc in enumerate(self.encounter_state.npcs):
+        for npc in self.encounter_state.npcs:
             actions = self._db.list_actions(npc=npc.slug)
-            self._tab_action_surfaces[tab_idx] = actions
+            # Seed per-action slot counters so every NPC starts the encounter
+            # with its limited-use actions at full charge. Without this the
+            # `slots_remaining` dict is empty until the first use, and
+            # snapshot save/load round-trips an incomplete picture.
+            self._seed_slots_remaining(npc, actions)
             tab = NPCTab(
                 npc_state=npc,
                 actions=actions,
@@ -199,6 +266,7 @@ class MainWindow(QMainWindow):
                 parent=self,
                 event_bus=self.event_bus,
             )
+            self._tab_action_surfaces[id(tab)] = actions
             tab.state_changed.connect(self._on_tab_state_changed)
             tab.reorder_requested.connect(self._handle_reorder_request)
             tab.quit_requested.connect(self.close)
@@ -211,9 +279,29 @@ class MainWindow(QMainWindow):
         self._suggestion_driver.suggestions_ready.connect(self._on_suggestions_ready)
         self._suggestion_driver.suggestion_failed.connect(self._on_suggestion_failed)
 
+        # Dedicated single-thread pool for LLM fallback runs (run() blocks on
+        # network round-trips). Kept separate from the suggestion pool so a
+        # long fallback can't starve background suggestion fetches. Single
+        # thread → at most one fallback in flight at a time.
+        self._llm_pool = QThreadPool(self)
+        self._llm_pool.setMaxThreadCount(1)
+
         # Status bar at the bottom for transient messages
         self.setStatusBar(QStatusBar(self))
         self.statusBar().showMessage(f"Loaded {len(self.encounter_state.npcs)} NPC(s) · log → {self.encounter_state.log_path.name}")
+
+    @staticmethod
+    def _seed_slots_remaining(npc: NPCState, actions: list[dict]) -> None:
+        """Pre-fill `npc.slots_remaining` from each action's `slots` block so a
+        freshly-launched NPC starts with every limited-use action known and at
+        full count. Existing entries are never overwritten (a restored snapshot
+        or mid-fight launch keeps its real counts)."""
+        for a in actions:
+            slot_cfg = a.get("slots") or {}
+            count = slot_cfg.get("count")
+            action_name = a.get("action")
+            if action_name and isinstance(count, int):
+                npc.slots_remaining.setdefault(action_name, count)
 
     def _wire_shortcuts(self) -> None:
         # Cmd+1 .. Cmd+9 jump directly to that tab index
@@ -232,6 +320,17 @@ class MainWindow(QMainWindow):
 
     def _advance_round(self) -> None:
         self.encounter_state.advance_round()
+        self._apply_round_change()
+
+    def _apply_round_change(self) -> None:
+        """Run the GUI-side effects of a round change: refresh tabs, update the
+        counter button, and emit the `round_advanced` bus event (which ticks
+        condition durations on every NPCTab + writes the round divider).
+
+        Shared by the round button and the LLM round tools so the two paths
+        cannot drift — the LLM `advance_round` / `set_round` tools call back
+        into this via the `on_round_advanced` hook wired in set_llm_controller.
+        """
         # Refresh every tab; recharge rolls handled by each tab's start-of-turn,
         # but we trigger them here for round-button convenience.
         for i in range(self.tabs.count()):
@@ -240,8 +339,8 @@ class MainWindow(QMainWindow):
                 tab.refresh()
         self.round_btn.setText(self._round_btn_text())
         self.statusBar().showMessage(f"Round → {self.encounter_state.round_num}", 3000)
-        # Surface the round change as an event so any "at start of round X"
-        # triggers (none yet, but the bus is generic) can fire.
+        # Surface the round change as an event so condition durations tick
+        # (NPCTab._on_round_event) and any "at start of round X" triggers fire.
         if hasattr(self, "event_bus"):
             self.event_bus.emit(round_event(self.encounter_state.round_num))
 
@@ -267,9 +366,20 @@ class MainWindow(QMainWindow):
         # Kick off per-tab suggestion fetches in the background (no-op if no LLM)
         self._fire_suggestion_refresh()
 
+    def _tab_by_key(self, tab_key: int) -> NPCTab | None:
+        """Resolve a stable tab key — id(NPCTab) — back to the live widget.
+        Returns None if no tab with that identity exists (e.g. a stale worker
+        result for a tab that has since been removed)."""
+        for i in range(self.tabs.count()):
+            t = self.tabs.widget(i)
+            if isinstance(t, NPCTab) and id(t) == tab_key:
+                return t
+        return None
+
     def _fire_suggestion_refresh(self) -> None:
         """Submit one async fetch per tab. Earlier in-flight workers' results
-        are dropped via the generation counter in SuggestionDriver."""
+        are dropped via the generation counter in SuggestionDriver. Workers are
+        keyed on id(NPCTab) so a /reorder mid-flight can't misroute results."""
         controller = getattr(self, "_llm_controller", None)
         if controller is None:
             return
@@ -280,14 +390,14 @@ class MainWindow(QMainWindow):
                 tab.show_suggestions_loading()
                 # Bind everything the worker needs via closure
                 npc_state = tab.npc_state
-                action_surface = self._tab_action_surfaces.get(i, [])
+                action_surface = self._tab_action_surfaces.get(id(tab), [])
                 log_path = self.encounter_state.log_path
 
                 def fetcher(controller=controller, npc=npc_state, surface=action_surface, lp=log_path):
                     log_tail = self._last_log_tail(lp, lines=10)
                     return controller.suggest_next_actions(npc, surface, log_tail)
 
-                self._suggestion_driver.request_for_tab(i, fetcher)
+                self._suggestion_driver.request_for_tab(id(tab), fetcher)
 
     @staticmethod
     def _last_log_tail(log_path, lines: int = 10) -> str | None:
@@ -297,27 +407,27 @@ class MainWindow(QMainWindow):
         except OSError:
             return None
 
-    def _on_suggestions_ready(self, tab_idx: int, suggestions) -> None:
+    def _on_suggestions_ready(self, tab_key: int, suggestions) -> None:
         if not hasattr(self, "_llm_suggestions_by_tab"):
             self._llm_suggestions_by_tab: dict[int, list] = {}
-        self._llm_suggestions_by_tab[tab_idx] = list(suggestions)
+        self._llm_suggestions_by_tab[tab_key] = list(suggestions)
         # Re-render the combined bar — watches first, then LLM picks.
-        self._refresh_suggestions_for_tab(tab_idx)
+        self._refresh_suggestions_for_tab(tab_key)
         # Stale-watch cleanup: drop watch suggestions whose target NPC is no
         # longer bloodied / dead. Keeps the bar honest.
-        self._prune_watch_suggestions(tab_idx)
+        self._prune_watch_suggestions(tab_key)
 
-    def _on_suggestion_failed(self, tab_idx: int, error: str) -> None:
+    def _on_suggestion_failed(self, tab_key: int, error: str) -> None:
         if not hasattr(self, "_llm_suggestions_by_tab"):
             self._llm_suggestions_by_tab = {}
-        self._llm_suggestions_by_tab[tab_idx] = []
-        self._refresh_suggestions_for_tab(tab_idx)
-        self.statusBar().showMessage(f"Suggestion fetch failed (tab {tab_idx}): {error}", 4000)
+        self._llm_suggestions_by_tab[tab_key] = []
+        self._refresh_suggestions_for_tab(tab_key)
+        self.statusBar().showMessage(f"Suggestion fetch failed: {error}", 4000)
 
-    def _prune_watch_suggestions(self, tab_idx: int) -> None:
+    def _prune_watch_suggestions(self, tab_key: int) -> None:
         """Remove watch suggestions whose triggering condition no longer holds.
         Currently checks: targeted NPC is no longer bloodied (HP > half)."""
-        bucket = self._watch_suggestions.get(tab_idx, [])
+        bucket = self._watch_suggestions.get(tab_key, [])
         if not bucket:
             return
         kept: list[Suggestion] = []
@@ -336,8 +446,8 @@ class MainWindow(QMainWindow):
                 continue
             kept.append(sug)
         if len(kept) != len(bucket):
-            self._watch_suggestions[tab_idx] = kept
-            self._refresh_suggestions_for_tab(tab_idx)
+            self._watch_suggestions[tab_key] = kept
+            self._refresh_suggestions_for_tab(tab_key)
 
     def _cycle_tab(self, direction: int) -> None:
         if self.tabs.count() == 0:
@@ -442,6 +552,7 @@ class MainWindow(QMainWindow):
             npc.reaction_used = src.reaction_used
             npc.bonus_used = src.bonus_used
             npc.recharges = dict(src.recharges)
+            npc.slots_remaining = dict(src.slots_remaining)
             npc.turn_taken_this_round = src.turn_taken_this_round
         self.encounter_state.round_num = restored.round_num
         self.round_btn.setText(self._round_btn_text())
@@ -462,15 +573,15 @@ class MainWindow(QMainWindow):
         so the heal suggestion disappears once Aelric is back above half."""
         # Prune first — covers the case where this event is a heal that just
         # un-bloodied somebody.
-        for tab_idx in list(self._watch_suggestions.keys()):
-            self._prune_watch_suggestions(tab_idx)
+        for tab_key in list(self._watch_suggestions.keys()):
+            self._prune_watch_suggestions(tab_key)
 
         matches = self.watch_matcher.find_matches(event)
         if not matches:
             return
         for m in matches:
-            tab_idx = self._tab_index_for_slug(m.watch.npc_slug)
-            if tab_idx is None:
+            tab_key = self._tab_key_for_slug(m.watch.npc_slug)
+            if tab_key is None:
                 continue
             target_name = self._npc_display_name(m.target_npc) if m.target_npc else None
             display_action = m.watch.action_name.replace("_", " ").title()
@@ -482,31 +593,34 @@ class MainWindow(QMainWindow):
                 action_name=m.watch.action_name,
                 target_npc=m.target_npc,
             )
-            bucket = self._watch_suggestions.setdefault(tab_idx, [])
+            bucket = self._watch_suggestions.setdefault(tab_key, [])
             # Dedupe by (action, target) so a repeated bloodied event doesn't
             # stack duplicate suggestions
             key = (sug.action_name, sug.target_npc)
             if not any((s.action_name, s.target_npc) == key for s in bucket):
                 bucket.insert(0, sug)  # newest on top
             # Push to the suggestion bar (combined with LLM ones below)
-            self._refresh_suggestions_for_tab(tab_idx)
+            self._refresh_suggestions_for_tab(tab_key)
 
-    def _refresh_suggestions_for_tab(self, tab_idx: int) -> None:
+    def _refresh_suggestions_for_tab(self, tab_key: int) -> None:
         """Push the current combined (watch + LLM) suggestion list onto a tab.
-        Watch suggestions always come first."""
-        tab = self.tabs.widget(tab_idx)
-        if not isinstance(tab, NPCTab):
+        Watch suggestions always come first. `tab_key` is id(NPCTab)."""
+        tab = self._tab_by_key(tab_key)
+        if tab is None:
             return
-        watch_subs = list(self._watch_suggestions.get(tab_idx, []))
-        llm_subs = getattr(self, "_llm_suggestions_by_tab", {}).get(tab_idx, [])
+        watch_subs = list(self._watch_suggestions.get(tab_key, []))
+        llm_subs = getattr(self, "_llm_suggestions_by_tab", {}).get(tab_key, [])
         combined = watch_subs + llm_subs
         tab.set_suggestions(combined[:5])
 
-    def _tab_index_for_slug(self, slug: str) -> int | None:
+    def _tab_key_for_slug(self, slug: str) -> int | None:
+        """Return the stable tab key — id(NPCTab) — for the first tab whose NPC
+        has this slug, or None. Used to route watch suggestions; stable across
+        /reorder unlike a positional index."""
         for i in range(self.tabs.count()):
             t = self.tabs.widget(i)
             if isinstance(t, NPCTab) and t.npc_state.slug == slug:
-                return i
+                return id(t)
         return None
 
     def _npc_display_name(self, slug: str) -> str:
@@ -599,18 +713,55 @@ class MainWindow(QMainWindow):
         return f"event: {event.kind} on {event.subject_npc}"
 
     def _on_llm_fallback(self, text: str, parsed) -> None:
-        """Route fallback input to the LLM controller if one's been wired."""
+        """Route fallback input to the LLM controller if one's been wired.
+
+        The LLM call (up to 10 blocking network round-trips, 2-40s) runs on a
+        QThreadPool worker so the window stays responsive — the DM can keep
+        working on other tabs while it thinks. Tool calls mutate live widgets,
+        so they are marshalled back to this (the GUI) thread via
+        `_on_llm_dispatch_requested`. A "thinking…" status message stays up for
+        the duration."""
         controller = getattr(self, "_llm_controller", None)
         if controller is None:
             self.statusBar().showMessage(f"LLM fallback (no controller): {text!r}", 5000)
             return
         active_npc = self.encounter_state.active_npc
         active_slug = active_npc.slug if active_npc is not None else None
-        # Run synchronously for v0.2 simplicity; v0.3 can spin this off on a QThread
-        # if blocking the UI becomes a problem.
-        self.statusBar().showMessage(f"LLM thinking about: {text!r} ...", 1500)
-        result = controller.run(text, active_npc_slug=active_slug)
-        # Refresh all tabs after the LLM possibly mutated state
+
+        # Persistent (no timeout) thinking indicator — cleared by the finished slot.
+        self.statusBar().showMessage(f"LLM thinking about: {text!r} …")
+
+        signals = _LLMWorkerSignals()
+        # QueuedConnection so the dispatch slot runs on THIS (GUI) thread even
+        # though the signal is emitted from the worker thread.
+        signals.dispatch_requested.connect(
+            self._on_llm_dispatch_requested, Qt.ConnectionType.QueuedConnection
+        )
+        signals.finished.connect(
+            self._on_llm_finished, Qt.ConnectionType.QueuedConnection
+        )
+        # Keep a reference so the signals QObject isn't GC'd mid-run.
+        self._llm_run_signals = signals
+        worker = _LLMRunWorker(controller, text, active_slug, signals)
+        self._llm_pool.start(worker)
+
+    def _on_llm_dispatch_requested(self, tool_uses, holder, done) -> None:
+        """GUI-thread slot: dispatch a batch of LLM tool calls (which mutate
+        live state + touch widgets), store the results in `holder`, then set
+        the `done` Event to unblock the waiting worker thread."""
+        try:
+            controller = getattr(self, "_llm_controller", None)
+            if controller is None:
+                holder["error"] = "LLM controller went away mid-run"
+            else:
+                holder["result"] = controller.dispatch_tool_uses(tool_uses)
+        except Exception as exc:  # noqa: BLE001
+            holder["error"] = str(exc)
+        finally:
+            done.set()
+
+    def _on_llm_finished(self, result) -> None:
+        """GUI-thread slot: the LLM run completed. Refresh tabs + report."""
         for i in range(self.tabs.count()):
             t = self.tabs.widget(i)
             if isinstance(t, NPCTab):
@@ -620,6 +771,7 @@ class MainWindow(QMainWindow):
         else:
             msg = result.text[:120] if result.text else f"LLM ran {len(result.tool_calls)} tool(s)"
             self.statusBar().showMessage(msg, 5000)
+        self.llm_run_finished.emit(result)
 
     # ─────────── help ───────────
 
@@ -676,11 +828,22 @@ class MainWindow(QMainWindow):
         update the UI. Also fires an initial suggestion refresh so the bar
         populates before the first turn."""
         self._llm_controller = controller
+        # Route the LLM round tools through the same round-change side effects
+        # the round button uses, so condition durations tick consistently
+        # regardless of whether the DM clicks the button or asks the LLM.
+        bundle = getattr(controller, "_bundle", None)
+        if bundle is not None:
+            bundle.on_round_advanced = lambda _round: self._apply_round_change()
         self._fire_suggestion_refresh()
 
     def closeEvent(self, event) -> None:  # noqa: N802 (Qt API)
-        """Drain the suggestion thread pool before closing."""
+        """Drain the suggestion + LLM thread pools before closing."""
         if hasattr(self, "_suggestion_driver"):
             self._suggestion_driver.cancel_all()
             self._suggestion_driver.shutdown(timeout_ms=2000)
+        if hasattr(self, "_llm_pool"):
+            # A blocked LLM worker waits on a threading.Event that only the GUI
+            # thread sets — once we stop processing events it can deadlock. Give
+            # it a bounded grace period, then move on regardless.
+            self._llm_pool.waitForDone(2000)
         super().closeEvent(event)
