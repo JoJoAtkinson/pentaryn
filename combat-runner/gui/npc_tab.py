@@ -768,11 +768,28 @@ class NPCTab(QWidget):
         ``apply_uncertain_damage``. Returns ``None`` on an error / exception.
         """
         roller = _get_roller()
+        # Resolve this combatant's sticky target_ids → display names so the
+        # attack table can surface `→ <name>` per attack. Lookup goes through
+        # the top-level window's encounter_state (best-effort; if anything is
+        # missing we just pass None and the existing no-decoration shape
+        # renders, same as before this feature existed).
+        target_names: list[str] | None = None
+        try:
+            tids = list(self.npc_state.target_ids or [])
+            mw = self.window()
+            es = getattr(mw, "encounter_state", None)
+            if tids and es is not None and hasattr(es, "combatant_by_id"):
+                resolved = [es.combatant_by_id(tid) for tid in tids]
+                names = [c.name for c in resolved if c is not None]
+                target_names = names or None
+        except Exception:
+            target_names = None
         try:
             result_json = roller.roll_combat_action(
                 npc=self.npc_state.slug,
                 action=action_name,
                 log_path=str(self.log_path),
+                target_names=target_names,
             )
             result = json.loads(result_json)
         except Exception as exc:

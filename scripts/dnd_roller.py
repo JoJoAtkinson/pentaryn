@@ -568,6 +568,7 @@ async def _execute_combat_action_async(
     action_name: str,
     spec: dict,
     log_path: str | None,
+    target_names: list[str] | None = None,
 ) -> dict:
     """Execute a structured action spec; return formatted reply + metadata."""
     action_type = spec.get("type", "single_attack")
@@ -682,6 +683,12 @@ async def _execute_combat_action_async(
 
         # Compact paired table — per-attack rider inlined ("if HIT: DC 15 ...")
         # so the DM sees the conditional save right next to the to-hit it depends on.
+        # If target_names is provided, each row also surfaces "→ <name>" so the
+        # DM can match the to-hit against the right combatant's AC without
+        # cross-referencing the pending-damage line. Distribution: attack i
+        # targets target_names[i] if available, else falls back to the LAST
+        # name (DM convention: overflow goes to the same final target).
+        targets = list(target_names or [])
         lines.append("```")
         for i, atk in enumerate(attacks):
             to_hit = to_hit_result["rolls_with_bonuses"][i]
@@ -689,6 +696,9 @@ async def _execute_combat_action_async(
             dmg_total = dmg_res["total_with_bonuses"]
             dmg_type = atk.get("damage_type", "")
             line = f"{atk['name']:<10s} to-hit {to_hit:>3d} / dmg {dmg_total:>3d} {dmg_type}"
+            if targets:
+                target = targets[i] if i < len(targets) else targets[-1]
+                line += f"   → {target}"
             extra_res = dmg_res.get("extra_damage")
             if extra_res:
                 etype = dmg_res.get("extra_damage_type", "")
@@ -903,11 +913,18 @@ def roll_combat_action(
     npc: str,
     action: str,
     log_path: str | None = None,
+    target_names: list[str] | None = None,
 ) -> str:
     """Run a structured combat action for an NPC in one MCP call.
 
     Looks up the action in `combat-runner/actions.jsonl` (flat DB). `action` can
     be the action name OR a verb (resolved via the action's `verbs` list).
+
+    `target_names` (optional) — display names of the target(s) for this action.
+    For multiattack / single_attack, each attack-table row gets `→ <name>`
+    appended so the DM can match to-hits against the right combatant's AC.
+    Distribution: attack i takes `target_names[i]` if available, else the LAST
+    name (overflow convention). Ignored for area / utility / reaction.
 
     Returns: JSON with `output` (Markdown reply, print verbatim), `action_type`,
     `logged`, `resolved_action`, and `rolls` (structured roll sidecar for the
@@ -936,7 +953,9 @@ def roll_combat_action(
     # Build the spec dict from the record (drop bookkeeping fields)
     spec = {k: v for k, v in record.items() if k not in ("npc", "action", "updated_at")}
     try:
-        result = asyncio.run(_execute_combat_action_async(npc, resolved, spec, log_path))
+        result = asyncio.run(_execute_combat_action_async(
+            npc, resolved, spec, log_path, target_names=target_names,
+        ))
         result["resolved_action"] = resolved
         return json.dumps(result, ensure_ascii=False)
     except Exception as e:
