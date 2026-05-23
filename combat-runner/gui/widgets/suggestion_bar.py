@@ -52,6 +52,11 @@ class SuggestionBar(QWidget):
         self._layout.setContentsMargins(0, 4, 0, 4)
         self._layout.setSpacing(6)
         self._buttons: list[QPushButton] = []
+        # Keep the original Suggestion objects alongside the buttons so the
+        # click handler can recover slug + panel_number from action_name.
+        # Freeform LLM suggestions need the slug (visible text) for typed-
+        # equivalent dispatch; numbered DB actions take the fast chip path.
+        self._suggestions: list[Suggestion] = []
         self._loading_label: QLabel | None = None
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self._render_empty()
@@ -63,6 +68,7 @@ class SuggestionBar(QWidget):
         Pass an empty iterable to clear."""
         self._clear()
         suggestions = list(suggestions)[: self._max_buttons]
+        self._suggestions = list(suggestions)
         if not suggestions:
             self._render_empty()
             return
@@ -105,6 +111,13 @@ class SuggestionBar(QWidget):
         # easily recover it from the button. Return the button texts as a proxy.
         return [b.text() for b in self._buttons]
 
+    def current_suggestion_objects(self) -> list[Suggestion]:
+        """The Suggestion objects currently rendered (preserves slug +
+        panel_number alongside action_name). Used by the click handler to
+        decide whether a click is a numbered DB action (chip-fast-path) or
+        a freeform LLM suggestion (slug-through-parser path)."""
+        return list(self._suggestions)
+
     # ─────────── internals ───────────
 
     def _clear(self) -> None:
@@ -113,6 +126,7 @@ class SuggestionBar(QWidget):
             if w := item.widget():
                 w.deleteLater()
         self._buttons.clear()
+        self._suggestions = []
         self._loading_label = None
 
     def _render_empty(self) -> None:

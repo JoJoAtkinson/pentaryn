@@ -1033,6 +1033,36 @@ class NPCTab(QWidget):
     # ─────────── internal: suggestion click ───────────
 
     def _on_suggestion_chosen(self, action_name: str) -> None:
-        """Treat a suggestion-button click as an action against this tab's
-        combatant — the same path as an action chip click."""
-        self._on_chip_clicked(action_name)
+        """Route a suggestion-button click.
+
+        Two flavors of suggestion live on this bar:
+
+        * **Numbered DB action** (`panel_number` set, `action_name` is a real
+          DB action key like `multiattack`). Click goes through
+          `_on_chip_clicked` — the existing fast-path that wraps it in a
+          `kind="command"` ParsedCommand and lets the main window resolve
+          the token against the DB.
+        * **Freeform LLM suggestion** (`panel_number` is None, slug is what
+          the user actually sees on the button — e.g. `5 break free from
+          sleep`). The action_name field may carry a snake-cased intent that
+          doesn't match any DB action and silently no-ops via the chip path.
+          Here we dispatch the SLUG through the dispatcher exactly like the
+          user had typed it — so unparseable freeform requests route to the
+          LLM fallback, matching typed behavior.
+        """
+        suggestion = next(
+            (s for s in self.suggestion_bar.current_suggestion_objects()
+             if s.action_name == action_name),
+            None,
+        )
+        if suggestion is not None and suggestion.panel_number is not None:
+            # Numbered DB action — fast chip-click path.
+            self._on_chip_clicked(action_name)
+            return
+        # Freeform LLM suggestion (or stale signal with no matching entry):
+        # dispatch the SLUG through the parser. Falls back to action_name when
+        # we can't find the original Suggestion (defensive — never silently
+        # swallow a click).
+        text = (suggestion.slug if suggestion else action_name).strip()
+        cmd = parse_command(text)
+        self.command_requested.emit(cmd)
