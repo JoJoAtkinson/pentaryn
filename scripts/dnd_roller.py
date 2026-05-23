@@ -980,18 +980,34 @@ def combat_action_upsert(npc: str, action: str, spec: dict) -> str:
     """Add or replace one (npc, action) entry in the actions DB.
 
     Validates the spec; raises ValueError on bad input. Persists atomically.
-    Returns JSON with `ok`, `npc`, `action`, `updated_at`. On error: JSON with `error`.
+    Returns JSON with `ok`, `npc`, `action`, `updated_at`, and a `warnings`
+    array. On error: JSON with `error`.
+
+    Warnings come from `scripts/srd_corrections.yml` — when the action name
+    matches a known entry there (e.g. `counterspell`), the spec's text fields
+    are scanned for the entry's expected_phrases / banned_phrases. Warnings
+    are advisory — the row still persists. The corrections file is the place
+    to document house-rule tweaks and known 2014→2024 mechanic changes.
     """
     try:
         record = combat_actions_db.upsert(npc, action, spec)
-        return json.dumps({
-            "ok": True,
-            "npc": record["npc"],
-            "action": record["action"],
-            "updated_at": record["updated_at"],
-        })
     except (ValueError, TypeError, AttributeError, KeyError) as e:
         return json.dumps({"ok": False, "error": str(e)})
+    # Warnings are best-effort — a broken corrections file must never make
+    # an otherwise-valid upsert fail. Swallow any import / parse errors.
+    warnings: list[str] = []
+    try:
+        from srd_corrections import warnings_for_upsert
+        warnings = warnings_for_upsert(action, spec)
+    except Exception:
+        pass
+    return json.dumps({
+        "ok": True,
+        "npc": record["npc"],
+        "action": record["action"],
+        "updated_at": record["updated_at"],
+        "warnings": warnings,
+    })
 
 
 def combat_actions_list(

@@ -21,34 +21,45 @@ Run `/Users/joe/GitHub/dnd/.venv/bin/python scripts/mcp/server.py --list-tools` 
 - `get_spell_list` returns v1-style spell **slugs** (e.g., `'fireball'`); these don't match v2 spell **keys** (e.g., `'srd-2024_fireball'`). To chain into `get_spell_details`, first call `search_spells(name=slug, match='exact')` and use the returned `key`.
 - For local lore (NPCs, factions, sessions, free-text vault search), use the `lore.py` tools: `search_npcs`, `get_npc`, `get_faction_overview`, `last_session_summary`, `find_lore`. These read the repo directly — no API.
 
-### Authoring rules — verify the SRD source on every spell lookup
+### Authoring rules — 2024 by default, house rules in one file
 
-This is a **D&D 2024 / 5.5e** project (per [AGENTS.md](AGENTS.md)). The MCP
-SRD cache (`.cache/srd5_2_v2.sqlite`) holds entries from **all sources** —
-srd-2024, srd-2014, third-party — concurrently, gzipped, with TTLs. A
-`search_spells` call without a source filter ranks srd-2024 first but does
-NOT hide the 2014 / third-party entries; with a slight ranking quirk or a
-scoped call, a 2014 entry can slip into a result and get encoded as-if it
-were current. That's the regression-vector that put 2014-rules Counterspell
-into the actions DB originally — the cache served the older entry, the
-authoring session ran with it.
+This is a **D&D 2024 / 5.5e** project (per [AGENTS.md](AGENTS.md)). Two
+layered defenses keep the encoding correct:
 
-**Discipline:** every time you encode a spell's mechanics on an NPC action
-row, read the result's `document.key` field. Confirm it's `srd-2024`. If
-it's `srd-2014` or anything else, re-search with `source='srd-2024'` as a
-hard filter, OR pull the v2 key directly via `get_spell_details(key='srd-2024_<spell>')`.
-Don't trust the rank order alone.
+**1. MCP rule-text lookups default to `source='srd-2024'`.**
 
-Known-changed spells where 2024 differs materially from 2014 (extend as you
-find more — keep entries specific so a quick scan catches real gotchas):
+`search_spells` and `search_rules` now hard-filter to srd-2024 unless you
+explicitly opt out. The MCP SRD cache (`.cache/srd5_2_v2.sqlite`) holds
+entries from every source side-by-side, and a ranked-only query could
+historically surface a 2014 entry that an authoring session then encoded
+as-if it were current (the original Counterspell-2014 regression). With
+the hard filter, that path is closed by default.
 
-- **Counterspell** — target makes Con save (was: caster ability check); slot
-  is NOT expended on a successful counter (was: always expended); base DC
-  10 + Counterspell's slot level. See `aelric-frostweaver/counterspell` in
-  `combat-runner/actions.jsonl` for the canonical encoding in this repo.
+Opt-out forms (use when you specifically want legacy / third-party):
+- `source=''` — no filter, no priority sort, raw API order
+- `source='srd-2014'` — fetch legacy entry on purpose
+- `source='tob,a5e-ag'` — third-party only
 
-Pinned via `combat-runner/tests/test_actions_db_2024_rules.py` — one test
-per (npc, action) pair, fails if a row regresses to 2014 phrasing.
+`get_spell_details` / `get_rule_section` were already safe: their key
+argument (`'srd-2024_counterspell'`) encodes the source in the request.
+
+**2. House rules + known-changed entries live in [`scripts/srd_corrections.yml`](scripts/srd_corrections.yml).**
+
+Consulted ONLY by `combat_action_upsert` after a row validates — never by
+the live MCP path. When the action name matches an entry, the tool scans
+the spec's text fields for that entry's `expected_phrases` (must be
+present) and `banned_phrases` (must not be present), and returns advisory
+warnings in the upsert response. Warnings don't block the write; they
+nudge you toward the right encoding.
+
+Add an entry to that file when:
+- A 2014 → 2024 mechanic changed and the upstream cache might leak old
+  phrasing (Counterspell is the canonical first entry).
+- You're encoding a campaign house rule that diverges from RAW (use the
+  `house_tweaks` field for the note; the phrase checks stay optional).
+
+Backstopped by `combat-runner/tests/test_actions_db_2024_rules.py` — one
+test per (npc, action) pair that pins specific rows to specific phrasings.
 
 ### Campaign-time math (in-process, mtime-checked)
 

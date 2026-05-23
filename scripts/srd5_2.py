@@ -581,7 +581,12 @@ def search_spells(
     range_min: Optional[int] = None,
     range_max: Optional[int] = None,
     keys: Optional[str] = None,
-    source: Optional[str] = None,
+    # Default hard-filters to srd-2024 so the cache cannot leak srd-2014
+    # entries (the bug that put 2014-rules Counterspell into actions.jsonl).
+    # Opt-out: source='' (empty string) → no filter, no priority sort. Or
+    # name another source explicitly (e.g. source='srd-2014' to fetch
+    # legacy rules on purpose, source='tob,a5e-ag' for third-party).
+    source: Optional[str] = "srd-2024",
     match: str = "partial",
     fields: Optional[str] = None,
     exclude: Optional[str] = None,
@@ -888,7 +893,10 @@ def search_armor(
 def search_rules(
     query: str,
     keys: Optional[str] = None,
-    source: Optional[str] = None,
+    # Default hard-filters to srd-2024 so rule-text lookups don't accidentally
+    # surface legacy 2014 phrasing. Opt-out: source='' (no filter, no priority
+    # sort) or source='srd-2014' to fetch legacy rules on purpose.
+    source: Optional[str] = "srd-2024",
     fields: Optional[str] = None,
     exclude: Optional[str] = None,
     limit: int = 5,

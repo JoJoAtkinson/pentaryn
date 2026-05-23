@@ -1,0 +1,62 @@
+# Joe's house-rules + known-changed SRD entries.
+#
+# What this file is:
+#   A flat, human-readable index of spells/features where the SRD entry
+#   needs special handling at NPC-authoring time. NOT consumed at runtime
+#   by the MCP / SRD lookup path — only by `combat_action_upsert` after a
+#   new row is validated. The MCP API and its cache remain untouched.
+#
+# Two reasons to add an entry here:
+#   1. A known 2014 → 2024 mechanic difference the cache might leak (the
+#      original bug — see commit 1bf4307 for Counterspell).
+#   2. A house rule that diverges from RAW (write `house_tweaks` notes).
+#
+# Schema (one entry per (kind, action_name)):
+#   spells:
+#     <spell_name>:                        # matches the upsert's `action` arg
+#       summary: <one-line plain-English description>
+#       expected_phrases: [...]            # case-insensitive substrings the
+#                                          # spec's text MUST contain. Each
+#                                          # missing phrase → a warning.
+#       banned_phrases: [...]              # phrases that signal the row
+#                                          # regressed (e.g. 2014 wording).
+#                                          # Each present phrase → a warning.
+#       house_tweaks: [...]                # optional. free-form notes for
+#                                          # at-table house rules. Listed for
+#                                          # human review; not checked.
+#       references:                        # optional links / SRD keys
+#         srd_2024_key: <key>
+#         notes: <free-form>
+#
+# Warnings are advisory — the upsert still persists. A noisy file is fine;
+# the goal is "you'll see the right thing at authoring time."
+
+spells:
+
+  counterspell:
+    summary: "2024 rules: target makes Con save; slot NOT expended on success; DC = 10 + Counterspell's slot level."
+    expected_phrases:
+      - "Constitution"     # the casting creature's save ability
+      - "not expended"     # or "isn't expended" — the slot-survives clause
+    banned_phrases:
+      - "ability check"    # 2014: caster rolled this; 2024 has no such roll
+      - "auto-counters"    # 2014 auto-counter for low-level spells; removed
+      - "slot is expended" # 2014 expended-on-success rule
+    house_tweaks: []
+    references:
+      srd_2024_key: srd-2024_counterspell
+      notes: "Confirmed via search_spells(name='counterspell', match='exact', source='srd-2024')."
+
+# ─────────── (placeholders — uncomment + fill as you find more) ───────────
+#
+#  fireball:
+#    summary: "..."
+#    expected_phrases: [...]
+#    banned_phrases: [...]
+#    house_tweaks:
+#      - "We rule that Fireball is centered on a point in space, and a creature
+#         at the EDGE of the 20-ft sphere gets advantage on the save."
+#
+# rules:
+#   # Same shape as spells. Use when an NPC's action invokes a general rule
+#   # that has a known 2014/2024 difference (e.g. opportunity attacks).
