@@ -342,6 +342,13 @@ class MainWindow(QMainWindow):
         self.event_bus.subscribe("move_away", self._on_move_away_event)
 
         self._tab_action_surfaces: dict[int, list[dict]] = {}
+        # Pre-index every .md under the encounter root by slug (stem). Used to
+        # populate the per-tab Stat Block panel. rglob handles flat layouts
+        # (`<root>/npcs/<slug>.md`) and nested ones (`<root>/npcs/gnolls/<slug>.md`)
+        # uniformly. PC tabs (no .md) drop through to None.
+        self._md_paths_by_slug: dict[str, Path] = {
+            p.stem: p for p in self.encounter_state.root.rglob("*.md")
+        }
         for npc in self.encounter_state.npcs:
             actions = self._db.list_actions(npc=npc.slug)
             # Canonical action order: the NPC's own actions first, global /
@@ -367,6 +374,7 @@ class MainWindow(QMainWindow):
                 log_path=self.encounter_state.log_path,
                 parent=self,
                 event_bus=self.event_bus,
+                md_path=self._md_paths_by_slug.get(npc.slug),
             )
             self._tab_action_surfaces[id(tab)] = actions
             tab.state_changed.connect(self._on_tab_state_changed)

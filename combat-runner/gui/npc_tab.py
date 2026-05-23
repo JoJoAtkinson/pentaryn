@@ -27,6 +27,8 @@ from PySide6.QtWidgets import (
     QLabel,
     QPushButton,
     QSizePolicy,
+    QTabWidget,
+    QTextBrowser,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -224,12 +226,16 @@ class NPCTab(QWidget):
         log_path: Path,
         parent: QWidget | None = None,
         event_bus: EventBus | None = None,
+        md_path: Path | None = None,
     ) -> None:
         super().__init__(parent)
         self.npc_state = npc_state
         self.actions = actions  # action summaries from combat_actions_db.list_actions
         self.log_path = Path(log_path)
         self.event_bus = event_bus
+        # Path to the NPC's source .md file. Used by the "Stat block" tab in
+        # the console panel for at-table reference. None for PC tabs (no .md).
+        self.md_path = Path(md_path) if md_path else None
         if self.event_bus is not None:
             self.event_bus.subscribe("round_advanced", self._on_round_event)
 
@@ -377,10 +383,10 @@ class NPCTab(QWidget):
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
 
-        log_header = QLabel("Combat log")
-        log_header.setStyleSheet("color: #6c8eba; font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em;")
-        layout.addWidget(log_header)
-
+        # Combat log + stat-block reference share a mini-tabbed console area.
+        # The combatant-tab bar at the top of the window is the primary
+        # navigation surface — this inner bar is intentionally smaller / lower
+        # contrast so it reads as a sub-control of the box below.
         self.log_view = QTextEdit()
         self.log_view.setReadOnly(True)
         self.log_view.setObjectName("CombatLog")
@@ -388,10 +394,45 @@ class NPCTab(QWidget):
         # has glyphs for d4/d6/d8/d10/d12/d20 numerals. Qt falls back to the
         # next family for any codepoint the dice font lacks (i.e. normal text).
         self.log_view.setStyleSheet(
-            "background: #14171b; color: #b8bdc4; border: 1px solid #2a2f38; "
+            "background: #14171b; color: #b8bdc4; border: none; "
             "font-family: 'DnD Dice', 'SF Mono', Menlo, monospace; font-size: 12px;"
         )
-        layout.addWidget(self.log_view, 1)
+
+        self.stat_view = QTextBrowser()
+        self.stat_view.setOpenExternalLinks(False)
+        self.stat_view.setStyleSheet(
+            "background: #14171b; color: #b8bdc4; border: none; "
+            "font-size: 11px; padding: 6px;"
+        )
+        self._populate_stat_view()
+
+        self.console_tabs = QTabWidget()
+        self.console_tabs.setObjectName("ConsoleTabs")
+        # Small / connected style: thin tabs, no expanding fill, selected tab
+        # blends into the pane below by sharing background and dropping its
+        # bottom border. Distinct enough from the combatant tab bar (which is
+        # the OS default tab style at full size) that the two read as two
+        # different levels of navigation.
+        self.console_tabs.setStyleSheet(
+            "QTabWidget#ConsoleTabs::pane { border: 1px solid #2a2f38; "
+            "  background: #14171b; top: -1px; }"
+            "QTabWidget#ConsoleTabs QTabBar::tab { "
+            "  padding: 2px 10px; margin-right: 2px; "
+            "  font-size: 10px; color: #6c8eba; "
+            "  background: #1c2027; border: 1px solid #2a2f38; "
+            "  border-bottom: none; "
+            "  border-top-left-radius: 3px; border-top-right-radius: 3px; }"
+            "QTabWidget#ConsoleTabs QTabBar::tab:selected { "
+            "  background: #14171b; color: #cdb4ff; }"
+            "QTabWidget#ConsoleTabs QTabBar::tab:hover:!selected { "
+            "  color: #b8bdc4; }"
+        )
+        bar = self.console_tabs.tabBar()
+        if bar is not None:
+            bar.setExpanding(False)
+        self.console_tabs.addTab(self.log_view, "Combat log")
+        self.console_tabs.addTab(self.stat_view, "Stat block")
+        layout.addWidget(self.console_tabs, 1)
 
         # Suggestion bar (v0.2): 3 LLM-prefetched action shortcuts above the input
         self.suggestion_bar = SuggestionBar(max_buttons=3)
@@ -810,6 +851,37 @@ class NPCTab(QWidget):
             self.hp_bar.set_preview(member, projected_hp)
 
     # ─────────── log helpers ───────────
+
+    def _populate_stat_view(self) -> None:
+        """Load `self.md_path` into the Stat block tab, stripping frontmatter.
+
+        Called once at construction — the NPC's .md doesn't mutate during play.
+        Falls back to a graceful placeholder when md_path is missing/unreadable
+        (PC tabs, files moved, file permissions, etc.)."""
+        if self.md_path is None:
+            self.stat_view.setMarkdown(
+                "*(no stat block file — PC tabs or md_path not provided)*"
+            )
+            return
+        if not self.md_path.exists():
+            self.stat_view.setMarkdown(
+                f"*(stat block file not found: `{self.md_path.name}`)*"
+            )
+            return
+        try:
+            text = self.md_path.read_text(encoding="utf-8")
+        except OSError as e:
+            self.stat_view.setMarkdown(
+                f"*(stat block unavailable: {e})*"
+            )
+            return
+        # Strip leading --- frontmatter block (same approach as the picker's
+        # _overview.md preview). Keep everything past the closing fence.
+        if text.startswith("---"):
+            end = text.find("---", 3)
+            if end > 0:
+                text = text[end + 3:].lstrip("\n")
+        self.stat_view.setMarkdown(text)
 
     def _append_log(self, html: str) -> None:
         self.log_view.append(html)
