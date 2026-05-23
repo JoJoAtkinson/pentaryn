@@ -33,7 +33,7 @@ At the end of each *other* creature's turn, the beholder may spend legendary act
 - **Move (1 action):** fly speed.
 - **Tentacle (1 action):** one `tentacle_lash` attack (verb: `tentacle`).
 - **Void Ray (2 actions):** `void_ray` — DC 16 Dex, 4d10 force, half on save (range 120 ft).
-- **Drain Divinity (3 actions):** `drain_divinity` — target with spell slots in 30 ft makes DC 16 Cha or loses highest slot; beholder gains 2× slot level temp HP.
+- **Drain Divinity (3 actions):** `drain_divinity` — living target with spell slots in 30 ft makes DC 16 Cha or loses highest slot; beholder gains 2× slot level temp HP. (Living target only — fizzles if target is dead or has no slots.)
 
 Track remaining actions on the tab.
 
