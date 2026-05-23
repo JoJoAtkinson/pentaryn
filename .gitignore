@@ -52,6 +52,7 @@ package-lock.json
 
 # Python / uv
 .venv/
+.venv-cron/
 venv/
 __pycache__/
 *.pyc
