@@ -47,6 +47,7 @@ _DURATION_MAX = 100
 # Sigil-first patterns for out-of-band commands that can't be confused with
 # the `<who> <stream>` grammar: they start with a literal keyword or `/`.
 _NOTE_RE = re.compile(r"^note(?:\s+(.+))?$", re.IGNORECASE)
+_INFO_RE = re.compile(r"^info(?:\s+(.+))?$", re.IGNORECASE)
 _REORDER_RE = re.compile(r"^/reorder\s+(.+)$", re.IGNORECASE)
 _QUIT_RE = re.compile(r"^/(quit|exit)$", re.IGNORECASE)
 
@@ -131,6 +132,9 @@ def parse(raw: str) -> ParsedCommand:
     if m := _NOTE_RE.match(raw):
         return ParsedCommand(
             kind="note", raw=raw, note_text=(m.group(1) or "").strip())
+    if m := _INFO_RE.match(raw):
+        return ParsedCommand(
+            kind="info", raw=raw, info_token=(m.group(1) or "").strip())
     if m := _REORDER_RE.match(raw):
         slugs = [tok for tok in re.split(r"\s+", m.group(1).strip()) if tok]
         return ParsedCommand(kind="reorder", raw=raw, reorder_slugs=slugs)

@@ -1104,6 +1104,10 @@ class MainWindow(QMainWindow):
             self._handle_reorder_request(cmd.reorder_slugs)
             return
 
+        if cmd.kind == "info":
+            self._handle_info_request(cmd.info_token)
+            return
+
         if cmd.kind == "quit":
             self.close()
             return
@@ -1670,6 +1674,88 @@ class MainWindow(QMainWindow):
         current = self.tabs.currentWidget()
         if current is not None and hasattr(current, "_append_log"):
             current._append_log(html)
+
+    def _handle_info_request(self, token: str) -> None:
+        """Resolve `info <token>` against the active tab's action surface and
+        print the action's full spec to the active log.
+
+        Token resolution:
+          * empty                → print a short usage hint
+          * all-digits           → resolve as a panel hotkey number
+          * anything else        → match against action name (exact) then any
+                                    verb (substring, case-insensitive)
+        """
+        current = self.tabs.currentWidget()
+        if current is None or not hasattr(current, "actions"):
+            self._append_to_active_tab(
+                "<span style='color:#7d8590'>ℹ no active combatant tab — switch to an NPC first</span>"
+            )
+            return
+
+        actions: list[dict] = list(current.actions or [])
+        if not actions:
+            self._append_to_active_tab(
+                "<span style='color:#7d8590'>ℹ this tab has no actions to describe</span>"
+            )
+            return
+
+        if not token:
+            available = ", ".join(f"{i+1}.{a['action']}" for i, a in enumerate(actions[:8]))
+            more = f" (+{len(actions)-8} more)" if len(actions) > 8 else ""
+            self._append_to_active_tab(
+                f"<span style='color:#cdb4ff'>ℹ usage: <b>info &lt;number|name&gt;</b></span><br/>"
+                f"<span style='color:#7d8590'>available: {available}{more}</span>"
+            )
+            return
+
+        from .action_numbering import resolve_panel_number
+        from .action_info import format_action_info
+
+        resolved: dict | None = None
+        if token.isdigit():
+            resolved = resolve_panel_number(actions, int(token))
+        else:
+            low = token.lower()
+            # Exact action-name match first (snake_case allowed); then verb
+            # substring match for fuzzy DM phrasing.
+            resolved = next(
+                (a for a in actions if a.get("action", "").lower() == low),
+                None,
+            )
+            if resolved is None:
+                # space → underscore — "void scream" → "void_scream"
+                snake = low.replace(" ", "_")
+                resolved = next(
+                    (a for a in actions if a.get("action", "").lower() == snake),
+                    None,
+                )
+            if resolved is None:
+                resolved = next(
+                    (a for a in actions
+                     if any(low in v.lower() for v in (a.get("verbs") or []))),
+                    None,
+                )
+
+        if resolved is None:
+            self._append_to_active_tab(
+                f"<span style='color:#ff8c8c'>ℹ no action on this tab matches "
+                f"<b>{token}</b></span>"
+            )
+            return
+
+        # The tab's `actions` carries summaries (verbs / type / recharge /
+        # range), not the full spec (attacks, damage, save, effect text).
+        # Pull the full row from the DB for a complete description.
+        import sys
+        from pathlib import Path
+        repo_root = Path(__file__).resolve().parents[2]
+        sys.path.insert(0, str(repo_root / "scripts"))
+        try:
+            from combat_actions_db import get as db_get
+            full = db_get(current.npc_state.slug, resolved["action"])
+        except Exception:
+            full = resolved  # fall back to the summary — partial info beats none
+        self._append_to_active_tab(format_action_info(full or resolved))
 
     @staticmethod
     def _npc_before_state(before_snapshot: dict, npc_id: str) -> dict | None:

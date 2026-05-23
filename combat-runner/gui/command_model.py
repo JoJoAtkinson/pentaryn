@@ -34,7 +34,7 @@ class Effect:
     # minimum (already applied) and marks the pending record resolved + logs.
 
 
-CommandKind = Literal["command", "set_target", "unparseable", "note", "reorder", "quit"]
+CommandKind = Literal["command", "set_target", "unparseable", "note", "reorder", "quit", "info"]
 
 
 @dataclass
@@ -48,4 +48,6 @@ class ParsedCommand:
     note_text: str = ""
     # kind == "reorder"
     reorder_slugs: list[str] = field(default_factory=list)
+    # kind == "info"  — panel-number string or action-name/verb to look up
+    info_token: str = ""
     # kind in ("quit",) -> no extra fields
