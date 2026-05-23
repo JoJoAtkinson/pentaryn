@@ -55,6 +55,11 @@
 - **Recommendation:** Add an explicit example to `derro-shardcaller.md`: "e.g., if the Rager hits Bazgar on the Rager's turn, Bazgar has disadvantage on all saves until end of Bazgar's next turn." Ruling: YES, applies to any save by the target before end of target's next turn, regardless of when in the round the save is triggered.
 - See `_playtest-runs/2026-05-23T03-17-40.md` FI-2 / MQ-2.
 
+### DD-11: Maw grapple rider — "critical hit" (DB) vs "disadvantage on saving throw" (original stat sheet)
+- **Context:** The original `beholder-thrulm.md` stat block described the Maw grapple effect as "target has disadvantage on the saving throw." The DB spec (authored during the `feat(thrulm)` conversion) says "If the target is grappled by the beholder, this attack is a critical hit instead." These are mechanically different: the crit version doubles Maw damage on a grappled target (~21 → ~39 avg) while the disadvantage version only penalizes PC reactions. Both the `multiattack` Maw entry and the new standalone `maw` action use the "crit" version for consistency.
+- **Recommendation:** Decide which rule is canonical. The crit version creates more dramatic grapple→bite moments but is a significant upgrade. If intending "crit on grapple," document explicitly in tactics. If intending "disadvantage on saves," update `rider_on_hit` on both `multiattack.Maw` and standalone `maw`.
+- See `_playtest-runs/2026-05-23T04-30-11.md` DD-11.
+
 ### DD-10: dnd_roller.py needs local RNG fallback for cron sandbox (INFRA)
 - **Context:** External RNG endpoints (random.org, quantumnumbers.anu.edu.au) are blocked by the Anthropic sandbox outbound network policy. Phase A required a monkey-patch in the cron harness to pre-populate the number cache with `random.Random`. All 27 actions still passed cleanly.
 - **Recommendation:** Add ~10 lines to `scripts/dnd_roller.py` inside `_ensure_numbers`: after both external fetches fail, fall back to `os.urandom`-seeded local random. Out of cron blast radius — human to implement.
@@ -71,6 +76,7 @@
 
 *(newest first; each entry is one line — drill into `_playtest-runs/<ts>.md` for details)*
 
+- 2026-05-23 04:30 UTC — slice #3 (beholder-escorts-limited) — party indeterminate (Marwen 💀 R2, Bazgar grappled, Sabriel untouched at 43/44 HP; projected TPK by R4-5); beholder at 51/110 HP after 3 rounds; Fireball never fired (Marwen eliminated before R3); 0 bugs fixed, 1 new DD raised (DD-11 Maw grapple-crit vs disadvantage-on-saves discrepancy) — see _playtest-runs/2026-05-23T04-30-11.md
 - 2026-05-23 03:17 UTC — slice #2 (tank-wall) — party VICTORY in 5 rounds; no PCs fell; Shardcaller fired Shard-Barrage 3× (high luck run); Taunt DC 12 never landed (3/3 misses by Marwen); 0 bugs fixed, 3 DESIGN DECISIONS raised (DD-8 Call Weakness guard, DD-9 Pack Tactics timing, DD-10 local RNG fallback) — see _playtest-runs/2026-05-23T03-17-40.md
 - 2026-05-23 02:30 UTC — slice #1 (shrine-wedge) — party VICTORY in 4 rounds; Sabriel fell R3 (Unstable Form advantage chained hits); altar zone suppressed Fireball doubling, saving both derro from R1 death; 1 auto-fix (altar zone docs), 4 DESIGN DECISIONS raised — see _playtest-runs/2026-05-23T02-30-00.md
 - 2026-05-23 01:37 UTC — slice #0 (threshold-patrol) — party VICTORY in 3 rounds; Marwen reached 8 HP (primary target throughout); Shardcaller barrage dominated damage; 1 bug fixed (ancient_resonance psychic rider) — see _playtest-runs/2026-05-23T01-41-59.md
