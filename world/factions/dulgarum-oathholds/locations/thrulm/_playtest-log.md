@@ -70,6 +70,14 @@
 - **Recommendation:** Two options: (a) Give beholder +4 flat initiative bonus (legendary tier — justified by its truesight and alien perception); (b) add tactics note "If Disintegration Ray primary target is dead, retarget next caster/divine martial or hold for Void Scream." Auto-fix #1 in this run adds the retarget text but does not address the init position. Does not change encounter balance (still TPK in 2 rounds) but impairs the beholder's menace.
 - See `_playtest-runs/2026-05-23T05-21-54.md` DD-12.
 
+### DD-14: Solo-rager-rush resolves in 2 rounds — Berserk/Taunt/Madness mechanics untested
+- **Context:** 2026-05-23 solo-rager-rush run (seed 494310). Marwen's two Fireballs (8d6 each) dealt more damage across R1–R2 than all six rager multiattacks combined. The fight ended before any Berserk recharge roll was needed, before Taunt-forced disadvantage had a meaningful effect, and before Madness Endurance produced a visible hit. The three signature mechanics the slice is intended to stress-test were never exercised.
+- **Recommendation:** (a) Bump rager HP to ~65 to survive a single Fireball hit and force 4+ rounds, or (b) add a Fireball terrain constraint (column cover in the vault limits AOE overlap to 2 ragers max). Without a change, every wizard-in-party run ends this slice in R2. See `_playtest-runs/2026-05-23T06-19-43.md` FI-1.
+
+### DD-15: Berserk output always shows 3 attacks regardless of in-reach target count
+- **Context:** 2026-05-23 solo-rager-rush. Rager#2 berserked with only 2 living PCs; the DB output still printed a 3rd attack line. The prereq says "fewer attacks if fewer in reach" but the roller enforces nothing — DM must manually skip excess lines. Confusing at table.
+- **Recommendation:** Document in `derro-rager.md` tactics: "Berserk output always prints 3 attack lines — DM caps at actual in-reach creature count." Or restructure spec to hand-roll variable targets outside the DB. See `_playtest-runs/2026-05-23T06-19-43.md` FI-2.
+
 ### DD-13: Void Eruption lair action damage variance — can feel trivial on low rolls
 - **Context:** Round 1 Void Eruption (2d10 force, DC 16 Dex) rolled 2 total (1+1 = 2). Half on save = 1 force per PC. A lair action that deals 1 force is set-dressing. At mean (11), it's meaningful; at minimum (2), it's not. This is the first time the lair action's low-end has been tested.
 - **Recommendation:** Raise to `3d6` (range 3–18, average 10.5) for a higher floor with similar ceiling, or add a minimum damage note. Alternatively raise the save DC from 16 to 17 to make even small-damage results sting more. Balance-adjacent only — all 4 final-confrontation runs result in TPK regardless.
@@ -86,6 +94,7 @@
 
 *(newest first; each entry is one line — drill into `_playtest-runs/<ts>.md` for details)*
 
+- 2026-05-23 06:19 UTC — slice #5 (solo-rager-rush) — party VICTORY in 2 rounds; Marwen near-lethal R1 (2 HP), revived R2; 2 Fireballs solved the fight before Berserk/Taunt/Madness mechanics could loop; 0 bugs fixed, 2 new DDs raised (DD-14 HP too low for slice intent, DD-15 Berserk 3-attack output confusion) — see _playtest-runs/2026-05-23T06-19-43.md
 - 2026-05-23 05:21 UTC — slice #4 (final-confrontation) — TPK in 2 rounds; Marwen 💀 R1 (double Ancient Resonance), Bazgar 💀 R2 (void eruption), Sabriel 💀 R2 (shrine-touched multiattack); beholder dealt 0 direct damage (init 6, all PCs dead/dying before its turn); 2 bugs fixed (retarget tactics, chamber hazard mislabeling), 2 new DDs raised (DD-12 init, DD-13 lair variance), DD-11 follow-up added — see _playtest-runs/2026-05-23T05-21-54.md
 - 2026-05-23 04:30 UTC — slice #3 (beholder-escorts-limited) — party indeterminate (Marwen 💀 R2, Bazgar grappled, Sabriel untouched at 43/44 HP; projected TPK by R4-5); beholder at 51/110 HP after 3 rounds; Fireball never fired (Marwen eliminated before R3); 0 bugs fixed, 1 new DD raised (DD-11 Maw grapple-crit vs disadvantage-on-saves discrepancy) — see _playtest-runs/2026-05-23T04-30-11.md
 - 2026-05-23 03:17 UTC — slice #2 (tank-wall) — party VICTORY in 5 rounds; no PCs fell; Shardcaller fired Shard-Barrage 3× (high luck run); Taunt DC 12 never landed (3/3 misses by Marwen); 0 bugs fixed, 3 DESIGN DECISIONS raised (DD-8 Call Weakness guard, DD-9 Pack Tactics timing, DD-10 local RNG fallback) — see _playtest-runs/2026-05-23T03-17-40.md
