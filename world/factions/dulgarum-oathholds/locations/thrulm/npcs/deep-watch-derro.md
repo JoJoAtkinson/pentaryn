@@ -27,7 +27,7 @@ tags: ["#combat-runner", "#npc", "#combat", "#derro", "#dulgarum-oathholds", "#t
 - **Round 1, in formation:** Multiattack (two hand axes) on the closest melee threat that has an ally in reach — Tactical Drilling kicks in.
 - **Isolated / outranged:** Switch to **Light Crossbow** (range 80/320, +4 to hit). Better hit chance and lets the derro hold position behind cover.
 - **Focus-fire:** Anyone visibly casting or healing — Deep Watch knows what a wizard looks like.
-- **Below half HP (≤13):** Cunning Action → Disengage, fall back to nearest ally or cover. Will *not* break ranks without an order; will retreat if a Deep Watch officer signals withdrawal.
+- **Below half HP (≤13):** Cunning Action → Disengage, fall back to nearest ally or cover. Once disengaged, switch to **Light Crossbow** from cover — do NOT re-enter melee range. Will *not* break ranks without an order; will retreat if a Deep Watch officer signals withdrawal.
 - **Sunlight:** Disadvantage on attacks and sight-based Perception. Will refuse to fight in direct sun unless ordered.
 
 ## Description (one line)
