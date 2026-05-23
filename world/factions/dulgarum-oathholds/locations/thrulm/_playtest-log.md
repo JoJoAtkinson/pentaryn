@@ -83,6 +83,22 @@
 - **Recommendation:** Raise to `3d6` (range 3–18, average 10.5) for a higher floor with similar ceiling, or add a minimum damage note. Alternatively raise the save DC from 16 to 17 to make even small-damage results sting more. Balance-adjacent only — all 4 final-confrontation runs result in TPK regardless.
 - See `_playtest-runs/2026-05-23T05-21-54.md` DD-13.
 
+### DD-16: Call Weakness wasted in shardcaller-only formations — attack-roll ability incompatible with Barrage
+- **Context:** 2026-05-23 shardcaller-team run. All 3 shardcallers burned Call Weakness in R1 on allies who then fired Shard-Barrage (a save-based area, not an attack roll). All 5 charges spent had zero measurable effect. Call Weakness says "advantage on next attack roll" — Barrage, Taunt, and Ancient Resonance are all saves, not attack rolls.
+- **Fix applied:** Added explicit guard to `derro-shardcaller.md` tactics: "Do not Call Weakness an ally who plans to use Shard-Barrage this turn — advantage is wasted." Also added stagger note for multi-shardcaller formations.
+- **Remaining work:** Extend note to cover Rager Taunt + any other save-based abilities in the encounter. Consider redesigning Call Weakness to grant advantage on saves instead (or both) if intended to synergize with Barrage.
+- See `_playtest-runs/2026-05-23T07-16-03.md` FI-1 / DD-16.
+
+### DD-17: Triple Barrage front-loaded in R1 — shardcaller signature weapon never recycles
+- **Context:** 2026-05-23 shardcaller-team run. All 3 shardcallers fired Barrage in R1 (simultaneous); recharge 5–6 never fired in R2–R3. Identical structural issue to DD-6 (shrine-touched double Resonance R1). The "will Barrage recharge?" tension that the mechanic is designed for never emerged.
+- **Recommendation:** Auto-fix (stagger tactic) applied to .md. Two additional options: (a) raise recharge to 4–6 for higher probability in multi-round fights, (b) give shardcallers a tactics rule preventing barrage if another shardcaller just fired this round (forcing natural stagger). Stagger tactic alone requires DM discipline — may not be reliable at table.
+- See `_playtest-runs/2026-05-23T07-16-03.md` FI-2 / DD-17.
+
+### DD-18: Fireball trivializes shardcaller slice (mirror of DD-14 for ragers)
+- **Context:** 2026-05-23 shardcaller-team run. Marwen's R2 Fireball brought all 3 shardcallers from 33 HP to 11/11/dead. Fight effectively decided by a single spell. Shardcallers have no fire resistance and low HP for a 3-NPC cluster in an open area. Kiting mechanic (Tactical Retreat) was mechanically irrelevant — Fireball is 150-ft range and doesn't require the wizard to close.
+- **Recommendation:** Terrain constraint (columns limit Fireball overlap to ≤2 targets at once) OR bump HP to ~42 OR give shardcallers Evasion. Terrain constraint is the least disruptive and fits the stone-corridor setting. Authoring-only change to encounter notes; no DB modification needed.
+- See `_playtest-runs/2026-05-23T07-16-03.md` FI-3 / DD-18.
+
 ### DD-7: Multiattack output labels combined damage under primary type (ONGOING from DD-2)
 - **Context:** Multiattack output reads "7 slashing (incl +1 necrotic extra_damage)" — the combined total is labeled under slashing. A DM applying slashing resistance would incorrectly halve the necrotic portion. Root cause is dnd_roller.py multiattack renderer, not the DB spec.
 - **Recommendation:** Fix multiattack renderer to display "6 slashing + 1 necrotic = 7 total". Out of cron blast radius.
@@ -94,6 +110,7 @@
 
 *(newest first; each entry is one line — drill into `_playtest-runs/<ts>.md` for details)*
 
+- 2026-05-23 07:16 UTC — slice #6 (shardcaller-team) — party VICTORY in 3 rounds; Bazgar took 28 piercing R1 (double-barrage), Marwen near-lethal at 9/32 R2; Fireball R2 collapsed two shardcallers and put all three in finishing range; Call Weakness wasted entirely (attack-roll ability incompatible with Barrage); triple front-loaded Barrage fired R1, recharge never happened; kiting feel absent (Fireball trivializes range advantage); 1 auto-fix (Call Weakness / Barrage stagger tactics), 3 new DDs raised (DD-16 CW incompatibility, DD-17 Barrage front-load, DD-18 Fireball trivializes) — see _playtest-runs/2026-05-23T07-16-03.md
 - 2026-05-23 06:19 UTC — slice #5 (solo-rager-rush) — party VICTORY in 2 rounds; Marwen near-lethal R1 (2 HP), revived R2; 2 Fireballs solved the fight before Berserk/Taunt/Madness mechanics could loop; 0 bugs fixed, 2 new DDs raised (DD-14 HP too low for slice intent, DD-15 Berserk 3-attack output confusion) — see _playtest-runs/2026-05-23T06-19-43.md
 - 2026-05-23 05:21 UTC — slice #4 (final-confrontation) — TPK in 2 rounds; Marwen 💀 R1 (double Ancient Resonance), Bazgar 💀 R2 (void eruption), Sabriel 💀 R2 (shrine-touched multiattack); beholder dealt 0 direct damage (init 6, all PCs dead/dying before its turn); 2 bugs fixed (retarget tactics, chamber hazard mislabeling), 2 new DDs raised (DD-12 init, DD-13 lair variance), DD-11 follow-up added — see _playtest-runs/2026-05-23T05-21-54.md
 - 2026-05-23 04:30 UTC — slice #3 (beholder-escorts-limited) — party indeterminate (Marwen 💀 R2, Bazgar grappled, Sabriel untouched at 43/44 HP; projected TPK by R4-5); beholder at 51/110 HP after 3 rounds; Fireball never fired (Marwen eliminated before R3); 0 bugs fixed, 1 new DD raised (DD-11 Maw grapple-crit vs disadvantage-on-saves discrepancy) — see _playtest-runs/2026-05-23T04-30-11.md

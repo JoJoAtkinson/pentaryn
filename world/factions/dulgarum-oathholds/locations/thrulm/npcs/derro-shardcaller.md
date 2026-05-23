@@ -28,7 +28,8 @@ tags: ["#combat-runner", "#npc", "#combat", "#derro", "#thrulm", "#ranged", "#su
 - **Position:** 40–60 ft behind the front line. Stays out of melee, uses other derro as cover.
 - **Round 1, in range of a caster:** Multiattack (two Shard-Throws, +4 to hit, range 30/60) on the visible spellcaster / healer first.
 - **3+ enemies in a line:** **Shard-Barrage** (Recharge 5–6) — 15-ft line, DC 13 Dex, 3d6 piercing, half on save.
-- **Bonus action — Call Weakness:** target the ally hitting hardest; that ally gets advantage on its next attack. Save the 3 uses for the fight's most dangerous round.
+- **Bonus action — Call Weakness:** target the ally hitting hardest; that ally gets advantage on its next **attack roll**. **Do not Call Weakness an ally who plans to use Shard-Barrage this turn** — Barrage is a save-based area effect (no attack roll), so the advantage is wasted. Call Weakness is for Multiattack turns only. Save the 3 uses for the fight's most dangerous round. With multiple shardcallers, stagger targets — don't double-buff the same ally.
+- **Stagger Barrages (multiple shardcallers):** when 2+ shardcallers have Barrage available, only one fires per round unless a truly decisive line-up exists. A staggered barrage keeps pressure across multiple rounds; a simultaneous triple-barrage R1 depletes all area coverage instantly and leaves rounds 2+ as pure multiattack.
 - **If a melee threat closes within 15 ft:** Tactical Retreat (no OA), then continue throwing.
 - **Below 12 HP:** retreat behind a Rager or pillar; only fire if no melee can reach.
 
