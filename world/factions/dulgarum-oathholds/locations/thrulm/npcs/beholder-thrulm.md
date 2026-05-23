@@ -2,13 +2,47 @@
 name: The Hunger Below (Beholder)
 description: "An eye-creature drawn to the void left by a sealed god; feeds on the absence of divinity"
 type: creature
-tags: ["#npc", "#combat", "#beholder", "#thrulm", "#boss", "#aberration"]
+location: thrulm
+tags: ["#combat-runner", "#npc", "#combat", "#beholder", "#thrulm", "#boss", "#aberration", "#cr-13"]
 status: active
 created: 2026-04-26
-last-modified: 2026-04-26
+last-modified: 2026-05-23
 ---
 
-# The Hunger Below (Unnamed Beholder)
+# The Hunger Below (Beholder)
+
+**HP** 110 (13d10+39) **·** **AC** 17 (alien hide) **·** **Speed** fly 30 ft. (hover) **·** **Saves** Dex +6, Wis +5 **·** **Resistances** psychic; nonmagic B/P/S (non-sanctified) **·** **Immunities** poison; charmed, exhaustion, frightened, paralyzed, petrified, poisoned, prone, restrained **·** **Truesight** 120 ft. **·** **CR** 13 (10,000 XP)
+
+> Action mechanics live in `combat-runner/actions.jsonl` (DB) — see the launcher-injected **Ready actions** reference for verbs and call signatures.
+>
+> **Void-Feeding (passive, shrine only):** All attack rolls and damage rolls below are pre-computed **+1** for Void-Feeding (active in the Thrulm shrine chamber). Drop to base if beholder leaves the chamber.
+
+---
+
+## Start-of-turn checklist
+
+1. **Antireality** (reaction) refreshes to AVAILABLE.
+2. If **Disintegration Ray** is USED, roll d6 — recovers on **5–6**.
+3. If **Void Scream** is USED, roll d6 — recovers on **6**.
+4. 3 **Legendary Actions** reset at the start of the beholder's turn — track manually.
+5. **Legendary Resistance** (3/Day) — mark uses manually when spent.
+
+---
+
+## Tactics — when the DM asks "what does it do?"
+
+- **Round 1:** Multiattack the lowest-AC target (Marwen, AC 15). Two Tentacle Lashes to grapple, then Maw. If Disintegration Ray is up, open with Ray on Marwen instead (avg 45 force — likely drops her outright).
+- **Mid-fight:** Keep 2+ PCs grappled with Tentacle. Use Legendary Tentacle (1 action) to grab a third if possible. Hold Void Scream for 3 PCs within 30 ft.
+- **Against divine casters:** Legendary Drain Divinity (3 actions) on Sabriel if she has spell slots. Otherwise Legendary Void Ray (2 actions) on ranged attackers.
+- **Below 30 HP:** Shrine-Drift toward lower shaft, Compel Thrall to block pursuit. Disintegration Ray on any PC near 0 HP — disintegration denial is the priority.
+
+## Description (one line)
+
+A hollow sphere of coagulated shadow, 6 ft. across — no eyes, no pupils, just a void-gap where a mouth might be, and four bone-white tentacle-roots that drag across the stone.
+
+---
+
+## Extended Lore & Full Stat Sheet
 
 *Lesson: Not all hungers are created in the normal way.*
 
