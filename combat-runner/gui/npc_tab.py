@@ -763,31 +763,40 @@ class NPCTab(QWidget):
 
     # ─────────── action execution ───────────
 
-    def _run_action(self, action_name: str) -> dict | None:
+    def _run_action(
+        self, action_name: str,
+        target_names_override: list[str] | None = None,
+    ) -> dict | None:
         """Call scripts.dnd_roller.roll_combat_action and append its output.
 
         Returns the parsed result dict (including the structured ``rolls``
         sidecar) so an external caller — the directed-command lifecycle in
         MainWindow — can route save-bearing damage through
         ``apply_uncertain_damage``. Returns ``None`` on an error / exception.
+
+        `target_names_override` — when provided, used instead of pulling
+        target names from this combatant's sticky target_ids. The
+        mob-multiattack distribution path uses this to expand a per-member
+        target list (one name per attack).
         """
         roller = _get_roller()
-        # Resolve this combatant's sticky target_ids → display names so the
-        # attack table can surface `→ <name>` per attack. Lookup goes through
-        # the top-level window's encounter_state (best-effort; if anything is
-        # missing we just pass None and the existing no-decoration shape
-        # renders, same as before this feature existed).
+        # Resolve target_names. Caller's override wins (mob distribution
+        # path); otherwise read this combatant's sticky target_ids and look
+        # up display names via the top-level window's encounter_state.
         target_names: list[str] | None = None
-        try:
-            tids = list(self.npc_state.target_ids or [])
-            mw = self.window()
-            es = getattr(mw, "encounter_state", None)
-            if tids and es is not None and hasattr(es, "combatant_by_id"):
-                resolved = [es.combatant_by_id(tid) for tid in tids]
-                names = [c.name for c in resolved if c is not None]
-                target_names = names or None
-        except Exception:
-            target_names = None
+        if target_names_override is not None:
+            target_names = list(target_names_override) or None
+        else:
+            try:
+                tids = list(self.npc_state.target_ids or [])
+                mw = self.window()
+                es = getattr(mw, "encounter_state", None)
+                if tids and es is not None and hasattr(es, "combatant_by_id"):
+                    resolved = [es.combatant_by_id(tid) for tid in tids]
+                    names = [c.name for c in resolved if c is not None]
+                    target_names = names or None
+            except Exception:
+                target_names = None
         try:
             result_json = roller.roll_combat_action(
                 npc=self.npc_state.slug,
@@ -1031,6 +1040,20 @@ class NPCTab(QWidget):
         ``None`` on error.
         """
         return self._run_action(action_name)
+
+    def run_action_externally_with_targets(
+        self, action_name: str, target_names: list[str],
+    ) -> dict | None:
+        """Variant of run_action_externally that overrides the resolved
+        target_names (instead of pulling them from this tab's sticky target).
+
+        Used by the mob-multiattack distribution path: when a 3-gnoll pack
+        attacks 3 PCs in one fire, MainWindow pre-computes an expanded list
+        like [Bazgar, Bazgar, Marwen, Marwen, Sabriel, Sabriel] so each
+        attack row in the rendered table gets the correct `→ <target>`.
+        Falls through to the regular `_run_action` path for everything else.
+        """
+        return self._run_action(action_name, target_names_override=target_names)
 
     def set_suggestions(self, suggestions: list[Suggestion]) -> None:
         """Main window calls this after the LLM controller returns suggestions

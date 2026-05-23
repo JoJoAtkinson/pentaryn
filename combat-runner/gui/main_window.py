@@ -1441,6 +1441,51 @@ class MainWindow(QMainWindow):
         if _is_area and _action_name_pre is not None:
             _shared_area_result = actor_tab.run_action_externally(_action_name_pre)
 
+        # Mob multiattack distribution: when a mob with count==N targets EXACTLY
+        # N combatants with a multiattack/single_attack action whose attacks
+        # list divides evenly into per-member groups, fire the action ONCE
+        # and route each member's attack-group to its corresponding target.
+        # Pre-fix bug: each typed target re-fired the multiattack, so a
+        # 3-gnoll pack vs 3 PCs rolled 18 attacks instead of 6 and every
+        # target accrued the whole pack's damage as their pending amount.
+        _shared_mob_result: dict | None = None
+        _mob_attacks_per_member = 0
+        _mob_target_names: list[str] = []
+        _is_mob_multi = False
+        if (
+            not _is_area
+            and actor.kind != "pc"
+            and _action_spec_pre is not None
+            and _action_spec_pre.get("type") in ("multiattack", "single_attack")
+            and len(target_ids) > 1
+            and getattr(actor, "count", 1) > 1
+            and len(target_ids) == actor.count
+        ):
+            # `_action_spec_pre` is a list_actions SUMMARY — no full attacks
+            # list. Fetch the full DB row to count attacks-per-member.
+            try:
+                _full_spec = self._db.get(actor.slug, _action_name_pre)
+            except Exception:
+                _full_spec = None
+            _attack_count = (
+                len(_full_spec.get("attacks", []) or []) if isinstance(_full_spec, dict) else 0
+            )
+            if _attack_count > 0 and _attack_count % actor.count == 0:
+                _mob_attacks_per_member = _attack_count // actor.count
+                # Resolve target names so the runner can decorate each attack
+                # row with the right `→ <name>`. Members 1..N attack targets
+                # 1..N respectively, so we expand the per-member groups in
+                # order: [t1, t1, t2, t2, t3, t3] for attacks_per_member=2.
+                for cid in target_ids:
+                    c = self.encounter_state.combatant_by_id(cid)
+                    name = c.name if c is not None else cid
+                    for _ in range(_mob_attacks_per_member):
+                        _mob_target_names.append(name)
+                _is_mob_multi = True
+                _shared_mob_result = actor_tab.run_action_externally_with_targets(
+                    _action_name_pre, target_names=_mob_target_names,
+                )
+
         for cid in target_ids:
             combatant = self.encounter_state.combatant_by_id(cid)
             if combatant is None:
@@ -1511,15 +1556,41 @@ class MainWindow(QMainWindow):
             # AoE branch: an `area` action was already rolled ONCE above the
             # loop. Reuse the shared result so every target saves against the
             # same damage number (5e cone/sphere mechanics).
+            #
+            # Mob-multi branch: a mob multiattack vs N==count targets was
+            # rolled ONCE above; per-target damage = sum of THAT member's
+            # contiguous attack-slice from `rolls.per_attack_damage`.
+            #
+            # Default branch: fire once per target (legitimate per-target
+            # roll independence for attacks).
+            override_total: int | None = None
             if _is_area and _shared_area_result is not None:
                 result = _shared_area_result
+            elif _is_mob_multi and _shared_mob_result is not None:
+                result = _shared_mob_result
+                # Identify THIS target's member index in the typed order to
+                # slice the per_attack_damage list.
+                try:
+                    member_idx = target_ids.index(cid)
+                except ValueError:
+                    member_idx = 0
+                per_attack = (
+                    (result or {}).get("rolls", {}).get("per_attack_damage", [])
+                    if isinstance(result, dict) else []
+                )
+                if per_attack and _mob_attacks_per_member > 0:
+                    start = member_idx * _mob_attacks_per_member
+                    end = start + _mob_attacks_per_member
+                    override_total = sum(per_attack[start:end])
             else:
                 result = actor_tab.run_action_externally(action_name)
             # An action is never scoped to a single mob member — the parser
             # rejects an `m<n>` modifier before an action token. Uncertain
             # damage routes to the target combatant with default member
             # routing (highest-numbered alive member for a mob).
-            self._route_uncertain_damage(result, cid, action_name)
+            self._route_uncertain_damage(
+                result, cid, action_name, override_total=override_total,
+            )
 
     def _route_uncertain_damage(
         self,
@@ -1528,6 +1599,7 @@ class MainWindow(QMainWindow):
         action_name: str,
         *,
         member: int | None = None,
+        override_total: int | None = None,
     ) -> None:
         """Apply a rolled action's uncertain damage via the didn't-land lifecycle.
 
@@ -1535,6 +1607,11 @@ class MainWindow(QMainWindow):
         result. For a ``save``- or ``attack``-kind roll it applies the assumed
         minimum and records a ``PendingEffect`` (spec §4). A no-roll action
         (``rolls`` empty/absent) is a no-op here — it carries no HP damage.
+
+        `override_total` — when provided, used instead of the sidecar's
+        damage_total. The mob-multiattack distribution path uses this to
+        route each target a SLICE of the rolled damage (just their assigned
+        member's attacks) rather than the whole pack's total.
         """
         if not isinstance(result, dict):
             return
@@ -1542,7 +1619,10 @@ class MainWindow(QMainWindow):
         if not isinstance(rolls, dict) or not rolls:
             return
         kind = rolls.get("kind")
-        full_amount = rolls.get("damage_total")
+        if override_total is not None:
+            full_amount = override_total
+        else:
+            full_amount = rolls.get("damage_total")
         if kind not in ("save", "attack") or not isinstance(full_amount, int):
             return
         # Normalize on_save: the actions DB uses "half" / "no damage";

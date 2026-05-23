@@ -674,10 +674,15 @@ async def _execute_combat_action_async(
         )
 
         # Structured sidecar: an attack-roll action lands 0 until confirmed
-        # `hit`. `damage_total` is the sum of every attack's rolled damage.
+        # `hit`. `damage_total` is the sum of every attack's rolled damage;
+        # `per_attack_damage` exposes the breakdown so a caller (the GUI's
+        # mob-multiattack distribution path) can sum a CONTIGUOUS SLICE of
+        # attacks and route just that share to one target — instead of every
+        # target receiving the whole-pack total.
         rolls = {
             "kind": "attack",
             "damage_total": sum(d["total_with_bonuses"] for d in damage_results),
+            "per_attack_damage": [d["total_with_bonuses"] for d in damage_results],
             "on_save": "none",
         }
 
