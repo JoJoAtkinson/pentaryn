@@ -21,6 +21,25 @@ Run `/Users/joe/GitHub/dnd/.venv/bin/python scripts/mcp/server.py --list-tools` 
 - `get_spell_list` returns v1-style spell **slugs** (e.g., `'fireball'`); these don't match v2 spell **keys** (e.g., `'srd-2024_fireball'`). To chain into `get_spell_details`, first call `search_spells(name=slug, match='exact')` and use the returned `key`.
 - For local lore (NPCs, factions, sessions, free-text vault search), use the `lore.py` tools: `search_npcs`, `get_npc`, `get_faction_overview`, `last_session_summary`, `find_lore`. These read the repo directly — no API.
 
+### Authoring rules — don't trust memory for spell mechanics
+
+This is a **D&D 2024 / 5.5e** project (per [AGENTS.md](AGENTS.md)). The 2014→2024
+rewrite changed mechanics on many common spells in subtle ways your training
+data may not reflect. **Always verify via `search_spells` (or `search_rules`)
+before encoding a spell's effect on an NPC action row** — those tools default
+to srd-2024 priority.
+
+Known-changed spells where 2024 differs materially from 2014 (extend this list
+as you find more — keep it specific so a quick scan catches them):
+
+- **Counterspell** — target makes Con save (was: caster ability check); slot
+  is NOT expended on a successful counter (was: always expended); base DC
+  10 + Counterspell's slot level. See `aelric-frostweaver/counterspell` in
+  `combat-runner/actions.jsonl` for the canonical encoding in this repo.
+
+When in doubt: `search_spells(name='<spell>', match='exact')` — read the
+`desc`, `saving_throw_ability`, `attack_roll`, and `damage_*` fields.
+
 ### Campaign-time math (in-process, mtime-checked)
 
 - `age_convert` is the default for free-form input — it auto-detects year ⇄ label.
