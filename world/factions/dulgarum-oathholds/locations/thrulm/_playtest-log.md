@@ -16,6 +16,16 @@
 
 ## DESIGN DECISIONS (review in morning)
 
+### DD-38: Altitude retreat conflicts with Drain Divinity 30-ft range (NEW)
+- **Context:** 2026-05-23 empty-void 2nd-cycle R3. Beholder at 40 HP (below 60). `shrine_drift` bonus moved it to 65 ft altitude per "prefer ranged, 60+ ft up" tactic. This places beholder >30 ft above all PCs, making Drain Divinity (range 30 ft) unreachable. The below-60-HP altitude preference (added tactic) and the Drain Divinity FIRST priority order (DD-28 fix) are mutually exclusive when beholder retreats high. In R3 the beholder both skipped its main action (FI-3 gap) AND made Drain Divinity unreachable — two compounding losses.
+- **Recommendation (log only):** (a) Precedence rule: "below-60-HP altitude preference is secondary to Drain Divinity range if a slot-holder with L2+ is alive — stay within 30 ft of that target even below 60 HP"; or (b) Increase Drain Divinity range from 30 ft to 60 ft (DB spec change, requires human sign-off). Option (b) matches Telepathy range conceptually. Do NOT auto-fix.
+- **See:** `_playtest-runs/2026-05-23T16-20-00.md` DD-38.
+
+### FI-7 (NEW): Antireality 0-fire structural in empty-void — altitude geometry prevents trigger
+- **Context:** 2026-05-23 empty-void 2nd-cycle. 0/~4 firing rounds (matches 0/7 from cycle 1). Antireality requires an attack roll ≥10 damage. In altitude fights, Sabriel never reaches melee range (beholder shrine_drifts to maintain distance), Bazgar's javelins are below the threshold, and all caster damage is saves. Structural: Antireality only fires in slice #3/#4 where party closes to melee, or after the solo-retreat puts the beholder at shaft lip within reach. The 0-fire pattern in empty-void is correct fight geometry, not a bug.
+- **Recommendation:** Document in `beholder-thrulm.md` when Antireality is expected to fire: "In altitude-dominant fights, Antireality rarely fires. Antireality demonstrates in R3+ melee-close fights or after solo retreat puts beholder at shaft-lip 5 ft from Sabriel." No DB change.
+- **See:** `_playtest-runs/2026-05-23T16-20-00.md` FI-7.
+
 ### DD-37: CW over-filtered in stagger context — 0/9 charges spent 2nd cycle (harness bug + tactics fix)
 - **Context:** 2026-05-23 shardcaller-team 2nd-cycle. SC2 used Multiattack (stagger held its Barrage) but CW harness filtered SC3 as a CW target because SC3 had `barrage_rdy=True`. Harness assumed Barrage-ready SCs always Barrage — but stagger means only 1 fires per round, so SC3 was also multiattacking. CW should have fired on SC3. Result: 0/9 CW spent for 2nd consecutive shardcaller-team run (1st cycle = 0 productive uses, this cycle = 0 uses at all).
 - **Auto-fix applied:** Added explicit stagger-formation CW guidance to `derro-shardcaller.md`: "In shardcaller-only formations with stagger active, the two non-barrage SCs should CW each other." Authoring only, low-risk.
@@ -62,7 +72,9 @@
 
 ### FI-3 (PENDING HUMAN REVIEW): Beholder main action wasted below 60 HP — tactics gap
 - **Context:** 2026-05-23 beholder-escorts-limited 2nd-cycle R5–R6. Below 60 HP, tactics say "prefer ranged, hold position 60+ ft up." Beholder used shrine_drift (bonus) but took no main-action attack in 2 rounds. Should be: shrine_drift (bonus) + Void Ray or Multiattack (main). Text doesn't specify main action separately from positioning.
-- **Recommendation:** Add: "Below 60 HP, shrine_drift handles repositioning (bonus). Main action is still Void Ray or Multiattack from altitude — do not skip the main action." NOT auto-fixing — requires human review of below-60-HP intended behavior before authoring.
+- **2nd confirmation (empty-void 2nd-cycle R3):** Beholder at 40 HP, Disintegration on cooldown (d6=1,1 both rolls), Void Scream on cooldown — zero main-action options while at altitude. Main action skipped entirely. 3rd combined occurrence (beholder-escorts-limited ×2, empty-void ×1). Strongly recommend authoring fix.
+- **Additional note (DD-38):** "Void Ray" is a *legendary* action (2 actions), not a main action. The recommendation "main action is still Void Ray" is misleading. Correct phrasing: "Main action: use Multiattack if PCs are within melee reach (hover-descend to 10 ft); otherwise Disintegration if recharged; otherwise hold (no other main-action ranged option). Legendary budget provides Void Ray as ranged offense — coordinate main + legendary budget for maximum output."
+- **Recommendation:** Add the above text. NOT auto-fixing — requires human review of below-60-HP intended behavior before authoring.
 
 > Each entry: heading, context, recommendation, and a pointer to the failing run or the change made.
 
@@ -198,6 +210,7 @@
 
 *(newest first; each entry is one line — drill into `_playtest-runs/<ts>.md` for details)*
 
+- 2026-05-23 16:20 UTC — slice #7 2nd-cycle (empty-void) — TPK R5 projected (Bazgar last standing at 16 HP, Marwen+Sabriel downed by R4; beholder at 40/110); Void Scream fired R2 (MQ-4 fix confirmed); Drain Divinity priority fired R1+R2 (DD-28 fix confirmed) but Sabriel saved both (18, 17 vs DC 16); FI-3 confirmed 2nd cycle (main action gap R3, disint+VS both on cooldown); 2 new DDs raised (DD-38 altitude-vs-Drain-Divinity conflict, FI-7 Antireality 0-fire structural in altitude fights); 1 auto-fix (Void Scream save reminder to .md checklist) — see _playtest-runs/2026-05-23T16-20-00.md
 - 2026-05-23 15:19 UTC — slice #6 2nd-cycle (shardcaller-team) — party VICTORY R2; Fireball 24 fire R1 eliminates SC1+SC2 (DD-18 confirmed 2nd cycle); SC2 correctly staggered Barrage (DD-17 fix holding); CW 0/9 spent (DD-37 new — harness over-filtered stagger targets, tactics fix applied); PTV 0 activations (FI-5 new — too short fight); stagger-after-death: SC3 fires second Barrage after SC1's death (correct behavior); 2 auto-fixes (PTV toggle note, stagger-formation CW guidance); 2 new DDs (DD-37 CW harness over-filter, FI-5 PTV zero-fire) — see _playtest-runs/2026-05-23T15-19-00.md
 - 2026-05-23 14:19 UTC — slice #5 2nd-cycle (solo-rager-rush) — party VICTORY R2; Berserk fired 2× (2/6 attacks landed), Taunt fired 5× (4 FAILs, zero effect — DD-36 Taunt immunity for save-based casters confirmed); DD-14 confirmed 2nd cycle (HP too low, R2 party win); 3 auto-fixes (DD-15 Berserk output note, DD-36 Taunt caveat, MQ-5 double-Taunt ruling); 2 new DDs raised (DD-36 Taunt immunity, MQ-5 double-Taunt conflict) — see _playtest-runs/2026-05-23T14-19-22.md
 - 2026-05-23 13:15 UTC — slice #4 2nd-cycle (final-confrontation) — TPK R3; Marwen ☠ R2 (Disintegration Ray, beholder — but at 6 HP from shrine Resonance damage); Bazgar ☠ R3 (Ancient Resonance, Shrine-1); Sabriel ☠ R3 (Shrine-Axe, Shrine-2); beholder at 110/110 HP (took ZERO damage entire fight); Drain Divinity fired and succeeded (first time across all runs) but made zero tactical impact; shrine-touched init 23 both rounds (ahead of entire party) confirmed structural (DD-33 new); double Ancient Resonance R2 confirms DD-6 2nd cycle; 0 bugs fixed; 3 new DDs raised (DD-33 shrine init dominance, DD-34 Drain Divinity late-game irrelevance, DD-35 thrall cleanup noise) — see _playtest-runs/2026-05-23T13-15-00.md
