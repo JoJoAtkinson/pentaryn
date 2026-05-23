@@ -8,7 +8,7 @@ tags: ["#combat-runner", "#npc", "#combat", "#derro", "#thrulm", "#shrine-touche
 ---
 # Shrine-Touched Derro (Blessed/Cursed)
 
-**HP** 45 (7d8+14) **·** **AC** 16 (hardened skin) **·** **Speed** 30 ft. (+10 ft. within 60 ft of altar) **·** **Saves** Dex +5, Con +5 **·** **Resist** necrotic, psychic **·** **Immune** charmed, frightened **·** **Darkvision 120 ft.** **·** **Vulnerable** fire, radiant **·** **CR** 3 (700 XP)
+**HP** 45 (7d8+14) **·** **AC** 16 (hardened skin) **·** **Speed** 30 ft. (+10 ft. within 60 ft of altar) **·** **Saves** Dex +5, Con +5 **·** **Resist** necrotic, psychic **·** **Immune** charmed, frightened **·** **Darkvision 120 ft.** **·** **Vulnerable** fire, radiant (suppressed within 60 ft of altar — see Altar Zone below) **·** **CR** 3 (700 XP)
 
 > Action mechanics live in `combat-runner/actions.jsonl` (DB) — see the launcher-injected **Ready actions** reference for verbs and call signatures.
 
@@ -23,6 +23,14 @@ tags: ["#combat-runner", "#npc", "#combat", "#derro", "#thrulm", "#shrine-touche
 5. **Shrine-Bound:** if more than 300 ft from the shrine: takes 2d6 psychic at start of turn; cannot leave the chamber.
 
 ---
+
+## Altar Zone (within 60 ft of altar)
+
+> **Fire & radiant vulnerability suppressed.** The shrine's ambient power insulates shrine-touched from the damage types that would otherwise exploit their instability. Fire and radiant damage deals *normal* damage (not doubled) while the derro is within 60 ft of the altar stone.
+>
+> Effect ends immediately if the shrine-touched moves more than 60 ft from the altar.
+>
+> *(Playtest note: this is the primary reason to keep shrine-touched near the altar — pull them away to re-expose the vulnerability. Marwen's Fireball and Sabriel's Divine Smite both lose their fire/radiant bonus in this zone.)*
 
 ## Tactics — when the DM asks "what does it do?"
 

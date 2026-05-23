@@ -31,10 +31,30 @@
 - **Context:** The DW tactics say "Disengage, fall back" at ≤13 HP but don't say to switch to crossbow. A DM could reasonably keep the DW in melee while "falling back," which contradicts the tactical intent.
 - **Recommendation:** Add to `deep-watch-derro.md` tactics: "Once below half HP and disengaged, switch to **Light Crossbow** from cover." Low-risk authoring clarification.
 
+### DD-4: Altar zone fire/radiant vulnerability suppression — now documented in NPC .md (AUTO-FIX)
+- **Context:** Shrine-touched-derro are vulnerable to fire and radiant, but within 60 ft of the altar the shrine's ambient power suppresses this vulnerability. Without the suppression, Marwen's Fireball (8d6=22 fire, doubled = 44 per target) would have killed both shrine-touched in Round 1 — the encounter evaporates. This mechanic was not written down anywhere in DM-facing files; DM had to know from slice briefing only.
+- **Fix applied:** Added "Altar Zone" section to `shrine-touched-derro.md` stat line and a full explanation block in Tactics. See `_playtest-runs/2026-05-23T02-30-00.md`.
+- **Remaining work:** The `_overview.md` Geography section doesn't list this as a terrain feature. Also: does the suppression apply to all fire/radiant (including cantrips, torches) or only spells? Needs authoring decision.
+
+### DD-5: Unstable Form feedback loop — 10+ damage threshold too easily triggered
+- **Context:** In the shrine-wedge run, Rune-B had Unstable Form advantage for 3 consecutive rounds. The 10+ damage threshold is met almost every round once the party focuses fire. Effectively becomes permanent advantage, not a "reactive danger moment."
+- **Recommendation:** Raise threshold to 15+, or limit to first attack only (not all attacks), or tie to HP milestone (half HP or below). Current mechanic snowballs: more PC damage → more shrine-touched advantage → more PC damage taken.
+- See `_playtest-runs/2026-05-23T02-30-00.md` DD-5.
+
+### DD-6: Both shrine-touched burn Ancient Resonance R1 — later rounds Resonance-dry
+- **Context:** With 3 PCs clustering in approach, both derro qualify for the "2+ in 15-ft cone" condition immediately. Result: double Resonance in R1, then zero recharge fires in a 4-round fight (recharge 5-6, ~33%/round). The dynamic "will Resonance recharge in time?" tension never materializes.
+- **Recommendation:** Stagger tactics (one derro holds Resonance until R2), reduce trigger threshold, or increase recharge probability to 4-6. See `_playtest-runs/2026-05-23T02-30-00.md` DD-6.
+
+### DD-7: Multiattack output labels combined damage under primary type (ONGOING from DD-2)
+- **Context:** Multiattack output reads "7 slashing (incl +1 necrotic extra_damage)" — the combined total is labeled under slashing. A DM applying slashing resistance would incorrectly halve the necrotic portion. Root cause is dnd_roller.py multiattack renderer, not the DB spec.
+- **Recommendation:** Fix multiattack renderer to display "6 slashing + 1 necrotic = 7 total". Out of cron blast radius.
+- See `_playtest-runs/2026-05-23T02-30-00.md` MQ-1.
+
 ---
 
 ## Runs
 
 *(newest first; each entry is one line — drill into `_playtest-runs/<ts>.md` for details)*
 
+- 2026-05-23 02:30 UTC — slice #1 (shrine-wedge) — party VICTORY in 4 rounds; Sabriel fell R3 (Unstable Form advantage chained hits); altar zone suppressed Fireball doubling, saving both derro from R1 death; 1 auto-fix (altar zone docs), 4 DESIGN DECISIONS raised — see _playtest-runs/2026-05-23T02-30-00.md
 - 2026-05-23 01:37 UTC — slice #0 (threshold-patrol) — party VICTORY in 3 rounds; Marwen reached 8 HP (primary target throughout); Shardcaller barrage dominated damage; 1 bug fixed (ancient_resonance psychic rider) — see _playtest-runs/2026-05-23T01-41-59.md
