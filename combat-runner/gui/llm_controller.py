@@ -98,6 +98,13 @@ class _StateBundle:
     # most importantly ticking condition durations on every NPC. Wired by
     # MainWindow.set_llm_controller; None in headless / unit-test contexts.
     on_round_advanced: Callable[[int], None] | None = None
+    # Invoked after `_tool_add_log_entry` writes to the markdown log file so
+    # the GUI can ALSO push the same line into the active tab's combat-log
+    # view widget. Without this hook, LLM-written entries (spell-cast
+    # outcomes, condition applications, narration) end up in the file but
+    # never surface in any tab — the DM sees nothing in-app. Wired by
+    # MainWindow.set_llm_controller; None in headless contexts.
+    on_log_entry: Callable[[str, str | None], None] | None = None
 
     def notify(self) -> None:
         if self.on_state_changed is not None:
@@ -264,9 +271,18 @@ def _tool_add_log_entry(bundle: _StateBundle, text: str, kind: str | None = None
             ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             prefix = f"[{kind}] " if kind else ""
             f.write(f"- `{ts}` — {prefix}{text}\n")
-        return {"ok": True}
     except OSError as e:
         return {"ok": False, "error": str(e)}
+    # Fire the GUI hook AFTER the canonical file write succeeded. A buggy or
+    # crashing callback must not roll back the file (the file is authoritative);
+    # log + swallow so the LLM's tool call still reports ok.
+    if bundle.on_log_entry is not None:
+        try:
+            bundle.on_log_entry(text, kind)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception("on_log_entry hook raised")
+    return {"ok": True}
 
 
 def _tool_get_state_schema(bundle: _StateBundle) -> dict[str, Any]:

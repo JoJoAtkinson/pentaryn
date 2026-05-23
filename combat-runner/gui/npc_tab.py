@@ -432,6 +432,10 @@ class NPCTab(QWidget):
             bar.setExpanding(False)
         self.console_tabs.addTab(self.log_view, "Combat log")
         self.console_tabs.addTab(self.stat_view, "Stat block")
+        # Track when an LLM-fired log entry lands while the user is reading
+        # the Stat block; on switch back to Combat log the indicator clears.
+        self._combat_log_unread = False
+        self.console_tabs.currentChanged.connect(self._on_console_tab_changed)
         layout.addWidget(self.console_tabs, 1)
 
         # Suggestion bar (v0.2): 3 LLM-prefetched action shortcuts above the input
@@ -868,6 +872,30 @@ class NPCTab(QWidget):
             self.hp_bar.set_preview(member, projected_hp)
 
     # ─────────── log helpers ───────────
+
+    def _on_console_tab_changed(self, idx: int) -> None:
+        """Clear the Combat-log unread marker when the user opens that tab."""
+        if idx == 0 and self._combat_log_unread:
+            self._combat_log_unread = False
+            self.console_tabs.setTabText(0, "Combat log")
+
+    def receive_external_log(self, text: str, kind: str | None = None) -> None:
+        """Append a line written by an external system (the LLM controller's
+        `add_log_entry` tool) to the combat log view.
+
+        Styled to distinguish from the NPC's own action output: dim color, a
+        `[<kind>]` prefix when kind is given. If the user is currently reading
+        the Stat block, the Combat log sub-tab title gets a `●` marker so the
+        next entry doesn't go un-noticed.
+        """
+        prefix = f"[{kind}] " if kind else ""
+        # Light purple — matches the existing Cast log color in _player_action_cast
+        # (#ce93d8) so the family of "spell-style" entries reads consistently.
+        html = f"<span style='color:#ce93d8'>{prefix}{text}</span>"
+        self._append_log(html)
+        if self.console_tabs.currentIndex() != 0:
+            self._combat_log_unread = True
+            self.console_tabs.setTabText(0, "● Combat log")
 
     def _populate_stat_view(self) -> None:
         """Load `self.md_path` into the Stat block tab, stripping frontmatter.

@@ -2032,7 +2032,26 @@ class MainWindow(QMainWindow):
         bundle = getattr(controller, "_bundle", None)
         if bundle is not None:
             bundle.on_round_advanced = lambda _round: self._apply_round_change()
+            # Push LLM-written log lines (`add_log_entry` tool) into the active
+            # tab's log_view so the DM SEES the spell-cast outcome / condition
+            # application / narration in-app, not just in the .md file.
+            bundle.on_log_entry = self._on_llm_log_entry
         self._fire_suggestion_refresh()
+
+    def _on_llm_log_entry(self, text: str, kind: str | None) -> None:
+        """Hook fired by `_tool_add_log_entry` after a successful file write.
+
+        Pushes the entry into the currently-active tab's log_view. The active
+        tab is correct because LLM tool dispatch is marshalled back to the GUI
+        thread (`_on_llm_dispatch_requested`), and the active tab at that
+        moment is the one whose command-input the user submitted.
+        """
+        current = self.tabs.currentWidget()
+        if current is not None and hasattr(current, "receive_external_log"):
+            try:
+                current.receive_external_log(text, kind)
+            except Exception:
+                pass  # bundle's hook wrapper already swallows; belt-and-braces
 
     def showEvent(self, event) -> None:  # noqa: N802 (Qt API)
         """Put initial keyboard focus on the active tab's command input so the
