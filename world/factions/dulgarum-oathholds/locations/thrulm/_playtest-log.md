@@ -16,6 +16,23 @@
 
 ## DESIGN DECISIONS (review in morning)
 
+### DD-28: Drain Divinity zero-fire pattern — beholder's flagship counter never fires (2nd occurrence)
+- **Context:** 2026-05-23 beholder-escorts-limited 2nd-cycle. Sabriel held L3 slot R1–R5, Marwen held L3 slot through R1. Drain Divinity (3 legendary actions) never triggered. Same finding as cycle-1 run (04:30 UTC). 7 rounds of full-legendary-budget resets, never a Drain Divinity fire. The beholder's premier anti-divine-caster ability has not fired in any run.
+- **Auto-fix applied:** Added priority clause to tactics: "Legendary priority order: Drain Divinity FIRST if budget is full and slot-holder with L2+ is within 30 ft." Authoring-only.
+- **Remaining work:** If Drain Divinity still doesn't fire in next 2 beholder runs, consider reducing legendary cost from 3 → 2 actions, making it more naturally competitive with Void Ray. Requires human sign-off on balance impact (temp HP gain via Drain Divinity is significant at high slot levels).
+
+### DD-31: Prone advantage on beholder melee attacks not modeled — DM reminder missing
+- **Context:** 2026-05-23 beholder-escorts-limited 2nd-cycle. Unstable Ground proned Sabriel 3/3 consecutive rounds (R5–R7). Beholder's Tentacle Lash (melee) should have rolled with advantage. Not applied. Hit probability goes from ~35% to ~56% vs AC 19 — enough to flip misses to hits.
+- **Recommendation:** Add to `beholder-thrulm.md` tactics under "Engaged by melee": "If target is prone and beholder is within 5 ft, all Tentacle and Maw attacks have advantage." Authoring-only. Decide whether to auto-fix next cycle.
+
+### MQ-4: Void Scream first-use ambiguity — "wait for recharge" vs "starts available"
+- **Context:** 2026-05-23 beholder-escorts-limited 2nd-cycle R1–R2. Two or more PCs clustered within 30 ft for 2 rounds; Void Scream was available but never fired. Tactics text "fire the moment it's recharged" implies waiting, even though the ability starts available (not recharged from a prior use). DM treating it as a recharge-wait ability loses the devastating R1 window.
+- **Recommendation:** Clarify tactics: "Void Scream **is available from R1** — fire it immediately if 2+ PCs cluster within 30 ft. Do not treat first use as a recharge wait." Authoring-only, low-risk. This is potentially high-impact: a R1 Void Scream when the party first enters clusters everyone within 30 ft.
+
+### FI-3 (PENDING HUMAN REVIEW): Beholder main action wasted below 60 HP — tactics gap
+- **Context:** 2026-05-23 beholder-escorts-limited 2nd-cycle R5–R6. Below 60 HP, tactics say "prefer ranged, hold position 60+ ft up." Beholder used shrine_drift (bonus) but took no main-action attack in 2 rounds. Should be: shrine_drift (bonus) + Void Ray or Multiattack (main). Text doesn't specify main action separately from positioning.
+- **Recommendation:** Add: "Below 60 HP, shrine_drift handles repositioning (bonus). Main action is still Void Ray or Multiattack from altitude — do not skip the main action." NOT auto-fixing — requires human review of below-60-HP intended behavior before authoring.
+
 > Each entry: heading, context, recommendation, and a pointer to the failing run or the change made.
 
 ### DD-1: Shard-Barrage recharge (5 vs 6) for threshold-patrol slice
@@ -150,6 +167,7 @@
 
 *(newest first; each entry is one line — drill into `_playtest-runs/<ts>.md` for details)*
 
+- 2026-05-23 12:18 UTC — slice #3 2nd-cycle (beholder-escorts-limited) — TPK R7; Marwen ☠ R2 (Void Ray), Bazgar ☠ R4 (Void Ray), Sabriel ☠ R7 (Tentacle Lash); beholder at 20/110 HP; all thralls dead R1 (Fireball + Sabriel, 2nd cycle confirms pattern); Drain Divinity zero fires (DD-28 confirmed 2nd time, auto-fix priority clause added); Antireality 4/7 rounds (✓ DD-21 fix holding); Void Scream never fired despite being available R1 (MQ-4 new); 1 auto-fix (Drain Divinity priority rule), 3 new DDs raised (DD-28 2nd occurrence, DD-31 prone/melee advantage gap, MQ-4 Void Scream first-use) — see _playtest-runs/2026-05-23T12-18-00.md
 - 2026-05-23 11:20 UTC — slice #2 2nd-cycle (tank-wall) — party VICTORY in 3 rounds; Bazgar 32/49, Marwen 17/32 (2 level-2 slots burned), Sabriel 33/44; Rager fell R2 (never landed Berserk); Call Weakness spent 2× on Rager (missed all Berserk swings vs AC 18/19); Taunt landed R1 but Marwen targeted Rager anyway (mechanically inert); Shardcaller missed both R3 shots and fell to Fire Bolt; 2 auto-fixes (Taunt tiebreaker in rager.md, Berserk+CW first-swing note in shardcaller.md); 3 new DDs raised (DD-24 Taunt inert on self-targeting PC, DD-25 CW below-floor initiative gap, DD-26 tank-wall pairing never demonstrates in 2nd cycle) — see _playtest-runs/2026-05-23T11-20-00.md
 - 2026-05-23 10:18 UTC — slice #1 2nd-cycle (shrine-wedge) — party VICTORY in 2 rounds; Bazgar 21/49, Marwen 26/32, Sabriel untouched (44/44); altar zone suppressed Fireball vulnerability again (saved ST2 from R1 death); Action Surge + Fireball ended fight before Unstable Form or Resonance recharge tension could develop; OBR trigger direction bug found in harness (fires on shrine-touched taking damage, not landing hit); 0 bugs fixed, 1 new DD raised (DD-23 OBR trigger harness); reinforces DD-5 (Unstable Form threshold), DD-6 (Resonance front-load) — see _playtest-runs/2026-05-23T10-18-49.md
 - 2026-05-23 09:18 UTC — slice #0 2nd-cycle (threshold-patrol) — party VICTORY in 4 rounds; Bazgar 39/49, Marwen 16/32 (all slots burned), Sabriel untouched; Barrage fired once (R1), recharged R3 but SC1 at 1 HP; both DW saved on Thunderwave (wasted slot); 0 bugs fixed; 1 new DD raised (DD-22: harness models Tactical Drilling as flat not advantage — DW threat understated by ~24 pp); FI-3: DD-1 Barrage-double-fire concern is seed-dependent not structural — see _playtest-runs/2026-05-23T09-18-56.md
