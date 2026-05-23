@@ -421,14 +421,30 @@ class EncounterPicker(QDialog):
         while self.counts_form.rowCount() > 0:
             self.counts_form.removeRow(0)
         self._count_spinboxes: dict[str, QSpinBox] = {}
+        self._count_checks: dict[str, Any] = {}  # slug → QCheckBox
+        from PySide6.QtWidgets import QCheckBox
         for npc in enc.npcs:
+            row_widget = QWidget()
+            row_layout = QHBoxLayout(row_widget)
+            row_layout.setContentsMargins(0, 0, 0, 0)
+            check = QCheckBox()
+            check.setChecked(True)
             spin = QSpinBox()
             spin.setRange(1, 20)
             spin.setValue(npc.default_count)
             spin.setSingleStep(1)
+            # Toggling the checkbox flips include/exclude — spinbox greys out
+            # when the NPC is excluded (count emitted as 0). Themed encounters
+            # bundle many possible mob types under one root; only a subset
+            # appears in any given session.
+            check.toggled.connect(spin.setEnabled)
+            row_layout.addWidget(check)
+            row_layout.addWidget(spin)
+            row_layout.addStretch(1)
             label = QLabel(f"{npc.name}  ({npc.slug})")
-            self.counts_form.addRow(label, spin)
+            self.counts_form.addRow(label, row_widget)
             self._count_spinboxes[npc.slug] = spin
+            self._count_checks[npc.slug] = check
 
         self.launch_btn.setEnabled(True)
 
@@ -437,7 +453,10 @@ class EncounterPicker(QDialog):
         if row < 0 or row >= len(self.encounters):
             return
         enc = self.encounters[row]
-        counts = {slug: spin.value() for slug, spin in self._count_spinboxes.items()}
+        counts = {
+            slug: (spin.value() if self._count_checks[slug].isChecked() else 0)
+            for slug, spin in self._count_spinboxes.items()
+        }
         player_selections: dict[str, dict] = {}
         for pid, check in self._player_checks.items():
             player_selections[pid] = {

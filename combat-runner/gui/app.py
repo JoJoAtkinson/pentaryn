@@ -92,6 +92,11 @@ def build_encounter_state(
     # 2. Build NPC combatants
     for picker_npc in encounter.npcs:
         count = counts.get(picker_npc.slug, 1)
+        # count<=0 means this NPC type was disabled in the picker (themed
+        # encounter, mob not present in this session). Skip — don't build
+        # an empty combatant or a tab the DM has no use for.
+        if count <= 0:
+            continue
         # Extract more details from the .md frontmatter for HP/AC/etc.
         details = _parse_npc_details(picker_npc.md_path, picker_npc.slug, picker_npc.name)
         npc_state = NPCState(
