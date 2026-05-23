@@ -21,24 +21,34 @@ Run `/Users/joe/GitHub/dnd/.venv/bin/python scripts/mcp/server.py --list-tools` 
 - `get_spell_list` returns v1-style spell **slugs** (e.g., `'fireball'`); these don't match v2 spell **keys** (e.g., `'srd-2024_fireball'`). To chain into `get_spell_details`, first call `search_spells(name=slug, match='exact')` and use the returned `key`.
 - For local lore (NPCs, factions, sessions, free-text vault search), use the `lore.py` tools: `search_npcs`, `get_npc`, `get_faction_overview`, `last_session_summary`, `find_lore`. These read the repo directly — no API.
 
-### Authoring rules — don't trust memory for spell mechanics
+### Authoring rules — verify the SRD source on every spell lookup
 
-This is a **D&D 2024 / 5.5e** project (per [AGENTS.md](AGENTS.md)). The 2014→2024
-rewrite changed mechanics on many common spells in subtle ways your training
-data may not reflect. **Always verify via `search_spells` (or `search_rules`)
-before encoding a spell's effect on an NPC action row** — those tools default
-to srd-2024 priority.
+This is a **D&D 2024 / 5.5e** project (per [AGENTS.md](AGENTS.md)). The MCP
+SRD cache (`.cache/srd5_2_v2.sqlite`) holds entries from **all sources** —
+srd-2024, srd-2014, third-party — concurrently, gzipped, with TTLs. A
+`search_spells` call without a source filter ranks srd-2024 first but does
+NOT hide the 2014 / third-party entries; with a slight ranking quirk or a
+scoped call, a 2014 entry can slip into a result and get encoded as-if it
+were current. That's the regression-vector that put 2014-rules Counterspell
+into the actions DB originally — the cache served the older entry, the
+authoring session ran with it.
 
-Known-changed spells where 2024 differs materially from 2014 (extend this list
-as you find more — keep it specific so a quick scan catches them):
+**Discipline:** every time you encode a spell's mechanics on an NPC action
+row, read the result's `document.key` field. Confirm it's `srd-2024`. If
+it's `srd-2014` or anything else, re-search with `source='srd-2024'` as a
+hard filter, OR pull the v2 key directly via `get_spell_details(key='srd-2024_<spell>')`.
+Don't trust the rank order alone.
+
+Known-changed spells where 2024 differs materially from 2014 (extend as you
+find more — keep entries specific so a quick scan catches real gotchas):
 
 - **Counterspell** — target makes Con save (was: caster ability check); slot
   is NOT expended on a successful counter (was: always expended); base DC
   10 + Counterspell's slot level. See `aelric-frostweaver/counterspell` in
   `combat-runner/actions.jsonl` for the canonical encoding in this repo.
 
-When in doubt: `search_spells(name='<spell>', match='exact')` — read the
-`desc`, `saving_throw_ability`, `attack_roll`, and `damage_*` fields.
+Pinned via `combat-runner/tests/test_actions_db_2024_rules.py` — one test
+per (npc, action) pair, fails if a row regresses to 2014 phrasing.
 
 ### Campaign-time math (in-process, mtime-checked)
 

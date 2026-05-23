@@ -1,9 +1,10 @@
 """Regression guards for known 2014→2024 rule changes encoded in actions.jsonl.
 
 Each test pins the *mechanic* — the specific words a 2024-rules effect carries
-that a 2014-rules effect would never say. If a future authoring pass (manual
-or LLM) reverts a row to 2014 phrasing, the test fails loudly and the diff
-shows up in CI.
+that a 2014-rules effect would never say. If a future authoring pass reverts
+a row to 2014 phrasing (the MCP SRD cache holds BOTH editions and a slip-up
+in the source filter can surface 2014 results), the test fails loudly and
+the diff shows up in CI.
 
 Extend this file as more spell/feature rows get refreshed to 2024 rules; one
 test per (npc, action) pair, with the marker phrasing the 2024 SRD entry
