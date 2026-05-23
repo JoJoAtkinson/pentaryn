@@ -99,6 +99,21 @@
 - **Recommendation:** Terrain constraint (columns limit Fireball overlap to ≤2 targets at once) OR bump HP to ~42 OR give shardcallers Evasion. Terrain constraint is the least disruptive and fits the stone-corridor setting. Authoring-only change to encounter notes; no DB modification needed.
 - See `_playtest-runs/2026-05-23T07-16-03.md` FI-3 / DD-18.
 
+### DD-19: Drain Divinity slot-targeting ambiguity (AUTO-FIXED)
+- **Context:** 2026-05-23 empty-void run. The ability text says "spell slots or divine power" — ambiguous whether it targets arcane (wizard) slots or only divine slots. At table, a DM might rule it doesn't drain Marwen's wizard slots.
+- **Fix applied:** Clarified tactics in `beholder-thrulm.md` to explicitly state "any creature with spell slots (including arcane casters)." If intent is divine-only, revert and add `target_filter: "divine_slots"` to DB spec.
+- **Remaining work:** Confirm canonical intent: all spell slots vs divine only. The "all slots" version is more tactically interesting. See `_playtest-runs/2026-05-23T08-20-26.md` MQ-1.
+
+### DD-20: Solo beholder retreat path nonfunctional without thralls (AUTO-FIXED)
+- **Context:** 2026-05-23 empty-void run. Below-30-HP tactics said "retreats using thralls and lair actions as cover." No thralls in solo slice → beholder had no cover and fought to death instead. Fight ran 7 rounds with beholder alive at 2–10 HP for 4+ rounds.
+- **Fix applied:** Added explicit solo-config retreat clause to `beholder-thrulm.md`: shrine_drift each round toward the deeper shaft, unstable_ground on chasing PC, beholder hovers at shaft lip.
+- **Remaining work:** DM decision needed — in the negotiation/empty-void context, should the beholder fight to death (backed into a corner) or retreat? See `_playtest-runs/2026-05-23T08-20-26.md` MQ-2.
+
+### DD-21: Antireality reaction — zero fires in 7-round solo fight
+- **Context:** 2026-05-23 empty-void run. Antireality (+2 AC vs one incoming attack, declared after seeing the roll) was available every round but never triggered. Auto-fix sharpened the trigger guidance ("any stated Divine Smite, stated Power Attack, or ≥10 estimated damage — when in doubt, trigger"). But 0/7 uses may persist without deliberate DM tracking.
+- **Recommendation:** Add a reminder line to the Start-of-turn checklist: "At end of your turn, note whether Antireality fired this round (it should fire ~1×/2 rounds in a melee fight)." If 2+ future runs also show 0/N uses, the reaction threshold is too ambiguous.
+- See `_playtest-runs/2026-05-23T08-20-26.md` DD-21.
+
 ### DD-7: Multiattack output labels combined damage under primary type (ONGOING from DD-2)
 - **Context:** Multiattack output reads "7 slashing (incl +1 necrotic extra_damage)" — the combined total is labeled under slashing. A DM applying slashing resistance would incorrectly halve the necrotic portion. Root cause is dnd_roller.py multiattack renderer, not the DB spec.
 - **Recommendation:** Fix multiattack renderer to display "6 slashing + 1 necrotic = 7 total". Out of cron blast radius.
@@ -110,6 +125,7 @@
 
 *(newest first; each entry is one line — drill into `_playtest-runs/<ts>.md` for details)*
 
+- 2026-05-23 08:20 UTC — slice #7 (empty-void) — party VICTORY in 7 rounds (barely: Bazgar+Marwen down, Sabriel at 5/44 HP); beholder killed by Sabriel melee after Void Ray killed or downed Marwen 3× (LoH triage loop key mechanic); Disintegration fired 2×; Void Scream never recharged (recharge-6 expected variance); Antireality never triggered (0/7 rounds — DM vigilance gap); 4 auto-fixes (Drain Divinity scope, solo retreat path, Antireality threshold, Chamber Hazard LoH callout); 3 new DDs raised (DD-19 Drain Divinity ambiguity, DD-20 solo retreat, DD-21 Antireality 0-fire) — see _playtest-runs/2026-05-23T08-20-26.md
 - 2026-05-23 07:16 UTC — slice #6 (shardcaller-team) — party VICTORY in 3 rounds; Bazgar took 28 piercing R1 (double-barrage), Marwen near-lethal at 9/32 R2; Fireball R2 collapsed two shardcallers and put all three in finishing range; Call Weakness wasted entirely (attack-roll ability incompatible with Barrage); triple front-loaded Barrage fired R1, recharge never happened; kiting feel absent (Fireball trivializes range advantage); 1 auto-fix (Call Weakness / Barrage stagger tactics), 3 new DDs raised (DD-16 CW incompatibility, DD-17 Barrage front-load, DD-18 Fireball trivializes) — see _playtest-runs/2026-05-23T07-16-03.md
 - 2026-05-23 06:19 UTC — slice #5 (solo-rager-rush) — party VICTORY in 2 rounds; Marwen near-lethal R1 (2 HP), revived R2; 2 Fireballs solved the fight before Berserk/Taunt/Madness mechanics could loop; 0 bugs fixed, 2 new DDs raised (DD-14 HP too low for slice intent, DD-15 Berserk 3-attack output confusion) — see _playtest-runs/2026-05-23T06-19-43.md
 - 2026-05-23 05:21 UTC — slice #4 (final-confrontation) — TPK in 2 rounds; Marwen 💀 R1 (double Ancient Resonance), Bazgar 💀 R2 (void eruption), Sabriel 💀 R2 (shrine-touched multiattack); beholder dealt 0 direct damage (init 6, all PCs dead/dying before its turn); 2 bugs fixed (retarget tactics, chamber hazard mislabeling), 2 new DDs raised (DD-12 init, DD-13 lair variance), DD-11 follow-up added — see _playtest-runs/2026-05-23T05-21-54.md

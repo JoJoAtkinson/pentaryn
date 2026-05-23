@@ -43,12 +43,13 @@ Track remaining actions on the tab.
 
 - **Round 1, all party visible:** Multiattack from 10-ft tentacle reach if any PC is in range; otherwise hover at 30–40 ft altitude and **Disintegration Ray** (range 120 ft) at the highest-level caster. **Retarget if primary is dead:** next highest caster or divine martial; fall back to any living PC.
 - **Anyone within 30 ft, especially clustered:** **Void Scream** the moment it's recharged (it cycles on 6 only — be patient).
-- **Cleric/paladin present:** burn legendary actions on **Drain Divinity** rather than Void Ray. Removing healing/buffs is the whole strategy.
+- **Cleric/paladin present:** burn legendary actions on **Drain Divinity** rather than Void Ray. Removing healing/buffs is the whole strategy. *Drain Divinity targets any creature with spell slots* (including arcane casters — Marwen's wizard slots are valid targets); pick the creature with the highest remaining slot level. Below 30 HP: prefer Void Ray over Drain Divinity (save 1 action for movement if needed) unless Disintegration is available.
 - **Engaged by melee:** Multiattack tentacles to grapple (DC 16 Str escape), then **Maw** the grappled target. Use `shrine_drift` bonus to back off through walls / pillars.
 - **Lair actions:** at init 20, prefer `void_eruption` if 2+ PCs near the altar; otherwise `unstable_ground` on a melee threat; `manifest_thralls` only if thralls are alive AND positioned usefully.
-- **Antireality reaction:** save for the biggest expected hit — a paladin smite, a rogue sneak attack with sanctified weapons.
+- **Antireality reaction:** Trigger on any incoming melee attack that already hit and deals an estimated 10+ damage — always trigger on a stated Divine Smite, a stated Power Attack, or a crit confirmation. When in doubt, trigger it. (+2 AC declared after seeing the roll, before damage.)
 - **Below 60 HP:** prefer ranged. Hold position 60+ ft up using fly + shrine drift.
-- **Below 30 HP:** retreats into the lower shaft using thralls and lair actions as cover. Telepathic taunt: *"You cannot seal this. The void remains."*
+- **Below 30 HP, thralls alive:** retreats into the lower shaft using thralls and lair actions as cover. Telepathic taunt: *"You cannot seal this. The void remains."*
+- **Below 30 HP, NO thralls (solo configuration):** use `shrine_drift` each bonus action to retreat toward the deeper shaft entrance. Use `unstable_ground` lair actions to prone the chasing PC. Beholder will not descend the shaft but hovers at the lip — if PCs disengage, it stops pursuing.
 - **Below 20 HP, no escape:** spends every legendary on Disintegration / Void Ray on whoever is closest to killing it.
 
 ## Description (one line)
@@ -65,7 +66,8 @@ A 6-ft eyeless sphere of translucent stone-shadow, four bone-spine appendages dr
 
 ## Chamber Hazards (void effects — apply to PCs, not the beholder)
 
-- **Healing spells backfire:** Any healing spell cast inside the chamber deals its rolled healing as **necrotic damage** to the intended target instead of restoring HP (divine magic contradicts the void's absence). Lay on Hands is a class feature, not a spell — it is unaffected. Only spell-slot healing is reversed.
+- **Healing spells backfire:** Any healing spell cast inside the chamber deals its rolled healing as **necrotic damage** to the intended target instead of restoring HP (divine magic contradicts the void's absence). **Lay on Hands is a class feature, not a spell — it is UNAFFECTED and heals normally.** Potions are items, not spells — also unaffected. Only slot-consuming healing spells (Cure Wounds, Healing Word, Mass Cure Wounds, etc.) are reversed. This distinction *will* come up at table — make the ruling before the first heal is attempted.
+- **Sanctified weapon rider (DM applies manually, not in DB):** Sanctified dwarven weapons deal +1d8 damage per hit against the beholder. If Sabriel or any PC wields a sanctified weapon, apply this after each recorded hit — the DB outputs do NOT include it.
 
 ---
 
