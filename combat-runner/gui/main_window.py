@@ -1060,16 +1060,37 @@ class MainWindow(QMainWindow):
             done.set()
 
     def _on_llm_finished(self, result) -> None:
-        """GUI-thread slot: the LLM run completed. Refresh tabs + report."""
+        """GUI-thread slot: the LLM run completed. Refresh tabs + route the
+        outcome into the active tab's Log so the DM can refer back to it
+        during the session — instead of a 5s status-bar flash.
+
+        Routing:
+          * `result.error`  → log line tagged `kind="error"` (red).
+          * `result.text`   → log line tagged `kind="info"` (cyan). This is
+                              the LLM's text reply for Q&A like
+                              "does counterspell take an action?"
+          * no text + tools → no log entry pushed (the tool calls already
+                              fired their own log lines via their handlers).
+
+        The persistent "LLM thinking about: …" indicator is always cleared
+        when this slot runs — its job (live in-flight feedback) is done.
+        """
         for i in range(self.tabs.count()):
             t = self.tabs.widget(i)
             if isinstance(t, NPCTab):
                 t.refresh()
-        if result.error:
-            self.statusBar().showMessage(f"LLM error: {result.error}", 5000)
-        else:
-            msg = result.text[:120] if result.text else f"LLM ran {len(result.tool_calls)} tool(s)"
-            self.statusBar().showMessage(msg, 5000)
+        # Drop the in-flight "thinking…" message regardless of outcome.
+        self.statusBar().clearMessage()
+        # Push result content into the active tab's Log.
+        current = self.tabs.currentWidget()
+        if current is not None and hasattr(current, "receive_external_log"):
+            try:
+                if result.error:
+                    current.receive_external_log(f"LLM error: {result.error}", kind="error")
+                elif result.text:
+                    current.receive_external_log(result.text, kind="info")
+            except Exception:
+                pass  # never let a log-routing failure bubble up
         self.llm_run_finished.emit(result)
 
     # ─────────── command grammar dispatch ───────────

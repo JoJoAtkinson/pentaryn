@@ -430,7 +430,7 @@ class NPCTab(QWidget):
         bar = self.console_tabs.tabBar()
         if bar is not None:
             bar.setExpanding(False)
-        self.console_tabs.addTab(self.log_view, "Combat log")
+        self.console_tabs.addTab(self.log_view, "Log")
         self.console_tabs.addTab(self.stat_view, "Stat block")
         # Track when an LLM-fired log entry lands while the user is reading
         # the Stat block; on switch back to Combat log the indicator clears.
@@ -874,28 +874,38 @@ class NPCTab(QWidget):
     # ─────────── log helpers ───────────
 
     def _on_console_tab_changed(self, idx: int) -> None:
-        """Clear the Combat-log unread marker when the user opens that tab."""
+        """Clear the Log unread marker when the user opens the Log tab."""
         if idx == 0 and self._combat_log_unread:
             self._combat_log_unread = False
-            self.console_tabs.setTabText(0, "Combat log")
+            self.console_tabs.setTabText(0, "Log")
+
+    # Kind → hex color mapping for receive_external_log. No filter UI yet,
+    # but visual differentiation gives the eye an anchor (Q&A reads cyan,
+    # errors red, spell narration lavender, events light blue). A future
+    # filter feature can key off the same `kind` tag.
+    _KIND_COLORS = {
+        "spell": "#ce93d8",   # lavender (matches the existing Cast-chip color)
+        "info":  "#80deea",   # cyan — LLM Q&A / rules lookups / explanations
+        "error": "#ff5252",   # red — LLM error / fallback failure
+        "event": "#90caf9",   # light blue — generic LLM-fired event
+    }
 
     def receive_external_log(self, text: str, kind: str | None = None) -> None:
-        """Append a line written by an external system (the LLM controller's
-        `add_log_entry` tool) to the combat log view.
+        """Append a line written by an external system (LLM Q&A reply, LLM
+        controller's `add_log_entry` tool, fallback errors) into the Log.
 
-        Styled to distinguish from the NPC's own action output: dim color, a
-        `[<kind>]` prefix when kind is given. If the user is currently reading
-        the Stat block, the Combat log sub-tab title gets a `●` marker so the
-        next entry doesn't go un-noticed.
+        `kind` tags the line for later filter UIs (and drives the color today).
+        If the user is reading the Stat block when an entry lands, the Log
+        sub-tab title is marked with a `●` so the next entry doesn't go
+        un-noticed.
         """
         prefix = f"[{kind}] " if kind else ""
-        # Light purple — matches the existing Cast log color in _player_action_cast
-        # (#ce93d8) so the family of "spell-style" entries reads consistently.
-        html = f"<span style='color:#ce93d8'>{prefix}{text}</span>"
+        color = self._KIND_COLORS.get(kind, "#7d8590")  # default dim gray
+        html = f"<span style='color:{color}'>{prefix}{text}</span>"
         self._append_log(html)
         if self.console_tabs.currentIndex() != 0:
             self._combat_log_unread = True
-            self.console_tabs.setTabText(0, "● Combat log")
+            self.console_tabs.setTabText(0, "● Log")
 
     def _populate_stat_view(self) -> None:
         """Load `self.md_path` into the Stat block tab, stripping frontmatter.
