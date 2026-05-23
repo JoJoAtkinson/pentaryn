@@ -719,7 +719,29 @@ async def _execute_combat_action_async(
         # appears (proves rolls came from the quantum source, not random.org
         # fallback). The dice glyphs use the custom DnD-dice font and are
         # readable when that font is the terminal's primary fontFamily.
-        lines.append(f"_to-hits:_ {to_hit_result['narrative']}")
+        #
+        # NOTE: `to_hit_result['narrative']` is the generic _build_narrative
+        # output, which ends in `= <sum>` (correct for damage dice, WRONG for
+        # to-hits — each attack roll is independent and the DM compares it to
+        # the target's AC on its own). We rebuild the to-hits line per-attack:
+        #   ⚛️ <d20>(roll+bonus=total) <d20>(roll+bonus=total) ...
+        # No trailing sum.
+        _to_hit_glyph = _glyph_for_die(20)
+        _to_hit_parts: list[str] = []
+        for raw_roll, bonus, total in zip(
+            to_hit_result["rolls"],
+            to_hit_bonuses,
+            to_hit_result["rolls_with_bonuses"],
+        ):
+            if bonus:
+                sign = "+" if bonus >= 0 else ""
+                _to_hit_parts.append(f"{_to_hit_glyph}({raw_roll}{sign}{bonus}={total})")
+            else:
+                _to_hit_parts.append(f"{_to_hit_glyph}({total})")
+        _to_hit_body = " ".join(_to_hit_parts)
+        if to_hit_result.get("source") == "quantumnumbers":
+            _to_hit_body = f"{_QUANTUM_MARKER} {_to_hit_body}"
+        lines.append(f"_to-hits:_ {_to_hit_body}")
         for i, atk in enumerate(attacks):
             lines.append(f"_{atk['name']} dmg:_ {damage_results[i]['narrative']}")
             extra_res = damage_results[i].get("extra_damage")
