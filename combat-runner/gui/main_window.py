@@ -1399,6 +1399,27 @@ class MainWindow(QMainWindow):
         if not isinstance(actor_tab, NPCTab):
             return
 
+        # AoE one-roll semantics: an `area` action rolls damage ONCE and every
+        # target saves against that same number. Pre-resolve the action_name +
+        # is_area flag so the loop below can branch between (a) AoE — fire once
+        # outside the loop and reuse the result per target, and (b) attacks /
+        # utilities — fire per target (independent rolls). PC fast-path
+        # (try_player_action) doesn't touch DB actions, so it's unaffected.
+        _actions_surface = self._tab_action_surfaces.get(id(actor_tab), [])
+        _action_name_pre = self._resolve_action_token(token, _actions_surface)
+        _action_spec_pre = next(
+            (a for a in _actions_surface if a.get("action") == _action_name_pre),
+            None,
+        ) if _action_name_pre else None
+        _is_area = (
+            actor.kind != "pc"
+            and _action_spec_pre is not None
+            and _action_spec_pre.get("type") == "area"
+        )
+        _shared_area_result: dict | None = None
+        if _is_area and _action_name_pre is not None:
+            _shared_area_result = actor_tab.run_action_externally(_action_name_pre)
+
         for cid in target_ids:
             combatant = self.encounter_state.combatant_by_id(cid)
             if combatant is None:
@@ -1465,7 +1486,14 @@ class MainWindow(QMainWindow):
             # outcome is "saved"/"miss" and a later `<target> hit` upgrades it
             # (spec §4). A no-save no-attack-roll action carries no `rolls`
             # damage and stays as printed text.
-            result = actor_tab.run_action_externally(action_name)
+            #
+            # AoE branch: an `area` action was already rolled ONCE above the
+            # loop. Reuse the shared result so every target saves against the
+            # same damage number (5e cone/sphere mechanics).
+            if _is_area and _shared_area_result is not None:
+                result = _shared_area_result
+            else:
+                result = actor_tab.run_action_externally(action_name)
             # An action is never scoped to a single mob member — the parser
             # rejects an `m<n>` modifier before an action token. Uncertain
             # damage routes to the target combatant with default member
