@@ -714,6 +714,55 @@ def _build_tool_dispatch_table(bundle: _StateBundle) -> dict[str, Callable[..., 
     }
 
 
+# ─────────── review-text post-filter ───────────
+# Markers a verbose "all clear" analysis trips on. When the reviewer model spoke
+# but called NO tools, and any of these markers appear in its text, the review
+# is suppressed — it's noise the DM doesn't need in the log. Real concerns
+# (advisories, immunity flags, target-mistake catches) stay visible because
+# they DON'T contain these markers (or they triggered a tool call).
+_REVIEW_NO_CONCERN_MARKERS = (
+    "no issues detected",
+    "no issues found",
+    "no issue detected",
+    "no issue found",
+    "no issues",
+    "no concerns",
+    "no concern",
+    "no flags",
+    "no problem",
+    "looks correct",
+    "looks fine",
+    "looks good",
+    "looks clean",
+    "is correct",
+    "is sound",
+    "is fine",
+    "is appropriate",
+    "is clean",
+    "is reasonable",
+)
+
+
+def _should_suppress_review(text: str, tool_calls: list[dict]) -> bool:
+    """Return True if a non-empty review text should NOT be logged.
+
+    A review is suppressible only when it took no corrective action (no tool
+    calls) AND its text contains an all-clear marker. Such a review is the
+    verbose noise the DM complained about — the system prompt asks for
+    silence; this filter is a safety net for when the model speaks anyway.
+
+    Brief actionable advisories ("did you mean the stalker, not Marwen?") do
+    NOT contain these markers and stay visible. Any tool-call review (a real
+    correction) is always preserved regardless of text content.
+    """
+    if not text:
+        return False
+    if tool_calls:
+        return False
+    low = text.lower()
+    return any(marker in low for marker in _REVIEW_NO_CONCERN_MARKERS)
+
+
 # ─────────── controller ───────────
 
 class LLMController:
@@ -810,8 +859,16 @@ class LLMController:
         "  9. If the command and its delta are both correct, stay silent (return "
         "     no text, no tools). Never block on uncertainty — if genuinely "
         "     unsure AND the command looks fine, stay silent.\n"
+        "SILENCE is the signal for a clean command. NEVER write 'no issues "
+        "detected', 'looks correct', 'the command is sound', or any other "
+        "all-clear analysis. NEVER list your reasoning in numbered points when "
+        "nothing is wrong. NEVER write a paragraph that ends 'no issues' — that "
+        "is the bug. If you have nothing to flag and no tool to call, return "
+        "an empty response. The DM trusts your silence to mean clean.\n"
         "Be concise. Prefer a single corrective tool call. One sentence if you speak."
     )
+
+
 
     def __init__(
         self,
@@ -1110,9 +1167,11 @@ class LLMController:
         # Log the review line whenever the model spoke — even on a cap-hit,
         # where `result.error` is set but `result.text` carries a usable
         # correction. Strip any '⟳ review:' the model self-prefixed.
+        # SUPPRESS verbose "no issues detected" analyses with no corrective
+        # tool calls — those are the most common form of review noise.
         if result.text:
             clean = self._strip_review_prefix(result.text)
-            if clean:
+            if clean and not _should_suppress_review(clean, list(result.tool_calls)):
                 _tool_add_log_entry(self._bundle, f"⟳ review: {clean}", kind="review")
         return result
 
