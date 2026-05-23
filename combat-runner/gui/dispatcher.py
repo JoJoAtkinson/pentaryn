@@ -8,16 +8,17 @@ Grammar (see docs/superpowers/specs/2026-05-22-combat-command-grammar-design.md)
     <who> <stream>
 
   <who>  — the first token. A leading digit string is an explicit target
-           (digit-run split); leading whitespace / sigil / word resolves to
-           the current sticky target.
+           (digit-run split); a leading sigil / word resolves to the current
+           sticky target. (Whitespace is stripped before parsing — a leading
+           Space is consumed by the GUI command box as a target autocomplete.)
   <stream> — a left-to-right sequence of effect groups:
-       undo / hit              -> bare-word effects
+       undo / hit (hits) / save (saved, miss, missed)  -> bare-word effects
        <num> <dmg-tag…>        -> an `amount` group, qualified by tags
        <num> <condition>       -> a `condition`, num = duration
        <num>                   -> an `action` (panel hotkey number)
        <condition>             -> a `condition`, default duration
        <verb>                  -> an `action` by name
-       m<n>                    -> mob-member modifier on the next amount
+       m<n> / m<digits> / m    -> mob-member modifier on the next effect
        <dmg-tag> with no num    -> unparseable (the DM meant an amount)
 
 Anything that doesn't fit -> `kind="unparseable"` (the caller routes to LLM).
@@ -30,10 +31,12 @@ import re
 from .command_model import Effect, ParsedCommand
 from .command_tags import resolve_tags
 from .state import canonicalize_condition
-from .targeting import classify_who
+from .targeting import _ALL_DIGITS as _NUMBER_RE
+from .targeting import classify_who, split_runs
 
-_NUMBER_RE = re.compile(r"^\d+$")
-_MOB_RE = re.compile(r"^m([1-9]\d*)$", re.IGNORECASE)
+# Mob-member modifier. `m` alone -> all alive members; `m<digits>` -> a member
+# selection (digit-run split, see `_mob_members`).
+_MOB_RE = re.compile(r"^m(\d*)$", re.IGNORECASE)
 
 # Sane bounds — a fat-fingered `2 999999 fire` or a giant condition duration is
 # almost certainly a typo. Out-of-range commands route to `unparseable` so the
@@ -43,7 +46,7 @@ _DURATION_MAX = 100
 
 # Sigil-first patterns for out-of-band commands that can't be confused with
 # the `<who> <stream>` grammar: they start with a literal keyword or `/`.
-_NOTE_RE = re.compile(r"^note\s+(.+)$", re.IGNORECASE)
+_NOTE_RE = re.compile(r"^note(?:\s+(.+))?$", re.IGNORECASE)
 _REORDER_RE = re.compile(r"^/reorder\s+(.+)$", re.IGNORECASE)
 _QUIT_RE = re.compile(r"^/(quit|exit)$", re.IGNORECASE)
 
@@ -95,44 +98,86 @@ def _is_condition(token: str) -> bool:
     return canonicalize_condition(word) is not None
 
 
+def _mob_members(digits: str) -> list[int]:
+    """Convert the digit-run of an `m<digits>` modifier into a member list.
+
+    Contract (mirrors `Effect.members`):
+      ""    -> []          `m` alone -> all alive members
+      "3"   -> [3]         single digit -> member 3
+      "12"  -> [1, 2]      multi-digit -> digit-run split (targeting.split_runs)
+      "11"  -> [11]        a repeated-digit run is ONE member id
+      "122" -> [1, 22]     mixed runs -> [1, 22]
+
+    Reuses `targeting.split_runs` so member selection follows the same
+    digit-run rule the `<who>` slot uses for combatant ids.
+    """
+    if not digits:
+        return []
+    return [int(run) for run in split_runs(digits)]
+
+
 def parse(raw: str) -> ParsedCommand:
     """Parse a raw command string into a `ParsedCommand`."""
     raw = raw or ""
 
+    # Collapse runs of internal whitespace and strip the ends. Done on the raw
+    # string BEFORE the out-of-band sigil checks so the note/slash paths also
+    # get clean token boundaries.
+    raw = re.sub(r"\s+", " ", raw).strip()
+
     # Out-of-band sigil forms — checked BEFORE the `<who>` path so they are
     # never accidentally routed to the LLM. These forms are unambiguous:
-    # a leading `note ` or `/` cannot start a valid `<who> <stream>` command.
-    s = raw.strip()
-    if m := _NOTE_RE.match(s):
-        return ParsedCommand(kind="note", raw=raw, note_text=m.group(1).strip())
-    if m := _REORDER_RE.match(s):
+    # a leading `note` or `/` cannot start a valid `<who> <stream>` command.
+    if m := _NOTE_RE.match(raw):
+        return ParsedCommand(
+            kind="note", raw=raw, note_text=(m.group(1) or "").strip())
+    if m := _REORDER_RE.match(raw):
         slugs = [tok for tok in re.split(r"\s+", m.group(1).strip()) if tok]
         return ParsedCommand(kind="reorder", raw=raw, reorder_slugs=slugs)
-    if _QUIT_RE.match(s):
+    if _QUIT_RE.match(raw):
         return ParsedCommand(kind="quit", raw=raw)
+    # A leading `/` that matched none of the slash commands above is a mistyped
+    # slash command (`/qut`, `/quit5`) — never a valid `<who> <stream>`. Route
+    # it straight to `unparseable` rather than letting it fall through and be
+    # mis-read as an action verb.
+    if raw.startswith("/"):
+        return ParsedCommand(kind="unparseable", raw=raw)
 
-    use_current = bool(raw) and raw[0].isspace()
-    tokens = raw.split()
+    # Strip a single trailing sentence-punctuation char (`.`, `,`, `;`) so
+    # `2 8 melee.` parses like `2 8 melee`. Applied AFTER the note/slash checks
+    # so note text is left verbatim.
+    body = re.sub(r"[.,;]$", "", raw)
 
-    cmd = ParsedCommand(kind="unparseable", raw=raw)
+    # Insert a space at every digit→letter boundary so a missing-space typo
+    # like `8melee` becomes `8 melee`. Letter→digit boundaries (e.g. the `m3`
+    # mob sigil) are deliberately NOT split. This glue is single-direction: a
+    # chained typo like `8melee3prone` is only half-corrected and still ends up
+    # unparseable — the `m3`-preservation rule makes a fully-general fix
+    # impossible.
+    body = re.sub(r"(?<=\d)(?=[A-Za-z])", " ", body)
+
+    tokens = body.split()
+
+    cmd = ParsedCommand(kind="unparseable", raw=body)
 
     if not tokens:
         return cmd
 
-    # 1) <who> — the first token. Leading whitespace means the whole input is
-    # the <stream> and <who> resolves to the current sticky target.
-    if use_current:
-        stream = tokens
+    # 1) <who> — the first token. A leading digit-run is an explicit target;
+    # a leading sigil / bare word means the whole input is the <stream> and
+    # <who> resolves to the current sticky target. (A literal leading space is
+    # never seen here — the GUI consumes it as a current-target autocomplete
+    # before the string reaches the parser.)
+    use_current = False
+    who = classify_who(tokens[0])
+    if who.mode == "explicit":
+        cmd.target_ids = who.ids
+        stream = tokens[1:]
     else:
-        who = classify_who(tokens[0])
-        if who.mode == "explicit":
-            cmd.target_ids = who.ids
-            stream = tokens[1:]
-        else:
-            # current target (leading sigil / word). The first token is part
-            # of the <stream>, not a consumed <who>.
-            use_current = True
-            stream = tokens
+        # current target (leading sigil / word). The first token is part
+        # of the <stream>, not a consumed <who>.
+        use_current = True
+        stream = tokens
 
     # 2) <who> alone -> set the sticky target.
     if not stream:
@@ -143,7 +188,9 @@ def parse(raw: str) -> ParsedCommand:
 
     # 3) Walk the <stream> left to right.
     effects: list[Effect] = []
-    pending_member: int | None = None
+    # Pending mob-member selection from an `m<...>` modifier. `None` = none
+    # seen; otherwise a list per the `Effect.members` contract ([] = all).
+    pending_members: list[int] | None = None
     i = 0
     n = len(stream)
     ok = True
@@ -151,20 +198,39 @@ def parse(raw: str) -> ParsedCommand:
     while i < n:
         tok = stream[i]
 
-        # m<n> — mob-member modifier on the next amount effect.
+        # m<n> / m<digits> / m — mob-member modifier on the next effect.
         if (m := _MOB_RE.match(tok)) is not None:
-            pending_member = int(m.group(1))
+            pending_members = _mob_members(m.group(1))
+            # A `0` member (from `m0` / `m00`) is invalid — members are
+            # 1-indexed. Route to the LLM rather than silently no-op it.
+            if any(mem < 1 for mem in pending_members):
+                ok = False
+                break
             i += 1
             continue
 
-        # bare words: undo / hit
+        # bare words: undo / hit. Neither can carry an `m<n>` mob-member
+        # selector — if one is pending, the command is off-grammar -> LLM.
         low = tok.lower()
         if low == "undo":
+            if pending_members is not None:
+                ok = False
+                break
             effects.append(Effect(kind="undo"))
             i += 1
             continue
-        if low == "hit":
+        if low in ("hit", "hits"):
+            if pending_members is not None:
+                ok = False
+                break
             effects.append(Effect(kind="hit"))
+            i += 1
+            continue
+        if low in ("save", "saved", "miss", "missed"):
+            if pending_members is not None:
+                ok = False
+                break
+            effects.append(Effect(kind="save"))
             i += 1
             continue
 
@@ -185,9 +251,9 @@ def parse(raw: str) -> ParsedCommand:
                     kind="amount",
                     amount=number,
                     amount_tags=resolved,
-                    member=pending_member,
+                    members=pending_members,
                 ))
-                pending_member = None
+                pending_members = None
                 i = j
                 continue
 
@@ -199,16 +265,31 @@ def parse(raw: str) -> ParsedCommand:
                 if canonical is None:
                     ok = False
                     break
+                # Carry any pending member selection onto the condition so the
+                # applier can reject member-scoped conditions — the parser only
+                # carries the info, it never rejects here.
                 effects.append(Effect(
                     kind="condition",
                     condition=canonical,
                     duration=number,
                     forced_condition=forced,
+                    members=pending_members,
                 ))
+                pending_members = None
                 i += 2
                 continue
 
-            # nothing / another number after -> action by number.
+            # nothing / another token after -> action by number. Three inputs
+            # route to the LLM instead of firing a wrong action: a second bare
+            # number (`2 5 3` is ambiguous), action `0` (panel hotkeys are
+            # 1-based), and a pending `m<n>` modifier (an action cannot be
+            # scoped to a single mob member).
+            if pending_members is not None:
+                ok = False
+                break
+            if number <= 0 or (nxt is not None and _NUMBER_RE.match(nxt)):
+                ok = False
+                break
             effects.append(Effect(kind="action", action_token=tok))
             i += 1
             continue
@@ -220,12 +301,16 @@ def parse(raw: str) -> ParsedCommand:
             if canonical is None:
                 ok = False
                 break
+            # Carry any pending member selection onto the condition so the
+            # applier can reject member-scoped conditions (see above).
             effects.append(Effect(
                 kind="condition",
                 condition=canonical,
                 duration=None,
                 forced_condition=forced,
+                members=pending_members,
             ))
+            pending_members = None
             i += 1
             continue
 
@@ -244,6 +329,10 @@ def parse(raw: str) -> ParsedCommand:
         # action-by-name is a single verb: it is only valid as the sole token
         # of the stream. Two bare words in a row don't chain (-> LLM).
         if n != 1:
+            ok = False
+            break
+        # An action cannot carry an `m<n>` mob-member selector -> LLM.
+        if pending_members is not None:
             ok = False
             break
         effects.append(Effect(kind="action", action_token=tok))

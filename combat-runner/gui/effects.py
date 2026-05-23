@@ -11,15 +11,9 @@ combatant id strings (no ``"0"`` / ``use_current`` placeholders).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
-from gui.state import EncounterState, NPCState, canonicalize_condition
-from gui.command_model import Effect
-from gui.history import PendingEffect
-
-if TYPE_CHECKING:
-    pass  # actor type hint only; NPCState already imported above
-
+from .command_model import Effect
+from .history import PendingEffect
+from .state import EncounterState, NPCState, canonicalize_condition
 
 # ─── public API ──────────────────────────────────────────────────────────────
 
@@ -57,13 +51,31 @@ def apply_effect(
     if kind == "amount":
         return _apply_amount(state, effect, target_ids)
     if kind == "condition":
-        return _apply_condition(state, effect, target_ids)
+        fragments, _ = _apply_condition(state, effect, target_ids)
+        return fragments
     if kind in ("action", "hit", "undo"):
         raise NotImplementedError(
             f"apply_effect: kind={kind!r} is not handled here — "
             "use the dedicated handler (Tasks 8 / 10)."
         )
     raise ValueError(f"apply_effect: unknown effect kind {kind!r}")
+
+
+def apply_condition_effect(
+    state: EncounterState,
+    effect: Effect,
+    *,
+    target_ids: list[str],
+) -> tuple[list[str], dict[str, bool]]:
+    """Like ``apply_effect`` for condition effects, but also returns a
+    ``per_target_applied`` dict mapping each combatant id to the direction
+    (``True`` = condition applied, ``False`` = removed).
+
+    Used by ``MainWindow._handle_command`` so ``_emit_condition_events`` can
+    fire the authoritative direction instead of re-deriving it from a
+    substring scan of ``combatant.conditions``.
+    """
+    return _apply_condition(state, effect, target_ids)
 
 
 # ─── amount ──────────────────────────────────────────────────────────────────
@@ -83,35 +95,54 @@ def _apply_amount(
             fragments.append(f"warn: no combatant with id {cid!r}")
             continue
 
-        if is_heal:
-            delta = combatant.apply_heal(effect.amount, member=effect.member)
+        # Resolve the member list to iterate over.
+        # members is None  → default routing (one call, member=None).
+        # members == []    → all alive members (AoE: full amount to each).
+        # members == [1,2] → explicit set (full amount to each listed member).
+        members = effect.members
+        if members is None:
+            member_targets: list[int | None] = [None]
+        elif members == []:
+            member_targets = list(combatant.alive_member_indices())  # type: ignore[assignment]
+            if not member_targets:
+                fragments.append(
+                    f"warn: {combatant.name}: no alive members to target"
+                )
+                continue
         else:
-            delta = combatant.apply_damage(effect.amount, member=effect.member)
+            member_targets = list(members)  # type: ignore[assignment]
 
-        # A skipped result (out-of-range mob member, dead member, no alive
-        # members) is a no-op: surface it as a warning so the caller does NOT
-        # treat it as an applied effect (e.g. fires no bus events).
-        if delta.get("skipped"):
-            member_label = f" m{effect.member}" if effect.member is not None else ""
-            fragments.append(
-                f"warn: {combatant.name}{member_label}: no such target "
-                f"({delta['skipped']})"
-            )
-            continue
+        for member in member_targets:
+            if is_heal:
+                delta = combatant.apply_heal(effect.amount, member=member)
+            else:
+                delta = combatant.apply_damage(effect.amount, member=member)
 
-        before, after = delta.get("before", 0), delta.get("after", 0)
-        if is_heal:
-            fragments.append(
-                f"{combatant.name} healed {effect.amount} "
-                f"({before} → {after} HP)"
-            )
-        else:
-            tag_str = f" [{damage_type}]" if damage_type else ""
-            suffix = " (killed)" if delta.get("killed") else ""
-            fragments.append(
-                f"{combatant.name} took {effect.amount}{tag_str} damage "
-                f"({before} → {after} HP){suffix}"
-            )
+            # A skipped result (out-of-range mob member, dead member, no alive
+            # members) is a no-op: surface it as a warning so the caller does NOT
+            # treat it as an applied effect (e.g. fires no bus events).
+            if delta.get("skipped"):
+                member_label = f" m{member}" if member is not None else ""
+                fragments.append(
+                    f"warn: {combatant.name}{member_label}: no such target "
+                    f"({delta['skipped']})"
+                )
+                continue
+
+            before, after = delta.get("before", 0), delta.get("after", 0)
+            member_label = f" m{member}" if member is not None else ""
+            if is_heal:
+                fragments.append(
+                    f"{combatant.name}{member_label} healed {effect.amount} "
+                    f"({before} → {after} HP)"
+                )
+            else:
+                tag_str = f" [{damage_type}]" if damage_type else ""
+                suffix = " (killed)" if delta.get("killed") else ""
+                fragments.append(
+                    f"{combatant.name}{member_label} took {effect.amount}{tag_str} damage "
+                    f"({before} → {after} HP){suffix}"
+                )
 
     return fragments
 
@@ -128,8 +159,14 @@ def _apply_condition(
     state: EncounterState,
     effect: Effect,
     target_ids: list[str],
-) -> list[str]:
+) -> tuple[list[str], dict[str, bool]]:
     """Apply or toggle a condition effect.
+
+    Returns ``(fragments, per_target_applied)`` where ``per_target_applied``
+    maps each combatant id to the authoritative applied/removed direction
+    (``True`` = condition just applied, ``False`` = removed).  The direction
+    comes directly from ``toggle_condition``'s return value — no re-inspection
+    of ``combatant.conditions`` needed.
 
     If ``effect.condition`` is not a recognized catalog name the function
     returns a list containing ``_CONDITION_UNKNOWN_SENTINEL`` (a ``warn:``
@@ -142,21 +179,53 @@ def _apply_condition(
     indicates a bug or an LLM-authored effect with a bad name — fail loud.
     """
     fragments: list[str] = []
+    per_target_applied: dict[str, bool] = {}
     canonical = canonicalize_condition(effect.condition)
 
     if canonical is None:
         # Fail loud: surface a warning AND return the sentinel so the caller
         # knows not to fire bus events or save.
-        return [
-            f"warn: {_CONDITION_UNKNOWN_SENTINEL}: unknown condition "
-            f"{effect.condition!r}"
-        ]
+        return (
+            [
+                f"warn: {_CONDITION_UNKNOWN_SENTINEL}: unknown condition "
+                f"{effect.condition!r}"
+            ],
+            {},
+        )
 
-    # duration to apply when toggling ON.  Default is 1 round.
-    # A duration of None OR <= 0 (e.g. a parsed `3 0 stun`) is treated as the
-    # 1-round default — toggle_condition's `> 0` guard would otherwise drop a
-    # 0 silently and make the condition permanent.
+    # Reject member-scoped conditions: `m2 prone` is not supported — conditions
+    # apply to the whole mob/tab. If effect.members is not None, an m<...>
+    # modifier was attached.
+    if effect.members is not None:
+        return (
+            [
+                f"warn: conditions apply to the whole mob — "
+                f"drop the m<n> (e.g. just '{effect.condition}')"
+            ],
+            {},
+        )
+
+    # `bloodied` is an auto-managed marker — state.py applies and clears it from
+    # the HP-at-or-below-half threshold. A DM cannot meaningfully toggle it or
+    # pin a duration on it (the next HP change overrides either), so reject the
+    # command rather than letting the refresh path strand a stale duration.
+    if canonical == "bloodied":
+        return (
+            ["warn: 'bloodied' is auto-tracked from HP — it can't be set "
+             "directly"],
+            {},
+        )
+
+    # Duration refresh vs. toggle-off semantics.
+    # When a duration is given: ALWAYS ensure the condition is present with that
+    # duration.  If already present, REFRESH the duration (don't toggle off).
+    # When no duration is given (bare condition word): keep the classic toggle.
     _dur = effect.duration
+    has_duration = _dur is not None
+
+    # Normalize: a duration of 0 or None (no number given) uses the 1-round
+    # default for "add with duration" path.  For the toggle-off path it doesn't
+    # matter.
     applied_duration = _dur if (_dur is not None and _dur > 0) else 1
 
     for cid in target_ids:
@@ -165,14 +234,33 @@ def _apply_condition(
             fragments.append(f"warn: no combatant with id {cid!r}")
             continue
 
-        now_active = combatant.toggle_condition(canonical, duration=applied_duration)
-        if now_active:
-            dur_str = f" ({applied_duration}r)" if applied_duration else ""
-            fragments.append(f"{combatant.name} → {canonical}{dur_str}")
+        if has_duration:
+            # Duration given → ensure condition is present with this duration.
+            if canonical in combatant.conditions:
+                # Already present: REFRESH the duration (don't remove it).
+                combatant.condition_durations[canonical] = applied_duration
+                now_active = True
+                per_target_applied[cid] = True
+                dur_str = f" ({applied_duration}r)"
+                fragments.append(f"{combatant.name} → {canonical}{dur_str} (refreshed)")
+            else:
+                # Not present: add it with the duration.
+                combatant.add_condition(canonical, duration=applied_duration)
+                now_active = True
+                per_target_applied[cid] = True
+                dur_str = f" ({applied_duration}r)"
+                fragments.append(f"{combatant.name} → {canonical}{dur_str}")
         else:
-            fragments.append(f"{combatant.name} ← {canonical} removed")
+            # No duration given → classic toggle behavior.
+            now_active = combatant.toggle_condition(canonical, duration=applied_duration)
+            per_target_applied[cid] = now_active
+            if now_active:
+                dur_str = f" ({applied_duration}r)" if applied_duration else ""
+                fragments.append(f"{combatant.name} → {canonical}{dur_str}")
+            else:
+                fragments.append(f"{combatant.name} ← {canonical} removed")
 
-    return fragments
+    return fragments, per_target_applied
 
 
 # ─── uncertain damage + hit upgrade ──────────────────────────────────────────
@@ -258,6 +346,7 @@ def apply_uncertain_damage(
             resolved=False,
             source=source,
             round=state.round_num if round_num is None else round_num,
+            member=member,
         )
     )
     return fragments
@@ -332,7 +421,7 @@ def apply_hit(
 
         remaining = pending.full_amount - pending.applied_amount
         if remaining > 0:
-            delta = combatant.apply_damage(remaining)
+            delta = combatant.apply_damage(remaining, member=pending.member)
             before, after = delta.get("before", 0), delta.get("after", 0)
             suffix = " (killed)" if delta.get("killed") else ""
             fragments.append(
@@ -344,5 +433,55 @@ def apply_hit(
 
         pending.applied_amount = pending.full_amount
         pending.resolved = True
+
+    return fragments
+
+
+def apply_save_resolve(
+    state: EncounterState,
+    target_ids: list[str],
+) -> list[str]:
+    """Resolve each target's latest unresolved PendingEffect as a save / miss.
+
+    No further HP is applied — the minimum was already applied when the action
+    fired (0 for an attack, the save outcome for a save). This call simply
+    marks the pending record resolved and emits a log line, so the DM can
+    explicitly confirm the outcome instead of relying on round-advance
+    auto-clear.
+
+    Mirrors `apply_hit`'s "latest unresolved per id" rule. A `warn:` fragment
+    is appended for any id that has nothing pending.
+    """
+    fragments: list[str] = []
+    for cid in target_ids:
+        pending = None
+        for pe in reversed(state.pending_effects):
+            if pe.combatant_id == cid and not pe.resolved:
+                pending = pe
+                break
+        if pending is None:
+            fragments.append(f"warn: nothing pending for {cid}")
+            continue
+        combatant = state.combatant_by_id(cid)
+        if combatant is None:
+            fragments.append(f"warn: no combatant with id {cid!r}")
+            pending.resolved = True
+            continue
+        pending.resolved = True
+        src = pending.source or "the pending effect"
+        if pending.kind == "save":
+            applied = pending.applied_amount
+            full = pending.full_amount
+            if applied > 0:
+                fragments.append(
+                    f"{combatant.name} saved against {src} "
+                    f"(took {applied} of {full} — no further damage)"
+                )
+            else:
+                fragments.append(
+                    f"{combatant.name} saved against {src} (no damage)"
+                )
+        else:
+            fragments.append(f"{combatant.name} — {src} missed")
 
     return fragments

@@ -190,6 +190,33 @@ def test_jump_command_emits_command_signal(qtbot, pc_state):
     assert received[0].target_ids == ["3"]
 
 
+def test_chip_click_aims_at_current_target_not_self(qtbot, npc_state):
+    """Clicking an action chip emits a `use_current` command with NO explicit
+    target — the actor's action aims at the sticky current target.
+
+    Regression: it used to carry `target_ids=[this tab's NPC]`, so every NPC's
+    attack landed on itself (and silently retargeted the encounter onto the
+    actor, since a directed command sets the sticky target)."""
+    from gui.npc_tab import NPCTab
+
+    npc_state.id = "2"
+    tab = NPCTab(npc_state=npc_state, actions=[], log_path=Path("/tmp/log.md"))
+    qtbot.addWidget(tab)
+
+    received = []
+    tab.command_requested.connect(received.append)
+
+    tab._on_chip_clicked("frost_ray")
+
+    assert len(received) == 1
+    cmd = received[0]
+    assert cmd.kind == "command"
+    assert cmd.use_current is True
+    assert cmd.target_ids == []          # never the tab's own combatant
+    assert cmd.effects[0].kind == "action"
+    assert cmd.effects[0].action_token == "frost_ray"
+
+
 # ─────────────────────────────────────────────────────
 # pinned_notes in status strip
 # ─────────────────────────────────────────────────────
@@ -322,13 +349,25 @@ def test_pc_tab_refresh_does_not_crash(qtbot, pc_state):
 # ─────────────────────────────────────────────────────
 
 def test_damage_log_includes_actor_name(qtbot, npc_state):
-    """After a damage sigil, the combat log must contain the NPC's name as a prefix."""
+    """After a damage effect, the combat log must contain the NPC's name.
+
+    Ported from _apply_damage to effects.apply_effect (the production path).
+    The fragment produced by apply_effect already contains the NPC name.
+    """
+    from gui.command_model import Effect
+    from gui.effects import apply_effect
     from gui.npc_tab import NPCTab
+    from gui.state import EncounterState
+
+    npc_state.id = "9"  # assign a stable id so combatant_by_id can resolve it
+    state = EncounterState(name="test", root=Path("/tmp"), log_path=Path("/tmp/log.md"), npcs=[npc_state])
+    effect = Effect(kind="amount", amount=3)
+    fragments = apply_effect(state, effect, target_ids=["9"], actor=None)
 
     tab = NPCTab(npc_state=npc_state, actions=[], log_path=Path("/tmp/log.md"))
     qtbot.addWidget(tab)
-
-    tab._apply_damage(3, None, None)
+    for frag in fragments:
+        tab._append_log(frag)
 
     log_html = tab.log_view.toHtml()
     assert npc_state.name in log_html, (
@@ -337,15 +376,26 @@ def test_damage_log_includes_actor_name(qtbot, npc_state):
 
 
 def test_heal_log_includes_actor_name(qtbot, npc_state):
-    """After a heal sigil, the combat log must contain the NPC's name as a prefix."""
+    """After a heal effect, the combat log must contain the NPC's name.
+
+    Ported from _apply_heal to effects.apply_effect (the production path).
+    """
+    from gui.command_model import Effect
+    from gui.effects import apply_effect
     from gui.npc_tab import NPCTab
+    from gui.state import EncounterState
 
     # Damage first so there is HP to restore
     npc_state.apply_damage(4)
+    npc_state.id = "9"  # assign a stable id so combatant_by_id can resolve it
+    state = EncounterState(name="test", root=Path("/tmp"), log_path=Path("/tmp/log.md"), npcs=[npc_state])
+    effect = Effect(kind="amount", amount=2, amount_tags={"direction": "heal"})
+    fragments = apply_effect(state, effect, target_ids=["9"], actor=None)
+
     tab = NPCTab(npc_state=npc_state, actions=[], log_path=Path("/tmp/log.md"))
     qtbot.addWidget(tab)
-
-    tab._apply_heal(2, None)
+    for frag in fragments:
+        tab._append_log(frag)
 
     log_html = tab.log_view.toHtml()
     assert npc_state.name in log_html, (

@@ -79,6 +79,7 @@ class CommandInput(QLineEdit):
         # runs when the popup is hidden.
         self._condition_model = QStringListModel(["@" + c for c in CONDITIONS], self)
         self._slash_model = QStringListModel(list(SLASH_COMMANDS), self)
+        self._tag_hint_model = QStringListModel([], self)  # reused per keystroke (GUI-10)
         self._completer = _LastTokenCompleter(self._condition_model, self)
         self._completer.setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive)
         self._completer.setFilterMode(Qt.MatchFlag.MatchStartsWith)
@@ -96,6 +97,13 @@ class CommandInput(QLineEdit):
         self._member_count: int = 1
         self._member_hp: list[int] = [0]
 
+        # Current sticky-target combatant ids (e.g. ["2"] or ["1","2","3"]).
+        # Set by NPCTab on every refresh; consumed by the leading-Space
+        # autocomplete (an empty box + Space inserts these ids + a space).
+        self._current_target_ids: list[str] = []
+        # Default placeholder, restored after a transient "no target" hint.
+        self._default_placeholder = self.placeholderText()
+
     # ─────────── context wiring (call from NPCTab on state change) ───────────
 
     def update_context(self, member_hp: list[int], max_hp_per_member: int) -> None:
@@ -106,6 +114,12 @@ class CommandInput(QLineEdit):
         self._max_hp_per_member = max(1, max_hp_per_member)
         # If a preview is active, recompute it against the new state.
         self._on_text_changed(self.text())
+
+    def set_current_target(self, target_ids: list[str]) -> None:
+        """Inform the input of the current sticky-target combatant id(s) so a
+        leading-Space keystroke can auto-insert them. Called by NPCTab on every
+        state refresh."""
+        self._current_target_ids = [str(t) for t in target_ids]
 
     # ─────────── live preview ───────────
 
@@ -119,6 +133,11 @@ class CommandInput(QLineEdit):
         """
         from ..dispatcher import parse
 
+        # Once the DM types anything, drop a transient "no target" hint and
+        # restore the default placeholder.
+        if text and self.placeholderText() != self._default_placeholder:
+            self.setPlaceholderText(self._default_placeholder)
+
         cmd = parse(text)
         if cmd.kind != "command" or len(cmd.effects) != 1:
             self.preview_changed.emit(None, None)
@@ -131,10 +150,13 @@ class CommandInput(QLineEdit):
         amount = eff.amount
         is_heal = eff.amount_tags.get("direction") == "heal"
 
-        # Determine target member (0-indexed). `eff.member` is 1-indexed from
-        # `m<n>` in the stream; None means default routing.
-        if eff.member is not None:
-            target_idx = eff.member - 1
+        # Determine target member (0-indexed). `eff.members` is the 1-indexed
+        # member selection from an `m<...>` modifier: None → default routing,
+        # [] → all alive members, [1,2] → an explicit set. The single-cell HP
+        # preview shows the first explicitly-named member; `None`/`[]` fall
+        # through to default routing.
+        if eff.members:
+            target_idx = eff.members[0] - 1
             if not (0 <= target_idx < self._member_count):
                 # Out-of-range target → no preview (parser will catch it on submit)
                 self.preview_changed.emit(None, None)
@@ -157,9 +179,9 @@ class CommandInput(QLineEdit):
 
     # ─────────── autocomplete popup ───────────
 
-    # Matches a directed-command prefix: <repeated-digit id> [m<n>] <amount> <partial-tag>
-    # Groups: (1) the repeating digit (structural), (2) the partial tag token (may be empty).
-    _TAG_HINT_RE = re.compile(r'^(\d)\1*\s+(?:m\d+\s+)?\d+(?:\s+\w+)*\s+(\w*)$', re.IGNORECASE)
+    # Matches a directed-command prefix: <digit-run id> [m<n>] <amount> <partial-tag>
+    # Groups: (1) the digit run (structural), (2) the partial tag token (may be empty).
+    _TAG_HINT_RE = re.compile(r'^(\d+)\s+(?:m\d+\s+)?\d+(?:\s+\w+)*\s+(\w*)$', re.IGNORECASE)
 
     def _update_completer_model(self, text: str) -> None:
         """Swap the completer's candidate list based on the leading sigil.
@@ -205,8 +227,8 @@ class CommandInput(QLineEdit):
                 # prefix to the trailing partial token, so the popup filters
                 # `fire`/`force`/… against `f` rather than the whole line.
                 candidates = hint_pool(completed_tokens)
-                model = QStringListModel(candidates, self)
-                self._completer.setModel(model)
+                self._tag_hint_model.setStringList(candidates)
+                self._completer.setModel(self._tag_hint_model)
             else:
                 # Hide popup for non-sigil text
                 popup = self._completer.popup()
@@ -241,6 +263,18 @@ class CommandInput(QLineEdit):
         if event.key() == Qt.Key.Key_Escape:
             self.clear()
             self.preview_changed.emit(None, None)
+            return
+        # Leading Space on an EMPTY box → auto-insert the current target's
+        # id(s) + a trailing space, so the DM can type `<space>8 melee` and
+        # have it hit the sticky target. Mid-input space is a normal
+        # separator (unchanged). With NO current target, prefill `0 ` (self)
+        # — the DM sees the self-target in the box before submitting and can
+        # accept it (e.g. for a self-buff) or edit it.
+        if event.key() == Qt.Key.Key_Space and not self.text():
+            if self._current_target_ids:
+                self.setText("".join(self._current_target_ids) + " ")
+            else:
+                self.setText("0 ")
             return
         # Up/Down browse history
         if event.key() == Qt.Key.Key_Up and self._history:

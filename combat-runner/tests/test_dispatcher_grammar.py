@@ -52,10 +52,22 @@ def test_compound_amount_then_condition():
     assert _eff(c, 1).duration == 1
 
 
-def test_use_current_leading_space():
-    c = parse(" 1")
+def test_use_current_bare_word():
+    # A bare-word stream (no leading digit-run <who>) resolves to the current
+    # sticky target. A literal leading space is never seen by the parser — the
+    # GUI consumes it as a current-target autocomplete before parse() runs.
+    c = parse("prone")
     assert c.use_current is True
-    assert _eff(c, 0).kind == "action" and _eff(c, 0).action_token == "1"
+    assert _eff(c, 0).kind == "condition" and _eff(c, 0).condition == "prone"
+
+
+def test_leading_space_no_longer_special():
+    # The leading-whitespace use_current rule was removed; ` 1` parses exactly
+    # like `1` — an explicit set_target on combatant 1.
+    c = parse(" 1")
+    assert c.kind == "set_target"
+    assert c.target_ids == ["1"]
+    assert c.use_current is False
 
 
 def test_self_token():
@@ -69,13 +81,89 @@ def test_hit_and_undo():
     assert parse("undo").effects[0].kind == "undo"
 
 
+def test_hits_is_an_alias_for_hit():
+    """`hits` (plural) resolves a pending effect exactly like `hit` — a common
+    typo that should not fall through to a fuzzy action-by-name lookup."""
+    assert _eff(parse("13 hits"), 0).kind == "hit"
+    assert _eff(parse("hits"), 0).kind == "hit"
+
+
+def test_save_and_miss_parse_as_save_resolution():
+    """`save` / `saved` / `miss` / `missed` all parse as a `save` resolution
+    effect — the lifecycle counterpart of `hit` for confirming the assumed
+    minimum (already applied) and logging the outcome explicitly."""
+    for word in ("save", "saved", "miss", "missed"):
+        c = parse(word)
+        assert _eff(c, 0).kind == "save", word
+    # With a leading <who> the resolution applies per-target.
+    c = parse("13 save")
+    assert c.target_ids == ["1", "3"]
+    assert _eff(c, 0).kind == "save"
+
+
 def test_damage_tag_without_number_is_unparseable():
     assert parse("2 melee").kind == "unparseable"
 
 
 def test_mob_member_attaches_to_amount():
     e = _eff(parse("7 m3 6 melee"), 0)
-    assert e.kind == "amount" and e.amount == 6 and e.member == 3
+    assert e.kind == "amount" and e.amount == 6 and e.members == [3]
+
+
+# ─── multi-member mob targeting (mob BUG-1) ────────────────────────────────
+
+
+def test_mob_single_digit_member():
+    """`m3` -> a one-member list [3]."""
+    e = _eff(parse("7 m3 6 melee"), 0)
+    assert e.members == [3]
+
+
+def test_mob_multi_digit_member_set():
+    """`m12` is a digit-run member SET [1,2] — NOT 'member 12'."""
+    e = _eff(parse("7 m12 6 melee"), 0)
+    assert e.members == [1, 2]
+
+
+def test_mob_multi_digit_non_adjacent_set():
+    """`m13` -> members [1,3]."""
+    e = _eff(parse("7 m13 6 melee"), 0)
+    assert e.members == [1, 3]
+
+
+def test_mob_repeated_digit_run_is_one_member():
+    """`m11` is a single repeated-digit run -> member [11] (split_runs rule)."""
+    e = _eff(parse("7 m11 6 melee"), 0)
+    assert e.members == [11]
+
+
+def test_mob_m_alone_is_all_members():
+    """`m` with no digits -> [] -> ALL alive members."""
+    e = _eff(parse("7 m 6 melee"), 0)
+    assert e.members == []
+
+
+def test_no_mob_modifier_members_is_none():
+    """No `m` token at all -> members is None (default routing)."""
+    e = _eff(parse("7 6 melee"), 0)
+    assert e.members is None
+
+
+def test_mob_member_carried_on_condition():
+    """`7 m2 prone` — the parser must CARRY members onto the condition effect
+    (so the applier can reject member-scoped conditions). It does NOT reject."""
+    c = parse("7 m2 prone")
+    assert c.kind == "command"
+    e = _eff(c, 0)
+    assert e.kind == "condition" and e.condition == "prone"
+    assert e.members == [2]
+
+
+def test_mob_member_carried_on_condition_with_duration():
+    """`7 m2 3 stun` — members carried onto a duration-qualified condition."""
+    e = _eff(parse("7 m2 3 stun"), 0)
+    assert e.kind == "condition" and e.condition == "stunned" and e.duration == 3
+    assert e.members == [2]
 
 
 def test_condition_at_escape_hatch():
@@ -170,6 +258,33 @@ def test_grapple_parses_to_canonical():
     assert e.kind == "condition" and e.condition == "grappled"
 
 
+def test_poison_bare_is_condition():
+    """`3 poison` — bare `poison` is the poisoned CONDITION, not a damage type."""
+    c = parse("3 poison")
+    assert c.kind == "command"
+    e = _eff(c, 0)
+    assert e.kind == "condition" and e.condition == "poisoned"
+    assert e.duration is None
+
+
+def test_poison_with_number_is_condition_duration():
+    """`3 2 poison` — `poison` is a condition, so the number is a DURATION
+    (poisoned for 2 rounds), NOT 2 poison-typed damage."""
+    c = parse("3 2 poison")
+    assert c.kind == "command"
+    e = _eff(c, 0)
+    assert e.kind == "condition" and e.condition == "poisoned" and e.duration == 2
+
+
+def test_poison_for_eight_rounds_not_eight_damage():
+    """`2 8 poison` parses as poisoned-for-8-rounds — NOT 8 damage."""
+    c = parse("2 8 poison")
+    assert c.kind == "command"
+    e = _eff(c, 0)
+    assert e.kind == "condition", "poison must be a condition, not an amount"
+    assert e.condition == "poisoned" and e.duration == 8
+
+
 def test_at_notacondition_is_unparseable():
     """`@notacondition` with the @ sigil but unknown word must be unparseable,
     not a silent no-op (the @ sigil signals explicit condition intent)."""
@@ -192,13 +307,14 @@ def test_note_case_insensitive():
     assert c.note_text == "hello world"
 
 
-def test_note_requires_text():
-    """Bare `note` with no trailing text is not a `note` command — it falls
-    through to the `<who> <stream>` grammar as an action-by-name token
-    (against the current sticky target). It does NOT route to the LLM note path."""
+def test_bare_note_is_an_empty_note():
+    """Bare `note` with no trailing text parses as a `note` command with empty
+    text — not as an action-by-name token. An empty note is a degenerate input
+    the GUI treats as a no-op; the point is that a fat-fingered `note` never
+    becomes a bogus action lookup."""
     c = parse("note")
-    # Not a note — treated as a bare action token
-    assert c.kind != "note"
+    assert c.kind == "note"
+    assert c.note_text == ""
 
 
 def test_reorder_parses_slugs():

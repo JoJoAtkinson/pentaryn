@@ -79,24 +79,27 @@ def test_directed_heal_increases_target_hp(window):
     assert target.hp == 16
 
 
-# ─────────── set_target / jump ───────────
+# ─────────── set_target ───────────
 
 
-def test_set_target_jumps_to_target_tab(window):
-    """A bare id '2' sets the sticky target and jumps to its tab (index 1)."""
+def test_set_target_does_not_switch_tabs(window):
+    """A bare id '2' sets the sticky target WITHOUT switching tabs — the
+    active tab is the ACTOR, and you set a target to then act on it from the
+    actor's tab."""
     window.tabs.setCurrentIndex(0)
     cmd = parse("2")
     assert cmd.kind == "set_target"
     window._on_command(cmd)
-    assert window.tabs.currentIndex() == 1
+    assert window.tabs.currentIndex() == 0   # no jump
     assert window.encounter_state.current_target == ["2"]
 
 
-def test_set_target_to_first_combatant_focuses_index_zero(window):
-    """Bare id '1' focuses index 0 (actor's own tab)."""
+def test_set_target_from_non_actor_tab_stays_put(window):
+    """set_target never switches tabs, whichever tab is active."""
     window.tabs.setCurrentIndex(1)
     window._on_command(parse("1"))
-    assert window.tabs.currentIndex() == 0
+    assert window.tabs.currentIndex() == 1   # stays put
+    assert window.encounter_state.current_target == ["1"]
 
 
 # ─────────── condition ───────────

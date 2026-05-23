@@ -1,9 +1,12 @@
 """Action chip grid — clickable action cards for the active NPC.
 
-Each chip shows action name + a verb hint. Clicking emits `chip_clicked(action_name)`.
-USED actions render greyed-out and don't emit on click. Sorted by `priority`
-descending (higher priority → top-left), with `scope: "global"` actions
-visually segregated at the bottom of the grid.
+Each chip shows its panel hotkey number + action name + a verb hint. Clicking
+emits `chip_clicked(action_name)`. USED actions render greyed-out and don't emit
+on click. Chips render in the order they are passed in — the caller supplies the
+canonical surface order (NPC-specific actions first, then `scope: "global"`
+ones), which is also the order the panel hotkey numbers index. Global actions
+are visually segregated under a divider; their numbers continue from the
+NPC-specific block.
 
 The grid uses a 2-column flow layout (configurable via cols arg).
 """
@@ -23,6 +26,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from ..action_numbering import GLOBAL_ACTION_BASE
 
 
 class ActionChip(QFrame):
@@ -44,12 +49,14 @@ class ActionChip(QFrame):
         meta: str | None = None,  # e.g. "range 30/60 ft" or "recharge 5+"
         narration: str | None = None,
         action_type: str | None = None,
+        number: int | None = None,  # 1-based panel hotkey number
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self.action_name = action_name
         self.is_used = is_used
         self.is_global = is_global
+        self.number = number
         self.narration = narration or ""
         self.action_type = action_type or ""
 
@@ -85,8 +92,12 @@ class ActionChip(QFrame):
             name_label.setStyleSheet("font-weight: 600; color: #6c8eba; text-decoration: line-through;")
 
     def _format_name(self) -> str:
-        # snake_case → Title Case for display
-        return self.action_name.replace("_", " ").title()
+        # snake_case → Title Case for display, prefixed with the panel hotkey
+        # number so the DM can see what to type (e.g. "1 · Tail Sweep").
+        name = self.action_name.replace("_", " ").title()
+        if self.number is not None:
+            return f"{self.number} · {name}"
+        return name
 
     def mousePressEvent(self, event) -> None:  # noqa: N802 (Qt API)
         if event.button() == Qt.MouseButton.LeftButton and not self.is_used:
@@ -146,9 +157,14 @@ class ActionChipGrid(QWidget):
         """Populate the grid from a list of action summary dicts.
 
         Each dict needs: `action` (str), `verbs` (list[str]). Optional:
-        `priority` (int, higher = first), `scope` (str, "global" segregates),
-        `range`, `area`, `recharge`, `prerequisite` (any of these surface as
-        meta text under the verbs).
+        `scope` (str, "global" segregates under a divider), `range`, `area`,
+        `recharge`, `prerequisite` (any of these surface as meta text under
+        the verbs).
+
+        Chips render in the given list order — the caller supplies the
+        canonical surface order, which is also the order the panel hotkey
+        numbers index. Each chip is labelled with its 1-based number; the
+        global block's numbers continue from the NPC-specific block.
         """
         used_actions = used_actions or set()
         self._slot_remaining_by_action = slot_remaining or {}
@@ -159,6 +175,9 @@ class ActionChipGrid(QWidget):
                 w.deleteLater()
         self._chips.clear()
 
+        # Split into NPC-specific vs global while PRESERVING the incoming
+        # order — the caller already sorted; re-sorting here would desync the
+        # chip numbers from the panel hotkeys.
         per_npc: list[dict[str, Any]] = []
         globals_: list[dict[str, Any]] = []
         for a in actions:
@@ -167,24 +186,21 @@ class ActionChipGrid(QWidget):
             else:
                 per_npc.append(a)
 
-        # Sort each bucket by priority descending; ties by action name ascending.
-        def _sort_key(a: dict[str, Any]) -> tuple[int, str]:
-            return (-int(a.get("priority", 0)), a.get("action", ""))
-        per_npc.sort(key=_sort_key)
-        globals_.sort(key=_sort_key)
-
-        # Render per-NPC actions first
+        # Render per-NPC actions first, numbered from 1.
         if per_npc:
-            self._add_grid_section(per_npc, used_actions, label=None)
+            self._add_grid_section(per_npc, used_actions, start_number=1)
 
-        # Then a separator + globals
+        # Then a separator + globals, on the fixed GLOBAL_ACTION_BASE numbers
+        # (111, 112, …) — the same on every NPC's tab.
         if globals_:
             if per_npc:
                 divider = QLabel("— Global actions —")
                 divider.setStyleSheet("color: #6c8eba; font-size: 10px; padding-top: 8px;")
                 divider.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 self._layout.addWidget(divider)
-            self._add_grid_section(globals_, used_actions, label=None, is_global=True)
+            self._add_grid_section(
+                globals_, used_actions,
+                start_number=GLOBAL_ACTION_BASE, is_global=True)
 
         self._layout.addStretch(1)
 
@@ -192,7 +208,7 @@ class ActionChipGrid(QWidget):
         self,
         items: list[dict[str, Any]],
         used: set[str],
-        label: str | None,
+        start_number: int,
         is_global: bool = False,
     ) -> None:
         grid_host = QWidget(self)
@@ -226,6 +242,7 @@ class ActionChipGrid(QWidget):
                 meta=meta,
                 narration=a.get("narration_preview") or a.get("narration"),
                 action_type=a.get("type"),
+                number=start_number + i,
                 parent=grid_host,
             )
             chip.show_narration_requested.connect(self.show_narration_requested.emit)

@@ -34,13 +34,25 @@ def controller_with_fake_client(sample_encounter):
     return ctrl, fake_client
 
 
+def _affected(**over):
+    """Build one affected-target dict with sensible defaults."""
+    base = {
+        "id": "5", "name": "Goblin", "slug": "goblin", "kind": "npc",
+        "hp_before": 7, "hp_after": 0, "max_hp": 7,
+        "conditions_before": [], "conditions_after": [],
+        "immunities": [],
+    }
+    base.update(over)
+    return base
+
+
 def test_review_command_calls_api(controller_with_fake_client):
     ctrl, fake_client = controller_with_fake_client
     ctrl.review_command(
         raw="5 12 fire",
-        actor={"id": "1", "name": "Vessa", "slug": "pc-1"},
-        target={"id": "5", "name": "Goblin", "slug": "goblin",
-                "hp": 7, "max_hp": 7, "conditions": [], "in_melee": False},
+        actor={"id": "1", "name": "Vessa", "slug": "pc-1", "kind": "pc"},
+        affected=[_affected(hp_before=7, hp_after=0)],
+        roster=[{"id": "5", "name": "Goblin", "kind": "npc"}],
         applied_direction="damage", applied_amount=12,
         log_tail="",
     )
@@ -50,12 +62,88 @@ def test_review_command_calls_api(controller_with_fake_client):
 def test_review_silent_returns_no_error(controller_with_fake_client):
     ctrl, _ = controller_with_fake_client
     result = ctrl.review_command(
-        raw="5 12", actor={"id": "1", "name": "A", "slug": "a"},
-        target={"id": "5", "name": "B", "slug": "b",
-                "hp": 10, "max_hp": 10, "conditions": [], "in_melee": False},
+        raw="5 12", actor={"id": "1", "name": "A", "slug": "a", "kind": "npc"},
+        affected=[_affected(name="B", hp_before=10, hp_after=-2, max_hp=10)],
+        roster=[{"id": "5", "name": "B", "kind": "npc"}],
         applied_direction="damage", applied_amount=12, log_tail="",
     )
     assert result.error is None
+
+
+# ── GAP coverage: the review user_msg now carries real context ────────────────
+
+def test_review_user_msg_contains_before_after_hp():
+    """The review context shows the real before→after HP delta."""
+    from gui.llm_controller import LLMController
+
+    msg = LLMController.build_review_user_msg(
+        raw="2 80 melee",
+        actor={"id": "1", "name": "Vessa", "kind": "pc"},
+        affected=[_affected(name="Marwen", id="2", hp_before=32, hp_after=0, max_hp=32)],
+        roster=[{"id": "2", "name": "Marwen", "kind": "npc"}],
+        applied_direction="damage", applied_amount=80, log_tail="",
+    )
+    assert "32→0" in msg, msg
+    assert "damage 80" in msg
+
+
+def test_review_user_msg_contains_immunities():
+    """Each target's damage immunities appear in the context."""
+    from gui.llm_controller import LLMController
+
+    msg = LLMController.build_review_user_msg(
+        raw="2 30 fire",
+        actor={"id": "1", "name": "Mage", "kind": "pc"},
+        affected=[_affected(name="Fire Elemental", id="2",
+                            hp_before=50, hp_after=20,
+                            immunities=["fire", "poison"])],
+        roster=[{"id": "2", "name": "Fire Elemental", "kind": "npc"}],
+        applied_direction="damage", applied_amount=30, log_tail="",
+    )
+    assert "fire" in msg and "poison" in msg
+    assert "immunities" in msg.lower()
+    # resistances are not in the data — the context must say so.
+    assert "resistances" in msg.lower()
+
+
+def test_review_user_msg_contains_all_targets():
+    """A multi-target command lists ALL its targets, not just the first."""
+    from gui.llm_controller import LLMController
+
+    msg = LLMController.build_review_user_msg(
+        raw="123 fireball",
+        actor={"id": "9", "name": "Mage", "kind": "pc"},
+        affected=[
+            _affected(name="Goblin A", id="1", hp_before=10, hp_after=0),
+            _affected(name="Goblin B", id="2", hp_before=12, hp_after=2),
+            _affected(name="Goblin C", id="3", hp_before=8, hp_after=0),
+        ],
+        roster=[
+            {"id": "1", "name": "Goblin A", "kind": "npc"},
+            {"id": "2", "name": "Goblin B", "kind": "npc"},
+            {"id": "3", "name": "Goblin C", "kind": "npc"},
+        ],
+        applied_direction=None, applied_amount=None, log_tail="",
+    )
+    assert "Goblin A" in msg and "Goblin B" in msg and "Goblin C" in msg
+
+
+def test_review_user_msg_contains_roster():
+    """The full combatant roster (id/name/pc-vs-npc) is in the context."""
+    from gui.llm_controller import LLMController
+
+    msg = LLMController.build_review_user_msg(
+        raw="7 20 heal",
+        actor={"id": "1", "name": "Cleric", "kind": "pc"},
+        affected=[_affected(name="Orc", id="7", hp_before=10, hp_after=30)],
+        roster=[
+            {"id": "1", "name": "Cleric", "kind": "pc"},
+            {"id": "7", "name": "Orc", "kind": "npc"},
+        ],
+        applied_direction="heal", applied_amount=20, log_tail="",
+    )
+    assert "Cleric" in msg and "[pc]" in msg
+    assert "Orc" in msg and "[npc]" in msg
 
 
 def test_apply_command_tool_heals_npc(sample_encounter):
@@ -92,14 +180,17 @@ def test_main_window_enqueues_review_no_op_without_controller(qtbot, sample_enco
     that); it verifies the guard-clause — _llm_controller absent → no worker
     spawned, no crash, no inflight signals added.
     """
+    from gui.dispatcher import parse
     from gui.main_window import MainWindow
+    from gui.state import serialize_encounter
     sample_encounter.npcs[0].id = "1"
     win = MainWindow(sample_encounter)
     qtbot.addWidget(win)
     # No controller attached — _enqueue_review must return silently.
     before_inflight = len(win._inflight_llm_signals)
-    win._enqueue_review("−18", sample_encounter.npcs[0], sample_encounter.npcs[0],
-                        applied_direction="damage", applied_amount=18)
+    snap = serialize_encounter(sample_encounter)
+    win._enqueue_review(parse("1 18 dmg"), sample_encounter.npcs[0], ["1"],
+                        snap, snap)
     # No new workers should be in-flight since there is no controller.
     assert len(win._inflight_llm_signals) == before_inflight
 
@@ -207,9 +298,9 @@ def test_review_command_uses_trimmed_tool_set(controller_with_fake_client):
     ctrl, fake_client = controller_with_fake_client
     ctrl.review_command(
         raw="5 12 fire",
-        actor={"id": "1", "name": "Vessa", "slug": "pc-1"},
-        target={"id": "5", "name": "Goblin", "slug": "goblin",
-                "hp": 7, "max_hp": 7, "conditions": [], "in_melee": False},
+        actor={"id": "1", "name": "Vessa", "slug": "pc-1", "kind": "pc"},
+        affected=[_affected(hp_before=7, hp_after=0)],
+        roster=[{"id": "5", "name": "Goblin", "kind": "npc"}],
         applied_direction="damage", applied_amount=12,
         log_tail="",
     )
@@ -240,3 +331,264 @@ def test_run_path_uses_full_tool_set(controller_with_fake_client):
         f"run() should use more than the {len(REVIEW_TOOL_NAMES)} review tools "
         f"(got {len(sent_names)})"
     )
+
+
+# ── Enriched payload + prompt + pipeline ──────────────────────────────
+
+
+def test_review_user_msg_carries_applied_amount_and_max_hp():
+    """An absurd amount stays reviewable: the applied amount and each target's
+    max HP both render, so the prompt's magnitude rule can flag e.g. 700 on a
+    32-HP target. There is no separate `raw_amount` field — the parser rejects
+    out-of-range amounts outright, so the applied amount IS the typed amount."""
+    from gui.llm_controller import LLMController
+
+    msg = LLMController.build_review_user_msg(
+        raw="2 700 heal",
+        actor={"id": "1", "name": "Cleric", "kind": "pc"},
+        affected=[_affected(name="Marwen", id="2", kind="pc",
+                            hp_before=32, hp_after=32, max_hp=32)],
+        roster=[{"id": "2", "name": "Marwen", "kind": "pc"}],
+        applied_direction="heal", applied_amount=700, log_tail="",
+    )
+    assert "700" in msg              # the applied (== typed) amount
+    assert "32" in msg               # target max HP — the magnitude anchor
+
+
+def test_review_user_msg_carries_condition_durations():
+    """Per-condition remaining durations appear in the context."""
+    from gui.llm_controller import LLMController
+
+    msg = LLMController.build_review_user_msg(
+        raw="7 90 frightened",
+        actor={"id": "1", "name": "Mage", "kind": "pc"},
+        affected=[_affected(name="Skeleton", id="7",
+                            hp_before=13, hp_after=13, max_hp=13,
+                            conditions_before=[],
+                            conditions_after=["frightened"],
+                            durations_after={"frightened": 90})],
+        roster=[{"id": "7", "name": "Skeleton", "kind": "npc"}],
+        applied_direction=None, applied_amount=None, log_tail="",
+    )
+    assert "90" in msg
+    assert "frightened" in msg
+
+
+def test_review_user_msg_carries_id_fallback_flag():
+    """An id that did not cleanly resolve is surfaced in the context."""
+    from gui.llm_controller import LLMController
+
+    msg = LLMController.build_review_user_msg(
+        raw="0 buff",
+        actor={"id": "1", "name": "Bazgar", "kind": "pc"},
+        affected=[_affected(name="Bazgar", id="1", kind="pc")],
+        roster=[{"id": "1", "name": "Bazgar", "kind": "pc"}],
+        applied_direction=None, applied_amount=None, log_tail="",
+        id_fallbacks=[{"token": "0", "resolved_to": "1"}],
+    )
+    assert "0" in msg
+    assert "fallback" in msg.lower() or "resolve" in msg.lower()
+
+
+def test_review_user_msg_omits_id_block_when_no_fallbacks():
+    """A valid command (no id fallbacks) produces a payload with NO
+    id-resolution block at all, so the reviewer cannot reach for it as a
+    catch-all. Covers both the None default and an explicit empty list."""
+    from gui.llm_controller import LLMController
+
+    for fallbacks in (None, []):
+        msg = LLMController.build_review_user_msg(
+            raw="3 14 heal",
+            actor={"id": "1", "name": "Cleric", "kind": "pc"},
+            affected=[_affected(name="Sabriel", id="3", kind="pc",
+                                hp_before=24, hp_after=38, max_hp=38)],
+            roster=[{"id": "3", "name": "Sabriel", "kind": "pc"}],
+            applied_direction="heal", applied_amount=14, log_tail="",
+            id_fallbacks=fallbacks,
+        )
+        assert "id-resolution" not in msg.lower(), fallbacks
+        assert "fallback" not in msg.lower(), fallbacks
+
+
+def test_review_user_msg_includes_id_block_when_fallback_present():
+    """A genuinely malformed id (the fallback list is non-empty) still
+    renders the id-resolution block so the real case keeps being flagged."""
+    from gui.llm_controller import LLMController
+
+    msg = LLMController.build_review_user_msg(
+        raw="0 buff",
+        actor={"id": "1", "name": "Bazgar", "kind": "pc"},
+        affected=[_affected(name="Bazgar", id="1", kind="pc")],
+        roster=[{"id": "1", "name": "Bazgar", "kind": "pc"}],
+        applied_direction=None, applied_amount=None, log_tail="",
+        id_fallbacks=[{"token": "0", "resolved_to": "1"}],
+    )
+    assert "id-resolution fallbacks" in msg.lower()
+    assert "'0'" in msg or "token 0" in msg.lower()
+
+
+def test_review_prompt_gates_id_resolution_flag_to_block_presence():
+    """The prompt's id-resolution clause must be opt-in: it only fires
+    when the fallback block is present, and must forbid the catch-all use."""
+    from gui.llm_controller import LLMController
+
+    prompt = LLMController.REVIEW_SYSTEM_PROMPT.lower()
+    # The clause is conditioned on the block being present in the payload.
+    assert "id-resolution fallbacks' block" in prompt
+    assert "if that block is absent" in prompt
+    # And it explicitly forbids the catch-all behaviour the regression showed.
+    assert "catch-all" in prompt
+
+
+def test_review_prompt_has_allegiance_gated_multitarget_rule():
+    """The prompt must say an all-enemy AoE is correct and only flag a
+    multi-target command that includes an ally/PC."""
+    from gui.llm_controller import LLMController
+
+    prompt = LLMController.REVIEW_SYSTEM_PROMPT.lower()
+    assert "all-enemy" in prompt or "all enemy" in prompt
+    # only flag when an ally/PC is in the target set
+    assert "includes an ally" in prompt or "include an ally" in prompt
+
+
+def test_review_prompt_has_type_immunity_and_undead_rule():
+    """The prompt instructs the review to apply type-based immunities and
+    names undead → necrotic explicitly."""
+    from gui.llm_controller import LLMController
+
+    prompt = LLMController.REVIEW_SYSTEM_PROMPT.lower()
+    assert "undead" in prompt and "necrotic" in prompt
+    assert "construct" in prompt
+
+
+def test_review_prompt_has_magnitude_and_noop_rules():
+    """The prompt flags absurd amounts (magnitude rule) and wrong-target
+    no-ops (a clean no-op delta does not excuse a wrong command)."""
+    from gui.llm_controller import LLMController
+
+    prompt = LLMController.REVIEW_SYSTEM_PROMPT.lower()
+    assert "applied amount" in prompt
+    assert "no-op" in prompt
+
+
+def test_review_prompt_explains_didnt_land_lifecycle():
+    """The prompt teaches the reviewer the didn't-land/`hit` lifecycle so it
+    never flags a still-pending effect as 'damage not applied'."""
+    from gui.llm_controller import LLMController
+
+    prompt = LLMController.REVIEW_SYSTEM_PROMPT.lower()
+    assert "lifecycle" in prompt
+    assert "pending effect" in prompt
+    assert "damage not applied" in prompt
+
+
+def test_review_user_msg_renders_pending_effects():
+    """An unresolved pending effect is surfaced per target so the reviewer
+    does not mistake an action's still-pending damage for lost damage."""
+    from gui.llm_controller import LLMController
+
+    msg = LLMController.build_review_user_msg(
+        raw="2 frost-ray",
+        actor={"id": "4", "name": "Aelric", "kind": "npc"},
+        affected=[_affected(name="Bazgar", id="2", kind="pc",
+                            hp_before=49, hp_after=49, max_hp=49,
+                            pending=[{"full": 14, "applied": 0,
+                                      "kind": "attack", "source": "frost ray"}])],
+        roster=[{"id": "2", "name": "Bazgar", "kind": "pc"}],
+        applied_direction=None, applied_amount=None, log_tail="",
+    )
+    assert "PENDING" in msg
+    assert "14" in msg
+    assert "frost ray" in msg
+
+
+def test_strip_review_prefix_removes_double_sigil():
+    """A leading '⟳ review:' the model emits is stripped so the logger
+    does not double-prefix."""
+    from gui.llm_controller import LLMController
+
+    assert LLMController._strip_review_prefix("⟳ review: corrected to 8") == "corrected to 8"
+    assert LLMController._strip_review_prefix("⟳ corrected to 8") == "corrected to 8"
+    # plain text is untouched
+    assert LLMController._strip_review_prefix("corrected to 8") == "corrected to 8"
+
+
+def test_review_logs_no_double_prefix(controller_with_fake_client, tmp_path):
+    """End-to-end: when the model self-prefixes '⟳ review:', the logged
+    line carries the sigil exactly once."""
+    from gui.llm_controller import LLMController
+
+    log_file = tmp_path / "combat.md"
+    fake_client = MagicMock()
+    resp = MagicMock()
+    resp.stop_reason = "end_turn"
+    text_block = MagicMock()
+    text_block.type = "text"
+    text_block.text = "⟳ review: Skeleton is immune to poison; should be 0."
+    resp.content = [text_block]
+    fake_client.messages.create.return_value = resp
+
+    from gui.state import EncounterState
+    import pathlib
+    es = EncounterState(name="t", root=pathlib.Path(tmp_path),
+                         log_path=log_file, npcs=[])
+    ctrl = LLMController(es, log_path=str(log_file), client=fake_client)
+
+    ctrl.review_command(
+        raw="7 8 poison",
+        actor={"id": "1", "name": "Mage", "kind": "pc"},
+        affected=[_affected(name="Skeleton", id="7")],
+        roster=[{"id": "7", "name": "Skeleton", "kind": "npc"}],
+        applied_direction="damage", applied_amount=8, log_tail="",
+    )
+    logged = log_file.read_text(encoding="utf-8")
+    assert logged.count("⟳ review:") == 1, f"double prefix in log: {logged!r}"
+
+
+def test_chat_loop_returns_last_text_on_cap_hit(controller_with_fake_client):
+    """On a tool-loop cap-hit, the last assistant text is RETURNED (not
+    discarded). A correction emitted before the cap survives."""
+    from gui.llm_controller import LLMController
+    import pathlib
+    from gui.state import EncounterState
+
+    # A fake client that ALWAYS returns a tool_use → the loop never ends
+    # naturally and hits the cap. Each turn also emits text.
+    fake_client = MagicMock()
+    resp = MagicMock()
+    resp.stop_reason = "tool_use"
+    text_block = MagicMock()
+    text_block.type = "text"
+    text_block.text = "800 damage is impossible; correcting to 8."
+    tool_block = MagicMock()
+    tool_block.type = "tool_use"
+    tool_block.name = "add_log_entry"
+    tool_block.id = "tu-1"
+    tool_block.input = {"text": "note"}
+    resp.content = [text_block, tool_block]
+    fake_client.messages.create.return_value = resp
+
+    es = EncounterState(name="t", root=pathlib.Path("/tmp"),
+                        log_path=pathlib.Path("/tmp/cap.md"), npcs=[])
+    ctrl = LLMController(es, log_path="/tmp/cap.md", client=fake_client)
+
+    result = ctrl.review_command(
+        raw="6 800 melee",
+        actor={"id": "1", "name": "Mage", "kind": "pc"},
+        affected=[_affected(name="Goblin", id="6")],
+        roster=[{"id": "6", "name": "Goblin", "kind": "npc"}],
+        applied_direction="damage", applied_amount=800, log_tail="",
+    )
+    # The cap was hit → error is set, but the text is NOT discarded.
+    assert result.error is not None
+    assert "cap" in result.error
+    assert "correcting to 8" in result.text, (
+        "cap-hit must return the last assistant text, not discard it"
+    )
+
+
+def test_review_max_iterations_is_seven():
+    """The review iteration cap was raised to 7."""
+    from gui.llm_controller import LLMController
+
+    assert LLMController.REVIEW_MAX_ITERATIONS == 7

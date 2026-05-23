@@ -16,6 +16,7 @@ from __future__ import annotations
 import dataclasses
 import importlib.util
 import json
+import os
 import sys
 import threading
 from datetime import datetime
@@ -23,7 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import QEvent, QObject, QRunnable, Qt, QThreadPool, Signal
-from PySide6.QtGui import QAction, QKeySequence, QShortcut
+from PySide6.QtGui import QAction, QColor, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -37,19 +38,34 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .action_numbering import GLOBAL_ACTION_BASE, panel_number, resolve_panel_number
+from .command_model import Effect, ParsedCommand
+from .effects import (
+    _CONDITION_UNKNOWN_SENTINEL,
+    apply_condition_effect,
+    apply_effect,
+    apply_hit,
+    apply_save_resolve,
+    apply_uncertain_damage,
+    clear_stale_pending,
+)
 from .event_bus import (
     Event,
     EventBus,
     TriggerMatch,
     TriggerMatcher,
     WatchMatcher,
+    bloodied_event,
     collect_triggers_from_db,
     collect_watches_from_db,
+    condition_event,
+    damage_event,
+    death_event,
+    heal_event,
     round_event,
 )
-from .command_model import Effect, ParsedCommand
-from .effects import _CONDITION_UNKNOWN_SENTINEL, apply_effect, apply_hit
 from .history import UndoStack
+from .matching import fuzzy_match_one
 from .npc_tab import NPCTab
 from .state import EncounterState, NPCState, deserialize_encounter, serialize_encounter
 from .suggestion_driver import SuggestionDriver
@@ -135,7 +151,7 @@ class _LLMRunWorker(_LLMWorkerBase):
                 dispatch_fn=self._marshalled_dispatch,
             )
         except Exception as exc:  # noqa: BLE001
-            from .llm_controller import RunResult
+            from .llm_controller import RunResult  # local: cycle-breaker (llm_controller → main_window)
             result = RunResult(error=f"LLM worker crashed: {exc}")
         self._signals.finished.emit(result)
 
@@ -149,31 +165,40 @@ class _LLMReviewWorker(_LLMWorkerBase):
     """
 
     def __init__(
-        self, controller: Any, raw_command: str, actor: dict, target: dict,
+        self, controller: Any, raw_command: str, actor: dict,
+        affected: list[dict], roster: list[dict],
         applied_direction: str | None, applied_amount: int | None,
         log_tail: str, signals: _LLMWorkerSignals,
+        id_fallbacks: list[dict] | None = None,
+        action: dict | None = None,
     ) -> None:
         super().__init__(controller, signals)
         self._raw = raw_command
         self._actor = actor
-        self._target = target
+        self._affected = affected
+        self._roster = roster
         self._direction = applied_direction
         self._amount = applied_amount
         self._log_tail = log_tail
+        self._id_fallbacks = id_fallbacks or []
+        self._action = action  # resolved action info (name + spec)
 
     def run(self) -> None:
         try:
             result = self._controller.review_command(
                 raw=self._raw,
                 actor=self._actor,
-                target=self._target,
+                affected=self._affected,
+                roster=self._roster,
                 applied_direction=self._direction,
                 applied_amount=self._amount,
                 log_tail=self._log_tail,
                 dispatch_fn=self._marshalled_dispatch,
+                id_fallbacks=self._id_fallbacks,
+                action=self._action,
             )
         except Exception as exc:  # noqa: BLE001
-            from .llm_controller import RunResult
+            from .llm_controller import RunResult  # local: cycle-breaker (llm_controller → main_window)
             result = RunResult(error=f"review crashed: {exc}")
         self._signals.finished.emit(result)
 
@@ -319,6 +344,18 @@ class MainWindow(QMainWindow):
         self._tab_action_surfaces: dict[int, list[dict]] = {}
         for npc in self.encounter_state.npcs:
             actions = self._db.list_actions(npc=npc.slug)
+            # Canonical action order: the NPC's own actions first, global /
+            # universal actions after — so the monster's special abilities get
+            # the low hotkey numbers (1, 2, …) the DM reaches for most. Within
+            # each group, higher `priority` first, then name. This single
+            # ordering drives BOTH the panel hotkey numbers
+            # (`_resolve_action_token` indexes this list) and the chip grid, so
+            # a chip's displayed number is exactly what the DM types.
+            actions.sort(key=lambda a: (
+                1 if a.get("scope") == "global" else 0,
+                -int(a.get("priority") or 0),
+                a.get("action", ""),
+            ))
             # Seed per-action slot counters so every NPC starts the encounter
             # with its limited-use actions at full charge. Without this the
             # `slots_remaining` dict is empty until the first use, and
@@ -356,6 +393,10 @@ class MainWindow(QMainWindow):
         # Rolling buffer of the last 10 raw command strings (newest last).
         # Populated by _on_command; passed to the LLM fallback for context.
         self._recent_commands: list[str] = []
+        # Action info captured by _apply_action_effect and consumed once by
+        # _on_command when calling _enqueue_review. None when the most-recent
+        # command was NOT an action invocation.
+        self._pending_action_info: dict | None = None
 
         # Status bar at the bottom for transient messages
         self.setStatusBar(QStatusBar(self))
@@ -455,7 +496,6 @@ class MainWindow(QMainWindow):
         # A pending effect from a prior round is stale — resolve it (the
         # default "do nothing" outcome is a successful save / a miss). This
         # also clears its unresolved marker. Spec §4.
-        from .effects import clear_stale_pending
         stale = clear_stale_pending(
             self.encounter_state, self.encounter_state.round_num
         )
@@ -478,14 +518,18 @@ class MainWindow(QMainWindow):
 
     def _tab_title(self, npc: NPCState) -> str:
         id_prefix = f"{npc.id} · " if npc.id else ""
+        # A dead combatant gets a 💀 prefix and `_repaint_all_tabs` grays its
+        # tab text — but the tab stays clickable so the DM can still select it
+        # (e.g. to revive). For a mob, `npc.is_dead` is "every member dead".
+        dead_prefix = "💀 " if npc.is_dead else ""
         # Minimal unresolved-effect marker (spec §6): a trailing " ?" when this
         # combatant has an unresolved PendingEffect. Cleared automatically once
         # the effect resolves (via `hit` or round-advance stale-clear), because
         # every repaint path re-derives the title through this method.
         suffix = " ?" if self._has_unresolved_pending(npc) else ""
         if npc.count > 1:
-            return f"{id_prefix}{npc.name} ×{npc.count}  {npc.hp}/{npc.max_total_hp}{suffix}"
-        return f"{id_prefix}{npc.name}  {npc.hp}/{npc.max_total_hp}{suffix}"
+            return f"{dead_prefix}{id_prefix}{npc.name} ×{npc.count}  {npc.hp}/{npc.max_total_hp}{suffix}"
+        return f"{dead_prefix}{id_prefix}{npc.name}  {npc.hp}/{npc.max_total_hp}{suffix}"
 
     def _has_unresolved_pending(self, npc: NPCState) -> bool:
         """True if *npc* has an unresolved PendingEffect (drives the tab marker)."""
@@ -525,7 +569,7 @@ class MainWindow(QMainWindow):
         npc = npcs.pop(from_idx)
         npcs.insert(to_idx, npc)
         self.encounter_state.active_tab_index = self.tabs.currentIndex()
-        # Tab indices shifted — re-map current_target ids onto the new layout.
+        # Indices shifted — repaint the targeting arrow against the new layout.
         self._refresh_target_arrow()
 
     def _on_tab_state_changed(self) -> None:
@@ -557,21 +601,27 @@ class MainWindow(QMainWindow):
         controller = getattr(self, "_llm_controller", None)
         if controller is None:
             return
-        # Show "thinking…" hint on every tab; results replace it
+        # Show "thinking…" hint on every NPC tab; results replace it.
+        # Player characters are skipped: players decide their own turns, so a
+        # PC tab never gets LLM "next action" suggestions — the suggester is
+        # for the DM's monsters only.
         for i in range(self.tabs.count()):
             tab = self.tabs.widget(i)
-            if isinstance(tab, NPCTab):
-                tab.show_suggestions_loading()
-                # Bind everything the worker needs via closure
-                npc_state = tab.npc_state
-                action_surface = self._tab_action_surfaces.get(id(tab), [])
-                log_path = self.encounter_state.log_path
+            if not isinstance(tab, NPCTab):
+                continue
+            if tab.npc_state.kind == "pc":
+                continue
+            tab.show_suggestions_loading()
+            # Bind everything the worker needs via closure
+            npc_state = tab.npc_state
+            action_surface = self._tab_action_surfaces.get(id(tab), [])
+            log_path = self.encounter_state.log_path
 
-                def fetcher(controller=controller, npc=npc_state, surface=action_surface, lp=log_path):
-                    log_tail = self._last_log_tail(lp, lines=10)
-                    return controller.suggest_next_actions(npc, surface, log_tail)
+            def fetcher(controller=controller, npc=npc_state, surface=action_surface, lp=log_path):
+                log_tail = self._last_log_tail(lp, lines=10)
+                return controller.suggest_next_actions(npc, surface, log_tail)
 
-                self._suggestion_driver.request_for_tab(id(tab), fetcher)
+            self._suggestion_driver.request_for_tab(id(tab), fetcher)
 
     @staticmethod
     def _last_log_tail(log_path, lines: int = 10) -> str | None:
@@ -624,14 +674,20 @@ class MainWindow(QMainWindow):
             self._refresh_suggestions_for_tab(tab_key)
 
     def _cycle_tab(self, direction: int) -> None:
-        if self.tabs.count() == 0:
+        """Move the active tab one step in `direction` (+1 next, -1 prev),
+        SKIPPING any dead combatants — turn order rolls past them. A direct
+        click still selects a dead tab (e.g. to revive). If everyone is dead,
+        the active tab stays where it is rather than infinite-looping."""
+        count = self.tabs.count()
+        if count == 0:
             return
-        new_idx = (self.tabs.currentIndex() + direction) % self.tabs.count()
-        self.tabs.setCurrentIndex(new_idx)
-
-    def _jump_to_tab(self, idx: int) -> None:
-        if 0 <= idx < self.tabs.count():
-            self.tabs.setCurrentIndex(idx)
+        new_idx = (self.tabs.currentIndex() + direction) % count
+        for _ in range(count):
+            tab = self.tabs.widget(new_idx)
+            if isinstance(tab, NPCTab) and not tab.npc_state.is_dead:
+                self.tabs.setCurrentIndex(new_idx)
+                return
+            new_idx = (new_idx + direction) % count
 
     def _handle_reorder_request(self, new_slugs: list[str]) -> None:
         """Handle `/reorder slug1 slug2 ...` from any tab."""
@@ -772,7 +828,26 @@ class MainWindow(QMainWindow):
         watch_subs = list(self._watch_suggestions.get(tab_key, []))
         llm_subs = getattr(self, "_llm_suggestions_by_tab", {}).get(tab_key, [])
         combined = watch_subs + llm_subs
-        tab.set_suggestions(combined[:5])
+
+        # Annotate each suggestion with its panel hotkey number (1, 2, … for
+        # NPC-specific actions; 111, 112, … for globals — see action_numbering).
+        # Actions not in the surface get panel_number=None.
+        action_surface = self._tab_action_surfaces.get(tab_key, [])
+        action_index: dict[str, int] = {
+            a["action"]: panel_number(action_surface, i)
+            for i, a in enumerate(action_surface)
+            if a.get("action")
+        }
+        annotated = [
+            Suggestion(
+                slug=s.slug,
+                action_name=s.action_name,
+                target_npc=s.target_npc,
+                panel_number=action_index.get(s.action_name),
+            )
+            for s in combined
+        ]
+        tab.set_suggestions(annotated[:5])
 
     def _tab_key_for_slug(self, slug: str) -> int | None:
         """Return the stable tab key — id(NPCTab) — for the first tab whose NPC
@@ -864,7 +939,6 @@ class MainWindow(QMainWindow):
         Auto-PASS when running under the offscreen Qt platform (i.e. headless
         test runs) so blocking modals can't deadlock pytest. The real GUI runs
         under cocoa/xcb/etc. and uses the full dialog."""
-        import os
         if os.environ.get("QT_QPA_PLATFORM") == "offscreen":
             return None
         dlg = ReactionPromptDialog(event_summary=summary, matches=rows, parent=self)
@@ -1005,6 +1079,11 @@ class MainWindow(QMainWindow):
           * ``command``     → snapshot, resolve targets, apply each Effect,
                               emit bus events, repaint, refresh the arrow.
         """
+        # Empty / whitespace-only input is a no-op — a stray Enter must never
+        # parse, snapshot, or spawn an LLM fallback round-trip (UX finding F1).
+        if not (cmd.raw or "").strip():
+            return
+
         # Record every raw command string for LLM context (rolling window of 10).
         if cmd.raw:
             self._recent_commands.append(cmd.raw)
@@ -1013,9 +1092,12 @@ class MainWindow(QMainWindow):
 
         # --- out-of-band commands (no LLM, no snapshot) ---
         if cmd.kind == "note":
-            self._append_to_active_tab(
-                f"<span style='color:#90caf9'>📝 {cmd.note_text}</span>"
-            )
+            # A bare `note` with no text is a degenerate fat-finger — no-op it
+            # rather than logging an empty entry.
+            if cmd.note_text:
+                self._append_to_active_tab(
+                    f"<span style='color:#90caf9'>📝 {cmd.note_text}</span>"
+                )
             return
 
         if cmd.kind == "reorder":
@@ -1027,7 +1109,7 @@ class MainWindow(QMainWindow):
             return
 
         if cmd.kind == "unparseable":
-            from .llm_controller import build_correction_context
+            from .llm_controller import build_correction_context  # local: cycle-breaker (llm_controller → main_window)
             correction_ctx = build_correction_context(
                 state_dict=serialize_encounter(self.encounter_state),
                 recent_commands=self._recent_commands,
@@ -1079,22 +1161,23 @@ class MainWindow(QMainWindow):
                 if not has_undo_effect:
                     actor = self.encounter_state.active_npc
                     ids = self._resolve_targets(cmd)
-                    target = (
-                        self.encounter_state.combatant_by_id(ids[0])
-                        if ids else None
-                    ) or actor
-                    if target is not None:
-                        self._enqueue_review(
-                            cmd.raw, actor, target,
-                            applied_direction=None,
-                            applied_amount=None,
-                        )
+                    # Consume the action info captured during _handle_command
+                    # (None for non-action commands).
+                    action_info = self._pending_action_info
+                    self._pending_action_info = None
+                    # Hand the review the REAL before→after delta: `before` is
+                    # the pre-command serialized snapshot (captured above for
+                    # undo); `after` is the post-command snapshot. Every
+                    # resolved target is reviewed, not just the first.
+                    self._enqueue_review(cmd, actor, ids, before, after,
+                                         action_info=action_info)
 
     def _resolve_targets(self, cmd: ParsedCommand) -> list[str]:
         """Resolve a ParsedCommand's <who> into concrete combatant id strings.
 
-        ``"0"`` resolves to the active combatant's id; ``use_current`` resolves
-        to ``encounter_state.current_target``.
+        An all-zero id (``"0"``, ``"00"`` — a same-digit run never splits)
+        resolves to the active combatant's id; ``use_current`` resolves to
+        ``encounter_state.current_target``.
         """
         if cmd.use_current:
             return list(self.encounter_state.current_target)
@@ -1102,26 +1185,29 @@ class MainWindow(QMainWindow):
         active_id = active.id if active else ""
         resolved: list[str] = []
         for cid in cmd.target_ids:
-            resolved.append(active_id if cid == "0" else cid)
+            is_self = bool(cid) and set(cid) == {"0"}
+            resolved.append(active_id if is_self else cid)
         return resolved
 
     def _handle_set_target(self, cmd: ParsedCommand) -> None:
-        """A bare <who> — set the sticky current target and jump to its tab."""
+        """A bare <who> — set the sticky current target.
+
+        Does NOT switch tabs: the active tab is the ACTOR, and you set a target
+        in order to then act on it from the actor's tab. The target's tab gets
+        the red ▼ arrow instead (drawn on every current-target tab, never on
+        the actor's own). Staying put also keeps the "now the target" log line
+        on the actor's tab where the DM is looking.
+        """
         ids = self._resolve_targets(cmd)
         self.encounter_state.current_target = list(ids)
         names = []
-        first_idx: int | None = None
         for cid in ids:
             combatant = self.encounter_state.combatant_by_id(cid)
             if combatant is None:
                 continue
             names.append(combatant.name)
-            idx = self.encounter_state.npcs.index(combatant)
-            if first_idx is None:
-                first_idx = idx
-        if first_idx is not None:
-            self.tabs.setCurrentIndex(first_idx)
         self._refresh_target_arrow()
+        self._push_current_target_to_inputs()
         if names:
             label = ", ".join(names)
             verb = "is" if len(names) == 1 else "are"
@@ -1131,11 +1217,22 @@ class MainWindow(QMainWindow):
 
     def _handle_command(self, cmd: ParsedCommand) -> None:
         """Apply a `kind == "command"` ParsedCommand's effects."""
+        # Reset per-command action info before applying effects.
+        self._pending_action_info = None
         ids = self._resolve_targets(cmd)
+        # Zero resolved targets — e.g. an untargeted `prone`/`hit` with no
+        # current target set. Don't silently no-op: tell the DM (UX finding F3).
+        # `undo` carries no target and is exempt — it operates on the stack.
+        if not ids and not any(e.kind == "undo" for e in cmd.effects):
+            self._append_to_active_tab(
+                "<span style='color:#ff9800'>no current target — set one first</span>"
+            )
+            return
         # A command carrying explicit target_ids (not use_current) is sticky:
         # it also updates the current target.
         if cmd.target_ids and not cmd.use_current:
             self.encounter_state.current_target = list(ids)
+            self._push_current_target_to_inputs()
 
         actor = self.encounter_state.active_npc
 
@@ -1148,12 +1245,31 @@ class MainWindow(QMainWindow):
                 continue
             if effect.kind == "hit":
                 fragments = apply_hit(self.encounter_state, ids)
-                self._log_fragments(fragments)
+                self._log_fragments(fragments, actor=actor, target_ids=ids)
+                self._refresh_pending_markers()
                 continue
-            # amount / condition → effects.apply_effect.
+            if effect.kind == "save":
+                fragments = apply_save_resolve(self.encounter_state, ids)
+                self._log_fragments(fragments, actor=actor, target_ids=ids)
+                self._refresh_pending_markers()
+                continue
+            # amount → effects.apply_effect.
             # Snapshot HP per-target first so skipped no-ops (out-of-range mob
             # member etc.) emit no bus events — only targets whose HP actually
             # moved get a damage/heal event.
+            # condition → apply_condition_effect, which also returns the
+            # authoritative per-target applied/removed direction.
+            if effect.kind == "condition":
+                fragments, cond_direction = apply_condition_effect(
+                    self.encounter_state, effect, target_ids=ids
+                )
+                self._log_fragments(fragments, actor=actor, target_ids=ids)
+                # Only fire bus events when at least one condition was toggled.
+                # If _apply_condition returned the sentinel (unknown condition),
+                # fragments will contain it and we must NOT fire or auto-save.
+                if not any(_CONDITION_UNKNOWN_SENTINEL in frag for frag in fragments):
+                    self._emit_condition_events(effect, ids, cond_direction)
+                continue
             hp_before = {
                 cid: c.hp
                 for cid in ids
@@ -1162,7 +1278,7 @@ class MainWindow(QMainWindow):
             fragments = apply_effect(
                 self.encounter_state, effect, target_ids=ids, actor=actor
             )
-            self._log_fragments(fragments)
+            self._log_fragments(fragments, actor=actor, target_ids=ids)
             if effect.kind == "amount":
                 changed = [
                     cid for cid in ids
@@ -1179,15 +1295,6 @@ class MainWindow(QMainWindow):
                             target_c.in_melee = True
                     if actor is not None:
                         actor.in_melee = True
-            elif effect.kind == "condition":
-                # Only fire bus events when the condition actually applied.
-                # If _apply_condition returned the sentinel (unknown condition),
-                # fragments will contain it and we must NOT fire or auto-save.
-                condition_applied = not any(
-                    _CONDITION_UNKNOWN_SENTINEL in frag for frag in fragments
-                )
-                if condition_applied:
-                    self._emit_condition_events(effect, ids)
 
         self._repaint_all_tabs()
         self._refresh_target_arrow()
@@ -1221,14 +1328,23 @@ class MainWindow(QMainWindow):
                     val = set(val)
                 setattr(npc, f.name, val)
         self.encounter_state.round_num = restored.round_num
-        self.encounter_state.current_target = list(restored.current_target)
+        # `current_target` is per-actor now (stored on each NPCState as
+        # `target_ids`) — the field-copy loop above already restored it for
+        # every npc, no separate top-level restore needed.
         self.encounter_state.pending_effects = list(restored.pending_effects)
         # Restore the active tab (part of EncounterState; bounds-checked since
-        # the restored index may exceed the current tab count).
+        # the restored index may exceed the current tab count). If it is out of
+        # range — a tab was closed between snapshot and restore — clamp into
+        # range rather than leaving a stale pointer (parity with
+        # `deserialize_encounter`).
         idx = restored.active_tab_index
         if 0 <= idx < self.tabs.count():
             self.encounter_state.active_tab_index = idx
             self.tabs.setCurrentIndex(idx)
+        elif self.tabs.count() > 0:
+            clamped = max(0, min(idx, self.tabs.count() - 1))
+            self.encounter_state.active_tab_index = clamped
+            self.tabs.setCurrentIndex(clamped)
         self.round_btn.setText(self._round_btn_text())
         self._refresh_target_arrow()
 
@@ -1252,11 +1368,25 @@ class MainWindow(QMainWindow):
     def _apply_action_effect(self, effect: Effect, target_ids: list[str]) -> None:
         """Resolve an action token (panel number or fuzzy name) and run it.
 
-        The action runs against each resolved target combatant via that tab's
-        `run_action_externally` — the action rolls its own damage and applies
-        its own riders.
+        An action belongs to the ACTOR — the active-tab combatant — not to
+        whoever it is aimed at. ``<target-id> <action>`` runs the *actor's*
+        action and aims it at the named target(s): the verb is resolved on the
+        actor's action surface, the action rolls on the actor's tab, and any
+        uncertain damage / `PendingEffect` is keyed to the *target* combatant
+        so a follow-up ``<target> hit`` resolves it correctly.
         """
         token = effect.action_token
+        actor = self.encounter_state.active_npc
+        if actor is None:
+            self._append_to_active_tab(
+                "<span style='color:#ff5252'>no active combatant to act</span>"
+            )
+            return
+        actor_idx = self.encounter_state.npcs.index(actor)
+        actor_tab = self.tabs.widget(actor_idx)
+        if not isinstance(actor_tab, NPCTab):
+            return
+
         for cid in target_ids:
             combatant = self.encounter_state.combatant_by_id(cid)
             if combatant is None:
@@ -1264,32 +1394,71 @@ class MainWindow(QMainWindow):
                     f"<span style='color:#ff5252'>unknown combatant id: #{cid}</span>"
                 )
                 continue
-            idx = self.encounter_state.npcs.index(combatant)
-            tab = self.tabs.widget(idx)
-            if not isinstance(tab, NPCTab):
-                continue
+
             # PC tabs: the generic player-action chips (Dodge → dodging
             # condition, Disengage → _disengaging flag, etc.) carry richer
-            # behavior than the generic global utility actions, so they win.
-            if tab.npc_state.kind == "pc" and tab.try_player_action(token):
+            # behavior than the generic global utility actions. When the ACTOR
+            # is a PC, route the action through the PC's player-action chips.
+            if actor.kind == "pc" and actor_tab.try_player_action(token):
                 continue
-            actions = self._tab_action_surfaces.get(id(tab), [])
+
+            actions = self._tab_action_surfaces.get(id(actor_tab), [])
             action_name = self._resolve_action_token(token, actions)
             if action_name is None:
-                self._append_to_active_tab(
-                    f"<span style='color:#ff9800'>no action {token!r} on "
-                    f"{combatant.name}</span>"
-                )
+                if token.isdigit():
+                    npc_n = sum(1 for a in actions if a.get("scope") != "global")
+                    glob_n = sum(1 for a in actions if a.get("scope") == "global")
+                    spans = []
+                    if npc_n:
+                        spans.append(f"1-{npc_n}")
+                    if glob_n:
+                        last = GLOBAL_ACTION_BASE + glob_n - 1
+                        spans.append(
+                            f"{GLOBAL_ACTION_BASE}-{last}"
+                            if glob_n > 1 else str(GLOBAL_ACTION_BASE)
+                        )
+                    rng = " or ".join(spans) or "none"
+                    self._append_to_active_tab(
+                        f"<span style='color:#ff9800'>action #{token} out of range "
+                        f"({rng}) on {actor.name}</span>"
+                    )
+                else:
+                    self._append_to_active_tab(
+                        f"<span style='color:#ff9800'>no action {token!r} on "
+                        f"{actor.name}</span>"
+                    )
                 continue
-            # Run the action — `run_action_externally` returns the parsed
-            # roll_combat_action result, including the structured `rolls`
-            # sidecar. A save-bearing or attack-roll action's damage is
-            # *uncertain*: route it through apply_uncertain_damage so the
-            # default outcome is "saved"/"miss" and a later `hit` upgrades it
+            # Capture the resolved action name + a compact spec summary so the
+            # review payload can include an "Action run: …" line. Written once
+            # per target; the action token is identical across every target of
+            # a command, so this is last-write-wins of the same value.
+            action_spec = next(
+                (a for a in actions if a.get("action") == action_name), None
+            )
+            if action_spec is not None:
+                panel_n = next(
+                    (i + 1 for i, a in enumerate(actions) if a.get("action") == action_name),
+                    None,
+                )
+                self._pending_action_info = {
+                    "name": action_name,
+                    "panel": panel_n,
+                    "spec": action_spec,
+                }
+            # Run the action on the ACTOR's tab — `run_action_externally`
+            # returns the parsed roll_combat_action result, including the
+            # structured `rolls` sidecar. A save-bearing or attack-roll
+            # action's damage is *uncertain*: route it through
+            # apply_uncertain_damage keyed to the TARGET so the default
+            # outcome is "saved"/"miss" and a later `<target> hit` upgrades it
             # (spec §4). A no-save no-attack-roll action carries no `rolls`
             # damage and stays as printed text.
-            result = tab.run_action_externally(action_name)
-            self._route_uncertain_damage(result, cid, action_name, member=effect.member)
+            result = actor_tab.run_action_externally(action_name)
+            # An action is never scoped to a single mob member — the parser
+            # rejects an `m<n>` modifier before an action token. Uncertain
+            # damage routes to the target combatant with default member
+            # routing (highest-numbered alive member for a mob).
+            self._route_uncertain_damage(result, cid, action_name)
 
     def _route_uncertain_damage(
         self,
@@ -1319,7 +1488,6 @@ class MainWindow(QMainWindow):
         # apply_uncertain_damage expects "half" / "none".
         on_save_raw = str(rolls.get("on_save", "none")).strip().lower()
         on_save = "half" if on_save_raw == "half" else "none"
-        from .effects import apply_uncertain_damage
         fragments = apply_uncertain_damage(
             self.encounter_state,
             combatant_id,
@@ -1329,63 +1497,35 @@ class MainWindow(QMainWindow):
             source=action_name,
             member=member,
         )
-        self._log_fragments(fragments)
+        self._log_fragments(
+            fragments, actor=self.encounter_state.active_npc,
+            target_ids=[combatant_id],
+        )
         self._refresh_pending_markers()
 
     @staticmethod
     def _resolve_action_token(token: str, actions: list[dict]) -> str | None:
         """Resolve an `action_token` against an NPC's action surface.
 
-        A digit string is a 1-based panel index. Otherwise the token is
-        matched, tightest-first: exact action-name → exact `verbs` alias →
-        unique prefix → unique substring → closest difflib match. Returns the
-        canonical action name, or None.
+        A digit string is a panel hotkey number — 1, 2, 3, … for NPC-specific
+        actions, 111, 112, … for global ones (see `action_numbering`).
+        Otherwise the token is matched via ``matching.fuzzy_match_one``
+        (5-strategy tightest-first: exact → verbs alias → prefix → substring →
+        difflib). Returns the canonical action name, or None.
         """
         if not actions:
             return None
         if token.isdigit():
-            idx = int(token) - 1
-            if 0 <= idx < len(actions):
-                return actions[idx].get("action")
-            return None
-        q = token.lower().strip()
+            action = resolve_panel_number(actions, int(token))
+            return action.get("action") if action else None
         names = [a.get("action", "") for a in actions if a.get("action")]
-        norm = {n: n.lower().replace("_", " ") for n in names}
-
-        exact = [n for n in names if norm[n] == q or n.lower() == q]
-        if exact:
-            return exact[0]
-        # Exact match against an action's authored `verbs` aliases
-        # (e.g. 'grab' → the grapple action's verbs list).
-        for a in actions:
-            verbs = [v.lower() for v in (a.get("verbs") or [])]
-            if q in verbs and a.get("action"):
-                return a["action"]
-        prefix = [n for n in names if norm[n].startswith(q) or n.lower().startswith(q)]
-        if len(prefix) == 1:
-            return prefix[0]
-        if not prefix:
-            sub = [n for n in names if q in norm[n] or q in n.lower()]
-            if len(sub) == 1:
-                return sub[0]
-        # Last resort: closest difflib match (handles abbreviations / typos
-        # like 'grab' → 'grapple', 'attaccck' → 'attack'). The 0.5 cutoff is
-        # deliberately loose — exact/prefix/substring already caught the easy
-        # cases, so this only fires for genuine near-misses.
-        import difflib
-        close = difflib.get_close_matches(q, [norm[n] for n in names], n=1, cutoff=0.5)
-        if close:
-            for n in names:
-                if norm[n] == close[0]:
-                    return n
-        return None
+        aliases = {a.get("action", ""): a.get("verbs") or [] for a in actions if a.get("action")}
+        return fuzzy_match_one(token, names, aliases=aliases)
 
     def _emit_amount_events(self, effect: Effect, target_ids: list[str]) -> None:
         """Fire damage/heal/bloodied/death events for an applied amount."""
         if self.event_bus is None:
             return
-        from .event_bus import bloodied_event, damage_event, death_event, heal_event
-
         is_heal = effect.amount_tags.get("direction") == "heal"
         dtype = effect.amount_tags.get("type")
         delivery = effect.amount_tags.get("delivery")
@@ -1405,36 +1545,105 @@ class MainWindow(QMainWindow):
                 if combatant.is_dead:
                     self.event_bus.emit(death_event(combatant.slug))
 
-    def _emit_condition_events(self, effect: Effect, target_ids: list[str]) -> None:
-        """Fire condition_applied / condition_removed events."""
+    def _emit_condition_events(
+        self,
+        effect: Effect,
+        target_ids: list[str],
+        direction: dict[str, bool],
+    ) -> None:
+        """Fire condition_applied / condition_removed events.
+
+        ``direction`` is a ``{combatant_id: now_active}`` dict returned
+        directly by ``apply_condition_effect`` — the authoritative toggle
+        direction from ``toggle_condition``, not re-derived from a substring
+        scan of ``combatant.conditions``.
+        """
         if self.event_bus is None:
             return
-        from .event_bus import condition_event
         for cid in target_ids:
             combatant = self.encounter_state.combatant_by_id(cid)
             if combatant is None:
                 continue
-            applied = any(
-                effect.condition in c or c == effect.condition
-                for c in combatant.conditions
-            )
+            applied = direction.get(cid, False)
             self.event_bus.emit(
                 condition_event(combatant.slug, effect.condition, applied=applied)
             )
 
-    def _log_fragments(self, fragments: list[str]) -> None:
-        """Append effect log fragments to the active tab's log view."""
+    def _tab_for_combatant(self, cid: str) -> "NPCTab | None":
+        """The NPCTab whose combatant has id `cid`, or None."""
+        combatant = self.encounter_state.combatant_by_id(cid)
+        if combatant is None:
+            return None
+        try:
+            idx = self.encounter_state.npcs.index(combatant)
+        except ValueError:
+            return None
+        tab = self.tabs.widget(idx)
+        return tab if isinstance(tab, NPCTab) else None
+
+    def _log_fragments(
+        self,
+        fragments: list[str],
+        actor: NPCState | None = None,
+        target_ids: list[str] | None = None,
+    ) -> None:
+        """Append effect log fragments to the active tab's log view — and, for
+        each affected combatant in `target_ids`, to that combatant's own tab
+        log too, so a hit shows up on the victim's log, not only the actor's
+        view.
+
+        When *actor* is given, each non-warning fragment is prefixed with the
+        acting combatant's name (`Gnoll → Marwen: -8 melee`) so the log names
+        who acted, not just who was affected (UX Theme 9). Warnings are left
+        unprefixed — they are about the command, not an actor's deed.
+        """
+        actor_prefix = f"{actor.name} → " if actor is not None else ""
+        current = self.tabs.currentWidget()
+        # Affected combatants' own tabs — but never the active tab (it already
+        # receives every fragment) and never twice.
+        target_tabs: list[NPCTab] = []
+        for cid in target_ids or []:
+            tab = self._tab_for_combatant(cid)
+            if tab is not None and tab is not current and tab not in target_tabs:
+                target_tabs.append(tab)
         for frag in fragments:
-            colour = "#ff5252" if frag.startswith("warn:") else "#b8bdc4"
-            self._append_to_active_tab(f"<span style='color:{colour}'>{frag}</span>")
+            is_warn = frag.startswith("warn:")
+            colour = "#ff5252" if is_warn else "#b8bdc4"
+            text = frag if is_warn else f"{actor_prefix}{frag}"
+            html = f"<span style='color:{colour}'>{text}</span>"
+            self._append_to_active_tab(html)
+            for tab in target_tabs:
+                tab._append_log(html)
 
     def _repaint_all_tabs(self) -> None:
-        """Refresh every tab widget + re-title it (HP shows in the title)."""
+        """Refresh every tab widget + re-title it (HP shows in the title) and
+        gray the title of any dead combatant's tab."""
+        bar = self.tabs.tabBar()
+        # An invalid QColor() restores the palette default — used for live
+        # combatants. A fixed gray indicates "out of the fight".
+        dead_color = QColor("#6c6c6c")
+        live_color = QColor()
         for i in range(self.tabs.count()):
             tab = self.tabs.widget(i)
             if isinstance(tab, NPCTab):
                 tab.refresh()
                 self.tabs.setTabText(i, self._tab_title(tab.npc_state))
+                if bar is not None:
+                    bar.setTabTextColor(
+                        i, dead_color if tab.npc_state.is_dead else live_color
+                    )
+
+    def _push_current_target_to_inputs(self) -> None:
+        """Push each combatant's own sticky target to its tab's command input.
+
+        Targets are per-actor (stored on `NPCState.target_ids`), so each tab's
+        leading-Space autocomplete prefills the target THAT combatant is
+        focused on — not a single encounter-wide value.
+        """
+        for i in range(self.tabs.count()):
+            tab = self.tabs.widget(i)
+            if isinstance(tab, NPCTab):
+                tab.input.set_current_target(list(tab.npc_state.target_ids))
 
     def _refresh_target_arrow(self) -> None:
         """Map `current_target` ids → tab indices and update the tab bar arrow.
@@ -1462,41 +1671,142 @@ class MainWindow(QMainWindow):
         if current is not None and hasattr(current, "_append_log"):
             current._append_log(html)
 
+    @staticmethod
+    def _npc_before_state(before_snapshot: dict, npc_id: str) -> dict | None:
+        """Pull the pre-command HP + conditions for `npc_id` out of a serialized
+        encounter snapshot. Returns None if no combatant with that id is found.
+
+        HP is the sum of `member_hp` (the snapshot stores per-member HP, not the
+        computed total) so it matches `NPCState.hp` for both single creatures
+        and mobs.
+        """
+        for nd in before_snapshot.get("npcs", []):
+            if nd.get("id") == npc_id:
+                return {
+                    "hp": sum(nd.get("member_hp", []) or []),
+                    "conditions": sorted(nd.get("conditions", []) or []),
+                }
+        return None
+
     def _enqueue_review(
-        self, raw_command: str, actor, target, *,
-        applied_direction: str | None, applied_amount: int | None,
+        self, cmd, actor, ids: list[str], before: dict, after: dict,
+        action_info: dict | None = None,
     ) -> None:
         """Enqueue an async LLM review for any state-changing command.
         No-ops if no LLM controller is wired.
 
-        Stale-review mitigation: we record the target's HP at enqueue time.
-        When the review result arrives (_on_review_finished), if the target's HP
-        has changed in the meantime we downgrade any mutation to advisory — the
-        review text is logged as a note rather than applied as a state change.
-        This prevents a late-returning review from clobbering a more-recent
-        command's result under rapid at-table input.
+        The review receives the REAL before→after delta: for every resolved
+        target id, its HP/conditions in `before` (the pre-command snapshot) vs.
+        the current live state, plus the target's immunities and a compact
+        roster of every combatant. `before`/`after` are serialized encounter
+        snapshots from `_on_command` (captured for undo / no-op detection).
+
+        Stale-review mitigation: we record the first target's HP at enqueue
+        time. When the review result arrives (_on_review_finished), if that
+        HP has changed in the meantime we downgrade any mutation to advisory —
+        the review text is logged as a note rather than applied as a state
+        change. This prevents a late-returning review from clobbering a
+        more-recent command's result under rapid at-table input.
         """
         controller = getattr(self, "_llm_controller", None)
         if controller is None:
             return
 
-        # Snapshot HP at enqueue to detect stale reviews later.
-        hp_at_enqueue = target.hp
+        # Resolve the live target NPCStates. Fall back to the actor when the
+        # command carried no explicit targets (e.g. a self-affecting command).
+        targets: list = []
+        for cid in ids:
+            c = self.encounter_state.combatant_by_id(cid)
+            if c is not None and all(c is not t for t in targets):
+                targets.append(c)
+        if not targets and actor is not None:
+            targets = [actor]
+        if not targets:
+            return
+
+        # The stale-review HP guard tracks the first target.
+        primary = targets[0]
+        hp_at_enqueue = primary.hp
 
         actor_snapshot = {
             "id": actor.id if actor else None,
             "name": actor.name if actor else "?",
             "slug": actor.slug if actor else None,
+            "kind": actor.kind if actor else "?",
         }
-        target_snapshot = {
-            "id": target.id,
-            "name": target.name,
-            "slug": target.slug,
-            "hp": hp_at_enqueue,
-            "max_hp": target.max_total_hp,
-            "conditions": sorted(target.conditions),
-            "in_melee": target.in_melee,
-        }
+
+        # Build one affected-entry per target, each carrying the real
+        # before→after HP/conditions. `before` is the pre-command snapshot;
+        # current live state is the "after".
+        affected: list[dict] = []
+        for t in targets:
+            before_state = self._npc_before_state(before, t.id) or {}
+            # Unresolved pending effects on this target — the didn't-land
+            # lifecycle. The review must see these so it does NOT mistake an
+            # action's still-pending damage for "damage not applied".
+            pending = [
+                {
+                    "full": pe.full_amount,
+                    "applied": pe.applied_amount,
+                    "kind": pe.kind,
+                    "source": pe.source,
+                }
+                for pe in self.encounter_state.pending_effects
+                if pe.combatant_id == t.id and not pe.resolved
+            ]
+            affected.append({
+                "id": t.id,
+                "name": t.name,
+                "slug": t.slug,
+                "kind": t.kind,
+                "hp_before": before_state.get("hp", t.hp),
+                "hp_after": t.hp,
+                "max_hp": t.max_total_hp,
+                "conditions_before": before_state.get("conditions", []),
+                "conditions_after": sorted(t.conditions),
+                # Per-condition remaining durations so the review can flag an
+                # implausible duration (e.g. frightened for 90 rounds).
+                "durations_after": dict(t.condition_durations),
+                # Immunities so the review can catch immunity errors.
+                "immunities": list(t.immunities),
+                # Pending (didn't-land lifecycle) effects awaiting `hit`.
+                "pending": pending,
+            })
+
+        # Compact roster of every combatant — id / name / kind — so the review
+        # can catch wrong-target / wrong-allegiance mistakes.
+        roster = [
+            {"id": n.id, "name": n.name, "kind": n.kind}
+            for n in self.encounter_state.npcs
+        ]
+
+        # The real applied scalar — direction + amount from the first amount
+        # effect of the command (None for pure condition commands; the
+        # per-target HP delta in `affected` still tells the story).
+        applied_direction: str | None = None
+        applied_amount: int | None = None
+        for eff in getattr(cmd, "effects", []):
+            if eff.kind == "amount":
+                applied_direction = eff.amount_tags.get("direction", "damage")
+                applied_amount = eff.amount
+                break
+
+        # Flag any target id that did not cleanly resolve. A raw token of "0"
+        # resolves to the actor (self-fallback); any other token that maps to
+        # no combatant is a malformed-id fallback. `cmd.target_ids` carries the
+        # raw typed tokens; `_resolve_targets` already mapped them.
+        id_fallbacks: list[dict] = []
+        if not getattr(cmd, "use_current", False):
+            actor_id = actor.id if actor else ""
+            for token in getattr(cmd, "target_ids", []) or []:
+                if token == "0":
+                    id_fallbacks.append({
+                        "token": token,
+                        "resolved_to": actor_id or "(actor)",
+                    })
+                elif self.encounter_state.combatant_by_id(token) is None:
+                    id_fallbacks.append({"token": token, "resolved_to": "(unresolved)"})
+
         log_tail = self._last_log_tail(self.encounter_state.log_path, lines=8)
 
         signals = _LLMWorkerSignals()
@@ -1505,7 +1815,7 @@ class MainWindow(QMainWindow):
         )
         self._inflight_llm_signals.add(signals)
         signals.finished.connect(
-            lambda result, rt=target, hp_snap=hp_at_enqueue:
+            lambda result, rt=primary, hp_snap=hp_at_enqueue:
                 self._on_review_finished(result, rt, hp_snap),
             Qt.ConnectionType.QueuedConnection,
         )
@@ -1516,13 +1826,16 @@ class MainWindow(QMainWindow):
 
         worker = _LLMReviewWorker(
             controller=controller,
-            raw_command=raw_command,
+            raw_command=getattr(cmd, "raw", str(cmd)),
             actor=actor_snapshot,
-            target=target_snapshot,
+            affected=affected,
+            roster=roster,
             applied_direction=applied_direction,
             applied_amount=applied_amount,
             log_tail=log_tail or "",
             signals=signals,
+            id_fallbacks=id_fallbacks,
+            action=action_info,  # resolved action context
         )
         self._llm_pool.start(worker)
 
@@ -1569,7 +1882,7 @@ class MainWindow(QMainWindow):
     def _open_srd_import(self) -> None:
         """Encounter → Add NPC from SRD… dialog. After import the user has to
         Switch encounters to pick up the new NPC (we don't hot-reload yet)."""
-        from .widgets.srd_monster_import import SrdMonsterImportDialog
+        from .widgets.srd_monster_import import SrdMonsterImportDialog  # local: optional heavy dialog, not always needed
         dlg = SrdMonsterImportDialog(default_encounter_root=self.encounter_state.root, parent=self)
 
         def _after_import(slug: str, md_path: str) -> None:

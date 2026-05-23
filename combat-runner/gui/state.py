@@ -158,6 +158,10 @@ class NPCState:
     id: str = ""                 # permanent repeated-digit label ("1", "22", etc.)
     in_melee: bool = False       # set True when actor/target of a melee-tagged command
     pinned_notes: list[str] = field(default_factory=list)  # free-form tracked state
+    # Per-combatant sticky target — the combatant id(s) THIS actor is focused
+    # on. Each monster/PC remembers its own target; a `<who>`-less command and
+    # the ▼ targeting arrow read the ACTIVE combatant's `target_ids`.
+    target_ids: list[str] = field(default_factory=list)
 
     # Action chips that are USED for the current turn (e.g. bonus actions).
     # Refreshed at start of NPC's turn (or at round advance via the meta-controller).
@@ -377,7 +381,6 @@ class EncounterState:
     round_num: int = 1
     active_tab_index: int = 0
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    current_target: list[str] = field(default_factory=list)
     # Typed as plain list to avoid an import cycle; PendingEffect is defined in history.py.
     # Serialize via dataclasses.asdict if entries are dataclasses; round-trip as list[dict].
     pending_effects: list = field(default_factory=list)
@@ -412,6 +415,20 @@ class EncounterState:
     @property
     def active_npc(self) -> NPCState | None:
         return self.npc_by_tab_index(self.active_tab_index)
+
+    @property
+    def current_target(self) -> list[str]:
+        """The ACTIVE combatant's sticky target — per-actor, so each monster /
+        PC remembers who it is focused on. Empty when the active combatant has
+        no target set (or there is no active combatant)."""
+        actor = self.active_npc
+        return actor.target_ids if actor is not None else []
+
+    @current_target.setter
+    def current_target(self, ids: list[str]) -> None:
+        actor = self.active_npc
+        if actor is not None:
+            actor.target_ids = list(ids)
 
     def advance_round(self) -> None:
         """Round + 1. Refresh every NPC's reaction-used flag. Caller handles recharge rolls."""
@@ -513,6 +530,7 @@ def _serialize_npc(npc: NPCState) -> dict[str, Any]:
         "id": npc.id,
         "in_melee": npc.in_melee,
         "pinned_notes": list(npc.pinned_notes),
+        "target_ids": list(npc.target_ids),
     }
 
 
@@ -555,6 +573,7 @@ def _deserialize_npc(d: dict[str, Any]) -> NPCState:
         id=str(d.get("id", "")),
         in_melee=bool(d.get("in_melee", False)),
         pinned_notes=list(d.get("pinned_notes", []) or []),
+        target_ids=list(d.get("target_ids", []) or []),
     )
     # Belt-and-suspenders: post-construction sanity check (should be unreachable
     # given the pre-check above, but defends against future regressions).
@@ -602,6 +621,7 @@ def _deserialize_pending(entry: Any) -> Any:
         for key in required:
             if key not in entry:
                 raise ValueError(f"pending_effect dict missing required key {key!r}")
+        raw_member = entry.get("member")
         return PendingEffect(
             combatant_id=str(entry["combatant_id"]),
             full_amount=int(entry["full_amount"]),
@@ -610,6 +630,7 @@ def _deserialize_pending(entry: Any) -> Any:
             resolved=bool(entry.get("resolved", False)),
             source=str(entry.get("source", "")),
             round=int(entry.get("round", 0)),
+            member=int(raw_member) if raw_member is not None else None,
         )
     raise ValueError(f"pending_effect entry must be a dict or PendingEffect, got {type(entry).__name__}")
 
@@ -635,7 +656,6 @@ def deserialize_encounter(d: dict[str, Any]) -> EncounterState:
         round_num=int(d.get("round_num", 1)),
         active_tab_index=int(d.get("active_tab_index", 0)),
         created_at=created,
-        current_target=list(d.get("current_target", []) or []),
         pending_effects=[
             _deserialize_pending(e) for e in (d.get("pending_effects", []) or [])
         ],
