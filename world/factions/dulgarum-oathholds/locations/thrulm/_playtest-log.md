@@ -45,6 +45,21 @@
 - **Context:** With 3 PCs clustering in approach, both derro qualify for the "2+ in 15-ft cone" condition immediately. Result: double Resonance in R1, then zero recharge fires in a 4-round fight (recharge 5-6, ~33%/round). The dynamic "will Resonance recharge in time?" tension never materializes.
 - **Recommendation:** Stagger tactics (one derro holds Resonance until R2), reduce trigger threshold, or increase recharge probability to 4-6. See `_playtest-runs/2026-05-23T02-30-00.md` DD-6.
 
+### DD-8: Call Weakness wasted on dying ally — tactics need HP guard
+- **Context:** In the 2026-05-23 tank-wall run (R3), the Shardcaller spent its last Call Weakness charge giving the Rager advantage — when the Rager had 10 HP and was killed that same round before it could attack. The final use was mechanically inert.
+- **Recommendation:** Add to `derro-shardcaller.md` tactics: "Do not spend Call Weakness on an ally at ≤15 HP or below half HP — save the charge for a fresh attacker or hold for the most dangerous round." Low-risk authoring-only fix.
+- See `_playtest-runs/2026-05-23T03-17-40.md` FI-1.
+
+### DD-9: Pack Tactics Voice passive timing ambiguity
+- **Context:** The "when an ally hits, target has disadvantage on next save" passive fired 3 times in the tank-wall run as a DM note but was never enforced in practice. Timing is unclear: does it apply to saves triggered on the Shardcaller's own turn (after an ally's attack in a prior turn)?
+- **Recommendation:** Add an explicit example to `derro-shardcaller.md`: "e.g., if the Rager hits Bazgar on the Rager's turn, Bazgar has disadvantage on all saves until end of Bazgar's next turn." Ruling: YES, applies to any save by the target before end of target's next turn, regardless of when in the round the save is triggered.
+- See `_playtest-runs/2026-05-23T03-17-40.md` FI-2 / MQ-2.
+
+### DD-10: dnd_roller.py needs local RNG fallback for cron sandbox (INFRA)
+- **Context:** External RNG endpoints (random.org, quantumnumbers.anu.edu.au) are blocked by the Anthropic sandbox outbound network policy. Phase A required a monkey-patch in the cron harness to pre-populate the number cache with `random.Random`. All 27 actions still passed cleanly.
+- **Recommendation:** Add ~10 lines to `scripts/dnd_roller.py` inside `_ensure_numbers`: after both external fetches fail, fall back to `os.urandom`-seeded local random. Out of cron blast radius — human to implement.
+- See `_playtest-runs/2026-05-23T03-17-40.md` MQ-1.
+
 ### DD-7: Multiattack output labels combined damage under primary type (ONGOING from DD-2)
 - **Context:** Multiattack output reads "7 slashing (incl +1 necrotic extra_damage)" — the combined total is labeled under slashing. A DM applying slashing resistance would incorrectly halve the necrotic portion. Root cause is dnd_roller.py multiattack renderer, not the DB spec.
 - **Recommendation:** Fix multiattack renderer to display "6 slashing + 1 necrotic = 7 total". Out of cron blast radius.
@@ -56,5 +71,6 @@
 
 *(newest first; each entry is one line — drill into `_playtest-runs/<ts>.md` for details)*
 
+- 2026-05-23 03:17 UTC — slice #2 (tank-wall) — party VICTORY in 5 rounds; no PCs fell; Shardcaller fired Shard-Barrage 3× (high luck run); Taunt DC 12 never landed (3/3 misses by Marwen); 0 bugs fixed, 3 DESIGN DECISIONS raised (DD-8 Call Weakness guard, DD-9 Pack Tactics timing, DD-10 local RNG fallback) — see _playtest-runs/2026-05-23T03-17-40.md
 - 2026-05-23 02:30 UTC — slice #1 (shrine-wedge) — party VICTORY in 4 rounds; Sabriel fell R3 (Unstable Form advantage chained hits); altar zone suppressed Fireball doubling, saving both derro from R1 death; 1 auto-fix (altar zone docs), 4 DESIGN DECISIONS raised — see _playtest-runs/2026-05-23T02-30-00.md
 - 2026-05-23 01:37 UTC — slice #0 (threshold-patrol) — party VICTORY in 3 rounds; Marwen reached 8 HP (primary target throughout); Shardcaller barrage dominated damage; 1 bug fixed (ancient_resonance psychic rider) — see _playtest-runs/2026-05-23T01-41-59.md
