@@ -41,7 +41,7 @@ Track remaining actions on the tab.
 
 ## Tactics — when the DM asks "what does it do?"
 
-- **Round 1, all party visible:** Multiattack from 10-ft tentacle reach if any PC is in range; otherwise hover at 30–40 ft altitude and **Disintegration Ray** (range 120 ft) at the highest-level caster.
+- **Round 1, all party visible:** Multiattack from 10-ft tentacle reach if any PC is in range; otherwise hover at 30–40 ft altitude and **Disintegration Ray** (range 120 ft) at the highest-level caster. **Retarget if primary is dead:** next highest caster or divine martial; fall back to any living PC.
 - **Anyone within 30 ft, especially clustered:** **Void Scream** the moment it's recharged (it cycles on 6 only — be patient).
 - **Cleric/paladin present:** burn legendary actions on **Drain Divinity** rather than Void Ray. Removing healing/buffs is the whole strategy.
 - **Engaged by melee:** Multiattack tentacles to grapple (DC 16 Str escape), then **Maw** the grappled target. Use `shrine_drift` bonus to back off through walls / pillars.
@@ -61,8 +61,11 @@ A 6-ft eyeless sphere of translucent stone-shadow, four bone-spine appendages dr
 
 - **Sanctified dwarven weapons:** +1d8 damage per hit.
 - **Holy water:** 1d8 per dose; beholder *flees* from sustained applications.
-- **Divine spells:** healing spells cast within the chamber damage instead of heal (divine magic contradicts the void).
 - **The lower shaft:** beholder will NOT pursue PCs down it — something deeper scares it.
+
+## Chamber Hazards (void effects — apply to PCs, not the beholder)
+
+- **Healing spells backfire:** Any healing spell cast inside the chamber deals its rolled healing as **necrotic damage** to the intended target instead of restoring HP (divine magic contradicts the void's absence). Lay on Hands is a class feature, not a spell — it is unaffected. Only spell-slot healing is reversed.
 
 ---
 
