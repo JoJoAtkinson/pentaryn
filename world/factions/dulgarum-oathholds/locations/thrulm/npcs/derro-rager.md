@@ -26,7 +26,7 @@ tags: ["#combat-runner", "#npc", "#combat", "#derro", "#thrulm", "#melee", "#tan
 ## Tactics — when the DM asks "what does it do?"
 
 - **Round 1:** Charge the strongest-looking enemy in reach. Multiattack (two greataxe swings).
-- **Always Taunt the squishiest visible non-engaged target** (caster or rogue) on the bonus action — DC 12 Cha or disadvantage attacking anyone but the rager.
+- **Always Taunt the squishiest visible non-engaged target** (caster or rogue) on the bonus action — DC 12 Cha or disadvantage attacking anyone but the rager. **Tiebreaker:** prefer a target who is currently attacking the Shardcaller or ignoring the rager entirely. If the squishiest target is already focused on the rager, redirect Taunt to whoever is threatening the back line instead — Taunt that forces someone onto the rager is wasted if they were already attacking the rager.
 - **If 2+ enemies in reach:** consider **Berserk** (Recharge 5–6) — one greataxe vs *each* creature in reach; rager cannot move that turn, so only fire when already in the right spot.
 - **Marked attacker:** remembered until the rager hits them — focus that target on the next turn.
 - **Below 15 HP:** does NOT retreat. Madness Endurance keeps it swinging until 0. Use Berserk if available.
