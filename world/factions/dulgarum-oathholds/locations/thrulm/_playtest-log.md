@@ -114,6 +114,11 @@
 - **Recommendation:** Add a reminder line to the Start-of-turn checklist: "At end of your turn, note whether Antireality fired this round (it should fire ~1×/2 rounds in a melee fight)." If 2+ future runs also show 0/N uses, the reaction threshold is too ambiguous.
 - See `_playtest-runs/2026-05-23T08-20-26.md` DD-21.
 
+### DD-22: Phase B test harness simulates Tactical Drilling as flat roll — DW threat understated
+- **Context:** 2026-05-23 threshold-patrol 2nd-cycle run. The cron simulation applies `d20+2` for DW Tactical Drilling instead of rolling with advantage (`max(d20a,d20b)+2`). Actual hit rate vs AC 15 Marwen is ~64% with advantage vs 40% flat; vs AC 18 Bazgar it's ~56% vs 35%. Deep Watch are mechanically more threatening than every sim result shows.
+- **Recommendation:** Fix the Phase B loop to roll `max(d20a, d20b)+bonus` when advantage conditions are met. Out of cron blast radius for DB changes — human to update the harness or the cron-prompt simulation template. Until fixed, DW patrol results in `_playtest-runs/` understate DW damage contribution.
+- See `_playtest-runs/2026-05-23T09-18-56.md` FI-1.
+
 ### DD-7: Multiattack output labels combined damage under primary type (ONGOING from DD-2)
 - **Context:** Multiattack output reads "7 slashing (incl +1 necrotic extra_damage)" — the combined total is labeled under slashing. A DM applying slashing resistance would incorrectly halve the necrotic portion. Root cause is dnd_roller.py multiattack renderer, not the DB spec.
 - **Recommendation:** Fix multiattack renderer to display "6 slashing + 1 necrotic = 7 total". Out of cron blast radius.
@@ -125,6 +130,7 @@
 
 *(newest first; each entry is one line — drill into `_playtest-runs/<ts>.md` for details)*
 
+- 2026-05-23 09:18 UTC — slice #0 2nd-cycle (threshold-patrol) — party VICTORY in 4 rounds; Bazgar 39/49, Marwen 16/32 (all slots burned), Sabriel untouched; Barrage fired once (R1), recharged R3 but SC1 at 1 HP; both DW saved on Thunderwave (wasted slot); 0 bugs fixed; 1 new DD raised (DD-22: harness models Tactical Drilling as flat not advantage — DW threat understated by ~24 pp); FI-3: DD-1 Barrage-double-fire concern is seed-dependent not structural — see _playtest-runs/2026-05-23T09-18-56.md
 - 2026-05-23 08:20 UTC — slice #7 (empty-void) — party VICTORY in 7 rounds (barely: Bazgar+Marwen down, Sabriel at 5/44 HP); beholder killed by Sabriel melee after Void Ray killed or downed Marwen 3× (LoH triage loop key mechanic); Disintegration fired 2×; Void Scream never recharged (recharge-6 expected variance); Antireality never triggered (0/7 rounds — DM vigilance gap); 4 auto-fixes (Drain Divinity scope, solo retreat path, Antireality threshold, Chamber Hazard LoH callout); 3 new DDs raised (DD-19 Drain Divinity ambiguity, DD-20 solo retreat, DD-21 Antireality 0-fire) — see _playtest-runs/2026-05-23T08-20-26.md
 - 2026-05-23 07:16 UTC — slice #6 (shardcaller-team) — party VICTORY in 3 rounds; Bazgar took 28 piercing R1 (double-barrage), Marwen near-lethal at 9/32 R2; Fireball R2 collapsed two shardcallers and put all three in finishing range; Call Weakness wasted entirely (attack-roll ability incompatible with Barrage); triple front-loaded Barrage fired R1, recharge never happened; kiting feel absent (Fireball trivializes range advantage); 1 auto-fix (Call Weakness / Barrage stagger tactics), 3 new DDs raised (DD-16 CW incompatibility, DD-17 Barrage front-load, DD-18 Fireball trivializes) — see _playtest-runs/2026-05-23T07-16-03.md
 - 2026-05-23 06:19 UTC — slice #5 (solo-rager-rush) — party VICTORY in 2 rounds; Marwen near-lethal R1 (2 HP), revived R2; 2 Fireballs solved the fight before Berserk/Taunt/Madness mechanics could loop; 0 bugs fixed, 2 new DDs raised (DD-14 HP too low for slice intent, DD-15 Berserk 3-attack output confusion) — see _playtest-runs/2026-05-23T06-19-43.md
