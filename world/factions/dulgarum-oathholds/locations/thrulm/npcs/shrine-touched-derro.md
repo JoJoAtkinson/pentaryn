@@ -17,7 +17,7 @@ tags: ["#combat-runner", "#npc", "#combat", "#derro", "#thrulm", "#shrine-touche
 ## Start-of-turn checklist
 
 1. If **Ancient Resonance** is USED, roll `roll_dice(1, 6)` — recovers on 5–6.
-2. **Reaction** refreshes to AVAILABLE: **Oath-Breaking Retaliation** (counter-attack on damage taken).
+2. **Reaction** refreshes to AVAILABLE: **Oath-Breaking Retaliation** (counter-attack on damage taken). OBR fires **immediately when the shrine-touched takes damage** (during the attacker's turn) — interrupts between attacks if the attacker has multiattack. Spent for the round until this checklist runs again.
 3. **Driven Escape** bonus action available — 30 ft, no OAs, but must move toward the shrine if not in sight of combat.
 4. **Unstable Form:** if shrine-touched took 10+ damage in a single turn last round, it has **advantage on all attacks** until end of its next turn.
 5. **Shrine-Bound:** if more than 300 ft from the shrine: takes 2d6 psychic at start of turn; cannot leave the chamber.
