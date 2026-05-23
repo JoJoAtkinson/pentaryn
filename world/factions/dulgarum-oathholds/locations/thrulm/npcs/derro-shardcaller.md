@@ -19,7 +19,7 @@ tags: ["#combat-runner", "#npc", "#combat", "#derro", "#thrulm", "#ranged", "#su
 1. If **Shard-Barrage** is USED, roll `roll_dice(1, 6)` — recovers on 5–6.
 2. **Call Weakness** (3/Day) — track uses across the encounter; bonus action when ready.
 3. **Tactical Retreat** bonus action available each turn (move 30 ft away from nearest enemy without provoking).
-4. **Pack Tactics Voice (passive):** when an ally within 30 ft hits, the target has disadvantage on the *next* saving throw before end of its next turn — call this out in the reply so the DM remembers it.
+4. **Pack Tactics Voice (passive):** when an ally within 30 ft hits, the target has disadvantage on the *next* saving throw before end of its next turn — call this out in the reply so the DM remembers it. **Toggle, not stackable:** the target either has disadv or it doesn't; multiple hits in the same round simply refresh the duration, not grant "disadv on two saves."
 
 ---
 
@@ -29,7 +29,7 @@ tags: ["#combat-runner", "#npc", "#combat", "#derro", "#thrulm", "#ranged", "#su
 - **Round 1, in range of a caster:** Multiattack (two Shard-Throws, +4 to hit, range 30/60) on the visible spellcaster / healer first.
 - **3+ enemies in a line:** **Shard-Barrage** (Recharge 5–6) — 15-ft line, DC 13 Dex, 3d6 piercing, half on save.
 - **Bonus action — Call Weakness:** target the ally hitting hardest; that ally gets advantage on its next **attack roll**. **Do not Call Weakness an ally who plans to use Shard-Barrage this turn** — Barrage is a save-based area effect (no attack roll), so the advantage is wasted. Call Weakness is for Multiattack turns only. Save the 3 uses for the fight's most dangerous round. With multiple shardcallers, stagger targets — don't double-buff the same ally. **When calling on the Rager before a Berserk turn:** advantage applies to the Rager's *first* Greataxe swing only (the benefit is spent after that roll); remaining Berserk swings are flat rolls. Still worth using — the first swing is typically the highest-value opportunity.
-- **Stagger Barrages (multiple shardcallers):** when 2+ shardcallers have Barrage available, only one fires per round unless a truly decisive line-up exists. A staggered barrage keeps pressure across multiple rounds; a simultaneous triple-barrage R1 depletes all area coverage instantly and leaves rounds 2+ as pure multiattack.
+- **Stagger Barrages (multiple shardcallers):** when 2+ shardcallers have Barrage available, only one fires per round unless a truly decisive line-up exists. A staggered barrage keeps pressure across multiple rounds; a simultaneous triple-barrage R1 depletes all area coverage instantly and leaves rounds 2+ as pure multiattack. **In shardcaller-only formations (no melee allies), when stagger is active:** the two non-barrage shardcallers are multiattacking this round — they SHOULD use Call Weakness on each other (not on the barrage-firing shardcaller, whose advantage would be wasted on a save-based attack). This is the one formation where CW pays off: both multiattacking SCs get attack-roll advantage simultaneously.
 - **If a melee threat closes within 15 ft:** Tactical Retreat (no OA), then continue throwing.
 - **Below 12 HP:** retreat behind a Rager or pillar; only fire if no melee can reach.
 
