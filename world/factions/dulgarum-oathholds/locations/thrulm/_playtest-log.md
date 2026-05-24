@@ -16,6 +16,12 @@
 
 ## DESIGN DECISIONS (review in morning)
 
+### DD-40: Unstable Form advantage has never applied to any attack roll — structural AR/UF conflict (NEW)
+- **Context:** 2026-05-24 shrine-wedge 3rd cycle. All 3 shrine-wedge runs: UF activated but was wasted every time. STDs with UF active either (a) fire Ancient Resonance (save-based area — UF advantage doesn't apply), (b) die before acting (Fireball kills them before their turn), or (c) both. In R2 of 3rd cycle, STD-B had both UF active AND recharged AR — fired AR anyway (2+ in cone condition still met), throwing away the advantage bonus. UF's "reactive danger" mechanic has never been exercised across 3 cycles.
+- **Recommendation (do NOT auto-fix):** (a) Modify UF to add +2 to AR save DC when active (requires DB spec change); (b) Raise AR cone trigger to 3+ enemies when UF is active (forces Multiattack when only 2 PCs present); or (c) Redesign UF as a half-HP threshold effect ("dying fury") rather than per-turn 10+ damage trigger — separates the "took a big hit" moment from the "about to die" moment. Requires human sign-off.
+- **Auto-fix applied (partial — authoring only):** Added "Unstable Form priority" tactics note to `shrine-touched-derro.md`: when UF is active, prefer Multiattack over AR if only 2 enemies are in cone. This at least directs the DM to choose Multiattack when UF would be wasted on AR. DB spec unchanged.
+- **See:** `_playtest-runs/2026-05-24T04-22-25.md` DD-40.
+
 ### DD-39: CW initiative blindness — Shardcaller CWs allies who die before acting (NEW)
 - **Context:** 2026-05-24 threshold-patrol 3rd-cycle. R1: Shardcaller called CW on DW-Derro-1 (init 3, acts AFTER Bazgar at init 9). Bazgar killed DW-1 before its turn — CW wasted. R2: CW on DW-Derro-2 (init 17); DW-2 already acted this round; DW-2 killed in R3 before acting. 2/2 CW uses had zero effect. Root cause: tactics don't prioritize allies by initiative proximity to the "danger window" before a high-damage PC acts.
 - **Recommendation (auto-fixable):** Add to `derro-shardcaller.md` tactics: "Call Weakness on the ally who acts NEXT in initiative — prefer allies whose turn comes BEFORE the party's highest-damage dealer. Avoid CW on allies who act after the main damage dealer; likely dead before benefiting."
@@ -107,9 +113,11 @@
 - **Recommendation:** Raise threshold to 15+, or limit to first attack only (not all attacks), or tie to HP milestone (half HP or below). Current mechanic snowballs: more PC damage → more shrine-touched advantage → more PC damage taken.
 - See `_playtest-runs/2026-05-23T02-30-00.md` DD-5.
 
-### DD-6: Both shrine-touched burn Ancient Resonance R1 — later rounds Resonance-dry
+### DD-6: Both shrine-touched burn Ancient Resonance R1 — later rounds Resonance-dry (AUTO-FIXED cycle 3)
 - **Context:** With 3 PCs clustering in approach, both derro qualify for the "2+ in 15-ft cone" condition immediately. Result: double Resonance in R1, then zero recharge fires in a 4-round fight (recharge 5-6, ~33%/round). The dynamic "will Resonance recharge in time?" tension never materializes.
-- **Recommendation:** Stagger tactics (one derro holds Resonance until R2), reduce trigger threshold, or increase recharge probability to 4-6. See `_playtest-runs/2026-05-23T02-30-00.md` DD-6.
+- **Auto-fix applied (2026-05-24 cycle 3):** Added stagger rule to `shrine-touched-derro.md` tactics: if two shrine-touched both have AR available, only the one acting FIRST in initiative fires R1 — the second holds and uses Multiattack. Authoring-only, low-risk.
+- **Remaining work:** Confirm stagger rule holds in next shrine-wedge run. Recharge probability 5-6 still may produce high AR frequency — 3rd cycle showed STD-B recharged on d6=6 immediately (R2 AR firing). Consider recharge 6-only if stagger alone doesn't add sufficient tension.
+- See `_playtest-runs/2026-05-23T02-30-00.md` DD-6, confirmed cycles 2+3.
 
 ### DD-8: Call Weakness wasted on dying ally — tactics need HP guard
 - **Context:** In the 2026-05-23 tank-wall run (R3), the Shardcaller spent its last Call Weakness charge giving the Rager advantage — when the Rager had 10 HP and was killed that same round before it could attack. The final use was mechanically inert.
@@ -216,6 +224,7 @@
 
 *(newest first; each entry is one line — drill into `_playtest-runs/<ts>.md` for details)*
 
+- 2026-05-24 04:22 UTC — slice #1 3rd-cycle (shrine-wedge) — party VICTORY R3; Bazgar 13/49 (took 36 necrotic+psychic from 2× double AR), Marwen 17/32, Sabriel 44/44 UNTOUCHED (3rd consecutive); AR fired 3× total (both R1 double-fire confirmed DD-6, STD-B recharged R2 on d6=6 and fired 3rd); UF activated both STDs R2+R3 but advantage never applied (DD-40 new — AR always wins 2+ cone condition, UF wasted); OBR correct direction confirmed (DD-23 fix holding); Altar Zone suppressed fire/radiant doubling both rounds; Bazgar 0/4 attacks hit (extreme variance, 4× consecutive miss vs AC16); 2 auto-fixes (DD-6 stagger tactic, DD-40 UF priority note); 1 new DD (DD-40 UF/AR structural conflict) — see _playtest-runs/2026-05-24T04-22-25.md
 - 2026-05-24 03:19 UTC — slice #0 3rd-cycle (threshold-patrol) — party VICTORY R3; Bazgar 11/49 HP (primary sponge, both barrages), Marwen 17/32, Sabriel 44/44 (untouched, 3rd consecutive run); Shard-Barrage fired twice again (recharged R2 on 6/6 — DD-1 re-confirmed, 2/3 runs double-fire); CW wasted both uses (initiative blindness — DD-39 new, auto-fix applied); Tactical Drilling: 1 hit in R1, 2 hits in R2 (R2 adv overcounted — see FI-2/DD-22 still unresolved); 28/28 Phase A actions pass (urandom cache seeding required, DD-10 still unresolved); 1 new DD raised (DD-39 CW initiative blindness); 0 spec bugs — see _playtest-runs/2026-05-24T03-19-45.md
 - 2026-05-23 16:20 UTC — slice #7 2nd-cycle (empty-void) — TPK R5 projected (Bazgar last standing at 16 HP, Marwen+Sabriel downed by R4; beholder at 40/110); Void Scream fired R2 (MQ-4 fix confirmed); Drain Divinity priority fired R1+R2 (DD-28 fix confirmed) but Sabriel saved both (18, 17 vs DC 16); FI-3 confirmed 2nd cycle (main action gap R3, disint+VS both on cooldown); 2 new DDs raised (DD-38 altitude-vs-Drain-Divinity conflict, FI-7 Antireality 0-fire structural in altitude fights); 1 auto-fix (Void Scream save reminder to .md checklist) — see _playtest-runs/2026-05-23T16-20-00.md
 - 2026-05-23 15:19 UTC — slice #6 2nd-cycle (shardcaller-team) — party VICTORY R2; Fireball 24 fire R1 eliminates SC1+SC2 (DD-18 confirmed 2nd cycle); SC2 correctly staggered Barrage (DD-17 fix holding); CW 0/9 spent (DD-37 new — harness over-filtered stagger targets, tactics fix applied); PTV 0 activations (FI-5 new — too short fight); stagger-after-death: SC3 fires second Barrage after SC1's death (correct behavior); 2 auto-fixes (PTV toggle note, stagger-formation CW guidance); 2 new DDs (DD-37 CW harness over-filter, FI-5 PTV zero-fire) — see _playtest-runs/2026-05-23T15-19-00.md

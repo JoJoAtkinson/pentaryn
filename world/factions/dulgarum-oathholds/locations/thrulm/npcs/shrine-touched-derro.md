@@ -34,8 +34,9 @@ tags: ["#combat-runner", "#npc", "#combat", "#derro", "#thrulm", "#shrine-touche
 
 ## Tactics — when the DM asks "what does it do?"
 
-- **Round 1, near altar:** Multiattack — two Shrine-Axe strikes (slashing + necrotic per hit) on the closest enemy.
-- **2+ enemies in a 15-ft cone:** **Ancient Resonance** (Recharge 5–6) — DC 14 Dex, 2d10 necrotic, +1d4 psychic on fail.
+- **2+ enemies in a 15-ft cone:** **Ancient Resonance** (Recharge 5–6) — DC 14 Dex, 2d10 necrotic, +1d4 psychic on fail. **Stagger rule (multiple shrine-touched):** if two shrine-touched both have Resonance available in the same round, only the one acting FIRST in initiative fires — the second uses Multiattack instead and holds Resonance for the next round. Prevents both burning AR R1 and leaving R2+ Resonance-dry.
+- **Unstable Form priority:** if UF is active (see checklist item 4), PREFER Multiattack over Ancient Resonance when only 2 enemies are in cone — UF grants advantage on attack rolls, which is wasted on the save-based AR. If 3+ enemies are in cone, AR wins regardless.
+- **All other turns / after firing AR:** Multiattack — two Shrine-Axe strikes (slashing + necrotic per hit) on the closest enemy.
 - **Reaction priority — Oath-Breaking Retaliation:** auto-fires when hit; one Shrine-Axe counter-swing at the attacker. Self-damages 1d4 psychic regardless.
 - **Pulled away from shrine (~150+ ft):** panic. Uses Ancient Resonance recklessly each turn it recharges, ignoring positioning.
 - **Below 20 HP:** drives toward the altar (Driven Escape) — never retreats away from the shrine.
