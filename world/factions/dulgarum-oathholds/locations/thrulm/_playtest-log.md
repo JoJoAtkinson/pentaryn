@@ -16,6 +16,17 @@
 
 ## DESIGN DECISIONS (review in morning)
 
+### DD-43: Antireality margin check missing — reaction fires even when it can't negate the hit (AUTO-FIXED)
+- **Context:** 2026-05-24 beholder-escorts-limited 3rd cycle R1. Sabriel rolled 13+7=20 vs AC 17 (margin=3). Antireality +2 raised effective AC to 19; roll 20 still ≥ 19 → HIT regardless. Reaction consumed with zero effect. Current guidance "trigger on any hit ≥ 10 estimated dmg" has no margin check — it fires even when the roll exceeds AC+2.
+- **Auto-fix applied:** Added margin check to `beholder-thrulm.md` Antireality tactics: "Only trigger if total attack roll ≤ AC+2 (i.e., raising AC by 2 could change the outcome). If total ≥ AC+3, save the reaction."
+- **Remaining work:** None.
+- **See:** `_playtest-runs/2026-05-24T06-26-10.md` Bugs auto-fixed.
+
+### DD-42: Drain Divinity consuming full legendary budget prevents Void Ray when targets are low-HP (NEW)
+- **Context:** 2026-05-24 beholder-escorts-limited 3rd cycle. DD-28 fix applied (Drain Divinity FIRST). Beholder spent ALL 3 legendary actions on Drain Divinity every round R1–R3. In R2 and R3, Marwen was at 12 HP — a Void Ray (avg 22, half=11 on save) would have killed her, permanently removing Fireball. Instead, beholder burned 6 legendary actions (R2+R3) for zero effect (Marwen saved both times at 17 vs DC 16 — by 1 point). The DD-28 "FIRST" priority is being applied as "always" priority, leaving zero legendary for Void Ray or Tentacle.
+- **Recommendation (do NOT auto-fix):** Add HP threshold to Drain Divinity priority: *"Drain Divinity FIRST if target is at ≥ 20 HP AND slot level ≥ 2. If the highest-slot target is at ≤ 15 HP, prefer Void Ray (2) + Tentacle (1) — guaranteed kill > uncertain slot drain."* Human sign-off required (balance impact: more lethal vs low-HP targets).
+- **See:** `_playtest-runs/2026-05-24T06-26-10.md` DD-42.
+
 ### DD-41: CW range breaks once Rager charges — 30 ft range exceeded after melee close (NEW, AUTHORING FIX APPLIED)
 - **Context:** 2026-05-24 tank-wall 3rd cycle. Starting positions: party 0ft, Rager 40ft, SC 55ft → SC-to-Rager = 15ft (in CW range). After Rager charges to melee (~5ft from party): SC-to-Rager ≈ 50ft (OUT of 30ft CW range). R1 CW on Rager is valid only if SC acts before Rager moves. R2+ CW on a melee Rager is impossible without SC repositioning into melee danger. In 3/3 tank-wall runs SC acted before Rager (R1), so R1 CW was always valid; the range issue surfaces in hypothetical R2+ CW attempts that the harness was incorrectly allowing.
 - **Auto-fix applied:** Added "Range note (DD-41)" to `derro-shardcaller.md` Call Weakness bullet: fire CW on Rager R1 before it charges; if out of range in later rounds, hold charge for next eligible ally.
@@ -80,13 +91,19 @@
 - **Auto-fix applied:** Added priority clause to tactics: "Legendary priority order: Drain Divinity FIRST if budget is full and slot-holder with L2+ is within 30 ft." Authoring-only.
 - **Remaining work:** If Drain Divinity still doesn't fire in next 2 beholder runs, consider reducing legendary cost from 3 → 2 actions, making it more naturally competitive with Void Ray. Requires human sign-off on balance impact (temp HP gain via Drain Divinity is significant at high slot levels).
 
-### DD-31: Prone advantage on beholder melee attacks not modeled — DM reminder missing
+### DD-31: Prone advantage on beholder melee attacks not modeled — DM reminder missing (AUTO-FIXED cycle 3)
 - **Context:** 2026-05-23 beholder-escorts-limited 2nd-cycle. Unstable Ground proned Sabriel 3/3 consecutive rounds (R5–R7). Beholder's Tentacle Lash (melee) should have rolled with advantage. Not applied. Hit probability goes from ~35% to ~56% vs AC 19 — enough to flip misses to hits.
-- **Recommendation:** Add to `beholder-thrulm.md` tactics under "Engaged by melee": "If target is prone and beholder is within 5 ft, all Tentacle and Maw attacks have advantage." Authoring-only. Decide whether to auto-fix next cycle.
+- **Auto-fix applied (2026-05-24 3rd cycle):** Added prone-advantage reminder to `beholder-thrulm.md` "Engaged by melee" bullet. In R3 this run, Bazgar prone when beholder attacked (Tentacle2) — advantage was owed but not applied in sim. Fix now in authoring.
+- **See:** `_playtest-runs/2026-05-24T06-26-10.md` Bugs auto-fixed.
 
 ### MQ-4: Void Scream first-use ambiguity — "wait for recharge" vs "starts available"
 - **Context:** 2026-05-23 beholder-escorts-limited 2nd-cycle R1–R2. Two or more PCs clustered within 30 ft for 2 rounds; Void Scream was available but never fired. Tactics text "fire the moment it's recharged" implies waiting, even though the ability starts available (not recharged from a prior use). DM treating it as a recharge-wait ability loses the devastating R1 window.
 - **Recommendation:** Clarify tactics: "Void Scream **is available from R1** — fire it immediately if 2+ PCs cluster within 30 ft. Do not treat first use as a recharge wait." Authoring-only, low-risk. This is potentially high-impact: a R1 Void Scream when the party first enters clusters everyone within 30 ft.
+
+### FI-9 (NEW): Void Scream non-recharge pattern — recharge-6-only creates high variance across runs
+- **Context:** 2026-05-24 beholder-escorts-limited 3rd cycle. VS used R1 (devastating), then recharge rolls: R2=5, R3=3. VS remained spent through the entire tracked portion of the fight. Expected recharges in a 5-round fight after R1 use ≈ 0.85. Actual = 0. Feels like VS permanently disappears after the R1 blast.
+- **Recommendation (log only):** Consider recharge 5–6 (~33%/round) instead of 6-only (~17%/round). Risk: if VS fires R1 AND recharges R3, the encounter may be unrecoverable. However, recharge 5–6 is already the rate for Shard-Barrage and Disintegration Ray — feels consistent with the tier. Human sign-off required.
+- **See:** `_playtest-runs/2026-05-24T06-26-10.md` FI-9.
 
 ### FI-3 (PENDING HUMAN REVIEW): Beholder main action wasted below 60 HP — tactics gap
 - **Context:** 2026-05-23 beholder-escorts-limited 2nd-cycle R5–R6. Below 60 HP, tactics say "prefer ranged, hold position 60+ ft up." Beholder used shrine_drift (bonus) but took no main-action attack in 2 rounds. Should be: shrine_drift (bonus) + Void Ray or Multiattack (main). Text doesn't specify main action separately from positioning.
@@ -230,6 +247,7 @@
 
 *(newest first; each entry is one line — drill into `_playtest-runs/<ts>.md` for details)*
 
+- 2026-05-24 06:26 UTC — slice #3 3rd-cycle (beholder-escorts-limited) — TPK projected R5; Void Scream R1 CONFIRMED DEVASTATING (42 psychic, 2/3 PC fails, Bazgar 22HP Marwen 12HP after opener); Drain Divinity fired R1 (Sabriel FAIL, first R1 success!) + R2+R3 (Marwen SAVE 17/17 both); MQ-4 fix fully validated; DD-42 new (DD-28 over-priority — Void Ray never fired); FI-3 confirmed R3 (3rd cycle, Multiattack fallback); FI-9 new (VS recharge-6 0/2 recharges); 3 auto-fixes (DD-31 prone-advantage note, DD-43 Antireality margin check, rotation index 3→4); 3 new DDs (DD-42, DD-43, FI-9); MQ-6/MQ-7 clarifications logged — see _playtest-runs/2026-05-24T06-26-10.md
 - 2026-05-24 05:20 UTC — slice #2 3rd-cycle (tank-wall) — party VICTORY R4; Bazgar 49/49 UNTOUCHED (0/2 Rager hits, all misses), Marwen 24/32 (8 piercing R1 SC hit), Sabriel 44/44 UNTOUCHED; Rager killed R2-R3 by Fireball (26 fire, Rager save=1 full); SC fell R3 to Bazgar (13 slashing); Berserk never fired (Rager died before recharge window); CW used 1/3 (R1 on Rager — advantage uncollectable after Rager rolled natural 1+2); Taunt: Marwen saved (DC 12, rolled 15); Action Surge fired R2 (Bazgar 4-attack turn dealt 33 dmg to Rager); DD-26 confirmed 3rd cycle; DD-41 new (CW range breaks after Rager charges — authoring fix applied); PTV triggered but inapplicable vs save-caster (FI-5 pattern); 28/28 Phase A actions clean (cache pre-seeded, DD-10 still unresolved); 1 auto-fix (DD-41 CW range note shardcaller.md); 1 new DD raised (DD-41) — see _playtest-runs/2026-05-24T05-20-23.md
 - 2026-05-24 04:22 UTC — slice #1 3rd-cycle (shrine-wedge) — party VICTORY R3; Bazgar 13/49 (took 36 necrotic+psychic from 2× double AR), Marwen 17/32, Sabriel 44/44 UNTOUCHED (3rd consecutive); AR fired 3× total (both R1 double-fire confirmed DD-6, STD-B recharged R2 on d6=6 and fired 3rd); UF activated both STDs R2+R3 but advantage never applied (DD-40 new — AR always wins 2+ cone condition, UF wasted); OBR correct direction confirmed (DD-23 fix holding); Altar Zone suppressed fire/radiant doubling both rounds; Bazgar 0/4 attacks hit (extreme variance, 4× consecutive miss vs AC16); 2 auto-fixes (DD-6 stagger tactic, DD-40 UF priority note); 1 new DD (DD-40 UF/AR structural conflict) — see _playtest-runs/2026-05-24T04-22-25.md
 - 2026-05-24 03:19 UTC — slice #0 3rd-cycle (threshold-patrol) — party VICTORY R3; Bazgar 11/49 HP (primary sponge, both barrages), Marwen 17/32, Sabriel 44/44 (untouched, 3rd consecutive run); Shard-Barrage fired twice again (recharged R2 on 6/6 — DD-1 re-confirmed, 2/3 runs double-fire); CW wasted both uses (initiative blindness — DD-39 new, auto-fix applied); Tactical Drilling: 1 hit in R1, 2 hits in R2 (R2 adv overcounted — see FI-2/DD-22 still unresolved); 28/28 Phase A actions pass (urandom cache seeding required, DD-10 still unresolved); 1 new DD raised (DD-39 CW initiative blindness); 0 spec bugs — see _playtest-runs/2026-05-24T03-19-45.md
