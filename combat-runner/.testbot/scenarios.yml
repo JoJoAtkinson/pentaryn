@@ -142,6 +142,46 @@ scenarios:
     targets:
       max_click_count: 6
 
+  # --- THRULM (beholder encounter) --- blocked until #combat-runner tags and
+  # actions.jsonl entries exist for beholder-thrulm + thrall-derro.
+  # These scenarios are drafted for future rotation once the DB is populated.
+  - id: thrulm-beholder-tentacle-grapple
+    title: Beholder tentacle lash → grapple PC → maw follow-up; verify grapple state
+    encounter: thrulm
+    prelude: |
+      The Hunger Below descends. One tentacle snaps toward the fighter.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "tentacle"}
+      - {kind: type, tab: beholder-thrulm, text: "maw"}
+      - {kind: assert_condition, slug: beholder-thrulm, condition: grapple_active}
+    targets:
+      max_click_count: 6
+      max_llm_fallback: 0
+
+  - id: thrulm-beholder-disintegration
+    title: Disintegration Ray recharge fires → PC at 0 HP → disintegrated flag set
+    encounter: thrulm
+    prelude: |
+      The eye-that-is-not-an-eye locks onto the wizard. The air bends.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "disintegrate"}
+    targets:
+      max_click_count: 5
+
+  - id: thrulm-void-scream-aoe
+    title: Void Scream (Recharge 6) hits multiple PCs — WIS saves, psychic damage
+    encounter: thrulm
+    prelude: |
+      Reality tears. Every creature within 30 feet staggers.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "scream"}
+      - {kind: click_round}
+    targets:
+      max_click_count: 6
+
   - id: ancestor-stir-frightened-cascade
     title: Ancestor-Stir claws → frightened condition → wail recharge cycle
     encounter: gar-vally

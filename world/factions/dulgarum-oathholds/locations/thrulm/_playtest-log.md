@@ -16,6 +16,16 @@
 
 ## DESIGN DECISIONS (review in morning)
 
+### DD-50: CHEAT-SHEET Shrine-Touched false fire/radiant vulnerability (AUTO-FIXED, 2026-05-24)
+- **Context:** Cold-fire audit. COMBAT-CHEAT-SHEET.md listed "Vulnerable To: fire, radiant" for Shrine-Touched and "→ Use FIRE and RADIANT against Shrine-Touched" — neither has a basis in `shrine-touched-derro.md` (no vulnerabilities listed; only resistance to necrotic/psychic). Also "Fireball, Guiding Bolt" in kill-fastest table wrongly implies radiant vulnerability.
+- **Auto-fix applied:** Removed false vulnerability column entry; corrected TACTICAL-QUICK-SCAN tip; updated kill-fastest row to fire/thunder, noted "no listed vulnerabilities."
+- **Risk:** Low. Authoring label + advice only.
+
+### DD-49: CHEAT-SHEET Shrine-Touched CR wrong — CR 3 vs actual Prof +3 (~CR 5) (AUTO-FIXED, 2026-05-24)
+- **Context:** Cold-fire audit. `shrine-touched-derro.md` states "Proficiency Bonus: +3" (saves Dex +5 / Con +5 = mod +3, consistent). CR 3 uses Prof +2 — cheat sheet label is off by ≥2 CR steps.
+- **Auto-fix applied:** Cheat sheet label changed from `(CR 3)` to `(~CR 5)`.
+- **Risk:** Low. Authoring label only.
+
 ### FI-14 / MQ-12 (NEW): CW dead-card pattern confirmed 4th cycle; Sabriel untouched 4th cycle
 - **Context:** 2026-05-24 threshold-patrol 4th cycle. Two recurring patterns confirmed:
   1. **FI-14 — Sabriel untouched 4th consecutive threshold-patrol run.** DWs always focus Bazgar (closest melee); SC always focuses Marwen (caster priority). Sabriel takes 0 damage in all 4 runs. At table feels odd — the tankiest PC is the safest. Authoring-only fix: add SC tactics note that the divine martial is the sustain engine and Barrage should occasionally target Sabriel if the line allows. Human sign-off needed (changes SC targeting priority).
