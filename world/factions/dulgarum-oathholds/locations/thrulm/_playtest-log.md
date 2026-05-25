@@ -16,6 +16,7 @@
 
 ## Runs
 
+- 2026-05-25 15:24 UTC — slice #1 (shrine-wedge) 2nd-cycle — VICTORY R3 (Bazgar 17/49, Marwen 32/32 untouched, Sabriel 33/44); stagger (MQ-28 fix) correctly prevented double-AR R1 FI-78 POSITIVE; VICTORY vs cycle-1 TPK confirms stagger fix changes outcome FI-79 POSITIVE; UF never activated (STD-A killed before acting with UF R2 — FI-80 2nd structural confirm); fire suppression zero-impact (1-target Fireball save=half FI-81); Slow optimal R1 play FI-82; Marwen untouched FI-83; MQ-42 AUTO-FIXED (AR concentration-check callout added to shrine-touched-derro.md); MQ-43 NEW (Slow vs Fireball R1 DM advice gap); 28/28 Phase A clean (DD-10 21st consecutive); 1 bug auto-fixed — see _playtest-runs/2026-05-25T15-24-09.md
 - 2026-05-25 14:20 UTC — slice #0 (threshold-patrol) 6th-cycle — VICTORY R3 (Bazgar 45/49, Marwen 17/32, Sabriel 44/44 untouched 6th cycle); MQ-27 fix validated FI-73 NEW POSITIVE (CW→DW-B highest-init, converted miss→hit 4 dmg to Bazgar — first CW outcome in 6 TP cycles); DW-A killed before acting init 5 again FI-74 (DD-39 6th consecutive); Sabriel untouched FI-75 (FI-14 6th confirm); CW ≤20 HP guard fired correctly FI-76 NEW POSITIVE; Barrage 0/1 recharge chances FI-77 (structural); MQ-41 NEW (harness: Barrage condition never evaluated — corridor line-up likely triggers it at table); 28/28 Phase A clean (DD-10 20th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T14-20-00.md
 - 2026-05-25 13:16 UTC — slice #7 (empty-void) 2nd-cycle — TPK R4 (Marwen disintegrated R1, Bazgar disintegrated R4, Sabriel downed by legendary Void Ray); FI-67 NEW (DD under-fires at altitude — 30 ft range vs beholder altitude gate); FI-68 NEW (solo beholder wastes 1 legendary/round at range); FI-69 NEW / FI-56 confirm (AC 19 negates multiattack ~22% rounds, Maw auto-crit never triggered); FI-70 NEW (healing hazard forces LoH — add DM callout box); FI-71 NEW (negotiation price predetermined — recommend middle option); FI-72 NEW (lair locked on unstable_ground, party never near altar); MQ-39 NEW (Disint rider clarification); MQ-40 NEW CRITICAL (2 PC permanent deaths from single ability — table culture decision); 28/28 Phase A clean (cache pre-seeded DD-10 19th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T13-16-44.md
 - 2026-05-25 12:00 UTC — slice #6 (shardcaller-team) 5th-cycle — VICTORY R2 (Bazgar 49/49, Marwen 28/32, Sabriel 44/44); Marwen init 21 (highest) → Fireball R1 drops SC-A+B to 2 HP; Bazgar kills both before they act; SC-C sole survivor hits Marwen once (4 piercing); PTV fires once (FI-66 NEW) never consumed; CW 0/9 charges again (FI-65 NEW 5th consecutive); DD-18 6th shardcaller-team confirm; MQ-38 NEW (chamber layout/Fireball range ambiguity); 28/28 Phase A clean (DD-10 18th consecutive); 1 auto-fix (MQ-35 applied: Berserk involuntary-move voids eligibility note added to derro-rager.md) — see _playtest-runs/2026-05-25T12-00-00.md
@@ -30,6 +31,25 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-78/79 (POSITIVE) / FI-80/81/82/83 / MQ-42 (auto-fixed) / MQ-43 (NEW): Shrine-wedge 2nd-cycle — VICTORY R3; stagger fix confirmed; UF/fire-suppression still invisible; Slow > Fireball in altar zone
+
+- **Context:** 2026-05-25 15:24 UTC, slice #1 (shrine-wedge) 2nd cycle. Seed 494367. VICTORY R3 — Bazgar 17/49, Marwen 32/32 (untouched), Sabriel 33/44. Init: Sabriel 8, Bazgar 6, STD-B 6, Marwen 5, STD-A 3. 28/28 Phase A clean (DD-10 21st consecutive). 1 bug auto-fixed (MQ-42).
+
+  1. **FI-78 (POSITIVE): Stagger rule correctly prevents double-AR R1.** STD-A held AR (lower init 3 < STD-B init 6). Only STD-B fired AR. R1 damage: 19 HP total (Bazgar 8, Sabriel 11). Compare to cycle 1 (double-AR, no stagger): ~35+ HP R1 → TPK. Stagger fix is working.
+
+  2. **FI-79 (POSITIVE): 2nd-cycle VICTORY vs 1st-cycle TPK directly demonstrates stagger fix value.** The only structural change between cycles was enforcing the stagger rule. Result: TPK → VICTORY. Encounter is survivable with correct stagger. **No fix needed — confirms design intent.**
+
+  3. **FI-80 (2nd confirm): UF structurally never fires in shrine-wedge.** STD-A took 37 dmg R1 (UF threshold ≥10 met). Sabriel (init 8) kills STD-A before its R2 turn (init 3). UF activates but the STD dies before using it. UF requires surviving to the next turn, which burst-heavy parties prevent. *Recommend noting in shrine-touched-derro.md start-of-turn checklist: "UF is most relevant against sustained-damage parties; burst parties will kill the STD before UF fires."* **Not auto-fixing — this is a balance/feel note, not a bug.**
+
+  4. **FI-81: Altar zone fire suppression zero-impact in this cycle.** Marwen's Fireball R2 hit only STD-B (only survivor); STD-B saved → half fire damage regardless. Suppression only matters when fire area hits STDs that FAIL a save. In burst-focus-fire patterns (one STD dead R2), the mechanic never surfaces. This is structural, not a bug. **DM callout: Fireball is substantially better outside the altar zone (doubled on fail); party should be incentivized to pull STDs out of range before casting.**
+
+  5. **MQ-43 (NEW): Slow vs Fireball R1 — DM guidance gap for altar zone.** Slow L3 outperformed Fireball L3 in this cycle because fire suppression + burst focus-fire made Fireball redundant. Slow removed STD-A's actions and OBR reactions for 1+ rounds, preventing ~14 HP of party damage. **Recommend:** add a sidebar to `_overview.md` or shrine-touched-derro.md: *"In the altar zone, control spells (Slow, Web, Hypnotic Pattern) outperform fire spells due to vulnerability suppression. Fireball is a trap in this room."*
+
+- **Bugs auto-fixed:** 1 — MQ-42: added AR concentration-check callout to shrine-touched-derro.md tactics section.
+- **See:** `_playtest-runs/2026-05-25T15-24-09.md`
+
+---
 
 ### FI-73 (NEW POSITIVE) / FI-74 (DD-39 6th confirm) / FI-75 (FI-14 6th confirm) / MQ-41 (NEW harness): Threshold-patrol 6th cycle — VICTORY R3; MQ-27 fix validated; DW-A pre-turn death structural; Sabriel untouched structural; Barrage corridor trigger gap
 
