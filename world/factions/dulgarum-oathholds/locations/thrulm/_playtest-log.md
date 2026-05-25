@@ -14,7 +14,24 @@
 
 ---
 
+## Runs
+
+- 2026-05-25 04:19 UTC — slice #7 (empty-void) — TPK R3; VS R1 wipe (4th cycle); DR unused (primary dead); main-action dead zone R2-R3; DD-51 auto-fixed (VS dice .md→6d10); 1 LA stranded/round — see _playtest-runs/2026-05-25T04-19-54.md
+
+---
+
 ## DESIGN DECISIONS (review in morning)
+
+### DD-51 (AUTO-FIXED) / FI-35 / FI-36 / FI-37 / MQ-25 / MQ-26 (NEW): Empty-void 4th cycle — TPK R3; VS R1 kills Marwen; DR unused; main-action dead zone 2× R; 1 LA stranded at altitude
+- **Context:** 2026-05-25 empty-void 4th cycle. Seed 494356. TPK R3 — Beholder at 81/110 HP. 28/28 Phase A clean (cache pre-seeded; DD-10 11th consecutive).
+  1. **DD-51 (AUTO-FIXED) — VS dice mismatch .md vs DB:** `beholder-thrulm.md` start-of-turn checklist said "5d8 psychic" for Void Scream; DB spec says "6d10". Fixed .md to "6d10". Low-risk authoring alignment.
+  2. **FI-35 (NEW — POSITIVE) — VS R1 wipe confirmed 4th empty-void cycle:** Beholder at 30 ft altitude fires VS immediately on turn 1. 35 psychic (sim; dispatch authoritative: 46) killed Marwen outright, dropped Bazgar to 28%, Sabriel to 20%. All frightened. Pattern 4/4 cycles. Narratively powerful; no counterplay window at level 5 vs CR 13. Log only — expected difficulty.
+  3. **FI-36 (NEW) — Main-action dead zone R2-R3 (FI-3 pattern, 3rd empty-void occurrence):** After VS fires, primary DR target (Marwen) was dead. Sim failed to retarget; at table DM should fire DR at Sabriel (9 HP, 40% hit rate → certain kill). Beholder held main action R2 AND R3. Recommend authoring fix: "If VS fires R1 and kills the primary DR target, retarget DR to next living creature immediately in R2 rather than holding." Authoring-only, low-risk.
+  4. **FI-37 (NEW) — 1 LA stranded at altitude after Void Ray:** VR costs 2 LA, leaving 1 LA. At 30 ft altitude, Tentacle (1 LA) requires descent to ground; Legendary Move costs 1 LA to reposition. Both expose the beholder to melee. 2 LA stranded across R2+R3. Design question: should there be a 1-LA ranged option (Void Whisper concept)? Log for human review.
+  5. **MQ-25 (NEW — sim harness) — Dispatch double-roll in AOE:** `void_scream` dispatch printed 46 psychic; sim re-rolled and got 35. Applied 35 (not 46). At authoritative 46, fight would have resolved R1-R2. Fix: parse printed damage from dispatch rather than re-rolling. Out of blast radius.
+  6. **MQ-26 (NEW) — VS range boundary in negotiation entry:** PCs at threshold are ~50 ft from beholder (3D). PCs who advance to altar base are exactly 30 ft (boundary). Sim assumed advancement; at table DM must confirm position. Recommend `.md` addition: "In negotiation entry, VS range depends on PC position — confirm before firing." Links to DD-48.
+- **Bugs auto-fixed:** 1 (DD-51: VS dice in .md checklist 5d8→6d10)
+- **See:** `_playtest-runs/2026-05-25T04-19-54.md`
 
 ### FI-32 (NEW) / FI-33 (NEW POSITIVE) / FI-34 (NEW) / MQ-23 / MQ-24 (NEW): Shardcaller-team 4th cycle — VICTORY R3; PTV fires first time; CW+stagger rule demonstrated; TR 0/4 structural; Fireball NOT used
 - **Context:** 2026-05-25 shardcaller-team 4th cycle. Seed 494355. VICTORY R3 — Bazgar 39/49, Marwen 15/32 (LoH triage), Sabriel 44/44 (untouched 4th cycle). 28/28 Phase A clean (cache pre-seeded; DD-10 10th consecutive).
