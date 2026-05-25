@@ -16,6 +16,7 @@
 
 ## Runs
 
+- 2026-05-25 09:15 UTC — slice #4 (final-confrontation) 6th-cycle — TPK R1 (sim artifact); MQ-34 CRITICAL: VS dispatch=18 psychic, sim applied 37 → correct outcome is R1 survival (Bazgar 23, Marwen 6, Sabriel 15 HP all frightened), TPK in R2-3; FI-59 (DD-33 urgency softened by MQ-34); FI-60 NEW POSITIVE (first DD slot strip in FC: Marwen L3 gone); FI-61 NEW POSITIVE (stagger correctly enforced 1st FC cycle); DD-33 6th-cycle confirm; 28/28 Phase A clean (DD-10 16th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T09-15-00.md
 - 2026-05-25 08:18 UTC — slice #3 (beholder-escorts-limited) — TPK R3; Grapple+Maw auto-crit kills Bazgar R1 (FI-56 NEW); Drain Divinity fired once/saved (FI-57 NEW); VS never recharged (FI-58 NEW); init-20 tie beholder vs lair action (MQ-31 NEW); thrall multiattack naming (MQ-32 NEW); incapacitated not enforced sim-only (MQ-33 NEW); beholder took 5 dmg total; 28/28 Phase A clean (DD-10 15th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T08-18-24.md
 - 2026-05-25 07:00 UTC — slice #2 (tank-wall) 1st-cycle — VICTORY R9; SC Barrage R1 landed (15 piercing to Marwen+Sabriel); Rager died R5 (Sabriel divine smite); Marwen down×2 (healed back); CW stranded R2+ (DD-41 2nd-cycle confirm); Berserk 0/4 recharge + structurally unavailable (FI-53 new); Taunt 1/5 success R3 (FI-55 new); MQ-29/30 harness; 28/28 Phase A clean (DD-10 14th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T07-00-00.md
 - 2026-05-25 06:19 UTC — slice #1 (shrine-wedge) — TPK R3; double-AR R1 (MQ-28 harness bug — stagger rule unenforced mid-round); Marwen R1 R2, Sabriel R2, Bazgar R3; party dealt 17 total dmg to both STDs; UF/DE/Altar-pull never triggered (FI-38/39/40/41/42 new); OBR fired R2 missed; 28/28 Phase A clean (DD-10 13th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T06-19-01.md
@@ -25,6 +26,21 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### MQ-34 (CRITICAL) / FI-59 / FI-60 (POSITIVE) / FI-61 (POSITIVE): Final-confrontation 6th-cycle — Sim-artifact TPK R1; correct dispatch shows R1 survival; first DD slot strip; stagger working
+
+- **Context:** 2026-05-25 09:15 UTC, slice #4 (final-confrontation) 6th-cycle. Seed 494361. Sim reported TPK R1 — but this is a sim artifact. 28/28 Phase A clean (DD-10 16th consecutive). No bugs auto-fixed. Init: STB 23 (fires AR R1), Lair 20, Bazgar 19, STA 17, Sabriel 17, Beholder 16, thralls 14-15, Marwen 11.
+
+  1. **MQ-34 (NEW — CRITICAL, confirm MQ-25): Void Scream dispatch=18 psychic; sim re-rolled 6d10=37 and applied 37. This is the same double-roll bug as MQ-25 (empty-void). Under authoritative dispatch values: Bazgar 23HP, Marwen 6HP, Sabriel 15HP — ALL survive R1 frightened. Similarly Void Eruption dispatch=5 force; sim applied 14.** Under correct dispatch, the fight runs to R2-3 TPK rather than R1. This single bug has been inflating the severity of all previous final-confrontation cycles — prior R1 TPK reports are partially artifacts. **Priority: HIGH. Fix direction: parse dispatch damage from output text rather than re-rolling. Human infra fix needed. Do NOT auto-fix.**
+
+  2. **FI-59 (NEW — DD-33 urgency recalibrated):** With correct dispatch values, all 3 PCs survive R1 (frightened, low HP) and take their turns: Bazgar Action Surge focuses STA down to 12HP, Sabriel smites STA dead. Party has meaningful counterplay before VS hits. Prior characterization "zero counterplay window" was partly MQ-34 artifact. DD-33 fix (lower ST Dex to +1, or shrine-bound hesitation at init 15) still recommended — one STD fires AR before entire party every cycle — but urgency drops from URGENT to HIGH. Do NOT auto-fix.
+
+  3. **FI-60 (NEW, POSITIVE): First Drain Divinity slot strip across 6 final-confrontation cycles.** Beholder spent legendary 3-action budget on DD after Bazgar's turn. Marwen Cha save: 4 vs DC 16 → FAIL. Marwen loses L3 Fireball slot before she acts. At table: Marwen must use L2 Scorching Ray (single target) instead of L3 Fireball (5 targets) for her R1 action. In a fight lasting 3+ rounds, this compounds — DD working exactly as designed. Positive signal: DD does have teeth in this slice when legendary timing is correct (fire after first PC's turn when budget is full).
+
+  4. **FI-61 (NEW, POSITIVE): Stagger correctly enforced for the first time in final-confrontation simulation.** STB (init 23) fired AR; sim tracked `stb_ar_fired=True` and forced STA (init 17) to Multiattack instead. STA's two strikes missed Marwen (lucky). With correct stagger: only one STD AR per round. Prior cycles had broken stagger (MQ-21). This is the stagger fix working.
+
+- **Bugs auto-fixed:** none
+- **See:** `_playtest-runs/2026-05-25T09-15-00.md`
 
 ### FI-56 (NEW) / FI-57 (NEW) / FI-58 (NEW) / MQ-31/32/33 (NEW): Beholder-escorts-limited 1st-cycle — TPK R3; Grapple+Maw R1 kills tank; Drain Divinity phantom; VS never recharged
 - **Context:** 2026-05-25 08:18 UTC, slice #3 (beholder-escorts-limited) 1st-cycle. Seed 494360. TPK R3 — beholder at 105/110 HP. 28/28 Phase A clean (DD-10 15th consecutive). No bugs auto-fixed. Init: Beholder 20 (tie with lair — MQ-31), Marwen 15, Bazgar 12, Sabriel 10.
