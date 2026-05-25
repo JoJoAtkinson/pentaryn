@@ -16,11 +16,19 @@
 
 ## Runs
 
+- 2026-05-25 05:00 UTC — slice #0 5th-cycle (threshold-patrol) — VICTORY R3 (Bazgar 49/49, Marwen 18/32, Sabriel 44/44 untouched 5th cycle); DW-A killed before acting (init 5 = last — DD-39/MQ-12 5th-cycle confirm); CW wasted 3/3 (R1 on DW-A who died before turn; MQ-27 NEW — CW should target highest-init ally); Sabriel untouched FI-14 5th cycle; Barrage 0/2 recharge chances; Bazgar untouched; 28/28 Phase A clean (DD-10 12th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T05-00-00.md
 - 2026-05-25 04:19 UTC — slice #7 (empty-void) — TPK R3; VS R1 wipe (4th cycle); DR unused (primary dead); main-action dead zone R2-R3; DD-51 auto-fixed (VS dice .md→6d10); 1 LA stranded/round — see _playtest-runs/2026-05-25T04-19-54.md
 
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### MQ-27 (NEW): CW target selection — prefer highest-initiative ally
+- **Context:** 2026-05-25 threshold-patrol 5th cycle. SC-X (init 16) gives Call Weakness to DW-A (init 5) in R1. Bazgar (init 14) hits DW-A to 10 HP; Sabriel (init 6) kills DW-A before DW-A acts. 5th consecutive cycle where CW is wasted on an ally who dies before its turn.
+- **Root cause:** Current DD-39 fix says "only use CW if a melee ally is alive." Insufficient — the fix doesn't account for initiative ordering. DW-A having init 5 (lowest in the fight) means it is most likely to die before acting when focused by Bazgar+Sabriel.
+- **Recommendation:** In `derro-shardcaller.md` tactics, add sub-rule: "When choosing the CW target, prefer the ally with the **highest initiative count** — they are most likely to survive to their turn and benefit from advantage. If two allies are available, never CW the lowest-initiative ally when a higher-initiative ally is available." Authoring-only. Low-risk. Resolves DD-39/MQ-12 structurally.
+- **Sub-note:** MQ-23 (harness doesn't apply CW advantage to attack rolls in simulation) continues. Not a spec bug.
+- See `_playtest-runs/2026-05-25T05-00-00.md` MQ-27.
 
 ### DD-51 (AUTO-FIXED) / FI-35 / FI-36 / FI-37 / MQ-25 / MQ-26 (NEW): Empty-void 4th cycle — TPK R3; VS R1 kills Marwen; DR unused; main-action dead zone 2× R; 1 LA stranded at altitude
 - **Context:** 2026-05-25 empty-void 4th cycle. Seed 494356. TPK R3 — Beholder at 81/110 HP. 28/28 Phase A clean (cache pre-seeded; DD-10 11th consecutive).
