@@ -16,12 +16,22 @@
 
 ## Runs
 
+- 2026-05-25 06:19 UTC — slice #1 (shrine-wedge) — TPK R3; double-AR R1 (MQ-28 harness bug — stagger rule unenforced mid-round); Marwen R1 R2, Sabriel R2, Bazgar R3; party dealt 17 total dmg to both STDs; UF/DE/Altar-pull never triggered (FI-38/39/40/41/42 new); OBR fired R2 missed; 28/28 Phase A clean (DD-10 13th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T06-19-01.md
 - 2026-05-25 05:00 UTC — slice #0 5th-cycle (threshold-patrol) — VICTORY R3 (Bazgar 49/49, Marwen 18/32, Sabriel 44/44 untouched 5th cycle); DW-A killed before acting (init 5 = last — DD-39/MQ-12 5th-cycle confirm); CW wasted 3/3 (R1 on DW-A who died before turn; MQ-27 NEW — CW should target highest-init ally); Sabriel untouched FI-14 5th cycle; Barrage 0/2 recharge chances; Bazgar untouched; 28/28 Phase A clean (DD-10 12th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T05-00-00.md
 - 2026-05-25 04:19 UTC — slice #7 (empty-void) — TPK R3; VS R1 wipe (4th cycle); DR unused (primary dead); main-action dead zone R2-R3; DD-51 auto-fixed (VS dice .md→6d10); 1 LA stranded/round — see _playtest-runs/2026-05-25T04-19-54.md
 
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-38/39 (NEW): shrine-wedge — UF and DE phantom mechanics; stagger rule callout needed (MQ-28)
+- **Context:** 2026-05-25 shrine-wedge 1st cycle. Seed 494358. TPK R3. Double-AR R1 (MQ-28 harness bug — stagger rule checked mid-round instead of start-of-round). 17 total party damage to both STDs.
+- **FI-38 (UF phantom):** Unstable Form never triggered. STD-A crit = 8 dmg (below 10+ threshold); Sabriel hit = 8 slashing. UF requires ≥10 in a single turn — achievable via Bazgar Action Surge or Sabriel smite, but the party was suppressed by R1 AR damage before they could mount focused offense. Probable correct design (UF is a catch for Action Surge pile-on), but 1st cycle confirms UF is invisible in 3-round fights.
+- **FI-39 (DE phantom):** Driven Escape not triggered. Both STDs stayed ~100% HP. Below-20 threshold unreachable in 3 rounds at party's damage output. DE is intended for edge cases (party chips a STD down before TPK) — probably correct but phantom in standard outcomes.
+- **MQ-28 (harness):** Stagger rule evaluated mid-round in sim. Both STDs fired AR R1 instead of just STD-A (higher init). Correct stated rule: evaluate "both recharged" at START of round, pre-mark lower-init STD as holding. Compressed TPK to R3 vs probable R4-5 with correct stagger. Strategic conclusion unchanged.
+- **Authoring recommendation (low-risk):** Add to `shrine-touched-derro.md` tactics: *"⚠️ Stagger rule evaluated at START of round: check both STDs before any actions resolve; if both have AR recharged, mark the lower-initiative STD as 'holding AR' for this round."*
+- **Bugs auto-fixed:** none
+- See `_playtest-runs/2026-05-25T06-19-01.md`
 
 ### MQ-27 (NEW): CW target selection — prefer highest-initiative ally
 - **Context:** 2026-05-25 threshold-patrol 5th cycle. SC-X (init 16) gives Call Weakness to DW-A (init 5) in R1. Bazgar (init 14) hits DW-A to 10 HP; Sabriel (init 6) kills DW-A before DW-A acts. 5th consecutive cycle where CW is wasted on an ally who dies before its turn.
