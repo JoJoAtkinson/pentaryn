@@ -16,6 +16,7 @@
 
 ## Runs
 
+- 2026-05-25 13:16 UTC — slice #7 (empty-void) 2nd-cycle — TPK R4 (Marwen disintegrated R1, Bazgar disintegrated R4, Sabriel downed by legendary Void Ray); FI-67 NEW (DD under-fires at altitude — 30 ft range vs beholder altitude gate); FI-68 NEW (solo beholder wastes 1 legendary/round at range); FI-69 NEW / FI-56 confirm (AC 19 negates multiattack ~22% rounds, Maw auto-crit never triggered); FI-70 NEW (healing hazard forces LoH — add DM callout box); FI-71 NEW (negotiation price predetermined — recommend middle option); FI-72 NEW (lair locked on unstable_ground, party never near altar); MQ-39 NEW (Disint rider clarification); MQ-40 NEW CRITICAL (2 PC permanent deaths from single ability — table culture decision); 28/28 Phase A clean (cache pre-seeded DD-10 19th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T13-16-44.md
 - 2026-05-25 12:00 UTC — slice #6 (shardcaller-team) 5th-cycle — VICTORY R2 (Bazgar 49/49, Marwen 28/32, Sabriel 44/44); Marwen init 21 (highest) → Fireball R1 drops SC-A+B to 2 HP; Bazgar kills both before they act; SC-C sole survivor hits Marwen once (4 piercing); PTV fires once (FI-66 NEW) never consumed; CW 0/9 charges again (FI-65 NEW 5th consecutive); DD-18 6th shardcaller-team confirm; MQ-38 NEW (chamber layout/Fireball range ambiguity); 28/28 Phase A clean (DD-10 18th consecutive); 1 auto-fix (MQ-35 applied: Berserk involuntary-move voids eligibility note added to derro-rager.md) — see _playtest-runs/2026-05-25T12-00-00.md
 - 2026-05-25 10:22 UTC — slice #5 (solo-rager-rush) 7th-cycle — VICTORY R5 (Bazgar 41/49, Marwen 22/32, Sabriel 12/44); R1 dead before acting (init 2 — FI-62 NEW: 7th-cycle last-init elimination); Berserk R1 all-in (R2+R3 both fire immediately FI-64 NEW); Taunt 0/5 effective (FI-63 NEW — Marwen Cha +3 passes 3/4; on fail targets taunter → no disadv); MQ-35 NEW (Thunderwave push → Berserk eligibility void; sim abstracted position); MQ-36 AUTO-FIXED (SR misclassified as save-based in Taunt limitation); 28/28 Phase A clean (cache pre-seeded DD-10 17th consecutive); 1 auto-fix (MQ-36 SR exemption removed from derro-rager.md) — see _playtest-runs/2026-05-25T10-22-43.md
 - 2026-05-25 09:15 UTC — slice #4 (final-confrontation) 6th-cycle — TPK R1 (sim artifact); MQ-34 CRITICAL: VS dispatch=18 psychic, sim applied 37 → correct outcome is R1 survival (Bazgar 23, Marwen 6, Sabriel 15 HP all frightened), TPK in R2-3; FI-59 (DD-33 urgency softened by MQ-34); FI-60 NEW POSITIVE (first DD slot strip in FC: Marwen L3 gone); FI-61 NEW POSITIVE (stagger correctly enforced 1st FC cycle); DD-33 6th-cycle confirm; 28/28 Phase A clean (DD-10 16th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T09-15-00.md
@@ -28,6 +29,31 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-67/68/69/70/71/72 (NEW) / MQ-39/40 (NEW): Empty-void 2nd-cycle — TPK R4; Disint kills 2 PCs permanently; altitude gate blocks DD; lair monotonous
+
+- **Context:** 2026-05-25 13:16 UTC, slice #7 (empty-void) 2nd-cycle. Seed 494365. TPK R4 — Marwen disintegrated R1 (Disint Ray), Bazgar disintegrated R4 (Disint recharged), Sabriel downed by legendary Void Ray at 9 HP. 28/28 Phase A clean (DD-10 19th consecutive). 0 bugs auto-fixed.
+
+  1. **FI-67 (NEW): Drain Divinity altitude gate — DD's 30 ft range fails when beholder stays at 30–40 ft.** DD is the beholder's most efficient legendary spend (3 actions, removes slots + gains temp HP). But when the beholder hovers at 30–40 ft altitude, any ground-level PC is outside the 30 ft sphere. In R1, DD was blocked all round; in R2, the beholder had to fly + shrine_drift to close, then DD fired once. With no thralls, the beholder must choose between altitude safety and DD access. The current tactics text says "DD on first PC's end-of-turn if within 30 ft" — but doesn't explain HOW to get within 30 ft while at altitude. **Recommend adding a descent-to-fire note to the beholder's tactics section.**
+
+  2. **FI-68 (NEW): Solo beholder leaks 1 legendary per round at range.** Without thralls, the 3-legendary budget is hard to spend cleanly. Void Ray costs 2; Tentacle costs 1 but has 10 ft reach (useless at altitude). In multiple rounds, 1 legendary action went unused. With thralls, compel_thrall (1 action) fills the gap. Without: the budget routinely ends at 1/3 or 0/3 with 1 wasted. This is not a bug, but the DM should know: the beholder fights least efficiently in the empty-void slice.
+
+  3. **FI-69 (NEW, confirms FI-56): AC 19 negates multiattack ~22% of rounds; Maw auto-crit never fires.** Sabriel's AC 19 (heavy + shield) brings each tentacle lash to 40% hit rate. In R3, all three multiattack components missed. The Maw auto-crit (grappled target) never triggered because the tentacles couldn't grapple. This is a confirmed pattern — high-AC divine martial is a hard counter to the beholder's primary melee.
+
+  4. **FI-70 (NEW): Healing hazard + disintegration = no recovery path.** Two PCs were disintegrated; Lay on Hands cannot target a disintegrated body. The healing hazard (spell → necrotic) already removes slot-healing; disintegration removes the target entirely. Sabriel's LoH is the only healing in-combat but it's useless once a PC is annihilated. **DM callout recommended: bold warning before first PC drops.**
+
+  5. **FI-71 (NEW): Negotiation price is structurally incompatible with party mission.** The beholder's only negotiable concession (lower shaft off-limits) is the one thing the party cannot accept. Negotiation delivers lore but offers no real choice. **Recommend adding middle-ground options (divine item sacrifice, temporary truce cost) to Interaction Notes.**
+
+  6. **FI-72 (NEW): Lair action monotonous — only `unstable_ground` fires.** `void_eruption` requires PCs near the altar; `manifest_thralls` requires living thralls. In this slice (no thralls, party at threshold), `unstable_ground` fires every lair action for 4 rounds. The lair action suite feels like a single ability. Note for DM: if the party plays the range game, they never see the shrine's lair variety.
+
+  7. **MQ-40 (NEW, CRITICAL): Two PC permanent deaths from Disintegration Ray in one fight.** Marwen (R1) and Bazgar (R4) were both disintegrated. No L5 resurrection option exists for either. This is mechanically correct for a CR 13 beholder, but is a table-culture question: does the user intend permanent character death to be on the table in Thrulm? Options listed in the run transcript. **Human must decide before this encounter goes to table.**
+
+  8. **MQ-39 (NEW): Disintegration vs Void Ray — death clarity needed at table.** Disint = permanent. Void Ray/Scream/Tentacle = normal downed. The DM needs a visible tracker or a clear verbal signal when Disint fires to distinguish permanent vs temporary death. Suggest: a dedicated "disintegrated" token or a different-colored die on the miniature.
+
+- **Bugs auto-fixed:** 0
+- **See:** `_playtest-runs/2026-05-25T13-16-44.md`
+
+---
 
 ### FI-65 (NEW) / FI-66 (NEW) / FI-67 (NEW) / DD-18 (6th SC-team confirm) / MQ-38 (NEW): Shardcaller-team 5th-cycle — VICTORY R2; CW 0/9 structural; PTV disadv never consumed; Fireball-first initiative kills 2 SCs before they act; chamber layout ambiguity
 
