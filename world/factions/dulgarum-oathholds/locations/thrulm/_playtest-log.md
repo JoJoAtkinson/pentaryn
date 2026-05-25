@@ -16,6 +16,7 @@
 
 ## Runs
 
+- 2026-05-25 17:18 UTC — slice #2 (tank-wall) 2nd-cycle — VICTORY R2 (Bazgar 20/49, Marwen 23/32, Sabriel 44/44 untouched); CW 3/3 stranded (DD-41 3rd tank-wall confirm — FI-84); Berserk 0 fires 2nd consecutive (DD-26/FI-85); extreme R2 vs R9 variance (FI-86 NEW); Taunt→Fireball bypass (FI-87 DD-24 2nd confirm); MQ-44 sim barrage re-roll artifact; 28/28 Phase A clean (DD-10 22nd consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T17-18-27.md
 - 2026-05-25 15:24 UTC — slice #1 (shrine-wedge) 2nd-cycle — VICTORY R3 (Bazgar 17/49, Marwen 32/32 untouched, Sabriel 33/44); stagger (MQ-28 fix) correctly prevented double-AR R1 FI-78 POSITIVE; VICTORY vs cycle-1 TPK confirms stagger fix changes outcome FI-79 POSITIVE; UF never activated (STD-A killed before acting with UF R2 — FI-80 2nd structural confirm); fire suppression zero-impact (1-target Fireball save=half FI-81); Slow optimal R1 play FI-82; Marwen untouched FI-83; MQ-42 AUTO-FIXED (AR concentration-check callout added to shrine-touched-derro.md); MQ-43 NEW (Slow vs Fireball R1 DM advice gap); 28/28 Phase A clean (DD-10 21st consecutive); 1 bug auto-fixed — see _playtest-runs/2026-05-25T15-24-09.md
 - 2026-05-25 14:20 UTC — slice #0 (threshold-patrol) 6th-cycle — VICTORY R3 (Bazgar 45/49, Marwen 17/32, Sabriel 44/44 untouched 6th cycle); MQ-27 fix validated FI-73 NEW POSITIVE (CW→DW-B highest-init, converted miss→hit 4 dmg to Bazgar — first CW outcome in 6 TP cycles); DW-A killed before acting init 5 again FI-74 (DD-39 6th consecutive); Sabriel untouched FI-75 (FI-14 6th confirm); CW ≤20 HP guard fired correctly FI-76 NEW POSITIVE; Barrage 0/1 recharge chances FI-77 (structural); MQ-41 NEW (harness: Barrage condition never evaluated — corridor line-up likely triggers it at table); 28/28 Phase A clean (DD-10 20th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T14-20-00.md
 - 2026-05-25 13:16 UTC — slice #7 (empty-void) 2nd-cycle — TPK R4 (Marwen disintegrated R1, Bazgar disintegrated R4, Sabriel downed by legendary Void Ray); FI-67 NEW (DD under-fires at altitude — 30 ft range vs beholder altitude gate); FI-68 NEW (solo beholder wastes 1 legendary/round at range); FI-69 NEW / FI-56 confirm (AC 19 negates multiattack ~22% rounds, Maw auto-crit never triggered); FI-70 NEW (healing hazard forces LoH — add DM callout box); FI-71 NEW (negotiation price predetermined — recommend middle option); FI-72 NEW (lair locked on unstable_ground, party never near altar); MQ-39 NEW (Disint rider clarification); MQ-40 NEW CRITICAL (2 PC permanent deaths from single ability — table culture decision); 28/28 Phase A clean (cache pre-seeded DD-10 19th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T13-16-44.md
@@ -31,6 +32,25 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-84/85/86/87 / MQ-44: Tank-wall 2nd-cycle — VICTORY R2; extreme variance; CW/Berserk pairing still never demonstrates
+
+- **Context:** 2026-05-25 17:18 UTC, slice #2 (tank-wall) 2nd cycle. Seed 494369. VICTORY R2 — Bazgar 20/49, Marwen 23/32, Sabriel 44/44 (untouched). Init: Marwen 20, Sabriel 18, Bazgar 14, Rager 13, SC 10. 28/28 Phase A clean (DD-10 22nd consecutive). 0 bugs auto-fixed.
+
+  1. **FI-84 (DD-41 3rd tank-wall confirm): CW 3/3 stranded — initiative-dependent structural gap.** SC init 10 < Rager init 13. Rager charges to melee before SC acts; SC-to-Rager gap grows to ~50 ft — beyond 30 ft CW range. No other ally in range. 3/3 CW uses unspendable for the entire fight. In both today's tank-wall cycles (07:00 and 17:18 UTC), CW fired 0 times. Across all tank-wall cycles on record, CW-on-Rager fires only when SC wins initiative vs Rager (~50% probability). **The Taunt+CW pairing the slice is designed to showcase has never demonstrated together.** Not auto-fixable without repositioning SC closer or extending CW range.
+
+  2. **FI-85 (DD-26 2nd consecutive confirm): Berserk never fires in 2nd tank-wall cycle.** Rager moved R1 → Berserk ineligible R1. R2: took 30 fire (Fireball) → died before acting. Berserk requires surviving to R2 with ≥2 PCs in reach and no movement taken that turn. The burst-fire party prevents this. DD-26 recommendation (raise Rager HP 52→~70) unimplemented. **Human decision needed before next tank-wall cycle.**
+
+  3. **FI-86 (NEW): Extreme fight-length variance — R2 vs R9 — purely from initiative.** 07:00 cycle (SC init 21 → SC acts first, CW fires, Rager acts late): fight lasts R9. 17:18 cycle (all PCs act before any NPC in R2): Fireball + smite erases both NPCs in R2. 7-round delta driven solely by initiative. Tank-wall's design goals (taunt+CW synergy, Berserk burst feel) require the Rager to act early; in "PCs-first" inititiative rolls they are structurally unachievable. **This is the crux of DD-26: raising Rager HP is necessary but not sufficient — the fight also needs the Rager to act before the party front-loads, which is initiative-dependent. Recommend: either (a) give the Rager a +3 Dex modifier (12 Dex) so it more consistently wins initiative, or (b) accept the high variance as a feature of this encounter zone. Both options need human sign-off.**
+
+  4. **FI-87 (DD-24 2nd confirm): Taunted Marwen casts Fireball — Taunt fully bypassed.** Marwen failed DC 12 Cha → taunted. Immediately cast Fireball (DC 14 Dex save, AoE). Taunt's "disadvantage on attack rolls vs non-Rager" does not apply to saving-throw-based spells. The Rager spent its bonus action to zero effect. Rager.md already documents this. No additional fix — confirmed structural limitation of preemptive Taunt design.
+
+  5. **MQ-44 (sim-artifact, not a spec bug): Barrage damage re-roll discrepancy.** Dispatch returned "9 piercing" (canonical). Sim re-rolled `d(3,6)` = 6 independently. Canonical post-R1 HP: Bazgar 20/49, Marwen 23/32. Outcome (VICTORY R2) unchanged. Future Phase B scripts should parse the dispatch output damage value rather than re-rolling.
+
+- **Bugs auto-fixed:** 0
+- **See:** `_playtest-runs/2026-05-25T17-18-27.md`
+
+---
 
 ### FI-78/79 (POSITIVE) / FI-80/81/82/83 / MQ-42 (auto-fixed) / MQ-43 (NEW): Shrine-wedge 2nd-cycle — VICTORY R3; stagger fix confirmed; UF/fire-suppression still invisible; Slow > Fireball in altar zone
 
