@@ -16,6 +16,7 @@
 
 ## Runs
 
+- 2026-05-25 14:20 UTC — slice #0 (threshold-patrol) 6th-cycle — VICTORY R3 (Bazgar 45/49, Marwen 17/32, Sabriel 44/44 untouched 6th cycle); MQ-27 fix validated FI-73 NEW POSITIVE (CW→DW-B highest-init, converted miss→hit 4 dmg to Bazgar — first CW outcome in 6 TP cycles); DW-A killed before acting init 5 again FI-74 (DD-39 6th consecutive); Sabriel untouched FI-75 (FI-14 6th confirm); CW ≤20 HP guard fired correctly FI-76 NEW POSITIVE; Barrage 0/1 recharge chances FI-77 (structural); MQ-41 NEW (harness: Barrage condition never evaluated — corridor line-up likely triggers it at table); 28/28 Phase A clean (DD-10 20th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T14-20-00.md
 - 2026-05-25 13:16 UTC — slice #7 (empty-void) 2nd-cycle — TPK R4 (Marwen disintegrated R1, Bazgar disintegrated R4, Sabriel downed by legendary Void Ray); FI-67 NEW (DD under-fires at altitude — 30 ft range vs beholder altitude gate); FI-68 NEW (solo beholder wastes 1 legendary/round at range); FI-69 NEW / FI-56 confirm (AC 19 negates multiattack ~22% rounds, Maw auto-crit never triggered); FI-70 NEW (healing hazard forces LoH — add DM callout box); FI-71 NEW (negotiation price predetermined — recommend middle option); FI-72 NEW (lair locked on unstable_ground, party never near altar); MQ-39 NEW (Disint rider clarification); MQ-40 NEW CRITICAL (2 PC permanent deaths from single ability — table culture decision); 28/28 Phase A clean (cache pre-seeded DD-10 19th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T13-16-44.md
 - 2026-05-25 12:00 UTC — slice #6 (shardcaller-team) 5th-cycle — VICTORY R2 (Bazgar 49/49, Marwen 28/32, Sabriel 44/44); Marwen init 21 (highest) → Fireball R1 drops SC-A+B to 2 HP; Bazgar kills both before they act; SC-C sole survivor hits Marwen once (4 piercing); PTV fires once (FI-66 NEW) never consumed; CW 0/9 charges again (FI-65 NEW 5th consecutive); DD-18 6th shardcaller-team confirm; MQ-38 NEW (chamber layout/Fireball range ambiguity); 28/28 Phase A clean (DD-10 18th consecutive); 1 auto-fix (MQ-35 applied: Berserk involuntary-move voids eligibility note added to derro-rager.md) — see _playtest-runs/2026-05-25T12-00-00.md
 - 2026-05-25 10:22 UTC — slice #5 (solo-rager-rush) 7th-cycle — VICTORY R5 (Bazgar 41/49, Marwen 22/32, Sabriel 12/44); R1 dead before acting (init 2 — FI-62 NEW: 7th-cycle last-init elimination); Berserk R1 all-in (R2+R3 both fire immediately FI-64 NEW); Taunt 0/5 effective (FI-63 NEW — Marwen Cha +3 passes 3/4; on fail targets taunter → no disadv); MQ-35 NEW (Thunderwave push → Berserk eligibility void; sim abstracted position); MQ-36 AUTO-FIXED (SR misclassified as save-based in Taunt limitation); 28/28 Phase A clean (cache pre-seeded DD-10 17th consecutive); 1 auto-fix (MQ-36 SR exemption removed from derro-rager.md) — see _playtest-runs/2026-05-25T10-22-43.md
@@ -29,6 +30,23 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-73 (NEW POSITIVE) / FI-74 (DD-39 6th confirm) / FI-75 (FI-14 6th confirm) / MQ-41 (NEW harness): Threshold-patrol 6th cycle — VICTORY R3; MQ-27 fix validated; DW-A pre-turn death structural; Sabriel untouched structural; Barrage corridor trigger gap
+
+- **Context:** 2026-05-25 14:20 UTC, slice #0 (threshold-patrol) 6th cycle. Seed 494366. VICTORY R3 — Bazgar 45/49, Marwen 17/32, Sabriel 44/44. Init: SC-X 19, Marwen 18, Bazgar 17, Sabriel 15, DW-B 9, DW-A 5. 28/28 Phase A clean (DD-10 20th consecutive). 0 bugs auto-fixed.
+
+  1. **FI-73 (NEW, POSITIVE): MQ-27 CW fix produces first mechanical outcome in 6 threshold-patrol cycles.** DW-B received CW advantage (init 9, highest-init DW). On axe 1: base d20=4+4=8 would have missed AC 18. CW gave max of {4, 19}+4=23 → hit, 4 damage to Bazgar. Without CW, zero DW damage to any PC this cycle. Signal: MQ-27 fix is working. Caveat: impact low because DW-A died immediately, leaving only 1 DW to benefit from CW. CW's full value requires both DWs to survive to their turns. **No fix needed — track whether cycles with both DWs alive generate higher CW payoff.**
+
+  2. **FI-74 (DD-39 6th consecutive confirm): DW-A killed before acting is now a structural floor, not variance.** DW-A: init 5 (last) every cycle. Marwen + Bazgar combined output (Scorching Ray 24 fire + greatsword 4 slashing = 28) exceeds DW-A's 27 HP in 2 PC turns. This cannot change without raising DW HP or giving DW-A a readied action. **Options for human: (a) raise DW HP to ~35 ("veteran" frame, +8 HP buffer); (b) add DW ready-action rule "if caster acts first, ready Attack on trigger"; (c) accept DW-A as a guaranteed speed bump, no action expected.** Six cycles is a large enough sample — human decision needed.
+
+  3. **FI-75 (FI-14 6th consecutive): Sabriel untouched — 44/44 HP in all 6 threshold-patrol cycles.** DWs always target Bazgar (closest melee). SC-X always targets Marwen (caster). Sabriel occupies a tactical gap: not the closest melee (Bazgar is) and not the caster (Marwen is). She engages freely and smites without pressure. **Authoring recommendation (low-risk, requires human sign-off):** Add note to SC-X threshold-patrol tactics: *"If 3 PCs advance into the corridor and form a line, fire Shard-Barrage (15-ft line) rather than Multiattack — it forces Sabriel to make a DC 13 Dex save and distributes pressure to the unengaged PC."*
+
+  4. **MQ-41 (NEW — harness): Shard-Barrage corridor trigger never evaluated in Phase B sim.** Threshold corridor is 40 ft wide — narrow enough that 3 advancing PCs could form a 15-ft line (standard marching order). SC-X should fire Barrage R1 if the geometry holds. Sim always picks Multiattack, understating SC-X's R1 potential. **At-table test recommended:** have the DM deliberately trigger Barrage R1 in the next manual playthrough of this slice. If it hits all 3 PCs (DC 13 Dex, ~10 piercing half on save), Sabriel finally takes damage and the encounter feel shifts meaningfully.
+
+- **Bugs auto-fixed:** 0
+- **See:** `_playtest-runs/2026-05-25T14-20-00.md`
+
+---
 
 ### FI-67/68/69/70/71/72 (NEW) / MQ-39/40 (NEW): Empty-void 2nd-cycle — TPK R4; Disint kills 2 PCs permanently; altitude gate blocks DD; lair monotonous
 
