@@ -1,88 +1,42 @@
 ---
 name: Derro Rager
 description: "Melee tank; draws aggro and absorbs punishment"
-type: creature
-tags: ["#npc", "#combat", "#derro", "#thrulm", "#melee", "#tank"]
-status: active
 created: 2026-04-26
-last-modified: 2026-04-26
+status: active
+location: thrulm
+tags: ["#combat-runner", "#npc", "#combat", "#derro", "#thrulm", "#melee", "#tank", "#cr-2"]
 ---
-
 # Derro Rager (Melee Tank)
 
-A derro pumped with madness-born strength. They charge into combat, soak hits meant for others, and punish anyone who ignores them. They fight with pure fury and pain-driven endurance.
+**HP** 52 (8d8+16) **·** **AC** 16 (half-plate) **·** **Speed** 30 ft. **·** **Saves** Str +4, Con +4 **·** **Resist** poison **·** **Immune** frightened **·** **Darkvision 120 ft.** **·** **CR** 2 (450 XP)
+
+> Action mechanics live in `combat-runner/actions.jsonl` (DB) — see the launcher-injected **Ready actions** reference for verbs and call signatures.
 
 ---
 
-## Combat Stats
+## Start-of-turn checklist
 
-| **AC** | **HP** | **Speed** |
-|--------|--------|-----------|
-| 16 (half-plate) | 52 (8d8 + 16) | 30 ft. |
-
-| **STR** | **DEX** | **CON** | **INT** | **WIS** | **CHA** |
-|---------|---------|---------|---------|---------|---------|
-| 15 (+2) | 11 (+0) | 14 (+2) | 8 (-1) | 10 (+0) | 9 (-1) |
-
-| **Saving Throws** | Str +4, Con +4 |
-| **Skills** | Athletics +4 |
-| **Damage Resistances** | poison |
-| **Condition Immunities** | frightened |
-| **Senses** | darkvision 120 ft., passive Perception 10 |
-| **Languages** | Dwarvish, Undercommon |
-| **Challenge** | 2 (450 XP) |
+1. If **Berserk** is USED, roll `roll_dice(1, 6)` — recovers on 5–6.
+2. If rager took damage last turn: +1 to attack rolls this turn (Madness Endurance). **DM applies manually — roller output does NOT include this bonus; add +1 to each printed to-hit result.**
+3. If a specific enemy hit the rager last turn: **next** attack against that enemy has advantage (Incoming Damage Aggro — the rager remembers).
+4. **Taunt** bonus action is available each turn.
 
 ---
 
-## Traits
+## Tactics — when the DM asks "what does it do?"
 
-**Madness Endurance.** The rager has advantage on saving throws against being frightened. When it takes damage, it gains +1 to attack rolls until the end of its next turn (pain fuels it).
+- **Round 1:** Charge the strongest-looking enemy in reach. Multiattack (two greataxe swings).
+- **Always Taunt the squishiest visible non-engaged target** (caster or rogue) on the bonus action — DC 12 Cha or disadvantage attacking anyone but the rager. **Tiebreaker:** prefer a target who is currently attacking the Shardcaller or ignoring the rager entirely. If the squishiest target is already focused on the rager, redirect Taunt to whoever is threatening the back line instead — Taunt that forces someone onto the rager is wasted if they were already attacking the rager. **Limitation:** Taunt's disadvantage only applies to attack rolls — it does NOT affect saving throw-based spells (Fireball, Scorching Ray, Shard Barrage). A wizard relying exclusively on save-based spells is functionally immune to Taunt. **Multi-Taunt ruling:** if two ragers Taunt the same target simultaneously, the target has disadvantage only on attacks vs creatures that are NOT either rager — they may attack either taunting rager without penalty. **Rager-only formation corollary (FI-31):** when all living ragers taunt the same PC, MQ-5's "not either rager" exclusion covers every NPC in the encounter — the PC has no disadvantage on any attack. In rager-only encounters, split Taunt across multiple PCs (one rager per target) rather than stacking on the same caster.
+- **If 2+ enemies in reach:** consider **Berserk** (Recharge 5–6) — one greataxe vs *each* creature in reach; rager cannot move that turn, so only fire when already in the right spot. **DB output always shows 3 attack lines — DM caps at actual in-reach creature count and skips excess lines (e.g. 2 PCs in reach → use lines 1–2 only).** **Berserk + Taunt same turn (DD-45):** use both — Berserk hits everyone in reach; for the Taunt bonus action, target whichever PC will deal the most threatening action next (the action-surging fighter, the spell-slot caster) rather than whoever you just Berserked. The Taunt disadvantage compounds with Berserk: the taunted PC attacks with disadvantage on their turn even after being hit. In solo-rager encounters with no allies to protect, Taunt whoever poses the greatest follow-up threat (highest remaining resources).
+- **Marked attacker:** remembered until the rager hits them — focus that target on the next turn.
+- **Below 15 HP:** does NOT retreat. Madness Endurance keeps it swinging until 0. Use Berserk if available.
 
-**Incoming Damage Aggro.** When the rager takes damage from an enemy it can see, the next attack the rager makes against that enemy has advantage. It *remembers* who hit it.
+## Description (one line)
 
----
-
-## Actions
-
-**Multiattack.** Two attacks with Greataxe.
-
-**Greataxe.** *Melee Weapon Attack:* +4 to hit, reach 5 ft., one target. *Hit:* 10 (1d12 + 2) slashing damage.
-
-**Berserk (Recharge 5–6).** The rager makes one Greataxe attack against each creature it can reach. It cannot move on this turn.
-
----
-
-## Bonus Actions
-
-**Taunt.** The rager targets one creature it can see within 30 feet. That creature makes a DC 12 Charisma save or has disadvantage on attack rolls against targets other than the rager until the end of its next turn.
-
----
-
-## Tactics
-
-- **Charges in immediately** — gets to the strongest-looking enemy
-- **Stays in melee** — rarely backs up
-- **Marks the attacker** — goes after whoever just hit it hardest
-- **Uses Taunt** — forces a target to either hit it or suffer disadvantage
-- **Won't leave combat** — fights until it dies or drops
+Scarred, pain-fueled, half-plate dented from too many fights — eyes too white, breathing too fast.
 
 ---
 
 ## Position & Role
 
-**Where:** Front line, 5-10 feet from enemies  
-**Goal:** Tank hits, keep enemies from getting past it  
-**If hit:** Gets angrier, hits back harder, taunts the attacker
-
----
-
-## Loot
-
-- 12 gp
-- Half-plate (worth 600 gp, but heavy and bulky)
-
----
-
-## Related Links
-
-- [Thrulm Location](../_overview.md)
+Front line, 5–10 ft from enemies. Tanks hits; the more it's hit, the harder it swings.

@@ -30,7 +30,10 @@ TAG_FACETS: dict[str, dict] = {
             "cold":      {},
             "acid":      {},
             "lightning": {},
-            "poison":    {},
+            # NOTE: `poison` is intentionally NOT a damage-type here. By DM
+            # decision (UX finding F6) `poison` always means the *poisoned
+            # condition* — `canonicalize_condition` maps it — so the dispatcher
+            # reads it as a condition. Poison-typed damage is not expressible.
             "necrotic":  {},
             "radiant":   {},
             "thunder":   {},

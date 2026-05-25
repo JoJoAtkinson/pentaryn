@@ -154,3 +154,25 @@ def test_uncertain_damage_mob_member_hit_upgrades_named_member():
     assert mob.member_hp[1] == 20, "member 2 must be untouched after hit"
     assert mob.member_hp[2] == 10, "member 3 must have taken full 10 damage"
     assert es.pending_effects[0].resolved is True
+
+
+def test_pending_effect_member_round_trips_through_serialize():
+    """PendingEffect.member survives serialize_encounter/deserialize_encounter."""
+    es = _mob_es()
+    apply_uncertain_damage(
+        es, "9", full_amount=10, kind="save", on_save="half", source="fireball", member=3
+    )
+    assert es.pending_effects[0].member == 3  # written correctly
+
+    # Round-trip through JSON-safe dict (the snapshot / undo boundary).
+    restored = deserialize_encounter(serialize_encounter(es))
+    p = restored.pending_effects[0]
+    assert p.member == 3, "member must survive serialize/deserialize"
+
+    # Old snapshots without 'member' must still load (member defaults to None).
+    import dataclasses
+    raw = dataclasses.asdict(es.pending_effects[0])
+    del raw["member"]  # simulate an old snapshot
+    from gui.state import _deserialize_pending
+    old_style = _deserialize_pending(raw)
+    assert old_style.member is None, "missing 'member' key must default to None"

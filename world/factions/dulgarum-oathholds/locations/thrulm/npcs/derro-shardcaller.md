@@ -1,89 +1,45 @@
 ---
 name: Derro Shardcaller
 description: "Ranged tactical leader; calls formations and weaknesses"
-type: creature
-tags: ["#npc", "#combat", "#derro", "#thrulm", "#ranged", "#support"]
-status: active
 created: 2026-04-26
-last-modified: 2026-04-26
+status: active
+location: thrulm
+tags: ["#combat-runner", "#npc", "#combat", "#derro", "#thrulm", "#ranged", "#support", "#cr-2"]
 ---
-
 # Derro Shardcaller (Tactical Support)
 
-A derro who learned to read stone and **call out weaknesses** in enemy formations. They throw shards of obsidian and ancient flint, and their voice carries commands that make other derro fight harder.
+**HP** 33 (6d8+6) **·** **AC** 14 (leather) **·** **Speed** 30 ft. **·** **Saves** Wis +4 **·** **Resist** psychic **·** **Darkvision 120 ft., passive Perception 14** **·** **CR** 2 (450 XP)
+
+> Action mechanics live in `combat-runner/actions.jsonl` (DB) — see the launcher-injected **Ready actions** reference for verbs and call signatures.
 
 ---
 
-## Combat Stats
+## Start-of-turn checklist
 
-| **AC** | **HP** | **Speed** |
-|--------|--------|-----------|
-| 14 (leather) | 33 (6d8 + 6) | 30 ft. |
-
-| **STR** | **DEX** | **CON** | **INT** | **WIS** | **CHA** |
-|---------|---------|---------|---------|---------|---------|
-| 9 (-1) | 15 (+2) | 12 (+1) | 13 (+1) | 14 (+2) | 12 (+1) |
-
-| **Saving Throws** | Wis +4 |
-| **Skills** | Perception +4, Insight +4 |
-| **Damage Resistances** | psychic |
-| **Senses** | darkvision 120 ft., passive Perception 14 |
-| **Languages** | Dwarvish, Undercommon |
-| **Challenge** | 2 (450 XP) |
+1. If **Shard-Barrage** is USED, roll `roll_dice(1, 6)` — recovers on 5–6.
+2. **Call Weakness** (3/Day) — track uses across the encounter; bonus action when ready.
+3. **Tactical Retreat** bonus action available each turn (move 30 ft away from nearest enemy without provoking).
+4. **Pack Tactics Voice (passive):** when an ally within 30 ft hits, the target has disadvantage on the *next* saving throw before end of its next turn — call this out in the reply so the DM remembers it. **Toggle, not stackable:** the target either has disadv or it doesn't; multiple hits in the same round simply refresh the duration, not grant "disadv on two saves."
 
 ---
 
-## Traits
+## Tactics — when the DM asks "what does it do?"
 
-**Stone-Sense.** The shardcaller knows if it's on solid stone vs other terrain. It has advantage on Perception checks to spot structural weaknesses.
+- **Position:** 40–60 ft behind the front line. Stays out of melee, uses other derro as cover.
+- **Round 1, in range of a caster:** Multiattack (two Shard-Throws, +4 to hit, range 30/60) on the visible spellcaster / healer first.
+- **3+ enemies in a line:** **Shard-Barrage** (Recharge 5–6) — 15-ft line, DC 13 Dex, 3d6 piercing, half on save.
+- **Bonus action — Call Weakness:** target the ally hitting hardest; that ally gets advantage on its next **attack roll**. **Do not Call Weakness an ally who plans to use Shard-Barrage this turn** — Barrage is a save-based area effect (no attack roll), so the advantage is wasted. Call Weakness is for Multiattack turns only. Save the 3 uses for the fight's most dangerous round. With multiple shardcallers, stagger targets — don't double-buff the same ally. **When calling on the Rager before a Berserk turn:** advantage applies to the Rager's *first* Greataxe swing only (the benefit is spent after that roll); remaining Berserk swings are flat rolls. Still worth using — the first swing is typically the highest-value opportunity. **Initiative priority (DD-39):** Call Weakness on the ally whose turn comes NEXT in initiative order — prefer an ally whose turn falls BEFORE the party's highest-damage dealer. Avoid CW on an ally who acts after the biggest threat in the current round; that ally is likely to be killed before benefiting. Never CW an ally at ≤20 HP (DD-8/DD-25 guard still applies). **Range note (DD-41):** CW has 30 ft range — once the Rager charges to melee (~40 ft from the SC's back-line position, SC-to-Rager gap grows to ~50 ft), CW is out of range. Fire CW on the Rager in R1 before it charges (when SC acts first in initiative); R2+ CW on a melee Rager is impossible without SC repositioning into danger. If the Rager is out of range, hold the charge for the next eligible ally or the fight's most dangerous remaining round.
+- **Stagger Barrages (multiple shardcallers):** when 2+ shardcallers have Barrage available, only one fires per round unless a truly decisive line-up exists. A staggered barrage keeps pressure across multiple rounds; a simultaneous triple-barrage R1 depletes all area coverage instantly and leaves rounds 2+ as pure multiattack. **In shardcaller-only formations (no melee allies), when stagger is active:** the two non-barrage shardcallers are multiattacking this round — they SHOULD use Call Weakness on each other (not on the barrage-firing shardcaller, whose advantage would be wasted on a save-based attack). This is the one formation where CW pays off: both multiattacking SCs get attack-roll advantage simultaneously.
+- **If a melee threat closes within 15 ft:** Tactical Retreat (no OA), then continue throwing. **Tactical Retreat is a BONUS ACTION — the main action (Shard-Throw or Barrage) still happens this turn.** Do not give up the attack action to retreat. Fire in the new position. (DD-47: 0/3 shardcaller-team cycles demonstrated TR; DMs consistently miss the "bonus action, not main action" framing.)
+- **2-SC endgame (both have Barrage available):** The SC that acts FIRST in initiative should multiattack this round (not barrage) and CW the other SC. The second SC fires Barrage. This stagger ensures CW hits an attack-roll turn and barrage coverage continues into the next round. If both SCs have barrage and act consecutively (back-to-back initiative), the first SC still multiattacks unless the Barrage line-up is decisive; the second fires Barrage. Avoid simultaneous double-barrage in the 2-SC endgame — it exhausts all remaining area coverage at once. (DD-47 2nd cycle: SC-B CW'd SC-C then SC-C fired Barrage, wasting the CW advantage.)
+- **Below 12 HP:** retreat behind a Rager or pillar; only fire if no melee can reach. In shardcaller-only formations (no Rager present), "retreat behind a Rager" is unavailable — use a pillar or column instead; if no cover exists, accept the exposed position and fire (don't sacrifice action economy to run).
 
-**Pack Tactics Voice.** When an ally of the shardcaller hits a target within 30 feet of the shardcaller, the target has disadvantage on the next saving throw it makes before the end of its next turn (the shardcaller "calls out" the weakness).
+## Description (one line)
 
----
-
-## Actions
-
-**Multiattack.** Two attacks with Shard-Throw or one Shard-Barrage.
-
-**Shard-Throw.** *Ranged Weapon Attack:* +4 to hit, range 30/60 ft., one target. *Hit:* 6 (1d8 + 2) piercing damage.
-
-**Shard-Barrage (Recharge 5–6).** The shardcaller throws a spray of shards in a 15-foot line. Each creature in the line makes a DC 13 Dexterity save, taking 10 (3d6) piercing damage on a failed save, or half on a success.
-
----
-
-## Bonus Actions
-
-**Call Weakness (3/Day).** The shardcaller targets one ally it can see within 30 feet. That ally gains advantage on its next attack roll before the end of the turn.
-
-**Tactical Retreat.** Move up to 30 feet away from the nearest enemy without provoking opportunity attacks.
-
----
-
-## Tactics
-
-- **Stays 40+ feet away** — throws shards, calls out weaknesses
-- **Positions behind other derro** — uses them as shields
-- **First target:** Enemy spellcasters or the cleric (removes support)
-- **If engaged:** Uses Tactical Retreat + Shard-Barrage, then backs up
-- **Coordinates:** Calls Weakness on whoever is hitting hardest
+Wiry derro draped in obsidian pouches and bone-charm cords; voice carries strangely far, like the stone repeats it.
 
 ---
 
 ## Position & Role
 
-**Where:** Back line, 40-60 feet from enemies  
-**Goal:** Support allies, weaken enemy saves, stay alive  
-**If approached:** Retreat + throw, then reposition
-
----
-
-## Loot
-
-- 15 gp
-- Pouch of shard-throwing stones (crafted, no resale value)
-
----
-
-## Related Links
-
-- [Thrulm Location](../_overview.md)
+Back line, 40–60 ft from enemies. Calls weaknesses, scatters lines with barrages, never lets melee close.

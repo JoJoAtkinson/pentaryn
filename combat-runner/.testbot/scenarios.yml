@@ -142,6 +142,46 @@ scenarios:
     targets:
       max_click_count: 6
 
+  # --- THRULM (beholder encounter) --- blocked until #combat-runner tags and
+  # actions.jsonl entries exist for beholder-thrulm + thrall-derro.
+  # These scenarios are drafted for future rotation once the DB is populated.
+  - id: thrulm-beholder-tentacle-grapple
+    title: Beholder tentacle lash → grapple PC → maw follow-up; verify grapple state
+    encounter: thrulm
+    prelude: |
+      The Hunger Below descends. One tentacle snaps toward the fighter.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "tentacle"}
+      - {kind: type, tab: beholder-thrulm, text: "maw"}
+      - {kind: assert_condition, slug: beholder-thrulm, condition: grapple_active}
+    targets:
+      max_click_count: 6
+      max_llm_fallback: 0
+
+  - id: thrulm-beholder-disintegration
+    title: Disintegration Ray recharge fires → PC at 0 HP → disintegrated flag set
+    encounter: thrulm
+    prelude: |
+      The eye-that-is-not-an-eye locks onto the wizard. The air bends.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "disintegrate"}
+    targets:
+      max_click_count: 5
+
+  - id: thrulm-void-scream-aoe
+    title: Void Scream (Recharge 6) hits multiple PCs — WIS saves, psychic damage
+    encounter: thrulm
+    prelude: |
+      Reality tears. Every creature within 30 feet staggers.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "scream"}
+      - {kind: click_round}
+    targets:
+      max_click_count: 6
+
   - id: ancestor-stir-frightened-cascade
     title: Ancestor-Stir claws → frightened condition → wail recharge cycle
     encounter: gar-vally
@@ -177,3 +217,136 @@ scenarios:
     targets:
       max_click_count: 0
       reaction_prompts_min: 1
+
+  # ───────── Thrulm encounter (Dulgarum Oathholds, beholder over a sealed shrine) ─────────
+  # Party: The Compass Edge (level 5, 3 PCs). The beholder is CR 13 — meant to crush.
+  # These scenarios stress per-NPC mechanics rather than full encounter survivability.
+
+  - id: thrulm-beholder-multiattack
+    title: Beholder fires multiattack (2 tentacles + maw) — DM types "attack", no crash
+    encounter: thrulm
+    prelude: |
+      The beholder drifts within tentacle reach of the front line.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "attack"}
+    targets:
+      max_click_count: 5
+
+  - id: thrulm-beholder-disintegration-ranged
+    title: Beholder fires Disintegration Ray at the wizard
+    encounter: thrulm
+    prelude: |
+      Marwen weaves an incantation. The beholder finds her.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "disintegrate"}
+    targets:
+      max_click_count: 5
+
+  - id: thrulm-shrine-touched-resonance-cycle
+    title: Shrine-Touched fires Ancient Resonance, recharge cycle survives a round
+    encounter: thrulm
+    prelude: |
+      A shrine-touched derro looms up from the altar's shadow.
+    turns:
+      - {kind: switch_tab, slug: shrine-touched-derro}
+      - {kind: type, tab: shrine-touched-derro, text: "resonance"}
+      - {kind: click_round}
+    targets:
+      max_click_count: 6
+
+  - id: thrulm-rager-taunt-bonus
+    title: Rager taunts on bonus action — utility action dispatches, no crash
+    encounter: thrulm
+    prelude: |
+      The rager crashes into the party's wizard's space — and roars.
+    turns:
+      - {kind: switch_tab, slug: derro-rager}
+      - {kind: type, tab: derro-rager, text: "taunt"}
+    targets:
+      max_click_count: 5
+
+  - id: thrulm-rager-berserk-recharge
+    title: Rager fires Berserk (multiattack vs all in reach), recharge ticks across a round
+    encounter: thrulm
+    prelude: |
+      Three PCs are in the rager's 5-ft reach. It plants its feet.
+    turns:
+      - {kind: switch_tab, slug: derro-rager}
+      - {kind: type, tab: derro-rager, text: "berserk"}
+      - {kind: click_round}
+    targets:
+      max_click_count: 6
+
+  - id: thrulm-shardcaller-call-weakness
+    title: Shardcaller burns Call Weakness — utility action dispatches without crash
+    encounter: thrulm
+    prelude: |
+      The shardcaller picks Bazgar's swing. Names it weak.
+    turns:
+      - {kind: switch_tab, slug: derro-shardcaller}
+      - {kind: type, tab: derro-shardcaller, text: "call"}
+    targets:
+      max_click_count: 5
+
+  - id: thrulm-shardcaller-barrage-line
+    title: Shardcaller fires Shard-Barrage (line area, DC 13 Dex)
+    encounter: thrulm
+    prelude: |
+      Two PCs line up. The shardcaller smiles.
+    turns:
+      - {kind: switch_tab, slug: derro-shardcaller}
+      - {kind: type, tab: derro-shardcaller, text: "barrage"}
+    targets:
+      max_click_count: 5
+
+  - id: thrulm-deep-watch-formation
+    title: Deep Watch derro — multiattack opener, then crossbow on the wizard
+    encounter: thrulm
+    prelude: |
+      Two Deep Watch derro hold the chamber mouth. The wizard is twenty feet back.
+    turns:
+      - {kind: switch_tab, slug: deep-watch-derro}
+      - {kind: type, tab: deep-watch-derro, text: "attack"}
+      - {kind: click_round}
+      - {kind: type, tab: deep-watch-derro, text: "crossbow"}
+    targets:
+      max_click_count: 7
+
+  - id: thrulm-thrall-single-attack
+    title: Thrall makes the one weak swing it has — single_attack masquerading as multiattack
+    encounter: thrulm
+    prelude: |
+      The beholder gestures. A thrall lurches forward, axe in hand.
+    turns:
+      - {kind: switch_tab, slug: thrall-derro}
+      - {kind: type, tab: thrall-derro, text: "attack"}
+    targets:
+      max_click_count: 5
+
+  - id: thrulm-beholder-lair-actions
+    title: Beholder uses all three lair-action utilities in succession
+    encounter: thrulm
+    prelude: |
+      Init 20 rolls around. The chamber moves.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "unstable ground"}
+      - {kind: type, tab: beholder-thrulm, text: "manifest thralls"}
+      - {kind: type, tab: beholder-thrulm, text: "void eruption"}
+    targets:
+      max_click_count: 8
+
+  - id: thrulm-beholder-legendary-rotation
+    title: Beholder spends legendary actions — tentacle, void ray, drain divinity
+    encounter: thrulm
+    prelude: |
+      End of PC turn. The beholder reaches.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "tentacle lash"}
+      - {kind: type, tab: beholder-thrulm, text: "void ray"}
+      - {kind: type, tab: beholder-thrulm, text: "drain divinity"}
+    targets:
+      max_click_count: 7

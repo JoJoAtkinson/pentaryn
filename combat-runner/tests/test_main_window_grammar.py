@@ -74,37 +74,114 @@ def test_directed_damage(window):
     assert two.hp == before - 8
 
 
+def test_directed_damage_logs_on_target_tab(window):
+    """A directed damage command logs the hit on the TARGET's own tab, not
+    only the actor's view — so a combatant's tab shows what happened to it."""
+    window.tabs.setCurrentIndex(0)             # actor = One (tab 0)
+    _submit(window, "2 8 slash")               # target = combatant id 2 (tab 1)
+    target_log = window.tabs.widget(1).log_view.toPlainText()
+    assert "Two took 8" in target_log, target_log
+    # The actor's own tab still has it too.
+    actor_log = window.tabs.widget(0).log_view.toPlainText()
+    assert "Two took 8" in actor_log
+
+
+def test_pc_tabs_get_no_llm_suggestions(window, monkeypatch):
+    """Player-character tabs are skipped by the LLM suggestion refresh — only
+    the DM's monsters get next-action suggestions; players decide their own
+    turns."""
+    class _FakeController:
+        def suggest_next_actions(self, *a, **kw):
+            return []
+
+    window._llm_controller = _FakeController()
+    requested: list = []
+    monkeypatch.setattr(
+        window._suggestion_driver, "request_for_tab",
+        lambda key, fetcher: requested.append(key),
+    )
+    window._fire_suggestion_refresh()
+
+    pc_tab = window.tabs.widget(3)          # Actor PC (id 4)
+    assert pc_tab.npc_state.kind == "pc"
+    assert id(pc_tab) not in requested, "PC tab must not get an LLM suggestion fetch"
+    npc_tab = window.tabs.widget(0)          # an NPC
+    assert id(npc_tab) in requested, "NPC tabs still get suggestions"
+
+
 # ─────────────────────────── set_target ───────────────────────────
 
 
 def test_set_target_sets_current_target_and_arrow(window):
-    """'2' sets current_target to ['2']; the arrow shows on tab 2 once the
-    actor is viewing a different tab (it is never drawn on the actor tab)."""
+    """'2' sets current_target to ['2'] WITHOUT switching tabs — the active
+    tab stays on the actor, and the red ▼ arrow appears on the target's tab."""
     window.tabs.setCurrentIndex(0)
     _submit(window, "2")
     assert window.encounter_state.current_target == ["2"]
-    # set_target jumps to the target tab — which becomes the actor, so no
-    # arrow there. Switch back to a different tab and the arrow appears.
-    window.tabs.setCurrentIndex(0)
+    # No tab switch — the actor's tab (0) is still active.
+    assert window.tabs.currentIndex() == 0
+    # The arrow appears on the target's tab (combatant id 2 at index 1).
     assert 1 in window.tabs.tabBar().arrow_indices()
+
+
+def test_set_target_writes_active_combatants_target(window):
+    """A bare `set_target` writes the ACTIVE combatant's `target_ids` and the
+    active tab's command input picks it up for leading-Space autocomplete.
+    Other tabs keep their own (still-empty) targets — targets are per-actor.
+
+    Regression: the input was wired via a wrong-parent lookup
+    (`self.parent()` → the QTabWidget's QStackedWidget), so `set_current_target`
+    was never called and Space always reported 'no target'."""
+    window.tabs.setCurrentIndex(0)
+    _submit(window, "2")
+    actor_tab = window.tabs.widget(0)
+    assert actor_tab.npc_state.target_ids == ["2"]
+    assert actor_tab.input._current_target_ids == ["2"]
+    # Another combatant (no target set) still has empty target_ids.
+    other_tab = window.tabs.widget(2)
+    assert other_tab.npc_state.target_ids == []
+    assert other_tab.input._current_target_ids == []
+
+
+def test_sticky_targeted_command_writes_active_combatants_target(window):
+    """A directed command like `3 8 slash` is sticky on the ACTOR — it sets
+    the active combatant's target_ids (and its input), not every tab's."""
+    window.tabs.setCurrentIndex(0)
+    _submit(window, "3 8 slash")
+    actor_tab = window.tabs.widget(0)
+    assert window.encounter_state.current_target == ["3"]
+    assert actor_tab.npc_state.target_ids == ["3"]
+    assert actor_tab.input._current_target_ids == ["3"]
+    # A different combatant's tab is not touched.
+    other_tab = window.tabs.widget(1)
+    assert other_tab.npc_state.target_ids == []
 
 
 # ─────────────────────────── current-target action ───────────────────────────
 
 
-def test_leading_space_runs_action_against_current_target(window, monkeypatch):
-    """' 1' with current_target ['2'] runs action 1 against combatant 2."""
-    window.tabs.setCurrentIndex(0)
-    _submit(window, "2")  # set sticky target to id 2
+def test_action_runs_on_actor_surface_aimed_at_target(window, monkeypatch):
+    """`<target> <action>` runs the ACTOR's action, aimed at the target.
+
+    The action verb resolves against the active-tab combatant's action
+    surface — not the target's — and the roll runs on the actor's tab.
+    """
+    actor_idx = 0  # actor = combatant id 1 (tab 0)
+    window.tabs.setCurrentIndex(actor_idx)
+    actor_tab = window.tabs.widget(actor_idx)
+
+    # Give the ACTOR a one-action surface; resolve action #1 against it.
+    window._tab_action_surfaces[id(actor_tab)] = [{"action": "cleave"}]
 
     ran: list = []
-    target_idx = 1  # combatant id 2 is at index 1
-    target_tab = window.tabs.widget(target_idx)
     monkeypatch.setattr(
-        target_tab, "run_action_externally", lambda name: ran.append(name)
+        actor_tab, "run_action_externally", lambda name: ran.append(name)
     )
-    _submit(window, " 1")
-    assert ran, "action should have run against the current target"
+    # Aim the actor's action #1 at combatant id 2.
+    _submit(window, "2 1")
+    assert ran == ["cleave"], (
+        f"action should run on the actor's surface; got {ran}"
+    )
 
 
 # ─────────────────────────── undo ───────────────────────────
@@ -123,19 +200,17 @@ def test_undo_restores_prior_hp(window):
 
 
 def test_undo_restores_active_tab_index(window):
-    """Undo restores `active_tab_index` and the visible tab (A3-H2 / A4-H1).
+    """Undo restores `active_tab_index` and the visible tab.
 
-    A directed command from tab 0 that jumps to a target tab must, after
-    `undo`, return focus to the pre-command tab."""
-    window.tabs.setCurrentIndex(0)
-    # A directed set_target jumps the active tab to the target.
-    _submit(window, "3")  # set_target id 3 -> jumps to tab 2
-    assert window.tabs.currentIndex() == 2
-    # Now a damage command from a different tab.
+    A mutating command snapshots the active tab; after the DM moves to a
+    different tab, `undo` must return focus to the pre-command tab."""
+    # A mutating command from tab 1 snapshots active_tab_index = 1.
     window.tabs.setCurrentIndex(1)
     _submit(window, "1 5 slash")
-    # undo should revert the damage AND restore the active tab to index 1.
+    # The DM moves to a different tab, then undoes.
+    window.tabs.setCurrentIndex(2)
     _submit(window, "undo")
+    # undo reverts the damage AND restores the active tab to index 1.
     assert window.tabs.currentIndex() == 1
     assert window.encounter_state.active_tab_index == 1
 
@@ -167,9 +242,9 @@ def test_noop_command_does_not_snapshot(window):
     # Clear the sticky target so the next use-current command resolves to [].
     window.encounter_state.current_target = []
     depth_after_real = len(window.undo_stack._snapshots)
-    # A leading-space (use-current) damage command with no current target:
-    # parses as kind="command", reaches _handle_command, mutates nothing ->
-    # the eager snapshot must be discarded.
+    # A bare-word amount with no current target: `7 fire` after a leading
+    # space still has a leading digit-run, so it never reaches a mutating
+    # path that snapshots — the undo stack depth is unchanged either way.
     _submit(window, " 7 fire")
     assert len(window.undo_stack._snapshots) == depth_after_real
     # A single undo reverts the real damage, not a phantom no-op step.
@@ -193,13 +268,26 @@ def test_set_target_remains_undoable(window):
 
 
 def test_multi_target_damage(window):
-    """'123 3 poison' damages all of ids 1, 2, 3."""
+    """'123 8 fire' damages all of ids 1, 2, 3.
+
+    (`<num> poison` now parses as the poisoned *condition*, not damage —
+    so a multi-target damage test must use an unambiguous damage tag.)
+    """
     ones = [window.encounter_state.combatant_by_id(c) for c in ("1", "2", "3")]
     before = [c.hp for c in ones]
     window.tabs.setCurrentIndex(3)
-    _submit(window, "123 3 poison")
+    _submit(window, "123 8 fire")
     after = [window.encounter_state.combatant_by_id(c).hp for c in ("1", "2", "3")]
-    assert after == [b - 3 for b in before]
+    assert after == [b - 8 for b in before]
+
+
+def test_multi_target_condition(window):
+    """'123 3 poison' applies the poisoned condition to ids 1, 2, 3."""
+    window.tabs.setCurrentIndex(3)
+    _submit(window, "123 3 poison")
+    for c in ("1", "2", "3"):
+        combatant = window.encounter_state.combatant_by_id(c)
+        assert "poisoned" in combatant.conditions
 
 
 # ─────────────────────────── targeting arrow ───────────────────────────
@@ -213,14 +301,62 @@ def test_arrow_never_on_actor_tab(window):
     assert 0 not in window.tabs.tabBar().arrow_indices()
 
 
-def test_arrow_on_targeted_tab(window):
-    """Targeting non-actor combatants shows the arrow on each targeted tab."""
+def test_dead_combatant_tab_is_grayed_and_skull_prefixed(window):
+    """A dead combatant's tab shows a 💀 prefix and is grayed out — but the
+    tab stays clickable so the DM can still select it (e.g. to revive)."""
+    target = window.encounter_state.combatant_by_id("2")
+    target.apply_damage(target.max_hp)         # drop to 0
+    assert target.is_dead
+    window._repaint_all_tabs()
+    assert "💀" in window.tabs.tabText(1)
+    # And the tab text is grayed.
+    from PySide6.QtGui import QColor
+    assert window.tabs.tabBar().tabTextColor(1) == QColor("#6c6c6c")
+    # Clicking it still works (selectable for revive).
+    window.tabs.setCurrentIndex(1)
+    assert window.tabs.currentIndex() == 1
+
+
+def test_cycle_tab_skips_dead_combatants(window):
+    """Ctrl+Tab / Ctrl+Shift+Tab cycle past dead combatants — turn order rolls
+    past them. Direct selection still works (covered above)."""
+    # Kill the middle two; cycling from tab 0 should land on tab 3 (alive).
+    window.encounter_state.combatant_by_id("2").apply_damage(99)
+    window.encounter_state.combatant_by_id("3").apply_damage(99)
+    window._repaint_all_tabs()
     window.tabs.setCurrentIndex(0)
-    _submit(window, "23")  # set_target {2,3} -> tabs 1 and 2; jumps to tab 1
-    # Move the actor off a targeted tab so both arrows are visible.
-    window.tabs.setCurrentIndex(3)
+    window._cycle_tab(1)
+    assert window.tabs.currentIndex() == 3
+    # Reverse-cycle from 3 also skips the dead ones, landing on 0.
+    window._cycle_tab(-1)
+    assert window.tabs.currentIndex() == 0
+
+
+def test_target_is_sticky_per_actor(window):
+    """Each combatant remembers its own target — switching tabs doesn't
+    clobber. Tab to a fresh combatant → no target; tab back → remembered."""
+    window.tabs.setCurrentIndex(0)             # active = One
+    _submit(window, "2")                       # One.target_ids = ["2"]
+    assert window.encounter_state.current_target == ["2"]
+    # Switch to a fresh combatant — its target is empty.
+    window.tabs.setCurrentIndex(1)             # active = Two (no target)
+    assert window.encounter_state.current_target == []
+    # Switch back — One still remembers its target.
+    window.tabs.setCurrentIndex(0)
+    assert window.encounter_state.current_target == ["2"]
+
+
+def test_arrow_on_targeted_tab(window):
+    """The ▼ arrow shows on the active combatant's target tabs (never on the
+    actor's own). Targets are per-actor — switching to a fresh combatant
+    clears the arrows."""
+    window.tabs.setCurrentIndex(0)
+    _submit(window, "23")  # active=One sets its target to {2,3}
     arrows = window.tabs.tabBar().arrow_indices()
-    assert arrows == {1, 2}
+    assert arrows == {1, 2}     # arrows on the target tabs
+    # Switching to a fresh combatant (with no target set) clears the arrows.
+    window.tabs.setCurrentIndex(3)
+    assert window.tabs.tabBar().arrow_indices() == set()
 
 
 # ─────────────────────────── LLM fallback ───────────────────────────
@@ -441,3 +577,28 @@ def test_compound_undo_reverts_both_effects(window):
 
     assert window.encounter_state.combatant_by_id("2").hp == hp_before
     assert "prone" not in window.encounter_state.combatant_by_id("2").conditions
+
+
+# ─────────────────────────── 0=self token end-to-end ────────────────────────
+
+
+def test_zero_self_token_applies_damage_to_active_combatant(window):
+    """'0 5 fire' submitted from a known active tab must damage the active
+    combatant by 5.
+
+    The `0` token is the self-targeting shorthand: it resolves to the active
+    combatant's id via `_resolve_targets`. This test guards the full
+    _resolve_targets('0') → active-id → apply_damage path end-to-end.
+    """
+    # Tab 0 is combatant id 1 (NPCState "One", 40 hp).
+    window.tabs.setCurrentIndex(0)
+    one = window.encounter_state.combatant_by_id("1")
+    hp_before = one.hp
+
+    _submit(window, "0 5 fire")
+
+    assert window.encounter_state.combatant_by_id("1").hp == hp_before - 5, (
+        f"'0 5 fire' from tab 0 must apply 5 damage to the active combatant "
+        f"(id '1'); hp was {hp_before}, now "
+        f"{window.encounter_state.combatant_by_id('1').hp}"
+    )

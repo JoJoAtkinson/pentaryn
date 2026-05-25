@@ -248,8 +248,30 @@ def _parse_npc_details(md_path: Path, slug: str, name: str) -> dict:
                 out["cr"] = float(cr_str)
         except (ValueError, ZeroDivisionError):
             pass
+    immunities: list[str] = []
     if immunity_match:
-        out["immunities"] = (immunity_match.group(1).lower(),)
+        immunities.append(immunity_match.group(1).lower())
+    # Fold in standard 5e creature-type-derived damage immunities so the LLM
+    # review sees them structured rather than having to infer from the name.
+    # We scan the stat sheet for a creature-type keyword. The review
+    # prompt still applies its own type-knowledge as a backstop — this just
+    # makes the common cases (undead/construct) reliable.
+    type_immunities = {
+        "undead": ("poison", "necrotic"),
+        "construct": ("poison",),
+        "golem": ("poison",),
+    }
+    lowered = text.lower()
+    for type_kw, imms in type_immunities.items():
+        if re.search(rf"\b{type_kw}\b", lowered):
+            immunities.extend(imms)
+            break
+    if immunities:
+        # de-dup, preserve order
+        seen: set[str] = set()
+        out["immunities"] = tuple(
+            i for i in immunities if not (i in seen or seen.add(i))
+        )
     return out
 
 

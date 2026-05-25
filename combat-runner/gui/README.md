@@ -47,11 +47,18 @@ is routed to the LLM meta-controller.
 |---------------------|----------------------------------------------------------------------|
 | leading digit-run   | explicit target(s). A digit string splits into same-digit **runs**: `2` → {2}, `123` → {1,2,3}, `2233` → {22,33} |
 | `0`                 | **self** — the active tab's combatant (combinable: `0123` → {self,1,2,3}) |
-| leading whitespace  | the **current target** (the sticky set)                              |
-| leading sigil/word  | also the current target (no explicit `<who>`)                        |
+| leading sigil/word  | the **current target** (the sticky set) — no explicit `<who>`        |
 
 A `<who>` token **alone** (digits, nothing after) sets the sticky current
-target, jumps to that tab, and logs *"Marwen is now the target."*
+target and logs *"Marwen is now the target."* It does **not** switch tabs —
+the active tab stays on the actor; the target's tab gets the ▼ arrow.
+
+> A leading **Space** on an empty command box is a GUI convenience, not a
+> grammar token: it auto-inserts the active combatant's sticky-target id(s)
+> and a space. With no target set it prefills `0 ` (self), so the DM sees
+> the self-target before submitting and can accept or edit it. The parser
+> itself strips all whitespace — the current target is reached by a leading
+> sigil/word.
 
 ### `<stream>` — effects
 
@@ -61,11 +68,12 @@ A number's meaning is set by the **token immediately after it**:
 |--------------------------|--------------------------------------|----------------------|
 | `<num> <dmg-tag…>`       | a damage / heal **amount**           | `2 8 melee slash`    |
 | `<num> <condition>`      | the condition's **duration** (rounds)| `3 2 stun`           |
-| `<num>` then nothing     | an **action #** (panel hotkey)       | `2 2`                |
+| `<num>` then nothing     | an **action #** (panel hotkey)       | `2 2` · `2 111`      |
 | `<condition>` no number  | the condition, **default 1 round**   | `3 prone`            |
 | `<verb>`                 | an **action by name** (fuzzy-matched)| `3 tail-sweep`       |
-| `m<n>`                   | mob-member modifier on the next amount | `7 m3 6 melee`     |
-| `hit`                    | upgrade a pending effect to a full hit | `13 hit` · `␣hit`  |
+| `m<n>` / `m12` / `m`     | mob-member modifier on the next amount/condition (one member / digit-run set / `m` alone = all alive) | `7 m3 6 melee` · `7 m12 6 fire` |
+| `hit` (or `hits`)        | upgrade a pending effect to a full hit | `13 hit` · ` hit`  |
+| `save` / `miss`          | explicit "no further damage" — log the save / miss outcome | `1 save` · ` miss` |
 | `undo`                   | revert the last command              | `undo`               |
 | a damage-tag with **no** number | **error → routed to the LLM** | `2 melee` ✗          |
 
@@ -75,21 +83,26 @@ A number's meaning is set by the **token immediately after it**:
   prone for 1 round.
 - **`@` is an optional escape hatch:** `@prone` forces the condition reading for
   the rare word that collides with an action verb.
+- **`poison` is a condition, not a damage type:** `poison` always parses as the
+  `poisoned` condition — there is no poison damage type. So `2 8 poison` is
+  *poisoned for 8 rounds*, not 8 poison damage.
 
 ### Cheat-sheet
 
 ```
-<who>  = digit-run (2, 123, 2233) · leading space = current target · 0 = self
-<who> alone                 -> set sticky target, jump tab
+<who>  = digit-run (2, 123, 2233) · 0 = self · leading sigil/word = current target
+<who> alone                 -> set sticky target (no tab switch)
 <who> <num>                 -> action #num
 <who> <num> <dmg-tags…>     -> amount, qualified      (2 10 melee slash)
 <who> <num> <condition>     -> condition, num = duration (3 2 stun)
 <who> <condition>           -> condition, default 1 round
 <who> <verb>                -> action by name (fuzzy)
 compound:  4 9 bludge 1 prone   -> 9 bludgeoning dmg + prone 1 round
-hit   -> upgrade effect to full hit (13 hit · ␣hit)
+hit   -> upgrade effect to full hit (13 hit · ' hit' for the current target)
+save  -> explicitly resolve a pending effect as save/miss (no further damage)
 undo  -> revert last command
 @cond -> force the condition reading
+(Space on an empty command box prefills the current-target id(s).)
 ```
 
 The **active tab** is logged as the actor. A red ▼ targeting arrow paints on
@@ -97,6 +110,15 @@ every current-target tab (never on the actor's own tab — so `0`/self shows no
 arrow). The arrow follows drag-reorder for free.
 
 Click an action chip in the grid to run it without typing.
+
+#### Action numbers
+
+Every action chip shows its **panel hotkey number**. The NPC's own actions are
+numbered **1, 2, 3, …** (its special abilities — what you reach for most).
+Global / universal actions (Push, Grapple, Dodge, …) get **fixed numbers from
+111** — `111`, `112`, `113`, … — *the same on every combatant's tab*. So `2 1`
+is "actor's action #1 on target 2" and `2 111` is "actor's first global action
+on target 2", and the 111+ range never collides with an NPC's `1..N`.
 
 #### Tag vocabulary
 
@@ -106,7 +128,7 @@ Tags follow a **faceted** model. Only one value per facet is active at a time; a
 |------------|-----------------------------------------------------------------------------------------------------|------------------------------|
 | `direction`| `damage` (`dmg`, `dam`) · `heal` (`healing`, `hp`)                                                 | Default: `damage`            |
 | `delivery` | `melee` · `ranged` (`rng`)                                                                          | Dropped if direction = heal  |
-| `type`     | `fire` · `cold` · `acid` · `lightning` · `poison` · `necrotic` · `radiant` · `thunder` · `force` · `psychic` · `piercing` (`pierce`) · `slashing` (`slash`) · `bludgeoning` (`bludge`, `bludgeon`) | Dropped if direction = heal  |
+| `type`     | `fire` · `cold` · `acid` · `lightning` · `necrotic` · `radiant` · `thunder` · `force` · `psychic` · `piercing` (`pierce`) · `slashing` (`slash`) · `bludgeoning` (`bludge`, `bludgeon`) | Dropped if direction = heal. `poison` is **not** here — it parses as the `poisoned` condition. |
 
 ## Keyboard
 
@@ -174,8 +196,8 @@ Key points for DMs:
 - `main_window.py` — owns `EncounterState`, the `QTabWidget` (with the `CombatTabBar` targeting-arrow tab bar), the round button, the `EventBus`, the `TriggerMatcher`, the `UndoStack`, and the `SuggestionDriver`. `_on_command(ParsedCommand)` snapshots, resolves targets, applies each effect, emits bus events, and refreshes the arrow.
 - `npc_tab.py` — one tab per combatant (NPC or PC). Composes `HPBar`, action area (DB-driven chip grid for NPCs; generic chip row for PCs), `CommandInput`, `SuggestionBar`. `_on_submitted` parses the input and emits `command_requested(ParsedCommand)` for the main window to dispatch.
 - `command_tags.py` — pure-Python faceted tag taxonomy (`resolve_tags`, `hint_pool`). No Qt.
-- `dispatcher.py` — the `<who> <stream>` grammar parser. `parse(raw) -> ParsedCommand` (`kind ∈ {command, set_target, unparseable}`). Pure Python, no Qt.
-- `command_model.py` — the `Effect` / `ParsedCommand` dataclasses (the dispatcher → main_window contract).
+- `dispatcher.py` — the `<who> <stream>` grammar parser. `parse(raw) -> ParsedCommand` (`kind ∈ {command, set_target, unparseable, note, reorder, quit}`). Pure Python, no Qt.
+- `command_model.py` — the `Effect` / `ParsedCommand` dataclasses (the dispatcher → main_window contract). `Effect` carries a `members` list for mob-member targeting.
 - `effects.py` — `apply_effect` / `apply_hit` / `apply_uncertain_damage`: the authoritative `Effect` → `EncounterState` mutation point.
 - `history.py` — `UndoStack` (memento full-state snapshots) + `PendingEffect` records.
 - `targeting.py` — pure `<who>`-token logic (`classify_who`, `split_runs`).
@@ -244,8 +266,8 @@ for the full rules. Worked examples:
 | `0123`                  | Target {self, 1, 2, 3}                                      |
 | `3 2 stun`              | Stun combatant #3 for 2 rounds                              |
 | `4 9 bludge 1 prone`    | 9 bludgeoning damage **and** prone for 1 round (compound)   |
-| `␣12 heal`              | Heal the **current target** by 12 (leading space)           |
-| `3` (alone)             | Set #3 as the sticky current target, jump to its tab        |
+| ` 12 heal`              | Heal the **current target** by 12 (leading sigil/word; Space on an empty box prefills the id) |
+| `3` (alone)             | Set #3 as the sticky current target (no tab switch)         |
 | `13 hit`                | Upgrade the pending effect on #1 and #3 to a full hit       |
 | `undo`                  | Revert the last command (memento undo)                      |
 | anything off-grammar    | Routed to the LLM meta-controller                           |

@@ -368,7 +368,6 @@ def _tool_apply_command(bundle: _StateBundle, command: str, target_slug: str) ->
     `condition` effect to the named NPC. Action / hit / undo effects are not
     applied here (they need GUI context) — they report ``ok=False``.
     """
-    from .command_model import Effect  # noqa: F401  (imported for clarity)
     from .dispatcher import parse as parse_command
     from .effects import apply_effect
 
@@ -720,16 +719,82 @@ class LLMController:
 
     REVIEW_SYSTEM_PROMPT = (
         "You are an at-table D&D 5.5e combat reviewer. A DM just typed a command; "
-        "the fast path already applied the deterministic effect. Your job:\n"
-        "  1. Verify the effect was correct (check resistances, immunities, tags).\n"
-        "  2. If the target has a resistance or immunity that changes the result, "
-        "     call apply_command or set_hp to revise it, then reply with "
-        "     '⟳ review: <short explanation>'.\n"
-        "  3. If the command is free-form ('33 is taunted'), interpret it: "
-        "     prefer add_condition for condition-like input, else add_log_entry.\n"
-        "  4. If everything looks correct, stay silent (return no text, no tools).\n"
-        "  5. Never block on uncertainty — if you're unsure, stay silent.\n"
-        "Be concise. One tool call maximum. One sentence if you say anything."
+        "the fast path already applied the deterministic effect. You are given the "
+        "ACTOR who acted (with allegiance), the RAW command typed, the applied "
+        "amount — for every "
+        "affected combatant, its before→after HP and conditions (with remaining "
+        "durations) — plus each target's damage immunities, optionally an "
+        "id-resolution-fallbacks block (present ONLY when a typed id did not "
+        "cleanly resolve), and a roster of every combatant (id, name, kind "
+        "pc/npc), and any PENDING effects on each target.\n"
+        "LIFECYCLE: an attack- or save-based action applies the MINIMUM "
+        "outcome immediately — 0 HP for an attack roll (a miss until the DM "
+        "resolves it), or the save outcome for a save — and records the "
+        "remainder as a PENDING effect the DM resolves later by typing `hit`. "
+        "A pending effect shown in the payload is the intended didn't-land "
+        "lifecycle, NOT lost or unapplied damage: NEVER flag a pending effect "
+        "as 'damage not applied' or 'damage missing', and NEVER apply it "
+        "yourself. A `hit` command merely resolves an existing pending "
+        "effect — its HP drop is expected, not an error.\n"
+        "Judge the "
+        "ORIGINAL COMMAND + CONTEXT, not just the applied delta. Your job:\n"
+        "  1. IMMUNITY/RESISTANCE. Check the damage type against the target's "
+        "     listed immunities AND standard 5e type-based immunities you infer "
+        "     from the creature's name/type — the listed field may be incomplete. "
+        "     Apply your own D&D knowledge: undead are immune to poison and "
+        "     (by convention) necrotic; constructs/golems are immune to poison; "
+        "     elementals are immune to their element; fiends/demons resist "
+        "     cold/fire/lightning; etc. If the target is IMMUNE the damage should "
+        "     have been 0; if RESISTANT, halved.\n"
+        "  2. MAGNITUDE. Sanity-check the applied amount — and any PENDING "
+        "     amount — against the target's max HP (shown on each "
+        "     affected-combatant line). An amount many times the target's max "
+        "     HP (e.g. an 80 or 700 on a 32-HP target) is a likely typo and "
+        "     must be FLAGGED even if HP only dropped to 0 / the heal capped "
+        "     harmlessly — the clean delta does not excuse the absurd input. "
+        "     (A pending amount that is plausible is NOT a problem — see "
+        "     LIFECYCLE.)\n"
+        "  3. ALLEGIANCE. Use the roster `kind`. Damaging an ally/PC (a kind=pc "
+        "     combatant), or healing an enemy, is likely a wrong-target mistake — "
+        "     flag it UNLESS the recent log shows it is intentional (a charmed "
+        "     attacker, a sacrifice, friendly-fire the DM narrated). For a "
+        "     multi-target command: an all-ENEMY multi-hit (AoE) is normal and "
+        "     correct — NEVER flag it. Flag a multi-target command ONLY when its "
+        "     target set INCLUDES an ally/PC (friendly fire).\n"
+        "  4. RAW-COMMAND SCAN. Read the raw command string. If it lists 2+ "
+        "     damage-type tags (e.g. 'fire necrotic'), the parser silently kept "
+        "     only one — flag the ambiguity. ID-RESOLUTION: raise an "
+        "     id-resolution / unrecognised-id / malformed-command concern ONLY "
+        "     when this payload literally contains an "
+        "     'Id-resolution fallbacks' block. If that block is ABSENT, every "
+        "     typed id resolved cleanly — you MUST NOT flag any id-resolution "
+        "     or malformed-command issue, and must never use 'id-resolution "
+        "     failure' as a catch-all for an unfamiliar token, prose effect, or "
+        "     novel verb. When the block IS present, flag that the command "
+        "     referenced an unrecognised id, naming the exact token from the "
+        "     block. ACTION INVOCATIONS: if an 'Action run:' line is present, "
+        "     the command was a valid action invocation — judge the action's "
+        "     effect (damage, save DC, type) and do NOT flag the command as "
+        "     malformed or unrecognised.\n"
+        "  5. DURATIONS. Flag an implausible condition duration — a duration "
+        "     beyond ~10 rounds (e.g. frightened for 90 rounds) is almost "
+        "     certainly a mistyped amount.\n"
+        "  6. WRONG-TARGET NO-OPS. If the command itself looks wrong (heal on an "
+        "     enemy, damage on an already-dead combatant) emit a "
+        "     short advisory line EVEN IF the applied delta is a clean zero/no-op. "
+        "     A clean no-op delta does not excuse a wrong command. (A malformed "
+        "     id is covered by rule 4 — only when the fallback block is "
+        "     present.)\n"
+        "  7. If a state value is genuinely wrong, call apply_command (or set_hp) "
+        "     to revise it. Then reply with ONE short sentence — for an advisory "
+        "     with no correction, just the sentence. Do NOT prefix your text with "
+        "     '⟳ review:' — the logger adds that.\n"
+        "  8. If the command is free-form ('33 is taunted'), interpret it: prefer "
+        "     add_condition for condition-like input, else add_log_entry.\n"
+        "  9. If the command and its delta are both correct, stay silent (return "
+        "     no text, no tools). Never block on uncertainty — if genuinely "
+        "     unsure AND the command looks fine, stay silent.\n"
+        "Be concise. Prefer a single corrective tool call. One sentence if you speak."
     )
 
     def __init__(
@@ -788,44 +853,234 @@ class LLMController:
         ]
         return self._chat_loop(client, messages, dispatch_fn=dispatch_fn)
 
+    @staticmethod
+    def build_review_user_msg(
+        raw: str,
+        actor: dict,
+        affected: list[dict],
+        roster: list[dict],
+        applied_direction: str | None,
+        applied_amount: int | None,
+        log_tail: str,
+        id_fallbacks: list[dict] | None = None,
+        action: dict | None = None,
+    ) -> str:
+        """Build the review `user_msg` — the full context payload.
+
+        Pure helper, no I/O, so tests can assert the context shape directly.
+
+        ``affected`` — one dict per combatant the command actually mutated, each
+        with: name, id, kind, hp_before, hp_after, max_hp, conditions_before,
+        conditions_after, immunities, optionally ``durations_after`` (a
+        ``{condition: rounds}`` map) so the review can flag implausible
+        durations, and ``pending`` (a list of unresolved didn't-land-lifecycle
+        effects awaiting `hit`). This is the REAL before→after delta the fast
+        path produced.
+
+        ``roster`` — every combatant in the fight (id, name, kind) so the review
+        can catch wrong-target / wrong-allegiance mistakes (healed an enemy,
+        damaged an ally).
+
+        ``id_fallbacks`` — list of ``{"token": <typed id>, "resolved_to": <id>}``
+        for any target id that did not cleanly resolve (e.g. ``0`` → actor-self,
+        or an unrecognised id). Empty / None means every id resolved cleanly.
+
+        ``action`` — optional dict with keys ``name``, ``panel``
+        (1-based panel number or None), and ``spec`` (the raw action record).
+        When present, a ``Action run:`` line is rendered so the reviewer can
+        see what the command actually resolved to instead of an opaque token
+        like ``5 3``.  When absent (command was NOT an action invocation),
+        nothing is rendered and the reviewer must NOT flag it as malformed.
+        """
+        actor_desc = (
+            f"{actor.get('name', '?')} "
+            f"(id={actor.get('id', '?')}, kind={actor.get('kind', '?')})"
+        )
+        if applied_direction:
+            applied_desc = f"{applied_direction} {applied_amount}"
+        else:
+            applied_desc = "(no scalar amount — see per-target HP delta below)"
+
+        target_lines: list[str] = []
+        for t in affected:
+            imm = t.get("immunities") or []
+            imm_desc = ", ".join(imm) if imm else "none listed"
+            cond_before = t.get("conditions_before", [])
+            cond_after = t.get("conditions_after", [])
+            durations = t.get("durations_after") or {}
+            if durations:
+                dur_desc = ", ".join(
+                    f"{c}={r}rd" for c, r in sorted(durations.items())
+                )
+                cond_after_desc = f"{cond_after} (durations: {dur_desc})"
+            else:
+                cond_after_desc = f"{cond_after}"
+            cond_desc = (
+                f"conditions {cond_before}"
+                if cond_before == cond_after and not durations
+                else f"conditions {cond_before}→{cond_after_desc}"
+            )
+            target_lines.append(
+                f"  - {t.get('name', '?')} (id={t.get('id', '?')}, "
+                f"kind={t.get('kind', '?')}): "
+                f"HP {t.get('hp_before', '?')}→{t.get('hp_after', '?')}"
+                f"/{t.get('max_hp', '?')}, {cond_desc}, "
+                f"damage immunities: {imm_desc}; "
+                f"resistances: unknown — infer from creature type/name"
+            )
+            pending = t.get("pending") or []
+            if pending:
+                pend_descs = [
+                    f"{p.get('full', '?')} from '{p.get('source') or '?'}' "
+                    f"({p.get('kind', '?')} roll, {p.get('applied', 0)} applied "
+                    f"so far)"
+                    for p in pending
+                ]
+                target_lines.append(
+                    "      PENDING (didn't-land lifecycle — intended, NOT lost "
+                    "damage; the DM resolves it with `hit`): "
+                    + "; ".join(pend_descs)
+                )
+        targets_block = (
+            "\n".join(target_lines) if target_lines
+            else "  (no combatant HP/conditions changed)"
+        )
+
+        roster_lines = [
+            f"  - id={c.get('id', '?')} {c.get('name', '?')} [{c.get('kind', '?')}]"
+            for c in roster
+        ]
+        roster_block = "\n".join(roster_lines) if roster_lines else "  (empty)"
+
+        if id_fallbacks:
+            fb_lines = [
+                f"  - typed id {fb.get('token', '?')!r} did not cleanly "
+                f"resolve — fell back to id {fb.get('resolved_to', '?')!r}"
+                for fb in id_fallbacks
+            ]
+            fallback_block = (
+                "Id-resolution fallbacks (a typed id was malformed / "
+                "unrecognised — confirm the DM intended this target):\n"
+                + "\n".join(fb_lines) + "\n"
+            )
+        else:
+            fallback_block = ""
+
+        # "Action run" line — present only for action invocations.
+        if action is not None:
+            action_name = action.get("name", "?")
+            panel = action.get("panel")
+            panel_str = f"(#{panel})" if panel is not None else ""
+            spec = action.get("spec") or {}
+            atype = spec.get("type", "?")
+            # Build a compact effect summary from the spec.
+            summary_parts: list[str] = [atype]
+            atk = spec.get("attack") or {}
+            if atk:
+                dmg = atk.get("damage_dice", "")
+                mod = atk.get("damage_modifier", 0)
+                mod_str = f"+{mod}" if mod >= 0 else str(mod)
+                hits = atk.get("num_attacks", 1)
+                if dmg:
+                    summary_parts.append(f"{hits}x {dmg}{mod_str}")
+            ma = spec.get("multiattack") or {}
+            if ma:
+                sub = ma.get("attacks") or []
+                if sub:
+                    # Each sub has damage_dice + damage_modifier.
+                    parts2 = []
+                    for s in sub:
+                        dd = s.get("damage_dice", "")
+                        dm2 = s.get("damage_modifier", 0)
+                        dm2_str = f"+{dm2}" if dm2 >= 0 else str(dm2)
+                        if dd:
+                            parts2.append(f"{dd}{dm2_str}")
+                    if parts2:
+                        summary_parts.append(f"{len(parts2)}x {', '.join(parts2)}")
+            area = spec.get("area") or {}
+            if area:
+                save_dc = area.get("save_dc")
+                save_ab = area.get("save_ability", "")
+                if save_dc:
+                    summary_parts.append(f"DC {save_dc} {save_ab} save")
+                dmg2 = area.get("damage_dice", "")
+                if dmg2:
+                    summary_parts.append(dmg2)
+            action_line = (
+                f"Action run: {action_name} {panel_str}"
+                f" — {', '.join(summary_parts)}\n"
+            )
+        else:
+            action_line = ""
+
+        return (
+            f"Actor (who acted): {actor_desc}\n"
+            f"Command typed: {raw!r}\n"
+            f"{action_line}"
+            f"Fast path applied: {applied_desc}\n"
+            f"{fallback_block}"
+            f"Affected combatants (before→after — this is what the fast path "
+            f"actually did):\n{targets_block}\n"
+            f"Full combatant roster:\n{roster_block}\n"
+            f"Recent log:\n{log_tail}"
+        )
+
+    # Cap on review tool-call iterations. A thorough immunity / magnitude
+    # check legitimately needs 4–6 round-trips; 7 leaves headroom. On a
+    # cap-hit the last assistant text is RETURNED (not discarded) — see
+    # `_chat_loop` — so a correction emitted before the cap still survives.
+    REVIEW_MAX_ITERATIONS = 7
+
+    @staticmethod
+    def _strip_review_prefix(text: str) -> str:
+        """Strip a leading '⟳ review:' (or a bare leading '⟳') the model may
+        have emitted, so `_tool_add_log_entry` doesn't double-prefix the line
+        (G10 — '⟳ review: ⟳ review: …')."""
+        stripped = text.lstrip()
+        for prefix in ("⟳ review:", "⟳review:", "⟳"):
+            if stripped.startswith(prefix):
+                return stripped[len(prefix):].lstrip()
+        return text
+
     def review_command(
         self,
         raw: str,
         actor: dict,
-        target: dict,
+        affected: list[dict],
+        roster: list[dict],
         applied_direction: str | None,
         applied_amount: int | None,
         log_tail: str,
         dispatch_fn: Callable[[list[Any]], list[dict[str, Any]]] | None = None,
+        id_fallbacks: list[dict] | None = None,
+        action: dict | None = None,
     ) -> "RunResult":
         """Async review of an already-applied command. Blocking — run off-thread.
 
         The fast path has already applied the deterministic effect; this asks
-        the model to verify it (resistances/immunities/free-form intent) and,
-        if anything is wrong, revise via tools. If the review writes a sentence
-        it is appended to the combat log with a `⟳ review:` prefix.
+        the model to verify it (resistances/immunities/over-damage/wrong-target
+        /free-form intent) and, if anything is wrong, revise via tools. If the
+        review writes a sentence it is appended to the combat log with a
+        `⟳ review:` prefix.
+
+        ``affected`` carries the REAL before→after HP/conditions (with
+        durations) for every target the command mutated; ``roster`` carries
+        every combatant's id/name/kind so the review can reason about
+        allegiance. ``id_fallbacks`` flags any id that did not cleanly resolve.
+
+        On a tool-loop cap-hit the last assistant text is returned (not
+        discarded), so a correction the model emitted before the cap still
+        gets logged.
         """
         client = self._ensure_client()
         if client is None:
             return RunResult(error="no API key")
 
-        actor_desc = f"{actor.get('name', '?')} (id={actor.get('id', '?')})"
-        target_desc = (
-            f"{target.get('name', '?')} (id={target.get('id', '?')}, "
-            f"HP {target.get('hp', '?')}/{target.get('max_hp', '?')}, "
-            f"conditions={target.get('conditions', [])}, "
-            f"in_melee={target.get('in_melee', False)})"
-        )
-        applied_desc = (
-            f"{applied_direction} {applied_amount}"
-            if applied_direction else "(fast path: no direct mutation)"
-        )
-        user_msg = (
-            f"Actor: {actor_desc}\n"
-            f"Target: {target_desc}\n"
-            f"Command typed: {raw!r}\n"
-            f"Fast path applied: {applied_desc}\n"
-            f"Recent log:\n{log_tail}"
+        user_msg = self.build_review_user_msg(
+            raw, actor, affected, roster,
+            applied_direction, applied_amount, log_tail,
+            id_fallbacks=id_fallbacks,
+            action=action,
         )
 
         messages = [{"role": "user", "content": user_msg}]
@@ -833,11 +1088,16 @@ class LLMController:
             client, messages,
             system_override=self.REVIEW_SYSTEM_PROMPT,
             dispatch_fn=dispatch_fn,
-            max_iterations=2,
+            max_iterations=self.REVIEW_MAX_ITERATIONS,
             tools_override=self._review_tools,
         )
-        if result.text and not result.error:
-            _tool_add_log_entry(self._bundle, f"⟳ review: {result.text}", kind="review")
+        # Log the review line whenever the model spoke — even on a cap-hit,
+        # where `result.error` is set but `result.text` carries a usable
+        # correction. Strip any '⟳ review:' the model self-prefixed.
+        if result.text:
+            clean = self._strip_review_prefix(result.text)
+            if clean:
+                _tool_add_log_entry(self._bundle, f"⟳ review: {clean}", kind="review")
         return result
 
     def dispatch_tool_uses(self, tool_uses: list[Any]) -> list[dict[str, Any]]:
@@ -1061,12 +1321,19 @@ class LLMController:
             break
         if hit_cap:
             logger.warning(
-                "LLM tool loop reached iteration cap (%d); response may be incomplete",
+                "LLM tool loop reached iteration cap (%d); returning last "
+                "assistant text (any tool calls already made stand)",
                 iteration_cap,
             )
+            # Do NOT discard. The model may have emitted a correct
+            # correction in an earlier turn (and its tool calls already
+            # mutated state) — return the last assistant text so the review
+            # line still gets logged. `error` is set so callers that need to
+            # know the loop was truncated still can, but `text` is the
+            # authoritative result.
             return RunResult(
                 text=final_text,
                 tool_calls=list(self._run_tool_calls),
-                error=f"reached tool-loop iteration cap ({iteration_cap}); response may be partial",
+                error=f"reached tool-loop iteration cap ({iteration_cap}); returned last partial response",
             )
         return RunResult(text=final_text, tool_calls=list(self._run_tool_calls))

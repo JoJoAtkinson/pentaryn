@@ -10,7 +10,7 @@
 |----------|--------|--------|----------|----------|--------------|---|
 | **Deep Watch** (CR 1/8) | 15 | 27 | +2 | Hold line, protect team | Middle, with others | Attack + Cunning Action (Disengage) |
 | **Thrall** (CR 1/4) | 14 | 22 | +1 | Obey beholder | Wherever beholder points | Move toward beholder's target |
-| **Shrine-Touched** (CR 3) | 16 | 45 | +2 | Defend shrine | Within 60 ft of altar | Ancient Resonance (cone, DC 14 DEX) |
+| **Shrine-Touched** (~CR 5) | 16 | 45 | +2 | Defend shrine | Within 60 ft of altar | Ancient Resonance (cone, DC 14 DEX) |
 | **Shardcaller** (CR 2) | 14 | 33 | +2 | Support allies, weaken enemy saves | Back line (40-60 ft away) | Call Weakness (ally gets advantage) |
 | **Rager** (CR 2) | 16 | 52 | +0 | Tank hits, mark attackers | Front line (melee range) | Taunt (enemy disadvantage vs others) |
 
@@ -20,7 +20,7 @@
 
 | **The Hunger Below** | **AC** | **HP** | **Init** | **GOAL** | **Position** | **Key Action** |
 |----------|--------|--------|----------|----------|--------------|---|
-| CR 13 | 17 | 110 | +3 | Drain divinity, disintegrate casters, avoid melee | Hover above altar (40-60 ft up) | **Disintegration Ray** (target highest caster) or **Drain Divinity** (target cleric/paladin) |
+| CR 13 | 17 | 110 | +3 | Drain divinity, disintegrate casters, avoid melee | Hover above altar (40-60 ft up) | **Disintegration Ray** (target highest caster) or **Drain Divinity** (target cleric/paladin). **NOTE: +1 attack/dmg in shrine chamber (Void-Feeding) — effective to-hit +7, not +6.** |
 
 ---
 
@@ -140,7 +140,7 @@
 |---|---|---|---|
 | **Deep Watch** | Ranged, any | Magic Missile, Scorching Ray | Low HP, no resistances |
 | **Thrall** | Any physical, melee | Magic Missile, Eldritch Blast | Low HP — psychic is resisted, use force/physical |
-| **Shrine-Touched** | Fire, radiant, nonmagic | Fireball, Guiding Bolt | Resistant to psychic/necrotic; no formal vulnerability but these bypass resistances |
+| **Shrine-Touched** | Fire, force, nonmagic | Fireball (fire), Shatter (thunder) | Resistant to psychic/necrotic; no listed vulnerabilities |
 | **Shardcaller** | Melee, close-in | Misty Step + melee, Command (retreat) | Squishy if you get close |
 | **Rager** | Magic (it has no resist except poison) | Magic Missile, Eldritch Blast | No saves needed, pure damage |
 | **Beholder** | Sanctified weapons, Dispel Magic | True Strike + sanctified attack | Resistances and flight = annoying |
