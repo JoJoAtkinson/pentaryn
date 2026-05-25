@@ -111,7 +111,7 @@
 |---|---|---|---|
 | Deep Watch | — | poison | — |
 | Thrall | — | psychic | — |
-| Shrine-Touched | — | necrotic, psychic | fire, radiant |
+| Shrine-Touched | — | necrotic, psychic | — |
 | Shardcaller | — | psychic | — |
 | Rager | — | poison | — |
 | Beholder | poison | psychic; nonmagic B/P/S (unsanctified weapons) | sanctified weapons, holy water |
@@ -139,8 +139,8 @@
 | Target Type | Best Attack Type | Best Spell | Why |
 |---|---|---|---|
 | **Deep Watch** | Ranged, any | Magic Missile, Scorching Ray | Low HP, no resistances |
-| **Thrall** | Psychic, melee | Psychic Scream, Dissonant Whispers | Low HP, no resistances |
-| **Shrine-Touched** | Fire, radiant, nonmagic | Fireball, Guiding Bolt | Resistant to psychic/necrotic |
+| **Thrall** | Any physical, melee | Magic Missile, Eldritch Blast | Low HP — psychic is resisted, use force/physical |
+| **Shrine-Touched** | Fire, radiant, nonmagic | Fireball, Guiding Bolt | Resistant to psychic/necrotic; no formal vulnerability but these bypass resistances |
 | **Shardcaller** | Melee, close-in | Misty Step + melee, Command (retreat) | Squishy if you get close |
 | **Rager** | Magic (it has no resist except poison) | Magic Missile, Eldritch Blast | No saves needed, pure damage |
 | **Beholder** | Sanctified weapons, Dispel Magic | True Strike + sanctified attack | Resistances and flight = annoying |
