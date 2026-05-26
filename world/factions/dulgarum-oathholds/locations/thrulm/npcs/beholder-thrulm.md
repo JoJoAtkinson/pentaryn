@@ -22,7 +22,7 @@ tags: ["#combat-runner", "#npc", "#combat", "#beholder", "#thrulm", "#boss", "#a
 4. **Bonus actions available this turn:** `shrine_drift` (move 30 ft, can pass through things) OR `compel_thrall` (1/turn, force a charmed creature to move).
 5. **Legendary Resistance:** 3/day, still available unless burned.
 6. **Void-Feeding (passive):** in the shrine chamber, +1 to attack and damage rolls (already baked into action specs); advantage on resist-divine-turn checks.
-7. **Lair Actions** trigger on **init count 20** (not the beholder's turn): pick `unstable_ground`, `manifest_thralls`, or `void_eruption`.
+7. **Lair Actions** trigger on **init count 20, LOSING TIES** (not the beholder's turn): if the beholder also rolled 20, beholder turn resolves first, *then* lair action fires. Pick `unstable_ground`, `manifest_thralls`, or `void_eruption`.
 
 ---
 
