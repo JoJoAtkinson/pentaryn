@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-26 14:15 UTC — slice #6 (shardcaller-team) 7th-cycle — VICTORY R4 (Bazgar 6/49, Sabriel 44/44 untouched, Marwen 0/32 DOWN); FIRST low-FB cycle (21 fire, 2 saves) — all 3 SCs survive R1 for first time in SC-team history (FI-145 NEW); first 4-round SC-team fight (DD-18 7th confirm); CW 0/9 effective 7th consecutive (FI-144 NEW, MQ-64 doc-fix auto-applied); PTV fired once vs Marwen — never influenced outcome (FI-146 NEW); SC-C Barrage recharge d6=6 R4 at 5 HP went unused (FI-147 NEW); Phase A env-fail (network-blocked, DD-10 streak broken again); 1 bug auto-fixed (MQ-64 CW pre-check note added to derro-shardcaller.md); FI-145 NEW DESIGN DECISION (SC clustering enables Fireball wipe — scatter positions?) — see _playtest-runs/2026-05-26T14-15-58.md
+
 - 2026-05-26 13:19 UTC — slice #5 (solo-rager-rush) 9th-cycle — VICTORY R3 (Bazgar 35/49, Marwen 10/32, Sabriel 28/44 sim / 44/44 MQ-63-corrected); FIRST 3-round fight in 9 SRR cycles (FI-140 NEW POSITIVE); FIRST all-Berserk-fires R2 cycle (FI-136 NEW POSITIVE MILESTONE); FIRST Berserk recharge ever in SRR — rager_B d6=6 R3, all-miss result (FI-141 NEW POSITIVE); Slow opener (vs Fireball R1) was enabling factor; all-fail Slow saves (2,3,3 vs DC15, 34% event) major R1 output reduction (FI-135 NEW POSITIVE); Taunt-with-Berserk: Bazgar 0/2 attacks at disadv due to taunt routing (FI-137 NEW); aggro-mark FI-97 9th confirm; MQ-63 NEW (Berserk while Slowed = 1 attack only; RAW fix); MQ-47+MQ-63 both AUTO-FIXED (Berserk prereq notes added to derro-rager.md); FI-143 NEW DESIGN DECISION (Slow more reliable vs ragers than expected — Wis proficiency question); Phase A env-fail (network-blocked, same DD-10 condition as FI-114); 2 bugs auto-fixed — see _playtest-runs/2026-05-26T13-19-20.md
 
 - 2026-05-26 12:21 UTC — slice #4 (final-confrontation) 8th-cycle — TPK R3 (Bazgar 0/STD-B axe, Marwen DISINTEGRATED R2, Sabriel 0/VE lair action R3; Beholder 76/110 HP — most damage in any FC cycle: 38 total); FIRST FC cycle where lair action delivers killing blow on a PC (Sabriel via VE R3, FI-132 NEW); Disint recharged d6=6 R2 → back-to-back fires; Sabriel LoH revives Marwen → Disint kills Marwen next action (FI-131 NEW feel); stagger rule violated by sim: STD-B init 25 fires AR before stagger check runs at STD-A block init 9 → double-AR R1 (FI-130 NEW sim/MQ-61); STD multiattack 0/4 hits vs Bazgar AC18 before VE softened him (FI-133 NEW feel); Party Scorching Ray 3-hit sequence (27 fire) is first meaningful mid-fight counterplay vs beholder (FI-133); DD-33 8th FC confirm; Phase A 28/28 clean (cache pre-seeded, DD-10 33rd consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-26T12-21-43.md
@@ -46,6 +48,14 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-145 (DESIGN DECISION): shardcaller-team 7th-cycle — SC clustering enables Fireball wipe; scatter positions?
+
+- **Context:** 2026-05-26 14:15 UTC, slice #6 (shardcaller-team) 7th cycle. Seed 494390. VICTORY R4.
+
+  1. **FI-145 (NEW — DESIGN DECISION): Should shardcallers start scattered to prevent single-Fireball wipe?** 7 SC-team cycles: in 6 of them Fireball hits all 3 SCs (clustered in back chamber), dealing average 28 fire and reducing 2+ SCs below 10 HP before they act. This cycle (21 fire) is the only exception, and the 4-round fight that resulted was the most interesting SC-team cycle in the series. Root cause: the chamber description doesn't specify SC starting positions, so the sim defaults to "clustered 50 ft back." At table, tactical DMs might scatter SCs naturally; the sim doesn't. **Options:** (a) Add explicit positioning note to _overview.md or shardcaller.md: "SCs should start no closer than 15 ft to each other — Fireball's 20-ft radius cannot catch all 3 if spaced correctly." This is a pure positioning doc fix with no mechanical change. (b) Give SCs Evasion passive. (c) Raise HP to survive average Fireball. Option (a) is lowest-effort and most realistic. **Human decision needed: is SC clustering by design, or should they spread?** Tactical answer: SCs should spread (they're ranged kiting skirmishers, not melee blocks). Story answer: they might cluster near the shrine. **Do not auto-fix.**
+
+  2. **DD-18 (7th confirm — ESCALATION): Marwen's Fireball remains the structural fight-decider in all SC-team cycles.** Seven cycles: 6 = 2-round fight (Fireball R1 drops 2 SCs), 1 = 4-round fight (low Fireball roll). The encounter resolution is overwhelmingly determined by one die roll in R1. This is a valid data point for the user to weigh against option (a) above.
 
 ### FI-143 (DESIGN DECISION): solo-rager-rush 9th-cycle — Slow too effective vs ragers; Wis save proficiency question
 
