@@ -17,7 +17,7 @@ tags: ["#combat-runner", "#npc", "#combat", "#derro", "#thrulm", "#ranged", "#su
 ## Start-of-turn checklist
 
 1. If **Shard-Barrage** is USED, roll `roll_dice(1, 6)` — recovers on 5–6.
-2. **Call Weakness** (3/Day) — track uses across the encounter; bonus action when ready.
+2. **Call Weakness** (3/Day) — track uses across the encounter; bonus action when ready. **Pre-check (MQ-66):** only CW an ally with HP > 0 who has not yet fallen this round. If the ally you intended to CW was just killed before your turn (e.g. a Fighter crit before your initiative), hold the charge and pick the next-highest-initiative living ally instead.
 3. **Tactical Retreat** bonus action available each turn (move 30 ft away from nearest enemy without provoking).
 4. **Pack Tactics Voice (passive):** when an ally within 30 ft hits, the target has disadvantage on the *next* saving throw before end of its next turn — call this out in the reply so the DM remembers it. **Toggle, not stackable:** the target either has disadv or it doesn't; multiple hits in the same round simply refresh the duration, not grant "disadv on two saves."
 
