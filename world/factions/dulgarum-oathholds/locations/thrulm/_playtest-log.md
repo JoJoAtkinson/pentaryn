@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-26 13:19 UTC — slice #5 (solo-rager-rush) 9th-cycle — VICTORY R3 (Bazgar 35/49, Marwen 10/32, Sabriel 28/44 sim / 44/44 MQ-63-corrected); FIRST 3-round fight in 9 SRR cycles (FI-140 NEW POSITIVE); FIRST all-Berserk-fires R2 cycle (FI-136 NEW POSITIVE MILESTONE); FIRST Berserk recharge ever in SRR — rager_B d6=6 R3, all-miss result (FI-141 NEW POSITIVE); Slow opener (vs Fireball R1) was enabling factor; all-fail Slow saves (2,3,3 vs DC15, 34% event) major R1 output reduction (FI-135 NEW POSITIVE); Taunt-with-Berserk: Bazgar 0/2 attacks at disadv due to taunt routing (FI-137 NEW); aggro-mark FI-97 9th confirm; MQ-63 NEW (Berserk while Slowed = 1 attack only; RAW fix); MQ-47+MQ-63 both AUTO-FIXED (Berserk prereq notes added to derro-rager.md); FI-143 NEW DESIGN DECISION (Slow more reliable vs ragers than expected — Wis proficiency question); Phase A env-fail (network-blocked, same DD-10 condition as FI-114); 2 bugs auto-fixed — see _playtest-runs/2026-05-26T13-19-20.md
+
 - 2026-05-26 12:21 UTC — slice #4 (final-confrontation) 8th-cycle — TPK R3 (Bazgar 0/STD-B axe, Marwen DISINTEGRATED R2, Sabriel 0/VE lair action R3; Beholder 76/110 HP — most damage in any FC cycle: 38 total); FIRST FC cycle where lair action delivers killing blow on a PC (Sabriel via VE R3, FI-132 NEW); Disint recharged d6=6 R2 → back-to-back fires; Sabriel LoH revives Marwen → Disint kills Marwen next action (FI-131 NEW feel); stagger rule violated by sim: STD-B init 25 fires AR before stagger check runs at STD-A block init 9 → double-AR R1 (FI-130 NEW sim/MQ-61); STD multiattack 0/4 hits vs Bazgar AC18 before VE softened him (FI-133 NEW feel); Party Scorching Ray 3-hit sequence (27 fire) is first meaningful mid-fight counterplay vs beholder (FI-133); DD-33 8th FC confirm; Phase A 28/28 clean (cache pre-seeded, DD-10 33rd consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-26T12-21-43.md
 
 - 2026-05-26 11:20 UTC — slice #3 (beholder-escorts-limited) 3rd-cycle — TPK R8 (Bazgar 0, Marwen 0, Sabriel 0; Beholder 51/110 HP); Sabriel LOH-revival loop R3-R8 dominates — 6 consecutive revive turns, zero attacks on beholder after R1 (FI-125 NEW feel); frightened condition persisted R2-R8 due to sim harness bug (FI-126 NEW sim harness); VS fires once (R2, 41 psychic) then never recharges in 8 rounds — design-choice question recharge-5-6 vs 6-only (FI-127 NEW DESIGN DECISION); Drain Divinity strips Sabriel L2 R1 then becomes dead weight (FI-128 NEW feel/doc fix); lair monotony post-thrall-wipe (FI-129 NEW feel/doc); FI-56 3rd confirm (Maw autocrit on grappled sim harness, DD-11 URGENT still pending); MQ-59 NEW (void_eruption sim used DC14 Str, DB is DC16 Dex — sim bug not game bug); MQ-60 NEW (compel_thrall Cha save vs thrall Wis save — spec ambiguity); Antireality fired 3× (blocked 3 hits including grappled-Maw R4); Phase A 28/28 clean (cache pre-seeded, DD-10 32nd consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-26T11-20-24.md
@@ -44,6 +46,14 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-143 (DESIGN DECISION): solo-rager-rush 9th-cycle — Slow too effective vs ragers; Wis save proficiency question
+
+- **Context:** 2026-05-26 13:19 UTC, slice #5 (solo-rager-rush) 9th cycle. Seed 494389. VICTORY R3.
+
+  1. **FI-143 (NEW — DESIGN DECISION): Should derro-ragers have Wis save proficiency?** Current ragers have no Wis save proficiency (+0 assumed). All 3 failed DC15 Slow saves in R1 (rolls 2, 3, 3 — 34% all-fail event at +0). With Wis proficiency (+4), DC15 requires a natural 11+, making all-fail 12.5% — rarer but still possible. Thematically, derro-ragers have Madness Endurance (pain tolerance, not psychic clarity), so low Wis (+0 or negative) is flavor-correct. **The question is whether Slow should be a reliable tool vs ragers at table.** At +0: ~70% single-fail rate means DM can reliably debuff 1-2 ragers per cast. At +4: ~50% single-fail rate, feels riskier. If the table dynamic should punish wizards who "waste" a 3rd slot on Slow, add proficiency. If Slow should be a valid alternate play (as FI-82 and this cycle suggest), keep +0. **Human decision. Do not auto-fix.**
+
+  2. **FI-141 / FI-96 continued (design gap): Berserk recharge fires but is anticlimactic.** Rager-B recharged Berserk (d6=6 R3) and swung all-miss (1, 2, 5 vs 18/15/19 ACs, ~5% event). The recharge mechanic works; the feel depends on RNG. At table, a all-miss recharged Berserk needs DM narration ("three wild swings carve air") to land. No fix needed — note for DM prep.
 
 ### FI-130 (sim/MQ-61) / FI-131 / FI-132 (NEW kill pattern) / FI-133 / FI-134 / MQ-61 / MQ-62: final-confrontation 8th-cycle — TPK R3; double-AR sim bug; back-to-back Disint; lair kills Sabriel; party deals 38 dmg (most in FC history)
 
