@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-26 17:29 UTC — slice #1 (shrine-wedge) 4th-cycle — TPK R3 (Marwen 0 R1 via stagger-MA, Bazgar 0 R2 UF-adv MA, Sabriel 0 R3; STD-A 12/45, STD-B 45/45 untouched); FIRST shrine-wedge TPK (prior 3 cycles all VICTORY — FI-158 NEW CRITICAL); root cause: STD-A init 23 > Marwen 21 → AR fires before Slow lands → all 3 PCs fail AR DC14 save (FI-159 NEW DESIGN DECISION — init-dependence too high); Marwen downed R1 without acting first time in SW history (FI-160 NEW FEEL); stagger rule correct 4th consecutive cycle (FI-161 NEW POSITIVE); OBR+UF feedback loop identified as Bazgar-trap (FI-162 NEW FEEL); Phase A 28/28 clean (cache pre-seeded, DD-10 network-block env continues); 0 bugs auto-fixed — see _playtest-runs/2026-05-26T17-29-24.md
+
 - 2026-05-26 16:19 UTC — slice #0 (threshold-patrol) 8th-cycle — VICTORY R2 (Bazgar 46/49, Marwen 7/32, Sabriel 41/44 untouched 8th cycle); Phase A 28/28 clean after cache pre-seed (MQ-67 NEW: network block bypassed via local-random cache, DD-10 env pattern continues); Bazgar init 19 beats SC by 1 → DW1 critted to −9 before SC acts → CW wasted on corpse (DD-39/FI-74 8th-cycle confirm, FI-154 NEW); SC Barrage R1 lands — 6 applied (MQ-53 dual-stream, dispatch=9); DW2 Tactical Drilling 3/4 adv hits → Marwen 7/32 (FI-156 NEW — TD+Barrage synergy near-lethal on Marwen); SC Tactical Retreat correct as bonus R2 with no DW allies (FI-155 NEW POSITIVE); SC both shard-throws miss at 4 HP R2, Marwen Magic Missile finishes (FI-157 NEW); MQ-66 NEW (CW alive-check missing — auto-fixed: added HP>0 pre-check to derro-shardcaller.md); 1 bug auto-fixed — see _playtest-runs/2026-05-26T16-19-44.md
 
 - 2026-05-26 15:19 UTC — slice #7 (empty-void) 4th-cycle — TPK R5 (Bazgar −32 VS R5, Marwen −43 VS R5, Sabriel −37 VS R5; Beholder 50/110 HP — ~60 dmg taken, MOST IN ANY EV CYCLE); FIRST DR double-miss R2-R3 in any EV cycle (FI-152 NEW POSITIVE, 16% event); FIRST beholder below 50% HP in EV slice (44/110 by end R3); Negotiation Persuasion fail (d20+4=6) — 4th EV cycle confirming dead-end (FI-148 4th confirm); back-to-back VS R4+R5 (d6=6 on VS recharge R5 — second consecutive double-VS in cron history); Bazgar 2/2 hits R3 (18 slashing — record single-round output); DD strips: Marwen loses L3 R2 + L1 R4 (2/4 DD fails); VS fear on Bazgar nullifies R4 attacks (0/2 at disadv — FI-149 auto-fixed: DM note added); MQ-64 auto-fixed (shrine_drift vs OA descent note added to beholder-thrulm.md); MQ-65 NEW (Disint dispatch 48 force = Marwen disintegrated R1; sim applied 30 — 6th chronic double-roll instance); FI-152/FI-153 DESIGN DECISIONS (path-to-victory exists but sim overstates party survival; human sign-off on double-roll infra); Phase A 17/28 env-fail (network-blocked, same DD-10 condition); 2 bugs auto-fixed — see _playtest-runs/2026-05-26T15-19-33.md
@@ -52,6 +54,20 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-159 (DESIGN DECISION): shrine-wedge 4th-cycle — initiative-dependence too high; encounter outcome is a coin-flip on STD init vs Marwen init
+
+- **Context:** 2026-05-26 17:29 UTC, slice #1 (shrine-wedge) 4th cycle. Seed 494393. TPK R3 — first shrine-wedge TPK; prior 3 cycles all VICTORY.
+
+  1. **FI-159 (NEW — DESIGN DECISION): The shrine-wedge encounter outcome is entirely determined by whether STD-A's initiative beats Marwen's.** Record: STD-A wins init → TPK (1×); Marwen wins init → VICTORY (3×). Mechanically: if Marwen acts first, Slow slows STD-A (−2 AC, no reactions), removing OBR and AR on the following turn. If STD-A acts first, AR fires into a fresh party (all fail DC14 saves → 15 dmg each), then stagger-MA kills Marwen before she acts. The 2-point initiative delta (STD +5 vs Marwen +3) generates a coin-flip with huge outcome variance. **Design options for human review:**
+     - **(a) Party surprise round** if they stealth the approach (recon the chamber before engagement). Removes the coin-flip; rewards tactical play. Most narrative fit.
+     - **(b) Script delayed AR** — STDs don't fire AR until R2. R1 they use multiattack only ("still resonating"). Guaranteed one PC turn before AR. Moderate difficulty reduction.
+     - **(c) Reduce STD initiative bonus** (+5 → +3 or +2). Narrows the gap; doesn't eliminate variance. Weakest fix.
+     - **(d) Accept current variance** — 75%/25% VICTORY/TPK split may be intentional. Some tables prefer high-variance combat.
+
+  2. **FI-160 (NEW FEEL):** Marwen downed R1 without taking a single action — feels worst-case for player agency. The most punishing outcome in tabletop is a player whose character never acts. This outcome (initiative beat + AR damage + stagger-MA) should be considered when choosing fix option above.
+
+---
 
 ### FI-152 / FI-153 (DESIGN DECISION): empty-void 4th-cycle — DR double-miss creates first sub-50% beholder HP; sim artifact overstates party survival; double-roll infra urgency
 
