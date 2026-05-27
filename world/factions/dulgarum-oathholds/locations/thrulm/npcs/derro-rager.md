@@ -19,7 +19,7 @@ tags: ["#combat-runner", "#npc", "#combat", "#derro", "#thrulm", "#melee", "#tan
 1. If **Berserk** is USED, roll `roll_dice(1, 6)` — recovers on 5–6.
 2. If rager took damage last turn: +1 to attack rolls this turn (Madness Endurance). **DM applies manually — roller output does NOT include this bonus; add +1 to each printed to-hit result.**
 3. If a specific enemy hit the rager last turn: **next** attack against that enemy has advantage (Incoming Damage Aggro — the rager remembers).
-4. **Taunt** bonus action is available each turn.
+4. **Taunt** bonus action is available each turn. **Slowed exception (FI-192):** if the rager is under Slow (or any effect that restricts it to 1 action OR 1 bonus action per turn), Taunt is unavailable — use the action for a single greataxe attack instead; the bonus action is forfeited. Berserk is also unavailable under Slow per MQ-63.
 
 ---
 
