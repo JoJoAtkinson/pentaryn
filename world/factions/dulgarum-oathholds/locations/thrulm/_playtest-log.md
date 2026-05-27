@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-27 04:17 UTC — slice #2 (tank-wall) 10th-cycle — VICTORY R3 (Bazgar 45/49, Marwen 22/32, Sabriel 38/44); party acts BEFORE both NPCs entire cycle (Sabriel 22 > Marwen 18 > Bazgar 14 > Rager 8 > SC 6 — FI-164 NEW/DESIGN DECISION, initiative collapse 10th cycle confirm); CW 0/3 used (DD-41 10th confirm, SC init 6 < Rager init 8 → window missed, Rager in melee before SC turn — FI-163 NEW); Taunt landed (Marwen failed DC 12 cha save) — correctly caused disadv on Scorching Ray vs SC (attack roll, not save — DD-52 NEW POSITIVE, confirms existing MQ-36/doc); Slow (3rd-lvl) → both NPCs fail WIS saves (Rager 9, SC 4 vs DC 14) in R1 → encounter resolved before Berserk/CW synergy could test (MQ-68 NEW feel); Barrage fired R1 — all 3 PCs halved (9-6-8 dmg); Rager downed R2 turn 1 (Sabriel), SC downed R3 turn 1 (Sabriel smite); Phase A 28/28 clean (cache pre-seeded, DD-10 network-block continues); 0 bugs auto-fixed — see _playtest-runs/2026-05-27T04-17-51.md
+
 - 2026-05-26 17:29 UTC — slice #1 (shrine-wedge) 4th-cycle — TPK R3 (Marwen 0 R1 via stagger-MA, Bazgar 0 R2 UF-adv MA, Sabriel 0 R3; STD-A 12/45, STD-B 45/45 untouched); FIRST shrine-wedge TPK (prior 3 cycles all VICTORY — FI-158 NEW CRITICAL); root cause: STD-A init 23 > Marwen 21 → AR fires before Slow lands → all 3 PCs fail AR DC14 save (FI-159 NEW DESIGN DECISION — init-dependence too high); Marwen downed R1 without acting first time in SW history (FI-160 NEW FEEL); stagger rule correct 4th consecutive cycle (FI-161 NEW POSITIVE); OBR+UF feedback loop identified as Bazgar-trap (FI-162 NEW FEEL); Phase A 28/28 clean (cache pre-seeded, DD-10 network-block env continues); 0 bugs auto-fixed — see _playtest-runs/2026-05-26T17-29-24.md
 
 - 2026-05-26 16:19 UTC — slice #0 (threshold-patrol) 8th-cycle — VICTORY R2 (Bazgar 46/49, Marwen 7/32, Sabriel 41/44 untouched 8th cycle); Phase A 28/28 clean after cache pre-seed (MQ-67 NEW: network block bypassed via local-random cache, DD-10 env pattern continues); Bazgar init 19 beats SC by 1 → DW1 critted to −9 before SC acts → CW wasted on corpse (DD-39/FI-74 8th-cycle confirm, FI-154 NEW); SC Barrage R1 lands — 6 applied (MQ-53 dual-stream, dispatch=9); DW2 Tactical Drilling 3/4 adv hits → Marwen 7/32 (FI-156 NEW — TD+Barrage synergy near-lethal on Marwen); SC Tactical Retreat correct as bonus R2 with no DW allies (FI-155 NEW POSITIVE); SC both shard-throws miss at 4 HP R2, Marwen Magic Missile finishes (FI-157 NEW); MQ-66 NEW (CW alive-check missing — auto-fixed: added HP>0 pre-check to derro-shardcaller.md); 1 bug auto-fixed — see _playtest-runs/2026-05-26T16-19-44.md
@@ -66,6 +68,16 @@
      - **(d) Accept current variance** — 75%/25% VICTORY/TPK split may be intentional. Some tables prefer high-variance combat.
 
   2. **FI-160 (NEW FEEL):** Marwen downed R1 without taking a single action — feels worst-case for player agency. The most punishing outcome in tabletop is a player whose character never acts. This outcome (initiative beat + AR damage + stagger-MA) should be considered when choosing fix option above.
+
+---
+
+### FI-163 / FI-164 (DESIGN DECISION): tank-wall 10th-cycle — CW-Rager synergy structurally absent; initiative collapse primary failure mode
+
+- **Context:** 2026-05-27 04:17 UTC, slice #2 (tank-wall) 10th cycle. Seed 494404. VICTORY R3 — Bazgar 45/49, Marwen 22/32, Sabriel 38/44. Init: Sabriel 22 > Marwen 18 > Bazgar 14 > Rager 8 > SC 6.
+
+  1. **FI-163 (NEW DESIGN DECISION): After 10 cycles, Tank Wall has never meaningfully tested the Taunt + Call Weakness pairing.** CW was used 0/3 this cycle (Rager out of range, already in melee before SC's turn). Summary across cycles: CW fired on Rager in 1 out of 10 cycles (cycle 3, SC won initiative), and even then advantage was uncollected (Rager rolled nat-1). The slice description says "Tests taunt + call_weakness pairing" but the structural constraint (DD-41: CW only reaches Rager if SC acts first in R1, ~50% probability) means the intended test fails roughly half the time from initiative alone, and fails the other half because the Rager is dead or dying by SC's turn. **Recommendation:** Redesign the slice or change its stated intent. Options: (a) give the SC a scripted surprise-round CW on the Rager before initiative (guaranteed pairing test); (b) rename the slice "Ranged Support Only" and remove the Rager entirely, testing SC self-sufficiency; (c) add a second Rager to increase fight duration and give CW multiple firing windows.
+
+  2. **FI-164 (NEW DESIGN DECISION): Initiative collapse is the Tank Wall primary failure mode across 10 cycles.** In this cycle: full party (Sabriel 22, Marwen 18, Bazgar 14) acted before both NPCs (Rager 8, SC 6). Rager received 44 damage before taking its first action, acting at 8/52 HP. Taunt fired but was meaningless (Rager dead R2 turn 1). This is not a rare event: the Rager has +1 Dex (low initiative baseline) and a level-5 party's Dex modifiers comfortably outpace it. **Recommendation:** Give the Rager +3 initiative (Dex ASI flavor: "pain-fueled adrenaline surge"), or run Tank Wall as a surprised-party encounter where the derro act in a surprise round.
 
 ---
 
