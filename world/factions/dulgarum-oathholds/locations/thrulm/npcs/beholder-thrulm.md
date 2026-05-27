@@ -19,10 +19,11 @@ tags: ["#combat-runner", "#npc", "#combat", "#beholder", "#thrulm", "#boss", "#a
 1. If **Disintegration Ray** is USED, roll `roll_dice(1, 6)` — recovers on 5–6.
 2. If **Void Scream** is USED, roll `roll_dice(1, 6)` — recovers on 6 only. *(DC 16 Wis save, 6d10 psychic, 30-ft radius — DM reminder; full spec in DB)*
 3. **Reaction** refreshes to AVAILABLE: **Antireality** (+2 AC vs one incoming attack, declared after seeing the roll).
-4. **Bonus actions available this turn:** `shrine_drift` (move 30 ft, can pass through things) OR `compel_thrall` (1/turn, force a charmed creature to move).
-5. **Legendary Resistance:** 3/day, still available unless burned.
-6. **Void-Feeding (passive):** in the shrine chamber, +1 to attack and damage rolls (already baked into action specs); advantage on resist-divine-turn checks.
-7. **Lair Actions** trigger on **init count 20, LOSING TIES** (not the beholder's turn): if the beholder also rolled 20, beholder turn resolves first, *then* lair action fires. Pick `unstable_ground`, `manifest_thralls`, or `void_eruption`.
+4. **Bonus actions available this turn:** `shrine_drift` (move 30 ft, can pass through things) OR `compel_thrall` (1/turn, force a charmed creature to move). Bonus actions are separate from the main action — either can be used in the same turn as Multiattack, DR, or VS.
+5. **Main action (choose exactly one per turn):** `multiattack` / `disintegration_ray` (if available) / `void_scream` (if available). DR and VS are **mutually exclusive** — only one fires per turn; each replaces the full main action. *(MQ-84: a turn cannot include both DR and VS.)*
+6. **Legendary Resistance:** 3/day, still available unless burned.
+7. **Void-Feeding (passive):** in the shrine chamber, +1 to attack and damage rolls (already baked into action specs); advantage on resist-divine-turn checks.
+8. **Lair Actions** trigger on **init count 20, LOSING TIES** (not the beholder's turn): if the beholder also rolled 20, beholder turn resolves first, *then* lair action fires. Pick `unstable_ground`, `manifest_thralls`, or `void_eruption`.
 
 ---
 
