@@ -8,7 +8,7 @@ tags: ["#combat-runner", "#npc", "#combat", "#beholder", "#thrulm", "#boss", "#a
 ---
 # The Hunger Below (Unnamed Beholder)
 
-**HP** 110 (13d10+39) **·** **AC** 17 (alien hide) **·** **Speed** 0 ft., fly 30 ft. (hover) **·** **Saves** Dex +6, Wis +5 **·** **Resist** psychic; nonmagic B/P/S from non-sanctified weapons **·** **Immune** poison; charmed/exhaustion/frightened/paralyzed/petrified/poisoned/prone/restrained **·** **Truesight 120 ft.** (cannot be blinded) **·** **Telepathy 120 ft.** **·** **CR** 13 (10,000 XP)
+**HP** 110 (13d10+39) **·** **AC** 17 (alien hide) **·** **Speed** 0 ft., fly 30 ft. (hover) **·** **Saves** Dex +8, Wis +7 **·** **Resist** psychic; nonmagic B/P/S from non-sanctified weapons **·** **Immune** poison; charmed/exhaustion/frightened/paralyzed/petrified/poisoned/prone/restrained **·** **Truesight 120 ft.** (cannot be blinded) **·** **Telepathy 120 ft.** **·** **CR** 13 (10,000 XP)
 
 > Action mechanics live in `combat-runner/actions.jsonl` (DB) — see the launcher-injected **Ready actions** reference for verbs and call signatures.
 

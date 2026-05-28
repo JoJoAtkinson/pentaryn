@@ -350,3 +350,28 @@ scenarios:
       - {kind: type, tab: beholder-thrulm, text: "drain divinity"}
     targets:
       max_click_count: 7
+
+  - id: thrulm-beholder-antireality-reaction
+    title: Beholder takes incoming hit → antireality buff reaction prompts (reaction_kind=buff regression)
+    encounter: thrulm
+    prelude: |
+      Bazgar's greatsword bites in. Reality ripples around the wound.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "-15"}
+    targets:
+      max_click_count: 5
+      reaction_prompts_min: 1
+
+  - id: thrulm-beholder-hp-tracking
+    title: Beholder takes damage — HP decrements correctly, no crash
+    encounter: thrulm
+    prelude: |
+      Sabriel strikes with a blessed dwarven blade.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "-28"}
+      - {kind: assert_hp, slug: beholder-thrulm, expected: 82}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0
