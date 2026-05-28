@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-28 15:18 UTC — slice #2 (tank-wall) 12th-cycle — VICTORY R6 (Bazgar 19/49, Marwen DOWN R3 Berserk 13 dmg, Sabriel 17/44; Rager down R6 Bazgar 2× hits; SC down R6 Sabriel; SC-CW 3/3 unused at death — FI-NEW-TW12-A 12th lockout confirm); Berserk recharged 3 consecutive rounds R3-R5 (d6=6/5/5 — FI-NEW-TW12-B variance spike); Taunt suppressed Marwen Firebolt 3 rounds (disadvantage d20=1,1,1 — Marwen Shatter R1 unaffected, correct); Phase A 28/28 clean (cache pre-seeded, DD-10 network-block 26th consecutive); CW lockout root: SC+Rager tied init 4, Rager acted first, charged before SC turn — CW range miss all R1+; MQ-NEW-TW12-C init-tie Dex tiebreak gap (correct order SC>Sabriel>Rager would have enabled R1 CW); MQ-NEW-TW12-A PTV untracked harness gap (MQ-77 class); MQ-NEW-TW12-B ME+Berserk stack order confirmed correct; FI-NEW-TW12-D Berserk 3rd-line display friction R4-R5 (DM caps at 2, authoring fix recommended); FI-NEW-TW12-E PTV trigger missed by harness; FI-NEW-TW12-A DESIGN DECISION (CW range 30 ft structurally unworkable in 2-NPC TW; recommend 60 ft or terrain start-closer note); 0 bugs auto-fixed — see _playtest-runs/2026-05-28T15-18-49.md
+
 - 2026-05-28 14:30 UTC — slice #1 (shrine-wedge) 7th-cycle — TPK R7 (Bazgar DOWN R4 UF-adv MA; Marwen DOWN R2 UF-adv MA; Sabriel LAST STANDING → DOWN R7 STD2 UF-adv MA; STD1 DEAD R4 Sabriel smite; STD2 17/45 survives); SIM BUG: HP incapacitation not enforced (both STDs failed Wis 5/3 vs DC15 R1-end — harness cleared flag at SoT, STDs acted freely R2+; true result with HP enforced = VICTORY ~R3; MQ-SW7-C same class as MQ-79); Phase A 28/28 clean (cache pre-seeded, DD-10 network-block 25th consecutive); stagger correct 7th cycle (STD1 held AR R1; STD2 fired AR correctly); AR cold patch confirmed (STD2 recharge R2-R4 all failed — rolls 1/3/1; recharged R5 too late, 1-target only); OBR FIRST HIT in 7 SW cycles (R6 STD2 vs Sabriel AC19, roll 16+4=20 hit, 3 dmg — FI-190 partial break); FI-159 7th confirm (init-dependence); FI-NEW-SW7-A DESIGN DECISION (STD Wis +0 too low vs HP DC15 — 75% incap rate; fight outcome = HP vs AR race; consider Wis prof or shrine-advantage); FI-NEW-SW7-B (OBR 3 dmg < OBR 4 self-dmg R6 — self-damage primary effect); FI-NEW-SW7-C (AR recharge cold patch 3 consec — consider recharge 4-6); 2 bugs auto-fixed (MQ-55 OBR/UF threshold clarification, MQ-SW7-B stagger low-HP exemption — both shrine-touched-derro.md) — see _playtest-runs/2026-05-28T14-30-00.md
 
 - 2026-05-28 13:17 UTC — slice #0 (threshold-patrol) 10th-cycle — VICTORY R4 (Bazgar 25/49, Marwen −8 DOWN, Sabriel 40/44; DW1+DW2+SC all down; SC fired Barrage 3× via fast recharge R2+R4); SC init 22 — CW on DW1 R1 before DW1 acts (correct); DW1+DW2 both focus Marwen (caster-focus tactics correct); Marwen downed R2 by DW2 MA (HP 4→−8; R1 Shatter hit DW1+DW2 at critical juncture post-Bazgar softening — decisive); FEEL-1 (Barrage recharged 2×/4 rounds — within variance but fast; 33% threshold pattern); FEEL-2 (SC solo R3-R4 kiting not modeled — at-table would extend 1-2 rounds); FEEL-3 (Marwen death-trap: 32 HP cannot absorb 2-round derro focus fire + Barrage — correct by design); FEEL-4 (CW advantage on DW1 R1 invisible in dispatch output — DM may forget to apply); MQ-NEW-TP10-1 (Tactical Drilling split-party note missing from DW tactics — DESIGN NOTE); Phase A 28/28 clean (cache pre-seeded, DD-10 network-block continues — 24th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-28T13-17-24.md
@@ -100,6 +102,21 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-NEW-TW12-A: tank-wall 12th-cycle — Call Weakness 30-ft range structurally unworkable in 2-NPC formation
+
+- **Context:** 2026-05-28 15:18 UTC, slice #2 (tank-wall) 12th cycle. Seed 494439. VICTORY R6 — Bazgar 19/49, Marwen DOWN R3, Sabriel 17/44. Phase A 28/28 clean (DD-10 26th consecutive network-block). 0 bugs auto-fixed.
+
+  **FI-NEW-TW12-A (DESIGN DECISION — 12th confirm): CW 30-ft range is structurally insufficient in the Rager+SC formation.** Across all 12 tank-wall cycles, CW has fired **0 times on the Rager after R1** and fires in R1 only when SC wins initiative over Rager (~50% of cycles). In this cycle, SC and Rager tied initiative (both 4); Rager acted first per sim order; Rager charged to melee (~50 ft from SC) before SC's turn; CW was permanently out of range. Across the fight, SC's flagship tactical mechanic (Advantage on ally attack rolls) contributed 0 combat value for 6 rounds and 3 wasted charges.
+
+  **Root cause:** the Shardcaller's "back-line, 40–60 ft from enemies" positioning puts it permanently outside the 30-ft CW window once the Rager closes to melee. The only window is R1 pre-charge, which requires SC to act before the Rager — a coin flip at best.
+
+  **Options for human review:**
+  - **(A) Increase CW range to 60 ft** — doubles the usable window; CW would reach a melee Rager when SC is at 50 ft. Cleanest fix; no positioning compromise required.
+  - **(B) Add terrain note to TW encounter setup:** SC starts 20–30 ft behind Rager (not 50 ft). SC uses Barrage R1 + CW R1 (they don't conflict — CW is bonus, Barrage is main action). This makes CW available R1 regardless of initiative and keeps it in range through R2. No spec change needed.
+  - **(C) Accept the lockout** — argue that CW's value is felt in multi-SC formations (shardcaller-team slice) and tank-wall is just an unlucky formation for the mechanic. But then the TW-specific "call out the Rager's opening" flavor never fires at the table.
+
+  **Recommendation:** Option (A) with a note that CW on a charging melee ally (range 60 ft) is already lore-consistent ("voice carries strangely far, like the stone repeats it").
 
 ### FI-NEW-SW7-A: shrine-wedge 7th-cycle — STD Wis +0 too low vs Hypnotic Pattern DC 15
 
