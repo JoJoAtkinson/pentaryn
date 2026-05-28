@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-28 16:00 UTC — slice #3 (beholder-escorts-limited) — TPK R2; Marwen insta-down R1 VS; Sabriel LA-Void-Ray R2; Bazgar LA-Void-Ray R2; Beholder 74/110 HP, all thralls untouched; Phase A 28/28 clean (DD-10 27th consecutive network-block); VS R1 nearly guarantees Marwen one-shot (FI-NEW-BEL3-A); thralls cosmetic damage (FI-NEW-BEL3-B); healing-backfire usability gap (FI-NEW-BEL3-C); void-eruption altar-proximity implicit (FI-NEW-BEL3-D); sim double-roll methodology bug (FI-NEW-BEL3-E); 0 bugs auto-fixed — see _playtest-runs/2026-05-28T16-00-00.md
+
 - 2026-05-28 15:18 UTC — slice #2 (tank-wall) 12th-cycle — VICTORY R6 (Bazgar 19/49, Marwen DOWN R3 Berserk 13 dmg, Sabriel 17/44; Rager down R6 Bazgar 2× hits; SC down R6 Sabriel; SC-CW 3/3 unused at death — FI-NEW-TW12-A 12th lockout confirm); Berserk recharged 3 consecutive rounds R3-R5 (d6=6/5/5 — FI-NEW-TW12-B variance spike); Taunt suppressed Marwen Firebolt 3 rounds (disadvantage d20=1,1,1 — Marwen Shatter R1 unaffected, correct); Phase A 28/28 clean (cache pre-seeded, DD-10 network-block 26th consecutive); CW lockout root: SC+Rager tied init 4, Rager acted first, charged before SC turn — CW range miss all R1+; MQ-NEW-TW12-C init-tie Dex tiebreak gap (correct order SC>Sabriel>Rager would have enabled R1 CW); MQ-NEW-TW12-A PTV untracked harness gap (MQ-77 class); MQ-NEW-TW12-B ME+Berserk stack order confirmed correct; FI-NEW-TW12-D Berserk 3rd-line display friction R4-R5 (DM caps at 2, authoring fix recommended); FI-NEW-TW12-E PTV trigger missed by harness; FI-NEW-TW12-A DESIGN DECISION (CW range 30 ft structurally unworkable in 2-NPC TW; recommend 60 ft or terrain start-closer note); 0 bugs auto-fixed — see _playtest-runs/2026-05-28T15-18-49.md
 
 - 2026-05-28 14:30 UTC — slice #1 (shrine-wedge) 7th-cycle — TPK R7 (Bazgar DOWN R4 UF-adv MA; Marwen DOWN R2 UF-adv MA; Sabriel LAST STANDING → DOWN R7 STD2 UF-adv MA; STD1 DEAD R4 Sabriel smite; STD2 17/45 survives); SIM BUG: HP incapacitation not enforced (both STDs failed Wis 5/3 vs DC15 R1-end — harness cleared flag at SoT, STDs acted freely R2+; true result with HP enforced = VICTORY ~R3; MQ-SW7-C same class as MQ-79); Phase A 28/28 clean (cache pre-seeded, DD-10 network-block 25th consecutive); stagger correct 7th cycle (STD1 held AR R1; STD2 fired AR correctly); AR cold patch confirmed (STD2 recharge R2-R4 all failed — rolls 1/3/1; recharged R5 too late, 1-target only); OBR FIRST HIT in 7 SW cycles (R6 STD2 vs Sabriel AC19, roll 16+4=20 hit, 3 dmg — FI-190 partial break); FI-159 7th confirm (init-dependence); FI-NEW-SW7-A DESIGN DECISION (STD Wis +0 too low vs HP DC15 — 75% incap rate; fight outcome = HP vs AR race; consider Wis prof or shrine-advantage); FI-NEW-SW7-B (OBR 3 dmg < OBR 4 self-dmg R6 — self-damage primary effect); FI-NEW-SW7-C (AR recharge cold patch 3 consec — consider recharge 4-6); 2 bugs auto-fixed (MQ-55 OBR/UF threshold clarification, MQ-SW7-B stagger low-HP exemption — both shrine-touched-derro.md) — see _playtest-runs/2026-05-28T14-30-00.md
@@ -102,6 +104,21 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-NEW-BEL3-A: beholder-escorts-limited — VS round-1 Marwen one-shot (feel issue)
+
+- **Context:** 2026-05-28 16:00 UTC, slice #3 (beholder-escorts-limited). Seed 494440. TPK R2. Phase A 28/28 clean (DD-10 27th consecutive network-block). 0 bugs auto-fixed.
+
+  **FI-NEW-BEL3-A (FEEL NOTE): Void Scream fires R1 and nearly one-shots Marwen before she takes a second turn.** The beholder starts with VS available and can descend via shrine_drift (OA-safe) on its first turn to bring the whole party into the 30-ft radius. Average 6d10=33 psychic one-shots Marwen (32 HP) ~60% of the time even on a failed save (she has no HP buffer). With any prior damage (ThrallA hit for 5 in this run) the threshold drops to near 100%.
+
+  Result: Marwen has one meaningful action (Hypnotic Pattern here, which fizzled on beholder's Wis +7), then is removed from combat for the rest of the fight. For an overwhelming-by-design encounter this may be acceptable, but if the intent is for the party to feel the full encounter before dying, Marwen's arc is "cast one spell, unconscious forever."
+
+  **Options:**
+  - **(A) Accept it** — the beholder is CR 13 vs level-5 party. VS is supposed to be decisive. Marwen's role in the fight is "first to fall, forcing Sabriel LoH decisions."
+  - **(B) Add a tactical gate:** tactics note says "use VS the moment it's recharged." Consider revising to "use VS R2+ to allow at least one full exchange; R1 use Multiattack instead." This would not change the fight outcome (party still loses) but gives the caster one more exchange and makes the fight feel less instant.
+  - **(C) Bump Marwen's max HP** in the roster (currently 32 = wizard minimum). A d6 hit die wizard at level 5 with Con 10 = 17 HP + 4×3.5avg = 31 HP. If Con 12 (+1), max-first-die: 6+5×4+5 = 31 HP. Not much headroom. If Joe wants Marwen to survive one VS hit on average, she'd need ~34+ HP (saving half of 6d10=16.5+1=17.5; needs 34 HP to not die from the half-damage hit on top of 5-ish prior damage).
+
+  **Recommendation:** (A) — accept for slice-3. Log for human review. If Marwen consistently dying on beholder's first turn (regardless of slice) becomes a pattern, revisit.
 
 ### FI-NEW-TW12-A: tank-wall 12th-cycle — Call Weakness 30-ft range structurally unworkable in 2-NPC formation
 
