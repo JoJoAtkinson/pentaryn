@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-28 18:19 UTC — slice #5 (solo-rager-rush) 13th-cycle — INDETERMINATE R3 (all 6 alive; R2 at 3/52 HP, projected PC VICTORY R4–5; Marwen 12/32 — critically low); Phase A 28/28 clean (network blocked, cache pre-seeded seed 494442, DD-10 29th consecutive); Berserk saturation: 4 fires in 3 rounds across 3 ragers (FI-NEW-SRR1 — recharge 5–6 may be too generous in 3v3 clustered fight); Taunt has no movement component — slice description "tests taunt-induced movement" sets false expectation (FI-NEW-SRR2 MQ-NEW-SRR2 — DESIGN DECISION); Wizard Taunt immunity via save-spells confirmed (Marwen Shatter bypasses Taunt — FI-NEW-SRR4 4th pattern confirm); Berserk under Slow violated by sim twice R3 (MQ-63 not enforced; not a spec bug — harness gap); aggro-mark (3 independent marks) + Madness Endurance + Berserk recharge + Taunt state = 12 manual-DM variables for 3 ragers (FI-NEW-SRR3 overhead DESIGN DECISION); Slow Con-save end-of-turn not documented in rager .md (MQ-NEW-SRR1); 0 bugs auto-fixed, 4 feel/design issues logged — see _playtest-runs/2026-05-28T18-19-28.md
+
 - 2026-05-28 17:24 UTC — slice #4 (final-confrontation) 12th-cycle — extrapolated TPK R2-3; sim crashed KeyError at R1 end (MQ-NEW-FC4-G, harness bug not spec); Phase A 28/28 clean (cache pre-seeded, DD-10 28th-consecutive network-block); corrected R1 (dispatch-authoritative): DR MISSED Marwen (to-hit 10 vs AC 15 — MQ-NEW-FC4-F MQ-77 confirm); T4 HIT Marwen (to-hit 20, 3 slashing); stagger violated by sim (S2 fired AR, should have held — MQ-NEW-FC4-G MQ-61/86 class; corrected); VE lair 14 force all PCs (all 3 fail DC 16); S1 AR fires 13 necrotic (half to Bazgar/Marwen pass); Fireball kills T2/T3 (beholder saves, 13 fire only — FI-NEW-FC4-F: beholder Dex +8 = 75% Fireball save rate); corrected R1 end: Bazgar ~29 HP, Marwen ~9 HP, Sabriel ~30 HP, Beholder ~78-87 HP; FI-NEW-FC4-E POSITIVE (DR-miss R1 → earned-death narrative: party dealt ~22-32 dmg, 2 thralls wiped, Fireball/smite/attacks fired before VS closes R2); 1 bug auto-fixed (FI-NEW-FC4-LOH: LoH cannot restore disintegrated creature — doc note added to beholder-thrulm.md Chamber Hazards); FI-NEW-FC4-F DM presentation note (Fireball always half vs beholder — call it out at table); FI-NEW-FC4-G sim crash — see _playtest-runs/2026-05-28T17-24-45.md
 
 - 2026-05-28 16:00 UTC — slice #3 (beholder-escorts-limited) — TPK R2; Marwen insta-down R1 VS; Sabriel LA-Void-Ray R2; Bazgar LA-Void-Ray R2; Beholder 74/110 HP, all thralls untouched; Phase A 28/28 clean (DD-10 27th consecutive network-block); VS R1 nearly guarantees Marwen one-shot (FI-NEW-BEL3-A); thralls cosmetic damage (FI-NEW-BEL3-B); healing-backfire usability gap (FI-NEW-BEL3-C); void-eruption altar-proximity implicit (FI-NEW-BEL3-D); sim double-roll methodology bug (FI-NEW-BEL3-E); 0 bugs auto-fixed — see _playtest-runs/2026-05-28T16-00-00.md
@@ -106,6 +108,41 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-NEW-SRR2 / MQ-NEW-SRR2: solo-rager-rush — "taunt-induced movement" is undefined (DESIGN DECISION)
+
+- **Context:** 2026-05-28 18:19 UTC, slice #5 (solo-rager-rush) 13th cycle. Seed 494442. Indeterminate R3; projected PC victory R4–5.
+
+  **FI-NEW-SRR2 / MQ-NEW-SRR2 (DESIGN DECISION): The slice #5 test description says "Tests berserk recharge, aggro-mark riders, taunt-induced movement." Taunt has no movement component whatsoever — it only grants disadvantage on attack rolls vs non-rager targets.** There is nothing in the Taunt spec (DB or .md) that forces, incentivizes, or rewards PC movement toward the rager. "Taunt-induced movement" in the slice description is ambiguous:
+
+  - **(Interpretation A)** "The rager moves toward its taunted target" — narrative only, no mechanical compulsion on the PC. This is what the current Taunt does implicitly (rager wants to stay in reach of its taunted prey), but it's not a mechanic to test.
+  - **(Interpretation B)** "The PC is compelled to move toward the rager on a failed save" — not in the current spec. Would require adding a movement-compulsion rider (e.g. "on a failed save, target must spend its movement moving toward the rager on its next turn").
+
+  **Recommendation:** If movement-compulsion was the intended design, add it as an explicit rider. If purely narrative, update the slice #5 description to "Tests berserk recharge, aggro-mark riders, and taunt coverage in rager-only formation" (remove "movement"). Either way, the current slice test cannot verify a mechanic that doesn't exist.
+
+### FI-NEW-SRR1: solo-rager-rush — Berserk saturation in 3-rager clustered fights
+
+- **Context:** 2026-05-28 18:19 UTC, slice #5 (solo-rager-rush) 13th cycle.
+
+  **FI-NEW-SRR1 (FEEL ISSUE): With 3 PCs clustered and all 3 ragers in melee reach, Berserk fires 4 times across 3 rounds** (R3 in R1, R2 in R2, R1 in R3, R3 in R3). Recharge 5–6 means each rager has a ~33% chance to recover each turn; with 3 independent ragers, at least one Berserk fires almost every round once first-uses are spent. The "desperate all-or-nothing sweep" feel is diluted when Berserk is a near-constant AoE pattern.
+
+  **Options for human review:**
+  - **(A) Accept it** — three CR2 ragers vs a level-5 party is already heavily stacked for the party; the constant Berserk pressure is appropriate for an overwhelming encounter design.
+  - **(B) Raise recharge to 6-only** — reduces per-rager Berserk frequency from 33% to 17% per turn. In a 3v3 fight, 50% chance at least one fires (vs ~68% at 5-6). More "desperate moment" feel.
+  - **(C) Gate Berserk on below-half HP** — "only when HP ≤ 26" — fits the cornered-animal narrative and prevents R1 Berserk openers.
+
+### FI-NEW-SRR3: solo-rager-rush — excessive manual tracking overhead for 3-rager formation
+
+- **Context:** 2026-05-28 18:19 UTC, slice #5 (solo-rager-rush) 13th cycle.
+
+  **FI-NEW-SRR3 (FEEL/DM-OVERHEAD): A 3-rager encounter requires tracking 12 independent state variables:** 3× Madness Endurance (+1 to-hit if took damage), 3× Incoming Damage Aggro (advantage vs last attacker), 3× Berserk recharge die, 3× active Taunt target. All four are "DM applies manually" and none are surfaced in the dispatch output.
+
+  At a live table this is significant cognitive load for a CR2 minion type. Compared to the beholder (which has similarly many variables but is a solo, unique monster), the rager's complexity-per-unit-count is higher.
+
+  **Recommendation:** Consider one of:
+  - Drop Incoming Damage Aggro entirely (thematically redundant with Madness Endurance — both reward "hit the rager and it hits harder back").
+  - Encode Madness Endurance as a `rider_on_hit` note in the multiattack/berserk DB specs so the dispatch output reminds the DM: "DM: if this rager took damage last turn, add +1 to the printed to-hit values."
+  - Leave as-is for solo-rager encounters where one DM tracks one rager; note it as a "3-rager complexity warning" in the encounter overview.
 
 ### FI-NEW-BEL3-A: beholder-escorts-limited — VS round-1 Marwen one-shot (feel issue)
 
