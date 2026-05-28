@@ -25,6 +25,7 @@ tags: ["#combat-runner", "#npc", "#combat", "#derro", "#dulgarum-oathholds", "#t
 ## Tactics — when the DM asks "what does it do?"
 
 - **Round 1, in formation:** Multiattack (two hand axes) on the closest melee threat that has an ally in reach — Tactical Drilling kicks in.
+- **Split party (caster 20+ ft from front-liners):** One DW peels to the caster while the other holds the front. The peeler doesn't benefit from Tactical Drilling on its first turn; if the other DW closes next round, Drilling resumes. Never leave the caster uncontested. *(MQ-NEW-TP10-1 — 10th TP cycle)*
 - **Isolated / outranged:** Switch to **Light Crossbow** (range 80/320, +4 to hit). Better hit chance and lets the derro hold position behind cover.
 - **Focus-fire:** Anyone visibly casting or healing — Deep Watch knows what a wizard looks like.
 - **Below half HP (≤13):** Cunning Action → Disengage, fall back to nearest ally or cover. Once disengaged, switch to **Light Crossbow** from cover — do NOT re-enter melee range. Will *not* break ranks without an order; will retreat if a Deep Watch officer signals withdrawal.
