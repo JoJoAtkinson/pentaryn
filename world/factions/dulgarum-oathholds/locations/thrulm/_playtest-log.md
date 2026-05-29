@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-29 19:20 UTC — slice #3 19th-cycle (beholder-escorts-limited) — TPK R4 (Bazgar 0/49 VS R2+lair R4; Marwen 0/32 downed R1 TL2+Thrall-C; Sabriel 0/44 VS R2+lair R4; Beholder 62/110 + 10 temp HP); Fireball kills Thrall-A+B R1 (34 fire fail — escorts evaporate in 1 action FI-BE3-01); VS fires R2 decisive — Bazgar/Sabriel both FAIL Wis save, Bazgar instantly downed + frightened (50 psy); Sabriel 8/44 + frightened; Antireality triggered R1 Bazgar atk=19 vs AC17 (+2 AC = 19 eff) — hit lands (19≥19), reaction zero-benefit edge case (FI-BE3-03 DESIGN DECISION); DD consumes all 3 LA after Bazgar turn every round — VR and TL never fire as LAs (FI-BE3-02 DESIGN DECISION, 19th BEL cycle); Sabriel DD fails R2+R3 (Cha 13/12 vs DC16), loses L3+L2 slots → beholder 10 temp HP; LoH pool exhausted R3 (5/25 remaining); lair VE finishes Bazgar+Sabriel R4 (both fail Dex save); VS recharged d6=6 R4 but fight over by lair action; Phase A 29/29 clean (network blocked, cache pre-seeded seed 494467, 43rd consecutive); 0 bugs auto-fixed; DESIGN DECISIONS: FI-BE3-02 DD LA monopoly (19th BEL confirm), FI-BE3-03 Antireality margin edge case, FI-BE3-05 thrall multiattack verb naming — see _playtest-runs/2026-05-29T19-20-29.md
+
 - 2026-05-29 18:19 UTC — slice #2 18th-cycle (tank-wall) — VICTORY R3 (Bazgar 49/49, Marwen 17/32, Sabriel 40/44; Rager down R2 Sabriel; SC down R3 Sabriel smite); Rager 52→2 HP in R1 burst (Sabriel smite 25 + SR 8 + Bazgar 17 = 50 dmg — FI-TW-18-A 18th durability-failure confirm); Taunt fired Marwen R1 Cha-fail but Rager dead before Marwen could take full disadv benefit (FI-TW-18-B); CW 1/3 used (Bazgar R1 advantage → 2 hits), 2 charges wasted on dead-Rager (FI-TW-18-C 18th CW-lockout confirm); TR never triggered — Bazgar never closed within 15ft before SC died (FI-TW-18-D); Phase A 29/29 clean (network blocked, cache pre-seeded seed 494466, 42nd consecutive); 0 bugs auto-fixed; DESIGN DECISIONS: DD-TW-18-1 Rager durability (52 HP insufficient vs smite-burst, 18th cycle flag), DD-TW-18-2 CW range 30ft unworkable in TW formation (18th cycle repeat) — see _playtest-runs/2026-05-29T18-19-05.md
 
 - 2026-05-29 16:20 UTC — slice #1 17th-cycle (shrine-wedge) — VICTORY R3 (Bazgar 43/49, Marwen 30/32, Sabriel 38/44; both STDs down; STD-A dropped R1 Action Surge; STD-B incapacitated R2-R3 Hypnotic Pattern Wis-2 vs DC14 all-fail); 1 bug auto-fixed (BUG-SW17-A OBR-while-incapacitated: added incapacitated/stunned/paralyzed reaction exclusion to shrine-touched-derro.md); HARNESS BUG: dispatched as "STD-A"/"STD-B" not slug — AR dealt 0 necrotic, only 1d4 psychic riders; true outcome confidence LOW (see MQ-SW17-A); FI-159 17th confirm (PCs won init → VICTORY); FI-188 17th confirm (UF unreachable — both STDs died before 2nd NPC turn); FI-SW-17-C 17th-cycle Wis+0 incap pattern (HP/Hypnotic ~70% incap rate); MQ-SW17-B stagger same-round double-fire window (STD-B freed mid-R1, fired AR same round); DESIGN DECISION MQ-SW17-C: stagger hold "until next round" vs "until first fires" — clarification recommended; Phase A 28/28 clean (network blocked, cache pre-seeded seed 494464, 41st consecutive) — see _playtest-runs/2026-05-29T16-20-56.md
@@ -134,6 +136,26 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-BE3-03: beholder-escorts-limited — Antireality margin trigger with no benefit (19th-cycle, edge case)
+
+- **Context:** 2026-05-29 19:20 UTC, slice #3 (beholder-escorts-limited) 19th cycle. Seed 494467. TPK R4.
+
+  **FI-BE3-03 (DESIGN DECISION):** Bazgar's R1 attack total was 19 vs beholder AC 17. Per DD-43, Antireality triggers when `atk ≤ AC+2` (17+2=19). The +2 AC raises effective AC to 19. Bazgar's atk (19) equals the new AC exactly → hit still lands. The reaction was consumed with zero benefit. At the table this reads as "the beholder flinched for nothing." The current trigger condition (`atk ≤ AC+2`) creates a degenerate case where an atk exactly equal to `AC+2` triggers the reaction but cannot be negated. The intended purpose of the reaction is to convert borderline hits into misses.
+
+  **Recommendation:** Tighten trigger from `≤ AC+2` to `< AC+2` (i.e., atk 17 or 18 only), so Antireality always has a chance to negate the hit when it fires. This removes the "trigger but zero benefit" case and makes the reaction more legible at the table. Do NOT auto-fix — requires updating the threshold stated in both the .md Tactics block and DD-43 if formally adopted.
+
+### FI-BE3-02: beholder-escorts-limited — Drain Divinity monopolizes LA budget (19th-cycle confirm of FI-NEW-BEL10-B)
+
+- **Context:** 2026-05-29 19:20 UTC, slice #3 (beholder-escorts-limited) 19th cycle. Seed 494467. TPK R4.
+
+  **FI-BE3-02 (DESIGN DECISION — repeat of FI-NEW-BEL10-B):** DD (3 LA) consumed the entire legendary action budget after Bazgar's turn in every round. VR and Tentacle Lash never fired as legendary actions across 3 active rounds. LA tracker showed 0/3 for all turns after the first PC's. Confirming the 10th-cycle finding: the DD-vs-VR+TL tradeoff is mechanically sound (DD > VR+T when a L2+ slot target is in range) but the feel consequence is that the beholder appears to "do nothing" on 3 of 4 PC turns per round. This is the 19th consecutive BEL cycle; the pattern is structural, not variance. See FI-NEW-BEL10-B for the full recommendation (reduce DD to 2 LA).
+
+### FI-BE3-01: beholder-escorts-limited — All thrall escorts wiped by single Fireball (table coaching note)
+
+- **Context:** 2026-05-29 19:20 UTC, slice #3 (beholder-escorts-limited) 19th cycle. Seed 494467. TPK R4.
+
+  **FI-BE3-01 (TABLE COACHING NOTE):** Thralls A and B were clustered near the beholder at altitude (~10 ft separation), both within the Fireball blast radius. One L3 Fireball (34 fire, both failed Dex saves) killed them both in R1. Thrall C survived only because it had been directed toward Marwen (across the chamber). The escort pressure function evaporated in 1 action. Thralls (22 HP, no fire resistance) are appropriate CR 1/4 HP but clustering them enables single-Fireball wipes. **Recommendation (DM coaching, no stat change):** Add a line to `_overview.md` or the encounter setup note: "Thrall positions: stagger placement so no two thralls occupy the same 20-ft zone. This prevents a single Fireball from eliminating all escorts." The fix is scene setup, not a stat change.
 
 ### DD-TW-18-1: tank-wall — Rager durability insufficient vs smite-burst party (18th-cycle repeat)
 
