@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-29 18:19 UTC — slice #2 18th-cycle (tank-wall) — VICTORY R3 (Bazgar 49/49, Marwen 17/32, Sabriel 40/44; Rager down R2 Sabriel; SC down R3 Sabriel smite); Rager 52→2 HP in R1 burst (Sabriel smite 25 + SR 8 + Bazgar 17 = 50 dmg — FI-TW-18-A 18th durability-failure confirm); Taunt fired Marwen R1 Cha-fail but Rager dead before Marwen could take full disadv benefit (FI-TW-18-B); CW 1/3 used (Bazgar R1 advantage → 2 hits), 2 charges wasted on dead-Rager (FI-TW-18-C 18th CW-lockout confirm); TR never triggered — Bazgar never closed within 15ft before SC died (FI-TW-18-D); Phase A 29/29 clean (network blocked, cache pre-seeded seed 494466, 42nd consecutive); 0 bugs auto-fixed; DESIGN DECISIONS: DD-TW-18-1 Rager durability (52 HP insufficient vs smite-burst, 18th cycle flag), DD-TW-18-2 CW range 30ft unworkable in TW formation (18th cycle repeat) — see _playtest-runs/2026-05-29T18-19-05.md
+
 - 2026-05-29 16:20 UTC — slice #1 17th-cycle (shrine-wedge) — VICTORY R3 (Bazgar 43/49, Marwen 30/32, Sabriel 38/44; both STDs down; STD-A dropped R1 Action Surge; STD-B incapacitated R2-R3 Hypnotic Pattern Wis-2 vs DC14 all-fail); 1 bug auto-fixed (BUG-SW17-A OBR-while-incapacitated: added incapacitated/stunned/paralyzed reaction exclusion to shrine-touched-derro.md); HARNESS BUG: dispatched as "STD-A"/"STD-B" not slug — AR dealt 0 necrotic, only 1d4 psychic riders; true outcome confidence LOW (see MQ-SW17-A); FI-159 17th confirm (PCs won init → VICTORY); FI-188 17th confirm (UF unreachable — both STDs died before 2nd NPC turn); FI-SW-17-C 17th-cycle Wis+0 incap pattern (HP/Hypnotic ~70% incap rate); MQ-SW17-B stagger same-round double-fire window (STD-B freed mid-R1, fired AR same round); DESIGN DECISION MQ-SW17-C: stagger hold "until next round" vs "until first fires" — clarification recommended; Phase A 28/28 clean (network blocked, cache pre-seeded seed 494464, 41st consecutive) — see _playtest-runs/2026-05-29T16-20-56.md
 
 - 2026-05-29 15:19 UTC — slice #0 16th-cycle (threshold-patrol) — VICTORY R4, Marwen DOWN R2 SC shard-throws (13→−2 HP); Bazgar (29/49) + Sabriel (38/44) survive; Barrage R1 catches full party 12 piercing in corridor (MQ-41/FI-75 16th-cycle confirm); SC collapses R3 before acting (2 HP entering R3, killed by Sabriel smite — never fires CW or second Barrage; FI-TP-1 NEW FEEL: SC needs DM column-cover to survive past R2 in this slice); CW 0/3 used again (FI-TP11-C 12th-cycle confirm — DW1+DW2 win init; already-acted guard withholds all CW R2+); Phase A 28/28 clean (network blocked, cache pre-seeded seed 494463, 40th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-29T15-19-31.md
@@ -132,6 +134,18 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### DD-TW-18-1: tank-wall — Rager durability insufficient vs smite-burst party (18th-cycle repeat)
+
+- **Context:** 2026-05-29 18:19 UTC, slice #2 (tank-wall) 18th-cycle. Seed 494466. Victory R3.
+
+  **DD-TW-18-1 (DESIGN DECISION):** Derro Rager at 52 HP collapses in Round 1 against a level-5 party with a smite-capable PC. In this run: Sabriel smite hit for 25 (10 + 15 smite), Scorching Ray added 8, Bazgar closed for 17 — total ~50 damage in Round 1. Rager was at 2 HP entering R2 and died immediately. The "tank wall" concept requires the Rager to absorb enough punishment to let Taunt redirect and Berserk fire. At 52 HP the Rager doesn't survive long enough for either mechanic to matter. This failure pattern has appeared in at least 3 independently documented TW cycles (cycle 9 FI-TW-1, cycle 12 FI-NEW-TW12-A, and now cycle 18). **Recommendation (do not auto-fix):** Consider one of: (a) HP increase to ~70-80; (b) Resistance to radiant damage (smite is the single-biggest damage source vs the Rager); (c) add a "Pain Surge" mechanic granting 10 temp HP when the Rager drops below 50% HP (one-time soak). The human author should decide which fits the creature's identity.
+
+### DD-TW-18-2: tank-wall — CW range 30ft structurally unworkable in this formation (18th-cycle repeat)
+
+- **Context:** 2026-05-29 18:19 UTC, slice #2 (tank-wall) 18th-cycle. Seed 494466.
+
+  **DD-TW-18-2 (DESIGN DECISION — repeat of FI-TW-1 / FI-NEW-TW12-A):** Call Weakness (30ft range) cannot reliably reach the Rager in tank-wall geometry. The Rager charges 30ft on R1; the SC stays at the back line. By the time the SC acts, the Rager-SC gap is ~40-50ft. This run: SC-to-Rager distance was ~20ft before Rager charged → ~50ft after. CW used 1/3 charges on Bazgar (valid, R1 pre-charge), then 0/2 remaining charges after Rager death. 18 consecutive cycles, 0 CW charges used on a Rager in any TW run. **Recommendation (do not auto-fix):** Either raise CW range to 60ft, or add terrain direction: "The Shardcaller should start no more than 25ft behind the Rager in the tank-wall formation." The current range creates a dead ability by default.
 
 ### MQ-SW17-C: shrine-wedge — stagger hold release scope: "until next round" vs "until first fires" (17th-cycle)
 
