@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-29 10:26 UTC — slice #3 10th-cycle (beholder-escorts-limited) — VICTORY R6 (Bazgar 1/49 sole survivor; Marwen+Sabriel down; Thrall-B 9/22 surrenders; Beholder 0 HP; 0 bugs auto-fixed); rare all-save VS R1 (~9% prob) enabled party agency; Fireball wiped 2/3 thralls R1; Bazgar Action Surge R1 hit for 16 (trip immune, MQ-82); VS never recharged 5/5 attempts (FI-NEW-BEL10-C, FI-127 10th confirm); DD monopolized full LA budget every round (FI-NEW-BEL10-B DESIGN DECISION — VR+TL never fired as LAs); Antireality never fired (FI-NEW-BEL10-D, DD-21 10th confirm); sim errors: void_eruption used Con saves (spec: Dex DC16), unstable_ground targeted all PCs (spec: one creature); Phase A 28/28 clean (network blocked, cache pre-seeded seed 494458, DD-10 35th consecutive) — see _playtest-runs/2026-05-29T10-26-20.md
+
 - 2026-05-29 09:19 UTC — slice #2 9th-cycle (tank-wall) — VICTORY R4 (Bazgar 43/49, Marwen 14/32, Sabriel 32/44; Rager down R3 Bazgar; SC down R4 Sabriel; 0 bugs auto-fixed); CW lockout confirmed again (9th-cycle TW pattern, FI-TW-1 — all 3 CW charges unused, SC-to-Rager gap ~40 ft throughout, structurally unworkable; matches 12th-cycle TW prev run); Taunt correct twice on Marwen (R2+R3 Cha fail; Scorching Ray correctly at disadv per MQ-36; 2/3 rays missed R2, 3/3 missed R3); Berserk fizzle at 12 HP (3 attacks, all miss — R2 to-hit 15/5/6; FI-TW-2 feel issue); Shard Barrage R1 correct (MQ-41, 3 PCs in narrow corridor — 12 piercing, Sabriel full 12; Bazgar/Marwen save half); Phase A 28/28 clean (network blocked, cache pre-seeded seed 494457, DD-10 34th consecutive); DESIGN DECISION: FI-TW-1 CW structural range lockout (tank-wall formation prevents CW coordination; recommend SC start 25 ft from party or raise CW range to 60 ft) — see _playtest-runs/2026-05-29T09-19-41.md
 
 - 2026-05-29 08:17 UTC — slice #1 8th-cycle (shrine-wedge) — VICTORY R2 (Bazgar 19/49, Marwen 9/32, Sabriel 28/44; both STDs down; STD-A low-HP AR all-3-fail DC14 → Bazgar 19/Marwen 16/Sabriel 28 HP after; STD-B held stagger both rounds correct; UF active R2 on both STDs but both killed before NPC turns — FI-SW-8-B 8th UF-unreachable confirm); 1 bug auto-fixed (OBR melee-range restriction not stated — added 5-ft range exclusion + AoE exclusion to shrine-touched-derro.md); FI-SW-8-A DESIGN DECISION (initiative-determinism 8th-cycle confirm — party won init 16/11/7 vs 2/1, VICTORY; FI-159 pattern; see run detail); FI-SW-8-C fireball vulnerability suppression positive 5th confirm; FI-SW-8-D concentration borderline pass Marwen (DC10, rolled exactly 10); Phase A 28/28 clean (network blocked, cache pre-seeded seed 494456, DD-10 33rd consecutive) — see _playtest-runs/2026-05-29T08-17-18.md
@@ -118,6 +120,12 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-NEW-BEL10-B: beholder-escorts-limited — Drain Divinity monopolizes legendary action economy (10th-cycle new)
+
+- **Context:** 2026-05-29 10:26 UTC, slice #3 (beholder-escorts-limited) 10th cycle. Seed 494458. Victory R6.
+
+  **FI-NEW-BEL10-B (DESIGN DECISION):** Drain Divinity costs 3 LA — the beholder's entire per-round legendary budget. In every round where a living slot-holder was within 30 ft, the beholder fired DD after the first PC's end-of-turn, consuming all 3 LA. Void Ray (2 LA) and Tentacle Lash (1 LA) never fired as legendary actions across 6 rounds. The "legendary" sequence became: DD after PC-1 → nothing after PC-2 → nothing after PC-3. No VR force chip, no Tentacle harass. The monotony is doubly confirmed in empty-void cycles (where DD vs VR priority is the same). **Recommendation:** (a) Reduce DD to 2 LA so it competes with VR rather than consuming everything — the beholder then gets DD (2 LA) after the first PC's turn and VR (2 LA) or TL (1 LA) after a second PC's turn. Or (b) add a cap: "DD once per round, even if LA budget is available." The effect (slot drain pressure + additional LA damage) would feel much richer with option (a). Do NOT auto-fix — spec change required.
 
 ### FI-TW-1 (9th-cycle confirm): tank-wall — Call Weakness structurally dead in standard formation
 
