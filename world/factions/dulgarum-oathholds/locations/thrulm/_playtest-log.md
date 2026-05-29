@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-29 05:24 UTC — slice #6 5th-cycle (shardcaller-team) — VICTORY R3 (Bazgar 38/49, Marwen 19/32, Sabriel 44/44 untouched); SC-A killed R2 Bazgar 2-hit (10+16) after Bazgar DASHED R1; SC-B killed R3 Fireball (28 fire both fail DC15); SC-C killed R3 Sabriel smite; **DD-47 RESOLVED** — TR fired TWICE (SC-A vs Bazgar R2, SC-B vs Sabriel R2; first TR activations in 5 SC-team cycles); kiting dynamic present first time (FI-36 POSITIVE); TR razor-thin (30 ft retreat vs 30 ft PC speed — Bazgar exactly catches SC-A; FI-37 DESIGN DECISION: intentional tension or increase to 40 ft?); Fireball R3 first SC-team use (28 fire — decisive payoff not trivializing; DD-18 nuance: timing determines feel); PTV triggered R2 double-hit but never consumed R3 (FI-35 DESIGN DECISION — PTV structurally blocked: Barrage-SC always acts before multiattack-SCs in init; cross-round blocked by Marwen init 15 > SC-C Barrage init 14; PTV disadv can't reach a same-round Barrage and expires before next-round Barrage); CW fully depleted SC-C 3/3 R1–R3; harness stagger bug R2 (SC-C blocked from Barrage by spent tracker, should have fired — not spec bug); 28/28 Phase A clean (network blocked, cache pre-seeded seed 494453, DD-10 30th consecutive); 0 bugs auto-fixed, 3 design issues logged — see _playtest-runs/2026-05-29T05-24-19.md
+
 - 2026-05-28 18:19 UTC — slice #5 (solo-rager-rush) 13th-cycle — INDETERMINATE R3 (all 6 alive; R2 at 3/52 HP, projected PC VICTORY R4–5; Marwen 12/32 — critically low); Phase A 28/28 clean (network blocked, cache pre-seeded seed 494442, DD-10 29th consecutive); Berserk saturation: 4 fires in 3 rounds across 3 ragers (FI-NEW-SRR1 — recharge 5–6 may be too generous in 3v3 clustered fight); Taunt has no movement component — slice description "tests taunt-induced movement" sets false expectation (FI-NEW-SRR2 MQ-NEW-SRR2 — DESIGN DECISION); Wizard Taunt immunity via save-spells confirmed (Marwen Shatter bypasses Taunt — FI-NEW-SRR4 4th pattern confirm); Berserk under Slow violated by sim twice R3 (MQ-63 not enforced; not a spec bug — harness gap); aggro-mark (3 independent marks) + Madness Endurance + Berserk recharge + Taunt state = 12 manual-DM variables for 3 ragers (FI-NEW-SRR3 overhead DESIGN DECISION); Slow Con-save end-of-turn not documented in rager .md (MQ-NEW-SRR1); 0 bugs auto-fixed, 4 feel/design issues logged — see _playtest-runs/2026-05-28T18-19-28.md
 
 - 2026-05-28 17:24 UTC — slice #4 (final-confrontation) 12th-cycle — extrapolated TPK R2-3; sim crashed KeyError at R1 end (MQ-NEW-FC4-G, harness bug not spec); Phase A 28/28 clean (cache pre-seeded, DD-10 28th-consecutive network-block); corrected R1 (dispatch-authoritative): DR MISSED Marwen (to-hit 10 vs AC 15 — MQ-NEW-FC4-F MQ-77 confirm); T4 HIT Marwen (to-hit 20, 3 slashing); stagger violated by sim (S2 fired AR, should have held — MQ-NEW-FC4-G MQ-61/86 class; corrected); VE lair 14 force all PCs (all 3 fail DC 16); S1 AR fires 13 necrotic (half to Bazgar/Marwen pass); Fireball kills T2/T3 (beholder saves, 13 fire only — FI-NEW-FC4-F: beholder Dex +8 = 75% Fireball save rate); corrected R1 end: Bazgar ~29 HP, Marwen ~9 HP, Sabriel ~30 HP, Beholder ~78-87 HP; FI-NEW-FC4-E POSITIVE (DR-miss R1 → earned-death narrative: party dealt ~22-32 dmg, 2 thralls wiped, Fireball/smite/attacks fired before VS closes R2); 1 bug auto-fixed (FI-NEW-FC4-LOH: LoH cannot restore disintegrated creature — doc note added to beholder-thrulm.md Chamber Hazards); FI-NEW-FC4-F DM presentation note (Fireball always half vs beholder — call it out at table); FI-NEW-FC4-G sim crash — see _playtest-runs/2026-05-28T17-24-45.md
@@ -108,6 +110,25 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-35: shardcaller-team — Pack Tactics Voice structurally blocked by initiative math (DESIGN DECISION)
+
+- **Context:** 2026-05-29 05:24 UTC, slice #6 (shardcaller-team) 5th cycle. Seed 494453. Victory R3.
+
+  **FI-35 (DESIGN DECISION): PTV reliably triggers but never pays off against a Barrage save.** Root cause: the shardcaller cannot Barrage and multiattack in the same turn. The stagger rule means the Barrage-firing SC (highest init) acts BEFORE the other SCs multiattack — so PTV from a multiattack hit always trails the Barrage by one round. Cross-round PTV consumption is blocked by initiative order: Marwen (init 15) acts before SC-C's Barrage window (init 14), so the PTV disadv expires before SC-C can fire. Across 5 SC-team cycles, PTV has triggered 3 times and been consumed 0 times against a Barrage save.
+
+  **Options:**
+  - Change PTV to grant disadvantage on the next **attack roll** (not save) — this would benefit melee allies (Rager) but shardcallers have no melee allies in this slice.
+  - Change PTV to trigger *before* the Barrage-SC acts: e.g. "when this creature fires Shard-Barrage, each target within 30 ft who was hit by an ally since the start of this creature's last turn has disadv on the Barrage save." This makes PTV a Barrage rider rather than a passive.
+  - Accept that PTV is a nice-to-have bonus that only pays off in specific initiative orders, not a reliable mechanic.
+
+### FI-37: shardcaller-team — Tactical Retreat distance razor-thin vs 30 ft PC speed (DESIGN DECISION)
+
+- **Context:** 2026-05-29 05:24 UTC, slice #6 (shardcaller-team) 5th cycle. DD-47 RESOLVED.
+
+  **FI-37 (DESIGN QUESTION): TR grants 30 ft of retreat movement. A Fighter with 30 ft speed can spend their full move to close exactly 30 ft, nullifying the retreat.** In this cycle, SC-A retreated 30 ft (to ~35 ft from Bazgar's new position) and Bazgar moved 30 ft to close the gap, ending up 5 ft away and attacking. The "kiting" escape only works if the SC has a head start or there's terrain (column, corner) that adds pathing distance. On an open vault floor, TR is a temporary delay, not guaranteed escape.
+
+  **Decision needed:** Is this razor-thin tension intentional (creates dramatic "almost got away" moments) or should TR retreat 40 ft to guarantee escape vs standard 30 ft PCs? If intentional, add a DM note to encounter header: "SCs' TR only guarantees escape if there are columns between them and melee PCs — place 2–3 columns in the vault's mid-section."
 
 ### FI-NEW-SRR2 / MQ-NEW-SRR2: solo-rager-rush — "taunt-induced movement" is undefined (DESIGN DECISION)
 
