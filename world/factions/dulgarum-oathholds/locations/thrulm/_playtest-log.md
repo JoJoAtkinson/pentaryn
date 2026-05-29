@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-29 09:19 UTC — slice #2 9th-cycle (tank-wall) — VICTORY R4 (Bazgar 43/49, Marwen 14/32, Sabriel 32/44; Rager down R3 Bazgar; SC down R4 Sabriel; 0 bugs auto-fixed); CW lockout confirmed again (9th-cycle TW pattern, FI-TW-1 — all 3 CW charges unused, SC-to-Rager gap ~40 ft throughout, structurally unworkable; matches 12th-cycle TW prev run); Taunt correct twice on Marwen (R2+R3 Cha fail; Scorching Ray correctly at disadv per MQ-36; 2/3 rays missed R2, 3/3 missed R3); Berserk fizzle at 12 HP (3 attacks, all miss — R2 to-hit 15/5/6; FI-TW-2 feel issue); Shard Barrage R1 correct (MQ-41, 3 PCs in narrow corridor — 12 piercing, Sabriel full 12; Bazgar/Marwen save half); Phase A 28/28 clean (network blocked, cache pre-seeded seed 494457, DD-10 34th consecutive); DESIGN DECISION: FI-TW-1 CW structural range lockout (tank-wall formation prevents CW coordination; recommend SC start 25 ft from party or raise CW range to 60 ft) — see _playtest-runs/2026-05-29T09-19-41.md
+
 - 2026-05-29 08:17 UTC — slice #1 8th-cycle (shrine-wedge) — VICTORY R2 (Bazgar 19/49, Marwen 9/32, Sabriel 28/44; both STDs down; STD-A low-HP AR all-3-fail DC14 → Bazgar 19/Marwen 16/Sabriel 28 HP after; STD-B held stagger both rounds correct; UF active R2 on both STDs but both killed before NPC turns — FI-SW-8-B 8th UF-unreachable confirm); 1 bug auto-fixed (OBR melee-range restriction not stated — added 5-ft range exclusion + AoE exclusion to shrine-touched-derro.md); FI-SW-8-A DESIGN DECISION (initiative-determinism 8th-cycle confirm — party won init 16/11/7 vs 2/1, VICTORY; FI-159 pattern; see run detail); FI-SW-8-C fireball vulnerability suppression positive 5th confirm; FI-SW-8-D concentration borderline pass Marwen (DC10, rolled exactly 10); Phase A 28/28 clean (network blocked, cache pre-seeded seed 494456, DD-10 33rd consecutive) — see _playtest-runs/2026-05-29T08-17-18.md
 
 - 2026-05-29 07:19 UTC — slice #0 11th-cycle (threshold-patrol) — VICTORY R3 (Bazgar 25/49, Marwen 27/32, Sabriel 36/44; all NPCs down; DW-A down R2 Sabriel ×2, SC down R2 Fireball full-26, DW-B down R3 Sabriel); SC R1 correctly: CW on DW-B (highest-init un-acted ally >20 HP per DD-39/MQ-12), Barrage corridor rule R1 per MQ-41/FI-75; DW-B CW+Drilling adv → 2 hits Bazgar (10 dmg combined) + Barrage 8 Bazgar (saves); CW R2 held (DW-B ≤20 HP guard correct per DD-8/DD-25); **FI-TP11-A** PTV invisible at DW-B hit events (11th TP cycle, FI-35 class — PTV fires on ally turns not SC turns; tracking gap continues); **FI-TP11-B** DW-A ≤13 edge case (DM-sim misread "not below" when DW-A was exactly 13/27 HP — spec correct, minor ambiguity at table); **FI-TP11-C DESIGN DECISION**: CW structural lockout 11th cycle — SC used CW R1 (DW-B collected, 2 hits), then CW withheld R2 (DW-B ≤20 HP); SC ends fight with 2/3 charges unused; 3-charge pool wasted in TP 2-round fight; **MQ-TP11-A** CW+Drilling adv sources confirmed non-stacking (correct 5e RAW); Phase A 28/28 clean (network blocked, cache pre-seeded seed 494455, DD-10 32nd consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-29T07-19-52.md
@@ -116,6 +118,14 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-TW-1 (9th-cycle confirm): tank-wall — Call Weakness structurally dead in standard formation
+
+- **Context:** 2026-05-29 09:19 UTC, slice #2 (tank-wall) 9th cycle. Seed 494457. Victory R4.
+
+  **FI-TW-1 (9th-cycle confirm of DD-41 / FI-163):** CW 3/3 charges unused again. SC started 50 ft from party; Rager engaged at 10 ft from party → SC-to-Rager gap ~40 ft throughout, exceeding the 30-ft CW range. Across all tank-wall cycles, CW fired on the Rager in exactly 1 of 9 cycles (cycle 3, SC won initiative, advantage uncollected as Rager rolled nat-1). The slice is labelled "tests taunt + call_weakness pairing" but CW paired zero times out of nine. **FI-TW-2 (secondary):** Rager Berserk fizzled at 12 HP in R2 — all 3 attacks missed (rolls 11/5/6+4). The Rager's climactic ability failed to land before death. Both issues should be considered together when redesigning the slice.
+
+  **Recommendation (same as FI-163):** Either (a) reposition SC to 20–25 ft from party start (SC-to-Rager gap ≤30 ft at engagement point, enabling R1 CW), (b) extend CW range to 60 ft in the spec, or (c) rename the slice and test something the formation actually exercises. If (a), validate that the new SC position still prevents one-round elimination by the party. Do NOT auto-fix.
 
 ### FI-SW-8-A: shrine-wedge — outcome near-deterministically linked to initiative (8th-cycle confirm)
 
