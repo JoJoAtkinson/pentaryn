@@ -765,6 +765,8 @@ async def _execute_combat_action_async(
             f"DC {save.get('dc', '?')} {save.get('ability', '?')} save — "
             f"failers take {full}, savers take {savers_take}]"
         )
+        if save.get("notes"):
+            lines.append(f"_(DM: {save['notes']})_")
         if "recharge" in spec:
             lines.append("")
             lines.append(
