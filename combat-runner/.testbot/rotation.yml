@@ -1,0 +1,76 @@
+# Phase B slice rotation for thrulm playtest.
+# run_counter increments after each fire; idx = counter % len(slices).
+# Edit slice definitions here; run_counter lives in rotation-counter.
+
+slices:
+  - id: round-1-opener
+    name: "Round 1 opener — multiattack target selection"
+    description: >
+      Beholder wins initiative. Decide: multiattack now or save Disintegration Ray
+      for Marwen (lowest HP, AC 15, 32 HP)? Simulate full multiattack turn including
+      tentacle grapple rider. Track first-round damage output.
+
+  - id: disintegration-threat
+    name: "Disintegration Ray threat ceiling"
+    description: >
+      Assume recharge rolls 5-6 on turn 1. Beholder targets Marwen (32 HP, AC 15).
+      Roll 10d8 force +6 vs AC 15. If hit: average ~45 damage. Does it one-shot a
+      32-HP Wizard? If yes, is the TPK risk from a single die roll acceptable for
+      this encounter's intent? Record threat ceiling and feel note.
+
+  - id: legendary-action-loop
+    name: "Legendary action pacing over one round"
+    description: >
+      3 PCs take turns in initiative order. After each PC's turn, beholder uses one
+      legendary action. Simulate: Move (reposition) → Tentacle (vs Marwen, +6) →
+      Void Ray (vs Bazgar, DC 16 Dex, 4d10 force). Record total legendary damage
+      and verify action labels are unambiguous for the DM.
+
+  - id: void-scream-clustering
+    name: "Void Scream — area damage and save timing"
+    description: >
+      Beholder waits until Bazgar and Sabriel are both within 30 ft of the shrine
+      (likely round 2). Void Scream (recharge 6), DC 16 Wis save. Bazgar: Wis save
+      (assume +1 Wis, so d20+1 vs 16). Sabriel: Wis save (divine martial, assume +3
+      Wis, d20+3 vs 16). Marwen: likely within 30 ft too. Simulate all 3 saves.
+      Note shrine proximity disadvantage rule and whether it's clear enough to run
+      without prep.
+
+  - id: drain-divinity-vs-sabriel
+    name: "Drain Divinity — legendary action economy test"
+    description: >
+      Beholder spends all 3 legendary actions on Drain Divinity targeting Sabriel
+      (divine martial; assume level 5 slots: two 3rd-level, three 2nd-level, four
+      1st-level). DC 16 Cha save each time (assume +2 Cha for Sabriel). Simulate
+      3 saves. If all fail: Sabriel loses three 3rd-level slots; beholder gains 18
+      temp HP. Is this mechanically sound? Does spending all 3 legendary actions on
+      one effect feel correct?
+
+  - id: lair-action-round
+    name: "Lair action decision tree (init 20)"
+    description: >
+      Context: 2 thrall derro are present (HP 22, AC 14 each). Bazgar is within
+      20 ft of the shrine. Both derro are within 60 ft of beholder.
+      Decision: Unstable Ground (prone Bazgar, DC 16 Dex)? Manifest Thralls (derro
+      get temp HP + bonus action attack)? Void Eruption (all in 20 ft of shrine take
+      2d10 force, DC 16 Dex)? Simulate the optimal choice and the non-optimal choice.
+      Note which is more interesting at the table.
+
+  - id: retreat-threshold
+    name: "Retreat at 30 HP — tactical viability"
+    description: >
+      Beholder drops to 28 HP (below threshold). Per tactics: retreats toward lower
+      shaft, uses thralls to block. Does it have a meaningful path given hover 30 ft
+      speed and the encounter room dimensions? Does the retreat feel dramatic or
+      anticlimactic? Check if any existing action supports the retreat mechanically
+      (Shrine-Drift is the bonus action move; verify it works as an escape tool).
+
+  - id: antireality-timing
+    name: "Antireality reaction — flip rate and economy"
+    description: >
+      Bazgar attacks beholder: +7 to hit (level 5 fighter) vs AC 17. Rolls a 14
+      (total 21, hits). Beholder uses Antireality (+2 AC → AC becomes 19). Does
+      21 still hit? No. Beholder burns the reaction. Next attack: Bazgar rolls 18
+      (total 25, hits regardless). Beholder cannot react again until next turn.
+      Is the Antireality +2 economically fair vs a +7-atk fighter? Simulate 3
+      rounds of Bazgar attacking and count how many times Antireality flips a hit.

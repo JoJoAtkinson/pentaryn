@@ -374,4 +374,78 @@ scenarios:
       - {kind: assert_hp, slug: beholder-thrulm, expected: 82}
     targets:
       max_click_count: 5
+
+  # ── Thrulm: state-assertion regression tests (PC HP tracking + slot tracking) ──
+  # Added cycle 18 (bootstrap run) — these test the state machine more deeply than
+  # the no-crash smoke tests above.
+
+  - id: thrulm-multiattack-hp
+    title: "Thrulm: Multiattack — three hits deduct HP from Bazgar (2 HP remaining)"
+    encounter: thrulm
+    prelude: |
+      The void-thing lashes out. Bazgar is in range. Two tentacles and a maw.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "1 14 bludgeon"}
+      - {kind: type, tab: beholder-thrulm, text: "1 11 bludgeon"}
+      - {kind: type, tab: beholder-thrulm, text: "1 22 pierce"}
+      - {kind: assert_hp, slug: "1", expected: 2}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0
+
+  - id: thrulm-legendary-resistance-slot
+    title: "Thrulm: Legendary Resistance — slot decrements from 3 to 2"
+    encounter: thrulm
+    prelude: |
+      Sabriel's Turn Undead crackles through the chamber. The void-thing refuses it.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "legendary resistance"}
+      - {kind: assert_slot, slug: beholder-thrulm, action: legendary_resistance, remaining: 2}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0
+
+  - id: thrulm-void-scream-aoe
+    title: "Thrulm: Void Scream avg damage to all 3 PCs — Marwen craters to 0"
+    encounter: thrulm
+    prelude: |
+      The silence erupts. All three adventurers clutch their heads.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "1 33 psychic"}
+      - {kind: type, tab: beholder-thrulm, text: "2 33 psychic"}
+      - {kind: type, tab: beholder-thrulm, text: "3 33 psychic"}
+      - {kind: assert_hp, slug: "1", expected: 16}
+      - {kind: assert_hp, slug: "2", expected: 0}
+      - {kind: assert_hp, slug: "3", expected: 11}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0
+
+  - id: thrulm-disintegration-slot-consumed
+    title: "Thrulm: Disintegration Ray — recharge slot consumed after firing"
+    encounter: thrulm
+    prelude: |
+      The void-mouth opens. A beam of un-existence strikes toward Marwen.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "2 disintegrate"}
+      - {kind: assert_slot, slug: beholder-thrulm, action: disintegration_ray, remaining: 0}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0
+
+  - id: thrulm-prone-from-unstable-ground
+    title: "Thrulm: Unstable Ground lair action — prone condition applied to Bazgar"
+    encounter: thrulm
+    prelude: |
+      Initiative 20. The shrine-stone buckles beneath Bazgar's feet.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "1 prone"}
+      - {kind: assert_condition, slug: "1", condition: prone}
+    targets:
+      max_click_count: 5
       max_llm_fallback: 0
