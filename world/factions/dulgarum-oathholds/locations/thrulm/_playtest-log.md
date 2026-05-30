@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-30 15:00 UTC — slice #5 16th-cycle (solo-rager-rush) — VICTORY R4 (Bazgar 22/49, Marwen 0/32 down R3, Sabriel 36/44; all 3 ragers dead); Grimjaw (init 6, last) killed R1 before acting — wizard uncontested 2× Fireball (FI-SRR-16-A NEW: split-taunt structural gap when taunter draws lowest init); Marwen 2× Fireball (26+23 fire) wiped 68 HP spread R1-R2; Berserk connected Bonesnap+Splitear both R2 (5 hits total, incl. Marwen AC15 2 hits — FI-SRR-16-B: Berserk fizzle is AC-gated, not universal; AC15 connects ~50%, AC19 still fizzles); Berserk attack-line-cap confirmed R3 Splitear (2 PCs alive → line 3 skipped — positive confirm); Madness Endurance active R2-R3 both surviving ragers but +1 never bridged a miss→hit (cosmetic this run); Taunt split correct but inert — each PC already focused assigned rager; Sabriel taunted 3/4 saves but moot (Splitear was sole target); Phase A 29/29 clean (network blocked, cache pre-seeded seed 494487, 55th consecutive); 0 bugs auto-fixed; DESIGN DECISIONS: FI-SRR-16-A wizard-taunter lowest-init death, FI-SRR-16-B Berserk AC-gating clarification — see _playtest-runs/2026-05-30T15-00-00.md
+
 - 2026-05-30 14:24 UTC — slice #4 15th-cycle (final-confrontation) — TPK R3 (beholder 110/110 + 4 temp HP; 15th consecutive 0-beholder-damage FC; DR miss R1 +6 vs AC15; VS double-downer R2 catches Bazgar+Sabriel simultaneously; DD saved R1 Sabriel 23vs16 — first R1 DD resistance in 15 FC cycles; Marwen sole survivor to R3 AR); 1 bug auto-fixed (void_scream missing frightened condition from DB save.notes — DESIGN DECISION MQ-FC15-A: DR .md says DC15 Con save on hit but DB has no save, inconsistency flagged); Phase A 29/29 clean (network blocked, cache pre-seeded seed 494486, 54th consecutive); see _playtest-runs/2026-05-30T14-24-20.md
 
 - 2026-05-30 13:31 UTC — slice #3 20th-cycle (beholder-escorts-limited) — VICTORY R6 (Bazgar 5/49 dn-4×/revived; Marwen 3/32 per canonical VR dmg; Sabriel 32/44; Beholder 0/110 killed Bazgar hit R6); VS zero recharges 6 rounds (d6: 5,2,2,1,4,4 — 33% event, FI-127 class); DD monopoly R1-R5 confirmed 20th BEL cycle (FI-BE3-02), FI-128 VR pivot correct R6; escorts vaporized R1 Fireball (FI-BE3-01 20th confirm); Sabriel LoH revival loop 4× (20HP total) uncontested — DD monopoly blocked LoH-pressure LA-TL counter (FI-BEL20-B DESIGN DECISION); Phase A 29/29 clean (network blocked, cache pre-seeded seed 494485, 53rd consecutive); 0 bugs auto-fixed; DESIGN DECISIONS: FI-BEL20-A VS recharge-6 variance (VICTORY vs TPK fully VS-dependent), FI-BEL20-B LoH-loop vs DD monopoly priority conflict — see _playtest-runs/2026-05-30T13-31-00.md
@@ -154,6 +156,18 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-SRR-16-A: solo-rager-rush — Wizard-taunter lowest-initiative death exposes Taunt split gap (new, 16th cycle)
+
+- **Context:** 2026-05-30 15:00 UTC, slice #5 (solo-rager-rush) 16th cycle. Seed 494487. VICTORY R4.
+
+  **FI-SRR-16-A (DESIGN DECISION):** Grimjaw drew initiative 6 — the lowest roll of all 6 combatants. He was the rager assigned to taunt Marwen per FI-31 split-taunt rotation (R1→Marwen, R2→Sabriel, R3→Bazgar). He never acted: Fireball brought him to 26 HP, Sabriel's smite to 7 HP, Bazgar finished him. Marwen cast Fireball twice (R1+R2) completely uncontested. The split-taunt strategy assumes each rager acts before its target, which is only true if the rager wins initiative. The wizard typically has lower initiative modifiers (DEX +3 vs rager DEX −1, median gap ~4 pips), so the rager-assigned-to-wizard frequently loses the race. **Recommendation:** Revise rager tactics to say "whichever rager acts first should Taunt the wizard (highest-spell-threat) as its first bonus action — even if the 'designated' taunter hasn't acted yet. Priority: wizard > caster > whoever." This prevents one unfavorable initiative roll from nullifying the taunt strategy entirely.
+
+### FI-SRR-16-B: solo-rager-rush — Berserk hit rate is AC-gated, not uniformly weak (16th-cycle clarification of FI-SRR-B)
+
+- **Context:** 2026-05-30 15:00 UTC, slice #5 (solo-rager-rush) 16th cycle. Seed 494487. VICTORY R4.
+
+  **FI-SRR-16-B (DESIGN DECISION — clarification to existing FI-SRR-B):** Cycles 5-15 flagged "Berserk fizzle vs AC18-19" and recommended recharge 4-6. This run shows Berserk connected readily against Marwen (AC15): Bonesnap hit her R2 (19 vs 15), and 5 of 7 total Berserk attacks landed (compared to the near-whiff patterns in prior cycles that modeled only high-AC party members). Against AC19 (Sabriel) the fizzle pattern held (3 misses in 3 attempts this run). The recharge-4-6 recommendation from FI-SRR-B is still valid for AC18-19 scenarios, but Berserk is already doing meaningful work against AC≤16. **For human:** the recommendation to boost recharge applies specifically to the "all party members AC18+" scenario. If the encounter regularly features at least one low-AC PC (caster, rogue), Berserk stays threatening without a recharge change. Consider framing FI-SRR-B fix as "increase recharge only if run at full-plate party" rather than blanket change.
 
 ### FI-BEL20-A: beholder-escorts-limited — VS recharge-6 variance makes outcome VS-dependent (new, 20th cycle)
 
