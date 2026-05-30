@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-30 13:31 UTC — slice #3 20th-cycle (beholder-escorts-limited) — VICTORY R6 (Bazgar 5/49 dn-4×/revived; Marwen 3/32 per canonical VR dmg; Sabriel 32/44; Beholder 0/110 killed Bazgar hit R6); VS zero recharges 6 rounds (d6: 5,2,2,1,4,4 — 33% event, FI-127 class); DD monopoly R1-R5 confirmed 20th BEL cycle (FI-BE3-02), FI-128 VR pivot correct R6; escorts vaporized R1 Fireball (FI-BE3-01 20th confirm); Sabriel LoH revival loop 4× (20HP total) uncontested — DD monopoly blocked LoH-pressure LA-TL counter (FI-BEL20-B DESIGN DECISION); Phase A 29/29 clean (network blocked, cache pre-seeded seed 494485, 53rd consecutive); 0 bugs auto-fixed; DESIGN DECISIONS: FI-BEL20-A VS recharge-6 variance (VICTORY vs TPK fully VS-dependent), FI-BEL20-B LoH-loop vs DD monopoly priority conflict — see _playtest-runs/2026-05-30T13-31-00.md
+
 - 2026-05-30 12:19 UTC — slice #2 19th-cycle (tank-wall) — VICTORY R3 (Bazgar 32/49, Marwen 19/32, Sabriel 33/44; Rager 0/52 R3 Bazgar; SC 0/33 R3 Marwen SR); Fireball 28 fire double-fail R1 → Rager 14/52+SC 5/33; Bazgar AS 4-atk R1 (10 dmg); Barrage R1 all-save half (7+3+11=21 spread); Berserk R1 1/3-hit (10 Bazgar — MQ-TW-19-A: sim violated no-move prereq, spec correct); Taunt R1 PASS / R2 FAIL (taunted Marwen disadv Fire Bolt → miss; Rager dead R3 before Taunt meaningful); CW 0/3 used (SC 70ft, Rager 30ft → 40ft gap > 30ft CW range — DD-TW-19-1 19th lockout confirm); Rager 38 dmg R1 (AS 10 + Fireball 28) → 14/52 HP — DD-TW-19-2 19th durability-fail confirm; Phase A 29/29 clean (network blocked, cache pre-seeded seed 494484, 52nd consecutive); 0 bugs auto-fixed; DESIGN DECISIONS: DD-TW-19-1 CW range lockout (recommend 60ft or SC start-pos ≤25ft from Rager), DD-TW-19-2 Rager durability (recommend +13 HP or damage-reduction trigger) — see _playtest-runs/2026-05-30T12-19-42.md
 
 - 2026-05-30 11:18 UTC — slice #1 18th-cycle (shrine-wedge) — VICTORY R2 (Bazgar 42/49, Marwen 32/32 untouched, Sabriel DOWNED R2 UF-crit by std_b 20 dmg; std_a dead R1 Fireball+Bazgar, std_b dead R2 Bazgar Action Surge); AR R1 fired (both melee PCs saved — ~16% chance); stagger correct (std_a held R1); Fireball 32 fire no doubling (altar zone suppressed, FI-SW18-A DM-coaching confirm); smite 9 radiant no doubling (altar zone, FI-SW18-B confirm); UF activated on std_b (36 dmg R1 incl 3 OBR self-psychic → advantage R2 → nat-20 crit → Sabriel downed, FI-SW18-C UF+OBR chain working); Hold Person failed (std_b Wis save 18 vs DC15); Phase A 29/29 clean (network blocked, cache pre-seeded seed 494483, 51st consecutive); 1 bug auto-fixed (BUG-SW18-A OBR trigger.match narrowed to melee-5ft to match .md) — see _playtest-runs/2026-05-30T11-18-59.md
@@ -150,6 +152,18 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-BEL20-A: beholder-escorts-limited — VS recharge-6 variance makes outcome VS-dependent (new, 20th cycle)
+
+- **Context:** 2026-05-30 13:31 UTC, slice #3 (beholder-escorts-limited) 20th cycle. Seed 494485. **VICTORY R6** — first slice-3 victory since cycle 10.
+
+  **FI-BEL20-A (DESIGN DECISION):** VS failed to recharge for 6 consecutive rounds (d6 rolls: 5,2,2,1,4,4). P(no recharge in 6 rounds) ≈ 33%. With VS absent, the fight was a 6-round attrition grind — party took damage but remained functional (beholder died R6 from Marwen Fire Bolt + Bazgar longsword). In VS-present cycles (the other ~67%), the fight is a decisive TPK by R3-4. The outcome is strongly bimodal: VS fires → TPK; VS absent → possible party victory. **For human:** Is recharge-6 for VS intentional "rarely fires, devastating when it does"? The current variance creates wildly different fight textures. If the BEL slice should always be threatening/unwinnable, consider recharge-5 (36% per round, expected 2.2 fires in 6 rounds). If one devastating VS event is the design, recharge-6 is correct and this Victory run confirms that without it the party can win.
+
+### FI-BEL20-B: beholder-escorts-limited — LoH revival loop vs DD monopoly priority conflict (new, 20th cycle)
+
+- **Context:** 2026-05-30 13:31 UTC, slice #3 (beholder-escorts-limited) 20th cycle. Seed 494485. VICTORY R6.
+
+  **FI-BEL20-B (DESIGN DECISION):** Sabriel used Lay on Hands 4× to revive Bazgar (5HP each), contributing ~20HP of healing that directly extended the fight 3 rounds and enabled the party kill. The beholder's .md says: "spend 1 legendary action (Tentacle Lash, 1 LA) at the END of Sabriel's turn to pressure her HP" when she LoH-loops. This never fired because DD consumes all 3 LA every round, leaving no LA budget for Tentacle. The two tactics are mutually exclusive when budget is full (3 LA = one DD, no leftover). **For human:** should the LoH-pressure rule take priority over DD in specific conditions? Proposed resolution: "If Sabriel used LoH on an ally this turn AND Sabriel has L2+ slots remaining (making her a valid DD target next turn), skip DD this turn and instead use: Tentacle (1 LA) on Sabriel + Void Ray (2 LA) on the highest-threat PC. Resume DD next turn." This trades one DD for Sabriel HP pressure + VR offensive output, and prevents LoH loop from being entirely uncountered. Not auto-fixing — affects fundamental LA allocation logic.
 
 ### FI-SW18-A: shrine-wedge — Fireball and smite suppression need in-world DM cue (18th-cycle coaching note)
 
