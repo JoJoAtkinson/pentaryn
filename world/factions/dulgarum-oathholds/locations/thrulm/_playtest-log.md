@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-31 12:00 UTC — slice #1 20th-cycle (shrine-wedge) — VICTORY R4 (Bazgar DOWN 0/49, Marwen 20/32, Sabriel 28/44; STD-A KILLED R2, STD-B KILLED R4 Fire Bolt before recharged AR fires); init Bazgar 19 first; stagger correct R1 (STD-B holds AR, STD-A fires); UF wasted on AR R1 (3 PCs in cone, AR correct, but advantage meaningless — FI-SW20-C 20th confirm); OBR hit Bazgar for 10 mid-R2 attack sequence (dying-while-killing — FI-SW20-B POSITIVE); STD-B fired AR R2 at 2 standing PCs with UF active (SIM ERROR + MQ-SW20-A NEW: downed Bazgar counted as 3rd cone target, should have Multiattacked per UF priority); altar zone suppressed Scorching Ray (12 fire vs ~24) and Divine Smite (8 radiant vs ~16) — FI-SW20-D POSITIVE; UF on MA R3 decisive — pushed d20=12 → d20=18 (miss→hit vs AC19 — FI-SW20-E POSITIVE); Sabriel Dex+5 passes AR almost always — 12 total dmg (FI-SW20-F 20th confirm); Phase A 29/29 clean (seed 494509, 60th consecutive); 0 bugs auto-fixed; DESIGN DECISIONS: MQ-SW20-A downed PC in cone for UF priority — see _playtest-runs/2026-05-31T12-00-00.md
+
 - 2026-05-31 11:24 UTC — slice #0 1st-cycle (threshold-patrol) — VICTORY R3 (Bazgar 20/49, Marwen 20/32, Sabriel 22/44; all NPCs down); Marwen Scorching Ray R1 hits SC 3/3 (27 fire, SC 6/33 after R1); SC Barrage R1 hits both front PCs (Bazgar FAIL 12, Marwen FAIL 6); Sabriel smite burst cripples DW-B R1 (20 divine+6 slash → DW-B 1HP); SC CW on DW-A 12HP (≤20HP guard MISSED in sim — FI-TP-0-A); Marwen Firebolt R2 misses SC; SC Shard-Throw R2 hits Marwen (6 pierce → 20HP); DW-B falls R2 Sabriel; SC falls R3 Marwen Firebolt (13 fire); DW-A falls R3 Bazgar+Sabriel; Phase A 29/29 clean (network blocked, cache pre-seeded seed 494507); 0 bugs auto-fixed; DESIGN DECISIONS: FI-TP-0-B CW dead weight in patrol formation (0/3 charges fired usefully), MQ-TP-0-B SC/DW-B init-tie ordering determines CW validity — see _playtest-runs/2026-05-31T11-24-00.md
 
 - 2026-05-31 10:23 UTC — slice #7 11th-cycle (empty-void) — TPK R3 (Marwen DISINTEGRATED R1: DR recharge d6=6 same round as surprise miss, hit 25 vs AC15, 31 force; Bazgar 0/49 R2: grapple TL1 + Maw auto-crit 46 piercing; Sabriel DISINTEGRATED R3: DR recharged again d6=6, hit 21 vs AC19 prone, 47 force; Beholder 59/110 HP, LR 3/3 untouched, VS never recharged); surprise DR vs Bazgar AC18 MISSED (9 vs AC18); DR recharged R1 (d6=6) → pivoted to Marwen (AC15 easy hit); DD R1 Marwen fail L3 lost; Sabriel smite R1+R2 = 24 dmg; lair VE×2 then UG Sabriel prone R3; FI-EV11-A: consecutive DR recharge (6,_,6) 2 DRs in 3 rounds; FI-EV11-C: VS recharge-6 never fires in sub-4-round fight (7th confirm); FI-EV11-D: LoH pool 25 HP unused (Sabriel no action slot for revive before DR); MQ-EV11-A NEW: DR recharge timing — start-of-beholder-turn vs start-of-round (fires before lair action in sim); MQ-EV10-B RESOLVED: DR is attack-roll not save; MQ-EV10-A 2nd-cycle unresolved: hard-trigger → DR-surprise too punishing in negotiation context; Phase A 29/29 clean (seed 494506); 0 bugs auto-fixed — see _playtest-runs/2026-05-31T10-23-02.md
@@ -178,6 +180,18 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### MQ-SW20-A: shrine-wedge — downed PC counts as "enemy in cone" for UF priority? (20th cycle, new)
+
+- **Context:** 2026-05-31 12:00 UTC, slice #1 (shrine-wedge) 20th cycle. Seed 494509. VICTORY R4.
+
+  **MQ-SW20-A (NEW):** In R2, Bazgar was downed (0 HP, unconscious) entering STD-B's turn. STD-B had UF active. The .md says: "if UF active and only 2 enemies in cone, PREFER Multiattack over AR." The sim counted unconscious Bazgar as a 3rd cone enemy and fired AR instead of Multiattack. The actual tactical impact was minimal (AR downed Bazgar who was already at 10 HP with two passing saves for Sabriel/Marwen), but the ruling matters for future cycles where UF+AR is fired at a 2-standing-PC situation.
+
+  **Recommendation:** Downed/unconscious PCs do NOT count as "enemies in cone" for UF priority purposes. They cannot take actions, cannot be meaningfully targeted by save effects, and their presence inflates the cone count artificially. Add one line to shrine-touched-derro.md under the UF tactics note: *"Unconscious or downed creatures do not count as active enemies in the cone for this calculation."*
+
+  Note: this does NOT change the stagger rule or the below-20-HP AR-reckless rule — only the UF priority check.
+
+  **Human sign-off required** before editing shrine-touched-derro.md.
 
 ### FI-BEL21-C: beholder-escorts-limited — manifest_thralls lair guidance when 1 survivor at low HP
 
