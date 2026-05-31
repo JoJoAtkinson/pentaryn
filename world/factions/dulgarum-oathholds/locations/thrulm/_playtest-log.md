@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-31 17:00 UTC — slice #5 18th-cycle (solo-rager-rush) — TPK R8 (first SRR TPK in 18 cycles); Rager-C survives 23/52 HP; Fireball R1 poor penetration (2/3 ragers saved, only RB 22 full dmg) — Fireball-dependency structural confirm (FI-SRR18-E NEW); Rager-A 3× consecutive Berserk R1/R2/R3 at near-death (recharge 6,5 streak — FI-SRR18-C pattern data); Berserk 3-line-cap overhead 18th confirm (FI-SRR18-D DESIGN DECISION); FI-31 18th confirm (Taunt inert vs save-based spells); Sabriel down R3, Bazgar down R4, Marwen solo R5-R8 (Fire Bolt vs AC16 slow chip, Misty Step R8 too late); MQ-SRR18-A: Rager damage modifier +2 (DB) vs +3 (sim harness error) — human verify Str mod vs stat array; Phase A 29/29 clean (network blocked, cache pre-seeded seed 494513, 64th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-31T17-00-00.md
+
 - 2026-05-31 16:00 UTC — slice #4 (final-confrontation) — TPK R3; Marwen DR-disintegrated R2 (permanent); VS killing blow Sabriel R3 (27–39 psy, LoH exhausted); Fireball R2 kills TD-1/2/3, chunks beholder −40 HP (STD fire vuln SUPPRESSED altar zone — working); Antireality blocks Sabriel L2 smite R3 (hit 19 = AC+2=19, exact margin — FI-FC5-C POSITIVE confirm); beholder 70/110 HP at TPK; SIM-FC5-A: STD-A stagger bug (fired AR in R1, should have held — spec correct, sim checked at action-time not round-start); SIM-FC5-B: dual-dice persistent; SIM-FC5-C: lair Unstable Ground targeted downed Bazgar R2 (wasted — .md says skip on unconscious); FI-FC5-A: R1 burst pre-lair extremely front-loaded (STD-B init 25 fires AR before lair action — Marwen downed R1 rotation, disintegrated R2); FI-FC5-B: altar zone fire suppression confirmed working; MQ-FC5-A: stagger rule start-of-round check needs DM reminder bullet in STD checklist (human decision); Phase A 29/29 clean (network blocked, cache pre-seeded seed 494512, 63rd consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-31T16-00-00.md
 
 - 2026-05-31 15:22 UTC — slice #3 22nd-cycle (beholder-escorts-limited) — TPK R7 (sim-as-run; sim corrupted by 2 harness errors — see MQ-BEL22-D/E; corrected TPK likely R2-3); VS R1 one-shots Marwen 38 psy (FI-BEL22-B 22nd confirm); DR 6/6 R1 recharge + 5/6 R3 recharge — two DR fires in 3 rounds (FI-BEL22-E lucky cluster); Fireball kills TA+TC R1 thrall-bait (FI-BEL22-A 22nd confirm); MQ-BEL22-D CRITICAL SIM ERROR: DR check printed raw d20 not total — R2 DR vs Bazgar actual total 20 vs AC18 = HIT (Bazgar should have been DISINTEGRATED R2), sim showed MISS; MQ-BEL22-E: LoH used on disintegrated Marwen R3 (disintegration state not tracked); SIM DOUBLE-CORRUPTION: fight trajectory from R2+ unreliable; authoritative: Bazgar disint R2, Marwen disint R3, Sabriel solo vs Beholder ≤72 HP → TPK likely R3-4; Maw grapple-crit 44 piercing kills Sabriel R7 in sim (FI-BEL22-C positive confirm); DD monopoly R1-R6 22nd confirm (FI-BEL22-F → FI-BE3-02); Antireality correct R4 (atk=18 ≤ AC+2=19 → miss after +2); MQ-BEL22-B: dual bonus action (compel+shrine_drift, sim error); Phase A 29/29 clean (network blocked, cache pre-seeded seed 494511, 62nd consecutive); 0 bugs auto-fixed; no new DESIGN DECISIONS (all findings are pattern confirms or sim harness errors) — see _playtest-runs/2026-05-31T15-22-44.md
@@ -186,6 +188,36 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-SRR18-D: solo-rager-rush — Berserk 3-line output cap: add DM cue to narration? (18th cycle, new pattern confirm)
+
+- **Context:** 2026-05-31 17:00 UTC, slice #5 (solo-rager-rush) 18th cycle. Seed 494513. TPK R8.
+
+  **FI-SRR18-D (18th-cycle confirm):** The Berserk DB output always prints 3 attack lines (labeled "target 1", "target 2", "target 3") regardless of how many enemies are actually in reach. The tactics .md says *"DB output always shows 3 attack lines — DM caps at actual in-reach creature count and skips excess lines."* This instruction is correct but lives in Tactics, not in the action output itself. At the table, a DM who presses the Berserk button sees 3 lines and must remember to discard extras — a non-trivial cognitive load in a fast-moving combat.
+
+  **Recommendation:** Append a parenthetical to the Berserk `output` field narration line: *"(DM: cap at actual in-reach target count — discard excess lines)"*. This is a DB narration change, not a mechanical change. Would require `combat_action_upsert` to update the `output` field. Low-risk, high-DM-UX value.
+
+  **Human sign-off required** before editing the DB. Confirm that the parenthetical style is acceptable for the other multi-target attack outputs.
+
+### FI-SRR18-E: solo-rager-rush — fight outcome entirely Fireball-dependent (18th cycle, first TPK)
+
+- **Context:** 2026-05-31 17:00 UTC, slice #5 (solo-rager-rush) 18th cycle. Seed 494513. TPK R8.
+
+  **FI-SRR18-E (new):** All 17 prior solo-rager-rush cycles were VICTORY. This cycle is the first TPK, caused by poor Fireball penetration (2/3 ragers made their Dex saves, dealing only half-damage 11 each). The structural pattern is clear: Fireball full-fail → VICTORY R3–4; Fireball half-penetration → TPK R5–8. The L5 party has no winning path against 3× CR2 ragers without one clean Fireball.
+
+  **This is not a bug.** Solo-rager-rush is a pressure-test, not a balanced fight. The Fireball-dependency is expected given the action economy. However: (a) the slice has very low decision depth — it's essentially a single dice-check wrapped in 3–8 rounds of resolution; (b) a DM running this live would see Fireball succeed 17 out of 18 times and conclude the party "always wins," missing that one bad-luck cycle ends in TPK. The fight is more volatile than it appears.
+
+  **No action required.** Logging as structural context for encounter design notes. If the slice is used as a warmup fight it should carry a DM note: *"This encounter is Fireball-gated. If Marwen's Fireball fails to drop at least 1 rager, the party should retreat."*
+
+### MQ-SRR18-A: solo-rager-rush — Rager Greataxe damage modifier: +2 (DB) vs +3 (stat block saves)?
+
+- **Context:** 2026-05-31 17:00 UTC, slice #5 (solo-rager-rush) 18th cycle. Seed 494513. TPK R8.
+
+  **MQ-SRR18-A (new):** The Berserk and Multiattack DB outputs print `+2` as the damage modifier. The rager .md stat block shows "Saves Str +4, Con +4" — if Str save = prof(+2) + Str mod, then Str mod = +2. However, Str save +4 with proficiency +3 (CR 2) would give Str mod +1, not +2. The modifier is ambiguous from the stat block header alone.
+
+  **Recommendation:** Verify the rager's Strength modifier against the original stat array. If Str mod = +2, DB is correct; if Str mod = +3 (half-plate melee tank intended), the DB spec needs updating via `combat_action_upsert`. A +1 difference per hit (~7 hits this cycle) equals ~7 HP of underestimated damage — not fight-changing, but affects accuracy of future sim calibration.
+
+  **Human check required** (stat array file or design notes). No auto-fix applied.
 
 ### MQ-FC5-A: final-confrontation — stagger rule start-of-round check: add checklist prompt? (5th cycle, new)
 
