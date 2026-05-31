@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-31 19:00 UTC — slice #7 12th-cycle (empty-void) — TPK R3 (Bazgar DISINTEGRATED R3 DR hit 21 vs AC18; Sabriel+Marwen fled — party non-viable; beholder 44/110 HP); surprise DR nat-1 MISS (1+6=7 vs Marwen AC15 — MQ-EV12-B 12th-cycle MQ-EV10-A escalation); VS recharged R1 (d6=6) fires R1 → all 3 PCs frightened; VS damage only 12 (6d10 low-roll, 1,1,2,2,3,3) but fear rider decisive — Bazgar 0/4 hits R2-R3 at disadvantage (FI-EV12-B confirm); DD twice failed by Marwen (CHA save 17 both vs DC16 — FI-EV12-D new, 9% streak); Sabriel Antireality save R2 hit 19 = AC+2=19 but not blocked (19 ≥ 19 = still hit, spec correct); LoH unused except 5pts Marwen revive R3 (FI-EV12-E confirm); DR missed twice total (surprise nat-1 + R2 roll 14 vs Marwen AC15) before landing hit R3 Bazgar (FI-EV12-A / MQ-EV12-C new); negotiation pacing correct (2 exchanges before hard-trigger, FI-NEW-EV5-B working); lair rotation R1=UG R2=VE R3=UG correct (FI-129); Phase A 29/29 clean (network blocked, cache pre-seeded seed 494515, 66th consecutive); 0 bugs auto-fixed; DESIGN DECISIONS: FI-EV12-A MQ-EV10-A escalated (hard-trigger → DR-surprise feel binary; recommend VR warning-shot instead), FI-EV12-C VS recharge-6 too binary (recommend 5-6), FI-EV12-D DD-fail-adapt guidance gap — see _playtest-runs/2026-05-31T19-00-00.md
+
 - 2026-05-31 18:19 UTC — slice #6 (shardcaller-team) — CORRECTED VICTORY R3 (Marwen DOWN R2, Bazgar+Sabriel standing; raw sim reported TPK R5 due to SIM-BUG-SCT6-A hit-overcounting); PTV+Barrage disadv combo proc'd correctly (Marwen DC13 Dex with disadv R1); CW misdirection: SC-A CW'd designated-barrage SC-C (advantage wasted — SIM-BUG-SCT6-B barrage pre-assignment not pre-computed); Barrage stagger worked (1 per round confirmed); Shard-Barrage recharge failed 4 consecutive turns for SC-C (FI-SCT6-D new pattern data); MQ-SCT6-A new: 3-SC barrage assignment protocol not explicit in checklist (DESIGN DECISION — see below); Phase A 29/29 clean (network blocked, cache pre-seeded seed 494514, 65th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-31T18-19-53.md
 
 - 2026-05-31 17:00 UTC — slice #5 18th-cycle (solo-rager-rush) — TPK R8 (first SRR TPK in 18 cycles); Rager-C survives 23/52 HP; Fireball R1 poor penetration (2/3 ragers saved, only RB 22 full dmg) — Fireball-dependency structural confirm (FI-SRR18-E NEW); Rager-A 3× consecutive Berserk R1/R2/R3 at near-death (recharge 6,5 streak — FI-SRR18-C pattern data); Berserk 3-line-cap overhead 18th confirm (FI-SRR18-D DESIGN DECISION); FI-31 18th confirm (Taunt inert vs save-based spells); Sabriel down R3, Bazgar down R4, Marwen solo R5-R8 (Fire Bolt vs AC16 slow chip, Misty Step R8 too late); MQ-SRR18-A: Rager damage modifier +2 (DB) vs +3 (sim harness error) — human verify Str mod vs stat array; Phase A 29/29 clean (network blocked, cache pre-seeded seed 494513, 64th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-31T17-00-00.md
@@ -190,6 +192,46 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### MQ-EV10-A / FI-EV12-A (ESCALATED): empty-void — hard-trigger → DR surprise too binary; 12-cycle confirm (2026-05-31T19)
+
+- **Context:** 2026-05-31 19:00 UTC, slice #7 (empty-void) 12th cycle. Seed 494515.
+
+  MQ-EV10-A has been raised each cycle since the 10th. This cycle is the 12th confirm. Summary: when the party's hard-threat (explicit lower-shaft investigation statement) triggers the surprise round, the beholder fires Disintegration Ray. DR outcome splits the fight into two degenerate results:
+  - DR hits Marwen (55% vs AC 15): permanent death before combat formally begins. Fight over in R1-2.
+  - DR misses (45%): fight extends, feels anticlimactic — the beholder's opening was a whiff.
+
+  12-cycle data suggests neither outcome feels satisfying. The miss (this cycle, nat 1 surprise round) undercuts tension; the hit (most prior cycles) is permanently-punishing before the party reacts.
+
+  **Recommendation:** Change the hard-trigger response:
+  - **Step 1 (hard threat):** Beholder fires a **Void Ray** (2 legendary actions, DC 16 Dex, 4d10 force) as a *warning shot* rather than DR. No surprise round — roll initiative immediately.
+  - **DR** becomes available as a first-round action once initiative is established.
+  - Second entry after dismissal remains "hostile on sight = DR in surprise" (per existing .md note).
+  
+  This gives: threat-response → initiative → real fight. DR stays lethal and scary but fires when the party can react. LoH/smites/positioning all matter.
+
+  **Human sign-off required.** Changes negotiation trigger spec in beholder.md. Moderate complexity. Recommend testing in slice #7 cycle 13 before committing.
+
+### FI-EV12-C (NEW): empty-void — VS recharge-6 creates binary outcomes; consider recharge 5-6 (2026-05-31T19)
+
+- **Context:** 2026-05-31 19:00 UTC, slice #7 12th cycle. Seed 494515.
+
+  12-cycle data: VS fired in 5 of 12 cycles (~42%). All 5 VS-fire cycles ended TPK R2-3. All 7 non-VS cycles ran R4-6 with varied outcomes. The encounter is essentially two different fights depending on one d6 per round. At recharge 6-only, P(fires in 3 rounds) = 42%, in 4 rounds = 52%. At recharge 5-6, P(fires in 3 rounds) = 70%, in 4 rounds = 84%.
+
+  The solo beholder without VS is a genuinely interesting fight (LA economy, DR, frightened riders). With VS it's a near-certain TPK. Recharge 5-6 would make VS the expected fight-shaper rather than the lucky wildcard.
+
+  **Recommendation:** Change void_scream spec `recharge: 6` to `recharge: 5`. Run 3 validation cycles on slice #7. If VS fires too reliably (>80%), revert. **Human sign-off required.** DB change: `combat_action_upsert("beholder-thrulm", "void_scream", {..., "recharge": 5, ...})`.
+
+### FI-EV12-D (NEW): empty-void — Drain Divinity tactics gap: no guidance on DD failure adaptation (2026-05-31T19)
+
+- **Context:** 2026-05-31 19:00 UTC, slice #7 12th cycle. Seed 494515.
+
+  Beholder spent 6 LA on DD against Marwen across R1-R2. Both times Marwen saved (CHA +1 vs DC 16, ~30% save rate, hit threshold both times at 17). No guidance in the tactics section for "what to do when DD fails." Result: beholder auto-retried DD on next LA budget, burning another 3 LA with zero return.
+
+  **Recommended tactics addition** to beholder.md DD priority section:
+  > "If DD fails (target saved): do NOT immediately retry DD on next LA budget. Use Void Ray (2 LA) once against that target to apply HP pressure, then retry DD on the following budget. Pressing the same save twice gives the caster free consecutive chances at 30% success rate each; the VR forces them to spend resources to stay up, which makes the next DD failure more costly."
+
+  **Human sign-off required.** Edit to beholder.md tactics section only; no DB change needed. Low-risk.
 
 ### MQ-SCT6-A: shardcaller-team — 3-SC barrage designation not explicit in checklist (new, 2026-05-31T18)
 
