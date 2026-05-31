@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-31 18:19 UTC — slice #6 (shardcaller-team) — CORRECTED VICTORY R3 (Marwen DOWN R2, Bazgar+Sabriel standing; raw sim reported TPK R5 due to SIM-BUG-SCT6-A hit-overcounting); PTV+Barrage disadv combo proc'd correctly (Marwen DC13 Dex with disadv R1); CW misdirection: SC-A CW'd designated-barrage SC-C (advantage wasted — SIM-BUG-SCT6-B barrage pre-assignment not pre-computed); Barrage stagger worked (1 per round confirmed); Shard-Barrage recharge failed 4 consecutive turns for SC-C (FI-SCT6-D new pattern data); MQ-SCT6-A new: 3-SC barrage assignment protocol not explicit in checklist (DESIGN DECISION — see below); Phase A 29/29 clean (network blocked, cache pre-seeded seed 494514, 65th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-31T18-19-53.md
+
 - 2026-05-31 17:00 UTC — slice #5 18th-cycle (solo-rager-rush) — TPK R8 (first SRR TPK in 18 cycles); Rager-C survives 23/52 HP; Fireball R1 poor penetration (2/3 ragers saved, only RB 22 full dmg) — Fireball-dependency structural confirm (FI-SRR18-E NEW); Rager-A 3× consecutive Berserk R1/R2/R3 at near-death (recharge 6,5 streak — FI-SRR18-C pattern data); Berserk 3-line-cap overhead 18th confirm (FI-SRR18-D DESIGN DECISION); FI-31 18th confirm (Taunt inert vs save-based spells); Sabriel down R3, Bazgar down R4, Marwen solo R5-R8 (Fire Bolt vs AC16 slow chip, Misty Step R8 too late); MQ-SRR18-A: Rager damage modifier +2 (DB) vs +3 (sim harness error) — human verify Str mod vs stat array; Phase A 29/29 clean (network blocked, cache pre-seeded seed 494513, 64th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-31T17-00-00.md
 
 - 2026-05-31 16:00 UTC — slice #4 (final-confrontation) — TPK R3; Marwen DR-disintegrated R2 (permanent); VS killing blow Sabriel R3 (27–39 psy, LoH exhausted); Fireball R2 kills TD-1/2/3, chunks beholder −40 HP (STD fire vuln SUPPRESSED altar zone — working); Antireality blocks Sabriel L2 smite R3 (hit 19 = AC+2=19, exact margin — FI-FC5-C POSITIVE confirm); beholder 70/110 HP at TPK; SIM-FC5-A: STD-A stagger bug (fired AR in R1, should have held — spec correct, sim checked at action-time not round-start); SIM-FC5-B: dual-dice persistent; SIM-FC5-C: lair Unstable Ground targeted downed Bazgar R2 (wasted — .md says skip on unconscious); FI-FC5-A: R1 burst pre-lair extremely front-loaded (STD-B init 25 fires AR before lair action — Marwen downed R1 rotation, disintegrated R2); FI-FC5-B: altar zone fire suppression confirmed working; MQ-FC5-A: stagger rule start-of-round check needs DM reminder bullet in STD checklist (human decision); Phase A 29/29 clean (network blocked, cache pre-seeded seed 494512, 63rd consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-31T16-00-00.md
@@ -188,6 +190,28 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### MQ-SCT6-A: shardcaller-team — 3-SC barrage designation not explicit in checklist (new, 2026-05-31T18)
+
+- **Context:** 2026-05-31 18:19 UTC, slice #6 (shardcaller-team) 65th cycle. Seed 494514.
+
+  The derro-shardcaller checklist (item 5) describes the stagger rule and provides 2-SC endgame guidance, but does not specify which SC is the designated barrage-firer in a 3-SC formation. The testbot simulation chose "2nd-highest-initiative SC fires Barrage", which is consistent with the 2-SC endgame rule, but the checklist doesn't state this explicitly for 3+ SCs.
+
+  The ambiguity also caused a simulation error (SIM-BUG-SCT6-B): because the barrage designee wasn't pre-assigned before the first SC decided on CW targets, SC-A Call Weakness'd the barrage SC (whose advantage was wasted on a save-based attack).
+
+  **Recommendation:** Add to checklist item 5 under the STAGGER paragraph: *"3-SC designation: at start of round, designate the 2nd-highest-initiative alive SC as Barrage this round; the 1st and 3rd multiattack. This designation must be made before the first SC acts so CW selection can exclude the barrage SC."*
+
+  **Human sign-off required.** This is a clarification edit to the .md; no DB change needed. Low-risk.
+
+### FI-SCT6-A: shardcaller-team — Marwen R1-R2 elimination near-automatic vs 3-SC formation (new, 2026-05-31T18)
+
+- **Context:** 2026-05-31 18:19 UTC, slice #6 (shardcaller-team) 65th cycle. Seed 494514.
+
+  With 3 SCs using stagger (1 Barrage + 2 multiattacks), Marwen (32 HP, AC 15 wizard) receives ~25 damage in R1 (surviving to 7 HP), then falls early R2 from a follow-up multiattack. Her R1 Fireball lands, but she is dead before a 2nd Fireball is possible. This pattern may repeat consistently across cycles since the 3-SC formation focuses fire on the lowest-AC target.
+
+  **Not a balance issue** at the slice level (Shardcaller Team is meant to be dangerous). Note for human: if this slice is used mid-dungeon (Marwen already resource-depleted), it could be a near-instant kill. Consider whether the party has access to pre-combat positioning options before using this formation in-session.
+
+  **No action required.** Logging as structural design context.
 
 ### FI-SRR18-D: solo-rager-rush — Berserk 3-line output cap: add DM cue to narration? (18th cycle, new pattern confirm)
 
