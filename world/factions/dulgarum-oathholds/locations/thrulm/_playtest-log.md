@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-31 16:00 UTC — slice #4 (final-confrontation) — TPK R3; Marwen DR-disintegrated R2 (permanent); VS killing blow Sabriel R3 (27–39 psy, LoH exhausted); Fireball R2 kills TD-1/2/3, chunks beholder −40 HP (STD fire vuln SUPPRESSED altar zone — working); Antireality blocks Sabriel L2 smite R3 (hit 19 = AC+2=19, exact margin — FI-FC5-C POSITIVE confirm); beholder 70/110 HP at TPK; SIM-FC5-A: STD-A stagger bug (fired AR in R1, should have held — spec correct, sim checked at action-time not round-start); SIM-FC5-B: dual-dice persistent; SIM-FC5-C: lair Unstable Ground targeted downed Bazgar R2 (wasted — .md says skip on unconscious); FI-FC5-A: R1 burst pre-lair extremely front-loaded (STD-B init 25 fires AR before lair action — Marwen downed R1 rotation, disintegrated R2); FI-FC5-B: altar zone fire suppression confirmed working; MQ-FC5-A: stagger rule start-of-round check needs DM reminder bullet in STD checklist (human decision); Phase A 29/29 clean (network blocked, cache pre-seeded seed 494512, 63rd consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-31T16-00-00.md
+
 - 2026-05-31 15:22 UTC — slice #3 22nd-cycle (beholder-escorts-limited) — TPK R7 (sim-as-run; sim corrupted by 2 harness errors — see MQ-BEL22-D/E; corrected TPK likely R2-3); VS R1 one-shots Marwen 38 psy (FI-BEL22-B 22nd confirm); DR 6/6 R1 recharge + 5/6 R3 recharge — two DR fires in 3 rounds (FI-BEL22-E lucky cluster); Fireball kills TA+TC R1 thrall-bait (FI-BEL22-A 22nd confirm); MQ-BEL22-D CRITICAL SIM ERROR: DR check printed raw d20 not total — R2 DR vs Bazgar actual total 20 vs AC18 = HIT (Bazgar should have been DISINTEGRATED R2), sim showed MISS; MQ-BEL22-E: LoH used on disintegrated Marwen R3 (disintegration state not tracked); SIM DOUBLE-CORRUPTION: fight trajectory from R2+ unreliable; authoritative: Bazgar disint R2, Marwen disint R3, Sabriel solo vs Beholder ≤72 HP → TPK likely R3-4; Maw grapple-crit 44 piercing kills Sabriel R7 in sim (FI-BEL22-C positive confirm); DD monopoly R1-R6 22nd confirm (FI-BEL22-F → FI-BE3-02); Antireality correct R4 (atk=18 ≤ AC+2=19 → miss after +2); MQ-BEL22-B: dual bonus action (compel+shrine_drift, sim error); Phase A 29/29 clean (network blocked, cache pre-seeded seed 494511, 62nd consecutive); 0 bugs auto-fixed; no new DESIGN DECISIONS (all findings are pattern confirms or sim harness errors) — see _playtest-runs/2026-05-31T15-22-44.md
 
 - 2026-05-31 14:18 UTC — slice #2 22nd-cycle (tank-wall) — VICTORY R2 (Bazgar 35/49, Marwen 24/32, Sabriel 39/44; Rager 0/52 R1 Fireball+Sabriel+Bazgar burst; SC 0/33 R2 MM+Bazgar); SC init 21 CW'd Rager R1 (correctly), Rager init 1 NEVER ACTED — CW wasted again (FI-TW22-B 22nd-cycle Rager-pre-turn-death confirm); Fireball 30 fire R1 (Rager full-fail → 22/52, SC half 15 → 18/33); Sabriel 7 slashing (Rager 15/52); Bazgar 8+9 slashing kill Rager; Taunt never fired (Rager dead before turn); SC R2: TR (bonus) + Barrage (main action): Bazgar full 14, Sabriel half 5 — TR+Barrage correctly combined (FI-182 confirm); MM 14 + Bazgar 10 kill SC R2; SIM ERROR MQ-TW-22-A: harness applied CW advantage to Bazgar's attack rolls vs Rager (wrong — CW gives Rager advantage on its own attacks; Rager never collected it); Phase A 29/29 clean (network blocked, cache pre-seeded seed 494510, 61st consecutive); 0 bugs auto-fixed; no new DESIGN DECISIONS (FI-TW22-B is 22nd confirm of DD-TW-18-1/DD-TW-19-2 Rager durability pattern) — see _playtest-runs/2026-05-31T14-18-59.md
@@ -184,6 +186,16 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### MQ-FC5-A: final-confrontation — stagger rule start-of-round check: add checklist prompt? (5th cycle, new)
+
+- **Context:** 2026-05-31 16:00 UTC, slice #4 (final-confrontation) 5th cycle. Seed 494512. TPK R3.
+
+  **MQ-FC5-A (NEW):** The stagger rule says "Stagger is evaluated at the START of the round — check both STDs *before any actions resolve*." This is already in the .md under Tactics. However, the playtest sim violated it by checking at time-of-action (when STD-A acted at init 7, STD-B had already set its `ar_used` flag, making the "both have AR" condition false). A live DM faces the same cognitive load: by the time the lower-init STD acts, the higher-init STD has already gone, and the DM may not remember to have pre-marked the hold.
+
+  **Recommendation:** Add a single bullet to shrine-touched-derro.md Start-of-turn checklist (round-start section) — *"⚑ STAGGER REMINDER: At the start of every round (before any STD acts), if BOTH shrine-touched derro have Ancient Resonance available, mark the lower-initiative one as 'AR HELD this round'."* The text in Tactics is correct; this is a DM-prompt duplication in the checklist where DMs are more likely to catch it.
+
+  **Human sign-off required** before editing shrine-touched-derro.md. (Low risk — no mechanical change, documentation only.)
 
 ### MQ-SW20-A: shrine-wedge — downed PC counts as "enemy in cone" for UF priority? (20th cycle, new)
 
