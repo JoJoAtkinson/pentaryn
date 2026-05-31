@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-05-31 20:17 UTC — slice #0 2nd-cycle (threshold-patrol) — VICTORY R3 (Bazgar 28/49, Marwen 21/32, Sabriel 44/44 untouched; all NPCs down); SC Barrage R1 corridor correct (Bazgar full 8, Marwen half 6 — FI-75 R1-corridor-default 2nd confirm); SC CW 0/3 used — MQ-12 guard fired (DW-A 11 HP ≤20 at SC's R1 turn, already-acted; FI-TP-2-A 2nd CW-lockout confirm, new mechanism: Bazgar R1-burst pre-depletes DW-A); Marwen Slow R1 hit 1/3 (DW-A fail, DW-B+SC resist; SC WIS+4 resisted 23 vs DC15); MQ-TP-2-A NEW: Slow+Multiattack ruling — sim applied 1-attack restriction, correct ruling is both attacks allowed (Multiattack = 1 action; Slow limits actions not attacks-per-action) — DM coaching note needed in DW .md; MQ-NEW-TP10-1 DW-B peel to Marwen 2nd-confirm (peeled R1, Marwen took 5 dmg); FI-TP-2-B: Sabriel 44/44 untouched 2nd-cycle (split-peel never re-targets divine martial — 2nd-cycle confirm); Trip Attack vs DW-A STR save 17 vs DC15 = resist (variance, not flag); SIM ERROR: Marwen scripted to re-cast Slow R2 (concentration conflict — authoritative: Firebolt R2 kills SC instead); Phase A 29/29 clean (network blocked, cache pre-seeded seed 494516, 67th consecutive); 0 bugs auto-fixed; DESIGN DECISIONS: FI-TP-2-A CW structural lockout 2nd-confirm (new burst-mechanism), MQ-TP-2-A Slow+Multiattack DM note needed — see _playtest-runs/2026-05-31T20-17-31.md
+
 - 2026-05-31 19:00 UTC — slice #7 12th-cycle (empty-void) — TPK R3 (Bazgar DISINTEGRATED R3 DR hit 21 vs AC18; Sabriel+Marwen fled — party non-viable; beholder 44/110 HP); surprise DR nat-1 MISS (1+6=7 vs Marwen AC15 — MQ-EV12-B 12th-cycle MQ-EV10-A escalation); VS recharged R1 (d6=6) fires R1 → all 3 PCs frightened; VS damage only 12 (6d10 low-roll, 1,1,2,2,3,3) but fear rider decisive — Bazgar 0/4 hits R2-R3 at disadvantage (FI-EV12-B confirm); DD twice failed by Marwen (CHA save 17 both vs DC16 — FI-EV12-D new, 9% streak); Sabriel Antireality save R2 hit 19 = AC+2=19 but not blocked (19 ≥ 19 = still hit, spec correct); LoH unused except 5pts Marwen revive R3 (FI-EV12-E confirm); DR missed twice total (surprise nat-1 + R2 roll 14 vs Marwen AC15) before landing hit R3 Bazgar (FI-EV12-A / MQ-EV12-C new); negotiation pacing correct (2 exchanges before hard-trigger, FI-NEW-EV5-B working); lair rotation R1=UG R2=VE R3=UG correct (FI-129); Phase A 29/29 clean (network blocked, cache pre-seeded seed 494515, 66th consecutive); 0 bugs auto-fixed; DESIGN DECISIONS: FI-EV12-A MQ-EV10-A escalated (hard-trigger → DR-surprise feel binary; recommend VR warning-shot instead), FI-EV12-C VS recharge-6 too binary (recommend 5-6), FI-EV12-D DD-fail-adapt guidance gap — see _playtest-runs/2026-05-31T19-00-00.md
 
 - 2026-05-31 18:19 UTC — slice #6 (shardcaller-team) — CORRECTED VICTORY R3 (Marwen DOWN R2, Bazgar+Sabriel standing; raw sim reported TPK R5 due to SIM-BUG-SCT6-A hit-overcounting); PTV+Barrage disadv combo proc'd correctly (Marwen DC13 Dex with disadv R1); CW misdirection: SC-A CW'd designated-barrage SC-C (advantage wasted — SIM-BUG-SCT6-B barrage pre-assignment not pre-computed); Barrage stagger worked (1 per round confirmed); Shard-Barrage recharge failed 4 consecutive turns for SC-C (FI-SCT6-D new pattern data); MQ-SCT6-A new: 3-SC barrage assignment protocol not explicit in checklist (DESIGN DECISION — see below); Phase A 29/29 clean (network blocked, cache pre-seeded seed 494514, 65th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-31T18-19-53.md
@@ -192,6 +194,37 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-TP-2-A: threshold-patrol — CW structural lockout 2nd-cycle confirm; new burst-mechanism identified (2026-05-31T20)
+
+- **Context:** 2026-05-31 20:17 UTC, slice #0 (threshold-patrol) 2nd cycle. Seed 494516.
+
+  CW was unused for the 2nd consecutive TP cycle (1st-cycle: FI-TP-0-B). New mechanism confirmed: in this run, Bazgar's R1 burst (trip attack + longsword × 2) dropped DW-A to 11/27 HP before SC (init 8, lowest) could act. The MQ-12 guard correctly blocked CW on the already-acted DW-A (≤20 HP).
+
+  Root cause: SC always acts last in TP formation (init 8 this run, init 8 prior run). By SC's first turn, the closest DW ally has absorbed a full PC attack round and is typically ≤20 HP.
+
+  In R2, DW-A was dead before SC's turn. DW-B was at 19 HP and would have been borderline (MQ-12 guard at 20 HP boundary) — but also already-acted.
+
+  **Implication:** CW has effective utility in TP formation only when SC rolls high initiative (≥15 to act before both DW allies). With 2-DW + 1-SC formation and SC's typical Dex-based initiative, this is structurally rare.
+
+  **Options for human review:**
+  1. Lower MQ-12 guard from ≤20 to ≤15 HP for threshold-patrol context (allows CW when ally is wounded but functional).
+  2. Add SC guidance: "If both allies have already-acted this round at ≤20 HP, Tactical Retreat instead of holding CW."
+  3. Accept CW as strategically available on high-init SC draws only (no change to spec).
+  4. Revisit SC starting position — placing SC closer to DW allies might let a different ally serve as CW target.
+  
+  **Human sign-off needed.** No DB change required; .md tactics edit only if option 1 or 2 chosen.
+
+### MQ-TP-2-A: threshold-patrol — Slow + Multiattack ruling; DW coaching note needed (2026-05-31T20)
+
+- **Context:** 2026-05-31 20:17 UTC, slice #0 (threshold-patrol) 2nd cycle. Seed 494516.
+
+  DW-A was Slowed R1 (1 of 3 NPCs caught). Simulation incorrectly applied 1-attack cap to DW-A's Multiattack. Correct 5e ruling: Slow restricts to "only one action per turn" — Multiattack IS one action. A slowed DW-A should still resolve both axe swings when using Multiattack. What Slow prevents: using *both* an action AND a bonus action (can only use one or the other). Drilling-advantage on a Slowed Multiattack is unchanged.
+
+  **Recommended fix:** Add a bullet to the DW .md start-of-turn checklist:
+  > "If SLOWED: can still use Multiattack (both attacks). Cannot also use a bonus action the same turn. Cunning Action is unavailable. No reactions."
+
+  Low-risk .md edit. Human sign-off recommended but optional.
 
 ### MQ-EV10-A / FI-EV12-A (ESCALATED): empty-void — hard-trigger → DR surprise too binary; 12-cycle confirm (2026-05-31T19)
 
