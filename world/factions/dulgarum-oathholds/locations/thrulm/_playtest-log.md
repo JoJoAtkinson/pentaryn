@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-02 21:20 UTC — slice #6 20th-cycle (shardcaller-team) — VICTORY R2 (Bazgar 31/49, Marwen 11/32 sim / ~5/32 auth-PTV, Sabriel 44/44 untouched; all 3 SCs dead; SC-A DEAD javelin R1, SC-C DEAD Sabriel smite R1, SC-B DEAD Bazgar maul R2); seed 494565; init Marwen(22)→SC-A(20)→SC-B(16)→Bazgar(5)=Sabriel(5)=SC-C(5); Fireball R1 30 fire: SC-A FAIL→3HP, SC-B SAVE→18HP, SC-C FAIL→3HP (20th-cycle R1-decisive confirm FI-SCT-20-B); SC-A Barrage R1 13 pierce (Bazgar FAIL 13→36, Marwen SAVE 6→26); SC-B CW→SC-C (correct stagger CW), MA 2/2 hit Marwen (10 pierce total →16HP; SIM-SCT-20-A: CW ADV applied to granter SC-B not grantee SC-C — harness bug, outcome same); SC-C dies before acting (init-tie ordering auth wrong — SIM harness ran Bazgar/Sabriel first, auth SC-C Dex+2 should act before Bazgar/Sabriel MQ-SCT-20-A); R2 SC-B TR+Barrage (11 pierce both SAVE; SIM-SCT-20-B PTV reset wrong — auth Marwen has PTV disadv on R2 Barrage save); Bazgar maul 15→SC-B DEAD; CW 1/9 used (FI-SCT-20-D NEW severity-HIGH: most extreme underuse yet — 8 charges wasted; 20th-cycle DD-SCT7-A confirm, recommend 1/encounter); 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494565, 98th consecutive); DESIGN DECISIONS: FI-SCT-20-A SC-A below-12HP Barrage (defensible, thematic); FI-SCT-20-B Fireball-decisive 20th confirm; FI-SCT-20-D CW 1/9 worst cycle (DD-SCT7-A 20th, consider 1/encounter); MQ-SCT-20-A init-tie SC Dex+2 coaching gap — see _playtest-runs/2026-06-02T21-20-41.md
+
 - 2026-06-02 20:19 UTC — slice #5 10th-cycle (solo-rager-rush) — VICTORY R6 (Bazgar 25/49 standing, Marwen DOWN R2 multiattack focus, Sabriel DOWN R3; R1 DEAD R1-focused; R2 DEAD R3; R3 DEAD R6; Berserk 0/1 hits this run — all-miss R1 10th-cycle high-variance confirm FI-SRR10-B; Fireball R1 25 fire all-3-fail; Taunt 0 mechanical effect — Bazgar irrelevant (already targeting R1), Marwen passed, Sabriel failed but down R3; FI-31 10th-cycle split confirm; ME +1 all 3 ragers R2+ confirm; SIM-SRR10-A Taunt re-targeting gap (R2/R3 should redirect to Bazgar after Marwen/Sabriel drop — harness skipped); MQ-SRR10-B Berserk gate harness error (spurious d6>=5 check before use, not a DB bug); 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494564, 97th consecutive); DESIGN DECISIONS: FI-SRR10-C 1v1 endgame anticlimactic (R4-R6 chip grind, no rager escalation); FI-SRR10-D Taunt DC 12 structurally inert 10th-cycle (0 mechanical effect, consider DC 13); SIM-SRR10-A Taunt redirect-on-drop coaching note needed — see _playtest-runs/2026-06-02T20-19-16.md
 
 - 2026-06-02 19:23 UTC — slice #4 27th-cycle (final-confrontation) — TPK R3 (Marwen DISINTEGRATED R1 DR atk 15 vs AC15 → 47 force; Bazgar double-killed R2: lair VE 9→0, LoH revive 1HP, VS 33→0 again; Sabriel STD-B SA1 R3 → 10→0; beholder 110/110 untouched; STD-B 33/45 surviving; 4 thralls 10–22 HP alive); seed 494563; init STD-B(19)→Sabriel(18)→STD-A(17)→THR-1/3/4(15)→Marwen(13)→Thrulm(12)→Bazgar(4)→THR-2(3); lair UG R1 prone Bazgar (Dex sv8 fail); STD-B stagger holds AR R1 (sim SIM-FC27-A: assignment inverted — STD-B acts first, should fire; outcome correct); STD-B MA 2/2 hit Bazgar (23 total dmg →26HP); DD R1 SAVED Marwen Cha sv18; STD-A AR R1 Bazgar FAIL 18+Marwen FAIL 20 (Bazgar 26→8, Marwen 32→12); THR pile 2/6 hits on Marwen (1+4 slashing, Marwen→7HP); Fireball R1 L3: STD-A fail 24 (altar zone fire-vuln suppressed), STD-B save 12, THR-1/2 save 12 each; Thrulm DR R1 15+6=21 vs AC15 HIT 47 force DISINTEGRATES Marwen; Bazgar GS R1 kills STD-A (14 slashing); lair VE R2 Bazgar fail 9→0; DD R2 FAIL Sabriel Cha sv7 → L2 slot drained +4 tempHP; Sabriel LoH revives Bazgar 1HP (LoH 25→24); THR-1/3/4 all miss Bazgar; Thrulm VS R2 (shrine_drift descent bonus OA-safe) Bazgar FAIL 33 psy→0 + Sabriel FAIL 23 psy→2HP; both FRIGHTENED; STD-B SA1 R3 kills Sabriel (24 HIT 10→0); 1 bug auto-fixed (FIX-FC27-A: beholder FI-20 compel_thrall re-target-on-death note added — after primary PC target is disintegrated, update to next-lowest-AC living PC); 29/29 Phase A clean (network blocked, cache pre-seeded seed 494563, 96th consecutive); DESIGN DECISIONS: FI-FC27-B altar-zone fire suppression 27th-cycle confirm (L3 Fireball under-delivers on STDs); FI-FC27-C thrall contribution negligible (5 total dmg in 2 rounds); FI-FC27-D killing blow from STD-B not beholder (feel gap); FI-FC27-E Bazgar double-kill arc (LoH revival immediately punished by VS, positive); FI-FC27-F VS fires R2 (3-round fight, resolves FI-FC4-C); SIM-FC27-A stagger assignment inverted (harness, not spec) — see _playtest-runs/2026-06-02T19-23-49.md
@@ -251,7 +253,37 @@
 
 ## DESIGN DECISIONS (review in morning)
 
-### FI-SRR10-C: solo-rager-rush — Bazgar 1v1 endgame anticlimactic (10th cycle, 2026-06-02T20)
+### FI-SCT-20-D: shardcaller-team — CW 1/9 worst cycle, DD-SCT7-A 20th confirm (2026-06-02T21)
+
+- **Context:** 2026-06-02 21:20 UTC, slice #6 (shardcaller-team) 20th cycle. Seed 494565. Victory R2.
+
+  **Finding:** Only 1 of 9 total CW charges fired this run: SC-B granted CW to SC-C (correct per stagger), but SC-C died before acting (killed by Sabriel's smite in R1 initiative tie). SC-A held 3 charges correctly (would have been wasted on Barrage-firing ally per MQ-64). SC-B had 1 more opportunity in R2 but TR blocked it (bonus-action conflict). 8/9 charges went unused. Across 20 cycles, the pattern is consistent: CW is a 3/day resource that fires 0–3 times total per encounter, average ~2, with many cycles seeing 0–1 actual effect (CW on dead/dying ally, CW on barrage-firing ally correctly held, CW on already-acted ally). The ability's 3/day limit implies it should matter across an encounter, but structurally it never matters that much.
+
+  **Recommendation (escalated from 18th cycle):** Reduce to **1/encounter** (not 3/day). A single high-value CW in the fight's most dangerous round is more thematically correct than 3 charges that mostly misfire or go unused. Alternatively: change to "bonus action + no daily limit" but "once per PC per round" — this would let SCs cycle it freely and increase actual effect without power-spiking.
+
+  **Human decision needed. Do not auto-fix.**
+
+### FI-SCT-20-B: shardcaller-team — Fireball R1-decisive 20th cycle confirm (2026-06-02T21)
+
+- **Context:** Same run as FI-SCT-20-D.
+
+  **Finding:** For the 3rd+ consecutive shardcaller-team cycle, Marwen (init 22, acts first) fires Fireball before any SC acts, crippling all three. In this run: SC-A and SC-C at 3 HP, SC-B at 18 HP. Both sub-10-HP SCs died in R1 without taking a meaningful action. The 3-SC cluster formation is structurally fragile against early-initiative AoE — three targets within a 20-ft radius is an inevitable Fireball cluster.
+
+  **Recommendation:** Two options: (a) add staging note that SCs should not cluster within 20 ft — spread at ≥25 ft apart to deny the simultaneous Fireball. This is a DM staging fix, not a spec fix. (b) Give one SC a reaction or minor defensive ability (e.g., Uncanny Dodge vs one designated AoE per long rest). Option (a) is the lower-lift fix. Add to shardcaller .md under Position: *"Against unknown parties: start spread ≥25 ft apart to deny a single Fireball from hitting all three."*
+
+  **Can be auto-fixed in .md (tactics note only, no balance change). Will fix in this fire.**
+
+### MQ-SCT-20-A: shardcaller-team — initiative tie SC Dex+2 should beat Bazgar/Sabriel (2026-06-02T21)
+
+- **Context:** Same run as FI-SCT-20-D.
+
+  **Finding:** On a 3-way tie at init 5 between Bazgar (Dex -1), Sabriel (Dex +0), and SC-C (Dex +2), 5e rules break ties by Dex modifier — SC-C (+2) acts before Sabriel (+0) before Bazgar (-1). Auth order: SC-C fires (Barrage blocked by stagger, Multiattack vs Marwen), then Sabriel kills SC-C. Sim harness incorrectly ran Bazgar and Sabriel before SC-C. In this run, the auth order gives SC-C one turn of output vs Marwen before dying. 2× Shard-Throw +4 vs AC15: expect ~7 additional piercing on Marwen (from 16/32 → ~9/32 before Sabriel kills SC-C). Party still wins R1-R2, but Marwen is lower.
+
+  **Recommendation:** Add to shardcaller .md: *"Initiative ties: SC Dex +2 typically beats level-5 party members unless they have DEX 14+ (Marwen Dex ~14, tie). On ties, SC acts before Str-heavy PCs."*
+
+  **Auto-fixable (.md coaching note). Will fix in this fire.**
+
+### FI-SRR10-C: solo-rager-rush — Bazgar 1v1 endgame anticlimactic (10th cycle, 2026-06-02T20) solo-rager-rush — Bazgar 1v1 endgame anticlimactic (10th cycle, 2026-06-02T20)
 
 - **Context:** 2026-06-02 20:19 UTC, slice #5 (solo-rager-rush) 10th cycle. Seed 494564. Victory R6.
 
