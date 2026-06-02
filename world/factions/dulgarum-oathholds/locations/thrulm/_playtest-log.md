@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-02 18:26 UTC — slice #3 27th-cycle (beholder-escorts-limited) — TPK R1 (VS 43 psychic all-fail: Bazgar −3, Marwen −11, Sabriel −8; beholder 85/110 auth; TB 10/22 surviving; TA/TC dead from Fireball); lair VE R1 both PCs SAVED (18 force half → Bazgar 40, Sabriel 35); Fireball R1 (Marwen init-17) 25 fire: TA DEAD fail, TC DEAD fail, TB SAVE 10HP, beholder FAIL −25 → 85; Sabriel smite+TA hit (16 dmg, smite L1, TA 6HP) before VS; compel_thrall TB-toward-Marwen CORRECT (live-thrall guard MQ-BEL25-A confirmed working cycle-27); VS dispatch 43 psy R1 all-fail (Bazgar sv3, Marwen sv7, Sabriel sv10 all vs DC16); DD Sabriel FAIL end-Sabriel-turn Cha sv10 vs DC16 → L3 drained + beholder +6 temp HP but WASTED (at max HP 110 — FI-BEL27-A NEW); MQ-BEL27-A 27th confirm VS avail R1 (MQ-BEL25-B still open); SIM-BEL27-A lair-fires-before-TA-at-init-20 sim harness order error (lair LOSES ties, TA acted first auth); MQ-BEL27-B initiative-tie-at-20 creature-vs-lair priority needs .md clarification; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494562, 95th consecutive); DESIGN DECISIONS: FI-BEL27-A DD-at-full-HP temp-HP-wasted gap; MQ-BEL27-A VS-start-state 27th confirm; MQ-BEL27-B lair-init-20 tie clarification needed — see _playtest-runs/2026-06-02T18-26-55.md
+
 - 2026-06-02 17:21 UTC — slice #2 26th-cycle (tank-wall) — VICTORY R2, Bazgar 43/49, Marwen 32/32 untouched, Sabriel 32/44 (Berserk auth-HIT 6 slashing); CW range-locked 26th-cycle (SC-to-Rager 40 ft > 30 ft CW range — MQ-TW26-A NEW root cause over init-order; init window was open SC(16)>Rager(15) but distance blocked); SC glass-cannon 26th-confirm (Sabriel R1 25 dmg → Fireball half 15 kills SC); Rager Berserk auth 1/2 (MISS Bazgar to-hit 5 vs AC18, HIT Sabriel to-hit 23 vs AC19 for 6 slashing — SIM-TW26-A parse fail: 0 lines applied in harness); Taunt Marwen FAIL DC12 inert vs Fireball (FI-31 26th confirm); PTV blocked 40 ft gap (FI-TW23-D 26th confirm); Fireball 31 fire (Rager Dex FAIL→21HP, SC PASS→0HP-DOWN); Bazgar Trip+Prone Rager (12+8 slashing→1HP); Sabriel R2 smite 15→Rager DOWN; SC Barrage 12 pierce dispatch-auth (both saves passed, 6 each); seed 494561; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded, 94th consecutive); DESIGN DECISIONS: MQ-TW26-A CW range root-cause (positioning not init-order); MQ-TW26-B Taunt-vs-save-caster coaching gap — see _playtest-runs/2026-06-02T17-21-40.md
 
 - 2026-06-02 16:20 UTC — slice #1 24th-cycle (shrine-wedge) — VICTORY R3, Bazgar 29/49, Marwen -2/32 DOWN, Sabriel 29/44; seed 494560; init Bazgar(19)→STD-A(15)=Marwen(15)→STD-B(13)→Sabriel(6); stagger correct R1 (STD-A acts first, STD-B holds AR); Bazgar 0/2 miss STD-A R1; STD-A AR R1 (Bazgar SAVE 4 dmg, Marwen FAIL 13 necrotic+psychic → 19HP); Marwen Fireball R1 24 fire (both STDs SAVE — 12 each; altar zone suppression irrelevant this cycle due to high save rolls); STD-B MA 1/2 hit Marwen R1 (3 dmg → 16HP); Sabriel 1/2 hit STD-A (10 slashing → 23HP); OBR fires vs Sabriel (24 HIT 14 dmg → 30HP; STD-A self 3 psychic → 20HP); STD-A R1 total dmg 25 → UF active R2; AR recharges R2 (rolled 5); STD-A AR R2 3-PCs-in-cone (Bazgar FAIL 14 dmg→31HP, Marwen FAIL 18 dmg → -2/32 DOWN); STD-B below 20HP (Bazgar crit R2 + OBR miss + self 4) → stagger exemption; STD-B Driven Escape + reckless AR (Bazgar FAIL 15 dmg→16HP, Sabriel SAVE 1 dmg→29HP); Sabriel kills STD-B R2 smite (19 dmg); STD-A AR not recharged R3 (rolled 3); Bazgar kills STD-A R3 (22 dmg, Trip prone); Second Wind +13 → 29HP; Phase A 29/29 clean (network blocked, cache pre-seeded seed 494560, 93rd consecutive); 0 bugs auto-fixed; DESIGN DECISIONS: FI-SW24-A caster-pressure 24th-confirm (double-AR R2 kills Marwen); MQ-SW24-A Driven-Escape cone validity post-move; MQ-SW24-B OBR fires between multiattack hits (sim oversight R3) — see _playtest-runs/2026-06-02T16-20-34.md
@@ -244,6 +246,34 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-BEL27-A: beholder-escorts-limited — DD at full HP wastes temp HP (27th cycle, 2026-06-02T18)
+
+- **Context:** 2026-06-02 18:26 UTC, slice #3 (beholder-escorts-limited) 27th cycle. Seed 494562. Init: TA(20)→Sabriel(19)→Marwen(17)→beholder(14)=Bazgar(14)→TC(13)→TB(7). TPK R1.
+
+  **Finding:** Drain Divinity (3 LA) fired on Sabriel at the end of her turn. Sabriel failed her Cha save (sv 10 vs DC 16), losing her L3 slot. The beholder gained +6 temp HP (2× slot level). However, beholder was at 110/110 (full HP, no damage taken yet). Temp HP is wasted when at max HP — the slot drain is the only benefit gained. The tactics say "burn LA on DD when clerics/paladins present" but don't note the HP threshold condition. Against a party that opens with burst damage (Fireball, smites), beholder frequently takes damage in R1 before its turn; in this cycle, it went 4th in init so it was undamaged when the LA fired at end-of-Sabriel's-turn.
+
+  **Recommendation:** Add coaching note to beholder.md Tactics under DD priority: *"If beholder is at full HP and the party's total output this round is likely ≤20 dmg (no Fireball yet, no smite hit), DD temp HP will be wasted — the slot drain alone is still valuable. If beholder is already below 100 HP, DD temp HP actively matters. Prioritize DD regardless of HP state when L2+ slots remain, but note the waste at HP cap."*
+
+  **Do not auto-fix:** This is a tactics coaching gap, not a spec error.
+
+### MQ-BEL27-A: VS start-state for slice #3 — 27th-cycle confirmation (MQ-BEL25-B ongoing)
+
+- **Context:** Same run as FI-BEL27-A. VS fired in R1 again — 4th consecutive slice-3 cycle (cycles 24, 25, 26, 27) with VS available at start.
+
+  **Finding:** The cron-prompt slice #3 description says "NO disintegration ray yet" but says nothing about VS. All 27 slice-3 runs have implicitly started with VS available (fresh encounter, no prior use). MQ-BEL25-B first flagged this. The implicit assumption is correct (VS starts available at encounter start — a fresh beholder hasn't fired it), but it should be explicit in the slice definition so the harness doesn't accidentally vary this assumption.
+
+  **Recommendation:** Update cron-prompt slice #3 description to: *"1× beholder-thrulm (NO disintegration ray yet; VS starts AVAILABLE — fresh encounter) + 3× thrall-derro."* Do NOT auto-fix the cron-prompt (human authoring file). Flag for morning review.
+
+### MQ-BEL27-B: Initiative tie at init-20 — creature-vs-lair priority undocumented in beholder.md
+
+- **Context:** Same run as FI-BEL27-A. TA rolled initiative 20 (tying with the lair-action count). Simulation fired lair before TA — incorrect. Lair fires at init 20 "losing ties."
+
+  **Finding:** The beholder.md lair action note states "lair actions trigger on init count 20, LOSING TIES" but doesn't give an example of a creature that also rolled 20. At table, a DM might not immediately catch the tie. The .md is technically correct but silent on the example. In this run, TA's attack was a miss anyway, but the precedent matters.
+
+  **Recommendation:** Add to beholder.md lair action note: *"Example: if a thrall or PC rolls init 20, that creature acts before the lair fires. The lair yields to any creature at exactly init count 20."*
+
+  **Low priority:** Can be added next .md authoring session; no combat outcome impact in this cycle.
 
 ### MQ-TW26-A: tank-wall — CW range root cause is positioning, not initiative (26th cycle, 2026-06-02T17)
 
