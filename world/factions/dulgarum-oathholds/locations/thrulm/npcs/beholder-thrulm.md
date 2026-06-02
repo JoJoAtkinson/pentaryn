@@ -16,7 +16,7 @@ tags: ["#combat-runner", "#npc", "#combat", "#beholder", "#thrulm", "#boss", "#a
 
 ## Start-of-turn checklist
 
-1. If **Disintegration Ray** is USED, roll `roll_dice(1, 6)` — recovers on 5–6.
+1. If **Disintegration Ray** is USED, roll `roll_dice(1, 6)` — recovers on 5–6. **DR is a ranged ATTACK ROLL (+6 to hit, range 120 ft), NOT a Dex saving throw** — on a hit, full 10d8 force damage applies (no half-damage on a miss). Contrast with Void Ray (legendary) which is a DC 16 Dex save.
 2. If **Void Scream** is USED, roll `roll_dice(1, 6)` — recovers on 6 only. *(DC 16 Wis save, 6d10 psychic, 30-ft radius — DM reminder; full spec in DB)*
 3. **Reaction** refreshes to AVAILABLE: **Antireality** (+2 AC vs one incoming attack, declared after seeing the roll).
 4. **Bonus actions available this turn:** `shrine_drift` (move 30 ft, can pass through things) OR `compel_thrall` (1/turn, force a charmed creature to move). Bonus actions are separate from the main action — either can be used in the same turn as Multiattack, DR, or VS.
