@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-02 17:21 UTC — slice #2 26th-cycle (tank-wall) — VICTORY R2, Bazgar 43/49, Marwen 32/32 untouched, Sabriel 32/44 (Berserk auth-HIT 6 slashing); CW range-locked 26th-cycle (SC-to-Rager 40 ft > 30 ft CW range — MQ-TW26-A NEW root cause over init-order; init window was open SC(16)>Rager(15) but distance blocked); SC glass-cannon 26th-confirm (Sabriel R1 25 dmg → Fireball half 15 kills SC); Rager Berserk auth 1/2 (MISS Bazgar to-hit 5 vs AC18, HIT Sabriel to-hit 23 vs AC19 for 6 slashing — SIM-TW26-A parse fail: 0 lines applied in harness); Taunt Marwen FAIL DC12 inert vs Fireball (FI-31 26th confirm); PTV blocked 40 ft gap (FI-TW23-D 26th confirm); Fireball 31 fire (Rager Dex FAIL→21HP, SC PASS→0HP-DOWN); Bazgar Trip+Prone Rager (12+8 slashing→1HP); Sabriel R2 smite 15→Rager DOWN; SC Barrage 12 pierce dispatch-auth (both saves passed, 6 each); seed 494561; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded, 94th consecutive); DESIGN DECISIONS: MQ-TW26-A CW range root-cause (positioning not init-order); MQ-TW26-B Taunt-vs-save-caster coaching gap — see _playtest-runs/2026-06-02T17-21-40.md
+
 - 2026-06-02 16:20 UTC — slice #1 24th-cycle (shrine-wedge) — VICTORY R3, Bazgar 29/49, Marwen -2/32 DOWN, Sabriel 29/44; seed 494560; init Bazgar(19)→STD-A(15)=Marwen(15)→STD-B(13)→Sabriel(6); stagger correct R1 (STD-A acts first, STD-B holds AR); Bazgar 0/2 miss STD-A R1; STD-A AR R1 (Bazgar SAVE 4 dmg, Marwen FAIL 13 necrotic+psychic → 19HP); Marwen Fireball R1 24 fire (both STDs SAVE — 12 each; altar zone suppression irrelevant this cycle due to high save rolls); STD-B MA 1/2 hit Marwen R1 (3 dmg → 16HP); Sabriel 1/2 hit STD-A (10 slashing → 23HP); OBR fires vs Sabriel (24 HIT 14 dmg → 30HP; STD-A self 3 psychic → 20HP); STD-A R1 total dmg 25 → UF active R2; AR recharges R2 (rolled 5); STD-A AR R2 3-PCs-in-cone (Bazgar FAIL 14 dmg→31HP, Marwen FAIL 18 dmg → -2/32 DOWN); STD-B below 20HP (Bazgar crit R2 + OBR miss + self 4) → stagger exemption; STD-B Driven Escape + reckless AR (Bazgar FAIL 15 dmg→16HP, Sabriel SAVE 1 dmg→29HP); Sabriel kills STD-B R2 smite (19 dmg); STD-A AR not recharged R3 (rolled 3); Bazgar kills STD-A R3 (22 dmg, Trip prone); Second Wind +13 → 29HP; Phase A 29/29 clean (network blocked, cache pre-seeded seed 494560, 93rd consecutive); 0 bugs auto-fixed; DESIGN DECISIONS: FI-SW24-A caster-pressure 24th-confirm (double-AR R2 kills Marwen); MQ-SW24-A Driven-Escape cone validity post-move; MQ-SW24-B OBR fires between multiattack hits (sim oversight R3) — see _playtest-runs/2026-06-02T16-20-34.md
 
 - 2026-06-02 15:19 UTC — slice #0 20th-cycle (threshold-patrol) — VICTORY R1, Bazgar 40/49, Marwen 32/32 untouched (pre-Fireball), Sabriel 38/44; seed 494559; init Bazgar(17)→DW-A(12)→DW-B(11)→Sabriel(8)→SC(5)=Marwen(5); Bazgar Trip Attack DW-A (13 dmg, resist STR21); DW-A 1/2 axe HIT Bazgar (4 slashing); DW-B 0/2 MISS Bazgar (adv rolls 8,5); Sabriel smite+atk-2 SC (21 total → SC 12/33); SC Shard-Barrage R1 (13 pierce: Bazgar save 6 taken, Sabriel save 6 taken); Marwen Fireball L3 (35 fire, all 3 NPCs FAIL DC14 → SC -23, DW-A -21, DW-B -8 DEAD); CW 3/3 never used; Barrage marked USED at TPK; no bugs found; DESIGN DECISIONS: FI-TP0-A patrol fragile vs Fireball (20th-cycle 1-round wipe), FI-TP0-B CW entirely invisible, FI-TP0-C SC at exactly "below 12" retreat boundary post-Sabriel smite, MQ-TP0-B Fireball geometry vs SC 40 ft back — see _playtest-runs/2026-06-02T15-19-26.md
@@ -242,6 +244,22 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### MQ-TW26-A: tank-wall — CW range root cause is positioning, not initiative (26th cycle, 2026-06-02T17)
+
+- **Context:** 2026-06-02 17:21 UTC, slice #2 (tank-wall) 26th cycle. Seed 494561. Init: Sabriel(20)→SC(16)→Rager(15)→Marwen(10)→Bazgar(9). VICTORY R2. 0 bugs auto-fixed. Phase A 29/29 clean, 94th consecutive.
+
+  **New finding:** This cycle had the init window open (SC 16 > Rager 15), but CW was still unreachable. Root cause: SC starts 50 ft from party entry point; Rager starts 10 ft from party. SC-to-Rager distance = ~40 ft, which exceeds CW's 30 ft range. Initiative order is irrelevant — even when SC acts before Rager, CW cannot reach Rager at standard starting positions. Prior cycles attributed lockout to "SC acts after Rager in init" — this is a secondary cause. The primary cause is **starting distance**.
+
+  **Recommendation:** Either (a) reduce SC's default starting distance to 30–35 ft from party (i.e., ≤30 ft from Rager) so CW is in range R1, or (b) raise CW range from 30 ft to 60 ft. Option (a) has the side effect of making SC more vulnerable to melee front-loading; option (b) makes CW a more prominent encounter feature. Human design call — do NOT auto-fix. Cross-ref DD-41, DD-TW-19-1, FI-TW20-A (20+ cycles of CW lockout).
+
+### MQ-TW26-B: tank-wall — Taunt-vs-save-caster coaching gap (26th cycle, 2026-06-02T17)
+
+- **Context:** Same run as MQ-TW26-A above.
+
+  **Finding:** Rager's Taunt bonus action targets the "squishiest non-engaged target (caster or rogue)" per .md tactics. In this cycle, that was Marwen. Marwen failed her Cha save (11 vs DC 12), granting her disadvantage on attacks vs non-Rager targets. However, Marwen's entire combat contribution was Fireball (DC 15 Dex save — unaffected by Taunt per FI-31). Taunt consumed the bonus action slot and produced zero effect. 26th-cycle confirm of FI-31.
+
+  **Recommendation:** Add to Rager's Taunt tactic bullet: *"Exception: if the caster's primary weapon is a save-based AOE (Fireball, Shatter, Thunder Wave), Taunt targeting them is mechanically null — redirect to the fighter or martial who uses attack rolls instead (Bazgar). Taunt's disadvantage applies only to attack rolls, not saving throws."* Low-risk coaching note, no spec change.
 
 ### FI-NEW-EV7-A/B + MQ-EV7-A/B: empty-void 1st-cycle — DR disintegrates before initiative; DD monopolizes solo LA; DR mechanic undocumented (2026-06-02T14)
 
