@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-02 20:19 UTC — slice #5 10th-cycle (solo-rager-rush) — VICTORY R6 (Bazgar 25/49 standing, Marwen DOWN R2 multiattack focus, Sabriel DOWN R3; R1 DEAD R1-focused; R2 DEAD R3; R3 DEAD R6; Berserk 0/1 hits this run — all-miss R1 10th-cycle high-variance confirm FI-SRR10-B; Fireball R1 25 fire all-3-fail; Taunt 0 mechanical effect — Bazgar irrelevant (already targeting R1), Marwen passed, Sabriel failed but down R3; FI-31 10th-cycle split confirm; ME +1 all 3 ragers R2+ confirm; SIM-SRR10-A Taunt re-targeting gap (R2/R3 should redirect to Bazgar after Marwen/Sabriel drop — harness skipped); MQ-SRR10-B Berserk gate harness error (spurious d6>=5 check before use, not a DB bug); 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494564, 97th consecutive); DESIGN DECISIONS: FI-SRR10-C 1v1 endgame anticlimactic (R4-R6 chip grind, no rager escalation); FI-SRR10-D Taunt DC 12 structurally inert 10th-cycle (0 mechanical effect, consider DC 13); SIM-SRR10-A Taunt redirect-on-drop coaching note needed — see _playtest-runs/2026-06-02T20-19-16.md
+
 - 2026-06-02 19:23 UTC — slice #4 27th-cycle (final-confrontation) — TPK R3 (Marwen DISINTEGRATED R1 DR atk 15 vs AC15 → 47 force; Bazgar double-killed R2: lair VE 9→0, LoH revive 1HP, VS 33→0 again; Sabriel STD-B SA1 R3 → 10→0; beholder 110/110 untouched; STD-B 33/45 surviving; 4 thralls 10–22 HP alive); seed 494563; init STD-B(19)→Sabriel(18)→STD-A(17)→THR-1/3/4(15)→Marwen(13)→Thrulm(12)→Bazgar(4)→THR-2(3); lair UG R1 prone Bazgar (Dex sv8 fail); STD-B stagger holds AR R1 (sim SIM-FC27-A: assignment inverted — STD-B acts first, should fire; outcome correct); STD-B MA 2/2 hit Bazgar (23 total dmg →26HP); DD R1 SAVED Marwen Cha sv18; STD-A AR R1 Bazgar FAIL 18+Marwen FAIL 20 (Bazgar 26→8, Marwen 32→12); THR pile 2/6 hits on Marwen (1+4 slashing, Marwen→7HP); Fireball R1 L3: STD-A fail 24 (altar zone fire-vuln suppressed), STD-B save 12, THR-1/2 save 12 each; Thrulm DR R1 15+6=21 vs AC15 HIT 47 force DISINTEGRATES Marwen; Bazgar GS R1 kills STD-A (14 slashing); lair VE R2 Bazgar fail 9→0; DD R2 FAIL Sabriel Cha sv7 → L2 slot drained +4 tempHP; Sabriel LoH revives Bazgar 1HP (LoH 25→24); THR-1/3/4 all miss Bazgar; Thrulm VS R2 (shrine_drift descent bonus OA-safe) Bazgar FAIL 33 psy→0 + Sabriel FAIL 23 psy→2HP; both FRIGHTENED; STD-B SA1 R3 kills Sabriel (24 HIT 10→0); 1 bug auto-fixed (FIX-FC27-A: beholder FI-20 compel_thrall re-target-on-death note added — after primary PC target is disintegrated, update to next-lowest-AC living PC); 29/29 Phase A clean (network blocked, cache pre-seeded seed 494563, 96th consecutive); DESIGN DECISIONS: FI-FC27-B altar-zone fire suppression 27th-cycle confirm (L3 Fireball under-delivers on STDs); FI-FC27-C thrall contribution negligible (5 total dmg in 2 rounds); FI-FC27-D killing blow from STD-B not beholder (feel gap); FI-FC27-E Bazgar double-kill arc (LoH revival immediately punished by VS, positive); FI-FC27-F VS fires R2 (3-round fight, resolves FI-FC4-C); SIM-FC27-A stagger assignment inverted (harness, not spec) — see _playtest-runs/2026-06-02T19-23-49.md
 
 - 2026-06-02 18:26 UTC — slice #3 27th-cycle (beholder-escorts-limited) — TPK R1 (VS 43 psychic all-fail: Bazgar −3, Marwen −11, Sabriel −8; beholder 85/110 auth; TB 10/22 surviving; TA/TC dead from Fireball); lair VE R1 both PCs SAVED (18 force half → Bazgar 40, Sabriel 35); Fireball R1 (Marwen init-17) 25 fire: TA DEAD fail, TC DEAD fail, TB SAVE 10HP, beholder FAIL −25 → 85; Sabriel smite+TA hit (16 dmg, smite L1, TA 6HP) before VS; compel_thrall TB-toward-Marwen CORRECT (live-thrall guard MQ-BEL25-A confirmed working cycle-27); VS dispatch 43 psy R1 all-fail (Bazgar sv3, Marwen sv7, Sabriel sv10 all vs DC16); DD Sabriel FAIL end-Sabriel-turn Cha sv10 vs DC16 → L3 drained + beholder +6 temp HP but WASTED (at max HP 110 — FI-BEL27-A NEW); MQ-BEL27-A 27th confirm VS avail R1 (MQ-BEL25-B still open); SIM-BEL27-A lair-fires-before-TA-at-init-20 sim harness order error (lair LOSES ties, TA acted first auth); MQ-BEL27-B initiative-tie-at-20 creature-vs-lair priority needs .md clarification; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494562, 95th consecutive); DESIGN DECISIONS: FI-BEL27-A DD-at-full-HP temp-HP-wasted gap; MQ-BEL27-A VS-start-state 27th confirm; MQ-BEL27-B lair-init-20 tie clarification needed — see _playtest-runs/2026-06-02T18-26-55.md
@@ -248,6 +250,36 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-SRR10-C: solo-rager-rush — Bazgar 1v1 endgame anticlimactic (10th cycle, 2026-06-02T20)
+
+- **Context:** 2026-06-02 20:19 UTC, slice #5 (solo-rager-rush) 10th cycle. Seed 494564. Victory R6.
+
+  **Finding:** After Marwen went down R2 and Sabriel went down R3, Bazgar soloed R3 (27/52 HP) through Rounds 4–6. Each round was symmetric chip damage: Bazgar dealing 8–12/round, R3 dealing 6–13/round. Neither was in danger of dying quickly. The encounter ended without drama. The rager's only escalation mechanism (Madness Endurance) provides +1 to attack rolls, which is insufficient to create a "desperate last stand" feel. Berserk requires 2+ enemies in reach and can't fire in a 1v1.
+
+  **Recommendation:** Add a tactics coaching note to derro-rager.md: *"If all allies are dead and only one PC remains: fight to 0 HP per existing text. The 1v1 endgame is a grind by design — the rager's Madness Endurance keeps it competitive but doesn't spike. If the DM wants a more dramatic close, narrate the rager's increasing frenzy but mechanically it just swings until it drops."* This frames the grind as intentional, not a gap.
+
+  **Do not auto-fix balance:** The grind is lore-consistent. Low priority.
+
+### FI-SRR10-D: solo-rager-rush — Taunt DC 12 structurally inert (10th-cycle confirm)
+
+- **Context:** Same run as FI-SRR10-C. 10 cycles of solo-rager-rush data.
+
+  **Finding:** In this run, Taunt generated zero mechanical effect: Bazgar's failed save (vs R1's Taunt) was irrelevant because he was targeting R1 directly; Marwen passed her save; Sabriel failed but went down before making a taunted attack. Across 10 cycles of solo-rager-rush: Taunt's DC 12 is low vs party Cha saves (Bazgar +0, Marwen +1, Sabriel +2). On average ~40% pass rate. Even when it lands, the effect requires the taunted PC to both stay alive AND choose to attack a non-taunting creature — two conditions that frequently don't coexist.
+
+  **Recommendation:** Consider raising Taunt DC to 13. This would shift the Marwen pass rate from ~45% to ~30% and Sabriel's from ~50% to ~40%. Alternatively, add a coaching note that Taunt is most impactful when it forces a caster off a key action — e.g., preventing Fireball requires the wizard to target non-taunting creatures — but since Fireball is a save-based spell unaffected by Taunt, this coaching is already in the .md (FI-31). The root issue is the save DC is borderline too low for level-5 PCs.
+
+  **Human decision needed:** Raising the DC changes balance. Do not auto-fix.
+
+### SIM-SRR10-A: Taunt re-targeting after primary split-target drops — coaching note gap in derro-rager.md
+
+- **Context:** Same run as FI-SRR10-C. When Marwen went down R2, R2's Taunt target expired. Both Bazgar and Sabriel were alive. Simulation skipped R2's Taunt entirely (harness bug), but the .md gives no guidance on reassignment.
+
+  **Finding:** The FI-31 rager-only corollary says "split Taunt across multiple PCs (one rager per target)" but doesn't specify what to do when a split-target drops. MQ-NEW-2 says to skip unconscious/dead targets. These two rules together imply redirect, but to whom? If R2 redirects to Bazgar (who is already taunted by R1), the FI-31 "no stacking" intent is violated. If R2 redirects to Sabriel (R3's assigned target), same problem. If R2 skips, MQ-NEW-2 says "skip entirely" — but that wastes the bonus action.
+
+  **Recommendation:** Add to derro-rager.md Tactics under Taunt: *"If your assigned split-target drops unconscious or dies, redirect Taunt to any living PC not already taunted this round. If all living PCs are already taunted by other ragers this round, skip Taunt per MQ-NEW-2."* This preserves FI-31 while giving clear redirect guidance.
+
+  **Auto-fixable:** This is a tactics coaching note, not a spec error. Can be added to derro-rager.md. **Will add in this fire if human approves; flagging here first since it touches the .md authoring scope.**
 
 ### FI-BEL27-A: beholder-escorts-limited — DD at full HP wastes temp HP (27th cycle, 2026-06-02T18)
 
