@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-03 14:29 UTC — slice #5 11th-cycle (solo-rager-rush) — VICTORY R4 (Bazgar 12/49 LoH-exhausted, Marwen 20/32, Sabriel 44/44 untouched; all 3 ragers DEAD; all 3 Berserk R1 (R3:1/2hit Bazgar-14 pre-Fireball, R2:0/2, R1:2/2 post-Fireball Bazgar-6+Marwen-12); Fireball R1 27-fire all-3-fail decisive; Berserk 0/6 recharge attempts R2-R3 (drought); R3 0/6 attacks Sabriel AC19-wall 11th-cycle confirm FI-SRR11-B; LoH 25 exhausted decisive margin FI-SRR11-E; Taunt R3→Sabriel FAIL×4 0 mechanical effect (taunter=target); R2→Bazgar FAIL×3 (1 missed application R4 SIM-SRR11-A, prone+taunt cancel to straight); Scorching Ray 0/3 hits R2 L2-waste FI-SRR11-F; init R2/Sabriel tie SIM-note-alpha-fallback); seed 494582; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494582, 105th consecutive); DESIGN DECISIONS: FI-SRR11-A Berserk-pre-Fireball init-race 11th confirm; FI-SRR11-B R3 AC19-wall 11th confirm (redirect-to-Marwen coaching needed); FI-SRR11-C Berserk recharge drought post-R1 (consider 4-5-6); FI-SRR11-D Taunt Sabriel vestigial when taunter=target (R3 should Taunt Marwen per MQ-SRR11-A); FI-SRR11-E LoH decisive margin (POSITIVE); MQ-SRR11-A Taunt target assignment R3→Sabriel vs correct R3→Marwen — see _playtest-runs/2026-06-03T14-29-36.md
+
 - 2026-06-03 13:21 UTC — slice #4 28th-cycle (final-confrontation) — TPK R2 (Marwen DISINTEGRATED R1 DR 26-vs-AC15 HIT 54-force; Bazgar 0 STD-2 AR R2 + 3 death-save-failures; Sabriel 0 VS R2 33-psychic-fail; beholder 110/110 untouched with 6 temp HP from DD; DR recharge fail d6=2, VS used main-action R2; stagger correct R2 STD-2 fires first; DD R1 Sabriel SAVE 19, DD R2 FAIL 14 → L3 drained after she fell; LoH 25 HP never activated 28th-cycle confirm FI-FC28-C; shrine_drift OA-safe descent confirmed DD-48; VE lair save-type simulation error SIM-FC28-B DC14-Str used vs auth DC16-Dex — no outcome change; OBR double-trigger sim error SIM-FC28-A, no material impact); seed 494581; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494581, 104th consecutive); DESIGN DECISIONS: FI-FC28-A mob-kills-beholder pattern 28th confirm (STD-2 AR delivers killing blow, not beholder — 2 consecutive FC cycles); FI-FC28-B DR disintegration announce-first coaching (before Sabriel action); MQ-FC28-A VE save DC16-Dex coaching note missing from beholder.md — see _playtest-runs/2026-06-03T13-21-07.md
 
 - 2026-06-03 12:20 UTC — slice #3 1st-beholder-cycle (beholder-escorts-limited) — TPK R6 (Beholder 71/110; all thralls dead R1-R2 Fireball; Bazgar 0 ×4 downs cycled LoH; Marwen 0 VS-R2; Sabriel 0 VR-R6; VS R2 decisive 3×fail 31+32+27=90 psychic → fear rider never expressed; DD 2/4 hits vs Sabriel Cha+3; LoH pool exhausted R5-R6; TL+Maw R1 43-total on Bazgar before VS; Beholder Dex+8 saves both Fireballs half; SIM-BEL3-A void_eruption double-call harness; lair void_eruption 5-consecutive FI-129 rotation violated sim-only); seed 494580; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494580, 103rd consecutive); DESIGN DECISIONS: FI-BEL3-B VS-fear-rider-invisible (kills before fear expresses; DM coaching: delay VS until R3+ for dramatic value); FI-BEL3-C DD-vs-FI-125-conflict (sole-surviving-PC LoH loop — DD 3 LA vs Tentacle pressure 1 LA: recommend VR+TL split when Sabriel sole PC <30HP); FI-BEL3-D thrall-axe +1 never-hit 2 turns (intentional weak-puppet flavor, no change); MQ-BEL3-A grapple-persists-at-0HP sim-bug (not spec; unconscious ends grappled MQ-FC14-A) — see _playtest-runs/2026-06-03T12-20-51.md
@@ -264,6 +266,36 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-SRR11-B: solo-rager-rush — R3 AC19 wall, redirect-to-Marwen coaching missing (11th cycle confirm) (2026-06-03T14)
+
+- **Context:** 2026-06-03 14:29 UTC, slice #5 (solo-rager-rush) 11th cycle. Seed 494582. VICTORY R4. R3 positioned adjacent to Sabriel; Sabriel AC 19.
+
+  **Finding:** R3 attempted 6 attacks against Sabriel across R1-R4 and landed 0. Hit rate with +4 bonus vs AC19 ≈ 30%. 0/6 = ~0.7^6 ≈ 7.5% probability — statistically rare but has now appeared in multiple SRR cycles (FI-SR9-A, FI-SRR10-B). More importantly, this is a structural problem: R3 is tactically placed adjacent to the highest-AC target and will chronically underperform. The tactics text says "charge strongest-looking enemy" and doesn't include a "redirect after miss-streak" clause.
+
+  **Recommendation:** Add coaching note to derro-rager.md tactics: "If 0/2 attacks hit an AC 19+ target in the same round, redirect melee focus to the lowest-AC standing enemy (Marwen AC15) on the next turn. Don't grind into a wall." Human review: should the MELEE_PREF assignment also be updated (R3 → Marwen, not Sabriel)?
+
+  **Do not auto-fix** (positioning/coaching, not spec bug).
+
+### FI-SRR11-C: solo-rager-rush — Berserk recharge drought post-R1 (11th cycle pattern) (2026-06-03T14)
+
+- **Context:** Same run. All 3 ragers Berserk in R1 (correct, 2+ PCs in reach). All 3 fail to recharge over R2+R3 (6 consecutive fails; d6≥5 required, 6 attempts).
+
+  **Finding:** The current recharge 5-6 (≈33%) means a rager has a ~44% chance of never recharging in a 4-round fight. In practice, the Berserk is a "one-and-done" in most cycles. This undermines the ability's identity as a sustained threat vs. a one-time spike. Compare to Ancient Resonance (recharge 4-5-6 ≈ 50%) which fires more reliably.
+
+  **Recommendation:** Consider changing Berserk recharge from 5-6 to 4-5-6. This raises per-turn recharge to ≈50% and means a rager that survives to R3 has a ~75% cumulative chance of firing again. Would materially extend the rager fight without changing R1 output. Human review needed before any DB change.
+
+  **Do not auto-fix** (balance change — human decision).
+
+### MQ-SRR11-A: solo-rager-rush — Taunt target R3→Sabriel vs R3→Marwen (11th cycle) (2026-06-03T14)
+
+- **Context:** Same run. R3 Taunt assignment: TAUNT_MAP has R3→Sabriel. Per split-target rule (FI-31), each rager targets a different PC. Current assignment: R1→Marwen, R2→Bazgar, R3→Sabriel.
+
+  **Finding:** R3's Taunt on Sabriel is mechanically vestigial: (a) Sabriel's primary attack target is R3 itself — the taunter — so no disadvantage applies, and (b) Sabriel Cha+3 vs DC12 passes ~55% of the time anyway. The correct Taunt target for R3 is Marwen (squishiest caster, AC15), which would force disadv on her Scorching Ray/Fire Bolt attack rolls when attacking non-R3 targets. R1 currently Taunts Marwen — but both R1 and R3 taunting Marwen simultaneously would use the FI-31 multi-taunt rule (no stack benefit, multi-taunter clause).
+
+  **Recommendation:** Update derro-rager.md tactics to clarify: "In 3-rager formation (FI-31 split): R1→Marwen, R2→Bazgar, R3→Bazgar (or next-lowest-Cha). Never Taunt AC19 targets whose primary focus is the taunter." Human review before changing TAUNT_MAP — this is a tactics coaching edit, not a DB change.
+
+  **Do not auto-fix** (coaching edit — human review).
 
 ### FI-FC28-A: final-confrontation — mob delivers killing blow (2× confirmed, cycles 27–28) (2026-06-03T13)
 
