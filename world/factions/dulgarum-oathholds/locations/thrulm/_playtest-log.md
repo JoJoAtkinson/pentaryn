@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-03 16:24 UTC — slice #7 22nd-cycle (empty-void) — TPK R4 (Marwen DISINTEGRATED surprise DR d20=17 HIT 49-force; Sabriel DISINTEGRATED R2 DR-recharge-d6=6-HIT-23vsAC19-57-force; Bazgar 0 VE-lair R4 17-force; beholder 81/110 LR:3/3-unused VS-recharged-no-targets DD-0-uses; VS R1 26-psy Bazgar-fail-frightened/Sabriel-save; DD 0/1 attempts resisted Cha+3; Antireality 1 trigger (hit17=AC+2 exact, converted) then 1 hit-24-over-threshold; AR fires only in narrow band vs AC+7-fighter; Bazgar Action-Surge 1/4-hits all-disadv-frightened; dual-dice VE dispatch/sim divergence); seed 494584; 1 bug auto-fixed (FIX-EV7-22-A VE-dice-3d8→2d10 beholder.md line-26); 29/29 Phase A clean (network blocked, cache pre-seeded seed 494584, 107th consecutive); DESIGN DECISIONS: FI-EV7-22-A DR-double-disintegration high-lethality-burst (22nd cycle, 2 PCs disint in R0+R2, full resources unused — human review DR magnitude/recharge); FI-EV7-22-B DD-LA-never-executes 22nd confirm (Sabriel eliminated before 2nd DD attempt, 3-LA-burned-0-output); FI-EV7-22-C Sabriel-full-resources-elimination (LoH25/slots-full/smites-unused — DR bypasses attrition kit entirely); FI-EV7-22-D Antireality-narrow-band (1 trigger exact-threshold vs fighter; FI-EV7-21-C 22nd confirm); FI-EV7-19-A manifest_thralls-locked 22nd confirm; FI-EV7-19-E shrine_drift-narration-monotony 22nd confirm; MQ-FC25-B VE-dice-gap 22nd confirm (fixed inline); MQ-EV7-22-A dual-dice-reporting-gap (dispatch vs sim dice for VE) — see _playtest-runs/2026-06-03T16-24-00.md
+
 - 2026-06-03 15:22 UTC — slice #6 21st-cycle (shardcaller-team) — VICTORY R3 (Bazgar 49/49 untouched, Marwen 22/32, Sabriel 44/44 untouched; all 3 SCs DEAD; SC-A DEAD R2 Bazgar-10 melee, SC-B DEAD R2 Marwen-SR-9-fire, SC-C DEAD R3 Sabriel-11+smite; Fireball R1 27-fire SC-A-save-13/SC-B-fail-27; long-range R1 0-hits all SCs except SC-B via CW-cancel-disadv-straight (1-hit 7dmg Marwen); CW 2/9 charges used both R1 only (≤20HP guard blocks R2+); TR fires R2 all 3 SCs — bonus-action monopoly confirmed; Barrage recharged twice (SC-B R2 recharge) fired 0 times — open-vault geometry confirm; PTV 0 activations 3 rounds; Marwen absorbs 100% of SC damage (kiting-feel confirmed); kiting melee-frustration positive); seed 494583; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, same infra constraint as prior 106 consecutive fires); DESIGN DECISIONS: FI-SCT-6-A PTV-0-activations open-vault geometry; FI-SCT-6-B Barrage-0-fires open-vault (coaching note needed); FI-SCT-6-C CW 3/day → 1/encounter practical limit (DD-SCT7-A 21st cycle confirm); FI-SCT-6-D TR-blocks-CW R2+ bonus-action monopoly confirmed; FI-SCT-6-E kiting-feel works (POSITIVE); MQ-SCT-6-A PTV+Barrage same-round timing clarification; MQ-SCT-6-B Barrage direction backward-vs-pursuer — see _playtest-runs/2026-06-03T15-22-21.md
 
 - 2026-06-03 14:29 UTC — slice #5 11th-cycle (solo-rager-rush) — VICTORY R4 (Bazgar 12/49 LoH-exhausted, Marwen 20/32, Sabriel 44/44 untouched; all 3 ragers DEAD; all 3 Berserk R1 (R3:1/2hit Bazgar-14 pre-Fireball, R2:0/2, R1:2/2 post-Fireball Bazgar-6+Marwen-12); Fireball R1 27-fire all-3-fail decisive; Berserk 0/6 recharge attempts R2-R3 (drought); R3 0/6 attacks Sabriel AC19-wall 11th-cycle confirm FI-SRR11-B; LoH 25 exhausted decisive margin FI-SRR11-E; Taunt R3→Sabriel FAIL×4 0 mechanical effect (taunter=target); R2→Bazgar FAIL×3 (1 missed application R4 SIM-SRR11-A, prone+taunt cancel to straight); Scorching Ray 0/3 hits R2 L2-waste FI-SRR11-F; init R2/Sabriel tie SIM-note-alpha-fallback); seed 494582; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494582, 105th consecutive); DESIGN DECISIONS: FI-SRR11-A Berserk-pre-Fireball init-race 11th confirm; FI-SRR11-B R3 AC19-wall 11th confirm (redirect-to-Marwen coaching needed); FI-SRR11-C Berserk recharge drought post-R1 (consider 4-5-6); FI-SRR11-D Taunt Sabriel vestigial when taunter=target (R3 should Taunt Marwen per MQ-SRR11-A); FI-SRR11-E LoH decisive margin (POSITIVE); MQ-SRR11-A Taunt target assignment R3→Sabriel vs correct R3→Marwen — see _playtest-runs/2026-06-03T14-29-36.md
@@ -268,6 +270,36 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-EV7-22-A: empty-void — DR double-disintegration, beholder lethality ceiling (22nd cycle) (2026-06-03T16)
+
+- **Context:** 2026-06-03 16:24 UTC, slice #7 (empty-void) 22nd cycle. Seed 494584. TPK R4.
+
+  **Finding:** DR recharged on d6=6 between R1 and R2 (17% probability). This produced a double-disintegration pattern: Marwen eliminated in the surprise round (49 force vs AC15), Sabriel eliminated R2 (57 force vs AC19). Two of three PCs disintegrated before Round 3; Bazgar soloed and was killed by lair void_eruption R4. Sabriel died with her entire resource pool intact (LoH 25, smites full, slots L3:2/L2:3/L1:4). The encounter resolved before the beholder needed to use Drain Divinity, Void Ray, or any legendary action.
+
+  **Human review question (escalated from FI-EV7-21-A, 22nd cycle confirm):** DR's 10d8 force damage routinely exceeds the HP of AC15 targets in a single shot, and the recharge 5-6 (~33% per round) means a 2-hit DR pattern occurs in approximately 1 in 6 encounter sequences. Is this ceiling acceptable? Recommendation: consider DR recharge 6-only (16% per round) to force longer fights with more ability expression, OR reduce to 8d8 force (avg 36 vs current avg 45) so the "instant-kill" ceiling only applies to Marwen. Either change would let VS, DD, and VR express their mechanics before the encounter ends.
+
+  **Human decision needed. Do not auto-fix.**
+
+### FI-EV7-22-B: empty-void — DD LA budget never executes when DR fires (22nd cycle confirm) (2026-06-03T16)
+
+- **Context:** Same run as FI-EV7-22-A.
+
+  **Finding:** Drain Divinity (3 LA) resisted once, then Sabriel eliminated before a second attempt. 3 LA burned for 0 output. This is the inverse of the FI-EV7-21-B problem (4 consecutive DD resists): here DR was TOO effective, removing the DD target. In 22 empty-void cycles, DD's average output per fight is ~1–2 slot drains when DR underperforms, and ~0 when DR fires cleanly. The LA budget is effectively a "bonus round" of the DR hit pattern — if DR hits, DD never gets to express; if DR misses, DD becomes the game.
+
+  **Recommendation (for human):** The Drain Divinity mechanics are well-authored, but the fight's structure means they only express in the 15–25% of encounters where DR underperforms. Consider whether that frequency is acceptable for the encounter's flagship ability.
+
+  **Human decision needed. Do not auto-fix.**
+
+### FI-EV7-22-C: empty-void — Sabriel full-resources elimination (22nd cycle) (2026-06-03T16)
+
+- **Context:** Same run as FI-EV7-22-A.
+
+  **Finding:** Sabriel died with all slots, LoH, and smite pool intact. Her kit (LoH, smites, healing) is entirely anti-attrition — it's designed to counteract sustained pressure over multiple rounds. Against a beholder using disintegration as an opener, the entire kit is bypassed: a disintegrated creature has no body, so LoH fails, and the remaining party member (Bazgar) doesn't have enough turns to use Sabriel's heals strategically before dying.
+
+  **Note:** This is structurally expected (the beholder is meant to overwhelm a L5 party), but the feel is abrupt. A potential DM coaching note: "When the party approaches negotiation, the beholder should allow VS and Multiattack to express before reaching for DR — the fear rider and grapple/maw pattern are more dramatically satisfying than a two-hit disintegration sequence."
+
+  **Human decision needed. Do not auto-fix** (this is a feel note, not a spec bug).
 
 ### FI-SCT-6-A: shardcaller-team — Pack Tactics Voice 0 activations in open-vault geometry (21st cycle confirm) (2026-06-03T15)
 
