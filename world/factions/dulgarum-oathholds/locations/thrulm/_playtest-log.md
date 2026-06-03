@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-03 21:20 UTC — slice #3 2nd-cycle (beholder-escorts-limited) — TPK R4 (Beholder 66/110; Thrulm HP 66/110; all thralls DEAD R1 Fireball; VS R1 32-psychic all-3-fail → Bazgar+Marwen 0HP Sabriel 6HP; Sabriel LoH revive Bazgar R2/Marwen R3; DD resisted R1+R2 Cha-save-22 twice, landed R3 save-4 drain-L2; multiattack all-miss R2 (to-hit 13/15/9 vs AC18); lair VE drops Marwen before her R4 action (revived R3, killed again before acting); MQ-BEL3-2-A CT save-language confusion (thrall "no saves" vs spec "[ASK PLAYER: DC16 Cha]"); FIX-BEL3-2-A CT retargeting note extended to cover 0HP targets from prior rounds); seed 494589; 1 bug auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 9999, 111th consecutive); DESIGN DECISIONS: FI-BEL3-2-B VS-R1-nova 2nd-cycle confirm (suggest delay VS to R2 or post-shrine_drift-descent for dramatic beat); FI-BEL3-2-C DD-escape-hatch-R3-not-applied (sim used DD R3 despite 2-consec-fail escape hatch; rule correct, sim wrong; DM coaching reinforcement); FI-BEL3-2-D Sabriel-LoH pacing confirmed working; FI-BEL3-2-E beholder-multiattack-all-miss-R2 feel-note (variance, no spec change); FI-BEL3-2-F lair-kills-revived-PC-before-acting (init-20 VE timing, mechanically correct, may feel punishing) — see _playtest-runs/2026-06-03T21-20-10.md
+
 - 2026-06-03 20:20 UTC — slice #2 (tank-wall) — VICTORY R3 (Bazgar 43/49, Marwen 14/32, Sabriel 32/44; Rager DEAD R2 Sabriel-smite; Shardcaller DEAD R3 Marwen-FB+Sabriel; Hold-Person-fizzled R1 (Rager Wis-save 16 vs DC14); Berserk R1 1/3-hit (Sabriel 12-slashing); Shard-Barrage R1 4-total-dmg (extreme low-roll, both-SAVE, 2hp each); CW-on-Rager-before-Berserk wasted (advantage only on first of 3 Berserk swings, still missed Bazgar AC18); Taunt-Marwen fail (5 vs DC12) → disadvantage never cashed (she targeted Rager anyway); TR fires R2 after Rager falls; dual-pool SIM artifact on Berserk narrative vs resolution (ongoing class SIM-dual-pool)); seed 494588; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494588, 110th consecutive); DESIGN DECISIONS: FI-TW-1 CW-on-Rager-before-Berserk (advantage partially wasted — first swing only; coaching note needed: hold CW for R2 multiattack when Berserk expected); FI-TW-2 Taunt vestigial in 2-NPC slice (naturally targets rager first; disadvantage vs non-rager never cashed); FI-TW-3 Barrage extreme-low-roll 4/18 max (variance noted, no spec change); MQ-TW-1 CW+Berserk interaction spec silent (recommend adding "first attack roll only" note to CW spec) — see _playtest-runs/2026-06-03T20-20-47.md
 
 - 2026-06-03 19:16 UTC — slice #1 26th-cycle (shrine-wedge) — VICTORY R2 (Bazgar 22/49, Marwen 11/32, Sabriel 23/44; STD-A DEAD R1 Bazgar-Action-Surge-burst; STD-B DEAD R2 Fireball; STD-B AR R1 all-3-fail 21dmg-each at 4HP; stagger correct (STD-B higher-init fires, STD-A holds-then-dies-before-acting); OBR×2 (STD-A HIT Bazgar 6, STD-B MISS Sabriel AC19); Fireball R1 23-fire STD-B-fail; Fireball R2 L3-slot-waste on 4HP target; altar-zone fire-vuln suppressed (decisive regardless)); seed 494587; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494587, 109th consecutive); DESIGN DECISIONS: FI-SW26-A init-order-determines-difficulty 26th confirm (same pattern as FI-SW25-A; wide variance band from init alone); FI-SW26-B stagger-assigned-fires-on-last-breath (STD-B at 4HP fires devastating AR, STD-A held-and-killed-without-acting; no spec change but coaching note about mid-round stagger cede not possible); FI-SW26-C altar-zone suppression 26th confirm (fire vuln invisible in practice, DM coaching: announce suppression explicitly); FI-SW26-D second-Fireball-on-4HP target slot-waste (DM coaching: use cantrip for cleanup); SIM-SW26-A AR dual-dice divergence (dispatch 13 necrotic vs sim 17 necrotic, ongoing class SIM-SW25-B) — see _playtest-runs/2026-06-03T19-16-00.md
@@ -276,6 +278,34 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-BEL3-2-B: beholder-escorts-limited — VS R1 nova, 2nd-cycle confirm (2026-06-03T21)
+
+- **Context:** 2026-06-03 21:20 UTC, slice #3 (beholder-escorts-limited) 2nd cycle. Seed 494589. TPK R4.
+
+  **Finding:** Void Scream firing in Round 1 with all three PCs failing their saves (rolls 8/13/11 vs DC 16) dropped Bazgar and Marwen immediately and left Sabriel at 6 HP. The fight was effectively decided by a single action in R1. This is the second consecutive beholder-escorts-limited run where VS R1 was the decisive blow.
+
+  **Impact:** The encounter can feel over before it starts when VS fires early and all saves fail. Sabriel's LoH extended the fight by 2 rounds, but the party never had agency — they were in triage from R1 onward.
+
+  **Recommendation (DM coaching):** Delay VS to R2 or use `shrine_drift` to descend visibly first, giving the table a "beholder descends, fills the room with menace" beat before the nova fires. Alternatively: R1 = multiattack (establish melee threat), R2+ = VS. This doesn't change the spec — it's a tactics coaching note about dramatic pacing.
+
+### FI-BEL3-2-F: beholder-escorts-limited — lair init-20 kills just-revived PC before acting (2026-06-03T21)
+
+- **Context:** 2026-06-03 21:20 UTC, slice #3 2nd cycle. Seed 494589. TPK R4.
+
+  **Finding:** Marwen was revived by LoH in R3, then killed again by void eruption (init 20) in R4 before her init-19 turn could fire. She had 10 HP and the lair dealt 10 force (full, failed Dex save). She contributed nothing in R4.
+
+  **Impact:** The lair action at init 20 creates a "punishment window" where any just-revived PC with low HP is immediately re-killed before they can act. This can feel punishing and repetitive if the revive→lair-kill→revive cycle loops.
+
+  **For human review:** Is this the intended pattern? The void chamber's init-20 lair pressure is a key design element (forces players to think about lair action positioning), but if it consistently punishes LoH revives, consider whether the lair action should have a different trigger or a "no consecutive same-target" rule. Mechanically correct; feel question only.
+
+### MQ-BEL3-2-A: compel_thrall "[ASK PLAYER: DC 16 Cha save]" conflicts with thrall "No saves" (2026-06-03T21)
+
+- **Context:** 2026-06-03 21:20 UTC, slice #3 2nd cycle. Discovered during Phase B playtest.
+
+  **Finding:** The `compel_thrall` DB spec effect says `"[ASK PLAYER: DC 16 Cha save] — on a fail, the target moves up to 30 ft..."`. The target is "one creature charmed by the beholder" — i.e., the thrall. But `thrall-derro.md` says "No saves (dominated mind)". At table, the DM sees "[ASK PLAYER]" and doesn't know which player rolls, or for which creature.
+
+  **Recommendation:** Clarify the spec. If CT only applies to already-dominated creatures (no save), remove the save language. If CT can also compel a partially-dominated creature that might resist, add a note explaining when the save applies. Suggested replacement effect text: "Bonus action (1/turn). One creature already charmed by the beholder within 60 ft immediately moves up to 30 ft toward the beholder or a target the beholder designates. No save — fully dominated thralls cannot resist. (For partially dominated targets at DM discretion, DC 16 Cha save applies.)"
 
 ### FI-TW-1: tank-wall — CW-on-Rager before Berserk, advantage partially wasted (1st cycle) (2026-06-03T20)
 
