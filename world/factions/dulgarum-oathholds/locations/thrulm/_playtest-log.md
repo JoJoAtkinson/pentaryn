@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-03 20:20 UTC — slice #2 (tank-wall) — VICTORY R3 (Bazgar 43/49, Marwen 14/32, Sabriel 32/44; Rager DEAD R2 Sabriel-smite; Shardcaller DEAD R3 Marwen-FB+Sabriel; Hold-Person-fizzled R1 (Rager Wis-save 16 vs DC14); Berserk R1 1/3-hit (Sabriel 12-slashing); Shard-Barrage R1 4-total-dmg (extreme low-roll, both-SAVE, 2hp each); CW-on-Rager-before-Berserk wasted (advantage only on first of 3 Berserk swings, still missed Bazgar AC18); Taunt-Marwen fail (5 vs DC12) → disadvantage never cashed (she targeted Rager anyway); TR fires R2 after Rager falls; dual-pool SIM artifact on Berserk narrative vs resolution (ongoing class SIM-dual-pool)); seed 494588; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494588, 110th consecutive); DESIGN DECISIONS: FI-TW-1 CW-on-Rager-before-Berserk (advantage partially wasted — first swing only; coaching note needed: hold CW for R2 multiattack when Berserk expected); FI-TW-2 Taunt vestigial in 2-NPC slice (naturally targets rager first; disadvantage vs non-rager never cashed); FI-TW-3 Barrage extreme-low-roll 4/18 max (variance noted, no spec change); MQ-TW-1 CW+Berserk interaction spec silent (recommend adding "first attack roll only" note to CW spec) — see _playtest-runs/2026-06-03T20-20-47.md
+
 - 2026-06-03 19:16 UTC — slice #1 26th-cycle (shrine-wedge) — VICTORY R2 (Bazgar 22/49, Marwen 11/32, Sabriel 23/44; STD-A DEAD R1 Bazgar-Action-Surge-burst; STD-B DEAD R2 Fireball; STD-B AR R1 all-3-fail 21dmg-each at 4HP; stagger correct (STD-B higher-init fires, STD-A holds-then-dies-before-acting); OBR×2 (STD-A HIT Bazgar 6, STD-B MISS Sabriel AC19); Fireball R1 23-fire STD-B-fail; Fireball R2 L3-slot-waste on 4HP target; altar-zone fire-vuln suppressed (decisive regardless)); seed 494587; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494587, 109th consecutive); DESIGN DECISIONS: FI-SW26-A init-order-determines-difficulty 26th confirm (same pattern as FI-SW25-A; wide variance band from init alone); FI-SW26-B stagger-assigned-fires-on-last-breath (STD-B at 4HP fires devastating AR, STD-A held-and-killed-without-acting; no spec change but coaching note about mid-round stagger cede not possible); FI-SW26-C altar-zone suppression 26th confirm (fire vuln invisible in practice, DM coaching: announce suppression explicitly); FI-SW26-D second-Fireball-on-4HP target slot-waste (DM coaching: use cantrip for cleanup); SIM-SW26-A AR dual-dice divergence (dispatch 13 necrotic vs sim 17 necrotic, ongoing class SIM-SW25-B) — see _playtest-runs/2026-06-03T19-16-00.md
 
 - 2026-06-03 17:16 UTC — slice #0 22nd-cycle (threshold-patrol) — VICTORY R4 (Bazgar 18/49, Marwen 9/32, Sabriel 44/44 untouched; DW-A DEAD R2 Sabriel-5; DW-B DEAD R3 Sabriel-7+7+Bazgar-10; SC DEAD R4 Sabriel-4+Bazgar-10+Marwen-15-Firebolt; Barrage R1 12-pierce Bazgar-FAIL/Marwen-FAIL; THL R1 DW-A incap 1 round (Wis-4 fail DC14, saves R2-d20=15 barely); DW-A Tactical-Drilling R1 misapplied by sim — DW-A acts before DW-B closes, attacks flat (FIX-DW-TP22-A); DW-B Drilling R1 correct (DW-A already in melee); Barrage recharges R3 d6=6 → fires again (Marwen+Bazgar both SAVE, 6 each); CW 0/3 used (22nd consecutive cycle double-block: init-7+≤20HP guard)); seed 494585; 1 bug auto-fixed (FIX-DW-TP22-A Tactical-Drilling simultaneous-charge clarification in deep-watch-derro.md); 29/29 Phase A clean (network blocked, cache pre-seeded seed 494585, 108th consecutive); DESIGN DECISIONS: FI-TP22-A CW 0/3 22nd-cycle double-block confirm (HIGH: init-order+range structurally prevent use; recommend human review of formation spacing or HP guard threshold); FI-TP22-B DW-Wis-save weak vs CC (30% pass DC14 — THL near-guaranteed 1 round removal; coaching note or Wis bump needed); FI-TP22-C solo-SC-R3-Barrage feels like cleanup not pressure (tactical retreat when all melee allies dead); MQ-TP22-A Drilling simultaneous-charge resolution (FIXED inline); MQ-TP22-B SC-can-CW-different-ally-while-self-Barrageing (coaching clarity gap, no spec change) — see _playtest-runs/2026-06-03T17-16-02.md
@@ -274,6 +276,34 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-TW-1: tank-wall — CW-on-Rager before Berserk, advantage partially wasted (1st cycle) (2026-06-03T20)
+
+- **Context:** 2026-06-03 20:20 UTC, slice #2 (tank-wall) 1st cycle. Seed 494588. VICTORY R3.
+
+  **Finding:** Shardcaller correctly called CW on the Rager before it acted (SC init 4 > Rager init 2, as per the "CW highest-init alive ally before they act" rule). The Rager then chose Berserk (correct: 3 PCs in reach, all fresh). CW advantage applied only to the first of three Berserk swings, then was consumed — the other two swings were flat rolls. In this run, the CW-boosted first swing still missed Bazgar (AC 18). The net result: 1 CW charge spent, 0 benefit.
+
+  The shardcaller tactics warn against CW on a barrage-firing ally (save-based, no attack roll). Berserk is attack-roll based, so the spec is technically silent. But Berserk is multi-swing — CW advantage is spent on one roll out of N. In encounters where the Rager will Berserk R1 (2+ PCs in reach, fresh), the SC's CW charge is better saved for the R2 multiattack where the advantage covers a full 2-swing sequence.
+
+  **Recommendation:** Add to shardcaller tactics: "When Rager has 2+ PCs in reach and Berserk is not on cooldown (i.e., the Rager will almost certainly Berserk R1), hold CW for the R2 multiattack — Berserk consumes the advantage on the first of N swings only, and the +4 to-hit already pressures AC 14–16 derro formations without help. Save the charge."
+
+  **Do not auto-fix (coaching note, not spec change).**
+
+### FI-TW-2: tank-wall — Taunt vestigial in 2-NPC slice (1st cycle) (2026-06-03T20)
+
+- **Context:** Same run. Marwen failed Taunt save (5 vs DC 12) and had disadvantage on attacks vs non-rager. But Marwen targeted the Rager on her next turn anyway — the disadvantage never applied.
+
+  **Finding:** In a 2-NPC encounter, the back-line caster's natural priority is the front-line threat (the rager). Taunt's disadvantage only matters if the caster tries to target the shardcaller instead. By the time the Rager falls and the caster switches targets, Taunt has expired. This is a slice-composition artifact; in larger formations (shardcaller-team, final-confrontation), Taunt is meaningfully disruptive — it forces casters to either eat disadvantage on AoE targets or focus the rager instead. Calling this out for awareness only.
+
+  **Do not auto-fix (works correctly in multi-NPC formations; 2-NPC isolation makes it feel vestigial).**
+
+### MQ-TW-1: tank-wall — CW + Berserk spec silent on "first attack roll only" (1st cycle) (2026-06-03T20)
+
+- **Context:** Same run. The `call_weakness` spec says "advantage on its next attack roll." Berserk fires multiple attack rolls. Per 5e rules, advantage is spent after the first roll. The spec does not state this.
+
+  **Recommendation:** Add a `note` field to the call_weakness spec: "advantage applies to the Rager's first attack roll only; it is consumed whether that roll hits or misses. For multiattack or Berserk turns, remaining attacks are flat rolls." Prevents DMs from accidentally granting multi-swing advantage.
+
+  **Candidate for auto-fix next fire — add note field to CW spec via combat_action_upsert.**
 
 ### FI-SW26-B: shrine-wedge — stagger-assigned-fires-on-last-breath, held STD killed before acting (26th cycle) (2026-06-03T19)
 
