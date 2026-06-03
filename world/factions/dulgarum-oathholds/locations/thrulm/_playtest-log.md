@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-03 12:20 UTC — slice #3 1st-beholder-cycle (beholder-escorts-limited) — TPK R6 (Beholder 71/110; all thralls dead R1-R2 Fireball; Bazgar 0 ×4 downs cycled LoH; Marwen 0 VS-R2; Sabriel 0 VR-R6; VS R2 decisive 3×fail 31+32+27=90 psychic → fear rider never expressed; DD 2/4 hits vs Sabriel Cha+3; LoH pool exhausted R5-R6; TL+Maw R1 43-total on Bazgar before VS; Beholder Dex+8 saves both Fireballs half; SIM-BEL3-A void_eruption double-call harness; lair void_eruption 5-consecutive FI-129 rotation violated sim-only); seed 494580; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494580, 103rd consecutive); DESIGN DECISIONS: FI-BEL3-B VS-fear-rider-invisible (kills before fear expresses; DM coaching: delay VS until R3+ for dramatic value); FI-BEL3-C DD-vs-FI-125-conflict (sole-surviving-PC LoH loop — DD 3 LA vs Tentacle pressure 1 LA: recommend VR+TL split when Sabriel sole PC <30HP); FI-BEL3-D thrall-axe +1 never-hit 2 turns (intentional weak-puppet flavor, no change); MQ-BEL3-A grapple-persists-at-0HP sim-bug (not spec; unconscious ends grappled MQ-FC14-A) — see _playtest-runs/2026-06-03T12-20-51.md
+
 - 2026-06-03 11:20 UTC — slice #2 27th-cycle (tank-wall) — VICTORY R2 (Bazgar 45/49 auth, Marwen 23/32, Sabriel 44/44 untouched; Rager DEAD R1 Fireball-26-fail+Bazgar-23-trip+Sabriel-smite-28, SC DEAD R2 SR-16+Bazgar-7; Rager 0/2 hits vs AC18 R1 — to-hit 8,9 both miss; Taunt FAIL DC12 inert vs save-caster FI-31 27th; CW range-locked 40ft gap MQ-TW26-A 27th; init Marwen22→Rager20→SC12→Bazgar8→Sabriel6; SIM-TW27-A rager-dmg-without-AC-check harness, SIM-TW27-B barrage-recharge-inverted harness); seed 494579; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494579, 102nd consecutive); DESIGN DECISIONS: FI-TW27-A MQ-TW26-A 27th-cycle CW-range confirm (CW fired 1 of 27 cycles; recommend spacing ≤25ft or range to 60ft); FI-TW27-B Fireball-decisive 27th confirm (Marwen init-22 tops all combatants → R1 Fireball before Rager acts); FI-TW27-C Taunt-inert 27th-cycle (FI-31 confirm; DC12 Cha structurally dead text vs save-caster); FI-TW27-D Rager-0-dmg-all-miss-AC18 (variance, not spec gap) — see _playtest-runs/2026-06-03T11-20-17.md
 
 - 2026-06-03 10:17 UTC — slice #1 25th-cycle (shrine-wedge) — VICTORY R2 (Bazgar 34/49, Marwen 21/32, Sabriel 44/44 untouched; STD-1 DEAD R1 Bazgar Action-Surge burst, STD-2 DEAD R1 Fireball 30-fire+Sabriel-smite+OBR-self-kill); init STD-1→STD-2→Bazgar→Marwen→Sabriel; stagger correct (STD-2 holds AR R1 → moot, STD-2 dies R1); STD-1 AR (Bazgar FAIL 5 dmg, Marwen FAIL 11 dmg, con-save-fail); Bazgar 4-atk Action Surge kills STD-1 (14+19+12+14 — OBR fires, misses, 3 self-psy); Fireball 30 fire STD-2 FAIL (altar zone suppressed — decisive regardless); OBR self-kill STD-2 (4 psychic at 1 HP); UF never activates (both STDs dead R1); seed 494578; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 42, 101st consecutive); DESIGN DECISIONS: FI-SW25-A low-attrition 25th-cycle variance (init-order determines easy-win vs near-TPK range; Action Surge + Fireball clears both STDs R1 when Bazgar acts mid-init); FI-SW25-B altar-zone suppression 25th-cycle confirm DD-SW23-A (Fireball decisive regardless of vulnerability state, pull-away puzzle invisible); FI-SW25-D OBR self-finishing-blow (STD-2 killed by own reaction; +4 OBR misses AC18/AC19 two-thirds of the time — self-damage more mechanically reliable than the counter-swing); MQ-SW25-B multiattack roller labels combined slashing+necrotic total as "slashing" type (dnd_roller.py format bug, out of bot blast radius) — see _playtest-runs/2026-06-03T10-17-00.md
@@ -260,6 +262,34 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-BEL3-B: beholder-escorts-limited — Void Scream fear rider invisible (2026-06-03T12)
+
+- **Context:** 2026-06-03 12:20 UTC, slice #3 (beholder-escorts-limited) 1st beholder cycle. Seed 494580. TPK R6. Beholder 71/110.
+
+  **Finding:** Void Scream fired R2 and dealt 31+32+27=90 total psychic to 3 PCs (all failed DC16 Wis). Both Bazgar and Marwen were instantly knocked to 0 HP by VS; Sabriel dropped to 17 HP and became the sole survivor from R3 onward. The **fear rider** (frightened for 1 minute) never expressed meaningfully in play: Bazgar was unconscious, Marwen was unconscious, and Sabriel's frightened condition was cleared R3 via save (22 vs DC16). VS's primary design intent per FI-149 is the fear condition that suppresses Bazgar's melee output for 2-3 rounds. This never happened because VS killed Bazgar outright.
+
+  **Root cause:** Marwen rolled initiative 21 (highest) and used Fireball R1, dealing 13 halved damage to beholder. Bazgar then hit for 9. Beholder entered R2 at 80 HP. Void Scream waited 1 full round (correct per tactics — "be patient"), then fired R2 when all 3 PCs were within 30ft. But the 18-roll average × 3 failed PCs produced a one-shot scenario.
+
+  **Human decision:** Should VS be DM-coached to delay until R3+ (after the Multiattack grapple sequence has engaged a PC) so the fear rider has at least 1-2 turns to express? Or is the "VS as two-turn win condition" acceptable for this overwhelming-difficulty slice? Note the distinction: in the full-beholder slice (#4), VS is meant to terrify and weaken before DR finishes; in the limited slice (#3) without DR, VS is doing the killing work instead.
+
+  **Do not auto-fix** (DM coaching question, not a spec bug).
+
+### FI-BEL3-C: beholder-escorts-limited — DD vs FI-125 Tentacle-pressure conflict (2026-06-03T12)
+
+- **Context:** Same run as FI-BEL3-B. Rounds 3-5, Sabriel sole surviving PC at 17 HP cycling Lay on Hands.
+
+  **Finding:** FI-125 specifies: "if Sabriel is < 30 HP and just used LoH on an ally, Tentacle (1 LA) at end of her turn." However, the beholder's default LA priority is Drain Divinity (3 LA) which consumes the entire legendary action budget on Sabriel's end-of-turn trigger. In this run:
+  - R3: Sabriel at 17 HP, used LoH. Beholder spent 3 LA on DD (Sabriel saved). 0 LA remaining for Tentacle pressure.
+  - R4: Same. Sabriel saved again.
+  - R5: Sabriel failed DD, lost L2 slot. 0 LA remaining.
+  - R6: No L2 slot target. Beholder correctly switched to VR+TL and killed Sabriel.
+
+  The LoH depletion loop ran 4 full rounds (Sabriel revived Bazgar 3× before LoH hit 0). During this loop the beholder never landed HP pressure on Sabriel via Tentacle. Sabriel stayed at 17 HP throughout R3-R6 despite being the sole PC.
+
+  **Recommendation:** Add tiebreak to beholder tactics: "If Sabriel is the sole surviving PC AND ≤ 30 HP AND her LoH pool is not yet exhausted (> 0), switch to Void Ray (2 LA) + Tentacle (1 LA) split instead of DD (3 LA). DD on a sole survivor with no slot protection is low-marginal-value; VR + TL delivers guaranteed HP pressure per turn."
+
+  **Do not auto-fix** (tactics text change; human should approve the wording and whether it belongs in FI-125 or as a new entry).
 
 ### FI-SW25-A: shrine-wedge — low-attrition R2 victory, initiative-order variance (2026-06-03T10)
 
