@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-03 08:00 UTC — slice #7 21st-cycle (empty-void) — VICTORY R5 (anomalous; sim-error: LoH revived disintegrated Marwen R4, extended fight by ~1 round; auth projection: VICTORY R5-R6 even without Marwen); beholder 0/110; Bazgar 11/49 FRIGHTENED; Marwen 0/32 DISINTEGRATED R4; Sabriel 25/44; DR 2/3 miss (d20=6,2), DD 4/4 resisted (Sabriel Cha+3 rolls 23/23/23/21 vs DC16) — 0/12 LA output all fight; VS fired R2 (38 psychic: Bazgar FAIL frightened, Marwen/Sabriel SAVE half); Fireball R1 half (beholder Dex +8 save 22 vs DC15), Scorching Ray 2×, 2× Divine Smite (crit R2), Bazgar 3/5 hits; seed 494576; 2 bugs auto-fixed (FIX-EV7-21-A disintegration-LoH checklist note; FIX-EV7-21-B DD consecutive-fail escape hatch in LA tactics); 29/29 Phase A clean (network blocked, cache pre-seeded seed 494576, 99th consecutive); DESIGN DECISIONS: FI-EV7-21-A VICTORY anomaly (DR 2-miss + DD 4-resist combined 12% probability — not a spec bug but confirms burst-damage threat window when beholder underperforms; human review: HP pool 110 may be low for attrition strategy, consider 120-130); FI-EV7-21-B DD all-or-nothing 21st confirm (fixed FIX-EV7-21-B); FI-EV7-21-C Antireality dead-letter vs +7 fighter (DD-43 threshold never met; human review: relax to ≤AC+4?); FI-EV7-21-D sim-error LoH-on-disintegrated (fixed FIX-EV7-21-A); MQ-EV7-21-A VE saves not resolved in sim — see _playtest-runs/2026-06-03T08-00-00.md
+
 - 2026-06-02 21:20 UTC — slice #6 20th-cycle (shardcaller-team) — VICTORY R2 (Bazgar 31/49, Marwen 11/32 sim / ~5/32 auth-PTV, Sabriel 44/44 untouched; all 3 SCs dead; SC-A DEAD javelin R1, SC-C DEAD Sabriel smite R1, SC-B DEAD Bazgar maul R2); seed 494565; init Marwen(22)→SC-A(20)→SC-B(16)→Bazgar(5)=Sabriel(5)=SC-C(5); Fireball R1 30 fire: SC-A FAIL→3HP, SC-B SAVE→18HP, SC-C FAIL→3HP (20th-cycle R1-decisive confirm FI-SCT-20-B); SC-A Barrage R1 13 pierce (Bazgar FAIL 13→36, Marwen SAVE 6→26); SC-B CW→SC-C (correct stagger CW), MA 2/2 hit Marwen (10 pierce total →16HP; SIM-SCT-20-A: CW ADV applied to granter SC-B not grantee SC-C — harness bug, outcome same); SC-C dies before acting (init-tie ordering auth wrong — SIM harness ran Bazgar/Sabriel first, auth SC-C Dex+2 should act before Bazgar/Sabriel MQ-SCT-20-A); R2 SC-B TR+Barrage (11 pierce both SAVE; SIM-SCT-20-B PTV reset wrong — auth Marwen has PTV disadv on R2 Barrage save); Bazgar maul 15→SC-B DEAD; CW 1/9 used (FI-SCT-20-D NEW severity-HIGH: most extreme underuse yet — 8 charges wasted; 20th-cycle DD-SCT7-A confirm, recommend 1/encounter); 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494565, 98th consecutive); DESIGN DECISIONS: FI-SCT-20-A SC-A below-12HP Barrage (defensible, thematic); FI-SCT-20-B Fireball-decisive 20th confirm; FI-SCT-20-D CW 1/9 worst cycle (DD-SCT7-A 20th, consider 1/encounter); MQ-SCT-20-A init-tie SC Dex+2 coaching gap — see _playtest-runs/2026-06-02T21-20-41.md
 
 - 2026-06-02 20:19 UTC — slice #5 10th-cycle (solo-rager-rush) — VICTORY R6 (Bazgar 25/49 standing, Marwen DOWN R2 multiattack focus, Sabriel DOWN R3; R1 DEAD R1-focused; R2 DEAD R3; R3 DEAD R6; Berserk 0/1 hits this run — all-miss R1 10th-cycle high-variance confirm FI-SRR10-B; Fireball R1 25 fire all-3-fail; Taunt 0 mechanical effect — Bazgar irrelevant (already targeting R1), Marwen passed, Sabriel failed but down R3; FI-31 10th-cycle split confirm; ME +1 all 3 ragers R2+ confirm; SIM-SRR10-A Taunt re-targeting gap (R2/R3 should redirect to Bazgar after Marwen/Sabriel drop — harness skipped); MQ-SRR10-B Berserk gate harness error (spurious d6>=5 check before use, not a DB bug); 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494564, 97th consecutive); DESIGN DECISIONS: FI-SRR10-C 1v1 endgame anticlimactic (R4-R6 chip grind, no rager escalation); FI-SRR10-D Taunt DC 12 structurally inert 10th-cycle (0 mechanical effect, consider DC 13); SIM-SRR10-A Taunt redirect-on-drop coaching note needed — see _playtest-runs/2026-06-02T20-19-16.md
@@ -252,6 +254,28 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-EV7-21-A: empty-void — VICTORY anomaly, beholder HP pool question (2026-06-03T08)
+
+- **Context:** 2026-06-03 08:00 UTC, slice #7 (empty-void) 21st cycle. Seed 494576. VICTORY R5.
+
+  **Finding:** First party victory in 21 empty-void cycles. Root cause was a double-low-probability outcome: DR missed 2/3 attempts (d20=6 and d20=2), and Drain Divinity was resisted 4/4 consecutive times (Sabriel Cha +3 vs DC 16 succeeds on 13+, ~40% per save; P(4 in a row) ≈ 2.6%). With both primary action economies broken, the party's burst damage (Fireball half + Scorching Ray ×2 + 2 Divine Smites + Bazgar 3/5 hits) totaled ~98 damage in 5 rounds — more than the beholder's 110 HP pool.
+
+  **Note:** The simulation error (LoH revived disintegrated Marwen in R4 — see FIX-EV7-21-A) artificially extended the fight by ~1 round. In authentic play the fight outcome is still a likely VICTORY in R5–R6 with 2 PCs.
+
+  **Human review question:** The beholder's 110 HP pool and +6 to-hit DR mean that on bad dice, the party can win before the beholder's action economy matters. Is this acceptable variance, or should HP be raised to 120–130 to force consistent multi-round engagement? The beholder's damage ceiling (10d8 DR, 6d10 VS, legendary VR) is very high — the vulnerability is the to-hit dependency for DR and the DD-saves for legendary actions. HP increase would deepen the fight without changing feel.
+
+  **Human decision needed. Do not auto-fix.**
+
+### FI-EV7-21-C: empty-void — Antireality DD-43 dead-letter vs +7 fighter (2026-06-03T08)
+
+- **Context:** Same run.
+
+  **Finding:** Antireality never fired in this fight. Bazgar's three hits were totals 24, 26, 22 — all above the DD-43 threshold (total ≤ AC+2 = 19). The reaction is structurally blocked against any fighter with ≥+7 to-hit because their hits tend to cluster in the 20–27 range, never in the 18–19 "worth blocking" window. Across 21 cycles, Antireality fires approximately 1-in-5 times Bazgar lands a hit — mostly useless against the primary melee threat.
+
+  **Recommendation:** Consider relaxing DD-43 from "total ≤ AC+2" to "total ≤ AC+4" (i.e., total ≤ 21). This would let Antireality fire on hits of 18–21, which is a meaningful fraction of Bazgar's hits. Without this change the reaction is essentially a "only fires on lucky-but-barely-hits" check.
+
+  **Human decision needed. Do not auto-fix** (changes combat feel).
 
 ### FI-SCT-20-D: shardcaller-team — CW 1/9 worst cycle, DD-SCT7-A 20th confirm (2026-06-02T21)
 
