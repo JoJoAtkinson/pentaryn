@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-03 17:16 UTC — slice #0 22nd-cycle (threshold-patrol) — VICTORY R4 (Bazgar 18/49, Marwen 9/32, Sabriel 44/44 untouched; DW-A DEAD R2 Sabriel-5; DW-B DEAD R3 Sabriel-7+7+Bazgar-10; SC DEAD R4 Sabriel-4+Bazgar-10+Marwen-15-Firebolt; Barrage R1 12-pierce Bazgar-FAIL/Marwen-FAIL; THL R1 DW-A incap 1 round (Wis-4 fail DC14, saves R2-d20=15 barely); DW-A Tactical-Drilling R1 misapplied by sim — DW-A acts before DW-B closes, attacks flat (FIX-DW-TP22-A); DW-B Drilling R1 correct (DW-A already in melee); Barrage recharges R3 d6=6 → fires again (Marwen+Bazgar both SAVE, 6 each); CW 0/3 used (22nd consecutive cycle double-block: init-7+≤20HP guard)); seed 494585; 1 bug auto-fixed (FIX-DW-TP22-A Tactical-Drilling simultaneous-charge clarification in deep-watch-derro.md); 29/29 Phase A clean (network blocked, cache pre-seeded seed 494585, 108th consecutive); DESIGN DECISIONS: FI-TP22-A CW 0/3 22nd-cycle double-block confirm (HIGH: init-order+range structurally prevent use; recommend human review of formation spacing or HP guard threshold); FI-TP22-B DW-Wis-save weak vs CC (30% pass DC14 — THL near-guaranteed 1 round removal; coaching note or Wis bump needed); FI-TP22-C solo-SC-R3-Barrage feels like cleanup not pressure (tactical retreat when all melee allies dead); MQ-TP22-A Drilling simultaneous-charge resolution (FIXED inline); MQ-TP22-B SC-can-CW-different-ally-while-self-Barrageing (coaching clarity gap, no spec change) — see _playtest-runs/2026-06-03T17-16-02.md
+
 - 2026-06-03 16:24 UTC — slice #7 22nd-cycle (empty-void) — TPK R4 (Marwen DISINTEGRATED surprise DR d20=17 HIT 49-force; Sabriel DISINTEGRATED R2 DR-recharge-d6=6-HIT-23vsAC19-57-force; Bazgar 0 VE-lair R4 17-force; beholder 81/110 LR:3/3-unused VS-recharged-no-targets DD-0-uses; VS R1 26-psy Bazgar-fail-frightened/Sabriel-save; DD 0/1 attempts resisted Cha+3; Antireality 1 trigger (hit17=AC+2 exact, converted) then 1 hit-24-over-threshold; AR fires only in narrow band vs AC+7-fighter; Bazgar Action-Surge 1/4-hits all-disadv-frightened; dual-dice VE dispatch/sim divergence); seed 494584; 1 bug auto-fixed (FIX-EV7-22-A VE-dice-3d8→2d10 beholder.md line-26); 29/29 Phase A clean (network blocked, cache pre-seeded seed 494584, 107th consecutive); DESIGN DECISIONS: FI-EV7-22-A DR-double-disintegration high-lethality-burst (22nd cycle, 2 PCs disint in R0+R2, full resources unused — human review DR magnitude/recharge); FI-EV7-22-B DD-LA-never-executes 22nd confirm (Sabriel eliminated before 2nd DD attempt, 3-LA-burned-0-output); FI-EV7-22-C Sabriel-full-resources-elimination (LoH25/slots-full/smites-unused — DR bypasses attrition kit entirely); FI-EV7-22-D Antireality-narrow-band (1 trigger exact-threshold vs fighter; FI-EV7-21-C 22nd confirm); FI-EV7-19-A manifest_thralls-locked 22nd confirm; FI-EV7-19-E shrine_drift-narration-monotony 22nd confirm; MQ-FC25-B VE-dice-gap 22nd confirm (fixed inline); MQ-EV7-22-A dual-dice-reporting-gap (dispatch vs sim dice for VE) — see _playtest-runs/2026-06-03T16-24-00.md
 
 - 2026-06-03 15:22 UTC — slice #6 21st-cycle (shardcaller-team) — VICTORY R3 (Bazgar 49/49 untouched, Marwen 22/32, Sabriel 44/44 untouched; all 3 SCs DEAD; SC-A DEAD R2 Bazgar-10 melee, SC-B DEAD R2 Marwen-SR-9-fire, SC-C DEAD R3 Sabriel-11+smite; Fireball R1 27-fire SC-A-save-13/SC-B-fail-27; long-range R1 0-hits all SCs except SC-B via CW-cancel-disadv-straight (1-hit 7dmg Marwen); CW 2/9 charges used both R1 only (≤20HP guard blocks R2+); TR fires R2 all 3 SCs — bonus-action monopoly confirmed; Barrage recharged twice (SC-B R2 recharge) fired 0 times — open-vault geometry confirm; PTV 0 activations 3 rounds; Marwen absorbs 100% of SC damage (kiting-feel confirmed); kiting melee-frustration positive); seed 494583; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, same infra constraint as prior 106 consecutive fires); DESIGN DECISIONS: FI-SCT-6-A PTV-0-activations open-vault geometry; FI-SCT-6-B Barrage-0-fires open-vault (coaching note needed); FI-SCT-6-C CW 3/day → 1/encounter practical limit (DD-SCT7-A 21st cycle confirm); FI-SCT-6-D TR-blocks-CW R2+ bonus-action monopoly confirmed; FI-SCT-6-E kiting-feel works (POSITIVE); MQ-SCT-6-A PTV+Barrage same-round timing clarification; MQ-SCT-6-B Barrage direction backward-vs-pursuer — see _playtest-runs/2026-06-03T15-22-21.md
@@ -271,7 +273,33 @@
 
 ## DESIGN DECISIONS (review in morning)
 
-### FI-EV7-22-A: empty-void — DR double-disintegration, beholder lethality ceiling (22nd cycle) (2026-06-03T16)
+### FI-TP22-A: threshold-patrol — CW 0/3 used, 22nd-cycle double-block confirm (SEVERITY: HIGH) (2026-06-03T17)
+
+- **Context:** 2026-06-03 17:16 UTC, slice #0 (threshold-patrol) 22nd cycle. Seed 494585. VICTORY R4.
+
+  **Finding:** SC initiative 7 (last of all combatants). Both DWs act before SC every round. By the time SC acts in R1, the DWs are in melee and full HP — technically valid CW targets if HP > 20. But: (a) in R1 SC fires Barrage (main action), so CW timing must be bonus-action on the same turn — SC correctly skips CW because Barrage just fired and the DW CW targets act before SC next round (already-acted guard MQ-12). In R2, DW-A is dead and DW-B is at 17 HP (≤20 HP guard). CW never fires in 22 consecutive threshold-patrol cycles. The mechanic's designed function (boosting the highest-initiative DW for a decisive early attack) is structurally prevented by the patrol's initiative ordering.
+
+  **Human decision needed:** Option A — encounters.md note to position SC within 15 ft of DWs (not 50 ft back), giving the SC a chance to CW on R1 bonus while walking in. Option B — cap HP guard at ≤15 HP for 2-NPC escort configurations. Option C — replace CW with a reaction-based ability so initiative order doesn't block it.
+
+  **Do not auto-fix.**
+
+### FI-TP22-B: threshold-patrol — DW Wis save structurally weak vs wizard crowd control (2026-06-03T17)
+
+- **Context:** Same run. Marwen used Tasha's Hideous Laughter (L1, DC 14 Wis) on DW-A in R1. DW-A rolled d20=5, Wis-1=4 — fail. Was incapacitated for R1, barely saved R2 (15 on d20, barely meeting DC14), then died anyway. In 22 threshold-patrol cycles, wizard CC on a DW has been near-automatic when attempted. DW Wis save: no proficiency, Wis 8 → -1 modifier → ~30% pass rate vs DC14 each turn.
+
+  **Recommendation:** Either (a) give DW Wis save proficiency (Oath-Bound Resolve applies to charmed/frightened — extend to Wis saves generally?), or (b) add a note to DW tactics that they close aggressively to deny spellcasting range (move to within 5 ft of wizard to force somatic components, impose disadvantage on concentration). Authoring-only change if a tactics note; spec change if adding a trait.
+
+  **Do not auto-fix.**
+
+### FI-TP22-C: threshold-patrol — solo SC fires Barrage from 20 HP as encounter endgame — feels like cleanup (2026-06-03T17)
+
+- **Context:** Same run. SC at 20 HP with both DWs dead, Barrage recovered (d6=6), fires again vs 3 converging PCs. Dealt 6 piercing each to Marwen and Bazgar (both saved). The encounter's dramatic arc peaked when the DWs fell; the SC's Barrage felt like cleanup pressure rather than a dangerous formation ability.
+
+  **Recommendation:** Add a retreat trigger to SC tactics: "If all melee allies are dead and you are below full HP, begin Tactical Retreat each round (move 30 ft away) toward the column cluster. Fire Multiattack from the new position. This makes the SC feel like a commander withdrawing rather than a solo skirmisher dying in place." Low-risk tactics-only change — can auto-fix if confirmed after human review.
+
+  **Do not auto-fix (design question: should SC fight or flee solo?).**
+
+### FI-EV7-22-A: empty-void — DR double-disintegration, beholder lethality ceiling (22nd cycle) (2026-06-03T16) — DR double-disintegration, beholder lethality ceiling (22nd cycle) (2026-06-03T16)
 
 - **Context:** 2026-06-03 16:24 UTC, slice #7 (empty-void) 22nd cycle. Seed 494584. TPK R4.
 

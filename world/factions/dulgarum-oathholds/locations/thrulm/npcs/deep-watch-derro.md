@@ -24,7 +24,7 @@ tags: ["#combat-runner", "#npc", "#combat", "#derro", "#dulgarum-oathholds", "#t
 
 ## Tactics — when the DM asks "what does it do?"
 
-- **Round 1, in formation:** Multiattack (two hand axes) on the closest melee threat that has an ally in reach — Tactical Drilling kicks in.
+- **Round 1, in formation:** Multiattack (two hand axes) on the closest melee threat. Tactical Drilling (advantage) applies only when an ally is **already in position adjacent to the target** — not when both DWs are simultaneously closing from range. In a simultaneous charge: the first DW to act (higher initiative) attacks flat; the second DW attacks with Drilling advantage because the first is already in melee. *(FIX-DW-TP22-A: clarified simultaneous-charge resolution — 22nd-cycle threshold-patrol confirm)*
 - **Split party (caster 20+ ft from front-liners):** One DW peels to the caster while the other holds the front. The peeler doesn't benefit from Tactical Drilling on its first turn; if the other DW closes next round, Drilling resumes. Never leave the caster uncontested. *(MQ-NEW-TP10-1 — 10th TP cycle)*
 - **Isolated / outranged:** Switch to **Light Crossbow** (range 80/320, +4 to hit). Better hit chance and lets the derro hold position behind cover.
 - **Focus-fire:** Anyone visibly casting or healing — Deep Watch knows what a wizard looks like.
