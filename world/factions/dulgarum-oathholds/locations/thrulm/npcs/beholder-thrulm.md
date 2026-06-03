@@ -23,7 +23,7 @@ tags: ["#combat-runner", "#npc", "#combat", "#beholder", "#thrulm", "#boss", "#a
 5. **Main action (choose exactly one per turn):** `multiattack` / `disintegration_ray` (if available) / `void_scream` (if available). DR and VS are **mutually exclusive** — only one fires per turn; each replaces the full main action. *(MQ-84: a turn cannot include both DR and VS.)*
 6. **Legendary Resistance:** 3/day, still available unless burned.
 7. **Void-Feeding (passive):** in the shrine chamber, +1 to attack and damage rolls (already baked into action specs); advantage on resist-divine-turn checks.
-8. **Lair Actions** trigger on **init count 20, LOSING TIES** (not the beholder's turn): if the beholder also rolled 20, beholder turn resolves first, *then* lair action fires. Pick `unstable_ground`, `manifest_thralls`, or `void_eruption`. *Tie example: if any thrall or PC also rolled init 20, they act BEFORE the lair fires — the lair yields to any creature at exactly count 20 (MQ-BEL27-B).*
+8. **Lair Actions** trigger on **init count 20, LOSING TIES** (not the beholder's turn): if the beholder also rolled 20, beholder turn resolves first, *then* lair action fires. Pick `unstable_ground`, `manifest_thralls`, or `void_eruption`. *Tie example: if any thrall or PC also rolled init 20, they act BEFORE the lair fires — the lair yields to any creature at exactly count 20 (MQ-BEL27-B).* **VOID ERUPTION save: DC 16 Dex save, 3d8 force, half on save** (not DC 14 Str — MQ-FC28-A).
 
 ---
 

@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-03 13:21 UTC — slice #4 28th-cycle (final-confrontation) — TPK R2 (Marwen DISINTEGRATED R1 DR 26-vs-AC15 HIT 54-force; Bazgar 0 STD-2 AR R2 + 3 death-save-failures; Sabriel 0 VS R2 33-psychic-fail; beholder 110/110 untouched with 6 temp HP from DD; DR recharge fail d6=2, VS used main-action R2; stagger correct R2 STD-2 fires first; DD R1 Sabriel SAVE 19, DD R2 FAIL 14 → L3 drained after she fell; LoH 25 HP never activated 28th-cycle confirm FI-FC28-C; shrine_drift OA-safe descent confirmed DD-48; VE lair save-type simulation error SIM-FC28-B DC14-Str used vs auth DC16-Dex — no outcome change; OBR double-trigger sim error SIM-FC28-A, no material impact); seed 494581; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494581, 104th consecutive); DESIGN DECISIONS: FI-FC28-A mob-kills-beholder pattern 28th confirm (STD-2 AR delivers killing blow, not beholder — 2 consecutive FC cycles); FI-FC28-B DR disintegration announce-first coaching (before Sabriel action); MQ-FC28-A VE save DC16-Dex coaching note missing from beholder.md — see _playtest-runs/2026-06-03T13-21-07.md
+
 - 2026-06-03 12:20 UTC — slice #3 1st-beholder-cycle (beholder-escorts-limited) — TPK R6 (Beholder 71/110; all thralls dead R1-R2 Fireball; Bazgar 0 ×4 downs cycled LoH; Marwen 0 VS-R2; Sabriel 0 VR-R6; VS R2 decisive 3×fail 31+32+27=90 psychic → fear rider never expressed; DD 2/4 hits vs Sabriel Cha+3; LoH pool exhausted R5-R6; TL+Maw R1 43-total on Bazgar before VS; Beholder Dex+8 saves both Fireballs half; SIM-BEL3-A void_eruption double-call harness; lair void_eruption 5-consecutive FI-129 rotation violated sim-only); seed 494580; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494580, 103rd consecutive); DESIGN DECISIONS: FI-BEL3-B VS-fear-rider-invisible (kills before fear expresses; DM coaching: delay VS until R3+ for dramatic value); FI-BEL3-C DD-vs-FI-125-conflict (sole-surviving-PC LoH loop — DD 3 LA vs Tentacle pressure 1 LA: recommend VR+TL split when Sabriel sole PC <30HP); FI-BEL3-D thrall-axe +1 never-hit 2 turns (intentional weak-puppet flavor, no change); MQ-BEL3-A grapple-persists-at-0HP sim-bug (not spec; unconscious ends grappled MQ-FC14-A) — see _playtest-runs/2026-06-03T12-20-51.md
 
 - 2026-06-03 11:20 UTC — slice #2 27th-cycle (tank-wall) — VICTORY R2 (Bazgar 45/49 auth, Marwen 23/32, Sabriel 44/44 untouched; Rager DEAD R1 Fireball-26-fail+Bazgar-23-trip+Sabriel-smite-28, SC DEAD R2 SR-16+Bazgar-7; Rager 0/2 hits vs AC18 R1 — to-hit 8,9 both miss; Taunt FAIL DC12 inert vs save-caster FI-31 27th; CW range-locked 40ft gap MQ-TW26-A 27th; init Marwen22→Rager20→SC12→Bazgar8→Sabriel6; SIM-TW27-A rager-dmg-without-AC-check harness, SIM-TW27-B barrage-recharge-inverted harness); seed 494579; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494579, 102nd consecutive); DESIGN DECISIONS: FI-TW27-A MQ-TW26-A 27th-cycle CW-range confirm (CW fired 1 of 27 cycles; recommend spacing ≤25ft or range to 60ft); FI-TW27-B Fireball-decisive 27th confirm (Marwen init-22 tops all combatants → R1 Fireball before Rager acts); FI-TW27-C Taunt-inert 27th-cycle (FI-31 confirm; DC12 Cha structurally dead text vs save-caster); FI-TW27-D Rager-0-dmg-all-miss-AC18 (variance, not spec gap) — see _playtest-runs/2026-06-03T11-20-17.md
@@ -262,6 +264,36 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-FC28-A: final-confrontation — mob delivers killing blow (2× confirmed, cycles 27–28) (2026-06-03T13)
+
+- **Context:** 2026-06-03 13:21 UTC, slice #4 (final-confrontation) 28th cycle. Seed 494581. TPK R2.
+
+  **Finding:** Two consecutive final-confrontation cycles (FC27 and FC28) show that the beholder itself does not deliver the killing blow to either Bazgar or Sabriel. In both cycles, STD-2's Ancient Resonance AoE is the decisive down-stroke. The beholder delivers the iconic DR disintegration (Marwen R1, both cycles) and lands Void Scream (FC28: Sabriel 14→0), but the physical attrition comes from mob actions.
+
+  **Is this a problem?** The beholder's disintegration of Marwen is the unforgettable moment of the encounter. The subsequent mob pressure is thematically appropriate (the beholder doesn't "swoop in to finish" — it just watches as its thralls do cleanup). However, if the goal is for the beholder to feel like the *primary* threat to Bazgar and Sabriel as well as Marwen, the 2-round timeline may be too fast for the beholder to act twice before the party collapses.
+
+  **Recommendation:** No spec change. Add a DM coaching note: "In the final confrontation, the dramatic arc should be DR→disintegration R1, VS R2, then mop-up. If the party survives VS, the beholder's R3+ legendary economy becomes the pressure." The mob finishing is thematically correct — the beholder orchestrates, the thralls execute.
+
+  **Do not auto-fix** (feel/framing question, not a spec bug).
+
+### FI-FC28-B: final-confrontation — DR disintegration announce-first coaching (2026-06-03T13)
+
+- **Context:** Same run as FI-FC28-A. R1 beholder turn: DR hits Marwen at 9 HP (after STD-2 AR reduced her from 32), 54 force disintegrates.
+
+  **Finding:** The .md correctly documents "announce immediately on a 0-HP hit" (FI-NEW-FC4-LOH). In the 28th cycle, this note was not tested at table (playtest context), but the ruling is critical: Sabriel acts at init 3, two turns after the beholder (init 10). If DR disintegrates Marwen mid-R1 and the DM doesn't announce immediately, Sabriel may attempt LoH on her next turn only to be told the body is dust. The ruling must happen at the moment DR connects, before any other player action.
+
+  **This is a coaching gap in DM execution, not a spec bug.** The .md has the ruling; the risk is a DM forgetting to surface it at the table.
+
+  **Do not auto-fix** (DM coaching note, already in .md).
+
+### MQ-FC28-A: void_eruption save spec mismatch in simulation (FIXED in beholder.md) (2026-06-03T13)
+
+- **Context:** 2026-06-03 13:21 UTC. Lair action void_eruption R2. Simulation used DC 14 Str save; action output shows DC 16 Dex save.
+
+  **Finding:** This simulation error has appeared in prior cycles (MQ-EV7-19-B, SIM-FC24-C). The beholder.md start-of-turn checklist item 8 did not specify VE save type, leading to repeated DM mis-application. **Auto-fix applied this cycle:** added "**VOID ERUPTION save: DC 16 Dex save, 3d8 force, half on save** (not DC 14 Str — MQ-FC28-A)" to checklist item 8. Auth VE with correct DC 16 Dex: both Bazgar (Dex +2, need 14+) and Sabriel (Dex ~0, need 16+) likely fail, taking full 20 force. Outcome unchanged (both fall R2 regardless), but HP totals auth: Bazgar 1/49, Sabriel 17/44 entering Thrall-2's turn.
+
+  **Bug auto-fixed** — beholder.md checklist item 8 now specifies DC 16 Dex. No DB change needed.
 
 ### FI-BEL3-B: beholder-escorts-limited — Void Scream fear rider invisible (2026-06-03T12)
 
