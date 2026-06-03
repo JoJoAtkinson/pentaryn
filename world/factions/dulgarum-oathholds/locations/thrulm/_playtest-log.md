@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-03 15:22 UTC — slice #6 21st-cycle (shardcaller-team) — VICTORY R3 (Bazgar 49/49 untouched, Marwen 22/32, Sabriel 44/44 untouched; all 3 SCs DEAD; SC-A DEAD R2 Bazgar-10 melee, SC-B DEAD R2 Marwen-SR-9-fire, SC-C DEAD R3 Sabriel-11+smite; Fireball R1 27-fire SC-A-save-13/SC-B-fail-27; long-range R1 0-hits all SCs except SC-B via CW-cancel-disadv-straight (1-hit 7dmg Marwen); CW 2/9 charges used both R1 only (≤20HP guard blocks R2+); TR fires R2 all 3 SCs — bonus-action monopoly confirmed; Barrage recharged twice (SC-B R2 recharge) fired 0 times — open-vault geometry confirm; PTV 0 activations 3 rounds; Marwen absorbs 100% of SC damage (kiting-feel confirmed); kiting melee-frustration positive); seed 494583; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, same infra constraint as prior 106 consecutive fires); DESIGN DECISIONS: FI-SCT-6-A PTV-0-activations open-vault geometry; FI-SCT-6-B Barrage-0-fires open-vault (coaching note needed); FI-SCT-6-C CW 3/day → 1/encounter practical limit (DD-SCT7-A 21st cycle confirm); FI-SCT-6-D TR-blocks-CW R2+ bonus-action monopoly confirmed; FI-SCT-6-E kiting-feel works (POSITIVE); MQ-SCT-6-A PTV+Barrage same-round timing clarification; MQ-SCT-6-B Barrage direction backward-vs-pursuer — see _playtest-runs/2026-06-03T15-22-21.md
+
 - 2026-06-03 14:29 UTC — slice #5 11th-cycle (solo-rager-rush) — VICTORY R4 (Bazgar 12/49 LoH-exhausted, Marwen 20/32, Sabriel 44/44 untouched; all 3 ragers DEAD; all 3 Berserk R1 (R3:1/2hit Bazgar-14 pre-Fireball, R2:0/2, R1:2/2 post-Fireball Bazgar-6+Marwen-12); Fireball R1 27-fire all-3-fail decisive; Berserk 0/6 recharge attempts R2-R3 (drought); R3 0/6 attacks Sabriel AC19-wall 11th-cycle confirm FI-SRR11-B; LoH 25 exhausted decisive margin FI-SRR11-E; Taunt R3→Sabriel FAIL×4 0 mechanical effect (taunter=target); R2→Bazgar FAIL×3 (1 missed application R4 SIM-SRR11-A, prone+taunt cancel to straight); Scorching Ray 0/3 hits R2 L2-waste FI-SRR11-F; init R2/Sabriel tie SIM-note-alpha-fallback); seed 494582; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494582, 105th consecutive); DESIGN DECISIONS: FI-SRR11-A Berserk-pre-Fireball init-race 11th confirm; FI-SRR11-B R3 AC19-wall 11th confirm (redirect-to-Marwen coaching needed); FI-SRR11-C Berserk recharge drought post-R1 (consider 4-5-6); FI-SRR11-D Taunt Sabriel vestigial when taunter=target (R3 should Taunt Marwen per MQ-SRR11-A); FI-SRR11-E LoH decisive margin (POSITIVE); MQ-SRR11-A Taunt target assignment R3→Sabriel vs correct R3→Marwen — see _playtest-runs/2026-06-03T14-29-36.md
 
 - 2026-06-03 13:21 UTC — slice #4 28th-cycle (final-confrontation) — TPK R2 (Marwen DISINTEGRATED R1 DR 26-vs-AC15 HIT 54-force; Bazgar 0 STD-2 AR R2 + 3 death-save-failures; Sabriel 0 VS R2 33-psychic-fail; beholder 110/110 untouched with 6 temp HP from DD; DR recharge fail d6=2, VS used main-action R2; stagger correct R2 STD-2 fires first; DD R1 Sabriel SAVE 19, DD R2 FAIL 14 → L3 drained after she fell; LoH 25 HP never activated 28th-cycle confirm FI-FC28-C; shrine_drift OA-safe descent confirmed DD-48; VE lair save-type simulation error SIM-FC28-B DC14-Str used vs auth DC16-Dex — no outcome change; OBR double-trigger sim error SIM-FC28-A, no material impact); seed 494581; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494581, 104th consecutive); DESIGN DECISIONS: FI-FC28-A mob-kills-beholder pattern 28th confirm (STD-2 AR delivers killing blow, not beholder — 2 consecutive FC cycles); FI-FC28-B DR disintegration announce-first coaching (before Sabriel action); MQ-FC28-A VE save DC16-Dex coaching note missing from beholder.md — see _playtest-runs/2026-06-03T13-21-07.md
@@ -266,6 +268,58 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-SCT-6-A: shardcaller-team — Pack Tactics Voice 0 activations in open-vault geometry (21st cycle confirm) (2026-06-03T15)
+
+- **Context:** 2026-06-03 15:22 UTC, slice #6 (shardcaller-team) 21st cycle. Seed 494583. VICTORY R3. Open main vault, SCs spread ≥25 ft apart.
+
+  **Finding:** PTV (passive: ally-hits → target disadvantage on next saving throw) never triggered across 3 rounds of combat. Root cause: all SC attacks in R1 were at disadvantage (long range), resulting in only 1 hit total across 6 attack rolls. No SC ever set up a "hit now → ally barrages next" sequence because: (a) hit rates at long-range disadvantage are ~25% per attack, (b) Barrage never fired (see FI-SCT-6-B), and (c) by R2 all allies were ≤20 HP blocking CW/coordination. This is at least the 4th consecutive shardcaller cycle with 0 PTV activations in the main vault. PTV appears to be a corridor-only mechanic.
+
+  **Recommendation:** Add to derro-shardcaller.md tactics checklist item 4: "**In open-vault encounters:** PTV activation probability per round ≈ 6% (hit rate 25% × barrage-setup rate). Accept that PTV will likely not trigger. Its value is deterrent/positional (forces PCs to stay spread), not a rotation-centerpiece." Do not remove PTV — it pays off in the corridor/threshold encounter.
+
+  **Do not auto-fix** (coaching note only — human review before .md edit).
+
+### FI-SCT-6-B: shardcaller-team — Shard-Barrage 0 fires in open vault (21st cycle, 3rd open-vault confirm) (2026-06-03T15)
+
+- **Context:** Same run. SC-B recharged Barrage in R2 (d6=5) but did not fire. No other SC reached a firing opportunity.
+
+  **Finding:** In 3 consecutive open-vault shardcaller cycles, Barrage fired 0 times. Causes: (1) 15-ft line geometry can't reach party at 40-55 ft starting distance; (2) once PCs close, TR fires the bonus action and SCs retreat before Barrage becomes useful; (3) at low HP (≤12), retreat priority overrides all offensive options. Barrage is a corridor mechanic that fires reliably in threshold-patrol (confirmed multiple cycles) but structurally cannot execute in the main vault's open geometry.
+
+  **Recommendation:** Add a note to SC tactics under Barrage: "**Open vault:** Barrage will rarely or never fire — its primary value here is positioning deterrent (keeps PCs spread). In main-vault encounters, do not hold CW charges in anticipation of a Barrage setup that may not materialize; use CW on the first eligible multiattacking ally."
+
+  **Do not auto-fix** (coaching note — human review before .md edit).
+
+### FI-SCT-6-C: shardcaller-team — CW 3/day collapses to 1/encounter in practice (21st cycle, DD-SCT7-A confirm) (2026-06-03T15)
+
+- **Context:** Same run. 2/9 total CW charges used (SC-C → SC-B, SC-B → SC-A, both R1). From R2 onward, all allies ≤20 HP blocked by DD-8/DD-25 guard.
+
+  **Finding:** This is the 21st consecutive shardcaller cycle confirming the pattern: the ≤20 HP guard correctly prevents waste but means CW is a 1-round ability per encounter regardless of the 3/day limit. The 3/day denomination assumes 3 separate encounters per long rest, but per-encounter usage is 1 charge. The cognitive overhead of "I have 3 charges" while only 1 is usable creates decision noise at the table.
+
+  **Recommendation:** Consider simplifying to **1/encounter** (equivalent to the real firing rate) or **2/day** (modest reserve). At minimum, add a tactics note: "In practice, you will spend 1 CW charge per encounter before the ≤20 HP guard activates. Reserve the other 2 for subsequent encounters if this is not the final fight."
+
+  **Do not auto-fix** (balance/UX simplification — human decision).
+
+### MQ-SCT-6-A: shardcaller-team — PTV+Barrage same-round timing needs explicit checklist callout (2026-06-03T15)
+
+- **Context:** Same run. Mechanical question about PTV stacking with Barrage when triggered in the same round.
+
+  **Finding:** PTV spec says "target has disadvantage on the *next* saving throw before end of its next turn." If SC-B multiattacks and hits Bazgar in round N, does SC-A's Barrage in the SAME round benefit from PTV disadvantage on the Dex save? Answer: YES — Barrage save happens before Bazgar's next turn, so PTV applies. This is the most potent use of PTV but is never called out explicitly in checklist item 4.
+
+  **Recommendation:** Add to checklist item 4: "**PTV + Barrage combo:** if SC-X hits target T in round N, and SC-Y fires Barrage targeting T in the SAME round (before T's next turn), T rolls the Barrage Dex save at disadvantage. Call this out explicitly when SC-X hits — the Barrage-firing SC should be notified immediately."
+
+  **Do not auto-fix** (coaching/clarification note — human review before .md edit).
+
+### MQ-SCT-6-B: shardcaller-team — Barrage line direction not specified (backward vs pursuer) (2026-06-03T15)
+
+- **Context:** Same run. Theoretical: when a PC charges and is within 15 ft behind an SC, can the SC fire Barrage "backward" through the pursuer?
+
+  **Finding:** The Barrage spec says "15-ft line" with no directional constraint. Standard 5e line areas originate from the caster and extend in any direction. An SC retreating via TR with a PC 5-10 ft behind could technically fire Barrage backward to hit the pursuer. This would be a powerful use case that makes Barrage useful in the TR-retreat situation. Nothing in the .md permits or prohibits this.
+
+  **Recommendation:** Add to Barrage in the checklist or tactics: "Barrage line can be oriented in ANY direction from the SC's position — including backward toward a pursuing PC. When TR fires this turn and a PC pursuer is within 15 ft, firing Barrage into the pursuer AFTER TR repositioning is legal and often optimal (bonus action TR then attack action Barrage). This is the primary use case for Barrage in melee-threatened situations."
+
+  **Note:** This may be a significant feel improvement — turns the "TR then Barrage" sequence into a valid rotation and resolves the bonus-action conflict (TR uses bonus action, Barrage uses main action — they DON'T conflict). Human review to confirm ruling and add to .md.
+
+  **Do not auto-fix** (ruling clarification + potential tactics improvement — human decision).
 
 ### FI-SRR11-B: solo-rager-rush — R3 AC19 wall, redirect-to-Marwen coaching missing (11th cycle confirm) (2026-06-03T14)
 
