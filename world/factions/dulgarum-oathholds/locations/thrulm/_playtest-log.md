@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-03 09:18 UTC — slice #0 21st-cycle (threshold-patrol) — VICTORY R2 (Bazgar 11/49, Marwen 26/32 (0 L3 slots), Sabriel 44/44 untouched; DW-A DEAD R1 Bazgar GS, DW-B DEAD R2 Fireball, SC-1 DEAD R2 Fireball); init DW-B(22)→DW-A(21)→Marwen(19)→Sabriel(10)→SC-1(3)→Bazgar(0); DW front-load 22 HP on Bazgar before Marwen acts (highest pre-Fireball DW pressure in recent TP cycles); Fireball R1 22 fire (DW-A PASS 11, DW-B FAIL 22 →5HP, SC-1 FAIL 22 →11HP); Sabriel smite DW-A 13 radiant → 3HP; SC Barrage 12 pierce (Bazgar FAIL 12, Marwen PASS 6); Fireball R2 26 fire kills DW-B+SC-1; CW 0/3 used (21st-cycle range+init double-block confirm); seed 494577; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494577, 100th consecutive); DESIGN DECISIONS: FI-TP21-A CW 0/3 21st confirm (double block: range 50ft>30ft AND SC init-3 already-acted guard — recommend patrol spacing note in encounters.md); MQ-TP21-B SC 50ft back positioning ambiguous (add explicit patrol gap to encounters.md); FI-TP21-C DW front-load pressure working (22 HP pre-Marwen, positive feel); SIM-TP21-A Bazgar targets already-dead SC-1 R2 (harness target-selection bug, not spec) — see _playtest-runs/2026-06-03T09-18-48.md
+
 - 2026-06-03 08:00 UTC — slice #7 21st-cycle (empty-void) — VICTORY R5 (anomalous; sim-error: LoH revived disintegrated Marwen R4, extended fight by ~1 round; auth projection: VICTORY R5-R6 even without Marwen); beholder 0/110; Bazgar 11/49 FRIGHTENED; Marwen 0/32 DISINTEGRATED R4; Sabriel 25/44; DR 2/3 miss (d20=6,2), DD 4/4 resisted (Sabriel Cha+3 rolls 23/23/23/21 vs DC16) — 0/12 LA output all fight; VS fired R2 (38 psychic: Bazgar FAIL frightened, Marwen/Sabriel SAVE half); Fireball R1 half (beholder Dex +8 save 22 vs DC15), Scorching Ray 2×, 2× Divine Smite (crit R2), Bazgar 3/5 hits; seed 494576; 2 bugs auto-fixed (FIX-EV7-21-A disintegration-LoH checklist note; FIX-EV7-21-B DD consecutive-fail escape hatch in LA tactics); 29/29 Phase A clean (network blocked, cache pre-seeded seed 494576, 99th consecutive); DESIGN DECISIONS: FI-EV7-21-A VICTORY anomaly (DR 2-miss + DD 4-resist combined 12% probability — not a spec bug but confirms burst-damage threat window when beholder underperforms; human review: HP pool 110 may be low for attrition strategy, consider 120-130); FI-EV7-21-B DD all-or-nothing 21st confirm (fixed FIX-EV7-21-B); FI-EV7-21-C Antireality dead-letter vs +7 fighter (DD-43 threshold never met; human review: relax to ≤AC+4?); FI-EV7-21-D sim-error LoH-on-disintegrated (fixed FIX-EV7-21-A); MQ-EV7-21-A VE saves not resolved in sim — see _playtest-runs/2026-06-03T08-00-00.md
 
 - 2026-06-02 21:20 UTC — slice #6 20th-cycle (shardcaller-team) — VICTORY R2 (Bazgar 31/49, Marwen 11/32 sim / ~5/32 auth-PTV, Sabriel 44/44 untouched; all 3 SCs dead; SC-A DEAD javelin R1, SC-C DEAD Sabriel smite R1, SC-B DEAD Bazgar maul R2); seed 494565; init Marwen(22)→SC-A(20)→SC-B(16)→Bazgar(5)=Sabriel(5)=SC-C(5); Fireball R1 30 fire: SC-A FAIL→3HP, SC-B SAVE→18HP, SC-C FAIL→3HP (20th-cycle R1-decisive confirm FI-SCT-20-B); SC-A Barrage R1 13 pierce (Bazgar FAIL 13→36, Marwen SAVE 6→26); SC-B CW→SC-C (correct stagger CW), MA 2/2 hit Marwen (10 pierce total →16HP; SIM-SCT-20-A: CW ADV applied to granter SC-B not grantee SC-C — harness bug, outcome same); SC-C dies before acting (init-tie ordering auth wrong — SIM harness ran Bazgar/Sabriel first, auth SC-C Dex+2 should act before Bazgar/Sabriel MQ-SCT-20-A); R2 SC-B TR+Barrage (11 pierce both SAVE; SIM-SCT-20-B PTV reset wrong — auth Marwen has PTV disadv on R2 Barrage save); Bazgar maul 15→SC-B DEAD; CW 1/9 used (FI-SCT-20-D NEW severity-HIGH: most extreme underuse yet — 8 charges wasted; 20th-cycle DD-SCT7-A confirm, recommend 1/encounter); 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494565, 98th consecutive); DESIGN DECISIONS: FI-SCT-20-A SC-A below-12HP Barrage (defensible, thematic); FI-SCT-20-B Fireball-decisive 20th confirm; FI-SCT-20-D CW 1/9 worst cycle (DD-SCT7-A 20th, consider 1/encounter); MQ-SCT-20-A init-tie SC Dex+2 coaching gap — see _playtest-runs/2026-06-02T21-20-41.md
@@ -254,6 +256,28 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-TP21-A: threshold-patrol — CW 0/3 used, 21st-cycle double-block structural confirm (2026-06-03T09)
+
+- **Context:** 2026-06-03 09:18 UTC, slice #0 (threshold-patrol) 21st cycle. Seed 494577. VICTORY R2.
+
+  **Finding:** Call Weakness went unused for the 21st consecutive threshold-patrol cycle. This cycle reveals the double structural block with unusual clarity: (1) SC-1 rolled initiative 3 — dead last, after both DWs (init 22, 21) and all three PCs. The "already-acted-ally guard" (MQ-12 in the .md checklist) fires against both DWs, since they acted in init slots 22 and 21 before SC's init slot 3. (2) SC-1 is positioned 50 ft behind the DW pair, exceeding CW's 30 ft range. Either block alone would prevent CW from firing; both together make it structurally inaccessible regardless of dice. The .md thoroughly documents both guards, so there is no spec bug.
+
+  **Human decision needed:** Two options:
+  - (a) Move SC-1's patrol position to ≤25 ft behind the DW pair (removes the range block; init block may still fire if SC rolls low). Add a note to `encounters.md` or `_overview.md` specifying the patrol gap.
+  - (b) Accept that CW is a "shrine/rager combo" ability, not a patrol ability. SC's role in threshold-patrol is barrage + multiattack; CW is intended to matter in the shrine-wedge and tank-wall formations. If this is the intent, no change is needed but the .md tactics could add: "In threshold-patrol setup, expect 0 CW uses; the formation spacing makes it unavailable."
+
+  **Do not auto-fix** (changes encounter narration/positioning).
+
+### MQ-TP21-B: threshold-patrol — SC patrol gap unspecified in encounter files (2026-06-03T09)
+
+- **Context:** Same run.
+
+  **Finding:** The encounter files (encounters.md, _overview.md) do not specify the SC-1 patrol distance behind the DW pair. The current simulation assumption (50 ft, based on "40–60 ft behind the front line" in the derro-shardcaller.md tactics) consistently exceeds CW's 30 ft range. If the patrol gap were 25 ft, CW would be in range and SC's low initiative would become the only block.
+
+  **Recommendation:** Add a line to the threshold-patrol encounter note: "SC-1 patrols 25 ft behind DW-A and DW-B (within CW range)." This is the minimum change to make CW theoretically available in patrol encounters. Whether CW actually fires still depends on SC's initiative roll.
+
+  **Low-risk, but human should confirm patrol geometry with map before updating.**
 
 ### FI-EV7-21-A: empty-void — VICTORY anomaly, beholder HP pool question (2026-06-03T08)
 
