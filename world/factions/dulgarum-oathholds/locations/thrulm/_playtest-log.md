@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-03 22:28 UTC — slice #4 29th-cycle (final-confrontation) — TPK R3 (Marwen DISINTEGRATED R2 DR d20=11+6=17 vs AC15 HIT 50 force; Bazgar+Sabriel DOWN R3 VS 32 psychic both-SAVE half-16 still-lethal; beholder 84/110 LR×3 unused; thralls dead R1 Fireball all-fail 30 fire; STD-A dead R1 Bazgar-maneuver 22; STD-B dead R2 Marwen-ScorchingRay; DD R1 Marwen FAIL L3 drain +6 temp (still had L3×1 → Fireball not prevented); DD R2 fires again (Marwen FAIL 2nd-L3 drained, now L3×0); DD R3 Sabriel FAIL L2×0; VS fear rider never applied (both saved); LoH 25 never activated 29th confirm; stagger inverted SIM-FC29-A harness); seed 494590; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494590, 112th consecutive); DESIGN DECISIONS: FI-FC29-A POSITIVE beholder-kills-all-3-PCs-directly (DR+VS; first FC cycle without mob-assist kill); FI-FC29-B DD-on-L3×2 slows-not-prevents-Fireball (coaching: DD-after-1st-L3-drain = no-op if target has ≥2); FI-FC29-C VS-fear-rider-academic-when-PCs-depleted (floor-damage-kills before-fear-registers); FI-FC29-D manifest_thralls-1-survivor marginal (unstable_ground better when LA-budget-spent); FI-FC29-E FI-128-L2-threshold borderline (beholder DD on L2×1 target at 84HP should switch to VR+TL per spec) — see _playtest-runs/2026-06-03T22-28-54.md
+
 - 2026-06-03 21:20 UTC — slice #3 2nd-cycle (beholder-escorts-limited) — TPK R4 (Beholder 66/110; Thrulm HP 66/110; all thralls DEAD R1 Fireball; VS R1 32-psychic all-3-fail → Bazgar+Marwen 0HP Sabriel 6HP; Sabriel LoH revive Bazgar R2/Marwen R3; DD resisted R1+R2 Cha-save-22 twice, landed R3 save-4 drain-L2; multiattack all-miss R2 (to-hit 13/15/9 vs AC18); lair VE drops Marwen before her R4 action (revived R3, killed again before acting); MQ-BEL3-2-A CT save-language confusion (thrall "no saves" vs spec "[ASK PLAYER: DC16 Cha]"); FIX-BEL3-2-A CT retargeting note extended to cover 0HP targets from prior rounds); seed 494589; 1 bug auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 9999, 111th consecutive); DESIGN DECISIONS: FI-BEL3-2-B VS-R1-nova 2nd-cycle confirm (suggest delay VS to R2 or post-shrine_drift-descent for dramatic beat); FI-BEL3-2-C DD-escape-hatch-R3-not-applied (sim used DD R3 despite 2-consec-fail escape hatch; rule correct, sim wrong; DM coaching reinforcement); FI-BEL3-2-D Sabriel-LoH pacing confirmed working; FI-BEL3-2-E beholder-multiattack-all-miss-R2 feel-note (variance, no spec change); FI-BEL3-2-F lair-kills-revived-PC-before-acting (init-20 VE timing, mechanically correct, may feel punishing) — see _playtest-runs/2026-06-03T21-20-10.md
 
 - 2026-06-03 20:20 UTC — slice #2 (tank-wall) — VICTORY R3 (Bazgar 43/49, Marwen 14/32, Sabriel 32/44; Rager DEAD R2 Sabriel-smite; Shardcaller DEAD R3 Marwen-FB+Sabriel; Hold-Person-fizzled R1 (Rager Wis-save 16 vs DC14); Berserk R1 1/3-hit (Sabriel 12-slashing); Shard-Barrage R1 4-total-dmg (extreme low-roll, both-SAVE, 2hp each); CW-on-Rager-before-Berserk wasted (advantage only on first of 3 Berserk swings, still missed Bazgar AC18); Taunt-Marwen fail (5 vs DC12) → disadvantage never cashed (she targeted Rager anyway); TR fires R2 after Rager falls; dual-pool SIM artifact on Berserk narrative vs resolution (ongoing class SIM-dual-pool)); seed 494588; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494588, 110th consecutive); DESIGN DECISIONS: FI-TW-1 CW-on-Rager-before-Berserk (advantage partially wasted — first swing only; coaching note needed: hold CW for R2 multiattack when Berserk expected); FI-TW-2 Taunt vestigial in 2-NPC slice (naturally targets rager first; disadvantage vs non-rager never cashed); FI-TW-3 Barrage extreme-low-roll 4/18 max (variance noted, no spec change); MQ-TW-1 CW+Berserk interaction spec silent (recommend adding "first attack roll only" note to CW spec) — see _playtest-runs/2026-06-03T20-20-47.md
@@ -278,6 +280,24 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-FC29-A (POSITIVE): final-confrontation — beholder kills all 3 PCs with own abilities (2026-06-03T22)
+
+- **Context:** 2026-06-03 22:28 UTC, slice #4 (final-confrontation) 29th cycle. Seed 494590. TPK R3.
+- **Finding:** DR disintegrated Marwen R2. VS half-damage finished Bazgar and Sabriel R3 (both saved, floor damage still lethal at 3 and 7 HP). First FC cycle without a mob assist on the killing blow — the beholder felt like the apex threat. Prior cycles (FI-FC27-D, FI-FC28-A) had STD mob landing kills. The hinge was DR recharging on R2 (rolled 6); without that recharge the beholder falls to Multiattack and STDs do more work.
+- **Recommendation:** No spec change. Log as positive confirmation that beholder's own kit is sufficient for the TPK when RNG cooperates. The DR recharge (5-6 = 33%) is the variance driver for this pattern.
+
+### FI-FC29-B: final-confrontation — DD on L3×2 slows but doesn't prevent Fireball (2026-06-03T22)
+
+- **Context:** 2026-06-03 22:28 UTC, slice #4 29th cycle. Seed 494590.
+- **Finding:** DD fired after STD-B's turn (init 23, before Marwen init 22). Marwen had L3×2 at that point. DD drained one L3 → L3×1 remaining. She cast Fireball with the remaining L3. DD's first drain on a 2-slot caster costs them a resource but doesn't change R1 behavior.
+- **Recommendation (coaching note to add to beholder tactics):** "When target has ≥2 of their highest remaining slot, first DD removes redundancy but doesn't prevent the next-round use. If target has exactly 1 remaining of their highest slot AND another slot-holder is in range, consider pivoting DD to the other target whose solo L2+ slot is more impactful (e.g. Sabriel's L2 fuels smites + healing pool discipline)."
+
+### FI-FC29-E: final-confrontation — FI-128 L2 threshold borderline at 84 HP (2026-06-03T22)
+
+- **Context:** 2026-06-03 22:28 UTC, slice #4 29th cycle. Beholder at 84 HP, R3.
+- **Finding:** DD fired on Sabriel's last L2 slot. FI-128 says "DD only worth 3 LA when target has L2+ slots remaining" but qualifies: "switch to VR (2 LA) when target's highest remaining is L1." Sabriel had L2×1 — technically still L2+, so DD was spec-compliant. But at 84 HP (not below 40), VR+TL expected output (~24.5 avg damage dealt) far exceeds DD's 4 temp HP. The spec correctly notes this trade-off but the beholder tactics didn't apply the "below 40 HP" exception properly.
+- **Recommendation:** Reinforce in beholder.md tactics: "At HP > 40 and target at exactly L2×1, prefer VR(2)+TL(1) over DD(3). The 4 temp HP from L2 drain is less valuable than 24.5 avg damage. Reserve DD for L3+ targets or sub-40 HP desperation plays."
 
 ### FI-BEL3-2-B: beholder-escorts-limited — VS R1 nova, 2nd-cycle confirm (2026-06-03T21)
 
