@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-03 10:17 UTC — slice #1 25th-cycle (shrine-wedge) — VICTORY R2 (Bazgar 34/49, Marwen 21/32, Sabriel 44/44 untouched; STD-1 DEAD R1 Bazgar Action-Surge burst, STD-2 DEAD R1 Fireball 30-fire+Sabriel-smite+OBR-self-kill); init STD-1→STD-2→Bazgar→Marwen→Sabriel; stagger correct (STD-2 holds AR R1 → moot, STD-2 dies R1); STD-1 AR (Bazgar FAIL 5 dmg, Marwen FAIL 11 dmg, con-save-fail); Bazgar 4-atk Action Surge kills STD-1 (14+19+12+14 — OBR fires, misses, 3 self-psy); Fireball 30 fire STD-2 FAIL (altar zone suppressed — decisive regardless); OBR self-kill STD-2 (4 psychic at 1 HP); UF never activates (both STDs dead R1); seed 494578; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 42, 101st consecutive); DESIGN DECISIONS: FI-SW25-A low-attrition 25th-cycle variance (init-order determines easy-win vs near-TPK range; Action Surge + Fireball clears both STDs R1 when Bazgar acts mid-init); FI-SW25-B altar-zone suppression 25th-cycle confirm DD-SW23-A (Fireball decisive regardless of vulnerability state, pull-away puzzle invisible); FI-SW25-D OBR self-finishing-blow (STD-2 killed by own reaction; +4 OBR misses AC18/AC19 two-thirds of the time — self-damage more mechanically reliable than the counter-swing); MQ-SW25-B multiattack roller labels combined slashing+necrotic total as "slashing" type (dnd_roller.py format bug, out of bot blast radius) — see _playtest-runs/2026-06-03T10-17-00.md
+
 - 2026-06-03 09:18 UTC — slice #0 21st-cycle (threshold-patrol) — VICTORY R2 (Bazgar 11/49, Marwen 26/32 (0 L3 slots), Sabriel 44/44 untouched; DW-A DEAD R1 Bazgar GS, DW-B DEAD R2 Fireball, SC-1 DEAD R2 Fireball); init DW-B(22)→DW-A(21)→Marwen(19)→Sabriel(10)→SC-1(3)→Bazgar(0); DW front-load 22 HP on Bazgar before Marwen acts (highest pre-Fireball DW pressure in recent TP cycles); Fireball R1 22 fire (DW-A PASS 11, DW-B FAIL 22 →5HP, SC-1 FAIL 22 →11HP); Sabriel smite DW-A 13 radiant → 3HP; SC Barrage 12 pierce (Bazgar FAIL 12, Marwen PASS 6); Fireball R2 26 fire kills DW-B+SC-1; CW 0/3 used (21st-cycle range+init double-block confirm); seed 494577; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494577, 100th consecutive); DESIGN DECISIONS: FI-TP21-A CW 0/3 21st confirm (double block: range 50ft>30ft AND SC init-3 already-acted guard — recommend patrol spacing note in encounters.md); MQ-TP21-B SC 50ft back positioning ambiguous (add explicit patrol gap to encounters.md); FI-TP21-C DW front-load pressure working (22 HP pre-Marwen, positive feel); SIM-TP21-A Bazgar targets already-dead SC-1 R2 (harness target-selection bug, not spec) — see _playtest-runs/2026-06-03T09-18-48.md
 
 - 2026-06-03 08:00 UTC — slice #7 21st-cycle (empty-void) — VICTORY R5 (anomalous; sim-error: LoH revived disintegrated Marwen R4, extended fight by ~1 round; auth projection: VICTORY R5-R6 even without Marwen); beholder 0/110; Bazgar 11/49 FRIGHTENED; Marwen 0/32 DISINTEGRATED R4; Sabriel 25/44; DR 2/3 miss (d20=6,2), DD 4/4 resisted (Sabriel Cha+3 rolls 23/23/23/21 vs DC16) — 0/12 LA output all fight; VS fired R2 (38 psychic: Bazgar FAIL frightened, Marwen/Sabriel SAVE half); Fireball R1 half (beholder Dex +8 save 22 vs DC15), Scorching Ray 2×, 2× Divine Smite (crit R2), Bazgar 3/5 hits; seed 494576; 2 bugs auto-fixed (FIX-EV7-21-A disintegration-LoH checklist note; FIX-EV7-21-B DD consecutive-fail escape hatch in LA tactics); 29/29 Phase A clean (network blocked, cache pre-seeded seed 494576, 99th consecutive); DESIGN DECISIONS: FI-EV7-21-A VICTORY anomaly (DR 2-miss + DD 4-resist combined 12% probability — not a spec bug but confirms burst-damage threat window when beholder underperforms; human review: HP pool 110 may be low for attrition strategy, consider 120-130); FI-EV7-21-B DD all-or-nothing 21st confirm (fixed FIX-EV7-21-B); FI-EV7-21-C Antireality dead-letter vs +7 fighter (DD-43 threshold never met; human review: relax to ≤AC+4?); FI-EV7-21-D sim-error LoH-on-disintegrated (fixed FIX-EV7-21-A); MQ-EV7-21-A VE saves not resolved in sim — see _playtest-runs/2026-06-03T08-00-00.md
@@ -256,6 +258,45 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-SW25-A: shrine-wedge — low-attrition R2 victory, initiative-order variance (2026-06-03T10)
+
+- **Context:** 2026-06-03 10:17 UTC, slice #1 (shrine-wedge) 25th cycle. Seed 494578. VICTORY R2. Bazgar 34/49, Marwen 21/32, Sabriel 44/44 untouched.
+
+  **Finding:** This is the lowest-attrition shrine-wedge outcome in 25 cycles. Root cause: Bazgar drew mid-initiative (after both STDs but before Marwen/Sabriel), used Action Surge for 4 attacks, and killed STD-1 outright before it could chain AR. Marwen's Fireball (30 fire, STD-2 FAIL) then left STD-2 at 1 HP, and Sabriel finished. STD-2 never used its stagger-held AR (died R1 before getting a second turn).
+
+  The shrine-wedge slice has now produced outcomes across the full spectrum:
+  - R2 easy wins (SW23, SW25 — Bazgar burst + Fireball decisive)
+  - R3 party bloodied (SW24: Marwen DOWN; SW21: near-TPK)
+  - R4 front-liner collapse (SW22: Bazgar + Sabriel DOWN, Marwen pristine)
+
+  This variance is driven almost entirely by initiative roll. When Bazgar acts before Marwen's Fireball window, his Action Surge removes an STD before AR can chain — easy win. When STDs get two full AR uses (both PCs hit R1 + recharged STD fires again R2), the fight is punishing.
+
+  **Human decision needed:** Is this initiative-variance range acceptable? The slice is *meant* to test resonance recharge + UF, which only matter in R3+ fights. In ~40% of cycles, the fight ends in R2 before those mechanics fire. Options: (a) reduce STD AC from 16 to 15 (no effect — Bazgar hits on 11+ either way), (b) add a 3rd STD to make burst-clearing harder, (c) accept the variance (it's thematically appropriate that an organized burst can overwhelm two derro before they chain resonance).
+
+  **Do not auto-fix** (balance decision).
+
+### FI-SW25-B: shrine-wedge — altar zone fire suppression 25th-cycle confirm (2026-06-03T10)
+
+- **Context:** Same run as FI-SW25-A.
+
+  **Finding:** 25th consecutive cycle in which Marwen's Fireball remained decisive regardless of vulnerability suppression. The altar zone correctly suppresses fire vulnerability, but the base damage (30 fire on a DC14 fail) is already lethal-or-near-lethal against 45 HP STDs without the vulnerability doubling. The mechanical suppression is spec-correct; the design question is whether it creates a meaningful puzzle at the table.
+
+  **Observation:** The "pull-them-away to expose vulnerability" puzzle only matters if (a) players discover the vulnerability (not telegraphed by any .md narration), and (b) the encounter is long enough for positioning to matter. In R2 fights neither condition applies. In R3+ fights (SW21, SW22), the altar zone did matter (Sabriel's smite was notably weaker inside the zone).
+
+  **Recommendation (non-breaking):** Add one line to the Altar Zone box in `shrine-touched-derro.md` (player-facing narration hook): "When a shrine-touched inside the altar zone is struck by fire or radiant, the shrine-runes briefly flare — but the light is absorbed. A perceptive character might notice the dampening (DC 14 Arcana/Religion)." This gives the DM a natural cue to telegraph the suppression without hard-coding a mechanic.
+
+  **Do not auto-fix** (narrative change; human should approve the exact wording).
+
+### MQ-SW25-B: multiattack roller output — combined damage labeled with primary type only (2026-06-03T10)
+
+- **Context:** Observed in Phase B narration; same issue class as prior cycles.
+
+  **Finding:** The multiattack roller output line "dmg 3 slashing (incl +1 necrotic extra_damage)" presents the combined total (2 slashing + 1 necrotic = 3) labeled as "slashing." A DM applying slashing resistance would reduce the full 3 points, including the 1 necrotic. The 🔚-breakdown (shown on the next lines) correctly separates the types, but the summary line invites misreading.
+
+  **Blast radius:** This is in `scripts/dnd_roller.py` (summary-line formatting), not in the DB spec. Out of bot's modification scope.
+
+  **Recommendation:** Change the summary line format from `dmg X slashing (incl +Y necrotic)` to `dmg X total [A slashing + B necrotic]` or similar. The fix belongs in `dnd_roller.py` around the multiattack output block. Human review and fix needed.
 
 ### FI-TP21-A: threshold-patrol — CW 0/3 used, 21st-cycle double-block structural confirm (2026-06-03T09)
 
