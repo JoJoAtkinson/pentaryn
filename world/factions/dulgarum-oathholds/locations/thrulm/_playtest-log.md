@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-04 14:22 UTC — slice #3 3rd-cycle (beholder-escorts-limited) — TPK R3 (Beholder 93/110; Thralls A:15 B:2 C:1 alive; Fireball R1 half-save 10-fire+near-killed thralls (B+C to 1HP); TL1 hit Bazgar-15 TL2 hit Sabriel-13 Maw-miss R1; Marwen grappled LA-TL end-of-R1 (Str 2 fail); LA Void-Ray 15-force Marwen R1 → 3HP; Lair-VE R2 all-3-fail 10-force → Marwen DOWN; DD R2 Sabriel SAVED Cha-save-19; LoH revive Marwen R2 to 1HP; Thrall-C manifest-reposition R3 kills Marwen (4 slashing at 1HP); VS R3 29-psychic both-FAIL Bazgar+Sabriel DOWN; DR never fired (slice 3 design); LR never tested (0 saves from PCs); 29/29 Phase A clean (network blocked, cache pre-seeded seed 494606, 119th consecutive); 0 bugs auto-fixed; DESIGN DECISIONS: FI-BEL3-3-A VS-is-TPK-vector-even-without-DR; FI-BEL3-3-B DD-failed-once-not-escape-hatch; FI-BEL3-3-C thrall-indirect-kill-via-manifest-reposition; FI-BEL3-3-D LoH-drained-by-lair+thrall-chain; MQ-BEL3-3-A unstable_ground-DC16Dex-vs-standard-DC13Dex-confirm-needed — see _playtest-runs/2026-06-04T14-22-50.md
+
 - 2026-06-04 13:18 UTC — slice #2 28th-cycle (tank-wall) — VICTORY R2 (Bazgar 43/49, Marwen 28/32, Sabriel 32/44; Rager DEAD R1 Bazgar-surge-13+Fireball-31-fail+Sabriel-smite-16; SC DEAD R2 Bazgar-5+Marwen-MM-12+Sabriel-crit-smite-22; Taunt-Marwen PASS nat20 (DC12); CW BLOCKED R1 init-block (Rager-10 acted before SC-6); CW BLOCKED R2 TR-priority (bonus-action conflict FI-181); Barrage R1 6/18-max-dmg low-roll Bazgar+Marwen-SAVE half, Sabriel-FAIL-12; SC TR fires R2 Rager dead; Action Surge Bazgar R1 4atks 2/4 hit; no bugs; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494605, 118th consecutive); seed 494605); DESIGN DECISIONS: FI-TW28-A CW-structural-init-block 28th-cycle confirm (1/28 cycles CW fires; init SC-6 < Rager-10 structural; recommend ≤25ft formation cap or CW range 60ft); FI-TW28-B Fireball-decisive 28th confirm; FI-TW28-C Taunt-fizzle-nat20+save-caster FI-31 28th confirm; FI-TW28-D Barrage-low-roll-variance (3d6 high variance R1 pressure luck-dependent); SIM-TW28-A dual-dice-gap ongoing (class pattern) — see _playtest-runs/2026-06-04T13-18-30.md
 
 - 2026-06-04 12:19 UTC — slice #1 27th-cycle (shrine-wedge) — VICTORY R4 (Bazgar 14/49, Marwen 8/32, Sabriel 37/44; STD-A DEAD R2 Marwen-ScorchingRay×2; STD-B DEAD R4 Bazgar; AR×2: STD-A R1 all-3-saved, STD-B R2 all-3-saved; stagger correct (STD-A init-13>STD-B init-6 fires R1, STD-B holds); AR 0/3 recharge attempts (STD-A r4, STD-B r2 r3); UF: STD-A R2 (34dmg R1), STD-B R4 (26dmg R3); OBR×4: STD-A HIT-Bazgar-R1-9dmg+self4psy, STD-A MISS-Bazgar-R2-self1psy, STD-B MISS-Bazgar-R3-self1psy, STD-B HIT-Bazgar-R4-17dmg+self1psy; altar-zone fire/radiant suppressed throughout; Marwen L2 slots exhausted R3; seed 494604; 1 bug auto-fixed (FIX-SW27-A dnd_roller.py multiattack display: dmg_total labeled as primary damage_type only; fixed to show "N type +M extra_type = T total" breakdown); 29/29 Phase A clean (network blocked, cache pre-seeded seed 494604, 117th consecutive); DESIGN DECISIONS: FI-SW27-A OBR-dispatch-no-roll (reaction_kind:buff → effect-text-only; DM manually rolls +4/1d8+1/1d8; fired 4× this fight = high friction; schema extension to counter_attack kind needed); FI-SW27-B AR-psychic-rider-in-notes (1d4 psychic on AR-fail not auto-rolled; buried in notes; all-3-saved so no impact this run; authoring gap); FI-SW27-C AR-recharge-0/3-variance (0 successful recharges in 3 attempts; prior cycle had both recharge; no systematic issue); SIM-SW27-A dual-dice-gap ongoing (dispatch AR-dice vs sim-save-dice independent; class pattern) — see _playtest-runs/2026-06-04T12-19-31.md
@@ -292,6 +294,25 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### MQ-BEL3-3-A: beholder-escorts-limited — unstable_ground DC 16 Dex vs SRD DC 13 Dex (confirm needed) (2026-06-04T14)
+
+- **Context:** 2026-06-04 14:22 UTC, slice #3 3rd cycle. Seed 494606. TPK R3.
+- **Finding:** DB spec for `unstable_ground` says `[ASK PLAYER: DC 16 Dex save]` — on a fail, target falls PRONE. Standard 5e SRD beholder lair action uses DC 13 Dex for the same prone effect. Our beholder uses DC 16 Dex (same as void_eruption and all other lair action DCs), which means Bazgar (Dex +2) needs 14+ to save — 35% save rate, prone very likely each firing. At DC 13 he'd need 10+, saving 55% of the time.
+- **For human review:** Is DC 16 intentional for unstable_ground? If so, no change needed (it's consistent with the beholder's other lair DCs). If DC 13 was intended (SRD default), update the DB spec via `combat_action_upsert`. Not auto-fixed — this could be a deliberate power-level decision.
+
+### FI-BEL3-3-A: beholder-escorts-limited — Void Scream is the TPK vector even without Disintegration Ray (POSITIVE) (2026-06-04T14)
+
+- **Context:** 2026-06-04 14:22 UTC, slice #3 3rd cycle. Seed 494606. TPK R3.
+- **Finding:** The "limited" slice explicitly excludes DR. Despite this, the beholder TPK'd in R3 using only VS + multiattack + lair actions. VS fired on R3 at 29 psychic (6d10 roll) and dropped both standing PCs (Bazgar at 21 HP, Sabriel at 21 HP). The slice confirms that VS alone is encounter-ending against a depleted party. DR's absence doesn't reduce the beholder's kill potential within the first 3 rounds.
+- **Positive observation:** The fight lasted 3 rounds with a clear escalation arc: R1 (probing attacks + Fireball response), R2 (lair VE drops Marwen, beholder multiattack pressure), R3 (VS endgame). This arc produces a more dramatic defeat than an R1 VS-nova (which was the pattern in the 1st cycle per FI-BEL3-B). The VS-on-R3 timing feels earned.
+- **No spec change needed.** DM coaching: delay VS to R3+ for dramatic arc.
+
+### FI-BEL3-3-D: beholder-escorts-limited — LoH drained by lair+thrall chain elegantly (POSITIVE) (2026-06-04T14)
+
+- **Context:** 2026-06-04 14:22 UTC, slice #3 3rd cycle. Marwen went DOWN twice (R2 via void_eruption, R3 via Thrall-C after manifest_thralls reposition). Each revival cost 1 LoH HP (minimum). By R3, Sabriel had used 1 LoH and her attacks were all misses. The lair+thrall+beholder pressure chain depleted LoH faster than combat resolved.
+- **Finding:** The synergy between `void_eruption` (lair, deals AoE down), `manifest_thralls` (lair, repositions thralls for cleanup), and `compel_thrall` (bonus, directs thralls to specific targets) creates an indirect LoH-bleed that doesn't require DR or VS. Even 1-HP thralls become dangerous when manifest_thralls repositions them to downed targets.
+- **No spec change needed. Positive design observation.**
 
 ### FI-SW27-A: shrine-wedge — OBR dispatch outputs no dice rolls (schema design issue, MEDIUM) (2026-06-04T12)
 
