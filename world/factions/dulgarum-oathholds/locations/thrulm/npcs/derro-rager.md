@@ -20,6 +20,7 @@ tags: ["#combat-runner", "#npc", "#combat", "#derro", "#thrulm", "#melee", "#tan
 2. If rager took damage last turn: +1 to attack rolls this turn (Madness Endurance). **DM applies manually — roller output does NOT include this bonus; add +1 to each printed to-hit result.**
 3. If a specific enemy hit the rager last turn: **next** attack against that enemy has advantage (Incoming Damage Aggro — the rager remembers).
 4. **Taunt** bonus action is available each turn. **Slowed exception (FI-192):** if the rager is under Slow (or any effect that restricts it to 1 action OR 1 bonus action per turn), Taunt is unavailable — use the action for a single greataxe attack instead; the bonus action is forfeited. Berserk is also unavailable under Slow per MQ-63.
+5. **If PRONE (FIX-SRR13-A):** the rager has two options — **(a)** stand up (spend half movement, then act normally — Berserk's no-movement prereq is violated if movement was spent, so choose Multiattack instead) or **(b)** stay prone and Berserk (all Berserk and Multiattack attack rolls are made at disadvantage while prone — DM applies manually; roller output does NOT adjust for prone). Tactically: if 2+ PCs are in reach, option (b) can still deal net damage despite disadvantage; if only 1 PC is in reach, standing up and Multiattacking is almost always better.
 
 ---
 
