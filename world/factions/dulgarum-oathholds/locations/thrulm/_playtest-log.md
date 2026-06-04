@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-04 10:00 UTC — slice #7 1st-cycle (empty-void) — TPK R3 (Marwen DISINTEGRATED surprise-DR d20=13+6=19 vs AC15; Sabriel DISINTEGRATED R2 DR d20=16+6=22 vs AC19 (DR recharged R2 on 6); Bazgar solo R3 down-TL1 multiattack; beholder 64/110 LR×3 unused; VS fired R1 (DR-unavailable): Bazgar PASS half-10, Sabriel FAIL 37-psychic frightened; DD R1 Sabriel FAIL L3 drain +6 temp; VR+TL R2 vs Bazgar 14-force; 2 disintegrations in 2 rounds (DR recharged fastest possible); negotiation ran correctly: 2-exchange minimum honored (FI-NEW-EV5-B), Bazgar hard-threat triggered surprise DR; LoH-disintegration FI-NEW-FC4-LOH fired correctly (Sabriel reached for ash); LR NEVER TESTED (party had 0 save-based offense — Marwen killed before acting)); seed 494602; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494602, 115th consecutive); DESIGN DECISIONS: FI-EV7-23-A surprise-DR-removes-caster-before-any-PC-acts (negotiation-to-combat transition nearly guaranteed to eliminate Marwen; empty-void slice tests Bazgar-solo not full-party); FI-EV7-23-B VS-recharge-6-one-shot-in-short-fights (fear rider never manifested; VS 1/3-round fight = limited coverage); FI-EV7-23-C LA-budget-wasted-at-collapse (DD×1+VR×1+TL×1 only; 3 LA unused R3); FI-EV7-23-D Maw-unconditional-in-multiattack (fires without grapple prereq; .md says "grapple then Maw" — intentional or conditional?); FI-EV7-23-E negotiation-feel POSITIVE (alien telepathy + hard-threat trigger + LoH-ash reveal = best dramatic beat); FI-EV7-23-F altitude-gate-DD-48-ambiguous-in-slice (slice has no starting altitude spec; VS assumed ≤30ft; recommend fix) — see _playtest-runs/2026-06-04T10-00-00.md
+
 - 2026-06-04 09:16 UTC — slice #6 22nd-cycle (shardcaller-team) — VICTORY R4 (Bazgar 30/49, Marwen 1/32 (DOWN R2 PTV-flip→SC-B-Barrage, LoH'd R3 1pt), Sabriel 24/44; SC-A DEAD R1 Sabriel; SC-B DEAD R2 Sabriel-smite; SC-C DEAD R4 Marwen-FireBolt+Sabriel-smite; Barrage×3 total: SC-C R1 9-dmg, SC-B R2 10-dmg-PTV-flip, SC-C R4 11-dmg (stagger correct all 3); CW 3/9 used (SC-C→SC-A R1 hit×1, SC-A→SC-B R1 hit×1, SC-B→SC-C R1 advance-grant-ok, SC-C→SC-B-blocked-HP10-guard R2); PTV FIRST ACTIVATION 22nd-cycle: SC-A+SC-B hits Marwen R1 → PTV disadv on SC-B R2 Barrage save → Marwen save-16-to-save-6-FAIL → DOWN; Scorching Ray 0/3 all-miss R2 (9% event, SC-B survived to fire Barrage); SC-C all-miss Sabriel R3 AC19-wall (+4 vs AC19 = 30% hit); corridor geometry key: 1st cycle with narrow corridor — broke every open-vault pattern (PTV 0→1, Barrage 0→3, CW 1→3)); seed 494601; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494601, 114th consecutive); DESIGN DECISIONS: FI-SCT-22-A corridor-geometry-breaks-all-open-vault-confirms (terrain-dependent formation, recommend terrain-flag in rotation); FI-SCT-22-B PTV-FIRST-ACTIVATION 22nd-cycle POSITIVE (corridor kept SCs in cohesion → PTV paid off on Barrage save); FI-SCT-22-C CW-advance-grant-fragile (recharge-uncertainty; coaching note, no spec change); FI-SCT-22-D Scorching-Ray-all-miss-9%-event (left SC-B alive to fire; coaching: Fire Bolt vs low-HP target may outperform SR); FI-SCT-22-E SC-C-solo-AC19-wall-22nd-confirm; FI-SCT-22-F 3×Barrages-fired POSITIVE (corridor pacing vs 0 open-vault) — see _playtest-runs/2026-06-04T09-16-15.md
 
 - 2026-06-04 08:17 UTC — slice #5 12th-cycle (solo-rager-rush) — VICTORY R4 (Bazgar 10/49, Marwen 20/32, Sabriel 35/44; all 3 ragers DEAD; R1 DEAD R2 Scorching-Ray after Fireball+Sabriel+Bazgar crippled to 2hp; R3 DEAD R3 Scorching-Ray; R2 DEAD R4 Bazgar-crit-18-slashing; Fireball R1 27-fire R1-fail-27 R2-pass-13 R3-fail-27 (decisive R1 12th confirm); Berserk once (R3 6hp 2-of-3-PCs-hit Marwen-12+Sabriel-9 positive-feel FI-SRR12-C); R1 crit Bazgar R1 for 21 near-death-rage; Taunt split correct FI-31 R1 (R1→Bazgar-fail R3→Marwen-saved R2→Marwen-fail); Taunt DC12 3/3 Bazgar-saved FI-SRR12-D-confirm; SIM-SRR12-A taunt-cross-round harness bug (Marwen's SR R2 should-disadvantage vs non-R2 but taunt_log cleared); Madness Endurance +1 all ragers R1 (Fireball hit all three)); seed 494600; 0 bugs auto-fixed; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494600, 113th consecutive); DESIGN DECISIONS: FI-SRR12-A Taunt-cross-round-harness-bug (table coaching: Taunt persists to end-of-next-turn, crosses round boundary when taunter acts last); FI-SRR12-B Berserk-only-at-near-death 12th confirm (FI-SRR11-C; recharge 5-6 + Fireball-cripple = reactive death-thrash not proactive tool; human review: lower to 4+?); FI-SRR12-C Berserk-near-death-feel POSITIVE (R3 6hp sweeps 2-PCs distinct identity); FI-SRR12-D Taunt-DC12-structurally-inert 12th confirm (Bazgar 3/3 saves; recommend DC 13 or Wis save) — see _playtest-runs/2026-06-04T08-17-57.md
@@ -449,6 +451,62 @@
   **Recommendation:** Add a retreat trigger to SC tactics: "If all melee allies are dead and you are below full HP, begin Tactical Retreat each round (move 30 ft away) toward the column cluster. Fire Multiattack from the new position. This makes the SC feel like a commander withdrawing rather than a solo skirmisher dying in place." Low-risk tactics-only change — can auto-fix if confirmed after human review.
 
   **Do not auto-fix (design question: should SC fight or flee solo?).**
+
+### FI-EV7-23-A: empty-void — Surprise-round DR removes caster before any PC acts (23rd cycle) (2026-06-04T10)
+
+- **Context:** 2026-06-04 10:00 UTC, slice #7 (empty-void) 23rd cycle. Seed 494602. TPK R3.
+
+  **Finding:** Hard-threat trigger (FI-NEW-EV5-B) fired DR in the surprise round, killing Marwen (−5 HP) before Round 1 began. The fight proceeded as a 2-PC combat vs an uninjured beholder. The slice's stated purpose ("tests legendary/lair flow when nothing else is in the way") was not served because the party's only save-based caster was eliminated immediately. In this run, Legendary Resistance was never needed (0 PC saves forced on beholder) and only 3 of the beholder's 14 distinct abilities were exercised (VS, DR, multiattack). The negotiation-to-combat transition worked cleanly — but the surprise-DR trigger's consequence is that the "empty void" slice functions as a Bazgar-vs-beholder solo test whenever the negotiation fails (which it almost always will at a L5 table without Khôr-Bhog-Khôr artifacts).
+
+  **Recommendation:** Consider adding a variant "no-surprise" version of the slice where the negotiation breaks down and combat starts on a standard initiative roll (no surprise round). The hard-threat surprise round is correct behavior per FI-NEW-EV5-B and should not be removed from the beholder spec, but flagging the slice so the cron knows to also run a "normal init" variant would give better coverage of the beholder's full ability rotation.
+
+  **Human decision needed. Do not auto-fix.**
+
+### FI-EV7-23-B: empty-void — VS recharge-6 makes it effectively a one-shot in short fights (23rd cycle) (2026-06-04T10)
+
+- **Context:** Same run. VS fired R1 (DR unavailable). VS rolled 5 (R2), 1 (R3) — never recharged. Fight ended R3.
+
+  **Finding:** With a 1-in-6 recharge, VS rarely fires more than once in encounters shorter than 6 rounds. The VS fear rider — which the .md explicitly calls the ability's "most durable effect" — had exactly 1 round to manifest (Sabriel was frightened at end of R1, died in R2). In a 3-round TPK, VS's fear condition never compounded. This is a coverage gap for the fear-rider design, not a spec bug. The recharge-6 is mechanically correct for a 6d10+fear combo, but the cron has now seen VS fire-once-and-expire across multiple consecutive short-fight slices.
+
+  **Note:** This is a running pattern confirmed across cycles 22+23. If the intent is for the fear rider to be a multi-round decision point, the encounter needs to last longer (either lower DR recharge or give the party more durable HP). No spec change suggested; logging for the human to decide whether the VS recharge-6 meets design intent.
+
+  **Do not auto-fix.**
+
+### FI-EV7-23-C: empty-void — LA budget wasted at 3-round TPK collapse (23rd cycle, running pattern) (2026-06-04T10)
+
+- **Context:** Same run. Round 3: sole surviving PC (Bazgar) at 11 HP. Killed on TL1 of multiattack. 3 LA refreshed and immediately went unused.
+
+  **Finding:** 23 cycles of the empty-void slice. LA rotation (DD cycle → VR → TL) only gets full expression when the fight lasts 4+ rounds. In fights that end R3, the LA sub-system fires ~1.5 cycles total. This is structurally confirmed: DR's effectiveness at killing 2/3 PCs determines whether the LA economy has anything to do. Combining with FI-EV7-22-B (LA budget fails when DR fires too well) and FI-EV7-22-C (Sabriel's anti-attrition kit never deploys), the running pattern is: when DR performs at or above expected (~33% recharge), the fight ends before the beholder's secondary systems can contribute to the feel of the encounter.
+
+  **Running pattern note only — no action required without broader DR recharge decision from FI-EV7-22-A.**
+
+### FI-EV7-23-D: empty-void — Maw fires unconditionally in multiattack spec (mechanical question) (2026-06-04T10)
+
+- **Context:** R3 multiattack. Spec fires TL1+TL2+Maw as 3 separate attacks. Maw's `rider_on_hit`: "If target is grappled by beholder, this attack is a critical hit instead."
+
+  **Finding:** The .md tactics say "Multiattack tentacles to grapple, then Maw the grappled target" — implying Maw is conditional on grapple success. The DB spec fires Maw unconditionally (3-attack multiattack every turn), with the crit upgrade as the grapple reward. This produces avg ~42 damage per full-hit multiattack vs ~28 if Maw were grapple-conditional.
+
+  **Mechanical question:** Is unconditional Maw correct? If yes, add a note to the .md tactics: "The Maw fires whether grapple succeeded or not; grapple only upgrades it to an automatic critical hit." If conditional, add a spec `prerequisite` gate. The current unconditional behavior makes the multiattack very strong at +6/3d6+3/+6/3d6+3/+6/4d8+3 (all vs same target).
+
+  **Human decision needed. Do not auto-fix.**
+
+### FI-EV7-23-E: empty-void — Negotiation-to-combat transition feel POSITIVE (23rd cycle confirm) (2026-06-04T10)
+
+- **Context:** Negotiation phase. Two genuine exchange rounds, near-success on Marwen's promise, Bazgar's hard threat triggering surprise DR. Sabriel's LoH-disintegration reveal (reaching for ash).
+
+  **Finding:** The FI-NEW-EV5-B pacing spec is working. The beholder's telepathic responses ("Names are not gifts. You carry only a sound." and the near-acceptance of Marwen's promise) feel appropriately alien. The hard-threat trigger's consequence (immediate DR on the threatening party member) is dramatically satisfying — Bazgar's impatience had a permanent cost. The LoH-ash moment was the strongest dramatic beat in the run. No changes needed.
+
+  **Positive signal. No action required.**
+
+### FI-EV7-23-F: empty-void — Altitude gate DD-48 ambiguous in slice spec (mechanical question) (2026-06-04T10)
+
+- **Context:** R1 Void Scream. Playtest assumed beholder at altar level (≤30 ft altitude). If beholder started at 60+ ft, VS would be out of range of ground-level PCs per DD-48.
+
+  **Finding:** The empty-void slice has no starting altitude specified. Without a thrall screen or other tactical reason to be at altitude, the beholder's natural position during negotiation is probably altar-level. But the slice description doesn't say so, leaving this as DM fiat. In the 23rd cycle I assumed altar-level and VS fired R1; in a table run a DM might place the beholder high, meaning VS never fires until the beholder descends.
+
+  **Recommendation:** Add to the slice description in `thrulm-cron-prompt.md`: "Beholder starts at altar level (≤30 ft altitude) — during negotiation it hovers near the central altar. No thrall screen means no tactical reason to hold altitude; it descends toward the party as combat begins."
+
+  **Add to briefing if user agrees. Do not auto-fix beholder.md or DB.**
 
 ### FI-EV7-22-A: empty-void — DR double-disintegration, beholder lethality ceiling (22nd cycle) (2026-06-03T16) — DR double-disintegration, beholder lethality ceiling (22nd cycle) (2026-06-03T16)
 
