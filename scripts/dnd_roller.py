@@ -688,14 +688,17 @@ async def _execute_combat_action_async(
             dmg_res = damage_results[i]
             dmg_total = dmg_res["total_with_bonuses"]
             dmg_type = atk.get("damage_type", "")
-            line = f"{atk['name']:<10s} to-hit {to_hit:>3d} / dmg {dmg_total:>3d} {dmg_type}"
             extra_res = dmg_res.get("extra_damage")
             if extra_res:
                 etype = dmg_res.get("extra_damage_type", "")
-                line += (
-                    f"  (incl +{extra_res['total_with_bonuses']} {etype}"
-                    " extra_damage)"
+                base_dmg = dmg_total - extra_res["total_with_bonuses"]
+                line = (
+                    f"{atk['name']:<10s} to-hit {to_hit:>3d} / dmg"
+                    f" {base_dmg} {dmg_type} +{extra_res['total_with_bonuses']} {etype}"
+                    f" = {dmg_total} total"
                 )
+            else:
+                line = f"{atk['name']:<10s} to-hit {to_hit:>3d} / dmg {dmg_total:>3d} {dmg_type}"
             if atk.get("rider_on_hit"):
                 line += f"   → if HIT: {atk['rider_on_hit']}"
             lines.append(line)
