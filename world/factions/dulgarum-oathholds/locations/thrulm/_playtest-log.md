@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-05 13:21 UTC — slice #1 29th-cycle (shrine-wedge) — VICTORY R4 (Bazgar 26/49, Marwen 28/32, Sabriel 6/44; STD1 DEAD R2 ScorchingRay+MM-final; STD2 DEAD R4 Bazgar-Action-Surge; AR 0×R1 (stagger-hold+cone<2-neither-could-fire), double-AR R2 (STD1 AR: Sabriel-FAIL-17+Bazgar-FAIL-17; STD2 AR: Sabriel-SAVE-2+Bazgar-SAVE-2); Scorching-Ray×2 (L2); LoH self-heal Sabriel R4 (10pts; feature-not-spell, void-hazard-unaffected); OBR self: STD1-3/STD2-3; altar zone fire+radiant suppressed throughout (Sabriel smite 9 vs ~18 expected outside zone); Bazgar 0/4 hits R1+R3 (cold dice, Action-Surge R4 decisive); seed 494629; 29/29 Phase A clean (network blocked, cache pre-seeded seed 99, 136th consecutive); 0 bugs auto-fixed; DESIGN DECISIONS: FI-SW29-A stagger+cone<2=zero-AR-R1+double-AR-nova-R2 NEW; FI-SW29-B altar-zone-suppression 29th-confirm; FI-SW29-C stagger-hold-persists-when-higher-init-no-fire clarification-needed NEW; FI-SW29-D UF-never-expressed confirm; FI-SW29-E OBR-dispatch-text-only 29th-confirm; MQ-SW29-A stagger-release-condition-when-higher-not-firing — see _playtest-runs/2026-06-05T13-21-51.md
+
 - 2026-06-05 12:17 UTC — slice #0 26th-cycle (threshold-patrol) — VICTORY R3 (Bazgar 36/49, Marwen 18/32, Sabriel 44/44; DWD1 DEAD R1 Fireball-fail-29; DWD2 DEAD R1 Fireball-fail-22+Bazgar-cleanup; SC DEAD R3 SR-R2-19dmg+SR-R3-11dmg; Fireball decisive R1; Barrage R1 8-pierce Bazgar-fail+Marwen-fail; DWDs 1/4 hits (DWD2 axe-5-Bazgar R1); CW-MQ66-violation-sim (CW fired on dead DWD1; correct play=redirect-DWD2 per MQ-66; sim methodology gap); TR-never-triggered (SC downed before Bazgar closes within 15ft); seed 494628; 29/29 Phase A clean (network blocked, cache pre-seeded seed 99, 135th consecutive); 0 bugs auto-fixed; DESIGN DECISIONS: FI-TP26-A Fireball-trivializes-DWD-formation 26th-confirm; FI-TP26-B CW-wasted-threshold-patrol structural-gap; FI-TP26-C TR-never-activates; MQ-TP26-A sim-dispatch-vs-manual-reroll-divergence; MQ-TP26-B MQ-66-redirect-sim-gap — see _playtest-runs/2026-06-05T12-17-54.md
 
 - 2026-06-05 11:20 UTC — slice #7 25th-cycle (empty-void) — VICTORY R3-sim/R4-corrected (DR 0/2 both-MISS surprise+R3-nat1; VS R1 Marwen-DOWN Sabriel-FAIL-frightened; LoH revive Marwen→Fireball×2 decisive; Sabriel crit-smite R3 finishing blow; DD×3: R1-FAIL+6tmp, R2-PASS, R3-FAIL+6tmp; Fireball×2: R1-half-12, R2-half-17; temp-HP not absorbed in sim (SIM-EV7-25-A: corrected beholder survives R3 at ~10HP→R4); altitude retreat not simulated (SIM-EV7-25-B); DR recharge d6=6 misread as still-USED (SIM-EV7-25-D); LoH-TL-override missing in sim pre-fix (SIM-EV7-25-C); seed 494627; 29/29 Phase A clean (network blocked, cache pre-seeded seed 494627, 134th consecutive); 2 bugs auto-fixed (FIX-EV7-25-A no-thrall-lair-rotation note; FIX-EV7-25-B LoH-TL-override cross-ref added to priority order); DESIGN DECISIONS: FI-EV7-25-A surprise-DR-miss-swing-outcome 25th-confirm; FI-EV7-25-B VS+LoH-recovery-arc POSITIVE; FI-EV7-25-C no-thrall-lair-mechanical (only VE+UG; recommend 3rd option); FI-EV7-25-D DD-tmpHP-noise-late 25th-confirm; FI-EV7-25-E altitude-retreat-second-act-unsimulated; FI-EV7-25-F DR-0/2-anomaly; FI-EV7-25-G AR-never-fired 25th-confirm; MQ-EV7-25-A DD-vs-LoH-TL-priority; MQ-EV7-25-B DR-recharge-5-or-6-DM-coaching; MQ-EV7-25-C solo-lair-3rd-option — see _playtest-runs/2026-06-05T11-20-00.md
@@ -317,6 +319,34 @@
 ---
 
 ## DESIGN DECISIONS (review in morning)
+
+### FI-SW29-A: shrine-wedge — AR stagger + cone requirement creates 0-AR R1 + double-AR R2 nova pattern (NEW) (2026-06-05T13)
+
+- **Context:** 2026-06-05 13:21 UTC, slice #1 cycle 29. Seed 494629. VICTORY R4. Both STDs survived R1 intact with AR ready.
+- **Finding:** In R1, STD1 had only Sabriel in its 15-ft cone — AR requires 2+, so STD1 could not fire. STD2 was stagger-held. Neither STD fired AR in R1. Both entered R2 with AR available (STD1 recharged R2 start). R2: STD1 AR (Sabriel/Bazgar both failed: 17 damage each), then STD2 AR (both saved: 2 damage each). The combined double-AR nova in R2 dropped Sabriel from 37 → 20 HP and Bazgar from 49 → 30 HP in a single round after a quiet R1. On a bad-roll run, if STD2's save target had also been 15+ necrotic (average), both PCs would have taken 34 total across the two ARs. This is the maximum-pressure variant of the stagger mechanism.
+- **Distinction from prior cycles:** In cycles 22–28, at least one STD typically died in R1 (from Action Surge / Fireball) or fired AR R1 (when 2+ targets in cone immediately). This cycle's quiet R1 + double-AR R2 is a distinct dangerous configuration that hasn't been captured before.
+- **Recommendation:** Consider whether AR should have a single-target fallback (e.g., fire at reduced damage, 1d10 necrotic, no psychic rider) when cone is <2. This would prevent the "dead pressure round" where STD1 has AR ready but cannot fire due to spread. Alternatively, add a note that this 0-AR-R1 pattern is a known balance lever — the party can spread to prevent AR firing, creating an intentional tactical game. **Human design decision.**
+
+### FI-SW29-B: shrine-wedge — Altar zone fire/radiant vulnerability suppression (29th-cycle confirm) (2026-06-05T13)
+
+- **Context:** 2026-06-05 13:21 UTC, slice #1 cycle 29. Seed 494629. VICTORY R4.
+- **Finding:** Sabriel's L1 Divine Smite dealt 9 radiant (normal); outside the altar zone vs an STD, this would be 18 (doubled). Marwen's Scorching Rays dealt normal fire throughout. The suppression meaningfully shaped Marwen's spell choice (SR over Fireball) and reduced Sabriel's offensive output by ~50% per smite.
+- **Problem:** The DB outputs no reminder that vulnerability is suppressed. DM must track this manually and proactively announce it. A table DM who forgets will accidentally double fire/radiant damage, creating wildly inconsistent outcomes.
+- **Recommendation:** Add a line to `COMBAT-CHEAT-SHEET.md` as a pre-combat reminder: "Altar zone (60 ft): STD fire+radiant vulnerability SUPPRESSED — normal damage for Fireball/SR/smite." 29th cycle — this is chronic. The cheat sheet is the right place for it. **Minor documentation fix; within blast radius.**
+
+### FI-SW29-C: shrine-wedge — Stagger-hold persists when higher-init STD cannot fire AR (NEW) (2026-06-05T13)
+
+- **Context:** 2026-06-05 13:21 UTC, slice #1 cycle 29. Seed 494629. VICTORY R4.
+- **Finding:** The stagger rule states "check both STDs at start of round; if both have AR recharged, mark lower-initiative STD as HOLD-AR." In R1, STD1 had AR but could not fire (cone < 2 targets). STD2 remained held. The hold is evaluated on availability, not on whether the higher-init STD actually fires. This is implied but not stated explicitly in the .md.
+- **Impact:** When the higher-init STD has AR but the cone geometry prevents firing, the lower-init STD is penalized for the higher-init's positioning failure. Combined with the "both recharged" configuration entering R2, this creates the maximum-nova scenario (double-AR in same round).
+- **Recommendation (minor text fix):** Add one sentence to stagger rule: "The stagger hold persists regardless of whether the higher-initiative STD actually fires AR on its turn — it is evaluated at the start of the round based on AR availability, not on execution." No balance change. **Within blast radius — can fix inline.**
+
+### MQ-SW29-A: shrine-wedge — Stagger hold when higher-init STD cannot fire AR (2026-06-05T13)
+
+- **Context:** Same as FI-SW29-C. Is "stagger hold persists even if higher-init cannot fire" the intended ruling?
+- **Current .md:** "if two shrine-touched both have Resonance available in the same round, only the one acting FIRST in initiative fires." The phrase "fires" is ambiguous — does it mean "may fire" or "fires and therefore blocks"?
+- **Finding:** If "fires" means "fires regardless of cone," then the stagger hold is absolute (STD1 fires into 1 target or holds, STD2 holds). If "fires" means "fires when possible," then the hold should release when STD1 can't fire.
+- **Recommendation:** Confirm intent. If stagger is availability-based (recommended — simpler), add the clarifying sentence from FI-SW29-C. If it's execution-based, add: "If the higher-initiative STD cannot fire AR this turn (no valid cone target), the lower-initiative STD's hold releases and it may fire AR at its normal opportunity."
 
 ### FI-TP26-A: threshold-patrol — Fireball trivializes DWD formation (26th-cycle confirm) (2026-06-05T12)
 
