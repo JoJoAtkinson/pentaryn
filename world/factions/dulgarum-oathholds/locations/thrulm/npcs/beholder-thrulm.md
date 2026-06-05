@@ -106,11 +106,17 @@ The beholder is intelligent and patient. Its strategy depends on the party compo
 **Against Melee:** Grapples with tentacles and drags into difficult terrain; uses ranged attacks while keeping distance.
 
 **Against Clerics/Paladins:** Focuses on **Drain Divinity** to remove their healing and buffs. It *hates* sanctified weapons and holy water (treats them as if from a higher plane).
+- *DD timing note:* The temp HP gain from DD is incidental (2–6 HP at most levels — noise vs 110 HP pool). The real value is slot attrition — denying L2/L3 smites. Use DD early (R1–R2) while the target's slot pool is full. After their L2+ slots are exhausted, switch to Void Ray or Tentacle instead.
+- *LoH override note:* If Sabriel uses Lay on Hands (not a spell) to revive a downed ally within the void-feeding zone, the beholder cannot counter with DD (LoH is not a spell slot). Prioritize Void Ray or a Tentacle LA to prevent the revived ally from acting.
 
 **Environmental Use:** 
 - Hovers near the shrine altar to maximize Void-Feeding bonus
 - Uses lair terrain (pillars, collapsed shrine remains) for cover
 - Draws thrall derro into combat on initiative count 20 to overwhelm the party
+- *Lair timing note:* Lair actions fire at init 20. If the beholder has high initiative (>18), it acts almost immediately after the lair action — the lair sets up, the beholder executes. If the beholder has low initiative (≤12), PCs can act between the lair and the beholder's turn, creating counterplay.
+- *VS positioning note:* "Within 10 ft of the shrine" for VS disadvantage applies to the physical shrine/altar in the corner of the chamber — not the beholder's current position. PCs at the vault entrance (threshold) are typically 40–60 ft from the shrine and do NOT start with shrine-proximity disadvantage. Only PCs who have advanced to within 10 ft of the altar (e.g., melee fighters engaging the beholder at the altar) should roll with disadvantage.
+
+**Resistance reminder:** The beholder resists nonmagic bludgeoning, piercing, and slashing from non-sanctified weapons. Melee fighters without magical or sanctified weapons deal half damage. Paladin radiant smites and wizard spells (fire, force) are NOT resisted.
 
 **Retreat:** If reduced below 30 HP, the beholder retreats deeper into the lower shaft, using thralls to block pursuit. If below 20 HP, it attempts to crush/disintegrate the party while fleeing.
 
