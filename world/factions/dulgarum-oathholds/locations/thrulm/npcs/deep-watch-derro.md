@@ -1,45 +1,115 @@
 ---
 name: Deep Watch Derro
 description: "Loyal dwarf-kin sworn to contain the depths"
-created: 2026-04-26
+type: creature
+tags: ["#npc", "#combat", "#derro", "#dulgarum-oathholds", "#thrulm", "#deep-watch"]
 status: active
-location: thrulm
-tags: ["#combat-runner", "#npc", "#combat", "#derro", "#dulgarum-oathholds", "#thrulm", "#deep-watch", "#cr-1-8"]
+created: 2026-04-26
+last-modified: 2026-04-26
 ---
+
 # Deep Watch Derro (Standard)
 
-**HP** 27 (5d8+5) **·** **AC** 15 (studded leather) **·** **Speed** 30 ft. **·** **Saves** Dex +4 **·** **Resist** poison **·** **Darkvision 120 ft.** **·** **CR** 1/8 (25 XP)
-
-> Action mechanics live in `combat-runner/actions.jsonl` (DB) — see the launcher-injected **Ready actions** reference for verbs and call signatures.
+Grim. Disciplined. Terrified of what they're guarding, but bound by oath.
 
 ---
 
-## Start-of-turn checklist
+## Combat Stats (Battle-Ready Zone)
 
-1. Cunning Action (Dash / Disengage / Hide) is available each turn as a bonus action — use the global `disengage` / `hide` / `dash` verbs.
-2. If a Deep Watch sergeant is alive within sight/hearing: advantage on saves vs charmed/frightened (Oath-Bound Resolve).
-3. If an ally is within 5 ft of the target the derro is attacking: advantage on its melee attack (Tactical Drilling).
+| **AC** | **HP** | **Speed** |
+|--------|--------|-----------|
+| 15 (studded leather) | 27 (5d8 + 5) | 30 ft. |
 
----
+| **STR** | **DEX** | **CON** | **INT** | **WIS** | **CHA** |
+|---------|---------|---------|---------|---------|---------|
+| 10 (+0) | 14 (+2) | 12 (+1) | 11 (+0) | 13 (+1) | 8 (-1) |
 
-## Tactics — when the DM asks "what does it do?"
-
-- **Round 1, in formation:** Multiattack (two hand axes) on the closest melee threat. Tactical Drilling (advantage) applies only when an ally is **already in position adjacent to the target** — not when both DWs are simultaneously closing from range. In a simultaneous charge: the first DW to act (higher initiative) attacks flat; the second DW attacks with Drilling advantage because the first is already in melee. *(FIX-DW-TP22-A: clarified simultaneous-charge resolution — 22nd-cycle threshold-patrol confirm)*
-- **Split party (caster 20+ ft from front-liners):** One DW peels to the caster while the other holds the front. The peeler doesn't benefit from Tactical Drilling on its first turn; if the other DW closes next round, Drilling resumes. Never leave the caster uncontested. *(MQ-NEW-TP10-1 — 10th TP cycle)*
-- **Isolated / outranged:** Switch to **Light Crossbow** (range 80/320, +4 to hit). Better hit chance and lets the derro hold position behind cover.
-- **Focus-fire:** Anyone visibly casting or healing — Deep Watch knows what a wizard looks like.
-- **Below half HP (≤13):** Cunning Action → Disengage, fall back to nearest ally or cover. Once disengaged, switch to **Light Crossbow** from cover — do NOT re-enter melee range. Will *not* break ranks without an order; will retreat if a Deep Watch officer signals withdrawal.
-- **Sunlight:** Disadvantage on attacks and sight-based Perception. Will refuse to fight in direct sun unless ordered.
-
-## Description (one line)
-
-Grim, scarred, in armor worn thin by decades on the seal — eyes hard, sleeping bad some nights.
+| **Saving Throws** | Dex +4 |
+| **Skills** | Perception +3, Stealth +4 |
+| **Damage Resistances** | poison |
+| **Senses** | darkvision 120 ft., passive Perception 13 |
+| **Languages** | Dwarvish, Undercommon |
+| **Challenge** | 1/8 (25 XP) |
+| **Proficiency Bonus** | +2 |
 
 ---
 
-## Interaction Notes (non-combat)
+## Combat Traits
 
-- Bound by oath; cannot bargain about the seals.
-- Respects combat prowess — bested in honorable combat, may parley.
-- A legitimate Deep Watch commander's voice ends combat instantly.
-- If captured: gives patrol schedules, never speaks of what's in Thrulm.
+**Sunlight Sensitivity.** While in sunlight, the derro has disadvantage on attack rolls and Wisdom (Perception) checks that rely on sight.
+
+**Oath-Bound Resolve.** The derro has advantage on saving throws against being frightened or charmed, as long as it can see or hear a Deep Watch commander.
+
+**Tactical Drilling.** The derro works well with others; if an ally is within 5 feet and the target is also within the ally's reach, the derro has advantage on its melee attack roll against the target.
+
+---
+
+## Actions
+
+**Multiattack.** The derro makes two attacks with Hand Axe or one with Crossbow.
+
+**Hand Axe.** *Melee Weapon Attack:* +2 to hit, reach 5 ft., one target. *Hit:* 3 (1d6) slashing damage.
+
+**Light Crossbow.** *Ranged Weapon Attack:* +4 to hit, range 80/320 ft., one target. *Hit:* 6 (1d8 + 2) piercing damage.
+
+---
+
+## Bonus Actions
+
+**Cunning Action.** Dash, Disengage, or Hide.
+
+---
+
+## Tactics
+
+- **Hold the line:** Stays in formation with allies; doesn't break ranks unless ordered by a superior
+- **Target troublemakers:** Focuses fire on anyone who looks like they can cast or heal
+- **Retreat on command:** Will fall back if a Deep Watch commander signals withdrawal
+- **Defensive:** Prefers cover and numbers over direct engagement
+- **Loyalty over instinct:** Even if afraid, won't abandon the post
+
+---
+
+## Interaction Notes
+
+**Motivations:** Bound by oath to guard the Sealed Depths. The duty is heavy, but it is *duty*. Honor above fear.
+
+**Voice & Personality:** Clipped, efficient speech. Grim humor about the work. Won't explain the nature of what they guard—some secrets carry death sentences.
+
+**De-escalation Hooks:**
+- If confronted by legitimate Deep Watch authority, will stand down (they can't refuse a direct order)
+- Respect combat prowess; if bested in honorable combat, might parley
+- Cannot be bargained with about the seals; they would sooner die
+
+**If Captured:** Will reveal patrol schedules and watch rotations, but will *never* speak of what's truly in Thrulm.
+
+---
+
+## Description
+
+Sturdy, scarred, missing an eye or a finger or a few toes. Dressed in practical armor worn thin from decades of service. The eyes are hard and don't rest easy.
+
+These derro have seen things deeper down. The ones at the gates still sleep some nights.
+
+---
+
+## Tactics & Behavior
+
+Deep Watch derro are trained soldiers. They fight together, hold positions, and follow a chain of command. A lone derro is a derro separated from its unit—and that unsettles it more than combat does.
+
+When they speak of Thrulm, their voices drop. They use the old name, the one that means "sealed hollow," and they spit after saying it.
+
+---
+
+## Lore & Background
+
+These derro were sworn into the Deep Watch during a ceremony that leaves no choice and no exit. They know the oaths bind them to something. They suspect they know what. They pray they're wrong.
+
+Many have relatives above in Dulgarum proper, and families they'll never see again if promotion carries them deeper.
+
+---
+
+## Related Links
+
+- [Dulgarum Faction Overview](../../_overview.md)
+- [Thrulm Location](../_overview.md)
