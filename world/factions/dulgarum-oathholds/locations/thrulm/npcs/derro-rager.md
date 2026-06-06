@@ -63,7 +63,8 @@ A derro pumped with madness-born strength. They charge into combat, soak hits me
 - **Charges in immediately** — gets to the strongest-looking enemy
 - **Stays in melee** — rarely backs up
 - **Marks the attacker** — goes after whoever just hit it hardest
-- **Uses Taunt** — forces a target to either hit it or suffer disadvantage
+- **Uses Taunt** — forces a target to either hit it or suffer disadvantage. **Each rager picks a DIFFERENT Taunt target** — if an ally rager already taunted a PC this round, choose another PC. If all living PCs are already taunted by allies, skip Taunt this turn. (Stacking multiple taunts on the same target wastes the bonus action and creates rules confusion.)
+- **Taunt stacking rule:** only the most recently applied Taunt on a given PC is active; earlier ones from other ragers are superseded. This avoids the ambiguity of "disadvantage vs. every rager simultaneously."
 - **Won't leave combat** — fights until it dies or drops
 - **Frightened immunity — Menacing Attack rider wasted:** the Rager is immune to the Frightened condition. If a PC uses the Menacing Attack maneuver, the superiority-die bonus damage applies normally but the "disadvantage + can't approach" rider does nothing. Inform the DM when this fires so they can warn the player before the superiority die is spent.
 - **Berserk is a stand-still option** — use only when already within 5 ft of two or more enemies; Berserk prevents all movement on the rager's turn, so firing it when only one enemy is in reach wastes the action. If repositioning would bring a second target into reach, use Multiattack instead and save Berserk for the next round.
