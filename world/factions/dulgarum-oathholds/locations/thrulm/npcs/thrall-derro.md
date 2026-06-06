@@ -2,7 +2,7 @@
 name: Thrall Derro
 description: "Partially dominated by the beholder; caught between master and oath"
 type: creature
-tags: ["#npc", "#combat", "#derro", "#thrulm", "#thrall", "#beholder-touched"]
+tags: ["#combat-runner", "#npc", "#combat", "#derro", "#thrulm", "#thrall", "#beholder-touched"]
 status: active
 created: 2026-04-26
 last-modified: 2026-04-26

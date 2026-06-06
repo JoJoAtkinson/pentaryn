@@ -2,7 +2,7 @@
 name: The Hunger Below (Beholder)
 description: "An eye-creature drawn to the void left by a sealed god; feeds on the absence of divinity"
 type: creature
-tags: ["#npc", "#combat", "#beholder", "#thrulm", "#boss", "#aberration"]
+tags: ["#combat-runner", "#npc", "#combat", "#beholder", "#thrulm", "#boss", "#aberration"]
 status: active
 created: 2026-04-26
 last-modified: 2026-04-26

@@ -2,7 +2,7 @@
 name: Derro Rager
 description: "Melee tank; draws aggro and absorbs punishment"
 type: creature
-tags: ["#npc", "#combat", "#derro", "#thrulm", "#melee", "#tank"]
+tags: ["#combat-runner", "#npc", "#combat", "#derro", "#thrulm", "#melee", "#tank"]
 status: active
 created: 2026-04-26
 last-modified: 2026-04-26
@@ -65,6 +65,7 @@ A derro pumped with madness-born strength. They charge into combat, soak hits me
 - **Marks the attacker** — goes after whoever just hit it hardest
 - **Uses Taunt** — forces a target to either hit it or suffer disadvantage
 - **Won't leave combat** — fights until it dies or drops
+- **Frightened immunity — Menacing Attack rider wasted:** the Rager is immune to the Frightened condition. If a PC uses the Menacing Attack maneuver, the superiority-die bonus damage applies normally but the "disadvantage + can't approach" rider does nothing. Inform the DM when this fires so they can warn the player before the superiority die is spent.
 - **Berserk is a stand-still option** — use only when already within 5 ft of two or more enemies; Berserk prevents all movement on the rager's turn, so firing it when only one enemy is in reach wastes the action. If repositioning would bring a second target into reach, use Multiattack instead and save Berserk for the next round.
 - **DB output shows 3 attack lines for Berserk** — cap at the actual number of creatures in reach; skip excess lines for dead or absent targets.
 
