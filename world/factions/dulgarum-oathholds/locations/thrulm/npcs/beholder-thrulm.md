@@ -129,6 +129,7 @@ On initiative count 20 (losing ties), the beholder takes a lair action to move o
 **Unstable Ground.** One creature the beholder can see within 60 feet must succeed on a DC 16 Dexterity saving throw or fall prone as the stone buckles beneath it.
 
 **Manifest Thralls.** Up to three derro that are charmed by the beholder and within 60 feet of it gain temporary hit points equal to the beholder's Charisma modifier (minimum 1). They can immediately use their reaction to move or make a weapon attack.
+- *DM note:* If no thralls are alive or within 60 ft, this lair action does nothing — the beholder wastes its lair action. Use Unstable Ground or Void Eruption instead when thralls have been wiped.
 
 **Void Eruption.** Each creature within 20 feet of the shrine must make a DC 16 Dexterity saving throw, taking 11 (2d10) force damage on a failed save.
 
