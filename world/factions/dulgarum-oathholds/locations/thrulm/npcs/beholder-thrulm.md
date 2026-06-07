@@ -130,6 +130,7 @@ On initiative count 20 (losing ties), the beholder takes a lair action to move o
 
 **Manifest Thralls.** Up to three derro that are charmed by the beholder and within 60 feet of it gain temporary hit points equal to the beholder's Charisma modifier (minimum 1). They can immediately use their reaction to move or make a weapon attack.
 - *DM note:* If no thralls are alive or within 60 ft, this lair action does nothing — the beholder wastes its lair action. Use Unstable Ground or Void Eruption instead when thralls have been wiped.
+- *Hit-rate note (FIX-BEL3-38-A):* If thralls are alive but landing 0 hits on a high-AC party (AC 18+), switch to Unstable Ground or Void Eruption — thrall +1 THP and reaction attacks add no real pressure against armored PCs. Manifest Thralls is strongest when thralls can actually hit (AC ≤ 14 targets).
 
 **Void Eruption.** Each creature within 20 feet of the shrine must make a DC 16 Dexterity saving throw, taking 11 (2d10) force damage on a failed save.
 
