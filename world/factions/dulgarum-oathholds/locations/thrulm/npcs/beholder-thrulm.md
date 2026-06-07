@@ -102,12 +102,14 @@ The beholder can take three legendary actions, choosing from the options below. 
 The beholder is intelligent and patient. Its strategy depends on the party composition:
 
 **Against Casters:** Prioritizes disintegration of spellcasters; uses Void Scream to damage groups while isolating targets.
+- *DR target note (FIX-EV7-30-A):* **Disintegration Ray targets conscious creatures only.** The disintegration rider ("reduces to 0 HP") does NOT trigger against already-downed targets — they are already at 0, so no reduction occurs (RAW PHB p.197: damage to 0-HP creature causes death save failures only). Against a downed target, DR is wasted. If all PCs are downed except one, hold DR for the standing target. Against a single standing PC, DR + high roll is the highest expected kill; don't waste the recharge on confirming a downed body.
 
 **Against Melee:** Grapples with tentacles and drags into difficult terrain; uses ranged attacks while keeping distance.
 - *Maw timing note (FIX-FC39-A):* On multiattack, both Tentacle Lash attacks fire first. If either hits, that PC is grappled. The Maw's third attack MUST then target the grappled PC — this triggers the auto-crit rider (4d8+3 becomes 8d8+3, avg ~40 piercing). This is the highest single-turn damage output available to the beholder. Do NOT split Maw onto a different PC; the crit is the point. If both tentacle lashes miss, Maw hits any target normally (no crit opportunity). (39th-cycle confirm: Maw auto-crit never expressed in 10+ cycles because sim/DM targets a third PC — this note corrects that.)
 
 **Against Clerics/Paladins:** Focuses on **Drain Divinity** to remove their healing and buffs. It *hates* sanctified weapons and holy water (treats them as if from a higher plane).
 - *DD timing note:* The temp HP gain from DD is incidental (2–6 HP at most levels — noise vs 110 HP pool). The real value is slot attrition — denying L2/L3 smites. Use DD early (R1–R2) while the target's slot pool is full. After their L2+ slots are exhausted, switch to Void Ray or Tentacle instead.
+- *DD vs VS sequencing note (FIX-EV7-30-B):* If Void Scream has NOT been used this combat AND Sabriel has L2+ smite slots remaining, prioritize **Drain Divinity (LA cost 3) as the post-Sabriel legendary action in R1**, before VS fires. DD early strips the smite pool; VS then fires R2 into a depleted paladin. If you spend R1 LA on Void Ray + Tentacle, VS fires R2 and kills Sabriel before DD ever executes — wasting the anti-divine counter entirely. (30th-cycle confirm: DD never fired because VS downed Sabriel before any DD window.)
 - *LoH override note:* If Sabriel uses Lay on Hands (not a spell) to revive a downed ally within the void-feeding zone, the beholder cannot counter with DD (LoH is not a spell slot). Prioritize Void Ray or a Tentacle LA to prevent the revived ally from acting.
 
 **Environmental Use:** 
