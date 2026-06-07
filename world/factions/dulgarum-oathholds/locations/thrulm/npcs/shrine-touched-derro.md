@@ -39,7 +39,7 @@ tags: ["#combat-runner", "#npc", "#combat", "#derro", "#thrulm", "#shrine-touche
 - **All other turns / after firing AR:** Multiattack — two Shrine-Axe strikes (slashing + necrotic per hit) on the closest enemy.
 - **Reaction priority — Oath-Breaking Retaliation:** auto-fires when hit by a visible attacker **within melee reach (5 ft)**; one Shrine-Axe counter-swing at the attacker. Self-damages 1d4 psychic regardless. OBR does NOT fire against ranged attackers, ranged-spell attackers, or area-effect damage (Fireball, etc.) — the shrine-touched cannot swing at someone not in reach. OBR does NOT fire while the shrine-touched is incapacitated, stunned, paralyzed, or otherwise unable to take reactions. If the trigger is ambiguous (attacker just moved away), OBR does not fire.
 - **Pulled away from shrine (~150+ ft):** panic. Uses Ancient Resonance recklessly each turn it recharges, ignoring positioning.
-- **Below 20 HP:** drives toward the altar (Driven Escape) — never retreats away from the shrine.
+- **Below 20 HP:** uses **Driven Escape (bonus action)** to move toward the altar — no opportunity attacks, no retreat. Main action: AR recklessly if available and 2+ targets in cone (stagger hold does not apply); otherwise Multiattack on the nearest PC. Never retreats away from the shrine.
 
 ## Description (one line)
 
