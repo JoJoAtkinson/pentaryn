@@ -68,6 +68,7 @@ A derro pumped with madness-born strength. They charge into combat, soak hits me
 - **Won't leave combat** — fights until it dies or drops
 - **Frightened immunity — Menacing Attack rider wasted:** the Rager is immune to the Frightened condition. If a PC uses the Menacing Attack maneuver, the superiority-die bonus damage applies normally but the "disadvantage + can't approach" rider does nothing. Inform the DM when this fires so they can warn the player before the superiority die is spent.
 - **Berserk is a stand-still option** — use only when already within 5 ft of two or more enemies; Berserk prevents all movement on the rager's turn, so firing it when only one enemy is in reach wastes the action. If repositioning would bring a second target into reach, use Multiattack instead and save Berserk for the next round.
+- **Berserk starts available at combat start** (5e RAW: recharge abilities begin combat recharged). Use R1 if the rager can reach 2+ enemies after its charge. After use, roll d6 at the start of each subsequent turn — recharges on 5–6. The DB output always shows 3 attack lines; cap at actual enemies in reach.
 - **DB output shows 3 attack lines for Berserk** — cap at the actual number of creatures in reach; skip excess lines for dead or absent targets.
 
 ---
