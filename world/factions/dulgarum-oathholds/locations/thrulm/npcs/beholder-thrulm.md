@@ -104,6 +104,7 @@ The beholder is intelligent and patient. Its strategy depends on the party compo
 **Against Casters:** Prioritizes disintegration of spellcasters; uses Void Scream to damage groups while isolating targets.
 
 **Against Melee:** Grapples with tentacles and drags into difficult terrain; uses ranged attacks while keeping distance.
+- *Maw timing note (FIX-FC39-A):* On multiattack, both Tentacle Lash attacks fire first. If either hits, that PC is grappled. The Maw's third attack MUST then target the grappled PC — this triggers the auto-crit rider (4d8+3 becomes 8d8+3, avg ~40 piercing). This is the highest single-turn damage output available to the beholder. Do NOT split Maw onto a different PC; the crit is the point. If both tentacle lashes miss, Maw hits any target normally (no crit opportunity). (39th-cycle confirm: Maw auto-crit never expressed in 10+ cycles because sim/DM targets a third PC — this note corrects that.)
 
 **Against Clerics/Paladins:** Focuses on **Drain Divinity** to remove their healing and buffs. It *hates* sanctified weapons and holy water (treats them as if from a higher plane).
 - *DD timing note:* The temp HP gain from DD is incidental (2–6 HP at most levels — noise vs 110 HP pool). The real value is slot attrition — denying L2/L3 smites. Use DD early (R1–R2) while the target's slot pool is full. After their L2+ slots are exhausted, switch to Void Ray or Tentacle instead.
@@ -127,6 +128,7 @@ The beholder is intelligent and patient. Its strategy depends on the party compo
 On initiative count 20 (losing ties), the beholder takes a lair action to move or use one of the following options:
 
 **Unstable Ground.** One creature the beholder can see within 60 feet must succeed on a DC 16 Dexterity saving throw or fall prone as the stone buckles beneath it.
+- *Target priority note (FIX-FC39-B):* Prefer melee fighters (Bazgar, Sabriel) over back-line casters (Marwen). Prone on a melee fighter: costs them movement to stand up, halves their speed, imposes disadvantage on attack rolls — sustained melee disruption. Prone on a caster who is already at range: disadvantage on ranged attack rolls only, and they spend a bonus action-equivalent standing up but still cast freely. If Marwen is the only target in range, Unstable Ground is still worth using (DC 16 Dex is 30%+ failure rate for low-Dex casters). Rotate to Void Eruption once melee fighters cluster within 20 ft of the shrine (R3+).
 
 **Manifest Thralls.** Up to three derro that are charmed by the beholder and within 60 feet of it gain temporary hit points equal to the beholder's Charisma modifier (minimum 1). They can immediately use their reaction to move or make a weapon attack.
 - *DM note:* If no thralls are alive or within 60 ft, this lair action does nothing — the beholder wastes its lair action. Use Unstable Ground or Void Eruption instead when thralls have been wiped.
