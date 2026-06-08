@@ -67,6 +67,8 @@ Grim. Disciplined. Terrified of what they're guarding, but bound by oath.
 - **Retreat on command:** Will fall back if a Deep Watch commander signals withdrawal
 - **Defensive:** Prefers cover and numbers over direct engagement
 - **Loyalty over instinct:** Even if afraid, won't abandon the post
+- *(FIX-TP33-A) Restrained condition — own attacks at disadvantage:* If a DW is Restrained (e.g. by Web), its own attack rolls are made at disadvantage (5e RAW: Restrained = speed 0, disadvantage on own attacks, advantage for attackers). This also blocks Tactical Drilling advantage — advantage and disadvantage cancel to a straight roll. The spec is correct; the sim has historically not enforced this. DM must track: Restrained DW attacks are disadvantaged even while adjacent to an ally.
+- *(FIX-TP33-B) Cunning Action trigger:* Use Cunning Action (Dash) when the DW's position is compromised — e.g., party retreats and DWs need to close, or a ranged threat is beyond 5 ft melee reach. Use Disengage if the DW is below 10 HP and needs to fall back to the gate without provoking OAs. Hide is available but rarely useful — the threshold chamber offers limited cover.
 
 ---
 
