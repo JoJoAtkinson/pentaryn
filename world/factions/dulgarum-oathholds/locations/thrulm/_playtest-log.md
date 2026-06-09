@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-09 10:19 UTC — slice #3 (beholder-escorts-limited) 1st-cycle — TPK R3 (Bazgar DOWN R1 TL1-17bludg+Maw-autocrit-37p; ThrallB+C DOWN R1 Fireball-35fire-FAIL; ThrallA DOWN R2 Fireball-26fire-FAIL; Marwen DOWN R2 VS-41psych-half-19; Sabriel DOWN R3 VS-27psych-full; Beholder-survives-9HP; DD-R1-PASS (Sabriel-CHA+3-rolled-18; correct-protocol-held-3LA); UG-R1-Bazgar-FAIL-prone (correct-melee-target; TL-bypassed-prone-penalty; no-ranged-used-FIX-EV7-34-A-NOT-triggered); VS-R2-decisive-correct-sequencing-FIX-EV7-32-A; VS-recharged-R3-roll6-16pct-beholder-saves; Phase A 29/29 clean (network-blocked; cache-seeded seed 494722); 0 bugs auto-fixed; DESIGN DECISIONS: FI-BEL3-A thrall-paper-fragility-vs-Fireball (3x22HP wiped R1-2; zero pressure; consider 30-35HP or AoE-scatter mechanic); FI-BEL3-B beholder-9HP-survivor-near-death-without-DR (limited-slice almost party-win without VS-R3-recharge); FI-BEL3-C Maw-autocrit-decisive-one-turn-down (37p-crit felt correct; recommend table-warning on grapple-setup); FI-BEL3-D DD-35pct-vs-CHA+3-Sabriel-low-hit-rate-carry (consider post-VS timing); FI-BEL3-E Lair-UG-productive-FIX-EV7-34-A-confirmed-not-triggered; FI-BEL3-F VS-R2-fight-decider-carry; MQ-BEL3-A prone-attacker-conditions-stacking-table-note; MQ-BEL3-B below-30HP-retreat-thralls-dead-rule-gap — see _playtest-runs/2026-06-09T10-19-27.md
+
 - 2026-06-09 09:17 UTC — slice #2 (tank-wall) 39th-cycle — VICTORY R4 (Bazgar 2/49, Marwen 16/32, Sabriel 44/44; Rager DOWN R3 Bazgar-9slash; SC DOWN R4 Bazgar-22slash; Rager-init20>SC-init11-CW-1rnd-delayed (CW-R1-SC-grants-after-Rager-acts; SIM-TW39-A cleared-at-rnd-start; R2-Rager-had-adv-not-applied; MISS-vs-AC18-35pct-flip-loss); Taunt-Marwen-3x-all-bypassed (R1-Fireball-save-based-zero-disadv; R2-Fire-Bolt-vs-Rager-directly-no-disadv; R3-save-rolled-14-PASS); Fireball-R1-SC-PASS-half-10fire (SC 33→23); Berserk-available-0-fires (R1-only-1-enemy-in-reach; Rager-died-R3); Rager-crit-R3-22slash-Bazgar-2HP-POSITIVE-spike; SC-solo-R4-anticlimactic-39th (whiff-both; Bazgar-22slash-cleanup); Phase A 29/29 clean (network-blocked 71st-consec; cache-seeded seed 494721); 0 bugs auto-fixed; DESIGN DECISIONS: FI-TW39-A Taunt-3x-zero-vs-Fireball-39th-carry (save-based-bypasses; DC12-irrelevant; rider-recommendation); FI-TW39-B SC-solo-endgame-anticlimactic-39th-carry (Barrage-recharge-4-6-recommended); FI-TW39-C Bazgar-crit-2HP-POSITIVE; SIM-TW39-A CW-adv-cleared-at-rnd-start (R2+R3-Rager-missed-without-adv; 35pct-flip-untracked; harness-gap); SIM-TW39-B Sabriel-LoH-unused-sim-gap (Bazgar-2HP; table-should-heal); MQ-TW39-A Taunt-vs-save-spells-DM-note-recommended; MQ-TW39-B CW-timing-note-SC-after-Rager-init-still-worthwhile — see _playtest-runs/2026-06-09T09-17-00.md
 
 - 2026-06-09 08:17 UTC — slice #1 (shrine-wedge) 1st-cycle — VICTORY R4 (Bazgar 13/49, Marwen 5/32, Sabriel 44/44; STD-Alpha-AR-R1-20dmg-Bazgar; Stagger-Beta-R1-correct (lower-init holds); UF-Alpha-R2-adv-near-kills-Marwen (11-dmg-adv-both-hit); OBR-3x-all-miss-self-dmg-11p-chips-kills; Sabriel-smite-R2-kills-Alpha; Beta-AR-banked-2rnd-fires-R3-16dmg-Bazgar-13HP; Altar-zone-fire+rad-suppressed-Marwen-Shatter+Sleet-pivot; Phase A 11/29 clean (network-blocked 70th-consec; 17 ext-RNG-fail not spec bugs); 0 bugs auto-fixed; DESIGN DECISIONS: FI-SW-A altar-zone-confirms-intent; FI-SW-B stagger+UF-banked-AR-arc-good-feel; FI-SW-C OBR-self-dmg-11p-contributes; FI-SW-D UF-wasted-vs-AC19 (add-lowest-AC-targeting); FI-SW-E VICTORY-R4-moderate-drain-appropriate; FI-SW-F stagger-2rnd-hold-DESIGN-DECISION; MQ-SW-A OBR-once-per-round-clarify; MQ-SW-B network-blocked-70th-carry — see _playtest-runs/2026-06-09T08-17-21.md
@@ -459,6 +461,31 @@
 - 2026-05-25 04:19 UTC — slice #7 (empty-void) — TPK R3; VS R1 wipe (4th cycle); DR unused (primary dead); main-action dead zone R2-R3; DD-51 auto-fixed (VS dice .md→6d10); 1 LA stranded/round — see _playtest-runs/2026-05-25T04-19-54.md
 
 ---
+
+## DESIGN DECISIONS (1st BEL3-cycle additions — 2026-06-09T10)
+
+**FI-BEL3-A [DESIGN DECISION] Thrall-derro paper fragility renders action-economy-pressure test void**
+- Slice #3 calls for 3× thrall-derro to apply "action-economy pressure" alongside the beholder. In practice: Marwen's R1 Fireball (8d6=35) one-shot ThrallB and ThrallC (22 HP, failed DEX saves), ThrallA limped to 5 HP and died R2 Fireball. Total thrall contribution: 1 hit on Bazgar (4 dmg). They were irrelevant.
+- Root cause: 22 HP at DC 14 DEX (thrall DEX +1) means a Fireball has a ~70% chance of killing each thrall outright, and near-100% chance of dealing more than their HP on a fail. Against any party with AoE, thrall-derro are structural zeroes.
+- Recommendation: bump thrall HP to 30–35, or add a mechanic (e.g., on AoE targeting, Beholder commands Fractured Will reaction to scatter — thralls move away from blast center, forcing separate targeting). Fundamental design decision; do not auto-fix.
+
+**FI-BEL3-B [DESIGN DECISION] Beholder at 9 HP survivor — "limited" slice nearly ends in beholder death**
+- Without Disintegration Ray, the beholder took 58 HP from Sabriel (three Longsword+Smite hits) and 43 HP from Fireballs = 101 total, starting at 110 HP → survived at 9 HP. Survived ONLY because Void Scream recharged on exactly 6/6 (16.7% chance) in R3.
+- If VS had not recharged, Sabriel (at 5 HP) would have had another round to attack. Given she had 1 L1 slot remaining, that's another 1d8+3+2d8 radiant ≈ 15 dmg average — enough to kill the beholder.
+- Log for human: the "limited" slice is already a winnable fight for the party if dice go even modestly in their favor. Intentional tension or unexpected? Confirm design intent for slice #3.
+
+**FI-BEL3-C [FEEL NOTE] Maw auto-crit is the encounter's most decisive single-hit mechanic — needs table-warning**
+- Bazgar went from 45 HP to 0 in one beholder turn: 17 bludgeoning (Tentacle 1) + 37 piercing (Maw auto-crit on grappled = 8d8+4). This is correct per FIX-FC39-A and is working as designed.
+- The problem is surprise: at the table, players don't know the Maw crits on grappled targets until it happens. Losing 54 HP in one turn with no warning feels cheap. Recommend: add a narration cue when the beholder grapples ("the tendril tightens and the great maw swings hungrily toward you — this is going to hurt") so players understand the threat and can try to escape before Maw fires.
+
+**FI-BEL3-D [DESIGN DECISION] Drain Divinity vs Sabriel CHA+3 — 35% hit rate carry**
+- DD fired correctly per R1 LA hold protocol. Sabriel rolled 15+3=18 vs DC 16 → success. 35% chance of failure at CHA +3; with Paladin Aura of Protection (CHA mod to saves for allies within 10 ft), Sabriel's own effective DD save is DC 16 vs +3 = 35% fail → reliable enough to attempt. But worth confirming: at CHA +4 (likely for a level 5 paladin), fail rate drops to 30%.
+- Possible alternative timing: fire DD in R3 after VS has weakened the party — Sabriel at low HP might be more risk-averse and the table atmosphere more fraught. Carry for human review.
+
+**MQ-BEL3-B [MECHANICAL QUESTION] Beholder below-30-HP retreat — rule gap when thralls are dead**
+- At end of R2, beholder hit exactly 30 HP (retreat threshold). Entered R3 at 30 HP, hit to 9 HP by Sabriel (R3 init 16) before beholder acted (R3 init 9). At 9 HP, beholder is well below threshold.
+- Tactics say: "retreats deeper into lower shaft, using thralls to block pursuit." All thralls are dead. There is no rule for what the beholder does when it wants to retreat but has no thralls to block.
+- Recommendation: add a sentence to Tactics: "If below 30 HP and all thralls are dead, the beholder Shrine-Drifts through the nearest solid surface toward the lower shaft each turn, spending LAs on Move to maximize distance, and fires VS/VS-recharge offensively on any PC within 30 ft en route." This prevents the DM freeze at the table.
 
 ## DESIGN DECISIONS (39th TW-cycle additions — 2026-06-09T09)
 
