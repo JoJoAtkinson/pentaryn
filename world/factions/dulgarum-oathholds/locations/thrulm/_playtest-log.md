@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-09 04:20 UTC — slice #5 (solo-rager-rush) 45th-cycle — VICTORY R4 (Bazgar 26/49, Marwen 12/32, Sabriel 21/44; R-Alpha DOWN R3 Bazgar-Trip+16slash; R-Beta DOWN R3 Sabriel-smite-19; R-Gamma DOWN R4 Sabriel-smite-24; Fireball×2-decisive (R1-23fire-Alpha-SAVE-half-Beta/Gamma-FAIL; R2-16fire-Alpha-SAVE-Beta-FAIL-Gamma-SAVE; rager Dex+0 structural-floor-4th-SR5-confirm); Berserk-R1-all-3 (available-at-start; 3-PCs-in-reach; identical narration×3-FI-SR5-45-B); Berserk-Beta-recharged-R2-roll5 Berserk-Gamma-recharged-R3-roll6 (2/2-recharge-vs-cycle44-0/2; 5-total-Berserk-fires); ME(+1)-active-all-ragers-after-Fireball-R1; Taunt×5-all-inert-5th-consec-SR5 (only-ragers-present; disadv-vs-non-rager-structurally-moot; FI-SR5-45-A-carry); Aggro-Gamma-Marwen-correct (Fireball→Gamma aggro=Marwen; R2 ADV multiattack hit×2 → Marwen 1HP; MQ-SR5-45-A ADV-one-roll-or-all-rolls-in-multiattack); Phase A 29/29 clean (network-blocked 41st-consec; cache-pre-seeded seed 494716); 0 bugs auto-fixed; DESIGN DECISIONS: FI-SR5-45-A Taunt-inert-SR5-5th-consec (all-targets-ragers; disadv-clause-never-bites; DM-note-recommended-or-secondary-effect-design-decision); FI-SR5-45-B Triple-Berserk-R1-narration-repeat-NEW (identical-text×3; add-variant-narrations); FI-SR5-45-C VICTORY-R4-Fireball-decisive-45th (carry FI-SR5-44-E/FI-SR5-L; slice-note-needed delay-Fireball-R2); FI-SR5-45-D Aggro-Marwen-POSITIVE (correctly-targeted-nearly-downed-Marwen); MQ-SR5-45-A Aggro-"next-attack"-one-roll-or-all-multiattack (recommend clarify "first attack roll on next turn"); MQ-SR5-45-B network-blocked-41st-carry; MQ-SR5-45-C Berserk-3-line-cap-buried-carry-MQ-SR5-C — see _playtest-runs/2026-06-09T04-20-43.md
+
 - 2026-06-09 03:22 UTC — slice #4 (final-confrontation) 43rd-cycle — TPK R3 (Beholder 110/110 zero-damage; Bazgar DOWN R1 Tentacle-grapple-11bludg+Maw-autocrit-38pierce; Sabriel-LoH-R1+R2-yoyo-25/25-LoH-consumed-10th-FC-confirm; DD-fired-R1-post-Sabriel FIX-FC40-A-43rd-clean (Sabriel-Cha-4<DC16; L3-stripped; inert-Sabriel-died-before-smiting-carry); STD-double-AR-R1-SIM-STAGGER-INVERTED (STD-B-init14>STD-A-init6; sim flagged wrong direction; both fired; Marwen-1HP after AR1+AR2; spec-stagger-correct-sim-error-only); Fireball-R1-3/4-thralls-dead; Thrall-1 DOWN R2 Bazgar-12slash; lair-UG-Bazgar-prone-R1+R2-consec-nat1-rolls; VS-recharged-R3-not-fired-3rd-FC-consec (beholder-used-MA; fight-decided); DR-never-recharged-3rd-FC-consec; STD-A-killing-blow-R3 (shrine-axe-roll21-vs-AC19-17dmg; Sabriel 3HP→DOWN); MQ-FC43-B Bazgar-nonmagic-resist-not-applied-sim (Tentacle+Maw halved; Bazgar-may-survive-R1-MA-with-resist-applied); Phase A 29/29 clean (network-blocked 40th-consec; cache-pre-seeded seed 494715); 0 bugs auto-fixed; DESIGN DECISIONS: FI-FC43-A VS-recharged-R3-not-fired-3rd-FC-consec (P-fire-43pct-in-3r; carry FI-FC42-B; recommend-Recharge-5-6); FI-FC43-B beholder-0-damage-43rd-FC (zero-agency-Bazgar; Marwen-died-before-beholder; structural-CR13-vs-L5); FI-FC43-C STD-A-killing-blow-feel-note (DM: narrate-shrine-chorus-not-beholder-filler); FI-FC43-D LoH-yoyo-10th-FC-carry (DD-strips-slots-not-LoH-pool; DESIGN: should-DD-also-drain-LoH?); FI-FC43-E DR-never-recharged (P=30pct-0-recharges-3-rounds); MQ-FC43-A stagger-at-table-tracking-note-needed; MQ-FC43-B Bazgar-resist-halves-Tentacle+Maw-DESIGN-QUESTION; MQ-FC43-C network-blocked-40th — see _playtest-runs/2026-06-09T03-22-51.md
 
 - 2026-06-09 02:15 UTC — slice #3 (beholder-escorts-limited) 3rd-BEL3-cycle — INDETERMINATE R3 (all 3 PCs downed with 2 death-save failures; beholder at 9/110 HP retreating; Bazgar downed R1-Maw-crit-52p+R2-thrall-3slash+R3-TL; Sabriel downed R2-Maw-crit-26p+LA-VR-11f; Marwen downed R3-TL-14bludg; Marwen-Scorching-Ray-3-hits-62fire decisive (71→9 HP); DD-R1-protocol-correct (Sabriel-Cha-save-6<DC16; L2 stripped; FIX-FC40-A-3rd-BEL3-clean); Bazgar-LoH-yoyo-R1+R2-3rd-BEL3-confirm; VS-never-recharged-3rd-BEL3-confirm; thralls-9dmg-total-3rd-BEL3-confirm; Fireball-R1-beholder-PASS-half-13fire; Phase A 29/29 clean (network-blocked 39th-consec; cache-pre-seeded seed 494714); 0 bugs auto-fixed; DESIGN DECISIONS: FI-BEL3-3RD-A INDETERMINATE-all-PCs-downed-beholder-9HP (tense near-win; slice-3-intent-validated); FI-BEL3-3RD-B Maw-autocrit-to-hit-ambiguity-NEW (rider_on_hit vs auto-bypass; recommend note in .md); FI-BEL3-3RD-C VS-never-recharged-3rd-BEL3-carry-FI-BEL3-38-B (recharge-5-6-recommended); FI-BEL3-3RD-D LoH-yoyo-3rd-BEL3-confirm-carry; FI-BEL3-3RD-E thralls-9dmg-3rd-BEL3-confirm-carry; FI-BEL3-3RD-F Fireball-thrall-splash-sim-gap (thralls not in AOE; real-table-thralls-likely-wiped-R1); FI-BEL3-3RD-G DD-worked-but-L2-surplus-L5; FI-BEL3-3RD-H Bazgar-nonmagic-50pct-output-carry; MQ-BEL3-3RD-A Maw-to-hit-required-RAW; MQ-BEL3-3RD-B network-blocked-39th-carry; MQ-BEL3-3RD-C grapple-multiattack-seq-confirmed — see _playtest-runs/2026-06-09T02-15-00.md
@@ -445,6 +447,39 @@
 - 2026-05-25 06:19 UTC — slice #1 (shrine-wedge) — TPK R3; double-AR R1 (MQ-28 harness bug — stagger rule unenforced mid-round); Marwen R1 R2, Sabriel R2, Bazgar R3; party dealt 17 total dmg to both STDs; UF/DE/Altar-pull never triggered (FI-38/39/40/41/42 new); OBR fired R2 missed; 28/28 Phase A clean (DD-10 13th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T06-19-01.md
 - 2026-05-25 05:00 UTC — slice #0 5th-cycle (threshold-patrol) — VICTORY R3 (Bazgar 49/49, Marwen 18/32, Sabriel 44/44 untouched 5th cycle); DW-A killed before acting (init 5 = last — DD-39/MQ-12 5th-cycle confirm); CW wasted 3/3 (R1 on DW-A who died before turn; MQ-27 NEW — CW should target highest-init ally); Sabriel untouched FI-14 5th cycle; Barrage 0/2 recharge chances; Bazgar untouched; 28/28 Phase A clean (DD-10 12th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T05-00-00.md
 - 2026-05-25 04:19 UTC — slice #7 (empty-void) — TPK R3; VS R1 wipe (4th cycle); DR unused (primary dead); main-action dead zone R2-R3; DD-51 auto-fixed (VS dice .md→6d10); 1 LA stranded/round — see _playtest-runs/2026-05-25T04-19-54.md
+
+---
+
+## DESIGN DECISIONS (45th SR5-cycle additions — 2026-06-09T04)
+
+**FI-SR5-45-A Taunt mechanically inert in solo-rager-rush — 5th consecutive SR5 confirm**
+- In any formation where ONLY ragers are present, Taunt's "disadvantage on attacks vs
+  non-rager targets" clause never triggers because all valid attack targets ARE ragers.
+  The bonus action fires, a save is rolled, and zero game-mechanical constraint results.
+- Recommendation: add a DM-facing note in derro-rager.md Tactics section: "In a
+  rager-only formation, Taunt disadv is moot — DM may narrate as flavor but need not
+  track the save." A mechanical fix (secondary clause for all-melee scenarios) would
+  require a balance decision from the human.
+
+**FI-SR5-45-B Triple Berserk R1 narration repetition — new**
+- When all 3 ragers have Berserk available at initiative start and 3 PCs are in melee
+  range, all 3 fire Berserk in the same round, printing the same narration text 3 times.
+  This dulls impact. Consider adding 2 alternate narration strings to the Berserk spec
+  so DMs see variety across a multi-rager turn.
+
+**FI-SR5-45-C Fireball structural counter — carry from FI-SR5-44-E / FI-SR5-L**
+- 5th consecutive SR5 cycle where Fireball ×2 is the decisive element. Rager Dex+0
+  means nearly all ragers fail DC 14 saves. Recommend adding a slice-level DM note:
+  "For richer Berserk/Taunt/ME expression, encourage Marwen to hold Fireball until
+  R2 so R1 Berserk fires at full HP and the rager identity is established first."
+
+**MQ-SR5-45-A Incoming Damage Aggro "next attack" ambiguity — clarification needed**
+- The .md says "the next attack the rager makes against that enemy has advantage."
+  In multiattack (2 swings vs the same target), should advantage apply to both rolls
+  or only the first? Strict reading of "next attack" = one roll.
+- Recommend: update derro-rager.md to read "The **first** attack roll the rager makes
+  against that enemy on its next turn has advantage." This eliminates table ambiguity
+  and is a minor nerf (second swing loses advantage after a miss on the first).
 
 ---
 
