@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-09 05:14 UTC — slice #6 (shardcaller-team) 46th-cycle — VICTORY R3 (Bazgar 40/49, Marwen 17/32, Sabriel 21/44; SC-A DOWN R1 Bazgar+Sabriel-before-SC-A-acts (init-4; Barrage-never-fired-FI-SCT6-46-A-NEW); SC-B DOWN R2 Sabriel-smite-1HP+Marwen-SR-ray1-8fire; SC-C DOWN R3 Marwen-3xSR-rays-18fire; SC-B-Barrage-R2-hit-Marwen+Sabriel (12-and-9-pierce; PTV-Marwen-disadv-Barrage-save-[11/5]→7-FAIL-would-fail-flat-anyway; PTV-confirmed-functional-not-decisive-2nd-consec); SC-C-Barrage-R3-original-charge-satisfying-feel (Sabriel+Marwen-both-FAIL; 4+7-pierce); Fireball-never-deployed-init-gating (Marwen-init4; SC-A-dead-before-Marwen-acts; 2-targets-remain<3; Scorching-Ray-instead-3-L2-slots-all-used); CW-3/3-unspent-SC-C-solo-endgame-structural (no-allies); stagger-enforced-R2-R3-correctly (SC-B-R2/SC-C-R3 one-Barrage-per-round ✓); CW-adv-not-applied-to-dispatch-ongoing (MQ-SCT-35-A-carry); Phase A 29/29 clean (network-blocked 42nd-consec; cache-pre-seeded seed 494717); 0 bugs auto-fixed; DESIGN DECISIONS: FI-SCT6-46-A SC-A-DOWN-R1-before-Barrage-NEW (lowest-init=barrage-carrier=most-exposed; Barrage-structurally-lost-when-PCs-roll-high-init; consider-highest-init-SC-carries-Barrage-tradeoff-CW-timing); FI-SCT6-46-B VICTORY-R3-comfortable-47th-consec-confirm (carry FI-SCT6-45-B; add-1-Thrall-or-HP-to-40); FI-SCT6-46-C Fireball-never-deployed-init-gated-SCT (Marwen-last-init; SC-A-down-before-Marwen; 2-targets-remain; DM-note: Marwen-high-init=Fireball-available); MQ-SCT6-46-A Barrage-carrier-init-vulnerability (when-override-FI-SCT-34-A?); MQ-SCT6-46-B CW-adv-dispatch-gap-carry; MQ-SCT6-46-C dual-dice-gap-carry — see _playtest-runs/2026-06-09T05-14-00.md
+
 - 2026-06-09 04:20 UTC — slice #5 (solo-rager-rush) 45th-cycle — VICTORY R4 (Bazgar 26/49, Marwen 12/32, Sabriel 21/44; R-Alpha DOWN R3 Bazgar-Trip+16slash; R-Beta DOWN R3 Sabriel-smite-19; R-Gamma DOWN R4 Sabriel-smite-24; Fireball×2-decisive (R1-23fire-Alpha-SAVE-half-Beta/Gamma-FAIL; R2-16fire-Alpha-SAVE-Beta-FAIL-Gamma-SAVE; rager Dex+0 structural-floor-4th-SR5-confirm); Berserk-R1-all-3 (available-at-start; 3-PCs-in-reach; identical narration×3-FI-SR5-45-B); Berserk-Beta-recharged-R2-roll5 Berserk-Gamma-recharged-R3-roll6 (2/2-recharge-vs-cycle44-0/2; 5-total-Berserk-fires); ME(+1)-active-all-ragers-after-Fireball-R1; Taunt×5-all-inert-5th-consec-SR5 (only-ragers-present; disadv-vs-non-rager-structurally-moot; FI-SR5-45-A-carry); Aggro-Gamma-Marwen-correct (Fireball→Gamma aggro=Marwen; R2 ADV multiattack hit×2 → Marwen 1HP; MQ-SR5-45-A ADV-one-roll-or-all-rolls-in-multiattack); Phase A 29/29 clean (network-blocked 41st-consec; cache-pre-seeded seed 494716); 0 bugs auto-fixed; DESIGN DECISIONS: FI-SR5-45-A Taunt-inert-SR5-5th-consec (all-targets-ragers; disadv-clause-never-bites; DM-note-recommended-or-secondary-effect-design-decision); FI-SR5-45-B Triple-Berserk-R1-narration-repeat-NEW (identical-text×3; add-variant-narrations); FI-SR5-45-C VICTORY-R4-Fireball-decisive-45th (carry FI-SR5-44-E/FI-SR5-L; slice-note-needed delay-Fireball-R2); FI-SR5-45-D Aggro-Marwen-POSITIVE (correctly-targeted-nearly-downed-Marwen); MQ-SR5-45-A Aggro-"next-attack"-one-roll-or-all-multiattack (recommend clarify "first attack roll on next turn"); MQ-SR5-45-B network-blocked-41st-carry; MQ-SR5-45-C Berserk-3-line-cap-buried-carry-MQ-SR5-C — see _playtest-runs/2026-06-09T04-20-43.md
 
 - 2026-06-09 03:22 UTC — slice #4 (final-confrontation) 43rd-cycle — TPK R3 (Beholder 110/110 zero-damage; Bazgar DOWN R1 Tentacle-grapple-11bludg+Maw-autocrit-38pierce; Sabriel-LoH-R1+R2-yoyo-25/25-LoH-consumed-10th-FC-confirm; DD-fired-R1-post-Sabriel FIX-FC40-A-43rd-clean (Sabriel-Cha-4<DC16; L3-stripped; inert-Sabriel-died-before-smiting-carry); STD-double-AR-R1-SIM-STAGGER-INVERTED (STD-B-init14>STD-A-init6; sim flagged wrong direction; both fired; Marwen-1HP after AR1+AR2; spec-stagger-correct-sim-error-only); Fireball-R1-3/4-thralls-dead; Thrall-1 DOWN R2 Bazgar-12slash; lair-UG-Bazgar-prone-R1+R2-consec-nat1-rolls; VS-recharged-R3-not-fired-3rd-FC-consec (beholder-used-MA; fight-decided); DR-never-recharged-3rd-FC-consec; STD-A-killing-blow-R3 (shrine-axe-roll21-vs-AC19-17dmg; Sabriel 3HP→DOWN); MQ-FC43-B Bazgar-nonmagic-resist-not-applied-sim (Tentacle+Maw halved; Bazgar-may-survive-R1-MA-with-resist-applied); Phase A 29/29 clean (network-blocked 40th-consec; cache-pre-seeded seed 494715); 0 bugs auto-fixed; DESIGN DECISIONS: FI-FC43-A VS-recharged-R3-not-fired-3rd-FC-consec (P-fire-43pct-in-3r; carry FI-FC42-B; recommend-Recharge-5-6); FI-FC43-B beholder-0-damage-43rd-FC (zero-agency-Bazgar; Marwen-died-before-beholder; structural-CR13-vs-L5); FI-FC43-C STD-A-killing-blow-feel-note (DM: narrate-shrine-chorus-not-beholder-filler); FI-FC43-D LoH-yoyo-10th-FC-carry (DD-strips-slots-not-LoH-pool; DESIGN: should-DD-also-drain-LoH?); FI-FC43-E DR-never-recharged (P=30pct-0-recharges-3-rounds); MQ-FC43-A stagger-at-table-tracking-note-needed; MQ-FC43-B Bazgar-resist-halves-Tentacle+Maw-DESIGN-QUESTION; MQ-FC43-C network-blocked-40th — see _playtest-runs/2026-06-09T03-22-51.md
@@ -447,6 +449,45 @@
 - 2026-05-25 06:19 UTC — slice #1 (shrine-wedge) — TPK R3; double-AR R1 (MQ-28 harness bug — stagger rule unenforced mid-round); Marwen R1 R2, Sabriel R2, Bazgar R3; party dealt 17 total dmg to both STDs; UF/DE/Altar-pull never triggered (FI-38/39/40/41/42 new); OBR fired R2 missed; 28/28 Phase A clean (DD-10 13th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T06-19-01.md
 - 2026-05-25 05:00 UTC — slice #0 5th-cycle (threshold-patrol) — VICTORY R3 (Bazgar 49/49, Marwen 18/32, Sabriel 44/44 untouched 5th cycle); DW-A killed before acting (init 5 = last — DD-39/MQ-12 5th-cycle confirm); CW wasted 3/3 (R1 on DW-A who died before turn; MQ-27 NEW — CW should target highest-init ally); Sabriel untouched FI-14 5th cycle; Barrage 0/2 recharge chances; Bazgar untouched; 28/28 Phase A clean (DD-10 12th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T05-00-00.md
 - 2026-05-25 04:19 UTC — slice #7 (empty-void) — TPK R3; VS R1 wipe (4th cycle); DR unused (primary dead); main-action dead zone R2-R3; DD-51 auto-fixed (VS dice .md→6d10); 1 LA stranded/round — see _playtest-runs/2026-05-25T04-19-54.md
+
+---
+
+## DESIGN DECISIONS (46th SCT-cycle additions — 2026-06-09T05)
+
+**FI-SCT6-46-A SC-A DOWN R1 before Barrage fires — NEW barrage-carrier vulnerability**
+- The FI-SCT-34-A assignment puts the lowest-initiative SC in the Barrage carrier role. In
+  this cycle, SC-A rolled init 4; Bazgar (init 15) and Sabriel (init 6) focus-fired SC-A
+  to 0 HP before SC-A's turn, so R1 Barrage was never delivered.
+- This is the first R1-kill of the designated Barrage SC in 46 observed cycles. The
+  paradox: the Barrage carrier is the formation's most initiative-fragile combatant,
+  making guaranteed R1 AoE pressure probabilistic rather than reliable.
+- **Decision required:** Should the highest-init SC carry Barrage R1 (acts before PCs,
+  guarantees AoE) with the tradeoff that CW timing is disrupted (CW on mid-init SC is
+  the current same-round benefit ✓)? Or is probabilistic R1 Barrage acceptable as a
+  balancing mechanism (high-init rolls = party survives R1 area hit; low-init rolls =
+  barrage lost but formation trades it for better CW coverage)?
+- Recommend: add a DM note to `derro-shardcaller.md` — "If the lowest-init SC drops
+  below 10 HP from PC attacks before its R1 turn, the next-highest-init SC with Barrage
+  available should fire on its turn even if another SC already Barrageged. The R1 Barrage
+  is more valuable than stagger-compliance when the carrier is about to die."
+  Actually, the current stagger note only prevents *double* Barrage — the R2/R3 stagger.
+  This is specifically about the R1 carrier being killed. Since SC-A never fired, there
+  was no "stagger violation" possible. A pre-emptive note about fallback is still useful.
+
+**FI-SCT6-46-B VICTORY R3 comfortable — 47th consecutive SCT-only confirm**
+- Bazgar 40/49 · Marwen 17/32 · Sabriel 21/44. No deaths. Marwen at 53% most stressed.
+- Carry FI-SCT6-45-B. 3-SC formation consistently resolved in 3–5 rounds without PC
+  deaths. Formation serves as a harassment encounter, not a threat. Add 1× Thrall (8 HP
+  minion to absorb focus fire) or raise SC HP to 40 to create a real death threat.
+
+**FI-SCT6-46-C Fireball init-gating in SCT — structural pattern**
+- Marwen last in initiative (init 4). By time Marwen acts in R1, SC-A is dead →
+  2 targets remain → 3-SC Fireball requirement not met → Scorching Ray instead.
+- This is a structural feature of: (a) SC spread tactic (no cluster for Fireball
+  line), (b) Marwen consistently rolling low init. If Marwen rolls ≥15 init, she acts
+  before focus fire depletes targets. DM at-table note: "remind Marwen player that
+  Fireball is most useful R1 before the party breaks formation; if Marwen acts late,
+  switch to Scorching Ray by default."
 
 ---
 
