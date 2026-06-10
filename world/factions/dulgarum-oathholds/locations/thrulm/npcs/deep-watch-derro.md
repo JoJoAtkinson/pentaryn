@@ -40,7 +40,7 @@ Grim. Disciplined. Terrified of what they're guarding, but bound by oath.
 
 **Oath-Bound Resolve.** The derro has advantage on saving throws against being frightened or charmed, as long as it can see or hear a Deep Watch commander.
 
-**Tactical Drilling.** The derro works well with others; if an ally is within 5 feet and the target is also within the ally's reach, the derro has advantage on its melee attack roll against the target.
+**Tactical Drilling.** The derro works well with others; if an ally is within 5 feet and the target is also within the ally's reach, the derro has advantage on its melee attack roll against the target. *(MQ-TP37-A split-target clarification: TD only activates when BOTH this derro AND the allied derro are each within 5 ft of the SAME target. If two DWs split to attack different PCs, neither has TD advantage — each DW must be adjacent to the other DW's chosen target for the trait to fire.)*
 
 ---
 
