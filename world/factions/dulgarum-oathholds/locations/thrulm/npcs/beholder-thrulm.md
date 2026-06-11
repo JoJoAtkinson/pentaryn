@@ -92,6 +92,8 @@ It is territorial, but not mindless. It gathers thralls. It shapes the derro who
 
 The beholder can take three legendary actions, choosing from the options below. Only one legendary action can be used at a time and only at the end of another creature's turn.
 
+- *(LA timing — FIX-EV7-39-A):* **LA can ONLY be used at the end of ANOTHER creature's turn — never during the beholder's own turn.** LA refresh at the start of the beholder's turn. At-table sequence: resolve the beholder's multiattack/action fully, then wait for each subsequent PC to complete their turn before spending an LA. The DD post-Sabriel protocol (FIX-FC40-A) is the canonical example: hold all 3 LA through Bazgar and Marwen's turns, spend 3 LA on DD immediately after Sabriel ends her turn. Once 3 LA are spent on DD in R1, no LA are available again until the beholder's R2 turn begins. Do NOT apply Void Ray or Tentacle LAs before a PC has had their turn — this would preempt their action and is mechanically illegal.*
+
 **Move.** The beholder moves up to its flying speed.
 
 **Tentacle.** The beholder makes one **Tentacle Lash** attack.
