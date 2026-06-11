@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-11 14:19 UTC — slice #7 (empty-void) 40th-EV7-cycle — TPK R3 (Bazgar-Maw-autocrit-39pierce-R1-DOWN(-5HP); Sabriel-VR+VS-combo-R2-39dmg-from-30HP-DOWN; Marwen-VE-R3-5force-from-3HP-DOWN; Beholder-33/110; negotiation-partial-Marwen17-passes/Sabriel-nat1-5-fails; DD-R1-FIRED-CORRECT-40th-EV7-Sabriel-FAIL-Cha13<DC16-L1-stripped (SIM-EV7-40-A-L1-not-L2-strip-bug-minor); LR-3/3-unused-40th-EV7-carry; DR-never-recharged-40th-EV7-carry (2xd6=4-and-4); VS-recharged-R1-d6=6-fired-R2-decisive; Fireball-R1-SAVE-half-11/R2-FAIL-full-30 (beholder-77hp-at-R2-start); Beholder-init-7-lost-to-all-PCs; Phase A 29/29 clean (network-blocked 108th-consec; cache-seeded seed 494774); 0 bugs auto-fixed; DESIGN DECISIONS: FI-EV7-40-A negotiation-DC-undefined-NEW; FI-EV7-40-B LR-3/3-idle-carry; FI-EV7-40-C DR-never-fires-short-fights-carry; FI-EV7-40-D VR+VS-R2-combo-clean-kill-POSITIVE; FI-EV7-40-E DD-L1-strip-not-L2-SIM-bug; MQ-EV7-40-B VoidFeeding-DB-gap-carry; MQ-EV7-40-C negotiation-success-path-untested-40th-EV7 — see _playtest-runs/2026-06-11T14-19-41.md
+
 - 2026-06-11 13:17 UTC — slice #6 (shardcaller-team) 52nd-SCT6-cycle — VICTORY R2 (Marwen-DOWN-R2-Barrage-half-2dmg; Bazgar-43/49; Sabriel-44/44; SC-A-DOWN-R1-Sabriel-smite+Bazgar-23dmg; SC-B-DOWN-R1-Fireball-34fire-full (PTV-disadv-nat20→FAIL; FI-SCT6-52-B-NEW); SC-C-DOWN-R2-Sabriel-kills; Barrage-R1-FIRES-FIRST-TIME-before-Fireball (SC-C-init9>Marwen-init3-nat1; FI-SCT6-52-A-POSITIVE); CW-consumed-correct-first-confirm (SC-B-nat20-CW-adv-17dmg-Marwen; FI-SCT6-52-C-POSITIVE); PTV-decisive-SC-B-Fireball-save-NAT20→FAIL (FI-SCT6-52-B-ironic); Fireball-12th-SCT6-structural-confirm; SIM-dispatch-divergence-12th-consec (MQ-SCT6-52-B); Phase A 29/29 clean (network-blocked 107th-consec; cache-seeded seed 494773); 0 bugs auto-fixed; DESIGN DECISIONS: FI-SCT6-52-A R1-Barrage-fires-when-Marwen-low-init-POSITIVE; FI-SCT6-52-B PTV-disadv-kills-SC-via-own-Fireball-ironic; FI-SCT6-52-C CW-consumed-POSITIVE; MQ-SCT6-52-A Barrage-reassign-to-high-init-SC-rec — see _playtest-runs/2026-06-11T13-17-39.md
 
 - 2026-06-11 12:16 UTC — slice #5 (solo-rager-rush) 50th-SR5-cycle — VICTORY R6 (Marwen-DOWN-R2-RB-multiattack-14slash; Bazgar-32/49; Sabriel-25/44; Fireball-LOW-19fire-decisive-but-not-cleanup (RA-33HP/RB-33HP/RC-43HP-post-FB); RA-Berserk-R1-2-MISS (8vs18/6vs15); RA-Berserk-RECHARGE-d6=6-R2-fires-again (Bazgar-3/Marwen-7; Madness+1-active-R2-correct); Marwen-RB-R2-14slash-down (-10HP; was-4HP-surviving-RA-Berserk+RC-hit); RC-SAVES-Fireball-DEX18≥DC14-9fire-43HP (never-targeted-until-R5; two-wave-dynamic-POSITIVE-FI-SR5-50-C); RC-AC19-walls-both-R4-atks (20-and-17-both-MISS-FI-SR5-50-C); Aggro-RC-vs-Bazgar-R5-ADV-HIT-10slash-correct (FI-SR5-50-D); RA-DOWN-R3-Sabriel-smite; RB-DOWN-R4-Bazgar-Trip; RC-DOWN-R6-Sabriel-smite; Taunt-0×-same-type-10th+-consec (FI-SR5-50-A-CRITICAL-retire); Phase A 29/29 clean (network-blocked 106th-consec; cache-seeded seed 494772); 0 bugs auto-fixed; DESIGN DECISIONS: FI-SR5-50-A retire-slice-10th-confirm-CRITICAL; FI-SR5-50-B low-Fireball-R6-extension-POSITIVE; FI-SR5-50-C RC-two-wave-POSITIVE; MQ-SR5-50-A network-blocked-106th-carry — see _playtest-runs/2026-06-11T12-16-00.md
@@ -545,6 +547,25 @@
 - 2026-05-25 06:19 UTC — slice #1 (shrine-wedge) — TPK R3; double-AR R1 (MQ-28 harness bug — stagger rule unenforced mid-round); Marwen R1 R2, Sabriel R2, Bazgar R3; party dealt 17 total dmg to both STDs; UF/DE/Altar-pull never triggered (FI-38/39/40/41/42 new); OBR fired R2 missed; 28/28 Phase A clean (DD-10 13th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T06-19-01.md
 - 2026-05-25 05:00 UTC — slice #0 5th-cycle (threshold-patrol) — VICTORY R3 (Bazgar 49/49, Marwen 18/32, Sabriel 44/44 untouched 5th cycle); DW-A killed before acting (init 5 = last — DD-39/MQ-12 5th-cycle confirm); CW wasted 3/3 (R1 on DW-A who died before turn; MQ-27 NEW — CW should target highest-init ally); Sabriel untouched FI-14 5th cycle; Barrage 0/2 recharge chances; Bazgar untouched; 28/28 Phase A clean (DD-10 12th consecutive); 0 bugs auto-fixed — see _playtest-runs/2026-05-25T05-00-00.md
 - 2026-05-25 04:19 UTC — slice #7 (empty-void) — TPK R3; VS R1 wipe (4th cycle); DR unused (primary dead); main-action dead zone R2-R3; DD-51 auto-fixed (VS dice .md→6d10); 1 LA stranded/round — see _playtest-runs/2026-05-25T04-19-54.md
+
+---
+
+## DESIGN DECISIONS (40th EV7-cycle additions — 2026-06-11T14-19)
+
+**FI-EV7-40-A [DESIGN DECISION] Negotiation DC undefined — no written Persuasion DC for beholder cooperation:**
+The `.md` Interaction Notes describe *when* negotiation can work but contain no explicit DC. With Sabriel's +4 Cha, a DC 15 = 50% success. Without a written DC, the negotiation scene is arbitrary each run. **Recommendation:** Set DC 18 (passage through) or DC 14 (if party has actively demonstrated hostility to shrine restoration). Add advantage if party carries an artifact connected to Khôr-Bhog-Khôr. Add to Interaction Notes in `beholder-thrulm.md`.
+
+**FI-EV7-40-B [CARRY] LR 3/3 idle across 40 EV7 cycles:**
+The beholder has not spent a single LR in the last 4 consecutive EV7 runs. At level 5, the party lacks save-or-suck spells (Hold Person, Banishment) that force LR burn. LR is probably calibrated correctly for harder parties, but a live DM note clarifying "reserve LR for Wis/Cha control spells, not Dex saves from Fireball" would reduce misapplication.
+
+**FI-EV7-40-C [CARRY] DR never fires in short (≤3 round) fights:**
+DR has recharged ~0% of EV7 fights. Against a level-5 party the fight resolves before 2 successful recharge rolls (≈11% per 3-round window). **Recommendation:** Raise DR to recharge 4-6 or 3-6 to let it fire at least once per full-length fight and reinforce the encounter's "overwhelm" narrative.
+
+**FI-EV7-40-D [POSITIVE] VR+VS R2 combo is a clean two-step kill:**
+Void Ray (2 LA) strips HP, Void Scream (action) finishes even on a passed save. Sabriel passed the VS save but died anyway (38 damage from 30 HP total). Feels earned, not arbitrary.
+
+**SIM-EV7-40-A [SIM BUG] DD stripped L1 slot instead of L2 (highest available):**
+Sabriel had L2×2 and L1×4 at DD time. DD text says "highest level remaining" = L2. Sim stripped L1. Minor impact (2 THP vs 4 THP, L2 smite loss more painful). Fix in harness logic for DD target-slot selection.
 
 ---
 
