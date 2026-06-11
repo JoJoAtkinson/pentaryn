@@ -16,6 +16,8 @@
 
 ## Runs
 
+- 2026-06-11 21:34 UTC — slice #6 (shardcaller-team) 53rd-SCT6-cycle — VICTORY R2 (Marwen-24/32-SC-C-R1-throw8; Bazgar-49/49; Sabriel-44/44; SC-A-DOWN-R1-Fireball-40fire-FAIL-DEX12<DC14; SC-B-DOWN-R1-Fireball-40fire-FAIL-DEX7<DC14; SC-C-DOWN-R2-ScRay-11fire; Barrage-zero-13th-consec-SCT6-SC-B-lowest-init7-dies-before-acting (FI-SCT6-53-A-carry-13th); CW-SC-C→SC-A-wasted-13th-consec (SC-A-dead-before-using; FI-SCT6-53-B-retire-rec-13th); Fireball-decisive-13th-consec-8d6=40-SC-B-FAIL (FI-SCT6-53-D); PTV-SC-C-hit-Marwen-disadv-on-next-save-no-target-this-slice; Throw2-15vs15-sim-correction (5e-hits-on-equal; FI-SCT6-53-C); Phase A 29/29 clean (local-RNG-mock; external-blocked-115th-consec; seed-494781); 0 bugs auto-fixed; DESIGN DECISIONS: FI-SCT6-53-A Barrage-lowest-init-dies-13th-consec-CRITICAL; FI-SCT6-53-B CW-wasted-13th-retire-rec; FI-SCT6-53-E Barrage-reassign-high-init-rec-MQ-SCT6-52-A-carry — see _playtest-runs/2026-06-11T21-34-10.md
+
 - 2026-06-11 20:18 UTC — slice #5 (solo-rager-rush) 51st-SR5-cycle — TPK R7 (Marwen-DOWN-R3-RA-Berserk+RB-multi-combined-12slash; Bazgar-DOWN-R5-RB-Aggro-adv-13+14slash; Sabriel-DOWN-R7-RB-multi-19+19exact-hit-last-stand; RA-DEAD-R3-Bazgar-attrition-22HP; Fireball-R1-22fire-low-roll-all-survive; Berserk-5x-ALL-MISS-R1 (9/8/9-attack-lines; 0/9-hits-vs-AC18/15/19; FI-SR5-51-B-unlucky-seed); Aggro-2x-correct (RA-vs-Marwen-R2; RB-vs-Bazgar-R5); Taunt-SKIPPED-16x-same-type-11th-consec-FI-SR5-51-A-RETIRE-CRITICAL; FIX-SR5-51-A Maw-rider-text-fixed (grappled-crit-autohit-ambiguity; rewrote-to-AND-this-attack-hits); Phase A 29/29 clean (local-RNG-mock; external-blocked-114th-consec; seed-494780); 1 bug auto-fixed FIX-SR5-51-A; DESIGN DECISIONS: FI-SR5-51-A retire-SR5-11th-consec-CRITICAL; MQ-SR5-51-A network-blocked-114th-rec-local-fallback; MQ-SR5-51-B retire-SR5-replace-mixed-formation — see _playtest-runs/2026-06-11T20-18-57.md
 
 - 2026-06-11 19:26 UTC — slice #4 (final-confrontation) 50th-FC-cycle — TPK R2 (Marwen-DOWN-R1-Maw-autocrit-28pierce-grappled; Bazgar-DOWN-R2-VS-29psych-12HP; Sabriel-DOWN-R2-VS-40psych-27HP; VS-R2-decisive-two-kill-POSITIVE-FI-FC50-E; DD-FIRE-Sabriel-SAVE-nat20+3=23≥16-whiff-3LA-wasted-FI-FC50-C; STD-A-AR-low-HP-exemption-correct-12+13-decisive-FI-FC50-B; Fireball-R1-33fire-T3/T4-DOWN-T1/T2-6HP-STD-A/B-29HP-saved-DEX5; Beholder-0-dmg-50th-FC-structural-FI-FC50-A; Marwen-init22-first-Fireball-then-Maw-kill-FI-FC50-D; LoH-Marwen-revived-10HP-VR-LA-countered-23force-re-down; stagger-correct-STD-B-fires-STD-A-holds-until-low-HP-exemption; MQ-FC50-A DD-redirect-Marwen-rec; MQ-FC50-C VoidFeeding-DB-gap-not-decisive-carry; Phase A 29/29 clean (local-RNG-mock; external-blocked-113th-consec; seed-494779); 0 bugs auto-fixed; DESIGN DECISIONS: FI-FC50-A beholder-0-dmg-structural-50th; FI-FC50-C DD-whiff-3LA-variance; FI-FC50-D Marwen-first-Fireball-Maw-trade; MQ-FC50-A DD-Marwen-redirect-rec — see _playtest-runs/2026-06-11T19-26-17.md
@@ -665,6 +667,19 @@ Every single EV7 cycle applies the Void-Feeding +1 bonus manually. The dispatch 
 
 **SIM-EV7-39-C [STRUCTURAL SIM FLAW] LA timing — fires during beholder's own action block**
 The simulation fires remaining LA (after DD) within the beholder's own turn instead of at the end of other creatures' turns. This is mechanically illegal (LA can only be used at end of another creature's turn per PHB). Effect: Marwen is downed before she can cast Fireball R1, dramatically reducing party damage output and shortening the fight. This flaw likely affects every EV7 cycle where LA is available mid-round. Fix needed in the harness (move LA dispatch to end-of-PC-turn hooks). Fixed in .md (FIX-EV7-39-A) for table play.
+
+---
+
+## DESIGN DECISIONS (53rd SCT6-cycle additions — 2026-06-11T21:34)
+
+**FI-SCT6-53-A [DESIGN DECISION / CRITICAL] Barrage-lowest-init-dies-13th-consec (carry from FI-SCT6-51-B / MQ-SCT6-52-A)**
+SC-B was assigned Barrage per stagger (lowest init = 7). Marwen (init 17) Fireballed SC-B dead before it acted — 13th consecutive SCT6 cycle where Barrage was blocked. The stagger assigns Barrage to the lowest-init SC to prevent double-barrage, but lowest-init = most likely to act after Marwen = most likely to die first. **Critical recommendation (13th confirmation):** reassign Barrage to the HIGHEST-init SC (most likely to beat Marwen in initiative, also most likely to be outside the Fireball blast per spread doctrine). DM decision required before run 54 — this changes formation doctrine and stagger assignment.
+
+**FI-SCT6-53-B [DESIGN DECISION] Retire SCT6 or rotate in mixed formation — CW-wasted-13th-consec**
+Call Weakness has been wasted in all 13 consecutive SCT6 cycles (SC-only formation). Mechanism: the CW-receiving SC is inside the Fireball blast zone and dies before its turn. CW only delivers value when: (a) target survives to its turn, and (b) target has an attack roll action (not Barrage, which is save-based). **Recommendation:** replace SCT6 slice with SC+Rager mixed formation so CW can be evaluated in a survivable context, or gate SCT6 to only run when Marwen's initiative ≤ the lowest-init SC's (so Barrage fires first). At minimum, document CW as an escort-formation mechanic in the shardcaller .md.
+
+**FI-SCT6-53-E [DESIGN DECISION / CARRY] Barrage-reassign-to-high-init-rec — MQ-SCT6-52-A 13th-cycle confirmation**
+MQ-SCT6-52-A from cycle #52 recommended reassigning Barrage to the highest-init SC. This run is the 13th confirmation. If DM does not act on this by run 54, recommend auto-applying the stagger change and flagging as FIX rather than MQ.
 
 ---
 
