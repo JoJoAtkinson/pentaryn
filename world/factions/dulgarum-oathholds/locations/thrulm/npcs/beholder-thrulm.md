@@ -61,7 +61,7 @@ It is territorial, but not mindless. It gathers thralls. It shapes the derro who
 
 **Tentacle Lash.** *Melee Weapon Attack:* +6 to hit, reach 10 ft., one target. *Hit:* 14 (3d6 + 3) bludgeoning damage, and the target is grappled (escape DC 16). The beholder has four tentacles; it can grapple up to four creatures at once. Each tentacle can be targeted separately (AC 15, 15 HP).
 
-**Maw.** *Melee Weapon Attack:* +6 to hit, reach 5 ft., one target. *Hit:* 22 (4d8 + 3) piercing damage. If the target is a creature grappled by the beholder, this attack is a critical hit instead.
+**Maw.** *Melee Weapon Attack:* +6 to hit, reach 5 ft., one target. *Hit:* 21 (4d8 + 3) piercing damage. If the target is a creature grappled by the beholder, this attack is a critical hit instead.
 - *(FIX-EV7-35-A) Maw vs already-downed grappled target:* If a tentacle hits and grapples a PC, then a second tentacle hit drops that PC to 0 HP in the same multiattack, the Maw auto-crit rider still technically applies (grapple persists through the downed state). At the table: **redirect Maw to the next available standing target in reach**. If no other target is in reach, **skip Maw** — the crit purpose (punishing a standing grappled target for maximum damage) is already moot once the target is unconscious. Firing Maw into a downed body deals 30+ damage in death-save failures, which is mechanically valid but wasteful and anticlimactic. The auto-crit rider applies to conscious grappled creatures only for DM intent.*
 
 **Disintegration Ray (Recharge 5–6).** *Ranged Spell Attack:* +6 to hit, range 120 ft., one creature. *Hit:* 45 (10d8) force damage. If this damage reduces the target to 0 hit points, the target is disintegrated (turned to ash). A creature reduced to 0 HP by this attack cannot be restored to life except by true resurrection or wish.
@@ -84,7 +84,7 @@ It is territorial, but not mindless. It gathers thralls. It shapes the derro who
 
 ## Reactions
 
-**Antireality.** When the beholder is hit by an attack it can see, it can use its reaction to gain +2 AC against that attack (after seeing the roll). The stone beneath it ripples as if underwater.
+**Antireality.** When the beholder is targeted by an attack it can see, it can use its reaction to impose disadvantage on that attack roll (once per round). The stone beneath it ripples as if underwater.
 
 ---
 

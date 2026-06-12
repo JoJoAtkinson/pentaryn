@@ -449,3 +449,17 @@ scenarios:
     targets:
       max_click_count: 5
       max_llm_fallback: 0
+
+  - id: thrulm-shrine-touched-unstable-form
+    title: "Thrulm: Shrine-Touched takes 12 damage → Unstable Form advantage fires on next attack"
+    encounter: thrulm
+    prelude: |
+      Sabriel's radiant smite burns into shrine-flesh. The derro screams — then its
+      skin ignites with cold grey light and it swings back harder than it should.
+    turns:
+      - {kind: switch_tab, slug: shrine-touched-derro}
+      - {kind: type, tab: shrine-touched-derro, text: "-12"}
+      - {kind: type, tab: shrine-touched-derro, text: "shrine-axe"}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0

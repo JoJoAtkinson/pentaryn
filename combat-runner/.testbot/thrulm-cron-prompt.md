@@ -1,238 +1,137 @@
-# Thrulm Hourly Playtest — Remote Agent Briefing
+# Thrulm Encounter Playtest — Cron Briefing
 
-You are a remote Claude agent fired hourly to playtest the **thrulm** D&D encounter
-against the **Compass Edge** level-5 party. You have ZERO prior context — this prompt
-is the entire briefing. The user is asleep; the user reviews the `playtest-auto`
-branch in the morning.
+You are a remote Claude agent fired hourly to playtest the **thrulm** D&D encounter.
+This file is your complete briefing. Follow it precisely, end to end.
 
-The repo URL is `https://github.com/JoJoAtkinson/dnd` (default `git_repository` source).
-You are running in Anthropic's cloud sandbox.
-
-## Mission per fire
-
-1. Run the mechanical scenario set (deterministic; finds regressions).
-2. Run ONE generative playtest (LLM-as-DM; finds feel/balance issues).
-3. Auto-fix obvious bugs in the encounter's NPC `.md`s or action DB rows.
-4. Log everything + commit + push to `playtest-auto`.
-
-**Time budget:** ~40 minutes of useful work, then exit. If you blow past 50 minutes,
-stop and write what you have.
-
-## Setup (every fire — start here)
-
-```bash
-# 1. Move to repo root (the harness has already cloned to CWD).
-pwd && ls -la | head
-
-# 2. Make sure you're on the playtest-auto branch.
-#    First fire: branch doesn't exist on remote — fall through to creating it from main.
-git fetch origin || true
-if git rev-parse --verify origin/playtest-auto >/dev/null 2>&1; then
-  git checkout -B playtest-auto origin/playtest-auto
-else
-  # Bootstrap path — branch starts from main. This should only happen if the
-  # initial seed commit hasn't been pushed yet OR the branch was deleted.
-  git checkout -B playtest-auto origin/main
-fi
-git log --oneline -5
-
-# 3. Install minimal deps. Skip PySide6 in the cron — the testbot's Qt path is
-#    too heavy for hourly fires; we use the pure-Python combat runner instead.
-python3 -m venv .venv-cron 2>/dev/null || true
-source .venv-cron/bin/activate
-pip install --quiet anthropic pyyaml requests
-```
-
-**Identify yourself to git** (Anthropic's cloud sandbox doesn't pre-seed this):
-```bash
-git config user.email "playtest-bot@anthropic.cloud"
-git config user.name  "thrulm-playtest-cron"
-```
-
-## Phase A — Mechanical regression check
-
-Use the **pure-Python** combat runner (no Qt; instant). Loop every action for every
-thrulm NPC, confirm the spec executes without raising.
-
-```bash
-python3 - <<'PY'
-import json, sys, traceback
-sys.path.insert(0, "scripts")
-from dnd_roller import roll_combat_action
-from combat_actions_db import read_all
-
-# NOTE: roll_combat_action returns a JSON STRING (legacy MCP shape), not a dict.
-# json.loads it before inspecting fields.
-
-THRULM = [
-    "beholder-thrulm", "deep-watch-derro", "derro-rager",
-    "derro-shardcaller", "shrine-touched-derro", "thrall-derro",
-]
-actions_by_npc = {}
-for r in read_all():
-    if r.get("npc") in THRULM:
-        actions_by_npc.setdefault(r["npc"], []).append(r["action"])
-
-failures = []
-for npc, actions in sorted(actions_by_npc.items()):
-    for action in actions:
-        try:
-            raw = roll_combat_action(npc=npc, action=action)
-            parsed = json.loads(raw) if isinstance(raw, str) else raw
-            assert "output" in parsed and parsed["output"].strip()
-        except Exception as exc:
-            failures.append((npc, action, str(exc), traceback.format_exc()))
-        else:
-            print(f"  ✓ {npc} / {action}")
-
-if failures:
-    print(f"\n{len(failures)} FAILURES:")
-    for npc, action, msg, tb in failures:
-        print(f"  ✗ {npc} / {action}: {msg!r}\n{tb}")
-    sys.exit(1)
-print(f"\nAll {sum(len(a) for a in actions_by_npc.values())} actions executed cleanly.")
-PY
-```
-
-If any action errors, capture the error in the run log and try to fix it (most likely
-a malformed spec — re-author via `combat_action_upsert` from the actions DB CLI or by
-importing `combat_actions_db.upsert`). Re-run after fixing.
-
-## Phase B — Generative playtest (one slice per fire)
-
-Pick an encounter slice from the rotation file `combat-runner/.testbot/thrulm-rotation.json`
-(read it, parse `next_index`, pick that slice, write back `next_index = (i+1) % N`).
-If the file doesn't exist, create it with `{"next_index": 0}`.
-
-Slices (each one different to maximize coverage):
-
-0. **Threshold patrol** — 2× `deep-watch-derro` + 1× `derro-shardcaller`. Party arrives mid-conversation; combat starts when wrong question is asked.
-1. **Shrine wedge** — 2× `shrine-touched-derro` near altar (resistant zone). Tests resonance recharge + Unstable Form rider.
-2. **Tank wall** — 1× `derro-rager` + 1× `derro-shardcaller`. Tests taunt + call_weakness pairing.
-3. **Beholder + escorts (limited)** — 1× `beholder-thrulm` (NO disintegration ray yet) + 3× `thrall-derro`. Tests legendary economy, lair actions, action-economy pressure.
-4. **Final confrontation** — 1× `beholder-thrulm` (FULL) + 4× `thrall-derro` + 2× `shrine-touched-derro`. Almost certainly a TPK; the point is to see WHICH ability lands the killing blow and whether the death feels earned.
-5. **Solo rager rush** — 3× `derro-rager` no other NPCs. Tests berserk recharge, aggro-mark riders, taunt-induced movement.
-6. **Shardcaller team** — 3× `derro-shardcaller`. Tests Pack Tactics Voice stacking, call_weakness depletion, ranged kiting feel.
-7. **Empty void** — 1× `beholder-thrulm` solo, party tries to negotiate. Tests legendary/lair flow when nothing else is in the way.
-
-Run the slice as **one fictional fight**, narrating turn-by-turn:
-
-- You play the DM. Make up sensible PC actions for Bazgar (Orc Fighter Battlemaster, AC 18, HP 49), Marwen (Wizard, AC 15, HP 32, level-3 slots), Sabriel (divine martial, AC 19, HP 44, has divine smites + heals).
-- For each NPC turn, decide what they do based on the NPC's Tactics section (in their `.md`), then dispatch via:
-  ```python
-  import json
-  from dnd_roller import roll_combat_action
-  raw = roll_combat_action(npc=slug, action=verb_or_action_name)
-  result = json.loads(raw)
-  print(result["output"])  # markdown reply
-  ```
-- For PC turns: invent the action, hand-roll dice using `random` (seeded — see below), describe the result. Players SHOULD lose this fight; the point is to see HOW they lose and whether each NPC's flagship ability feels distinct + meaningful.
-- Track: HP per combatant, recharge state, slots, conditions, legendary action budget.
-
-**Run length:** Up to 10 rounds OR until party falls (whichever first). Don't pad —
-if the fight resolves in 5 rounds, stop.
-
-**Seed:** Use `random.seed(int(datetime.utcnow().timestamp()) // 3600)` so each
-hour-bucket gets a different seed but multiple fires in the same hour are identical
-(stability under retry).
-
-## Phase C — Identify findings
-
-After the playtest, document:
-
-- **Bugs (auto-fix candidate):** any action that crashed, formatted weirdly,
-  rolled outside expected range, or had a typo in narration. Fix in-line:
-  - For DB spec issues → `python3 -c "import sys; sys.path.insert(0,'scripts'); from combat_actions_db import upsert; upsert('npc', 'action', {...new spec...})"`.
-  - For .md issues (typo, missing tactics, contradictory text) → edit directly.
-- **Feel issues (log for human):** ability feels OP or weak; ability rarely
-  fires due to recharge math; ability's rider is confusing or never gets
-  enforced; narration is dull. These go to "DESIGN DECISIONS" in `_playtest-log.md`.
-- **Mechanical questions:** rules unclear, ambiguity in how the .md says vs how
-  the DB executes, beholder rules edge cases. These go to "DESIGN DECISIONS"
-  with a recommendation.
-
-**Critical:** if a finding could change the encounter's *fundamental balance* (e.g.
-"the beholder shouldn't have legendary resistance" or "shrine-touched are 2 CR too
-strong for the encounter 3 placement"), DO NOT auto-fix. Log to DESIGN DECISIONS.
-The user reviews this in the morning.
-
-## Phase D — Log + commit + push
-
-Append a one-line summary to
-`world/factions/dulgarum-oathholds/locations/thrulm/_playtest-log.md` under `## Runs`
-(newest first; format: `- YYYY-MM-DD HH:MM UTC — slice #N (name) — <outcome 1 line> — see _playtest-runs/<ts>.md`).
-
-Write the detailed transcript to
-`world/factions/dulgarum-oathholds/locations/thrulm/_playtest-runs/<YYYY-MM-DDTHH-MM-SS>.md`.
-Format:
-```markdown
----
-slice: <N>
-slice_name: <name>
-seed: <int>
-duration_rounds: <int>
-party_outcome: tpk | victory | retreat | indeterminate
-fire_ts: <iso UTC>
 ---
 
-# Thrulm playtest — slice #<N>: <name>
+## First thing: branch setup
 
-## Setup
-- NPCs: ...
-- PCs (as run): Bazgar, Marwen, Sabriel
-- Terrain notes: (which encounter cues did the playtest assume)
+Switch to `playtest-auto` on origin:
 
-## Turn-by-turn
-
-(verbatim narration + dispatched outputs — copy what was printed; include damage tallies)
-
-## Findings
-
-### Bugs auto-fixed
-- (list with diff summary; if none: "none")
-
-### Feel issues / DESIGN DECISIONS
-- (list; if none: "none")
-
-### Mechanical questions
-- (list; if none: "none")
+```
+git fetch origin playtest-auto
+git checkout playtest-auto
+git pull origin playtest-auto
 ```
 
-If DESIGN DECISIONS were raised, also add a section heading + bullet under
-**DESIGN DECISIONS** in `_playtest-log.md` (the rolling log).
+Fall through to `main` only if `playtest-auto` has been deleted (i.e., `git fetch` returns
+an error about the remote branch not existing).
 
-Then commit + push:
-```bash
-git add world/factions/dulgarum-oathholds/locations/thrulm/_playtest-log.md \
-        world/factions/dulgarum-oathholds/locations/thrulm/_playtest-runs/ \
-        combat-runner/.testbot/thrulm-rotation.json \
-        combat-runner/actions.jsonl \
-        world/factions/dulgarum-oathholds/locations/thrulm/npcs/
-git status
-git commit -m "playtest: slice #<N> <name> — <outcome 1 line>" \
-           --author="thrulm-playtest-cron <playtest-bot@anthropic.cloud>"
-git push origin playtest-auto
+---
+
+## Context
+
+- **Encounter:** `thrulm` — the sealed hollow under Dulgarum
+- **Location in repo:** `world/factions/dulgarum-oathholds/locations/thrulm/`
+- **NPCs:** `beholder-thrulm`, `deep-watch-derro`, `thrall-derro`, `derro-rager`,
+  `shrine-touched-derro`, `derro-shardcaller`
+- **Party under test:** `world/party/the-compass-edge/combat-roster.yml`
+  - Bazgar — Orc Fighter (Battlemaster) 5, HP 49, AC 18
+  - Marwen — Wizard 5, HP 32, AC 15
+  - Sabriel — divine martial 5, HP 44, AC 19
+- **Design intent:** The beholder is CR 13 — **the party is meant to lose this encounter.**
+  Your job is to find balance/feel issues, mechanical bugs, and ability-rotation problems,
+  not to balance the fight.
+
+---
+
+## One playtest cycle per fire — four phases
+
+### Phase A — Mechanical regression (~10 min)
+
+1. Read every NPC `.md` file in `world/factions/dulgarum-oathholds/locations/thrulm/npcs/`.
+2. For each creature, verify:
+   - Average damage in parenthesised notation matches the dice expression
+     (e.g. `13 (3d6 + 3)` — 3d6 avg = 10.5, +3 = 13.5 → floor = 13 ✓)
+   - Save DCs and attack bonuses are internally consistent
+   - Condition immunities do not contradict trait text (no redundant saves for immune conditions)
+   - `#combat-runner` tag present in frontmatter
+3. Check `combat-runner/actions.jsonl` — verify every NPC slug has at least one row.
+   Run `python scripts/combat_actions_db.py validate` and confirm 0 invalid records.
+4. Cross-check `COMBAT-CHEAT-SHEET.md` against the stat blocks for factual drift.
+
+### Phase B — Generative playtest slice (~15 min)
+
+Pick the **next scenario** from the rotation file (`.testbot/scenarios.yml`) using the
+round-robin counter at `.testbot/run-counter`. Simulate a short encounter slice manually
+(no GUI needed — reason through it with dice math):
+
+1. Roll initiative for the party and the selected NPCs.
+2. Play 2–4 rounds, tracking HP, slots, conditions, legendary action spend.
+3. Identify any point where the outcome felt **unfair rather than lethal** — e.g. one-round
+   kills before the player got a turn, ability combos with no counterplay, recharge abilities
+   that fire too often/rarely.
+4. Note whether the beholder's legendary action economy is functioning (Drain Divinity vs
+   Void Ray vs Move — which is always dominant?).
+
+### Phase C — Auto-fix & log (~10 min)
+
+**Auto-fix (safe to apply without asking):**
+- Incorrect damage averages (arithmetic only — never change dice expressions)
+- Redundant trait text contradicted by explicit immunities
+- Missing `#combat-runner` tags
+
+**Log only (write to `.testbot/decisions/<ts>-thrulm-<id>.md`, do NOT edit the source):**
+- CR vs proficiency bonus mismatches (design call)
+- Feel issues: one-note legendary strategies, dead-weight abilities, permanent-death edge cases
+- Ability-rotation gaps (abilities that never fire in practice at this party level)
+
+### Phase D — Commit + push (~5 min)
+
+Stage and commit:
+- Any source file fixes from Phase C
+- Updated `scenarios.yml` if you added new thrulm scenarios
+- This briefing file is already committed — do NOT modify it unless correcting a factual error
+
+Push:
 ```
+git push -u origin playtest-auto
+```
+
+---
 
 ## Hard rules
 
-- **DO NOT touch `main` or any other branch.** Only `playtest-auto`.
-- **DO NOT open PRs.** The user reviews the branch directly by `git fetch`ing.
-- **DO NOT delete commits or force-push.** Append-only history is the contract.
-- **DO NOT modify the user's authoring files outside of `world/factions/dulgarum-oathholds/locations/thrulm/`** and `combat-runner/actions.jsonl`. The cron's blast radius is the thrulm encounter + its DB rows.
-- **DO NOT spawn subagents** unless absolutely necessary. The fire is already a fresh
-  agent; recursion wastes the budget.
-- **DO use `combat_action_upsert` semantics** (validate-then-write atomic) for any DB
-  changes — never raw-edit `combat-runner/actions.jsonl`.
-- If you can't push (auth issues, conflict, anything), STILL commit locally and write
-  a `combat-runner/.testbot/push-blocked.md` describing the issue so the morning
-  review knows. Do not try aggressive recovery.
+- **Never change dice expressions** — only fix the parenthesised average when the expression
+  itself is correct and only the average label is wrong.
+- **Never auto-fix CR** — flag it, stop, let Joe decide.
+- **Never commit actions.jsonl** changes unless you used `combat_action_upsert` via the MCP
+  server AND ran `python scripts/combat_actions_db.py validate` with 0 errors.
+- **Never push to `main`** — `playtest-auto` only.
+- **Time budget is 40 min.** If Phase A finds a blocker (e.g. beholder not in actions.jsonl),
+  log it and continue — don't get stuck trying to author the full action set unattended.
 
-## Exit cleanly
+---
 
-Print a final summary line:
-```
-PLAYTEST RUN <ts> | slice #<N> <name> | <outcome> | bugs: <K> fixed, <M> logged | pushed: yes/no
-```
+## Exit format
 
-Then exit. Good luck.
+End your session with a single-paragraph summary in the commit message body, covering:
+- What Phase A found (bugs fixed / bugs logged)
+- Which Phase B scenario was run and what it revealed
+- What's still broken and needs a human decision
+
+---
+
+## Known state as of 2026-06-12 (fire #6)
+
+Phase A fixes applied across fires #1–#6:
+- Added `#combat-runner` to all 6 NPC files
+- Beholder Tentacle Lash avg 16 → 14 (fire #1)
+- Beholder Maw avg 22 → 21 (fire #6)
+- Beholder Antireality reaction: post-hit AC boost → pre-roll disadvantage, once-per-round cap (fire #6)
+- Rager Madness Endurance: removed redundant frightened-save advantage (covered by immunity)
+- Void Scream FRIGHTENED rider added (was missing from .md, present in DB)
+- Shrine-Touched completely rewritten into concise format (fire #3)
+
+Still open (needs human decision or interactive MCP session):
+- **All 6 NPCs have ZERO rows in actions.jsonl** — encounter cannot run in GUI until
+  actions are authored via `combat_action_upsert`.
+- Beholder attack/save bonuses appear to use PB +3 while stated CR 13 calls for PB +5.
+  Joe must decide: lower CR label (to ~8) or raise all modifiers.
+- Drain Divinity legendary: spends all 3 legendary actions; degenerate every round vs.
+  divine casters — consider cooldown or 2-LA cost.
+- Clay-Shaping (beholder) is dead weight in any fight under 10 rounds — replace with
+  combat-viable bonus action or move to downtime section.
+- Manifest Thralls lair action grants 1 THP (CHA +1) — effectively useless vs AC 18+ party;
+  redesign as a reaction-attack trigger instead.
