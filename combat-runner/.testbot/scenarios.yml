@@ -479,3 +479,55 @@ scenarios:
     targets:
       max_click_count: 4
       max_llm_fallback: 0
+
+  # ── Thrulm: LA economy + feel regression tests (fire #7 additions) ──
+  # Three scenarios targeting mechanics identified in Phase B manual playtests:
+  # (1) DD LA-hold post-Sabriel protocol, (2) STD low-HP stagger exemption,
+  # (3) Maw auto-crit target selection (grappled PC, not third PC).
+
+  - id: thrulm-dd-la-hold-protocol
+    title: "Thrulm: DD LA-hold — 3 LA reserved; drain_divinity watch fires after Sabriel's turn"
+    encounter: thrulm
+    prelude: |
+      The beholder opens combat with multiattack. Bazgar takes hits; Marwen steps back.
+      The beholder holds. It watches Sabriel's divine light. It waits.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "multi"}
+      - {kind: switch_tab, slug: sabriel}
+      - {kind: type, tab: sabriel, text: "loh"}
+      - {kind: expect_watch, slug: beholder-thrulm, action_name: drain_divinity}
+    targets:
+      max_click_count: 6
+      max_llm_fallback: 0
+
+  - id: thrulm-shrine-touched-stagger-exempt
+    title: "Thrulm: STD at 17 HP (below 20) — stagger hold exemption; Ancient Resonance fires recklessly"
+    encounter: thrulm
+    prelude: |
+      Marwen's Fireball carves through the shrine-touched pair. The dimmer one staggers —
+      and the shrine's hunger pulses through its cracked skin.
+    turns:
+      - {kind: switch_tab, slug: shrine-touched-derro}
+      - {kind: type, tab: shrine-touched-derro, text: "-28"}
+      - {kind: assert_hp, slug: shrine-touched-derro, expected: 17}
+      - {kind: type, tab: shrine-touched-derro, text: "resonance"}
+      - {kind: no_crash}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0
+
+  - id: thrulm-maw-autocrit-grappled-target
+    title: "Thrulm: Maw targets grappled PC — auto-crit fires on grappled target, not a third PC"
+    encounter: thrulm
+    prelude: |
+      Two tentacles have found Bazgar. The maw opens. There is no mercy here.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "tentacle"}
+      - {kind: type, tab: beholder-thrulm, text: "tentacle"}
+      - {kind: type, tab: beholder-thrulm, text: "maw"}
+      - {kind: no_crash}
+    targets:
+      max_click_count: 6
+      max_llm_fallback: 0
