@@ -170,8 +170,8 @@ scenarios:
     targets:
       max_click_count: 5
 
-  - id: thrulm-void-scream-aoe
-    title: Void Scream (Recharge 6) hits multiple PCs — WIS saves, psychic damage
+  - id: thrulm-void-scream-verb
+    title: Void Scream verb dispatches without crash — WIS saves, psychic damage
     encounter: thrulm
     prelude: |
       Reality tears. Every creature within 30 feet staggers.
