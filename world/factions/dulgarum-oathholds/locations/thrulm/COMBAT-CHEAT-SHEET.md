@@ -87,7 +87,7 @@
 **Start of Round:**
 1. [CHECK] Which derro go this initiative count?
 2. [CHECK] Is the Beholder using Clay-Shaping? (If yes, it can't move/attack; thralls shield it)
-3. [CHECK] Shardcaller giving Weakness to allies? (-2 to enemy saves for one of them)
+3. [CHECK] Shardcaller's Call Weakness active? (3/day — one ally has ADVANTAGE on its next attack roll; does NOT affect saves)
 4. [CHECK] Rager Taunt active? (Check if anyone has disadvantage vs non-Rager targets)
 5. [CHECK] Are Shrine-Touched within 60 ft of altar? (They move +10 ft and resist psychic/necrotic)
 

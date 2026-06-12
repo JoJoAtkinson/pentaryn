@@ -463,3 +463,19 @@ scenarios:
     targets:
       max_click_count: 5
       max_llm_fallback: 0
+
+  - id: thrulm-beholder-shrine-drift-retreat
+    title: "Thrulm: Beholder fires Shrine-Drift (bonus action move) — no crash, verb resolves"
+    encounter: thrulm
+    prelude: |
+      The beholder drops below 30 HP. It phases toward the lower shaft entrance. Note:
+      Shrine-Drift does NOT have a no-OA clause (unlike Driven Escape / Tactical Retreat).
+      DM must Disengage (action) first to avoid OAs on a retreat. This scenario confirms
+      the verb fires correctly; OA interaction is table-side.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "drift"}
+      - {kind: no_crash}
+    targets:
+      max_click_count: 4
+      max_llm_fallback: 0
