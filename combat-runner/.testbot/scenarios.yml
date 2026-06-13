@@ -599,3 +599,47 @@ scenarios:
     targets:
       max_click_count: 5
       max_llm_fallback: 0
+
+  # ── Thrulm: Thrall weapon-dispatch regression (fire #31 addition) ──
+  # BUG-A31-08: 'attack' verb on thrall-derro fires Dagger (Desperate) stats (+3, 1d4+2)
+  # instead of Hand Axe (Weak) stats (+1, 1d4). Both `multiattack` and `dagger` DB rows
+  # have identical attacks arrays. This scenario is a regression test: once BUG-A31-08
+  # is fixed via MCP (hand_axe_weak row added, multiattack updated), 'attack' should
+  # fire hand-axe stats and 'dagger' should fire dagger stats independently.
+  # Until then: both verbs dispatch without crash and produce dagger output (DB state).
+
+  - id: thrulm-thrall-axe-dispatch
+    title: "Thrulm: Thrall 'attack' verb fires without crash — BUG-A31-08 regression; expect dagger stats until fixed"
+    encounter: thrulm
+    prelude: |
+      The beholder gestures. The thrall lurches. The beholder did not specify which
+      weapon. 'attack' dispatches multiattack (single_attack) — currently Dagger stats.
+      'dagger' dispatches the dagger action directly. Both should fire without crash.
+    turns:
+      - {kind: switch_tab, slug: thrall-derro}
+      - {kind: type, tab: thrall-derro, text: "attack"}
+      - {kind: type, tab: thrall-derro, text: "dagger"}
+      - {kind: no_crash}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0
+
+  # ── Thrulm: Beholder Compel Thrall BA dispatch (fire #31 addition) ──
+  # FEEL-F31-01: Compel Thrall (BA) is dominated by Shrine-Drift (BA) in typical
+  # encounter flow. This scenario verifies the verb fires without crash and the
+  # utility action dispatches correctly — smoke test for a mechanic that the DM
+  # rarely uses but must be reachable via the grammar.
+
+  - id: thrulm-beholder-compel-thrall
+    title: "Thrulm: Beholder uses Compel Thrall (bonus action utility) — dispatches without crash"
+    encounter: thrulm
+    prelude: |
+      A thrall lingers near Marwen. The beholder's hunger focuses. One pulse of will
+      and the thrall jerks toward the wizard. Compel Thrall is a bonus action; the
+      beholder's main action (multiattack) still fires this turn.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "compel"}
+      - {kind: no_crash}
+    targets:
+      max_click_count: 5
