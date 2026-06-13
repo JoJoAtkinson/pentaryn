@@ -118,3 +118,29 @@ Three thrall derro each get 1 temp HP and a free move/attack. The temp HP is fun
 - **2 critical design issues logged**: no `#combat-runner` tags on any thrulm NPC (encounter not loadable by combat runner), and Antireality reaction is mechanically broken.
 - **Phase B playtest** confirms the encounter is lethal for the level-5 party as intended; key feel issues are the near-useless thrall derro, the Void Scream instant-kill window on the wizard, and Disintegration Ray's permanent-death clause.
 - **Next step**: Author `#combat-runner` tags + `actions.jsonl` entries for the beholder and at least one derro variant to enable live headless testing.
+
+---
+
+## Run 32 — 2026-06-13
+
+**Phase A:** PASS (198 tests, 0 invalid DB records, 29 rows, all 6 `#combat-runner` tags present)
+
+**Phase B:** Slice 3 — Grapple Lock Simulation (date.day=13 % 10 = 3)
+
+Beholder opens targeting Bazgar (STR 18, Athletics +7, escape DC 16 → 60% per attempt). Key numbers:
+
+- R1 grapple acquisition: ≥1 tentacle hits in 70% of outcomes. Both hit + Maw in 9% of outcomes → Bazgar outright dead.
+- Maw vs grappled target: auto-crit (8d8+3 ≈ 39 avg) per .md. Expected R1 damage ~31 HP; Bazgar at ~18 HP entering R2.
+- Escape cycle: Bazgar spends full action to escape (60% success); beholder re-grapples with 1 LA Tentacle (45% success). Net free-and-staying-free probability: ~33% per 2-turn window. Bazgar spends roughly half his turns escaping over a 4-round fight.
+- Action economy: Bazgar's full action vs beholder's 1 LA is a lopsided trade.
+
+**Phase C:** 1 new bug (BUG-A32-07), 3 feel issues logged. 0 auto-fixes.
+
+| BUG-A32-07 | Maw auto-crit (grappled = crit) not encoded in DB. Runner outputs 21 avg, not 39 avg. DM must manually override. | Medium | Joe + MCP |
+| FEEL-G1 | Grapple-escape-re-grapple loop across 2–3 rounds is repetitive; Bazgar deals ~0 DPR during escape turns. | Medium | DM judgment |
+| FEEL-G2 | Beholder should re-grapple different targets (not the PC who just escaped) to spread pressure. | Low | DM judgment |
+| FEEL-G3 | Escape DC 16 is fair at 60% success, but re-grapple rate (45%) means Bazgar is effectively pinned for ~half the fight. | Low | DM awareness |
+
+**Status:** FEEL-ISSUES-LOGGED / BUG-A32-07 open for Joe + MCP
+
+**Carry-forward open items (fire #32):** BUG-CR-PB, BUG-A6-01, BUG-A7-05, BUG-A10-05, BUG-A12-06, BUG-F7-02, BUG-F7-03, BUG-18-01, BUG-A21-01, BUG-A31-07, BUG-A31-08, BUG-A32-07 (new)

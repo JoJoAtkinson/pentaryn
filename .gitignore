@@ -80,3 +80,4 @@ combat-runner/.testbot/*
 !combat-runner/.testbot/*-cron-prompt.md
 !combat-runner/.testbot/*-rotation.json
 !combat-runner/.testbot/playtest-*.md
+!combat-runner/.testbot/decisions/*.md
