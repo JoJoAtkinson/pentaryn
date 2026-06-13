@@ -643,3 +643,28 @@ scenarios:
       - {kind: no_crash}
     targets:
       max_click_count: 5
+
+  # ── Thrulm: Maw rider_on_hit text regression (fire #33 addition) ──
+  # BUG-A32-07 partial fix: Maw DB row now has rider_on_hit text describing the
+  # auto-crit condition (updated 2026-06-11). This scenario verifies: (a) Maw
+  # fires without crash against a grappled target, (b) the rider_on_hit text
+  # appears in the output for the DM to read. The runner does NOT auto-compute
+  # 8d8+3 (doubled dice) — DM must manually roll extra 4d8 when grappled target
+  # is struck. This scenario confirms verb dispatch and text visibility only.
+
+  - id: thrulm-maw-rider-on-hit-text
+    title: "Thrulm: Maw fires against grappled PC — rider_on_hit crit text visible in output, no crash"
+    encounter: thrulm
+    prelude: |
+      Bazgar is grappled. The maw opens. The rider_on_hit text should appear: "If the
+      target is grappled by the beholder AND this attack hits, it scores a critical hit
+      (damage dice doubled)." DM must then manually roll 8d8+3 instead of 4d8+3.
+      This scenario verifies the Maw verb fires and doesn't crash — not that crit is
+      auto-computed.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "maw"}
+      - {kind: no_crash}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0

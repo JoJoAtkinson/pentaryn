@@ -86,6 +86,7 @@ It is territorial, but not mindless. It gathers thralls. It shapes the derro who
 ## Reactions
 
 **Antireality.** When the beholder is targeted by an attack it can see, it can use its reaction to impose disadvantage on that attack roll (once per round). The stone beneath it ripples as if underwater.
+- *(DM timing note — FIX-F33-A): Do NOT wait for the combat-runner prompt to declare Antireality — the runner fires the prompt after the attack resolves (post-hit, on the damage event), by which point imposing the reaction is retroactive. Declare Antireality the moment the attacker announces their attack, before any dice are rolled. The DB `effect` field currently says "+2 AC" — this is incorrect (BUG-F7-02/A31-07, open 26 fires). The intended mechanic is disadvantage on the triggering attack roll, per this stat block.)*
 
 ---
 
