@@ -111,12 +111,12 @@
 |---|---|---|---|
 | Deep Watch | — | poison | — |
 | Thrall | charmed (enslaved instead), frightened | psychic | — |
-| Shrine-Touched | charmed, frightened | necrotic, psychic | fire, radiant |
+| Shrine-Touched | charmed, frightened | necrotic, psychic | fire, radiant *(suppressed within 60 ft of altar — pull them away first)* |
 | Shardcaller | — | psychic | — |
 | Rager | frightened | poison | — |
 | Beholder | charmed, exhaustion, frightened, paralyzed, petrified, poisoned, prone, restrained | psychic; nonmagic B/P/S (unsanctified weapons) | sanctified weapons, holy water |
 
-**→ Use FIRE and RADIANT against Shrine-Touched. Use SANCTIFIED weapons against Beholder.**
+**→ Use FIRE and RADIANT against Shrine-Touched — but only outside 60 ft of altar (vulnerability is suppressed in the altar zone). Use SANCTIFIED weapons against Beholder.**
 
 ---
 
@@ -140,7 +140,7 @@
 |---|---|---|---|
 | **Deep Watch** | Ranged, any | Magic Missile, Scorching Ray | Low HP, no resistances |
 | **Thrall** | Force, fire, melee | Magic Missile, Scorching Ray | Low HP; has psychic resistance — avoid psychic |
-| **Shrine-Touched** | Fire, radiant, nonmagic | Fireball, Guiding Bolt | Resistant to psychic/necrotic |
+| **Shrine-Touched** | Fire, radiant, nonmagic | Fireball, Guiding Bolt | Resistant to psychic/necrotic; fire/radiant vulnerability suppressed within 60 ft of altar |
 | **Shardcaller** | Melee, close-in | Misty Step + melee, Command (retreat) | Squishy if you get close |
 | **Rager** | Magic (it has no resist except poison) | Magic Missile, Eldritch Blast | No saves needed, pure damage |
 | **Beholder** | Sanctified weapons, Dispel Magic | True Strike + sanctified attack | Resistances and flight = annoying |
