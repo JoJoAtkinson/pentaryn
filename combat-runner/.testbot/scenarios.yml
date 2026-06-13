@@ -576,3 +576,26 @@ scenarios:
     targets:
       max_click_count: 5
       max_llm_fallback: 0
+
+  # ── Thrulm: DWD crossbow pivot (fire #30 addition) ──
+  # FEEL-F30-01: Cunning Action Disengage (BA) + Crossbow single_attack (main action)
+  # must coexist on one turn. Tests the crossbow-pivot mechanic identified in the
+  # thrulm-deep-watch-formation Phase B simulation: DWD leaves melee via Disengage
+  # then fires the crossbow in the same turn — regression for bonus-action double-spend.
+
+  - id: thrulm-deep-watch-disengage-crossbow
+    title: "Thrulm: DWD Disengage (Cunning Action BA) + Crossbow (main action) — two-part turn, no crash"
+    encounter: thrulm
+    prelude: |
+      DWD-1 is dead. DWD-2 is in Bazgar's melee at 14 HP. Marwen stands 20 ft back.
+      The derro has one job: get out and shoot. Cunning Action (Disengage) is the bonus
+      action; Light Crossbow is the main action. Both fire on the same turn — regression
+      for the R2 crossbow-pivot without bonus-action double-spend.
+    turns:
+      - {kind: switch_tab, slug: deep-watch-derro}
+      - {kind: type, tab: deep-watch-derro, text: "disengage"}
+      - {kind: type, tab: deep-watch-derro, text: "crossbow"}
+      - {kind: no_crash}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0
