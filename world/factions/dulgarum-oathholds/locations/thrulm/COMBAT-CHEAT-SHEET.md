@@ -10,7 +10,7 @@
 |----------|--------|--------|----------|----------|--------------|---|
 | **Deep Watch** (CR 1/8) | 15 | 27 | +2 | Hold line, protect team | Middle, with others | Attack + Cunning Action (Disengage) |
 | **Thrall** (CR 1/4) | 14 | 22 | +1 | Obey beholder | Wherever beholder points | Move toward beholder's target |
-| **Shrine-Touched** (CR 3) | 16 | 45 | +2 | Defend shrine | Within 60 ft of altar | Ancient Resonance (cone, DC 14 DEX) |
+| **Shrine-Touched** (CR 3) | 16 | 45 | +3 | Defend shrine | Within 60 ft of altar | Ancient Resonance (cone, DC 14 DEX) |
 | **Shardcaller** (CR 2) | 14 | 33 | +2 | Support allies, weaken enemy saves | Back line (40-60 ft away) | Call Weakness (ally gets advantage) |
 | **Rager** (CR 2) | 16 | 52 | +0 | Tank hits, mark attackers | Front line (melee range) | Taunt (enemy disadvantage vs others) |
 
@@ -42,7 +42,7 @@
 |---|---|---|---|
 | Deep Watch | 14 | +2 | Standard |
 | Thrall | 13 | +1 | Slow |
-| Shrine-Touched | 15 | +2 | Standard |
+| Shrine-Touched | 16 | +3 | Standard |
 | Shardcaller | 15 | +2 | Standard (acts before Deep Watch) |
 | Rager | 11 | +0 | Slow (goes last in round) |
 
@@ -110,11 +110,11 @@
 | Type | Immune To | Resistant To | Vulnerable To |
 |---|---|---|---|
 | Deep Watch | — | poison | — |
-| Thrall | — | psychic | — |
-| Shrine-Touched | — | necrotic, psychic | fire, radiant |
+| Thrall | charmed (enslaved instead), frightened | psychic | — |
+| Shrine-Touched | charmed, frightened | necrotic, psychic | fire, radiant |
 | Shardcaller | — | psychic | — |
-| Rager | — | poison | — |
-| Beholder | poison | psychic; nonmagic B/P/S (unsanctified weapons) | sanctified weapons, holy water |
+| Rager | frightened | poison | — |
+| Beholder | charmed, exhaustion, frightened, paralyzed, petrified, poisoned, prone, restrained | psychic; nonmagic B/P/S (unsanctified weapons) | sanctified weapons, holy water |
 
 **→ Use FIRE and RADIANT against Shrine-Touched. Use SANCTIFIED weapons against Beholder.**
 
