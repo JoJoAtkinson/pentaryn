@@ -554,3 +554,25 @@ scenarios:
     targets:
       max_click_count: 6
       max_llm_fallback: 0
+
+  # ── Thrulm: Shardcaller TR + Shard-Throw on same turn (fire #28 addition) ──
+  # FEEL-F28-02: TR and CW are BOTH bonus actions — only one fires per turn.
+  # This scenario verifies TR (bonus action) executes alongside main Multiattack
+  # (Shard-Throw) without crash or bonus-action double-spend — regression test
+  # for the two-part SC turn when a melee threat closes within 15 ft.
+
+  - id: thrulm-shardcaller-tr-then-throw
+    title: "Thrulm: Shardcaller Tactical Retreat (BA) + Shard-Throw (main action) — two-part turn, no crash"
+    encounter: thrulm
+    prelude: |
+      Bazgar charges the shardcaller. The SC skitters back without a word and keeps throwing.
+      Tactical Retreat is a bonus action; Shard-Throw (Multiattack) is the main action.
+      Both must execute on the same turn without conflict or bonus-action double-spend.
+    turns:
+      - {kind: switch_tab, slug: derro-shardcaller}
+      - {kind: type, tab: derro-shardcaller, text: "retreat"}
+      - {kind: type, tab: derro-shardcaller, text: "throw"}
+      - {kind: no_crash}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0
