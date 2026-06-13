@@ -530,4 +530,27 @@ scenarios:
       - {kind: no_crash}
     targets:
       max_click_count: 6
+
+  # ── Thrulm: Rager Taunt vs save-based spells (fire #26 addition) ──
+  # FEEL-F26-01: Taunt imposes disadvantage on attack rolls only; save-based
+  # wizard spells are unaffected. This scenario confirms the Taunt condition
+  # flag does NOT add disadvantage to a subsequent save-DC spell (Shatter).
+
+  - id: thrulm-rager-taunt-no-attack-penalty
+    title: "Thrulm: Rager taunts Marwen; Shardcaller then takes AoE damage — Taunt doesn't block save-spell output"
+    encounter: thrulm
+    prelude: |
+      The rager roars at Marwen. She ignores it and picks a point above the shardcaller.
+      The stone rings. Taunt (attack-roll disadvantage) doesn't affect save-DC spells.
+      Shardcaller takes 13 thunder (Shatter avg) — regression: Taunt on PC does not
+      suppress damage events from that PC to NPCs.
+    turns:
+      - {kind: switch_tab, slug: derro-rager}
+      - {kind: type, tab: derro-rager, text: "taunt"}
+      - {kind: switch_tab, slug: derro-shardcaller}
+      - {kind: type, tab: derro-shardcaller, text: "-13"}
+      - {kind: assert_hp, slug: derro-shardcaller, expected: 20}
+      - {kind: no_crash}
+    targets:
+      max_click_count: 6
       max_llm_fallback: 0
