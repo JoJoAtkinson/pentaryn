@@ -66,11 +66,16 @@ slices:
       (Shrine-Drift is the bonus action move; verify it works as an escape tool).
 
   - id: antireality-timing
-    name: "Antireality reaction — flip rate and economy"
+    name: "Antireality reaction — disadvantage flip rate and economy"
     description: >
-      Bazgar attacks beholder: +7 to hit (level 5 fighter) vs AC 17. Rolls a 14
-      (total 21, hits). Beholder uses Antireality (+2 AC → AC becomes 19). Does
-      21 still hit? No. Beholder burns the reaction. Next attack: Bazgar rolls 18
-      (total 25, hits regardless). Beholder cannot react again until next turn.
-      Is the Antireality +2 economically fair vs a +7-atk fighter? Simulate 3
-      rounds of Bazgar attacking and count how many times Antireality flips a hit.
+      [Updated fire #22 — fire #6 changed Antireality from +2 AC post-roll to
+      pre-roll disadvantage; DB entry still shows old text (BUG-F7-02).]
+      Bazgar attacks beholder: +7 to hit vs AC 17 — needs 10+ to hit (55% base).
+      Beholder uses Antireality (reaction, once per round) to impose DISADVANTAGE
+      on the triggering attack roll. With disadvantage, hit rate drops to ~30%
+      (P(both rolls ≥10) = 0.55²). Simulate Bazgar's Action over 3 rounds
+      (2 attacks per round): Antireality fires on the FIRST attack each round only
+      (one reaction per round). Record how many of Bazgar's 6 total rolls are
+      flipped from hit to miss by disadvantage. Note: if Bazgar already has
+      disadvantage from another source, Antireality is wasted (advantage/disadvantage
+      do not stack — straight roll results instead).
