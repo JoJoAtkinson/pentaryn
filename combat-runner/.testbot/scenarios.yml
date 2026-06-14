@@ -726,3 +726,30 @@ scenarios:
     targets:
       max_click_count: 5
       max_llm_fallback: 0
+
+  # ── Thrulm: CT vs Shrine-Drift BA conflict (fire #50 addition) ──
+  # FEEL-F50-01: Compel Thrall and Shrine-Drift are BOTH bonus actions — only one can
+  # fire per beholder turn. This scenario confirms both verbs dispatch sequentially
+  # without crash (the runner resolves each verb independently; BA exclusivity is a
+  # DM-enforced rule, not a system gate). Symmetric with thrulm-shardcaller-tr-then-throw
+  # (TR/CW BA conflict) and thrulm-deep-watch-disengage-crossbow (CA Disengage/crossbow).
+  # DM must choose CT OR Shrine-Drift, not both, on any given turn.
+
+  - id: thrulm-beholder-ct-drift-ba-conflict
+    title: "Thrulm: CT and Shrine-Drift are both bonus actions — dispatch in sequence, no crash; DM chooses one"
+    encounter: thrulm
+    prelude: |
+      Bazgar downed. A thrall is 40 ft from Marwen; beholder also needs to close range
+      for Disintegration Ray next turn. Both Compel Thrall (CT) and Shrine-Drift (SD)
+      are bonus actions — only one fires this beholder turn. DM must choose. This scenario
+      confirms both verbs dispatch without crash (runner resolves each independently);
+      the bonus-action exclusivity is DM-enforced. Note: firing both in one turn is illegal
+      per 5e RAW and should be narrated as a DM error, not a system feature.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "compel"}
+      - {kind: type, tab: beholder-thrulm, text: "drift"}
+      - {kind: no_crash}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0
