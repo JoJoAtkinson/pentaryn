@@ -131,6 +131,8 @@
 | Beholder | Void Scream | 16 | WIS (psychic damage; on FAILED save: also FRIGHTENED 1 min, DC 16 Wis save ends) |
 | Beholder | Void Ray | 16 | DEX (force damage) |
 | Beholder | Drain Divinity | 16 | CHA (lose spell slot) |
+| Beholder (lair) | Unstable Ground | 16 | DEX (fall prone) |
+| Beholder (lair) | Void Eruption | 16 | DEX (force damage; all within 20 ft of shrine) |
 
 ---
 
