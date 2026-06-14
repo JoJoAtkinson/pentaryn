@@ -753,3 +753,28 @@ scenarios:
     targets:
       max_click_count: 5
       max_llm_fallback: 0
+
+  # BUG-A52-01: unstable_ground effect text missing prone-advantage reminder.
+  # DM should roll TL with advantage vs prone target (PHB p.292) but runner doesn't prompt it.
+  # This scenario verifies unstable_ground dispatches and effect text is visible in output.
+  # Until fix lands (combat_action_upsert adds prone-advantage reminder), this catches regressions.
+
+  - id: thrulm-ug-prone-advantage-reminder
+    title: "Thrulm: UG fires, prone applied — verify effect text visible; DM must know to roll TL with advantage"
+    encounter: thrulm
+    prelude: |
+      Init 20. Beholder fires Unstable Ground at Bazgar (DC 16 Dex — Bazgar DEX -1,
+      80% fail rate). On fail: Bazgar prone. Beholder then acts at init 18: multiattack
+      vs prone Bazgar. PHB p.292: melee attackers within 5 ft have ADVANTAGE vs prone
+      targets. This scenario verifies UG dispatches and effect text ("on a fail, target
+      falls PRONE") is visible in output. BUG-A52-01: the effect text does NOT currently
+      include a prone-advantage reminder for the attacker — DM must recall PHB p.292
+      independently. Until combat_action_upsert adds the reminder, this is a known gap.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "unstable ground"}
+      - {kind: type, tab: beholder-thrulm, text: "attack"}
+      - {kind: no_crash}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0
