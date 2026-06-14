@@ -668,3 +668,35 @@ scenarios:
     targets:
       max_click_count: 5
       max_llm_fallback: 0
+
+  # ── Thrulm: UG-prone → melee advantage regression (fire #40 addition) ──
+  # FEEL-F40-01: Unstable Ground (init 20 lair) applies prone to Bazgar. Prone targets
+  # suffer melee attack advantage (RAW PHB). Tentacle Lash and Maw (both melee reach)
+  # attack prone Bazgar at 75% hit rate (+7 with advantage vs AC 18) instead of 50%.
+  # Combined with the Maw auto-crit rider (grappled target), this raises expected R1
+  # damage from ~27 avg to ~49 avg — enough to down Bazgar (HP 49) with ~80%
+  # probability. The UG tactics note documents only the PC's mobility cost, not the
+  # beholder's gained melee advantage. This scenario seeds a dispatch regression: prone
+  # condition applied, then TL and Maw fire. Advantage is applied manually at the table
+  # (the runner cannot enforce RAW advantage on melee-vs-prone); no_crash confirms dispatch.
+
+  - id: thrulm-lair-prone-melee-synergy
+    title: "Thrulm: UG prone + TL melee advantage — prone Bazgar, beholder TL + Maw dispatch, no crash"
+    encounter: thrulm
+    prelude: |
+      Init 20: Unstable Ground drops Bazgar prone. Beholder acts next (init 17).
+      RAW: melee attacks vs prone targets have advantage. TL (reach 10 ft) and Maw
+      (reach 5 ft) are melee — both fire at advantage vs prone AC 18. +7 with advantage
+      = 75% hit rate (vs 50% standing). DM applies advantage manually; runner fires the
+      verbs. Maw auto-crit rider still applies if TL grapples first. FEEL-F40-01 synergy
+      regression: confirm prone condition present, both attacks dispatch, no crash.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "1 prone"}
+      - {kind: assert_condition, slug: "1", condition: prone}
+      - {kind: type, tab: beholder-thrulm, text: "tentacle"}
+      - {kind: type, tab: beholder-thrulm, text: "maw"}
+      - {kind: no_crash}
+    targets:
+      max_click_count: 7
+      max_llm_fallback: 0
