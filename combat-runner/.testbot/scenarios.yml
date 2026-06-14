@@ -700,3 +700,29 @@ scenarios:
     targets:
       max_click_count: 7
       max_llm_fallback: 0
+
+  # ── Thrulm: DD-LoH redirect (fire #43 addition) ──
+  # FEEL-F43-01: Drain Divinity cannot target Lay on Hands (LoH is not a spell slot).
+  # The existing thrulm-dd-la-hold-protocol scenario fires DD watch after Sabriel types
+  # "loh" — mechanically invalid DD target. Correct beholder response: Void Ray (2 LA,
+  # DC 16 DEX, 22 force, 120 ft range) to threaten the revived PC. This scenario verifies
+  # Void Ray dispatches without crash in the post-LoH-redirect narrative context, confirming
+  # the corrected DM flow. Regression: DD watch fires → DM redirects → Void Ray → no crash.
+
+  - id: thrulm-dd-loh-redirect-void-ray
+    title: "Thrulm: DD watch after LoH → DM redirects to Void Ray (2 LA, 120 ft) — no crash"
+    encounter: thrulm
+    prelude: |
+      Sabriel uses Lay on Hands to revive Bazgar. The beholder's DD watch fires after her
+      turn. LoH is NOT a spell slot — DD cannot strip it (per existing tactics note). Correct
+      beholder response: Void Ray (2 LA, DC 16 DEX, 22 avg force, 120 ft range) targeting
+      the revived Bazgar now at 1 HP. 1 LA remains (hold for Tentacle after Marwen's turn).
+      This scenario confirms the redirect-to-Void-Ray path dispatches without crash.
+      Regression for FEEL-F43-01: DD watch on LoH is a valid prompt; DM chooses Void Ray.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "void ray"}
+      - {kind: no_crash}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0
