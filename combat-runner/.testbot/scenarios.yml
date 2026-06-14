@@ -778,3 +778,34 @@ scenarios:
     targets:
       max_click_count: 5
       max_llm_fallback: 0
+
+  # ── Thrulm: DD hover-range conflict (fire #56 addition) ──
+  # BUG-A12-06 (43+ fires open): Drain Divinity has 30-ft range; beholder's default
+  # hover is 40–60 ft above the shrine floor. At hover altitude, DD cannot reach any
+  # PC standing on the ground. The beholder must descend (using fly movement on its own
+  # turn, or Shrine-Drift BA) before spending the 3 LA on DD. The tactics section and
+  # DB effect text do NOT document this requirement. This scenario confirms DD verb
+  # dispatch without crash and makes the range gap visible in testing.
+  # FEEL-F56-01: descending via Shrine-Drift (BA) releases grappled creatures (per
+  # FIX-FC48-B) — grapple-maintenance vs DD-descent is an undocumented tactical
+  # trade-off. Both conflict with the R1-LA-reserve protocol (FIX-FC40-A).
+
+  - id: thrulm-dd-hover-range-descent
+    title: "Thrulm: DD 30-ft range vs beholder hover 40-60 ft — descent required; DM awareness test"
+    encounter: thrulm
+    prelude: |
+      Sabriel stands at the shrine floor (~40 ft below the beholder's default hover).
+      Beholder attempts Drain Divinity (3 LA, 30-ft range). At 40-ft hover, DD is out of
+      range — beholder MUST descend on its own turn first (fly 30 ft down) or use
+      Shrine-Drift (BA) to close range before the LA fires. Descent via SD releases any
+      grappled creature (FIX-FC48-B). The R1-LA-reserve protocol (FIX-FC40-A) assumes
+      DD is in range at the moment it fires — this is only true if the beholder descends.
+      BUG-A12-06: DB effect text says "within 30 ft" but runner does NOT enforce range.
+      This scenario confirms DD dispatch; hover-range enforcement is DM-side only.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "drain divinity"}
+      - {kind: no_crash}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0
