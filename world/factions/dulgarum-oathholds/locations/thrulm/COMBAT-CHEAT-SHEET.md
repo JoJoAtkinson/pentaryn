@@ -114,9 +114,9 @@
 | Shrine-Touched | charmed, frightened | necrotic, psychic | fire, radiant *(suppressed within 60 ft of altar — pull them away first)* |
 | Shardcaller | — | psychic | — |
 | Rager | frightened | poison | — |
-| Beholder | charmed, exhaustion, frightened, paralyzed, petrified, poisoned, prone, restrained | psychic; nonmagic B/P/S (unsanctified weapons) | sanctified weapons, holy water |
+| Beholder | charmed, exhaustion, frightened, paralyzed, petrified, poisoned, prone, restrained | psychic; nonmagic B/P/S (unsanctified weapons) | sanctified weapons (+1d8/hit, not ×2), holy water (+1d8/dose, not ×2) |
 
-**→ Use FIRE and RADIANT against Shrine-Touched — but only outside 60 ft of altar (vulnerability is suppressed in the altar zone). Use SANCTIFIED weapons against Beholder.**
+**→ Use FIRE and RADIANT against Shrine-Touched — but only outside 60 ft of altar (vulnerability is suppressed in the altar zone). Use SANCTIFIED weapons against Beholder (+1d8/hit — this is a custom bonus, NOT the standard 5e Vulnerability which would double all damage).**
 
 ---
 
