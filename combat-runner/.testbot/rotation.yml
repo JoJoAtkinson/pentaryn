@@ -21,10 +21,15 @@ slices:
   - id: legendary-action-loop
     name: "Legendary action pacing over one round"
     description: >
-      3 PCs take turns in initiative order. After each PC's turn, beholder uses one
-      legendary action. Simulate: Move (reposition) → Tentacle (vs Marwen, +6) →
-      Void Ray (vs Bazgar, DC 16 Dex, 4d10 force). Record total legendary damage
-      and verify action labels are unambiguous for the DM.
+      3 PCs take turns in initiative order. Beholder has 3 LA total (refreshes at
+      start of its own turn). Correct sequence for full damage: Tentacle (1 LA) after
+      Marwen's turn → Void Ray (2 LA) after Bazgar's turn → 0 LA remaining after
+      Sabriel's turn. [FIX-F61-A: prior draft prescribed Move+Tentacle+Void Ray =
+      4 LA, which exceeds the 3-LA budget. Move LA removed; Tentacle+Void Ray = 3.]
+      Simulate: +7 vs Marwen AC 15 (65% hit, avg 13 bludg + grapple); DC 16 Dex vs
+      Bazgar (80% fail, avg 22 force). Record ~28 avg total LA damage and verify
+      Void Ray (save-based) vs Disintegration Ray (attack-roll) naming is unambiguous
+      for the DM.
 
   - id: void-scream-clustering
     name: "Void Scream — area damage and save timing"
