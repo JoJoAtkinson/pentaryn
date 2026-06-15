@@ -127,7 +127,7 @@
 | Shrine-Touched | Ancient Resonance | 14 | DEX (avoid damage) |
 | Shardcaller | Shard-Barrage | 13 | DEX (avoid damage) |
 | Rager | Taunt | 12 | CHA (avoid disadvantage) |
-| Beholder | Disintegration Ray | +6 to hit | (attack roll, not save) |
+| Beholder | Disintegration Ray | +7 to hit | (attack roll; +6 base +1 Void-Feeding, always active in chamber) |
 | Beholder | Void Scream | 16 | WIS (psychic damage; on FAILED save: also FRIGHTENED 1 min, DC 16 Wis save ends) |
 | Beholder | Void Ray | 16 | DEX (force damage) |
 | Beholder | Drain Divinity | 16 | CHA (lose spell slot) |
