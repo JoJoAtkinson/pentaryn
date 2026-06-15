@@ -338,18 +338,37 @@ scenarios:
     targets:
       max_click_count: 8
 
+  # FIX-F82-01: prior version included "drain divinity" as a third turn, making
+  # the LA budget 1+2+3=6 LA vs the 3-LA max. Tentacle (1) + Void Ray (2) = 3 LA total
+  # (full budget). Drain Divinity (3 LA, all remaining) is tested separately below.
   - id: thrulm-beholder-legendary-rotation
-    title: Beholder spends legendary actions — tentacle, void ray, drain divinity
+    title: Beholder spends all 3 legendary actions — tentacle (1 LA) + void ray (2 LA)
     encounter: thrulm
     prelude: |
-      End of PC turn. The beholder reaches.
+      End of PC turn. The beholder reaches — tentacle for the nearest, void ray for the caster.
     turns:
       - {kind: switch_tab, slug: beholder-thrulm}
       - {kind: type, tab: beholder-thrulm, text: "tentacle lash"}
       - {kind: type, tab: beholder-thrulm, text: "void ray"}
-      - {kind: type, tab: beholder-thrulm, text: "drain divinity"}
     targets:
-      max_click_count: 7
+      max_click_count: 6
+
+  # Drain Divinity costs 3 LA alone — takes the full legendary action budget.
+  # Cannot be combined with Tentacle or Void Ray in the same round.
+  - id: thrulm-beholder-drain-divinity-solo
+    title: "Thrulm: Beholder spends all 3 LA on Drain Divinity targeting Sabriel (divine martial)"
+    encounter: thrulm
+    prelude: |
+      After Sabriel's turn. The beholder holds all 3 legendary actions in reserve, then spends
+      them all on Drain Divinity. Sabriel (divine martial, est. CHA +2) must make a DC 16
+      CHA save or lose her highest remaining spell slot. Beholder gains 2× (slot level) temp HP.
+      3 LA cost = full round budget; no Tentacle or Void Ray possible this initiative.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "drain divinity"}
+      - {kind: no_crash}
+    targets:
+      max_click_count: 5
 
   - id: thrulm-beholder-antireality-reaction
     title: Beholder takes incoming hit → antireality buff reaction prompts (reaction_kind=buff regression)
