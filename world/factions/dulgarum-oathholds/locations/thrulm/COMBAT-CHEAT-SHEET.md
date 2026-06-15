@@ -32,7 +32,7 @@
 2. **Is there a tank (Rager)?** → It will Taunt and mark attackers. Don't ignore it or it taunts your casters.
 3. **Are there Shrine-Touched?** → They resist psychic/necrotic and are faster near altar. Reposition or use fire/radiant.
 4. **Is the beholder here?** → It's hovering above, picking off spellcasters. Your casters need cover or interruption.
-5. **How many Thralls?** → They move on beholder's turn, not their own. They're minions; eliminate to reduce beholder's action economy.
+5. **How many Thralls?** → They act on their own initiative (DEX +1, usually last in order). The beholder can ALSO direct them via Compel Thrall (BA) or Manifest Thralls (lair action). They're minions; eliminate to reduce beholder's action economy.
 
 ---
 
