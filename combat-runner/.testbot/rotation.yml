@@ -47,9 +47,9 @@ slices:
       Beholder spends all 3 legendary actions on Drain Divinity targeting Sabriel
       (divine martial; assume level 5 slots: two 3rd-level, three 2nd-level, four
       1st-level). DC 16 Cha save each time (assume +2 Cha for Sabriel). Simulate
-      3 saves. If all fail: Sabriel loses three 3rd-level slots; beholder gains 18
-      temp HP. Is this mechanically sound? Does spending all 3 legendary actions on
-      one effect feel correct?
+      3 saves. If all fail: Sabriel loses both 3rd-level slots then one 2nd-level;
+      beholder gains at most 16 temp HP (6+6+4). Is this mechanically sound? Does
+      spending all 3 legendary actions on one effect feel correct?
 
   - id: lair-action-round
     name: "Lair action decision tree (init 20)"
