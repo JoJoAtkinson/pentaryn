@@ -850,3 +850,35 @@ scenarios:
     targets:
       max_click_count: 5
       max_llm_fallback: 0
+
+  # ── Thrulm: DD descent + correct Sabriel CHA save (fire #93 addition) ──
+  # NEW-R93-01: `thrulm-beholder-drain-divinity-solo` prelude states "est. CHA +2"
+  # as Sabriel's save modifier. This is the raw CHA ability modifier. A divine
+  # martial (Paladin-class) at level 5 has proficiency in CHA saving throws:
+  # actual save = CHA mod +2 + PB +3 = +5. Using "+2" gives 65% fail rate;
+  # correct "+5" gives 50%. This scenario documents the correct execution path:
+  # Shrine-Drift (BA) descent first, then DD, with correct save noted.
+  # FEEL-R93-02: 3-LA full-budget on a 50/50 save with zero consolation on success.
+  # FEEL-R93-03: Shrine-Drift (BA) for descent forecloses Compel Thrall (BA) on R1.
+
+  - id: thrulm-dd-descent-then-drain
+    title: "Thrulm: DD correct flow — Shrine-Drift BA descent then 3 LA DD; Sabriel CHA save +5 (Paladin PB)"
+    encounter: thrulm
+    prelude: |
+      Beholder R1 protocol: starts at 60-ft hover → Shrine-Drift (bonus action, 30 ft descent)
+      → Multiattack (2 TL + Maw) → hold all 3 LA through Bazgar + Marwen turns → DD fires
+      immediately after Sabriel ends her turn (FIX-FC40-A). Beholder now at ~30 ft above
+      floor, within 30-ft range of Sabriel at the shrine. Shrine-Drift BA used on this turn;
+      Compel Thrall is unavailable (same BA slot — FEEL-R93-03).
+      Sabriel CHA save: DC 16 vs +5 (CHA mod +2 + PB +3, Paladin proficiency). This is
+      50/50 — NOT the 65% fail rate implied by the "est. CHA +2" in the solo-scenario prelude
+      (NEW-R93-01). On fail: Sabriel loses L3 slot; beholder gains 6 temp HP. On success:
+      no effect; full 3-LA budget wasted.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "drift"}
+      - {kind: type, tab: beholder-thrulm, text: "drain divinity"}
+      - {kind: no_crash}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0
