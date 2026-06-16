@@ -413,6 +413,28 @@ scenarios:
       max_click_count: 5
       max_llm_fallback: 0
 
+  # FEEL-F86-01 (fire R79): thrulm-multiattack-hp above tests non-crit Maw (22 avg) only.
+  # The auto-crit path (both TL hit → grapple → Maw 8d8+3 avg 39) has no HP-assertion test.
+  # This scenario covers that gap: 14 + 11 + 39 = 64 → Bazgar downed (HP 49 → 0).
+  # Contrast: thrulm-multiattack-hp uses 22-pierce (49 − 47 = 2 HP remaining).
+  - id: thrulm-multiattack-autocrit-hp
+    title: "Thrulm: Multiattack auto-crit Maw — grappled Bazgar takes 8d8+3 avg (39 pierce), downed"
+    encounter: thrulm
+    prelude: |
+      Both tentacles find Bazgar. He is grappled. The maw opens — auto-crit (8d8+3 avg 39,
+      not 4d8+3 avg 22). Total damage: 14 + 11 + 39 = 64. Bazgar (HP 49) drops to 0 HP.
+      Regression for FEEL-F86-01: the grapple → Maw-auto-crit kill vector, the primary
+      single-turn burst, must produce a 0-HP assert (not the 2-HP leftover from non-crit path).
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "1 14 bludgeon"}
+      - {kind: type, tab: beholder-thrulm, text: "1 11 bludgeon"}
+      - {kind: type, tab: beholder-thrulm, text: "1 39 pierce"}
+      - {kind: assert_hp, slug: "1", expected: 0}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0
+
   - id: thrulm-legendary-resistance-slot
     title: "Thrulm: Legendary Resistance — slot decrements from 3 to 2"
     encounter: thrulm
