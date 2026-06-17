@@ -1,62 +1,140 @@
 ---
 name: Shrine-Touched Derro
 description: "Infused with power from the sealed shrine; dangerous and unstable"
-created: 2026-04-26
+type: creature
+tags: ["#npc", "#combat", "#combat-runner", "#derro", "#thrulm", "#shrine-touched", "#magic"]
 status: active
-location: thrulm
-tags: ["#combat-runner", "#npc", "#combat", "#derro", "#thrulm", "#shrine-touched", "#magic", "#cr-3"]
+created: 2026-04-26
+last-modified: 2026-04-26
 ---
+
 # Shrine-Touched Derro (Blessed/Cursed)
 
-**HP** 45 (7d8+14) **·** **AC** 16 (hardened skin) **·** **Speed** 30 ft. (+10 ft. within 60 ft of altar) **·** **Saves** Dex +5, Con +5 **·** **Resist** necrotic, psychic **·** **Immune** charmed, frightened **·** **Darkvision 120 ft.** **·** **Vulnerable** fire, radiant (suppressed within 60 ft of altar — see Altar Zone below) **·** **CR** 3 (700 XP)
+A derro that wandered into proximity of the sealed shrine and *changed*. The ancient god's power, bottled and bound beneath the stone, has leaked into this creature. It is no longer fully derro, and no longer entirely sane.
 
-> Action mechanics live in `combat-runner/actions.jsonl` (DB) — see the launcher-injected **Ready actions** reference for verbs and call signatures.
-
----
-
-## Start-of-turn checklist
-
-1. If **Ancient Resonance** is USED, roll `roll_dice(1, 6)` — recovers on 5–6.
-2. **Reaction** refreshes to AVAILABLE: **Oath-Breaking Retaliation** (counter-attack on damage taken). OBR fires **immediately when the shrine-touched takes damage** (during the attacker's turn) — interrupts between attacks if the attacker has multiattack. Spent for the round until this checklist runs again.
-3. **Driven Escape** bonus action available — 30 ft, no OAs, but must move toward the shrine if not in sight of combat.
-4. **Unstable Form:** if shrine-touched took 10+ damage in a single turn last round, it has **advantage on all attacks** until end of its next turn. *(All incoming damage counts toward this threshold, including OBR self-damage — if OBR fired last round, add the 1d4 psychic self-damage to the total when checking.)*
-5. **Shrine-Bound:** if more than 300 ft from the shrine: takes 2d6 psychic at start of turn; cannot leave the chamber.
+It fights with the fury of something caught between two forces: the oath that tries to contain it, and the power that wants to *unmake* it.
 
 ---
 
-## Altar Zone (within 60 ft of altar)
+## Combat Stats (Battle-Ready Zone)
 
-> **Fire & radiant vulnerability suppressed.** The shrine's ambient power insulates shrine-touched from the damage types that would otherwise exploit their instability. Fire and radiant damage deals *normal* damage (not doubled) while the derro is within 60 ft of the altar stone.
->
-> Effect ends immediately if the shrine-touched moves more than 60 ft from the altar.
->
-> *(Playtest note: this is the primary reason to keep shrine-touched near the altar — pull them away to re-expose the vulnerability. Marwen's Fireball and Sabriel's Divine Smite both lose their fire/radiant bonus in this zone.)*
+| **AC** | **HP** | **Speed** |
+|--------|--------|-----------|
+| 16 (hardened skin) | 45 (7d8 + 14) | 30 ft. |
 
-## Tactics — when the DM asks "what does it do?"
+| **STR** | **DEX** | **CON** | **INT** | **WIS** | **CHA** |
+|---------|---------|---------|---------|---------|----------|
+| 13 (+1) | 15 (+2) | 14 (+2) | 9 (-1) | 8 (-1) | 11 (+0) |
 
-- **2+ enemies in a 15-ft cone:** **Ancient Resonance** (Recharge 5–6) — DC 14 Dex, 2d10 necrotic (save halves), +1d4 psychic on fail only. **Stagger rule (multiple shrine-touched):** if two shrine-touched both have Resonance available in the same round, only the one acting FIRST in initiative fires — the second uses Multiattack instead and holds Resonance for the next round. Prevents both burning AR R1 and leaving R2+ Resonance-dry. ⚠️ **Stagger is evaluated at the START of the round** — check both STDs *before any actions resolve*; if both have AR recharged, mark the lower-initiative STD as "holding AR" now. Do NOT wait until the lower-initiative STD's turn to make this check. ⚠️ **Stagger hold persists even after the higher-init STD fires:** once the lower-init STD is marked "holding AR" at round start, that hold is permanent for the round — it does NOT lift if the higher-init STD clears its own AR-available flag by acting. Evaluate once at round start and lock it in. **Stagger exemption (low HP):** a shrine-touched below 20 HP uses Driven Escape priority (see below) and is NOT subject to the stagger hold — it fires AR recklessly if AR is available and 2+ targets are in cone. ⚠️ **AR threatens concentration:** any caster who takes damage from AR must succeed on a Con save (DC = 10 or half damage taken, whichever is higher) or lose a concentration spell — call this out at the table when a caster is in the cone.
-- **Unstable Form priority:** if UF is active (see checklist item 4), PREFER Multiattack over Ancient Resonance when only 2 enemies are in cone — UF grants advantage on attack rolls, which is wasted on the save-based AR. If 3+ enemies are in cone, AR wins regardless.
-- **All other turns / after firing AR:** Multiattack — two Shrine-Axe strikes (slashing + necrotic per hit) on the closest enemy.
-- **Reaction priority — Oath-Breaking Retaliation:** auto-fires after taking damage from a visible attacker **within melee reach (5 ft)** — i.e. after ALL damage from that attack is applied (including Divine Smite or other added damage); one Shrine-Axe counter-swing at the attacker. Self-damages 1d4 psychic regardless. OBR does NOT fire against ranged attackers, ranged-spell attackers, or area-effect damage (Fireball, etc.) — the shrine-touched cannot swing at someone not in reach. OBR does NOT fire while the shrine-touched is incapacitated, stunned, paralyzed, or otherwise unable to take reactions. If the trigger is ambiguous (attacker just moved away), OBR does not fire.
-- **Pulled away from shrine (~150+ ft):** panic. Uses Ancient Resonance recklessly each turn it recharges, ignoring positioning.
-- **Below 20 HP:** uses **Driven Escape (bonus action)** to move toward the altar — no opportunity attacks, no retreat. Main action: AR recklessly if available and 2+ targets in cone (stagger hold does not apply); otherwise Multiattack on the nearest PC. Never retreats away from the shrine.
-
-## Description (one line)
-
-Skin glowing faintly with shifting runes, eyes empty, voice fragmenting into a discordant hum — looks slightly out of phase with the world.
-
----
-
-## Variant flavor (multiple shrine-touched in one fight)
-
-- One hums at a different frequency.
-- One's runes glow a different color.
-- One is *fighting* the transformation — pleads in panicked dwarvish before the shrine's will reasserts.
+| **Saving Throws** | Dex +5, Con +5 |
+| **Skills** | Perception +1, Stealth +5 |
+| **Damage Vulnerabilities** | fire, radiant |
+| **Damage Resistances** | necrotic, psychic |
+| **Damage Immunities** | — |
+| **Condition Immunities** | charmed, frightened |
+| **Senses** | darkvision 120 ft., passive Perception 11 |
+| **Languages** | Dwarvish, Undercommon (speaks in fragmented prophecy) |
+| **Proficiency Bonus** | +3 |
 
 ---
 
-## Interaction Notes (non-combat)
+## Combat Traits
 
-- Cannot be reasoned with; the dwarf is gone.
-- Sanctified dwarven weapons hit it with advantage; running water disrupts its connection (disadvantage on saves while immersed).
-- Cannot be turned or dominated — the shrine's will overrides.
+**Sunlight Sensitivity.** While in sunlight, the derro has disadvantage on attack rolls and Wisdom (Perception) checks that rely on sight.
+
+**Shrine-Bound.** The derro's body hums with ancient power. It has resistance to necrotic and psychic damage. However, if it moves more than 300 feet away from the shrine in Thrulm, it takes 2d6 psychic damage at the start of its turn; it cannot leave the chamber entirely.
+
+**Unstable Form.** When the derro takes damage, its form flickers and destabilizes. After taking 10 or more damage in a single turn, it gains advantage on attack rolls until the end of its next turn, as the shrine's power floods through it.
+
+**Fragmented Mind.** The derro is immune to being charmed or frightened due to the shrine's influence. It cannot be reasoned with about the nature of what has happened to it.
+
+---
+
+## Actions
+
+**Multiattack.** The derro makes two attacks with Shrine-Axe.
+
+**Shrine-Axe.** *Melee Weapon Attack:* +4 to hit, reach 5 ft., one target. *Hit:* 6 (1d8 + 1) slashing damage plus 4 (1d8) necrotic damage.
+
+**Ancient Resonance (Recharge 5–6).** The derro emits a wave of pure shrine-energy in a 15-foot cone. Each creature in the area must make a DC 14 Dexterity saving throw, taking 11 (2d10) necrotic damage on a failed save, or half as much on a successful one. Creatures that fail take an additional 2 (1d4) psychic damage as their minds brush against something beyond comprehension.
+
+---
+
+## Bonus Actions
+
+**Driven Escape.** The derro moves up to 30 feet. This movement does not provoke opportunity attacks, and it must move toward the shrine if not in sight of combat.
+
+---
+
+## Reactions
+
+**Oath-Breaking Retaliation.** When the derro takes damage from a source it can see, it can use its reaction to make one **Shrine-Axe** attack against the attacker. Regardless of whether the attack hits, the derro takes 2 (1d4) psychic damage as the shrine's power consumes it from within.
+
+---
+
+## Tactics
+
+The shrine-touched derro is a creature of conflicting drives:
+
+- **Defends the shrine:** It gravitates toward the altar, as if guarding it or worshipping it
+- **Attacks intruders:** It sees the party as contaminants; the shrine's presence drives territorial rage
+- **Fractured communication:** If the derro tries to speak, words come out in fragmented prophecy or ancient Dwarvish—glimpses of what the god *was*
+- **Unpredictable durability:** When hurt badly, the shrine empowers it; smart opponents notice it fights *harder* when bleeding
+- **Self-destructive at range:** If separated from the shrine by a party member, it becomes panicked and dangerous, using Ancient Resonance recklessly
+
+---
+
+## Interaction Notes
+
+**Motivations:** The derro no longer has independent motivations. It is an extension of the shrine's will—angry, confused, trying to protect/destroy depending on the fluctuation of ancient power.
+
+**Voice & Personality:** Speaks in broken sentences or prophecy. Repeats fragmentary names of the old god. Hums a discordant note that doesn't sound like a living throat.
+
+**Weaknesses:** 
+- Sanctified dwarven weapons (blessed with the old ways) harm it with advantage
+- Running water disrupts the shrine's connection (the derro takes disadvantage on saves while immersed)
+- Separation from the shrine for more than 6 rounds drives it into panic
+
+**De-escalation Hooks:** None. This creature cannot be reasoned with. It can only be fought or understood.
+
+---
+
+## Description
+
+The derro's skin has a faint luminescence—not light, but a *wrongness*, as if its flesh is slightly out of phase with the rest of the world. Its eyes are empty, but when it speaks, shadows move behind them.
+
+Runes are carved into its exposed flesh, glowing faintly. Some are dwarvish. Some are *not*. Some hurt to look at directly.
+
+---
+
+## What Happened
+
+This derro was chosen (or cursed) by proximity. The shrine's power, sealed beneath centuries of dwarf-craft, sees the derro as a *vessel*. It is not controlled like the beholder's thralls; it is being *rewritten* by something that remembers being a god.
+
+Over the weeks/months it has been down here, it has become something else. Not dead. Not alive. A conduit.
+
+---
+
+## Lore & Background
+
+If the derro could be freed and restored to sanity, it might speak of what it experienced in the shrine's presence. It might describe visions of the god's fall, the sealing of the shrine, the moment something *else* arrived to fill the void.
+
+But restoration is not possible. The transformation is too complete. The shrine has left its mark in ways magic cannot undo.
+
+---
+
+## Variant: Multiple Shrine-Touched
+
+The beholder can create these. For each one, describe subtle differences:
+- One hums a different frequency
+- One's runes glow different colors
+- One is further along the transformation (more alien, less derro)
+- One is *fighting* the transformation and speaks in panicked dwarvish before the shrine's will takes over
+
+---
+
+## Related Links
+
+- [Dulgarum Faction Overview](../../_overview.md)
+- [Thrulm Location](../_overview.md)
+- [The Beholder](./beholder-thrulm.md)

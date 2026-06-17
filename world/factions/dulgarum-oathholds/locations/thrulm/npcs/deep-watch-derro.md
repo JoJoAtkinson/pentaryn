@@ -2,7 +2,7 @@
 name: Deep Watch Derro
 description: "Loyal dwarf-kin sworn to contain the depths"
 type: creature
-tags: ["#combat-runner", "#npc", "#combat", "#derro", "#dulgarum-oathholds", "#thrulm", "#deep-watch"]
+tags: ["#npc", "#combat", "#combat-runner", "#derro", "#dulgarum-oathholds", "#thrulm", "#deep-watch"]
 status: active
 created: 2026-04-26
 last-modified: 2026-04-26
@@ -21,7 +21,7 @@ Grim. Disciplined. Terrified of what they're guarding, but bound by oath.
 | 15 (studded leather) | 27 (5d8 + 5) | 30 ft. |
 
 | **STR** | **DEX** | **CON** | **INT** | **WIS** | **CHA** |
-|---------|---------|---------|---------|---------|---------|
+|---------|---------|---------|---------|---------|----------|
 | 10 (+0) | 14 (+2) | 12 (+1) | 11 (+0) | 13 (+1) | 8 (-1) |
 
 | **Saving Throws** | Dex +4 |
@@ -40,7 +40,7 @@ Grim. Disciplined. Terrified of what they're guarding, but bound by oath.
 
 **Oath-Bound Resolve.** The derro has advantage on saving throws against being frightened or charmed, as long as it can see or hear a Deep Watch commander.
 
-**Tactical Drilling.** The derro works well with others; if an ally is within 5 feet and the target is also within the ally's reach, the derro has advantage on its melee attack roll against the target. *(MQ-TP37-A split-target clarification: TD only activates when BOTH this derro AND the allied derro are each within 5 ft of the SAME target. If two DWs split to attack different PCs, neither has TD advantage — each DW must be adjacent to the other DW's chosen target for the trait to fire.)*
+**Tactical Drilling.** The derro works well with others; if an ally is within 5 feet and the target is also within the ally's reach, the derro has advantage on its melee attack roll against the target.
 
 ---
 
@@ -67,9 +67,6 @@ Grim. Disciplined. Terrified of what they're guarding, but bound by oath.
 - **Retreat on command:** Will fall back if a Deep Watch commander signals withdrawal
 - **Defensive:** Prefers cover and numbers over direct engagement
 - **Loyalty over instinct:** Even if afraid, won't abandon the post
-- *(FIX-TP33-A) Restrained condition — own attacks at disadvantage:* If a DW is Restrained (e.g. by Web), its own attack rolls are made at disadvantage (5e RAW: Restrained = speed 0, disadvantage on own attacks, advantage for attackers). This also blocks Tactical Drilling advantage — advantage and disadvantage cancel to a straight roll. The spec is correct; the sim has historically not enforced this. DM must track: Restrained DW attacks are disadvantaged even while adjacent to an ally.
-- *(FIX-TP33-B) Cunning Action trigger:* Use Cunning Action (Dash) when the DW's position is compromised — e.g., party retreats and DWs need to close, or a ranged threat is beyond 5 ft melee reach. Use Disengage if the DW is below 10 HP and needs to fall back to the gate without provoking OAs. Hide is available but rarely useful — the threshold chamber offers limited cover.
-- *(FIX-TP42-A) Tactical Drilling after push/knockback:* If a push effect (e.g. Thunderwave, Repelling Blast) separates this DW from its partner by more than 5 ft relative to the shared target, TD is **lost** for this DW until both DWs are again within 5 ft of the same target simultaneously. Use Cunning Action (Dash) to close the gap if below 30 ft and the formation can be restored this turn; otherwise accept the straight roll. Relevant 5e RAW: TD requires "an ally is within 5 feet" of the target AND "you are within 5 feet" — a 10-ft push that separates the pair invalidates both conditions for the pushed DW.
 
 ---
 

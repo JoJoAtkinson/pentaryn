@@ -2,7 +2,7 @@
 name: The Hunger Below (Beholder)
 description: "An eye-creature drawn to the void left by a sealed god; feeds on the absence of divinity"
 type: creature
-tags: ["#combat-runner", "#npc", "#combat", "#beholder", "#thrulm", "#boss", "#aberration"]
+tags: ["#npc", "#combat", "#combat-runner", "#beholder", "#thrulm", "#boss", "#aberration"]
 status: active
 created: 2026-04-26
 last-modified: 2026-04-26
@@ -25,7 +25,7 @@ It is territorial, but not mindless. It gathers thralls. It shapes the derro who
 | 17 (alien hide) | 110 (13d10 + 39) | 0 ft., fly 30 ft. (hover) |
 
 | **STR** | **DEX** | **CON** | **INT** | **WIS** | **CHA** |
-|---------|---------|---------|---------|---------|---------|
+|---------|---------|---------|---------|---------|----------|
 | 8 (-1) | 16 (+3) | 16 (+3) | 17 (+3) | 14 (+2) | 13 (+1) |
 
 | **Saving Throws** | Dex +6, Wis +5 |
@@ -49,8 +49,7 @@ It is territorial, but not mindless. It gathers thralls. It shapes the derro who
 - +1 to attack rolls and damage rolls
 - Advantage on checks to resist being turned by divine magic
 
-**Clay-Shaping.** The beholder can transmute raw clay into derro through a transmutation ritual that takes 1 minute of uninterrupted concentration. During the ritual, the beholder cannot move, attack, or use other abilities. The ritual requires a 5-foot cube of clay (plentiful in Thrulm deposits). When complete, a **Deep Watch Derro** or **Thrall Derro** fully-formed emerges (beholder's choice). The new derro is charmed by the beholder and obeys its telepathic commands. A derro created this way lasts for 7 days before the clay either hardens permanently (becoming a real creature that retains charm toward the beholder) or crumbles (if not tended). The beholder can have up to 6 derro under this charm at any time.
-- *(FIX-BEL3-26-A) "Derro Guard" was a dangling reference with no stat block in this encounter. Replaced with Deep Watch Derro (nearest authored match: CR 1/8, studded leather, hand axe + light crossbow). Thrall Derro is the beholder-dominated alternative. No "Derro Guard" sheet exists — do not improvise stats.)*
+**Clay-Shaping.** The beholder can transmute raw clay into derro through a transmutation ritual that takes 1 minute of uninterrupted concentration. During the ritual, the beholder cannot move, attack, or use other abilities. The ritual requires a 5-foot cube of clay (plentiful in Thrulm deposits). When complete, a **Derro Guard** or **Thrall Derro** fully-formed emerges (beholder's choice). The new derro is charmed by the beholder and obeys its telepathic commands. A derro created this way lasts for 7 days before the clay either hardens permanently (becoming a real creature that retains charm toward the beholder) or crumbles (if not tended). The beholder can have up to 6 derro under this charm at any time.
 
 **Lair Actions (Thrulm)** The beholder can take lair actions while in the chamber. On initiative count 20 (losing ties), it takes a lair action.
 
@@ -60,24 +59,19 @@ It is territorial, but not mindless. It gathers thralls. It shapes the derro who
 
 **Multiattack.** The beholder makes three attacks: two with **Tentacle Lash** and one with **Maw**.
 
-**Tentacle Lash.** *Melee Weapon Attack:* +6 to hit, reach 10 ft., one target. *Hit:* 13 (3d6 + 3) bludgeoning damage, and the target is grappled (escape DC 16). The beholder has four tentacles; it can grapple up to four creatures at once. Each tentacle can be targeted separately (AC 15, 15 HP).
+**Tentacle Lash.** *Melee Weapon Attack:* +6 to hit, reach 10 ft., one target. *Hit:* 14 (3d6 + 3) bludgeoning damage, and the target is grappled (escape DC 16). The beholder has four tentacles; it can grapple up to four creatures at once. Each tentacle can be targeted separately (AC 15, 15 HP).
 
-**Maw.** *Melee Weapon Attack:* +6 to hit, reach 5 ft., one target. *Hit:* 21 (4d8 + 3) piercing damage. If the target is a creature grappled by the beholder, this attack is a critical hit instead.
-- *(FIX-EV7-35-A) Maw vs already-downed grappled target:* If a tentacle hits and grapples a PC, then a second tentacle hit drops that PC to 0 HP in the same multiattack, the Maw auto-crit rider still technically applies (grapple persists through the downed state). At the table: **redirect Maw to the next available standing target in reach**. If no other target is in reach, **skip Maw** — the crit purpose (punishing a standing grappled target for maximum damage) is already moot once the target is unconscious. Firing Maw into a downed body deals 30+ damage in death-save failures, which is mechanically valid but wasteful and anticlimactic. The auto-crit rider applies to conscious grappled creatures only for DM intent.*
+**Maw.** *Melee Weapon Attack:* +6 to hit, reach 5 ft., one target. *Hit:* 22 (4d8 + 3) piercing damage. If the target is a creature grappled by the beholder, the target has disadvantage on the saving throw.
 
 **Disintegration Ray (Recharge 5–6).** *Ranged Spell Attack:* +6 to hit, range 120 ft., one creature. *Hit:* 45 (10d8) force damage. If this damage reduces the target to 0 hit points, the target is disintegrated (turned to ash). A creature reduced to 0 HP by this attack cannot be restored to life except by true resurrection or wish.
-- *(FIX-FC40-B) Disintegration + LoH DM note:* A disintegrated PC (turned to ash by DR) has no body — Lay on Hands, healing word, revivify, and other "restore HP to a dying creature" effects **cannot target ash**. If Sabriel attempts LoH on a disintegrated ally, the action is wasted. Announce disintegration explicitly when it occurs so the table tracks which bodies are gone. Target standing (conscious) PCs only — DR on a downed (non-disintegrated) target wastes the recharge on death saves, not elimination (see DR target note FIX-EV7-30-A).*
 
-**Void Scream (Recharge 6).** The beholder emits a piercing sound that warps reality around the shrine. Each creature within 30 feet that can hear it must make a DC 16 Wisdom saving throw, taking 33 (6d10) psychic damage on a failed save, or half as much on a successful one. On a failed save, the target is also **frightened** of the beholder for 1 minute (DC 16 Wisdom saving throw at the end of each of the target's turns ends the effect). Creatures within 10 feet of the shrine have disadvantage on this save.
-- *(FIX-FC46-A) Void Scream FRIGHTENED rider:* The DB action has always included FRIGHTENED on a failed VS save (confirmed in roller output from the 46th cycle). The .md description was missing this rider. FRIGHTENED imposes: disadvantage on attack rolls while the beholder is in line of sight; the target cannot willingly move closer to the beholder. This does NOT affect a creature already prone or grappled (they are already disadvantaged or immobilized). Frightened PCs attempting to flee provoke opportunity attacks if not using Disengage.*
-- *(FIX-FC48-A) VS vs unconscious PCs ("can hear it" clause):* VS affects creatures that **can hear** the scream. An unconscious creature is "unaware of its surroundings" (PHB 294) — ruling: **unconscious creatures cannot hear VS and are excluded from its effect**. Do NOT apply VS damage to a PC already at 0 HP, even if they are within 30 ft. (If applied, 33–35 psychic damage on a 0-HP PC with ≤33 max HP triggers instant death — mechanically valid but anticlimactic and likely unintended.) Redirect VS to conscious targets only. (48th-FC-cycle flag: Marwen at 0 HP, within 30 ft — confirmed ruling needed; excluded from VS this run.)*
+**Void Scream (Recharge 6).** The beholder emits a piercing sound that warps reality around the shrine. Each creature within 30 feet that can hear it must make a DC 16 Wisdom saving throw, taking 33 (6d10) psychic damage on a failed save, or half as much on a successful one. Creatures within 10 feet of the shrine have disadvantage on this save.
 
 ---
 
 ## Bonus Actions
 
 **Shrine-Drift.** The beholder moves up to 30 feet. It can move through other creatures and objects as if they were difficult terrain; it takes 5 (1d10) force damage if it ends its turn inside a creature or object.
-- *(FIX-FC48-B) Shrine-Drift does NOT drag grappled creatures:* Shrine-Drift is a discrete bonus-action move, not the beholder's standard fly-speed movement. RAW grapple rules allow the grappler to drag a grappled creature at **half its normal move speed** — but only during its normal movement, not via a special ability's repositioning. Ruling: **Shrine-Drift does not drag grappled targets.** If the beholder uses Shrine-Drift to move more than 10 ft from a grappled creature, the grapple ends (beholder moves out of its own Tentacle Lash reach). Consequence: the beholder should not use Shrine-Drift while maintaining a grapple it wants to keep. If repositioning is needed (e.g., to reach the altar for VS positioning), the beholder should **release the grapple first** or **use its standard fly movement** (which drags at half speed). (48th-FC-cycle flag: Shrine-Drift reposition R2 would have freed Sabriel — confirmed ruling needed.)*
 
 **Compel Thrall (1/Turn).** The beholder targets one creature it can see within 60 feet that is charmed by it (usually a dominated derro). The target must succeed on a DC 16 Charisma saving throw or move up to 30 feet toward the beholder or another target the beholder designates.
 
@@ -85,16 +79,13 @@ It is territorial, but not mindless. It gathers thralls. It shapes the derro who
 
 ## Reactions
 
-**Antireality.** When the beholder is targeted by an attack it can see, it can use its reaction to impose disadvantage on that attack roll (once per round). The stone beneath it ripples as if underwater.
-- *(DM timing note — FIX-F33-A): Do NOT wait for the combat-runner prompt to declare Antireality — the runner fires the prompt after the attack resolves (post-hit, on the damage event), by which point imposing the reaction is retroactive. Declare Antireality the moment the attacker announces their attack, before any dice are rolled. The DB `effect` field currently says "+2 AC" — this is incorrect (BUG-F7-02/A31-07, open 26 fires). The intended mechanic is disadvantage on the triggering attack roll, per this stat block.)*
+**Antireality.** When the beholder is hit by an attack it can see, it can use its reaction to gain +2 AC against that attack (after seeing the roll). The stone beneath it ripples as if underwater.
 
 ---
 
 ## Legendary Actions
 
 The beholder can take three legendary actions, choosing from the options below. Only one legendary action can be used at a time and only at the end of another creature's turn.
-
-- *(LA timing — FIX-EV7-39-A):* **LA can ONLY be used at the end of ANOTHER creature's turn — never during the beholder's own turn.** LA refresh at the start of the beholder's turn. At-table sequence: resolve the beholder's multiattack/action fully, then wait for each subsequent PC to complete their turn before spending an LA. The DD post-Sabriel protocol (FIX-FC40-A) is the canonical example: hold all 3 LA through Bazgar and Marwen's turns, spend 3 LA on DD immediately after Sabriel ends her turn. Once 3 LA are spent on DD in R1, no LA are available again until the beholder's R2 turn begins. Do NOT apply Void Ray or Tentacle LAs before a PC has had their turn — this would preempt their action and is mechanically illegal.*
 
 **Move.** The beholder moves up to its flying speed.
 
@@ -111,31 +102,15 @@ The beholder can take three legendary actions, choosing from the options below. 
 The beholder is intelligent and patient. Its strategy depends on the party composition:
 
 **Against Casters:** Prioritizes disintegration of spellcasters; uses Void Scream to damage groups while isolating targets.
-- *DR target priority (MQ-FC51-B):* **Prefer lower-AC targets** — Marwen (AC 15) is the optimal DR target (65% hit rate at +7 vs AC 15 with Void-Feeding active); Bazgar (AC 18) is 50%; Sabriel (AC 19) is only 45%. If Marwen is standing and conscious, fire DR at Marwen first. Only target Sabriel or Bazgar if Marwen is already down.
-- *(FIX-BEL3-26-B) Hit rates in DR target note corrected for Void-Feeding (+1 bonus): +7 vs AC 15 = 65% (was incorrectly stated as "+6 vs AC 15 = 65%"; +6 vs AC 15 is 60%). Full corrected table: Marwen AC 15 = 65% (+7, VF); Bazgar AC 18 = 50% (+7, VF); Sabriel AC 19 = 45% (+7, VF). Prior note attributed 65% to +6 — off by 5 percentage points. All Void-Feeding active rates assume beholder stays within the chamber (standard for boss fight). If for any reason VF is suppressed (beholder pushed into a non-shrine chamber), revert to +6 base: Marwen 60%, Bazgar 45%, Sabriel 40%.)*
-- *DR target note (FIX-EV7-30-A):* **Disintegration Ray targets conscious creatures only.** The disintegration rider ("reduces to 0 HP") does NOT trigger against already-downed targets — they are already at 0, so no reduction occurs (RAW PHB p.197: damage to 0-HP creature causes death save failures only). Against a downed target, DR is wasted. If all PCs are downed except one, hold DR for the standing target. Against a single standing PC, DR + high roll is the highest expected kill; don't waste the recharge on confirming a downed body.
-- *DR vs nat-20 stabilized PC (MQ-FC45-A):* A PC who scored a natural 20 on a death save is restored to 1 HP and is **conscious** — they are a valid DR target. Do NOT skip DR on a PC just because they were recently downed. The nat-20 reset them to 1 HP (conscious body, valid disintegration target); fire DR immediately if recharged. A disintegrated 1-HP PC leaves no body — no revivify, LoH, or healing word can undo it. *(45th-FC-cycle confirm: Marwen stabilized nat-20 R4 → DR fired same turn → disintegrated. Dramatically decisive.)*
 
 **Against Melee:** Grapples with tentacles and drags into difficult terrain; uses ranged attacks while keeping distance.
-- *Maw timing note (FIX-FC39-A):* On multiattack, both Tentacle Lash attacks fire first. If either hits, that PC is grappled. The Maw's third attack MUST then target the grappled PC — this triggers the auto-crit rider (4d8+3 becomes 8d8+3, avg ~40 piercing). This is the highest single-turn damage output available to the beholder. Do NOT split Maw onto a different PC; the crit is the point. If both tentacle lashes miss, Maw hits any target normally (no crit opportunity). (39th-cycle confirm: Maw auto-crit never expressed in 10+ cycles because sim/DM targets a third PC — this note corrects that.)
 
 **Against Clerics/Paladins:** Focuses on **Drain Divinity** to remove their healing and buffs. It *hates* sanctified weapons and holy water (treats them as if from a higher plane).
-- *DD timing note:* The temp HP gain from DD is incidental (2–6 HP at most levels — noise vs 110 HP pool). The real value is slot attrition — denying L2/L3 smites. Use DD early (R1–R2) while the target's slot pool is full. After their L2+ slots are exhausted, switch to Void Ray or Tentacle instead.
-- *DD vs VS sequencing note (FIX-EV7-30-B):* If Void Scream has NOT been used this combat AND Sabriel has L2+ smite slots remaining, prioritize **Drain Divinity (LA cost 3) as the post-Sabriel legendary action in R1**, before VS fires. DD early strips the smite pool; VS then fires R2 into a depleted paladin. If you spend R1 LA on Void Ray + Tentacle, VS fires R2 and kills Sabriel before DD ever executes — wasting the anti-divine counter entirely. (30th-cycle confirm: DD never fired because VS downed Sabriel before any DD window.)
-- *R1 LA reserve protocol (FIX-FC40-A):* To have 3 LA available for DD after Sabriel's turn, the beholder must **skip ALL reactive LAs on Bazgar's and Marwen's turns in R1**. Spending 1 LA (Tentacle after Bazgar) + 2 LA (Void Ray after Marwen) exhausts the budget before Sabriel acts — DD never fires. R1 protocol: hold all 3 LA until Sabriel completes her turn, then spend the full budget on Drain Divinity. Resume reactive LAs from R2 onward. Exception: if Sabriel goes down before her R1 turn (e.g., from VS or heavy multiattack damage), the DD window is moot — shift to reactive LAs immediately. (40th-cycle confirm: LA consumed on Tentacle+VR R1 → 0 LA remaining for DD → DD never fires despite being optimal play.)
-- *FIX-FC47-A — DD window on initiative tie or beholder-first:* The R1-LA-hold protocol triggers **after Sabriel ends her R1 turn**, regardless of whether the beholder acts before or after Sabriel in initiative. If the beholder beats Sabriel's initiative (or ties and wins the tie-break), it acts first, then holds LAs through Bazgar's and Marwen's turns, then fires DD immediately after Sabriel ends her turn. The DD window is NOT closed by "beholder went first" — it is closed only by "Sabriel has not yet acted this round" or "Sabriel is already down." (47th-FC-cycle confirm: beholder and Sabriel both rolled init 16; beholder acted first on tie; DD window was available post-Sabriel but sim logic incorrectly required beholder-init < Sabriel-init — corrected here.)
-- *LoH override note:* If Sabriel uses Lay on Hands (not a spell) to revive a downed ally within the void-feeding zone, the beholder cannot counter with DD (LoH is not a spell slot). Prioritize Void Ray or a Tentacle LA to prevent the revived ally from acting.
-- *DD temporal ordering note (FIX-BEL3-10-B):* DD fires **after Sabriel ends her turn** — she may have already expended smite slots attacking during that turn. DD strips **remaining** slots, not all slots. Against a Sabriel who attacks twice with smites first, DD's value is reduced to stripping 1 residual slot rather than 3. DD is most impactful when Sabriel's slot pool is intact — i.e., when beholder has **lower initiative than Sabriel** (Sabriel hasn't attacked yet this round when her turn comes and DD fires immediately after). If beholder has higher initiative, accept that DD strips only leftover slots; it still prevents R2+ smites and forces Sabriel into LoH-only mode. (10th-BEL3-cycle confirm: beholder init 23 > Sabriel init 17 → Sabriel spent 2 smites → DD stripped last 1 → effective strip = 1 of 3.)*
 
 **Environmental Use:** 
 - Hovers near the shrine altar to maximize Void-Feeding bonus
 - Uses lair terrain (pillars, collapsed shrine remains) for cover
 - Draws thrall derro into combat on initiative count 20 to overwhelm the party
-- *Lair timing note:* Lair actions fire at init 20. If the beholder has high initiative (>18), it acts almost immediately after the lair action — the lair sets up, the beholder executes. If the beholder has low initiative (≤12), PCs can act between the lair and the beholder's turn, creating counterplay.
-- *VS positioning note:* "Within 10 ft of the shrine" for VS disadvantage applies to the physical shrine/altar in the corner of the chamber — not the beholder's current position. PCs at the vault entrance (threshold) are typically 40–60 ft from the shrine and do NOT start with shrine-proximity disadvantage. Only PCs who have advanced to within 10 ft of the altar (e.g., melee fighters engaging the beholder at the altar) should roll with disadvantage.
-- *VS vs Multiattack R1 sequencing (FIX-EV7-32-A):* **R1 = Multiattack (grapple); R2 = Void Scream.** Do NOT fire VS on R1. The R1 protocol is: (1) Lair UG at init 20, (2) beholder Multiattack to build grapple pressure, (3) hold all 3 LA for DD post-Sabriel. VS fires R2 after DD has stripped smite slots and the party is weakened. Firing VS R1 burns the action before grapples land and negates the Maw auto-crit synergy entirely. If the beholder has initiative ≥ 18 and acts before all PCs, the temptation to VS immediately is a mistake — grapple first. (32nd-EV7-cycle confirm: R1 multiattack, R2 VS is the correct cadence; all prior EV7 TPKs that end R2–R3 follow this sequence.)
-
-**Resistance reminder:** The beholder resists nonmagic bludgeoning, piercing, and slashing from non-sanctified weapons. Melee fighters without magical or sanctified weapons deal half damage. Paladin radiant smites and wizard spells (fire, force) are NOT resisted.
 
 **Retreat:** If reduced below 30 HP, the beholder retreats deeper into the lower shaft, using thralls to block pursuit. If below 20 HP, it attempts to crush/disintegrate the party while fleeing.
 
@@ -146,18 +121,10 @@ The beholder is intelligent and patient. Its strategy depends on the party compo
 On initiative count 20 (losing ties), the beholder takes a lair action to move or use one of the following options:
 
 **Unstable Ground.** One creature the beholder can see within 60 feet must succeed on a DC 16 Dexterity saving throw or fall prone as the stone buckles beneath it.
-- *Target priority note (FIX-FC39-B):* Prefer melee fighters (Bazgar, Sabriel) over back-line casters (Marwen). Prone on a melee fighter: costs them movement to stand up, halves their speed, imposes disadvantage on attack rolls — sustained melee disruption. Prone on a caster who is already at range: disadvantage on ranged attack rolls only, and they spend a bonus action-equivalent standing up but still cast freely. If Marwen is the only target in range, Unstable Ground is still worth using (DC 16 Dex is 30%+ failure rate for low-Dex casters). Rotate to Void Eruption once melee fighters cluster within 20 ft of the shrine (R3+).
-- *Downed-target note (FIX-BEL3-38-B):* Do NOT target a downed (0 HP) PC with Unstable Ground — a prone body contributes nothing and the lair action is wasted entirely. If the primary melee target (Bazgar) is already down, shift to the next standing melee PC (Sabriel → Bazgar priority order), or use Void Eruption if any PC has advanced to within 20 ft of the shrine. Switch to Manifest Thralls only if thralls are up and facing AC ≤ 14 targets. (2nd BEL3 cycle: UG fired on downed Bazgar R3+R4, both wasted.)
-- *Prone + ranged attack note (FIX-EV7-34-A):* RAW PHB — a prone target imposes DISADVANTAGE on ranged attack rolls against it (including ranged spell attacks like Disintegration Ray and Void Ray LA). If UG makes a PC prone, **do NOT use DR or Void Ray against that same target on the same or next turn** — beholder would attack at disadvantage, counteracting the goal. Use UG on a melee fighter to disrupt their mobility; use DR/VR against a standing (non-prone) target. If the only available DR/VR target is currently prone, either wait (prone ends when they stand) or switch to multiattack instead.
 
 **Manifest Thralls.** Up to three derro that are charmed by the beholder and within 60 feet of it gain temporary hit points equal to the beholder's Charisma modifier (minimum 1). They can immediately use their reaction to move or make a weapon attack.
-- *DM note:* If no thralls are alive or within 60 ft, this lair action does nothing — the beholder wastes its lair action. Use Unstable Ground or Void Eruption instead when thralls have been wiped.
-- *Hit-rate note (FIX-BEL3-38-A):* If thralls are alive but landing 0 hits on a high-AC party (AC 18+), switch to Unstable Ground or Void Eruption — thrall +1 THP and reaction attacks add no real pressure against armored PCs. Manifest Thralls is strongest when thralls can actually hit (AC ≤ 14 targets).
-- *Single-thrall threshold (FIX-BEL3-10-C):* If **≤1 thrall is alive** AND primary standing melee targets are AC 18+, **prefer Unstable Ground over Manifest Thralls**. A lone thrall at +3 to hit has only ~10–15% hit rate vs AC 18/19; UG (DC 16 Dex save) applies ~40% pressure to a fighter with +2 Dex. The UG trade is strictly better. Do not wait for the reaction attack to miss before switching — make the pre-emptive call based on thrall count and target AC. (10th-BEL3-cycle confirm: Manifest Thralls wasted 2 lair actions in R2+R3 with lone TD-C missing both reaction attacks vs AC 18.)*
 
 **Void Eruption.** Each creature within 20 feet of the shrine must make a DC 16 Dexterity saving throw, taking 11 (2d10) force damage on a failed save.
-- *VE vs downed PCs (MQ-FC45-B):* VE targets ALL creatures within 20 ft — no consciousness qualifier. A dying (0 HP) PC on the shrine floor within 20 ft takes VE damage; each hit counts as 1 failed death save (RAW PHB). This can accelerate death-save accumulation significantly if the party has downed PCs in the shrine zone. **DM option:** waive VE against downed bodies if the drama is better served by a focused kill, or if the downed PCs have been moved to the threshold (>20 ft from altar). The legal read is that VE hits them. *(45th-FC-cycle flag: sim excluded downed PCs from VE — this may have prolonged the fight by ~1 round.)*
-- *Cinematic-kill note (FI-FC45-B):* If only one PC remains conscious at ≤ 10 HP and the beholder has a recharged main action (VS, DR, or grapple-Maw), consider holding the lair action (or using Manifest Thralls as a low-impact placeholder) to keep the dramatic killing blow for the beholder's own turn. The lair action firing first (init 20) can steal a kill that would read better as a named ability.
 
 ---
 

@@ -2,7 +2,7 @@
 name: Thrall Derro
 description: "Partially dominated by the beholder; caught between master and oath"
 type: creature
-tags: ["#combat-runner", "#npc", "#combat", "#derro", "#thrulm", "#thrall", "#beholder-touched"]
+tags: ["#npc", "#combat", "#combat-runner", "#derro", "#thrulm", "#thrall", "#beholder-touched"]
 status: active
 created: 2026-04-26
 last-modified: 2026-04-26
@@ -21,7 +21,7 @@ Eyes unfocused. Movements jerky, as if pulled by invisible strings. A derro caug
 | 14 (leather armor, cracked) | 22 (4d8 + 4) | 30 ft. |
 
 | **STR** | **DEX** | **CON** | **INT** | **WIS** | **CHA** |
-|---------|---------|---------|---------|---------|---------|
+|---------|---------|---------|---------|---------|----------|
 | 9 (-1) | 13 (+1) | 12 (+1) | 10 (+0) | 9 (-1) | 7 (-2) |
 
 | **Saving Throws** | None; dominated mind has no saves |
@@ -48,7 +48,7 @@ Eyes unfocused. Movements jerky, as if pulled by invisible strings. A derro caug
 
 ## Actions
 
-**Attack.** The derro makes one melee attack. It does not make additional attacks; the domination is incomplete.
+**Multiattack.** The derro makes one melee attack. It does not make additional attacks; the domination is incomplete.
 
 **Hand Axe (Weak).** *Melee Weapon Attack:* +1 to hit, reach 5 ft., one target. *Hit:* 2 (1d4) slashing damage. This attack has disadvantage if the target is the beholder or another thrall.
 
