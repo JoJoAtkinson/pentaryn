@@ -36,7 +36,7 @@ A derro pumped with madness-born strength. They charge into combat, soak hits me
 
 ## Traits
 
-**Madness Endurance.** The rager has advantage on saving throws against being frightened. When it takes damage, it gains +1 to attack rolls until the end of its next turn (pain fuels it).
+**Madness Endurance.** When it takes damage, it gains +1 to attack rolls until the end of its next turn (pain fuels it).
 
 **Incoming Damage Aggro.** When the rager takes damage from an enemy it can see, the next attack the rager makes against that enemy has advantage. It *remembers* who hit it.
 
@@ -46,7 +46,7 @@ A derro pumped with madness-born strength. They charge into combat, soak hits me
 
 **Multiattack.** Two attacks with Greataxe.
 
-**Greataxe.** *Melee Weapon Attack:* +4 to hit, reach 5 ft., one target. *Hit:* 10 (1d12 + 2) slashing damage.
+**Greataxe.** *Melee Weapon Attack:* +4 to hit, reach 5 ft., one target. *Hit:* 8 (1d12 + 2) slashing damage.
 
 **Berserk (Recharge 5–6).** The rager makes one Greataxe attack against each creature it can reach. It cannot move on this turn.
 
