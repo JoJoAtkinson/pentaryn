@@ -56,7 +56,7 @@
 |------|---|---|
 | **Deep Watch** | Stand in formation, focus-fire targets | Break formation, flank, separate from group |
 | **Thrall** | Move where beholder commands | Kill beholder = thralls stand confused |
-| **Shrine-Touched** | Stay near altar, resist magic, hit harder when hurt | Pull them away from altar or use non-magical damage |
+| **Shrine-Touched** | Stay near altar, resist magic, hit harder when hurt | Fire/radiant damage is effective at any distance; psychic/necrotic is resisted |
 | **Shardcaller** | Hang back 40+ ft, call weaknesses, weaken saves | Rush them or target from range, prevent Weakness calls |
 | **Rager** | Charge in, tank damage, mark attackers | Let them hit your tank, go around them to reach others |
 | **Beholder** | Hover, disintegrate, drain divinity, avoid melee | Get close to it, interrupt rituals, protect casters |
@@ -89,7 +89,7 @@
 2. [CHECK] Is the Beholder using Clay-Shaping? (If yes, it can't move/attack; thralls shield it)
 3. [CHECK] Shardcaller's Call Weakness active? (3/day — one ally has ADVANTAGE on its next attack roll; does NOT affect saves)
 4. [CHECK] Rager Taunt active? (Check if anyone has disadvantage vs non-Rager targets)
-5. [CHECK] Are Shrine-Touched within 60 ft of altar? (They move +10 ft and resist psychic/necrotic)
+5. [CHECK] Are Shrine-Touched within 60 ft of altar? (They resist psychic/necrotic; speed is standard 30 ft — no speed bonus near altar)
 
 **When Beholder Acts:**
 - Does it have a caster lined up? → Disintegration Ray
@@ -111,12 +111,12 @@
 |---|---|---|---|
 | Deep Watch | — | poison | — |
 | Thrall | charmed (enslaved instead), frightened | psychic | — |
-| Shrine-Touched | charmed, frightened | necrotic, psychic | fire, radiant *(suppressed within 60 ft of altar — pull them away first)* |
+| Shrine-Touched | charmed, frightened | necrotic, psychic | fire, radiant |
 | Shardcaller | — | psychic | — |
 | Rager | frightened | poison | — |
 | Beholder | charmed, exhaustion, frightened, paralyzed, petrified, poisoned, prone, restrained | psychic; nonmagic B/P/S (unsanctified weapons) | sanctified weapons (+1d8/hit, not ×2), holy water (+1d8/dose, not ×2) |
 
-**→ Use FIRE and RADIANT against Shrine-Touched — but only outside 60 ft of altar (vulnerability is suppressed in the altar zone). Use SANCTIFIED weapons against Beholder (+1d8/hit — this is a custom bonus, NOT the standard 5e Vulnerability which would double all damage).**
+**→ Use FIRE and RADIANT against Shrine-Touched — vulnerability applies at any distance (no altar suppression in stat block). Use SANCTIFIED weapons against Beholder (+1d8/hit — this is a custom bonus, NOT the standard 5e Vulnerability which would double all damage).**
 
 ---
 
@@ -142,7 +142,7 @@
 |---|---|---|---|
 | **Deep Watch** | Ranged, any | Magic Missile, Scorching Ray | Low HP, no resistances |
 | **Thrall** | Force, fire, melee | Magic Missile, Scorching Ray | Low HP; has psychic resistance — avoid psychic |
-| **Shrine-Touched** | Fire, radiant, nonmagic | Fireball, Guiding Bolt | Resistant to psychic/necrotic; fire/radiant vulnerability suppressed within 60 ft of altar |
+| **Shrine-Touched** | Fire, radiant | Fireball, Guiding Bolt | Resistant to psychic/necrotic; fire/radiant vulnerability applies at any distance |
 | **Shardcaller** | Melee, close-in | Misty Step + melee, Command (retreat) | Squishy if you get close |
 | **Rager** | Magic (it has no resist except poison) | Magic Missile, Eldritch Blast | No saves needed, pure damage |
 | **Beholder** | Sanctified weapons, Dispel Magic | True Strike + sanctified attack | Resistances and flight = annoying |
@@ -169,4 +169,4 @@ This fits on one page. Fold in half or laminate for table use.
 
 ---
 
-*Last Updated: 2026-06-05*
+*Last Updated: 2026-06-18 (R126 — removed false fire/radiant altar-suppression mechanic and incorrect +10 ft speed claim; neither exist in the Shrine-Touched stat block)*
