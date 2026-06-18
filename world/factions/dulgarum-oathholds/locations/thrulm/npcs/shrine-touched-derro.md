@@ -46,7 +46,7 @@ It fights with the fury of something caught between two forces: the oath that tr
 
 **Unstable Form.** When the derro takes damage, its form flickers and destabilizes. After taking 10 or more damage in a single turn, it gains advantage on attack rolls until the end of its next turn, as the shrine's power floods through it.
 
-**Fragmented Mind.** The derro is immune to being charmed or frightened due to the shrine's influence. It cannot be reasoned with about the nature of what has happened to it.
+**Fragmented Mind.** It cannot be reasoned with about the nature of what has happened to it.
 
 ---
 
