@@ -65,7 +65,9 @@ It is territorial, but not mindless. It gathers thralls. It shapes the derro who
 
 **Disintegration Ray (Recharge 5–6).** *Ranged Spell Attack:* +6 to hit, range 120 ft., one creature. *Hit:* 45 (10d8) force damage. If this damage reduces the target to 0 hit points, the target is disintegrated (turned to ash). A creature reduced to 0 HP by this attack cannot be restored to life except by true resurrection or wish.
 
-**Void Scream (Recharge 6).** The beholder emits a piercing sound that warps reality around the shrine. Each creature within 30 feet that can hear it must make a DC 16 Wisdom saving throw, taking 33 (6d10) psychic damage on a failed save, or half as much on a successful one. Creatures within 10 feet of the shrine have disadvantage on this save.
+**Void Scream (Recharge 6).** The beholder emits a piercing sound that warps reality around the shrine. Each creature within 30 feet that can hear it must make a DC 16 Wisdom saving throw, taking 33 (6d10) psychic damage on a failed save, or half as much on a successful one. On a failed save, the target is also **frightened** of the beholder for 1 minute (DC 16 Wisdom saving throw at the end of each of the target's turns ends the effect). Creatures within 10 feet of the shrine have disadvantage on this save.
+- *(FIX-FC46-A) Void Scream FRIGHTENED rider:* The DB action has always included FRIGHTENED on a failed VS save (confirmed in roller output from the 46th cycle). The .md description was missing this rider. FRIGHTENED imposes: disadvantage on attack rolls while the beholder is in line of sight; the target cannot willingly move closer to the beholder. This does NOT affect a creature already prone or grappled (they are already disadvantaged or immobilized). Frightened PCs attempting to flee provoke opportunity attacks if not using Disengage.*
+- *(FIX-FC48-A) VS vs unconscious PCs ("can hear it" clause):* VS affects creatures that **can hear** the scream. An unconscious creature is "unaware of its surroundings" (PHB 294) — ruling: **unconscious creatures cannot hear VS and are excluded from its effect**. Do NOT apply VS damage to a PC already at 0 HP, even if they are within 30 ft. (If applied, 33–35 psychic damage on a 0-HP PC with ≤33 max HP triggers instant death — mechanically valid but anticlimactic and likely unintended.) Redirect VS to conscious targets only. (48th-FC-cycle flag: Marwen at 0 HP, within 30 ft — confirmed ruling needed; excluded from VS this run.)*
 
 ---
 
@@ -79,7 +81,9 @@ It is territorial, but not mindless. It gathers thralls. It shapes the derro who
 
 ## Reactions
 
-**Antireality.** When the beholder is hit by an attack it can see, it can use its reaction to gain +2 AC against that attack (after seeing the roll). The stone beneath it ripples as if underwater.
+**Antireality.** When the beholder is targeted by an attack it can see, it can use its reaction to impose disadvantage on that attack roll (once per round). The stone beneath it ripples as if underwater.
+- *(DM timing note — FIX-F33-A): Do NOT wait for the combat-runner prompt to declare Antireality — the runner fires the prompt after the attack resolves (post-hit, on the damage event), by which point imposing the reaction is retroactive. Declare Antireality the moment the attacker announces their attack, before any dice are rolled. The DB `effect` field currently says "+2 AC" — this is incorrect (BUG-F7-02/A31-07, open 26+ fires). The intended mechanic is disadvantage on the triggering attack roll, per this stat block.)*
+- *(FIX-R122-A) Regression note: the fire #6 and fire #33 fixes both regressed in commit 9a3ee5f (R107 area; the add-#combat-runner commit overwrote accumulated text). Restored here at R122.)*
 
 ---
 
