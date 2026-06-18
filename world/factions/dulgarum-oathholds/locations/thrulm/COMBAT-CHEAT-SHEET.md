@@ -10,7 +10,7 @@
 |----------|--------|--------|----------|----------|--------------|---|
 | **Deep Watch** (CR 1/8) | 15 | 27 | +2 | Hold line, protect team | Middle, with others | Attack + Cunning Action (Disengage) |
 | **Thrall** (CR 1/4) | 14 | 22 | +1 | Obey beholder | Wherever beholder points | Move toward beholder's target |
-| **Shrine-Touched** (CR 3) | 16 | 45 | +2 | Defend shrine | Within 60 ft of altar | Ancient Resonance (cone, DC 14 DEX) |
+| **Shrine-Touched** (CR 3) | 16 | 45 | +2 | Defend shrine | Within 60 ft of altar | Ancient Resonance (cone, DC 14 DEX, Recharge 5–6) |
 | **Shardcaller** (CR 2) | 14 | 33 | +2 | Support allies, weaken enemy saves | Back line (40-60 ft away) | Call Weakness (ally gets advantage) |
 | **Rager** (CR 2) | 16 | 52 | +0 | Tank hits, mark attackers | Front line (melee range) | Taunt (enemy disadvantage vs others) |
 
@@ -88,6 +88,7 @@
 1. [CHECK] Which derro go this initiative count?
 2. [CHECK] Is the Beholder using Clay-Shaping? (If yes, it can't move/attack; thralls shield it)
 3. [CHECK] Shardcaller's Call Weakness active? (3/day — one ally has ADVANTAGE on its next attack roll; does NOT affect saves)
+   - Pack Tactics Voice (passive): whenever any ally hits a target within 30 ft of the shardcaller, that target has DISADVANTAGE on its next saving throw before end of its next turn
 4. [CHECK] Rager Taunt active? (Check if anyone has disadvantage vs non-Rager targets)
 5. [CHECK] Are Shrine-Touched within 60 ft of altar? (They resist psychic/necrotic; speed is standard 30 ft — no speed bonus near altar)
 
@@ -99,7 +100,7 @@
 **When Derro Acts:**
 - Rager? → Charges nearest, uses Taunt if vulnerable target present
 - Shardcaller? → Calls Weakness on whoever is winning, then attacks/retreats
-- Shrine-Touched? → Ancient Resonance on groups, melee on solo targets
+- Shrine-Touched? → Ancient Resonance (Recharge 5–6) on groups, melee on solo targets; track recharge each turn
 - Deep Watch? → Focus-fire with allies, Cunning Action to Disengage
 - Thrall? → Moves toward beholder's target (predictable, use it)
 
@@ -169,4 +170,4 @@ This fits on one page. Fold in half or laminate for table use.
 
 ---
 
-*Last Updated: 2026-06-18 (R126 — removed false fire/radiant altar-suppression mechanic and incorrect +10 ft speed claim; neither exist in the Shrine-Touched stat block)*
+*Last Updated: 2026-06-18 (R127 — added Pack Tactics Voice reminder to round-by-round checklist; added Recharge 5–6 annotation to Ancient Resonance in DERRO TYPES table and round-by-round checklist)*
