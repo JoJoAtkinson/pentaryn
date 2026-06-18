@@ -54,7 +54,7 @@ It fights with the fury of something caught between two forces: the oath that tr
 
 **Multiattack.** The derro makes two attacks with Shrine-Axe.
 
-**Shrine-Axe.** *Melee Weapon Attack:* +4 to hit, reach 5 ft., one target. *Hit:* 6 (1d8 + 1) slashing damage plus 4 (1d8) necrotic damage.
+**Shrine-Axe.** *Melee Weapon Attack:* +4 to hit, reach 5 ft., one target. *Hit:* 5 (1d8 + 1) slashing damage plus 4 (1d8) necrotic damage.
 
 **Ancient Resonance (Recharge 5–6).** The derro emits a wave of pure shrine-energy in a 15-foot cone. Each creature in the area must make a DC 14 Dexterity saving throw, taking 11 (2d10) necrotic damage on a failed save, or half as much on a successful one. Creatures that fail take an additional 2 (1d4) psychic damage as their minds brush against something beyond comprehension.
 
