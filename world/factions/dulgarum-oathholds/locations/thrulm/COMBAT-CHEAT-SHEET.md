@@ -93,6 +93,7 @@
 5. [CHECK] Are Shrine-Touched within 60 ft of altar? (They resist psychic/necrotic; speed is standard 30 ft — no speed bonus near altar)
 
 **When Beholder Acts:**
+- **[IN CHAMBER]** Void-Feeding always active: add +1 to every beholder attack roll and damage roll (runner shows +6; correct in-chamber value is +7 for all attacks).
 - Does it have a caster lined up? → Disintegration Ray
 - Any clerics/paladins? → Drain Divinity (takes spell slots)
 - Otherwise → Void Ray + reposition or Void Scream (full party damage)
@@ -170,4 +171,4 @@ This fits on one page. Fold in half or laminate for table use.
 
 ---
 
-*Last Updated: 2026-06-18 (R127 — added Pack Tactics Voice reminder to round-by-round checklist; added Recharge 5–6 annotation to Ancient Resonance in DERRO TYPES table and round-by-round checklist)*
+*Last Updated: 2026-06-19 (R129 — CS-DRIFT-05: added Void-Feeding +1 reminder to When-Beholder-Acts section; runner shows +6, correct in-chamber is +7 for all beholder attacks)*
