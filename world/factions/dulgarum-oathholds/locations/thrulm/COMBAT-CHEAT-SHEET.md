@@ -22,6 +22,17 @@
 |----------|--------|--------|----------|----------|--------------|---|
 | CR 13 | 17 | 110 | +3 | Drain divinity, disintegrate casters, avoid melee | Hover above altar (40-60 ft up) | **Disintegration Ray** (target highest caster) or **Drain Divinity** (target cleric/paladin) |
 
+**Legendary Actions (3/round, end of another creature's turn):**
+
+| LA Cost | Action | Effect |
+|---------|--------|--------|
+| 1 | Move | Fly up to 30 ft |
+| 1 | Tentacle | One Tentacle Lash attack (+7 in chamber) |
+| 2 | Void Ray | 1 target within 120 ft, DC 16 DEX save, 22 (4d10) force |
+| 3 | Drain Divinity | 1 target within 30 ft, DC 16 CHA save, lose highest spell slot; beholder gains THP |
+
+*Drain Divinity costs the entire LA budget — using it once means no Move or Tentacle that round.*
+
 ---
 
 ## TACTICAL QUICK-SCAN
@@ -91,12 +102,14 @@
    - Pack Tactics Voice (passive): whenever any ally hits a target within 30 ft of the shardcaller, that target has DISADVANTAGE on its next saving throw before end of its next turn
 4. [CHECK] Rager Taunt active? (Check if anyone has disadvantage vs non-Rager targets)
 5. [CHECK] Are Shrine-Touched within 60 ft of altar? (They resist psychic/necrotic; speed is standard 30 ft — no speed bonus near altar)
+6. [CHECK] Initiative count 20? → **Beholder lair action** (Unstable Ground DC 16 DEX/prone, Manifest Thralls +CHA THP + reaction, or Void Eruption DC 16 DEX 2d10 force within 20 ft of shrine — pick most tactically relevant).
 
 **When Beholder Acts:**
 - **[IN CHAMBER]** Void-Feeding always active: add +1 to every beholder attack roll and damage roll (runner shows +6; correct in-chamber value is +7 for all attacks).
 - Does it have a caster lined up? → Disintegration Ray
 - Any clerics/paladins? → Drain Divinity (takes spell slots)
 - Otherwise → Void Ray + reposition or Void Scream (full party damage)
+- **REACTION — Antireality:** When the beholder is targeted by an attack it can see, declare **before the attack roll** — imposes disadvantage on that roll. Once per round. (Combat runner fires the prompt post-hit as a workaround; DM must declare early manually.)
 
 **When Derro Acts:**
 - Rager? → Charges nearest, uses Taunt if vulnerable target present
@@ -171,4 +184,4 @@ This fits on one page. Fold in half or laminate for table use.
 
 ---
 
-*Last Updated: 2026-06-19 (R129 — CS-DRIFT-05: added Void-Feeding +1 reminder to When-Beholder-Acts section; runner shows +6, correct in-chamber is +7 for all beholder attacks)*
+*Last Updated: 2026-06-19 (R131 — CS-DRIFT-06: Antireality reaction added to When-Beholder-Acts; CS-DRIFT-07: Initiative-20 lair action step added to Start-of-Round checklist; CS-DRIFT-08: Legendary action LA-cost table added to Beholder section)*
