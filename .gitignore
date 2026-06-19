@@ -77,3 +77,6 @@ combat-runner/tests/.metrics/
 combat-runner/.testbot/*
 !combat-runner/.testbot/scenarios.yml
 !combat-runner/.testbot/*-cron-prompt.md
+!combat-runner/.testbot/decisions/
+combat-runner/.testbot/decisions/*
+!combat-runner/.testbot/decisions/*.md
