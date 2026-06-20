@@ -14,9 +14,10 @@ slices:
     name: "Disintegration Ray threat ceiling"
     description: >
       Assume recharge rolls 5-6 on turn 1. Beholder targets Marwen (32 HP, AC 15).
-      Roll 10d8 force +6 vs AC 15. If hit: average ~45 damage. Does it one-shot a
-      32-HP Wizard? If yes, is the TPK risk from a single die roll acceptable for
-      this encounter's intent? Record threat ceiling and feel note.
+      Roll 10d8 force +7 vs AC 15 (Void-Feeding +1 always active in chamber). If hit:
+      average ~46 damage (10d8+1 in chamber). Does it one-shot a 32-HP Wizard? If yes,
+      is the TPK risk from a single die roll acceptable for this encounter's intent?
+      Record threat ceiling and feel note.
 
   - id: legendary-action-loop
     name: "Legendary action pacing over one round"
