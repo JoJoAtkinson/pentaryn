@@ -1,13 +1,13 @@
 {
-  "next_index": 5,
+  "next_index": 6,
   "slices": [
-    "threshold-patrol",
-    "shrine-wedge",
-    "tank-wall",
-    "beholder-escorts-limited",
-    "final-confrontation",
-    "solo-rager-rush",
-    "shardcaller-team",
-    "empty-void"
+    "round-1-opener",
+    "disintegration-threat",
+    "legendary-action-loop",
+    "void-scream-clustering",
+    "drain-divinity-vs-sabriel",
+    "lair-action-round",
+    "retreat-threshold",
+    "antireality-timing"
   ]
 }
