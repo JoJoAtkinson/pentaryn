@@ -27,12 +27,12 @@ It fights with the fury of something caught between two forces: the oath that tr
 | 13 (+1) | 15 (+2) | 14 (+2) | 9 (-1) | 8 (-1) | 11 (+0) |
 
 | **Saving Throws** | Dex +5, Con +5 |
-| **Skills** | Perception +1, Stealth +5 |
+| **Skills** | Perception +2, Stealth +5 |
 | **Damage Vulnerabilities** | fire, radiant |
 | **Damage Resistances** | necrotic, psychic |
 | **Damage Immunities** | — |
 | **Condition Immunities** | charmed, frightened |
-| **Senses** | darkvision 120 ft., passive Perception 11 |
+| **Senses** | darkvision 120 ft., passive Perception 12 |
 | **Languages** | Dwarvish, Undercommon (speaks in fragmented prophecy) |
 | **Proficiency Bonus** | +3 |
 
