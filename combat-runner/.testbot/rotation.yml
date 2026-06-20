@@ -27,7 +27,9 @@ slices:
       Sabriel's turn. [FIX-F61-A: prior draft prescribed Move+Tentacle+Void Ray =
       4 LA, which exceeds the 3-LA budget. Move LA removed; Tentacle+Void Ray = 3.]
       Simulate: +7 vs Marwen AC 15 (65% hit, avg 13 bludg + grapple); DC 16 Dex vs
-      Bazgar (80% fail, avg 22 force). Record ~28 avg total LA damage and verify
+      Bazgar (70% fail — DEX +1, needs 15+ to save; TOOL-R162-01 corrected from 80%).
+      Expected Void Ray: 0.70×22 + 0.30×11 = 18.7 avg force. Record ~27 avg total LA
+      damage and verify
       Void Ray (save-based) vs Disintegration Ray (attack-roll) naming is unambiguous
       for the DM.
 
