@@ -240,3 +240,29 @@ scenarios:
         (2) ancient_resonance rolls correctly as 2d10 necrotic DC14 DEX save.
         Feel note: Unstable Form (+advantage on attacks after 10+ damage) has no
         DB representation — DM must apply manually. Log as automation gap.
+
+  - id: thrulm-oath-breaking-dual-damage
+    title: Shrine-touched killed by lethal hit — Oath-Breaking Retaliation fires on death blow, dual damage type verified
+    encounter: thrulm
+    prelude: |
+      Sabriel's radiant smite found the shrine-touched mid-swing. 29 damage.
+      The creature was already dead when the runes flared — but the oath-echo
+      fired anyway, and the axe still landed.
+    turns:
+      - {kind: switch_tab, slug: shrine-touched-derro}
+      - {kind: type, tab: shrine-touched-derro, text: "-28"}
+      - {kind: assert_hp, slug: shrine-touched-derro, expected: 17}
+      - {kind: type, tab: shrine-touched-derro, text: "-29"}
+      - {kind: expect_watch, slug: shrine-touched-derro, action_name: oath_breaking_retaliation}
+    targets:
+      max_click_count: 6
+      reaction_prompts_min: 1
+      notes: |
+        Tests DB-BUG-R156-01: oath_breaking_retaliation reaction must roll BOTH
+        1d8+1 slashing AND 1d8 necrotic in a single output. Currently the DB row
+        has no embedded damage dice — the runner will narrate without rolling.
+        This scenario should FAIL (reaction prompt fires but no dice output) until
+        the DB row is updated via combat_action_upsert with an embedded shrine-axe
+        single_attack spec. Unstable Form advantage should also surface (shrine-touched
+        took 28+29=57 damage this "turn" in the test — well above 10-damage threshold).
+        Regression gate: once fixed, confirm both damage types appear in narration.
