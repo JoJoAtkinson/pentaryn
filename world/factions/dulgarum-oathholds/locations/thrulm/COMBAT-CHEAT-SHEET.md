@@ -143,7 +143,7 @@
 | Shardcaller | Shard-Barrage | 13 | DEX (avoid damage) |
 | Rager | Taunt | 12 | CHA (avoid disadvantage) |
 | Beholder | Disintegration Ray | +7 to hit | (attack roll; +6 base +1 Void-Feeding, always active in chamber) |
-| Beholder | Void Scream | 16 | WIS (psychic damage; on FAILED save: also FRIGHTENED 1 min, DC 16 Wis save ends) |
+| Beholder | Void Scream | 16 | WIS (psychic damage; on FAILED save: also FRIGHTENED 1 min, DC 16 Wis save ends; within 10 ft of shrine: **disadvantage** on this save) |
 | Beholder | Void Ray | 16 | DEX (force damage) |
 | Beholder | Drain Divinity | 16 | CHA (lose spell slot) |
 | Beholder (lair) | Unstable Ground | 16 | DEX (fall prone) |
@@ -184,4 +184,4 @@ This fits on one page. Fold in half or laminate for table use.
 
 ---
 
-*Last Updated: 2026-06-19 (R131 — CS-DRIFT-06: Antireality reaction added to When-Beholder-Acts; CS-DRIFT-07: Initiative-20 lair action step added to Start-of-Round checklist; CS-DRIFT-08: Legendary action LA-cost table added to Beholder section)*
+*Last Updated: 2026-06-21 (R186 — CS-DRIFT-09: Void Scream shrine-proximity disadvantage added to SAVE DCs table)*
