@@ -41,7 +41,7 @@
 
 1. **Are there ranged derro (Shardcaller)?** → They're 40+ feet back. Prioritize them or they buff allies.
 2. **Is there a tank (Rager)?** → It will Taunt and mark attackers. Don't ignore it or it taunts your casters.
-3. **Are there Shrine-Touched?** → They resist psychic/necrotic and are faster near altar. Reposition or use fire/radiant.
+3. **Are there Shrine-Touched?** → They resist psychic/necrotic; speed 30 ft (no bonus near altar). Reposition or use fire/radiant.
 4. **Is the beholder here?** → It's hovering above, picking off spellcasters. Your casters need cover or interruption.
 5. **How many Thralls?** → They act on their own initiative (DEX +1, usually last in order). The beholder can ALSO direct them via Compel Thrall (BA) or Manifest Thralls (lair action). They're minions; eliminate to reduce beholder's action economy.
 
@@ -184,4 +184,4 @@ This fits on one page. Fold in half or laminate for table use.
 
 ---
 
-*Last Updated: 2026-06-21 (R186 — CS-DRIFT-09: Void Scream shrine-proximity disadvantage added to SAVE DCs table)*
+*Last Updated: 2026-06-21 (R191 — CS-DRIFT-25: removed incorrect "faster near altar" from Tactical Quick-Scan #3; Shrine-Touched speed is 30 ft always)*
