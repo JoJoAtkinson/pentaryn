@@ -107,7 +107,7 @@
 **When Beholder Acts:**
 - **[IN CHAMBER]** Void-Feeding always active: add +1 to every beholder attack roll and damage roll (runner shows +6; correct in-chamber value is +7 for all attacks).
 - Does it have a caster lined up? → Disintegration Ray
-- Any clerics/paladins? → Drain Divinity (takes spell slots)
+- Any clerics/paladins within 30 ft? → Drain Divinity (takes spell slots; **30 ft range** — beholder must descend from default 40-60 ft hover to use)
 - Otherwise → Void Ray + reposition or Void Scream (full party damage)
 - **REACTION — Antireality:** When the beholder is targeted by an attack it can see, declare **before the attack roll** — imposes disadvantage on that roll. Once per round. (Combat runner fires the prompt post-hit as a workaround; DM must declare early manually.)
 
