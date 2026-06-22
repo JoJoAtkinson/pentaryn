@@ -266,3 +266,25 @@ scenarios:
         single_attack spec. Unstable Form advantage should also surface (shrine-touched
         took 28+29=57 damage this "turn" in the test — well above 10-damage threshold).
         Regression gate: once fixed, confirm both damage types appear in narration.
+
+  - id: thrulm-rager-berserk-gate
+    title: Rager uses Berserk — type "utility" rolls no dice; regression gate for BUG-RAGER-BERSERK-TYPE
+    encounter: thrulm
+    prelude: |
+      The rager has been hit twice. It stops moving and becomes pure geometry —
+      the greataxe describes a full circle and the world gets smaller.
+    turns:
+      - {kind: switch_tab, slug: derro-rager}
+      - {kind: type, tab: derro-rager, text: "berserk"}
+    targets:
+      max_click_count: 4
+      max_llm_fallback: 0
+      notes: |
+        Regression gate for BUG-RAGER-BERSERK-TYPE (HIGH, 15+ fires).
+        `berserk` is currently type "utility" with no attacks array — the runner
+        will narrate without rolling any dice. This scenario SHOULD FAIL (narration
+        fires but no 1d12 dice output) until `berserk` is re-authored via
+        combat_action_upsert as type "area" or given an embedded attacks spec.
+        Pass condition: roller output contains a 1d12 roll (at least one greataxe
+        attack against each creature in reach). Recharge 5–6 label should also
+        appear once the type is corrected.
