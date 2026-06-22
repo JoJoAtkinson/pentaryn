@@ -4,6 +4,9 @@ PY := $(shell if [ -x ./.venv/bin/python ]; then echo ./.venv/bin/python; elif [
 # Prime party — The Compass Edge — preloaded by `make prime`.
 PARTY_PRIME := world/party/the-compass-edge/combat-roster.yml
 
+# Second party — Grant Gang — preloaded by `make second`.
+PARTY_SECOND := world/party/grant-gang/combat-roster.yml
+
 # ─── Combat-runner GUI (PySide6 + qt-material) ──────────────────────────
 # Opens the encounter picker, lets you pick mob counts, then launches the
 # multi-tab combat window. Discovers NPCs by the #combat-runner tag and reads
@@ -25,6 +28,11 @@ combat-gui: combat
 .PHONY: prime
 prime:
 	@cd $(ROOT) && PYTHONPATH=combat-runner $(PY) -m gui.app --party $(PARTY_PRIME)
+
+# Launch the GUI with the second party (Grant Gang) preloaded. Roster: $(PARTY_SECOND)
+.PHONY: second
+second:
+	@cd $(ROOT) && PYTHONPATH=combat-runner $(PY) -m gui.app --party $(PARTY_SECOND)
 
 # Run the test suite for the GUI (skips scenarios by default for speed; use
 # `make combat-test-all` for the full ring including scenarios).

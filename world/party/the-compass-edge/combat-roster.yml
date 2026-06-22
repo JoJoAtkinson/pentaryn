@@ -6,5 +6,5 @@
 party: The Compass Edge
 players:
   - { name: Bazgar,  id: "1", max_hp: 49, ac: 18 }   # Orc Fighter (Battlemaster) — chain shirt + shield
-  - { name: Marwen,  id: "2", max_hp: 32, ac: 15 }   # Wizard (d6) — Mage Armor (13) + Dex 14
+  - { name: Marwen,  id: "2", max_hp: 52, ac: 14 }   # Wizard (d6) — Mage Armor (13) + Dex 14
   - { name: Sabriel, id: "3", max_hp: 44, ac: 19 }   # divine martial — heavy armor + shield

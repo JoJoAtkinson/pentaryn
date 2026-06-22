@@ -10,6 +10,7 @@
     ]
   },
   "enabledPlugins": {
-    "discord@claude-plugins-official": true
+    "discord@claude-plugins-official": true,
+    "skill-creator@claude-plugins-official": true
   }
 }

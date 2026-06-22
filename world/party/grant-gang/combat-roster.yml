@@ -1,0 +1,5 @@
+party: Grant Gang
+players:
+  - { name: Pipfuhk,  id: "1", max_hp: 8, ac: 12 }   
+  - { name: Nimbee-Ray,  id: "2", max_hp: 8, ac: 12 }  
+  - { name: Bargh, id: "3", max_hp: 15, ac: 12 }  
