@@ -139,7 +139,7 @@
 
 | Type | What They Force | DC | Save Type |
 |---|---|---|---|
-| Shrine-Touched | Ancient Resonance | 14 | DEX (avoid damage) |
+| Shrine-Touched | Ancient Resonance | 14 | DEX (11 (2d10) necrotic; on fail: +2 (1d4) psychic) |
 | Shardcaller | Shard-Barrage | 13 | DEX (avoid damage) |
 | Rager | Taunt | 12 | CHA (avoid disadvantage) |
 | Beholder | Disintegration Ray | +7 to hit | (attack roll; +6 base +1 Void-Feeding, always active in chamber) |
