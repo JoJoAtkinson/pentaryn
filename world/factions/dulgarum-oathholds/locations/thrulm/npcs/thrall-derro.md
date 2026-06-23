@@ -52,7 +52,7 @@ Eyes unfocused. Movements jerky, as if pulled by invisible strings. A derro caug
 
 **Hand Axe (Weak).** *Melee Weapon Attack:* +1 to hit, reach 5 ft., one target. *Hit:* 2 (1d4) slashing damage. This attack has disadvantage if the target is the beholder or another thrall.
 
-**Dagger (Desperate).** *Melee or Ranged Weapon Attack:* +3 to hit, reach 5 ft. or range 20/60 ft., one target. *Hit:* 4 (1d4 + 2) piercing damage.
+**Dagger (Desperate).** *Melee or Ranged Weapon Attack:* +3 to hit, reach 5 ft. or range 20/60 ft., one target. *Hit:* 3 (1d4 + 1) piercing damage.
 
 ---
 
