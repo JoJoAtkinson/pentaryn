@@ -10,7 +10,7 @@ last-modified: 2026-04-26
 
 # The Hunger Below (Unnamed Beholder)
 
-**HP** 110 (13d10+39) **·** **AC** 17 **·** **Speed** 0 ft., fly 30 ft. (hover) **·** **Saves** Dex +6, Wis +5 **·** **Immunities** charmed, frightened, paralyzed, prone **·** **Truesight** 120 ft. **·** **CR** 13 (10,000 XP)
+**HP** 110 (13d10+39) **·** **AC** 17 **·** **Speed** 0 ft., fly 30 ft. (hover) **·** **Saves** Dex +6, Wis +5 **·** **Immunities** charmed, exhaustion, frightened, paralyzed, petrified, poisoned, prone, restrained **·** **Truesight** 120 ft. **·** **CR** 13 (10,000 XP)
 
 > Action mechanics live in `combat-runner/actions.jsonl` — see **Ready actions** for verbs and call signatures.
 
