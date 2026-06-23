@@ -109,7 +109,7 @@
 - Does it have a caster lined up? → Disintegration Ray
 - Any clerics/paladins within 30 ft? → Drain Divinity (takes spell slots; **30 ft range** — beholder must descend from default 40-60 ft hover to use)
 - Otherwise → Void Ray + reposition or Void Scream (full party damage)
-- **REACTION — Antireality:** When the beholder is targeted by an attack it can see, declare **before the attack roll** — imposes disadvantage on that roll. Once per round. (Combat runner fires the prompt post-hit as a workaround; DM must declare early manually.)
+- **REACTION — Antireality:** When the beholder is targeted by an attack it can see, declare **before the attack roll** — imposes disadvantage on that roll. Once per round. (Combat runner fires the prompt pre-roll on `action_executed` event — post-R224 fix; no manual early-declare needed.)
 
 **When Derro Acts:**
 - Rager? → Charges nearest, uses Taunt if vulnerable target present
@@ -184,4 +184,4 @@ This fits on one page. Fold in half or laminate for table use.
 
 ---
 
-*Last Updated: 2026-06-21 (R191 — CS-DRIFT-25: removed incorrect "faster near altar" from Tactical Quick-Scan #3; Shrine-Touched speed is 30 ft always)*
+*Last Updated: 2026-06-23 (R231 — CS-DRIFT-R231-01: Antireality parenthetical updated to reflect R224 pre-roll fix; CS-DRIFT-R213-01 confirmed closed — Drain Divinity 30-ft range present)*
