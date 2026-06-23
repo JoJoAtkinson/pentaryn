@@ -288,3 +288,63 @@ scenarios:
         Pass condition: roller output contains a 1d12 roll (at least one greataxe
         attack against each creature in reach). Recharge 5–6 label should also
         appear once the type is corrected.
+
+  - id: thrulm-beholder-tentacle-grapple
+    title: Beholder multiattack → Marwen grappled → Maw advantage verified → Antireality on counter
+    encounter: thrulm
+    prelude: |
+      The shrine chamber is silent save for the copper taste of the air. The Hunger
+      drifts from the altar — tentacles trailing. Marwen is nearest. Bazgar raises his
+      shield. The stone beneath the beholder ripples as if underwater.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "multi"}
+      - {kind: type, tab: beholder-thrulm, text: "lash"}
+      - {kind: type, tab: beholder-thrulm, text: "-15"}
+      - {kind: assert_hp, slug: beholder-thrulm, expected: 95}
+    targets:
+      max_click_count: 10
+      max_llm_fallback: 0
+      notes: |
+        Tests: (1) multiattack rolls all 3 sub-attacks with grapple riders on both
+        tentacles. (2) 'lash' verb resolves to tentacle_legendary (not multiattack).
+        (3) Antireality prompt fires on incoming attack (action_executed event after
+        BUG-F7-02 fix R224) — verify prompt appears BEFORE damage is resolved.
+        Regression gate for BUG-F7-02: if prompt still fires on damage event, this
+        cycle didn't fully take.
+
+  - id: thrulm-disintegration-recharge
+    title: Disintegration Ray fires → recharge label surfaces → round advance ticks recharge
+    encounter: thrulm
+    prelude: |
+      Marwen is down. The beholder angles toward Bazgar — the void within it hungry
+      for something durable to unmake.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "disintegrate"}
+      - {kind: click_round}
+    targets:
+      max_click_count: 8
+      notes: |
+        Tests: (1) disintegration_ray surfaces recharge=5 label in output.
+        (2) Permanent-death rider text appears in narration ("cannot be restored
+        except by true resurrection or wish"). (3) After click_round, DM sees
+        the recharge roll prompt. Design flag: FEEL-003 — permanent death on
+        a "meant to lose" fight; Joe may want a soft-kill variant for Compass Edge.
+
+  - id: thrulm-void-scream-aoe
+    title: Void Scream (recharge 6) — psychic AoE with shrine-proximity penalty and frightened rider
+    encounter: thrulm
+    prelude: |
+      All three PCs converge. The beholder rises above the altar, tentacles spread wide.
+      A pressure builds behind the eyes. Then it screams without a mouth.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "scream"}
+    targets:
+      max_click_count: 5
+      notes: |
+        Tests: (1) void_scream surfaces recharge=6 and the 30-ft-radius area tag.
+        (2) Frightened rider text appears (FIX-FC46-A). (3) "Creatures within 10 ft
+        of shrine have disadvantage" reminder surfaces (FIX-FC48-A). DC 16 Wis save,
+        6d10 psychic, half on success. Unconscious PCs excluded per FIX-FC48-A ruling.

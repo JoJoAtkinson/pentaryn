@@ -2,13 +2,30 @@
 name: The Hunger Below (Beholder)
 description: "An eye-creature drawn to the void left by a sealed god; feeds on the absence of divinity"
 type: creature
-tags: ["#npc", "#combat", "#combat-runner", "#beholder", "#thrulm", "#boss", "#aberration"]
+tags: ["#npc", "#combat", "#combat-runner", "#beholder", "#thrulm", "#boss", "#aberration", "#cr-13"]
 status: active
 created: 2026-04-26
 last-modified: 2026-04-26
 ---
 
 # The Hunger Below (Unnamed Beholder)
+
+**HP** 110 (13d10+39) **·** **AC** 17 **·** **Speed** 0 ft., fly 30 ft. (hover) **·** **Saves** Dex +6, Wis +5 **·** **Immunities** charmed, frightened, paralyzed, prone **·** **Truesight** 120 ft. **·** **CR** 13 (10,000 XP)
+
+> Action mechanics live in `combat-runner/actions.jsonl` — see **Ready actions** for verbs and call signatures.
+
+---
+
+## Start-of-turn checklist
+
+1. **Antireality** reaction resets to AVAILABLE. Declare it when the *attacker announces their attack*, before any dice (see BUG-F7-02 fix note in DB).
+2. If **Disintegration Ray** USED: roll d6 — recovers on 5–6.
+3. If **Void Scream** USED: roll d6 — recovers on 6 only.
+4. **Legendary Resistance (3/Day):** mark each use. Refills at dawn (i.e., never mid-combat).
+5. **Void-Feeding:** If the beholder is near the shrine altar, add +1 to all attack rolls and damage rolls manually at the table (not baked into DB values).
+6. Reset legendary actions to 3.
+
+---
 
 *Lesson: Not all hungers are created in the normal way.*
 
