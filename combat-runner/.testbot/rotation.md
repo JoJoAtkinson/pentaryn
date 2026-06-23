@@ -23,6 +23,6 @@ Add new slices at the bottom; never reorder (that would scramble the rotation).
 
 7. **Legendary Resistance Trigger** — Simulate a round where Marwen casts a save-based spell (e.g. Hold Person DC 14). Beholder fails the save, uses Legendary Resistance. Log: how many LR uses does the party realistically force before the beholder runs out? (3 total)
 
-8. **Antireality Reaction Economy** — PC makes attack vs beholder AC 17. Beholder uses Antireality (+2 AC). Evaluate whether this reaction meaningfully changes outcomes (rolls that hit 17-18 now need 19-20). Is this a feel-good reaction or a dominant one?
+8. **Antireality Reaction Economy** — PC makes attack vs beholder AC 17. Beholder uses Antireality (imposes **disadvantage** on the triggering attack roll — pre-roll, fires on `action_executed` event per R224 fix; NOT "+2 AC"). Evaluate whether halving the hit-rate on one attack per round meaningfully changes outcomes. Is this a feel-good reaction or a dominant one?
 
 9. **Retreat Sequence** — Beholder drops below 30 HP. Simulate tactical retreat using Shrine-Drift + thrall screen. Does the movement math let it escape? Can the party pursue a hovering, phasing creature?
