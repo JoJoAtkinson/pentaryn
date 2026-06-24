@@ -64,7 +64,7 @@ It is territorial, but not mindless. It gathers thralls. It shapes the derro who
 
 **Void-Feeding.** The beholder is strengthened by the absence of divinity. While within the chamber containing the sealed shrine, it gains:
 - +1 to attack rolls and damage rolls
-- Advantage on checks to resist being turned by divine magic
+- *(FIX-R247-A) Removed: "Advantage on checks to resist being turned by divine magic" — redundant with frightened condition immunity. Any Turn mechanic applies the Turned/frightened condition; the beholder's explicit frightened immunity means no save is ever made, making any advantage on that save meaningless. Same pattern as Rager Madness Endurance fix (earlier fire).*
 
 **Clay-Shaping.** The beholder can transmute raw clay into derro through a transmutation ritual that takes 1 minute of uninterrupted concentration. During the ritual, the beholder cannot move, attack, or use other abilities. The ritual requires a 5-foot cube of clay (plentiful in Thrulm deposits). When complete, a **Derro Guard** or **Thrall Derro** fully-formed emerges (beholder's choice). The new derro is charmed by the beholder and obeys its telepathic commands. A derro created this way lasts for 7 days before the clay either hardens permanently (becoming a real creature that retains charm toward the beholder) or crumbles (if not tended). The beholder can have up to 6 derro under this charm at any time.
 
