@@ -76,8 +76,9 @@ slices:
   - id: antireality-timing
     name: "Antireality reaction — disadvantage flip rate and economy"
     description: >
-      [Updated fire #22 — fire #6 changed Antireality from +2 AC post-roll to
-      pre-roll disadvantage; DB entry still shows old text (BUG-F7-02).]
+      [BUG-F7-02 CLOSED R224: fire #6 changed Antireality from +2 AC post-roll to
+      pre-roll disadvantage; DB entry confirmed correct at R224 — "impose disadvantage
+      on the triggering attack roll." No stale text remains in DB.]
       Bazgar attacks beholder: +7 to hit vs AC 17 — needs 10+ to hit (55% base).
       Beholder uses Antireality (reaction, once per round) to impose DISADVANTAGE
       on the triggering attack roll. With disadvantage, hit rate drops to ~30%
