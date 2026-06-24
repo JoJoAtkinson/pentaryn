@@ -129,7 +129,7 @@
 | Shrine-Touched | charmed, frightened | necrotic, psychic | fire, radiant |
 | Shardcaller | — | psychic | — |
 | Rager | frightened | poison | — |
-| Beholder | charmed, exhaustion, frightened, paralyzed, petrified, poisoned, prone, restrained | psychic; nonmagic B/P/S (unsanctified weapons) | sanctified weapons (+1d8/hit, not ×2), holy water (+1d8/dose, not ×2) |
+| Beholder | charmed, exhaustion, frightened, paralyzed, petrified, poisoned (cond.), prone, restrained; **poison (dmg.)** | psychic; nonmagic B/P/S (unsanctified weapons) | sanctified weapons (+1d8/hit, not ×2), holy water (+1d8/dose, not ×2) |
 
 **→ Use FIRE and RADIANT against Shrine-Touched — vulnerability applies at any distance (no altar suppression in stat block). Use SANCTIFIED weapons against Beholder (+1d8/hit — this is a custom bonus, NOT the standard 5e Vulnerability which would double all damage).**
 
@@ -184,4 +184,4 @@ This fits on one page. Fold in half or laminate for table use.
 
 ---
 
-*Last Updated: 2026-06-23 (R231 — CS-DRIFT-R231-01: Antireality parenthetical updated to reflect R224 pre-roll fix; CS-DRIFT-R213-01 confirmed closed — Drain Divinity 30-ft range present)*
+*Last Updated: 2026-06-24 (R261 — CS-DRIFT-R256-01 applied: beholder "poisoned (cond.)" split from "poison (dmg.)" in Immune To column; flagged open since R256)*
