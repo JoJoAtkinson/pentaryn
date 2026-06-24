@@ -210,7 +210,7 @@ scenarios:
       Then the hunger spoke, and the feet moved.
     turns:
       - {kind: switch_tab, slug: thrall-derro}
-      - {kind: type, tab: thrall-derro, text: "hand axe"}
+      - {kind: type, tab: thrall-derro, text: "axe"}
       - {kind: type, tab: thrall-derro, text: "compelled"}
       - {kind: click_round}
     targets:
