@@ -128,8 +128,9 @@ Still open (needs human decision or interactive MCP session):
 - ~~**All 6 NPCs have ZERO rows in actions.jsonl**~~ — **RESOLVED as of fire #60 (2026-06-14):**
   all 6 NPCs now have DB rows (beholder 14, shardcaller 4, shrine-touched 4, rager 3,
   deep-watch 2, thrall 2 = 29 rows; `validate` → 0 invalid). Encounter can run in GUI.
-  Open DB bugs remain (Antireality "+2 AC" text, void_ray type "area", thrall multiattack
-  fires dagger stats) — see decisions log for details.
+  Open DB bugs remain (~~Antireality "+2 AC" text~~ **CLOSED R224** — DB effect field confirmed
+  correct at R281 audit; void_ray type "area", thrall multiattack fires dagger stats) — see
+  decisions log for details.
 - Beholder attack/save bonuses appear to use PB +3 while stated CR 13 calls for PB +5.
   Joe must decide: lower CR label (to ~8) or raise all modifiers.
 - Drain Divinity legendary: spends all 3 legendary actions; degenerate every round vs.
