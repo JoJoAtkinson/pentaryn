@@ -27,7 +27,7 @@
 | LA Cost | Action | Effect |
 |---------|--------|--------|
 | 1 | Move | Fly up to 30 ft |
-| 1 | Tentacle | One Tentacle Lash attack (+7 in chamber) |
+| 1 | Tentacle | One Tentacle Lash attack (+9 in chamber) |
 | 2 | Void Ray | 1 target within 120 ft, DC 16 DEX save, 22 (4d10) force |
 | 3 | Drain Divinity | 1 target within 30 ft, DC 16 CHA save, lose highest spell slot; beholder gains THP |
 
@@ -105,7 +105,7 @@
 6. [CHECK] Initiative count 20? → **Beholder lair action** (Unstable Ground DC 16 DEX/prone, Manifest Thralls +CHA THP + reaction, or Void Eruption DC 16 DEX 2d10 force within 20 ft of shrine — pick most tactically relevant).
 
 **When Beholder Acts:**
-- **[IN CHAMBER]** Void-Feeding always active: add +1 to every beholder attack roll and damage roll (runner shows +6; correct in-chamber value is +7 for all attacks).
+- **[IN CHAMBER]** Void-Feeding always active: add +1 to every beholder attack roll and damage roll (runner shows +8; add +1 for in-chamber value of +9 for all attacks).
 - Does it have a caster lined up? → Disintegration Ray
 - Any clerics/paladins within 30 ft? → Drain Divinity (takes spell slots; **30 ft range** — beholder must descend from default 40-60 ft hover to use)
 - Otherwise → Void Ray + reposition or Void Scream (full party damage)
@@ -142,7 +142,7 @@
 | Shrine-Touched | Ancient Resonance | 14 | DEX (11 (2d10) necrotic; on fail: +2 (1d4) psychic) |
 | Shardcaller | Shard-Barrage | 13 | DEX (avoid damage) |
 | Rager | Taunt | 12 | CHA (avoid disadvantage) |
-| Beholder | Disintegration Ray | +7 to hit | (attack roll; +6 base +1 Void-Feeding, always active in chamber) |
+| Beholder | Disintegration Ray | +9 to hit | (attack roll; +8 base +1 Void-Feeding, always active in chamber) |
 | Beholder | Void Scream | 16 | WIS (psychic damage; on FAILED save: also FRIGHTENED 1 min, DC 16 Wis save ends; within 10 ft of shrine: **disadvantage** on this save) |
 | Beholder | Void Ray | 16 | DEX (force damage) |
 | Beholder | Drain Divinity | 16 | CHA (lose spell slot) |
@@ -184,4 +184,4 @@ This fits on one page. Fold in half or laminate for table use.
 
 ---
 
-*Last Updated: 2026-06-24 (R261 — CS-DRIFT-R256-01 applied: beholder "poisoned (cond.)" split from "poison (dmg.)" in Immune To column; flagged open since R256)*
+*Last Updated: 2026-06-26 (R301 — CS-DRIFT-R301-01: beholder attack bonus references updated from +6/+7 to +8/+9. DB was corrected to to_hit_bonus=8 in commit 205a505; cheat sheet was stale since R261.)*

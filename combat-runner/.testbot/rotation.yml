@@ -14,7 +14,7 @@ slices:
     name: "Disintegration Ray threat ceiling"
     description: >
       Assume recharge rolls 5-6 on turn 1. Beholder targets Marwen (32 HP, AC 15).
-      Roll 10d8 force +7 vs AC 15 (Void-Feeding +1 always active in chamber). If hit:
+      Roll 10d8 force +9 vs AC 15 (DB to_hit_bonus=8, +1 Void-Feeding always active in chamber). If hit:
       average ~46 damage (10d8+1 in chamber). Does it one-shot a 32-HP Wizard? If yes,
       is the TPK risk from a single die roll acceptable for this encounter's intent?
       Record threat ceiling and feel note.
@@ -27,8 +27,8 @@ slices:
       Marwen's turn → Void Ray (2 LA) after Bazgar's turn → 0 LA remaining after
       Sabriel's turn. [FIX-F61-A: prior draft prescribed Move+Tentacle+Void Ray =
       4 LA, which exceeds the 3-LA budget. Move LA removed; Tentacle+Void Ray = 3.]
-      Simulate: +7 vs Marwen AC 15 (65% hit, avg 14 bludg + grapple — 3d6+4 in chamber,
-      Void-Feeding +1 always active); DC 16 Dex vs Bazgar (70% fail — DEX +1, needs 15+
+      Simulate: +9 vs Marwen AC 15 (75% hit, avg 14 bludg + grapple — 3d6+4 in chamber,
+      Void-Feeding +1 always active; DB to_hit_bonus=8); DC 16 Dex vs Bazgar (70% fail — DEX +1, needs 15+
       to save; TOOL-R162-01 corrected from 80%). Expected Void Ray: 0.70×23 + 0.30×11 =
       19.4 avg force (4d10+1 in chamber). Record ~28.5 avg total LA damage and verify
       Void Ray (save-based) vs Disintegration Ray (attack-roll) naming is unambiguous
