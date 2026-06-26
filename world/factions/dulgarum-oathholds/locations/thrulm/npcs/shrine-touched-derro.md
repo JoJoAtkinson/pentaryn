@@ -50,6 +50,16 @@ It fights with the fury of something caught between two forces: the oath that tr
 
 ---
 
+## Start-of-Turn Checklist
+
+1. **Unstable Form:** Did the derro take **10 or more damage** in a single hit last turn?
+   If yes → it has **advantage on ALL attack rolls** (including Oath-Breaking Retaliation)
+   until the end of THIS turn. Clear after this turn ends.
+2. **Ancient Resonance:** If used last turn, roll d6 — recharges on 5–6.
+3. **Shrine-Bound:** Did the derro end its last turn more than 300 ft from the shrine? (Unlikely in chamber — skip if not applicable.)
+
+---
+
 ## Actions
 
 **Multiattack.** The derro makes two attacks with Shrine-Axe.
