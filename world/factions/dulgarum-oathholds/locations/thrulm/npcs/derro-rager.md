@@ -46,7 +46,7 @@ A derro pumped with madness-born strength. They charge into combat, soak hits me
 
 **Multiattack.** Two attacks with Greataxe.
 
-**Greataxe.** *Melee Weapon Attack:* +4 to hit, reach 5 ft., one target. *Hit:* 10 (1d12 + 2) slashing damage.
+**Greataxe.** *Melee Weapon Attack:* +4 to hit, reach 5 ft., one target. *Hit:* 9 (1d12 + 2) slashing damage.
 
 **Berserk (Recharge 5–6).** The rager makes one Greataxe attack against each creature it can reach. It cannot move on this turn.
 
