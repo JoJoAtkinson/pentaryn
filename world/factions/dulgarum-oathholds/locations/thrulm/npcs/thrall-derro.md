@@ -10,6 +10,18 @@ last-modified: 2026-04-26
 
 # Thrall Derro (Beholder-Dominated)
 
+**HP** 22 (4d8+4) **·** **AC** 14 (leather) **·** **Speed** 30 ft. **·** No useful saves **·** Resist: psychic **·** **CR** ~1/4
+
+> Action mechanics in `combat-runner/actions.jsonl`.
+
+## Start-of-turn checklist
+
+1. No recharges. No reactions (cannot react independently).
+2. One melee attack per turn (domination incomplete).
+3. **Compelled Movement (Bonus Action):** Beholder can direct this thrall up to 30 ft — use `note` to log the direction.
+
+---
+
 Eyes unfocused. Movements jerky, as if pulled by invisible strings. A derro caught between two commands: the oath that bound them, and the hunger that now *owns* them.
 
 ---

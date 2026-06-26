@@ -10,7 +10,7 @@ last-modified: 2026-04-26
 
 # The Hunger Below (Unnamed Beholder)
 
-**HP** 110 (13d10+39) **·** **AC** 17 **·** **Speed** 0 ft., fly 30 ft. (hover) **·** **Saves** Dex +6, Wis +5 **·** **Immunities** charmed, exhaustion, frightened, paralyzed, petrified, poisoned, prone, restrained **·** **Truesight** 120 ft. **·** **CR** 13 (10,000 XP)
+**HP** 110 (13d10+39) **·** **AC** 17 **·** **Speed** 0 ft., fly 30 ft. (hover) **·** **Saves** Dex +8, Wis +7 **·** **Immunities** charmed, exhaustion, frightened, paralyzed, petrified, poisoned, prone, restrained **·** **Truesight** 120 ft. **·** **CR** 13 (10,000 XP)
 
 > Action mechanics live in `combat-runner/actions.jsonl` — see **Ready actions** for verbs and call signatures.
 
@@ -21,9 +21,9 @@ last-modified: 2026-04-26
 1. **Antireality** reaction resets to AVAILABLE. Declare it when the *attacker announces their attack*, before any dice (see BUG-F7-02 fix note in DB).
 2. If **Disintegration Ray** USED: roll d6 — recovers on 5–6.
 3. If **Void Scream** USED: roll d6 — recovers on 6 only.
-4. **Legendary Resistance (3/Day):** mark each use. Refills at dawn (i.e., never mid-combat).
-5. **Void-Feeding:** If the beholder is near the shrine altar, add +1 to all attack rolls and damage rolls manually at the table (not baked into DB values).
-6. Reset legendary actions to 3.
+4. **Legendary Actions:** 3 available per round (spend between turns). Options: Move (1), Tentacle Lash (1), Void Ray (2), Drain Divinity (3).
+5. **Legendary Resistance (3/Day):** mark each use. Refills at dawn (i.e., never mid-combat).
+6. **Void-Feeding:** If the beholder is near the shrine altar, add +1 to all attack rolls and damage rolls manually at the table (not baked into DB values).
 
 ---
 
@@ -45,7 +45,7 @@ It is territorial, but not mindless. It gathers thralls. It shapes the derro who
 |---------|---------|---------|---------|---------|----------|
 | 8 (-1) | 16 (+3) | 16 (+3) | 17 (+3) | 14 (+2) | 13 (+1) |
 
-| **Saving Throws** | Dex +6, Wis +5 |
+| **Saving Throws** | Dex +8, Wis +7 |
 | **Skills** | Arcana +6, Perception +5 |
 | **Damage Resistances** | psychic; nonmagic B/P/S from non-sanctified weapons |
 | **Damage Immunities** | poison |
@@ -76,12 +76,12 @@ It is territorial, but not mindless. It gathers thralls. It shapes the derro who
 
 **Multiattack.** The beholder makes three attacks: two with **Tentacle Lash** and one with **Maw**.
 
-**Tentacle Lash.** *Melee Weapon Attack:* +6 to hit, reach 10 ft., one target. *Hit:* 14 (3d6 + 3) bludgeoning damage, and the target is grappled (escape DC 16). The beholder has four tentacles; it can grapple up to four creatures at once. Each tentacle can be targeted separately (AC 15, 15 HP).
+**Tentacle Lash.** *Melee Weapon Attack:* +8 to hit, reach 10 ft., one target. *Hit:* 14 (3d6 + 3) bludgeoning damage, and the target is grappled (escape DC 16). The beholder has four tentacles; it can grapple up to four creatures at once. Each tentacle can be targeted separately (AC 15, 15 HP).
 
-**Maw.** *Melee Weapon Attack:* +6 to hit, reach 5 ft., one target. *Hit:* 21 (4d8 + 3) piercing damage. If the target is a creature grappled by the beholder, the target has disadvantage on ability checks to escape the grapple.
+**Maw.** *Melee Weapon Attack:* +8 to hit, reach 5 ft., one target. *Hit:* 21 (4d8 + 3) piercing damage. If the target is a creature grappled by the beholder, the target has disadvantage on ability checks to escape the grapple.
 - *(FIX-R220-A) BUG-R216-01 resolved: prior text read "disadvantage on the saving throw" — the Maw is a weapon attack with no saving throw. Correct mechanic is disadvantage on the contested Athletics/Acrobatics check to escape the grapple (PHB "Grappled" condition). First logged R216, reproduced R217–R219, fixed R220.)*
 
-**Disintegration Ray (Recharge 5–6).** *Ranged Spell Attack:* +6 to hit, range 120 ft., one creature. *Hit:* 45 (10d8) force damage. If this damage reduces the target to 0 hit points, the target is disintegrated (turned to ash). A creature reduced to 0 HP by this attack cannot be restored to life except by true resurrection or wish.
+**Disintegration Ray (Recharge 5–6).** *Ranged Spell Attack:* +8 to hit, range 120 ft., one creature. *Hit:* 45 (10d8) force damage. If this damage reduces the target to 0 hit points, the target is disintegrated (turned to ash). A creature reduced to 0 HP by this attack cannot be restored to life except by true resurrection or wish.
 
 **Void Scream (Recharge 6).** The beholder emits a piercing sound that warps reality around the shrine. Each creature within 30 feet that can hear it must make a DC 16 Wisdom saving throw, taking 33 (6d10) psychic damage on a failed save, or half as much on a successful one. On a failed save, the target is also **frightened** of the beholder for 1 minute (DC 16 Wisdom saving throw at the end of each of the target's turns ends the effect). Creatures within 10 feet of the shrine have disadvantage on this save.
 - *(FIX-FC46-A) Void Scream FRIGHTENED rider:* The DB action has always included FRIGHTENED on a failed VS save (confirmed in roller output from the 46th cycle). The .md description was missing this rider. FRIGHTENED imposes: disadvantage on attack rolls while the beholder is in line of sight; the target cannot willingly move closer to the beholder. This does NOT affect a creature already prone or grappled (they are already disadvantaged or immobilized). Frightened PCs attempting to flee provoke opportunity attacks if not using Disengage.*

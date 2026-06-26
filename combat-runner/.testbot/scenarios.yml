@@ -268,7 +268,7 @@ scenarios:
         Regression gate: once fixed, confirm both damage types appear in narration.
 
   - id: thrulm-rager-berserk-gate
-    title: Rager uses Berserk — type "utility" rolls no dice; regression gate for BUG-RAGER-BERSERK-TYPE
+    title: Rager uses Berserk — regression gate for BUG-RAGER-BERSERK-TYPE (fixed this run)
     encounter: thrulm
     prelude: |
       The rager has been hit twice. It stops moving and becomes pure geometry —
@@ -280,14 +280,10 @@ scenarios:
       max_click_count: 4
       max_llm_fallback: 0
       notes: |
-        Regression gate for BUG-RAGER-BERSERK-TYPE (HIGH, 15+ fires).
-        `berserk` is currently type "utility" with no attacks array — the runner
-        will narrate without rolling any dice. This scenario SHOULD FAIL (narration
-        fires but no 1d12 dice output) until `berserk` is re-authored via
-        combat_action_upsert as type "area" or given an embedded attacks spec.
-        Pass condition: roller output contains a 1d12 roll (at least one greataxe
-        attack against each creature in reach). Recharge 5–6 label should also
-        appear once the type is corrected.
+        Regression gate for BUG-RAGER-BERSERK-TYPE. `berserk` was previously type
+        "utility" with no attacks array. Fixed this run: now type "multiattack" with
+        embedded attacks spec. Pass condition: roller output contains a 1d12 roll
+        (at least one greataxe attack against each creature in reach) + recharge=5 label.
 
   - id: thrulm-beholder-tentacle-grapple
     title: Beholder multiattack → Marwen grappled → Maw advantage verified → Antireality on counter
@@ -348,3 +344,25 @@ scenarios:
         (2) Frightened rider text appears (FIX-FC46-A). (3) "Creatures within 10 ft
         of shrine have disadvantage" reminder surfaces (FIX-FC48-A). DC 16 Wis save,
         6d10 psychic, half on success. Unconscious PCs excluded per FIX-FC48-A ruling.
+
+  - id: thrulm-beholder-hp-track
+    title: "Thrulm smoke test — beholder HP track, derro-rager tab switch, condition tick"
+    encounter: thrulm
+    prelude: |
+      The Hunger Below hovers above the shrine-altar. The Compass Edge enters the chamber. Stone cracks beneath it. Initiative falls.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "-30"}
+      - {kind: assert_hp, slug: beholder-thrulm, expected: 80}
+      - {kind: switch_tab, slug: derro-rager}
+      - {kind: type, tab: derro-rager, text: "-20"}
+      - {kind: assert_hp, slug: derro-rager, expected: 32}
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "@blinded 2"}
+      - {kind: assert_condition, slug: beholder-thrulm, condition: blinded, remaining: 2}
+      - {kind: click_round}
+      - {kind: click_round}
+      - {kind: assert_no_condition, slug: beholder-thrulm, condition: blinded}
+    targets:
+      max_click_count: 5
+      max_llm_fallback: 0

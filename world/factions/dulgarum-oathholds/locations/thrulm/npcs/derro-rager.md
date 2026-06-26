@@ -10,6 +10,18 @@ last-modified: 2026-04-26
 
 # Derro Rager (Melee Tank)
 
+**HP** 52 (8d8+16) **·** **AC** 16 (half-plate) **·** **Speed** 30 ft. **·** **Saves** Str +4, Con +4 **·** Resist: poison **·** **CR** 2
+
+> Action mechanics in `combat-runner/actions.jsonl`.
+
+## Start-of-turn checklist
+
+1. If **Berserk** USED, roll 1d6 — recovers on **5–6**.
+2. **Bonus action Taunt** available every turn (no recharge).
+3. If rager took damage last turn, it has +1 to attacks until end of this turn (Madness Endurance).
+
+---
+
 A derro pumped with madness-born strength. They charge into combat, soak hits meant for others, and punish anyone who ignores them. They fight with pure fury and pain-driven endurance.
 
 ---
