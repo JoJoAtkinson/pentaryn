@@ -366,3 +366,40 @@ scenarios:
     targets:
       max_click_count: 5
       max_llm_fallback: 0
+
+  - id: thrulm-shardcaller-barrage
+    title: Shardcaller Shard-Barrage — recharge label + DC 13 DEX save in output
+    encounter: thrulm
+    prelude: |
+      The shardcaller steps back behind the column, hand curling around a fistful of obsidian.
+      The flint shards whisper as they take flight — a wide spray cutting across the party's advance.
+    turns:
+      - {kind: switch_tab, slug: derro-shardcaller}
+      - {kind: type, tab: derro-shardcaller, text: "barrage"}
+      - {kind: click_round}
+    targets:
+      max_click_count: 5
+      notes: |
+        Tests: (1) shard_barrage fires as area action, DC 13 DEX save, 3d6 piercing avg 10.
+        (2) recharge=5 label surfaces in output. (3) After click_round, DM sees recharge roll
+        prompt. Regression gate for BUG-R314-02: DC 13 is off by 1 from PB+2+DEX+2=12 — this
+        scenario captures the DC-as-authored so the fix can be verified here once resolved.
+
+  - id: thrulm-deep-watch-formation
+    title: Deep Watch derro crossbow then multiattack — attack bonus and damage coverage
+    encounter: thrulm
+    prelude: |
+      The deep watch holds the line, crossbow leveled. A partner closes from the left.
+      When Bazgar steps into reach, the axe comes out.
+    turns:
+      - {kind: switch_tab, slug: deep-watch-derro}
+      - {kind: type, tab: deep-watch-derro, text: "crossbow"}
+      - {kind: type, tab: deep-watch-derro, text: "multi"}
+    targets:
+      max_click_count: 5
+      notes: |
+        First scenario covering deep-watch-derro. Tests: (1) crossbow rolls 1d8+2 piercing
+        at +4 to-hit (DEX+2+PB+2). (2) multiattack resolves to two hand_axe rolls at +2
+        to-hit, 1d6 slashing. (3) Tactical Drilling advantage note (ally within 5 ft) should
+        surface in narration — in this solo scenario no ally is present, so note should either
+        not appear or appear as a conditional. Confirms no LLM fallback on both verbs.
