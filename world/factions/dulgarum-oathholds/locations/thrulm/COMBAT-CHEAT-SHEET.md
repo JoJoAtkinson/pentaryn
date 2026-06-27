@@ -108,7 +108,7 @@
 - **[IN CHAMBER]** Void-Feeding always active: add +1 to every beholder attack roll and damage roll (runner shows +8; add +1 for in-chamber value of +9 for all attacks).
 - Does it have a caster lined up? → Disintegration Ray
 - Any clerics/paladins within 30 ft? → Drain Divinity (takes spell slots; **30 ft range** — beholder must descend from default 40-60 ft hover to use)
-- Otherwise → Void Ray + reposition or Void Scream (full party damage)
+- Otherwise → Void Ray + reposition or Void Scream (full party damage; **30 ft range — must descend from hover, same as Drain Divinity**)
 - **REACTION — Antireality:** When the beholder is targeted by an attack it can see, declare **before the attack roll** — imposes disadvantage on that roll. Once per round. (Combat runner fires the prompt pre-roll on `action_executed` event — post-R224 fix; no manual early-declare needed.)
 
 **When Derro Acts:**
@@ -143,7 +143,7 @@
 | Shardcaller | Shard-Barrage | 13 | DEX (avoid damage) |
 | Rager | Taunt | 12 | CHA (avoid disadvantage) |
 | Beholder | Disintegration Ray | +9 to hit | (attack roll; +8 base +1 Void-Feeding, always active in chamber) |
-| Beholder | Void Scream | 16 | WIS (psychic damage; on FAILED save: also FRIGHTENED 1 min, DC 16 Wis save ends; within 10 ft of shrine: **disadvantage** on this save) |
+| Beholder | Void Scream | 16 | WIS (psychic damage; on FAILED save: also FRIGHTENED 1 min, DC 16 Wis save ends; within 10 ft of shrine: **disadvantage** on this save; **30 ft radius from beholder — must descend from default hover to reach ground-level targets**) |
 | Beholder | Void Ray | 16 | DEX (force damage) |
 | Beholder | Drain Divinity | 16 | CHA (lose spell slot) |
 | Beholder (lair) | Unstable Ground | 16 | DEX (fall prone) |
