@@ -51,8 +51,12 @@ slices:
       (divine martial; assume level 5 slots: two 3rd-level, three 2nd-level, four
       1st-level). DC 16 Cha save each time (assume +2 Cha for Sabriel). Simulate
       3 saves. If all fail: Sabriel loses both 3rd-level slots then one 2nd-level;
-      beholder gains at most 16 temp HP (6+6+4). Is this mechanically sound? Does
-      spending all 3 legendary actions on one effect feel correct?
+      beholder gains at most 6 temp HP from any one use (2×3 for a 3rd-level slot).
+      CORRECTION: THP do not stack in 5e — each new grant replaces the previous only
+      if higher. Three drains of 3rd/3rd/2nd give the beholder a maximum of 6 THP
+      held at any moment, NOT 16 accumulated. Expected THP gain per use = 0.65×6 ≈ 4.
+      Is this mechanically sound? Does spending all 3 legendary actions on one effect
+      feel correct?
 
   - id: lair-action-round
     name: "Lair action decision tree (init 20)"
