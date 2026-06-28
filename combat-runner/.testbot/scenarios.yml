@@ -403,3 +403,46 @@ scenarios:
         to-hit, 1d6 slashing. (3) Tactical Drilling advantage note (ally within 5 ft) should
         surface in narration — in this solo scenario no ally is present, so note should either
         not appear or appear as a conditional. Confirms no LLM fallback on both verbs.
+
+  - id: thrulm-drain-divinity-vs-void-ray
+    title: Beholder LA economy — Drain Divinity (3 LA) vs Void Ray (2 LA) narration and cost display
+    encounter: thrulm
+    prelude: |
+      Round 2. Marwen is at 0 HP, death saves ticking. The beholder turns toward Sabriel.
+      Three legendary actions remain. The choice is not obvious — but the math is.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "void ray"}
+      - {kind: type, tab: beholder-thrulm, text: "drain"}
+    targets:
+      max_click_count: 6
+      notes: |
+        Tests LA economy narration: (1) void_ray_legendary surfaces as DC 16 DEX save,
+        4d10 force, labels cost as "2 legendary actions." (2) drain_divinity surfaces as
+        DC 16 CHA save, labels cost as "3 legendary actions" (all remaining). Both should
+        fire cleanly without LLM fallback. FEEL-R328-01: Void Ray outperforms Drain Divinity
+        in DPR at this party level (18.7 exp damage vs 0 damage + 3.3 exp THP). Regression
+        gate: once DD is redesigned (cost 2 LA, or damage component added), rerun this
+        scenario and verify DD narration reflects the change. Also verify DD narration states
+        the THP gain formula ("beholder gains THP equal to twice the spell level lost").
+
+  - id: thrulm-dr-permadeath-threshold
+    title: Disintegration Ray permadeath rider — narration must include cannot-be-restored text
+    encounter: thrulm
+    prelude: |
+      The wizard is at full HP. The beholder considers the geometry. Then the void opens.
+      The ray arrives without the courtesy of a warning.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "disintegrate"}
+    targets:
+      max_click_count: 4
+      notes: |
+        Regression gate for NARRATION-GAP-R321-01: disintegration_ray narration_preview
+        is missing the permanent-death rider. Pass condition: roller output includes text
+        equivalent to "cannot be restored to life except by true resurrection or wish."
+        Fail condition: output ends with damage roll only, no permadeath note. DR permadeath
+        thresholds for Compass Edge: Marwen (32 HP) and Sabriel (44 HP) are within DR
+        average (45) — always disintegrated on a non-crit hit from full HP. Bazgar (49 HP)
+        is NOT — survives a non-crit hit at 4 HP. DM should target Marwen/Sabriel with DR,
+        wait until Bazgar is below 45 HP. (FEEL-R328-02)
