@@ -446,3 +446,29 @@ scenarios:
         average (45) — always disintegrated on a non-crit hit from full HP. Bazgar (49 HP)
         is NOT — survives a non-crit hit at 4 HP. DM should target Marwen/Sabriel with DR,
         wait until Bazgar is below 45 HP. (FEEL-R328-02)
+
+  - id: thrulm-beholder-action-starvation
+    title: Beholder with both rays on recharge — no fallback ranged attack at hover distance
+    encounter: thrulm
+    prelude: |
+      The disintegration ray just fired. Void scream hasn't recharged. The beholder
+      hangs forty feet above the stone. Bazgar stands below it, shield raised. The
+      Hunger Below has nothing to throw from up here. Its tentacles reach for something
+      that isn't there.
+    turns:
+      - {kind: switch_tab, slug: beholder-thrulm}
+      - {kind: type, tab: beholder-thrulm, text: "attack"}
+      - {kind: type, tab: beholder-thrulm, text: "shrine_drift"}
+    targets:
+      max_click_count: 5
+      notes: |
+        Captures FEEL-FIRE7-01: when Disintegration Ray AND Void Scream are both on
+        recharge, the beholder at 40+ ft hover has zero main-action attacks (Tentacle
+        Lash reach is 10 ft, Maw 5 ft). Typing "attack" should resolve to multiattack
+        (which requires melee) — the runner narrates it but the beholder is out of range,
+        creating a dead turn. shrine_drift (BA) moves the beholder but is not an attack.
+        Expected: both inputs complete without crash; narration for multiattack notes
+        melee-only range. FEEL: this design gap surfaced in fire #7 3-round sim (Round 2
+        dead turn). Joe's decision: add a non-recharge fallback ranged attack ("eye-stalk
+        force, 1d8+3, +8 to hit, 60 ft") or accept that beholder MUST descend to melee
+        when rays are spent.
