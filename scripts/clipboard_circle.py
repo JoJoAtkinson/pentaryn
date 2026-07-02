@@ -81,12 +81,38 @@ def import_png_to_clipboard(in_path: Path) -> None:
     _run_osascript(script)
 
 
-def crop_center_square(img: Image.Image) -> Image.Image:
+def crop_square(img: Image.Image, anchor: str = "center") -> Image.Image:
+    """Crop to the largest square. ``anchor`` chooses what to keep on the long axis.
+
+    For a portrait (taller than wide), ``top`` keeps the top of the image and
+    cuts off the bottom; ``bottom`` does the reverse. For a landscape, ``top``
+    is treated as "keep the left edge". ``center`` (the default) keeps the
+    middle — the usual choice when the source is already square-ish.
+    """
     w, h = img.size
     side = min(w, h)
-    left = (w - side) // 2
-    top = (h - side) // 2
+    anchor = (anchor or "center").strip().lower()
+    if w >= h:  # landscape (or square): offset horizontally
+        top = 0
+        if anchor in ("top", "start", "left"):
+            left = 0
+        elif anchor in ("bottom", "end", "right"):
+            left = w - side
+        else:
+            left = (w - side) // 2
+    else:  # portrait: offset vertically
+        left = 0
+        if anchor in ("top", "start", "left"):
+            top = 0
+        elif anchor in ("bottom", "end", "right"):
+            top = h - side
+        else:
+            top = (h - side) // 2
     return img.crop((left, top, left + side, top + side))
+
+
+def crop_center_square(img: Image.Image) -> Image.Image:
+    return crop_square(img, "center")
 
 
 def circle_mask(size: int) -> Image.Image:
@@ -100,8 +126,8 @@ def circle_mask(size: int) -> Image.Image:
     return mask_big.resize((size, size), resample=Image.Resampling.LANCZOS)
 
 
-def circle_crop_rgba(img: Image.Image, *, size: int) -> Image.Image:
-    square = crop_center_square(img.convert("RGBA"))
+def circle_crop_rgba(img: Image.Image, *, size: int, anchor: str = "center") -> Image.Image:
+    square = crop_square(img.convert("RGBA"), anchor)
     if square.size != (size, size):
         square = square.resize((size, size), resample=Image.Resampling.LANCZOS)
     mask = circle_mask(size)
@@ -234,9 +260,58 @@ def apply_token_finish(img: Image.Image) -> Image.Image:
     return out
 
 
-def main() -> int:
+def make_token(img: Image.Image, *, anchor: str = "center") -> Image.Image:
+    out = circle_crop_rgba(img, size=TOKEN_PX, anchor=anchor)
+    return apply_token_finish(out)
+
+
+def _parse_args(argv: list[str]):
+    import argparse
+
+    p = argparse.ArgumentParser(
+        description=(
+            "Make a circular VTT token. With no --in, reads the macOS clipboard "
+            "and writes the result back to it. With --in/--out, works on files."
+        )
+    )
+    p.add_argument("--in", dest="in_path", help="Input image file (default: clipboard).")
+    p.add_argument(
+        "--out",
+        dest="out_path",
+        help="Output file. Always PNG bytes regardless of extension (e.g. .pen).",
+    )
+    p.add_argument(
+        "--crop",
+        default="center",
+        choices=["center", "top", "bottom", "left", "right"],
+        help=(
+            "Which part to keep when squaring a non-square image. "
+            "'top' keeps the top of a portrait and cuts off the bottom. Default: center."
+        ),
+    )
+    return p.parse_args(argv)
+
+
+def run_file(in_path: Path, out_path: Path, *, anchor: str) -> int:
+    try:
+        img = Image.open(in_path)
+    except Exception as e:
+        print(f"Error: couldn't open {in_path}: {e}", file=sys.stderr)
+        return 2
+    try:
+        out = make_token(img, anchor=anchor)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out.save(out_path, format="PNG", dpi=(TOKEN_DPI, TOKEN_DPI))
+    except Exception as e:
+        print(f"Error: Failed to process image: {e}", file=sys.stderr)
+        return 2
+    print(f"OK: saved {out.size[0]}x{out.size[1]} token ({anchor} crop) to {out_path}")
+    return 0
+
+
+def run_clipboard(anchor: str) -> int:
     if platform.system() != "Darwin":
-        print("Error: This script currently supports macOS only.", file=sys.stderr)
+        print("Error: clipboard mode supports macOS only (use --in/--out).", file=sys.stderr)
         return 2
 
     downloads_dir = Path.home() / "Downloads"
@@ -262,8 +337,7 @@ def main() -> int:
 
         try:
             img = Image.open(src)
-            out = circle_crop_rgba(img, size=TOKEN_PX)
-            out = apply_token_finish(out)
+            out = make_token(img, anchor=anchor)
             out.save(tmp_out, format="PNG", dpi=(TOKEN_DPI, TOKEN_DPI))
             shutil.move(str(tmp_out), str(dst))
         except Exception as e:
@@ -279,6 +353,16 @@ def main() -> int:
         print(f"OK: saved {out.size[0]}x{out.size[1]} circular PNG to {dst}")
         print("OK: clipboard updated")
         return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = _parse_args(sys.argv[1:] if argv is None else argv)
+    if args.in_path or args.out_path:
+        if not (args.in_path and args.out_path):
+            print("Error: --in and --out must be given together.", file=sys.stderr)
+            return 2
+        return run_file(Path(args.in_path), Path(args.out_path), anchor=args.crop)
+    return run_clipboard(args.crop)
 
 
 if __name__ == "__main__":

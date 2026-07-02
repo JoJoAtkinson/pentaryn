@@ -309,7 +309,9 @@ def _apply_pdf_defaults(pandoc_args: list[str]) -> list[str]:
     if not has_prefix("--toc-depth"):
         updated.append("--toc-depth=2")
     if not has_prefix("--pdf-engine"):
-        updated.append("--pdf-engine=pdflatex")
+        # LuaLaTeX (luahbtex) renders Unicode symbols and color emoji natively
+        # via the luaotfload font fallback set up in .vscode/pandoc-header.tex.
+        updated.append("--pdf-engine=lualatex")
 
     # Variables (keep simple; don't try to dedupe pairs aggressively).
     vars_defaults = [

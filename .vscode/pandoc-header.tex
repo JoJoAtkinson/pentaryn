@@ -30,3 +30,17 @@
 \renewcommand{\arraystretch}{1.2}
 \setlength{\parindent}{0pt}
 \setlength{\tabcolsep}{2pt}  % reduce column padding from default 6pt
+
+% --- Unicode symbol + color-emoji rendering (LuaLaTeX only) ---
+% Under LuaLaTeX, fall the main font back to Arial Unicode MS (arrows, ≤, ⚠, …)
+% and then Apple Color Emoji (😀 🎲 ✅) for any glyph the main font lacks.
+% Guarded by \ifLuaTeX so pdfLaTeX/XeLaTeX builds are unaffected.
+\usepackage{iftex}
+\ifLuaTeX
+  \usepackage{fontspec}
+  \directlua{luaotfload.add_fallback("emojifallback", {
+    "Arial Unicode MS:mode=harf;",
+    "Apple Color Emoji:mode=harf;"
+  })}
+  \setmainfont{Baskerville}[RawFeature={fallback=emojifallback}]
+\fi
