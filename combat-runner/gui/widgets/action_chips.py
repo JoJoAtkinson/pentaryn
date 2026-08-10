@@ -168,8 +168,14 @@ class ActionChipGrid(QWidget):
                 per_npc.append(a)
 
         # Sort each bucket by priority descending; ties by action name ascending.
+        # `priority` is optional and hand-authored in actions.jsonl, so coerce
+        # defensively — a missing/None/garbage value must never crash the tab.
         def _sort_key(a: dict[str, Any]) -> tuple[int, str]:
-            return (-int(a.get("priority", 0)), a.get("action", ""))
+            try:
+                priority = int(a.get("priority") or 0)
+            except (TypeError, ValueError):
+                priority = 0
+            return (-priority, str(a.get("action") or ""))
         per_npc.sort(key=_sort_key)
         globals_.sort(key=_sort_key)
 

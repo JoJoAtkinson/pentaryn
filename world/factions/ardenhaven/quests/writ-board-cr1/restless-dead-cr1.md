@@ -36,6 +36,8 @@ They're not overtly hostile—just walking—but they can't be allowed near the 
 
 ## The Encounter
 
+**Run it from:** [Restless Dead — Eastern Valley Battlefield](../../locations/restless-dead-battlefield/_overview.md) — full terrain, tactics, and combat-runner NPCs.
+
 **Enemies:** 4 skeletons (use standard skeleton stats)  
 **Terrain:** Rocky valley with scattered burial cairns, elevation changes, loose stones  
 **Tactics:** Skeletons don't attack unless threatened; they attempt to walk past the party toward Ardenford. If engaged, they fight defensively but without strategy.

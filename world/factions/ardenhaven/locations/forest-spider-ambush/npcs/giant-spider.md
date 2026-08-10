@@ -1,6 +1,7 @@
 ---
 name: Giant Spider
 created: 2026-05-21
+last-modified: 2026-08-09
 status: active
 location: forest-spider-ambush
 count: 1
@@ -28,6 +29,14 @@ tags: ["#combat-runner", "#beast", "#spider", "#forest-spider-ambush", "#cr-1"]
 - **Follow up:** drop or climb adjacent to a Restrained target and Bite — attacks against a Restrained creature have Advantage.
 - **Stay high:** between bites, climb back up out of melee reach; melee PCs must chase it up the web.
 - **No retreat:** a hunting spider does not flee — it fights until killed.
+
+## Variant notes — see [`_overview.md`](../_overview.md)
+
+**Identical in all three variants.** Same statblock, same 200 XP, same opener.
+
+- **v1 — The Shortcut:** exactly as above. Web the front rank, drop, bite, climb.
+- **v2 — The Cart:** the pony hanging in the web sling is **its larder**. The **larder rule** is live: the instant a creature cuts the sling, the anchor lines, or the pedlar's cocoon, that creature is this spider's only target for the rest of the fight — it will walk through opportunity attacks and ignore the fighter hitting it in the back to reach them. It has no instinct to protect the pony from fire and will keep biting while the canopy burns.
+- **v3 — Tam Ackley:** it does not care about the boy. He is a wolf spider's problem. It stays on whoever it Webbed.
 
 ## Description (one line)
 

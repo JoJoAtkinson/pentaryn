@@ -10,7 +10,6 @@ dependencies = [
   "pillow>=12.2.0",
   "pytest",
   "cairosvg",
-  "chromadb",
   "python-dotenv",
   "tomlkit",
   "requests-cache>=1.3.1",
@@ -22,11 +21,36 @@ dependencies = [
   "pytest-qt>=4.4"
 ]
 
+# Optional extras — not installed by a bare `uv sync`.
+[project.optional-dependencies]
+# Vector-search stack, used ONLY by scripts/lore_inconsistencies.py (and its
+# `lore_inconsistency_report` MCP tool), which imports chromadb lazily.
+# It is kept out of the default install because it pulls ~60 transitive packages
+# (onnxruntime, kubernetes, grpcio, opentelemetry, tokenizers, ...) and is the
+# most fragile part of the tree on new Python releases.
+#   Install with: uv sync --extra vector
+vector = [
+  "chromadb>=1.5.9",
+  # chromadb only requires pypika>=0.48.9, but 0.48.9 is sdist-only and its
+  # setup.py uses `ast.Str`, removed in Python 3.12 — it cannot build on 3.14.
+  # 0.51.1 ships a wheel. Floor it here so a fresh re-lock can't pick the old one.
+  "pypika>=0.51.1",
+]
+
 # Notes on native text layout (RAQM):
-# - On macOS, install native libs first:
-#     brew install libraqm harfbuzz fribidi freetype
-# - Pillow only enables RAQM if it's built from source *after* those libs are installed.
-# - uv config below forces Pillow to build from source (no wheel), allowing RAQM detection.
+# - Only scripts/timeline_svg needs it; `build_timeline_svg` preflights and
+#   errors with instructions if Pillow lacks RAQM.
+# - Pillow only enables RAQM if it's built from SOURCE *after* the native libs
+#   exist. A source build also needs the image codecs, not just the RAQM stack:
+#     brew install libraqm harfbuzz fribidi freetype \
+#                  jpeg-turbo libtiff little-cms2 openjpeg webp zlib
+#   (Omitting the codecs fails the build with "could not be found for jpeg".)
+# - Setup is scripted: `scripts/setup_pillow_raqm.sh`.
+# - `no-binary-package` below applies to `uv sync`/`uv run`, so a sync cannot
+#   silently swap the source build for a wheel and drop RAQM. [tool.uv.pip] is
+#   kept too because it covers the separate `uv pip ...` code path.
+[tool.uv]
+no-binary-package = ["pillow"]
 
 [tool.uv.pip]
 no-binary = ["pillow"]
@@ -46,3 +70,6 @@ markers = [
 ]
 testpaths = ["scripts/tests", "combat-runner/tests"]
 python_files = ["test_*.py"]
+# Put the repo root on sys.path so `from scripts.… import …` resolves without
+# an editable install or a manually exported PYTHONPATH.
+pythonpath = ["."]

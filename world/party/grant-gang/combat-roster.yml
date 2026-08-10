@@ -1,0 +1,18 @@
+# Grant Gang — the real table.
+#
+# In-fiction this party are the "Ardenford Underdogs" of
+# campaigns/ardenford-underdogs/_overview.md. Same people, two names:
+# Grant Gang is the table, Ardenford Underdogs is the crew they play.
+# This file is the single source of truth — there is no separate
+# ardenford-underdogs roster.
+#
+# Launch:  make grant-gang     (or `make underdogs`, same thing)
+#
+# `id` MUST be a repeated-digit string ("1", "22", "333", ...). Non-uniform
+# ids ("12", "34") cannot be addressed by the GUI's `<who> <stream>` grammar.
+# `max_hp` / `ac` are the PC's CURRENT sheet values — update them on level-up.
+party: Grant Gang
+players:
+  - { name: Pipfuhk,    id: "1", max_hp: 8,  ac: 12 }
+  - { name: Nimbee-Ray, id: "2", max_hp: 8,  ac: 12 }
+  - { name: Bargh,      id: "3", max_hp: 15, ac: 12 }

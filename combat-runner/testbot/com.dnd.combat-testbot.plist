@@ -6,17 +6,17 @@
     <string>com.dnd.combat-testbot</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/joe/GitHub/dnd/combat-runner/testbot/run-fire.sh</string>
+        <string>/Users/joe/Documents/GitHub/pentaryn/combat-runner/testbot/run-fire.sh</string>
     </array>
     <key>StartInterval</key>
     <integer>1800</integer>
     <key>RunAtLoad</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/Users/joe/GitHub/dnd/combat-runner/.testbot/launchd-stdout.log</string>
+    <string>/Users/joe/Documents/GitHub/pentaryn/combat-runner/.testbot/launchd-stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/joe/GitHub/dnd/combat-runner/.testbot/launchd-stderr.log</string>
+    <string>/Users/joe/Documents/GitHub/pentaryn/combat-runner/.testbot/launchd-stderr.log</string>
     <key>WorkingDirectory</key>
-    <string>/Users/joe/GitHub/dnd</string>
+    <string>/Users/joe/Documents/GitHub/pentaryn</string>
 </dict>
 </plist>

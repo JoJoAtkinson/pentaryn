@@ -10,8 +10,10 @@
 
 set -euo pipefail
 
-REPO_ROOT="/Users/joe/GitHub/dnd"
-DAEMON_DIR="$REPO_ROOT/combat-runner/daemon"
+# Resolve the repo root from this script's own location:
+# <repo>/combat-runner/daemon/build-daemon.sh -> up two levels.
+DAEMON_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$DAEMON_DIR/../.." && pwd)"
 PROMPT_FILE="$DAEMON_DIR/prompt.txt"
 LOGS_DIR="$DAEMON_DIR/logs"
 SHIPPED_FLAG="$DAEMON_DIR/shipped.flag"

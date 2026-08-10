@@ -6,7 +6,7 @@ For repo conventions, file locations, naming, frontmatter, and timeline workflow
 
 **When a request maps to an MCP tool, use the MCP tool. Don't shell out to the underlying script.**
 
-Run `/Users/joe/GitHub/dnd/.venv/bin/python scripts/mcp/server.py --list-tools` to see every tool available, including which are in-process (fast) vs. subprocess (slower).
+Run `./.venv/bin/python scripts/mcp/server.py --list-tools` from the repo root to see every tool available, including which are in-process (fast) vs. subprocess (slower). (Create the venv first with `uv sync`.)
 
 ## MCP usage hints — `dnd-scripts` server
 
@@ -89,6 +89,26 @@ When Joe asks for a new combat NPC ("make me a CR3 frost yeti for mountin-pass",
 9. After upserting all actions, **run `python scripts/combat_actions_db.py validate`** — every DB row should pass. `... list --npc <slug>` to confirm the actions are in.
 
 Reference exemplar: [`world/factions/garhammar-trade-league/locations/mountin-pass/npcs/glacier-stalker.md`](world/factions/garhammar-trade-league/locations/mountin-pass/npcs/glacier-stalker.md). Its DB rows in [`combat-runner/actions.jsonl`](combat-runner/actions.jsonl) exercise every action type — multiattack (including a multiattack-with-prereq, Pounce), single_attack, area (with recharge), utility, reaction.
+
+## Secrets — never hardcode, never commit
+
+Secrets live in **Infisical**, not in this repo. There is no `.env` to read.
+
+The **Foundry VTT license key** (`FOUNDRY_VTT_LICENSE_KEY`) is the one in use
+today. Get it at runtime via [`scripts/foundry/license_key.py`](scripts/foundry/README.md):
+
+```python
+from scripts.foundry.license_key import foundry_license_key
+key = foundry_license_key()   # env var if injected, else infisical CLI
+```
+
+Verify retrieval with `make foundry-check` — it prints length and format only.
+
+**Rules:** never write a secret value to a file, a log, or stdout; never pass
+one as a command-line argument (visible in `ps`); read it at the point of use
+rather than caching it. If the infisical CLI reports an auth failure, stop and
+tell Joe to run `infisical login` — do **not** prompt for the value or hardcode
+it. When adding a new secret, follow the same pattern; don't invent a `.env`.
 
 ## Don't read these directories
 
