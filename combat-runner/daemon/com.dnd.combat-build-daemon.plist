@@ -8,7 +8,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/bin/bash</string>
-        <string>/Users/joe/GitHub/dnd/combat-runner/daemon/build-daemon.sh</string>
+        <string>/Users/joe/Documents/GitHub/pentaryn/combat-runner/daemon/build-daemon.sh</string>
     </array>
 
     <!-- Fire every hour at :07 to avoid the :00 spike (matches the session cron). -->
@@ -28,9 +28,9 @@
 
     <!-- Surface stderr/stdout in case our wrapper logging fails. -->
     <key>StandardOutPath</key>
-    <string>/Users/joe/GitHub/dnd/combat-runner/daemon/logs/launchd.stdout.log</string>
+    <string>/Users/joe/Documents/GitHub/pentaryn/combat-runner/daemon/logs/launchd.stdout.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/joe/GitHub/dnd/combat-runner/daemon/logs/launchd.stderr.log</string>
+    <string>/Users/joe/Documents/GitHub/pentaryn/combat-runner/daemon/logs/launchd.stderr.log</string>
 
     <!-- Inherit the user's PATH so `claude` is findable. -->
     <key>EnvironmentVariables</key>

@@ -1,0 +1,99 @@
+[
+  {
+    "npc": "skeleton",
+    "action": "shamble_onward",
+    "type": "utility",
+    "scope": "self",
+    "verbs": [
+      "shamble",
+      "walk",
+      "march",
+      "onward",
+      "pass",
+      "keep walking",
+      "ignore"
+    ],
+    "narration": "It walks. Empty sockets fixed west, it steps around the living the way a man steps around a fencepost.",
+    "effect": "**Default action, every round, unless this skeleton has been damaged, blocked, or grabbed.** The skeleton moves its full 30 ft. west toward Ardenford and makes no attack. It steps *around* a creature standing in its path -- once. If a PC blocks it a second time, grabs it, or damages it, it counts as threatened and switches to Shortsword or Shortbow from its next turn on. A skeleton that is disengaged from does **not** pursue: it reorients west and resumes walking. No morale, no fear, no retreat -- once provoked it fights to 0 HP, and walks the rest of the time.",
+    "priority": 10,
+    "updated_at": "2026-08-09T00:00:00+00:00"
+  },
+  {
+    "npc": "skeleton",
+    "action": "heed_the_living",
+    "type": "utility",
+    "scope": "self",
+    "verbs": [
+      "heed",
+      "listen",
+      "calm",
+      "talk",
+      "gentle voice",
+      "speak",
+      "parley",
+      "soothe"
+    ],
+    "prerequisite": "A PC addresses the skeleton calmly instead of attacking it, and no attack has been made against it this round.",
+    "narration": "The skull turns toward the voice and stops. Whatever is left in there is listening.",
+    "effect": "The skeleton halts and orients on the speaker. [ASK PLAYER] DC 13 Persuasion **or** Religion check. **Success:** the skeletons are not hostile -- they are confused, and they are going *home*. They stand still while a calm voice keeps talking, and can be led, turned, or walked elsewhere. **Failure:** no harm done and no aggression triggered; the skeleton resumes Shamble Onward on its next turn and the party may try again. It understands the languages it knew in life but cannot speak and will not answer questions -- it responds to **tone**, not words.",
+    "priority": 9,
+    "updated_at": "2026-08-09T00:00:00+00:00"
+  },
+  {
+    "npc": "skeleton",
+    "action": "shortsword",
+    "type": "single_attack",
+    "scope": "self",
+    "verbs": [
+      "shortsword",
+      "sword",
+      "stab",
+      "melee",
+      "attack",
+      "slash",
+      "thrust"
+    ],
+    "range": "5 ft",
+    "prerequisite": "This skeleton has been damaged, blocked, or grabbed -- an unprovoked skeleton uses Shamble Onward instead.",
+    "narration": "The skeleton turns without hurry and drives a pitted shortsword forward, bone grinding on bone.",
+    "priority": 8,
+    "attacks": [
+      {
+        "name": "Shortsword",
+        "to_hit_bonus": 4,
+        "damage": "1d6",
+        "damage_modifier": 2,
+        "damage_type": "piercing"
+      }
+    ],
+    "updated_at": "2026-08-09T00:00:00+00:00"
+  },
+  {
+    "npc": "skeleton",
+    "action": "shortbow",
+    "type": "single_attack",
+    "scope": "self",
+    "verbs": [
+      "shortbow",
+      "bow",
+      "shoot",
+      "ranged",
+      "arrow",
+      "loose"
+    ],
+    "range": "80/320 ft",
+    "prerequisite": "Provoked, but no reachable target -- the PC is on a cairn, a ledge, or across a gap. The skeleton will not climb or leave high ground to chase.",
+    "narration": "It draws a warped bow with fingers that are more sinew than flesh, and looses.",
+    "priority": 7,
+    "attacks": [
+      {
+        "name": "Shortbow",
+        "to_hit_bonus": 4,
+        "damage": "1d6",
+        "damage_modifier": 2,
+        "damage_type": "piercing"
+      }
+    ],
+    "updated_at": "2026-08-09T00:00:00+00:00"
+  }
+]

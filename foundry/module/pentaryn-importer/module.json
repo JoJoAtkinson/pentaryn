@@ -1,0 +1,41 @@
+{
+  "id": "pentaryn-importer",
+  "title": "Pentaryn Importer",
+  "description": "Headless importer for generated Pentaryn NPC Actors. Exposes game.pentaryn.import() and nothing else — no UI, no settings, no canvas hooks. See foundry/CONTRACT.md.",
+  "version": "1.0.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "14"
+  },
+  "authors": [
+    {
+      "name": "Joseph Atkinson"
+    }
+  ],
+  "esmodules": [
+    "pentaryn-importer.mjs"
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "5.3.0",
+          "verified": "5.3.3"
+        }
+      }
+    ]
+  },
+  "socket": false,
+  "protected": false,
+  "flags": {
+    "pentaryn": {
+      "contract": "pentaryn/actors.json@1",
+      "targetSystem": "dnd5e",
+      "targetSystemVersion": "5.3",
+      "generation": 14,
+      "defaultFileName": "actors.json"
+    }
+  }
+}

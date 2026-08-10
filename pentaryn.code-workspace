@@ -37,11 +37,28 @@
 				"strings": false
 			}
 		},
+		// Gold window chrome so this window is unmistakable among other projects.
+		// Palette: #FFD700 gold (primary surfaces) / #FFE98A pale gold (inactive + hover)
+		//          #8A5A00 deep bronze (badges + remote, light text) / #B8860B amber (debugging)
+		// Gold is a LIGHT colour, so every foreground on a gold surface is dark.
 		"workbench.colorCustomizations": {
-			"titleBar.activeBackground": "#FFD700", // dark navy/black
-			"titleBar.inactiveBackground": "#FFD700",
-			"titleBar.activeForeground": "#000000", // light text
-			"titleBar.inactiveForeground": "#000000"
+			"titleBar.activeBackground": "#FFD700", // gold
+			"titleBar.activeForeground": "#000000", // dark text on gold
+			"titleBar.inactiveBackground": "#FFE98A", // pale gold
+			"titleBar.inactiveForeground": "#6B5200", // muted dark gold
+			"activityBar.background": "#FFD700",
+			"activityBar.foreground": "#000000",
+			"activityBar.inactiveForeground": "#6B5200", // dimmed, still legible on gold
+			"activityBar.activeBorder": "#000000",
+			"activityBarBadge.background": "#8A5A00", // deep bronze so light text reads
+			"activityBarBadge.foreground": "#FFFFFF",
+			"statusBar.background": "#FFD700",
+			"statusBar.foreground": "#000000",
+			"statusBar.noFolderBackground": "#FFD700",
+			"statusBar.debuggingBackground": "#B8860B", // darkgoldenrod, keeps dark text
+			"statusBarItem.hoverBackground": "#FFE98A", // lighter gold on hover
+			"statusBarItem.remoteBackground": "#8A5A00",
+			"statusBarItem.remoteForeground": "#FFFFFF"
 		},
 	}
 }

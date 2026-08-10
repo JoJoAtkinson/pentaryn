@@ -1,6 +1,7 @@
 ---
 name: Giant Wolf Spider
 created: 2026-05-21
+last-modified: 2026-08-09
 status: active
 location: forest-spider-ambush
 count: 2
@@ -27,6 +28,14 @@ tags: ["#combat-runner", "#beast", "#spider", "#forest-spider-ambush", "#cr-1-4"
 - **Hit and reposition:** fast enough to bite and still climb out of reach, or flank with the other wolf spider for Advantage.
 - **Run down stragglers:** the 40 ft. speed catches fleeing or low-HP PCs — chase them.
 - **Mindless:** no fear, no retreat — fights to the death.
+
+## Variant notes — see [`_overview.md`](../_overview.md)
+
+**Identical in all three variants.** Two of them, 50 XP each. Set to 3 in the picker (**350 XP** total encounter) for a table of six.
+
+- **v1 — The Shortcut:** buried in the leaf litter, prone and motionless, Stealth +5 vs. passive Perception. They come out **behind** the marching order.
+- **v2 — The Cart:** they are not guarding the pony and will not defend it. But if a PC cuts the sling, **the bolting pony charges a 40-ft line and does not care whose side anyone is on** — these two roll the DC 12 Dex save like everybody else, and a prone wolf spider on open road is the best target on the map.
+- **v3 — Tam Ackley:** *run down stragglers* is the standing instruction, and at the top of round 2 there is a sixteen-year-old sprinting through the middle of the road. **One of the two peels off him immediately** and does not come back until he is down or behind something. That is one wolf spider not biting a PC — which is the price the encounter is charging for the boy's life.
 
 ## Description (one line)
 

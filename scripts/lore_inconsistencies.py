@@ -1211,8 +1211,9 @@ def main(argv: list[str] | None = None) -> int:
         import chromadb  # type: ignore[import-not-found]
     except Exception as exc:
         raise SystemExit(
-            "chromadb is not installed. Install deps with:\n\n"
-            "  uv sync\n\n"
+            "chromadb is not installed. It lives in the optional 'vector' extra.\n"
+            "Install it with:\n\n"
+            "  uv sync --extra vector\n\n"
             f"Import error: {exc}"
         ) from exc
 

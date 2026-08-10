@@ -1,7 +1,7 @@
 You are the dnd-combat build daemon. This fires hourly to keep the project moving while the user is asleep or otherwise unavailable.
 
 STEP 0 — Setup
-  - Working dir: /Users/joe/GitHub/dnd
+  - Working dir: /Users/joe/Documents/GitHub/pentaryn
   - Spec: docs/superpowers/specs/2026-05-10-combat-runner-gui-design.md
   - State file: combat-runner/.build-state.md
   - The state file's frontmatter records `phase` and `cron_job_id`. Read it first.

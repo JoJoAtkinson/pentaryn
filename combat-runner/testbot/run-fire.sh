@@ -7,12 +7,17 @@
 # Each fire is independent; failures don't affect future fires.
 
 set -u
-cd /Users/joe/GitHub/dnd
+
+# Resolve the repo root from this script's own location:
+# <repo>/combat-runner/testbot/run-fire.sh -> up two levels.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+cd "$REPO_ROOT"
 
 LOG_DIR=combat-runner/.testbot
 mkdir -p "$LOG_DIR"
 
-/Users/joe/GitHub/dnd/.venv/bin/python combat-runner/testbot/run_one_scenario.py \
+"$REPO_ROOT/.venv/bin/python" combat-runner/testbot/run_one_scenario.py \
     >>"$LOG_DIR/cron.log" 2>>"$LOG_DIR/cron.err"
 status=$?
 

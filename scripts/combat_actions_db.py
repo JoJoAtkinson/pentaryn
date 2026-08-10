@@ -452,8 +452,8 @@ def list_actions(
     By default also include any rows whose `scope == "global"` (universal
     actions like Push/Grapple/Dodge). Pass `include_globals=False` to suppress.
     Each summary contains: npc, action, type, verbs, narration_preview, range,
-    area, recharge, prerequisite, trigger, scope. NOT the full attack/damage
-    spec — that's behind get() / combat_action_run.
+    area, recharge, prerequisite, trigger, scope, watch, priority. NOT the full
+    attack/damage spec — that's behind get() / combat_action_run.
     """
     records = read_all()
     if npc or npcs:
@@ -478,7 +478,16 @@ def list_actions(
             "verbs": r.get("verbs", []),
             "narration_preview": narration,
         }
-        for opt in ("range", "area", "recharge", "prerequisite", "trigger", "scope", "watch"):
+        for opt in (
+            "range",
+            "area",
+            "recharge",
+            "prerequisite",
+            "trigger",
+            "scope",
+            "watch",
+            "priority",
+        ):
             if opt in r:
                 summary[opt] = r[opt]
         summaries.append(summary)
