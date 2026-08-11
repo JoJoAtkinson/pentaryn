@@ -42,12 +42,12 @@ make you change your mind later.
 | **D1** | **Do not fork `foundry-vtt-mcp`.** Install upstream, pin **v0.8.3**. | Every reason to fork dissolved: flat to-hit is handled by generic passthroughs (D2), walls/lights/scenes by the UVTT path (D4). That leaves zero must-have reasons against permanent rebase liability on a 10,233-line `data-access.ts` and a 49-case hand-written switch. | A workflow is genuinely blocked by an unexposed internal — `addActorsToScene` (placing a token for an existing actor) is the likely first. Then fork, one commit per concern, and open the PRs so the fork trends back to empty. |
 | **D2** | For dnd5e items with pre-baked numbers, use **only** `manage-actors` create and `manage-world-items` add-to-actor. **Never** `dnd5e-add-feature`. | Both forward `system` verbatim (`data-access.ts:9623ff`, `4612ff`), routing around the hardcoded `flat: false`. The dnd5e adapter has no `normalizePayload`, so nothing rewrites the payload. | Ad-hoc authoring gets frequent enough that hand-writing activity JSON is error-prone → send the ~10-line `flatToHit` PR upstream. |
 | **D3** | Actor pipeline = **Python generator → committed JSON → small personal Foundry module** doing validated `Document.create`. MCP is the *interactive* layer only. | The importer must be reproducible, idempotent and testable. An LLM driving MCP calls is none of those, and every failure mode here is **silent**. | After two months it's <20 actors and never re-run → it was over-built; collapse to a one-time import and delete. |
-| **D4** | Walls/doors/lights via **Auto-Wall desktop app → UVTT committed to repo → `dd-import`**. Keep the in-Foundry `auto-wall` module as a touch-up tool. | Only path covering all three. The Foundry module does walls only; the MCP server has *zero* AmbientLight support. UVTT is a diffable, re-importable artifact. | CV output on these painterly maps needs more cleanup than manual tracing → `auto-wall` module for rough walls + ~15 min manual doors/lights per map, and stop calling it a pipeline. |
+| **D4** | ~~Auto-Wall → UVTT → `dd-import`~~ **REVERSED 2026-08-11.** Draw walls, doors and lights **by hand in Foundry's own tools**. | The reversal trigger fired as written: CV output on these painterly maps needed more cleanup than doing it by hand. Three scenes, drawn once — the pipeline never paid for itself. Auto-Wall and `dd-import` to be uninstalled. | A future batch of maps large enough that hand-drawing is genuinely infeasible, **or** crisp vector-style maps (Dungeondraft exports) where CV actually works. Accept the cost below before reversing back. |
 | **D5** | Scenes are **live-world documents**. No compendium/Adventure packs. **Delete and recreate** the 3 hand-written scenes. | Packs are a distribution format; you have one world and one GM. The existing 3 bypassed validation *and* version-stamping, and have no walls, lights or grid — nothing worth preserving. | Scenes accumulate placed tokens, journal pins or fog worth keeping → round-trip those specific ones instead. |
 | **D6** | **Ignore ComfyUI map generation** — never run its setup. Separately, set `FOUNDRY_CONNECTION_TYPE=websocket`. | A 1,379-image curated library beats SDXL output on quality and infinitely on prep time; your bottleneck is walls and grids, not map supply. *(The env var is unrelated to ComfyUI — it selects the transport to the Foundry module. Set it to keep that on localhost.)* | A set-piece the library can't cover *and* an idle weekend. Even then, evaluate hosted generators first. |
 | **D7** | Register the MCP server at **project scope** (`.mcp.json`), exactly one registration. | Repo-visible and version-controlled. The earlier name-conflict came from *dual* registration, not from project scope. | See **O1** — the macOS installer creates a second, invisible registration. |
 | **D8** | Everything lives in `pentaryn`. **No submodules, no vendoring.** | Nothing to vendor without a fork. Generated JSON is the golden-file surface for pytest and the diffable record of what was imported. | Module iteration gets frequent enough that copy-staleness bites → switch to a symlink. |
-| **D9** | Set the grid in the **Auto-Wall desktop app while tracing**; it rides along in the UVTT as `pixels_per_grid`. Foundry's Grid Configuration is fallback only. | These maps are **gridless** — "programmatic grid detection" is a category error. Choosing square size is a scale judgement, ~90 seconds per map, already part of the tracing pass. | A future batch of 50+ *gridded* maps. Three gridless ones never will. |
+| **D9** | Set the grid in **Foundry's Scene Config → Grid → Grid Configuration** (was: in Auto-Wall; moot after D4's reversal). Size a **door** to one square. | These maps are **gridless** — "programmatic grid detection" is a category error. Choosing square size is a scale judgement, ~90 seconds per map. Measure against the *building*, not the frame: `alchemist-shop.jpg` at 45 px/cell gives an 8×9 shop, which is unplayable; ~23 px/cell gives 16×18. | A future batch of 50+ *gridded* maps. Three gridless ones never will. |
 | **D10** | **Gate every stage.** Do not proceed past a failure. | Both verified failure modes are silent. "It didn't error" is worthless — each gate must *positively confirm* the thing it protects. | Never for the gates themselves; individual assertions can relax after passing unchanged across three sessions. |
 
 ### Deliberately cut
@@ -270,26 +270,35 @@ positively confirm the file is gone, so it establishes the tunnel is up first an
 > ⚙️ **Independent of Stages 1–2** and the riskiest external link. Worth running **first or in
 > parallel** so a chain failure doesn't strand finished actor work behind it.
 
-**Chain test on one map before any real tracing:**
+**Done by hand in Foundry**, per D4's reversal (2026-08-11). Per scene:
 
-1. Auto-Wall desktop app → trace `inn-common-room.jpg`, set the grid (D9) → export UVTT
-2. Import that UVTT with **`dd-import`** (Universal Battlemap Importer) onto a **throwaway** scene
-3. Confirm: walls exist, doors toggle, lights emit, grid matches
+1. **Scene Config → Grid → Grid Configuration** — size a *door* to one square. Measure against
+   the **building**, not the frame (D9). `alchemist-shop.jpg` wants ~23 px/cell, not 45.
+2. **Walls layer** — trace the building's outer shell and interior partitions.
+3. **Door walls** for openings; **Terrain/window walls** where sight passes but movement doesn't.
+4. **Lighting layer** — hearths, lanterns, candles. Enable **Token Vision** in Scene Config.
+5. Step through as a player token and check what's visible from each room.
 
-**Fallback chain if `dd-import` rejects it:** Myxelium's `quick-battlemap-importer` →
-`auto-wall` Foundry module (`game.modules.get("auto-wall").api` → `detect()`, `generate()`,
-`createWalls({clear})`) for walls plus manual doors and lights. The fallback loses the
-committed-artifact property, which weakens D4 — revisit whether a small fork tool for lights
-earns its keep after all.
+### ⚠️ The cost of this reversal — know it before you rely on it
 
-Commit accepted UVTT files to **`foundry/uvtt/`** in the repo — **never** under `Data/`.
+The UVTT path produced a **committed, re-importable artifact**: if a scene got mangled you
+re-imported the file and were back. Hand-drawn walls live **only in the world database**.
+
+Consequences to accept:
+- A corrupted or deleted scene means **re-drawing by hand** — the repo cannot rebuild it.
+- `~/backups/ardenhaven-*.tar.gz` is now the *only* recovery path for wall/light work.
+  **Back up after any significant drawing session**, not just before writes.
+- Scenes are no longer reproducible from the repo, so `foundry/uvtt/` stays empty and the
+  "everything in git" property of this pipeline covers **actors only**, not scenes.
+
+That's a real loss, deliberately accepted: three scenes drawn once, versus a CV pipeline that
+needed more cleanup than the hand-drawing it was meant to replace.
 
 ### Division of labour
 | Task | Who |
 | ---- | --- |
-| Trace wall geometry from pixels | **Auto-Wall CV** |
-| *"That segment is a door, that's an archway"* | **Claude, reading the map** |
-| *"Hearth here, lanterns there, candle in the backroom"* | **Claude** |
+| Draw walls, doors, lights | **you, in Foundry's tools** |
+| *"That segment is a door, that's an archway"* | Claude can advise from the map image |
 | Place encounter tokens | **Claude + MCP** |
 
 ### ✅ Gate 3
