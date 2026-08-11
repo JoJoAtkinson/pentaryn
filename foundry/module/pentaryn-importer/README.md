@@ -54,6 +54,15 @@ cp -R ~/Library/Application\ Support/FoundryVTT/Data/worlds/ardenhaven ~/backups
 it is **world-readable over the tunnel while Foundry is up** — `express.static(paths.data)` serves
 the whole Data directory with no authentication. Hence **copy in → import → delete**:
 
+**Run `make foundry-import`.** It does all three steps — stages the file, waits while you run the
+import in Foundry's console, then deletes and verifies:
+
+```bash
+make foundry-import
+```
+
+The three steps it wraps, for reference:
+
 ```bash
 # 1. copy in
 cp foundry/build/actors.json ~/Library/Application\ Support/FoundryVTT/Data/worlds/ardenhaven/
@@ -72,9 +81,13 @@ curl -s -o /dev/null -w '%{http_code}\n' https://vtt.atjoseph.com/worlds/ardenha
 
 The module **cannot** do step 3 itself: Foundry's client API has no file-delete. `FilePicker`
 exposes `browse`, `upload`, `createDirectory` and `configurePath` and nothing else
-(`client/applications/apps/file-picker.mjs`). So the module returns
-`result.deleteJson = {required, path, url, note}` and raises a permanent toast, and the make target
-does the deletion.
+(`client/applications/apps/file-picker.mjs`).
+
+So the deleting agent is **`make foundry-import`** (CONTRACT.md §12, *"Deleting `actors.json` —
+who actually does it"*), and it `rm`s the staged file whether or not you report the import
+succeeded. What the module contributes is a backstop for an import run by hand: it returns
+`result.deleteJson = {required, path, url, note}` and raises a **permanent** toast. If you see
+that toast and did not come through `make foundry-import`, run `make foundry-clean` now.
 
 ### Options
 
@@ -146,6 +159,8 @@ absence of errors.
 | Placed tokens survive | Actors are **updated**, never deleted and recreated. Only embedded Items are replaced (`deleteEmbeddedDocuments` + `createEmbeddedDocuments`). |
 | GM work survives | `img`, `prototypeToken.texture` and `system.attributes.hp.value` are stripped from every update payload. Hand-added Items (no `flags.pentaryn.action`) are left in place by default. |
 | Silent key-stripping is caught | `assertPrototypeToken` compares every leaf the payload asked for against the saved **source** data. A key Foundry dropped reads back as `undefined`, exactly like the `"vaule"` probe in Gate 0. |
+| A silently dropped Item is caught | `createEmbeddedDocuments` returns only what it actually created — an Item that fails validation is omitted from the array **without throwing**. `replaceItems` asserts `created.length === itemsData.length` and names the missing Item(s). |
+| An unaddressable Item is caught | After the write, every payload Item must be findable by its `flags.pentaryn.action`. No match ⇒ the Item was dropped or the flag was stripped, and the next run would no longer recognise it as managed. This never silently skips: `expected` blocks (§8) are not exhaustive, so a missed Item has no other check standing behind it. |
 | Deterministic activity ids survive | `assertActivityIdsSurvived` checks each supplied 16-char id is present in the saved `ActivityCollection`. This is contract **U7**; if it ever fails, the message says what has to change (§8.2 rule 3 → resolve by name). |
 | Displayed numbers are the baked numbers | Readback assertions compare `activity.labels.toHit`, `labels.save`, `labels.damage.N.formula` and `item.labels.recharge` — what the sheet and chat card show, after every bonus has had its chance to apply. Recomputing `bonus + mod + prof` in the assert would agree with the bug. |
 | One bad actor doesn't kill the run | Per-actor `try/catch`; failures collected into a per-slug report. **Assertion** failures are deliberately excluded — they mean the silent-strip mode is live and nothing in the batch can be trusted, so they abort. |
@@ -212,7 +227,10 @@ number in the header comment of `pentaryn-importer.mjs`.
 It has **not** been run against a live Foundry. It was exercised against an offline simulation of
 the document API, which confirmed: dry run, create, idempotent skip, forced update, version-gate
 refusal, `@ref` lint refusal, abort-on-first-assertion-mismatch, prototype-token strip detection,
-and one `ValidationError` failing a single actor without aborting the run. That simulation is not a
+one `ValidationError` failing a single actor without aborting the run, and — with the actor's
+`expected` block set to `null`, so nothing else could catch it — both silent-Item failures:
+`createEmbeddedDocuments` returning fewer documents than it was given, and an Item whose
+`flags.pentaryn.action` came back stripped. That simulation is not a
 substitute for Gate 2 — it cannot reproduce Foundry's actual cleaning, dnd5e's actual label
 derivation, or the `attack.flat` behaviour that is the whole point of the exercise.
 

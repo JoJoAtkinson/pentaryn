@@ -1408,4 +1408,24 @@ something to take on trust.
 - [ ] Never write `actor.img`, `prototypeToken.texture.src`, or `system.attributes.hp.value` on an update.
 - [ ] Per-actor `try/catch` around document writes; abort the whole run on an *assertion* failure.
 - [ ] Run every `expected` assertion against prepared documents, with the normalisation of §8.2.
-- [ ] Delete `actors.json` from `Data/` on success.
+- [ ] Assert `created.length === itemsData.length` after `createEmbeddedDocuments` — a payload Item that fails validation is dropped from the returned array *without throwing*, and `expected` blocks are not exhaustive, so nothing else catches it.
+- [ ] Assert every payload Item is findable afterwards by its `flags.pentaryn.action`. A missing match means the Item was dropped or the flag was stripped; either way it is no longer addressable by the next run's upsert. Never skip the per-item checks when the lookup misses.
+- [ ] Report that `actors.json` must be deleted from `Data/` on success — `deleteJson.required` in the return value, plus a permanent `ui.notifications.warn`.
+
+### Deleting `actors.json` — who actually does it
+
+The importer **cannot** delete the file. Foundry's client-side API has no file-delete: `FilePicker`
+exposes `browse`, `upload`, `createDirectory` and `configurePath` and nothing else
+(`client/applications/apps/file-picker.mjs`). Deleting is therefore **out of contract for the
+module** and **in contract for the toolchain**:
+
+| Step | Agent | Obligation |
+| ---- | ----- | ---------- |
+| Copy `actors.json` into `Data/worlds/ardenhaven/` | `make foundry-sync` | — |
+| Run the import | GM, in Foundry's console | — |
+| **Delete the file from `Data/`** | **`make foundry-import`** | MUST `rm` the staged file whether or not the operator reports the import succeeded |
+| Prove it is gone from the players' side | `make foundry-verify` | MUST probe the site root first, then require HTTP **404** for `actors.json`; with the tunnel demonstrably up, any other code MUST fail |
+
+The module's job is to make the requirement impossible to miss — a `deleteJson` block in the return
+value and a permanent warning toast — for the case where the import was run by hand rather than
+through `make foundry-import`. It is a backstop, not the mechanism.

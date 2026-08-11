@@ -5,8 +5,8 @@
   "targetSystem": "dnd5e",
   "targetSystemVersion": "5.3",
   "generation": 14,
-  "generatedAt": "2026-08-10T18:10:59+00:00",
-  "sourceRevision": "9a4199f-dirty",
+  "generatedAt": "2026-08-10T20:52:50+00:00",
+  "sourceRevision": "09e5d82-dirty",
   "skipped": [
     {
       "npc": "_global",

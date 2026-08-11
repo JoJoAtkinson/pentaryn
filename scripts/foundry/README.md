@@ -32,8 +32,10 @@ viewable at <https://foundryvtt.com/community/atjoseph/licenses>.
 | `make foundry-check` | Verify key retrieval; prints length/format, never the value |
 | `make foundry-actors` | Regenerate `foundry/build/actors.json` from `combat-runner/actions.jsonl` + `#combat-runner` markdown |
 | `make foundry-sync` | `foundry-actors`, then **copy** (never symlink) the importer module + `actors.json` into the live Foundry `Data/` dir |
-| `make foundry-clean` | Delete the staged `actors.json` from `Data/`, then run `foundry-verify` |
-| `make foundry-verify` | Assert `actors.json` 404s over the public tunnel (Gate 2). Reports, doesn't fail, if the tunnel itself is down |
+| `make foundry-import` | **The one to run.** `foundry-sync`, wait while you run `game.pentaryn.import()` in Foundry's console, then `foundry-clean` |
+| `make foundry-clean-only` | Delete the staged `actors.json` from `Data/`. No verification |
+| `make foundry-clean` | `foundry-clean-only`, then `foundry-verify` |
+| `make foundry-verify` | Gate 2 — probe the site root, then assert `actors.json` 404s over the public tunnel. Skips (exit 0) only when the root itself is unreachable |
 
 Players connect to **<https://vtt.atjoseph.com>**. `cloudflared` runs from a
 pidfile in `.run/` (gitignored); the tunnel is only up while you're running.
@@ -41,7 +43,7 @@ pidfile in `.run/` (gitignored); the tunnel is only up while you're running.
 **The license key is needed exactly once**, at Foundry's first-run activation
 screen. Foundry stores it afterwards — `make vtt-up` never needs it.
 
-## Actor pipeline (`foundry-actors` / `foundry-sync` / `foundry-clean`)
+## Actor pipeline (`foundry-actors` / `foundry-import`)
 
 See [`playbooks/foundry-vtt.md`](../../playbooks/foundry-vtt.md) (Stages 1-2, Gate 2)
 for the full pipeline and its decision log.
@@ -54,9 +56,24 @@ tunnel is up, so anything under it is world-readable by anyone who can reach
 `https://vtt.atjoseph.com`.
 
 ```bash
-make foundry-sync   # regenerate + stage module and actors.json into Data/
+make foundry-import   # sync → prompt → delete → verify. One command, whole loop.
+```
+
+It stages the module and `actors.json`, prints the console commands, waits, and then
+**deletes the staged file whatever you answer** — answering "n" only skips the public
+404 assertion, never the deletion. The importer module *cannot* delete it (Foundry's
+client API has no file-delete); it only warns. `make foundry-import` is the agent that
+actually removes the file — see CONTRACT.md §12, *"Deleting `actors.json` — who
+actually does it"*.
+
+The pieces, if you need them separately:
+
+```bash
+make foundry-sync        # regenerate + stage module and actors.json into Data/
 # ... run the import inside Foundry ...
-make foundry-clean  # delete the staged actors.json, then verify it's gone
+make foundry-clean       # delete the staged actors.json, then verify it's gone
+make foundry-verify      # verify only — probes the site root first, so a down tunnel
+                         # can't masquerade as a pass. Tunnel up + not-404 → exit 1.
 ```
 
 ## Verify it resolves
