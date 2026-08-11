@@ -196,11 +196,17 @@ foundry-key:
 #                    #combat-runner markdown — see D8, generated JSON IS committed).
 # `foundry-sync`   : regenerate, then COPY (never symlink, D8) the importer module and
 #                    actors.json into the live Foundry Data/ dir, ready to import.
+# `foundry-import` : the whole Stage 2 loop — sync, wait while you run
+#                    `game.pentaryn.import()` in Foundry's console, then clean + verify.
+#                    THIS is the agent that deletes actors.json. The module cannot: Foundry's
+#                    client API has no file-delete (FilePicker exposes browse, upload,
+#                    createDirectory, configurePath — and nothing else), so the module warns
+#                    and this target does the removal. Use this rather than the pieces.
 # `foundry-clean`  : delete the staged actors.json from Data/ — Data/ is served over
 #                    HTTP with NO AUTH while the tunnel is up (see the red box at the
 #                    top of the playbook), so this is a required step, not cleanup.
 # `foundry-verify` : Gate 2's check — assert the staged actors.json 404s publicly.
-#                    Reports, doesn't fail the build, if the tunnel itself is down.
+#                    Probes the site root first, so "tunnel down" can't masquerade as a pass.
 FOUNDRY_DATA          := $(HOME)/Library/Application Support/FoundryVTT/Data
 FOUNDRY_MODULE_NAME   := pentaryn-importer
 FOUNDRY_MODULE_SRC    := $(ROOT)/foundry/module/$(FOUNDRY_MODULE_NAME)
@@ -227,23 +233,92 @@ foundry-sync: foundry-actors
 	@echo "  ✓ actors.json staged → $(FOUNDRY_ACTORS_STAGED)"
 	@echo "  ⚠ Data/ is public with no auth while the tunnel is up — import now, then: make foundry-clean"
 
-.PHONY: foundry-clean
-foundry-clean:
+# ── The Stage 2 loop: copy in → import → delete ──
+# CONTRACT.md §12 requires actors.json to be deleted from Data/ on success. The importer
+# module CANNOT do it — Foundry's client-side API has no file-delete — so this target is the
+# deleting agent, and the module's permanent toast is the fallback for anyone who ran the
+# import by hand. Deletion happens whatever you answer; answering "n" only skips the 404
+# assertion, it never leaves the file behind.
+#
+# Interactive by design: the import runs in Foundry's browser console, which make cannot
+# drive. Reads from the terminal (/dev/tty) so a piped stdin can't silently auto-answer.
+#
+# THREE ways out of the prompt, and all three delete — a target whose whole job is "don't
+# leave a public file lying around" must not have an exit path that leaves it lying around:
+#   answered      → delete (+ verify on y)
+#   no terminal   → skip the prompt, delete anyway
+#   Ctrl-C / TERM → trap deletes, then re-raises
+.PHONY: foundry-import
+foundry-import: foundry-sync
+	@echo ""
+	@echo "  ── Stage 2 — run the import ──────────────────────────────────────────"
+	@echo "  1. Foundry → world 'ardenhaven' → F12 console"
+	@echo "  2. Dry run first:   await game.pentaryn.import({ dryRun: true })"
+	@echo "  3. Then for real:   await game.pentaryn.import()"
+	@echo "     One NPC only:    await game.pentaryn.import({ only: ['<slug>'] })"
+	@echo ""
+	@echo "  The module ABORTS the run on any readback-assertion failure. If it does, fix the"
+	@echo "  generator and start over — do not import the rest."
+	@echo ""
+	@trap 'echo; echo "  ▸ interrupted — deleting the staged JSON"; \
+	       rm -f "$(FOUNDRY_ACTORS_STAGED)"; exit 130' INT TERM; \
+	  printf "  Import finished (ok / assertion failure / didn't run)? [y/N] "; \
+	  ans=""; \
+	  if { read -r ans < /dev/tty; } 2>/dev/null; then :; else \
+	    ans=""; echo ""; \
+	    echo "  ▸ no terminal to prompt on — assuming the import did not run"; fi; \
+	  trap - INT TERM; \
+	  case "$$ans" in \
+	    [yY]*) echo "  ▸ deleting the staged JSON, then asserting it 404s publicly..."; \
+	           $(MAKE) --no-print-directory foundry-clean ;; \
+	    *)     echo "  ▸ deleting the staged JSON anyway — it must not linger in a public dir."; \
+	           $(MAKE) --no-print-directory foundry-clean-only; \
+	           echo "  ▸ skipped the public 404 assertion; re-run it with: make foundry-verify"; \
+	           echo "  ▸ re-stage when you're ready with: make foundry-import" ;; \
+	  esac
+
+# Delete without verifying. `foundry-clean` is the one you want — it also proves the
+# deletion took effect from the players' side.
+.PHONY: foundry-clean-only
+foundry-clean-only:
 	@rm -f "$(FOUNDRY_ACTORS_STAGED)"
 	@if [ -f "$(FOUNDRY_ACTORS_STAGED)" ]; then \
 	  echo "  ✗ $(FOUNDRY_ACTORS_STAGED) still on disk — check permissions"; exit 1; \
 	else echo "  ✓ $(FOUNDRY_ACTORS_STAGED) deleted"; fi
+
+.PHONY: foundry-clean
+foundry-clean: foundry-clean-only
 	@$(MAKE) --no-print-directory foundry-verify
 
+# Two probes, in order, because one code cannot distinguish "the file is gone" from "the
+# request never reached Foundry" (D10: each gate must POSITIVELY confirm the thing it
+# protects; "it didn't error" is worthless).
+#
+#   1. site root — establishes tunnel state. Same 200/302 test as vtt-status's "public:".
+#   2. actors.json — only meaningful once the tunnel is demonstrably up.
+#
+# With the tunnel up, ONLY 404 passes. A 403 (Cloudflare bot-challenging curl's non-browser
+# UA), a 302 (an interstitial), a 5xx — none of those prove the file is gone, and a player's
+# browser sails past exactly the challenge curl trips over. Treat every one as a failure.
 .PHONY: foundry-verify
 foundry-verify:
-	@code=$$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 $(FOUNDRY_ACTORS_URL) 2>/dev/null); \
+	@root=$$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 https://$(TUNNEL_HOST)/ 2>/dev/null); \
+	if [ "$$root" != "200" ] && [ "$$root" != "302" ]; then \
+	  echo "  ▸ tunnel not reachable (site root HTTP $${root:-000}) — nothing is public, nothing to verify."; \
+	  echo "    To confirm positively: make vtt-up, then: make foundry-verify"; \
+	  exit 0; \
+	fi; \
+	code=$$(curl -s -o /dev/null -w '%{http_code}' --max-time 8 $(FOUNDRY_ACTORS_URL) 2>/dev/null); \
 	if [ "$$code" = "404" ]; then \
-	  echo "  ✓ actors.json not reachable (HTTP 404)"; \
+	  echo "  ✓ tunnel UP (root HTTP $$root) and actors.json is HTTP 404 — confirmed not served"; \
 	elif [ "$$code" = "200" ]; then \
-	  echo "  ✗ actors.json returned HTTP 200 — still exposed. Run: make foundry-clean"; exit 1; \
+	  echo "  ✗ actors.json returned HTTP 200 — STILL EXPOSED to every connected player."; \
+	  echo "    Run: make foundry-clean"; exit 1; \
 	else \
-	  echo "  ▸ tunnel not reachable (HTTP $${code:-none}) — skipping. Bring it up with: make vtt-up, then re-run"; \
+	  echo "  ✗ tunnel is UP (root HTTP $$root) but actors.json returned HTTP $${code:-000}, not 404."; \
+	  echo "    That does NOT prove the file is gone — a bot-challenge or interstitial answers curl"; \
+	  echo "    differently than a player's browser. Run: make foundry-clean, then check by hand:"; \
+	  echo "      $(FOUNDRY_ACTORS_URL)"; exit 1; \
 	fi
 
 # ─── Tests ──────────────────────────────────────────────────────────────

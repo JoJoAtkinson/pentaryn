@@ -231,7 +231,12 @@ cp -R ~/Library/Application\ Support/FoundryVTT/Data/worlds/ardenhaven ~/backups
 
 1. `make foundry-sync` copies `foundry/build/actors.json` → `Data/worlds/ardenhaven/`
 2. Run the import
-3. **Delete the file from `Data/`** — the make target or the importer does this on success
+3. **Delete the file from `Data/`** — `make foundry-clean` does this, and asserts the 404
+
+`make foundry-import` runs all three: sync, prompt while you run `game.pentaryn.import()` in the
+console, then clean and verify. **The module cannot do step 3** — Foundry's client API has no
+file-delete (`FilePicker` exposes only `browse`, `upload`, `createDirectory`, `configurePath`), so
+it warns permanently and the make target is the deleting agent. See CONTRACT.md §12.
 
 Module exposes `game.pentaryn.import()`. No UI, no settings, no hooks.
 
@@ -248,10 +253,15 @@ Import one NPC · readback assertions pass · abort-on-first-mismatch works · *
 config correct** (vision, bars, size, disposition — wrong defaults surface mid-session and no
 other gate catches them) · then re-run the full import and assert **zero changes** (idempotence).
 
-**Then confirm the JSON is gone:**
+**Then confirm the JSON is gone** — `make foundry-verify`, or by hand:
 ```bash
+curl -s -o /dev/null -w '%{http_code}\n' https://vtt.atjoseph.com/                                # tunnel up? 200/302
 curl -s -o /dev/null -w '%{http_code}\n' https://vtt.atjoseph.com/worlds/ardenhaven/actors.json   # expect 404
 ```
+Both probes, in that order. A 404 from a *down* tunnel proves nothing — per **D10** the gate has to
+positively confirm the file is gone, so it establishes the tunnel is up first and then requires a
+404. With the tunnel up, anything other than 404 (a 403 bot-challenge against curl's UA, a 302, a
+5xx) fails: none of them show what a player's browser would get.
 
 ---
 

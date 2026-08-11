@@ -841,12 +841,20 @@ const isManagedItem = item => foundry.utils.getProperty(item, `flags.${FLAG_SCOP
  * generated set, because a freshly created Actor has no others. Pass
  * `unmanagedItems: "delete"` to take the literal reading.
  *
+ * Count-checked on the way out. `createEmbeddedDocuments` returns only the documents that were
+ * actually created: a payload Item that fails validation is dropped from the returned array
+ * WITHOUT throwing, so `created.length < itemsData.length` is the silent-drop signature. Nothing
+ * downstream catches it on its own — the `expected` blocks (§8) are deliberately not exhaustive,
+ * so a dropped Item with no `expected` entry would otherwise sail through the whole run.
+ *
  * @param {Actor} actor
  * @param {object[]} itemsData
  * @param {"keep"|"delete"} unmanagedItems
+ * @param {string} slug
  * @returns {Promise<{deleted: number, created: number, unmanaged: string[]}>}
+ * @throws {PentarynAssertionError} when Foundry created fewer Items than the payload asked for.
  */
-async function replaceItems(actor, itemsData, unmanagedItems) {
+async function replaceItems(actor, itemsData, unmanagedItems, slug) {
   const managed = actor.items.filter(isManagedItem);
   const unmanaged = actor.items.filter(i => !isManagedItem(i));
 
@@ -858,6 +866,22 @@ async function replaceItems(actor, itemsData, unmanagedItems) {
   let created = [];
   if (itemsData.length) {
     created = await actor.createEmbeddedDocuments("Item", itemsData, { render: false, keepId: false });
+  }
+
+  if (created.length !== itemsData.length) {
+    const requestedNames = itemsData.map(i => i.name);
+    const createdNames = new Set(created.map(i => i.name));
+    const message = assertionMessage({
+      slug,
+      path: "actor.items (createEmbeddedDocuments)",
+      expected: `${itemsData.length} Item(s): ${requestedNames.join(", ")}`,
+      actual: `${created.length} Item(s): ${[...createdNames].join(", ") || "none"}`,
+      hint: "Foundry DROPPED " + (itemsData.length - created.length) + " Item(s) without raising. "
+        + "Missing: " + (requestedNames.filter(n => !createdNames.has(n)).join(", ") || "(duplicate names — compare by index)")
+        + ". Check the dropped Item's `type` and `system` against CONTRACT.md §3."
+    });
+    shout(message);
+    throw new PentarynAssertionError(message);
   }
 
   return {
@@ -1032,7 +1056,7 @@ async function importActors(options = {}) {
         created.push(slug);
       }
 
-      const itemResult = await replaceItems(actor, items, unmanagedItems);
+      const itemResult = await replaceItems(actor, items, unmanagedItems, slug);
       if (itemResult.unmanaged.length) {
         warn(
           `${slug}: left ${itemResult.unmanaged.length} hand-added Item(s) in place `
@@ -1046,10 +1070,36 @@ async function importActors(options = {}) {
 
       // Strip detection on the two structures Foundry is most likely to quietly mangle.
       assertPrototypeToken(actor, data.prototypeToken, slug);
+      // Every payload Item must be findable by its `flags.pentaryn.action`. `replaceItems` has
+      // already proved the COUNT matches; this proves the IDENTITY does. The two failures it
+      // separates: Foundry stripped `flags.pentaryn.action` (the item exists but is no longer
+      // addressable, and the next run would treat it as hand-added and leave it behind), or the
+      // generator emitted two rows with the same action name (count matches, one shadows the
+      // other). Silently skipping — the old `if (liveItem)` — is the exact failure class this
+      // module exists to catch.
       for (const itemData of items) {
         const action = foundry.utils.getProperty(itemData, `flags.${FLAG_SCOPE}.action`);
-        const liveItem = actor.items.find(i => foundry.utils.getProperty(i, `flags.${FLAG_SCOPE}.action`) === action);
-        if (liveItem) assertActivityIdsSurvived(liveItem, itemData, slug);
+        const liveItem = (action === undefined)
+          ? undefined
+          : actor.items.find(i => foundry.utils.getProperty(i, `flags.${FLAG_SCOPE}.action`) === action);
+        if (!liveItem) {
+          const message = assertionMessage({
+            slug,
+            action: action ?? "(no flags.pentaryn.action in payload)",
+            path: `flags.${FLAG_SCOPE}.action`,
+            expected: action,
+            actual: actor.items.map(i => foundry.utils.getProperty(i, `flags.${FLAG_SCOPE}.action`)),
+            hint: (action === undefined)
+              ? "The PAYLOAD item carries no `flags.pentaryn.action`. The generator must emit one on "
+                + "every Item — it is the upsert key for the embedded-Item replace (CONTRACT.md §4.2)."
+              : "Payload item has no matching embedded Item — it was dropped, or Foundry STRIPPED "
+                + "`flags.pentaryn.action`. Either way the Item is unaddressable: the next run cannot "
+                + "recognise it as managed and will leave it behind as hand-added."
+          });
+          shout(message);
+          throw new PentarynAssertionError(message);
+        }
+        assertActivityIdsSurvived(liveItem, itemData, slug);
       }
 
       // The contract's own expectations (§8) — displayed labels, not recomputed maths.
@@ -1086,14 +1136,20 @@ async function importActors(options = {}) {
   // §12 / playbook Stage 2: Data/ is served over HTTP with no authentication and is public while
   // the tunnel is up. Foundry's client API has no file-delete (FilePicker exposes only browse,
   // upload, createDirectory and configurePath — client/applications/apps/file-picker.mjs), so the
-  // importer cannot remove it itself. It reports the fact instead, and `make foundry-import` does
-  // the deletion.
+  // importer cannot remove it itself.
+  //
+  // Per CONTRACT.md §12 ("Deleting actors.json — who actually does it") the DELETING AGENT is
+  // `make foundry-import`, which rm's the staged file after this call returns — whether or not
+  // the import succeeded. What follows is the backstop for an import run by hand instead: a
+  // machine-readable `deleteJson` block and a permanent toast. Do not mistake it for the
+  // mechanism; if you got here without `make foundry-import`, run `make foundry-clean` now.
   const deleteJson = {
     required: !dryRun && !failed.length,
     path,
     url,
-    note: "Foundry has no client-side file-delete API. Delete this file from Data/ now — it is "
-      + "world-readable over the tunnel. `make foundry-import` does it for you."
+    note: "Foundry has no client-side file-delete API, so this module cannot remove the file. "
+      + "`make foundry-import` deletes it for you (and `make foundry-clean` does it on its own). "
+      + "Until then it is world-readable over the tunnel."
   };
   if (deleteJson.required) {
     warn(`DELETE THIS NOW: Data/${path} is public while the tunnel is up.`);
