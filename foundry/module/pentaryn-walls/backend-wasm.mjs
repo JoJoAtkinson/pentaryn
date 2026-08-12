@@ -119,7 +119,12 @@ export function runWasm(walls, opts = {}) {
   };
 }
 
-await load();
+// Registration is SYNCHRONOUS and the load is fire-and-forget. A top-level `await` here
+// suspends evaluation of every module that imports this one — which delayed
+// pentaryn-walls.mjs past Foundry's `ready` hook, so the API was never attached. The
+// backend simply reports itself unavailable until the bytes arrive, and `pickBackend`
+// falls back to JS for any run in that window.
+export const ready = load();
 
 register({
   name: "wasm",

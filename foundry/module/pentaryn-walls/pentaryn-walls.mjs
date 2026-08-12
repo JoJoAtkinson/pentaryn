@@ -14,7 +14,7 @@
 
 import {runEngine, FLAG_SCOPE} from "./wall-engine.mjs";
 import {get as getBackend, available} from "./backends.mjs";
-import "./backend-wasm.mjs";   // registers "wasm" when the compiled module loads
+import {ready as wasmReady} from "./backend-wasm.mjs";  // registers "wasm"; loads async
 
 const MODULE_ID = "pentaryn-walls";
 
@@ -252,8 +252,9 @@ Hooks.once("init", () => {
   });
 });
 
-Hooks.once("ready", () => {
+Hooks.once("ready", async () => {
   if (!game.user.isGM) return;
+  await wasmReady;          // settled by now in practice; awaited so the log line is accurate
   game.pentaryn ??= {};
   game.pentaryn.walls = {preview, run, undo, makeMacro, runEngine, backends: available};
   console.log(`${MODULE_ID} | ready — backends: ${available().map(b => b.name).join(", ")}. ` +
