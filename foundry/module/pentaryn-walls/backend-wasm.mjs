@@ -11,7 +11,7 @@
  */
 
 import {register} from "./backends.mjs";
-import {resolveConfig, SOLID, FLAG_SCOPE} from "./wall-engine.mjs";
+import {resolveConfig, analyze, lintOnly, SOLID, FLAG_SCOPE} from "./wall-engine.mjs";
 
 let mod = null;
 let loadError = null;
@@ -66,9 +66,9 @@ export function runWasm(walls, opts = {}) {
   if (len < 0) throw new Error("wasm engine reported an unsound rule set (D did not fall)");
 
   const out = new Int32Array(mod.memory.buffer, mod.out_ptr(), len);
-  const [nc, nu, nr, iterations] = out;
+  const [nc, nu, nr, iterations, nComp] = out;
 
-  let p = 4;
+  let p = 5;
   const creates = [];
   for (let i = 0; i < nc; i++, p += 4) {
     creates.push({c: [out[p], out[p + 1], out[p + 2], out[p + 3]], ...SOLID, levels: [],
@@ -80,15 +80,34 @@ export function runWasm(walls, opts = {}) {
     updates.push({_id: w?._id ?? w?.id, c: [out[p + 1], out[p + 2], out[p + 3], out[p + 4]],
                   flags: {[FLAG_SCOPE]: {generated: true, run: opts.runId ?? "run"}}});
   }
-  const refusals = [];
-  for (let i = 0; i < nr; i++, p += 2) {
-    refusals.push({at: [out[p], out[p + 1]], wall: null, why: "(wasm backend: position only)"});
+  p += nr * 2;   // positions only; reasons come from JS below, and only if there are any
+  const components = [];
+  for (let i = 0; i < nComp; i++, p += 2) {
+    components.push({walls: out[p], dangling: out[p + 1], closed: out[p + 1] === 0});
+  }
+
+  // Hybrid split, by cost rather than by convenience. Components are cheap over a graph the
+  // engine already has, so they are computed in wasm. Refusal *reasons* need a JS graph
+  // build — the single most expensive thing here — so they are computed only when there is
+  // actually something to explain, which on a settled scene is nothing. Wording therefore
+  // can never drift from the reference, and a clean run pays nothing for the guarantee.
+  const lints = lintOnly(walls, opts);
+  let refusals = [];
+  if (nr > 0) {
+    const applied = walls.map(w => {
+      const u = updates.find(u => u._id === (w._id ?? w.id));
+      return u ? {...w, c: u.c} : w;
+    }).concat(creates.map((c, i) => ({_id: `gen-${i}`, ...c})));
+    refusals = analyze(applied, opts).refusals;
   }
 
   return {
-    creates, updates, refusals, lints: [], log: [],
+    creates, updates, refusals, lints, log: [],
     report: {iterations, created: creates.length, moved: updates.length,
-             refused: refusals.length, components: [], config: {gridSize: cfg.gridSize}}
+             refused: refusals.length, components,
+             config: {gridSize: cfg.gridSize, weldEps: cfg.weldEps, collEps: cfg.collEps,
+                      pinEps: cfg.pinEps, gapMax: cfg.gapMax, cornerMax: cfg.cornerMax,
+                      extMax: cfg.extMax}}
   };
 }
 

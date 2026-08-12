@@ -14,7 +14,14 @@ which endpoint and why.
 - **Design, rule table, traces:** [`playbooks/foundry-wall-autocomplete.md`](../../../playbooks/foundry-wall-autocomplete.md)
 - **Target:** Foundry **v14.365**. System-agnostic — it only touches `Wall` documents.
 
-No UI. No settings. Two hooks: `init` to register the keybindings, `ready` to attach the API.
+One setting (engine backend), two hooks: `init` for keybindings and the setting, `ready` to
+attach the API.
+
+**The compiled engine is on by default.** *Game Settings → Wall Autocomplete → Engine
+backend* toggles between Automatic / Compiled / JavaScript. Both produce identical geometry —
+verified against the same 44 fixtures — so the setting only affects speed. A missing or
+unloadable `.wasm` degrades to JavaScript automatically; every run reports which engine it
+used and how long it took.
 
 ---
 
@@ -172,8 +179,22 @@ These are the reasons to trust it on a scene you have drawn by hand:
 
 ## Compiled backend (side-by-side)
 
-The harness is in place; **no compiled backend is built yet** — this machine has no WASM
-toolchain (no emcc, no rust, and Apple clang has no `wasm32` target).
+**Built and on by default.** `wall-engine.wasm` is a Rust port compiled to
+`wasm32-unknown-unknown`, ~12x faster than the JS engine and passing all 44 fixtures.
+
+    rooms   walls in   js       wasm
+    10x10   400        106 ms   11 ms
+    14x14   784        442 ms   38 ms
+    20x20   1600       1680 ms  142 ms
+    28x28   3136       6109 ms  531 ms
+
+The split is by cost, not convenience: wasm owns the fixed-point loop and component
+analysis; JS keeps lints and refusal *wording*, and only computes the latter when something
+was actually refused. So a compiled run can never drift from the reference on the text you
+read, and a clean run pays nothing for that guarantee.
+
+Rebuild with `make foundry-walls-wasm` after changing `wasm/src/lib.rs`. **The JS engine
+stays the reference** — change it first, then port.
 
 What exists now:
 

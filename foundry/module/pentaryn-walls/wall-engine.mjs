@@ -818,6 +818,37 @@ function diagnose(v, segs, verts, cfg, ambiguous) {
 /* -------------------------------------------- */
 
 /**
+ * Diagnostics for a wall set, with no mutation: lints, component state, and the reason each
+ * loose end is still loose.
+ *
+ * Split out so a compiled backend can own the hot fixed-point loop while these stay in JS.
+ * They are all once-per-run and cheap relative to the loop, and keeping them here means a
+ * backend cannot drift from the reference on the wording of a refusal — which is the part
+ * the user actually reads.
+ */
+export function lintOnly(walls, opts = {}) {
+  const cfg = resolveConfig(opts);
+  return lint(walls.map(toSeg).map((s, i) => ({...s, c: [...s.c], idx: i})), cfg);
+}
+
+export function analyze(walls, opts = {}) {
+  const cfg = resolveConfig(opts);
+  const segs = walls.map(toSeg).map((s, i) => ({...s, c: [...s.c], idx: i}));
+  const lints = lint(segs, cfg);
+  const verts = buildGraph(segs, cfg);
+  const amb = ambiguousAnchors(enumerate(segs, verts, cfg));
+  return {
+    lints,
+    refusals: danglingOf(verts).map(v => ({
+      at: v.p, wall: v.ends[0].seg.id, why: diagnose(v, segs, verts, cfg, amb)
+    })),
+    components: components(segs, verts).map(c => ({
+      walls: c.segs.length, dangling: c.dangling, closed: c.dangling === 0
+    }))
+  };
+}
+
+/**
  * Run the engine over a set of wall documents.
  *
  * @param {object[]} walls  Wall-document-shaped objects: {_id, c, door, sight, move, dir, levels, flags}

@@ -130,6 +130,7 @@ struct Vert {
     p: P,
     ends: Vec<(usize, usize)>, // (seg index, which end)
     pinned: bool,
+    pin_host: Option<usize>,
     keep_open: bool,
     dangling: bool,
     out: P,
@@ -150,8 +151,8 @@ fn build_graph(segs: &[Seg], cfg: &Cfg) -> Graph {
             let p = s.end(w);
             let k = key_of(p);
             let vi = *index.entry(k).or_insert_with(|| {
-                verts.push(Vert { p, ends: Vec::new(), pinned: false, keep_open: false,
-                                  dangling: false, out: [0.0, 0.0] });
+                verts.push(Vert { p, ends: Vec::new(), pinned: false, pin_host: None,
+                                  keep_open: false, dangling: false, out: [0.0, 0.0] });
                 verts.len() - 1
             });
             verts[vi].ends.push((si, w));
@@ -167,7 +168,11 @@ fn build_graph(segs: &[Seg], cfg: &Cfg) -> Graph {
             if own.contains(&si) || s.degenerate() { continue; }
             if let Some(f) = foot(p, s.a(), s.b()) {
                 if f.t <= 0.0 || f.t >= 1.0 { continue; }
-                if dist2(p, f.point) <= pin_eps2 { verts[vi].pinned = true; break; }
+                if dist2(p, f.point) <= pin_eps2 {
+                    verts[vi].pinned = true;
+                    verts[vi].pin_host = Some(si);
+                    break;
+                }
             }
         }
     }
@@ -528,6 +533,42 @@ fn apply(inst: &Inst, segs: &mut Vec<Seg>, g: &Graph) {
     }
 }
 
+/// Connected components over shared vertices and pins. Returns (walls, dangling) per group.
+/// Ported rather than left to JS because the JS version needs its own graph build, which on
+/// a large scene costs more than the entire compiled run.
+fn components(segs: &[Seg], g: &Graph) -> Vec<(usize, usize)> {
+    let n = segs.len();
+    let mut parent: Vec<usize> = (0..n).collect();
+    fn find(parent: &mut Vec<usize>, mut x: usize) -> usize {
+        while parent[x] != x { parent[x] = parent[parent[x]]; x = parent[x]; }
+        x
+    }
+    for v in g.verts.iter() {
+        for i in 1..v.ends.len() {
+            let (a, b) = (find(&mut parent, v.ends[0].0), find(&mut parent, v.ends[i].0));
+            if a != b { parent[a] = b; }
+        }
+        if let Some(h) = v.pin_host {
+            let (a, b) = (find(&mut parent, v.ends[0].0), find(&mut parent, h));
+            if a != b { parent[a] = b; }
+        }
+    }
+    let mut order: Vec<usize> = Vec::new();
+    let mut counts: HashMap<usize, (usize, usize)> = HashMap::new();
+    for i in 0..n {
+        if segs[i].degenerate() { continue; }
+        let r = find(&mut parent, i);
+        let e = counts.entry(r).or_insert_with(|| { order.push(r); (0, 0) });
+        e.0 += 1;
+    }
+    for v in g.verts.iter() {
+        if !v.dangling { continue; }
+        let r = find(&mut parent, v.ends[0].0);
+        if let Some(e) = counts.get_mut(&r) { e.1 += 1; }
+    }
+    order.into_iter().map(|r| counts[&r]).collect()
+}
+
 /* ------------------------------------------------------------------ */
 /*  Trim (single-shot pre-pass)                                        */
 /* ------------------------------------------------------------------ */
@@ -690,17 +731,21 @@ pub extern "C" fn run(grid_size: f64, gap_max: f64, corner_max: f64, ext_max: f6
     }
     let refusals: Vec<P> = dangling_of(&g).iter().map(|&i| g.verts[i].p).collect();
 
+    let comps = components(&segs, &g);
+
     let mut out: Vec<i32> = Vec::new();
     out.push(creates.len() as i32);
     out.push(updates.len() as i32);
     out.push(refusals.len() as i32);
     out.push(iterations as i32);
+    out.push(comps.len() as i32);
     for c in creates.iter() { for k in 0..4 { out.push(c[k] as i32); } }
     for (i, c) in updates.iter() {
         out.push(*i as i32);
         for k in 0..4 { out.push(c[k] as i32); }
     }
     for r in refusals.iter() { out.push(r[0] as i32); out.push(r[1] as i32); }
+    for (w, d) in comps.iter() { out.push(*w as i32); out.push(*d as i32); }
 
     let len = out.len() as i32;
     unsafe { *std::ptr::addr_of_mut!(OUT_BUF) = out; }
