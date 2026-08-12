@@ -321,6 +321,27 @@ foundry-verify:
 	  echo "      $(FOUNDRY_ACTORS_URL)"; exit 1; \
 	fi
 
+# ─── Foundry pipeline (walls) ───────────────────────────────────────────
+# Independent of the actor pipeline above — different module, no staged file, nothing
+# public. See playbooks/foundry-wall-autocomplete.md.
+FOUNDRY_WALLS_SRC := $(ROOT)/foundry/module/pentaryn-walls
+FOUNDRY_WALLS_DST := $(FOUNDRY_DATA)/modules/pentaryn-walls
+
+# The engine is pure geometry, so the whole suite runs with Foundry stopped.
+.PHONY: foundry-walls-test
+foundry-walls-test:
+	@node $(FOUNDRY_WALLS_SRC)/test/run.mjs
+
+# Copy, not symlink (D8) — so a stale copy is a real failure mode. Tests gate the sync.
+.PHONY: foundry-walls-sync
+foundry-walls-sync: foundry-walls-test
+	@mkdir -p "$(FOUNDRY_DATA)/modules"
+	@rm -rf "$(FOUNDRY_WALLS_DST)"
+	@cp -R "$(FOUNDRY_WALLS_SRC)" "$(FOUNDRY_WALLS_DST)"
+	@echo "  ✓ module → $(FOUNDRY_WALLS_DST)"
+	@echo "    Enable 'Pentaryn Wall Autocomplete' in Manage Modules, reload, then:"
+	@echo "      await game.pentaryn.walls.preview()"
+
 # ─── Tests ──────────────────────────────────────────────────────────────
 # Run the test suite for the GUI (skips scenarios by default for speed; use
 # `make combat-test-all` for the full ring including scenarios).

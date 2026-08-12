@@ -1,0 +1,26 @@
+{
+  "id": "pentaryn-walls",
+  "title": "Pentaryn Wall Autocomplete",
+  "description": "Deterministic completion of hand-drawn walls. Rough in the windows, doors and hint stubs; the engine infers the rest or refuses and says why. Exposes game.pentaryn.walls.preview() / .run() / .undo() and nothing else. See playbooks/foundry-wall-autocomplete.md.",
+  "version": "0.1.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "14"
+  },
+  "authors": [
+    {
+      "name": "Joseph Atkinson"
+    }
+  ],
+  "esmodules": [
+    "pentaryn-walls.mjs"
+  ],
+  "socket": false,
+  "protected": false,
+  "flags": {
+    "pentaryn": {
+      "flagScope": "wall-autocomplete",
+      "generation": 14
+    }
+  }
+}
