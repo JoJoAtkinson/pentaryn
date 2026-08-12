@@ -11,7 +11,8 @@
  *   node test/bench.mjs 20         # include a 20x20 grid (1600 walls in)
  */
 
-import "../backend-wasm.mjs";   // registers "wasm" if the module is built
+import {ready as wasmReady} from "../backend-wasm.mjs";
+await wasmReady;   // the backend loads async; wait before asking if it is available
 import {available, compare} from "../backends.mjs";
 
 const w = (id, c) => ({_id: id, c, light: 20, move: 20, sight: 20, sound: 20,
