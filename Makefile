@@ -87,7 +87,7 @@ CF_LOG       := $(RUN_DIR)/cloudflared.log
 
 # ── Combined up / down ──
 .PHONY: vtt-up
-vtt-up: foundry-up tunnel-up
+vtt-up: foundry-backup-safe foundry-assets foundry-up tunnel-up
 	@echo ""
 	@echo "  ▸ players:  https://$(TUNNEL_HOST)"
 	@echo "  ▸ local:    $(FOUNDRY_URL)"
@@ -95,6 +95,7 @@ vtt-up: foundry-up tunnel-up
 
 .PHONY: vtt-down
 vtt-down: tunnel-down foundry-down
+	@$(MAKE) --no-print-directory foundry-backup REASON=shutdown
 	@echo "  ▸ all down"
 
 # ── Status ──
@@ -320,6 +321,36 @@ foundry-verify:
 	  echo "    differently than a player's browser. Run: make foundry-clean, then check by hand:"; \
 	  echo "      $(FOUNDRY_ACTORS_URL)"; exit 1; \
 	fi
+
+# ─── Foundry ⇄ OneDrive ─────────────────────────────────────────────────
+# OneDrive is the source of truth, with ONE DIRECTION EACH WAY so the two can
+# never fight over the same file:
+#   assets flow DOWN  — drop <kind>-<nn>.zip in OneDrive, next start unpacks it
+#   the world flows UP — every stop and start snapshots it, rolling, keep 100
+# Restore is deliberately manual; see scripts/foundry/cloud.py for why syncing
+# a live LevelDB world would corrupt it.
+.PHONY: foundry-assets
+foundry-assets:
+	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud assets
+
+.PHONY: foundry-backup
+foundry-backup:
+	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud backup --reason $(or $(REASON),manual)
+
+# Lifecycle variant: skips quietly when the server is already up, so `make vtt-up`
+# on a running server does not abort before starting the tunnel.
+.PHONY: foundry-backup-safe
+foundry-backup-safe:
+	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud backup --reason prelaunch --if-stopped
+
+# Lists snapshots when given no SNAP; restores that one when given it.
+.PHONY: foundry-restore
+foundry-restore:
+	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud restore $(if $(SNAP),--snapshot $(SNAP),)
+
+.PHONY: foundry-cloud
+foundry-cloud:
+	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud status
 
 # ─── Foundry pipeline (walls) ───────────────────────────────────────────
 # Independent of the actor pipeline above — different module, no staged file, nothing

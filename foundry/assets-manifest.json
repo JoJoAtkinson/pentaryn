@@ -1,0 +1,12 @@
+{
+  "packs": {
+    "tokens-01": {
+      "bytes": 201593499,
+      "dest": "Data/assets/tokens/tokens-01",
+      "extracted": "2026-08-12T14:54:40+00:00",
+      "files": 1913,
+      "sha256": "552f9aa4172201c91f59b62d755e47e1e13027873c8fa15ac3e2a037e93e8733",
+      "zip": "tokens-01.zip"
+    }
+  }
+}

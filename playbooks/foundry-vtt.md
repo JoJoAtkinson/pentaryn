@@ -294,6 +294,62 @@ Consequences to accept:
 That's a real loss, deliberately accepted: three scenes drawn once, versus a CV pipeline that
 needed more cleanup than the hand-drawing it was meant to replace.
 
+## OneDrive — the source of truth
+
+OneDrive holds everything Foundry needs; local disk holds only what Foundry serves.
+**One direction each way, so the two can never fight over the same file.**
+
+```
+OneDrive/DnD/foundry/
+  README.txt          explains the below, for whoever opens the folder in six months
+  assets/             YOU put zips here      → flows DOWN into Foundry on start
+  world-backups/      automatic, rolling     ← flows UP on every stop and start
+  system-backup/      automatic, one copy    ← refreshed only on a version change
+```
+
+| Target | Direction | What |
+| --- | --- | --- |
+| `make foundry-assets` | down | Unpacks any new `<kind>-<nn>.zip`. Hash-tracked, extracted once, never overwritten. |
+| `make foundry-backup` | up | Snapshots world + Config + modules (~4 MB). Keeps the last 100, skips if unchanged. |
+| `make foundry-restore` | manual | Lists snapshots; `SNAP=<name>` restores one, archiving current state first. |
+| `make foundry-cloud` | — | Status: packs, snapshots, whether the server is up. |
+
+Both are wired into the lifecycle: `vtt-up` snapshots then unpacks before launching,
+`vtt-down` snapshots after stopping. Backing up on *start* as well as stop is what
+catches a crash or force-quit that skipped the shutdown hook.
+
+### Why not just sync the whole data directory
+
+`Data/worlds/<world>/data/` is a live **LevelDB**. A sync client reads `.ldb` files
+mid-compaction and uploads inconsistent snapshots, and resolves conflicts by writing
+*conflict copies* into the directory — junk inside a live database. LevelDB's
+single-writer `LOCK` means neither side detects the other, so nothing errors; the world
+simply fails to open, weeks later. Foundry's own static route hard-403s
+`.ldb`/`LOCK`/`MANIFEST` for related reasons.
+
+Measured on this machine: a read through `~/Library/CloudStorage` **hung for 30 s** while
+the OneDrive daemon was busy, against **6 ms** for the same file read directly. That is
+also why assets are unpacked to local disk rather than symlinked — the stall is caused by
+the File Provider daemon, not the symlink, so a direct path would hang identically.
+
+A *stopped* database copies consistently every time. That is the whole trick.
+
+### The rules that keep it safe
+
+- **Packs are append-only.** Never edit a published zip; add `<kind>-<nn+1>.zip`. A zip
+  whose hash changed after extraction is **refused**, not silently re-applied.
+- **Each pack gets its own folder** (`tokens-01.zip` → `assets/tokens/tokens-01/`), so
+  cross-pack collisions are structurally impossible and deleting a pack is one `rm -rf`.
+- **Filenames normalise to kebab-case at extraction only** — before any Foundry document
+  references them. Never rename inside an extracted pack; fix it in the next zip.
+- **Restore is never automatic.** Rolling backups make an automatic restore *more*
+  dangerous, not less: an older snapshot silently overwriting a newer world is now a
+  thing that can happen a hundred ways.
+- **Both write paths refuse while Foundry is running.** The lifecycle hook skips quietly
+  instead; a manual run fails loudly.
+- **Art never goes in git.** OneDrive holds the bytes; `foundry/assets-manifest.json`
+  holds the inventory, and is committed.
+
 ### Division of labour
 | Task | Who |
 | ---- | --- |
