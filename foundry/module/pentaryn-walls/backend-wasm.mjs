@@ -82,8 +82,11 @@ export function runWasm(walls, opts = {}) {
   const updates = [];
   for (let i = 0; i < nu; i++, p += 5) {
     const w = walls[out[p]];
+    // priorC comes from the input wall — the compiled side never needs to carry it, but
+    // without it a trim or weld on the wasm path could not be undone at all.
     updates.push({_id: w?._id ?? w?.id, c: [out[p + 1], out[p + 2], out[p + 3], out[p + 4]],
-                  flags: {[FLAG_SCOPE]: {generated: true, run: opts.runId ?? "run"}}});
+                  flags: {[FLAG_SCOPE]: {run: opts.runId ?? "run", rule: "X1",
+                                         priorC: w ? [...w.c] : null}}});
   }
   p += nr * 2;   // positions only; reasons come from JS below, and only if there are any
   const components = [];
