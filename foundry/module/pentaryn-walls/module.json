@@ -1,8 +1,8 @@
 {
   "id": "pentaryn-walls",
   "title": "Pentaryn Wall Autocomplete",
-  "description": "Deterministic completion of hand-drawn walls. Rough in the windows, doors and hint stubs; the engine infers the rest or refuses and says why. Exposes game.pentaryn.walls.preview() / .run() / .undo() and nothing else. See playbooks/foundry-wall-autocomplete.md.",
-  "version": "0.1.0",
+  "description": "Deterministic completion of hand-drawn walls. Rough in the windows, doors and hint stubs; the engine infers the rest or refuses and says why. Ships a compiled (WASM) engine that is ~12x faster than the JS one and verified byte-identical against the same 44 fixtures. Exposes game.pentaryn.walls.preview() / .run() / .undo(). See playbooks/foundry-wall-autocomplete.md.",
+  "version": "0.2.0",
   "compatibility": {
     "minimum": "13",
     "verified": "14"

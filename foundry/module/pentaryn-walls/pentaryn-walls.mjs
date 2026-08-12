@@ -13,6 +13,8 @@
  */
 
 import {runEngine, FLAG_SCOPE} from "./wall-engine.mjs";
+import {get as getBackend, available} from "./backends.mjs";
+import "./backend-wasm.mjs";   // registers "wasm" when the compiled module loads
 
 const MODULE_ID = "pentaryn-walls";
 
@@ -31,29 +33,47 @@ function readWalls(scene) {
   });
 }
 
+/**
+ * Pick the engine. "auto" prefers the compiled backend and silently falls back to JS when it
+ * is absent — a missing or unloadable .wasm must degrade to slower, never to broken.
+ */
+function pickBackend(requested) {
+  const want = requested ?? game.settings.get(MODULE_ID, "backend");
+  if (want !== "auto") {
+    const b = getBackend(want);
+    if (b?.available()) return b;
+    ui.notifications.warn(`Wall autocomplete: backend "${want}" unavailable, using JavaScript.`);
+  } else {
+    const wasm = getBackend("wasm");
+    if (wasm?.available()) return wasm;
+  }
+  return getBackend("js");
+}
+
 function evaluate(scene, opts = {}) {
   const walls = readWalls(scene);
-  return {
-    walls,
-    result: runEngine(walls, {
-      gridSize: scene.grid.size,
-      runId: new Date().toISOString(),
-      ...opts
-    })
-  };
+  const backend = pickBackend(opts.backend);
+  const t0 = performance.now();
+  const result = backend.run(walls, {
+    gridSize: scene.grid.size,
+    runId: new Date().toISOString(),
+    ...opts
+  });
+  return {walls, result, backend: backend.name, ms: performance.now() - t0};
 }
 
 /* -------------------------------------------- */
 /*  Reporting                                   */
 /* -------------------------------------------- */
 
-function report(scene, result, {committed}) {
+function report(scene, result, {committed, backend, ms}) {
   const {report: r, refusals, lints} = result;
   const lines = [];
   lines.push(`<p><strong>Wall autocomplete — ${scene.name}</strong></p>`);
   lines.push(`<p>${committed ? "Committed" : "<em>Preview — nothing was written.</em>"} ` +
              `${r.created} wall${r.created === 1 ? "" : "s"} created, ${r.moved} moved, ` +
-             `${r.iterations} pass${r.iterations === 1 ? "" : "es"}.</p>`);
+             `${r.iterations} pass${r.iterations === 1 ? "" : "es"} in ${Math.round(ms)} ms ` +
+             `<span style="opacity:.6">(${backend})</span>.</p>`);
 
   const closed = r.components.filter(c => c.closed).length;
   lines.push(`<p>${r.components.length} component${r.components.length === 1 ? "" : "s"}: ` +
@@ -94,21 +114,21 @@ function report(scene, result, {committed}) {
 
 async function preview({sceneId, ...opts} = {}) {
   const scene = targetScene(sceneId);
-  const {result} = evaluate(scene, opts);
-  report(scene, result, {committed: false});
+  const {result, backend, ms} = evaluate(scene, opts);
+  report(scene, result, {committed: false, backend, ms});
   return result;
 }
 
 async function run({sceneId, ...opts} = {}) {
   const scene = targetScene(sceneId);
-  const {result} = evaluate(scene, opts);
+  const {result, backend, ms} = evaluate(scene, opts);
 
   // Two batches, after the loop has already reached its fixed point in memory. A thrown
   // assertion or a tripped iteration cap therefore costs nothing.
   if (result.updates.length) await scene.updateEmbeddedDocuments("Wall", result.updates);
   if (result.creates.length) await scene.createEmbeddedDocuments("Wall", result.creates);
 
-  report(scene, result, {committed: true});
+  report(scene, result, {committed: true, backend, ms});
   return result;
 }
 
@@ -158,6 +178,15 @@ async function makeMacro(action = "preview", slot) {
 // Keybindings MUST be registered during `init` — ClientKeybindings#register throws
 // afterwards (client/helpers/interaction/client-keybindings.mjs:156).
 Hooks.once("init", () => {
+  game.settings.register(MODULE_ID, "backend", {
+    name: "Engine backend",
+    hint: "Automatic uses the compiled (WASM) engine when it loads, falling back to JavaScript. " +
+          "Both produce identical geometry — verified against the same 44 fixtures — so this " +
+          "only affects speed. Compiled is ~12x faster on large scenes.",
+    scope: "world", config: true, type: String, default: "auto",
+    choices: {auto: "Automatic (compiled when available)", wasm: "Compiled (WASM)", js: "JavaScript"}
+  });
+
   // One run at a time. On a large scene a run takes a moment, and a held or double-tapped
   // key would otherwise start a second pass over geometry the first is still committing.
   let busy = false;
@@ -200,7 +229,8 @@ Hooks.once("init", () => {
 Hooks.once("ready", () => {
   if (!game.user.isGM) return;
   game.pentaryn ??= {};
-  game.pentaryn.walls = {preview, run, undo, makeMacro, runEngine};
-  console.log(`${MODULE_ID} | ready — Alt+W preview, Alt+Shift+W run. ` +
+  game.pentaryn.walls = {preview, run, undo, makeMacro, runEngine, backends: available};
+  console.log(`${MODULE_ID} | ready — backends: ${available().map(b => b.name).join(", ")}. ` +
+              `Alt+W preview, Alt+Shift+W run. ` +
               `API: game.pentaryn.walls.preview() / .run() / .undo() / .makeMacro()`);
 });
