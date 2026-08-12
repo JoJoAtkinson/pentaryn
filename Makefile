@@ -332,6 +332,19 @@ FOUNDRY_WALLS_DST := $(FOUNDRY_DATA)/modules/pentaryn-walls
 foundry-walls-test:
 	@node $(FOUNDRY_WALLS_SRC)/test/run.mjs
 
+# Build the compiled backend. Needs rustup + the wasm32-unknown-unknown target:
+#   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+#   rustup target add wasm32-unknown-unknown
+# Rust rather than C/C++ on purpose: no FMA contraction, no fast-math, so float
+# semantics are strict IEEE-754 by default — which is what keeps it bit-identical.
+.PHONY: foundry-walls-wasm
+foundry-walls-wasm:
+	@cd $(FOUNDRY_WALLS_SRC)/wasm && PATH="$$HOME/.cargo/bin:$$PATH" \
+	  cargo build --release --target wasm32-unknown-unknown
+	@cp $(FOUNDRY_WALLS_SRC)/wasm/target/wasm32-unknown-unknown/release/wall_engine.wasm \
+	  $(FOUNDRY_WALLS_SRC)/wall-engine.wasm
+	@echo "  ✓ wall-engine.wasm ($$(du -h $(FOUNDRY_WALLS_SRC)/wall-engine.wasm | cut -f1))"
+
 # Scaling curve: at what map size does this stop being instant? Decides whether a compiled
 # backend is worth building. Pass a grid size to extend the sweep, e.g. `make foundry-walls-bench N=20`.
 .PHONY: foundry-walls-bench
