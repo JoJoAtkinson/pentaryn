@@ -1055,8 +1055,12 @@ export function runEngine(walls, opts = {}) {
                       flags: {[FLAG_SCOPE]: {...stamp, rule: s.rule, kind: category(s),
                                              sources: s.sources ?? []}}});
       } else if (s.dirty) {
+        // Deliberately NOT `...stamp`: that carries `generated: true`, and a hand-drawn wall
+        // the engine merely welded or trimmed is not generated. Undo checks `generated`
+        // first, so conflating the two made undo DELETE the user's own walls instead of
+        // restoring their length.
         updates.push({_id: s.id, c: s.c,
-                      flags: {[FLAG_SCOPE]: {...stamp, rule: s.rule, priorC: s.priorC}}});
+                      flags: {[FLAG_SCOPE]: {run: runId, rule: s.rule, priorC: s.priorC}}});
       }
     }
   }

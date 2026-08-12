@@ -132,24 +132,50 @@ async function run({sceneId, ...opts} = {}) {
   return result;
 }
 
-/** Delete everything the engine generated and restore any endpoint it moved. */
-async function undo({sceneId} = {}) {
+/**
+ * Undo a run: delete the walls it created and restore the length of any wall it trimmed or
+ * welded. **One run at a time, most recent first** — every mutation is stamped with the
+ * run's timestamp, so repeated undos peel back run by run rather than wiping the lot. Pass
+ * `{all: true}` to remove everything this module has ever done to the scene.
+ *
+ * This is what makes "just run it and look" a safe workflow: the run is the unit of undo.
+ */
+async function undo({sceneId, all = false} = {}) {
   const scene = targetScene(sceneId);
+
+  const stamped = scene.walls.filter(w => w.getFlag(FLAG_SCOPE, "run"));
+  if (!stamped.length) {
+    ui.notifications.info("Wall autocomplete: nothing of mine on this scene to undo.");
+    return {deleted: 0, restored: 0, run: null};
+  }
+  const latest = stamped.map(w => w.getFlag(FLAG_SCOPE, "run")).sort().at(-1);
+  const targets = all ? stamped : stamped.filter(w => w.getFlag(FLAG_SCOPE, "run") === latest);
+
   const generated = [], restores = [];
-  for (const wall of scene.walls) {
-    const f = wall.getFlag(FLAG_SCOPE, "generated");
-    const prior = wall.getFlag(FLAG_SCOPE, "priorC");
-    if (f) generated.push(wall.id);
-    else if (prior) restores.push({_id: wall.id, c: prior, [`flags.-=${FLAG_SCOPE}`]: null});
+  for (const wall of targets) {
+    // `generated` means the engine created it; a `priorC` without it means the engine only
+    // shortened a wall the user drew, which must be restored rather than deleted.
+    if (wall.getFlag(FLAG_SCOPE, "generated")) generated.push(wall.id);
+    else {
+      const prior = wall.getFlag(FLAG_SCOPE, "priorC");
+      if (prior) restores.push({_id: wall.id, c: prior, [`flags.-=${FLAG_SCOPE}`]: null});
+    }
   }
   if (restores.length) await scene.updateEmbeddedDocuments("Wall", restores);
   if (generated.length) await scene.deleteEmbeddedDocuments("Wall", generated);
 
+  const remaining = new Set(stamped.map(w => w.getFlag(FLAG_SCOPE, "run"))).size - 1;
   ChatMessage.create({
-    content: `<p><strong>Wall autocomplete — undo</strong></p><p>Deleted ${generated.length} generated wall${generated.length === 1 ? "" : "s"}, restored ${restores.length} moved endpoint${restores.length === 1 ? "" : "s"}.</p>`,
+    content: `<p><strong>Wall autocomplete — undo</strong></p>` +
+      `<p>Removed ${generated.length} generated wall${generated.length === 1 ? "" : "s"} and ` +
+      `restored ${restores.length} trimmed wall${restores.length === 1 ? "" : "s"} ` +
+      `${all ? "(everything)" : `from the run at ${latest}`}.</p>` +
+      (!all && remaining > 0
+        ? `<p style="opacity:.7">${remaining} earlier run${remaining === 1 ? "" : "s"} still applied — undo again to peel back further.</p>` : ""),
     whisper: ChatMessage.getWhisperRecipients("GM").map(u => u.id)
   });
-  return {deleted: generated.length, restored: restores.length};
+  ui.notifications.info(`Undid ${generated.length} created, ${restores.length} restored.`);
+  return {deleted: generated.length, restored: restores.length, run: all ? "all" : latest};
 }
 
 /**
@@ -200,29 +226,29 @@ Hooks.once("init", () => {
     return true;
   };
 
-  game.keybindings.register(MODULE_ID, "preview", {
-    name: "Wall autocomplete: preview",
-    hint: "Report what would be built on the current scene. Writes nothing.",
-    editable: [{key: "KeyW", modifiers: ["Alt"]}],
-    restricted: true,
-    onDown: guard(preview)
-  });
-
   game.keybindings.register(MODULE_ID, "run", {
     name: "Wall autocomplete: run",
-    hint: "Complete the walls on the current scene.",
-    editable: [{key: "KeyW", modifiers: ["Alt", "Shift"]}],
+    hint: "Complete the walls on the current scene. Reversible — undo removes exactly this run.",
+    editable: [{key: "KeyW", modifiers: ["Alt"]}],
     restricted: true,
     onDown: guard(run)
   });
 
-  // Deliberately unbound by default: it deletes walls, and a stray keypress should not.
+  // Bound now that undo is run-scoped and restores trimmed walls rather than deleting them.
   game.keybindings.register(MODULE_ID, "undo", {
-    name: "Wall autocomplete: undo",
-    hint: "Delete every wall this module generated and restore any endpoint it moved. Unbound by default — assign a key here if you want one.",
-    editable: [],
+    name: "Wall autocomplete: undo last run",
+    hint: "Remove the walls the last run created and restore any it trimmed. Press again to peel back the run before it.",
+    editable: [{key: "KeyZ", modifiers: ["Alt"]}],
     restricted: true,
     onDown: guard(undo)
+  });
+
+  game.keybindings.register(MODULE_ID, "preview", {
+    name: "Wall autocomplete: preview",
+    hint: "Report what would be built without writing anything.",
+    editable: [{key: "KeyW", modifiers: ["Alt", "Shift"]}],
+    restricted: true,
+    onDown: guard(preview)
   });
 });
 
@@ -231,6 +257,6 @@ Hooks.once("ready", () => {
   game.pentaryn ??= {};
   game.pentaryn.walls = {preview, run, undo, makeMacro, runEngine, backends: available};
   console.log(`${MODULE_ID} | ready — backends: ${available().map(b => b.name).join(", ")}. ` +
-              `Alt+W preview, Alt+Shift+W run. ` +
+              `Alt+W run, Alt+Z undo, Alt+Shift+W preview. ` +
               `API: game.pentaryn.walls.preview() / .run() / .undo() / .makeMacro()`);
 });

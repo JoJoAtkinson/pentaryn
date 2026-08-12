@@ -60,14 +60,22 @@ table to the console. Refused endpoints get a transient `canvas.ping()`.
 
 ### Hotkeys
 
-| Key | Action |
+| Key (macOS: Alt = ⌥) | Action |
 | --- | --- |
-| **Alt + W** | preview — report only, writes nothing |
-| **Alt + Shift + W** | run — commit |
-| *(unbound)* | undo — deliberately has no default key, since it deletes walls |
+| **Alt + W** | **run** — complete the walls |
+| **Alt + Z** | **undo the last run** — press again to peel back the run before it |
+| **Alt + Shift + W** | preview — report only, writes nothing |
 
-Rebind them in *Game Settings → Configure Controls → Pentaryn Wall Autocomplete*. All three
-are GM-only, and a second press while a run is in flight is refused rather than queued.
+The intended loop is **run, look, undo if you don't like it** — preview is there but rarely
+needed, because a run is cleanly reversible.
+
+**Undo is scoped to one run.** Every mutation is stamped with the run's timestamp, so undo
+removes exactly the last run: the walls it created, plus the original length of any wall it
+trimmed or welded. Repeated undos step back run by run. `undo({all: true})` removes
+everything this module has ever done to the scene.
+
+Rebind in *Game Settings → Configure Controls → Pentaryn Wall Autocomplete*. All three are
+GM-only, and a second press while a run is in flight is refused rather than queued.
 
 Prefer a clickable button? `await game.pentaryn.walls.makeMacro("run")` puts one on the
 hotbar (also accepts `"preview"` / `"undo"`, and an optional slot number).
