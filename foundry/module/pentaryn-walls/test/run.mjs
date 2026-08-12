@@ -5,12 +5,28 @@
  * Pass `-v` to dump the mutation log for every fixture, or a substring to run one.
  */
 
-import {runEngine, FLAG_SCOPE, SOLID} from "../wall-engine.mjs";
+import {FLAG_SCOPE, SOLID} from "../wall-engine.mjs";
+import {get as getBackend, available} from "../backends.mjs";
 import {FIXTURES} from "./fixtures.mjs";
 
 const argv = process.argv.slice(2);
 const verbose = argv.includes("-v");
 const only = argv.find(a => !a.startsWith("-"));
+
+// Any registered backend can be validated against the whole corpus. The JS engine is the
+// reference; a compiled backend is correct exactly insofar as it passes these same 44.
+const backendName = (argv.find(a => a.startsWith("--backend=")) ?? "--backend=js").split("=")[1];
+const backend = getBackend(backendName);
+if (!backend) {
+  console.error(`unknown backend "${backendName}" — available: ${available().map(b => b.name).join(", ")}`);
+  process.exit(2);
+}
+if (!backend.available()) {
+  console.error(`backend "${backendName}" is registered but not available (not built?)`);
+  process.exit(2);
+}
+const runEngine = backend.run;
+if (backendName !== "js") console.log(`running the corpus against backend: ${backendName}\n`);
 
 const results = new Map();
 let pass = 0, fail = 0;
