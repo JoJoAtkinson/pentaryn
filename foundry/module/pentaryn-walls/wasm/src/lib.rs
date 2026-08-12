@@ -97,6 +97,10 @@ fn blocks_open(a: P, b: P, c: P, d: P) -> bool {
 struct Seg {
     c: [f64; 4],
     door: i32,
+    light: i32,
+    sight: i32,
+    sound: i32,
+    move_: i32,
     dir: i32,
     keep_open: bool,
     is_new: bool,
@@ -110,6 +114,36 @@ impl Seg {
     #[inline] fn end(&self, w: usize) -> P { if w == 0 { self.a() } else { self.b() } }
     #[inline] fn degenerate(&self) -> bool { self.c[0] == self.c[2] && self.c[1] == self.c[3] }
     #[inline] fn frozen(&self) -> bool { self.dir != 0 }
+
+    /// Foundry's own categories (APP/client/documents/wall.mjs:76-89). Test order matters.
+    fn category(&self) -> &'static str {
+        if self.sight == 0 && self.light + self.sound + self.move_ == 0 { return "blank"; }
+        if self.sight == 0 { return "invisible"; }
+        if self.sight == 10 { return "terrain"; }
+        if self.sight == 30 || self.sight == 40 { return "window"; }
+        if self.move_ == 0 { return "ethereal"; }
+        "solid"
+    }
+
+    /// Doors and windows are openings *within* a wall line — what continues past them is the
+    /// wall. Every other type extends as itself.
+    fn inferred_kind(&self) -> &'static str {
+        if self.door != 0 { return "solid"; }
+        let c = self.category();
+        if c == "window" { "solid" } else { c }
+    }
+
+    fn kind_rank(&self) -> u8 {
+        match self.inferred_kind() {
+            "solid" => 0, "terrain" => 1, "invisible" => 2, "ethereal" => 3, _ => 4,
+        }
+    }
+
+    /// The restriction fields a wall grown from this segment should carry.
+    fn profile(&self) -> [i32; 4] {
+        if self.inferred_kind() == "solid" { [20, 20, 20, 20] }
+        else { [self.light, self.sight, self.sound, self.move_] }
+    }
 }
 
 struct Cfg {
@@ -297,7 +331,7 @@ fn cast_ray(g: &Graph, vi: usize, segs: &[Seg], cfg: &Cfg) -> Ray {
 /* ------------------------------------------------------------------ */
 
 #[derive(Clone)]
-enum Act { Move { vi: usize, to: P }, Create(Vec<[f64; 4]>) }
+enum Act { Move { vi: usize, to: P }, Create(Vec<([f64; 4], [i32; 4])>) }
 
 #[derive(Clone)]
 struct Inst {
@@ -378,7 +412,9 @@ fn enumerate(segs: &[Seg], g: &Graph, cfg: &Cfg) -> Vec<Inst> {
             if aim_count(a.p, b.p, g, cfg, &[key_of(a.p), key_of(b.p)]) >= 2 { continue; }
             out.push(Inst { rule: 3, tier: 3, cost: d2.sqrt(), lex: [a.p, b.p],
                 anchors: vec![key_of(a.p), key_of(b.p)],
-                act: Act::Create(vec![[a.p[0], a.p[1], b.p[0], b.p[1]]]) });
+                act: Act::Create(vec![([a.p[0], a.p[1], b.p[0], b.p[1]],
+                    if segs[ai].kind_rank() <= segs[bi].kind_rank() { segs[ai].profile() }
+                    else { segs[bi].profile() })]) });
         }
     }
 
@@ -447,7 +483,8 @@ fn enumerate(segs: &[Seg], g: &Graph, cfg: &Cfg) -> Vec<Inst> {
             lex: [g.verts[legs[0]].p, g.verts[legs[1]].p],
             anchors: legs.iter().map(|&m| key_of(g.verts[m].p)).collect(),
             act: Act::Create(legs.iter().map(|&m| {
-                let q = g.verts[m].p; [q[0], q[1], p[0], p[1]]
+                let q = g.verts[m].p;
+                ([q[0], q[1], p[0], p[1]], segs[g.verts[m].ends[0].0].profile())
             }).collect()) });
     }
 
@@ -457,7 +494,8 @@ fn enumerate(segs: &[Seg], g: &Graph, cfg: &Cfg) -> Vec<Inst> {
             let v = &g.verts[vi];
             out.push(Inst { rule: 5, tier: 4, cost: dist2(v.p, h).sqrt(), lex: [v.p, h],
                 anchors: vec![key_of(v.p)],
-                act: Act::Create(vec![[v.p[0], v.p[1], h[0], h[1]]]) });
+                act: Act::Create(vec![([v.p[0], v.p[1], h[0], h[1]],
+                                       segs[v.ends[0].0].profile())]) });
         }
     }
 
@@ -497,13 +535,13 @@ fn ambiguous(insts: &[Inst]) -> Vec<(i64, i64)> {
 fn act_key(a: &Act) -> String {
     match a {
         Act::Move { to, .. } => format!("m{:?}", to),
-        Act::Create(ws) => format!("c{:?}", ws),
+        Act::Create(ws) => format!("c{:?}", ws.iter().map(|(c, _)| *c).collect::<Vec<_>>()),
     }
 }
 
 fn bbox(inst: &Inst, g: &Graph) -> [f64; 4] {
     let pts: Vec<P> = match &inst.act {
-        Act::Create(ws) => ws.iter().flat_map(|c| vec![[c[0], c[1]], [c[2], c[3]]]).collect(),
+        Act::Create(ws) => ws.iter().flat_map(|(c, _)| vec![[c[0], c[1]], [c[2], c[3]]]).collect(),
         Act::Move { vi, to } => vec![g.verts[*vi].p, *to],
     };
     let (mut x0, mut y0, mut x1, mut y1) = (f64::MAX, f64::MAX, f64::MIN, f64::MIN);
@@ -525,8 +563,9 @@ fn apply(inst: &Inst, segs: &mut Vec<Seg>, g: &Graph) {
             s.dirty = true;
         }
         Act::Create(ws) => {
-            for c in ws {
-                segs.push(Seg { c: *c, door: 0, dir: 0, keep_open: false,
+            for (c, prof) in ws {
+                segs.push(Seg { c: *c, door: 0, light: prof[0], sight: prof[1],
+                                sound: prof[2], move_: prof[3], dir: 0, keep_open: false,
                                 is_new: true, dirty: false, prior_c: None });
             }
         }
@@ -675,10 +714,14 @@ pub extern "C" fn run(grid_size: f64, gap_max: f64, corner_max: f64, ext_max: f6
 
     let mut segs: Vec<Seg> = Vec::with_capacity(n);
     for i in 0..n {
-        let o = 1 + i * 8;
+        let o = 1 + i * 11;
         segs.push(Seg {
             c: [input[o] as f64, input[o + 1] as f64, input[o + 2] as f64, input[o + 3] as f64],
             door: input[o + 4],
+            light: input[o + 8],
+            sight: input[o + 5],
+            sound: input[o + 9],
+            move_: input[o + 10],
             dir: input[o + 6],
             keep_open: input[o + 7] != 0,
             is_new: false, dirty: false, prior_c: None,
@@ -723,10 +766,10 @@ pub extern "C" fn run(grid_size: f64, gap_max: f64, corner_max: f64, ext_max: f6
     }
 
     // Serialise
-    let mut creates: Vec<[f64; 4]> = Vec::new();
+    let mut creates: Vec<([f64; 4], [i32; 4])> = Vec::new();
     let mut updates: Vec<(usize, [f64; 4])> = Vec::new();
     for (i, s) in segs.iter().enumerate() {
-        if s.is_new { creates.push(s.c); }
+        if s.is_new { creates.push((s.c, [s.light, s.sight, s.sound, s.move_])); }
         else if s.dirty && i < original { updates.push((i, s.c)); }
     }
     let refusals: Vec<P> = dangling_of(&g).iter().map(|&i| g.verts[i].p).collect();
@@ -739,7 +782,10 @@ pub extern "C" fn run(grid_size: f64, gap_max: f64, corner_max: f64, ext_max: f6
     out.push(refusals.len() as i32);
     out.push(iterations as i32);
     out.push(comps.len() as i32);
-    for c in creates.iter() { for k in 0..4 { out.push(c[k] as i32); } }
+    for (c, prof) in creates.iter() {
+        for k in 0..4 { out.push(c[k] as i32); }
+        for k in 0..4 { out.push(prof[k]); }
+    }
     for (i, c) in updates.iter() {
         out.push(*i as i32);
         for k in 0..4 { out.push(c[k] as i32); }

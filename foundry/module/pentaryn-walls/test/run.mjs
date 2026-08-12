@@ -8,7 +8,7 @@
 import {FLAG_SCOPE, SOLID} from "../wall-engine.mjs";
 import "../backend-wasm.mjs";   // registers "wasm" if built
 import {get as getBackend, available} from "../backends.mjs";
-import {FIXTURES} from "./fixtures.mjs";
+import {FIXTURES, kindOf} from "./fixtures.mjs";
 
 const argv = process.argv.slice(2);
 const verbose = argv.includes("-v");
@@ -100,6 +100,12 @@ for (const fx of FIXTURES) {
     if (e.refusalMatches) {
       const hit = res.refusals.some(r => e.refusalMatches.test(r.why));
       if (!hit) problems.push(`no refusal matched ${e.refusalMatches} — got: ${res.refusals.map(r => r.why).join(" | ") || "(none)"}`);
+    }
+    if (e.allCreatedKinds) {
+      const wrong = res.creates.filter(c => kindOf(c) !== e.allCreatedKinds);
+      if (wrong.length) {
+        problems.push(`expected every created wall to be "${e.allCreatedKinds}", got ${[...new Set(wrong.map(kindOf))].join(", ")}`);
+      }
     }
     for (const code of e.lintCodes ?? []) {
       if (!res.lints.some(l => l.code === code)) problems.push(`no ${code} lint — got ${[...new Set(res.lints.map(l => l.code))].join(",") || "(none)"}`);

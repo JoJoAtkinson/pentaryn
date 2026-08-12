@@ -130,6 +130,10 @@ pair with the outer's and bridge the two.
   To re-open it, nudge or delete one of its walls.
 - **Complete one structure per run.** That inertness *is* the isolation mechanism — two
   half-hinted structures in the same run will trade endpoints.
+- **Every wall type keeps itself — except doors and windows.** Terrain extends as terrain,
+  invisible as invisible, ethereal as ethereal. A door or window is an opening *within* a
+  wall line, so the run around it is inferred **solid**. Where one wall must bridge two
+  different kinds, the most-blocking wins: `solid > terrain > invisible > ethereal > blank`.
 - **Double-line (thick) walls are first-class** — trace both lines with corner gaps. A doorway
   through one needs a door segment in *each* line, or jamb caps.
 - **Give every room at least one hinted corner.** A lone floating hint grafts onto whatever

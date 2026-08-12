@@ -170,15 +170,66 @@ function toSeg(w, idx) {
     id: w._id ?? w.id ?? `w${idx}`,
     c: [...w.c],
     door: w.door ?? 0,
+    light: w.light ?? 20,
     sight: w.sight ?? 20,
+    sound: w.sound ?? 20,
     move: w.move ?? 20,
     dir: w.dir ?? 0,
+    threshold: w.threshold ?? null,
     levels: w.levels ?? [],
     keepOpen: flags.keepOpen === true,
     generated: flags.generated === true,
     isNew: false,
     dirty: false
   };
+}
+
+/**
+ * Foundry's own wall categories, mirroring `getWallCategory()`
+ * (APP/client/documents/wall.mjs:76-89). Order of the tests matters.
+ */
+function category(s) {
+  const {light = 20, sight = 20, sound = 20, move = 20} = s;
+  if (sight === 0 && light + sound + move === 0) return "blank";
+  if (sight === 0) return "invisible";
+  if (sight === 10) return "terrain";
+  if (sight === 30 || sight === 40) return "window";
+  if (move === 0) return "ethereal";
+  return "solid";
+}
+
+/**
+ * What kind of wall should grow *out of* this segment.
+ *
+ * Doors and windows are openings **within** a wall line — what continues past them is the
+ * wall, not the opening — so they infer solid. Every other type is a kind of wall in its own
+ * right and extends as itself: a terrain run stays terrain, an invisible run stays invisible.
+ * That is what stops the engine betraying an invisible wall by capping it with a solid one.
+ */
+function inferredKind(s) {
+  if (s.door !== 0) return "solid";
+  const c = category(s);
+  return c === "window" ? "solid" : c;
+}
+
+/**
+ * When ONE wall has to bridge sources of different kinds (only F1 can), the most-blocking
+ * kind wins. Over-blocking is visible and fixable; under-blocking leaves a hole players walk
+ * or see through. F2 needs no ranking at all — each leg grows from its own segment.
+ */
+const KIND_RANK = {solid: 0, terrain: 1, invisible: 2, ethereal: 3, blank: 4};
+
+/** The restriction fields a wall grown from `s` should carry. */
+function profileFrom(s) {
+  if (inferredKind(s) === "solid") return {...SOLID};
+  return {light: s.light, sight: s.sight, sound: s.sound, move: s.move,
+          door: 0, ds: 0, dir: 0, ...(s.threshold ? {threshold: s.threshold} : {})};
+}
+
+/** Of several source segments, the one whose kind a single bridging wall should take. */
+function dominantSource(segs) {
+  return segs.reduce((best, s) =>
+    KIND_RANK[inferredKind(s)] < KIND_RANK[inferredKind(best)] ? s : best);
 }
 
 const segA = s => [s.c[0], s.c[1]];
@@ -522,7 +573,7 @@ function enumerate(segs, verts, cfg) {
       // asymmetry between one aim and two is what makes this safe.
       if (aimCount(a.p, b.p, verts, cfg, new Set([a.key, b.key])) >= 2) continue;
       out.push({rule: "F1", cost: Math.sqrt(d2), lex: [a.p, b.p], anchors: [a.key, b.key],
-                act: {kind: "create", walls: [[...a.p, ...b.p]]}});
+                act: {kind: "create", walls: [[...a.p, ...b.p]], srcs: [dominantSource([A, B])]}});
     }
   }
 
@@ -596,7 +647,8 @@ function enumerate(segs, verts, cfg) {
     if (legs.length < 2) continue;
     const cost = legs.reduce((sum, v) => sum + Math.sqrt(dist2(v.p, P)), 0);
     out.push({rule: "F2", cost, lex: [legs[0].p, legs[1].p], anchors: legs.map(v => v.key), corner: P,
-              act: {kind: "create", walls: legs.map(v => [...v.p, ...P])}});
+              act: {kind: "create", walls: legs.map(v => [...v.p, ...P]),
+                    srcs: legs.map(v => v.ends[0].seg)}});
   }
 
   // E1 — dangling extension. The weakest evidence: one segment shooting a ray along its own
@@ -605,7 +657,7 @@ function enumerate(segs, verts, cfg) {
     const hit = castRay(v, segs, cfg);
     if (hit && !hit.refusal) {
       out.push({rule: "E1", cost: Math.sqrt(dist2(v.p, hit.H)), lex: [v.p, hit.H], anchors: [v.key],
-                act: {kind: "create", walls: [[...v.p, ...hit.H]]}});
+                act: {kind: "create", walls: [[...v.p, ...hit.H]], srcs: [v.ends[0].seg]}});
     }
   }
 
@@ -739,13 +791,14 @@ function applyInstance(inst, segs, runId) {
     seg.rule = inst.rule;
     return;
   }
-  for (const c of inst.act.walls) {
+  inst.act.walls.forEach((c, i) => {
     const donor = inst.anchors.length ? inst.anchors[0] : null;
+    const src = inst.act.srcs?.[i];
     segs.push({
       idx: segs.length,
       id: `gen-${runId}-${segs.length}`,
       c: [...c],
-      ...SOLID,
+      ...(src ? profileFrom(src) : {...SOLID}),
       levels: inst.levels ?? [],
       keepOpen: false,
       generated: true,
@@ -755,7 +808,7 @@ function applyInstance(inst, segs, runId) {
       sources: inst.anchors,
       donor
     });
-  }
+  });
 }
 
 /* -------------------------------------------- */
@@ -995,8 +1048,12 @@ export function runEngine(walls, opts = {}) {
     const stamp = {generated: true, run: runId};
     for (const s of segs) {
       if (s.isNew) {
-        creates.push({c: s.c, ...SOLID, levels: s.levels,
-                      flags: {[FLAG_SCOPE]: {...stamp, rule: s.rule, sources: s.sources ?? []}}});
+        creates.push({c: s.c, light: s.light, sight: s.sight, sound: s.sound, move: s.move,
+                      door: 0, ds: 0, dir: 0,
+                      ...(s.threshold ? {threshold: s.threshold} : {}),
+                      levels: s.levels,
+                      flags: {[FLAG_SCOPE]: {...stamp, rule: s.rule, kind: category(s),
+                                             sources: s.sources ?? []}}});
       } else if (s.dirty) {
         updates.push({_id: s.id, c: s.c,
                       flags: {[FLAG_SCOPE]: {...stamp, rule: s.rule, priorC: s.priorC}}});

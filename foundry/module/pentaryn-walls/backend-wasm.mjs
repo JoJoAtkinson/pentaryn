@@ -40,15 +40,18 @@ export async function load(url) {
 
 /** Flat i32 layout, mirroring `run()` in lib.rs. */
 function marshal(walls) {
-  const buf = new Int32Array(1 + walls.length * 8);
+  const buf = new Int32Array(1 + walls.length * 11);
   buf[0] = walls.length;
   walls.forEach((w, i) => {
-    const o = 1 + i * 8;
+    const o = 1 + i * 11;
     buf[o] = w.c[0]; buf[o + 1] = w.c[1]; buf[o + 2] = w.c[2]; buf[o + 3] = w.c[3];
     buf[o + 4] = w.door ?? 0;
     buf[o + 5] = w.sight ?? 20;
     buf[o + 6] = w.dir ?? 0;
     buf[o + 7] = (w.flags?.[FLAG_SCOPE]?.keepOpen === true) ? 1 : 0;
+    buf[o + 8] = w.light ?? 20;
+    buf[o + 9] = w.sound ?? 20;
+    buf[o + 10] = w.move ?? 20;
   });
   return buf;
 }
@@ -70,8 +73,10 @@ export function runWasm(walls, opts = {}) {
 
   let p = 5;
   const creates = [];
-  for (let i = 0; i < nc; i++, p += 4) {
-    creates.push({c: [out[p], out[p + 1], out[p + 2], out[p + 3]], ...SOLID, levels: [],
+  for (let i = 0; i < nc; i++, p += 8) {
+    creates.push({c: [out[p], out[p + 1], out[p + 2], out[p + 3]],
+                  light: out[p + 4], sight: out[p + 5], sound: out[p + 6], move: out[p + 7],
+                  door: 0, ds: 0, dir: 0, levels: [],
                   flags: {[FLAG_SCOPE]: {generated: true, run: opts.runId ?? "run"}}});
   }
   const updates = [];
