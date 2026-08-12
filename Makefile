@@ -332,6 +332,12 @@ FOUNDRY_WALLS_DST := $(FOUNDRY_DATA)/modules/pentaryn-walls
 foundry-walls-test:
 	@node $(FOUNDRY_WALLS_SRC)/test/run.mjs
 
+# Scaling curve: at what map size does this stop being instant? Decides whether a compiled
+# backend is worth building. Pass a grid size to extend the sweep, e.g. `make foundry-walls-bench N=20`.
+.PHONY: foundry-walls-bench
+foundry-walls-bench:
+	@node $(FOUNDRY_WALLS_SRC)/test/bench.mjs $(N)
+
 # Copy, not symlink (D8) — so a stale copy is a real failure mode. Tests gate the sync.
 .PHONY: foundry-walls-sync
 foundry-walls-sync: foundry-walls-test

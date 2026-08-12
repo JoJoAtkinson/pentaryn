@@ -139,7 +139,9 @@ pair with the outer's and bridge the two.
 | `wall-engine.mjs` | The engine. Pure geometry — no Foundry APIs, no globals, no I/O. |
 | `pentaryn-walls.mjs` | Glue: read the scene, call the engine, commit in two batches, report. |
 | `test/fixtures.mjs` | The corpus — the design doc's traces plus the adversarial cases. |
-| `test/run.mjs` | Runner. No dependencies. |
+| `test/run.mjs` | Runner. No dependencies. `--backend=<name>` to validate another backend. |
+| `test/bench.mjs` | Scaling curve across registered backends. |
+| `backends.mjs` | Backend registry + `compare()`, the identity check. |
 
 Because the engine is a pure function of the input coordinates, effectively all of it is
 testable with Foundry not running:
@@ -167,6 +169,68 @@ These are the reasons to trust it on a scene you have drawn by hand:
   and the endpoints it came from — which is what makes `undo()` exact.
 - **It never reads door state.** An open door is transparent to Foundry's collision API, so
   consulting it would make results depend on whether someone left a door open.
+
+## Compiled backend (side-by-side)
+
+The harness is in place; **no compiled backend is built yet** — this machine has no WASM
+toolchain (no emcc, no rust, and Apple clang has no `wasm32` target).
+
+What exists now:
+
+```bash
+make foundry-walls-bench          # scaling curve, all registered backends
+make foundry-walls-bench N=20     # extend the sweep
+node test/run.mjs --backend=js    # run all 44 fixtures against a named backend
+```
+
+`backends.mjs` holds the registry. A backend is `{name, run(walls, opts), available()}`
+returning the same shape as `runEngine`. Registering one is the *only* change needed —
+`compare()` will then diff it against the JS reference, the bench gains a column, and
+`--backend=<name>` validates it against the whole corpus.
+
+**The JS engine is the reference.** A compiled backend is correct exactly insofar as it
+produces byte-identical creates, updates and refusals. `compare()` decides that
+mechanically, so "is it the same?" is never a judgement call.
+
+### Before building one, read the curve
+
+| rooms | walls in | walls out | js |
+| --- | --- | --- | --- |
+| 5×5 | 100 | 300 | 18 ms |
+| 8×8 | 256 | 768 | 69 ms |
+| 10×10 | 400 | 1200 | 130 ms |
+| 14×14 | 784 | 2352 | 459 ms |
+
+The per-pass work is quadratic in wall count, so the column grows ~4× each time walls
+double. **A compiled backend moves the column down by a constant factor; it does not change
+that shape.** Cutting the *pair count* (spatial pruning of the O(dangling²) candidate scan,
+which is 80% of the run) attacks the exponent instead, and stays in JS.
+
+For reference, the real scenes in `ardenhaven` are 8 and 61 walls.
+
+### If you do build one
+
+Toolchain, whichever you prefer — neither is installed:
+
+```bash
+brew install emscripten                                    # C/C++ -> wasm
+# or
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh   # then: rustup target add wasm32-unknown-unknown
+```
+
+**Watch float determinism.** This engine's whole value is that the same drawing always
+yields the same walls. C/C++ compilers contract `a*b+c` into FMA and reorder float
+expressions by default, and `-ffast-math` is worse — either can change a result in the last
+bits, which is enough to flip a tolerance comparison. Build with `-ffp-contract=off` and no
+fast-math. The 44 fixtures will catch a divergence, but expect to spend the time on flags.
+
+**Not recommended: a C++ round-trip over HTTP/IPC.** It needs a server process alongside
+Foundry and reintroduces a real bridge — the one cost this design currently doesn't pay.
+WASM at least stays in-process.
+
+**Worth doing independently of any of this:** run the engine in a Web Worker. It is already
+pure — no Foundry globals, no I/O — so it drops in unchanged, and it keeps the canvas
+responsive on long runs regardless of what language the engine is written in.
 
 ## Performance
 
