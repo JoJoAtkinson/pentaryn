@@ -6,6 +6,7 @@
  */
 
 import {FLAG_SCOPE, SOLID} from "../wall-engine.mjs";
+import "../backend-wasm.mjs";   // registers "wasm" if built
 import {get as getBackend, available} from "../backends.mjs";
 import {FIXTURES} from "./fixtures.mjs";
 
