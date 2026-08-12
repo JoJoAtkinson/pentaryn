@@ -54,8 +54,17 @@ export function canonical(result) {
     const [a, b, x, y] = c;
     return (a < x || (a === x && b < y)) ? `${a},${b},${x},${y}` : `${x},${y},${a},${b}`;
   };
+  const kind = c => {
+    const {light = 20, sight = 20, sound = 20, move = 20} = c;
+    if (sight === 0 && light + sound + move === 0) return "blank";
+    if (sight === 0) return "invisible";
+    if (sight === 10) return "terrain";
+    if (sight === 30 || sight === 40) return "window";
+    if (move === 0) return "ethereal";
+    return "solid";
+  };
   return {
-    creates: result.creates.map(c => seg(c.c)).sort(),
+    creates: result.creates.map(c => `${seg(c.c)}:${kind(c)}`).sort(),
     updates: result.updates.map(u => `${u._id}:${seg(u.c)}`).sort(),
     refusals: result.refusals.map(r => `${r.at[0]},${r.at[1]}`).sort()
   };

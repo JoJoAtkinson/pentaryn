@@ -11,7 +11,7 @@ status: draft
 > macro infer the rest. No prediction, no scoring, no CV. A fixed rule table iterated to a
 > fixed point, refusing anywhere it would have to guess.
 >
-> **Built.** `foundry/module/pentaryn-walls/` — engine, Foundry glue, 44 passing fixtures.
+> **Built.** `foundry/module/pentaryn-walls/` — engine + compiled WASM backend, 49 passing fixtures on both.
 > §12 records the corrections implementation forced on this design. Successor to Stage 3 of
 > [`foundry-vtt.md`](foundry-vtt.md) (D4: hand-draw walls) — this does not reverse D4, it
 > makes hand-drawing cheaper.
@@ -103,19 +103,26 @@ and you can aim the tool rather than fight it.
    corner instead of turning. Refusal messages name the distance, so they tell you the fix.
 8. **Don't aim a partition at a door's midspan** — offset the door. Nothing thinner than the
    weld tolerance survives; deliberate offsets should be at least one grid step.
-9. **Double-line (thick) walls are first-class.** Trace both lines with corner gaps; anything
+9. **Every wall type keeps itself — except doors and windows.** A terrain run extends as
+   terrain, an invisible run as invisible, an ethereal run as ethereal. Doors and windows are
+   openings *within* a wall line, so what continues past them is the **wall**, not the
+   opening: hint with a window and you get solid wall around it. When one bridging wall has
+   to span two different kinds — the only case where a choice exists — the **most-blocking
+   kind wins**: `solid > terrain > invisible > ethereal > blank`. Over-blocking is visible
+   and fixable; under-blocking leaves a hole players walk or see through.
+10. **Double-line (thick) walls are first-class.** Trace both lines with corner gaps; anything
    closer than the weld tolerance is read as one line. A doorway through a double wall needs
    a door segment in *each* line, or jamb caps — otherwise the inner line refills and you get
    a blocked doorway.
-10. **Cave mouths:** stop chamber spans short of an edge mouth's corners and start the passage
+11. **Cave mouths:** stop chamber spans short of an edge mouth's corners and start the passage
    walls just outside them. At a *vertex* mouth, chain-draw the passage walls onto the chamber
    wall ends, or lay a door across the mouth. Adjacent mouths and one-square mouths are fine.
-11. **Give every room at least one hinted corner** (two hints on adjacent walls). A lone
+12. **Give every room at least one hinted corner** (two hints on adjacent walls). A lone
    floating hint grafts onto whatever its carrier happens to reach.
-12. **Keep segments meant for one wall line within 2px of it.** 3px to half a grid step gets a
+13. **Keep segments meant for one wall line within 2px of it.** 3px to half a grid step gets a
    refusal telling you to nudge; beyond half a step it is treated as a deliberately different
    line.
-13. **Don't place geometry exactly on a tolerance boundary.** A gap of exactly `GAP_MAX`, or a
+14. **Don't place geometry exactly on a tolerance boundary.** A gap of exactly `GAP_MAX`, or a
    leg of exactly `CORNER_MAX`, flips behaviour on a 1px nudge — not because the engine is
    unstable but because that is what a threshold is. Every refusal names its number, so stay
    a few px clear of it.
@@ -887,6 +894,7 @@ Foundry stopped; `make foundry-walls-sync` copies the module in (tests gate the 
 | Double-line (thick) wall | Two nested rings, no special handling; stable 6px→half a square. |
 | Chamfered 45° corner | Mixed-angle junctions; the chamfer is just another wall line. |
 | Shallow wedge | F2's glancing guard: near-parallel carriers build no sliver. |
+| Wall kinds ×5 | Terrain/invisible/ethereal extend as themselves; doors and windows imply solid; most-blocking wins a mixed bridge. |
 | Nesting 1–4 | Inner closes; outer added with `updates: 0`; partition pins on the inert inner; finishing-move connector. |
 
 **Still worth adding:** a 64-gon tower with one segment removed (assert the chord is refused,

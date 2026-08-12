@@ -18,6 +18,19 @@ const w = (x0, y0, x1, y1, extra = {}) => ({
 /** Foundry's window preset: proximity sight + threshold (walls.mjs:469). */
 const win = (x0, y0, x1, y1, extra = {}) => w(x0, y0, x1, y1, {light: 30, sight: 30, ...extra});
 const door = (x0, y0, x1, y1, extra = {}) => w(x0, y0, x1, y1, {door: 1, ...extra});
+const terrain = (x0, y0, x1, y1, e = {}) => w(x0, y0, x1, y1, {light: 10, sight: 10, sound: 10, ...e});
+const invisible = (x0, y0, x1, y1, e = {}) => w(x0, y0, x1, y1, {light: 0, sight: 0, sound: 0, ...e});
+const ethereal = (x0, y0, x1, y1, e = {}) => w(x0, y0, x1, y1, {move: 0, ...e});
+/** Foundry's category test, for asserting what kind a generated wall came out as. */
+export const kindOf = c => {
+  const {light = 20, sight = 20, sound = 20, move = 20} = c;
+  if (sight === 0 && light + sound + move === 0) return "blank";
+  if (sight === 0) return "invisible";
+  if (sight === 10) return "terrain";
+  if (sight === 30 || sight === 40) return "window";
+  if (move === 0) return "ethereal";
+  return "solid";
+};
 
 /* -------------------------------------------- */
 
@@ -513,6 +526,44 @@ export const FIXTURES = [
     opts: {gridSize: 100},
     expect: {creates: 1, refusals: 0, allClosed: true,
              mustCreate: [[850, 500, 1000, 500]]}
+  },
+  {
+    name: "wall kinds — a terrain square stays terrain",
+    why: "Generated walls used to be hardcoded solid, so completing a terrain building silently gave you solid walls.",
+    walls: [terrain(400, 0, 600, 0, {id: "n"}), terrain(1000, 400, 1000, 600, {id: "e"}),
+            terrain(400, 1000, 600, 1000, {id: "s"}), terrain(0, 400, 0, 600, {id: "w"})],
+    opts: {gridSize: 100},
+    expect: {creates: 8, refusals: 0, allClosed: true, allCreatedKinds: "terrain"}
+  },
+  {
+    name: "wall kinds — an invisible run extends as invisible",
+    why: "The user's case: an invisible wall must not be capped with a solid one, which would give away that it is there.",
+    walls: [...box("S", 0, 0, 1000, 1000), invisible(400, 400, 600, 400, {id: "i"})],
+    opts: {gridSize: 100},
+    expect: {creates: 2, refusals: 0, allCreatedKinds: "invisible"}
+  },
+  {
+    name: "wall kinds — an ethereal run extends as ethereal",
+    why: "Ethereal blocks sight but not movement; extending it as solid would wall players in.",
+    walls: [...box("S", 0, 0, 1000, 1000), ethereal(400, 600, 600, 600, {id: "e"})],
+    opts: {gridSize: 100},
+    expect: {creates: 2, refusals: 0, allCreatedKinds: "ethereal"}
+  },
+  {
+    name: "wall kinds — windows and doors imply a SOLID run",
+    why: "The distinction that resolves the whole question: a door or window is an opening WITHIN a wall line, so what continues past it is the wall, not the opening.",
+    walls: [win(200, 0, 300, 0, {id: "n1"}), win(600, 0, 700, 0, {id: "n2"}),
+            door(1000, 400, 1000, 600, {id: "e"}),
+            w(400, 1000, 600, 1000, {id: "s"}), w(0, 400, 0, 600, {id: "wst"})],
+    opts: {gridSize: 100},
+    expect: {refusals: 0, allClosed: true, allCreatedKinds: "solid"}
+  },
+  {
+    name: "wall kinds — the most-blocking source wins a mixed bridge",
+    why: "Only F1 needs a priority order (one wall, two sources). Over-blocking is visible and fixable; under-blocking leaves a hole.",
+    walls: [terrain(200, 500, 400, 500, {id: "t"}), w(700, 500, 900, 500, {id: "s"})],
+    opts: {gridSize: 100},
+    expect: {creates: 1, allCreatedKinds: "solid"}
   },
   {
     name: "lint — the pathologies",
