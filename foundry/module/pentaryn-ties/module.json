@@ -1,0 +1,36 @@
+{
+  "id": "pentaryn-ties",
+  "title": "Pentaryn NPC Ties",
+  "description": "Who knows who. Records directed relationships between actors — a stance, a one-word label, a strength and a page of notes — edits them on a Ties tab on the actor sheet, and paints them on the canvas: hover a token, press the Ties key, and everyone that person knows who is in sight is labelled with what they are to them. Two keys: one word each, or draggable cards with token art. Distant ties get a thin line instead of a floating label. Players can use it on their own character — only their own connections, only what their token can actually see. Client-side only. Exposes game.pentaryn.ties.",
+  "version": "0.3.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "14"
+  },
+  "authors": [
+    {
+      "name": "Joseph Atkinson"
+    }
+  ],
+  "esmodules": [
+    "pentaryn-ties.mjs"
+  ],
+  "styles": [
+    "styles/ties.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "socket": false,
+  "protected": false,
+  "flags": {
+    "pentaryn": {
+      "flagScope": "ties",
+      "generation": 14
+    }
+  }
+}

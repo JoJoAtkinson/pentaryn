@@ -10,4 +10,5 @@ Point Claude at one when you want the procedure followed without re-deriving it.
 | -------- | ------ |
 | [roll20-map-prep.md](roll20-map-prep.md) | Getting battlemaps into Roll20 with a correct grid — upload, page setup, placement, grid math, and what can/can't be automated |
 | [foundry-vtt.md](foundry-vtt.md) | Building the Ardenhaven world programmatically in Foundry — MCP bridge, actor generation from `actions.jsonl`, and the write paths that fail silently |
+| [foundry-ops.md](foundry-ops.md) | Running Foundry day to day — server + cloudflare tunnel lifecycle, the OneDrive one-way sync contract, license-key handling, module install (Setup screen or filesystem drop — never from inside a running world), and the public-`Data/` security gate |
 | [foundry-mcp-fork.md](foundry-mcp-fork.md) | Design for forking the Foundry MCP bridge — tool inventory, context-bloat handling, logging, repo placement, guardrails. **Design only, not implemented** |

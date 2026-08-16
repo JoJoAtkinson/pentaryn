@@ -1,0 +1,248 @@
+.pentaryn-ties {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  font-size: var(--font-size-13, 13px);
+}
+
+.pentaryn-ties .pt-help {
+  margin: 0;
+  opacity: 0.7;
+  font-size: var(--font-size-11, 11px);
+  line-height: 1.35;
+}
+
+.pentaryn-ties .pt-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+.pentaryn-ties .pt-row,
+.pentaryn-ties .pt-add {
+  display: grid;
+  grid-template-columns: 1.2rem minmax(6rem, 1fr) minmax(6rem, 1.2fr) 7rem 3.5rem 1.8rem 1.8rem;
+  align-items: center;
+  gap: 4px;
+}
+
+.pentaryn-ties .pt-row.pt-open {
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 3px;
+  padding-bottom: 2px;
+}
+
+.pentaryn-ties .pt-add {
+  grid-template-columns: minmax(6rem, 1.2fr) minmax(6rem, 1fr) 7rem 3.5rem auto;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--color-border-light-tertiary, #bbb);
+}
+
+.pentaryn-ties .pt-dot {
+  text-align: center;
+  font-size: 1.05em;
+  line-height: 1;
+}
+
+.pentaryn-ties .pt-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pentaryn-ties a.pt-name {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.pentaryn-ties a.pt-name:hover {
+  text-decoration: underline;
+}
+
+.pentaryn-ties .pt-missing {
+  opacity: 0.45;
+  font-style: italic;
+}
+
+.pentaryn-ties input,
+.pentaryn-ties select {
+  height: 1.6rem;
+  font-size: inherit;
+}
+
+.pentaryn-ties .pt-del,
+.pentaryn-ties .pt-notes-toggle {
+  border: none;
+  background: none;
+  cursor: pointer;
+  opacity: 0.55;
+  padding: 0;
+  width: 1.6rem;
+}
+
+.pentaryn-ties .pt-del:hover {
+  opacity: 1;
+  color: var(--color-level-error, #b60205);
+}
+
+/* a filled-in pin means there is prose behind it — readable at a glance down the column */
+.pentaryn-ties .pt-notes-toggle.has-notes {
+  opacity: 1;
+  color: var(--color-text-hyperlink, #5a4bc4);
+}
+
+.pentaryn-ties .pt-notes-toggle:hover {
+  opacity: 1;
+}
+
+.pentaryn-ties .pt-notes {
+  grid-column: 1 / -1;
+  padding: 0.25rem 0.15rem 0.35rem;
+}
+
+.pentaryn-ties .pt-notes[hidden] {
+  display: none;
+}
+
+.pentaryn-ties .pt-notes-text {
+  width: 100%;
+  height: auto;
+  min-height: 5.5rem;
+  resize: vertical;
+  font-family: inherit;
+  font-size: var(--font-size-12, 12px);
+  line-height: 1.4;
+}
+
+.pentaryn-ties .pt-empty {
+  opacity: 0.55;
+  font-style: italic;
+  padding: 0.5rem 0;
+}
+
+.pentaryn-ties .pt-reciprocal {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.8;
+}
+
+.pentaryn-ties .pt-reciprocal input {
+  height: auto;
+}
+
+/* the player's variant of the reciprocal line is prose, not a checkbox */
+.pentaryn-ties p.pt-reciprocal {
+  margin: 0;
+  font-style: italic;
+}
+
+/* ── the card layer ──────────────────────────────────────────────────── */
+
+/*
+ * Fixed, full-window, and transparent to the mouse — the cards themselves take pointer
+ * events back. Anything less and the layer would swallow every click on the canvas.
+ * z-index sits above the board and below Foundry's dialogs and notifications.
+ */
+#pentaryn-ties-cards {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+}
+
+#pentaryn-ties-cards .pt-card {
+  position: fixed;
+  pointer-events: auto;
+  display: grid;
+  grid-template-columns: 2.6rem 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 17rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid var(--color-border-dark, #1a1a1a);
+  border-radius: 5px;
+  background: rgba(20, 19, 17, 0.92);
+  color: #f0f0e0;
+  font-size: var(--font-size-12, 12px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+  cursor: grab;
+  user-select: none;
+}
+
+#pentaryn-ties-cards .pt-card:active {
+  cursor: grabbing;
+}
+
+/* dragged = kept: say so, so it's obvious which ones the key will not sweep away */
+#pentaryn-ties-cards .pt-card.pt-pinned {
+  border-color: var(--color-shadow-primary, #c9a227);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(201, 162, 39, 0.35);
+}
+
+#pentaryn-ties-cards .pt-card-art {
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: #000;
+}
+
+#pentaryn-ties-cards .pt-card-body {
+  min-width: 0;
+}
+
+#pentaryn-ties-cards .pt-card-word {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+#pentaryn-ties-cards .pt-card-name {
+  opacity: 0.8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#pentaryn-ties-cards .pt-card-notes {
+  margin-top: 0.3rem;
+  padding-top: 0.3rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  font-size: var(--font-size-11, 11px);
+  line-height: 1.35;
+  white-space: pre-wrap;
+  max-height: 9rem;
+  overflow-y: auto;
+  opacity: 0.9;
+}
+
+/* the ✕ is the only way out of a pinned card, so it only exists once one is pinned */
+#pentaryn-ties-cards .pt-card-close {
+  display: none;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 0 0.15rem;
+  align-self: start;
+}
+
+#pentaryn-ties-cards .pt-card.pt-pinned .pt-card-close {
+  display: block;
+}
+
+#pentaryn-ties-cards .pt-card-close:hover {
+  opacity: 1;
+}

@@ -392,6 +392,37 @@ foundry-walls-sync: foundry-walls-test
 	@echo "    Enable 'Pentaryn Wall Autocomplete' in Manage Modules, reload, then:"
 	@echo "      await game.pentaryn.walls.preview()"
 
+# ─── NPC Ties module ────────────────────────────────────────────────────
+# Relationship graph on actor flags: a Ties tab on the sheet, and a GM-only
+# canvas overlay on a rebindable key. See foundry/module/pentaryn-ties/README.md
+# and playbooks/foundry-npc-ties.md.
+FOUNDRY_TIES_SRC := $(ROOT)/foundry/module/pentaryn-ties
+FOUNDRY_TIES_DST := $(FOUNDRY_DATA)/modules/pentaryn-ties
+
+# Syntax-check every module source before it can reach Foundry — a parse error in an
+# esmodule fails silently at load time and the module simply never registers.
+.PHONY: foundry-ties-check
+foundry-ties-check:
+	@for f in $(FOUNDRY_TIES_SRC)/*.mjs; do \
+	  node --input-type=module -e "import('node:url')" >/dev/null 2>&1 || exit 0; \
+	  node --check "$$f" 2>/dev/null || { echo "  ✗ syntax error in $$f"; node --check "$$f"; exit 1; }; \
+	done
+	@python3 -c "import json,sys; json.load(open('$(FOUNDRY_TIES_SRC)/module.json')); json.load(open('$(FOUNDRY_TIES_SRC)/lang/en.json'))" \
+	  || { echo "  ✗ malformed JSON in module.json or lang/en.json"; exit 1; }
+	@echo "  ✓ pentaryn-ties sources parse"
+
+# Copy, not symlink (D8) — a stale copy must be a real, visible failure mode.
+.PHONY: foundry-ties-sync
+foundry-ties-sync: foundry-ties-check
+	@mkdir -p "$(FOUNDRY_DATA)/modules"
+	@rm -rf "$(FOUNDRY_TIES_DST)"
+	@cp -R "$(FOUNDRY_TIES_SRC)" "$(FOUNDRY_TIES_DST)"
+	@echo "  ✓ module → $(FOUNDRY_TIES_DST)"
+	@echo "    Foundry only scans Data/modules at STARTUP:"
+	@echo "      make vtt-down && make vtt-up"
+	@echo "    then enable 'Pentaryn NPC Ties' in Manage Modules and reload."
+	@echo "    Key defaults to 8 — rebind in Configure Controls → Ties."
+
 # ─── Tests ──────────────────────────────────────────────────────────────
 # Run the test suite for the GUI (skips scenarios by default for speed; use
 # `make combat-test-all` for the full ring including scenarios).
