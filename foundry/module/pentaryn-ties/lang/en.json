@@ -1,0 +1,52 @@
+{
+  "PENTARYN_TIES.title": "Ties",
+  "PENTARYN_TIES.windowTitle": "Ties — {name}",
+  "PENTARYN_TIES.macroName": "Ties Web",
+  "PENTARYN_TIES.help": "What this character is to each person listed. Hover them on the canvas and press the Ties key to see it on the map. The note pin holds the long version — it stays here, and never goes on the map.",
+  "PENTARYN_TIES.empty": "No ties recorded.",
+  "PENTARYN_TIES.helpPlayer": "People your character knows, and one word for what you are to each of them. Yours to keep up to date. On a scene, hover your token and press the Ties key to see which of them are in sight.",
+  "PENTARYN_TIES.reciprocalPlayer": "Recorded on your character only — the other person's own list is theirs.",
+  "PENTARYN_TIES.card.close": "Close this card",
+  "PENTARYN_TIES.add": "Add",
+  "PENTARYN_TIES.reciprocal": "Also write the matching tie on the other character",
+
+  "PENTARYN_TIES.row.wordPlaceholder": "one word — sister, rival, client…",
+  "PENTARYN_TIES.row.notesAdd": "Add notes on this relationship",
+  "PENTARYN_TIES.row.notesRead": "Notes on this relationship — click to read or edit",
+  "PENTARYN_TIES.row.notesPlaceholder": "The long version — how they met, what is owed, what is not said in front of {name}. Only ever visible here.",
+  "PENTARYN_TIES.row.remove": "Remove this tie",
+  "PENTARYN_TIES.row.missingHint": "This actor no longer exists.",
+  "PENTARYN_TIES.row.missingName": "(missing)",
+
+  "PENTARYN_TIES.stance.devoted": "Devoted",
+  "PENTARYN_TIES.stance.friendly": "Friendly",
+  "PENTARYN_TIES.stance.neutral": "Neutral",
+  "PENTARYN_TIES.stance.wary": "Wary",
+  "PENTARYN_TIES.stance.hostile": "Hostile",
+
+  "PENTARYN_TIES.confirm.removeTitle": "Remove tie",
+  "PENTARYN_TIES.confirm.removeBoth": "Remove the tie between {a} and {b}, in both directions?",
+  "PENTARYN_TIES.confirm.removeOne": "Remove {a}'s tie to {b}, leaving the other direction alone?",
+  "PENTARYN_TIES.confirm.removeNotes": "The notes written on this tie go with it.",
+
+  "PENTARYN_TIES.notify.noTarget": "Hover a token, or select one.",
+  "PENTARYN_TIES.notify.none": "{name} has no ties recorded.",
+  "PENTARYN_TIES.notify.partial": "{name}: {shown} shown · not on this scene — {missing}",
+  "PENTARYN_TIES.notify.pickSomeone": "Pick someone to tie to first.",
+  "PENTARYN_TIES.notify.notYours": "Hover your own character's token.",
+  "PENTARYN_TIES.notify.noneInSight": "Nobody you know is in sight from here.",
+
+  "PENTARYN_TIES.keybind.show": "Show ties web — a word each",
+  "PENTARYN_TIES.keybind.showHint": "Hover your token (or select one) and press to label everyone you know who is in sight, with one word each. Anyone further off gets a thin line instead. Press again to clear.",
+  "PENTARYN_TIES.keybind.showCards": "Show ties web — cards",
+  "PENTARYN_TIES.keybind.showCardsHint": "The same web, as popup cards with their token art and name. Drag a card to keep it — dragged cards stay put and close only with their ✕. Press again to sweep the rest away.",
+
+  "PENTARYN_TIES.settings.sheetTab": "Show the Ties tab on actor sheets",
+  "PENTARYN_TIES.settings.sheetTabHint": "Adds a Ties tab to actor sheets. The tab is written against the default dnd5e sheet; a module that replaces the sheet entirely may render it oddly or not at all. Turn this off if so — the header button opens the same editor anywhere.",
+
+  "PENTARYN_TIES.settings.playerAccess": "Let players see their own ties",
+  "PENTARYN_TIES.settings.playerAccessHint": "Players can run the ties web on a character they own, and read the Ties tab on that character's sheet. They only ever see their own connections, only ones their token can actually see — walls and light are respected — and never the notes. Turn this off to make the whole feature GM-only again.",
+
+  "PENTARYN_TIES.settings.nearDistance": "Near distance (grid squares)",
+  "PENTARYN_TIES.settings.nearDistanceHint": "Within this many squares a tie is labelled at the token. Beyond it, a thin line is drawn from you to them so the label belongs to somebody."
+}

@@ -1,0 +1,68 @@
+{
+  "_comment": "Maps exported from the Roll20 'Ardenhaven' campaign. Grid size is derived from the Roll20 page geometry (page width in 70px units / snapping_increment = square count), not from image analysis — Roll20 stores the authored grid, so this is exact rather than guessed. Files live in the Foundry user data dir, not the repo.",
+  "source": "https://app.roll20.net/editor/ — campaign 'Ardenhaven'",
+  "exported": "2026-08-11",
+  "assetDir": "assets/maps/roll20",
+  "maps": [
+    {
+      "slug": "start",
+      "roll20Page": "Start",
+      "file": "assets/maps/roll20/start.webp",
+      "width": 2464,
+      "height": 1856,
+      "gridSize": 35,
+      "bytes": 863240
+    },
+    {
+      "slug": "ardenford-middle-tier-streets",
+      "roll20Page": "Ardenford — Middle Tier Streets",
+      "file": "assets/maps/roll20/ardenford-middle-tier-streets.webp",
+      "width": 2048,
+      "height": 2048,
+      "gridSize": 41,
+      "bytes": 1397924
+    },
+    {
+      "slug": "old-lumber-camp-spiders",
+      "roll20Page": "The Old Lumber Camp — Spiders",
+      "file": "assets/maps/roll20/old-lumber-camp-spiders.webp",
+      "width": 2048,
+      "height": 2048,
+      "gridSize": 41,
+      "bytes": 1565718
+    },
+    {
+      "slug": "deep-fall-ancient-halls",
+      "roll20Page": "Deep Fall — The Ancient Halls",
+      "file": "assets/maps/roll20/deep-fall-ancient-halls.webp",
+      "width": 3500,
+      "height": 3500,
+      "gridSize": 70,
+      "bytes": 3915332
+    },
+    {
+      "slug": "harbour-undercave",
+      "roll20Page": "The Harbour Undercave",
+      "file": "assets/maps/roll20/harbour-undercave.webp",
+      "width": 3500,
+      "height": 3500,
+      "gridSize": 70,
+      "bytes": 3596938
+    },
+    {
+      "slug": "stone-breach-approach",
+      "roll20Page": "Stone Breach — The Approach",
+      "file": "assets/maps/roll20/stone-breach-approach.webp",
+      "width": 1632,
+      "height": 2912,
+      "gridSize": 56,
+      "bytes": 1309132
+    }
+  ],
+  "skipped": [
+    {
+      "roll20Page": "My Random Dungeon Scrawl 1-8",
+      "reason": "Dungeon Scrawl stub pages. 2-5 and 7-8 have no thumbnail and no art at all. Page 1 holds only 14 token/object graphics (no map layer background) and page 6's thumbnail is a broken vtt-sync worker URL. Nothing to export."
+    }
+  ]
+}
