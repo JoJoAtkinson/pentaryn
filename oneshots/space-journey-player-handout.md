@@ -19,7 +19,7 @@ tags: [oneshot, space-journey, handout, players, foundry, 5.5e, level-5]
 
 **How you win:** earn **10 Trace**. Every scene you take off the board pays it, three ways —
 resolve the scene's objective, find and kill Oz (which cuts the scene short), or break the set open
-with one of your abilities. There are ten scenes and ten Trace, so grinding it out always gets you
+with one of your abilities. There are nine scenes and nine Trace, so grinding it out always gets you
 there — but **every bonus Trace banks a free pass: one scene, of your choosing, that you simply
 refuse to play.** You'll always see the set before you decide — the GM describes it, and any of you
 can call the pass before the first roll. Walk into something you don't like the look of and you can

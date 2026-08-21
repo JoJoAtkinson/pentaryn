@@ -123,3 +123,71 @@ except LicenseKeyUnavailable as exc:
 | File | Purpose |
 |---|---|
 | `license_key.py` | Runtime license-key retrieval. `python -m scripts.foundry.license_key` self-checks. |
+| `ring_subject.py` | Build a dynamic-ring **subject** texture from round token art. Read the next section before re-arting any ringed token. |
+
+## Re-arting a token that has a dynamic ring
+
+> ⚠️ **`texture.src` is not what a ringed token draws.** With the dynamic ring on,
+> the canvas draws `ring.subject.texture`. Change only the art and the token keeps
+> showing the old picture — the document says one thing, the canvas another, and
+> nothing anywhere reports an error. It looks exactly like a stale client.
+
+Every PC and named NPC in `ardenhaven` has a ring, so this is the normal case, not the
+exception. Four fields move together:
+
+| Field | Set to |
+|---|---|
+| `img` | the art (sheet portrait) |
+| `prototypeToken.texture.src` | the art |
+| `prototypeToken.ring.subject.texture` | the **subject** built from that art |
+| each placed token's `texture.src` + `ring.subject.texture` | the same pair |
+
+Placed tokens do **not** inherit a prototype change — update the scene copies explicitly
+or the players keep seeing the old token on the map.
+
+```bash
+./.venv/bin/python scripts/foundry/ring_subject.py \
+  "$HOME/Library/Application Support/FoundryVTT/Data/assets/tokens/tokens-01/halflings/halfling-explorer.png"
+# -> assets/tokens/custom/ring-subjects/halfling-explorer-28c04d.webp
+```
+
+The spec is 512×512 RGBA, source art scaled into the centred two-thirds safe area
+(341×341 at offset 85) — measured off the subjects already in the world, which are
+byte-for-byte consistent. Verify with `await canvas.draw()` and then read
+`token.mesh.texture.baseTexture.resource.src`; reading the document only tells you what
+you asked for, not what is on screen.
+
+### Ringless crowd tokens need the subject in `texture.src`
+
+The rule inverts when `ring.enabled` is `false` — a ringless token draws `texture.src`
+and ignores `ring.subject.texture` entirely. Point `texture.src` at the raw art and the
+crowd renders at the **full** grid square while every ringed NPC beside it renders at
+two-thirds: a 1.5× size mismatch, no error, and the correctly-built subject file sitting
+there unused. That is exactly what happened to the 103 crowd tokens across the Opera
+House, Fairfield Market and Port of Inglesford scenes on 2026-08-16.
+
+So for crowd art, **both** fields get the subject webp:
+
+| `ring.enabled` | `texture.src` | `ring.subject.texture` |
+|---|---|---|
+| `true` (PCs, named NPCs) | the raw art | the subject |
+| `false` (crowd, mobs, clumps) | **the subject** | the subject |
+
+One sweep fixes any that drift, prototypes and placed tokens alike:
+
+```js
+for (const a of game.actors) {
+  const p = a.prototypeToken, subj = p.ring?.subject?.texture;
+  if (!p.ring?.enabled && subj && p.texture.src !== subj)
+    await a.update({"prototypeToken.texture.src": subj});
+}
+for (const sc of game.scenes) {
+  const u = sc.tokens.filter(t => !t.ring?.enabled && t.ring?.subject?.texture
+                                  && t.texture.src !== t.ring.subject.texture)
+                     .map(t => ({_id: t.id, "texture.src": t.ring.subject.texture}));
+  if (u.length) await sc.updateEmbeddedDocuments("Token", u);
+}
+```
+
+Read `_source`, not the derived doc, when auditing right after a write — derived token
+data goes stale and will report the change as missing when it landed.

@@ -16,7 +16,7 @@ The other six pregens were **not touched**.
 > prepared list for Ballad built around Heroism, and Cunning Strike pre-resolved to *Trip* for Pip.
 > Both are now out of date. The other six entries there are still accurate.
 
-Companions: [space-journey-story-outline.md](space-journey-story-outline.md) (the ten scenes),
+Companions: [space-journey-story-outline.md](space-journey-story-outline.md) (the nine scenes),
 [twenty-one-social-map.md](twenty-one-social-map.md) (the cast and their ties).
 
 ---
@@ -25,8 +25,14 @@ Companions: [space-journey-story-outline.md](space-journey-story-outline.md) (th
 
 | | Player | Character | Build | Foundry actor id |
 |---|---|---|---|---|
-| Bard | Kristine | **Ballad Quinn** | Human Bard 5, College of Lore, Entertainer | `opMBKiyGpxSJQkg7` |
-| Rogue | Kyle | **Pip Locksley** | Halfling Rogue 5, Thief, Criminal | `mfkhAL0SzLJ34KfA` |
+| Bard | Kristine | **Ballad Quinn** — *she/her* | Human Bard 5, College of Lore, Entertainer | `opMBKiyGpxSJQkg7` |
+| Rogue | Kyle | **Pip Locksley** — *he/him* | Halfling Rogue 5, Thief, Criminal | `mfkhAL0SzLJ34KfA` |
+
+> **Genders were flipped on 2026-08-16** — the bard is a woman, the rogue is a man, reversing
+> what the original art implied. Both names are already gender-neutral and were **kept**: renaming
+> would have churned the actor, its ownership, its ties and every doc that cites it, to fix
+> nothing. The pronouns are now recorded on the sheets (`system.details.gender`) rather than
+> carried by the portrait alone — a picture is not a field you can read back.
 
 Both tokens are placed in scene **`1. Trophy Gallery (Run 20)`** (`OyBj2br7fV2Lzuyx`), side by side
 at (1960, 1680) and (2100, 1680).
@@ -113,8 +119,8 @@ Invisibility, Suggestion, Shatter and Hypnotic Pattern were all literally uncast
 
 On the Expertise call: the designers wanted Perception Expertise on *both*, because Oz's ring on
 someone's hand is the adventure's only working detection channel and Insight is nullified by
-design. Joe kept Ballad's Performance Expertise — he is a bard called Ballad Quinn with an
-Entertainer background, and the newly-applied Perception *proficiency* already took him from
+design. Joe kept Ballad's Performance Expertise — she is a bard called Ballad Quinn with an
+Entertainer background, and the newly-applied Perception *proficiency* already took her from
 +1 to +4.
 
 ---
@@ -161,7 +167,7 @@ count against the nine.
 | **− Enhance Ability** | Buys a concentration slot to fix what Expertise ×2 + JoAT + Bardic Inspiration already solve. |
 | **− Slow** | Same slot, same save, same shape as Hypnotic Pattern and strictly worse. |
 | **− Major Image** | Concentration illusion that can't damage; Minor Illusion covers the practical use free. |
-| **− Dancing Lights / − Prestidigitation** | Concentration light competes with Hypnotic Pattern; Prestidigitation goes unused across ten scenes. |
+| **− Dancing Lights / − Prestidigitation** | Concentration light competes with Hypnotic Pattern; Prestidigitation goes unused across nine scenes. |
 
 **Attuned 3/3:** Cloak of Protection · Stone of Good Luck · Periapt of Wound Closure
 **Other magic:** Pipes of Haunting (no attunement — the substitute frontliner, *and* a magical
@@ -198,6 +204,25 @@ grappling hook, caltrops, 3 bags of ball bearings, manacles, hooded lantern, 3 o
 
 ---
 
+## 6b. Social ties — added 2026-08-16
+
+Both PCs now have a **hometown and thirty years of local history**. Fairfield, the river town from
+Scene 3, and they grew up in it — Ballad busking since she was eight, Pip two doors away learning
+locks instead of chords. The Computor wrote the backstory; every NPC believes it.
+
+**34 edges written into the `pentaryn-ties` module**, both directions, with a separate note per
+side — the PC's row is what the player remembers, the NPC's row is in the NPC's voice and ends with
+**how they behave toward that PC today**. Hover the NPC, press `8`, play accordingly.
+
+| | Ties | Shape |
+|---|---:|---|
+| **Ballad Quinn** | 21 + Pip | Wide and warm. Performance/Persuasion Expertise means the whole town has an opinion and most of it is good. Two enemies (Dolen Petch, Widow Cress) and both are her own songs |
+| **Pip Locksley** | 12 + Ballad | A third as many, underworld-weighted, transactional. No Persuasion or Performance, so nothing here was charmed — it was bought, owed or earned |
+
+**The full design, the Ned brothers' spine, the deliberate blanks, and the five scene consequences
+are in [twenty-one-social-map.md §7](twenty-one-social-map.md).** Three of those consequences need a
+DM decision before play and are listed in §7 below.
+
 ## 7. Open rulings still owed by the DM
 
 1. **Define The Lunge.** Set the save ability — **CHA** is the *Magic Jar* precedent and gives
@@ -207,8 +232,26 @@ grappling hook, caltrops, 3 bags of ball bearings, manacles, hooded lantern, 3 o
 2. **Rescale Oz's finale HP for two PCs** — roughly 150–170 rather than a four-player number.
 3. **Pencil in two short rests**, after Scene 4 and after Scene 7. Font of Inspiration and hit dice
    are this duo's only mid-night recovery, and the outline currently guarantees neither.
-4. **Scene 3's mob temperature climbs faster than two mouths can talk it down.** Decide whether
-   Widow Cress is guaranteed reachable — she is the lever that makes the arithmetic close.
+4. ~~**Scene 3's mob temperature climbs faster than two mouths can talk it down.**~~ **Largely
+   answered by the social ties (§6b).** Ballad now has warm access to Dagget, Maud, Tobb, Cobb,
+   Aldous, Hanne and Josy, which closes the arithmetic. **Widow Cress is deliberately *not*
+   reachable** — Ballad's own song is what wounded her — but Cress's granddaughter Hanne likes
+   Ballad, so there is a backdoor. Decide what it costs.
+
+### Added by the tie pass (2026-08-16) — decide before play
+
+5. **Scene 2: do not let the party kill Little Ned.** Pip now has a `strength:4` tie to him. Script
+   Ned breaking when he sees Pip and **Rennick knifing the deserter**, or the scripted death reads as
+   a railroad. Narrate the recognition (*"you know that walk"*) in round one, before the player can
+   press `8` and let the UI do the reveal.
+6. **Scene 7: Oz's lockdown overrides Old Semm's latch, always.** Pip's tie gets the scene-dock door
+   left on the latch; Semm's own hook is that he found a door locked from outside. Make them the
+   same door — the guaranteed exit becomes proof the fire is murder. Without this ruling the scene
+   collapses.
+7. **Scene 3's opening line needs rewriting.** The outline calls the party *"these seven
+   strangers"* ([story outline](space-journey-story-outline.md) line 208). They are not strangers
+   any more — Big Ned is naming his mother's songbird and the halfling he already blamed. The
+   replacement is a better scene; write it.
 
 Also undefined and worth a decision before play: the **Scene 7 smoke/suffocation and crush saves**
 and **Scene 5 `Break the Line`**. Both PCs are STR 10 with no STR or CON save proficiency; run

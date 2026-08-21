@@ -10,16 +10,31 @@ Autonomous pass started **2026-08-15**. Fable subagents audit, Opus writes.
 | 1 | Run Twenty | *himself* — then the reboot | Trophy Gallery |
 | 2 | The Road to Town | Rennick the Knife, bandit captain | Cliff Trade Road |
 | 3 | The Market Square | **Big Ned**, the dead bandit's brother | Fairfield Market |
-| 4 | The Short Drop | Magistrate Corben Vale | Town of Hanged Men |
-| 5 | Last Orders | Harl Wetherby, innkeeper | Dragonsfall Tavern ×3 |
-| 6 | The Quiet Night | a nobody villager — and does nothing | Hamlet of Grimsby |
-| 7 | The Fire | the lead tenor | Spider's Tear Opera House ×3 |
-| 8 | The Guide | the hired lantern-bearer | Catacombs of Silence |
-| 9 | The Parley | *himself* — no tricks | The Library |
-| 10 | Twenty-One | *himself* — nowhere left to hide | Trophy Gallery |
+| 4 | Last Orders | Harl Wetherby, innkeeper | Dragonsfall Tavern ×3 |
+| 5 | The Quiet Night | **Fenna**, a connoisseur with the good bottle | Dragonsfall Tavern (same art as 4) |
+| 6 | The Fire | the lead tenor | Spider's Tear Opera House ×3 |
+| 7 | The Guide | the hired lantern-bearer | Catacombs of Silence |
+| 8 | The Parley | *himself* — no tricks | The Library |
+| 9 | Twenty-One | *himself* — nowhere left to hide | Trophy Gallery |
+
+> **2026-08-16 — the hanging is cut and the flow is nine scenes.** *The Short Drop* (Magistrate
+> Corben Vale, Town of Hanged Men) was Scene 3 with a fail state pre-applied — same square, same
+> temperature track, same honest NPCs worked one at a time — and the night has to finish in one
+> sitting. Everything below this line in **Landed** is a record of the 08-15 pass and still says
+> ten scenes; read it as history, not as the current spec. Renumbering swept through the outline,
+> roster, background cast, social map, main doc, handout, pregens and tune-up. `Town of Hanged Men`
+> + Roof stay built in Foundry, parked. Pate, Josy and Hanne moved into the market square rather
+> than being cut; Alderman Hobbe Grove was cut.
+>
+> **Same day — The Quiet Night moved into the Dragonsfall.** Same inn as Scene 4, two hours later
+> (siege at nine, this at eleven), party bedded down upstairs, Oz downstairs in Fenna with the
+> good bottle, working out that he can taste it. New staff actors: **Wat Harrow** (barkeep) and
+> **Nessa Wetherby** (Harl's niece, serves tables), both wired into the ties module.
+> Grimsby and its sixteen-villager search are parked. Knock-on: **the inn no longer burns in Scene
+> 4** (Scene 6 is the fire, and the building has to still be standing).
 
 **Cut from v2:** the dock riot · the sea cave / twenty coffins · the anchor and the seal vaults ·
-the old friend's face · bridges at night. The village that remembers was *repurposed* into Scene 6.
+the old friend's face · bridges at night. The village that remembers was *repurposed* into Scene 5.
 
 ---
 

@@ -1,18 +1,27 @@
 # Twenty-One — NPC & Monster Roster (design pass)
 
-Ten-scene one-shot, D&D 5e (2024 rules). Villain: **Ozmandius the Unmade ("Oz")** — himself in Scenes 1, 9, and 10; in every scene between he wears one host and gets **nothing for it but the host's own stat block**. This is a **planning document for hand-building Foundry actors** — plain portable stat blocks, all rolls pre-computed.
+Nine-scene one-shot, D&D 5e (2024 rules). Villain: **Ozmandius the Unmade ("Oz")** — himself in Scenes 1, 8, and 9; in every scene between he wears one host and gets **nothing for it but the host's own stat block**. This is a **planning document for hand-building Foundry actors** — plain portable stat blocks, all rolls pre-computed.
 
 **Calibrated against:** 4 level-5 PCs (baseline), scaling down to 2. Party reference: AC 12–21, ~32–65 HP, attacks +6/+7 (+9 Thessa), save DCs 15. Chassis grounded in SRD 5.2 / MM 2024: Bandit (AC 12, 11 HP), Bandit Captain (AC 15, 52 HP), Guard (AC 16, 11 HP), Tough (AC 12, 32 HP), Berserker (trimmed, hooded), Commoner (AC 10, 4 HP).
 
 **Scale lines:** every monster carries `scale: 2=N, 3=N, 4=N` — exact headcount at party size 2/3/4. `4=` is the baseline design. Oz hosts and unique NPCs are always `2=1, 3=1, 4=1` (a `0` means "omit at that party size").
 
-**Scenes 1 and 6 have no combat at all.** That's deliberate, and their entries below say so — don't pad them.
+**Scenes 1 and 5 have no combat at all.** That's deliberate, and their entries below say so — don't pad them.
 
 ---
 
 ## OZ'S VESSEL — the reusable possession template
 
-Apply to the scene's host. The rule is absolute and it is the whole design: **Oz gets the host's stat block and nothing else.** No AC bonus, no bonus HP, no extra attacks, no save advantage, no unlocking reactions scene over scene. A possessed innkeeper hits like an innkeeper. The menace is *who is looking out of the eyes*, not what the body can do — his real stat block waits in Scene 10.
+> **Retired 2026-08-16 — this template is no longer an item on any host sheet.** The
+> `Oz's Vessel` / `Worn, Not Ruled` feats were deleted from Rennick, Big Ned, Harl Wetherby and
+> Scribe Ellisane, because an actor-level marker is permanent and bleeds into every scene that actor
+> appears in — which broke outright once Scenes 4 and 5 shared one inn and one cast. Possession is
+> now marked **per-token, GM-only**: `pentaryn-ties` 0.5.0, Token HUD → masks-theater button. The
+> deleted text is archived verbatim in [`_retired-vessel-items.md`](_retired-vessel-items.md).
+> **The rules below still stand** — they are how you *play* a host; they are just no longer pasted
+> onto sheets.
+
+Apply to the scene's host. The rule is absolute and it is the whole design: **Oz gets the host's stat block and nothing else.** No AC bonus, no bonus HP, no extra attacks, no save advantage, no unlocking reactions scene over scene. A possessed innkeeper hits like an innkeeper. The menace is *who is looking out of the eyes*, not what the body can do — his real stat block waits in Scene 9.
 
 - **On 0 HP — Oz abandons the host.** Black frost spiderwebs out of the mouth and eyes; a voice not the host's mutters *"Twenty… not twenty-one."* The host collapses **unconscious but stable at 0 HP** — alive unless the party deliberately executed them (moral texture: every host is a victim, not a villain).
 - **Scenes 2–3 — dropping the host does NOT end the scene.** Oz hops to another body *in the same scene*: a bandit's eyes go wrong mid-sentence, a villager in the crowd goes still. This is deliberate — it teaches the rule at the table.
@@ -23,7 +32,7 @@ Apply to the scene's host. The rule is absolute and it is the whole design: **Oz
 
 ## Scene 1 — Run Twenty (the trophy room)
 
-**Oz himself. NO COMBAT — do not roll initiative, do not stat anything.** The cold open: Oz among the trophies of twenty runs, then the reboot. Whatever the party tries — talk, steel, spells — the scene ends in the reboot; don't reach for the Scene 10 block, it fires first. Nothing to build for Foundry here.
+**Oz himself. NO COMBAT — do not roll initiative, do not stat anything.** The cold open: Oz among the trophies of twenty runs, then the reboot. Whatever the party tries — talk, steel, spells — the scene ends in the reboot; don't reach for the Scene 9 block, it fires first. Nothing to build for Foundry here.
 
 ---
 
@@ -70,41 +79,7 @@ scale: 2=1, 3=1, 4=1  *(one track, any party size)*
 
 ---
 
-## Scene 4 — The Short Drop (Town of Hanged Men)
-
-**Oz = the magistrate (OBVIOUS).** Reads the party's own sentence back to them.
-
-### Magistrate Corben Vale (Oz's Vessel)
-scale: 2=1, 3=1, 4=1
-- Host base: Commoner. **AC 10** · **HP 4** · Speed 30 — the template adds nothing; Vale is exactly as killable as any magistrate.
-- **Gavel** +2, 1d4 bludgeoning — he will never use it.
-- Social front: Deception +7; Insight DC 15. The signet ring is on the hand holding the writ.
-- **Dropping him ends the scene** — this is the first scene where the rule is live. One crossbow bolt through the magistrate ends the hanging: the town watches him exhale black frost, and nobody wants to be deputized anymore. The guards and the crowd are the fight only if the party won't take that shot.
-- Tactics: stays on the scaffold, uses height and the guards as a screen. Wants the hanging to proceed; hides behind procedure when it can't.
-
-### Scaffold Guard
-scale: 2=2, 3=3, 4=4
-- **AC 16** (chain + shield) · **HP 11** · Speed 30 — (SRD Guard)
-- **Spear** +3, 1d6+1 piercing (melee or 20/60)
-- Tactics: hold the scaffold stairs; they're townsfolk in uniform — morale breaks if the executioner drops.
-
-### Executioner
-scale: 2=1, 3=1, 4=1
-- **AC 13** · **HP 52** · Speed 30 — (Berserker chassis, hooded)
-- **Greataxe** +5, 1d12+3 slashing
-- **Hood's Swing** (Recharge 5–6): sweeping arc — every creature within 5 ft, DC 13 Dex save, 1d12+3 slashing (half on success).
-- Tactics: guards the lever. Doesn't pursue off the scaffold.
-
-### Deputized Crowd (escalating mob — rules-light, not fixed monsters)
-scale: 2=1, 3=1, 4=1  *(one escalation track, not a headcount)*
-- If the alarm bell rings, **2 deputized townsfolk arrive at the end of each round** (max 12). AC 10, HP 4, club +2, 1d4.
-- Run them as clumps: **every 4 townsfolk act as one mob attack** — +4 to hit, 2d4 bludgeoning, and DC 12 Str save or grappled.
-- **Off-ramps (say yes to these):** Intimidation DC 15 scatters one clump; dropping Vale ends the whole scene (Scene 4+ rule) — escalation included.
-- Killing townsfolk is a story loss, not an encounter feature.
-
----
-
-## Scene 5 — Last Orders (Dragonsfall Tavern, three floors)
+## Scene 4 — Last Orders (Dragonsfall Tavern, three floors)
 
 **Oz = the innkeeper (SUBTLE).** Exits barred before the party noticed.
 
@@ -124,13 +99,13 @@ scale: 2=3, 3=4, 4=6
 
 ---
 
-## Scene 6 — The Quiet Night (Hamlet of Grimsby)
+## Scene 5 — The Quiet Night (the Dragonsfall again, eleven o'clock)
 
-**NO COMBAT — deliberately.** Oz is one of **16 named villagers** and **does nothing**: no attacks, no plots, no moves. Any of them could be him; the only tells are the template's — the signet ring, Deception +7 against Insight DC 15. The scene's tension is the search, not a fight, so there is nothing to build here beyond 16 Commoner tokens. If the party starts hurting villagers to flush him out, that's the story loss, not an encounter. Dropping the right villager ends the scene (Scene 4+ rule); dropping a wrong one is just a murder Oz gets to watch.
+**NO COMBAT — deliberately, and he will not start one.** Oz wears **Fenna** (Commoner: AC 10, HP 4), sitting alone mid-room with the best bottle in the house, `OBVIOUS`, ring on the hand round the glass. He does not attack, does not stand, does not resist. **He does not need the Vessel template's social front** — Deception +7 and Insight DC 15 are irrelevant here because he is not pretending. The party can kill him with one hit and he invites them to; **dropping him ends the scene** (Scene 4+ rule) and costs them the long rest, because nobody sleeps in a room where that just happened. There is nothing to build beyond one Commoner actor and three or four survivor tokens.
 
 ---
 
-## Scene 7 — The Fire (Spider's Tear Opera House, three levels)
+## Scene 6 — The Fire (Spider's Tear Opera House, three levels)
 
 **Oz = the lead tenor (SUBTLE — until the doors won't open).** He locked every door in the house before the curtain; the scripted Act III fire does the killing. **The threat is the crowd crush — run it as a hazard, not statblocks.** Escape is **up**: boxes → catwalks → out through the skylight.
 
@@ -150,7 +125,7 @@ scale: 2=1, 3=1, 4=1
 
 ---
 
-## Scene 8 — The Guide (Catacombs of Silence, 30×40)
+## Scene 7 — The Guide (Catacombs of Silence, 30×40)
 
 **Oz = "Tam Bellows," the hired lantern-bearer (SUBTLE).** He never fights. He steers — every "shortcut" crosses something already living down here.
 
@@ -166,7 +141,7 @@ scale: 2=1, 3=2, 4=2
 - **AC 17** · **HP 68** · Speed 30 · Immune: poison; charmed, frightened, exhaustion, paralyzed · Resist: cold, necrotic
 - **Circle-Bound:** cannot move farther than 30 ft from the seal's rim; **regains 5 HP** at the start of its turn while touching the circle (destroyed normally at 0).
 - **Multiattack:** two **Sealing Strikes** +7, 2d8+4 force; once per turn on a hit, DC 15 Str save or dragged **10 ft toward the circle's center**.
-- **Branding Grasp** (bonus action, one creature it hit this turn): DC 15 Con save or 2d8 necrotic and the creature takes a **Half-Mark** — a burning half-circle brand. *A Half-Marked creature has **disadvantage on its first save against Oz's possession Lunge in Scene 10.*** (Ends on Remove Curse / Greater Restoration, or when Oz falls.) — This is the load-bearing hook: tonight's wounds are the finale's weakness.
+- **Branding Grasp** (bonus action, one creature it hit this turn): DC 15 Con save or 2d8 necrotic and the creature takes a **Half-Mark** — a burning half-circle brand. *A Half-Marked creature has **disadvantage on its first save against Oz's possession Lunge in Scene 9.*** (Ends on Remove Curse / Greater Restoration, or when Oz falls.) — This is the load-bearing hook: tonight's wounds are the finale's weakness.
 - **Closing Arc** (Recharge 5–6): 15-ft cone of black frost, DC 15 Dex save, 4d8 cold (half on success); the ground in the cone ices over (difficult terrain until end of the Warden's next turn).
 - Tactics: drag one PC onto the circle and brand them; they treat only creatures *on or over the circle* as trespassers — stepping fully off the rim buys a round of peace (teach the party this, it's how a 2-PC table survives). The constructs **ignore Tam** — he reads as part of the seal, which should bother the party before the fight, not after.
 
@@ -179,17 +154,17 @@ scale: 2=2, 3=2, 4=4
 
 ---
 
-## Scene 9 — The Parley (the tower Library)
+## Scene 8 — The Parley (the tower Library)
 
-**Oz himself — alone, no host, no tricks.** No intended combat; this scene is the conversation. But if the party attacks, he fights at **full strength**: run the complete **Ozmandius the Unmade** block from Scene 10 — 250 HP, AC 17, CR 10, Twenty Deaths reactions, all three legendary actions, everything.
+**Oz himself — alone, no host, no tricks.** No intended combat; this scene is the conversation. But if the party attacks, he fights at **full strength**: run the complete **Ozmandius the Unmade** block from Scene 9 — 250 HP, AC 17, CR 10, Twenty Deaths reactions, all three legendary actions, everything.
 
 scale: 2=1, 3=1, 4=1
 - **He does not die here.** At 0 HP nothing resolves — the program will not resolve its antagonist outside the final encounter. The wounds simply stop mattering: he gets up, straightens himself, and **walks upstairs**. Let the party land the killing blow and watch it not count — that's what the scene is for.
-- Save the every-round Lunge cadence for Scene 10 — here he doesn't need anyone else's body, and he knows it.
+- Save the every-round Lunge cadence for Scene 9 — here he doesn't need anyone else's body, and he knows it.
 
 ---
 
-## Scene 10 — Twenty-One (the Trophy Gallery — his real body, and this time it can end)
+## Scene 9 — Twenty-One (the Trophy Gallery — his real body, and this time it can end)
 
 **Ozmandius's true form — and killable at last**, because the Trophy Gallery holds **no NPCs for him to wear**: nothing to hop to, no host to abandon, only the party and the trophies of twenty runs. Solo, legendary-tier, genuinely lethal; target ~3–4 rounds against a focused party of 4.
 
@@ -204,7 +179,7 @@ scale: 2=1, 3=1, 4=1  *(solo boss — tune with the table below, never with head
 - **Multiattack:** three **Unmaking Touches** +8, reach 5 ft, 2d8+5 necrotic each. (Ranged option: **Frost Shard** +8, range 60 ft, 2d10+5 cold.)
 
 **The Lunge (possession attempt — fires every round, automatic)**
-- At **initiative count 20** (losing ties), Oz's shadow tears loose and lunges at one creature he can see within 40 ft: **DC 15 Charisma save** (DC 16 once he's Bloodied). A Scene-8 **Half-Mark** imposes disadvantage on that creature's *first* Lunge save. The party's bodies are the only ones left in the room — this is his way out, and he tries it every round.
+- At **initiative count 20** (losing ties), Oz's shadow tears loose and lunges at one creature he can see within 40 ft: **DC 15 Charisma save** (DC 16 once he's Bloodied). A Scene-7 **Half-Mark** imposes disadvantage on that creature's *first* Lunge save. The party's bodies are the only ones left in the room — this is his way out, and he tries it every round.
 - **On a failure — Oz-Ridden** until the end of the creature's next turn:
   - On its turn, **Oz moves the PC and makes one weapon attack with it** (the PC's own to-hit/damage) against a target of Oz's choice. Oz **cannot** spend the PC's limited resources — no spell slots, no Smites, no superiority dice, no Rage (base attacks only).
   - Oz's true body stays active, but he **can't use Twenty Deaths reactions** while riding (he's split — this is the window).
@@ -246,21 +221,20 @@ scale: 2=1, 3=1, 4=1  *(solo boss — tune with the table below, never with head
 | Actor | Scenes | Chassis | Unique? |
 |---|---|---|---|
 | — (Run Twenty) | 1 | none — **no combat** | — |
-| Oz's Vessel (template) | 2,3,4,5,6,7,8 | per-host — **host block only, no changes** | template — a tag, not a stat mod |
+| Oz's Vessel (template) | 2,3,4,5,6,7 | per-host — **host block only, no changes** | template — a tag, not a stat mod |
 | Rennick the Knife | 2 | Bandit Captain (2024) | yes |
 | Road Bandit (Cutter, Hobbes, Grin, Little Ned, Squint, Toad) | 2 | Bandit (2024) | no (one actor, six named tokens) |
 | Big Ned | 3 | custom brute | yes |
 | Mob Temperature | 3 | none — escalation ladder | — |
-| Magistrate Corben Vale | 4 | Commoner | yes |
-| Scaffold Guard | 4 | Guard | no |
-| Executioner | 4 | Berserker | no |
-| Deputized Crowd | 4 | custom (mob track) | no |
-| Harl Wetherby | 5 | custom (his own sheet) | yes |
-| Doorbreaker Mercenary | 5 | Tough | no |
-| Grimsby villagers ×16 | 6 | Commoner — **no combat** | no |
-| The Lead Tenor | 7 | Commoner | yes |
-| The Crush | 7 | none — hazard | — |
-| "Tam Bellows" | 8 | Commoner — **never fights** | yes |
-| Warden of the Unfinished Circle | 8 | custom construct | yes |
-| Seal Remnant | 8 | custom minion | no |
-| Ozmandius the Unmade | 9, 10 | custom solo | yes (cannot die in 9) |
+| Harl Wetherby | 4 | custom (his own sheet) | yes |
+| Doorbreaker Mercenary | 4 | Tough | no |
+| Fenna (Oz's host) | 5 | Commoner — **no combat, 4 HP, invites it** | yes |
+| Wat Harrow, Barkeep | 5 | Commoner — **no combat** | yes (new) |
+| Nessa Wetherby | 5 | Commoner — **no combat** | yes (new) |
+| Dragonsfall regulars ×8 | 5 | Commoner — **no combat** | no |
+| The Lead Tenor | 6 | Commoner | yes |
+| The Crush | 6 | none — hazard | — |
+| "Tam Bellows" | 7 | Commoner — **never fights** | yes |
+| Warden of the Unfinished Circle | 7 | custom construct | yes |
+| Seal Remnant | 7 | custom minion | no |
+| Ozmandius the Unmade | 8, 9 | custom solo | yes (cannot die in 8) |

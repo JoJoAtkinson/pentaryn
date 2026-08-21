@@ -18,13 +18,12 @@ any of them, the night runs exactly as written.
 | Scene | A. Colm Bracken (guard) | B. Edmun Latch (clerk) | C. Marn Hollis (merc) | D. "Lark" (gossip) |
 |---|---|---|---|---|
 | 3 The Market Square | ✓ town watch, losing the square | ✓ passing through on the writ circuit | — | ✓ working the crowd |
-| 4 The Short Drop | ✓ scaffold stairs | ✓ at Vale's elbow | — | — |
-| 5 Last Orders | — | — | ✓ sixth man through the door | ✓ playing the inn |
-| 6 The Quiet Night | — | — | — | ✓ playing the fire at Grimsby |
-| 7 The Fire | ✓ opening-night rotation | ✓ backstage, house paperwork | ✓ hired as house muscle | ✓ the interval act |
+| 4 Last Orders | — | — | ✓ sixth man through the door | ✓ playing the inn |
+| 5 The Quiet Night | — | — | — | ✓ still in the building, sobering up |
+| 6 The Fire | ✓ opening-night rotation | ✓ backstage, house paperwork | ✓ hired as house muscle | ✓ the interval act |
 
-**Scenes 1, 2, 8, 9 and 10 have no recurring cast** — the trophy room, the road, the catacombs, the
-library and the top of the tower are all deliberately underpopulated. The four pay off in **Scene 7**,
+**Scenes 1, 2, 7, 8 and 9 have no recurring cast** — the trophy room, the road, the catacombs, the
+library and the top of the tower are all deliberately underpopulated. The four pay off in **Scene 6**,
 not at the end: a locked, burning opera house is the last place in the night where a sympathetic
 guard and a mercenary who won't die for a contract are worth anything.
 
@@ -47,9 +46,7 @@ with "that's above my pay" — and then, if you just wait, answers them anyway.
 **Scene by scene:**
 - **S3** — town watch at the edge of the market square, trying to stop a lynching with four men and
   no authority. Losing. He is the only uniform in the square who does not want this.
-- **S4** — scaffold stairs at the dawn drop. The guard who won't look at the hooded prisoners'
-  faces. Takes his orders from the paper, not from Vale.
-- **S7** — stuffed into opening-night half-plate that doesn't fit, filling a hole in the doubled
+- **S6** — stuffed into opening-night half-plate that doesn't fit, filling a hole in the doubled
   rotation. Hates every minute. By now he recognizes the party — and has not reported them.
   **This is where the arc pays.** When the doors turn out to be locked and the house starts to burn,
   he is a man with a shoulder, a reason, and nothing left to protect.
@@ -58,15 +55,15 @@ with "that's above my pay" — and then, if you just wait, answers them anyway.
 - *First meeting:* he's not local, he serves paper not men, and the paper comes "already signed,
   up-river" — the first free hint the chain runs to Tower-City.
 - *Second meeting:* the pattern — same man, worse posting. He's noticed his employers going strange
-  and will say so if it's safe: *"The magistrate stopped eating. The captain stopped sleeping.
-  Paper says I don't notice things."*
+  and will say so if it's safe: *"House manager stopped eating. Lieutenant stopped sleeping. Paper
+  says I don't notice things."*
 - *By the end:* the party knows they've had a sympathizer in uniform all night. Good for: waved-through
-  checkpoints, a look-the-other-way, and in Scene 7 a live lever — he's standing next to a locked
+  checkpoints, a look-the-other-way, and in Scene 6 a live lever — he's standing next to a locked
   door in a burning building.
 
 **The hook.** Coin in front of witnesses insults the pension; an *out* does not. Give him proof he
 can put on paper, or a warning that turns out true, or just treat him like the professional nobody
-else sees. In S7, if the party earned him earlier, he stops taking the rotation's orders and starts
+else sees. In S6, if the party earned him earlier, he stops taking the rotation's orders and starts
 taking theirs — gets a door open, gets a row of stalls moving, buys them the round they need.
 Threatened instead, he goes correct and useless: dying eight months short of a pension for strangers
 is not a trade he will make.
@@ -77,7 +74,7 @@ is not a trade he will make.
 lift ink-blots and dry seals).
 
 **Throughline.** Circuit under-clerk of the magistracy; he travels with the paper, so he's worked
-for Vale, for the customs house, and now for the seals office — nobody's man. His loyalty is to the
+for three magistracies, for the customs house, and now for the seals office — nobody's man. His loyalty is to the
 ledger being *correct*, which is becoming a problem, because the ledger has stopped being correct
 and he is the only living person who's noticed. Wants to matter to someone before he's forty;
 failing that, a posting with a stove. **Tic:** murmurs your last three words back as he writes them;
@@ -88,9 +85,7 @@ writ-box carried like an infant.
 - **S3** — passing through on the writ circuit, watching a crowd assemble around a well. He is the
   only person in the square who thinks to ask the boring question: *who paid the crier, and out of
   which office?* Nobody has ever thanked him for asking a question like that.
-- **S4** — at Magistrate Vale's elbow holding the writ-box. He engrossed the death writ. He noticed
-  Vale's signature changed its slant this week. Said nothing. Filed it anyway.
-- **S7** — backstage with the house paperwork, reconciling an opening-night ledger. Knows the key
+- **S6** — backstage with the house paperwork, reconciling an opening-night ledger. Knows the key
   register — and that **every door key in the building was signed out this morning, by a hand he
   doesn't recognise, against no office at all.** Paper from nowhere offends him more than the fire
   will.
@@ -101,7 +96,7 @@ writ-box carried like an infant.
 - *Second meeting:* the same clerk, chasing the same wrong paper. If anyone has been kind, he
   volunteers the anomaly: the same hand countersigns documents from *different* offices — "O. the
   Unmade" — and signatures change their slant the week their owners go strange.
-- *By the end (S7):* a full insider on Oz's current host — Ellisane works the interval alone in the
+- *By the end (S6):* a full insider on Oz's current host — Ellisane works the interval alone in the
   manager's office; the writ of passage's exact path to the Castellan's countersignature; a copy of
   the tower lift schedule in his own writ-box. Good for: catching the forgery before it ever meets a
   seal-lamp, a *genuine* writ drafted correctly, or sworn testimony that unpicks the party's outlaw
@@ -124,24 +119,24 @@ always checks the one corner nobody's watching. **Recognizable by:** split eyebr
 a size big, axe haft wrapped in a dead friend's rein-leather.
 
 **Scene by scene:**
-- **S5** — sixth man through the tavern door, and the one who hangs back: covers the stairs "in
+- **S4** — sixth man through the tavern door, and the one who hangs back: covers the stairs "in
   case," doesn't press a downed target. First to break when it turns. If the party leaves him a way
   out, he takes it — that's the seed of the whole arc.
-- **S7** — hired as house muscle for opening night; easy money, stand at the back, look large.
+- **S6** — hired as house muscle for opening night; easy money, stand at the back, look large.
   **The fee does not cover a fire.** If the party turned him at the inn, this is where it pays: he
   is standing next to a locked door with a crowbar's worth of shoulder and no reason to stay.
 
 **What repeated engagement teaches:**
-- *First meeting (S5):* he's a wage, not a believer. Spared or cornered, he can name the paymaster —
+- *First meeting (S4):* he's a wage, not a believer. Spared or cornered, he can name the paymaster —
   a quiet innkeeper paid six axes, in advance, in coin that was still cold.
 - *Second meeting:* the rule, stated plainly — he'll take any job, he won't die for one. And each
   time, they can see the employer got worse and his sleep got shorter.
-- *By the end (S7):* the party knows exactly where his line is, and a burning building is a very
+- *By the end (S6):* the party knows exactly where his line is, and a burning building is a very
   easy place to find it. **He will not die for a theatre.**
 
 **The hook.** Never appeal to virtue — appeal to the arithmetic. *"The fee doesn't cover this,"*
-said by someone who has spared him once, is nearly a command word. Sparing him in Scene 5 costs the
-party one escaped enemy and buys the whole arc; turned in S7 he stops guarding the house and starts
+said by someone who has spared him once, is nearly a command word. Sparing him in Scene 4 costs the
+party one escaped enemy and buys the whole arc; turned in S6 he stops guarding the house and starts
 emptying it, and takes the other hired men with him.
 
 ### D. Isbet Marrow, called "Lark" — the gossip
@@ -156,13 +151,14 @@ trade is that her prices are fair. Wants enough put by to stop traveling before 
 what you can afford. **Recognizable by:** red scarf; older than she plays.
 
 **Scene by scene:**
-- **S5** — playing the inn that night; under a table the moment the door goes. She watched Harl bar
+- **S4** — playing the inn that night; under a table the moment the door goes. She watched Harl bar
   the back door an hour before the mercenaries came — she just doesn't know yet what it means. (Get
   her out alive; she has two more bookings.)
-- **S6** — playing the fire in the square at Grimsby, because a village that feeds you is a booking.
-  Knows every face in the hamlet by evening and will sell you a list of who has been *odd today* —
-  which is the whole Scene 6 puzzle, for money.
-- **S7** — hired for the interval. Knows the boxes and who sits in them, the backstage doors, which
+- **S5** — **still here**, because it is the same room two hours later and she was under a table
+  for the fight. She is the one person who watched the whole evening from floor level and is now
+  sober enough to price it. She will not go near Old Cobb's table, and if asked why, says only
+  *"that one costs"* — and then does not name a price, which for Lark is unheard of.
+- **S6** — hired for the interval. Knows the boxes and who sits in them, the backstage doors, which
   guard-lieutenant is honest, and that the house has been strange about keys all week.
 
 **What repeated engagement teaches:**
@@ -173,7 +169,7 @@ what you can afford. **Recognizable by:** red scarf; older than she plays.
 - *By the end:* she's the alternate route into anything social — introductions, timing, rumor. If
   the party needs the word on the street *changed*, she is the mouth that changes it.
   Good for: any information the written plot doesn't hand over, seeding a counter-story (breaking
-  the market square in S3, salting the house in S7), or a warning delivered somewhere the party
+  the market square in S3, salting the house in S6), or a warning delivered somewhere the party
   can't go.
 
 **The hook.** Pay her fairly once and she's fair forever; stiff her once and the prices triple. Big
@@ -189,8 +185,12 @@ collection is a free scene beat; use it.)
 One line each: who, why they're there, disposition, and a hook that only fires if a player engages
 them. Recurring cast present in the scene are listed at the top of each roster.
 
-> **Aligned to the v3 flow, 2026-08-15.** Every hook below points at a scene that exists. The dock
-> riot and the saloon reunion are gone; their people were re-homed, not cut.
+> **Aligned to the v3 flow, 2026-08-16.** Every hook below points at a scene that exists. The dock
+> riot and the saloon reunion are gone; their people were re-homed, not cut. **The gallows town went
+> with the hanging, but its people didn't** — Pate, Josy and Hanne moved down the hill into the
+> market square, where they do more work than they ever did on the scaffold. Only Alderman Hobbe
+> Grove is actually cut (he existed solely as the magistrate's rival, and the magistrate is off-screen
+> now). Widow Cress appears once, in the square, and her arc ends there.
 
 ### Scene 3 — The Market Square (the lynching)
 
@@ -220,32 +220,20 @@ arranged*.
   steps on her own, not for sale, and **Big Ned cannot answer her.**
 - **Skipper Rojan** — his barge is at the wharf and he wants no part of this. **Hook:** coin gets
   the party out of town by water the moment the square turns — the exit that isn't through people.
+- **Pate** — rope-seller and hawker, down from gallows hill for the day; bored, mercenary, honest for
+  money. **Hook:** he'll happily say who's been buying — **including the man who bought forty feet of
+  hemp this morning**, hours before anyone in this square had been accused of anything. Somebody
+  intended to hang people today. Pairs with Ambrose Fell: Fell names the price, Tobb names the face,
+  Pate proves the rope was bought before the grief was.
+- **Josy** — pickpocket kid working the surge; feral-cheerful, twelve. **Hook:** befriended or paid,
+  she lifts the crier's purse and hands it over — the coin in it is stamped, and stamped coin came
+  from an office. Ignored, she lifts a PC's pouch instead and becomes a chase at the worst moment.
+- **Hanne** — levy drummer, sixteen, **Widow Cress's granddaughter**, and sick of every civic duty
+  this town has handed her. **Hook:** she is the one person who can get her grandmother down to the
+  front of the crowd — and Cress is worth two steps of Mob Temperature on her own. This is the
+  designed backdoor to the square's strongest lever; see [social map §7b](twenty-one-social-map.md).
 
-### Scene 4 — The Short Drop (the gallows town)
-
-*Also present: **Colm Bracken** (A) on the scaffold stairs; **Edmun Latch** (B) at Vale's elbow with
-the writ-box; **Brother Aldous** (S5), if met, saying rites on the scaffold. Magistrate Corben Vale
-is Oz.*
-
-- **Widow Cress** — **and this time she says nothing.** She stood up for them in the square and she
-  will not stand up for them here, because this one has a magistrate and a signature. **Hook:** ask
-  her why and she tells you, plainly, and it is worse than a refusal. *(If Scene 3 was skipped, she
-  is simply the woman who comes every dawn and can point out which gibbets.)*
-- **Alderman Hobbe Grove** — hates that Vale outranks him; it is the organising fact of his week.
-  **Hook:** because he watches Vale obsessively, **he is the one person in town who has noticed Vale
-  isn't himself** — the stopped eating, the changed hand, the dismissed housekeeper. He'll trade it
-  for anything that embarrasses the magistracy in public.
-- **Pate** — rope-seller and souvenir hawker; bored, mercenary. **Hook:** for a few coins, the
-  mechanics — the north trap sticks, where the lever-chains run, and the executioner never steps
-  off the scaffold.
-- **Josy** — pickpocket kid working the crowd; feral-cheerful. **Hook:** befriended or paid, she can
-  lift keys or the writ off the scaffold party during the drumroll; ignored, she lifts a PC's pouch
-  instead and becomes a chase.
-- **Hanne** — levy drummer, sixteen, Widow Cress's granddaughter, hates this job for reasons nobody
-  in the square has ever asked about. **Hook:** spooked or persuaded, her hands slip — the drumroll
-  stutters and **the drop waits a round.**
-
-### Scene 5 — Last Orders (the tavern, before the door explodes)
+### Scene 4 — Last Orders (the tavern, before the door explodes)
 
 *Also present: **Marn Hollis** (C) sixth through the door; **Lark** (D) fiddling by the fire. Harl
 Wetherby is Oz.*
@@ -267,29 +255,54 @@ Wetherby is Oz.*
 - **Fenna** — running a crooked dice game in the corner; sharp, amused. **Hook:** beat her fair, or
   catch her cheating and stay polite, and she pays in what she noticed: **the same six men walked
   past the window twice before dark,** and the innkeeper watched them do it.
-- **Brother Aldous** — hedge-priest drinking himself steady before working the dawn executions in
-  the hanging town; morbid, gentle. **Hook:** travels the same road — will vouch for the party in
-  the Scene 4 crowd, or say the rites slow and buy them a round of delay.
+- **Brother Aldous** — hedge-priest drinking himself steady before a week of country funerals;
+  morbid, gentle, and braver than he looks. **Hook:** he does not accept a barred house. Asked, he
+  walks into the middle of the room and gets the patrons down and out through the cellar hatch —
+  which hands the party back every round they'd have spent on crowd control.
 
-### Scene 6 — The Quiet Night (Grimsby)
+### Scene 5 — The Quiet Night (the Dragonsfall, eleven o'clock)
 
-*Also present: **Lark** (D) playing the fire. Oz is one of the sixteen villagers and does nothing.*
+*Also present: **Lark** (D), sober and shaken. **Fenna is Oz** — alone mid-room with the best bottle
+in the house, not hiding.*
 
-**The roster here is the whole village** — sixteen named tokens, any of whom is him. These three
-have hooks; the rest are the puzzle.
+**Nobody here is a puzzle.** The search version of this scene is parked. Everyone below is a real
+lodger or a real regular of this inn, and the full who-is-awake-and-how-drunk table lives in
+[the outline's Scene 5](space-journey-story-outline.md). These are the ones with hooks.
 
 - **Halloran** — ex-garrison, dismissed for talking about what he heard underground; drinking to
   forget, quietly terrified. **Hook:** the only person who has been in the **catacombs** and come
   back. Door-by-door, he can describe the branching, the burial niches, and the one thing that
-  matters: ***the causeway is the way out and it's south.*** Free Scene 8 insurance, two scenes
+  matters: ***the causeway is the way out and it's south.*** Free Scene 7 insurance, two scenes
   early, from a man nobody listens to.
-- **Grigor** — off-shift, bone-tired, proud of his work. **Hook:** he knows this village is a stop
-  on the road to the city and can say what's playing at the opera and when — the first mention of
-  Scene 7 before the plot has to make it.
-- **Nols** — pouring for the fire; neutral to a fault, sees everything. **Hook:** a quiet coin buys
-  the answer to the only question that matters tonight — *who has been odd today?*
+- **Grigor** — off-shift, bone-tired, proud of his work. **Hook:** he can say what's playing at the
+  opera and when — the first mention of Scene 6 before the plot has to make it.
+- **Wat Harrow, Barkeep** — Harl's potman of eleven years, behind his own bar for the first time and
+  hating it. Sober, steady, out of his depth. **Hook:** he is the scene's **Rule 2 proof**. Ask about
+  the bottle Fenna is drinking and you get *"That's the good stuff, that is"* — correct, canned, and
+  containing nothing. He has poured it for eleven years and cannot tell you what it tastes like.
+- **Nessa Wetherby** — **Harl's niece**, seventeen, works the tables. Sober and steady in the way
+  people are when they have decided not to feel anything yet. **Hook:** she has been in every corner
+  of this room all evening, so she is the best witness in the building — and she keeps drifting back
+  to her uncle's bench between tables, which is the scene's quiet counterweight to the woman
+  enjoying a drink.
+- **Old Cobb** — retired ferryman, same chair eleven years, steady rather than drunk. **Hook:** he
+  told them in Scene 4 that Harl had been *wrong for nine days.* He does it again, unprompted, about
+  Fenna: *"Fenna don't drink. Fenna sells drink to people who drink."*
+- **Ansa Pike** — still facing the door, still not drinking, waiting for a boat that is not coming.
+  **Hook:** she has watched that doorway all evening without blinking, which makes her the one person
+  who can say **exactly who came in after the fight and when** — and her answer is *nobody did.*
+  Old Cobb never left.
+- **Brother Aldous** — sitting with the six dead mercenaries because somebody should. **Hook:** he
+  will say the rites over the party's enemies without being asked, and if anyone watches him do it,
+  that is the scene's quiet counterweight to the man at the table talking about beer.
+- **Dolen Petch** — travelling knife-grinder, no permanent home, drinking hard and entitled to.
+  **Hook:** he'll sharpen everything the party owns for free tonight, badly, because his hands are
+  shaking — a free, useless kindness in a scene made of them.
+- **Sela Bratch** — room 3, awake, lights out, not coming down. **Hook:** unchanged from Scene 4 —
+  she knows the new roof route, and tonight she is far more willing to trade it, because she wants
+  to know whether it is safe to be in this building.
 
-### Scene 7 — The Fire (opening night at the Spider's Tear)
+### Scene 6 — The Fire (opening night at the Spider's Tear)
 
 *Also present: **Colm Bracken** (A) in ill-fitting rotation plate; **Edmun Latch** (B) backstage
 with the key register; **Marn Hollis** (C) hired as house muscle; **Lark** (D) playing the interval.
@@ -322,7 +335,7 @@ The lead tenor is Oz.*
 
 ---
 
-*Scenes 1, 2, 8, 9 and 10 get no extras roster, deliberately. The trophy room is empty, the road has
+*Scenes 1, 2, 7, 8 and 9 get no extras roster, deliberately. The trophy room is empty, the road has
 only bandits, the catacombs have only the guide, the library has only him, and the top of the tower
 has only him. **Every populated scene in this one-shot is a scene about people, and every empty one
 is a scene about Oz.***

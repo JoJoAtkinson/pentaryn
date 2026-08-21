@@ -243,10 +243,10 @@ comes from three places instead of one. In priority order:
    Scenes 2–4 run lighter (~8) by their own nature — a trivial bandit ambush, a lynching where the
    crowd is the threat, a hanging you escape rather than fight — so the first real fight is the
    scene-5 inn siege and nobody should be desperate walking into it.
-3. **The two breathers — scene 6's quiet village (no combat at all) and scene 9's parley (no
+3. **The two breathers — scene 5's quiet night at the inn (no combat at all) and scene 8's parley (no
    required fight) — restore everything but HP.** Pact slots, Bardic Inspiration, Channel
    Divinity and Second Wind come back; wounds don't. **Hit Dice are the one thing a breather never
-   hands back** — that single restriction is what keeps ten scenes from going slack, and it's the
+   hands back** — that single restriction is what keeps nine scenes from going slack, and it's the
    one worth holding onto now that everything else about healing is unrestricted.
 4. **Party healing is the third source** — Lay on Hands (25 HP), Second Wind ×3, plus any Cure
    Wounds a table decides to prepare. Together with the Doctor that's *generous*, and it should be:
