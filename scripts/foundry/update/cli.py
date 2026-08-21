@@ -57,6 +57,18 @@ def cmd_run(args) -> int:
 
     result = apply_mod.run(dry=args.dry, force=args.force, skip_llm=args.skip_llm)
     print(f"  outcome: {result.outcome}")
+    for record in result.applied:
+        print(f"  ✓ applied {record['id']} {record['from']} → {record['to']}")
+    for record in result.failed:
+        print(f"  ✗ failed  {record['id']}: {record.get('error')}")
+    # Spell the recovery out here, not only in the report. This log is the first place
+    # anyone looks, and "outcome: recovered" on its own does not say WHAT was rolled
+    # back or from which snapshot — which is exactly the question it prompts.
+    for rec in result.recoveries:
+        verdict = "ok" if rec["ok"] else f"FAILED: {rec.get('error')}"
+        print(f"  ↩ ROLLED BACK {rec['kind']} {rec['target']} — {verdict}")
+        for step in rec.get("steps", []):
+            print(f"      · {step}")
     for message in result.messages:
         print(f"  · {message}")
 
