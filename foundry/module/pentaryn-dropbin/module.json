@@ -1,0 +1,34 @@
+{
+  "id": "pentaryn-dropbin",
+  "title": "Pentaryn Drop Bin",
+  "description": "An append-only ledger of every item that leaves a character. Records Item Piles drops to the ground and outright deletions from a sheet, in the order they happened, with the item's complete source data — so a two-hander dropped in a corridor three sessions ago can be handed back exactly as it was. Writes to a world setting and mirrors to assets/drop-bin/drop-log.json. GM is the only writer; player clients route their entries through socketlib. Exposes game.pentaryn.dropbin.",
+  "version": "0.1.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "14"
+  },
+  "authors": [
+    {
+      "name": "Joseph Atkinson"
+    }
+  ],
+  "esmodules": [
+    "dropbin.mjs"
+  ],
+  "socket": true,
+  "protected": false,
+  "relationships": {
+    "requires": [
+      {
+        "id": "socketlib",
+        "type": "module"
+      }
+    ]
+  },
+  "flags": {
+    "pentaryn": {
+      "flagScope": "dropbin",
+      "generation": 14
+    }
+  }
+}

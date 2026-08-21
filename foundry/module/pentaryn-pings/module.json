@@ -1,0 +1,26 @@
+{
+  "id": "pentaryn-pings",
+  "title": "Pentaryn Ping Log",
+  "description": "Records canvas pings — yours and your players' — into a world setting, so a spot you pointed at can still be read back minutes later. Foundry keeps no ping history of its own: a ping is a transient socket message that draws an animation and is gone. This keeps the last N of them (user, scene, x, y, timestamp) in the database instead, which is what makes 'put a monster where I pinged' possible from a tool that cannot watch the canvas live. GM-only writer; players never write world settings. Exposes game.pentaryn.pings.",
+  "version": "0.1.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "14"
+  },
+  "authors": [
+    {
+      "name": "Joseph Atkinson"
+    }
+  ],
+  "esmodules": [
+    "pings.mjs"
+  ],
+  "socket": false,
+  "protected": false,
+  "flags": {
+    "pentaryn": {
+      "flagScope": "pings",
+      "generation": 14
+    }
+  }
+}

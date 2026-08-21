@@ -8,7 +8,7 @@
  *
  * Direction: an actor's array says what THAT ACTOR is to each person listed.
  *   Piet's array contains { id: <brellin>, word: "understudy" }
- *   → hovering Piet, the badge under Brellin reads "understudy".
+ *   → hovering Piet, the card over Brellin reads "understudy".
  */
 
 export const MODULE = "pentaryn-ties";

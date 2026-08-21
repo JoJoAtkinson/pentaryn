@@ -227,6 +227,56 @@
   opacity: 0.9;
 }
 
+/* ── the worn mark (GM only — see worn.mjs) ─────────────────────────── */
+
+/*
+ * The card line: this token is somebody else tonight. Violet is the mark's one accent,
+ * everywhere it appears — a render decision, never stored in the flag.
+ */
+#pentaryn-ties-cards .pt-card-worn {
+  margin-top: 0.3rem;
+  padding-top: 0.3rem;
+  border-top: 1px solid rgba(155, 89, 182, 0.55);
+  font-size: var(--font-size-11, 11px);
+  line-height: 1.35;
+}
+
+#pentaryn-ties-cards .pt-card-worn-by {
+  font-weight: 700;
+  color: #c9a0dc;
+}
+
+#pentaryn-ties-cards .pt-card-worn-note {
+  margin-top: 0.15rem;
+  white-space: pre-wrap;
+  max-height: 7rem;
+  overflow-y: auto;
+  opacity: 0.9;
+}
+
+/* the HUD button lights violet when a mark is set, so prep can read the row of HUDs */
+#token-hud .pt-worn-btn.active,
+.placeable-hud .pt-worn-btn.active {
+  color: #c9a0dc;
+  border-color: rgba(155, 89, 182, 0.8);
+}
+
+.pt-worn-dialog .form-group {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.2rem;
+  margin-bottom: 0.5rem;
+}
+
+.pt-worn-dialog textarea {
+  resize: vertical;
+  min-height: 5rem;
+  font-family: inherit;
+  font-size: var(--font-size-12, 12px);
+  line-height: 1.4;
+}
+
 /* the ✕ is the only way out of a pinned card, so it only exists once one is pinned */
 #pentaryn-ties-cards .pt-card-close {
   display: none;
@@ -245,4 +295,38 @@
 
 #pentaryn-ties-cards .pt-card-close:hover {
   opacity: 1;
+}
+
+/* ------------------------------------------------------------------ */
+/*  The description card (key 9, GM only)                             */
+/*                                                                    */
+/*  A DialogV2 window, not a canvas card — the prose can run long, so  */
+/*  it wants a scrollbar and a resize grip rather than a floating tag. */
+/* ------------------------------------------------------------------ */
+
+.pt-describe {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.pt-describe-art {
+  width: 96px;
+  height: 96px;
+  flex: 0 0 auto;
+  object-fit: cover;
+  border: 1px solid var(--color-border-dark, #999);
+  border-radius: 4px;
+}
+
+.pt-describe-body {
+  flex: 1 1 auto;
+  min-width: 0;          /* let long words wrap instead of stretching the dialog */
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+/* The biography is authored HTML — keep its first paragraph flush with the art. */
+.pt-describe-body > :first-child {
+  margin-top: 0;
 }

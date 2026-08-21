@@ -15,19 +15,58 @@
  *
  * Pinned cards outlive scene changes and reloads: they are a memo, not a scene overlay.
  *
+ * This module owns the cards and nothing else. The wire joining a card to its token is
+ * drawn on the canvas by overlay.mjs, which rebuilds it from `live()` every time
+ * `onChange` fires — so the two can never disagree about what is on screen.
+ *
  * Client-side only, like everything else here. Nothing crosses the socket.
  */
 
 import { MODULE, read, stanceOf, stanceLabel } from "./ties-api.mjs";
+import { readWorn } from "./worn.mjs";
 
 const LAYER_ID = "pentaryn-ties-cards";
 export const PIN_SETTING = "pinnedCards";
 const FALLBACK_ART = "icons/svg/mystery-man.svg";
 
-/** key `${sourceActorId}:${tieId}` -> { el, pinned, sourceId, tieId, anchor } */
+/** key `${sourceActorId}:${tieId}` -> { el, pinned, sourceId, tieId, anchor, colour } */
 const cards = new Map();
 
 const key = (sourceId, tieId) => `${sourceId}:${tieId}`;
+
+/**
+ * One subscriber, set by overlay.mjs. Every mutation of the card set calls it, so the
+ * wires are a pure function of what is on screen rather than a second thing to remember
+ * to update. A card that comes back after being closed brings its wire back with it.
+ */
+let notify = () => {};
+export const setOnChange = fn => {
+  notify = typeof fn === "function" ? fn : () => {};
+};
+
+/**
+ * What is on screen right now, for the wire renderer. Positions are read from the live
+ * DOM (not from a cached value) so a card mid-drag reports where it actually is.
+ */
+export function live() {
+  const out = [];
+  for (const r of cards.values()) {
+    const box = r.el.getBoundingClientRect();
+    out.push({
+      sourceId: r.sourceId,
+      tieId: r.tieId,
+      // The SPECIFIC token this card was built above — not just its actor. An actor with two
+      // tokens on one scene would otherwise have its wire resolved by "first visible token
+      // in placeables order", which is not necessarily the one the user aimed at.
+      tokenId: r.tokenId,
+      pinned: r.pinned,
+      colour: r.colour,
+      // bottom-centre of the card: where a wire should leave from
+      screen: { x: box.left + box.width / 2, y: box.top + box.height }
+    });
+  }
+  return out;
+}
 
 function layer() {
   let el = document.getElementById(LAYER_ID);
@@ -100,6 +139,29 @@ function buildCard(tie, token, { showNotes = false } = {}) {
     body.append(notes);
   }
 
+  /**
+   * The worn mark, GM only — this token is somebody else tonight. Reads off the TOKEN
+   * document (per-scene by construction) and rides under the notes the same way. The
+   * `isGM` gate matches every other render path for the mark: players never see a line,
+   * whatever the flag says. Like everything on a card, it is textContent, never HTML.
+   */
+  const worn = game.user?.isGM ? readWorn(token?.document) : null;
+  if (worn) {
+    const box = document.createElement("div");
+    box.className = "pt-card-worn";
+    const who = document.createElement("div");
+    who.className = "pt-card-worn-by";
+    who.textContent = game.i18n.format("PENTARYN_TIES.worn.cardLabel", { by: worn.by || "?" });
+    box.append(who);
+    if (worn.note.trim()) {
+      const note = document.createElement("div");
+      note.className = "pt-card-worn-note";
+      note.textContent = worn.note;
+      box.append(note);
+    }
+    body.append(box);
+  }
+
   const close = document.createElement("button");
   close.type = "button";
   close.className = "pt-card-close";
@@ -143,6 +205,7 @@ function makeDraggable(rec) {
     // a click is not a drag — only commit past a few pixels, so a stray press doesn't pin
     if (!rec.pinned && Math.hypot(dx, dy) > 4) pin(rec);
     place(rec, ox + dx, oy + dy);
+    notify(); // the wire follows the card out to wherever it is being dropped
   });
 
   const end = ev => {
@@ -189,6 +252,8 @@ export function show(sourceActor, entries, { showNotes = false } = {}) {
       pinned: false,
       sourceId: sourceActor.id,
       tieId: tie.id,
+      tokenId: token?.id ?? null,
+      colour: stanceOf(tie.stance).hex,
       // top edge of the token, in canvas coords — see the geometry note in overlay.mjs on
       // why this comes off `center` and the document, never `token.x`
       anchor: token ? { x: token.center.x, y: token.center.y - (token.h ?? 0) / 2 } : null
@@ -197,6 +262,7 @@ export function show(sourceActor, entries, { showNotes = false } = {}) {
       ev.stopPropagation();
       remove(k);
       savePinned();
+      notify();
     });
     layer().appendChild(el);
     cards.set(k, rec);
@@ -204,6 +270,7 @@ export function show(sourceActor, entries, { showNotes = false } = {}) {
     follow(rec);
     shown++;
   }
+  notify();
   return shown;
 }
 
@@ -231,12 +298,14 @@ function remove(k) {
 /** The key press sweep — takes the transient ones, leaves anything that was dragged. */
 export function closeTransient() {
   for (const [k, rec] of [...cards.entries()]) if (!rec.pinned) remove(k);
+  notify();
 }
 
 /** Everything, pinned included. Only used by the console API and by teardown-on-logout. */
 export function closeAll() {
   for (const k of [...cards.keys()]) remove(k);
   savePinned();
+  notify();
 }
 
 export function anyTransient() {
@@ -281,20 +350,47 @@ export function restorePinned() {
     if (!actor || !(game.user.isGM || actor.isOwner)) continue;
     const tie = read(actor).find(x => x.id === entry.tieId);
     if (!tie) continue;
-    const token = canvas?.ready ? canvas.tokens.placeables.find(p => p.actor?.id === tie.id) : null;
+    /**
+     * ⚠ The visibility rule applies here too, and used not to.
+     *
+     * The card's art is the TOKEN's texture, so restoring a pinned card against a token this
+     * client cannot see would show a player both that the person is on this scene and what
+     * they currently look like — off a card they pinned on a different scene entirely. The
+     * wire was already safe (paintWires resolves through the filtered lookup); this was the
+     * one hole left. Without a token the card falls back to `tie.img`, which is the actor
+     * portrait they could already reach.
+     *
+     * Inlined rather than imported: overlay.mjs imports this module, so canSee() cannot come
+     * the other way without a cycle. Canonical version and its `isVisible` vs `visible`
+     * reasoning live there.
+     */
+    const seen = p => game.user?.isGM === true || (p.isVisible ?? p.visible) === true;
+    const token = canvas?.ready
+      ? canvas.tokens.placeables.find(p => p.actor?.id === tie.id && seen(p)) ?? null
+      : null;
     const k = key(actor.id, tie.id);
     if (cards.has(k)) continue;
     const { el, close } = buildCard(tie, token, { showNotes: true });
-    const rec = { el, pinned: true, sourceId: actor.id, tieId: tie.id, anchor: null };
+    const rec = {
+      el,
+      pinned: true,
+      sourceId: actor.id,
+      tieId: tie.id,
+      tokenId: token?.id ?? null,
+      colour: stanceOf(tie.stance).hex,
+      anchor: null
+    };
     el.classList.add("pt-pinned");
     close.addEventListener("click", ev => {
       ev.stopPropagation();
       remove(k);
       savePinned();
+      notify();
     });
     layer().appendChild(el);
     cards.set(k, rec);
     makeDraggable(rec);
     place(rec, Number(entry.x) || 20, Number(entry.y) || 20);
   }
+  notify();
 }

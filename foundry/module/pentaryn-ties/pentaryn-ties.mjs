@@ -1,20 +1,23 @@
 /**
  * Pentaryn NPC Ties — entry point.
  *
- *   game.pentaryn.ties.show()          toggle the canvas web for the hovered token
+ *   game.pentaryn.ties.show()          toggle every card for the hovered token (key 8)
+ *   game.pentaryn.ties.showOne()       selected -> hovered, that one card (key 7)
  *   game.pentaryn.ties.edit(actor)     open the standalone editor
  *   game.pentaryn.ties.read(actor)     sanitised ties (never throws)
  *   game.pentaryn.ties.set(a, b, {...}) create/update an edge and its mirror
  *   game.pentaryn.ties.setNotes(a, bId, text)  the long version, sheet-only
  *
- * The key is a real Foundry keybinding, not a hotbar macro — it shows up in
- * Configure Controls and can be rebound if 8 is already spoken for. A macro is
- * also created once, on first ready, for anyone who prefers dragging it to a bar.
+ * Both keys are real Foundry keybindings, not hotbar macros — they show up in
+ * Configure Controls and can be rebound if 7 or 8 are already spoken for. A macro
+ * is also created once, on first ready, for anyone who prefers dragging it to a bar.
  */
 
 import * as API from "./ties-api.mjs";
 import * as Overlay from "./overlay.mjs";
 import * as Cards from "./popups.mjs";
+import * as Worn from "./worn.mjs";
+import * as Describe from "./describe.mjs";
 import { TiesEditor, buildHTML, bind } from "./editor.mjs";
 
 const MODULE = API.MODULE;
@@ -26,9 +29,26 @@ const TAB = "ties";
 
 Hooks.once("init", () => {
   /**
-   * Two keys, two levels of noise. Not `restricted` any more — players need to reach this
-   * for their own character; the permission check lives in Overlay.toggle(), where it can
-   * also honour the playerAccess setting.
+   * TWO keys, and they are the same web at two densities.
+   *
+   *   8 — hover somebody: a card for everyone THEY know who is in sight.
+   *   7 — select your own token and hover somebody else: the ONE card for what that person
+   *       is to you. Press again on them to close it, move to another and press for theirs.
+   *
+   * They read the canvas differently on purpose — 8's subject is the hovered token, 7's is
+   * the SELECTED one and the hovered token is the object. 7 therefore refuses to run
+   * without a selection rather than falling back to the hover, because falling back would
+   * silently answer a different question. The reasoning lives in overlay.mjs.
+   *
+   * 0.3.0 also shipped two keys — bare 8 for a word under each token, Shift+8 for cards —
+   * and the cards won outright, so the word mode was removed rather than left in as a
+   * setting nobody would pick. This is not that: both of these draw cards, and they differ
+   * only in how many.
+   *
+   * `showWeb` keeps its original id so anyone who rebound it off 8 keeps their key.
+   *
+   * Neither is `restricted` — players need to reach this for their own character; the
+   * permission check lives in the overlay, where it also honours the playerAccess setting.
    */
   game.keybindings.register(MODULE, "showWeb", {
     name: "PENTARYN_TIES.keybind.show",
@@ -36,26 +56,30 @@ Hooks.once("init", () => {
     editable: [{ key: "Digit8" }],
     restricted: false,
     onDown: () => {
-      Overlay.toggle(Overlay.MODES.WORD);
+      Overlay.showAll();
+      return true;
+    }
+  });
+
+  game.keybindings.register(MODULE, "showOneTie", {
+    name: "PENTARYN_TIES.keybind.one",
+    hint: "PENTARYN_TIES.keybind.oneHint",
+    editable: [{ key: "Digit7" }],
+    restricted: false,
+    onDown: () => {
+      Overlay.showOne();
       return true;
     }
   });
 
   /**
-   * Shift+8, not 9. Hotbar slot 9 is spoken for by the Quick View macro (see
-   * playbooks/foundry-npc-ties.md), and a bare Digit9 keybinding would fire both. Same
-   * finger, shift for more detail, nothing else disturbed.
+   * 9 — the odd one out, and deliberately so. 7 and 8 are two densities of the same
+   * question and both have a player half; this is "who IS this", read off the actor's
+   * private biography, and is GM-only. It lives next to them on the number row because
+   * that is where the hand already is, and because 7/8/9 were free — a letter would have
+   * collided with something Foundry or dnd5e already owns.
    */
-  game.keybindings.register(MODULE, "showCards", {
-    name: "PENTARYN_TIES.keybind.showCards",
-    hint: "PENTARYN_TIES.keybind.showCardsHint",
-    editable: [{ key: "Digit8", modifiers: ["Shift"] }],
-    restricted: false,
-    onDown: () => {
-      Overlay.toggle(Overlay.MODES.CARD);
-      return true;
-    }
-  });
+  Describe.registerKeybinding();
 
   game.settings.register(MODULE, "macroCreated", { scope: "world", config: false, type: Boolean, default: false });
 
@@ -99,6 +123,7 @@ Hooks.once("init", () => {
   });
 
   Overlay.registerHooks();
+  Worn.registerHooks();
 });
 
 /**
@@ -109,11 +134,12 @@ Hooks.once("init", () => {
  */
 function publishAPI() {
   const api = {
-    show: Overlay.toggle,
-    cards: () => Overlay.toggle(Overlay.MODES.CARD),
+    show: Overlay.showAll,
+    showAll: Overlay.showAll,
+    showOne: Overlay.showOne,
+    cards: Overlay.showAll, // 0.3.0 name, kept so existing macros don't break
     clear: Overlay.clear,
     closeAllCards: Cards.closeAll,
-    MODES: Overlay.MODES,
     edit: actor => TiesEditor.open(actor),
     read: API.read,
     set: API.setTie,
@@ -121,7 +147,16 @@ function publishAPI() {
     setNotes: API.setNotes,
     remove: API.removeTie,
     migrate: API.migrateLegacy,
-    STANCES: API.STANCES
+    STANCES: API.STANCES,
+    // the worn mark — per-token, GM-only. Console path for anyone who prefers a macro
+    // to the HUD button: game.pentaryn.ties.wornDialog(canvas.tokens.controlled[0])
+    worn: Worn.readWorn,
+    setWorn: Worn.setWorn,
+    clearWorn: Worn.clearWorn,
+    wornDialog: Worn.openDialog,
+    // the description card — GM only, key 9. Was the `Quick View` macro.
+    describe: Describe.toggle,
+    closeDescription: Describe.close
   };
   const current = game.pentaryn;
   if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, ties: api };

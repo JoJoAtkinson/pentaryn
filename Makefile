@@ -13,7 +13,7 @@ PY := $(shell if [ -x ./.venv/bin/python ]; then echo ./.venv/bin/python; elif [
 PARTY_GANG    := world/party/grant-gang/combat-roster.yml
 PARTY_COMPASS := world/party/the-compass-edge/combat-roster.yml
 PARTY_LEDGER  := world/party/black-ledger/combat-roster.yml
-
+i
 # ─── Combat-runner GUI (PySide6 + qt-material) ──────────────────────────
 # Opens the encounter picker, lets you pick mob counts, then launches the
 # multi-tab combat window. Discovers NPCs by the #combat-runner tag and reads
@@ -393,8 +393,8 @@ foundry-walls-sync: foundry-walls-test
 	@echo "      await game.pentaryn.walls.preview()"
 
 # ─── NPC Ties module ────────────────────────────────────────────────────
-# Relationship graph on actor flags: a Ties tab on the sheet, and a GM-only
-# canvas overlay on a rebindable key. See foundry/module/pentaryn-ties/README.md
+# Relationship graph on actor flags: a Ties tab on the sheet, and draggable
+# canvas cards on a rebindable key (players get it for their own character). See foundry/module/pentaryn-ties/README.md
 # and playbooks/foundry-npc-ties.md.
 FOUNDRY_TIES_SRC := $(ROOT)/foundry/module/pentaryn-ties
 FOUNDRY_TIES_DST := $(FOUNDRY_DATA)/modules/pentaryn-ties
@@ -418,7 +418,11 @@ foundry-ties-sync: foundry-ties-check
 	@rm -rf "$(FOUNDRY_TIES_DST)"
 	@cp -R "$(FOUNDRY_TIES_SRC)" "$(FOUNDRY_TIES_DST)"
 	@echo "  ✓ module → $(FOUNDRY_TIES_DST)"
-	@echo "    Foundry only scans Data/modules at STARTUP:"
+	@echo "    Already enabled? A browser RELOAD (F5) is enough — .mjs and .css are"
+	@echo "    served fresh. But module.json is read once at STARTUP, so the version"
+	@echo "    in Manage Modules stays stale until you restart. Don't trust it to tell"
+	@echo "    you whether the new code is live; check the behaviour."
+	@echo "    First install, or a new file in module.json:"
 	@echo "      make vtt-down && make vtt-up"
 	@echo "    then enable 'Pentaryn NPC Ties' in Manage Modules and reload."
 	@echo "    Key defaults to 8 — rebind in Configure Controls → Ties."

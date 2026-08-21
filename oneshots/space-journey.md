@@ -39,7 +39,7 @@ tags: [oneshot, space-journey, foundry, 5.5e, level-5]
 > and every bonus box is a **free pass**: one scene, of your choosing, that you simply refuse to
 > play. Walk into something you don't like the look of and you can turn around and leave.
 >
-> **Ten Trace and it's over.** There are ten scenes, so grinding it out always gets you there;
+> **Nine Trace and it's over.** There are nine scenes, so grinding it out always gets you there;
 > earn the bonuses and you get there early, while you're all still standing. Either way it ends in
 > his trophy room — the one room with nobody left for him to wear, and the only place his death
 > will stick.
@@ -72,7 +72,7 @@ tags: [oneshot, space-journey, foundry, 5.5e, level-5]
    wounds.
 5. **The scene is then spent** — the order marches forward, minus whatever you've passed on, and
    never back.
-6. It ends in the **trophy room** (scene 10): himself, in his own body, and **no NPCs left to
+6. It ends in the **trophy room** (scene 9): himself, in his own body, and **no NPCs left to
    wear.** Kill him there and it finally sticks.
 
 ---
@@ -500,10 +500,10 @@ seams only show to someone who was looking at something else. Say this once and 
 > **The odds** (level 5, so PB +3). Trained: **30–35%** per check. Rogue with Expertise:
 > **50%**. Untrained: **5–20%**, depending on Wisdom — low, but never zero, which is the point.
 > At two or three incidental checks a scene, expect a panel to surface **roughly every other
-> scene**. Over ten scenes that's ~5 sightings and, realistically, ~3 the party actually reaches.
+> scene**. Over nine scenes that's ~4–5 sightings and, realistically, ~3 the party actually reaches.
 
 **Reaching it is the secondary objective.** Place it somewhere that costs something — behind the
-bandits' line, under the scaffold, backstage past the fire, down the branch of catacomb the guide
+bandits' line, behind the well platform, backstage past the fire, down the branch of catacomb the guide
 swears is unsafe. Spotting a panel should reorganize the party's whole plan for the
 scene. If it's convenient, you've placed it wrong.
 
@@ -586,10 +586,10 @@ watches a hole appear in the world and has to keep working around it for the res
   deletes the man he was wearing and ends the argument, and he walks into the next scene furious
   and untouched.
 
-> **If he saves it for the finale (scene 10):** a pass is worth nothing there — nothing passes on
+> **If he saves it for the finale (scene 9):** a pass is worth nothing there — nothing passes on
 > the ending — so instead the
 > shot takes **half of Oz's current hit points**, no save, no reaction, no *"Not this time."* It
-> doesn't win the fight. It makes holding onto it for nine scenes worth having done.
+> doesn't win the fight. It makes holding onto it for eight scenes worth having done.
 
 > **Alternate, if you'd rather he be a talker than a shooter:** *Poker Face* — once per session,
 > tell Oz one lie and he believes it completely, no save. Twenty deaths taught him how these
@@ -906,12 +906,13 @@ The exceptions, and every one is deliberate:
   the ring; kill Big Ned and the mob grows a new ringleader mid-sentence. These two scenes exist
   to teach the rule while it's cheap — let the party kill him twice early, so they've stopped
   trying by the time it would cost them.
-- **Scene 6: named, he tips his hat.** There is no fight in The Quiet Night. Call him out and
-  the nobody smiles, touches his brim, and walks out of the village. That's all that happens.
-- **Scene 9: killing him doesn't stick.** He's in his own body, at full strength, in his own
+- **Scene 5: he isn't hiding.** There is no fight in The Quiet Night and no search either — he is
+  sitting at a table with a beer, `OBVIOUS`, and he'd rather they slept. Threaten him and he
+  welcomes it, then points out what it costs them. That's all that happens.
+- **Scene 8: killing him doesn't stick.** He's in his own body, at full strength, in his own
   library, and putting him down changes nothing. The Parley is for talking.
 
-**Finding him does not make him leave** (scenes 2–8). Naming the host costs him the pretense —
+**Finding him does not make him leave** (scenes 2–7). Naming the host costs him the pretense —
 he stops acting and starts playing the host's stat block like he's read the manual, because he
 has. Exposure is not the end of the scene. It's the start of the fight, fought with whatever the
 body he chose can do.
@@ -948,10 +949,11 @@ wounds only close by healing; catching your breath doesn't close one; see the do
 schedule regardless of how the party is doing — going Trace-less is punishment enough for a
 botched objective.
 
-**The second rest is scene 6, and it's on the board.** The Quiet Night is a **full long rest** —
-hit points, Hit Dice, slots, everything. That is exactly its trap: taking it means stopping the
-hunt for a whole quiet evening while Oz stands in the village square, in a nobody, doing nothing
-but watching them sleep. The rest is real. So is he. Whether they dare take it *is* the scene.
+**The second rest is scene 5, and it's on the board.** The Quiet Night is a **full long rest** —
+hit points, Hit Dice, slots, everything. That is exactly its trap: it happens in the same inn they
+just fought a siege in, two hours later, with Oz downstairs in a borrowed body nursing a drink and
+openly telling them to go to bed. The rest is real. So is he. Whether they dare take it *is* the
+scene.
 
 ### Escalation — Grudge
 
@@ -960,7 +962,7 @@ but watching them sleep. The rest is real. So is he. Whether they dare take it *
 - From about scene 3, whoever he's wearing starts quoting past runs in the host's voice —
   *"You opened with the fireball in run six too."* This costs nothing, breaks no rule, and is the
   best free tell in the game. Use it every scene.
-- **The numeric Grudge applies only in scenes 9–10**, in his own body. In scenes 2–8 he runs on
+- **The numeric Grudge applies only in scenes 8–9**, in his own body. In scenes 2–7 he runs on
   the host's stock stat block, full stop — a +1 the host didn't come with would break hard
   rule 1.
 - He arrives at the finale with **one Grudge per scene the party actually played** after the
@@ -982,7 +984,7 @@ finale hides behind. Trace is a floor under the party's feet, not a wall in fron
 | **Standard Issue** fired at the host (First Officer, §5) | **+1 bonus** |
 | Any clever use of holodeck physics the GM likes | **+1 bonus** |
 
-**The floor:** every scene resolved pays +1, and there are ten scenes, so the track cannot stall
+**The floor:** every scene resolved pays +1, and there are nine scenes, so the track cannot stall
 out. Grinding always gets there — bloodier, later, but always.
 
 **The pass:** every **bonus** box is a **free pass** — one scene the party never has to play, and
@@ -994,7 +996,7 @@ chapter, and they're standing in the next one. That's the whole point of making 
 get to look at the thing, decide they want no part of it tonight, and walk. Once dice are on the
 table the scene is theirs to finish; a pass buys a scene skipped, not a fight abandoned.
 
-**Passable: scenes 2–8.** Scene 1 already happened and **scenes 9 and 10 always run** — nothing
+**Passable: scenes 2–7.** Scene 1 already happened and **scenes 8 and 9 always run** — nothing
 passes on the ending.
 
 **What it costs.** The skipped scene's +1 never lands, so a pass moves the party forward without
@@ -1003,11 +1005,11 @@ blood and time, not Trace.** They still get there — the bonus that bought the 
 own +1 — they just get there with more HP and fewer scars, facing a wizard with one less Grudge.
 
 **Passing on The Quiet Night** costs them the long rest, and it's now their own hands doing it.
-Don't warn them; don't hide it either. *"A village on an ordinary evening — nothing is wrong"* is an
-honest description of that set, and if they hear "nothing is wrong" and spend a pass to skip past
-it, that is a decision they made with the truth in front of them. It also leaves Oz without the
-evening he uses to pick his finale target — so he picks it himself, and he picks whoever has hurt
-him most.
+Don't warn them; don't hide it either. *"The common room downstairs, and nothing is going to happen
+in it"* is an honest description of that set, and if they hear that and spend a pass to skip past it,
+that is a decision they made with the truth in front of them. It also leaves Oz without the
+conversation he uses to pick his finale target — so he picks it himself, and he picks whoever has
+hurt him most.
 
 **If the party is limping by scene 6 or 7 with no passes banked, hand them a bonus box off a good
 idea** — a skipped scene is the kindest heal in the game, and arriving at the finale underpowered
@@ -1015,13 +1017,13 @@ is a threat to hold over the table, not a TPK to actually deliver.
 
 ### Statting Oz
 
-**Scenes 2–8: he is the host.** Run the host's stock stat block, unmodified — a *bandit captain*,
+**Scenes 2–7: he is the host.** Run the host's stock stat block, unmodified — a *bandit captain*,
 a *thug*, a *noble*, a *commoner* with a cellar key. What makes him dangerous in the middle
 scenes is not numbers; it's twenty runs of knowing exactly what this party does under pressure,
 worn inside a body they haven't thought to suspect. The party's damage dies with each host —
-there is nothing of *him* to wound until scene 9.
+there is nothing of *him* to wound until scene 8.
 
-**Scenes 9–10: his own body.** Build him as a **solo CR 9-ish arcane duelist** for a level 5
+**Scenes 8–9: his own body.** Build him as a **solo CR 9-ish arcane duelist** for a level 5
 party of 5, with legendary actions, the Grudge bonus (above), and one signature: he
 *pre-counters* the party's habits. Practical version: give him three **Twenty Deaths**
 reactions, usable once each per scene —
@@ -1033,13 +1035,13 @@ reactions, usable once each per scene —
   fold to Magister Orin's one prepared copy. Print it in his block so it lands as a bit rather
   than a rules argument at the table.
 
-**Play him to win — in every body.** The bandit captain focuses fire, the magistrate uses the law
-like a garrote, the tenor lets the party waste rounds on doors he locked himself. In the finale
+**Play him to win — in every body.** The bandit captain focuses fire, the innkeeper bars the exits
+before anyone notices, the tenor lets the party waste rounds on doors he locked himself. In the finale
 he targets the weakest crew member, finishes people off, and does not pull a single punch. The
-party's safety does not come from you being merciful — it comes from the fact that in scenes 2–8
+party's safety does not come from you being merciful — it comes from the fact that in scenes 2–7
 he's wearing stock NPCs, and in the finale **his own hit points are finally on the table.**
 
-**He arrives at scene 9 untouched**, no matter what the party did all night — their damage was
+**He arrives at scene 8 untouched**, no matter what the party did all night — their damage was
 spent on hosts, and it died with the bodies it was dealt to. That sounds unfair and it's the
 point: **Trace is the track that accumulates, not his health bar.** Say this out loud around
 scene 3, when someone notices, or they'll think they're making progress in the wrong currency.
@@ -1058,7 +1060,7 @@ HP. He should feel like a wall — the first one all night that stays hit.
   *anyone* who dies, not just the Redshirt. A crewman wanders in looking for the gym, the doors
   slam, and that player is back on a fresh pregen. Nobody watches from the couch.
 - **Healing works — yours and his.** Don't explain how (§6). Death is the thing that's permanent.
-- Budget the real damage: **~10–12 average HP per PC per scene**, ~8 in scenes 2–4. That's the
+- Budget the real damage: **~10–12 average HP per PC per scene**, ~8 in scenes 2–3. That's the
   number that makes ten persistent scenes survivable (§6).
 - Environmental hazards are the actual threat: the flood, the collapse, the siege engines.
 - The arch is locked. The Computor answers, but only in the most literal, unhelpful way, and it
@@ -1066,7 +1068,7 @@ HP. He should feel like a wall — the first one all night that stays hit.
 
 ---
 
-## 10. The ten scenes
+## 10. The nine scenes
 
 Each is one Foundry scene. Roughly 15–25 minutes each. **They run in this order, every time.**
 Oz never chooses the set — he only chooses who to wear when it loads. The first room and the last
@@ -1077,21 +1079,20 @@ room are the same room.
 | 1 | **Run Twenty** | Cold open. The trophy room — his sanctum, his corpse, confetti. Then the reboot | *himself* — and then he sits up | Survive the reboot; learn the safeties are off. Somebody loots the ring |
 | 2 | **The Road to Town** | A bandit ambush on the road | the bandit captain | Get the whole party through the ambush alive. Kill the captain and he hops to another bandit — watch the hands |
 | 3 | **The Market Square** | An open-air lynching — a mob, a rope, a grievance | **Big Ned**, a dead bandit's brother | Stop the hanging. He hops here too, once — it's the last free lesson |
-| 4 | **The Short Drop** | A lawful hanging — scaffold, paperwork, a drum | the magistrate | Get the condemned off the scaffold. The law is honest even when the judge isn't — use it |
-| 5 | **Last Orders** | The inn. Hired mercenaries at every table, paid in honest coin | the innkeeper | Get out of the inn alive. The mercs were honestly hired, and the contract is real and readable |
-| 6 | **The Quiet Night** | A village on an ordinary evening. Nothing is wrong | a nobody, who does nothing | Rest — a full long rest, and that's the trap (§8). Name him and he tips his hat and leaves |
-| 7 | **The Fire** | An opera house, mid-performance. He locked the doors | the lead tenor | Get everyone out of the building |
-| 8 | **The Guide** | Catacombs. Someone has to lead the way down, and he made sure it's him | the hired guide | Reach the far side — without going where he steers you |
-| 9 | **The Parley** | His library. Quiet, warm, two chairs | *himself* — **unkillable.** Dropping him at full strength doesn't stick | Hear him out, or don't. Leave knowing something you can use |
-| 10 | **Twenty-One** | The trophy room again — wrong-colored, no exits, and **no NPCs** | *himself* — **killable.** There is nobody left to wear | Kill him. It sticks this time |
+| 4 | **Last Orders** | The inn. Hired mercenaries at every table, paid in honest coin | the innkeeper | Get out of the inn alive. The mercs were honestly hired, and the contract is real and readable |
+| 5 | **The Quiet Night** | The same inn at eleven. Party bedded down upstairs, one man downstairs with a beer | **Fenna**, who runs the dice and appreciates a good bottle | Rest — a full long rest, and that's the trap (§8). He isn't hiding; the scene is the conversation |
+| 6 | **The Fire** | An opera house, mid-performance. He locked the doors | the lead tenor | Get everyone out of the building |
+| 7 | **The Guide** | Catacombs. Someone has to lead the way down, and he made sure it's him | the hired guide | Reach the far side — without going where he steers you |
+| 8 | **The Parley** | His library. Quiet, warm, two chairs | *himself* — **unkillable.** Dropping him at full strength doesn't stick | Hear him out, or don't. Leave knowing something you can use |
+| 9 | **Twenty-One** | The trophy room again — wrong-colored, no exits, and **no NPCs** | *himself* — **killable.** There is nobody left to wear | Kill him. It sticks this time |
 
-**Damage budget:** ~10–12 average real HP per PC per scene, ~8 in scenes 2–4. the Doctor heals each
+**Damage budget:** ~10–12 average real HP per PC per scene, ~8 in scenes 2–3. the Doctor heals each
 crew member once per scene (2d8+5, ~14), so that budget is deliberately just under what he can
-undo — the party bleeds slowly all night. The **breather** fires after scene 3-or-4, and **scene 6
+undo — the party bleeds slowly all night. The **breather** fires after scene 3-or-4, and **scene 5
 is the long rest**, if they dare take it (§8); mark both on your scene list before you start.
 
 **The pass rule.** Every bonus Trace box banks a **free pass**, and the party picks which scene
-(2–8) it burns — spent at the top of a scene, after your description and before the first roll
+(2–7) it burns — spent at the top of a scene, after your description and before the first roll
 (§8). Don't run sets just because they're written. The party reaching the Parley after seven
 scenes instead of nine is them *winning*, not you losing prep, and the passed sets were never his
 to keep anyway. Scenes 9 and 10 always run; nothing passes on the ending. If the party is limping
@@ -1109,12 +1110,12 @@ feedback: was this challenge satisfactory?"* Let the Captain answer.
 ## 11. Foundry VTT build checklist
 
 - [ ] World: `space-journey`, system dnd5e, 5.5e ruleset
-- [ ] 10 scenes built + walled + lit, named `01-run-twenty` … `10-twenty-one`
-- [ ] Scene navigation bar ordered 1–10 so a scene change is one click (`switch-scene`)
+- [ ] 9 scenes built + walled + lit, named `01-run-twenty` … `09-twenty-one`
+- [ ] Scene navigation bar ordered 1–9 so a scene change is one click (`switch-scene`)
 - [ ] 8 pregen actors, level 5, folder `Space Journey — Pregens`, ownership assigned at the table
-- [ ] **One actor per host** — bandit captain, Big Ned, magistrate, innkeeper, village nobody,
-       lead tenor, hired guide: mostly stock stat blocks, each its own actor, each with **the ring
-       visible in the token art.** Oz's own actor (the CR 9 duelist) is only needed for scenes 9–10
+- [ ] **One actor per host** — bandit captain, Big Ned, innkeeper, Fenna, lead tenor,
+       hired guide: mostly stock stat blocks, each its own actor, each with **the ring
+       visible in the token art.** Oz's own actor (the CR 9 duelist) is only needed for scenes 8–9
 - [ ] Generic NPC/crowd tokens per scene (they're all honest programs — no stat depth needed)
 - [ ] Journal entries: one per scene (GM notes + read-aloud), one for role abilities, handed to
        players as a shared journal
@@ -1133,7 +1134,7 @@ feedback: was this challenge satisfactory?"* Let the Captain answer.
 - [ ] **The Doctor card** — the blockquoted rules card as a page in the shared player journal, next to
        the role-abilities page. It is the complete rules for him; players run him themselves
 - [ ] Holodeck-grid effect: a tile/overlay of yellow grid lines to flash on scene change
-- [ ] Sound: transporter chirp on scene change, red-alert klaxon for scene 9
+- [ ] Sound: transporter chirp on scene change, red-alert klaxon for scene 8
 
 Maps: check `foundry/roll20-maps.json` for anything reusable before sourcing new art. Assets
 flow through OneDrive per the existing pipeline.
@@ -1162,10 +1163,10 @@ flow through OneDrive per the existing pipeline.
 
 ## 13. Prep order (what to build first)
 
-1. **The hosts** — mostly stock stat blocks (bandit captain, a thug for Big Ned, a noble for the
-   magistrate, commoners for the innkeeper and the nobody, the tenor, the guide), one actor each,
-   ring in every token art ← *scenes 2–8 run on these, not on Oz*
-2. Oz's own stat block + the three Twenty Deaths reactions — **needed only for scenes 9–10**
+1. **The hosts** — mostly stock stat blocks (bandit captain, a thug for Big Ned, commoners for
+   Fenna, the tenor and the guide), one actor each,
+   ring in every token art ← *scenes 2–7 run on these, not on Oz*
+2. Oz's own stat block + the three Twenty Deaths reactions — **needed only for scenes 8–9**
 3. **The Doctor** — one actor, two items, a d6 barks table, one printed card ← *the free healing,
    the immortal decoy, and the forensics all live here*
 4. The 8 pregens, per [space-journey-pregens.md](space-journey-pregens.md)
