@@ -349,6 +349,35 @@ def apply_core(fa: FoundryAdmin, decision: dict) -> dict:
 
 # ── Phase 9: put service back ────────────────────────────────────────────────
 
+def shut_down_service(messages: list[str]) -> None:
+    """Leave the table down: world deactivated, server quit, tunnel closed.
+
+    The default end state for a scheduled run. Nobody is playing at four in the morning,
+    and leaving Foundry and a public tunnel up for the rest of the week is exposure and
+    resource use for nothing — you start it yourself with `make vtt-up` when you want it.
+
+    Deliberately does NOT take a parting backup the way `make vtt-down` does. The run
+    already snapshotted before it touched anything, and that snapshot is the week's
+    rollback point; a second one now would be inside the 5-day coalescing window and
+    would REPLACE it with post-update state — quietly destroying the only pre-update
+    restore point on the very run that created it.
+
+    Tunnel first: a live tunnel pointed at a server that is going away serves errors to
+    anyone who happens to be looking.
+    """
+    if recover.tunnel_running(REPO_ROOT):
+        if recover.tunnel_down(REPO_ROOT):
+            messages.append("tunnel closed")
+        else:
+            messages.append("could not close the Cloudflare tunnel")
+    try:
+        admin_mod.quit_app()
+        messages.append("Foundry stopped — start it again with: make vtt-up")
+    except Exception as exc:  # noqa: BLE001
+        messages.append(f"could not stop Foundry: {exc}")
+    state.EntryState.clear()
+
+
 def restore_service(entry: state.EntryState, messages: list[str]) -> None:
     """Return Foundry and the tunnel to how they were found.
 
@@ -460,7 +489,7 @@ def _run_locked(result: RunResult, run_id: str, *, dry: bool, force: bool,
             # first-sighting review guard for the next real run.
             if not dry:
                 risk.save_seen(packages, exclude=held)
-            return _finish(result, status, entry, dry=dry)
+            return _finish(result, status, entry, dry=dry, policy=policy)
 
         status.set_phase("snapshot")
         backups = backup_packages(fa, auto, policy, run_id)
@@ -511,7 +540,7 @@ def _run_locked(result: RunResult, run_id: str, *, dry: bool, force: bool,
             result.outcome = "done"
             risk.save_seen(inventory.scan(), exclude=held)
 
-        return _finish(result, status, entry, dry=False)
+        return _finish(result, status, entry, dry=False, policy=policy)
 
     except Aborted as exc:
         result.outcome = "skipped"
@@ -524,6 +553,9 @@ def _run_locked(result: RunResult, run_id: str, *, dry: bool, force: bool,
         result.messages.append(f"run failed: {exc}")
         status.finish("failed", str(exc))
         if entry:
+            # A crash is the one case that does NOT shut down: the run may have been
+            # started by hand while the table was in use, and a half-finished run
+            # should hand back what it found rather than switch the lights off.
             restore_service(entry, result.messages)
         return result
 
@@ -557,9 +589,14 @@ def _recover(result: RunResult, fa: FoundryAdmin, system, broken) -> None:
 
 
 def _finish(result: RunResult, status: state.RunStatus,
-            entry: state.EntryState | None, *, dry: bool) -> RunResult:
+            entry: state.EntryState | None, *, dry: bool,
+            policy: dict | None = None) -> RunResult:
+    shutdown = ((policy or {}).get("lifecycle", {}) or {}).get("shutdown_when_done", True)
     if entry and not dry:
-        restore_service(entry, result.messages)
+        if shutdown:
+            shut_down_service(result.messages)
+        else:
+            restore_service(entry, result.messages)
     elif entry and dry:
         state.EntryState.clear()
     result.finished = time.strftime("%Y-%m-%dT%H:%M:%S%z")
@@ -583,6 +620,9 @@ def notify_result(result: RunResult) -> None:
         return
 
     lines = [f"{a['id']} {a['from']} → {a['to']}" for a in applied] or ["nothing to update"]
+    if any("Foundry stopped" in m for m in result.messages):
+        lines.append("")
+        lines.append("Server left down — bring it up with: make vtt-up")
     if held:
         notify.notify("attention", f"{len(applied)} applied, {len(held)} need you",
                       "\n".join(lines + [""] +

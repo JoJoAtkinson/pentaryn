@@ -40,6 +40,20 @@ retention:
   core_bundles: 2       # local tars of Resources/app, ~287 MB each
   system_mirrors: 3     # OneDrive system-backup/<system>-<version>.tar.gz
 
+lifecycle:
+  # Leave the table DOWN when a run finishes: world deactivated, Foundry quit, tunnel
+  # closed. Nobody is playing at four in the morning, and leaving a public tunnel up all
+  # week is exposure for nothing — you bring it up yourself with `make vtt-up`.
+  #
+  # Set false to instead put back exactly what the run found (server up if it was up,
+  # world relaunched, tunnel restored).
+  #
+  # Note: the shutdown deliberately does NOT take a parting backup the way
+  # `make vtt-down` does. The run already snapshotted before touching anything, and a
+  # second snapshot minutes later would fall inside the 5-day coalescing window and
+  # REPLACE it — destroying the week's only pre-update restore point.
+  shutdown_when_done: true
+
 smoke:
   # "all" smokes every installed world. Migration is per-world and happens on launch,
   # so a world you skip migrates untested at your next manual launch.

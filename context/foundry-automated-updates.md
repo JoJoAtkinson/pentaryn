@@ -175,6 +175,7 @@ most of what follows is undocumented and was established by reading it.
 | Chrome runs **headful, off-screen** | Foundry's canvas is WebGL; headless SwiftShader is a different renderer than the players use. A LaunchAgent runs in the GUI session, so a real window is available. |
 | Notifications respect Focus | Joe explicitly did not want them to pierce it. `notify(modal=True)` still exists and raises a Focus-proof alert window; no class uses it. |
 | Report is committed with an explicit pathspec, never `-A`, never a checkout | The worktree is routinely dirty with campaign work. |
+| A finished run shuts the server and tunnel down (`lifecycle.shutdown_when_done`) | Nobody plays at 04:00; leaving a public tunnel up all week is exposure for nothing. It skips the parting backup `vtt-down` takes — a second snapshot minutes after the run's own would land inside the 5-day coalescing window and REPLACE the week's only pre-update restore point. A *crashed* run still restores what it found instead, since it may have been started by hand mid-session. |
 | The updater shells out to `scripts.foundry.cloud backup`, the same call `make vtt-down` makes | One implementation of the retention rules. A creative session and the Saturday run produce snapshots under identical coalescing, rolling and promotion behaviour; only the `--reason` log label differs. A non-zero exit is a hard failure — otherwise the run would find an *older* snapshot and believe it had a fresh restore point. |
 
 ### Backup retention (reworked 2026-08-21 at Joe's request)

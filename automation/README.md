@@ -102,6 +102,22 @@ Two consequences worth knowing:
 Reports land in [`foundry/logs/auto-updates/`](../foundry/logs/auto-updates/) — one
 markdown write-up and one machine-readable JSON per run — and are committed and pushed.
 
+### It leaves the table down
+
+A finished run **shuts everything down**: world deactivated, Foundry quit, tunnel closed.
+Nobody is playing at four in the morning, and leaving a public tunnel up all week is
+exposure for nothing. Bring it back with `make vtt-up` when you want to play; the
+notification and the log both say so.
+
+The shutdown deliberately skips the parting backup `make vtt-down` takes. The run already
+snapshotted before touching anything, and that snapshot is the week's rollback point — a
+second one minutes later would fall inside the 5-day coalescing window and **replace** it
+with post-update state, destroying the restore point on the very run that made it.
+
+A run that *crashes* is the exception: it hands back whatever it found, because it may
+have been started by hand while the table was in use. Set
+`lifecycle.shutdown_when_done: false` to make every run behave that way.
+
 ### Backups and what they cost
 
 A snapshot is ~2.5 GB, almost all of it premium map art in `Data/modules`, so retention
