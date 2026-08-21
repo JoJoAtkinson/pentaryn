@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Foundry VTT auto-update — Saturdays at 04:06.
+
+     Install:  make vtt-update-install
+     Run now:  launchctl kickstart -p gui/$(id -u)/com.pentaryn.vtt-update
+     Remove:   make vtt-update-uninstall
+
+     Two settings here are not boilerplate:
+
+     AbandonProcessGroup — REQUIRED. The run brings the Cloudflare tunnel back up at
+       the end via `make tunnel-up`, which backgrounds cloudflared with nohup. nohup
+       does not detach it from the process group, and launchd reaps the whole group
+       when the job exits — so without this, every successful run would end by silently
+       killing the tunnel and locking players out until someone noticed.
+
+     StartCalendarInterval on a Saturday — launchd runs a *missed* calendar job when the
+       Mac wakes, which could be Saturday afternoon, an hour before a session. The job
+       itself refuses to run outside the 03:30–09:00 window in update-policy.yml for
+       exactly that reason. A Mac that was powered off at 04:06 gets no catch-up run at
+       all; the 06:12 watchdog reports that.
+
+     04:06 rather than 06:06: a full run — 2.5 GB backup, core download and install,
+     then a browser smoke test on each world — takes 20-40 minutes. Starting at four
+     means it is finished, or visibly finishing, by the time anyone is awake and
+     opening a laptop.
+
+     Minute 6 rather than 0: nothing needs it on the hour, and off-the-hour scheduling
+     keeps this clear of everything else that fires at :00.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.pentaryn.vtt-update</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/joe/Documents/GitHub/pentaryn/automation/bin/vtt-update.sh</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/joe/Documents/GitHub/pentaryn</string>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key><integer>6</integer>
+        <key>Hour</key><integer>4</integer>
+        <key>Minute</key><integer>6</integer>
+    </dict>
+
+    <!-- Must outlive the job: see the note above. -->
+    <key>AbandonProcessGroup</key><true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/joe/Documents/GitHub/pentaryn/.state/logs/launchd-vtt-update.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/joe/Documents/GitHub/pentaryn/.state/logs/launchd-vtt-update.log</string>
+
+    <key>ProcessType</key><string>Background</string>
+    <key>LowPriorityIO</key><true/>
+</dict>
+</plist>

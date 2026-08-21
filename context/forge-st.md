@@ -1,6 +1,6 @@
 ---
 title: "Forge ST — context index"
-last_modified: 2026-08-18
+last_modified: 2026-08-21
 status: active
 tags: [context, index, oneshot, space-journey, twenty-one, foundry]
 ---
@@ -41,6 +41,11 @@ Use 2024 compendium packs: `dnd5e.spells24`, `dnd5e.equipment24`, `dnd5e.feats24
 
 **Tools:** `mcp__foundry__*` (world ops; `eval-js` is the escape hatch).
 `mcp__dnd-scripts__*` (SRD lookups, campaign-time math, repo ops).
+
+📍 **[`foundry-automated-updates.md`](foundry-automated-updates.md) — read before touching
+the auto-updater.** The engineering context: Foundry's undocumented admin API, the seven
+traps in it (world-gated actions, fire-and-forget writes, launch-migrates-the-world), the
+risk/recovery design, backup retention, and what is and is not verified.
 
 📍 **[`foundry-markers.md`](foundry-markers.md) — read before acting on "put X here" or "replace
 the red one".** Colour and numbered marker tokens, the centre-on-the-marker placement contract,
@@ -194,8 +199,10 @@ the raw art and the crowd renders 1.5× the ringed NPCs beside it. Fixed world-w
 | `foundry-ops.md` | Day-to-day Foundry operations. **Start here for Foundry work.** |
 | `foundry-vtt.md` | The programmatic campaign pipeline. |
 | `foundry-npc-ties.md` | NPC tie/social-graph design. |
+| `foundry-attack-activities.md` | One-click Sneak Attack + off-hand damage with no ability mod (Argon, no midi). |
 | `foundry-wall-autocomplete.md` | Completing hand-drawn walls. |
 | `foundry-mcp-fork.md` | The MCP bridge fork design. |
+| `../automation/README.md` | **The Saturday-06:00 auto-updater**, operator view — commands, one-time setup, retention. |
 | `roll20-map-prep.md` | Roll20 → Foundry map prep. |
 
 ## Scripts & data
@@ -203,6 +210,13 @@ the raw art and the crowd renders 1.5× the ringed NPCs beside it. Fixed world-w
 - `scripts/foundry/` — `build_actors.py`, `build_scenes.py`, `prep_map.py`, `cloud.py`,
   `license_key.py` (secrets via Infisical, never a `.env`), `seafoot_v9_to_v14.py`,
   `ring_subject.py`, `travel_glyph.py` (scene-link indicator art)
+- `scripts/foundry/update/` — the unattended updater (scan → adjudicate → apply → smoke →
+  recover). `make vtt-update-dry` is read-only and safe with the world up.
+- `scripts/foundry/admin_password.py` — the server admin password (Infisical + keychain),
+  same contract as `license_key.py`
+- `foundry/update-policy.yml` — what may auto-apply, pins, retention, the run window
+- `foundry/cloudflared/config.yml` — tunnel ingress; **`/setup`, `/auth`, `/update` and
+  `/license` are 403 through `vtt.atjoseph.com`**, admin is localhost-only
 - `foundry/CONTRACT.md` — the `actors.json` generator ⇄ importer contract
 - `foundry/assets-manifest.json`, `foundry/roll20-maps.json`, `foundry/map-library-plan.md`
 

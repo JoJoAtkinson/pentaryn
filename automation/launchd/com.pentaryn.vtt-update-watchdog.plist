@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Watchdog for the 04:06 update — Saturdays at 06:12.
+
+     On its own timer on purpose. One of the things it exists to catch is "the update
+     job never fired", and a check that runs as the last step of the job it monitors
+     cannot report that. Two hours is comfortable clearance for a 20-40 minute run; if
+     it is genuinely still going, the watchdog says so and leaves it alone rather than
+     declaring a failure. It also lands early enough to have put service back before
+     anyone sits down at the machine.
+
+     It can also restore service (relaunch the world, bring the tunnel up), so it needs
+     AbandonProcessGroup for the same reason the updater does.
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.pentaryn.vtt-update-watchdog</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>/Users/joe/Documents/GitHub/pentaryn/automation/bin/vtt-update-watchdog.sh</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/joe/Documents/GitHub/pentaryn</string>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Weekday</key><integer>6</integer>
+        <key>Hour</key><integer>6</integer>
+        <key>Minute</key><integer>12</integer>
+    </dict>
+
+    <key>AbandonProcessGroup</key><true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/joe/Documents/GitHub/pentaryn/.state/logs/launchd-vtt-update-watchdog.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/joe/Documents/GitHub/pentaryn/.state/logs/launchd-vtt-update-watchdog.log</string>
+
+    <key>ProcessType</key><string>Background</string>
+    <key>LowPriorityIO</key><true/>
+</dict>
+</plist>

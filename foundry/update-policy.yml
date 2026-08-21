@@ -1,0 +1,67 @@
+# Policy for the unattended Saturday-06:00 updater.
+# See automation/README.md for the whole design; this file is the only thing you should
+# need to edit to change its behaviour.
+
+# Foundry's own release channel. `check()` PERSISTS this into Config/options.json,
+# so changing it here changes the running server's channel too.
+channel: stable
+
+core:
+  # 14.365 -> 14.372, same generation. Foundry's previewCompatibility must come back
+  # clean for every installed package before this is allowed to run.
+  auto_build_updates: true
+  # 14 -> 15. Foundry's own isGenerationalChange sets willDisableModules: a generation
+  # bump disables every module that has not been re-verified. That is exactly the
+  # "high-risk migration that will take a lot of tokens" case — always hold and notify.
+  auto_generation_change: false
+
+packages:
+  # Major bumps never apply straight away; they go to the adjudicator, which reads the
+  # release notes and decides. Flip this to true only if you want majors unattended.
+  auto_major: false
+
+  # Never update these, whatever upstream says. Pinning belongs here, not in a comment.
+  hold: []
+
+  # Always send these to the adjudicator even for a patch bump. Use for a module that
+  # has burned you before. dnd5e is deliberately NOT here: you chose to treat the system
+  # like any other module, backed by the rolling OneDrive snapshots (see cloud.py:
+  # 10 rolling, 5-day coalescing, past generations preserved forever).
+  review_always: []
+
+retention:
+  # Every run backs up the packages it is about to change (Foundry's per-package
+  # createBackup) — that is what a module rollback restores from, and it costs seconds.
+  # A FULL snapshot copies every installed package instead: 2.7 GB here, almost all of
+  # it premium map art that has not changed in months. The phase-1 OneDrive tar already
+  # covers worlds + Config + modules, so the full snapshot is off by default.
+  full_snapshot: false
+  native_snapshots: 4   # kept only when full_snapshot is on
+  core_bundles: 2       # local tars of Resources/app, ~287 MB each
+  system_mirrors: 3     # OneDrive system-backup/<system>-<version>.tar.gz
+
+smoke:
+  # "all" smokes every installed world. Migration is per-world and happens on launch,
+  # so a world you skip migrates untested at your next manual launch.
+  worlds: all
+  browser: true
+  browser_dwell_seconds: 60
+  # Console noise that is not worth failing a run over. Matched as substrings.
+  ignore_console:
+    - "Failed to load resource: net::ERR_"
+    - "DevTools failed to load source map"
+    - "[Deprecation]"
+
+window:
+  # launchd coalesces a run missed while the Mac was asleep onto the next wake. Without
+  # this guard a Saturday-afternoon wake would take the tunnel down an hour before a
+  # session. Outside these hours the run declines and notifies instead.
+  # Must contain the scheduled 04:06 start with room in front of it, and must NOT
+  # stretch into the afternoon — the whole point is to refuse a run that launchd
+  # deferred onto a wake hours later, which would take the tunnel down before a session.
+  earliest: "03:30"
+  latest: "09:00"
+
+report:
+  commit: true
+  push: true

@@ -13,7 +13,6 @@ PY := $(shell if [ -x ./.venv/bin/python ]; then echo ./.venv/bin/python; elif [
 PARTY_GANG    := world/party/grant-gang/combat-roster.yml
 PARTY_COMPASS := world/party/the-compass-edge/combat-roster.yml
 PARTY_LEDGER  := world/party/black-ledger/combat-roster.yml
-i
 # ─── Combat-runner GUI (PySide6 + qt-material) ──────────────────────────
 # Opens the encounter picker, lets you pick mob counts, then launches the
 # multi-tab combat window. Discovers NPCs by the #combat-runner tag and reads
@@ -84,17 +83,30 @@ TUNNEL_HOST  := vtt.atjoseph.com
 RUN_DIR      := $(ROOT)/.run
 CF_PID       := $(RUN_DIR)/cloudflared.pid
 CF_LOG       := $(RUN_DIR)/cloudflared.log
+# Ingress rules, not a bare --url: `--url` publishes EVERY route Foundry serves,
+# including /setup, /auth and /update. The config 403s those at the edge so server
+# administration is reachable only from the local port. See the file's own header.
+CF_CONFIG    := $(ROOT)/foundry/cloudflared/config.yml
 
 # ── Combined up / down ──
+# Both lifecycle targets refuse while an update run holds the lock. Starting the tunnel
+# underneath a run would publish /setup at exactly the moment the run has parked the
+# server world-inactive, which is when /setup answers.
+.PHONY: vtt-lock-check
+vtt-lock-check:
+	@if [ -d "$(ROOT)/.state/vtt-update.lock" ]; then \
+	  echo "  ✗ an auto-update run is in progress (.state/vtt-update.lock)."; \
+	  echo "    Wait for it, or: make vtt-update-status"; exit 1; fi
+
 .PHONY: vtt-up
-vtt-up: foundry-backup-safe foundry-assets foundry-up tunnel-up
+vtt-up: vtt-lock-check foundry-backup-safe foundry-assets foundry-up tunnel-up
 	@echo ""
 	@echo "  ▸ players:  https://$(TUNNEL_HOST)"
 	@echo "  ▸ local:    $(FOUNDRY_URL)"
 	@echo "  ▸ teardown: make vtt-down"
 
 .PHONY: vtt-down
-vtt-down: tunnel-down foundry-down
+vtt-down: vtt-lock-check tunnel-down foundry-down
 	@$(MAKE) --no-print-directory foundry-backup REASON=shutdown
 	@echo "  ▸ all down"
 
@@ -148,7 +160,7 @@ tunnel-up:
 	@if ! cloudflared tunnel list 2>/dev/null | grep -q "$(TUNNEL_NAME)"; then \
 	  echo "  ✗ tunnel '$(TUNNEL_NAME)' doesn't exist — run: make tunnel-setup"; exit 1; fi
 	@echo "  ▸ starting tunnel..."
-	@nohup cloudflared tunnel run --url $(FOUNDRY_URL) $(TUNNEL_NAME) \
+	@nohup cloudflared tunnel --config $(CF_CONFIG) run $(TUNNEL_NAME) \
 	  >> $(CF_LOG) 2>&1 & echo $$! > $(CF_PID)
 	@sleep 3
 	@if kill -0 "$$(cat $(CF_PID))" 2>/dev/null; then \
@@ -437,3 +449,92 @@ combat-test:
 .PHONY: combat-test-all
 combat-test-all:
 	@cd $(ROOT) && QT_QPA_PLATFORM=offscreen $(PY) -m pytest combat-runner/tests/ -v
+
+# ─── Foundry auto-update (Saturdays 06:00) ──────────────────────────────
+# Unattended package + core updates, backed by the OneDrive snapshots above.
+# Design and one-time setup: automation/README.md
+#
+#   vtt-update-dry   : what WOULD change. Read-only, safe with the world up.
+#   vtt-update-now   : the real run, on demand.
+#   vtt-update-status: what the last/current run is doing.
+#   vtt-update-*     : launchd install/removal and the pause switch.
+VTT_UPDATE_LOCK := $(ROOT)/.state/vtt-update.lock
+VTT_UPDATE_PAUSE := $(ROOT)/.state/vtt-update.pause
+LAUNCH_AGENTS := $(HOME)/Library/LaunchAgents
+
+.PHONY: vtt-update-dry
+vtt-update-dry:
+	@cd $(ROOT) && $(PY) -m scripts.foundry.update.cli scan --notes
+
+.PHONY: vtt-update-scan
+vtt-update-scan:
+	@cd $(ROOT) && $(PY) -m scripts.foundry.update.cli scan
+
+.PHONY: vtt-update-now
+vtt-update-now:
+	@cd $(ROOT) && ./automation/bin/vtt-update.sh --force
+	@echo "  ▸ log: .state/logs/vtt-update-$$(date +%F).log"
+
+.PHONY: vtt-update-status
+vtt-update-status:
+	@cd $(ROOT) && $(PY) -m scripts.foundry.update.cli status
+
+.PHONY: vtt-update-install
+vtt-update-install: vtt-notifier
+	@mkdir -p $(ROOT)/.state/logs
+	@cp $(ROOT)/automation/launchd/com.pentaryn.vtt-update.plist $(LAUNCH_AGENTS)/
+	@cp $(ROOT)/automation/launchd/com.pentaryn.vtt-update-watchdog.plist $(LAUNCH_AGENTS)/
+	@launchctl bootout gui/$$(id -u)/com.pentaryn.vtt-update 2>/dev/null || true
+	@launchctl bootout gui/$$(id -u)/com.pentaryn.vtt-update-watchdog 2>/dev/null || true
+	@launchctl bootstrap gui/$$(id -u) $(LAUNCH_AGENTS)/com.pentaryn.vtt-update.plist
+	@launchctl bootstrap gui/$$(id -u) $(LAUNCH_AGENTS)/com.pentaryn.vtt-update-watchdog.plist
+	@echo "  ✓ installed — Saturdays 04:06, watchdog 06:12"
+	@echo "  ▸ verify: launchctl list | grep pentaryn.vtt"
+
+.PHONY: vtt-update-uninstall
+vtt-update-uninstall:
+	@launchctl bootout gui/$$(id -u)/com.pentaryn.vtt-update 2>/dev/null || true
+	@launchctl bootout gui/$$(id -u)/com.pentaryn.vtt-update-watchdog 2>/dev/null || true
+	@rm -f $(LAUNCH_AGENTS)/com.pentaryn.vtt-update.plist
+	@rm -f $(LAUNCH_AGENTS)/com.pentaryn.vtt-update-watchdog.plist
+	@echo "  ✓ removed"
+
+.PHONY: vtt-update-pause
+vtt-update-pause:
+	@mkdir -p $(ROOT)/.state && touch $(VTT_UPDATE_PAUSE)
+	@echo "  ✓ paused — scheduled runs will decline until: make vtt-update-resume"
+
+.PHONY: vtt-update-resume
+vtt-update-resume:
+	@rm -f $(VTT_UPDATE_PAUSE)
+	@echo "  ✓ resumed"
+
+# Builds "Ardenhaven VTT.app", the identity notifications are posted under.
+.PHONY: vtt-notifier
+vtt-notifier:
+	@$(ROOT)/automation/notifier/build-notifier.sh
+
+# ─── Foundry administrator password ─────────────────────────────────────
+# Needed by the updater's browser smoke test: `sessions.loginAsUser` lets it log in as
+# the GM with no USER password, but only when session.admin is set — and Foundry only
+# sets that on a successful admin-password check. Also gates graceful world shutdown
+# over the API. Stored in Infisical, mirrored to the login keychain so the unattended
+# job survives an expired Infisical session.
+.PHONY: foundry-admin-push
+foundry-admin-push:
+	@$(ROOT)/automation/bin/foundry-admin-push.sh
+
+.PHONY: foundry-admin-check
+foundry-admin-check:
+	@cd $(ROOT) && $(PY) -m scripts.foundry.admin_password
+
+# Tells Foundry itself to use it. The world must be stopped.
+.PHONY: foundry-admin-configure
+foundry-admin-configure:
+	@cd $(ROOT) && $(PY) -m scripts.foundry.update.cli admin-configure
+
+# Clipboard, for the setup screen. Never displays the value.
+.PHONY: foundry-admin-key
+foundry-admin-key:
+	@cd $(ROOT) && $(PY) -c "from scripts.foundry.admin_password import foundry_admin_password; import subprocess; subprocess.run(['pbcopy'], input=foundry_admin_password(), text=True)"
+	@echo "  ✓ admin password copied to clipboard — paste it, then: pbcopy </dev/null"

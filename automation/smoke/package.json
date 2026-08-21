@@ -1,0 +1,9 @@
+{
+  "name": "vtt-smoke",
+  "private": true,
+  "type": "module",
+  "description": "Post-update client-side smoke test for Foundry VTT — see smoke.mjs",
+  "dependencies": {
+    "puppeteer-core": "^24.10.0"
+  }
+}
