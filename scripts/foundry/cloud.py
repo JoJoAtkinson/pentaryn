@@ -24,9 +24,29 @@ land mid-session on every document read.
 So: a *stopped* database is copied wholesale, which is always consistent. A
 *running* one is never touched by the cloud at all.
 
-Sizes, measured, which is why this is cheap: the world is ~1.7 MB, Config 8 KB,
-modules 2.5 MB. Systems (144 MB) are mirrored once rather than rolled, because
-they change only on a version bump and are reinstallable anyway.
+Sizes, re-measured 2026-08-21 — and no longer cheap. The world is ~1.7 MB and Config
+8 KB, but ``Data/modules`` has grown to **2.7 GB**, almost entirely premium map art
+(the eledryll bundles and mad-endlesswiz). A snapshot is therefore ~2.5 GB, not the
+~4 MB this docstring used to claim, and 8 of them already occupy 13 GB.
+
+Retention is therefore built around that size rather than around a count:
+
+- **Ten** rolling snapshots, not a hundred. At ~2.5 GB each that is a 25 GB ceiling.
+- A snapshot taken within **five days** of the newest one *replaces* it. A day of
+  editing should cost one snapshot, not six — otherwise an afternoon of
+  `vtt-up`/`vtt-down` cycles evicts weeks of real history from a ten-deep window.
+  The weekly auto-update always lands outside that window, so it always adds one.
+- Snapshots from a Foundry **generation you have left** are copied into
+  ``major-release/`` and never pruned. Abandoning a generation should be a decision you
+  can unmake in six months, and a rolling window cannot promise that.
+
+If the ceiling still bothers you, the lever is ``Data/modules``: it is 2.7 GB of
+re-downloadable premium map art that changes a few times a year, riding along in a
+snapshot whose job is to protect a 1.7 MB world.
+
+Systems (132 MB) are mirrored per version rather than rolled, because they change only
+on a version bump — but see ``KEEP_SYSTEM_MIRRORS``: more than one is kept now, because
+rolling a system update back needs the version you were on *before* it.
 """
 
 from __future__ import annotations
@@ -53,17 +73,41 @@ CLOUD_ROOT = Path.home() / "Library/CloudStorage/OneDrive-Personal/DnD/foundry"
 
 ASSETS_IN = CLOUD_ROOT / "assets"           # you put zips here
 WORLD_BACKUPS = CLOUD_ROOT / "world-backups"  # automatic, rolling
-SYSTEM_BACKUP = CLOUD_ROOT / "system-backup"  # automatic, one copy
+SYSTEM_BACKUP = CLOUD_ROOT / "system-backup"  # automatic, one copy per version
+# Never pruned. One snapshot per Foundry GENERATION: the last state captured while you
+# were still on it. Leaving a generation behind is a decision you should get to unmake
+# months later, and the rolling window cannot promise that.
+MAJOR_RELEASES = CLOUD_ROOT / "major-release"
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = REPO_ROOT / "foundry" / "assets-manifest.json"
 
-KEEP_SNAPSHOTS = 100
+# Ten rolling snapshots, one per COALESCE_WINDOW_DAYS at the tightest — so roughly
+# 50 days of history at worst and ~10 weeks at the normal weekly cadence.
+KEEP_SNAPSHOTS = 10
+
+# A snapshot taken while the newest one is younger than this REPLACES it instead of
+# stacking on top. The point is that a day of edits should cost one snapshot, not six:
+# without this, an afternoon of `vtt-up`/`vtt-down` cycles evicts weeks of real history
+# from the rolling window, which is the opposite of what the window is for. The weekly
+# auto-update always lands well outside the window, so it always writes a fresh one.
+COALESCE_WINDOW_DAYS = 5
+
+# How many versions of each system's mirror to retain. More than one, because a
+# system rollback needs the version you were on *before* the update, and the
+# post-update backup would otherwise have already deleted it.
+KEEP_SYSTEM_MIRRORS = 3
 
 # A pack zip is `<kind>-<nn>.zip`. The kind decides where it lands; the number
 # only keeps names unique and ordered. Append-only: published zips are never
 # edited, new finds get the next number.
 ZIP_NAME = re.compile(r"^([a-z][a-z0-9-]*)-(\d{2})\.zip$")
+# `world-<stamp>-fvtt<version>.tar.gz`. The version suffix was added 2026-08-21; older
+# snapshots have no suffix and simply report an unknown Foundry version, which the
+# major-release promotion treats as "cannot tell" rather than as a generation change.
+SNAPSHOT_NAME = re.compile(r"^world-(\d{4}-\d{2}-\d{2}-\d{6})(?:-fvtt([0-9.]+))?\.tar\.gz$")
+APP_PACKAGE_JSON = Path("/Applications/Foundry Virtual Tabletop.app"
+                        "/Contents/Resources/app/package.json")
 # FOUNDRY_DATA is the root that holds Config/ Data/ Logs/, so these are Data-relative.
 KINDS = {
     "tokens": "Data/assets/tokens",
@@ -109,7 +153,7 @@ def sha256_file(path: Path) -> str:
 
 def ensure_cloud() -> None:
     """Create the folder structure, with a README so it explains itself to a human."""
-    for d in (ASSETS_IN, WORLD_BACKUPS, SYSTEM_BACKUP):
+    for d in (ASSETS_IN, WORLD_BACKUPS, SYSTEM_BACKUP, MAJOR_RELEASES):
         d.mkdir(parents=True, exist_ok=True)
     readme = CLOUD_ROOT / "README.txt"
     if not readme.exists():
@@ -127,10 +171,20 @@ def ensure_cloud() -> None:
             "world-backups/  AUTOMATIC — do not edit.\n"
             "                Rolling snapshots of the campaign, Config and modules,\n"
             "                written on every server stop and start. Newest last.\n"
-            f"                The most recent {KEEP_SNAPSHOTS} are kept.\n\n"
+            f"                The most recent {KEEP_SNAPSHOTS} are kept, and a snapshot\n"
+            f"                taken within {COALESCE_WINDOW_DAYS} days of the previous one\n"
+            "                REPLACES it — so a day of editing costs one snapshot,\n"
+            "                not six, and the window keeps real weeks of history.\n\n"
+            "major-release/  AUTOMATIC — never pruned.\n"
+            "                When Foundry moves to a new generation (14 -> 15), the\n"
+            "                last snapshot taken while you were still on the old one\n"
+            "                is preserved here. Deleting one is you deciding you are\n"
+            "                never going back to that version.\n\n"
             "system-backup/  AUTOMATIC — do not edit.\n"
-            "                One copy of the game system, for rebuilding from scratch.\n"
-            "                Refreshed only when its version changes.\n\n"
+            "                One copy per game-system version, for rebuilding from\n"
+            f"                scratch. The last {KEEP_SYSTEM_MIRRORS} versions are kept, because\n"
+            "                rolling a system update back needs the code you were on\n"
+            "                BEFORE it.\n\n"
             "Restoring is never automatic. Run `make foundry-restore` and pick a\n"
             "snapshot; it archives the current state first, so a restore is undoable.\n",
             encoding="utf-8",
@@ -298,8 +352,20 @@ def backup(reason: str = "manual", if_stopped: bool = False) -> int:
         log("no change since the last snapshot — skipped")
         return 0
 
+    # Before writing anything: if the installed generation has moved on since the last
+    # backup, the newest snapshot from the OLD generation is the last state that still
+    # runs on it. Preserve it now, while it is still inside the rolling window.
+    promote_major_release()
+
+    core = core_version()
     stamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
-    out = WORLD_BACKUPS / f"world-{stamp}.tar.gz"
+    out = WORLD_BACKUPS / f"world-{stamp}-fvtt{core}.tar.gz"
+
+    # Coalescing: note the snapshot this one may replace, but write the new one FIRST
+    # and only then delete the old. Deleting first would leave a window — however
+    # short — in which a 2.5 GB write could fail and take the restore point with it.
+    superseded = _coalesce_target()
+
     with tarfile.open(out, "w:gz") as tar:
         for rel in SNAPSHOT_PATHS:
             src = FOUNDRY_DATA / rel
@@ -308,14 +374,97 @@ def backup(reason: str = "manual", if_stopped: bool = False) -> int:
     marker.write_text(digest + "\n", encoding="utf-8")
     log(f"snapshot → {out.name} ({out.stat().st_size / 1e6:.1f} MB, {reason})")
 
+    if superseded and superseded.exists():
+        age_days = (time.time() - superseded.stat().st_mtime) / 86400
+        superseded.unlink()
+        log(f"replaced {superseded.name} ({age_days:.1f} days old, inside the "
+            f"{COALESCE_WINDOW_DAYS}-day window)")
+
     snaps = sorted(WORLD_BACKUPS.glob("world-*.tar.gz"))
-    for old in snaps[:-KEEP_SNAPSHOTS]:
-        old.unlink()
-        log(f"pruned {old.name}")
+    for stale in snaps[:-KEEP_SNAPSHOTS]:
+        stale.unlink()
+        log(f"pruned {stale.name}")
     log(f"{min(len(snaps), KEEP_SNAPSHOTS)} of {KEEP_SNAPSHOTS} snapshots kept")
 
     mirror_systems()
     return 0
+
+
+def core_version() -> str:
+    """The installed Foundry version, read from the app bundle — no server needed.
+
+    Stamped into every snapshot filename so a snapshot is self-describing about which
+    Foundry it came from. That is what makes the major-release promotion below possible
+    without a separate index to keep in sync.
+    """
+    try:
+        pkg = json.loads((APP_PACKAGE_JSON).read_text(encoding="utf-8"))
+        rel = pkg.get("release", {})
+        return f"{rel.get('generation')}.{rel.get('build')}"
+    except (OSError, json.JSONDecodeError, AttributeError):
+        return "unknown"
+
+
+def snapshot_core_version(path: Path) -> str | None:
+    """Pull the `-fvtt<version>` suffix back out of a snapshot filename."""
+    m = SNAPSHOT_NAME.match(path.name)
+    return m.group(2) if m else None
+
+
+def generation(version: str | None) -> str | None:
+    """Foundry's generation is the leading integer: 14.365 -> 14."""
+    if not version:
+        return None
+    head = version.split(".")[0]
+    return head if head.isdigit() else None
+
+
+def _coalesce_target() -> Path | None:
+    """The newest snapshot, if it is young enough to be replaced rather than kept."""
+    snaps = sorted(WORLD_BACKUPS.glob("world-*.tar.gz"))
+    if not snaps:
+        return None
+    newest = snaps[-1]
+    age_days = (time.time() - newest.stat().st_mtime) / 86400
+    return newest if age_days < COALESCE_WINDOW_DAYS else None
+
+
+def promote_major_release() -> Path | None:
+    """Preserve the last snapshot taken on a generation you have since left.
+
+    Called before each backup. If the installed generation differs from the one the
+    newest existing snapshot was taken under, that snapshot is the final state that
+    still runs on the old generation — copy it into ``major-release/``, where nothing
+    prunes it.
+
+    Doing it here rather than at upgrade time also catches an upgrade done by hand
+    through Foundry's own setup screen, which the updater never sees.
+    """
+    MAJOR_RELEASES.mkdir(parents=True, exist_ok=True)
+    current = generation(core_version())
+    snaps = sorted(WORLD_BACKUPS.glob("world-*.tar.gz"))
+    if not current or not snaps:
+        return None
+
+    previous = generation(snapshot_core_version(snaps[-1]))
+    if not previous or previous == current:
+        return None
+
+    # Newest snapshot actually taken while on the old generation.
+    candidates = [s for s in snaps
+                  if generation(snapshot_core_version(s)) == previous]
+    if not candidates:
+        return None
+    source = candidates[-1]
+
+    if any(f"-fvtt{previous}." in q.name for q in MAJOR_RELEASES.glob("*.tar.gz")):
+        return None  # this generation is already preserved
+
+    target = MAJOR_RELEASES / source.name
+    shutil.copy2(source, target)
+    log(f"Foundry {previous} → {current}: preserved {source.name} in major-release/ "
+        f"({target.stat().st_size / 1e6:.0f} MB, never pruned)")
+    return target
 
 
 def mirror_systems() -> None:
@@ -334,8 +483,15 @@ def mirror_systems() -> None:
         out = SYSTEM_BACKUP / f"{sysdir.name}-{version}.tar.gz"
         if out.exists():
             continue
-        for stale in SYSTEM_BACKUP.glob(f"{sysdir.name}-*.tar.gz"):
+        # Keep the last few versions, not just the current one. This used to delete
+        # every older mirror before writing the new one, which meant the first backup
+        # taken *after* a system update destroyed the only copy of the version you
+        # would want to roll back to — at exactly the moment you would want it. The
+        # auto-updater depends on the old mirror surviving; see
+        # scripts/foundry/update/recover.py.
+        for stale in sorted(SYSTEM_BACKUP.glob(f"{sysdir.name}-*.tar.gz"))[:-KEEP_SYSTEM_MIRRORS]:
             stale.unlink()
+            log(f"pruned system mirror {stale.name}")
         with tarfile.open(out, "w:gz") as tar:
             tar.add(sysdir, arcname=sysdir.name)
         log(f"system mirror → {out.name} ({out.stat().st_size / 1e6:.0f} MB)")
@@ -348,17 +504,30 @@ def restore(which: str | None, yes: bool = False) -> int:
     if server_running():
         die("Foundry is running — stop it first")
     snaps = sorted(WORLD_BACKUPS.glob("world-*.tar.gz"))
-    if not snaps:
+    preserved = sorted(MAJOR_RELEASES.glob("world-*.tar.gz"))
+    if not snaps and not preserved:
         die(f"no snapshots in {WORLD_BACKUPS}")
 
     if which is None:
-        print(f"  snapshots in {WORLD_BACKUPS} (newest last):")
-        for s in snaps[-20:]:
+        print(f"  rolling snapshots in {WORLD_BACKUPS} (newest last):")
+        for s in snaps[-KEEP_SNAPSHOTS:]:
             print(f"      {s.name}  {s.stat().st_size / 1e6:5.1f} MB")
-        print(f"\n  restore one with:  make foundry-restore SNAP={snaps[-1].name}")
+        if preserved:
+            print(f"\n  preserved past generations in {MAJOR_RELEASES} (never pruned):")
+            for s in preserved:
+                print(f"      {s.name}  {s.stat().st_size / 1e6:5.1f} MB")
+            print("      ⚠ restoring one of these gives you a world last opened by an")
+            print("        OLDER Foundry. Reinstall that version first, or it will be")
+            print("        migrated forward again on the next launch.")
+        newest = (snaps or preserved)[-1]
+        print(f"\n  restore one with:  make foundry-restore SNAP={newest.name}")
         return 0
 
+    # Accept a name from either directory — a preserved generation is a legitimate
+    # restore target, and making the caller supply a path would be a footgun.
     chosen = WORLD_BACKUPS / which
+    if not chosen.exists():
+        chosen = MAJOR_RELEASES / which
     if not chosen.exists():
         die(f"no such snapshot: {which}")
     if not yes:
@@ -369,9 +538,31 @@ def restore(which: str | None, yes: bool = False) -> int:
             return 1
 
     backup(reason="pre-restore safety copy")
+
+    # Clear each target before extracting. `extractall` overlays: it writes the files
+    # in the archive and leaves everything else alone, so restoring an older snapshot
+    # over a newer tree keeps every file the newer version added. The result runs, and
+    # is a mixed-version install — the worst kind of failed restore, because it looks
+    # like it worked.
+    for rel in SNAPSHOT_PATHS:
+        target = FOUNDRY_DATA / rel
+        if target.exists():
+            shutil.rmtree(target)
+            log(f"cleared {rel}")
+
     with tarfile.open(chosen, "r:gz") as tar:
         tar.extractall(FOUNDRY_DATA, filter="data")
     log(f"restored {chosen.name}")
+
+    # Snapshots cover worlds/Config/modules but NOT Data/systems, which is mirrored
+    # separately. A world restored to an older state expects the system version it was
+    # migrated with, so say so rather than leaving a half-restore looking complete.
+    mirrors = sorted(SYSTEM_BACKUP.glob("*.tar.gz"))
+    if mirrors:
+        log("note: systems are NOT part of this snapshot. If you are rolling back a")
+        log("      system update, also restore its code from:")
+        for mirror in mirrors[-KEEP_SYSTEM_MIRRORS:]:
+            log(f"        {mirror}")
     return 0
 
 

@@ -1,0 +1,47 @@
+# Cloudflare Tunnel ingress for vtt.atjoseph.com.
+#
+# WHY THIS FILE EXISTS
+#
+# `make tunnel-up` used to run `cloudflared tunnel run --url http://localhost:30000`,
+# which publishes EVERY route Foundry serves — including /setup, /auth and /update, the
+# entire server-administration surface. That is a problem in general, and specifically a
+# problem for the auto-updater: those routes only answer while no world is active, and
+# parking the server in exactly that state is the first thing an update run does.
+#
+# So the admin surface is blocked at the edge instead. The result is the model this
+# setup wants: **administration is reachable only from the local port, and the tunnel
+# carries players only.** Foundry has no host-conditional auth of its own, so this is
+# where it has to be enforced.
+#
+# `path` is a Go regular expression, matched against the request path (cloudflared's
+# ingress rules; the first matching rule wins, and the last must be a catch-all).
+#
+# CONSEQUENCE WORTH KNOWING: the GM's in-game "Return to Setup" posts to /setup, so it
+# will stop working through the tunnel. Shut the world down locally, or with
+# `make vtt-down`. Delete the first rule if you would rather have it back.
+#
+# Defence in depth, not the only defence: the admin password (Infisical /
+# FOUNDRY_ADMIN_PASSWORD, see scripts/foundry/admin_password.py) still protects these
+# routes if this file is ever bypassed, and Config/options.json has `upnp: false` so
+# Foundry does not quietly ask the router to expose port 30000 alongside the tunnel.
+
+tunnel: ardenhaven
+credentials-file: /Users/joe/.cloudflared/3f188349-3bfb-4674-bde1-b4eb61b872f0.json
+
+# Foundry's world load is chatty; the defaults are tuned for short requests.
+originRequest:
+  connectTimeout: 30s
+  noTLSVerify: false
+
+ingress:
+  # ── Administration: localhost only, by construction ──
+  - hostname: vtt.atjoseph.com
+    path: ^/(setup|auth|update|license)(/|$)
+    service: http_status:403
+
+  # ── Everything the table actually needs: /join, /game, /socket.io, assets ──
+  - hostname: vtt.atjoseph.com
+    service: http://localhost:30000
+
+  # Required: the last rule must match everything.
+  - service: http_status:404
