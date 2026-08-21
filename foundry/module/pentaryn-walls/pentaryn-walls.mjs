@@ -252,11 +252,29 @@ Hooks.once("init", () => {
   });
 });
 
+/**
+ * Publish the API without assuming `game.pentaryn` is ours to extend.
+ * pentaryn-importer creates and FREEZES that namespace in its own ready hook, and
+ * module ready-hooks fire in alphabetical order of module id — "pentaryn-walls" sorts
+ * after "pentaryn-importer", so by the time we get here the object is frozen and a bare
+ * `game.pentaryn.walls = …` throws in strict mode (esmodules always are). That takes
+ * the rest of this hook down with it, so the module silently has no API and no log
+ * line. Rebuild the object instead — the same guard dropbin, pings and ties all carry.
+ */
+function publishAPI() {
+  const api = {preview, run, undo, makeMacro, runEngine, backends: available};
+  const current = game.pentaryn;
+  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, walls: api };
+  else {
+    game.pentaryn ??= {};
+    game.pentaryn.walls = api;
+  }
+}
+
 Hooks.once("ready", async () => {
   if (!game.user.isGM) return;
   await wasmReady;          // settled by now in practice; awaited so the log line is accurate
-  game.pentaryn ??= {};
-  game.pentaryn.walls = {preview, run, undo, makeMacro, runEngine, backends: available};
+  publishAPI();
   console.log(`${MODULE_ID} | ready — backends: ${available().map(b => b.name).join(", ")}. ` +
               `Alt+W run, Alt+Z undo, Alt+Shift+W preview. ` +
               `API: game.pentaryn.walls.preview() / .run() / .undo() / .makeMacro()`);
