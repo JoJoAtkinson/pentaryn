@@ -75,16 +75,32 @@ players ──https──▶ vtt.atjoseph.com ──cloudflared (named tunnel "a
 | System | **dnd5e 5.3.3** |
 | Live world | **`space-journey`** (verified live 2026-08-13) |
 
-### 🔴 The Makefile still points at `ardenhaven` — the live world is `space-journey`
+### The actor pipeline targets `space-journey` — and says so out loud
 
-The most dangerous line in this document. `FOUNDRY_WORLD_DIR`, `FOUNDRY_ACTORS_STAGED` and
-`FOUNDRY_ACTORS_URL` (Makefile ~L215–218) are hardcoded to `worlds/ardenhaven`, and so are
-`foundry/CONTRACT.md` and the docs written before the world changed. Running
-`make foundry-import` today stages `actors.json` into **`ardenhaven`, not `space-journey`**:
-the import finds nothing, **and** Gate 2's 404 assertion checks the `ardenhaven` URL — so every
-light goes green while nothing was imported and nothing meaningful was verified. A gate that
-passes for the wrong reason is worse than one that fails. **Fix the Makefile before the next
-actor import.** (The *tunnel* name is also `ardenhaven`; that one is cosmetic and fine.)
+This used to be the most dangerous line in this document. `FOUNDRY_WORLD_DIR`,
+`FOUNDRY_ACTORS_STAGED` and `FOUNDRY_ACTORS_URL` were hardcoded in the Makefile to
+`worlds/ardenhaven` while the live world was `space-journey`, so `make foundry-import`
+staged `actors.json` into a world nobody was playing: the import found nothing, **and**
+Gate 2 asserted its 404 against the *unused* world's URL. Every light green, nothing
+imported, nothing meaningfully verified. A gate that passes for the wrong reason is
+worse than one that fails.
+
+**Fixed 2026-08-22.** The world is now one constant in
+[`scripts/foundry/ops/config.py`](../../scripts/foundry/ops/config.py), defaulting to
+`space-journey`, and three things make a repeat visible rather than silent:
+
+* every pipeline run prints `▸ target world: <name>` before it copies anything;
+* a missing world directory is a hard stop that lists the worlds actually on disk —
+  `mkdir -p` would otherwise invent `worlds/typo/` and everything downstream would
+  look like it worked;
+* the staged path and the probed URL are asserted to name the same world, in
+  `scripts/tests/test_foundry_ops.py`.
+
+Override for a one-off with `make foundry-import WORLD=ardenhaven`. Both worlds still
+exist on disk, so "the directory exists" alone can't catch a wrong-but-real name — the
+printed line is what you check.
+
+*(The **tunnel** is also named `ardenhaven`. That one is cosmetic and fine.)*
 
 ---
 
@@ -111,10 +127,27 @@ because the snapshot is the step that requires "stopped".
 | Target | Does |
 | ------ | ---- |
 | `make foundry-up` / `foundry-down` | App only. `foundry-down` is `osascript quit`, falling back to `pkill` |
-| `make tunnel-up` / `tunnel-down` | Tunnel only. `tunnel-up` `nohup`s cloudflared, writes the pidfile, and checks it survived 3 s |
-| `make tunnel-logs` | `tail -40` of the cloudflared log |
+| `make tunnel-up` / `tunnel-down` | Tunnel only. `tunnel-up` starts cloudflared detached, writes the pidfile, and checks it survived 3 s |
+| `make tunnel-logs` | Last 40 lines of the cloudflared log |
 | `make tunnel-setup` | **One-time**: `cloudflared tunnel login`, create the tunnel, route DNS. Idempotent |
-| `make vtt` | Three independent probes: local curl · pidfile `kill -0` · public HTTP 200/302 |
+| `make vtt` | Three independent probes: local HTTP · pidfile `kill -0` · public HTTP 200/302 |
+
+### Where the logic lives
+
+The Makefile is a list of commands, not an implementation. Each target is one line
+that calls Python:
+
+| Layer | Module |
+| ----- | ------ |
+| Server, tunnel, status | [`scripts/foundry/ops/service.py`](../../scripts/foundry/ops/service.py) |
+| Actor pipeline (stage → import → clean → verify) | [`scripts/foundry/ops/pipeline.py`](../../scripts/foundry/ops/pipeline.py) |
+| Module check + install | [`scripts/foundry/ops/modules.py`](../../scripts/foundry/ops/modules.py) |
+| Paths, world name, module registry | [`scripts/foundry/ops/config.py`](../../scripts/foundry/ops/config.py) |
+| OneDrive sync | [`scripts/foundry/cloud.py`](../../scripts/foundry/cloud.py) |
+| The weekly updater | [`scripts/foundry/update/`](../../scripts/foundry/update/) |
+
+`python -m scripts.foundry.ops --help` lists the whole surface; `make help` lists the
+handful worth remembering.
 
 ---
 
