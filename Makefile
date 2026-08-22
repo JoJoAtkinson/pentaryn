@@ -1,71 +1,13 @@
 ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 PY := $(shell if [ -x ./.venv/bin/python ]; then echo ./.venv/bin/python; elif [ -x ./venv/bin/python ]; then echo ./venv/bin/python; else echo python3; fi)
 
-# ─── Party rosters ──────────────────────────────────────────────────────
-# One target per party, named after the party. Adding a new table = add a
-# roster path here and a target below; nothing else silently changes.
-#
-# `id` in each roster MUST be a repeated-digit string ("1", "22", "333") or
-# the GUI's `<who> <stream>` command grammar can't address that PC.
-# Grant Gang == the Ardenford Underdogs. Same table, two names: Grant Gang is
-# the players, Ardenford Underdogs is the crew they play in
-# campaigns/ardenford-underdogs/. One roster, two aliases.
-PARTY_GANG    := world/party/grant-gang/combat-roster.yml
-PARTY_COMPASS := world/party/the-compass-edge/combat-roster.yml
-PARTY_LEDGER  := world/party/black-ledger/combat-roster.yml
-# ─── Combat-runner GUI (PySide6 + qt-material) ──────────────────────────
-# Opens the encounter picker, lets you pick mob counts, then launches the
-# multi-tab combat window. Discovers NPCs by the #combat-runner tag and reads
-# the shared actions DB. This is the at-table default.
-#
-# The old CLI launcher (combat-runner/launch.py) is no longer wired to a make
-# target. If you need the NPC-only fallback, run it directly:
-#     ./.venv/bin/python combat-runner/launch.py
-.PHONY: combat
-combat:
-	@cd $(ROOT) && PYTHONPATH=combat-runner $(PY) -m gui.app
-
-# Alias — kept so `make combat-gui` (and docs that reference it) still work.
-.PHONY: combat-gui
-combat-gui: combat
-
-# ─── Launch with a party preloaded ──────────────────────────────────────
-# Each PC gets its own tab and a directed-command id.
-
-# Grant Gang — the level-1 campaign in campaigns/ardenford-underdogs/
-.PHONY: grant-gang
-grant-gang:
-	@cd $(ROOT) && ./scripts/check-roster.sh $(PARTY_GANG)
-	@cd $(ROOT) && PYTHONPATH=combat-runner $(PY) -m gui.app --party $(PARTY_GANG)
-
-# Aliases — same party, whichever name is in your head at the time.
-.PHONY: underdogs gang
-underdogs: grant-gang
-gang: grant-gang
-
-# The Compass Edge
-.PHONY: compass
-compass:
-	@cd $(ROOT) && ./scripts/check-roster.sh $(PARTY_COMPASS)
-	@cd $(ROOT) && PYTHONPATH=combat-runner $(PY) -m gui.app --party $(PARTY_COMPASS)
-
-# Alias — `make prime` historically meant The Compass Edge. Kept for muscle
-# memory and any docs that still say `prime`.
-.PHONY: prime
-prime: compass
-
-# The Black Ledger
-.PHONY: ledger
-ledger:
-	@cd $(ROOT) && ./scripts/check-roster.sh $(PARTY_LEDGER)
-	@cd $(ROOT) && PYTHONPATH=combat-runner $(PY) -m gui.app --party $(PARTY_LEDGER)
-
-# List the rosters make knows about, and whether each is table-ready.
-.PHONY: parties
-parties:
-	@cd $(ROOT) && for f in $(PARTY_GANG) $(PARTY_COMPASS) $(PARTY_LEDGER); do \
-		./scripts/check-roster.sh "$$f" --report; \
-	done
+# ─── Instruction surface ────────────────────────────────────────────────
+# CLAUDE.md loads into every session, so it has to stay a routing table. This
+# fails if it grows past 60 lines, if any routing link 404s, or (warning only)
+# if a context file has no "Read this when:" line.
+.PHONY: check-context
+check-context:
+	@cd $(ROOT) && $(PY) scripts/check_context.py
 
 # ─── Foundry VTT + Cloudflare Tunnel ────────────────────────────────────
 # `make vtt-up`   → Foundry server + tunnel, players can reach $(TUNNEL_HOST)
@@ -203,9 +145,9 @@ foundry-key:
 	@echo "  ✓ license key copied to clipboard — paste into Foundry, then run: pbcopy </dev/null"
 
 # ─── Foundry pipeline (actors) ──────────────────────────────────────────
-# See playbooks/foundry-vtt.md for the full pipeline (Stages 1-2, Gate 2).
+# See context/plans/foundry-content-pipeline.md for the full pipeline (Stages 1-2, Gate 2).
 # `foundry-actors` : regenerate the committed golden file, foundry/build/actors.json
-#                    (Stage 1; the generator reads combat-runner/actions.jsonl + the
+#                    (Stage 1; the generator reads foundry/actions.jsonl + the
 #                    #combat-runner markdown — see D8, generated JSON IS committed).
 # `foundry-sync`   : regenerate, then COPY (never symlink, D8) the importer module and
 #                    actors.json into the live Foundry Data/ dir, ready to import.
@@ -366,7 +308,7 @@ foundry-cloud:
 
 # ─── Foundry pipeline (walls) ───────────────────────────────────────────
 # Independent of the actor pipeline above — different module, no staged file, nothing
-# public. See playbooks/foundry-wall-autocomplete.md.
+# public. See context/plans/foundry-wall-autocomplete.md.
 FOUNDRY_WALLS_SRC := $(ROOT)/foundry/module/pentaryn-walls
 FOUNDRY_WALLS_DST := $(FOUNDRY_DATA)/modules/pentaryn-walls
 
@@ -407,7 +349,7 @@ foundry-walls-sync: foundry-walls-test
 # ─── NPC Ties module ────────────────────────────────────────────────────
 # Relationship graph on actor flags: a Ties tab on the sheet, and draggable
 # canvas cards on a rebindable key (players get it for their own character). See foundry/module/pentaryn-ties/README.md
-# and playbooks/foundry-npc-ties.md.
+# and context/plans/foundry-npc-ties.md.
 FOUNDRY_TIES_SRC := $(ROOT)/foundry/module/pentaryn-ties
 FOUNDRY_TIES_DST := $(FOUNDRY_DATA)/modules/pentaryn-ties
 
@@ -438,17 +380,6 @@ foundry-ties-sync: foundry-ties-check
 	@echo "      make vtt-down && make vtt-up"
 	@echo "    then enable 'Pentaryn NPC Ties' in Manage Modules and reload."
 	@echo "    Key defaults to 8 — rebind in Configure Controls → Ties."
-
-# ─── Tests ──────────────────────────────────────────────────────────────
-# Run the test suite for the GUI (skips scenarios by default for speed; use
-# `make combat-test-all` for the full ring including scenarios).
-.PHONY: combat-test
-combat-test:
-	@cd $(ROOT) && QT_QPA_PLATFORM=offscreen $(PY) -m pytest combat-runner/tests/ -v -m 'not scenario'
-
-.PHONY: combat-test-all
-combat-test-all:
-	@cd $(ROOT) && QT_QPA_PLATFORM=offscreen $(PY) -m pytest combat-runner/tests/ -v
 
 # ─── Foundry auto-update (Saturdays 06:00) ──────────────────────────────
 # Unattended package + core updates, backed by the OneDrive snapshots above.

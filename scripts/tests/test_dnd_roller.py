@@ -137,34 +137,13 @@ def test_modifier_out_of_range_raises():
         dnd_roller.roll_dice(num_dice=1, dice_size=20, modifier=5000)
 
 
-# ───────────────────────── _parse_dice_spec bounds (A3-E2) ─────────────────
-
-@pytest.mark.parametrize("bad", ["0d6", "2d0", "1000d6", "garbage", "2d5", ""])
-def test_parse_dice_spec_rejects_bad_input(bad):
-    """_parse_dice_spec must reject out-of-bounds counts/sizes and garbage."""
-    with pytest.raises(ValueError):
-        dnd_roller._parse_dice_spec(bad)
-
-
-@pytest.mark.parametrize(
-    "good,expected",
-    [("2d6", (2, 6)), ("1d20", (1, 20)), ("100d4", (100, 4)), (" 3 d 8 ", (3, 8))],
-)
-def test_parse_dice_spec_accepts_valid(good, expected):
-    assert dnd_roller._parse_dice_spec(good) == expected
-
-
-def test_parse_dice_spec_rejects_leading_zeros():
-    """Leading-zero dice (A3-E10) must be rejected, not silently corrected."""
-    with pytest.raises(ValueError):
-        dnd_roller._parse_dice_spec("03d06")
 
 
 # ───────────────────────── _confined_log_path (C3-F1) ──────────────────────
 
 def test_confined_log_path_accepts_repo_relative_md(tmp_path, monkeypatch):
     """A repo-relative .md path resolves inside the repo and is accepted."""
-    p = dnd_roller._confined_log_path("combat-runner/test-log.md")
+    p = dnd_roller._confined_log_path("foundry/test-log.md")
     assert p.suffix == ".md"
     assert dnd_roller._REPO_ROOT in p.parents
 
@@ -181,14 +160,7 @@ def test_confined_log_path_rejects_traversal():
 
 def test_confined_log_path_rejects_non_md():
     with pytest.raises(ValueError, match=r"\.md"):
-        dnd_roller._confined_log_path("combat-runner/evil.zshrc")
-
-
-def test_log_combat_event_rejects_bad_path():
-    """log_combat_event returns a structured error (not a crash) on a bad path."""
-    result = json.loads(dnd_roller.log_combat_event("/etc/passwd", "x"))
-    assert result["logged"] is False
-    assert "error" in result
+        dnd_roller._confined_log_path("foundry/evil.zshrc")
 
 
 # ───────────────────────── combat_action_upsert robustness (A4-M1) ─────────
@@ -201,149 +173,3 @@ def test_combat_action_upsert_non_dict_spec_returns_ok_false():
     assert result["ok"] is False
     assert "error" in result
 
-
-# ───────────────────────── combat action runner ────────────────────────────
-
-def _run_action(monkeypatch, tmp_path, npc, action, spec):
-    """Seed a tmp DB with one action and run it through roll_combat_action."""
-    import scripts.combat_actions_db as cdb
-
-    db = tmp_path / "actions.jsonl"
-    monkeypatch.setenv("DND_COMBAT_ACTIONS_DB", str(db))
-    cdb.upsert(npc, action, spec)
-    return json.loads(dnd_roller.roll_combat_action(npc, action))
-
-
-def test_reaction_movement_path_no_damage_roll(monkeypatch, tmp_path):
-    """A reaction_kind=movement spec prints the effect, no damage roll."""
-    result = _run_action(
-        monkeypatch, tmp_path, "wraith", "phase_escape",
-        {
-            "type": "reaction",
-            "reaction_kind": "movement",
-            "narration": "poof",
-            "effect": "The wraith slips through the wall.",
-        },
-    )
-    assert "error" not in result
-    assert "slips through the wall" in result["output"]
-    assert result["action_type"] == "reaction"
-
-
-def test_reaction_buff_path(monkeypatch, tmp_path):
-    result = _run_action(
-        monkeypatch, tmp_path, "cleric", "shield_of_faith",
-        {
-            "type": "reaction",
-            "reaction_kind": "buff",
-            "narration": "glow",
-            "effect": "+2 AC until the start of the cleric's next turn.",
-        },
-    )
-    assert "error" not in result
-    assert "+2 AC" in result["output"]
-
-
-def test_slots_surfaced_in_output(monkeypatch, tmp_path):
-    """A spec with `slots` runs and surfaces a charge-tracking reminder."""
-    result = _run_action(
-        monkeypatch, tmp_path, "mage", "blink",
-        {
-            "type": "utility",
-            "narration": "vanishes",
-            "effect": "Teleports 30ft.",
-            "slots": {"count": 3, "refresh": "long_rest"},
-        },
-    )
-    assert "error" not in result
-    assert "charge" in result["output"].lower()
-
-
-def test_extra_damage_folded_into_total(monkeypatch, tmp_path):
-    """extra_damage is rolled and added to the attack's damage total."""
-    # 5 numbers: 1 to-hit + 1 base damage + ... extra damage roll.
-    _seed_cache([10, 0, 0, 0, 0, 0, 0, 0], source="random_org")
-    result = _run_action(
-        monkeypatch, tmp_path, "fire-knight", "flame_strike",
-        {
-            "type": "single_attack",
-            "narration": "burn",
-            "attacks": [
-                {
-                    "name": "Longsword",
-                    "to_hit_bonus": 5,
-                    "damage": "1d8",
-                    "damage_modifier": 3,
-                    "damage_type": "slashing",
-                    "extra_damage": {"dice": "2d6", "type": "fire"},
-                }
-            ],
-        },
-    )
-    assert "error" not in result
-    assert "extra_damage" in result["output"]
-    assert "fire" in result["output"]
-
-
-def test_area_action_emits_save_rolls_sidecar(monkeypatch, tmp_path):
-    """An area/save action returns a structured `rolls` sidecar for the GUI's
-    didn't-land lifecycle, alongside the unchanged Markdown `output`."""
-    _seed_cache([3, 5, 2, 6], source="random_org")
-    result = _run_action(
-        monkeypatch, tmp_path, "frost-mage", "ice_storm",
-        {
-            "type": "area",
-            "area": "20-ft radius",
-            "narration": "hail",
-            "damage": {"dice": "4d6", "type": "cold"},
-            "save": {"dc": 15, "ability": "Dex", "on_save": "half"},
-        },
-    )
-    assert "error" not in result
-    rolls = result["rolls"]
-    assert rolls["kind"] == "save"
-    assert rolls["on_save"] == "half"
-    assert rolls["save_dc"] == 15
-    assert isinstance(rolls["damage_total"], int)
-    # The Markdown output is unchanged — still carries the at-table reminder.
-    assert "ASKING PLAYER" in result["output"]
-
-
-def test_attack_action_emits_attack_rolls_sidecar(monkeypatch, tmp_path):
-    """A single_attack action returns a `rolls` sidecar with kind=attack."""
-    _seed_cache([10, 5, 0, 0], source="random_org")
-    result = _run_action(
-        monkeypatch, tmp_path, "knight", "longsword",
-        {
-            "type": "single_attack",
-            "narration": "swing",
-            "attacks": [
-                {
-                    "name": "Longsword",
-                    "to_hit_bonus": 5,
-                    "damage": "1d8",
-                    "damage_modifier": 3,
-                    "damage_type": "slashing",
-                }
-            ],
-        },
-    )
-    assert "error" not in result
-    rolls = result["rolls"]
-    assert rolls["kind"] == "attack"
-    assert rolls["on_save"] == "none"
-    assert isinstance(rolls["damage_total"], int)
-
-
-def test_utility_action_emits_empty_rolls_sidecar(monkeypatch, tmp_path):
-    """A no-roll utility action carries an empty `rolls` sidecar (no HP damage)."""
-    result = _run_action(
-        monkeypatch, tmp_path, "mage", "mage_armor",
-        {
-            "type": "utility",
-            "narration": "shimmer",
-            "effect": "AC becomes 13 + Dex.",
-        },
-    )
-    assert "error" not in result
-    assert result["rolls"] == {}

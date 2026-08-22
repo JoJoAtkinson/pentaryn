@@ -2,7 +2,7 @@
 """Combat-actions database (JSONL flat-file).
 
 Replaces the per-NPC .actions.toml sidecars with one append-friendly file:
-`combat-runner/actions.jsonl`. Composite key = (npc, action). One JSON object
+`foundry/actions.jsonl`. Composite key = (npc, action). One JSON object
 per line. Tracked in git — this is authoritative campaign data, not
 per-machine state.
 
@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-_DEFAULT_DB = _REPO_ROOT / "combat-runner" / "actions.jsonl"
+_DEFAULT_DB = _REPO_ROOT / "foundry" / "actions.jsonl"
 
 
 def _db_path() -> Path:

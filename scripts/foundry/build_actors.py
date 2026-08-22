@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Build `foundry/build/actors.json` from the combat-runner corpus.
 
-Stage 1 of the Foundry pipeline. Reads two inputs — `combat-runner/actions.jsonl`
+Stage 1 of the Foundry pipeline. Reads two inputs — `foundry/actions.jsonl`
 (every roll pre-computed) and the `#combat-runner` NPC markdown (HP/AC/CR/senses)
 — and emits the generator side of the contract in `foundry/CONTRACT.md`.
 
@@ -50,7 +50,7 @@ from typing import Any, Iterable
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-ACTIONS_DB = REPO_ROOT / "combat-runner/actions.jsonl"
+ACTIONS_DB = REPO_ROOT / "foundry/actions.jsonl"
 WORLD_DIR = REPO_ROOT / "world"
 OVERRIDES_DIR = REPO_ROOT / "foundry/overrides"
 

@@ -1,6 +1,6 @@
 ---
 name: NPC Combat-Runner Template
-description: Canonical template for creating a `#combat-runner`-tagged NPC. The .md is a slim human-readable stat sheet; action mechanics live in the central DB at `combat-runner/actions.jsonl`, populated via the `combat_action_upsert` MCP tool.
+description: Canonical template for creating a `#combat-runner`-tagged NPC. The .md is a slim human-readable stat sheet; action mechanics live in the central DB at `foundry/actions.jsonl`, populated via the `combat_action_upsert` MCP tool.
 tags: ["#template", "#combat-runner-template"]
 ---
 
@@ -11,13 +11,13 @@ tags: ["#template", "#combat-runner-template"]
 > A combat-runner NPC is **one .md file + N entries in the actions DB**:
 >
 > 1. **`<slug>.md`** — human-readable stat sheet under `world/.../<encounter>/npcs/`. Status line, start-of-turn checklist, tactics, description. The `#combat-runner` frontmatter tag is what the launcher discovers.
-> 2. **Entries in `combat-runner/actions.jsonl`** — one row per action. Composite key = `(npc_slug, action_name)`. Authored via the **`combat_action_upsert`** MCP tool (Opus call) — the tool validates the spec before persisting, so malformed structures bounce back with a specific error.
+> 2. **Entries in `foundry/actions.jsonl`** — one row per action. Composite key = `(npc_slug, action_name)`. Authored via the **`combat_action_upsert`** MCP tool (Opus call) — the tool validates the spec before persisting, so malformed structures bounce back with a specific error.
 >
 > The .md does NOT need a verb table or any roll mechanics — the launcher queries the DB at boot and injects a "Ready actions" reference into the at-table session.
 >
 > **Where to save the .md:** `world/factions/<faction>/locations/<encounter>/npcs/<slug>.md`. The `#combat-runner` tag in the frontmatter is required for discovery.
 >
-> **Reference exemplar:** `world/factions/garhammar-trade-league/locations/mountin-pass/npcs/glacier-stalker.md` and the corresponding rows in `combat-runner/actions.jsonl`.
+> **Reference exemplar:** `world/factions/garhammar-trade-league/locations/mountin-pass/npcs/glacier-stalker.md` and the corresponding rows in `foundry/actions.jsonl`.
 
 ---
 
@@ -35,7 +35,7 @@ tags: ["#combat-runner", "#<creature-type>", "#<theme>", "#<encounter-slug>", "#
 
 **HP** XX (XdY+Z) **·** **AC** XX (<armor source>) **·** **Speed** 30 ft. **·** **Saves** Str +X, Con +X **·** **<Resistances/Immunities>** **·** **<Senses>** **·** **CR** X (XXX XP)
 
-> Action mechanics live in `combat-runner/actions.jsonl` (DB) — see the launcher-injected **Ready actions** reference for verbs and call signatures.
+> Action mechanics live in `foundry/actions.jsonl` (DB) — see the launcher-injected **Ready actions** reference for verbs and call signatures.
 
 ---
 
