@@ -15,7 +15,7 @@ Scene 4 and an unconscious man on a bench in Scene 5, on the same actor.
 
 Possession is now marked **per-token**, GM-only, via `pentaryn-ties` 0.5.0 —
 `token.flags["pentaryn-ties"].worn = { by, note }`, Token HUD → masks-theater button. See
-[`playbooks/foundry-npc-ties.md`](../playbooks/foundry-npc-ties.md).
+[`context/plans/foundry-npc-ties.md`](../context/plans/foundry-npc-ties.md).
 
 **This file is the verbatim text of what was deleted**, so nothing is lost. The prose from the
 `Worn, Not Ruled` notes was migrated into the token marks; the mechanical `Oz's Vessel` text was

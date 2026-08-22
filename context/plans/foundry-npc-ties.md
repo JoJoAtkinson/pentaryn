@@ -7,6 +7,9 @@ status: shipped — 0.4.0
 
 # NPC Ties — design plan
 
+**Read this when:** changing or extending the `pentaryn-ties` module. **Design doc.** To *use* ties at the table, read the module's own README at `foundry/module/pentaryn-ties/README.md`.
+**Not this file:** current possession marks in play → [`../space-journey.md`](../space-journey.md)
+
 > **Goal.** Hover an NPC, press **8**, and every token on the map that relates to them gets a card:
 > a coloured dot for stance, one word for the relationship, their name, their token art and your
 > notes — so the GM can role-play the room instantly, without opening a sheet.
@@ -33,7 +36,7 @@ status: shipped — 0.4.0
 > lives*). Open questions resolved at the bottom; two of the original decisions were overturned in
 > play and are marked as such.
 
-Companion to [`twenty-one-social-map.md`](../oneshots/twenty-one-social-map.md), which is the
+Companion to [`twenty-one-social-map.md`](../../oneshots/twenty-one-social-map.md), which is the
 hand-authored version of the same data.
 
 ---
@@ -127,7 +130,7 @@ shade later, or recolouring the whole scheme, never touches stored data.
 
 ### 4. `strength` reuses the social map's **1–5**
 
-Already authored in [`twenty-one-social-map.md`](../oneshots/twenty-one-social-map.md), so importing
+Already authored in [`twenty-one-social-map.md`](../../oneshots/twenty-one-social-map.md), so importing
 is free. It originally drove **badge opacity and size** — a `5` loud, a `2` a whisper. With the
 badges gone (0.4.0) it drives **order**: strongest ties first, on the sheet and in the stack of
 cards. Kept as a number rather than dropped, because ranking is the thing you want when a scene has
@@ -243,7 +246,7 @@ which happens in exactly two ways:
 > injection, and a card layer that has to restore itself on `ready` all need registration at startup.
 > So `pentaryn-ties` **is** a module, synced with `make foundry-ties-sync`, and Foundry only scans
 > `Data/modules` at startup — the restart this section hoped to dodge is real. See
-> [`foundry-ops.md`](foundry-ops.md) §5.
+> [`foundry-ops.md`](../foundry/ops.md) §5.
 
 The original plan called for a `pentaryn-ties` world module because hooks must register at startup.
 **They don't — we don't need hooks.**
@@ -258,7 +261,7 @@ that follows the cursor. So:
 | The data | Actor flags, written by a seeding macro (or by me over the bridge) |
 | The editor (phase 3) | A macro that opens an ApplicationV2 window — still no module |
 
-**This avoids the Foundry restart** that [`foundry-ops.md`](foundry-ops.md) §5 warns about, keeps
+**This avoids the Foundry restart** that [`foundry-ops.md`](../foundry/ops.md) §5 warns about, keeps
 everything visible and editable in the Macro Directory, and means there is no `make …-sync` step to
 forget. A module only becomes necessary if we ever want a permanent Settings-menu entry.
 

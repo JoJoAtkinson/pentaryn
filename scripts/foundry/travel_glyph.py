@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate the travel-indicator glyph family.
 
-A scene link (see context/foundry-scene-links.md) is a Region with a
+A scene link (see context/foundry/scene-links.md) is a Region with a
 teleportToken behavior — invisible to players by design. These glyphs are the
 *sign* that goes with it: a soft feathered mark laid down as a Tile, below the
 token layer, saying "you can leave from here".

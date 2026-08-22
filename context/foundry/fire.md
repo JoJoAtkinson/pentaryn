@@ -8,6 +8,9 @@ tags: [context, foundry, tiles, fire, vfx, mass-edit, spider's-tear]
 
 # Foundry fire — the Fire Kit
 
+**Read this when:** acting on "set it on fire", "the building goes up", or "put flames here".
+**Not this file:** placing anything else at a named spot → [`markers.md`](markers.md)
+
 **Read this before acting on "set it on fire", "the building goes up", or "put flames here".**
 Animated, looping, alpha-transparent fire you place as ordinary **Tiles**. No new module.
 Built 2026-08-20 for **Scene 06 — The Fire** (Spider's Tear Opera House), but it is
@@ -32,13 +35,13 @@ depends on Sequencer or Token Magic FX.
 | The art | `Data/assets/tiles/tiles-01/fire/*.webm` — 22 clips |
 | Thumbnails | `.../fire/thumbs/*.webp` — what the preset browser shows |
 | Credits + full inventory | `.../fire/credits.txt` |
-| Visual reference sheet | [`foundry/fire-kit-sheet.png`](../foundry/fire-kit-sheet.png) — all 22 clips, one page |
+| Visual reference sheet | [`foundry/fire-kit-sheet.png`](../../foundry/fire-kit-sheet.png) — all 22 clips, one page |
 | Source zip (source of truth) | OneDrive `DnD/foundry/assets/tiles-01.zip` |
 | Presets | Compendium **Mass Edit: Presets (MAIN)** → folder **Fire Kit** |
 | Macros | Macro folder **Fire Kit**, all GM-only (`ownership.default = NONE`) |
 
 The pack came down the normal asset road — `make foundry-assets` — so it is recorded in
-[`foundry/assets-manifest.json`](../foundry/assets-manifest.json) and re-extracts on a fresh
+[`foundry/assets-manifest.json`](../../foundry/assets-manifest.json) and re-extracts on a fresh
 machine. **Packs are append-only.** To add more fire art, publish `tiles-02.zip`; never edit
 `tiles-01.zip` in place.
 
@@ -65,7 +68,7 @@ which squares are on fire*, not photorealism. Rendered as a fully-painted floor:
 ring** and reads as an outline, not an area; `fire-10x10` is decent but frays at the edges.
 `fire-small` is dense, bright and fills its square, so one tile per square is unambiguous.
 `fire-medium` is the closest runner-up — a bit chunkier and more explosion-like — if you ever want
-to swap. See [`foundry/fire-kit-sheet.png`](../foundry/fire-kit-sheet.png).
+to swap. See [`foundry/fire-kit-sheet.png`](../../foundry/fire-kit-sheet.png).
 
 **Don't scale it up.** `fire-small` at 2×2 or 3×3 leaves dark islands between blobs — the clip
 doesn't fill its own box. For a bigger area, paint more 1×1s.

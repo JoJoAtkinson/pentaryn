@@ -7,13 +7,16 @@ status: draft
 
 # Wall Autocomplete — deterministic completion of hand-drawn walls
 
+**Read this when:** changing or extending the `pentaryn-walls` engine. **Design doc.** To *use* it, read `foundry/module/pentaryn-walls/README.md`.
+**Not this file:** map prep before walling → [`../foundry/map-library.md`](../foundry/map-library.md)
+
 > Rough in the *informative* wall segments — windows, doors, the odd hint stub — and let a
 > macro infer the rest. No prediction, no scoring, no CV. A fixed rule table iterated to a
 > fixed point, refusing anywhere it would have to guess.
 >
 > **Built.** `foundry/module/pentaryn-walls/` — engine + compiled WASM backend, 49 passing fixtures on both.
 > §12 records the corrections implementation forced on this design. Successor to Stage 3 of
-> [`foundry-vtt.md`](foundry-vtt.md) (D4: hand-draw walls) — this does not reverse D4, it
+> [`foundry-vtt.md`](foundry-content-pipeline.md) (D4: hand-draw walls) — this does not reverse D4, it
 > makes hand-drawing cheaper.
 
 **Verdict: yes, this is possible, and it is smaller than it looks.** ~800 lines of JS. The rule

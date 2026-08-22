@@ -1,28 +1,30 @@
-# MCP Servers (Local)
+# `dnd-scripts` MCP server
 
-This folder contains MCP servers that expose repo-local tooling to an MCP-capable client (e.g., Codex).
+A local stdio MCP server that exposes this repo's tooling to Claude Code. It auto-discovers
+tools by scanning `scripts/` for modules that declare an `MCP_TOOL` / `MCP_TOOLS` literal —
+adding a tool means adding that literal to a script, not editing the server.
 
-## Run
+## Running it
 
-The server is launched by your MCP client over stdio (see VS Code setup below).
-To run it manually: `./.venv/bin/python scripts/mcp/server.py`.
+Registered for this workspace in [`../../.vscode/mcp.json`](../../.vscode/mcp.json). It is
+launched by the client over stdio; you rarely start it by hand.
 
-## VS Code setup
+```bash
+./.venv/bin/python scripts/mcp/server.py --list-tools   # the live tool list
+./.venv/bin/python scripts/mcp/server.py                # run it manually
+```
 
-This repo includes a workspace MCP config at `.vscode/mcp.json` that registers the `dnd-scripts` server.
+`--list-tools` also reports which tools run **in-process** (fast) and which shell out to a
+**subprocess** (slower), plus every script it skipped and why.
 
-- Ensure your venv exists at `./.venv` (e.g. `uv sync` / `uv venv`).
-- Reload VS Code (Command Palette: `Developer: Reload Window`).
-- Check `View -> Output -> MCP Server Logs` to confirm `dnd-scripts` started and tools were detected.
+## Tool semantics
 
-## Codex setup
+Quirks worth knowing before you call something — SRD source filters, v1-slug vs v2-key,
+`find_lore`'s substring matching, the expensive subprocess tools — are documented in
+[`../../context/tools.md`](../../context/tools.md).
 
-- `./.venv/bin/python scripts/mcp/manage_codex_config.py` installs/refreshes the managed block in `~/.codex/config.toml`.
-- Restart Codex / reload your editor to pick up the new server.
-  - Verify with `codex mcp list` (it should show `dnd-scripts`).
+## Optional group filter
 
-## Tools (current)
-
-The server auto-discovers ~70 tools by scanning `scripts/` for modules exposing an
-`MCP_TOOL` marker. Run `./.venv/bin/python scripts/mcp/server.py --list-tools` for
-the live list, including which tools run in-process (fast) vs. in a subprocess.
+Set `DND_MCP_TOOLS_GROUP=combat` and only modules whose top-level `MCP_GROUPS` list contains
+that group are loaded — a cold-start speed-up for a session that needs dice and stat blocks
+but not the lore and timeline surface. Nothing sets it automatically; it is opt-in.

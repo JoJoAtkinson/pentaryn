@@ -8,6 +8,9 @@ tags: [context, foundry, markers, workflow, item-piles, journal-notes]
 
 # Foundry markers — how Joe points at a spot
 
+**Read this when:** acting on "put X here", "replace the red one", or anything that names a spot on a map in chat.
+**Not this file:** teleports between scenes → [`scene-links.md`](scene-links.md) · fire tiles → [`fire.md`](fire.md)
+
 **Read this before acting on "put X here" or "replace the red one".** Markers are how a spot on
 a Foundry map gets named in chat. They exist because Foundry keeps **no ping history** — a ping
 draws an animation and is gone, and nothing scripted can read it back afterwards. A marker is a
@@ -373,7 +376,7 @@ they are visible, nameable, and survive a reload — but a ping is quicker for a
 
 ## Also see
 
-- [`forge-st.md`](forge-st.md) — the campaign context index
+- [`README.md`](README.md) — the Foundry domain root
 - `foundry/module/pentaryn-pings/` — the ping recorder
 - `foundry/module/pentaryn-dropbin/` — the ledger of everything that leaves a character sheet, and
   (since 2026-08-17) three Item Piles patches: the attunement repair, container lock enforcement,

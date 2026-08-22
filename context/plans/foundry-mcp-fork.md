@@ -7,12 +7,15 @@ status: draft
 
 # Foundry MCP Bridge — Fork Design
 
+**Read this when:** you need to know why the Foundry MCP bridge was forked and how its tool surface was chosen. **History, not instructions** — the fork now lives at `~/Documents/GitHub/foundry-vtt-mcp`.
+**Not this file:** operating Foundry → [`../foundry/README.md`](../foundry/README.md)
+
 > The tool surface, repo placement and guardrails for forking `adambdooley/foundry-vtt-mcp`
 > so Ardenhaven can be driven conversationally instead of clicked.
 
 **Status: DESIGN ONLY — nothing implemented.**
 
-**Supersedes [D1](foundry-vtt.md) ("do not fork").** Its reversal trigger fired exactly as
+**Supersedes [D1](foundry-content-pipeline.md) ("do not fork").** Its reversal trigger fired exactly as
 written — *"a workflow is genuinely blocked by an unexposed internal — `addActorsToScene` is the
 likely first."* It was, twice: setting a scene grid, and placing a token for an existing actor.
 Also re-opens **D8** (placement), whose stated premise — *"nothing to vendor without a fork"* —
@@ -267,5 +270,5 @@ is a tarball.
 
 ## Related
 
-- [foundry-vtt.md](foundry-vtt.md) — the parent playbook. **D1 and D8 need amending on acceptance.**
-- [`foundry/CONTRACT.md`](../foundry/CONTRACT.md) — actor pipeline contract
+- [foundry-vtt.md](foundry-content-pipeline.md) — the parent playbook. **D1 and D8 need amending on acceptance.**
+- [`foundry/CONTRACT.md`](../../foundry/CONTRACT.md) — actor pipeline contract

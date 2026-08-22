@@ -1,5 +1,8 @@
 # Map library — storage, organisation, and findability
 
+**Read this when:** finding one battlemap out of ~1,750, or filing a new pack into the library.
+**Not this file:** getting a found map into a scene → [`../plans/foundry-content-pipeline.md`](../plans/foundry-content-pipeline.md)
+
 How ~1,750 battlemaps are stored, and how a specific one gets found in under a minute.
 
 Extends the existing convention: **OneDrive is source of truth; assets down, world up.**

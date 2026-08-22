@@ -7,9 +7,12 @@ tags: [context, foundry, automation, launchd, updates]
 
 # Foundry automated updates — context
 
+**Read this when:** extending, debugging or reasoning about the Saturday auto-updater — before touching any of it.
+**Not this file:** just running it (commands, setup, retention) → [`../../automation/README.md`](../../automation/README.md)
+
 **Everything a fresh session needs to extend, debug or reason about the Saturday-04:06
 auto-updater.** Built 2026-08-21. Operator-facing docs are
-[`automation/README.md`](../automation/README.md); this file is the engineering context —
+[`automation/README.md`](../../automation/README.md); this file is the engineering context —
 the decisions, the traps, and the facts about Foundry's internals that the design rests on.
 
 Read this first, then open only the module you are changing.

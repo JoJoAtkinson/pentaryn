@@ -30,7 +30,7 @@ viewable at <https://foundryvtt.com/community/atjoseph/licenses>.
 | `make tunnel-logs` | Tail the tunnel log |
 | `make foundry-key` | Copy the license key to the clipboard (first-run activation only) |
 | `make foundry-check` | Verify key retrieval; prints length/format, never the value |
-| `make foundry-actors` | Regenerate `foundry/build/actors.json` from `combat-runner/actions.jsonl` + `#combat-runner` markdown |
+| `make foundry-actors` | Regenerate `foundry/build/actors.json` from `foundry/actions.jsonl` + `#combat-runner` markdown |
 | `make foundry-sync` | `foundry-actors`, then **copy** (never symlink) the importer module + `actors.json` into the live Foundry `Data/` dir |
 | `make foundry-import` | **The one to run.** `foundry-sync`, wait while you run `game.pentaryn.import()` in Foundry's console, then `foundry-clean` |
 | `make foundry-clean-only` | Delete the staged `actors.json` from `Data/`. No verification |
@@ -45,7 +45,7 @@ screen. Foundry stores it afterwards — `make vtt-up` never needs it.
 
 ## Actor pipeline (`foundry-actors` / `foundry-import`)
 
-See [`playbooks/foundry-vtt.md`](../../playbooks/foundry-vtt.md) (Stages 1-2, Gate 2)
+See [`context/plans/foundry-content-pipeline.md`](../../context/plans/foundry-content-pipeline.md) (Stages 1-2, Gate 2)
 for the full pipeline and its decision log.
 
 `foundry/build/actors.json` is **committed** — it's the golden-file surface for

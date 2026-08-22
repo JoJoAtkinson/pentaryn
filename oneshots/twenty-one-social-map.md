@@ -302,7 +302,7 @@ charming. Where Ballad left people feeling good, Pip left people owing, owed or 
 **All of this lives in the module, not just here.** 34 edges, written both directions with a
 separate note per side — the PC's row is what the player remembers, the NPC's row is written in
 the NPC's voice and **ends with how they behave toward that PC today**, so hovering the NPC mid-scene
-tells you how to play them. See [`playbooks/foundry-npc-ties.md`](../playbooks/foundry-npc-ties.md).
+tells you how to play them. See [`context/plans/foundry-npc-ties.md`](../context/plans/foundry-npc-ties.md).
 
 ### 7a. The Neds — the spine of it
 

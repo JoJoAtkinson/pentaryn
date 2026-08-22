@@ -13,7 +13,7 @@ Stage 2 of the Foundry pipeline. Reads the `actors.json` produced by Stage 1
 
 - **Contract:** [`foundry/CONTRACT.md`](../../CONTRACT.md) — normative; this module implements the
   "Importer (Stage 2) MUST" checklist in §12.
-- **Why the pipeline looks like this:** [`playbooks/foundry-vtt.md`](../../../playbooks/foundry-vtt.md)
+- **Why the pipeline looks like this:** [`context/plans/foundry-content-pipeline.md`](../../../context/plans/foundry-content-pipeline.md)
   (D3, D8, D10).
 - **Target:** Foundry **v14.365** · dnd5e **5.3.3**.
 

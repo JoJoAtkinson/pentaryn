@@ -7,6 +7,9 @@ status: active
 
 # Foundry VTT — Operations
 
+**Read this when:** running Foundry day to day — starting or stopping the server and tunnel, OneDrive sync, the license key, installing a module, or checking what is exposed publicly.
+**Not this file:** building content programmatically → [`../plans/foundry-content-pipeline.md`](../plans/foundry-content-pipeline.md) · the unattended updater → [`automated-updates.md`](automated-updates.md)
+
 > Running the thing. Starting and stopping the server and the tunnel, keeping OneDrive
 > and local disk in their lanes, getting the license key without leaking it, installing
 > modules, and not leaving campaign files hanging on a public URL.
@@ -16,9 +19,9 @@ status: active
 | You want to… | Playbook |
 | ------------ | -------- |
 | Start/stop the server, the tunnel, sync assets, restore a world, install a module, check what's exposed | **this one** |
-| Build world *content* — actor generation from `actions.jsonl`, the importer module, the write paths that fail silently, Gates 0–4 | [`foundry-vtt.md`](foundry-vtt.md) |
-| Complete hand-drawn walls | [`foundry-wall-autocomplete.md`](foundry-wall-autocomplete.md) |
-| Extend the MCP bridge's tool surface | [`foundry-mcp-fork.md`](foundry-mcp-fork.md) — design only |
+| Build world *content* — actor generation from `actions.jsonl`, the importer module, the write paths that fail silently, Gates 0–4 | [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) |
+| Complete hand-drawn walls | [`foundry-wall-autocomplete.md`](../plans/foundry-wall-autocomplete.md) |
+| Extend the MCP bridge's tool surface | [`foundry-mcp-fork.md`](../plans/foundry-mcp-fork.md) — design only |
 
 Where this one and `foundry-vtt.md` overlap — the actors import pipeline and its Gate 2 — this playbook covers the
 *operational* half (what deletes the staged file, what proves it's gone) and links out for the rest.
@@ -37,7 +40,7 @@ Where this one and `foundry-vtt.md` overlap — the actors import pipeline and i
 | See what's in the cloud store | `make foundry-cloud` |
 | Install or update a module | Setup screen (resolves dependencies) **or** unzip the release into `Data/modules/<id>/` and restart — §5. Never from inside a running world |
 | Push a local module to Foundry | `make foundry-sync` (importer) · `make foundry-walls-sync` (walls) · `make foundry-ties-sync` (ties) |
-| Import actors | [`foundry-vtt.md`](foundry-vtt.md) Stages 1–2, then `make foundry-import` (🔴 read §1's red box first — it stages into the wrong world today) |
+| Import actors | [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) Stages 1–2, then `make foundry-import` (🔴 read §1's red box first — it stages into the wrong world today) |
 | Prove nothing's exposed | `make foundry-verify` |
 | Check the license key resolves | `make foundry-check` — prints length and format, never the value |
 | First-run activation only | `make foundry-key` → pastes to clipboard → `pbcopy </dev/null` after |
@@ -117,7 +120,7 @@ because the snapshot is the step that requires "stopped".
 
 ## 3. The OneDrive contract
 
-> Source: [`scripts/foundry/cloud.py`](../scripts/foundry/cloud.py) — read its module docstring.
+> Source: [`scripts/foundry/cloud.py`](../../scripts/foundry/cloud.py) — read its module docstring.
 
 **One direction each way, and the two never touch the same files.** That single rule is the whole
 design; everything below follows from it.
@@ -196,7 +199,7 @@ copies to the clipboard for Foundry's **first-run activation screen** — the on
 needed; Foundry stores it afterwards and `make vtt-up` never asks again. Clear the clipboard after
 with `pbcopy </dev/null`.
 
-Full detail: [`scripts/foundry/README.md`](../scripts/foundry/README.md).
+Full detail: [`scripts/foundry/README.md`](../../scripts/foundry/README.md).
 
 ---
 
@@ -210,14 +213,14 @@ Full detail: [`scripts/foundry/README.md`](../scripts/foundry/README.md).
 | id | version | Source |
 | -- | ------- | ------ |
 | `pentaryn-importer` | 1.0.0 | `make foundry-sync` copies it in |
-| `pentaryn-walls` | 0.2.0 | `make foundry-walls-sync` copies it in ([README](../foundry/module/pentaryn-walls/README.md)) |
-| `pentaryn-ties` | 0.1.0 | `make foundry-ties-sync` copies it in. Directed NPC relationships on actor flags: Ties tab on actor sheets, GM-only canvas overlay on a rebindable keybinding (default `8`). [README](../foundry/module/pentaryn-ties/README.md) · [design doc](foundry-npc-ties.md) |
+| `pentaryn-walls` | 0.2.0 | `make foundry-walls-sync` copies it in ([README](../../foundry/module/pentaryn-walls/README.md)) |
+| `pentaryn-ties` | 0.1.0 | `make foundry-ties-sync` copies it in. Directed NPC relationships on actor flags: Ties tab on actor sheets, GM-only canvas overlay on a rebindable keybinding (default `8`). [README](../../foundry/module/pentaryn-ties/README.md) · [design doc](../plans/foundry-npc-ties.md) |
 
 **The bridge:**
 
 | id | version | Source |
 | -- | ------- | ------ |
-| `foundry-mcp-bridge` | 0.8.3 | Upstream, installed via Setup screen. Pinned — see [D1](foundry-vtt.md) |
+| `foundry-mcp-bridge` | 0.8.3 | Upstream, installed via Setup screen. Pinned — see [D1](../plans/foundry-content-pipeline.md) |
 
 **Combat HUD** — Argon, a per-character action bar for guest players:
 
@@ -363,13 +366,13 @@ positively confirm the file is gone (D10), so it establishes the tunnel is up an
 404. With the tunnel up, **only 404 passes** — a 403 (Cloudflare bot-challenging curl's UA), a 302
 interstitial, a 5xx: none of them show what a player's browser would get.
 
-Full Gate 2 detail: [`foundry-vtt.md`](foundry-vtt.md) Stage 2.
+Full Gate 2 detail: [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) Stage 2.
 
 ---
 
 ## 7. Driving the world — MCP bridge
 
-Per the golden rule in [`CLAUDE.md`](../CLAUDE.md) / [`AGENTS.md`](../AGENTS.md): **when a request
+Per the golden rule in [`CLAUDE.md`](../../CLAUDE.md) / [`context/world/README.md`](../world/README.md): **when a request
 maps to an MCP tool, use the tool — don't shell out to the underlying script.**
 
 The `foundry` server is registered once, at project scope in `.mcp.json`, with
@@ -553,10 +556,10 @@ has three levels. Anything that walks scenes should read `levels[]`, not `backgr
 
 ## Related
 
-- [`foundry-vtt.md`](foundry-vtt.md) — the content pipeline: decisions D1–D10, actor generation, importer module, Gates 0–4
-- [`foundry-wall-autocomplete.md`](foundry-wall-autocomplete.md) · [`pentaryn-walls` README](../foundry/module/pentaryn-walls/README.md)
-- [`foundry-npc-ties.md`](foundry-npc-ties.md) · [`pentaryn-ties` README](../foundry/module/pentaryn-ties/README.md)
-- [`foundry-mcp-fork.md`](foundry-mcp-fork.md) — bridge fork design (not implemented)
-- [`scripts/foundry/README.md`](../scripts/foundry/README.md) — license key, make-target table
-- [`foundry/CONTRACT.md`](../foundry/CONTRACT.md) — the `actors.json` generator ⇄ importer contract (§12 for who deletes the staged file)
-- [`scripts/foundry/cloud.py`](../scripts/foundry/cloud.py) — the OneDrive implementation; its docstring is the rationale
+- [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) — the content pipeline: decisions D1–D10, actor generation, importer module, Gates 0–4
+- [`foundry-wall-autocomplete.md`](../plans/foundry-wall-autocomplete.md) · [`pentaryn-walls` README](../../foundry/module/pentaryn-walls/README.md)
+- [`foundry-npc-ties.md`](../plans/foundry-npc-ties.md) · [`pentaryn-ties` README](../../foundry/module/pentaryn-ties/README.md)
+- [`foundry-mcp-fork.md`](../plans/foundry-mcp-fork.md) — bridge fork design (not implemented)
+- [`scripts/foundry/README.md`](../../scripts/foundry/README.md) — license key, make-target table
+- [`foundry/CONTRACT.md`](../../foundry/CONTRACT.md) — the `actors.json` generator ⇄ importer contract (§12 for who deletes the staged file)
+- [`scripts/foundry/cloud.py`](../../scripts/foundry/cloud.py) — the OneDrive implementation; its docstring is the rationale

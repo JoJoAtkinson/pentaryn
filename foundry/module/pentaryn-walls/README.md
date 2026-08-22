@@ -11,7 +11,7 @@ Rough in the walls that carry information — windows, doors, one hint stub per 
 — and let the engine infer the rest. Where it would have to guess, it refuses and tells you
 which endpoint and why.
 
-- **Design, rule table, traces:** [`playbooks/foundry-wall-autocomplete.md`](../../../playbooks/foundry-wall-autocomplete.md)
+- **Design, rule table, traces:** [`context/plans/foundry-wall-autocomplete.md`](../../../context/plans/foundry-wall-autocomplete.md)
 - **Target:** Foundry **v14.365**. System-agnostic — it only touches `Wall` documents.
 
 One setting (engine backend), two hooks: `init` for keybindings and the setting, `ready` to

@@ -7,6 +7,9 @@ status: shipped — Pip Locksley
 
 # Attack activities — one-click Sneak Attack, and off-hand damage without the modifier
 
+**Read this when:** authoring a weapon activity in dnd5e — one-click Sneak Attack, off-hand damage with no ability modifier, anything Argon-facing.
+**Not this file:** NPC action specs for the actor pipeline → [`../tools.md`](../tools.md)
+
 > **Goal.** Kill two bits of at-table friction in Argon: the rogue rolling damage and *then*
 > hunting for Sneak Attack, and the off-hand weapon wrongly adding Dex/Str to its damage.
 

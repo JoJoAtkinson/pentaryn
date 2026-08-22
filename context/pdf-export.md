@@ -1,5 +1,9 @@
 # Exporting Markdown to PDF
 
+**Read this when:** setting up or debugging Markdown → PDF export, or the VS Code
+"Markdown: Export to PDF" task misbehaves.
+**Not this file:** just exporting a file → use the `pandoc_export_pdf` MCP tool ([`tools.md`](tools.md))
+
 This repo is set up so you can work in `.md` files and quickly export any open Markdown file to a PDF that lands in your `~/Downloads` folder.
 
 ## One-time setup (CLI tools)

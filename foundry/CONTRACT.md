@@ -9,7 +9,7 @@ status: draft
 
 > The seam between **Stage 1** (`scripts/foundry/build_actors.py`, Python) and **Stage 2**
 > (`foundry/module/pentaryn-importer/`, JS). Both are built against this document.
-> See [`playbooks/foundry-vtt.md`](../playbooks/foundry-vtt.md) for why the pipeline is shaped
+> See [`context/plans/foundry-content-pipeline.md`](../context/plans/foundry-content-pipeline.md) for why the pipeline is shaped
 > this way (D3, D8) and what each gate protects (D10).
 
 **Target:** Foundry **v14.365** (`generation: 14`) · dnd5e **5.3.3** · world `ardenhaven`.

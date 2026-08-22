@@ -124,7 +124,7 @@ the old friend's face · bridges at night. The village that remembers was *repur
 - **Verified live:** survives three consecutive re-renders with the tab open, no duplicate links,
   rows intact. The frozen-`game.pentaryn` fix confirmed — importer, walls and ties now coexist.
 
-### G — `playbooks/foundry-ops.md`
+### G — `context/foundry/ops.md`
 - §5 rewritten from **5 modules to the real 21**, grouped by purpose, with a drift note and the
   one-liner to re-derive the list. `pentaryn-ties` documented.
 

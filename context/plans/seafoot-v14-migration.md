@@ -8,6 +8,9 @@ tags: [foundry, maps, migration, seafoot]
 
 # Migrating 520 pre-built scenes from Foundry v9 to v14
 
+**Read this when:** you need to know how the 520-map Seafoot bundle became one v14 module. **History, not instructions** — the migration is complete and its script has been removed.
+**Not this file:** finding a map today → [`../foundry/map-library.md`](../foundry/map-library.md)
+
 ## What we have
 
 The Quarantine bundle ships **520 complete Foundry modules**, one per map, each containing a

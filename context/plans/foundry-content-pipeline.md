@@ -7,6 +7,9 @@ status: draft
 
 # Foundry VTT — Programmatic Campaign Pipeline
 
+**Read this when:** planning or changing how repo content becomes Foundry documents — actors, scenes, walls, lights. **A design doc**; its own status line says how much has actually been executed.
+**Not this file:** day-to-day server operation → [`../foundry/ops.md`](../foundry/ops.md)
+
 > Getting **Ardenhaven** into Foundry so that NPCs, scenes, walls and lights are built
 > from the repo rather than by clicking. Written after establishing — the hard way —
 > which write paths actually work on **v14.365 / dnd5e 5.3.3**, and which fail *silently*.
@@ -109,7 +112,7 @@ pointing at it. Stage 3 still tests the chain before real work, but `dd-import` 
 
 - `make vtt-up` brings up Foundry + tunnel; players connect at `https://vtt.atjoseph.com`
 - MCP bridge connected, so Claude can query and nudge the **live** world during prep
-- NPCs rebuilt from `combat-runner/actions.jsonl` by one deterministic, idempotent command
+- NPCs rebuilt from `foundry/actions.jsonl` by one deterministic, idempotent command
 - Three scenes with correct grids, walls, doors and lights — recreated through validated paths
 - Every input (actor JSON, UVTT) committed and diffable; nothing authored only inside the world DB
 
@@ -395,6 +398,6 @@ and token vision behaves · `make vtt-down`.
 
 ## Related
 
-- [roll20-map-prep.md](roll20-map-prep.md) — the predecessor; grid math and the source map library inventory still apply
-- [`scripts/foundry/README.md`](../scripts/foundry/README.md) — license key retrieval, make targets
+- roll20-map-prep.md *(removed)* — the predecessor; grid math and the source map library inventory still apply
+- [`scripts/foundry/README.md`](../../scripts/foundry/README.md) — license key retrieval, make targets
 - `combat-runner/gui/README.md` — the at-table combat runner these actors mirror
