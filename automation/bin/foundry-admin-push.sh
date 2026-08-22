@@ -1,58 +1,57 @@
 #!/bin/bash
-# Publish the Foundry administrator password to Infisical and the macOS login keychain.
+# Mirror the Foundry grandmaster password from Infisical into the macOS login keychain.
 #
-# Source of the value: FVT_GRANDMASTER_PW in this repo's .env (gitignored, never
-# committed — verified). This script is the only thing that reads it, and it never
-# prints it, never echoes it, and never puts it in a command line:
+# Infisical is the source of truth. This script does not create the secret and has no
+# other source for it — if it is not in Infisical, set it there first.
 #
-#   · Infisical gets it through `secrets set --file`, so the value travels in a
-#     0600 temp file rather than in argv, where `ps` would show it to any process.
-#   · The keychain gets it on stdin via `-w -` for the same reason.
+#   Project : project-joe  (74f78c84-b0f0-45f9-8b7a-c3e54b0785b2)
+#   Env     : dev      Path: /      Name: FOUNDRY_VTT_GRANDMASTER_PW
 #
-# Two destinations on purpose. Infisical is the source of truth and the cross-machine
-# store; the keychain copy is what keeps the unattended 04:06 job working when the
-# Infisical CLI's interactive session expires — which it had already done on this
-# machine while this was being written.
+# Why mirror it at all: the consumer is a launchd LaunchAgent firing at 04:06 on a
+# Saturday, and the infisical CLI's session is an interactive login that expires. A
+# weekly job that silently stops the first time a token lapses is a trap, not
+# automation. The login keychain is unlocked for the whole GUI session a LaunchAgent
+# runs in, so it answers unattended. Read order at the point of use is
+# env -> Infisical -> keychain; see scripts/foundry/admin_password.py.
+#
+# The value never reaches argv, a log, or stdout:
+#   · fetched with `--plain --silent` into a shell variable in this process only;
+#   · handed to `security` through `-i`, which reads a command stream on stdin.
+#     (`security add-generic-password -w` takes the value as an ARGUMENT and there is
+#     no stdin form. `-w -` silently stores a literal "-" — that is exactly what
+#     happened on the first attempt: a 22-character password came back as 1 char.)
 #
 # Usage:  make foundry-admin-push
 set -euo pipefail
 
-REPO="$(cd "$(dirname "$0")/../.." && pwd)"
-ENV_FILE="$REPO/.env"
-SRC_VAR="FVT_GRANDMASTER_PW"
-DEST_VAR="FOUNDRY_ADMIN_PASSWORD"
+PROJECT_ID="74f78c84-b0f0-45f9-8b7a-c3e54b0785b2"
+ENVIRONMENT="dev"
+SECRET_PATH="/"
+SECRET_NAME="FOUNDRY_VTT_GRANDMASTER_PW"
 KEYCHAIN_SERVICE="pentaryn-foundry-admin"
 
-[ -f "$ENV_FILE" ] || { echo "  ✗ no $ENV_FILE" >&2; exit 1; }
-grep -q "^${SRC_VAR}=" "$ENV_FILE" || {
-  echo "  ✗ $SRC_VAR is not set in $ENV_FILE" >&2; exit 1; }
+command -v infisical >/dev/null 2>&1 || {
+  echo "  ✗ the infisical CLI is not installed" >&2
+  echo "    brew install infisical/get-cli/infisical" >&2
+  exit 1
+}
 
-# Read it into a variable in this shell only. `set +x` is already the default; the
-# value is never expanded into a command line below.
-# shellcheck disable=SC1090
-VALUE="$(grep -m1 "^${SRC_VAR}=" "$ENV_FILE" | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'\$//")"
-[ -n "$VALUE" ] || { echo "  ✗ $SRC_VAR is empty" >&2; exit 1; }
-echo "  ▸ read $SRC_VAR from .env (${#VALUE} chars — value not shown)"
-
-TMP="$(mktemp -t fvtadmin)"
-chmod 600 "$TMP"
-trap 'rm -f "$TMP"' EXIT
-printf '%s=%s\n' "$DEST_VAR" "$VALUE" > "$TMP"
-
-# ── Infisical ──
-if infisical secrets set --file "$TMP" --silent >/dev/null 2>&1; then
-  echo "  ✓ $DEST_VAR → Infisical"
-else
-  echo "  ▸ Infisical refused (usually an expired session)."
-  echo "    Run: infisical login    then re-run: make foundry-admin-push"
-  echo "    The keychain copy below is written regardless, so the job still works."
+# stdin=/dev/null so a lapsed session fails fast instead of dropping into the
+# interactive domain-selection prompt and hanging forever.
+if ! VALUE="$(infisical secrets get "$SECRET_NAME" \
+                --projectId "$PROJECT_ID" --env "$ENVIRONMENT" --path "$SECRET_PATH" \
+                --plain --silent < /dev/null 2>/dev/null)"; then
+  echo "  ✗ could not read $SECRET_NAME from Infisical." >&2
+  echo "    Usually an expired CLI session. Run:  infisical login" >&2
+  echo "    Then re-run:  make foundry-admin-push" >&2
+  exit 1
 fi
 
+VALUE="${VALUE%%$'\n'*}"
+[ -n "$VALUE" ] || { echo "  ✗ $SECRET_NAME is empty in Infisical" >&2; exit 1; }
+echo "  ▸ read $SECRET_NAME from Infisical (${#VALUE} chars — value not shown)"
+
 # ── macOS login keychain ──
-# `security add-generic-password -w` takes the value as an ARGUMENT — there is no
-# stdin form, and `-w -` silently stores a literal "-" (which is exactly what happened
-# on the first attempt: a 22-character password came back as 1 character). The way to
-# keep it out of argv is `security -i`, which reads a command stream on stdin.
 ESCAPED=${VALUE//\\/\\\\}       # backslashes first...
 ESCAPED=${ESCAPED//\"/\\\"}     # ...then double quotes, for security's own parser
 if printf 'add-generic-password -a "%s" -s "%s" -U -w "%s"\n' \
@@ -62,14 +61,14 @@ if printf 'add-generic-password -a "%s" -s "%s" -U -w "%s"\n' \
     echo "  ✗ keychain round-trip mismatch (stored ${#STORED} chars, expected ${#VALUE})" >&2
     exit 1
   fi
-  echo "  ✓ $DEST_VAR → login keychain (service: $KEYCHAIN_SERVICE, ${#STORED} chars verified)"
+  echo "  ✓ mirrored to login keychain (service: $KEYCHAIN_SERVICE, ${#STORED} chars verified)"
 else
   echo "  ✗ could not write the keychain item" >&2
   exit 1
 fi
 
 echo ""
-echo "  Verify (prints length only, never the value):"
+echo "  Verify (prints length and source only, never the value):"
 echo "    make foundry-admin-check"
 echo ""
 echo "  Then tell Foundry itself to use it — the world must be DOWN:"

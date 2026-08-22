@@ -63,8 +63,9 @@ matter here:
   gracefully rather than quitting the app.
 
 So one admin secret buys a smoke test that stores no *user* credential anywhere. It
-lives in Infisical (`FOUNDRY_ADMIN_PASSWORD`) and is mirrored into the macOS login
-keychain, because the Infisical CLI's session is an interactive login that expires —
+lives in Infisical (`FOUNDRY_VTT_GRANDMASTER_PW`, project `project-joe`, env `dev`,
+path `/`) and is mirrored into the macOS login keychain by `make foundry-admin-push`,
+because the Infisical CLI's session is an interactive login that expires —
 it already had, on this machine, while this was being built. A weekly job that stops
 working the first time a token lapses is a trap, not automation.
 

@@ -68,7 +68,18 @@ def _fetch_from_infisical() -> str:
             capture_output=True,
             text=True,
             check=True,
+            # Both are load-bearing, and their absence was a real hang: with a lapsed
+            # session the CLI drops into an interactive domain-selection prompt and
+            # waits forever on a terminal that may not be there. `make foundry-check`
+            # sat for minutes rather than failing. Same guards as admin_password.py.
+            stdin=subprocess.DEVNULL,
+            timeout=30,
         )
+    except subprocess.TimeoutExpired as exc:
+        raise LicenseKeyUnavailable(
+            "the infisical CLI did not respond within 30s (an expired session makes it "
+            "prompt, which an unattended job cannot answer). Run `infisical login`."
+        ) from exc
     except FileNotFoundError as exc:
         raise LicenseKeyUnavailable(
             "The `infisical` CLI is not installed. Install it with "

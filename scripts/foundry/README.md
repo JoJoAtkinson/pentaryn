@@ -2,22 +2,38 @@
 
 Helpers for the Foundry Virtual Tabletop side of the campaign.
 
-## License key — how it's stored
+## Secrets — how they're stored
 
-**The Foundry license key is not in this repo, and must never be.** It is not in
-a `.env`, not in a committed config, not in the Makefile. It lives in
-[Infisical](https://app.infisical.com) and is read at runtime, every time.
+**Nothing sensitive is in this repo, and nothing may be.** Not in a `.env` (there
+isn't one), not in a committed config, not in the Makefile. Both secrets live in
+[Infisical](https://app.infisical.com) and are read at runtime, every time.
 
 | | |
 |---|---|
 | **Project** | `project-joe` — `74f78c84-b0f0-45f9-8b7a-c3e54b0785b2` |
 | **Environment** | `dev` |
 | **Secret path** | `/` |
-| **Secret name** | `FOUNDRY_VTT_LICENSE_KEY` |
-| **Auth** | the homebrew `infisical` CLI, already logged in as Joe. No token is passed. |
+| **Auth** | the homebrew `infisical` CLI, logged in as Joe. No token is passed. |
 
-The key is the Foundry VTT license for account `atjoseph`; licenses are
-viewable at <https://foundryvtt.com/community/atjoseph/licenses>.
+| Secret | Read by | What it's for |
+|---|---|---|
+| `FOUNDRY_VTT_LICENSE_KEY` | `license_key.py` | First-run activation. Needed once; Foundry stores it afterwards. `make foundry-key` puts it on the clipboard without displaying it. |
+| `FOUNDRY_VTT_GRANDMASTER_PW` | `admin_password.py` | The server administrator password. Buys `loginAsUser` for the smoke test and a graceful `POST /join {shutdown}` — both refuse unless an admin password is set. |
+
+The license key is for account `atjoseph`; licenses are viewable at
+<https://foundryvtt.com/community/atjoseph/licenses>.
+
+### The grandmaster password has a second tier
+
+`admin_password.py` resolves **env → Infisical → macOS login keychain**. The keychain
+copy exists because the consumer is a launchd job firing at 04:06 on a Saturday, and
+the Infisical CLI's session is an interactive login that expires — a weekly job that
+stops the first time a token lapses is a trap.
+
+`make foundry-admin-push` copies Infisical's value down into the keychain, so the
+mirror cannot drift from the source. It has no other source: if the secret is not in
+Infisical, set it there. `make foundry-admin-check` prints the length and which tier
+answered, never the value.
 
 ## Make targets
 
@@ -123,6 +139,7 @@ except LicenseKeyUnavailable as exc:
 | File | Purpose |
 |---|---|
 | `license_key.py` | Runtime license-key retrieval. `python -m scripts.foundry.license_key` self-checks. |
+| `admin_password.py` | Runtime grandmaster-password retrieval (env → Infisical → keychain). `python -m scripts.foundry.admin_password` self-checks. |
 | `ring_subject.py` | Build a dynamic-ring **subject** texture from round token art. Read the next section before re-arting any ringed token. |
 
 ## Re-arting a token that has a dynamic ring

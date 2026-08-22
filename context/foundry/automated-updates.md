@@ -114,7 +114,7 @@ most of what follows is undocumented and was established by reading it.
    ```
    Most of the setup API only checks the returned success, so it *appears* to work. But
    `loginAsUser` and `/join {shutdown}` check `session.admin` directly. **This is the whole
-   reason `FOUNDRY_ADMIN_PASSWORD` exists.**
+   reason `FOUNDRY_VTT_GRANDMASTER_PW` exists.**
 
 4. **Launching a world migrates it, in place, irreversibly.** `world.mjs setup()` runs
    `migrateCore()` when the core is newer and `migrateSystem()` when the system is —
@@ -216,7 +216,7 @@ A snapshot is **~2.5 GB** — `Data/modules` is 2.7 GB of premium map art, not t
 * **No user password is stored anywhere.** The smoke test authenticates as server admin over
   127.0.0.1 and uses `loginAs`. The session cookie reaches Node in a 0600 temp file, never
   argv.
-* `FOUNDRY_ADMIN_PASSWORD`: env → Infisical → **macOS login keychain**. The keychain tier
+* `FOUNDRY_VTT_GRANDMASTER_PW`: env → Infisical → **macOS login keychain**. The keychain tier
   exists because the Infisical CLI's session is an interactive login that expires — it was
   already expired on this machine — and because it **hangs on an interactive prompt** when
   it does, so the subprocess uses `stdin=DEVNULL` and a 30 s timeout. A weekly job that

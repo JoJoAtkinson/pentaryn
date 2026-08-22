@@ -41,10 +41,10 @@ import sys
 PROJECT_ID = "74f78c84-b0f0-45f9-8b7a-c3e54b0785b2"
 ENVIRONMENT = "dev"
 SECRET_PATH = "/"
-SECRET_NAME = "FOUNDRY_ADMIN_PASSWORD"
+SECRET_NAME = "FOUNDRY_VTT_GRANDMASTER_PW"
 
 # Login-keychain service name for the unattended fallback copy. An identifier, not a
-# secret. Written alongside Infisical by `make foundry-admin-push`.
+# secret. Refreshed FROM Infisical by `make foundry-admin-push`.
 KEYCHAIN_SERVICE = "pentaryn-foundry-admin"
 
 _AUTH_HINT = (
@@ -97,8 +97,8 @@ def _fetch_from_infisical() -> str:
     if not value:
         raise AdminPasswordUnavailable(
             f"{SECRET_NAME} resolved empty in project {PROJECT_ID} "
-            f"(env={ENVIRONMENT}, path={SECRET_PATH}). Set it with: "
-            "make foundry-admin-push"
+            f"(env={ENVIRONMENT}, path={SECRET_PATH}). Set it in Infisical — this "
+            "repo has no other source."
         )
     return value
 
@@ -115,8 +115,8 @@ def _fetch_from_keychain() -> str | None:
     The login keychain is unlocked for the whole of Joe's GUI session, which is the
     session a LaunchAgent runs in, so ``security find-generic-password`` succeeds
     unattended. Infisical stays the source of truth and the cross-machine store;
-    this is the copy that survives a lapsed token. ``make foundry-admin-push`` writes
-    both, so they cannot drift.
+    this is the copy that survives a lapsed token. ``make foundry-admin-push`` copies
+    Infisical's value down into it, so the mirror cannot drift from the source.
     """
     try:
         proc = subprocess.run(
