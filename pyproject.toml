@@ -15,7 +15,10 @@ dependencies = [
   "requests-cache>=1.3.1",
   # Read directly by scripts/foundry/update/risk.py (foundry/update-policy.yml). It was
   # already present transitively; a re-lock could drop it, so it is declared.
-  "pyyaml>=6.0"
+  "pyyaml>=6.0",
+  # Arrow-key pickers for `make vtt-login` (world / user). Imported lazily and
+  # degraded to a numbered prompt if absent, so a bare checkout still works.
+  "questionary>=2.1.1",
 ]
 
 # Optional extras — not installed by a bare `uv sync`.

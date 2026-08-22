@@ -22,6 +22,7 @@ help:
 	@echo ""
 	@echo "  At the table"
 	@echo "    make vtt-up            Foundry + tunnel, players can connect"
+	@echo "    make login             pick a campaign + user, land in the world logged in"
 	@echo "    make vtt-down          tear both down, snapshot the world"
 	@echo "    make vtt               status: app, tunnel, public reachability"
 	@echo ""
@@ -29,6 +30,7 @@ help:
 	@echo "    make foundry-import    build actors -> stage -> import -> delete -> verify"
 	@echo "    make foundry-ties-sync install the NPC Ties module"
 	@echo "    make foundry-walls-sync install the Wall Autocomplete module"
+	@echo "    make foundry-attunement-sync install the Attunement Slots module"
 	@echo ""
 	@echo "  Housekeeping"
 	@echo "    make foundry-backup    snapshot the world to OneDrive"
@@ -48,7 +50,7 @@ check-context:
 TUNNEL_HOST := vtt.atjoseph.com
 FOUNDRY_URL := http://localhost:30000
 
-.PHONY: vtt-up vtt-down vtt vtt-status vtt-lock-check
+.PHONY: vtt-up vtt-down vtt vtt-status vtt-lock-check vtt-login login
 
 vtt-lock-check:
 	@$(OPS) lock-check
@@ -62,6 +64,12 @@ vtt-up: vtt-lock-check foundry-backup-safe foundry-assets foundry-up tunnel-up
 vtt-down: vtt-lock-check tunnel-down foundry-down
 	@$(MAKE) --no-print-directory foundry-backup REASON=shutdown
 	@echo "  ▸ all down"
+
+# Start the app, launch the world, and land in it as GM — no dropdown, no password.
+# Not folded into vtt-up: that one runs unattended from the updater, where popping a
+# browser window open would be wrong. See scripts/foundry/ops/login.py.
+vtt-login login:
+	@$(OPS) login $(if $(USER_NAME),--user "$(USER_NAME)") $(if $(WORLD),--world "$(WORLD)")
 
 vtt: vtt-status
 vtt-status:
@@ -148,9 +156,12 @@ foundry-cloud:
 # unproved. Copy, never symlink — a stale copy must be a visible failure.
 .PHONY: foundry-ties-check foundry-ties-sync
 .PHONY: foundry-walls-test foundry-walls-sync foundry-walls-wasm foundry-walls-bench
+.PHONY: foundry-attunement-check foundry-attunement-sync
 
 foundry-ties-check:  ; @$(OPS) module-check ties
 foundry-ties-sync:   ; @$(OPS) module-sync ties
+foundry-attunement-check: ; @$(OPS) module-check attunement
+foundry-attunement-sync:  ; @$(OPS) module-sync attunement
 foundry-walls-test:  ; @$(OPS) module-check walls
 foundry-walls-sync:  ; @$(OPS) module-sync walls
 foundry-walls-wasm:  ; @$(OPS) walls-wasm

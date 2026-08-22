@@ -40,6 +40,7 @@ answered, never the value.
 | Target | Does |
 |---|---|
 | `make vtt-up` | Start Foundry **and** the Cloudflare tunnel |
+| `make login` | Pick a campaign and a user from an arrow-key menu, land in the world logged in — no dropdown, no password. Alias: `make vtt-login`. Needs the admin password configured; see [`ops.md`](../../context/foundry/ops.md) §2 |
 | `make vtt-down` | Stop both |
 | `make vtt` | Status of Foundry, tunnel, and public reachability |
 | `make tunnel-setup` | **One-time** — cloudflared login, create tunnel, route DNS |

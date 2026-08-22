@@ -1,0 +1,29 @@
+{
+  "id": "pentaryn-attunement",
+  "title": "Pentaryn Attunement Slots",
+  "description": "Renders attunement as physical slots in the character sheet sidebar, directly under the stats block, so the icons sit beside the AC badge they change. Drag an item from the inventory onto a slot to attune it; drop onto an occupied slot to replace its occupant; right-click a slot to unattune. Slot positions are persisted per-actor, so an item stays where you put it instead of resorting when its neighbours change. dnd5e tracks attunement but enforces nothing — a character can attune seven items and the system will apply every one — so this also warns on every path that can exceed the cap, including macros and MCP scripts, without ever vetoing the write. Exposes game.pentaryn.attunement.",
+  "version": "0.1.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "14"
+  },
+  "authors": [
+    {
+      "name": "Joseph Atkinson"
+    }
+  ],
+  "esmodules": [
+    "attunement.mjs"
+  ],
+  "styles": [
+    "attunement.css"
+  ],
+  "socket": false,
+  "protected": false,
+  "flags": {
+    "pentaryn": {
+      "flagScope": "attunement",
+      "generation": 14
+    }
+  }
+}

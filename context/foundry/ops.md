@@ -33,6 +33,7 @@ Where this one and `foundry-vtt.md` overlap — the actors import pipeline and i
 | I want to… | Do |
 | ---------- | -- |
 | Play tonight | `make vtt-up` → players at <https://vtt.atjoseph.com> → `make vtt-down` after |
+| Get **yourself** into the world, no dropdown, no typed password | `make login` — §2's login box |
 | Know if anything's running | `make vtt` — Foundry, tunnel pid, and public reachability, three separate probes |
 | Add art (tokens/maps/tiles/portraits/audio) | Drop `<kind>-<nn>.zip` in `OneDrive/DnD/foundry/assets/`, then `make foundry-assets` (or just `make vtt-up`) |
 | Snapshot the world right now | `make vtt-down` first, then `make foundry-backup` — it **refuses** while the server is up |
@@ -149,6 +150,72 @@ that calls Python:
 
 `python -m scripts.foundry.ops --help` lists the whole surface; `make help` lists the
 handful worth remembering.
+
+### Getting *into* the world — `make login`
+
+`vtt-up` gets the server and the tunnel running. It does not get **you** in: that was still
+the setup screen, then Launch World, then the user dropdown, then the GM's password.
+
+```
+make login              ↑/↓ pick a campaign, ↑/↓ pick a user, land in the world
+make vtt-login          the same target under its longer name
+make login WORLD=ardenhaven USER_NAME=Kyle     fully specified — no prompts
+```
+
+At a terminal it asks two questions, both pre-answered with the sensible default so enter
+is usually enough:
+
+```
+▸ Which campaign? (↑/↓, enter)
+ » Space Journey  (space-journey, dnd5e, last played 2026-08-22)  ← running
+   ardenhaven  (ardenhaven, dnd5e, last played 2026-08-21)
+▸ Log in as? (↑/↓, enter)
+ » Gamemaster  (Gamemaster)
+   Kristine  (Player)
+   Kyle  (Player)
+```
+
+Picking a *different* campaign from the running one deactivates it first, which disconnects
+everyone — so it asks, and the confirmation names how many players are connected. Passing
+`--world`/`WORLD=` skips the picker; without a terminal (a script, a cron job, a pipe) it
+never prompts at all and stays in whatever is already serving, because silently switching a
+live world is not something an unattended run may do. Logging in as a player is the fast way
+to check what they can actually see.
+
+It is **not** part of `vtt-up`, deliberately: `vtt-up` also runs unattended from the Saturday
+updater, and popping a browser window open there would be wrong. Run both — order doesn't
+matter, `login` starts the app itself if it has to.
+
+**No GM password is stored anywhere.** The one secret involved is the *server admin*
+password (§4), and it never leaves the Python process — the browser is handed a session id,
+not a credential. That works because Foundry's `sessions.loginAsUser` lets an
+admin-authenticated session log in as any user without that user's own password. It is also
+why `make foundry-admin-configure` is a prerequisite: with no admin password set,
+`authenticateAdmin` returns success but never sets `session.admin`, and `loginAs` 403s with
+`USERS.LoginAsGMRequired`.
+
+Three Foundry facts make this work, and the first one is the trap:
+
+| | |
+| - | - |
+| **`POST /auth` cannot authenticate while a world is live** | `auth.mjs`: `const t = !game.world && sessions.authenticateAdmin(...).success`. The `&&` short-circuits, so `authenticateAdmin` is **never called** and the route redirects back to `/auth` — indistinguishable from a wrong password. Don't debug the password; it's the route |
+| **`POST /setup` authenticates unconditionally** | `setup.mjs` runs `authenticateAdmin` *before* its world-active test and only gates the package *actions* on it. So posting the admin password to `/setup` elevates the session and then 403s the action. The 403 is the expected outcome, not an error. Safe only because the body carries neither `shutdown` nor `editWorld` — both are handled above that 403 |
+| **The session cookie ignores ports** | Foundry issues `session=…; HttpOnly; SameSite=Strict`, so no page script can install it. But cookies are scoped to a *host*, not host:port (RFC 6265 §8.5) — so a one-shot local server on an ephemeral port can `Set-Cookie` and 302 the browser into `/game`, and Foundry on :30000 accepts it |
+
+The world list is read from each `world.json` on disk (Foundry's own list comes from a
+`/setup` socket handler that returns `{}` once a world is active). **`lastPlayed` in those
+files is a raw JavaScript `Date.toString()`, not ISO** — sort it as a string and you order by
+weekday name, which on a two-world list looks entirely plausible and is wrong.
+
+The user list comes from `getJoinData` over socket.io's polling transport, because Foundry
+serves exactly one HTTP API route (`/api/status`) and it carries neither users nor the admin
+flag. That is why no GM id is pinned in config — rebuild the world and the login still finds
+the Gamemaster — and it is also how `FoundryAdmin.authenticate()` verifies an admin handshake
+while a world is up (`isAdmin` in the same payload).
+
+Rationale in full: [`scripts/foundry/ops/login.py`](../../scripts/foundry/ops/login.py) for
+the browser handoff, [`scripts/foundry/update/admin.py`](../../scripts/foundry/update/admin.py)
+for the Foundry client. Security review: §6.
 
 ---
 
@@ -402,6 +469,45 @@ interstitial, a 5xx: none of them show what a player's browser would get.
 
 Full Gate 2 detail: [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) Stage 2.
 
+### 🔴 The edge blocks four paths — and `/join` is not one of them
+
+`foundry/cloudflared/config.yml` 403s `^/(setup|auth|update|license)`, and its header claims
+the result is that "administration is reachable only from the local port, by construction."
+**That is not quite true, and the gap is in `/join`.** Measured through the live tunnel on
+2026-08-22:
+
+```
+POST https://vtt.atjoseph.com/setup                        → 403   (blocked at the edge)
+POST https://vtt.atjoseph.com/join {action: "shutdown",
+                                    adminPassword: "wrong"} → 401  ERROR.InvalidAdminCredentials
+```
+
+That 401 came from Foundry, not Cloudflare — the request reached the server. `join.mjs`'s
+`shutdown` branch calls `sessions.authenticateAdmin` with no world-active guard, so the admin
+password is **guessable from the internet**, and a correct guess both deactivates the world
+and leaves that remote session admin-flagged (which then unlocks `loginAs` on the same route).
+Foundry ships no rate limiting — `express.mjs` and `sessions.mjs` contain no such thing.
+
+This predates `vtt-login` and is unrelated to it; `vtt-login` uses `/setup` over loopback.
+What holds the line today is password entropy: 22 characters (`make foundry-admin-check`
+prints the length, never the value), which is not brute-forceable. The ingress `path` is a
+path regex and cannot see a POST body, so this cannot be fixed in `config.yml` — the options
+are keeping the password long, or a Cloudflare rate-limiting rule on `/join`.
+
+### What `vtt-login` does and does not expose
+
+Reviewed 2026-08-22. Nothing it adds is reachable from outside:
+
+- The handoff server binds **loopback only** on an ephemeral port, answers **one** request at
+  a 128-bit nonce path, and is gone within 90 s. The tunnel never routes it.
+- The admin password goes from Infisical/keychain straight into one loopback POST body. Never
+  argv, never a file, never a log, never the browser.
+- The browser receives a session id — and that session is **admin-flagged**, which a human
+  logging in through the `/join` dropdown is not. It is `HttpOnly`, `SameSite=Strict`, scoped
+  to `localhost`, and so can never be sent to `vtt.atjoseph.com`. Foundry offers no way to
+  drop the flag while a world is active (`adminLogout` is behind the same `!game.world` gate),
+  so this is inherent, not a shortcut. It expires with Foundry's own 24 h cookie lifetime.
+
 ---
 
 ## 7. Driving the world — MCP bridge
@@ -573,6 +679,7 @@ has three levels. Anything that walks scenes should read `levels[]`, not `backgr
 | ------ | -------------------- |
 | **Syncing a live world silently corrupts it** | LevelDB single-writer `LOCK` means no side detects the other. Nothing errors. The world fails to open **weeks later**. This is why restore is manual and why only stopped databases are copied |
 | **`Data/` is public with no auth while the tunnel is up** | `.json` files are served. `make foundry-clean` is a required step, not tidying |
+| **`POST /auth` "rejects" a correct admin password while a world is up** | It never checked it. `auth.mjs` short-circuits on `!game.world`. Use `/setup`, which authenticates unconditionally — §2's login box |
 | **A down tunnel makes every 404 check pass** | Always probe the site root first. `make foundry-verify` does; a hand-rolled `curl` won't |
 | **Module install can't be driven from inside the world** | Not a missing tool — a Foundry architecture boundary. `foundry.applications.setup` is `{}` inside a world. The filesystem drop is scriptable from the shell; the Setup screen needs a human |
 | **A dropped module is invisible until restart + enable** | The `Data/modules` scan runs at server startup, and enablement is per-world (`core.moduleConfiguration` / Manage Modules). Fails by doing nothing at all |

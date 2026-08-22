@@ -9,11 +9,12 @@ verification must refuse to pass on anything except a positive 404.
 from __future__ import annotations
 
 import signal
+import time
 import sys
 
 import pytest
 
-from scripts.foundry.ops import cli, modules, pipeline, service
+from scripts.foundry.ops import cli, login, modules, pipeline, service
 from scripts.foundry.ops import config as cfg
 
 
@@ -183,6 +184,7 @@ def test_every_subcommand_routes(monkeypatch):
         monkeypatch.setattr(cli.pipeline, fn, lambda *a, **k: 0)
     for fn in ("check", "sync", "walls_wasm", "walls_bench"):
         monkeypatch.setattr(cli.modules, fn, lambda *a, **k: 0)
+    monkeypatch.setattr(cli.login_mod, "login", lambda *a, **k: 0)
 
     for name in names:
         argv = [name]
@@ -330,3 +332,309 @@ def test_declared_modules_exist_on_disk():
 @pytest.mark.skipif(sys.platform != "darwin", reason="the table is a Mac")
 def test_foundry_data_is_under_application_support():
     assert "Application Support/FoundryVTT/Data" in str(cfg.FOUNDRY_DATA)
+
+
+# ── vtt-login: the parts that can be tested without a live server ─────────────
+#
+# The wire protocol is proved by running it (see context/foundry/ops.md §2). What is
+# pinned here is the logic that would fail silently or destructively: picking the wrong
+# world or user, and switching worlds out from under connected players.
+
+def test_pick_user_prefers_a_gamemaster_over_document_order():
+    users = [
+        {"_id": "p1", "name": "Kristine", "role": 2},
+        {"_id": "gm", "name": "Gamemaster", "role": 4},
+        {"_id": "p2", "name": "Kyle", "role": 2},
+    ]
+    assert login._pick_user(users, None, prompt=False)["_id"] == "gm"
+
+
+def test_pick_user_honours_an_explicit_name_case_insensitively():
+    users = [{"_id": "gm", "name": "Gamemaster", "role": 4},
+             {"_id": "p2", "name": "Kyle", "role": 2}]
+    assert login._pick_user(users, "kyle", prompt=False)["_id"] == "p2"
+
+
+def test_pick_user_names_the_alternatives_when_the_name_is_wrong():
+    users = [{"_id": "gm", "name": "Gamemaster", "role": 4}]
+    with pytest.raises(RuntimeError, match="Gamemaster"):
+        login._pick_user(users, "Nobody", prompt=False)
+
+
+def test_pick_user_refuses_a_world_with_no_gamemaster_when_it_cannot_ask():
+    with pytest.raises(RuntimeError, match="no Gamemaster"):
+        login._pick_user([{"_id": "p", "name": "Kyle", "role": 2}], None, prompt=False)
+
+
+def test_pick_user_menu_defaults_to_the_gamemaster(monkeypatch):
+    """Highest role first, GM pre-selected — pressing enter must never quietly log you
+    in as a player with a player's view of the world."""
+    seen = {}
+
+    def fake_choose(prompt, options, default_index=0):
+        seen.update(options=options, default_index=default_index)
+        return options[default_index][1]
+
+    monkeypatch.setattr(login, "_choose", fake_choose)
+    users = [{"_id": "p2", "name": "Kyle", "role": 2},
+             {"_id": "gm", "name": "Gamemaster", "role": 4},
+             {"_id": "p1", "name": "Kristine", "role": 2}]
+    assert login._pick_user(users, None, prompt=True)["_id"] == "gm"
+    assert seen["options"][seen["default_index"]][1]["_id"] == "gm"
+
+
+def test_pick_world_rejects_a_name_that_is_not_on_disk(monkeypatch):
+    monkeypatch.setattr(login, "worlds_on_disk",
+                        lambda: [{"id": "space-journey", "title": "SJ", "system": "dnd5e",
+                                  "played_label": ""}])
+    with pytest.raises(RuntimeError, match="no world named"):
+        login._pick_world(None, "typo", prompt=False)
+
+
+def test_pick_world_without_a_terminal_never_switches_the_live_world(monkeypatch):
+    """A non-interactive run must land in whatever is already serving. Silently
+    switching would deactivate a world with players on it."""
+    monkeypatch.setattr(login, "worlds_on_disk", lambda: [
+        {"id": "ardenhaven", "title": "A", "system": "dnd5e", "played_label": "2026-01-01"},
+        {"id": "space-journey", "title": "SJ", "system": "dnd5e", "played_label": "2026-08-22"},
+    ])
+    assert login._pick_world("ardenhaven", None, prompt=False) == "ardenhaven"
+
+
+def test_pick_world_menu_defaults_to_the_running_world(monkeypatch):
+    seen = {}
+
+    def fake_choose(prompt, options, default_index=0):
+        seen.update(options=options, default_index=default_index)
+        return options[default_index][1]
+
+    monkeypatch.setattr(login, "_choose", fake_choose)
+    monkeypatch.setattr(login, "worlds_on_disk", lambda: [
+        {"id": "space-journey", "title": "SJ", "system": "dnd5e", "played_label": "2026-08-22"},
+        {"id": "ardenhaven", "title": "A", "system": "dnd5e", "played_label": "2026-01-01"},
+    ])
+    assert login._pick_world("ardenhaven", None, prompt=True) == "ardenhaven"
+    assert "running" in seen["options"][seen["default_index"]][0]
+
+
+class _FakeStatus:
+    def __init__(self, active, world, users=0):
+        self.active, self.world, self.users = active, world, users
+
+
+class _FakeAdmin:
+    def __init__(self, status):
+        self._status = status
+        self.launched = []
+        self.deactivated = False
+
+    def status(self):
+        return self._status
+
+    def deactivate_world(self):
+        self.deactivated = True
+        return True
+
+    def launch_world(self, world):
+        self.launched.append(world)
+
+    def wait_for_world(self, world, timeout=0):
+        pass
+
+
+def test_ensure_world_does_nothing_when_the_right_world_is_already_up():
+    fa = _FakeAdmin(_FakeStatus(True, "space-journey"))
+    login._ensure_world(fa, "space-journey", prompt=False)
+    assert not fa.deactivated and not fa.launched
+
+
+def test_ensure_world_refuses_to_drop_connected_players_unattended():
+    """Switching worlds disconnects everyone. Without a terminal to confirm at, that
+    must be an error rather than something that just happens."""
+    fa = _FakeAdmin(_FakeStatus(True, "ardenhaven", users=3))
+    with pytest.raises(RuntimeError, match="3 user"):
+        login._ensure_world(fa, "space-journey", prompt=False)
+    assert not fa.deactivated
+
+
+def test_ensure_world_switches_when_confirmed(monkeypatch):
+    monkeypatch.setattr(login, "_choose", lambda *a, **k: True)
+    monkeypatch.setattr(login.time, "sleep", lambda *_: None)
+    fa = _FakeAdmin(_FakeStatus(True, "ardenhaven", users=2))
+    login._ensure_world(fa, "space-journey", prompt=True)
+    assert fa.deactivated and fa.launched == ["space-journey"]
+
+
+def test_ensure_world_leaves_the_live_world_alone_when_declined(monkeypatch):
+    monkeypatch.setattr(login, "_choose", lambda *a, **k: False)
+    fa = _FakeAdmin(_FakeStatus(True, "ardenhaven", users=2))
+    with pytest.raises(RuntimeError, match="staying in"):
+        login._ensure_world(fa, "space-journey", prompt=True)
+    assert not fa.deactivated and not fa.launched
+
+
+def test_ensure_world_launches_when_nothing_is_running():
+    fa = _FakeAdmin(_FakeStatus(False, None))
+    login._ensure_world(fa, "space-journey", prompt=False)
+    assert not fa.deactivated and fa.launched == ["space-journey"]
+
+
+def test_handoff_is_single_use_and_nonce_guarded():
+    """One request, at the nonce path only, and the port is closed afterwards."""
+    import urllib.error
+    import urllib.request
+
+    urls = []
+    real_run = login.subprocess.run
+
+    def fake_run(argv, **kw):
+        urls.append(argv[1])
+        return real_run(["true"], **kw)
+
+    login.subprocess.run = fake_run
+    try:
+        import threading
+        result = {}
+        t = threading.Thread(
+            target=lambda: result.update(
+                ok=login._handoff("sess-id", "localhost", "http://localhost:30000/game", True)),
+            daemon=True)
+        t.start()
+        for _ in range(100):
+            if urls:
+                break
+            time.sleep(0.05)
+        assert urls, "the handoff never opened a URL"
+        url = urls[0]
+
+        # A guessed path on the right port gets nothing.
+        base = url.rsplit("/", 1)[0]
+        try:
+            urllib.request.urlopen(f"{base}/wrong-nonce", timeout=5)
+            raise AssertionError("a wrong nonce was served")
+        except urllib.error.HTTPError as exc:
+            assert exc.code == 404
+
+        class NoRedirect(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, *a, **k):
+                return None
+
+        opener = urllib.request.build_opener(NoRedirect)
+        try:
+            opener.open(url, timeout=5)
+            raise AssertionError("expected a redirect, not a 200")
+        except urllib.error.HTTPError as exc:
+            assert exc.code == 302
+            assert exc.headers["Location"] == "http://localhost:30000/game"
+            cookie = exc.headers["Set-Cookie"]
+            assert cookie.startswith("session=sess-id;")
+            assert "HttpOnly" in cookie and "SameSite=Strict" in cookie
+
+        # A replay either meets the spent-ticket 410 or an already-closed socket,
+        # depending on whether it lands before the main thread tears the server down.
+        # The property under test is that it is never handed the cookie again.
+        try:
+            replay = opener.open(url, timeout=5).status
+        except urllib.error.HTTPError as exc:
+            replay = exc.code
+        except OSError:
+            replay = "closed"
+
+        t.join(timeout=10)
+        assert not t.is_alive(), "the handoff server did not shut down"
+        assert result["ok"] is True
+        assert replay in (410, "closed"), f"the ticket was replayable: {replay}"
+
+        # The port is released — a second visit cannot reach it.
+        with pytest.raises(Exception):
+            urllib.request.urlopen(url, timeout=3)
+    finally:
+        login.subprocess.run = real_run
+
+
+# ── FoundryAdmin.authenticate(): the route depends on the world state ─────────
+#
+# `/auth` short-circuits on `!game.world` and never checks the password while a world
+# is live, then redirects exactly as it does for a rejection. Sending an admin
+# handshake there with a world up produced "the password did not match" against a
+# correct password — a diagnosis that sends you to re-sync a secret that was fine.
+
+class _Recorder:
+    """A requests.Session stand-in that records posts and replays canned responses."""
+
+    def __init__(self, is_admin=True):
+        self.posts = []
+        self._is_admin = is_admin
+        self.cookies = {}
+
+    def post(self, url, data=None, json=None, **kw):
+        self.posts.append((url, data or json or {}))
+
+        class R:
+            status_code = 302
+            headers = {"Location": "/setup"}
+        return R()
+
+    def get(self, url, **kw):
+        raise AssertionError(f"unexpected GET {url}")
+
+
+def _admin_with(session, active):
+    from scripts.foundry.update.admin import FoundryAdmin
+
+    fa = FoundryAdmin(base_url="http://x", admin_password="pw")
+    fa.session = session
+    fa.world_active = lambda: active
+    fa.join_data = lambda: {"isAdmin": session._is_admin}
+    return fa
+
+
+def test_authenticate_uses_setup_when_a_world_is_active():
+    session = _Recorder(is_admin=True)
+    _admin_with(session, active=True).authenticate()
+    urls = [u for u, _ in session.posts]
+    assert urls == ["http://x/setup"], "must not touch /auth while a world is live"
+    body = session.posts[0][1]
+    assert body["adminPassword"] == "pw"
+    # Both keys are handled ABOVE setup.mjs's 403 and would deactivate or mutate the
+    # live world rather than merely flagging the session.
+    assert "shutdown" not in body and body["action"] != "editWorld"
+
+
+def test_authenticate_uses_auth_when_no_world_is_active():
+    session = _Recorder()
+    _admin_with(session, active=False).authenticate()
+    assert [u for u, _ in session.posts] == ["http://x/auth"]
+
+
+def test_authenticate_fails_when_foundry_reports_the_session_is_not_admin():
+    from scripts.foundry.update.admin import FoundryError
+
+    session = _Recorder(is_admin=False)
+    with pytest.raises(FoundryError, match="not admin"):
+        _admin_with(session, active=True).authenticate()
+
+
+def test_authenticate_is_idempotent():
+    session = _Recorder()
+    fa = _admin_with(session, active=True)
+    fa.authenticate()
+    fa.authenticate()
+    assert len(session.posts) == 1
+
+
+def test_world_ordering_parses_foundrys_javascript_date():
+    """`lastPlayed` is a JS Date.toString(), not ISO. Sorted as a string it orders by
+    weekday name — Friday before Saturday before Thursday — which on a short list looks
+    plausible and is wrong."""
+    fri = "Fri Aug 21 2026 18:58:27 GMT-0400 (Eastern Daylight Time)"
+    sat = "Sat Aug 22 2026 13:37:32 GMT-0400 (Eastern Daylight Time)"
+    thu = "Thu Aug 27 2026 09:00:00 GMT-0400 (Eastern Daylight Time)"
+    assert login._last_played(sat) > login._last_played(fri)
+    assert login._last_played(thu) > login._last_played(sat), "string sort would fail here"
+    assert sorted([thu, sat, fri]) == [fri, sat, thu], "confirming the naive sort is wrong"
+
+
+def test_world_ordering_survives_a_missing_or_unparseable_date():
+    assert login._last_played("") == login._last_played("not a date")
+    assert login._last_played("").year == 1, "unknown dates must sort last, not raise"

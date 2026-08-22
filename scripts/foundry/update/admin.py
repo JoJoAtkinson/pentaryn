@@ -20,7 +20,14 @@ Three facts about that API shape this whole file:
    Since a OneDrive backup needs the server fully stopped anyway, we quit the app
    instead: exactly what ``make vtt-down`` has done safely every session.
 
-3. **Several actions are fire-and-forget.** ``createSnapshot``, ``restoreSnapshot``,
+3. **The world-active gate gets applied to the *actions*, not to the admin
+   handshake.** ``setup.mjs`` runs ``sessions.authenticateAdmin`` before it computes
+   ``c``, so ``/setup`` is the one route that can establish an admin session at any
+   time — which is why ``authenticate()`` uses it whenever a world is up. ``/auth``
+   cannot: it short-circuits on ``!game.world`` and never checks the password at all,
+   while reporting the same redirect it uses for a rejection.
+
+4. **Several actions are fire-and-forget.** ``createSnapshot``, ``restoreSnapshot``,
    ``restoreBackup`` and ``launchWorld`` return ``{}`` at once and emit progress (and
    errors) only over socket.io. Callers must poll for the effect — hence
    ``wait_for_world``, ``wait_for_snapshot`` and ``wait_for_package_version``.
@@ -37,6 +44,7 @@ directly: ``loginAsUser`` (the smoke test's GM login) and ``POST /join {shutdown
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import time
 from dataclasses import dataclass
@@ -186,13 +194,54 @@ class FoundryAdmin:
     # -- auth ---------------------------------------------------------------
 
     def authenticate(self) -> None:
-        """Establish an admin session. Sends ``adminPassword`` only if we were given
-        one — in the body, never in argv, and never logged."""
+        """Establish an admin session, whatever state the server is in.
+
+        Two routes, because ``/auth`` **cannot authenticate while a world is live** —
+        ``auth.mjs`` reads::
+
+            const t = !game.world && sessions.authenticateAdmin(e,s).success;
+
+        The ``&&`` short-circuits, so with a world up ``authenticateAdmin`` is never
+        called and the route redirects back to ``/auth``: identical to a rejected
+        password. This used to raise "the one supplied did not match" against a
+        perfectly good password — a diagnosis that sends you to re-sync a secret that
+        was never wrong. The updater only escaped it by always authenticating while
+        parked at the setup screen.
+
+        With a world active, ``/setup`` is the route that works: ``setup.mjs`` runs
+        ``authenticateAdmin`` *before* its world-active test and gates only the package
+        actions on the result, so the flag gets set and the action is then refused with
+        a 403 we expect and ignore. The body must carry neither ``shutdown`` nor
+        ``editWorld`` — both are handled above that 403 and would deactivate or mutate
+        the live world. ``isAdmin`` in the ``getJoinData`` payload is Foundry's own
+        report of the resulting flag, so the check is authoritative rather than
+        inferred from a status code.
+
+        Sends ``adminPassword`` only if we were given one — in the body, never in argv,
+        and never logged.
+        """
         if self._authenticated:
             return
         body = {}
         if self._admin_password:
             body["adminPassword"] = self._admin_password
+
+        if self.world_active():
+            self.session.post(
+                f"{self.base_url}/setup",
+                json={"action": "listBackups", **body},
+                timeout=self.timeout, allow_redirects=False,
+            )
+            if self._admin_password and not self.join_data().get("isAdmin"):
+                raise FoundryError(
+                    "admin authentication failed — Foundry reports the session is not "
+                    "admin after /setup accepted the password field. The configured "
+                    "password (Config/admin.txt) and the one supplied differ. "
+                    "Re-sync it with: make foundry-admin-push"
+                )
+            self._authenticated = True
+            return
+
         r = self.session.post(f"{self.base_url}/auth", data=body,
                               timeout=self.timeout, allow_redirects=False)
         # /auth redirects to /setup on success, back to /auth on failure.
@@ -204,6 +253,40 @@ class FoundryAdmin:
                 "Re-sync it with: make foundry-admin-push"
             )
         self._authenticated = True
+
+    def join_data(self) -> dict:
+        """``getJoinData`` over socket.io's polling transport.
+
+        Foundry serves exactly one HTTP API route — ``/api/status`` (``api.mjs``) — and
+        it carries no users and no admin flag. Everything the ``/join`` page renders
+        arrives over the socket instead, so a script that wants the user list (to find
+        the GM without pinning an id) or ``isAdmin`` (to verify an admin handshake) has
+        to speak socket.io. The polling transport is plain HTTP: handshake, connect to
+        the default namespace, emit, read the ack.
+
+        Returns ``{}`` when no world is active — ``join.mjs``'s handler short-circuits
+        on ``!game.world``.
+        """
+        q = {"EIO": "4", "transport": "polling"}
+        r = self.session.get(f"{self.base_url}/socket.io/", params=q, timeout=self.timeout)
+        r.raise_for_status()
+        # Engine.IO frames are a single-digit packet type followed by the payload.
+        sid = json.loads(r.text[1:])["sid"]
+
+        q_sid = {**q, "sid": sid}
+        self.session.post(f"{self.base_url}/socket.io/", params=q_sid, data="40",
+                          timeout=self.timeout)
+        self.session.get(f"{self.base_url}/socket.io/", params=q_sid,
+                         timeout=self.timeout)                       # CONNECT ack
+        self.session.post(f"{self.base_url}/socket.io/", params=q_sid,
+                          data='421["getJoinData"]', timeout=self.timeout)
+        r = self.session.get(f"{self.base_url}/socket.io/", params=q_sid,
+                             timeout=self.timeout)
+        r.raise_for_status()
+        m = re.search(r"431(\[.*)", r.text, re.S)
+        if not m:
+            raise FoundryError(f"getJoinData returned no ack payload: {r.text[:200]!r}")
+        return json.loads(m.group(1))[0]
 
     def reauthenticate(self) -> None:
         """Force a fresh admin handshake.

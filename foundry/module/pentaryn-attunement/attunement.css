@@ -1,0 +1,161 @@
+/*
+ * Pentaryn Attunement Slots
+ *
+ * Deliberately borrows dnd5e2's own sidebar vocabulary rather than inventing a
+ * look: the header copies `.favorites > h3`, empty slots copy the favourites
+ * drop region, and the remove button copies `.deletion-control`. The strip is a
+ * sibling of `.favorites` and should read as one.
+ *
+ * Icons are 44px against favourites' 32px. That gap is the point — the attuned
+ * items are the live ones, and they should out-weigh the bookmarks below them.
+ * Three across plus gaps comes to ~156px inside a 230px column.
+ */
+
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────── */
+
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement > h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+  border-bottom: 1px solid currentcolor;
+  color: var(--dnd5e-color-gold, #9f9275);
+  font-size: var(--font-size-13);
+}
+
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement > h3 .count {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement > h3 .separator {
+  opacity: 0.5;
+  margin: 0 1px;
+}
+
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement.over-cap > h3 .count {
+  color: var(--dnd5e-color-maroon, #a91409);
+  font-weight: bold;
+}
+
+/* ── Slots ────────────────────────────────────────────────────────────────── */
+
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement .slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+}
+
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement .attunement-slot {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 4px;
+  transition: box-shadow 150ms ease, opacity 150ms ease;
+}
+
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement .attunement-slot figure {
+  width: 44px;
+  height: 44px;
+  position: relative;
+  margin: 0;
+}
+
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement .attunement-slot img {
+  width: 44px;
+  height: 44px;
+  object-fit: cover;
+  cursor: var(--cursor-pointer);
+}
+
+/*
+ * Constant geometry is what makes attuning legible: the outline is in the same
+ * place before and after, so only the fill changes. Matches the favourites drop
+ * region rather than the death-save pips — pips are 12px buttons and would read
+ * as clickable toggles at this size.
+ */
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement .attunement-slot.empty {
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--drop-region-border-color, currentcolor);
+  color: var(--drop-region-text-color, currentcolor);
+  opacity: 0.25;
+}
+
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement .attunement-slot.empty .ghost {
+  font-size: var(--font-size-16);
+  line-height: 1;
+}
+
+/* Attuned, but equipped-state or item type means the effects are doing nothing.
+   Same tertiary-text convention the system uses for suppressed favourites. */
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement .attunement-slot.suppressed img {
+  opacity: 0.45;
+  filter: grayscale(0.8);
+}
+
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement .attunement-slot .suppressed-badge {
+  position: absolute;
+  inset: auto 2px 2px auto;
+  font-size: var(--font-size-11);
+  color: var(--color-text-tertiary, #7a7971);
+  text-shadow: 0 0 3px var(--color-shadow-dark, #000);
+  pointer-events: none;
+}
+
+/* Past attunement.max — these exist only because the system let them. */
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement .attunement-slot.overflow {
+  box-shadow: 0 0 0 2px var(--dnd5e-color-maroon, #a91409);
+}
+
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement .attunement-slot.dragover {
+  box-shadow: 0 0 0 2px var(--dnd5e-color-gold, #9f9275);
+  opacity: 1;
+}
+
+/* ── Remove control — mirrors the favourites deletion-control ─────────────── */
+
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement .deletion-control {
+  position: absolute;
+  inset: auto auto 2px 2px;
+  opacity: 0;
+  transition: opacity 150ms ease;
+  color: var(--color-text-primary, #f7f3e8);
+  text-shadow: 0 0 4px var(--color-shadow-dark, #000);
+  cursor: var(--cursor-pointer);
+}
+
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement .attunement-slot:hover .deletion-control,
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement .deletion-control:focus-visible {
+  opacity: 1;
+}
+
+/* ── Over-cap note ────────────────────────────────────────────────────────── */
+
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement .over-cap-note {
+  margin: 0;
+  font-size: var(--font-size-11);
+  color: var(--dnd5e-color-maroon, #a91409);
+  text-align: center;
+}
+
+/* ── The system's own counter, when over cap ──────────────────────────────── */
+/* The fallback signal for anyone with the sidebar collapsed, and the only
+   signal on an NPC sheet. */
+
+.dnd5e2.sheet.actor .attunement.pentaryn-over-cap {
+  color: var(--dnd5e-color-maroon, #a91409);
+  font-weight: bold;
+}
+
+.dnd5e2.sheet.actor .attunement.pentaryn-over-cap .value {
+  text-shadow: 0 0 6px var(--dnd5e-color-maroon, #a91409);
+}

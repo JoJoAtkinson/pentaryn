@@ -111,5 +111,20 @@ MODULES = {
             "  await game.pentaryn.walls.preview()",
         ),
     ),
+    "attunement": ModuleSpec(
+        "pentaryn-attunement",
+        # node-test rather than parse: importing the module is itself a parse check,
+        # and the slot reconciliation has edge cases (stale flags, deleted items,
+        # over-cap) that are tedious to stage in a browser and must never throw —
+        # computeSlots runs inside a render hook.
+        check="node-test",
+        after_sync=(
+            "Enable 'Pentaryn Attunement Slots' in Manage Modules, then reload.",
+            "The strip renders in the character sheet sidebar, under the stats card.",
+            "Drag an inventory item onto a slot to attune; drop onto a filled slot to",
+            "replace it; right-click a slot (or its ✕) to unattune.",
+            "Audit an actor:  game.pentaryn.attunement.report('Ballad Quinn')",
+        ),
+    ),
     "importer": ModuleSpec("pentaryn-importer", check="none"),
 }

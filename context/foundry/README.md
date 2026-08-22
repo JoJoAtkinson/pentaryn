@@ -42,6 +42,7 @@ Use the 2024 compendium packs: `dnd5e.spells24`, `dnd5e.equipment24`, `dnd5e.fea
 | Who-knows-who, social graph, possession marks — at the table | [`../../foundry/module/pentaryn-ties/README.md`](../../foundry/module/pentaryn-ties/README.md) |
 | One-click Sneak Attack, off-hand damage with no ability mod | [`attack-activities.md`](attack-activities.md) |
 | Completing hand-drawn walls | [`../../foundry/module/pentaryn-walls/README.md`](../../foundry/module/pentaryn-walls/README.md) |
+| Attunement — the sidebar slots, over-cap warnings, "why is this item doing nothing" | [`../../foundry/module/pentaryn-attunement/README.md`](../../foundry/module/pentaryn-attunement/README.md) |
 | Finding one battlemap out of ~1,750 | [`map-library.md`](map-library.md) |
 | The unattended Saturday updater — before touching it | [`automated-updates.md`](automated-updates.md) |
 | Running the updater as an operator — commands, setup, retention | [`../../automation/README.md`](../../automation/README.md) |
@@ -98,5 +99,5 @@ keep showing the *host's* own relationships. See [`../plans/foundry-npc-ties.md`
   `/license` are 403 through `vtt.atjoseph.com`**, admin is localhost-only
 - `foundry/CONTRACT.md` — the `actors.json` generator ⇄ importer contract
 - `foundry/assets-manifest.json`, `foundry/roll20-maps.json`
-- `foundry/module/` — five in-house modules: `pentaryn-ties`, `-walls`, `-importer`,
-  `-pings`, `-dropbin`
+- `foundry/module/` — six in-house modules: `pentaryn-ties`, `-walls`, `-importer`,
+  `-pings`, `-dropbin`, `-attunement`

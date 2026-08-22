@@ -128,6 +128,14 @@ most of what follows is undocumented and was established by reading it.
    world is active (`setup.mjs`: `c = !game.world && adminOk`). The run has to park the
    server at the setup screen first.
 
+   But the **admin handshake is not** — `setup.mjs` runs `sessions.authenticateAdmin`
+   *before* it computes `c`, and gates only the action on the result. So `/setup` is the
+   one route that can establish an admin session at any time. `/auth` cannot: it reads
+   `!game.world && sessions.authenticateAdmin(...)`, so with a world up the `&&`
+   short-circuits and the password is **never checked** — and it then redirects exactly
+   as it does for a rejection. `FoundryAdmin.authenticate()` picks the route by world
+   state for this reason.
+
 2. **`POST /setup {shutdown:true}` does not work from a script.** It calls
    `world.deactivate(req, {asAdmin: c})` with that same always-false `c`, and `world.mjs`
    bails to `{redirect:"/join"}` because a scripted session has no `req.user`. Use
@@ -291,6 +299,18 @@ Every one of these was invisible to unit tests and would have silently broken pr
    *after* `/api/status` reports inactive (otherwise the next launch logs
    `LEVEL_DATABASE_NOT_OPEN` and the error-log check blames the update).
 
+5. **`/auth` reports a correct admin password as wrong whenever a world is live.**
+   Not a wrong password and not a lapsed secret — the route short-circuits on
+   `!game.world` and never calls `authenticateAdmin`, then redirects back to `/auth`,
+   which is byte-identical to how it rejects. The updater escaped this only because it
+   always authenticated while parked at the setup screen; any path that authenticated
+   after a launch — `run_browser`'s `fa.authenticate()` on a fresh client, `_post`'s
+   403 retry via `reauthenticate()` — got "the one supplied did not match" and sent you
+   off to re-sync a secret that was fine. `authenticate()` now uses `/setup` when a
+   world is active and verifies the result against `isAdmin` in the `getJoinData`
+   socket payload, which is Foundry's own report of the flag rather than a guess from a
+   status code. Found 2026-08-22 while building `make login`.
+
 Also fixed: the entrypoint log recorded only `outcome: recovered` — never *what* was
 rolled back, from which snapshot, or whether the rollback itself worked. It raised
 exactly the question it could not answer, and you had to open the JSON run record to
@@ -348,6 +368,7 @@ would otherwise have to go and rediscover.
 | Foundry core | **14.367** (updated by the updater itself, from 14.365) |
 | dnd5e | 5.3.3 |
 | Worlds | `space-journey` and `ardenhaven`, both migrated to 14.367, both smoke-clean |
+| Browser smoke | Re-verified live 2026-08-22 against `space-journey`: logged in as Gamemaster, `gameReady` and `canvasReady` true, scene "1. The Library (The Parley)", 28 modules active, zero client errors. It does get past the join screen and does exercise the world |
 | Server | **left down** — that is the new intended end state; `make vtt-up` to play |
 | Tunnel | down, with the ingress rules in place (`/setup` etc. 403 publicly) |
 | Git | everything merged and pushed to **`main`**; the working branch `foundry-vtt-pipeline` points at the same commit. HEAD is on `main`, so future auto-update reports commit there |

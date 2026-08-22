@@ -19,7 +19,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from . import modules, pipeline, service
+from . import config as cfg, login as login_mod, modules, pipeline, service
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -34,6 +34,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     # ── service ──
     add("up", "Start the Foundry application and wait for it to answer.")
+    lg = add("login", "Pick a campaign and a user, and open the browser inside the world.")
+    lg.add_argument("--user", help="log in as this user; skips the picker")
+    lg.add_argument("--world", help="world to end up in; skips the picker. Switching away "
+                                    f"from a running world deactivates it (default: {cfg.WORLD_NAME})")
+    lg.add_argument("--no-open", action="store_true",
+                    help="print the handoff URL instead of opening the default browser")
+    lg.add_argument("--no-prompt", action="store_true",
+                    help="never show a picker; take the defaults (for scripts)")
     add("down", "Quit Foundry gracefully.")
     add("status", "Foundry, tunnel, and what players actually get.")
     add("lock-check", "Fail if an auto-update run holds the lock.")
@@ -52,7 +60,9 @@ def build_parser() -> argparse.ArgumentParser:
     add("verify", "Assert the staged actors.json is not served publicly.")
 
     # ── modules ──
-    names = sorted(k for k in ("ties", "walls"))
+    # Derived, not hardcoded: adding a ModuleSpec is enough to make it syncable.
+    # "importer" is excluded because the actor pipeline stages it, not module-sync.
+    names = sorted(k for k in cfg.MODULES if k != "importer")
     mcheck = add("module-check", "Prove a module's sources before it can reach Foundry.")
     mcheck.add_argument("module", choices=names)
     msync = add("module-sync", "Check, then copy a module into Foundry's Data/modules.")
@@ -69,6 +79,10 @@ def main(argv: list[str] | None = None) -> int:
     c = args.command
 
     if c == "up":            return service.up()
+    if c == "login":         return login_mod.login(
+                                 user=args.user, world=args.world,
+                                 open_browser=not args.no_open,
+                                 prompt=False if args.no_prompt else None)
     if c == "down":          return service.down()
     if c == "status":        return service.status()
     if c == "lock-check":    return service.lock_check()
