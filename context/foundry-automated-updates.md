@@ -262,22 +262,74 @@ Every one of these was invisible to unit tests and would have silently broken pr
    *after* `/api/status` reports inactive (otherwise the next launch logs
    `LEVEL_DATABASE_NOT_OPEN` and the error-log check blames the update).
 
+Also fixed: the entrypoint log recorded only `outcome: recovered` — never *what* was
+rolled back, from which snapshot, or whether the rollback itself worked. It raised
+exactly the question it could not answer, and you had to open the JSON run record to
+find out a core update had been reverted. `cli.cmd_run` now logs applied and failed
+packages and every verified recovery step.
+
 Also fixed: `restore_service` built an **unauthenticated** client, so it could not relaunch
 the world once an admin password existed — a run genuinely left the table down before this
 was caught. Anything that acts now goes through `apply._admin_client()`.
 
 ### Smoke baselines — why a broken world does not veto updates
 
-`ardenhaven` throws `Cannot add property walls, object is not extensible` on every load,
-independently of any update. Without special handling that one world would roll back every
-good update forever. So `.state/vtt-smoke-baseline.json` records each world's client-error
-fingerprint (digits masked, since line/column offsets move between builds) and a world
-fails only on **new** faults. First sighting records rather than accuses; a clean run
-refreshes the baseline so a fixed fault stops being tolerated; `game.ready` never becoming
-true fails regardless of any baseline.
+`.state/vtt-smoke-baseline.json` records each world's client-error fingerprint (digits
+masked, since line and column offsets move between builds). A world fails only on **new**
+faults. First sighting records rather than accuses; a clean run refreshes the baseline so
+a fault that has since been fixed stops being tolerated; `game.ready` never becoming true
+fails regardless of any baseline.
 
-**`ardenhaven` is genuinely broken client-side and worth investigating separately** —
-`space-journey` is clean.
+This exists because `ardenhaven` was throwing on every single load, and without it that
+one world would have rolled back every good update forever.
+
+**Both worlds are clean as of 2026-08-21 and both baselines are empty** — see the walls
+fix below. Do not read a non-empty baseline as normal; it means something is broken and
+merely tolerated.
+
+### The `ardenhaven` breakage (found by the smoke test, fixed)
+
+The smoke test earned its place on day one. `ardenhaven` threw
+`Cannot add property walls, object is not extensible` on every load — and the cause was
+ours, not Foundry's:
+
+`pentaryn-importer` creates `game.pentaryn` and **freezes** it in its ready hook. Module
+ready-hooks fire in alphabetical order of module id, so `pentaryn-walls` always runs
+after it, and a bare `game.pentaryn.walls = {...}` throws in strict mode — **taking the
+rest of the hook down with it**, so the module had no API and no log line at all in any
+world where both were enabled.
+
+`dropbin`, `pings` and `ties` all already carried the rebuild-the-object guard; `walls`
+was the only one of the five missing it. Fixed in commit `e422878` with the same pattern.
+
+**The root cause is still there:** the importer replacing and freezing a *shared*
+namespace is what forced four separate modules to work around it. Making it merge
+instead of replace would end that class of bug — deliberately not done, to keep the fix
+minimal, but it is the right next move if a fifth module ever trips on it.
+
+---
+
+## State at the end of the build session (2026-08-21, ~19:20)
+
+Written down because the next session starts cold, and several of these are things you
+would otherwise have to go and rediscover.
+
+| | |
+|---|---|
+| Foundry core | **14.367** (updated by the updater itself, from 14.365) |
+| dnd5e | 5.3.3 |
+| Worlds | `space-journey` and `ardenhaven`, both migrated to 14.367, both smoke-clean |
+| Server | **left down** — that is the new intended end state; `make vtt-up` to play |
+| Tunnel | down, with the ingress rules in place (`/setup` etc. 403 publicly) |
+| Git | everything merged and pushed to **`main`**; the working branch `foundry-vtt-pipeline` points at the same commit. HEAD is on `main`, so future auto-update reports commit there |
+| Schedule | `com.pentaryn.vtt-update` Sat **04:06**, watchdog Sat **06:12**, both loaded |
+| Rollback point | `.state/core-rollback/app-14.365.tar.gz` (127 MB) if 14.367 misbehaves |
+| Snapshots | 8 of 10 kept; tonight's five backup cycles coalesced into one |
+| Infisical | session **expired** — the admin password is being read from the macOS keychain fallback. `infisical login` then `make foundry-admin-push` to resync |
+
+**Expect the first scheduled run to be quiet.** Nothing is pending except
+`mad-endlesswiz2`, which is held. It should produce a ⚠️ notification, a committed
+report, and a server left shut down.
 
 ---
 
@@ -294,6 +346,13 @@ true fails regardless of any baseline.
 * **New API call** → `admin.py`, and assume it is fire-and-forget until proven otherwise.
 * **Testing** → `make vtt-update-dry` is read-only and safe with the world up. Anything
   Foundry-assisted needs the world **down**. `--force` bypasses pause/window/user gates.
+* **Launching a test run from a shell** → detach it, e.g. Python
+  `subprocess.Popen([...], start_new_session=True)`. A backgrounded `nohup ... &` stays in
+  the calling shell's process group, so when the shell (or an agent's command timeout)
+  dies, it takes the run with it — a run was lost to exactly that, mid-smoke, and looked
+  like a hang. This is the same hazard the plists' **`AbandonProcessGroup`** covers under
+  launchd: without it, launchd would reap the `cloudflared` the run had just restarted,
+  silently killing the tunnel at the end of every successful run.
 * **Costs tokens**: `run` without `--skip-llm` calls Opus twice. `--skip-llm` holds every
   `review` item and writes the fallback report.
 
@@ -301,8 +360,8 @@ true fails regardless of any baseline.
 
 * `scripts/foundry/license_key.py` has the same interactive-hang risk as `admin_password.py`
   did (no `stdin=DEVNULL`, no timeout). Not in the updater's path, so left alone.
-* `.state/vtt-update.seen.json` does not exist yet, so the **first real run will send every
-  package with an update to the adjudicator**. That is the intended conservative default.
+* `.state/vtt-update.seen.json` now holds 27 packages. Only `mad-endlesswiz2` is unseen
+  (it is held, and held packages are deliberately excluded so they keep being reviewed).
 * `pentaryn-seafoot-maps` is installed in `Data/modules` but absent from `foundry/module/`;
   the drift check reports it every run until that is reconciled.
 * `mad-endlesswiz2` 13.0.1 → 14.1.0 is held: a major bump of premium content with no public
