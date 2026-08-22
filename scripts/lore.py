@@ -678,9 +678,7 @@ MCP_TOOLS = [
             "QUIRK: many session folders contain only audio (audio.m4a) and have no notes/ "
             "subdir; for those `notes_count` is 0 and `notes` is empty — NOT an error. "
             "QUIRK: For cross-session NPC callbacks, use `find_lore(query='<name>', "
-            "paths='sessions')` instead of iterating session by session. The vault also has a "
-            "parallel narrative tree under `story/` (e.g., `story/the-compass-edge/`) with "
-            "session summaries written from in-character perspectives."
+            "paths='sessions')` instead of iterating session by session."
         ),
         "annotations": {"title": "Last Session Notes", **_RO_LOCAL},
         "argv": ["--mcp-tool", "last_session_summary"],

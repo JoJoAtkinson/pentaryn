@@ -26,6 +26,10 @@ sessions/**/*.wav
 .history/
 
 .timeline_data/
+
+# Pass-3 player-facing story output. Was the story/the-compass-edge submodule
+# (github.com/JoJoAtkinson/story-the-compass-edge), detached 2026-08-22.
+story/
 output/
 # Generated timeline SVGs should publish into `docs/` (Pages), not under `world/`.
 world/**/_history.*.svg

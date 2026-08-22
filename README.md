@@ -13,7 +13,6 @@ server (`dnd-scripts`) exposes SRD lookups, vault search and repo operations to 
 | `world/` | The campaign vault — factions, locations, NPCs, parties, history TSVs, house rules |
 | `oneshots/` | Self-contained adventures. Currently **Space Journey / Twenty-One** |
 | `sessions/` | Per-session transcripts and notes |
-| `story/` | In-character session chronicles (submodule) |
 | `foundry/` | Foundry-side data — the actor contract, generated actors, update policy, tunnel config, five in-house modules |
 | `scripts/` | Python tooling: SRD client, vault search, timeline renderer, Foundry pipeline, the MCP server |
 | `automation/` | The Saturday auto-updater — launchd jobs, smoke test, notifier |

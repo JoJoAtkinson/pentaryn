@@ -55,10 +55,10 @@ context_after = 30.0
 max_line_length = 100
 
 [pass3]
-# CRITICAL: output MUST point to story/the-compass-edge
-# This is a git submodule/repo used for publishing player-facing story content.
-# Do NOT change this path without understanding the git submodule structure.
-# Write player-facing story output into the story submodule (keeps access control separate)
+# Player-facing story output. Formerly a git submodule pointing at
+# github.com/JoJoAtkinson/story-the-compass-edge; the submodule was detached and
+# story/ removed from this repo. Re-running pass3 recreates this as a plain
+# (untracked) directory.
 output = "story/the-compass-edge"
 model = "gpt-5.2"
 temperature = 0.7  # Higher for creative prose (0.0-2.0)
