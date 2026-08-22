@@ -25,6 +25,7 @@ service records the entry state first, so a crash is recoverable rather than per
 
 from __future__ import annotations
 
+import os
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -106,19 +107,89 @@ def gate(fa: FoundryAdmin, policy: dict, *, force: bool = False) -> state.EntryS
     return entry
 
 
-def _check_window(policy: dict) -> None:
-    """launchd coalesces a run missed while the Mac was asleep onto the next wake.
+# Notes raised by the window gate. gate() has no handle on the RunResult, so they
+# are parked here and drained by the caller that does.
+_WINDOW_NOTES: list[str] = []
 
-    Without this guard a Saturday-afternoon wake would take the tunnel down and start
-    reinstalling packages an hour before a session.
+
+def drain_window_notes() -> list[str]:
+    """Take the gate's notes, leaving the buffer empty for the next run."""
+    notes, _WINDOW_NOTES[:] = list(_WINDOW_NOTES), []
+    return notes
+
+
+def _launched_at() -> datetime | None:
+    """When launchd actually started this job, per the shell wrapper.
+
+    `automation/bin/vtt-update.sh` exports VTT_UPDATE_LAUNCHED_AT as its very first
+    action, before anything that can block. Absent (a bare `python -m ... run`), we
+    have no measurement and must not invent one.
+    """
+    raw = os.environ.get("VTT_UPDATE_LAUNCHED_AT", "").strip()
+    if not raw:
+        return None
+    try:
+        return datetime.fromtimestamp(float(raw))
+    except (ValueError, OSError):
+        return None
+
+
+def _check_window(policy: dict) -> None:
+    """Refuse a run that BEGAN outside its window.
+
+    The gate exists because launchd runs a missed calendar job on the next wake, and
+    a Saturday-afternoon wake would take the tunnel down an hour before a session.
+
+    It gates on when the run *started*, not on when this line executes, and those are
+    not the same clock. On 2026-08-22 the job fired dead on schedule at 04:06:05 and
+    then sat 5h17m blocked on an invisible TCC consent dialog; by the time this check
+    ran the clock said 09:22, and the old code declined while asserting a cause it had
+    never measured — "a run launchd deferred from a sleeping Mac". The Mac was plugged
+    in and awake all night. A gate may report what it measured and nothing else.
     """
     window = policy.get("window", {}) or {}
     earliest = str(window.get("earliest", "05:00"))
     latest = str(window.get("latest", "09:00"))
-    now = datetime.now().strftime("%H:%M")
+
+    launched = _launched_at()
+    now_dt = datetime.now()
+    now = now_dt.strftime("%H:%M")
+
+    if launched is None:
+        # No wrapper, so no measured start. Fall back to the clock and say so.
+        if not (earliest <= now <= latest):
+            raise Aborted(
+                f"{now} is outside the {earliest}–{latest} window. Launch time was not "
+                "recorded (VTT_UPDATE_LAUNCHED_AT unset — started outside "
+                "automation/bin/vtt-update.sh?), so this is the current clock, not the "
+                "run's start time.")
+        return
+
+    started = launched.strftime("%H:%M")
+    stalled_s = int((now_dt - launched).total_seconds())
+
+    if not (earliest <= started <= latest):
+        raise Aborted(
+            f"launchd started this run at {started}, outside the {earliest}–{latest} "
+            f"window — declining. (A calendar job missed while the Mac was off or "
+            f"asleep runs on the next wake, which is what this guard is for.)")
+
+    # Started in-window. If we are only now getting here, something held the run up,
+    # and that is a fault to surface rather than a benign skip.
     if not (earliest <= now <= latest):
-        raise Aborted(f"{now} is outside the {earliest}–{latest} window — this is a "
-                      "run launchd deferred from a sleeping Mac, not the scheduled one")
+        raise Aborted(
+            f"this run STARTED ON TIME at {started} but did not reach the window check "
+            f"until {now} — {stalled_s // 3600}h{stalled_s % 3600 // 60:02d}m later. It "
+            f"was blocked, not deferred. The known cause is a TCC consent prompt that "
+            f"cannot be displayed to a launchd job; automation/bin/vtt-update.sh now "
+            f"caps interpreter startup to fail fast instead of hanging. Check the "
+            f"Full Disk Access grant for .venv/bin/python.")
+
+    if stalled_s > 900:
+        # In-window at both ends but slow to get here: not fatal, still worth saying.
+        _WINDOW_NOTES.append(
+            f"run started at {started} but reached the window check {stalled_s // 60}m "
+            f"later — check for a blocked interpreter startup")
 
 
 def _admin_client() -> FoundryAdmin:
@@ -449,6 +520,7 @@ def _run_locked(result: RunResult, run_id: str, *, dry: bool, force: bool,
     try:
         status.set_phase("gate")
         entry = gate(fa, policy, force=force)
+        result.messages.extend(drain_window_notes())
 
         status.set_phase("tunnel-down")
         if entry.tunnel_up and not dry:

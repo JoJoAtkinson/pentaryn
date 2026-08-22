@@ -19,6 +19,32 @@ Read this first, then open only the module you are changing.
 
 ---
 
+## 🔴 The interpreter needs a TCC grant, or the job hangs instead of running
+
+**2026-08-22.** The Saturday job fired on schedule at 04:06:05 and then sat for
+**5h17m01s** blocked on a modal TCC consent dialog nobody could see: WindowServer
+denied `UserNotificationCenter` the right to come to the front, so the prompt existed
+and was never displayed. The `caffeinate` assertion held continuously from 04:06:05 to
+09:23:06 — the process was alive and stuck, not deferred. The Mac was plugged in and
+awake all night (`pmset -g log`: zero sleep events).
+
+The gate then declined it and reported "a run launchd deferred from a sleeping Mac" —
+a hardcoded string asserting a cause nothing had measured. Both halves are fixed:
+the gate now reads the launch time exported by the wrapper and distinguishes deferred
+from blocked, and the wrapper caps interpreter startup at 60s so this fails fast.
+
+**The grant itself is still outstanding and only Joe can do it.** `tccd` did not log
+the service name and the dialog text is `<private>`, but the shape matches the known
+case: `.venv/bin/python` is a uv-managed CPython running with `WorkingDirectory`
+inside `~/Documents`.
+
+    System Settings → Privacy & Security → Full Disk Access → +
+    /Users/joe/.local/share/uv/python/cpython-3.14.6-macos-aarch64-none/bin/python3.14
+
+Add the **resolved** binary, not the `.venv/bin/python` symlink — TCC keys on the real
+executable. Confirm with `make vtt-update-dry`. Until it is granted, every Saturday
+run fails at the 60-second preflight with that path in the log.
+
 ## What it is
 
 A launchd LaunchAgent that keeps Foundry, its 27 modules and the `dnd5e` system on the
