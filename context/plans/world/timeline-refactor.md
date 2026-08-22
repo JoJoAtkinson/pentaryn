@@ -270,15 +270,9 @@ Accepted, and deliberately not fixed here:
   to `_overview.md` palette derivation rather than erroring. See *The config moves too*.
 - **`build_timeline_svg` / `build_timeline_key`** MCP tools are left untouched and will fail
   until the renderer is replaced.
-- **The age MCP tools — `age_convert`, `year_to_age`, `age_to_year` — go SILENTLY WRONG.**
-  `ages.py:55` returns an empty `AgeIndex` when `world/ages/_history.tsv` is missing, and
-  `format_year` (`ages.py:130-133`) then falls back to `return str(year)`. So `age_convert("4150")`
-  returns `"4150"` instead of `"ᛏ200"` with no warning. These tools are in the CLAUDE.md
-  route table and recommended by `context/tools.md:58`. Worst failure mode in this migration.
-- **`ages_converter.py:116` hardcodes `world/_history.config.toml`** for `present_year` and
-  returns `None` silently when absent (`:118`). Broken by the config **move**, not the TSV
-  deletion. Downstream, `age_convert("-50")` raises an error telling you to edit a file that
-  no longer exists (`:133`).
+- ~~**The age MCP tools go silently wrong.**~~ **FIXED** — see *Age tools: scoped out, then
+  fixed* below. This was the worst failure mode in the migration and should never have been
+  out of scope.
 - **`scripts/lore_inconsistencies.py` degrades SILENTLY.** `_discover_history_event_ids`
   (`:227-229`) filters on the filename `_history.tsv` and returns `[]` — the
   `lore_inconsistency_report` MCP tool then reports "History entities: True" while checking
@@ -302,6 +296,33 @@ Stale references to repair (documentation only, no behaviour):
 | `scripts/timeline_svg/AGENTS.md` | 7 refs — **auto-loaded agent instructions**, will actively misdirect |
 | `scripts/timeline_svg/README.md` | 9 refs |
 | `context/tools.md` | 58 — recommends `age_convert`; 66 — `build_timeline_svg` row needs a broken-until-replaced note |
+
+## Age tools: scoped out, then fixed
+
+`age_convert`, `year_to_age`, and `age_to_year` were initially lumped in with "renderer code,
+deliberately not updated." **That was a scoping error.** They are not rendering — they are
+campaign-time math used live at the table, and they are in the CLAUDE.md route table. They
+were fixed immediately after the migration.
+
+The failure was nasty because it was silent. `ages.py` returned an empty `AgeIndex` when its
+input was missing, and `format_year` falls back to `return str(year)` — so `age_convert("4150")`
+answered `"4150"` instead of `"ᛏ200"` with no error at all. Two separate breakages:
+
+| Broke | Cause | Fix |
+|---|---|---|
+| `AgeIndex.load_global` | read `world/ages/_history.tsv` (deleted) | reads `world/ages/history/*.md` frontmatter |
+| `_load_present_year` | read `world/_history.config.toml` (moved) | reads `world/history/config.toml` |
+| mtime cache | keyed on a single file's mtime | ages source is now a folder — key takes the newest mtime across it, since a directory's own mtime does not change when a file inside is edited in place |
+| silent degradation | empty index answered wrongly | `_get_age_state` now raises rather than returning an index that cannot be trusted |
+
+The loader reads `year` from frontmatter, never the filename — `00000-00-01_age-ash-and-silence.md`
+carries a synthetic sort slot that is not its date, and deriving the year from the filename
+would be wrong for exactly that file. There is a test pinning this.
+
+Five tests were added (`test_ages_converter.py::TestLoadGlobalFromMarkdown`) covering the
+markdown loader, tag filtering, frontmatter-beats-filename, and the loud-failure path. The
+lesson worth keeping: **a data migration must trace every reader, not just the obvious one**,
+and a reader that degrades silently is worse than one that crashes.
 
 ## Execution
 

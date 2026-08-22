@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-import csv
 import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
+
+import yaml
 
 from .game_time import DAYS_PER_MONTH, MONTHS_PER_YEAR
 
@@ -51,47 +52,57 @@ class AgeIndex:
 
     @staticmethod
     def load_global(repo_root: Path, *, debug: bool = False) -> "AgeIndex":
-        ages_tsv = (repo_root / "world" / "ages" / "_history.tsv").resolve()
-        if not ages_tsv.exists():
+        """Build the age index from `world/ages/history/*.md` frontmatter.
+
+        Returns an empty index when the folder is absent so callers that build
+        partial worlds (tests, ad-hoc scopes) keep working. Callers that need a
+        real answer must check `.ages` — an empty index silently degrades
+        `format_year` to bare years.
+        """
+        ages_dir = (repo_root / "world" / "ages" / "history").resolve()
+        if not ages_dir.is_dir():
             return AgeIndex(ages=tuple(), debug=debug)
 
-        with ages_tsv.open(newline="", encoding="utf-8") as handle:
-            reader = csv.DictReader(handle, delimiter="\t")
-            if not reader.fieldnames:
-                raise SystemExit(f"{ages_tsv}: missing header row")
-            # Allow column-aligned headers with spaces.
-            reader.fieldnames = [name.strip() for name in reader.fieldnames]
-            fieldnames = set(reader.fieldnames)
-            required = {"event_id", "tags", "date", "title"}
-            if not required.issubset(fieldnames):
-                raise SystemExit(f"{ages_tsv}: missing required columns: {', '.join(sorted(required - fieldnames))}")
+        raw_ages: list[AgeWindow] = []
+        date_re = re.compile(r"^(?P<year>\d{1,6})(?:[/-].*)?$")
+        for path in sorted(ages_dir.glob("*.md")):
+            text = path.read_text(encoding="utf-8")
+            if not text.startswith("---\n"):
+                raise SystemExit(f"{path}: missing YAML frontmatter")
+            try:
+                front = yaml.safe_load(text.split("---\n", 2)[1]) or {}
+            except yaml.YAMLError as exc:
+                raise SystemExit(f"{path}: invalid frontmatter: {exc}") from exc
 
-            raw_ages: list[AgeWindow] = []
-            date_re = re.compile(r"^(?P<year>\d{1,6})(?:/.*)?$")
-            for idx, row in enumerate(reader, start=2):
-                if None in row:
-                    raise SystemExit(
-                        f"{ages_tsv}:{idx} has too many columns (tabbing misaligned). Remove extra tab(s) so each row matches the header."
-                    )
-                tags = {t for t in re.split(r"[;\s]+", (row.get("tags") or "").strip()) if t}
-                if "age" not in tags:
-                    continue
-                event_id = (row.get("event_id") or "").strip()
-                title = (row.get("title") or "").strip() or event_id
-                date_raw = (row.get("date") or "").strip()
-                m = date_re.match(date_raw)
+            tags = {str(t) for t in (front.get("tags") or [])}
+            if "age" not in tags:
+                continue
+
+            event_id = str(front.get("event_id") or path.stem).strip()
+            title = str(front.get("title") or event_id).strip()
+
+            # Prefer the integer `year`; fall back to parsing `date`. Never the
+            # filename — one event carries a synthetic sort slot that is not its date.
+            year = front.get("year")
+            if year is None:
+                m = date_re.match(str(front.get("date") or "").strip())
                 if not m:
-                    raise SystemExit(f"{ages_tsv}:{idx} invalid date {date_raw!r} (expected YYYY or YYYY/MM/DD)")
-                start_year = int(m.group("year"))
-                raw_ages.append(
-                    AgeWindow(
-                        event_id=event_id,
-                        title=title,
-                        glyph=_extract_glyph(title),
-                        start_year=start_year,
-                        end_year=None,
-                    )
+                    raise SystemExit(f"{path}: no usable `year` or `date` in frontmatter")
+                year = m.group("year")
+            try:
+                start_year = int(year)
+            except (TypeError, ValueError) as exc:
+                raise SystemExit(f"{path}: year {year!r} is not an integer") from exc
+
+            raw_ages.append(
+                AgeWindow(
+                    event_id=event_id,
+                    title=title,
+                    glyph=_extract_glyph(title),
+                    start_year=start_year,
+                    end_year=None,
                 )
+            )
 
         raw_ages.sort(key=lambda a: a.start_year)
         ages: list[AgeWindow] = []

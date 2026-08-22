@@ -55,11 +55,6 @@ here.
 
 ## Campaign-time math
 
-> **Broken until the renderer is replaced.** `age_convert`, `year_to_age`, and `age_to_year`
-> read `world/ages/_history.tsv`, which no longer exists. They do not error — they return the
-> bare year (`"4150"` instead of `"ᛏ200"`). Do not trust their output. See
-> [`plans/world/timeline-refactor.md`](plans/world/timeline-refactor.md).
-
 `age_convert` auto-detects the direction and is the default for free-form input. Use
 `year_to_age` / `age_to_year` only when the input direction is known.
 

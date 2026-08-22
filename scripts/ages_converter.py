@@ -113,7 +113,7 @@ def _parse_age_label(value: str) -> ParsedAgeLabel | None:
 
 
 def _load_present_year(repo_root: Path) -> int | None:
-    cfg_path = (repo_root / "world" / "_history.config.toml").resolve()
+    cfg_path = (repo_root / "world" / "history" / "config.toml").resolve()
     if not cfg_path.exists():
         return None
     raw = tomllib.loads(cfg_path.read_text(encoding="utf-8"))
@@ -130,7 +130,7 @@ def _resolve_relative_year(offset: int, present_year: int | None) -> int:
     if offset >= 0:
         return offset
     if present_year is None:
-        raise ValueError("present_year is not set (set present_year = ... in world/_history.config.toml)")
+        raise ValueError("present_year is not set (set present_year = ... in world/history/config.toml)")
     return present_year + offset
 
 
@@ -168,7 +168,7 @@ def age_to_year(*, label: ParsedAgeLabel, index: AgeIndex, present_year: int | N
     else:
         if present_year is None:
             raise ValueError(
-                "present_year is not set (set present_year = ... in world/_history.config.toml) "
+                "present_year is not set (set present_year = ... in world/history/config.toml) "
                 "and is required to resolve negative offsets for the current/ongoing age"
             )
         end_boundary_year = present_year
@@ -196,29 +196,49 @@ def convert_auto(*, value: str, index: AgeIndex, present_year: int | None) -> st
 
 
 # --- In-process state for MCP_HANDLERS dispatch ----------------------------------
-# Cache (AgeIndex, present_year) keyed on the mtimes of the files they're loaded from.
-# Each call stats both files (sub-millisecond) and rebuilds only when one has changed,
-# so editing the TSV / TOML in VSCode is picked up automatically without a server restart.
+# Cache (AgeIndex, present_year) keyed on the mtimes of the sources they're loaded from.
+# Each call stats the ages folder and the config (sub-millisecond) and rebuilds only when
+# one has changed, so editing an event in VSCode is picked up without a server restart.
+#
+# The ages source is a *folder* of per-event markdown, so the key takes the newest mtime
+# across it — a directory's own mtime changes when files are added or removed, but not
+# when an existing file is edited in place.
 
-_AGES_TSV_PATH = REPO_ROOT / "world" / "ages" / "_history.tsv"
-_HISTORY_CONFIG_PATH = REPO_ROOT / "world" / "_history.config.toml"
+_AGES_HISTORY_DIR = REPO_ROOT / "world" / "ages" / "history"
+_HISTORY_CONFIG_PATH = REPO_ROOT / "world" / "history" / "config.toml"
 
 _age_state_cache: tuple[tuple[float, float], AgeIndex, int | None] | None = None
 
 
 def _mtime_or_zero(path: Path) -> float:
     try:
-        return path.stat().st_mtime
+        newest = path.stat().st_mtime
     except FileNotFoundError:
         return 0.0
+    if path.is_dir():
+        for child in path.glob("*.md"):
+            try:
+                newest = max(newest, child.stat().st_mtime)
+            except FileNotFoundError:
+                continue
+    return newest
 
 
 def _get_age_state() -> tuple[AgeIndex, int | None]:
     global _age_state_cache
-    key = (_mtime_or_zero(_AGES_TSV_PATH), _mtime_or_zero(_HISTORY_CONFIG_PATH))
+    key = (_mtime_or_zero(_AGES_HISTORY_DIR), _mtime_or_zero(_HISTORY_CONFIG_PATH))
     if _age_state_cache is not None and _age_state_cache[0] == key:
         return _age_state_cache[1], _age_state_cache[2]
     index = AgeIndex.load_global(REPO_ROOT, debug=False)
+    if not index.ages:
+        # Fail loudly. An empty index does not error downstream — `format_year`
+        # falls back to returning the bare year, so `age_convert("4150")` would
+        # answer "4150" instead of "ᛏ200" with no indication anything was wrong.
+        raise ValueError(
+            f"No ages loaded from {_AGES_HISTORY_DIR}. Expected markdown events tagged "
+            f"`age` in their frontmatter. Age conversions cannot be trusted until this "
+            f"resolves."
+        )
     present_year = _load_present_year(REPO_ROOT)
     _age_state_cache = (key, index, present_year)
     return index, present_year

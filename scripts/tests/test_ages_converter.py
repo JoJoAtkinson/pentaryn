@@ -89,12 +89,13 @@ class TestAgeStateMtimeCache:
         """Point the cache's backing-file constants at writable temp files and
         make load_global / _load_present_year derive observable values from them,
         so a reload is detectable. Resets the module-level cache around the test."""
-        tsv = tmp_path / "_history.tsv"
-        cfg = tmp_path / "_history.config.toml"
-        tsv.write_text("v1\n", encoding="utf-8")
+        tsv = tmp_path / "history"
+        cfg = tmp_path / "config.toml"
+        tsv.mkdir()
+        (tsv / "00000-00-00_seed.md").write_text("v1\n", encoding="utf-8")
         cfg.write_text("present_year = 4000\n", encoding="utf-8")
 
-        monkeypatch.setattr(ages_module, "_AGES_TSV_PATH", tsv)
+        monkeypatch.setattr(ages_module, "_AGES_HISTORY_DIR", tsv)
         monkeypatch.setattr(ages_module, "_HISTORY_CONFIG_PATH", cfg)
 
         # load count lets us assert whether a rebuild happened.
@@ -149,3 +150,73 @@ class TestAgeStateMtimeCache:
         assert calls["load"] == 2
         assert idx1 is not idx2
         assert py2 == 4222
+
+
+# ---------------------------------------------------------------------------
+# AgeIndex.load_global reads per-event markdown under `world/ages/history/`.
+# These exist because the previous TSV loader degraded *silently* when its input
+# went missing: format_year falls back to the bare year, so age_convert("4150")
+# answered "4150" instead of "ᛏ200" with no error.
+# ---------------------------------------------------------------------------
+
+
+def _write_age(dirpath, stem, *, title, year, tags=("public", "age"), event_id=None, date=None):
+    dirpath.mkdir(parents=True, exist_ok=True)
+    front = [
+        "---",
+        f"title: {title}",
+        f"event_id: {event_id or stem.split('_', 1)[-1]}",
+        f"date: '{date if date is not None else year}'",
+        f"year: {year}",
+        "precision: year",
+        "duration: 0",
+        "tags:",
+        *[f"- {t}" for t in tags],
+        "---",
+        "",
+        "Body.",
+    ]
+    (dirpath / f"{stem}.md").write_text("\n".join(front) + "\n", encoding="utf-8")
+
+
+class TestLoadGlobalFromMarkdown:
+    def test_builds_windows_from_frontmatter(self, tmp_path) -> None:
+        ages = tmp_path / "world" / "ages" / "history"
+        _write_age(ages, "00000-00-00_age-a", title="⟂ Age A", year=0)
+        _write_age(ages, "01500-00-00_age-b", title="ᛒ Age B", year=1500)
+        _write_age(ages, "04277-00-00_age-c", title="⋈ Age C", year=4277)
+
+        idx = AgeIndex.load_global(tmp_path)
+        assert [a.glyph for a in idx.ages] == ["⟂", "ᛒ", "⋈"]
+        # End years are derived from the next age's start.
+        assert [(a.start_year, a.end_year) for a in idx.ages] == [(0, 1499), (1500, 4276), (4277, None)]
+        assert idx.format_year(4327) == "⋈50"
+
+    def test_untagged_events_are_skipped(self, tmp_path) -> None:
+        ages = tmp_path / "world" / "ages" / "history"
+        _write_age(ages, "00000-00-00_the-fall", title="Fall of the Ancients", year=0,
+                   tags=("public", "world", "lore"))
+        _write_age(ages, "01500-00-00_age-b", title="ᛒ Age B", year=1500)
+
+        idx = AgeIndex.load_global(tmp_path)
+        assert [a.event_id for a in idx.ages] == ["age-b"]
+
+    def test_frontmatter_year_wins_over_filename(self, tmp_path) -> None:
+        """One real event carries a synthetic sort slot that is not its date:
+        `00000-00-01_age-ash-and-silence.md` is dated year 0. The loader must
+        never derive the year from the filename."""
+        ages = tmp_path / "world" / "ages" / "history"
+        _write_age(ages, "00000-00-01_age-ash", title="⟂ Age of Ash", year=0, date="0")
+
+        idx = AgeIndex.load_global(tmp_path)
+        assert idx.ages[0].start_year == 0
+
+    def test_missing_folder_returns_empty_index(self, tmp_path) -> None:
+        assert AgeIndex.load_global(tmp_path).ages == ()
+
+    def test_empty_index_raises_rather_than_answering_wrongly(self, tmp_path, monkeypatch) -> None:
+        monkeypatch.setattr(ages_module, "_AGES_HISTORY_DIR", tmp_path / "nope")
+        monkeypatch.setattr(ages_module, "_age_state_cache", None)
+        monkeypatch.setattr(AgeIndex, "load_global", staticmethod(lambda *a, **k: AgeIndex(ages=())))
+        with pytest.raises(ValueError, match="No ages loaded"):
+            ages_module._get_age_state()
