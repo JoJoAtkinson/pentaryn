@@ -16,6 +16,13 @@ temp
 
 sessions/**/outputs
 
+# Session audio is NOT in this repo. Master copies live in
+# OneDrive-Personal/DnD/sessions/. It was 3.2 GB of Git LFS with nothing
+# reading it; see sessions/README.md.
+sessions/**/*.m4a
+sessions/**/*.flac
+sessions/**/*.wav
+
 .history/
 
 .timeline_data/
