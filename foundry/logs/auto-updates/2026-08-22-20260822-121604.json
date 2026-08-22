@@ -1,0 +1,17 @@
+{
+  "run_id": "20260822-121604",
+  "outcome": "failed",
+  "started": "2026-08-22T12:16:04-0400",
+  "finished": "",
+  "snapshot": null,
+  "native_snapshot": null,
+  "applied": [],
+  "failed": [],
+  "recoveries": [],
+  "smoke": [],
+  "warnings": {},
+  "messages": [
+    "run failed: Command '['/Users/joe/Documents/GitHub/pentaryn/.venv/bin/python', '-m', 'scripts.foundry.cloud', 'backup', '--reason', 'auto-update']' timed out after 900 seconds"
+  ],
+  "plan": {}
+}
