@@ -22,6 +22,16 @@ OK, FAIL = 0, 1
 # cloudflared's own credential, written by `cloudflared tunnel login`.
 CF_CERT = Path.home() / ".cloudflared/cert.pem"
 
+# Every probe claims to be a browser, and this is load-bearing rather than cosmetic.
+# Cloudflare 403s a bare `Python-urllib/3.x` at the edge before the request ever
+# reaches Foundry. That turns a healthy server into "HTTP 403" in `make vtt`, and —
+# far worse — makes the Gate 2 verifier read "tunnel not reachable, nothing to
+# verify" and PASS without checking anything, which is precisely the passes-for-the-
+# wrong-reason failure the gate exists to prevent. The probes must see what a
+# player's browser sees.
+BROWSER_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+              "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36")
+
 
 def _say(msg: str) -> None:
     print(f"  {msg}")
@@ -34,7 +44,7 @@ def _http_code(url: str, timeout: float) -> int:
     whole point of the pipeline's public-exposure check — so HTTPError is unwrapped
     rather than propagated.
     """
-    req = urllib.request.Request(url, method="GET")
+    req = urllib.request.Request(url, method="GET", headers={"User-Agent": BROWSER_UA})
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.status
@@ -44,8 +54,45 @@ def _http_code(url: str, timeout: float) -> int:
         return 0
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Report the redirect instead of following it — where it points is the answer."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _probe(url: str, timeout: float) -> tuple[int, str]:
+    """(status, Location) without following redirects.
+
+    Foundry answers the site root with a redirect whose target says what state the
+    server is in: /setup when no world is launched, /join or /game when one is. That
+    distinction is the whole difference between "players can connect" and "players
+    get a 403", so it must not be flattened into a single status code.
+    """
+    opener = urllib.request.build_opener(_NoRedirect)
+    req = urllib.request.Request(url, headers={"User-Agent": BROWSER_UA})
+    try:
+        with opener.open(req, timeout=timeout) as resp:
+            return resp.status, resp.headers.get("Location", "")
+    except urllib.error.HTTPError as exc:
+        return exc.code, exc.headers.get("Location", "") if exc.headers else ""
+    except Exception:
+        return 0, ""
+
+
 def foundry_is_up(timeout: float = 2.0) -> bool:
-    return _http_code(cfg.FOUNDRY_URL, timeout) in (200, 302)
+    return _probe(cfg.FOUNDRY_URL, timeout)[0] in (200, 302)
+
+
+def world_is_launched(timeout: float = 3.0) -> bool | None:
+    """True if a world is active, False if the server is parked at /setup, None if
+    the server did not answer at all."""
+    code, location = _probe(cfg.FOUNDRY_URL, timeout)
+    if code == 0:
+        return None
+    if code == 302 and "/setup" in location:
+        return False
+    return True
 
 
 # ── update-run lock ───────────────────────────────────────────────────────────
@@ -204,9 +251,21 @@ def status() -> int:
     print(f"  {'tunnel:':<10} "
           + (f"UP   (pid {pid}, https://{cfg.TUNNEL_HOST})" if pid else "down"))
 
-    # The one that matters: the others can both look fine while players see nothing.
-    code = _http_code(f"https://{cfg.TUNNEL_HOST}", 8.0)
-    print(f"  {'public:':<10} "
-          + (f"reachable (HTTP {code})" if code in (200, 302)
-             else f"not reachable (HTTP {code})"))
+    # The one that matters — and the one that used to lie. "HTTP 403" was printed
+    # both when the tunnel was down and when it was perfectly healthy but no world
+    # was launched: Foundry redirects the root to /setup, and /setup is 403'd at the
+    # Cloudflare edge on purpose. Two opposite situations, one message. Now the
+    # redirect target is read, so the line says which one it is.
+    code, location = _probe(f"https://{cfg.TUNNEL_HOST}/", 8.0)
+    if code == 0:
+        verdict = "not reachable — tunnel or DNS is down"
+    elif code == 302 and "/setup" in location:
+        verdict = ("tunnel OK, but NO WORLD IS LAUNCHED — players get a 403.\n"
+                   f"  {'':<10} Launch one in the Foundry window (/setup is blocked "
+                   "through the tunnel by design).")
+    elif code in (200, 302):
+        verdict = f"reachable (HTTP {code}) — players can connect"
+    else:
+        verdict = f"unexpected HTTP {code}{f' → {location}' if location else ''}"
+    print(f"  {'public:':<10} {verdict}")
     return OK

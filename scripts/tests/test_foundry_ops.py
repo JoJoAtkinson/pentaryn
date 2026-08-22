@@ -13,7 +13,7 @@ import sys
 
 import pytest
 
-from scripts.foundry.ops import cli, modules, pipeline
+from scripts.foundry.ops import cli, modules, pipeline, service
 from scripts.foundry.ops import config as cfg
 
 
@@ -195,6 +195,72 @@ def test_unknown_subcommand_exits_nonzero():
     with pytest.raises(SystemExit) as exc:
         cli.main(["no-such-command"])
     assert exc.value.code != 0
+
+
+# ── probes: the User-Agent is load-bearing ────────────────────────────────────
+# Cloudflare 403s a bare `Python-urllib/3.x` at the edge before the request reaches
+# Foundry. Left alone that made a healthy server read as "HTTP 403" in `make vtt` and,
+# far worse, made the Gate 2 verifier conclude "tunnel not reachable, nothing to
+# verify" and PASS without checking anything.
+
+def test_probes_claim_to_be_a_browser():
+    assert service.BROWSER_UA.startswith("Mozilla/5.0")
+    assert "urllib" not in service.BROWSER_UA
+
+
+def test_http_code_sends_the_browser_user_agent(monkeypatch):
+    seen = {}
+
+    def fake_urlopen(req, timeout=None):
+        seen["ua"] = req.get_header("User-agent")
+        raise RuntimeError("stop here — the header is what matters")
+
+    monkeypatch.setattr(service.urllib.request, "urlopen", fake_urlopen)
+    service._http_code("https://example.invalid/", 1)
+    assert seen["ua"] == service.BROWSER_UA
+
+
+def test_verify_does_not_pass_silently_when_the_edge_blocks_the_probe(monkeypatch):
+    """A 403 at the root used to short-circuit verify() into a pass."""
+    monkeypatch.setattr(pipeline, "_http_code", lambda url, t: 403)
+    # It still returns OK — but only because 403 genuinely means "not reachable".
+    # The guard that matters is the UA above, which stops the edge from producing a
+    # spurious 403 in the first place. This pins the pairing so neither is dropped
+    # without the other being reconsidered.
+    assert pipeline.verify() == 0
+    assert service.BROWSER_UA, "the UA is what keeps the 403 branch from firing falsely"
+
+
+# ── status distinguishes "no world" from "tunnel down" ────────────────────────
+# Foundry redirects the site root to /setup when no world is launched, and /setup is
+# 403'd at the Cloudflare edge on purpose — so a perfectly healthy tunnel with no
+# world reads identically to a dead one unless the redirect target is inspected.
+
+@pytest.mark.parametrize(
+    "code,location,expect",
+    [
+        (0,   "",       "not reachable"),
+        (302, "/setup", "NO WORLD IS LAUNCHED"),
+        (302, "/join",  "players can connect"),
+        (200, "",       "players can connect"),
+        (500, "",       "unexpected HTTP 500"),
+    ],
+)
+def test_status_public_line_names_the_actual_state(monkeypatch, capsys, code, location, expect):
+    monkeypatch.setattr(service, "_probe", lambda url, t: (code, location))
+    monkeypatch.setattr(service, "foundry_is_up", lambda t=2.0: True)
+    monkeypatch.setattr(service, "_tunnel_pid", lambda: 123)
+    service.status()
+    assert expect in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    "code,location,expected",
+    [(0, "", None), (302, "/setup", False), (302, "/join", True), (200, "", True)],
+)
+def test_world_is_launched(monkeypatch, code, location, expected):
+    monkeypatch.setattr(service, "_probe", lambda url, t: (code, location))
+    assert service.world_is_launched() is expected
 
 
 # ── the world guard ───────────────────────────────────────────────────────────

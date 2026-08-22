@@ -73,7 +73,7 @@ players ──https──▶ vtt.atjoseph.com ──cloudflared (named tunnel "a
 | Data root | `~/Library/Application Support/FoundryVTT/Data` |
 | Core | **v14.365** |
 | System | **dnd5e 5.3.3** |
-| Live world | **`space-journey`** (verified live 2026-08-13) |
+| Live world | **`space-journey`** — verified 2026-08-22 three ways: `/join` page title is "Space Journey", its `lastPlayed` is today, and Foundry holds 78 open file handles on its LevelDB while `ardenhaven` has 0 |
 
 ### The actor pipeline targets `space-journey` — and says so out loud
 
@@ -87,7 +87,8 @@ worse than one that fails.
 
 **Fixed 2026-08-22.** The world is now one constant in
 [`scripts/foundry/ops/config.py`](../../scripts/foundry/ops/config.py), defaulting to
-`space-journey`, and three things make a repeat visible rather than silent:
+`space-journey` (confirmed live 2026-08-22 — see §1), and three things make a repeat
+visible rather than silent:
 
 * every pipeline run prints `▸ target world: <name>` before it copies anything;
 * a missing world directory is a hard stop that lists the worlds actually on disk —
