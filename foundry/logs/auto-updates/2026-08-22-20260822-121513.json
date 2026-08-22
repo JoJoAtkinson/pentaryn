@@ -1,0 +1,17 @@
+{
+  "run_id": "20260822-121513",
+  "outcome": "skipped",
+  "started": "2026-08-22T12:15:13-0400",
+  "finished": "",
+  "snapshot": null,
+  "native_snapshot": null,
+  "applied": [],
+  "failed": [],
+  "recoveries": [],
+  "smoke": [],
+  "warnings": {},
+  "messages": [
+    "launchd started this run at 12:15, outside the 03:30\u201309:00 window \u2014 declining. (A calendar job missed while the Mac was off or asleep runs on the next wake, which is what this guard is for.)"
+  ],
+  "plan": {}
+}
