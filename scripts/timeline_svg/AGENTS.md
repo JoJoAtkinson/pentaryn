@@ -1,6 +1,18 @@
 <INSTRUCTIONS>
 # Timeline SVG + History System (Agent Notes)
 
+> ## ⚠️ DEAD PIPELINE — the input format described below no longer exists
+>
+> History events moved from `_history.tsv` to one markdown file per event under
+> `world/**/history/`, and `_history.config.toml` moved to `history/config.toml`. This code
+> was deliberately not updated; it has no input and will fail. Everything below describes
+> the **previous** system.
+>
+> Current data format: [`context/world/timelines.md`](../../context/world/timelines.md) ·
+> What changed and what a replacement must handle:
+> [`context/plans/world/timeline-refactor.md`](../../context/plans/world/timeline-refactor.md)
+
+
 This repo uses TSV-driven history that renders to SVG timelines.
 
 ## Scope + configs

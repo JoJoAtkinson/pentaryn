@@ -18,7 +18,7 @@
 | **Party Level** | Avg X (min Y / max Z) |
 | **Size** | X PCs + Y companions |
 | **Patron / Employer (Optional)** | [Faction/NPC](../../factions/faction-slug/_overview.md) |
-| **Timeline** | [Party Timeline](./_history.tsv) |
+| **Timeline** | [Party Timeline](./history/) |
 
 ## Setting Rules
 
@@ -76,5 +76,5 @@ Create one member page per character at `members/<member-slug>.md` using `templa
 ## Related Links
 
 - [Party & Member Creation Rules](../_party-creation-rules.md)
-- [Party Timeline](./_history.tsv)
+- [Party Timeline](./history/)
 - [Session Notes](../../../sessions/notes/session-XX-YYYY-MM-DD.md)

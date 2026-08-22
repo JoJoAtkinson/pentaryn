@@ -18,7 +18,7 @@ A campaign for new D&D players, set in [Ardenford](../../world/factions/ardenhav
 
 |                            |                                                                                                                                                                          |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Age of the world** | [Age of Trade](../../world/ages/_history.tsv) (current era — war is over, coin runs everything)                                                                            |
+| **Age of the world** | [Age of Trade](../../world/ages/history/04277-00-00_age-trade.md) (current era — war is over, coin runs everything)                                                                            |
 | **Current date**     | ⋈3 (year 3 of the Age of Trade)                                                                                                                                         |
 | **City**             | [Ardenford](../../world/factions/ardenhaven/locations/ardenford/ardenford.md) — capital of Ardenhaven, built atop and around an old Ancient site                           |
 | **Starting level**   | 1                                                                                                                                                                        |

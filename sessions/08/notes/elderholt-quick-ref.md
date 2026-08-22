@@ -122,7 +122,7 @@ Both paths are valid. Same class/spells can end up either way depending on choic
 | **Elwen** (deceased) | Marrith's daughter. Deep-witch executed by Marrith for going too far. |
 | **Mara "Centipede"** | Broken-loss witch. Human head on centipede body. Lurks in ruins. Coven doesn't know she exists. |
 
-> Source: [_history.tsv](../../../world/factions/elderholt/_history.tsv) · [centipede.md](../../../world/factions/elderholt/npcs/broken-loss-witches/centipede.md)
+> Source: [history/](../../../world/factions/elderholt/history/) · [centipede.md](../../../world/factions/elderholt/npcs/broken-loss-witches/centipede.md)
 
 ---
 
@@ -134,7 +134,7 @@ Both paths are valid. Same class/spells can end up either way depending on choic
 - The witches **sealed the Underdark** — Kharbora killed matron mothers, Taramet forged the door. Key is lost.
 - **Broken/lost witches** exist in the wild — corrupted, monstrous, can sense their own kind. Marrith and Raven handle them.
 
-> Source: [witchs.md](../../../world/factions/elderholt/witchs.md) · [random-facts.md](../../../world/factions/elderholt/random-facts.md) · [_history.tsv](../../../world/factions/elderholt/_history.tsv)
+> Source: [witchs.md](../../../world/factions/elderholt/witchs.md) · [random-facts.md](../../../world/factions/elderholt/random-facts.md) · [history/](../../../world/factions/elderholt/history/)
 
 ---
 

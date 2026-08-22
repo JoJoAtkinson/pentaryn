@@ -120,7 +120,7 @@ pov_characters = ["Bazgar", "Sabriel", "Marwen"]
 # Avoid duplicating voice notes here to prevent drift.
 
 [timeline]
-# Party name (maps to world/party/{party_name}/_history.tsv)
+# Party name (maps to world/party/{party_name}/history/)
 party_name = "the-compass-edge"
 
 # Event ID prefix for timeline events

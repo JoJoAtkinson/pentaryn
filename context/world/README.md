@@ -29,7 +29,7 @@ Everything canonical lives under `world/`. There is no parallel top-level conten
 | Factions | `world/factions/<faction-slug>/_overview.md` |
 | Locations | `world/factions/<region-slug>/locations/<location>.md` |
 | NPCs | `world/factions/<faction>/locations/<place>/npcs/<slug>.md` |
-| Parties | `world/party/<party-slug>/` — `_overview.md`, `members/`, `_history.tsv` |
+| Parties | `world/party/<party-slug>/` — `_overview.md`, `members/`, `history/` |
 | Homebrew creatures | `world/creatures/` |
 | House rules | `world/house-rules/` |
 | Ages / calendar | `world/ages/` |

@@ -64,4 +64,4 @@ Each elder gave specific counsel. Use these if Marwen (or a PC connected to her)
 - The Ashcroft gifts: fire, reshaping, foresight run in their blood
 - Marrith's crow — has it been sent yet?
 
-> Source: [_history.tsv](../../../world/factions/elderholt/_history.tsv) · [marrith-the-ashen-measure.md](../../../world/factions/elderholt/elders/marrith-the-ashen-measure.md)
+> Source: [history/](../../../world/factions/elderholt/history/) · [marrith-the-ashen-measure.md](../../../world/factions/elderholt/elders/marrith-the-ashen-measure.md)
