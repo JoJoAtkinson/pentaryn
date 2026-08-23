@@ -126,5 +126,19 @@ MODULES = {
             "Audit an actor:  game.pentaryn.attunement.report('Ballad Quinn')",
         ),
     ),
+    "lookup": ModuleSpec(
+        "pentaryn-lookup",
+        # node-test: the whole point of the module is that its text handling is proved
+        # rather than retyped. lookup-core.mjs is pure, so the 41 fixtures run in node.
+        check="node-test",
+        after_sync=(
+            "Enable 'Pentaryn Rules Lookup' in Manage Modules, then reload.",
+            "Confirm against the live world:",
+            "  await game.pentaryn.rules.selftest()",
+            "Then:",
+            "  await game.pentaryn.rules.search('half cover')",
+            "  await game.pentaryn.rules.monster('Adult Black Dragon')",
+        ),
+    ),
     "importer": ModuleSpec("pentaryn-importer", check="none"),
 }

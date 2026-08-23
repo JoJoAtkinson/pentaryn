@@ -40,6 +40,28 @@ RollTable packs.
 
 **Foundry must be running with a world active.** Use `mcp__foundry__eval-js`.
 
+### Preferred: the `pentaryn-lookup` module
+
+```js
+await game.pentaryn.rules.search("half cover")          // 5 hits, clean snippets, UUIDs
+await game.pentaryn.rules.page("Study")                 // or a Compendium UUID from search()
+await game.pentaryn.rules.monster("Adult Black Dragon") // shallow digest + uuid
+await game.pentaryn.rules.packs()                       // what's installed
+await game.pentaryn.rules.selftest()                    // assert the assumptions still hold
+```
+
+One line instead of twenty, and the five silent traps below are handled in one tested
+file (41 fixtures, `node test/run.mjs`). See
+[`../../foundry/module/pentaryn-lookup/README.md`](../../foundry/module/pentaryn-lookup/README.md).
+Defaults: PHB + DMG + 2024 SRD; Monster Manual text and 2014 SRD are opt-in via
+`{books: "monsters" | "all" | "2014"}`, and 2014 hits are stamped `edition: "2014"`.
+
+The raw recipes below still work and are what the module does internally — reach for
+them when the module is not installed, or when you need a shape it does not cover.
+
+⚠ **The raw recipes do NOT strip enrichers.** Their snippets will carry
+`@UUID[Compendium....]{Label}` noise; the module's do not.
+
 ### ⚠ `search-compendium` cannot do this
 
 `mcp__foundry__search-compendium` matches **entity names only** — its own description
@@ -116,10 +138,15 @@ For placing one on the canvas, prefer the real tools —
 
 ## Notes that will bite
 
-* **Strip the HTML.** `page.text.content` is Foundry-flavoured HTML. It also carries
-  enrichers like `&Reference[Half Cover]` and `[[/save dex 15]]`; the regex above
-  flattens them to plain words, which is usually what you want for reading but loses
-  the link targets.
+* **Strip the enrichers, not just the tags.** `page.text.content` is Foundry-flavoured
+  HTML *plus* enrichers, and a `replace(/<[^>]+>/g, " ")` leaves every enricher intact.
+  Measured 2026-08-22: **5,052 `@UUID[…]`** across the four books (PHB 1,355 · DMG
+  1,218 · MM 1,384 · content24 1,095) and 312 inline rolls. One surviving `@UUID` eats
+  ~80 characters of a 240-character snippet. The real forms are `@UUID[…]{Label}`
+  (keep the label), bare `@UUID[…]` (drop it), `&amp;Reference[…]` — note the ampersand
+  arrives HTML-escaped — and `[[/save dex 15]]`. `lookup-core.mjs` handles all of them;
+  an unknown enricher degrades to its bracketed text rather than vanishing, because
+  losing a rule's words is worse than leaving a stray token in them.
 * **Return a UUID with every hit.** `Compendium.<pack>.JournalEntry.<id>.JournalEntryPage.<id>`
   is pasteable into Foundry chat and into journal entries, so a rules answer can be
   handed to the table rather than retyped.

@@ -1,0 +1,32 @@
+{
+  "id": "pentaryn-lookup",
+  "title": "Pentaryn Rules Lookup",
+  "description": "Full-text search across the owned rulebooks, from one call. Exposes game.pentaryn.rules.search() / .page() / .monster() / .packs() / .selftest(). Read-only: it never writes a document. Searches the Player's Handbook, Dungeon Master's Guide and 2024 SRD by default; Monster Manual text and the 2014 SRD are opt-in, and 2014 hits are stamped with their edition so they cannot be mistaken for current rules. Every hit carries a pasteable Compendium UUID.",
+  "version": "0.1.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "14"
+  },
+  "authors": [
+    {
+      "name": "Joseph Atkinson"
+    }
+  ],
+  "esmodules": [
+    "pentaryn-lookup.mjs"
+  ],
+  "socket": false,
+  "protected": false,
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {}
+      }
+    ]
+  },
+  "url": "https://github.com/JoJoAtkinson/pentaryn",
+  "manifest": "",
+  "download": ""
+}

@@ -154,10 +154,13 @@ foundry-cloud:
 # The check step is not optional politeness: a parse error in an esmodule fails
 # silently at load and the module simply never registers. Nothing reaches Data/
 # unproved. Copy, never symlink — a stale copy must be a visible failure.
+.PHONY: foundry-lookup-check foundry-lookup-sync
 .PHONY: foundry-ties-check foundry-ties-sync
 .PHONY: foundry-walls-test foundry-walls-sync foundry-walls-wasm foundry-walls-bench
 .PHONY: foundry-attunement-check foundry-attunement-sync
 
+foundry-lookup-check: ; @$(OPS) module-check lookup
+foundry-lookup-sync:  ; @$(OPS) module-sync lookup
 foundry-ties-check:  ; @$(OPS) module-check ties
 foundry-ties-sync:   ; @$(OPS) module-sync ties
 foundry-attunement-check: ; @$(OPS) module-check attunement
