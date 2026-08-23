@@ -97,6 +97,11 @@ Sanity check: make one `eval-js` call, then `wc -l foundry/logs/eval.jsonl`.
 were one-off reads. Treat that as a narrow sample of one kind of work, not a verdict on
 the whole tool surface.
 
+**Decision 2026-08-23:** `place-tokens` retired from the fork — the surface is
+deliberately **eval-js only**, logging stays on, and the tool question gets revisited
+against a clean month of steady-state log (~2026-09-22). Full reasoning and the revisit
+criteria: [`../plans/mcp-skill-library.md`](../plans/mcp-skill-library.md).
+
 ---
 
 ## Token conventions — applied world-wide

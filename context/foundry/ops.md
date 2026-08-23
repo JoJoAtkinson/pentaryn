@@ -529,7 +529,7 @@ Tool families available (~40 tools; don't enumerate, just look):
 | ------ | -------- |
 | Actors | `manage-actors`, `list-characters`, `get-character`, `dnd5e-create-npc`, ownership |
 | Items | `manage-world-items`, `search-character-items`, `use-item` |
-| Scenes & tokens | `list-scenes`, `switch-scene`, `place-tokens`, `move-token`, `toggle-token-condition` |
+| Scenes & tokens | `list-scenes`, `switch-scene`, `move-token`, `toggle-token-condition` |
 | Compendium | `search-compendium`, `get-compendium-entry-full`, `create-actor-from-compendium` |
 | Journals & quests | `list-journals`, `search-journals`, `create-quest-journal`, `link-quest-to-npc` |
 | Rolls | `request-player-rolls` |

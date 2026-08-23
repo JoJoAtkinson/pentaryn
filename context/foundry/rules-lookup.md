@@ -133,8 +133,10 @@ return { name: a.name, cr: a.system.details.cr, ac: a.system.attributes.ac.value
          features: a.items.map(i => ({ name: i.name, type: i.type })) };
 ```
 
-For placing one on the canvas, prefer the real tools —
-`create-actor-from-compendium`, `place-tokens` — over `eval-js`.
+For placing one on the canvas, prefer the real tools — `create-actor-from-compendium` —
+over `eval-js`. (`place-tokens` was retired from the fork 2026-08-23; the fork surface is
+deliberately eval-js only until the September log review — see
+[`../plans/mcp-skill-library.md`](../plans/mcp-skill-library.md).)
 
 ## Notes that will bite
 
