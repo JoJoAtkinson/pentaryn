@@ -31,15 +31,81 @@ export const STRENGTHS = [5, 4, 3, 2, 1];
  */
 export const NOTES_MAX = 4000;
 
+/**
+ * And a cap on the one-word label. It is meant to be a word; nothing enforced that, so a
+ * pasted paragraph — or a relayed one — could ride along on every actor update forever.
+ */
+export const WORD_MAX = 120;
+
 const num = (v, d) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : d);
 export const clampStance = v => Math.max(-2, Math.min(2, num(v, 0)));
 export const clampStrength = v => Math.max(1, Math.min(5, num(v, 3)));
 export const clampNotes = v => (typeof v === "string" ? v.slice(0, NOTES_MAX) : "");
+export const clampWord = v => (typeof v === "string" ? v.trim().slice(0, WORD_MAX) : "");
 export const stanceOf = v => STANCES.find(s => s.value === clampStance(v)) ?? STANCES[2];
 
 export function stanceLabel(v) {
   const s = stanceOf(v);
   return game.i18n.localize(`PENTARYN_TIES.stance.${s.key}`);
+}
+
+/**
+ * The world actor behind a token — NOT `token.actor`.
+ *
+ * ⚠ For an UNLINKED token `token.actor` is the synthetic delta actor, with its own id.
+ * Ties written there land on the token's ActorDelta, where `read()` on the world actor will
+ * never see them and a second token of the same creature gets a different list. Always
+ * resolve through `actorId` — for a linked token this is the same document anyway.
+ */
+export function baseActorOf(token) {
+  const id = token?.document?.actorId ?? token?.actorId ?? null;
+  return id ? game.actors?.get(id) ?? null : null;
+}
+
+/**
+ * Which actors are present on the current scene **as far as this user is concerned**.
+ *
+ * ⚠ This is a disclosure surface, not a convenience. Sorting a tie list into "here" and
+ * "elsewhere" states out loud who is in the room — so for anyone but the GM it is filtered
+ * through `Token#isVisible`, the same test the ties keys use, and the same one the renderer
+ * used to decide whether to draw that token at all. A hidden token, or one behind a wall,
+ * therefore falls into "elsewhere", which is exactly what a player would see if that person
+ * genuinely were not there. **A character who is hiding must not be findable by opening a
+ * ties sheet.**
+ *
+ * `isVisible`, not `visible`: on v14 `Token#visible` is the inherited PIXI flag and reads
+ * true for every placeable on the scene, walled-off and GM-hidden alike.
+ */
+export function presentActorIds() {
+  const isGM = game.user?.isGM === true;
+  const ids = new Set();
+  for (const token of canvas?.tokens?.placeables ?? []) {
+    if (!isGM && !token.isVisible) continue;
+    const actor = baseActorOf(token);
+    if (actor) ids.add(actor.id);
+  }
+  return ids;
+}
+
+/**
+ * May this user record ties at all?
+ *
+ * The `playerAccess` setting's hint promises "turn this off to make the whole feature
+ * GM-only again". It used to govern only the sheet tab and the canvas keys, leaving the
+ * dialog, the hover key and the HUD button answering to nobody. A kill-switch that leaves
+ * three doors open is not one.
+ *
+ * It lives here, in the layer that imports nothing, because both the UI and the relay's
+ * GM-side handler have to ask the same question — and having them import each other to
+ * share it built a cycle.
+ */
+export function mayWrite(user = game.user) {
+  if (user?.isGM) return true;
+  try {
+    return game.settings.get(MODULE, "playerAccess") === true;
+  } catch {
+    return false; // settings not registered yet: refuse rather than guess
+  }
 }
 
 /** Sanitised, resolved ties for an actor. Never throws. Never returns non-array. */
@@ -69,11 +135,73 @@ export function read(actor) {
           : game.i18n?.localize("PENTARYN_TIES.row.missingName") ?? "(missing)"),
       img: target?.img ?? null,
       missing: !target,
-      word: typeof t.word === "string" ? t.word.trim() : "",
+      word: clampWord(t.word),
       notes: clampNotes(t.notes),
       stance: clampStance(t.stance),
       strength: clampStrength(t.strength)
     });
+  }
+  out.sort((a, b) => b.strength - a.strength || a.name.localeCompare(b.name));
+  return out;
+}
+
+/**
+ * Everyone who has recorded a tie pointing AT this actor — the inbound half of the graph.
+ *
+ * ## GM only, and gated here rather than in the UI
+ *
+ * A player's panel shows only rows their own actor authored. Inbound is the opposite: it is
+ * other people's records, and showing it to a player would reveal the existence and the
+ * names of actors they have never met — a disclosure the parent plan's three player rules
+ * never had to cover, because until now a sheet only ever displayed what that actor wrote.
+ *
+ * The gate lives in this function, not in the renderer, so there is no UI path that can
+ * leak it by forgetting to ask. **If you want a player to know about a connection, write it
+ * onto their own character's sheet.**
+ *
+ * ## Why a scan, and not an index
+ *
+ * Foundry ships every Actor document to every client, so the whole graph is already in
+ * memory before anyone asks. Measured in the live campaign — 136 actors, 196 edges — one
+ * actor's inbound lookup costs **0.027 ms**, and building an index for the entire world
+ * costs 0.115 ms. At a projected 20,000 actors a full index is ~17 ms, still less than
+ * rendering the sheet it would sit on. A persisted reverse index would be a second copy of
+ * the truth that can disagree with the first, bought for nothing.
+ */
+export function inbound(actor) {
+  if (!actor || game.user?.isGM !== true) return [];
+  const mine = new Set(read(actor).map(t => t.id));
+  const out = [];
+  for (const other of game.actors?.contents ?? []) {
+    if (other.id === actor.id) continue;
+    let raw;
+    try {
+      raw = other.getFlag(MODULE, FLAG);
+    } catch {
+      continue;
+    }
+    if (!Array.isArray(raw)) continue;
+    for (const t of raw) {
+      if (!t || typeof t !== "object" || t.id !== actor.id) continue;
+      out.push({
+        id: other.id,
+        name: other.name,
+        img: other.img ?? null,
+        /*
+         * Direction, and it is easy to get backwards: an actor's array says what THAT ACTOR
+         * is to each person in it (parent plan §2). So this word — sitting on `other`'s
+         * sheet, pointing at `actor` — is what **other is to actor**. Hovering Wat and
+         * reading Harl's inbound row gives "potman": Harl is Wat's potman.
+         */
+        word: clampWord(t.word),
+        notes: clampNotes(t.notes),
+        stance: clampStance(t.stance),
+        strength: clampStrength(t.strength),
+        // does this actor point back at them? the pair is then two halves of one relationship
+        mutual: mine.has(other.id)
+      });
+      break; // one row per actor; read() already de-duplicates on write
+    }
   }
   out.sort((a, b) => b.strength - a.strength || a.name.localeCompare(b.name));
   return out;
@@ -84,7 +212,7 @@ const toStored = list =>
   list.map(t => ({
     id: t.id,
     name: t.name,
-    word: t.word ?? "",
+    word: clampWord(t.word),
     notes: clampNotes(t.notes),
     stance: clampStance(t.stance),
     strength: clampStrength(t.strength)

@@ -18,6 +18,12 @@ which tools run in-process (fast) and which shell out to a subprocess (slower).
 
 ## SRD lookups (in-process, disk-cached, Open5e v2)
 
+> **No longer the default.** Joe owns the 2024 PHB, DMG and Monster Manual as Foundry
+> modules — the actual book text and 504 MM stat blocks, queryable live in ~400 ms. Go
+> there first: [`foundry/rules-lookup.md`](foundry/rules-lookup.md). These tools remain
+> the right call for third-party sources (Tome of Beasts, Level Up A5E), for edition
+> comparison, and for when Foundry is closed.
+
 - `search_*` tools return **full entries inline**, not summaries. You usually don't need to
   chain `search_X → get_X_details`.
 - `get_*_details` take a v2 **`key`** (`'srd-2024_goblin-warrior'`, `'srd-2024_fireball'`) —

@@ -29,7 +29,8 @@ Open the entry point, then only what it points to. Every context file opens with
 | The current one-shot — scene state, cast, IDs, what's still unbuilt | [`context/space-journey.md`](context/space-journey.md) |
 | World & lore authoring — where files go, naming, frontmatter, combat NPCs | [`context/world/README.md`](context/world/README.md) |
 | Timeline events and the history SVGs | [`context/world/timelines.md`](context/world/timelines.md) |
-| SRD lookups, vault search, campaign-time math — tool semantics and quirks | [`context/tools.md`](context/tools.md) |
+| A rule, spell, feat, item or monster — **the owned PHB/DMG/MM, not the SRD API** | [`context/foundry/rules-lookup.md`](context/foundry/rules-lookup.md) |
+| Vault search, campaign-time math, MCP tool semantics and quirks | [`context/tools.md`](context/tools.md) |
 | Creating content from a skeleton | [`templates/README.md`](templates/README.md) |
 | How something was designed or migrated (history, not instructions) | [`context/plans/`](context/plans/) |
 

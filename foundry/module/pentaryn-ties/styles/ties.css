@@ -1,17 +1,52 @@
+/* ── the sheet panel: a row you click open ───────────────────────────── */
+
+/*
+ * One row, two halves. `.pt-summary` is what you scan and the entire click target;
+ * `.pt-detail-wrap` is what unfolds under it. No mode, no inline inputs in the summary —
+ * everything you can change lives in the detail, so the collapsed list stays readable.
+ * `container-type` is what lets the narrow sheet tab and the wide standalone window share
+ * one stylesheet — see the container query at the bottom.
+ */
 .pentaryn-ties {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.5rem;
   font-size: var(--font-size-13, 13px);
+  container-type: inline-size;
+
+  /*
+   * The stance palette. These are the canvas cards' hexes, chosen against a near-black
+   * card, and they are right here too — on a DARK sheet. Semibold 13px text needs 4.5:1;
+   * on white these land at 1.9–3.8:1, so the light theme restates every one below.
+   * Neutral is never painted onto a word (the dot carries it) but still colours the dot.
+   */
+  --pt-devoted: #2ecc40;
+  --pt-friendly: #6ab04c;
+  --pt-neutral: #9aa0a6;
+  --pt-wary: #e1a53a;
+  --pt-hostile: #e74c3c;
 }
 
-.pentaryn-ties .pt-help {
-  margin: 0;
-  opacity: 0.7;
-  font-size: var(--font-size-11, 11px);
-  line-height: 1.35;
+/* Same five stances, darkened until each clears 4.5:1 on white (5.1–6.6:1). */
+.theme-light .pentaryn-ties {
+  --pt-devoted: #1b7f2f;
+  --pt-friendly: #3f7526;
+  --pt-wary: #8a5300;
+  --pt-hostile: #b3251b;
+  --pt-neutral: #6b7075;
 }
+
+.pentaryn-ties .pt-word.pt-devoted { color: var(--pt-devoted); }
+.pentaryn-ties .pt-word.pt-friendly { color: var(--pt-friendly); }
+.pentaryn-ties .pt-word.pt-wary { color: var(--pt-wary); }
+.pentaryn-ties .pt-word.pt-hostile { color: var(--pt-hostile); }
+
+.pentaryn-ties .pt-dot.pt-devoted { background: var(--pt-devoted); }
+.pentaryn-ties .pt-dot.pt-friendly { background: var(--pt-friendly); }
+.pentaryn-ties .pt-dot.pt-neutral { background: var(--pt-neutral); }
+.pentaryn-ties .pt-dot.pt-wary { background: var(--pt-wary); }
+.pentaryn-ties .pt-dot.pt-hostile { background: var(--pt-hostile); }
 
 .pentaryn-ties .pt-list {
   list-style: none;
@@ -19,50 +54,84 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  max-height: 22rem;
+  max-height: 26rem;
   overflow-y: auto;
 }
 
-.pentaryn-ties .pt-row,
-.pentaryn-ties .pt-add {
-  display: grid;
-  grid-template-columns: 1.2rem minmax(6rem, 1fr) minmax(6rem, 1.2fr) 7rem 3.5rem 1.8rem 1.8rem;
-  align-items: center;
-  gap: 4px;
+.pentaryn-ties .pt-row + .pt-row {
+  border-top: 1px solid rgba(128, 128, 128, 0.22);
 }
 
 .pentaryn-ties .pt-row.pt-open {
-  background: rgba(0, 0, 0, 0.04);
-  border-radius: 3px;
-  padding-bottom: 2px;
+  background: rgba(128, 128, 128, 0.1);
+  border-radius: 4px;
 }
 
-.pentaryn-ties .pt-add {
-  grid-template-columns: minmax(6rem, 1.2fr) minmax(6rem, 1fr) 7rem 3.5rem auto;
-  padding-top: 0.35rem;
-  border-top: 1px solid var(--color-border-light-tertiary, #bbb);
+/* the click target: portrait · name · word · chip · pips · hint */
+.pentaryn-ties .pt-summary {
+  display: grid;
+  grid-template-columns: 30px minmax(7rem, 1.1fr) minmax(6rem, 1fr) 5.6rem 4.2rem 1.4rem;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
 }
 
-.pentaryn-ties .pt-dot {
+.pentaryn-ties .pt-summary:hover {
+  background: rgba(128, 128, 128, 0.12);
+}
+
+.pentaryn-ties .pt-summary:focus-visible {
+  outline: 2px solid var(--color-text-hyperlink, #5a4bc4);
+  outline-offset: -2px;
+}
+
+/* the pencil: a hint that the row opens, not a control of its own */
+.pentaryn-ties .pt-hint {
+  opacity: 0.3;
   text-align: center;
-  font-size: 1.05em;
-  line-height: 1;
+  font-size: 11px;
+  transition: opacity 120ms ease;
+}
+
+.pentaryn-ties .pt-summary:hover .pt-hint,
+.pentaryn-ties .pt-summary:focus-visible .pt-hint,
+.pentaryn-ties .pt-row.pt-open .pt-hint {
+  opacity: 0.85;
+}
+
+/* portrait — the canvas cards' round art, at row scale. Decoration, not a control. */
+.pentaryn-ties .pt-portrait {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(128, 128, 128, 0.45);
+  background: rgba(0, 0, 0, 0.25);
+  object-fit: cover;
+  display: block;
+  flex: 0 0 auto;
+}
+
+.pentaryn-ties .pt-missing-row .pt-portrait {
+  filter: grayscale(1);
+  opacity: 0.5;
+}
+
+/* the name column, with the note preview folded under it */
+.pentaryn-ties .pt-who {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
 }
 
 .pentaryn-ties .pt-name {
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.pentaryn-ties a.pt-name {
-  cursor: pointer;
-  text-decoration: none;
-}
-
-.pentaryn-ties a.pt-name:hover {
-  text-decoration: underline;
 }
 
 .pentaryn-ties .pt-missing {
@@ -70,44 +139,180 @@
   font-style: italic;
 }
 
-.pentaryn-ties input,
-.pentaryn-ties select {
-  height: 1.6rem;
-  font-size: inherit;
+/* one dimmed line of the note. Clamped, so a 4000-char paragraph can't become a page. */
+.pentaryn-ties .pt-note-preview {
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.pentaryn-ties .pt-del,
-.pentaryn-ties .pt-notes-toggle {
-  border: none;
-  background: none;
-  cursor: pointer;
+.pentaryn-ties .pt-note-preview.pt-note-none {
+  opacity: 0.35;
+}
+
+/* the unfolded detail says the same thing in full — one of them has to go */
+.pentaryn-ties .pt-row.pt-open .pt-note-preview {
+  display: none;
+}
+
+/* the word — stance-coloured and semibold, exactly the card treatment */
+.pentaryn-ties .pt-word {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* no word yet: fall back to the stance label, quietly, as the cards do */
+.pentaryn-ties .pt-word.pt-noword {
+  font-weight: 400;
+  font-style: italic;
   opacity: 0.55;
+}
+
+/* stance chip — the dot plus its word */
+.pentaryn-ties .pt-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  justify-self: start;
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.85;
+  padding: 1px 8px 1px 6px;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 9px;
+  white-space: nowrap;
+}
+
+/* a row with no word borrows the stance label for its word cell; the chip goes dot-only */
+.pentaryn-ties .pt-chip.pt-chip-bare {
   padding: 0;
-  width: 1.6rem;
+  border: none;
 }
 
-.pentaryn-ties .pt-del:hover {
-  opacity: 1;
-  color: var(--color-level-error, #b60205);
+.pentaryn-ties .pt-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
 }
 
-/* a filled-in pin means there is prose behind it — readable at a glance down the column */
-.pentaryn-ties .pt-notes-toggle.has-notes {
+/*
+ * Strength: five pips, tallest last. Deliberately NOT stance-coloured — one hue channel
+ * per row already carries stance, and double-encoding makes a strong enemy look like two
+ * facts disagreeing. currentColor so it reads on a light or a dark sheet without asking.
+ */
+.pentaryn-ties .pt-pips {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  justify-self: start;
+}
+
+.pentaryn-ties .pt-pip {
+  width: 5px;
+  padding: 0;
+  border: none;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0.2;
+}
+
+.pentaryn-ties .pt-pip:nth-child(1) { height: 6px; }
+.pentaryn-ties .pt-pip:nth-child(2) { height: 8px; }
+.pentaryn-ties .pt-pip:nth-child(3) { height: 10px; }
+.pentaryn-ties .pt-pip:nth-child(4) { height: 12px; }
+.pentaryn-ties .pt-pip:nth-child(5) { height: 14px; }
+
+.pentaryn-ties .pt-pip.fill {
+  opacity: 0.85;
+}
+
+/*
+ * Foundry sizes every `button` off `--button-size` (28px min-height), which flattens the
+ * pip ladder into five identical bars the moment they become clickable. Reset the box —
+ * the nth-child heights above are the whole point of the control.
+ */
+.pentaryn-ties button.pt-pip {
+  cursor: pointer;
+  box-shadow: none;
+  --button-size: 0;
+  min-height: 0;
+  min-width: 0;
+  line-height: 0;
+  margin: 0;
+  position: relative;
+}
+
+/* A 5px-wide bar is a cruel mouse target. Grow the hit area without moving the bar. */
+.pentaryn-ties button.pt-pip::after {
+  content: "";
+  position: absolute;
+  inset: -7px -2px;
+}
+
+.pentaryn-ties button.pt-pip:hover {
   opacity: 1;
   color: var(--color-text-hyperlink, #5a4bc4);
 }
 
-.pentaryn-ties .pt-notes-toggle:hover {
+/* Keyboard focus on a 5px bar needs a ring, not a tint. */
+.pentaryn-ties button.pt-pip:focus-visible {
   opacity: 1;
+  outline: 2px solid var(--color-text-hyperlink, #5a4bc4);
+  outline-offset: 2px;
 }
 
-.pentaryn-ties .pt-notes {
-  grid-column: 1 / -1;
-  padding: 0.25rem 0.15rem 0.35rem;
+.pentaryn-ties .pt-missing-row .pt-chip,
+.pentaryn-ties .pt-missing-row .pt-word,
+.pentaryn-ties .pt-missing-row .pt-pips {
+  opacity: 0.5;
 }
 
-.pentaryn-ties .pt-notes[hidden] {
+/* ── the detail, revealed on click ───────────────────────────────────── */
+
+.pentaryn-ties .pt-detail-wrap[hidden] {
   display: none;
+}
+
+.pentaryn-ties .pt-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  /* line up under the name, past the portrait column */
+  padding: 0.15rem 0.4rem 0.5rem 36px;
+}
+
+.pentaryn-ties .pt-fields {
+  display: grid;
+  grid-template-columns: minmax(7rem, 1.4fr) minmax(6rem, 1fr) auto;
+  align-items: end;
+  gap: 0.5rem;
+}
+
+.pentaryn-ties .pt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+}
+
+.pentaryn-ties .pt-field-label {
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pentaryn-ties input,
+.pentaryn-ties select {
+  height: 1.6rem;
+  font-size: inherit;
+  min-width: 0;
 }
 
 .pentaryn-ties .pt-notes-text {
@@ -120,28 +325,472 @@
   line-height: 1.4;
 }
 
+.pentaryn-ties .pt-notes-prose {
+  font-size: var(--font-size-12, 12px);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  opacity: 0.9;
+  border-left: 2px solid rgba(128, 128, 128, 0.35);
+  padding-left: 0.6rem;
+  max-height: 12rem;
+  overflow-y: auto;
+}
+
+.pentaryn-ties .pt-notes-prose.pt-note-none {
+  opacity: 0.5;
+}
+
+.pentaryn-ties .pt-detail-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+/* text buttons, not icon buttons: in an opened panel there is room to say the word */
+.pentaryn-ties .pt-textbtn {
+  background: none;
+  border: none;
+  box-shadow: none;
+  width: auto;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.75;
+  --button-size: 0;
+  min-height: 0;
+}
+
+.pentaryn-ties .pt-textbtn:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
+.pentaryn-ties .pt-del:hover {
+  color: var(--color-level-error, #b60205);
+}
+
+/* ── who is in the room, and who is not ──────────────────────────────── */
+
+/*
+ * Quiet by design: this is a sorting aid, not a section of its own. It only ever renders
+ * when both groups have rows, so it never labels the obvious.
+ */
+.pentaryn-ties .pt-group-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-top: 0.3rem;
+}
+
+.pentaryn-ties .pt-group-title {
+  font-size: var(--font-size-11, 11px);
+  font-weight: 600;
+  opacity: 0.6;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* a hairline after the title, so the eye finds the break without a heavy rule */
+.pentaryn-ties .pt-group-head::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: rgba(128, 128, 128, 0.3);
+}
+
+.pentaryn-ties .pt-list-elsewhere .pt-summary {
+  opacity: 0.82;
+}
+
+/* ── what the other side says back ───────────────────────────────────── */
+
+/*
+ * The reply fragment sits under the name, on the row that already names them, because most
+ * pairs are mutual and a second list would print nearly every row twice. GM only — every
+ * one of these is read off another actor's array.
+ */
+.pentaryn-ties .pt-reply {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.62;
+  min-width: 0;
+}
+
+.pentaryn-ties .pt-reply i {
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+.pentaryn-ties .pt-reply-word {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pentaryn-ties .pt-reply-word.pt-noword {
+  font-style: italic;
+  opacity: 0.8;
+}
+
+.pentaryn-ties .pt-reply .pt-dot {
+  width: 6px;
+  height: 6px;
+}
+
+/* the row is open: their side in full, read-only, with a door to edit it properly */
+.pentaryn-ties .pt-their-side {
+  border-top: 1px dashed rgba(128, 128, 128, 0.35);
+  padding-top: 0.4rem;
+  margin-top: 0.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.pentaryn-ties .pt-their-head,
+.pentaryn-ties .pt-inbound-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pentaryn-ties .pt-their-title,
+.pentaryn-ties .pt-inbound-title {
+  font-size: var(--font-size-11, 11px);
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+/*
+ * The badge is the promise that a player is not seeing this. It never degrades in the
+ * container query — a GM-only marker that disappears on a narrow sheet is worse than none.
+ */
+.pentaryn-ties .pt-gm-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-size-11, 11px);
+  padding: 0 6px;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  border-radius: 9px;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.pentaryn-ties .pt-their-line {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: var(--font-size-12, 12px);
+}
+
+/* ── people who wrote this character down without being written down back ─ */
+
+.pentaryn-ties .pt-inbound-head {
+  padding-top: 0.5rem;
+  margin-top: 0.25rem;
+  border-top: 1px solid var(--color-border-light-tertiary, rgba(128, 128, 128, 0.4));
+}
+
+.pentaryn-ties .pt-inbound-hint {
+  margin: 0;
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.55;
+  line-height: 1.35;
+}
+
+.pentaryn-ties .pt-list-inbound {
+  max-height: 18rem;
+}
+
+/* a dashed inline rule: these rows live on someone else's sheet, not this one */
+.pentaryn-ties .pt-row.pt-inbound > .pt-summary {
+  border-inline-start: 2px dashed rgba(128, 128, 128, 0.45);
+  padding-inline-start: 6px;
+}
+
+.pentaryn-ties .pt-row.pt-inbound .pt-hint {
+  opacity: 0.35;
+}
+
+/* ── adding ──────────────────────────────────────────────────────────── */
+
+.pentaryn-ties .pt-add-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid var(--color-border-light-tertiary, rgba(128, 128, 128, 0.4));
+}
+
+.pentaryn-ties .pt-add-btn {
+  width: auto;
+  flex: 0 0 auto;
+  font-size: var(--font-size-12, 12px);
+  padding: 0 0.6rem;
+}
+
+.pentaryn-ties .pt-add-hint {
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.55;
+}
+
 .pentaryn-ties .pt-empty {
   opacity: 0.55;
   font-style: italic;
   padding: 0.5rem 0;
 }
 
-.pentaryn-ties .pt-reciprocal {
+/*
+ * The sheet tab is far narrower than the standalone window. Below ~480px the stance chip
+ * drops its label (the dot survives), the portrait shrinks, and the detail's field row
+ * stacks. The name, the word and the pips never degrade — they are the scan path, and the
+ * scan path is the feature.
+ */
+@container (width < 480px) {
+  .pentaryn-ties .pt-summary {
+    grid-template-columns: 24px minmax(6rem, 1.1fr) minmax(5rem, 1fr) 1.2rem 4.2rem 1.2rem;
+  }
+  .pentaryn-ties .pt-chip {
+    padding: 0;
+    border: none;
+  }
+  .pentaryn-ties .pt-chip-label {
+    display: none;
+  }
+  .pentaryn-ties .pt-portrait {
+    width: 24px;
+    height: 24px;
+  }
+  /* the arrow is the least of what the reply says; the word and the dot survive */
+  .pentaryn-ties .pt-reply i {
+    display: none;
+  }
+  .pentaryn-ties .pt-detail {
+    padding-left: 30px;
+  }
+  .pentaryn-ties .pt-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* ── the add/edit dialog ─────────────────────────────────────────────── */
+
+.pentaryn-tie-dialog .pt-dlg {
   display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.5rem;
+  font-size: var(--font-size-13, 13px);
+}
+
+/* who → whom, said with faces, because a name in a dropdown is easy to misread */
+.pentaryn-tie-dialog .pt-dlg-pair {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.6rem;
+}
+
+.pentaryn-tie-dialog .pt-dlg-side {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 2px 8px;
+  min-width: 0;
+}
+
+.pentaryn-tie-dialog .pt-dlg-side .pt-portrait {
+  grid-row: 1 / 3;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid rgba(128, 128, 128, 0.45);
+  background: rgba(0, 0, 0, 0.25);
+  object-fit: cover;
+}
+
+.pentaryn-tie-dialog .pt-dlg-side-label {
   font-size: var(--font-size-11, 11px);
-  opacity: 0.8;
+  opacity: 0.55;
 }
 
-.pentaryn-ties .pt-reciprocal input {
-  height: auto;
+.pentaryn-tie-dialog .pt-dlg-fixed {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-/* the player's variant of the reciprocal line is prose, not a checkbox */
-.pentaryn-ties p.pt-reciprocal {
+.pentaryn-tie-dialog a.pt-dlg-link {
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.pentaryn-tie-dialog a.pt-dlg-link:hover {
+  text-decoration: underline;
+}
+
+.pentaryn-tie-dialog a.pt-dlg-link:focus-visible {
+  outline: 2px solid var(--color-text-hyperlink, #5a4bc4);
+  outline-offset: 2px;
+}
+
+.pentaryn-tie-dialog .pt-dlg-arrow {
+  opacity: 0.45;
+}
+
+.pentaryn-tie-dialog .pt-dlg-note {
   margin: 0;
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.75;
+  line-height: 1.35;
+}
+
+.pentaryn-tie-dialog .pt-fields {
+  display: grid;
+  grid-template-columns: minmax(7rem, 1.4fr) minmax(6rem, 1fr) auto;
+  align-items: end;
+  gap: 0.5rem;
+}
+
+.pentaryn-tie-dialog .pt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin: 0;
+}
+
+/*
+ * Dialog labels name the direction — "what X is to Y" — so truncating one hides the very
+ * thing the field is about. The window has the width; let them wrap. (The sheet panel's
+ * labels still clip, because there a row is a scan line and height is the scarce thing.)
+ */
+.pentaryn-tie-dialog .pt-field-label {
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.6;
+  line-height: 1.25;
+}
+
+.pentaryn-tie-dialog input,
+.pentaryn-tie-dialog select {
+  height: 1.7rem;
+  font-size: inherit;
+  min-width: 0;
+  width: 100%;
+}
+
+.pentaryn-tie-dialog textarea {
+  width: 100%;
+  min-height: 5.5rem;
+  resize: vertical;
+  font-family: inherit;
+  font-size: var(--font-size-12, 12px);
+  line-height: 1.4;
+}
+
+.pentaryn-tie-dialog :disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* the mirror box: indented under what it mirrors, and quiet until it diverges */
+.pentaryn-tie-dialog .pt-dlg-reverse {
+  padding-left: 1.1rem;
+  border-left: 2px solid rgba(128, 128, 128, 0.3);
+  margin-top: -0.15rem;
+}
+
+.pentaryn-tie-dialog .pt-dlg-mirror-input::placeholder {
+  opacity: 0.45;
   font-style: italic;
+}
+
+.pentaryn-tie-dialog .pt-dlg-mirror-input.pt-diverged {
+  border-color: var(--color-text-hyperlink, #5a4bc4);
+}
+
+.pentaryn-tie-dialog .pt-dlg-mirror-hint {
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.5;
+}
+
+.pentaryn-tie-dialog textarea.pt-dlg-mirror-input {
+  min-height: 3.2rem;
+}
+
+.pentaryn-tie-dialog .pt-dlg-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  padding-top: 0.25rem;
+}
+
+.pentaryn-tie-dialog .pt-dlg-actions button {
+  width: auto;
+  padding: 0 0.9rem;
+}
+
+/* the pips are shared with the sheet panel; only the interactive reset is repeated here */
+.pentaryn-tie-dialog .pt-pips {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.pentaryn-tie-dialog .pt-pip {
+  width: 5px;
+  padding: 0;
+  border: none;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0.2;
+}
+
+.pentaryn-tie-dialog .pt-pip:nth-child(1) { height: 6px; }
+.pentaryn-tie-dialog .pt-pip:nth-child(2) { height: 8px; }
+.pentaryn-tie-dialog .pt-pip:nth-child(3) { height: 10px; }
+.pentaryn-tie-dialog .pt-pip:nth-child(4) { height: 12px; }
+.pentaryn-tie-dialog .pt-pip:nth-child(5) { height: 14px; }
+.pentaryn-tie-dialog .pt-pip.fill { opacity: 0.85; }
+
+.pentaryn-tie-dialog button.pt-pip {
+  cursor: pointer;
+  box-shadow: none;
+  --button-size: 0;
+  min-height: 0;
+  min-width: 0;
+  line-height: 0;
+  margin: 0;
+  position: relative;
+}
+
+.pentaryn-tie-dialog button.pt-pip::after {
+  content: "";
+  position: absolute;
+  inset: -7px -2px;
+}
+
+.pentaryn-tie-dialog button.pt-pip:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--color-text-hyperlink, #5a4bc4);
+  outline-offset: 2px;
+}
+
+/*
+ * No container query here: nothing in the dialog declares `container-type`, so one would
+ * never match. The window is a fixed 520px, so the field row wraps on its own terms.
+ */
+@media (max-width: 560px) {
+  .pentaryn-tie-dialog .pt-fields {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 
 /* ── the card layer ──────────────────────────────────────────────────── */

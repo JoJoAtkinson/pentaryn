@@ -9,8 +9,10 @@ your notes. Press again to sweep them away. **Drag one to keep it.**
 **Players get this too, for their own character.** With a table of thirty NPCs, "who can I actually
 talk to?" is a real question, and this answers it without the GM reading out a list.
 
-**Client-only.** The overlay is a PIXI container and a DOM layer that exist in one browser. Nothing
-crosses the socket.
+**Client-only, with one exception.** The overlay is a PIXI container and a DOM layer that exist in
+one browser; no card, no wire and no hover ever crosses the socket. The single exception is the
+**reverse-side relay**: a player cannot write to an NPC at all, so their client asks a GM's client
+to record the other half of a tie. It carries two actor ids and nothing else; who sent it comes from the server, not the message — see *Both sides*.
 
 ---
 
@@ -43,9 +45,9 @@ no entry at all means no card. Absence is information.
 ## Notes
 
 The one-word label is what you need mid-scene; the notes are what you need when a player asks a
-question you didn't plan for. Click the **pin** at the end of a row to unfold a textarea: how they
-met, what is owed, what neither of them says out loud. A filled-in pin means there is prose behind
-it, so you can read the column at a glance.
+question you didn't plan for. **Click a row anywhere** and it opens: word, stance, strength and a
+textarea for how they met, what is owed, what neither of them says out loud. The first line of the
+notes shows under the name while the row is shut, so you can read the column at a glance.
 
 Notes ride along on the card, under the name. They are only ever shown to whoever pressed the key —
 a card is drawn in one browser and nothing about it crosses the socket.
@@ -54,10 +56,13 @@ Notes save as you type (and again on blur), so closing the sheet mid-sentence do
 paragraph. Deleting a tie deletes its notes, and the confirmation says so when there is prose to
 lose.
 
-Notes are **not mirrored**. Like `word`, they are written from one side's point of view — Piet's
-notes about Brellin are Piet's, and Brellin's row for Piet starts blank. Copying the paragraph
-across would just create two versions of it to keep in sync. From a script:
-`game.pentaryn.ties.setNotes(actor, targetId, text)`, or pass `notes` / `reverseNotes` to `set()`.
+Notes are **directed**, like `word`: Piet's notes about Brellin are written from Piet's side. But
+they are not *isolated* — in the tie dialog each of the word and the notes has a second box for the
+other side, showing your text greyed in behind it. **Leave it blank and their side stays the same as
+yours**, this save and every later one; type in it and the two have diverged, and yours stops
+changing theirs. Clearing the box re-links them. Identity is the whole mechanism: two sides that say
+the same thing *are* linked, two that differ are not, and there is no hidden flag to disagree with
+what you can read. From a script: `game.pentaryn.ties.setNotes(actor, targetId, text)`.
 
 ## Using it
 
@@ -66,13 +71,30 @@ across would just create two versions of it to keep in sync. From a script:
 | **Canvas** | Hover a token, press **`8`**. Same person again clears; a different person swaps; empty space clears |
 | **Canvas** | Select your own token, hover somebody else, press **`7`** — that one tie, on its own |
 | **Canvas** | Hover a token, press **`9`** — who that person *is*, from their description. **GM only** |
-| **Sheet** | A **Ties** tab on the actor sheet. Edit inline — changes save on change, there's no submit button to forget |
-| **Header** | A people-arrows button in the sheet header opens the same editor in a window |
-| **Console** | `game.pentaryn.ties.read(actor)` · `.set(a, b, {word, stance, strength, notes})` · `.setNotes(a, bId, text)` · `.show()` · `.edit(actor)` |
+| **Sheet** | A **Ties** tab on the actor sheet. Rows read at a glance — portrait, name, the word, the stance, how strong, and the first line of your notes. **Click a row anywhere** and it opens: word, stance, strength and notes, editable in place, saving as you type. Click again to shut it |
+| **Map** | Hover anyone and press **`6`**. The token you hover becomes the person the tie is **to**, and you pick whose list it goes on — unless they are the only character you can write on, in which case they become the person it is **from** and you pick who it is to. The **token HUD** has the same button, on any token whose HUD you can open |
+| **Header** | A people-arrows button in the sheet header opens the same panel in a window |
+| **Console** | `game.pentaryn.ties.read(actor)` · `.inbound(actor)` *(GM)* · `.set(a, b, {word, stance, strength, notes})` · `.setNotes(a, bId, text)` · `.show()` · `.edit(actor)` |
 
-By default, adding or removing a tie writes **both directions**. Untick *"Also write the matching
-tie"* to make a deliberately one-sided one — he thinks they're friends, she doesn't. (A player only
-ever writes their own side; the checkbox isn't offered to them, because the server would refuse it.)
+**Both sides, without anyone being told about permissions.** Recording a tie writes your side and
+seeds theirs — if their side is blank, or still says what yours said, it follows; once it says
+something different it is theirs and yours stops touching it. A player cannot write to an NPC at
+all (Foundry refuses it), so their client asks a GM's client to do that half — and over that hop
+the rule is narrower: **blank is filled, written text is never touched**, because deciding "still
+says what yours said" would mean trusting the asking client about what yours used to say. It is silent either
+way, and it needs a GM online: with nobody to ask, their own side still saves, and the next Save
+from anyone on that pair completes it.
+
+**What a player can see on the panel.** Their own character's list only — but that list shows
+each tied actor's **name and portrait**, whether or not they have permission on that actor. This
+is deliberate: the row has always shown the cached name, and the face is the same category of
+disclosure on a list the GM curated. It follows that **a face or a name that would spoil the game
+must not be given a tie on a player's character** — put it in a GM-only journal instead, the same
+rule that already applies to tie notes.
+
+Adding or removing a tie works on **both directions**. Removing takes the matching row with it. A
+one-sided tie — he thinks they're friends, she doesn't — is made by diverging the second box, or
+simply by editing only one side.
 
 ## On the canvas
 
@@ -109,9 +131,11 @@ The feature is safe to hand to the table because of three rules, none of which i
    player "3 contacts not in sight" would hand back exactly the information the wall took away.
    If nothing is visible they are told only that nobody they know is in sight.
 3. **Only your own list.** Players edit their own character's ties — it's an address book, and
-   keeping it current is theirs to do. The tie *target* dropdown is filtered to actors they already
-   have at least LIMITED permission on, because Foundry ships every Actor document to every client
-   and an unfiltered list would name every NPC in the world.
+   keeping it current is theirs to do. Target lists are filtered: from a **sheet**, to actors they
+   already have at least LIMITED permission on, because Foundry ships every Actor document to every
+   client and an unfiltered list would name every NPC in the world; from the **canvas**, to tokens
+   that pass `Token#isVisible`, and a token they do not own is named by its *token* name, so a
+   disguise stays a disguise.
 
 > ### ⚠ Tie notes are not a secrets store
 >

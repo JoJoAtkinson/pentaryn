@@ -18,7 +18,8 @@ import * as Overlay from "./overlay.mjs";
 import * as Cards from "./popups.mjs";
 import * as Worn from "./worn.mjs";
 import * as Describe from "./describe.mjs";
-import { TiesEditor, buildHTML, bind } from "./editor.mjs";
+import { TiesEditor, buildHTML, bind, forgetActor } from "./editor.mjs";
+import { registerRelay } from "./relay.mjs";
 
 const MODULE = API.MODULE;
 const TAB = "ties";
@@ -57,6 +58,30 @@ Hooks.once("init", () => {
     restricted: false,
     onDown: () => {
       Overlay.showAll();
+      return true;
+    }
+  });
+
+  /**
+   * 6 — the writing key, next to the three reading keys.
+   *
+   * Right-clicking a token was the obvious home for this and it is not available: core's
+   * `Token#_canHUD` is `user.isGM || actor.testUserPermission(user, "OWNER")`, so a player
+   * right-clicking an NPC gets nothing at all, and there is no context-menu hook for
+   * placeables (`_getEntryContextOptions` is a sidebar/application thing). A hover key is
+   * the only surface that gives a player "you can see them, so you can add them".
+   *
+   * Hovering someone you OWN opens their list to write on; hovering anyone else opens a
+   * tie pointing AT them, from you.
+   */
+  game.keybindings.register(MODULE, "addTie", {
+    name: "PENTARYN_TIES.keybind.add",
+    hint: "PENTARYN_TIES.keybind.addHint",
+    editable: [{ key: "Digit6" }],
+    restricted: false,
+    onDown: () => {
+      if (!API.mayWrite()) return true;
+      openTieDialogFor(canvas?.tokens?.hover ?? null);
       return true;
     }
   });
@@ -141,7 +166,10 @@ function publishAPI() {
     clear: Overlay.clear,
     closeAllCards: Cards.closeAll,
     edit: actor => TiesEditor.open(actor),
+    addTie: token => openTieDialogFor(token ?? canvas?.tokens?.hover ?? canvas?.tokens?.controlled?.[0] ?? null),
     read: API.read,
+    // who points AT this actor — GM only, gated inside the function itself
+    inbound: API.inbound,
     set: API.setTie,
     setTie: API.setTie,
     setNotes: API.setNotes,
@@ -179,6 +207,15 @@ Hooks.once("ready", async () => {
     } catch (err) {
       console.error(`${MODULE} | ready step failed: ${label}`, err);
     }
+  }
+});
+
+/** The GM half of the reverse-side relay. Harmless to register on a player client. */
+Hooks.once("ready", () => {
+  try {
+    registerRelay();
+  } catch (err) {
+    console.warn(`${MODULE} | reverse-side relay not registered`, err);
   }
 });
 
@@ -257,6 +294,12 @@ function injectTab(app, element) {
   }
   if (!freshSection && link.dataset.ptBound === "1") return; // both already live and wired
 
+  /*
+   * No mode to pass any more: a row is read-at-a-glance until you click it, and the detail
+   * it opens is editable for whoever owns the actor. The sheet's own Play/Edit slider is
+   * irrelevant to us now — which also means a sheet re-render cannot land us in the wrong
+   * one.
+   */
   const paint = () => {
     section.innerHTML = buildHTML(actor);
     bind(section.firstElementChild, actor, paint);
@@ -296,6 +339,68 @@ function injectTab(app, element) {
   if (app.tabGroups?.primary === TAB) activate();
 }
 
+/**
+ * Open the tie dialog for a token.
+ *
+ * The dialog works out which end of the link the token fills — normally the **to** half,
+ * falling back to the **from** half when removing it would leave you no one to write on
+ * (a player pressing this on their own token). That rule lives in the dialog because it is
+ * driven by who you have access to, which is the same thing that decides everything else
+ * about the window.
+ */
+export async function openTieDialogFor(token) {
+  const { TieDialog, baseActorOf, sourceCandidates } = await import("./tie-dialog.mjs");
+  const actor = token ? baseActorOf(token) : null;
+  if (!actor) {
+    ui.notifications.warn(game.i18n.localize("PENTARYN_TIES.notify.noTarget"));
+    return null;
+  }
+  // nothing to write with, and for a player that includes the case where the GM turned the
+  // whole feature off — so check the pens, not the token
+  if (!API.mayWrite()) return null;
+  if (!game.user?.isGM && !sourceCandidates().length) return null;
+  return TieDialog.open({ clicked: actor, clickedToken: token });
+}
+
+/**
+ * The Token HUD button — the discoverable half of the pair.
+ *
+ * The HUD only opens for a token you own or as GM (core's `_canHUD`), so this needs no
+ * permission check of its own: if the button is on screen, you were allowed to open it.
+ */
+function injectTieHUD(app, element) {
+  const token = app?.object ?? null;
+  // the HUD opens for owners and GMs, but the setting can still have this feature switched
+  // off for players — in which case the button must not be there to press
+  if (!API.mayWrite()) return;
+  const root = element instanceof HTMLElement ? element : element?.[0];
+  const col = root?.querySelector(".col.left") ?? root?.querySelector(".left");
+  if (!col || col.querySelector(".pt-tie-btn")) return;
+  if (!token) return;
+
+  const label = game.i18n.localize("PENTARYN_TIES.hud.tie");
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "control-icon pt-tie-btn";
+  btn.dataset.tooltip = label;
+  btn.setAttribute("aria-label", label);
+  btn.innerHTML = '<i class="fa-solid fa-people-arrows"></i>';
+  btn.addEventListener("click", ev => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    openTieDialogFor(token);
+  });
+  col.appendChild(btn);
+}
+
+Hooks.on("renderTokenHUD", (app, element) => {
+  try {
+    injectTieHUD(app, element);
+  } catch (err) {
+    console.warn(`${MODULE} | tie HUD injection skipped`, err);
+  }
+});
+
 /** Header button — the robust host, independent of the sheet's tab markup. */
 function injectHeaderButton(app, element) {
   const actor = app?.document;
@@ -315,6 +420,11 @@ function injectHeaderButton(app, element) {
   if (close) header.insertBefore(btn, close);
   else header.appendChild(btn);
 }
+
+// The editor keeps which note panels are open in a module-level Map keyed by actor id.
+// Nothing else references a deleted actor's entry, so drop it rather than hold it for the
+// rest of the session.
+Hooks.on("deleteActor", actor => forgetActor(actor.id));
 
 for (const hook of ["renderNPCActorSheet", "renderCharacterActorSheet", "renderActorSheetV2", "renderActorSheet"]) {
   Hooks.on(hook, (app, element) => {

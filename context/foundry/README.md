@@ -35,6 +35,7 @@ Use the 2024 compendium packs: `dnd5e.spells24`, `dnd5e.equipment24`, `dnd5e.fea
 
 | Doing… | Read |
 |---|---|
+| **Any rules, spell, feat, item or monster question** | [`rules-lookup.md`](rules-lookup.md) |
 | Day-to-day server ops — start/stop, tunnel, OneDrive sync, module install | [`ops.md`](ops.md) |
 | "Put X here" / "replace the red one" — anything naming a spot on a map | [`markers.md`](markers.md) |
 | "The party goes upstairs" — Region + teleport scene links | [`scene-links.md`](scene-links.md) |
