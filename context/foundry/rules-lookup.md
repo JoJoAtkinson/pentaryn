@@ -77,17 +77,25 @@ for (const id of BOOKS) {
 return { hitCount: hits.length, hits: hits.slice(0, 6) };
 ```
 
-### One known page, by name (cheaper — index only)
+### One known page, by name
+
+⚠ **Do not use `getIndex({fields: ["pages.name"]})` for this.** It does not reliably
+populate `pages`: measured on v14.367, **2 of 47** entries came back with an array and
+the other 45 with an empty object `{}`, even after `pack.clear()`. Because `{}` is
+truthy, `(entry.pages || []).find(...)` throws or silently misses depending on
+iteration order — it worked once here and then stopped. `getDocuments()` is the source
+of truth, costs ~150 ms for the whole PHB, and is what the search recipe above already
+uses.
 
 ```js
 const pack = game.packs.get("dnd-players-handbook.content");
-const index = await pack.getIndex({ fields: ["pages.name"] });
-for (const entry of index) {
-  const p = (entry.pages || []).find(pg => pg.name === "Study");
-  if (!p) continue;
-  const doc = await pack.getDocument(entry._id);
-  const html = doc.pages.get(p._id).text?.content ?? "";
-  return html.replace(/<[^>]+>/g, " ").replace(/&\w+;/g, " ").replace(/\s+/g, " ").trim();
+for (const doc of await pack.getDocuments()) {
+  const page = doc.pages.find(p => p.name === "Study");
+  if (!page) continue;
+  const html = page.text?.content ?? "";
+  return { journal: doc.name,
+           uuid: `Compendium.${pack.collection}.JournalEntry.${doc.id}.JournalEntryPage.${page.id}`,
+           text: html.replace(/<[^>]+>/g, " ").replace(/&\w+;/g, " ").replace(/\s+/g, " ").trim() };
 }
 ```
 
@@ -124,6 +132,36 @@ For placing one on the canvas, prefer the real tools —
   fails with `LEVEL_ITERATOR_NOT_OPEN` unless Foundry is stopped. There is no reason to
   extract for normal use — the live query is faster than the extraction — but that is
   the route if you ever need rules with Foundry closed.
+
+## Verified API notes — v14.367 / dnd5e 5.3.3
+
+Probed live on 2026-08-22, because training-era knowledge of Foundry is mostly v10–v13
+and this world is newer. Everything here was checked, not assumed.
+
+| Thing | Reality |
+|---|---|
+| `game.version` / `game.system` | `14.367` / `dnd5e 5.3.3` |
+| `globalThis.duplicate(...)` | **GONE.** Use `foundry.utils.duplicate`. |
+| `JournalEntry`, `Actor` globals | still present; `foundry.documents.*` also works |
+| `game.packs.get(id)` | `CompendiumCollection` |
+| `pack.getIndex()` | a `Collection` — iterable, has `.size` |
+| `pack.getIndex({fields})` | **unreliable for nested fields** (see above) |
+| index entry keys | `_id, uuid, name, sort, folder, pages, img` |
+| `pack.getDocuments()` | authoritative; whole PHB ≈ 150 ms |
+| `doc.pages`, `actor.items` | `EmbeddedCollection` — `.size`, `.find`, `.get`. **No `.length`** |
+| `actor.system.details.cr` | number (e.g. `3`) |
+| `actor.system.attributes.ac.value` | number (e.g. `17`); `.flat` is `null` |
+| `fromUuid` | global function |
+
+**The `.length` trap.** `EmbeddedCollection` and the index's `pages` object have no
+`.length`, so `x.pages.length` is `undefined`, `sum += undefined` is `NaN`, and `NaN`
+serializes to `null` in the tool result. It does not throw — you just get a `null` in
+a report and may not notice. Use `.size`, or count from `getDocuments()`.
+
+**Cheapest way to be right:** when unsure of a data path, probe it in the same call
+you act in — build a small `{label, value}` list and return it alongside the result,
+rather than spending a round-trip on a separate "check" call. That is most of what the
+59% read/inspect share of the eval log actually is.
 
 ## When the Open5e MCP is still the right call
 
