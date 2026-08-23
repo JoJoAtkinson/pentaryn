@@ -52,6 +52,27 @@ Use the 2024 compendium packs: `dnd5e.spells24`, `dnd5e.equipment24`, `dnd5e.fea
 
 ---
 
+## The action log is the promotion mechanism — keep it on
+
+Every fork tool call lands in `foundry/logs/mcp-<month>.jsonl`, and every `eval-js`
+call also lands in `foundry/logs/eval.jsonl` with its stated purpose. That log is how
+you decide which recurring `eval-js` uses have earned a typed tool — it is the design's
+own answer to "what should the tool surface be", and it is meant to be grepped from the
+repo rather than exposed as a tool.
+
+Both are gated on **`PENTARYN_MCP_LOG_DIR`**, set in `.mcp.json`. If it is unset, the
+server logs nothing and says nothing — it was unset from 2026-08-14 to 2026-08-22 and
+the gap is simply missing. A restart of the MCP server is needed after changing it.
+
+Sanity check: make one `eval-js` call, then `wc -l foundry/logs/eval.jsonl`.
+
+**What the log said as of 2026-08-22** (3 days of scene-building, 2026-08-11 → 08-14):
+323 `eval-js` calls versus 2 `place-tokens`, and nothing else. 59% of the eval calls
+were one-off reads. Treat that as a narrow sample of one kind of work, not a verdict on
+the whole tool surface.
+
+---
+
 ## Token conventions — applied world-wide
 
 Ring tiers: **gold** `#ffcc4d` PC · **red** `#d8433a` foe · **green** `#86c98a` named/talkable ·

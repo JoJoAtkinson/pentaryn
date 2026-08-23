@@ -2,8 +2,13 @@
   "mcpServers": {
     "foundry": {
       "command": "node",
-      "args": ["/Users/joe/Documents/GitHub/foundry-vtt-mcp/packages/mcp-server/dist/index.js"],
-      "env": { "FOUNDRY_CONNECTION_TYPE": "websocket" }
+      "args": [
+        "/Users/joe/Documents/GitHub/foundry-vtt-mcp/packages/mcp-server/dist/index.js"
+      ],
+      "env": {
+        "FOUNDRY_CONNECTION_TYPE": "websocket",
+        "PENTARYN_MCP_LOG_DIR": "/Users/joe/Documents/GitHub/pentaryn/foundry/logs"
+      }
     }
   }
 }
