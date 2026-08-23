@@ -1,8 +1,8 @@
 ---
 created: 2026-08-22
-last-modified: 2026-08-22
+last-modified: 2026-08-23
 tags: ["#playbook", "#foundry", "#vtt", "#npcs", "#design", "#ui"]
-status: shipped — 0.10.0, verified in play as GM and as a player; iteration 3 (dialog direction inversion + link-by-identity reverse side) proposed, in build; iteration 4 (GM-only inbound view on the sheet) proposed — data layer landed, renderer specced
+status: shipped — 0.10.0, verified in play as GM and as a player; iteration 3 (dialog direction inversion + link-by-identity reverse side) proposed, in build; iteration 4 (GM-only inbound view on the sheet) proposed — data layer landed, renderer specced; the open disguise question resolved 2026-08-23 → foundry-disguise.md
 ---
 
 # NPC Ties — sheet GUI redesign
@@ -581,9 +581,21 @@ for byte what they would have seen had the token not been on the scene.
 | One label for both roles | "On this scene" is false for a player who cannot see half of it; each role gets the label that is true for them | Two more strings |
 | Re-render the panel on `canvasReady` so the split follows a scene change | Known staleness, shared with the rest of the panel; a scene change with the sheet open is rare and reopening fixes it | Revisit if it bites |
 
-## ⚠ Open question for Joe — the disguise ends at the dialog
+## ~~⚠ Open question for Joe~~ — the disguise ends at the dialog — **RESOLVED 2026-08-23**
 
-**Not a bug, and not fixed: a decision that is his.**
+> **Resolved by Joe's pointer design, judged and specced in
+> [`foundry-disguise.md`](foundry-disguise.md).** A disguised token carries a token-level
+> mark pointing at a **persona actor** (a sibling flag beside `worn`, which is untouched),
+> and every player-facing capture resolves through `apparentActorOf(token)` — so a player's
+> tie **aims at the persona's id**, and `read()` live-resolves the persona's name and art
+> natively, forever. All three options below are dominated: option 2's facade inside
+> `read()` is unnecessary (the row already stores the right id), option 3 stays rejected,
+> and option 1's curation rule survives only as the rule for ad-hoc renamed tokens with no
+> mark. Detection is a hidden, GM-thrown Investigation check riding the Study gesture —
+> the full design, schema, and Rejected table live in the new doc. The section below stays
+> as the record of the question as it stood.
+
+**~~Not a bug, and not fixed: a decision that is his.~~** Ruled; see above.
 
 A token wearing a disguise ("Hooded Figure" over Ozmandius) now keeps that name and art through
 every part of the tie dialog for a player — the header chip, the picker, the status line, the word

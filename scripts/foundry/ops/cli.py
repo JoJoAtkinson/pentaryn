@@ -69,7 +69,9 @@ def build_parser() -> argparse.ArgumentParser:
     # "importer" is excluded because the actor pipeline stages it, not module-sync.
     names = sorted(k for k in cfg.MODULES if k != "importer")
     mcheck = add("module-check", "Prove a module's sources before it can reach Foundry.")
-    mcheck.add_argument("module", choices=names)
+    # `importer` is checkable but not syncable: the actor pipeline stages it, and a
+    # `module-sync importer` would put a second copy where Foundry loads modules from.
+    mcheck.add_argument("module", choices=sorted(cfg.MODULES))
     msync = add("module-sync", "Check, then copy a module into Foundry's Data/modules.")
     msync.add_argument("module", choices=names)
     add("walls-wasm", "Build the compiled (WASM) wall engine.")

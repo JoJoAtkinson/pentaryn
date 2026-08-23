@@ -1,7 +1,7 @@
 ---
 title: "Foundry — domain root"
 status: active
-last_modified: 2026-08-22
+last_modified: 2026-08-23
 tags: [context, foundry, index]
 ---
 
@@ -19,9 +19,24 @@ server, the tunnel, the updater, the asset pipeline.
 
 ---
 
-## The world
+## The platform
 
-World `ardenhaven` · Foundry **v14.365** · system **dnd5e 5.3.3** · **D&D 2024 rules**
+Foundry **v14.367** · system **dnd5e 5.3.3** · **D&D 2024 rules**
+
+> **This domain is not written for one world.** Everything here applies to **any dnd5e world**
+> authored in this setup — the tooling, the modules and the conventions travel; only the content
+> changes. Do **not** hardcode a world id in these files or in anything you build from them.
+>
+> **Ask the live client which world you are in** rather than assuming:
+>
+> ```js
+> game.world.id      // e.g. "space-journey"
+> game.world.title   // e.g. "Space Journey"
+> ```
+>
+> The `WORLD=` argument to `make login` is the only place a world name is named on purpose, and
+> it is supplied per invocation. Current campaign state — which world is live, who is in it, what
+> is built — lives in [`../space-journey.md`](../space-journey.md), never here.
 
 Use the 2024 compendium packs: `dnd5e.spells24`, `dnd5e.equipment24`, `dnd5e.feats24`,
 `dnd-players-handbook.*`. Not the 2014 `dnd5e.items` pack unless an item exists only there.
@@ -36,6 +51,7 @@ Use the 2024 compendium packs: `dnd5e.spells24`, `dnd5e.equipment24`, `dnd5e.fea
 | Doing… | Read |
 |---|---|
 | **Any rules, spell, feat, item or monster question** | [`rules-lookup.md`](rules-lookup.md) |
+| Attributes, what a study reveals, turning backstory into discoverables | [`attributes.md`](attributes.md) |
 | Day-to-day server ops — start/stop, tunnel, OneDrive sync, module install | [`ops.md`](ops.md) |
 | "Put X here" / "replace the red one" — anything naming a spot on a map | [`markers.md`](markers.md) |
 | "The party goes upstairs" — Region + teleport scene links | [`scene-links.md`](scene-links.md) |
@@ -91,6 +107,12 @@ server logs nothing and says nothing — it was unset from 2026-08-14 to 2026-08
 the gap is simply missing. A restart of the MCP server is needed after changing it.
 
 Sanity check: make one `eval-js` call, then `wc -l foundry/logs/eval.jsonl`.
+
+**A `"phase": "transport"` line is a call that never reached Foundry** — module not
+connected, dead socket, timeout. Until 2026-08-23 those threw before the log write and
+left no line at all, so a session spent fighting a dead bridge read back as a quiet one.
+Every other phase comes from Foundry itself, so `transport` is unambiguous. Grepping for
+real usage means excluding them: `grep -v '"phase":"transport"' foundry/logs/eval.jsonl`.
 
 **What the log said as of 2026-08-22** (3 days of scene-building, 2026-08-11 → 08-14):
 323 `eval-js` calls versus 2 `place-tokens`, and nothing else. 59% of the eval calls

@@ -73,8 +73,10 @@ what you can read. From a script: `game.pentaryn.ties.setNotes(actor, targetId, 
 | **Canvas** | Hover a token, press **`9`** — who that person *is*, from their description. **GM only** |
 | **Sheet** | A **Ties** tab on the actor sheet. Rows read at a glance — portrait, name, the word, the stance, how strong, and the first line of your notes. **Click a row anywhere** and it opens: word, stance, strength and notes, editable in place, saving as you type. Click again to shut it |
 | **Map** | Hover anyone and press **`6`**. The token you hover becomes the person the tie is **to**, and you pick whose list it goes on — unless they are the only character you can write on, in which case they become the person it is **from** and you pick who it is to. The **token HUD** has the same button, on any token whose HUD you can open |
+| **Map** | Hover anyone you can see and press **`5`** — their page in *your* character's notebook opens, started for you if it is new. Three tokens of one goblin are one page. Whose notebook: the token you have selected, else the character you are assigned, else the only one you own here |
+| **Sheet** | A **Known** tab beside it, on **character** sheets only — the notebook (below) |
 | **Header** | A people-arrows button in the sheet header opens the same panel in a window |
-| **Console** | `game.pentaryn.ties.read(actor)` · `.inbound(actor)` *(GM)* · `.set(a, b, {word, stance, strength, notes})` · `.setNotes(a, bId, text)` · `.show()` · `.edit(actor)` |
+| **Console** | `game.pentaryn.ties.read(actor)` · `.inbound(actor)` *(GM)* · `.set(a, b, {word, stance, strength, notes})` · `.setNotes(a, bId, text)` · `.show()` · `.edit(actor)` · `.known.read(actor)` · `.known.add(actor, who)` · `.known.file(token)` · `.known.remove(actor, id)` |
 
 **Both sides, without anyone being told about permissions.** Recording a tie writes your side and
 seeds theirs — if their side is blank, or still says what yours said, it follows; once it says
@@ -164,6 +166,92 @@ The feature is safe to hand to the table because of three rules, none of which i
 
 Turn the whole thing back off with **Let players see their own ties** in module settings.
 
+## Known — the notebook tab (0.11.0, the key 0.12.0)
+
+**A second tab, on character sheets only.** Ties answer *who does this person know*; Known answers
+*what has my character learned about the people and creatures they have met* — one entry per world
+actor, filed under a category, with a page of prose that belongs to the player.
+
+```js
+flags["pentaryn-ties"].known = [
+  { id: "<actorId>", name: "Goblin", category: "beasts", notes: "", when: 1755900000000 }
+]
+```
+
+| | |
+| - | - |
+| **Adding** | Two doors. On the map, hover whoever is in front of you and press **`5`**: the page opens, written if it was new, with the cursor already in it. On the tab, **Add…** for anyone this character could have met, on the scene or not — players see only actors they hold LIMITED on, the same filter the tie dialog's picker uses. The key has no LIMITED filter of its own and does not need one: seeing them is the permission |
+| **Refusing** | The key does nothing on a token you cannot see (`Token#isVisible` — GM-hidden, behind a wall, out of your light), nothing on your own character, and nothing on empty floor — **all three say the same sentence**, deliberately, so the key can never be waved at the dark to find out what is standing in it. With no character to write in it says so instead |
+| **Filing** | Two categories to start — **Sentient** and **Beasts**. A new entry lands in one automatically: a player character or a `humanoid` is sentient, every other creature type is a beast, and an actor with nothing readable behind it is sentient. Change it in the row |
+| **Order** | By category, then the order they were written down — the date on the right of each row is when it was first filed, and nothing you do later moves it |
+| **Writing** | Click a row to open it; the prose saves as you type, up to 8000 characters. Bigger than a tie note on purpose: the Study roll will one day *append* to this field |
+| **Names** | Same rule as a tie row — the live actor's name and portrait when it resolves, the cached name when it does not, so a deleted actor greys out instead of vanishing. **Anything that would spoil the game must not be reachable as an entry**, exactly as with ties |
+
+An NPC has no Known tab: it is a player's notebook, and an NPC does not keep one.
+
+**This is phases 1 and 2 of a longer design** — `context/plans/foundry-encounter-log.md`. Still to
+come, all additive and none of them changing the schema above: GM lore rows for individuals, and the
+automatic Past Encounters chronicle that will feed this list.
+
+## Study — "what is this?" (0.13.0)
+
+Open an entry and press **What is this?**. Your character makes one knowledge check about that
+creature's **kind**, and whatever it clears is written into your notebook in your own copy of the
+GM's words. **One attempt per kind, ever** — no retry on a bad roll; that is the whole shape of it.
+
+| | |
+| - | - |
+| **The skill** | Chosen for you from the creature's type, off the PHB's own **Areas of Knowledge** table (Study, Rules Glossary): Arcana for aberrations, constructs, elementals, fey and monstrosities; History for giants and humanoids; Nature for beasts, dragons, oozes and plants; Religion for celestials, fiends and undead. A creature with no type at all takes History |
+| **The ladder** | **15** buys the description · **20** adds what it shrugs off · **25** adds its real attacks and damage. Under 15 you still get *something* — every rung delivers. The DCs are a house rule; the installed DMG has no monster-knowledge rule anywhere to borrow |
+| **Kind, not individual** | Studying Grix the Gutter-King teaches you what a *goblin* is, and the text lands on the **Goblin** page — created for you if you had not filed one. Grix's own row says so. A plain monster is its own kind, so for a stock goblin the two are one row |
+| **You never see the roll** | It is thrown **blind, on the GM's own computer**. You see "privately rolled some dice" and one line in chat saying a check was made and about whom. No total, no DC, no pass or fail, and no 3D dice |
+| **…and the answer may be wrong** | That is the feature. The GM can write a different description for each rung, and a low one is allowed to be confidently false. A natural 1 can read exactly like a triumph — you will not know, and neither will your notes |
+| **In a fight** | It costs your action. The module says so and asks; it does not enforce it — the action economy is the GM's table to run |
+| **No GM online, no roll** | Nothing queues. A blind, arbitrated roll needs an arbiter |
+| **No content, no button** | A creature with no description, no authored rungs and no attacks shows nothing to press — which also tells the GM which monsters still want writing |
+
+### For the GM
+
+The authoring surface is phase 4's; for now it is the console. Everything below is GM-only and
+refuses politely for anyone else.
+
+```js
+const G = game.actors.getName("Goblin"), B = game.actors.getName("Ballad Quinn");
+
+game.pentaryn.ties.study.tiers(G, [                 // author the ladder; sparse, any rung may be
+  { min: 0,  text: "Some kind of grubby child in a helmet." },   // omitted, and any rung may lie
+  { min: 15, text: "A hobgoblin runt. They fear fire above all things." },
+  { min: 25, text: "A goblin. Feywild-born, and it hates a closed door." }
+]);
+game.pentaryn.ties.study.kind(actor);      // dialog: point a named NPC at the actor that is its kind
+game.pentaryn.ties.study.hold(G, true);    // hold this kind's reveals for approval (null = inherit)
+game.pentaryn.ties.study.beliefs(G);       // what each character was told, and whether it landed
+game.pentaryn.ties.study.pending();        // every undelivered reveal in the world
+game.pentaryn.ties.study.deliver(B, G);    // release one
+game.pentaryn.ties.study.reset(B, G);      // un-spend the roll — the honest do-over
+```
+
+A rung with no authored text falls back to prose derived from the sheet itself, which is always
+true because it is read off the real stat block. Enrichers are resolved before anything is copied
+— a Monster Manual attack becomes "Melee Attack Roll: +4, reach 5 ft. Hit: 5 (1d6 + 2) Slashing
+damage" — and if one cannot be resolved the line degrades to the item's plain name rather than
+pasting `[[/attack extended]]` into somebody's notebook. Derived description is capped: a Monster
+Manual biography is the creature's whole lore page, not a paragraph, so it is cut with an ellipsis.
+**Write the rungs.** The derived text only keeps a creature rollable until you do.
+
+**The approval gate.** With *Hold every reveal for my approval* on (world setting, or per-kind via
+`study.hold`), a completed roll parks its answer and prompts you with **Deliver** or **Later**.
+There is no Deny: the check passed, and taking a success back is what `reset` is for, in the open.
+While it waits the player sees exactly what a plain failure looks like — the chat line, the button
+gone, and nothing else. The roll is spent the moment the dice fall, held or not, so nothing about
+the delay says which way it went.
+
+**What is genuinely hidden, and what only looks it.** The total, the DC, the rungs they did not buy
+and your words for them are never sent to a player's computer — that is real. Everything else is the
+module's standing rule: **a monster's stat block is already on every player's machine**, and a flag
+is readable with devtools. Write the rungs for players who want to play, not against players who
+want to cheat; the same table honesty that lets people report their own dice covers this too.
+
 ## Worn — the GM-only possession marker (0.5.0)
 
 For the villain who wears one host per scene. Right-click a token, press the **masks** button on
@@ -228,9 +316,10 @@ never filled in.
 
 ## Rebinding the key
 
-They're real Foundry keybindings, not hotbar macros: **Configure Controls → Ties**. If `7`, `8` or
-`9` are already spoken for, rebind them there. Number keys were chosen over letters because Foundry
-and dnd5e already own most of the alphabet, and `7`/`8`/`9` collide with nothing but hotbar slots. A `Ties Web` macro is also created once on first load for anyone who
+They're real Foundry keybindings, not hotbar macros: **Configure Controls → Ties**. If `5` through
+`9` are already spoken for, rebind them there — the tab's own hint reads whatever they are bound to
+now, so it cannot go stale on you. Number keys were chosen over letters because Foundry
+and dnd5e already own most of the alphabet, and `5`–`9` collide with nothing but hotbar slots. A `Ties Web` macro is also created once on first load for anyone who
 would rather drag it to a hotbar slot.
 
 > **0.4.0 dropped the second key.** 0.3.0 had bare `8` for a one-word badge under each token and

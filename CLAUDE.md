@@ -1,7 +1,9 @@
 # CLAUDE.md — routing only
 
-D&D 5.5e campaign vault plus the Foundry VTT automation that runs it. Current campaign:
-**Space Journey / Twenty-One**, in Foundry world `ardenhaven`.
+D&D 5.5e campaign vault plus the Foundry VTT automation that runs it. The tooling is
+world-agnostic — it runs **any dnd5e world** in this setup. Ask the live client which one you
+are in (`game.world.id`) rather than assuming; current campaign state lives in
+[`context/space-journey.md`](context/space-journey.md).
 
 This file is auto-loaded into every session, so it stays short. Anything longer than two
 lines belongs in `context/`, and this table is how you find it.
@@ -30,6 +32,7 @@ Open the entry point, then only what it points to. Every context file opens with
 | World & lore authoring — where files go, naming, frontmatter, combat NPCs | [`context/world/README.md`](context/world/README.md) |
 | Timeline events and the history SVGs | [`context/world/timelines.md`](context/world/timelines.md) |
 | A rule, spell, feat, item or monster — **the owned PHB/DMG/MM, not the SRD API** | [`context/foundry/rules-lookup.md`](context/foundry/rules-lookup.md) |
+| Attributes, monster study text, turning a backstory into things players can discover | [`context/foundry/attributes.md`](context/foundry/attributes.md) |
 | Vault search, campaign-time math, MCP tool semantics and quirks | [`context/tools.md`](context/tools.md) |
 | Creating content from a skeleton | [`templates/README.md`](templates/README.md) |
 | How something was designed or migrated (history, not instructions) | [`context/plans/`](context/plans/) |

@@ -545,6 +545,45 @@
   padding: 0.5rem 0;
 }
 
+/* ── the Known list ──────────────────────────────────────────────────── */
+
+/*
+ * The notebook tab carries BOTH classes — `class="pentaryn-ties pentaryn-known"` — so every
+ * rule above already applies to it: the row, the portrait, the note preview, the detail, the
+ * add bar, the group heads, the light-theme palette. Only the differences are restated here,
+ * which is one grid and two pieces of chrome. A change to the row idiom lands on both tabs
+ * because there is only one row idiom.
+ */
+
+/* portrait · name+preview · when it was filed · hint. No word, no stance, no pips. */
+.pentaryn-known .pt-summary {
+  grid-template-columns: 30px minmax(8rem, 1fr) 3.4rem 1.4rem;
+}
+
+/* the filing date, which is also the order of the list — quiet, and never the scan key */
+.pentaryn-known .pt-known-when {
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.5;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.pentaryn-known .pt-known-intro {
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.6;
+  margin: 0;
+}
+
+/* one control, not three: the category select must not stretch across the whole detail */
+.pentaryn-known .pt-fields {
+  grid-template-columns: minmax(7rem, 14rem);
+}
+
+/* the group heading is a category name, so it says the name and nothing else */
+.pentaryn-known .pt-group-head + .pt-list {
+  margin-bottom: 0.35rem;
+}
+
 /*
  * The sheet tab is far narrower than the standalone window. Below ~480px the stance chip
  * drops its label (the dot survives), the portrait shrinks, and the detail's field row
@@ -575,6 +614,13 @@
   }
   .pentaryn-ties .pt-fields {
     grid-template-columns: 1fr 1fr;
+  }
+  /* the Known row has one fewer column to give up; the date shrinks, the name never does */
+  .pentaryn-known .pt-summary {
+    grid-template-columns: 24px minmax(6rem, 1fr) 3rem 1.2rem;
+  }
+  .pentaryn-known .pt-fields {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -978,4 +1024,512 @@
 /* The biography is authored HTML — keep its first paragraph flush with the art. */
 .pt-describe-body > :first-child {
   margin-top: 0;
+}
+
+/* ── the study conduit (phase 3) ───────────────────────────────────────────
+ * Deliberately plain. The indistinguishability contract says no styling may
+ * differ by outcome — so there is no success tint, no failure tint, and no
+ * class anywhere below that a tier could ever be mapped onto.
+ */
+.pentaryn-known .pt-known-kind {
+  font-size: 0.85em;
+  opacity: 0.75;
+  font-style: italic;
+  margin: 0 0 0.4rem;
+}
+
+.pentaryn-known .pt-study-btn[disabled] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.pt-study-dialog .pt-study-hint,
+.pt-known-picker .pt-study-hint {
+  margin: 0 0 0.6rem;
+  opacity: 0.8;
+  font-size: 0.9em;
+}
+
+.pt-study-modes {
+  display: flex;
+  gap: 0.9rem;
+  margin-bottom: 0.6rem;
+}
+
+.pt-study-mode {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.pt-study-hold-meta {
+  opacity: 0.8;
+  font-size: 0.9em;
+}
+
+.pt-study-hold-text {
+  white-space: pre-wrap;
+  max-height: 14rem;
+  overflow-y: auto;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border-light-tertiary, #999);
+  border-radius: 3px;
+}
+
+/*
+ * The granted region — what the GM's side handed over, under the player's own notes.
+ *
+ * Deliberately does NOT look like a field. No border-as-input, no focus ring, no resize
+ * grip: everything above it in the detail can be typed into and this cannot, so it has to
+ * read as a quotation rather than as a box someone forgot to enable. The left rule and the
+ * indent are the whole signal.
+ */
+.pentaryn-ties .pt-granted {
+  margin: 0.5rem 0 0;
+  padding: 0.35rem 0 0.35rem 0.6rem;
+  border-left: 3px solid var(--pt-granted-rule);
+  background: var(--pt-granted-bg);
+  border-radius: 0 3px 3px 0;
+}
+
+.pentaryn-ties {
+  --pt-granted-rule: #8a7bd8;
+  --pt-granted-bg: rgba(138, 123, 216, 0.09);
+}
+
+.theme-light .pentaryn-ties {
+  --pt-granted-rule: #5a4bb8;
+  --pt-granted-bg: rgba(90, 75, 184, 0.07);
+}
+
+.pentaryn-ties .pt-granted-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: var(--font-size-11, 11px);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+  margin-bottom: 0.25rem;
+}
+
+.pentaryn-ties .pt-granted-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.pentaryn-ties .pt-grant {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+}
+
+.pentaryn-ties .pt-grant-icon {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border: none;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.pentaryn-ties .pt-grant-body { min-width: 0; }
+
+.pentaryn-ties .pt-grant-source {
+  display: block;
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.7;
+}
+
+/*
+ * `pre-line`, not `pre-wrap`: the rungs are authored as paragraphs and a tier that arrives
+ * as one run-on line reads as a different tier — but leading indentation in the source
+ * should not survive into the sheet.
+ */
+.pentaryn-ties .pt-grant-text {
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+/* ── Phase 4: the individual axis ─────────────────────────────────────────── */
+
+/*
+ * The offer list on a player's entry. Each button prints the fact's name and its price, and
+ * the price is deliberately quiet — it is information, not a call to action, and a DC set in
+ * the same weight as the label reads like a stat block rather than a hook.
+ */
+.pentaryn-ties .pt-lore-offers {
+  margin: 0.5rem 0 0;
+  padding: 0.4rem 0 0;
+  border-top: 1px dashed var(--color-border-light-tertiary, #999);
+}
+
+.pentaryn-ties .pt-lore-offers-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: var(--font-size-11, 11px);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+  margin-bottom: 0.3rem;
+}
+
+.pentaryn-ties .pt-lore-offer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pentaryn-ties .pt-lore-btn {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  text-align: left;
+}
+
+.pentaryn-ties .pt-lore-offer-label { flex: 1 1 auto; min-width: 0; }
+
+.pentaryn-ties .pt-lore-offer-price {
+  flex: 0 0 auto;
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── the GM's authoring section ──────────────────────────────────────────── */
+
+.pentaryn-ties .pt-authoring {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 2px solid var(--color-border-light-primary, #666);
+}
+
+.pentaryn-ties .pt-kind-picker { margin: 0.35rem 0 0.6rem; }
+
+.pentaryn-ties .pt-lore-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0.35rem;
+  cursor: pointer;
+}
+
+/*
+ * The DC badge. `tabular-nums` so a column of 10/15/20 lines up — a GM scanning for the one
+ * row they set too high is reading the numbers, not the labels.
+ */
+.pentaryn-ties .pt-lore-dc {
+  flex: 0 0 auto;
+  min-width: 2.1em;
+  text-align: center;
+  padding: 0.05rem 0.25rem;
+  border-radius: 3px;
+  background: var(--pt-granted-bg);
+  border: 1px solid var(--pt-granted-rule);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-size-11, 11px);
+}
+
+.pentaryn-ties .pt-lore-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pentaryn-ties .pt-lore-skill {
+  flex: 0 0 auto;
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.7;
+}
+
+/* the missing-failure-text warning: the one thing on this row worth interrupting for */
+.pentaryn-ties .pt-lore-leak { flex: 0 0 auto; color: var(--pt-wary); }
+
+.pentaryn-ties .pt-lore-price {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 0.4rem;
+}
+
+.pentaryn-ties .pt-field-dc input { width: 4.5em; text-align: center; }
+
+.pentaryn-ties .pt-lore-warning {
+  margin: 0 0 0.4rem;
+  padding: 0.3rem 0.45rem;
+  border-left: 3px solid var(--pt-wary);
+  background: color-mix(in srgb, var(--pt-wary) 8%, transparent);
+  border-radius: 0 3px 3px 0;
+}
+
+/* ── the belief ledger ───────────────────────────────────────────────────── */
+
+.pentaryn-ties .pt-belief-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.pentaryn-ties .pt-belief {
+  padding: 0.35rem 0.45rem;
+  border: 1px solid var(--color-border-light-tertiary, #999);
+  border-radius: 3px;
+}
+
+/* a row waiting on the GM is the only thing in this section that is asking for something */
+.pentaryn-ties .pt-belief-pending {
+  border-color: var(--pt-wary);
+  background: color-mix(in srgb, var(--pt-wary) 7%, transparent);
+}
+
+.pentaryn-ties .pt-belief-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.pentaryn-ties .pt-belief-who { font-weight: 600; }
+.pentaryn-ties .pt-belief-fact { flex: 1 1 auto; min-width: 0; opacity: 0.85; }
+
+.pentaryn-ties .pt-belief-meta,
+.pentaryn-ties .pt-belief-when {
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+
+.pentaryn-ties .pt-belief-tag {
+  font-size: var(--font-size-11, 11px);
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  background: var(--pt-wary);
+  color: #1a1a1a;
+}
+
+.pentaryn-ties .pt-belief-text {
+  margin: 0.25rem 0;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-12, 12px);
+  opacity: 0.9;
+}
+
+.pentaryn-ties .pt-belief-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ── Phase 6: the attribute layer ─────────────────────────────────────────── */
+
+.pentaryn-ties .pt-attr-summary {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0.35rem;
+  cursor: pointer;
+}
+
+.pentaryn-ties .pt-attr-icon {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  border: none;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.pentaryn-ties .pt-attr-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pentaryn-ties .pt-attr-category {
+  flex: 0 0 auto;
+  font-size: var(--font-size-11, 11px);
+  opacity: 0.65;
+}
+
+/*
+ * A derived link reads as quieter than an authored one — it is a fact about the stat block,
+ * not something the GM chose to say. The distinction is the tab's whole information design:
+ * "worked out" rows are context, authored rows are content.
+ */
+.pentaryn-ties .pt-attr-tag {
+  flex: 0 0 auto;
+  font-size: var(--font-size-11, 11px);
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  border: 1px solid var(--color-border-light-tertiary, #999);
+  opacity: 0.7;
+}
+
+.pentaryn-ties .pt-attr-adv { flex: 0 0 auto; color: var(--pt-granted-rule); }
+
+.pentaryn-ties .pt-attr-count {
+  flex: 0 0 auto;
+  min-width: 1.6em;
+  text-align: center;
+  font-size: var(--font-size-11, 11px);
+  font-variant-numeric: tabular-nums;
+  border-radius: 999px;
+  padding: 0.05rem 0.3rem;
+  background: var(--pt-granted-bg);
+  border: 1px solid var(--pt-granted-rule);
+}
+
+/*
+ * The shared-scope warning, and it is deliberately loud (decision 16's honesty note).
+ * The editor below it edits the REGISTRY, not this actor — a DC changed here changes for
+ * every carrier. That is the feature and also the mistake, so the banner sits between the
+ * per-actor fields above and the shared editor below, marking exactly where scope changes.
+ */
+.pentaryn-ties .pt-shared-head {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.6rem 0 0.35rem;
+  padding: 0.3rem 0.45rem;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--pt-granted-rule) 14%, transparent);
+  border: 1px solid var(--pt-granted-rule);
+  font-size: var(--font-size-12, 12px);
+  font-weight: 600;
+}
+
+.pentaryn-ties .pt-field-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pentaryn-ties .pt-attr-fields { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+/* ── the autocomplete ────────────────────────────────────────────────────── */
+
+.pentaryn-ties .pt-attr-add { flex-direction: column; align-items: stretch; gap: 0.3rem; }
+
+.pentaryn-ties .pt-attr-search { width: 100%; }
+
+.pentaryn-ties .pt-attr-results {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  max-height: 14rem;
+  overflow-y: auto;
+}
+
+.pentaryn-ties .pt-attr-hit {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.2rem 0.35rem;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
+}
+
+.pentaryn-ties .pt-attr-hit:hover { border-color: var(--pt-granted-rule); }
+
+.pentaryn-ties .pt-attr-hit img {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  border: none;
+  border-radius: 3px;
+  object-fit: cover;
+}
+
+.pentaryn-ties .pt-attr-hit-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pentaryn-ties .pt-attr-create { font-weight: 600; }
+
+/* ── Phase 8: inspection and secrecy ──────────────────────────────────────── */
+
+/*
+ * The inspect control on the token HUD.
+ *
+ * ⚠ Deliberately IDENTICAL for every target — no state, no badge, no count, no colour that varies
+ * by what the creature carries. A control that looked different next to someone with secrets would
+ * answer the question before the dice did, which is the property the whole feature rests on.
+ */
+.pt-inspect-btn i { pointer-events: none; }
+
+/* the failed-branch marker: GM-only, and it must never render on a player's view */
+.pentaryn-ties .pt-attr-row.pt-attr-failed .pt-attr-title {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.pentaryn-ties .pt-attr-failed-tag {
+  flex: 0 0 auto;
+  font-size: var(--font-size-11, 11px);
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--pt-hostile) 20%, transparent);
+  border: 1px solid var(--pt-hostile);
+}
+
+/* the invalid-ancestry banner — Joe's Q1 error, GM-visible and actionable */
+.pentaryn-ties .pt-ancestry-warning {
+  margin: 0.4rem 0;
+  padding: 0.35rem 0.5rem;
+  border-left: 3px solid var(--pt-hostile);
+  background: color-mix(in srgb, var(--pt-hostile) 8%, transparent);
+  border-radius: 0 3px 3px 0;
+}
+
+.pentaryn-ties .pt-ancestry-warning button { margin-top: 0.25rem; }
+
+/* ── The inspection tempo tell ────────────────────────────────────────────── */
+
+/*
+ * Rendered by this module rather than by `ChatBubbles#say`, so it inherits the `chat-bubble`
+ * look from core and then differs in exactly two ways: it is **italic**, because it describes
+ * what the table can see rather than anything the character said out loud; and it lives long
+ * enough (5s) to be noticed by someone who was looking at their sheet.
+ */
+.chat-bubble.pt-tempo {
+  position: absolute;
+  max-width: 320px;
+  font-style: italic;
+  /* a shade quieter than speech — a stage direction, not a line */
+  opacity: 0.94;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* the same voice in the chat log, so the record reads like the bubble did */
+.pt-tempo-line {
+  font-style: italic;
+  opacity: 0.9;
+  margin: 0;
 }

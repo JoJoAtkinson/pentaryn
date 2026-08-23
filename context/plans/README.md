@@ -1,7 +1,7 @@
 ---
 title: "Plans — how things were built"
 status: active
-last_modified: 2026-08-22
+last_modified: 2026-08-23
 tags: [context, plans, history]
 ---
 
@@ -21,6 +21,9 @@ lore authoring → [`../world/README.md`](../world/README.md)
 |---|---|---|
 | [`foundry-content-pipeline.md`](foundry-content-pipeline.md) | Repo content → Foundry documents (actors, scenes, walls, lights) | partly executed — see its own status line |
 | [`foundry-npc-ties.md`](foundry-npc-ties.md) | The `pentaryn-ties` module | shipped |
+| [`foundry-npc-ties-gui.md`](foundry-npc-ties-gui.md) | The ties sheet GUI — read rows, the tie dialog, inbound view | shipped through 0.10.0; iterations 3–4 in build |
+| [`foundry-encounter-log.md`](foundry-encounter-log.md) | Known list / Study rolls / Past Encounters tabs in `pentaryn-ties` | phase 1 built; rest proposed |
+| [`foundry-disguise.md`](foundry-disguise.md) | The disguise pointer mask beside `worn` — layered persona redirect + hidden Investigation checks | proposed |
 | [`foundry-wall-autocomplete.md`](foundry-wall-autocomplete.md) | The `pentaryn-walls` engine + WASM backend | shipped |
 | [`foundry-attunement.md`](foundry-attunement.md) | The `pentaryn-attunement` sidebar slot strip + over-cap warnings | shipped |
 | [`foundry-mcp-fork.md`](foundry-mcp-fork.md) | The forked Foundry MCP bridge (now at `~/Documents/GitHub/foundry-vtt-mcp`) | shipped |

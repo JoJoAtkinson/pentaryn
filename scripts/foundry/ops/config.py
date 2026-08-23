@@ -72,12 +72,26 @@ MODULE_SRC_ROOT = REPO_ROOT / "foundry/module"
 
 
 class ModuleSpec:
-    """One in-house module: where it lives, and how to prove it before syncing."""
+    """One in-house module: where it lives, and how to prove it before syncing.
 
-    def __init__(self, name: str, *, check: str, after_sync: tuple[str, ...] = ()):
+    `check` is a tuple because the gates are cumulative, not alternatives. It used to
+    be a single string, and "node-test" therefore *replaced* the parse check on the
+    three modules that had a suite — which is how a module whose files all parsed and
+    whose suite all passed could still fail to load in the browser. A check that runs
+    instead of another check is not a gate.
+    """
+
+    #: every gate a spec may name — see `modules._CHECKS`
+    CHECKS = ("parse", "imports", "i18n", "node-test")
+
+    def __init__(self, name: str, *, check: str | tuple[str, ...],
+                 after_sync: tuple[str, ...] = ()):
         self.name = name
-        self.check = check          # "parse" | "node-test" | "none"
+        self.check = (check,) if isinstance(check, str) else tuple(check)
         self.after_sync = after_sync  # lines printed after a successful copy
+        unknown = [c for c in self.check if c not in (*self.CHECKS, "none")]
+        if unknown:
+            raise ValueError(f"{name}: unknown check(s) {unknown}")
 
     @property
     def src(self) -> Path:
@@ -88,10 +102,19 @@ class ModuleSpec:
         return FOUNDRY_MODULES / self.name
 
 
+# Every module gets the full static battery. The three gates answer different
+# questions and none of them subsumes another:
+#   parse      — does each file, alone, tokenise?           (`node --check`)
+#   imports    — does every named import exist where it is imported FROM?
+#   i18n       — does every key the code asks for exist in lang/en.json?
+# `imports` is the one that would have caught the outage of 2026-08-22: an `export`
+# was deleted, every file still parsed, and the module silently never registered.
+_STATIC = ("parse", "imports", "i18n")
+
 MODULES = {
     "ties": ModuleSpec(
         "pentaryn-ties",
-        check="parse",
+        check=_STATIC,
         after_sync=(
             "Already enabled? A browser RELOAD (F5) is enough — .mjs and .css are",
             "served fresh. But module.json is read once at STARTUP, so the version",
@@ -105,7 +128,7 @@ MODULES = {
     ),
     "walls": ModuleSpec(
         "pentaryn-walls",
-        check="node-test",
+        check=(*_STATIC, "node-test"),
         after_sync=(
             "Enable 'Pentaryn Wall Autocomplete' in Manage Modules, reload, then:",
             "  await game.pentaryn.walls.preview()",
@@ -113,11 +136,10 @@ MODULES = {
     ),
     "attunement": ModuleSpec(
         "pentaryn-attunement",
-        # node-test rather than parse: importing the module is itself a parse check,
-        # and the slot reconciliation has edge cases (stale flags, deleted items,
-        # over-cap) that are tedious to stage in a browser and must never throw —
-        # computeSlots runs inside a render hook.
-        check="node-test",
+        # node-test on top of the static gates: the slot reconciliation has edge cases
+        # (stale flags, deleted items, over-cap) that are tedious to stage in a browser
+        # and must never throw — computeSlots runs inside a render hook.
+        check=(*_STATIC, "node-test"),
         after_sync=(
             "Enable 'Pentaryn Attunement Slots' in Manage Modules, then reload.",
             "The strip renders in the character sheet sidebar, under the stats card.",
@@ -130,7 +152,7 @@ MODULES = {
         "pentaryn-lookup",
         # node-test: the whole point of the module is that its text handling is proved
         # rather than retyped. lookup-core.mjs is pure, so the 41 fixtures run in node.
-        check="node-test",
+        check=(*_STATIC, "node-test"),
         after_sync=(
             "Enable 'Pentaryn Rules Lookup' in Manage Modules, then reload.",
             "Confirm against the live world:",
@@ -140,5 +162,7 @@ MODULES = {
             "  await game.pentaryn.rules.monster('Adult Black Dragon')",
         ),
     ),
-    "importer": ModuleSpec("pentaryn-importer", check="none"),
+    # The actor pipeline stages this one, not module-sync, so it is not in the CLI's
+    # module list — but the static gates are free and it is real code, so it gets them.
+    "importer": ModuleSpec("pentaryn-importer", check=_STATIC),
 }

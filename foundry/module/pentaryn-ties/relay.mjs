@@ -53,7 +53,7 @@
  * stands alone — the next Save from anyone on that pair completes it.
  */
 
-import { MODULE, read, write, clampStance, clampStrength, clampNotes, mayWrite } from "./ties-api.mjs";
+import { MODULE, read, write, clampStance, clampStrength, clampNotes, mayWrite, canReach } from "./ties-api.mjs";
 
 const CHANNEL = `module.${MODULE}`;
 const MIRROR = "mirror-reverse";
@@ -106,11 +106,16 @@ async function applyMirror(payload, senderId) {
 
   /*
    * A player may write any flag content they like onto their own actor, including a tie
-   * pointing at someone they have never seen — so the forward row's existence proves
-   * nothing about reach. Hold the relay to the same rule the dialog's own pickers use.
+   * pointing at someone they have never seen — so the forward row's existence proves nothing
+   * about reach, and it has to be re-derived here.
+   *
+   * ⚠ This used to demand LIMITED and nothing else, which was stricter than the study conduit's
+   * rule and made the relay nearly unusable: a player could inspect, file and study an NPC but
+   * not record a tie it saw back, because players rarely hold LIMITED on NPCs. Demonstrated with
+   * two live clients before it was changed. Both halves now share `canReach`.
    */
-  if (!user.isGM && target.testUserPermission(user, "LIMITED") !== true) {
-    console.warn(`${MODULE} | relay refused: ${user.name} cannot see ${target.name}`);
+  if (!canReach(user, target)) {
+    console.warn(`${MODULE} | relay refused: ${user.name} cannot reach ${target.name}`);
     return;
   }
 

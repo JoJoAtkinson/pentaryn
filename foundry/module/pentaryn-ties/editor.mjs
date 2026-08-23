@@ -30,6 +30,7 @@ import {
   stanceOf,
   stanceLabel
 } from "./ties-api.mjs";
+import { authoringHTML, bindAuthoring } from "./authoring.mjs";
 
 const esc = s =>
   String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -411,12 +412,15 @@ export function buildHTML(actor) {
     ${elsewhereBlock}
     ${add}
     ${inboundSection}
+    ${authoringHTML(actor)}
   </div>`;
 }
 
 /** Wire a rendered block. `rerender` is called after any mutation that reorders rows. */
 export function bind(root, actor, rerender = () => {}) {
   if (!root || !actor) return;
+  // the GM authoring section — a no-op for a player, gated inside rather than here
+  bindAuthoring(root, actor, rerender);
   const canEdit = actor.isOwner === true;
   const replies = new Map(inbound(actor).filter(r => r.mutual).map(r => [r.id, r]));
 

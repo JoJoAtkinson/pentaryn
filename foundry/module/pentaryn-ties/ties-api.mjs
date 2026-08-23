@@ -340,3 +340,35 @@ export async function migrateLegacy() {
   if (moved) console.log(`${MODULE} | migrated ties for ${moved} actor(s) from flags.${LEGACY_SCOPE}`);
   return { moved };
 }
+
+/**
+ * **The one reach rule** — can this user legitimately ask about this actor?
+ *
+ * LIMITED permission, **or** a token of them on a scene this user could be looking at.
+ *
+ * ## Why it lives here and not in either caller
+ *
+ * There used to be two rules. The study conduit used this one; `relay.mjs` required LIMITED
+ * alone — and phase 3's own comment predicted they would disagree. They did, demonstrated with
+ * two live clients: a player could inspect an NPC, file them and study them, but **could not**
+ * record a tie that NPC saw back, because players almost never hold LIMITED on NPCs. The relay
+ * therefore nearly never fired.
+ *
+ * Two copies of a security rule is two chances to get it subtly wrong on a path nobody
+ * re-audits, so there is now one definition and both halves import it.
+ *
+ * ⚠ This is deliberately NOT line of sight. Visibility is computed per-client and a GM's client
+ * cannot derive what another player can see; this is what a GM *can* re-derive from documents it
+ * holds itself. Ruled acceptable — the module defends against accidents and honest curiosity,
+ * never against a determined player at a console.
+ */
+export function canReach(user, actor) {
+  if (!user || !actor) return false;
+  if (user.isGM) return true;
+  if (actor.testUserPermission(user, "LIMITED") === true) return true;
+  const scenes = [game.scenes?.active, canvas?.scene].filter(Boolean);
+  for (const scene of scenes) {
+    for (const token of scene.tokens ?? []) if (token.actorId === actor.id) return true;
+  }
+  return false;
+}
