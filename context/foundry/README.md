@@ -52,6 +52,32 @@ Use the 2024 compendium packs: `dnd5e.spells24`, `dnd5e.equipment24`, `dnd5e.fea
 
 ---
 
+## Stale bridge processes will silently break every MCP tool
+
+Every Claude Code session spawns its own `index.js` MCP server, and the first one also
+spawns the singleton `backend.js` that owns the bridge's websocket ports
+(31414–31416). **Nothing cleans them up when a session ends.**
+
+On 2026-08-23 a `backend.js` from three days earlier still held all three ports. After
+a Foundry restart the browser reconnected to that stale broker, and every bridge tool
+timed out — `eval-js`, `get-world-info`, all of them — with no error logged anywhere.
+Three current sessions sat there unable to bind.
+
+    make foundry-bridge-status    # who is live, who is an orphan, who holds the ports
+    make foundry-bridge-clean     # kill orphans only  (DRY=1 to preview)
+
+**`clean` never kills a server whose parent is a live `claude` process.** That
+restraint is the point: the obvious fix — kill everything matching `foundry-vtt-mcp` —
+severs the tools of every other running session, which is exactly what happened while
+diagnosing this. The orphan signal is a dead parent; a live backend under an orphaned
+server is the shape that actually held the ports.
+
+`make vtt-up` warns (never kills) when the port holder is an orphan, because a restart
+is precisely when the browser reconnects and picks the wrong broker.
+
+**After cleaning, a Foundry tab that is already open must be reloaded** to reconnect,
+and the MCP server itself needs a Claude Code restart if it was the one killed.
+
 ## The action log is the promotion mechanism — keep it on
 
 Every fork tool call lands in `foundry/logs/mcp-<month>.jsonl`, and every `eval-js`

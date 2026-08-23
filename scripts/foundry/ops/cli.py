@@ -19,7 +19,7 @@ from __future__ import annotations
 import argparse
 import sys
 
-from . import config as cfg, login as login_mod, modules, pipeline, service
+from . import bridge, config as cfg, login as login_mod, modules, pipeline, service
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -48,6 +48,11 @@ def build_parser() -> argparse.ArgumentParser:
     add("tunnel-up", "Start the Cloudflare tunnel.")
     add("tunnel-down", "Stop the Cloudflare tunnel.")
     add("tunnel-setup", "One-time: authenticate, create the tunnel, route DNS.")
+    add("bridge-status", "MCP bridge processes: which are live sessions, which are orphans, "
+                         "and who holds the websocket ports.")
+    bc = add("bridge-clean", "Kill orphaned MCP bridge processes. Never touches a server "
+                             "whose parent is a live Claude session.")
+    bc.add_argument("--dry-run", action="store_true", help="list what would be killed")
     logs = add("tunnel-logs", "Tail the tunnel log.")
     logs.add_argument("-n", "--lines", type=int, default=40)
 
@@ -90,6 +95,8 @@ def main(argv: list[str] | None = None) -> int:
     if c == "tunnel-down":   return service.tunnel_down()
     if c == "tunnel-setup":  return service.tunnel_setup()
     if c == "tunnel-logs":   return service.tunnel_logs(args.lines)
+    if c == "bridge-status": return bridge.status()
+    if c == "bridge-clean":  return bridge.clean(dry_run=args.dry_run)
 
     if c == "actors":        return pipeline.build_actors()
     if c == "stage":         return pipeline.stage()

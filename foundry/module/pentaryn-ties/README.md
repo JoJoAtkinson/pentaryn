@@ -89,8 +89,8 @@ from anyone on that pair completes it.
 each tied actor's **name and portrait**, whether or not they have permission on that actor. This
 is deliberate: the row has always shown the cached name, and the face is the same category of
 disclosure on a list the GM curated. It follows that **a face or a name that would spoil the game
-must not be given a tie on a player's character** — put it in a GM-only journal instead, the same
-rule that already applies to tie notes.
+must not be given a tie on a player's character** — and not a GM-only journal either, which is no
+more private (see the box below). Keep it out of the world.
 
 Adding or removing a tie works on **both directions**. Removing takes the matching row with it. A
 one-sided tie — he thinks they're friends, she doesn't — is made by diverging the second box, or
@@ -147,11 +147,20 @@ The feature is safe to hand to the table because of three rules, none of which i
 > So the three rules above govern **what is presented**, which is what stops accidental reading and
 > shoulder-surfing. They are not an access-control boundary, and nothing client-side could be one.
 >
-> **Anything that would actually spoil the game — "Vasca is Ozmandius wearing her" — belongs in a
-> GM-only journal, not in a tie note on any actor.** Use notes for what you'd be happy to read out
-> if asked: how they met, what is owed, what they want. Putting a secret on the NPC's side rather
-> than the PC's hides it from the *sheet*, which is worth doing, but it is a tidiness measure and
-> not a lock.
+> **Anything that would actually spoil the game — "Vasca is Ozmandius wearing her" — must not be
+> written into the world at all.** Not as a tie note, and **not in a GM-only journal**: measured in
+> a live world from a player's own session, their client holds 9 journals, 4 of them at permission
+> level 0, and the full text of one that is hidden from their sidebar reads straight out of the
+> console. A compendium marked "not visible" to them still serves its whole index and every
+> document on request. Foundry's server does no ownership filtering when it hands documents out.
+>
+> Use notes for what you'd be happy to read out if asked: how they met, what is owed, what they
+> want. Putting a secret on the NPC's side rather than the PC's hides it from the *sheet*, which is
+> worth doing, but it is a tidiness measure and not a lock. A real secret lives in your own notes,
+> outside the VTT, and reaches the table by being said.
+>
+> This is a deliberate, accepted trade: it is a game among friends, and hardening it against people
+> who are not attacking it would buy nothing.
 
 Turn the whole thing back off with **Let players see their own ties** in module settings.
 
@@ -180,8 +189,8 @@ Set and clear from the HUD dialog, or from a script: `game.pentaryn.ties.worn(to
 
 > Same caveat as tie notes: token documents, flags included, are synced to every client, so a
 > player with devtools open can read the mark. Every render path is GM-gated, which stops
-> shoulder-surfing — it is not a lock. Keep the note to what a leak could survive; the deep
-> secrets stay in a GM journal.
+> shoulder-surfing — it is not a lock. Keep the note to what a leak could survive; a real secret
+> does not go into the world at all, a GM journal included.
 
 ## Description card — key `9` (GM only) (0.7.0)
 

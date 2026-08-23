@@ -29,8 +29,8 @@ status: shipped — 0.4.0
 > "Fenna". The mark is the only thing layered on top.
 >
 > ⚠ **Token flags sync to every client.** Hidden from the UI, not encrypted — a player with devtools
-> could read it, exactly as with tie notes. Accepted and documented. If a secret ever must be
-> genuinely unreadable, it needs a GM-owned journal keyed by token id.
+> could read it, exactly as with tie notes. Accepted and documented. **A GM-owned journal is not an
+> escape hatch either** — see the correction below; nothing stored inside Foundry is hidden.
 
 > **Status: shipped, 0.4.0.** Built as a module after all (see the correction in *Where the code
 > lives*). Open questions resolved at the bottom; two of the original decisions were overturned in
@@ -210,10 +210,37 @@ So rules 1–3 stop *accidental* seeing, which is the actual table problem — a
 web and learning who is behind the door. They are **not** an access-control boundary, and no
 client-side module could provide one.
 
-**Anything that would spoil the game if read — "Vasca is Ozmandius wearing her" — goes in a GM-only
-journal, not in a tie note on any actor.** Tie notes are for what you would happily say aloud if
-asked: how they met, what is owed, what they want. Keeping a secret on the NPC's row rather than the
-PC's hides it from the sheet UI, which is worth doing, but it is tidiness, not a lock.
+**Anything that would spoil the game if read must not be written into the world at all** — not as a
+tie note, and (corrected 2026-08-22) **not in a GM-only journal either.** Tie notes are for what you
+would happily say aloud if asked: how they met, what is owed, what they want. Keeping a secret on the
+NPC's row rather than the PC's hides it from the sheet UI, which is worth doing, but it is tidiness,
+not a lock.
+
+> ### ⚠ Correction, 2026-08-22 — "put it in a GM-only journal" was wrong
+>
+> An earlier version of this section told you to move real secrets into a GM-owned journal. **That
+> advice does not work**, and the same measurement that proved it for actors proves it for
+> everything else. Checked in the live world from a player's own session:
+>
+> | | Held by a non-GM's client | Of which they have no permission on |
+> | --- | --- | --- |
+> | Actors | 136 | 122 |
+> | Journals | 9 | 4 |
+>
+> One of those four journals is `visible === false` — hidden from her sidebar — and its full page
+> text reads out of her console. **Compendiums are no better:** a pack marked not visible to her
+> served its 391-entry index and complete documents on request. And the server does no ownership
+> filtering at all on the read path: its entire `dist/` contains exactly one `testUserPermission`
+> call, and that one guards wildcard token *image browsing*.
+>
+> So there is no store inside Foundry that a player's client does not receive. A genuine secret has
+> to live somewhere the world never sees — the vault in this repo, a GM's notes outside the VTT —
+> and reach the table by being said out loud.
+>
+> **This is accepted, deliberately.** Joe's ruling: *"i'm 100% okay with that. its a game among
+> friends, locking it down like there hackers do not make sense."* The rules here exist to stop a
+> player *accidentally* learning something over someone's shoulder, which is the real table problem.
+> They are a courtesy, not a boundary, and the module should never be built as though they were one.
 
 ### Near, far, and the wires
 

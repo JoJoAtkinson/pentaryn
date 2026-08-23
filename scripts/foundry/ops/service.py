@@ -122,11 +122,22 @@ def up() -> int:
     for _ in range(cfg.FOUNDRY_BOOT_TIMEOUT):
         if foundry_is_up():
             _say(f"✓ foundry up on {cfg.FOUNDRY_URL}")
+            _warn_stale_bridge()
             return OK
         time.sleep(1)
     _say(f"✗ foundry didn't answer after {cfg.FOUNDRY_BOOT_TIMEOUT}s "
          "(first run? finish activation in the window)")
     return FAIL
+
+
+def _warn_stale_bridge() -> None:
+    """A restart is exactly when the browser reconnects — and reconnecting to a stale
+    broker is silent. Imported here to keep bridge.py out of the module import cycle."""
+    try:
+        from .bridge import warn_if_stale
+        warn_if_stale()
+    except Exception:
+        pass
 
 
 def down() -> int:

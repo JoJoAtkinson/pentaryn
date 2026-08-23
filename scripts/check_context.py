@@ -18,6 +18,20 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CLAUDE_MD_MAX_LINES = 60
 LINK_RE = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
+FENCE_RE = re.compile(r"^```.*?^```", re.M | re.S)
+INLINE_CODE_RE = re.compile(r"`[^`\n]*`")
+
+
+def prose_only(text: str) -> str:
+    """Markdown with code removed.
+
+    A doc that documents a regex is not a doc with a broken link. `foundry-encounter-log.md`
+    contains ``["\'`](PENTARYN_[A-Z_]+...)`` inside a code span, and the link pattern
+    matches it happily — so code has to come out before links are looked for. Replaced
+    with blank lines rather than deleted so nothing else shifts.
+    """
+    text = FENCE_RE.sub(lambda m: "\n" * m.group(0).count("\n"), text)
+    return INLINE_CODE_RE.sub(" ", text)
 
 
 def check_claude_md_length(errors: list[str]) -> None:
@@ -36,7 +50,7 @@ def check_links(errors: list[str]) -> None:
     for src in targets:
         if not src.exists():
             continue
-        for label, link in LINK_RE.findall(src.read_text(encoding="utf-8")):
+        for label, link in LINK_RE.findall(prose_only(src.read_text(encoding="utf-8"))):
             if link.startswith(("http://", "https://", "#", "mailto:")):
                 continue
             if not (src.parent / link.split("#")[0]).exists():

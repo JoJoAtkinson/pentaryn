@@ -77,6 +77,7 @@ vtt-status:
 
 # ─── The pieces: application, tunnel ────────────────────────────────────
 .PHONY: foundry-up foundry-down tunnel-up tunnel-down tunnel-logs tunnel-setup
+.PHONY: foundry-bridge-status foundry-bridge-clean
 
 foundry-up:      ; @$(OPS) up
 foundry-down:    ; @$(OPS) down
@@ -84,6 +85,14 @@ tunnel-up:       ; @$(OPS) tunnel-up
 tunnel-down:     ; @$(OPS) tunnel-down
 tunnel-logs:     ; @$(OPS) tunnel-logs
 tunnel-setup:    ; @$(OPS) tunnel-setup
+
+# Every Claude Code session spawns its own MCP server, and the first one also spawns the
+# singleton broker that owns the bridge's websocket ports. Nothing cleans them up. A
+# broker left behind by a finished session keeps the ports, Foundry's browser reconnects
+# to it after a restart, and every bridge tool times out with nothing logged. `clean`
+# kills orphans only — never a server whose parent is a live Claude session.
+foundry-bridge-status: ; @$(OPS) bridge-status
+foundry-bridge-clean:  ; @$(OPS) bridge-clean $(if $(DRY),--dry-run,)
 
 # ─── Secrets ────────────────────────────────────────────────────────────
 # Both live in Infisical and are read at the point of use. The checks print length
