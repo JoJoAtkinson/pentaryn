@@ -273,11 +273,9 @@ Accepted, and deliberately not fixed here:
 - ~~**The age MCP tools go silently wrong.**~~ **FIXED** — see *Age tools: scoped out, then
   fixed* below. This was the worst failure mode in the migration and should never have been
   out of scope.
-- **`scripts/lore_inconsistencies.py` degrades SILENTLY.** `_discover_history_event_ids`
-  (`:227-229`) filters on the filename `_history.tsv` and returns `[]` — the
-  `lore_inconsistency_report` MCP tool then reports "History entities: True" while checking
-  zero. It will also begin chunking the new `history/*.md` as generic markdown (`:315`),
-  which is arguably an upgrade but was nobody's decision.
+- ~~**`scripts/lore_inconsistencies.py` degrades silently.**~~ **DELETED** — the script, its
+  tests, its `lore_inconsistency_report` MCP tool, and the `vector` extra (chromadb) it was
+  the sole consumer of were all removed rather than repaired. It was not going to be used.
 - **`docs/` serves stale timelines forever.** 16 tracked `docs/history.*.{svg,html}` files are
   published by `.github/workflows/pages.yml`, which has no build step — it uploads `docs/`
   as-is. The Pages site keeps serving pre-migration renders, drifting indefinitely.

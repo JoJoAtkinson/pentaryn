@@ -520,8 +520,8 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
     
     # Optional group filter: when DND_MCP_TOOLS_GROUP is set, only load modules
     # whose top-level MCP_GROUPS list contains that group name. Massively cuts
-    # cold-start latency by skipping unrelated heavy imports (chromadb, pandas,
-    # etc.) when only a focused tool surface is needed (e.g. combat-runner).
+    # cold-start latency by skipping unrelated heavy imports (pandas, PIL, etc.)
+    # when only a focused tool surface is needed (e.g. combat-runner).
     # Modules without a MCP_GROUPS declaration are skipped when a filter is active.
     group_filter = os.environ.get("DND_MCP_TOOLS_GROUP", "").strip()
 

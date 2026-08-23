@@ -19,22 +19,10 @@ dependencies = [
   # Arrow-key pickers for `make vtt-login` (world / user). Imported lazily and
   # degraded to a numbered prompt if absent, so a bare checkout still works.
   "questionary>=2.1.1",
-]
-
-# Optional extras — not installed by a bare `uv sync`.
-[project.optional-dependencies]
-# Vector-search stack, used ONLY by scripts/lore_inconsistencies.py (and its
-# `lore_inconsistency_report` MCP tool), which imports chromadb lazily.
-# It is kept out of the default install because it pulls ~60 transitive packages
-# (onnxruntime, kubernetes, grpcio, opentelemetry, tokenizers, ...) and is the
-# most fragile part of the tree on new Python releases.
-#   Install with: uv sync --extra vector
-vector = [
-  "chromadb>=1.5.9",
-  # chromadb only requires pypika>=0.48.9, but 0.48.9 is sdist-only and its
-  # setup.py uses `ast.Str`, removed in Python 3.12 — it cannot build on 3.14.
-  # 0.51.1 ships a wheel. Floor it here so a fresh re-lock can't pick the old one.
-  "pypika>=0.51.1",
+  # Imported directly by scripts/dnd_roller.py. It was only ever present as a
+  # chromadb transitive; removing the `vector` extra dropped it and broke the
+  # roller's tests, so it is declared.
+  "httpx>=0.27",
 ]
 
 # Notes on native text layout (RAQM):

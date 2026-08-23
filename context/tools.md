@@ -70,5 +70,4 @@ here.
 |---|---|
 | `pandoc_export_pdf` | Never invoke `scripts/pandoc-export.py` directly. Setup and troubleshooting: [`pdf-export.md`](pdf-export.md). |
 | `build_timeline_svg` / `build_timeline_key` | **Broken until the renderer is replaced** — see [`world/timelines.md`](world/timelines.md). |
-| `lore_inconsistency_report` | Indexes the whole vault into ChromaDB. Expensive — ask first. Needs `uv sync --extra vector`. |
 | `fix_md_links` | Dry-run by default. Pass `write=true` only after reviewing the proposed changes. |
