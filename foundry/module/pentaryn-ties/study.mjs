@@ -1831,6 +1831,38 @@ async function promptCascadeDeliver(character, subject) {
 }
 
 /**
+ * Which creatures are holding an undelivered identification of one attribute, for one character.
+ *
+ * The knowledge ledger records *that* a rung is held (`pending: true`) but not **where** — the
+ * parked answer lives in a belief row on the creature they were looking at. So the world tree can
+ * mark a node "waiting on you" and, without this, offer nothing to do about it: the GM had to
+ * remember which NPC the roll happened on and go and find them. This is the lookup that turns the
+ * marker into a button.
+ */
+export function heldCarriersFor(character, attrId) {
+  if (!game.user?.isGM || !character || !attrId) return [];
+  const key = `attr:${attrId}:${MEMBER_FACT}`;
+  const out = [];
+  for (const subject of game.actors?.contents ?? []) {
+    const rec = beliefsOf(subject)[character.id]?.[key];
+    if (rec && !rec.delivered && String(rec.text ?? "").trim()) out.push(subject);
+  }
+  return out;
+}
+
+/**
+ * Release everything held on one attribute for one character, wherever it is parked.
+ *
+ * Delegates each pair to `deliverHeldIdentifications`, so the parked payload is still replayed
+ * from the ledger rather than recomputed, and each release still resumes its own cascade.
+ */
+export async function releaseHeldAttribute(character, attrId) {
+  const carriers = heldCarriersFor(character, attrId);
+  for (const subject of carriers) await deliverHeldIdentifications(character, subject);
+  return carriers.length;
+}
+
+/**
  * Release every held identification on this pair, then **re-run the cascade**.
  *
  * The re-run is the whole of "resume": the planner reads the ledgers this just changed, so the

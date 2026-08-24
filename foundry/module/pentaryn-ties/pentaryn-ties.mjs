@@ -385,6 +385,7 @@ function publishAPI() {
       clearScoping: Study.clearScoping,
       inspectAs: Study.inspectAs,
       deliverHeld: Study.deliverHeldIdentifications,
+      releaseHeld: Study.releaseHeldAttribute,
       resetIdent: Study.resetIdentification,
       release: Study.grantKind,
       resetInspection: Study.resetInspection
@@ -423,6 +424,7 @@ Hooks.once("ready", async () => {
   for (const [label, step] of [
     ["publish api", async () => publishAPI()],
     ["migrate legacy flags", async () => game.user.isGM && API.migrateLegacy()],
+    ["repair dead attribute icons", async () => game.user.isGM && Attributes.repairIcons()],
     ["create macro", async () => game.user.isGM && ensureMacro()],
     ["restore pinned cards", async () => Cards.restorePinned()]
   ]) {

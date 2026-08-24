@@ -1547,11 +1547,25 @@
   padding: 0;
 }
 
+/*
+ * Deep worlds are the point, so the per-level indent is small and the tree scrolls sideways rather
+ * than squeezing titles into a column one word wide. A realm → kingdom → region → city → quarter →
+ * district → street → house → order → cell chain is ten levels and has to stay readable.
+ */
+.pentaryn-ties .pt-world-tree {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
 .pentaryn-ties .pt-world-branch {
-  margin-left: 0.75rem;
-  padding-left: 0.6rem;
+  margin-left: 0.45rem;
+  padding-left: 0.45rem;
   border-left: 1px solid var(--color-border-light-tertiary, #999);
 }
+
+/* Titles must not wrap to one word per line once the indent is deep. */
+.pentaryn-ties .pt-world-row .pt-attr-title { white-space: nowrap; }
+.pentaryn-ties .pt-world-node { min-width: max-content; }
 
 .pentaryn-ties .pt-world-row {
   display: flex;
@@ -1563,15 +1577,80 @@
 
 .pentaryn-ties .pt-world-row:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
 
-/*
- * A **waypoint** is a place the character has not learned but which has to be drawn to hold up
- * something beneath it that they have. Dimmed, because it is scaffolding rather than knowledge —
- * and its title is safe to show: they already know the thing under it belongs somewhere.
- */
-.pentaryn-ties .pt-state-waypoint > .pt-world-row { opacity: 0.5; }
+/* The twisty. A leaf gets an empty one of the same width, so titles stay in one column. */
+.pentaryn-ties .pt-twisty {
+  flex: 0 0 auto;
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  line-height: 1;
+  font-size: 0.75rem;
+}
+.pentaryn-ties .pt-twisty:hover { opacity: 1; }
+.pentaryn-ties .pt-twisty-leaf { cursor: default; visibility: hidden; }
 
-/* GM-only states. A player's tree never contains these nodes at all. */
-.pentaryn-ties .pt-state-unknown > .pt-world-row { opacity: 0.6; }
+/* "3/7" — GM only. See the warning in `worldNode`: on a player's tree this would be a leak. */
+.pentaryn-ties .pt-world-count {
+  flex: 0 0 auto;
+  font-size: 0.7rem;
+  opacity: 0.6;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Filter chips, GM only. */
+.pentaryn-ties .pt-world-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0.3rem 0 0.4rem;
+}
+.pentaryn-ties .pt-chip {
+  flex: 0 0 auto;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  border: 1px solid var(--color-border-light-tertiary, #999);
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  width: auto;
+}
+.pentaryn-ties .pt-chip:hover { background: color-mix(in srgb, currentColor 8%, transparent); }
+.pentaryn-ties .pt-chip-on {
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  font-weight: 600;
+}
+.pentaryn-ties .pt-chip-quiet { opacity: 0.65; border-style: dashed; }
+
+/*
+ * The action follows the item rather than the right-hand edge.
+ *
+ * ⚠ `margin-left: auto` pushed it to the end of the row — which is fine in a flat list and wrong
+ * in a deep tree: the row grows with the indent, so at nine levels down the button sat off the
+ * side of a horizontally-scrolling panel and the GM had to scroll to reach the one control the
+ * whole view exists for. A ragged right edge is the correct trade here.
+ */
+.pentaryn-ties .pt-world-row .pt-tell-btn { flex: 0 0 auto; margin-left: 0.15rem; opacity: 0.45; }
+.pentaryn-ties .pt-world-row:hover .pt-tell-btn,
+.pentaryn-ties .pt-tell-btn:focus-visible { opacity: 1; }
+
+
+/*
+ * GM-only states: a player's rendered tree contains none of these nodes. (World settings sync to
+ * every client, so a determined player can still read the registry from the console — the tree
+ * refuses to *show* what they were not told, which is the honest claim. See attributes.md.)
+ *
+ * Grey means "they have not been told this". It is the GM's working surface: scan for grey, click
+ * Tell them. Kept legible rather than ghosted, because it is a thing to act on, not chrome.
+ */
+.pentaryn-ties .pt-state-unknown > .pt-world-row { opacity: 0.55; }
+.pentaryn-ties .pt-state-unknown > .pt-world-row .pt-attr-title { font-style: italic; }
 .pentaryn-ties .pt-state-failed > .pt-world-row .pt-attr-title { text-decoration: line-through; }
 
 .pentaryn-ties .pt-state-failed .pt-attr-tag {

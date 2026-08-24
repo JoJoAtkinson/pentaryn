@@ -38,7 +38,7 @@ import {
   repairAncestry
 } from "./attributes.mjs";
 import { loreEditorHTML, bindLoreEditor } from "./lore.mjs";
-import { kindActorOf, attrLoreStateFor, requestAttrLore } from "./study.mjs";
+import { kindActorOf, attrLoreStateFor, requestAttrLore, releaseHeldAttribute } from "./study.mjs";
 import { grantsForEntry, GRANTED_FLAG, HELP_SCALE, CARRIED_SCALE } from "./known-core.mjs";
 
 const esc = s =>
@@ -55,6 +55,45 @@ const openFor = id => {
   if (!expanded.has(id)) expanded.set(id, new Set());
   return expanded.get(id);
 };
+
+/**
+ * Tree navigation state, per character: which branches the user has explicitly toggled, and which
+ * states the GM is filtering to.
+ *
+ * ⚠ Cosmetic, in memory, **never** a setting. A world setting syncs to every client, so persisting
+ * it would both leak across users and quietly record which branches a GM was prepping.
+ */
+const worldToggled = new Map();
+const worldFilter = new Map();
+const toggledFor = id => {
+  if (!worldToggled.has(id)) worldToggled.set(id, new Map());
+  return worldToggled.get(id);
+};
+
+/**
+ * Is this branch open?
+ *
+ * Untouched, a **player's** map is open all the way down — it is small, and it is theirs. The
+ * GM's is the whole world, so it opens to the roots and their children and no further: "click a
+ * city, see its districts" without a wall of guilds. An explicit toggle always wins.
+ */
+const branchOpen = (node, characterId, isGM) =>
+  toggledFor(characterId).get(node.id) ?? (!isGM || node.depth < 1);
+
+/** How much of a branch they have, for the GM's collapsed rows. Never rendered to a player. */
+function branchTally(node) {
+  let known = 0;
+  let total = 0;
+  const walk = n => {
+    for (const c of n.children) {
+      total++;
+      if (c.state === "known") known++;
+      walk(c);
+    }
+  };
+  walk(node);
+  return { known, total };
+}
 
 const resolver = actor => kindActorOf(actor);
 
@@ -143,7 +182,13 @@ function summary(row, isGM) {
              data-tooltip="${esc(t("attributes.grantsAdvantage"))}"></i>`
         : ""
     }
-    ${row.loreCount ? `<span class="pt-attr-count">${row.loreCount}</span>` : ""}
+    ${/*
+        ⚠ GM-only. This counts EVERY lore row on the attribute, not the ones the viewer can reach —
+        so a player could subtract what they are offered and read off "there are two more secrets
+        here". The size of what you do not know is knowledge, and it is the class of leak this
+        whole view is built to refuse.
+      */ ""}
+    ${isGM && row.loreCount ? `<span class="pt-attr-count">${row.loreCount}</span>` : ""}
     <i class="fa-solid fa-chevron-down pt-caret" aria-hidden="true"></i>
   </div>`;
 }
@@ -253,15 +298,44 @@ function worldKnowledgeSection(character, isGM) {
   if (!character) return "";
   const forest = knowledgeTree(character, { forGM: isGM });
   const body = forest.length
-    ? `<ul class="pt-list pt-world-tree">${forest.map(n => worldNode(n, isGM)).join("")}</ul>`
+    ? `<ul class="pt-list pt-world-tree">${forest.map(n => worldNode(n, isGM, character.id)).join("")}</ul>`
     : `<p class="pt-empty">${esc(t("attributes.worldEmpty"))}</p>`;
 
-  return `<div class="pt-group-head" role="heading" aria-level="3">
+  /*
+   * The GM's filter. Not offered to a player and not needed by one: their tree holds only things
+   * they know, so every filter but "all" would be empty — and a control listing states they can
+   * never be in is itself a statement that those states exist for them.
+   */
+  const active = worldFilter.get(character.id) ?? "all";
+  const filters = ["all", "unknown", "pending", "failed"];
+  const bar = isGM
+    ? `<div class="pt-world-filter" role="group" aria-label="${esc(t("attributes.filterLabel"))}">
+        ${filters
+          .map(
+            k => `<button type="button" class="pt-chip${k === active ? " pt-chip-on" : ""}"
+                    data-action="world-filter" data-filter="${k}">${esc(t(`attributes.filter.${k}`))}</button>`
+          )
+          .join("")}
+        <button type="button" class="pt-chip pt-chip-quiet" data-action="world-collapse">${esc(t("attributes.collapseAll"))}</button>
+        <button type="button" class="pt-chip pt-chip-quiet" data-action="world-expand">${esc(t("attributes.expandAll"))}</button>
+      </div>`
+    : "";
+
+  /*
+   * The character id is stamped here because the bind side must grant to **whoever this tree was
+   * drawn for**, not to `actor`. They are the same today (the only call site passes no viewer),
+   * but the first caller that renders one character's map on another sheet would otherwise have
+   * Tell-them buttons quietly granting to the wrong person. `grantControl` already does this.
+   */
+  return `<div class="pt-world" data-character="${esc(character.id)}">
+    <div class="pt-group-head" role="heading" aria-level="3">
       <span class="pt-group-title">${esc(t("attributes.worldHeading"))}</span>
     </div>
     <p class="pt-hint">${esc(t(isGM ? "attributes.worldHintGM" : "attributes.worldHint"))}</p>
+    ${bar}
     ${body}
-    ${isGM ? grantControl(character) : ""}`;
+    ${isGM ? grantControl(character) : ""}
+  </div>`;
 }
 
 /**
@@ -271,14 +345,26 @@ function worldKnowledgeSection(character, isGM) {
  * point of the view: open a city, see its districts and the guilds under them, and hand over the
  * one you meant without searching for its name.
  *
- * ⚠ A player's tree contains only `known` and `waypoint` nodes — `knowledgeTree` prunes the rest
- * away entirely rather than hiding them in markup, because a rendered list of what you do not
- * know describes the shape of what is missing.
+ * ⚠ A player's tree contains **only `known` nodes** — `knowledgeTree` drops the rest entirely
+ * rather than hiding them in markup, because a rendered list of what you do not know describes
+ * the shape of what is missing. Unknown ancestors do not survive as placeholders either: a guild
+ * granted without its city is re-rooted, since drawing the city would name it.
  */
-function worldNode(node, isGM) {
+function worldNode(node, isGM, characterId) {
+  const open = branchOpen(node, characterId, isGM);
   const kids = node.children.length
-    ? `<ul class="pt-world-branch">${node.children.map(c => worldNode(c, isGM)).join("")}</ul>`
+    ? `<ul class="pt-world-branch"${open ? "" : " hidden"}>${node.children
+        .map(c => worldNode(c, isGM, characterId))
+        .join("")}</ul>`
     : "";
+
+  const twisty = node.children.length
+    ? `<button type="button" class="pt-twisty" data-action="world-toggle" aria-expanded="${open}"
+         aria-label="${esc(t(open ? "attributes.collapseBranch" : "attributes.expandBranch"))}">
+        <i class="fa-solid fa-chevron-${open ? "down" : "right"}" aria-hidden="true"></i>
+      </button>`
+    : `<span class="pt-twisty pt-twisty-leaf" aria-hidden="true"></span>`;
+
   const tag =
     node.state === "failed"
       ? `<span class="pt-attr-tag pt-state-failed">${esc(t("attributes.state.failed"))}</span>`
@@ -287,20 +373,47 @@ function worldNode(node, isGM) {
         : node.state === "unknown"
           ? `<span class="pt-attr-tag pt-state-unknown">${esc(t("attributes.state.unknown"))}</span>`
           : "";
-  const give =
-    isGM && (node.state === "unknown" || node.state === "failed")
-      ? `<button type="button" class="pt-textbtn pt-tell-btn" data-action="tell-one" data-id="${esc(node.id)}"
-           data-tooltip="${esc(t("attributes.tellOneTip"))}">
-          <i class="fa-solid fa-comment"></i> ${esc(t("attributes.tellOne"))}
-        </button>`
-      : "";
 
-  return `<li class="pt-world-node pt-state-${esc(node.state ?? "known")}" data-id="${esc(node.id)}">
+  /*
+   * ⚠ **GM only, and this is the leak the whole view is built to refuse.** "2 of 7 told" states
+   * how much of a branch exists — so on a player's tree it would announce the size of what they
+   * have not found, node by node, which is the same disclosure as drawing the missing nodes
+   * themselves. Their tree is contracted before it ever gets here and carries no arithmetic.
+   */
+  const tally = isGM && node.children.length ? branchTally(node) : null;
+  const count = tally
+    ? `<span class="pt-world-count" data-tooltip="${esc(t("attributes.tallyTip"))}">${tally.known}/${tally.total}</span>`
+    : "";
+
+  /*
+   * "waiting on you" was the one state with a marker and no action — the GM had to remember which
+   * creature the roll happened on and go and find them. `releaseHeld` locates the parked answer
+   * wherever it sits, so the button can live next to the marker.
+   */
+  const give =
+    !isGM
+      ? ""
+      : node.state === "pending"
+        ? `<button type="button" class="pt-textbtn pt-tell-btn" data-action="release-one" data-id="${esc(node.id)}"
+             data-tooltip="${esc(t("attributes.releaseOneTip"))}">
+            <i class="fa-solid fa-unlock"></i> ${esc(t("attributes.releaseOne"))}
+          </button>`
+        : node.state === "unknown" || node.state === "failed"
+          ? `<button type="button" class="pt-textbtn pt-tell-btn" data-action="tell-one" data-id="${esc(node.id)}"
+               data-tooltip="${esc(t("attributes.tellOneTip"))}">
+              <i class="fa-solid fa-comment"></i> ${esc(t("attributes.tellOne"))}
+            </button>`
+          : "";
+
+  return `<li class="pt-world-node pt-state-${esc(node.state ?? "known")}" data-id="${esc(node.id)}"
+      data-state="${esc(node.state ?? "known")}">
     <div class="pt-world-row">
+      ${twisty}
       <img class="pt-attr-icon" src="${esc(node.icon)}" alt="">
       <span class="pt-attr-title">${esc(node.title)}</span>
       ${node.category ? `<span class="pt-attr-category">${esc(node.category)}</span>` : ""}
       ${tag}
+      ${count}
       ${give}
     </div>
     ${kids}
@@ -332,7 +445,7 @@ function grantControl(character) {
            placeholder="${esc(t("attributes.grantPlaceholder"))}"
            aria-label="${esc(t("attributes.grantPlaceholder"))}">
     <label class="pt-field pt-field-check">
-      <input type="checkbox" class="pt-grant-parents" checked>
+      <input type="checkbox" class="pt-grant-parents">
       <span>${esc(t("attributes.grantParents"))}</span>
     </label>
     <p class="pt-hint">${esc(t("attributes.grantParentsHint"))}</p>
@@ -362,7 +475,12 @@ function ancestryWarning(actor) {
 
 export function buildAttributesHTML(actor, viewer = null) {
   const isGM = game.user?.isGM === true;
-  const who = viewer ?? (actor?.type === "character" ? actor : null);
+  /*
+   * Whose knowledge filters this sheet. Their own character is themselves; on anyone else's sheet
+   * — including an NPC a player happens to own — it is the character they play, so what they see
+   * is what that character has actually worked out.
+   */
+  const who = viewer ?? (actor?.type === "character" ? actor : game.user?.character ?? null);
   const rows = attributesOf(actor, resolver, { viewer: who });
   const open = openFor(actor.id);
 
@@ -513,15 +631,30 @@ export function bindAttributes(root, actor, rerender = () => {}) {
   bindGrant(box, rerender);
 
   /*
-   * "Tell them" straight off the tree — the fast path. Ancestors come with it, because a node
-   * granted without them is inert for identification (see `grantKnowledge`).
+   * "Tell them" straight off the tree — the fast path, and it hands over **exactly the node you
+   * clicked**. Joe's rule: a GM may give a guild deep in the tree without giving the city above
+   * it. They will know of it without being able to spot a member yet, which is the honest result
+   * of having been told a name; the grant control below carries the opt-in for the other case.
    */
+  bindWorldTree(box);
+
   for (const btn of box.querySelectorAll("[data-action='tell-one']")) {
     btn.addEventListener("click", async () => {
-      const who = actor?.type === "character" ? actor : null;
+      const who = game.actors?.get(btn.closest(".pt-world")?.dataset.character ?? "");
       if (!who) return;
       btn.disabled = true;
-      await grantKnowledge(who, btn.dataset.id, { withParents: true });
+      await grantKnowledge(who, btn.dataset.id);
+      rerender();
+    });
+  }
+
+  for (const btn of box.querySelectorAll("[data-action='release-one']")) {
+    btn.addEventListener("click", async () => {
+      const who = game.actors?.get(btn.closest(".pt-world")?.dataset.character ?? "");
+      if (!who) return;
+      btn.disabled = true;
+      const freed = await releaseHeldAttribute(who, btn.dataset.id);
+      if (!freed) ui.notifications?.warn(t("attributes.releaseNone"));
       rerender();
     });
   }
@@ -531,6 +664,83 @@ export function bindAttributes(root, actor, rerender = () => {}) {
     for (const { id } of brokenAncestry(actor, resolver)) await repairAncestry(actor, id);
     rerender();
   });
+}
+
+/**
+ * Tree navigation: twisties, expand/collapse all, and the GM's state filter.
+ *
+ * All of it works on the **already-rendered** DOM rather than through `rerender()`. Repainting the
+ * tab to open a branch would rebuild the attribute list, the grant control and every listener on
+ * them, and would fight the search box for focus. It also keeps the filter honest: it can only
+ * ever hide nodes that are already in the markup, so it cannot invent a row.
+ */
+function bindWorldTree(box) {
+  const wrap = box.querySelector(".pt-world");
+  if (!wrap) return;
+  const characterId = wrap.dataset.character ?? "";
+  const toggled = toggledFor(characterId);
+
+  const setOpen = (li, open) => {
+    const branch = li.querySelector(":scope > .pt-world-branch");
+    const twisty = li.querySelector(":scope > .pt-world-row > .pt-twisty");
+    if (!branch) return;
+    branch.hidden = !open;
+    twisty?.setAttribute("aria-expanded", String(open));
+    const icon = twisty?.querySelector("i");
+    if (icon) icon.className = `fa-solid fa-chevron-${open ? "down" : "right"}`;
+    toggled.set(li.dataset.id, open);
+  };
+
+  for (const btn of wrap.querySelectorAll("[data-action='world-toggle']")) {
+    btn.addEventListener("click", ev => {
+      ev.stopPropagation();
+      const li = btn.closest(".pt-world-node");
+      setOpen(li, li.querySelector(":scope > .pt-world-branch")?.hidden === true);
+    });
+  }
+
+  for (const [action, open] of [["world-expand", true], ["world-collapse", false]]) {
+    wrap.querySelector(`[data-action='${action}']`)?.addEventListener("click", () => {
+      for (const li of wrap.querySelectorAll(".pt-world-node")) setOpen(li, open);
+    });
+  }
+
+  /*
+   * The filter is GM-only markup, so it can show every state without a second thought. A node
+   * survives if it matches, or if anything beneath it does — otherwise filtering to "not told"
+   * would hide the city you need to open to reach the district you were looking for.
+   */
+  const applyFilter = key => {
+    worldFilter.set(characterId, key);
+    for (const b of wrap.querySelectorAll("[data-action='world-filter']"))
+      b.classList.toggle("pt-chip-on", b.dataset.filter === key);
+
+    const matches = li => key === "all" || li.dataset.state === key;
+    const keep = li => {
+      const kids = [...li.querySelectorAll(":scope > .pt-world-branch > .pt-world-node")];
+      const anyKid = kids.map(keep).some(Boolean); // map, not some — every node must be visited
+      const mine = matches(li) || anyKid;
+      li.hidden = !mine;
+      // a filtered search is useless collapsed: open the way down to what survived
+      if (key !== "all" && anyKid) setOpen(li, true);
+      return mine;
+    };
+    const roots = [...wrap.querySelectorAll(":scope > .pt-world-tree > .pt-world-node")];
+    const hits = roots.map(keep).filter(Boolean).length;
+    let empty = wrap.querySelector(".pt-world-none");
+    if (!hits && !empty) {
+      empty = document.createElement("p");
+      empty.className = "pt-empty pt-world-none";
+      empty.textContent = t("attributes.filterNone");
+      wrap.querySelector(".pt-world-tree")?.after(empty);
+    } else if (hits && empty) empty.remove();
+  };
+
+  for (const b of wrap.querySelectorAll("[data-action='world-filter']"))
+    b.addEventListener("click", () => applyFilter(b.dataset.filter));
+
+  const active = worldFilter.get(characterId);
+  if (active && active !== "all") applyFilter(active);
 }
 
 /** The GM's per-character disclosure control — the only non-roll route into world knowledge. */

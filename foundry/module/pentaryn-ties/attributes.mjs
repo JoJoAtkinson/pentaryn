@@ -44,6 +44,7 @@ import {
   readLore,
   withAncestors,
   ancestorsOf,
+  wouldCycle,
   KNOWLEDGE_SETTING,
   readKnowledge,
   knowsAttribute,
@@ -51,6 +52,7 @@ import {
   visibleAttributesFor,
   forestOf,
   subtreeOf,
+  contractForest,
   childrenOf
 } from "./known-core.mjs";
 
@@ -60,13 +62,84 @@ export { REGISTRY_SETTING, ATTR_BELIEFS_SETTING, KNOWLEDGE_SETTING } from "./kno
 const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
 const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
 
-/** Generic art by category, so a new entry is never a broken image. */
+/**
+ * A default icon per category, so a new attribute looks like the thing it is without anyone
+ * picking art. Joe: *"let's have a generic icon if no custom is given that feels good — city,
+ * town, guild, fact, common categories that I can later customize."*
+ *
+ * `category` is free text, so this is a lookup with a fallback rather than an enum: type "guild"
+ * and you get a guild banner, type "smugglers' compact" and you get the generic standard, and
+ * either way the entry's icon field stays yours to change. Synonyms are folded in (`quarter` →
+ * district, `clan` → family) because the point is that a GM types the word they were already
+ * thinking of and it just works.
+ *
+ * ⚠ **Every path here must exist in Foundry's own icon set, and that is not self-enforcing.**
+ * `faction` and `place` — the two categories a world tree is mostly made of — used to point at
+ * files that 404, so every guild and every city rendered a blank square. Nothing logs, the layout
+ * still works, and it merely looks unfinished. All of these were checked against the served
+ * paths; check any you add the same way. `repairIcons` cleans up entries written against the two
+ * dead ones.
+ */
 const CATEGORY_ICONS = {
-  faction: "icons/environment/settlement/watchtower-flag.webp",
-  place: "icons/environment/settlement/house-two-fire.webp",
+  // places, largest to smallest
+  realm: "icons/environment/settlement/castle.webp",
+  kingdom: "icons/environment/settlement/castle-tan.webp",
+  region: "icons/environment/wilderness/terrain-river-road-gray.webp",
+  city: "icons/environment/settlement/city-night.webp",
+  town: "icons/environment/settlement/house-two-stories.webp",
+  village: "icons/environment/settlement/hut.webp",
+  district: "icons/environment/settlement/house-city.webp",
+  street: "icons/environment/settlement/sign-wood.webp",
+  building: "icons/environment/settlement/house-manor.webp",
+  place: "icons/environment/settlement/city-gate.webp",
+  // organisations
+  guild: "icons/sundries/flags/banner-standard-green.webp",
+  faction: "icons/sundries/flags/banner-standard-blue.webp",
+  order: "icons/sundries/flags/banner-standard-purple.webp",
+  crew: "icons/sundries/flags/banner-flag-pirate.webp",
+  cult: "icons/sundries/flags/banner-flag-skull-red.webp",
+  temple: "icons/environment/settlement/temple-night.webp",
+  // people, and the things that happen to them
+  family: "icons/environment/settlement/house-farmland.webp",
   people: "icons/environment/people/group.webp",
-  trade: "icons/tools/smithing/anvil.webp",
-  default: "icons/sundries/flags/banner-flag-blue.webp"
+  trade: "icons/environment/settlement/market-stall.webp",
+  title: "icons/commodities/treasure/medal-ribbon-gold-blue.webp",
+  condition: "icons/magic/death/hand-withered-gray.webp",
+  event: "icons/sundries/documents/calendar-daily.webp",
+  fact: "icons/sundries/scrolls/scroll-bound-gold-brown.webp",
+  default: "icons/sundries/flags/banner-standard-brown.webp"
+};
+
+/** Words a GM is likely to type for a category there is already art for. */
+const CATEGORY_ALIASES = {
+  empire: "realm", nation: "realm", land: "region", province: "region", reach: "region",
+  quarter: "district", ward: "district", neighbourhood: "district", neighborhood: "district",
+  road: "street", house: "building", manor: "building", household: "family", clan: "family",
+  bloodline: "family", company: "order", knighthood: "order", gang: "crew", band: "crew",
+  ship: "crew", church: "temple", faith: "temple", religion: "temple", sect: "cult",
+  folk: "people", species: "people", tribe: "people", business: "trade", market: "trade",
+  craft: "trade", rank: "title", office: "title", illness: "condition", disease: "condition",
+  curse: "condition", affliction: "condition", secret: "fact", rumour: "fact", rumor: "fact",
+  lore: "fact"
+};
+
+/** The two paths that 404. Kept beside the map so a repair and a default never drift apart. */
+const DEAD_ICONS = {
+  "icons/environment/settlement/watchtower-flag.webp": CATEGORY_ICONS.faction,
+  "icons/environment/settlement/house-two-fire.webp": CATEGORY_ICONS.place
+};
+
+/** Is this icon one this module chose, rather than one a GM picked? Only ours may be replaced. */
+const isDefaultIcon = icon =>
+  !String(icon ?? "").trim() || Object.values(CATEGORY_ICONS).includes(icon) || icon in DEAD_ICONS;
+
+/** What the tree should draw for one entry — its own art, or its category's if it has none. */
+const iconArt = entry => entry.icon || iconForCategory(entry.category);
+
+/** Default art for a free-text category: exact match, then a synonym, then the generic standard. */
+export const iconForCategory = category => {
+  const key = String(category ?? "").trim().toLowerCase();
+  return CATEGORY_ICONS[key] ?? CATEGORY_ICONS[CATEGORY_ALIASES[key]] ?? CATEGORY_ICONS.default;
 };
 
 const DERIVED_ICONS = {
@@ -116,7 +189,7 @@ export async function createAttribute(title, { category = "", icon = null, advan
     id,
     title: String(title ?? "").trim(),
     category,
-    icon: icon ?? CATEGORY_ICONS[category] ?? CATEGORY_ICONS.default,
+    icon: icon ?? iconForCategory(category),
     advantage,
     lore: []
   });
@@ -124,6 +197,28 @@ export async function createAttribute(title, { category = "", icon = null, advan
   list.push(entry);
   await saveRegistry(list);
   return { ok: true, entry };
+}
+
+/**
+ * One-shot repair for entries authored against the two icon paths that 404 (see `CATEGORY_ICONS`).
+ *
+ * Entries store their icon, so fixing the default fixes nothing already written — and the symptom
+ * is a blank square rather than an error, so nobody would think to go and re-pick them by hand.
+ * Only the dead paths are touched; a deliberately chosen icon is never overwritten.
+ */
+
+export async function repairIcons() {
+  if (!game.user?.isGM) return 0;
+  const list = registry();
+  let fixed = 0;
+  for (const entry of list) {
+    const better = DEAD_ICONS[entry.icon];
+    if (!better) continue;
+    entry.icon = better;
+    fixed++;
+  }
+  if (fixed) await saveRegistry(list);
+  return fixed;
 }
 
 /**
@@ -138,7 +233,26 @@ export async function updateAttribute(id, patch) {
   const list = registry();
   const i = list.findIndex(e => e.id === id);
   if (i < 0) return false;
-  const merged = clampAttribute({ ...list[i], ...patch, id: list[i].id });
+  /*
+   * ⚠ Refuse a parent that would close a loop. `wouldCycle` was written for this and then never
+   * called from anywhere, so the only thing standing between a slip of the mouse and a cycle was
+   * the readers' degrade-gracefully behaviour — and the tree does not degrade gracefully, it makes
+   * the whole loop and everything under it disappear (see `forestOf`). Cheap to refuse here.
+   */
+  if ("parent" in (patch ?? {}) && wouldCycle(id, patch.parent, list)) {
+    ui.notifications?.warn(t("attributes.cycleRefused"));
+    return false;
+  }
+  /*
+   * Retyping the category should re-dress the entry: call it a city and it gets the city. Only an
+   * icon this module chose is replaced — the moment a GM picks their own art it is theirs, and a
+   * later category edit leaves it alone.
+   */
+  const next = { ...patch };
+  if ("category" in next && !("icon" in next) && isDefaultIcon(list[i].icon)) {
+    next.icon = iconForCategory(next.category);
+  }
+  const merged = clampAttribute({ ...list[i], ...next, id: list[i].id });
   if (!merged) return false;
   list[i] = merged;
   return saveRegistry(list);
@@ -217,7 +331,21 @@ export function attributeIdsOf(actor, kindResolver = null) {
 export function describeAttribute(id) {
   const entry = attributeById(id);
   const ns = derivedNamespace(id);
-  if (entry) return { ...entry, derived: !!ns, authored: true, loreCount: entry.lore.length };
+  /*
+   * ⚠ An entry may have **no icon at all** — the field is optional and older entries were written
+   * before any default existed, so they rendered `<img src="">`: a blank square in the tree and in
+   * the list. Filling it here fixes every one of them at read, with nothing to migrate and without
+   * writing over a GM's own choice.
+   */
+  if (entry) {
+    return {
+      ...entry,
+      icon: entry.icon || iconForCategory(entry.category),
+      derived: !!ns,
+      authored: true,
+      loreCount: entry.lore.length
+    };
+  }
   const slug = ns ? id.slice(ns.length + 1) : id;
   return {
     id,
@@ -263,19 +391,25 @@ const titleCase = s =>
  * Everything one actor carries, as display records, authored entries first.
  *
  * `viewer` filters by what that character has actually identified — a secret membership must not
- * be listed to someone who has not worked it out. Omit `viewer` for the GM's own view and for a
- * character's own sheet, where carrying implies knowing.
+ * be listed to someone who has not worked it out. Two viewers see everything: a **GM**, and a
+ * character looking at **their own sheet**, where carrying implies knowing.
+ *
+ * ⚠ **A missing `viewer` is not permission.** An earlier cut read `!viewer` as "trusted context"
+ * and returned the carried set unfiltered — but the sheet passes no viewer for any NPC, and a
+ * player may own an NPC (a hireling, a mount, the party's guide). That handed the owner every
+ * secret membership on it, ancestors included, with no roll and no grant. An unresolved viewer
+ * now filters against nothing, which hides secrets rather than revealing them.
  */
 export function attributesOf(actor, kindResolver = null, { viewer = null } = {}) {
   const carried = attributeIdsOf(actor, kindResolver);
   const visible =
-    !viewer || viewer.id === actor.id || game.user?.isGM
+    game.user?.isGM || (viewer && viewer.id === actor.id)
       ? carried
       : visibleAttributesFor({
           carried,
           registry: registry(),
           beliefs: actor.getFlag?.(MODULE, "beliefs") ?? {},
-          characterId: viewer.id,
+          characterId: viewer?.id ?? "",
           isGM: false
         });
   const rows = visible.map(describeAttribute);
@@ -450,11 +584,19 @@ export async function setKnowledge(rows) {
  * **Grant world knowledge** — the "they know of this" half of the GM control, and with research
  * cut (R1d) the *only* route into a character's knowledge that is not a blind roll.
  *
- * `withParents` is not a convenience: a leaf granted alone is **inert for identification**,
- * because stage 2 climbs the ladder and a character who cannot place anyone's city can never place
- * anyone's guild. Granting the assassins' guild alone tells them it exists and nothing more —
- * which is right for *"you keep having to kill assassins from a city you never been to"*, and
- * wrong for a GM who meant them to start spotting members.
+ * **A grant may land anywhere in the tree.** Joe's rule: *"I can give a child deep in a tree
+ * without giving anything up the tree — say the research assassins, but might know nothing about
+ * where they come from."* That is the point of a disclosure rather than a roll, so `withParents`
+ * defaults **off** and hands over exactly the one thing named.
+ *
+ * What it costs is worth knowing, and is a fact about the world rather than a bug: identification
+ * climbs root-first (`identificationLadder`), so a character told about the guild alone knows it
+ * exists but still cannot **spot a member** until they can place the district above it. Turn
+ * `withParents` on when you meant them to start recognising people; leave it off when you meant
+ * them to have heard a name.
+ *
+ * Blind rolls never skip. Only the GM can, and the cases where skipping is right are too
+ * particular to encode — so they live here, on a button, and nowhere else.
  */
 export async function grantKnowledge(character, attrId, { withParents = false } = {}) {
   if (!game.user?.isGM || !character || !attrId) return false;
@@ -470,14 +612,30 @@ export async function grantKnowledge(character, attrId, { withParents = false } 
  * they permanently lost would be: an entry that says *"you failed to learn about somewhere"* names
  * the somewhere, which is the knowledge they failed to get.
  */
-export function knownWorld(character, { forGM = false } = {}) {
+export function knownWorld(character, { forGM = false, kindResolver = null } = {}) {
   const rows = knowledge()[character?.id] ?? {};
+  const live = new Set(registry().map(e => e.id));
   const out = [];
+  const seen = new Set();
   for (const [id, rec] of Object.entries(rows)) {
     if (rec.failed && !forGM) continue;
     // a rung the GM is still holding is not yet theirs to know about
     if (rec.pending && !forGM) continue;
+    /*
+     * ⚠ Ghost rows. `deleteAttribute` leaves knowledge behind on purpose (re-creating the id
+     * restores everything), but `describeAttribute` fabricates a fallback record from the slug —
+     * so a deleted "The Quiet Hand" reappeared here forever as "Quiethand", in a list the tree
+     * browser had no matching node for, and went on suppressing the grant search's offer of it.
+     * Derived ids legitimately have no entry; anything else with no entry is a ghost.
+     */
+    if (!live.has(id) && !derivedNamespace(id)) continue;
+    seen.add(id);
     out.push({ ...describeAttribute(id), ...rec, attrId: id });
+  }
+  // carrying implies knowing — computed, so re-linking a PC never needs a matching grant
+  for (const id of character ? attributeIdsOf(character, kindResolver) : []) {
+    if (seen.has(id) || derivedNamespace(id)) continue;
+    out.push({ ...describeAttribute(id), attrId: id, when: 0, failed: false, pending: false, via: "carried" });
   }
   return out.sort(
     (a, b) => Number(a.failed) - Number(b.failed) || (a.category || "").localeCompare(b.category || "") || a.title.localeCompare(b.title)
@@ -506,37 +664,57 @@ export function knowsIncludingCarried(character, kindResolver = null) {
  *
  * | state | means | GM sees | player sees |
  * | --- | --- | --- | --- |
- * | `known` | worked out or told | ✓ | ✓ |
+ * | `known` | worked out, told, or **carried** | ✓ | ✓ |
  * | `pending` | passed, waiting on the GM to deliver | ✓ | — |
  * | `failed` | rolled and missed; only a grant reopens it | ✓ | — |
  * | `unknown` | never attempted | ✓ | — |
+ *
+ * A player's tree carries **only `known` nodes**. Anything above one they were not told about is
+ * contracted away rather than drawn dim, because a GM may grant a guild without its city and the
+ * city's name is then not theirs to see.
  *
  * ⚠ A player must never see a `failed` or `unknown` node. Either one **names the thing they do
  * not know**, which is the knowledge itself — a list of the gaps in your map tells you the shape
  * of what is missing. Only `forGM` may render them, and `prune` drops them outright rather than
  * hiding them in markup a curious client could read.
  */
-export function knowledgeTree(character, { forGM = false } = {}) {
+export function knowledgeTree(character, { forGM = false, kindResolver = null } = {}) {
   const rows = knowledge()[character?.id] ?? {};
+  /*
+   * ⚠ **Carrying implies knowing**, and the tree has to say so. This is §4's rule and the ledger's
+   * own `via: "carried"` was reserved for it, but nothing wired it up — so a PC the GM had put in
+   * the Salt Dogs saw the crew listed at the top of the tab and *nothing* in the world map below
+   * it. Two halves of one tab disagreeing about what a character knows, and a **Tell them** button
+   * offering to grant them a guild they are already in.
+   *
+   * It is computed rather than written, so re-linking a PC never needs a matching grant.
+   *
+   * The materialised ancestors come with it (`linkAttribute` writes them), which is the intended
+   * meaning of a membership rather than a leak: you know which district your own crew works and
+   * which city that is in. Derived namespaces are left out — an authored `species:human` entry
+   * would otherwise sprout "Human" as a root in every character's map, and an authored `kind:`
+   * entry would put an NPC's name there.
+   */
+  const carried = new Set(character ? attributeIdsOf(character, kindResolver).filter(id => !derivedNamespace(id)) : []);
   const state = id => {
+    // carried wins over a stale failure: they blind-rolled it, missed, and later joined anyway —
+    // reading `failed` first would hide a character's own guild from them
+    if (carried.has(id)) return "known";
     const rec = rows[id];
     if (!rec) return "unknown";
     if (rec.failed) return "failed";
     return rec.pending ? "pending" : "known";
   };
-  const forest = forestOf(registry(), { state });
+  const forest = forestOf(registry(), { state, icon: iconArt });
   if (forGM) return forest;
 
   /*
-   * Prune to what they know, keeping a node only if it or something beneath it is known —
-   * so a known guild still shows the city it hangs under, and nothing else leaks.
+   * Their map is exactly what they know, and the links between unknown things **contract**
+   * rather than being drawn as placeholders — see `contractForest`. A guild they were told about
+   * without its city sits at the top of their own map, not under a greyed-out city whose name
+   * would be the leak.
    */
-  const prune = node => {
-    const kids = node.children.map(prune).filter(Boolean);
-    if (node.state !== "known" && !kids.length) return null;
-    return { ...node, children: kids, state: node.state === "known" ? "known" : "waypoint" };
-  };
-  return forest.map(prune).filter(Boolean);
+  return contractForest(forest, n => n.state === "known");
 }
 
 /** Everything beneath one attribute, flat — "show me this city's districts and guilds". */
@@ -548,12 +726,18 @@ export function branchOf(attrId, character = null, { forGM = false } = {}) {
     if (!rec) return "unknown";
     return rec.failed ? "failed" : rec.pending ? "pending" : "known";
   };
-  const node = subtreeOf(attrId, registry(), { state });
+  const node = subtreeOf(attrId, registry(), { state, icon: iconArt });
   if (!node) return [];
   const flat = [];
   const walk = n => { flat.push(n); n.children.forEach(walk); };
   walk(node);
-  return forGM || !character ? flat : flat.filter(n => n.state === "known");
+  /*
+   * ⚠ No character is **not** a licence. The old shape returned the whole unfiltered branch for
+   * `branchOf(id)` — a signature that reads like a harmless default and hands back every secret
+   * under a node. A GM asks for it explicitly.
+   */
+  if (forGM) return flat;
+  return character ? flat.filter(n => n.state === "known") : [];
 }
 
 /* -------------------------------------------- */

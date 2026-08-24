@@ -27,8 +27,9 @@ A creature **is** something (its *kind* — a stat block) and **belongs to** thi
 *attributes* — a city, a guild, an illness). Those are separate axes and they cross: a rogue
 guild has humans and goblins in it. Players learn either axis only by **inspecting** somebody —
 nothing is ever revealed automatically. Each fact is **one roll, ever**: you know it or you do
-not, and a failure is permanent. Attributes form a **tree**, and knowing a child requires knowing
-its parents, so depth costs *rolls* rather than a higher DC.
+not, and a failure is permanent. Attributes form a **tree**, and *working something out* requires
+knowing its parents, so depth costs *rolls* rather than a higher DC. A **GM's grant ignores the
+tree** and may land anywhere in it — only blind rolls climb.
 
 ---
 
@@ -171,11 +172,13 @@ rare.
 descendant forever** for that character. A DC 20 city can silently delete a whole branch of your
 world for someone. Roots should be nearly free; the depth is the difficulty.
 
-⚠ **Nothing checks for cycles.** `A.update("a", { parent: "b" })` after
-`A.update("b", { parent: "a" })` is stored happily; the resolver then quietly degrades both to
-roots (the walk stops at the repeat). Check the shape yourself before re-parenting. A **dangling**
-parent — its entry was deleted — likewise degrades the node to a root rather than making it
-unreachable.
+⚠ **A cycle is refused at write time.** `A.update("a", { parent: "b" })` after
+`A.update("b", { parent: "a" })` returns `false` and leaves the parent alone, with a notification
+saying why. This used to be stored happily on the theory that the readers degrade gracefully — and
+most do, but the tree browser did not: a loop and its whole subtree dropped out of every view while
+search and the ledger went on believing in them. If one somehow exists, the tree now promotes it to
+a root instead of vanishing it. A **dangling** parent — its entry was deleted — degrades the node
+to a root rather than making it unreachable, which is deliberate.
 
 ---
 
@@ -411,9 +414,17 @@ Judgement calls worth making consciously:
 The **Attributes** tab on a character's sheet shows the world as a tree, nested the way it
 actually is — a guild under a district under a city.
 
-**A player sees only what they know**, plus the places above it so a known guild still hangs off
-its city. Nothing else is drawn: a list of the gaps in your map describes the shape of what is
-missing, so unknown nodes are **pruned away entirely**, not dimmed.
+**A player sees only what they know.** Nothing else is drawn: a list of the gaps in your map
+describes the shape of what is missing, so unknown nodes are **dropped entirely**, not dimmed.
+
+That includes ancestors. If you granted a guild without its city, their tree shows the guild as a
+**root** — the city is not drawn above it even as scaffolding, because its name is the very thing
+you did not hand over.
+
+An edge is drawn only when they know **both ends and the link between them**. Know the city and
+the guild but not the district in between, and you get two roots, not the guild tucked under the
+city: nesting is the only information this view carries, so an invented edge is a disclosure. Grant
+the missing link and the branch assembles itself.
 
 **A GM sees the whole tree** with everything marked:
 
@@ -424,16 +435,58 @@ missing, so unknown nodes are **pruned away entirely**, not dimmed.
 | **missed it** | rolled and failed — only a grant reopens it |
 | **not told** | never attempted |
 
-Every marked row carries a **Tell them** button. That is the fast path: open a city, see its
-districts and the guilds beneath them, hand over the one you meant without typing its name. It
-grants ancestors too, so what you hand over is never inert.
+Every marked row carries an action. **Tell them** on *not told* and *missed it* hands over exactly
+that node — see the warning under [Giving knowledge away](#giving-knowledge-away) for when you want
+the ancestors too. **Release** on *waiting on you* hands over an answer they already rolled for,
+finding whichever creature it is parked on so you do not have to remember.
+
+Navigation, GM side:
+
+- **Twisties** on every branch. Your tree opens to the roots and their children; a player's opens
+  all the way down, because it is small and it is theirs.
+- **Collapse all / Expand all** for a first look at a large world.
+- **Filter chips** — *Not told*, *Waiting on you*, *Missed it*. A filter keeps the ancestors needed
+  to reach a hit and opens the way down to it, so "what have I not given this character near
+  Ardenhaven" is one click. Players get no filter: every state but *known* is empty for them, and a
+  control listing states they can never be in says those states exist.
+- **Counts** ("3/8") on your branches only. On a player's tree the size of what they have not found
+  is itself the disclosure.
+
+Depth is not a constraint — realm → kingdom → region → city → quarter → district → street → house →
+household → cell renders whole, and the tree scrolls sideways rather than crushing titles. The cap
+is a runaway guard at 64.
 
 ```js
 A.known(pc);                  // the flat list of what they know
-A.known(pc, { forGM: true }); // …including what they failed
+A.known(pc, { forGM: true }); // …including what they failed and what is held
 ```
 
+**Carrying implies knowing.** A character who *is* in the Salt Dogs has the crew — and the district
+and city its membership materialises — in their map already, marked `via: "carried"`, with no grant
+needed and nothing written to the ledger. Re-link a PC and their map follows.
+
 ---
+
+## Icons
+
+A new attribute takes its art from its **category**, which is free text. Type `city`, `town`,
+`guild`, `fact` — or `realm`, `kingdom`, `region`, `district`, `street`, `building`, `place`,
+`faction`, `order`, `crew`, `cult`, `temple`, `family`, `people`, `trade`, `title`, `condition`,
+`event` — and you get art that suits. Common synonyms are folded in, so `quarter`, `clan`,
+`church`, `gang`, `illness`, `secret` all land somewhere sensible. Anything else gets a plain
+standard.
+
+Retype the category and the icon follows it — **unless you picked your own**, in which case it is
+yours and nothing overwrites it. Set one on the entry to override at any time.
+
+```js
+await A.update(id, { category: "city" });                    // becomes a city
+await A.update(id, { icon: "worlds/mine/ardenhaven.webp" }); // yours from here on
+```
+
+⚠ Two of the old defaults pointed at files that do not exist, so every guild and city drew a blank
+square. Fixed, and entries written against them are repaired on load. If you add a category icon,
+check the path actually serves — a wrong one logs nothing and merely looks unfinished.
 
 ## Giving knowledge away
 
@@ -442,7 +495,8 @@ Rolls are not the only route in — and after a permanent failure they are the *
 ```js
 const A = game.pentaryn.ties.attributes;
 // they know of it — travel, a library, a good story
-await A.tell(pc, "ashfallcompany", { withParents: true });
+await A.tell(pc, "ashfallcompany");                        // just this one thing
+await A.tell(pc, "ashfallcompany", { withParents: true }); // …and everywhere it sits
 A.known(pc);                    // what they know of the world
 A.known(pc, { forGM: true });   // …including branches they permanently failed
 ```
@@ -455,9 +509,15 @@ this — tell them"*, because that is exactly when you need it.
 already failed stay failed; clear those with `S.resetIdent(pc, creature, id)`. Granting the city
 reopens the branch; it does not un-fail the stranger they already misread.
 
-⚠ **`withParents` is not a convenience.** A leaf granted alone is **inert**: they know the guild
-exists and can never spot a member, because stage 2 climbs the ladder. Leave it on unless you
-mean exactly that ("you have fought them, but you have never been to that city").
+⚠ **A grant may land anywhere in the tree, and `withParents` is off by default.** *"I can give a
+child deep in a tree without giving anything up the tree — say the research assassins, but they
+might know nothing about where they come from."* That is what a grant is for.
+
+Know what the bare version buys, because it is a fact about the world rather than a limitation:
+identification climbs root-first, so a character told about the guild alone **knows it exists and
+still cannot spot a member** until they can place the district above it. Turn `withParents` on
+when you meant them to start recognising people; leave it off when you meant them to have heard a
+name. Blind rolls never skip a rung — only you can.
 
 Handing someone a monster instead:
 
@@ -524,6 +584,9 @@ features — nothing here reads them.
 
 - **A GM client must be connected** for any of this. No GM, no rolls — by design, a blind
   arbitrated roll needs an arbiter.
+- **A cycle is refused now**, so an attribute cannot be made its own ancestor by mistake. If one
+  ever exists (a hand-edited setting), the tree promotes it to a root rather than making it and
+  everything under it silently vanish.
 - **Everything syncs to every client.** Players *hold* the registry in memory; the UI hides it.
   This defends against accidents, not against a console. Do not put anything
   in a lore row you could not bear a curious player reading.

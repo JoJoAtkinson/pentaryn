@@ -606,9 +606,46 @@ export function kindHasContent({ biography = "", tiers = [], attacks = [] } = {}
   return Array.isArray(attacks) && attacks.length > 0;
 }
 
+/**
+ * One pass over the registry: id → entry, and parent → children.
+ *
+ * The tree functions used to call `readRegistry` — a clamp of every entry plus `readLore` over
+ * every row — once **per node**, which makes a paint O(n²) in registry size and fires on every
+ * sheet render and after every grant click. Build this once and hand it down instead. Anywhere a
+ * `registry` is accepted below, an index may be passed in its place.
+ */
+export function indexRegistry(registry) {
+  const list = readRegistry(registry);
+  const byId = new Map(list.map(e => [e.id, e]));
+  const kids = new Map();
+  for (const e of list) {
+    const p = typeof e.parent === "string" ? e.parent : "";
+    if (!kids.has(p)) kids.set(p, []);
+    kids.get(p).push(e);
+  }
+  return { list, byId, kids };
+}
+
+const asIndex = registry => (registry?.byId instanceof Map ? registry : indexRegistry(registry));
+
+/**
+ * A pure runaway backstop, and nothing else.
+ *
+ * ⚠ It is **not** the cycle guard — `subtreeOf`'s `seen` set is, and it terminates a loop at the
+ * repeat whatever this is set to; `updateAttribute` now refuses to write one in the first place.
+ * An earlier 12 was doing double duty and quietly amputated real worlds: a chain of realm →
+ * kingdom → region → city → quarter → district → street → house → household → order → cell is
+ * eleven before anyone has been unreasonable, and the twelfth vanished with no error. Joe:
+ * *"can be much deeper than 3 in some cases — let's ensure the depth can go much deeper."*
+ *
+ * So it sits far above any plausible world. Nothing here costs anything until a branch is that
+ * deep, and a tree that hits 64 is a bug worth hearing about rather than a world worth drawing.
+ */
+export const TREE_DEPTH_MAX = 64;
+
+
 /** The direct children of an id — the inverse of `ancestorsOf`, and just as computed. */
-export const childrenOf = (id, registry) =>
-  readRegistry(registry).filter(e => e.parent === (typeof id === "string" ? id.trim() : ""));
+export const childrenOf = (id, registry) => asIndex(registry).kids.get(typeof id === "string" ? id.trim() : "") ?? [];
 
 /**
  * One attribute and everything beneath it, as a nested tree.
@@ -618,34 +655,91 @@ export const childrenOf = (id, registry) =>
  * contain a cycle (nothing refuses one — see `ancestorsOf`), and a browser that recurses forever
  * is worse than one that stops.
  */
-export function subtreeOf(id, registry, { state = () => null, depth = 0, seen = new Set() } = {}) {
+export function subtreeOf(id, registry, { state = () => null, icon = null, depth = 0, seen = new Set(), index = null } = {}) {
   const key = typeof id === "string" ? id.trim() : "";
-  if (!key || depth > 12 || seen.has(key)) return null;
-  const entry = readRegistry(registry).find(e => e.id === key);
+  const idx = index ?? asIndex(registry);
+  if (!key || seen.has(key)) return null;
+  const entry = idx.byId.get(key);
   if (!entry) return null;
+  if (depth > TREE_DEPTH_MAX) {
+    // amputating in silence is the failure this module has been bitten by most; say so once
+    console?.warn?.(`pentaryn-ties | attribute tree deeper than ${TREE_DEPTH_MAX} at "${key}" — branch not drawn`);
+    return null;
+  }
   const next = new Set([...seen, key]);
   return {
     id: key,
     title: entry.title,
     category: entry.category,
-    icon: entry.icon,
+    // injected like `state`, so this file stays free of any particular VTT's art paths — the client
+    // half fills a blank icon from the entry's category
+    icon: icon ? icon(entry) : entry.icon,
     secret: entry.secret,
     depth,
     state: state(key),
-    children: childrenOf(key, registry)
-      .map(c => subtreeOf(c.id, registry, { state, depth: depth + 1, seen: next }))
+    children: childrenOf(key, idx)
+      .map(c => subtreeOf(c.id, idx, { state, icon, depth: depth + 1, seen: next, index: idx }))
       .filter(Boolean)
       .sort((a, b) => a.title.localeCompare(b.title))
   };
 }
 
-/** Every root, each with its subtree — the whole world as a forest. */
-export const forestOf = (registry, opts = {}) =>
-  readRegistry(registry)
-    .filter(e => !e.parent || !readRegistry(registry).some(x => x.id === e.parent))
-    .map(e => subtreeOf(e.id, registry, opts))
-    .filter(Boolean)
-    .sort((a, b) => a.title.localeCompare(b.title));
+/**
+ * Every root, each with its subtree — the whole world as a forest.
+ *
+ * ⚠ **Nothing may vanish.** A root used to be "no parent, or a parent that is not in the
+ * registry" — but every member of a `parent` cycle has a parent that IS in the registry, so a
+ * cycle and its whole descendant subtree silently disappeared from the GM's browser, from the
+ * player's, and from the only surface that can hand any of it over, while `searchAttributes` and
+ * the knowledge ledger went on believing in them. `subtreeOf`'s seen-set guards a walk that in
+ * that case never started. So anything no root reached is promoted to a root of its own: a
+ * malformed registry costs a wrong-looking tree rather than an invisible one.
+ */
+export const forestOf = (registry, opts = {}) => {
+  const idx = asIndex(registry);
+  const byTitle = (a, b) => String(a.title ?? "").localeCompare(String(b.title ?? ""));
+  const trees = idx.list
+    .filter(e => !e.parent || !idx.byId.has(e.parent))
+    .map(e => subtreeOf(e.id, idx, { ...opts, index: idx }))
+    .filter(Boolean);
+
+  const seen = new Set();
+  const mark = n => { seen.add(n.id); n.children.forEach(mark); };
+  trees.forEach(mark);
+  for (const e of idx.list) {
+    if (seen.has(e.id)) continue;
+    const orphan = subtreeOf(e.id, idx, { ...opts, index: idx });
+    if (!orphan) continue;
+    mark(orphan);
+    trees.push(orphan);
+  }
+  return trees.sort(byTitle);
+};
+
+export function contractForest(forest, keep = () => true) {
+  /*
+   * ⚠ A survivor is attached to a parent **only when its immediate parent survived**. An earlier
+   * cut let a dropped node's children fall into the nearest *kept ancestor* instead — so a player
+   * told about Greyharbour and the Quiet Hand, but not the Undercity between them, saw the guild
+   * drawn directly inside the city. Nesting is the whole information this view carries, so that
+   * edge asserted a containment the GM never granted, and asserted it wrongly besides (it is two
+   * levels down, not one). Joe's rule is literal: *"if I gave them a child and didn't give them
+   * the parent, it should live unparented."* Not re-homed — unparented.
+   */
+  const unplaced = [];
+  const visit = node => {
+    const kids = (Array.isArray(node?.children) ? node.children : []).map(visit).filter(Boolean);
+    if (keep(node)) return { ...node, children: kids };
+    // dropped: its kept children have nowhere honest to hang, so they stand on their own
+    unplaced.push(...kids);
+    return null;
+  };
+
+  const roots = (Array.isArray(forest) ? forest : []).map(visit).filter(Boolean);
+  const byTitle = (a, b) => String(a.title ?? "").localeCompare(String(b.title ?? ""));
+  const stamp = (node, depth) => ({ ...node, depth, children: node.children.map(c => stamp(c, depth + 1)).sort(byTitle) });
+  return [...roots, ...unplaced].map(n => stamp(n, 0)).sort(byTitle);
+}
 
 /* ── the two ledgers ──────────────────────────────────────────────────────── */
 

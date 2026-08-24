@@ -85,6 +85,8 @@ import {
   planStep,
   forestOf,
   subtreeOf,
+  contractForest,
+  TREE_DEPTH_MAX,
   childrenOf,
   helpFor,
   clampSources
@@ -1434,6 +1436,15 @@ export function register({ t, eq, ok }) {
     ok(depth <= 13, `walk terminated at depth ${depth}`);
   });
 
+  t("tree: art is injected too, so the pure layer holds no VTT paths", () => {
+    // an entry may legitimately carry no icon; the client half fills it from the category
+    const bare = [{ id: "x", title: "X", category: "guild" }, { id: "y", title: "Y", parent: "x", icon: "mine.webp" }];
+    const node = subtreeOf("x", bare, { icon: e => e.icon || `art/${e.category}.webp` });
+    eq(node.icon, "art/guild.webp", "filled from the category");
+    eq(node.children[0].icon, "mine.webp", "a chosen icon is never overwritten");
+    eq(subtreeOf("x", bare).icon, null, "no resolver means the entry's own value, untouched");
+  });
+
   t("tree: state is injected, so the pure layer never decides who knows what", () => {
     const known = new Set(["city", "guild"]);
     const node = subtreeOf("city", WORLD, { state: id => (known.has(id) ? "known" : "unknown") });
@@ -1441,6 +1452,118 @@ export function register({ t, eq, ok }) {
     eq(node.children.find(c => c.id === "docks").state, "unknown");
     eq(node.children.find(c => c.id === "under").children[0].state, "known");
     eq(subtreeOf("city", WORLD).state, null, "no state function means no state");
+  });
+
+  t("tree: a node kept without its parent is re-rooted, never propped on a placeholder", () => {
+    /*
+     * The GM told them about the guild and nothing else. Their map must not draw the city or the
+     * district above it — those names ARE the knowledge they were not given. The guild rises to
+     * stand beside whatever else they do know.
+     */
+    const known = new Set(["guild", "lung"]);
+    const forest = forestOf(WORLD, { state: id => (known.has(id) ? "known" : "unknown") });
+    const mine = contractForest(forest, n => n.state === "known");
+    eq(mine.map(n => n.id), ["lung", "guild"], "both roots, sorted by title");
+    eq(mine.every(n => n.children.length === 0), true, "nothing unknown came along");
+    eq(mine.every(n => n.depth === 0), true, "depth is re-stamped for the tree actually drawn");
+    // and the city and district appear nowhere in the payload at all, not even hidden
+    ok(!JSON.stringify(mine).includes("Undercity"), "the district name never reaches the render payload");
+    ok(!JSON.stringify(mine).includes("Greyharbour"), "nor the city name (see the console caveat in attributes.md)");
+  });
+
+  t("tree: a gap in the middle unparents the child — it does NOT re-home under the grandparent", () => {
+    /*
+     * They were told about Greyharbour and about the Quiet Hand, but never about the Undercity
+     * between them. Drawing the guild inside the city would assert a containment nobody granted —
+     * and assert it wrongly, since it is two levels down. It stands on its own instead.
+     */
+    const known = new Set(["city", "guild"]);
+    const forest = forestOf(WORLD, { state: id => (known.has(id) ? "known" : "unknown") });
+    const mine = contractForest(forest, n => n.state === "known");
+    eq(mine.map(n => n.id), ["city", "guild"], "two roots, not one nesting the other");
+    eq(mine.every(n => n.children.length === 0), true, "and no invented edge between them");
+    eq(mine.every(n => n.depth === 0), true);
+  });
+
+  t("tree: an edge survives only when BOTH ends and the link between them are known", () => {
+    const known = new Set(["city", "under", "guild"]); // the whole chain
+    const forest = forestOf(WORLD, { state: id => (known.has(id) ? "known" : "unknown") });
+    const mine = contractForest(forest, n => n.state === "known");
+    eq(mine.map(n => n.id), ["city"], "one root");
+    eq(mine[0].children.map(n => n.id), ["under"]);
+    eq(mine[0].children[0].children.map(n => n.id), ["guild"], "nested the way the world is");
+    eq(mine[0].children[0].children[0].depth, 2, "depth re-stamped for the tree drawn");
+  });
+
+  t("tree: a cycle in the registry is promoted to a root, never silently vanished", () => {
+    /*
+     * A root used to mean "no parent, or a parent that is not in the registry" — but every member
+     * of a loop HAS a parent that is in the registry, so the loop and everything under it dropped
+     * out of the browser entirely while search and the ledger went on believing in them. Silence
+     * is the failure mode this module has been bitten by most.
+     */
+    const looped = [
+      { id: "a", title: "A", parent: "b" },
+      { id: "b", title: "B", parent: "a" },
+      { id: "c", title: "C", parent: "a" },
+      { id: "free", title: "Free" }
+    ];
+    const ids = forestOf(looped).map(n => n.id);
+    ok(ids.includes("free"), "the honest root is still a root");
+    ok(ids.includes("a") || ids.includes("b"), "the loop surfaces instead of disappearing");
+    const flat = new Set();
+    const walk = n => { flat.add(n.id); n.children.forEach(walk); };
+    forestOf(looped).forEach(walk);
+    eq([...flat].sort(), ["a", "b", "c", "free"], "every entry is reachable somewhere in the forest");
+  });
+
+  t("tree: a world far deeper than three levels is drawn whole", () => {
+    /*
+     * Joe: "can be much deeper than 3 in some cases." Realm → kingdom → region → city → quarter →
+     * district → street → house → household → order → cell is eleven before anyone is being
+     * unreasonable, and an earlier cap of 12 amputated the next level in silence.
+     */
+    const deep = Array.from({ length: 24 }, (_, i) => ({
+      id: `n${i}`, title: `Level ${String(i).padStart(2, "0")}`, secret: true, parent: i ? `n${i - 1}` : ""
+    }));
+    let node = forestOf(deep)[0];
+    let seen = 0;
+    while (node) { seen++; node = node.children[0]; }
+    eq(seen, 24, "every level survives the walk");
+
+    // and the contracted view keeps the chain, re-stamping depth as it goes
+    const known = new Set(deep.map(e => e.id));
+    const mine = contractForest(forestOf(deep, { state: id => (known.has(id) ? "known" : "unknown") }), n => n.state === "known");
+    let cur = mine[0];
+    let depth = 0;
+    while (cur.children.length) { cur = cur.children[0]; depth++; }
+    eq(depth, 23);
+    eq(cur.depth, 23, "depth is the drawn depth, not the registry's");
+    ok(TREE_DEPTH_MAX >= 64, `runaway backstop is well clear of real worlds (got ${TREE_DEPTH_MAX})`);
+  });
+
+  t("tree: past the runaway backstop a branch stops, and a cycle stops on its own", () => {
+    const tooDeep = Array.from({ length: TREE_DEPTH_MAX + 4 }, (_, i) => ({
+      id: `d${i}`, title: `D${i}`, parent: i ? `d${i - 1}` : ""
+    }));
+    let node = forestOf(tooDeep)[0];
+    let seen = 0;
+    while (node) { seen++; node = node.children[0]; }
+    eq(seen, TREE_DEPTH_MAX + 1, "stops at the cap rather than running away");
+
+    // the seen-set, not the cap, is what makes a loop terminate — it must hold at any cap
+    const loop = [{ id: "a", title: "A", parent: "b" }, { id: "b", title: "B", parent: "a" }];
+    let cur = subtreeOf("a", loop);
+    let n = 0;
+    while (cur) { n++; cur = cur.children[0]; }
+    eq(n, 2, "a two-node cycle draws each node once");
+  });
+
+  t("tree: contracting everything away leaves an empty forest, not a shell", () => {
+    const forest = forestOf(WORLD, { state: () => "unknown" });
+    eq(contractForest(forest, n => n.state === "known"), []);
+    eq(contractForest(undefined, () => true), []);
+    eq(contractForest(forest).length, 2, "no predicate keeps the forest whole");
   });
 
   t("cap: a Monster Manual lore page is cut on a word boundary and marked as cut", () => {
