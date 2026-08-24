@@ -503,16 +503,29 @@ function bindGrant(box, rerender) {
 
   const paint = () => {
     const { matches, canCreate } = searchAttributes(input.value, resolver);
-    const known = new Set(knownWorld(character, { forGM: true }).map(r => r.attrId));
-    const rows = matches
-      .filter(m => !known.has(m.id))
+    /*
+     * ⚠ Only attributes they actually **know** are filtered out — never the ones they FAILED.
+     *
+     * `knownWorld(forGM)` returns failed rows too, so filtering on "has a row" hid exactly the
+     * attributes a GM most needs this control for: a permanent failure is the whole reason to
+     * hand something over. Worse, hiding the match left only **Create**, which silently made a
+     * near-duplicate under a different id.
+     *
+     * A failed entry is offered and marked, because granting it is the release valve.
+     */
+    const rows = knownWorld(character, { forGM: true });
+    const settled = new Map(rows.map(r => [r.attrId, r]));
+    const hits = matches
+      .filter(m => !(settled.has(m.id) && !settled.get(m.id).failed))
       .slice(0, 12)
-      .map(
-        m => `<button type="button" class="pt-attr-hit" data-id="${esc(m.id)}">
+      .map(m => {
+        const failed = settled.get(m.id)?.failed === true;
+        return `<button type="button" class="pt-attr-hit${failed ? " pt-attr-hit-failed" : ""}" data-id="${esc(m.id)}">
           <img src="${esc(m.icon)}" alt="">
           <span class="pt-attr-hit-title">${esc(m.title)}</span>
-        </button>`
-      )
+          ${failed ? `<span class="pt-attr-tag">${esc(t("attributes.theyFailedThis"))}</span>` : ""}
+        </button>`;
+      })
       .join("");
     const create =
       input.value.trim() && canCreate
@@ -520,7 +533,7 @@ function bindGrant(box, rerender) {
             <i class="fa-solid fa-plus"></i> ${esc(f("attributes.createOne", { title: input.value.trim() }))}
           </button>`
         : "";
-    results.innerHTML = rows + create || `<p class="pt-hint">${esc(t("attributes.noMatches"))}</p>`;
+    results.innerHTML = hits + create || `<p class="pt-hint">${esc(t("attributes.noMatches"))}</p>`;
     results.hidden = false;
 
     for (const b of results.querySelectorAll(".pt-attr-hit")) {

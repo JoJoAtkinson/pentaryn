@@ -307,5 +307,6 @@
   "PENTARYN_TIES.known.hide": "Tuck this away",
   "PENTARYN_TIES.known.unhide": "Put it back",
   "PENTARYN_TIES.known.showHidden": "Show {count} tucked away",
-  "PENTARYN_TIES.known.hideHidden": "Hide the tucked away again"
+  "PENTARYN_TIES.known.hideHidden": "Hide the tucked away again",
+  "PENTARYN_TIES.attributes.theyFailedThis": "they missed this — tell them"
 }

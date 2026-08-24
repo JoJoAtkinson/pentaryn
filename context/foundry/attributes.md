@@ -418,6 +418,14 @@ A.known(pc);                    // what they know of the world
 A.known(pc, { forGM: true });   // …including branches they permanently failed
 ```
 
+From the sheet: open the character, **Attributes** tab, *Tell them about something* (GM-only) —
+type, click. An attribute they **permanently failed** is offered there and flagged *"they missed
+this — tell them"*, because that is exactly when you need it.
+
+⚠ **A grant lifts stage 1 only — knowing the thing exists.** Per-creature identifications they
+already failed stay failed; clear those with `S.resetIdent(pc, creature, id)`. Granting the city
+reopens the branch; it does not un-fail the stranger they already misread.
+
 ⚠ **`withParents` is not a convenience.** A leaf granted alone is **inert**: they know the guild
 exists and can never spot a member, because stage 2 climbs the ladder. Leave it on unless you
 mean exactly that ("you have fought them, but you have never been to that city").

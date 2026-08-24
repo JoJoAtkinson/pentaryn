@@ -3057,6 +3057,26 @@ The offset shifts what a rung **costs**, never what it is **called**, so authore
 records and every fixture keep meaning the same thing when a GM nudges a creature. Renaming the
 rungs instead would have made a stored `tier: 20` ambiguous the moment an offset changed.
 
+### The grant control hid the one thing it existed for (2026-08-23)
+
+Joe, checking his own mental model: *"it's easy for me to choose to give it on a research roll, it
+just perm blocked off on inspection. GM can still override it with a click."* Correct in principle
+— and the click was broken.
+
+The control filtered its results against `knownWorld(forGM: true)`, which **returns failed rows
+too**. So an attribute the character had permanently failed counted as "already known" and was
+**hidden from the picker** — the single case the control exists for. Typing "Dragonsfall" offered
+only **Create**, which silently made a near-duplicate under a different id (`dragonsfall` beside
+`testdragonsfall`), because the collision check compares normalised ids and those two differ.
+
+Now only *successfully* known attributes are filtered out. A failed one is offered and flagged
+**"they missed this — tell them"**. Verified end to end through the control: one click lifted the
+permanent failure, no duplicate created.
+
+⚠ Worth stating where the model is easy to get wrong: **a grant lifts stage 1 only.** It reopens
+the branch (they know the place exists); it does not un-fail a per-creature identification they
+already botched — that is `resetIdent`.
+
 ### Left in the world
 
 **TEST — Shadow** and **TEST — Shadow Demon**, marked like the attributes so Joe can try the ladder
