@@ -37,14 +37,22 @@ help:
 	@echo "    make foundry-restore   list snapshots (SNAP=<id> to restore one)"
 	@echo "    make vtt-update-dry    what a Saturday run WOULD change"
 	@echo "    make check-context     CLAUDE.md + context/ integrity"
+	@echo "    make check-lore        wikilinks + frontmatter across the lore trees"
 	@echo ""
 	@echo "  Everything else: make -pRrq | grep '^[a-z]' | sort, or read this file."
 	@echo ""
 
 # ─── Instruction surface ────────────────────────────────────────────────
-.PHONY: check-context
+.PHONY: check-context check-lore check-all
 check-context:
 	@cd $(ROOT) && $(PY) scripts/check_context.py
+
+# The lore trees use wikilinks, which check_context.py and fix_md_links cannot
+# see. This is what watches them.
+check-lore:
+	@cd $(ROOT) && $(PY) scripts/check_lore_links.py
+
+check-all: check-context check-lore
 
 # ─── Table lifecycle ────────────────────────────────────────────────────
 TUNNEL_HOST := vtt.atjoseph.com

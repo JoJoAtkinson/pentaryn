@@ -2,10 +2,10 @@
 name: Thrall Derro
 description: "Partially dominated by the beholder; caught between master and oath"
 type: creature
-tags: ["#npc", "#combat", "#derro", "#thrulm", "#thrall", "#beholder-touched"]
+tags: ["npc", "combat", "derro", "thrulm", "thrall", "beholder-touched"]
 status: active
 created: 2026-04-26
-last-modified: 2026-04-26
+last_modified: 2026-04-26
 ---
 
 # Thrall Derro (Beholder-Dominated)
@@ -117,6 +117,6 @@ Some commit suicide. Some become the beholder's most bitter enemies. Some go hol
 
 ## Related Links
 
-- [Dulgarum Faction Overview](../../_overview.md)
-- [Thrulm Location](../_overview.md)
-- [The Beholder](./beholder-thrulm.md) — The creature that enslaves them
+- [[world/factions/dulgarum-oathholds/locations/thrulm/_overview|Dulgarum Faction Overview]]
+- [[world/factions/dulgarum-oathholds/locations/thrulm/_overview|Thrulm Location]]
+- [[beholder-thrulm|The Beholder]] — The creature that enslaves them

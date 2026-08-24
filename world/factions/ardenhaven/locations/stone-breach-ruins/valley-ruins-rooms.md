@@ -1,7 +1,7 @@
 ---
 created: 2026-01-03
-last-modified: 2026-01-03
-tags: ["#location", "#ruins", "#dungeon", "#loot"]
+last_modified: 2026-01-03
+tags: ["location", "ruins", "dungeon", "loot"]
 status: active
 ---
 

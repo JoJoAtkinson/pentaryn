@@ -1,6 +1,6 @@
 ---
 created: 2025-12-31
-tags: ["#quest", "#cr1", "#ardenhaven", "#active"]
+tags: ["quest", "cr1", "ardenhaven", "active"]
 status: active
 ---
 

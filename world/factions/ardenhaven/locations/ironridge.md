@@ -1,7 +1,7 @@
 ---
 created: 2026-01-17
-last-modified: 2026-01-17
-tags: ["#location", "#ardenhaven", "#mining", "#village", "#mountains"]
+last_modified: 2026-01-17
+tags: ["location", "ardenhaven", "mining", "village", "mountains"]
 status: active
 ---
 
@@ -13,7 +13,7 @@ status: active
 
 | Attribute | Value |
 |---|---|
-| **Region** | [Ardenhaven](../../_overview.md) |
+| **Region** | [[world/factions/ardenhaven/_overview\|Ardenhaven]] |
 | **Type** | Mining Village |
 | **Population** | ~200 |
 | **Distance from Ardenford** | 15 miles northwest (mountain road) |
@@ -22,7 +22,7 @@ status: active
 
 ## Description
 
-Ironridge clings to the mountainside northwest of [Ardenford](ardenford/ardenford.md), a cluster of stone buildings built on terraced platforms carved from the ridge itself. The village exists for one purpose: extracting iron ore and quality stone from the mountain and sending it down to Ardenford's forges.
+Ironridge clings to the mountainside northwest of [[ardenford|Ardenford]], a cluster of stone buildings built on terraced platforms carved from the ridge itself. The village exists for one purpose: extracting iron ore and quality stone from the mountain and sending it down to Ardenford's forges.
 
 The air is thin and cold, heavy with smoke from the smelter. Mine shafts tunnel deep into the mountain, reinforced with timber hauled up from the lowlands. A winding mountain road—narrow, steep, dangerous—connects Ironridge to Ardenford below.
 
@@ -55,7 +55,7 @@ A small dwarven community lives here permanently, employed by the mine as engine
 
 ## Related Links
 
-- [Ardenford](ardenford/ardenford.md)
-- [Ardenhaven Overview](../../_overview.md)
-- [Calstead](calstead.md) (grain village)
-- [Thorndale](thorndale.md) (livestock village)
+- [[ardenford|Ardenford]]
+- [[world/factions/ardenhaven/_overview|Ardenhaven Overview]]
+- [[calstead|Calstead]] (grain village)
+- [[thorndale|Thorndale]] (livestock village)

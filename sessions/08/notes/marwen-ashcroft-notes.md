@@ -1,7 +1,7 @@
 ---
 created: 2026-03-29
-last-modified: 2026-03-29
-tags: ["#session", "#dm-reference", "#elderholt", "#marwen"]
+last_modified: 2026-03-29
+tags: ["session", "dm-reference", "elderholt", "marwen"]
 status: active
 ---
 
@@ -52,7 +52,7 @@ Each elder gave specific counsel. Use these if Marwen (or a PC connected to her)
 - **Raven:** "I love visitors." (walks off)
 - **Marrith:** Run from broken witches. Find a traveling party. Don't go alone out of pride. If cornered, lie — promise you can heal it, buy time for allies.
 
-> Source: [1_marwen-leaving.md](../../../world/factions/elderholt/story/1_marwen-leaving.md)
+> Source: [[1_marwen-leaving|1_marwen-leaving.md]]
 
 ---
 
@@ -64,4 +64,4 @@ Each elder gave specific counsel. Use these if Marwen (or a PC connected to her)
 - The Ashcroft gifts: fire, reshaping, foresight run in their blood
 - Marrith's crow — has it been sent yet?
 
-> Source: [history/](../../../world/factions/elderholt/history/) · [marrith-the-ashen-measure.md](../../../world/factions/elderholt/elders/marrith-the-ashen-measure.md)
+> Source: [history/](../../../world/factions/elderholt/history/) · [[marrith-the-ashen-measure|marrith-the-ashen-measure.md]]

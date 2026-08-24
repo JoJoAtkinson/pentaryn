@@ -48,7 +48,7 @@ def _iter_markdown_files(root: Path) -> list[Path]:
     skip_dirs = {".git", ".venv", "node_modules", ".output", "__pycache__"}
     markdown_files: list[Path] = []
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in skip_dirs and not d.startswith(".pandoc-merged-")]
+        dirnames[:] = [d for d in dirnames if d not in skip_dirs]
         for filename in filenames:
             if filename.lower().endswith(".md"):
                 markdown_files.append(Path(dirpath) / filename)

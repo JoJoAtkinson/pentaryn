@@ -2,10 +2,10 @@
 name: Deep Watch Derro
 description: "Loyal dwarf-kin sworn to contain the depths"
 type: creature
-tags: ["#npc", "#combat", "#derro", "#dulgarum-oathholds", "#thrulm", "#deep-watch"]
+tags: ["npc", "combat", "derro", "dulgarum-oathholds", "thrulm", "deep-watch"]
 status: active
 created: 2026-04-26
-last-modified: 2026-04-26
+last_modified: 2026-04-26
 ---
 
 # Deep Watch Derro (Standard)
@@ -110,5 +110,5 @@ Many have relatives above in Dulgarum proper, and families they'll never see aga
 
 ## Related Links
 
-- [Dulgarum Faction Overview](../../_overview.md)
-- [Thrulm Location](../_overview.md)
+- [[world/factions/dulgarum-oathholds/locations/thrulm/_overview|Dulgarum Faction Overview]]
+- [[world/factions/dulgarum-oathholds/locations/thrulm/_overview|Thrulm Location]]

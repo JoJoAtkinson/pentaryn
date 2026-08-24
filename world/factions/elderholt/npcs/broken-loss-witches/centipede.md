@@ -1,7 +1,7 @@
 ---
 created: 2026-01-01
-last-modified: 2026-01-01
-tags: ["#world", "#faction", "#elderholt", "#npc", "#witch", "#deep-witch", "#broken-loss-witches"]
+last_modified: 2026-01-01
+tags: ["world", "faction", "elderholt", "npc", "witch", "deep-witch", "broken-loss-witches"]
 status: draft
 ---
 
@@ -9,7 +9,7 @@ status: draft
 
 *A lost Deep-Witch whose bargains left her with a human face and a centipede body—terrifying to meet, but more roleplay than a straight fight.*
 
-Related lore: [Witches of Elderholt](../../witchs.md)
+Related lore: [[witchs|Witches of Elderholt]]
 
 ## At A Glance
 
@@ -191,6 +191,6 @@ If you need numbers, run Mara as a **6th-level spellcaster** built for control a
 
 ## Related Links
 
-- [Witches of Elderholt](../../witchs.md)
-- [Elderholt — The Coven Realm](../../_overview.md)
-- [Broken Witch — Concept Development](../broken-witch-concept.md)
+- [[witchs|Witches of Elderholt]]
+- [[world/factions/elderholt/_overview|Elderholt — The Coven Realm]]
+- [[broken-witch-concept|Broken Witch — Concept Development]]

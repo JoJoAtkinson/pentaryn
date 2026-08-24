@@ -12,7 +12,7 @@
 | **Type**         | Nomadic Horde / Theocratic Warband Alliance            |
 | **Size**         | Regional orc power                                     |
 | **Alignment**    | Chaotic Good |
-| **Headquarters** | [Rakthok](locations/rakthok.md)                        |
+| **Headquarters** | [[rakthok\|Rakthok]]                        |
 | **Government**   | Fire Council democracy electing a Warlord               |
 | **Founded**      | The Exodus from the Blighted Lands                     |
 
@@ -171,7 +171,7 @@ The Horde is an alliance of tribes with distinct virtues and rivalries. Notable 
 
 ## Locations
 
-### [Headquarters — Rakthok](locations/rakthok.md)
+### [[rakthok|Headquarters — Rakthok]]
 
 Fortified war-camp and shamanic ritual grounds; semi-permanent staging area for raids.
 
@@ -195,7 +195,7 @@ Temporary encampments along Calderon Imperium borders; constantly relocated.
 
 ### Enemies
 
-- **[Calderon Imperium](../calderon-imperium/_overview.md):** Primary target of raids; existential threat justifying Imperium's undead research
+- **[[world/factions/calderon-imperium/_overview|Calderon Imperium]]:** Primary target of raids; existential threat justifying Imperium's undead research
 
 ## Reputation
 
@@ -245,8 +245,8 @@ Lean into the irony that a Horde branded monstrous may be the most effective dem
 
 ## Related Links
 
-- [Headquarters — Rakthok](locations/rakthok.md)
-- [Calderon Imperium](../calderon-imperium/_overview.md)
-- [Garrok Confederation](../garrok-confederation/_overview.md)
-- [Merrowgate](../merrowgate/_overview.md)
-- [The Raids Never Stopped](./conflict.md)
+- [[rakthok|Headquarters — Rakthok]]
+- [[world/factions/calderon-imperium/_overview|Calderon Imperium]]
+- [[world/factions/garrok-confederation/_overview|Garrok Confederation]]
+- [[world/factions/merrowgate/_overview|Merrowgate]]
+- [[conflict|The Raids Never Stopped]]

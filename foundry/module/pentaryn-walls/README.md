@@ -1,7 +1,7 @@
 ---
 created: 2026-08-11
-last-modified: 2026-08-11
-tags: ["#foundry", "#vtt", "#module", "#maps", "#walls"]
+last_modified: 2026-08-11
+tags: ["foundry", "vtt", "module", "maps", "walls"]
 status: draft
 ---
 

@@ -1,7 +1,7 @@
 ---
 created: 2026-01-17
-last-modified: 2026-01-17
-tags: ["#location", "#ardenhaven", "#ardenford", "#shop", "#courier"]
+last_modified: 2026-01-17
+tags: ["location", "ardenhaven", "ardenford", "shop", "courier"]
 status: active
 ---
 
@@ -18,7 +18,7 @@ Ardenford's fastest—and most discreet—courier service. If you need a message
 | Attribute | Value |
 |---|---|
 | **Type** | Courier service / message runners |
-| **Location** | [Ardenford](../ardenford.md) (Middle Tier, near the tier switchbacks) |
+| **Location** | [[ardenford\|Ardenford]] (Middle Tier, near the tier switchbacks) |
 | **Affiliation** | Ardenhaven (licensed courier guild) |
 
 ## The Shop
@@ -62,5 +62,5 @@ The back room is always bustling: runners coming and going, boots clattering on 
 
 ## Related Links
 
-- [Ardenford](../ardenford.md)
-- [Ardenhaven](../../_overview.md)
+- [[ardenford|Ardenford]]
+- [[world/factions/ardenhaven/_overview|Ardenhaven]]

@@ -4,7 +4,7 @@ created: 2026-05-11
 status: active
 location: gar-vally
 count: 3
-tags: ["#combat-runner", "#beast", "#hyena", "#gar-vally", "#pack-animal", "#cr-1-8"]
+tags: ["combat-runner", "beast", "hyena", "gar-vally", "pack-animal", "cr-1-8"]
 ---
 # Valley Hyena
 

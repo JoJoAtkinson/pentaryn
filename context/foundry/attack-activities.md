@@ -1,7 +1,7 @@
 ---
 created: 2026-08-21
-last-modified: 2026-08-21
-tags: ["#playbook", "#foundry", "#vtt", "#dnd5e", "#combat", "#argon"]
+last_modified: 2026-08-21
+tags: ["playbook", "foundry", "vtt", "dnd5e", "combat", "argon"]
 status: shipped — Pip Locksley
 ---
 

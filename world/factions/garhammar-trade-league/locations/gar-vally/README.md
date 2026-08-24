@@ -1,6 +1,6 @@
 ---
 created: 2026-05-09
-last-modified: 2026-05-09
+last_modified: 2026-05-09
 status: active
 ---
 
@@ -86,12 +86,12 @@ Party on Dulgarum road
 
 ## Related Files
 
-- [Full Encounter Details](encounters.md)
-- [Location Lore & History](_overview.md)
+- [[world/factions/garhammar-trade-league/locations/gar-vally/encounters|Full Encounter Details]]
+- [[world/factions/garhammar-trade-league/locations/gar-vally/_overview|Location Lore & History]]
 - [Stat Blocks](npcs/)
-  - [Unnamed Gnoll Warrior](npcs/unnamed-gnoll-warrior.md)
-  - [Jorran the Hunt-Captain](npcs/jorran-hunt-captain.md)
-  - [Matron of the Valley](npcs/matron-of-the-valley.md)
-  - [Unnamed Hunt-Lieutenant](npcs/unnamed-hunt-lieutenant.md)
-  - [Valley Hyena](npcs/valley-hyena.md)
-  - [Ancestor-Stir (Secret)](npcs/ancestor-stir.md)
+  - [[world/factions/garhammar-trade-league/locations/gar-vally/npcs/unnamed-gnoll-warrior|Unnamed Gnoll Warrior]]
+  - [[world/factions/garhammar-trade-league/locations/gar-vally/npcs/jorran-hunt-captain|Jorran the Hunt-Captain]]
+  - [[world/factions/garhammar-trade-league/locations/gar-vally/npcs/matron-of-the-valley|Matron of the Valley]]
+  - [[world/factions/garhammar-trade-league/locations/gar-vally/npcs/unnamed-hunt-lieutenant|Unnamed Hunt-Lieutenant]]
+  - [[world/factions/garhammar-trade-league/locations/gar-vally/npcs/valley-hyena|Valley Hyena]]
+  - [[world/factions/garhammar-trade-league/locations/gar-vally/npcs/ancestor-stir|Ancestor-Stir (Secret)]]

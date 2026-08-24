@@ -1,9 +1,9 @@
 ---
 created: 2026-08-09
-last-modified: 2026-08-09
+last_modified: 2026-08-09
 status: ready
 location: ardenhaven
-tags: ["#encounter", "#ardenhaven", "#ardenford", "#smugglers", "#harbour", "#cr-low", "#writ-board-cr2", "#variants"]
+tags: ["encounter", "ardenhaven", "ardenford", "smugglers", "harbour", "cr-low", "writ-board-cr2", "variants"]
 ---
 # The Harbour Undercave
 
@@ -12,7 +12,7 @@ tags: ["#encounter", "#ardenhaven", "#ardenford", "#smugglers", "#harbour", "#cr
 > This is the sourcing.
 
 **Where:** a sea cave under the **Lower Tier**, west of the fishing docks — reachable at low water along the shingle under the harbour wall, or by boat through a gap you would not attempt twice. Tidemark Hold's customs writ stops at the harbour mouth and everyone involved knows exactly where that line is.
-**Quest:** **Distilled Alcohol Delivery**, [writ board (CR2)](../../quests/writ-board-cr2/_board.md) — [Hesta Briarvein](../ardenford/shops/willowglass-apothecary.md) at the Willowglass Apothecary pays **half in healing potions per bottle delivered**, and does not ask where the bottles came from.
+**Quest:** **Distilled Alcohol Delivery**, [[world/factions/ardenhaven/quests/writ-board-cr2/_board|writ board (CR2)]] — [[willowglass-apothecary|Hesta Briarvein]] at the Willowglass Apothecary pays **half in healing potions per bottle delivered**, and does not ask where the bottles came from.
 **Tuned for:** 4–6 level-1 PCs. Same map, same statblocks, **275 XP** in every variant — pick one at the table and swap without re-tuning.
 
 | | Variant | What it is | XP |

@@ -29,8 +29,8 @@ sessions/**/*.wav
 
 # Pass-3 player-facing story output. Was the story/the-compass-edge submodule
 # (github.com/JoJoAtkinson/story-the-compass-edge), detached 2026-08-22.
-story/
-output/
+/story/
+/output/
 # Generated timeline SVGs should publish into `docs/` (Pages), not under `world/`.
 world/**/_history.*.svg
 world/**/_timeline.*.svg
@@ -87,3 +87,8 @@ __pycache__/
 # Built by automation/notifier/build-notifier.sh — a compiled AppleScript bundle
 # carrying a copy of Foundry's icon. Rebuilt by `make vtt-notifier`, not tracked.
 automation/notifier/*.app/
+
+# Obsidian: keep the vault config, drop the per-machine window state.
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.obsidian/**/*cache*

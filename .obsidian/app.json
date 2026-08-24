@@ -1,0 +1,22 @@
+{
+  "useMarkdownLinks": false,
+  "newLinkFormat": "shortest",
+  "alwaysUpdateLinks": true,
+  "newFileLocation": "current",
+  "attachmentFolderPath": "./",
+  "showUnsupportedFiles": false,
+  "userIgnoreFilters": [
+    "foundry/",
+    "scripts/",
+    "automation/",
+    "fonts/",
+    ".venv/",
+    ".cache/",
+    ".output/",
+    ".state/",
+    ".history/",
+    "context/foundry/rules-lookup.md",
+    "context/plans/foundry-encounter-log.md",
+    "context/plans/obsidian-first-migration.md"
+  ]
+}

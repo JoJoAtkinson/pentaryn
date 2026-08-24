@@ -1,7 +1,7 @@
 ---
 created: 2025-12-12
-last-modified: 2025-12-12
-tags: ["#pc", "#character", "#rakthok-horde", "#fighter"]
+last_modified: 2025-12-12
+tags: ["pc", "character", "rakthok-horde", "fighter"]
 status: active
 player: Jeff
 ---
@@ -59,7 +59,7 @@ Da'kat is his mom
 
 ## Related Links
 
-- [Ghorrak Dakmar'nak](../../world/factions/rakthok-horde/Chosen-Warlord-Ghorrak)
-- [Rakthok Horde](../../world/factions/rakthok-horde/_overview.md)
-- [Black Marsh](../../world/factions/rakthok-horde/locations/black-marsh.md)
-- [Calderon Imperium](../../world/factions/calderon-imperium/_overview.md)
+- [[chosen-warlord-ghorrak|Ghorrak Dakmar'nak]]
+- [[world/factions/rakthok-horde/_overview|Rakthok Horde]]
+- [[black-marsh|Black Marsh]]
+- [[world/factions/calderon-imperium/_overview|Calderon Imperium]]

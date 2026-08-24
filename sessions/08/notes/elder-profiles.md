@@ -1,7 +1,7 @@
 ---
 created: 2026-03-29
-last-modified: 2026-03-29
-tags: ["#session", "#dm-reference", "#elderholt", "#elders"]
+last_modified: 2026-03-29
+tags: ["session", "dm-reference", "elderholt", "elders"]
 status: active
 ---
 
@@ -22,7 +22,7 @@ Twelve Elders rule Elderholt. Each has survived decades of bargaining with the V
 - **Won't:** Shield anyone who tries to use her the way her mother did. Her anger is real.
 - **RP hook:** "Will you let someone already broken take this one too?"
 
-> Source: [arlen-the-tithe-bearer.md](../../../world/factions/elderholt/elders/arlen-the-tithe-bearer.md)
+> Source: [[arlen-the-tithe-bearer|arlen-the-tithe-bearer.md]]
 
 ---
 
@@ -38,7 +38,7 @@ Twelve Elders rule Elderholt. Each has survived decades of bargaining with the V
 - **Key dynamic:** Ishvar speaks first; Brannith speaks last. The council watches the gap between them.
 - **Closest to:** Calyrix (old friends). Witch-children visit her freely.
 
-> Source: [brannith-the-hag-overlooked.md](../../../world/factions/elderholt/elders/brannith-the-hag-overlooked.md)
+> Source: [[brannith-the-hag-overlooked|brannith-the-hag-overlooked.md]]
 
 ---
 
@@ -53,7 +53,7 @@ Twelve Elders rule Elderholt. Each has survived decades of bargaining with the V
 - **Won't:** Keep secrets from herself, lie convincingly, or selectively forget.
 - **Override:** Goes dormant if a witch invokes quiet — unless a child is threatened or Elderholt's security is at stake.
 
-> Source: [calyrix-the-many-minded.md](../../../world/factions/elderholt/elders/calyrix-the-many-minded.md)
+> Source: [[calyrix-the-many-minded|calyrix-the-many-minded.md]]
 
 ---
 
@@ -69,7 +69,7 @@ Twelve Elders rule Elderholt. Each has survived decades of bargaining with the V
 - **Key dynamic:** Joked about and quietly feared. Accusing her would tear the coven apart.
 - **Rival:** Brannith (can't regulate her).
 
-> Source: [ishvar-of-prudence.md](../../../world/factions/elderholt/elders/ishvar-of-prudence.md)
+> Source: [[ishvar-of-prudence|ishvar-of-prudence.md]]
 
 ---
 
@@ -84,7 +84,7 @@ Twelve Elders rule Elderholt. Each has survived decades of bargaining with the V
 - **Won't:** Accept pity, make decisions for others, or tolerate those who push unwilling people into bargains.
 - **Coven fear:** What will she sacrifice next?
 
-> Source: [kharbora-the-living-shadow.md](../../../world/factions/elderholt/elders/kharbora-the-living-shadow.md)
+> Source: [[kharbora-the-living-shadow|kharbora-the-living-shadow.md]]
 
 ---
 
@@ -100,7 +100,7 @@ Twelve Elders rule Elderholt. Each has survived decades of bargaining with the V
 - **Family:** Great-grandmother to Marwen and Clair Ashcroft. Gave Marwen a crow before she left.
 - **Why feared:** Not because she kills — because she *proved* she will.
 
-> Source: [marrith-the-ashen-measure.md](../../../world/factions/elderholt/elders/marrith-the-ashen-measure.md)
+> Source: [[marrith-the-ashen-measure|marrith-the-ashen-measure.md]]
 
 ---
 
@@ -115,7 +115,7 @@ Twelve Elders rule Elderholt. Each has survived decades of bargaining with the V
 - **Won't:** Elaborate. She spoke Marwen's name once in dark prophecy (great ruin and destruction) and refuses to say more.
 - **RP tip:** When she speaks, the coven prays this is one of the moments that still matters.
 
-> Source: [naelith-the-unmoored-seer.md](../../../world/factions/elderholt/elders/naelith-the-unmoored-seer.md)
+> Source: [[naelith-the-unmoored-seer|naelith-the-unmoored-seer.md]]
 
 ---
 
@@ -130,7 +130,7 @@ Twelve Elders rule Elderholt. Each has survived decades of bargaining with the V
 - **Won't:** Comfort, reassure, train apprentices, or lie.
 - **Appearance:** Smooth dark bones etched in fine necromantic script. Violet light in ribcage. Ember eyes.
 
-> Source: [raven-the-vital-ascendant.md](../../../world/factions/elderholt/elders/raven-the-vital-ascendant.md)
+> Source: [[raven-the-vital-ascendant|raven-the-vital-ascendant.md]]
 
 ---
 
@@ -145,7 +145,7 @@ Twelve Elders rule Elderholt. Each has survived decades of bargaining with the V
 - **Won't:** Speak, answer directly, be worshipped ("She is not our god. She is our sister who paid more than any of us.").
 - **Outsider error:** Travelers assume she is Elderholt's patron goddess.
 
-> Source: [silniel-witch-tree.md](../../../world/factions/elderholt/elders/silniel-witch-tree.md)
+> Source: [[silniel-witch-tree|silniel-witch-tree.md]]
 
 ---
 
@@ -159,7 +159,7 @@ Twelve Elders rule Elderholt. Each has survived decades of bargaining with the V
 - **Appearance:** Blackened steel skin, gold-inlay veins, creaking joints, four arms.
 - **History note:** Built a massive door sealing off a corridor to the Underdark. Lost the key. Not worried about it.
 
-> Source: [taramet-the-forge.md](../../../world/factions/elderholt/elders/taramet-the-forge.md)
+> Source: [[taramet-the-forge|taramet-the-forge.md]]
 
 ---
 
@@ -175,7 +175,7 @@ Twelve Elders rule Elderholt. Each has survived decades of bargaining with the V
 - **Opposite of:** Kharbora (mind sacrifice vs. body sacrifice).
 - **RP tip:** Witch-children are afraid of her — she's too alien. But she's dedicated to them.
 
-> Source: [vezrugar-the-empty-vessel.md](../../../world/factions/elderholt/elders/vezrugar-the-empty-vessel.md)
+> Source: [[vezrugar-the-empty-vessel|vezrugar-the-empty-vessel.md]]
 
 ---
 
@@ -194,4 +194,4 @@ Twelve Elders rule Elderholt. Each has survived decades of bargaining with the V
 - **Will:** Carry the coven's will into the wider world when they act as one. Travel endlessly.
 - **Won't:** Stay. Respond to Sendings reliably. Be pinned down.
 
-> Source: [wayward-witch.md](../../../world/factions/elderholt/elders/wayward-witch.md)
+> Source: [[wayward-witch|wayward-witch.md]]

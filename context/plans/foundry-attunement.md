@@ -1,7 +1,7 @@
 ---
 created: 2026-08-22
-last-modified: 2026-08-22
-tags: ["#playbook", "#foundry", "#vtt", "#dnd5e", "#design"]
+last_modified: 2026-08-22
+tags: ["playbook", "foundry", "vtt", "dnd5e", "design"]
 status: shipped — 0.1.0
 ---
 

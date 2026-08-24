@@ -1,7 +1,7 @@
 ---
 created: 2025-12-12
-last-modified: 2025-12-12
-tags: ["#npc", "#character", "#rakthok-horde", "#warlord"]
+last_modified: 2025-12-12
+tags: ["npc", "character", "rakthok-horde", "warlord"]
 status: active
 ---
 
@@ -17,7 +17,7 @@ status: active
 | **Alignment** | Lawful Neutral                                             |
 | **Location**  | Rakthok (Horde headquarters), roots in the Black Marsh     |
 | **Affiliation** | Rakthok Horde, Dakmar'nak Tribe                          |
-| **Lineage**   | Son of Bazrak, elder brother of [Bazgar Dakmar'nak](../../../characters/player-characters/jeff-bazgar.md) |
+| **Lineage**   | Son of Bazrak, elder brother of [[jeff-bazgar\|Bazgar Dakmar'nak]] |
 
 ## Overview
 
@@ -36,13 +36,13 @@ Ghorrak is imposing even by orc standards—broad-shouldered, heavily muscled, a
 
 ## Backstory
 
-Ghorrak’s rise to Warlord was forged in the crucible of endless conflict. As the eldest son of Bazrak, he was expected to lead, and he met every challenge with ferocity and resolve. Ghorrak’s faith in the Ancestors and the old ways is absolute; he believes that only by following tradition can the Horde survive the threats of the Imperium and the blighted lands. His relationship with his younger brother, [Bazgar Dakmar'nak](../../../characters/player-characters/jeff-bazgar.md), is strained by Bazgar’s questioning nature and ambition, yet Ghorrak respects his brother’s courage, even if he cannot condone his defiance.
+Ghorrak’s rise to Warlord was forged in the crucible of endless conflict. As the eldest son of Bazrak, he was expected to lead, and he met every challenge with ferocity and resolve. Ghorrak’s faith in the Ancestors and the old ways is absolute; he believes that only by following tradition can the Horde survive the threats of the Imperium and the blighted lands. His relationship with his younger brother, [[jeff-bazgar|Bazgar Dakmar'nak]], is strained by Bazgar’s questioning nature and ambition, yet Ghorrak respects his brother’s courage, even if he cannot condone his defiance.
 
 ---
 
 ## Related Links
 
-- [Bazgar Dakmar'nak](../../../characters/player-characters/jeff-bazgar.md)
-- [Rakthok Horde](./rakthok-horde.md)
-- [Black Marsh](../../locations/black-marsh.md)
-- [Calderon Imperium](../calderon-imperium.md)
+- [[jeff-bazgar|Bazgar Dakmar'nak]]
+- [[world/factions/rakthok-horde/_overview|Rakthok Horde]]
+- [[black-marsh|Black Marsh]]
+- [[world/factions/calderon-imperium/_overview|Calderon Imperium]]

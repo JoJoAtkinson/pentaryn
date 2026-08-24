@@ -1,7 +1,7 @@
 ---
 name: Mountin Pass — Encounter Overview
 description: Scene context, terrain, hazards, and tactical notes for combat encounters in the high pass. Auto-loaded by combat-runner.
-tags: ["#encounter-overview", "#mountin-pass", "#garhammar"]
+tags: ["encounter-overview", "mountin-pass", "garhammar"]
 ---
 
 # Mountin Pass — Encounter Overview

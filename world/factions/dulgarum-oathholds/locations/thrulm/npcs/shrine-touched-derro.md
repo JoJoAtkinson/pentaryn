@@ -2,10 +2,10 @@
 name: Shrine-Touched Derro
 description: "Infused with power from the sealed shrine; dangerous and unstable"
 type: creature
-tags: ["#npc", "#combat", "#derro", "#thrulm", "#shrine-touched", "#magic"]
+tags: ["npc", "combat", "derro", "thrulm", "shrine-touched", "magic"]
 status: active
 created: 2026-04-26
-last-modified: 2026-04-26
+last_modified: 2026-04-26
 ---
 
 # Shrine-Touched Derro (Blessed/Cursed)
@@ -134,6 +134,6 @@ The beholder can create these. For each one, describe subtle differences:
 
 ## Related Links
 
-- [Dulgarum Faction Overview](../../_overview.md)
-- [Thrulm Location](../_overview.md)
-- [The Beholder](./beholder-thrulm.md)
+- [[world/factions/dulgarum-oathholds/locations/thrulm/_overview|Dulgarum Faction Overview]]
+- [[world/factions/dulgarum-oathholds/locations/thrulm/_overview|Thrulm Location]]
+- [[beholder-thrulm|The Beholder]]

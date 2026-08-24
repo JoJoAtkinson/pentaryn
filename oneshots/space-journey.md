@@ -53,7 +53,7 @@ tags: [oneshot, space-journey, foundry, 5.5e, level-5]
 > **Two picks, five minutes, and we start.**
 
 *Roles are §3, the two picks are §4, the sheets are in
-[space-journey-pregens.md](space-journey-pregens.md).*
+[[space-journey-pregens|space-journey-pregens.md]].*
 
 ---
 
@@ -150,7 +150,7 @@ Have a Child Lock."*
 
 Every player makes exactly **two choices**. That's it. Hand them a sheet, start playing.
 
-> **Hand them [space-journey-player-handout.md](space-journey-player-handout.md).** That's the
+> **Hand them [[space-journey-player-handout|space-journey-player-handout.md]].** That's the
 > player-facing one-pager: both picks, every ability in one line, and the Doctor card — with no
 > hosts, no scene list, and no Trace bookkeeping. Everything below is the GM's copy.
 
@@ -181,7 +181,7 @@ Redshirt is the Paladin).
 | **Dame Corriel** | Paladin (Devotion) | Divine Smite and moral certainty (aura sold separately until level 6) | Medium |
 
 **Full pinned builds and the lethality math live in
-[space-journey-pregens.md](space-journey-pregens.md).** Every sheet has its spells, maneuvers,
+[[space-journey-pregens|space-journey-pregens.md]].** Every sheet has its spells, maneuvers,
 feats, and gear locked — nothing left to choose, and a one-line turn script printed on it.
 
 > **The name on the sheet is a sticker, not a rule.** Nothing mechanical is attached to it. Want
@@ -1152,7 +1152,7 @@ flow through OneDrive per the existing pipeline.
    If a dry run passes on half the night, make the bonus sources rarer, not smaller — the passes
    are the fun part. Watch for hoarding, too: a table that banks four and spends none has turned
    the reward into homework, and the fix is to remind them at a door, not to add a rule.
-4. **Do you want Oz statted in `combat-runner`** (`#combat-runner` NPC + `actions.jsonl` rows)
+4. **Do you want Oz statted in `combat-runner`** (`combat-runner` NPC + `actions.jsonl` rows)
    so the GUI can run him live, or is he Foundry-only?
 5. **Pregen sheets** — build in Foundry from compendium, or author as `.md` first?
 6. **One heal per crew member per scene** — that's ~14 HP each against a ~10–12 HP scene budget,
@@ -1169,9 +1169,9 @@ flow through OneDrive per the existing pipeline.
 2. Oz's own stat block + the three Twenty Deaths reactions — **needed only for scenes 8–9**
 3. **The Doctor** — one actor, two items, a d6 barks table, one printed card ← *the free healing,
    the immortal decoy, and the forensics all live here*
-4. The 8 pregens, per [space-journey-pregens.md](space-journey-pregens.md)
+4. The 8 pregens, per [[space-journey-pregens|space-journey-pregens.md]]
 5. Scenes 1, 9, 10 (the three that must land)
 6. The Trace / Grudge trackers
 7. Scenes 2–8, in the order you find maps for them
-8. Player handout — **done**: [space-journey-player-handout.md](space-journey-player-handout.md).
-   Export with the `pandoc_export_pdf` MCP tool, or paste it into a shared Foundry journal
+8. Player handout — **done**: [[space-journey-player-handout|space-journey-player-handout.md]].
+   Paste it into a shared Foundry journal

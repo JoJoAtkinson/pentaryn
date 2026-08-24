@@ -1,7 +1,7 @@
 ---
 created: 2025-12-07
-last-modified: 2026-01-10
-tags: ["#world", "#location", "#capital", "#ardenford"]
+last_modified: 2026-01-10
+tags: ["world", "location", "capital", "ardenford"]
 status: complete
 ---
 
@@ -12,7 +12,7 @@ status: complete
 - **Population:** ~50,000
 - **Culture:** Human (Ardenhaven)
 - **Type:** Capital city, federated republic seat
-- **Faction:** [Ardenhaven](../_overview.md)
+- **Faction:** [[world/factions/ardenhaven/_overview|Ardenhaven]]
 - **Founded:** Built atop ancient ruins, unified as capital 4173 AF
 - **Elevation:** Sea level (Lower Tier) to ~400 feet (Upper Tier)
 
@@ -28,7 +28,7 @@ The salt air from the northern sea mingles with the smell of fresh bread, leathe
 
 ### Seasonal Life
 
-- **[The Bridgefire of Morvalos](bridgefire-of-morvalos.md):** Ardenford's midwinter observance — ten thousand people marching south by candlelight to watch a volunteer run across an open field and burn a bridge the city spent all year building. They do it to remember a real battle. They do it because they would do it again.
+- **[[bridgefire-of-morvalos|The Bridgefire of Morvalos]]:** Ardenford's midwinter observance — ten thousand people marching south by candlelight to watch a volunteer run across an open field and burn a bridge the city spent all year building. They do it to remember a real battle. They do it because they would do it again.
 
 ---
 
@@ -107,7 +107,7 @@ The Council of Consuls **rotates their meetings** between different keeps to avo
 
 ### Named Keeps 
 
-**[Harrowick Keep](harrowick-keep.md)**
+**[[_harrowick-keep|Harrowick Keep]]**
 - **Location:** Upper Tier, northeastern edge
 - **Purpose:** Military command and training center
 - **Owner:** Funded by the federal government post-war
@@ -219,7 +219,7 @@ Quiet. Reverent. The smell of old paper and leather bindings. Sunlight streams t
 Magister Merrick is a stern woman in her 60s, fiercely protective of the collection but generous with access. She believes knowledge should be shared, not hoarded. Want to read the treaty that ended the war? She'll fetch it for you (with supervision). Researching ruin sites? She'll pull maps and notes from previous explorers. Need a quiet place to think? Find a desk and stay as long as you like.
 
 **Notable Staff:**
-- [Elarion Faenwynd](../npc/elarian-faenwynd.md) — Elf archivist/translator and guest scholar from Araethilion
+- [[archivist-elarian-faenwynd|Elarion Faenwynd]] — Elf archivist/translator and guest scholar from Araethilion
 
 **Adventurer Relevance:**
 The library maintains records of **known ruin sites**, including reports from adventurers who've returned with findings. Before venturing out, smart adventurers consult the archives to learn what others discovered—and what killed them.
@@ -236,7 +236,7 @@ The library maintains records of **known ruin sites**, including reports from ad
 
 If Ardenford needs spearheads in bulk, a blade re-peened after a bad parry, or a set of armor straps replaced before patrol, this is where it ends up. The forge runs hot, the prices are plain, and Branik’s patience ends the moment someone asks for “a legendary edge for a discount.”
 
-**Full location:** [The Anvil & Oar](shops/the-anvil-and-oar.md)
+**Full location:** [[the-anvil-and-oar|The Anvil & Oar]]
 
 ---
 
@@ -250,7 +250,7 @@ If Ardenford needs spearheads in bulk, a blade re-peened after a bad parry, or a
 
 Silverbridge Arcana is where adventurers go when they want to be prepared instead of lucky: component pouches, warded document cases, and a small, carefully curated selection of scrolls. Everything comes with a receipt and a warning label.
 
-**Full location:** [Silverbridge Arcana](shops/silverbridge-arcana.md)
+**Full location:** [[silverbridge-arcana|Silverbridge Arcana]]
 
 ---
 
@@ -264,7 +264,7 @@ Silverbridge Arcana is where adventurers go when they want to be prepared instea
 
 Willowglass is where half the Middle Tier goes for the problems they don’t want to explain in public. The window bottles are green, the shop smells like dried herbs, and the vials catch light like river glass.
 
-**Full location:** [Willowglass Apothecary](shops/willowglass-apothecary.md)
+**Full location:** [[willowglass-apothecary|Willowglass Apothecary]]
 
 ---
 
@@ -277,13 +277,13 @@ Willowglass is where half the Middle Tier goes for the problems they don’t wan
 
 Not an inn—no beds, no lingering. Just mugs, stew, and dwarves who know the valley well enough to tell you when your plan is going to get you killed.
 
-**Full location:** [Thar'kar Taproom](shops/tharkar-taproom.md)
+**Full location:** [[tharkar-taproom-sherpa-for-hire|Thar'kar Taproom]]
 
 ---
 
 
 
-### [The Leafscript Cabinet](leafscript-cabinet.md) (Elven Curios)
+### [[leafscript-cabinet|The Leafscript Cabinet]] (Elven Curios)
 
 > **"If the leaf-strokes are wrong, I won’t sell it. If they’re right, I won’t stop talking about it."**
 
@@ -305,7 +305,7 @@ A small, meticulous shop where labels are written twice (Common and careful elve
 
 Pell spent thirty years as a copying clerk at the Concordance Library before his eyesight forced him out. He opened the Still Page because he couldn't make himself move away from the building. The shop is small — four tables, a bench by the window, a short counter — and serves scholars, early-morning archivists, and anyone who needs somewhere quiet to sit with a cup and think. Pell knows most of the library staff by first name and keeps their preferred blends waiting.
 
-**Full location:** [The Still Page](shops/the-still-page.md)
+**Full location:** [[the-still-page|The Still Page]]
 
 ---
 ### Willowglass Apothecary (Alchemist)

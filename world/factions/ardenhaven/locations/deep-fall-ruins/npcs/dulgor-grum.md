@@ -1,7 +1,7 @@
 ---
 created: 2026-01-30
-last-modified: 2026-01-30
-tags: ["#world", "#npc", "#ardenhaven", "#deep-fall-ruins", "#derro", "#combat"]
+last_modified: 2026-01-30
+tags: ["world", "npc", "ardenhaven", "deep-fall-ruins", "derro", "combat"]
 status: active
 ---
 # Dulgor-grum (DULL-gor-grum) — the Pit-Deep Claywright

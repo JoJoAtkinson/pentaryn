@@ -499,7 +499,7 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
     # TODO: cache discovery output keyed on (path, mtime) to skip AST re-parse
     # for unchanged files on server restart.
     # TODO: add streaming progress notifications for slow subprocess-dispatched tools
-    # (dnd_pass*, pandoc_export_pdf, build_timeline_*) via MCP `notifications/progress`.
+    # (dnd_pass*, build_timeline_*) via MCP `notifications/progress`.
     scripts_dir = (repo_root / "scripts").resolve()
     skipped: list[tuple[Path, str]] = []
     runners: list[ToolRunner] = []

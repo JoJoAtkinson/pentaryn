@@ -1,11 +1,11 @@
 ---
 name: Giant Wolf Spider
 created: 2026-08-09
-last-modified: 2026-08-09
+last_modified: 2026-08-09
 status: active
 location: old-lumber-camp
 count: 2
-tags: ["#combat-runner", "#beast", "#spider", "#old-lumber-camp", "#ardenhaven", "#cr-1-4"]
+tags: ["combat-runner", "beast", "spider", "old-lumber-camp", "ardenhaven", "cr-1-4"]
 ---
 # Giant Wolf Spider
 

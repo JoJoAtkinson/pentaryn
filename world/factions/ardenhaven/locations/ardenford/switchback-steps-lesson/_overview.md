@@ -1,15 +1,15 @@
 ---
 created: 2026-08-09
-last-modified: 2026-08-09
+last_modified: 2026-08-09
 status: ready
 location: ardenford
-tags: ["#encounter", "#ardenhaven", "#ardenford", "#gray-district", "#nonlethal", "#cr-low", "#writ-board-cr2", "#variants"]
+tags: ["encounter", "ardenhaven", "ardenford", "gray-district", "nonlethal", "cr-low", "writ-board-cr2", "variants"]
 ---
 # A Quiet Lesson — 12 Switchback Steps
 
 > Nonlethal only. Leave him breathing. No maiming.
 
-**Where:** the Switchback Steps, **Middle Tier**, off Western Market Lane — a stone stair that climbs the tier wall in four flights and three landings. Number 12 is the tenement at the second landing. Quest: **Quiet Lesson — Clean-Street Work**, [writ board (CR2)](../../../quests/writ-board-cr2/_board.md). 50 gp per hand, payment left with the barkeep. No employer's name anywhere on the paper.
+**Where:** the Switchback Steps, **Middle Tier**, off Western Market Lane — a stone stair that climbs the tier wall in four flights and three landings. Number 12 is the tenement at the second landing. Quest: **Quiet Lesson — Clean-Street Work**, [[world/factions/ardenhaven/quests/writ-board-cr2/_board|writ board (CR2)]]. 50 gp per hand, payment left with the barkeep. No employer's name anywhere on the paper.
 **Tuned for:** 4–6 level-1 PCs. Same map, same statblocks, **200 XP** in every variant — pick one at the table and swap without re-tuning.
 
 | | Variant | What it is | XP |

@@ -57,7 +57,7 @@ When generating **world** content (files in the `world/` folder), follow these c
 
    **Elderholt Naming (Human & Witch-Adjacent)**
 
-   Use for personal names from **Elderholt (EL-der-HOLT)** and its surrounding villages: human-rooted, restrained, and quietly haunted by coven culture. (Setting context: [Elderholt overview](../factions/elderholt/_overview.md).)
+   Use for personal names from **Elderholt (EL-der-HOLT)** and its surrounding villages: human-rooted, restrained, and quietly haunted by coven culture. (Setting context: [[world/factions/elderholt/_overview|Elderholt overview]].)
 
    - Tone: intimate, not geographic; burdened, not heroic; eerie without melodrama.
    - Prefer 2–3 syllables (2 is the “default heartbeat”).

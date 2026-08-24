@@ -1,7 +1,7 @@
 ---
 created: 2026-04-27
-last-modified: 2026-04-27
-tags: ["#quest", "#draft", "#elderholt", "#raven", "#gnolls", "#bazgar", "#sabriel"]
+last_modified: 2026-04-27
+tags: ["quest", "draft", "elderholt", "raven", "gnolls", "bazgar", "sabriel"]
 status: draft
 ---
 # A Soul Worth Sending (working title)

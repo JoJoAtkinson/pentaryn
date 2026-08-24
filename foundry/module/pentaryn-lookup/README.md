@@ -1,7 +1,7 @@
 ---
 created: 2026-08-22
-last-modified: 2026-08-22
-tags: ["#foundry", "#vtt", "#module", "#rules", "#compendium"]
+last_modified: 2026-08-22
+tags: ["foundry", "vtt", "module", "rules", "compendium"]
 status: shipped — 0.1.0
 ---
 

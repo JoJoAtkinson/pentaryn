@@ -1,7 +1,7 @@
 ---
 created: 2025-12-14
-last-modified: 2025-12-14
-tags: ["#world", "#elderholt", "#witch", "#lore", "#person"]
+last_modified: 2025-12-14
+tags: ["world", "elderholt", "witch", "lore", "person"]
 status: draft
 ---
 # The First Witch

@@ -41,12 +41,12 @@ This book was discovered in the stacks of the **Concordance Library** in Ardenfo
 
 ## Acquisition
 
-- **Location Found:** [Ardenford — Concordance Library](../../world/factions/ardenhaven/locations/ardenford.md#the-concordance-library)
-- **Obtained By:** [Marwen](../../characters/player-characters/kristine-marwen.md) (taken from the library)
-- **Transferred To:** [Sabriel](../../characters/player-characters/nicole-sabriel.md)
+- **Location Found:** [[ardenford#the-concordance-library|Ardenford — Concordance Library]]
+- **Obtained By:** [[kristine-marwen|Marwen]] (taken from the library)
+- **Transferred To:** [[nicole-sabriel|Sabriel]]
 - **When:** Session 01
 
 ## Current Owner
 
-**Owner:** [Sabriel](../../characters/player-characters/nicole-sabriel.md)  
+**Owner:** [[nicole-sabriel|Sabriel]]  
 **Status:** Carried

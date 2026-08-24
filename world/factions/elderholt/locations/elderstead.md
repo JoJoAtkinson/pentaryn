@@ -1,7 +1,7 @@
 ---
 created: 2025-12-07
-last-modified: 2025-12-07
-tags: ["#world", "#location"]
+last_modified: 2025-12-07
+tags: ["world", "location"]
 status: draft
 ---
 
@@ -11,7 +11,7 @@ status: draft
 
 - Culture: Human (Elderholt — Coven Realm)
 - Type: Capital city
-- Faction: [Elderholt](../_overview.md)
+- Faction: [[world/factions/elderholt/_overview|Elderholt]]
 
 ## Description
 Elderstead is a quiet, ward-heavy settlement built around an unnaturally immense tree in the central square. To outsiders it looks like a rain-rotted frontier town. To the coven, it is an anchor: the nearest safe “surface” above the Axiom below, where the Voice is loudest and the coven’s most dangerous rites are kept out of sight.

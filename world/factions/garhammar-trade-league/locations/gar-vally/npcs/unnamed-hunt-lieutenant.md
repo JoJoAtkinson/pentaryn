@@ -3,7 +3,7 @@ name: Hunt-Lieutenant
 created: 2026-05-11
 status: active
 location: gar-vally
-tags: ["#combat-runner", "#humanoid", "#gnoll", "#gar-vally", "#successor", "#cr-1"]
+tags: ["combat-runner", "humanoid", "gnoll", "gar-vally", "successor", "cr-1"]
 ---
 # Hunt-Lieutenant
 

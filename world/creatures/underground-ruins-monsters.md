@@ -1,7 +1,7 @@
 ---
 created: 2026-01-03
-last-modified: 2026-01-03
-tags: ["#creatures", "#underground", "#ruins", "#custom"]
+last_modified: 2026-01-03
+tags: ["creatures", "underground", "ruins", "custom"]
 status: active
 ---
 

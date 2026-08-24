@@ -1,7 +1,7 @@
 ---
 created: 2026-01-30
-last-modified: 2026-01-30
-tags: ["#world", "#monster", "#construct", "#ardenhaven", "#deep-fall-ruins", "#wild", "#fungus"]
+last_modified: 2026-01-30
+tags: ["world", "monster", "construct", "ardenhaven", "deep-fall-ruins", "wild", "fungus"]
 status: draft
 ---
 # Wild Spore-Stitched Colossus (WYL'd SPOR-STITCHT kuh-LOSS-us)

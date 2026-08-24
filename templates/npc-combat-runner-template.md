@@ -1,7 +1,7 @@
 ---
 name: NPC Combat-Runner Template
-description: Canonical template for creating a `#combat-runner`-tagged NPC. The .md is a slim human-readable stat sheet; action mechanics live in the central DB at `foundry/actions.jsonl`, populated via the `combat_action_upsert` MCP tool.
-tags: ["#template", "#combat-runner-template"]
+description: Canonical template for creating a `combat-runner`-tagged NPC. The .md is a slim human-readable stat sheet; action mechanics live in the central DB at `foundry/actions.jsonl`, populated via the `combat_action_upsert` MCP tool.
+tags: ["template", "combat-runner-template"]
 ---
 
 # NPC Combat-Runner Template
@@ -10,12 +10,12 @@ tags: ["#template", "#combat-runner-template"]
 >
 > A combat-runner NPC is **one .md file + N entries in the actions DB**:
 >
-> 1. **`<slug>.md`** — human-readable stat sheet under `world/.../<encounter>/npcs/`. Status line, start-of-turn checklist, tactics, description. The `#combat-runner` frontmatter tag is what the launcher discovers.
+> 1. **`<slug>.md`** — human-readable stat sheet under `world/.../<encounter>/npcs/`. Status line, start-of-turn checklist, tactics, description. The `combat-runner` frontmatter tag is what the launcher discovers.
 > 2. **Entries in `foundry/actions.jsonl`** — one row per action. Composite key = `(npc_slug, action_name)`. Authored via the **`combat_action_upsert`** MCP tool (Opus call) — the tool validates the spec before persisting, so malformed structures bounce back with a specific error.
 >
 > The .md does NOT need a verb table or any roll mechanics — the launcher queries the DB at boot and injects a "Ready actions" reference into the at-table session.
 >
-> **Where to save the .md:** `world/factions/<faction>/locations/<encounter>/npcs/<slug>.md`. The `#combat-runner` tag in the frontmatter is required for discovery.
+> **Where to save the .md:** `world/factions/<faction>/locations/<encounter>/npcs/<slug>.md`. The `combat-runner` tag in the frontmatter is required for discovery.
 >
 > **Reference exemplar:** `world/factions/garhammar-trade-league/locations/mountin-pass/npcs/glacier-stalker.md` and the corresponding rows in `foundry/actions.jsonl`.
 
@@ -29,7 +29,7 @@ name: <Display Name>
 created: YYYY-MM-DD
 status: active
 location: <encounter-slug>
-tags: ["#combat-runner", "#<creature-type>", "#<theme>", "#<encounter-slug>", "#cr-<X>"]
+tags: ["combat-runner", "<creature-type>", "<theme>", "<encounter-slug>", "cr-<X>"]
 ---
 # <Display Name>
 
@@ -166,7 +166,7 @@ or `"buff"` and provide an `"effect": "<text>"` instead of a `damage` block.)
 
 Before declaring the NPC ready:
 
-- [ ] `#combat-runner` is in the .md frontmatter `tags` array.
+- [ ] `combat-runner` is in the .md frontmatter `tags` array.
 - [ ] If this is a NEW encounter, you've also created at least a brief `_overview.md` at the encounter root (terrain, hazards, hooks).
 - [ ] `combat_action_upsert` returned `ok: true` for every action this NPC has.
 - [ ] Each action's `verbs` list contains the natural words a DM is likely to say.

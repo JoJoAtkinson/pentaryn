@@ -1,7 +1,7 @@
 ---
 created: 2025-12-11
-last-modified: 2025-12-11
-tags: ["#world", "#faction", "#elderholt", "#witch", "#npc", "#lore"]
+last_modified: 2025-12-11
+tags: ["world", "faction", "elderholt", "witch", "npc", "lore"]
 status: draft
 ---
 # Elder Raven the Vital Ascendant (RAY-ven)

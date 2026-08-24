@@ -1,7 +1,7 @@
 ---
 created: 2025-12-14
-last-modified: 2025-12-15
-tags: ["#npc", "#character", "#orc", "#rakthok-horde", "#dakmarnak", "#ardenhaven", "#garhammar-trade-league"]
+last_modified: 2025-12-15
+tags: ["npc", "character", "orc", "rakthok-horde", "dakmarnak", "ardenhaven", "garhammar-trade-league"]
 status: draft
 ---
 
@@ -16,7 +16,7 @@ Vorzug is a Dakmar'nak engineer who learned (the hard way) that in Garhammar, a 
 | **Race** | Orc (Dakmar'nak tribe) |
 | **Role** | Bridgewright / smith’s helper / labor advocate |
 | **Alignment** | Neutral Good |
-| **Location** | [Ardenford](../locations/ardenford.md) |
+| **Location** | [[ardenford\|Ardenford]] |
 | **Affiliation** | Rakthok Horde (Dakmar'nak); Ardenhaven (resident-in-good-standing, pending) |
 | **Languages** | Orcish (fluent), Common (serviceable), Dwarven (basic; learned from Bazgar) |
 
@@ -65,8 +65,8 @@ He came to Ardenford for three honorable reasons:
 
 ## Related Links
 
-- [Bazgar Dakmar'nak](../../../../characters/player-characters/jeff-bazgar.md)
-- [Ardenford](../locations/ardenford.md)
-- [Ardenhaven](../_overview.md)
-- [Garhammar Trade League](../../garhammar-trade-league/_overview.md)
-- [Dakmar'nak Tribe](../../rakthok-horde/tribes/dakmarnak.md)
+- [[jeff-bazgar|Bazgar Dakmar'nak]]
+- [[ardenford|Ardenford]]
+- [[world/factions/ardenhaven/_overview|Ardenhaven]]
+- [[world/factions/garhammar-trade-league/_overview|Garhammar Trade League]]
+- [[dakmarnak|Dakmar'nak Tribe]]

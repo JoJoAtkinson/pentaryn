@@ -1,7 +1,7 @@
 ---
 created: 2026-01-30
-last-modified: 2026-01-30
-tags: ["#world", "#location", "#ardenhaven", "#deep-fall-ruins", "#derro", "#combat", "#encounter"]
+last_modified: 2026-01-30
+tags: ["world", "location", "ardenhaven", "deep-fall-ruins", "derro", "combat", "encounter"]
 status: active
 ---
 # Derro Foe Party: The Gloomcinders (10)
@@ -14,9 +14,9 @@ The Gloomcinders fight in **bad light**: ash, soot, and a lantern that drinks co
 
 ## Files
 
-- DM-facing tactics: [dm-notes.md](dm-notes.md)
-- Named derros (3): [named-derros.md](named-derros.md)
-- Trash mobs (7): [trash-mobs.md](trash-mobs.md)
+- DM-facing tactics: [[world/factions/ardenhaven/locations/deep-fall-ruins/derro-foe-party-02-the-gloomcinders/dm-notes|dm-notes.md]]
+- Named derros (3): [[world/factions/ardenhaven/locations/deep-fall-ruins/derro-foe-party-02-the-gloomcinders/named-derros|named-derros.md]]
+- Trash mobs (7): [[world/factions/ardenhaven/locations/deep-fall-ruins/derro-foe-party-02-the-gloomcinders/trash-mobs|trash-mobs.md]]
 
 ## Party Roster (10)
 
@@ -36,5 +36,5 @@ Role: hook bruiser lieutenant (drags targets into the smoke).
 4–7) **Derro Lantern Skulkers (x4)** — optional names: Thar'brum, Khorbad-dum, Drakmor-dur, Thargrum-dun  
 8–10) **Derro Hook Bruisers (x3)** — optional names: Bardrog-dur, Drogbar-bor, (pick one from open list)
 
-If you want to rename any mook quickly, grab from: [Derro Open Names](../derro-open-names.md).
+If you want to rename any mook quickly, grab from: [[derro-open-names|Derro Open Names]].
 

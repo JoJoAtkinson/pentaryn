@@ -1,7 +1,7 @@
 ---
 created: 2025-12-09
-last-modified: 2025-12-22
-tags: ["#reference", "#worldbuilding", "#calendar", "#important"]
+last_modified: 2025-12-22
+tags: ["reference", "worldbuilding", "calendar", "important"]
 status: active
 ---
 

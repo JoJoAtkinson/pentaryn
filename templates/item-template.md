@@ -66,14 +66,14 @@ Stories and legends about the item.
 
 How the party obtained this item (or how they could obtain it).
 
-- **Location Found:** [Location](../world/factions/region-name/locations/location-name.md)
-- **Quest:** [Quest Name](../quests/active/quest-name.md)
-- **Obtained By:** [Character Name](../characters/player-characters/character-name.md)
+- **Location Found:** [[location-name|Location]]
+- **Quest:** [[quest-name|Quest Name]]
+- **Obtained By:** [[character-name|Character Name]]
 - **Date Obtained:** YYYY-MM-DD
 
 ## Current Owner
 
-**Owner:** [Character Name](../characters/player-characters/character-name.md)
+**Owner:** [[character-name|Character Name]]
 **Status:** Equipped/Carried/Stored
 
 ## Curse (if applicable)
@@ -110,6 +110,6 @@ Hidden properties that may be discovered later.
 
 ## Related Links
 
-- [Related Quest](../quests/active/quest-name.md)
-- [Creator](../characters/npcs/creator-name.md)
-- [Location Found](../world/factions/region-name/locations/location-name.md)
+- [[quest-name|Related Quest]]
+- [[creator-name|Creator]]
+- [[location-name|Location Found]]

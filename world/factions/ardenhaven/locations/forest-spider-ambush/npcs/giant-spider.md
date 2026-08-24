@@ -1,11 +1,11 @@
 ---
 name: Giant Spider
 created: 2026-05-21
-last-modified: 2026-08-09
+last_modified: 2026-08-09
 status: active
 location: forest-spider-ambush
 count: 1
-tags: ["#combat-runner", "#beast", "#spider", "#forest-spider-ambush", "#cr-1"]
+tags: ["combat-runner", "beast", "spider", "forest-spider-ambush", "cr-1"]
 ---
 # Giant Spider
 

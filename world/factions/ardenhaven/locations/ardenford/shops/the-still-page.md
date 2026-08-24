@@ -1,7 +1,7 @@
 ---
 created: 2026-03-14
-last-modified: 2026-03-14
-tags: ["#location", "#shop", "#ardenford", "#upper-tier"]
+last_modified: 2026-03-14
+tags: ["location", "shop", "ardenford", "upper-tier"]
 status: stub
 ---
 
@@ -37,5 +37,5 @@ The window bench faces the lane toward the library entrance. People come here to
 
 ## Related Links
 
-- [Ardenford](../ardenford.md)
-- [Concordance Library](../ardenford.md#the-concordance-library)
+- [[ardenford|Ardenford]]
+- [[ardenford#the-concordance-library|Concordance Library]]

@@ -1,7 +1,7 @@
 ---
 created: 2025-12-23
-last-modified: 2025-12-23
-tags: ["#world", "#assets", "#attribution"]
+last_modified: 2025-12-23
+tags: ["world", "assets", "attribution"]
 status: active
 ---
 

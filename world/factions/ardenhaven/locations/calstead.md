@@ -1,7 +1,7 @@
 ---
 created: 2026-01-17
-last-modified: 2026-01-17
-tags: ["#location", "#ardenhaven", "#farming", "#village"]
+last_modified: 2026-01-17
+tags: ["location", "ardenhaven", "farming", "village"]
 status: active
 ---
 
@@ -13,7 +13,7 @@ status: active
 
 | Attribute | Value |
 |---|---|
-| **Region** | [Ardenhaven](../../_overview.md) |
+| **Region** | [[world/factions/ardenhaven/_overview\|Ardenhaven]] |
 | **Type** | Farming Village |
 | **Population** | ~150 |
 | **Distance from Ardenford** | 12 miles northeast |
@@ -22,7 +22,7 @@ status: active
 
 ## Description
 
-Calstead sits in the fertile plains northeast of [Ardenford](ardenford/ardenford.md), surrounded by fields of wheat and barley that stretch to the horizon. The village is simple: a single main road lined with farmhouses, a communal granary, and a water-powered mill that grinds grain for the surrounding homesteads.
+Calstead sits in the fertile plains northeast of [[ardenford|Ardenford]], surrounded by fields of wheat and barley that stretch to the horizon. The village is simple: a single main road lined with farmhouses, a communal granary, and a water-powered mill that grinds grain for the surrounding homesteads.
 
 Life here follows the seasons. Planting in spring, tending through summer, harvest in fall, and quiet winters spent repairing tools and preparing for the next cycle. Most families have farmed these same plots for generations.
 
@@ -52,7 +52,7 @@ Life here follows the seasons. Planting in spring, tending through summer, harve
 
 ## Related Links
 
-- [Ardenford](ardenford/ardenford.md)
-- [Ardenhaven Overview](../../_overview.md)
-- [Thorndale](thorndale.md) (neighboring livestock village)
-- [Ironridge](ironridge.md) (mountain mining town)
+- [[ardenford|Ardenford]]
+- [[world/factions/ardenhaven/_overview|Ardenhaven Overview]]
+- [[thorndale|Thorndale]] (neighboring livestock village)
+- [[ironridge|Ironridge]] (mountain mining town)

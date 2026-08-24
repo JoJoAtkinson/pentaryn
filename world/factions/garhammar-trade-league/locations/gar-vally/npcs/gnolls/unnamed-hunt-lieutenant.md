@@ -3,7 +3,7 @@ name: Unnamed Hunt-Lieutenant
 type: stat-block
 created: 2026-05-09
 status: active
-tags: ["#gnoll", "#gar-vally", "#lieutenant", "#cr-1", "#successor"]
+tags: ["gnoll", "gar-vally", "lieutenant", "cr-1", "successor"]
 ---
 
 # Unnamed Hunt-Lieutenant
@@ -115,6 +115,6 @@ Until that day, the lieutenant waits. She guards the matron, she hunts, she prep
 
 ## Related Links
 
-- [Gar-Vally Encounter](../encounters.md)
-- [Matron of the Valley](matron-of-the-valley.md)
-- [Unnamed Gnoll Warrior](unnamed-gnoll-warrior.md)
+- [[world/factions/garhammar-trade-league/locations/gar-vally/encounters|Gar-Vally Encounter]]
+- [[world/factions/garhammar-trade-league/locations/gar-vally/npcs/gnolls/matron-of-the-valley|Matron of the Valley]]
+- [[world/factions/garhammar-trade-league/locations/gar-vally/npcs/gnolls/unnamed-gnoll-warrior|Unnamed Gnoll Warrior]]

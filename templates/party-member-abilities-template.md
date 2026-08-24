@@ -8,14 +8,14 @@
 ## Links
 
 - Party: [`../_overview.md`](../_overview.md)
-- Canon Sheet: [Character Sheet](../../../../characters/player-characters/character-name.md) or [NPC Sheet](../../../../characters/npcs/npc-name.md)
+- Canon Sheet: [[character-name|Character Sheet]] or [[npc-name|NPC Sheet]]
 
 ## Snapshot
 
 | Attribute | Value |
 |----------|-------|
 | **Ancestry** | |
-| **Origin** | [Faction/Region](../../../factions/faction-slug/_overview.md) |
+| **Origin** | [[world/factions/faction-slug/_overview\|Faction/Region]] |
 | **Class / Subclass** | |
 | **Level** | |
 | **Alignment** | |

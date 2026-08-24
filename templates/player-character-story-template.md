@@ -114,10 +114,10 @@
 *Describe the character's important relationships in narrative terms.*
 
 ### Party Members
-- **[PC Name](link-to-character.md):** [Describe the relationship's history, current dynamic, tensions, bonds, and how they interact. Write naturally, not in bullet points.]
+- **[[link-to-character|PC Name]]:** [Describe the relationship's history, current dynamic, tensions, bonds, and how they interact. Write naturally, not in bullet points.]
 
 ### Important NPCs
-- **[NPC Name](link-to-npc.md):** [Same as above - tell the story of this connection.]
+- **[[link-to-npc|NPC Name]]:** [Same as above - tell the story of this connection.]
 
 ### Broader Social Connections
 [Describe their relationship to factions, communities, or groups. How do they fit into the larger world?]

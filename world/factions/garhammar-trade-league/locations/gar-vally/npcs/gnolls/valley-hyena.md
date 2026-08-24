@@ -3,7 +3,7 @@ name: Valley Hyena
 type: stat-block
 created: 2026-05-09
 status: active
-tags: ["#gnoll", "#gar-vally", "#hyena", "#cr-1/8", "#beast"]
+tags: ["gnoll", "gar-vally", "hyena", "cr-1/8", "beast"]
 ---
 
 # Valley Hyena
@@ -74,5 +74,5 @@ These hyenas are companions and hunting-partners to the gnolls of Gar-Vally. The
 
 ## Related Links
 
-- [Gar-Vally Encounter](../encounters.md)
-- [Unnamed Gnoll Warrior](unnamed-gnoll-warrior.md)
+- [[world/factions/garhammar-trade-league/locations/gar-vally/encounters|Gar-Vally Encounter]]
+- [[world/factions/garhammar-trade-league/locations/gar-vally/npcs/gnolls/unnamed-gnoll-warrior|Unnamed Gnoll Warrior]]

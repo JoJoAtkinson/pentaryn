@@ -3,7 +3,7 @@ name: Jorran the Hunt-Captain
 type: stat-block
 created: 2026-05-09
 status: active
-tags: ["#gnoll", "#gar-vally", "#captain", "#cr-1", "#named", "#jorran"]
+tags: ["gnoll", "gar-vally", "captain", "cr-1", "named", "jorran"]
 ---
 
 # Jorran the Hunt-Captain
@@ -115,6 +115,6 @@ Jorran is a proven warrior and hunt-captain under the matron.
 
 ## Related Links
 
-- [Gar-Vally Encounter](../encounters.md)
-- [Unnamed Gnoll Warrior](unnamed-gnoll-warrior.md)
-- [Matron of the Valley](matron-of-the-valley.md)
+- [[world/factions/garhammar-trade-league/locations/gar-vally/encounters|Gar-Vally Encounter]]
+- [[world/factions/garhammar-trade-league/locations/gar-vally/npcs/gnolls/unnamed-gnoll-warrior|Unnamed Gnoll Warrior]]
+- [[world/factions/garhammar-trade-league/locations/gar-vally/npcs/gnolls/matron-of-the-valley|Matron of the Valley]]

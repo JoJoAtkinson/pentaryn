@@ -2,10 +2,10 @@
 name: Thrulm Encounters
 description: "Multi-stage encounter progression in the sealed hollow"
 type: encounter-guide
-tags: ["#thrulm", "#encounters", "#progression", "#beholder"]
+tags: ["thrulm", "encounters", "progression", "beholder"]
 status: active
 created: 2026-04-26
-last-modified: 2026-04-26
+last_modified: 2026-04-26
 ---
 
 # Thrulm: Encounter Progression
@@ -292,8 +292,8 @@ If the party defeats the beholder and chooses to go deeper:
 
 ## Related Links
 
-- [Thrulm Location](../_overview.md)
-- [The Beholder](./npcs/beholder-thrulm.md)
-- [Deep Watch Derro](./npcs/deep-watch-derro.md)
-- [Thrall Derro](./npcs/thrall-derro.md)
-- [Shrine-Touched Derro](./npcs/shrine-touched-derro.md)
+- [[world/factions/dulgarum-oathholds/locations/thrulm/_overview|Thrulm Location]]
+- [[beholder-thrulm|The Beholder]]
+- [[deep-watch-derro|Deep Watch Derro]]
+- [[thrall-derro|Thrall Derro]]
+- [[shrine-touched-derro|Shrine-Touched Derro]]

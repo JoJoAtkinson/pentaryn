@@ -1,7 +1,7 @@
 ---
 created: 2026-01-18
-last-modified: 2026-01-18
-tags: ["#world", "#location", "#ardenhaven", "#deep-fall-ruins", "#monster", "#beast"]
+last_modified: 2026-01-18
+tags: ["world", "location", "ardenhaven", "deep-fall-ruins", "monster", "beast"]
 status: active
 ---
 # Giant Bat

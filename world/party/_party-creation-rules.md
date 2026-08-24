@@ -1,7 +1,7 @@
 ---
 created: 2026-01-16
-last-modified: 2026-01-16
-tags: ["#world", "#party", "#rules", "#character-creation"]
+last_modified: 2026-01-16
+tags: ["world", "party", "rules", "character-creation"]
 status: active
 ---
 # Party & Member Creation Rules
@@ -116,13 +116,13 @@ party_rules:
 
 If you include any of the following, add a short **Exception Note** in the party’s `_overview.md`:
 
-- Elf from [Araethilion](../factions/araethilion/_overview.md)
-- Human from [Calderon Imperium](../factions/calderon-imperium/_overview.md)
-- Orc from [Rakthok Horde](../factions/rakthok-horde/_overview.md)
+- Elf from [[world/factions/araethilion/_overview|Araethilion]]
+- Human from [[world/factions/calderon-imperium/_overview|Calderon Imperium]]
+- Orc from [[world/factions/rakthok-horde/_overview|Rakthok Horde]]
 
 ## Sources (Setting Canon Links)
 
-- Elves: [Araethilion](../factions/araethilion/_overview.md)
-- Empire: [Calderon Imperium](../factions/calderon-imperium/_overview.md)
-- Western orcs: [Garrok Confederation](../factions/garrok-confederation/_overview.md)
-- Eastern orcs: [Rakthok Horde](../factions/rakthok-horde/_overview.md)
+- Elves: [[world/factions/araethilion/_overview|Araethilion]]
+- Empire: [[world/factions/calderon-imperium/_overview|Calderon Imperium]]
+- Western orcs: [[world/factions/garrok-confederation/_overview|Garrok Confederation]]
+- Eastern orcs: [[world/factions/rakthok-horde/_overview|Rakthok Horde]]

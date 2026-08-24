@@ -4,7 +4,7 @@ created: 2026-05-11
 status: active
 location: gar-vally
 count: 2
-tags: ["#combat-runner", "#humanoid", "#gnoll", "#gar-vally", "#warrior", "#cr-1-2"]
+tags: ["combat-runner", "humanoid", "gnoll", "gar-vally", "warrior", "cr-1-2"]
 ---
 # Gnoll Warrior
 

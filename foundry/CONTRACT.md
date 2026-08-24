@@ -1,7 +1,7 @@
 ---
 created: 2026-08-10
-last-modified: 2026-08-10
-tags: ["#foundry", "#vtt", "#contract", "#dnd5e"]
+last_modified: 2026-08-10
+tags: ["foundry", "vtt", "contract", "dnd5e"]
 status: draft
 ---
 
@@ -109,7 +109,7 @@ the gate meaningless.
 ### 2.1 Actor identity — slug, and the collision rule
 
 An Actor exists for each **NPC slug** that has (a) at least one `actions.jsonl` row and (b) at
-least one `#combat-runner` markdown file. `flags.pentaryn.slug` is that slug; it is the upsert
+least one `combat-runner` markdown file. `flags.pentaryn.slug` is that slug; it is the upsert
 key in Stage 2.
 
 **Five slugs have two markdown files each** — `bandit`, `tough`, `stirge`, `giant-spider`,
@@ -154,7 +154,7 @@ Every skip MUST append an object to the manifest's `skipped` array:
 | --- | --- | --- | --- |
 | `srd-universal-action` | the 8 `_global` rows (`dash`, `disengage`, `dodge`, `grapple`, `help`, `hide`, `push`, `shove_prone`) | 8 | `scope: "global"`, no owning creature, no `.md`. These are core 5e actions Foundry already surfaces. Emitting them onto all 19 NPCs would add 152 duplicate Items for zero information. *Reverse if* the at-table workflow actually wants them as clickable chips per token. |
 | `pc-not-npc` | rows for `grek`, `maela`, `orren`, `vessa`, `zor-gar` | 19 | These are player characters under `world/party/black-ledger/members/`. Their `.md` is a different format (table-based, no status line) and they belong in Foundry as `character` Actors owned by players, not GM-built `npc` Actors. Detector: source path under `world/party/` **or** frontmatter `tags` lacks any `#cr-*` tag. |
-| `no-markdown-source` | any row whose slug has no `#combat-runner` `.md` | 0 | Would leave an Actor with no HP/AC/CR. Fail loudly rather than invent. |
+| `no-markdown-source` | any row whose slug has no `combat-runner` `.md` | 0 | Would leave an Actor with no HP/AC/CR. Fail loudly rather than invent. |
 | `unmappable-field` | *(row still emitted)* — not a row skip | — | Do **not** use this for rows. Field-level losses go in `flags.pentaryn.unmapped` on the Item (§4.4). |
 
 Anything else → the generator MUST fail rather than invent a reason code.
@@ -325,7 +325,7 @@ randomImg, appendNumber, prependAdjective`. Anything else — `x`, `y`, `elevati
 **Default: the `abilities` key is not emitted at all.** dnd5e's `initialKeys` gives every ability
 `value: 10` (`[common]`), i.e. modifier `+0`.
 
-Reasoning: no `#combat-runner` markdown records ability scores. Recovering them from the status
+Reasoning: no `combat-runner` markdown records ability scores. Recovering them from the status
 line would mean inverting `Saves Str +7, Con +7` through an assumed proficiency — a derivation,
 and an ambiguous one (Str 18 + proficient, or Str 24 + not). The playbook is explicit:
 *"Pre-compute every roll … No ability-score derivations."* Every number this pipeline cares about

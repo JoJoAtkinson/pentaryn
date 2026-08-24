@@ -1,7 +1,7 @@
 ---
 created: 2026-05-09
-last-modified: 2026-05-09
-tags: ["#encounter", "#gar-vally", "#gnoll", "#tier", "#social"]
+last_modified: 2026-05-09
+tags: ["encounter", "gar-vally", "gnoll", "tier", "social"]
 status: active
 ---
 

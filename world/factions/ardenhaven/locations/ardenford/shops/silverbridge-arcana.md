@@ -1,7 +1,7 @@
 ---
 created: 2026-01-01
-last-modified: 2026-01-10
-tags: ["#location", "#ardenhaven", "#ardenford", "#shop", "#magic", "#spellcasting"]
+last_modified: 2026-01-10
+tags: ["location", "ardenhaven", "ardenford", "shop", "magic", "spellcasting"]
 status: draft
 ---
 
@@ -18,7 +18,7 @@ Selise Dawnquill (seh-LEESS dawn-KWILL).
 | Attribute | Value |
 |---|---|
 | **Type** | Arcane vendor / scribe |
-| **Location** | [Ardenford](../ardenford.md) (Upper Tier, a short walk from the Concordance Library) |
+| **Location** | [[ardenford\|Ardenford]] (Upper Tier, a short walk from the Concordance Library) |
 | **Affiliation** | Ardenhaven (registered scribe; charter-compliant) |
 
 ## Shop Offerings
@@ -119,9 +119,9 @@ When the party “browses the counter,” roll on one table (or pick). Selise ke
 
 ## Related Links
 
-- [Ardenford](../ardenford.md)
-- [Ardenhaven](../../_overview.md)
-- [Elarion Faenwynd](../../npc/elarian-faenwynd.md)
+- [[ardenford|Ardenford]]
+- [[world/factions/ardenhaven/_overview|Ardenhaven]]
+- [[archivist-elarian-faenwynd|Elarion Faenwynd]]
 
 
 

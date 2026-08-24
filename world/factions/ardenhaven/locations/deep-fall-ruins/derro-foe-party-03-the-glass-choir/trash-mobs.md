@@ -1,12 +1,12 @@
 ---
 created: 2026-01-31
-last-modified: 2026-01-31
-tags: ["#world", "#location", "#ardenhaven", "#deep-fall-ruins", "#derro", "#combat", "#encounter"]
+last_modified: 2026-01-31
+tags: ["world", "location", "ardenhaven", "deep-fall-ruins", "derro", "combat", "encounter"]
 status: active
 ---
 # Trash Mobs (7) — The Glass Choir
 
-Run these as two squads (Choir Skulkers + Glasscutters). Name them as needed from: [Derro Open Names](../derro-open-names.md).
+Run these as two squads (Choir Skulkers + Glasscutters). Name them as needed from: [[derro-open-names|Derro Open Names]].
 
 ## Derro Choir Skulker (x4)
 

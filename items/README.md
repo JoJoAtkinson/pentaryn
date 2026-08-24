@@ -42,7 +42,5 @@ This directory contains all equipment, treasure, and magic items.
 
 ## Quick Links
 
-- [Item Template](../templates/item-template.md)
+- [[item-template|Item Template]]
 - [Magic Items](magic-items/)
-- [Artifacts](artifacts/)
-- [Mundane Items](mundane/)

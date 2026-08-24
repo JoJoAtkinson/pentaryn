@@ -1,7 +1,7 @@
 ---
 created: 2026-05-09
-last-modified: 2026-05-09
-tags: ["#location", "#gnoll", "#gar-vally", "#garhammar-trade-league", "#moon", "#ancestor"]
+last_modified: 2026-05-09
+tags: ["location", "gnoll", "gar-vally", "garhammar-trade-league", "moon", "ancestor"]
 status: active
 ---
 
@@ -64,6 +64,6 @@ I record this because the truth of it serves better than the convenient lie. The
 
 ## Related Links
 
-- [Raven's Quest: A Soul Worth Sending](../../../staging/quest-ravens-gnoll-conversion.md)
-- [Garhammar Trade League](../_overview.md)
-- [Dulgarum Oathholds](../../dulgarum-oathholds/_overview.md)
+- [[quest-ravens-gnoll-conversion|Raven's Quest: A Soul Worth Sending]]
+- [[world/factions/garhammar-trade-league/locations/gar-vally/_overview|Garhammar Trade League]]
+- [[world/factions/dulgarum-oathholds/_overview|Dulgarum Oathholds]]

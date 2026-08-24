@@ -3,7 +3,7 @@ name: Unnamed Gnoll Warrior
 type: stat-block
 created: 2026-05-09
 status: active
-tags: ["#gnoll", "#gar-vally", "#warrior", "#cr-1/2", "#humanoid"]
+tags: ["gnoll", "gar-vally", "warrior", "cr-1/2", "humanoid"]
 ---
 
 # Unnamed Gnoll Warrior
@@ -78,6 +78,6 @@ A hyena-headed humanoid, scarred and muscular. Its fur is matted, stinking of bl
 
 ## Related Links
 
-- [Gar-Vally Encounter](../encounters.md)
-- [Jorran the Hunt-Captain](jorran-hunt-captain.md)
-- [Matron of the Valley](matron-of-the-valley.md)
+- [[world/factions/garhammar-trade-league/locations/gar-vally/encounters|Gar-Vally Encounter]]
+- [[world/factions/garhammar-trade-league/locations/gar-vally/npcs/gnolls/jorran-hunt-captain|Jorran the Hunt-Captain]]
+- [[world/factions/garhammar-trade-league/locations/gar-vally/npcs/gnolls/matron-of-the-valley|Matron of the Valley]]

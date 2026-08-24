@@ -1,7 +1,7 @@
 ---
 created: 2026-01-10
-last-modified: 2026-01-10
-tags: ["#location", "#ardenford", "#shop", "#tavern", "#guides", "#dwarves"]
+last_modified: 2026-01-10
+tags: ["location", "ardenford", "shop", "tavern", "guides", "dwarves"]
 status: draft
 ---
 
@@ -44,4 +44,4 @@ Thar'kar isn’t a guild hall, and nobody will call themselves a “sherpa” in
 
 ## Related Links
 
-- [Ardenford](../ardenford.md)
+- [[ardenford|Ardenford]]

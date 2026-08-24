@@ -22,4 +22,5 @@ extensions so it cannot drift back in.
 | `pass1.json`, `pass2/*.toml` | 01–04 — scene detection and summaries from the retired story_craft pipeline. Kept as lore: `find_lore` and `last_session_summary` read them. |
 | `config.toml` | 01–04 — that pipeline's per-session config |
 
-In-character chronicles built from these live in [`../story/`](../story/).
+In-character chronicles built from these lived in `story/`, a submodule detached on
+2026-08-22; the directory is gitignored and no longer part of this repo.

@@ -17,16 +17,16 @@ The seal was holding until recently. Now something has breached it: a beholder-l
 ## Folder Contents
 
 ### Main Location File
-- **[_overview.md](_overview.md)** — Full description of Thrulm, its history, geography, and mysteries
+- **[[world/factions/dulgarum-oathholds/locations/thrulm/_overview|_overview.md]]** — Full description of Thrulm, its history, geography, and mysteries
 
 ### NPC Stat Blocks (Combat-Ready Templates)
-- **[npcs/deep-watch-derro.md](npcs/deep-watch-derro.md)** — CR 1/8 loyal Deep Watch guardian
-- **[npcs/thrall-derro.md](npcs/thrall-derro.md)** — CR 1/4 beholder-dominated servant
-- **[npcs/shrine-touched-derro.md](npcs/shrine-touched-derro.md)** — CR 3 god-infused hybrid warrior
-- **[npcs/beholder-thrulm.md](npcs/beholder-thrulm.md)** — CR 13 The Hunger Below (main boss)
+- **[[deep-watch-derro|npcs/deep-watch-derro.md]]** — CR 1/8 loyal Deep Watch guardian
+- **[[thrall-derro|npcs/thrall-derro.md]]** — CR 1/4 beholder-dominated servant
+- **[[shrine-touched-derro|npcs/shrine-touched-derro.md]]** — CR 3 god-infused hybrid warrior
+- **[[beholder-thrulm|npcs/beholder-thrulm.md]]** — CR 13 The Hunger Below (main boss)
 
 ### Encounter Guide
-- **[encounters.md](encounters.md)** — Five-stage encounter progression with tactics, loot, and alternative outcomes
+- **[[world/factions/dulgarum-oathholds/locations/thrulm/encounters|encounters.md]]** — Five-stage encounter progression with tactics, loot, and alternative outcomes
 
 ---
 
@@ -89,8 +89,8 @@ The seal was holding until recently. Now something has breached it: a beholder-l
 
 ## Pre-Game Prep
 
-1. **Read [_overview.md](_overview.md)** — Understand the location's history and mysteries
-2. **Scan [encounters.md](encounters.md)** — Choose which encounters to use and their scaling
+1. **Read [[world/factions/dulgarum-oathholds/locations/thrulm/_overview|_overview.md]]** — Understand the location's history and mysteries
+2. **Scan [[world/factions/dulgarum-oathholds/locations/thrulm/encounters|encounters.md]]** — Choose which encounters to use and their scaling
 3. **Bookmark NPC stat blocks** — You'll need them mid-session
 4. **Decide:** What is the beholder protecting? What's deeper? What does the High King know?
 

@@ -1,11 +1,11 @@
 ---
 name: Giant Wolf Spider
 created: 2026-05-21
-last-modified: 2026-08-09
+last_modified: 2026-08-09
 status: active
 location: forest-spider-ambush
 count: 2
-tags: ["#combat-runner", "#beast", "#spider", "#forest-spider-ambush", "#cr-1-4"]
+tags: ["combat-runner", "beast", "spider", "forest-spider-ambush", "cr-1-4"]
 ---
 # Giant Wolf Spider
 

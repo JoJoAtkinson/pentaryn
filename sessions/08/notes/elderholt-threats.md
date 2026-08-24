@@ -1,7 +1,7 @@
 ---
 created: 2026-03-29
-last-modified: 2026-03-29
-tags: ["#session", "#dm-reference", "#elderholt"]
+last_modified: 2026-03-29
+tags: ["session", "dm-reference", "elderholt"]
 status: active
 ---
 
@@ -36,7 +36,7 @@ Deep-witches who went too far, lost themselves, and became monsters.
 - The coven doesn't know she exists (lost to time)
 - **Threat level:** Psychological horror, control magic, prophecy-at-a-cost
 
-> Source: [centipede.md](../../../world/factions/elderholt/npcs/broken-loss-witches/centipede.md) · [broken-witch-concept.md](../../../world/factions/elderholt/npcs/broken-witch-concept.md)
+> Source: [[centipede|centipede.md]] · [[broken-witch-concept|broken-witch-concept.md]]
 
 ---
 
@@ -48,7 +48,7 @@ Deep-witches who went too far, lost themselves, and became monsters.
 - The key is **lost** — Taramet doesn't seem worried
 - This is a dormant threat: what's behind that door?
 
-> Source: [random-facts.md](../../../world/factions/elderholt/random-facts.md)
+> Source: [[random-facts|random-facts.md]]
 
 ---
 
@@ -86,4 +86,4 @@ Deep-witches who went too far, lost themselves, and became monsters.
 - But it needs only a **name** to choose a different toll
 - It's loudest beneath Elderstead in the Axiom
 
-> Source: [witchs.md](../../../world/factions/elderholt/witchs.md) · [raven-the-vital-ascendant.md](../../../world/factions/elderholt/elders/raven-the-vital-ascendant.md)
+> Source: [[witchs|witchs.md]] · [[raven-the-vital-ascendant|raven-the-vital-ascendant.md]]

@@ -1,7 +1,7 @@
 ---
 created: 2025-12-07
-last-modified: 2025-12-07
-tags: ["#world", "#location", "#important"]
+last_modified: 2025-12-07
+tags: ["world", "location", "important"]
 status: draft
 ---
 
@@ -11,7 +11,7 @@ status: draft
 
 - Culture: Elven (Araethilion)
 - Type: Capital city
-- Faction: [Araethilion](../_overview.md)
+- Faction: [[world/factions/araethilion/_overview|Araethilion]]
 
 ## Description
 Aeralithil is a radiant forest capital where living temples and songwoven halls encircle Elaerith’s courts. Beauty and abundance mask a harsher truth: proximity to the living god is privilege. 

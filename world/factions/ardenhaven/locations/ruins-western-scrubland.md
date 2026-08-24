@@ -1,6 +1,6 @@
 ---
 created: 2026-01-04
-tags: ["#world", "#location", "#ardenhaven", "#ruins", "#dungeon"]
+tags: ["world", "location", "ardenhaven", "ruins", "dungeon"]
 status: complete
 ---
 
@@ -13,7 +13,7 @@ status: complete
 - **Age:** Pre-Ardenhaven (likely Age of Rhodes or earlier)
 - **Current Status:** Recently cleared of goblins (early winter 4250 AF)
 - **Danger Level:** Low (CR 1-2 encounters possible)
-- **Faction:** Technically [Ardenhaven](../_overview.md) territory, but unclaimed
+- **Faction:** Technically [[world/factions/ardenhaven/_overview|Ardenhaven]] territory, but unclaimed
 
 ---
 
@@ -23,7 +23,7 @@ What locals call "the old ruins" is actually the remains of a small fortified st
 
 The real feature of interest is a **small cave entrance** hidden among collapsed stones on the site's western edge. This natural cave, possibly expanded or worked by whoever built the original structure, served as a lair for a small goblin warband until recently.
 
-The location sits in a transitional zone where the [grassy foothills](grassy-foothills.md) give way to rockier scrubland. Boulders and thorny brush provide natural cover, and the terrain's rough enough that casual travelers avoid it.
+The location sits in a transitional zone where the [[grassy-foothills|grassy foothills]] give way to rockier scrubland. Boulders and thorny brush provide natural cover, and the terrain's rough enough that casual travelers avoid it.
 
 ---
 
@@ -136,7 +136,7 @@ The ruins are now **abandoned** but not yet claimed or repurposed:
 - Rocky terrain makes stealth difficult (loose stones underfoot)
 - Wind picks up as sun sets; temperature drops
 - Smell of old smoke and decay near the cave entrance
-- Distant bleating of sheep from [Redwick Farm](grassy-foothills.md)
+- Distant bleating of sheep from [[grassy-foothills|Redwick Farm]]
 
 **Inside the Cave:**
 - Damp, earthy smell mixed with old smoke

@@ -1,11 +1,11 @@
 ---
 name: Switchback Neighbour
 created: 2026-08-09
-last-modified: 2026-08-09
+last_modified: 2026-08-09
 status: active
 location: switchback-steps-lesson
 count: 4
-tags: ["#combat-runner", "#humanoid", "#gray-district", "#nonlethal", "#switchback-steps-lesson", "#ardenford", "#ardenhaven", "#cr-1-8"]
+tags: ["combat-runner", "humanoid", "gray-district", "nonlethal", "switchback-steps-lesson", "ardenford", "ardenhaven", "cr-1-8"]
 ---
 # Switchback Neighbour
 

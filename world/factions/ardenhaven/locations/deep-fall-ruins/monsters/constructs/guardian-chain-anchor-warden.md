@@ -1,7 +1,7 @@
 ---
 created: 2026-01-30
-last-modified: 2026-01-30
-tags: ["#world", "#monster", "#construct", "#ardenhaven", "#deep-fall-ruins", "#guardian"]
+last_modified: 2026-01-30
+tags: ["world", "monster", "construct", "ardenhaven", "deep-fall-ruins", "guardian"]
 status: draft
 ---
 # Guardian Chain-Anchor Warden (GAR-dee-un CHAYN ANG-ker WOR-dn)

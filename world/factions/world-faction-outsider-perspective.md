@@ -1,7 +1,7 @@
 ---
 created: 2025-12-29
-last-modified: 2025-12-29
-tags: ["#world", "#factions", "#lore", "#handout"]
+last_modified: 2025-12-29
+tags: ["world", "factions", "lore", "handout"]
 status: complete
 ---
 

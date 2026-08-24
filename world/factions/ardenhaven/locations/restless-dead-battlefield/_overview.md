@@ -1,15 +1,15 @@
 ---
 created: 2026-08-09
-last-modified: 2026-08-09
+last_modified: 2026-08-09
 status: ready
 location: ardenhaven
-tags: ["#encounter", "#ardenhaven", "#undead", "#cr-low", "#restless-dead", "#variants"]
+tags: ["encounter", "ardenhaven", "undead", "cr-low", "restless-dead", "variants"]
 ---
 # Restless Dead — Eastern Valley Battlefield
 
 > Four of them, strung out in a loose column, walking west. Not hunting. Not hunting anything. Just walking, the way soldiers walk when they've been told to go home.
 
-**Where:** a windswept valley in the eastern mountains, ~4 miles from Ardenford — an abandoned battlefield from a war that ended 127 years ago. Quest: [Restless Dead](../../quests/writ-board-cr1/restless-dead-cr1.md), posted by border-patrol scout **Renn Caldor**.
+**Where:** a windswept valley in the eastern mountains, ~4 miles from Ardenford — an abandoned battlefield from a war that ended 127 years ago. Quest: [[restless-dead-cr1|Restless Dead]], posted by border-patrol scout **Renn Caldor**.
 **Tuned for:** 4–6 level-1 PCs. **200 XP in every variant** at the four-PC roster — pick one on the way to the table and nothing needs re-tuning. The XP is deliberately soft; the encounter's weight is emotional, not mechanical.
 
 ---
@@ -242,6 +242,6 @@ Then he goes back to counting heads.
 
 - **skeleton** ×3–4 — the column (CR 1/4, 50 XP each). One of them is **Corwin**, in every variant.
 - **zombie** ×1 — *v2 only.* The Calderon soldier at the back who doesn't stop (CR 1/4, 50 XP). Set to **0** in v1 and v3.
-- **ambrose-wend** ×1 — *v3 only.* [Chaplain Ambrose Wend](npcs/ambrose-wend.md), Ridgeward Battalion (CR 1/4, 50 XP). Not undead, not alive, 11 HP, and the whole fight hangs off him. Set to **0** in v1 and v2.
+- **ambrose-wend** ×1 — *v3 only.* [[ambrose-wend|Chaplain Ambrose Wend]], Ridgeward Battalion (CR 1/4, 50 XP). Not undead, not alive, 11 HP, and the whole fight hangs off him. Set to **0** in v1 and v2.
 
 **XP: 200 in every variant at the four-PC roster. 250 with a fourth skeleton, or with v2 and v3 stacked.**

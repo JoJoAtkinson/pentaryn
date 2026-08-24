@@ -1,11 +1,11 @@
 ---
 name: Chaplain Ambrose Wend
 created: 2026-08-09
-last-modified: 2026-08-09
+last_modified: 2026-08-09
 status: active
 location: restless-dead-battlefield
 count: 1
-tags: ["#combat-runner", "#humanoid", "#named-antagonist", "#necromancer", "#variant", "#restless-dead-battlefield", "#ardenhaven", "#cr-1-4"]
+tags: ["combat-runner", "humanoid", "named-antagonist", "necromancer", "variant", "restless-dead-battlefield", "ardenhaven", "cr-1-4"]
 ---
 # Chaplain Ambrose Wend
 

@@ -1,11 +1,11 @@
 ---
 name: Undercave Smuggler
 created: 2026-08-09
-last-modified: 2026-08-09
+last_modified: 2026-08-09
 status: active
 location: harbour-undercave
 count: 4
-tags: ["#combat-runner", "#humanoid", "#smugglers", "#harbour-undercave", "#ardenford", "#ardenhaven", "#cr-1-8"]
+tags: ["combat-runner", "humanoid", "smugglers", "harbour-undercave", "ardenford", "ardenhaven", "cr-1-8"]
 ---
 # Undercave Smuggler
 

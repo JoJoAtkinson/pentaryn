@@ -1,7 +1,7 @@
 ---
 created: 2026-01-17
-last-modified: 2026-03-14
-tags: ["#world", "#party", "#black-ledger", "#member", "#combat-runner"]
+last_modified: 2026-03-14
+tags: ["world", "party", "black-ledger", "member", "combat-runner"]
 status: active
 ---
 # Grek Bar'Kar (GREK bar-KAR)
@@ -12,9 +12,9 @@ status: active
 
 | Attribute | Value |
 |---|---|
-| **Party** | [The Black Ledger](../_overview.md) |
+| **Party** | [[world/party/black-ledger/_overview\|The Black Ledger]] |
 | **Ancestry** | Dwarf |
-| **Origin** | [Garhammar](../../../factions/garhammar-trade-league/_overview.md) |
+| **Origin** | [[world/factions/garhammar-trade-league/_overview\|Garhammar]] |
 | **Class / Level** | Artificer 3 |
 | **Alignment** | Lawful Neutral |
 | **Background** | Guild engineer |

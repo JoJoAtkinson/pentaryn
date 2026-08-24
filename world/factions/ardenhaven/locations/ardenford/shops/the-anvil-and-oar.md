@@ -1,7 +1,7 @@
 ---
 created: 2026-01-01
-last-modified: 2026-01-10
-tags: ["#location", "#ardenhaven", "#ardenford", "#shop", "#weaponsmith"]
+last_modified: 2026-01-10
+tags: ["location", "ardenhaven", "ardenford", "shop", "weaponsmith"]
 status: draft
 ---
 
@@ -20,7 +20,7 @@ daugher name is : Helen Ironweld
 | Attribute | Value |
 |---|---|
 | **Type** | Weaponsmith / armorer |
-| **Location** | [Ardenford](../ardenford.md) (Lower Tier, just off the harbor lanes) |
+| **Location** | [[ardenford\|Ardenford]] (Lower Tier, just off the harbor lanes) |
 | **Affiliation** | Ardenhaven (licensed smith; guild-adjacent) |
 
 ## The Shop
@@ -44,5 +44,5 @@ A narrow-front smithy wedged between net-menders and rope sellers, with a forge 
 
 ## Related Links
 
-- [Ardenford](../ardenford.md)
-- [Ardenhaven](../../_overview.md)
+- [[ardenford|Ardenford]]
+- [[world/factions/ardenhaven/_overview|Ardenhaven]]

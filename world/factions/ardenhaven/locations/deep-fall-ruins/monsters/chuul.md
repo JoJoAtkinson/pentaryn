@@ -1,7 +1,7 @@
 ---
 created: 2026-01-30
-last-modified: 2026-01-31
-tags: ["#world", "#monster", "#ardenhaven", "#deep-fall-ruins", "#water"]
+last_modified: 2026-01-31
+tags: ["world", "monster", "ardenhaven", "deep-fall-ruins", "water"]
 status: reference
 ---
 # Chuul (CR 4)

@@ -1,7 +1,7 @@
 ---
 created: 2026-01-01
-last-modified: 2026-01-10
-tags: ["#location", "#ardenhaven", "#ardenford", "#shop", "#alchemist", "#apothecary"]
+last_modified: 2026-01-10
+tags: ["location", "ardenhaven", "ardenford", "shop", "alchemist", "apothecary"]
 status: draft
 ---
 
@@ -18,7 +18,7 @@ Hesta (HESS-tuh) Briarvein (BRY-ur-vayn).
 | Attribute | Value |
 |---|---|
 | **Type** | Alchemist / apothecary |
-| **Location** | [Ardenford](../ardenford.md) (Middle Tier, near the Western Market lanes) |
+| **Location** | [[ardenford\|Ardenford]] (Middle Tier, near the Western Market lanes) |
 | **Affiliation** | Ardenhaven (licensed apothecary; temple-friendly) |
 
 ## Shop Offerings
@@ -119,5 +119,5 @@ When the party “browses the good shelf,” roll on one table (or pick). Most o
 
 ## Related Links
 
-- [Ardenford](../ardenford.md)
-- [Ardenhaven](../../_overview.md)
+- [[ardenford|Ardenford]]
+- [[world/factions/ardenhaven/_overview|Ardenhaven]]

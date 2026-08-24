@@ -1,7 +1,7 @@
 ---
 created: 2026-01-30
-last-modified: 2026-01-30
-tags: ["#world", "#location", "#ardenhaven", "#deep-fall-ruins", "#neogi"]
+last_modified: 2026-01-30
+tags: ["world", "location", "ardenhaven", "deep-fall-ruins", "neogi"]
 status: draft
 ---
 # K'azz'jak'n Silk Cistern (KAZH-jak-EN SILK SIS-tern)

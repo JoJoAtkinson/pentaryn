@@ -1,0 +1,21 @@
+# A thread view: every note tagged `conflict`, from anywhere in the vault.
+#
+# `conflict` is a cross-cutting topic tag — it is on 21 event files spread across
+# world/ages/history/ and the merrowgate, ardenhaven, rakthok-horde and elderholt
+# history folders. No folder collects them, and none should: each event belongs to
+# the faction that lived it. The tag is the second home; this file is the view of it.
+#
+# Columns are the display order. The chronological key is `file.name` — the
+# zero-padded {YYYYY}-{MM}-{DD} sort key — not `date`, because a 360-day calendar
+# produces dates (4327/02/30) that no date type will parse. Sort on the first
+# column to read the thread front to back.
+#
+# Obsidian-only: Bases renders in Obsidian, and is inert in VS Code.
+
+filters:
+  and:
+    - file.hasTag("conflict")
+views:
+  - type: table
+    name: Conflict
+    order: [file.name, title, year, tags]

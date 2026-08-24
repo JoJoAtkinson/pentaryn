@@ -1,7 +1,7 @@
 ---
 created: 2025-12-11
-last-modified: 2025-12-11
-tags: ["#world", "#faction", "#elderholt", "#witch", "#lore"]
+last_modified: 2025-12-11
+tags: ["world", "faction", "elderholt", "witch", "lore"]
 status: draft
 ---
 # Witches of Elderholt

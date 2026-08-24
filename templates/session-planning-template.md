@@ -17,7 +17,7 @@ What do you want to accomplish this session?
 
 Quick summary of what happened last session and where we left off.
 
-- Location: [Location Name](../../world/factions/region-name/locations/location-name.md)
+- Location: [[location-name|Location Name]]
 - Situation: 
 - Cliffhanger: 
 
@@ -26,7 +26,7 @@ Quick summary of what happened last session and where we left off.
 ### Opening Scene
 How the session will start.
 
-**Location:** [Location](../../world/factions/region-name/locations/location-name.md)  
+**Location:** [[location-name|Location]]  
 **Setup:** 
 
 > Read-aloud opening text
@@ -34,7 +34,7 @@ How the session will start.
 ### Beat 1: [Title]
 **Location:**  
 **Purpose:** What this scene accomplishes  
-**NPCs:** [List relevant NPCs](../characters/npcs/npc-name.md)  
+**NPCs:** [[npc-name|List relevant NPCs]]  
 **Description:** 
 
 ### Beat 2: [Title]
@@ -58,11 +58,11 @@ Where you'd like to end if possible.
 ## Prepared Encounters
 
 ### Combat Encounter 1: [Name]
-**Location:** [Location](../../world/factions/region-name/locations/location-name.md)  
+**Location:** [[location-name|Location]]  
 **Trigger:** What causes this encounter  
 **Enemies:**
-- X × [Creature](../creatures/monsters/creature-name.md)
-- X × [Creature](../creatures/monsters/creature-name.md)
+- X × [[creature-name|Creature]]
+- X × [[creature-name|Creature]]
 
 **Tactics:** How enemies fight  
 **Victory Condition:**  
@@ -87,7 +87,7 @@ Where you'd like to end if possible.
 **Failure:** Consequences of failure
 
 ### Social Encounter: [Name]
-**NPC(s):** [Name](../characters/npcs/npc-name.md)  
+**NPC(s):** [[npc-name|Name]]  
 **Goal:** What the NPC wants  
 **Information Available:** What players can learn  
 **Persuasion DCs:** 
@@ -95,13 +95,13 @@ Where you'd like to end if possible.
 
 ## NPCs This Session
 
-### [NPC Name](../characters/npcs/npc-name.md)
+### [[npc-name|NPC Name]]
 - **Role:** How they're involved
 - **Goal:** What they want
 - **Key Info:** Important facts
 - **Voice/Mannerism:** Roleplay notes
 
-### [NPC Name](../characters/npcs/npc-name.md)
+### [[npc-name|NPC Name]]
 - **Role:**
 - **Goal:**
 - **Key Info:**
@@ -109,7 +109,7 @@ Where you'd like to end if possible.
 
 ## Locations Used
 
-### [Location Name](../../world/factions/region-name/locations/location-name.md)
+### [[location-name|Location Name]]
 - **Key Features:** Important details to mention
 - **Atmosphere:** Mood and description
 - **Secrets:** Hidden things
@@ -119,11 +119,11 @@ Where you'd like to end if possible.
 ### Treasure
 - Gold: XXX gp
 - Items: 
-  - [Item Name](../items/magic-items/item-name.md)
+  - [[item-name|Item Name]]
   - 
 
 ### Quest Rewards
-- [Quest Name](../quests/active/quest-name.md): Rewards for completion
+- [[quest-name|Quest Name]]: Rewards for completion
 
 ### XP Budget
 - Total XP available: XXX
@@ -131,10 +131,10 @@ Where you'd like to end if possible.
 
 ## Player Character Hooks
 
-### [PC Name](../characters/player-characters/pc-name.md)
+### [[pc-name|PC Name]]
 Specific content or hooks for this character this session.
 
-### [PC Name](../characters/player-characters/pc-name.md)
+### [[pc-name|PC Name]]
 Content for this character...
 
 ## Flexibility Points
@@ -239,6 +239,6 @@ Fill this out after the session:
 
 ## Related Links
 
-- [Previous Session Notes](../notes/session-XX-YYYY-MM-DD.md)
+- [[session-XX-YYYY-MM-DD|Previous Session Notes]]
 - [Active Quests](../../quests/active/)
-- [Campaign Overview](../../README.md)
+- [[README|Campaign Overview]]

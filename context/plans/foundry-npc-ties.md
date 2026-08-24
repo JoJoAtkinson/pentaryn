@@ -1,7 +1,7 @@
 ---
 created: 2026-08-15
-last-modified: 2026-08-16
-tags: ["#playbook", "#foundry", "#vtt", "#npcs", "#design"]
+last_modified: 2026-08-16
+tags: ["playbook", "foundry", "vtt", "npcs", "design"]
 status: shipped — 0.4.0
 ---
 

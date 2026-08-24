@@ -1,11 +1,11 @@
 ---
 name: Skeleton
 created: 2026-08-09
-last-modified: 2026-08-09
+last_modified: 2026-08-09
 status: active
 location: restless-dead-battlefield
 count: 4
-tags: ["#combat-runner", "#undead", "#restless-dead-battlefield", "#ardenhaven", "#cr-1-4"]
+tags: ["combat-runner", "undead", "restless-dead-battlefield", "ardenhaven", "cr-1-4"]
 ---
 # Skeleton
 

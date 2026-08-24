@@ -1,11 +1,11 @@
 ---
 name: Giant Spider
 created: 2026-08-09
-last-modified: 2026-08-09
+last_modified: 2026-08-09
 status: active
 location: old-lumber-camp
 count: 1
-tags: ["#combat-runner", "#beast", "#spider", "#old-lumber-camp", "#ardenhaven", "#cr-1"]
+tags: ["combat-runner", "beast", "spider", "old-lumber-camp", "ardenhaven", "cr-1"]
 ---
 # Giant Spider
 

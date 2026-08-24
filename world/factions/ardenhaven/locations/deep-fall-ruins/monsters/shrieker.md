@@ -1,7 +1,7 @@
 ---
 created: 2026-01-30
-last-modified: 2026-01-31
-tags: ["#world", "#monster", "#ardenhaven", "#deep-fall-ruins", "#fungus"]
+last_modified: 2026-01-31
+tags: ["world", "monster", "ardenhaven", "deep-fall-ruins", "fungus"]
 status: reference
 ---
 # Shrieker (CR 0)

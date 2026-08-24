@@ -445,12 +445,47 @@ class Sheet:
         }
 
 
+_TAGS_INLINE_RE = re.compile(r"^tags:\s*\[(?P<items>.*)\]\s*$", re.MULTILINE)
+_TAGS_BLOCK_RE = re.compile(r"^tags:\s*$\n(?P<items>(?:[ \t]*-[ \t]*\S.*\n?)+)", re.MULTILINE)
+
+
+def head_tags(head: str) -> list[str]:
+    """Tag values from a sheet head, `#` stripped, both YAML list styles.
+
+    Reads the `tags:` array only — never raw prose. The previous
+    implementation grepped the head for the literal `#combat-runner`, which
+    also matched the word in a `description:` line (see
+    `world/factions/garhammar-trade-league/locations/mountin-pass/_overview.md`).
+    """
+    raw: list[str] = []
+    m = _TAGS_INLINE_RE.search(head)
+    if m:
+        raw = m.group("items").split(",")
+    else:
+        m = _TAGS_BLOCK_RE.search(head)
+        if m:
+            raw = [ln.strip().lstrip("-").strip() for ln in m.group("items").splitlines()]
+    return [t.strip().strip('"').strip("'").lstrip("#") for t in raw if t.strip()]
+
+
+def is_combat_runner(head: str) -> bool:
+    """True if this sheet head carries the combat-runner tag.
+
+    Accepts it with or without the leading `#`. The vault was authored with
+    `tags: ["#combat-runner", ...]`, but Obsidian does not index `#`-prefixed
+    entries in a YAML tags array as property tags, so the whole vault was
+    normalized to plain tags. Both spellings are honoured so this keeps
+    working either way.
+    """
+    return "combat-runner" in head_tags(head)
+
+
 def discover_sheets() -> dict[str, list[Sheet]]:
-    """All `#combat-runner` NPC markdown, grouped by slug. PC sheets excluded."""
+    """All combat-runner NPC markdown, grouped by slug. PC sheets excluded."""
     by_slug: dict[str, list[Sheet]] = {}
     for path in sorted(WORLD_DIR.rglob("*.md")):
         head = "\n".join(path.read_text(encoding="utf-8").splitlines()[:30])
-        if "#combat-runner" not in head:
+        if not is_combat_runner(head):
             continue
         rel = path.relative_to(REPO_ROOT).as_posix()
         if rel.startswith(PARTY_PREFIX):
@@ -463,7 +498,7 @@ def pc_slugs() -> set[str]:
     return {
         p.stem
         for p in sorted((REPO_ROOT / PARTY_PREFIX).rglob("*.md"))
-        if "#combat-runner" in "\n".join(p.read_text(encoding="utf-8").splitlines()[:30])
+        if is_combat_runner("\n".join(p.read_text(encoding="utf-8").splitlines()[:30]))
     }
 
 

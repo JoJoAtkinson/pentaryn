@@ -11,20 +11,20 @@
 |-----------|-------|
 | **Party Slug** | `party-slug` (folder under `world/party/`) |
 | **Campaign / Arc** | |
-| **Home Base** | [Location](../../factions/region-slug/locations/location-name.md) |
+| **Home Base** | [[location-name\|Location]] |
 | **Current Location** | |
 | **In-World Date** | YYYY/MM/DD |
 | **Party Ethos (Optional)** | Lawful/Neutral/Chaotic + Good/Neutral/Evil |
 | **Party Level** | Avg X (min Y / max Z) |
 | **Size** | X PCs + Y companions |
-| **Patron / Employer (Optional)** | [Faction/NPC](../../factions/faction-slug/_overview.md) |
+| **Patron / Employer (Optional)** | [[world/factions/faction-slug/_overview\|Faction/NPC]] |
 | **Timeline** | [Party Timeline](./history/) |
 
 ## Setting Rules
 
 Use these defaults when adding or generating members:
 
-- [Party & Member Creation Rules](../_party-creation-rules.md)
+- [[_party-creation-rules|Party & Member Creation Rules]]
 
 ## Roster
 
@@ -32,8 +32,8 @@ Create one member page per character at `members/<member-slug>.md` using `templa
 
 | Name | PC/NPC | Player | Ancestry | Origin | Class | Level | Alignment | Background | Party Role | Sheet |
 |------|--------|--------|----------|--------|-------|-------|-----------|------------|-----------|-------|
-| [Name](members/member-slug.md) | PC | | | | | | | | | [sheet](../../../characters/player-characters/character-name.md) |
-| [Name](members/member-slug.md) | NPC | | | | | | | | | [sheet](../../../characters/npcs/npc-name.md) |
+| [[member-slug\|Name]] | PC | | | | | | | | | [[character-name\|sheet]] |
+| [[member-slug\|Name]] | NPC | | | | | | | | | [[npc-name\|sheet]] |
 
 ### Exceptions & Notes
 
@@ -47,14 +47,14 @@ Create one member page per character at `members/<member-slug>.md` using `templa
 
 ### Active Quests
 
-- [Quest Name](../../../quests/active/quest-name.md) — status/notes
+- [[quest-name|Quest Name]] — status/notes
 
 ### Faction & NPC Relationships
 
 | Person/Faction | Relationship | Notes |
 |---------------|--------------|-------|
-| [Faction](../../factions/faction-slug/_overview.md) | Friendly/Neutral/Hostile | |
-| [NPC](../../../characters/npcs/npc-name.md) | Ally/Rival/Enemy | |
+| [[world/factions/faction-slug/_overview\|Faction]] | Friendly/Neutral/Hostile | |
+| [[npc-name\|NPC]] | Ally/Rival/Enemy | |
 
 ### Resources & Inventory
 
@@ -75,6 +75,6 @@ Create one member page per character at `members/<member-slug>.md` using `templa
 
 ## Related Links
 
-- [Party & Member Creation Rules](../_party-creation-rules.md)
+- [[_party-creation-rules|Party & Member Creation Rules]]
 - [Party Timeline](./history/)
-- [Session Notes](../../../sessions/notes/session-XX-YYYY-MM-DD.md)
+- [[session-XX-YYYY-MM-DD|Session Notes]]

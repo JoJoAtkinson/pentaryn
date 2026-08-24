@@ -1,7 +1,7 @@
 ---
 created: 2026-01-17
-last-modified: 2026-01-17
-tags: ["#item", "#magic-item", "#wondrous-item", "#druid", "#elven"]
+last_modified: 2026-01-17
+tags: ["item", "magic-item", "wondrous-item", "druid", "elven"]
 status: active
 ---
 
@@ -86,4 +86,4 @@ The +1d4 healing boost is limited to once per day, keeping it useful but not ove
 
 ## Related Links
 
-- [Magic Items](../README.md)
+- [[items/README|Magic Items]]

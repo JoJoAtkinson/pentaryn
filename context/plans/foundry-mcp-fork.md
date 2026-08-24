@@ -1,7 +1,7 @@
 ---
 created: 2026-08-11
-last-modified: 2026-08-11
-tags: ["#playbook", "#foundry", "#mcp", "#design"]
+last_modified: 2026-08-11
+tags: ["playbook", "foundry", "mcp", "design"]
 status: draft
 ---
 

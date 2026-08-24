@@ -1,33 +1,33 @@
 ---
 created: 2026-01-17
-last-modified: 2026-01-30
-tags: ["#world", "#location", "#ardenhaven", "#deep-fall-ruins"]
+last_modified: 2026-01-30
+tags: ["world", "location", "ardenhaven", "deep-fall-ruins"]
 status: active
 ---
 # Deep Fall Ruins
 
 ## Monsters
 
-- [Giant Bat](giant-bat.md)
-- [Deep Fall Ruins — Monsters (index)](monsters/_overview.md)
+- [[giant-bat|Giant Bat]]
+- [[world/factions/ardenhaven/locations/deep-fall-ruins/monsters/_overview|Deep Fall Ruins — Monsters (index)]]
 
 ## Session Aids
 
-- [Derro Open Names](derro-open-names.md)
-- [Derro Foe Party: The Shardclaws](derro-foe-party-01-the-shardclaws/_overview.md)
-- [Derro Foe Party: The Gloomcinders](derro-foe-party-02-the-gloomcinders/_overview.md)
-- [Derro Foe Party: The Glass Choir](derro-foe-party-03-the-glass-choir/_overview.md)
+- [[derro-open-names|Derro Open Names]]
+- [[world/factions/ardenhaven/locations/deep-fall-ruins/derro-foe-party-01-the-shardclaws/_overview|Derro Foe Party: The Shardclaws]]
+- [[world/factions/ardenhaven/locations/deep-fall-ruins/derro-foe-party-02-the-gloomcinders/_overview|Derro Foe Party: The Gloomcinders]]
+- [[world/factions/ardenhaven/locations/deep-fall-ruins/derro-foe-party-03-the-glass-choir/_overview|Derro Foe Party: The Glass Choir]]
 
 ## Sites
 
-- [K'azz'jak'n Silk Cistern (Neogi city)](locations/kazzjakn-silk-cistern.md)
-- [Thrumkhor-dum (Derro core city)](locations/thrumkhor-dum.md)
+- [[kazzjakn-silk-cistern|K'azz'jak'n Silk Cistern (Neogi city)]]
+- [[thrumkhor-dum|Thrumkhor-dum (Derro core city)]]
 
 ## NPCs
 
-- [Dulgor-grum](npcs/dulgor-grum.md)
-- [Ivar Calder](npcs/ivar-calder.md)
-- [Sivren Coilfin](npcs/sivren-coilfin.md)
-- [Moksel-dum](npcs/moksel-dum.md)
-- [Drakzul-dur](npcs/drakzul-dur.md)
-- [Fizz Bit](npcs/fizz-bit.md)
+- [[dulgor-grum|Dulgor-grum]]
+- [[ivar-calder|Ivar Calder]]
+- [[sivren-coilfin|Sivren Coilfin]]
+- [[moksel-dum|Moksel-dum]]
+- [[drakzul-dur|Drakzul-dur]]
+- [[fizz-bit|Fizz Bit]]

@@ -1,12 +1,12 @@
 ---
 created: 2026-04-25
-last-modified: 2026-04-25
-tags: ["#arc", "#sabriel", "#naelith", "#scene", "#brainstorm"]
+last_modified: 2026-04-25
+tags: ["arc", "sabriel", "naelith", "scene", "brainstorm"]
 status: brainstorm
 ---
 # Sabriel — The Naelith Encounter
 
-A scene built around one line. Sabriel runs into [Naelith](../../world/factions/elderholt/elders/naelith-the-unmoored-seer.md) somewhere odd — a tunnel beneath Elderstead, the edge of the witch-tree's roots, a doorway no one uses.
+A scene built around one line. Sabriel runs into [[naelith-the-unmoored-seer|Naelith]] somewhere odd — a tunnel beneath Elderstead, the edge of the witch-tree's roots, a doorway no one uses.
 
 > **Naelith:** "Oh — did you find the shrine to Khôr-Bhog-Khôr?"
 >
@@ -141,7 +141,7 @@ Pick as needed. Not ordered. Not exhaustive — write more for your table.
 
 ## The Shrine (sketched, not finished)
 
-- **Location.** Beneath one of the [Dulgarum Oathholds](../../world/factions/dulgarum-oathholds/_overview.md) — the *darkest* hold, deeper than the Sealed Depths. The dwarves built their breachgates over a foundation that was already there. Naelith calls it *"the roof the Dulgarum forgot they were standing on."*
+- **Location.** Beneath one of the [[world/factions/dulgarum-oathholds/_overview|Dulgarum Oathholds]] — the *darkest* hold, deeper than the Sealed Depths. The dwarves built their breachgates over a foundation that was already there. Naelith calls it *"the roof the Dulgarum forgot they were standing on."*
 - **God.** **Khôr-Bhog-Khôr.** Ancient. Pre-mortal. Pre-dwarven. Spoken from the chest, never the nose — sandwich-chant, three syllables, middle one fattest. The name is what worshippers gave him after the fact; he had none of his own.
 - **Guardian.** One creature. Pick or roll:
   - **Oath-revenant** — a dwarf who swore to guard the shrine before the Binding of Oaths and never released his vow.

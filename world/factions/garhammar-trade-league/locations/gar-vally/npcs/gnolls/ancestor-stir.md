@@ -3,7 +3,7 @@ name: Ancestor-Stir
 type: stat-block
 created: 2026-05-09
 status: active
-tags: ["#gnoll", "#gar-vally", "#undead", "#cr-4", "#secret", "#ancestor"]
+tags: ["gnoll", "gar-vally", "undead", "cr-4", "secret", "ancestor"]
 ---
 
 # Ancestor-Stir
@@ -103,6 +103,6 @@ If the party sees this creature, they are witnessing the direct consequence of t
 
 ## Related Links
 
-- [Gar-Vally Encounter](../encounters.md)
-- [Matron of the Valley](matron-of-the-valley.md)
-- [Unnamed Hunt-Lieutenant](unnamed-hunt-lieutenant.md)
+- [[world/factions/garhammar-trade-league/locations/gar-vally/encounters|Gar-Vally Encounter]]
+- [[world/factions/garhammar-trade-league/locations/gar-vally/npcs/gnolls/matron-of-the-valley|Matron of the Valley]]
+- [[world/factions/garhammar-trade-league/locations/gar-vally/npcs/gnolls/unnamed-hunt-lieutenant|Unnamed Hunt-Lieutenant]]

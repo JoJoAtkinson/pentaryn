@@ -12,7 +12,7 @@
 | **Type** | Guild Oligarchy |
 | **Size** | Regional dwarven power |
 | **Alignment** | Lawful Neutral (with Neutral Evil profit-chasing) |
-| **Headquarters** | [Garhammar](locations/garhammar.md) |
+| **Headquarters** | [[garhammar\|Garhammar]] |
 | **Founded** | The Charter Revolt (post-Dulgarum schism) |
 
 ## Symbol & Colors
@@ -110,7 +110,7 @@ Guild dues, adherence to contracts, non-aggression in inter-guild disputes, acce
 
 ## Locations
 
-### [Headquarters — Garhammar](locations/garhammar.md)
+### [[garhammar|Headquarters — Garhammar]]
 Guildhall metropolis; charter vaults and gearworks define the capital.
 
 ### Contract Foundries
@@ -122,12 +122,12 @@ Mining colonies, trade ports, and arbitration halls scattered across regions.
 ## Allies & Enemies
 
 ### Allies
-- **[Calderon Imperium](../calderon-imperium/_overview.md):** Major arms client
-- **[Merrowgate](../merrowgate/_overview.md):** Trade and arbitration partner
+- **[[world/factions/calderon-imperium/_overview|Calderon Imperium]]:** Major arms client
+- **[[world/factions/merrowgate/_overview|Merrowgate]]:** Trade and arbitration partner
 - **All factions** (as paying clients)
 
 ### Rivals
-- **[Dulgarum](../dulgarum-oathholds/_overview.md):** Ideological and cultural tension; seen as oath-breakers
+- **[[world/factions/dulgarum-oathholds/_overview|Dulgarum]]:** Ideological and cultural tension; seen as oath-breakers
 
 ### Enemies
 - Factions threatening free trade; insurgents targeting exploited labor
@@ -194,7 +194,7 @@ A labor uprising threatens production; a client state defaults and Garhammar sei
 
 ## Related Links
 
-- [Headquarters — Garhammar](locations/garhammar.md)
-- [Dulgarum-Oathholds](../dulgarum-oathholds/_overview.md)
-- [Calderon Imperium](../calderon-imperium/_overview.md)
-- [Merrowgate](../merrowgate/_overview.md)
+- [[garhammar|Headquarters — Garhammar]]
+- [[world/factions/dulgarum-oathholds/_overview|Dulgarum-Oathholds]]
+- [[world/factions/calderon-imperium/_overview|Calderon Imperium]]
+- [[world/factions/merrowgate/_overview|Merrowgate]]

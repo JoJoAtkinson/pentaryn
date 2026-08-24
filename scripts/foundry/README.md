@@ -47,7 +47,7 @@ answered, never the value.
 | `make tunnel-logs` | Tail the tunnel log |
 | `make foundry-key` | Copy the license key to the clipboard (first-run activation only) |
 | `make foundry-check` | Verify key retrieval; prints length/format, never the value |
-| `make foundry-actors` | Regenerate `foundry/build/actors.json` from `foundry/actions.jsonl` + `#combat-runner` markdown |
+| `make foundry-actors` | Regenerate `foundry/build/actors.json` from `foundry/actions.jsonl` + `combat-runner` markdown |
 | `make foundry-sync` | `foundry-actors`, then **copy** (never symlink) the importer module + `actors.json` into the live Foundry `Data/` dir |
 | `make foundry-import` | **The one to run.** `foundry-sync`, wait while you run `game.pentaryn.import()` in Foundry's console, then `foundry-clean` |
 | `make foundry-clean-only` | Delete the staged `actors.json` from `Data/`. No verification |

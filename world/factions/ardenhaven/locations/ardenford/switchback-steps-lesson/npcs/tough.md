@@ -1,11 +1,11 @@
 ---
 name: Veska Torlan
 created: 2026-08-09
-last-modified: 2026-08-09
+last_modified: 2026-08-09
 status: active
 location: switchback-steps-lesson
 count: 1
-tags: ["#combat-runner", "#humanoid", "#gray-district", "#calderon-refugees", "#nonlethal", "#switchback-steps-lesson", "#ardenford", "#ardenhaven", "#cr-1-2"]
+tags: ["combat-runner", "humanoid", "gray-district", "calderon-refugees", "nonlethal", "switchback-steps-lesson", "ardenford", "ardenhaven", "cr-1-2"]
 ---
 # Veska Torlan
 

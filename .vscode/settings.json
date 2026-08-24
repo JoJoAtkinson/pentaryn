@@ -1,4 +1,31 @@
 {
   "terminal.integrated.fontFamily": "'DnD Dice', Menlo, monospace",
   // "terminal.integrated.gpuAcceleration": "off"
+
+  // --- Obsidian-compatible markdown (see context/plans/obsidian-first-migration.md) ---
+
+  // Foam writes `[//begin]` link-reference blocks into files by default, which
+  // churns git and confuses Obsidian. This must stay off.
+  "foam.edit.linkReferenceDefinitions": "off",
+
+  // Keep Foam out of the trees that hold Foundry enricher syntax (`[[/attack]]`,
+  // `[[lookup]]`) and out of node_modules — it would read them as broken wikilinks.
+  "foam.files.ignore": [
+    "**/node_modules/**",
+    "foundry/**",
+    "scripts/**",
+    "automation/**",
+    ".venv/**",
+    ".cache/**",
+    ".output/**",
+    ".state/**",
+    ".history/**"
+  ],
+
+  // Validates relative links in whatever file is open, workspace-wide — not
+  // just context/. It does not parse [[wikilinks]], so converted lore prose is
+  // simply invisible to it; what it will surface is genuinely broken relative
+  // links anywhere, including the ones still outstanding under world/.
+  "markdown.validate.enabled": true,
+  "markdown.validate.ignoredLinks": ["#*"]
 }

@@ -1,7 +1,7 @@
 ---
 created: 2026-03-29
-last-modified: 2026-03-29
-tags: ["#session", "#dm-reference", "#elderholt"]
+last_modified: 2026-03-29
+tags: ["session", "dm-reference", "elderholt"]
 status: active
 ---
 
@@ -102,4 +102,4 @@ Use these as openers or reactions to get into character fast.
 - **Emberwake** festival (winter) — fire, community, witches invited as guests not leaders
 - **Tidebound Fair** (summer) — outsiders might mistake it for a witches' ceremony
 
-> Sources: [unthreaded.md](../../../world/factions/elderholt/unthreaded.md) · [witchs.md](../../../world/factions/elderholt/witchs.md)
+> Sources: [[unthreaded|unthreaded.md]] · [[witchs|witchs.md]]

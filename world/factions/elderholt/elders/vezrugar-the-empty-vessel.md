@@ -1,7 +1,7 @@
 ---
 created: 2025-12-11
-last-modified: 2025-12-12
-tags: ["#npc", "#elder", "#witch", "#elderholt"]
+last_modified: 2025-12-12
+tags: ["npc", "elder", "witch", "elderholt"]
 status: draft
 ---
 

@@ -9,10 +9,10 @@
 
 | Attribute                    | Value                                        |
 | ---------------------------- | -------------------------------------------- |
-| **Quest Giver**        | [NPC Name](../characters/npcs/npc-name.md)      |
+| **Quest Giver**        | [[npc-name\|NPC Name]]      |
 | **Type**               | Main Quest/Side Quest/Personal Quest         |
 | **Level Range**        | 1-5                                          |
-| **Location(s)**        | [Location](../world/factions/region-name/locations/location-name.md) |
+| **Location(s)**        | [[location-name\|Location]] |
 | **Estimated Duration** | 1 session / Multiple sessions                |
 
 ## Quest Summary
@@ -38,17 +38,17 @@ Context and background information. Why is this quest needed? What led to this s
 
 ## Key NPCs
 
-- **[Quest Giver Name](../characters/npcs/npc-name.md):** Their role in the quest
-- **[Ally Name](../characters/npcs/ally-name.md):** How they help
-- **[Antagonist Name](../characters/npcs/antagonist-name.md):** Their opposition
+- **[[npc-name|Quest Giver Name]]:** Their role in the quest
+- **[[ally-name|Ally Name]]:** How they help
+- **[[antagonist-name|Antagonist Name]]:** Their opposition
 
 ## Locations
 
-### [Location Name](../world/factions/region-name/locations/location-name.md)
+### [[location-name|Location Name]]
 
 Description of how this location relates to the quest. What happens here?
 
-### [Location Name](../world/factions/region-name/locations/location-name.md)
+### [[location-name|Location Name]]
 
 Description...
 
@@ -108,7 +108,7 @@ Consequences if the quest fails.
 ### Primary Rewards
 
 - Gold: XXX gp
-- Items: [Magic Item](../items/magic-items/item-name.md)
+- Items: [[item-name|Magic Item]]
 - Experience: XXX XP
 
 ### Optional Rewards
@@ -136,9 +136,9 @@ Different ways the party might approach solving this quest.
 
 ## Connected Quests
 
-- **[Previous Quest](quest-name.md):** How it leads to this
-- **[Related Quest](quest-name.md):** Parallel storyline
-- **[Future Quest](quest-name.md):** What this leads to
+- **[[quest-name|Previous Quest]]:** How it leads to this
+- **[[quest-name|Related Quest]]:** Parallel storyline
+- **[[quest-name|Future Quest]]:** What this leads to
 
 ## DM Notes
 
@@ -171,7 +171,7 @@ Progress made...
 
 ## Related Links
 
-- [Quest Giver](../characters/npcs/npc-name.md)
-- [Primary Location](../world/factions/region-name/locations/location-name.md)
-- [Related Faction](../world/factions/faction-name/_overview.md)
-- [Session Notes](../sessions/notes/session-XX-YYYY-MM-DD.md)
+- [[npc-name|Quest Giver]]
+- [[location-name|Primary Location]]
+- [[world/factions/faction-name/_overview|Related Faction]]
+- [[session-XX-YYYY-MM-DD|Session Notes]]

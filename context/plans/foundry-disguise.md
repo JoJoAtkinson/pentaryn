@@ -1,7 +1,7 @@
 ---
 created: 2026-08-23
-last-modified: 2026-08-23
-tags: ["#playbook", "#foundry", "#vtt", "#npcs", "#design", "#proposal"]
+last_modified: 2026-08-23
+tags: ["playbook", "foundry", "vtt", "npcs", "design", "proposal"]
 status: proposed — judged 2026-08-23 from Joe's pointer sketch; resolves the GUI plan's open disguise question and unblocks encounter-log phase 5; amended same day from Joe's end-to-end walkthrough (the layer stack, the Impersonated marker, one correction to the reveal default); amended a second time same day (the GM's button pops ONE layer — overturning this doc's clear-all — with layer-identity keying, and the GM approval gate on check reveals); not built
 ---
 

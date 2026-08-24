@@ -1,7 +1,7 @@
 ---
 created: 2026-05-02
-last-modified: 2026-05-02
-tags: ["#campaign", "#handout", "#ardenford"]
+last_modified: 2026-05-02
+tags: ["campaign", "handout", "ardenford"]
 status: active
 ---
 

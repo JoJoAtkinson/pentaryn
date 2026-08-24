@@ -1,19 +1,19 @@
 ---
 name: Stirge
 created: 2026-08-09
-last-modified: 2026-08-09
+last_modified: 2026-08-09
 status: active
 location: goblin-raiders-scrubland-ruins
 count: 2
-tags: ["#combat-runner", "#beast", "#second-wave", "#goblin-raiders-scrubland-ruins", "#ardenhaven", "#cr-1-8"]
+tags: ["combat-runner", "beast", "second-wave", "goblin-raiders-scrubland-ruins", "ardenhaven", "cr-1-8"]
 ---
 # Stirge
 
 **HP** 5 (2d4) **·** **AC** 13 (natural) **·** **Speed** 10 ft., **fly 40 ft.** **·** **Darkvision** 60 ft. **·** **Passive Perception** 9 **·** **CR** 1/8 (25 XP)
 
-> Action mechanics live in `combat-runner/actions.jsonl` — see the launcher's **Ready actions** reference for verbs. Same rows as the [harbour undercave](../../harbour-undercave/npcs/stirge.md) stirges; no new DB entries.
+> Action mechanics live in `combat-runner/actions.jsonl` — see the launcher's **Ready actions** reference for verbs. Same rows as the [[world/factions/ardenhaven/locations/harbour-undercave/npcs/stirge|harbour undercave]] stirges; no new DB entries.
 
-**[v3 — The Fifth Goblin](../_overview.md) only.** Two of them, roosting in the crack above the back passage where the warm air off the fire pit collects. They came **up the cut stair** behind the sheep pen on the second night after the goblins broke through the wall. They have taken the band's last sheep and had a go at two of the goblins, and they are the reason a warband with darkvision 60 ft has kept a fire lit for four nights in a cave it does not need light in.
+**[[world/factions/ardenhaven/locations/goblin-raiders-scrubland-ruins/_overview|v3 — The Fifth Goblin]] only.** Two of them, roosting in the crack above the back passage where the warm air off the fire pit collects. They came **up the cut stair** behind the sheep pen on the second night after the goblins broke through the wall. They have taken the band's last sheep and had a go at two of the goblins, and they are the reason a warband with darkvision 60 ft has kept a fire lit for four nights in a cave it does not need light in.
 
 **They are not the goblins' pets and the goblins cannot control them.** Nobody in this cave is on anybody's side.
 

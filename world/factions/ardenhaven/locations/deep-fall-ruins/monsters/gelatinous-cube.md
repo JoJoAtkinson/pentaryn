@@ -1,7 +1,7 @@
 ---
 created: 2026-01-30
-last-modified: 2026-01-31
-tags: ["#world", "#monster", "#ardenhaven", "#deep-fall-ruins", "#ooze"]
+last_modified: 2026-01-31
+tags: ["world", "monster", "ardenhaven", "deep-fall-ruins", "ooze"]
 status: reference
 ---
 # Gelatinous Cube (CR 2)

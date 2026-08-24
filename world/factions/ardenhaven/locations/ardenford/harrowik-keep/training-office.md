@@ -1,7 +1,7 @@
 ---
 created: 2026-01-10
-last-modified: 2026-01-10
-tags: ["#npc", "#character", "#ardenhaven", "#ardenford", "#harrowick-keep", "#military", "#training"]
+last_modified: 2026-01-10
+tags: ["npc", "character", "ardenhaven", "ardenford", "harrowick-keep", "military", "training"]
 status: draft
 ---
 
@@ -51,5 +51,5 @@ Neat uniform, ink-stained fingertips, hair pinned back for practicality. Moves l
 
 ## Related Links
 
-- [Harrowick Keep — Live Exercise Contract](../quests/writ-board-cr2/harrowick-keep-live-exercise.md)
-- [Ardenford](../locations/ardenford.md)
+- [[harrowick-keep-live-exercise|Harrowick Keep — Live Exercise Contract]]
+- [[ardenford|Ardenford]]

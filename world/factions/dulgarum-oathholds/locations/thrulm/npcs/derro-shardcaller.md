@@ -2,10 +2,10 @@
 name: Derro Shardcaller
 description: "Ranged tactical leader; calls formations and weaknesses"
 type: creature
-tags: ["#npc", "#combat", "#derro", "#thrulm", "#ranged", "#support"]
+tags: ["npc", "combat", "derro", "thrulm", "ranged", "support"]
 status: active
 created: 2026-04-26
-last-modified: 2026-04-26
+last_modified: 2026-04-26
 ---
 
 # Derro Shardcaller (Tactical Support)
@@ -86,4 +86,4 @@ A derro who learned to read stone and **call out weaknesses** in enemy formation
 
 ## Related Links
 
-- [Thrulm Location](../_overview.md)
+- [[world/factions/dulgarum-oathholds/locations/thrulm/_overview|Thrulm Location]]

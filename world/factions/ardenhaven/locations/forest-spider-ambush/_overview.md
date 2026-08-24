@@ -1,15 +1,15 @@
 ---
 created: 2026-05-21
-last-modified: 2026-08-09
+last_modified: 2026-08-09
 status: ready
 location: ardenhaven
-tags: ["#encounter", "#ardenhaven", "#spiders", "#cr-low", "#forest-spider-ambush", "#variants"]
+tags: ["encounter", "ardenhaven", "spiders", "cr-low", "forest-spider-ambush", "variants"]
 ---
 # Forest Spider Ambush — Road to the Ruins
 
 > The shortcut runs through old wood. In the last quarter mile the birdsong stopped, and the branches overhead are wrong — too grey, too thick, too still.
 
-**Where:** a wooded hollow on the track between Ardenford and the [Western Scrubland Ruins](../ruins-western-scrubland.md) — a roadside fight on the way to the goblin job.
+**Where:** a wooded hollow on the track between Ardenford and the [[ruins-western-scrubland|Western Scrubland Ruins]] — a roadside fight on the way to the goblin job.
 **Tuned for:** 4–6 level-1 PCs. Same hollow, same statblocks, **300 XP** in every variant — pick one on the walk to the table and swap without re-tuning.
 
 | | Variant | What it is | XP |
@@ -50,7 +50,7 @@ So: **do not let a variant become the session.** v2 and v3 each add exactly one 
 - **It owns the vertical.** Between bites the giant spider climbs back to 15 ft, out of shortsword reach. Melee PCs have to climb a trunk, cut the web out from under it, or find a rock. **Reward all three.**
 - **The wolf spiders never stand and trade.** Burst out of the litter, bite (+3, 1d4+1 plus **[ASK PLAYER] DC 11 Con save**, 2d4 poison, half on a success), then run — 40 ft, up a trunk, out of reach. Flank when they can; both adjacent to one PC is Advantage for both.
 - **They run down stragglers.** Anything fleeing, anything below half, anything that gets separated. If a PC breaks for the road, a wolf spider goes with them and it is faster than they are.
-- **Larder rule** (same as the [old lumber camp](../old-lumber-camp/_overview.md), and it matters in v2): the instant a creature cuts into a cocoon, a sling, or an egg sac, the **giant spider commits to that creature for the rest of the fight** — walking through opportunity attacks, ignoring everyone else, until one of them is dead.
+- **Larder rule** (same as the [[world/factions/ardenhaven/locations/old-lumber-camp/_overview|old lumber camp]], and it matters in v2): the instant a creature cuts into a cocoon, a sling, or an egg sac, the **giant spider commits to that creature for the rest of the fight** — walking through opportunity attacks, ignoring everyone else, until one of them is dead.
 
 ## Shared: fire, and what it costs here
 
@@ -111,7 +111,7 @@ This is the part worth running. **[ASK PLAYER] DC 12 Survival**, or free to anyo
 
 - **Three sets of tracks came into this hollow together, from the east-south-east, four nights ago.** In a line, not spread out. Not hunting — *travelling*.
 - **[ASK PLAYER] DC 13 Nature:** the web here is days old — bright, unsoiled, no husks, no egg sacs, no larder but a pony. **This is not a lair. It is a camp.** A giant spider with a nest does not build a road-web. This one is looking for somewhere to put one.
-- **East-south-east through the old wood, three miles, is Gareth Thorne's [lumber camp](../old-lumber-camp/_overview.md).**
+- **East-south-east through the old wood, three miles, is Gareth Thorne's [[world/factions/ardenhaven/locations/old-lumber-camp/_overview|lumber camp]].**
 
 Play it whichever way the campaign already went:
 

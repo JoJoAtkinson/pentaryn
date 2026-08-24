@@ -1,7 +1,7 @@
 ---
 created: 2026-01-31
-last-modified: 2026-01-31
-tags: ["#world", "#npc", "#ardenhaven", "#deep-fall-ruins", "#gnome", "#wizard", "#combat"]
+last_modified: 2026-01-31
+tags: ["world", "npc", "ardenhaven", "deep-fall-ruins", "gnome", "wizard", "combat"]
 status: active
 ---
 # Fizz Bit (FIZZ bit) -- the Separated Spellbook

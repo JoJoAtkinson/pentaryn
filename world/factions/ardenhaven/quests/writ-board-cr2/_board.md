@@ -1,7 +1,7 @@
 ---
 created: 2026-01-10
-last-modified: 2026-01-10
-tags: ["#handout", "#quests", "#quest-board", "#ardenford", "#cr2", "#ardenhaven"]
+last_modified: 2026-01-10
+tags: ["handout", "quests", "quest-board", "ardenford", "cr2", "ardenhaven"]
 status: active
 ---
 
@@ -64,6 +64,6 @@ Nonlethal only. No lasting harm beyond duty cleric healing.
 Pay: 160 gold.
 
 Report: Harrowick Keep, east-facing service door, first light.
-Ask for [Rella Dunsford](../../npc/_harrowick-keep_rella-dunsford-training-office.md) (Training Office).
+Ask for [[training-office|Rella Dunsford]] (Training Office).
 
 **How it's posted:** Clean paper, squared margins, and a crisp stamp at the bottom.

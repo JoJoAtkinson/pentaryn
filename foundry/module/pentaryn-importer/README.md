@@ -1,7 +1,7 @@
 ---
 created: 2026-08-10
-last-modified: 2026-08-10
-tags: ["#foundry", "#vtt", "#module", "#dnd5e"]
+last_modified: 2026-08-10
+tags: ["foundry", "vtt", "module", "dnd5e"]
 status: draft
 ---
 

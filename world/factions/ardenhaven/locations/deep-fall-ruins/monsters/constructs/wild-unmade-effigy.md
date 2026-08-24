@@ -1,7 +1,7 @@
 ---
 created: 2026-01-30
-last-modified: 2026-01-30
-tags: ["#world", "#monster", "#construct", "#ardenhaven", "#deep-fall-ruins", "#wild"]
+last_modified: 2026-01-30
+tags: ["world", "monster", "construct", "ardenhaven", "deep-fall-ruins", "wild"]
 status: draft
 ---
 # Wild Unmade Effigy (WYL'd un-MAYD EF-ih-jee)

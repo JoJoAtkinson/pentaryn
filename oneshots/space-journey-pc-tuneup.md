@@ -11,13 +11,13 @@ tags: [oneshot, space-journey, twenty-one, pregens, foundry, 5.5e, level-5, chan
 **Change record for the two pregens actually in play.** Kris plays the Bard, Kyle plays the Rogue.
 The other six pregens were **not touched**.
 
-> ⚠️ **This file supersedes [space-journey-pregens.md](space-journey-pregens.md) for these two
+> ⚠️ **This file supersedes [[space-journey-pregens|space-journey-pregens.md]] for these two
 > characters only.** That file still describes their *original* builds — including a pinned
 > prepared list for Ballad built around Heroism, and Cunning Strike pre-resolved to *Trip* for Pip.
 > Both are now out of date. The other six entries there are still accurate.
 
-Companions: [space-journey-story-outline.md](space-journey-story-outline.md) (the nine scenes),
-[twenty-one-social-map.md](twenty-one-social-map.md) (the cast and their ties).
+Companions: [[space-journey-story-outline|space-journey-story-outline.md]] (the nine scenes),
+[[twenty-one-social-map|twenty-one-social-map.md]] (the cast and their ties).
 
 ---
 
@@ -220,7 +220,7 @@ side — the PC's row is what the player remembers, the NPC's row is in the NPC'
 | **Pip Locksley** | 12 + Ballad | A third as many, underworld-weighted, transactional. No Persuasion or Performance, so nothing here was charmed — it was bought, owed or earned |
 
 **The full design, the Ned brothers' spine, the deliberate blanks, and the five scene consequences
-are in [twenty-one-social-map.md §7](twenty-one-social-map.md).** Three of those consequences need a
+are in [[twenty-one-social-map|twenty-one-social-map.md §7]].** Three of those consequences need a
 DM decision before play and are listed in §7 below.
 
 ## 7. Open rulings still owed by the DM
@@ -249,7 +249,7 @@ DM decision before play and are listed in §7 below.
    same door — the guaranteed exit becomes proof the fire is murder. Without this ruling the scene
    collapses.
 7. **Scene 3's opening line needs rewriting.** The outline calls the party *"these seven
-   strangers"* ([story outline](space-journey-story-outline.md) line 208). They are not strangers
+   strangers"* ([[space-journey-story-outline|story outline]] line 208). They are not strangers
    any more — Big Ned is naming his mother's songbird and the halfling he already blamed. The
    replacement is a better scene; write it.
 

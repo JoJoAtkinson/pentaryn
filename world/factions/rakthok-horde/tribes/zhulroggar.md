@@ -1,7 +1,7 @@
 ---
 created: 2025-12-14
-last-modified: 2025-12-14
-tags: ["#world", "#faction", "#rakthok-horde", "#tribe"]
+last_modified: 2025-12-14
+tags: ["world", "faction", "rakthok-horde", "tribe"]
 status: draft
 ---
 
@@ -37,5 +37,5 @@ They are allied with the Dakmar'nak and greatly appreciate the militarily weaker
 
 ## Related Links
 
-- [Rakthok Horde](../_overview.md)
-- [Dakmar'nak Tribe](./dakmarnak.md)
+- [[world/factions/rakthok-horde/_overview|Rakthok Horde]]
+- [[dakmarnak|Dakmar'nak Tribe]]

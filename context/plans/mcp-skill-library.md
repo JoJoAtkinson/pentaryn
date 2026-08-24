@@ -1,7 +1,7 @@
 ---
 created: 2026-08-23
-last-modified: 2026-08-23
-tags: ["#foundry", "#mcp", "#design", "#rejected"]
+last_modified: 2026-08-23
+tags: ["foundry", "mcp", "design", "rejected"]
 status: settled — do not build
 ---
 

@@ -1,6 +1,6 @@
 ---
 created: 2026-01-04
-tags: ["#world", "#location", "#ardenhaven", "#farmlands"]
+tags: ["world", "location", "ardenhaven", "farmlands"]
 status: complete
 ---
 
@@ -12,7 +12,7 @@ status: complete
 - **Terrain:** Grassy hills transitioning to rocky scrubland
 - **Elevation:** 200-400 feet
 - **Primary Use:** Sheep grazing, small farms
-- **Faction:** [Ardenhaven](../_overview.md)
+- **Faction:** [[world/factions/ardenhaven/_overview|Ardenhaven]]
 - **Notable Features:** Redwick Farm, old ruin foundations
 
 ---
@@ -38,7 +38,7 @@ The landscape opens up as you leave the city, providing excellent sightlines. Hi
 ### Terrain Features
 
 **Rocky Scrubland (Southwest)**
-- The grass thins out as you head southwest toward [the old ruins](ruins-western-scrubland.md)
+- The grass thins out as you head southwest toward [[ruins-western-scrubland|the old ruins]]
 - Scattered boulders, some large enough to hide behind
 - Low brush and thorny plants
 - Evidence of old foundations and collapsed walls from a previous age
@@ -74,7 +74,7 @@ Maren runs approximately 40-50 sheep, primarily for wool production with some so
 ### Recent Troubles
 
 **Goblin Raids (3 nights running, recently resolved by adventurers):**
-- Goblins from [the old ruins](ruins-western-scrubland.md) raided at dusk
+- Goblins from [[ruins-western-scrubland|the old ruins]] raided at dusk
 - Lost 12 ewes total before intervention
 - Tracks led southwest into rocky scrubland
 
@@ -116,7 +116,7 @@ Local shepherds have built a small cairn here and occasionally leave supplies (f
 
 ### Old Stone Walls
 
-Throughout the foothills, you'll find low stone walls that predate the current farms. These were built by an earlier civilization, possibly the same one that built the [ruins](ruins-western-scrubland.md). Many farmers have incorporated these walls into their property boundaries or used the stones for new construction.
+Throughout the foothills, you'll find low stone walls that predate the current farms. These were built by an earlier civilization, possibly the same one that built the [[ruins-western-scrubland|ruins]]. Many farmers have incorporated these walls into their property boundaries or used the stones for new construction.
 
 ---
 
@@ -170,9 +170,9 @@ The farmers view the city as necessary but distant. They sell wool and meat ther
 ## Connections
 
 - **Ardenford:** 2 miles east; main market for wool and meat
-- **[Western Scrubland Ruins](ruins-western-scrubland.md):** Southwest; recent goblin threat
+- **[[ruins-western-scrubland|Western Scrubland Ruins]]:** Southwest; recent goblin threat
 - **Northern Forests:** Timber source; occasional monster threats
-- **Eastern Border:** Connects to patrol routes and [watchtowers](../README.md)
+- **Eastern Border:** Connects to patrol routes and [[world/README|watchtowers]]
 
 ---
 

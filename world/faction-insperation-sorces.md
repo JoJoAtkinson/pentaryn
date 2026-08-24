@@ -1,7 +1,7 @@
 ---
 created: 2025-12-22
-last-modified: 2025-12-22
-tags: ["#world", "#factions", "#inspiration", "#references"]
+last_modified: 2025-12-22
+tags: ["world", "factions", "inspiration", "references"]
 status: draft
 ---
 
@@ -12,9 +12,9 @@ This is a **real-world inspiration map** for each in-world faction: aesthetics, 
 - This is **not** a 1:1 equivalence or a historical claim.
 - Use these as **research starting points** and tonal anchors; avoid flattening any culture into a stereotype.
 - Links point to each faction’s overview for quick context.
-- See also: [Faction Proximity & Influence](faction-proximity-and-influence.md)
+- See also: [[faction-proximity-and-influence|Faction Proximity & Influence]]
 
-## [Elderholt — The Coven Realm](factions/elderholt/_overview.md)
+## [[world/factions/elderholt/_overview|Elderholt — The Coven Realm]]
 
 - Function:
   - Hidden witch-polity guarding Elderstead and the Axiom beneath it.
@@ -25,7 +25,7 @@ This is a **real-world inspiration map** for each in-world faction: aesthetics, 
   - **Shugendō / yamabushi mountain ascetics (Japan)** — Timeline: c. 800–1600 CE — Remote rites, endurance trials, forested sacred geographies, outsiders treating practitioners as liminal and unsettling.
   - **Norse seiðr and völur** — Timeline: c. 800–1100 CE — Prophecy-work, taboo power with social cost, traveling specialists, bargains with unseen forces that are treated as *forces* more than “gods.”
 
-## [Ardenhaven — The Haven Realm](factions/ardenhaven/_overview.md)
+## [[world/factions/ardenhaven/_overview|Ardenhaven — The Haven Realm]]
 
 - Function:
   - Charter-bound monarchy sharing power with a council of lords, guilds, and temples.
@@ -36,7 +36,7 @@ This is a **real-world inspiration map** for each in-world faction: aesthetics, 
   - **English constitutional tradition** — Timeline: c. 1215–1707 CE — Charter limits, petition culture, negotiated power between crown, nobles, and emerging civic bodies.
   - **Swiss Confederacy (cantons & militia tradition)** — Timeline: c. 1291–1798 CE — Local autonomy balanced with shared defense, citizen-soldier expectations, coalition politics.
 
-## [Rakthok Horde — Eastern Orc Horde](factions/rakthok-horde/_overview.md)
+## [[world/factions/rakthok-horde/_overview|Rakthok Horde — Eastern Orc Horde]]
 
 - Function:
   - Nomadic warband alliance organized through Fire Councils and shamanic vision-leadership.
@@ -47,7 +47,7 @@ This is a **real-world inspiration map** for each in-world faction: aesthetics, 
   - **Göktürk and early Turkic steppe polities** — Timeline: c. 552–744 CE — Tribal federations, oath-bond leadership, steppe mobility, sacral authority intertwined with rule.
   - **Xiongnu confederation** — Timeline: c. 209 BCE–48 CE — Frontier pressure shaping identity, confederate structures under a war-leader, negotiated trade/raiding cycles with settled empires.
 
-## [Garrok Confederation — Western Orc Confederation](factions/garrok-confederation/_overview.md)
+## [[world/factions/garrok-confederation/_overview|Garrok Confederation — Western Orc Confederation]]
 
 - Function:
   - Clan-autonomy preserved inside a shared legal framework (War Moots, Oathfire Courts).
@@ -58,7 +58,7 @@ This is a **real-world inspiration map** for each in-world faction: aesthetics, 
   - **Germanic/Anglo-Saxon wergild systems** — Timeline: c. 500–1066 CE — Compensation law, oath and reputation as social infrastructure, violence constrained by payment and judgement.
   - **Early Irish Brehon law traditions** — Timeline: c. 600–1600 CE — Honor-prices, layered legal status, mediation-first justice with sharp consequences for oath-breakers.
 
-## [Dulgarum — The Oathbound Holds](factions/dulgarum-oathholds/_overview.md)
+## [[world/factions/dulgarum-oathholds/_overview|Dulgarum — The Oathbound Holds]]
 
 - Function:
   - Fortress society built on binding oaths, clan discipline, and a hidden war “below.”
@@ -69,7 +69,7 @@ This is a **real-world inspiration map** for each in-world faction: aesthetics, 
   - **Tokugawa Japan (ordered society & codes of duty)** — Timeline: c. 1603–1868 CE — Hierarchy as stability, ritual as governance, harsh enforcement to prevent fracture.
   - **Monastic-military frontier orders (e.g., Hospitallers/Templars)** — Timeline: c. 1100–1500 CE — Vows that override personal life, fortified gatekeeping, inner secrecy justified by existential threats.
 
-## [Merrowgate — The City of Bargains](factions/merrowgate/_overview.md)
+## [[world/factions/merrowgate/_overview|Merrowgate — The City of Bargains]]
 
 - Function:
   - Neutral trade hub where guilds are the state, and contract law is sacred.
@@ -80,7 +80,7 @@ This is a **real-world inspiration map** for each in-world faction: aesthetics, 
   - **Phoenician maritime city-states** — Timeline: c. 1200–539 BCE — Trade-first identity, networked ports, flexible diplomacy, wealth moving faster than borders.
   - **Medieval Cairo & Mediterranean trade law (Geniza-era commercial world)** — Timeline: c. 900–1200 CE — Contract culture, merchant networks spanning hostile polities, credit and reputation as enforcement.
 
-## [Garhammar Trade League — The Free Guild-League](factions/garhammar-trade-league/_overview.md)
+## [[world/factions/garhammar-trade-league/_overview|Garhammar Trade League — The Free Guild-League]]
 
 - Function:
   - Capital-weighted guild governance: “freedom” defined as charter rights and market power.
@@ -91,7 +91,7 @@ This is a **real-world inspiration map** for each in-world faction: aesthetics, 
   - **Chartered companies (VOC / early corporate empire)** — Timeline: c. 1602–1799 CE — Share-weighted governance, private armies, “trade” as sovereignty, profit motives reshaping politics.
   - **Fugger-era finance houses (Central Europe)** — Timeline: c. 1450–1600 CE — Credit as control, debt leverage over rulers, industry tied to political outcomes.
 
-## [Araethilion — Veiled Crown Theocracy](factions/araethilion/_overview.md)
+## [[world/factions/araethilion/_overview|Araethilion — Veiled Crown Theocracy]]
 
 - Function:
   - Theocracy centered on a living divine sovereign; access/proximity is power.
@@ -102,7 +102,7 @@ This is a **real-world inspiration map** for each in-world faction: aesthetics, 
   - **Byzantine court ceremony & church-state entanglement** — Timeline: c. 527–1204 CE — Power expressed through controlled access, elaborate hierarchy, doctrine as governance.
   - **Tibet under the Ganden Phodrang (theocratic governance)** — Timeline: c. 1642–1959 CE — Religious legitimacy as state legitimacy, monastic administration, exile politics shaping “orthodoxy.”
 
-## [Calderon Imperium — The Ashen Empire](factions/calderon-imperium/_overview.md)
+## [[world/factions/calderon-imperium/_overview|Calderon Imperium — The Ashen Empire]]
 
 - Function:
   - Centralized imperial order: edicts, permits, census, professional legions, infrastructure.

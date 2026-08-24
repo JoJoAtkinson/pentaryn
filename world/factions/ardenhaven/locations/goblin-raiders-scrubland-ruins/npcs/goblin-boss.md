@@ -1,11 +1,11 @@
 ---
 name: Goblin Boss
 created: 2026-05-21
-last-modified: 2026-08-09
+last_modified: 2026-08-09
 status: active
 location: goblin-raiders-scrubland-ruins
 count: 1
-tags: ["#combat-runner", "#humanoid", "#goblinoid", "#goblin-raiders-scrubland-ruins", "#cr-1"]
+tags: ["combat-runner", "humanoid", "goblinoid", "goblin-raiders-scrubland-ruins", "cr-1"]
 ---
 # Goblin Boss
 

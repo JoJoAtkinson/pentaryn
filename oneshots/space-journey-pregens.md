@@ -8,7 +8,7 @@ tags: [oneshot, space-journey, pregens, 5.5e, level-5]
 
 # Space Journey — the eight pregens
 
-Companion to [space-journey.md](space-journey.md). Eight level 5 D&D 2024 characters, pinned so
+Companion to [[oneshots/space-journey|space-journey.md]]. Eight level 5 D&D 2024 characters, pinned so
 that **no choice is left on the sheet**. Built as Foundry actors in the `Space Journey — Pregens`
 folder of the `space-journey` world.
 
@@ -16,7 +16,7 @@ folder of the `space-journey` world.
 > for Kris and Kyle — were audited and rebuilt on 2026-08-16. Their entries below describe the
 > *original* builds and are out of date: Ballad's prepared list no longer contains Heroism, and
 > Pip's Cunning Strike is no longer pre-resolved to *Trip*. See
-> [space-journey-pc-tuneup.md](space-journey-pc-tuneup.md) for their current sheets, the accuracy
+> [[space-journey-pc-tuneup|space-journey-pc-tuneup.md]] for their current sheets, the accuracy
 > bugs that were fixed, and the DM rulings still outstanding. **The other six entries are accurate.**
 
 > **The no-healing rule was cut.** Party healing, potions, Hit Dice, Second Wind and Lay on Hands

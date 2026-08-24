@@ -1,7 +1,7 @@
 ---
 created: 2026-01-16
-last-modified: 2026-01-16
-tags: ["#world", "#party", "#shardrunners"]
+last_modified: 2026-01-16
+tags: ["world", "party", "shardrunners"]
 status: active
 ---
 # The Shardrunners
@@ -16,10 +16,10 @@ status: active
 | **Alignment / Ethos** | Chaotic Neutral |
 | **Personality Type** | Thrill-seekers (impulsive, rumor-chasing, high variance) |
 | **Level Range** | 2–4 |
-| **Home Base** | [Ardenford](../../factions/ardenhaven/locations/ardenford/ardenford.md) |
-| **Primary Target** | “The next score” (currently sniffing around the [Western Scrubland Ruins](../../factions/ardenhaven/locations/ruins-western-scrubland.md)) |
+| **Home Base** | [[ardenford\|Ardenford]] |
+| **Primary Target** | “The next score” (currently sniffing around the [[ruins-western-scrubland\|Western Scrubland Ruins]]) |
 | **Loot Policy** | Winner’s choice in the moment, then equal split after appraisal (arguments expected) |
-| **Rulebook** | [Party & Member Creation Rules](../_party-creation-rules.md) |
+| **Rulebook** | [[_party-creation-rules\|Party & Member Creation Rules]] |
 
 ## Why They Delve
 
@@ -35,11 +35,11 @@ They want money, but they want the *hit* too: the rush of a sealed door, the sna
 
 | Name | Ancestry | Origin | Class | Level | Alignment | Background | Party Role | Notes |
 |---|---|---|---|---:|---|---|---|---|
-| Cassian | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Sorcerer | 3 | Chaotic Neutral | Gambler | Damage / distraction | Always double-or-nothing |
-| Torford | Human | [Thorndale](../../factions/ardenhaven/locations/thorndale.md) | Rogue | 2 | Chaotic Neutral | Smuggler | Infiltration / getaway | If there's a lock, she's already on it |
-| Fizzbit Tangle | Gnome | [Merrowgate](../../factions/merrowgate/_overview.md) | Artificer | 4 | Chaotic Neutral | Tinkerer | Gear / bankroll | Pays up front, takes a quiet cut |
-| Oakwick | Human | [Calstead](../../factions/ardenhaven/locations/calstead.md) | Cleric | 2 | Lawful Neutral | Village healer | Heals / prevents spirals | The only one who writes plans down |
-| Ug'nak of Rak'thokhar | Orc | [Rakthok](../../factions/rakthok-horde/_overview.md) | Druid | 3 | Chaotic Good | Spirit-seeker | Omens / wards | **Wild card:** hates the greed, needs the access |
+| Cassian | Human | [[world/factions/ardenhaven/_overview\|Ardenhaven]] | Sorcerer | 3 | Chaotic Neutral | Gambler | Damage / distraction | Always double-or-nothing |
+| Torford | Human | [[thorndale\|Thorndale]] | Rogue | 2 | Chaotic Neutral | Smuggler | Infiltration / getaway | If there's a lock, she's already on it |
+| Fizzbit Tangle | Gnome | [[world/factions/merrowgate/_overview\|Merrowgate]] | Artificer | 4 | Chaotic Neutral | Tinkerer | Gear / bankroll | Pays up front, takes a quiet cut |
+| Oakwick | Human | [[calstead\|Calstead]] | Cleric | 2 | Lawful Neutral | Village healer | Heals / prevents spirals | The only one who writes plans down |
+| Ug'nak of Rak'thokhar | Orc | [[world/factions/rakthok-horde/_overview\|Rakthok]] | Druid | 3 | Chaotic Good | Spirit-seeker | Omens / wards | **Wild card:** hates the greed, needs the access |
 
 ### Exceptions & Notes
 
@@ -49,6 +49,6 @@ They want money, but they want the *hit* too: the rush of a sealed door, the sna
 
 ## Related Links
 
-- [Party & Member Creation Rules](../_party-creation-rules.md)
-- [Ardenford](../../factions/ardenhaven/locations/ardenford/ardenford.md)
-- [Western Scrubland Ruins](../../factions/ardenhaven/locations/ruins-western-scrubland.md)
+- [[_party-creation-rules|Party & Member Creation Rules]]
+- [[ardenford|Ardenford]]
+- [[ruins-western-scrubland|Western Scrubland Ruins]]

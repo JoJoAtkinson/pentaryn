@@ -1,7 +1,7 @@
 ---
 created: 2026-03-29
-last-modified: 2026-03-29
-tags: ["#session", "#dm-reference", "#elderholt", "#elders"]
+last_modified: 2026-03-29
+tags: ["session", "dm-reference", "elderholt", "elders"]
 status: active
 ---
 

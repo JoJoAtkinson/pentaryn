@@ -1,15 +1,15 @@
 ---
 created: 2026-05-21
-last-modified: 2026-08-09
+last_modified: 2026-08-09
 status: ready
 location: ruins-western-scrubland
-tags: ["#encounter", "#ardenhaven", "#goblins", "#cr-low", "#goblin-raiders-scrubland-ruins", "#variants"]
+tags: ["encounter", "ardenhaven", "goblins", "cr-low", "goblin-raiders-scrubland-ruins", "variants"]
 ---
 # Goblin Raiders — Western Scrubland Ruins
 
 > A second goblin warband crept into the cave the last band was driven out of. Bigger, better led, and a tenday settled in.
 
-**Where:** the cave lair beneath the [Western Scrubland Ruins](../ruins-western-scrubland.md), ~3 miles SW of Ardenford — the site the party cleared in session 1.
+**Where:** the cave lair beneath the [[ruins-western-scrubland|Western Scrubland Ruins]], ~3 miles SW of Ardenford — the site the party cleared in session 1.
 **Tuned for:** 4–6 level-1 PCs. Same map, **400 XP** in every variant — hard for four, solid for five, comfortable for six. Pick one at the table and swap without re-tuning.
 
 | | Variant | What it is | XP |
@@ -165,7 +165,7 @@ Nit genuinely believes these humans let goblins surrender, **because they did.**
 
 ## v3 — The Fifth Goblin
 
-**3 raiders + 1 boss + 2 stirges — 150 + 200 + 50 = 400 XP.** Use this when the seeded question in the [location file](../ruins-western-scrubland.md) — *does the cave system extend deeper?* — should finally get an answer, and the answer should be small, cold, and level-1 safe.
+**3 raiders + 1 boss + 2 stirges — 150 + 200 + 50 = 400 XP.** Use this when the seeded question in the [[ruins-western-scrubland|location file]] — *does the cave system extend deeper?* — should finally get an answer, and the answer should be small, cold, and level-1 safe.
 
 **There were five. There are four.** And the fire pit in the main chamber is **lit**, and has been lit for four nights, and **goblins have darkvision and do not need fire.**
 
@@ -185,7 +185,7 @@ Cold air comes up it, steadily, which means it opens somewhere else. There is a 
 
 **Two stirges** (CR 1/8, 25 XP each), roosting in the crack above the back passage where the warm air from the fire pit collects. They came up out of the stair on the second night and they have been feeding on whatever holds still. They took the band's last sheep. They have had a go at two of the goblins.
 
-**They are not the goblins' pets and the goblins cannot control them.** Run them exactly as they are run in the [harbour undercave](../harbour-undercave/_overview.md) — see [`npcs/stirge.md`](npcs/stirge.md):
+**They are not the goblins' pets and the goblins cannot control them.** Run them exactly as they are run in the [[world/factions/ardenhaven/locations/harbour-undercave/_overview|harbour undercave]] — see [`npcs/stirge.md`](npcs/stirge.md):
 
 - **Do not roll them into initiative at the start.** They come down mid-fight: the moment the fight reaches the back passage, or the first real shout inside the cave, or the instant the fire pit is knocked over or goes out. `drop_from_the_dark`, one Stealth roll of **1d20+3** for the pair against passive Perceptions, then slot them into the order.
 - **Nearest warm body, whoever it belongs to.** A stirge landing on a goblin is the best beat in the variant. Play it. For one round everybody in the cave has the same problem, and it is very hard to go back to shooting each other afterwards.
@@ -208,7 +208,7 @@ Give them exactly three things at the bottom of the rope and then get them back 
 2. **Moving air**, coming from somewhere past the fall. **It opens somewhere else.** That is the hook, and it is enough.
 3. **The fifth goblin's gear**, at the foot of the stair. No goblin. His knife, his belt, and — in a fold of his shirt where he put it because he knew what he had — **a palm-sized disc of grey metal, smooth, unmarked, faintly and persistently warm.** No aura a level-1 party can read. Nobody in this party can tell them a thing about it.
 
-That disc goes to [Silverbridge Arcana](../ardenford/shops/silverbridge-arcana.md) for appraisal, and the appraisal is a session hook, and that is the correct payoff for a cleared goblin cave in a campaign about going underground for a living. **Do not give it a mechanical effect at level 1.**
+That disc goes to [[silverbridge-arcana|Silverbridge Arcana]] for appraisal, and the appraisal is a session hook, and that is the correct payoff for a cleared goblin cave in a campaign about going underground for a living. **Do not give it a mechanical effect at level 1.**
 
 **And do not answer what happened to the fifth goblin.** Not this session, not with a monster, not with a body. He is not down there and he is not up here. Leave it.
 

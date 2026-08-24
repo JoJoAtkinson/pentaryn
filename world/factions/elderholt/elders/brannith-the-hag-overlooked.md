@@ -1,7 +1,7 @@
 ---
 created: 2025-12-14
-last-modified: 2025-12-16
-tags: ["#npc", "#elder", "#witch", "#elderholt"]
+last_modified: 2025-12-16
+tags: ["npc", "elder", "witch", "elderholt"]
 status: draft
 ---
 
@@ -29,13 +29,13 @@ Brannith lives at the edge of Elderholt in a leaning house where charms clatter 
 
 Witch-children trust her because they are taught that “scary things don’t pretend to be kind” and that “punishment has rules.” Brannith never surprises them, she does exactly what she is supposed to do.
 
-[Elder Ishvar](ishvar-of-prudence.md) cannot stand Brannith, because she cannot regulate her and cannot effectively manipulate her. Ishvar has tried, repeatedly, to bring Brannith under control. Each attempt fails, not because Brannith resists but because she complies too literally.
+[[ishvar-of-prudence|Elder Ishvar]] cannot stand Brannith, because she cannot regulate her and cannot effectively manipulate her. Ishvar has tried, repeatedly, to bring Brannith under control. Each attempt fails, not because Brannith resists but because she complies too literally.
 
 If Ishvar writes a statute, Brannith follows it exactly as written and then enforces everything the statute failed to name. This exposes every flaw: Ishvar shows what the law *permits*, and Brannith immediately becomes the harsh, literal shape of those permissions.
 
 There is an unspoken agreement in council that Ishvar speaks first and Brannith speaks last. Ishvar frames a matter in terms of doctrine and “the greater good”; Brannith then demonstrates what that doctrine looks like when enforced without mercy or interpretation. When the Hag contradicts others after that, the council listens—because they are seeing the end of the road they are about to pave.
 
-The Hag is closest to [Calyrix](calyrix-the-many-minded.md) and may be found talking to her old friend whenever children are nearby.
+The Hag is closest to [[calyrix-the-many-minded|Calyrix]] and may be found talking to her old friend whenever children are nearby.
 
 ## Using Brannith in Play
 

@@ -1,7 +1,7 @@
 ---
 created: 2026-01-17
-last-modified: 2026-01-17
-tags: ["#location", "#ardenhaven", "#livestock", "#village"]
+last_modified: 2026-01-17
+tags: ["location", "ardenhaven", "livestock", "village"]
 status: active
 ---
 
@@ -13,7 +13,7 @@ status: active
 
 | Attribute | Value |
 |---|---|
-| **Region** | [Ardenhaven](../../_overview.md) |
+| **Region** | [[world/factions/ardenhaven/_overview\|Ardenhaven]] |
 | **Type** | Livestock Village |
 | **Population** | ~120 |
 | **Distance from Ardenford** | 8 miles southeast |
@@ -22,7 +22,7 @@ status: active
 
 ## Description
 
-Thorndale sprawls across rolling pastures southeast of [Ardenford](ardenford/ardenford.md), where sheep and cattle graze on grasslands bordered by thorny hedgerows. The village is built around livestock: pens, barns, wool-drying sheds, and a tannery that processes hides into leather.
+Thorndale sprawls across rolling pastures southeast of [[ardenford|Ardenford]], where sheep and cattle graze on grasslands bordered by thorny hedgerows. The village is built around livestock: pens, barns, wool-drying sheds, and a tannery that processes hides into leather.
 
 The air smells of wool, manure, and tanning chemicals—a working smell that marks the village from a mile away. Herders drive their flocks to market in Ardenford weekly, and shearers arrive seasonally to work the spring wool harvest.
 
@@ -30,7 +30,7 @@ The air smells of wool, manure, and tanning chemicals—a working smell that mar
 
 - **Primary Export:** Wool, leather, and livestock (sheep, cattle)
 - **Secondary:** Tallow candles, preserved meat
-- **Trade:** Supplies Ardenford with leather goods and meat; buys grain from [Calstead](calstead.md)
+- **Trade:** Supplies Ardenford with leather goods and meat; buys grain from [[calstead|Calstead]]
 
 ## Notable Locations
 
@@ -52,7 +52,7 @@ The air smells of wool, manure, and tanning chemicals—a working smell that mar
 
 ## Related Links
 
-- [Ardenford](ardenford/ardenford.md)
-- [Ardenhaven Overview](../../_overview.md)
-- [Calstead](calstead.md) (neighboring grain village)
-- [Ironridge](ironridge.md) (mountain mining town)
+- [[ardenford|Ardenford]]
+- [[world/factions/ardenhaven/_overview|Ardenhaven Overview]]
+- [[calstead|Calstead]] (neighboring grain village)
+- [[ironridge|Ironridge]] (mountain mining town)

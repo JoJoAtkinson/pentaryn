@@ -1,7 +1,7 @@
 ---
 created: 2026-08-10
-last-modified: 2026-08-10
-tags: ["#playbook", "#foundry", "#vtt", "#mcp", "#maps"]
+last_modified: 2026-08-10
+tags: ["playbook", "foundry", "vtt", "mcp", "maps"]
 status: draft
 ---
 

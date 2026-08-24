@@ -8,14 +8,14 @@ tags: [oneshot, space-journey, outline, scenes, maps]
 
 # The Twenty-First Death of Ozmandius the Unmade
 
-The linear story the holodeck program runs. Companion to [space-journey.md](space-journey.md).
+The linear story the holodeck program runs. Companion to [[oneshots/space-journey|space-journey.md]].
 
 > **What changed from the main doc.** Players keep **one character all night** — the §7 Re-Casting
 > rule is not used in this version. And Oz no longer wears disguises: **he possesses one NPC per
 > scene.** Everything else in the main doc still applies.
 
 > **🔨 v3 in progress — being rewritten one scene at a time.** v2 drifted away from the holodeck
-> frame in [space-journey.md](space-journey.md) and opened at an inn. It now opens where the main
+> frame in [[oneshots/space-journey|space-journey.md]] and opened at an inn. It now opens where the main
 > doc always said it did: the trophy room, Run 20, the reboot. **All nine scenes are locked. The v2
 > scenes below them are stale and will be reworked in order.** The tell is now the **ring**, not the
 > brand.

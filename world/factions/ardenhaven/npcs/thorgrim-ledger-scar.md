@@ -1,7 +1,7 @@
 ---
 created: 2025-12-31
-last-modified: 2025-12-31
-tags: ["#npc", "#ardenhaven", "#ardenford", "#garhammer", "#dwarf", "#tavern-keeper"]
+last_modified: 2025-12-31
+tags: ["npc", "ardenhaven", "ardenford", "garhammer", "dwarf", "tavern-keeper"]
 status: complete
 ---
 

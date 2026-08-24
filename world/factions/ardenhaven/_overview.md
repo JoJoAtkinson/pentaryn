@@ -12,7 +12,7 @@
 | **Type** | Constitutional Monarchy |
 | **Size** | Regional human realm |
 | **Alignment** | Neutral Good (aspirational) |
-| **Headquarters** | [Ardenford](locations/ardenford.md) |
+| **Headquarters** | [[ardenford\|Ardenford]] |
 | **Founded** | Post-Imperial Wars (exact year TBD) |
 
 ## Symbol & Colors
@@ -74,12 +74,12 @@ Local Sheriffs & Mayors
 
 ## Notable People (NPCs)
 
-- [Elarion Faenwynd](locations/ardenford/concordance-library/archivist-elarian-faenwynd.md) — Elf archivist/translator at the Concordance Library
-- [Branik Ironweld](locations/ardenford/shops/the-anvil-and-oar.md) — Weaponsmith at The Anvil & Oar (Lower Tier)
+- [[archivist-elarian-faenwynd|Elarion Faenwynd]] — Elf archivist/translator at the Concordance Library
+- [[the-anvil-and-oar|Branik Ironweld]] — Weaponsmith at The Anvil & Oar (Lower Tier)
 - [Selise Dawnquill](npcs/selise-dawnquill-silverbridge-arcana.md) — Proprietor of Silverbridge Arcana (Upper Tier)
 - [Hesta Briarvein](npcs/hesta-briarvein-willowglass-apothecary.md) — Alchemist at Willowglass Apothecary (Middle Tier)
-- [Thorgrim Ledger-Scar](npcs/thorgrim-ledger-scar.md) — Dwarven keeper of The Wayward Compass
-- [Vorzug Dakmar'nak](npcs/vorzug-ledger-scar.md) — Orc bridgewright and labor advocate
+- [[thorgrim-ledger-scar|Thorgrim Ledger-Scar]] — Dwarven keeper of The Wayward Compass
+- [[vorzug-ledger-scar|Vorzug Dakmar'nak]] — Orc bridgewright and labor advocate
 
 ## Membership
 
@@ -119,7 +119,7 @@ Taxes, militia service (voluntary but incentivized), jury duty, respect for the 
 
 ## Locations
 
-### [Headquarters — Ardenford](locations/ardenford.md)
+### [[ardenford|Headquarters — Ardenford]]
 River-crossing capital and council seat; symbol of resilience and shared governance.
 
 ### Border Fortresses
@@ -131,11 +131,11 @@ Fertile river valleys, mixed forests, and recovering farmland; contested borders
 ## Allies & Enemies
 
 ### Allies
-- **[Garrok Confederation](../garrok-confederation/_overview.md):** Recent mutual defense treaties; trade and honor pacts
-- **[Merrowgate](../merrowgate/_overview.md):** Trade partner (though Merrowgate plays all sides)
+- **[[world/factions/garrok-confederation/_overview|Garrok Confederation]]:** Recent mutual defense treaties; trade and honor pacts
+- **[[world/factions/merrowgate/_overview|Merrowgate]]:** Trade partner (though Merrowgate plays all sides)
 
 ### Rivals
-- **[Calderon Imperium](../calderon-imperium/_overview.md):** Competing visions of lawful order; shared but tense border
+- **[[world/factions/calderon-imperium/_overview|Calderon Imperium]]:** Competing visions of lawful order; shared but tense border
 
 ### Enemies
 - Bandit networks exploiting weak oversight; internal corruption factions
@@ -203,7 +203,7 @@ A major corruption scandal threatens Council unity; an Imperium incursion tests 
 
 ## Related Links
 
-- [Headquarters — Ardenford](locations/ardenford.md)
-- [Calderon Imperium](../calderon-imperium/_overview.md)
-- [Garrok Confederation](../garrok-confederation/_overview.md)
-- [Merrowgate](../merrowgate/_overview.md)
+- [[ardenford|Headquarters — Ardenford]]
+- [[world/factions/calderon-imperium/_overview|Calderon Imperium]]
+- [[world/factions/garrok-confederation/_overview|Garrok Confederation]]
+- [[world/factions/merrowgate/_overview|Merrowgate]]

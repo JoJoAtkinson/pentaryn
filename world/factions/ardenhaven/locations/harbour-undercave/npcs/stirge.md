@@ -1,11 +1,11 @@
 ---
 name: Stirge
 created: 2026-08-09
-last-modified: 2026-08-09
+last_modified: 2026-08-09
 status: active
 location: harbour-undercave
 count: 3
-tags: ["#combat-runner", "#beast", "#second-wave", "#harbour-undercave", "#ardenford", "#ardenhaven", "#cr-1-8"]
+tags: ["combat-runner", "beast", "second-wave", "harbour-undercave", "ardenford", "ardenhaven", "cr-1-8"]
 ---
 # Stirge
 

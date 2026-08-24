@@ -1,7 +1,7 @@
 ---
 created: 2026-03-29
-last-modified: 2026-03-29
-tags: ["#npc", "#ruler", "#calderon-imperium", "#emperor"]
+last_modified: 2026-03-29
+tags: ["npc", "ruler", "calderon-imperium", "emperor"]
 status: stub
 ---
 
@@ -13,8 +13,8 @@ First Name: Caven
 
 - **Race:** Human
 - **Role:** Emperor of the Calderon Imperium
-- **Location:** [Ironstead](../locations/ironstead.md) — Imperial Throne
-- **Faction:** [Calderon Imperium](../_overview.md)
+- **Location:** [[ironstead|Ironstead]] — Imperial Throne
+- **Faction:** [[world/factions/calderon-imperium/_overview|Calderon Imperium]]
 
 ---
 
@@ -79,5 +79,5 @@ Quintus Calderon is a dynast — he did not seize the throne, he was born to it.
 
 ## Related
 
-- [Calderon Imperium — Overview](../_overview.md)
-- [Ironstead](../locations/ironstead.md)
+- [[world/factions/calderon-imperium/_overview|Calderon Imperium — Overview]]
+- [[ironstead|Ironstead]]

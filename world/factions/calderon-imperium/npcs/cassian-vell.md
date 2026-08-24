@@ -1,7 +1,7 @@
 ---
 created: 2026-01-17
-last-modified: 2026-01-17
-tags: ["#world", "#faction", "#calderon-imperium", "#npc"]
+last_modified: 2026-01-17
+tags: ["world", "faction", "calderon-imperium", "npc"]
 status: active
 ---
 # Cassian Vell (KASS-ee-an VELL)
@@ -12,7 +12,7 @@ status: active
 
 | Attribute | Value |
 |---|---|
-| **Faction** | [Calderon Imperium](../_overview.md) |
+| **Faction** | [[world/factions/calderon-imperium/_overview\|Calderon Imperium]] |
 | **Office** | Censorate field auditor (counter-subversion) |
 | **Ancestry** | Human |
 | **Class / Level** | Rogue 6 (Assassin) |

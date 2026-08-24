@@ -12,7 +12,7 @@
 | **Type** | Imperial Government / Autocracy |
 | **Size** | Continental power |
 | **Alignment** | Lawful Neutral (authoritarian tendencies) |
-| **Headquarters** | [Ironstead](locations/ironstead.md) |
+| **Headquarters** | [[ironstead\|Ironstead]] |
 | **Founded** | The Consolidation Era (exact year TBD) |
 
 ## Symbol & Colors
@@ -64,7 +64,7 @@ Legion Cohorts & Civil Bureaus
 
 ### Key Leaders
 
-#### [Emperor Quintus Calderon](npcs/quintus-calderon.md) (QWIN-tus cal-DAIR-on)
+#### [[quintus-calderon|Emperor Quintus Calderon]] (QWIN-tus cal-DAIR-on)
 - **Title:** Emperor of the Calderon Imperium
 - **Role:** Supreme head of state; final authority on all edicts
 - **Description:** A dynast who governs as the living extension of institutional will — composed, unhurried, impeccably correct
@@ -117,7 +117,7 @@ Tax, service (civil or military), adherence to edicts and inspections, permit re
 
 ## Locations
 
-### [Headquarters — Ironstead](locations/ironstead.md)
+### [[ironstead|Headquarters — Ironstead]]
 The Imperium’s iron seat: straight boulevards, edict basilicas, and parade grounds; open borders under unbending rule.
 
 ### Provincial Capitals
@@ -129,10 +129,10 @@ The core heartlands and annexed marches; recognized borders with the Haven Realm
 ## Allies & Enemies
 
 ### Allies
-- **[Garhammar Trade League](../garhammar-trade-league/_overview.md):** Arms, engines, and arbitration when profitable
+- **[[world/factions/garhammar-trade-league/_overview|Garhammar Trade League]]:** Arms, engines, and arbitration when profitable
 
 ### Rivals
-- **[Ardenhaven](../ardenhaven/_overview.md):** Competing vision of lawful order with shared frontier
+- **[[world/factions/ardenhaven/_overview|Ardenhaven]]:** Competing vision of lawful order with shared frontier
 
 ### Enemies
 - Active insurgencies and outlaw cults; hostile foreign warbands when raids cross borders
@@ -199,6 +199,6 @@ An imperial census reform, an anti-necromancy tribunal showdown, and a brink-of-
 
 ## Related Links
 
-- [Headquarters — Ironstead](locations/ironstead.md)
-- [Garhammar Trade League](../garhammar-trade-league/_overview.md)
-- [Ardenhaven](../ardenhaven/_overview.md)
+- [[ironstead|Headquarters — Ironstead]]
+- [[world/factions/garhammar-trade-league/_overview|Garhammar Trade League]]
+- [[world/factions/ardenhaven/_overview|Ardenhaven]]

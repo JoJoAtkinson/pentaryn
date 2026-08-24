@@ -1,6 +1,6 @@
 ---
 created: 2025-12-31
-tags: ["#quest", "#cr1", "#ardenhaven", "#active"]
+tags: ["quest", "cr1", "ardenhaven", "active"]
 status: active
 ---
 
@@ -36,7 +36,7 @@ They're not overtly hostile—just walking—but they can't be allowed near the 
 
 ## The Encounter
 
-**Run it from:** [Restless Dead — Eastern Valley Battlefield](../../locations/restless-dead-battlefield/_overview.md) — full terrain, tactics, and combat-runner NPCs.
+**Run it from:** [[world/factions/ardenhaven/locations/restless-dead-battlefield/_overview|Restless Dead — Eastern Valley Battlefield]] — full terrain, tactics, and combat-runner NPCs.
 
 **Enemies:** 4 skeletons (use standard skeleton stats)  
 **Terrain:** Rocky valley with scattered burial cairns, elevation changes, loose stones  

@@ -1,7 +1,7 @@
 ---
 created: 2026-01-10
-last-modified: 2026-01-10
-tags: ["#quest", "#cr2", "#ardenford", "#harrowick-keep", "#training", "#contract"]
+last_modified: 2026-01-10
+tags: ["quest", "cr2", "ardenford", "harrowick-keep", "training", "contract"]
 status: active
 ---
 
@@ -11,7 +11,7 @@ status: active
 
 **Work:** Live exercise (unannounced) — ambush and capture a trainee squad (unarmed).  
 **Pay:** 160 gp.  
-**Where:** Harrowick Keep, east-facing service door, first light. Ask for [Rella Dunsford](../../npc/_harrowick-keep_rella-dunsford-training-office.md).
+**Where:** Harrowick Keep, east-facing service door, first light. Ask for [[training-office|Rella Dunsford]].
 
 ---
 

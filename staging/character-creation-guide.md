@@ -1,7 +1,7 @@
 ---
 created: 2026-04-29
-last-modified: 2026-04-29
-tags: ["#staging", "#guide", "#player-resource"]
+last_modified: 2026-04-29
+tags: ["staging", "guide", "player-resource"]
 status: draft
 ---
 

@@ -1,7 +1,7 @@
 ---
 created: 2026-03-29
-last-modified: 2026-03-29
-tags: ["#session", "#dm-reference", "#elderholt"]
+last_modified: 2026-03-29
+tags: ["session", "dm-reference", "elderholt"]
 status: active
 ---
 
@@ -20,7 +20,7 @@ Fast-access notes for running a session in Elderholt. Everything links back to t
 - The Witch-Tree (Silniel) dominates the town square
 - Beneath the town: **the Axiom** — buried runic chamber where the Voice is loudest
 
-> Source: [_overview.md](../../../world/factions/elderholt/_overview.md) ·  [elderholt.md](../../../world/factions/elderholt/elderholt.md)
+> Source: [[world/factions/elderholt/_overview|_overview.md]] ·  [[elderholt|elderholt.md]]
 
 ---
 
@@ -32,7 +32,7 @@ Fast-access notes for running a session in Elderholt. Everything links back to t
 - Safest to access in **ancient ruins** and the **Axiom** beneath Elderstead
 - Young children can hear it passively without cost — but the moment an adult *asks* a child to channel it, the child pays the toll
 
-> Source: [witchs.md](../../../world/factions/elderholt/witchs.md)
+> Source: [[witchs|witchs.md]]
 
 ---
 
@@ -47,7 +47,7 @@ Fast-access notes for running a session in Elderholt. Everything links back to t
 
 Both paths are valid. Same class/spells can end up either way depending on choices.
 
-> Source: [witchs.md](../../../world/factions/elderholt/witchs.md)
+> Source: [[witchs|witchs.md]]
 
 ---
 
@@ -60,7 +60,7 @@ Both paths are valid. Same class/spells can end up either way depending on choic
 | **Hollowed** | Multiple bargains, barely recognizable. Stable enough for leadership. |
 | **Elder** | Decades of bargaining. Living embodiments of sacrifice. 12 remain. |
 
-> Source: [witchs.md](../../../world/factions/elderholt/witchs.md)
+> Source: [[witchs|witchs.md]]
 
 ---
 
@@ -73,7 +73,7 @@ Both paths are valid. Same class/spells can end up either way depending on choic
 | **Ward-Rings** | Layered boundary marks that hide and protect Elderstead |
 | **Brannith's House** | Edge of Elderholt. Leaning, crow-covered. Witch-children visit freely. |
 
-> Source: [elderstead.md](../../../world/factions/elderholt/locations/elderstead.md)
+> Source: [[elderstead|elderstead.md]]
 
 ---
 
@@ -85,7 +85,7 @@ Both paths are valid. Same class/spells can end up either way depending on choic
 - Only existential threats bring the coven to act as one (handful of times per century).
 - Players arriving as outsiders will be received in the central hall **under careful wards**.
 
-> Source: [elderholt.md](../../../world/factions/elderholt/elderholt.md)
+> Source: [[elderholt|elderholt.md]]
 
 ---
 
@@ -108,7 +108,7 @@ Both paths are valid. Same class/spells can end up either way depending on choic
 - Food: root stews, black pine bread with honey, smoked fish
 - Artistic traditions: wood carving (ward-like patterns) and quilting (story-quilts passed through families)
 
-> Source: [unthreaded.md](../../../world/factions/elderholt/unthreaded.md)
+> Source: [[unthreaded|unthreaded.md]]
 
 ---
 
@@ -122,7 +122,7 @@ Both paths are valid. Same class/spells can end up either way depending on choic
 | **Elwen** (deceased) | Marrith's daughter. Deep-witch executed by Marrith for going too far. |
 | **Mara "Centipede"** | Broken-loss witch. Human head on centipede body. Lurks in ruins. Coven doesn't know she exists. |
 
-> Source: [history/](../../../world/factions/elderholt/history/) · [centipede.md](../../../world/factions/elderholt/npcs/broken-loss-witches/centipede.md)
+> Source: [history/](../../../world/factions/elderholt/history/) · [[centipede|centipede.md]]
 
 ---
 
@@ -134,7 +134,7 @@ Both paths are valid. Same class/spells can end up either way depending on choic
 - The witches **sealed the Underdark** — Kharbora killed matron mothers, Taramet forged the door. Key is lost.
 - **Broken/lost witches** exist in the wild — corrupted, monstrous, can sense their own kind. Marrith and Raven handle them.
 
-> Source: [witchs.md](../../../world/factions/elderholt/witchs.md) · [random-facts.md](../../../world/factions/elderholt/random-facts.md) · [history/](../../../world/factions/elderholt/history/)
+> Source: [[witchs|witchs.md]] · [[random-facts|random-facts.md]] · [history/](../../../world/factions/elderholt/history/)
 
 ---
 
@@ -146,4 +146,4 @@ Both paths are valid. Same class/spells can end up either way depending on choic
 - A broken-loss witch is spotted in the wild — send the crow
 - Naelith speaks a prophecy that may or may not be for *now*
 
-> Source: [elderstead.md](../../../world/factions/elderholt/locations/elderstead.md) · [_todos.md](../../../world/factions/elderholt/_todos.md)
+> Source: [[elderstead|elderstead.md]] · [[_todos|_todos.md]]

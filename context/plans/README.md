@@ -29,6 +29,7 @@ lore authoring → [`../world/README.md`](../world/README.md)
 | [`foundry-mcp-fork.md`](foundry-mcp-fork.md) | The forked Foundry MCP bridge (now at `~/Documents/GitHub/foundry-vtt-mcp`) | shipped |
 | [`seafoot-v14-migration.md`](seafoot-v14-migration.md) | 520 v9 map modules → one v14 module | complete |
 | [`world/timeline-refactor.md`](world/timeline-refactor.md) | History TSVs → per-event markdown under `history/` | complete |
+| [`obsidian-first-migration.md`](obsidian-first-migration.md) | Wikilinks + tag-based multi-home, Obsidian alongside VS Code | proposed — nothing executed |
 
 **Adding one:** design a system → write the plan here. Ship it → write the use-doc in its
 domain folder and link back. Don't leave the plan as the only documentation.

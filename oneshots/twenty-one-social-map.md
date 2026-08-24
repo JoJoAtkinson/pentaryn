@@ -9,8 +9,8 @@ tags: [oneshot, space-journey, twenty-one, npcs, relationships, placement, pcs]
 # Twenty-One — the social map
 
 Who knows who, how well, and **how close their tokens should stand.** Companion to
-[twenty-one-background-cast.md](twenty-one-background-cast.md) (who they are) and
-[space-journey-story-outline.md](space-journey-story-outline.md) (where they are).
+[[twenty-one-background-cast|twenty-one-background-cast.md]] (who they are) and
+[[space-journey-story-outline|space-journey-story-outline.md]] (where they are).
 
 > **Why this exists.** A crowd of unrelated named tokens reads as a list. A crowd where six people
 > are standing in three pairs and one man is standing on his own reads as a **town**. This file
@@ -456,7 +456,7 @@ by the UI:
 3. The brass padlock in the coat is the grief beat. Let Pip find it, say nothing, and carry it into
    Scene 3.
 
-**Scene 3 — this is the fix for the climb-rate problem, not a break.** [The tune-up](space-journey-pc-tuneup.md)
+**Scene 3 — this is the fix for the climb-rate problem, not a break.** [[space-journey-pc-tuneup|The tune-up]]
 §7.4 records that *"the mob temperature climbs faster than two mouths can talk it down."* Ballad now
 has warm access to Dagget, Maud, Tobb, Cobb, Aldous, Hanne and Josy, which closes that gap. It does
 **not** pre-solve the scene, because:
@@ -496,6 +496,6 @@ advance what that costs**, because Cress herself is locked at −2 and must stay
 
 - **New NPC?** Give them at least one tie of 3 or better, or deliberately give them none and write
   them into §4.
-- **Contradiction with [twenty-one-background-cast.md](twenty-one-background-cast.md)?** That file
+- **Contradiction with [[twenty-one-background-cast|twenty-one-background-cast.md]]?** That file
   wins on *character*; this file wins on *who stands where*.
 - **New tie invented at the table?** Add the row. The graph is supposed to grow during play.

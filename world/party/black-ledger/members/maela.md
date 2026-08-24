@@ -1,11 +1,7 @@
-```
-
-```
-
 ---
 created: 2026-01-17
-last-modified: 2026-03-14
-tags: ["#world", "#party", "#black-ledger", "#member", "#combat-runner"]
+last_modified: 2026-03-14
+tags: ["world", "party", "black-ledger", "member", "combat-runner"]
 status: active
 ---
 # Maela Thorn
@@ -18,9 +14,9 @@ Pack with Vorgrin, the demon lord
 
 | Attribute               | Value                                              |
 | ----------------------- | -------------------------------------------------- |
-| **Party**         | [The Black Ledger](../_overview.md)                   |
+| **Party**         | [[world/party/black-ledger/_overview\|The Black Ledger]]                   |
 | **Ancestry**      | Human                                              |
-| **Origin**        | [Elderholt](../../../factions/elderholt/_overview.md) |
+| **Origin**        | [[world/factions/elderholt/_overview\|Elderholt]] |
 | **Class / Level** | Warlock 4                                          |
 | **Alignment**     | Lawful Evil                                        |
 | **Background**    | Coven debtor                                       |

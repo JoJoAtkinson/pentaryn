@@ -3,7 +3,7 @@ name: Jorran the Hunt-Captain
 created: 2026-05-11
 status: active
 location: gar-vally
-tags: ["#combat-runner", "#humanoid", "#gnoll", "#gar-vally", "#named", "#cr-1"]
+tags: ["combat-runner", "humanoid", "gnoll", "gar-vally", "named", "cr-1"]
 ---
 # Jorran the Hunt-Captain
 

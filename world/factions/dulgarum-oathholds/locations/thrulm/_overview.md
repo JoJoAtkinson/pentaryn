@@ -2,10 +2,10 @@
 name: Thrulm
 description: "Sealed hollow — a forbidden chamber deep in Dulgarum where something ancient stirs"
 type: location
-tags: ["#world", "#location", "#dulgarum-oathholds", "#sealed", "#forbidden", "#deep"]
+tags: ["world", "location", "dulgarum-oathholds", "sealed", "forbidden", "deep"]
 status: draft
 created: 2026-04-26
-last-modified: 2026-04-26
+last_modified: 2026-04-26
 ---
 
 # Thrulm — The Sealed Hollow
@@ -130,6 +130,6 @@ The beholder is not evil in the way a demon is evil. It is an *absence* made man
 
 ## Related Links
 
-- [Dulgarum Faction Overview](../_overview.md)
-- [Deep Watch](../../../npcs/) — Deep Warden-Prime and the secret war
+- [[world/factions/dulgarum-oathholds/locations/thrulm/_overview|Dulgarum Faction Overview]]
+- [Deep Watch](npcs/) — Deep Warden-Prime and the secret war
 - [Khôr-Bhog-Khôr](../../../lore/khorbhogkhor.md) — The ancient god whose shrine lies here

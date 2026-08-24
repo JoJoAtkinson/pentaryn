@@ -1,7 +1,7 @@
 ---
 created: 2026-01-30
-last-modified: 2026-01-30
-tags: ["#world", "#location", "#ardenhaven", "#deep-fall-ruins", "#derro", "#naming"]
+last_modified: 2026-01-30
+tags: ["world", "location", "ardenhaven", "deep-fall-ruins", "derro", "naming"]
 status: active
 ---
 # Derro Open Names (Dwarven-Style)
@@ -10,7 +10,7 @@ Derro in the Deep Fall Ruins use **dwarven-style** naming (hard consonants, shor
 
 Use these as “grab-and-go” names for hostile derro NPCs.
 
-Named NPC ready for combat: [Dulgor-grum](./npcs/dulgor-grum.md).
+Named NPC ready for combat: [[dulgor-grum|Dulgor-grum]].
 
 ## Names
 

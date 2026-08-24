@@ -1,7 +1,7 @@
 ---
 created: 2026-03-13
-last-modified: 2026-03-14
-tags: ["#event", "#festival", "#ardenhaven", "#ardenford", "#winter", "#history"]
+last_modified: 2026-03-14
+tags: ["event", "festival", "ardenhaven", "ardenford", "winter", "history"]
 status: draft
 ---
 
@@ -184,8 +184,8 @@ The food is working food — warm, portable, no ceremony required:
 
 ## Related Links
 
-- [Ardenford](ardenford.md)
-- [Ardenhaven overview](../../_overview.md)
-- [Wayward Compass](ardenford.md#the-wayward-compass-starting-inn)
-- [Thar'kar Taproom](shops/tharkar-taproom.md)
-- [Silverbridge Arcana](shops/silverbridge-arcana.md)
+- [[ardenford|Ardenford]]
+- [[world/factions/ardenhaven/_overview|Ardenhaven overview]]
+- [[ardenford#the-wayward-compass-starting-inn|Wayward Compass]]
+- [[tharkar-taproom-sherpa-for-hire|Thar'kar Taproom]]
+- [[silverbridge-arcana|Silverbridge Arcana]]

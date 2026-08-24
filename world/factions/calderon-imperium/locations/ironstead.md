@@ -1,7 +1,7 @@
 ---
 created: 2025-12-07
-last-modified: 2025-12-07
-tags: ["#world", "#location", "#important"]
+last_modified: 2025-12-07
+tags: ["world", "location", "important"]
 status: draft
 ---
 
@@ -11,7 +11,7 @@ status: draft
 
 - Culture: Human (Calderon Imperium — The Ashen Empire)
 - Type: Capital city
-- Faction: [Calderon Imperium](../_overview.md)
+- Faction: [[world/factions/calderon-imperium/_overview|Calderon Imperium]]
 
 ## Description
 Ironstead is a city of straight, iron-banded boulevards and regimented districts built in basalt and steel. Parade grounds flank the central edict halls; banners march as often as legions. Everyone understands the bargain: prosperity and order in exchange for absolute obedience to imperial law.

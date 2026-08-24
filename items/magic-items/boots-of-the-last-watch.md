@@ -1,7 +1,7 @@
 ---
 created: 2026-03-14
-last-modified: 2026-03-14
-tags: ["#item", "#magic-item", "#wondrous-item", "#cursed", "#utility"]
+last_modified: 2026-03-14
+tags: ["item", "magic-item", "wondrous-item", "cursed", "utility"]
 status: active
 ---
 

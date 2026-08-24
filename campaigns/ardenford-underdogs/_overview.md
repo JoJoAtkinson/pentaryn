@@ -1,7 +1,7 @@
 ---
 created: 2026-05-02
-last-modified: 2026-05-02
-tags: ["#campaign", "#ardenhaven", "#ardenford", "#underdogs"]
+last_modified: 2026-05-02
+tags: ["campaign", "ardenhaven", "ardenford", "underdogs"]
 status: active
 campaign-slug: ardenford-underdogs
 setting-age: age-of-trade
@@ -12,15 +12,15 @@ hub-location: ardenford
 
 > A handful of no-names with empty pockets, one cheap job, and a city built on top of a graveyard nobody's finished robbing yet.
 
-A campaign for new D&D players, set in [Ardenford](../../world/factions/ardenhaven/locations/ardenford/ardenford.md) — the capital city of the [Ardenhaven](../../world/factions/ardenhaven/_overview.md) realm. The whole story takes place in and below the city: streets, taverns, guildhalls, and the ruins of the lost world the city was built on.
+A campaign for new D&D players, set in [[ardenford|Ardenford]] — the capital city of the [[world/factions/ardenhaven/_overview|Ardenhaven]] realm. The whole story takes place in and below the city: streets, taverns, guildhalls, and the ruins of the lost world the city was built on.
 
 ## Quick facts
 
 |                            |                                                                                                                                                                          |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Age of the world** | [Age of Trade](../../world/ages/history/04277-00-00_age-trade.md) (current era — war is over, coin runs everything)                                                                            |
+| **Age of the world** | [[04277-00-00_age-trade\|Age of Trade]] (current era — war is over, coin runs everything)                                                                            |
 | **Current date**     | ⋈3 (year 3 of the Age of Trade)                                                                                                                                         |
-| **City**             | [Ardenford](../../world/factions/ardenhaven/locations/ardenford/ardenford.md) — capital of Ardenhaven, built atop and around an old Ancient site                           |
+| **City**             | [[ardenford\|Ardenford]] — capital of Ardenhaven, built atop and around an old Ancient site                           |
 | **Starting level**   | 1                                                                                                                                                                        |
 | **Tone**             | Grounded, classical D&D — the monsters are real, the danger is real, but it isn't grimdark. People still drink, gamble, and laugh. The dungeons just*also* kill them. |
 | **Pacing**           | Start tight (delve → recover → spend → delve), open up as the players show what they want                                                                             |
@@ -41,19 +41,19 @@ So you band together. Not because you trust each other yet. Because nobody else 
 
 ## Where it happens
 
-**Hub:** [Thar&#39;kar Taproom](../../world/factions/ardenhaven/locations/ardenford/shops/tharkar-taproom-sherpa-for-hire.md). Eastern edge of the city, dwarven-run, the unofficial place where guides, porters, and underdog crews hang around looking for work. The route board behind the bar lists names, distances, and prices that change with the weather. If you don't have a sponsor, this is where jobs find you — not because anyone hires you here, but because the bar is the kind of place a desperate stranger walks into looking for the cheapest possible help.
+**Hub:** [[tharkar-taproom-sherpa-for-hire|Thar&#39;kar Taproom]]. Eastern edge of the city, dwarven-run, the unofficial place where guides, porters, and underdog crews hang around looking for work. The route board behind the bar lists names, distances, and prices that change with the weather. If you don't have a sponsor, this is where jobs find you — not because anyone hires you here, but because the bar is the kind of place a desperate stranger walks into looking for the cheapest possible help.
 
 **Other Ardenford locations to know about** (the script doesn't need you to memorize these; they exist when you go looking):
 
-- [The Anvil &amp; Oar](../../world/factions/ardenhaven/locations/ardenford/shops/the-anvil-and-oar.md) — gear and weapons.
-- [Willowglass Apothecary](../../world/factions/ardenhaven/locations/ardenford/shops/willowglass-apothecary.md) — potions, salves, etc.
-- [Silverbridge Arcana](../../world/factions/ardenhaven/locations/ardenford/shops/silverbridge-arcana.md) — appraisal, identification, the occasional scroll.
+- [[the-anvil-and-oar|The Anvil &amp; Oar]] — gear and weapons.
+- [[willowglass-apothecary|Willowglass Apothecary]] — potions, salves, etc.
+- [[silverbridge-arcana|Silverbridge Arcana]] — appraisal, identification, the occasional scroll.
 - [Concordance Library](../../world/factions/ardenhaven/locations/ardenford/concordance-library/) — research and lore (when you start finding things you don't understand).
-- [Wayward Compass](../../world/factions/ardenhaven/locations/ardenford/shops/wayward-compass.md), [Leafscript Cabinet](../../world/factions/ardenhaven/locations/ardenford/shops/leafscript-cabinet.md), [The Still Page](../../world/factions/ardenhaven/locations/ardenford/shops/the-still-page.md) — supporting shops as needed.
+- [[wayward-compass|Wayward Compass]], [[leafscript-cabinet|Leafscript Cabinet]], [[the-still-page|The Still Page]] — supporting shops as needed.
 
 **Ruins:** Three known sites in Ardenhaven, plus sealed levels under the city itself.
 
-- [Western Scrubland Ruins](../../world/factions/ardenhaven/locations/ruins-western-scrubland.md) — the most picked-over and best-mapped. Where most low-level crews start.
+- [[ruins-western-scrubland|Western Scrubland Ruins]] — the most picked-over and best-mapped. Where most low-level crews start.
 - [Deep Fall Ruins](../../world/factions/ardenhaven/locations/deep-fall-ruins/) — deeper, more dangerous, contested.
 - [Stone Breach Ruins](../../world/factions/ardenhaven/locations/stone-breach-ruins/) — newer access, less known.
 - **Sealed sub-levels under Ardenford itself** — officially off-limits, occasionally accessible to crews willing to take a risk and a fine.
@@ -64,10 +64,10 @@ These are the established names. Above ground, they're polite — even helpful �
 
 | Crew                                                                 | Ethos           | What they're like in the ruins                                                                                                   |
 | -------------------------------------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| [The Black Ledger](../../world/party/black-ledger/_overview.md)         | Lawful Evil     | Predators with paperwork. Will sell anything, including cursed things. If you have something they want, you have a problem.      |
-| [The Inkbound Charter](../../world/party/inkbound-charter/_overview.md) | Lawful Neutral  | Surveyors. Treat ruins like a job site. Will work*around* you cleanly if you don't mess with their grid.                       |
-| [The Lantern Wardens](../../world/party/lantern-wardens/_overview.md)   | Neutral Good    | Rescuers. They charge — but they'll come pull you out of a hole if you can pay. The closest thing to allies the underdogs have. |
-| [The Shardrunners](../../world/party/shardrunners/_overview.md)         | Chaotic Neutral | Thrill-seekers. They'll race you to a find. Loud, flashy, in debt to dangerous people.                                           |
+| [[world/party/black-ledger/_overview\|The Black Ledger]]         | Lawful Evil     | Predators with paperwork. Will sell anything, including cursed things. If you have something they want, you have a problem.      |
+| [[world/party/inkbound-charter/_overview\|The Inkbound Charter]] | Lawful Neutral  | Surveyors. Treat ruins like a job site. Will work*around* you cleanly if you don't mess with their grid.                       |
+| [[world/party/lantern-wardens/_overview\|The Lantern Wardens]]   | Neutral Good    | Rescuers. They charge — but they'll come pull you out of a hole if you can pay. The closest thing to allies the underdogs have. |
+| [[world/party/shardrunners/_overview\|The Shardrunners]]         | Chaotic Neutral | Thrill-seekers. They'll race you to a find. Loud, flashy, in debt to dangerous people.                                           |
 | [The Compass Edge](../../world/party/the-compass-edge/)                 | (TBD)           | Specialize in pulling other crews out of trouble — for a price.                                                                 |
 
 Players: you'll meet these crews. You'll be hired by some, hunted by others, sometimes both in the same week. Your long game is to become a name like one of theirs.
@@ -90,11 +90,11 @@ When something kills you, it doesn't gloat. It just kills you. Bring rope.
 
 ## Characters
 
-Per the [party creation rules](../../world/party/_party-creation-rules.md), Ardenhaven supports the standard D&D ancestries with one note:
+Per the [[_party-creation-rules|party creation rules]], Ardenhaven supports the standard D&D ancestries with one note:
 
 - **Common** in this region: humans, dwarves, halflings, gnomes.
 - **Uncommon but fine:** orcs (Garrok-origin), tieflings, dragonborn (with a story reason).
-- **Rare:** elves. Most elves come from [Araethilion](../../world/factions/araethilion/_overview.md), an insular realm — playing one means *exile, defector, runaway, or envoy on a personal mission*. Bring a one-line reason and we'll work it into the underdog story (it fits the theme; an exile elf is *exactly* the kind of person nobody else will hire).
+- **Rare:** elves. Most elves come from [[world/factions/araethilion/_overview|Araethilion]], an insular realm — playing one means *exile, defector, runaway, or envoy on a personal mission*. Bring a one-line reason and we'll work it into the underdog story (it fits the theme; an exile elf is *exactly* the kind of person nobody else will hire).
 
 All classes are open. Backgrounds should answer: *why isn't a real crew willing to hire you?* Even one sentence is enough. Examples:
 
@@ -110,7 +110,7 @@ Ardenhaven is a constitutional monarchy ruled by the Council. There are guilds, 
 
 ## The starting hook
 
-A merchant has posted a low-pay, low-danger job at Thar'kar: retrieve a specific small item from a known-safe outer chamber of the [Western Scrubland Ruins](../../world/factions/ardenhaven/locations/ruins-western-scrubland.md). The pay is bad. The job is beneath the established crews — they laughed at the posting and walked. You see a few other people standing around the route board with the same desperate look you have. The dwarf behind the bar reads the names, looks up at all of you, and says: *"Well? You're a crew now or you're not."*
+A merchant has posted a low-pay, low-danger job at Thar'kar: retrieve a specific small item from a known-safe outer chamber of the [[ruins-western-scrubland|Western Scrubland Ruins]]. The pay is bad. The job is beneath the established crews — they laughed at the posting and walked. You see a few other people standing around the route board with the same desperate look you have. The dwarf behind the bar reads the names, looks up at all of you, and says: *"Well? You're a crew now or you're not."*
 
 You're a crew.
 

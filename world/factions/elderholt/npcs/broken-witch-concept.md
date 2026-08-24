@@ -1,7 +1,7 @@
 ---
 created: 2026-01-01
-last-modified: 2026-01-01
-tags: ["#world", "#faction", "#elderholt", "#npc", "#witch", "#deep-witch"]
+last_modified: 2026-01-01
+tags: ["world", "faction", "elderholt", "npc", "witch", "deep-witch"]
 status: concept-development
 ---
 

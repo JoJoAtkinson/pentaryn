@@ -1,7 +1,7 @@
 ---
 created: 2026-01-31
-last-modified: 2026-01-31
-tags: ["#world", "#npc", "#ardenhaven", "#deep-fall-ruins", "#shroom-derro", "#fungus", "#combat", "#dead"]
+last_modified: 2026-01-31
+tags: ["world", "npc", "ardenhaven", "deep-fall-ruins", "shroom-derro", "fungus", "combat", "dead"]
 status: dead
 ---
 # Drakzul-dur (DRAK-zull-door) — Red Spore Leader (Pusher) [KILLED]

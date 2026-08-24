@@ -2,10 +2,10 @@
 name: The Hunger Below (Beholder)
 description: "An eye-creature drawn to the void left by a sealed god; feeds on the absence of divinity"
 type: creature
-tags: ["#npc", "#combat", "#beholder", "#thrulm", "#boss", "#aberration"]
+tags: ["npc", "combat", "beholder", "thrulm", "boss", "aberration"]
 status: active
 created: 2026-04-26
-last-modified: 2026-04-26
+last_modified: 2026-04-26
 ---
 
 # The Hunger Below (Unnamed Beholder)
@@ -204,8 +204,8 @@ Some theories:
 
 ## Related Links
 
-- [Dulgarum Faction Overview](../../_overview.md)
-- [Thrulm Location](../_overview.md)
-- [Deep Watch Derro](./deep-watch-derro.md)
-- [Thrall Derro](./thrall-derro.md)
-- [Shrine-Touched Derro](./shrine-touched-derro.md)
+- [[world/factions/dulgarum-oathholds/locations/thrulm/_overview|Dulgarum Faction Overview]]
+- [[world/factions/dulgarum-oathholds/locations/thrulm/_overview|Thrulm Location]]
+- [[deep-watch-derro|Deep Watch Derro]]
+- [[thrall-derro|Thrall Derro]]
+- [[shrine-touched-derro|Shrine-Touched Derro]]

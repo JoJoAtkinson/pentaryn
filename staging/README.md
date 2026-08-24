@@ -1,7 +1,7 @@
 ---
 created: 2026-04-27
-last-modified: 2026-04-27
-tags: ["#staging", "#drafts"]
+last_modified: 2026-04-27
+tags: ["staging", "drafts"]
 status: meta
 ---
 

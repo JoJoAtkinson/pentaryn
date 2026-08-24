@@ -1,7 +1,7 @@
 ---
 created: 2025-12-07
-last-modified: 2025-12-07
-tags: ["#world", "#location"]
+last_modified: 2025-12-07
+tags: ["world", "location"]
 status: draft
 ---
 
@@ -11,7 +11,7 @@ status: draft
 
 - Culture: Orc (Rakthok Horde)
 - Type: Capital stronghold
-- Faction: [Rakthok-Horde](../_overview.md)
+- Faction: [[world/factions/rakthok-horde/_overview|Rakthok-Horde]]
 
 ## Description
 Rakthok’s bone-marked palisades and omen towers stand over scarred plains. Vision Councils convene to name Chosen Warlords when threats loom.

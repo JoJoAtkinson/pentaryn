@@ -1,7 +1,7 @@
 ---
 created: 2026-01-10
-last-modified: 2026-01-10
-tags: ["#world", "#location", "#shop", "#ardenford", "#elven", "#dwarf"]
+last_modified: 2026-01-10
+tags: ["world", "location", "shop", "ardenford", "elven", "dwarf"]
 status: draft
 ---
 
@@ -18,7 +18,7 @@ What makes the place memorable isn’t the wares so much as the proprietor’s d
 ## Proprietors
 
 ### Khorin Bar’dur (KOH-rin BAR-door)
-A native of Ardenford with family ties to the [Dulgarum Oathholds](../../../dulgarum-oathholds/_overview.md), Khorin is a stout, bright-eyed dwarf with ink-stained fingers and the excited cadence of a lecturer who *finally* found someone willing to listen. He collects elven work the way others collect coins: with attention, record-keeping, and a kind of reverence.
+A native of Ardenford with family ties to the [[world/factions/dulgarum-oathholds/_overview|Dulgarum Oathholds]], Khorin is a stout, bright-eyed dwarf with ink-stained fingers and the excited cadence of a lecturer who *finally* found someone willing to listen. He collects elven work the way others collect coins: with attention, record-keeping, and a kind of reverence.
 
 Khorin isn’t trying to be elven, and he isn’t infatuated with elves as people. He’s fascinated with the *culture*: the language’s precision, the craft traditions, the way even mundane objects are designed with intent.
 
@@ -53,6 +53,6 @@ Thessa greets people with a look that says: *be polite, buy something, don’t e
 
 ## Related Links
 
-- [Ardenford](ardenford.md)
-- [The Concordance Library](ardenford.md#the-concordance-library)
-- [Elarion Faenwynd](../../npc/elarian-faenwynd.md)
+- [[ardenford|Ardenford]]
+- [[ardenford#the-concordance-library|The Concordance Library]]
+- [[archivist-elarian-faenwynd|Elarion Faenwynd]]

@@ -1,7 +1,7 @@
 ---
 created: 2026-01-17
-last-modified: 2026-03-14
-tags: ["#world", "#party", "#black-ledger", "#member", "#combat-runner"]
+last_modified: 2026-03-14
+tags: ["world", "party", "black-ledger", "member", "combat-runner"]
 status: active
 ---
 # Vessa Cane
@@ -12,9 +12,9 @@ status: active
 
 | Attribute | Value |
 |---|---|
-| **Party** | [The Black Ledger](../_overview.md) |
+| **Party** | [[world/party/black-ledger/_overview\|The Black Ledger]] |
 | **Ancestry** | Human |
-| **Origin** | [Merrowgate](../../../factions/merrowgate/_overview.md) |
+| **Origin** | [[world/factions/merrowgate/_overview\|Merrowgate]] |
 | **Class / Level** | Rogue 5 |
 | **Alignment** | Lawful Evil |
 | **Background** | Guild fixer |

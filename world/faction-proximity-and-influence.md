@@ -1,7 +1,7 @@
 ---
 created: 2025-12-22
-last-modified: 2025-12-22
-tags: ["#world", "#factions", "#geography", "#politics", "#reference"]
+last_modified: 2025-12-22
+tags: ["world", "factions", "geography", "politics", "reference"]
 status: draft
 ---
 

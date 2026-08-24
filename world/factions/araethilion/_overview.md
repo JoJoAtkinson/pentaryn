@@ -12,7 +12,7 @@
 | **Type**         | Theocratic Autocracy                        |
 | **Size**         | Regional elven power                        |
 | **Alignment**    | Lawful Neutral (with tyrannical undertones) |
-| **Headquarters** | [Aeralithil](locations/aeralithil.md)       |
+| **Headquarters** | [[aeralithil\|Aeralithil]]       |
 | **Founded**      | The Age of First Song (mythic era)          |
 
 ## Symbol & Colors
@@ -33,7 +33,7 @@ Araethilene settlements are shaped with the mountains rather than carved from th
 
 ### Capital — Aeralithil
 
-From afar, [Aeralithil](locations/aeralithil.md) is announced by a vast tower rising where forest meets stone. Its lower reaches are partially carved into the mountainside, anchoring it to the land, but its form rejects traditional elven design: the tower is Elaerith’s, and its architecture is treated as godly rather than elven—authority made manifest.
+From afar, [[aeralithil|Aeralithil]] is announced by a vast tower rising where forest meets stone. Its lower reaches are partially carved into the mountainside, anchoring it to the land, but its form rejects traditional elven design: the tower is Elaerith’s, and its architecture is treated as godly rather than elven—authority made manifest.
 
 ### Borders & Contrast
 
@@ -143,7 +143,7 @@ Attend seasonal rites and civic ceremonies, serve when summoned to temple or cou
 
 ## Locations
 
-### [Headquarters — Aeralithil](locations/aeralithil.md)
+### [[aeralithil|Headquarters — Aeralithil]]
 
 Sacred heart-city beneath the Veiled Crown; living temples and songwoven halls mask hidden rites.
 
@@ -159,7 +159,7 @@ Ancient forests and river valleys; borders maintained by natural wards and Vine-
 
 ### Allies
 
-- **[Merrowgate](../merrowgate/_overview.md):** Trade partner for enchanted goods
+- **[[world/factions/merrowgate/_overview|Merrowgate]]:** Trade partner for enchanted goods
 
 ### Rivals
 
@@ -245,6 +245,6 @@ A seer’s prophecy reaches critical mass; an inner-ring faction debates looseni
 
 ## Related Links
 
-- [Headquarters — Aeralithil](locations/aeralithil.md)
-- [The Living God — Elaerith](./the-living-god.md)
-- [Merrowgate](../merrowgate/_overview.md)
+- [[aeralithil|Headquarters — Aeralithil]]
+- [[the-living-god|The Living God — Elaerith]]
+- [[world/factions/merrowgate/_overview|Merrowgate]]

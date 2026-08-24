@@ -3,7 +3,7 @@ name: Aelric Frostweaver
 created: 2026-05-10
 status: active
 location: mountin-pass
-tags: ["#combat-runner", "#humanoid", "#wizard", "#cold", "#mountin-pass", "#cr-3", "#ally-of-glacier-stalker"]
+tags: ["combat-runner", "humanoid", "wizard", "cold", "mountin-pass", "cr-3", "ally-of-glacier-stalker"]
 ---
 # Aelric Frostweaver
 

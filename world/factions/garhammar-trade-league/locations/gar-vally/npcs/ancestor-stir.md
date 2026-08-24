@@ -3,7 +3,7 @@ name: Ancestor-Stir
 created: 2026-05-11
 status: active
 location: gar-vally
-tags: ["#combat-runner", "#undead", "#gnoll", "#gar-vally", "#secret", "#cr-4"]
+tags: ["combat-runner", "undead", "gnoll", "gar-vally", "secret", "cr-4"]
 ---
 # Ancestor-Stir
 

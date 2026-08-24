@@ -1,7 +1,7 @@
 ---
 created: 2026-01-16
-last-modified: 2026-01-16
-tags: ["#world", "#party", "#lantern-wardens"]
+last_modified: 2026-01-16
+tags: ["world", "party", "lantern-wardens"]
 status: active
 ---
 # The Lantern Wardens
@@ -16,10 +16,10 @@ status: active
 | **Alignment / Ethos** | Neutral Good |
 | **Personality Type** | Caretakers (service-first, risk-aware) |
 | **Level Range** | 2–4 |
-| **Home Base** | [Ardenford](../../factions/ardenhaven/locations/ardenford/ardenford.md) |
-| **Primary Target** | [Western Scrubland Ruins](../../factions/ardenhaven/locations/ruins-western-scrubland.md) and nearby foundations |
+| **Home Base** | [[ardenford\|Ardenford]] |
+| **Primary Target** | [[ruins-western-scrubland\|Western Scrubland Ruins]] and nearby foundations |
 | **Loot Policy** | Equal shares; 10% “lantern tithe” for rope/lamps/medkits; no cursed-item sales to civilians |
-| **Rulebook** | [Party & Member Creation Rules](../_party-creation-rules.md) |
+| **Rulebook** | [[_party-creation-rules\|Party & Member Creation Rules]] |
 
 ## Why They Delve
 
@@ -35,11 +35,11 @@ They want coin like anyone else, but their pitch is *public safety*: clear hazar
 
 | Name | Ancestry | Origin | Class | Level | Alignment | Background | Party Role | Notes |
 |---|---|---|---|---:|---|---|---|---|
-| Wolfridge | Human | [Ironridge](../../factions/ardenhaven/locations/ironridge.md) | Fighter | 3 | Neutral Good | Mine guard | Captain / shield | Practical, steady under pressure |
-| Brightford | Human | [Ardenhaven](../../factions/ardenhaven/_overview.md) | Cleric | 2 | Lawful Good | Acolyte | Healer / mediator | Believes "loot is fine if it saves lives" |
-| Khargrim-dun | Dwarf | [Dulgarum](../../factions/dulgarum-oathholds/_overview.md) | Fighter | 3 | Lawful Neutral | Oathbound guard | Front line / logistics | Treats the vow like a contract |
-| Pipwick Thistle | Gnome | [Merrowgate](../../factions/merrowgate/_overview.md) | Rogue | 2 | Chaotic Good | Locksmith-urchin | Scout / locks | Talks fast; hands faster |
-| Lucan Varro | Human | [Calderon Imperium](../../factions/calderon-imperium/_overview.md) | Wizard | 4 | Lawful Neutral | Registry clerk (defector) | Arcana / translation | **Wild card:** disciplined, guarded, useful (Calderon naming) |
+| Wolfridge | Human | [[ironridge\|Ironridge]] | Fighter | 3 | Neutral Good | Mine guard | Captain / shield | Practical, steady under pressure |
+| Brightford | Human | [[world/factions/ardenhaven/_overview\|Ardenhaven]] | Cleric | 2 | Lawful Good | Acolyte | Healer / mediator | Believes "loot is fine if it saves lives" |
+| Khargrim-dun | Dwarf | [[world/factions/dulgarum-oathholds/_overview\|Dulgarum]] | Fighter | 3 | Lawful Neutral | Oathbound guard | Front line / logistics | Treats the vow like a contract |
+| Pipwick Thistle | Gnome | [[world/factions/merrowgate/_overview\|Merrowgate]] | Rogue | 2 | Chaotic Good | Locksmith-urchin | Scout / locks | Talks fast; hands faster |
+| Lucan Varro | Human | [[world/factions/calderon-imperium/_overview\|Calderon Imperium]] | Wizard | 4 | Lawful Neutral | Registry clerk (defector) | Arcana / translation | **Wild card:** disciplined, guarded, useful (Calderon naming) |
 
 ### Exceptions & Notes
 
@@ -49,6 +49,6 @@ They want coin like anyone else, but their pitch is *public safety*: clear hazar
 
 ## Related Links
 
-- [Party & Member Creation Rules](../_party-creation-rules.md)
-- [Ardenford](../../factions/ardenhaven/locations/ardenford/ardenford.md)
-- [Western Scrubland Ruins](../../factions/ardenhaven/locations/ruins-western-scrubland.md)
+- [[_party-creation-rules|Party & Member Creation Rules]]
+- [[ardenford|Ardenford]]
+- [[ruins-western-scrubland|Western Scrubland Ruins]]

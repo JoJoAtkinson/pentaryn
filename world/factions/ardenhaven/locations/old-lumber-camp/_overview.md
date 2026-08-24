@@ -1,15 +1,15 @@
 ---
 created: 2026-08-09
-last-modified: 2026-08-09
+last_modified: 2026-08-09
 status: ready
 location: ardenhaven
-tags: ["#encounter", "#ardenhaven", "#spiders", "#cr-low", "#old-lumber-camp"]
+tags: ["encounter", "ardenhaven", "spiders", "cr-low", "old-lumber-camp"]
 ---
 # The Old Lumber Camp — Spiders
 
 > Three miles south, forest road past Miller's Creek. The cart track comes out of the trees and the wall is right there — a ring of stacked logs twice a man's height, gate hanging open, nobody on it. Nothing has been cut here in three weeks. The chimney is still smoking.
 
-**Where:** Gareth Thorne's abandoned lumber camp in the southern forest, ~3 miles from Ardenford. Quest: [Spider Lair](../../quests/writ-board-cr1/spider-lair-cr1.md), posted by forester **Gareth Thorne** — 80gp, *"Lost two workers already. Need the camp cleared. That's it."*
+**Where:** Gareth Thorne's abandoned lumber camp in the southern forest, ~3 miles from Ardenford. Quest: [[spider-lair-cr1|Spider Lair]], posted by forester **Gareth Thorne** — 80gp, *"Lost two workers already. Need the camp cleared. That's it."*
 **Map:** Roll20 page **"The Old Lumber Camp — Spiders"**, 50×50 squares at 5 ft (250 ft × 250 ft). Palisade ring, stone bunkhouse dead centre, sawpits, log piles, timber stacks, cart road in from the treeline.
 **Tuned for:** 4–6 level-1 PCs. **1 giant spider + 2 giant wolf spiders = 300 XP** — Moderate for four, Low for six.
 

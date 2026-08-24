@@ -1,7 +1,7 @@
 ---
 created: 2025-12-14
-last-modified: 2025-12-14
-tags: ["#world", "#faction", "#rakthok-horde", "#tribe"]
+last_modified: 2025-12-14
+tags: ["world", "faction", "rakthok-horde", "tribe"]
 status: draft
 ---
 
@@ -41,5 +41,5 @@ The people of Kuldrak have a longstanding rivalry with the Dakmar'nak, a dispute
 
 ## Related Links
 
-- [Rakthok Horde](../_overview.md)
-- [Dakmar'nak Tribe](./dakmarnak.md)
+- [[world/factions/rakthok-horde/_overview|Rakthok Horde]]
+- [[dakmarnak|Dakmar'nak Tribe]]

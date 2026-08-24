@@ -12,7 +12,7 @@
 | **Type** | Guild/Religious Order/Thieves' Guild/Military/Government/etc. |
 | **Size** | Small/Medium/Large/Regional/Continental |
 | **Alignment** | Typical alignment |
-| **Headquarters** | [Location](locations/location-name.md) |
+| **Headquarters** | [[location-name\|Location]] |
 | **Founded** | Year/Era |
 
 ## Symbol & Colors
@@ -62,12 +62,12 @@ Regular Members
 
 ### Key Leaders
 
-#### [Leader Name](../characters/npcs/leader-name.md)
+#### [[leader-name|Leader Name]]
 - **Title:** Supreme Leader/Guildmaster/etc.
 - **Role:** What they do
 - **Description:** Brief description
 
-#### [Lieutenant Name](../characters/npcs/lieutenant-name.md)
+#### [[lieutenant-name|Lieutenant Name]]
 - **Title:** 
 - **Role:** 
 - **Description:** 
@@ -102,7 +102,7 @@ What is expected of members.
 
 ### Magical
 - **Spellcasters:** Number and power level
-- **Artifacts:** [Important Items](../items/artifacts/item-name.md)
+- **Artifacts:** [[item-name|Important Items]]
 
 ### Political
 - **Influence:** Areas of political power
@@ -110,10 +110,10 @@ What is expected of members.
 
 ## Locations
 
-### [Headquarters](locations/headquarters-name.md)
+### [[headquarters-name|Headquarters]]
 Description of main base.
 
-### [Outpost Name](locations/outpost-name.md)
+### [[outpost-name|Outpost Name]]
 Description of secondary location.
 
 ### Territory
@@ -122,15 +122,15 @@ Regions where the faction has presence or control.
 ## Allies & Enemies
 
 ### Allies
-- **[Faction Name](../faction-name/_overview.md):** Nature of alliance
+- **[[world/factions/faction-name/_overview|Faction Name]]:** Nature of alliance
 - 
 
 ### Rivals
-- **[Faction Name](../faction-name/_overview.md):** Source of rivalry
+- **[[world/factions/faction-name/_overview|Faction Name]]:** Source of rivalry
 - 
 
 ### Enemies
-- **[Faction Name](../faction-name/_overview.md):** Reason for enmity
+- **[[world/factions/faction-name/_overview|Faction Name]]:** Reason for enmity
 - 
 
 ## Reputation
@@ -158,11 +158,11 @@ Active initiatives or campaigns.
 ## Quests & Involvement
 
 ### Quests Offered
-- [Quest Name](../quests/active/quest-name.md)
+- [[quest-name|Quest Name]]
 - 
 
 ### Related Quests
-- [Quest Name](../quests/active/quest-name.md)
+- [[quest-name|Quest Name]]
 - 
 
 ## Player Faction Reputation
@@ -171,7 +171,7 @@ Track party standing with this faction.
 
 | Character | Rank | Reputation | Notes |
 |-----------|------|------------|-------|
-| [Name](../characters/player-characters/name.md) | | Friendly/Neutral/Hostile | |
+| [[name\|Name]] | | Friendly/Neutral/Hostile | |
 | | | | |
 
 ### Reputation Effects
@@ -201,8 +201,8 @@ Long-term story arcs involving this faction.
 
 ## Related Links
 
-- [Leader](../characters/npcs/leader-name.md)
-- [Headquarters](../locations/headquarters-name.md)
-- [Related Quest](../quests/active/quest-name.md)
-- [Allied Faction](faction-name.md)
-- [Enemy Faction](faction-name.md)
+- [[leader-name|Leader]]
+- [[headquarters-name|Headquarters]]
+- [[quest-name|Related Quest]]
+- [[faction-name|Allied Faction]]
+- [[faction-name|Enemy Faction]]

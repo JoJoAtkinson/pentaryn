@@ -1,7 +1,7 @@
 ---
 created: 2026-01-31
-last-modified: 2026-01-31
-tags: ["#world", "#npc", "#ardenhaven", "#deep-fall-ruins", "#tower", "#wizard", "#combat"]
+last_modified: 2026-01-31
+tags: ["world", "npc", "ardenhaven", "deep-fall-ruins", "tower", "wizard", "combat"]
 status: draft
 ---
 # Ivar Calder (EYE-var CAL-der) — Tower Scribe of “Acceptable” Cruelty

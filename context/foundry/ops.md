@@ -1,7 +1,7 @@
 ---
 created: 2026-08-13
-last-modified: 2026-08-15
-tags: ["#playbook", "#foundry", "#vtt", "#ops", "#onedrive", "#secrets"]
+last_modified: 2026-08-15
+tags: ["playbook", "foundry", "vtt", "ops", "onedrive", "secrets"]
 status: active
 ---
 

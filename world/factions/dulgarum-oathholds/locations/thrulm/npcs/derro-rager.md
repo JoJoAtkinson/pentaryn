@@ -2,10 +2,10 @@
 name: Derro Rager
 description: "Melee tank; draws aggro and absorbs punishment"
 type: creature
-tags: ["#npc", "#combat", "#derro", "#thrulm", "#melee", "#tank"]
+tags: ["npc", "combat", "derro", "thrulm", "melee", "tank"]
 status: active
 created: 2026-04-26
-last-modified: 2026-04-26
+last_modified: 2026-04-26
 ---
 
 # Derro Rager (Melee Tank)
@@ -85,4 +85,4 @@ A derro pumped with madness-born strength. They charge into combat, soak hits me
 
 ## Related Links
 
-- [Thrulm Location](../_overview.md)
+- [[world/factions/dulgarum-oathholds/locations/thrulm/_overview|Thrulm Location]]

@@ -1,7 +1,7 @@
 ---
 created: 2026-03-14
-last-modified: 2026-03-14
-tags: ["#item", "#magic-item", "#wondrous-item", "#ancient", "#attunement"]
+last_modified: 2026-03-14
+tags: ["item", "magic-item", "wondrous-item", "ancient", "attunement"]
 ---
 # Velaravos (veh-lah-RAH-vohs) Compression Band
 
@@ -202,5 +202,5 @@ This is an ancient tool with horrifying side effects, not a cartoon execution gi
 
 ## Related Links
 
-- [Calendar &amp; Reckoning of the Fall](../../world/calendar-reckoning-of-the-fall.md)
-- [Magic Items](../README.md)
+- [[calendar-reckoning-of-the-fall|Calendar &amp; Reckoning of the Fall]]
+- [[items/README|Magic Items]]

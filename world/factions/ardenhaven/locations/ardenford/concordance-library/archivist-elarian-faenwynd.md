@@ -1,7 +1,7 @@
 ---
 created: 2026-01-01
-last-modified: 2026-01-01
-tags: ["#npc", "#character", "#elf", "#ardenhaven", "#ardenford", "#concordance-library", "#araethilion"]
+last_modified: 2026-01-01
+tags: ["npc", "character", "elf", "ardenhaven", "ardenford", "concordance-library", "araethilion"]
 status: draft
 ---
 
@@ -19,8 +19,8 @@ An elven archivist and quiet political operator embedded in Ardenford’s Concor
 | **Race** | High Elf |
 | **Role** | Archivist / translator / discreet courier |
 | **Alignment** | Neutral Good |
-| **Location** | [Ardenford](../locations/ardenford.md) (Concordance Library, Upper Tier) |
-| **Affiliation** | [Araethilion](../../araethilion/_overview.md); Ardenhaven (guest scholar, charter-recognized) |
+| **Location** | [[ardenford\|Ardenford]] (Concordance Library, Upper Tier) |
+| **Affiliation** | [[world/factions/araethilion/_overview\|Araethilion]]; Ardenhaven (guest scholar, charter-recognized) |
 | **Languages** | Elvish (fluent), Common (fluent), Draconic (reading), Celestial (basic) |
 
 ## Appearance
@@ -54,6 +54,6 @@ If the Council learns this, it becomes politics. If Araethilion learns it, it be
 
 ## Related Links
 
-- [Ardenford](../locations/ardenford.md)
-- [Ardenhaven](../_overview.md)
-- [Araethilion](../../araethilion/_overview.md)
+- [[ardenford|Ardenford]]
+- [[world/factions/ardenhaven/_overview|Ardenhaven]]
+- [[world/factions/araethilion/_overview|Araethilion]]

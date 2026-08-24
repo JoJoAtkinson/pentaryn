@@ -1,7 +1,7 @@
 ---
 created: 2026-08-21
-last-modified: 2026-08-21
-tags: ["#automation", "#foundry", "#launchd"]
+last_modified: 2026-08-21
+tags: ["automation", "foundry", "launchd"]
 status: active
 ---
 

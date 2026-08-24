@@ -3,7 +3,7 @@ name: Matron of the Valley
 created: 2026-05-11
 status: active
 location: gar-vally
-tags: ["#combat-runner", "#humanoid", "#gnoll", "#gar-vally", "#leader", "#vessel", "#cr-3"]
+tags: ["combat-runner", "humanoid", "gnoll", "gar-vally", "leader", "vessel", "cr-3"]
 ---
 # Matron of the Valley
 

@@ -2,7 +2,7 @@ Player question to the elder witches:
 
 Where should Marwen say she is from if asked in the wider world? Is it okay to say she is from Elderholt or should she lie?
 
-[Brannith](../elders/brannith-the-hag-overlooked.md), [Ishvar](../elders/ishvar-of-prudence.md), [Taramet](../elders/taramet-the-forge.md), [Raven](../elders/raven-the-vital-ascendant.md), [Marrith](../elders/marrith-the-ashen-measure.md).
+[[brannith-the-hag-overlooked|Brannith]], [[ishvar-of-prudence|Ishvar]], [[taramet-the-forge|Taramet]], [[raven-the-vital-ascendant|Raven]], [[marrith-the-ashen-measure|Marrith]].
 
 
 ## Brannith's Advice

@@ -1,11 +1,11 @@
 ---
 name: Zombie
 created: 2026-08-09
-last-modified: 2026-08-09
+last_modified: 2026-08-09
 status: active
 location: restless-dead-battlefield
 count: 1
-tags: ["#combat-runner", "#undead", "#variant", "#restless-dead-battlefield", "#ardenhaven", "#cr-1-4"]
+tags: ["combat-runner", "undead", "variant", "restless-dead-battlefield", "ardenhaven", "cr-1-4"]
 ---
 # Zombie
 
@@ -39,7 +39,7 @@ tags: ["#combat-runner", "#undead", "#variant", "#restless-dead-battlefield", "#
 
 ## Who it was
 
-A **Calderon** soldier, not an Ardenhaven one — the wrong side of the field, and the wrong uniform to be lying among the Ridgeward Battalion's cairns. Enough of the coat is left to read the cut of it. If [Corwin](../_overview.md) and the other three are walking home, this one is not: it is only walking.
+A **Calderon** soldier, not an Ardenhaven one — the wrong side of the field, and the wrong uniform to be lying among the Ridgeward Battalion's cairns. Enough of the coat is left to read the cut of it. If [[world/factions/ardenhaven/locations/restless-dead-battlefield/_overview|Corwin]] and the other three are walking home, this one is not: it is only walking.
 
 Nobody laid a cairn over him a hundred and twenty-seven years ago, and that is not an accident. If the party asks why the four are gentle and the fifth is not, the honest DM answer is that nobody knows — but the field knows who it buried and who it didn't.
 

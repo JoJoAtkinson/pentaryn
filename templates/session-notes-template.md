@@ -7,7 +7,7 @@
 
 ## Party Members Present
 
-- [Character Name](../characters/player-characters/character-name.md) - Player Name
+- [[character-name|Character Name]] - Player Name
 - 
 - 
 
@@ -19,7 +19,7 @@ Brief overview of what happened this session (2-3 sentences).
 
 ### Part 1: [Title/Scene Name]
 
-**Location:** [Location Name](../../world/factions/region-name/locations/location-name.md)
+**Location:** [[location-name|Location Name]]
 
 What happened in this part of the session. Include:
 - Dialogue and interactions
@@ -47,24 +47,24 @@ Continue the narrative...
 
 ## NPCs Met
 
-- **[NPC Name](../characters/npcs/npc-name.md):** How the party interacted with them
+- **[[npc-name|NPC Name]]:** How the party interacted with them
 - 
 
 ## Locations Visited
 
-- **[Location Name](../../world/factions/region-name/locations/location-name.md):** What happened there
+- **[[location-name|Location Name]]:** What happened there
 - 
 
 ## Quests Updated
 
 ### New Quests
-- **[Quest Name](../quests/active/quest-name.md):** How it was obtained
+- **[[quest-name|Quest Name]]:** How it was obtained
 
 ### Progressed Quests
-- **[Quest Name](../quests/active/quest-name.md):** Progress made
+- **[[quest-name|Quest Name]]:** Progress made
 
 ### Completed Quests
-- **[Quest Name](../quests/completed/quest-name.md):** How it was completed
+- **[[quest-name|Quest Name]]:** How it was completed
 - **Rewards:** 
 
 ## Loot & Rewards
@@ -119,6 +119,6 @@ Private notes about how the session went, what worked, what didn't, future plans
 
 ## Related Links
 
-- [Previous Session](session-XX-YYYY-MM-DD.md)
-- [Next Session](session-XX-YYYY-MM-DD.md)
-- [Campaign Home](../../README.md)
+- [[session-XX-YYYY-MM-DD|Previous Session]]
+- [[session-XX-YYYY-MM-DD|Next Session]]
+- [[README|Campaign Home]]

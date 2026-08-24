@@ -1,7 +1,7 @@
 ---
 created: 2026-08-22
-last-modified: 2026-08-23
-tags: ["#playbook", "#foundry", "#vtt", "#npcs", "#design", "#ui"]
+last_modified: 2026-08-23
+tags: ["playbook", "foundry", "vtt", "npcs", "design", "ui"]
 status: shipped — 0.10.0, verified in play as GM and as a player; iteration 3 (dialog direction inversion + link-by-identity reverse side) proposed, in build; iteration 4 (GM-only inbound view on the sheet) proposed — data layer landed, renderer specced; the open disguise question resolved 2026-08-23 → foundry-disguise.md
 ---
 

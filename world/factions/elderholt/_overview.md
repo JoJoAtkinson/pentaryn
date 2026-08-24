@@ -1,7 +1,7 @@
 ---
 created: 2025-12-07
-last-modified: 2025-12-15
-tags: ["#world", "#faction", "#elderholt", "#lore"]
+last_modified: 2025-12-15
+tags: ["world", "faction", "elderholt", "lore"]
 status: active
 ---
 
@@ -21,7 +21,7 @@ status: active
 | **Type** | Hidden coven polity / witch enclave |
 | **Size** | Micro-realm (~500 souls) |
 | **Alignment** | True Neutral (protective, terrifying) |
-| **Headquarters** | [Elderstead](locations/elderstead.md) |
+| **Headquarters** | [[elderstead\|Elderstead]] |
 | **Founded** | The Warding Compact (exact year TBD) |
 
 ## What Elderholt Is (And Isn’t)
@@ -57,6 +57,6 @@ When a faction seeks Elderholt’s aid, it sends envoys to petition. There are n
 
 ## Related Links
 
-- [Elderholt](./elderholt.md)
-- [Witches of Elderholt](./witchs.md)
-- [Elders of Elderholt](./elders/_overview.md)
+- [[elderholt|Elderholt]]
+- [[witchs|Witches of Elderholt]]
+- [[world/factions/elderholt/elders/_overview|Elders of Elderholt]]

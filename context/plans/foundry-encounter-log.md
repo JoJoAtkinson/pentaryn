@@ -1,7 +1,7 @@
 ---
 created: 2026-08-22
-last-modified: 2026-08-23
-tags: ["#playbook", "#foundry", "#vtt", "#npcs", "#design", "#proposal"]
+last_modified: 2026-08-23
+tags: ["playbook", "foundry", "vtt", "npcs", "design", "proposal"]
 status: phases 1–3 built 2026-08-23 (phase 3: the study conduit — blind GM-side rollSkill over the socket, kindOf resolution + a minimal pointer picker, authored tier messages with the derived fallback, graded reveal into the kind entry, the studied lock + belief ledger, combat warning, GM reset, and the Deliver/Later approval gate; two-client indistinguishability run passed, held variant included) (Known tab: schema, hardened reader + 34 node fixtures, entry rows, add picker, multi-tab injection; the canvas key that files a hovered token, proved as GM and as a player) — the rest still proposed; judged 2026-08-22; amended same day three times (kind/individual knowledge split; Past Encounters reinstated as a capped tab; the blind rework — authored tiers that may lie, GM-thrown blind rolls, plaintext reveals, encryption designed as a later opt-in); fourth pass same day added the build-and-validate gate (incl. the beliefs-as-lock correction and the disguise recommendation); disguise ruled 2026-08-23 (Joe's pointer design → foundry-disguise.md) — phase 5 unblocked; attribute layer judged 2026-08-23, after phases 1–3 shipped (decisions 15–21: the granted-region rework phases 1–3 owe — reveals must leave the editable notes field — kinds and attributes coexist, the registry as a GM-only world setting with derived links computed never stored, RAW-default advantage predicate, attributes as the new phase 6, encryption renumbered 7); rework + phases 4–7 not built
 ---
 

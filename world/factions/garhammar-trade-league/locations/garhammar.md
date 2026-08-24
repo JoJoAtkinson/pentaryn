@@ -1,7 +1,7 @@
 ---
 created: 2025-12-07
-last-modified: 2025-12-07
-tags: ["#world", "#location"]
+last_modified: 2025-12-07
+tags: ["world", "location"]
 status: draft
 ---
 
@@ -11,7 +11,7 @@ status: draft
 
 - Culture: Dwarven (Garhammar Trade League)
 - Type: Capital city
-- Faction: [Garhammar-Trade-League](../_overview.md)
+- Faction: [[world/factions/garhammar-trade-league/_overview|Garhammar-Trade-League]]
 
 ## Description
 Garhammar thrives on ledgers and engines. Guild charters, arbitration halls, and contract foundries power a weaponized neutrality.

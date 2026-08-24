@@ -134,6 +134,6 @@ And being noticed is how you disappear.
 
 ## Related Links
 
-- [Ardenford](../ardenford.md)
-- [Calderon Imperium](../../../calderon-imperium/_overview.md)
-- [Ardenhaven](../../_overview.md)
+- [[ardenford|Ardenford]]
+- [[world/factions/calderon-imperium/_overview|Calderon Imperium]]
+- [[world/factions/ardenhaven/_overview|Ardenhaven]]

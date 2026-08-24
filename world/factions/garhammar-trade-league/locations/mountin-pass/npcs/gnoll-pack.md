@@ -4,7 +4,7 @@ created: 2026-05-10
 status: active
 location: mountin-pass
 count: 3
-tags: ["#combat-runner", "#humanoid", "#gnoll", "#pack", "#mountin-pass", "#cr-1-2"]
+tags: ["combat-runner", "humanoid", "gnoll", "pack", "mountin-pass", "cr-1-2"]
 ---
 # Gnoll Pack
 

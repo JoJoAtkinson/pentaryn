@@ -1,7 +1,7 @@
 ---
 created: 2025-12-11
-last-modified: 2025-12-11
-tags: ["#world", "#location", "#region", "#rakthok-horde"]
+last_modified: 2025-12-11
+tags: ["world", "location", "region", "rakthok-horde"]
 status: draft
 ---
 
@@ -11,7 +11,7 @@ status: draft
 
 - Culture: Eastern Orc (Rakthok Horde heartlands)
 - Type: Region (cold wetlands)
-- Faction: [Rakthok Horde](../_overview.md)
+- Faction: [[world/factions/rakthok-horde/_overview|Rakthok Horde]]
 
 ## Description
 
@@ -40,7 +40,7 @@ Dense reed beds, knotted mangroves, and slow, coal-dark channels. Hidden sinkhol
 - **Main Exports:** Blackened iron arms, alligator-hide leathers, spirit-etched totems
 - **Main Imports:** Grain, salt, outside lore
 - **Currency:** Favors, ancestor oaths, and occasional Calderon coin seized in raids
-- **Trade Routes:** Hidden pole-boat channels leading toward [Ardenhaven](../../ardenhaven/_overview.md) and clandestine swaps with Merrowgate factors
+- **Trade Routes:** Hidden pole-boat channels leading toward [[world/factions/ardenhaven/_overview|Ardenhaven]] and clandestine swaps with Merrowgate factors
 
 ## Inhabitants
 
@@ -68,6 +68,6 @@ Quicksilt pits, venomous reeds, and ancestral guardians who ensnare those deemed
 
 ## Related Links
 
-- [Rakthok Horde](../_overview.md)
-- [Dakmar'nak Tribe](../tribes/dakmarnak.md)
-- [Calderon Imperium](../../calderon-imperium/_overview.md)
+- [[world/factions/rakthok-horde/_overview|Rakthok Horde]]
+- [[dakmarnak|Dakmar'nak Tribe]]
+- [[world/factions/calderon-imperium/_overview|Calderon Imperium]]

@@ -1,7 +1,7 @@
 ---
 created: 2026-01-31
-last-modified: 2026-01-31
-tags: ["#world", "#location", "#ardenhaven", "#deep-fall-ruins", "#derro", "#combat", "#encounter"]
+last_modified: 2026-01-31
+tags: ["world", "location", "ardenhaven", "deep-fall-ruins", "derro", "combat", "encounter"]
 status: active
 ---
 # Derro Foe Party: The Glass Choir (10)
@@ -14,9 +14,9 @@ The Glass Choir fight in **echo and silence**: they use ring-chimes, cracked cry
 
 ## Files
 
-- DM-facing tactics: [dm-notes.md](dm-notes.md)
-- Named derros (3): [named-derros.md](named-derros.md)
-- Trash mobs (7): [trash-mobs.md](trash-mobs.md)
+- DM-facing tactics: [[world/factions/ardenhaven/locations/deep-fall-ruins/derro-foe-party-03-the-glass-choir/dm-notes|dm-notes.md]]
+- Named derros (3): [[world/factions/ardenhaven/locations/deep-fall-ruins/derro-foe-party-03-the-glass-choir/named-derros|named-derros.md]]
+- Trash mobs (7): [[world/factions/ardenhaven/locations/deep-fall-ruins/derro-foe-party-03-the-glass-choir/trash-mobs|trash-mobs.md]]
 
 ## Party Roster (10)
 
@@ -36,5 +36,5 @@ Role: chain-hook lieutenant (drags targets into kill-lines).
 4–7) **Derro Choir Skulkers (x4)** — optional names: Drakmor-dur, Thar'brum, Khorbad-dum, Drogbar-bor  
 8–10) **Derro Glasscutters (x3)** — optional names: Bardrog-dur, Thargrum-dun, (pick one from open list)
 
-If you want to rename any mook quickly, grab from: [Derro Open Names](../derro-open-names.md).
+If you want to rename any mook quickly, grab from: [[derro-open-names|Derro Open Names]].
 

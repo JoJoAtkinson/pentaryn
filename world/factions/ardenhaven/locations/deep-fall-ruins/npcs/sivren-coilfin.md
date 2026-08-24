@@ -1,7 +1,7 @@
 ---
 created: 2026-01-31
-last-modified: 2026-01-31
-tags: ["#world", "#npc", "#ardenhaven", "#deep-fall-ruins", "#merchant", "#water"]
+last_modified: 2026-01-31
+tags: ["world", "npc", "ardenhaven", "deep-fall-ruins", "merchant", "water"]
 status: draft
 ---
 # Sivren Coilfin (SIV-ren KOYL-fin) — the Eel-Back Trader

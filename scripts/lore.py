@@ -113,9 +113,15 @@ def _split_frontmatter(text: str) -> tuple[dict[str, Any], str]:
         - `key: value` → string value (quotes stripped)
         - `key: [a, b, c]` or `key: ["a", "b"]` → list (parsed as JSON, with
           single quotes coerced to double; falls back to comma-split if JSON
-          fails). The vault's dominant tag style is `tags: ["#a", "#b"]`.
-        Multi-line YAML lists (`key:\\n  - a\\n  - b`) are NOT supported;
-        only ~2 files in the vault use that form.
+          fails). This is the style used across `world/` lore docs.
+        - `key:\\n  - a\\n  - b` (block-style list) → list. This is the style
+          every history event under `world/**/history/` uses — 156 files, not
+          the "~2" an earlier version of this docstring claimed. They used to
+          parse as the empty string, which silently violated the "always a
+          list" contract advertised on `get_faction_overview`.
+        Tag values are returned as authored. The vault was normalized away
+        from `["#a", "#b"]` to `["a", "b"]` so Obsidian would index them; a
+        stray `#` is tolerated but no longer expected.
 
     (B) Markdown-style metadata (no YAML fences), used by ~50 vault files
         including most faction _overview.md docs:
@@ -132,7 +138,15 @@ def _split_frontmatter(text: str) -> tuple[dict[str, Any], str]:
     m = _FRONTMATTER_RE.match(text)
     if m:
         fm: dict[str, Any] = {}
+        pending_list_key: str | None = None
         for line in m.group("body").splitlines():
+            # Block-style list item belonging to the key we saw last.
+            if pending_list_key and re.match(r"^[ \t]*-[ \t]*\S", line):
+                item = line.strip().lstrip("-").strip().strip('"').strip("'")
+                fm[pending_list_key].append(item)
+                continue
+            pending_list_key = None
+
             if not line.strip() or line.lstrip().startswith("#"):
                 continue
             if ":" not in line:
@@ -140,6 +154,14 @@ def _split_frontmatter(text: str) -> tuple[dict[str, Any], str]:
             key, _, value = line.partition(":")
             key = key.strip()
             value = value.strip()
+            if not value:
+                # `key:` with nothing after it opens a block-style list. If no
+                # `- item` lines follow, it stays an empty list, which still
+                # honours the "always a list when present" contract better
+                # than the empty string this used to produce.
+                fm[key] = []
+                pending_list_key = key
+                continue
             if value.startswith("[") and value.endswith("]"):
                 try:
                     fm[key] = json.loads(value)

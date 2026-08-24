@@ -3,7 +3,7 @@ name: Matron of the Valley
 type: stat-block
 created: 2026-05-09
 status: active
-tags: ["#gnoll", "#gar-vally", "#matron", "#cr-3", "#leader", "#vessel"]
+tags: ["gnoll", "gar-vally", "matron", "cr-3", "leader", "vessel"]
 ---
 
 # Matron of the Valley
@@ -141,8 +141,8 @@ When she dies, she will be eaten by her chosen successor (the Hunt-Lieutenant), 
 
 ## Related Links
 
-- [Gar-Vally Encounter](../encounters.md)
-- [Unnamed Gnoll Warrior](unnamed-gnoll-warrior.md)
-- [Jorran the Hunt-Captain](jorran-hunt-captain.md)
-- [Unnamed Hunt-Lieutenant](unnamed-hunt-lieutenant.md)
-- [Ancestor-Stir (Secret)](ancestor-stir.md)
+- [[world/factions/garhammar-trade-league/locations/gar-vally/encounters|Gar-Vally Encounter]]
+- [[world/factions/garhammar-trade-league/locations/gar-vally/npcs/gnolls/unnamed-gnoll-warrior|Unnamed Gnoll Warrior]]
+- [[world/factions/garhammar-trade-league/locations/gar-vally/npcs/gnolls/jorran-hunt-captain|Jorran the Hunt-Captain]]
+- [[world/factions/garhammar-trade-league/locations/gar-vally/npcs/gnolls/unnamed-hunt-lieutenant|Unnamed Hunt-Lieutenant]]
+- [[world/factions/garhammar-trade-league/locations/gar-vally/npcs/gnolls/ancestor-stir|Ancestor-Stir (Secret)]]

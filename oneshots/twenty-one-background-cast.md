@@ -7,8 +7,8 @@ tags: [oneshot, space-journey, npcs, background-cast]
 
 # Twenty-One — Living Background Cast
 
-Companion to [twenty-one-roster.md](twenty-one-roster.md) (combat) and
-[space-journey-story-outline.md](space-journey-story-outline.md) (scenes). This is improv fuel,
+Companion to [[twenty-one-roster|twenty-one-roster.md]] (combat) and
+[[space-journey-story-outline|space-journey-story-outline.md]] (scenes). This is improv fuel,
 not combat math: four recurring people the party can ignore all night or slowly learn to use, plus
 one-off extras for every populated scene. **Nothing here is required.** If the party never talks to
 any of them, the night runs exactly as written.
@@ -215,7 +215,7 @@ arranged*.
 - **Maud Kettlin** — at the front of every surge, and Ansa Pike's aunt. **Hook:** take her side in
   some small grievance — a shove, a spilled creel — and she becomes the party's loudest defender in
   a crowd that is mostly volume.
-- **Widow Cress** — see [social map §3b](twenty-one-social-map.md). **She is against this and she
+- **Widow Cress** — see [[twenty-one-social-map|social map §3b]]. **She is against this and she
   will say so**, because a mob is not a court and if it were, her son died for nothing. Worth two
   steps on her own, not for sale, and **Big Ned cannot answer her.**
 - **Skipper Rojan** — his barge is at the wharf and he wants no part of this. **Hook:** coin gets
@@ -231,7 +231,7 @@ arranged*.
 - **Hanne** — levy drummer, sixteen, **Widow Cress's granddaughter**, and sick of every civic duty
   this town has handed her. **Hook:** she is the one person who can get her grandmother down to the
   front of the crowd — and Cress is worth two steps of Mob Temperature on her own. This is the
-  designed backdoor to the square's strongest lever; see [social map §7b](twenty-one-social-map.md).
+  designed backdoor to the square's strongest lever; see [[twenty-one-social-map|social map §7b]].
 
 ### Scene 4 — Last Orders (the tavern, before the door explodes)
 
@@ -267,7 +267,7 @@ in the house, not hiding.*
 
 **Nobody here is a puzzle.** The search version of this scene is parked. Everyone below is a real
 lodger or a real regular of this inn, and the full who-is-awake-and-how-drunk table lives in
-[the outline's Scene 5](space-journey-story-outline.md). These are the ones with hooks.
+[[space-journey-story-outline|the outline's Scene 5]]. These are the ones with hooks.
 
 - **Halloran** — ex-garrison, dismissed for talking about what he heard underground; drinking to
   forget, quietly terrified. **Hook:** the only person who has been in the **catacombs** and come

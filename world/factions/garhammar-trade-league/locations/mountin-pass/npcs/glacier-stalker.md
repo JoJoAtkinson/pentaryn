@@ -3,7 +3,7 @@ name: Glacier Stalker
 created: 2026-05-10
 status: active
 location: mountin-pass
-tags: ["#combat-runner", "#beast", "#cold", "#ambush-predator", "#mountin-pass", "#cr-5"]
+tags: ["combat-runner", "beast", "cold", "ambush-predator", "mountin-pass", "cr-5"]
 ---
 # Glacier Stalker
 

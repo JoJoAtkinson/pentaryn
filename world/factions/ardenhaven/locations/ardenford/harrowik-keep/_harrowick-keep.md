@@ -1,7 +1,7 @@
 ---
 created: 2026-01-10
-last-modified: 2026-01-10
-tags: ["#world", "#location", "#keep", "#ardenford", "#harrowick-keep", "#ardenhaven"]
+last_modified: 2026-01-10
+tags: ["world", "location", "keep", "ardenford", "harrowick-keep", "ardenhaven"]
 status: draft
 ---
 
@@ -46,6 +46,6 @@ Contractors are common enough that Harrowick has procedures for them—briefings
 
 ## Related Links
 
-- [Ardenford](ardenford.md)
-- [Writ Board (CR2)](../../quests/writ-board-cr2/_board.md)
-- [Harrowick Keep — Live Exercise Contract](../../quests/writ-board-cr2/harrowick-keep-live-exercise.md)
+- [[ardenford|Ardenford]]
+- [[world/factions/ardenhaven/quests/writ-board-cr2/_board|Writ Board (CR2)]]
+- [[harrowick-keep-live-exercise|Harrowick Keep — Live Exercise Contract]]

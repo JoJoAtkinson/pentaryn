@@ -4,9 +4,10 @@ This directory contains all world-building information for the campaign setting.
 
 ## Structure
 
-- **locations/** - Cities, dungeons, regions, and other places
 - **factions/** - Organizations, guilds, and groups
-- **lore/** - Mythology, legends, and world lore
+- **ages/** - Calendar, ages, and the world timeline
+- **party/** - Player parties, their members and history
+- **creatures/** - Homebrew creatures
 - **naming_conventions/** - Naming rules for locations and characters
 
 ## Creating World Content
@@ -14,7 +15,7 @@ This directory contains all world-building information for the campaign setting.
 ### Naming Conventions
 
 See [naming_conventions/](naming_conventions/) for detailed naming rules:
-- [Locations & Places](naming_conventions/locations-and-places.md) - Rules for cities, regions, ruins, and geographic features
+- [[locations-and-places|Locations & Places]] - Rules for cities, regions, ruins, and geographic features
 - Character naming conventions (TODO: to be created)
 
 ### Locations
@@ -42,8 +43,8 @@ See [naming_conventions/](naming_conventions/) for detailed naming rules:
 
 ## Quick Links
 
-- [Location Template](../templates/location-template.md)
-- [Faction Template](../templates/faction-template.md)
+- [[location-template|Location Template]]
+- [[faction-template|Faction Template]]
 - [Factions (Regions & Locations)](factions/)
 - [History](history/)
-- [Lore](lore/)
+- [Ages & Calendar](ages/)
