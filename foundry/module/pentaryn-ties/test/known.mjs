@@ -83,6 +83,9 @@ import {
   identifiedState,
   visibleAttributesFor,
   planStep,
+  forestOf,
+  subtreeOf,
+  childrenOf,
   helpFor,
   clampSources
 } from "../known-core.mjs";
@@ -1389,6 +1392,55 @@ export function register({ t, eq, ok }) {
     // and a hidden entry keeps everything else it had
     const kept = toStoredKnown([{ id: "a", cachedName: "A", hidden: true, notes: "mine", imposter: 9, when: 3 }])[0];
     eq(kept, { id: "a", name: "A", category: "sentient", notes: "mine", imposter: 9, hidden: true, when: 3 });
+  });
+
+  const WORLD = [
+    { id: "city", title: "Greyharbour", secret: true },
+    { id: "under", title: "The Undercity", parent: "city", secret: true },
+    { id: "docks", title: "The Docks", parent: "city", secret: true },
+    { id: "guild", title: "The Quiet Hand", parent: "under", secret: true },
+    { id: "lung", title: "Forge Lung", secret: true }
+  ];
+
+  t("tree: children, subtrees and a forest of roots", () => {
+    eq(childrenOf("city", WORLD).map(c => c.id).sort(), ["docks", "under"]);
+    eq(childrenOf("guild", WORLD), []);
+    eq(childrenOf("nosuch", WORLD), []);
+
+    const city = subtreeOf("city", WORLD);
+    eq(city.title, "Greyharbour");
+    eq(city.children.map(c => c.title), ["The Docks", "The Undercity"], "sorted by title");
+    eq(city.children.find(c => c.id === "under").children.map(c => c.id), ["guild"]);
+    eq(city.depth, 0);
+    eq(city.children[0].depth, 1);
+
+    // roots only, and an orphan whose parent was deleted counts as one
+    eq(forestOf(WORLD).map(n => n.id), ["lung", "city"].sort((a, b) =>
+      WORLD.find(x => x.id === a).title.localeCompare(WORLD.find(x => x.id === b).title)));
+    eq(forestOf([{ id: "orphan", title: "O", parent: "deleted" }]).map(n => n.id), ["orphan"]);
+    eq(subtreeOf("nosuch", WORLD), null);
+  });
+
+  t("tree: a hand-written cycle terminates instead of hanging the browser", () => {
+    /*
+     * Nothing refuses a cycle at write time (see `ancestorsOf`), so the browser has to survive
+     * one. A view that recurses forever is worse than one that stops early.
+     */
+    const cyclic = [{ id: "a", title: "A", parent: "b" }, { id: "b", title: "B", parent: "a" }];
+    const node = subtreeOf("a", cyclic);
+    ok(!!node, "still returns something");
+    let depth = 0, cur = node;
+    while (cur?.children?.length) { cur = cur.children[0]; depth++; }
+    ok(depth <= 13, `walk terminated at depth ${depth}`);
+  });
+
+  t("tree: state is injected, so the pure layer never decides who knows what", () => {
+    const known = new Set(["city", "guild"]);
+    const node = subtreeOf("city", WORLD, { state: id => (known.has(id) ? "known" : "unknown") });
+    eq(node.state, "known");
+    eq(node.children.find(c => c.id === "docks").state, "unknown");
+    eq(node.children.find(c => c.id === "under").children[0].state, "known");
+    eq(subtreeOf("city", WORLD).state, null, "no state function means no state");
   });
 
   t("cap: a Monster Manual lore page is cut on a word boundary and marked as cut", () => {

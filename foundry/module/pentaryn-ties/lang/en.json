@@ -275,8 +275,6 @@
   "PENTARYN_TIES.attributes.worldHeading": "What you know of the world",
   "PENTARYN_TIES.attributes.worldHint": "Places, groups and conditions this character has worked out or been told about. Knowing a place makes its people easier to read.",
   "PENTARYN_TIES.attributes.worldEmpty": "Nothing yet. Look people over and you will start to piece the world together.",
-  "PENTARYN_TIES.attributes.failed": "Never worked it out",
-  "PENTARYN_TIES.attributes.failedTip": "They rolled and missed. They can never recognise this on sight — only be told about it.",
   "PENTARYN_TIES.attributes.grantHeading": "Tell them about something",
   "PENTARYN_TIES.attributes.grantPlaceholder": "Something they have learned, or a new name to create…",
   "PENTARYN_TIES.attributes.grantParents": "Include everything it belongs to",
@@ -308,5 +306,11 @@
   "PENTARYN_TIES.known.unhide": "Put it back",
   "PENTARYN_TIES.known.showHidden": "Show {count} tucked away",
   "PENTARYN_TIES.known.hideHidden": "Hide the tucked away again",
-  "PENTARYN_TIES.attributes.theyFailedThis": "they missed this — tell them"
+  "PENTARYN_TIES.attributes.theyFailedThis": "they missed this — tell them",
+  "PENTARYN_TIES.attributes.worldHintGM": "Everything in the world, as this character sees it. Marked rows are things they have not been told — open a place to find what sits under it.",
+  "PENTARYN_TIES.attributes.state.failed": "missed it",
+  "PENTARYN_TIES.attributes.state.pending": "waiting on you",
+  "PENTARYN_TIES.attributes.state.unknown": "not told",
+  "PENTARYN_TIES.attributes.tellOne": "Tell them",
+  "PENTARYN_TIES.attributes.tellOneTip": "Hand this over, along with everything it belongs to."
 }

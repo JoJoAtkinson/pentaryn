@@ -406,6 +406,35 @@ Judgement calls worth making consciously:
 
 ---
 
+## Browsing the world
+
+The **Attributes** tab on a character's sheet shows the world as a tree, nested the way it
+actually is — a guild under a district under a city.
+
+**A player sees only what they know**, plus the places above it so a known guild still hangs off
+its city. Nothing else is drawn: a list of the gaps in your map describes the shape of what is
+missing, so unknown nodes are **pruned away entirely**, not dimmed.
+
+**A GM sees the whole tree** with everything marked:
+
+| Marked | Means |
+| --- | --- |
+| *(plain)* | they know it |
+| **waiting on you** | passed, held, not yet delivered |
+| **missed it** | rolled and failed — only a grant reopens it |
+| **not told** | never attempted |
+
+Every marked row carries a **Tell them** button. That is the fast path: open a city, see its
+districts and the guilds beneath them, hand over the one you meant without typing its name. It
+grants ancestors too, so what you hand over is never inert.
+
+```js
+A.known(pc);                  // the flat list of what they know
+A.known(pc, { forGM: true }); // …including what they failed
+```
+
+---
+
 ## Giving knowledge away
 
 Rolls are not the only route in — and after a permanent failure they are the *only* alternative.

@@ -32,6 +32,7 @@ import {
   unlinkAttribute,
   searchAttributes,
   knownWorld,
+  knowledgeTree,
   grantKnowledge,
   brokenAncestry,
   repairAncestry
@@ -250,34 +251,60 @@ function detail(row, { actor, isGM, viewer }) {
  */
 function worldKnowledgeSection(character, isGM) {
   if (!character) return "";
-  const rows = knownWorld(character, { forGM: isGM });
-  const body = rows.length
-    ? `<ul class="pt-list pt-attr-list">${rows
-        .map(
-          r => `<li class="pt-row pt-attr-row${r.failed ? " pt-attr-failed" : ""}" data-id="${esc(r.attrId)}">
-            <div class="pt-summary pt-attr-summary">
-              <img class="pt-attr-icon" src="${esc(r.icon)}" alt="">
-              <span class="pt-attr-title">${esc(r.title)}</span>
-              ${r.category ? `<span class="pt-attr-category">${esc(r.category)}</span>` : ""}
-              ${
-                r.failed
-                  ? `<span class="pt-attr-failed-tag" data-tooltip="${esc(t("attributes.failedTip"))}">${esc(
-                      t("attributes.failed")
-                    )}</span>`
-                  : ""
-              }
-            </div>
-          </li>`
-        )
-        .join("")}</ul>`
+  const forest = knowledgeTree(character, { forGM: isGM });
+  const body = forest.length
+    ? `<ul class="pt-list pt-world-tree">${forest.map(n => worldNode(n, isGM)).join("")}</ul>`
     : `<p class="pt-empty">${esc(t("attributes.worldEmpty"))}</p>`;
 
   return `<div class="pt-group-head" role="heading" aria-level="3">
       <span class="pt-group-title">${esc(t("attributes.worldHeading"))}</span>
     </div>
-    <p class="pt-hint">${esc(t("attributes.worldHint"))}</p>
+    <p class="pt-hint">${esc(t(isGM ? "attributes.worldHintGM" : "attributes.worldHint"))}</p>
     ${body}
     ${isGM ? grantControl(character) : ""}`;
+}
+
+/**
+ * One node of the world tree, and its branch beneath it.
+ *
+ * The GM's version carries a **Tell them** button on anything not yet known, which is the whole
+ * point of the view: open a city, see its districts and the guilds under them, and hand over the
+ * one you meant without searching for its name.
+ *
+ * ⚠ A player's tree contains only `known` and `waypoint` nodes — `knowledgeTree` prunes the rest
+ * away entirely rather than hiding them in markup, because a rendered list of what you do not
+ * know describes the shape of what is missing.
+ */
+function worldNode(node, isGM) {
+  const kids = node.children.length
+    ? `<ul class="pt-world-branch">${node.children.map(c => worldNode(c, isGM)).join("")}</ul>`
+    : "";
+  const tag =
+    node.state === "failed"
+      ? `<span class="pt-attr-tag pt-state-failed">${esc(t("attributes.state.failed"))}</span>`
+      : node.state === "pending"
+        ? `<span class="pt-attr-tag pt-state-pending">${esc(t("attributes.state.pending"))}</span>`
+        : node.state === "unknown"
+          ? `<span class="pt-attr-tag pt-state-unknown">${esc(t("attributes.state.unknown"))}</span>`
+          : "";
+  const give =
+    isGM && (node.state === "unknown" || node.state === "failed")
+      ? `<button type="button" class="pt-textbtn pt-tell-btn" data-action="tell-one" data-id="${esc(node.id)}"
+           data-tooltip="${esc(t("attributes.tellOneTip"))}">
+          <i class="fa-solid fa-comment"></i> ${esc(t("attributes.tellOne"))}
+        </button>`
+      : "";
+
+  return `<li class="pt-world-node pt-state-${esc(node.state ?? "known")}" data-id="${esc(node.id)}">
+    <div class="pt-world-row">
+      <img class="pt-attr-icon" src="${esc(node.icon)}" alt="">
+      <span class="pt-attr-title">${esc(node.title)}</span>
+      ${node.category ? `<span class="pt-attr-category">${esc(node.category)}</span>` : ""}
+      ${tag}
+      ${give}
+    </div>
+    ${kids}
+  </li>`;
 }
 
 /**
@@ -484,6 +511,20 @@ export function bindAttributes(root, actor, rerender = () => {}) {
 
   bindSearch(box, actor, rerender);
   bindGrant(box, rerender);
+
+  /*
+   * "Tell them" straight off the tree — the fast path. Ancestors come with it, because a node
+   * granted without them is inert for identification (see `grantKnowledge`).
+   */
+  for (const btn of box.querySelectorAll("[data-action='tell-one']")) {
+    btn.addEventListener("click", async () => {
+      const who = actor?.type === "character" ? actor : null;
+      if (!who) return;
+      btn.disabled = true;
+      await grantKnowledge(who, btn.dataset.id, { withParents: true });
+      rerender();
+    });
+  }
 
   box.querySelector("[data-action='attr-repair']")?.addEventListener("click", async () => {
     // repair = re-link each broken membership, which materialises what it already implied

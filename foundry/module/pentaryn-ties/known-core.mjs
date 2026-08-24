@@ -606,6 +606,47 @@ export function kindHasContent({ biography = "", tiers = [], attacks = [] } = {}
   return Array.isArray(attacks) && attacks.length > 0;
 }
 
+/** The direct children of an id — the inverse of `ancestorsOf`, and just as computed. */
+export const childrenOf = (id, registry) =>
+  readRegistry(registry).filter(e => e.parent === (typeof id === "string" ? id.trim() : ""));
+
+/**
+ * One attribute and everything beneath it, as a nested tree.
+ *
+ * `state(id)` is injected so this stays pure: the caller decides what "known", "failed" or
+ * "unknown" mean and this only arranges them. Depth is capped because a hand-edited registry can
+ * contain a cycle (nothing refuses one — see `ancestorsOf`), and a browser that recurses forever
+ * is worse than one that stops.
+ */
+export function subtreeOf(id, registry, { state = () => null, depth = 0, seen = new Set() } = {}) {
+  const key = typeof id === "string" ? id.trim() : "";
+  if (!key || depth > 12 || seen.has(key)) return null;
+  const entry = readRegistry(registry).find(e => e.id === key);
+  if (!entry) return null;
+  const next = new Set([...seen, key]);
+  return {
+    id: key,
+    title: entry.title,
+    category: entry.category,
+    icon: entry.icon,
+    secret: entry.secret,
+    depth,
+    state: state(key),
+    children: childrenOf(key, registry)
+      .map(c => subtreeOf(c.id, registry, { state, depth: depth + 1, seen: next }))
+      .filter(Boolean)
+      .sort((a, b) => a.title.localeCompare(b.title))
+  };
+}
+
+/** Every root, each with its subtree — the whole world as a forest. */
+export const forestOf = (registry, opts = {}) =>
+  readRegistry(registry)
+    .filter(e => !e.parent || !readRegistry(registry).some(x => x.id === e.parent))
+    .map(e => subtreeOf(e.id, registry, opts))
+    .filter(Boolean)
+    .sort((a, b) => a.title.localeCompare(b.title));
+
 /* ── the two ledgers ──────────────────────────────────────────────────────── */
 
 /**

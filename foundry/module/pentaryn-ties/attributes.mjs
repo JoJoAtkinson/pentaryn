@@ -48,7 +48,10 @@ import {
   readKnowledge,
   knowsAttribute,
   failedAttribute,
-  visibleAttributesFor
+  visibleAttributesFor,
+  forestOf,
+  subtreeOf,
+  childrenOf
 } from "./known-core.mjs";
 
 // re-exported so the entry point registers the settings by the same names this file reads
@@ -492,6 +495,65 @@ export function knowsIncludingCarried(character, kindResolver = null) {
   const known = new Set(Object.entries(knowledge()[character?.id] ?? {}).filter(([, r]) => !r.failed).map(([id]) => id));
   for (const id of attributeIdsOf(character, kindResolver)) known.add(id);
   return known;
+}
+
+/**
+ * **The world as one character sees it** — the tree browser behind both views.
+ *
+ * A player gets only what they know: their own map of the world, arranged the way it actually
+ * nests. A GM gets the same tree with **everything else showing too**, each node marked, so
+ * finding the next thing to hand over is one look rather than a search:
+ *
+ * | state | means | GM sees | player sees |
+ * | --- | --- | --- | --- |
+ * | `known` | worked out or told | ✓ | ✓ |
+ * | `pending` | passed, waiting on the GM to deliver | ✓ | — |
+ * | `failed` | rolled and missed; only a grant reopens it | ✓ | — |
+ * | `unknown` | never attempted | ✓ | — |
+ *
+ * ⚠ A player must never see a `failed` or `unknown` node. Either one **names the thing they do
+ * not know**, which is the knowledge itself — a list of the gaps in your map tells you the shape
+ * of what is missing. Only `forGM` may render them, and `prune` drops them outright rather than
+ * hiding them in markup a curious client could read.
+ */
+export function knowledgeTree(character, { forGM = false } = {}) {
+  const rows = knowledge()[character?.id] ?? {};
+  const state = id => {
+    const rec = rows[id];
+    if (!rec) return "unknown";
+    if (rec.failed) return "failed";
+    return rec.pending ? "pending" : "known";
+  };
+  const forest = forestOf(registry(), { state });
+  if (forGM) return forest;
+
+  /*
+   * Prune to what they know, keeping a node only if it or something beneath it is known —
+   * so a known guild still shows the city it hangs under, and nothing else leaks.
+   */
+  const prune = node => {
+    const kids = node.children.map(prune).filter(Boolean);
+    if (node.state !== "known" && !kids.length) return null;
+    return { ...node, children: kids, state: node.state === "known" ? "known" : "waypoint" };
+  };
+  return forest.map(prune).filter(Boolean);
+}
+
+/** Everything beneath one attribute, flat — "show me this city's districts and guilds". */
+export function branchOf(attrId, character = null, { forGM = false } = {}) {
+  const rows = character ? knowledge()[character.id] ?? {} : {};
+  const state = id => {
+    const rec = rows[id];
+    if (!character) return null;
+    if (!rec) return "unknown";
+    return rec.failed ? "failed" : rec.pending ? "pending" : "known";
+  };
+  const node = subtreeOf(attrId, registry(), { state });
+  if (!node) return [];
+  const flat = [];
+  const walk = n => { flat.push(n); n.children.forEach(walk); };
+  walk(node);
+  return forGM || !character ? flat : flat.filter(n => n.state === "known");
 }
 
 /* -------------------------------------------- */

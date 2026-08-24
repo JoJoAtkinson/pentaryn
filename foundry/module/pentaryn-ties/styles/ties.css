@@ -1533,3 +1533,60 @@
   opacity: 0.9;
   margin: 0;
 }
+
+/* ── The world tree ───────────────────────────────────────────────────────── */
+
+/*
+ * Nesting is the whole information here — a guild reads as *under* a district reads as *under* a
+ * city — so the indent and the rule down the left are doing real work, not decoration.
+ */
+.pentaryn-ties .pt-world-tree,
+.pentaryn-ties .pt-world-branch {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pentaryn-ties .pt-world-branch {
+  margin-left: 0.75rem;
+  padding-left: 0.6rem;
+  border-left: 1px solid var(--color-border-light-tertiary, #999);
+}
+
+.pentaryn-ties .pt-world-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.18rem 0.25rem;
+  border-radius: 3px;
+}
+
+.pentaryn-ties .pt-world-row:hover { background: color-mix(in srgb, currentColor 6%, transparent); }
+
+/*
+ * A **waypoint** is a place the character has not learned but which has to be drawn to hold up
+ * something beneath it that they have. Dimmed, because it is scaffolding rather than knowledge —
+ * and its title is safe to show: they already know the thing under it belongs somewhere.
+ */
+.pentaryn-ties .pt-state-waypoint > .pt-world-row { opacity: 0.5; }
+
+/* GM-only states. A player's tree never contains these nodes at all. */
+.pentaryn-ties .pt-state-unknown > .pt-world-row { opacity: 0.6; }
+.pentaryn-ties .pt-state-failed > .pt-world-row .pt-attr-title { text-decoration: line-through; }
+
+.pentaryn-ties .pt-state-failed .pt-attr-tag {
+  background: color-mix(in srgb, var(--pt-hostile) 20%, transparent);
+  border-color: var(--pt-hostile);
+}
+
+.pentaryn-ties .pt-state-pending .pt-attr-tag {
+  background: color-mix(in srgb, var(--pt-wary) 20%, transparent);
+  border-color: var(--pt-wary);
+}
+
+/* the fast path: hand it over without leaving the tree */
+.pentaryn-ties .pt-tell-btn {
+  margin-left: auto;
+  flex: 0 0 auto;
+  font-size: var(--font-size-11, 11px);
+}
