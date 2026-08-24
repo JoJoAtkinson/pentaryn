@@ -1195,29 +1195,51 @@ joining the two. His plan is to migrate it in:
 
 ```js
 source: null | {
-  path:   "world/factions/ardenhaven/locations/ardenford/gray-district.md",  // repo-relative
-  blob:   "9f3c…" | null,   // git hash-object of the bytes actually read — the drift anchor
-  commit: "d9fb63b…" | null // the containing commit, for orientation and `git diff`
+  blob: "41bcd52a…" | null,                                          // a COMMITTED git blob — the identity
+  path: "world/factions/ardenhaven/…/gray-district.md"               // a label, refreshable from the blob
 }
 ```
+
+**Amended the same day, by Joe, after walking the recovery through:** *"always create an attribute
+linked to a hash from git… commit the file and then git the hash. Only store the hash on the
+attribute — that alone allows reconstruction of where it came from."*
+
+Two changes fall out. **`commit` is dropped**: once the blob is guaranteed committed,
+`git log --all --find-object=<blob> --name-status` searches every commit on every ref and returns
+both the commit and the path, so storing a commit is a second thing that can go stale for no gain.
+And **the blob becomes the identity while the path is demoted to a label** — kept because it is what
+a human reads on the sheet and because it makes a drift check one hash of one file rather than a
+history search, but never authoritative. The original mistake would have been treating a path as
+identity; a label that rots is recoverable, an identity that rots is not.
+
+⚠ **The rule the whole field rests on: commit first, then take the hash.** `git hash-object`
+fingerprints whatever is on disk including uncommitted edits, and those bytes are in no commit, so
+no search will ever find them — the record looks healthy and is a dead end. The loop takes the hash
+with `git rev-parse HEAD:<path>`, which reads it out of git rather than off the disk and so cannot
+capture a dirty state, after checking `git status --porcelain -- <path>` is empty. A browser cannot
+verify this, so it is enforced where the loop runs and documented in the use-doc.
+
+⚠ **`path` is retained rather than dropped because a note that does not exist yet has no hash.**
+Joe's outbound flow (author in Foundry, generate the markdown) is representable only as
+`{ blob: null, path }`. Pure hash-only storage would have silently removed it.
 
 Nothing in-engine gates on it. A dangling `source` is harmless — the opposite of `parent`, whose
 dangling case had to be ruled on (degrade to root, never to unreachable).
 
-**Why the anchor is a blob and not the commit Joe named.** A commit records a version Joe did not
-necessarily read: he authors from his editor, and the working tree is routinely dirty. Hash the
-bytes at link time and the record cannot lie — drift is a re-hash and a compare, needing no history
-at all. It also survives a rebase, which a raw SHA pin does not, and it buys the rename defence
-below for free. `commit` stays because Joe asked for it by name and it is what makes a drift report
-diffable; it is courtesy, not the mechanism.
+**Why a blob and not the commit Joe first named.** Content-addressing is what makes this survive
+history: a rebase mints new commit SHAs and orphans a commit pin, but unchanged file content keeps
+the *same* blob and git simply reuses it. Drift becomes an equality check needing no history at all.
+The commit-first rule then closes the one hole a content hash has — bytes that were never committed
+are in no object database and are unfindable forever.
 
 ⚠ **The vault gets reorganised, so a bare path rots.** Measured: **76 renames across 69 commits**
 touching `world/` — 41 in December, 18 in January, four as recently as 2026-08-22. A moved note
 breaks every attribute sourced from it, and because a dangling `source` is harmless it breaks in
-**silence**. The blob is the defence: a dangling path whose stored blob matches `git hash-object` of
-some other vault file **is** the moved file, and the drift report can propose the re-point
-mechanically. This is the one migration hazard worth engineering against; delete and history-rewrite
-are report-level only.
+**silence**. The blob is the defence, and `--find-object` is the whole recovery: it locates the file
+even when it was renamed *and* rewritten, which is the case a live-vault blob scan cannot handle
+(no current file has that content any more). An earlier draft of this decision proposed such a scan
+as the defence; it is strictly weaker and was replaced. Delete and history-rewrite stay
+report-level.
 
 ⚠ **`blob: null` means "no recorded version" and nothing else.** Joe's sentence describes a
 *behaviour* — author in Foundry, pull the markdown out — not a stored instruction. Read as one, a

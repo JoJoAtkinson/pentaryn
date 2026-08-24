@@ -219,9 +219,8 @@ function summary(row, isGM) {
 function sourceBlock(row) {
   const src = row.source;
   if (!src) return "";
-  const short = v => (typeof v === "string" ? v.slice(0, 7) : null);
-  const version = short(src.blob)
-    ? f("attributes.sourceVersion", { hash: short(src.blob) })
+  const version = src.blob
+    ? f("attributes.sourceVersion", { hash: src.blob.slice(0, 7) })
     : t("attributes.sourceNoVersion");
   return `<div class="pt-field pt-source" data-id="${esc(row.id)}">
       <span class="pt-field-label">${esc(t("attributes.sourceLabel"))}</span>

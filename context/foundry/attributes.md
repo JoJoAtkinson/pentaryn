@@ -495,63 +495,86 @@ changes. It exists because `world/` and the attribute tree are the *same hierarc
 and the pointer is what stops them drifting apart.
 
 ```js
-source: {
-  path:   "world/factions/ardenhaven/locations/ardenford/gray-district.md",  // repo-relative
-  blob:   "41bcd52a…",   // git hash-object of the bytes you actually read
-  commit: "493326c0…"    // the containing commit, for orientation and `git diff`
-}
+source: { blob: "41bcd52a…",                              // the identity — a committed git blob
+          path: "world/factions/…/gray-district.md" }     // a label, and refreshable
 ```
 
-**The migration loop.** Read a note, author what a player can discover from it, point back:
+**The blob is the identity; the path is only a label.** Git keeps every version of every committed
+file forever, filed under the fingerprint of its bytes — so the hash alone reconstructs everything:
+
+```bash
+git log --all --find-object=<blob> --name-status   # every commit on every ref; gives commit + path
+```
+
+That works even when the note was later renamed **and** rewritten, which is exactly what a stored
+path cannot survive — this vault has 76 renames across 69 commits. The path is kept because it is
+what you read on the sheet and it makes a drift check one hash of one file instead of a history
+search. When it rots, nothing is lost: recover it from the blob.
+
+### ⚠ Commit first, then take the hash
+
+**This is the rule the whole thing rests on.** `git hash-object` will fingerprint whatever is on
+disk, including uncommitted edits — and those bytes are in no commit, so no search will ever find
+them. The record would look perfectly healthy and be a dead end.
 
 ```bash
 P="world/factions/ardenhaven/locations/ardenford/gray-district.md"
-git hash-object "$P"                 # -> the blob
-git log -1 --format=%H -- "$P"       # -> the commit
+git status --porcelain -- "$P"      # must be EMPTY. If not, commit before going further.
+git rev-parse "HEAD:$P"             # the committed blob — this is what you store
 ```
+
+`git rev-parse HEAD:<path>` reads the hash out of git rather than off the disk, so it can never
+capture an uncommitted state. If it disagrees with `git hash-object <path>`, the file is dirty and
+you are not ready to link it.
+
+### The loop
+
+Read a note, author what a player can discover from it, point back:
 
 ```js
-await A.create("The Gray District", { category: "district", source: { path, blob, commit } });
+await A.create("The Gray District", { category: "district", source: { blob, path } });
 ```
 
-`create` takes `source` directly, because this loop runs hundreds of times and a
-create-then-update pair would double every write. **Many attributes may share one path** — one note
-about Ardenford can seed the city, three districts and a guild.
+`create` takes `source` directly, because this loop runs hundreds of times and a create-then-update
+pair would double every write. **Many attributes may share one blob** — one note about Ardenford can
+seed the city, three districts and a guild.
 
-**Checking for drift.** Nothing does this automatically, and nothing should — see the warning
-below. Run it while you are authoring, which is the only time it matters:
+### Keeping it current
+
+You will rarely need to touch a `source` again. When you *do* rewrite an attribute from a changed
+note, re-commit the note and update the hash in the same breath:
+
+```js
+await A.update(id, { source: { blob, path } });   // whole-object replacement — see below
+```
+
+**Checking for drift**, while you are authoring, which is the only time it matters:
 
 ```bash
-git ls-files world | grep '\.md$' | tr '\n' '\0' | xargs -0 git hash-object > /tmp/blobs
-git ls-files world | grep '\.md$' > /tmp/paths
-paste /tmp/blobs /tmp/paths          # the whole vault indexed by content, ~30ms for 364 files
+git rev-parse "HEAD:$P"    # differs from the stored blob? the note changed. Re-read it.
 ```
 
-Compare each attribute's `source.blob` against the current hash of its `source.path`. Different
-means the note changed since you authored from it — go re-read it. Group the report **by path**, or
-one edited note makes you read the same diff once per attribute.
+**When the path has rotted** — the note moved, so the path names nothing:
 
-**When a note moves.** The path dangles silently: nothing gates on `source`, so nothing complains.
-That index is the fix — look the stored `blob` up in it and whatever file now hashes to it *is* the
-moved note:
-
-```js
-await A.update(id, { source: { path: newPath, blob, commit } });
+```bash
+git log --all --find-object=<stored blob> --name-status | head
 ```
 
-⚠ **A patch replaces `source` whole.** `{ source: { path } }` drops the hashes with it, and that is
-deliberate: a changed path is a different file, and a hash carried across would assert provenance
-nothing checked. Send the new hashes, or send nulls.
+That names the commit and the path the file had there. If it moved again afterwards, hop forward
+from that path. Then update the label.
 
-**Authoring in Foundry instead.** Set a path with no hashes and the note does not exist yet — write
-the attribute first, generate the markdown from it later. The generator's rule is
-**create-if-absent, refuse-if-present**, and it checks the filesystem rather than trusting the
-field, because `blob: null` also arises from a path you typed by hand and from tooling that failed
-to record a version. Nothing is allowed to overwrite prose you wrote.
+⚠ **A patch replaces `source` whole.** `{ source: { path } }` drops the blob with it, and that is
+deliberate: a changed path may be a different file, and a hash carried across would assert
+provenance nothing checked. Send both, or send `null`.
+
+**Authoring in Foundry instead.** Set a path with no blob and the note does not exist yet — write
+the attribute first, generate the markdown later. The generator's rule is **create-if-absent,
+refuse-if-present**, checking the filesystem rather than trusting the field, because `blob: null`
+also arises from a path you typed by hand. Nothing is allowed to overwrite prose you wrote.
 
 **On the sheet:** the path and a short hash show under the attribute, with **Clear**. There is no
-edit box, because a browser cannot run `git hash-object` or check that a file is there — the loop
-above is where this field gets written.
+edit box — a browser cannot run git or check that a file is there, so the loop above is where this
+field gets written.
 
 ## Giving knowledge away
 
@@ -649,10 +672,10 @@ features — nothing here reads them.
 
 - **A GM client must be connected** for any of this. No GM, no rolls — by design, a blind
   arbitrated roll needs an arbiter.
-- **`source` records what you *read*, not what you committed.** The hash is of the bytes on disk at
-  the moment you linked, so if your tree was dirty the attribute is anchored to your editor's
-  version — which is the honest answer, and it is why the anchor is a content hash rather than the
-  commit. Commit the note and the hash still matches; edit it and it does not.
+- **A `source` blob must be committed, or the provenance is a dead end that looks alive.**
+  `git hash-object` fingerprints uncommitted bytes happily, and nothing will ever find them again.
+  Take the hash with `git rev-parse HEAD:<path>` and check `git status --porcelain -- <path>` is
+  empty first.
 - **Never write a drift flag back into the registry.** The registry setting is rewritten *whole* on
   every save, last writer wins — so a background job that computed drift and wrote it back would
   discard whatever you were editing at the time, across every entry rather than one. Drift is a

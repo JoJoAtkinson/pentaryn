@@ -1230,19 +1230,31 @@ export const SOURCE_PATH_MAX = 512;
  * Where an attribute came from — the markdown in the GM's own vault that seeded it.
  *
  * ```js
- * source: { path: "world/factions/…/gray-district.md", blob: "9f3c…", commit: "d9fb63b…" }
+ * source: { blob: "41bcd52a…", path: "world/factions/…/gray-district.md" }
  * ```
  *
- * **`blob` is the drift anchor, not `commit`.** A commit records a version the author may never
- * have read: they write from an editor, and a working tree is routinely dirty. The hash of the
- * bytes actually read cannot lie — drift is a re-hash and a compare, needing no history at all, and
- * it survives a rebase where a raw commit pin would be orphaned. `commit` is kept because it is
- * what makes a drift report diffable, and because Joe asked for it by name.
+ * **The blob is the identity. The path is a label.**
  *
- * **`blob: null` means "no recorded version" and nothing more.** It must never be read as "no file
- * exists, generate one" — that same null arises from a path typed by hand for a file that is
- * already there, and a generator trusting it would overwrite hand-written prose. Existence is a
- * filesystem question, always; the generator's contract is create-if-absent, refuse-if-present.
+ * A git blob hash is the fingerprint of the file's bytes, and git keeps every version of every
+ * committed file forever, filed under exactly that hash. So the hash alone reconstructs the
+ * provenance — `git log --all --find-object=<blob> --name-status` searches every commit on every
+ * ref and hands back both the commit and the path the file had there. It works even when the note
+ * was later renamed *and* rewritten, which is the case a stored path cannot survive.
+ *
+ * That is why the path is only a label: it is what a human reads on the sheet, and it makes the
+ * drift check a single hash of a single file rather than a history search. It may rot — this vault
+ * has 76 renames across 69 commits — and when it does, nothing is lost, because it is recoverable
+ * from the blob at any time. **The original mistake would be treating a path as identity.**
+ *
+ * ⚠ **The blob must be a COMMITTED hash.** Joe's rule: *"Commit the file and then git the hash."*
+ * `git hash-object` will happily fingerprint uncommitted bytes — and those bytes are in no commit,
+ * so no search will ever find them and the provenance is a dead end that looks alive. The
+ * authoring loop commits first and takes the hash from git; this file cannot check that (a browser
+ * has no git), so it is a documented rule enforced where the loop runs.
+ *
+ * `blob: null` means "no recorded version" and nothing else — never "no file exists, generate one".
+ * That same null arises from a path typed by hand for a file already on disk, so existence stays a
+ * filesystem question and the generator is create-if-absent, refuse-if-present.
  *
  * ⚠ **Hygiene here is load-bearing.** A generator turns `path` into a *write instruction*, so an
  * absolute path or a `..` segment out of a hand-edited setting is a write outside the vault. Both
@@ -1259,12 +1271,10 @@ export function clampSource(raw) {
   // no escaping the repo, and no absolute paths: this string can become a write target
   if (path.startsWith("/") || /^[a-zA-Z]:/.test(path)) return null;
   if (path.split("/").some(seg => seg === ".." || seg === "")) return null;
-  const hash = v => (typeof v === "string" && /^[0-9a-f]{4,64}$/.test(v.trim()) ? v.trim() : v == null ? null : false);
-  const blob = hash(raw.blob);
-  const commit = hash(raw.commit);
+  if (raw.blob == null) return { blob: null, path };
   // a hash that is present but malformed invalidates the record — never repair it to a bare path
-  if (blob === false || commit === false) return null;
-  return { path, blob, commit };
+  if (typeof raw.blob !== "string" || !/^[0-9a-f]{7,64}$/.test(raw.blob.trim())) return null;
+  return { blob: raw.blob.trim(), path };
 }
 
 /** One of a fixed vocabulary, or the default — never whatever was stored. */

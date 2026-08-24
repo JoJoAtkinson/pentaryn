@@ -1496,14 +1496,17 @@ export function register({ t, eq, ok }) {
     eq(mine[0].children[0].children[0].depth, 2, "depth re-stamped for the tree drawn");
   });
 
-  t("source: a well-formed record round-trips, and junk becomes null", () => {
-    const good = { path: "world/factions/ardenhaven/gray-district.md", blob: "9f3c1a2b", commit: "d9fb63b" };
+  t("source: the blob is the identity and the path is a label", () => {
+    const good = { blob: "41bcd52af97a0a9bcdee302cda9e2c165df7ef0d", path: "world/factions/a/gray-district.md" };
     eq(clampSource(good), good);
-    eq(clampSource({ path: "world/a.md" }), { path: "world/a.md", blob: null, commit: null });
+    eq(clampSource({ path: "world/a.md" }), { blob: null, path: "world/a.md" }, "no version yet is legal");
     eq(clampSource(null), null);
     eq(clampSource("world/a.md"), null, "a bare string is not a source record");
     eq(clampSource({ path: "   " }), null);
+    eq(clampSource({ blob: "41bcd52a" }), null, "a hash with nowhere to point is not a record");
     eq(clampSource({ path: "world\\factions\\a.md" }).path, "world/factions/a.md", "separators normalise");
+    // `commit` was dropped: a committed blob reconstructs it via `git log --find-object`
+    ok(!("commit" in clampSource(good)), "no commit field");
   });
 
   t("source: a path that could escape the repo is refused outright", () => {
@@ -1521,8 +1524,9 @@ export function register({ t, eq, ok }) {
   t("source: a malformed hash invalidates the whole record, never just itself", () => {
     // a half-record must not survive claiming provenance it has lost
     eq(clampSource({ path: "world/a.md", blob: "zzzz" }), null);
-    eq(clampSource({ path: "world/a.md", commit: 42 }), null);
-    eq(clampSource({ path: "world/a.md", blob: null, commit: null }).path, "world/a.md", "absent is fine");
+    eq(clampSource({ path: "world/a.md", blob: 42 }), null);
+    eq(clampSource({ path: "world/a.md", blob: "abc" }), null, "too short to be a git hash");
+    eq(clampSource({ path: "world/a.md", blob: null }).path, "world/a.md", "absent is fine");
   });
 
   t("source: survives a patch to an unrelated field — the regression `advantage` never had", () => {
@@ -1532,16 +1536,14 @@ export function register({ t, eq, ok }) {
      * exactly how `advantage` became a corpse: written by two call sites, read by the summary to
      * draw an icon, and silently dropped in between.
      */
-    const src = { path: "world/factions/ardenhaven/gray-district.md", blob: "9f3c1a2b", commit: null };
+    const src = { blob: "41bcd52af97a0a9bcdee302cda9e2c165df7ef0d", path: "world/factions/a/gray-district.md" };
     const entry = clampAttribute({ id: "graydistrict", title: "The Gray District", source: src });
     eq(entry.source, src, "it survives the clamp at all");
 
-    // now the thing that actually broke: edit something else and read it back
     const edited = clampAttribute({ ...entry, dc: 18 });
     eq(edited.source, src, "and survives an unrelated edit");
     eq(edited.dc, 18);
 
-    // and a round trip through the registry reader, which every save goes through
     const [stored] = readRegistry([edited]);
     eq(stored.source, src, "and a whole-registry round trip");
   });
@@ -1549,9 +1551,9 @@ export function register({ t, eq, ok }) {
   t("source: a patch replaces the object whole rather than merging into it", () => {
     // a changed path is a different file; a hash carried across would assert provenance nothing
     // checked. `updateAttribute`'s shallow spread makes this the behaviour — the test pins it.
-    const entry = clampAttribute({ id: "a", title: "A", source: { path: "world/old.md", blob: "aaaa" } });
+    const entry = clampAttribute({ id: "a", title: "A", source: { path: "world/old.md", blob: "aaaaaaa" } });
     const moved = clampAttribute({ ...entry, source: { path: "world/new.md" } });
-    eq(moved.source, { path: "world/new.md", blob: null, commit: null }, "the old hash does not ride along");
+    eq(moved.source, { blob: null, path: "world/new.md" }, "the old hash does not ride along");
     eq(clampAttribute({ ...entry, source: null }).source, null, "and it can be cleared");
   });
 
