@@ -65,6 +65,7 @@ import {
   attrIdOf,
   derivedNamespace,
   clampAttribute,
+  clampSource,
   readRegistry,
   deriveAttributes,
   attributeIdsFor,
@@ -1493,6 +1494,65 @@ export function register({ t, eq, ok }) {
     eq(mine[0].children.map(n => n.id), ["under"]);
     eq(mine[0].children[0].children.map(n => n.id), ["guild"], "nested the way the world is");
     eq(mine[0].children[0].children[0].depth, 2, "depth re-stamped for the tree drawn");
+  });
+
+  t("source: a well-formed record round-trips, and junk becomes null", () => {
+    const good = { path: "world/factions/ardenhaven/gray-district.md", blob: "9f3c1a2b", commit: "d9fb63b" };
+    eq(clampSource(good), good);
+    eq(clampSource({ path: "world/a.md" }), { path: "world/a.md", blob: null, commit: null });
+    eq(clampSource(null), null);
+    eq(clampSource("world/a.md"), null, "a bare string is not a source record");
+    eq(clampSource({ path: "   " }), null);
+    eq(clampSource({ path: "world\\factions\\a.md" }).path, "world/factions/a.md", "separators normalise");
+  });
+
+  t("source: a path that could escape the repo is refused outright", () => {
+    /*
+     * ⚠ Not pedantry: a generator turns this string into a WRITE TARGET, so an absolute path or a
+     * `..` segment out of a hand-edited setting is a write outside the vault.
+     */
+    eq(clampSource({ path: "/etc/passwd" }), null, "absolute");
+    eq(clampSource({ path: "C:/windows/system32" }), null, "windows absolute");
+    eq(clampSource({ path: "../../.ssh/id_rsa" }), null, "climbing out");
+    eq(clampSource({ path: "world/../../secrets.md" }), null, "climbing out mid-path");
+    eq(clampSource({ path: "world//a.md" }), null, "empty segment");
+  });
+
+  t("source: a malformed hash invalidates the whole record, never just itself", () => {
+    // a half-record must not survive claiming provenance it has lost
+    eq(clampSource({ path: "world/a.md", blob: "zzzz" }), null);
+    eq(clampSource({ path: "world/a.md", commit: 42 }), null);
+    eq(clampSource({ path: "world/a.md", blob: null, commit: null }).path, "world/a.md", "absent is fine");
+  });
+
+  t("source: survives a patch to an unrelated field — the regression `advantage` never had", () => {
+    /*
+     * `clampAttribute` returns an explicit literal and every write is routed back through it, so a
+     * field missing from that literal is erased on the next edit of ANY field on ANY entry. That is
+     * exactly how `advantage` became a corpse: written by two call sites, read by the summary to
+     * draw an icon, and silently dropped in between.
+     */
+    const src = { path: "world/factions/ardenhaven/gray-district.md", blob: "9f3c1a2b", commit: null };
+    const entry = clampAttribute({ id: "graydistrict", title: "The Gray District", source: src });
+    eq(entry.source, src, "it survives the clamp at all");
+
+    // now the thing that actually broke: edit something else and read it back
+    const edited = clampAttribute({ ...entry, dc: 18 });
+    eq(edited.source, src, "and survives an unrelated edit");
+    eq(edited.dc, 18);
+
+    // and a round trip through the registry reader, which every save goes through
+    const [stored] = readRegistry([edited]);
+    eq(stored.source, src, "and a whole-registry round trip");
+  });
+
+  t("source: a patch replaces the object whole rather than merging into it", () => {
+    // a changed path is a different file; a hash carried across would assert provenance nothing
+    // checked. `updateAttribute`'s shallow spread makes this the behaviour — the test pins it.
+    const entry = clampAttribute({ id: "a", title: "A", source: { path: "world/old.md", blob: "aaaa" } });
+    const moved = clampAttribute({ ...entry, source: { path: "world/new.md" } });
+    eq(moved.source, { path: "world/new.md", blob: null, commit: null }, "the old hash does not ride along");
+    eq(clampAttribute({ ...entry, source: null }).source, null, "and it can be cleared");
   });
 
   t("tree: a cycle in the registry is promoted to a root, never silently vanished", () => {

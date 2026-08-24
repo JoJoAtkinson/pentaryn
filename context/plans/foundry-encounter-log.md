@@ -1174,6 +1174,124 @@ No data migration: the live world was re-verified clean this pass (`ties` on 56 
 
 ---
 
+### 23. `source` — an attribute points back at the markdown it came from (ruled by Joe, 2026-08-24)
+
+Joe has a large, well-written vault in the same repo — 364 tracked markdown files under `world/`,
+folder hierarchy mirroring containment (faction → locations → city → district → building, up to
+seven deep). It is the **same hierarchy the attribute tree encodes**, written twice, with nothing
+joining the two. His plan is to migrate it in:
+
+> *"I'd call that **source** so I have it. It can be null if I'm not sourcing it from my git repo —
+> but if I am sourcing it then having the path is great. Often my source material has DM notes, and
+> so I want that filtered down to what the player sees. So I can take a markdown and use it to
+> inspire attributes and link it to the source. **Many attributes can be linked to the same
+> source.** My only concern is it getting out of sync — let's make source an object that takes a
+> commit version. If the version is null it's assumed that it's pathing info but there's no file
+> created — means I can author content in Foundry and have it pull out and create the markdown.
+> That said, **the golden path should be source → attribute**, where the attribute has the path to
+> markdown and commit version."*
+
+**The shape** — one optional field on the registry entry, sibling of `parent` and `dc`:
+
+```js
+source: null | {
+  path:   "world/factions/ardenhaven/locations/ardenford/gray-district.md",  // repo-relative
+  blob:   "9f3c…" | null,   // git hash-object of the bytes actually read — the drift anchor
+  commit: "d9fb63b…" | null // the containing commit, for orientation and `git diff`
+}
+```
+
+Nothing in-engine gates on it. A dangling `source` is harmless — the opposite of `parent`, whose
+dangling case had to be ruled on (degrade to root, never to unreachable).
+
+**Why the anchor is a blob and not the commit Joe named.** A commit records a version Joe did not
+necessarily read: he authors from his editor, and the working tree is routinely dirty. Hash the
+bytes at link time and the record cannot lie — drift is a re-hash and a compare, needing no history
+at all. It also survives a rebase, which a raw SHA pin does not, and it buys the rename defence
+below for free. `commit` stays because Joe asked for it by name and it is what makes a drift report
+diffable; it is courtesy, not the mechanism.
+
+⚠ **The vault gets reorganised, so a bare path rots.** Measured: **76 renames across 69 commits**
+touching `world/` — 41 in December, 18 in January, four as recently as 2026-08-22. A moved note
+breaks every attribute sourced from it, and because a dangling `source` is harmless it breaks in
+**silence**. The blob is the defence: a dangling path whose stored blob matches `git hash-object` of
+some other vault file **is** the moved file, and the drift report can propose the re-point
+mechanically. This is the one migration hazard worth engineering against; delete and history-rewrite
+are report-level only.
+
+⚠ **`blob: null` means "no recorded version" and nothing else.** Joe's sentence describes a
+*behaviour* — author in Foundry, pull the markdown out — not a stored instruction. Read as one, a
+null would also arise from a path typed by hand for a file that already exists and from tooling that
+failed to record a version, and a generator trusting it would overwrite hand-written world prose.
+**Existence is a filesystem question, always.** The generator's contract is create-if-absent,
+refuse-and-report-if-present, with no override. Joe's outbound flow still works exactly as asked
+(path set, no version, no file on disk → generate); the only case the rule forbids is the one that
+destroys writing. A stored `mode: "from-file" | "to-file"` was rejected: it is a state machine in
+data that the filesystem already answers, and it can disagree with the filesystem, at which point
+one of them is lying.
+
+⚠ **Drift status is never written back into the registry.** `saveRegistry` rewrites the setting
+**whole**, last writer wins, no merge — and the sheet fires `updateAttribute` on every field change.
+A background checker that read the registry, computed drift and wrote flags back would discard
+whatever the GM edited in between, across the entire registry rather than one row. Drift lives in a
+repo-side **report**, grouped by path so one drifted file is read once rather than once per
+attribute. Its only failure mode is "not run", which is acceptable: drift matters only while
+authoring, and authoring is when it runs.
+
+⚠ **A path can be a spoiler.** The registry syncs to every client, and
+`world/factions/ardenhaven/locations/ardenford/gray-district.md` names a parentage the tree may be
+deliberately withholding — a filename can give away what a title was carefully chosen not to. This
+is the existing "do not put anything in a lore row you could not bear a curious player reading"
+rule, extended; the use-doc must say so, because the leak arrives through a field that looks like
+bookkeeping.
+
+⚠ **Path hygiene is load-bearing, not pedantry.** The generator turns `path` into a *write
+instruction*, so an absolute path or a `..` segment in a hand-edited setting is a write outside the
+vault. `clampSource` rejects both and caps length; the generator independently resolves and verifies
+containment under `world/`. A malformed hash drops the **whole** object to null rather than being
+repaired to a bare path, so a half-record cannot claim provenance it lost.
+
+**Who writes it.** Foundry runs in a browser: it cannot run git or stat a file, so it cannot compute
+`blob` or verify `path`. That is not a limitation to design around — every registry write from
+outside Foundry already goes through `eval-js` from a Claude session running *in the repo*, where
+git and the filesystem are. The sheet **displays** (path, short hash) and **clears**; the migration
+loop hashes in Bash and writes through the API. Short SHAs are display sugar, never storage.
+
+**Rejected: frontmatter as the index** (the vault names the attribute ids it seeds). It is
+rename-safe by construction and syncs no paths to players, but it fails on three counts: an
+attribute authored in Foundry that *wants* a file has no file to carry the frontmatter, so Joe's
+outbound flow cannot exist; drift still needs a version anchor, which means machine state churning
+inside his own prose; and the vault is heterogeneous today — `gray-district.md` carries no YAML at
+all, using a bold `**Tags:**` line — so it would start with silent misses across a large share of
+364 files. Its one virtue, rename-safety, is taken via blob-matching instead.
+
+**Not now:** a per-lore-row `section` anchor. File granularity is the actionable unit — a drifted
+file means "re-read this note", and the human maps sections to rows in that same pass. It would add
+three more field-drop stations across `clampLoreRow`/`readLore`/the lore editor, and the shape does
+not foreclose it.
+
+#### The field-drop checklist — and the corpse that proves it is needed
+
+⚠ **This trap has already fired on this very record.** `advantage` is written by `createAttribute`
+and by the sheet's *author* button, **dropped** by `clampAttribute` (which returns an explicit
+literal), and still **read** by `summary()` to draw the grants-advantage d20 — so that icon has been
+unreachable for every authored entry since `whenKnown`/`whenCarried` replaced the concept and the
+summary never followed. Verified live: written `true`, stored absent, described `null`. Fixed in the
+same change as `source` lands, because it is the same mistake.
+
+Every station `source` must reach in one commit:
+
+| Station | What it needs |
+| --- | --- |
+| `clampAttribute` | `source` in the returned literal via `clampSource(raw)`. **The critical one** — `saveRegistry` routes every write through `readRegistry`, so missing it erases `source` on the next edit of *any* field on *any* entry |
+| `createAttribute` | accept `source` in opts, or every migration is a create-then-update pair, hundreds of times |
+| `updateAttribute` | the merge is a shallow spread, so a patch **replaces `source` whole** — a path change arrives with its new hash or with nulls, never merged. Documented, not inferred |
+| `describeAttribute` | `source: null` in the unauthored-fallback literal, or consumers see `undefined` on one branch and an object on the other |
+| `attributes-ui.mjs` | display and clear. The generic `data-attr-field` handler writes flat `{[field]: value}`, so a `source.path` key would be silently dropped — this needs a bespoke handler |
+| `test/known.mjs` | the regression that matters most: **patching an unrelated field preserves `source`** (that is precisely the `advantage` failure). Plus junk → null, hygiene rejections, round-trip, whole-object replacement |
+| `context/foundry/attributes.md` | a sourcing section, and *Things that will bite*: the dirty-tree rule, create-if-absent, never-write-back, and the path-as-spoiler warning |
+
+
 ## Build order — stop anywhere
 
 | Phase | Delivers | Usable alone? | Honest scope |

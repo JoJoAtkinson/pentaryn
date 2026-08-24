@@ -1211,8 +1211,60 @@ export function clampAttribute(entry) {
     // the approval gate, tri-state exactly like a lore row's — and ORTHOGONAL to the scale above
     hold: entry.hold === true ? true : entry.hold === false ? false : null,
     lore: readLore(entry.lore),
+    /*
+     * ⚠ Decision 23's field, and the one station that erases it for the WHOLE registry if missed:
+     * `saveRegistry` routes every write through `readRegistry`, so a `source` absent from this
+     * literal is dropped on the next edit of any field on any entry. `advantage` is the corpse that
+     * proves it — written by two call sites, never named here, and still read by the summary to
+     * draw an icon that has therefore never appeared.
+     */
+    source: clampSource(entry.source),
     bonuses: [] // decision 20 — reserved, empty in v1, and emptied on read so it stays that way
   };
+}
+
+/** A path into the repo, or nothing. Repo-relative, no escaping, and never a write outside it. */
+export const SOURCE_PATH_MAX = 512;
+
+/**
+ * Where an attribute came from — the markdown in the GM's own vault that seeded it.
+ *
+ * ```js
+ * source: { path: "world/factions/…/gray-district.md", blob: "9f3c…", commit: "d9fb63b…" }
+ * ```
+ *
+ * **`blob` is the drift anchor, not `commit`.** A commit records a version the author may never
+ * have read: they write from an editor, and a working tree is routinely dirty. The hash of the
+ * bytes actually read cannot lie — drift is a re-hash and a compare, needing no history at all, and
+ * it survives a rebase where a raw commit pin would be orphaned. `commit` is kept because it is
+ * what makes a drift report diffable, and because Joe asked for it by name.
+ *
+ * **`blob: null` means "no recorded version" and nothing more.** It must never be read as "no file
+ * exists, generate one" — that same null arises from a path typed by hand for a file that is
+ * already there, and a generator trusting it would overwrite hand-written prose. Existence is a
+ * filesystem question, always; the generator's contract is create-if-absent, refuse-if-present.
+ *
+ * ⚠ **Hygiene here is load-bearing.** A generator turns `path` into a *write instruction*, so an
+ * absolute path or a `..` segment out of a hand-edited setting is a write outside the vault. Both
+ * are refused. A malformed hash drops the **whole** object rather than degrading to a bare path, so
+ * a half-record can never claim provenance it has lost.
+ *
+ * Nothing in this module gates on `source`. A dangling path is harmless — the exact opposite of
+ * `parent`, and deliberately so.
+ */
+export function clampSource(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const path = str(raw.path, SOURCE_PATH_MAX).trim().replace(/\\/g, "/");
+  if (!path) return null;
+  // no escaping the repo, and no absolute paths: this string can become a write target
+  if (path.startsWith("/") || /^[a-zA-Z]:/.test(path)) return null;
+  if (path.split("/").some(seg => seg === ".." || seg === "")) return null;
+  const hash = v => (typeof v === "string" && /^[0-9a-f]{4,64}$/.test(v.trim()) ? v.trim() : v == null ? null : false);
+  const blob = hash(raw.blob);
+  const commit = hash(raw.commit);
+  // a hash that is present but malformed invalidates the record — never repair it to a bare path
+  if (blob === false || commit === false) return null;
+  return { path, blob, commit };
 }
 
 /** One of a fixed vocabulary, or the default — never whatever was stored. */

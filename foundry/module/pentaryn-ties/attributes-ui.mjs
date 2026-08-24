@@ -39,7 +39,7 @@ import {
 } from "./attributes.mjs";
 import { loreEditorHTML, bindLoreEditor } from "./lore.mjs";
 import { kindActorOf, attrLoreStateFor, requestAttrLore, releaseHeldAttribute } from "./study.mjs";
-import { grantsForEntry, GRANTED_FLAG, HELP_SCALE, CARRIED_SCALE } from "./known-core.mjs";
+import { grantsForEntry, GRANTED_FLAG, HELP_SCALE, CARRIED_SCALE, helpFor } from "./known-core.mjs";
 
 const esc = s =>
   String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -176,8 +176,14 @@ function summary(row, isGM) {
           )}</span>`
         : ""
     }
+    ${/*
+        ⚠ This read `row.advantage` — a field `clampAttribute` drops on every read, so the icon has
+        never once rendered for an authored entry. `whenKnown`/`whenCarried` replaced the concept
+        and the summary was never followed through. `helpFor` resolves `inherit`, so ask it rather
+        than comparing strings here.
+      */ ""}
     ${
-      isGM && row.advantage
+      isGM && row.authored && (helpFor(row) !== "enables" || helpFor(row, { carried: true }) !== "enables")
         ? `<i class="fa-solid fa-dice-d20 pt-attr-adv" aria-label="${esc(t("attributes.grantsAdvantage"))}"
              data-tooltip="${esc(t("attributes.grantsAdvantage"))}"></i>`
         : ""
@@ -191,6 +197,39 @@ function summary(row, isGM) {
     ${isGM && row.loreCount ? `<span class="pt-attr-count">${row.loreCount}</span>` : ""}
     <i class="fa-solid fa-chevron-down pt-caret" aria-hidden="true"></i>
   </div>`;
+}
+
+/**
+ * Where this attribute came from — read-mostly, by design.
+ *
+ * Foundry runs in a browser: it cannot run git or stat a file, so it cannot compute the blob hash
+ * or check that the path is real. That is not a gap to work around — every registry write from
+ * outside Foundry already comes from a session running *in the repo*, where both are available. So
+ * this shows what was recorded and offers **Clear**, and the migration loop writes it.
+ *
+ * ⚠ The generic `data-attr-field` handler writes a flat `{ [field]: value }`, so wiring a
+ * `source.path` key through it would store a key `clampAttribute` silently drops. Hence a bespoke
+ * control rather than another `data-attr-field`.
+ *
+ * ⚠ **The path itself can be a spoiler.** `world/factions/ardenhaven/…/gray-district.md` names a
+ * parentage the tree may be withholding, so this is GM-only markup like everything else in the
+ * editor — but the warning belongs in the use-doc too, because it arrives through a field that
+ * looks like bookkeeping rather than content.
+ */
+function sourceBlock(row) {
+  const src = row.source;
+  if (!src) return "";
+  const short = v => (typeof v === "string" ? v.slice(0, 7) : null);
+  const version = short(src.blob)
+    ? f("attributes.sourceVersion", { hash: short(src.blob) })
+    : t("attributes.sourceNoVersion");
+  return `<div class="pt-field pt-source" data-id="${esc(row.id)}">
+      <span class="pt-field-label">${esc(t("attributes.sourceLabel"))}</span>
+      <code class="pt-source-path" data-tooltip="${esc(src.path)}">${esc(src.path)}</code>
+      <span class="pt-source-version">${esc(version)}</span>
+      <button type="button" class="pt-textbtn" data-action="source-clear" data-id="${esc(row.id)}"
+              data-tooltip="${esc(t("attributes.sourceClearTip"))}">${esc(t("attributes.sourceClear"))}</button>
+    </div>`;
 }
 
 function detail(row, { actor, isGM, viewer }) {
@@ -240,6 +279,7 @@ function detail(row, { actor, isGM, viewer }) {
                 ).join("")}
               </select>
             </label>
+            ${sourceBlock(row)}
             <label class="pt-field pt-field-check">
               <input type="checkbox" data-attr-field="secret" data-id="${esc(row.id)}"${row.secret ? " checked" : ""}>
               <span>${esc(t("attributes.secretLabel"))}</span>
@@ -597,7 +637,8 @@ export function bindAttributes(root, actor, rerender = () => {}) {
       // authoring a DERIVED id creates an entry with that exact id — nothing links, because
       // the link was never stored (decision 16). Every carrier is enriched at once.
       const list = registry();
-      list.push({ id, title: row.title, category: row.category, icon: row.icon, advantage: !row.derived, lore: [] });
+      // `advantage` was written here and dropped on read; the help scale is the live concept
+      list.push({ id, title: row.title, category: row.category, icon: row.icon, lore: [] });
       await game.settings.set(MODULE, "attributes", list);
       open.add(id);
       rerender();
@@ -607,6 +648,14 @@ export function bindAttributes(root, actor, rerender = () => {}) {
   for (const btn of box.querySelectorAll("[data-action='attr-unlink']")) {
     btn.addEventListener("click", async () => {
       await unlinkAttribute(actor, btn.dataset.id);
+      rerender();
+    });
+  }
+
+  for (const btn of box.querySelectorAll("[data-action='source-clear']")) {
+    btn.addEventListener("click", async () => {
+      // whole-object replacement, per decision 23 — never a partial patch
+      await updateAttribute(btn.dataset.id, { source: null });
       rerender();
     });
   }

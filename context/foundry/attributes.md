@@ -488,6 +488,71 @@ await A.update(id, { icon: "worlds/mine/ardenhaven.webp" }); // yours from here 
 square. Fixed, and entries written against them are repaired on load. If you add a category icon,
 check the path actually serves — a wrong one logs nothing and merely looks unfinished.
 
+## Sourcing from the vault
+
+An attribute can point back at the markdown it came from. Optional — leave it off and nothing
+changes. It exists because `world/` and the attribute tree are the *same hierarchy written twice*,
+and the pointer is what stops them drifting apart.
+
+```js
+source: {
+  path:   "world/factions/ardenhaven/locations/ardenford/gray-district.md",  // repo-relative
+  blob:   "41bcd52a…",   // git hash-object of the bytes you actually read
+  commit: "493326c0…"    // the containing commit, for orientation and `git diff`
+}
+```
+
+**The migration loop.** Read a note, author what a player can discover from it, point back:
+
+```bash
+P="world/factions/ardenhaven/locations/ardenford/gray-district.md"
+git hash-object "$P"                 # -> the blob
+git log -1 --format=%H -- "$P"       # -> the commit
+```
+
+```js
+await A.create("The Gray District", { category: "district", source: { path, blob, commit } });
+```
+
+`create` takes `source` directly, because this loop runs hundreds of times and a
+create-then-update pair would double every write. **Many attributes may share one path** — one note
+about Ardenford can seed the city, three districts and a guild.
+
+**Checking for drift.** Nothing does this automatically, and nothing should — see the warning
+below. Run it while you are authoring, which is the only time it matters:
+
+```bash
+git ls-files world | grep '\.md$' | tr '\n' '\0' | xargs -0 git hash-object > /tmp/blobs
+git ls-files world | grep '\.md$' > /tmp/paths
+paste /tmp/blobs /tmp/paths          # the whole vault indexed by content, ~30ms for 364 files
+```
+
+Compare each attribute's `source.blob` against the current hash of its `source.path`. Different
+means the note changed since you authored from it — go re-read it. Group the report **by path**, or
+one edited note makes you read the same diff once per attribute.
+
+**When a note moves.** The path dangles silently: nothing gates on `source`, so nothing complains.
+That index is the fix — look the stored `blob` up in it and whatever file now hashes to it *is* the
+moved note:
+
+```js
+await A.update(id, { source: { path: newPath, blob, commit } });
+```
+
+⚠ **A patch replaces `source` whole.** `{ source: { path } }` drops the hashes with it, and that is
+deliberate: a changed path is a different file, and a hash carried across would assert provenance
+nothing checked. Send the new hashes, or send nulls.
+
+**Authoring in Foundry instead.** Set a path with no hashes and the note does not exist yet — write
+the attribute first, generate the markdown from it later. The generator's rule is
+**create-if-absent, refuse-if-present**, and it checks the filesystem rather than trusting the
+field, because `blob: null` also arises from a path you typed by hand and from tooling that failed
+to record a version. Nothing is allowed to overwrite prose you wrote.
+
+**On the sheet:** the path and a short hash show under the attribute, with **Clear**. There is no
+edit box, because a browser cannot run `git hash-object` or check that a file is there — the loop
+above is where this field gets written.
+
 ## Giving knowledge away
 
 Rolls are not the only route in — and after a permanent failure they are the *only* alternative.
@@ -584,6 +649,18 @@ features — nothing here reads them.
 
 - **A GM client must be connected** for any of this. No GM, no rolls — by design, a blind
   arbitrated roll needs an arbiter.
+- **`source` records what you *read*, not what you committed.** The hash is of the bytes on disk at
+  the moment you linked, so if your tree was dirty the attribute is anchored to your editor's
+  version — which is the honest answer, and it is why the anchor is a content hash rather than the
+  commit. Commit the note and the hash still matches; edit it and it does not.
+- **Never write a drift flag back into the registry.** The registry setting is rewritten *whole* on
+  every save, last writer wins — so a background job that computed drift and wrote it back would
+  discard whatever you were editing at the time, across every entry rather than one. Drift is a
+  report you run, never state that is stored.
+- **A source path can be a spoiler.** `world/factions/ardenhaven/.../gray-district.md` names a
+  parentage the tree may be deliberately withholding — a filename can give away what you were
+  careful not to put in a title. The registry syncs to every client, so the same rule as lore rows
+  applies: nothing in a path you could not bear a curious player reading.
 - **A cycle is refused now**, so an attribute cannot be made its own ancestor by mistake. If one
   ever exists (a hand-edited setting), the tree promotes it to a root rather than making it and
   everything under it silently vanish.

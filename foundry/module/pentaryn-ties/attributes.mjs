@@ -178,19 +178,28 @@ async function saveRegistry(list) {
  * past it was not deliberate, and colliding on the id is the signal. `yellowstone2` is how you
  * mean a different one.
  */
-export async function createAttribute(title, { category = "", icon = null, advantage = true } = {}) {
+export async function createAttribute(title, { category = "", icon = null, source = null } = {}) {
   if (!game.user?.isGM) return { ok: false, reason: "notGM" };
   const id = attrIdOf(title);
   if (!id) return { ok: false, reason: "empty" };
   const list = registry();
   const existing = list.find(e => e.id === id);
   if (existing) return { ok: false, reason: "collision", existing };
+  /*
+   * ⚠ `advantage` used to be passed here and is gone. `clampAttribute` never named it in its
+   * returned literal, so it was dropped on every read while two call sites went on writing it and
+   * the summary went on reading it — see decision 23's field-drop checklist. `whenKnown` and
+   * `whenCarried` are the live concept.
+   *
+   * `source` is accepted at creation because the migration loop is create-and-point, hundreds of
+   * times; making it a create-then-update pair would double every write.
+   */
   const entry = clampAttribute({
     id,
     title: String(title ?? "").trim(),
     category,
     icon: icon ?? iconForCategory(category),
-    advantage,
+    source,
     lore: []
   });
   if (!entry) return { ok: false, reason: "empty" };
@@ -247,6 +256,12 @@ export async function updateAttribute(id, patch) {
    * Retyping the category should re-dress the entry: call it a city and it gets the city. Only an
    * icon this module chose is replaced — the moment a GM picks their own art it is theirs, and a
    * later category edit leaves it alone.
+   */
+  /*
+   * ⚠ The merge is a shallow spread, so `{ source: { path } }` **replaces the whole object** and
+   * drops the hashes with it. That is the documented rule rather than a bug to paper over: a path
+   * that changed is a different file, and a hash carried across from the old one would assert
+   * provenance nothing checked. Send the new hashes, or send nulls.
    */
   const next = { ...patch };
   if ("category" in next && !("icon" in next) && isDefaultIcon(list[i].icon)) {
@@ -352,7 +367,9 @@ export function describeAttribute(id) {
     title: derivedTitle(ns, slug),
     category: ns ? f("attributes.derivedCategory", { ns: t(`attributes.ns.${ns}`) }) : "",
     icon: ns ? DERIVED_ICONS[ns] ?? CATEGORY_ICONS.default : CATEGORY_ICONS.default,
-    advantage: false, // no entry means the GM has said nothing about it
+    // no entry means the GM has said nothing about it — and `source` must be null on BOTH branches
+    // or a consumer sees an object one way and `undefined` the other
+    source: null,
     lore: [],
     bonuses: [],
     derived: !!ns,
