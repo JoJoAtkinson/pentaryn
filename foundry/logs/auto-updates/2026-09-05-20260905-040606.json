@@ -1,0 +1,1271 @@
+{
+  "run_id": "20260905-040606",
+  "outcome": "no-op",
+  "started": "2026-09-05T04:06:06-0400",
+  "finished": "2026-09-05T04:10:10-0400",
+  "snapshot": "world-2026-09-05-040611-fvtt14.367.tar.gz",
+  "native_snapshot": null,
+  "applied": [],
+  "failed": [],
+  "recoveries": [],
+  "smoke": [],
+  "warnings": {},
+  "messages": [
+    "Foundry stopped \u2014 start it again with: make vtt-up"
+  ],
+  "plan": {
+    "generated": "2026-09-05T04:09:52-0400",
+    "mode": "foundry",
+    "core": {
+      "installed": "14.367",
+      "channel": "stable"
+    },
+    "system": {
+      "id": "dnd5e",
+      "installed": "5.3.3"
+    },
+    "active_world_at_scan": null,
+    "worlds": [
+      {
+        "id": "ardenhaven",
+        "title": "ardenhaven",
+        "system": "dnd5e",
+        "system_version": "5.3.3",
+        "core_version": "14.367",
+        "last_played": "Fri Aug 21 2026 18:58:27 GMT-0400 (Eastern Daylight Time)"
+      },
+      {
+        "id": "space-journey",
+        "title": "Space Journey",
+        "system": "dnd5e",
+        "system_version": "5.3.3",
+        "core_version": "14.367",
+        "last_played": "Sat Aug 29 2026 04:10:05 GMT-0400 (Eastern Daylight Time)"
+      }
+    ],
+    "counts": {
+      "tracked": 17,
+      "protected": 7,
+      "local": 8,
+      "forked": 0,
+      "untracked": 0
+    },
+    "local_drift": [
+      {
+        "id": "pentaryn-seafoot-maps",
+        "installed": "1.0.0",
+        "repo": null,
+        "note": "installed but not present in foundry/module/"
+      }
+    ],
+    "decisions": [
+      {
+        "id": "core",
+        "type": "core",
+        "bucket": "skip",
+        "installed": "14.367",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "no core update available \u2014 licence server replied: {\"info\": \"SETUP.UpdateNotAvailable\"}"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "bucket": "skip",
+        "installed": "5.3.3",
+        "target": "5.3.3",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "betterroofs",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "4.0.2",
+        "target": "4.0.2",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "dice-so-nice",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "6.2.9",
+        "target": "6.2.9",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "dnd-dungeon-masters-guide",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "2.0.0",
+        "target": "2.0.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": true
+      },
+      {
+        "id": "dnd-monster-manual",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.4.0",
+        "target": "1.4.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": true
+      },
+      {
+        "id": "dnd-players-handbook",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "2.2.0",
+        "target": "2.2.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": true
+      },
+      {
+        "id": "eledryll-maps-castle-life-bundle-1",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.14.3",
+        "target": "1.14.3",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": true
+      },
+      {
+        "id": "eledryll-spiders-tear-opera-house",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.1.0",
+        "target": "1.1.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": true
+      },
+      {
+        "id": "enhancedcombathud",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "5.0.1",
+        "target": "5.0.1",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "enhancedcombathud-dnd5e",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "5.2.2",
+        "target": "5.2.2",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "foundry-mcp-bridge",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.8.3",
+        "target": "0.8.3",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "item-piles",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "3.3.4",
+        "target": "3.3.4",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "itempilesdnd5e",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.1.0",
+        "target": "1.1.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "levels",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "7.0.3",
+        "target": "7.0.3",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "lib-wrapper",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.13.5.1",
+        "target": "1.13.5.1",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "mad-endlesswiz",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "14.1.0",
+        "target": "14.1.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": true
+      },
+      {
+        "id": "mad-endlesswiz2",
+        "type": "module",
+        "bucket": "hold",
+        "installed": "13.0.1",
+        "target": "14.1.0",
+        "bump": "major",
+        "reasons": [
+          "not seen by a previous run \u2014 reviewed once before it can update unattended",
+          "adjudicated hold: No release notes available and the jump is major (13.0.1 -> 14.1.0), which matches the missing-notes major-version hold rule."
+        ],
+        "notes_url": "https://www.patreon.com/themadcartographer",
+        "protected": true,
+        "adjudication": "No release notes available and the jump is major (13.0.1 -> 14.1.0), which matches the missing-notes major-version hold rule."
+      },
+      {
+        "id": "monks-active-tiles",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "14.01",
+        "target": "14.01",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "multi-token-edit",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "3.3.3",
+        "target": "3.3.3",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-attunement",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.1.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-dropbin",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.1.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-importer",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.0.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-lookup",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.1.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-pings",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.1.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-seafoot-maps",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.0.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-ties",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.16.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-walls",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.2.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "scene-packer",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "2.8.12",
+        "target": "2.8.12",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "socketlib",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "v1.1.4",
+        "target": "v1.1.4",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "theripper-premium-hub",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "6.0.1",
+        "target": "6.0.1",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "tile-scroll",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "5.0.0",
+        "target": "5.0.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "wall-height",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "7.0.8",
+        "target": "7.0.8",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      }
+    ],
+    "upstream": {
+      "dnd5e": {
+        "id": "dnd5e",
+        "type": "system",
+        "installed": "5.3.3",
+        "latest": "5.3.3",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "13.347",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://raw.githubusercontent.com/foundryvtt/dnd5e/master/system.json"
+      },
+      "betterroofs": {
+        "id": "betterroofs",
+        "type": "module",
+        "installed": "4.0.2",
+        "latest": "4.0.2",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "lib-wrapper",
+              "type": "module",
+              "compatibility": {}
+            }
+          ],
+          "recommends": [
+            {
+              "id": "theripper-premium-hub",
+              "type": "module",
+              "reason": "TheRipper93's Module Hub will alert you of critical updates and give you easy access to documentation in the configure settings screen",
+              "compatibility": {}
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/theripper93/Better-Roofs/releases/latest/download/module.json"
+      },
+      "dice-so-nice": {
+        "id": "dice-so-nice",
+        "type": "module",
+        "installed": "6.2.9",
+        "latest": "6.2.9",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": 14,
+          "verified": "14.365"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://gitlab.com/riccisi/foundryvtt-dice-so-nice/-/raw/master/module/module.json"
+      },
+      "dnd-dungeon-masters-guide": {
+        "id": "dnd-dungeon-masters-guide",
+        "type": "module",
+        "installed": "2.0.0",
+        "latest": "2.0.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "13",
+          "verified": "13"
+        },
+        "relationships": {
+          "systems": [
+            {
+              "id": "dnd5e",
+              "type": "system",
+              "compatibility": {
+                "minimum": "5.1.0"
+              }
+            }
+          ]
+        },
+        "protected": true,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "dnd-monster-manual": {
+        "id": "dnd-monster-manual",
+        "type": "module",
+        "installed": "1.4.0",
+        "latest": "1.4.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "13",
+          "verified": "14"
+        },
+        "relationships": {
+          "systems": [
+            {
+              "id": "dnd5e",
+              "type": "system",
+              "compatibility": {
+                "minimum": "5.3.3"
+              }
+            }
+          ]
+        },
+        "protected": true,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "dnd-players-handbook": {
+        "id": "dnd-players-handbook",
+        "type": "module",
+        "installed": "2.2.0",
+        "latest": "2.2.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "13",
+          "verified": "14"
+        },
+        "relationships": {
+          "systems": [
+            {
+              "id": "dnd5e",
+              "type": "system",
+              "compatibility": {
+                "minimum": "5.1.9"
+              }
+            }
+          ]
+        },
+        "protected": true,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "eledryll-maps-castle-life-bundle-1": {
+        "id": "eledryll-maps-castle-life-bundle-1",
+        "type": "module",
+        "installed": "1.14.3",
+        "latest": "1.14.3",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": true,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "eledryll-spiders-tear-opera-house": {
+        "id": "eledryll-spiders-tear-opera-house",
+        "type": "module",
+        "installed": "1.1.0",
+        "latest": "1.1.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": true,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "enhancedcombathud": {
+        "id": "enhancedcombathud",
+        "type": "module",
+        "installed": "5.0.1",
+        "latest": "5.0.1",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {
+          "requires": [],
+          "recommends": [],
+          "systems": []
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/theripper93/enhancedcombathud/releases/latest/download/module.json"
+      },
+      "enhancedcombathud-dnd5e": {
+        "id": "enhancedcombathud-dnd5e",
+        "type": "module",
+        "installed": "5.2.2",
+        "latest": "5.2.2",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "enhancedcombathud",
+              "type": "module",
+              "compatibility": {
+                "minimum": "3.0.4"
+              }
+            }
+          ],
+          "systems": [
+            {
+              "id": "dnd5e",
+              "type": "system",
+              "compatibility": {
+                "minimum": "5.0.0"
+              }
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/theripper93/enhancedcombathud-dnd5e/releases/latest/download/module.json"
+      },
+      "foundry-mcp-bridge": {
+        "id": "foundry-mcp-bridge",
+        "type": "module",
+        "installed": "0.8.3",
+        "latest": "0.8.3",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "13",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/adambdooley/foundry-vtt-mcp/releases/latest/download/module.json"
+      },
+      "item-piles": {
+        "id": "item-piles",
+        "type": "module",
+        "installed": "3.3.4",
+        "latest": "3.3.4",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "13",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "socketlib",
+              "type": "module"
+            },
+            {
+              "id": "lib-wrapper",
+              "type": "module"
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/fantasycalendar/FoundryVTT-ItemPiles/releases/latest/download/module.json"
+      },
+      "itempilesdnd5e": {
+        "id": "itempilesdnd5e",
+        "type": "module",
+        "installed": "1.1.0",
+        "latest": "1.1.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "12",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "item-piles",
+              "type": "module",
+              "manifest": "https://github.com/fantasycalendar/FoundryVTT-ItemPiles/releases/latest/download/module.json",
+              "compatibility": {
+                "minimum": "3.2.7",
+                "verified": "3.2.7"
+              }
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/fantasycalendar/FoundryVTT-ItemPilesDnD5e/releases/latest/download/module.json"
+      },
+      "levels": {
+        "id": "levels",
+        "type": "module",
+        "installed": "7.0.3",
+        "latest": "7.0.3",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "lib-wrapper",
+              "type": "module",
+              "compatibility": {}
+            }
+          ],
+          "recommends": []
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/theripper93/Levels/releases/latest/download/module.json"
+      },
+      "lib-wrapper": {
+        "id": "lib-wrapper",
+        "type": "module",
+        "installed": "1.13.5.1",
+        "latest": "1.13.5.1",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "0.6.5",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/ruipin/fvtt-lib-wrapper/releases/latest/download/module.json"
+      },
+      "mad-endlesswiz": {
+        "id": "mad-endlesswiz",
+        "type": "module",
+        "installed": "14.1.0",
+        "latest": "14.1.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "scene-packer",
+              "type": "module",
+              "compatibility": {}
+            },
+            {
+              "id": "lib-wrapper",
+              "type": "module",
+              "compatibility": {}
+            },
+            {
+              "id": "multi-token-edit",
+              "type": "module",
+              "compatibility": {}
+            }
+          ],
+          "recommends": [
+            {
+              "id": "monks-active-tiles",
+              "type": "module",
+              "compatibility": {}
+            }
+          ]
+        },
+        "protected": true,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "mad-endlesswiz2": {
+        "id": "mad-endlesswiz2",
+        "type": "module",
+        "installed": "13.0.1",
+        "latest": "14.1.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "scene-packer",
+              "type": "module",
+              "compatibility": {}
+            },
+            {
+              "id": "lib-wrapper",
+              "type": "module",
+              "compatibility": {}
+            },
+            {
+              "id": "tile-scroll",
+              "type": "module",
+              "compatibility": {}
+            }
+          ],
+          "recommends": [
+            {
+              "id": "monks-active-tiles",
+              "type": "module",
+              "compatibility": {}
+            }
+          ]
+        },
+        "protected": true,
+        "notes_url": "https://www.patreon.com/themadcartographer",
+        "has_update": true,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "monks-active-tiles": {
+        "id": "monks-active-tiles",
+        "type": "module",
+        "installed": "14.01",
+        "latest": "14.01",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/ironmonk108/monks-active-tiles/releases/latest/download/module.json"
+      },
+      "multi-token-edit": {
+        "id": "multi-token-edit",
+        "type": "module",
+        "installed": "3.3.3",
+        "latest": "3.3.3",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": 14,
+          "verified": "14.363"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "lib-wrapper",
+              "type": "module"
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/Aedif/multi-token-edit/releases/download/3.3.3/module.json"
+      },
+      "pentaryn-attunement": {
+        "id": "pentaryn-attunement",
+        "type": "module",
+        "installed": "0.1.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-dropbin": {
+        "id": "pentaryn-dropbin",
+        "type": "module",
+        "installed": "0.1.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-importer": {
+        "id": "pentaryn-importer",
+        "type": "module",
+        "installed": "1.0.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-lookup": {
+        "id": "pentaryn-lookup",
+        "type": "module",
+        "installed": "0.1.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-pings": {
+        "id": "pentaryn-pings",
+        "type": "module",
+        "installed": "0.1.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-seafoot-maps": {
+        "id": "pentaryn-seafoot-maps",
+        "type": "module",
+        "installed": "1.0.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-ties": {
+        "id": "pentaryn-ties",
+        "type": "module",
+        "installed": "0.16.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-walls": {
+        "id": "pentaryn-walls",
+        "type": "module",
+        "installed": "0.2.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "scene-packer": {
+        "id": "scene-packer",
+        "type": "module",
+        "installed": "2.8.12",
+        "latest": "2.8.12",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "0.8.6",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/League-of-Foundry-Developers/scene-packer/releases/download/2.8.12/module.json"
+      },
+      "socketlib": {
+        "id": "socketlib",
+        "type": "module",
+        "installed": "v1.1.4",
+        "latest": "v1.1.4",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "11",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/farling42/foundryvtt-socketlib/releases/latest/download/module.json"
+      },
+      "theripper-premium-hub": {
+        "id": "theripper-premium-hub",
+        "type": "module",
+        "installed": "6.0.1",
+        "latest": "6.0.1",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/theripper93/theripper-premium-hub/releases/latest/download/module.json"
+      },
+      "tile-scroll": {
+        "id": "tile-scroll",
+        "type": "module",
+        "installed": "5.0.0",
+        "latest": "5.0.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "lib-wrapper",
+              "type": "module",
+              "compatibility": {}
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/theripper93/tile-scroll/releases/latest/download/module.json"
+      },
+      "wall-height": {
+        "id": "wall-height",
+        "type": "module",
+        "installed": "7.0.8",
+        "latest": "7.0.8",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "13",
+          "verified": "13"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "lib-wrapper",
+              "type": "module",
+              "compatibility": {}
+            }
+          ],
+          "recommends": [
+            {
+              "id": "theripper-premium-hub",
+              "type": "module",
+              "reason": "TheRipper93's Module Hub will alert you of critical updates and give you easy access to documentation in the configure settings screen",
+              "compatibility": {}
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/theripper93/wall-height/releases/latest/download/module.json"
+      }
+    },
+    "forks": [
+      {
+        "fork": "JoJoAtkinson/foundry-vtt-mcp",
+        "upstream": "adambdooley/foundry-vtt-mcp",
+        "package_id": "foundry-mcp-bridge",
+        "ahead": 0,
+        "behind": 16,
+        "branch": "master",
+        "error": null,
+        "checkout_path": null,
+        "notes": [
+          "16 commit(s) behind upstream with no local changes \u2014 safe to fast-forward: gh repo sync JoJoAtkinson/foundry-vtt-mcp"
+        ]
+      }
+    ],
+    "buckets": {
+      "auto": [],
+      "review": [],
+      "hold": [
+        "mad-endlesswiz2"
+      ]
+    },
+    "adjudication": {
+      "ran": true,
+      "error": null,
+      "verdicts": [
+        {
+          "id": "mad-endlesswiz2",
+          "verdict": "hold",
+          "rationale": "No release notes available and the jump is major (13.0.1 -> 14.1.0), which matches the missing-notes major-version hold rule."
+        }
+      ]
+    }
+  }
+}
