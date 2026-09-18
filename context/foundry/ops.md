@@ -1,6 +1,6 @@
 ---
 created: 2026-08-13
-last_modified: 2026-08-15
+last_modified: 2026-09-17
 tags: ["playbook", "foundry", "vtt", "ops", "onedrive", "secrets"]
 status: active
 ---
@@ -59,7 +59,7 @@ players ──https──▶ vtt.atjoseph.com ──cloudflared (named tunnel "a
                                                                                      │
                                           ~/Library/Application Support/FoundryVTT/  │
                                             Config/  Data/  Logs/  ◀─────────────────┘
-                                                     ├── worlds/   space-journey · ardenhaven
+                                                     ├── worlds/   space-journey · ardenford · ardenhaven
                                                      ├── modules/  21 (see §5)
                                                      ├── systems/  dnd5e 5.3.3
                                                      └── assets/   maps · tokens · splash
@@ -74,7 +74,7 @@ players ──https──▶ vtt.atjoseph.com ──cloudflared (named tunnel "a
 | Data root | `~/Library/Application Support/FoundryVTT/Data` |
 | Core | **v14.365** |
 | System | **dnd5e 5.3.3** |
-| Live world | **`space-journey`** — verified 2026-08-22 three ways: `/join` page title is "Space Journey", its `lastPlayed` is today, and Foundry holds 78 open file handles on its LevelDB while `ardenhaven` has 0 |
+| Live world | **whichever one is launched** — three worlds now exist, so never infer it. `python -m scripts.foundry.ops status` names it, or ask the client for `game.world.id`. `space-journey` was the live world through 2026-09-17; `ardenford` was created that day (see *Creating a new world*, below) |
 
 ### The actor pipeline targets `space-journey` — and says so out loud
 
@@ -98,11 +98,59 @@ visible rather than silent:
 * the staged path and the probed URL are asserted to name the same world, in
   `scripts/tests/test_foundry_ops.py`.
 
-Override for a one-off with `make foundry-import WORLD=ardenhaven`. Both worlds still
+Override for a one-off with `make foundry-import WORLD=ardenhaven`. All three worlds still
 exist on disk, so "the directory exists" alone can't catch a wrong-but-real name — the
 printed line is what you check.
 
 *(The **tunnel** is also named `ardenhaven`. That one is cosmetic and fine.)*
+
+### Creating a new world — the Setup screen is not the only path
+
+World creation is a plain HTTP route, `POST /create` with `action: "createWorld"`
+(`dist/server/views/create.mjs`). It needs an admin-authenticated session and **no world
+active**, which is exactly the state `FoundryAdmin` already knows how to reach — so a new
+world can be stood up from a script without touching the browser:
+
+```python
+from scripts.foundry.update.admin import FoundryAdmin
+from scripts.foundry.admin_password import foundry_admin_password
+admin = FoundryAdmin(admin_password=foundry_admin_password())
+admin.authenticate()
+admin.session.post(f"{admin.base_url}/create", json={
+    "action": "createWorld", "id": "<slug>", "title": "<Title>",
+    "system": "dnd5e", "launch": True})
+```
+
+`launch: True` runs `firstLaunch()`, which creates every collection LevelDB **and** a
+default Gamemaster user. Without it you get `world.json` and empty directories, and the
+databases appear only on the first real launch.
+
+**Copying a world's add-on setup is a settings copy, not a package install.** Which
+modules are on is the world-scoped setting `core.moduleConfiguration` — a plain
+`{id: true}` map in `worlds/<id>/data/settings`. Copy it and the new world comes up with
+the same modules enabled, no Manage Modules step. This is the same trick §5 describes for
+the Argon pair.
+
+🔴 **Do the copy while both worlds are closed.** `settings` is a LevelDB; a live world
+holds the lock, and `world.setup()` reads `core.moduleConfiguration` *before* it connects
+any packs, so the setting has to be on disk before the launch that should honour it.
+Reading and writing it is `classic-level` out of Foundry's own `node_modules`, keys
+`!settings!<id>`, values the same document shape you read back.
+
+The chicken-and-egg this avoids: `eval-js` runs inside a loaded client, so it cannot turn
+on `foundry-mcp-bridge` in a world where the bridge is off. Pre-seed the setting on disk,
+then launch, and the bridge is live on the first connection.
+
+**Worth copying with it** (all verified 2026-09-17 when `ardenford` was built from
+`space-journey`): `core.permissions`, `core.prototypeTokenOverrides` (this is where the
+world-wide `lockRotation` lives — see the token conventions in
+[`README.md`](README.md)), and any per-module settings you have tuned, e.g.
+`pentaryn-ties.*` and `enhancedcombathud*`.
+
+**Not worth copying:** `core.compendiumConfiguration`. Its values are Folder ids that
+exist only in the source world, and the dnd5e system recreates the same sidebar folders
+in any new world anyway. The one thing to re-apply by hand is a deliberately unlocked
+pack (`pentaryn-seafoot-maps.scenes` is unlocked in both worlds).
 
 ---
 

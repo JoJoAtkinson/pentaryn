@@ -1,0 +1,382 @@
+---
+title: "Ardenford — campaign state"
+status: active
+last_modified: 2026-09-17
+tags: [context, campaign, ardenford, ardenhaven, campaign-state]
+---
+
+# Ardenford — campaign state
+
+**Read this when:** building or running the Ardenford campaign in Foundry — what exists in
+the world, what is still a suggestion, what is still unbuilt.
+**Not this file:** how Foundry works → [`foundry/README.md`](foundry/README.md) ·
+the city's lore, districts, shops and NPCs → `world/factions/ardenhaven/locations/ardenford/`
+· the *other* campaign → [`space-journey.md`](space-journey.md)
+
+> **This is a volatile file.** Dated findings and IDs belong here, not in the Foundry
+> domain root.
+
+Foundry world id **`ardenford`**, title **Ardenford**, dnd5e 5.3.3 on core 14.367.
+Seated in [Ardenford](../world/factions/ardenhaven/locations/ardenford/ardenford.md), the
+three-tiered capital of Ardenhaven — Lower Tier harbour, Middle Tier trade and
+residential, Upper Tier ridge, and an ancient tunnel network under all of it.
+
+---
+
+## 2026-09-17 — world created
+
+Built from `space-journey`'s setup, not from scratch. Method and the traps are written up
+in [`foundry/ops.md`](foundry/ops.md) → *Creating a new world*; what landed here:
+
+- **All 30 modules** `space-journey` had are enabled, by copying `core.moduleConfiguration`
+  into the world's `settings` LevelDB before the first real launch. Verified live: 30 active,
+  zero drift in either direction.
+- **`core.permissions`** and **`core.prototypeTokenOverrides`** copied too — so the
+  world-wide `lockRotation: true` convention holds here from day one.
+- **`core.compendiumConfiguration` deliberately not copied** (Folder ids don't travel).
+  dnd5e rebuilt the same sidebar folders by itself. The one thing re-applied by hand:
+  `pentaryn-seafoot-maps.scenes` unlocked, matching `space-journey`.
+- No actors, no journals beyond the suggestion list, no playable scene chosen yet.
+
+## The `Suggestions` folders — 115 candidate maps, none of them decisions
+
+The Scenes sidebar has a **`Suggestions`** folder with seven sub-folders, and the Journal
+sidebar has a matching **`Suggestions` → `Ardenford — Map Candidates`** entry that maps
+each city location to its candidates and says why each one was picked.
+
+| Sub-folder | Scenes |
+|---|---:|
+| 1 · Lower Tier — Harbor | 13 |
+| 2 · Middle Tier — Trade & Residential | 12 |
+| 3 · Upper Tier — Ridge | 12 |
+| 4 · The Keeps | 22 |
+| 5 · The Ancient Tunnels | 18 |
+| 6 · Interiors — Inns, Shops & Halls | 20 |
+| 7 · Outside the City | 18 |
+
+**Selection rule: walls already drawn.** Every one of the 115 has authored walls (the
+thinnest is 11, the heaviest 2,168); most carry lighting and ambient sound as well. That
+rule is why the OneDrive battlemap folders and the 1,217 unnamed `Castle Maps - NNN`
+JPEGs were left out entirely — raw images with no wall data. Sources used, all already
+enabled: `pentaryn-seafoot-maps` (687 scenes), `eledryll-maps-castle-life-bundle-1`,
+`eledryll-spiders-tear-opera-house`, `mad-endlesswiz`, `mad-endlesswiz2`,
+`dnd-dungeon-masters-guide`.
+
+Imported with `active: false, navigation: false`, so nothing is in the scene nav bar and
+nothing is the active scene. **These are meant to be culled** — deleting a scene is one
+click and removes its walls with it.
+
+### The one weak match
+
+**Greystone Granaries** (folder 4) — five interconnected warehouses built around an
+ancient tower, siege- and fire-proof. Nothing in the library is that. `The Old Mill` and
+`Cliffton Castle` are standing in. If the Granaries matter to a session, they want
+building rather than picking.
+
+### The find worth knowing about
+
+`City of Saltspray`, `City of Turmburg` and `City of Vohenheim` each ship as a
+**three-level stacked coastal city** — ground / Middle Floors / Top Floors — which is
+Ardenford's own geometry. Taking all three levels of one of them gives a continuous city
+across the tiers rather than three unrelated maps. They are split across sub-folders 1, 2
+and 3 on purpose, so the tier each one serves is obvious.
+
+---
+
+## 2026-09-17 — the three players
+
+| User | Role | Password | Colour | Avatar |
+|---|---|---|---|---|
+| Jack | Trusted Player (2) | none | `#28cc71` | `assets/tokens/custom/jack-token.webp` |
+| Sean | Trusted Player (2) | none | `#287bcc` | `assets/tokens/custom/sean-token.webp` |
+| Zac | Trusted Player (2) | none | `#8a6fd4` | `assets/tokens/custom/zac-token.webp` |
+
+**Trusted Player, not Player** — matching `space-journey`'s Kristine/Kyle/Joe, because the
+`core.permissions` copied from that world is tuned around role 2. Drop to role 1 and some
+of those grants stop applying.
+
+Art came from the three tokens Joe had selected in the **Roll20** `Ardenhaven` campaign,
+pulled from `files.d20.io`. Ring subjects built to the standard ⅔ safe area with
+`scripts/foundry/ring_subject.py`:
+
+    assets/tokens/custom/ring-subjects/jack-token-025881.webp
+    assets/tokens/custom/ring-subjects/sean-token-af5f34.webp
+    assets/tokens/custom/ring-subjects/zac-token-0e4a53.webp
+
+🔴 **The source art is only 144×144.** Roll20's CDN stores exactly one size for these —
+`original`, `max`, `med` and `thumb` all return the same 8 KB webp, and the `.png` variants
+404. Scaled into the 341 px safe area that is a 2.4× upscale, so it is soft when zoomed in.
+If better originals exist, re-run `ring_subject.py` on them and the filenames change (the
+hex suffix is a digest of the source).
+
+No actors yet — the users have `character: null`, and the Roll20 tokens they came from
+represent no character sheet either.
+
+## 2026-09-17 — The Wayward Compass, and the cast
+
+**The inn is built.** Space Journey's tavern came across whole, as a scene folder
+`The Wayward Compass`:
+
+| Scene | Walls | Lights | Sounds | Tokens |
+|---|---:|---:|---:|---:|
+| 1. The Wayward Compass — Common Room | 272 | 21 | 25 | 40 |
+| 2. The Wayward Compass — Guest Rooms | 221 | 17 | 18 | 25 |
+| 3. The Wayward Compass — Roof | 114 | 6 | 3 | 0 |
+
+Copied straight out of `space-journey`'s LevelDB and created with `keepId: true`, so the
+three **`teleportToken` Regions still wire the floors together** — Taproom ↔ Second Floor ↔
+Roof. All destinations verified resolving. Keeping the ids is the whole reason that works;
+a re-import without them silently produces three unconnected maps.
+
+🔴 **Method, for next time.** The embedded collections live in sublevels keyed
+`!scenes.<coll>!<sceneId>.<docId>`, nested two deep for `scenes.regions.behaviors` and
+`scenes.tokens.delta.items`. The scene document itself stores only **arrays of ids**, so a
+copy has to re-inflate them. Extract with both worlds closed, validate every id resolves
+before writing, then stage the JSON into the target world dir and `fetch()` it from the
+client. **Take the tunnel down while the staged file exists** — everything under `Data/` is
+publicly served — then delete it and prove the 404.
+
+### The cast — 46 actors in three folders
+
+- **`The Wayward Compass` (18)** — Space Journey's tavern crowd, imported with the scenes:
+  43 `Doorbreaker Mercenary` tokens plus named patrons (Quill, Edmun Latch, Skipper Rojan,
+  Brother Aldous, Vess Tarrow, Isbet Marrow "Lark", Old Cobb, Ansa Pike…).
+  ⚠ **`Ballad Quinn` and `Pip Locksley` are Space Journey's PCs** and came with the set.
+  ⚠ `Harl Wetherby` is SJ's innkeeper — his actor is kept but **his tokens were removed**
+  and Thorgrim put on his square.
+- **`Ardenford — Townsfolk` (15)** — every named Ardenford character in the vault, stubbed:
+  name, art, ring tier, biography from the lore file. **No stat blocks** except Thorgrim.
+- **`Ardenford — Extras (crowd)` (10)** — the faded `generic-villagers` art as ringless
+  crowd actors, to drop onto street scenes and rename if they turn out to matter.
+
+**Thorgrim Ledger-Scar** is the innkeeper, from
+[`world/factions/ardenhaven/npcs/thorgrim-ledger-scar.md`](../world/factions/ardenhaven/npcs/thorgrim-ledger-scar.md)
+— Mountain Dwarf, CR 2, 68 HP, AC 15, full biography. His mechanical features (Shield Slam,
+Tavern Brawler, Dwarven Resilience, Tower Shield Defense) are **described but not yet added
+as items**.
+
+🔴 **Three vault documents disagree about who owns The Wayward Compass:**
+`ardenford.md` says Torren Ashvale, a retired human soldier; `shops/wayward-compass.md` says
+it is a *courier service* run by Barnaby; `npcs/thorgrim-ledger-scar.md` says Thorgrim owns
+and keeps it — and even hedges, "Torren Ashvale (if Torren exists in your version)". Thorgrim
+is the one in play. **All three are stubbed as actors; the vault still needs reconciling.**
+
+Four token art paths (`Ode Kellam`, `Simm Rowl`, `Quill`, `Vess Tarrow`) arrived pointing at
+`tokens-01/humans-male/…` instead of `tokens-01/humans/humans-male/…`. Repaired here on both
+the actors and the 6 placed tokens; **they are still broken in `space-journey`.**
+
+## 2026-09-17 — The Hideout, and the marker set
+
+**`Temp Markers` actor folder recreated** — `Marker · 1`…`12` and the eight colours, rebuilt
+from Space Journey's definitions rather than copied (the art in
+`assets/tokens/custom/markers/` lives under `Data/` and is already shared by every world, so
+only the actors had to be made). Same contract as
+[`foundry/markers.md`](foundry/markers.md): 0.25 grid units, ringless, `displayName: 50`,
+disposition 0.
+
+⚠ **One deliberate divergence.** `markers.md` says the markers are "prototype-hidden", but in
+`space-journey` no `hidden` flag is set on the prototype at all — the doc describes intent the
+data never had. Ardenford's copies set `hidden: true` on the prototype **and** on each placed
+token, because `getTokenDocument()` does not carry prototype `hidden` through to placement.
+
+**The party hideout** is `The Hideout — Underwood Market`, promoted out of
+`Suggestions → 2 · Middle Tier` into its own `The Hideout` scene folder and added to the scene
+navigation bar as **Hideout**. A covered/underground stone market: stalls under striped
+awnings, a central rotunda, crate yards, a stair up in the north-east, and a bar counter with
+tables in the south-east room. 307 walls, 30 lights, 15 ambient sounds, all authored.
+
+Markers 1–9 are placed and hidden, one per distinct area, so a spot can be named in chat:
+
+| # | Where | Image px | Canvas px |
+|---|---|---|---|
+| 1 | north-west stalls, green and red awnings | 1125, 338 | 2306, 1069 |
+| 2 | west pillared corridor — the lit approach | 712, 1500 | 1893, 2231 |
+| 3 | walled side room, north-west quarter | 1462, 1125 | 2643, 1856 |
+| 4 | the central rotunda | 2081, 1500 | 3262, 2231 |
+| 5 | open crate yard, north of centre | 2737, 938 | 3918, 1669 |
+| 6 | north-east storeroom and the stair up | 3487, 488 | 4668, 1219 |
+| 7 | the four-stall block, east hall | 3431, 1481 | 4612, 2212 |
+| 8 | south-east room — bar counter and tables | 3750, 2400 | 4931, 3131 |
+| 9 | south-west stalls | 1387, 2588 | 2568, 3319 |
+
+Scene is 4500×3000 at grid 150 (30×20 squares), padding 0.25 → **canvas = image + (1200, 750)**.
+Getting that offset wrong is the mistake `markers.md` warns about.
+
+## 2026-09-17 — the bandits at marker 2
+
+Marker 2 (the west pillared corridor, the lit approach into the Hideout) is now a bandit
+gang, and the marker was **consumed** per the placement contract in
+[`foundry/markers.md`](foundry/markers.md). Joe had already deleted markers 1 and 3–9.
+
+| Token | Stat block | CR | XP | Ring |
+|---|---|---:|---:|---|
+| Bandit ×4 | `dnd-monster-manual.actors` → Bandit | 1/8 | 25 ea | grey `#9098a0` — mook |
+| Sevrin Thornwick | `dnd-monster-manual.actors` → Bandit Captain | 2 | 450 | **red `#d8433a` — foe** |
+
+The two ring tiers are the whole point: the captain reads as the dangerous one at a glance
+without a nameplate or a stat check. Both drawn from the **owned 2024 Monster Manual**, not
+the SRD, per [`foundry/rules-lookup.md`](foundry/rules-lookup.md).
+
+**Budgeted for three level-2 PCs.** 550 XP total against the 2024 DMG's Low 300 / Moderate
+450 / High 600 for that party — a real fight, short of deadly. 2024 dropped the encounter
+multiplier, so the raw sum is the comparison. Worth knowing: **the captain alone is 450 XP**,
+the entire Moderate budget, and the gang outnumbers the party 5 to 3.
+
+The owned MM bandit ladder is **Bandit 1/8 → Bandit Captain 2 → Bandit Deceiver 7 → Bandit
+Crime Lord 11**. There is no CR 1 bandit; Deceiver is CR 7, not the mid-tier its name suggests.
+
+**No firearms.** The 2024 MM Bandit Captain ships with a **Pistol** (martial ranged, 1d10
+piercing, 30/90, Vex). Swapped for a **Hand Crossbow** — 1d6 piercing, 30/120, ammunition /
+light / loading, Vex — from `dnd5e.equipment24`, with `_stats.compendiumSource` stamped.
+A world sweep confirms it was the only firearm in Ardenford.
+
+🔴 **Convert the item in place; do not delete it.** The captain's Multiattack reads
+`[[/item .2TB9ZSIbtbi4UtSv]]`, an item-id reference. Deleting the Pistol leaves a dead link in
+the stat block. Re-skinning the *same item id* keeps the link intact and the enricher picks up
+the new name by itself — Multiattack now renders "using Scimitar and Hand Crossbow in any
+combination" with no edit to the feat.
+
+Hand crossbow is the right swap because it is **one-handed**: Multiattack lets him mix it with
+the Scimitar, which a two-handed heavy crossbow or longbow would break. Cost is 1d10 → 1d6, so
+his ranged attack drops from avg 8.5 to 6.5. CR and the 550 XP budget are unchanged.
+
+One Bandit actor carries all four mook tokens (`actorLink: false`), so damage is tracked per
+token. `Sevrin Thornwick` is an invented name in the Ardenhaven human pattern — rename freely.
+
+⚠ **`prototypeToken.name` does not follow an actor rename.** Creating the captain from the
+compendium under a new name left every placed token nameplated "Bandit Captain"; the prototype
+and the placed tokens both had to be set explicitly.
+
+## 2026-09-17 — the misfit spots
+
+**The party is three level-2 misfits** — chaotic neutral leaning evil-ish, "evil with hearts":
+not heroes, definitely not villains, decent when it is cheap enough. Four town spots built for
+that, promoted out of `Suggestions` into `Ardenford — Misfit Spots` and put on the scene nav bar:
+
+| Nav name | Scene | Walls / Lights |
+|---|---|---|
+| Western Market, after dark | Summer Marketplace Night | 168 / 14 |
+| The Vintara Baths | Clandestine Bath House | 188 / 23 |
+| The Drowned Tap | Undercity Sewer Tavern | 592 / 17 |
+| The Concordance Library | Arken's Ancient Library | 456 / 0 |
+
+Situations live in the journal `Ardenford — Misfit Spots`, one page each. Every page follows the
+same shape: why they end up there · three dumb ideas they *will* have · what actually goes wrong ·
+who is standing there · if it goes loud (XP-costed) · **the heart**.
+
+**"The heart" is the load-bearing part of the brief.** Each spot has one beat where being decent
+costs them something small and real — the porter with his daughter's name on the tally board, the
+bath attendant who gets blamed, the smuggled Willowglass medicine that quietly stops reaching the
+Gray District. Consequence by things-getting-worse-offscreen, not by punishment. Drop those and
+the party is just petty criminals.
+
+They reuse the existing cast rather than inventing more: **Elarion Faenwynd** and **Magister Ellyn
+Merrick** at the Concordance, **Khargrom-dur** vouching for them in the tunnels, **Pell Orvaine**
+as the soft way in.
+
+### Encounter budgets — three level-2 PCs
+
+Low 300 · Moderate 450 · High 600 (2024 DMG, no multiplier). Verified XP from the owned MM:
+
+> Commoner 10 · Guard / Bandit / Cultist / Warrior Infantry / Noble 25 · Swarm of Rats / Goblin
+> Warrior / Priest Acolyte 50 · Scout / Tough 100 · Spy / Pirate 200 · Bandit Captain / Berserker /
+> Cultist Fanatic 450 · Guard Captain 1,100
+
+**Guards are AC 16** — at level 2 the watch is a reason to run, not a speed bump. **Guard Captain
+at 1,100 XP is nearly 2× the High budget**: a losing condition, not an encounter. There is no
+`Thug` and no `Acolyte` in the 2024 MM — use `Tough` (CR 1/2) and `Priest Acolyte` (CR 1/4).
+
+🔴 **Every Seafoot scene ships `globalLight` on at darkness 0.** "Summer Marketplace *Night*" is
+night in the *art only* — mechanically it is broad daylight, and the 14 placed lights do nothing.
+Raise the scene darkness level if stealth is supposed to matter. This applies to all 115 imported
+candidates, not just these four.
+
+## 2026-09-17 — the four boards are dressed
+
+28 tokens across the four misfit spots, **6–8 each** — deliberately few enough to track without a
+sheet. Same three-tier shape everywhere: **one or two green levers, two or three grey muscle,
+two or three ringless nobodies.**
+
+| Board | Tokens | Green (lever) | Grey (muscle) | Ringless |
+|---|---:|---|---|---|
+| Western Market, after dark | 7 | Sella Redcott, Wick Harlow | Redcott's Man ×2 | 3 |
+| The Vintara Baths | 7 | Aldric Dunwick, Nessa Brightmoor | Vintara Minder ×2 | 3 |
+| The Drowned Tap | 8 | Brogmar-dur, Khargrom-dur | Tunnel Runner ×2, Tap Lookout | 3 |
+| The Concordance Library | 6 | Ellyn Merrick, Elarion Faenwynd | Corr Ashgate, Ardenford Watch | 2 |
+
+Each journal page gained an **On the board** section: every NPC, where they stand, what they are
+doing, and which of the three jobs they are for — *pick a fight · be in the way · be a lever.*
+
+**Positions were chosen off the background art, not guessed.** The maps were read from disk,
+downscaled with a 5-square grid overlay, positions picked against real features, then re-rendered
+as a contact sheet with the placed tokens drawn on to confirm nobody stands in a wall or in water.
+Worth repeating for any future staging — it is cheap and it catches the errors that are invisible
+from the document side.
+
+Conversion for all four (4500×3000, grid 150, padding 0.25):
+`preview px × 3.75 = image px` · `image + (1200, 750) = canvas` · token x,y is the **top-left** of
+its square, so snap with `round((centre − 75) / 150) × 150`.
+
+New actors, in `Ardenford — Misfit Spots (cast)`: **Wick Harlow** (night porter), **Sella Redcott**
+(fence), **Nessa Brightmoor** (bath attendant), **Aldric Dunwick** (consul's aide), **Brogmar-dur**
+(keeps the Drowned Tap), **Corr Ashgate** (rival delver), and **Ardenford Watch** — the MM Guard,
+CR 1/8 but **AC 16**, dressed to the grey mook tier and reusable city-wide.
+
+Muscle reuses the existing **Bandit** actor with per-token renames (`Redcott's Man`,
+`Vintara Minder`, `Tunnel Runner`, `Tap Lookout`), so four different gangs cost one actor and the
+sidebar stays readable. Nobodies are the ringless **Extras** villagers.
+
+## 2026-09-17 — the cast got gear and a key-9 card
+
+**The hotkey is `9`, not `8`.** `pentaryn-ties` registers six bindings, confirmed live here:
+
+| Key | Does |
+|---|---|
+| `4` | inspect — the identification cascade (players) |
+| `5` | file the hovered token in your character's notebook |
+| `6` | add a tie |
+| `7` | one tie, on its own |
+| `8` | the ties web — everyone this person knows who is in sight |
+| **`9`** | **description card — who this person *is*. GM only.** |
+
+`9` reads **`system.details.biography.value`** — the *private* field — and falls back to the
+public one only if the private was never filled. So prep goes in the private biography, and that
+is what all six cast biographies were rewritten into.
+
+**Card format, built to be read mid-scene rather than studied:** a one-line hook, then
+**Type** (a personality label, not a paragraph), **Was / Now** (two sentences of backstory),
+**Voice**, then **Wants / Lever / Tell**. Roughly 850 characters each — a glance, not a read.
+The *Tell* line is the one that pays off at the table: one physical habit to play them with.
+
+### Gear
+
+Real items from `dnd5e.equipment24` / `dnd5e.items`, each stamped with `_stats.compendiumSource`
+per the convention in [`foundry/markers.md`](foundry/markers.md), **plus one bespoke object each**
+— the thing actually worth stealing:
+
+| NPC | The object |
+|---|---|
+| Wick Harlow | **Wick's Tally Board** — evidence against a consul's supplier *and* against Wick |
+| Sella Redcott | **Redcott's Purse** |
+| Nessa Brightmoor | **Bathhouse Keys** — every door including the unwatched canal dock |
+| Aldric Dunwick | **The Unsigned Writ** |
+| Brogmar-dur | **The Favour Book** — no coin tab is kept; this is kept instead |
+| Corr Ashgate | **Forged Reclamation Writ** — registry number of an expedition that never came back |
+
+`Ardenford Watch` came pre-equipped from the Monster Manual (Spear, Chain Shirt, Shield).
+
+## Still unbuilt
+
+- No map chosen for anything else. Every location is still a candidate list.
+- No actors. The Ardenford NPCs in `world/factions/ardenhaven/locations/ardenford/` — Torren
+  Ashvale, Selise Dawnquill, Hesta Briarvein, Branik Ironweld, Elarian Faenwynd, Pell
+  Orvaine, Khorin Bar'dur, Thessa Kraghammar — exist as lore only.
+- **The actor pipeline still targets `space-journey`.** `scripts/foundry/ops/config.py`
+  defaults there; importing into this world needs `WORLD=ardenford` until that default
+  moves. See [`foundry/ops.md`](foundry/ops.md) §1.
+- No session zero. **Joe's party is three level 2**, but Jack, Sean and Zac still have blank sheets —
+  dnd5e derives level from class items, so they cannot be set to level 2 until each has a class.
+- Thorgrim's four features exist as prose, not as rollable items.
+- The 15 `Ardenford — Townsfolk` still have one-line bios and no gear — they have not had the key-9 card treatment.
+- The Hideout: marker 2 is spent on the bandits. Markers 1 and 3–9 were deleted; re-place from the `Temp Markers` folder as needed.
+- No Ardenford city overview scene, so locations live in the nav bar rather than as pins on a city map.
