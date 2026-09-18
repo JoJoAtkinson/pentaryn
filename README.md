@@ -10,15 +10,20 @@ server (`dnd-scripts`) exposes SRD lookups, vault search and repo operations to 
 
 | Path | What's in it |
 |---|---|
-| `world/` | The campaign vault — factions, locations, NPCs, parties, history TSVs, house rules |
+| `world/` | The campaign vault — factions, locations, NPCs, parties, per-event history, house rules |
+| `characters/` | Player characters — a stat file and a `.narrative.md` companion each |
+| `campaigns/` | Campaign framing and handouts. Currently **Ardenford Underdogs** |
 | `oneshots/` | Self-contained adventures. Currently **Space Journey / Twenty-One** |
-| `sessions/` | Per-session transcripts and notes |
+| `sessions/` | Per-session transcripts and notes. Audio lives in OneDrive, not here |
+| `items/` | Magic and notable items |
+| `staging/` | Drafts on their way to a permanent home. Never link into it from canonical lore |
+| `adhok_notes/` | Loose one-off notes that were never filed |
 | `foundry/` | Foundry-side data — the actor contract, generated actors, update policy, tunnel config, five in-house modules |
 | `scripts/` | Python tooling: SRD client, vault search, timeline renderer, Foundry pipeline, the MCP server |
 | `automation/` | The Saturday auto-updater — launchd jobs, smoke test, notifier |
 | `context/` | Instructions for Claude, sharded by domain. Start at [`CLAUDE.md`](CLAUDE.md) |
 | `templates/` | Content skeletons you copy |
-| `docs/` | Published timeline SVGs (GitHub Pages) |
+| `fonts/` | The `dnd-dice` font and its install notes |
 
 ## Getting set up
 
