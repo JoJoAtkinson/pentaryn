@@ -18,9 +18,9 @@
 
 ## Appearance & Physical Presence
 
-The first thing you notice are her eyes. For a moment, you might swear they�re the color of blood before realizing they�re only a pale brown, sharp enough that when she looks at you it feels less like attention and more like assessment. When she listens, it�s with the intensity of someone weighing whether a thing is dangerous.
+The first thing you notice are her eyes. For a moment, you might swear they’re the color of blood before realizing they’re only a pale brown, sharp enough that when she looks at you it feels less like attention and more like assessment. When she listens, it’s with the intensity of someone weighing whether a thing is dangerous.
 
-Marwen Ashcroft is tall (5�9�) and spare, all sharp angles softened only by movement. Her long, raven-dark hair hangs loose down her back, clearly combed recently and then left to its own devices. She carries herself like someone used to being watched and careful not to invite it.
+Marwen Ashcroft is tall (5’9”) and spare, all sharp angles softened only by movement. Her long, raven-dark hair hangs loose down her back, clearly combed recently and then left to its own devices. She carries herself like someone used to being watched and careful not to invite it.
 
 She wears an ash-grey tunic over a faded white undershirt. A long, waxed wool jacket in dark charcoal hangs from her shoulders, reinforced at the cuffs and elbows, its high collar half-raised as if against more than the weather. When she moves, the lining flashes a muted rust-orange, gone again almost before you notice it.
 
@@ -42,12 +42,12 @@ Marwen lives in a state of persistent unease. Worry is her default companion, no
 She is wary by nature. Trust is not freely given, but once earned, it is deep and fiercely held.
 
 ### Typical Mood
-Quietly vigilant. Marwen often appears focused, watchful, and slightly withdrawn, as if listening for danger others can�t hear. Beneath that guarded exterior is a genuine hunger for reassurance that she is doing well, that she belongs, that her efforts matter.
-Moments of praise or success don�t erase her worry, but they steady it.
+Quietly vigilant. Marwen often appears focused, watchful, and slightly withdrawn, as if listening for danger others can’t hear. Beneath that guarded exterior is a genuine hunger for reassurance that she is doing well, that she belongs, that her efforts matter.
+Moments of praise or success don’t erase her worry, but they steady it.
 
 ### Sense of Humor
 Her humor is understated and selective. She enjoys cleverness: wordplay, puzzles clicking into place, small triumphs of understanding. She smiles easily at simple comforts: warm bread with honey, music played on strings, Flicker being unexpectedly affectionate.
-She dislikes self-deprecating humor, especially when aimed at identity or worth. Jokes that cut inward land badly, even if she doesn�t immediately show it.
+She dislikes self-deprecating humor, especially when aimed at identity or worth. Jokes that cut inward land badly, even if she doesn’t immediately show it.
 
 ### Stress and Conflict Response
 Under pressure, Marwen tends to act first and regulate later. When stress spikes, she makes a decisive, sometimes impulsive move, then retreats into meditation or quiet ritual to regain control. This pattern makes her effective in sudden crises, but it feeds her fear that hesitation or poor judgment will hurt someone.
@@ -59,11 +59,11 @@ She shows care through deeds rather than words: guiding a hand, offering quiet h
 She is not socially dominant, but when she commits to someone, she becomes a protector.
 
 ### Specific Fears and Insecurities
-Beyond belonging, Marwen�s greatest fear is hesitation. She is terrified of freezing at the wrong moment and paying for it with someone else�s pain. This fear fuels both her admiration for decisive authority and her temptation toward bargains that promise certainty.
+Beyond belonging, Marwen’s greatest fear is hesitation. She is terrified of freezing at the wrong moment and paying for it with someone else’s pain. This fear fuels both her admiration for decisive authority and her temptation toward bargains that promise certainty.
 She fears failing those she loves more than she fears death or corruption. The idea that her inaction could harm others is unbearable to her.
 
 ### Moral Compass
-Marwen�s morality is transactional, but not cruel.
+Marwen’s morality is transactional, but not cruel.
 Her guiding belief is: everything has a price, and the only sin is pretending otherwise. She accepts that hard choices exist and believes the responsible thing is to choose deliberately, not look away.
 There are lines she will not cross:
 * She will not betray a friend.
@@ -80,7 +80,7 @@ Marwen speaks carefully, as if every word carries weight and consequence. She of
 
 Her language is situational and deceptively plain. Marwen is highly intelligent, with a broader vocabulary than most expect, but she consciously reins it in. Around strangers, especially non-witches, she simplifies her speech, avoiding arcane terminology and never volunteering information about Elderholt. She is deeply wary of revealing where she comes from, and even more wary of what that knowledge might cost her.
 
-Marwen is a questioner by nature. She asks far more than she tells, probing gently, circling ideas, testing assumptions. When uncertain, she hedges her statements with �I think,� �maybe,� or �it seems,� not from lack of conviction but from fear of being wrong in ways that might matter. Her desire to belong makes her careful not to overstep, to ensure her presence is wanted before she presses further.
+Marwen is a questioner by nature. She asks far more than she tells, probing gently, circling ideas, testing assumptions. When uncertain, she hedges her statements with “I think,” “maybe,” or “it seems,” not from lack of conviction but from fear of being wrong in ways that might matter. Her desire to belong makes her careful not to overstep, to ensure her presence is wanted before she presses further.
 
 When nervous, her speech speeds up and drops in volume. She becomes quieter, faster, and more inward, words tumbling out in half-formed thoughts. Long pauses punctuate her sentences as she thinks aloud, especially when reasoning through problems or moral dilemmas. Under stress, her speech becomes clipped and precise, stripped of excess until only intent remains.
 
@@ -94,7 +94,7 @@ When casting magic, her voice changes completely. It rises in volume and cadence
 
 She lies and withholds information carefully, choosing words with surgical precision. If mocked for her voice or her speech, she withdraws in visible embarrassment, becoming quieter, smaller, retreating into observation rather than confrontation.
 
-Marwen�s speech reveals her core tension: a mind that burns with curiosity and conviction, restrained by caution, fear of judgment, and a deep, aching need to remain welcome.
+Marwen’s speech reveals her core tension: a mind that burns with curiosity and conviction, restrained by caution, fear of judgment, and a deep, aching need to remain welcome.
 
 ---
 
@@ -124,7 +124,7 @@ Marwen Ashcroft is the daughter of Breann, a Votary witch who had her thread str
 
 Clair is Marwen's older sister by three years. She demonstrated powerful Sight from an early age and has undergone the path of a ward-witch as a result. She is now a Tollbearer, having struck her first real bargain. Marwen looks up to her, wants to be just like her. How Clair actually feels about Marwen is unknown.
 
-Rowan is Marwen and Clair�s father but not Breann�s husband. Rowan is a fisherman. Before Marwen�s rebirth, Rowan had imagined a future where Marwen would walk beside him rather than away from him. A son who would learn knots and nets, the reading of waves, the patience required to wait and provide. He never spoke this expectation aloud, but it lived in the way he watched her hands, in the tools he set aside too early, in the pine knot he carved while she grew. When the fire came and Marwen declared who she was, he did not argue, did not hesitate, did not mourn her truth. But he did grieve the shape of the life he thought he would share. That grief never became distance. He adjusted. He learned her name as if it had always been hers. He carved smaller things after that. Keepsakes instead of tools. With Marwen, Rowan's love is practical and constant. He packs extra food. Mends her clothes without comment. Asks where she is going, not why. When she left Elderholt, he did not ask when she will return.
+Rowan is Marwen and Clair’s father but not Breann’s husband. Rowan is a fisherman. Before Marwen’s rebirth, Rowan had imagined a future where Marwen would walk beside him rather than away from him. A son who would learn knots and nets, the reading of waves, the patience required to wait and provide. He never spoke this expectation aloud, but it lived in the way he watched her hands, in the tools he set aside too early, in the pine knot he carved while she grew. When the fire came and Marwen declared who she was, he did not argue, did not hesitate, did not mourn her truth. But he did grieve the shape of the life he thought he would share. That grief never became distance. He adjusted. He learned her name as if it had always been hers. He carved smaller things after that. Keepsakes instead of tools. With Marwen, Rowan's love is practical and constant. He packs extra food. Mends her clothes without comment. Asks where she is going, not why. When she left Elderholt, he did not ask when she will return.
 
 ### Key Turning Points
 
@@ -231,9 +231,9 @@ TODO: Describe relationships with other PCs as they develop.
 
 **Brannith the Hag (Mentor):** One of Marwen's three mentors among the Elders. Brannith recognized the parallel between being what others expect her to be and Marwen being remade by declaring who she was. She began teaching Marwen without asking permission. Her lessons are about not waiting to be welcomed, about existing in liminal spaces, and about refusing to constantly explain oneself. Brannith approves of Marwen but in a challenging, uncomfortable way.
 
-**Silniel the Witch-Tree of Elderholt (Mentor) : ** A silent mentor, Marwen spent time under Silniel�s branches and became to hear the witch turned tree in her dreams. Marwen learned to be still and to meditate with her. Silniel showed Marwen a vision of climbing her, which the young witch did, but doesn�t know the reason why.
+**Silniel the Witch-Tree of Elderholt (Mentor) : ** A silent mentor, Marwen spent time under Silniel’s branches and became to hear the witch turned tree in her dreams. Marwen learned to be still and to meditate with her. Silniel showed Marwen a vision of climbing her, which the young witch did, but doesn’t know the reason why.
 
-**Marrith the Ashen Measure (Mentor) : ** Marrith�s mentorship of Marwen was never gentle, but it was deliberate. She taught Marwen that fire is not rage or release, but judgment made visible, destruction shaped by will rather than impulse. Where others warned Marwen away from her destructive aptitude, Marrith forced her to confront it, insisting that denial was more dangerous than mastery. She drilled into Marwen the lesson that restraint is an active choice, not an absence of power, and that overwhelming force must be held in reserve until there is no other answer. Marrith never promised Marwen absolution, only responsibility. And beneath the severity, there was a quiet, unspoken truth: if the day came when Marwen had to be stopped, Marrith would do it herself, because that is what love looks like to a fire that refuses to spread.
+**Marrith the Ashen Measure (Mentor) : ** Marrith’s mentorship of Marwen was never gentle, but it was deliberate. She taught Marwen that fire is not rage or release, but judgment made visible, destruction shaped by will rather than impulse. Where others warned Marwen away from her destructive aptitude, Marrith forced her to confront it, insisting that denial was more dangerous than mastery. She drilled into Marwen the lesson that restraint is an active choice, not an absence of power, and that overwhelming force must be held in reserve until there is no other answer. Marrith never promised Marwen absolution, only responsibility. And beneath the severity, there was a quiet, unspoken truth: if the day came when Marwen had to be stopped, Marrith would do it herself, because that is what love looks like to a fire that refuses to spread.
 
 
 **The Elders (Various Relationships):** 
@@ -265,7 +265,7 @@ She has learned some necromantic theory from Raven's writings, though she has ha
 She has undergone training with Brannith the Hag, learning lessons about thresholds, belonging, and refusing to constantly explain herself.
 
 Marwen has further aptitude of transmutation magic: the act of reforging reality around her.
-Her magic is performed by copying spells into a book, translating them into words and techniques that the Voice teaches her. Some may mistake her for a �wizard� in this way.
+Her magic is performed by copying spells into a book, translating them into words and techniques that the Voice teaches her. Some may mistake her for a “wizard” in this way.
 
 ---
 
@@ -273,12 +273,12 @@ Her magic is performed by copying spells into a book, translating them into word
 
 Marwen is rarely still. Even when standing, her hands and feet shift constantly, as if her body refuses to settle. She paces when thinking, circling problems rather than confronting them head-on. Her hands are almost always occupied, tugging at the strap of her satchel, adjusting the fall of her coat, tightening her leggings, steepling her fingers before shoving them into pockets. Stillness feels unsafe to her.
 
-Raised voices make her flinch. She turns quickly toward sudden sounds, especially if she isn�t expecting them, eyes sharp and searching. When she feels safe, her posture collapses inward, shoulders slouched, gaze angled downward rather than outward, as though lowering herself makes her less visible. Around people she trusts, she unconsciously picks up their turns of phrase and metaphors, echoing them later without realizing it.
+Raised voices make her flinch. She turns quickly toward sudden sounds, especially if she isn’t expecting them, eyes sharp and searching. When she feels safe, her posture collapses inward, shoulders slouched, gaze angled downward rather than outward, as though lowering herself makes her less visible. Around people she trusts, she unconsciously picks up their turns of phrase and metaphors, echoing them later without realizing it.
 Marwen has little patience for waste. The casual disposal of usable food or spell components irritates her far more than it should, and she bristles at inefficiency born of carelessness. Crying unsettles her deeply, more so than anger or fear, while the scent of pine grounds her, slowing her breath and steadying her thoughts.
 
 Embarrassment sends her retreating into busyness. She buries herself in her books, fusses with equipment, or pretends to study something nearby rather than address it directly. When overwhelmed, she oscillates between withdrawal and impulsive action, depending on how trapped she feels. Alone, she sprawls, stretching out and spreading her belongings around her as if claiming space she rarely allows herself publicly. Bathing is a private ritual she avoids in front of others, and her reluctance to tend to it means she often smells faintly of ash, pine, old leather, and less pleasant alchemical remnants.
 
-Anger shows first in her jaw, tightening as though she�s holding back words or a spell. She instinctively bristles at people who treat others as lesser or value wealth over care, and she grows quietly hostile toward those who press her about her origins, condemn witches outright, or insist too forcefully on the certainty of gods.
+Anger shows first in her jaw, tightening as though she’s holding back words or a spell. She instinctively bristles at people who treat others as lesser or value wealth over care, and she grows quietly hostile toward those who press her about her origins, condemn witches outright, or insist too forcefully on the certainty of gods.
 
 Flicker amplifies her curiosity. With her familiar near, she becomes more openly inquisitive, poking at the world with a childlike fascination that borders on reckless. Over time, companions will notice her worst traveling habit: she smells bad, carried along with the weight of old spell components and neglect. When she sleeps, she curls tightly inward, arms and legs drawn close, like someone guarding something fragile or bracing for loss.
 
@@ -294,7 +294,7 @@ Marwen does not believe the Axiom is a god. To her, it is an ancient ruin, a con
 
 She rejects the worship of gods entirely. In her view, gods are merely powerful individuals who inspired devotion through fear, ignorance, or convenience. She bargains only with the Voice, and even that relationship is defined by distrust. The Voice is not to be named, loved, or feared. It takes in exchange. Nothing more, nothing less.
 
-Choice is the axis of Marwen�s moral universe. What a person chooses to do defines them more than birth, prophecy, or fate. Sacrifice is inevitable and meaningful. Everyone gives something up, whether for love, safety, ambition, or purpose. Suffering, to Marwen, is not tragic or redemptive. It is necessary, a harsh tool that shapes the world into something survivable.
+Choice is the axis of Marwen’s moral universe. What a person chooses to do defines them more than birth, prophecy, or fate. Sacrifice is inevitable and meaningful. Everyone gives something up, whether for love, safety, ambition, or purpose. Suffering, to Marwen, is not tragic or redemptive. It is necessary, a harsh tool that shapes the world into something survivable.
 
 She believes the world owes nothing to the vulnerable. Compassion is not an obligation, but a choice made by those with kind hearts. Power, however, creates responsibility. Those who abuse it reveal themselves and should have that power taken from them.
 Marwen is deeply skeptical of rigid hierarchies. Anything short of pure democracy feels illogical to her. Wisdom and experience matter, but authority without consent does not. She respects leaders who are decisive yet compassionate, those willing to act while still seeing the cost of their actions.

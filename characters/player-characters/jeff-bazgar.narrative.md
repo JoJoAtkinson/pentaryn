@@ -38,7 +38,7 @@ Despite his moderate successes in training and early raids, Bazgar is constantly
 
 ## Voice & Manner of Speaking
 
-Bazgar speaks with an accent, with broad intonation and rolling �r�s. His tone is typically upbeat and unserious, quick to make light of the situation. He uses a lot of animal-based expressions, such as �taking rabbit steps� to mean small incremental progress, or �karth-darg�, which means �alligator fucker� in his native language, and is his favorite insult. His vocabulary is moderately advanced, though he sometimes forgets words and has to reach for them.
+Bazgar speaks with an accent, with broad intonation and rolling ’r’s. His tone is typically upbeat and unserious, quick to make light of the situation. He uses a lot of animal-based expressions, such as “taking rabbit steps” to mean small incremental progress, or “karth-darg”, which means “alligator fucker” in his native language, and is his favorite insult. His vocabulary is moderately advanced, though he sometimes forgets words and has to reach for them.
 
 ---
 
@@ -133,7 +133,7 @@ Bazgar is a skilled fighter with moderate success in training and early raids. H
 
 He uses an axe with a wicked curve made of black iron and carries a wooden targe shield covered in alligator leather, decorated with an alligator skull ringed by spirit-flames.
 
-Bazgar prefers attacks that knock the opponent off guard or turn their strength and weight against them, such as leg-hooking trips and sudden charges with his shield or shoulder. He�s also skilled with his bare hands and has a penchant for pinning his opponents. Despite his finesse, he prefers brutal weapons like axes and warhammers. He fights with a shield because such weapons lack in defense, but prefers an open hand he can grab and distract with. He is quick to seize any battlefield advantages he can and is skilled at maneuvering himself, his allies, and his enemies into positions that give him and his group the edge. 
+Bazgar prefers attacks that knock the opponent off guard or turn their strength and weight against them, such as leg-hooking trips and sudden charges with his shield or shoulder. He’s also skilled with his bare hands and has a penchant for pinning his opponents. Despite his finesse, he prefers brutal weapons like axes and warhammers. He fights with a shield because such weapons lack in defense, but prefers an open hand he can grab and distract with. He is quick to seize any battlefield advantages he can and is skilled at maneuvering himself, his allies, and his enemies into positions that give him and his group the edge. 
 
 ---
 
