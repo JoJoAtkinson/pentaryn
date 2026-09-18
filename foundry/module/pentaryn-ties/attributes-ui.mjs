@@ -38,7 +38,9 @@ import {
   repairAncestry
 } from "./attributes.mjs";
 import { loreEditorHTML, bindLoreEditor } from "./lore.mjs";
-import { kindActorOf, attrLoreStateFor, requestAttrLore, releaseHeldAttribute } from "./study.mjs";
+// `requestAttrLore` (the player-initiated roll) is deliberately no longer imported: attribute
+// facts are handed over by the GM via "Mark as learned", never rolled for from the player's side.
+import { kindActorOf, attrLoreStateFor, releaseHeldAttribute } from "./study.mjs";
 import { grantsForEntry, GRANTED_FLAG, HELP_SCALE, CARRIED_SCALE, helpFor } from "./known-core.mjs";
 
 const esc = s =>
@@ -132,29 +134,37 @@ function grantedBlock(grants) {
   </section>`;
 }
 
-/** The offers a player sees for one attribute — same idiom as the Known entry's lore rows. */
+/**
+ * **Mark as learned — GM only, and invisible to the player.**
+ *
+ * This used to be the player's own Study button: they clicked, it rolled, and a failure was
+ * permanent. That is the wrong shape for a VTT. The table's actual sequence is *"I spend the
+ * afternoon in the library"* → the GM decides whether that earns anything → the GM hands it
+ * over. The player never initiates and never rolls here, so the affordance does not exist on
+ * their sheet at all — not greyed out, not disabled, **absent**, because a disabled button
+ * still tells them a secret is there.
+ *
+ * Clicking **grants** the row's pass text outright. It does not roll: by the time a GM presses
+ * this they have already decided.
+ */
 function offersBlock(actor, subject, attrId) {
-  if (!actor?.isOwner) return "";
+  if (!game.user?.isGM) return "";
   const rows = attrLoreStateFor(actor, subject, attrId).filter(r => r.available);
   if (!rows.length) return "";
-  return `<div class="pt-lore-offers">
+  return `<div class="pt-lore-offers pt-gm-only">
     <div class="pt-lore-offers-head">
-      <i class="fa-solid fa-magnifying-glass-plus" aria-hidden="true"></i>
-      <span>${esc(t("known.lore.heading"))}</span>
+      <i class="fa-solid fa-book-open-reader" aria-hidden="true"></i>
+      <span>${esc(t("attributes.learnedHeading"))}</span>
     </div>
     <ul class="pt-lore-offer-list">
       ${rows
         .map(
           r => `<li>
-            <button type="button" class="pt-textbtn pt-lore-btn" data-action="attr-roll"
-                data-attr="${esc(attrId)}" data-lore="${esc(r.id)}"${r.gmOnline ? "" : " disabled"}
-                data-tooltip="${esc(
-                  r.gmOnline
-                    ? f("known.lore.tip", { label: r.label, skill: r.skillLabel, dc: r.dc })
-                    : t("known.study.noGMTip")
-                )}">
+            <button type="button" class="pt-textbtn pt-lore-btn" data-action="attr-learned"
+                data-attr="${esc(attrId)}" data-lore="${esc(r.id)}"
+                data-tooltip="${esc(f("attributes.learnedTip", { label: r.label }))}">
               <span class="pt-lore-offer-label">${esc(r.label)}</span>
-              <span class="pt-lore-offer-price">${esc(f("known.lore.price", { skill: r.skillLabel, dc: r.dc }))}</span>
+              <span class="pt-lore-offer-price">${esc(t("attributes.learnedAction"))}</span>
             </button>
           </li>`
         )
@@ -236,11 +246,14 @@ function detail(row, { actor, isGM, viewer }) {
   const offers = offersBlock(viewer, actor, row.id);
 
   if (!isGM) {
-    // a player sees what they were told and what is still on offer — and nothing else
+    /*
+     * A player sees **only what they have been told**. No offers, no DCs, no disabled buttons —
+     * a player cannot study something into existence on their own, and an affordance they cannot
+     * use still leaks that a secret is there. The GM grants from their side; see `offersBlock`.
+     */
     return `<div class="pt-detail pt-attr-detail">
-      ${grants || offers ? "" : `<p class="pt-empty">${esc(t("attributes.playerEmpty"))}</p>`}
+      ${grants ? "" : `<p class="pt-empty">${esc(t("attributes.playerEmpty"))}</p>`}
       ${grants}
-      ${offers}
     </div>`;
   }
 
@@ -597,14 +610,30 @@ export function bindAttributes(root, actor, rerender = () => {}) {
   }
 
   /*
-   * The roll. Same unconditional repaint contract as every other affordance in this module:
-   * a pass, a failure and a held roll all leave this client looking identical — one fewer row
-   * on offer, nothing else. A repaint conditional on the answer would BE the answer.
+   * **Mark as learned.** GM-only, and a grant rather than a roll — the decision was made at the
+   * table before this was clicked, so there is nothing left to leave to a die. Writes the row's
+   * pass text straight into the viewer's granted flag, which is the same store the identification
+   * cascade commits to, so it renders identically to something they worked out themselves.
    */
-  for (const btn of box.querySelectorAll("[data-action='attr-roll']")) {
+  for (const btn of box.querySelectorAll("[data-action='attr-learned']")) {
     btn.addEventListener("click", async () => {
-      btn.disabled = true; // one gesture, one roll
-      await requestAttrLore(viewer, actor, btn.dataset.attr, btn.dataset.lore);
+      if (!game.user?.isGM || !viewer) return;
+      btn.disabled = true;
+      const attrId = btn.dataset.attr;
+      const loreId = btn.dataset.lore;
+      const entry = describeAttribute(attrId);
+      const row = (entry?.lore ?? []).find(r => r.id === loreId);
+      if (row) {
+        const granted = foundry.utils.deepClone(viewer.getFlag(MODULE, GRANTED_FLAG) ?? {});
+        granted[`attr:${attrId}:${loreId}`] = {
+          text: row.text,
+          when: Date.now(),
+          icon: entry.icon,
+          source: `${entry.title} — ${row.label}`
+        };
+        await viewer.update({ [`flags.${MODULE}.${GRANTED_FLAG}`]: granted });
+        ui.notifications.info(f("attributes.learnedDone", { label: row.label, who: viewer.name }));
+      }
       rerender();
     });
   }

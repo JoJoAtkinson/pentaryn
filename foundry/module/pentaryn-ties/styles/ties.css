@@ -67,6 +67,28 @@
   border-radius: 4px;
 }
 
+/*
+ * The caret is the row's only open/closed feedback, and it had no rule at all: `summary()` hardcodes
+ * `fa-chevron-down` and — unlike the world tree's twisty, which swaps the icon class in JS — nothing
+ * ever changes it. The arrow therefore pointed down whether the row was open or shut, so a row that
+ * expanded correctly still read as a dead control. Rotate on `.pt-open`, which the toggle already
+ * sets, rather than swapping classes in two places.
+ */
+.pentaryn-ties .pt-caret {
+  transition: transform 120ms ease;
+  transform: rotate(-90deg);
+}
+
+.pentaryn-ties .pt-row.pt-open .pt-caret {
+  transform: rotate(0deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pentaryn-ties .pt-caret {
+    transition: none;
+  }
+}
+
 /* the click target: portrait · name · word · chip · pips · hint */
 .pentaryn-ties .pt-summary {
   display: grid;
