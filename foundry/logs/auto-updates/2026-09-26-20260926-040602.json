@@ -1,0 +1,1356 @@
+{
+  "run_id": "20260926-040602",
+  "outcome": "failed",
+  "started": "2026-09-26T04:06:02-0400",
+  "finished": "",
+  "snapshot": "world-2026-09-26-040608-fvtt14.367.tar.gz",
+  "native_snapshot": "per-package: dice-so-nice, foundry-mcp-bridge",
+  "applied": [
+    {
+      "id": "dice-so-nice",
+      "type": "module",
+      "from": "6.3.1",
+      "to": "6.4.1"
+    },
+    {
+      "id": "foundry-mcp-bridge",
+      "type": "module",
+      "from": "0.8.3",
+      "to": "0.8.4"
+    }
+  ],
+  "failed": [],
+  "recoveries": [],
+  "smoke": [],
+  "warnings": {},
+  "messages": [
+    "run failed: 'list' object has no attribute 'get'"
+  ],
+  "plan": {
+    "generated": "2026-09-26T04:09:46-0400",
+    "mode": "foundry",
+    "core": {
+      "installed": "14.367",
+      "channel": "stable"
+    },
+    "system": {
+      "id": "dnd5e",
+      "installed": "5.3.3"
+    },
+    "active_world_at_scan": null,
+    "worlds": [
+      {
+        "id": "ardenford",
+        "title": "Ardenford",
+        "system": "dnd5e",
+        "system_version": "5.3.3",
+        "core_version": "14.367",
+        "last_played": "Thu Sep 17 2026 15:24:26 GMT-0400 (Eastern Daylight Time)"
+      },
+      {
+        "id": "ardenhaven",
+        "title": "ardenhaven",
+        "system": "dnd5e",
+        "system_version": "5.3.3",
+        "core_version": "14.367",
+        "last_played": "Fri Aug 21 2026 18:58:27 GMT-0400 (Eastern Daylight Time)"
+      },
+      {
+        "id": "space-journey",
+        "title": "Space Journey",
+        "system": "dnd5e",
+        "system_version": "5.3.3",
+        "core_version": "14.367",
+        "last_played": "Wed Sep 23 2026 17:18:00 GMT-0400 (Eastern Daylight Time)"
+      }
+    ],
+    "counts": {
+      "tracked": 17,
+      "protected": 7,
+      "local": 8,
+      "forked": 0,
+      "untracked": 0
+    },
+    "local_drift": [
+      {
+        "id": "pentaryn-seafoot-maps",
+        "installed": "1.0.0",
+        "repo": null,
+        "note": "installed but not present in foundry/module/"
+      }
+    ],
+    "decisions": [
+      {
+        "id": "core",
+        "type": "core",
+        "bucket": "auto",
+        "installed": "14.367",
+        "target": "14.368",
+        "bump": "minor",
+        "reasons": [
+          "build bump 14.367 -> 14.368 within generation 14; compatibility preview clean",
+          "not blocking, but noted: multi-token-edit (UNVERIFIED_BUILD), wall-height (UNVERIFIED_GENERATION)"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "bucket": "hold",
+        "installed": "5.3.3",
+        "target": "6.0.5",
+        "bump": "major",
+        "reasons": [
+          "major bump 5.3.3 -> 6.0.5",
+          "adjudicated hold: Major system bump. 6.0 reworks chat-card data and ActiveEffects (v2). dnd5e add-ons enhancedcombathud-dnd5e and itempilesdnd5e may break. Full notes truncated; 6.0.1 fixed worlds failing to load."
+        ],
+        "notes_url": "https://github.com/foundryvtt/dnd5e/releases",
+        "protected": false,
+        "adjudication": "Major system bump. 6.0 reworks chat-card data and ActiveEffects (v2). dnd5e add-ons enhancedcombathud-dnd5e and itempilesdnd5e may break. Full notes truncated; 6.0.1 fixed worlds failing to load."
+      },
+      {
+        "id": "betterroofs",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "4.0.2",
+        "target": "4.0.2",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "dice-so-nice",
+        "type": "module",
+        "bucket": "auto",
+        "installed": "6.3.1",
+        "target": "6.4.1",
+        "bump": "minor",
+        "reasons": [
+          "minor bump, compatibility and relationships check out"
+        ],
+        "notes_url": "https://gitlab.com/riccisi/foundryvtt-dice-so-nice/-/releases",
+        "protected": false
+      },
+      {
+        "id": "dnd-dungeon-masters-guide",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "2.0.0",
+        "target": "2.0.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": true
+      },
+      {
+        "id": "dnd-monster-manual",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.4.0",
+        "target": "1.4.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": true
+      },
+      {
+        "id": "dnd-players-handbook",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "2.2.0",
+        "target": "2.2.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": true
+      },
+      {
+        "id": "eledryll-maps-castle-life-bundle-1",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.14.3",
+        "target": "1.14.3",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": true
+      },
+      {
+        "id": "eledryll-spiders-tear-opera-house",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.1.0",
+        "target": "1.1.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": true
+      },
+      {
+        "id": "enhancedcombathud",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "5.0.1",
+        "target": "5.0.1",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "enhancedcombathud-dnd5e",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "5.2.2",
+        "target": "5.2.2",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "foundry-mcp-bridge",
+        "type": "module",
+        "bucket": "auto",
+        "installed": "0.8.3",
+        "target": "0.8.4",
+        "bump": "patch",
+        "reasons": [
+          "patch bump, compatibility and relationships check out"
+        ],
+        "notes_url": "https://github.com/adambdooley/foundry-vtt-mcp/releases",
+        "protected": false
+      },
+      {
+        "id": "item-piles",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "3.3.4",
+        "target": "3.3.4",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "itempilesdnd5e",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.1.0",
+        "target": "1.1.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "levels",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "7.0.3",
+        "target": "7.0.3",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "lib-wrapper",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.13.5.1",
+        "target": "1.13.5.1",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "mad-endlesswiz",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "14.1.0",
+        "target": "14.1.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": true
+      },
+      {
+        "id": "mad-endlesswiz2",
+        "type": "module",
+        "bucket": "hold",
+        "installed": "13.0.1",
+        "target": "14.1.0",
+        "bump": "major",
+        "reasons": [
+          "not seen by a previous run \u2014 reviewed once before it can update unattended",
+          "adjudicated hold: Major version jump (13.0.1 -> 14.1.0) with no public release notes. Policy is to hold missing notes on a major bump. Needs one manual review before unattended updates."
+        ],
+        "notes_url": "https://www.patreon.com/themadcartographer",
+        "protected": true,
+        "adjudication": "Major version jump (13.0.1 -> 14.1.0) with no public release notes. Policy is to hold missing notes on a major bump. Needs one manual review before unattended updates."
+      },
+      {
+        "id": "monks-active-tiles",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "14.01",
+        "target": "14.01",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "multi-token-edit",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "3.3.6",
+        "target": "3.3.6",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-attunement",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.1.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-dropbin",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.1.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-importer",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.0.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-lookup",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.1.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-pings",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.1.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-seafoot-maps",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "1.0.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-ties",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.16.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "pentaryn-walls",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "0.2.0",
+        "target": null,
+        "bump": "none",
+        "reasons": [
+          "built in this repo \u2014 updated by make foundry-sync, not upstream"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "scene-packer",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "2.8.12",
+        "target": "2.8.12",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "socketlib",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "v1.1.4",
+        "target": "v1.1.4",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "theripper-premium-hub",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "6.0.1",
+        "target": "6.0.1",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "tile-scroll",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "5.0.0",
+        "target": "5.0.0",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      },
+      {
+        "id": "wall-height",
+        "type": "module",
+        "bucket": "skip",
+        "installed": "7.0.8",
+        "target": "7.0.8",
+        "bump": "none",
+        "reasons": [
+          "up to date"
+        ],
+        "notes_url": null,
+        "protected": false
+      }
+    ],
+    "upstream": {
+      "dnd5e": {
+        "id": "dnd5e",
+        "type": "system",
+        "installed": "5.3.3",
+        "latest": "6.0.5",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14.367",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": "https://github.com/foundryvtt/dnd5e/releases",
+        "has_update": true,
+        "error": null,
+        "notes": [
+          {
+            "version": "release-6.0.5",
+            "name": "release-6.0.5",
+            "url": "https://github.com/foundryvtt/dnd5e/releases/tag/release-6.0.5",
+            "published": "2026-09-22T22:22:44Z",
+            "body": "A small release to fix some disruptive issues. For the full 6.0.0 patch notes, please see [here](https://github.com/foundryvtt/dnd5e/releases/tag/release-6.0.0).\r\n\r\n---\r\n\r\n## Bug Fixes\r\n\r\n- [#7527] Fix error thrown when rolling activity-requested checks or saves in some circumstances.\n\n**Installation:** To manually install this release, please use the following manifest URL: https://github.com/foundryvtt/dnd5e/releases/download/release-6.0.5/system.json"
+          },
+          {
+            "version": "release-6.0.4",
+            "name": "release-6.0.4",
+            "url": "https://github.com/foundryvtt/dnd5e/releases/tag/release-6.0.4",
+            "published": "2026-09-22T18:52:21Z",
+            "body": "Patch release with additional bug fixes. For the full 6.0.0 patch notes, please see [here](https://github.com/foundryvtt/dnd5e/releases/tag/release-6.0.0).\r\n\r\n---\r\n\r\n## Bug Fixes\r\n\r\n- [#7453] Fix sense synchronisation not applying defaults from the synchronised vision mode.\r\n- [#7486] Fix `getCraftCost` ignoring configured exceptions.\r\n- [#7489] Fix being unable to toggle short rest options in the dialog spawned via group actor.\r\n- [#7492] Fix creatures with immunity to exhaustion receiving Exhaustion II when having exhaustion applied to them.\r\n- [#7493] Fix human readable ActiveEffect target path labels being rendered for rule-type ActiveEffects.\r\n- [#7496] Fix Check & Save activity bonuses resolving against the wrong Actor's roll data.\r\n- [#7501] Fix some cases of hard-coded skill assumptions.\r\n- [#7503] Fix transparent chat cards on `/stream` view.\r\n- [#7516] Fix some cases of ActiveEffects without short or long rest expiries nonetheless expiring on a short or long rest.\r\n- [#7522] Fix hidden Activities appearing as choices in the Activity creation dialog.\r\n- [#7526] Fix Items created via Activity consumption not being appropriately removed when consumption is reverted.\r\n\r\n## Improvements\r\n\r\n- [#7485] Dice terms with complex, deterministic number or faces now show resolved dice in roll dialogs.\r\n\r\n**Installation:** To manually install this release, please use the following manifest URL: https://github.com/foundryvtt/dnd5e/releases/download/release-6.0.4/system.json"
+          },
+          {
+            "version": "release-6.0.3",
+            "name": "release-6.0.3",
+            "url": "https://github.com/foundryvtt/dnd5e/releases/tag/release-6.0.3",
+            "published": "2026-09-17T14:14:38Z",
+            "body": "Patch release with additional bug fixes. For the full 6.0.0 patch notes, please see [here](https://github.com/foundryvtt/dnd5e/releases/tag/release-6.0.0).\r\n\r\n---\r\n\r\n## Bug Fixes\r\n\r\n- [#7474] Fix error thrown when calling `simplifyBonus` with an invalid formula.\r\n- [#7475] Fix effects targeting `system.rolls.attack.*` not applying correctly in some cases.\r\n- [#7480] Fix enchanted containers not showing their enchantments under the effects tab.\r\n- [#7482, #7484] Fix duration-less effects expiring after one turn in combat.\n\n**Installation:** To manually install this release, please use the following manifest URL: https://github.com/foundryvtt/dnd5e/releases/download/release-6.0.3/system.json"
+          },
+          {
+            "version": "release-6.0.2",
+            "name": "release-6.0.2",
+            "url": "https://github.com/foundryvtt/dnd5e/releases/tag/release-6.0.2",
+            "published": "2026-09-15T18:27:21Z",
+            "body": "Patch release with additional bug fixes. For the full 6.0.0 patch notes, please see [here](https://github.com/foundryvtt/dnd5e/releases/tag/release-6.0.0).\r\n\r\n---\r\n\r\n## Compendium Content\r\n\r\n- [#7452] Fix the Druid's Primal Order: Magician cantrip bonus.\r\n\r\n## Bug Fixes\r\n\r\n- [#7442] Fix deprecation warning when creating some advancements.\r\n- [#7450] Fix the `item` property of roll data referring to the wrong item in Rule-type AE conditions.\r\n- [#7455] Fix compendium spells dropped into the inventory tab not being created as scrolls correctly.\r\n- [#7459] Fix infinite loop caused by casting a concentration spell from a scroll.\r\n- [#7462] Fix negative modifiers omitted from roll breakdown.\r\n- [#7463] Fix requesting a roll via enricher from a detached window throwing an error.\r\n- [#7466] Fix some NPC embed localisation strings.\r\n\r\n## Improvements\r\n\r\n- [#7443] Allow supplying custom flavour to group roll request messages.\n\n**Installation:** To manually install this release, please use the following manifest URL: https://github.com/foundryvtt/dnd5e/releases/download/release-6.0.2/system.json"
+          },
+          {
+            "version": "release-6.0.1",
+            "name": "release-6.0.1",
+            "url": "https://github.com/foundryvtt/dnd5e/releases/tag/release-6.0.1",
+            "published": "2026-09-11T17:57:25Z",
+            "body": "Patch release with additional bug fixes. For the full 6.0.0 patch notes, please see [here](https://github.com/foundryvtt/dnd5e/releases/tag/release-6.0.0).\r\n\r\n---\r\n\r\n## Bug Fixes\r\n\r\n- [#7427] Fix error throw when rendering cards whose activities could not be resolved.\r\n- [#7428] Fix legacy cards rendering with v3 compact styles.\r\n- [#7429] Fix players with appropriate permissions being unable to summon.\r\n- [#7430] Fix configuring a filter with invalid JSON causing the filter to become uneditable.\r\n- [#7439] Fix some worlds failing to load.\r\n\r\n\r\n\r\n\r\n**Installation:** To manually install this release, please use the following manifest URL: https://github.com/foundryvtt/dnd5e/releases/download/release-6.0.1/system.json"
+          },
+          {
+            "version": "release-6.0.0",
+            "name": "release-6.0.0",
+            "url": "https://github.com/foundryvtt/dnd5e/releases/tag/release-6.0.0",
+            "published": "2026-09-10T17:26:28Z",
+            "body": "<img width=\"2560\" height=\"1440\" alt=\"6.0 release banner\" src=\"https://github.com/user-attachments/assets/18464cf1-d6c4-417a-b48b-9d414e37cebf\" />\r\n\r\nThe 6.0 release of the D&D Fifth Edition system is the largest ever in the system's history. The main focus of the update has been taking full advantage of all the new Foundry Virtual Tabletop version 14 features. The Levels feature has allowed us to automate falling and fall damage, and the ActiveEffect v2 work has opened up a wealth of new ways to configure ActiveEffects, including conditional effects, rules-based effects, Region-attached effects, and improved expiry handling.\r\n\r\nWe always take these opportunities to clean up and consolidate the codebase to provide a stronger foundation moving forward, and as part of this work we have invested significant effort in another iteration of the chat cards, and integrated several long-requested features such as improved armor class handling.\r\n\r\nSee below for more details on the feature highlights, but given the release's size, we have had to be particularly conservative with what we highlight. As always, see the end for full notes on bug fixes and improvements, and check the [wiki](https://github.com/foundryvtt/dnd5e/wiki) for a more extended overview of all the system's various features.\r\n\r\n**\u26a0\ufe0f COMPATIBILITY WARNING: \u26a0\ufe0f** The version 6.0 release of the system **ONLY SUPPORTS** Foundry Virtual Tabletop version 14 and greater. To use this new game system version you must also use Foundry VTT version 14. If you do not wish to update your core software, please continue using an earlier version of the dnd5e system.\r\n\r\n**\u26a0\ufe0f IMPORTANT: \u26a0\ufe0f** If you previously downloaded the 6.0 *pre-release* version, you **MUST** uninstall and then re-install the game system. Failing to do so may result in corrupt or lost data.\r\n\r\n**Installation:** To manually install this release, please use the following manifest URL: https://github.com/foundryvtt/dnd5e/releases/download/release-6.0.0/system.json\r\n\r\n---\r\n\r\n## Chat Cards\r\n\r\nThe chat cards have been overdue another iteration. The core software has supported better underlying data representations for chat card data for some time. As part of the work to improve the data modelling, we took the opportunity to do another pass on the look and feel.\r\n\r\nThe majority of chat cards have been adjusted to be much more compact, and will also include information on the specific activity used, preferring an activity description over the item description if one exists.\r\n\r\n<img width=\"292\" height=\"145\" alt=\"Compact attack activity chat card\" src=\"https://github.com/user-attachments/assets/e8219c44-0cbe-47d2-ba7d-a72fe1cf64b2\" />\r\n\r\n<img width=\"292\" height=\"170\" alt=\"Compact attack roll chat card\" src=\"https://github.com/user-attachments/assets/c9d519bb-0d29-4bf6-940c-419f1393564d\" />\r\n\r\nDespite being more compact, we have included more information than before, in some cases.\r\n\r\n<img width=\"292\" height=\"236\" alt=\"Compact damage roll chat card\" src=\"https://github.com/user-attachments/assets/8e0827f6-45a2-4aa9-ae79-c4e6bbb23d5e\" />\r\n\r\nIn most cases, targets are now grouped, in order to save space, but it is still possible to adjust individual targets or pan to them by right-clicking the target pill.\r\n\r\n<img width=\"294\" height=\"320\" alt=\"Compact save activity chat card showing target pill context menu options\" src=\"https://github.com/user-attachments/assets/e4540753-ff1b-4b0a-8ad9-b69d6d7ab4bb\" />\r\n\r\nThe effects tray has also become more compact, with the ability to apply multiple effects at once by shift+clicking additional effects.\r\n\r\n<img width=\"292\" height=\"273\" alt=\"Compact chat card showing the Mirror Image spell being cast and the effects tray\" src=\"https://github.com/user-attachments/assets/d532b015-9ce1-4ee2-9aae-2fc13c98720d\" />\r\n\r\nThe damage tray has received similar treatment and now groups targets as well. Manual adjustments are again available via the right-click menu, allowing you to adjust a multiplier for the "
+          }
+        ],
+        "manifest_url": "https://raw.githubusercontent.com/foundryvtt/dnd5e/master/system.json"
+      },
+      "betterroofs": {
+        "id": "betterroofs",
+        "type": "module",
+        "installed": "4.0.2",
+        "latest": "4.0.2",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "lib-wrapper",
+              "type": "module",
+              "compatibility": {}
+            }
+          ],
+          "recommends": [
+            {
+              "id": "theripper-premium-hub",
+              "type": "module",
+              "reason": "TheRipper93's Module Hub will alert you of critical updates and give you easy access to documentation in the configure settings screen",
+              "compatibility": {}
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/theripper93/Better-Roofs/releases/latest/download/module.json"
+      },
+      "dice-so-nice": {
+        "id": "dice-so-nice",
+        "type": "module",
+        "installed": "6.3.1",
+        "latest": "6.4.1",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": 14,
+          "verified": "14.368"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": "https://gitlab.com/riccisi/foundryvtt-dice-so-nice/-/releases",
+        "has_update": true,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://gitlab.com/riccisi/foundryvtt-dice-so-nice/-/raw/master/module/module.json"
+      },
+      "dnd-dungeon-masters-guide": {
+        "id": "dnd-dungeon-masters-guide",
+        "type": "module",
+        "installed": "2.0.0",
+        "latest": "2.0.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "13",
+          "verified": "13"
+        },
+        "relationships": {
+          "systems": [
+            {
+              "id": "dnd5e",
+              "type": "system",
+              "compatibility": {
+                "minimum": "5.1.0"
+              }
+            }
+          ]
+        },
+        "protected": true,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "dnd-monster-manual": {
+        "id": "dnd-monster-manual",
+        "type": "module",
+        "installed": "1.4.0",
+        "latest": "1.4.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "13",
+          "verified": "14"
+        },
+        "relationships": {
+          "systems": [
+            {
+              "id": "dnd5e",
+              "type": "system",
+              "compatibility": {
+                "minimum": "5.3.3"
+              }
+            }
+          ]
+        },
+        "protected": true,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "dnd-players-handbook": {
+        "id": "dnd-players-handbook",
+        "type": "module",
+        "installed": "2.2.0",
+        "latest": "2.2.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "13",
+          "verified": "14"
+        },
+        "relationships": {
+          "systems": [
+            {
+              "id": "dnd5e",
+              "type": "system",
+              "compatibility": {
+                "minimum": "5.1.9"
+              }
+            }
+          ]
+        },
+        "protected": true,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "eledryll-maps-castle-life-bundle-1": {
+        "id": "eledryll-maps-castle-life-bundle-1",
+        "type": "module",
+        "installed": "1.14.3",
+        "latest": "1.14.3",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": true,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "eledryll-spiders-tear-opera-house": {
+        "id": "eledryll-spiders-tear-opera-house",
+        "type": "module",
+        "installed": "1.1.0",
+        "latest": "1.1.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": true,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "enhancedcombathud": {
+        "id": "enhancedcombathud",
+        "type": "module",
+        "installed": "5.0.1",
+        "latest": "5.0.1",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {
+          "requires": [],
+          "recommends": [],
+          "systems": []
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/theripper93/enhancedcombathud/releases/latest/download/module.json"
+      },
+      "enhancedcombathud-dnd5e": {
+        "id": "enhancedcombathud-dnd5e",
+        "type": "module",
+        "installed": "5.2.2",
+        "latest": "5.2.2",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "enhancedcombathud",
+              "type": "module",
+              "compatibility": {
+                "minimum": "3.0.4"
+              }
+            }
+          ],
+          "systems": [
+            {
+              "id": "dnd5e",
+              "type": "system",
+              "compatibility": {
+                "minimum": "5.0.0"
+              }
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/theripper93/enhancedcombathud-dnd5e/releases/latest/download/module.json"
+      },
+      "foundry-mcp-bridge": {
+        "id": "foundry-mcp-bridge",
+        "type": "module",
+        "installed": "0.8.3",
+        "latest": "0.8.4",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "13",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": "https://github.com/adambdooley/foundry-vtt-mcp/releases",
+        "has_update": true,
+        "error": null,
+        "notes": [
+          {
+            "version": "0.8.4",
+            "name": "Foundry MCP Server v0.8.4",
+            "url": "https://github.com/adambdooley/foundry-vtt-mcp/releases/tag/v0.8.4",
+            "published": "2026-09-12T15:27:37Z",
+            "body": "## Foundry MCP Server v0.8.4\n\nComplete multi-platform distribution for Foundry MCP Server - AI-powered campaign management for Foundry VTT using Claude Desktop.\n\n**Compatible with Foundry VTT v13 and v14.**\n\n### Installation Options\n\n**Windows Users:**\n- Download `FoundryMCPServer-Setup-v0.8.4.exe`\n- Run installer (no admin rights required)\n- Automatic Claude Desktop configuration\n\n**Mac Users:**\n- Download `FoundryMCPServer-v0.8.4.dmg`\n- Open DMG and double-click the PKG installer\n- Choose components: MCP Server (required), Foundry Module, ComfyUI AI Maps\n- Automatic Claude Desktop configuration\n- To uninstall: Double-click `Uninstall.tool` from the DMG\n\n**Manual Installation (All Platforms):**\n- Download `foundry-mcp-server-v0.8.4.zip`\n- Extract and run with Node.js 18+\n- Manual Claude Desktop configuration required\n\n**Foundry VTT Users:**\n- Install directly from Foundry's module browser\n- Or use manifest: `https://github.com/adambdooley/foundry-vtt-mcp/releases/latest/download/module.json`\n\n### Quick Start\n1. Choose your installation method above\n2. Install MCP Bridge module in Foundry VTT\n3. Restart Claude Desktop\n4. Start creating AI-powered campaigns!\n\n### New in this release\n- Scene music and playlist tools: bind playlists and tracks to scenes, plus playlist CRUD and playback control\n- ActiveEffect management: create, update and delete effects on actors or their items\n- DSA5 system support, plus a new `replace-journal-page` tool\n- `manage-actors` can now place existing world actors onto the current scene\n- Fixes: `use-item` targeting on Foundry V13/V14, Windows installer upgrade safety (no longer risks an existing ComfyUI install), large responses timing out over WebRTC, and several D&D 5e feature-creation defects\n\nSee the changelog for the full list.\n\n### Features\n- 48 MCP tools for comprehensive Foundry VTT integration\n- Multi-system support: D&D 5e, Pathfinder 2e, DSA5, Cosmere RPG, WFRP4e, and Mongoose Traveller 2e\n- Generic actor CRUD (create/update/delete actors and embedded items) across all systems\n- D&D 5e NPC creation suite: stat blocks, attacks, saves, auras, and spellcasting\n- Actor creation with natural language processing\n- Quest management with HTML generation and updates\n- Campaign system with multi-part structure and progress tracking\n- Dice roll coordination between Claude and Foundry players\n- Actor ownership management with bulk operations\n- Enhanced creature index for instant monster searches\n- AI-powered battlemap generation with ComfyUI integration\n\nFor full documentation, visit: https://github.com/adambdooley/foundry-vtt-mcp\n\n\n## What's Changed\n* chore: correct release-notes tool count and system list by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/71\n* ci: guard against version drift across manifests by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/72\n* fix: repair scene background image after generate-map scene creation by @Sir-Salty-Bacon in https://github.com/adambdooley/foundry-vtt-mcp/pull/79\n* fix(module): use ws:// for loopback hosts even on HTTPS pages (#74) by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/82\n* feat: DSA5 adapter support (normalizePayload, describeActorSchema) + system detection + replace-journal-page tool by @frankyh75 in https://github.com/adambdooley/foundry-vtt-mcp/pull/81\n* fix: include scene_name in map job dedup hash (#80) by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/84\n* fix: register getPackIndex query for list-dsa5-archetypes (#77) by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/83\n* feat: add 'place' action to manage-actors for existing world actors (#75) by @adambdooley in https://github.com/adambdooley/foundry-vtt-mcp/pull/85\n* fix: scope .form-footer rules to the module's own settings forms by @apoapostolov in https://github.com/adambdooley/foundry-vtt-mcp/pull/97\n* Fix/journal page rename (Issue #95) by @tacostorm in https://github.com/adambd"
+          }
+        ],
+        "manifest_url": "https://github.com/adambdooley/foundry-vtt-mcp/releases/latest/download/module.json"
+      },
+      "item-piles": {
+        "id": "item-piles",
+        "type": "module",
+        "installed": "3.3.4",
+        "latest": "3.3.4",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "13",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "socketlib",
+              "type": "module"
+            },
+            {
+              "id": "lib-wrapper",
+              "type": "module"
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/fantasycalendar/FoundryVTT-ItemPiles/releases/latest/download/module.json"
+      },
+      "itempilesdnd5e": {
+        "id": "itempilesdnd5e",
+        "type": "module",
+        "installed": "1.1.0",
+        "latest": "1.1.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "12",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "item-piles",
+              "type": "module",
+              "manifest": "https://github.com/fantasycalendar/FoundryVTT-ItemPiles/releases/latest/download/module.json",
+              "compatibility": {
+                "minimum": "3.2.7",
+                "verified": "3.2.7"
+              }
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/fantasycalendar/FoundryVTT-ItemPilesDnD5e/releases/latest/download/module.json"
+      },
+      "levels": {
+        "id": "levels",
+        "type": "module",
+        "installed": "7.0.3",
+        "latest": "7.0.3",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14",
+          "maximum": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "lib-wrapper",
+              "type": "module",
+              "compatibility": {}
+            }
+          ],
+          "recommends": []
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/theripper93/Levels/releases/latest/download/module.json"
+      },
+      "lib-wrapper": {
+        "id": "lib-wrapper",
+        "type": "module",
+        "installed": "1.13.5.1",
+        "latest": "1.13.5.1",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "0.6.5",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/ruipin/fvtt-lib-wrapper/releases/latest/download/module.json"
+      },
+      "mad-endlesswiz": {
+        "id": "mad-endlesswiz",
+        "type": "module",
+        "installed": "14.1.0",
+        "latest": "14.1.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "scene-packer",
+              "type": "module",
+              "compatibility": {}
+            },
+            {
+              "id": "lib-wrapper",
+              "type": "module",
+              "compatibility": {}
+            },
+            {
+              "id": "multi-token-edit",
+              "type": "module",
+              "compatibility": {}
+            }
+          ],
+          "recommends": [
+            {
+              "id": "monks-active-tiles",
+              "type": "module",
+              "compatibility": {}
+            }
+          ]
+        },
+        "protected": true,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "mad-endlesswiz2": {
+        "id": "mad-endlesswiz2",
+        "type": "module",
+        "installed": "13.0.1",
+        "latest": "14.1.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "scene-packer",
+              "type": "module",
+              "compatibility": {}
+            },
+            {
+              "id": "lib-wrapper",
+              "type": "module",
+              "compatibility": {}
+            },
+            {
+              "id": "tile-scroll",
+              "type": "module",
+              "compatibility": {}
+            }
+          ],
+          "recommends": [
+            {
+              "id": "monks-active-tiles",
+              "type": "module",
+              "compatibility": {}
+            }
+          ]
+        },
+        "protected": true,
+        "notes_url": "https://www.patreon.com/themadcartographer",
+        "has_update": true,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "monks-active-tiles": {
+        "id": "monks-active-tiles",
+        "type": "module",
+        "installed": "14.01",
+        "latest": "14.01",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/ironmonk108/monks-active-tiles/releases/latest/download/module.json"
+      },
+      "multi-token-edit": {
+        "id": "multi-token-edit",
+        "type": "module",
+        "installed": "3.3.6",
+        "latest": "3.3.6",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": 14,
+          "verified": "14.363"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "lib-wrapper",
+              "type": "module"
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/Aedif/multi-token-edit/releases/download/3.3.6/module.json"
+      },
+      "pentaryn-attunement": {
+        "id": "pentaryn-attunement",
+        "type": "module",
+        "installed": "0.1.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-dropbin": {
+        "id": "pentaryn-dropbin",
+        "type": "module",
+        "installed": "0.1.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-importer": {
+        "id": "pentaryn-importer",
+        "type": "module",
+        "installed": "1.0.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-lookup": {
+        "id": "pentaryn-lookup",
+        "type": "module",
+        "installed": "0.1.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-pings": {
+        "id": "pentaryn-pings",
+        "type": "module",
+        "installed": "0.1.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-seafoot-maps": {
+        "id": "pentaryn-seafoot-maps",
+        "type": "module",
+        "installed": "1.0.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-ties": {
+        "id": "pentaryn-ties",
+        "type": "module",
+        "installed": "0.16.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "pentaryn-walls": {
+        "id": "pentaryn-walls",
+        "type": "module",
+        "installed": "0.2.0",
+        "latest": null,
+        "source": "local",
+        "compatibility": {},
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": null
+      },
+      "scene-packer": {
+        "id": "scene-packer",
+        "type": "module",
+        "installed": "2.8.12",
+        "latest": "2.8.12",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "0.8.6",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/League-of-Foundry-Developers/scene-packer/releases/download/2.8.12/module.json"
+      },
+      "socketlib": {
+        "id": "socketlib",
+        "type": "module",
+        "installed": "v1.1.4",
+        "latest": "v1.1.4",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "11",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/farling42/foundryvtt-socketlib/releases/latest/download/module.json"
+      },
+      "theripper-premium-hub": {
+        "id": "theripper-premium-hub",
+        "type": "module",
+        "installed": "6.0.1",
+        "latest": "6.0.1",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {},
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/theripper93/theripper-premium-hub/releases/latest/download/module.json"
+      },
+      "tile-scroll": {
+        "id": "tile-scroll",
+        "type": "module",
+        "installed": "5.0.0",
+        "latest": "5.0.0",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "14",
+          "verified": "14"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "lib-wrapper",
+              "type": "module",
+              "compatibility": {}
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/theripper93/tile-scroll/releases/latest/download/module.json"
+      },
+      "wall-height": {
+        "id": "wall-height",
+        "type": "module",
+        "installed": "7.0.8",
+        "latest": "7.0.8",
+        "source": "manifest",
+        "compatibility": {
+          "minimum": "13",
+          "verified": "13"
+        },
+        "relationships": {
+          "requires": [
+            {
+              "id": "lib-wrapper",
+              "type": "module",
+              "compatibility": {}
+            }
+          ],
+          "recommends": [
+            {
+              "id": "theripper-premium-hub",
+              "type": "module",
+              "reason": "TheRipper93's Module Hub will alert you of critical updates and give you easy access to documentation in the configure settings screen",
+              "compatibility": {}
+            }
+          ]
+        },
+        "protected": false,
+        "notes_url": null,
+        "has_update": false,
+        "error": null,
+        "notes": [],
+        "manifest_url": "https://github.com/theripper93/wall-height/releases/latest/download/module.json"
+      }
+    },
+    "forks": [
+      {
+        "fork": "JoJoAtkinson/foundry-vtt-mcp",
+        "upstream": "adambdooley/foundry-vtt-mcp",
+        "package_id": "foundry-mcp-bridge",
+        "ahead": 0,
+        "behind": 63,
+        "branch": "master",
+        "error": null,
+        "checkout_path": null,
+        "notes": [
+          "63 commit(s) behind upstream with no local changes \u2014 safe to fast-forward: gh repo sync JoJoAtkinson/foundry-vtt-mcp"
+        ]
+      }
+    ],
+    "buckets": {
+      "auto": [
+        "core",
+        "dice-so-nice",
+        "foundry-mcp-bridge"
+      ],
+      "review": [],
+      "hold": [
+        "dnd5e",
+        "mad-endlesswiz2"
+      ]
+    },
+    "adjudication": {
+      "ran": true,
+      "error": null,
+      "verdicts": [
+        {
+          "id": "dnd5e",
+          "verdict": "hold",
+          "rationale": "Major system bump. 6.0 reworks chat-card data and ActiveEffects (v2). dnd5e add-ons enhancedcombathud-dnd5e and itempilesdnd5e may break. Full notes truncated; 6.0.1 fixed worlds failing to load."
+        },
+        {
+          "id": "mad-endlesswiz2",
+          "verdict": "hold",
+          "rationale": "Major version jump (13.0.1 -> 14.1.0) with no public release notes. Policy is to hold missing notes on a major bump. Needs one manual review before unattended updates."
+        }
+      ]
+    }
+  }
+}
