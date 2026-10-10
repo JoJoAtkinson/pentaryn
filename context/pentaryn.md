@@ -620,3 +620,10 @@ The pentaryn world now runs **dnd5e 6.0.6** (was 5.3.3) on Foundry 14.369; migra
 - **Open:** other three worlds unlaunched on 6 (they migrate on first launch); cards-flow suite not run; Caven "Allosaurus" token (`3MOg1yNcRGsrJtBj`) has an empty texture (pre-upgrade Wild Shape, art in `previousTokenData`); stale expired "Imperceptible Barrier" effect on Caven; keep **one** GM client connected (several GM tabs duplicate Item Piles takes).
 - Updater stays paused.
 - **2026-10-10 update:** other three worlds now migrated to dnd5e 6.0.6 (no longer open). Test cleanup done: chat 446 messages, Caven's stale Imperceptible Barrier removed (AC 15), no combats, Drow Prison active and paused. Item Piles default pile is now `RReAnOkxHGoZ1Ca7`. Still open: Allosaurus token texture, cards-flow suite.
+
+## Prompt markers (2026-10-10)
+
+Module `pentaryn-prompts` **0.4.0** installed and enabled (lookup 0.3.0 beside it); six marker actors in the **`Prompt Markers`** actor folder (not `Temp Markers`); a hidden `Prompt · <size>` token carries Joe's typed text and one MCP call, `prompt-markers` (`gather`, then `replace`), turns each into a real actor/PC/hotspot/note/light/tile. Polished 2026-10-10 (plan §15): docs corrected, eval scratch removed, known gaps listed in the playbook. Backup `world-2026-10-10-100635-fvtt14.369.tar.gz` (`REASON=prompt-markers`). Playbook: `foundry/prompt-markers.md`; build record: `plans/prompt-markers.md`; module: `foundry/module/pentaryn-prompts/README.md`.
+
+- UX playtest passed; LLM evals 8/8/7 (round 2) and 8/9/7 (round 3); both rounds' follow-ups shipped in 0.3.0 and 0.4.0 (plan §13–§14).
+- New sessions need a Claude Code restart (or `/mcp` reconnect) to see `mcp__foundry__prompt-markers`.

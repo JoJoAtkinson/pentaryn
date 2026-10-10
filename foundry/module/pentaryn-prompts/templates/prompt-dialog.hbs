@@ -1,0 +1,17 @@
+<div class="pp-body">
+  <aside class="pp-panel" data-panel>
+    <p class="pp-empty">{{panelLoading}}</p>
+  </aside>
+  <section class="pp-main">
+    <textarea name="prompt" class="pp-text" autofocus spellcheck="true" placeholder="{{placeholder}}">{{text}}</textarea>
+    <footer class="pp-footer">
+      <div class="pp-chips">
+        {{#each sizes}}
+        <button type="button" class="pp-chip{{#if active}} active{{/if}}" data-action="size" data-size="{{key}}" data-tooltip="{{title}}">{{key}}</button>
+        {{/each}}
+      </div>
+      <button type="button" class="pp-delete" data-action="deleteMarker"><i class="fa-solid fa-trash"></i> {{deleteLabel}}</button>
+      <span class="pp-hint">{{hint}}</span>
+    </footer>
+  </section>
+</div>

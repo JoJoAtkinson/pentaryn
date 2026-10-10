@@ -12,7 +12,7 @@
 
 import {
   toPlainText, searchBooks, findPage, renderPage, monsterDigest,
-  pageUuid, actorUuid, snippetAround, capPayload, LIMITS,
+  pageUuid, actorUuid, snippetAround, capPayload, LIMITS, embeddedTableUuids, renderTable,
 } from "../lookup-core.mjs";
 import { BOOKS, PAGES, MONSTER_OK, MONSTER_MOVED } from "./fixtures.mjs";
 
@@ -307,6 +307,20 @@ t("monsterDigest on nothing is notFound, not a crash", () => {
 });
 
 // ── report ───────────────────────────────────────────────────────────────────
+// ── embedded roll tables ──
+t("embeddedTableUuids finds RollTable embeds only, once each", () => {
+  const html = `<p>@Embed[Compendium.dmg.content.JournalEntry.a.JournalEntryPage.b caption=false]</p>
+    @Embed[Compendium.dmg.tables.RollTable.minor rollable] @Embed[Compendium.dmg.tables.RollTable.major rollable]
+    @Embed[Compendium.dmg.tables.RollTable.minor rollable]`;
+  eq(embeddedTableUuids(html), ["Compendium.dmg.tables.RollTable.minor", "Compendium.dmg.tables.RollTable.major"]);
+});
+t("renderTable prints ranges and stripped text", () => {
+  const r = renderTable({ name: "Minor", formula: "1d100", uuid: "u", results: [
+    { range: [1, 20], description: "<p>You can speak @UUID[x]{Abyssal}.</p>" }, { range: [21, 21], name: "Single" }] });
+  eq(r.rows, ["1-20 You can speak Abyssal.", "21 Single"]);
+  eq(r.formula, "1d100");
+});
+
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) {
   console.log("\nfailures:");

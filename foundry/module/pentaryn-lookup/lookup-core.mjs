@@ -232,6 +232,31 @@ export function renderPage(found, opts = {}) {
   return out;
 }
 
+// ── embedded roll tables ─────────────────────────────────────────────────────
+/**
+ * The RollTable uuids a page embeds (`@Embed[Compendium.<pack>.RollTable.<id> rollable]`).
+ * toPlainText drops embeds, so without this a page like the DMG's "Artifacts" loses the four
+ * property tables that are the whole point of it.
+ */
+export function embeddedTableUuids(html) {
+  const out = [];
+  for (const m of String(html ?? "").matchAll(/@Embed\[([^\]\s]+)[^\]]*\]/g)) {
+    if (/\.RollTable\./.test(m[1]) && !out.includes(m[1])) out.push(m[1]);
+  }
+  return out;
+}
+
+/** A RollTable as plain rows: `{name, formula, uuid, rows: ["01-20 text", ...]}`. */
+export function renderTable(t) {
+  const rows = (t.results ?? []).map(r => {
+    const [lo, hi] = r.range ?? [];
+    const span = lo === hi ? `${lo}` : `${lo}-${hi}`;
+    const text = toPlainText(r.description ?? r.text ?? r.name ?? "");
+    return `${span} ${text}`.trim();
+  });
+  return { name: t.name, formula: t.formula ?? "", uuid: t.uuid, rows };
+}
+
 // ── monsters ─────────────────────────────────────────────────────────────────
 /**
  * Deliberately shallow. dnd5e's system data model churns faster than core, so the

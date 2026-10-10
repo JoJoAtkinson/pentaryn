@@ -34,6 +34,7 @@ Open the entry point, then only what it points to. Every context file opens with
 | The Ardenford campaign — world state, the map-candidate `Suggestions` folders | [`context/ardenford.md`](context/ardenford.md) |
 | The Pentaryn world (main build) — modules, splash, marker/crowd actors, what's still unbuilt | [`context/pentaryn.md`](context/pentaryn.md) |
 | World & lore authoring — where files go, naming, frontmatter, combat NPCs | [`context/world/README.md`](context/world/README.md) |
+| Building a scene out from typed prompt markers (`Prompt · <size>` tokens) | [`context/foundry/prompt-markers.md`](context/foundry/prompt-markers.md) |
 | Timeline events and the history SVGs | [`context/world/timelines.md`](context/world/timelines.md) |
 | A rule, spell, feat, item or monster — **the owned PHB/DMG/MM, not the SRD API** | [`context/foundry/rules-lookup.md`](context/foundry/rules-lookup.md) |
 | Attributes, monster study text, turning a backstory into things players can discover | [`context/foundry/attributes.md`](context/foundry/attributes.md) |

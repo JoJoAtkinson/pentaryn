@@ -1,8 +1,8 @@
 {
   "id": "pentaryn-lookup",
   "title": "Pentaryn Rules Lookup",
-  "description": "Full-text search across the owned rulebooks, from one call. Exposes game.pentaryn.rules.search() / .page() / .monster() / .packs() / .selftest(). Read-only: it never writes a document. Searches the Player's Handbook, Dungeon Master's Guide and 2024 SRD by default; Monster Manual text and the 2014 SRD are opt-in, and 2014 hits are stamped with their edition so they cannot be mistaken for current rules. Every hit carries a pasteable Compendium UUID.",
-  "version": "0.1.1",
+  "description": "Full-text search across the owned rulebooks, from one call. Exposes game.pentaryn.rules.search() / .page() (with embedded roll tables) / .monster() (with {text: true}: enriched feature text) / .monsters() (by size, type, CR) / .names() (PHB class, subclass, species, background and feat names) / .onList() / .spellList() / .packs() / .selftest(). Read-only: it never writes a document. Searches the Player's Handbook, Dungeon Master's Guide and 2024 SRD by default; Monster Manual text and the 2014 SRD are opt-in, and 2014 hits are stamped with their edition so they cannot be mistaken for current rules. Every hit carries a pasteable Compendium UUID.",
+  "version": "0.3.0",
   "compatibility": {
     "minimum": "13",
     "verified": "14"

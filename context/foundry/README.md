@@ -55,6 +55,7 @@ Use the 2024 compendium packs: `dnd5e.spells24`, `dnd5e.equipment24`, `dnd5e.fea
 | Reviewing attributes, "the selected attributes", what Claude changed | [`attribute-review.md`](attribute-review.md) |
 | Day-to-day server ops — start/stop, tunnel, OneDrive sync, module install | [`ops.md`](ops.md) |
 | "Put X here" / "replace the red one" — anything naming a spot on a map | [`markers.md`](markers.md) |
+| "Process the prompt markers" / "replace the prompts" — `Prompt · <size>` tokens with typed text | [`prompt-markers.md`](prompt-markers.md) |
 | "The party goes upstairs" — Region + teleport scene links | [`scene-links.md`](scene-links.md) |
 | "Set it on fire" / "the building goes up" — the Fire Kit | [`fire.md`](fire.md) |
 | Who-knows-who, social graph, possession marks — at the table | [`../../foundry/module/pentaryn-ties/README.md`](../../foundry/module/pentaryn-ties/README.md) |
@@ -133,6 +134,17 @@ the whole tool surface.
 deliberately **eval-js only**, logging stays on, and the tool question gets revisited
 against a clean month of steady-state log (~2026-09-22). Full reasoning and the revisit
 criteria: [`../plans/mcp-skill-library.md`](../plans/mcp-skill-library.md).
+**2026-10-10:** a second fork tool, `prompt-markers` (one fat tool, `action` enum), fronts the
+`pentaryn-prompts` module; only its `replace` action is written to the action log. The same build
+added a per-query transport timeout (default still 10 s) and image passthrough for fork tools —
+see [`prompt-markers.md`](prompt-markers.md). From module 0.3.0 the module builds `npc`
+replacements itself and the tool prints the module's readback text as it is. From 0.4.0 (fork
+rebuilt the same day) `replace` also takes `specFile` (a JSON spec on disk) and the dry run previews
+characters on an unsaved actor.
+**Tools missing from a session** that the backend has (a fork tool added after the session
+started): Claude Code caches `tools/list` per session. Wrappers built from 2026-10-10 announce a
+changed list (`notifications/tools/list_changed`, polled every 30 s); older sessions need `/mcp` →
+reconnect, or a new session. `dnd5e-add-feature` also takes `recharge: 5` (fork).
 
 ---
 

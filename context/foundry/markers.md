@@ -9,7 +9,8 @@ tags: [context, foundry, markers, workflow, item-piles, journal-notes]
 # Foundry markers — how Joe points at a spot
 
 **Read this when:** acting on "put X here", "replace the red one", or anything that names a spot on a map in chat.
-**Not this file:** teleports between scenes → [`scene-links.md`](scene-links.md) · fire tiles → [`fire.md`](fire.md)
+**Not this file:** teleports between scenes → [`scene-links.md`](scene-links.md) · fire tiles → [`fire.md`](fire.md) ·
+a marker that carries typed text ("process the prompt markers") → [`prompt-markers.md`](prompt-markers.md)
 
 **Read this before acting on "put X here" or "replace the red one".** Markers are how a spot on
 a Foundry map gets named in chat. They exist because Foundry keeps **no ping history** — a ping
@@ -23,7 +24,11 @@ but markers are the reliable path and the one to reach for by default.)
 
 ## The two sets
 
-Both live in the **`Temp Markers`** actor folder. Drag one onto any scene.
+Which sets exist, and the folder they sit in, **varies by world** — check the live world
+(`game.actors.filter(a => a.name.startsWith("Marker · "))`) rather than assuming. In `pentaryn`
+(checked 2026-10-10) the folder is **`Markers (1–9)`** and holds the number set `Marker · 1` …
+`Marker · 9` only — no colour set. The earlier worlds keep both sets below in **`Temp Markers`**.
+Drag one onto any scene.
 
 | Set | Names | Art | Use it for |
 |---|---|---|---|
@@ -33,8 +38,10 @@ Both live in the **`Temp Markers`** actor folder. Drag one onto any scene.
 Both sets are **0.25 grid units** — deliberately half the default size of the eye hotspot icon
 (0.5), so a marker never hides what it is pointing at and can sit precisely on a small object.
 
-Markers are **prototype-hidden**: ghosted for the GM, invisible to players. That is correct for
-scaffolding — Kris and Kyle should never see them. The ghosting is not a bug.
+Markers are **not** hidden by their prototype — v14 prototype tokens have no `hidden` field.
+Hold **Alt** while dropping one (GM only) to place it hidden: ghosted for the GM, invisible to
+players, which is right for scaffolding. A marker dropped without Alt is **visible to players**;
+hide it from its Token HUD. (Prompt markers are different: their module forces `hidden` on create.)
 
 ---
 
@@ -119,7 +126,7 @@ Most markers become an **interaction hotspot**: a small Item Piles container wea
   inherit it. The template and the existing Markers/Hotspots were locked before the upgrade
   (`.state/core-rollback/token-sizes-pre-dnd5e6.json`); set it yourself on any new hotspot or
   marker actor, or on a token you resize by hand.
-- Hold **Alt** while dragging to place off-grid.
+- Hold **Shift** while dropping to place off-grid (v14; Alt now means "drop hidden").
 
 Alternative glyphs already built, same folder: `icon-magnifier`, `icon-hand`, `icon-chevron`,
 `icon-ring`, and three subtle `interact-glint*` variants.

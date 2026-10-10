@@ -278,6 +278,21 @@ MODULES = {
             "Audit feat riders per actor:  game.pentaryn.riders.report()",
         ),
     ),
+    "prompts": ModuleSpec(
+        "pentaryn-prompts",
+        # node-test: geometry-core.mjs (bands, bearings, nearest-square distance, the pure sight
+        # test, grouping, ids, the gather text, door lines, XP budgets) and build-core.mjs (PC
+        # ability budgets, choice matching) are pure and carry the whole contract.
+        check=(*_STATIC, "node-test"),
+        after_sync=(
+            "First install: restart Foundry (module.json is read at startup), enable",
+            "'Pentaryn Prompt Markers', then reload the ONE GM tab. The six 'Prompt ·' actors",
+            "appear in the 'Prompt Markers' folder at GM ready.",
+            "  game.pentaryn.prompts.status()",
+            "  await game.pentaryn.prompts.gather({scenes: 'current'})",
+            "Marker art: ./.venv/bin/python scripts/foundry/prompt-marker-art.py",
+        ),
+    ),
     # The actor pipeline stages this one, not module-sync, so it is not in the CLI's
     # module list — but the static gates are free and it is real code, so it gets them.
     "importer": ModuleSpec("pentaryn-importer", check=_STATIC),

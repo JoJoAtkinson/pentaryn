@@ -1,7 +1,7 @@
 ---
 title: "Rules and monster lookup — the owned books, live"
 status: active
-last_modified: 2026-08-22
+last_modified: 2026-10-10
 tags: [context, foundry, rules, monsters, compendium, srd]
 ---
 
@@ -46,9 +46,33 @@ RollTable packs.
 await game.pentaryn.rules.search("half cover")          // 5 hits, clean snippets, UUIDs
 await game.pentaryn.rules.page("Study")                 // or a Compendium UUID from search()
 await game.pentaryn.rules.monster("Adult Black Dragon") // shallow digest + uuid
+await game.pentaryn.rules.monster("Goblin Boss", {text: true}) // + every feature's rules text, enrichers resolved
+await game.pentaryn.rules.monsters({size: "large", type: "construct", cr: "5-8"}) // pick candidates by size/type/CR
+await game.pentaryn.rules.names()                       // PHB classes, subclasses by class, species, backgrounds, feats
 await game.pentaryn.rules.packs()                       // what's installed
 await game.pentaryn.rules.selftest()                    // assert the assumptions still hold
+await game.pentaryn.rules.onList("Fireball", "cleric")  // {onList: false, uuid, level} — class spell lists
+await game.pentaryn.rules.spellList("cleric", {level: 3}) // the names on a list, one entry per spell
 ```
+
+`page()` also returns the page's **embedded roll tables** as `tables: [{name, formula, uuid,
+rows: ["1-20 …"]}]` — the DMG's "Artifacts" page is four tables and almost no prose; without them
+the page reads as empty (`{tables: false}` to skip).
+
+`monster(name, {text: true})` adds `features: [{name, type, activation, recharge, text}]` and the
+creature's `languages` and `speed`. The text is enriched the way the sheet shows it — `[[lookup
+@name]]` becomes "the goblin boss", `[[/attack]]` "+4", `[[/damage]]` "5 (1d6 + 2)" — so one call gives
+what a patch decision needs (which features hang on the amulet a construct lost). `monsters(q)` searches
+the Monster Manual, then the 2024 SRD, one entry per name: `size` (word or dnd5e key), `type`
+(`"fey"` — the 2024 goblins are fey, kobolds dragons), `cr` (a value `"1/4"` or a range `"1/2-2"`;
+`minCr`/`maxCr`), `name` (substring), `limit` (40); lowest CR first, each with its uuid for a
+prompt-markers `actor` replacement. `names(kind?)` gives the exact PHB names a `character` spec takes
+(`"Elf, High"`, `"Life Domain"`); `names("subclass")` one part.
+
+**Spell lists are not in the books' text.** The PHB's "Class Spell Lists" pages are empty shells
+and `page()` returns nothing useful for them; the lists live in dnd5e's registry
+(`dnd5e.registry.spellLists.forType("class", "<identifier>")`), which `onList` / `spellList` read.
+`{type: "subclass"}` for a subclass list.
 
 One line instead of twenty, and the five silent traps below are handled in one tested
 file (41 fixtures, `node test/run.mjs`). See
@@ -181,6 +205,18 @@ and this world is newer. Everything here was checked, not assumed.
 | `actor.system.details.cr` | number (e.g. `3`) |
 | `actor.system.attributes.ac.value` | number (e.g. `17`); `.flat` is `null` |
 | `fromUuid` | global function |
+
+### dnd5e 6.x additions — verified 2026-10-10 on v14.369 / dnd5e 6.0.6
+
+| Thing | Reality |
+|---|---|
+| `activity.damage.parts` (weapon attack activity) | **read** = the base weapon die merged in (`["1d6"]`); **source** = only the extra parts (`[]`) with `includeBase: true`. Writing the read value back doubles the die (a spear became 2d6). Write only extra parts, or change the weapon's `system.damage.base` |
+| spell preparation | `system.method` (`"spell"`, `"pact"`, `"innate"`, …) and `system.prepared` **0 \| 1 \| 2** (unprepared / prepared / always) — not the 5.x `preparation.mode` |
+| spell `system.sourceItem` | `"class:wizard"`, `"subclass:life"`, `"race:tiefling-infernal"`, `"feat:magic-initiate"` — who granted it |
+| Recharge n–6 | `system.uses = {max: "1", spent: 0, recovery: [{period: "recharge", formula: "5", type: "recoverAll"}]}` plus an `itemUses` consumption target (`{type: "itemUses", target: "", value: "1"}`) on each activity. `dnd5e-add-feature` takes `recharge: 5` (fork); `prompt-markers` patches take `traits[].recharge` / `recharge: {name: n}` |
+| `CONFIG.DND5E.ENCOUNTER_DIFFICULTY` | 2024 DMG XP per character `[low, moderate, high]` by level (index 1–20) |
+| Advancements | `dnd5e.applications.advancement.AdvancementManager` is UI-driven; a level-N PC is built headlessly by `pentaryn-prompts`' `character` kind — do not hand-set HP, proficiencies, speed or casting ability |
+| species / background link | `system.details.race` / `.background` are set by the item's `_onCreate` with an un-awaited update; a following full actor update can overwrite them (speed 0, no darkvision). Set them explicitly after adding the item |
 
 **The `.length` trap.** `EmbeddedCollection` and the index's `pages` object have no
 `.length`, so `x.pages.length` is `undefined`, `sum += undefined` is `NaN`, and `NaN`

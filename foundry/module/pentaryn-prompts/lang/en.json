@@ -1,0 +1,51 @@
+{
+  "PENTARYN_PROMPTS": {
+    "dialog": {
+      "title": "Prompt",
+      "placeholder": "What goes here? A few words is enough. Enter for a new line.",
+      "hint": "Esc saves · ⌘⏎ saves · ⇧Esc undoes",
+      "delete": "Delete",
+      "removedEmpty": "Prompt marker removed (empty).",
+      "saveFailed": "The prompt could not be saved; see the console.",
+      "noActor": "No \"Prompt · {size}\" actor in this world. Reload as GM to recreate it."
+    },
+    "panel": {
+      "loading": "Looking around…",
+      "failed": "Could not compute what this marker sees; see the console.",
+      "inSight": "In sight · {n}",
+      "nobody": "Sees nothing.",
+      "more": "+{n} more",
+      "outOfSight": "Out of sight (within {ft} ft) · {n}",
+      "empty": "(empty)",
+      "builtFrom": "Built from:"
+    },
+    "hud": {
+      "edit": "Edit prompt",
+      "sees": "sees {n}"
+    },
+    "keybind": {
+      "place": "Place a prompt marker",
+      "placeHint": "Drops a prompt marker of your default size under the cursor and opens its text box.",
+      "edit": "Edit the hovered prompt marker",
+      "editHint": "Opens the text box of the prompt marker under the cursor."
+    },
+    "settings": {
+      "panelRows": { "name": "Side panel rows", "hint": "How many things the dialog lists before \"+N more\"." },
+      "panelChars": { "name": "Side panel preview length", "hint": "Characters of text shown per row in the dialog's side panel." },
+      "gatherChars": { "name": "Gather description length", "hint": "Characters of a built thing's description included in the gather text (cut at a sentence end)." },
+      "party": { "name": "Party for encounter budgets", "hint": "Size x level, e.g. 4x5 (or blank). The gather prints the 2024 DMG XP budget per encounter and replace reports each encounter's difficulty. A gather's own party argument wins." },
+      "unseenWithinFt": { "name": "Out-of-sight radius (ft)", "hint": "Things behind a wall or door are still listed when they are this close." },
+      "cropMaxPerCall": { "name": "Crops per gather", "hint": "Most encounter images one gather returns." },
+      "cropLongSidePx": { "name": "Crop size (px)", "hint": "Long side of each encounter image. 768 is about 790 image tokens." },
+      "cropsDefault": {
+        "name": "Encounter images",
+        "hint": "Auto: images when exactly one scene is gathered.",
+        "auto": "Auto",
+        "on": "Always",
+        "off": "Never"
+      },
+      "deleteEmptyOnClose": { "name": "Remove empty new markers", "hint": "A freshly dropped marker closed with no text is deleted." },
+      "defaultSize": { "name": "Prompt marker size for the P key", "hint": "Which marker the P key places." }
+    }
+  }
+}

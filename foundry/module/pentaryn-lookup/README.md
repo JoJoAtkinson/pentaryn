@@ -2,7 +2,7 @@
 created: 2026-08-22
 last_modified: 2026-10-10
 tags: ["foundry", "vtt", "module", "rules", "compendium"]
-status: shipped — 0.1.1
+status: shipped — 0.2.0
 ---
 
 # `pentaryn-lookup`
@@ -15,6 +15,11 @@ await game.pentaryn.rules.page("Study")
 await game.pentaryn.rules.monster("Adult Black Dragon")
 await game.pentaryn.rules.packs()
 await game.pentaryn.rules.selftest()
+await game.pentaryn.rules.onList("Fireball", "cleric")     // class spell lists (dnd5e's registry)
+await game.pentaryn.rules.spellList("wizard", {level: 3})
+await game.pentaryn.rules.monster("Goblin Boss", {text: true})              // + feature text, enrichers resolved
+await game.pentaryn.rules.monsters({size: "large", type: "construct", cr: "5-8"})
+await game.pentaryn.rules.names()                                          // PHB names for a character spec
 ```
 
 Read-only. It never writes a document, opens a dialog, or touches the canvas.
@@ -65,6 +70,12 @@ prepared `details.cr` / `attributes.ac.value` / `attributes.hp.max` paths are un
 - `page.text.content` → HTML string
 - `fromUuid(uuid)` → document
 - `actor.system.details.cr`, `.attributes.ac.value` (`.flat` fallback), `.attributes.hp.max`
+- `dnd5e.registry.spellLists.forType(type, identifier)` → `{uuids, has(spellOrUuid)}`; `.options` lists the known lists (dnd5e 6.0.6)
+- `RollTable#results` → `{range, description, name}` (v14)
+- `pack.getIndex({fields: ["system.details.cr", "system.traits.size", "system.details.type.value"]})` — actor index
+  fields are reliable (504/504 MM entries filled, 2026-10-10; the unreliable case is journal `pages`)
+- `foundry.applications.ux.TextEditor.implementation.enrichHTML(html, {rollData, relativeTo})` resolves dnd5e's
+  `[[lookup]]`, `[[/attack]]`, `[[/damage]]` (0.3.0)
 
 ## Defaults worth knowing
 
@@ -87,8 +98,19 @@ prepared `details.cr` / `attributes.ac.value` / `attributes.hp.max` paths are un
 ```js
 search(query, {books, limit, snippet, regex})   // books: "rules"|"monsters"|"all"|"2014"|[ids]
 page(refOrName, {raw, maxChars, offset, books}) // ref may be a Compendium UUID from search()
-monster(name)                                   // exact-then-substring across 4 actor packs
+monster(name, {text})                           // exact-then-substring across 4 actor packs; text: true adds
+                                                //   features [{name, type, activation, recharge, text}] (TextEditor.enrichHTML
+                                                //   with the item's roll data, then plain text), languages, speed
+monsters({size, type, cr, minCr, maxCr, name, limit, packs}) // MM then 2024 SRD index, one per name, lowest CR first
+names(kind)                                     // {classes, subclasses: {cls: […]}, species, backgrounds, feats: {origin, general, …}}
+onList(spell, cls, {type})                      // spell name or uuid; type "class" (default) | "subclass"
+spellList(cls, {type, level})                   // one entry per spell name, PHB first
 ```
+
+`page()` appends the page's embedded roll tables as `tables: [{name, formula, uuid, rows}]`
+(`@Embed[…RollTable…]` is otherwise dropped with the other enrichers); `{tables: false}` skips it.
+The "Class Spell Lists" pages in the PHB are empty shells — the lists are only in
+`dnd5e.registry.spellLists`, which `onList`/`spellList` read.
 
 ## Install
 
@@ -103,7 +125,9 @@ Then enable **Pentaryn Rules Lookup** in Manage Modules and reload. Confirm with
 
 Asserts the assumptions above against the live world: the packs exist, `"half cover"`
 finds a Cover page, hits carry pasteable UUIDs, snippets are enricher-free,
-`page("Study")` resolves, `monster("Goblin")` returns numeric cr/ac/hp — and that
+`page("Study")` resolves, `monster("Goblin")` returns numeric cr/ac/hp, `onList` is true for
+Fireball on the wizard list and false on the cleric's, `page("Artifacts")` carries its four roll
+tables — and that
 core's `CompendiumCollection#indexDocument` still projects index fields with
 `getProperty`, which drops nested page fields, so if Foundry ever fixes it you find out
 deliberately rather than by someone "optimizing" the adapter back into the bug.

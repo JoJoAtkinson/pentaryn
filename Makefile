@@ -183,6 +183,7 @@ foundry-cloud:
 .PHONY: foundry-dropbin-check foundry-dropbin-sync foundry-cursors-check foundry-cursors-sync
 .PHONY: foundry-movement-check foundry-movement-sync foundry-creatures-check foundry-creatures-sync
 .PHONY: foundry-riders-check foundry-riders-sync
+.PHONY: foundry-prompts-check foundry-prompts-sync
 
 foundry-lookup-check: ; @$(OPS) module-check lookup
 foundry-lookup-sync:  ; @$(OPS) module-sync lookup
@@ -212,6 +213,8 @@ foundry-creatures-check: ; @$(OPS) module-check creatures
 foundry-creatures-sync:  ; @$(OPS) module-sync creatures
 foundry-riders-check: ; @$(OPS) module-check riders
 foundry-riders-sync:  ; @$(OPS) module-sync riders
+foundry-prompts-check: ; @$(OPS) module-check prompts
+foundry-prompts-sync:  ; @$(OPS) module-sync prompts
 foundry-walls-test:  ; @$(OPS) module-check walls
 foundry-walls-sync:  ; @$(OPS) module-sync walls
 foundry-walls-wasm:  ; @$(OPS) walls-wasm

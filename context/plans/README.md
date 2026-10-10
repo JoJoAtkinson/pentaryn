@@ -33,6 +33,7 @@ lore authoring → [`../world/README.md`](../world/README.md)
 | [`dnd5e-6-upgrade.md`](dnd5e-6-upgrade.md) | dnd5e 5.3.3 to 6.0.6: backups, per-module port, retired-for-native, Argon playtest, rollback recipe | executed 2026-10-10, kept 6.0.6 |
 | [`foundry-update-2026-10.md`](foundry-update-2026-10.md) | Attended October 2026 update: core 14.369, Dice So Nice, mad-endlesswiz2; dnd5e 6 go/no-go, rollback rule, regression checklist | executed 2026-10-10 |
 | [`smarter-updater.md`](smarter-updater.md) | Tiered escalation for the Saturday updater: Haiku triage, Opus analysis, Fable go/no-go, sandboxed Opus fix; adjustments registry and the "Still needed?" phase | v1 built 2026-10-10 (triage + analysis, `max_tier: analyze`); v2/v3 designed |
+| [`prompt-markers.md`](prompt-markers.md) | Prompt markers: six sized marker actors, the drop-to-type dialog with an LOS side panel, the one-call `prompt-markers` gather/replace tool in the bridge fork, the `pentaryn-prompts` module | built, installed, UX-playtested and LLM-evaluated 2026-10-10; eval follow-ups open (section 12) |
 | [`world/timeline-refactor.md`](world/timeline-refactor.md) | History TSVs → per-event markdown under `history/` | complete |
 | [`obsidian-first-migration.md`](obsidian-first-migration.md) | Wikilinks + tag-based multi-home, Obsidian alongside VS Code | proposed — nothing executed |
 

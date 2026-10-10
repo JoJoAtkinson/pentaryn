@@ -1,0 +1,139 @@
+<prompt_markers call="pm-1f49" scenes="2" prompts="13" built="4" encounters="3" alone="2">
+<legend>
+p# = prompt marker to build and replace. t# = already built: context only, never replace, never move.
+ft = 5e grid distance between nearest occupied squares (adjacent = 5), scene diagonal rule.
+Bands: touching 5 | reach 10 | close 15-30 | near 35-60 | far 65-150 | distant 155+.
+LOS = clear sight line through walls with unlimited darkvision (light ignored).
+door = blocked only by a closed door (secret doors say "secret door"). wall = no sight line.
+Bearing = compass on the map, north is up. at = feet from the map's top-left corner.
+Encounter E# = linked by <=30 ft with LOS; a hostile built creature in it brings its pack (the hostile built creatures linked the same way).
+Formation = linked by <=15 ft with LOS, inside an encounter.
+elev = elevation in ft when not 0. Door lines: each door near a prompt, its state, and who can see it from which side.
+Images (if any) are set dressing: what the room looks like. Distances and LOS come from this text, never from the picture.
+</legend>
+<party>none set (the world setting "Party for encounter budgets" is blank and the call gave none): no XP budgets. Pass party: "4x5" (PCs x level) or [5,5,4,5] if you know the party; otherwise ask Joe — never guess one.</party>
+
+<scene id="s1" name="ZZ Prompt Test 1" nav="The Warren" map="120x80 ft (24x16 squares of 5 ft)" regions="none" levels="1">
+<overview>
+E1: p1 p2 p3 p4 p5 + built t1 "Grizzik, Goblin Shaman". Formation p1 p2 p3 p4 p5 t1. Built XP already in it: 200.
+E2: p6 p7. Formation p6 p7.
+E2 is 35 ft E of E1, no LOS between them (wall).
+Alone: p8 (15 ft S of p4, behind a closed door).
+Door at 28,35 ft (closed, E-W wall): N side E1 (p4 at the door); S side p8 (10 ft). No sight line to it: E2 (p6 50 ft, wall).
+Built: t1 (in E1).
+</overview>
+
+<encounter id="E1" centre="28,18 ft" span="30 ft" members="p1 p2 p3 p4 p5 t1" formation="p1 p2 p3 p4 p5 t1">
+<prompt id="p1" size="mid" footprint="Medium 5x5 ft" at="28,18 ft" region="">
+Goblin boss. Scarred, wolf-skull helm, carries the iron key to the shrine door.
+Bullies the others; flees if bloodied.
+<sees>p3 10 SW reach | t1 10 NE reach | p2 15 E close | p4 15 S close</sees>
+<unseen>p5 15 NW close wall | p8 30 S close door | p6 50 E near wall</unseen>
+</prompt>
+<prompt id="p2" size="mid" footprint="Medium 5x5 ft" at="43,18 ft" region="">
+Goblin minion with a sling, hangs back.
+<sees>t1 10 NW reach | p1 15 W close | p4 15 SW close | p3 25 W close | p5 30 NW close</sees>
+<unseen>p8 30 SW close wall | p6 35 E near wall | p7 50 E near wall</unseen>
+</prompt>
+<prompt id="p3" size="mid" footprint="Medium 5x5 ft" at="18,28 ft" region="">
+Goblin minion, rusty spear, terrified of the boss.
+<sees>p1 10 NE reach | p4 10 SE reach | t1 20 NE close | p2 25 E close</sees>
+<unseen>p8 20 SE close wall | p5 25 N close wall | p6 60 E near wall</unseen>
+</prompt>
+<prompt id="p4" size="mid" footprint="Medium 5x5 ft" at="28,33 ft" region="">
+Goblin minion by the door to the side passage. Listens at it.
+<sees>p3 10 NW reach | p1 15 N close | p2 15 NE close | t1 25 N close</sees>
+<unseen>p8 15 S close door | p5 30 NW close wall | p6 50 E near wall</unseen>
+</prompt>
+<prompt id="p5" size="small" footprint="Small 5x5 ft" at="13,3 ft" elev="10 ft" region="">
+Goblin archer on the ledge above the entrance. First to see the party.
+<sees>p1 15 SE close | p3 25 S close | t1 25 E close | p2 30 SE close | p4 30 SE close</sees>
+<unseen>p8 45 S near wall</unseen>
+</prompt>
+<built id="t1" kind="npc" name="Grizzik, Goblin Shaman" type="humanoid (goblinoid)" stats="CR 1, AC 13, HP 27" disposition="hostile" at="38,8 ft" hidden="no">
+Built from prompt (p2 of pm-0a0a, mid, 2026-10-09): "goblin shaman who secretly wants the boss dead; keeps a pouch of bone dice"
+Why: the boss's rival: built first so the pack has someone to betray him
+Carries: Pouch of bone dice (loot)
+Description: Hunched, ash-daubed, never meets the boss's eye. Casts with bone dice and lies about what they show. / Tactics: hangs back behind the boss and casts from cover. If the boss falls he surrenders at once and offers the shrine key's hiding place for his life. [...]
+</built>
+</encounter>
+
+<encounter id="E2" centre="84,15 ft" span="10 ft" members="p6 p7" formation="p6 p7">
+<prompt id="p6" size="large" footprint="Large 10x10 ft" at="80,15 ft" region="">
+A stone guardian. Dormant until the chalice is lifted.
+<sees>p7 10 E reach</sees>
+<unseen>p2 35 W near wall | t1 40 W near wall | p1 50 W near wall | p4 50 W near wall | p8 50 SW near wall | p3 60 W near wall</unseen>
+</prompt>
+<prompt id="p7" size="tiny" footprint="Tiny 2.5x2.5 ft" at="91,11 ft" region="">
+The stolen chalice on the altar. Silver, dented, worth 150 gp to the temple and 40 to a fence.
+<sees>p6 10 W reach</sees>
+<unseen>p2 50 W near wall | t1 55 W near wall</unseen>
+</prompt>
+</encounter>
+
+<alone>
+<prompt id="p8" size="mid" footprint="Medium 5x5 ft" at="28,48 ft" region="">
+Bugbear guard dozing on a stool in the side passage. Snores loudly.
+<sees>nobody</sees>
+<unseen>p4 15 N close door | p3 20 NW close wall | p1 30 N close door | p2 30 NE close wall | t1 40 N near wall | p5 45 N near wall | p6 50 NE near wall</unseen>
+</prompt>
+</alone>
+</scene>
+
+<scene id="s2" name="ZZ Prompt Test 2" nav="The Crossroads" map="100x50 ft (20x10 squares of 5 ft)" regions="Common Room, Bar, Kitchen" levels="1">
+<overview>
+E3: p9 p10 p11 p12 + built t2 "Notice board", t3 "Maudie Teller, innkeeper". Formation p9 p10 p11 p12 t3.
+Alone: p13 (10 ft SW of t4 Spilled flour sack, in sight; 35 ft E of p10, in sight).
+Door at 65,23 ft (open, N-S wall): W side E3 (t3 20 ft); E side p13 (5 ft), t4 (20 ft).
+Built: t2 (in E3), t3 (in E3), t4 (context only).
+</overview>
+
+<encounter id="E3" centre="28,20 ft" span="40 ft" members="p9 p10 p11 p12 t2 t3" formation="p9 p10 p11 p12 t3">
+<prompt id="p9" size="mid" footprint="Medium 5x5 ft" at="28,23 ft" region="">
+Party: the fighter. Human, ex-caravan guard, owes the innkeeper money.
+<sees>p11 5 SE touching | p10 10 E reach | p12 10 S reach | t2 20 NW close | t3 20 NE close | p13 45 E near</sees>
+<unseen>t4 55 E near wall</unseen>
+</prompt>
+<prompt id="p10" size="mid" footprint="Medium 5x5 ft" at="38,23 ft" region="">
+Party: the cleric of the Crossroads shrine.
+<sees>p11 5 SW touching | p9 10 W reach | p12 10 SW reach | t3 15 NE close | t2 30 NW close | p13 35 E near</sees>
+<unseen>t4 45 E near wall</unseen>
+</prompt>
+<prompt id="p11" size="mid" footprint="Medium 5x5 ft" at="33,28 ft" region="">
+Party: the halfling rogue, sits with her back to the wall.
+<sees>p9 5 NW touching | p10 5 NE touching | p12 5 SW touching | t3 20 NE close | t2 25 NW close | p13 40 E near</sees>
+<unseen>t4 50 E near wall</unseen>
+</prompt>
+<prompt id="p12" size="mid" footprint="Medium 5x5 ft" at="28,33 ft" region="">
+Party: the wizard, asleep over a book.
+<sees>p11 5 NE touching | p9 10 N reach | p10 10 NE reach | t2 25 NW close | t3 25 NE close | p13 45 E near</sees>
+<unseen>t4 55 E near wall</unseen>
+</prompt>
+<built id="t2" kind="note" name="Notice board" at="6,6 ft">
+Built from prompt (tiny, 2026-10-02): "notice board with three jobs on it"
+Description: A warped board of wanted posters and lost-dog notices.
+</built>
+<built id="t3" kind="npc" name="Maudie Teller, innkeeper" type="humanoid" stats="CR 0, AC 10, HP 4" disposition="neutral" at="48,8 ft" hidden="no">
+Built from prompt (mid, 2026-10-02): "innkeeper, knows every rumour, overcharges strangers"
+Description: Broad, floury, remembers every face and every tab.
+</built>
+</encounter>
+
+<alone>
+<prompt id="p13" size="mid" footprint="Medium 5x5 ft" at="73,23 ft" region="">
+The cook, cleaver in hand, hates the wizard.
+<sees>t4 10 NE reach | p10 35 W near | p11 40 W near | p9 45 W near | p12 45 W near | t2 65 W far</sees>
+<unseen>t3 25 NW close wall</unseen>
+</prompt>
+</alone>
+
+<context_only>
+<built id="t4" kind="hotspot" name="Spilled flour sack" at="81,11 ft" hidden="no">
+Items: Flour x3 (loot), The Ember Crown (artifact; unidentified, shows as "Soot-Blackened Bronze Circlet"; attunement required)
+Description: A split sack, footprints in the flour.
+</built>
+</context_only>
+</scene>
+
+<todo>p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13</todo>
+</prompt_markers>
