@@ -344,7 +344,7 @@ export async function migrateLegacy() {
 /**
  * **The one reach rule** — can this user legitimately ask about this actor?
  *
- * LIMITED permission, **or** a token of them on a scene this user could be looking at.
+ * LIMITED permission, **or** a token of them on the active scene or the scene this user is viewing.
  *
  * ## Why it lives here and not in either caller
  *
@@ -366,7 +366,15 @@ export function canReach(user, actor) {
   if (!user || !actor) return false;
   if (user.isGM) return true;
   if (actor.testUserPermission(user, "LIMITED") === true) return true;
-  const scenes = [game.scenes?.active, canvas?.scene].filter(Boolean);
+  /*
+   * ⚠ The scene THE ASKING USER is viewing (`User#viewedScene`, a synced field), not the GM's
+   * own `canvas.scene`. This runs on the GM's client, so `canvas.scene` was where the GM happened
+   * to be looking — and a player pulled to (or testing on) any non-active scene had every closer
+   * look refused silently: the stub card posted, then nothing rolled. Found by the 2026-10
+   * usability run (Area 7 K2: Caven on a scratch scene, the GM bridge on another).
+   */
+  const viewed = user.viewedScene ? game.scenes?.get(user.viewedScene) : null;
+  const scenes = [game.scenes?.active, viewed].filter(Boolean);
   for (const scene of scenes) {
     for (const token of scene.tokens ?? []) if (token.actorId === actor.id) return true;
   }

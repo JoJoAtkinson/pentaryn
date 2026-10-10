@@ -1,0 +1,23 @@
+{
+  "id": "pentaryn-combat",
+  "title": "Pentaryn Combat",
+  "description": "Melee on the Argon Combat HUD with fewer clicks and nothing taken away. Full Attack runs every swing the Attack action gives (Extra Attack, Two/Three Extra Attacks, Nick, an NPC's or Wild Shape form's Multiattack), each through dnd5e's own roll dialog, with a pause bar to retarget, switch weapon or stop. The Action pips count swings (2 → 1 → 0), also for weapons clicked by hand. Off-hand, Nick, Flurry of Blows, Martial Arts and Hew appear as one-click follow-ups only when the character qualifies. Sneak Attack (and Frenzy, Colossus Slayer, Divine Strike) is offered on the attack card once per turn, with the crit carried and the damage type set; each player can switch it to Auto. Off-hand attacks spend the Bonus pip and no longer stick, Two-Weapon Fighting and Great Weapon Master damage is added, and empty weapon sets are filled once. Every change is a setting. Exposes game.pentaryn.combat.",
+  "version": "0.1.0",
+  "compatibility": { "minimum": "14", "verified": "14" },
+  "authors": [{ "name": "Joseph Atkinson" }],
+  "esmodules": ["combat.mjs", "hud.mjs"],
+  "styles": ["styles/combat.css"],
+  "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
+  "relationships": {
+    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.0.6" } }],
+    "recommends": [
+      { "id": "enhancedcombathud", "type": "module", "reason": "Full Attack, the swing pips and the follow-ups live on the Argon Combat HUD." },
+      { "id": "enhancedcombathud-dnd5e", "type": "module", "reason": "Argon's dnd5e panels are the ones recomposed." },
+      { "id": "pentaryn-aoe", "type": "module", "reason": "Its auto-damage rolls each swing's damage on its own; without it each attack card keeps its Damage button." },
+      { "id": "pentaryn-transform", "type": "module", "reason": "Wild Shape forms get Full Attack from their Multiattack beside transform's front row." }
+    ]
+  },
+  "socket": false,
+  "protected": false,
+  "flags": { "pentaryn": { "flagScope": "combat", "generation": 14 } }
+}

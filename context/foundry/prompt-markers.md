@@ -267,7 +267,8 @@ shows as "Soot-Blackened Bronze Circlet"; attunement required)`.
   // spellbook: ["Identify", "Web"],                // a wizard's: in the book, not prepared
   startingEquipment: "A",                           // the PHB's class + background gear (B: their gold; default none)
   items: ["Emblem", {data: {name: "Prayer Beads", type: "loot"}}],   // extras; a named holy symbol picks the focus
-  biography: "<p>…</p>"}}
+  biography: "<p>…</p>",
+  folder: "ZZ usability"}}                          // optional: an Actor folder id or name (default Foundry MCP Characters)
 ```
 
 A cleric's pick is titled **`Divine Order Choice`** in the book; `"Divine Order"` works too (any title
@@ -384,7 +385,7 @@ secret. `note` is one line on **why** this choice — it is stamped into provena
    low`) — size the fight here, not after. Nothing is written; bad keys, items, spells, choice keys, npc
    fields, light keys and ability scores fail here, all of a replacement's at once.
    **Required for more than 5 replacements** — the tool refuses a real batch over 5 with
-   `DRY_RUN_REQUIRED` unless the *identical* spec was dry-run first (same backend session).
+   `DRY_RUN_REQUIRED` unless the *identical* spec was dry-run first (same backend session). The count is every replacement in the call, valid or not.
 2. **Real run** — the same call without `dryRun`. Actors and journals are made per replacement
    (an `npc`: the actor, then each feature), then everything is placed in one batch per scene,
    provenance stamped (`flags.pentaryn-prompts.provenance`), markers deleted only after their
@@ -393,7 +394,7 @@ secret. `note` is one line on **why** this choice — it is stamped into provena
    `markerDeleted=true|false`; under it the `patched:` list, a character's `sheet:` (abilities,
    HP, AC, PB, spell DC, saves, skills, speed, darkvision, size, languages, feats, spell counts vs limits),
    `DEFAULTED (check):` and `WARN:` lines; then `remaining: <sceneId>=<n>`; then one line per
-   encounter built into: `E1: 325 XP from 5 creature(s) vs party 4 x L3: low 600 | moderate 900 |
+   encounter built into (`remaining: unknown …` when no replacement got as far as its scene — a stale call, a bad spec — never read that as "all built"): `E1: 325 XP from 5 creature(s) vs party 4 x L3: low 600 | moderate 900 |
    high 1600 → under low` (hostile npcs only — the party and neutral/friendly NPCs do not count). A
    group with no hostile creature (the party itself, a shopkeeper) reads `E3: no hostile creature — no
    difficulty to judge`.
@@ -406,7 +407,7 @@ module (a `cleanup:` line under it); the marker stays. An npc feature that would
 | Code | Meaning | Do |
 |---|---|---|
 | `TEXT_CHANGED` | Joe edited the prompt after your gather | regather and re-read that prompt; `force: true` only if Joe says the old text stands |
-| `MARKER_GONE` | the marker was deleted or swapped (size chip) | regather |
+| `MARKER_GONE` | the marker is gone; the message says why — `already replaced … (now Token "…" [id])`, `resized … (now marker <id>)`, or deleted | regather |
 | `CALL_UNKNOWN` | the call rotated out (last 5 gathers kept) | regather, or target by `sceneId` + `markerId` |
 | `SCENE_UNKNOWN` | scene id/name not found | `list` |
 | `BAD_SPEC` | the arguments are wrong; the message names the field | fix and resend |
@@ -420,7 +421,7 @@ module (a `cleanup:` line under it); the marker stays. An npc feature that would
 
 Tell Joe what each `p#` became, by name, one line each (`p1 → Skarra Wolf-Helm, goblin boss CR 1`),
 and each encounter's difficulty line. Say where new actors landed (`Foundry MCP Creatures` for
-monsters and NPCs, `Foundry MCP Characters` for PCs, `Scene Props` for hotspots), every `DEFAULTED` choice he may want
+monsters and NPCs, `Foundry MCP Characters` for PCs unless `folder` named one, `Scene Props` for hotspots), every `DEFAULTED` choice he may want
 different, and what still needs a hand: features you could not express, map work the prompt
 implies (a hidden door, a ledge's height), art (new NPCs and PCs get the default image unless
 you passed `img`; the ring tier is set per replacement).

@@ -59,6 +59,7 @@ Use the 2024 compendium packs: `dnd5e.spells24`, `dnd5e.equipment24`, `dnd5e.fea
 | "The party goes upstairs" — Region + teleport scene links | [`scene-links.md`](scene-links.md) |
 | "Set it on fire" / "the building goes up" — the Fire Kit | [`fire.md`](fire.md) |
 | Who-knows-who, social graph, possession marks — at the table | [`../../foundry/module/pentaryn-ties/README.md`](../../foundry/module/pentaryn-ties/README.md) |
+| Full Attack, swing pips, off-hand / Nick / Flurry, Sneak Attack offers on the HUD — `pentaryn-combat` | [`melee.md`](melee.md) |
 | One-click Sneak Attack, off-hand damage with no ability mod | [`attack-activities.md`](attack-activities.md) |
 | Spell circles you can't move/delete, "damage isn't rolled", monster saves off an area — `pentaryn-aoe` | [`aoe.md`](aoe.md) |
 | Completing hand-drawn walls | [`../../foundry/module/pentaryn-walls/README.md`](../../foundry/module/pentaryn-walls/README.md) |

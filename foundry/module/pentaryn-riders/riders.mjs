@@ -39,6 +39,12 @@
  */
 
 import * as core from "./riders-core.mjs";
+// Ritual Adept: unprepared wizard rituals on the HUD, slot unticked by default (setting `rituals`).
+import "./rituals.mjs";
+// Concentration summons leave when concentration ends; the break button gets its label (setting `concentrationSummons`).
+import "./concentration.mjs";
+// Argon tidy-ups: shared-uses badges (Metamagic ↔ Font of Magic) refresh; panels collapse for area placement.
+import "./argon-tidy.mjs";
 
 const MOD = core.MOD;
 const QUERY = `${MOD}.battleMedic`;

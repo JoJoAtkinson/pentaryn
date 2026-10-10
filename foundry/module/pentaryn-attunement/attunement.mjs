@@ -258,7 +258,7 @@ async function onCreateItemBond(item, options, userId) {
   await item.update({ [`flags.${MODULE}.-=${BOND}`]: null });
   const entry = awayOf(actor).find(a => a.key === bond.key);
   if (!entry) return;
-  const slots = computeSlots(actor).slots.map(id => (id === AWAY + bond.key) ? item.id : id);
+  const slots = homeSlots(computeSlots(actor).slots, AWAY + bond.key, item.id);
   await actor.update({
     [`flags.${MODULE}.${AWAY_FLAG}`]: awayOf(actor).filter(a => a.key !== bond.key),
     [`flags.${MODULE}.${SLOTS}`]: slots
@@ -317,6 +317,29 @@ function computeSlots(actor) {
 
   const value = placed.size;
   return { slots, max, value, over: value > max };
+}
+
+/**
+ * An away item has come home as `itemId`. Put it back in the slot its away
+ * marker held.
+ *
+ * By the time this runs the item already exists *and is attuned* (preCreate
+ * restored it) while its away entry is still listed, so `computeSlots` has
+ * already dropped the new id into the first hole — or appended it as an extra
+ * slot when there was none. Swapping the marker alone then wrote the id twice:
+ * the flag grew a duplicate, and when there was a hole the item sat in the hole
+ * (first occurrence wins) instead of its own slot. Pure.
+ *
+ * @param {(string|null)[]} slots   reconciled slots, marker and new id both present
+ * @param {string} awayId           `away:<key>`
+ * @param {string} itemId
+ * @returns {(string|null)[]}
+ */
+function homeSlots(slots, awayId, itemId) {
+  if (!slots.includes(awayId)) return slots;
+  const out = slots.map(id => (id === itemId) ? null : (id === awayId) ? itemId : id);
+  while ((out.length > 0) && (out.at(-1) === null)) out.pop();
+  return out;
 }
 
 /**
@@ -874,4 +897,4 @@ Hooks.on("createItem", onCreateItemBond);
 // Exported for `test/run.mjs`. Foundry ignores exports on an esmodule entry point;
 // the reconciliation logic is the part with real edge cases, so it is worth being
 // able to prove it without standing a browser up.
-export { computeSlots, patchProficiencyMap };
+export { computeSlots, homeSlots, patchProficiencyMap };

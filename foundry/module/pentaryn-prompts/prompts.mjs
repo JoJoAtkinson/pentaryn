@@ -301,6 +301,12 @@ Hooks.on("deleteToken", doc => {
   PromptDialog.onTokenDeleted(doc);   // a replace or a delete elsewhere: close instead of typing into nothing
 });
 
+// the open box's side panel (what it sees, door tags) follows walls, doors and tokens as they change
+const refreshPanels = doc => { try { if (doc?.parent?.id) PromptDialog.refreshPanels(doc.parent.id); } catch { /* panel only */ } };
+const MOVED = ["x", "y", "elevation", "hidden", "width", "height", "level"];
+for (const h of ["createWall", "updateWall", "deleteWall", "createToken", "deleteToken", "createNote", "deleteNote"]) Hooks.on(h, refreshPanels);
+Hooks.on("updateToken", (doc, changes) => { if (MOVED.some(k => k in (changes ?? {}))) refreshPanels(doc); });
+
 Hooks.once("setup", () => patchDoubleClick());
 Typeahead.setOrphanSink(text => PromptDialog.takeOrphan(text));
 

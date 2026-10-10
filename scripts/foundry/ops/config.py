@@ -293,6 +293,19 @@ MODULES = {
             "Marker art: ./.venv/bin/python scripts/foundry/prompt-marker-art.py",
         ),
     ),
+    "combat": ModuleSpec(
+        "pentaryn-combat",
+        # node-test: combat-core.mjs (attack counts, the Full Attack state machine, the turn flag,
+        # follow-up and Sneak Attack eligibility, Multiattack parsing, weapon-set seeds) is pure.
+        check=(*_STATIC, "node-test"),
+        after_sync=(
+            "First install: restart Foundry (module.json is read at startup), enable",
+            "'Pentaryn Combat', then reload the ONE GM tab and any player tabs.",
+            "Every behaviour is a world setting (default on) — README → Adjustments.",
+            "  game.pentaryn.combat.plan(actor)      // the swings Full Attack would make",
+            "  game.pentaryn.combat.report()         // riders per PC and the turn flags",
+        ),
+    ),
     # The actor pipeline stages this one, not module-sync, so it is not in the CLI's
     # module list — but the static gates are free and it is real code, so it gets them.
     "importer": ModuleSpec("pentaryn-importer", check=_STATIC),

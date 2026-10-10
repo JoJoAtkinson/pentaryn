@@ -208,6 +208,9 @@ the setup screen, then Launch World, then the user dropdown, then the GM's passw
 make login              ↑/↓ pick a campaign, ↑/↓ pick a user, land in the world
 make vtt-login          the same target under its longer name
 make login WORLD=ardenhaven USER_NAME=Kyle     fully specified — no prompts
+make login USER_NAME=Talo LOGIN_HOST=127.0.0.1 NO_OPEN=1
+                        a player tab beside the GM's: 127.0.0.1 is its own cookie host, so the
+                        GM's localhost session survives; NO_OPEN prints the one-shot URL instead
 ```
 
 At a terminal it asks two questions, both pre-answered with the sensible default so enter

@@ -16,7 +16,7 @@
 
 globalThis.Hooks = { on() {}, once() {} };
 
-const { computeSlots, patchProficiencyMap } = await import("../attunement.mjs");
+const { computeSlots, homeSlots, patchProficiencyMap } = await import("../attunement.mjs");
 
 /**
  * Minimal stand-in for an Actor. `items` only needs `filter`, and each item only
@@ -193,6 +193,26 @@ check("malformed away entries are ignored",
 
 check("away items push an actor over cap",
   computeSlots(awayActor({ attuned: ["a", "b", "c"], away: [{ key: "k" }] })).over, true);
+
+/* ── Coming home: the away marker hands its slot back ─────────────────────── */
+
+// Live shape found on Talo 2026-10-10: the Staff came home into a full strip, so
+// computeSlots appended it as a 4th slot and the marker swap wrote it twice.
+{
+  const a = awayActor({ attuned: ["cloak", "pearl", "staff"], away: [{ key: "k1" }], slots: ["away:k1", "cloak", "pearl"] });
+  check("full strip: home item takes its own slot, no duplicate, no 4th slot",
+    homeSlots(slotsOf(a), "away:k1", "staff"), ["staff", "cloak", "pearl"]);
+}
+{
+  // With a hole before it, the old swap left the item in the hole (first occurrence wins).
+  const a = awayActor({ attuned: ["b", "staff"], away: [{ key: "k1" }], slots: [null, "b", "away:k1"] });
+  check("hole earlier in the strip: item returns to its own slot, the hole stays",
+    homeSlots(slotsOf(a), "away:k1", "staff"), [null, "b", "staff"]);
+}
+check("marker already gone (released meanwhile): slots untouched",
+  homeSlots(["a", "staff", null], "away:k1", "staff"), ["a", "staff", null]);
+check("the old duplicate shape reconciles to one occurrence",
+  slotsOf(actor({ attuned: ["s", "c", "p"], slots: ["s", "c", "p", "s"] })), ["s", "c", "p"]);
 
 /* ── Report ───────────────────────────────────────────────────────────────── */
 

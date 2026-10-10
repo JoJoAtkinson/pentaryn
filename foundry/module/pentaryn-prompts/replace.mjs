@@ -23,12 +23,12 @@ import {
 } from "./geometry-core.mjs";
 import { markerSizeOfToken, promptText } from "./markers.mjs";
 import { manifestFor } from "./gather.mjs";
-import { promptTokens, actorXp } from "./model.mjs";
+import { promptTokens, actorXp, provenanceOf } from "./model.mjs";
 import { checkPatch, applyPatch, patchSize, ringData } from "./patch.mjs";
 import { resolveCharacter, buildCharacter, previewCharacter, findItem, notFound } from "./character.mjs";
 import { checkNpc, createNpc } from "./npc.mjs";
 import { fixAttunement, specFileUrl } from "./build-core.mjs";
-import { renderReplace, planRow, resultRow, sheetLine } from "./readback-core.mjs";
+import { renderReplace, planRow, resultRow, sheetLine, createdText, needsDryRun, goneMessage } from "./readback-core.mjs";
 
 export const KINDS = Object.freeze(["actor", "npc", "character", "hotspot", "note", "light", "tile", "none"]);
 export const EYE = "assets/tokens/custom/props/icon-eye.webp";
@@ -67,8 +67,9 @@ function resolveOne(spec, index, { call, force }) {
     if (!sceneId || !markerId) throw codedError("BAD_SPEC", `replacement ${index}: give call + id, or sceneId + markerId`);
     const scene = game.scenes.get(sceneId);
     if (!scene) throw codedError("SCENE_UNKNOWN", sceneId);
+    e.scene = scene;   // a failed row still counts its scene's remaining prompts
     const marker = scene.tokens.get(markerId);
-    if (!marker) throw codedError("MARKER_GONE", `${e.pid ?? markerId} no longer on ${scene.name}`);
+    if (!marker) throw codedError("MARKER_GONE", goneMessage({ pid: e.pid, markerId, sceneName: scene.name, ...whyGone(scene, markerId) }));
     const size = markerSizeOfToken(marker);
     if (!size) throw codedError("BAD_SPEC", `${markerId} is not a prompt marker`);
     const text = promptText(marker);
@@ -81,6 +82,24 @@ function resolveOne(spec, index, { call, force }) {
     e.code = errorCode(err) ?? "BAD_SPEC";
   }
   return e;
+}
+
+/** A gone marker: the document built from it (provenance), or the marker a size chip swapped it for. */
+function whyGone(scene, markerId) {
+  try {
+    for (const coll of [scene.tokens, scene.notes, scene.lights, scene.tiles]) {
+      const doc = coll?.find(d => provenanceOf(d)?.markerId === markerId && provenanceOf(d)?.sceneId === scene.id);
+      if (doc) return { replacedBy: createdText({ type: doc.documentName, id: doc.id, name: doc.name || doc.text || doc.entry?.name || (doc.documentName === "AmbientLight" ? "Light" : "") }) };
+    }
+    let id = markerId, next = null;
+    for (let hop = 0; hop < 8; hop++) {   // resized more than once: follow the chain
+      const t = scene.tokens.find(d => d.flags?.[MODULE]?.swappedFrom === id);
+      if (!t) break;
+      next = t.id; id = t.id;
+    }
+    if (next) return { resizedTo: next };
+  } catch { /* the message is a nicety */ }
+  return {};
 }
 
 /* ── plan ───────────────────────────────────────────────────────────────── */
@@ -604,9 +623,9 @@ export async function replaceMany(input, opts = {}) {
     return { dryRun: true, call: callOut, text: renderReplace({ dryRun: true, call: callOut, rows, remaining, encounters }),
       results: rows, remaining, encounters };
   }
-  const okCount = entries.filter(e => e.ok).length;
-  if (okCount > DRY_RUN_OVER && !dryRuns.has(signature(entries)) && !args.skipDryRun) {
-    throw codedError("DRY_RUN_REQUIRED", `${okCount} replacements (over ${DRY_RUN_OVER}): run the same set with dryRun: true first, read the plan, then repeat it without dryRun`);
+  const requested = entries.length;
+  if (needsDryRun({ requested, seen: dryRuns.has(signature(entries)), skip: !!args.skipDryRun, over: DRY_RUN_OVER })) {
+    throw codedError("DRY_RUN_REQUIRED", `${requested} replacements (over ${DRY_RUN_OVER}): run the same set with dryRun: true first, read the plan, then repeat it without dryRun`);
   }
 
   // 1. Actors and journals first, per replacement; then the placed document data.

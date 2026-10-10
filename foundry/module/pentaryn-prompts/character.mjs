@@ -881,14 +881,25 @@ export async function previewCharacter(w, resolved) {
 }
 
 /**
+ * The Actor folder a character goes in: `with.folder` (an Actor folder id, or a name — found, or
+ * created at the top level), else "Foundry MCP Characters". A test set's character can land in the
+ * test set's folder instead of being moved there by hand (usability run 2026-10).
+ */
+async function characterFolder(want) {
+  const name = typeof want === "string" && want.trim() ? want.trim() : CHARACTER_FOLDER;
+  return game.folders.get(name)?.type === "Actor" ? game.folders.get(name)
+    : game.folders.find(f => f.type === "Actor" && f.name === name)
+      ?? await Folder.implementation.create({ name, type: "Actor" });
+}
+
+/**
  * Create the character. `w` is the replacement's `with` (kind "character"); `resolved` the result of
  * resolveCharacter. → `{actor, report}`. On any failure the half-built actor is deleted.
  */
 export async function buildCharacter(w, resolved, { prov = null } = {}) {
   const { abilities } = resolved;
   const report = { defaults: [...(resolved.defaults ?? [])], warnings: [...resolved.warnings] };
-  const folder = game.folders.find(f => f.type === "Actor" && f.name === CHARACTER_FOLDER)
-    ?? await Folder.implementation.create({ name: CHARACTER_FOLDER, type: "Actor" });
+  const folder = await characterFolder(w.folder);
   const D = CONST.TOKEN_DISPOSITIONS;
   const actor = await Actor.implementation.create({
     name: w.name, type: "character", folder: folder.id, img: w.img ?? undefined,

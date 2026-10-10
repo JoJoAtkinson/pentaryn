@@ -514,6 +514,21 @@ function composeBonusBar(panel, actor) {
   }
 }
 
+/**
+ * U-4-1: the form's Multiattack item when pentaryn-combat's Full Attack already runs it (Full Attack
+ * shown for this form, its Multiattack parsed from that item), so the text-only Multiattack button
+ * beside Full Attack can go. null = keep it (module off, a setting off, an unparsed Multiattack).
+ */
+function multiattackCoveredByFullAttack(actor) {
+  try {
+    if (!game.modules.get("pentaryn-combat")?.active) return null;
+    if (!game.settings.get("pentaryn-combat", "fullAttack") || !game.settings.get("pentaryn-combat", "multiattack")) return null;
+    const ma = game.pentaryn?.combat?.multiattack?.(actor);
+    if (!ma || ma.source === "flag" || (ma.total ?? 0) < 2 || !actor.items.get(ma.source)) return null;
+    return ma.source;
+  } catch { return null; }
+}
+
 function composeActionBar(panel, actor) {
   if (!actor?.isPolymorphed) return;
   const C = argonClasses();
@@ -521,12 +536,13 @@ function composeActionBar(panel, actor) {
   if (!C || !ItemBtn) return;
   const slot = panel._buttons.find(b => b._isWeaponSet);
   const onBar = panel._buttons.filter(b => b instanceof C.ItemButton && !b._isWeaponSet).map(b => b.item?.id);
-  const ids = frontRowItems(actor.items.contents, onBar);
+  const covered = multiattackCoveredByFullAttack(actor);
+  const ids = frontRowItems(actor.items.contents, onBar).filter(id => id !== covered);
   // The beast's attacks replace the weapon-set slot; showing both would list Bite twice.
   slot?.element.classList.add("pentaryn-hidden");
   // Argon's "Use Feature" panel lists the beast's action features (a Brown Bear's Multiattack) that
   // are already front-row buttons: a second way to the same thing. A panel holding nothing else goes.
-  const front = [...onBar, ...ids];
+  const front = [...onBar, ...ids, ...(covered ? [covered] : [])];
   const PanelBtn = CONFIG.ARGON?.MAIN?.BUTTONS?.ButtonPanelButton;
   const kept = panel._buttons.filter(b => {
     if (!PanelBtn || !(b instanceof PanelBtn) || liveButtons.has(b) || !Array.isArray(b.items)) return true;

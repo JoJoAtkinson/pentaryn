@@ -930,6 +930,20 @@ function openLookMenu(token, ev) {
     game.i18n.format("PENTARYN_TIES.known.look.menuTip", { name: token.name }), async () => {
       openLook(who, subject);
     });
+  /*
+   * The two writing keys (6 and 5) on the menu too (usability run 2026-10, U-7-1): Joe's rule is
+   * that no player action may be reachable only through a key nobody told them about. Both take
+   * the clicked token directly, so they do exactly what hovering it and pressing the key does,
+   * refusals included. Same items for every target, like the two above.
+   */
+  item("fa-people-arrows", game.i18n.localize("PENTARYN_TIES.keybind.add"),
+    game.i18n.format("PENTARYN_TIES.known.look.menuTieTip", { name: token.name }), async () => {
+      await openTieDialogFor(token);
+    });
+  item("fa-feather-pointed", game.i18n.localize("PENTARYN_TIES.known.look.menuNotebook"),
+    game.i18n.format("PENTARYN_TIES.known.look.menuNotebookTip", { name: token.name }), async () => {
+      await Known.fileHovered(token);
+    });
   document.body.appendChild(menu);
   const { innerWidth: w, innerHeight: h } = window;
   const r = menu.getBoundingClientRect();

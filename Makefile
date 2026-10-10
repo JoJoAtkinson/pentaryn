@@ -76,8 +76,9 @@ vtt-down: vtt-lock-check tunnel-down foundry-down
 # Start the app, launch the world, and land in it as GM — no dropdown, no password.
 # Not folded into vtt-up: that one runs unattended from the updater, where popping a
 # browser window open would be wrong. See scripts/foundry/ops/login.py.
+# A player tab beside the GM's: make login USER_NAME=Talo LOGIN_HOST=127.0.0.1 (NO_OPEN=1 prints the URL).
 vtt-login login:
-	@$(OPS) login $(if $(USER_NAME),--user "$(USER_NAME)") $(if $(WORLD),--world "$(WORLD)")
+	@$(OPS) login $(if $(USER_NAME),--user "$(USER_NAME)") $(if $(WORLD),--world "$(WORLD)") $(if $(LOGIN_HOST),--host "$(LOGIN_HOST)") $(if $(NO_OPEN),--no-open)
 
 vtt: vtt-status
 vtt-status:
@@ -184,6 +185,7 @@ foundry-cloud:
 .PHONY: foundry-movement-check foundry-movement-sync foundry-creatures-check foundry-creatures-sync
 .PHONY: foundry-riders-check foundry-riders-sync
 .PHONY: foundry-prompts-check foundry-prompts-sync
+.PHONY: foundry-combat-check foundry-combat-sync
 
 foundry-lookup-check: ; @$(OPS) module-check lookup
 foundry-lookup-sync:  ; @$(OPS) module-sync lookup
@@ -215,6 +217,8 @@ foundry-riders-check: ; @$(OPS) module-check riders
 foundry-riders-sync:  ; @$(OPS) module-sync riders
 foundry-prompts-check: ; @$(OPS) module-check prompts
 foundry-prompts-sync:  ; @$(OPS) module-sync prompts
+foundry-combat-check: ; @$(OPS) module-check combat
+foundry-combat-sync:  ; @$(OPS) module-sync combat
 foundry-walls-test:  ; @$(OPS) module-check walls
 foundry-walls-sync:  ; @$(OPS) module-sync walls
 foundry-walls-wasm:  ; @$(OPS) walls-wasm

@@ -412,6 +412,7 @@ check("size table ranks", SIZES.map(s => SIZE_BY_KEY[s.key].rank), [0, 1, 2, 3, 
 
 await import("./eval2-fixes.mjs").then(m => m.run({ check, ok, core, F, W, G }));
 await import("./eval3-fixes.mjs").then(m => m.run({ check, ok, core, F, W, G }));
+await import("./usability-fixes.mjs").then(m => m.run({ check, ok, core, F, W, G }));
 
 console.log(`pentaryn-prompts core: ${pass} passed, ${failures.length} failed`);
 if (failures.length) { console.log(failures.join("\n")); process.exit(1); }

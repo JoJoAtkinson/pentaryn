@@ -1,0 +1,184 @@
+/* Pentaryn Combat — Full Attack, follow-ups and the swing strip on the Argon HUD. */
+
+/* Full Attack: the first button on the Action bar, marked so it reads as "the" button. */
+.extended-combat-hud .action-element.pentaryn-combat-full {
+  box-shadow: inset 0 0 0 2px var(--ech-mainAction-base-background, #b5562e), 0 0 10px #f2d27a66;
+}
+
+/* A follow-up the character just earned (Off-hand, Flurry, Hew…). */
+.extended-combat-hud .pentaryn-combat-followup {
+  box-shadow: 0 0 0 2px #f2d27a, 0 0 12px #f2d27a88;
+}
+
+/* Rider toggles and "New turn": quieter. */
+.extended-combat-hud .pentaryn-combat-command {
+  opacity: 0.9;
+}
+
+/* No swings left: grey, still hoverable for its tooltip. */
+.extended-combat-hud .pentaryn-combat-empty {
+  filter: grayscale(1) brightness(0.8);
+}
+
+/* Pole Strike before it is earned: greyed, still hoverable for its "opens after…" tooltip (U-3-3). */
+.extended-combat-hud .pentaryn-combat-gated {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+/* A follow-up that just appeared mid-turn (Hew, Off-hand) pulses for a few seconds (U-3-4). */
+@keyframes pentaryn-combat-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px #f2d27a, 0 0 12px #f2d27a88; }
+  50% { box-shadow: 0 0 0 3px #fff3c4, 0 0 22px #f2d27aee; }
+}
+.extended-combat-hud .pentaryn-combat-followup.pentaryn-combat-new {
+  animation: pentaryn-combat-pulse 0.8s ease-in-out 5;
+}
+
+/* A toggle that is on (Reckless Attack). */
+.extended-combat-hud .pentaryn-combat-command.pentaryn-combat-active {
+  opacity: 1;
+  box-shadow: inset 0 0 0 2px #c0392b, 0 0 10px #c0392b88;
+}
+
+/* Kept for the no-Argon-render fallback. !important: Argon resets style.display on render. */
+.extended-combat-hud .pentaryn-combat-hidden {
+  display: none !important;
+}
+
+/* ── the swing strip and the weapon picker ── */
+.pentaryn-combat-strip {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  max-width: min(720px, calc(100vw - 32px));
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: rgba(20, 18, 16, 0.92);
+  border: 1px solid #f2d27a88;
+  color: #eee;
+  font-size: 13px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
+  animation: pentaryn-combat-fade 0.12s ease-out;
+}
+.pentaryn-combat-strip.paused {
+  border-color: #e0a040;
+}
+/* Picking a target: fade and let clicks reach the tokens under the strip; Stop stays live. */
+.pentaryn-combat-strip.picking {
+  opacity: 0.35;
+  pointer-events: none;
+}
+.pentaryn-combat-strip.picking .pc-stop {
+  pointer-events: auto;
+}
+@keyframes pentaryn-combat-fade { from { opacity: 0; } to { opacity: 1; } }
+.pentaryn-combat-strip .pc-head {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.pentaryn-combat-strip .pc-count {
+  color: #f2d27a;
+  font-weight: 600;
+}
+.pentaryn-combat-strip .pc-kind {
+  font-size: 11px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: #f2d27a33;
+}
+.pentaryn-combat-strip .pc-paused {
+  margin-top: 4px;
+  color: #f0c070;
+}
+.pentaryn-combat-strip .pc-row,
+.pentaryn-combat-strip .pc-weapons {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.pentaryn-combat-strip button {
+  width: auto;
+  min-width: 44px;
+  height: 28px;
+  line-height: 26px;
+  padding: 0 10px;
+  margin: 0;
+  color: #eee;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pentaryn-combat-strip button.active {
+  background: #f2d27a44;
+  border-color: #f2d27a;
+}
+.pentaryn-combat-strip button.pc-primary {
+  background: #f2d27a33;
+  border-color: #f2d27a;
+  font-weight: 600;
+}
+.pentaryn-combat-strip button.pc-stop {
+  margin-left: auto;
+  border-color: #c66;
+}
+.pentaryn-combat-strip .pc-quick {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  cursor: pointer;
+}
+.pentaryn-combat-strip .pc-weapons button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: auto;
+  min-height: 32px;
+  line-height: 1.2;
+  padding: 3px 8px;
+}
+.pentaryn-combat-strip .pc-weapons img {
+  width: 24px;
+  height: 24px;
+  border: none;
+}
+.pentaryn-combat-picker .pc-weapons button {
+  flex-direction: column;
+  align-items: center;
+  min-width: 96px;
+}
+.pentaryn-combat-picker .pc-weapons img {
+  width: 40px;
+  height: 40px;
+}
+.pentaryn-combat-picker .pc-stats,
+.pentaryn-combat-picker .pc-swings {
+  font-size: 11px;
+  color: #ccc;
+}
+
+/* ── chat: the rider offer and the auto note ── */
+.chat-message .pentaryn-combat-riders {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.chat-message .pentaryn-combat-rider.pentaryn-combat-eligible {
+  border-color: #3a8f3a;
+  box-shadow: 0 0 4px #3a8f3a88;
+}
+.chat-message .pentaryn-combat-auto a[data-undo] {
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.extended-combat-hud .pentaryn-combat-disabled { opacity: 0.4; filter: grayscale(1); }

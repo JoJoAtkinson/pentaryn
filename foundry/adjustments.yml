@@ -273,3 +273,136 @@ adjustments:
     native_when: n/a
     retire_class: never
     check: make foundry-creatures-check
+
+  # pentaryn-combat (2026-10-10, context/plans/melee-streamlining.md) — built, not yet synced.
+  - id: combat-argon-panel-injection
+    packages: [enhancedcombathud, enhancedcombathud-dnd5e]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/hud.mjs]
+    markers: ["renderActionPanelArgonComponent", "CONFIG.ARGON"]
+    what: Full Attack on the Action bar, follow-ups on the Bonus bar, Nick / rider toggles / New turn on the Special bar, injected via render*ArgonComponent and ItemButton subclasses; Pole Strike hidden by class until earned
+    why: Argon exposes no add-a-button API
+    native_when: an "add button to panel" API, or a multi-attack / extra-attack button in enhancedcombathud-dnd5e
+    retire_class: never
+    check: make foundry-combat-check
+
+  - id: combat-argon-swing-pips
+    packages: [enhancedcombathud-dnd5e]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/hud.mjs]
+    markers: ["overridePips", "maxActions"]
+    what: the Action panel's maxActions / currentActions getters overridden per instance so the pips count Extra Attack swings (2 → 1 → 0) from our turn flag
+    why: Argon's dnd5e Action panel is hard-coded to one pip
+    native_when: Argon counts attacks per Attack action (Extra Attack) itself
+    retire_class: guarded
+    check: make foundry-combat-check
+
+  - id: combat-argon-target-picker-reuse
+    packages: [enhancedcombathud]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/hud.mjs]
+    markers: ["PickerProbe", "_onPreLeftClick"]
+    what: Retarget mid-Full-Attack opens Argon's private TargetPicker by calling _onPreLeftClick on an unrendered ItemButton subclass; falls back to waiting for the next targetToken
+    why: the TargetPicker class is private to Argon's bundle
+    native_when: a public pickTargets() API
+    retire_class: guarded
+    check: make foundry-combat-check
+
+  - id: combat-argon-weapon-set-seed
+    packages: [enhancedcombathud]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/offhand.mjs]
+    markers: ["weaponSets"]
+    what: writes flags.enhancedcombathud.weaponSets once for characters whose flag was never written (set 1 melee + Light off-hand, set 2 ranged)
+    why: Argon dnd5e's default sets came up empty for the PCs on dnd5e 6
+    native_when: Argon's getDefaultSets fills the PC slots on dnd5e 6
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-dnd5e-offhand-mode-reset
+    packages: [dnd5e]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/offhand.mjs]
+    markers: ["last.${activity.id}.attackMode"]
+    what: after an off-hand attack, flags.dnd5e.last.<activity>.attackMode is set back to the weapon's main-hand mode
+    why: dnd5e remembers the last attack mode per activity, so Offhand stuck to the next main-hand swing
+    native_when: dnd5e stops remembering Offhand (or remembers it per hand)
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-dnd5e-roll-hooks
+    packages: [dnd5e]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/combat.mjs, foundry/module/pentaryn-combat/riders.mjs, foundry/module/pentaryn-combat/sequence.mjs]
+    markers: ["dnd5e.preRollDamageV2", "subsequentActions: false"]
+    what: Full Attack posts one usage card (use with subsequentActions:false) then one rollAttack per swing threaded via system.origin; preRollAttackV2 stamps the turn key; preRollDamageV2 adds TWF/GWM parts, auto rider dice and narrows a rider's damage type
+    why: dnd5e has no multi-swing attack or once-per-turn rider offer
+    native_when: dnd5e ships Extra Attack sequencing or rule effects that cover TWF/GWM/Sneak Attack (then turn weaponBonuses / riderOffers off)
+    retire_class: guarded
+    check: make foundry-combat-check
+
+  - id: combat-argon-rerender-cleanup
+    packages: [enhancedcombathud, enhancedcombathud-dnd5e]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/hud.mjs]
+    markers: ["forgetButtons", "argon-onSetChangeUpdateItem", "_itemButtons"]
+    what: before re-rendering a bar, removes the old buttons' drawer panels from the button-panel container, unhooks old weapon-set slots and drops them from ui.ARGON._itemButtons; bars re-render only when their follow-up signature changed
+    why: an ActionPanel render leaves its previous drawers and weapon-set hooks behind (pentaryn-transform cleans its own the same way)
+    native_when: Argon disposes a panel's previous buttons on render
+    retire_class: guarded
+    check: make foundry-combat-check
+
+  - id: riders-argon-ritual-adept-list
+    packages: [enhancedcombathud, enhancedcombathud-dnd5e, dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/rituals.mjs]
+    markers: ["ButtonPanelButton", "_spells", "dnd5e.preUseActivity"]
+    what: wraps Argon's base ButtonPanelButton.prototype._renderInner to append a "Rituals (no slot)" category to the Action bar's Cast Spell accordion (the dnd5e subclass's _spells, before _getPanel builds it) for a Ritual Adept actor's unprepared ritual spells; dnd5e.preUseActivity starts consume.spellSlot false for those spells
+    why: Argon's dnd5e Cast Spell panel hides unprepared spells for a wizard (showPrepared flag unset = prepared only), so a wizard's ritual-only spells were unreachable from the HUD; dnd5e defaults every leveled cast to spending a slot
+    native_when: Argon dnd5e lists ritual spells (or Ritual Adept) itself, or dnd5e gains a cast-as-ritual usage option
+    retire_class: guarded
+    check: make foundry-riders-check
+
+  - id: argon-shared-uses-badge
+    packages: [enhancedcombathud, enhancedcombathud-dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/argon-tidy.mjs]
+    markers: ["itemButtons", "spendsUsesOf"]
+    what: on updateItem (uses changed) of the HUD actor's item, re-renders every Argon item button whose activity spends that item's uses (itemUses consumption), e.g. the Metamagic tiles when Font of Magic changes
+    why: Argon re-renders a button only when its own item updates, and CoreHud#updateItemButtons adds only the first item to its batch (Set#add(...items)), so shared-uses badges showed an old count
+    native_when: Argon re-renders buttons that consume another item's uses, or fixes updateItemButtons to add every item
+    retire_class: safe
+    check: make foundry-riders-check
+
+  - id: argon-collapse-on-area-placement
+    packages: [enhancedcombathud, dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/argon-tidy.mjs]
+    markers: ["collapseAllPanels", "dnd5e.preCreateMeasuredTemplate"]
+    what: calls ui.ARGON.collapseAllPanels() on dnd5e.preCreateMeasuredTemplate, so an open Cast Spell panel is closed before the area follows the mouse
+    why: the open panel covered the battlefield and swallowed the placement click (it cast the spell button behind it)
+    native_when: Argon collapses its panels (or hides the HUD) during dnd5e area placement, or dnd5e minimises it like a sheet
+    retire_class: safe
+    check: make foundry-riders-check
+
+  - id: argon-tooltip-click-through
+    packages: [enhancedcombathud]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/riders.css]
+    markers: ["#tooltip .ech-tooltip"]
+    what: CSS pointer-events none on Argon's live hover tooltip (#tooltip .ech-tooltip); locked tooltips (core clones without the id) keep pointer events
+    why: Argon sets pointer-events:all on .ech-tooltip, so a tall tooltip clamped over its own button ate the click (Scorching Ray could not be cast from the HUD at 1299x848)
+    native_when: Argon drops pointer-events:all from the hover tooltip or positions it clear of the trigger button
+    retire_class: safe
+    check: make foundry-riders-check
+
+  - id: dnd5e-concentration-summons
+    packages: [dnd5e]
+    modules: [pentaryn-riders]
+    files: [foundry/module/pentaryn-riders/concentration.mjs]
+    markers: ["dnd5e.summonToken", "deleteActiveEffect", "breakConcentration"]
+    what: stamps a summoned token with the uuid of the cast's concentration effect (dnd5e.summonToken) and has the active GM delete those tokens when that effect is deleted; labels the Lost Concentration card's icon-only break button
+    why: dnd5e 6.0.6 ends dependent effects and enchantments with concentration but never summoned tokens; the break button was an unlabelled icon
+    native_when: dnd5e tracks summoned tokens as concentration dependents (flags.dnd5e.dependents / dependentOn on tokens), or labels its card buttons
+    retire_class: guarded
+    check: make foundry-riders-check

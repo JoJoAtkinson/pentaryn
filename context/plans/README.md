@@ -1,7 +1,7 @@
 ---
 title: "Plans — how things were built"
 status: active
-last_modified: 2026-08-23
+last_modified: 2026-10-10
 tags: [context, plans, history]
 ---
 
@@ -34,6 +34,10 @@ lore authoring → [`../world/README.md`](../world/README.md)
 | [`foundry-update-2026-10.md`](foundry-update-2026-10.md) | Attended October 2026 update: core 14.369, Dice So Nice, mad-endlesswiz2; dnd5e 6 go/no-go, rollback rule, regression checklist | executed 2026-10-10 |
 | [`smarter-updater.md`](smarter-updater.md) | Tiered escalation for the Saturday updater: Haiku triage, Opus analysis, Fable go/no-go, sandboxed Opus fix; adjustments registry and the "Still needed?" phase | v1 built 2026-10-10 (triage + analysis, `max_tier: analyze`); v2/v3 designed |
 | [`prompt-markers.md`](prompt-markers.md) | Prompt markers: six sized marker actors, the drop-to-type dialog with an LOS side panel, the one-call `prompt-markers` gather/replace tool in the bridge fork, the `pentaryn-prompts` module | built, installed, UX-playtested and LLM-evaluated 2026-10-10; eval follow-ups open (section 12) |
+| [`melee-streamlining.md`](melee-streamlining.md) | `pentaryn-combat`: Full Attack on the Argon HUD (Extra Attack / Multiattack / Flurry swings, pause-retarget-swap), swing pips, bonus-action follow-ups (Off-hand, Nick, Flurry, Hew), once-per-turn rider offers (Sneak Attack), off-hand mode/pip fixes, PC weapon-set seeding, manual-dice safe | built, adversarially reviewed (24 fixes, §15.4), synced and enabled 2026-10-10; usability-tested on the GM client, player-tab playtest still owed |
+| [`usability-test-plan-2026-10.md`](usability-test-plan-2026-10.md) | Player-usability test plan over everything built so far: nine live areas (turn flow, Full Attack and off-hand, once-per-turn riders, druid forms, sorcerer, wizard, attributes and no-leak sweep, exploration, prompt markers), click budgets, own-dice and one-at-a-time checks, ZZ test characters, cleanup case Z; changes go to the ledger below, results to the report | run 2026-10-10 (areas overlapped; most live player-tab cases blocked — re-run one area at a time) |
+| [`usability-changes-2026-10.md`](usability-changes-2026-10.md) | Ledger of every change the usability run applied (U-ids, with files, revert and retest steps) plus each area's open proposals (P-ids) | append-only; 32 U-entries, 44 proposals |
+| [`usability-report-2026-10.md`](usability-report-2026-10.md) | Findings of the usability run: verdict per area, click counts, bugs fixed, proposals ranked by player impact, what to test next session | written 2026-10-10 |
 | [`world/timeline-refactor.md`](world/timeline-refactor.md) | History TSVs → per-event markdown under `history/` | complete |
 | [`obsidian-first-migration.md`](obsidian-first-migration.md) | Wikilinks + tag-based multi-home, Obsidian alongside VS Code | proposed — nothing executed |
 

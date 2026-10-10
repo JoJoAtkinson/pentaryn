@@ -899,6 +899,15 @@ await S.reset(pc, npc, loreId);                     // un-spend one of an NPC's 
 await S.reset(pc, carrier, loreId, attrId);         // un-spend an attribute lore fact
 ```
 
+**Where the rows are.** A character's identification rows live on the **creature**,
+`npc.flags.pentaryn-ties.beliefs[pc.id]`, never on the PC. (The PC's own `beliefs` flag holds what
+*others* worked out about the PC.) `resetInspection` clears those rows and any failure line that
+roll handed over. It leaves the PC's `attr:<id>:#id` card, because that card belongs to the
+attribute, not to this creature. So afterwards the Look window shows nothing for this creature,
+and the next closer look rolls every rung again. Snapshot `npc.flags.pentaryn-ties.beliefs` before a
+reset you plan to undo. A restore written to the PC's flags lands in the wrong place (usability
+run 2026-10, Area 7).
+
 ⚠ **If the botched roll was that character's first contact with the attribute, the failure also
 wrote the permanent "never knew of it" — and `resetIdent` alone leaves the branch dead.** Follow
 it with `A.tell(pc, id, { withParents: true })`, which overwrites the failed row.

@@ -32,6 +32,7 @@ const esc = s => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").re
 
 const AUTOSAVE_MS = 600;
 const FOCUS_GUARD_MS = 1200;
+const PANEL_REFRESH_MS = 250;
 const WIDTH = 620, HEIGHT = 320;
 
 /** Client-space rectangle of a token, when its scene is the one on screen. */
@@ -82,6 +83,7 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   #deleted = false;
   #ticket = null;
   #panelRun = 0;
+  #panelTimer = null;
   #guardUntil = 0;
   #rows = new Map();
 
@@ -379,6 +381,8 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
     Object.assign(data, { x: Math.round(cx - w / 2), y: Math.round(cy - w / 2), elevation: tok.elevation, level: tok.level });
     foundry.utils.setProperty(data, `flags.${MODULE}.prompt`, this.#saved);
     foundry.utils.setProperty(data, `flags.${MODULE}.updatedAt`, Date.now());
+    // a replace still holding the old id can say "resized (now marker X)" instead of a bare MARKER_GONE
+    foundry.utils.setProperty(data, `flags.${MODULE}.swappedFrom`, tok.id);
     const [made] = await scene.createEmbeddedDocuments("Token", [data], { pentarynPrompts: { swap: true } });
     if (!made) return;
     this.#tokenId = made.id;   // before the delete: its deleteToken hook must not close this dialog
@@ -398,6 +402,19 @@ export class PromptDialog extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /* ── side panel ──────────────────────────────────────────────────────── */
+
+  /**
+   * Something the panel reads changed on a scene (a wall or door, a token placed, moved or
+   * removed): redraw the panel of every open box on that scene, debounced. Before, a door shut
+   * while the box was open kept showing the old door tags until the box was reopened.
+   */
+  static refreshPanels(sceneId) {
+    for (const app of PromptDialog.#live) {
+      if (app.#closing || !app.rendered || app.#sceneId !== sceneId) continue;
+      clearTimeout(app.#panelTimer);
+      app.#panelTimer = setTimeout(() => app.#renderPanel(), PANEL_REFRESH_MS);
+    }
+  }
 
   static #onRow(event, target) {
     const row = this.#rows.get(target?.dataset?.key);

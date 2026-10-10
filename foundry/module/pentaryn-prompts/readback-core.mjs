@@ -81,8 +81,9 @@ export function renderReplace(res) {
   for (const r of rows) {
     const label = r.label ?? r.id ?? "?";
     if (!r.ok) {
+      // MARKER_GONE: there was no marker to delete; "markerDeleted=false" would read as if it were still there
       lines.push(`${label}${r.kind ? ` ${r.kind}` : ""}: FAIL ${r.error ?? r.code ?? ""}`.trimEnd() +
-        (res?.dryRun ? "" : ` (markerDeleted=${r.markerDeleted ? "true" : "false"})`));
+        (res?.dryRun || r.code === "MARKER_GONE" ? "" : ` (markerDeleted=${r.markerDeleted ? "true" : "false"})`));
       lines.push(...detailLines(r));
       continue;
     }
@@ -94,8 +95,8 @@ export function renderReplace(res) {
     }
     lines.push(...detailLines(r));
   }
-  const remaining = res?.remaining && typeof res.remaining === "object" ? Object.entries(res.remaining) : null;
-  if (remaining) lines.push(`remaining: ${remaining.map(([s, n]) => `${s}=${n}`).join(" ") || "none"}`);
+  const rl = remainingLine(res?.remaining, rows);
+  if (rl) lines.push(rl);
   for (const e of res?.encounters ?? []) lines.push(encounterLine(e));
   if (res?.dryRun) lines.push("Nothing was written. Repeat the identical call without dryRun to apply.");
   return lines.join("\n");
@@ -148,4 +149,37 @@ export function resultRow(f) {
 
 function strings(list) {
   return (list ?? []).map(x => (typeof x === "string" ? x : JSON.stringify(x)));
+}
+
+/**
+ * The `remaining:` line. `{sceneId: n}` → `remaining: s1=3 s2=0`. When no replacement reached a
+ * scene (every row failed before its scene resolved: an unknown call, a bad spec) the count is
+ * unknown, not zero — "remaining: none" read as if everything were built (usability run 2026-10).
+ */
+export function remainingLine(remaining, rows = []) {
+  if (!remaining || typeof remaining !== "object") return null;
+  const parts = Object.entries(remaining).map(([s, n]) => `${s}=${n}`);
+  if (parts.length) return `remaining: ${parts.join(" ")}`;
+  if ((rows ?? []).length && (rows ?? []).every(r => !r.ok)) return "remaining: unknown (no replacement reached a scene; gather again)";
+  return "remaining: none";
+}
+
+/**
+ * More than `over` replacements in one call need a dry run of the same set first. The count is
+ * what the call ASKED for, not what validated: six specs of which five are stale must not slip
+ * under the guard and write the sixth for real (usability run 2026-10).
+ */
+export function needsDryRun({ requested = 0, seen = false, skip = false, over = 5 } = {}) {
+  return requested > over && !seen && !skip;
+}
+
+/**
+ * Why a marker is gone, for MARKER_GONE. `replacedBy`: `Token "Yark" [id]` (a document whose
+ * provenance names this marker); `resizedTo`: the id of the marker a size chip swapped it for.
+ */
+export function goneMessage({ pid = null, markerId = "?", sceneName = "?", replacedBy = null, resizedTo = null } = {}) {
+  const who = pid ?? markerId;
+  if (replacedBy) return `${who} was already replaced on ${sceneName} (now ${replacedBy}); gather again for what is left`;
+  if (resizedTo) return `${who} was resized on ${sceneName} (now marker ${resizedTo}); gather again`;
+  return `${who} no longer on ${sceneName} (deleted, or replaced outside this module); gather again`;
 }

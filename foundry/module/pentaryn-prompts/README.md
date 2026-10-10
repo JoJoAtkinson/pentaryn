@@ -55,7 +55,8 @@ Every marker token is forced hidden, sightless and `flags.dnd5e.lockSize` on cre
 - **Size chips** swap the marker for the other size actor centred on the same point, text carried.
 - **Side panel**: what this marker can see (unlimited darkvision through walls, doors as they stand,
   light ignored), nearest first; collapsed *Out of sight (within 60 ft)* with `door` / `wall` tags.
-  Click pans, ⌘-click opens the sheet / dialog.
+  Click pans, ⌘-click opens the sheet / dialog. It redraws (250 ms debounce) when a wall or door on
+  the scene changes, or a token or note is placed, moved or removed (0.4.1).
 - Hover a marker: its full text, size and how many things it sees (under any open window).
 - Nameplate: `✎ ` + the text with lines joined by ` / `, `…` only when cut at 40 characters.
 - Built things whose biography is only `@Embed[…]` (compendium monsters) show the embedded page's
@@ -107,7 +108,8 @@ args as above. Errors are `Error("<CODE>: detail")`: `TEXT_CHANGED`, `MARKER_GON
   that a type change clears the inherited ones.
 - `character` (`character.mjs`, pure half `build-core.mjs`) — `{name, level, class, subclass,
   species, background, abilities, abilityMethod, choices, hp, size, spells, spellbook, items,
-  allowOffList, startingEquipment, biography, img}`. Every problem is collected before anything
+  allowOffList, startingEquipment, biography, img, folder}` — `folder` is an Actor folder id or name
+  (found or created; default `Foundry MCP Characters`). Every problem is collected before anything
   throws: one `BAD_SPEC` lists them all (`problemsText`). Resolves the PHB/SRD items by name, validates the ability budget,
   and — in the dry run — every `choices` key against the advancements the build will step through
   (species, background, class levels 1..N, subclass, each capped at the character's level, what they
@@ -166,7 +168,7 @@ hotspots/tiles centred unsnapped; notes/lights on the centre. lockSize whenever 
 size category's; `hidden` explicit; elevation and level copied. Every created document (and the
 created actor/journal) gets `flags.pentaryn-prompts.provenance = {prompt, size, footprint, sceneId,
 markerId, call, pid, at, kind, note}`. More than 5 replacements need a dry run of the same marker set
-first (this GM page's lifetime; otherwise `DRY_RUN_REQUIRED`) unless `skipDryRun: true` — the bridge
+first (counted as the replacements the call asks for, valid or not; this GM page's lifetime; otherwise `DRY_RUN_REQUIRED`) unless `skipDryRun: true` — the bridge
 passes it, because it keeps its own identical-spec gate. Hotspot item uuids are
 resolved at plan time, so a bad one fails the dry run. A failed replacement keeps its marker, and any
 actor/journal this module created for it (import, copy, hotspot clone, note journal) is deleted again
@@ -217,10 +219,10 @@ centre.
 
 ## Status and known limits (2026-10-10)
 
-0.4.0 (eval round 3, plan §14) synced into `pentaryn` and verified live 2026-10-10 with the rebuilt
+0.4.1 (usability run 2026-10: panel refresh, MARKER_GONE says why, honest `remaining`, the over-5
+dry-run guard counts every requested replacement, `character.folder`). 0.4.0 (eval round 3, plan §14) synced into `pentaryn` and verified live 2026-10-10 with the rebuilt
 bridge fork. `status().version` says which code is loaded.
-Still open: the gaps listed in the playbook's "Known gaps" (feat-fixed ASI, starting-equipment hygiene, unsuffixed levelled keys, custom traits missing from `<built>`, `system.ability` not a dnd5e 6 weapon field); `replace` prefers `id` over `markerId`; the side panel does not refresh on a wall edit
-while open; door lines and LOS ignore Levels and wall heights.
+Still open: the gaps listed in the playbook's "Known gaps" (feat-fixed ASI, starting-equipment hygiene, unsuffixed levelled keys, custom traits missing from `<built>`, `system.ability` not a dnd5e 6 weapon field); `replace` prefers `id` over `markerId`; door lines and LOS ignore Levels and wall heights.
 
 ## Tests
 

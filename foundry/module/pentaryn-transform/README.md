@@ -73,6 +73,9 @@ refunds the use. API: `game.pentaryn.transform.starry.{assume, end, active, cons
 - **No duplicate panels in a form.** Argon's "Use Feature" (Multiattack) and "Use Item" (the beast's
   weapons, via `showWeaponsItems`) panels are dropped from the Action bar when everything they hold
   already has a front-row button (`coveredPanel`). Normal form is untouched.
+- **No text-only Multiattack beside Full Attack (U-4-1).** When pentaryn-combat's Full Attack runs
+  the form's parsed Multiattack (`fullAttack` + `multiattack` settings on), the Multiattack button is
+  left off the front row; an unparsed Multiattack or either setting off keeps it.
 - **Spellcasting** (the passive class feature, identifier `spellcasting`) is no longer carried into
   the form: "You can't cast spells" (`stripReason` → `no-spellcasting`).
 - **Temp HP.** The Wild Shape temp HP stay after reverting — that is the 2024 rule (they last until

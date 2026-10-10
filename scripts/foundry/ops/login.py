@@ -344,11 +344,27 @@ def _handoff(session_id: str, host: str, game_url: str, open_browser: bool) -> b
 
 # ── The command ──────────────────────────────────────────────────────────────
 
+# Loopback names only: the handoff server binds to this host. ``127.0.0.1`` is a different
+# cookie host from ``localhost`` (RFC 6265 keys on the name), so a player tab there keeps its own
+# session beside the GM's ``localhost`` tab in the same browser — the usability-test setup.
+LOOPBACK_HOSTS = ("localhost", "127.0.0.1")
+
+
 def login(user: str | None = None, world: str | None = None,
-          open_browser: bool = True, prompt: bool | None = None) -> int:
-    """Start whatever is not running, then put the browser inside the world."""
+          open_browser: bool = True, prompt: bool | None = None,
+          host: str | None = None) -> int:
+    """Start whatever is not running, then put the browser inside the world.
+
+    ``host`` picks the browser-facing loopback name (``127.0.0.1`` for a player tab next to
+    the GM's ``localhost`` one); the admin calls still go to ``cfg.FOUNDRY_URL``.
+    """
     base_url = cfg.FOUNDRY_URL
-    host = urllib.parse.urlsplit(base_url).hostname or "localhost"
+    parts = urllib.parse.urlsplit(base_url)
+    if host and host not in LOOPBACK_HOSTS:
+        _say(f"✗ --host must be one of {', '.join(LOOPBACK_HOSTS)}")
+        return FAIL
+    host = host or parts.hostname or "localhost"
+    game_base = f"{parts.scheme}://{host}" + (f":{parts.port}" if parts.port else "")
     # An explicit --world AND --user is a fully specified request; don't interrupt it.
     if prompt is None:
         prompt = _interactive() and not (world and user)
@@ -386,11 +402,11 @@ def login(user: str | None = None, world: str | None = None,
         _say("✗ Foundry issued no session cookie — nothing to hand to the browser.")
         return FAIL
 
-    if not _handoff(session_id, host, f"{base_url}/game", open_browser):
+    if not _handoff(session_id, host, f"{game_base}/game", open_browser):
         _say(f"✗ the browser never collected the session within {HANDOFF_TIMEOUT:.0f}s.")
         return FAIL
 
-    _say(f"✓ logged in as {who.get('name')} at {base_url}/game")
+    _say(f"✓ logged in as {who.get('name')} at {game_base}/game")
     if service._tunnel_pid() is None:
         _say("  ▸ players still need the tunnel: make tunnel-up")
     return OK

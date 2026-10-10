@@ -42,6 +42,9 @@ def build_parser() -> argparse.ArgumentParser:
                     help="print the handoff URL instead of opening the default browser")
     lg.add_argument("--no-prompt", action="store_true",
                     help="never show a picker; take the defaults (for scripts)")
+    lg.add_argument("--host", choices=login_mod.LOOPBACK_HOSTS,
+                    help="browser-facing host; 127.0.0.1 gives a player tab its own session "
+                         "beside the GM's localhost tab (default: the host in FOUNDRY_URL)")
     add("down", "Quit Foundry gracefully.")
     add("status", "Foundry, tunnel, and what players actually get.")
     add("lock-check", "Fail if an auto-update run holds the lock.")
@@ -89,7 +92,8 @@ def main(argv: list[str] | None = None) -> int:
     if c == "login":         return login_mod.login(
                                  user=args.user, world=args.world,
                                  open_browser=not args.no_open,
-                                 prompt=False if args.no_prompt else None)
+                                 prompt=False if args.no_prompt else None,
+                                 host=args.host)
     if c == "down":          return service.down()
     if c == "status":        return service.status()
     if c == "lock-check":    return service.lock_check()

@@ -1,0 +1,161 @@
+{
+  "PENTARYN_COMBAT": {
+    "FullAttack": "Full Attack",
+    "Hud": {
+      "WithWeapon": "{weapon}",
+      "SwingsLeft": "{left} of {total} swings left this turn",
+      "FullAttackText": "Attacks with {what}, one swing after another. Each swing opens the normal attack roll (Normal / Advantage / Disadvantage, or your own dice), and damage follows as usual.",
+      "FullAttackHint": "Left-click: attack. Right-click: pick another weapon. Esc on a roll pauses; Esc again stops. Clicking a weapon by hand still works and counts.",
+      "ToHit": "To hit",
+      "Swings": "Swings",
+      "NoSwingsLeft": "No swings left in your Attack action this turn. You can still click a weapon by hand if the GM allows it.",
+      "Cost": "Cost",
+      "Free": "Free (part of the Attack action)",
+      "BonusAction": "Bonus Action",
+      "NewTurn": "New turn",
+      "NewTurnHint": "Out of combat there is no turn order: click to start a fresh turn (swings, Sneak Attack and follow-ups available again).",
+      "PoleStrikeGated": "Pole Strike opens after you take the Attack action with a Quarterstaff, Spear or Heavy weapon with Reach."
+    },
+    "FollowUp": {
+      "offhand": "Off-hand: {weapon}",
+      "nick": "Nick: {weapon}",
+      "flurry": "Flurry of Blows",
+      "martial-arts": "Martial Arts strike",
+      "hew": "Hew: {weapon}",
+      "NoFocus": "No Focus Points left for Flurry of Blows."
+    },
+    "FollowUpText": {
+      "offhand": "The Light property's extra attack, as a Bonus Action. Your ability modifier isn't added to its damage unless it is negative (or you have Two-Weapon Fighting).",
+      "nick": "Nick: the Light extra attack made as part of the Attack action, so it costs no Bonus Action. Once per turn.",
+      "flurry": "Spend 1 Focus Point and make {n} Unarmed Strikes as a Bonus Action. Each strike opens its own attack roll.",
+      "martial-arts": "One Unarmed Strike as a Bonus Action.",
+      "hew": "Great Weapon Master: you scored a Critical Hit or dropped a creature to 0 HP — one more attack with the same weapon as a Bonus Action."
+    },
+    "Kind": {
+      "nick": "Nick",
+      "offhand": "Off-hand",
+      "bonus": "Bonus Action",
+      "main": "Attack"
+    },
+    "Strip": {
+      "SwingOf": "Swing {i} of {n}",
+      "NoTarget": "no target",
+      "Targets": "{n} targets",
+      "Paused": "Paused — the roll was closed. Resume, pick a new target or another weapon, or Stop (Esc). Swings you don't take stay on your Action pips.",
+      "Resume": "Resume",
+      "Retarget": "New target",
+      "Adv": "Adv",
+      "Dis": "Dis",
+      "AdvHint": "For the next swing only. The roll dialog's own buttons work too.",
+      "Quick": "Quick",
+      "QuickHint": "After the first swing, roll the rest without the dialog (same Normal / Advantage / Disadvantage). Manual dice still ask for each roll.",
+      "Stop": "Stop",
+      "StopHint": "End the Full Attack here. Swings not taken stay available.",
+      "SwapHint": "Use {weapon} for the remaining swings",
+      "PickTarget": "Target a creature for the next swing (Stop cancels).",
+      "AlreadyRunning": "A Full Attack is already running — finish or stop it first.",
+      "NoWeapon": "That weapon is no longer available."
+    },
+    "Picker": {
+      "Title": "Full Attack with…",
+      "Hint": "Click a weapon (remembered). Esc closes.",
+      "Swings": "{n} swing(s)"
+    },
+    "Rider": {
+      "Name": {
+        "sneak-attack": "Sneak Attack",
+        "frenzy": "Frenzy",
+        "colossus-slayer": "Colossus Slayer",
+        "divine-strike": "Divine Strike"
+      },
+      "Rule": {
+        "sneak-attack": "Once per turn, on a hit with a Finesse or Ranged weapon, if you have Advantage — or an ally who isn't Incapacitated is within 5 ft of the target — and you don't have Disadvantage.",
+        "frenzy": "While raging, after Reckless Attack: extra d6s on the first Strength-based hit this turn.",
+        "colossus-slayer": "Once per turn, on a hit against a creature that is missing any of its Hit Points.",
+        "divine-strike": "Once per turn, on a weapon hit."
+      },
+      "Check": {
+        "advantage": "Advantage",
+        "ally": "Ally beside the target",
+        "noDisadvantage": "No Disadvantage",
+        "raging": "Raging",
+        "reckless": "Reckless Attack this turn"
+      },
+      "Toggle": "{name}: {mode}",
+      "Mode": {
+        "ask": "Ask",
+        "auto": "Auto"
+      },
+      "ToggleHint": {
+        "ask": "Ask (now): a '+ {name} {dice}' button appears on your attack cards; click it when the GM says you hit. Click to switch to Auto.",
+        "auto": "Auto (now): {dice} is added to the first eligible attack's damage this turn, with an Undo if it missed. Click to switch to Ask."
+      },
+      "Used": "{name} was already used this turn.",
+      "Undo": "Undo",
+      "UndoHint": "It missed: give back this turn's use (the GM just doesn't apply this damage).",
+      "Undone": "{name} is available again this turn.",
+      "Stale": "That attack was on an earlier turn — use the button on this turn's attack card.",
+      "AskGM": "(none seen — ask your GM)",
+      "RecklessWhere": "(turn it on from the Special bar)"
+    },
+    "Setting": {
+      "fullAttack": {
+        "Name": "Full Attack button",
+        "Hint": "A Full Attack button on the Argon Action bar for characters with 2+ attacks: every swing in a row, one roll dialog each. Off: no button; weapons work as before."
+      },
+      "swingPips": {
+        "Name": "Swing pips",
+        "Hint": "The Action pips count swings (2 → 1 → 0) for characters with Extra Attack, also when weapons are clicked by hand. Off: one Action pip as before."
+      },
+      "followUps": {
+        "Name": "Follow-up buttons",
+        "Hint": "Off-hand, Nick, Flurry of Blows, Martial Arts and Hew appear as one-click buttons only when the character qualifies. Off: no extra buttons."
+      },
+      "gateFollowUps": {
+        "Name": "Pole Strike only after attacking with a polearm",
+        "Hint": "Polearm Master's Pole Strike shows on the Bonus bar only after the Attack action with a Quarterstaff, Spear or Heavy Reach weapon. Off: always shown."
+      },
+      "riderOffers": {
+        "Name": "Sneak Attack and once-per-turn riders",
+        "Hint": "'+ Sneak Attack 3d6' (and Frenzy, Colossus Slayer, Divine Strike) on attack cards, once per turn; each player can switch theirs to Auto. Off: use the feature items by hand."
+      },
+      "weaponBonuses": {
+        "Name": "Two-Weapon Fighting and Great Weapon Master damage",
+        "Hint": "Adds the ability modifier back to off-hand damage (Two-Weapon Fighting) and +Proficiency to Heavy weapon hits in the Attack action (Great Weapon Master). Off: add them by hand (don't also use GWM's separate damage button when this is on)."
+      },
+      "offhandModeReset": {
+        "Name": "Off-hand mode doesn't stick",
+        "Hint": "After an off-hand attack the weapon's next attack defaults to its normal grip again. Off: dnd5e remembers Offhand."
+      },
+      "offhandPip": {
+        "Name": "Off-hand spends the Bonus pip",
+        "Hint": "An off-hand attack greys the Bonus Action pip, not the Action pip. Off: Argon's default."
+      },
+      "seedWeaponSets": {
+        "Name": "Fill empty weapon sets",
+        "Hint": "Once, for characters whose Argon weapon sets were never set: set 1 = main melee weapon + Light off-hand, set 2 = ranged weapon. Never overwrites a set someone dragged."
+      },
+      "multiattack": {
+        "Name": "Full Attack for Multiattack",
+        "Hint": "NPCs and Wild Shape forms get Full Attack from their Multiattack (e.g. Bite then Claw). Off: the Multiattack card as before."
+      },
+      "recklessToggle": {
+        "Name": "Reckless Attack toggle",
+        "Hint": "A 'Reckless Attack: On/Off' button on the Special bar for Barbarians: it applies the Reckless effect (Advantage on Strength attacks until your next turn), which Frenzy's hint reads. Off: no button; apply Reckless by hand."
+      }
+    },
+    "Reckless": {
+      "Effect": "Reckless",
+      "Toggle": "Reckless Attack: {state}",
+      "State": {
+        "on": "On",
+        "off": "Off"
+      },
+      "Hint": {
+        "off": "Off (now). Click when you make your first attack this turn: Advantage on Strength attack rolls until your next turn starts (the roll dialog then defaults to Advantage), and attacks against you have Advantage. Frenzy counts it.",
+        "on": "On (now): Advantage on Strength attack rolls until your next turn starts; attacks against you have Advantage. Click to turn it off (a misclick)."
+      },
+      "On": "Reckless Attack: on until the start of your next turn."
+    }
+  }
+}

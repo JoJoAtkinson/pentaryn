@@ -1,0 +1,62 @@
+/**
+ * Ritual Adept, pure half (no Foundry globals; `node test/rituals.mjs` imports it bare).
+ *
+ * 2024 PHB, Wizard 1 — Ritual Adept: "You can cast any spell as a Ritual if that spell has the
+ * Ritual tag and the spell is in your spellbook. You needn't have the spell prepared, but you
+ * must read from the book to cast it in this way."
+ *
+ * So for an actor with Ritual Adept, an UNPREPARED wizard spell with the ritual tag can only ever
+ * be cast as a ritual: no slot. dnd5e leaves that to the player (untick "Consume Spell Slot"), and
+ * Argon's Cast Spell panel hides unprepared spells for a wizard, so neither surface shows it.
+ * The glue (rituals.mjs) lists these spells in a "Rituals" group on the HUD and starts their
+ * usage dialog with the slot unticked. Prepared ritual spells are left alone: they can be cast
+ * either way, so the player chooses as before.
+ */
+
+export const RITUAL_ADEPT_IDENTIFIER = "ritual-adept";
+export const RITUAL_ADEPT_SOURCE = "Compendium.dnd-players-handbook.classes.Item.phbwzdRitualAdep";
+
+/** Plain view of an Item for the predicates below (keeps them testable). */
+export function spellInfo(item) {
+  const sys = item?.system ?? {};
+  const props = sys.properties;
+  return {
+    type: item?.type ?? "",
+    level: Number(sys.level) || 0,
+    method: sys.method ?? "",
+    prepared: Number(sys.prepared) || 0,
+    ritual: !!(props && (typeof props.has === "function" ? props.has("ritual") : Array.isArray(props) && props.includes("ritual"))),
+    sourceClass: sys.sourceClass || "",
+    cachedFor: item?.flags?.dnd5e?.cachedFor ?? null
+  };
+}
+
+/** Does this feature item grant Ritual Adept? Identifier, PHB source, or name. */
+export function isRitualAdept(info) {
+  if (!info || (info.type && info.type !== "feat")) return false;
+  if (info.identifier === RITUAL_ADEPT_IDENTIFIER) return true;
+  if (info.source && info.source === RITUAL_ADEPT_SOURCE) return true;
+  return String(info.name ?? "").trim().toLowerCase() === "ritual adept";
+}
+
+/**
+ * Is this spell castable ONLY as a ritual (Ritual Adept, unprepared, from the spellbook)?
+ * Cantrips are never rituals; spells granted by an item (cachedFor) or cast innately / at will /
+ * as pact magic are not spellbook spells; a spell credited to another class is not in the book.
+ */
+export function isAdeptOnlyRitual(s) {
+  if (!s || s.type !== "spell" || !s.ritual) return false;
+  if (s.level < 1 || s.cachedFor) return false;
+  if (s.method !== "spell") return false;
+  if (s.prepared > 0) return false;
+  return !s.sourceClass || s.sourceClass === "wizard";
+}
+
+/** Sorted (level, then name) list of the spells the HUD's Rituals group shows. */
+export function adeptRituals(spells) {
+  return spells
+    .map(item => ({ item, s: spellInfo(item) }))
+    .filter(({ s }) => isAdeptOnlyRitual(s))
+    .sort((a, b) => (a.s.level - b.s.level) || String(a.item?.name).localeCompare(String(b.item?.name)))
+    .map(({ item }) => item);
+}

@@ -251,3 +251,9 @@ if (failures.length) {
   process.exit(1);
 }
 console.log(`riders-core: ${pass} passed`);
+
+// Ritual Adept fixtures (rituals-core.mjs) — exits 1 on its own failures.
+await import("./rituals.mjs");
+
+// Concentration summons + Argon tidy fixtures (table-core.mjs) — exits 1 on its own failures.
+await import("./table.mjs");

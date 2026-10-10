@@ -2,7 +2,7 @@
   "id": "pentaryn-prompts",
   "title": "Pentaryn Prompt Markers",
   "description": "Drop a prompt marker on a map, type what should be there, press Esc. Six hidden marker actors (tiny to xxl, in the 'Prompt Markers' folder) carry a few words each; a side panel shows what the marker can see through the walls, nearest first. One gather call hands Claude every prompt with distances, bands, bearings, line of sight, encounters and loners; one replace call puts the real thing on the marker's footprint, stamps the prompt on it as provenance and removes the marker. Exposes game.pentaryn.prompts and the pentaryn-prompts.* queries (GM only).",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "compatibility": { "minimum": "14", "verified": "14.369" },
   "authors": [{ "name": "Joseph Atkinson" }],
   "esmodules": ["prompts.mjs"],

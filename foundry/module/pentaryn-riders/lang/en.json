@@ -26,7 +26,18 @@
       "hdControls": {
         "name": "Hit Dice − / + on character sheets",
         "hint": "Shows a − and a + beside Hit Dice on the character sheet outside edit mode, to spend or regain one Hit Die."
+      },
+      "rituals": {
+        "name": "Ritual Adept rituals",
+        "hint": "For a wizard with Ritual Adept: unprepared ritual spells get a 'Rituals' group on the Combat HUD's Cast Spell panel, and casting one starts with 'Consume Spell Slot' unticked (tick it to spend a slot anyway). Turn off to go back to Argon's prepared-only list and dnd5e's default."
+      },
+      "concentrationSummons": {
+        "name": "Concentration summons leave with concentration",
+        "hint": "When a caster's concentration ends (dropped, broken, or a new concentration spell), the tokens that spell summoned (Flaming Sphere, Summon Dragon...) are removed from the map by the GM's client. Summons without concentration are never touched. Turn off to clean them up by hand."
       }
+    },
+    "rituals": {
+      "group": "Rituals (no slot)"
     }
   }
 }

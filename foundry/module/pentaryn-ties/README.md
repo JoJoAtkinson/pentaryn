@@ -443,6 +443,8 @@ button anywhere else.
 
 **What a player does:** double-click a creature they can see and don't own. A small menu opens
 with **Take a closer look**, which runs the same `Study.inspect` as the 4 key and the HUD eye.
+Since 0.19.3 it also carries **Add or edit a tie** (the 6 key) and **Write about them in my
+notebook** (the 5 key), so neither writing action is keyboard-only.
 
 **Why it exists:** core gives a player no Token HUD and no double-click handler on someone else's
 token, so the hover key was the only door. Joe double-clicked Marrith as Caven and got nothing.
@@ -505,3 +507,14 @@ All fields are optional; the default is an orange flame (`.pt-item-mark` in `sty
 
 - Blind Study rolls pass their roll mode through `foundry.dice.Roll._mapLegacyRollMode`. dnd5e 6 hands `rollMode` to core as the `messageMode`, which only accepts the new keys (`blind`, `gm`, `public`, `self`); the legacy `"blindroll"` was silently replaced by the client default, so the Study card and its Dice So Nice animation would have gone public. Registered as `dnd5e-legacy-roll-modes` in `foundry/adjustments.yml`.
 - `module.json` now requires dnd5e 6.0+ (verified 6.0.6). Nothing else changed for 6: sheet selectors, `details.race`/`background` and the `rollSkill` signature are the same in 6.0.6, and the Dice So Nice `skip` flag still holds.
+
+## 0.19.3 (2026-10-10, usability run)
+
+- **Fixed: a closer look from a non-active scene rolled nothing.** `canReach` (the one reach rule,
+  `ties-api.mjs`) checked the active scene and the **GM's own** `canvas.scene`, because it runs on
+  the GM's client. A player viewing any other scene (pulled there, or a test scene) got the stub
+  card and the tempo line, then a silent refusal (`inspect refused: … cannot see …` in the GM's
+  console only). It now reads the asking user's `viewedScene`. Same rule for Study and the tie
+  relay. Fixtured in `test/reach.mjs`.
+- The player's double-click menu gains **Add or edit a tie** and **Write about them in my
+  notebook** (U-7-1 in `context/plans/usability-changes-2026-10.md`).

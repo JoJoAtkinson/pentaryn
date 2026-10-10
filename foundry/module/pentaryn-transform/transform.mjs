@@ -169,16 +169,19 @@ function tokenOf(actor) {
   return actor?.getActiveTokens?.(false, true)?.[0] ?? null;
 }
 
+// `game.combat` is only the combat this client VIEWS (a GM activating another encounter flips every
+// client's view), so the mark looks for the started combat whose current turn is this token's.
 export function markBonusUsed(actor) {
-  const c = game.combat;
   const token = tokenOf(actor);
-  if (!c?.started || !token || c.combatant?.tokenId !== token.id) return;
+  if (!token) return;
+  const c = [game.combat, ...(game.combats ?? [])].find(x => x?.started && x.combatant?.tokenId === token.id);
+  if (!c) return;
   bonusMark = { combat: c.id, round: c.round, turn: c.turn, token: token.id };
 }
 
 export function bonusUsedNow(tokenId) {
-  const c = game.combat;
-  return !!(bonusMark && c?.started && bonusMark.combat === c.id && bonusMark.round === c.round
+  const c = bonusMark ? game.combats?.get(bonusMark.combat) : null;
+  return !!(bonusMark && c?.started && bonusMark.round === c.round
     && bonusMark.turn === c.turn && bonusMark.token === tokenId);
 }
 
