@@ -321,7 +321,7 @@ await scene.createEmbeddedDocuments("Note", [{
   iconSize: 64,                                      // 64 ≈ a 0.5 token on a 140px grid
   text: "Scrying Orb",                               // label under the pin; players see it
   fontSize: 24, textAnchor: CONST.TEXT_ANCHOR_POINTS.BOTTOM,
-  global: true }]);
+  global: false }]);                               // in-view rule: see below
 
 await scene.deleteEmbeddedDocuments("Token", [m.id]);
 ```
@@ -334,9 +334,26 @@ Then verify the same way as a token — `canvas.notes.placeables.map(n => n.visi
   it the pin renders and hovers but clicking does nothing, and it looks like a broken pin.
 - **A Note's `x`/`y` is its centre**, unlike a Token's top-left. So a Note goes on the marker's
   centre point directly — no half-size subtraction.
-- **`global: true`** makes the pin visible through unexplored darkness. That is deliberate here (a
-  pin floating in the dark still reads as "there is something over there"), but if you want the
-  readable to stay secret until the party walks into the room, set `global: false`.
+- **`global: false`, always (Joe's rule, 2026-10-07): an eye is seen, and used, only when it is in a
+  player's view.** A global pin shows and opens through walls from anywhere, so a player read the
+  letter from across the prison. Non-global pins show only while their centre is in the player's
+  current vision. pentaryn-dropbin's GM backfill flips any global readable pin to `false` at ready.
+- **Pile tokens never have sight.** Players are OBSERVER on piles, and a player with no token
+  selected sees through every observed token. A pile with `sight.enabled` lit its own room and showed
+  every eye on the map. The same backfill turns sight off on pile actors and tokens, and corpses
+  drop sight while they are lootable. Range stays unlimited, so whatever is in view can be opened.
+- **No light, no eyes.** In a scene with darkness 1 and no lights, a token without darkvision sees
+  nothing, so it sees no eyes either.
+  - **Keep the pin well inside the light.** A Note counts as in view when a point within
+    `iconSize/4` of its centre is seen. A pin at 153 px from a 150 px light showed only by that
+    tolerance. Move it ~15 px inward.
+  - **Once explored, a pin stays shown** (`canvas.fog.isPointExplored`), even if the light later
+    shrinks away from it.
+  - **A vision range of 0 still sees lit areas** in line of sight. That's how a PC across the
+    corridor sees another PC's glow. Light on a PC is item-driven: see `pentaryn-senses`.
+- **A per-player readable** (only one player sees the pin) uses `ownership: { default: NONE, <userId>: OBSERVER }`.
+  v14 `Note#isVisible` tests LIMITED on the page and then on the entry, so the other players get no
+  pin at all. The GM still sees every pin. Example: the Pentaryn "how you got here" eyes.
 - **Players open it with a double-click**, the same gesture as a hotspot — so the two kinds of eye
   behave identically at the table, which is the point of using one icon for both.
 - **GM-only text goes in `<section class="secret">…</section>`.** Verified: the player sees the
@@ -344,6 +361,12 @@ Then verify the same way as a token — `canvas.notes.placeables.map(n => n.visi
   failure" ruling ride along inside the same document the players are reading.
 - **The window title is `<folder name>: <entry name>`**, and players see it. Name the journal folder
   something in-fiction (`The Wizard's Tower`), not `SJ 08 — The Parley (Readables)`.
+- **Players keep a readable with the "Add to my journal" bar** (`pentaryn-journal`, see its
+  [README](../../foundry/module/pentaryn-journal/README.md)). The bar also appears on items opened
+  from an eye pile.
+  - The copy lands in `Player Journals/<name>'s Journal`, with secrets and embeds stripped.
+  - Provenance shows the scene's **navName** if set, otherwise this journal's folder name, plus the
+    pin's label. Set a player-facing navName if you want the place named. `scene.name` is never shown.
 
 ### A hidden thing on a marker
 

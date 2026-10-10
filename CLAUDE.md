@@ -4,7 +4,8 @@ D&D 5.5e campaign vault plus the Foundry VTT automation that runs it. The toolin
 world-agnostic — it runs **any dnd5e world** in this setup. Ask the live client which one you
 are in (`game.world.id`) rather than assuming; current campaign state lives in
 [`context/space-journey.md`](context/space-journey.md) and
-[`context/ardenford.md`](context/ardenford.md).
+[`context/ardenford.md`](context/ardenford.md), and
+[`context/pentaryn.md`](context/pentaryn.md).
 
 This file is auto-loaded into every session, so it stays short. Anything longer than two
 lines belongs in `context/`, and this table is how you find it.
@@ -31,6 +32,7 @@ Open the entry point, then only what it points to. Every context file opens with
 | Anything in Foundry — scenes, actors, tokens, server, tunnel, updater, assets | [`context/foundry/README.md`](context/foundry/README.md) |
 | The current one-shot — scene state, cast, IDs, what's still unbuilt | [`context/space-journey.md`](context/space-journey.md) |
 | The Ardenford campaign — world state, the map-candidate `Suggestions` folders | [`context/ardenford.md`](context/ardenford.md) |
+| The Pentaryn world (main build) — modules, splash, marker/crowd actors, what's still unbuilt | [`context/pentaryn.md`](context/pentaryn.md) |
 | World & lore authoring — where files go, naming, frontmatter, combat NPCs | [`context/world/README.md`](context/world/README.md) |
 | Timeline events and the history SVGs | [`context/world/timelines.md`](context/world/timelines.md) |
 | A rule, spell, feat, item or monster — **the owned PHB/DMG/MM, not the SRD API** | [`context/foundry/rules-lookup.md`](context/foundry/rules-lookup.md) |

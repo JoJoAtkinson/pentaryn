@@ -21,7 +21,7 @@ server, the tunnel, the updater, the asset pipeline.
 
 ## The platform
 
-Foundry **v14.367** · system **dnd5e 5.3.3** · **D&D 2024 rules**
+Foundry **v14.369** (since 2026-10-10) · system **dnd5e 5.3.3** · **D&D 2024 rules**
 
 > **This domain is not written for one world.** Everything here applies to **any dnd5e world**
 > authored in this setup — the tooling, the modules and the conventions travel; only the content
@@ -52,14 +52,17 @@ Use the 2024 compendium packs: `dnd5e.spells24`, `dnd5e.equipment24`, `dnd5e.fea
 |---|---|
 | **Any rules, spell, feat, item or monster question** | [`rules-lookup.md`](rules-lookup.md) |
 | Attributes, what a study reveals, turning backstory into discoverables | [`attributes.md`](attributes.md) |
+| Reviewing attributes, "the selected attributes", what Claude changed | [`attribute-review.md`](attribute-review.md) |
 | Day-to-day server ops — start/stop, tunnel, OneDrive sync, module install | [`ops.md`](ops.md) |
 | "Put X here" / "replace the red one" — anything naming a spot on a map | [`markers.md`](markers.md) |
 | "The party goes upstairs" — Region + teleport scene links | [`scene-links.md`](scene-links.md) |
 | "Set it on fire" / "the building goes up" — the Fire Kit | [`fire.md`](fire.md) |
 | Who-knows-who, social graph, possession marks — at the table | [`../../foundry/module/pentaryn-ties/README.md`](../../foundry/module/pentaryn-ties/README.md) |
 | One-click Sneak Attack, off-hand damage with no ability mod | [`attack-activities.md`](attack-activities.md) |
+| Spell circles you can't move/delete, "damage isn't rolled", monster saves off an area — `pentaryn-aoe` | [`aoe.md`](aoe.md) |
 | Completing hand-drawn walls | [`../../foundry/module/pentaryn-walls/README.md`](../../foundry/module/pentaryn-walls/README.md) |
 | Attunement — the sidebar slots, over-cap warnings, "why is this item doing nothing" | [`../../foundry/module/pentaryn-attunement/README.md`](../../foundry/module/pentaryn-attunement/README.md) |
+| Table-feedback modules — tool cursors, ghost movement, creature strip, rider rules (Elemental Adept, Battle Medic), Loot all, portals follow | [`../../foundry/module/pentaryn-cursors/README.md`](../../foundry/module/pentaryn-cursors/README.md), [`-movement`](../../foundry/module/pentaryn-movement/README.md), [`-creatures`](../../foundry/module/pentaryn-creatures/README.md), [`-riders`](../../foundry/module/pentaryn-riders/README.md), [`-dropbin`](../../foundry/module/pentaryn-dropbin/README.md), [`-portals`](../../foundry/module/pentaryn-portals/README.md), [`-senses`](../../foundry/module/pentaryn-senses/README.md) |
 | Finding one battlemap out of ~1,750 | [`map-library.md`](map-library.md) |
 | The unattended Saturday updater — before touching it | [`automated-updates.md`](automated-updates.md) |
 | Running the updater as an operator — commands, setup, retention | [`../../automation/README.md`](../../automation/README.md) |
@@ -174,5 +177,10 @@ keep showing the *host's* own relationships. See [`../plans/foundry-npc-ties.md`
   `/license` are 403 through `vtt.atjoseph.com`**, admin is localhost-only
 - `foundry/CONTRACT.md` — the `actors.json` generator ⇄ importer contract
 - `foundry/assets-manifest.json`, `foundry/roll20-maps.json`
-- `foundry/module/` — six in-house modules: `pentaryn-ties`, `-walls`, `-importer`,
-  `-pings`, `-dropbin`, `-attunement`
+- `foundry/module/` — in-house modules: `pentaryn-ties`, `-walls`, `-importer`,
+  `-pings`, `-dropbin`, `-attunement`, `-lookup`, `-transform` (Wild Shape and Starry Form on the Argon Bonus bar: pick a form, Return/Change Form, use count; revert from an item; blocks stacked transforms), `-names` (actor rename carries to token labels;
+  nicknames kept), `-cursors` (tool cursors), `-movement` (ghost toggle, owned-on-top), `-creatures` (creature light, Your creatures strip), `-riders` (Elemental Adept/Affinity, Battle Medic, Hit Dice -/+), `-portals`, `-aoe` (draggable/deletable spell areas, area saves with a GM Apply, damage on hit), `-senses` (token vision follows sheet Darkvision; an item flagged
+  `flags.pentaryn-senses.light` lights its carrier; `glow.mjs` adds the wandering
+  "Broken glow" light animation; `chain.mjs` draws an iron chain between two tokens, GM Token
+  HUD → Chain to target / Break chain). Players inspect others through `-ties`' double-click menu
+  and read-only **Look window** (`look.mjs`) — see its README

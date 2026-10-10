@@ -1,0 +1,95 @@
+---
+title: "Spell areas, saves and damage (pentaryn-aoe)"
+status: active
+last_modified: 2026-10-08
+tags: [context, foundry, dnd5e, module]
+---
+
+# Spell areas, saves and damage — `pentaryn-aoe`
+
+**Read this when:** a spell circle/cone won't move or delete, "damage isn't being rolled", or a
+save spell should roll the monsters' saves and apply full/half damage.
+**Not this file:** how it was designed and why → [`../plans/aoe-circles.md`](../plans/aoe-circles.md) ·
+module internals → [`../../foundry/module/pentaryn-aoe/README.md`](../../foundry/module/pentaryn-aoe/README.md)
+
+## At the table
+
+**Moving and deleting an area.** Every spell area (a dnd5e template, which is a Region on v14)
+gets a small target-icon **handle token** in its centre. For cones and lines it sits at the caster's end.
+Everyone owns the handle and the area.
+- Drag the handle to move the area. It ignores walls (movement action *displace*).
+- Delete the handle and the area goes with it. Delete the area and the handle goes too.
+- **Remove area** on the spell's chat card deletes that spell's areas on the scene you are viewing.
+- Areas clean themselves up. An instantaneous spell's area (Fireball) is deleted once every ticked
+  row has been applied. A concentration spell's areas go when the caster stops concentrating.
+
+**Cancelling a placement.** While a template follows the mouse, **Escape or right-click** cancels it
+(Escape: `escape.mjs`, rebindable as `pentaryn-aoe.cancelTemplate`; the tool you had is restored).
+With no template previewing, Escape behaves as normal (closes windows, opens the main menu).
+
+**Save spells (Fireball, Toll the Dead…).** Click **Damage** on the card as usual. The GM's client then:
+1. lists the creatures **inside the area**. If there is no area, it uses the roller's targets.
+   Handles, item piles, and crowd or marker actors (max HP 0) are skipped. The caster, hidden
+   tokens and anyone at 0 HP are listed but unticked;
+2. rolls every monster's save **GM-only**, so players never see the totals;
+3. posts one **request card** for the player characters. Each player sees only their own
+   button and rolls with the normal dialog, so advantage and bonuses are theirs to set. A save
+   rolled from the card's own "DC 17 DEX" button counts too;
+4. shows the GM a **tray** under the damage roll. Each row has a tick, the save result, a
+   multiplier (×0 ¼ ½ 1 2), and the damage after resistances. The tray buttons are
+   **Re-roll NPC saves**, **Ping players** and **Apply N**.
+   The per-row dice icon re-rolls one monster. The shield icon rolls a save for an absent player.
+
+Nothing is applied until **Apply** is pressed. Rows still waiting are skipped, and pressing
+Apply again later applies only the rows that have resolved since. A second Damage click on the
+same area greys out the older tray ("superseded"), so the same area can't be applied twice.
+The tray has no rule for Legendary Resistance, Evasion or cover. Set the multiplier on that row by hand.
+
+**Attacks.** When an attack roll hits, damage is rolled straight away on the attacker's own
+client. It also rolls when the target's AC is unknown, for example with no target selected.
+A known miss or a natural 1 rolls nothing. The card's Damage button still works.
+Players can't see hit/miss while `dnd5e.attackRollVisibility` is `"none"`. Setting it to
+`"hideAC"` shows hit/miss without the AC. That is Joe's call; this module does not change it.
+
+## Settings (world, Configure Settings → Pentaryn AoE)
+
+| Setting | Default | |
+|---|---|---|
+| Area handles | on | handle token per area |
+| Remove-area button | on | on spell cards |
+| Remove instantaneous areas after Apply | on | |
+| Remove areas when concentration ends | on | |
+| Saves from the area | on | the whole Part B pipeline |
+| Monster save visibility | GM only | `gmroll` · blind · public |
+| Apply monster damage automatically | off | PCs always wait for Apply |
+| Ask players to roll | on | the request card |
+| Roll damage on a hit | on | |
+
+## Console (`game.pentaryn.aoe`)
+
+```js
+game.pentaryn.aoe.sweep(canvas.scene)   // repair: orphan handles out, ownership + handles onto every template region
+game.pentaryn.aoe.areasFor(activityUuid, scene)
+game.pentaryn.aoe.removeArea(regionIds, scene)
+game.pentaryn.aoe.resolve(messageId)    // (re)build the tray on a damage message
+game.pentaryn.aoe.applyRows(messageId[, rowIds])
+```
+
+## Gotchas
+
+- **Needs the GM online.** No sockets are used. With no GM connected, saves aren't rolled and
+  nothing is applied. Moving and deleting areas still works.
+- **Every client needs the module**, because each player's own client creates the handle,
+  answers the request card and auto-rolls damage. Without it on a client, the GM
+  backstop adds the handle about 2.5 s later, and `sweep` repairs the rest.
+- **Startup sweep.** On ready, and on every scene change, the GM's client deletes handles whose
+  area is gone. It also gives *existing* template regions shared ownership and a handle. So
+  leftover areas from before the module was installed get handles the first time their scene is viewed.
+- **A moved area needs Damage clicked again.** Containment is read when the damage is rolled.
+- The handle is one shared world actor, **"Area handle"**, in `Scene Props`. The module creates it
+  on the GM's first ready. Don't delete it; if you do, it is recreated.
+- Concentration damage still triggers dnd5e's own concentration-check prompt for a concentrating PC. That is expected.
+
+Install: `make foundry-aoe-check` / `make foundry-aoe-sync`. A **first install needs a server
+restart**, because `Data/modules` is scanned at startup. `core.moduleConfiguration["pentaryn-aoe"]`
+is already set to `true`, so it loads enabled after that restart.

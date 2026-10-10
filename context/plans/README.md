@@ -28,6 +28,10 @@ lore authoring → [`../world/README.md`](../world/README.md)
 | [`foundry-attunement.md`](foundry-attunement.md) | The `pentaryn-attunement` sidebar slot strip + over-cap warnings | shipped |
 | [`foundry-mcp-fork.md`](foundry-mcp-fork.md) | The forked Foundry MCP bridge (now at `~/Documents/GitHub/foundry-vtt-mcp`) | shipped |
 | [`seafoot-v14-migration.md`](seafoot-v14-migration.md) | 520 v9 map modules → one v14 module | complete |
+| [`table-feedback-2026-10-08.md`](table-feedback-2026-10-08.md) | Triage of player feedback from the Underdark one-shot: bugs, rules riders, UX design questions | built and playtested 2026-10-09 |
+| [`druid-wild-shape.md`](druid-wild-shape.md) | Talo's Wild Shape and Starry Form on the Argon HUD (`pentaryn-transform` 0.2-0.3) | built; playtest 2026-10-10 passed core, audit items open |
+| [`foundry-update-2026-10.md`](foundry-update-2026-10.md) | Attended October 2026 update: core 14.369, Dice So Nice, mad-endlesswiz2; dnd5e 6 go/no-go, rollback rule, regression checklist | executed 2026-10-10 |
+| [`smarter-updater.md`](smarter-updater.md) | Tiered escalation for the Saturday updater: Haiku triage, Opus analysis, Fable go/no-go, sandboxed Opus fix; adjustments registry and the "Still needed?" phase | v1 built 2026-10-10 (triage + analysis, `max_tier: analyze`); v2/v3 designed |
 | [`world/timeline-refactor.md`](world/timeline-refactor.md) | History TSVs → per-event markdown under `history/` | complete |
 | [`obsidian-first-migration.md`](obsidian-first-migration.md) | Wikilinks + tag-based multi-home, Obsidian alongside VS Code | proposed — nothing executed |
 

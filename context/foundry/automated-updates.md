@@ -1,6 +1,6 @@
 ---
 title: "Foundry automated updates — context"
-last_modified: 2026-08-21
+last_modified: 2026-10-10
 status: active
 tags: [context, foundry, automation, launchd, updates]
 ---
@@ -45,6 +45,25 @@ Add the **resolved** binary, not the `.venv/bin/python` symlink — TCC keys on 
 executable. Confirm with `make vtt-update-dry`. Until it is granted, every Saturday
 run fails at the 60-second preflight with that path in the log.
 
+## What went wrong on 10-03, and the 2026-10-10 fixes
+
+The 10-03 run installed Dice So Nice and Multi Token Edit, then crashed with
+`'list' object has no attribute 'get'`: `smoke.package_warnings()` read `packageWarnings`
+from `getPackages`, which returns a plain list. It now reads them from the `getSetupData`
+payload (`FoundryAdmin.setup_data()`), and a crash records its traceback, lists packages left
+live and untested, and notifies "update FAILED, nothing rolled back" instead of "rolled back".
+Core 14.369 then changed the server: scripted POSTs need a same-origin `Origin` header, `/setup`
+answers 400 while a world runs, `/auth` answers 401 on a wrong password, and the graceful world
+shutdown is `POST /setup {worldShutdown}`. `admin.py` handles all of it (and `make vtt-login`).
+Escalation (tiers, models, cost) is in the next sections. **Re-armed 2026-10-10**
+(`make vtt-update-resume`); `make vtt-update-dry` shows only the deliberate holds (dnd5e 6.x,
+the pinned bridge). `launchctl` still shows last exit 1 until the next Saturday run replaces
+the 10-03 failure.
+
+**TCC grant: still outstanding as far as anyone can tell.** Only a launchd-started run
+exercises it, so it stays unconfirmed until the first Saturday after this re-arm. If that run
+fails at the 60-second preflight, Joe must add the resolved python binary (above).
+
 ## What it is
 
 A launchd LaunchAgent that keeps Foundry, its 27 modules and the `dnd5e` system on the
@@ -52,13 +71,15 @@ latest stable, unattended, with a backup before anything is touched and a rollba
 matches what actually broke.
 
 ```
-GATE → BACKUP → SCAN → [ADJUDICATE] → APPLY → SMOKE → RECOVER? → [REPORT] → NOTIFY → RESTORE
-python  python  python    claude      python  python   python     claude    python    python
+GATE → BACKUP → SCAN → [ADJUDICATE] → [ESCALATE] → APPLY → SMOKE → RECOVER? → [REPORT] → NOTIFY → RESTORE
+python  python  python    claude       claude×0–n   python  python   python     claude    python    python
 ```
 
-**The two bracketed steps are the only LLM steps and both fail closed.** No tokens ⇒
-`review` items stay held, safe updates still land, a plain-table report is still written,
+**The bracketed steps are the only LLM steps and all of them fail closed.** No tokens ⇒
+`review` items stay held, packages that touch code we adjusted are held (escalation's
+`hold_exposed`), other safe updates still land, a plain-table report is still written,
 the notification still fires. That split was a hard requirement, not a nicety.
+Escalation (2026-10-10) is described in [its own section](#escalation-tiered-llm-review-v1-2026-10-10).
 
 Jobs: `com.pentaryn.vtt-update` (Sat 04:06) · `com.pentaryn.vtt-update-watchdog` (Sat 06:12).
 Both installed and loaded. `launchctl list | grep pentaryn.vtt`.
@@ -76,6 +97,9 @@ Both installed and loaded. `launchctl list | grep pentaryn.vtt`.
 | `scripts/foundry/update/plan.py` | Assembles `plan.json`. Standalone vs Foundry-assisted modes. |
 | `scripts/foundry/update/forks.py` | `gh`-driven fork drift. Report only, never merges. |
 | `scripts/foundry/update/adjudicate.py` | Sandboxed `claude -p` that grades `review` items. |
+| `scripts/foundry/update/llm.py` | **The one way to call `claude -p`.** Builds the sandboxed argv, refuses tools for untrusted input, heartbeats the status file, enforces timeout/budget, parses cost. |
+| `scripts/foundry/update/escalate.py` | Triage (T0) and impact analysis (T1): facts, floor/ceiling, validators, source bundle, analysis cache, plan writer. |
+| `scripts/foundry/update/adjustments.py` | Loads/checks `foundry/adjustments.yml`; the exposure grep. |
 | `scripts/foundry/update/apply.py` | Orchestration: gate, backup, apply, phase/status, restore service. |
 | `scripts/foundry/update/smoke.py` | Server checks + the puppeteer browser check, per world. |
 | `scripts/foundry/update/recover.py` | The failure-class recovery matrix + backup artefacts. |
@@ -90,12 +114,15 @@ Both installed and loaded. `launchctl list | grep pentaryn.vtt`.
 | `automation/notifier/` | `Ardenhaven VTT.app` source + build script. |
 | `automation/smoke/smoke.mjs` | The puppeteer-core browser smoke test. |
 | `foundry/update-policy.yml` | **The only file you should normally edit.** |
+| `foundry/adjustments.yml` | Every place our code leans on a third-party package. `make foundry-adjustments-check`. |
+| `foundry/logs/auto-updates/plans/` | Ready-to-run plans the analysis tier wrote; committed with the report. |
 | `foundry/cloudflared/config.yml` | Tunnel ingress; blocks the admin surface. |
 | `foundry/logs/auto-updates/` | Per-run `.md` + `.json`, committed and pushed. |
 
 Runtime state (all gitignored) lives in `.state/`: `vtt-update.lock/` (a **directory** —
 macOS has no `flock`), `vtt-update.status`, `vtt-update.entry`, `vtt-update.seen.json`,
-`vtt-update-cache/`, `core-rollback/`, `system-aside/`, `logs/`.
+`vtt-update-cache/`, `vtt-update-analysis/` (T1 cache, one JSON per package × key),
+`vtt-update-dry-plans/` (plans from dry runs), `core-rollback/`, `system-aside/`, `logs/`.
 
 ---
 
@@ -120,26 +147,35 @@ most of what follows is undocumented and was established by reading it.
 | `POST /update {action:"previewCompatibility"}` | The collision check, done by Foundry. |
 | `POST /update {action:"updateDownload"}` | Downloads, installs, restarts. |
 | `POST /join {action:"loginAs"}` | Log in as any user with no user password — **needs `session.admin`**. |
-| `POST /join {action:"shutdown"}` | Graceful world deactivate — **needs an admin password**. |
+| `POST /setup {action:"worldShutdown"}` | Graceful world deactivate (14.369+) — **needs an admin password**. Before 14.369 this was `POST /join {action:"shutdown"}`, which 14.369 silently ignores (200 `{}`); `deactivate_world()` tries both. |
+
+**Every POST needs a same-origin `Origin` header on 14.369+.** `express.mjs` answers a POST
+whose `Sec-Fetch-Site`/`Origin` does not match the server with **400 "The request could not
+be processed."** before any route runs. `FoundryAdmin` sends `Origin: <base_url>` on every
+request; a hand-rolled `curl`/`requests` call must too. On 2026-10-10 the missing header made
+every package action 400 while `authenticate()` reported success.
 
 ### Seven traps, each of which cost real debugging time
 
-1. **Every `/setup` and `/update` package action is gated on `!game.world`** — 403 while a
-   world is active (`setup.mjs`: `c = !game.world && adminOk`). The run has to park the
-   server at the setup screen first.
+1. **Every `/setup` and `/update` package action is gated on `!game.world`** — refused while a
+   world is active (`/setup`: 400 on 14.369, 403 before; `/update`: 403). A non-admin session
+   gets 401 from `/setup` on 14.369 (403 before). The run has to park the server at the setup
+   screen first.
 
    But the **admin handshake is not** — `setup.mjs` runs `sessions.authenticateAdmin`
    *before* it computes `c`, and gates only the action on the result. So `/setup` is the
    one route that can establish an admin session at any time. `/auth` cannot: it reads
    `!game.world && sessions.authenticateAdmin(...)`, so with a world up the `&&`
-   short-circuits and the password is **never checked** — and it then redirects exactly
-   as it does for a rejection. `FoundryAdmin.authenticate()` picks the route by world
-   state for this reason.
+   short-circuits and the password is **never checked**. `FoundryAdmin.authenticate()` picks
+   the route by world state for this reason, and on `/auth` counts **only a redirect to
+   `/setup`** as success — 14.369 answers a bad password with a 401 re-render, a world that
+   came up meanwhile with a redirect to `/join`, a missing `Origin` with a 400.
 
 2. **`POST /setup {shutdown:true}` does not work from a script.** It calls
    `world.deactivate(req, {asAdmin: c})` with that same always-false `c`, and `world.mjs`
    bails to `{redirect:"/join"}` because a scripted session has no `req.user`. Use
-   `POST /join {action:"shutdown"}` (needs the admin password) or just quit the app.
+   `POST /setup {action:"worldShutdown", adminPassword}` (14.369+; `POST /join
+   {action:"shutdown"}` before) or just quit the app.
 
 3. **`authenticateAdmin` returns success without setting `session.admin`** when no admin
    password is configured:
@@ -147,7 +183,7 @@ most of what follows is undocumented and was established by reading it.
    if (session.admin || !pw) return {success: true, session};   // admin stays false
    ```
    Most of the setup API only checks the returned success, so it *appears* to work. But
-   `loginAsUser` and `/join {shutdown}` check `session.admin` directly. **This is the whole
+   `loginAsUser` and the graceful world shutdown check `session.admin` directly. **This is the whole
    reason `FOUNDRY_VTT_GRANDMASTER_PW` exists.**
 
 4. **Launching a world migrates it, in place, irreversibly.** `world.mjs setup()` runs
@@ -263,6 +299,130 @@ A snapshot is **~2.5 GB** — `Data/modules` is 2.7 GB of premium map art, not t
 
 ---
 
+## Escalation: tiered LLM review (v1, 2026-10-10)
+
+Design and rationale: [`../plans/smarter-updater.md`](../plans/smarter-updater.md). v1
+builds T0 triage and T1 analysis; T2 decide (Fable) and T3 fix (Opus, worktree) are
+designed but not built — `max_tier` above `analyze` is clamped with a reason in the record.
+
+**What it does.** After adjudication, on the final `auto` set plus held packages that need
+a plan, Python computes **facts** (adjustments rows, exposure grep, bump, note-keyword
+*counts*, last outcome from previous run records, whether a cached analysis exists). From
+facts alone it computes a **floor** (`escalate.package_floor`: a core bump, or an exposed
+package whose notes are not a clean patch, or a held major we adjusted with no cached
+plan → `analyze`) and a **ceiling** (`max_tier`, lowered when `window.latest − now −
+reserve_minutes`, the step's own `max_minutes` (40), or `budget_usd_per_run` cannot fit
+it). Haiku triage is offered only what it can change — `auto` packages with adjustments or
+exposure, plus held packages whose floor demands a plan — reads their notes and picks a
+tier; Python clamps it into `[floor, ceiling]`. At `analyze`, Opus `high` gets one
+call per package: facts, the registry rows, the notes, and a **source bundle** Python built
+from the files the rows name plus the exposure files (60 KB/file, ±80-line trim, 400 KB
+total, line-numbered). Its validated answer can move the package `auto → hold` and writes a
+plan to `foundry/logs/auto-updates/plans/<run_id>-<pkg>.md`.
+
+**What it can never do:** move anything into `auto`. `escalate.hold()` is the only bucket
+move in the module. Held packages are excluded from `save_seen` as before.
+
+**Trust boundary.** Every call goes through `llm.call`. `untrusted_input=True` (the
+default) makes `llm.build_command` raise `UnsafeCall` if the spec grants any tool. Tool-less
+argv: `--tools "" --disallowed-tools <list> --strict-mcp-config --mcp-config
+'{"mcpServers":{}}' --permission-mode dontAsk --permission-prompts none
+--no-session-persistence --restricted` (probed on CLI 2.1.296: the init event lists
+`tools: ["StructuredOutput"]`, `mcp_servers: []`),
+`--effort` and `--max-budget-usd` always set, `--system-prompt` carries the rules, the
+data goes on stdin, cwd is a fresh temp dir (no `CLAUDE.md`). Output passes a validator
+(`validate_triage`, `validate_analysis`): enums, length caps (over-long = **reject**), the
+offered-id allow-list (also sent as a schema `enum`), URL stripping, identifier-only `api`,
+cited files must be in the bundle, fix files must be in the cited area, tests must be a
+real `make foundry-*-check` / `pytest scripts/tests/…` (anything else becomes `none`),
+`unattended_fix_ok` recomputed. `handoff_brief()` is the only view a future tool-using
+tier gets — validated fields only, never `evidence.notes` or the triage digest.
+
+Strings a remote manifest controls — the target version, the notes URL, the decision
+reasons that interpolate them — and the adjudicator's free-text rationale never reach the
+FACTS block or a plan raw: `safe_version` (a version shape or `(unparseable version)`),
+`safe_url` (http(s), no whitespace or markdown) and `plain` (one line, URLs/backticks/
+angle brackets defanged). Plans get the report's IP scrub and pipe-escaped table cells:
+they are committed to a public repo and presented as runnable.
+
+**`--bare` is NOT used, on purpose.** Probed 2026-10-10: `--bare` reads auth only from
+`ANTHROPIC_API_KEY`; with this Mac's OAuth login every call returns `Not logged in`.
+`--restricted` ignores user/project/local settings files (so their hooks) and works with
+OAuth. `llm.isolation: bare` exists for when the job gets its own API key.
+
+**Fail-closed table** (all tested in `scripts/tests/test_update_escalation.py`):
+
+| Failure | Result |
+|---|---|
+| no CLI / non-zero exit / timeout / bad JSON / unknown id in triage | tier = floor; `hold_exposed` holds the exposed `auto` packages whose floor is `none` (triage was their only check); a package whose floor is `analyze` is left to T1, which holds on its own failure |
+| injection flag in triage | `hold_exposed` holds every offered `auto` package; **no T1 runs** — no Opus on flagged text, no plan written from it |
+| T1 failure, rejection or injection flag | that package held; nothing cached; the attempt is counted (if a model actually ran) and after `analysis_attempts` (2) the same key is not retried — held "not retried until either changes" |
+| out of time or run budget | package held "deferred: …", no call made |
+| Python exception inside escalation | caught; traceback in `escalation.traceback`; exposed floor packages held |
+| `--skip-llm` | escalation not run at all; record byte-identical to before |
+
+**Cache.** `.state/vtt-update-analysis/<pkg>--<key>.json`, key = sha256(id, installed,
+target, the package's registry rows, the full bytes of every bundle file, `PROMPT_VERSION`).
+Editing a file the analyst read, editing a row, a new upstream version or a prompt change
+all miss — for a package about to be installed. A **held** package (which will not be
+installed; its analysis only feeds a plan) also reuses the newest analysis of the same
+installed version against the same target *major* for `held_reuse_days` (28), so dnd5e
+6.x held for months costs about one Opus call a month rather than one per upstream patch
+or per edit to the seven files it reads; the plan says which pair it analysed. A held
+major with a reusable analysis costs **nothing**: no triage, no T1, the report links the
+existing plan. Failed attempts live beside the cache as `<pkg>--<key>.failures`. Dry runs
+populate the cache but write plans to `.state/vtt-update-dry-plans/` and commit nothing.
+
+**Cost and time.** Every call records model (resolved from `modelUsage`), effort, cost and
+seconds; `report.llm_calls()` gathers adjudicator + escalation + report, and every report
+ends with `LLM cost this run: $… (…)`. The status file is rewritten every 60 s during a
+call (`escalate/triage`, `escalate/analyze <pkg>`), so the watchdog's 20-minute rule holds.
+
+`--max-budget-usd` is enforced **after** the turn (probed 2026-10-10): a call that lands
+over its cap is billed and comes back `error_max_budget_usd` with no answer. So every
+`budget_usd` is a runaway guard set well above the expected cost — adjudicator $1.50
+(typical $0.05–0.15; it had no cap before), triage $0.25 (Haiku ~$0.002, Sonnet fallback
+~$0.04), analysis $2.50 per call / $5 per run (expected $0.4–1.2; a core bundle is ~250 KB).
+A call killed on timeout reports no cost; budgets *charge* it its cap (`llm.charged`) and
+the cost line adds "+ up to $X unreported".
+
+**Time.** The step stops at the earlier of `window.latest − reserve_minutes` and its own
+`max_minutes` (40). `vtt-update.sh`'s backstop is 90 min + `max_minutes` = 7 800 s
+(`escalate.wrapper_timeout()`) — not a flat three hours, which put the kill (07:06) after
+the 06:12 watchdog with nothing left to notice it. And whoever kills the run now cleans
+up after it: on a 143/137 exit the wrapper runs `cli killed`, which marks the status
+`failed`/`killed`, restores service from the entry state, removes the lock if its owner is
+dead (`make vtt-up` refuses while it exists) and notifies. The watchdog stays quiet about
+a `killed` run; its own dead-run path now also removes a dead owner's lock.
+
+**Adjustments registry.** `foundry/adjustments.yml`: `packages`, `modules`, `files`,
+`markers` (strings that must still be in the files), `what`, `why`, `native_when`,
+`retire_class`, `check`, plus per-package `aliases` for the exposure grep. Add a row
+whenever our code starts leaning on a package; `make foundry-adjustments-check` (and the
+`test_the_real_registry_matches_the_code` test) fails when a row rots. Core and dnd5e are
+excluded from exposure — every file mentions `dnd5e` — so for those the rows are all.
+
+Exposure costs money (an exposed non-clean update floors at an Opus call), so it matches
+**code, not prose**: comments and docstrings are stripped; the id is matched
+case-sensitively and must stand alone; an id that is also a JS identifier (`levels`,
+`socketlib`) must be quoted, a path segment or a `flags.` scope; and
+`scripts/foundry/update/` is not searched (it names packages as examples). A plain
+substring match had `levels` "exposed" in ten files via `DOCUMENT_OWNERSHIP_LEVELS` and
+`multi-token-edit` via an `upstream.py` docstring — three of the last six Saturdays would
+have bought an analysis for nothing. Aliases stay plain substrings.
+
+**Preview without spending.** `make vtt-update-dry` now ends with an `ESCALATION (preview,
+no LLM)` block: per package bucket, floor, adjustments, exposure count, keyword counts,
+last outcome, cached-analysis flag. A `review` item is previewed as `hold`.
+
+**Policy keys** (`foundry/update-policy.yml`): `llm.{isolation,adjudicator,report}`,
+`escalation.{enabled,max_tier,on_triage_failure,reserve_minutes,forced_minutes,
+max_minutes,budget_usd_per_run,analysis_attempts,held_reuse_days,tiers.*,unattended_fix,
+unattended_retire}`, `adjustments`. The report
+writer moved to `sonnet`/`medium`; set `llm.report.model: opus` to revert.
+
+---
+
 ## Verified end to end (2026-08-21)
 
 Gates (users connected, time window) · scan → adjudicate → bucketing · a **real install of
@@ -365,7 +525,7 @@ would otherwise have to go and rediscover.
 
 | | |
 |---|---|
-| Foundry core | **14.367** (updated by the updater itself, from 14.365) |
+| Foundry core | **14.367** at the 2026-08 build (14.369 since the attended 2026-10-10 update) |
 | dnd5e | 5.3.3 |
 | Worlds | `space-journey` and `ardenhaven`, both migrated to 14.367, both smoke-clean |
 | Browser smoke | Re-verified live 2026-08-22 against `space-journey`: logged in as Gamemaster, `gameReady` and `canvasReady` true, scene "1. The Library (The Parley)", 28 modules active, zero client errors. It does get past the join screen and does exercise the world |
@@ -403,8 +563,13 @@ report, and a server left shut down.
   like a hang. This is the same hazard the plists' **`AbandonProcessGroup`** covers under
   launchd: without it, launchd would reap the `cloudflared` the run had just restarted,
   silently killing the tunnel at the end of every successful run.
-* **Costs tokens**: `run` without `--skip-llm` calls Opus twice. `--skip-llm` holds every
+* **Costs tokens**: `run` without `--skip-llm` calls the adjudicator (Opus, only when
+  something is in `review`), triage (Haiku, only when a touched package is exposed), the
+  analysis (Opus, only at tier `analyze` and on a cache miss) and the report (Sonnet). The
+  report's last line is the measured total. `--skip-llm` skips all of them, holds every
   `review` item and writes the fallback report.
+* **Changing a prompt or a schema in `escalate.py`** → bump `PROMPT_VERSION` so cached
+  analyses written under the old rules are not reused.
 
 ## Known loose ends
 
@@ -414,6 +579,6 @@ report, and a server left shut down.
   (it is held, and held packages are deliberately excluded so they keep being reviewed).
 * `pentaryn-seafoot-maps` is installed in `Data/modules` but absent from `foundry/module/`;
   the drift check reports it every run until that is reconciled.
-* `mad-endlesswiz2` 13.0.1 → 14.1.0 is held: a major bump of premium content with no public
-  release notes for the adjudicator to read. It will stay held until updated by hand or
-  moved into `packages.hold`.
+* `mad-endlesswiz2` 13.0.1 → 14.1.0 was held (a major bump of premium content with no public
+  release notes for the adjudicator to read) and has since been installed by hand; all 25
+  scenes using it were checked.

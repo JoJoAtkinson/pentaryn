@@ -202,6 +202,14 @@ silent way to make a link the party can see and cannot use. Move both, or re-run
 moving the region and delete the old tile. If this bites more than once, a `updateTile` hook keyed
 on that flag would keep them married.
 
+## Destination cards (pentaryn-portals)
+
+The confirmation dialog shows a **card** per destination: a thumbnail, a title and a description. With several destinations, the cards replace the core `<select>` as radio buttons; they submit the same `destination` field, so the teleport logic is unchanged. The card data lives on the **destination** region, at `flags["pentaryn-portals"] = { title, img, description }`.
+
+To author a card, open Region config, then the Appearance tab, then **Portal card**. The camera button crops the map art around the region (8×5 squares, with the arrival square circled) into `assets/tokens/custom/portals/`. To add a choice, append another region uuid to `system.destinations` on the behavior. The behavior needs `choice: true`, and `revealed: true` if players should see the cards. Module README: `foundry/module/pentaryn-portals/README.md`.
+
+**Badges replace the tile as the visible sign.** A travel Tile disappears at darkness 1, because tiles are lit like the map. The portal module draws a badge on the interface layer instead, above the darkness; players only see it once its square has been in sight or explored: the destination thumbnail inside a violet ring. Hovering it shows the cards. A GM right-click offers Teleport party, Preview, Edit and Region settings. Keep the tiles for lit maps if you like, but don't rely on them in the Underdark.
+
 ## Behavior fields
 
 `system.*` on the `teleportToken` behavior:

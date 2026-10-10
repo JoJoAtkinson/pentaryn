@@ -102,7 +102,7 @@ return { hitCount: hits.length, hits: hits.slice(0, 6) };
 ### One known page, by name
 
 ⚠ **Do not use `getIndex({fields: ["pages.name"]})` for this.** It does not reliably
-populate `pages`: measured on v14.367, **2 of 47** entries came back with an array and
+populate `pages`: measured on v14.367 (still true on 14.369, intermittently: core `indexDocument` re-projects the entry with `getProperty` once `getDocuments()` has cached it), **2 of 47** entries came back with an array and
 the other 45 with an empty object `{}`, even after `pack.clear()`. Because `{}` is
 truthy, `(entry.pages || []).find(...)` throws or silently misses depending on
 iteration order — it worked once here and then stopped. `getDocuments()` is the source

@@ -59,7 +59,7 @@ players ──https──▶ vtt.atjoseph.com ──cloudflared (named tunnel "a
                                                                                      │
                                           ~/Library/Application Support/FoundryVTT/  │
                                             Config/  Data/  Logs/  ◀─────────────────┘
-                                                     ├── worlds/   space-journey · ardenford · ardenhaven
+                                                     ├── worlds/   space-journey · ardenford · ardenhaven · pentaryn
                                                      ├── modules/  21 (see §5)
                                                      ├── systems/  dnd5e 5.3.3
                                                      └── assets/   maps · tokens · splash
@@ -74,7 +74,7 @@ players ──https──▶ vtt.atjoseph.com ──cloudflared (named tunnel "a
 | Data root | `~/Library/Application Support/FoundryVTT/Data` |
 | Core | **v14.365** |
 | System | **dnd5e 5.3.3** |
-| Live world | **whichever one is launched** — three worlds now exist, so never infer it. `python -m scripts.foundry.ops status` names it, or ask the client for `game.world.id`. `space-journey` was the live world through 2026-09-17; `ardenford` was created that day (see *Creating a new world*, below) |
+| Live world | **whichever one is launched** — four worlds now exist, so never infer it. `python -m scripts.foundry.ops status` names it, or ask the client for `game.world.id`. `space-journey` was the live world through 2026-09-17; `ardenford` was created that day (see *Creating a new world*, below); `pentaryn` was created 2026-10-04 and is live (see [`../pentaryn.md`](../pentaryn.md)) |
 
 ### The actor pipeline targets `space-journey` — and says so out loud
 
@@ -378,6 +378,12 @@ Full detail: [`scripts/foundry/README.md`](../../scripts/foundry/README.md).
 | `enhancedcombathud` | 5.0.1 | Argon – Combat HUD (CORE). GitHub release zip, filesystem drop — path B below |
 | `enhancedcombathud-dnd5e` | 5.2.2 | Argon – Combat HUD (DND5E). Same drop. Needs `dnd5e ≥ 5.0.0` and `enhancedcombathud ≥ 3.0.4` |
 
+**GM view:**
+
+| id | version | Source |
+| -- | ------- | ------ |
+| `gm-vision` | 2.0.5 | dev7355608/gm-vision GitHub release zip, filesystem drop — path B. **Ctrl+G** toggles a GM-only lit view (darkness, fog, hidden tokens); players unaffected. No dependencies. Enabled in `pentaryn` only (2026-10-04) |
+
 **Multi-level rendering stack** — why the Spider's Tear Opera House works as a genuine
 three-level scene (§9):
 
@@ -395,7 +401,7 @@ three-level scene (§9):
 | `eledryll-maps-castle-life-bundle-1` | 1.14.3 | Foundry store, Setup screen |
 | `eledryll-spiders-tear-opera-house` | 1.1.0 | Foundry store, Setup screen. Ships its own pre-built three-level scene (§8) |
 | `mad-endlesswiz` | 14.1.0 | Foundry store, Setup screen |
-| `mad-endlesswiz2` | 13.0.1 | Foundry store, Setup screen |
+| `mad-endlesswiz2` | 14.1.0 | Foundry store, Setup screen |
 | `theripper-premium-hub` | 6.0.1 | Foundry store, Setup screen |
 | `dnd-players-handbook` | 2.2.0 | Official PHB premium module, Foundry store, Setup screen |
 
@@ -535,6 +541,11 @@ That 401 came from Foundry, not Cloudflare — the request reached the server. `
 password is **guessable from the internet**, and a correct guess both deactivates the world
 and leaves that remote session admin-flagged (which then unlocks `loginAs` on the same route).
 Foundry ships no rate limiting — `express.mjs` and `sessions.mjs` contain no such thing.
+
+**Closed on 14.369:** `join.mjs` no longer has a `shutdown` branch (the action is ignored,
+200 `{}`); the graceful shutdown moved to `POST /setup {action:"worldShutdown"}`, which the
+edge 403s. Re-measure through the tunnel before relying on that, and re-open this box if a
+core rollback puts 14.367 back.
 
 This predates `vtt-login` and is unrelated to it; `vtt-login` uses `/setup` over loopback.
 What holds the line today is password entropy: 22 characters (`make foundry-admin-check`
@@ -728,6 +739,9 @@ has three levels. Anything that walks scenes should read `levels[]`, not `backgr
 | **Syncing a live world silently corrupts it** | LevelDB single-writer `LOCK` means no side detects the other. Nothing errors. The world fails to open **weeks later**. This is why restore is manual and why only stopped databases are copied |
 | **`Data/` is public with no auth while the tunnel is up** | `.json` files are served. `make foundry-clean` is a required step, not tidying |
 | **`POST /auth` "rejects" a correct admin password while a world is up** | It never checked it. `auth.mjs` short-circuits on `!game.world`. Use `/setup`, which authenticates unconditionally — §2's login box |
+| **A scripted POST gets 400 "The request could not be processed." (14.369+)** | Core's same-origin guard: any POST without a matching `Origin`/`Sec-Fetch-Site` is refused before the route runs. `FoundryAdmin` sends `Origin: http://127.0.0.1:30000`; a hand-rolled `curl` must add `-H "Origin: http://127.0.0.1:30000"`. Before the fix it surfaced as "the configured password … differ" from `make vtt-login` |
+| **Never turn on Setup → Configuration → SSL Certificate** | 14.369 can serve HTTPS natively. Cloudflare already terminates TLS; switching it on breaks every `http://127.0.0.1:30000` caller — the updater, the smoke test, `vtt-login` — and the tunnel's origin config |
+| **A second Gamemaster login does not kick the first (14.369)** | Measured 2026-10-10: the smoke test logged in as Gamemaster from its own Chrome while the bridge tab was logged in as Gamemaster; the bridge stayed connected and `eval-js` kept answering. `loginAs` only logs out *its own* session (`sessions.logoutWorld`); core deactivates other sessions only on a password change |
 | **A down tunnel makes every 404 check pass** | Always probe the site root first. `make foundry-verify` does; a hand-rolled `curl` won't |
 | **Module install can't be driven from inside the world** | Not a missing tool — a Foundry architecture boundary. `foundry.applications.setup` is `{}` inside a world. The filesystem drop is scriptable from the shell; the Setup screen needs a human |
 | **A dropped module is invisible until restart + enable** | The `Data/modules` scan runs at server startup, and enablement is per-world (`core.moduleConfiguration` / Manage Modules). Fails by doing nothing at all |
@@ -739,6 +753,9 @@ has three levels. Anything that walks scenes should read `levels[]`, not `backgr
 | **`scene.background.src` writes vanish on v14** | `background` is not in the v14 Scene schema — it's a v13 read shim. Creates and updates are dropped **silently**, no error, and the scene renders blank. See §9 |
 | **Orphaned MCP backend on :31414** | Outlives its clients by design. Symptom is tools that hang or return stale state |
 | **Stale module copy in `Data/modules/`** | Copy, not symlink, is deliberate — but it means "I changed the source and nothing happened" is a real outcome. Re-run the sync target |
+| **A test player tab ignores clicks and hovers** | Chrome pauses rendering and the ticker in a hidden or unfocused tab, and the extension's CDP mouse events often never reach Foundry (`canvas.mousePosition` stays stale). Take a screenshot to wake the tab, or dispatch `PointerEvent`/`MouseEvent('dblclick')` on `canvas.app.view` at `canvas.clientCoordinatesFromCanvas(...)`. Log test players in via `127.0.0.1:30000` (`#join-game-form`) so their session doesn't collide with the GM's on `localhost` |
+| **Closing Chrome kills the GM bridge** | `eval-js` and the other `foundry` tools go dead. Reopen Chrome, then `make vtt-login WORLD=<id>` |
+| **A player test writes real knowledge** | An inspect from a test login rolls on the GM client and writes `beliefs`/`granted` flags plus chat cards. Snapshot first; `unsetFlag` and delete the messages after |
 | **`~/Library/CloudStorage` reads can hang 30 s** | The OneDrive File Provider daemon, not the path. Never read assets through it at runtime |
 
 ---
