@@ -39,7 +39,8 @@ import {
   GRANTED_FLAG,
   STUDY_RUNGS,
   grantsForEntry,
-  visibleAttributesFor
+  visibleAttributesFor,
+  isBlankProse
 } from "./known-core.mjs";
 import { studyStateFor, requestStudy, kindDialog, loreStateFor, requestLore, kindActorOf, grantKind as releaseKind } from "./study.mjs";
 import { attributeIdsOf, registry as registryOf } from "./attributes.mjs";
@@ -465,19 +466,40 @@ function studyControls(entry, { canEdit, isGM, study }) {
  * `pre-line` because the GM's rungs are authored as paragraphs and a tier that arrives as
  * one run-on line reads as a different tier.
  */
-function grantedRegion(grants) {
-  if (!grants?.length) return "";
-  const rows = grants
-    .map(
-      g => `<li class="pt-grant">
+/**
+ * One granted fact, exactly as the Known tab draws it. Exported for the GM's inspect window, whose
+ * player view must be the same furniture: `textHTML` replaces the escaped text (already-safe
+ * markup, e.g. a `<details>` around a long kind payload) and `extra` is appended inside the body
+ * (the GM's who-knows strip). The Known tab itself passes neither.
+ */
+export function grantCard(g, { extra = "", textHTML = null } = {}) {
+  /*
+   * No body, no card — not even its title. A grant whose text is blank (a failed roll's empty
+   * record, an emptied tier, `<p></p>`) would otherwise draw its source line ("Starved") as a
+   * header over nothing, which tells the player a check happened and came back empty. Every
+   * caller treats "" as "nothing here" and drops the group when nothing is left.
+   */
+  if (textHTML === null && isBlankProse(String(g?.text ?? ""))) return "";
+  return `<li class="pt-grant">
         ${g.icon ? `<img class="pt-grant-icon" src="${esc(g.icon)}" alt="">` : ""}
         <div class="pt-grant-body">
           ${g.source ? `<span class="pt-grant-source">${esc(g.source)}</span>` : ""}
-          <div class="pt-grant-text">${esc(g.text)}</div>
+          ${textHTML ?? `<div class="pt-grant-text">${esc(g.text)}</div>`}
+          ${extra}
         </div>
-      </li>`
-    )
-    .join("");
+      </li>`;
+}
+
+/** The region head, shared with the inspect window's player view. */
+export const grantedHead = () => `<div class="pt-granted-head">
+      <i class="fa-solid fa-book-open-reader"></i>
+      <span>${esc(t("known.granted.label"))}</span>
+    </div>`;
+
+function grantedRegion(grants) {
+  if (!grants?.length) return "";
+  const rows = grants.map(g => grantCard(g)).join("");
+  if (!rows) return ""; // every card was blank: no region, no "What you have learned" head
   return `<section class="pt-granted" aria-label="${esc(t("known.granted.label"))}">
     <div class="pt-granted-head">
       <i class="fa-solid fa-book-open-reader"></i>

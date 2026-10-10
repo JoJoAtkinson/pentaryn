@@ -159,3 +159,30 @@
 .dnd5e2.sheet.actor .attunement.pentaryn-over-cap .value {
   text-shadow: 0 0 6px var(--dnd5e-color-maroon, #a91409);
 }
+
+/* ── Away: attuned, but not on the character ─────────────────────────────── */
+/* Still holds its slot (that is the rule), but drawn as absent: faded,
+   desaturated, a dashed outline where the item should be, and a broken link. */
+
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement .attunement-slot.away {
+  outline: 2px dashed var(--color-text-tertiary, #7a7971);
+  outline-offset: -2px;
+}
+
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement .attunement-slot.away img {
+  opacity: 0.35;
+  filter: grayscale(1);
+  cursor: help;
+}
+
+.dnd5e2.sheet.actor .sidebar .pentaryn-attunement .attunement-slot .away-badge {
+  position: absolute;
+  inset: auto 2px 2px auto;
+  font-size: var(--font-size-12);
+  color: var(--dnd5e-color-maroon, #a91409);
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff;
+  pointer-events: none;
+}
+
+.pentaryn-away-tip { max-width: 220px; }
+.pentaryn-away-tip p { margin: 0.25rem 0 0; }

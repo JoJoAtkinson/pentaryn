@@ -1,0 +1,36 @@
+{
+  "id": "pentaryn-senses",
+  "title": "Pentaryn Token Vision Sync",
+  "description": "Keeps a token's vision matched to its actor's Darkvision. dnd5e computes senses on the sheet (Goggles of Night, the Darkvision spell, species traits) but never touches token vision, so a character with 60 ft Darkvision on paper still sees nothing in an unlit scene. Whenever an actor, its items or its effects change, the prototype token and every placed token of that actor with vision enabled get visionMode darkvision and the sheet's range, or basic vision when Darkvision is gone (goggles confiscated). Writes run on the active GM's client only. Exposes game.pentaryn.senses. Also adds the \"Broken glow (wandering)\" light animation (pentaryn-brokenglow), whose size and brightness ride a wave that never repeats, and lights carried by items (flags.pentaryn-senses.light). The Light cantrip lights a token or a square instead of summoning a floor token (\"On me\" / \"Pick a target\" on cast and on the spell card), and torches, lamps, lanterns and candles get a Light/Douse button (flags.pentaryn-senses.lit).",
+  "version": "0.3.0",
+  "compatibility": {
+    "minimum": "13",
+    "verified": "14"
+  },
+  "authors": [
+    {
+      "name": "Joseph Atkinson"
+    }
+  ],
+  "esmodules": [
+    "senses.mjs"
+  ],
+  "styles": [
+    "styles/light.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "socket": false,
+  "protected": false,
+  "flags": {
+    "pentaryn": {
+      "flagScope": "senses",
+      "generation": 14
+    }
+  }
+}

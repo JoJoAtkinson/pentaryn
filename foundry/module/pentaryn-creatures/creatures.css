@@ -1,0 +1,51 @@
+/* "Your creatures" strip, docked above the hotbar in #ui-bottom. #ui-middle has pointer-events: none. */
+#pentaryn-creatures {
+  pointer-events: auto;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: max-content;
+  max-width: 100%;
+  margin: 0 0 6px;
+  padding: 4px 8px;
+  border-radius: 24px;
+  background: rgba(11, 10, 19, 0.72);
+  border: 1px solid rgba(201, 162, 92, 0.55);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+  overflow-x: auto;
+}
+#pentaryn-creatures .pcr-label {
+  font-size: var(--font-size-11, 11px);
+  color: #e8dcc0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  padding-right: 2px;
+  user-select: none;
+}
+#pentaryn-creatures .pcr-token {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(232, 220, 192, 0.45);
+  background: rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.1s ease;
+}
+#pentaryn-creatures .pcr-token.rank-0 { border-color: rgba(201, 162, 92, 0.9); }
+#pentaryn-creatures .pcr-token:hover,
+#pentaryn-creatures .pcr-token:focus-visible { transform: scale(1.1); border-color: #ffd27a; outline: none; }
+#pentaryn-creatures .pcr-token.controlled { border-color: #ff9a2e; box-shadow: 0 0 8px #ff9a2e; }
+#pentaryn-creatures .pcr-token img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: none;
+  pointer-events: none;
+}

@@ -1,8 +1,8 @@
 {
   "id": "pentaryn-dropbin",
   "title": "Pentaryn Drop Bin",
-  "description": "An append-only ledger of every item that leaves a character. Records Item Piles drops to the ground and outright deletions from a sheet, in the order they happened, with the item's complete source data — so a two-hander dropped in a corridor three sessions ago can be handed back exactly as it was. Writes to a world setting and mirrors to assets/drop-bin/drop-log.json. GM is the only writer; player clients route their entries through socketlib. Exposes game.pentaryn.dropbin.",
-  "version": "0.1.0",
+  "description": "An append-only ledger of every item that leaves a character. Records Item Piles drops to the ground and outright deletions from a sheet, in the order they happened, with the item's complete source data — so a two-hander dropped in a corridor three sessions ago can be handed back exactly as it was. Writes to a world setting and mirrors to assets/drop-bin/drop-log.json. GM is the only writer; player clients route their entries through socketlib. Exposes game.pentaryn.dropbin. Also turns dead NPCs into lootable piles (Dead as the full-body overlay, a drawn eye while there is loot) and adds a Loot all button to Item Piles loot windows.",
+  "version": "0.2.0",
   "compatibility": {
     "minimum": "13",
     "verified": "14"
@@ -14,6 +14,13 @@
   ],
   "esmodules": [
     "dropbin.mjs"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
   ],
   "socket": true,
   "protected": false,

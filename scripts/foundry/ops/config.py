@@ -162,6 +162,122 @@ MODULES = {
             "  await game.pentaryn.rules.monster('Adult Black Dragon')",
         ),
     ),
+    "transform": ModuleSpec(
+        "pentaryn-transform",
+        # node-test: transform-core.mjs decides what is stripped from a Wild Shape form, what
+        # is carried back on revert, and how the Argon Bonus/Action bars are recomposed.
+        check=(*_STATIC, "node-test"),
+        after_sync=(
+            "0.2 adds hud.mjs and styles/transform.css to module.json — restart Foundry",
+            "(make vtt-down && make vtt-up); a browser reload alone will not load them.",
+            "Then reload every client. Wild Shape lives on the Argon Bonus bar:",
+            "  game.pentaryn.transform.forms(actor)            // the picker's tiles",
+            "  await game.pentaryn.transform.shift(actor, id)  // what a tile click does",
+            "  await game.pentaryn.transform.revert(actor)",
+        ),
+    ),
+    "names": ModuleSpec(
+        "pentaryn-names",
+        check=_STATIC,
+        after_sync=(
+            "First install: restart Foundry (module.json is read at startup), then reload.",
+            "Rename an actor: token labels that were its name (or the part before the",
+            "first comma) follow; nicknames stay.",
+        ),
+    ),
+    "senses": ModuleSpec(
+        "pentaryn-senses",
+        # node-test: chain-core.mjs (the token chain's flag reading and line geometry) is pure.
+        check=(*_STATIC, "node-test"),
+        after_sync=(
+            "First install: restart Foundry (module.json is read at startup), then reload.",
+            "Already enabled? A browser RELOAD (F5) picks up new .mjs files and assets.",
+            "Token vision now follows sheet Darkvision; check with",
+            "  game.pentaryn.senses.desiredSight(actor)",
+            "Token chains: game.pentaryn.chain.links() · Token HUD → Break chain.",
+        ),
+    ),
+    "portals": ModuleSpec(
+        "pentaryn-portals",
+        # node-test: portals-core.mjs decides who a party teleport carries and who follows a PC.
+        check=(*_STATIC, "node-test"),
+        after_sync=(
+            "First install: restart Foundry (module.json is read at startup), then reload.",
+            "Teleport confirmations now show destination cards; author them in Region config → Portal card.",
+        ),
+    ),
+    "journal": ModuleSpec(
+        "pentaryn-journal",
+        # node-test: sanitize() is what keeps GM secrets out of a player-owned copy; it is proved
+        # on synthetic fixtures before anything reaches Data/.
+        check=(*_STATIC, "node-test"),
+        after_sync=(
+            "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Player Journal', then reload.",
+            "Players get an 'Add to my journal' bar on every eye readable.",
+            "GM prep (optional, also runs on GM ready): game.pentaryn.journal.ensureAll()",
+            "Test from your own client: Settings → Pentaryn Player Journal → Show the Add button to the GM",
+        ),
+    ),
+    "aoe": ModuleSpec(
+        "pentaryn-aoe",
+        # node-test: core.mjs decides who is caught in an area, what a save is worth and which
+        # waiting row a save answers — proved on fixtures before anything reaches Data/.
+        check=(*_STATIC, "node-test"),
+        after_sync=(
+            "First install: restart Foundry (module.json is read at startup), then reload.",
+            "core.moduleConfiguration['pentaryn-aoe'] can be pre-set so it loads enabled.",
+            "Spell areas get a draggable/deletable handle; save spells get a GM tray on the damage roll.",
+            "  game.pentaryn.aoe.sweep(canvas.scene)",
+        ),
+    ),
+    "dropbin": ModuleSpec(
+        "pentaryn-dropbin",
+        # node-test: loot-core.mjs decides when the Loot all button shows and greys out.
+        check=(*_STATIC, "node-test"),
+        after_sync=(
+            "Already enabled? A browser RELOAD (F5) picks up .mjs changes; module.json needs a restart.",
+            "Item Piles loot windows get a 'Loot all' button; corpses show Dead as the overlay plus a drawn eye.",
+            "  game.pentaryn.dropbin.corpses.migrateLegacyEyes()",
+        ),
+    ),
+    "cursors": ModuleSpec(
+        "pentaryn-cursors",
+        # node-test: cursors-core.mjs picks the cursor for the active control/tool.
+        check=(*_STATIC, "node-test"),
+        after_sync=(
+            "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Tool Cursors', then reload.",
+            "Each canvas tool gets its own cursor; check with  game.pentaryn.cursors.current()",
+        ),
+    ),
+    "movement": ModuleSpec(
+        "pentaryn-movement",
+        # node-test: movement-core.mjs (owned-on-top sort, ghost policy) is pure.
+        check=(*_STATIC, "node-test"),
+        after_sync=(
+            "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Movement', then reload.",
+            "Players get a Ghost toggle in the token tools; the GM sets the policy in settings.",
+            "  game.pentaryn.movement.status()",
+        ),
+    ),
+    "creatures": ModuleSpec(
+        "pentaryn-creatures",
+        # node-test: creatures-core.mjs (who gets light, strip order) is pure.
+        check=(*_STATIC, "node-test"),
+        after_sync=(
+            "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Creatures', then reload.",
+            "Player-owned NPC tokens get a small light; players with 2+ tokens get a 'Your creatures' strip.",
+            "  game.pentaryn.creatures.syncAll()",
+        ),
+    ),
+    "riders": ModuleSpec(
+        "pentaryn-riders",
+        # node-test: riders-core.mjs (the RULES table and roll-term edits) is pure.
+        check=(*_STATIC, "node-test"),
+        after_sync=(
+            "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Feature Riders', then reload.",
+            "Audit feat riders per actor:  game.pentaryn.riders.report()",
+        ),
+    ),
     # The actor pipeline stages this one, not module-sync, so it is not in the CLI's
     # module list — but the static gates are free and it is real code, so it gets them.
     "importer": ModuleSpec("pentaryn-importer", check=_STATIC),

@@ -1,0 +1,36 @@
+/* pentaryn-senses — Light cantrip and lit items (light.mjs). */
+
+/* Inventory row: a flame between the name and the columns. Grey = unlit, orange = lit. */
+.dnd5e2 .items-section .item .item-row > .ps-light-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 6px;
+  flex: 0 0 auto;
+}
+.dnd5e2 .items-section .item .item-row > .ps-light-controls .item-control {
+  display: flex;
+  align-items: center;
+  font-size: var(--font-size-13, 13px);
+  color: var(--item-control-color, #7a7971);
+}
+.dnd5e2 .items-section .item .item-row > .ps-light-controls .item-control:hover {
+  color: var(--item-control-active-color, #c9593f);
+}
+.dnd5e2 .items-section .item .item-row > .ps-light-controls .ps-light-toggle.lit {
+  color: #ff8a1f;
+  text-shadow: 0 0 6px rgba(255, 150, 40, 0.75);
+}
+.dnd5e2 .items-section .item .item-row > .ps-light-controls .ps-light-hood.hooded {
+  color: #b46a1c;
+}
+.dnd5e2 .items-section .item .item-row > .ps-light-controls [aria-disabled="true"] {
+  cursor: default;
+}
+
+/* Picking a target for Light: crosshair over the canvas (PIXI sets an inline cursor, hence !important). */
+body.ps-picking #board,
+#board.ps-picking {
+  cursor: crosshair !important;
+}

@@ -1,0 +1,20 @@
+{
+  "PENTARYN_CREATURES": {
+    "label": "Your creatures",
+    "hint": "Click: select and show · Double-click: open sheet",
+    "settings": {
+      "lightRadius": {
+        "name": "Creature light (ft)",
+        "hint": "Bright light on every creature a player controls (summons, familiars, Arcane Eye), so it never disappears in the dark. Foundry measures token light from the token's edge: 5 also lights the squares around it, 0.5 lights little more than its own square. 0 turns the light off and removes it from every token it was added to. Never applied to player characters, and never replaces a light a token already has. To keep one creature dark, set its light to 0 in Token Config: it stays off."
+      },
+      "ownerSees": {
+        "name": "Players always see their own tokens",
+        "hint": "A token a player owns stays visible to that player even when nothing they control can see it, e.g. an Invisible Arcane Eye in the dark. Tokens the GM has hidden stay hidden."
+      },
+      "showStrip": {
+        "name": "Show the \"Your creatures\" strip",
+        "hint": "Portraits of the tokens you control on this scene, above the hotbar, once you have more than one. Click to select and pan to one, double-click to open its sheet."
+      }
+    }
+  }
+}

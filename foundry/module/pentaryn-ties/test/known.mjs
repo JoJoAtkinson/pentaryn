@@ -18,6 +18,7 @@
  */
 
 import {
+  touchesFlagScope,
   KNOWN_NOTES_MAX,
   KNOWN_NAME_MAX,
   SEEDED_CATEGORIES,
@@ -36,6 +37,7 @@ import {
   resolveKindId,
   readStudyTiers,
   authoredTier,
+  studyDescription,
   kindHasContent,
   readStudied,
   readBeliefs,
@@ -43,6 +45,7 @@ import {
   holdResolved,
   hasUnresolvedEnricher,
   flattenHTML,
+  isBlankProse,
   safeFlatten,
   capProse,
   DERIVED_PROSE_MAX,
@@ -59,14 +62,31 @@ import {
   makeLoreRow,
   rollableLore,
   loreRollable,
+  loreOfferable,
   LORE_DC_MIN,
   LORE_DC_MAX,
   LORE_TEXT_MAX,
   attrIdOf,
+  attrNameKey,
+  nameCollision,
+  renameCollision,
+  resolveAttrRef,
+  planEnsure,
   derivedNamespace,
   clampAttribute,
   clampSource,
   readRegistry,
+  ATTR_CONTENT_FIELDS,
+  clampTouched,
+  clampSnapshot,
+  snapshotOf,
+  SNAPSHOT_MAX,
+  ATTR_REVIEW_FIELDS,
+  changedFields,
+  reviewState,
+  needsReview,
+  sortForReview,
+  readSelection,
   deriveAttributes,
   attributeIdsFor,
   combineAdvantage,
@@ -81,16 +101,22 @@ import {
   failedAttribute,
   settledAttribute,
   identifiedKey,
+  identMissKey,
   identifiedState,
   visibleAttributesFor,
   planStep,
+  shareStatus,
+  SHARE_STATUSES,
+  priorOf,
   forestOf,
   subtreeOf,
   contractForest,
   TREE_DEPTH_MAX,
   childrenOf,
   helpFor,
-  clampSources
+  clampSources,
+  factOrder,
+  factKeyOf
 } from "../known-core.mjs";
 
 /* ── the world, as a plain object ─────────────────────────────────────────── */
@@ -104,6 +130,23 @@ const WORLD = {
 const resolve = id => WORLD[id] ?? null;
 
 export function register({ t, eq, ok }) {
+  /* ── hook keys: which flattened update keys wake the live windows ─────────── */
+
+  t("touchesFlagScope: a write under the scope, a legacy wipe, and the 14.369 operator wipe", () => {
+    eq(touchesFlagScope("flags.pentaryn-ties.granted.x", "pentaryn-ties"), true);
+    eq(touchesFlagScope("flags.pentaryn-ties.granted.-=x", "pentaryn-ties"), true);
+    eq(touchesFlagScope("flags.-=pentaryn-ties", "pentaryn-ties"), true);    // pre-14.369 diff
+    eq(touchesFlagScope("flags.pentaryn-ties", "pentaryn-ties"), true);      // ForcedDeletion, flattened
+  });
+
+  t("touchesFlagScope: never a sibling scope, another field, or junk", () => {
+    eq(touchesFlagScope("flags.pentaryn-ties-extra.x", "pentaryn-ties"), false);
+    eq(touchesFlagScope("flags.-=pentaryn-tiesx", "pentaryn-ties"), false);
+    eq(touchesFlagScope("flags.dnd5e.x", "pentaryn-ties"), false);
+    eq(touchesFlagScope("name", "pentaryn-ties"), false);
+    eq(touchesFlagScope(undefined, "pentaryn-ties"), false);
+  });
+
   /* ── defaulting: the two buckets, and the one that has no answer ───────── */
 
   t("category: a character-type actor is sentient whatever its creature type says", () => {
@@ -673,7 +716,8 @@ export function register({ t, eq, ok }) {
   });
 
   t("reveal: missing pieces collapse rather than leaving blank lines", () => {
-    eq(composeReveal({ tier: 25, header: "— Studied (Nature) —", description: "", traits: "", attacks: [] }), "— Studied (Nature) —");
+    // a header over nothing is no reveal at all — empty means no trace, not a hollow card
+    eq(composeReveal({ tier: 25, header: "— Studied (Nature) —", description: "", traits: "", attacks: [] }), "");
     eq(composeReveal({ tier: 25, description: "d", attacks: [null, "  "] }), "d");
     eq(composeReveal(), "");
   });
@@ -842,6 +886,7 @@ export function register({ t, eq, ok }) {
     const row = { id: "x", label: "L", dc: 15, text: "the truth", miss: "a rumour" };
     eq(loreOutcome(row, 15), { pass: true, text: "the truth", silent: false });
     eq(loreOutcome(row, 40), { pass: true, text: "the truth", silent: false });
+    // a failure hands over the WRITTEN failure line (Joe, 2026-10-08) — never the pass text
     eq(loreOutcome(row, 14), { pass: false, text: "a rumour", silent: false });
     // null total = no roll evaluated. Grading this as a failure would spend the one attempt
     // on a mis-click — the same trap `tierOf` refuses.
@@ -852,14 +897,15 @@ export function register({ t, eq, ok }) {
   });
 
   t("lore: an unauthored side is SILENT, and silence is flagged rather than hidden", () => {
-    // decision 8's amendment: under blind rolls a row with no miss text leaks failure by
-    // silence. The conduit still writes the lock and posts the stub; `silent` tells it to
-    // skip only the grant, so the observable difference is prose, never a missing card.
+    // a failure with no miss written is silent, and so is a pass with nothing authored. The
+    // conduit still writes the lock and posts the stub; `silent` tells it to skip only the grant,
+    // so there is no card and no retry. A WRITTEN miss is delivered on a failure (2026-10-08).
     const noMiss = { id: "x", label: "L", dc: 15, text: "the truth" };
     eq(loreOutcome(noMiss, 10), { pass: false, text: "", silent: true });
     eq(loreOutcome(noMiss, 20).silent, false);
     const noText = { id: "x", label: "L", dc: 15, miss: "a rumour" };
     eq(loreOutcome(noText, 20), { pass: true, text: "", silent: true });
+    eq(loreOutcome(noText, 10), { pass: false, text: "a rumour", silent: false }, "its failure side is written: ");
     eq(loreOutcome({ id: "x", label: "L", dc: 15, text: "   " }, 20).silent, true);
   });
 
@@ -872,6 +918,28 @@ export function register({ t, eq, ok }) {
     eq(readLore([row]).length, 1);
     // ...but it is never put in front of a player
     eq(rollableLore([row]), []);
+  });
+
+  t("lore: loreOfferable — only a row whose PASS says something is put in front of a player", () => {
+    const base = { id: "x", dc: 15 };
+    eq(loreOfferable({ ...base, label: "L", text: "the truth" }), true, "text only: ");
+    eq(loreOfferable({ ...base, label: "L", text: "t", miss: "m" }), true);
+    // a failure hands over nothing, so a miss-only row buys nothing whatever the dice do
+    eq(loreOfferable({ ...base, label: "L", miss: "a rumour" }), false, "miss only: ");
+    eq(loreOfferable({ ...base, label: "L" }), false, "neither: ");
+    eq(loreOfferable({ ...base, label: "L", text: "   " }), false);
+    eq(loreOfferable({ ...base, text: "the truth" }), false, "no label: ");
+    eq(loreOfferable(null), false);
+    // ...and it stays ROLLABLE (resolvable), so Share/Forget and the Look window still find it
+    eq(loreRollable({ ...base, label: "L", miss: "a rumour" }), true);
+  });
+
+  t("lore: the outcome boundary — dc-1 hands over the failure line, dc passes", () => {
+    const row = { id: "x", label: "L", dc: 12, text: "the truth", miss: "a fair guess" };
+    eq(loreOutcome(row, 11), { pass: false, text: "a fair guess", silent: false });
+    eq(loreOutcome({ ...row, miss: "" }, 11), { pass: false, text: "", silent: true }, "empty miss → nothing: ");
+    eq(loreOutcome(row, 12), { pass: true, text: "the truth", silent: false });
+    eq(loreOutcome(row, 11.6), { pass: true, text: "the truth", silent: false }, "rounded like the DC test: ");
   });
 
   t("lore: rollable needs a label AND something to say on at least one side", () => {
@@ -906,6 +974,138 @@ export function register({ t, eq, ok }) {
     eq(attrIdOf("x".repeat(200)).length, 64);
   });
 
+  t("names are unique: case-only and accent/whitespace differences collide", () => {
+    // Joe's rule — an attribute is one truth shared by every carrier, so one name, one entry
+    const reg = [{ id: "goblinguild", title: "Goblin Guild" }];
+    eq(nameCollision("goblin guild", reg)?.id, "goblinguild", "case only: ");
+    eq(nameCollision("GOBLIN GUILD", reg)?.id, "goblinguild", "case only: ");
+    eq(nameCollision("  Göblin   Guild ", reg)?.id, "goblinguild", "accent + whitespace: ");
+    eq(nameCollision("Goblin-Guild", reg)?.id, "goblinguild", "punctuation: ");
+    eq(nameCollision("Goblin Guild 2", reg), null, "a digit is how you mean a different one: ");
+    eq(nameCollision("!!!", reg), null, "a name that folds to nothing never collides: ");
+    eq(attrNameKey("Göblin Guild"), "goblinguild");
+    // no 64-character cut: two long names differing past it are different names
+    eq(attrNameKey("x".repeat(70) + "a") === attrNameKey("x".repeat(70) + "b"), false);
+  });
+
+  t("resolveAttrRef: an id, a name, or an entry — one rule everywhere", () => {
+    const reg = [
+      { id: "ashfallcompany", title: "Ashfall Company" },
+      { id: "greyharbour", title: "Greyharbour" }
+    ];
+    eq(resolveAttrRef("ashfallcompany", reg), { id: "ashfallcompany" }, "exact id: ");
+    eq(resolveAttrRef("Ashfall Company", reg), { id: "ashfallcompany" }, "the name the table sees: ");
+    eq(resolveAttrRef("  áshfall-COMPANY! ", reg), { id: "ashfallcompany" }, "accent/case/punctuation: ");
+    eq(resolveAttrRef({ id: "greyharbour", title: "whatever" }, reg), { id: "greyharbour" }, "an entry object: ");
+  });
+
+  t("resolveAttrRef: a miss is refused, never invented", () => {
+    const reg = [{ id: "ashfallcompany", title: "Ashfall Company" }];
+    // the old bug: link(actor, "Ashfal Company") wrote the literal string as a link
+    eq(resolveAttrRef("Ashfal Company", reg), { id: null, reason: "notFound" }, "typo: ");
+    eq(resolveAttrRef("", reg), { id: null, reason: "empty" });
+    eq(resolveAttrRef("   ", reg), { id: null, reason: "empty" });
+    eq(resolveAttrRef(null, reg), { id: null, reason: "empty" });
+    eq(resolveAttrRef("!!!", reg), { id: null, reason: "notFound" }, "folds to nothing: ");
+    eq(resolveAttrRef("ashfallcompany", []), { id: null, reason: "notFound" }, "empty registry: ");
+  });
+
+  t("resolveAttrRef: id beats name after crossed renames", () => {
+    // x renamed "Y", y renamed "X" — the id is the deterministic answer
+    const reg = [
+      { id: "x", title: "Y" },
+      { id: "y", title: "X" }
+    ];
+    eq(resolveAttrRef("x", reg).id, "x");
+    eq(resolveAttrRef("y", reg).id, "y");
+    // a renamed entry is still reachable by its new title when that is not someone's id
+    eq(resolveAttrRef("Redrock", [{ id: "yellowstone", title: "Redrock" }]).id, "yellowstone");
+  });
+
+  t("resolveAttrRef: legacy duplicate names are ambiguous, not first-match", () => {
+    const reg = [
+      { id: "goblinguild", title: "Goblin Guild" },
+      { id: "goblinguild2", title: "goblin guild" }
+    ];
+    eq(resolveAttrRef("Goblin Guild", reg), { id: null, reason: "ambiguous", candidates: ["goblinguild", "goblinguild2"] });
+    // the id still picks one exactly
+    eq(resolveAttrRef("goblinguild2", reg).id, "goblinguild2");
+  });
+
+  t("resolveAttrRef: derived ids resolve without an entry, normalised", () => {
+    eq(resolveAttrRef("species:High Elf", []).id, "species:highelf");
+    eq(resolveAttrRef("type:humanoid", []).id, "type:humanoid");
+    // kind: is an actor id — never lowercased, or it stops naming the document
+    eq(resolveAttrRef("kind:AbC123xyz", []).id, "kind:AbC123xyz");
+    eq(resolveAttrRef("species:", []), { id: null, reason: "notFound" });
+    // an unknown namespace is just a name, and a name that matches nothing
+    eq(resolveAttrRef("guild:thieves", []), { id: null, reason: "notFound" });
+  });
+
+  t("resolveAttrRef: a dangling id the actor carries can still be named (to unlink it)", () => {
+    const reg = [{ id: "ashfallcompany", title: "Ashfall Company" }];
+    eq(resolveAttrRef("deletedguild", reg), { id: null, reason: "notFound" }, "without carried: ");
+    eq(resolveAttrRef("deletedguild", reg, { carried: ["deletedguild"] }).id, "deletedguild", "with carried: ");
+    // a registry id still wins over a carried literal
+    eq(resolveAttrRef("ashfallcompany", reg, { carried: ["ashfallcompany"] }).id, "ashfallcompany");
+  });
+
+  t("planEnsure: returns the existing entry untouched, or plans a create", () => {
+    const reg = [
+      { id: "ashfallcompany", title: "Ashfall Company", dc: 14 },
+      { id: "yellowstone", title: "Redrock" }
+    ];
+    const hit = planEnsure("ashfall company", reg);
+    eq(hit.action, "existing");
+    eq(hit.entry.id, "ashfallcompany");
+    eq(hit.entry.dc, 14, "untouched: ");
+    eq(planEnsure("Redrock", reg).entry.id, "yellowstone", "found by its new title: ");
+    eq(planEnsure("Forge Lung", reg), { action: "create", id: "forgelung" });
+    eq(planEnsure("", reg), { action: "refuse", reason: "empty" });
+    eq(planEnsure("!!!", reg), { action: "refuse", reason: "empty" });
+    // renamed away from "Yellow Stone": the id is taken, the name is not — neither return nor create
+    const away = planEnsure("Yellow Stone", reg);
+    eq([away.action, away.reason, away.existing?.id], ["refuse", "collision", "yellowstone"]);
+    // a derived id has no entry to ensure
+    eq(planEnsure("species:elf", reg), { action: "refuse", reason: "invalid" });
+    eq(planEnsure("Dup", [{ id: "dup", title: "Dup" }, { id: "dup2", title: "dup" }]).reason, "ambiguous");
+  });
+
+  t("names are unique: a renamed entry is found by its title, not its stale id", () => {
+    // the gap this closes — id `yellowstone`, renamed Redrock; creating "Redrock" derives
+    // `redrock`, which the id check alone would let through
+    const reg = [{ id: "yellowstone", title: "Redrock" }];
+    eq(nameCollision("redrock", reg)?.id, "yellowstone");
+    eq(nameCollision("Yellowstone", reg), null, "the old name is free once renamed away: ");
+  });
+
+  t("names are unique: a rename into another entry's name is refused", () => {
+    const reg = [
+      { id: "goblinguild", title: "Goblin Guild" },
+      { id: "thievesguild", title: "Thieves' Guild" }
+    ];
+    eq(renameCollision("thievesguild", "goblin guild", reg)?.id, "goblinguild");
+    eq(renameCollision("thievesguild", "GÖBLIN  GUILD", reg)?.id, "goblinguild");
+    eq(renameCollision("thievesguild", "Night Market", reg), null, "a fresh name is fine: ");
+  });
+
+  t("names are unique: renaming to your own name in a different case is allowed", () => {
+    const reg = [
+      { id: "goblinguild", title: "Goblin Guild" },
+      { id: "thievesguild", title: "Thieves' Guild" }
+    ];
+    eq(renameCollision("goblinguild", "GOBLIN GUILD", reg), null);
+    eq(renameCollision("goblinguild", "goblin  guild", reg), null);
+    eq(renameCollision("thievesguild", "thieves guild", reg), null, "punctuation-only change: ");
+    // a legacy duplicate from before the rule: recasing your own name makes nothing worse
+    const legacy = [
+      { id: "goblin", title: "Goblin" },
+      { id: "goblin2", title: "goblin" }
+    ];
+    eq(renameCollision("goblin2", "GOBLIN", legacy), null);
+    eq(renameCollision("goblin2", "Hobgoblin", legacy), null);
+  });
+
   t("attrIdOf: an authored id can never collide with a derived one", () => {
     // the whole reason uniqueness is free: `:` is stripped, so no typed title can produce a
     // namespaced id, whatever a GM enters
@@ -933,6 +1133,106 @@ export function register({ t, eq, ok }) {
     eq(readRegistry([{ id: "guild" }])[0].title, "guild");
     // decision 20: bonuses are reserved and emptied on read, so v1 cannot grow one by accident
     eq(readRegistry([{ id: "guild", bonuses: [{ skill: "his", value: 5 }] }])[0].bonuses, []);
+  });
+
+  /* ── review bookkeeping (the Attribute Review panel) ────────────────────── */
+
+  t("review: timestamps and touched survive clampAttribute and a readRegistry round-trip", () => {
+    const e = clampAttribute({ id: "guild", createdAt: 1000, modifiedAt: 2000, reviewedAt: 1500, touched: ["reveal", "lore"] });
+    eq([e.createdAt, e.modifiedAt, e.reviewedAt, e.touched], [1000, 2000, 1500, ["reveal", "lore"]]);
+    const again = readRegistry(readRegistry([e]))[0];
+    eq([again.createdAt, again.modifiedAt, again.reviewedAt, again.touched], [1000, 2000, 1500, ["reveal", "lore"]]);
+  });
+
+  t("review: entries from before timestamps backfill to null/[] at read, never throw", () => {
+    const old = readRegistry([{ id: "merrowgate", title: "Merrowgate", reveal: "x" }])[0];
+    eq([old.createdAt, old.modifiedAt, old.reviewedAt, old.touched], [null, null, null, []]);
+    eq(reviewState(old), "unreviewed");
+  });
+
+  t("review: garbage timestamps become null — 0, strings, NaN and null are not times", () => {
+    const e = clampAttribute({ id: "g", createdAt: 0, modifiedAt: "2026-10-06", reviewedAt: NaN, touched: "reveal" });
+    eq([e.createdAt, e.modifiedAt, e.reviewedAt, e.touched], [null, null, null, []]);
+    eq(clampAttribute({ id: "g", createdAt: null }).createdAt, null);
+    eq(clampAttribute({ id: "g", createdAt: 12.7 }).createdAt, 13);
+  });
+
+  t("review: reviewedSnapshot — taken from content, survives the clamp, stripped of junk", () => {
+    const e = clampAttribute({ id: "guild", title: "Guild", reveal: "old", dc: 14, lore: [{ id: "r1", label: "x", text: "t" }], source: { path: "world/a.md" } });
+    const snap = snapshotOf(e);
+    eq([snap.title, snap.reveal, snap.dc, snap.lore[0].id, snap.lore[0].text], ["Guild", "old", 14, "r1", "t"]);
+    ok(!("source" in snap) && !("icon" in snap) && !("reviewedAt" in snap), "content only, no source/icon/bookkeeping");
+    const stored = clampAttribute({ ...e, reviewedAt: 5, reviewedSnapshot: snap, dc: 18 });
+    eq(stored.reviewedSnapshot, snap, "survives an unrelated edit");
+    eq(readRegistry([stored])[0].reviewedSnapshot, snap, "and a registry round trip");
+    eq(clampAttribute({ id: "old" }).reviewedSnapshot, null, "entries before snapshots read null");
+    eq(clampSnapshot({ title: 3, bogus: "x", secret: "yes", hold: "no", dc: "12", parent: " p " }), { title: "", secret: false, parent: "p", dc: null, hold: null });
+    eq([clampSnapshot("x"), clampSnapshot([]), clampSnapshot({ bogus: 1 })], [null, null, null]);
+    const big = clampSnapshot({ reveal: "a".repeat(SNAPSHOT_MAX + 10), miss: "b".repeat(SNAPSHOT_MAX + 10), lore: Array.from({ length: 200 }, (_, n) => ({ id: `r${n}`, text: "c".repeat(5000) })) });
+    ok(big === null || JSON.stringify(big).length <= SNAPSHOT_MAX, "size capped");
+    eq(changedFields(e, { ...e, reviewedSnapshot: snap }), [], "a snapshot is bookkeeping, not content");
+    ok(ATTR_REVIEW_FIELDS.includes("reviewedSnapshot"), "a patch cannot forge a snapshot");
+  });
+
+  t("review: touched keeps content field names only, deduped, in order", () => {
+    eq(clampTouched(["reveal", "bogus", "reveal", 3, "lore", "reviewedAt", "bonuses"]), ["reveal", "lore"]);
+    eq(clampTouched(null), []);
+    ok(ATTR_CONTENT_FIELDS.includes("lore") && !ATTR_CONTENT_FIELDS.includes("modifiedAt"), "bookkeeping is not content");
+  });
+
+  t("review: changedFields names content changes and ignores bookkeeping", () => {
+    const a = { id: "g", title: "Guild", reveal: "a", lore: [{ id: "r1", label: "x" }] };
+    eq(changedFields(a, { ...a }), []);
+    eq(changedFields(a, { ...a, reveal: "b" }), ["reveal"]);
+    eq(changedFields(a, { ...a, lore: [{ id: "r1", label: "y" }] }), ["lore"]);
+    eq(changedFields(a, { ...a, modifiedAt: 5, reviewedAt: 9, touched: ["reveal"], createdAt: 1, bonuses: [1] }), []);
+    eq(changedFields(a, { ...a, title: "Guild2", dc: 22 }), ["title", "dc"]);
+    // clamped on both sides: a no-op that only differs by sanitising is not a change
+    eq(changedFields(a, { ...a, dc: "15" }), []);
+  });
+
+  t("review: reviewState — unreviewed, changed after sign-off, reviewed", () => {
+    eq(reviewState({ id: "g" }), "unreviewed");
+    eq(reviewState({ id: "g", modifiedAt: 100, reviewedAt: null }), "unreviewed");
+    eq(reviewState({ id: "g", modifiedAt: 100, reviewedAt: 200 }), "reviewed");
+    eq(reviewState({ id: "g", modifiedAt: 300, reviewedAt: 200 }), "changed");
+    eq(reviewState({ id: "g", modifiedAt: 200, reviewedAt: 200, touched: ["reveal"] }), "changed", "same-ms edit still shows: ");
+    eq(reviewState({ id: "g", modifiedAt: null, reviewedAt: 200 }), "reviewed", "a pre-timestamp entry signed off is reviewed: ");
+    eq([needsReview({ id: "g" }), needsReview({ id: "g", reviewedAt: 5 })], [true, false]);
+  });
+
+  t("review: sortForReview — needs-review first (unreviewed, changed; newest first, nulls last), then reviewed by title", () => {
+    const list = [
+      { id: "b", title: "Bravo", reviewedAt: 10, modifiedAt: 5 },
+      { id: "a", title: "Alpha", reviewedAt: 10, modifiedAt: 5 },
+      { id: "c", title: "Charlie", reviewedAt: 10, modifiedAt: 50 },
+      { id: "u1", title: "Untimed" },
+      { id: "u2", title: "Newer", modifiedAt: 900 },
+      { id: "u3", title: "Older", modifiedAt: 100 }
+    ];
+    eq(sortForReview(list).map(e => e.id), ["u2", "u3", "u1", "c", "a", "b"]);
+    eq(sortForReview(list, "title").map(e => e.id), ["a", "b", "c", "u2", "u3", "u1"]);
+    eq(sortForReview(list, "modified").map(e => e.id), ["u2", "u3", "c", "a", "b", "u1"]);
+    eq(sortForReview(list, "nonsense").map(e => e.id), sortForReview(list).map(e => e.id), "unknown mode → review: ");
+    eq(list[0].id, "b", "input not mutated");
+    eq(sortForReview(null), []);
+  });
+
+  t("review: sortForReview by category groups, then title", () => {
+    const list = [
+      { id: "x", title: "Zed", category: "house" },
+      { id: "y", title: "Amber", category: "city" },
+      { id: "z", title: "Able", category: "house" }
+    ];
+    eq(sortForReview(list, "category").map(e => e.id), ["y", "z", "x"]);
+  });
+
+  t("review: readSelection prunes to live ids, dedupes, keeps order", () => {
+    const reg = [{ id: "merrowgate" }, { id: "houseilphrin" }];
+    eq(readSelection(["houseilphrin", "gone", "merrowgate", "houseilphrin", 7, null], reg), ["houseilphrin", "merrowgate"]);
+    eq(readSelection("merrowgate", reg), []);
+    eq(readSelection(undefined, reg), []);
+    eq(readSelection([" merrowgate "], reg), ["merrowgate"]);
   });
 
   t("registry: the help scale is clamped on read — type/size can never grant or hide", () => {
@@ -1211,6 +1511,178 @@ export function register({ t, eq, ok }) {
     eq(planStep({ registry: TREE, carried: broken, characterId: "char1" }), { done: true });
   });
 
+  /* ── the GM's Share: chain unlock and the who-knows tags ──────────── */
+
+  t("share: a shared identification reopens a FAILED parent and the child rolls next", () => {
+    const know = { char1: { ardenhaven: { when: 1, failed: true, via: "roll" } } };
+    const bel = { char1: { [identifiedKey("ardenhaven")]: { text: "", total: 7, when: 1 } } };
+    eq(plan({ knowledge: know, beliefs: bel }), { done: true }, "blocked twice over");
+    // exactly the two rows shareFact writes — nothing for the child
+    know.char1.ardenhaven = { when: 2, failed: false, via: "shared", pending: false };
+    bel.char1[identifiedKey("ardenhaven")] = { text: "Ardenhaven-born", total: null, when: 2, delivered: 2, from: "char2" };
+    const step = plan({ knowledge: know, beliefs: bel });
+    eq(step.roll, "undercity");
+    eq(step.backfill, true);
+    ok(!bel.char1[identifiedKey("undercity")], "children are not granted");
+    eq(visibleAttributesFor({ carried: CARRIER, registry: TREE, beliefs: bel, characterId: "char1" }).includes("ardenhaven"), true);
+    eq(readKnowledge(know).char1.ardenhaven.via, "shared");
+    eq(readBeliefs(bel).char1[identifiedKey("ardenhaven")].from, "char2");
+  });
+
+  t("share: only ONE of the two rows is not enough — both locks must be lifted", () => {
+    // the knowledge row alone: the failed identification row on this creature still blocks
+    const know = { char1: { ardenhaven: { when: 2, failed: false, via: "shared" } } };
+    const bel = { char1: { [identifiedKey("ardenhaven")]: { text: "", total: 7, when: 1, delivered: 1 } } };
+    eq(plan({ knowledge: know, beliefs: bel }), { done: true });
+    // the identification row alone over a stage-1 failure: the planner skips the settled rung and
+    // climbs — the per-creature answer is what gates the child, stage 1 only gates unsettled rungs
+    const know2 = { char1: { ardenhaven: { when: 1, failed: true } } };
+    const bel2 = { char1: { [identifiedKey("ardenhaven")]: { text: "told", total: null, when: 2, delivered: 2, from: "gm" } } };
+    eq(plan({ knowledge: know2, beliefs: bel2 }).roll, "undercity");
+  });
+
+  t("share: sharing a CHILD identification writes no parent and does not skip the climb", () => {
+    // the child's row on this creature, with the root untouched: the planner still asks the root
+    // first (it is unsettled), and the child is skipped once the climb reaches it
+    const bel = { char1: { [identifiedKey("undercity")]: { text: "undercity", total: null, when: 2, delivered: 2, from: "gm" } } };
+    eq(plan({ beliefs: bel }).roll, "ardenhaven");
+    eq(visibleAttributesFor({ carried: CARRIER, registry: TREE, beliefs: bel, characterId: "char1" }).includes("undercity"), true,
+      "the shared child's own grant still renders under this creature");
+  });
+
+  t("share: provenance round-trips, junk is dropped, rolled rows keep their old shape", () => {
+    eq(readKnowledge({ c: { a: { via: "shared" } } }).c.a.via, "shared");
+    eq(readKnowledge({ c: { a: { via: "nonsense" } } }).c.a.via, "roll");
+    // a share over a failure remembers it (so forgetting restores the failure); nothing else does
+    eq(readKnowledge({ c: { a: { via: "shared", overFailed: true } } }).c.a.overFailed, true);
+    eq("overFailed" in readKnowledge({ c: { a: { via: "roll", overFailed: true } } }).c.a, false);
+    eq("overFailed" in readKnowledge({ c: { a: { via: "shared" } } }).c.a, false);
+    eq(readBeliefs({ c: { k: { text: "x", from: "gm" } } }).c.k.from, "gm");
+    eq("from" in readBeliefs({ c: { k: { text: "x", from: 7 } } }).c.k, false, "a non-string from is dropped");
+    eq("from" in readBeliefs({ c: { k: { text: "x", from: "  " } } }).c.k, false);
+    eq(readBeliefs({ c: { k: { text: "x", from: "y".repeat(99) } } }).c.k.from.length, 40);
+    eq(readAttrBeliefs({ "a:b:c": { text: "x", from: "char2" } })["a:b:c"].from, "char2");
+    eq("from" in readAttrBeliefs({ "a:b:c": { text: "x", from: { id: 1 } } })["a:b:c"], false);
+  });
+
+  t("share: a failure that handed over nothing reads failed, and survives as a share's prior", () => {
+    // what a failed lore roll writes since 2026-10: no text, a real total, the verdict
+    const miss = { text: "", tier: null, total: 7, when: 5, delivered: 5, pass: false };
+    eq(shareStatus({ belief: miss }), "failed");
+    eq(shareStatus({ belief: miss, dc: 12 }), "failed");
+    eq(shareStatus({ belief: readBeliefs({ c: { k: miss } }).c.k }), "failed", "after the reader: ");
+    // a share over it keeps it — no text, but a total is an answer, so Forget gives the lock back
+    const kept = priorOf({ from: "gm", prior: miss });
+    eq(kept.prior.total, 7);
+    eq(kept.prior.pass, false);
+    eq(kept.prior.text, "");
+  });
+
+  t("share: the row a share replaced (prior) round-trips — only on a share, one level deep", () => {
+    const failed = { text: "", tier: null, total: 6, when: 3, delivered: 3 };
+    const shared = { text: "told", total: null, when: 9, delivered: 9, from: "gm", prior: failed };
+    eq(readBeliefs({ c: { k: shared } }).c.k.prior, { text: "", tier: null, total: 6, when: 3, delivered: 3 });
+    eq(readAttrBeliefs({ "a:b:c": shared })["a:b:c"].prior.total, 6);
+    // a rolled row never carries one — a re-roll must not inherit what a share kept
+    eq("prior" in readBeliefs({ c: { k: { text: "x", total: 12, prior: failed } } }).c.k, false);
+    // kind: a rolled tier survives, and its prose
+    const tier20 = { text: "a goblin, wary", tier: 20, total: 21, when: 4, delivered: 4 };
+    eq(readBeliefs({ c: { k: { text: "all of it", tier: 25, total: null, delivered: 9, from: "x", prior: tier20 } } }).c.k.prior.tier, 20);
+    // a prior is an ANSWER: a bare claim or junk is no prior at all
+    eq(priorOf({ from: "gm", prior: { text: "", total: null, delivered: null } }), {});
+    eq(priorOf({ from: "gm", prior: "nope" }), {});
+    // one level: a prior's own prior is not kept, its provenance is
+    const deep = priorOf({ from: "gm", prior: { text: "t", total: null, delivered: 2, from: "char2", prior: failed } });
+    eq(deep.prior.from, "char2");
+    eq("prior" in deep.prior, false);
+  });
+
+  t("share: forgetting a share over a failure gives the failure back — no free re-roll", () => {
+    // identification: the restored rolled failure blocks this creature's ladder again
+    const know = { char1: { ardenhaven: { when: 1, failed: true, via: "roll" } } };
+    const restored = { char1: { [identifiedKey("ardenhaven")]: { text: "", total: 7, when: 1, delivered: 1 } } };
+    eq(plan({ knowledge: know, beliefs: restored }), { done: true });
+    eq(shareStatus({ ident: true, belief: restored.char1[identifiedKey("ardenhaven")], failedKnowledge: true }), "failed");
+    // lore / kind: the restored row is the lock of record, so the study stays spent
+    eq(mayStudy({ beliefs: { char1: { [KIND_KEY]: { text: "", tier: 0, total: 4 } } }, characterId: "char1" }), false);
+    eq(shareStatus({ kind: true, belief: { text: "a goblin", tier: 20, total: 21, delivered: 4 } }), "passed",
+      "a forgotten raise leaves the rolled tier 20, not nothing");
+  });
+
+  t("share: an identification is 'told' by THIS creature's row, never the attribute-wide grant", () => {
+    // factStatus passes granted:false for ident — the grant key is per attribute and written by a
+    // pass on ANY carrier, so it must not read as knowing this one
+    eq(shareStatus({ ident: true, granted: false }), "none");
+    eq(shareStatus({ ident: true, granted: false, failedKnowledge: true }), "locked");
+  });
+
+  t("share: shareStatus — every tag, and the edges between them", () => {
+    eq(shareStatus(), "none");
+    eq(shareStatus({ belief: { text: "yes", total: 17, delivered: 5 } }), "passed");
+    eq(shareStatus({ belief: { text: "yes", total: null, delivered: 5, from: "gm" } }), "told");
+    eq(shareStatus({ belief: { text: "yes", total: null, delivered: 5 } }), "told", "grantKind's legacy release has no from");
+    eq(shareStatus({ belief: { text: "yes", total: 17, delivered: null } }), "held");
+    eq(shareStatus({ belief: { text: "", total: 4, delivered: 5 } }), "failed");
+    eq(shareStatus({ belief: { text: "  ", total: 4, delivered: null } }), "failed", "a held miss is still a miss");
+    eq(shareStatus({ failedKnowledge: true }), "locked");
+    eq(shareStatus({ granted: true }), "told", "Mark as learned: a grant with no ledger row");
+    eq(shareStatus({ granted: true, failedKnowledge: true }), "told", "a grant outranks the lock");
+    // a failed row outranks the grant: the ledger is the record of what happened on this creature
+    eq(shareStatus({ belief: { text: "", total: 3, delivered: 1 }, granted: true }), "failed");
+    // a bare claim (roll in flight) is not an answer
+    eq(shareStatus({ belief: { text: "", total: null, delivered: null } }), "none");
+    eq(shareStatus({ belief: { text: "", total: null, delivered: null }, failedKnowledge: true }), "locked");
+    // identification: the planner's own auto grant is a no-roll positive WITHOUT a from — a pass
+    eq(shareStatus({ ident: true, belief: { text: "kin", total: null, delivered: 1 } }), "passed");
+    eq(shareStatus({ ident: true, belief: { text: "kin", total: null, delivered: 1, from: "gm" } }), "told");
+    // kind: the tier, not the text, decides — tier 0 has authored (wrong) prose and is a failure
+    eq(shareStatus({ kind: true, belief: { text: "a bird", tier: 0, total: 9, delivered: 1 } }), "failed");
+    eq(shareStatus({ kind: true, belief: { text: "a goblin", tier: 15, total: 15, delivered: 1 } }), "passed");
+    eq(shareStatus({ kind: true, belief: { text: "a goblin", tier: 25, total: null, delivered: 1 } }), "told");
+    eq(shareStatus({ kind: true, belief: { text: "a goblin", tier: 20, total: 21, delivered: null } }), "held");
+    eq(SHARE_STATUSES.length, 6);
+  });
+
+  t("share: a failed lore roll WITH authored miss text reads failed, not passed", () => {
+    // the bug: before 2026-10 the miss line was stored as the belief's text, so text alone said
+    // "passed". A failure now stores "" — but those legacy rows are still in the world.
+    const row = { id: "r1", label: "The whistle", dc: 18, skill: "ins", text: "He signals the watch.", miss: "Just a tune." };
+    const out = loreOutcome(row, 11);
+    eq(out.pass, false);
+    eq(out.text, "Just a tune.", "a failure hands over its written line (2026-10-08): ");
+    // a legacy row, as the roll handler wrote it before 2026-10: the miss line AND the verdict
+    const written = { text: "Just a tune.", tier: null, total: 11, when: 5, delivered: 5, pass: out.pass };
+    const lore = readBeliefs({ c1: { "lore:vesh:r1": written } }).c1["lore:vesh:r1"];
+    eq(lore.pass, false, "readBeliefs keeps a boolean pass: ");
+    eq(shareStatus({ belief: lore, dc: 18 }), "failed");
+    eq(shareStatus({ belief: lore }), "failed", "the stored verdict needs no DC: ");
+    eq(shareStatus({ belief: { ...lore, delivered: null } }), "failed", "a held miss is still a miss: ");
+    // the attribute-lore ledger (a world setting) carries it the same way
+    const attr = readAttrBeliefs({ "attr:vrinn:r1:c1": written })["attr:vrinn:r1:c1"];
+    eq(attr.pass, false);
+    eq(shareStatus({ belief: attr, dc: 18 }), "failed");
+    // a pass records pass: true and still reads passed
+    eq(shareStatus({ belief: { ...lore, text: row.text, total: 19, pass: true }, dc: 18 }), "passed");
+    // legacy rows (no pass field): graded from total against the row's DC
+    const legacy = readBeliefs({ c1: { k: { text: "Just a tune.", total: 11, when: 1, delivered: 1 } } }).c1.k;
+    eq("pass" in legacy, false, "absent, not null: ");
+    eq(shareStatus({ belief: legacy, dc: 18 }), "failed");
+    eq(shareStatus({ belief: { ...legacy, total: 18 }, dc: 18 }), "passed");
+    eq(shareStatus({ belief: legacy }), "passed", "no DC known: the old reading, unchanged: ");
+    // junk pass values are dropped, not coerced
+    eq("pass" in readBeliefs({ c: { k: { text: "x", pass: "false" } } }).c.k, false);
+    eq("pass" in readBeliefs({ c: { k: { text: "x", pass: null } } }).c.k, false);
+    // a SHARE over the failure is told, even if a stale pass:false survived a merge
+    eq(shareStatus({ belief: { text: row.text, total: null, delivered: 6, from: "gm", pass: false }, dc: 18 }), "told");
+    // the share keeps the failure as its prior, verdict and all, so Forget gives it back
+    const shared = readBeliefs({ c1: { k: { text: row.text, total: null, when: 6, delivered: 6, from: "gm", prior: written } } }).c1.k;
+    eq(shared.prior.pass, false);
+    eq(shareStatus({ belief: shared.prior, dc: 18 }), "failed");
+    // kind and identification are untouched: tier / empty text decide them
+    eq(shareStatus({ kind: true, belief: { text: "a goblin", tier: 20, total: 21, delivered: 1, pass: false }, dc: 99 }), "passed");
+    eq(shareStatus({ ident: true, belief: { text: "kin", total: 4, delivered: 1 }, dc: 99 }), "passed");
+  });
+
   t("help: whenCarried inherits, and clamps up rather than storing a weaker value", () => {
     eq(helpFor({ id: "x", whenKnown: "advantage" }, { carried: false }), "advantage");
     eq(helpFor({ id: "x", whenKnown: "advantage" }, { carried: true }), "advantage", "inherit");
@@ -1283,16 +1755,18 @@ export function register({ t, eq, ok }) {
      * so a sub-15 roll returned the creature's whole Monster Manual entry. Found by running two
      * real imports through every rung: tier 0 and tier 15 came back byte-identical.
      *
-     * This fixture pins the composer's half; the conduit's half is the `tier >= 15` gate there.
+     * This fixture pins the composer's half; the conduit's half is `studyDescription` (fixtured
+     * below), which since 2026-10 also returns "" for an unauthored failure so nothing is composed.
      */
     const parts = { header: "— Studied (Religion) —", description: "It is a shadow.", traits: "Immune: Necrotic.", attacks: ["Claw: +4"] };
     eq(composeReveal({ ...parts, tier: 0 }), "— Studied (Religion) —\nIt is a shadow.");
     eq(composeReveal({ ...parts, tier: 15 }), "— Studied (Religion) —\nIt is a shadow.");
     eq(composeReveal({ ...parts, tier: 20 }), "— Studied (Religion) —\nIt is a shadow.\nImmune: Necrotic.");
     eq(composeReveal({ ...parts, tier: 25 }), "— Studied (Religion) —\nIt is a shadow.\nImmune: Necrotic.\nClaw: +4");
-    // a tier-0 caller passes NO description, which is what makes the bottom rung mean anything
-    eq(composeReveal({ ...parts, tier: 0, description: "Nothing about it means anything to you." }),
-       "— Studied (Religion) —\nNothing about it means anything to you.");
+    // a tier-0 caller with an authored rung 0 passes it as the description: the lie wears the
+    // pass shape byte for byte (header + description), so the card cannot say "this was a miss"
+    eq(composeReveal({ ...parts, tier: 0, description: "Probably a lost child." }),
+       "— Studied (Religion) —\nProbably a lost child.");
   });
 
   t("ledger: TOLD is not ROLLED — Number(null) must never become 0", () => {
@@ -1644,6 +2118,161 @@ export function register({ t, eq, ok }) {
 
   t("rungs: the ladder is 25/20/15/0, high to low — the order authors and grader share", () => {
     eq(STUDY_RUNGS, [25, 20, 15, 0]);
+  });
+
+  /* ── the Look window's list: factOrder / factKeyOf ─────────────────── */
+
+  const LOOK_REG = [
+    { id: "a", title: "A", secret: true, reveal: "in A", lore: [{ id: "la1", label: "A one", text: "a1" }, { id: "la2", label: "A two", text: "a2" }] },
+    { id: "b", parent: "a", secret: true, reveal: "in B" },
+    { id: "c", parent: "b", secret: true, reveal: "in C", lore: [{ id: "lc1", label: "C one", text: "c1" }] },
+    { id: "open", title: "Open", secret: false, lore: [{ id: "lo1", label: "Open one", text: "o1" }] },
+    { id: "species:human", title: "Human", secret: true, reveal: "human", lore: [{ id: "lh1", label: "Origin", text: "h" }] }
+  ];
+  const OWN = [{ id: "own1", label: "Mine", text: "m1" }, { id: "draft", label: "Draft" }, { id: "own2", label: "Mine 2", miss: "x" }];
+
+  t("factOrder: a secret ladder A→B→C carried as A and C only gives rungs [A, C], C's parent A", () => {
+    const ids = factOrder({ subjectId: "npc", carried: ["c", "a"], registry: LOOK_REG }).filter(x => x.group === "ident");
+    eq(ids.map(x => x.attrId), ["a", "c"]);
+    eq(ids.map(x => x.parentId), [null, "a"]);
+    eq(ids.map(x => x.key), ["attr:a:#id", "attr:c:#id"]);
+  });
+
+  t("factOrder: a visible attribute is no rung, but its lore rows are listed", () => {
+    const f = factOrder({ subjectId: "npc", carried: ["open"], registry: LOOK_REG });
+    eq(f.filter(x => x.group === "ident"), []);
+    eq(f.filter(x => x.group === "attr").map(x => [x.attrId, x.factId, x.secret]), [["open", "lo1", false]]);
+  });
+
+  t("factOrder: groups in ladder order — ident, attr (carried then row), own lore, kind last once", () => {
+    const f = factOrder({ subjectId: "npc", kindId: "goblin", carried: ["c", "open", "a"], registry: LOOK_REG, lore: OWN });
+    eq(f.map(x => x.group), ["ident", "ident", "attr", "attr", "attr", "attr", "lore", "lore", "kind"]);
+    eq(f.filter(x => x.group === "attr").map(x => x.factId), ["lc1", "lo1", "la1", "la2"]);
+    eq(f.filter(x => x.group === "lore").map(x => x.key), ["lore:npc:own1", "lore:npc:own2"], "the draft row is excluded");
+    eq(f.filter(x => x.group === "kind").map(x => x.key), ["kind:goblin"]);
+    eq(factOrder({ subjectId: "npc", kindId: null, carried: ["a"], registry: LOOK_REG }).some(x => x.group === "kind"), false);
+  });
+
+  t("factOrder: ids and keys only — no authored words, DCs or skills ride along", () => {
+    const f = factOrder({ subjectId: "npc", kindId: "k", carried: ["a", "c", "open"], registry: LOOK_REG, lore: OWN });
+    for (const x of f) for (const bad of ["reveal", "miss", "text", "dc", "skill", "title"]) ok(!(bad in x), `${x.key} carries ${bad}`);
+  });
+
+  t("factOrder: a derived id with a colon round-trips through parseFactKey", () => {
+    const f = factOrder({ subjectId: "npc", carried: ["species:human"], registry: LOOK_REG });
+    eq(f.map(x => x.key), ["attr:species:human:#id", "attr:species:human:lh1"]);
+    eq(f.map(x => parseFactKey(x.key)?.subject), ["species:human", "species:human"]);
+    eq(parseFactKey(f[1].key).fact, "lh1");
+  });
+
+  t("factOrder: junk input is an empty list, never a throw", () => {
+    eq(factOrder(), []);
+    eq(factOrder({ carried: null, registry: "x", lore: 3 }), []);
+  });
+
+  t("factKeyOf: the four literal keys shareKeyOf wrote before the refactor", () => {
+    eq(factKeyOf({ ns: "ident", attrId: "guild" }), "attr:guild:#id");
+    eq(factKeyOf({ ns: "attr", attrId: "guild", factId: "f1" }), "attr:guild:f1");
+    eq(factKeyOf({ ns: "lore", subjectId: "npc", factId: "f2" }), "lore:npc:f2");
+    eq(factKeyOf({ ns: "kind" }, "goblin"), "kind:goblin");
+    eq(factKeyOf({ ns: "kind" }, ""), "kind:");
+    eq(factKeyOf({ ns: "mask" }), null);
+  });
+
+  t("study: studyDescription — a failure says NOTHING unless rung 0 is authored", () => {
+    const none = "You place it, but nothing you could set down in words.";
+    // tier 0, nothing authored: no card at all (the generic "means nothing to you" card is gone)
+    eq(studyDescription({ authored: "", derived: "A goblin.", tier: 0, none }), "");
+    eq(studyDescription({ tier: 0 }), "");
+    // the derived truth never leaks below 15, and neither does `none`
+    eq(studyDescription({ derived: "A goblin.", tier: 0, none }), "");
+    // rung 0 authored: the one lie still delivered
+    const tiers = [{ min: 0, text: "Probably a lost child." }, { min: 15, text: "A goblin scout." }];
+    eq(studyDescription({ authored: authoredTier(tiers, 0), derived: "A goblin.", tier: 0, none }), "Probably a lost child.");
+    // 15+: authored wins, then derived, then `none` — a pass always says something
+    eq(studyDescription({ authored: authoredTier(tiers, 15), derived: "A goblin.", tier: 15, none }), "A goblin scout.");
+    eq(studyDescription({ authored: "", derived: "A goblin.", tier: 20, none }), "A goblin.");
+    eq(studyDescription({ authored: "", derived: "  ", tier: 25, none }), none);
+    // rung 0 never carries upward: a 15 with only rung 0 authored gets the truth, not the lie
+    const onlyLie = [{ min: 0, text: "Probably a lost child." }];
+    eq(studyDescription({ authored: authoredTier(onlyLie, 15), derived: "A goblin.", tier: 15, none }), "A goblin.");
+    eq(studyDescription({ authored: authoredTier(onlyLie, 25), derived: "", tier: 25, none }), none);
+  });
+
+  /* ── empty tiers leave no trace (Joe, 2026-10) ────────────────────────────── */
+
+  t("blank: whitespace, nbsp, zero-width and empty markup are all blank", () => {
+    for (const v of [undefined, null, 0, "", "   ", "\n\t", "&nbsp;", " &nbsp; ", "\u00a0", "\u200b", "<p></p>", "<p><br></p>",
+      "<p>&nbsp;</p>", "<div> </div>", "<p><strong></strong></p>", "<P class=\"x\"> </P>", "<!-- todo -->", "<br/><br />", "<ul><li></li></ul>"])
+      ok(isBlankProse(v), `expected blank: ${JSON.stringify(v)}`);
+  });
+
+  t("blank: any visible character is content — including text in angle brackets", () => {
+    for (const v of ["a", " x ", "<p>Starved.</p>", "<em>.</em>", "<the name is scratched out>", "1 < 2", "&amp;", "—"])
+      ok(!isBlankProse(v), `expected content: ${JSON.stringify(v)}`);
+  });
+
+  t("blank: an empty-HTML grant is not a grant, so no card and no section header renders", () => {
+    const g = readGranted({
+      "lore:a:x": { text: "<p></p>", when: 1, source: "Starved" },
+      "lore:a:y": { text: "<p>&nbsp;</p>", when: 1, source: "The veins" },
+      "lore:a:z": { text: "Still counting guards.", when: 1, source: "Still thinking" }
+    });
+    eq(Object.keys(g), ["lore:a:z"]);
+    // nothing but blanks → the join is empty, which is what every `if (!grants.length) return ""` guards on
+    eq(grantsForEntry({ "lore:a:x": { text: "<p><br></p>", when: 1 } }, "a").length, 0);
+  });
+
+  t("blank: a lore row whose pass text is empty HTML is silent on a pass, and never offered", () => {
+    const row = { id: "s", label: "Starved", skill: "med", dc: 10, text: "<p></p>", miss: "Weeks at most." };
+    eq(loreOutcome(row, 20), { pass: true, text: "", silent: true });
+    eq(loreOutcome(row, 5), { pass: false, text: "Weeks at most.", silent: false }, "the failure side is written: ");
+    eq(loreOutcome({ ...row, miss: "<p> </p>" }, 5), { pass: false, text: "", silent: true }, "blank failure HTML → nothing: ");
+    eq(loreOfferable(row), false, "a pass would buy an empty box: ");
+    eq(loreRollable(row), true, "still resolvable for Share/Forget off its GM note: ");
+    eq(loreRollable({ ...row, miss: "<p> </p>" }), false, "nothing on either side: ");
+  });
+
+  t("blank: the Starved shape — a failed check hands over the failure line, a pass the text", () => {
+    const row = { id: "s", label: "Starved", skill: "med", dc: 10, hold: false,
+      text: "Collarbones, wrists, cracked lips.", miss: "Weeks at most. He was thin before." };
+    eq(loreOutcome(row, 8), { pass: false, text: "Weeks at most. He was thin before.", silent: false }, "total 8 vs DC 10: ");
+    eq(loreOutcome(row, 10), { pass: true, text: "Collarbones, wrists, cracked lips.", silent: false });
+    // the failure line never carries the pass text, and the pass never carries the failure line
+    ok(!loreOutcome(row, 8).text.includes("Collarbones"), "fail shows no pass text");
+    ok(!loreOutcome(row, 10).text.includes("Weeks"), "pass shows no failure text");
+    // empty failure line → the old silent failure, untouched
+    eq(loreOutcome({ ...row, miss: "" }, 8), { pass: false, text: "", silent: true }, "empty miss: ");
+  });
+
+  t("identMissKey: a lore-namespace key on the subject, parseable, dot- and colon-safe", () => {
+    eq(identMissKey("IxcfWOvpcKID6bdn", "vrinn"), "lore:IxcfWOvpcKID6bdn:#idmiss-vrinn");
+    const k = identMissKey("a1", "species:human.elf");
+    ok(!k.slice("lore:a1:".length).includes(":"), "no colon in the fact segment");
+    ok(!k.includes("."), "no dot anywhere — Foundry would nest it");
+    eq(parseFactKey(k), { ns: "lore", subject: "a1", fact: "#idmiss-species%3Ahuman%2Eelf" });
+    ok(k !== identifiedKey("species:human.elf"), "never the ident key");
+    // it joins on the SUBJECT's Known page, not through the attribute (which a failure never identified)
+    const g = grantsForEntry({ [k]: { text: "Seems a pilgrim.", when: 1, source: "Brother Aldo" } }, "a1");
+    eq(g.map(x => x.text), ["Seems a pilgrim."]);
+    eq(grantsForEntry({ [k]: { text: "Seems a pilgrim.", when: 1 } }, "", { attributeIds: ["species:human.elf"] }), [], "not under the attribute: ");
+  });
+
+  t("blank: an empty-HTML authored rung is not authored — the truth falls through, a failure stays silent", () => {
+    const tiers = readStudyTiers([{ min: 0, text: "<p></p>" }, { min: 15, text: "<p>&nbsp;</p>" }, { min: 25, text: "Real." }]);
+    eq(tiers, [{ min: 25, text: "Real." }]);
+    const none = "You place it.";
+    eq(studyDescription({ authored: "<p></p>", derived: "A goblin.", tier: 15, none }), "A goblin.");
+    eq(studyDescription({ authored: "<p></p>", derived: "A goblin.", tier: 0, none }), "");
+    eq(studyDescription({ authored: "", derived: "<p></p>", tier: 15, none }), none);
+  });
+
+  t("blank: a reveal with no body is \"\" — the header never renders over nothing", () => {
+    const header = "— Studied (Nature) —";
+    eq(composeReveal({ tier: 0, header, description: "<p></p>" }), "");
+    eq(composeReveal({ tier: 15, header, description: "   ", traits: "Immune: fire." }), "", "traits are gated at 20: ");
+    eq(composeReveal({ tier: 20, header, description: "", traits: "Immune: fire." }), `${header}\nImmune: fire.`);
+    eq(composeReveal({ tier: 25, header, description: "", traits: "", attacks: ["<p></p>", "Bite"] }), `${header}\nBite`);
   });
 }
 

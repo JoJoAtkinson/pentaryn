@@ -29,7 +29,7 @@ journals named `Combat` and `Appendix C: Rules Glossary`. The working route is
 
 | Trap | What it does |
 |---|---|
-| `getIndex({fields:["pages.name"]})` | populated 2 of 47 PHB entries on v14.367; the rest came back `{}`. `pack.clear()` did not help. |
+| `getIndex({fields:["pages.name"]})` | populated 2 of 47 PHB entries on v14.367; the rest came back `{}`. Still broken on v14.369, but intermittently: core `indexDocument` rewrites an entry with `getProperty(source, "pages.name")` (undefined through an array) every time a document enters the pack cache, so the same call returns 47/47 or 0/47 depending on who ran `getDocuments()` first. |
 | `EmbeddedCollection` has no `.length` | `pages.length` → `undefined` → `NaN` when summed → `null` in the result, no error |
 | enricher noise | 5,052 `@UUID[…]` across PHB/DMG/MM/SRD survive a naive tag-strip and eat ~80 chars of snippet each |
 | transport truncation | `eval-js` silently truncates a large return |
@@ -54,7 +54,7 @@ things.
 
 ## Foundry APIs this depends on
 
-Verified live on **v14.367 / dnd5e 5.3.3**, 2026-08-22. Treat as a dated snapshot.
+Verified live on **v14.367 / dnd5e 5.3.3**, 2026-08-22, and re-verified on **v14.369**, 2026-10-10. Treat as a dated snapshot.
 
 - `game.packs.get(id)` → `CompendiumCollection`; `.metadata.label`, `.documentName`
 - `pack.getDocuments()` — **authoritative**; ~150 ms for the whole PHB
@@ -102,8 +102,14 @@ Then enable **Pentaryn Rules Lookup** in Manage Modules and reload. Confirm with
 Asserts the assumptions above against the live world: the packs exist, `"half cover"`
 finds a Cover page, hits carry pasteable UUIDs, snippets are enricher-free,
 `page("Study")` resolves, `monster("Goblin")` returns numeric cr/ac/hp — and that
-`getIndex({fields})` is *still* broken, so if Foundry ever fixes it you find out
+core's `CompendiumCollection#indexDocument` still projects index fields with
+`getProperty`, which drops nested page fields, so if Foundry ever fixes it you find out
 deliberately rather than by someone "optimizing" the adapter back into the bug.
+
+The canary checks the mechanism, not a live index. Until 2026-10-10 it counted filled
+entries from `getIndex({fields})`; on v14.369 that count flipped between 47/47 and 0/47
+with the bug intact, depending on whether a `getDocuments()` had run first, so the
+selftest read 9/10 on a healthy module.
 
 Run it after every sync, and after every Saturday auto-update — an update is exactly
 when a premium module restructures its journals or dnd5e moves a data path, and both

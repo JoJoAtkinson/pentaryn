@@ -31,6 +31,23 @@
  * sheet it is drawn on.
  */
 
+/**
+ * Does a flattened update key touch a module's flag scope?
+ *
+ * Hooks see `foundry.utils.flattenObject(changes)`. A write under the scope flattens to
+ * `flags.<scope>.<…>`; a whole-scope wipe used to arrive as `flags.-=<scope>`, but core 14.369
+ * migrates legacy `-=` keys to a `ForcedDeletion` operator while cleaning, and an operator
+ * flattens to the bare `flags.<scope>`. Accept all three; never a sibling scope that merely
+ * shares the prefix (`flags.<scope>-extra`).
+ */
+export function touchesFlagScope(key, scope) {
+  const k = String(key ?? "");
+  for (const head of [`flags.${scope}`, `flags.-=${scope}`]) {
+    if (k === head || k.startsWith(`${head}.`)) return true;
+  }
+  return false;
+}
+
 export const KNOWN_FLAG = "known";
 export const KNOWN_CATEGORIES_FLAG = "knownCategories";
 
@@ -250,7 +267,7 @@ export function readGranted(raw) {
     if (typeof key !== "string" || !key.trim()) continue;
     if (!value || typeof value !== "object" || Array.isArray(value)) continue;
     const text = str(value.text, GRANTED_TEXT_MAX);
-    if (!text.trim()) continue; // an empty grant is not a grant
+    if (isBlankProse(text)) continue; // an empty grant is not a grant — `<p></p>` included
     out[key.trim()] = {
       text,
       when: Math.max(0, num(value.when, 0)),
@@ -549,7 +566,7 @@ export function readStudyTiers(raw) {
     const min = num(e.min, NaN);
     if (!STUDY_RUNGS.includes(min) || seen.has(min)) continue;
     const text = str(e.text, TIER_TEXT_MAX).trim();
-    if (!text) continue; // an empty rung is not authored; it is a rung waiting to be written
+    if (isBlankProse(text)) continue; // an empty rung is not authored; it is a rung waiting to be written
     seen.add(min);
     out.push({ min, text });
   }
@@ -576,9 +593,16 @@ export function authoredTier(tiers, tier) {
    * a monster."*
    *
    * So the low rung is **false or nothing**, the high rungs are **true**, and a GM reading their
-   * own kind actor can tell which is which at a glance. It is also the same shape the other two
-   * axes already use — a lore row's `miss`, an attribute's `miss` — so all three now say "what
-   * they get when they fail" in the same place.
+   * own kind actor can tell which is which at a glance.
+   *
+   * ⚠ **2026-10: an unauthored failure hands over nothing.** A failed roll with no failure text
+   * written hands over nothing — no card, no title — and the lock is still written
+   * (`context/plans/attribute-silent-failure.md`). A lore row's `miss` and an attribute's `miss`
+   * are this rung's siblings: written, they are delivered on a failure; empty, nothing is
+   * (2026-10-08 — the 2026-10-07 "GM note, never delivered" rule was reversed). The generic *"Nothing about it means anything to you"* card an
+   * unauthored rung 0 used to fall back to is gone too: an unauthored rung 0 delivers nothing.
+   * An authored rung 0 survives because it is the one deliberate, un-nagged act — the GM chose
+   * to write a lie into the slot labelled as the miss.
    *
    * Two rules fall out, and the second is the one this got wrong:
    *
@@ -797,6 +821,53 @@ export function clampSources(raw) {
   };
 }
 
+/**
+ * The provenance of a **shared** belief row: the character id it came from, or `"gm"`.
+ *
+ * Spread in only when present, so every rolled row keeps exactly the shape it always had (and
+ * every stored row does not grow a `from: null` it never needed). GM-plane only — it lives on the
+ * NPC's ledger or in a GM-only setting, never on anything a player reads.
+ */
+export const SHARE_FROM_MAX = 40;
+const fromOf = rec => {
+  const v = typeof rec?.from === "string" ? rec.from.trim().slice(0, SHARE_FROM_MAX) : "";
+  return v ? { from: v } : {};
+};
+
+/**
+ * The roll's own verdict on a flat pass/fail row (lore and attribute lore), stored explicitly
+ * because the text could not always carry it: before 2026-10 a failed row WITH authored miss
+ * text stored that miss line as its text, indistinguishable from a pass by text alone. A failure
+ * now stores `text: ""`, but those legacy rows are still in the world, so the verdict stays
+ * explicit. Spread in only when a real boolean — rows written before this field existed have
+ * none, and `shareStatus` derives theirs from `total` against the row's DC instead.
+ */
+const passOf = rec => (typeof rec?.pass === "boolean" ? { pass: rec.pass } : {});
+
+/**
+ * What a **share** overwrote, so forgetting it gives that back instead of deleting the row.
+ *
+ * A share laid over a failed roll, or over a kind study held below the top tier, replaces a row
+ * the character EARNED (or spent). Forgetting it by deleting the row would hand back a free
+ * re-roll, or wipe the tier they rolled — the one-attempt rule `overFailed` protects for stage 1.
+ * So the share keeps the row it replaced here, and `forgetFact` writes it back, lock and all.
+ *
+ * Kept only on a share row (`from` present), one level deep (a prior never carries its own
+ * prior), and only when it was an answer, not a claim in flight.
+ */
+export function priorOf(rec) {
+  if (!fromOf(rec).from) return {};
+  const p = rec?.prior;
+  if (!p || typeof p !== "object" || Array.isArray(p)) return {};
+  const text = clampKnownNotes(p.text);
+  const total = numOrNull(p.total);
+  const delivered = timeOrNull(p.delivered);
+  // typed first: `Number(null)` is 0, a real rung, and would turn "no tier" into a tier-0 failure
+  const tier = typeof p.tier === "number" && STUDY_RUNGS.includes(num(p.tier, NaN)) ? num(p.tier, 0) : null;
+  if (!text.trim() && total === null && !delivered && tier === null) return {};
+  return { prior: { text, tier, total, when: Math.max(0, num(p.when, 0)), delivered, ...fromOf(p), ...passOf(p) } };
+}
+
 export function readBeliefs(raw) {
   const out = {};
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return out;
@@ -813,7 +884,11 @@ export function readBeliefs(raw) {
         when: Math.max(0, num(rec.when, 0)),
         // absent, not zero: `delivered: 0` and "never delivered" must not be the same value
         delivered: timeOrNull(rec.delivered),
-        sources: clampSources(rec.sources)
+        sources: clampSources(rec.sources),
+        // who shared it — present only on a GM share (see `shareStatus`), absent on every roll
+        ...fromOf(rec),
+        ...passOf(rec),
+        ...priorOf(rec)
       };
     }
     if (Object.keys(kept).length) out[characterId] = kept;
@@ -965,11 +1040,11 @@ export function clampLoreRow(row) {
     skill: typeof row.skill === "string" && row.skill.trim() ? row.skill.trim().slice(0, 32) : "his",
     text: str(row.text, LORE_TEXT_MAX),
     /*
-     * The miss line, and it is the honesty feature, not a nicety (decision 8's amendment).
-     * Under blind rolls a row with no miss text **leaks failure by silence**: a pass hands
-     * over prose, a fail hands over nothing, and the player reads the absence. Authoring a
-     * miss — vague or confidently false, the GM's choice — is what makes a lore row
-     * indistinguishable, the property the whole tier ladder gets for free.
+     * The failure line — **what the player takes away from a failed check** (Joe, 2026-10-08).
+     * Empty: a failure hands over nothing at all (no card, no title). Written: a failure hands over
+     * exactly this text, in the same card shape a pass uses, so it reads as what they noticed —
+     * never as "you failed". (2026-10-07 briefly made it a never-shown GM note; Joe reversed that,
+     * see `context/plans/attribute-silent-failure.md`.)
      */
     miss: str(row.miss, LORE_TEXT_MAX),
     // tri-state, like the kind's `studyHold`: null inherits the world's `holdDefault`
@@ -985,12 +1060,30 @@ export function clampLoreRow(row) {
  *  · **a label** — it is the affordance itself; an unnamed row is a button with no invitation
  *  · **something to say on at least one side** — a row with neither `text` nor `miss` hands
  *    over nothing whatever the dice do, so offering it spends the attempt on guaranteed
- *    silence. One side authored is fine (that is the leak the editor warns about, and the
- *    GM's call to make); neither side is a draft.
+ *    silence. Neither side is a draft.
+ *
+ * ⚠ This is the **resolve** test, not the **offer** test, and since 2026-10 the two differ. A
+ * row with only `miss` text would buy nothing on a pass (and a failure that reads like a finding
+ * with no truth behind it) — the player sheet asks `loreOfferable` instead. This one is left broad on purpose: a dozen readers
+ * (`resolveFact`, `factOrder` → the Look window, `factStatus`, the preview, `pending`) use it to
+ * find rows that already hold beliefs and grants, and narrowing it would strand Share/Forget on a
+ * legacy miss-only row and drop its existing card from the player's Look window.
  */
 export const loreRollable = row => {
   const clean = clampLoreRow(row);
-  return !!clean && !!clean.label && !!(clean.text.trim() || clean.miss.trim());
+  return !!clean && !!clean.label && !(isBlankProse(clean.text) && isBlankProse(clean.miss));
+};
+
+/**
+ * Can this row be **offered** to a player — drawn as a button they can spend their one attempt on?
+ *
+ * A row with no pass text has nothing to find: a pass would hand over nothing, and its failure
+ * text would be a lie with no truth behind it. It is a draft until its pass is written. Used by the two
+ * player-sheet offer lists only; everything that looks up a row by id stays on `loreRollable`.
+ */
+export const loreOfferable = row => {
+  if (!loreRollable(row)) return false;
+  return !isBlankProse(clampLoreRow(row).text);
 };
 
 /** Just the rows a player may be offered — the affordance list, never the storage list. */
@@ -1028,14 +1121,21 @@ export function loreOutcome(row, total) {
    */
   if (typeof total !== "number" || !Number.isFinite(total)) return null;
   const pass = Math.round(total) >= clean.dc;
-  const text = pass ? clean.text : clean.miss;
+  /*
+   * A pass hands over `text`; a failure hands over `miss` — the GM's written "what they take away
+   * from a failed check" — or NOTHING when `miss` is empty (Joe, 2026-10-08). The delivered shape
+   * is the same either way, so the card never says which it was.
+   */
+  // blank markup (`<p></p>`) is an empty side, not content — see `isBlankProse`
+  const said = pass ? clean.text : clean.miss;
+  const text = !isBlankProse(said) ? said : "";
   return {
     pass,
     text: text.trim(),
     /*
-     * A pass with no authored text, or a miss with no authored miss line, hands over nothing —
-     * and the caller must still write the lock and post the stub, or the *absence* of a card
-     * becomes the tell. `silent` is how the conduit knows to skip only the grant.
+     * A side with nothing written (a failure with no `miss`, a pass with no `text`) hands over
+     * nothing — and the caller must still write the lock and post the stub, so there is no retry. `silent` is how the conduit knows
+     * to skip only the grant.
      */
     silent: !text.trim()
   };
@@ -1153,6 +1253,57 @@ export function attrIdOf(title) {
     .slice(0, 64);
 }
 
+/**
+ * The comparison key for an attribute's NAME — `attrIdOf` without the 64-character cut.
+ *
+ * Joe's rule: an attribute is a universal truth shared by every carrier, so **no two may share a
+ * name**, ignoring case, accents, whitespace and punctuation — the same folding ids get, so
+ * "Yellow Stone" and "yéllowstone" are one name exactly as they are one id.
+ *
+ * ⚠ Why the id check alone is not enough: the id is derived **once**, at creation, and a rename
+ * never re-derives it (every carrier and every belief points at the id). So `yellowstone` renamed
+ * to "Redrock" leaves id `yellowstone` titled Redrock, and a later create of "Redrock" derives
+ * `redrock`, passes the id check, and the world has two Redrocks. The title is what the table
+ * sees, so the title is what has to be unique.
+ *
+ * ⚠ No `.slice(0, 64)` here: two long titles sharing their first 64 letters are different names.
+ * The truncation is an id-storage limit, and the id check still applies it on create.
+ */
+export function attrNameKey(title) {
+  const raw = typeof title === "string" ? title : "";
+  return raw
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * The entry (other than `exceptId`) whose name is `title` under `attrNameKey`, or `null`.
+ * An entry with no title is compared by its id, which is what `clampAttribute` displays for it.
+ * A title that folds to nothing never collides — creation refuses it as empty anyway.
+ */
+export function nameCollision(title, registry, { exceptId = null } = {}) {
+  const key = attrNameKey(title);
+  if (!key) return null;
+  return readRegistry(registry).find(e => e.id !== exceptId && attrNameKey(e.title || e.id) === key) ?? null;
+}
+
+/**
+ * Would renaming entry `id` to `title` give it another entry's name? Returns that entry or `null`.
+ *
+ * ⚠ A rename that keeps the entry's **own** name key is always allowed, even when the registry
+ * already holds a duplicate of it from before this rule existed: recasing "goblin" to "Goblin"
+ * makes nothing worse, and refusing it would freeze a legacy duplicate's title — and every other
+ * field the editor saves alongside it — until someone deleted one of the pair by hand.
+ */
+export function renameCollision(id, title, registry) {
+  const list = readRegistry(registry);
+  const self = list.find(e => e.id === id);
+  if (self && attrNameKey(self.title || self.id) === attrNameKey(title)) return null;
+  return nameCollision(title, list, { exceptId: id });
+}
+
 /** Is this a derived id, and if so which namespace? `null` for an authored slug. */
 export function derivedNamespace(id) {
   const raw = typeof id === "string" ? id.trim() : "";
@@ -1160,6 +1311,74 @@ export function derivedNamespace(id) {
   if (i < 0) return null;
   const ns = raw.slice(0, i);
   return DERIVED_NAMESPACES.includes(ns) ? ns : null;
+}
+
+/**
+ * `resolveAttrRef(ref, registry, { carried })` — **one rule for "which attribute did you mean"**,
+ * used by every API entry point that takes one. `ref` may be an id, a name, or an entry object.
+ *
+ * Order, first hit wins:
+ *
+ *  1. an **exact id** in the registry;
+ *  2. a **derived id** (`species:High Elf` → `species:highelf`; `kind:` kept verbatim, it is an
+ *     actor id) — valid with or without an entry, because derivation is what makes it exist;
+ *  3. an id in `carried` — the caller's actor's own authored flag, so a **dangling** link (entry
+ *     deleted, or a legacy typo) can still be named in order to unlink it;
+ *  4. a **name**, folded by `attrNameKey` and compared against each entry's title (or id when it
+ *     has none). One match resolves; two or more is `ambiguous` (legacy duplicates), never a guess.
+ *
+ * Id before name is the deterministic rule for crossed renames: if entry `x` was retitled "Y" and
+ * entry `y` retitled "X", `"x"` means the entry whose id is `x`.
+ *
+ * Returns `{ id }` on a hit, else `{ id: null, reason: "empty" | "notFound" | "ambiguous" }`
+ * (`candidates` lists the ids on `ambiguous`). **A miss never invents anything** — that is the
+ * point: a typo cannot become a link, a ghost knowledge row or a duplicate entry.
+ */
+export function resolveAttrRef(ref, registry, { carried = [] } = {}) {
+  const raw = (typeof ref === "string" ? ref : typeof ref?.id === "string" ? ref.id : "").trim();
+  if (!raw) return { id: null, reason: "empty" };
+  const list = readRegistry(registry);
+  if (list.some(e => e.id === raw)) return { id: raw };
+  const ns = derivedNamespace(raw);
+  if (ns) {
+    const rest = raw.slice(ns.length + 1);
+    const slug = ns === "kind" ? rest.trim() : attrIdOf(rest);
+    return slug ? { id: `${ns}:${slug}` } : { id: null, reason: "notFound" };
+  }
+  if ((Array.isArray(carried) ? carried : []).some(x => typeof x === "string" && x.trim() === raw)) return { id: raw };
+  const key = attrNameKey(raw);
+  if (!key) return { id: null, reason: "notFound" };
+  const hits = list.filter(e => attrNameKey(e.title || e.id) === key);
+  if (hits.length === 1) return { id: hits[0].id };
+  if (hits.length > 1) return { id: null, reason: "ambiguous", candidates: hits.map(e => e.id) };
+  return { id: null, reason: "notFound" };
+}
+
+/**
+ * What `ensure(title)` should do, decided without Foundry so it can be fixtured.
+ *
+ *  · `{ action: "existing", entry }` — the title already names (or ids) an entry. It is returned
+ *    **untouched**: ensure never edits what it finds, so re-running a script is safe.
+ *  · `{ action: "create", id }` — nothing by that name or id; create it.
+ *  · `{ action: "refuse", reason, existing? }` — `empty`, `ambiguous`, `invalid` (a derived id
+ *    with no entry: derived attributes exist without one, so there is nothing to ensure), or
+ *    `collision` — the title's derived id is taken by an entry that was **renamed away** from it.
+ *    That entry is not called this any more, so handing it back would be wrong; creating would
+ *    duplicate the id. Choose a different title (`… 2`) or link that entry by its id.
+ */
+export function planEnsure(title, registry) {
+  const list = readRegistry(registry);
+  const hit = resolveAttrRef(title, list);
+  if (hit.id) {
+    const entry = list.find(e => e.id === hit.id);
+    return entry ? { action: "existing", entry } : { action: "refuse", reason: "invalid" };
+  }
+  if (hit.reason !== "notFound") return { action: "refuse", reason: hit.reason, ...(hit.candidates ? { candidates: hit.candidates } : {}) };
+  const id = attrIdOf(typeof title === "string" ? title : "");
+  if (!id) return { action: "refuse", reason: "empty" };
+  const taken = list.find(e => e.id === id);
+  if (taken) return { action: "refuse", reason: "collision", existing: taken };
+  return { action: "create", id };
 }
 
 /** One registry entry, sanitised. Never throws; an entry with no usable id is dropped. */
@@ -1204,8 +1423,13 @@ export function clampAttribute(entry) {
     skill: typeof entry.skill === "string" && entry.skill.trim() ? entry.skill.trim().slice(0, 32) : "his",
     reveal: str(entry.reveal, LORE_TEXT_MAX),
     /*
-     * The miss line, and the same honesty rule lore rows carry: under a blind roll an attribute
-     * with nothing authored on the failing side leaks failure by silence.
+     * The failure line — what the player takes away from a FAILED identification (Joe, 2026-10-08).
+     * Empty: nothing at all. Written: the cascade grants it under `identMissKey` (the creature's
+     * page, titled with the creature, never the attribute); the ident belief row still writes
+     * `text: ""`, so every ledger reads the rung as not identified. Kept in this literal,
+     * `ATTR_CONTENT_FIELDS` and `SNAPSHOT_FIELDS` on purpose: dropping it would make
+     * `updateAttribute(id, { miss: "" })` an `unchanged` no-op, so legacy text could never be
+     * cleared, and the next save of any entry would silently erase it registry-wide.
      */
     miss: str(entry.miss, LORE_TEXT_MAX),
     // the approval gate, tri-state exactly like a lore row's — and ORTHOGONAL to the scale above
@@ -1219,8 +1443,153 @@ export function clampAttribute(entry) {
      * draw an icon that has therefore never appeared.
      */
     source: clampSource(entry.source),
-    bonuses: [] // decision 20 — reserved, empty in v1, and emptied on read so it stays that way
+    bonuses: [], // decision 20 — reserved, empty in v1, and emptied on read so it stays that way
+    /*
+     * Review bookkeeping (the Attribute Review panel). Epoch ms or `null`; `null` means "predates
+     * timestamps" or "never signed off". Named here for the same reason `source` is: a field this
+     * literal omits is erased from the whole registry on the next save of any entry. Entries
+     * written before these existed read as null/[] — nothing is written on load.
+     */
+    createdAt: timeOrNull(entry.createdAt),
+    modifiedAt: timeOrNull(entry.modifiedAt),
+    reviewedAt: timeOrNull(entry.reviewedAt),
+    touched: clampTouched(entry.touched),
+    // what the content said at the last sign-off, so the panel can show what changed since
+    reviewedSnapshot: clampSnapshot(entry.reviewedSnapshot)
   };
+}
+
+/* ── review bookkeeping ───────────────────────────────────────────────────── */
+
+/**
+ * The fields a human authored — the ones whose change means "Joe should look at this again".
+ * Bookkeeping (`createdAt/modifiedAt/reviewedAt/touched/bonuses`) and the id never count.
+ */
+export const ATTR_CONTENT_FIELDS = [
+  "title", "category", "icon", "whenKnown", "whenCarried", "secret", "parent",
+  "dc", "skill", "reveal", "miss", "hold", "lore", "source"
+];
+
+/** Fields that only the review machinery writes — stripped from any ordinary patch. */
+export const ATTR_REVIEW_FIELDS = ["createdAt", "modifiedAt", "reviewedAt", "touched", "reviewedSnapshot"];
+
+/**
+ * The content fields kept in `reviewedSnapshot`. `icon` and `source` are left out: neither is
+ * text Joe reads to review, and `source` hashes would only bloat the setting.
+ */
+export const SNAPSHOT_FIELDS = [
+  "title", "category", "whenKnown", "whenCarried", "secret", "parent", "dc", "skill", "reveal", "miss", "hold", "lore"
+];
+
+/** Snapshots bigger than this (JSON chars) are dropped rather than stored — the setting is world-wide. */
+export const SNAPSHOT_MAX = 64000;
+
+/** The sign-off snapshot of an entry: its SNAPSHOT_FIELDS, clamped. `null` for a non-entry. */
+export function snapshotOf(entry) {
+  const e = clampAttribute(entry);
+  if (!e) return null;
+  return clampSnapshot(Object.fromEntries(SNAPSHOT_FIELDS.map(k => [k, e[k]])));
+}
+
+/**
+ * A stored snapshot, sanitised: only SNAPSHOT_FIELDS, plain JSON values, lore through `readLore`,
+ * and the whole thing under SNAPSHOT_MAX. Anything else → `null`.
+ */
+export function clampSnapshot(raw) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const out = {};
+  for (const k of SNAPSHOT_FIELDS) {
+    if (!(k in raw)) continue;
+    const v = raw[k];
+    if (k === "lore") out.lore = readLore(v);
+    else if (k === "dc") out.dc = typeof v === "number" && Number.isFinite(v) ? v : null;
+    else if (k === "secret") out.secret = v === true;
+    else if (k === "hold") out.hold = v === true ? true : v === false ? false : null;
+    else if (k === "parent") out.parent = typeof v === "string" && v.trim() ? v.trim() : null;
+    else out[k] = str(v, LORE_TEXT_MAX);
+  }
+  if (!Object.keys(out).length) return null;
+  try {
+    if (JSON.stringify(out).length > SNAPSHOT_MAX) return null;
+  } catch {
+    return null;
+  }
+  return out;
+}
+
+/** `touched`: content field names only, deduped, order kept. Garbage → `[]`. */
+export function clampTouched(raw) {
+  if (!Array.isArray(raw)) return [];
+  const out = [];
+  for (const k of raw) if (typeof k === "string" && ATTR_CONTENT_FIELDS.includes(k) && !out.includes(k)) out.push(k);
+  return out;
+}
+
+/** Top-level content keys whose value differs (lore compared as a whole). Both sides clamped. */
+export function changedFields(before, after) {
+  const a = clampAttribute(before) ?? {};
+  const b = clampAttribute(after) ?? {};
+  return ATTR_CONTENT_FIELDS.filter(k => JSON.stringify(a[k] ?? null) !== JSON.stringify(b[k] ?? null));
+}
+
+/**
+ * `"unreviewed"` — never signed off · `"changed"` — content changed after the sign-off ·
+ * `"reviewed"`. A `touched` list also counts as changed, so an edit stamped in the same
+ * millisecond as a review cannot hide.
+ */
+export function reviewState(entry) {
+  const reviewed = timeOrNull(entry?.reviewedAt);
+  if (reviewed === null) return "unreviewed";
+  const modified = timeOrNull(entry?.modifiedAt);
+  if ((modified !== null && modified > reviewed) || clampTouched(entry?.touched).length) return "changed";
+  return "reviewed";
+}
+
+export const needsReview = entry => reviewState(entry) !== "reviewed";
+
+export const REVIEW_SORTS = ["review", "title", "modified", "category"];
+
+/**
+ * The panel's order. `review` (default): needs-review first — unreviewed, then changed, each
+ * newest-modified first with nulls last — then reviewed by title. The other modes are flat.
+ * Never mutates its input.
+ */
+export function sortForReview(list, mode = "review") {
+  const rows = Array.isArray(list) ? list.filter(e => e && typeof e === "object") : [];
+  const title = e => String(e.title || e.id || "");
+  const byTitle = (a, b) => title(a).localeCompare(title(b)) || String(a.id).localeCompare(String(b.id));
+  const byModified = (a, b) => {
+    const x = timeOrNull(a.modifiedAt);
+    const y = timeOrNull(b.modifiedAt);
+    if (x === y) return byTitle(a, b);
+    if (x === null) return 1;
+    if (y === null) return -1;
+    return y - x;
+  };
+  const rank = { unreviewed: 0, changed: 1, reviewed: 2 };
+  const m = REVIEW_SORTS.includes(mode) ? mode : "review";
+  if (m === "title") return [...rows].sort(byTitle);
+  if (m === "modified") return [...rows].sort(byModified);
+  if (m === "category") return [...rows].sort((a, b) => String(a.category || "").localeCompare(String(b.category || "")) || byTitle(a, b));
+  return [...rows].sort((a, b) => {
+    const ra = rank[reviewState(a)];
+    const rb = rank[reviewState(b)];
+    if (ra !== rb) return ra - rb;
+    return ra < 2 ? byModified(a, b) : byTitle(a, b);
+  });
+}
+
+/** The GM's selection flag → ids that are strings and exist in the registry, deduped, in order. */
+export function readSelection(raw, registry) {
+  if (!Array.isArray(raw)) return [];
+  const live = new Set(readRegistry(registry).map(e => e.id));
+  const out = [];
+  for (const id of raw) {
+    if (typeof id !== "string") continue;
+    const k = id.trim();
+    if (live.has(k) && !out.includes(k)) out.push(k);
+  }
+  return out;
 }
 
 /** A path into the repo, or nothing. Repo-relative, no escaping, and never a write outside it. */
@@ -1411,7 +1780,13 @@ export function readKnowledge(raw) {
          */
         pending: rec.pending === true,
         // how it arrived, for the GM's own reading of the tree — never shown to a player
-        via: ["roll", "grant", "carried"].includes(rec.via) ? rec.via : "roll"
+        via: ["roll", "grant", "carried", "shared"].includes(rec.via) ? rec.via : "roll",
+        /*
+         * A Share written over a permanent stage-1 FAILURE remembers it, so forgetting the share
+         * restores the failure instead of handing back a roll Joe ruled is gone for good. Spread
+         * only when set, so every other row keeps its shape.
+         */
+        ...(rec.via === "shared" && rec.overFailed === true ? { overFailed: true } : {})
       };
     }
     if (Object.keys(kept).length) out[characterId] = kept;
@@ -1444,6 +1819,23 @@ export const settledAttribute = (knowledge, characterId, attrId) =>
  * is a document the roller does not own.
  */
 export const identifiedKey = attrId => `attr:${String(attrId ?? "")}:${MEMBER_FACT}`;
+
+/**
+ * The GRANT key a failed identification's authored failure text (`entry.miss`) is filed under —
+ * Joe, 2026-10-08: a written failure line is what the player takes away; an empty one is nothing.
+ *
+ * ⚠ Not `identifiedKey`. That key's grant renders only where the attribute is identified (the
+ * secrecy filter) and is titled with the attribute — on a failure both would announce the very
+ * membership they failed to spot. This one is a `lore:` key on the SUBJECT, so it files on that
+ * creature's page like a tell, titled with the creature's name. The ident BELIEF row is untouched
+ * (it stays `text: ""` on a failure, which every GM ledger reads as "not identified").
+ *
+ * The attribute id is encoded so the key keeps `parseFactKey`'s grammar (fact = after the LAST
+ * colon) and holds no dot (Foundry would expand one into a nested path).
+ */
+export const IDENT_MISS_FACT_PREFIX = "#idmiss-";
+export const identMissKey = (subjectId, attrId) =>
+  `lore:${String(subjectId ?? "")}:${IDENT_MISS_FACT_PREFIX}${encodeURIComponent(String(attrId ?? "")).replace(/\./g, "%2E")}`;
 
 export function identifiedState(beliefs, characterId, attrId) {
   const rec = readBeliefs(beliefs)[characterId]?.[identifiedKey(attrId)];
@@ -1636,7 +2028,10 @@ export function readAttrBeliefs(raw) {
       when: Math.max(0, num(rec.when, 0)),
       delivered: timeOrNull(rec.delivered),
       claim: typeof rec.claim === "string" && rec.claim ? rec.claim : null,
-      sources: clampSources(rec.sources)
+      sources: clampSources(rec.sources),
+      ...fromOf(rec),
+      ...passOf(rec),
+      ...priorOf(rec)
     };
   }
   return out;
@@ -1686,6 +2081,30 @@ const ENTITIES = {
   mdash: "—", ndash: "–", hellip: "…", rsquo: "’", lsquo: "‘",
   ldquo: "“", rdquo: "”", times: "×", minus: "−", deg: "°"
 };
+
+/**
+ * Does this text say **nothing** a player could read? Whitespace, `&nbsp;`, zero-width characters,
+ * HTML comments and empty markup (`<p></p>`, `<p><br></p>`, `<div> </div>` — what a rich-text
+ * editor leaves behind when an author clears a field) all count as blank.
+ *
+ * Joe's rule (2026-10): any tier may be left empty on purpose, and **empty means no trace** — no
+ * card, no source line, no header around a hollow box. Every "is there anything to hand over?"
+ * test asks this rather than `.trim()`, which passes `"<p></p>"` as content and grants a card whose
+ * body is the literal tags (grant text is escaped at render).
+ *
+ * Only a fixed list of formatting tags is stripped, never `<anything>`: a GM's plain-text line
+ * that happens to sit in angle brackets ("<the name is scratched out>") is content and stays so.
+ */
+const BLANK_MARKUP =
+  /<!--[\s\S]*?-->|<\/?(?:p|br|hr|div|span|section|article|em|strong|b|i|u|s|small|mark|sub|sup|code|pre|blockquote|h[1-6]|ul|ol|li|a|font)\b[^>]*>/gi;
+export function isBlankProse(text) {
+  if (typeof text !== "string" || !text) return true;
+  return !text
+    .replace(BLANK_MARKUP, "")
+    .replace(/&(?:nbsp|#160|#x0*a0|#8203|#x200b|zwj|zwnj);/gi, "")
+    .replace(/[\s\u00a0\u200b-\u200d\u2060\ufeff]+/g, "")
+    .length;
+}
 
 /**
  * Enriched HTML → the prose that lands in a notebook.
@@ -1769,6 +2188,27 @@ export function traitsLine({ immune = [], resist = [], vulnerable = [], conditio
 }
 
 /**
+ * The description slot of a kind study, by tier — pure, so the failure rule is fixtured.
+ *
+ *   `authored`  the exact-rung authored text (`authoredTier`), or ""
+ *   `derived`   the kind's flattened biography, or ""
+ *   `none`      the "you place it, but nothing in words" line for a pass with no prose
+ *
+ * **Below 15 is a failure and hands over nothing** unless the GM authored rung 0 — the one lie
+ * this module still delivers (2026-10, `context/plans/attribute-silent-failure.md`). The generic
+ * "nothing about it means anything to you" card that used to fill an unauthored failure is gone:
+ * it was a card the player could read as "I failed". `none` is reachable only at 15 and above,
+ * so a pass always says something and a failure says nothing.
+ */
+export function studyDescription({ authored = "", derived = "", tier = 0, none = "" } = {}) {
+  const said = v => (isBlankProse(String(v ?? "")) ? "" : String(v).trim());
+  const a = said(authored);
+  if (a) return a;
+  if (!(Number(tier) >= 15)) return "";
+  return said(derived) || said(none);
+}
+
+/**
  * The reveal, exactly as it lands in the notes (decision 7's shape).
  *
  *     — Studied (Nature) —
@@ -1795,14 +2235,158 @@ export function composeReveal({
   separator = " · "
 } = {}) {
   const lines = [];
-  if (header) lines.push(header);
   const desc = String(description ?? "").trim();
-  if (desc) lines.push(desc);
-  if (tier >= 20 && String(traits ?? "").trim()) lines.push(String(traits).trim());
+  if (!isBlankProse(desc)) lines.push(desc);
+  if (tier >= 20 && !isBlankProse(String(traits ?? ""))) lines.push(String(traits).trim());
   if (tier >= 25) {
-    const clean = (Array.isArray(attacks) ? attacks : []).map(a => String(a ?? "").trim()).filter(Boolean);
+    const clean = (Array.isArray(attacks) ? attacks : []).map(a => String(a ?? "").trim()).filter(a => !isBlankProse(a));
     if (clean.length) lines.push(clean.join(separator));
   }
+  /*
+   * A header over nothing is not a reveal (Joe, 2026-10: empty means no trace). With no body line
+   * the whole reveal is "", so the caller's `silent` test sees an empty payload and grants no card,
+   * rather than a card that reads "— Studied (Nature) —" and stops.
+   */
+  if (!lines.length) return "";
+  if (header) lines.unshift(header);
   return lines.join("\n");
 }
 
+/* ── the GM's "who knows" tags — the inspect window's player view ─────────── */
+
+/** Every value `shareStatus` can return, in the order the GM's chips explain them. */
+export const SHARE_STATUSES = ["passed", "told", "held", "failed", "locked", "none"];
+
+/**
+ * Where one character stands on one fact — the GM's coaching tag. Pure, and fixtured.
+ *
+ *   `belief`          the ledger row for this character and fact (`readBeliefs`/`readAttrBeliefs`
+ *                     shape), or null
+ *   `granted`         is the fact's key in their `granted` map (a "Mark as learned" grant, or a
+ *                     legacy grant with no ledger row behind it)
+ *   `failedKnowledge` identification only: a permanent stage-1 failure on the attribute
+ *   `kind`            the row is a kind study: a tier under 15 is the empty answer
+ *   `dc`              flat lore rows only: the row's DC, used to grade a legacy row that has a
+ *                     `total` but no stored `pass` (a pre-2026-10 miss with authored miss text
+ *                     has text)
+ *   `ident`           the row is an identification: a no-roll positive WITHOUT a `from` is the
+ *                     planner's own `auto` grant (help scale or kin-sense), which the character
+ *                     worked out on sight — that is a pass, not a GM tell
+ *
+ * The ledger's convention for "they did not roll; I told them" is `total: null` on a delivered
+ * row (`grantKind` shipped it). A share also stamps `from`, which is what separates it from an
+ * `auto` identification, the one other writer of a no-roll positive.
+ *
+ * A row with no text, no total and no delivery is a claim (a roll in flight), not an answer.
+ */
+export function shareStatus({
+  belief = null, granted = false, failedKnowledge = false, kind = false, ident = false, dc = null
+} = {}) {
+  if (belief && typeof belief === "object") {
+    const text = typeof belief.text === "string" ? belief.text.trim() : "";
+    const total = typeof belief.total === "number" && Number.isFinite(belief.total) ? belief.total : null;
+    const delivered = !!belief.delivered;
+    const inFlight = !text && total === null && !delivered;
+    if (!inFlight) {
+      /*
+       * A failed flat roll WITH authored miss text stored the miss line as its text before
+       * 2026-10 (it stores "" now), so text alone reads those legacy rows as a pass. The roll's own verdict (`pass`) decides when it was recorded; a row
+       * from before that field derives it from its total against the row's DC. A share (`from`)
+       * is never a failure, whatever it replaced.
+       */
+      const rolledMiss = !kind && !ident && !belief.from && (belief.pass === false
+        || (typeof belief.pass !== "boolean" && total !== null && typeof dc === "number" && Math.round(total) < dc));
+      const empty = kind ? !(Number(belief.tier) >= 15) : !text || rolledMiss;
+      if (empty) return "failed";
+      if (!delivered) return "held";
+      if (total === null) return ident && !belief.from ? "passed" : "told";
+      return "passed";
+    }
+  }
+  if (granted) return "told";
+  if (failedKnowledge) return "locked";
+  return "none";
+}
+
+/* ── one subject's facts, in ladder order — the player view and the Look window ── */
+
+/**
+ * The grant/belief key one fact lives under, from the inspect window's fact descriptor:
+ *
+ *   `{ ns: "ident", attrId }`              → `attr:<attrId>:#id`
+ *   `{ ns: "attr",  attrId, factId }`      → `attr:<attrId>:<factId>`
+ *   `{ ns: "lore",  subjectId, factId }`   → `lore:<subjectId>:<factId>`
+ *   `{ ns: "kind" }` + `kindId`            → `kind:<kindId>`
+ *
+ * ⚠ **One home for the four grammars.** `study.mjs`'s `shareKeyOf` (what a Share writes) and
+ * `factOrder` below (what the player's Look window reads) used to be two hand-built copies of the
+ * same switch. A drift between them is silent in the worst direction: a share that lands under a
+ * key the window does not ask for is a card the player was told about and can never see. So both
+ * call this, and the fixtures pin the four literal strings.
+ *
+ * The kind id arrives as an argument because resolving `kindOf` needs `game.actors`; this file
+ * may not touch a Foundry global. `null` for anything it cannot name — the caller refuses.
+ */
+export function factKeyOf(spec, kindId = null) {
+  if (spec?.ns === "ident") return identifiedKey(spec.attrId);
+  if (spec?.ns === "attr") return attrFactKey(spec.attrId, spec.factId);
+  if (spec?.ns === "lore") return loreFactKey(spec.subjectId, spec.factId);
+  if (spec?.ns === "kind") return `kind:${kindId ?? ""}`;
+  return null;
+}
+
+/**
+ * **Which facts one subject could hand a player, in what order, under what key** — and nothing
+ * else. Pure, fixtured.
+ *
+ *   `{ group:"ident", ns:"ident", attrId, parentId, key }`     every SECRET rung the subject
+ *        carries, each ladder root → leaf (`identificationLadder` filtered to `carried`), ladders
+ *        in `carried` order, no duplicates. `parentId` is the rung above it in the first ladder
+ *        that reached it (null at a root).
+ *   `{ group:"attr", ns:"attr", attrId, factId, secret, key }`   every rollable lore row of every
+ *        carried attribute, `carried` order then row order, secret or not
+ *   `{ group:"lore", ns:"lore", factId, key }`                   the subject's own rollable rows
+ *   `{ group:"kind", ns:"kind", kindId, key }`                   exactly one, last; omitted only
+ *        when there is no `kindId` (whether the kind has anything to study is the caller's call)
+ *
+ * ⚠ **Ids and keys only, by design.** Never `reveal`, `miss`, `text`, `dc`, `skill` or `title`.
+ * Two consumers share this list and they are allowed to see very different things: the GM's
+ * player view (`preview.mjs`) draws the authored words under every key, and the player's Look
+ * window (`look.mjs`) may draw ONLY the `granted` record a key points at. If the ordering helper
+ * carried the authored text, the player surface would be one careless `fact.text` away from
+ * printing a rung they failed. Each consumer fetches what it is allowed to see.
+ */
+export function factOrder({ subjectId = "", kindId = null, carried = [], registry = [], lore = [] } = {}) {
+  const reg = readRegistry(registry);
+  const byId = new Map(reg.map(e => [e.id, e]));
+  const have = Array.isArray(carried) ? carried.filter(id => typeof id === "string" && id) : [];
+  const out = [];
+
+  // identification rungs: root → leaf, every secret rung this subject actually carries
+  const seen = new Set();
+  for (const id of have) {
+    if (!byId.get(id)?.secret) continue;
+    const ladder = identificationLadder(id, reg).filter(r => have.includes(r));
+    ladder.forEach((r, i) => {
+      if (seen.has(r)) return;
+      seen.add(r);
+      out.push({ group: "ident", ns: "ident", attrId: r, parentId: ladder[i - 1] ?? null, key: factKeyOf({ ns: "ident", attrId: r }) });
+    });
+  }
+
+  // attribute lore: carried order, then row order — secret or not (the GM's view notes which)
+  for (const id of have) {
+    const entry = byId.get(id);
+    for (const row of rollableLore(entry?.lore)) {
+      out.push({ group: "attr", ns: "attr", attrId: id, factId: row.id, secret: !!entry?.secret, key: factKeyOf({ ns: "attr", attrId: id, factId: row.id }) });
+    }
+  }
+
+  // the subject's own rows
+  for (const row of rollableLore(lore)) {
+    out.push({ group: "lore", ns: "lore", factId: row.id, key: factKeyOf({ ns: "lore", subjectId, factId: row.id }) });
+  }
+
+  if (kindId) out.push({ group: "kind", ns: "kind", kindId, key: factKeyOf({ ns: "kind" }, kindId) });
+  return out;
+}

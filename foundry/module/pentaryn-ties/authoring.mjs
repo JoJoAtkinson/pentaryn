@@ -93,6 +93,11 @@ function beliefRow(row) {
       <span class="pt-belief-who">${esc(row.character)}</span>
       <span class="pt-belief-fact">${esc(row.fact)}</span>
       <span class="pt-belief-meta">${esc(meta)}</span>
+      ${
+        // a failure hands the player nothing (2026-10), so the empty text box below cannot tell
+        // a miss from a pass into an unauthored side — the verdict says it here
+        row.pass === false ? `<span class="pt-belief-tag pt-belief-missed">${esc(t("authoring.beliefMissed"))}</span>` : ""
+      }
       ${row.pending ? `<span class="pt-belief-tag">${esc(t("authoring.pending"))}</span>` : ""}
     </div>
     <div class="pt-belief-text">${

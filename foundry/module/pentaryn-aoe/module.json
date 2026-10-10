@@ -1,0 +1,17 @@
+{
+  "id": "pentaryn-aoe",
+  "title": "Pentaryn AoE",
+  "description": "Spell areas everyone can move and delete: each dnd5e template region gets a small owned handle token it is attached to, so dragging the handle moves the area and deleting it deletes the area; the spell card gets a Remove all templates button under Place Template. When a save spell's damage is rolled, the GM's client lists the creatures inside the area, rolls the monsters' saves (GM-only), asks players to roll their own through a request card, and applies full/half/none on a GM-only Apply. Optionally rolls damage straight after an attack hits. A spell's effects go onto the caster automatically when the caster is its only target, and an Effects tray that still has unapplied effects is highlighted. Exposes game.pentaryn.aoe.",
+  "version": "0.2.2",
+  "compatibility": { "minimum": "14", "verified": "14" },
+  "authors": [{ "name": "Joseph Atkinson" }],
+  "relationships": {
+    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "5.3" } }]
+  },
+  "esmodules": ["aoe.mjs"],
+  "styles": ["aoe.css"],
+  "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
+  "socket": false,
+  "protected": false,
+  "flags": { "pentaryn": { "flagScope": "aoe", "generation": 14 } }
+}

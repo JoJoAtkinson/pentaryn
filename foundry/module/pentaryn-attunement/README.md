@@ -50,6 +50,22 @@ The suppressed state is the one worth watching. dnd5e suppresses an item's effec
 when it is unequipped *or* unattuned, so an attuned-but-unequipped Staff of Healing
 looks attuned everywhere else in the UI while doing nothing at all.
 
+## Attuned but not carried ("away" bonds)
+
+An attuned item that leaves the character keeps its slot. The rules say attunement only ends when you end it (or after 24 hours more than 100 ft away). The sheet shows it as **faded, greyscale, dashed, with a red broken-chain badge**. Hovering shows the item's name and *"Still attuned, but not on Talo. Its power is dormant until it is back in hand."* It deliberately does not say where the item is.
+
+```js
+// Move items into a container (an item-piles chest), tagged "(Talo)", attuned ones bonded
+await game.pentaryn.attunement.stash(actor, chestActor, itemIds, { currency: true });
+```
+
+- Each moved item carries `flags["pentaryn-attunement"].bond` holding its real name, equipped state and attunement. The actor carries `flags["pentaryn-attunement"].away`.
+- When a bonded item is created on any non-pile actor (item-piles Take, a drop, a script), `preCreateItem` strips the `(Name)` tag.
+- If that actor is the owner and the away entry still exists, the item also arrives **attuned and equipped**, the away slot becomes the item's slot, and a toast says so.
+- A bonded `Coin Purse` adds its coin to whoever takes it, then deletes itself.
+- The ✕ or a right-click on an away slot asks first, then ends the attunement.
+- `stash()` uses the item's *source* name. Enchanted items such as the War Mage wand build their displayed name from an effect (`{} of the War Mage, +1`). Tagging the prepared name would double that suffix.
+
 ## When the sidebar is collapsed
 
 The strip goes with it — the same gesture already hides AC, HP, hit dice and death

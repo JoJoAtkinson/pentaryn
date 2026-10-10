@@ -1,0 +1,4 @@
+{
+  "PENTARYN_CURSORS.Setting.enabled.Name": "Tool cursors on the map",
+  "PENTARYN_CURSORS.Setting.enabled.Hint": "Show the active scene tool on the mouse pointer over the map: red crosshair for Target, gold ruler for Ruler, cyan chevrons while placing a spell area, pink pin for Journal notes, green pencil for drawing. Select is always the normal arrow. Turn off if your browser or OS has trouble with custom cursors. Only affects this browser."
+}

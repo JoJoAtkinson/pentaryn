@@ -80,6 +80,191 @@
 
 const MODULE = "pentaryn-attunement";
 const SLOTS = "slots";
+const AWAY_FLAG = "away";
+const BOND = "bond";
+const AWAY = "away:";
+
+/* -------------------------------------------- */
+/*  Away bonds                                  */
+/* -------------------------------------------- */
+
+/*
+ * An attuned item that leaves its owner — confiscated into a chest, handed to
+ * someone to carry — is still attuned by the rules: attunement only ends when
+ * you end it, or after 24 hours more than 100 feet away. dnd5e has no way to say
+ * that. Delete the item from the actor and the attunement simply vanishes; the
+ * slot frees up and nothing remembers it.
+ *
+ * So the item carries a *bond* and the actor carries an *away list*:
+ *
+ *     item  flags["pentaryn-attunement"].bond = { actor, key, name, equipped, attuned, attunement, currency? }
+ *     actor flags["pentaryn-attunement"].away = [{ key, name, img }]
+ *
+ * The away entry holds a slot (greyed, chain-broken, "not on <actor>") and the
+ * bond lets the item find its way home: when an item carrying a bond is created
+ * on the bonded actor, by any route — item-piles Take, a sheet drop, a script —
+ * `preCreateItem` restores its real name, equipped state and attunement before
+ * the document exists, so it arrives lit up. Nobody has to remember to re-attune.
+ *
+ * `bond.name` is also what makes the "(Talo)" tag on a confiscated item go away
+ * the moment anyone picks it up: the tag is for finding things in the box, not
+ * for living on a character sheet.
+ *
+ * `bond.currency` marks a coin purse: on arrival its coin is added to the
+ * actor's purse and the item deletes itself.
+ */
+
+/** @returns {{key:string,name:string,img:string}[]} */
+function awayOf(actor) {
+  const list = actor?.getFlag?.(MODULE, AWAY_FLAG);
+  return Array.isArray(list) ? list.filter(a => a && (typeof a.key === "string")) : [];
+}
+
+/**
+ * Move items off an actor into a container actor, tagged with the owner's name
+ * and bonded so they come home attuned. Used for confiscation.
+ *
+ * @param {Actor} owner
+ * @param {Actor} container       Usually an item-piles container actor.
+ * @param {string[]} itemIds      Items to move. Container contents are flattened.
+ * @param {object} [opts]
+ * @param {string} [opts.tag]     Defaults to the owner's short name.
+ * @param {boolean} [opts.currency]  Also move the owner's coin, as a tagged purse.
+ */
+async function stash(owner, container, itemIds, { tag, currency = false } = {}) {
+  tag ??= owner.name.split(/[ ,]/)[0];
+  const ids = new Set(itemIds);
+  const away = awayOf(owner);
+  const creates = [];
+  const keyById = new Map();
+  const merged = new Map();
+
+  for (const id of ids) {
+    const item = owner.items.get(id);
+    if (!item) continue;
+    const key = foundry.utils.randomID();
+    const wasAttuned = !!item._source.system?.attuned;
+    const data = item.toObject();
+    delete data._id;
+    delete data.system.container;
+    // Source name, not prepared: an enchanted item's displayed name is built by
+    // an effect ("{} of the War Mage, +1"), and storing the prepared name would
+    // double the suffix when it comes home.
+    data.name = `${item._source.name} (${tag})`;
+    if ("equipped" in data.system) data.system.equipped = false;
+    if ("attuned" in data.system) data.system.attuned = false;
+    foundry.utils.setProperty(data, `flags.${MODULE}.${BOND}`, {
+      actor: owner.id, key, name: item._source.name,
+      equipped: !!item._source.system?.equipped,
+      attuned: wasAttuned,
+      attunement: item._source.system?.attunement ?? ""
+    });
+    if (wasAttuned) { away.push({ key, name: item.name, img: item.img }); keyById.set(id, key); }
+
+    // Merge plain duplicates (two stacks of torches) so the box stays readable.
+    const mkey = `${data.type}|${data.name}`;
+    const prior = (data.type !== "container" && !wasAttuned) ? merged.get(mkey) : null;
+    if (prior && ("quantity" in data.system)) { prior.system.quantity += data.system.quantity ?? 1; continue; }
+    merged.set(mkey, data);
+    creates.push(data);
+  }
+
+  if (currency) {
+    const coin = Object.fromEntries(Object.entries(owner.system.currency ?? {}).filter(([, v]) => v > 0));
+    if (Object.keys(coin).length) {
+      const label = Object.entries(coin).map(([k, v]) => `${v.toLocaleString()} ${k}`).join(", ");
+      creates.push({
+        name: `Coin Purse (${tag})`, type: "loot", img: "icons/containers/bags/coinpouch-simple-leather-tan.webp",
+        system: { quantity: 1, type: { value: "treasure" }, description: { value: `<p>${label}.</p>` } },
+        flags: { [MODULE]: { [BOND]: { actor: owner.id, key: foundry.utils.randomID(), name: "Coin Purse", currency: coin } } }
+      });
+    }
+  }
+
+  // Each away item keeps the slot it held before it left.
+  const slots = computeSlots(owner).slots.map(id => keyById.has(id) ? AWAY + keyById.get(id) : id);
+  await container.createEmbeddedDocuments("Item", creates);
+  await owner.deleteEmbeddedDocuments("Item", [...ids].filter(id => owner.items.has(id)));
+  const update = { [`flags.${MODULE}.${AWAY_FLAG}`]: away, [`flags.${MODULE}.${SLOTS}`]: slots };
+  if (currency) for (const k of Object.keys(owner.system.currency ?? {})) update[`system.currency.${k}`] = 0;
+  await owner.update(update);
+  return creates.length;
+}
+
+/**
+ * The owner ends attunement to an item they are not carrying.
+ * @param {Actor} actor
+ * @param {string} key
+ */
+async function releaseAway(actor, key) {
+  const away = awayOf(actor).filter(a => a.key !== key);
+  return actor.setFlag(MODULE, AWAY_FLAG, away);
+}
+
+/**
+ * An item is being created on an actor. If it carries a bond, put it back the
+ * way it was. Runs on whichever client creates the document — for an item-piles
+ * Take that is the GM's — which is why this mutates source rather than writing.
+ * @param {Item} item
+ */
+function restoreBond(item, data, options) {
+  const bond = item.getFlag?.(MODULE, BOND);
+  if (!bond) return;
+  const actor = item.parent;
+  if (!(actor instanceof Actor)) return;
+  // Into another container (box to box): leave it tagged.
+  if (game.itempiles?.API?.isValidItemPile?.(actor)) return;
+
+  const changes = { name: bond.name ?? item.name };
+  const home = (actor.id === bond.actor) && awayOf(actor).some(a => a.key === bond.key);
+  if (home) {
+    if (bond.attunement != null) changes["system.attunement"] = bond.attunement;
+    changes["system.attuned"] = true;
+    if (bond.equipped) changes["system.equipped"] = true;
+  } else if (actor.id === bond.actor) {
+    if (bond.attunement != null) changes["system.attunement"] = bond.attunement;
+    if (bond.equipped) changes["system.equipped"] = true;
+  }
+  item.updateSource(changes);
+  if (options) options[MODULE] = { bond };
+}
+
+/**
+ * After the item exists: hand its slot back and say so. Only on the client that
+ * created it, so it happens once.
+ */
+async function onCreateItemBond(item, options, userId) {
+  if (userId !== game.user.id) return;
+  const actor = item.parent;
+  if (!(actor instanceof Actor)) return;
+  // Read the bond off the document, not `options`: item-piles' create path does
+  // not carry preCreate's options mutations through to this hook.
+  const bond = item.getFlag(MODULE, BOND);
+  if (!bond) return;
+  if (game.itempiles?.API?.isValidItemPile?.(actor)) return;
+
+  if (bond.currency) {
+    const update = {};
+    for (const [k, v] of Object.entries(bond.currency)) update[`system.currency.${k}`] = (actor.system.currency?.[k] ?? 0) + v;
+    await actor.update(update);
+    await item.delete();
+    ui.notifications.info(t("CoinBack", { actor: actor.name }));
+    return;
+  }
+
+  if (actor.id !== bond.actor) return;
+  // Home for good: the bond has done its job. Anywhere else it stays, so the
+  // item still knows its way back if it is handed over later.
+  await item.update({ [`flags.${MODULE}.-=${BOND}`]: null });
+  const entry = awayOf(actor).find(a => a.key === bond.key);
+  if (!entry) return;
+  const slots = computeSlots(actor).slots.map(id => (id === AWAY + bond.key) ? item.id : id);
+  await actor.update({
+    [`flags.${MODULE}.${AWAY_FLAG}`]: awayOf(actor).filter(a => a.key !== bond.key),
+    [`flags.${MODULE}.${SLOTS}`]: slots
+  });
+  ui.notifications.info(t("BackInHand", { name: item.name, actor: actor.name }));
+}
 
 /* -------------------------------------------- */
 /*  State                                       */
@@ -101,6 +286,9 @@ function computeSlots(actor) {
   // by prepareFinalEquippableData (equipment without the Magical property) is
   // genuinely not attuned as far as the rest of the system is concerned.
   const attuned = actor.items.filter(i => i.system?.attuned).map(i => i.id);
+  // Attuned items that are not on the actor right now (confiscated, stashed) keep
+  // their slot. They live in the slot array as `away:<key>`.
+  for (const a of awayOf(actor)) attuned.push(AWAY + a.key);
   const attunedSet = new Set(attuned);
 
   // First occurrence wins. Without the dedupe a flag that repeats an id — which a
@@ -180,6 +368,8 @@ function buildSlot(actor, itemId, index, overflow, editable) {
   li.className = "attunement-slot";
   li.dataset.slot = String(index);
 
+  if (itemId?.startsWith?.(AWAY)) return buildAwaySlot(actor, itemId.slice(AWAY.length), index, overflow, editable, li);
+
   const item = itemId ? actor.items.get(itemId) : null;
 
   if (!item) {
@@ -232,6 +422,45 @@ function buildSlot(actor, itemId, index, overflow, editable) {
 }
 
 /**
+ * A slot held by an attuned item that is not on the actor. Greyed, with a
+ * broken-chain badge, and a plain tooltip that names it and says why it is
+ * dormant — deliberately not where it is: players read this sheet.
+ */
+function buildAwaySlot(actor, key, index, overflow, editable, li) {
+  const entry = awayOf(actor).find(a => a.key === key);
+  li.classList.add("away");
+  if (overflow) li.classList.add("overflow");
+  li.dataset.awayKey = key;
+
+  const fig = document.createElement("figure");
+  const img = document.createElement("img");
+  img.src = entry?.img ?? "icons/svg/item-bag.svg";
+  img.alt = entry?.name ?? "";
+  fig.append(img);
+  const badge = document.createElement("i");
+  badge.className = "fa-solid fa-link-slash away-badge";
+  badge.setAttribute("inert", "");
+  fig.append(badge);
+  if (editable) {
+    const rm = document.createElement("button");
+    rm.type = "button";
+    rm.className = "deletion-control unbutton";
+    rm.dataset.action = "release";
+    rm.setAttribute("aria-label", t("Release"));
+    rm.innerHTML = `<i class="fas fa-circle-xmark" inert></i>`;
+    fig.append(rm);
+  }
+  li.append(fig);
+
+  const name = foundry.utils.escapeHTML(entry?.name ?? "");
+  const body = t("AwayBody", { actor: foundry.utils.escapeHTML(actor.name.split(/[ ,]/)[0]) });
+  li.dataset.tooltip = `<div class="pentaryn-away-tip"><strong>${name}</strong><p>${body}</p></div>`;
+  li.dataset.tooltipDirection = "RIGHT";
+  li.setAttribute("aria-label", `${entry?.name} — ${body}`);
+  return li;
+}
+
+/**
  * Build the whole strip.
  * @param {Actor} actor
  * @param {boolean} editable
@@ -261,7 +490,7 @@ function buildStrip(actor, editable) {
   if (over) {
     const note = document.createElement("p");
     note.className = "over-cap-note roboto-upper";
-    note.textContent = game.i18n.format("PENTARYN.ATTUNEMENT.OverBy", { n: value - max });
+    note.textContent = t("OverBy", { n: value - max });
     root.append(note);
   }
 
@@ -296,6 +525,11 @@ async function attuneToSlot(actor, item, index) {
   const { slots } = computeSlots(actor);
   const occupant = slots[index] ?? null;
   if (occupant === item.id) return;
+  if (occupant?.startsWith(AWAY)) {
+    const name = awayOf(actor).find(a => AWAY + a.key === occupant)?.name ?? "";
+    ui.notifications.warn(t("SlotHeld", { name }));
+    return;
+  }
 
   const updates = [];
   if (occupant) updates.push({ _id: occupant, "system.attuned": false });
@@ -323,6 +557,19 @@ async function unattune(actor, itemId) {
 }
 
 /**
+ * Ending attunement to something you are not holding is permanent in a way the
+ * ordinary ✕ is not — the item will come back unattuned — so it asks first.
+ */
+async function confirmRelease(actor, key) {
+  const entry = awayOf(actor).find(a => a.key === key);
+  const ok = await foundry.applications.api.DialogV2.confirm({
+    window: { title: t("Release") },
+    content: `<p>${t("ReleaseConfirm", { name: foundry.utils.escapeHTML(entry?.name ?? "") })}</p>`
+  });
+  if (ok) return releaseAway(actor, key);
+}
+
+/**
  * @param {DragEvent} event
  * @param {Actor} actor
  */
@@ -343,11 +590,11 @@ async function onDrop(event, actor) {
   if (!item) return;
 
   if (item.parent?.uuid !== actor.uuid) {
-    ui.notifications.warn(game.i18n.localize("PENTARYN.ATTUNEMENT.NotOnActor"));
+    ui.notifications.warn(t("NotOnActor"));
     return;
   }
   if (!item.system?.attunement) {
-    ui.notifications.warn(game.i18n.format("PENTARYN.ATTUNEMENT.NotAttunable", { name: item.name }));
+    ui.notifications.warn(t("NotAttunable", { name: item.name }));
     return;
   }
 
@@ -364,6 +611,11 @@ async function onDrop(event, actor) {
 function activate(strip, actor, editable) {
   strip.addEventListener("click", event => {
     const slotEl = event.target.closest(".attunement-slot");
+    if (slotEl?.dataset.awayKey && event.target.closest('[data-action="release"]')) {
+      event.preventDefault();
+      event.stopPropagation();
+      return confirmRelease(actor, slotEl.dataset.awayKey);
+    }
     if (!slotEl?.dataset.itemId) return;
     if (event.target.closest('[data-action="unattune"]')) {
       event.preventDefault();
@@ -375,6 +627,11 @@ function activate(strip, actor, editable) {
 
   strip.addEventListener("contextmenu", event => {
     const slotEl = event.target.closest(".attunement-slot");
+    if (slotEl?.dataset.awayKey && editable) {
+      event.preventDefault();
+      event.stopPropagation();
+      return confirmRelease(actor, slotEl.dataset.awayKey);
+    }
     if (!slotEl?.dataset.itemId || !editable) return;
     event.preventDefault();
     event.stopPropagation();
@@ -437,9 +694,10 @@ function injectStrip(app, root) {
 function warnOverCap(actor, item, key) {
   const att = actor?.system?.attributes?.attunement;
   if (!att) return;
-  if (att.value < att.max) return;
-  ui.notifications.warn(game.i18n.format(key, {
-    name: item.name, actor: actor.name, value: att.value + 1, max: att.max
+  const value = att.value + awayOf(actor).length;
+  if (value < att.max) return;
+  ui.notifications.warn(t(key, {
+    name: item.name, actor: actor.name, value: value + 1, max: att.max
   }));
 }
 
@@ -447,13 +705,15 @@ function onPreUpdateItem(item, changes) {
   if (foundry.utils.getProperty(changes, "system.attuned") !== true) return;
   if (item.system?.attuned) return;             // already attuned: no delta
   if (!item.system?.attunement) return;         // does not count against the cap
-  warnOverCap(item.parent, item, "PENTARYN.ATTUNEMENT.WouldExceed");
+  warnOverCap(item.parent, item, "WouldExceed");
 }
 
-function onPreCreateItem(item) {
+function onPreCreateItem(item, data, options) {
+  restoreBond(item, data, options);
+  if (item.getFlag?.(MODULE, BOND)) return;
   if (!item.system?.attuned) return;
   if (!(item.parent instanceof Actor)) return;
-  warnOverCap(item.parent, item, "PENTARYN.ATTUNEMENT.ArrivedAttuned");
+  warnOverCap(item.parent, item, "ArrivedAttuned");
 }
 
 /* -------------------------------------------- */
@@ -546,29 +806,49 @@ function patchProficiencyMap(map) {
 /*  Registration                                */
 /* -------------------------------------------- */
 
+/** Strings live here, merged into i18n at init; `t()` falls back to them. */
+const STRINGS = {
+  OverBy: "{n} over the limit",
+  NotOnActor: "That item belongs to a different actor.",
+  NotAttunable: "{name} does not require attunement.",
+  WouldExceed: "{actor} is already attuned to {max} items — attuning {name} makes {value}.",
+  ArrivedAttuned: "{name} arrived already attuned; {actor} is now over the attunement limit.",
+  AwayBody: "Still attuned, but not on {actor}. Its power is dormant until it is back in hand.",
+  Release: "End Attunement",
+  ReleaseConfirm: "End attunement to <strong>{name}</strong>? It is not on you, so it will come back as an ordinary, unattuned item.",
+  SlotHeld: "That slot is held by {name}, which is attuned but not on you. End that attunement first.",
+  BackInHand: "{name} is back with {actor} — attunement restored.",
+  CoinBack: "{actor} recovers their coin."
+};
+
+/**
+ * Not routed through game.i18n: merging into `game.i18n.translations` at init
+ * did not survive to render time in v14, so every string printed as its key.
+ */
+function t(key, data = {}) {
+  return (STRINGS[key] ?? key).replace(/\{(\w+)\}/g, (m, k) => (k in data ? String(data[k]) : m));
+}
+
 Hooks.once("init", () => {
   const added = patchProficiencyMap(CONFIG.DND5E.armorProficienciesMap);
   if (added.length) console.log(`${MODULE} | proficiency applies to all: ${added.join(", ")}`);
 
-  // Registered here rather than shipped as a lang file: four strings.
-  foundry.utils.mergeObject(game.i18n.translations, {
-    PENTARYN: {
-      ATTUNEMENT: {
-        OverBy: "{n} over the limit",
-        NotOnActor: "That item belongs to a different actor.",
-        NotAttunable: "{name} does not require attunement.",
-        WouldExceed: "{actor} is already attuned to {max} items — attuning {name} makes {value}.",
-        ArrivedAttuned: "{name} arrived already attuned; {actor} is now over the attunement limit."
-      }
-    }
-  }, { inplace: true });
 });
 
-Hooks.once("ready", () => {
-  game.pentaryn ??= {};
-  game.pentaryn.attunement = { report, computeSlots };
+// pentaryn-importer replaces game.pentaryn with a FROZEN object in its own ready
+// hook, and ready hooks run in module-id order — "attunement" sorts before
+// "importer", so publishing synchronously gets wiped. Defer a tick (as
+// pentaryn-dropbin does), then rebuild the namespace rather than assign into it.
+Hooks.once("ready", () => setTimeout(() => {
+  const api = { report, computeSlots, stash, releaseAway, away: awayOf };
+  const current = game.pentaryn;
+  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, attunement: api };
+  else {
+    game.pentaryn ??= {};
+    game.pentaryn.attunement = api;
+  }
   console.log(`${MODULE} | ready`);
-});
+}, 0));
 
 // One hook for both sheets. `renderBaseActorSheet` fires for every subclass,
 // because Foundry walks the inheritance chain dispatching render<ClassName>.
@@ -588,6 +868,7 @@ Hooks.on("renderBaseActorSheet", (app, element) => {
 
 Hooks.on("preUpdateItem", onPreUpdateItem);
 Hooks.on("preCreateItem", onPreCreateItem);
+Hooks.on("createItem", onCreateItemBond);
 
 // Exported for `test/run.mjs`. Foundry ignores exports on an esmodule entry point;
 // the reconciliation logic is the part with real edge cases, so it is worth being

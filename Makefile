@@ -175,6 +175,14 @@ foundry-cloud:
 .PHONY: foundry-ties-check foundry-ties-sync
 .PHONY: foundry-walls-test foundry-walls-sync foundry-walls-wasm foundry-walls-bench
 .PHONY: foundry-attunement-check foundry-attunement-sync
+.PHONY: foundry-transform-check foundry-transform-sync
+.PHONY: foundry-names-check foundry-names-sync
+.PHONY: foundry-senses-check foundry-senses-sync foundry-portals-check foundry-portals-sync
+.PHONY: foundry-journal-check foundry-journal-sync
+.PHONY: foundry-aoe-check foundry-aoe-sync
+.PHONY: foundry-dropbin-check foundry-dropbin-sync foundry-cursors-check foundry-cursors-sync
+.PHONY: foundry-movement-check foundry-movement-sync foundry-creatures-check foundry-creatures-sync
+.PHONY: foundry-riders-check foundry-riders-sync
 
 foundry-lookup-check: ; @$(OPS) module-check lookup
 foundry-lookup-sync:  ; @$(OPS) module-sync lookup
@@ -182,6 +190,28 @@ foundry-ties-check:  ; @$(OPS) module-check ties
 foundry-ties-sync:   ; @$(OPS) module-sync ties
 foundry-attunement-check: ; @$(OPS) module-check attunement
 foundry-attunement-sync:  ; @$(OPS) module-sync attunement
+foundry-transform-check: ; @$(OPS) module-check transform
+foundry-transform-sync:  ; @$(OPS) module-sync transform
+foundry-names-check: ; @$(OPS) module-check names
+foundry-names-sync:  ; @$(OPS) module-sync names
+foundry-senses-check: ; @$(OPS) module-check senses
+foundry-senses-sync:  ; @$(OPS) module-sync senses
+foundry-portals-check: ; @$(OPS) module-check portals
+foundry-portals-sync:  ; @$(OPS) module-sync portals
+foundry-journal-check: ; @$(OPS) module-check journal
+foundry-journal-sync:  ; @$(OPS) module-sync journal
+foundry-aoe-check: ; @$(OPS) module-check aoe
+foundry-aoe-sync:  ; @$(OPS) module-sync aoe
+foundry-dropbin-check: ; @$(OPS) module-check dropbin
+foundry-dropbin-sync:  ; @$(OPS) module-sync dropbin
+foundry-cursors-check: ; @$(OPS) module-check cursors
+foundry-cursors-sync:  ; @$(OPS) module-sync cursors
+foundry-movement-check: ; @$(OPS) module-check movement
+foundry-movement-sync:  ; @$(OPS) module-sync movement
+foundry-creatures-check: ; @$(OPS) module-check creatures
+foundry-creatures-sync:  ; @$(OPS) module-sync creatures
+foundry-riders-check: ; @$(OPS) module-check riders
+foundry-riders-sync:  ; @$(OPS) module-sync riders
 foundry-walls-test:  ; @$(OPS) module-check walls
 foundry-walls-sync:  ; @$(OPS) module-sync walls
 foundry-walls-wasm:  ; @$(OPS) walls-wasm
@@ -193,10 +223,12 @@ VTT_UPDATE_PAUSE := $(ROOT)/.state/vtt-update.pause
 LAUNCH_AGENTS := $(HOME)/Library/LaunchAgents
 UPDATE_CLI := cd $(ROOT) && $(PY) -m scripts.foundry.update.cli
 
-.PHONY: vtt-update-dry vtt-update-scan vtt-update-now vtt-update-status
+.PHONY: vtt-update-dry vtt-update-scan vtt-update-now vtt-update-status foundry-adjustments-check
 .PHONY: vtt-update-install vtt-update-uninstall vtt-update-pause vtt-update-resume vtt-notifier
 
-vtt-update-dry:    ; @$(UPDATE_CLI) scan --notes
+vtt-update-dry:    ; @$(UPDATE_CLI) scan --notes --escalation
+# The adjustments registry (foundry/adjustments.yml) still matches the code it names.
+foundry-adjustments-check: ; @cd $(ROOT) && $(PY) -m scripts.foundry.update.adjustments --exposure
 vtt-update-scan:   ; @$(UPDATE_CLI) scan
 vtt-update-status: ; @$(UPDATE_CLI) status
 

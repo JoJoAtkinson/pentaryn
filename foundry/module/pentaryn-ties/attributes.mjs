@@ -30,12 +30,16 @@
  * GM who wants *this* orc not to count as `type:humanoid`.
  */
 
-import { MODULE } from "./ties-api.mjs";
+import { MODULE, baseActorOf } from "./ties-api.mjs";
 import {
   REGISTRY_SETTING,
   ATTRIBUTES_FLAG,
   ATTRIBUTES_OFF_FLAG,
   attrIdOf,
+  nameCollision,
+  renameCollision,
+  resolveAttrRef,
+  planEnsure,
   derivedNamespace,
   clampAttribute,
   readRegistry,
@@ -53,7 +57,14 @@ import {
   forestOf,
   subtreeOf,
   contractForest,
-  childrenOf
+  childrenOf,
+  changedFields,
+  clampTouched,
+  reviewState,
+  needsReview,
+  readSelection,
+  snapshotOf,
+  ATTR_REVIEW_FIELDS
 } from "./known-core.mjs";
 
 // re-exported so the entry point registers the settings by the same names this file reads
@@ -165,47 +176,172 @@ export function registry() {
 
 export const attributeById = id => registry().find(e => e.id === id) ?? null;
 
-/** GM-only. The server would refuse a player anyway; refusing here keeps the message honest. */
+/**
+ * GM-only. The server would refuse a player anyway; refusing here keeps the message honest.
+ * Never throws: a refused or failed write comes back `false`, and the caller turns that into
+ * `{ ok: false, reason: "writeFailed" }`.
+ */
 async function saveRegistry(list) {
   if (!game.user?.isGM) return false;
-  await game.settings.set(MODULE, REGISTRY_SETTING, readRegistry(list));
-  return true;
+  try {
+    await game.settings.set(MODULE, REGISTRY_SETTING, readRegistry(list));
+    return true;
+  } catch (err) {
+    console.warn(`${MODULE} | attribute registry write failed`, err);
+    return false;
+  }
 }
 
 /**
- * Create one entry. Returns `{ok:false, existing}` on a normalisation collision rather than
- * overwriting — decision 18: the autocomplete already offered the existing entry, so creating
- * past it was not deliberate, and colliding on the id is the signal. `yellowstone2` is how you
- * mean a different one.
+ * **Every registry write runs one at a time.** Each write reads the whole list, changes it, and
+ * writes the whole list back; the local value only updates when the server answers. Two writes in
+ * flight together (a field save then a "Reviewed" click, two lore fields in quick succession, a
+ * panel save racing Claude's `A.update`) would each read the old list and the second would
+ * silently undo the first. The read happens INSIDE the queued function, after the previous write
+ * has landed. ⚠ Never call a serialised function from inside another one — it would wait on
+ * itself. `fn` is run even if the previous write threw, and its own result/throw is returned.
  */
-export async function createAttribute(title, { category = "", icon = null, source = null } = {}) {
-  if (!game.user?.isGM) return { ok: false, reason: "notGM" };
+let writeChain = Promise.resolve();
+function serial(fn) {
+  const run = writeChain.then(fn, fn);
+  writeChain = run.catch(() => {});
+  return run;
+}
+
+/* -------------------------------------------- */
+/*  The write contract                          */
+/* -------------------------------------------- */
+
+/*
+ * **Reads return data. Writes return `{ ok, reason?, … }` and never throw.**
+ *
+ * `reason` is one of a closed set, so a script can branch on it:
+ *
+ * | reason | means |
+ * | --- | --- |
+ * | `notGM` | only a GM may write attributes |
+ * | `empty` | the title or reference was blank, or folded to nothing |
+ * | `notFound` | the id or name matches no attribute — **nothing was created** |
+ * | `ambiguous` | the name matches more than one entry (legacy duplicates); `candidates` lists them |
+ * | `collision` | that name or id is already taken; `existing` is the entry |
+ * | `cycle` | the parent would make the entry its own ancestor |
+ * | `invalid` | no actor, or a derived id where an entry was required |
+ * | `writeFailed` | Foundry refused or failed the write |
+ *
+ * ⚠ `{ ok: false }` is an object, so it is **truthy** — test `.ok`, never the result itself.
+ */
+const fail = (reason, extra = {}) => ({ ok: false, reason, ...extra });
+
+/** A resolver miss as a write result, carrying the candidates on `ambiguous`. */
+const missed = (r, extra = {}) => fail(r.reason, { ...(r.candidates ? { candidates: r.candidates } : {}), ...extra });
+
+/**
+ * The raw authored flag of an actor, used as `carried` so a dangling id there stays nameable.
+ * Reads the passed actor, synthetic or not — a delta merges over its base, so this is what shows.
+ */
+const carriedOf = actor => flagList(actor, ATTRIBUTES_FLAG);
+
+/**
+ * **Which attribute did you mean?** An id, a name, or an entry → its id, or `null`.
+ *
+ * Id first, then derived id, then (with `actor`) an id that actor already carries, then a unique
+ * name. A miss is `null`, never a guess and never a creation — see `resolveAttrRef`. Cheap, so a
+ * script can check before it acts: `A.resolve("Ashfall Company")` → `"ashfallcompany"`.
+ */
+export function resolveAttribute(ref, { actor = null } = {}) {
+  return resolveAttrRef(ref, registry(), { carried: actor ? carriedOf(actor) : [] }).id;
+}
+
+/**
+ * A `parent` value from a create/update patch → `{ parent }` (an id, or `null` to clear) or a
+ * refusal. A parent must be a **registry entry**: a bare derived id has no entry for the chain to
+ * continue through, so `ancestorsOf` would treat it as dangling and the parent would mean nothing.
+ */
+function resolveParent(value, list) {
+  if (value === null || value === undefined || (typeof value === "string" && !value.trim())) return { parent: null };
+  const r = resolveAttrRef(value, list);
+  if (!r.id) return { refusal: missed(r, { field: "parent" }) };
+  if (!list.some(e => e.id === r.id)) return { refusal: fail("notFound", { field: "parent" }) };
+  return { parent: r.id };
+}
+
+/**
+ * Create one entry — **strict**: a name or id already in use is refused, never overwritten.
+ *
+ * `opts` takes the **whole entry** — `category`, `icon`, `parent`, `dc`, `skill`, `secret`,
+ * `whenKnown`, `whenCarried`, `reveal`, `miss`, `hold`, `lore`, `source` — all sanitised by
+ * `clampAttribute`, so a backstory is one call per attribute rather than a create then an update.
+ * `parent` may be an id or a name and must already exist.
+ *
+ * → `{ok:true, entry}` | `{ok:false, reason:"notGM"|"empty"|"collision", existing?}` |
+ *   `{ok:false, reason:"notFound"|"ambiguous", field:"parent"}` | `{ok:false, reason:"writeFailed"}`
+ *
+ * Decision 18: the autocomplete already offered the existing entry, so creating past it was not
+ * deliberate, and colliding is the signal. `yellowstone2` is how you mean a different one. Use
+ * `ensureAttribute` when "the existing one is fine" is what you meant.
+ */
+export function createAttribute(title, opts = {}) {
+  return serial(() => createNow(title, opts));
+}
+
+async function createNow(title, opts) {
+  if (!game.user?.isGM) return fail("notGM");
+  const o = opts && typeof opts === "object" ? opts : {};
   const id = attrIdOf(title);
-  if (!id) return { ok: false, reason: "empty" };
+  if (!id) return fail("empty");
   const list = registry();
-  const existing = list.find(e => e.id === id);
-  if (existing) return { ok: false, reason: "collision", existing };
+  /*
+   * ⚠ Two checks, and the second is the authoritative one. The id check catches the ordinary
+   * case; the NAME check catches an entry that was renamed after creation — its id still says
+   * what it used to be called, so a new title can derive a fresh id and sail past the id check
+   * while duplicating the name the table sees (`attrNameKey`, `nameCollision`).
+   */
+  const existing = list.find(e => e.id === id) ?? nameCollision(title, list);
+  if (existing) return fail("collision", { existing });
+  const p = resolveParent(o.parent, list);
+  if (p.refusal) return p.refusal;
   /*
    * ⚠ `advantage` used to be passed here and is gone. `clampAttribute` never named it in its
-   * returned literal, so it was dropped on every read while two call sites went on writing it and
-   * the summary went on reading it — see decision 23's field-drop checklist. `whenKnown` and
-   * `whenCarried` are the live concept.
-   *
-   * `source` is accepted at creation because the migration loop is create-and-point, hundreds of
-   * times; making it a create-then-update pair would double every write.
+   * returned literal, so it was dropped on every read — see decision 23's field-drop checklist.
+   * `whenKnown` and `whenCarried` are the live concept, and pass straight through `o`.
    */
+  const now = Date.now();
   const entry = clampAttribute({
+    ...o,
     id,
     title: String(title ?? "").trim(),
-    category,
-    icon: icon ?? iconForCategory(category),
-    source,
-    lore: []
+    icon: o.icon ?? iconForCategory(o.category),
+    parent: p.parent,
+    lore: o.lore ?? [],
+    // review bookkeeping is never taken from `opts`: a new entry is always unreviewed
+    ...stampNew(now)
   });
-  if (!entry) return { ok: false, reason: "empty" };
+  if (!entry) return fail("empty");
   list.push(entry);
-  await saveRegistry(list);
+  if (!(await saveRegistry(list))) return fail("writeFailed");
   return { ok: true, entry };
+}
+
+/**
+ * **Get it or make it** — the forgiving half of `create`, for scripts and migrations.
+ *
+ * If `title` already names (or ids) an entry, that entry comes back **untouched** — `opts` are
+ * only used when creating, so re-running a script never rewrites a DC someone tuned since. Else it
+ * is created with `opts` exactly as `createAttribute` would.
+ *
+ * → `{ok:true, entry, existed:true|false}` | any `createAttribute` refusal |
+ *   `{ok:false, reason:"ambiguous", candidates}` | `{ok:false, reason:"collision", existing}` when
+ *   the title's id belongs to an entry that has since been **renamed** to something else.
+ */
+export async function ensureAttribute(title, opts = {}) {
+  const plan = planEnsure(title, registry());
+  if (plan.action === "existing") return { ok: true, entry: plan.entry, existed: true };
+  if (plan.action === "refuse") {
+    const { action, reason, ...rest } = plan;
+    return fail(reason, rest);
+  }
+  const made = await createAttribute(title, opts);
+  return made.ok ? { ...made, existed: false } : made;
 }
 
 /**
@@ -216,7 +352,29 @@ export async function createAttribute(title, { category = "", icon = null, sourc
  * Only the dead paths are touched; a deliberately chosen icon is never overwritten.
  */
 
-export async function repairIcons() {
+/**
+ * The sheet's "author entry" for a DERIVED id (`species:elf` …): creates an entry with that exact
+ * id, which `createAttribute` cannot (it derives ids from titles). Queued like every other write,
+ * and held to the same unique-name rule. → `{ok:true, entry}` | `{ok:false, reason:"notGM"|
+ * "collision"|"invalid"|"writeFailed", existing?}`.
+ */
+export const authorEntry = ({ id, title, category, icon }) =>
+  serial(async () => {
+    if (!game.user?.isGM) return fail("notGM");
+    const list = registry();
+    if (list.some(e => e.id === id)) return fail("collision", { existing: list.find(e => e.id === id) });
+    const clash = nameCollision(title, list, { exceptId: id });
+    if (clash) return fail("collision", { existing: clash });
+    const entry = clampAttribute({ id, title, category, icon, lore: [], ...stampNew() });
+    if (!entry) return fail("invalid");
+    list.push(entry);
+    if (!(await saveRegistry(list))) return fail("writeFailed");
+    return { ok: true, entry };
+  });
+
+export const repairIcons = () => serial(repairIconsNow);
+
+async function repairIconsNow() {
   if (!game.user?.isGM) return 0;
   const list = registry();
   let fixed = 0;
@@ -236,21 +394,97 @@ export async function repairIcons() {
  * ⚠ This is the *shared* record. A DC changed here changes for **every carrier** — that is the
  * feature, and it is also exactly how a GM rewrites a world-wide DC while thinking about one
  * orc. Decision 16's honesty note: every surface that reaches this must say whose DC it is.
+ *
+ * `ref` is an id or a name. → `{ok:true, entry}` |
+ * `{ok:false, reason:"notGM"|"notFound"|"ambiguous"|"cycle"|"collision"|"invalid"|"writeFailed"}`.
+ * The `cycle` and `collision` refusals also raise a notification, which is what the sheet shows.
  */
-export async function updateAttribute(id, patch) {
-  if (!game.user?.isGM) return false;
+export const updateAttribute = (ref, patch) => serial(() => commitNow(ref, patch));
+
+/**
+ * The Attribute Review panel's save — the same write as `updateAttribute`, except for how it
+ * treats the review state. Joe typing is Joe, not Claude, so his own edit never *un*-reviews:
+ *
+ * - an entry that was **reviewed** stays reviewed (`reviewedAt = now`, `touched = []`, the
+ *   snapshot refreshed to the new text);
+ * - an entry that was **unreviewed or changed** keeps exactly the review state it had — his edit
+ *   is not added to `touched`, and it is NOT signed off. Sign-off only ever happens through the
+ *   Reviewed button (`reviewAttribute`): fixing one typo must not clear the warning on lore he
+ *   has not read yet.
+ *
+ * Deliberately NOT on the public API. Only review-ui.mjs imports it.
+ */
+export const reviewedUpdate = (ref, patch) => serial(() => commitNow(ref, patch, { review: true }));
+
+/**
+ * The panel's lore-field save: one key of one lore row, with the `lore` array rebuilt INSIDE the
+ * write queue from the registry as it is at that moment — so a second lore save, or a Claude
+ * write, that landed after the panel rendered is never overwritten with a stale copy. Row count
+ * and row ids cannot change: the existing rows are mapped, one is patched.
+ * → as `reviewedUpdate`, or `{ok:false, reason:"notFound", field:"lore"}` if the row is gone.
+ */
+export const reviewedLoreUpdate = (ref, loreId, key, value) =>
+  serial(() => {
+    if (key === "id") return fail("invalid");
+    const list = registry();
+    const r = resolveAttrRef(ref, list);
+    const entry = r.id ? list.find(e => e.id === r.id) : null;
+    if (!entry) return r.id ? fail("notFound") : missed(r);
+    const lore = readLore(entry.lore);
+    if (!lore.some(row => row.id === loreId)) return fail("notFound", { field: "lore" });
+    return commitNow(entry.id, { lore: lore.map(r => (r.id === loreId ? { ...r, [key]: value } : r)) }, { review: true });
+  });
+
+/** Bookkeeping for a brand-new entry: created and modified now, never reviewed. */
+export const stampNew = (now = Date.now()) => ({ createdAt: now, modifiedAt: now, reviewedAt: null, touched: [] });
+
+/**
+ * The one update body. Stamps `modifiedAt` only when a content field actually changed; a no-op
+ * patch writes nothing (unless it is a review, which still records the sign-off). Off the review
+ * path, the changed field names accumulate in `touched` and the entry drops out of "reviewed".
+ */
+async function commitNow(ref, patch, { review = false } = {}) {
+  if (!game.user?.isGM) return fail("notGM");
   const list = registry();
-  const i = list.findIndex(e => e.id === id);
-  if (i < 0) return false;
+  const r = resolveAttrRef(ref, list);
+  if (!r.id) return missed(r);
+  const i = list.findIndex(e => e.id === r.id);
+  if (i < 0) return fail("notFound");
+  const id = list[i].id;
+  const next = { ...(patch && typeof patch === "object" ? patch : {}) };
+  // the review fields are the machinery's, never a patch's — `update(id, { reviewedAt })` must not forge a sign-off
+  for (const k of ATTR_REVIEW_FIELDS) delete next[k];
+  /*
+   * `parent` takes an id or a name, like everything else, and must exist — a typo'd parent used to
+   * be stored and then silently read as "root".
+   */
+  if ("parent" in next) {
+    const p = resolveParent(next.parent, list);
+    if (p.refusal) return p.refusal;
+    next.parent = p.parent;
+  }
   /*
    * ⚠ Refuse a parent that would close a loop. `wouldCycle` was written for this and then never
    * called from anywhere, so the only thing standing between a slip of the mouse and a cycle was
    * the readers' degrade-gracefully behaviour — and the tree does not degrade gracefully, it makes
    * the whole loop and everything under it disappear (see `forestOf`). Cheap to refuse here.
    */
-  if ("parent" in (patch ?? {}) && wouldCycle(id, patch.parent, list)) {
+  if (next.parent && wouldCycle(id, next.parent, list)) {
     ui.notifications?.warn(t("attributes.cycleRefused"));
-    return false;
+    return fail("cycle");
+  }
+  /*
+   * ⚠ Refuse a rename onto another entry's name. The id is never re-derived on rename (every
+   * carrier and belief points at it), so without this a rename is the one door through which two
+   * attributes end up sharing a name — Joe's rule is that they never may. Recasing an entry's own
+   * name is fine; `renameCollision` only looks at *other* entries.
+   */
+  if ("title" in next) {
+    const clash = renameCollision(id, String(next.title ?? "").trim() || list[i].id, list);
+    if (clash) {
+      ui.notifications?.warn(f("attributes.renameRefused", { title: clash.title, id: clash.id }));
+      return fail("collision", { existing: clash });
+    }
   }
   /*
    * Retyping the category should re-dress the entry: call it a city and it gets the city. Only an
@@ -263,27 +497,162 @@ export async function updateAttribute(id, patch) {
    * that changed is a different file, and a hash carried across from the old one would assert
    * provenance nothing checked. Send the new hashes, or send nulls.
    */
-  const next = { ...patch };
   if ("category" in next && !("icon" in next) && isDefaultIcon(list[i].icon)) {
     next.icon = iconForCategory(next.category);
   }
-  const merged = clampAttribute({ ...list[i], ...next, id: list[i].id });
-  if (!merged) return false;
+  const merged = clampAttribute({ ...list[i], ...next, id });
+  if (!merged) return fail("invalid");
+  const diff = changedFields(list[i], merged);
+  if (!diff.length) return { ok: true, entry: list[i], unchanged: true };
+  const now = Date.now();
+  merged.modifiedAt = now;
+  if (review && reviewState(list[i]) === "reviewed") {
+    // Joe edited an entry he had already signed off: it stays signed off, at the new text
+    merged.reviewedAt = now;
+    merged.touched = [];
+    merged.reviewedSnapshot = snapshotOf(merged);
+  } else if (review) {
+    // Joe edited an entry still awaiting review: leave its review state exactly as it was —
+    // not signed off, and his own edit is not listed as something Claude touched
+    merged.reviewedAt = list[i].reviewedAt;
+    merged.touched = list[i].touched;
+  } else merged.touched = clampTouched([...list[i].touched, ...diff]);
   list[i] = merged;
-  return saveRegistry(list);
+  if (!(await saveRegistry(list))) return fail("writeFailed");
+  return { ok: true, entry: merged, ...(diff.length ? { changed: diff } : { unchanged: true }) };
+}
+
+/* -------------------------------------------- */
+/*  Human review and the GM's selection         */
+/* -------------------------------------------- */
+
+/**
+ * **Joe's sign-off.** `reviewedAt = now`, `touched = []`; `modifiedAt` is not bumped — nothing in
+ * the content changed. Claude never calls this unless Joe explicitly asks.
+ */
+export async function reviewAttribute(ref) {
+  return setReviewed(ref, true);
+}
+
+/** Withdraw the sign-off (`reviewedAt = null`) — so a row can be flagged back to the top. */
+export async function unreviewAttribute(ref) {
+  return setReviewed(ref, false);
+}
+
+function setReviewed(ref, on) {
+  return serial(() => setReviewedNow(ref, on));
+}
+
+async function setReviewedNow(ref, on) {
+  if (!game.user?.isGM) return fail("notGM");
+  const list = registry();
+  const r = resolveAttrRef(ref, list);
+  if (!r.id) return missed(r);
+  const i = list.findIndex(e => e.id === r.id);
+  if (i < 0) return fail("notFound");
+  // signing off records what the content said, so the panel can show what changes after it;
+  // withdrawing keeps the old snapshot — "what changed since the last sign-off" is still useful
+  list[i] = on
+    ? { ...list[i], reviewedAt: Date.now(), touched: [], reviewedSnapshot: snapshotOf(list[i]) }
+    : { ...list[i], reviewedAt: null };
+  if (!(await saveRegistry(list))) return fail("writeFailed");
+  return { ok: true, entry: list[i] };
+}
+
+/** Entries needing a human look, needs-review order: `[{ id, title, reviewState, touched, modifiedAt, createdAt }]`. */
+export function unreviewedAttributes() {
+  return registry()
+    .filter(needsReview)
+    .map(e => ({ id: e.id, title: e.title, reviewState: reviewState(e), touched: e.touched, modifiedAt: e.modifiedAt, createdAt: e.createdAt }));
+}
+
+/** The user flag that holds the review panel's ticked boxes. Per GM user, survives reloads. */
+export const SELECTION_FLAG = "attrSelected";
+
+/** The current GM's selection as ids, pruned to live registry entries. */
+export function selectionIds() {
+  try {
+    return readSelection(game.user?.getFlag(MODULE, SELECTION_FLAG), registry());
+  } catch {
+    return [];
+  }
 }
 
 /**
- * Delete an entry.
+ * **What Joe has ticked** — the call Claude reads when he says "the selected attributes".
+ * → `[{ id, title, category, parent, reviewState }]`, in the order he ticked them.
+ */
+export function selectedAttributes() {
+  const byId = new Map(registry().map(e => [e.id, e]));
+  return selectionIds().map(id => {
+    const e = byId.get(id);
+    return { id, title: e.title, category: e.category, parent: e.parent, reviewState: reviewState(e) };
+  });
+}
+
+async function writeSelection(ids) {
+  if (!game.user?.isGM) return fail("notGM");
+  try {
+    await game.user.setFlag(MODULE, SELECTION_FLAG, ids);
+    return { ok: true, ids };
+  } catch (err) {
+    console.warn(`${MODULE} | selection write failed`, err);
+    return fail("writeFailed");
+  }
+}
+
+/** Resolve refs (id or name) → `{ ids, missed }`; a miss is reported, never guessed. */
+function resolveMany(refs) {
+  const list = registry();
+  const ids = [];
+  const miss = [];
+  for (const ref of Array.isArray(refs) ? refs : [refs]) {
+    const r = resolveAttrRef(ref, list);
+    if (r.id && list.some(e => e.id === r.id)) {
+      if (!ids.includes(r.id)) ids.push(r.id);
+    } else miss.push(typeof ref === "string" ? ref : ref?.id ?? String(ref));
+  }
+  return { ids, missed: miss };
+}
+
+/** Tick these (adds to the selection; `{ replace: true }` replaces it). → `{ ok, ids, missed? }`. */
+export async function selectAttributes(refs, { replace = false } = {}) {
+  const r = resolveMany(refs);
+  const base = replace ? [] : selectionIds();
+  const out = await writeSelection([...base, ...r.ids.filter(id => !base.includes(id))]);
+  return r.missed.length && out.ok ? { ...out, missed: r.missed } : out;
+}
+
+/** Untick these. → `{ ok, ids, missed? }`. */
+export async function deselectAttributes(refs) {
+  const r = resolveMany(refs);
+  const out = await writeSelection(selectionIds().filter(id => !r.ids.includes(id)));
+  return r.missed.length && out.ok ? { ...out, missed: r.missed } : out;
+}
+
+/** Untick everything. */
+export const clearSelection = () => writeSelection([]);
+
+/**
+ * Delete an entry. `ref` is an id or a name; a miss writes nothing and says `notFound`.
  *
  * The **links are not touched**, and cannot be: derived links are computed and authored links
  * are ids on actors. A deleted entry degrades every carrier's link to a bare id with no lore
  * and no advantage — which is exactly what a derived id with no entry already is, so there is
  * one behaviour rather than two. Re-creating the entry with the same id restores everything.
+ * `A.broken(actor)` lists such ids as `dangling`.
  */
-export async function deleteAttribute(id) {
-  if (!game.user?.isGM) return false;
-  return saveRegistry(registry().filter(e => e.id !== id));
+export const deleteAttribute = ref => serial(() => deleteNow(ref));
+
+async function deleteNow(ref) {
+  if (!game.user?.isGM) return fail("notGM");
+  const list = registry();
+  const r = resolveAttrRef(ref, list);
+  if (!r.id) return missed(r);
+  const entry = list.find(e => e.id === r.id);
+  if (!entry) return fail("notFound");
+  if (!(await saveRegistry(list.filter(e => e.id !== entry.id)))) return fail("writeFailed");
+  return { ok: true, entry };
 }
 
 /* -------------------------------------------- */
@@ -436,6 +805,46 @@ export function attributesOf(actor, kindResolver = null, { viewer = null } = {})
 }
 
 /**
+ * The actor a link is **written** to.
+ *
+ * An unlinked token's sheet hands us its synthetic actor, and a flag set there lands on that one
+ * token's delta: the world actor stays unlinked, the next token placed lacks it, and `stale()`,
+ * `search()` and the autocomplete (which walk `game.actors`) never see it. Ties already resolve
+ * through `actorId` for the same reason (`baseActorOf`), so links do too — a membership is a fact
+ * about the character, and every jailer token of "House Barrabin Jailer" is in House Barrabin.
+ *
+ * ⚠ One exception: a token whose delta **already** holds its own attribute flags (written before
+ * this rule) keeps being edited where those live. Redirecting it would strand them — the delta
+ * overrides the base, so an unlink on the world actor would change nothing that token shows.
+ */
+function subjectOf(actor) {
+  if (!actor?.isToken || !actor.token) return actor;
+  let own = {};
+  try {
+    own = actor.token.delta?._source?.flags?.[MODULE] ?? {};
+  } catch {
+    own = {};
+  }
+  if (ATTRIBUTES_FLAG in own || ATTRIBUTES_OFF_FLAG in own) return actor;
+  return baseActorOf(actor.token) ?? actor;
+}
+
+/** Write both link flags in **one** update — one round trip, one render. Never throws. */
+async function writeLinks(actor, { authored = null, off = null }) {
+  const data = {};
+  if (authored) data[`flags.${MODULE}.${ATTRIBUTES_FLAG}`] = authored;
+  if (off) data[`flags.${MODULE}.${ATTRIBUTES_OFF_FLAG}`] = off;
+  if (!Object.keys(data).length) return true;
+  try {
+    await actor.update(data);
+    return true;
+  } catch (err) {
+    console.warn(`${MODULE} | attribute link write failed`, err);
+    return false;
+  }
+}
+
+/**
  * Link an attribute to an actor — **and every ancestor with it** (Joe's Q1).
  *
  * > *"Add a child attribute to auto add all the parents as a requirement… this removes having to
@@ -446,25 +855,36 @@ export function attributesOf(actor, kindResolver = null, { viewer = null } = {})
  * feared — a carrier of a child that is not a carrier of its parent, whose membership no roll can
  * ever reach — **cannot be constructed**. Saying someone is an assassin of a particular guild says
  * they are of that district and that city, because that is what it means.
+ *
+ * `ref` is an id, a name or an entry. **A name that matches nothing is refused, never created** —
+ * so a typo cannot spawn a link to nothing. To create-if-missing, `ensureAttribute` first: two
+ * explicit calls is the point.
+ *
+ * → `{ok:true, id, actorId, added:[…], unsuppressed:[…]}` (both empty = already linked, still ok) |
+ *   `{ok:false, reason:"notGM"|"invalid"|"empty"|"notFound"|"ambiguous"|"writeFailed"}`
  */
-export async function linkAttribute(actor, id) {
-  if (!game.user?.isGM || !actor || !id) return false;
-  const wanted = withAncestors(id, registry());
-  const authored = flagList(actor, ATTRIBUTES_FLAG);
-  const off = flagList(actor, ATTRIBUTES_OFF_FLAG);
-  const derived = derivedFor(actor);
+export async function linkAttribute(actor, ref) {
+  if (!game.user?.isGM) return fail("notGM");
+  const subject = subjectOf(actor);
+  if (!subject) return fail("invalid");
+  const reg = registry();
+  const r = resolveAttrRef(ref, reg);
+  if (!r.id) return missed(r);
+  const wanted = withAncestors(r.id, reg);
+  const authored = flagList(subject, ATTRIBUTES_FLAG);
+  const off = flagList(subject, ATTRIBUTES_OFF_FLAG);
+  const derived = derivedFor(subject);
 
   // linking something suppressed means un-suppressing it — and its ancestors too, or the link
   // would land on an actor whose ladder is still broken by a suppression further up
-  const unsuppressed = off.filter(x => !wanted.includes(x));
-  if (unsuppressed.length !== off.length) {
-    if (unsuppressed.length) await actor.setFlag(MODULE, ATTRIBUTES_OFF_FLAG, unsuppressed);
-    else await actor.unsetFlag(MODULE, ATTRIBUTES_OFF_FLAG);
-  }
-
-  const add = wanted.filter(x => !authored.includes(x) && !derived.includes(x));
-  if (add.length) await actor.setFlag(MODULE, ATTRIBUTES_FLAG, [...authored, ...add]);
-  return true;
+  const unsuppressed = off.filter(x => wanted.includes(x));
+  const added = wanted.filter(x => !authored.includes(x) && !derived.includes(x));
+  const wrote = await writeLinks(subject, {
+    authored: added.length ? [...authored, ...added] : null,
+    off: unsuppressed.length ? off.filter(x => !wanted.includes(x)) : null
+  });
+  if (!wrote) return fail("writeFailed");
+  return { ok: true, id: r.id, actorId: subject.id, added, unsuppressed };
 }
 
 /**
@@ -473,9 +893,23 @@ export async function linkAttribute(actor, id) {
  * An **authored** link is removed from the flag. A **derived** link cannot be removed — it is
  * recomputed from the stat block every time — so it is suppressed instead. One gesture, two
  * mechanisms, and the GM does not have to know which is which.
+ *
+ * `ref` is an id, a name, or any id the actor carries — including a **dangling** one whose entry
+ * is gone, which is how `A.broken()`'s `dangling` rows are cleaned up. Unlinking something the
+ * actor does not carry is `{ok:true, removed:[], suppressed:[]}`, not an error.
+ *
+ * → `{ok:true, id, actorId, removed:[…], suppressed:[…]}` |
+ *   `{ok:false, reason:"notGM"|"invalid"|"empty"|"notFound"|"ambiguous"|"writeFailed"}`
  */
-export async function unlinkAttribute(actor, id) {
-  if (!game.user?.isGM || !actor || !id) return false;
+export async function unlinkAttribute(actor, ref) {
+  if (!game.user?.isGM) return fail("notGM");
+  const subject = subjectOf(actor);
+  if (!subject) return fail("invalid");
+  const reg = registry();
+  const authored = flagList(subject, ATTRIBUTES_FLAG);
+  const r = resolveAttrRef(ref, reg, { carried: authored });
+  if (!r.id) return missed(r);
+  const id = r.id;
 
   /*
    * ⚠ Unlinking a parent must take its **descendants** with it, or the write creates exactly the
@@ -484,7 +918,6 @@ export async function unlinkAttribute(actor, id) {
    * from an Ardenhaven assassin removes the assassin membership too, because the membership said
    * they were from Ardenhaven.
    */
-  const reg = registry();
   const doomed = new Set([id]);
   let grew = true;
   while (grew) {
@@ -496,30 +929,35 @@ export async function unlinkAttribute(actor, id) {
     }
   }
 
-  const authored = flagList(actor, ATTRIBUTES_FLAG);
-  const keep = authored.filter(x => !doomed.has(x));
-  if (keep.length !== authored.length) {
-    if (keep.length) await actor.setFlag(MODULE, ATTRIBUTES_FLAG, keep);
-    else await actor.unsetFlag(MODULE, ATTRIBUTES_FLAG);
-  }
+  const removed = authored.filter(x => doomed.has(x));
 
   /*
    * A derived link cannot be removed — it is recomputed from the stat block every time — so it is
    * suppressed instead. One gesture, two mechanisms, and the GM never has to know which is which.
+   * (`kind:` is not suppressible from here: it needs the kind resolver, which lives in study.mjs.)
    */
-  const derived = derivedFor(actor);
-  const suppress = [...doomed].filter(x => derived.includes(x));
-  if (suppress.length) {
-    const off = flagList(actor, ATTRIBUTES_OFF_FLAG);
-    const next = [...new Set([...off, ...suppress])];
-    if (next.length !== off.length) await actor.setFlag(MODULE, ATTRIBUTES_OFF_FLAG, next);
-  }
-  return true;
+  const derived = derivedFor(subject);
+  const off = flagList(subject, ATTRIBUTES_OFF_FLAG);
+  const suppressed = [...doomed].filter(x => derived.includes(x) && !off.includes(x));
+
+  const wrote = await writeLinks(subject, {
+    authored: removed.length ? authored.filter(x => !doomed.has(x)) : null,
+    off: suppressed.length ? [...off, ...suppressed] : null
+  });
+  if (!wrote) return fail("writeFailed");
+  return { ok: true, id, actorId: subject.id, removed, suppressed };
 }
 
 /**
  * Every carrier whose ancestry is broken — the invalid-sheet check (Joe's Q1: *"should have an
- * error and shouldn't be allowed"*).
+ * error and shouldn't be allowed"*). **The one "are this actor's links correct" call.**
+ *
+ * Two kinds of row:
+ *
+ *  · `{ id, missing }` — `id` is carried but its ancestor `missing` is not. Fix: `A.repair(actor, id)`.
+ *  · `{ id, missing: null, dangling: true }` — an authored id with **no registry entry** (deleted,
+ *    or a legacy typo). It degrades to a bare id with no lore. Fix: re-create the entry with that
+ *    id, or `A.unlink(actor, id)`.
  *
  * Fails **open**: the planner simply stops at the gap rather than rolling a fact the data says is
  * false, so a broken sheet costs an unreachable membership, never a wrong answer. The error exists
@@ -527,11 +965,16 @@ export async function unlinkAttribute(actor, id) {
  */
 export function brokenAncestry(actor, kindResolver = null) {
   const reg = registry();
+  const live = new Set(reg.map(e => e.id));
   // the resolver is injected, never imported — `study.mjs` imports THIS file, so reaching back
   // for `kindActorOf` would close a cycle
   const has = new Set(attributeIdsOf(actor, kindResolver));
   const bad = [];
   for (const id of has) {
+    if (!live.has(id) && !derivedNamespace(id)) {
+      bad.push({ id, missing: null, dangling: true });
+      continue;
+    }
     for (const parent of ancestorsOf(id, reg)) {
       if (!has.has(parent)) bad.push({ id, missing: parent });
     }
@@ -539,8 +982,8 @@ export function brokenAncestry(actor, kindResolver = null) {
   return bad;
 }
 
-/** Repair one broken carrier by adding what its membership already implies. */
-export const repairAncestry = (actor, id) => linkAttribute(actor, id);
+/** Repair one broken carrier by adding what its membership already implies. Same result as `link`. */
+export const repairAncestry = (actor, ref) => linkAttribute(actor, ref);
 
 /**
  * Re-parenting leaves every existing carrier holding the OLD ancestry — not *invalid* (they carry
@@ -548,8 +991,10 @@ export const repairAncestry = (actor, id) => linkAttribute(actor, id);
  * the GM can be offered a sweep. Never automatic: re-shaping the world is an authoring act, and
  * silently rewriting a hundred actors because of it is not.
  */
-export function staleCarriers(id) {
+export function staleCarriers(ref) {
   const reg = registry();
+  const id = resolveAttrRef(ref, reg).id;
+  if (!id) return [];
   const wanted = new Set(withAncestors(id, reg));
   const out = [];
   for (const actor of game.actors?.contents ?? []) {
@@ -588,11 +1033,34 @@ export const hasFailed = (character, attrId) => failedAttribute(knowledge(), cha
 export async function setKnowledge(rows) {
   if (!game.user?.isGM || !rows?.length) return false;
   const all = knowledge();
-  for (const { characterId, attrId, failed = false, via = "roll", when = 0, pending = false } of rows) {
+  for (const { characterId, attrId, failed = false, via = "roll", when = 0, pending = false, overFailed = false } of rows) {
     if (!characterId || !attrId) continue;
     all[characterId] ??= {};
-    all[characterId][attrId] = { when, failed, via, pending };
+    all[characterId][attrId] = { when, failed, via, pending, ...(overFailed ? { overFailed: true } : {}) };
   }
+  await game.settings.set(MODULE, KNOWLEDGE_SETTING, all);
+  return true;
+}
+
+/**
+ * Drop one world-knowledge row — **only a row a GM Share wrote** (`via: "shared"`).
+ *
+ * The first deletion of knowledge in the module, and deliberately narrow: it is the undo of a
+ * Share (`forgetFact`), nothing else. A rolled row — success or the permanent stage-1 failure —
+ * and a `grantKnowledge` row are left alone, and a share that was laid over a failed roll
+ * (`overFailed`) is turned back INTO that failure rather than deleted, so Joe's "no reset for a
+ * failed stage-1 roll" stands.
+ * → true when a row was removed.
+ */
+export async function clearKnowledge(characterId, attrId) {
+  if (!game.user?.isGM || !characterId || !attrId) return false;
+  const all = knowledge();
+  const row = all[characterId]?.[attrId];
+  if (row?.via !== "shared") return false;
+  // a share laid over a failed roll gives the failure back — forgetting is not a free re-roll
+  if (row.overFailed) all[characterId][attrId] = { when: row.when, failed: true, via: "roll", pending: false };
+  else delete all[characterId][attrId];
+  if (!Object.keys(all[characterId]).length) delete all[characterId];
   await game.settings.set(MODULE, KNOWLEDGE_SETTING, all);
   return true;
 }
@@ -614,13 +1082,36 @@ export async function setKnowledge(rows) {
  *
  * Blind rolls never skip. Only the GM can, and the cases where skipping is right are too
  * particular to encode — so they live here, on a button, and nowhere else.
+ *
+ * `ref` is an id or a name; an unknown one is refused rather than written as a ghost row.
+ * → `{ok:true, ids:[…]}` | `{ok:false, reason:"notGM"|"invalid"|"empty"|"notFound"|"ambiguous"|"writeFailed"}`
  */
-export async function grantKnowledge(character, attrId, { withParents = false } = {}) {
-  if (!game.user?.isGM || !character || !attrId) return false;
-  const ids = withParents ? withAncestors(attrId, registry()) : [attrId];
+export async function grantKnowledge(character, ref, { withParents = false } = {}) {
+  if (!game.user?.isGM) return fail("notGM");
+  if (!character?.id) return fail("invalid");
+  const reg = registry();
+  const r = resolveAttrRef(ref, reg);
+  if (!r.id) return missed(r);
+  const ids = withParents ? withAncestors(r.id, reg) : [r.id];
   const now = Date.now();
-  return setKnowledge(ids.map(id => ({ characterId: character.id, attrId: id, via: "grant", when: now })));
+  try {
+    await setKnowledge(ids.map(id => ({ characterId: character.id, attrId: id, via: "grant", when: now })));
+  } catch (err) {
+    console.warn(`${MODULE} | knowledge grant failed`, err);
+    return fail("writeFailed");
+  }
+  return { ok: true, ids };
 }
+
+/**
+ * `describeAttribute` for a console caller: an id or a name → a display record, or `null` when it
+ * names nothing. (The internal `describeAttribute(id)` always fabricates a record from the slug,
+ * which is right for a carried id and misleading for a typo.)
+ */
+export const describeRef = ref => {
+  const id = resolveAttribute(ref);
+  return id ? describeAttribute(id) : null;
+};
 
 /**
  * Everything a character knows of the world, as display records — the world-knowledge surface.
@@ -793,12 +1284,15 @@ export function searchAttributes(query, kindResolver = null) {
     )
     .slice(0, 40);
   const wouldBe = attrIdOf(q);
+  const named = nameCollision(q, registry());
+  const collidesWith = wouldBe ? rows.find(r => r.id === wouldBe) ?? (named && describeAttribute(named.id)) ?? null : null;
   return {
     matches,
     wouldBe,
-    // decision 18: creation past an existing id is refused, and the id is what decides
-    canCreate: !!wouldBe && !rows.some(r => r.id === wouldBe),
-    collidesWith: wouldBe ? rows.find(r => r.id === wouldBe) ?? null : null
+    // decision 18: creation past an existing id is refused — and past an existing NAME, which
+    // `createAttribute` now also refuses, so the button never offers what the click would refuse
+    canCreate: !!wouldBe && !collidesWith,
+    collidesWith
   };
 }
 

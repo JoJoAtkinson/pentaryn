@@ -166,6 +166,34 @@ const stock = { natural: true, clothing: true, light: "lgt", medium: "med", heav
   check("a second pass adds nothing", patchProficiencyMap(map), []);
 }
 
+/* ── Away bonds: attuned items not on the actor ───────────────────────────── */
+
+function awayActor({ attuned = [], away = [], slots, max = 3 } = {}) {
+  const a = actor({ attuned, max });
+  a.getFlag = (_m, k) => (k === "away" ? away : slots);
+  return a;
+}
+
+check("an away item holds a slot and counts",
+  [slotsOf(awayActor({ attuned: ["a"], away: [{ key: "k1", name: "Staff" }] })),
+   computeSlots(awayActor({ attuned: ["a"], away: [{ key: "k1", name: "Staff" }] })).value],
+  [["a", "away:k1", null], 2]);
+
+check("an away item keeps its stored position",
+  slotsOf(awayActor({ attuned: ["a", "b"], away: [{ key: "k1" }], slots: ["away:k1", "a", "b"] })),
+  ["away:k1", "a", "b"]);
+
+check("a stale away id (entry released) becomes a hole",
+  slotsOf(awayActor({ attuned: ["a"], away: [], slots: ["away:k1", "a"] })),
+  [null, "a", null]);
+
+check("malformed away entries are ignored",
+  slotsOf(awayActor({ attuned: [], away: ["x", null, { name: "no key" }, { key: "ok" }] })),
+  ["away:ok", null, null]);
+
+check("away items push an actor over cap",
+  computeSlots(awayActor({ attuned: ["a", "b", "c"], away: [{ key: "k" }] })).over, true);
+
 /* ── Report ───────────────────────────────────────────────────────────────── */
 
 if (failures.length) {

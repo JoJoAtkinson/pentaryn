@@ -43,9 +43,14 @@ function resolveBookIds(books) {
  * `game.packs` -> the plain shape lookup-core wants.
  *
  * `getDocuments()` rather than `getIndex({fields})`: the index does NOT reliably
- * populate nested fields — measured 2026-08-22 on v14.367, 2 of 47 PHB entries came
- * back populated and the rest as `{}`, unchanged by `pack.clear()`. `getDocuments()`
- * is ~150 ms for the whole PHB and is simply correct.
+ * populate nested fields. Measured 2026-08-22 on v14.367 (2 of 47 PHB entries filled,
+ * the rest `{}`) and again 2026-10-10 on v14.369: the server answers correctly, but
+ * core `CompendiumCollection#indexDocument` rebuilds an entry with
+ * `getProperty(source, "pages.name")` whenever a document enters the cache, which
+ * reads through the `pages` array as undefined and leaves `pages: {}` /
+ * `{text: {}}`. So the index is right or wrong depending on who called
+ * `getDocuments()` first — 47/47 one call, 0/47 the next. `getDocuments()` is
+ * ~150 ms for the whole PHB and is simply correct.
  *
  * `doc.pages` is an EmbeddedCollection: iterate it, use `.size`, never `.length`.
  */
@@ -187,11 +192,20 @@ async function selftest() {
 
   // Documents the bug the adapter routes around. If Foundry ever fixes it, this fails
   // and the fix becomes an informed decision instead of a silent regression.
-  const phb = game.packs.get("dnd-players-handbook.content");
-  const idx = await phb.getIndex({ fields: ["pages.name"] });
-  const populated = [...idx].filter(e => Array.isArray(e.pages)).length;
-  check("getIndex({fields}) still unreliable (documents the workaround)",
-        populated < idx.size, `${populated}/${idx.size} entries populated`);
+  // It tests the MECHANISM, not a live index: counting filled entries in
+  // `getIndex({fields})` depends on whether something already called getDocuments()
+  // this session, so it flipped between pass and fail on v14.369 with the bug intact.
+  // Side-effect free: replays indexDocument's projection on a literal, reads source.
+  const CC = foundry.documents.collections.CompendiumCollection;
+  const projected = {};
+  foundry.utils.setProperty(projected, "pages.name",
+    foundry.utils.getProperty({ pages: [{ name: "x" }] }, "pages.name"));
+  const viaGetProperty = /getProperty\(\s*data\s*,\s*field\s*\)/
+    .test(CC?.prototype?.indexDocument?.toString?.() ?? "");
+  check("core indexDocument still drops nested page fields (documents the workaround)",
+        viaGetProperty && !Array.isArray(projected.pages),
+        `indexDocument via getProperty=${viaGetProperty}, ` +
+        `projected pages=${JSON.stringify(projected.pages)}`);
 
   const failed = checks.filter(c => !c.ok);
   return { ok: failed.length === 0, passed: checks.length - failed.length,

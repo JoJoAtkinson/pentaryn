@@ -1,0 +1,32 @@
+{
+  "PENTARYN_RIDERS": {
+    "note": {
+      "bonus": "{label} {value}",
+      "min": "{label}: 1s count as {n}",
+      "reroll": "{label}: 1s rerolled"
+    },
+    "battleMedic": {
+      "flavor": "Battle Medic — {target} spends a d{faces} Hit Die",
+      "needTarget": "Battle Medic: target the one creature you are tending first.",
+      "noHitDice": "Battle Medic: {name} has no Hit Dice left to spend.",
+      "noGM": "Battle Medic needs the GM online to heal a creature you don't control.",
+      "failed": "Battle Medic was rolled, but {name}'s Hit Die and HP couldn't be updated — tell the GM.",
+      "done": "{name} spends a d{faces} Hit Die and regains {healed} HP. Hit Dice left: {value}/{max}.",
+      "doneShort": "{name} spends a d{faces} Hit Die and regains {healed} HP."
+    },
+    "hd": {
+      "spend": "Spend a Hit Die",
+      "restore": "Regain a Hit Die"
+    },
+    "settings": {
+      "enabled": {
+        "name": "Feature riders",
+        "hint": "Elemental Adept, Elemental Affinity, Potent Spellcasting, Healer and Battle Medic are applied automatically. Turn off to go back to doing them by hand."
+      },
+      "hdControls": {
+        "name": "Hit Dice − / + on character sheets",
+        "hint": "Shows a − and a + beside Hit Dice on the character sheet outside edit mode, to spend or regain one Hit Die."
+      }
+    }
+  }
+}

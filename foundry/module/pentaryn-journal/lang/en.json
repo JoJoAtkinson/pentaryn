@@ -1,0 +1,41 @@
+{
+  "PENTARYN_JOURNAL": {
+    "add": "Add to my journal",
+    "adding": "Adding…",
+    "saved": "In your journal",
+    "open": "Open",
+    "update": "Update my copy",
+    "hint": {
+      "add": "Keeps a copy you can reread any time.",
+      "saved": "Saved {when}",
+      "changed": "This has changed since you saved it — updating replaces your copy's text."
+    },
+    "new": "New",
+    "journalName": "{name}'s Journal",
+    "folder": "Player Journals",
+    "provenance": {
+      "foundIn": "Found in {place}",
+      "found": "Found",
+      "original": "the original",
+      "embedded": "embedded content"
+    },
+    "notify": {
+      "added": "Added to your journal — {name}",
+      "updated": "Updated in your journal — {name}",
+      "noGM": "Your journal needs the GM online to set it up the first time — ask them.",
+      "timeout": "The GM's client didn't answer. Try again in a moment.",
+      "failed": "Couldn't add this to your journal — tell the GM.",
+      "tooLarge": "This is too large to keep in your journal."
+    },
+    "settings": {
+      "gmButton": {
+        "name": "Show the Add button to the GM",
+        "hint": "For testing the player flow from the GM client. The GM gets a journal like anyone else. Note: the GM can always read every player's journal."
+      },
+      "singlePage": {
+        "name": "Eye readables open as a single page",
+        "hint": "When an eye's journal has only one page, players don't see the page list or the page arrows. Turn off if you add multi-page eyes later. Personal journals always show their list."
+      }
+    }
+  }
+}

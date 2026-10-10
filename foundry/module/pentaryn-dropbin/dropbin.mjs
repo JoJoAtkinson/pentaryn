@@ -53,6 +53,9 @@
  *      lists every chest in their sidebar; pinned readables likewise.
  */
 
+import { corpses } from "./corpses.mjs";
+import { loot } from "./loot.mjs";
+
 const MODULE = "pentaryn-dropbin";
 const LOG = "log";
 const COUNTER = "counter";
@@ -193,6 +196,8 @@ function registerCapture() {
 
 function buildAPI() {
   return {
+    corpses,
+    loot,
     all: () => readLog(),
     list: (n = 20) => readLog().slice(-n).reverse(),
     get: (n) => readLog().find(e => e.n === Number(n)) ?? null,
@@ -407,6 +412,39 @@ async function ensureLockSounds() {
 }
 
 /**
+ * Joe's rule: an eye can be seen, and so used, only when it is in a player's view.
+ *
+ *   - **Piles never see.** Players are OBSERVER on every pile, and Foundry lets a player who
+ *     controls no token see through every token they observe. A pile with `sight.enabled` was
+ *     therefore a vision source: each eye lit itself and its room, and every eye on the map
+ *     showed even though the party could see none of them.
+ *   - **Readables are not global.** A `global` Note shows (and opens on double-click) through
+ *     walls and darkness from anywhere; non-global Notes show only while their centre is in the
+ *     player's current vision, which is the in-view rule. Per-player readables follow it too.
+ *
+ * Range stays unlimited (item-piles reads an unset `distance` as Infinity), so whatever is in
+ * view can be opened. Corpses get the same no-sight treatment in corpses.mjs.
+ */
+async function ensureEyesNeedView() {
+  if (!game.user.isGM) return;
+  const isPile = d => d?.flags?.["item-piles"]?.data?.enabled;
+  let piles = 0, notes = 0;
+  for (const actor of game.actors) {
+    if (isPile(actor) && actor.prototypeToken.sight.enabled) {
+      await actor.update({ "prototypeToken.sight.enabled": false }); piles++;
+    }
+  }
+  for (const scene of game.scenes) {
+    const tok = scene.tokens.filter(t => isPile(t) && t.sight.enabled)
+      .map(t => ({ _id: t.id, "sight.enabled": false }));
+    if (tok.length) { await scene.updateEmbeddedDocuments("Token", tok); piles += tok.length; }
+    const pins = scene.notes.filter(n => n.global && n.entry).map(n => ({ _id: n.id, global: false }));
+    if (pins.length) { await scene.updateEmbeddedDocuments("Note", pins); notes += pins.length; }
+  }
+  if (piles || notes) console.log(`${MODULE} | in-view rule: sight off on ${piles} pile document(s), ${notes} readable pin(s) no longer global`);
+}
+
+/**
  * Pile actors must be OBSERVER for item-piles to work for players, which puts
  * every chest, cache and hotspot in the world into the players' Actors sidebar
  * by name — "Hidden Cache" rather spoils itself. Foundry has no ownership level
@@ -480,4 +518,5 @@ Hooks.once("ready", async () => {
   if (!game.user.isGM) { ui.actors?.render(); ui.journal?.render(); }
 
   await ensureLockSounds();
+  await ensureEyesNeedView();
 });

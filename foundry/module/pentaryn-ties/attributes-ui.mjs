@@ -35,13 +35,14 @@ import {
   knowledgeTree,
   grantKnowledge,
   brokenAncestry,
-  repairAncestry
+  repairAncestry,
+  authorEntry
 } from "./attributes.mjs";
 import { loreEditorHTML, bindLoreEditor } from "./lore.mjs";
 // `requestAttrLore` (the player-initiated roll) is deliberately no longer imported: attribute
 // facts are handed over by the GM via "Mark as learned", never rolled for from the player's side.
 import { kindActorOf, attrLoreStateFor, releaseHeldAttribute } from "./study.mjs";
-import { grantsForEntry, GRANTED_FLAG, HELP_SCALE, CARRIED_SCALE, helpFor } from "./known-core.mjs";
+import { grantsForEntry, GRANTED_FLAG, HELP_SCALE, CARRIED_SCALE, helpFor, rollableLore, LORE_FLAG } from "./known-core.mjs";
 
 const esc = s =>
   String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -173,12 +174,31 @@ function offersBlock(actor, subject, attrId) {
   </div>`;
 }
 
+/**
+ * GM-only chain tags on the collapsed row: what must be identified first, and what this one
+ * unlocks. Joe could not see the House Vrinn → personal-history chain on a sheet because the rows
+ * are flat. Never shown to players: a child's name is itself a secret.
+ */
+function chainTags(row) {
+  if (!row.authored) return "";
+  const parent = row.parent ? describeAttribute(row.parent) : null;
+  const kids = registry().filter(e => e.parent === row.id);
+  const need = parent
+    ? `<span class="pt-chain pt-chain-need" data-tooltip="${esc(`Can only be rolled after ${parent.title} is identified`)}"><i class="fa-solid fa-lock"></i> needs ${esc(parent.title)}</span>`
+    : "";
+  const unlocks = kids.length
+    ? `<span class="pt-chain pt-chain-kids" data-tooltip="${esc(`Identifying this unlocks: ${kids.map(k => k.title).join(", ")}`)}"><i class="fa-solid fa-key"></i> unlocks ${esc(kids.map(k => k.title).join(", "))}</span>`
+    : "";
+  return need + unlocks;
+}
+
 function summary(row, isGM) {
   return `<div class="pt-summary pt-attr-summary" role="button" tabindex="0"
        aria-label="${esc(f("attributes.rowAria", { title: row.title }))}">
     <img class="pt-attr-icon" src="${esc(row.icon)}" alt="">
     <span class="pt-attr-title">${esc(row.title)}</span>
     ${row.category ? `<span class="pt-attr-category">${esc(row.category)}</span>` : ""}
+    ${isGM ? chainTags(row) : ""}
     ${
       row.derived && !row.authored
         ? `<span class="pt-attr-tag pt-attr-derived" data-tooltip="${esc(t("attributes.derivedTip"))}">${esc(
@@ -241,6 +261,77 @@ function sourceBlock(row) {
     </div>`;
 }
 
+/**
+ * The identification check itself: the roll an Inspect makes, and the text it hands over on a
+ * pass. Joe found a personal history attribute "empty" on the sheet because this, the part that IS
+ * the history, was only visible in the review panel; the sheet showed lore rows alone. GM-only,
+ * like the rest of the editor.
+ *
+ * A failure hands over the `miss` text when it is written, and **nothing** when it is empty; it
+ * is recorded either way so there is no retry (Joe, 2026-10-08 — reversing the 2026-10-07 "GM
+ * note, never shown" rule in `context/plans/attribute-silent-failure.md`). Nothing nags when it
+ * is blank: empty is a legitimate choice.
+ */
+function identifyBlock(row) {
+  const skills = Object.entries(CONFIG.DND5E?.skills ?? {});
+  const opt = skills.map(([k, v]) => `<option value="${k}"${k === row.skill ? " selected" : ""}>${esc(game.i18n.localize(v.label ?? k))}</option>`).join("");
+  return `<div class="pt-identify">
+      <div class="pt-identify-head"><i class="fa-solid fa-eye" aria-hidden="true"></i> ${esc(t("attributes.identifyHeading"))}
+        <select data-attr-field="skill" data-id="${esc(row.id)}">${opt}</select>
+        <span>${esc(t("attributes.identifyDC"))}</span>
+        <input type="number" min="1" max="40" data-attr-field="dc" data-id="${esc(row.id)}" value="${esc(row.dc ?? 15)}">
+      </div>
+      <label class="pt-field pt-field-stacked">
+        <span class="pt-field-label">${esc(t("attributes.identifySuccess"))}</span>
+        <textarea rows="4" data-attr-field="reveal" data-id="${esc(row.id)}">${esc(row.reveal ?? "")}</textarea>
+        <span class="pt-hint">${esc(t("attributes.identifyFailHint"))}</span>
+      </label>
+      <label class="pt-field pt-field-stacked">
+        <span class="pt-field-label">${esc(t("attributes.identifyFailure"))}</span>
+        <textarea rows="3" data-attr-field="miss" data-id="${esc(row.id)}">${esc(row.miss ?? "")}</textarea>
+      </label>
+    </div>`;
+}
+
+/**
+ * **Clues on <carrier>** — under a PERSONAL attribute (category "personal": one character's own
+ * history), the individual lore rows on whoever carries it, read-only. The attribute says who they
+ * are; these rows are how a player could find it out, and the GM needs both in one place when
+ * deciding what a scene can surface. GM-only: the DCs and labels are authoring, never player-facing.
+ * Shared with the review panel (`review-ui.mjs`).
+ */
+export function personalCluesHTML(entry) {
+  if (game.user?.isGM !== true || !entry?.id) return "";
+  if (String(entry.category ?? "").trim().toLowerCase() !== "personal") return "";
+  const carriers = (game.actors?.contents ?? []).filter(a => {
+    try {
+      return attributeIdsOf(a, kindActorOf).includes(entry.id);
+    } catch {
+      return false;
+    }
+  });
+  if (!carriers.length) return "";
+  const skill = k => {
+    const label = CONFIG.DND5E?.skills?.[k]?.label;
+    return label ? game.i18n.localize(label) : k;
+  };
+  const lines = carriers.map(a => {
+    let rows = [];
+    try {
+      rows = rollableLore(a.getFlag(MODULE, LORE_FLAG));
+    } catch {
+      rows = [];
+    }
+    const list = rows.length
+      ? rows.map(r => `${r.label} (${skill(r.skill)} ${r.dc})`).join(", ")
+      : t("attributes.cluesNone");
+    return `<p class="pt-clues" data-tooltip="${esc(t("attributes.cluesTip"))}">
+      <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+      <b>${esc(f("attributes.cluesOn", { name: a.name }))}</b> ${esc(list)}</p>`;
+  });
+  return `<div class="pt-clues-box">${lines.join("")}</div>`;
+}
+
 function detail(row, { actor, isGM, viewer }) {
   const grants = grantedBlock(grantsFor(viewer, row.id));
   const offers = offersBlock(viewer, actor, row.id);
@@ -260,6 +351,7 @@ function detail(row, { actor, isGM, viewer }) {
   return `<div class="pt-detail pt-attr-detail">
     ${grants}
     ${offers}
+    ${personalCluesHTML(row)}
     ${
       row.authored
         ? `<div class="pt-fields pt-attr-fields">
@@ -298,6 +390,7 @@ function detail(row, { actor, isGM, viewer }) {
             </label>
           </div>
           <p class="pt-hint">${esc(t("attributes.helpHint"))}</p>
+          ${identifyBlock(row)}
           <div class="pt-shared-head">
             <i class="fa-solid fa-globe" aria-hidden="true"></i>
             ${esc(f("attributes.sharedWarning", { title: row.title }))}
@@ -514,7 +607,9 @@ function grantControl(character) {
  */
 function ancestryWarning(actor) {
   if (game.user?.isGM !== true) return "";
-  const bad = brokenAncestry(actor, resolver);
+  // dangling rows (an id whose entry is gone) are a console concern: no ancestor to name, and the
+  // repair button cannot fix them — only re-creating the entry or unlinking can
+  const bad = brokenAncestry(actor, resolver).filter(b => b.missing);
   if (!bad.length) return "";
   const names = [...new Set(bad.map(b => describeAttribute(b.missing).title))].join(", ");
   return `<div class="pt-ancestry-warning">
@@ -643,7 +738,7 @@ export function bindAttributes(root, actor, rerender = () => {}) {
   for (const el of box.querySelectorAll("[data-attr-field]")) {
     el.addEventListener("change", async () => {
       const field = el.dataset.attrField;
-      const value = el.type === "checkbox" ? el.checked : el.value;
+      const value = el.type === "checkbox" ? el.checked : el.type === "number" ? Number(el.value) : el.value;
       await updateAttribute(el.dataset.id, { [field]: value });
       rerender();
     });
@@ -664,10 +759,14 @@ export function bindAttributes(root, actor, rerender = () => {}) {
       const row = describeAttribute(id);
       // authoring a DERIVED id creates an entry with that exact id — nothing links, because
       // the link was never stored (decision 16). Every carrier is enriched at once.
-      const list = registry();
-      // `advantage` was written here and dropped on read; the help scale is the live concept
-      list.push({ id, title: row.title, category: row.category, icon: row.icon, lore: [] });
-      await game.settings.set(MODULE, "attributes", list);
+      // `authorEntry` goes through the registry write queue and applies the unique-name rule
+      // (attribute names are unique ignoring case, everywhere); it stamps the entry unreviewed
+      const made = await authorEntry({ id, title: row.title, category: row.category, icon: row.icon });
+      if (!made.ok) {
+        if (made.reason === "collision" && made.existing)
+          ui.notifications.warn(`An attribute named "${made.existing.title}" already exists. Link that one instead.`);
+        return;
+      }
       open.add(id);
       rerender();
     });
@@ -738,7 +837,7 @@ export function bindAttributes(root, actor, rerender = () => {}) {
 
   box.querySelector("[data-action='attr-repair']")?.addEventListener("click", async () => {
     // repair = re-link each broken membership, which materialises what it already implied
-    for (const { id } of brokenAncestry(actor, resolver)) await repairAncestry(actor, id);
+    for (const { id, missing } of brokenAncestry(actor, resolver)) if (missing) await repairAncestry(actor, id);
     rerender();
   });
 }
@@ -891,7 +990,7 @@ function bindSearch(box, actor, rerender) {
   const carried = new Set(attributeIdsOf(actor, resolver));
 
   const paint = () => {
-    const { matches, canCreate, wouldBe, collidesWith } = searchAttributes(input.value, resolver);
+    const { matches, canCreate, collidesWith } = searchAttributes(input.value, resolver);
     const rows = matches
       .filter(m => !carried.has(m.id))
       .slice(0, 12)
@@ -915,20 +1014,24 @@ function bindSearch(box, actor, rerender) {
             <i class="fa-solid fa-plus"></i> ${esc(f("attributes.createOne", { title: input.value.trim() }))}
           </button>`
         : input.value.trim() && collidesWith && !carried.has(collidesWith.id)
-          ? `<p class="pt-hint">${esc(f("attributes.collides", { title: collidesWith.title, id: wouldBe }))}</p>`
+          ? `<p class="pt-hint">${esc(f("attributes.collides", { title: collidesWith.title, id: collidesWith.id }))}</p>`
           : "";
     results.innerHTML = rows + create || `<p class="pt-hint">${esc(t("attributes.noMatches"))}</p>`;
     results.hidden = !input.value.trim() && !rows;
 
     for (const b of results.querySelectorAll(".pt-attr-hit")) {
       b.addEventListener("click", async () => {
+        let linked;
         if (b.dataset.create) {
           const made = await createAttribute(input.value.trim());
-          if (made.ok) await linkAttribute(actor, made.entry.id);
-          else if (made.reason === "collision") await linkAttribute(actor, made.existing.id);
+          if (made.ok) linked = await linkAttribute(actor, made.entry.id);
+          else if (made.reason === "collision") linked = await linkAttribute(actor, made.existing.id);
         } else {
-          await linkAttribute(actor, b.dataset.id);
+          linked = await linkAttribute(actor, b.dataset.id);
         }
+        // a hit can name an id whose entry is gone (the autocomplete lists every id any actor
+        // carries); link refuses those rather than spreading a dangling link, so say so
+        if (linked && !linked.ok) ui.notifications?.warn(f("attributes.linkRefused", { reason: linked.reason }));
         input.value = "";
         rerender();
       });

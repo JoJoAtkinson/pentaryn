@@ -1,0 +1,51 @@
+{
+  "PENTARYN_MOVEMENT": {
+    "tool": {
+      "on": "Ghost movement: ON (click to turn off)",
+      "ready": "Ghost movement: off (click to move through walls)",
+      "combat": "Ghost movement: off during combat",
+      "off": "Ghost movement: turned off by the GM",
+      "clip": {
+        "what": "While this is on, you can move your own tokens straight through walls, doors and other creatures. Your tokens look see-through so you can tell it's on.",
+        "on": "It's on. Click again to walk normally.",
+        "ready": "Click to switch it on. Click again to switch it off.",
+        "combat": "It switches off while a fight is running on this map, and you can switch it back on when the fight ends.",
+        "off": "The GM has switched it off for now.",
+        "vision": "Careful: walking through a wall means you see what's on the other side."
+      }
+    },
+    "gm": {
+      "off": "Player ghost movement: OFF (click to allow)",
+      "exploration": "Player ghost movement: exploration only (click to turn off)",
+      "always": "Player ghost movement: always allowed (click to turn off)",
+      "clip": {
+        "what": "Lets players move their own tokens through walls and creatures with the ghost button in their token tools. Your own unconstrained-movement tool is separate.",
+        "modes": "Click to turn it off for everyone. Click again to restore the previous mode. Choose between Exploration only and Always allowed in Settings, Pentaryn Movement.",
+        "combat": "Exploration only switches it off while a combat is running on the scene."
+      }
+    },
+    "notify": {
+      "blocked": {
+        "off": "The GM has turned ghost movement off.",
+        "combat": "Ghost movement is off while a fight is running on this map."
+      },
+      "cleared": {
+        "off": "The GM turned ghost movement off. Your tokens are stopped by walls again.",
+        "combat": "A fight started: ghost movement is off. Your tokens are stopped by walls again."
+      }
+    },
+    "settings": {
+      "policy": {
+        "name": "Player ghost movement",
+        "hint": "Lets players move their own tokens through walls and creatures with a ghost button in the token tools. Exploration only switches it off while a combat is running on the scene. The GM toolbar button next to it flips this off and back on.",
+        "off": "Off",
+        "exploration": "Exploration only",
+        "always": "Always allowed"
+      },
+      "ownedOnTop": {
+        "name": "Show my own tokens on top",
+        "hint": "Your own tokens are drawn above everyone else's, and take the click when tokens overlap. Only on your screen; nothing on the map changes for anyone else."
+      }
+    }
+  }
+}

@@ -30,15 +30,22 @@
  *
  * ## The indistinguishability contract (decision 11) — read this before touching the UI
  *
- * Every observable consequence of a *completed* study roll is identical for a triumph, a
- * failure and a deliberate lie: the affordance vanishes on any completed roll, the stub card
- * is the same DOM, no notification fires on the player's client, and the provenance header
- * carries the skill and nothing else. **If any pixel differs by outcome, that pixel is the
- * number.** Do not add a success tint, a "you learned a lot!" toast, or a longer delay for
- * the bigger write.
+ * The *process* of a completed study roll is identical whatever the outcome: the affordance
+ * vanishes on any completed roll, the stub card is the same DOM, no notification fires on the
+ * player's client, and the provenance header carries the skill and nothing else. **If any
+ * pixel of that differs by outcome, that pixel is the number.** Do not add a success tint, a
+ * "you learned a lot!" toast, or a longer delay for the bigger write.
+ *
+ * What it leaves behind is not identical, by decision (2026-10, "failure is absence",
+ * `context/plans/attribute-silent-failure.md`): on a lore tell or a kind study a pass adds a
+ * card and a Known-list entry, and a failure adds nothing — no card, no placeholder — while the
+ * lock is still written so there is no retry. The player can tell *that* they failed, never
+ * *what* they missed. An authored rung 0 on a kind is the one lie, and it lands in the pass's
+ * exact shape. The Inspect cascade stays fully indistinguishable: it rolls chat-less, so a
+ * failure and a pass with no reveal leave the same nothing on screen.
  */
 
-import { attributeLore, describeAttribute, attributeIdsOf, knowledge, setKnowledge } from "./attributes.mjs";
+import { attributeLore, describeAttribute, attributeIdsOf, knowledge, setKnowledge, clearKnowledge } from "./attributes.mjs";
 import { MODULE, mayWrite, canReach } from "./ties-api.mjs";
 import {
   KNOWN_FLAG,
@@ -48,6 +55,7 @@ import {
   LORE_FLAG,
   readLore,
   rollableLore,
+  loreOfferable,
   loreOutcome,
   loreFactKey,
   attrFactKey,
@@ -81,13 +89,21 @@ import {
   capProse,
   traitsLine,
   composeReveal,
+  studyDescription,
+  isBlankProse,
     toStoredKnown,
   makeKnownEntry,
   parseFactKey,
   parseLedgerKey,
   planStep,
   identifiedKey,
-  MEMBER_FACT
+  identMissKey,
+  MEMBER_FACT,
+  knowsAttribute,
+  failedAttribute,
+  shareStatus,
+  identifiedState,
+  factKeyOf
 } from "./known-core.mjs";
 
 const CHANNEL = `module.${MODULE}`;
@@ -279,11 +295,17 @@ export function resolveFact(spec) {
          * permanently fails to recognise a chicken.
          */
         if (off === "auto") {
-          return { text: await composeStudyPayload(kind, 25, label), silent: false, tier: 25, pass: true };
+          const text = await composeStudyPayload(kind, 25, label);
+          return { text, silent: !text, tier: 25, pass: true };
         }
         const tier = tierOf(total, off);
         if (tier === null) return null;
-        return { text: await composeStudyPayload(kind, tier, label), silent: false, tier, pass: tier >= 15 };
+        /*
+         * A failure (tier 0) composes to "" unless the GM authored rung 0, so it is `silent`: the
+         * lock is written and the stub posts, and nothing lands in the notebook (2026-10).
+         */
+        const text = await composeStudyPayload(kind, tier, label);
+        return { text, silent: !text, tier, pass: tier >= 15 };
       }
     };
   }
@@ -555,6 +577,9 @@ function kindTraits(kind) {
  * and the kind's flattened biography when it does not. That is the whole of "lower tiers may
  * lie": the authored text replaces the truth, and the derived text — read off the real sheet —
  * is what a kind with no authoring falls back to.
+ *
+ * **Returns "" for a failure with no authored rung 0** — no header, no placeholder (2026-10). A
+ * failure hands the player nothing; the caller still writes the lock and posts the stub.
  */
 export async function composeStudyPayload(kind, tier, skillLabel) {
   /*
@@ -587,12 +612,18 @@ export async function composeStudyPayload(kind, tier, skillLabel) {
    * undone); the tier only chooses what survives, which is what this line now actually does.
    *
    * An **authored** rung still wins at any tier — a GM who writes a tier-0 message is deliberately
-   * saying something on a failure, which is the honest-miss idiom lore rows use.
+   * saying something on a failure. Since 2026-10 that is the ONLY failure text this module
+   * delivers: an unauthored failure gets nothing at all (no generic "nothing about it means
+   * anything to you" card, which read as "you failed"), and the rule lives in `studyDescription`
+   * where it is fixtured. Lore rows and attributes do the same with their `miss` (2026-10-08).
    */
-  const description =
-    authoredTier(studyTiersOf(kind), tier) ||
-    (tier >= 15 ? derived : "") ||
-    t(tier > 0 ? "known.study.derived.none" : "known.study.derived.unknown");
+  const description = studyDescription({
+    authored: authoredTier(studyTiersOf(kind), tier),
+    derived,
+    tier,
+    none: t("known.study.derived.none")
+  });
+  if (!description) return "";
 
   return composeReveal({ tier, header: f("known.study.header", { skill: skillLabel }), description, traits, attacks });
 }
@@ -712,7 +743,9 @@ export async function requestAttrLore(character, subject, attrId, loreId) {
 export function attrLoreStateFor(character, subject, attrId) {
   if (!subject || !attrId) return [];
   const spent = studiedOf(character).lore;
-  return rollableLore(attributeLore(attrId)).map(row => {
+  // `loreOfferable`, not `loreRollable`: a failure hands over nothing, so a row with no pass text
+  // would spend the attempt on a guaranteed nothing — never draw it as a button
+  return rollableLore(attributeLore(attrId)).filter(loreOfferable).map(row => {
     const key = attrFactKey(attrId, row.id);
     return {
       id: row.id,
@@ -815,7 +848,8 @@ async function requestFact(character, subject, spec, label) {
 export function loreStateFor(character, subject) {
   if (!subject) return [];
   const spent = studiedOf(character).lore;
-  return rollableLore(flagOf(subject, LORE_FLAG)).map(row => {
+  // offerable, not merely rollable — see `attrLoreStateFor`
+  return rollableLore(flagOf(subject, LORE_FLAG)).filter(loreOfferable).map(row => {
     const key = loreFactKey(subject.id, row.id);
     return {
       id: row.id,
@@ -869,7 +903,9 @@ async function throwBlind(character, fact, { mode, situational, silent = false }
           rollMode: CONST.DICE_ROLL_MODES.BLIND,
           data: {
             flavor: f("known.study.rollFlavor", { name: fact.name, skill: fact.skillLabel }),
-            flags: { "dice-so-nice": { suppressRollDiceSoNice: true } }
+            // Dice So Nice reads `flags["dice-so-nice"].skip` (6.x); it never read the old
+            // `suppressRollDiceSoNice`, so blind study rolls animated on the GM's screen.
+            flags: { "dice-so-nice": { skip: true } }
           }
         }
   );
@@ -989,7 +1025,13 @@ async function applyStudy(payload, senderId) {
   }
 
   const now = Date.now();
-  const hold = fact.hold;
+  /*
+   * A silent outcome (a side with nothing written — a failure with no `miss`, a pass with no
+   * `text`) is never held: there is nothing
+   * to hand over, so a Deliver prompt would ask the GM to release an empty box and leave a
+   * pending row that delivers nothing. The lock and stub are written the same either way.
+   */
+  const hold = fact.hold && !graded.silent;
 
   /*
    * The write batch, **split** by the approval gate (disguise decision 8):
@@ -1009,13 +1051,19 @@ async function applyStudy(payload, senderId) {
     total: roll.total,
     when: now,
     delivered: hold ? null : now,
-    sources
+    sources,
+    // the verdict itself: a kind's rung-0 lie has text and is still a failure, and legacy lore
+    // rows stored their miss line as text, so text alone cannot say
+    pass: graded.pass === true
   });
   await applyPlayerWrites(character, fact, hold ? null : graded, now);
   await postStub(character, fact.subject);
 
   if (hold) await promptDeliver(character, fact);
-  else ui.notifications.info(f("known.study.notify.delivered", { character: character.name, kind: fact.name }));
+  else
+    ui.notifications.info(
+      f(graded.pass ? "known.study.notify.delivered" : "known.study.notify.missed", { character: character.name, kind: fact.name })
+    );
   return true;
 }
 
@@ -1082,7 +1130,10 @@ async function putBelief(fact, characterId, record) {
       when: record.when ?? 0,
       delivered: record.delivered ?? null,
       claim: record.claim ?? null,
-      sources: record.sources ?? null
+      sources: record.sources ?? null,
+      ...(typeof record.pass === "boolean" ? { pass: record.pass } : {}),
+      ...(record.from ? { from: record.from } : {}),
+      ...(record.from && record.prior ? { prior: record.prior } : {})
     };
   await game.settings.set(MODULE, ATTR_BELIEFS_SETTING, all);
 }
@@ -1097,7 +1148,13 @@ async function writeBelief(fact, characterId, record) {
         when: record.when ?? 0,
         delivered: record.delivered ?? null,
         claim: null,
-        sources: record.sources ?? null
+        sources: record.sources ?? null,
+        // stated even when absent: the update MERGES, so a share laid over a failed roll would
+        // otherwise inherit its `pass: false` and read as failed
+        pass: typeof record.pass === "boolean" ? record.pass : null,
+        ...(record.from ? { from: record.from } : {}),
+        // what a share replaced (`priorOf`) — a re-roll or a plain write drops it with the row
+        ...(record.from && record.prior ? { prior: record.prior } : {})
       }
     },
     { render: false }
@@ -1125,11 +1182,12 @@ async function applyPlayerWrites(character, fact, graded, now) {
   /*
    * `graded` is null for a held roll: write the lock alone now, and the reveal lands here from
    * `deliver` later. `graded.silent` is the other empty case and a different one — the roll
-   * resolved, but the GM authored nothing on the side it landed on (decision 8's amendment).
-   * Both write the lock and both let the stub post; only the grant is skipped, so what the
-   * player observes differs in prose and never in whether a card appeared.
+   * resolved and there is nothing to hand over: a failure with no written failure line, or a
+   * pass with no authored text. Both write the lock and both let the stub post; only the grant is
+   * skipped — no card, no Known-list entry, no title. A failure WITH written text is not silent: it
+   * is granted here exactly like a pass (Joe, 2026-10-08).
    */
-  if (graded && !graded.silent && graded.text) {
+  if (graded && !graded.silent && !isBlankProse(graded.text)) {
     /*
      * Which entry does this fact file under? The only place the namespaces disagree about
      * anything player-facing, and it is one line each:
@@ -1138,20 +1196,7 @@ async function applyPlayerWrites(character, fact, graded, now) {
      *   lore:  the INDIVIDUAL's page — this is the axis that answers "who is this one"
      */
     const entryActor = fact.ns === "kind" ? fact.ledger : fact.subject;
-    const rawKnown = flagOf(character, KNOWN_FLAG);
-    const list = Array.isArray(rawKnown) ? [...rawKnown] : [];
-    if (!list.find(e => e?.id === entryActor.id)) {
-      const entry = makeKnownEntry({
-        id: entryActor.id,
-        name: entryActor.name,
-        actorType: entryActor.type,
-        creatureType: entryActor.system?.details?.type?.value ?? null,
-        now
-      });
-      entry.name = entry.cachedName;
-      list.push(entry);
-    }
-    update[`flags.${MODULE}.${KNOWN_FLAG}`] = toStoredKnown(list);
+    update[`flags.${MODULE}.${KNOWN_FLAG}`] = knownListWith(character, entryActor, now);
 
     /*
      * The reveal lands in the sibling `granted` map, NOT in `entry.notes` (decision 22).
@@ -1168,14 +1213,37 @@ async function applyPlayerWrites(character, fact, graded, now) {
       when: now,
       icon: fact.img,
       // the provenance line: the kind's name for a bestiary fact, the row's label for a lore
-      // fact — which is what makes several lore grants on one page readable as separate facts
-      source: fact.name
+      // fact — which is what makes several lore grants on one page readable as separate facts.
+      // A GM Share passes its own ("… — shared by Caven").
+      source: graded.source ?? fact.name
     };
     update[`flags.${MODULE}.${GRANTED_FLAG}`] = granted;
   }
 
   await character.update(update);
   return true;
+}
+
+/**
+ * The character's Known list with `entryActor` filed in it (unchanged when already there), in
+ * storage shape — the "give the fact a page to render on" half of `applyPlayerWrites`, shared
+ * with the GM's Share so the two cannot disagree about how an entry is born.
+ */
+function knownListWith(character, entryActor, now) {
+  const rawKnown = flagOf(character, KNOWN_FLAG);
+  const list = Array.isArray(rawKnown) ? [...rawKnown] : [];
+  if (!list.find(e => e?.id === entryActor.id)) {
+    const entry = makeKnownEntry({
+      id: entryActor.id,
+      name: entryActor.name,
+      actorType: entryActor.type,
+      creatureType: entryActor.system?.details?.type?.value ?? null,
+      now
+    });
+    entry.name = entry.cachedName;
+    list.push(entry);
+  }
+  return toStoredKnown(list);
 }
 
 /**
@@ -1221,7 +1289,7 @@ async function promptDeliver(character, fact) {
       )}</p>` +
       // a silent outcome has no prose to preview — say so, or the GM reads an empty box as a bug
       `<div class="pt-study-hold-text">${
-        rec.text.trim() ? esc(rec.text) : `<em>${esc(t("known.study.holdSilent"))}</em>`
+        !isBlankProse(rec.text) ? esc(rec.text) : `<em>${esc(t("known.study.holdSilent"))}</em>`
       }</div>`,
     yes: { label: t("known.study.deliver") },
     no: { label: t("known.study.later") }
@@ -1247,11 +1315,33 @@ async function deliverFact(fact, character) {
   }
   if (rec.delivered) return false;
   const now = Date.now();
-  const silent = !String(rec.text ?? "").trim();
+  /*
+   * Replay the ledger (never recompute). A failed lore/attribute row parked its written failure
+   * line as its text, and that is what it hands over (Joe, 2026-10-08) — an empty one hands over
+   * nothing. The one exception is a KIND below 15 with no authored rung 0 now: rows held before
+   * 2026-10 parked the generic "nothing about it means anything" card, which is no longer said.
+   */
+  const missed = rowMissed(fact, rec);
+  const lie = fact.ns === "kind" && missed && !!authoredTier(studyTiersOf(fact.ledger), 0);
+  const silent = isBlankProse(String(rec.text ?? "")) || (fact.ns === "kind" && missed && !lie);
   if (!(await applyPlayerWrites(character, fact, { text: rec.text, silent, tier: rec.tier }, now))) return false;
   await putBelief(fact, character.id, { ...rec, delivered: now, claim: null });
-  ui.notifications.info(f("known.study.notify.delivered", { character: character.name, kind: fact.name }));
+  ui.notifications.info(
+    f(missed ? "known.study.notify.missed" : "known.study.notify.delivered", { character: character.name, kind: fact.name })
+  );
   return true;
+}
+
+/**
+ * Did this rolled row fail? The roll's stored verdict when there is one; a kind derives it from
+ * the tier; a legacy flat row with no `pass` derives it from its total against the row's DC. A
+ * share (`from`) or a GM tell (`total: null`) is never a failure.
+ */
+function rowMissed(fact, rec) {
+  if (!rec || rec.from) return false;
+  if (fact.ns === "kind") return rec.total !== null && rec.total !== undefined && !(Number(rec.tier) >= 15);
+  if (typeof rec.pass === "boolean") return rec.pass === false;
+  return typeof rec.total === "number" && typeof fact.dc === "number" && Math.round(rec.total) < fact.dc;
 }
 
 /**
@@ -1291,6 +1381,16 @@ export function pending() {
         if (!rec || rec.delivered) continue;
         const parsed = beliefKey === KIND_KEY ? { ns: "kind", fact: KIND_KEY } : parseFactKey(beliefKey);
         if (!parsed) continue; // an unrecognised key is not a pending anything
+        /*
+         * A held identification with no text and a total under its DC is a failed rung parked by
+         * the cascade before 2026-10 (it now stamps a failure delivered at once). It has nothing to
+         * hand over, so it is not a nag. An empty row at or over the DC is a legacy empty-reveal
+         * PASS whose knowledge row is still pending — that one stays listed, so the GM can free it
+         * with `deliverHeld`.
+         */
+        if (parsed.ns === "attr" && parsed.fact === MEMBER_FACT && !String(rec.text ?? "").trim()
+          && typeof rec.total === "number"
+          && rec.total < (describeAttribute(parsed.subject)?.dc ?? Infinity) + concealmentFor(ledger, parsed.subject)) continue;
         const label =
           parsed.ns === "lore"
             ? readLore(flagOf(ledger, LORE_FLAG)).find(r => r.id === parsed.fact)?.label ?? parsed.fact
@@ -1479,6 +1579,27 @@ export function beliefs(actor) {
   // both ledgers this actor can hold: the kind rows it collects as somebody's kind, and the
   // lore rows it collects as itself. An NPC that is its own kind holds both on one document.
   const rows = readLore(flagOf(actor, LORE_FLAG));
+  /*
+   * The roll's verdict, for the "missed" tag: a failure hands the player nothing now (2026-10), so
+   * an empty text box alone no longer says whether they missed or passed into an unauthored side.
+   * `true`/`false`, or `null` when nothing says (a claim in flight).
+   */
+  const passOfRow = (parsed, rec) => {
+    if (rec.from) return true; // a share is never a failure, whatever it replaced
+    if (parsed.ns === "kind") return Number(rec.tier) >= 15;
+    if (typeof rec.pass === "boolean") return rec.pass;
+    if (typeof rec.total !== "number") return rec.delivered || String(rec.text ?? "").trim() ? true : null;
+    if (parsed.ns === "lore") {
+      const dc = rows.find(r => r.id === parsed.fact)?.dc;
+      return typeof dc === "number" ? Math.round(rec.total) >= dc : null;
+    }
+    if (parsed.ns === "attr" && parsed.fact === MEMBER_FACT) {
+      if (String(rec.text ?? "").trim()) return true;
+      const dc = describeAttribute(parsed.subject)?.dc;
+      return typeof dc === "number" ? rec.total >= dc + concealmentFor(actor, parsed.subject) : null;
+    }
+    return null;
+  };
   for (const ledger of new Set([kindActorOf(actor), actor].filter(Boolean))) {
     for (const [characterId, facts] of Object.entries(beliefsOf(ledger))) {
       for (const [beliefKey, rec] of Object.entries(facts)) {
@@ -1500,6 +1621,7 @@ export function beliefs(actor) {
           when: new Date(rec.when).toLocaleString(),
           delivered: rec.delivered ? new Date(rec.delivered).toLocaleString() : null,
           pending: !rec.delivered,
+          pass: passOfRow(parsed, rec),
           text: rec.text
         });
       }
@@ -1723,23 +1845,57 @@ async function runCascade(character, subject, release = []) {
       pass = total >= fact.dc;
     }
 
-    const text = pass ? entry.reveal : entry.miss;
+    // blank markup is an empty reveal, exactly like "" — never a card of literal `<p></p>`
+    const text = pass && !isBlankProse(String(entry.reveal ?? "")) ? String(entry.reveal) : "";
+    /*
+     * A failure hands over the attribute's written failure line (`miss`), or nothing when it is
+     * empty (Joe, 2026-10-08). It is NOT the ident row's text — that stays "" so every ledger
+     * still reads "not identified" — and it is not filed under the ident key, whose card is titled
+     * with the attribute and shown only once identified. `identMissKey` files it on this
+     * creature's page, titled with the creature, so it reads as what they noticed about them.
+     * Delivered at once, never held: the hold gate parks a pass on its ident row, and a failure
+     * has no row text to park.
+     */
+    const missText = !pass && step.roll && !isBlankProse(String(entry.miss ?? "")) ? String(entry.miss) : "";
+    /*
+     * Only a pass with something to say waits on the GM. A pass with an empty `reveal` has nothing
+     * to deliver, so parking it left it pending for good (Deliver only frees rows with text) —
+     * the same rule `applyStudy` applies to a silent outcome.
+     */
+    const parks = pass && hold && !!text.trim();
     // the backfill: one roll settles both stages, and a failure closes stage 1 for good
     if (step.backfill)
       await setKnowledge([
         // pending while held: the lock is spent (they rolled) but the answer is not theirs yet
-        { characterId: character.id, attrId, failed: !pass, via: "roll", when: now, pending: pass && hold }
+        { characterId: character.id, attrId, failed: !pass, via: "roll", when: now, pending: parks }
       ]);
+    else if (step.roll && pass) {
+      /*
+       * They already knew of it only because they were TOLD (a Share's stage-1 row) and have now
+       * rolled it themselves on this creature: the knowledge is theirs, so it stops being a share.
+       * Otherwise forgetting that share later would clear — or turn back into a failure — a stage-1
+       * answer they earned here.
+       */
+      const row = knowledge()[character.id]?.[attrId];
+      if (row?.via === "shared")
+        await setKnowledge([{ characterId: character.id, attrId, failed: false, via: "roll", when: row.when, pending: false }]);
+    }
     await writeIdentification(subject, character.id, attrId, {
-      text: pass ? text : "",
+      text,
       total,
       when: now,
-      delivered: hold ? null : now
+      /*
+       * Only a held PASS with text waits on the GM. A failure, or a pass with no reveal, has
+       * nothing to deliver, and stamping it pending used to leave an empty row in `pending()` that
+       * no Deliver could do anything with.
+       */
+      delivered: parks ? null : now
     });
     if (pass && !hold && text.trim()) grants[`attr:${attrId}:${MEMBER_FACT}`] = { text, when: now, icon: entry.icon, source: entry.title };
+    if (missText.trim()) grants[identMissKey(subject.id, attrId)] = { text: missText, when: now, icon: subject.img ?? null, source: subject.name };
 
     if (!pass) break; // a failed rung blocks everything beneath it
-    if (hold) {
+    if (parks) {
       held = true;
       break; // suspends the climb; the GM's Deliver resumes it by calling back in
     }
@@ -1761,7 +1917,9 @@ async function writeIdentification(subject, characterId, attrId, rec) {
         when: rec.when ?? 0,
         delivered: rec.delivered ?? null,
         claim: null,
-        sources: null
+        sources: null,
+        ...(rec.from ? { from: rec.from } : {}),
+        ...(rec.from && rec.prior ? { prior: rec.prior } : {})
       }
     },
     { render: false } // GM-plane data: it must never repaint a sheet mid-gesture
@@ -1804,7 +1962,9 @@ async function promptCascadeDeliver(character, subject) {
     .map(({ attrId, rec }) => {
       const entry = describeAttribute(attrId);
       const passed = !!String(rec.text ?? "").trim();
-      return `<li class="pt-belief${passed ? "" : " pt-belief-miss"}">
+      // an empty row is a pass with no reveal authored, or a legacy failure parked before 2026-10
+      const missed = !passed && typeof rec.total === "number" && rec.total < entry.dc + concealmentFor(subject, attrId);
+      return `<li class="pt-belief${missed ? " pt-belief-miss" : ""}">
         <div class="pt-belief-head">
           <span class="pt-belief-who">${esc(entry.title)}</span>
           <span class="pt-belief-meta">${esc(
@@ -1812,7 +1972,9 @@ async function promptCascadeDeliver(character, subject) {
           )}</span>
         </div>
         <div class="pt-belief-text">${
-          passed ? esc(rec.text) : `<em>${esc(t("known.study.holdSilent"))}</em>`
+          passed
+            ? esc(rec.text)
+            : `<em>${esc(t(missed ? "known.study.holdSilent" : "authoring.beliefSilent"))}</em>`
         }</div>
       </li>`;
     })
@@ -1877,16 +2039,24 @@ export async function deliverHeldIdentifications(character, subject) {
   const update = {};
   const granted = readGranted(flagOf(character, GRANTED_FLAG));
   const freed = [];
+  const rows = knowledge()[character.id] ?? {};
   let any = false;
 
   for (const [key, rec] of Object.entries(mine)) {
     if (rec?.delivered || !key.endsWith(`:${MEMBER_FACT}`)) continue;
     update[`flags.${MODULE}.${BELIEFS_FLAG}.${character.id}.${key}.delivered`] = now;
+    const attrId = parseFactKey(key)?.subject;
     if (String(rec.text ?? "").trim()) {
-      const attrId = parseFactKey(key)?.subject;
       const entry = attrId ? describeAttribute(attrId) : null;
       granted[key] = { text: rec.text, when: now, icon: entry?.icon ?? null, source: entry?.title ?? "" };
       if (attrId) freed.push(attrId);
+    } else if (attrId && rows[attrId]?.pending) {
+      /*
+       * An empty-reveal pass parked before 2026-10: nothing to hand over, but its knowledge row
+       * is still pending and must be freed, or the tree says "waiting on you" forever. Only an
+       * existing pending row — never mint a knowledge row for an empty one.
+       */
+      freed.push(attrId);
     }
     any = true;
   }
@@ -1895,7 +2065,6 @@ export async function deliverHeldIdentifications(character, subject) {
   await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}`]: granted });
   // the knowledge those rungs bought stops being pending the moment the GM releases them
   if (freed.length) {
-    const rows = knowledge()[character.id] ?? {};
     await setKnowledge(freed.map(attrId => ({ ...(rows[attrId] ?? {}), characterId: character.id, attrId, pending: false })));
   }
   // resume: the ledgers changed, so the planner will now return the next rung
@@ -2166,7 +2335,7 @@ function showBubble({ tokenId, sceneId, text }) {
  * The belief row is written as delivered with `total: null` — the ledger's honest record of *"they
  * did not roll for this; I told them."*
  */
-export async function grantKind(character, kindOrSubject, tier = 15) {
+export async function grantKind(character, kindOrSubject, tier = 15, { from = null, quiet = false, prior = null } = {}) {
   if (!game.user?.isGM || !character) return false;
   const kind = kindActorOf(kindOrSubject);
   if (!kind) return false;
@@ -2174,7 +2343,7 @@ export async function grantKind(character, kindOrSubject, tier = 15) {
 
   const held = beliefsOf(kind)[character.id]?.[KIND_KEY];
   if (held && Number(held.tier ?? -1) >= tier) {
-    ui.notifications.info(f("known.study.notify.alreadyKnows", { character: character.name, kind: kind.name }));
+    if (!quiet) ui.notifications.info(f("known.study.notify.alreadyKnows", { character: character.name, kind: kind.name }));
     return false;
   }
 
@@ -2184,9 +2353,17 @@ export async function grantKind(character, kindOrSubject, tier = 15) {
   const fact = resolveFact({ ns: "kind", subjectId: kind.id });
   if (!fact) return false;
 
-  await putBelief(fact, character.id, { text, tier, total: null, when: now, delivered: now });
-  await applyPlayerWrites(character, fact, { text, silent: false, tier }, now);
-  ui.notifications.info(f("known.study.notify.released", { character: character.name, kind: kind.name, tier }));
+  // `from` is a share's provenance (a character id or "gm"); a plain release leaves it off
+  const fromId = from ? (typeof from === "string" ? from : from.id) : null;
+  const source = from && typeof from === "object" ? f("known.share.sourceBy", { source: kind.name, name: from.name }) : undefined;
+  // a flag update MERGES into the stored row: a plain release over a shared one would keep its
+  // stale `from`/`prior` and still read as a share, so drop that row first
+  if (held?.from && !fromId) await putBelief(fact, character.id, null);
+  // the row this replaces, when a Share raised a lower tier — `forgetFact` gives it back
+  await putBelief(fact, character.id, { text, tier, total: null, when: now, delivered: now, from: fromId, prior });
+  // "Mark as failed" (tier 0) composes to "" unless rung 0 is authored: lock and ledger, no card
+  await applyPlayerWrites(character, fact, { text, silent: !text, tier, source }, now);
+  if (!quiet) ui.notifications.info(f("known.study.notify.released", { character: character.name, kind: kind.name, tier }));
   return true;
 }
 
@@ -2217,6 +2394,10 @@ export async function resetIdentification(character, subject, attrId) {
   const rest = Object.keys(all).filter(k => k !== character.id);
   if (!others.length && !rest.length) await subject.unsetFlag(MODULE, BELIEFS_FLAG);
   else await subject.update(dropRow(`flags.${MODULE}.${BELIEFS_FLAG}`, character.id, key, all[character.id]), { render: false });
+  // a do-over takes back the failure line that roll handed them, if it handed one (2026-10-08)
+  const missKey = identMissKey(subject.id, attrId);
+  if (readGranted(flagOf(character, GRANTED_FLAG))[missKey])
+    await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}.-=${missKey}`]: null });
 
   ui.notifications.info(
     f("known.inspect.resetDone", { character: character.name, subject: subject.name, attr: describeAttribute(attrId).title })
@@ -2237,6 +2418,408 @@ export async function resetInspection(character, subject) {
     .filter(Boolean);
   for (const id of attrIds) await resetIdentification(character, subject, id);
   return attrIds.length;
+}
+
+/* -------------------------------------------- */
+/*  The GM's Share — telling, not rolling       */
+/* -------------------------------------------- */
+
+/**
+ * The grant key a fact renders under on the recipient's Known tab, and where its ledger row is.
+ * `spec` is the inspect window's fact descriptor:
+ *
+ *   `{ ns: "ident", subjectId, attrId }`           that `subject` carries `attrId`
+ *   `{ ns: "attr",  subjectId, attrId, factId }`   one lore row of an attribute
+ *   `{ ns: "lore",  subjectId, factId }`           one of the subject's own lore rows
+ *   `{ ns: "kind",  subjectId }`                   the kind study (shared at tier 25)
+ */
+function shareKeyOf(spec, subject) {
+  // the grammar lives in known-core's `factKeyOf`, shared with the player's Look window, so a
+  // share can never land under a key the window does not ask for
+  return factKeyOf({ ...spec, subjectId: subject.id }, spec?.ns === "kind" ? kindActorOf(subject)?.id ?? "" : null);
+}
+
+/**
+ * Where one character stands on one fact, for the GM: `shareStatus` plus the row it came from.
+ * → `{ status, key, belief, tier, total, from, dc }` — `status` ∈ passed|told|held|failed|locked|none.
+ * Reads only; GM-only because every ledger it reads is GM-plane.
+ */
+export function factStatus(spec, character) {
+  const subject = game.actors?.get(spec?.subjectId);
+  const none = { status: "none", key: null, belief: null, tier: null, total: null, from: null, dc: null };
+  if (!game.user?.isGM || !subject || !character) return none;
+  const key = shareKeyOf(spec, subject);
+  if (!key) return none;
+  const granted = !!readGranted(flagOf(character, GRANTED_FLAG))[key];
+  let belief = null;
+  let failedKnowledge = false;
+  let dc = null;
+  if (spec.ns === "ident") {
+    belief = beliefsOf(subject)[character.id]?.[key] ?? null;
+    failedKnowledge = failedAttribute(knowledge(), character.id, spec.attrId);
+    const entry = describeAttribute(spec.attrId);
+    if (typeof entry.dc === "number") dc = entry.dc + concealmentFor(subject, spec.attrId);
+  } else if (spec.ns === "attr") {
+    try {
+      belief = readAttrBeliefs(game.settings.get(MODULE, ATTR_BELIEFS_SETTING))[`${key}:${character.id}`] ?? null;
+    } catch {
+      belief = null;
+    }
+    dc = rollableLore(attributeLore(spec.attrId)).find(r => r.id === spec.factId)?.dc ?? null;
+  } else if (spec.ns === "lore") {
+    belief = beliefsOf(subject)[character.id]?.[key] ?? null;
+    dc = rollableLore(flagOf(subject, LORE_FLAG)).find(r => r.id === spec.factId)?.dc ?? null;
+  } else if (spec.ns === "kind") {
+    belief = beliefsOf(kindActorOf(subject))[character.id]?.[KIND_KEY] ?? null;
+  }
+  /*
+   * ⚠ An identification's grant key (`attr:<id>:#id`) belongs to the ATTRIBUTE, not to this
+   * creature: every pass on every carrier writes it, and a reset leaves it (decision 22). So it
+   * says nothing about whether they have placed THIS creature — only the row on this creature
+   * does. Counting it read "told" for a PC who had identified House Vrinn on Nilonim and never on
+   * Vesh, and Share then refused them as already knowing while Vesh's ladder stayed locked.
+   */
+  const status = shareStatus({
+    belief,
+    granted: spec.ns === "ident" ? false : granted,
+    failedKnowledge,
+    kind: spec.ns === "kind",
+    ident: spec.ns === "ident",
+    dc: spec.ns === "lore" || spec.ns === "attr" ? dc : null
+  });
+  return { status, key, belief, tier: belief?.tier ?? null, total: belief?.total ?? null, from: belief?.from ?? null, dc };
+}
+
+/** Non-GM users who own this character — the only people a share whisper may reach. */
+const ownersOf = character =>
+  (game.users?.contents ?? [])
+    .filter(u => !u.isGM && character?.testUserPermission?.(u, "OWNER"))
+    .map(u => u.id);
+
+/**
+ * The recipient's whisper: *that* they learned something and about whom — never what. The stub
+ * card's idiom (decision 11): the notebook is where the content lives. Skipped when nobody but a
+ * GM owns the character, which is the whole table today.
+ */
+async function whisperShare(character, subject) {
+  const whisper = ownersOf(character);
+  if (!whisper.length) return false;
+  await ChatMessage.create({
+    content: `<p class="pt-study-stub">${esc(f("known.share.whisper", { name: character.name, subject: subject.name }))}</p>`,
+    whisper,
+    speaker: { alias: game.user?.name ?? "GM" }
+  });
+  return true;
+}
+
+/**
+ * **Share one fact with characters who did not roll it** — the GM's "maybe mention this", made
+ * real. Writes exactly what a pass writes, marked as told (`total: null`, `from`), so it lands in
+ * the recipient's Known tab like anything they worked out themselves.
+ *
+ * ## The chain rule
+ *
+ * A shared **identification** is a delivered positive identification of that rung on that subject
+ * AND stage-1 knowledge of the attribute — whatever was there before, failure included. Those are
+ * the two rows the planner reads (`identifiedState`, `failedAttribute`), so the recipient's next
+ * Inspect climbs to the child rungs and rolls them; no planner change, fixtured in test/known.mjs.
+ * Children and parents are never written: a share hands over exactly the one thing named. Knowing
+ * the attribute does not identify it on any OTHER carrier — they still roll there (at advantage,
+ * if the attribute's help scale says so).
+ *
+ * A stage-1 row they already hold as KNOWN is left alone (its `via` stays the truth); a FAILED one
+ * is overwritten and remembered (`overFailed`) so `forgetFact` can give the failure back.
+ *
+ * Skips: `held` (use Deliver — it also resumes their cascade, which a share must not do) and
+ * `knows` (already passed or told; a kind below tier 25 is not "knows" — the share raises it).
+ *
+ * → `{ ok, shared: [pcId], skipped: [{pcId, reason}], unseen: [pcId], reason? }` — `unseen`: an
+ * attribute-lore share to someone who has not identified that (secret) attribute on this subject;
+ * the grant is written, but will not show under this creature until they have.
+ */
+export async function shareFact(spec, recipients, { from = null, notify = true } = {}) {
+  const out = { ok: false, shared: [], skipped: [], unseen: [] };
+  if (!game.user?.isGM) return { ...out, reason: "notGM" };
+  const subject = game.actors?.get(spec?.subjectId);
+  if (!subject || !["ident", "attr", "lore", "kind"].includes(spec?.ns)) return { ...out, reason: "invalid" };
+  const fromId = from ? from.id : "gm";
+  const fromActor = from && typeof from === "object" ? from : null;
+  const sourceBy = source => (fromActor ? f("known.share.sourceBy", { source, name: fromActor.name }) : source);
+
+  // resolve the fact once; a fact that cannot be said is refused for everyone
+  let entry = null;
+  let fact = null;
+  let text = "";
+  if (spec.ns === "ident") {
+    if (!attributeIdsOf(subject, kindActorOf).includes(spec.attrId)) return { ...out, reason: "notCarried" };
+    entry = describeAttribute(spec.attrId);
+    text = String(entry.reveal ?? "");
+    // a blank text row reads as NOT carrying, and would block every child beneath it
+    if (isBlankProse(text)) return { ...out, reason: "noText" };
+  } else if (spec.ns === "attr" || spec.ns === "lore") {
+    fact = resolveFact({ ns: spec.ns, subjectId: subject.id, factId: spec.factId, attrId: spec.attrId });
+    if (!fact) return { ...out, reason: "invalid" };
+    text = String(fact.row.text ?? "");
+    if (isBlankProse(text)) return { ...out, reason: "noText" };
+  } else {
+    const state = studyStateFor(null, subject);
+    if (!state.kind || !state.content) return { ...out, reason: "noText" };
+  }
+
+  const pcs = [];
+  const priorFor = new Map();
+  for (const pc of recipients ?? []) {
+    if (!pc?.id || pc.type !== "character") continue;
+    const st = factStatus(spec, pc);
+    if (st.status === "held") out.skipped.push({ pcId: pc.id, reason: "held" });
+    else if ((st.status === "passed" || st.status === "told") && !(spec.ns === "kind" && Number(st.tier ?? 0) < 25))
+      out.skipped.push({ pcId: pc.id, reason: "knows" });
+    else {
+      pcs.push(pc);
+      /*
+       * The row this share replaces — a failed roll, or a kind tier below 25 — kept on the shared
+       * row (`priorOf`) so `forgetFact` restores it, lock and all, instead of deleting it into a
+       * free re-roll. One level deep: a share over a share keeps the original answer.
+       */
+      const b = st.belief;
+      if (b && (b.text?.trim() || b.total != null || b.delivered || b.tier != null)) {
+        const base = b.from && b.prior ? b.prior : b;
+        priorFor.set(pc.id, {
+          text: base.text ?? "",
+          tier: base.tier ?? null,
+          total: base.total ?? null,
+          when: base.when ?? 0,
+          delivered: base.delivered ?? null,
+          ...(typeof base.pass === "boolean" ? { pass: base.pass } : {}),
+          ...(base.from ? { from: base.from } : {})
+        });
+      }
+    }
+  }
+  if (!pcs.length) return { ...out, ok: true };
+  const now = Date.now();
+
+  if (spec.ns === "ident") {
+    const attrId = spec.attrId;
+    const know = knowledge();
+    const rows = pcs
+      .map(pc => {
+        const row = know[pc.id]?.[attrId];
+        /*
+         * A stage-1 row still PENDING (a pass held on another creature) is known to the planner
+         * but hidden from the player's world list — so the reveal this share files would show on
+         * the Known tab while the attribute itself stayed invisible. Release it, keeping its
+         * `via`: it was rolled, and a Forget must not delete it (`clearKnowledge` is shared-only).
+         */
+        if (row && row.failed === false && row.pending)
+          return { characterId: pc.id, attrId, failed: false, via: row.via, when: row.when, pending: false };
+        if (knowsAttribute(know, pc.id, attrId)) return null;
+        return {
+          characterId: pc.id,
+          attrId,
+          failed: false,
+          via: "shared",
+          when: now,
+          pending: false,
+          overFailed: failedAttribute(know, pc.id, attrId)
+        };
+      })
+      .filter(Boolean);
+    if (rows.length) await setKnowledge(rows); // one call: the setting is rewritten whole
+    for (const pc of pcs) {
+      await writeIdentification(subject, pc.id, attrId, {
+        text,
+        total: null,
+        when: now,
+        delivered: now,
+        from: fromId,
+        prior: priorFor.get(pc.id) ?? null
+      });
+      const granted = readGranted(flagOf(pc, GRANTED_FLAG));
+      granted[identifiedKey(attrId)] = {
+        text: text.slice(0, GRANTED_TEXT_MAX),
+        when: now,
+        icon: entry.icon,
+        source: sourceBy(entry.title)
+      };
+      await pc.update({
+        [`flags.${MODULE}.${KNOWN_FLAG}`]: knownListWith(pc, subject, now),
+        [`flags.${MODULE}.${GRANTED_FLAG}`]: granted
+      });
+      out.shared.push(pc.id);
+    }
+  } else if (fact) {
+    // a SECRET attribute's lore renders under this creature only once they have placed him in it
+    // (`visibleAttributesFor`) — written all the same, but the GM is told where it will show
+    const secret = spec.ns === "attr" && !!reg().find(e => e.id === spec.attrId)?.secret;
+    for (const pc of pcs) {
+      if (secret && !identifiedState(flagOf(subject, BELIEFS_FLAG) ?? {}, pc.id, spec.attrId).carries) out.unseen.push(pc.id);
+      await putBelief(fact, pc.id, {
+        text,
+        tier: null,
+        total: null,
+        when: now,
+        delivered: now,
+        from: fromId,
+        prior: priorFor.get(pc.id) ?? null
+      });
+      await applyPlayerWrites(pc, fact, { text, silent: false, tier: null, source: sourceBy(fact.name) }, now);
+      out.shared.push(pc.id);
+    }
+  } else {
+    for (const pc of pcs) {
+      if (await grantKind(pc, subject, 25, { from: fromActor ?? "gm", quiet: true, prior: priorFor.get(pc.id) ?? null }))
+        out.shared.push(pc.id);
+      else out.skipped.push({ pcId: pc.id, reason: "knows" });
+    }
+  }
+
+  if (notify) for (const id of out.shared) await whisperShare(game.actors.get(id), subject);
+  return { ...out, ok: true };
+}
+
+/**
+ * Undo a share — **and only a share** (`factStatus` must read `told`).
+ *
+ * What the share REPLACED comes back (`prior`, kept by `shareFact`): a failed roll stays failed
+ * and locked, a kind tier they rolled stays theirs, card and all. Forgetting is never a free
+ * re-roll and never takes away something earned. With no prior (they had nothing) the row and
+ * the lock go, as a reset does.
+ *
+ * An identification's stage-1 row and its reveal card belong to the ATTRIBUTE, not this creature
+ * (`attr:<id>:#id` renders under every carrier they have placed). Both are left alone while ANY
+ * other creature is still identified as a carrier for them — rolled or shared — so forgetting
+ * House Vrinn on Vesh cannot un-know what Caven rolled on Nilonim. Otherwise the stage-1 row is
+ * cleared (`clearKnowledge`: shared rows only; a share over a failed roll restores the failure).
+ *
+ * The Known entry the share filed is left in their notebook, with any notes they wrote in it.
+ * → `{ ok, reason? }`
+ */
+export async function forgetFact(spec, character) {
+  if (!game.user?.isGM) return { ok: false, reason: "notGM" };
+  const subject = game.actors?.get(spec?.subjectId);
+  if (!subject || !character) return { ok: false, reason: "invalid" };
+  const st = factStatus(spec, character);
+  if (st.status !== "told") return { ok: false, reason: "notTold" };
+  const prior = st.belief?.prior ?? null;
+  const dropGrant = async () => {
+    if (readGranted(flagOf(character, GRANTED_FLAG))[st.key])
+      await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}.-=${st.key}`]: null });
+  };
+
+  if (spec.ns === "ident") {
+    const attrId = spec.attrId;
+    const key = identifiedKey(attrId);
+    // quietly, not through `resetIdentification`: this is not a do-over, and a flag update would
+    // MERGE the prior into the shared row (keeping its `from`) instead of replacing it
+    const all = flagOf(subject, BELIEFS_FLAG) ?? {};
+    if (all[character.id]?.[key])
+      await subject.update(dropRow(`flags.${MODULE}.${BELIEFS_FLAG}`, character.id, key, all[character.id]), { render: false });
+    if (prior) await writeIdentification(subject, character.id, attrId, prior);
+    const elsewhere = (game.actors?.contents ?? []).some(
+      a => a.id !== subject.id && identifiedState(flagOf(a, BELIEFS_FLAG) ?? {}, character.id, attrId).carries
+    );
+    if (!elsewhere) {
+      await clearKnowledge(character.id, attrId);
+      await dropGrant();
+    }
+    return { ok: true };
+  }
+
+  if (!prior) {
+    await reset(character, subject, spec.ns === "kind" ? null : spec.factId, spec.ns === "attr" ? spec.attrId : null);
+    await dropGrant();
+    return { ok: true };
+  }
+
+  // give back the row the share replaced; the `studied` lock it implies stays where it is
+  const fact = factFrom(subject, spec.ns === "kind" ? null : spec.factId, spec.ns === "attr" ? spec.attrId : null);
+  if (!fact) return { ok: false, reason: "invalid" };
+  await putBelief(fact, character.id, null);
+  await putBelief(fact, character.id, prior);
+  /*
+   * Was the replaced row a card the player actually holds? Delivered and with text — a failed
+   * lore/attribute row's text IS its written failure line, which they were handed (2026-10-08).
+   * The same test `deliverFact` applies, so Forget and Deliver agree: a kind's failure comes back
+   * only when the kind has an authored rung 0 (a legacy row may hold the retired generic line).
+   */
+  const missed = rowMissed(fact, prior);
+  const lie = spec.ns === "kind" && missed && !!authoredTier(studyTiersOf(fact.ledger), 0);
+  const earned = !!prior.delivered && !!String(prior.text ?? "").trim() && (spec.ns !== "kind" || !missed || lie);
+  if (earned) {
+    const granted = readGranted(flagOf(character, GRANTED_FLAG));
+    granted[st.key] = {
+      text: String(prior.text ?? "").slice(0, GRANTED_TEXT_MAX),
+      when: prior.when ?? Date.now(),
+      icon: fact.img,
+      source: fact.name
+    };
+    await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}`]: granted });
+  } else await dropGrant();
+  return { ok: true };
+}
+
+/**
+ * **Console-only audit:** granted cards a FAILURE put in a player's notebook before 2026-10.
+ *
+ * ⚠ Since 2026-10-08 a failure with written failure text DELIVERS that text again (Joe reversed
+ * the "never shown" rule), so lore/attribute cards this lists may be intended. Read it as "cards
+ * that came from a failed roll", not "cards to pull".
+ *
+ * Until then a failed lore roll delivered the row's miss line as a card, and a failed kind study
+ * delivered either its authored rung 0 or a generic "nothing about it means anything to you". Now
+ * a failure hands over nothing, but the cards already granted are still on the players' sheets.
+ * Pulling one is a visible change mid-campaign, so this only LISTS them; removing any is Joe's
+ * call by hand. No UI on purpose — a one-time sweep, and console exposure is fine at this table.
+ *
+ * Lists a card when the ledger row behind it is a failure: `pass: false`, or a legacy row with no
+ * `pass` whose total is under the row's DC. A kind card below tier 15 is listed only when it does
+ * not carry the kind's current authored rung 0 — that lie is the one failure text still delivered.
+ * Identification cards are never listed: the cascade never delivered a miss.
+ *
+ * → `[{ character, characterId, subject, factKey, text }]`
+ */
+export function legacyMissCards() {
+  if (!game.user?.isGM) return [];
+  let attrLedger = {};
+  try {
+    attrLedger = readAttrBeliefs(game.settings.get(MODULE, ATTR_BELIEFS_SETTING));
+  } catch {
+    attrLedger = {};
+  }
+  const flatMissed = (rec, dc) =>
+    !!rec && !rec.from && (rec.pass === false
+      || (typeof rec.pass !== "boolean" && typeof rec.total === "number" && typeof dc === "number" && Math.round(rec.total) < dc));
+  const out = [];
+  for (const pc of game.actors?.contents ?? []) {
+    if (pc.type !== "character") continue;
+    for (const [factKey, card] of Object.entries(readGranted(flagOf(pc, GRANTED_FLAG)))) {
+      const parsed = parseFactKey(factKey);
+      if (!parsed) continue;
+      let subject = null;
+      let missed = false;
+      if (parsed.ns === "lore") {
+        const actor = game.actors.get(parsed.subject);
+        if (!actor) continue;
+        subject = actor.name;
+        const dc = readLore(flagOf(actor, LORE_FLAG)).find(r => r.id === parsed.fact)?.dc;
+        missed = flatMissed(beliefsOf(actor)[pc.id]?.[factKey], dc);
+      } else if (parsed.ns === "attr" && parsed.fact !== MEMBER_FACT) {
+        subject = describeAttribute(parsed.subject)?.title ?? parsed.subject;
+        const dc = readLore(attributeLore(parsed.subject)).find(r => r.id === parsed.fact)?.dc;
+        missed = flatMissed(attrLedger[`${factKey}:${pc.id}`], dc);
+      } else if (parsed.ns === "kind") {
+        const kind = game.actors.get(parsed.subject);
+        if (!kind) continue;
+        subject = kind.name;
+        const rec = beliefsOf(kind)[pc.id]?.[KIND_KEY];
+        const lie = authoredTier(studyTiersOf(kind), 0);
+        missed = !!rec && !rec.from && !(Number(rec.tier) >= 15) && !(lie && String(card.text ?? "").includes(lie));
+      }
+      if (missed) out.push({ character: pc.name, characterId: pc.id, subject, factKey, text: card.text });
+    }
+  }
+  return out;
 }
 
 /** GM hand-throw, no socket and no gesture — the same handler, same validation, same writes. */

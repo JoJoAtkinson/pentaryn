@@ -16,11 +16,15 @@
  *   game.pentaryn.ties.study.askLore(pc, npc, loreId)  roll one of them
  *   game.pentaryn.ties.study.fact({ns, subjectId, factId})  the conduit's resolve seam
  *   game.pentaryn.ties.attributes.of(actor)    what this one belongs to (derived + authored)
- *   game.pentaryn.ties.attributes.create(title)  a registry entry; refuses an id collision
+ *   game.pentaryn.ties.attributes.create(title)  a registry entry; refuses an id or name collision
  *   game.pentaryn.ties.attributes.link(actor, id) / .unlink(actor, id)
  *   game.pentaryn.ties.study.inspect(pc, subject)   the one gesture that starts a check
+ *   game.pentaryn.ties.study.look(subject, pc?)     the player's read-only page on them (no roll)
  *   game.pentaryn.ties.attributes.known(pc)         what they have worked out of the world
  *   game.pentaryn.ties.attributes.tell(pc, id, {withParents})  disclosure, the only non-roll route
+ *   game.pentaryn.ties.attributes.openReview()      the GM's review panel (also the tag button, token tools)
+ *   game.pentaryn.ties.attributes.selected()        what the GM ticked in it → [{id,title,category,parent,reviewState}]
+ *   game.pentaryn.ties.attributes.unreviewed()      entries awaiting the GM's sign-off
  *
  * The keys are real Foundry keybindings, not hotbar macros — they show up in
  * Configure Controls and can be rebound if 5 through 9 are already spoken for. A macro
@@ -38,6 +42,10 @@ import * as Attributes from "./attributes.mjs";
 import * as AttributesUI from "./attributes-ui.mjs";
 import { registerRelay } from "./relay.mjs";
 import * as Study from "./study.mjs";
+import { openPreview } from "./preview.mjs";
+import { openLook } from "./look.mjs";
+import { AttributeReview, openReview } from "./review-ui.mjs";
+import * as ItemMarks from "./item-marks.mjs";
 
 const MODULE = API.MODULE;
 const TAB = "ties";
@@ -142,7 +150,11 @@ Hooks.once("init", () => {
       const token = canvas?.tokens?.hover ?? null;
       const who = inspectorFor();
       const subject = token?.actor ?? (token ? game.actors.get(token.document.actorId) : null);
-      if (who && subject && subject.id !== who.id) Study.inspect(who, subject);
+      if (who && subject && subject.id !== who.id) {
+        // the Look window first, before the dice — same moment, same frame, whatever follows
+        if (!game.user?.isGM) openLook(who, subject);
+        Study.inspect(who, subject);
+      }
       return true;
     }
   });
@@ -286,6 +298,7 @@ Hooks.once("init", () => {
 
   Overlay.registerHooks();
   Worn.registerHooks();
+  ItemMarks.register();
 });
 
 /**
@@ -355,6 +368,12 @@ function publishAPI() {
      *   study.deliver(character, kind)       release one
      *   study.reset(character, kind)         un-spend it — the honest do-over
      *   study.as(character, subject, {mode, situational})   throw the check by hand
+     *   study.preview(actor)                 the GM inspect window: player view + simulated rolls
+     *   study.look(subject, pc?)             the player's read-only Look window (null for a GM)
+     *   study.share(spec, [pc…], {from, notify})   tell them one fact as if passed (chain-aware)
+     *   study.forget(spec, pc)               undo a share, and only a share
+     *   study.whoKnows(spec, pc)             passed | told | held | failed | locked | none
+     *   study.audit.legacyMissCards()        cards a failure granted before 2026-10 (read-only)
      */
     study: {
       state: Study.studyStateFor,
@@ -381,6 +400,7 @@ function publishAPI() {
       attrOffers: Study.attrOffersFor,
       // phase 8 — inspection and the cascade
       inspect: Study.inspect,
+      look: (subject, character = game.user?.character) => openLook(character, subject),
       scoping: Study.scopingState,
       clearScoping: Study.clearScoping,
       inspectAs: Study.inspectAs,
@@ -388,14 +408,28 @@ function publishAPI() {
       releaseHeld: Study.releaseHeldAttribute,
       resetIdent: Study.resetIdentification,
       release: Study.grantKind,
-      resetInspection: Study.resetInspection
+      resetInspection: Study.resetInspection,
+      // GM inspect window — player view (with who-knows tags and Share) and simulated rolls
+      preview: openPreview,
+      // GM: tell characters one fact as if they had passed it; forget undoes a share (only)
+      share: Study.shareFact,
+      forget: Study.forgetFact,
+      whoKnows: Study.factStatus,
+      // console-only: cards a FAILURE granted before 2026-10 (failures now hand over nothing)
+      audit: { legacyMissCards: Study.legacyMissCards }
     },
+    /*
+     * Every call that names an attribute takes an id OR a name (id wins; a miss is refused, never
+     * created). Reads return data; writes return `{ ok, reason?, … }` and never throw — test `.ok`.
+     */
     attributes: {
       list: Attributes.registry,
       of: Attributes.attributesOf,
       ids: Attributes.attributeIdsOf,
       derived: Attributes.derivedFor,
-      describe: Attributes.describeAttribute,
+      resolve: Attributes.resolveAttribute,
+      describe: Attributes.describeRef,
+      ensure: Attributes.ensureAttribute,
       create: Attributes.createAttribute,
       update: Attributes.updateAttribute,
       remove: Attributes.deleteAttribute,
@@ -408,7 +442,20 @@ function publishAPI() {
       tell: Attributes.grantKnowledge,
       broken: Attributes.brokenAncestry,
       repair: Attributes.repairAncestry,
-      stale: Attributes.staleCarriers
+      stale: Attributes.staleCarriers,
+      /*
+       * The review panel (context/foundry/attribute-review.md). `update`/`create` above UN-review an
+       * entry and record what they touched; sign-off is the GM's — `review()` exists for when he
+       * asks, and the panel's own save (`reviewedUpdate`, `reviewedLoreUpdate`) is deliberately not published.
+       */
+      openReview,
+      selected: Attributes.selectedAttributes,
+      select: Attributes.selectAttributes,
+      deselect: Attributes.deselectAttributes,
+      clearSelection: Attributes.clearSelection,
+      review: Attributes.reviewAttribute,
+      unreview: Attributes.unreviewAttribute,
+      unreviewed: Attributes.unreviewedAttributes
     }
   };
   const current = game.pentaryn;
@@ -697,6 +744,26 @@ function injectTieHUD(app, element) {
   col.appendChild(btn);
 
   /*
+   * The GM's inspect window: what would an inspection (and every study after it) hand a player,
+   * who already knows each fact, and a Share to tell them. Drawn for the GM only, and the window
+   * itself refuses to open for anyone else — see preview.mjs. Only its Share/Forget clicks write.
+   */
+  if (game.user?.isGM && !col.querySelector(".pt-preview-btn")) {
+    const pv = document.createElement("button");
+    pv.type = "button";
+    pv.className = "control-icon pt-preview-btn";
+    pv.dataset.tooltip = "Inspect (GM only): player view and simulated rolls";
+    pv.setAttribute("aria-label", "Inspect preview");
+    pv.innerHTML = '<i class="fa-solid fa-flask"></i>';
+    pv.addEventListener("click", ev => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      openPreview(token.actor ?? game.actors.get(token.document.actorId));
+    });
+    col.appendChild(pv);
+  }
+
+  /*
    * Phase 8's inspect control — the route phase 6 never had, and the ONLY thing in this module
    * that starts an identification roll (Joe: *"no examine, no auto detection"*).
    *
@@ -717,7 +784,9 @@ function injectTieHUD(app, element) {
       ev.preventDefault();
       ev.stopPropagation();
       eye.disabled = true; // one gesture, one cascade — a double-click must not queue two
-      await Study.inspect(who, token.actor ?? game.actors.get(token.document.actorId));
+      const subject = token.actor ?? game.actors.get(token.document.actorId);
+      if (!game.user?.isGM) openLook(who, subject); // the player's page opens before the dice
+      await Study.inspect(who, subject);
     });
     col.appendChild(eye);
   }
@@ -776,6 +845,28 @@ Hooks.on("updateCombat", (combat, changes) => {
   }
 });
 
+/*
+ * The Attribute Review button — left toolbar, token tools, beside Argon's combat-hub swords.
+ * v14 shape: groups and tools are objects keyed by name; a one-shot button is `button: true` with
+ * `onChange` (core's own `tiles.browse` is built the same way). GM only: not added for players.
+ */
+Hooks.on("getSceneControlButtons", controls => {
+  try {
+    if (!game.user?.isGM || !controls?.tokens?.tools) return;
+    controls.tokens.tools.ptAttrReview = {
+      name: "ptAttrReview",
+      title: "PENTARYN_TIES.review.control",
+      icon: "fa-solid fa-tags",
+      button: true,
+      order: 60,
+      visible: game.user.isGM,
+      onChange: () => AttributeReview.open()
+    };
+  } catch (err) {
+    console.warn(`${MODULE} | review control skipped`, err);
+  }
+});
+
 Hooks.on("renderTokenHUD", (app, element) => {
   try {
     injectTieHUD(app, element);
@@ -783,6 +874,94 @@ Hooks.on("renderTokenHUD", (app, element) => {
     console.warn(`${MODULE} | tie HUD injection skipped`, err);
   }
 });
+
+/*
+ * The player's door to Inspect: double-click a creature you can see.
+ *
+ * A player can't open the Token HUD on a token they don't own (core `_canHUD`), and core never
+ * calls a non-owner's double-click handler without LIMITED, so the hover key (4) was the only way
+ * in. Joe double-clicked Marrith as Caven, expected a menu, and got nothing (2026-10-07).
+ *
+ * The listener sits on the canvas element and reads the hovered token, so it fires whatever the
+ * token's permission, and only for a token this client can actually see (hover already requires
+ * that). The menu is identical for every target, for the same reason the HUD eye is (see above).
+ * Item piles (corpses, chests) keep their own double-click and get no menu.
+ */
+let lookMenu = null;
+
+function closeLookMenu() {
+  lookMenu?.remove();
+  lookMenu = null;
+}
+
+function openLookMenu(token, ev) {
+  closeLookMenu();
+  const who = inspectorFor();
+  const subject = token.actor ?? game.actors.get(token.document.actorId);
+  if (!who || !subject || subject.id === who.id) return;
+
+  /*
+   * Two items, the same two for every target. "Take a closer look" opens the player's Look window
+   * FIRST and then inspects — the window's opening never waits on, or depends on, what the dice
+   * do. "What I know about them" opens the same window with no inspect at all: no stub card, no
+   * roll, no tempo tell — reading your own notebook is not looking someone over.
+   */
+  const menu = document.createElement("nav");
+  menu.className = "pt-look-menu";
+  const item = (icon, label, tip, act) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.innerHTML = `<i class="fa-solid ${icon}"></i> ${label}`;
+    b.dataset.tooltip = tip;
+    b.addEventListener("click", async e => {
+      e.preventDefault();
+      e.stopPropagation();
+      closeLookMenu(); // one gesture, one cascade
+      await act();
+    });
+    menu.appendChild(b);
+  };
+  item("fa-eye", game.i18n.localize("PENTARYN_TIES.known.inspect.button"),
+    game.i18n.format("PENTARYN_TIES.known.inspect.tip", { name: token.name }), async () => {
+      openLook(who, subject);
+      await Study.inspect(who, subject);
+    });
+  item("fa-book-open-reader", game.i18n.localize("PENTARYN_TIES.known.look.menu"),
+    game.i18n.format("PENTARYN_TIES.known.look.menuTip", { name: token.name }), async () => {
+      openLook(who, subject);
+    });
+  document.body.appendChild(menu);
+  const { innerWidth: w, innerHeight: h } = window;
+  const r = menu.getBoundingClientRect();
+  menu.style.left = `${Math.min(ev.clientX + 10, w - r.width - 8)}px`;
+  menu.style.top = `${Math.min(ev.clientY + 10, h - r.height - 8)}px`;
+  lookMenu = menu;
+}
+
+Hooks.on("canvasReady", () => {
+  const view = canvas.app?.view;
+  if (!view || view.dataset.ptLook) return;
+  view.dataset.ptLook = "1";
+  view.addEventListener("dblclick", ev => {
+    if (game.user?.isGM || !API.mayWrite()) return; // the GM has the HUD
+    // The token under the click itself, not Foundry's hover state: hover can be held by
+    // something else (a pin, a pile) or simply not have caught up, and then the double-click
+    // did nothing at all. Topmost first, and only creatures this client can see.
+    const pt = canvas.canvasCoordinatesFromClient({ x: ev.clientX, y: ev.clientY });
+    const under = canvas.tokens.placeables
+      .filter(t => t.isVisible && t.bounds.contains(pt.x, pt.y))
+      .sort((a, b) => (b.document.sort ?? 0) - (a.document.sort ?? 0) || b.zIndex - a.zIndex);
+    const token = under.find(t => !t.isOwner && !t.document.getFlag("item-piles", "data")?.enabled) ?? null;
+    if (!token || under[0]?.isOwner) return; // your own token on top: core opens your sheet
+    openLookMenu(token, ev);
+  });
+});
+document.addEventListener("pointerdown", ev => {
+  if (lookMenu && !lookMenu.contains(ev.target)) closeLookMenu();
+}, true);
+document.addEventListener("keydown", ev => { if (ev.key === "Escape") closeLookMenu(); });
+Hooks.on("canvasPan", () => closeLookMenu());
+Hooks.on("canvasTearDown", () => closeLookMenu());
 
 /** Header button — the robust host, independent of the sheet's tab markup. */
 function injectHeaderButton(app, element) {

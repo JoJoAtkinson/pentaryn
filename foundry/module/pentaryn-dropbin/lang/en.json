@@ -1,0 +1,11 @@
+{
+  "PENTARYN_DROPBIN": {
+    "lootAll": {
+      "label": "Loot all",
+      "tip": "Take everything into {name}'s inventory",
+      "noCharacter": "You need a character of your own to loot into. Ask the GM to assign one.",
+      "empty": "Nothing left to take.",
+      "failed": "Loot all failed. The GM's client must be connected; see the console."
+    }
+  }
+}

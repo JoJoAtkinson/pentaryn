@@ -166,6 +166,57 @@ The feature is safe to hand to the table because of three rules, none of which i
 
 Turn the whole thing back off with **Let players see their own ties** in module settings.
 
+## Attributes — one shared registry
+
+An attribute is a **universal truth shared by every actor that carries it**: one world-setting
+registry, one entry per attribute, and an edit to an entry changes it for every carrier.
+
+**Names are unique, ignoring case, accents, whitespace and punctuation** — the same folding ids
+get, so "Goblin Guild", "goblin guild" and "Göblin-Guild" are one name. This holds **on rename
+too**: a title edit that would give an entry another entry's name is refused with a warning and
+the title is left unchanged, and a new entry whose name matches a *renamed* entry is refused even
+though its derived id differs. Recasing an entry's own name is always allowed. Add a number
+(`Goblin Guild 2`) to mean a different one.
+
+From the console (`const A = game.pentaryn.ties.attributes`), the simple path is **ensure, then
+link by name**:
+
+```js
+await A.ensure("Goblin Guild", { category: "guild", parent: "Ardenhaven" }); // existing one, untouched — or created
+await A.link(actor, "Goblin Guild");    // writes its ancestors too; a typo is refused, never created
+```
+
+- **Id or name, everywhere.** `link`, `unlink`, `update`, `remove`, `tell`, `repair`, `stale`,
+  `describe` and `parent` all take an id, a name or an entry. Exact id wins, then a derived id,
+  then a unique name. A miss is `notFound`; a legacy duplicate name is `ambiguous`. `A.resolve(ref)`
+  answers "which one?" without doing anything.
+- **`create` is strict** (a taken name is `collision`); **`ensure` is get-or-create**. Both take
+  the whole entry (`parent`, `dc`, `secret`, `whenKnown`, `reveal`, …) in one call.
+- **Writes return `{ ok, reason?, … }`, never a bare boolean, never a throw.** `{ ok: false }` is
+  truthy — test `.ok`.
+- **Links from an unlinked token's sheet land on the world actor.** `A.broken(actor)` lists both
+  missing ancestors and dangling ids.
+
+Full usage: [`context/foundry/attributes.md`](../../../context/foundry/attributes.md).
+
+### Review panel (GM)
+
+The **tag icon** in the left toolbar's token tools opens **Attribute Review**: every registry entry
+in one flat list, unreviewed first with an amber outline. It is a review and text-edit tool —
+title, category, skill, DC, reveal, miss (the failure text — shown to the player on a failed roll,
+exactly like a pass; empty means a failure shows nothing) and each lore row's text can be edited (an edit there
+never changes review state — only the Reviewed button signs off); ids, parents, links, lore rows and new entries are changed by prompting
+Claude. Each row has a **Reviewed** button and a select checkbox; the ticks live in the GM's user
+flag `attrSelected` and are read with `A.selected()`.
+
+Every entry carries `createdAt / modifiedAt / reviewedAt` (epoch ms or `null`), `touched`, and
+`reviewedSnapshot` (the content at the last sign-off, diffed in the panel). Registry writes are
+queued one at a time.
+`A.update`/`A.create` stamp them and **un-review** the entry, recording which fields changed; a
+no-op update writes nothing. API: `openReview()`, `selected()`, `select(refs, {replace})`,
+`deselect(refs)`, `clearSelection()`, `review(ref)`, `unreview(ref)`, `unreviewed()`.
+Usage for Claude: [`context/foundry/attribute-review.md`](../../../context/foundry/attribute-review.md).
+
 ## Known — the notebook tab (0.11.0, the key 0.12.0)
 
 **A second tab, on character sheets only.** Ties answer *who does this person know*; Known answers
@@ -238,6 +289,19 @@ damage" — and if one cannot be resolved the line degrades to the item's plain 
 pasting `[[/attack extended]]` into somebody's notebook. Derived description is capped: a Monster
 Manual biography is the creature's whole lore page, not a paragraph, so it is cut with an ellipsis.
 **Write the rungs.** The derived text only keeps a creature rollable until you do.
+
+**The inspect window (0.17.0).** The flask button on the token HUD (GM only; also
+`study.preview(npc)`) opens on **Player view**: everything that NPC could hand a player who passed
+every check, drawn with the Known tab's own cards — identification reveals root → leaf, attribute
+lore, the NPC's own lore, the kind study at tier 25. Under each card, one switch per PC (first
+name) plus **Share with all** — on = passed or told, amber = held, off with a red edge = failed or
+locked. Clicking an off switch shares (writes what a pass writes, marked as told, plus a
+content-free whisper to the owners); clicking a *told* one forgets the share (`study.forget`); a
+rolled pass can't be un-learned and a held roll waits for Deliver. The switches update live while
+the window is open. A shared identification unlocks the rungs beneath it for the recipient's next
+Inspect, even over an earlier failure; it never grants the children. **Simulate rolls** is the original preview, unchanged —
+random rolls, odds, Reroll, nothing saved. Console: `study.share(spec, pcs, {from, notify})`,
+`study.forget(spec, pc)`, `study.whoKnows(spec, pc)`; see `context/foundry/attributes.md`.
 
 **The approval gate.** With *Hold every reveal for my approval* on (world setting, or per-kind via
 `study.hold`), a completed roll parks its answer and prompts you with **Deliver** or **Later**.
@@ -371,3 +435,65 @@ world. Pre-module data on `flags.world.ties` is migrated once, automatically, on
 
 Foundry **v13+**, verified on **v14**. System-agnostic — nothing here touches system data. The sheet
 tab is written against dnd5e 5.x markup but degrades to the header button anywhere else.
+
+## Double-click to look (2026-10-07)
+
+**What a player does:** double-click a creature they can see and don't own. A small menu opens
+with **Take a closer look**, which runs the same `Study.inspect` as the 4 key and the HUD eye.
+
+**Why it exists:** core gives a player no Token HUD and no double-click handler on someone else's
+token, so the hover key was the only door. Joe double-clicked Marrith as Caven and got nothing.
+
+**How it behaves:**
+
+- **Where it listens:** on the canvas element, reading `canvas.tokens.hover`. That means it only
+  fires for a token this client can see.
+- **Who gets it:** players only. The GM keeps the HUD.
+- **Item piles:** corpses and chests keep their own double-click and get no menu.
+- **Same for every target:** the menu is identical whoever you click.
+- **Closing:** an outside click, Escape, or panning the canvas closes it.
+
+## The player's Look window (0.18.0, 2026-10-07)
+
+**What a player sees:** taking a closer look now also opens a small read-only window,
+*"<name> — what you know"*. It holds the facts that character has actually been given about that
+person, drawn with the Known tab's own cards and in the order the GM's inspect window uses: who
+they belong to, what that tells you, facts about them, what they are. There are no switches, no
+DCs, no totals, and no sign of a pass or a failure.
+
+**How it opens:** all three doors open it first and then inspect: the double-click menu's
+**Take a closer look**, the **4** key, and the HUD eye. The double-click menu also has a second
+item, **What I know about them**, which opens the window without inspecting. That means no stub
+card and no roll. One window per character and subject: opening it again brings it to the front.
+`game.pentaryn.ties.study.look(subject, pc?)` does the same from the console. A GM gets no
+window; they have the flask.
+
+**The rule:** a card shows only if its key is in the character's `granted` flag. That flag is
+written only when something is delivered or a GM tells them. Identification cards and attribute
+cards also need the subject to be identified and released as a carrier on this subject, which is
+the Known tab's own secrecy filter. So a failed, held, locked or in-flight fact is simply absent.
+"Nothing learned" and "nothing arrived yet" print the same line. The card text is the grant
+record, never the authored reveal.
+
+**Live:** the window refreshes ~150 ms after writes land (a grant, a Share/Forget, a Deliver, a
+registry edit). It repaints only when the HTML actually changes, so a failed roll's ledger write
+changes nothing on screen.
+
+**Files:** `look.mjs` (the window), `facts.mjs` (gathers a subject's facts, shared with the GM
+preview), and `factOrder`/`factKeyOf` in `known-core.mjs` (pure, fixtured in `test/known.mjs`).
+The GM preview's Player view now builds its list from the same helper; its output is unchanged.
+
+## Item marks (0.19.0, 2026-10-07)
+
+`item-marks.mjs` draws a small icon after an item's name on every actor sheet: spells, features and inventory. It's a sign the player can't miss, for example the flame on each of Marrith's spells changed by her fire curse.
+
+```js
+item.setFlag("pentaryn-ties", "mark", { icon: "fa-fire", tip: "Hover text", color: "#ff7a1a" })
+```
+
+All fields are optional; the default is an orange flame (`.pt-item-mark` in `styles/ties.css`). Remove a mark with `item.unsetFlag("pentaryn-ties", "mark")`. Hook: `renderBaseActorSheet`.
+
+## 0.19.1 (2026-10-10, Foundry 14.369)
+
+- The flag-scope guard (`touchesFlagScope`) also recognises 14.369's "delete all of this module's data" update form (`flags.-=ties`).
+- Blind Study rolls set the Dice So Nice flag `skip` (what DSN 6.4.4 reads), so they no longer animate on the GM's screen.

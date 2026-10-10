@@ -21,8 +21,14 @@
  *
  * One fact, one price. `label` is the affordance the player sees before rolling (decision 8 —
  * that a secret exists is the invitation); `dc` and `skill` are the price; `text` is what a
- * pass buys; `miss` is what a failure buys, and authoring it is what makes the row honest
- * under blind rolls. `hold` is the per-row approval gate.
+ * pass buys. `hold` is the per-row approval gate.
+ *
+ * `miss` is **what a failure buys** (Joe, 2026-10-08). Written: a failed roll hands the player
+ * that text, in the same card a pass would draw, so it reads as what they took away — never as
+ * "you failed". Empty: a failed roll hands over nothing — no card, no title. The lock is written
+ * either way, so there is no retry. Nothing nags for it (the old warning icon stays gone).
+ * History: `context/plans/attribute-silent-failure.md` (its 2026-10-07 "GM note, never shown"
+ * rule was reversed).
  */
 
 import {
@@ -79,7 +85,7 @@ function holdOptions(hold) {
     .join("");
 }
 
-/** The collapsed line: what the row costs and whether it can currently be failed honestly. */
+/** The collapsed line: what the row costs. Nothing nags for a miss — a failure hands over nothing. */
 function summary(row) {
   const label = row.label.trim() || t("lore.untitled");
   const skill = CONFIG.DND5E?.skills?.[row.skill]?.label ?? row.skill;
@@ -88,12 +94,6 @@ function summary(row) {
     <span class="pt-lore-dc" data-tooltip="${esc(f("lore.dcTip", { skill, dc: row.dc }))}">${row.dc}</span>
     <span class="pt-lore-label">${esc(label)}</span>
     <span class="pt-lore-skill">${esc(skill)}</span>
-    ${
-      row.miss.trim()
-        ? ""
-        : `<i class="fa-solid fa-triangle-exclamation pt-lore-leak" aria-label="${esc(t("lore.leakWarn"))}"
-             data-tooltip="${esc(t("lore.leakWarn"))}"></i>`
-    }
     <i class="fa-solid fa-chevron-down pt-caret" aria-hidden="true"></i>
   </div>`;
 }

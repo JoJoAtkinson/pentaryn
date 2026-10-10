@@ -1,0 +1,14 @@
+{
+  "id": "pentaryn-journal",
+  "title": "Pentaryn Player Journal",
+  "description": "An 'Add to my journal' bar under every eye readable (a journal opened from a scene pin, its image popout, or an item opened from an eye pile). Clicking it copies what the player was shown, with GM secrets stripped, embeds turned into links and relative links made absolute, into their own personal journal. That journal then opens on the new entry, glowing among all their others. One journal per user, made by the GM client (or through a native user query to the active GM). Exposes game.pentaryn.journal.",
+  "version": "0.1.0",
+  "compatibility": { "minimum": "14", "verified": "14" },
+  "authors": [{ "name": "Joseph Atkinson" }],
+  "esmodules": ["journal.mjs"],
+  "styles": ["journal.css"],
+  "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
+  "socket": false,
+  "protected": false,
+  "flags": { "pentaryn": { "flagScope": "journal", "generation": 14 } }
+}

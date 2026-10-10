@@ -1,0 +1,34 @@
+/* Pentaryn Player Journal — the "Add to my journal" footer and the just-added glow.
+ * The gold is deliberately not the portals violet: this is "yours", that is "elsewhere". */
+
+/* The bar is a flex footer on the AppV2 window root, after .window-content. The root is a
+ * column flexbox and .window-content takes the rest, so no absolute positioning is needed. */
+.application.pentaryn-journal-readable > .pj-bar {
+  flex: 0 0 auto; display: flex; align-items: center; gap: .75rem;
+  min-height: 48px; padding: .4rem 1.25rem .4rem .75rem;            /* right pad clears the resize handle */
+  background: var(--color-cool-5, #1b1a24); border-top: 1px solid rgba(212,169,74,.5);
+  color: var(--color-light-1, #eee);
+}
+.pj-bar button { flex: 0 0 auto; width: auto; font-size: 1.05em; padding: .45rem .9rem; border-radius: 6px; }
+.pj-bar .pj-add, .pj-bar .pj-update { background: #d4a94a; color: #1b1a24; font-weight: bold; border: none; }
+.pj-bar .pj-open { background: transparent; border: 1px solid #d4a94a; color: #d4a94a; }
+.pj-bar button:disabled { opacity: .6; cursor: progress; }
+.pj-bar .pj-hint { margin-left: auto; opacity: .75; font-size: .9em; }
+.application.pentaryn-journal-readable.minimized > .pj-bar { display: none; }
+@container (max-width: 560px) { .pj-bar .pj-hint { display: none; } }
+@media (max-width: 560px) { .pj-bar .pj-hint { display: none; } }
+
+/* The confirmation: the new entry in the player's own journal. */
+nav.toc li.pj-just-added > .page-heading { animation: pj-glow 1.2s ease-in-out 3; border-left: 3px solid #d4a94a; background: rgba(212,169,74,.15); }
+article.journal-entry-page.pj-just-added { animation: pj-glow 1.2s ease-in-out 3; outline: 2px solid rgba(212,169,74,.6); outline-offset: 4px; border-radius: 4px; }
+.pj-new { margin-left: .4rem; font-size: .7em; padding: 0 .35em; border-radius: 3px; background: #d4a94a; color: #1b1a24; font-weight: bold; vertical-align: middle; flex: none; }
+@keyframes pj-glow { 0%,100% { box-shadow: 0 0 0 0 rgba(212,169,74,0); } 50% { box-shadow: 0 0 14px 4px rgba(212,169,74,.75); } }
+@media (prefers-reduced-motion: reduce) { .pj-just-added, nav.toc li.pj-just-added > .page-heading { animation: none; } }
+
+/* Inside a saved page. */
+.pj-provenance { font-size: .9em; opacity: .85; } .pj-rule { margin: .5rem 0 1rem; }
+.pj-revealed { border-left: 2px solid rgba(212,169,74,.5); padding-left: .5rem; }
+.pj-item-img { float: right; width: 96px; height: 96px; object-fit: contain; margin: 0 0 .5rem .5rem; border: none; }
+
+/* A one-page eye readable is a single piece of information: no page list, no page arrows. */
+.application.journal-sheet.pj-single .journal-sidebar { display: none; }

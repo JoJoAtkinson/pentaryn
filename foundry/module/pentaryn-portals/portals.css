@@ -1,0 +1,53 @@
+.pentaryn-portal-dialog .pp-cards { display: flex; flex-direction: column; gap: 0.5rem; margin: 0.5rem 0; }
+.pp-card { display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.4rem; border: 1px solid rgba(128,128,128,0.4); border-radius: 6px; background: rgba(0,0,0,0.15); }
+.pp-card .pp-thumb { width: 168px; height: 105px; object-fit: cover; border-radius: 4px; border: none; flex: none; }
+.pp-card .pp-text h4 { margin: 0 0 0.25rem; border: none; }
+.pp-card .pp-desc { margin: 0; font-size: 0.9em; line-height: 1.35; }
+.pp-choice { cursor: pointer; }
+.pp-choice input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+.pp-choice:has(input:checked) { border-color: #8a5cff; box-shadow: 0 0 0 2px #8a5cff inset; background: rgba(138,92,255,0.12); }
+.pp-config .pp-preview { margin-top: 0.5rem; }
+.pp-config .pp-snap { flex: 0 0 2rem; }
+
+.pp-hover { position: fixed; z-index: 10000; display: none; max-width: 460px; pointer-events: none;
+  background: var(--color-cool-5, #1b1a24); color: var(--color-light-1, #eee); padding: 0.4rem; border-radius: 8px; box-shadow: 0 4px 18px rgba(0,0,0,0.6); }
+.pp-hover .pp-cards { margin: 0; }
+.pp-menu { position: fixed; z-index: 10001; display: flex; flex-direction: column; min-width: 240px;
+  background: var(--color-cool-5, #1b1a24); color: var(--color-light-1, #eee); border: 1px solid #8a5cff; border-radius: 6px; padding: 0.25rem 0; box-shadow: 0 4px 18px rgba(0,0,0,0.6); }
+.pp-menu a { padding: 0.35rem 0.75rem; cursor: pointer; white-space: nowrap; }
+.pp-menu a:hover { background: rgba(138,92,255,0.25); }
+.pp-menu a i { width: 1.2em; margin-right: 0.35rem; text-align: center; }
+.pentaryn-portal-card .window-header .pp-toggle { position: relative; display: inline-block; width: 34px; height: 18px; flex: none; margin-right: 0.5rem; cursor: pointer; }
+.pentaryn-portal-card .pp-toggle input { opacity: 0; width: 0; height: 0; }
+.pentaryn-portal-card .pp-slider { position: absolute; inset: 0; background: rgba(255,255,255,0.25); border-radius: 18px; transition: background 150ms; }
+.pentaryn-portal-card .pp-slider::before { content: ""; position: absolute; width: 14px; height: 14px; left: 2px; top: 2px; background: #fff; border-radius: 50%; transition: transform 150ms; }
+.pentaryn-portal-card .pp-toggle input:checked + .pp-slider { background: #8a5cff; }
+.pentaryn-portal-card .pp-toggle input:checked + .pp-slider::before { transform: translateX(16px); }
+.pentaryn-portal-card .window-content { padding: 0.5rem 0.75rem; }
+.pentaryn-portal-card .pp-edit { margin-bottom: 0.5rem; }
+
+/* ── Edit view: the card, edited in place ────────────────────────────────── */
+.pentaryn-portal-card .pp-passage { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 0.6rem; }
+.pentaryn-portal-card .pp-name { font-size: 1.1em; font-weight: bold; }
+.pentaryn-portal-card .pp-switches { display: flex; flex-wrap: wrap; gap: 0.9rem; }
+.pentaryn-portal-card .pp-switch { display: inline-flex; align-items: center; gap: 0.4rem; cursor: pointer; position: relative; }
+.pentaryn-portal-card .pp-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.pentaryn-portal-card .pp-switch .pp-slider { position: relative; display: inline-block; width: 30px; height: 16px; background: rgba(255,255,255,0.25); border-radius: 16px; flex: none; transition: background 150ms; }
+.pentaryn-portal-card .pp-switch .pp-slider::before { content: ""; position: absolute; width: 12px; height: 12px; left: 2px; top: 2px; background: #fff; border-radius: 50%; transition: transform 150ms; }
+.pentaryn-portal-card .pp-switch input:checked + .pp-slider { background: #8a5cff; }
+.pentaryn-portal-card .pp-switch input:checked + .pp-slider::before { transform: translateX(14px); }
+.pentaryn-portal-card .pp-editcard { align-items: stretch; }
+.pentaryn-portal-card .pp-imgedit { position: relative; margin: 0; flex: none; }
+.pentaryn-portal-card .pp-imgedit .pp-thumb { width: 200px; height: 125px; cursor: pointer; }
+.pentaryn-portal-card .pp-imgtools { position: absolute; bottom: 4px; right: 4px; display: flex; gap: 3px; opacity: 0; transition: opacity 120ms; }
+.pentaryn-portal-card .pp-imgedit:hover .pp-imgtools { opacity: 1; }
+.pentaryn-portal-card .pp-imgtools button { width: 26px; height: 26px; line-height: 1; padding: 0; background: rgba(0,0,0,0.65); color: #fff; border: 1px solid #8a5cff; }
+.pentaryn-portal-card .pp-editcard .pp-text { flex: 1; display: flex; flex-direction: column; gap: 0.3rem; }
+.pentaryn-portal-card .pp-title { font-weight: bold; font-size: 1.05em; background: transparent; border: 1px dashed rgba(128,128,128,0.45); }
+.pentaryn-portal-card .pp-descedit { flex: 1; resize: vertical; font-size: 0.9em; line-height: 1.35; background: transparent; border: 1px dashed rgba(128,128,128,0.45); }
+.pentaryn-portal-card .pp-title:focus, .pentaryn-portal-card .pp-descedit:focus { border-style: solid; border-color: #8a5cff; }
+.pentaryn-portal-card .pp-meta { font-size: 0.8em; opacity: 0.75; display: flex; gap: 0.5rem; align-items: center; }
+.pentaryn-portal-card .pp-meta a { cursor: pointer; }
+.pentaryn-portal-card .pp-meta a:first-of-type { margin-left: auto; }
+.pentaryn-portal-card .pp-add { display: flex; gap: 0.6rem; align-items: center; margin-top: 0.5rem; }
+.pentaryn-portal-card .pp-add select { flex: 1; }
