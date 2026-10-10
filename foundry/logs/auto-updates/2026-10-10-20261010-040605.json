@@ -1,0 +1,31 @@
+{
+  "run_id": "20261010-040605",
+  "outcome": "skipped",
+  "started": "2026-10-10T04:06:05-0400",
+  "finished": "",
+  "snapshot": null,
+  "native_snapshot": null,
+  "applied": [],
+  "failed": [],
+  "recoveries": [],
+  "smoke": [],
+  "warnings": {},
+  "messages": [
+    "paused \u2014 remove .state/vtt-update.pause to resume"
+  ],
+  "traceback": null,
+  "plan": {},
+  "report_call": {
+    "tier": "report",
+    "model": "sonnet",
+    "effort": "medium",
+    "ok": true,
+    "resolved_model": "claude-sonnet-5-5",
+    "cost_usd": 0.00722,
+    "seconds": 3.3,
+    "error": null,
+    "detail": "20261010-040605",
+    "budget_usd": 0.5,
+    "cost_known": true
+  }
+}
