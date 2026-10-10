@@ -192,8 +192,8 @@ MODULES = {
         after_sync=(
             "First install: restart Foundry (module.json is read at startup), then reload.",
             "Already enabled? A browser RELOAD (F5) picks up new .mjs files and assets.",
-            "Token vision now follows sheet Darkvision; check with",
-            "  game.pentaryn.senses.desiredSight(actor)",
+            "Token vision is dnd5e's senseVisionSync (6.0+); the one-shot reset of stored",
+            "darkvision runs at GM ready — check game.settings.get('pentaryn-senses', 'sightReset') === 1",
             "Token chains: game.pentaryn.chain.links() · Token HUD → Break chain.",
         ),
     ),

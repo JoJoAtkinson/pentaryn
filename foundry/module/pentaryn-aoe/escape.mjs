@@ -1,41 +1,45 @@
 /**
- * Part E — Escape cancels a dnd5e area template placement, the same way right-click does.
+ * Part E — Escape cancels a spell-area placement on the FIRST press, even with a window open.
  *
- * dnd5e 5.3.3 AbilityTemplate#activatePreviewListeners only binds right-click
- * (canvas.app.view.oncontextmenu → _onCancelPlacement). Escape fell through to core's "dismiss"
- * (DEFERRED precedence), which closed windows or opened the main menu while the preview kept
- * following the mouse. This binding runs at PRIORITY precedence and only consumes the key while
- * a template is being placed; then it calls the template's own _onCancelPlacement, so the preview
- * is cleared, the earlier layer re-activated, the sheet restored and the placement promise
- * rejected exactly as for right-click. Otherwise it returns false and core handles Escape.
+ * dnd5e 6 places every activity area through core's RegionLayer#placeRegions
+ * (TemplatePlacement#_place). Core's own Escape ("dismiss", DEFERRED precedence) does reach the
+ * placement — but only at its step 5 (`canvas.activeLayer._onDismissKey`), after step 4 has closed
+ * every open window. dnd5e's BasePlacement#place minimises every framed window for the placement,
+ * starting with the sheet the spell was cast from, so the first Escape CLOSES that sheet while the
+ * preview keeps following the mouse — the 2026-10-08 table complaint Part E was written for. Only
+ * a cast from the Argon HUD with no window open cancels on the first press natively.
+ *
+ * This binding runs at PRIORITY precedence and consumes Escape only while canvas.regions has a
+ * placement in progress, cancelling it exactly as core's dismiss would (RegionLayer#_cancelPlacement
+ * resolves the placement with null; dnd5e then restores the layer and the windows). At any other
+ * time it returns false and core handles Escape. Adjustment row core-region-placement-escape.
  *
  * Keybindings can only be registered during init. A hot-patched copy cannot add one, but when the
- * module loaded at startup it takes over the binding registered then (see SLOT); on a first install
- * that is hot-patched there is no binding, it says so in the console and everything else installs.
+ * module loaded at startup it takes over the binding registered then (see SLOT).
  */
 
-import { MODULE, placingTemplate } from "./core.mjs";
+import { MODULE, placementInProgress } from "./core.mjs";
 
 /**
  * The handler slot the registered binding calls through. Foundry copies a binding's onDown into
  * its key map at init and never lets it be re-registered, so the function registered then is a
- * trampoline into this slot, and whichever copy installed last (a hot-patched copy after
- * uninstall() of the startup one, say) puts its own handler here. Empty slot = core Escape.
+ * trampoline into this slot; whichever copy installed last puts its own handler here.
+ * Empty slot = core Escape.
  */
 const SLOT = Symbol.for(`${MODULE}.cancelTemplate`);
 
-/** The template being placed right now, if any. */
+/** The region placement in progress right now (core's placement context), or null. */
 export function activePlacement() {
-  return placingTemplate(globalThis.canvas?.templates?.preview?.children);
+  const layer = globalThis.canvas?.regions;
+  return placementInProgress(layer) ? layer._placementContext : null;
 }
 
 /** Synchronous on purpose: an async onDown returns a Promise, which always counts as consumed. */
-function onEscape(context) {
-  const template = activePlacement();
-  if (!template) return false;
+function onEscape() {
+  const layer = globalThis.canvas?.regions;
+  if (!placementInProgress(layer)) return false;
   try {
-    const out = template._onCancelPlacement(context?.event);
-    if (out instanceof Promise) out.catch(err => console.error(`${MODULE} | cancel placement`, err));
+    layer._cancelPlacement();
   } catch (err) {
     console.error(`${MODULE} | cancel placement`, err);
   }
@@ -60,7 +64,7 @@ export function registerEscape() {
       precedence: CONST.KEYBINDING_PRECEDENCE.PRIORITY
     });
   } catch (err) {
-    console.warn(`${MODULE} | Escape-cancels-template keybinding not registered (registered after init?)`, err);
+    console.warn(`${MODULE} | Escape-cancels-placement keybinding not registered (registered after init?)`, err);
   }
 }
 

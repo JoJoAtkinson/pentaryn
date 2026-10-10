@@ -612,3 +612,11 @@ Plan/record: `plans/druid-wild-shape.md`. Use-doc: `foundry/module/pentaryn-tran
   4. Small: the form panel opens at the far left of the Action bar, the rest chat line for a shifted druid reads "Talo (Giant Bat) takes a short rest.", the Archer tooltip lingers after a click, the sheet route was exercised only via `Item.use()`.
 - **Strays:** polymorph form "Caven Calderon (Allosaurus)" (`zRTdAW9xtjnoMYzr`) has a token on "Surface — Kharg's Adit" and no Wild Shape/revert item. Potent Spellcasting skipped. Players on 0.2 get it when they reconnect.
 - **Cleanup after test:** test chat deleted, no form actors/combats, Wild Shape spent 0, Argon Always On off, Drow Prison active and paused.
+
+## dnd5e 6.0.6 upgrade (2026-10-10)
+
+The pentaryn world now runs **dnd5e 6.0.6** (was 5.3.3) on Foundry 14.369; migrated cleanly (226 actors, 449 chat messages, 16 scenes) and all three PCs plus Caven's Allosaurus form open without errors. Kept after a live Argon playtest (Marrith, Caven, Talo; real HUD clicks, GM and player tab): no rollback trigger fired, even though `enhancedcombathud-dnd5e` 5.2.2 and `itempilesdnd5e` 1.1.0 do not declare 6 support. All `pentaryn-*` modules were ported and synced. Build record, retired-for-native list and accepted degradations: `plans/dnd5e-6-upgrade.md`. Rollback recipe lives there too (backups in OneDrive `pre-dnd5e6-2026-10/`).
+
+- **Open:** other three worlds unlaunched on 6 (they migrate on first launch); cards-flow suite not run; Caven "Allosaurus" token (`3MOg1yNcRGsrJtBj`) has an empty texture (pre-upgrade Wild Shape, art in `previousTokenData`); stale expired "Imperceptible Barrier" effect on Caven; keep **one** GM client connected (several GM tabs duplicate Item Piles takes).
+- Updater stays paused.
+- **2026-10-10 update:** other three worlds now migrated to dnd5e 6.0.6 (no longer open). Test cleanup done: chat 446 messages, Caven's stale Imperceptible Barrier removed (AC 15), no combats, Drow Prison active and paused. Item Piles default pile is now `RReAnOkxHGoZ1Ca7`. Still open: Allosaurus token texture, cards-flow suite.

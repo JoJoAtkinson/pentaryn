@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Fixtures for chain-core.mjs, then light-core.mjs (test/light.mjs) — `node test/run.mjs`. No dependencies, no Foundry.
+ * Fixtures for chain-core.mjs, then light-core.mjs (test/light.mjs) and migrate.mjs
+ * (test/migrate.mjs) — `node test/run.mjs`. No dependencies, no Foundry.
  * The import itself is a check: chain-core.mjs must load with `game`, `canvas` and `PIXI` undefined.
  */
 
@@ -68,3 +69,6 @@ if (failures.length) { console.log(failures.join("\n")); process.exitCode = 1; }
 
 // The Light cantrip and lit items (light-core.mjs). Sets process.exitCode on failure.
 await import("./light.mjs");
+
+// The one-shot darkvision sight reset (migrate.mjs). Sets process.exitCode on failure.
+await import("./migrate.mjs");

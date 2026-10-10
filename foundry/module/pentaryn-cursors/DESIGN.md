@@ -184,7 +184,9 @@ still look "not the arrow".
   (`templates.mjs: visible: false, tools: {}`), so `ui.controls.control` stays `tokens` and
   `ui.controls.tool` stays whatever it was. Hence the `aoe` key reads **the layer, not the tool**,
   and takes precedence. When the preview ends dnd5e re-activates the initial layer, which fires the
-  hook again and the key drops back.
+  hook again and the key drops back. *Superseded on dnd5e 6 (0.2.0): placement is core
+  `RegionLayer#placeRegions`, detected from `canvas.regions._placementContext` plus
+  `canvas.regions.preview`; see README "The spell-area glyph".*
 - `canvasReady` — set the initial key; `canvasTearDown` — clear the attribute.
 
 ```js

@@ -12,17 +12,18 @@
  *  - records what was applied on the message (flags.pentaryn-aoe.effectsApplied), and adds a
  *    one-line "Applied to Caven: Mage Armor" note to the card;
  *  - highlights an Effects tray that still has effects nobody has applied, until someone applies
- *    them (dnd5e's own apply click is noticed and recorded too).
+ *    them (dnd5e's own Apply button is noticed and recorded too).
  *
- * Applying mirrors dnd5e 5.3.3 EffectApplicationElement#_applyEffectToActor: same origin (the
- * concentration effect when there is one), same dependentOn/scaling flags, and an effect already on
- * the actor from that origin is refreshed rather than duplicated. So a later click on the tray's own
- * apply button refreshes the same effect instead of stacking a second one.
+ * Applying IS dnd5e 6's tray: the data comes from EffectApplicationElement#_prepareEffectData on a
+ * detached <effect-application> bound to the card (system.origin, dependentOn/scaling/spellLevel,
+ * the activity's replacement values and auto-duration, _stats.duplicateSource — or compendiumSource
+ * for a dnd5e.effects pack effect). An effect already on the actor from that source is refreshed,
+ * not duplicated, so a later press of the tray's own Apply refreshes the same effect.
  */
 
 import { MODULE, aoeFlags, selfApplyReason, pendingEffects } from "./core.mjs";
 import { setting } from "./settings.mjs";
-import { on, guard } from "./hooks.mjs";
+import { on, guard, claimMessage } from "./hooks.mjs";
 
 const t = (key, data) => (data ? game.i18n.format(`PENTARYN_AOE.${key}`, data) : game.i18n.localize(`PENTARYN_AOE.${key}`));
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
@@ -41,26 +42,28 @@ const localApplied = new Map();      // message id → Set(effect ids) applied f
 /*  Reading a usage card                        */
 /* -------------------------------------------- */
 
-/** The card's applicable effects as documents on its item (enchantments excluded). */
-export function cardEffects(message) {
-  if (message?.type !== "usage") return [];
-  const refs = message.system?.effects ?? [];
-  if (!refs.length) return [];
-  const item = message.getAssociatedItem?.();
-  if (!item?.effects) return [];
-  return refs.map(ref => item.effects.get(String(ref).split(".").pop()))
-    .filter(e => e && e.type !== "enchantment");
+/**
+ * The card's applicable effects (enchantments excluded). dnd5e 6 stores them as uuids that are
+ * either relative to the item (.ActiveEffect.<id>) or point into the dnd5e.effects compendium;
+ * message.system.getEffects() resolves both, falling back to the item snapshot of a consumed item.
+ */
+export async function cardEffects(message) {
+  if (message?.type !== "usage" || !message.system?.effects?.length) return [];
+  const effects = (await message.system.getEffects?.()) ?? [];
+  return effects.filter(e => e && e.type !== "enchantment");
 }
 
-function concentrationOf(message) {
-  const id = message.system?.concentration;
-  return id ? message.getAssociatedActor?.()?.effects.get(id) ?? null : null;
+/** The actors a usage card targeted: dnd5e 6 records { actor, token } uuids (migrated cards only the actor). */
+function targetActors(message) {
+  return (message.system?.targets ?? []).map(tg => {
+    const token = tg?.token ? fromUuidSync(tg.token, { strict: false }) : null;
+    return token?.actor ?? (tg?.actor ? fromUuidSync(tg.actor, { strict: false }) : null);
+  }).filter(a => a?.effects);
 }
 
-/** What dnd5e uses as the applied effect's origin: the concentration effect, else the item effect. */
-function originFor(message, effect) {
-  return concentrationOf(message) ?? effect;
-}
+/** Is `applied` (on an actor) a copy of the card effect `effect`? dnd5e 6 links them by source, not origin. */
+const copiedFrom = (applied, effect) => applied._stats?.duplicateSource === effect.uuid
+  || applied._stats?.compendiumSource === effect.uuid;
 
 function appliedIds(message) {
   const flagged = aoeFlags(message).effectsApplied?.ids ?? [];
@@ -71,16 +74,17 @@ function appliedIds(message) {
  * Effect ids on the card still waiting. Applied = recorded on the message, or already on every
  * creature the card targeted (covers a GM who applied it some other way).
  */
-export function pendingFor(message) {
-  const effects = cardEffects(message);
+export async function pendingFor(message) {
+  // A settled card never lights up (pendingEffects says so too); answer before resolving its
+  // effects, which on dnd5e 6 is an async fromUuid per card (a pack fetch for dnd5e.effects).
+  if (Date.now() - (message?.timestamp ?? 0) > HIGHLIGHT_MAX_AGE) return [];
+  const effects = await cardEffects(message);
   if (!effects.length) return [];
   const applied = new Set(appliedIds(message));
-  const targets = (message.flags?.dnd5e?.targets ?? []).filter(d => d?.uuid)
-    .map(d => fromUuidSync(d.uuid, { strict: false })).filter(a => a?.effects);
+  const targets = targetActors(message);
   if (targets.length) {
     for (const e of effects) {
-      const origin = originFor(message, e).uuid;
-      if (targets.every(a => a.effects.some(x => x.origin === origin && !x.disabled))) applied.add(e.id);
+      if (targets.every(a => a.effects.some(x => copiedFrom(x, e) && !x.disabled))) applied.add(e.id);
     }
   }
   return pendingEffects(effects.map(e => e.id), [...applied],
@@ -91,22 +95,17 @@ export function pendingFor(message) {
 /*  Applying                                    */
 /* -------------------------------------------- */
 
-/** One effect onto one actor, the way dnd5e's tray does it (refresh, never duplicate). */
+/**
+ * One effect onto one actor, exactly as dnd5e's tray does it (refresh, never duplicate): the data
+ * comes from the tray's own _prepareEffectData on a detached <effect-application> bound to the card.
+ */
 async function applyEffect(message, effect, actor) {
-  const origin = originFor(message, effect);
-  const flags = { flags: { dnd5e: {
-    dependentOn: origin.uuid,
-    scaling: message.system?.scaling,
-    spellLevel: message.system?.spellLevel
-  } } };
-  // dnd5e matches on origin alone; the name check keeps two effects under one concentration
-  // from collapsing into one. A later tray click still finds one of them and only refreshes it.
-  const existing = actor.effects.find(e => e.origin === origin.uuid && (origin === effect || e.name === effect.name));
-  if (existing) {
-    await existing.update(foundry.utils.mergeObject({ ...effect.constructor.getInitialDuration(), disabled: false }, flags));
-    return existing;
-  }
-  const data = foundry.utils.mergeObject({ ...effect.toObject(), disabled: false, transfer: false, origin: origin.uuid }, flags);
+  const Tray = customElements.get("effect-application");
+  if (!Tray?.prototype?._prepareEffectData) throw new Error("dnd5e <effect-application> is not available");
+  const tray = new Tray();
+  tray.chatMessage = message;
+  const { action, data } = await tray._prepareEffectData(effect, actor);
+  if (action === "update") return actor.effects.get(data._id)?.update(data);
   return ActiveEffect.implementation.create(data, { parent: actor });
 }
 
@@ -121,17 +120,24 @@ async function markApplied(message, ids, extra = {}) {
 }
 
 /** Why this card's effects belong on its caster (core.selfApplyReason), or null. */
-function selfReason(message, effects = cardEffects(message)) {
+async function selfReason(message, effects = null) {
+  effects ??= await cardEffects(message);
   const caster = message.getAssociatedActor?.();
   if (!caster || !effects.length) return null;
   const activity = message.getAssociatedActivity?.();
   return selfApplyReason({
     casterUuid: caster.uuid,
-    targetUuids: (message.flags?.dnd5e?.targets ?? []).map(d => d?.uuid),
+    targetUuids: (message.system?.targets ?? []).map(targetActorUuid),
     affectsType: activity?.target?.affects?.type ?? null,
-    activityType: activity?.type ?? message.flags?.dnd5e?.activity?.type ?? null,
+    activityType: activity?.type ?? message.system?.activity?.type ?? null,
     effectCount: effects.length
   });
+}
+
+/** A recorded target's actor uuid (the token's actor when the token still exists, else the stored actor). */
+function targetActorUuid(tg) {
+  const token = tg?.token ? fromUuidSync(tg.token, { strict: false }) : null;
+  return token?.actor?.uuid ?? tg?.actor ?? null;
 }
 
 /** Is this client the one that writes for a card made by `userId`? */
@@ -150,14 +156,17 @@ function isApplier(userId) {
 export async function selfApply(message, { force = false } = {}) {
   if (!message || (!force && !setting("autoApplySelf"))) return null;
   if (aoeFlags(message).effectsApplied?.auto || inflight.has(message.id)) return null;
-  const effects = cardEffects(message);
-  if (!effects.length) return null;
-  const caster = message.getAssociatedActor?.();
-  if (!caster || !(game.user.isGM || caster.isOwner)) return null;
-  const reason = selfReason(message, effects);
-  if (!reason) return null;
   inflight.add(message.id);
   try {
+    const effects = await cardEffects(message);
+    if (!effects.length) return null;
+    const caster = message.getAssociatedActor?.();
+    if (!caster || !(game.user.isGM || caster.isOwner)) return null;
+    const reason = await selfReason(message, effects);
+    if (!reason) return null;
+    // Two sessions on the GM account are both the applier: one of them applies.
+    if (!force && !(await claimMessage(message, "selfApply"))) return null;
+    if (!force && aoeFlags(game.messages.get(message.id)).effectsApplied?.auto) return null;
     const applied = [];
     for (const effect of effects) {
       try {
@@ -204,39 +213,52 @@ function decorate(message, html) {
   if (!tray || tray.dataset.pentarynAoe) return;
   tray.dataset.pentarynAoe = "1";
 
-  const light = msg => {
-    if (!pendingFor(msg).length) return;
+  const light = async msg => {
+    if (!(await pendingFor(msg)).length) return;
     tray.classList.add("pentaryn-aoe-unapplied");
     tray.style.setProperty("--pentaryn-aoe-unapplied", JSON.stringify(t("Effects.Unapplied")));
   };
+  const warn = err => console.warn(`${MODULE} | highlight`, err);
 
   // A fresh card that is about to be auto-applied is not "waiting": skip the flash before the
   // GM's write lands and re-renders it. If that write never lands (the apply failed), look again
   // once the grace is over, so a failed auto-apply still lights up.
   const age = Date.now() - (message.timestamp ?? 0);
-  const autoSoon = setting("autoApplySelf") && !flag?.auto && age < AUTO_GRACE && !!selfReason(message);
   if (setting("highlightUnapplied")) {
-    if (!autoSoon) light(message);
-    else setTimeout(() => {
-      const live = game.messages.get(message.id);
-      if (live && tray.isConnected && !aoeFlags(live).effectsApplied?.auto) light(live);
-    }, AUTO_GRACE - age + 250);
+    (async () => {
+      const autoSoon = setting("autoApplySelf") && !flag?.auto && age < AUTO_GRACE && !!(await selfReason(message));
+      if (!autoSoon) return light(message);
+      setTimeout(() => {
+        const live = game.messages.get(message.id);
+        if (live && tray.isConnected && !aoeFlags(live).effectsApplied?.auto) light(live).catch(warn);
+      }, AUTO_GRACE - age + 250);
+    })().catch(warn);
   }
 
-  // Notice dnd5e's own apply click (the whole effect row is its button) so the highlight goes and
-  // the card remembers. Only counts when the tray had someone ticked to apply it to.
-  // Capture phase: dnd5e's .collapsible card-tray handler (_handleClickHeader) calls
-  // stopImmediatePropagation on every click inside the tray, so a bubble listener never fires.
+  // Notice dnd5e's own Apply so the highlight goes and the card remembers. In dnd5e 6 a click on an
+  // effect row only selects it (aria-pressed); the Apply button applies the pressed rows to the
+  // recorded-targets selection (or the controlled tokens). Only counts when it had someone to go on.
+  // Capture phase: the tray's .collapsible header handler calls stopImmediatePropagation.
   tray.addEventListener("click", ev => {
-    const li = ev.target?.closest?.("li.effect[data-id]");
-    if (!li || !tray.contains(li)) return;
-    const ticked = [...tray.querySelectorAll("[data-target-uuid] dnd5e-checkbox")].some(c => c.checked);
-    if (!ticked) return;
-    const id = li.dataset.id;
-    localApplied.set(message.id, new Set([...(localApplied.get(message.id) ?? []), id]));
-    if (!pendingFor(message).length) tray.classList.remove("pentaryn-aoe-unapplied");
-    setTimeout(() => markApplied(message, [id]).catch(err => console.warn(`${MODULE} | mark applied`, err)), MARK_DELAY);
+    const button = ev.target?.closest?.(".apply-button");
+    if (!button || !tray.contains(button)) return;
+    const ids = [...tray.querySelectorAll(".effect[data-uuid]")]
+      .filter(li => li.querySelector('button[aria-pressed="true"]')).map(li => li.dataset.id).filter(Boolean);
+    if (!ids.length || !applyTargets(tray).length) return;
+    localApplied.set(message.id, new Set([...(localApplied.get(message.id) ?? []), ...ids]));
+    pendingFor(message).then(p => { if (!p.length) tray.classList.remove("pentaryn-aoe-unapplied"); }).catch(warn);
+    setTimeout(() => markApplied(message, ids).catch(err => console.warn(`${MODULE} | mark applied`, err)), MARK_DELAY);
   }, true);
+}
+
+/**
+ * Who the tray's Apply will act on, as dnd5e 6 decides it (EffectApplicationElement#getTargets):
+ * the tray's own or the card's <recorded-targets> selection, else the controlled tokens.
+ */
+function applyTargets(tray) {
+  const recorded = tray.targetList ?? tray.closest("[data-message-id]")?.querySelector("recorded-targets");
+  if (recorded) return [...(recorded.targets ?? [])];
+  return canvas.tokens?.controlled?.filter(tk => tk.actor) ?? [];
 }
 
 /* -------------------------------------------- */

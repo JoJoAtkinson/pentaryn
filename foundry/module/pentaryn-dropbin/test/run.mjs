@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 /**
- * Fixtures for loot-core.mjs — `node test/run.mjs`. No dependencies, no Foundry.
- * The import itself is a check: loot-core.mjs must load with `game`, `canvas` and `PIXI` undefined.
+ * Fixtures for loot-core.mjs and i18n-shim.mjs — `node test/run.mjs`. No dependencies, no Foundry.
+ * The imports themselves are a check: both must load with `game`, `canvas`, `PIXI` and `Hooks` undefined.
  */
 
 const { MODULE, lootAllState, showEye, eyePlacement } = await import("../loot-core.mjs");
+const { fillMissingKeys, LEGACY_KEYS } = await import("../i18n-shim.mjs");
 
 let pass = 0;
 const failures = [];
@@ -52,6 +53,49 @@ check("bad input → zero", eyePlacement(undefined, -5), { size: 0, x: 0, y: 0 }
   // the badge sits inside the token and overlaps the core overlay's corner (60% centred)
   const p = eyePlacement(100, 100);
   check("inside token", p.x + p.size / 2 <= 100 && p.y - p.size / 2 >= 0, true);
+}
+
+/* ── i18n shim (dnd5e 6 removed the keys itempilesdnd5e 1.1.0 reads) ──── */
+{
+  // dnd5e 6.0.6 shape: rarity words under DND5E.ITEM.Rarity, "Unknown" only in core COMMON
+  const six = () => ({
+    COMMON: { Unknown: "Unknown" },
+    DND5E: { ITEM: { Rarity: { Common: "Common", Uncommon: "Uncommon", Rare: "Rare", VeryRare: "Very Rare", Legendary: "Legendary", Artifact: "Artifact", Mundane: "Mundane" } } },
+  });
+  const t = six();
+  const added = fillMissingKeys(t);
+  check("6.x: all seven keys added", added.length, 7);
+  check("6.x: rarity copied from ITEM.Rarity", [t.DND5E.ItemRarityUncommon, t.DND5E.ItemRarityRare, t.DND5E.ItemRarityVeryRare], ["Uncommon", "Rare", "Very Rare"]);
+  check("6.x: Unknown copied from COMMON", t.DND5E.Unknown, "Unknown");
+  check("6.x: nested tree untouched", t.DND5E.ITEM.Rarity.Rare, "Rare");
+  check("second run adds nothing", fillMissingKeys(t), []);
+
+  // 5.3.3 shape (keys still present, lowercase words) — never overwritten
+  const five = six();
+  Object.assign(five.DND5E, { ItemRarityCommon: "common", ItemRarityUncommon: "uncommon", ItemRarityRare: "rare", ItemRarityVeryRare: "very rare", ItemRarityLegendary: "legendary", ItemRarityArtifact: "artifact", Unknown: "Unknown" });
+  check("5.x: nothing added", fillMissingKeys(five), []);
+  check("5.x: existing words kept", five.DND5E.ItemRarityVeryRare, "very rare");
+
+  // a translation module defined one key: only the others are filled
+  const partial = six();
+  partial.DND5E.ItemRarityRare = "Selten";
+  const got = fillMissingKeys(partial);
+  check("partial: six added", got.length, 6);
+  check("partial: Rare not in the added list", got.includes("DND5E.ItemRarityRare"), false);
+  check("partial: translation kept", partial.DND5E.ItemRarityRare, "Selten");
+
+  // non-English client: source word from the English fallback when the language lacks it
+  const fr = { DND5E: {} };
+  fillMissingKeys(fr, six());
+  check("fallback dictionary used", [fr.DND5E.ItemRarityLegendary, fr.DND5E.Unknown], ["Legendary", "Unknown"]);
+
+  // nothing to copy from at all: literal English, never the raw key
+  const bare = {};
+  fillMissingKeys(bare);
+  check("no DND5E namespace → created and filled", [bare.DND5E.ItemRarityArtifact, bare.DND5E.Unknown], ["Artifact", "Unknown"]);
+  check("bad input → no-op", fillMissingKeys(null), []);
+  check("the six rarity keys + Unknown that itempilesdnd5e names", Object.keys(LEGACY_KEYS).sort(),
+    ["ItemRarityArtifact", "ItemRarityCommon", "ItemRarityLegendary", "ItemRarityRare", "ItemRarityUncommon", "ItemRarityVeryRare", "Unknown"]);
 }
 
 if (failures.length) {

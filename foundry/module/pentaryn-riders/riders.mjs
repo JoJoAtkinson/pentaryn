@@ -11,12 +11,16 @@
  *   `dnd5e.postDamageRollConfiguration` fires on the roller's client after the roll dialog (so the
  *   damage type is the final one, crits are already doubled and @references resolved) and before
  *   the dice are rolled. The riders edit the real terms there: a die modifier ("min2", "r1") on
- *   the dice of the right type, or one `+ N[Feature]` term. The chat card shows both in its formula
- *   and names the riders in its flavor. The message carries
- *       flags.pentaryn-riders = { applied: [keys], ignoreResistance: [types], origin }
+ *   the dice of the right type, or one `+ N[Feature]` term. The chat card shows both in its formula.
+ *   The message carries
+ *       flags.pentaryn-riders = { applied: [keys], ignoreResistance: [types], origin, detail }
+ *   (`core.riderFlag`). `origin` is the usage card's id (dnd5e 6 `system.origin`); `applied` is
+ *   the once-per-casting guard, read back from the earlier damage messages of the same card.
+ *   `dnd5e.renderChatMessage` turns the flag into a note under the card's dice row (dnd5e 6 strips
+ *   the header flavor from item cards, so the note cannot live there).
  *   `dnd5e.preCalculateDamage` reads `ignoreResistance` when the damage tray first lists a target
- *   that resists that type, and switches the resistance to "ignored" once. The GM can click the
- *   icon to switch it back; the tray keeps that choice.
+ *   that resists that type, and switches the resistance to "ignored" on the tray's own per-target
+ *   options, once. The GM can click the icon to switch it back; re-calculating and Apply keep that.
  *
  * Battle Medic (B3)
  *   One `utility` activity on the Healer feat, flagged flags.pentaryn-riders.flow = "battle-medic"
@@ -116,23 +120,20 @@ function describe(term) {
   return { kind: "other", flavor: term?.flavor ?? "" };
 }
 
+/**
+ * The usage card these rolls come from. dnd5e 6 puts it in `system.origin` of the message data:
+ * set by the activity when it rolls damage right after use, otherwise from the clicked card in
+ * `buildPost` (after this hook), so the clicked element is read here the same way.
+ */
 function originOf(config, message) {
   const d = message?.data ?? {};
-  return foundry.utils.getProperty(d, "flags.dnd5e.originatingMessage")
-    ?? d["flags.dnd5e.originatingMessage"]
+  const o = foundry.utils.getProperty(d, "system.origin") ?? d["system.origin"];
+  return (typeof o === "string" ? o : o?.id)
     ?? config?.event?.target?.closest?.("[data-message-id]")?.dataset?.messageId
     ?? null;
 }
 
-function usedFrom(origin) {
-  if (!origin) return [];
-  const used = new Set();
-  for (const m of game.messages ?? []) {
-    if (m.flags?.dnd5e?.originatingMessage !== origin) continue;
-    for (const k of m.flags?.[MOD]?.applied ?? []) used.add(k);
-  }
-  return [...used];
-}
+const usedFrom = origin => core.usedFromMessages(game.messages ?? [], origin);
 
 function applyRiders(rolls, config, message) {
   if (!game.settings.get(MOD, "enabled")) return;
@@ -191,43 +192,108 @@ function applyRiders(rolls, config, message) {
   }
   for (const r of changed) r.resetFormula();
 
-  // Stamp the message: what was applied (once-per-casting guard, the tray preset) and say so.
+  // Stamp the message: what was applied (once-per-casting guard, the tray preset, the card note).
+  // dnd5e 6 strips the header flavor from item cards, so the note is rendered from this flag.
   message.data ??= {};
-  foundry.utils.setProperty(message.data, `flags.${MOD}`, {
-    applied: plan.applied, ignoreResistance: plan.ignoreResistance, origin
-  });
-  const notes = plan.applied.map(key => {
-    const rule = core.ruleByKey(key);
-    const bonus = plan.bonuses.find(b => b.key === key);
-    if (bonus) return L("note.bonus", { label: rule.label, value: bonus.value > 0 ? `+${bonus.value}` : `${bonus.value}` });
-    const die = plan.dice.find(d => d.key === key);
-    if (die?.modifier.startsWith("min")) return L("note.min", { label: rule.label, n: die.modifier.slice(3) });
-    if (die?.modifier.startsWith("r")) return L("note.reroll", { label: rule.label });
-    return rule.label;
-  });
-  if (notes.length && typeof message.data.flavor === "string") message.data.flavor += ` · ${notes.join(" · ")}`;
+  foundry.utils.setProperty(message.data, `flags.${MOD}`, core.riderFlag(plan, origin));
 }
 
 Hooks.on("dnd5e.postDamageRollConfiguration", (rolls, config, dialog, message) => {
   try { applyRiders(rolls, config, message); } catch (err) { console.warn(`${MOD} | riders skipped`, err); }
 });
 
-// Elemental Adept: start the tray with the target's resistance to the feature's type ignored.
-// The options object is the tray's per-target object, so this runs once per target and a GM who
-// clicks the icon back on keeps that choice (the apply path copies the options, marker included).
+/* -------------------------------------------- */
+/*  The card note                               */
+/* -------------------------------------------- */
+
+// dnd5e 6 removes the header flavor from roll cards that carry an item header
+// (roll-message-data.mjs `_onRender`), so the note is a line of its own under the dice row,
+// rebuilt from flags.pentaryn-riders on every render. Hidden when the roll itself is private.
+function renderNote(message, html) {
+  if (!html?.querySelector) return;
+  html.querySelector(".pentaryn-riders-note")?.remove();
+  const flag = message?.flags?.[MOD];
+  if (!flag?.applied?.length || !["damage", "healing"].includes(message.type) || !message.isContentVisible) return;
+  const parts = core.noteParts(flag);
+  if (!parts.length) return;
+  const text = parts.map(p => {
+    if (p.kind === "bonus") return L("note.bonus", { label: p.label, value: p.value });
+    if (p.kind === "min") return L("note.min", { label: p.label, n: p.n });
+    if (p.kind === "reroll") return L("note.reroll", { label: p.label });
+    return p.label;
+  }).join(" · ");
+  const note = document.createElement("p");
+  note.className = "supplement pentaryn-riders-note";
+  note.textContent = text;
+  const content = html.querySelector(".message-content") ?? html;
+  const row = content.querySelector(":scope > section.icon-row");
+  if (row) row.after(note);
+  else content.append(note);
+}
+
+Hooks.on("dnd5e.renderChatMessage", (message, html) => {
+  try { renderNote(message, html); } catch (err) { console.warn(`${MOD} | card note skipped`, err); }
+});
+
+/* -------------------------------------------- */
+/*  Elemental Adept — the damage tray preset    */
+/* -------------------------------------------- */
+
+// The tray (`damage-application`) keeps one options object per target (getTargetOptions) and
+// hands `actor.calculateDamage` a shallow copy of it on every calculation and on Apply
+// (getMergedOptions). A preset written only on the copy would be lost — or, re-written on every
+// copy, could never be switched off. So the preset is seeded on the tray's own per-target object
+// together with the PRESET marker (the spread copies symbol keys, so later copies carry it): the
+// GM can switch the resistance back on, re-calculating keeps that choice, and Apply uses it.
+// When no tray for the message is in the DOM, only the copy is changed (the old behaviour).
+
+function seedIgnore(options, hit) {
+  if (options.ignore === true || options.ignore?.resistance === true) return;
+  options.ignore ??= {};
+  if (!(options.ignore.resistance instanceof Set)) options.ignore.resistance = new Set();
+  for (const t of hit) options.ignore.resistance.add(t);
+}
+
+/** The per-target options objects of every tray on this message that stand for `actor`. */
+function trayOptionsFor(message, actor) {
+  if (!message?.id || !actor) return [];
+  const out = [];
+  const sel = `[data-message-id="${CSS.escape(message.id)}"] damage-application`;
+  for (const tray of document.querySelectorAll(sel)) {
+    if (typeof tray.getTargetOptions !== "function") continue;
+    // The tray keys targets by token uuid (actor uuid when the actor has no token on the scene).
+    // While it builds its list the entry being calculated has no <option> yet, so the actor's own
+    // tokens are candidates too.
+    const uuids = new Set();
+    for (const o of tray.targetList?.querySelectorAll?.("option") ?? []) if (o.value) uuids.add(o.value);
+    if (actor.isToken && actor.token) uuids.add(actor.token.uuid);
+    for (const t of actor.getActiveTokens?.(false, true) ?? []) uuids.add(t.uuid);
+    uuids.add(actor.uuid);
+    for (const uuid of uuids) {
+      const doc = fromUuidSync(uuid, { strict: false });
+      if (doc !== actor && doc?.actor !== actor) continue;
+      out.push(tray.getTargetOptions(uuid));
+    }
+  }
+  return out;
+}
+
 Hooks.on("dnd5e.preCalculateDamage", (actor, damages, options) => {
   try {
     if (!options || options[PRESET]) return;
-    const types = options.originatingMessage?.flags?.[MOD]?.ignoreResistance;
-    if (!types?.length) return;
-    options[PRESET] = true;
-    if (!game.settings.get(MOD, "enabled")) return;
+    const message = options.originatingMessage;
+    const types = message?.flags?.[MOD]?.ignoreResistance;
+    if (!types?.length || !game.settings.get(MOD, "enabled")) return;
     const dr = actor?.system?.traits?.dr?.value;
     const hit = types.filter(t => dr?.has?.(t));
-    if (!hit.length || options.ignore === true || options.ignore?.resistance === true) return;
-    options.ignore ??= {};
-    if (!(options.ignore.resistance instanceof Set)) options.ignore.resistance = new Set();
-    for (const t of hit) options.ignore.resistance.add(t);
+    for (const persistent of trayOptionsFor(message, actor)) {
+      if (persistent[PRESET]) continue; // already seeded: the GM's choice stands
+      persistent[PRESET] = true;
+      if (hit.length) seedIgnore(persistent, hit);
+    }
+    // This calculation's copy was taken before the seeding above.
+    options[PRESET] = true;
+    if (hit.length) seedIgnore(options, hit);
   } catch (err) { console.warn(`${MOD} | resistance preset skipped`, err); }
 });
 

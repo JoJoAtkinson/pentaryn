@@ -10,13 +10,19 @@
  *
  * Nothing is applied until the GM presses Apply on the tray (tray.mjs), unless autoApplyNpc is on.
  * No sockets: with no GM online, nothing happens — correct for a GM-confirmed step.
+ *
+ * dnd5e 6: messages are typed (message.type "damage" / "save" / "usage") and carry their data in
+ * message.system. Every save this file rolls (NPC, request card, GM-for-player) is posted with the
+ * activity's messageSources and system.origin = the spell's usage card, the way dnd5e's own save
+ * button does, so the usage card's outcomes and the native damage tray's half-damage pill agree
+ * with the multipliers here.
  */
 
 import {
   MODULE, aoeFlags, buildRows, fillSave, matchSave, applicableRows, allApplied, newestRegion, multiplierFor
 } from "./core.mjs";
 import { setting } from "./settings.mjs";
-import { on, guard } from "./hooks.mjs";
+import { on, guard, claimMessage } from "./hooks.mjs";
 import { isHandle, isTemplateRegion, areasFor, removeArea, handleActor } from "./areas.mjs";
 
 export const REQUEST_HANDLER = `${MODULE}.save`;
@@ -74,10 +80,16 @@ export function describeToken(token) {
   };
 }
 
+/**
+ * TokenDocuments for a damage message's recorded targets on `scene`. dnd5e 6 records
+ * { actor, token } uuids; a message migrated from 5.3.3 has only the actor (the old { uuid }).
+ */
 function tokensForTargets(targets, scene) {
   const out = [];
   for (const tg of targets ?? []) {
-    const actor = fromUuidSync(tg.uuid);
+    const doc = tg?.token ? fromUuidSync(tg.token, { strict: false }) : null;
+    if (doc && (!scene || doc.parent === scene)) { out.push(doc); continue; }
+    const actor = fromUuidSync(tg?.actor ?? tg?.uuid ?? "", { strict: false });
     if (!actor) continue;
     const token = actor.token ?? actor.getActiveTokens?.(false, true)?.find(tk => tk.parent === scene)
       ?? scene?.tokens.find(tk => tk.actorId === actor.id);
@@ -89,6 +101,39 @@ function tokensForTargets(targets, scene) {
 /* -------------------------------------------- */
 /*  Resolve                                     */
 /* -------------------------------------------- */
+
+/** The activity a dnd5e 6 roll message belongs to. */
+function activityOf(message) {
+  return message.getAssociatedActivity?.() ?? fromUuidSync(message.system?.activity?.uuid ?? "", { strict: false });
+}
+
+/**
+ * The id of the usage card a roll message threads under (its system.origin; the live field is the
+ * resolved message), or null when it was rolled from somewhere else (the sheet, a macro).
+ */
+export function usageIdOf(message) {
+  const id = message?._source?.system?.origin ?? message?.system?.origin?.id ?? null;
+  return id && game.messages.get(id)?.type === "usage" ? id : null;
+}
+
+/**
+ * dnd5e's roll workflow sets system.origin to the message the click came from
+ * (BasicRoll.buildPost: event.target.closest("[data-message-id]")), which for a click in our tray
+ * or on the request card is the wrong card. Keep the keys (fast-forward, advantage), drop the target.
+ */
+function keysOnly(event) {
+  if (!event) return undefined;
+  const { altKey, ctrlKey, metaKey, shiftKey, clientX, clientY, type } = event;
+  return { altKey: !!altKey, ctrlKey: !!ctrlKey, metaKey: !!metaKey, shiftKey: !!shiftKey, clientX, clientY, type };
+}
+
+/** system data for a save we roll for this resolution: the activity's sources, threaded under the usage card. */
+function saveSystem(res) {
+  const activity = fromUuidSync(res?.activity ?? "", { strict: false });
+  const system = { ...(activity?.messageSources ?? {}) };
+  if (res?.usage && game.messages.has(res.usage)) system.origin = res.usage;
+  return system;
+}
 
 function damagesOf(message) {
   const agg = dnd5e.dice.aggregateDamageRolls(message.rolls, { respectProperties: true });
@@ -108,8 +153,8 @@ function damagesOf(message) {
 export async function resolve(messageOrId, { regionId = undefined } = {}) {
   if (!game.users.activeGM?.isSelf) return null;
   const message = typeof messageOrId === "string" ? game.messages.get(messageOrId) : messageOrId;
-  if (!message || message.flags?.dnd5e?.roll?.type !== "damage") return null;
-  const activity = fromUuidSync(message.flags?.dnd5e?.activity?.uuid ?? "");
+  if (!message || message.type !== "damage") return null;
+  const activity = activityOf(message);
   if (!activity?.save) return null;
 
   const scene = game.scenes.get(message.speaker?.scene) ?? canvas.scene;
@@ -120,11 +165,11 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
 
   const tokens = region
     ? [...(region.tokens ?? [])]
-    : tokensForTargets(message.flags?.dnd5e?.targets, scene);
+    : tokensForTargets(message.system.targets, scene);
 
   const ability = activity.save.ability?.first?.() ?? [...(activity.save.ability ?? [])][0];
   const dc = activity.save.dc?.value;
-  const onSave = message.flags?.dnd5e?.roll?.damageOnSave ?? activity.damage?.onSave ?? "half";
+  const onSave = message.system?.onSave ?? activity.damage?.onSave ?? "half";
   const casterActorId = activity.actor?.id ?? null;
   const rows = buildRows(tokens.map(describeToken), { casterActorId });
 
@@ -135,6 +180,7 @@ export async function resolve(messageOrId, { regionId = undefined } = {}) {
     region: region?.id ?? null,
     regions: candidates.map(r => ({ id: r.id, name: r.name })),
     scene: scene?.id ?? null,
+    usage: usageIdOf(message),
     ability, dc, onSave,
     damages: damagesOf(message),
     request: null,
@@ -175,8 +221,9 @@ async function rollOne(row, res, scene) {
   if (!actor) return null;
   const token = scene?.tokens.get(row.id) ?? null;
   const rolls = await actor.rollSavingThrow({ ability: res.ability, target: res.dc }, { configure: false }, {
-    rollMode: setting("npcSaveRollMode"),
-    data: { speaker: ChatMessage.getSpeaker({ actor, scene, token }) }
+    // dnd5e 6 passes this to core as messageMode; a legacy "gmroll" would silently become public.
+    rollMode: foundry.dice.Roll._mapLegacyRollMode(setting("npcSaveRollMode")),
+    data: { speaker: ChatMessage.getSpeaker({ actor, scene, token }), system: saveSystem(res) }
   });
   const roll = rolls?.[0];
   if (!roll) return null;
@@ -210,9 +257,14 @@ export async function rollNpcSaves(messageId, { rowIds = null, force = false } =
 export async function handleSaveRequest(actor, request, data, { event } = {}) {
   const msg = {};
   foundry.utils.setProperty(msg, "flags.dnd5e.requestResult", { actorUuid: actor.uuid, requestId: request.id });
-  const token = actor.token ?? actor.getActiveTokens?.(false, true)?.[0] ?? null;
-  msg.speaker = ChatMessage.getSpeaker({ actor, token });
-  const [roll] = (await actor.rollSavingThrow({ ability: data.ability, target: data.dc, event }, {}, { data: msg })) ?? [];
+  const res = aoeFlags(game.messages.get(data?.damageMessage)).resolution;
+  const scene = game.scenes.get(res?.scene);
+  const row = res?.rows?.find(r => r.kind === "manual" && r.actor === actor.uuid);
+  const token = (row && scene?.tokens.get(row.id)) ?? actor.token ?? actor.getActiveTokens?.(false, true)?.[0] ?? null;
+  msg.speaker = ChatMessage.getSpeaker({ actor, scene: token?.parent ?? scene, token });
+  // Thread the save under the spell's usage card, not the request card the click came from.
+  if (res) msg.system = saveSystem(res);
+  const [roll] = (await actor.rollSavingThrow({ ability: data.ability, target: data.dc, event: res ? keysOnly(event) : event }, {}, { data: msg })) ?? [];
   return roll?.parent ?? null;
 }
 
@@ -244,7 +296,7 @@ async function onSaveMessage(message) {
   if (!roll) return;
   const reqFlag = message.flags?.dnd5e?.requestResult;
   const info = {
-    ability: message.flags?.dnd5e?.roll?.ability,
+    ability: message.system?.ability,
     actorUuid: reqFlag?.actorUuid ?? null,
     actorId: message.speaker?.actor ?? null,
     tokenId: message.speaker?.token ?? null,
@@ -278,7 +330,9 @@ export async function rollForPlayer(messageId, rowId, { event } = {}) {
   if (res.request) foundry.utils.setProperty(data, "flags.dnd5e.requestResult", { actorUuid: actor.uuid, requestId: res.request });
   const scene = game.scenes.get(res.scene);
   const speaker = ChatMessage.getSpeaker({ actor, scene, token: scene?.tokens.get(row.id) });
-  return actor.rollSavingThrow({ ability: res.ability, target: res.dc, event }, {}, { data: { ...(data ?? {}), speaker } });
+  return actor.rollSavingThrow({ ability: res.ability, target: res.dc, event: keysOnly(event) }, {}, {
+    data: { ...(data ?? {}), speaker, system: saveSystem(res) }
+  });
 }
 
 /** Whisper the owners of rows still waiting for a save. */
@@ -354,17 +408,21 @@ export { multiplierFor };
 /*  Hook wiring                                 */
 /* -------------------------------------------- */
 
+/** An ability saving throw (dnd5e 6 save messages also carry concentration and death saves). */
+const isAbilitySave = message => message?.type === "save" && (message.system?.type ?? "ability") === "ability";
+
 export function installResolve() {
   CONFIG.DND5E.requests[REQUEST_HANDLER] = handleSaveRequest;
 
   on("createChatMessage", guard("createChatMessage", async (message) => {
     if (!game.users.activeGM?.isSelf) return;
-    const type = message.flags?.dnd5e?.roll?.type;
-    if (type === "save") return onSaveMessage(message);
-    if (type !== "damage" || !setting("resolveSaves")) return;
+    if (isAbilitySave(message)) return onSaveMessage(message);
+    if (message.type !== "damage" || !setting("resolveSaves")) return;
     if (aoeFlags(message).resolution) return;
-    const activity = fromUuidSync(message.flags?.dnd5e?.activity?.uuid ?? "");
-    if (!activity?.save) return;
+    if (!activityOf(message)?.save) return;
+    // Two sessions on the GM account would both resolve: doubled NPC saves and request cards.
+    if (!(await claimMessage(message, "resolve"))) return;
+    if (aoeFlags(game.messages.get(message.id)).resolution) return;
     return resolve(message);
   }));
 
@@ -372,6 +430,6 @@ export function installResolve() {
   on("updateChatMessage", guard("updateChatMessage", async (message, changes) => {
     if (!game.users.activeGM?.isSelf) return;
     if (!foundry.utils.getProperty(changes, "flags.dnd5e.requestResult")) return;
-    if (message.flags?.dnd5e?.roll?.type === "save") return onSaveMessage(message);
+    if (isAbilitySave(message)) return onSaveMessage(message);
   }));
 }

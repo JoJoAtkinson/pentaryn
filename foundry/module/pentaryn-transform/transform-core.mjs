@@ -231,6 +231,24 @@ export function carriedConditions(formEffects, { originalEffectIds = [], origina
 }
 
 /**
+ * A carried condition's data, ready to embed on the druid: a copy without its origin. The origin
+ * points into the form actor, which the revert deletes. dnd5e 6 keeps a second, structured origin
+ * on non-condition effects (`system.origin`: item, activity, actor…); both go.
+ *
+ * @param {object} effect  an effect source object
+ * @returns {object}  a shallow copy (with a shallow-copied `system`) minus `origin` and `system.origin`
+ */
+export function withoutOrigin(effect) {
+  const e = { ...effect };
+  delete e.origin;
+  if (e.system && typeof e.system === "object") {
+    e.system = { ...e.system };
+    delete e.system.origin;
+  }
+  return e;
+}
+
+/**
  * Effects the druid brought into the form that ended there — Concentration broken by damage, a
  * spell that was dispelled. dnd5e copies the druid's effects into the form under the same ids and
  * never back, so without this the druid returns still concentrating on a spell that already ended.
@@ -249,7 +267,9 @@ export function endedInForm(carriedIds, formEffects, originalEffects) {
 
 /**
  * Exhaustion and Heroic Inspiration gained or spent in the form. dnd5e copies both into the form
- * and neither back; dnd5e itself then keeps the exhaustion effect in step with the level.
+ * and neither back. In dnd5e 6 the prepared level is read from the `dnd5eexhaustion` effect's
+ * `system.level`, and writing `system.attributes.exhaustion` still turns into that effect
+ * (`Actor5e#_onUpdateExhaustion` applies the delta), so the attribute is the one thing to write.
  *
  * @param {{ exhaustion?: number, inspiration?: boolean }} form
  * @param {{ exhaustion?: number, inspiration?: boolean }} original
@@ -336,9 +356,11 @@ export function formSummary(f) {
   const units = f?.units || "ft";
   const subtitle = `CR ${formatCR(f?.cr)} ${[f?.sizeLabel, cap(f?.typeLabel)].filter(Boolean).join(" ")}`.trim();
   const order = ["walk", "burrow", "climb", "fly", "swim"];
+  // dnd5e 6 keeps speeds under movement.speeds (the flat keys are a shim until 7.0).
+  const speed = k => f?.movement?.speeds?.[k] ?? f?.movement?.[k];
   const moves = order
-    .filter(k => Number(f?.movement?.[k]) > 0)
-    .map(k => `${k === "walk" ? "" : `${k} `}${f.movement[k]} ${units}`.trim());
+    .filter(k => Number(speed(k)) > 0)
+    .map(k => `${k === "walk" ? "" : `${k} `}${speed(k)} ${units}`.trim());
   if (moves.length && f?.movement?.hover) moves[moves.length - 1] += " (hover)";
   const senses = Object.entries(f?.senses ?? {})
     .filter(([, v]) => Number(v) > 0)
@@ -555,6 +577,20 @@ export function starryEffectData({ base = null, constellation, label, img, now, 
   };
   if (origin) data.origin = origin;
   return data;
+}
+
+/** Change keys that grant a fly speed: dnd5e 6's key and the pre-6 one (stored PHB effects keep it). */
+const FLY_KEYS = Object.freeze(["system.attributes.movement.speeds.fly", "system.attributes.movement.fly"]);
+
+/**
+ * Does this effect grant a fly speed? Picks Twinkling Constellations' Dragon effect (Fly 20) over
+ * the plain one. Changes sit at `changes` (pre-v14 source) or `system.changes`.
+ * @param {object} effect  an ActiveEffect or its source
+ * @returns {boolean}
+ */
+export function grantsFly(effect) {
+  const changes = effect?.changes ?? effect?.system?.changes ?? [];
+  return (Array.isArray(changes) ? changes : []).some(ch => FLY_KEYS.some(k => String(ch?.key ?? "").startsWith(k)));
 }
 
 /**

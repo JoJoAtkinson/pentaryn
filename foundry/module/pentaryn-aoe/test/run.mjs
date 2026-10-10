@@ -10,8 +10,8 @@
 
 const {
   centreOf, multiplierFor, isCreature, rowKind, buildRows, fillSave, applicableRows, allApplied,
-  matchSave, shouldAutoDamage, newestRegion, aoeFlags, regionFromSpell, selfApplyReason, pendingEffects,
-  placingTemplate
+  matchSave, shouldAutoDamage, newestRegion, aoeFlags, regionFromSpell, regionOfActivity, selfApplyReason,
+  pendingEffects, isTemplateRegion, attachedTokenId, attachedToOther, handleVertical, placementInProgress
 } = await import("../core.mjs");
 
 let pass = 0;
@@ -31,6 +31,8 @@ check("cone → origin (caster end)", centreOf({ type: "cone", x: 700, y: 800, r
 check("line → origin", centreOf({ type: "line", x: 10, y: 20, length: 600, width: 100, rotation: 0 }), { x: 10, y: 20 });
 check("polygon → vertex mean", centreOf({ type: "polygon", points: [0, 0, 200, 0, 200, 100, 0, 100] }), { x: 100, y: 50 });
 check("missing shape never throws", centreOf(undefined), { x: 0, y: 0 });
+check("stationary emanation (dnd5e 6) → middle of its 1×1 base", centreOf({ type: "emanation", radius: 300, base: { type: "token", x: 400, y: 600, width: 1, height: 1 } }, { gridSize: 100 }), { x: 450, y: 650 });
+check("emanation of a large caster → middle of the 2×2 base", centreOf({ type: "emanation", base: { x: 400, y: 600, width: 2, height: 2 } }, { gridSize: 140 }), { x: 540, y: 740 });
 
 /* ── multiplierFor ────────────────────────────────────────────────────────── */
 check("fail → ×1", multiplierFor(false, "half"), 1);
@@ -118,15 +120,71 @@ check("aoeFlags reads the scope", aoeFlags({ flags: { "pentaryn-aoe": { handle: 
 
 /* ── regionFromSpell (A10: Remove all templates) ─────────────────────────── */
 const spell = { itemUuid: "Actor.mar.Item.fb", activityUuid: "Actor.mar.Item.fb.Activity.a1" };
-check("region of this spell's activity", regionFromSpell({ item: "Actor.mar.Item.fb", origin: "Actor.mar.Item.fb.Activity.a1" }, spell), true);
-check("region of the same spell's other activity", regionFromSpell({ item: "Actor.mar.Item.fb", origin: "Actor.mar.Item.fb.Activity.a2" }, spell), true);
-check("region with no item flag, by activity prefix", regionFromSpell({ origin: "Actor.mar.Item.fb.Activity.a2" }, spell), true);
-check("region with no item flag, exact activity", regionFromSpell({ origin: "Actor.mar.Item.fb.Activity.a1" }, { activityUuid: spell.activityUuid }), true);
-check("another spell's region is not", regionFromSpell({ item: "Actor.mar.Item.web", origin: "Actor.mar.Item.web.Activity.a1" }, spell), false);
-check("same spell on another caster is not", regionFromSpell({ item: "Actor.cav.Item.fb", origin: "Actor.cav.Item.fb.Activity.a1" }, spell), false);
+// dnd5e 6 region flags: { activity, item, origin: <caster TOKEN uuid> }
+const v6 = (item, activity) => ({ activity, item, origin: "Scene.s.Token.casterTok", dimensions: {}, spellLevel: 3 });
+check("6.0: region of this spell's activity", regionFromSpell(v6("Actor.mar.Item.fb", "Actor.mar.Item.fb.Activity.a1"), spell), true);
+check("6.0: region of the same spell's other activity", regionFromSpell(v6("Actor.mar.Item.fb", "Actor.mar.Item.fb.Activity.a2"), spell), true);
+check("6.0: no item flag, by activity prefix", regionFromSpell({ activity: "Actor.mar.Item.fb.Activity.a2", origin: "Scene.s.Token.t" }, spell), true);
+check("6.0: no item flag, exact activity only", regionFromSpell({ activity: "Actor.mar.Item.fb.Activity.a1", origin: "Scene.s.Token.t" }, { activityUuid: spell.activityUuid }), true);
+check("6.0: another spell's region is not", regionFromSpell(v6("Actor.mar.Item.web", "Actor.mar.Item.web.Activity.a1"), spell), false);
+check("6.0: same spell on another caster is not", regionFromSpell(v6("Actor.cav.Item.fb", "Actor.cav.Item.fb.Activity.a1"), spell), false);
+check("6.0: the caster token in origin is never taken for the spell", regionFromSpell({ origin: "Actor.mar.Item.fb.Token.x" }, { activityUuid: "Actor.mar.Item.fb" }), false);
+// 5.3.3 region flags, still on the scene after the migration: { item, origin: <activity uuid> }
+check("5.3.3: region of this spell's activity", regionFromSpell({ item: "Actor.mar.Item.fb", origin: "Actor.mar.Item.fb.Activity.a1" }, spell), true);
+check("5.3.3: region of the same spell's other activity", regionFromSpell({ item: "Actor.mar.Item.fb", origin: "Actor.mar.Item.fb.Activity.a2" }, spell), true);
+check("5.3.3: no item flag, by activity prefix", regionFromSpell({ origin: "Actor.mar.Item.fb.Activity.a2" }, spell), true);
+check("5.3.3: no item flag, exact activity", regionFromSpell({ origin: "Actor.mar.Item.fb.Activity.a1" }, { activityUuid: spell.activityUuid }), true);
+check("5.3.3: another spell's region is not", regionFromSpell({ item: "Actor.mar.Item.web", origin: "Actor.mar.Item.web.Activity.a1" }, spell), false);
+check("5.3.3: same spell on another caster is not", regionFromSpell({ item: "Actor.cav.Item.fb", origin: "Actor.cav.Item.fb.Activity.a1" }, spell), false);
 check("item id prefix of another item is not", regionFromSpell({ origin: "Actor.mar.Item.fb2.Activity.a1" }, spell), false);
+check("6.0: item id prefix of another item is not", regionFromSpell({ activity: "Actor.mar.Item.fb2.Activity.a1" }, spell), false);
 check("no flags is not", regionFromSpell(undefined, spell), false);
 check("nothing to match by is not", regionFromSpell({ item: "x", origin: "y" }, {}), false);
+
+/* ── regionOfActivity (Part B: areasFor) ─────────────────────────────────── */
+check("6.0: activity flag matches", regionOfActivity(v6("Actor.mar.Item.fb", "Actor.mar.Item.fb.Activity.a1"), spell.activityUuid), true);
+check("6.0: the same spell's other activity does not", regionOfActivity(v6("Actor.mar.Item.fb", "Actor.mar.Item.fb.Activity.a2"), spell.activityUuid), false);
+check("5.3.3: origin = activity matches", regionOfActivity({ item: "Actor.mar.Item.fb", origin: spell.activityUuid }, spell.activityUuid), true);
+check("no activity asked → nothing", regionOfActivity(v6("a", "b"), null), false);
+
+/* ── isTemplateRegion (both markers) ─────────────────────────────────────── */
+check("6.0 template region (flags.dnd5e.activity)", isTemplateRegion({ flags: { dnd5e: v6("Actor.mar.Item.fb", "Actor.mar.Item.fb.Activity.a1") } }), true);
+check("5.3.3 template region (flags.core.MeasuredTemplate)", isTemplateRegion({ flags: { core: { MeasuredTemplate: true }, dnd5e: { item: "i", origin: "a" } } }), true);
+check("create data (preCreateRegion) with the 6.0 marker", isTemplateRegion({ name: "Fireball [Joe]", flags: { dnd5e: { activity: "Actor.mar.Item.fb.Activity.a1" } } }), true);
+check("portal / scene-link region is not", isTemplateRegion({ flags: { "pentaryn-portals": { pair: "x" } } }), false);
+check("dnd5e flags without an activity are not", isTemplateRegion({ flags: { dnd5e: { item: "i" } } }), false);
+check("no flags is not", isTemplateRegion({}), false);
+check("nothing is not", isTemplateRegion(null), false);
+
+/* ── attachedToOther (emanations stay on their caster) ───────────────────── */
+const sceneTokens = { caster: { id: "caster", flags: {} }, h1: { id: "h1", flags: { "pentaryn-aoe": { handle: true, region: "r1" } } } };
+const lookup = id => sceneTokens[id];
+check("attached id from the source", attachedTokenId({ _source: { attachment: { token: "caster" } } }), "caster");
+check("attached id from the live document", attachedTokenId({ attachment: { token: { id: "h1" } } }), "h1");
+check("not attached → null", attachedTokenId({ attachment: { token: null } }), null);
+check("emanation attached to its caster → skip (no handle)", attachedToOther({ _source: { attachment: { token: "caster" } } }, lookup), true);
+check("attached to our handle → not someone else's", attachedToOther({ _source: { attachment: { token: "h1" } } }, lookup), false);
+check("not attached (Fireball) → gets a handle", attachedToOther({ _source: { attachment: { token: null } } }, lookup), false);
+check("attached to a token we cannot see → leave it", attachedToOther({ _source: { attachment: { token: "gone" } } }, lookup), true);
+
+/* ── handleVertical (where the handle token goes; dnd5e 6 regions have no elevation) ── */
+const lv = { L0: 0, L1: 20 };
+const onScene = id => id in lv;
+check("dnd5e 6: no source bottom (prepared −∞) → the region's level base", handleVertical({ regionLevels: ["L1"], sceneHasLevel: onScene, sourceBottom: null, levelBase: id => lv[id] }), { level: "L1", elevation: 20 });
+check("dnd5e 6 on the ground level → elevation 0, that level", handleVertical({ regionLevels: ["L0"], sceneHasLevel: onScene, sourceBottom: null, levelBase: id => lv[id] }), { level: "L0", elevation: 0 });
+check("a finite region bottom wins", handleVertical({ regionLevels: ["L1"], sceneHasLevel: onScene, sourceBottom: 25, levelBase: id => lv[id] }), { level: "L1", elevation: 25 });
+check("−Infinity is never handed on", handleVertical({ regionLevels: ["L1"], sceneHasLevel: onScene, sourceBottom: -Infinity, levelBase: () => -Infinity }), { level: "L1", elevation: 0 });
+check("5.3.3 region (bottom 0, no levels) → no level, 0", handleVertical({ regionLevels: [], sourceBottom: 0 }), { level: null, elevation: 0 });
+check("a level the scene no longer has is ignored", handleVertical({ regionLevels: ["gone"], sceneHasLevel: onScene, sourceBottom: null }), { level: null, elevation: 0 });
+check("levels as a Set (prepared) work too", handleVertical({ regionLevels: new Set(["L1"]), sceneHasLevel: onScene, levelBase: id => lv[id] }), { level: "L1", elevation: 20 });
+
+/* ── placementInProgress (Part E: Escape cancels a region placement) ──────── */
+const cancel = () => {};
+check("core placement context set → in progress", placementInProgress({ _placementContext: { preview: {} }, _cancelPlacement: cancel }), true);
+check("no placement → not in progress (core handles Escape)", placementInProgress({ _placementContext: null, _cancelPlacement: cancel }), false);
+check("a layer without core's cancel → never consume Escape", placementInProgress({ _placementContext: {} }), false);
+check("no canvas / no region layer → false", placementInProgress(undefined), false);
+check("the old 5.3.3 template preview is not a region placement", placementInProgress({ preview: { children: [{}] } }), false);
 
 /* ── selfApplyReason (D2) ────────────────────────────────────────────────── */
 const me = "Actor.cav";
@@ -153,46 +211,31 @@ check("an old card is settled", pendingEffects(["e1"], [], { ageMs: 7200000, max
 check("a fresh card is not", pendingEffects(["e1"], [], { ageMs: 1000, maxAgeMs: 3600000 }), ["e1"]);
 check("duplicates and blanks dropped", pendingEffects(["e1", "e1", "", null], []), ["e1"]);
 
-/* ── placingTemplate (E: Escape cancels placement) ───────────────────────── */
-const tpl = name => ({ name, destroyed: false, _onCancelPlacement() {} });
-check("empty preview → nothing to cancel", placingTemplate([]), null);
-check("no preview container → nothing", placingTemplate(undefined), null);
-check("one template being placed → it", placingTemplate([tpl("fireball")])?.name, "fireball");
-check("core drag preview (no cancel method) → nothing", placingTemplate([{ name: "drag", destroyed: false }]), null);
-check("destroyed template → nothing", placingTemplate([{ ...tpl("old"), destroyed: true }]), null);
-check("several → the newest", placingTemplate([tpl("a"), tpl("b")])?.name, "b");
-check("newest is not a template → the template under it", placingTemplate([tpl("a"), { name: "drag" }])?.name, "a");
-check("null children skipped", placingTemplate([null, tpl("a"), undefined])?.name, "a");
-
-/* ── escape.mjs binding hand-over (E: hot-patch keeps Escape-cancel) ───────── */
+/* ── claimMessage (hooks.mjs): one client per job on one account ─────────── */
 {
-  const actions = new Map();
-  let registered = null;
-  globalThis.CONST = { KEYBINDING_PRECEDENCE: { PRIORITY: 0 } };
-  globalThis.game = { keybindings: { actions, register(ns, a, d) { actions.set(`${ns}.${a}`, d); registered = d.onDown; } } };
-  const cancelled = [];
-  const placing = name => ({ destroyed: false, _onCancelPlacement() { cancelled.push(name); } });
-  globalThis.canvas = { templates: { preview: { children: [] } } };
-  // Two instances of one file, as a startup load and a hot-patched copy are (query = new instance).
-  const escapeUrl = new URL("../escape.mjs", import.meta.url).href;
-  const first = await import(`${escapeUrl}?copy=startup`);
-  first.registerEscape();
-  check("escape: nothing being placed → core keeps Escape", registered({}), false);
-  canvas.templates.preview.children = [placing("a")];
-  check("escape: placing → consumed", registered({}), true);
-  check("escape: placing → template's own cancel ran", cancelled, ["a"]);
-  first.disableEscape();
-  check("escape: after uninstall → core keeps Escape", registered({}), false);
-  const startupBinding = registered;
-  const hot = await import(`${escapeUrl}?copy=hot`);
-  hot.registerEscape();
-  check("escape: hot copy does not register twice", registered === startupBinding, true);
-  check("escape: hot copy takes over the startup binding", registered({}), true);
-  first.disableEscape();
-  check("escape: stale uninstall leaves the hot copy's handler", registered({}), true);
-  hot.disableEscape();
-  check("escape: hot uninstall → core keeps Escape", registered({}), false);
-  delete globalThis.game; delete globalThis.canvas; delete globalThis.CONST;
+  // Two sessions on the GM account: a shared server-ordered message, per-client socket ids.
+  const getP = (o, path) => path.split(".").reduce((v, k) => v?.[k], o);
+  const setP = (o, path, val) => { const ks = path.split("."); let v = o; for (const k of ks.slice(0, -1)) v = v[k] ??= {}; v[ks.at(-1)] = val; };
+  const store = new Map();
+  const msg = { id: "dmg1", flags: {}, async update(u) { await null; for (const [k, v] of Object.entries(u)) setP(msg, k, v); } };
+  store.set(msg.id, msg);
+  globalThis.foundry = { utils: { getProperty: getP } };
+  globalThis.game = { socket: { id: "A" }, messages: { get: id => store.get(id) } };
+  const { claimMessage } = await import("../hooks.mjs");
+  const pa = claimMessage(msg, "resolve");             // client A sees the broadcast
+  game.socket.id = "B";
+  const pb = claimMessage(msg, "resolve");             // client B sees it a moment later
+  const [a, b] = await Promise.all([pa, pb]);
+  check("two clients on one account: exactly one wins", [a, b].filter(Boolean).length, 1);
+  check("the last writer is the winner", { a, b }, { a: false, b: true });
+  game.socket.id = "C";
+  check("a late client stands down at once", await claimMessage(msg, "resolve"), false);
+  game.socket.id = "B";
+  check("the winner asking again still wins", await claimMessage(msg, "resolve"), true);
+  check("another job on the same message is its own claim", await claimMessage(msg, "selfApply"), true);
+  game.socket = {};
+  check("no socket id → act (single-client behaviour)", await claimMessage({ id: "x" }, "resolve"), true);
+  delete globalThis.game; delete globalThis.foundry;
 }
 
 console.log(`pentaryn-aoe core: ${pass} passed, ${failures.length} failed`);

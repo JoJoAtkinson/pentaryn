@@ -49,11 +49,14 @@ world migrates on its own first launch, so each one gets launched once after the
    on its own (major bumps, `auto_major: false`), and it cannot install protected content.
 3. **mad-endlesswiz2 is installed by hand** from the Setup screen (Patreon key). The updater
    only *notes* protected packages.
-4. **dnd5e 6.x: NO-GO this round.** Rule and reason below.
+4. **dnd5e 6.x: NO-GO this round** (superseded 2026-10-10: went to 6.0.6, see `dnd5e-6-upgrade.md`).
 5. **Do not enable native HTTPS** (new in 14.369). Cloudflare terminates TLS; turning it on
    breaks `server_running()`, the updater, the smoke test and the tunnel config.
 
 ## dnd5e 6.x go/no-go
+
+> **Superseded 2026-10-10** by Joe's decision to go to dnd5e 6.0.6 without waiting for the
+> adapters → [`dnd5e-6-upgrade.md`](dnd5e-6-upgrade.md). Kept below as the reasoning of record.
 
 **Rule.** dnd5e 6.x goes in only when **both** of these are true on the day of the update:
 
@@ -290,6 +293,8 @@ the tar listing before assuming.
 | bridge fork | — | none for core; rebase onto 0.8.4 (Phase 0) | — |
 
 ### dnd5e 6 port (deferred; do not start until the go/no-go flips)
+
+> **Superseded 2026-10-10.** The port was done and recorded in [`dnd5e-6-upgrade.md`](dnd5e-6-upgrade.md); use that, not this list.
 
 Kept here so the next plan starts from the diff, not from scratch. Line numbers are from the
 5.3.3-era sources on 2026-10-10.

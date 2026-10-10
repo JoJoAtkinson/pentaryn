@@ -21,7 +21,7 @@ server, the tunnel, the updater, the asset pipeline.
 
 ## The platform
 
-Foundry **v14.369** (since 2026-10-10) · system **dnd5e 5.3.3** · **D&D 2024 rules**
+Foundry **v14.369** (since 2026-10-10) · system **dnd5e 6.0.6** (pentaryn world; the other three worlds migrate from 5.3.3 on first launch) · **D&D 2024 rules**
 
 > **This domain is not written for one world.** Everything here applies to **any dnd5e world**
 > authored in this setup — the tooling, the modules and the conventions travel; only the content
@@ -96,6 +96,13 @@ is precisely when the browser reconnects and picks the wrong broker.
 
 **After cleaning, a Foundry tab that is already open must be reloaded** to reconnect,
 and the MCP server itself needs a Claude Code restart if it was the one killed.
+
+**Restarting only the broker** (for example to pick up a rebuilt fork `dist/`): `kill -9` the
+`backend.js` pid, never a plain `kill`. On SIGTERM the backend exits with code 0, and the
+wrapper reads that as "lost the lock" and exits too, which takes the session's MCP tools with
+it. After SIGKILL, the next tool call respawns the backend from the current `dist/`. The GM tab
+does not reconnect by itself (`autoReconnectEnabled` is off), so either reload it or run
+`await foundryMCPBridge.restart()` in its console (done 2026-10-10 for the dnd5e 6 port).
 
 ## The action log is the promotion mechanism — keep it on
 

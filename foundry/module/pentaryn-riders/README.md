@@ -10,12 +10,14 @@ identity**: the dnd5e `system.identifier`, the PHB compendium source, or the ite
 
 | Feature | What happens | Where you see it |
 |---|---|---|
-| **Elemental Adept** (typed) | On damage rolls of your **spells**, dice of the chosen type get Foundry's `min2`, so a 1 counts as 2. The damage tray starts with the target's resistance to that type **ignored**. | Formula `8d6min2`. Card flavor "Elemental Adept: 1s count as 2". In the tray, the resistance icon starts pressed ("Ignoring…"). Click it to switch resistance back on. |
-| **Elemental Affinity** (typed) | +CHA mod added **once** to a spell that deals your type. For a spell that makes several attacks from one card (Scorching Ray), only the first damage roll gets it. A save spell re-rolled from its card gets it again. | `+ 5[Elemental Affinity]` in the formula, and in the card flavor. |
+| **Elemental Adept** (typed) | On damage rolls of your **spells**, dice of the chosen type get Foundry's `min2`, so a 1 counts as 2. The damage tray starts with the target's resistance to that type **ignored**. | Formula `8d6min2`. A note under the card's dice row: "Elemental Adept: 1s count as 2". In the tray, the resistance icon starts pressed ("Ignoring…"). Click it to switch resistance back on; re-calculating and Apply keep that. |
+| **Elemental Affinity** (typed) | +CHA mod added **once** to a spell that deals your type. For a spell that makes several attacks from one card (Scorching Ray), only the first damage roll gets it. A save spell re-rolled from its card gets it again. | `+ 5[Elemental Affinity]` in the formula, and in the card note. |
 | **Potent Spellcasting** (Druid *Elemental Fury* / Cleric *Blessed Strikes*) | +WIS mod on damage from that class's **cantrips**. A cantrip with no class falls back to the actor's only spellcasting class. | `+ 4[Potent Spellcasting]`. |
 | **Healer** | Healing dice of your spells reroll 1s once (`r1`). Temp HP and max-HP rolls are left alone: they don't restore Hit Points. | `2d8r1`. |
 | **Healer → Battle Medic** | One activity. Target one creature and use it. dnd5e spends one kit use. Then the **target** spends its largest Hit Die, the healer rolls that die (1s rerolled) + PB, and the target regains the result. | Chat roll "Battle Medic — X spends a d10 Hit Die". A toast shows HP regained, and Hit Dice left when the healer could see the target's sheet anyway. |
 | **Hit Dice − / +** | On the character sheet, outside edit mode, a − and a + sit beside the *Hit Dice* label. They spend or regain one Hit Die, the largest first. | Sidebar. Each button greys out when there's nothing to spend or regain. |
+
+Requires dnd5e 6.0 (verified 6.0.6); 0.1.0 was the dnd5e 5.3 build.
 
 Both riders and the − / + can be turned off in *Settings → Pentaryn Feature Riders*
 (`enabled`, `hdControls`).
@@ -27,10 +29,25 @@ Both riders and the − / + can be turned off in *Settings → Pentaryn Feature 
   doubled, and `@` references are resolved. The real roll terms are edited: a die modifier is
   added, or one `+ N[label]` term is appended. If the roll is of a different type than the bonus,
   the flavor is the damage type, so dnd5e still types the bonus correctly.
-- The damage message carries `flags.pentaryn-riders = {applied, ignoreResistance, origin}`.
-  - `applied` drives the once-per-casting check: it finds earlier damage messages from the same card.
-  - `ignoreResistance` is read by `dnd5e.preCalculateDamage`. It sets `options.ignore.resistance` once for each tray
-    target that actually resists that type. Targets without the resistance get no icon.
+- The damage message carries `flags.pentaryn-riders = {applied, ignoreResistance, origin, detail}`
+  (`riderFlag` in the core).
+  - `origin` is the usage card's id. dnd5e 6 keeps it in the message's `system.origin`; at roll
+    time it comes from the message data (damage rolled right after use) or the clicked card.
+  - `applied` drives the once-per-casting check (`usedFromMessages`): earlier damage messages whose
+    stored `_source.system.origin` is the same card. The live `system.origin` is the resolved
+    message document, so the source is compared. Messages from dnd5e 5.x had their
+    `flags.dnd5e.originatingMessage` moved there by the system migration.
+  - `applied` + `detail` are the card note. dnd5e 6 removes the header flavor from roll cards
+    with an item header, so `dnd5e.renderChatMessage` adds a
+    `<p class="supplement pentaryn-riders-note">` right after the dice row (`section.icon-row`)
+    of damage and healing cards (`noteParts` in the core). Not shown on a private roll a viewer
+    can't see. A flag written by 0.1.0 (no `detail`) shows the rule names.
+  - `ignoreResistance` is read by `dnd5e.preCalculateDamage`. The tray keeps one options object
+    per target and passes a shallow copy to every calculation and to Apply, so the hook finds the
+    tray (`[data-message-id] damage-application`), takes `getTargetOptions(uuid)` for each of its
+    targets that is this actor, and adds the type to `ignore.resistance` there, with a marker so it
+    happens once. The GM's click on the icon edits that same object, so it holds. With no tray in
+    the page it changes only the copy. Targets without the resistance get no icon.
 - **Typed features need a type.** The type is resolved in this order:
   1. `flags.pentaryn-riders.damageType`
   2. the name's parenthetical, as in "Elemental Adept (Fire)"
@@ -106,6 +123,8 @@ Then add a fixture to `test/run.mjs`.
 - matching and type resolution
 - the formula transforms: `min2` on typed dice only, no doubled modifiers, crit-doubled dice, `r1`, typed bonus terms
 - `planRiders`: Marrith's Fireball, the second Scorching Ray, a two-part spell, Talo's cantrip (and one that already adds +WIS by hand), a levelled spell, healing
+- the message flag (`riderFlag`), the card note built from it (`noteParts`, including a 0.1.0 flag), and
+  the once-per-casting lookup on dnd5e 6 message shapes (`usedFromMessages` reads `_source.system.origin`)
 - Hit Die choice, the Battle Medic formula and the clamp
 
 Install: `make foundry-riders-sync` (the install agent adds the target). The first install needs a Foundry restart,
@@ -113,7 +132,11 @@ then enable the module and reload.
 
 **Verify live:**
 
-- **Fireball as Marrith:** the formula shows `min2` and `+CHA`, and a fire-resistant target's tray shows the resistance ignored.
+- **Fireball as Marrith:** the formula shows `min2` and `+CHA`, the note under the dice row names both, and a
+  fire-resistant target's tray shows the resistance ignored. Untick it, change the multiplier (re-calculates):
+  it stays unticked, and Apply uses the full-resistance value.
+- **Scorching Ray as Marrith:** the second ray's damage from the same card has `min2` but no second `+CHA`. (A save
+  spell's damage re-rolled from its card gets `+CHA` again, by design.)
 - **Produce Flame as Talo:** the formula adds WIS exactly once — `+ 5[Potent Spellcasting]`, or his hand-added `+ 5` with no rider term.
 - **Battle Medic, as a player, on another player's PC:** the GM writes the target's Hit Die and HP.
 - **The sheet's − / +:** works as a player, and is hidden in edit mode.

@@ -4,7 +4,8 @@
  *
  * Nothing Foundry is stubbed: importing the core bare is itself the proof that it stays pure.
  * Synthetic fixtures only (test/ is published with the module); their shapes follow a level-12
- * Circle of the Stars druid and the Monster Manual beasts as dnd5e 5.3 stores them.
+ * Circle of the Stars druid and the Monster Manual beasts as dnd5e 6.0 stores them (speeds under
+ * movement.speeds, condition effects typed "condition" with system.level, structured system.origin).
  */
 
 const core = await import("../transform-core.mjs");
@@ -12,7 +13,7 @@ const {
   MODULE_ID, EFFECT_ID, activitiesOf, isWildShapeActivity, findWildShapeItem, stripReason, stripForForm,
   isRevertData, returnLabel, durationSeconds, formatDuration, isExpired, usesLeft, useSyncUpdates,
   carriedConditions, pickRunner, withArticle, formatCR, formSummary, planBonusBar, frontRowItems,
-  pruneFavorites, endedInForm, attributeSync, shiftBlock, planWithout, CONSTELLATIONS, STARRY_LIGHT,
+  pruneFavorites, endedInForm, attributeSync, withoutOrigin, grantsFly, shiftBlock, planWithout, CONSTELLATIONS, STARRY_LIGHT,
   STARRY_SECONDS, constellationOfActivity, starryEffectData, starryBlock, coveredPanel, formTempHP, hpText
 } = core;
 
@@ -181,25 +182,46 @@ check("56 useSync type mismatch ignored", useSyncUpdates([{ _id: "x", type: "fea
 
 /* ── carried conditions ──────────────────────────────────────────────────── */
 
+// dnd5e 6.0: a status effect is type "condition" (system { type, level }, no system.origin); other
+// effects are "base"/"enchantment" with a structured system.origin next to core's origin string.
+const cond = (_id, name, statuses, extra = {}) =>
+  ({ _id, name, type: "condition", statuses, system: { type: statuses[0], level: null }, origin: null, ...extra });
+const FORM_UUID = "Actor.formTalo000000";
 const formEffects = [
-  { _id: EFFECT_ID, name: "Wild Shape: Ape", statuses: [] },
-  { _id: "dnd5eunconscious", name: "Unconscious", statuses: ["unconscious", "incapacitated"] },
-  { _id: "dnd5eprone000000", name: "Prone", statuses: ["prone"] },
-  { _id: "beastOwnEffect00", name: "Beast aura", statuses: ["invisible"] },
-  { _id: "taloBlessing0000", name: "Bless", statuses: [] },
-  { _id: "taloPoisoned0000", name: "Poisoned", statuses: ["poisoned"] }
+  { _id: EFFECT_ID, name: "Wild Shape: Ape", type: "base", statuses: [], system: { changes: [] } },
+  cond("dnd5eunconscious", "Unconscious", ["unconscious", "incapacitated"]),
+  cond("dnd5eprone000000", "Prone", ["prone"]),
+  { _id: "beastOwnEffect00", name: "Beast aura", type: "base", statuses: ["invisible"] },
+  { _id: "taloBlessing0000", name: "Bless", type: "base", statuses: [] },
+  cond("taloPoisoned0000", "Poisoned", ["poisoned"]),
+  { _id: "formHexed000000a", name: "Hexed", type: "base", statuses: ["cursed"],
+    origin: `${FORM_UUID}.Item.hex0000000000000`,
+    system: { changes: [], origin: { item: `${FORM_UUID}.Item.hex0000000000000`, actor: FORM_UUID } } }
 ];
 check("60 carried conditions", carriedConditions(formEffects, {
   originalEffectIds: ["taloBlessing0000", "taloPoisoned0000"], originalStatuses: ["poisoned"], sourceEffectIds: ["beastOwnEffect00"]
-}).map(e => e._id), ["dnd5eunconscious", "dnd5eprone000000"]);
+}).map(e => e._id), ["dnd5eunconscious", "dnd5eprone000000", "formHexed000000a"]);
+
+// The origin points into the form actor the revert deletes: both the core string and 6.0's system.origin go.
+const hexed = formEffects.find(e => e._id === "formHexed000000a");
+const hexedBack = withoutOrigin(hexed);
+check("60a carried effect: no origin, no system.origin", ["origin" in hexedBack, "origin" in hexedBack.system, hexedBack.statuses],
+  [false, false, ["cursed"]]);
+ok("60b carried effect: source not mutated", hexed.origin && hexed.system.origin.item);
+check("60c condition effect keeps its system", withoutOrigin(formEffects[1]), {
+  _id: "dnd5eunconscious", name: "Unconscious", type: "condition", statuses: ["unconscious", "incapacitated"],
+  system: { type: "unconscious", level: null }
+});
+check("60d no system at all", withoutOrigin({ _id: "a", origin: "x", statuses: ["prone"] }), { _id: "a", statuses: ["prone"] });
 check("61 already has the status", carriedConditions([{ _id: "a", statuses: ["prone"] }], { originalStatuses: ["prone"] }), []);
 check("62 duplicate statuses carried once", carriedConditions([
   { _id: "a", statuses: ["stunned", "incapacitated"] }, { _id: "b", statuses: ["stunned"] }
 ]).map(e => e._id), ["a"]);
 
 // Exhaustion is a level dnd5e keeps on the actor; it travels back as the attribute, not an effect.
+const exhaustion1 = cond("dnd5eexhaustion0", "Exhaustion", ["exhaustion"], { system: { type: "exhaustion", level: 1 } });
 check("63 exhaustion not carried as an effect", carriedConditions([
-  { _id: "dnd5eexhaustion0", statuses: ["exhaustion"] }, { _id: "dnd5eprone000000", statuses: ["prone"] }
+  exhaustion1, cond("dnd5eprone000000", "Prone", ["prone"])
 ]).map(e => e._id), ["dnd5eprone000000"]);
 
 /* ── effects that ended in the form ──────────────────────────────────────── */
@@ -222,6 +244,13 @@ check("69a attribute sync", attributeSync({ exhaustion: 2, inspiration: false },
   { "system.attributes.exhaustion": 2, "system.attributes.inspiration": false });
 check("69b attribute sync unchanged", attributeSync({ exhaustion: 0, inspiration: true }, { exhaustion: 0, inspiration: true }), {});
 check("69c attribute sync missing values", attributeSync({}, { exhaustion: 3 }), {});
+// dnd5e 6: the form's prepared exhaustion is its dnd5eexhaustion effect's system.level; the druid has
+// none (0). The update writes the attribute, which dnd5e turns into the druid's own effect at level 1.
+check("69d exhaustion gained in the form (6.0 effect level)",
+  attributeSync({ exhaustion: exhaustion1.system.level, inspiration: false }, { exhaustion: 0, inspiration: false }),
+  { "system.attributes.exhaustion": 1 });
+check("69e exhaustion removed in the form (Greater Restoration on the beast)",
+  attributeSync({ exhaustion: 0 }, { exhaustion: 2 }), { "system.attributes.exhaustion": 0 });
 
 /* ── can the druid shift ──────────────────────────────────────────────────── */
 
@@ -252,7 +281,7 @@ check("86 CR 0", formatCR(0), "0");
 
 const direWolf = formSummary({
   cr: 1, sizeLabel: "Large", typeLabel: "beast", ac: 14, units: "ft",
-  movement: { walk: 50, hover: false, jump: 8.5, speed: 50, max: 50 },
+  movement: { speeds: { walk: 50, burrow: 0, climb: 0, fly: 0, swim: 0, jump: 8.5 }, hover: false, units: "ft" },
   senses: { darkvision: 60, blindsight: null },
   attacks: [{ name: "Bite", toHit: "+5", damage: "1d10 + 3 Piercing" }],
   traits: ["Pack Tactics"]
@@ -264,10 +293,12 @@ check("88 dire wolf details", direWolf.details, [
 ]);
 check("89 dire wolf traits", direWolf.traits, ["Pack Tactics"]);
 const bat = formSummary({ cr: 0.25, sizeLabel: "Large", typeLabel: "beast", ac: 13,
-  movement: { walk: 10, fly: 60, hover: false }, senses: { blindsight: 120 }, attacks: [], traits: [] });
+  movement: { speeds: { walk: 10, fly: 60 }, hover: false }, senses: { blindsight: 120 }, attacks: [], traits: [] });
 check("90 giant bat speed", bat.details.find(d => d.label === "Speed").value, "10 ft, fly 60 ft");
 check("91 giant bat subtitle", bat.subtitle, "CR 1/4 Large Beast");
 check("92 hover marked", formSummary({ movement: { fly: 20, hover: true } }).details.find(d => d.label === "Speed").value, "fly 20 ft (hover)");
+check("92a flat keys (the pre-6 shape, the shim)", formSummary({ movement: { walk: 30, swim: 30 } }).details.find(d => d.label === "Speed").value, "30 ft, swim 30 ft");
+check("92b speeds win over the flat keys", formSummary({ movement: { speeds: { walk: 40 }, walk: 30 } }).details.find(d => d.label === "Speed").value, "40 ft");
 check("93 attack with no numbers", formSummary({ attacks: [{ name: "Web" }] }).details.at(-1), { label: "Web", value: "—" });
 
 /* ── Bonus bar plan ───────────────────────────────────────────────────────── */
@@ -367,6 +398,16 @@ const dragonBase = { _id: "FjlMdXqnzWeB34Ls", name: "Dragon Form (Twinkling)", i
   system: { changes: [{ key: "system.attributes.movement.fly", value: 20, type: "override" }] }, _stats: { x: 1 }, sort: 4,
   duration: { value: 600, units: "seconds", expiry: "turnStart" }, flags: { dnd5e: { riders: {} } } };
 const se = starryEffectData({ base: dragonBase, constellation: "dragon", label: "Dragon", now: 30, origin: "Actor.a.Item.b", id: "pentarynStarry00", description: "<p>x</p>" });
+// The PHB item's stored effect keeps the pre-6 key (dnd5e redirects it on apply); one written fresh
+// under 6.0 uses movement.speeds.fly. Both are the Twinkling one; the plain Dragon has neither.
+const dragon6 = { name: "Dragon Form (Twinkling)", system: { changes: [{ key: "system.attributes.movement.speeds.fly", value: "20", type: "override" }] } };
+const dragonPlain = { name: "Dragon Form", system: { changes: [{ key: "flags.dnd5e.minimumRoll", value: 10 }] } };
+check("133a fly: old key, new key, none, hover only, legacy top-level changes", [
+  grantsFly(dragonBase), grantsFly(dragon6), grantsFly(dragonPlain),
+  grantsFly({ system: { changes: [{ key: "system.attributes.movement.hover", value: true }] } }),
+  grantsFly({ changes: [{ key: "system.attributes.movement.speeds.fly", value: 20 }] }), grantsFly(null)
+], [true, true, false, false, true, false]);
+check("133b the Twinkling dragon is picked from either key", [dragonPlain, dragon6].find(grantsFly)?.name, "Dragon Form (Twinkling)");
 check("134 effect: id, name, enabled, not transferred", [se._id, se.name, se.disabled, se.transfer], ["pentarynStarry00", "Starry Form: Dragon", false, false]);
 check("135 effect: timed from now", [se.duration, se.start], [{ value: 600, units: "seconds", expiry: null }, { time: 30 }]);
 check("136 effect: keeps the Dragon's changes", se.system.changes.length, 1);

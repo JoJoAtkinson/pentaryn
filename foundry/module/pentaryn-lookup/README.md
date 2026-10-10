@@ -1,8 +1,8 @@
 ---
 created: 2026-08-22
-last_modified: 2026-08-22
+last_modified: 2026-10-10
 tags: ["foundry", "vtt", "module", "rules", "compendium"]
-status: shipped — 0.1.0
+status: shipped — 0.1.1
 ---
 
 # `pentaryn-lookup`
@@ -54,7 +54,9 @@ things.
 
 ## Foundry APIs this depends on
 
-Verified live on **v14.367 / dnd5e 5.3.3**, 2026-08-22, and re-verified on **v14.369**, 2026-10-10. Treat as a dated snapshot.
+Verified live on **v14.367 / dnd5e 5.3.3**, 2026-08-22, and re-verified on **v14.369**, 2026-10-10. Checked against the
+**dnd5e 6.0.6** source 2026-10-10 (0.1.1): the `dnd5e.rules`, `dnd5e.content24` and `dnd5e.actors24` pack ids and the
+prepared `details.cr` / `attributes.ac.value` / `attributes.hp.max` paths are unchanged. Treat as a dated snapshot.
 
 - `game.packs.get(id)` → `CompendiumCollection`; `.metadata.label`, `.documentName`
 - `pack.getDocuments()` — **authoritative**; ~150 ms for the whole PHB

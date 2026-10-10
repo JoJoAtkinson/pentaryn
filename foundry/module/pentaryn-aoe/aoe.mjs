@@ -7,8 +7,11 @@
  *   tray.mjs     Part B  the GM-only tray on the damage message
  *   attacks.mjs  Part C  auto damage on hit
  *   effects.mjs  Part D  a spell's effects go on you when you are its only target; unapplied trays light up
- *   escape.mjs   Part E  Escape cancels an area template placement, like right-click
+ *   escape.mjs   Part E  Escape cancels a spell-area placement on the first press, even with a sheet open
  *   core.mjs            pure helpers (node-tested in test/run.mjs)
+ *
+ * dnd5e 6 only (0.3.0). Part E now cancels core's RegionLayer#placeRegions placement (dnd5e 6
+ * places areas as regions); core's own Escape only gets there after closing every open window.
  *
  * Design: context/plans/aoe-circles.md · Use: README.md
  *
@@ -17,7 +20,7 @@
  */
 
 import { MODULE } from "./core.mjs";
-import { registerSettings, setting } from "./settings.mjs";
+import { registerSettings, migrateSettings, setting } from "./settings.mjs";
 import { hookIds, offAll } from "./hooks.mjs";
 import { installAreas, readyAreas, areasFor, spellAreas, handleFor, removeArea, sweep, ensureHandleActor, createHandle } from "./areas.mjs";
 import { installResolve, resolve, applyRows, rollNpcSaves, rollForPlayer, pingPlayers, setRow, REQUEST_HANDLER } from "./resolve.mjs";
@@ -70,6 +73,7 @@ export async function install({ sweepOnReady = true } = {}) {
   registerEscape();
   installHooks();
   publish();
+  await migrateSettings();
   await readyAreas({ sweepOnReady });
   return api;
 }
@@ -77,8 +81,8 @@ export async function install({ sweepOnReady = true } = {}) {
 export { api, uninstall, MODULE };
 
 // Normal module load: settings and the Escape keybinding at init (a keybinding can only be
-// registered then), hooks immediately (they only act on later events),
-// namespace and the GM's startup work at ready. CONFIG.DND5E.requests exists from dnd5e's init.
+// registered then), hooks at setup (they only act on later events), namespace and the GM's
+// startup work at ready. CONFIG.DND5E.requests exists from dnd5e's init.
 if (!globalThis.__pentarynAoeHot) {
   Hooks.once("init", () => {
     registerSettings();
@@ -89,6 +93,7 @@ if (!globalThis.__pentarynAoeHot) {
     // Deferred a tick: pentaryn-importer's ready hook (it sorts after "aoe") replaces
     // game.pentaryn with a frozen object, which would drop a key published synchronously here.
     setTimeout(publish, 0);
+    migrateSettings().catch(err => console.error(`${MODULE} | settings migration`, err));
     readyAreas().catch(err => console.error(`${MODULE} | ready`, err));
   });
 }

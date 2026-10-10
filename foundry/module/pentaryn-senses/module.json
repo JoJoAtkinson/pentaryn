@@ -1,11 +1,23 @@
 {
   "id": "pentaryn-senses",
-  "title": "Pentaryn Token Vision Sync",
-  "description": "Keeps a token's vision matched to its actor's Darkvision. dnd5e computes senses on the sheet (Goggles of Night, the Darkvision spell, species traits) but never touches token vision, so a character with 60 ft Darkvision on paper still sees nothing in an unlit scene. Whenever an actor, its items or its effects change, the prototype token and every placed token of that actor with vision enabled get visionMode darkvision and the sheet's range, or basic vision when Darkvision is gone (goggles confiscated). Writes run on the active GM's client only. Exposes game.pentaryn.senses. Also adds the \"Broken glow (wandering)\" light animation (pentaryn-brokenglow), whose size and brightness ride a wave that never repeats, and lights carried by items (flags.pentaryn-senses.light). The Light cantrip lights a token or a square instead of summoning a floor token (\"On me\" / \"Pick a target\" on cast and on the spell card), and torches, lamps, lanterns and candles get a Light/Douse button (flags.pentaryn-senses.lit).",
-  "version": "0.3.0",
+  "title": "Pentaryn Senses",
+  "description": "Lights, glow and chains for dnd5e 6. Token vision from the sheet's senses is dnd5e's own now (senseVisionSync); this module only resets, once per world, the darkvision sight its retired 0.3 sync stored on tokens, so a removed sense really goes dark (setting pentaryn-senses.sightReset, active GM, on ready). Lights carried by items (flags.pentaryn-senses.light) light whoever carries them and go dark when the item leaves. Torches, lamps, lanterns and candles get a Light/Douse button on the inventory row (flags.pentaryn-senses.lit), hooded lanterns a hood. The Light cantrip lights a token or a square instead of summoning a floor token (\"On me\" / \"Pick a target\" on cast, and On me / Pick a target / End as icons in the spell card's action row). Adds the \"Broken glow (wandering)\" light animation (pentaryn-brokenglow), whose size and brightness ride a wave that never repeats, and token chains drawn between two tokens. Writes run on the active GM's client only. Exposes game.pentaryn.senses.",
+  "version": "0.4.0",
   "compatibility": {
     "minimum": "13",
     "verified": "14"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "6.0",
+          "verified": "6.0.6"
+        }
+      }
+    ]
   },
   "authors": [
     {

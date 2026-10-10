@@ -2,13 +2,14 @@
   "id": "pentaryn-creatures",
   "title": "Pentaryn Creatures",
   "description": "Players can always find the creatures they control. Every token a player owns whose actor is a creature (summons, familiars, skeletons, Arcane Eye, a steed; never a PC or its Wild Shape form) carries a small bright light, set by the active GM's client and flagged so only that light is ever removed. Owners always see their own tokens, even Invisible ones in the dark (a per-client Token#isVisible override that never shows GM-hidden tokens). A 'Your creatures' strip above the hotbar shows a portrait of each token the player owns on the scene, their character first: click to select it and pan to it, double-click to open its sheet. Exposes game.pentaryn.creatures.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "compatibility": { "minimum": "14", "verified": "14" },
   "authors": [{ "name": "Joseph Atkinson" }],
   "esmodules": ["creatures.mjs"],
   "styles": ["creatures.css"],
   "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
   "relationships": {
+    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.0.6" } }],
     "recommends": [{ "id": "lib-wrapper", "type": "module", "reason": "Wraps Token#isVisible cleanly alongside other modules; without it the getter is patched directly." }]
   },
   "socket": false,

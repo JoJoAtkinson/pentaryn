@@ -28,8 +28,8 @@
   "PENTARYN_AOE.Tray.PingText": "{item}: please roll your {ability} save from the request card in chat.",
   "PENTARYN_AOE.Setting.handleTokens.Name": "Area handles",
   "PENTARYN_AOE.Setting.handleTokens.Hint": "Put a small token on every spell area. Drag it to move the area; delete it to delete the area. Everyone owns it.",
-  "PENTARYN_AOE.Setting.removeAreaButton.Name": "\"Remove all templates\" button",
-  "PENTARYN_AOE.Setting.removeAreaButton.Hint": "Put a Remove all templates button directly under Place Template on every spell card that places an area. It removes every template that spell placed on the scene you are viewing.",
+  "PENTARYN_AOE.Setting.removeAreaButton.Name": "\"Remove all templates\" icon",
+  "PENTARYN_AOE.Setting.removeAreaButton.Hint": "Put a Remove all templates icon next to Place Template on every spell card that places an area. It removes every template that spell placed on the scene you are viewing.",
   "PENTARYN_AOE.Setting.instantCleanup.Name": "Remove instantaneous areas after Apply",
   "PENTARYN_AOE.Setting.instantCleanup.Hint": "When every ticked row of an instantaneous spell (Fireball) has been applied, delete its area.",
   "PENTARYN_AOE.Setting.concentrationCleanup.Name": "Remove areas when concentration ends",
@@ -38,9 +38,9 @@
   "PENTARYN_AOE.Setting.resolveSaves.Hint": "When a save spell's damage is rolled, list the creatures in its area, roll the monsters' saves and ask the players for theirs. Nothing is applied until the GM presses Apply.",
   "PENTARYN_AOE.Setting.npcSaveRollMode.Name": "Monster save visibility",
   "PENTARYN_AOE.Setting.npcSaveRollMode.Hint": "Roll mode for saves the GM's client rolls for monsters.",
-  "PENTARYN_AOE.Setting.npcSaveRollMode.gmroll": "GM only",
-  "PENTARYN_AOE.Setting.npcSaveRollMode.blindroll": "Blind",
-  "PENTARYN_AOE.Setting.npcSaveRollMode.publicroll": "Public",
+  "PENTARYN_AOE.Setting.npcSaveRollMode.gm": "GM only",
+  "PENTARYN_AOE.Setting.npcSaveRollMode.blind": "Blind",
+  "PENTARYN_AOE.Setting.npcSaveRollMode.public": "Public",
   "PENTARYN_AOE.Setting.autoApplyNpc.Name": "Apply monster damage automatically",
   "PENTARYN_AOE.Setting.autoApplyNpc.Hint": "Apply damage to monsters as soon as their saves are rolled, without pressing Apply. Players' characters always wait for Apply.",
   "PENTARYN_AOE.Setting.promptPlayers.Name": "Ask players to roll",
@@ -52,5 +52,5 @@
   "PENTARYN_AOE.Setting.highlightUnapplied.Name": "Highlight effects not yet applied",
   "PENTARYN_AOE.Setting.highlightUnapplied.Hint": "Outline a card's Effects tray and mark it \"Not applied yet\" until someone applies its effects. Cards older than an hour are left alone.",
   "PENTARYN_AOE.Keybinding.cancelTemplate.Name": "Cancel template placement",
-  "PENTARYN_AOE.Keybinding.cancelTemplate.Hint": "While you are placing a spell's area template, this key cancels it, the same as right-click. At any other time the key does what it normally does."
+  "PENTARYN_AOE.Keybinding.cancelTemplate.Hint": "While you are placing a spell's area, this key cancels it on the first press, even with a sheet open. At any other time the key does what it normally does."
 }

@@ -56,13 +56,15 @@ OVERRIDES_DIR = REPO_ROOT / "foundry/overrides"
 
 CONTRACT = "pentaryn/actors.json@1"
 GENERATOR = "scripts/foundry/build_actors.py"
-GENERATOR_VERSION = "1.0.0"
+GENERATOR_VERSION = "1.0.1"
 TARGET_SYSTEM = "dnd5e"
-TARGET_SYSTEM_VERSION = "5.3"
+TARGET_SYSTEM_VERSION = "6.0"
 GENERATION = 14
 
 # ---------------------------------------------------------------------------
-# dnd5e 5.3.3 enums, read out of module/config.mjs in the installed system.
+# dnd5e 6.0.6 enums, read out of module/config.mjs in the installed system. Unchanged
+# from 5.3.3 except AREA_TARGET_TYPES gaining "ring" (6.0). 6.0 also adds a "jump"
+# movement type; the legacy movement shape this contract writes has no jump key.
 # ---------------------------------------------------------------------------
 
 DAMAGE_TYPES = frozenset(
@@ -84,10 +86,11 @@ SENSES = ("blindsight", "darkvision", "tremorsense", "truesight")
 MOVEMENT_TYPES = ("walk", "burrow", "climb", "fly", "swim")
 ACTOR_SIZES = frozenset("tiny sm med lg huge grg".split())
 AREA_TARGET_TYPES = frozenset(
-    "circle cone cube cylinder line radius sphere square wall".split()
+    "circle cone cube cylinder line radius ring sphere square wall".split()
 )
 
-# traits.size -> prototypeToken.width/height (CONTRACT §3.3).
+# traits.size -> prototypeToken.width/height (CONTRACT §3.3). dnd5e 6 sizes creature tokens
+# natively (tokenSizeSync); drop this with the contract @2 bump, not before (contentHash).
 SIZE_TO_TOKEN = {"tiny": 0.5, "sm": 1, "med": 1, "lg": 2, "huge": 3, "grg": 4}
 
 # actions.jsonl `slots.refresh` -> DND5E.limitedUsePeriods (CONTRACT §4.3, U1/U2).
@@ -1150,6 +1153,10 @@ def build_actor(
                 "tempmax": 0,
                 "formula": primary.hp_formula,
             },
+            # Legacy 5.3 shapes, kept on purpose until contract @2: dnd5e 6 migrates
+            # ac.calc "flat" -> ac.override, init.bonus -> init.roll.bonus and
+            # movement.<type> -> movement.speeds.<type> on create and update (shims until
+            # 7.0). Changing them here changes every contentHash -> wholesale re-import.
             "ac": {"calc": "flat", "flat": primary.ac_flat},
             "init": {"bonus": ""},
             "movement": {

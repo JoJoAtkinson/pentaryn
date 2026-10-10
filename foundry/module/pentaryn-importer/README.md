@@ -1,6 +1,6 @@
 ---
 created: 2026-08-10
-last_modified: 2026-08-10
+last_modified: 2026-10-10
 tags: ["foundry", "vtt", "module", "dnd5e"]
 status: draft
 ---
@@ -15,7 +15,12 @@ Stage 2 of the Foundry pipeline. Reads the `actors.json` produced by Stage 1
   "Importer (Stage 2) MUST" checklist in §12.
 - **Why the pipeline looks like this:** [`context/plans/foundry-content-pipeline.md`](../../../context/plans/foundry-content-pipeline.md)
   (D3, D8, D10).
-- **Target:** Foundry **v14.365** · dnd5e **5.3.3**.
+- **Target:** Foundry **v14** · dnd5e **6.0** (verified 6.0.6) — module 1.1.0, generator 1.0.1.
+  The version gate refuses any `actors.json` whose `targetSystemVersion` is not the live
+  dnd5e `major.minor`, so after the 6.0 upgrade rebuild with `make foundry-actors` before
+  importing. The payload shapes are still the 5.3 ones on purpose — see
+  [CONTRACT §1.2](../../CONTRACT.md) (dnd5e 6 migrates them until 7.0; moving them is the
+  `@2` contract bump).
 
 No UI. No settings. One hook (`ready`), used only to attach the API.
 
@@ -132,7 +137,7 @@ console.assert(again.counts.created === 0 && again.counts.updated === 0, "not id
   "path": "worlds/ardenhaven/actors.json",
   "url": "/worlds/ardenhaven/actors.json",
   "dryRun": false,
-  "manifest": { "generator": "…", "generatorVersion": "1.0.0", "generatedAt": "…",
+  "manifest": { "generator": "…", "generatorVersion": "1.0.1", "generatedAt": "…",
                 "sourceRevision": "9a4199f", "skippedRows": 27 },
   "counts": { "total": 19, "selected": 19, "created": 19, "updated": 0,
               "skipped": 0, "failed": 0, "assertions": 412 },
@@ -216,6 +221,13 @@ Every assertion failure names actor slug, item action, activity id, path, expect
 appears both as a permanent toast and as a `console.error`.
 
 ---
+
+## Changelog
+
+- **1.1.0** (2026-10-10) — retarget to dnd5e 6.0: `module.json` `targetSystemVersion` `"6.0"`,
+  dnd5e compatibility minimum 6.0.0 / verified 6.0.6. No code change; generator 1.0.1 emits
+  byte-identical actors (same `contentHash`), so a re-import after the upgrade changes nothing.
+- **1.0.0** (2026-08-10) — first release, dnd5e 5.3.
 
 ## Verification status
 

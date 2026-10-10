@@ -2,7 +2,7 @@
   "id": "pentaryn-dropbin",
   "title": "Pentaryn Drop Bin",
   "description": "An append-only ledger of every item that leaves a character. Records Item Piles drops to the ground and outright deletions from a sheet, in the order they happened, with the item's complete source data — so a two-hander dropped in a corridor three sessions ago can be handed back exactly as it was. Writes to a world setting and mirrors to assets/drop-bin/drop-log.json. GM is the only writer; player clients route their entries through socketlib. Exposes game.pentaryn.dropbin. Also turns dead NPCs into lootable piles (Dead as the full-body overlay, a drawn eye while there is loot) and adds a Loot all button to Item Piles loot windows.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "compatibility": {
     "minimum": "13",
     "verified": "14"
@@ -25,6 +25,16 @@
   "socket": true,
   "protected": false,
   "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "6.0",
+          "verified": "6.0.6"
+        }
+      }
+    ],
     "requires": [
       {
         "id": "socketlib",

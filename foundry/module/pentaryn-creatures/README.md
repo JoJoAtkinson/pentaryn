@@ -114,6 +114,13 @@ they are looking at.
 
 The fixtures are synthetic, because `test/` ships with the module.
 
+## dnd5e 6
+
+0.1.1 declares dnd5e 6.0 (verified 6.0.6). Nothing it reads moved: the actor `type`,
+`flags.dnd5e.originalActor` on a transformed copy, and core `Token#isVisible` (dnd5e 6
+`Token5e` does not override it, so the libWrapper target is unchanged). The light is a token
+`light`, not vision, so dnd5e 6's `senseVisionSync` does not touch it.
+
 ## Install
 
 `foundry/module/pentaryn-creatures/` is the source. The first install needs a Foundry restart

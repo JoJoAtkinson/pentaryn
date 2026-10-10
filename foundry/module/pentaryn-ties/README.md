@@ -433,8 +433,11 @@ world. Pre-module data on `flags.world.ties` is migrated once, automatically, on
 
 ## Compatibility
 
-Foundry **v13+**, verified on **v14**. System-agnostic — nothing here touches system data. The sheet
-tab is written against dnd5e 5.x markup but degrades to the header button anywhere else.
+Foundry **v13+**, verified on **v14** (14.369). **dnd5e 6.0+**, verified on **6.0.6** (declared in
+`module.json` → `relationships.systems`). Ties themselves touch no system data; the Known/Study side
+reads `details.race`/`background` and rolls through dnd5e's `rollSkill`, and the sheet tab is
+written against dnd5e's sheet markup (unchanged from 5.x in 6.0.6) but degrades to the header
+button anywhere else.
 
 ## Double-click to look (2026-10-07)
 
@@ -497,3 +500,8 @@ All fields are optional; the default is an orange flame (`.pt-item-mark` in `sty
 
 - The flag-scope guard (`touchesFlagScope`) also recognises 14.369's "delete all of this module's data" update form (`flags.-=ties`).
 - Blind Study rolls set the Dice So Nice flag `skip` (what DSN 6.4.4 reads), so they no longer animate on the GM's screen.
+
+## 0.19.2 (2026-10-10, dnd5e 6.0.6)
+
+- Blind Study rolls pass their roll mode through `foundry.dice.Roll._mapLegacyRollMode`. dnd5e 6 hands `rollMode` to core as the `messageMode`, which only accepts the new keys (`blind`, `gm`, `public`, `self`); the legacy `"blindroll"` was silently replaced by the client default, so the Study card and its Dice So Nice animation would have gone public. Registered as `dnd5e-legacy-roll-modes` in `foundry/adjustments.yml`.
+- `module.json` now requires dnd5e 6.0+ (verified 6.0.6). Nothing else changed for 6: sheet selectors, `details.race`/`background` and the `rollSkill` signature are the same in 6.0.6, and the Dice So Nice `skip` flag still holds.

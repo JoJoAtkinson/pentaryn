@@ -1,7 +1,7 @@
 ---
 title: "Foundry markers — how Joe points at a spot"
 created: 2026-08-17
-last_modified: 2026-08-17
+last_modified: 2026-10-10
 status: active
 tags: [context, foundry, markers, workflow, item-piles, journal-notes]
 ---
@@ -112,6 +112,13 @@ Most markers become an **interaction hotspot**: a small Item Piles container wea
   `0.5` normal, `0.65`–`0.8` major.
 - **Template actor:** `Hotspot · Look (template)` in the `Scene Props` folder — already a locked
   container with the icon. Drag it out and fill it rather than rebuilding the config.
+- **Size lock (dnd5e 6).** `dnd5e.tokenSizeSync` has the GM's client rewrite a creature token's
+  width/height to its actor's size category (`Token5e._onOverrideSize`), and hotspots, markers
+  and Item Piles containers are creature actors. Every odd-sized token needs
+  `flags.dnd5e.lockSize: true` on the token, and on the actor's `prototypeToken` so new copies
+  inherit it. The template and the existing Markers/Hotspots were locked before the upgrade
+  (`.state/core-rollback/token-sizes-pre-dnd5e6.json`); set it yourself on any new hotspot or
+  marker actor, or on a token you resize by hand.
 - Hold **Alt** while dragging to place off-grid.
 
 Alternative glyphs already built, same folder: `icon-magnifier`, `icon-hand`, `icon-chevron`,

@@ -48,6 +48,11 @@ dnd5e overrides the same way). This module wraps that method and `TokenLayer#_pr
 and adds the three flags when ghost is in effect for that token: a player, owner of the token, with
 the button on, and allowed by the GM policy.
 
+**dnd5e 6 (0.1.1).** 6.0 adds `Token5e#findMovementPath`, which pads the path with a waypoint
+before each blocking creature and does not read `ignoreTokens`. That only adds stops; the block itself
+is still `Token5e#constrainMovementPath`, which honours `ignoreTokens`, so ghost needs no change.
+Verify live: ghost on, a player drags through a wall and a creature; ghost off, both block.
+
 **No GM relay is needed.** Neither core nor the server refuses a player's unconstrained move. The
 constraint runs on the mover's own client (`TokenDocument#preUpdateMovement` passes the mover's
 `constrainOptions` straight into `constrainMovementPath`, `client/documents/token.mjs:1723/1813`).

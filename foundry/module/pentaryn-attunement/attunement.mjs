@@ -2,13 +2,13 @@
  * Pentaryn Attunement Slots
  * =========================
  *
- * dnd5e 5.x has the whole attunement data model — `system.attributes.attunement`
+ * dnd5e (5.x, and still 6.0.6) has the whole attunement data model — `system.attributes.attunement`
  * on the actor, `system.attunement` / `system.attuned` on the item, a live count,
  * and correct effect suppression — and then does almost nothing with it. The sheet
  * renders one small `☀ value / max` widget in the inventory filter row, and there
  * is no cap enforcement anywhere in the system:
  *
- *     // dnd5e.mjs, _prepareItemPhysical
+ *     // dnd5e 6.0.6 applications/actor/api/base-actor-sheet.mjs, _prepareItemPhysical
  *     ctx.attunement.disabled = !item.isOwner;   // ← the only gate there is
  *
  * So a character sits at 5/3 indefinitely and nothing says so. That is not
@@ -414,8 +414,9 @@ function buildSlot(actor, itemId, index, overflow, editable) {
 
   // The tooltip carries the item's own card; the suppression state is ours to
   // explain, so it goes on the icon's aria-label rather than being lost.
+  // dnd5e 6 moved the hint: DND5E.EffectUnavailableInfo → DND5E.EFFECT.Suppressed.Hint.
   li.setAttribute("aria-label", suppressed
-    ? `${item.name} — ${game.i18n.localize("DND5E.AttunementAttuned")}, ${game.i18n.localize("DND5E.EffectUnavailableInfo")}`
+    ? `${item.name} — ${game.i18n.localize("DND5E.AttunementAttuned")}, ${game.i18n.localize("DND5E.EFFECT.Suppressed.Hint")}`
     : `${item.name} — ${game.i18n.localize("DND5E.AttunementAttuned")}`);
 
   return li;

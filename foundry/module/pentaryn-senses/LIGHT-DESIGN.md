@@ -130,6 +130,9 @@ primary key; the profile check catches a renamed copy.
    `.card-buttons button[data-action="placeSummons"]` and append three buttons:
    `[On me]` `[Pick a target]` `[End light]`. Non-owners get the Summon button removed and
    nothing added. The card is the lasting control: re-aim a mis-click, move the light, end it.
+   *(dnd5e 6 port, v0.4.0: the gate is `message.type === "usage"` + `message.system.item.uuid`;
+   the Summon icon goes with its `<li>`, and the three controls are icon `<li>` entries in the
+   card's `section.icon-row ul.unlist` action row, created when the card has none.)*
 
 ### 5.3 The prompt
 

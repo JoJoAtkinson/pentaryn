@@ -14,7 +14,7 @@ export const DEFAULTS = {
   instantCleanup: true,
   concentrationCleanup: true,
   resolveSaves: true,
-  npcSaveRollMode: "gmroll",
+  npcSaveRollMode: "gm",
   autoApplyNpc: false,
   promptPlayers: true,
   autoDamageOnHit: true,
@@ -41,13 +41,34 @@ export function registerSettings() {
       name: "PENTARYN_AOE.Setting.npcSaveRollMode.Name",
       hint: "PENTARYN_AOE.Setting.npcSaveRollMode.Hint",
       scope: "world", config: true, type: String, default: DEFAULTS.npcSaveRollMode,
+      // Core v14 message modes. dnd5e 6 hands the roll mode to core as messageMode, and core
+      // replaces a name it does not know (the old "gmroll") with the client default, i.e. public.
       choices: {
-        gmroll: "PENTARYN_AOE.Setting.npcSaveRollMode.gmroll",
-        blindroll: "PENTARYN_AOE.Setting.npcSaveRollMode.blindroll",
-        publicroll: "PENTARYN_AOE.Setting.npcSaveRollMode.publicroll"
+        gm: "PENTARYN_AOE.Setting.npcSaveRollMode.gm",
+        blind: "PENTARYN_AOE.Setting.npcSaveRollMode.blind",
+        public: "PENTARYN_AOE.Setting.npcSaveRollMode.public"
       }
     });
   }
+}
+
+/** The pre-6.0 roll-mode names this setting stored (core's own mapping turns them into message modes). */
+export const LEGACY_ROLL_MODES = ["gmroll", "blindroll", "publicroll"];
+
+/**
+ * One-shot, active GM: a world that stored a legacy roll-mode name ("gmroll") gets the core v14
+ * message mode ("gm") written back, so the settings menu shows a real choice again. Until it has
+ * run (a hot-patched client), resolve.mjs maps the stored name at the roll anyway.
+ */
+export async function migrateSettings() {
+  if (!game.users?.activeGM?.isSelf) return null;
+  let stored;
+  try { stored = game.settings.get(MODULE, "npcSaveRollMode"); } catch { return null; }
+  if (!LEGACY_ROLL_MODES.includes(stored)) return null;
+  const next = foundry.dice.Roll._mapLegacyRollMode(stored);
+  await game.settings.set(MODULE, "npcSaveRollMode", next);
+  console.info(`${MODULE} | npcSaveRollMode ${stored} → ${next}`);
+  return next;
 }
 
 /** Read a setting; the default if it is unregistered or unreadable. */

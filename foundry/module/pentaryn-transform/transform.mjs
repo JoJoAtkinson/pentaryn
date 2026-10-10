@@ -11,7 +11,7 @@
 import {
   MODULE_ID, EFFECT_ID, activitiesOf, isWildShapeActivity, stripForForm, isRevertData, returnLabel,
   durationSeconds, formatDuration, isExpired, usesLeft, useSyncUpdates, carriedConditions, endedInForm,
-  attributeSync, pruneFavorites, shiftBlock, pickRunner, withArticle, formTempHP
+  attributeSync, pruneFavorites, shiftBlock, pickRunner, withArticle, formTempHP, withoutOrigin
 } from "./transform-core.mjs";
 
 const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
@@ -281,7 +281,7 @@ export async function revert(actor, { quiet = false, reason = "manual" } = {}) {
         originalEffectIds: back.effects.map(e => e.id),
         originalStatuses: Array.from(back.statuses ?? []),
         sourceEffectIds
-      }).map(e => { delete e.origin; return e; });
+      }).map(withoutOrigin);
       if (carried.length) await back.createEmbeddedDocuments("ActiveEffect", carried, { keepId: true });
     }
 
@@ -442,6 +442,13 @@ async function shapeTokenForm(form, source, meta) {
 /** Transform `host` into the profile's source; refunds the use when the shift does not happen. */
 async function doShift(host, activity, profileId, uuid) {
   const itemId = activity.item.id;
+  // dnd5e 6 adds a "form" transform mode (effects on the actor, no new actor). Wild Shape in
+  // 6.0.6 is still mode "cr"; a form-mode Wild Shape would half-shift here, so refuse it loudly.
+  if (activity.transform?.mode === "form") {
+    await refund(host, itemId);
+    ui.notifications.warn(T("PENTARYN_TRANSFORM.FormMode", { name: activity.item.name }));
+    return null;
+  }
   const source = uuid ? await fromUuid(uuid) : null;
   if (!source) {
     await refund(host, itemId);

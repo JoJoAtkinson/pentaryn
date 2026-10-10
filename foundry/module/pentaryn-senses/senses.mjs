@@ -1,8 +1,9 @@
-// Pentaryn Token Vision Sync — token vision follows the sheet's Darkvision.
+// Pentaryn Senses — lights carried by items, the Light cantrip, the broken glow, token chains.
 //
-// dnd5e derives system.attributes.senses.ranges.darkvision from items and effects but never writes
-// token sight. This mirrors it onto the prototype and placed tokens of any actor whose token has
-// vision enabled. Only the active GM writes, so a change seen by four clients is applied once.
+// Token vision from the sheet's senses is dnd5e's own since 6.0 (setting senseVisionSync,
+// TokenDocument5e#_applySenseVision). Our darkvision sync is retired; migrate.mjs resets the sight
+// it left stored on tokens once per world so the native sync can take over. Only the active GM
+// writes, so a change seen by four clients is applied once.
 
 // The broken glowstone light animation rides along; imported so adding it needed no module.json change.
 import "./glow.mjs";
@@ -11,44 +12,13 @@ import "./chain.mjs";
 // The Light cantrip and lit torches/lamps/lanterns (LIGHT-DESIGN.md). Its GM sweep runs after ours.
 import { api as lightApi } from "./light.mjs";
 import { DARK, carriedLightOf } from "./light-core.mjs";
+// The one-shot reset of the darkvision sight our retired sync stored (dnd5e 6 senseVisionSync).
+import { registerSightReset, resetSight } from "./migrate.mjs";
 
 const pending = new Map();
 
 function isWriter() {
   return game.users.activeGM?.isSelf ?? game.user.isGM;
-}
-
-/** The sight a token should have, from the actor's derived senses. */
-function desiredSight(actor) {
-  const senses = actor.system?.attributes?.senses;
-  const dv = Number(senses?.ranges?.darkvision ?? senses?.darkvision ?? 0) || 0;
-  return dv > 0 ? { visionMode: "darkvision", range: dv } : { visionMode: "basic", range: 0 };
-}
-
-async function sync(actor) {
-  if (!actor || actor.pack) return 0;
-  const want = desiredSight(actor);
-  let count = 0;
-  const p = actor.prototypeToken.sight;
-  if (p.enabled && (p.visionMode !== want.visionMode || p.range !== want.range)) {
-    await actor.update({ "prototypeToken.sight.visionMode": want.visionMode, "prototypeToken.sight.range": want.range });
-    count++;
-  }
-  for (const scene of game.scenes) {
-    const updates = [];
-    for (const t of scene.tokens) {
-      if (t.actorId !== actor.id || !t.sight.enabled) continue;
-      // An unlinked token has its own synthetic actor; read its senses, not the base actor's.
-      const w = t.actorLink ? want : desiredSight(t.actor ?? actor);
-      if (t.sight.visionMode !== w.visionMode || t.sight.range !== w.range)
-        updates.push({ _id: t.id, "sight.visionMode": w.visionMode, "sight.range": w.range });
-    }
-    if (updates.length) {
-      await scene.updateEmbeddedDocuments("Token", updates);
-      count += updates.length;
-    }
-  }
-  return count;
 }
 
 // ---- Lights carried by items ---------------------------------------------------------------------
@@ -122,7 +92,7 @@ async function syncLight(actor) {
 function schedule(actor) {
   if (!actor || actor.documentName !== "Actor" || !isWriter()) return;
   clearTimeout(pending.get(actor.id));
-  pending.set(actor.id, setTimeout(() => { pending.delete(actor.id); sync(actor); syncLight(actor); }, 250));
+  pending.set(actor.id, setTimeout(() => { pending.delete(actor.id); syncLight(actor); }, 250));
 }
 
 const actorOf = (doc) => {
@@ -139,13 +109,12 @@ for (const verb of ["create", "update", "delete"]) {
 // A token placed from a stale prototype, or before this module existed.
 Hooks.on("createToken", (token) => { if (token.actor) schedule(token.actor); });
 
+Hooks.once("init", registerSightReset);
+
 Hooks.once("ready", () => {
-  const api = { sync, syncLight, carriedLight, desiredSight, light: lightApi, setupLight: lightApi.setup, syncAll: async () => {
+  const api = { syncLight, carriedLight, resetSight, light: lightApi, setupLight: lightApi.setup, syncAll: async () => {
     let n = 0;
-    for (const a of game.actors) {
-      if (a.prototypeToken.sight.enabled) n += await sync(a);
-      n += await syncLight(a);
-    }
+    for (const a of game.actors) n += await syncLight(a);
     return n;
   } };
   const current = game.pentaryn;
@@ -154,7 +123,9 @@ Hooks.once("ready", () => {
     game.pentaryn ??= {};
     game.pentaryn.senses = api;
   }
-  if (isWriter()) api.syncAll()
+  if (isWriter()) resetSight()
+    .catch(e => console.warn(`${SCOPE} | sight reset`, e))
+    .then(() => api.syncAll())
     .then(() => (game.users.activeGM?.isSelf ? lightApi.sweep() : null))
     .catch(e => console.warn(`${SCOPE} | ready sweep`, e));
 });

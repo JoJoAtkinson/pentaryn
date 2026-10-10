@@ -28,4 +28,6 @@ the same `destination` field the core callback reads, so the teleport logic is u
 - **Same-scene links (0.4.1):** core 14.368+ stores a destination on the same scene *relative* to its behavior (`..<regionId>`). The module resolves every entry against its behavior (`fromUuidSync(u, {relative})`) and compares by absolute UUID (`hasDestination`/`withoutDestination` in `portals-core.mjs`), so cards, badges, Look and Unlink work for same-scene links too.
 - **Secrecy:** a behavior with `revealed: false` shows players no card (core shows them no name either).
 
+- **dnd5e 6 (0.4.2):** declares dnd5e 6.0 (verified 6.0.6). `flags.dnd5e.summon.origin` (still the summoning item's UUID) and `flags.dnd5e.isPolymorphed` are unchanged in 6.0.6; teleport behaviors are core.
+
 Install: `make foundry-portals-sync`; first install needs a Foundry restart (module.json is read at startup).

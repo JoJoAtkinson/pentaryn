@@ -51,10 +51,14 @@
  *      all open a locked chest.
  *   3. Directory filters — pile actors have to be OBSERVER for players, which
  *      lists every chest in their sidebar; pinned readables likewise.
+ *
+ * One more lives in its own file: `i18n-shim.mjs` puts back the DND5E.ItemRarity* /
+ * DND5E.Unknown keys itempilesdnd5e 1.1.0 still reads and dnd5e 6 removed.
  */
 
 import { corpses } from "./corpses.mjs";
 import { loot } from "./loot.mjs";
+import { installI18nShim } from "./i18n-shim.mjs";
 
 const MODULE = "pentaryn-dropbin";
 const LOG = "log";
@@ -64,6 +68,8 @@ const FILE = "drop-log.json";
 const DEDUPE_MS = 2000;
 
 let socket = null;
+
+installI18nShim();
 
 /* ------------------------------------------------------------------ storage */
 
@@ -287,7 +293,7 @@ Hooks.once("ready", () => {
 /* ------------------------------------------- item-piles attunement repair */
 /**
  * Item Piles 3.3.4 nulls `system.attunement` on every item it puts on an actor.
- * dnd5e 5.3.3 then stores that null as the *string* `"NaN"`, so a looted magic
+ * dnd5e (5.3.3, and still 6.0.6) then stores that null as the *string* `"NaN"`, so a looted magic
  * item stops declaring that it needs attunement — a Cloak of Displacement taken
  * out of a chest looks like a mundane cloak, and a Potion of Healing grows an
  * attunement control it should not have.

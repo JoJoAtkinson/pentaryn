@@ -900,7 +900,10 @@ async function throwBlind(character, fact, { mode, situational, silent = false }
     silent
       ? { create: false }
       : {
-          rollMode: CONST.DICE_ROLL_MODES.BLIND,
+          // dnd5e 6 hands this to core as `messageMode`, which only knows the new keys of
+          // CONFIG.ChatMessage.modes; a legacy "blindroll" is silently swapped for the client
+          // default (public) and the Study roll would land face-up in the player's chat.
+          rollMode: foundry.dice.Roll._mapLegacyRollMode(CONST.DICE_ROLL_MODES.BLIND),
           data: {
             flavor: f("known.study.rollFlavor", { name: fact.name, skill: fact.skillLabel }),
             // Dice So Nice reads `flags["dice-so-nice"].skip` (6.x); it never read the old
@@ -994,8 +997,11 @@ async function applyStudy(payload, senderId) {
   /*
    * The blind roll. Three things here are load-bearing and none is decoration:
    *
-   *  · `message.rollMode = "blindroll"` — core stamps `blind: true` and whispers the card to
-   *    GMs; `isContentVisible` is false for every non-GM, so core replaces the flavor with
+   *  · `message.rollMode = "blind"` — dnd5e 6 passes it to core as the `messageMode` (a key
+   *    of CONFIG.ChatMessage.modes; the legacy "blindroll" is mapped by
+   *    `Roll._mapLegacyRollMode` in throwBlind, because an unknown key silently falls back to
+   *    the client default and the card goes public). Core stamps `blind: true` and whispers
+   *    the card to GMs; `isContentVisible` is false for every non-GM, so core replaces the flavor with
    *    "privately rolled some dice" and dnd5e's pass/fail highlighter returns before styling
    *    anything. The player's copy of this card cannot render a verdict.
    *  · `dialog.configure = false` — the configuration dialog already happened, on the

@@ -1,7 +1,7 @@
 ---
 title: "Pentaryn Attunement Slots"
 status: active
-last_modified: 2026-08-22
+last_modified: 2026-10-10
 tags: [foundry, module, dnd5e, attunement]
 ---
 
@@ -147,11 +147,21 @@ neither column of any UI that filters prepared data.
 node test/run.mjs        # or: make foundry-attunement-sync, which runs them first
 ```
 
-26 fixtures. Most cover `computeSlots` — stale flags, deleted items, duplicate ids,
+31 fixtures. Most cover `computeSlots` — stale flags, deleted items, duplicate ids,
 corrupt flag types, over-cap, non-default `max`; it runs inside a render hook, so it
 must never throw, and the suite covers malformed actors for that reason. The rest pin
 the proficiency-map correction: that armour categories stay untouched, that `vehicle`
 is never claimed, and that an existing dnd5e definition always wins.
+
+## dnd5e 6
+
+0.2.0 targets dnd5e 6.0 (verified 6.0.6). The data model this module reads
+(`system.attributes.attunement`, `system.attunement` / `system.attuned`), the sheet
+DOM it hooks (`.sidebar > .card`, the inventory `.attunement` counter, the
+`.loading[data-uuid]` tooltip contract) and `CONFIG.DND5E.armorProficienciesMap`
+(still the six armour categories) are unchanged. The one change: the suppressed-slot
+aria-label reads `DND5E.EFFECT.Suppressed.Hint`, because 6.0 removed
+`DND5E.EffectUnavailableInfo`.
 
 ## Install
 

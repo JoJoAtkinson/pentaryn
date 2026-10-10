@@ -440,6 +440,73 @@ export function planRiders({ features = [], item = {}, rolls = [], abilities = {
 }
 
 /* -------------------------------------------- */
+/*  The message flag                            */
+/* -------------------------------------------- */
+
+/**
+ * What a damage message carries in flags.pentaryn-riders: the once-per-casting guard (`applied`),
+ * the tray preset (`ignoreResistance`), the usage card it came from (`origin`), and per rule what
+ * it did (`detail`) so the card note can be rebuilt at render time.
+ * @param {ReturnType<typeof planRiders>} plan
+ * @param {string|null} origin  id of the usage card
+ */
+export function riderFlag(plan, origin = null) {
+  const detail = {};
+  for (const key of plan.applied) {
+    const bonus = plan.bonuses.find(b => b.key === key);
+    const die = plan.dice.find(d => d.key === key);
+    if (bonus) detail[key] = { bonus: bonus.value };
+    else if (die) detail[key] = { modifier: die.modifier };
+    else detail[key] = {};
+  }
+  return { applied: [...plan.applied], ignoreResistance: [...plan.ignoreResistance], origin: origin ?? null, detail };
+}
+
+/**
+ * The card note, one entry per applied rule, from the flag alone (a flag written before `detail`
+ * existed gives the rule's label). Unknown keys are dropped. The module localizes each entry.
+ * @returns {({key: string, label: string, kind: "bonus", value: string}
+ *            |{key: string, label: string, kind: "min", n: string}
+ *            |{key: string, label: string, kind: "reroll"|"label"})[]}
+ */
+export function noteParts(flag) {
+  const out = [];
+  for (const key of flag?.applied ?? []) {
+    const rule = ruleByKey(key);
+    if (!rule) continue;
+    const d = flag?.detail?.[key] ?? {};
+    const value = Number(d.bonus);
+    if (d.bonus !== undefined && Number.isFinite(value) && value) {
+      out.push({ key, label: rule.label, kind: "bonus", value: value > 0 ? `+${value}` : `${value}` });
+    } else if (typeof d.modifier === "string" && /^min\d+$/.test(d.modifier)) {
+      out.push({ key, label: rule.label, kind: "min", n: d.modifier.slice(3) });
+    } else if (typeof d.modifier === "string" && /^r/.test(d.modifier)) {
+      out.push({ key, label: rule.label, kind: "reroll" });
+    } else out.push({ key, label: rule.label, kind: "label" });
+  }
+  return out;
+}
+
+/**
+ * Rule keys already applied by the damage messages rolled from one usage card (the once-per-casting
+ * guard). dnd5e 6 keeps the usage card id in `system.origin`; the live field resolves to the
+ * document, so the stored id is read from `_source`. Migrated 5.x messages had their
+ * flags.dnd5e.originatingMessage moved there by the system migration.
+ * @param {Iterable<{_source?: object, flags?: object}>} messages
+ * @param {string|null} origin  id of the usage card
+ * @returns {string[]}
+ */
+export function usedFromMessages(messages, origin) {
+  if (!origin) return [];
+  const used = new Set();
+  for (const m of messages ?? []) {
+    if (m?._source?.system?.origin !== origin) continue;
+    for (const k of m?.flags?.[MOD]?.applied ?? []) used.add(k);
+  }
+  return [...used];
+}
+
+/* -------------------------------------------- */
 /*  Hit Dice                                    */
 /* -------------------------------------------- */
 

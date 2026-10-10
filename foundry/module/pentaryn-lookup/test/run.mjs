@@ -280,7 +280,7 @@ t("page() stamps the edition on 2014 content", () => {
 });
 
 // ── monsters ─────────────────────────────────────────────────────────────────
-t("monsterDigest reads the dnd5e 5.3.3 paths", () => {
+t("monsterDigest reads the dnd5e 6.0.6 paths (prepared actor.system; unchanged from 5.3.3)", () => {
   const d = monsterDigest(MONSTER_OK);
   eq(d.cr, 1); eq(d.ac, 15); eq(d.hp, 7);
   eq(d.type, "humanoid"); eq(d.size, "sm");

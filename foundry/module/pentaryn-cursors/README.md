@@ -11,7 +11,7 @@ have the pencil, click the arrow". Nothing about any tool changes; only what the
 | plain system arrow | **Select** on any layer, any toggle/button, GM layers (walls, lights, …) | system hand |
 | red crosshair (Ember `#FF5252`) | Tokens → **Target** | white crosshair, red edge |
 | gold ruler (Brass `#FFD43B`) | Tokens → **Ruler** | white ruler, gold edge |
-| cyan converging chevrons (Glow `#4DD9FF`) | a **spell area** following the mouse (dnd5e *Place Template*), whatever tool was on | white, cyan edge |
+| cyan converging chevrons (Glow `#4DD9FF`) | a **spell area** being placed (dnd5e 6 places it as a Region), whatever tool was on | white, cyan edge |
 | pink map pin (Rose `#FF6AD5`) | Notes → **Journal** (place a pin) | white pin, pink edge |
 | green pencil (Moss `#69E05A`) | Drawings → rectangle / ellipse / polygon / freehand / text | white pencil, green edge |
 
@@ -39,8 +39,16 @@ where `CSS.supports` accepts it in `cursor`; otherwise the 32-px PNG.
 The key is recomputed on: every control's and modal tool's `onChange` (wrapped in
 `getSceneControlButtons`, because switching tool inside a control does not re-render the controls),
 `renderSceneControls`, `activateCanvasLayer`, `canvasReady`, and a child being added to or removed
-from `canvas.templates.preview` (the dnd5e spell-area preview lives there; the *active layer* is no
-signal, because on v14 `TemplateLayer#activate` hands off to the region layer). `canvasTearDown` clears.
+from `canvas.regions.preview`. `canvasTearDown` clears.
+
+**The spell-area glyph (dnd5e 6, 0.2.0).** dnd5e 6 places every activity area through core
+`RegionLayer#placeRegions` (`TemplatePlacement#_place`); `AbilityTemplate` and
+`canvas.templates.preview` are no longer used, so 0.1.0's check never fired on 6. The glyph now shows
+while the region layer has a `_placementContext` **and** that context's preview Region is in
+`canvas.regions.preview` (`placementActive` in `cursors-core.mjs`). Both, because a GM drag-drawing a
+region also fills the preview container without a context, and on cancel the preview leaves the
+container while the context is still set. The preview joins the container on the first pointer
+move, so the glyph appears as soon as the mouse moves after *Place*.
 
 **Other scripts blanking the cursor.** Foundry's `setCursor` writes `#board.style.cursor` only when
 its mode changes, so anything that sets it to `""` leaves the map on the system arrow (every tool

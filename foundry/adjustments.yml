@@ -23,6 +23,14 @@
 #   argon-toolbar-neighbour   pentaryn-ties' Attribute Review button only sets `order: 60`;
 #                             Argon is named in a comment, no Argon API is used.
 #   core-admin-api/cloud.py   cloud.py only probes :30000; it does not use the admin API.
+#
+# dnd5e 5.3.3 → 6.0.6 (2026-10-10, context/plans/dnd5e-6-upgrade.md): dnd5e-chat-card-flags
+# became dnd5e-chat-message-types (6.x moved chat-card data from flags.dnd5e to message.type /
+# message.system); five rows were added (legacy roll modes, token size lock, sense vision reset,
+# the Item Piles rarity i18n shim, region-placement Escape). Retired with the port, not
+# registered: pentaryn-senses' darkvision sync (dnd5e senseVisionSync). pentaryn-aoe's Escape
+# handler was first retired too, then kept on review: core's Escape reaches a placeRegions
+# placement only after closing every open window (row core-region-placement-escape).
 
 # Extra search terms for the exposure grep (escalate.py), per package. The package id itself is
 # always searched; these catch code that names the package by its global instead. Matched
@@ -40,7 +48,7 @@ adjustments:
     modules: [pentaryn-transform]
     files: [foundry/module/pentaryn-transform/hud.mjs]
     markers: ["ArgonComponent", "CONFIG.ARGON"]
-    what: Wild Shape / Starry Form buttons injected via render*ArgonComponent hooks; subclasses Argon's closure-private dnd5e button classes through CONFIG.ARGON.MAIN.BUTTONS
+    what: Wild Shape / Starry Form buttons injected via render*ArgonComponent hooks; subclasses Argon's closure-private dnd5e button classes through CONFIG.ARGON.MAIN.BUTTONS; dnd5e 6.0.6 — no change needed (Argon reads abilities.*.checkBonus through a dnd5e shim removed in 6.2)
     why: Argon exposes no add-a-button API
     native_when: an "add button to panel" API, or a dnd5e transform / wild-shape panel of its own
     retire_class: never
@@ -51,7 +59,7 @@ adjustments:
     modules: [pentaryn-transform]
     files: [foundry/module/pentaryn-transform/hud.mjs]
     markers: ["cancelTargetPicker", "mouseup"]
-    what: dispatches a synthetic right-button mouseup to cancel Argon's target picker before a form swap; Escape bound to the same
+    what: dispatches a synthetic right-button mouseup to cancel Argon's target picker before a form swap; Escape bound to the same; dnd5e 6.0.6 — no change needed (Argon reads abilities.*.checkBonus through a dnd5e shim removed in 6.2)
     why: the picker instance is private to Argon's bundle; right-click is its only cancel
     native_when: a public cancelTargeting() / cancel API on the picker
     retire_class: guarded
@@ -62,7 +70,7 @@ adjustments:
     modules: [pentaryn-transform]
     files: [foundry/module/pentaryn-transform/transform.mjs, foundry/module/pentaryn-transform/hud.mjs]
     markers: ["bonusUsedNow"]
-    what: re-marks "bonus action used" after Argon rebuilds the HUD on a token swap
+    what: re-marks "bonus action used" after Argon rebuilds the HUD on a token swap; dnd5e 6.0.6 — no change needed (Argon reads abilities.*.checkBonus through a dnd5e shim removed in 6.2)
     why: Argon keeps used-state on the panel instance, which a token swap destroys
     native_when: bonus-used state kept on the actor/combatant rather than the panel instance
     retire_class: guarded
@@ -73,7 +81,7 @@ adjustments:
     modules: [pentaryn-transform]
     files: [foundry/module/pentaryn-transform/hud.mjs, foundry/module/pentaryn-transform/transform-core.mjs]
     markers: ["renderPortraitPanelArgonComponent", "111/99"]
-    what: repaints the portrait HP so temp HP reads "99+12 / 99" instead of "111/99"
+    what: repaints the portrait HP so temp HP reads "99+12 / 99" instead of "111/99"; dnd5e 6.0.6 — no change needed (Argon reads abilities.*.checkBonus through a dnd5e shim removed in 6.2)
     why: Argon prints value + temp over max
     native_when: the portrait shows temp HP separately
     retire_class: safe
@@ -84,7 +92,7 @@ adjustments:
     modules: [pentaryn-transform]
     files: [foundry/module/pentaryn-transform/hud.mjs]
     markers: ["ARGON._tooltip"]
-    what: nulls ui.ARGON._tooltip so a stale tooltip does not survive a re-render
+    what: nulls ui.ARGON._tooltip so a stale tooltip does not survive a re-render; dnd5e 6.0.6 — no change needed (Argon reads abilities.*.checkBonus through a dnd5e shim removed in 6.2)
     why: Argon does not clear its tooltip on re-render
     native_when: Argon clears its own tooltip on re-render
     retire_class: safe
@@ -134,27 +142,82 @@ adjustments:
     retire_class: guarded
     check: make foundry-attunement-check
 
-  - id: dnd5e-chat-card-flags
+  - id: dnd5e-chat-message-types
     packages: [dnd5e]
     modules: [pentaryn-aoe, pentaryn-senses, pentaryn-riders]
-    files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/attacks.mjs, foundry/module/pentaryn-senses/light.mjs, foundry/module/pentaryn-riders/riders.mjs]
-    markers: ["flags?.dnd5e", "flags.dnd5e"]
-    what: reads flags.dnd5e.roll / .activity / .item / .originatingMessage on chat messages; dnd5e 6.x moves chat-card data to message.type / message.system
-    why: the only way to find the attack/damage message an effect belongs to
+    files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/attacks.mjs, foundry/module/pentaryn-aoe/areas.mjs, foundry/module/pentaryn-aoe/effects.mjs, foundry/module/pentaryn-senses/light.mjs, foundry/module/pentaryn-riders/riders.mjs]
+    markers: ["message.type", "system.targets", "system.origin", "getAssociatedActivity"]
+    what: reads message.type ("usage" / "attack" / "damage" / "save") and message.system.{activity,item,targets,origin,onSave,ability,mode,ammunition} on dnd5e 6 chat messages, plus message.getAssociatedActivity() and message.system.getEffects(); replaces the 5.x flags.dnd5e.roll / .activity / .item / .originatingMessage reads (renamed from dnd5e-chat-card-flags on the 6.0.6 port)
+    why: the only way to find the usage / attack / damage message an area, save, effect or rider belongs to
     native_when: n/a — a data-shape dependency, not a workaround
     retire_class: never
-    check: make foundry-aoe-check
+    check: make foundry-aoe-check foundry-senses-check foundry-riders-check
 
   - id: dnd5e-importer-gate
     packages: [dnd5e]
     modules: [pentaryn-importer, scripts/foundry]
     files: [foundry/module/pentaryn-importer/pentaryn-importer.mjs, scripts/foundry/build_actors.py]
     markers: ["targetSystemVersion", "TARGET_SYSTEM_VERSION"]
-    what: the importer refuses JSON built for another dnd5e minor (TARGET_SYSTEM_VERSION "5.3"); build_actors.py hard-codes 5.3.3 enums
+    what: the importer refuses JSON built for another dnd5e minor (TARGET_SYSTEM_VERSION "6.0"); build_actors.py hard-codes the dnd5e 6.0 enums but still emits the legacy movement.walk / init.bonus / ac.calc "flat" shapes, which dnd5e migrates on create and update until 7.0
     why: CONTRACT.md §1 — actor JSON is built against one system's data model
     native_when: n/a
     retire_class: never
     check: pytest scripts/tests/
+
+  - id: dnd5e-legacy-roll-modes
+    packages: [dnd5e, core]
+    modules: [pentaryn-aoe, pentaryn-ties]
+    files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/settings.mjs, foundry/module/pentaryn-ties/study.mjs]
+    markers: ["_mapLegacyRollMode"]
+    what: maps legacy roll-mode names ("gmroll", "blindroll", "publicroll") through core's foundry.dice.Roll._mapLegacyRollMode before handing them to dnd5e rolls (NPC area saves, blind Study rolls); pentaryn-aoe.npcSaveRollMode choices are gm / blind / public with a ready-time migration of a stored legacy value
+    why: dnd5e 6 passes rollMode to core as messageMode, and core silently replaces an unknown name with the client default (public) — blind Study rolls and GM-side NPC saves would show to players
+    native_when: dnd5e maps legacy roll-mode names itself before handing them to core, or core accepts them as messageMode
+    retire_class: safe
+    check: make foundry-aoe-check foundry-ties-check
+
+  - id: dnd5e-token-size-lock
+    packages: [dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/areas.mjs]
+    markers: ["lockSize"]
+    what: the area handle actor is traits.size "tiny", movement.hover true and prototypeToken.flags.dnd5e.lockSize true (ensureHandleActor/sweep keep it so); world data outside any module — the nine Marker prototypes and tokens, Hotspot containers (0.5, the 0.65 eye) and hand-resized NPCs — got flags.dnd5e.lockSize in the 5.3.3 pre-flight (audit list .state/core-rollback/token-sizes-pre-dnd5e6.json)
+    why: dnd5e 6 tokenSizeSync is not read-only — Token5e._onOverrideSize has the active GM write the synced width/height to persisted creature tokens on first render, so 0.5 handles, 0.25 Markers and 0.5/0.65 Hotspots would be resized; hover also exempts the handle from movementAutomation falling
+    native_when: dnd5e stops persisting synced sizes, or exempts non-creature / marker tokens from tokenSizeSync
+    retire_class: guarded
+    check: make foundry-aoe-check
+
+  - id: dnd5e-sense-vision-reset
+    packages: [dnd5e]
+    modules: [pentaryn-senses]
+    files: [foundry/module/pentaryn-senses/migrate.mjs]
+    markers: ["sightReset"]
+    what: one-shot per world (setting pentaryn-senses.sightReset < 1, active GM, on ready) resets every token and prototype with stored darkvision sight to basic / range 0, so dnd5e senseVisionSync derives vision from the sheet; replaces our retired darkvision sync
+    why: senseVisionSync only adds to prepared data and never clears a stored sense — a removed sense (Goggles of Night confiscated) would keep the old darkvision range
+    native_when: dnd5e senseVisionSync clears or overrides stored sight when the sense is gone; or every world has sightReset 1 (then the file can go)
+    retire_class: safe
+    check: make foundry-senses-check
+
+  - id: itempiles-rarity-i18n
+    packages: [item-piles, itempilesdnd5e, dnd5e]
+    modules: [pentaryn-dropbin]
+    files: [foundry/module/pentaryn-dropbin/i18n-shim.mjs, foundry/module/pentaryn-dropbin/dropbin.mjs]
+    markers: ["ItemRarity"]
+    what: at i18nInit adds DND5E.ItemRarityCommon / Uncommon / Rare / VeryRare / Legendary / Artifact (copied from DND5E.ITEM.Rarity.*) and DND5E.Unknown, only when missing
+    why: dnd5e 6 renamed the keys; Item Piles' dnd5e config still reads the old ones for the merchant Rarity column and the unidentified-item placeholder, which otherwise show raw keys (cosmetic)
+    native_when: an itempilesdnd5e / Item Piles release reads DND5E.ITEM.Rarity.* (or declares dnd5e 6 support)
+    retire_class: safe
+    check: make foundry-dropbin-check
+
+  - id: core-region-placement-escape
+    packages: [core, dnd5e]
+    modules: [pentaryn-aoe]
+    files: [foundry/module/pentaryn-aoe/escape.mjs, foundry/module/pentaryn-aoe/core.mjs]
+    markers: ["_placementContext", "_cancelPlacement"]
+    what: a PRIORITY Escape keybinding that cancels a RegionLayer#placeRegions placement in progress (dnd5e 6 TemplatePlacement) by calling core's internal RegionLayer#_cancelPlacement; returns false otherwise
+    why: core's DEFERRED "dismiss" closes every open window (step 4) before it reaches the layer's _onDismissKey (step 5), and dnd5e BasePlacement minimises the sheet the spell was cast from, so the first Escape closes the sheet while the preview keeps following the mouse
+    native_when: core's dismiss cancels an active region placement before it closes windows, or dnd5e's placement binds Escape itself
+    retire_class: guarded
+    check: make foundry-aoe-check
 
   - id: core-admin-api
     packages: [core]

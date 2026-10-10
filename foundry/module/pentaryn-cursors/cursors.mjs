@@ -5,7 +5,7 @@
 // changes the map's cursor and nothing else in the UI. Select stays the system arrow; every other
 // tool in KEYS gets its coloured glyph. Purely per-client: no documents, no sockets, no GM relay.
 
-import { MODULE, KEYS, VARS, keyFor, isModalTool, cursorValues } from "./cursors-core.mjs";
+import { MODULE, KEYS, VARS, keyFor, isModalTool, cursorValues, placementActive } from "./cursors-core.mjs";
 
 const WRAPPED = Symbol.for(`${MODULE}.wrapped`);
 let current = null;
@@ -69,19 +69,16 @@ function guardBoard() {
   }).observe(el, { attributes: true, attributeFilter: ["style"] });
 }
 
-/**
- * Is a spell-area preview following the mouse? dnd5e's AbilityTemplate#drawPreview adds itself to
- * canvas.templates.preview. Not canvas.activeLayer: on v14 TemplateLayer#activate hands off to the
- * RegionLayer, so the templates layer is never the active one.
- */
+/** Is a spell-area placement following the mouse? (dnd5e 6: core RegionLayer#placeRegions; see placementActive.) */
 function previewActive() {
-  return (canvas?.templates?.preview?.children?.length ?? 0) > 0;
+  const layer = canvas?.regions;
+  return placementActive(layer?.preview?.children, layer?._placementContext?.preview);
 }
 
 const watched = new WeakSet();
-/** Refresh when a preview is added to or removed from the template layer (the container is rebuilt per draw). */
+/** Refresh when a preview is added to or removed from the region layer (the container is rebuilt per draw). */
 function watchPreview() {
-  const preview = canvas?.templates?.preview;
+  const preview = canvas?.regions?.preview;
   if (!preview?.on || watched.has(preview)) return;
   watched.add(preview);
   const onChange = () => { try { refresh(); } catch (err) { console.warn(`${MODULE} | refresh failed`, err); } };
@@ -130,9 +127,9 @@ Hooks.on("getSceneControlButtons", (controls) => {
   }
 });
 Hooks.on("renderSceneControls", () => refresh());
-// The dnd5e spell-area preview activates the template layer (the region layer on v14) after which it
-// adds itself to canvas.templates.preview (watchPreview), and re-activates the prior layer when
-// placed or cancelled, after clearing the preview.
+// dnd5e 6 places a spell area with core RegionLayer#placeRegions: it activates the token or region
+// layer, then the preview Region joins canvas.regions.preview on the first pointer move (watchPreview);
+// the preview leaves the container when the placement is confirmed or cancelled.
 Hooks.on("activateCanvasLayer", () => refresh());
 // canvasReady: other modules' canvasReady handlers may blank the cursor (see resync), possibly before
 // this one runs, so also resync a tick later.

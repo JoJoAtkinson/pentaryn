@@ -511,37 +511,65 @@ async function tidyOldSummons() {
 /*  The spell card                              */
 /* -------------------------------------------- */
 
+/** An action-row entry shaped like dnd5e 6's own (templates/chat/parts/card-buttons.hbs). */
 function cardButton(icon, label, act) {
+  const li = document.createElement("li");
   const b = document.createElement("button");
   b.type = "button";
+  b.className = "icon";
   b.dataset.psLight = act;
-  b.innerHTML = `<i class="${icon}" inert></i> <span>${esc(label)}</span>`;
-  return b;
+  b.dataset.tooltip = label;
+  b.setAttribute("aria-label", label);
+  b.innerHTML = `<i class="${icon}" inert></i>`;
+  li.append(b);
+  return li;
+}
+
+/** The card's action row (`section.icon-row` holding a plain `ul.unlist`, not the pill rows). */
+function actionList(root) {
+  for (const ul of root.querySelectorAll("section.icon-row > ul.unlist")) {
+    if (!ul.classList.contains("pills")) return ul;
+  }
+  return null;
 }
 
 function decorateCard(message, html) {
-  const uuid = message?.flags?.dnd5e?.item?.uuid;
-  if (!uuid || message.flags?.dnd5e?.roll) return;
+  if (!message || message.type !== "usage") return;
+  const uuid = message.system?.item?.uuid;
+  if (!uuid) return;
   const item = itemFrom(uuid);
   if (!isLightSpellData(item)) return;
   const root = html instanceof HTMLElement ? html : html?.[0];
-  root?.querySelectorAll('[data-action="placeSummons"]').forEach(b => b.remove());
-  if (!item.isOwner) return;
-  let buttons = root?.querySelector(".card-buttons");
-  if (!buttons) {
-    const content = root?.querySelector(".chat-card") ?? root?.querySelector(".message-content");
-    if (!content) return;
-    buttons = document.createElement("div");
-    buttons.className = "card-buttons";
-    content.append(buttons);
+  if (!root) return;
+  // The PHB Light's summon button (not groupable, so it keeps data-action): drop it with its <li>.
+  root.querySelectorAll('[data-action="placeSummons"]').forEach(b => (b.closest("li") ?? b).remove());
+  let list = actionList(root);
+  if (list && !list.children.length) {
+    list.closest("section.icon-row")?.remove();
+    list = null;
   }
-  if (buttons.querySelector("[data-ps-light]")) return;
+  if (!item.isOwner) return;
+  if (!list) {
+    const content = root.querySelector(".chat-card") ?? root.querySelector(".message-content");
+    if (!content) return;
+    const section = document.createElement("section");
+    section.className = "icon-row";
+    const lead = document.createElement("i");
+    lead.className = "fa-solid fa-fw fa-circle-play";
+    lead.setAttribute("aria-label", L("DND5E.CHATMESSAGE.Row.Actions"));
+    list = document.createElement("ul");
+    list.className = "unlist";
+    section.append(lead, list);
+    content.append(section);
+  }
+  if (list.querySelector("[data-ps-light]")) return;
   const row = [
     cardButton("fa-solid fa-user", L("PENTARYN_SENSES.Light.OnMe"), "me"),
     cardButton("fa-solid fa-crosshairs", L("PENTARYN_SENSES.Light.Pick"), "pick"),
     cardButton("fa-solid fa-lightbulb-slash", L("PENTARYN_SENSES.Light.End"), "end")
   ];
-  for (const b of row) {
+  for (const li of row) {
+    const b = li.firstElementChild;
     b.addEventListener("click", ev => {
       ev.preventDefault();
       ev.stopPropagation();
@@ -551,7 +579,7 @@ function decorateCard(message, html) {
       const p = act === "me" ? onMe(live) : act === "pick" ? pickAndCast(live) : end(live);
       Promise.resolve(p).catch(e => warn(`card ${act}`, e));
     });
-    buttons.append(b);
+    list.append(li);
   }
 }
 

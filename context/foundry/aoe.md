@@ -1,7 +1,7 @@
 ---
 title: "Spell areas, saves and damage (pentaryn-aoe)"
 status: active
-last_modified: 2026-10-08
+last_modified: 2026-10-10
 tags: [context, foundry, dnd5e, module]
 ---
 
@@ -19,13 +19,17 @@ gets a small target-icon **handle token** in its centre. For cones and lines it 
 Everyone owns the handle and the area.
 - Drag the handle to move the area. It ignores walls (movement action *displace*).
 - Delete the handle and the area goes with it. Delete the area and the handle goes too.
-- **Remove area** on the spell's chat card deletes that spell's areas on the scene you are viewing.
+- The **eraser icon** next to *Place Template* on the spell's chat card ("Remove all templates")
+  deletes that spell's areas on the scene you are viewing.
+- An **emanation** (Spirit Guardians) gets no handle: dnd5e 6 attaches it to the caster's token,
+  so it moves with the caster.
 - Areas clean themselves up. An instantaneous spell's area (Fireball) is deleted once every ticked
   row has been applied. A concentration spell's areas go when the caster stops concentrating.
 
-**Cancelling a placement.** While a template follows the mouse, **Escape or right-click** cancels it
-(Escape: `escape.mjs`, rebindable as `pentaryn-aoe.cancelTemplate`; the tool you had is restored).
-With no template previewing, Escape behaves as normal (closes windows, opens the main menu).
+**Cancelling a placement.** While a template follows the mouse, **Escape or right-click** cancels it,
+on the first press even when the sheet you cast from is open. Core's own Escape would close every open
+window first (dnd5e minimises the sheet during placement), so the module keeps a small Escape binding
+that cancels core's region placement before anything else (`escape.mjs`).
 
 **Save spells (Fireball, Toll the Dead…).** Click **Damage** on the card as usual. The GM's client then:
 1. lists the creatures **inside the area**. If there is no area, it uses the roller's targets.
@@ -35,11 +39,13 @@ With no template previewing, Escape behaves as normal (closes windows, opens the
 3. posts one **request card** for the player characters. Each player sees only their own
    button and rolls with the normal dialog, so advantage and bonuses are theirs to set. A save
    rolled from the card's own "DC 17 DEX" button counts too;
-4. shows the GM a **tray** under the damage roll. Each row has a tick, the save result, a
+4. shows the GM a **tray** under the damage roll, below dnd5e's own damage tray. Each row has a tick, the save result, a
    multiplier (×0 ¼ ½ 1 2), and the damage after resistances. The tray buttons are
    **Re-roll NPC saves**, **Ping players** and **Apply N**.
    The per-row dice icon re-rolls one monster. The shield icon rolls a save for an absent player.
 
+Every save is threaded under the spell's card the way dnd5e's own save button threads it, so the
+card's outcomes and dnd5e's damage tray (its half-damage pill) agree with this tray.
 Nothing is applied until **Apply** is pressed. Rows still waiting are skipped, and pressing
 Apply again later applies only the rows that have resolved since. A second Damage click on the
 same area greys out the older tray ("superseded"), so the same area can't be applied twice.
@@ -56,11 +62,11 @@ Players can't see hit/miss while `dnd5e.attackRollVisibility` is `"none"`. Setti
 | Setting | Default | |
 |---|---|---|
 | Area handles | on | handle token per area |
-| Remove-area button | on | on spell cards |
+| "Remove all templates" icon | on | on spell cards |
 | Remove instantaneous areas after Apply | on | |
 | Remove areas when concentration ends | on | |
 | Saves from the area | on | the whole Part B pipeline |
-| Monster save visibility | GM only | `gmroll` · blind · public |
+| Monster save visibility | GM only | `gm` · `blind` · `public` (core v14 message modes; a stored `gmroll` is migrated on the GM's ready) |
 | Apply monster damage automatically | off | PCs always wait for Apply |
 | Ask players to roll | on | the request card |
 | Roll damage on a hit | on | |
@@ -77,6 +83,9 @@ game.pentaryn.aoe.applyRows(messageId[, rowIds])
 
 ## Gotchas
 
+- **Two GM tabs are fine** (the bridge tab plus your own). One of them does the work: one handle per
+  area, one save per monster, one request card. A tab that was open before a module update keeps
+  the old code until it is reloaded, and until then it can still add a second handle or save.
 - **Needs the GM online.** No sockets are used. With no GM connected, saves aren't rolled and
   nothing is applied. Moving and deleting areas still works.
 - **Every client needs the module**, because each player's own client creates the handle,
@@ -87,7 +96,11 @@ game.pentaryn.aoe.applyRows(messageId[, rowIds])
   leftover areas from before the module was installed get handles the first time their scene is viewed.
 - **A moved area needs Damage clicked again.** Containment is read when the damage is rolled.
 - The handle is one shared world actor, **"Area handle"**, in `Scene Props`. The module creates it
-  on the GM's first ready. Don't delete it; if you do, it is recreated.
+  on the GM's first ready. Don't delete it; if you do, it is recreated. It is `tiny`, hovers, and its
+  tokens carry `flags.dnd5e.lockSize` (the GM's ready and `sweep` keep it so), because dnd5e 6
+  `tokenSizeSync` would otherwise resize the 0.5 handles and `movementAutomation` mark them Falling.
+  The handle goes on the level the area was placed on (dnd5e 6 regions carry the viewed level and no
+  elevation), at that level's base elevation.
 - Concentration damage still triggers dnd5e's own concentration-check prompt for a concentrating PC. That is expected.
 
 Install: `make foundry-aoe-check` / `make foundry-aoe-sync`. A **first install needs a server

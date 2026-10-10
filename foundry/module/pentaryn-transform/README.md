@@ -86,6 +86,25 @@ refunds the use. API: `game.pentaryn.transform.starry.{assume, end, active, cons
   dnd5e counts as 12 damage (the "DC 10" cards in the 2026-10-10 playtest came from its own setup
   evals; the "DC 30" from its 120-damage step).
 
+## dnd5e 6 port (0.3.2)
+
+Requires dnd5e 6.0 (verified 6.0.6). What changed and what was checked to need no change:
+
+- **Starry Form's Twinkling flight** is recognised from either key: `system.attributes.movement.fly`
+  (the PHB item's stored effect; dnd5e redirects it on apply) or `system.attributes.movement.speeds.fly`
+  (effects written under 6.0). Pure check: `grantsFly`.
+- **Carried conditions** lose both origins before landing on the druid: core's `origin` string and
+  dnd5e 6's structured `system.origin` (both point into the form actor the revert deletes).
+  Pure: `withoutOrigin`.
+- **Exhaustion** is unchanged in code: 6.0 derives the level from the `dnd5eexhaustion` effect's
+  `system.level`, and writing `system.attributes.exhaustion` on revert still becomes that effect
+  (`Actor5e#_onUpdateExhaustion`). Fixtures 69d/69e.
+- **Form tooltips** read speeds from `movement.speeds` first (the flat keys are a dnd5e shim until 7.0).
+- **"form" transform mode** (new in 6.0, effects on the actor instead of a new actor) is refused with
+  a refund and a warning. 6.0.6's Wild Shape is still mode `cr`; this guard is defensive only.
+- **No change:** the `dnd5e.transformActor` hook (6.0 fires `transformActorV2` alongside it, neither
+  deprecated); `hud.mjs` (Argon's `isPolymorphed`, movement shim and `senses.ranges` reads hold).
+
 Testing note: a Chrome tab that isn't visible runs no animation frames and drops synthetic clicks
 until a screenshot renders it. Size animations and clicks "that did nothing" in such a tab are the
 harness, not the module.

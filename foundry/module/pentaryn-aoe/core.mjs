@@ -15,11 +15,18 @@ export function aoeFlags(doc) {
 /**
  * Where the handle sits for a region shape, in scene pixels.
  * circle/ellipse: centre · rectangle: centre after rotation about its anchor · polygon: vertex mean ·
+ * emanation (dnd5e 6, a stationary one; a moving one is attached to its caster and gets no handle):
+ * the middle of its token-shaped base, whose width/height are in grid units, hence gridSize ·
  * cone/line/anything else: the shape origin (the caster's end).
  */
-export function centreOf(shape) {
+export function centreOf(shape, { gridSize = 100 } = {}) {
   if (!shape) return { x: 0, y: 0 };
   switch (shape.type) {
+    case "emanation":
+    case "token": {
+      const b = shape.type === "token" ? shape : (shape.base ?? {});
+      return { x: (b.x ?? 0) + ((b.width ?? 1) * gridSize) / 2, y: (b.y ?? 0) + ((b.height ?? 1) * gridSize) / 2 };
+    }
     case "circle":
     case "ellipse":
     case "ring":
@@ -168,15 +175,84 @@ export function newestRegion(regions) {
 /* -------------------------------------------- */
 
 /**
- * Was this template region placed by this spell? `flags5e` is the region's flags.dnd5e
- * ({ item, origin }). Matches by the spell item, so a spell with two template activities is
- * cleared by one press; the activity uuid is the fallback for a region without an item flag.
+ * Is this region a spell area template? dnd5e 6 marks its template regions with
+ * flags.dnd5e.activity; regions placed under 5.3.3 carry core's flags.core.MeasuredTemplate instead
+ * (the 6.0 migration does not rewrite them). Portal and scene-link regions have neither.
+ */
+export function isTemplateRegion(r) {
+  return !!(r?.flags?.dnd5e?.activity || r?.flags?.core?.MeasuredTemplate);
+}
+
+/** The token id a region is attached to, or null (the live document holds a doc, the source an id). */
+export function attachedTokenId(region) {
+  const raw = region?._source?.attachment?.token ?? region?.attachment?.token ?? null;
+  if (!raw) return null;
+  return typeof raw === "string" ? raw : (raw.id ?? null);
+}
+
+/**
+ * Is this region attached to a token that is not one of our handles? dnd5e 6 attaches an emanation
+ * (Spirit Guardians) to its caster so it moves with them; giving it a handle would re-attach it to the
+ * handle and strand it. `tokenById` looks the id up on the region's scene. A missing token counts as
+ * "someone else's": we never steal an attachment we cannot see.
+ */
+export function attachedToOther(region, tokenById) {
+  const id = attachedTokenId(region);
+  if (!id) return false;
+  const tk = tokenById?.(id);
+  return !(tk && aoeFlags(tk).handle);
+}
+
+/**
+ * Was this template region placed by this spell? `flags5e` is the region's flags.dnd5e:
+ *   dnd5e 6:     { activity: <activity uuid>, item: <item uuid>, origin: <caster TOKEN uuid> }
+ *   dnd5e 5.3.3: { item: <item uuid>, origin: <activity uuid> }
+ * Matches by the spell item, so a spell with two template activities is cleared by one press; the
+ * activity uuid (either field) is the fallback for a region without an item flag.
  */
 export function regionFromSpell(flags5e, { itemUuid = null, activityUuid = null } = {}) {
   if (!flags5e) return false;
   if (itemUuid && flags5e.item === itemUuid) return true;
-  if (activityUuid && flags5e.origin === activityUuid) return true;
-  return !!itemUuid && typeof flags5e.origin === "string" && flags5e.origin.startsWith(`${itemUuid}.Activity.`);
+  if (activityUuid && (flags5e.activity === activityUuid || flags5e.origin === activityUuid)) return true;
+  if (!itemUuid) return false;
+  const prefix = `${itemUuid}.Activity.`;
+  return [flags5e.activity, flags5e.origin].some(u => typeof u === "string" && u.startsWith(prefix));
+}
+
+/**
+ * Is a region placement following the mouse on this RegionLayer? Core v14 keeps the placement's
+ * context on `_placementContext` from RegionLayer#placeRegions until it is confirmed or cancelled,
+ * and `_cancelPlacement` is what core's own Escape calls (escape.mjs, Part E).
+ * @param {{ _placementContext?: object|null, _cancelPlacement?: Function }|null|undefined} layer
+ */
+export function placementInProgress(layer) {
+  return !!layer?._placementContext && typeof layer._cancelPlacement === "function";
+}
+
+/**
+ * Where a handle token goes vertically: { level, elevation }.
+ *   dnd5e 6 (TemplatePlacement.fromActivity) creates the region with `levels: [the viewed level]`
+ *   and no elevation, so its SOURCE bottom is null and the prepared `region.elevation.bottom` is
+ *   -Infinity (core RegionDocument#prepareBaseData) — a token elevation must be a finite number,
+ *   so handing that to Token creation fails validation and no handle is made. The handle goes on
+ *   the region's level, at the region's finite source bottom, else that level's base, else 0.
+ *   5.3.3 (core's MeasuredTemplate migration): bottom 0, no levels → level null (the token takes
+ *   the scene's initial level and the caller gives the region that level, as before).
+ * @param {{ regionLevels?: Iterable<string>, sceneHasLevel?: (id: string) => boolean,
+ *           sourceBottom?: number|null, levelBase?: (id: string) => number|undefined }} input
+ * @returns {{ level: string|null, elevation: number }}
+ */
+export function handleVertical({ regionLevels = [], sceneHasLevel = () => true, sourceBottom = null, levelBase = () => undefined } = {}) {
+  const level = [...(regionLevels ?? [])].find(id => id && sceneHasLevel(id)) ?? null;
+  const base = level ? levelBase(level) : undefined;
+  const elevation = Number.isFinite(sourceBottom) ? sourceBottom : (Number.isFinite(base) ? base : 0);
+  return { level, elevation };
+}
+
+/** Is this region the area of exactly this activity (Part B: whose area is the damage for)? */
+export function regionOfActivity(flags5e, activityUuid) {
+  if (!flags5e || !activityUuid) return false;
+  return flags5e.activity === activityUuid || flags5e.origin === activityUuid;
 }
 
 /* -------------------------------------------- */
@@ -215,21 +291,4 @@ export function pendingEffects(effectIds, appliedIds = [], { ageMs = 0, maxAgeMs
   const ids = [...new Set(effectIds ?? [])].filter(Boolean);
   if (ids.some(id => done.has(id))) return [];
   return ids;
-}
-
-/**
- * The dnd5e area template whose placement Escape should cancel, or null.
- * `children` is canvas.templates.preview.children: dnd5e 5.3.3 AbilityTemplate#drawPreview adds
- * the template itself there and _finishPlacement clears it, so a child that can still cancel
- * itself (has _onCancelPlacement, not destroyed) means a placement is in progress. The newest
- * one wins, the one following the mouse. Anything else in the container (a core drag preview)
- * is not ours to cancel.
- */
-export function placingTemplate(children) {
-  const list = Array.isArray(children) ? children : [];
-  for (let i = list.length - 1; i >= 0; i--) {
-    const c = list[i];
-    if (c && !c.destroyed && typeof c._onCancelPlacement === "function") return c;
-  }
-  return null;
 }

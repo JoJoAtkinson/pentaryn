@@ -4,7 +4,10 @@
  * One row per creature caught in the area: tick, name, save result, multiplier, the damage that
  * would land (actor.calculateDamage, so resistances show), and Apply. Players never get this
  * element; they see the usage card, their own request button and their own save rolls.
- * The system's own <damage-application> tray is left in place as a manual fallback.
+ * The system's own <damage-application> tray is left in place as a manual fallback; since the saves
+ * resolve.mjs rolls are threaded under the usage card, its half-damage pill agrees with this tray.
+ * dnd5e 6 damage card (damage-card.hbs): .message-content holds .chat-card, the roll's
+ * section.icon-row, then <damage-application>; this tray goes right after the native one.
  */
 
 import { aoeFlags, MULTIPLIERS } from "./core.mjs";
@@ -15,12 +18,14 @@ const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 const t = (key, data) => (data ? game.i18n.format(`PENTARYN_AOE.${key}`, data) : game.i18n.localize(`PENTARYN_AOE.${key}`));
 const MULT_LABEL = { 0: "×0", 0.25: "×¼", 0.5: "×½", 1: "×1", 2: "×2" };
 
-function preview(row, res) {
+function preview(row, res, message = null) {
   if (row.multiplier === null || row.multiplier === undefined) return "—";
   const actor = fromUuidSync(row.actor);
   if (!actor?.calculateDamage) return "—";
   const damages = res.damages.map(d => ({ ...d, properties: new Set(d.properties ?? []) }));
-  const out = actor.calculateDamage(damages, { multiplier: row.multiplier });
+  // originatingMessage as Apply passes it (resolve.applyRows), so a damage-card rider such as
+  // Elemental Adept's ignored resistance shows here too, not only once applied.
+  const out = actor.calculateDamage(damages, { multiplier: row.multiplier, originatingMessage: message ?? undefined });
   return out ? String(Math.max(0, Math.floor(out.amount ?? 0))) : "—";
 }
 
@@ -35,14 +40,14 @@ function saveCell(row) {
   return `<span class="${cls}"><i class="fa-solid ${icon}" inert></i> ${esc(row.save.total)}</span>`;
 }
 
-function rowHTML(row, res) {
+function rowHTML(row, res, message = null) {
   const opts = MULTIPLIERS.map(m => `<option value="${m}" ${row.multiplier === m ? "selected" : ""}>${MULT_LABEL[m]}</option>`).join("");
   const blank = row.multiplier === null || row.multiplier === undefined ? `<option value="" selected>?</option>` : "";
   const locked = row.applied || res.superseded ? "disabled" : "";
   const extra = row.kind === "auto"
     ? `<a data-pa="reroll" data-row="${esc(row.id)}" data-tooltip="${esc(t("Tray.Reroll"))}"><i class="fa-solid fa-dice-d20" inert></i></a>`
     : `<a data-pa="rollfor" data-row="${esc(row.id)}" data-tooltip="${esc(t("Tray.RollFor"))}"><i class="fa-solid fa-user-shield" inert></i></a>`;
-  const status = row.applied ? `<span class="pa-applied" data-tooltip="${esc(row.hp ? `${row.hp.before} → ${row.hp.after}` : "")}">${esc(t("Tray.Applied"))}</span>` : preview(row, res);
+  const status = row.applied ? `<span class="pa-applied" data-tooltip="${esc(row.hp ? `${row.hp.before} → ${row.hp.after}` : "")}">${esc(t("Tray.Applied"))}</span>` : preview(row, res, message);
   return `<li class="pa-row ${row.applied ? "applied" : ""}" data-row="${esc(row.id)}">
     <input type="checkbox" data-pa="tick" ${row.apply ? "checked" : ""} ${locked}>
     <img src="${esc(row.img ?? "icons/svg/mystery-man.svg")}" alt="">
@@ -54,14 +59,14 @@ function rowHTML(row, res) {
   </li>`;
 }
 
-export function trayHTML(res) {
+export function trayHTML(res, message = null) {
   const ability = CONFIG.DND5E.abilities[res.ability]?.label ?? res.ability;
   const n = res.rows.filter(r => r.apply && !r.applied && r.multiplier !== null && r.multiplier !== undefined).length;
   const picker = (res.regions?.length ?? 0) > 1
     ? `<select data-pa="region">${res.regions.map(r => `<option value="${esc(r.id)}" ${r.id === res.region ? "selected" : ""}>${esc(r.name)}</option>`).join("")}</select>`
     : "";
   const body = res.rows.length
-    ? `<ol class="pa-rows">${res.rows.map(r => rowHTML(r, res)).join("")}</ol>`
+    ? `<ol class="pa-rows">${res.rows.map(r => rowHTML(r, res, message)).join("")}</ol>`
     : `<p class="pa-empty">${esc(t("Tray.Empty"))}</p>`;
   return `<div class="pa-head">
       <strong>${esc(t("Tray.Title", { ability, dc: res.dc ?? "?" }))}</strong>
@@ -84,8 +89,10 @@ function decorate(message, html) {
   host.querySelector(".pentaryn-aoe-tray")?.remove();
   const tray = document.createElement("section");
   tray.className = `pentaryn-aoe-tray${res.superseded ? " superseded" : ""}`;
-  tray.innerHTML = trayHTML(res);
-  host.append(tray);
+  tray.innerHTML = trayHTML(res, message);
+  const native = host.querySelector(":scope > damage-application");
+  if (native) native.after(tray);
+  else host.append(tray);
 
   tray.addEventListener("change", ev => {
     const el = ev.target;

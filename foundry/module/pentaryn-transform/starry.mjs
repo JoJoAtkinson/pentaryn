@@ -16,7 +16,7 @@
 
 import {
   MODULE_ID, activitiesOf, isWildShapeActivity, usesLeft, formatDuration, CONSTELLATIONS, STARRY_LIGHT,
-  STARRY_SECONDS, constellationOfActivity, starryEffectData, starryBlock
+  STARRY_SECONDS, constellationOfActivity, starryEffectData, starryBlock, grantsFly
 } from "./transform-core.mjs";
 import { say, isRunner, markBonusUsed } from "./transform.mjs";
 
@@ -120,10 +120,9 @@ export function constellationText(actor, c) {
 /** The item effect whose changes the constellation brings (the Dragon's floors), or the bare one. */
 function baseEffect(item, c, twinkling) {
   const effects = item?.effects?.contents ?? [];
-  const flies = e => (e.changes ?? e.system?.changes ?? []).some(ch => String(ch.key).startsWith("system.attributes.movement.fly"));
   if (c === "dragon") {
     const dragons = effects.filter(e => /dragon/i.test(e.name));
-    return (twinkling ? dragons.find(flies) : dragons.find(e => !flies(e))) ?? dragons[0] ?? null;
+    return (twinkling ? dragons.find(grantsFly) : dragons.find(e => !grantsFly(e))) ?? dragons[0] ?? null;
   }
   return effects.find(e => /^starry form$/i.test(e.name)) ?? null;
 }

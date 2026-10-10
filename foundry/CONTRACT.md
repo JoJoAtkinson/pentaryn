@@ -1,6 +1,6 @@
 ---
 created: 2026-08-10
-last_modified: 2026-08-10
+last_modified: 2026-10-10
 tags: ["foundry", "vtt", "contract", "dnd5e"]
 status: draft
 ---
@@ -12,7 +12,8 @@ status: draft
 > See [`context/plans/foundry-content-pipeline.md`](../context/plans/foundry-content-pipeline.md) for why the pipeline is shaped
 > this way (D3, D8) and what each gate protects (D10).
 
-**Target:** Foundry **v14.365** (`generation: 14`) · dnd5e **5.3.3** · world `ardenhaven`.
+**Target:** Foundry **v14** (`generation: 14`) · dnd5e **6.0** (verified 6.0.6; the contract was
+written against 5.3.3) · world `ardenhaven`. See §1.2 for what the 6.0 retarget did and did not change.
 
 **Normative language.** MUST / MUST NOT / SHOULD / MAY as in RFC 2119. Anything marked
 **UNCERTAIN** is a best guess with stated reasoning — §11 collects them all in one place, and each
@@ -62,9 +63,9 @@ Gate 1 meaningful).
 {
   "$contract": "pentaryn/actors.json@1",
   "generator": "scripts/foundry/build_actors.py",
-  "generatorVersion": "1.0.0",
+  "generatorVersion": "1.0.1",
   "targetSystem": "dnd5e",
-  "targetSystemVersion": "5.3",
+  "targetSystemVersion": "6.0",
   "generation": 14,
   "generatedAt": "2026-08-10T14:02:11+00:00",
   "sourceRevision": "9a4199f",
@@ -79,7 +80,7 @@ Gate 1 meaningful).
 | `generator` | string | Repo-relative path of the producing script. Informational. |
 | `generatorVersion` | string | SemVer of the generator. Bump the **minor** when emitted document shape changes; bump the **patch** for bugfixes that change no output. |
 | `targetSystem` | string | Literal `"dnd5e"`. |
-| `targetSystemVersion` | string | Literal `"5.3"` — `major.minor` only. |
+| `targetSystemVersion` | string | Literal `"6.0"` — `major.minor` only (was `"5.3"` until generator 1.0.1 / importer 1.1.0). |
 | `generation` | integer | Literal `14`, the Foundry generation. |
 | `generatedAt` | string | RFC 3339 UTC, `timespec="seconds"`, e.g. `2026-08-10T14:02:11+00:00`. Matches the `updated_at` convention already used in `actions.jsonl`. |
 | `sourceRevision` | string | Short git SHA of the tree the build read. `"dirty"` MAY be appended (`"9a4199f-dirty"`). |
@@ -93,11 +94,33 @@ Before creating anything the importer MUST verify **all** of:
 ```js
 manifest.$contract === "pentaryn/actors.json@1"
 manifest.targetSystem === game.system.id                                    // "dnd5e"
-manifest.targetSystemVersion === game.system.version.split(".").slice(0,2).join(".")   // "5.3"
+manifest.targetSystemVersion === game.system.version.split(".").slice(0,2).join(".")   // "6.0"
 manifest.generation === game.release.generation                             // 14
 ```
 
 Any mismatch → abort the whole run with a visible error. Do **not** import a subset.
+
+### 1.2 dnd5e 6.0 retarget (2026-10-10)
+
+Generator 1.0.1 / importer 1.1.0 moved **only the version gate** from `"5.3"` to `"6.0"` and added
+`ring` to the accepted area target types (§6.3). The contract id stays `@1` and the emitted
+actor documents are byte-identical, so every `contentHash` is unchanged and a re-import after
+the system upgrade touches nothing.
+
+Three shapes this contract writes are **legacy on dnd5e 6** and are migrated by the system on
+both create and update, with compatibility shims until **dnd5e 7.0**:
+
+| Written (`@1`) | dnd5e 6 stores it as | Migration |
+| --- | --- | --- |
+| `system.attributes.ac: {calc: "flat", flat: N}` | `ac.override = N` (`calc` dropped) | `attributes.mjs` `_migrateArmorClass` |
+| `system.attributes.init.bonus` | `init.roll.bonus` | `common.mjs` `#BONUS_FIELD_PATHS` |
+| `system.attributes.movement.<type>` | `movement.speeds.<type>` | `movement-field.mjs:56-59`; `movement.<type>` getter is a shim |
+
+They move to the native shapes together, in one bump to `pentaryn/actors.json@2`, alongside
+dropping the `traits.size` → `prototypeToken.width/height` table (§3.3) now that dnd5e 6's
+`tokenSizeSync` sizes creature tokens itself. That bump changes every `contentHash` and is a
+wholesale re-import, which is why it was not done with the 6.0 retarget. It MUST happen before
+the world moves to dnd5e 7.0.
 
 `generatedAt` and `sourceRevision` MUST NOT be gated on — they change every build and would make
 the gate meaningless.
@@ -896,7 +919,7 @@ dnd5e attack activity has no "save-or-be-grappled on hit" field.
 ```
 
 **Area parsing** — `target.template.type` MUST be a key of `DND5E.areaTargetTypes` (`[config]:2797`):
-`circle cone cube cylinder line radius sphere square wall`. `sizes` per type decides which of
+`circle cone cube cylinder line radius ring sphere square wall` (`ring` is new in dnd5e 6.0). `sizes` per type decides which of
 `size`/`width`/`height` is meaningful. The corpus has four distinct strings, all free prose:
 
 | `area` string | `template` | Confidence |

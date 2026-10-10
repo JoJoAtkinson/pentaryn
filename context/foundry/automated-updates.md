@@ -56,8 +56,7 @@ Core 14.369 then changed the server: scripted POSTs need a same-origin `Origin` 
 answers 400 while a world runs, `/auth` answers 401 on a wrong password, and the graceful world
 shutdown is `POST /setup {worldShutdown}`. `admin.py` handles all of it (and `make vtt-login`).
 Escalation (tiers, models, cost) is in the next sections. **Re-armed 2026-10-10**
-(`make vtt-update-resume`); `make vtt-update-dry` shows only the deliberate holds (dnd5e 6.x,
-the pinned bridge). `launchctl` still shows last exit 1 until the next Saturday run replaces
+(`make vtt-update-resume`); `make vtt-update-dry` shows only the deliberate hold (the pinned bridge; dnd5e 6.x is no longer held, 6.0.6 was installed by hand 2026-10-10). `launchctl` still shows last exit 1 until the next Saturday run replaces
 the 10-03 failure.
 
 **TCC grant: still outstanding as far as anyone can tell.** Only a launchd-started run
@@ -366,8 +365,7 @@ target, the package's registry rows, the full bytes of every bundle file, `PROMP
 Editing a file the analyst read, editing a row, a new upstream version or a prompt change
 all miss — for a package about to be installed. A **held** package (which will not be
 installed; its analysis only feeds a plan) also reuses the newest analysis of the same
-installed version against the same target *major* for `held_reuse_days` (28), so dnd5e
-6.x held for months costs about one Opus call a month rather than one per upstream patch
+installed version against the same target *major* for `held_reuse_days` (28), so a major held for months costs about one Opus call a month rather than one per upstream patch
 or per edit to the seven files it reads; the plan says which pair it analysed. A held
 major with a reusable analysis costs **nothing**: no triage, no T1, the report links the
 existing plan. Failed attempts live beside the cache as `<pkg>--<key>.failures`. Dry runs
@@ -526,7 +524,7 @@ would otherwise have to go and rediscover.
 | | |
 |---|---|
 | Foundry core | **14.367** at the 2026-08 build (14.369 since the attended 2026-10-10 update) |
-| dnd5e | 5.3.3 |
+| dnd5e | 5.3.3 at the 2026-08 build; 6.0.6 since 2026-10-10 |
 | Worlds | `space-journey` and `ardenhaven`, both migrated to 14.367, both smoke-clean |
 | Browser smoke | Re-verified live 2026-08-22 against `space-journey`: logged in as Gamemaster, `gameReady` and `canvasReady` true, scene "1. The Library (The Parley)", 28 modules active, zero client errors. It does get past the join screen and does exercise the world |
 | Server | **left down** — that is the new intended end state; `make vtt-up` to play |

@@ -26,3 +26,9 @@
   opacity: 0.35;
   cursor: default;
 }
+
+/* The riders note under a damage card's dice row (dnd5e 6 drops item cards' header flavor). */
+.chat-message .message-content > p.pentaryn-riders-note {
+  margin: 0.25rem 0 0;
+  text-align: center;
+}

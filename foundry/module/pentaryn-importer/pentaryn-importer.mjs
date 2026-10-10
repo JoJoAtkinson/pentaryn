@@ -34,6 +34,11 @@
  *   Foundry v14.365 → /Applications/Foundry Virtual Tabletop.app/Contents/Resources/app/
  *   dnd5e 5.3.3     → Data/systems/dnd5e/dnd5e-compiled.mjs.map (`sourcesContent`, 350 files)
  *
+ *   Target since 1.1.0 (2026-10-10): dnd5e **6.0** (verified 6.0.6). Only the version gate moved —
+ *   module.json `targetSystemVersion` "6.0", compared against the live major.minor below. The
+ *   payload shapes are still the 5.3 ones (see FORMULA_GLOBS); dnd5e 6 migrates them on create
+ *   and update until 7.0. The dnd5e line citations below are from 5.3.3.
+ *
  *   `game.release.generation`         common/config.mjs:140 (ReleaseData, integer, required)
  *   `game.system` (System package)    client/game.mjs:622 → `.id`, `.version`
  *   `foundry.utils.getRoute()`        common/utils/helpers.mjs:698
@@ -115,6 +120,12 @@ const FORMULA_OK = /^[0-9d+\-*/(). ]*$/;
  *
  * Note `system.attributes.movement.*` is deliberately expanded to the formula subkeys only:
  * that block also carries `hover` (boolean) and `units` ("ft"), and "ft" would fail FORMULA_OK.
+*
+ * DEFERRED to contract @2 (do not move piecemeal): `init.bonus` and `movement.<type>` are the
+ * legacy 5.3 shapes. dnd5e 6.0 migrates them to `init.roll.bonus` / `movement.speeds.<type>` on
+ * create and update (common.mjs:85, movement-field.mjs:56-59; shims until 7.0). Moving them here
+ * changes every actor's contentHash and forces a wholesale re-import, so they move together with
+ * the generator's shapes and the SIZE_TO_TOKEN drop in one contract bump.
  */
 const FORMULA_GLOBS = [
   "system.attributes.hp.formula",

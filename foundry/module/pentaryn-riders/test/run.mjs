@@ -10,7 +10,8 @@ const core = await import("../riders-core.mjs");
 const {
   RULES, ruleByKey, normalizeName, matchRule, resolveTypes, termTypes, planDice, withModifier,
   parseFormula, formatTerms, bonusTerms, transformFormula, planRiders, pickSpend, pickRestore,
-  battleMedicFormula, clampHeal, carriedAbilities, ADEPT_TYPES, AFFINITY_TYPES
+  battleMedicFormula, clampHeal, carriedAbilities, riderFlag, noteParts, usedFromMessages, MOD,
+  ADEPT_TYPES, AFFINITY_TYPES
 } = core;
 
 let pass = 0;
@@ -176,6 +177,53 @@ check("85 Healer: not on temp HP or max HP spell rolls (they aren't HP restored)
   []);
 check("84 Healer: not on a potion",
   planRiders({ features: [{ key: "healer" }], item: { isSpell: false }, rolls: [{ type: "healing", healing: true, types: ["healing"] }] }).applied, []);
+
+/* ── the message flag, the card note, once-per-casting (dnd5e 6 shapes) ───── */
+
+const marrithPlan = planRiders({ features: marrith, item: fireball, rolls: fireRoll, abilities: { cha: 5 }, activityType: "save" });
+const flag = riderFlag(marrithPlan, "usageCard0001");
+check("110 riderFlag from Marrith's Fireball", flag, {
+  applied: ["elemental-adept", "elemental-affinity"], ignoreResistance: ["fire"], origin: "usageCard0001",
+  detail: { "elemental-adept": { modifier: "min2" }, "elemental-affinity": { bonus: 5 } }
+});
+check("111 riderFlag with no origin", riderFlag({ dice: [], bonuses: [], ignoreResistance: [], applied: [] }).origin, null);
+check("112 note: Elemental Adept min2 + Elemental Affinity +5", noteParts(flag), [
+  { key: "elemental-adept", label: "Elemental Adept", kind: "min", n: "2" },
+  { key: "elemental-affinity", label: "Elemental Affinity", kind: "bonus", value: "+5" }
+]);
+check("113 note: Healer reroll", noteParts(riderFlag(planRiders({ features: [{ key: "healer" }], item: { isSpell: true, level: 1 },
+  rolls: [{ type: "healing", healing: true, types: ["healing"] }] }))),
+  [{ key: "healer", label: "Healer", kind: "reroll" }]);
+check("114 note: negative bonus keeps its sign", noteParts({ applied: ["potent-spellcasting-druid"], detail: { "potent-spellcasting-druid": { bonus: -1 } } }),
+  [{ key: "potent-spellcasting-druid", label: "Potent Spellcasting", kind: "bonus", value: "-1" }]);
+check("115 note: flag without detail (written by 0.1.0) gives the label", noteParts({ applied: ["elemental-adept"] }),
+  [{ key: "elemental-adept", label: "Elemental Adept", kind: "label" }]);
+check("116 note: unknown key dropped, empty flag empty", [noteParts({ applied: ["nope"] }), noteParts(null), noteParts({})], [[], [], []]);
+
+// ChatMessage stand-ins: dnd5e 6 keeps the usage card id in _source.system.origin (the live
+// system.origin resolves to the ChatMessage document, so it never equals the id).
+const usageDoc = { id: "usageCard0001" };
+const msg = (origin, applied, liveOrigin = usageDoc) => ({
+  _source: { system: { origin } }, system: { origin: liveOrigin },
+  flags: applied ? { [MOD]: { applied } } : {}
+});
+const log = [
+  msg("usageCard0001", ["elemental-adept", "elemental-affinity"]),
+  msg("usageCard0001", ["elemental-adept"]),
+  msg("otherCard0002", ["healer"]),
+  msg("usageCard0001", null),
+  { flags: { [MOD]: { applied: ["potent-spellcasting-druid"] } } },
+  { _source: { system: {} }, flags: { dnd5e: { originatingMessage: "usageCard0001" }, [MOD]: { applied: ["healer"] } } }
+];
+check("120 usedFromMessages by _source.system.origin", usedFromMessages(log, "usageCard0001"), ["elemental-adept", "elemental-affinity"]);
+check("121 usedFromMessages other card", usedFromMessages(log, "otherCard0002"), ["healer"]);
+check("122 usedFromMessages no origin", usedFromMessages(log, null), []);
+check("123 usedFromMessages ignores the resolved live origin", usedFromMessages([msg("x", ["healer"], { id: "usageCard0001" })], "usageCard0001"), []);
+check("124 usedFromMessages ignores the 5.x flag (the migration moves it)", usedFromMessages(log.slice(5), "usageCard0001"), []);
+const secondRay = planRiders({ features: marrith, item: fireball, rolls: fireRoll, abilities: { cha: 5 }, activityType: "attack",
+  usedThisCasting: usedFromMessages(log, "usageCard0001") });
+check("125 second Scorching Ray from the same card: no second CHA", [secondRay.bonuses.length, secondRay.skipped],
+  [0, [{ key: "elemental-affinity", why: "once-per-casting" }]]);
 
 /* ── Hit Dice and Battle Medic ────────────────────────────────────────────── */
 

@@ -8,7 +8,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const { MODULE, KEYS, VARS, DRAW_TOOLS, keyFor, isModalTool, cursorValues } = await import("../cursors-core.mjs");
+const { MODULE, KEYS, VARS, DRAW_TOOLS, keyFor, isModalTool, cursorValues, placementActive } = await import("../cursors-core.mjs");
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
 let pass = 0;
@@ -51,6 +51,18 @@ for (const [control, tool, templatesActive, want] of table)
 check("keyFor() no args", keyFor(), null);
 check("every non-null key is in KEYS", table.map(r => r[3]).filter(Boolean).every(k => k in KEYS), true);
 check("KEYS are exactly the five", Object.keys(KEYS), ["target", "ruler", "aoe", "note", "draw"]);
+
+/* ── placementActive: dnd5e 6 places areas through core RegionLayer#placeRegions ── */
+{
+  const placing = { id: "preview-1" }, other = { id: "gm-drawn" }, earlier = { id: "preview-0" };
+  check("no placement context → not active", placementActive([other], null), false);
+  check("context set, preview not yet drawn (before first pointer move)", placementActive([], placing), false);
+  check("context preview in the container → active", placementActive([placing], placing), true);
+  check("GM drag-drawing a region (no context) → not active", placementActive([other], undefined), false);
+  check("cancel: preview destroyed while context still set → not active", placementActive([other], placing), false);
+  check("multi-region: previous region kept, current drawn → active", placementActive([earlier, placing], placing), true);
+  check("no container (canvas not ready)", placementActive(undefined, placing), false);
+}
 
 /* ── isModalTool ──────────────────────────────────────────────────────── */
 check("plain tool is modal", isModalTool({ name: "ruler" }), true);

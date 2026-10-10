@@ -1,17 +1,33 @@
 # pentaryn-senses
 
-Token vision follows the sheet's Darkvision. dnd5e computes senses (Goggles of Night, the
-Darkvision spell, species traits, Wild Shape forms) but never touches token vision, so a
-character with 60 ft Darkvision on the sheet still sees nothing in an unlit scene.
+Lights carried by items, the Light cantrip, torches and lanterns, the broken-glow light animation
+and token chains. Needs dnd5e 6.0 or later (verified 6.0.6).
 
-On any change to an actor, its items or its effects, the prototype token and every placed token
-with **vision enabled** get `visionMode: darkvision` and the sheet's range, or `basic` / 0 when
-Darkvision is gone (goggles taken off or confiscated). Tokens with vision disabled are ignored,
-so monsters and crowds are untouched. Unlinked tokens read their own synthetic actor.
+## Token vision: dnd5e's own since 6.0 (v0.4.0)
 
-Only the active GM's client writes. A full sweep runs at ready.
+Token vision from the sheet's senses is native in dnd5e 6: with the world setting
+**senseVisionSync** on, every token's prepared sight takes the largest sight-granting sense on the
+sheet (darkvision, blindsight, tremorsense, truesight) and its detection modes. Goggles of Night,
+the Darkvision spell, species traits and Wild Shape forms all reach the token without us. Our own
+darkvision sync (0.1–0.3, which wrote `visionMode: darkvision` and the range onto stored token
+data) is retired.
 
-API: `game.pentaryn.senses.sync(actor)`, `.syncAll()`, `.desiredSight(actor)`, `.light`, `.setupLight()`.
+The native sync only adds to prepared data and never clears what is stored, so the darkvision our
+sync left on tokens would outlive the sense (goggles confiscated, still seeing 60 ft). `migrate.mjs`
+fixes that once per world:
+
+- On `ready`, the **active GM**, when the world setting `pentaryn-senses.sightReset` is below 1,
+  sets `sight.visionMode: "basic"` and `sight.range: 0` on every world prototype token and placed
+  token whose **stored** sight is enabled darkvision. Tokens with vision off, other modes and
+  compendium actors are untouched. Then it sets `sightReset` to 1.
+- It only runs on dnd5e 6 or later and only while `dnd5e.senseVisionSync` is on (with it off the
+  reset would leave those tokens blind); otherwise it waits for the next ready. No hand step: each
+  of the four worlds does it at its first GM load on 6.
+- Rerun by hand: `await game.pentaryn.senses.resetSight({ force: true })` returns
+  `{ prototypes, tokens }`.
+
+API: `game.pentaryn.senses.syncLight(actor)`, `.syncAll()` (carried lights), `.carriedLight(actor)`,
+`.resetSight()`, `.light`, `.setupLight()`.
 
 Sync: `make foundry-senses-check` / `make foundry-senses-sync`. First install needs a server restart.
 
@@ -78,8 +94,9 @@ summon is skipped and a small prompt asks **Where does the light go?**
 - **Pick a target**: the cursor becomes a crosshair and a notice says what to do. Click any token
   (it glows and carries the light) or any square (a light sits there and respects walls).
   Right-click or Esc cancels. A token you can't see counts as the square under it.
-- **Not now**: nothing happens. The chat card keeps **On me · Pick a target · End light** (in place
-  of Summon), so you can aim, move or end the light later from the card.
+- **Not now**: nothing happens. The chat card keeps **On me · Pick a target · End light** as icons
+  in its action row (in place of the Summon icon; hover for the label), so you can aim, move or end
+  the light later from the card.
 
 Casting again moves the light, because each caster has one Light. **End light** is on the card,
 and also on the Token HUD of a lit token (lightbulb-slash icon) for the caster and the GM.
@@ -132,4 +149,4 @@ deletion is logged.
 `.toggle(item)`, `.hood(item)`, `.profileFor(item)`, `.sweep()`, `.setup()`.
 
 **Safety:** every hook is wrapped. A bug logs `pentaryn-senses | light …` and does nothing else.
-`node test/run.mjs` runs the chain fixtures and then `test/light.mjs`.
+`node test/run.mjs` runs the chain fixtures, then `test/light.mjs`, then `test/migrate.mjs`.

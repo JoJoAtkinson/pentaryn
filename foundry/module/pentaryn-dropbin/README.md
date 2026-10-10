@@ -47,6 +47,24 @@ Four jobs, one module (`dropbin.mjs` loads the rest):
   character, and when Item Piles' native *Take All* is already in the footer.
 - **Needs a GM online.** Item Piles routes every transfer through the GM's client.
 
+## Item Piles on dnd5e 6 (i18n shim)
+
+dnd5e 6.0 deleted `DND5E.ItemRarityCommon` … `DND5E.ItemRarityArtifact` and `DND5E.Unknown`, but
+itempilesdnd5e 1.1.0 still names them: the merchant window's **Rarity** column and the name an
+**unidentified** item shows. Without them those cells read the raw key. `i18n-shim.mjs` copies the
+words back under the old names at `i18nInit` (from `DND5E.ITEM.Rarity.*` and core's
+`COMMON.Unknown`), and only for keys that are missing, so a translation module's words win.
+
+- **Check it live:** `game.i18n.localize("DND5E.ItemRarityVeryRare")` reads "Very Rare", not the key.
+  The console logs `Item Piles i18n shim added …` once per client load.
+- **Retire it** (delete the file and its import in `dropbin.mjs`) when an itempilesdnd5e release
+  reads `DND5E.ITEM.Rarity.*` itself. Registered as `itempiles-rarity-i18n` in
+  `foundry/adjustments.yml`. The Saturday updater flags it when that release lands.
+- **Needs dnd5e 6.0 or later** (`module.json`). Nothing else in the module changed for 6.0: the
+  attunement repair is still needed (Item Piles still writes `NaN` into `system.attunement`).
+  Corpses do not resize tokens, so `tokenSizeSync` leaves a body at its creature's size; hotspot
+  piles smaller than their size category rely on `flags.dnd5e.lockSize` (set by the pre-flight).
+
 ## Files
 
 | File | What |
@@ -54,5 +72,6 @@ Four jobs, one module (`dropbin.mjs` loads the rest):
 | `dropbin.mjs` | entry point, ledger, pile hygiene, `game.pentaryn.dropbin` |
 | `corpses.mjs` | corpse conversion, the drawn eye, legacy migration, GM HUD buttons |
 | `loot.mjs` | the Loot all button |
-| `loot-core.mjs` | pure rules for both (`node test/run.mjs`) |
+| `loot-core.mjs` | pure rules for corpses and Loot all (`node test/run.mjs`) |
+| `i18n-shim.mjs` | Item Piles i18n shim for dnd5e 6 (`fillMissingKeys` is tested by `node test/run.mjs`) |
 | `lang/en.json` | strings |

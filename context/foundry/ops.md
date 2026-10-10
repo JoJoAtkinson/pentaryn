@@ -378,6 +378,12 @@ Full detail: [`scripts/foundry/README.md`](../../scripts/foundry/README.md).
 | `enhancedcombathud` | 5.0.1 | Argon – Combat HUD (CORE). GitHub release zip, filesystem drop — path B below |
 | `enhancedcombathud-dnd5e` | 5.2.2 | Argon – Combat HUD (DND5E). Same drop. Needs `dnd5e ≥ 5.0.0` and `enhancedcombathud ≥ 3.0.4` |
 
+Argon switches itself on only when a combat reaches round 1, turn 0 (`openCombatStart`), and
+`alwaysOn` is a client setting that defaults to off. So a player who logs in **after** combat
+has started gets no HUD on select. They click the Argon toggle in the token scene controls, or
+turn on *Always On* in their client settings. This is upstream design and was the same on dnd5e
+5.3.3 (checked on 6.0.6, 2026-10-10).
+
 **GM view:**
 
 | id | version | Source |

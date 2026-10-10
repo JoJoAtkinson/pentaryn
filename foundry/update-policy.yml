@@ -31,6 +31,9 @@ packages:
   # has burned you before. dnd5e is deliberately NOT here: you chose to treat the system
   # like any other module, backed by the rolling OneDrive snapshots (see cloud.py:
   # 10 rolling, 5-day coalescing, past generations preserved forever).
+  # dnd5e 6.0.6 went in by hand on 2026-10-10, ahead of the Argon / Item Piles adapters
+  # (context/plans/dnd5e-6-upgrade.md); the 6.x go/no-go gate no longer applies. The updater stays paused
+  # (.state/vtt-update.pause) until Joe resumes it; dnd5e is not in `hold:`.
   review_always: []
 
 retention:

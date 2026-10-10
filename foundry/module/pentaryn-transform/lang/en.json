@@ -12,6 +12,7 @@
     "NoUses": "No Wild Shape uses left.",
     "UnknownForm": "That form isn't one of the known Wild Shape forms.",
     "SourceMissing": "The form's actor is missing. The Wild Shape use was refunded.",
+    "FormMode": "{name} is set to dnd5e's \"form\" transform mode, which this module does not shape. Set its transform mode back to Challenge Rating. The use was refunded.",
     "ShiftFailed": "{name} couldn't shift. The Wild Shape use was refunded; see the console.",
     "Block": {
       "Busy": "{name} is already shifting.",
