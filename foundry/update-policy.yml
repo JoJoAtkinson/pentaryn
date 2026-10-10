@@ -21,7 +21,11 @@ packages:
   auto_major: false
 
   # Never update these, whatever upstream says. Pinning belongs here, not in a comment.
-  hold: []
+  # foundry-mcp-bridge is installed from Joe's fork (../foundry-vtt-mcp, branch pentaryn),
+  # but its module.json still points at upstream's manifest. The 2026-09-26 run "patched"
+  # it 0.8.3 -> 0.8.4 with upstream's build and silently removed the fork's eval handler,
+  # which every eval-js / game.pentaryn.rules lookup depends on. Rebase the fork instead.
+  hold: [foundry-mcp-bridge]
 
   # Always send these to the adjudicator even for a patch bump. Use for a module that
   # has burned you before. dnd5e is deliberately NOT here: you chose to treat the system
@@ -79,3 +83,72 @@ window:
 report:
   commit: true
   push: true
+
+# ── LLM steps ────────────────────────────────────────────────────────────────
+# Every claude -p call the run makes goes through scripts/foundry/update/llm.py: no
+# tools for anything that reads release notes, no MCP, a scratch cwd, an explicit
+# --effort, a --max-budget-usd cap, and its cost recorded in the run report.
+llm:
+  # restricted = --restricted: user/project/local settings (and their hooks) ignored.
+  # bare = --bare: stricter, but it reads auth ONLY from ANTHROPIC_API_KEY — on this Mac
+  # (OAuth login) every --bare call fails "Not logged in". Use it only with a key.
+  isolation: restricted
+  # Every budget_usd below is a RUNAWAY GUARD, not a target. The CLI checks it after the
+  # turn: a call that lands over its cap is billed and its answer discarded (probed
+  # 2026-10-10). Keep caps well above the expected cost, never near it.
+  # Grades the `review` bucket from release notes. Unchanged model; effort now explicit.
+  # Typical $0.05-0.15; uncapped before 2026-10-10.
+  adjudicator: {model: opus, effort: medium, timeout_s: 600, budget_usd: 1.50}
+  # Writes the Saturday markdown from the JSON record. Sonnet: a summary of a record is
+  # Sonnet work. Set model: opus to go back.
+  report: {model: sonnet, effort: medium, timeout_s: 600, budget_usd: 0.50}
+
+# ── Escalation (context/plans/smarter-updater.md) ───────────────────────────
+# Between adjudication and apply, a cheap triage call decides whether this run needs an
+# impact analysis. Python bounds it: the floor is what the facts demand (a core bump,
+# an update to a package in foundry/adjustments.yml or that our code greps for, whose
+# notes are not a clean patch), the ceiling is max_tier lowered by the clock and the
+# budget. Escalation can only HOLD more and write plans; it never applies anything the
+# rules above did not already allow. --skip-llm skips it entirely.
+escalation:
+  enabled: true
+  # none | analyze | decide | fix. decide and fix are designed, not built (v2): anything
+  # above `analyze` is clamped to it. Raise only as each tier earns trust.
+  max_tier: analyze
+  # Triage failed (timeout, bad JSON, injection flag): `hold_exposed` holds every package
+  # that touches code we adjusted for the week; `proceed` carries on as before.
+  on_triage_failure: hold_exposed
+  reserve_minutes: 25     # kept back from window.latest for the smoke test + shutdown
+  forced_minutes: 120     # a --force run outside the window gets this long instead
+  # The whole step's wall clock. The wrapper's backstop is 90 min + this (130 min), so a
+  # stuck 04:06 run is killed ~06:16 — and the wrapper then restores service, releases
+  # the lock and notifies itself (cli killed), since the 06:12 watchdog may have passed.
+  max_minutes: 40
+  budget_usd_per_run: 12  # all escalation calls together, after the adjudicator
+  # A failed analysis is retried on later Saturdays at most this many times for the same
+  # version pair and source (then: held, "run it by hand"). Stops a held major whose
+  # analysis always times out from being re-bought every week.
+  analysis_attempts: 2
+  # A HELD package's analysis is reused for this many days while the installed version
+  # and the target's major stay the same, instead of re-buying it every time upstream
+  # ships a patch or our source changes. 0 = exact (version pair, source) matches only.
+  held_reuse_days: 28
+  tiers:
+    # ~$0.002 on Haiku; the cap leaves room for the Sonnet fallback (~$0.04).
+    triage:  {model: haiku, fallback: sonnet, effort: low, timeout_s: 120, budget_usd: 0.25}
+    # Opus reads the notes against our source; one call per package, cached per
+    # (version pair, registry rows, source files) in .state/vtt-update-analysis/.
+    # Expected $0.4-1.2 (a core bundle is ~250 KB of source); the cap is the guard.
+    analyze: {model: opus, effort: high, timeout_s: 900, budget_usd: 2.50, budget_usd_per_run: 5.00}
+    # v2, not built:
+    decide:  {model: fable, effort: high, timeout_s: 600, budget_usd: 0.75}
+    fix:     {model: opus, effort: high, timeout_s: 2400, budget_usd: 8.00}
+    review:  {model: opus, effort: xhigh, timeout_s: 900, budget_usd: 1.00}
+    explain: {model: sonnet, effort: low, timeout_s: 120, budget_usd: 0.10}
+  unattended_fix:
+    allowed_modules: []   # v2, e.g. [pentaryn-portals, pentaryn-ties]; empty = never
+    allow_scripts: false  # v3
+  unattended_retire: false  # v3
+
+# The registry escalation reads. `make foundry-adjustments-check` keeps it honest.
+adjustments: foundry/adjustments.yml

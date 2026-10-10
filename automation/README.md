@@ -1,6 +1,6 @@
 ---
 created: 2026-08-21
-last_modified: 2026-08-21
+last_modified: 2026-10-10
 tags: ["automation", "foundry", "launchd"]
 status: active
 ---
@@ -17,13 +17,14 @@ download and install, a browser smoke test per world) takes 20–40 minutes: sta
 four means it is done, or visibly finishing, by the time anyone opens a laptop.
 
 ```
-GATE → BACKUP → SCAN → [ADJUDICATE] → APPLY → SMOKE → RECOVER? → [REPORT] → NOTIFY → RESTORE
-python  python  python    claude      python  python   python     claude    python    python
+GATE → BACKUP → SCAN → [ADJUDICATE] → [ESCALATE] → APPLY → SMOKE → RECOVER? → [REPORT] → NOTIFY → RESTORE
+python  python  python    claude        claude      python  python   python     claude    python    python
 ```
 
-The two bracketed steps are the only ones that need Claude, and **both fail soft**: out
-of tokens, every `review` item simply stays held, the safe updates still land, a plain
-table report is still written, and the notification still fires.
+The bracketed steps are the only ones that need Claude, and **all of them fail soft**: out
+of tokens, every `review` item simply stays held, anything that touches code we adjusted
+is held for the week, the other safe updates still land, a plain table report is still
+written, and the notification still fires.
 
 ---
 
@@ -59,8 +60,9 @@ matter here:
 * `sessions.loginAsUser`, which lets the smoke-test browser log in as the Gamemaster
   **without that user's password**. It 403s (`USERS.LoginAsGMRequired`) without one —
   verified against this server.
-* `POST /join {action:"shutdown"}`, the only scripted way to deactivate a world
-  gracefully rather than quitting the app.
+* `POST /setup {action:"worldShutdown"}` (14.369+; `POST /join {action:"shutdown"}`
+  before), the only scripted way to deactivate a world gracefully rather than quitting
+  the app.
 
 So one admin secret buys a smoke test that stores no *user* credential anywhere. It
 lives in Infisical (`FOUNDRY_VTT_GRANDMASTER_PW`, project `project-joe`, env `dev`,
@@ -94,7 +96,8 @@ Two consequences worth knowing:
 
 | Command | What it does |
 |---|---|
-| `make vtt-update-dry` | What *would* change, with release notes. Read-only, **safe with the world up and players connected.** |
+| `make vtt-update-dry` | What *would* change, with release notes, and what escalation would look at (no LLM). Read-only, **safe with the world up and players connected.** |
+| `make foundry-adjustments-check` | The adjustments registry still matches the code it names. |
 | `make vtt-update-now` | A full run, now. Ignores the pause switch, the time window and the connected-user gate. |
 | `make vtt-update-status` | What the last (or current) run is doing. |
 | `make vtt-update-pause` / `-resume` | Skip scheduled runs without uninstalling. |
@@ -102,6 +105,38 @@ Two consequences worth knowing:
 
 Reports land in [`foundry/logs/auto-updates/`](../foundry/logs/auto-updates/) — one
 markdown write-up and one machine-readable JSON per run — and are committed and pushed.
+
+### Escalation: when a run thinks harder
+
+Most Saturdays nothing we wrote leans on what is updating, and the run behaves exactly as
+it always has. When an update touches a package in
+[`foundry/adjustments.yml`](../foundry/adjustments.yml) — Argon, Item Piles, Dice So Nice,
+dnd5e, the core admin API — or one our code greps for, a cheap Haiku call reads the notes
+and decides whether an Opus impact analysis is needed. Python sets the minimum (a core
+bump always gets one) and the maximum (the policy, the clock, a dollar budget).
+
+What you see:
+
+* **"plan ready: foundry/logs/auto-updates/plans/<run>-<package>.md"** in the notification.
+  The analysis held that package and wrote the steps to take it by hand: impact per area,
+  the fixes with the check that proves each, a **Still needed?** table for every
+  adjustment of ours (Argon first — keep / fix / retire / investigate), how to verify, how
+  to roll back. It is committed with the report. A model wrote it from release notes; read
+  each step before running it, and don't hand it to an agent as instructions.
+* **"HELD · core: escalation: …"** — the reason is the analysis's, or `deferred: out of
+  time` / `out of budget` when the window or the budget ran short, or `triage unavailable`
+  when the cheap call failed on a package it was the only check for (policy
+  `on_triage_failure: hold_exposed`), or `triage flagged a possible prompt injection` —
+  read that package's release notes yourself.
+* **`LLM cost this run: $0.42 (adjudicator $0.05, T0 $0.00, T1 $0.37)`** at the end of
+  every report. A held major (dnd5e 6.x) is analysed once and its plan reused for up to
+  four weeks while it stays held on the same major — about one Opus call a month, not one
+  per upstream patch. An analysis that fails twice for the same versions is not retried
+  until they change.
+
+Turn it off with `escalation.enabled: false`; skip every LLM step for one run with
+`--skip-llm`. Engineering detail:
+[`context/foundry/automated-updates.md`](../context/foundry/automated-updates.md#escalation-tiered-llm-review-v1-2026-10-10).
 
 ### It leaves the table down
 
@@ -166,8 +201,11 @@ candidate manifest declares its own `requires`/`conflicts`.
 ### The adjudicator is sandboxed
 
 Release notes are text written by strangers and fed to a model, so `claude -p` runs with
-`--strict-mcp-config --mcp-config '{"mcpServers":{}}'` and an explicit deny list for the
-built-in tools. This repo's MCP config includes a Foundry server with `eval-js` and an
+`--strict-mcp-config --mcp-config '{"mcpServers":{}}'`, `--tools ""` and an explicit deny
+list for the built-in tools, from an empty temp directory, with `--restricted` so no
+settings-file hooks run. The same fences apply to the triage, analysis and report calls —
+all of them go through `scripts/foundry/update/llm.py`, which refuses to give a tool to
+any call that carries third-party text. This repo's MCP config includes a Foundry server with `eval-js` and an
 Infisical server one call from a secret. A prompt-injected release note gets to
 influence one enum value and nothing else. Unparseable output, an unexpected id, a
 timeout — all mean *hold everything*.
@@ -202,13 +240,20 @@ nothing.
 
 A second job at 06:12 Saturday, on its own timer rather than as the last line of the
 updater: one of the things it exists to catch is *"the update never ran"*, which a check
-inside the update cannot report. It distinguishes three states from
+inside the update cannot report. It distinguishes four states from
 `.state/vtt-update.status`, which is written at start and updated every phase:
 
 * **still running** — a core download plus two world smoke tests can legitimately still
   be going. It says so and leaves it alone.
 * **died** — it **restores service first** (world, tunnel) and then notifies. A
   notification about a table that is still down is not much use.
+* **failed without a report** — the run recorded `failed` but never got as far as writing
+  its report (and so never sent its own notification). It notifies as a failure. A failed
+  run that did write its report already told you, so the watchdog stays quiet.
+* **killed by the backstop** — `vtt-update.sh` kills a run still going after 130 minutes
+  (90 + escalation's 40) and then cleans up itself — status marked, service restored,
+  the dead run's lock removed so `make vtt-up` works, "update run killed" notification —
+  because that kill can land after 06:12. The watchdog says nothing more about it.
 * **never fired** — usually the Mac was powered off. launchd catches up a *sleeping*
   Mac, not a powered-off one; nothing can fix that from here, so it just tells you.
 

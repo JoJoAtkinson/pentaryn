@@ -21,8 +21,9 @@ password. But two things check ``session.admin`` directly, and both are load-bea
 * ``sessions.loginAsUser`` — logging the smoke-test browser in as the Gamemaster
   *without that user's password*. Without an admin password this 403s
   (``USERS.LoginAsGMRequired``), which was verified against the running server.
-* ``POST /join {action: "shutdown"}`` — deactivating a world gracefully instead of
-  hard-quitting the app. It also refuses outright unless an admin password is set.
+* ``POST /setup {action: "worldShutdown"}`` (14.369+; ``POST /join {action:
+  "shutdown"}`` before that) — deactivating a world gracefully instead of hard-quitting
+  the app. It also refuses outright unless an admin password is set.
 
 So the admin password is what buys a smoke test that needs no *user* credential
 anywhere, and a clean world shutdown. It is also defence in depth for ``/setup``, which

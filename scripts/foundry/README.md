@@ -18,7 +18,7 @@ isn't one), not in a committed config, not in the Makefile. Both secrets live in
 | Secret | Read by | What it's for |
 |---|---|---|
 | `FOUNDRY_VTT_LICENSE_KEY` | `license_key.py` | First-run activation. Needed once; Foundry stores it afterwards. `make foundry-key` puts it on the clipboard without displaying it. |
-| `FOUNDRY_VTT_GRANDMASTER_PW` | `admin_password.py` | The server administrator password. Buys `loginAsUser` for the smoke test and a graceful `POST /join {shutdown}` — both refuse unless an admin password is set. |
+| `FOUNDRY_VTT_GRANDMASTER_PW` | `admin_password.py` | The server administrator password. Buys `loginAsUser` for the smoke test and a graceful world shutdown (`POST /setup {worldShutdown}` on 14.369+, `POST /join {shutdown}` before) — both refuse unless an admin password is set. Every POST also needs a same-origin `Origin` header on 14.369+ (`FoundryAdmin` sends it). |
 
 The license key is for account `atjoseph`; licenses are viewable at
 <https://foundryvtt.com/community/atjoseph/licenses>.

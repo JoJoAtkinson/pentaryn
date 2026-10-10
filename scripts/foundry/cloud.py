@@ -134,13 +134,21 @@ def die(msg: str) -> "NoReturn":  # type: ignore[valid-type]
 
 
 def server_running() -> bool:
-    """Foundry answers on :30000 when up. Several operations must refuse while it is."""
-    try:
-        import urllib.request
-        urllib.request.urlopen("http://localhost:30000", timeout=2)
-        return True
-    except Exception:
-        return False
+    """Something is listening on :30000. Several operations must refuse while it is.
+
+    A TCP connect, not an HTTP 200: the question is "would a backup or restore race a
+    live server", and a server that answers 4xx, redirects oddly, or speaks TLS (14.369
+    can serve HTTPS natively — Setup → Configuration → SSL) is still live. The old
+    ``urlopen`` check called each of those "stopped", the unsafe direction for a guard.
+    """
+    import socket
+    for host in ("127.0.0.1", "::1"):
+        try:
+            with socket.create_connection((host, 30000), timeout=2):
+                return True
+        except OSError:
+            continue
+    return False
 
 
 def sha256_file(path: Path) -> str:

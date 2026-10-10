@@ -48,7 +48,9 @@ def build(source: Path) -> Path:
     """Write the subject texture for `source` and return its path on disk."""
     art = Image.open(source).convert("RGBA").resize((SAFE, SAFE), Image.LANCZOS)
     canvas = Image.new("RGBA", (CANVAS, CANVAS), (0, 0, 0, 0))
-    canvas.paste(art, (OFFSET, OFFSET), art)
+    # alpha_composite, not paste(art, ..., mask=art): paste multiplies the source alpha
+    # by itself, so semi-transparent (faded crowd) art came out faded twice.
+    canvas.alpha_composite(art, (OFFSET, OFFSET))
 
     digest = hashlib.sha1(source.read_bytes()).hexdigest()[:6]
     out = OUT_DIR / f"{source.stem}-{digest}.webp"

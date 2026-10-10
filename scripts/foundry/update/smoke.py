@@ -88,7 +88,7 @@ def run_all(fa: FoundryAdmin, worlds: list[dict], *, policy: dict,
     results: list[WorldResult] = []
     for world in selected:
         # Foundry serves ONE world at a time, and `launchWorld` is a /setup action —
-        # which 403s while any world is active. So the previous world has to come down
+        # which is refused (400 on 14.369, 403 before) while any world is active. So the previous world has to come down
         # before the next can go up, or every world after the first fails to launch.
         _return_to_setup(fa)
         results.append(_smoke_one(fa, world, policy=policy, touched=touched,
@@ -102,7 +102,8 @@ def run_all(fa: FoundryAdmin, worlds: list[dict], *, policy: dict,
 def _return_to_setup(fa: FoundryAdmin) -> None:
     """Deactivate whatever world is running, so the setup API answers again.
 
-    Prefers the graceful path (`POST /join {shutdown}`, which needs the admin password)
+    Prefers the graceful path (`FoundryAdmin.deactivate_world`: `POST /setup
+    {worldShutdown}` on 14.369+, `POST /join {shutdown}` before; both need the admin password)
     and falls back to restarting the app — `options.json` has `world: null`, so a fresh
     start lands on the setup screen.
     """
@@ -294,18 +295,28 @@ def run_browser(fa: FoundryAdmin, world: str, *, dwell: int,
 
 
 def package_warnings(fa: FoundryAdmin, touched: set[str]) -> dict:
-    """Foundry's own per-package warnings.
+    """Foundry's own per-package warnings, for the packages this run touched.
 
     Must be read **before** a world is launched: ``setup.mjs``'s socket handler returns
     ``{}`` once ``game.world`` is set, so this is silently empty afterwards. It is also
     the only place an install-step failure shows up — ``installPackage`` resolves ``{}``
     on one.
+
+    The source is ``getSetupData`` (``FoundryAdmin.setup_data``), never the
+    ``getPackages`` setup action: that returns the remote repository listing as a bare
+    list, and calling ``.get`` on it crashed every run from 2026-08-29 to 2026-10-03
+    straight after the modules were installed — before core, before any smoke test.
+
+    Never raises. This is a diagnostic read between "install" and "smoke test"; a
+    failure here must not strand freshly installed packages untested.
     """
     try:
-        data = fa.setup("getPackages", type="module")
+        data = fa.setup_data()
     except Exception:  # noqa: BLE001
         return {}
-    warnings = data.get("packageWarnings") or {}
+    warnings = data.get("packageWarnings") if isinstance(data, dict) else None
+    if not isinstance(warnings, dict):
+        return {}
     return {k: v for k, v in warnings.items() if k in touched}
 
 

@@ -12,7 +12,7 @@ required taking the world down would never get used.
 for ``checkPackage`` on every package and ``updateCheck`` + ``previewCompatibility`` for
 the core. That is where Foundry's own compatibility engine gets to weigh in, and it is
 the mode the real Saturday run uses. It requires no world to be active — every package
-action 403s otherwise.
+action is refused otherwise (400 on 14.369, 403 before).
 
 The output is ``plan.json``: the whole machine-readable record the adjudicator reads,
 the applier acts on, and the report is written from.
@@ -61,7 +61,7 @@ def build(*, admin: FoundryAdmin | None = None, notes: bool = True,
             _apply_foundry_check(admin, pkg, d)
         decisions.append(d)
 
-    core_decision = _core_decision(admin, core_version, policy)
+    core_decision, core_target = _core_decision(admin, core_version, policy)
 
     plan = {
         "generated": started,
@@ -77,11 +77,79 @@ def build(*, admin: FoundryAdmin | None = None, notes: bool = True,
         "upstream": {k: v.to_json(scrub=True) for k, v in resolved.items()},
         "forks": [f.to_json() for f in (forks_mod.check(packages) if check_forks else [])],
     }
+    # The core's own release notes. No LLM step used to see them, and they are the only
+    # place a change to the admin API our scripts drive is announced (14.369's Origin
+    # header, the 400/401 codes): exactly what the escalation tier needs to read.
+    if notes and core_decision.target and core_target:
+        plan["upstream"]["core"] = core_upstream(core_version, core_target)
+
     plan["buckets"] = {
         bucket: [d["id"] for d in plan["decisions"] if d["bucket"] == bucket]
         for bucket in (risk.AUTO, risk.REVIEW, risk.HOLD)
     }
     return plan
+
+
+CORE_NOTES_HOSTS = ("foundryvtt.com", "www.foundryvtt.com")
+
+
+def core_upstream(installed: str, target: dict) -> dict:
+    """An ``upstream``-shaped entry for the core, with its release page as the note."""
+    url = str(target.get("notes") or "")
+    version = str(target.get("version") or "")
+    body = core_release_notes(url) if url else None
+    return {
+        "id": "core", "type": "core", "installed": installed, "latest": version,
+        "source": "updateCheck", "protected": False, "has_update": True,
+        "notes_url": url or None, "manifest_url": None, "error": None if body else
+        ("no release-notes URL in updateCheck" if not url else "release notes unavailable"),
+        "notes": ([{"version": version, "name": f"Foundry VTT {version}", "url": url,
+                    "published": str(target.get("time") or ""), "body": body}]
+                  if body else []),
+    }
+
+
+def core_release_notes(url: str) -> str | None:
+    """The text of a foundryvtt.com release page, or None. Never raises.
+
+    ``ReleaseData.notes`` is a URL, not text. Only Foundry's own site is fetched — the
+    URL comes from the licence server, but a fetcher that follows any URL it is handed
+    is one bad payload away from being something else."""
+    import html as html_mod
+    import re
+    import urllib.parse
+
+    import requests
+
+    try:
+        parsed = urllib.parse.urlparse(url)
+    except ValueError:
+        return None
+    if parsed.scheme != "https" or parsed.hostname not in CORE_NOTES_HOSTS:
+        return None
+
+    def _fetch() -> str | None:
+        try:
+            r = requests.get(url, timeout=25, headers={"User-Agent": upstream.USER_AGENT})
+            if r.status_code != 200:
+                return None
+            text = r.text
+        except requests.RequestException:
+            return None
+        m = re.search(r"<article[^>]*>(.*?)</article>", text, re.S)
+        body = m.group(1) if m else text
+        body = re.sub(r"<(script|style)[^>]*>.*?</\1>", "", body, flags=re.S | re.I)
+        body = re.sub(r"<li[^>]*>", "\n- ", body)
+        body = re.sub(r"<(?:br|/p|/h\d|/div|/ul)[^>]*>", "\n", body)
+        body = html_mod.unescape(re.sub(r"<[^>]+>", "", body))
+        body = re.sub(r"[ \t]+", " ", body)
+        body = re.sub(r"\n\s*\n+", "\n", body).strip()
+        return body[:20000] or None
+
+    try:
+        return upstream._cached(f"core_notes_{url}", _fetch)
+    except Exception:  # noqa: BLE001 - notes are an input, never a reason to fail a scan
+        return None
 
 
 def _versions(admin: FoundryAdmin | None,
@@ -170,20 +238,20 @@ def _normalise_release(target: dict | None) -> dict | None:
 
 
 def _core_decision(admin: FoundryAdmin | None, core_version: str,
-                   policy: dict) -> risk.Decision:
+                   policy: dict) -> tuple[risk.Decision, dict | None]:
     if not admin:
         d = risk.Decision(id="core", type="core", bucket=risk.SKIP,
                           installed=core_version, target=None, bump="none")
         d.reasons = ["core update check needs the running server (licence-authenticated "
                      "POST /update) — not available in a standalone scan"]
-        return d
+        return d, None
     try:
         target = admin.update_check(policy.get("channel", "stable"))
     except Exception as exc:  # noqa: BLE001
         d = risk.Decision(id="core", type="core", bucket=risk.HOLD,
                           installed=core_version, target=None, bump="none")
         d.reasons = [f"core update check failed: {exc}"]
-        return d
+        return d, None
 
     target = _normalise_release(target)
     if not target or not target.get("version") or target.get("info"):
@@ -197,7 +265,7 @@ def _core_decision(admin: FoundryAdmin | None, core_version: str,
         # the website was advertising a newer stable, and there was nothing to inspect.
         d.reasons = [f"no core update available — licence server replied: "
                      f"{json.dumps(target)[:300] if target else 'null'}"]
-        return d
+        return d, None
 
     preview = None
     if risk.generation(str(target["version"])) == risk.generation(core_version):
@@ -210,7 +278,7 @@ def _core_decision(admin: FoundryAdmin | None, core_version: str,
             # A missing preview must not read as "clean" — say so, and let classify_core
             # see an empty preview while the reason is on the record.
             target = dict(target, _preview_error=str(exc))
-    return risk.classify_core(core_version, target, preview, policy=policy)
+    return risk.classify_core(core_version, target, preview, policy=policy), target
 
 
 def write(plan: dict, path: Path) -> Path:

@@ -79,6 +79,29 @@ if [ -f "$REPO/.state/vtt-update.entry" ]; then
   exit 0
 fi
 
+# A run that recorded `failed` and never wrote its report also never sent its own
+# notification (cli.py notifies after the report). Before 2026-10-10 this fell through
+# to "finished cleanly", so a crash after the status write was reported as nothing.
+if [ "$OUTCOME" = "failed" ] && [ "$PHASE" = "killed" ]; then
+  # vtt-update.sh's backstop killed it and `cli killed` already restored service and
+  # notified. Say nothing twice.
+  log "run was killed by the wrapper's timeout; the wrapper cleaned up and notified"
+  exit 0
+fi
+
+if [ "$OUTCOME" = "failed" ]; then
+  RUN_ID=$("$PY" -c "import json,sys;print(json.load(open('$STATUS')).get('run_id',''))" 2>/dev/null)
+  DETAIL=$("$PY" -c "import json,sys;print(json.load(open('$STATUS')).get('detail','')[:200])" 2>/dev/null)
+  if ls "$REPO"/foundry/logs/auto-updates/*-"$RUN_ID".md >/dev/null 2>&1; then
+    log "run $RUN_ID failed; its report exists, so it notified itself"
+  else
+    log "run $RUN_ID failed with no report — notifying"
+    notify failed "update run failed" \
+      "The 04:06 run ($RUN_ID) ended as failed and wrote no report: ${DETAIL:-see .state/logs/}"
+  fi
+  exit 0
+fi
+
 log "run finished cleanly as '$OUTCOME' — nothing to do"
 find "$LOG_DIR" -name 'vtt-update-watchdog-*.log' -mtime +90 -delete 2>/dev/null
 exit 0

@@ -104,6 +104,26 @@ if ! run_with_timeout "$STARTUP_TIMEOUT" "$PY" -c "pass" >/dev/null 2>&1; then
   exit 75
 fi
 
+# With escalation enabled (foundry/update-policy.yml), the backstop is the 90 minutes a
+# run always had plus escalation.max_minutes (40) — 130 minutes, so a stuck 04:06 run is
+# killed at ~06:16. An explicit VTT_UPDATE_TIMEOUT wins; a policy that cannot be read
+# keeps 5400.
+if [ -z "${VTT_UPDATE_TIMEOUT:-}" ]; then
+  # Into a file, not $(…): the timeout helper's background killer would hold a
+  # command-substitution pipe open for the full STARTUP_TIMEOUT. The file is overwritten
+  # each run and left in .state/ (it holds one number).
+  TO_FILE="$REPO/.state/vtt-update.timeout"
+  run_with_timeout "$STARTUP_TIMEOUT" "$PY" -c \
+    "from scripts.foundry.update.escalate import wrapper_timeout; print(wrapper_timeout())" \
+    > "$TO_FILE" 2>/dev/null
+  POLICY_TIMEOUT=$(head -n1 "$TO_FILE" 2>/dev/null)
+  case "$POLICY_TIMEOUT" in
+    ''|*[!0-9]*) ;;
+    *) RUN_TIMEOUT=$POLICY_TIMEOUT ;;
+  esac
+fi
+echo "  run timeout ${RUN_TIMEOUT}s" >> "$LOG"
+
 # caffeinate -i (no idle sleep) -m (no disk sleep), holding the assertion for exactly
 # as long as the run takes.
 run_with_timeout "$RUN_TIMEOUT" caffeinate -im "$PY" -m scripts.foundry.update.cli run "$@" >> "$LOG" 2>&1
@@ -111,6 +131,11 @@ RC=$?
 
 if [ "$RC" -eq 143 ] || [ "$RC" -eq 137 ]; then
   echo "  ✗ run exceeded ${RUN_TIMEOUT}s and was terminated" >> "$LOG"
+  # The kill skipped every except/finally in Python: status still says "running", the
+  # entry state was not restored, the lock is still held and nobody was told. The 06:12
+  # watchdog only catches that if the kill landed before it ran. So clean up here, every
+  # time: mark the status, restore service, release the dead lock, notify.
+  run_with_timeout 900 "$PY" -m scripts.foundry.update.cli killed --after "$RUN_TIMEOUT" >> "$LOG" 2>&1
 fi
 
 echo "$(date -u +%FT%TZ) vtt-update finished rc=$RC" >> "$LOG"

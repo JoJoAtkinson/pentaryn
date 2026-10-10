@@ -8,6 +8,7 @@
     python -m scripts.foundry.update.cli notify --demo   # one notification of each class
     python -m scripts.foundry.update.cli admin-configure # set Foundry's admin password
     python -m scripts.foundry.update.cli recover-service # put world + tunnel back
+    python -m scripts.foundry.update.cli killed --after N  # the wrapper's backstop fired
 
 Use the make targets rather than this directly; they are the documented surface.
 """
@@ -37,15 +38,24 @@ def cmd_scan(args) -> int:
                   file=sys.stderr)
             return 1
         if fa.world_active():
-            print("  ✗ a world is active; every package action 403s while one is. "
+            print("  ✗ a world is active; every package action is refused while one is. "
                   "Omit --foundry, or stop the world first.", file=sys.stderr)
             return 1
 
     result = plan_mod.build(admin=fa, notes=args.notes, check_forks=not args.no_forks)
+    preview = None
+    if args.escalation:
+        # Facts, floor and ceiling only — no LLM call, nothing written.
+        from scripts.foundry.update import escalate, risk
+        preview = escalate.preview(result, risk.load_policy())
     if args.json:
-        print(json.dumps(result, indent=2))
+        print(json.dumps(result if preview is None else {**result, "escalation_preview": preview},
+                         indent=2))
     else:
         print(plan_mod.render_text(result))
+        if preview is not None:
+            print()
+            print(escalate.render_preview(preview))
     if args.out:
         plan_mod.write(result, Path(args.out))
         print(f"\n  → {args.out}")
@@ -71,6 +81,19 @@ def cmd_run(args) -> int:
             print(f"      · {step}")
     for message in result.messages:
         print(f"  · {message}")
+    if result.traceback:
+        print(result.traceback.rstrip())
+    if result.escalation:
+        esc = result.escalation
+        print(f"  ▲ escalation: tier {esc.get('tier')} (floor {esc.get('tier_floor')}, "
+              f"ceiling {esc.get('tier_ceiling')})"
+              + (f" — {esc['skipped']}" if esc.get("skipped") else ""))
+        for pkg, a in (esc.get("analysis") or {}).items():
+            print(f"      {pkg}: {a.get('impact', '?')} / {a.get('recommendation', '?')}"
+                  + (" (cached)" if a.get("cached") else "")
+                  + (f" — {a['error']}" if a.get("error") else "")
+                  + (f" → {a['path']}" if a.get("path") else ""))
+        print(f"  {report_mod.cost_line(result.to_json())}")
 
     if args.dry:
         from scripts.foundry.update import plan as plan_mod
@@ -79,13 +102,19 @@ def cmd_run(args) -> int:
             print(plan_mod.render_text(result.plan))
         return 0
 
-    md_path, json_path = report_mod.write(result.to_json(), use_llm=not args.skip_llm)
+    policy = _policy()
+    md_path, json_path = report_mod.write(result.to_json(), use_llm=not args.skip_llm,
+                                          policy=policy)
     print(f"  report: {md_path.relative_to(REPO_ROOT)}")
 
-    policy_report = _policy().get("report", {}) or {}
+    # Plans the escalation step wrote ride along with the report — same explicit
+    # pathspec, never `-A`. Only paths under the plans directory are accepted.
+    plan_paths = _plan_paths(result)
+
+    policy_report = policy.get("report", {}) or {}
     if policy_report.get("commit", True):
         for message in report_mod.commit_and_push(
-                [md_path, json_path], push=policy_report.get("push", True)):
+                [md_path, json_path, *plan_paths], push=policy_report.get("push", True)):
             result.messages.append(message)
             print(f"  · {message}")
 
@@ -198,14 +227,69 @@ def cmd_recover_service(args) -> int:
     from scripts.foundry.update import apply as apply_mod, state
 
     entry = state.EntryState.read()
+    messages: list[str] = []
+    if state.release_if_owner_dead():
+        messages.append("removed the dead run's lock (make vtt-up refuses while it exists)")
     if not entry:
         print("  nothing to restore — no interrupted run recorded")
+        for message in messages:
+            print(f"  · {message}")
         return 0
-    messages: list[str] = []
     apply_mod.restore_service(entry, messages)
     for message in messages or ["service restored"]:
         print(f"  · {message}")
     return 0
+
+
+def cmd_killed(args) -> int:
+    """The wrapper's backstop killed the run (``automation/bin/vtt-update.sh``).
+
+    SIGTERM then SIGKILL: none of the run's own ``except``/``finally`` blocks ran, so the
+    status still says ``running``, the entry state was not restored, the lock is still
+    held and nothing was reported. The 06:12 watchdog would catch that — but only if the
+    kill landed before it, and a slow escalation Saturday can move the kill past it. So
+    whoever kills the run cleans up after it: mark the status, put service back the way
+    the run found it (what the watchdog would do), release the dead lock, and notify."""
+    from scripts.foundry.update import apply as apply_mod, notify, state
+
+    status = state.read_status() or {}
+    if status.get("outcome") not in (None, "", "running"):
+        print(f"  run {status.get('run_id')} had already finished as "
+              f"{status.get('outcome')!r} — nothing to clean up")
+        return 0
+    run_id, phase = status.get("run_id", "?"), status.get("phase", "?")
+    detail = f"killed by the wrapper after {args.after}s, in phase {phase}"
+    # phase "killed" is what the watchdog looks for, so it does not alert a second time.
+    state.RunStatus(run_id=run_id, started=float(status.get("started") or 0),
+                    phase="killed", outcome="failed", detail=detail).write()
+
+    messages: list[str] = []
+    entry = state.EntryState.read()
+    if entry:
+        try:
+            apply_mod.restore_service(entry, messages)
+        except Exception as exc:  # noqa: BLE001 - still notify
+            messages.append(f"could not restore service: {exc}")
+    if state.release_if_owner_dead():
+        messages.append("released the dead run's lock")
+    for message in messages:
+        print(f"  · {message}")
+    notify.notify("failed", f"update run killed ({run_id})",
+                  f"{detail}. Anything it installed is live and untested; nothing was "
+                  f"rolled back. " + "; ".join(messages)[:300]
+                  + " Restore point: the newest OneDrive snapshot (make foundry-restore).")
+    return 0
+
+
+def _plan_paths(result) -> list[Path]:
+    from scripts.foundry.update import escalate
+    plans_dir = escalate.PLANS_DIR.resolve()
+    out: list[Path] = []
+    for rel in (result.escalation or {}).get("plans") or []:
+        path = (REPO_ROOT / rel).resolve()
+        if path.parent == plans_dir and path.suffix == ".md" and path.is_file():
+            out.append(path)
+    return out
 
 
 def _policy() -> dict:
@@ -222,6 +306,8 @@ def main(argv: list[str] | None = None) -> int:
                       help="also ask the running server (needs no active world)")
     scan.add_argument("--notes", action="store_true", help="fetch release notes too")
     scan.add_argument("--no-forks", action="store_true", help="skip the GitHub fork check")
+    scan.add_argument("--escalation", action="store_true",
+                      help="also preview escalation facts, floor and ceiling (no LLM)")
     scan.add_argument("--json", action="store_true")
     scan.add_argument("--out", help="also write plan.json here")
     scan.set_defaults(func=cmd_scan)
@@ -231,7 +317,8 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--force", action="store_true",
                      help="ignore the pause file, the time window and connected users")
     run.add_argument("--skip-llm", action="store_true",
-                     help="no adjudication and no written report; holds every review item")
+                     help="no adjudication, no escalation and no written report; holds "
+                          "every review item")
     run.set_defaults(func=cmd_run)
 
     status = sub.add_parser("status", help="what the last run did")
@@ -255,6 +342,11 @@ def main(argv: list[str] | None = None) -> int:
     recover_cmd = sub.add_parser("recover-service",
                                  help="restore world + tunnel after an interrupted run")
     recover_cmd.set_defaults(func=cmd_recover_service)
+
+    killed_cmd = sub.add_parser("killed", help="clean up after the wrapper's backstop "
+                                               "killed a run (called by vtt-update.sh)")
+    killed_cmd.add_argument("--after", type=int, default=0, help="the timeout, seconds")
+    killed_cmd.set_defaults(func=cmd_killed)
 
     args = parser.parse_args(argv)
     return args.func(args)

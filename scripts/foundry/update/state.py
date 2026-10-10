@@ -96,6 +96,30 @@ class Lock:
         self.release()
 
 
+def release_if_owner_dead(path: Path | None = None) -> bool:
+    """Remove the lock if the process that took it is gone. Returns True if removed.
+
+    A run killed by the wrapper's backstop (SIGTERM, then SIGKILL) never reaches its
+    ``finally``, so the lock directory outlives it — and ``make vtt-up``'s lock check
+    refuses to start the table while it exists, with no staleness test of its own. A
+    lock whose owner is still alive is never touched, however old."""
+    path = path or LOCK_DIR
+    if not path.is_dir():
+        return False
+    pid = Lock(path).owner().get("pid")
+    try:
+        if pid is not None and _pid_alive(int(pid)):
+            return False
+    except (TypeError, ValueError):
+        pass
+    (path / "owner.json").unlink(missing_ok=True)
+    try:
+        path.rmdir()
+    except OSError:
+        return False
+    return True
+
+
 def _pid_alive(pid: int) -> bool:
     try:
         os.kill(pid, 0)

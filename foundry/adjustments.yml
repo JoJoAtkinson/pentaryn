@@ -1,0 +1,212 @@
+# The adjustments registry — every place our code leans on, patches, works around or extends
+# a third-party package. Read by the Saturday updater's escalation step
+# (scripts/foundry/update/escalate.py) and checked by `make foundry-adjustments-check`.
+#
+# Design: context/plans/smarter-updater.md. Use-doc: context/foundry/automated-updates.md.
+#
+# Row fields
+#   id            stable kebab-case id; the analyst's "Still needed?" verdicts cite it
+#   packages      upstream package ids this row depends on, or `core` / `dnd5e`
+#   modules       which of OUR modules (or `scripts/foundry`) carries the adjustment
+#   files         repo-relative files the adjustment lives in. The check fails when one is gone.
+#   markers       literal strings that must still appear somewhere in `files`. The check fails
+#                 when none of the files carries one, so a refactor cannot silently orphan a row.
+#   what / why    one line each, for the analyst and for Joe
+#   native_when   what in a release note would mean the package now does this itself
+#   retire_class  safe = a flag/CSS/one-liner whose removal the module's tests cover
+#                 guarded = needs a human to confirm at the table
+#                 never = load-bearing; the package will not take it over
+#   check         the command that proves the adjustment still works
+#
+# Every row was opened and confirmed against the source on 2026-10-10. Two seed rows from the
+# plan were dropped on that read, and are recorded here so nobody re-adds them blind:
+#   argon-toolbar-neighbour   pentaryn-ties' Attribute Review button only sets `order: 60`;
+#                             Argon is named in a comment, no Argon API is used.
+#   core-admin-api/cloud.py   cloud.py only probes :30000; it does not use the admin API.
+
+# Extra search terms for the exposure grep (escalate.py), per package. The package id itself is
+# always searched; these catch code that names the package by its global instead. Matched
+# case-insensitively as plain substrings.
+aliases:
+  enhancedcombathud: ["ui.ARGON", "CONFIG.ARGON", "ArgonComponent"]
+  enhancedcombathud-dnd5e: ["CONFIG.ARGON", "ArgonComponent"]
+  item-piles: ["game.itempiles", "itempiles"]
+  dice-so-nice: ["dice3d"]
+  lib-wrapper: ["libWrapper"]
+
+adjustments:
+  - id: argon-panel-injection
+    packages: [enhancedcombathud, enhancedcombathud-dnd5e]
+    modules: [pentaryn-transform]
+    files: [foundry/module/pentaryn-transform/hud.mjs]
+    markers: ["ArgonComponent", "CONFIG.ARGON"]
+    what: Wild Shape / Starry Form buttons injected via render*ArgonComponent hooks; subclasses Argon's closure-private dnd5e button classes through CONFIG.ARGON.MAIN.BUTTONS
+    why: Argon exposes no add-a-button API
+    native_when: an "add button to panel" API, or a dnd5e transform / wild-shape panel of its own
+    retire_class: never
+    check: make foundry-transform-check
+
+  - id: argon-target-picker-cancel
+    packages: [enhancedcombathud]
+    modules: [pentaryn-transform]
+    files: [foundry/module/pentaryn-transform/hud.mjs]
+    markers: ["cancelTargetPicker", "mouseup"]
+    what: dispatches a synthetic right-button mouseup to cancel Argon's target picker before a form swap; Escape bound to the same
+    why: the picker instance is private to Argon's bundle; right-click is its only cancel
+    native_when: a public cancelTargeting() / cancel API on the picker
+    retire_class: guarded
+    check: make foundry-transform-check
+
+  - id: argon-bonus-used-tracking
+    packages: [enhancedcombathud]
+    modules: [pentaryn-transform]
+    files: [foundry/module/pentaryn-transform/transform.mjs, foundry/module/pentaryn-transform/hud.mjs]
+    markers: ["bonusUsedNow"]
+    what: re-marks "bonus action used" after Argon rebuilds the HUD on a token swap
+    why: Argon keeps used-state on the panel instance, which a token swap destroys
+    native_when: bonus-used state kept on the actor/combatant rather than the panel instance
+    retire_class: guarded
+    check: make foundry-transform-check
+
+  - id: argon-portrait-hp
+    packages: [enhancedcombathud]
+    modules: [pentaryn-transform]
+    files: [foundry/module/pentaryn-transform/hud.mjs, foundry/module/pentaryn-transform/transform-core.mjs]
+    markers: ["renderPortraitPanelArgonComponent", "111/99"]
+    what: repaints the portrait HP so temp HP reads "99+12 / 99" instead of "111/99"
+    why: Argon prints value + temp over max
+    native_when: the portrait shows temp HP separately
+    retire_class: safe
+    check: make foundry-transform-check
+
+  - id: argon-tooltip-clear
+    packages: [enhancedcombathud]
+    modules: [pentaryn-transform]
+    files: [foundry/module/pentaryn-transform/hud.mjs]
+    markers: ["ARGON._tooltip"]
+    what: nulls ui.ARGON._tooltip so a stale tooltip does not survive a re-render
+    why: Argon does not clear its tooltip on re-render
+    native_when: Argon clears its own tooltip on re-render
+    retire_class: safe
+    check: make foundry-transform-check
+
+  - id: dsn-skip-blind-study
+    packages: [dice-so-nice]
+    modules: [pentaryn-ties]
+    files: [foundry/module/pentaryn-ties/study.mjs]
+    markers: ['"dice-so-nice": { skip: true }']
+    what: sets flags["dice-so-nice"].skip on blind Study rolls so the GM's dice do not animate a secret check
+    why: DSN animates blind rolls for the roller
+    native_when: DSN hides blind rolls by itself, or renames/removes the skip flag
+    retire_class: safe
+    check: make foundry-ties-check
+
+  - id: itempiles-corpses
+    packages: [item-piles, itempilesdnd5e]
+    modules: [pentaryn-dropbin]
+    files: [foundry/module/pentaryn-dropbin/corpses.mjs, foundry/module/pentaryn-dropbin/dropbin.mjs, foundry/module/pentaryn-dropbin/loot.mjs]
+    markers: ["itempiles"]
+    what: turns a 0-HP NPC into a pile, the corpse eye, Loot all
+    why: Item Piles has no corpse / loot-all flow
+    native_when: Item Piles ships a native corpse or loot-all flow
+    retire_class: never
+    check: make foundry-dropbin-check
+
+  - id: itempiles-attunement-repair
+    packages: [item-piles]
+    modules: [pentaryn-attunement]
+    files: [foundry/module/pentaryn-attunement/attunement.mjs]
+    markers: ["isValidItemPile"]
+    what: repairs attunement on items that arrive already attuned (an Item Piles Take, a sheet drop, an import); skips pile actors themselves
+    why: dnd5e attunement is not re-checked when an item moves actors
+    native_when: dnd5e or Item Piles clears attunement on transfer
+    retire_class: guarded
+    check: make foundry-attunement-check
+
+  - id: dnd5e-armor-proficiencies
+    packages: [dnd5e]
+    modules: [pentaryn-attunement]
+    files: [foundry/module/pentaryn-attunement/attunement.mjs]
+    markers: ["armorProficienciesMap"]
+    what: patches CONFIG.DND5E.armorProficienciesMap, which covers only natural/clothing/light/medium/heavy/shield
+    why: armour types outside the map read as non-proficient
+    native_when: the map (or its replacement) covers every armour type
+    retire_class: guarded
+    check: make foundry-attunement-check
+
+  - id: dnd5e-chat-card-flags
+    packages: [dnd5e]
+    modules: [pentaryn-aoe, pentaryn-senses, pentaryn-riders]
+    files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/attacks.mjs, foundry/module/pentaryn-senses/light.mjs, foundry/module/pentaryn-riders/riders.mjs]
+    markers: ["flags?.dnd5e", "flags.dnd5e"]
+    what: reads flags.dnd5e.roll / .activity / .item / .originatingMessage on chat messages; dnd5e 6.x moves chat-card data to message.type / message.system
+    why: the only way to find the attack/damage message an effect belongs to
+    native_when: n/a — a data-shape dependency, not a workaround
+    retire_class: never
+    check: make foundry-aoe-check
+
+  - id: dnd5e-importer-gate
+    packages: [dnd5e]
+    modules: [pentaryn-importer, scripts/foundry]
+    files: [foundry/module/pentaryn-importer/pentaryn-importer.mjs, scripts/foundry/build_actors.py]
+    markers: ["targetSystemVersion", "TARGET_SYSTEM_VERSION"]
+    what: the importer refuses JSON built for another dnd5e minor (TARGET_SYSTEM_VERSION "5.3"); build_actors.py hard-codes 5.3.3 enums
+    why: CONTRACT.md §1 — actor JSON is built against one system's data model
+    native_when: n/a
+    retire_class: never
+    check: pytest scripts/tests/
+
+  - id: core-admin-api
+    packages: [core]
+    modules: [scripts/foundry]
+    files: [scripts/foundry/update/admin.py, scripts/foundry/ops/login.py, automation/smoke/smoke.mjs]
+    markers: ["Origin", "worldShutdown", "/join"]
+    what: the documented assumptions about /setup, /auth, /join, /update and the socket — the same-origin Origin header (14.369), the 400/401 codes, worldShutdown
+    why: the updater, login and smoke drive Foundry's undocumented admin surface
+    native_when: n/a
+    retire_class: never
+    check: pytest scripts/tests/test_admin_api_369.py
+
+  - id: core-portals-relative-uuid
+    packages: [core]
+    modules: [pentaryn-portals]
+    files: [foundry/module/pentaryn-portals/portals.mjs, foundry/module/pentaryn-portals/portals-core.mjs]
+    markers: ["relative: behavior"]
+    what: resolves the relative region UUIDs that 14.368+ stores for same-scene destinations (DocumentUUIDField relativize)
+    why: comparing raw stored UUIDs misses a same-scene link
+    native_when: n/a
+    retire_class: never
+    check: make foundry-portals-check
+
+  - id: core-ties-flag-wipe
+    packages: [core]
+    modules: [pentaryn-ties]
+    files: [foundry/module/pentaryn-ties/known-core.mjs, foundry/module/pentaryn-ties/look.mjs, foundry/module/pentaryn-ties/preview.mjs]
+    markers: ["ForcedDeletion"]
+    what: recognises a whole-scope flag deletion with or without the `-=` marker (14.369 migrates `-=` keys to a ForcedDeletion operator)
+    why: a wiped scope otherwise reads as an ordinary update and the ledger goes stale
+    native_when: n/a
+    retire_class: never
+    check: make foundry-ties-check
+
+  - id: core-transform-unwrap
+    packages: [core]
+    modules: [pentaryn-transform]
+    files: [foundry/module/pentaryn-transform/transform.mjs]
+    markers: ["_preUpdateOperation"]
+    what: wraps TokenDocument._preUpdateOperation to unwrap ForcedReplacement operators for a revert inside a region
+    why: core hands raw operators to region behaviours
+    native_when: core unwraps operators before region behaviours see them
+    retire_class: guarded
+    check: make foundry-transform-check
+
+  - id: creatures-libwrapper
+    packages: [lib-wrapper]
+    modules: [pentaryn-creatures]
+    files: [foundry/module/pentaryn-creatures/creatures.mjs]
+    markers: ["libWrapper.register"]
+    what: wraps core methods through libWrapper when it is active, with a manual-patch fallback
+    why: plays nicely with other modules wrapping the same methods
+    native_when: n/a
+    retire_class: never
+    check: make foundry-creatures-check

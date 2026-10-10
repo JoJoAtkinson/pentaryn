@@ -264,7 +264,7 @@ def _ensure_world(fa: FoundryAdmin, world: str, prompt: bool) -> None:
         if not fa.deactivate_world():
             raise RuntimeError(
                 "could not deactivate the running world — Foundry refuses "
-                "POST /join {shutdown} unless an admin password is configured "
+                "POST /setup {worldShutdown} unless an admin password is configured "
                 "(make foundry-admin-configure)."
             )
         time.sleep(SETTLE_SECONDS)

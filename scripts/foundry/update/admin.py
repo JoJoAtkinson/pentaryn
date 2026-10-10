@@ -6,26 +6,37 @@ typed front door onto it rather than a reimplementation. Read
 ``/Applications/Foundry Virtual Tabletop.app/Contents/Resources/app/dist/server/views/``
 if you want the other side of any of these calls.
 
-Three facts about that API shape this whole file:
+Five facts about that API shape this whole file (re-checked against 14.369's
+``dist/server``; where 14.369 changed one, the older behaviour is noted):
+
+0. **Every POST must look same-origin (14.369+).** ``express.mjs`` answers any POST
+   whose ``Sec-Fetch-Site`` is not ``same-origin`` — or, with no such header, whose
+   ``Origin`` is missing or differs from ``protocol://host`` — with **400 "The request
+   could not be processed."** before any route runs. A browser sends both headers; a
+   script sends neither. So :class:`FoundryAdmin` sends ``Origin: <base_url>`` on every
+   request. Without it every action 400s and ``/auth`` *looks* like it succeeded.
 
 1. **Every ``/setup`` and ``/update`` package action is gated on ``!game.world``.**
-   They return 403 while a world is active (``setup.mjs``: ``c = !game.world && adminOk``).
-   So the updater has to park the server at the setup screen before it can do anything.
+   While a world is active ``/setup`` answers **400** with that same "could not be
+   processed" body (14.367: 403) and ``/update`` answers 403. A non-admin session gets
+   **401** from ``/setup`` (14.367: 403). So the updater has to park the server at the
+   setup screen before it can do anything.
 
-2. **``POST /setup {shutdown: true}`` does not work from a script.** It calls
-   ``world.deactivate(req, {asAdmin: c})`` with that same always-false ``c``, and
-   ``world.mjs`` then bails to ``{redirect: "/join"}`` because a curl session has no
-   ``req.user``. The only script-reachable graceful deactivate is
-   ``POST /join {action: "shutdown", adminPassword}`` — which needs an admin password.
-   Since a OneDrive backup needs the server fully stopped anyway, we quit the app
-   instead: exactly what ``make vtt-down`` has done safely every session.
+2. **The graceful deactivate is ``POST /setup {action: "worldShutdown",
+   adminPassword}`` (14.369+).** It authenticates the password strictly, then calls
+   ``world.deactivate(req, {asAdmin})`` and redirects to ``/setup`` on success or
+   ``/join`` on refusal. The old route, ``POST /join {action: "shutdown"}``, is gone:
+   14.369's ``join.mjs`` ignores the action and answers 200 ``{}``.
+   :meth:`FoundryAdmin.deactivate_world` tries the new route and falls back to the old
+   one, so a core rollback to 14.367 still deactivates.
 
 3. **The world-active gate gets applied to the *actions*, not to the admin
-   handshake.** ``setup.mjs`` runs ``sessions.authenticateAdmin`` before it computes
-   ``c``, so ``/setup`` is the one route that can establish an admin session at any
-   time — which is why ``authenticate()`` uses it whenever a world is up. ``/auth``
-   cannot: it short-circuits on ``!game.world`` and never checks the password at all,
-   while reporting the same redirect it uses for a rejection.
+   handshake.** ``setup.mjs`` runs ``sessions.authenticateAdmin(…, {strict: true})``
+   before its world-active test, so ``/setup`` is the one route that can establish an
+   admin session at any time — which is why ``authenticate()`` uses it whenever a world
+   is up. ``/auth`` cannot: with a world up it redirects to ``/join`` without checking
+   the password, and on a bad password it re-renders the form (401) rather than
+   redirecting. Only a redirect to ``/setup`` means success.
 
 4. **Several actions are fire-and-forget.** ``createSnapshot``, ``restoreSnapshot``,
    ``restoreBackup`` and ``launchWorld`` return ``{}`` at once and emit progress (and
@@ -75,6 +86,29 @@ PACKAGE_DIR = {"module": MODULES_DIR, "system": SYSTEMS_DIR, "world": WORLDS_DIR
 
 class FoundryError(RuntimeError):
     """A Foundry API call returned an ``error`` field, or refused the request."""
+
+
+# 14.369's express.mjs answers a cross-origin POST with exactly this body — and so does
+# setup.mjs, for any action other than worldShutdown/editWorld while a world is active.
+REFUSED_400 = "The request could not be processed."
+
+
+def _redirect_target(r: requests.Response) -> str:
+    """Where a 3xx points, without its trailing slash; "" for anything else."""
+    if r.status_code not in (301, 302, 303, 307, 308):
+        return ""
+    return (r.headers.get("Location") or "").rstrip("/")
+
+
+def _error_text(r: requests.Response) -> str:
+    """The ``error`` field of a JSON refusal, else the start of the body."""
+    try:
+        data = r.json()
+    except ValueError:
+        return (r.text or "")[:200]
+    if isinstance(data, dict) and data.get("error"):
+        return str(data["error"])[:200]
+    return (r.text or "")[:200]
 
 
 class Timeout(RuntimeError):
@@ -168,6 +202,20 @@ def start_app(timeout: float = 120.0) -> None:
     raise Timeout(f"{APP_NAME} did not answer on {BASE_URL} within {timeout:.0f}s")
 
 
+def parse_ack(payload: str, ack_id: int = 1) -> dict | None:
+    """The first argument of socket.io ack ``ack_id`` in one polling response, or None.
+
+    A polling response is Engine.IO packets joined by ``\x1e``; an ack to the default
+    namespace is Engine.IO MESSAGE (4) + Socket.IO ACK (3) + the id + a JSON array.
+    """
+    prefix = f"43{ack_id}["
+    for packet in payload.split("\x1e"):
+        if packet.startswith(prefix):
+            args = json.loads(packet[len(prefix) - 1:])
+            return args[0] if args else {}
+    return None
+
+
 # ── HTTP client ──────────────────────────────────────────────────────────────
 
 class FoundryAdmin:
@@ -179,6 +227,9 @@ class FoundryAdmin:
         self.timeout = timeout
         self._admin_password = admin_password
         self.session = requests.Session()
+        # Fact 0: 14.369 refuses any POST that does not look same-origin. This is the
+        # header a browser on the Foundry page sends; it is not a credential.
+        self.session.headers["Origin"] = self.base_url
         self._authenticated = False
 
     # -- status -------------------------------------------------------------
@@ -227,6 +278,8 @@ class FoundryAdmin:
             body["adminPassword"] = self._admin_password
 
         if self.world_active():
+            # The action is refused (400 on 14.369, 403 before) *after* the password
+            # check has set the flag — expected, and the reason the status is ignored.
             self.session.post(
                 f"{self.base_url}/setup",
                 json={"action": "listBackups", **body},
@@ -235,24 +288,40 @@ class FoundryAdmin:
             if self._admin_password and not self.join_data().get("isAdmin"):
                 raise FoundryError(
                     "admin authentication failed — Foundry reports the session is not "
-                    "admin after /setup accepted the password field. The configured "
-                    "password (Config/admin.txt) and the one supplied differ. "
-                    "Re-sync it with: make foundry-admin-push"
+                    "admin after posting the password to /setup. Either the configured "
+                    "password (Config/admin.txt) and the one supplied differ (re-sync "
+                    "with: make foundry-admin-push), or the server refused the POST "
+                    "outright — 14.369+ does that to any POST without a same-origin "
+                    "Origin header."
                 )
             self._authenticated = True
             return
 
         r = self.session.post(f"{self.base_url}/auth", data=body,
                               timeout=self.timeout, allow_redirects=False)
-        # /auth redirects to /setup on success, back to /auth on failure.
-        location = r.headers.get("Location", "")
-        if r.status_code == 403 or location.endswith("/auth"):
+        # /auth redirects to /setup on success — and ONLY then. A bad password re-renders
+        # the form (401 on 14.369, a redirect back to /auth on 14.367); a world that came
+        # up in between redirects to /join; 14.369's same-origin guard answers 400. Every
+        # one of those used to slip through as success.
+        location = _redirect_target(r)
+        if location.endswith("/setup"):
+            self._authenticated = True
+            return
+        if r.status_code == 400:
             raise FoundryError(
-                "admin authentication failed — an admin password is configured "
-                "(Config/admin.txt) and the one supplied did not match. "
-                "Re-sync it with: make foundry-admin-push"
+                f"admin authentication refused before the password was checked "
+                f"(HTTP 400 {_error_text(r)!r}) — Foundry 14.369+ rejects a POST whose "
+                f"Origin does not match the server; this client sends {self.base_url!r}."
             )
-        self._authenticated = True
+        if location.endswith("/join"):
+            raise FoundryError("admin authentication raced a world launch — /auth "
+                               "redirected to /join. Retry.")
+        raise FoundryError(
+            "admin authentication failed — an admin password is configured "
+            "(Config/admin.txt) and the one supplied did not match "
+            f"(HTTP {r.status_code}{', → ' + location if location else ''}). "
+            "Re-sync it with: make foundry-admin-push"
+        )
 
     def join_data(self) -> dict:
         """``getJoinData`` over socket.io's polling transport.
@@ -261,17 +330,44 @@ class FoundryAdmin:
         it carries no users and no admin flag. Everything the ``/join`` page renders
         arrives over the socket instead, so a script that wants the user list (to find
         the GM without pinning an id) or ``isAdmin`` (to verify an admin handshake) has
-        to speak socket.io. The polling transport is plain HTTP: handshake, connect to
-        the default namespace, emit, read the ack.
+        to speak socket.io.
 
         Returns ``{}`` when no world is active — ``join.mjs``'s handler short-circuits
         on ``!game.world``.
+        """
+        return self._socket_call("getJoinData")
+
+    def setup_data(self) -> dict:
+        """``getSetupData`` — the payload the ``/setup`` page renders from.
+
+        This is the **only** place ``packageWarnings`` (``globalThis.packages.warnings``,
+        keyed by package id, each ``{id, type, warning: [...], error: [...]}``) is
+        vended. The ``getPackages`` setup *action* is something else entirely: it
+        returns the remote repository listing as a bare **list** (``views.mjs``:
+        ``return Array.from(r.values())``), with no warnings in it. Reading
+        ``packageWarnings`` off that list is what crashed every run from 2026-08-29 to
+        2026-10-03 with ``'list' object has no attribute 'get'``.
+
+        ``setup.mjs handleSocket`` returns ``{}`` while a world is active, or when an
+        admin password is configured and this session is not admin.
+        """
+        self.authenticate()
+        return self._socket_call("getSetupData")
+
+    def _socket_call(self, event: str, timeout: float | None = None) -> dict:
+        """Emit one acked event over socket.io's polling transport and return the ack.
+
+        The polling transport is plain HTTP: Engine.IO handshake, connect to the
+        default namespace, emit with ack id 1, then poll until the ``431[...]`` ack
+        arrives. A poll can carry several packets separated by ``\x1e``, and the
+        server may push unrelated events ahead of the ack, so the ack is picked out by
+        packet rather than by grabbing everything after the first ``431``.
         """
         q = {"EIO": "4", "transport": "polling"}
         r = self.session.get(f"{self.base_url}/socket.io/", params=q, timeout=self.timeout)
         r.raise_for_status()
         # Engine.IO frames are a single-digit packet type followed by the payload.
-        sid = json.loads(r.text[1:])["sid"]
+        sid = json.loads(r.text[1:].split("\x1e", 1)[0])["sid"]
 
         q_sid = {**q, "sid": sid}
         self.session.post(f"{self.base_url}/socket.io/", params=q_sid, data="40",
@@ -279,14 +375,19 @@ class FoundryAdmin:
         self.session.get(f"{self.base_url}/socket.io/", params=q_sid,
                          timeout=self.timeout)                       # CONNECT ack
         self.session.post(f"{self.base_url}/socket.io/", params=q_sid,
-                          data='421["getJoinData"]', timeout=self.timeout)
-        r = self.session.get(f"{self.base_url}/socket.io/", params=q_sid,
-                             timeout=self.timeout)
-        r.raise_for_status()
-        m = re.search(r"431(\[.*)", r.text, re.S)
-        if not m:
-            raise FoundryError(f"getJoinData returned no ack payload: {r.text[:200]!r}")
-        return json.loads(m.group(1))[0]
+                          data=f"421[{json.dumps(event)}]",
+                          timeout=self.timeout)
+        deadline = time.monotonic() + (timeout or self.timeout)
+        seen = ""
+        while time.monotonic() < deadline:
+            r = self.session.get(f"{self.base_url}/socket.io/", params=q_sid,
+                                 timeout=self.timeout)
+            r.raise_for_status()
+            seen = r.text
+            ack = parse_ack(r.text, ack_id=1)
+            if ack is not None:
+                return ack
+        raise FoundryError(f"{event} returned no ack payload: {seen[:200]!r}")
 
     def reauthenticate(self) -> None:
         """Force a fresh admin handshake.
@@ -306,7 +407,9 @@ class FoundryAdmin:
         self.authenticate()
         r = self.session.post(f"{self.base_url}{route}", json=payload,
                               timeout=self.timeout, allow_redirects=False)
-        if r.status_code == 403 and not _retried and self._admin_password:
+        # 401 (/setup, 14.369+) and 403 (/update; /setup before 14.369) both mean "this
+        # session is not admin".
+        if r.status_code in (401, 403) and not _retried and self._admin_password:
             # Sessions live in the server's memory, so ANY restart invalidates the
             # cookie and every admin call starts 403ing. A core update restarts the
             # process by design (`Updater.restart()` respawns it), which made a
@@ -315,11 +418,18 @@ class FoundryAdmin:
             # One transparent re-auth turns that into a non-event.
             self.reauthenticate()
             return self._post(route, payload, _retried=True)
-        if r.status_code == 403:
+        if r.status_code in (401, 403):
             raise FoundryError(
-                f"{route} {payload.get('action')} refused (403) — a world is active, "
-                "or admin auth was rejected. Package actions need the setup screen."
+                f"{route} {payload.get('action')} refused ({r.status_code}) — a world is "
+                "active, or admin auth was rejected. Package actions need the setup screen."
             )
+        if r.status_code == 400:
+            err = _error_text(r)
+            hint = (" — on 14.369+ /setup answers this while a world is active (package "
+                    "actions need the setup screen), and so does the same-origin guard "
+                    "for a POST without a matching Origin header"
+                    if err == REFUSED_400 else "")
+            raise FoundryError(f"{route} {payload.get('action')} refused (400): {err}{hint}")
         r.raise_for_status()
         try:
             data = r.json()
@@ -413,30 +523,43 @@ class FoundryAdmin:
     def deactivate_world(self) -> bool:
         """Return the server to the setup screen **without quitting the app**.
 
-        ``POST /setup {shutdown: true}`` looks like the way to do this and is not:
-        ``setup.mjs`` passes ``asAdmin = !game.world && adminOk``, which is always
-        false while a world is up, and ``world.deactivate`` then bails to
-        ``{redirect: "/join"}`` because a scripted session has no ``req.user``.
+        14.369+: ``POST /setup {action: "worldShutdown", adminPassword}`` (fact 2). It
+        checks the password strictly, deactivates as admin, and redirects to ``/setup``
+        on success or ``/join`` on refusal.
 
-        ``POST /join {action: "shutdown"}`` is the one that works — but it refuses
-        outright unless an admin password is configured (``if (!config.adminPassword)
-        return 403``). Returns False when that is the case, so the caller can fall
-        back to quitting the app.
+        14.367 and earlier: ``POST /join {action: "shutdown", adminPassword}``. Kept as a
+        fallback so a core rollback does not silently turn every deactivate into an app
+        restart. On 14.369 that route answers 200 ``{}`` and does nothing, which is why
+        it is tried second and why success is judged by ``/api/status``, never by the
+        response.
+
+        Both need an admin password. Returns False without one, or when neither route
+        brings the server to setup, so the caller can fall back to quitting the app.
         """
         if not self._admin_password:
             return False
-        r = self.session.post(
-            f"{self.base_url}/join",
-            data={"action": "shutdown", "adminPassword": self._admin_password},
-            timeout=self.timeout, allow_redirects=False,
+        attempts = (
+            ("/setup", {"action": "worldShutdown", "adminPassword": self._admin_password}),
+            ("/join", {"action": "shutdown", "adminPassword": self._admin_password}),
         )
-        if r.status_code in (401, 403):
-            return False
-        try:
-            self.wait_for_setup(timeout=90)
-        except Timeout:
-            return False
-        return True
+        for route, body in attempts:
+            try:
+                r = self.session.post(f"{self.base_url}{route}", data=body,
+                                      timeout=self.timeout, allow_redirects=False)
+            except requests.RequestException:
+                continue
+            if r.status_code in (401, 403):
+                continue
+            # A worldShutdown that was refused redirects to /join; do not wait on it.
+            target = _redirect_target(r)
+            if target and not target.endswith("/setup"):
+                continue
+            try:
+                self.wait_for_setup(timeout=60)
+            except Timeout:
+                continue
+            return True
+        return False
 
     def set_admin_password(self, new_password: str) -> None:
         """Configure Foundry's own admin password (``updateServerConfiguration``).
@@ -494,8 +617,8 @@ class FoundryAdmin:
         self.setup("deleteSnapshot", snapshots=[snapshot_id])
 
     def check_snapshot_disk_space(self) -> dict:
-        """403s while a world is active — call it only after the server is parked
-        at setup."""
+        """Refused (400 on 14.369, 403 before) while a world is active — call it only
+        after the server is parked at setup."""
         return self.setup("checkCreateSnapshotDiskSpace")
 
     # -- polling ------------------------------------------------------------

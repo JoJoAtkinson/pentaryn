@@ -106,7 +106,9 @@ try {
     const text = msg.text();
     if (ignored(text)) return;
     if (msg.type() === "error") result.errors.push({ type: "console", text: text.slice(0, 800) });
-    else if (msg.type() === "warning") result.warnings.push(text.slice(0, 400));
+    // Puppeteer reports console.warn as "warn" (older releases said "warning"); checking
+    // only "warning" left every smoke report's warnings list silently empty.
+    else if (msg.type() === "warn" || msg.type() === "warning") result.warnings.push(text.slice(0, 400));
   });
 
   // 1. Land on /join so the page's own client data (game.users, with roles) is available.

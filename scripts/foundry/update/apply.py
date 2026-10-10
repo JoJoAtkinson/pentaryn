@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The run itself: gate → back up → scan → adjudicate → apply → smoke → recover.
+"""The run itself: gate → back up → scan → adjudicate → escalate → apply → smoke → recover.
 
 Sequencing here is not cosmetic; three orderings are load-bearing and each one exists
 because getting it wrong is silent rather than loud.
@@ -11,7 +11,7 @@ is delivered, so "quit then back up" without waiting hands a still-running serve
 backup that then dies.
 
 **The scan happens after the world is down, not before.** Every ``/setup`` and
-``/update`` package action is gated on ``!game.world`` and 403s otherwise.
+``/update`` package action is gated on ``!game.world`` and is refused otherwise.
 
 **``packageWarnings`` is read before any world is launched.** ``setup.mjs``'s socket
 handler returns ``{}`` once a world is active, and package warnings are the *only* place
@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import os
 import time
+import traceback
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -34,7 +35,7 @@ from pathlib import Path
 from scripts.foundry import admin_password as admin_pw
 from scripts.foundry.cloud import WORLD_BACKUPS
 from scripts.foundry.update import (
-    adjudicate, admin as admin_mod, inventory, notify, plan as plan_mod,
+    adjudicate, admin as admin_mod, escalate, inventory, llm, notify, plan as plan_mod,
     recover, risk, smoke, state, upstream,
 )
 from scripts.foundry.update.admin import FoundryAdmin
@@ -57,6 +58,8 @@ class RunResult:
     smoke: list[dict] = field(default_factory=list)
     warnings: dict = field(default_factory=dict)
     messages: list[str] = field(default_factory=list)
+    traceback: str | None = None      # set only when the run crashed
+    escalation: dict | None = None    # set only when the escalation step ran
     snapshot: str | None = None
     native_snapshot: str | None = None
     started: str = ""
@@ -70,7 +73,9 @@ class RunResult:
             "applied": self.applied, "failed": self.failed,
             "recoveries": self.recoveries, "smoke": self.smoke,
             "warnings": self.warnings, "messages": self.messages,
-            "plan": self.plan,
+            "traceback": self.traceback, "plan": self.plan,
+            # Only when escalation ran, so a --skip-llm record is byte-identical to before.
+            **({"escalation": self.escalation} if self.escalation is not None else {}),
         }
 
 
@@ -547,11 +552,30 @@ def _run_locked(result: RunResult, run_id: str, *, dry: bool, force: bool,
         result.plan = plan_mod.build(admin=assisted, notes=True, policy=policy)
 
         status.set_phase("adjudicate")
+        adjudication_cost = 0.0
         if skip_llm:
             adjudicate.apply_verdicts(result.plan, [], "adjudication skipped (--skip-llm)")
         else:
-            verdicts, error = adjudicate.run(result.plan)
-            adjudicate.apply_verdicts(result.plan, verdicts, error)
+            verdicts, error, call = adjudicate.run(
+                result.plan, policy=policy,
+                heartbeat=lambda: status.set_phase("adjudicate"))
+            adjudicate.apply_verdicts(result.plan, verdicts, error, call)
+            # Charged, not reported: a timed-out adjudicator reported nothing but may
+            # have spent its cap, and that comes out of escalation's run budget.
+            adjudication_cost = llm.charged_one(call)
+
+        # Escalation: may only move auto → hold and write plans. Never raises; every
+        # failure inside it fails closed to the tier below. Skipped with --skip-llm so
+        # that path stays exactly what it was.
+        if not skip_llm and escalate.enabled(policy):
+            status.set_phase("escalate")
+            result.escalation = escalate.run(
+                result.plan, policy, run_id=run_id, dry=dry, forced=force,
+                spent_usd=adjudication_cost, status=status)
+            for held in result.escalation.get("held") or []:
+                result.messages.append(f"escalation held {held['id']}: {held['reason']}")
+            for err in result.escalation.get("errors") or []:
+                result.messages.append(f"escalation: {err}")
 
         auto = [d for d in result.plan["decisions"] if d["bucket"] == "auto"]
         held = {d["id"] for d in result.plan["decisions"] if d["bucket"] == "hold"}
@@ -584,6 +608,11 @@ def _run_locked(result: RunResult, run_id: str, *, dry: bool, force: bool,
 
         touched = {a["id"] for a in result.applied}
         result.warnings = smoke.package_warnings(fa, touched)
+        for pkg_id, w in sorted(result.warnings.items()):
+            if isinstance(w, dict) and w.get("error"):
+                result.messages.append(
+                    f"Foundry reported install errors for {pkg_id}: "
+                    + "; ".join(map(str, w["error"]))[:300])
 
         if core_decision and not result.failed:
             core_record = apply_core(fa, core_decision)
@@ -622,7 +651,11 @@ def _run_locked(result: RunResult, run_id: str, *, dry: bool, force: bool,
         return result
     except Exception as exc:  # noqa: BLE001
         result.outcome = "failed"
-        result.messages.append(f"run failed: {exc}")
+        # str(exc) alone hid this run's one real bug for six weeks: every report said
+        # "'list' object has no attribute 'get'" and nothing said where.
+        result.traceback = traceback.format_exc()
+        result.messages.append(f"run failed: {type(exc).__name__}: {exc}")
+        result.messages.extend(_crash_notes(result))
         status.finish("failed", str(exc))
         if entry:
             # A crash is the one case that does NOT shut down: the run may have been
@@ -630,6 +663,15 @@ def _run_locked(result: RunResult, run_id: str, *, dry: bool, force: bool,
             # should hand back what it found rather than switch the lights off.
             restore_service(entry, result.messages)
         return result
+
+
+def _crash_notes(result: RunResult) -> list[str]:
+    """What a crash left behind, said plainly. A crash skips smoke and recovery, so any
+    package already installed is live and untested, and nothing was rolled back."""
+    if not result.applied:
+        return []
+    done = ", ".join(f"{a['id']} {a.get('from')} → {a.get('to')}" for a in result.applied)
+    return [f"applied UNTESTED before the crash (no smoke test, no rollback): {done}"]
 
 
 def _recover(result: RunResult, fa: FoundryAdmin, system, broken) -> None:
@@ -683,7 +725,11 @@ def notify_result(result: RunResult) -> None:
 
     if result.outcome in ("failed", "recovered"):
         detail = "; ".join(result.messages[:2]) or "see the run report"
-        notify.notify("failed", f"update rolled back ({result.run_id})",
+        # Only say "rolled back" when something was. A crash rolls nothing back, and
+        # this title used to tell Joe it had while untested modules sat live.
+        title = ("update rolled back" if result.recoveries
+                 else "update FAILED, nothing rolled back")
+        notify.notify("failed", f"{title} ({result.run_id})",
                       f"{detail}\n\nRestore point: {result.snapshot or 'none'}")
         return
     if result.outcome == "skipped":
@@ -695,6 +741,16 @@ def notify_result(result: RunResult) -> None:
     if any("Foundry stopped" in m for m in result.messages):
         lines.append("")
         lines.append("Server left down — bring it up with: make vtt-up")
+    esc = result.escalation or {}
+    plans = esc.get("plans") or []
+    if plans:
+        lines.append("")
+        lines += [f"plan ready: {p}" for p in plans[:3]]
+    fix = esc.get("fix") or {}
+    if fix.get("branch") and fix.get("review") != "ship":
+        # v2: the fixer's branch was parked and its package rolled back.
+        lines.append(f"fix parked on {fix['branch']} — {fix.get('package', 'package')} "
+                     "rolled back")
     if held:
         notify.notify("attention", f"{len(applied)} applied, {len(held)} need you",
                       "\n".join(lines + [""] +

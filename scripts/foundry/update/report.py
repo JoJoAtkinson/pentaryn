@@ -24,15 +24,19 @@ import re
 import subprocess
 from pathlib import Path
 
+from scripts.foundry.update import llm
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 REPORT_DIR = REPO_ROOT / "foundry" / "logs" / "auto-updates"
 
+# `llm.report` in update-policy.yml overrides these. The report is a summary of a JSON
+# record — Sonnet work by Joe's own tiering — so the shipped policy sets sonnet/medium;
+# the code default stays opus so a policy without the block behaves as before.
 MODEL = "opus"
+EFFORT = "medium"
 TIMEOUT_SECONDS = 600
-DENIED_TOOLS = (
-    "Bash,Read,Write,Edit,MultiEdit,NotebookEdit,Glob,Grep,WebFetch,WebSearch,"
-    "Task,Agent,TodoWrite,Artifact,SendUserFile,Skill"
-)
+BUDGET_USD = 0.50
+DENIED_TOOLS = llm.DENIED_TOOLS
 
 IPV4 = re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")
 # IPv6 in two precise alternatives rather than one loose "hex groups separated by
@@ -59,6 +63,12 @@ Audience: the GM, reading it on a Saturday morning. He wants, in this order:
    release notes in the record.
 3. What was held and why, with what he'd have to do about it.
 4. Fork drift, local module drift, and anything else flagged.
+5. Escalation, when the record has an `escalation` block that ran (tier is not "none"
+   or something was held by it): which tier ran and why (floor, ceiling, triage
+   reason), what the analysis found per area, the Still-needed table (adjustment,
+   working, needed, action) with Argon rows first, the first three plan steps and the
+   plan's path, and anything held or deferred by escalation. If nothing ran, one line.
+   Do not write a cost line; one is appended to the report after you.
 
 Rules:
 - Markdown. Start with a `# ` H1 that includes the date. No preamble, no sign-off.
@@ -96,6 +106,12 @@ def scrub(record: dict) -> dict:
     cleaned["smoke"] = _strip_ips(cleaned.get("smoke", []))
     cleaned["messages"] = _strip_ips(cleaned.get("messages", []))
     cleaned["failed"] = _strip_ips(cleaned.get("failed", []))
+    if cleaned.get("escalation"):
+        # Model-written text (digests, what_breaks, plan steps) and error strings.
+        # Validated upstream; scrubbed again here because this record is pushed.
+        cleaned["escalation"] = _strip_ips(cleaned["escalation"])
+    if cleaned.get("traceback"):
+        cleaned["traceback"] = _strip_ips(cleaned["traceback"])
     return cleaned
 
 
@@ -111,6 +127,7 @@ def _compact_for_prompt(record: dict) -> dict:
         "run_id": record.get("run_id"), "outcome": record.get("outcome"),
         "applied": record.get("applied"), "failed": record.get("failed"),
         "recoveries": record.get("recoveries"), "messages": record.get("messages"),
+        "traceback": record.get("traceback"),
         "snapshot": record.get("snapshot"),
         "restore_command": (f"make foundry-restore SNAP={record['snapshot']}"
                             if record.get("snapshot") else None),
@@ -123,27 +140,56 @@ def _compact_for_prompt(record: dict) -> dict:
         "upstream": upstream,
         "forks": plan.get("forks"), "local_drift": plan.get("local_drift"),
         "adjudication": plan.get("adjudication"),
+        "escalation": _compact_escalation(record.get("escalation")),
     }
 
 
-def write_markdown(record: dict, *, model: str = MODEL) -> tuple[str, str | None]:
-    """Ask Claude for the prose. Returns ``(markdown, error)``."""
+def _compact_escalation(esc: dict | None) -> dict | None:
+    if not esc:
+        return None
+    return {k: esc.get(k) for k in ("tier_floor", "tier_ceiling", "tier", "ceiling_reasons",
+                                    "triage", "analysis", "held", "deferred", "plans",
+                                    "errors", "skipped", "analysis_skipped", "cost_usd")}
+
+
+def llm_calls(record: dict) -> list[dict]:
+    """Every LLM call the run made, in order: adjudicator, escalation tiers, report."""
+    calls: list[dict] = []
+    adj = ((record.get("plan") or {}).get("adjudication") or {}).get("call")
+    if adj:
+        calls.append(adj)
+    calls += list((record.get("escalation") or {}).get("calls") or [])
+    if record.get("report_call"):
+        calls.append(record["report_call"])
+    return calls
+
+
+def cost_line(record: dict) -> str:
+    from scripts.foundry.update.escalate import cost_line as _line
+    return _line(llm_calls(record))
+
+
+def spec(policy: dict | None = None) -> llm.Spec:
+    cfg = (policy or {}).get("llm") if isinstance(policy, dict) else None
+    cfg = cfg if isinstance(cfg, dict) else {}       # a policy typo must not crash the run
+    return llm.spec_from(cfg.get("report"), default_model=MODEL, default_effort=EFFORT,
+                         default_timeout=TIMEOUT_SECONDS, default_budget=BUDGET_USD,
+                         isolation=cfg.get("isolation", "restricted"))
+
+
+def write_markdown(record: dict, *, policy: dict | None = None,
+                   caller=llm.call) -> tuple[str, str | None, dict | None]:
+    """Ask Claude for the prose. Returns ``(markdown, error, call_record)``."""
     payload = json.dumps(_compact_for_prompt(record), indent=2)[:120_000]
-    cmd = [
-        "claude", "-p", "--model", model,
-        "--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}',
-        "--disallowed-tools", DENIED_TOOLS,
-        "--permission-mode", "default",
-    ]
-    try:
-        proc = subprocess.run(cmd, input=f"{PROMPT}\n\n## Run record\n\n```json\n{payload}\n```",
-                              capture_output=True, text=True, timeout=TIMEOUT_SECONDS)
-    except (subprocess.TimeoutExpired, OSError) as exc:
-        return fallback_markdown(record), f"report generation unavailable: {exc}"
-    if proc.returncode != 0 or not proc.stdout.strip():
-        detail = (proc.stderr or "").strip()[:200]
-        return fallback_markdown(record), f"claude exited {proc.returncode}: {detail}"
-    return proc.stdout.strip(), None
+    result = caller(spec(policy), f"## Run record\n\n```json\n{payload}\n```",
+                    tier="report", system_prompt=PROMPT, untrusted_input=True,
+                    detail=str(record.get("run_id") or ""))
+    call = result.record.to_json()
+    if not result.ok or not result.text.strip():
+        return (fallback_markdown(record),
+                f"report generation unavailable: {result.record.error or 'empty response'}",
+                call)
+    return result.text.strip(), None, call
 
 
 def fallback_markdown(record: dict) -> str:
@@ -196,20 +242,74 @@ def fallback_markdown(record: dict) -> str:
         for f in plan["forks"]:
             lines.append(f"- `{f['fork']}` ahead {f['ahead']} / behind {f['behind']}"
                          + (f" — {f['notes'][0]}" if f.get("notes") else ""))
+    lines += _escalation_section(record)
     if record.get("messages"):
         lines += ["", "## Notes", ""] + [f"- {m}" for m in record["messages"]]
+    if record.get("traceback"):
+        lines += ["", "## Traceback", "", "```", record["traceback"].rstrip(), "```"]
     return "\n".join(lines) + "\n"
 
 
-def write(record: dict, *, use_llm: bool = True) -> tuple[Path, Path]:
+def _escalation_section(record: dict) -> list[str]:
+    esc = record.get("escalation") or {}
+    if not esc:
+        return []
+    lines = ["", "## Escalation", "",
+             f"Tier **{esc.get('tier')}** (floor {esc.get('tier_floor')}, ceiling "
+             f"{esc.get('tier_ceiling')})" + (f" — {esc['skipped']}" if esc.get("skipped") else "")]
+    for r in esc.get("ceiling_reasons") or []:
+        lines.append(f"- ceiling: {r}")
+    tri = esc.get("triage") or {}
+    if tri:
+        lines.append(f"- triage: {tri.get('reason') if tri.get('ok') else 'FAILED — ' + str(tri.get('error'))}")
+    for pkg, a in (esc.get("analysis") or {}).items():
+        head = (f"- **{pkg}**: impact {a.get('impact', '?')}, recommendation "
+                f"{a.get('recommendation', '?')}" + (" (cached" + (f" since {a['since']}" if a.get("since") else "") + ")" if a.get("cached") else "")
+                + (f" — analysis of {a['analysed_pair']}" if a.get("analysed_pair") else ""))
+        if a.get("error"):
+            head += f" — {a['error']}"
+        lines.append(head)
+        for area in a.get("areas") or []:
+            lines.append(f"    - {area['area']} [{area['impact']}]: {area['what_breaks']}")
+        if a.get("path"):
+            lines.append(f"    - plan: `{a['path']}`")
+    rows = [(pkg, s) for pkg, a in (esc.get("analysis") or {}).items()
+            for s in a.get("still_needed") or []]
+    if rows:
+        lines += ["", "| Package | Adjustment | Working | Needed | Action |",
+                  "|---|---|---|---|---|"]
+        lines += [f"| {pkg} | `{s['adjustment']}` | {s['working']} | {s['needed']} | "
+                  f"{s['action']} |" for pkg, s in rows]
+    if esc.get("analysis_skipped"):
+        lines.append(f"- analysis skipped: {esc['analysis_skipped']}")
+    for h in esc.get("held") or []:
+        lines.append(f"- held `{h['id']}`: {h['reason']}")
+    for e in esc.get("errors") or []:
+        lines.append(f"- error: {e}")
+    lines += ["", cost_line(record)]
+    return lines
+
+
+def write(record: dict, *, use_llm: bool = True,
+          policy: dict | None = None) -> tuple[Path, Path]:
     """Write both artefacts. Returns ``(markdown_path, json_path)``."""
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     cleaned = scrub(record)
     day = (record.get("run_id") or "")[:8]
     stamp = f"{day[:4]}-{day[4:6]}-{day[6:8]}" if len(day) == 8 else "unknown"
 
-    md, error = (write_markdown(cleaned) if use_llm
-                 else (fallback_markdown(cleaned), "report generation skipped"))
+    if policy is None:
+        from scripts.foundry.update import risk
+        policy = risk.load_policy()
+    if use_llm:
+        md, error, call = write_markdown(cleaned, policy=policy)
+        cleaned["report_call"] = call
+        # The cost line is Python's, not the model's: it includes the report's own call,
+        # which did not exist when the record was handed over.
+        if not error:
+            md += f"\n\n---\n\n*{cost_line(cleaned)}*\n"
+    else:
+        md, error = fallback_markdown(cleaned), "report generation skipped"
     if error:
         cleaned.setdefault("messages", []).append(error)
         md += f"\n\n---\n\n*{error} — this report was generated without the LLM step.*\n"

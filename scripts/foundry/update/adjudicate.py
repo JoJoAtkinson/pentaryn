@@ -24,20 +24,26 @@ the exact wrong way to be robust.
 
 from __future__ import annotations
 
-import json
-import re
-import subprocess
 from dataclasses import dataclass
+from typing import Callable
 
+from scripts.foundry.update import llm
+
+# Model and effort come from `llm.adjudicator` in update-policy.yml; these are the
+# defaults when it is absent. Effort is set explicitly — Opus 5.5 defaults to medium, and
+# a tier that inherits a default is a tier nobody chose.
+#
+# The budget is a runaway guard. Before 2026-10-10 this call had no cap at all, and the
+# CLI enforces one after the turn — an answer that lands over it is billed and thrown
+# away, and every `review` item is then held. A typical Saturday is ~$0.05-0.15; a week
+# with a backlog of reviewed packages (six notes x 2.5k chars each) can pass $0.50.
 MODEL = "opus"
+EFFORT = "medium"
 TIMEOUT_SECONDS = 600
+BUDGET_USD = 1.50
 
-# Built-in tools the adjudicator has no business using. --strict-mcp-config with an
-# empty server map removes every MCP tool; this covers the rest.
-DENIED_TOOLS = (
-    "Bash,Read,Write,Edit,MultiEdit,NotebookEdit,Glob,Grep,WebFetch,WebSearch,"
-    "Task,Agent,TodoWrite,Artifact,SendUserFile,Skill"
-)
+# Kept for anything that imported it; the command itself is built in llm.py.
+DENIED_TOOLS = llm.DENIED_TOOLS
 
 SYSTEM_RULES = """\
 You are grading Foundry VTT package updates for an unattended 06:00 Saturday job.
@@ -94,7 +100,8 @@ def _candidate_block(decision: dict, upstream: dict) -> str:
 
 
 def build_prompt(plan: dict) -> tuple[str, list[str]]:
-    """Returns the prompt and the exact id list the answer is validated against."""
+    """Returns the data half of the prompt (the rules go in as the system prompt) and
+    the exact id list the answer is validated against."""
     review = [d for d in plan["decisions"] if d["bucket"] == "review"]
     ids = [d["id"] for d in review]
     installed = ", ".join(
@@ -103,7 +110,6 @@ def build_prompt(plan: dict) -> tuple[str, list[str]]:
     body = "\n".join(_candidate_block(d, plan["upstream"].get(d["id"], {}))
                      for d in review)
     prompt = (
-        f"{SYSTEM_RULES}\n\n"
         f"Foundry core {plan['core']['installed']}, system dnd5e "
         f"{plan['system']['installed']}.\n"
         f"Installed packages: {installed}\n\n"
@@ -114,48 +120,39 @@ def build_prompt(plan: dict) -> tuple[str, list[str]]:
 
 def _extract_json(text: str) -> dict | None:
     """Models occasionally wrap JSON in a fence despite being told not to."""
-    text = text.strip()
-    fence = re.search(r"```(?:json)?\s*(.+?)```", text, re.S)
-    if fence:
-        text = fence.group(1).strip()
-    start, end = text.find("{"), text.rfind("}")
-    if start == -1 or end <= start:
-        return None
-    try:
-        return json.loads(text[start:end + 1])
-    except json.JSONDecodeError:
-        return None
+    return llm.extract_json(text)
 
 
-def run(plan: dict, *, model: str = MODEL,
-        timeout: int = TIMEOUT_SECONDS) -> tuple[list[Verdict], str | None]:
-    """Adjudicate. Returns ``(verdicts, error)``; on any error every id is held."""
+def spec(policy: dict | None = None) -> llm.Spec:
+    cfg = (policy or {}).get("llm") if isinstance(policy, dict) else None
+    cfg = cfg if isinstance(cfg, dict) else {}       # a policy typo must not crash the run
+    return llm.spec_from(cfg.get("adjudicator"), default_model=MODEL,
+                         default_effort=EFFORT, default_timeout=TIMEOUT_SECONDS,
+                         default_budget=BUDGET_USD,
+                         isolation=cfg.get("isolation", "restricted"))
+
+
+def run(plan: dict, *, policy: dict | None = None,
+        heartbeat: Callable[[], None] | None = None,
+        caller: Callable[..., llm.Result] = llm.call,
+        ) -> tuple[list[Verdict], str | None, dict | None]:
+    """Adjudicate. Returns ``(verdicts, error, call_record)``; on any error every id is
+    held. ``call_record`` carries model, effort, cost and seconds for the run record."""
     prompt, ids = build_prompt(plan)
     if not ids:
-        return [], None
+        return [], None, None
 
-    cmd = [
-        "claude", "-p",
-        "--model", model,
-        "--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}',
-        "--disallowed-tools", DENIED_TOOLS,
-        "--permission-mode", "default",
-    ]
-    try:
-        proc = subprocess.run(cmd, input=prompt, capture_output=True, text=True,
-                              timeout=timeout)
-    except subprocess.TimeoutExpired:
-        return _hold_all(ids, f"adjudication timed out after {timeout}s")
-    except OSError as exc:
-        return _hold_all(ids, f"claude CLI unavailable: {exc}")
+    result = caller(spec(policy), prompt, tier="adjudicator", system_prompt=SYSTEM_RULES,
+                    untrusted_input=True, heartbeat=heartbeat, detail=", ".join(ids)[:120])
+    call = result.record.to_json()
+    if not result.ok:
+        verdicts, reason = _hold_all(ids, f"adjudication failed: {result.record.error}")
+        return verdicts, reason, call
 
-    if proc.returncode != 0:
-        detail = (proc.stderr or proc.stdout or "").strip()[:300]
-        return _hold_all(ids, f"claude exited {proc.returncode}: {detail}")
-
-    data = _extract_json(proc.stdout)
+    data = _extract_json(result.text)
     if not isinstance(data, dict) or not isinstance(data.get("verdicts"), list):
-        return _hold_all(ids, "adjudication output was not the expected JSON")
+        verdicts, reason = _hold_all(ids, "adjudication output was not the expected JSON")
+        return verdicts, reason, call
 
     allowed = set(ids)
     seen: dict[str, Verdict] = {}
@@ -166,7 +163,9 @@ def run(plan: dict, *, model: str = MODEL,
         # An id that was not offered, or a verdict outside the enum, means the answer
         # is not trustworthy as a whole — not that one row should be dropped.
         if pkg_id not in allowed or verdict not in ("apply", "hold"):
-            return _hold_all(ids, f"adjudication returned an unexpected entry: {entry}")
+            verdicts, reason = _hold_all(
+                ids, f"adjudication returned an unexpected entry: {entry}")
+            return verdicts, reason, call
         seen[pkg_id] = Verdict(id=pkg_id, verdict=verdict,
                                rationale=str(entry.get("rationale", ""))[:300])
 
@@ -174,14 +173,15 @@ def run(plan: dict, *, model: str = MODEL,
     for pkg_id in missing:
         seen[pkg_id] = Verdict(id=pkg_id, verdict="hold",
                                rationale="no verdict returned for this package")
-    return [seen[i] for i in ids], None
+    return [seen[i] for i in ids], None, call
 
 
 def _hold_all(ids: list[str], reason: str) -> tuple[list[Verdict], str]:
     return [Verdict(id=i, verdict="hold", rationale=reason) for i in ids], reason
 
 
-def apply_verdicts(plan: dict, verdicts: list[Verdict], error: str | None) -> dict:
+def apply_verdicts(plan: dict, verdicts: list[Verdict], error: str | None,
+                   call: dict | None = None) -> dict:
     """Fold verdicts back into the plan, moving `review` rows to `auto` or `hold`."""
     by_id = {v.id: v for v in verdicts}
     for decision in plan["decisions"]:
@@ -194,7 +194,7 @@ def apply_verdicts(plan: dict, verdicts: list[Verdict], error: str | None) -> di
             f"adjudicated {v.verdict}: {v.rationale}"
         ]
     plan["adjudication"] = {
-        "ran": bool(verdicts), "error": error,
+        "ran": bool(verdicts), "error": error, "call": call,
         "verdicts": [{"id": v.id, "verdict": v.verdict, "rationale": v.rationale}
                      for v in verdicts],
     }
