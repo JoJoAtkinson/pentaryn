@@ -106,6 +106,18 @@ Raven does not train apprentices, not out of secrecy, but out of disinterest. Sh
 
 Raven stands watch not out of loyalty or love, but because defending Elderholt aligns with her own calculus. The land remains. The dead remain useful. And as long as threats continue to rise, so will she.
 
+## Caven Calderon
+
+Raven sought out one person on purpose: Caven Calderon, a human necromancer from Brenfen. Caven
+died and summoned himself back from between the planes. Ever since, he has worked his own body
+like one of his undead, a puppet driven from somewhere he can't locate. Raven did not have his
+problem, but she understood it: a mind at odds with its body. The two of them explored magic
+together, looking for where his soul is and how to put him back. They understood each other.
+This is one of the very few bonds Raven has ever chosen.
+
+Caven was taken in the Underdark before Raven's lich rite. As far as he knows, she is still
+whole. Marrith believes the same.
+
 ## Using Raven in Play
 
 Raven is ideal when players believe they have found a way to outmaneuver fate.

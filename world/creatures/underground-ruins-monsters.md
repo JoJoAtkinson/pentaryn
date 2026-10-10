@@ -60,12 +60,7 @@ Stone whisperers wait motionless until prey approaches, then strike with petrify
 **Large aberration, chaotic evil**
 
 A horrifying creature that seems to be made of the absence of light given form. Where it moves, darkness clings like oil, and its many-jointed legs tap rhythms that hurt to hear.
-
-**Armor Class** 14 (natural armor)  
-**Hit Points** 68 (8d10 + 24)  
-**Speed** 40 ft., climb 40 ft.
-
-| STR | DEX | CON | INT | WIS | CHA |
+what| STR | DEX | CON | INT | WIS | CHA |
 |-----|-----|-----|-----|-----|-----|
 | 17 (+3) | 15 (+2) | 16 (+3) | 6 (-2) | 12 (+1) | 7 (-2) |
 

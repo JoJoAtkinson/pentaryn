@@ -6,4 +6,6 @@ Among witches, earned monikers and titles end up far more important than surname
 
 Such titles are meant to be feared, revered, and, most of all, respected.
 
+Every Elder has, one way or another, unlocked a long life through the Voice. Whatever their species, an Elder's years are no longer natural ones: a human Elder may have lived for centuries — Marrith has walked Elderholt for well over a thousand years.
+
  

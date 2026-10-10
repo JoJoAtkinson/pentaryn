@@ -1,6 +1,6 @@
 ---
 created: 2025-12-14
-last_modified: 2025-12-14
+last_modified: 2026-10-04
 tags: ["npc", "elder", "witch", "elderholt", "ward"]
 status: draft
 ---
@@ -11,6 +11,7 @@ status: draft
 
 Ward-Witch, Judge of the Coven
 
+Species: Human — her life extended far past any natural span through her bargains with the Voice  
 Domain: Controlled destruction, counter-rituals  
 Magic: Evocation restrained by warding principles
 
@@ -67,6 +68,22 @@ When it ended, there was no corpse. Only a clean ring of ash and a silence so co
 ## How They Appear Now
 
 Her skin is pale and the wards upon her skin are numerous and run jagged lines up and down her weathered skin.
+
+The wards are vivid red, and they are two kinds laid over each other:
+
+- **Burnt runes** — scars she seared into her own skin with her own fire. Raised, dark-edged, the red of a healed burn. These are the older, cruder ones, made when she had nothing but her own flame to work with.
+- **Living runes** — inscribed with far more powerful magic, glowing a bright, live-fire red, as if embers sit just under the skin.
+
+The two run through and across each other, so the eye reads them as layers rather than a single pattern: she does not simply glow. Where a living rune crosses an old scar, the light catches in the ridge of the burn.
+
+The runes are **small and dense** — fine glyphs no wider than a finger, packed tight like script in a manuscript margin. Witches keep their wards small so there is room for more; a ward drawn large is wasted skin.
+
+### In Her Youth
+
+![[marrith-ashcroft-art.webp]]
+*Young Marrith, c. 3200 A.F. — art: `FoundryVTT/Data/assets/tokens/custom/marrith-ashcroft-art.webp`.*
+
+Then, as now, her fire did not touch her when she cast it, but it burned away whatever she wore. In her youth that meant scorched linen wraps, blackened metal, and wild singed hair. The wards were already there, and already small.
 
 ## Role in the Covens
 
