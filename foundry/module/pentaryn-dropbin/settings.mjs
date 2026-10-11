@@ -100,7 +100,10 @@ export async function writeLedger({ n, log }) {
   await game.settings.set(MODULE, "log", log);
 }
 
-/** Empty the log; the counter is kept. */
-export async function clearLog() {
-  await game.settings.set(MODULE, "log", []);
+/**
+ * Empty the log; the counter is kept. Queued behind any append in flight, so an append that read
+ * the old log cannot write it back over the clear.
+ */
+export function clearLog() {
+  return queue().add(() => game.settings.set(MODULE, "log", []));
 }

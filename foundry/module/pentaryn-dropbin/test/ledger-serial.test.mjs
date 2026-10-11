@@ -7,7 +7,7 @@ import { dropbinWorld } from "./fixtures/world.mjs";
 mock.timers.enable({ apis: ["setTimeout"] });
 
 const F = await dropbinWorld();
-const { registerSettings, appendLedger, readLog, setting } = await import("../settings.mjs");
+const { registerSettings, appendLedger, clearLog, readLog, setting } = await import("../settings.mjs");
 registerSettings();
 
 const realSet = game.settings.set.bind(game.settings);
@@ -68,4 +68,14 @@ test("a failed write rejects that caller only; the next append still runs", asyn
   const r = await settle(second);
   assert.equal(r.n, 1, "the failed append wrote nothing, so Y takes #1");
   assert.deepEqual(readLog().map(e => e.itemName), ["Y"]);
+});
+
+test("clearLog waits for an append in flight, so the append cannot write the old log back over it", async () => {
+  await reset();
+  await settle(appendLedger(entry("old")));
+  const pending = appendLedger(entry("late"));          // reads ["old"], writes ["old", "late"] a tick later
+  const cleared = clearLog();
+  await settle(Promise.all([pending, cleared]));
+  assert.deepEqual(readLog(), [], "the clear lands last");
+  assert.equal(setting("counter"), 2, "the counter is kept");
 });
