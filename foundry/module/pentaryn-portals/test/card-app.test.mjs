@@ -78,12 +78,30 @@ test("edit controls: name, open (sealed), revealed and choice switches write the
   await set("open", false);
   await set("revealed", false);
   await set("choice", false);
-  assert.deepEqual(W.callsSince(n, ["update"]).map(x => [x.uuid, x.changes]), [
+  // [declared] C59: the behaviour switches write one batch through the region (was one update each).
+  assert.deepEqual(W.callsSince(n, ["update", "updateEmbedded"]).map(x => x.op === "update" ? [x.uuid, x.changes] : [x.parent, x.type, x.updates]), [
     [P.fork.uuid, { name: "North fork" }],
     [P.fork.uuid, { hidden: true }],
-    [P.bFork.uuid, { "system.revealed": false }],
-    [P.bFork.uuid, { "system.choice": false }],
+    [P.fork.uuid, "RegionBehavior", [{ _id: P.bFork.id, "system.revealed": false }]],
+    [P.fork.uuid, "RegionBehavior", [{ _id: P.bFork.id, "system.choice": false }]],
   ]);
+  assert.equal(P.bFork.system.revealed, false);
+  assert.equal(P.bFork.system.choice, false);
+  await app.close();
+});
+
+test("[declared] C59: a switch on a region with two teleport behaviours is one write for both", async () => {
+  const P = places(W, "C59");
+  const second = W.behavior(P.fork, { id: "BhvForkC59b", destinations: [P.stair.uuid] });
+  const app = await S.PortalCard.open(P.fork, { edit: true });
+  const el = app.element.querySelector('.window-content [data-set="revealed"]');
+  el.checked = false;
+  const n = F.calls.length;
+  await el.fire("change");
+  assert.deepEqual(W.callsSince(n, ["update", "updateEmbedded"]).map(x => [x.op, x.parent, x.updates]), [
+    ["updateEmbedded", P.fork.uuid, [{ _id: P.bFork.id, "system.revealed": false }, { _id: second.id, "system.revealed": false }]],
+  ]);
+  assert.deepEqual(W.callsSince(n, ["Hooks.callAll"]).map(x => x.name), ["updateRegionBehavior", "updateRegionBehavior"], "hooks still fire per behaviour");
   await app.close();
 });
 

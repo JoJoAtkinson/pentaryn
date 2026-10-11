@@ -118,7 +118,9 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
         const k = input.dataset.set;
         if (k === "name") return region.update({ name: input.value });
         if (k === "open") return region.update({ hidden: !input.checked });
-        for (const b of behaviors()) await b.update({ [`system.${k}`]: input.checked });
+        // One batched write for every teleport behaviour of the region (C59).
+        const updates = behaviors().map(b => ({ _id: b.id, [`system.${k}`]: input.checked }));
+        if (updates.length) await region.updateEmbeddedDocuments("RegionBehavior", updates);
       }));
     }
 

@@ -175,6 +175,25 @@ export function region(s, { id, name, bounds = { x: 0, y: 0, width: 100, height:
       return data.map(d => behavior(r, { name: d.name, type: d.type, ...d.system }));
     },
   });
+  // One batched write of the region's behaviours (C59): recorded once as `updateEmbedded`; each
+  // behaviour still applies its changes and fires its own update hook, as Foundry does.
+  Object.defineProperty(r, "updateEmbeddedDocuments", {
+    enumerable: false,
+    value: async (type, updates, options = {}) => {
+      F.calls.push({ op: "updateEmbedded", parent: r.uuid, type, updates: F.plain(updates), options: F.plain(options) });
+      const out = [];
+      for (const { _id, ...changes } of updates) {
+        const b = r.behaviors.get(_id);
+        if (!b) continue;
+        const i = F.calls.length;
+        await b.update(changes, options);
+        const j = F.calls.findIndex((c, k) => k >= i && c.op === "update" && c.uuid === b.uuid);
+        if (j >= 0) F.calls.splice(j, 1);   // the batch is the one recorded write
+        out.push(b);
+      }
+      return out;
+    },
+  });
   for (const b of behaviors) behavior(r, b);
   s.regions.set(r.id, r);
   r.collection = s.regions;
