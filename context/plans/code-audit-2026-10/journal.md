@@ -32,6 +32,19 @@ game.pentaryn.journal.{personal, add, status, open, shouldShowBar, ensure, ensur
 
 New pure rules go in journal-core.mjs with fixtures in test/run.mjs, and the README says the fixtures must be synthetic. New window types go in targetFor/targetOf (journal.mjs:234, 470). Those two functions duplicate each other's dispatch and should share one classifier, so a new target kind is added once. Unclear: the folderName setting is config:false and documented nowhere.
 
+## Status (wave 2, 2026-10-11 — journal lane, code phase; not yet live-tested)
+
+| Id | Status | Commit(s) |
+|---|---|---|
+| items-journal-32 | applied | `8bce2b4a` |
+| items-journal-33 | applied [declared] D-J3 | `d595451e` |
+| items-journal-34 | applied (guide step 2) | `7dc5fce8`, `526d1aa8` |
+| items-journal-35 | applied (+ `inspect(userRef)`) | `0fe84b85` |
+| items-journal-36 | applied | `93dc1a56` (catch, toast rename), `26e9df02` (breadcrumbs) |
+| items-journal-37 | applied (docs); (d) `relationships` waits for the Wave 7 `module.json` batch | `1b122e5` (wave 1), `b615d9d8` |
+| items-journal-38 | applied [declared] D-J3 (listeners registered on first use) | `cac07643` |
+| items-journal-40 | fixed, claim first [declared] D-J5 (a first-stamp claim on the sender's User, not `claimDocument`; see the guide's Result) | KNOWN `d8bfe157`, fix `f97e9f74`, `792f57fb`, `79155a74` |
+
 ## Findings index
 
 | Id | Category | Impact | Effort | Title |
