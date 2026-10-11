@@ -111,7 +111,7 @@ def fake_rclone(fake_cloud):
 
 @pytest.fixture(autouse=True)
 def fake_cloud(monkeypatch, tmp_path_factory):
-    """`PENTARYN_CLOUD` → a temp folder with the four subfolders; host env isolated."""
+    """`PENTARYN_CLOUD` → a temp folder with the cloud subfolders; host env isolated."""
     from scripts.foundry import storage
 
     base = tmp_path_factory.mktemp("cloud")

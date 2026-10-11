@@ -35,7 +35,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Protocol
 
-SUBFOLDERS = ("assets", "world-backups", "system-backup", "major-release")
+SUBFOLDERS = ("assets", "world-backups", "system-backup", "major-release", "bundles")
 JUNK_NAMES = {".DS_Store", "Thumbs.db", "desktop.ini"}
 PARTIAL = ".partial"
 

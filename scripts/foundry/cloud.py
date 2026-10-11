@@ -63,7 +63,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from scripts.foundry import bootstate, host
+from scripts.foundry import bootstate, bundles, host
 from scripts.foundry import storage as storage_mod
 from scripts.foundry.storage import JUNK_NAMES, Entry, Storage, StorageError
 
@@ -243,7 +243,7 @@ def ensure_cloud(st: Storage | None = None) -> Storage:
         st.mkdirs()
         if st.read_text("README.txt") != README_TEXT:
             st.write_text("README.txt", README_TEXT)
-        for sub in (WORLD_BACKUPS, SYSTEM_BACKUP):
+        for sub in (WORLD_BACKUPS, SYSTEM_BACKUP, bundles.BUNDLES):
             for e in storage_mod.stale_partials(st, sub, max_age=STALE_PARTIAL_SECONDS):
                 st.delete(f"{sub}/{e.name}")
                 log(f"swept a stale upload {sub}/{e.name} "
