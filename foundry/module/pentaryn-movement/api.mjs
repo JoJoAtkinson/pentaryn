@@ -46,7 +46,7 @@ function selftest(ctx) {
 export function buildApiFor(ctx) {
   const x = ctx.exposed;
   return buildApi(MANIFEST, {
-    status: () => x.status(),
+    status: opts => x.status(opts),
     ghostFor: token => x.ghostFor(token),
     combatActive: sceneId => x.combatActive(sceneId),
     setGhost: on => x.setGhost(on),

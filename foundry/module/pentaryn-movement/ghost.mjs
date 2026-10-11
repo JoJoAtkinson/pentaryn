@@ -16,9 +16,9 @@
 import * as core from "./movement-core.mjs";
 import {
   CSS, GHOST_ALPHA, GM_CLIP_KEYS, GM_ICONS, GM_KEYS, GM_TOOL, MODULE, NOTIFY_BACK, NOTIFY_BLOCKED, NOTIFY_CLEARED,
-  TOOL, TOOL_CLIP_KEYS, TOOL_KEYS
+  TOOL, TOOL_CLIP_KEYS, TOOL_KEYS, VERSION
 } from "./movement-core.mjs";
-import { setting } from "./settings.mjs";
+import { SETTINGS, setting } from "./settings.mjs";
 import { combatSummaries } from "./combat-adapter.mjs";
 import { defineAccessor, wrapMethod } from "./lib/patch.mjs";
 
@@ -52,12 +52,25 @@ export function ownedRankOf(token) {
   return core.ownedRank({ isGM: game.user.isGM, enabled: setting("ownedOnTop"), isOwner: !!token?.document?.isOwner });
 }
 
-/** Everything a console reader needs to see why ghost is or isn't on. */
-export function status() {
-  return core.statusFrom({
-    policy: policy(), combat: combatActive(), wish: wish(), isGM: game.user.isGM,
-    ownedOnTop: setting("ownedOnTop"), patched: { drag: dragPatched, keyboard: keyboardPatched }
-  });
+/** Every setting key with its scope, so a console reader never has to guess one (finding -23). */
+const SETTING_SCOPES = Object.freeze(Object.fromEntries(SETTINGS.map(r => [r.key, r.scope])));
+
+/**
+ * Everything a console reader needs to see why ghost is or isn't on, for `opts.sceneId` (default:
+ * the scene this client views). The first eight keys are the historic ones; sceneId, version and
+ * the settings key map are appended after them.
+ */
+export function status(opts = {}) {
+  const sceneId = opts?.sceneId ?? canvas?.scene?.id ?? null;
+  return {
+    ...core.statusFrom({
+      policy: policy(), combat: combatActive(sceneId), wish: wish(), isGM: game.user.isGM,
+      ownedOnTop: setting("ownedOnTop"), patched: { drag: dragPatched, keyboard: keyboardPatched }
+    }),
+    sceneId,
+    version: VERSION,
+    settings: SETTING_SCOPES,
+  };
 }
 
 /* -------------------------------------------- */

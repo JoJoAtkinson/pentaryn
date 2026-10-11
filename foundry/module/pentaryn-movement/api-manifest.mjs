@@ -17,11 +17,13 @@ export const MANIFEST = Object.freeze({
   rows: [
     {
       path: "status",
-      params: [],
-      returns: "{ policy, combatOnScene, allowed, reason, wish, ghost, ownedOnTop, patched: { drag, keyboard } }",
+      params: [{ name: "opts", type: "{ sceneId? }", optional: true, doc: "sceneId default: the viewed scene" }],
+      returns: "{ policy, combatOnScene, allowed, reason, wish, ghost, ownedOnTop, patched: { drag, keyboard }, "
+        + "sceneId, version, settings: { <key>: scope } }",
       gm: false, writes: false, legacy: true,
-      doc: "Why ghost is or isn't on for this client, on the scene it is viewing: the GM policy, whether a "
-        + "combat there stops ghosting, this client's button (wish) and whether the two core methods are wrapped.",
+      doc: "Why ghost is or isn't on for this client on a scene (opts.sceneId, default the viewed one): the GM "
+        + "policy, whether a combat there stops ghosting, this client's button (wish), whether the two core methods "
+        + "are wrapped, and every setting key with its scope (ghost and ownedOnTop are client settings).",
     },
     {
       path: "ghostFor",
