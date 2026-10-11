@@ -187,7 +187,8 @@ await A.link(actor, "Goblin Guild");    // writes its ancestors too; a typo is r
 ```
 
 - **Id or name, everywhere.** `link`, `unlink`, `update`, `remove`, `tell`, `repair`, `stale`,
-  `describe` and `parent` all take an id, a name or an entry. Exact id wins, then a derived id,
+  `lookup` and `parent` all take an id, a name or an entry (`describe` is a deprecated alias of
+  `lookup` until S8). Exact id wins, then a derived id,
   then a unique name. A miss is `notFound`; a legacy duplicate name is `ambiguous`. `A.resolve(ref)`
   answers "which one?" without doing anything.
 - **`create` is strict** (a taken name is `collision`); **`ensure` is get-or-create**. Both take
