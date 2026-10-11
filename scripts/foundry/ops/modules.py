@@ -24,7 +24,6 @@ None of them can tell you the module WORKS. They tell you it can load.
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import shutil
@@ -34,6 +33,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from . import config as cfg, jsscan
+from .digest import SYNC_STAMP, tree_digest  # noqa: F401 — re-exported for callers and tests
 from .out import append_jsonl, event, now_iso
 from .service import _say
 
@@ -490,28 +490,6 @@ def check_all(*, as_json: bool = False) -> int:
 #: same volume (the swap is a rename) but outside the folder Foundry scans for module.json files and
 #: serves over HTTP
 STAGING_DIRNAME = ".pentaryn-sync"
-
-
-#: written into every installed copy: what was installed, from which commit, when (python-tooling-10).
-#: A dotfile, so express.static does not serve it; excluded from `tree_digest`.
-SYNC_STAMP = ".pentaryn-sync.json"
-
-
-def tree_digest(root: Path, *, ignore: tuple[str, ...] = (SYNC_STAMP,)) -> str:
-    """sha256 over every file's module-relative path and bytes, in path order.
-
-    `ignore` names top-level files left out — the sync stamp, so a repo folder and the copy
-    installed from it digest the same. The updater's drift report uses the same function."""
-    h = hashlib.sha256()
-    files = [p for p in root.rglob("*") if p.is_file()]
-    for p in sorted(files, key=lambda q: q.relative_to(root).as_posix()):
-        rel = p.relative_to(root).as_posix()
-        if rel in ignore:
-            continue
-        h.update(rel.encode("utf-8") + b"\0")
-        h.update(p.read_bytes())
-        h.update(b"\0")
-    return f"sha256:{h.hexdigest()}"
 
 
 def _git_state(src: Path) -> tuple[str | None, bool | None]:
