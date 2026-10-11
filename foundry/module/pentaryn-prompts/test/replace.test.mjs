@@ -105,15 +105,11 @@ test("the same marker twice in one call: the second row is refused", async () =>
   assert.deepEqual([r.results[1].ok, r.results[1].code, r.results[1].error], [false, "BAD_SPEC", "m1 is replaced twice in this call"]);
 });
 
-test("argument checks before anything runs: a bad ring tier, an empty list; KNOWN prompts-lookup-14 a non-array is a bare TypeError", async () => {
+test("argument checks before anything runs: a bad ring tier, an empty list; [declared] DP6 a non-array is BAD_SPEC (was a bare TypeError)", async () => {
   await assert.rejects(R.replaceMany({ replacements: [{ sceneId: "s1", markerId: "m1", ring: "gold", with: { kind: "none" } }] }),
     { code: "BAD_SPEC", message: "BAD_SPEC: ring must be pc|foe|named|mook|none, got gold" });
   await assert.rejects(R.replaceMany({ replacements: [] }), { code: "BAD_SPEC", message: "BAD_SPEC: replacements must be a non-empty array" });
   await assert.rejects(R.replaceMany({}), { code: "BAD_SPEC", message: "BAD_SPEC: replacements must be a non-empty array" });
-  await assert.rejects(R.replaceMany({ replacements: { a: 1 } }), err => err instanceof TypeError && err.code === undefined);
-});
-
-test("TODO prompts-lookup-14 (DP6): a non-array replacements rejects BAD_SPEC", { todo: "DP6 [declared] flips the KNOWN TypeError row" }, async () => {
   await assert.rejects(R.replaceMany({ replacements: { a: 1 } }), { code: "BAD_SPEC", message: "BAD_SPEC: replacements must be a non-empty array" });
 });
 

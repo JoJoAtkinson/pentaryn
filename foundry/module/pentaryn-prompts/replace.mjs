@@ -585,8 +585,8 @@ export async function replaceMany(input, opts = {}) {
   let args = Array.isArray(input) ? { ...opts, replacements: input } : { ...(input ?? {}), ...opts };
   if (args.specFile) args = await withSpecFile(args);
   const { replacements, call = null, dryRun = false, force = false } = args;
-  for (const r of replacements ?? []) if (r?.ring) ringData(r.ring, null);   // BAD_SPEC on a bad tier, before anything runs
   if (!Array.isArray(replacements) || !replacements.length) throw codedError("BAD_SPEC", "replacements must be a non-empty array");
+  for (const r of replacements) if (r?.ring) ringData(r.ring, null);   // BAD_SPEC on a bad tier, before anything runs
 
   const entries = replacements.map((spec, i) => resolveOne(spec, i, { call, force }));
   const seen = new Set();
