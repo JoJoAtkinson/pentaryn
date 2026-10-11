@@ -145,17 +145,3 @@ export async function toggle() {
 
   return actor;
 }
-
-/** Registered from the entry point so all the keys are declared in one place. */
-export function registerKeybinding() {
-  game.keybindings.register(MODULE, "showDescription", {
-    name: "PENTARYN_TIES.keybind.describe",
-    hint: "PENTARYN_TIES.keybind.describeHint",
-    editable: [{ key: "Digit9" }],
-    restricted: true,          // GM only — this reads the private biography field
-    onDown: () => {
-      toggle();
-      return true;
-    }
-  });
-}

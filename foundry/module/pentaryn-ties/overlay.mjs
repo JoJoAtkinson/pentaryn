@@ -46,6 +46,7 @@ import { MODULE, read } from "./ties-api.mjs";
 import * as Cards from "./popups.mjs";
 import { canSee } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { setting } from "./settings.mjs";
 
 const log = makeLog(MODULE);
 
@@ -90,7 +91,7 @@ function soleOwnedToken() {
 function permitted(actor) {
   if (!actor) return false;
   if (game.user.isGM) return true;
-  if (!game.settings.get(MODULE, "playerAccess")) return false;
+  if (!setting("playerAccess")) return false;
   return actor.isOwner === true;
 }
 
@@ -122,11 +123,7 @@ function gridsApart(a, b) {
 }
 
 function nearDistance() {
-  try {
-    return Number(game.settings.get(MODULE, "nearDistance")) || 4;
-  } catch {
-    return 4;
-  }
+  return Number(setting("nearDistance")) || 4;
 }
 
 /** First visible token on this scene for an actor, or null. */

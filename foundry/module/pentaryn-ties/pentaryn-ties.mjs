@@ -47,6 +47,7 @@ import { openLook } from "./look.mjs";
 import { AttributeReview, openReview } from "./review-ui.mjs";
 import * as ItemMarks from "./item-marks.mjs";
 import { MODULE } from "./ties-core.mjs";
+import { registerSettings, onKeys, setting, mayWrite } from "./settings.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -57,248 +58,42 @@ const TAB = "ties";
 /*  Registration                                */
 /* -------------------------------------------- */
 
-Hooks.once("init", () => {
-  /**
-   * TWO keys, and they are the same web at two densities.
-   *
-   *   8 — hover somebody: a card for everyone THEY know who is in sight.
-   *   7 — select your own token and hover somebody else: the ONE card for what that person
-   *       is to you. Press again on them to close it, move to another and press for theirs.
-   *
-   * They read the canvas differently on purpose — 8's subject is the hovered token, 7's is
-   * the SELECTED one and the hovered token is the object. 7 therefore refuses to run
-   * without a selection rather than falling back to the hover, because falling back would
-   * silently answer a different question. The reasoning lives in overlay.mjs.
-   *
-   * 0.3.0 also shipped two keys — bare 8 for a word under each token, Shift+8 for cards —
-   * and the cards won outright, so the word mode was removed rather than left in as a
-   * setting nobody would pick. This is not that: both of these draw cards, and they differ
-   * only in how many.
-   *
-   * `showWeb` keeps its original id so anyone who rebound it off 8 keeps their key.
-   *
-   * Neither is `restricted` — players need to reach this for their own character; the
-   * permission check lives in the overlay, where it also honours the playerAccess setting.
-   */
-  game.keybindings.register(MODULE, "showWeb", {
-    name: "PENTARYN_TIES.keybind.show",
-    hint: "PENTARYN_TIES.keybind.showHint",
-    editable: [{ key: "Digit8" }],
-    restricted: false,
-    onDown: () => {
-      Overlay.showAll();
-      return true;
-    }
-  });
-
-  /**
-   * 6 — the writing key, next to the three reading keys.
-   *
-   * Right-clicking a token was the obvious home for this and it is not available: core's
-   * `Token#_canHUD` is `user.isGM || actor.testUserPermission(user, "OWNER")`, so a player
-   * right-clicking an NPC gets nothing at all, and there is no context-menu hook for
-   * placeables (`_getEntryContextOptions` is a sidebar/application thing). A hover key is
-   * the only surface that gives a player "you can see them, so you can add them".
-   *
-   * Hovering someone you OWN opens their list to write on; hovering anyone else opens a
-   * tie pointing AT them, from you.
-   */
-  game.keybindings.register(MODULE, "addTie", {
-    name: "PENTARYN_TIES.keybind.add",
-    hint: "PENTARYN_TIES.keybind.addHint",
-    editable: [{ key: "Digit6" }],
-    restricted: false,
-    onDown: () => {
-      if (!API.mayWrite()) return true;
-      openTieDialogFor(canvas?.tokens?.hover ?? null);
-      return true;
-    }
-  });
-
-  /**
-   * 5 — the other writing key, and it sits next to 6 because that is what it is.
-   *
-   * 6 records what someone is *to* you; 5 records what you have learned *about* them. Both
-   * are the same gesture — hover the creature in front of you and press — and both refuse in
-   * the same way, so they belong on adjacent keys rather than at opposite ends of the row.
-   *
-   * The tab's "Add…" picker is the other door and answers a different question ("someone I
-   * met three sessions ago"); this one answers "the thing that is looking at me right now",
-   * which is the door that has to be one keystroke wide.
-   */
-  game.keybindings.register(MODULE, "fileKnown", {
-    name: "PENTARYN_TIES.keybind.known",
-    hint: "PENTARYN_TIES.keybind.knownHint",
-    editable: [{ key: "Digit5" }],
-    restricted: false,
-    onDown: () => {
-      if (!API.mayWrite()) return true;
-      Known.fileHovered(canvas?.tokens?.hover ?? null);
-      return true;
-    }
-  });
-
+/*
+ * The keys' bodies. The rows (ids, default keys, labels) are KEYBINDINGS in settings.mjs; settings
+ * may not import a feature, so the bodies are handed over here and each row's onDown calls its body.
+ */
+onKeys({
+  showWeb: () => Overlay.showAll(),
+  addTie: () => {
+    if (!mayWrite()) return;
+    openTieDialogFor(canvas?.tokens?.hover ?? null);
+  },
+  fileKnown: () => {
+    if (!mayWrite()) return;
+    Known.fileHovered(canvas?.tokens?.hover ?? null);
+  },
   /*
    * Inspect the hovered token — phase 8's gesture, on the key beside the one that files them.
    * Deliberately the same idiom as `fileKnown`: hover, press, done. Nothing about the key press
    * varies by what the target carries.
    */
-  game.keybindings.register(MODULE, "inspect", {
-    name: "PENTARYN_TIES.keybind.inspect",
-    hint: "PENTARYN_TIES.keybind.inspectHint",
-    editable: [{ key: "Digit4" }],
-    restricted: false,
-    onDown: () => {
-      if (!API.mayWrite()) return true;
-      const token = canvas?.tokens?.hover ?? null;
-      const who = inspectorFor();
-      const subject = token?.actor ?? (token ? game.actors.get(token.document.actorId) : null);
-      if (who && subject && subject.id !== who.id) {
-        // the Look window first, before the dice — same moment, same frame, whatever follows
-        if (!game.user?.isGM) openLook(who, subject);
-        Study.inspect(who, subject);
-      }
-      return true;
+  inspect: () => {
+    if (!mayWrite()) return;
+    const token = canvas?.tokens?.hover ?? null;
+    const who = inspectorFor();
+    const subject = token?.actor ?? (token ? game.actors.get(token.document.actorId) : null);
+    if (who && subject && subject.id !== who.id) {
+      // the Look window first, before the dice — same moment, same frame, whatever follows
+      if (!game.user?.isGM) openLook(who, subject);
+      Study.inspect(who, subject);
     }
-  });
+  },
+  showOneTie: () => Overlay.showOne(),
+  showDescription: () => Describe.toggle()
+});
 
-  game.keybindings.register(MODULE, "showOneTie", {
-    name: "PENTARYN_TIES.keybind.one",
-    hint: "PENTARYN_TIES.keybind.oneHint",
-    editable: [{ key: "Digit7" }],
-    restricted: false,
-    onDown: () => {
-      Overlay.showOne();
-      return true;
-    }
-  });
-
-  /**
-   * 9 — the odd one out, and deliberately so. 7 and 8 are two densities of the same
-   * question and both have a player half; this is "who IS this", read off the actor's
-   * private biography, and is GM-only. It lives next to them on the number row because
-   * that is where the hand already is, and because 7/8/9 were free — a letter would have
-   * collided with something Foundry or dnd5e already owns.
-   */
-  Describe.registerKeybinding();
-
-  game.settings.register(MODULE, "macroCreated", { scope: "world", config: false, type: Boolean, default: false });
-
-  /**
-   * World scope: whether players may run this at all is the GM's call, and one answer for
-   * the table. Off mid-session and the next key press does nothing for them.
-   */
-  game.settings.register(MODULE, "playerAccess", {
-    name: "PENTARYN_TIES.settings.playerAccess",
-    hint: "PENTARYN_TIES.settings.playerAccessHint",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: true
-  });
-
-  /**
-   * The approval gate's world-wide fallback (disguise decision 8).
-   *
-   * Default **off** — auto-deliver — because a gate that is on by default turns every roll into
-   * a chore the first time somebody enables the feature, and Joe's own framing is that most
-   * checks he does not care about. The per-kind `studyHold` flag overrides it in both
-   * directions, and the granularity stops at the *roll*: a hold that applied only to high tiers
-   * would deliver low totals instantly and hold high ones, which makes the delay itself the
-   * number.
-   */
-  game.settings.register(MODULE, "holdDefault", {
-    name: "PENTARYN_TIES.settings.holdDefault",
-    hint: "PENTARYN_TIES.settings.holdDefaultHint",
-    scope: "world",
-    config: true,
-    type: Boolean,
-    default: false
-  });
-
-  /*
-   * The attribute registry and its ledger — phase 6, decision 16.
-   *
-   * `config: false` on both: neither is edited through Foundry's settings sheet. The registry
-   * has its own editor, and the ledger is machine-written. What a world setting buys here is
-   * **writability**, not visibility — `SETTINGS_MODIFY` requires role 4, so the server refuses
-   * a player write, which is what makes an attribute-lore lock as unforgeable as a belief row
-   * on an NPC. Everything in a world syncs to every client regardless (decision 8's
-   * measurements); this was never a secrecy mechanism and is not documented as one.
-   */
-  game.settings.register(MODULE, Attributes.REGISTRY_SETTING, {
-    scope: "world",
-    config: false,
-    type: Array,
-    default: []
-  });
-
-  game.settings.register(MODULE, Attributes.ATTR_BELIEFS_SETTING, {
-    scope: "world",
-    config: false,
-    type: Object,
-    default: {}
-  });
-
-  /*
-   * Decision 19. **Default RAW**, and that is a shipping decision rather than a preference:
-   * the 2024 PHB cancels advantage and disadvantage outright when both are present, however
-   * many sit on each side, and a module meant for other tables defaults to the book. Joe's
-   * netting is one flip.
-   */
-  /*
-   * Phase 8's world-knowledge ledger — who knows *of* what, and who has permanently failed to.
-   *
-   * A world setting rather than a flag on the character, and this is the one place the choice is
-   * load-bearing: a character actor is owned by its player, so a flag there would be
-   * player-writable and the stage-1 lock forgeable. `SETTINGS_MODIFY` requires role 4.
-   */
-  game.settings.register(MODULE, Attributes.KNOWLEDGE_SETTING, {
-    scope: "world",
-    config: false,
-    type: Object,
-    default: {}
-  });
-
-  game.settings.register(MODULE, "advantageStacking", {
-    name: "PENTARYN_TIES.settings.advantageStacking",
-    hint: "PENTARYN_TIES.settings.advantageStackingHint",
-    scope: "world",
-    config: true,
-    type: String,
-    choices: {
-      raw: "PENTARYN_TIES.settings.advantageRaw",
-      net: "PENTARYN_TIES.settings.advantageNet"
-    },
-    default: "raw"
-  });
-
-  game.settings.register(MODULE, "nearDistance", {
-    name: "PENTARYN_TIES.settings.nearDistance",
-    hint: "PENTARYN_TIES.settings.nearDistanceHint",
-    scope: "world",
-    config: true,
-    type: Number,
-    range: { min: 1, max: 20, step: 1 },
-    default: 4
-  });
-
-  // where dragged cards were left — per browser, so two people at one table don't fight over it
-  game.settings.register(MODULE, Cards.PIN_SETTING, {
-    scope: "client",
-    config: false,
-    type: Array,
-    default: []
-  });
-  game.settings.register(MODULE, "sheetTab", {
-    name: "PENTARYN_TIES.settings.sheetTab",
-    hint: "PENTARYN_TIES.settings.sheetTabHint",
-    scope: "client",
-    config: true,
-    type: Boolean,
-    default: true
-  });
-
+Hooks.once("init", () => {
+  registerSettings({ log });
   Overlay.registerHooks();
   Worn.registerHooks();
   ItemMarks.register();
@@ -520,7 +315,7 @@ Hooks.once("ready", () => {
 
 /** A draggable macro, created once, for people who'd rather use a hotbar slot. */
 async function ensureMacro() {
-  if (game.settings.get(MODULE, "macroCreated")) return;
+  if (setting("macroCreated")) return;
   const name = game.i18n.localize("PENTARYN_TIES.macroName");
   if (!game.macros.getName(name)) {
     await Macro.create({
@@ -551,7 +346,7 @@ async function ensureMacro() {
 function mayView(actor) {
   if (!(actor instanceof Actor)) return false;
   if (game.user?.isGM) return true;
-  return game.settings.get(MODULE, "playerAccess") === true && actor.isOwner === true;
+  return setting("playerAccess") === true && actor.isOwner === true;
 }
 
 /**
@@ -603,7 +398,7 @@ const SHEET_TABS = [
 ];
 
 function injectTab(app, element) {
-  if (!game.settings.get(MODULE, "sheetTab")) return;
+  if (!setting("sheetTab")) return;
   const actor = app?.document;
   if (!mayView(actor)) return;
 
@@ -722,7 +517,7 @@ export async function openTieDialogFor(token) {
   }
   // nothing to write with, and for a player that includes the case where the GM turned the
   // whole feature off — so check the pens, not the token
-  if (!API.mayWrite()) return null;
+  if (!mayWrite()) return null;
   if (!game.user?.isGM && !sourceCandidates().length) return null;
   return TieDialog.open({ clicked: actor, clickedToken: token });
 }
@@ -737,7 +532,7 @@ function injectTieHUD(app, element) {
   const token = app?.object ?? null;
   // the HUD opens for owners and GMs, but the setting can still have this feature switched
   // off for players — in which case the button must not be there to press
-  if (!API.mayWrite()) return;
+  if (!mayWrite()) return;
   const root = element instanceof HTMLElement ? element : element?.[0];
   const col = root?.querySelector(".col.left") ?? root?.querySelector(".left");
   if (!col || col.querySelector(".pt-tie-btn")) return;
@@ -971,7 +766,7 @@ Hooks.on("canvasReady", () => {
   if (!view || view.dataset.ptLook) return;
   view.dataset.ptLook = "1";
   view.addEventListener("dblclick", ev => {
-    if (game.user?.isGM || !API.mayWrite()) return; // the GM has the HUD
+    if (game.user?.isGM || !mayWrite()) return; // the GM has the HUD
     // The token under the click itself, not Foundry's hover state: hover can be held by
     // something else (a pin, a pile) or simply not have caught up, and then the double-click
     // did nothing at all. Topmost first, and only creatures this client can see.

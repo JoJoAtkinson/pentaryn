@@ -34,6 +34,7 @@ import {
 } from "../known-core.mjs";
 import { attackItems, composeStudyPayload } from "./compose.mjs";
 import { readFlag } from "../lib/flags.mjs";
+import { setting } from "../settings.mjs";
 
 
 /* -------------------------------------------- */
@@ -212,11 +213,7 @@ export const studyTiersOf = actor => readStudyTiers(readFlag(actor, MODULE, STUD
 
 /** The registry, read defensively — a setting can be unregistered when a hook fires early. */
 export function reg() {
-  try {
-    return game.settings.get(MODULE, REGISTRY_SETTING) ?? [];
-  } catch {
-    return [];
-  }
+  return setting(REGISTRY_SETTING) ?? [];
 }
 
 /**
@@ -224,20 +221,12 @@ export function reg() {
  * PHB, and Joe's netting is the one flip his table makes.
  */
 export function stackingRule() {
-  try {
-    return game.settings.get(MODULE, "advantageStacking") === "net" ? "net" : "raw";
-  } catch {
-    return "raw";
-  }
+  return setting("advantageStacking") === "net" ? "net" : "raw";
 }
 
 /** The world's fallback for the approval gate, read defensively — settings can be unborn. */
 export function holdDefault() {
-  try {
-    return game.settings.get(MODULE, "holdDefault") === true;
-  } catch {
-    return false;
-  }
+  return setting("holdDefault") === true;
 }
 
 export const studyHoldFor = kind => holdResolved(readFlag(kind, MODULE, STUDY_HOLD_FLAG), holdDefault());

@@ -69,6 +69,7 @@ import {
   BELIEFS_FLAG
 } from "./known-core.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { setting } from "./settings.mjs";
 
 const log = makeLog(MODULE);
 
@@ -172,11 +173,7 @@ const DERIVED_ICONS = {
 
 /** Never throws — a setting can be unregistered when a hook fires early. */
 export function registry() {
-  try {
-    return readRegistry(game.settings.get(MODULE, REGISTRY_SETTING));
-  } catch {
-    return [];
-  }
+  return readRegistry(setting(REGISTRY_SETTING));
 }
 
 export const attributeById = id => registry().find(e => e.id === id) ?? null;
@@ -1014,11 +1011,7 @@ export function staleCarriers(ref) {
 
 /** Never throws — a setting can be unregistered when a hook fires early. */
 export function knowledge() {
-  try {
-    return readKnowledge(game.settings.get(MODULE, KNOWLEDGE_SETTING));
-  } catch {
-    return {};
-  }
+  return readKnowledge(setting(KNOWLEDGE_SETTING));
 }
 
 export const knowsOf = (character, attrId) => knowsAttribute(knowledge(), character?.id, attrId);

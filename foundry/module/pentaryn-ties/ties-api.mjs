@@ -76,26 +76,8 @@ export function presentActorIds() {
   return ids;
 }
 
-/**
- * May this user record ties at all?
- *
- * The `playerAccess` setting's hint promises "turn this off to make the whole feature
- * GM-only again". It used to govern only the sheet tab and the canvas keys, leaving the
- * dialog, the hover key and the HUD button answering to nobody. A kill-switch that leaves
- * three doors open is not one.
- *
- * It lives here, in the layer that imports nothing, because both the UI and the relay's
- * GM-side handler have to ask the same question — and having them import each other to
- * share it built a cycle.
- */
-export function mayWrite(user = game.user) {
-  if (user?.isGM) return true;
-  try {
-    return game.settings.get(MODULE, "playerAccess") === true;
-  } catch {
-    return false; // settings not registered yet: refuse rather than guess
-  }
-}
+// `mayWrite` lives in settings.mjs (it reads a setting); re-exported for every importer of this file.
+export { mayWrite } from "./settings.mjs";
 
 /** Sanitised, resolved ties for an actor. Never throws. Never returns non-array. */
 export function read(actor) {

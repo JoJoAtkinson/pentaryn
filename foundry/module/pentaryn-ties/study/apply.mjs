@@ -25,6 +25,7 @@ import { promptDeliver } from "./gate.mjs";
 import { beliefsOf, resolveFact, stackingRule, studiedOf } from "./resolve.mjs";
 import { esc, f, log, SITUATIONAL_MAX, SITUATIONAL_MIN } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
+import { setting } from "../settings.mjs";
 
 /* -------------------------------------------- */
 /*  GM side                                     */
@@ -253,11 +254,7 @@ export async function applyStudy(payload, senderId) {
  */
 export function readBelief(fact, characterId) {
   if (fact.ns === "attr") {
-    try {
-      return readAttrBeliefs(game.settings.get(MODULE, ATTR_BELIEFS_SETTING))[`${fact.factKey}:${characterId}`] ?? null;
-    } catch {
-      return null;
-    }
+    return readAttrBeliefs(setting(ATTR_BELIEFS_SETTING))[`${fact.factKey}:${characterId}`] ?? null;
   }
   return beliefsOf(fact.ledger)[characterId]?.[fact.beliefKey] ?? null;
 }
@@ -287,7 +284,7 @@ export async function putBelief(fact, characterId, record) {
    */
   if (!game.user?.isGM) return;
   const key = `${fact.factKey}:${characterId}`;
-  const all = readAttrBeliefs(game.settings.get(MODULE, ATTR_BELIEFS_SETTING));
+  const all = readAttrBeliefs(setting(ATTR_BELIEFS_SETTING));
   if (record === null) delete all[key];
   else
     all[key] = {

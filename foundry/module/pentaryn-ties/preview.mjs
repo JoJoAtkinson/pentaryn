@@ -75,6 +75,7 @@ import {
 import { CONCEAL_FLAG, concealFor, firstName } from "./core/rules.mjs";
 import { readFlag } from "./lib/flags.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { setting } from "./settings.mjs";
 
 const log = makeLog(MODULE);
 
@@ -203,8 +204,8 @@ export class InspectPreview extends ApplicationV2 {
     const know = pc ? foundry.utils.deepClone(knowledge()) : {};
     const beliefs = {};
     const rollerCarries = pc ? attributeIdsOf(pc, kindActorOf) : [];
-    const holdDef = log.swallow("preview: holdDefault unreadable", () => game.settings.get(MODULE, "holdDefault") === true, false);
-    const rule = log.swallow("preview: advantageStacking unreadable", () => (game.settings.get(MODULE, "advantageStacking") === "net" ? "net" : "raw"), "raw");
+    const holdDef = setting("holdDefault") === true;
+    const rule = setting("advantageStacking") === "net" ? "net" : "raw";
 
     const conceal = id => concealFor(readFlag(subject, MODULE, CONCEAL_FLAG), id);
     const reach = new Map(); // attr id → chance of having identified it

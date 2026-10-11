@@ -45,6 +45,7 @@ import { factFrom, pending, reset, rowMissed } from "./gate.mjs";
 import { beliefsOf, kindActorOf, reg, resolveFact, studyStateFor, studyTiersOf } from "./resolve.mjs";
 import { esc, f, INSPECT } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
+import { setting } from "../settings.mjs";
 
 /* -------------------------------------------- */
 /*  The GM's Share — telling, not rolling       */
@@ -86,11 +87,7 @@ export function factStatus(spec, character) {
     const entry = describeAttribute(spec.attrId);
     if (typeof entry.dc === "number") dc = entry.dc + concealmentFor(subject, spec.attrId);
   } else if (spec.ns === "attr") {
-    try {
-      belief = readAttrBeliefs(game.settings.get(MODULE, ATTR_BELIEFS_SETTING))[`${key}:${character.id}`] ?? null;
-    } catch {
-      belief = null;
-    }
+    belief = readAttrBeliefs(setting(ATTR_BELIEFS_SETTING))[`${key}:${character.id}`] ?? null;
     dc = rollableLore(attributeLore(spec.attrId)).find(r => r.id === spec.factId)?.dc ?? null;
   } else if (spec.ns === "lore") {
     belief = beliefsOf(subject)[character.id]?.[key] ?? null;
@@ -407,12 +404,7 @@ export async function forgetFact(spec, character) {
  */
 export function legacyMissCards() {
   if (!game.user?.isGM) return [];
-  let attrLedger = {};
-  try {
-    attrLedger = readAttrBeliefs(game.settings.get(MODULE, ATTR_BELIEFS_SETTING));
-  } catch {
-    attrLedger = {};
-  }
+  const attrLedger = readAttrBeliefs(setting(ATTR_BELIEFS_SETTING));
   const out = [];
   for (const pc of game.actors?.contents ?? []) {
     if (pc.type !== "character") continue;

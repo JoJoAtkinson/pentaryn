@@ -27,6 +27,7 @@ import { concealmentFor } from "./cascade.mjs";
 import { beliefsOf, resolveFact, studiedOf, studyTiersOf } from "./resolve.mjs";
 import { esc, f, t } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
+import { setting } from "../settings.mjs";
 
 /* -------------------------------------------- */
 /*  The approval gate                           */
@@ -180,12 +181,7 @@ export function pending() {
     }
   }
   // ── the attribute plane, which is a setting rather than any document ──
-  let attrLedger = {};
-  try {
-    attrLedger = readAttrBeliefs(game.settings.get(MODULE, ATTR_BELIEFS_SETTING));
-  } catch {
-    attrLedger = {};
-  }
+  const attrLedger = readAttrBeliefs(setting(ATTR_BELIEFS_SETTING));
   for (const [key, rec] of Object.entries(attrLedger)) {
     if (!rec || rec.delivered || rec.claim) continue; // a bare claim is a roll in flight, not a pending reveal
     /*

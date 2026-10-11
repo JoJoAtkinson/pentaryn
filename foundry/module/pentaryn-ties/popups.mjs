@@ -26,11 +26,12 @@ import { MODULE, read, stanceOf, stanceLabel } from "./ties-api.mjs";
 import { readWorn } from "./worn.mjs";
 import { canSee } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { PIN_SETTING, setting } from "./settings.mjs";
 
 const log = makeLog(MODULE);
 
 const LAYER_ID = "pentaryn-ties-cards";
-export const PIN_SETTING = "pinnedCards";
+export { PIN_SETTING }; // the setting row lives in settings.mjs (CLIENT_STATE)
 const FALLBACK_ART = "icons/svg/mystery-man.svg";
 
 /** key `${sourceActorId}:${tieId}` -> { el, pinned, sourceId, tieId, anchor, colour } */
@@ -341,12 +342,7 @@ function savePinned() {
  * as a broken card.
  */
 export function restorePinned() {
-  let saved;
-  try {
-    saved = game.settings.get(MODULE, PIN_SETTING);
-  } catch {
-    return;
-  }
+  const saved = setting(PIN_SETTING);
   if (!Array.isArray(saved) || !saved.length) return;
 
   for (const entry of saved) {
