@@ -413,3 +413,171 @@ def test_r7_d4_c03_counts_dnd5e_ignore_tokens(tmp_path):
     assert status(conformance.score_dir(d), "C03") == "pass"
     (d / "m.mjs").write_text("export const ghost = o => Object.assign(o, { ignoreWalls: true });\n")
     assert status(conformance.score_dir(d), "C03") == "fail"
+
+
+# ── §5.9 async and concurrency rules (C53–C61) ───────────────────────────────
+
+def one(tmp_path, code: str, *, mid: str = "pentaryn-async", extra: dict | None = None, socket=None):
+    d = tmp_path / mid
+    man = {"id": mid, "esmodules": ["a.mjs"]}
+    if socket is not None:
+        man["socket"] = socket
+    write(d, {"module.json": json.dumps(man), "a.mjs": code, **(extra or {})})
+    return conformance.score_dir(d)
+
+
+def res(report, rid):
+    return next(r for r in report["results"] if r["id"] == rid)
+
+
+C53_CASES = [
+    ('reg.on("preUpdateActor", async (a) => { return false; });', "fail"),
+    ('Hooks.on("dnd5e.preUseActivity", async function (x) {});', "fail"),
+    ('reg.on("preCreateToken", check);\nasync function check(t) { return false; }', "fail"),
+    ('reg.on("preCreateToken", check);\nconst check = async (t) => false;', "fail"),
+    ('reg.on("preUpdateActor", (a) => { if (x) return false; });', "pass"),
+    ('reg.on("updateActor", async (a) => { await a.x(); });', "pass"),          # not vetoable
+    ('reg.on("preUpdateActor", elsewhere);', "pass"),                            # unresolved: noted only
+    ('myHooks.on("preUpdateActor", async () => {});', "pass"),                  # lookbehind
+]
+
+
+@pytest.mark.parametrize("code,want", C53_CASES)
+def test_c53_async_listener_on_a_vetoable_hook(tmp_path, code, want):
+    assert res(one(tmp_path, code), "C53")["status"] == want
+
+
+def test_c54_pre_doc_gated_on_the_active_gm_warns_any_gm_does_not(tmp_path):
+    r = res(one(tmp_path, 'reg.on("preUpdateActor", (a) => { if (!isActiveGM()) return; });\n'
+                          'reg.on("preCreateItem", (i) => { if (!game.user.isGM) return; });\n'), "C54")
+    assert r["status"] == "warn" and len(r["detail"]) == 1 and "a.mjs:1" in r["detail"][0]
+    report = one(tmp_path / "b", 'reg.on("preUpdateActor", (a) => { if (!isActiveGM()) return; });')
+    assert "C54" in report["warnings"] and "C54" in report["manual"]
+
+
+C55_CASES = [
+    ('await gm.query("x.y", {});', "fail"),
+    ('await game.users.activeGM.query("x.y", {});', "fail"),
+    ('await game.users.get(id).query("x.y", {});', "fail"),
+    ('await User.queryMany(users, "x.y", {});', "fail"),
+    ('await gm.query("x.y", {}, { timeout: 8000 });', "pass"),
+    ('await User.queryMany(users, "x.y", {}, { timeout: 5000 });', "pass"),
+    ('await queryGM("x.y", {});', "pass"),                                       # kit default
+    ('await db.query("select 1");', "pass"),                                     # not a User
+    ('await thing.query("x");', "manual"),                                       # unknown receiver
+]
+
+
+@pytest.mark.parametrize("code,want", C55_CASES)
+def test_c55_every_query_passes_a_timeout(tmp_path, code, want):
+    assert res(one(tmp_path, code), "C55")["status"] == want
+
+
+C56_CASES = [
+    ('CONFIG.queries["m.x"] = guarded(f);', "fail"),
+    ('CONFIG.queries[`${MODULE}.x`] = f;', "fail"),
+    ('CONFIG.queries.x = f;', "fail"),
+    ('CONFIG.queries ??= {};', "fail"),
+    ('Object.assign(CONFIG.queries, { x: f });', "fail"),
+    ('const h = CONFIG.queries[name];', "pass"),
+    ('CONFIG.queries[name](data);', "pass"),
+    ('if (CONFIG.queries[name] === f) {}', "pass"),
+    ('const ok = typeof CONFIG.queries?.["a.b"] === "function";', "pass"),
+]
+
+
+@pytest.mark.parametrize("code,want", C56_CASES)
+def test_c56_config_queries_only_through_the_kit(tmp_path, code, want):
+    assert res(one(tmp_path, code), "C56")["status"] == want
+
+
+C57_CASES = [
+    ('game.socket.on("module.pentaryn-async", f);', "pass"),
+    ('const CHANNEL = `module.${MODULE}`;\ngame.socket.emit(CHANNEL, {});', "pass"),
+    ('game.socket.emit("module.pentaryn-other", {});', "fail"),
+    ('const CH = "module.pentaryn-asyn";\ngame.socket.on(CH, f);', "fail"),
+    ('game.socket.on("userActivity", f);', "n/a"),                               # core event: C47
+]
+
+
+@pytest.mark.parametrize("code,want", C57_CASES)
+def test_c57_module_socket_channel_is_the_module_id(tmp_path, code, want):
+    assert res(one(tmp_path, code, socket=True), "C57")["status"] == want
+
+
+C58_CASES = [
+    ('const a = serialStore(MODULE, "ledger");', "pass"),
+    ('const a = serialStore(MODULE, ["a", "b"]);\nconst b = serialStore(MODULE, "c");', "pass"),
+    ('const a = serialStore(MODULE, "ledger");\nconst b = serialStore(MODULE, "ledger");', "fail"),
+    ('const a = serialStore(MODULE, ["b", "a"]);\nconst b = serialStore(MODULE, ["a", "b"]);', "fail"),
+    ('const a = serialStore(MODULE, ["a", "b"]);\nconst b = serialStore(MODULE, "a");', "fail"),
+    ('const a = serialStore(MODULE, key);', "pass"),                             # non-literal: noted
+]
+
+
+@pytest.mark.parametrize("code,want", C58_CASES)
+def test_c58_one_serial_store_per_key(tmp_path, code, want):
+    assert res(one(tmp_path, code), "C58")["status"] == want
+
+
+def test_c58_counts_keys_across_files(tmp_path):
+    report = one(tmp_path, 'import "./b.mjs";\nconst a = serialStore(MODULE, "ledger");',
+                 extra={"b.mjs": 'const b = serialStore(MODULE, "ledger");\n'})
+    assert res(report, "C58")["status"] == "fail"
+
+
+C59_CASES = [
+    ("for (const t of tokens) await t.update({ hidden: true });", "warn"),       # no braces
+    ("for (const t of tokens) { await t.update({ hidden: true }); }", "warn"),
+    ("for (const a of game.actors.filter(x => x.isOwner)) { await a.setFlag(M, 'k', 1); }", "warn"),
+    ("for (const id of ids) { await game.actors.get(id).update({}); }", "warn"),
+    ("while (q.length) { await q.pop().delete(); }", "warn"),
+    ("items.forEach(async (i) => { await i.update({}); });", "warn"),
+    ("for (const t of tokens) { u.push({ _id: t.id }); }\nawait scene.updateEmbeddedDocuments('Token', u);", "pass"),
+    ("for (const t of tokens) { if (!(await claimDocument(t, 'k'))) continue; }", "pass"),
+    ("for (const t of tokens) { await sleep(1); }", "pass"),
+]
+
+
+@pytest.mark.parametrize("code,want", C59_CASES)
+def test_c59_per_document_await_in_a_loop(tmp_path, code, want):
+    assert res(one(tmp_path, code), "C59")["status"] == ("warn" if want == "warn" else "pass")
+
+
+C60_CASES = [
+    ('reg.on("refreshToken", async (t) => { await paint(t); });', "warn"),
+    ('reg.on("refreshToken", (t) => { void (async () => { await paint(t); })(); });', "warn"),
+    ('reg.on("canvasPan", onPan);\nasync function onPan() {}', "warn"),
+    ('reg.on("refreshToken", (t) => { if (cache.has(t.id)) refresh(); });', "pass"),
+    ('reg.on("refreshToken", async (t) => { perFrame(() => paint(t)); });', "pass"),
+    ('reg.on("updateActor", async (a) => { await a.x(); });', "pass"),          # not hot
+]
+
+
+@pytest.mark.parametrize("code,want", C60_CASES)
+def test_c60_no_async_job_per_hot_hook_call(tmp_path, code, want):
+    assert res(one(tmp_path, code), "C60")["status"] == want
+
+
+C61_CASES = [
+    ('reg.on("updateActor", (a) => { a.update({ x: 1 }); });', "warn"),
+    ('reg.on("createChatMessage", async (m) => { await m.setFlag(M, "k", 1); });', "warn"),
+    ('reg.on("updateCombat", (c) => { if (!isAnyGM()) return; c.update({}); });', "warn"),   # any-GM only
+    ('reg.on("updateActor", (a) => { if (!isActiveGM()) return; a.update({}); });', "pass"),
+    ('reg.on("updateActor", (a, c, o, userId) => { if (userId !== game.user.id) return; a.update({}); });', "pass"),
+    ('reg.on("createChatMessage", (m) => { void claimMessage(m, "k").then(() => m.update({})); });', "pass"),
+    ('reg.on("updateActor", (a) => { if (!gate()) return; a.update({}); });\n'
+     'function gate() { return game.users.activeGM?.isSelf; }', "pass"),                  # gate in a helper
+    ('reg.on("deleteActor", (a) => { seen.delete(a.id); });', "pass"),                     # a Map, not a doc
+    ('reg.on("updateActor", (a) => { seen.set(a.id, 1); });', "pass"),
+]
+
+
+@pytest.mark.parametrize("code,want", C61_CASES)
+def test_c61_world_wide_document_reaction_runs_on_one_client(tmp_path, code, want):
+    assert res(one(tmp_path, code), "C61")["status"] == want
+
+
+def test_c61_any_gm_gate_names_why(tmp_path):
+    r = res(one(tmp_path, 'reg.on("updateCombat", (c) => { if (!game.user.isGM) return; c.update({}); });'), "C61")
+    assert "any-GM gate only" in r["detail"][0]

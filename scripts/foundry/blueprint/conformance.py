@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Score in-house Foundry modules against the addon blueprint (rules C01–C52).
+"""Score in-house Foundry modules against the addon blueprint (rules C01–C61).
 
     conformance.py [--root foundry/module] [--snapshot DIR] [--module m …] [--json | --markdown]
 
@@ -1391,6 +1391,322 @@ def c52(m):
                 detail.append(f"{rel}:{src.line_of(mm.start())} legacyName without until")
     return ok() if not detail else bad(detail)
 
+
+
+# ── async and concurrency (playbook §5.9) ────────────────────────────────────
+
+HOOK_REG = re.compile(r"(?<![\w$])(?:Hooks|reg|ctx\.reg)\.(?:on|once)\(\s*\x01(\d+)\x01\s*,\s*")
+VETOABLE = re.compile(r"^(?:[\w-]+\.)?pre[A-Z]")
+PRE_DOC = re.compile(r"^pre(?:Create|Update|Delete)[A-Z]\w*$")
+DOC_EVENT = re.compile(r"^(?:create|update|delete)[A-Z]\w*$")
+# one client: the active GM, a runner pick, or the initiator (`userId !== game.user.id` — the hook's
+# userId is the client that made the change, so exactly one tab passes)
+ACTIVE_GATE = re.compile(r"(?<![\w$])(?:isActiveGM|isActiveGMOrLoneGM|pickRunner)\(|activeGM\b"
+                         r"|(?<![\w$])\w*[uU]serId\s*!==?\s*game\.(?:userId|user\.id)\b"
+                         r"|game\.(?:userId|user\.id)\s*!==?\s*\w*[uU]serId\b")
+CLAIM = re.compile(r"(?<![\w$])(?:claimDocument|claimMessage)\(")
+DEFER = re.compile(r"(?<![\w$.])(?:perFrame|coalesce)\(|(?<![\w$])debounce\(")
+# a document or setting write in a listener body (a Map's `.delete(key)` is not one: a document's
+# delete takes nothing or an options object)
+DOC_WRITE = re.compile(r"\.(?:update|create)\(|\.delete\(\s*(?:\)|\{)|\.(?:set|unset)Flag\("
+                       r"|(?:update|create|delete)(?:Embedded)?Documents\(|settings\.set\(|\.write\(")
+LOOP_AWAIT_METHODS = {"update", "create", "delete", "setFlag", "unsetFlag", "createEmbeddedDocuments",
+                      "updateEmbeddedDocuments", "deleteEmbeddedDocuments"}
+QUERY_RECEIVERS = {"gm", "user", "activeGM", "recipient", "target", "owner"}
+
+
+@dataclass
+class Listener:
+    rel: str
+    line: int
+    name: str
+    is_async: bool
+    body: str | None         # the handler's text (a `{…}` block or an arrow's expression)
+    ident: str | None        # a named handler that could not be resolved in the same file
+
+
+def _expr_end(code: str, i: int) -> int:
+    """End of an expression starting at `i`: the first `,` `;` or unmatched closer at depth 0."""
+    depth = 0
+    while i < len(code):
+        c = code[i]
+        if c in "([{":
+            depth += 1
+        elif c in ")]}":
+            if depth == 0:
+                return i
+            depth -= 1
+        elif c in ",;" and depth == 0:
+            return i
+        i += 1
+    return i
+
+
+def _arrow_body(code: str, q: int) -> str:
+    if q < len(code) and code[q] == "{":
+        return code[q:match_paren(code, q) + 1]
+    return code[q:_expr_end(code, q)]
+
+
+def handler_at(code: str, pos: int, *, _depth: int = 0) -> tuple[bool, str | None, str | None]:
+    """(is_async, body, unresolved identifier) of the function expression or name at `pos`."""
+    am = re.match(r"async\b\s*", code[pos:])
+    is_async = bool(am)
+    p = pos + (am.end() if am else 0)
+    fm = re.match(r"function\b\s*\*?\s*[\w$]*\s*", code[p:])
+    if fm and code[p + fm.end():p + fm.end() + 1] == "(":
+        close = match_paren(code, p + fm.end())
+        q = close + 1 + len(re.match(r"\s*", code[close + 1:]).group(0))
+        if code[q:q + 1] == "{":
+            return is_async, code[q:match_paren(code, q) + 1], None
+        return is_async, None, None
+    if code[p:p + 1] == "(":
+        close = match_paren(code, p)
+        ar = re.match(r"\s*=>\s*", code[close + 1:])
+        if ar:
+            return is_async, _arrow_body(code, close + 1 + ar.end()), None
+    im = re.match(r"[A-Za-z_$][\w$]*\s*=>\s*", code[p:])
+    if im:
+        return is_async, _arrow_body(code, p + im.end()), None
+    im = re.match(r"([A-Za-z_$][\w$]*)\s*[,)]", code[p:])
+    if im and not is_async and _depth == 0:
+        name = re.escape(im.group(1))
+        dm = re.search(rf"(?<![\w$.])(async\s+)?function\s*\*?\s*{name}\s*\(", code)
+        if dm:
+            close = match_paren(code, dm.end() - 1)
+            q = close + 1 + len(re.match(r"\s*", code[close + 1:]).group(0))
+            body = code[q:match_paren(code, q) + 1] if code[q:q + 1] == "{" else None
+            return bool(dm.group(1)), body, None
+        dm = re.search(rf"(?<![\w$.])(?:const|let|var)\s+{name}\s*=\s*", code)
+        if dm:
+            return handler_at(code, dm.end(), _depth=1)
+        return False, None, im.group(1)
+    return is_async, None, None
+
+
+def listeners(m: Module) -> list[Listener]:
+    out = []
+    for rel, src in m.files.items():
+        for mm in HOOK_REG.finditer(src.code):
+            name = src.strings[int(mm.group(1))].value
+            is_async, body, ident = handler_at(src.code, mm.end())
+            out.append(Listener(rel, src.line_of(mm.start()), name, is_async, body, ident))
+    return out
+
+
+def _with_called(code: str, body: str) -> str:
+    """`body` plus the bodies of same-file functions it calls by name (one level)."""
+    extra = []
+    for name in set(re.findall(r"(?<![\w$.])([A-Za-z_$][\w$]*)\s*\(", body)):
+        dm = re.search(rf"(?<![\w$.])(?:async\s+)?function\s*{re.escape(name)}\s*\(", code)
+        if dm:
+            close = match_paren(code, dm.end() - 1)
+            q = close + 1 + len(re.match(r"\s*", code[close + 1:]).group(0))
+            if code[q:q + 1] == "{":
+                extra.append(code[q:match_paren(code, q) + 1])
+    return "\n".join([body, *extra])
+
+
+@rule("C53", "fail", "no async listener on a vetoable hook (pre*, <pkg>.pre*): it can never veto")
+def c53(m):
+    bad_, unresolved = [], []
+    for ls in listeners(m):
+        if not VETOABLE.match(ls.name):
+            continue
+        if ls.is_async:
+            bad_.append(f"{ls.rel}:{ls.line} {ls.name}")
+        elif ls.ident:
+            unresolved.append(f"{ls.rel}:{ls.line} {ls.name} → {ls.ident} (not in this file)")
+    return bad(bad_) if bad_ else ok(unresolved)
+
+
+@rule("C54", "warn+manual", "pre<Doc> listener gated on the active GM (pre* runs on the initiator only)")
+def c54(m):
+    found = [f"{ls.rel}:{ls.line} {ls.name}" for ls in listeners(m)
+             if PRE_DOC.match(ls.name) and ls.body
+             and re.search(r"activeGM\b|(?<![\w$])isActiveGM(?:OrLoneGM)?\(", ls.body)]
+    return ok() if not found else ("warn", found)
+
+
+@rule("C55", "fail", "every User#query / User.queryMany passes a timeout (queryGM exempt)")
+def c55(m):
+    detail, unknown = [], []
+    for rel, src in m.files.items():
+        code = src.code
+        for mm in re.finditer(r"((?<![\w$])(?:[A-Za-z_$][\w$]*\??\.)*[A-Za-z_$][\w$]*|\))\??\.query\(", code):
+            recv = mm.group(1)
+            last = recv.rstrip("?").split(".")[-1]
+            user_like = (last in QUERY_RECEIVERS or "activeGM" in recv or "game.user" in recv
+                         or (recv == ")" and "users" in code[max(0, mm.start() - 80):mm.start()]))
+            where = f"{rel}:{src.line_of(mm.start())}"
+            if not user_like:
+                if last not in ("db", "sql", "index", "pool", "client"):
+                    unknown.append(f"{where} {recv}.query( — is the receiver a User?")
+                continue
+            args = code[mm.end() - 1:match_paren(code, mm.end() - 1) + 1]
+            if not re.search(r"\btimeout\b", args):
+                detail.append(f"{where} {recv}.query( without timeout")
+        for mm in re.finditer(r"(?<![\w$])(?:User\.)?queryMany\(", code):
+            args = code[mm.end() - 1:match_paren(code, mm.end() - 1) + 1]
+            if not re.search(r"\btimeout\b", args):
+                detail.append(f"{rel}:{src.line_of(mm.start())} queryMany( without timeout")
+    if detail:
+        return bad(detail + unknown)
+    return ("manual", unknown) if unknown else ok()
+
+
+@rule("C56", "fail", "CONFIG.queries is assigned only by the kit (manifest query/relay rows)")
+def c56(m):
+    detail = []
+    for rel, src in m.files.items():
+        code = src.code
+        hits = []
+        for mm in re.finditer(r"CONFIG\.queries\s*\[", code):
+            close = match_paren(code, mm.end() - 1)
+            if re.match(r"\s*(?:\?\?|\|\||&&)?=(?!=)", code[close + 1:]):
+                hits.append(mm.start())
+        for mm in re.finditer(r"CONFIG\.queries\s*\.\s*[A-Za-z_$][\w$]*\s*(?:\?\?|\|\||&&)?=(?!=)"
+                              r"|CONFIG\.queries\s*(?:\?\?|\|\||&&)?=(?!=)"
+                              r"|Object\.assign\(\s*CONFIG\.queries\b", code):
+            hits.append(mm.start())
+        detail += [f"{rel}:{src.line_of(h)} hand-written CONFIG.queries assignment" for h in sorted(set(hits))]
+    return ok() if not detail else bad(detail)
+
+
+@rule("C57", "fail", "a game.socket module.* channel is exactly module.<module.json id>")
+def c57(m):
+    want = f"module.{m.id}"
+    used, detail = False, []
+    for rel, src in m.files.items():
+        code = src.code
+        consts = {}
+        for mm in re.finditer(r"(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*", code):
+            lit = lit_after(src, mm.end())
+            if lit and lit.value.startswith("module."):
+                consts[mm.group(1)] = lit
+        for mm in re.finditer(r"game\.socket\??\.(?:emit|on|off)\(\s*", code):
+            lit = lit_after(src, mm.end())
+            if lit is None:
+                ident = re.match(r"[A-Za-z_$][\w$]*", code[mm.end():])
+                lit = consts.get(ident.group(0)) if ident else None
+            if lit is None or not lit.value.startswith("module."):
+                continue                     # a core event (§5.6, C47) or unresolved
+            used = True
+            ok_ = lit.value == want if lit.plain else lit.value in ("module.${}", want)
+            if not ok_:
+                detail.append(f"{rel}:{src.line_of(mm.start())} channel {lit.value!r} ≠ {want!r}")
+    if not used:
+        return na("no module socket channel")
+    return ok() if not detail else bad(detail)
+
+
+@rule("C58", "fail", "one serialStore per key across the module")
+def c58(m):
+    seen: dict[str, str] = {}
+    tuples: dict[tuple, str] = {}
+    detail, manual = [], []
+    for rel, src in m.files.items():
+        code = src.code
+        for mm in re.finditer(r"(?<![\w$.])serialStore\(\s*[\w$.]+\s*,\s*", code):
+            where = f"{rel}:{src.line_of(mm.start())}"
+            lit = lit_after(src, mm.end())
+            if lit is not None and lit.plain:
+                keys = (lit.value,)
+            elif code[mm.end():mm.end() + 1] == "[":
+                inner = code[mm.end():match_paren(code, mm.end()) + 1]
+                strs = src.marks_in(inner)
+                if not strs or any(not s.plain for s in strs) or re.sub(r"[\s,\[\]]|\x01\d+\x01", "", inner):
+                    manual.append(f"{where} non-literal key")
+                    continue
+                keys = tuple(sorted(s.value for s in strs))
+            else:
+                manual.append(f"{where} non-literal key")
+                continue
+            if keys in tuples:
+                detail.append(f"{where} serialStore {list(keys)} again (first {tuples[keys]})")
+                continue
+            tuples[keys] = where
+            for k in keys:
+                if k in seen:
+                    detail.append(f"{where} key {k!r} already in a serialStore at {seen[k]}")
+                seen[k] = where
+    return bad(detail + manual) if detail else ok(manual)
+
+
+def _awaited_call(body: str, i: int) -> str | None:
+    """The last method called in the `await` chain starting at `i` (`a.b(x).update(…)` → update)."""
+    j, last = i, None
+    while j < len(body):
+        im = re.match(r"\s*\??\.?\s*([A-Za-z_$][\w$]*)", body[j:])
+        if not im:
+            break
+        name = im.group(1)
+        j += im.end()
+        nxt = re.match(r"\s*(\?\.)?([(\[])", body[j:])
+        while nxt:
+            k = j + nxt.end() - 1
+            if nxt.group(2) == "(":
+                last = name
+            j = match_paren(body, k) + 1
+            nxt = re.match(r"\s*(\?\.)?([(\[])", body[j:])
+        if not re.match(r"\s*\??\.", body[j:]):
+            break
+    return last
+
+
+def loop_bodies(code: str) -> list[tuple[int, str]]:
+    out = []
+    for mm in re.finditer(r"(?<![\w$.])(?:for|while)\s*\(", code):
+        close = match_paren(code, mm.end() - 1)
+        q = close + 1 + len(re.match(r"\s*", code[close + 1:]).group(0))
+        if code[q:q + 1] == "{":
+            out.append((mm.start(), code[q:match_paren(code, q) + 1]))
+        else:
+            out.append((mm.start(), code[q:_expr_end(code, q) + 1]))
+    for mm in re.finditer(r"\.(?:forEach|map)\(\s*(?=async\b)", code):
+        _, body, _ = handler_at(code, mm.end())
+        if body:
+            out.append((mm.start(), body))
+    return out
+
+
+@rule("C59", "warn+manual", "no per-document await inside a loop (batch with updateDocuments/modifyBatch)")
+def c59(m):
+    found = []
+    for rel, src in m.files.items():
+        for pos, body in loop_bodies(src.code):
+            for am in re.finditer(r"(?<![\w$])await\s+", body):
+                if _awaited_call(body, am.end()) in LOOP_AWAIT_METHODS:
+                    found.append(f"{rel}:{src.line_of(pos)} — batch with updateDocuments/modifyBatch")
+                    break
+    found = sorted(set(found), key=found.index)
+    return ok() if not found else ("warn", found[:15])
+
+
+@rule("C60", "warn", "no async listener or await in a hot-hook handler (defer via perFrame/debounce/coalesce)")
+def c60(m):
+    found = []
+    for ls in listeners(m):
+        if ls.name not in HOT_HOOKS:
+            continue
+        body = ls.body or ""
+        if (ls.is_async or re.search(r"(?<![\w$])await\b", body)) and not DEFER.search(body):
+            found.append(f"{ls.rel}:{ls.line} {ls.name}")
+    return ok() if not found else ("warn", found)
+
+
+@rule("C61", "warn+manual", "a writing create*/update*/delete* listener runs on one client (active-GM gate or claim)")
+def c61(m):
+    found = []
+    for ls in listeners(m):
+        if not DOC_EVENT.match(ls.name) or not ls.body or not DOC_WRITE.search(ls.body):
+            continue
+        scope = _with_called(m.code(ls.rel), ls.body)
+        if ACTIVE_GATE.search(scope) or CLAIM.search(scope):
+            continue
+        why = "any-GM gate only (runs in every GM tab)" if ROLE_GATE.search(scope) else "no gate"
+        found.append(f"{ls.rel}:{ls.line} {ls.name} — {why}")
+    return ok() if not found else ("warn", found[:15])
 
 # ── scoring ──────────────────────────────────────────────────────────────────
 
