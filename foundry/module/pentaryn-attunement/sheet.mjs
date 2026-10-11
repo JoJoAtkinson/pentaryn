@@ -7,7 +7,7 @@
  * handler without patching anything.
  */
 
-import { AWAY, MODULE, awayOf, computeSlots, t } from "./attunement-core.mjs";
+import { AWAY, MODULE, awayOf, computeSlots, safe, t } from "./attunement-core.mjs";
 import { releaseAway, writeSlots } from "./actor-adapter.mjs";
 import { decorateCounter, mountStrip } from "./strip.mjs";
 
@@ -101,6 +101,11 @@ async function onDrop(event, actor) {
   return attuneToSlot(actor, item, Number(slotEl.dataset.slot));
 }
 
+/** The listeners' async actions, logged with a label when they fail (items-journal-11). */
+const releaseSafe = safe("release", confirmRelease);
+const unattuneSafe = safe("unattune", unattune);
+const dropSafe = safe("drop", onDrop);
+
 /**
  * Wire the strip up. Listeners live on the strip itself, so `stopPropagation`
  * keeps drops away from the sheet's sort handler without patching anything.
@@ -114,13 +119,13 @@ function activate(strip, actor, editable) {
     if (slotEl?.dataset.awayKey && event.target.closest('[data-action="release"]')) {
       event.preventDefault();
       event.stopPropagation();
-      return confirmRelease(actor, slotEl.dataset.awayKey);
+      return releaseSafe(actor, slotEl.dataset.awayKey);
     }
     if (!slotEl?.dataset.itemId) return;
     if (event.target.closest('[data-action="unattune"]')) {
       event.preventDefault();
       event.stopPropagation();
-      return unattune(actor, slotEl.dataset.itemId);
+      return unattuneSafe(actor, slotEl.dataset.itemId);
     }
     actor.items.get(slotEl.dataset.itemId)?.sheet?.render(true);
   });
@@ -130,12 +135,12 @@ function activate(strip, actor, editable) {
     if (slotEl?.dataset.awayKey && editable) {
       event.preventDefault();
       event.stopPropagation();
-      return confirmRelease(actor, slotEl.dataset.awayKey);
+      return releaseSafe(actor, slotEl.dataset.awayKey);
     }
     if (!slotEl?.dataset.itemId || !editable) return;
     event.preventDefault();
     event.stopPropagation();
-    return unattune(actor, slotEl.dataset.itemId);
+    return unattuneSafe(actor, slotEl.dataset.itemId);
   });
 
   if (!editable) return;
@@ -152,7 +157,7 @@ function activate(strip, actor, editable) {
     event.target.closest(".attunement-slot")?.classList.remove("dragover");
   });
 
-  strip.addEventListener("drop", event => onDrop(event, actor));
+  strip.addEventListener("drop", event => dropSafe(event, actor));
 }
 
 /**

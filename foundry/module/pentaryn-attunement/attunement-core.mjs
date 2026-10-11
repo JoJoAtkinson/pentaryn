@@ -290,6 +290,27 @@ export function patchProficiencyMap(map) {
  */
 export const tooltipAnchorMissing = ({ element, tooltip }) => !element || !tooltip;
 
+/**
+ * Wrap a DOM listener's async action so a failure is logged with the module prefix and a label
+ * (`pentaryn-attunement | <label> failed`) instead of surfacing as an anonymous "Uncaught (in
+ * promise)". `fn` is called synchronously — a drop handler's preventDefault must run inside the
+ * event — and nothing is rethrown; the returned promise resolves undefined once `fn` settles.
+ * @param {string} label
+ * @param {Function} fn
+ * @param {(line: string, err: *) => void} [log]
+ */
+export function safe(label, fn, log = (...a) => console.error(...a)) {
+  const report = err => { log(`${MODULE} | ${label} failed`, err); };
+  return (...args) => {
+    try {
+      return Promise.resolve(fn(...args)).then(() => undefined, report);
+    } catch (err) {
+      report(err);
+      return Promise.resolve();
+    }
+  };
+}
+
 /* -------------------------------------------- */
 /*  Strings                                     */
 /* -------------------------------------------- */
