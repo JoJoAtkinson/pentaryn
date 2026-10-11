@@ -34,6 +34,22 @@ Today: eval-js → `game.pentaryn.senses.{syncLight,carriedLight,resetSight,sync
 
 A new light source profile goes in light-core.mjs LIGHT_PROFILES/ALIASES (or a `lightItem` flag on the item) plus a row in test/light.mjs. A new feature (like chain or glow) today becomes a side-effect import at the top of senses.mjs, with its own `on()` copy, publish guard and `MODULE` constant. That is unclear and drifts. Proposed: senses.mjs becomes a feature index (`carried.mjs`, `light.mjs`, `chain.mjs`, `glow.mjs`, `migrate.mjs`, each exporting install/uninstall/api), with a shared module-local `hooks.mjs`/`util.mjs`/`ids.mjs`, a 'Files / where things go' table in the README, and a `test/<feature>.mjs` chained from test/run.mjs.
 
+## Status (wave 3, 2026-10-11)
+
+Applied on `migrate/wave-3` with the blueprint migration (detail: the migration guide's Result).
+Structural: -18, -10 light half `a3388e0b` · -12, -21, -13 and -26 pure halves `13bd7517` · -16, -17,
+-23 `a1ea3e1a` · -24 `9e0c3a20`, glow label [declared] `7b5d79fd` · -27 module half `a269f91d`,
+`4e9cc5bf` · -34 [declared J10] `f76e7f91`, `88f85d98` · -25 [declared, additive] `c5af5e88`.
+Standalone: -11 `c1478be1` (+ synthetic-actor prototype write, [declared] `59870f95`) · -13 `90273143` ·
+-15 [declared] `2ae44ef8` · -19 `282d6c16` · -20 `42c4cfb7` · -22 `ff544d99` (README wording
+`4e9cc5bf`) · -14 [declared] `9fda315e` · -26 [declared] `6d43eb7e`, `cece01a2` · -10 chain half
+[declared] `763dda0f` · -38 [declared] `980958eb`. New at the checkpoint (no id): the glow's bright
+ratchet [declared] `ab430bed`.
+Not applied here (shared files, handed to the integrator): -29 adjustments rows (step 12), -27 context
+half (`context/foundry/README.md` routing row and `:202` clause, the `config.py` comment), the Wave 7
+`module.json` batch (C02, C07, C09, C37). Skipped: -26's optional `linkInfo()` and -38's optional
+pure `torchActivityPlan` (features / not needed for the fix).
+
 ## Findings index
 
 | Id | Category | Impact | Effort | Title |

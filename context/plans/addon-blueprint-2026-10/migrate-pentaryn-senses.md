@@ -9,6 +9,8 @@ tags: [foundry, modules, blueprint, plan, migration, senses]
 
 > **WAIT lifted 2026-10-11** (D9: live usability work finished; `wait.json` is empty). The WAIT wording below is history; the re-anchor step still applies.
 
+> **Wave 3 code phase done (2026-10-11):** migrated on `migrate/wave-3`, 91.5 % — see Result.
+
 > **Wave 3 re-anchor and checkpoint (2026-10-11).** `git diff 4e64f47..a5a1a906 -- foundry/module/pentaryn-senses` is empty, so every 4e64f47 anchor below is still a HEAD anchor (0 resolved, 0 obsolete). The scorer has grown since: the base scores **51.1 % (23/45)**; after the checkpoint **55.6 %** (C20 and C43 now pass). Characterisation checkpoint: **`5e76c4a1`** (see Result).
 
 > **Re-anchored to 4e64f47 on 2026-10-11.** The usability re-run (17275c9) is now committed. In this module it touched only `light.mjs`, `light-core.mjs`, `lang/en.json`, `styles/light.css`, `test/light.mjs`, `module.json` (0.4.1) and `README.md`. The working tree equals HEAD. Line numbers below are **4e64f47 lines** where marked, and frozen-snapshot lines otherwise. `senses.mjs`, `chain.mjs`, `chain-core.mjs`, `glow.mjs` and `migrate.mjs` are unchanged, so their snapshot lines are also HEAD lines. Re-anchor results: 0 steps resolved, 0 obsolete. New audit finding **senses-walls-cursors-38** (createItem torch hook) goes into glue case (k) and §4. Score 43.9 % (18/41), unchanged from the 2026-10-10 live run.
@@ -604,13 +606,72 @@ and **-34** (step 7).
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module senses --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: `5e76c4a1` · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | **91.5 %** (43/47 fail-class rules) at `4e9cc5bf` — was 55.6 % at the checkpoint, 51.1 % at base |
+| Date | 2026-10-11 (code phase only; nothing synced or run live) |
+| Commits | characterisation: `5e76c4a1` · refactor (steps 1–11): `0a2d50ad` `0bd574da` `a3388e0b` `13bd7517` `902cde6f` `a1ea3e1a` `a6561663` `92cc591f` `4110d70a` `f76e7f91` `88f85d98` `9e0c3a20` `7b5d79fd` `a269f91d` `c5af5e88` `92d0834c` `4e9cc5bf` · standalone: `c1478be1` `59870f95` `90273143` `2ae44ef8` `282d6c16` `42c4cfb7` `ff544d99` `9fda315e` `6d43eb7e` `cece01a2` `763dda0f` `980958eb` `ab430bed` |
+| Declared changes handed to the live-test workflow | S-1 … S-8, S-11 … S-14, J10, glow label (table below); live session not yet run |
+| `module.json` edits appended to `wave7-restart-batch.md` | no — a shared file: returned to the integrator (step 13 rows, unchanged from the guide) |
+| Adjustments rows appended to `adjustments-batch.md` | no — a shared file: returned to the integrator (step 12 rows + the two moved-marker rows) |
+| Still failing, and why | C07, C09, C37: the Wave 7 `module.json` batch. C32: `argon-light-pick-collapse-panels` still lists `light.mjs` (the marker moved to `argon.mjs` at step 6; the row edit is the integrator's). Warn: C02 (Wave 7), C37w (the pick crosshair's `!important`, kept) |
+
+### Wave 3 code phase (2026-10-11)
+
+Gates at `4e9cc5bf`: `node test/run.mjs` 146 node:test cases, 146 pass, 0 todo (the checkpoint's todo is
+fixed, `ab430bed`); `module-check senses` (parse, imports, i18n 33/33, node-test, vendor, conformance)
+green; `vendor.py check senses` identical. Coverage over the module's own files: **99.61 / 91.74 /
+98.94** (checkpoint 98.96 / 91.46 / 98.64); left: the drift `catch` in the entry's ready and
+`tidyOldSummons`' unresolvable-origin `catch` (now a debug line).
+
+Frozen-test changes, each in a named [declared] commit: `hooks.json` index 9 and the listener counts
+(S-3 `a6561663`); `glue-hot` (S-4 `92cc591f`); `glue-frozen`, `glue-frozen-late` (S-3, then J10
+`f76e7f91`); `surface.json`, `hooks-uninstall.json`, the published-key lists in `glue`/`glue-player`, the
+uninstall tests in `hooks`/`chain` (S-1/S-2 `88f85d98`; + `inspect`/`light.status` `c5af5e88`, +
+`light.recent` `9fda315e`); the glow label rows (`7b5d79fd`); `setup-light.json` (S-13 `59870f95`); the
+reconcile `value`s in four light goldens (S-6 `9fda315e`); chain's link refusals (S-8 `6d43eb7e`); the
+`-=` literal in `chain-break`/`chain-hud`/`second-gm` (S-5 `763dda0f`); `light-torch-create` packTorch
+(S-11 `980958eb`); `glow-animation` t=9000 bright and the todo (S-14 `ab430bed`). Import paths only:
+`0bd574da`. Every other frozen assertion and golden is byte-identical to the checkpoint. Additions
+(new test files or appended rows): `core-pure`, `settings`, `adapters`, `i18n`, `inspect`,
+`carried-index`, `carried-errors`, `light-perf`, `chain-perf`, `reconcile-summary`, the VERSION and -22a
+rows. No stop rule fired.
+
+How it differs from the guide as written:
+- **Order.** The declared hook-manifest change (S-3) and the hot-path removal (S-4) are their own
+  commits right after step 5's structural commit; J10 (the frozen-root throw, kit 1.0.2) is its own
+  commit before step 7. Docs (step 9) closed the wave, after the standalone pass, so the README
+  describes the final API.
+- **Hook guard.** Kit K7 had landed, so chain/light use `reg.on(…, { guard: "warn", label: "chain
+  <hook>" | "light <hook>" })` — the same console text, no level change; S-9 does not apply.
+- **Adapter name.** `light-world.mjs` is `light-adapter.mjs`: the scorer's C16 adapter pattern only
+  knows `argon|shapes|piles|adapter|*-adapter`.
+- **inspect.** `lightSpells[].litBy` is a list of `Scene.<id>.Token|AmbientLight.<id>` uuids, not
+  `{kind, scene, id}` objects (those would make the answer 5 deep; cap 4). `light.status` keeps the
+  objects. `inspectShape` lives in `core/inspect.mjs` (it needs chain and light).
+- **Glow on hot import.** The glow feature registers at once when the world is already ready (the
+  entry's hot path never fires `init`).
+- **Extra, in the spirit of the guide:** `handSquareEdit` (the hand-moved/deleted Light square rule)
+  is pure in core, which keeps `light.mjs` under 500 lines; `tokensByActor`, `summarise`,
+  `linkSpriteSpecs`, `shouldReinit` likewise.
+
+Live-test handoff (gated live phase; walls-style "nothing live" until then):
+
+| # | Observe |
+|---|---|
+| S-1/S-2 | `game.pentaryn.senses.describe().version === "0.4.1"`; `game.pentaryn.chain === game.pentaryn.senses.chain`; `game.pentaryn.chain.uninstall === undefined`; `Object.isFrozen(game.pentaryn.senses)`; `game.modules.get("pentaryn-senses").api === game.pentaryn.senses` |
+| S-3 | `Hooks.events.ready` has one fewer senses listener; both namespaces present after ready |
+| S-4 | dev: `game.pentaryn.senses.uninstall()` then `await import("/modules/pentaryn-senses/senses.mjs?v=2")` re-wires (Break chain back on the HUD) |
+| S-5 | GM: Break chain on a chained token; the chain disappears on every client |
+| S-6 | `await game.pentaryn.senses.light.reconcile(<Light uuid>)` → summary; `light.recent()` |
+| S-7 | console only (a failing carried sync warns `pentaryn-senses \| carried light <name> (<id>)`) |
+| S-8 | `await game.pentaryn.chain.link("Scene.x.Token.y", "Scene.x.Token.z")` → true on a non-viewed scene |
+| S-11 | drag a Torch into an unlocked world pack: no Light activity; drag it onto an actor: the flame button |
+| S-12 | `game.pentaryn.senses.inspect(<token>)` (depth ≤ 4); `light.status(<Light item>)` |
+| S-13 | give the Goblin's torch its activity (`setupLight()`); no write to the goblin token's actor prototype |
+| S-14 | a broken-glow light with a Bright radius brightens on each swell (not only after a token refresh) |
+| J10 | nothing at the table (`game.pentaryn` is never frozen) |
+| glow label | Token / Ambient Light config: the animation still reads "Broken glow (wandering)" |
+| perf | a scene with many tokens: drags with a chain drawn stay smooth; a batch delete of tokens is one sweep |
+| two GM tabs | see wave-3 report: duplicate Light square from two GM tabs (not changed) |
 
 ### Checkpoint `5e76c4a1` (wave 3, 2026-10-11)
 

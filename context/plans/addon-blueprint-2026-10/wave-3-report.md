@@ -43,3 +43,17 @@ module. Baseline: [`wave-3-baseline.md`](wave-3-baseline.md).
 |---|---|---|
 | portals: C32 / `foundry-adjustments-check` | `f6bbd2dc` → the ADJ batch commit | the S3 split moved the markers out of `portals.mjs`, and the two existing `adjustments.yml` rows still list it; fixed when the integrator lands the portals rows |
 | portals: module-check imports gate | `ae936c07` → `186cdfb1` (`ae936c07`, `8a060d21`, `b87d8c15`, `186cdfb1`) | `test/aoe-handle.test.mjs` imported `../../pentaryn-aoe/core.mjs` across modules; fixed `4d6f0c4b` (a cited oracle copy); module tests stayed green |
+- **senses — two GM tabs both run the Light reconcile (§5.9 async review).** The reconcile, the
+  deletion hooks and the ready sweep are gated on `isActiveGM()`, which elects a *user*; with the MCP
+  bridge tab and a GM browser tab open, both run. For a Light cast on a square both tabs create the
+  AmbientLight (two squares until the next reconcile or sweep removes one), and a "the creature is
+  gone" whisper is posted twice. The carried-light sync, the torch activity (fixed id
+  `psLightToggle000`), the token light writes and the darkvision reset are idempotent. Not changed
+  (a behaviour change with no guide step). Decide: a deterministic square `_id` created with
+  `keepId` (needs a live probe: an embedded create with an existing id), or a claim keyed by the
+  cast's `at` stamp (claims are never cleared, so one flag per cast accumulates on the item), or
+  keep it (rare: one GM tab at a time). Migration `4e9cc5bf`.
+- **senses — `setupLight()` updates each torch one at a time (C59 pattern).** A one-off GM command
+  over every torch in the world; batching per parent actor is one round trip each but changes the
+  frozen per-item `update` pins in `setup-light.json`, so it would be its own declared perf step.
+  Low value; recorded, not built.
