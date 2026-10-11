@@ -124,22 +124,29 @@ function announceLocked(actor, { playSound }) {
   } catch (err) { log?.debug("announceLocked: no canvas (off-screen); the notification is enough", err); }
 }
 
+/** The ready backfills run on the active GM only (corpses.mjs's runner), not on every GM tab. */
+const isGMRunner = () => game.users?.activeGM?.isSelf === true;
+
+/**
+ * Write a backfill plan: every actor in one batch (items-journal-25; updateActor still fires per
+ * actor), then one embedded batch per scene and document type.
+ */
+async function applyPlan(plan) {
+  if (plan.actorUpdates.length) await Actor.implementation.updateDocuments(plan.actorUpdates);
+  for (const { sceneId, type, updates } of plan.embedded) {
+    await game.scenes.get(sceneId).updateEmbeddedDocuments(type, updates);
+  }
+}
+
 /**
  * Every container gets a lock sound, whether or not it is locked today, so that
  * locking one later is a one-flag change and not a hunt for why it is silent.
  */
 async function ensureLockSounds() {
-  if (!game.user.isGM) return;
+  if (!isGMRunner()) return;
   const plan = planLockSounds(game.actors, game.scenes, LOCK_SOUND);
-  let patched = 0;
-  for (const { _id, ...changes } of plan.actorUpdates) {
-    await game.actors.get(_id).update(changes);
-    patched++;
-  }
-  for (const { sceneId, type, updates } of plan.embedded) {
-    await game.scenes.get(sceneId).updateEmbeddedDocuments(type, updates);
-    patched += updates.length;
-  }
+  await applyPlan(plan);
+  const patched = plan.actorUpdates.length + plan.embedded.reduce((n, e) => n + e.updates.length, 0);
   if (patched) console.log(`${MODULE} | lock sound set on ${patched} container document(s)`);
 }
 
@@ -158,14 +165,11 @@ async function ensureLockSounds() {
  * view can be opened. Corpses get the same no-sight treatment in corpses.mjs.
  */
 async function ensureEyesNeedView() {
-  if (!game.user.isGM) return;
+  if (!isGMRunner()) return;
   const plan = planEyesNeedView(game.actors, game.scenes);
-  let piles = 0, notes = 0;
-  for (const { _id, ...changes } of plan.actorUpdates) {
-    await game.actors.get(_id).update(changes); piles++;
-  }
-  for (const { sceneId, type, updates } of plan.embedded) {
-    await game.scenes.get(sceneId).updateEmbeddedDocuments(type, updates);
+  await applyPlan(plan);
+  let piles = plan.actorUpdates.length, notes = 0;
+  for (const { type, updates } of plan.embedded) {
     if (type === "Token") piles += updates.length; else notes += updates.length;
   }
   if (piles || notes) console.log(`${MODULE} | in-view rule: sight off on ${piles} pile document(s), ${notes} readable pin(s) no longer global`);

@@ -1,10 +1,12 @@
 [
   {
-    "actor": "Actor.actorChest000001",
-    "changes": {
-      "flags.item-piles.data.lockedSound": "sounds/lock.wav",
-      "prototypeToken.flags.item-piles.data.lockedSound": "sounds/lock.wav"
-    }
+    "actors": [
+      {
+        "_id": "actorChest000001",
+        "flags.item-piles.data.lockedSound": "sounds/lock.wav",
+        "prototypeToken.flags.item-piles.data.lockedSound": "sounds/lock.wav"
+      }
+    ]
   },
   {
     "scene": "sceneOne00000001",
@@ -17,10 +19,12 @@
     ]
   },
   {
-    "actor": "Actor.actorEye00000001",
-    "changes": {
-      "prototypeToken.sight.enabled": false
-    }
+    "actors": [
+      {
+        "_id": "actorEye00000001",
+        "prototypeToken.sight.enabled": false
+      }
+    ]
   },
   {
     "scene": "sceneOne00000001",

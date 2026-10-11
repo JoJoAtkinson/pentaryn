@@ -86,6 +86,21 @@ export async function dropbinWorld() {
     addChild(...c) { for (const x of c) { x.parent = this; this.children.push(x); } return c[0]; }
   }
   globalThis.PIXI = { Graphics, Sprite, Container };
+  // Actor.implementation.updateDocuments (items-journal-25): one logged batch; each actor's changes are
+  // applied and updateActor fires per document, as Foundry does.
+  Actor.implementation = Actor;
+  Actor.updateDocuments = async (updates, options = {}) => {
+    F.calls.push({ op: "Actor.updateDocuments", data: F.plain(updates) });
+    const out = [];
+    for (const { _id, ...changes } of updates) {
+      const doc = F.game.actors.get(_id);
+      const expanded = F.foundry.utils.expandObject(changes);
+      F.foundry.utils.mergeObject(doc, expanded);
+      Hooks.callAll("updateActor", doc, expanded, options, F.game.user.id);
+      out.push(doc);
+    }
+    return out;
+  };
   F.foundry.canvas = { loadTexture: async src => ({ src, baseTexture: {} }) };
   return F;
 }

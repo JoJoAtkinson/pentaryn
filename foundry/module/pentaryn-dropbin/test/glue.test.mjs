@@ -95,11 +95,13 @@ test("ready: post-ready registrations in order (golden/hooks-after-ready.json); 
   pinJSON("hooks-after-ready", after, import.meta.url);
   assert.deepEqual(after.map(h => h.name), ["item-piles-dropItem", "preDeleteItem", "item-piles-preRenderInterface",
     "item-piles-preRenderActorSheet", "item-piles-preRattleItemPile", "preCreateItem"]);
-  const writes = since(from).filter(c => c.op === "update" || c.op === "updateEmbeddedDocuments")
-    .map(c => (c.op === "update" ? { actor: c.uuid, changes: c.changes } : { scene: c.on, type: c.type, data: c.data }));
+  // [declared] items-journal-25: the active GM writes each plan's actors in one Actor.updateDocuments batch
+  const writes = since(from).filter(c => ["update", "Actor.updateDocuments", "updateEmbeddedDocuments"].includes(c.op))
+    .map(c => (c.op === "update" ? { actor: c.uuid, changes: c.changes }
+      : c.op === "Actor.updateDocuments" ? { actors: c.data } : { scene: c.on, type: c.type, data: c.data }));
   pinJSON("backfills", writes, import.meta.url);
-  // the oracle planners reproduce today's loops' payloads
-  const fromPlan = plan => [...plan.actorUpdates.map(({ _id, ...changes }) => ({ actor: `Actor.${_id}`, changes })),
+  // the oracle planners reproduce the payloads, the actors batched
+  const fromPlan = plan => [...(plan.actorUpdates.length ? [{ actors: plan.actorUpdates }] : []),
     ...plan.embedded.map(e => ({ scene: e.sceneId, type: e.type, data: e.updates }))];
   assert.deepEqual(writes, [...fromPlan(lock), ...fromPlan(eyes)]);
   // [declared] D-D1 (D2): published at ready on module.api, not a tick later; the ready line comes with it
