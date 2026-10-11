@@ -29,6 +29,9 @@ import { resolveCharacter, buildCharacter, previewCharacter, findItem, notFound 
 import { checkNpc, createNpc } from "./npc.mjs";
 import { fixAttunement, specFileUrl } from "./build-core.mjs";
 import { renderReplace, planRow, resultRow, sheetLine, createdText, needsDryRun, goneMessage } from "./readback-core.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 export const KINDS = Object.freeze(["actor", "npc", "character", "hotspot", "note", "light", "tile", "none"]);
 export const EYE = "assets/tokens/custom/props/icon-eye.webp";
@@ -98,7 +101,7 @@ function whyGone(scene, markerId) {
       next = t.id; id = t.id;
     }
     if (next) return { resizedTo: next };
-  } catch { /* the message is a nicety */ }
+  } catch (err) { log.debug("whyGone (the message is a nicety)", err); }
   return {};
 }
 
@@ -429,7 +432,7 @@ async function planOne(e) {
 function checkLightConfig(cfg, where) {
   if (!cfg || typeof cfg !== "object" || Array.isArray(cfg)) throw codedError("BAD_SPEC", `${where} must be an AmbientLight config object, e.g. {dim: 10, bright: 5, color: "#9fd3ff", animation: {type: "pulse"}}`);
   let known = null;
-  try { known = Object.keys(foundry.data.LightData.schema.fields); } catch { /* older core: unchecked */ }
+  try { known = Object.keys(foundry.data.LightData.schema.fields); } catch (err) { log.debug("LightData schema (older core: unchecked)", err); }
   const bad = known ? Object.keys(cfg).filter(k => !known.includes(k)) : [];
   if (bad.length) throw codedError("BAD_SPEC", `${where}: unknown key(s) ${bad.join(", ")}; known: ${known.join(", ")}`);
   return cfg;

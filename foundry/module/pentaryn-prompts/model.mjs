@@ -13,6 +13,9 @@ import { markerSizeOfToken, promptText, FOLDER_NAME } from "./markers.mjs";
 import { makeSight, heightWarning } from "./los.mjs";
 import { isStockLore } from "./build-core.mjs";
 import { settingReader } from "./lib/settings.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 /** core's own setting (C23 allows core's); 0 (equidistant) when unreadable, as before. */
 const coreSetting = settingReader("core", [{ key: "gridDiagonals", default: 0 }]);
@@ -51,7 +54,7 @@ function regionNames(scene, point) {
   for (const r of scene.regions ?? []) {
     try {
       if (r.testPoint({ x: point.x, y: point.y, elevation: point.elevation ?? 0 })) out.push(r.name);
-    } catch { /* a region with no shapes, or an API drift: leave it out */ }
+    } catch (err) { log.debug(`region ${r.name}: testPoint failed, left out`, err); }
   }
   return out;
 }
@@ -143,16 +146,29 @@ function tokenImg(tok) {
   return tok.texture?.src ?? "";
 }
 
+/**
+ * One core token call. An absent method (an older core, a plain object) leaves the fallback in
+ * place silently, as before; one that throws (API drift after an update) warns once per page.
+ */
+function tryCore(tok, method, use) {
+  if (typeof tok?.[method] !== "function") return;
+  try {
+    use(tok[method]());
+  } catch (err) {
+    log.warnOnce(`Token#${method}`, `Token#${method}: core API failed, using the fallback`, err);
+  }
+}
+
 function tokenGeometry(tok, g) {
   // getSize: the real pixel footprint (hex rows/columns are not width × size)
   let size = null;
-  try { size = tok.getSize?.(); } catch { /* fall back below */ }
+  tryCore(tok, "getSize", v => { size = v; });
   const rect = { x: tok.x, y: tok.y, w: size?.width ?? tok.width * g, h: size?.height ?? tok.height * g };
   const centre = { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2, elevation: tok.elevation ?? 0 };
   let origin = centre, points = null, squares = null;
-  try { origin = tok.getMovementOrigin(); } catch { /* fall back to the centre */ }
-  try { points = tok.getVisibilityTestPoints(); } catch { /* fall back below */ }
-  try { squares = dedupeSquares(tok.getOccupiedGridSpaceOffsets()); } catch { /* fall back below */ }
+  tryCore(tok, "getMovementOrigin", v => { origin = v; });
+  tryCore(tok, "getVisibilityTestPoints", v => { points = v; });
+  tryCore(tok, "getOccupiedGridSpaceOffsets", v => { squares = dedupeSquares(v); });
   const coreSquares = !!squares?.length;
   if (!points?.length) points = testPoints(rect, g).map(p => ({ ...p, elevation: centre.elevation }));
   if (!squares?.length) squares = occupiedSquares(rect, g);

@@ -20,8 +20,11 @@ import {
   checkChoiceKeys, nearestNames, defaultLanguagePicks, areLanguageKeys, fixAttunement, problemsText,
   startingEquipmentPlan, focusMissing
 } from "./build-core.mjs";
+import { makeLog } from "./lib/log.mjs";
 
 export const CHARACTER_FOLDER = "Foundry MCP Characters";
+const log = makeLog(MODULE);
+
 
 /** Owned books first, then the 2024 SRD. Missing packs are skipped. */
 const PACKS = {
@@ -99,7 +102,7 @@ function levelsOf(adv) {
   try {
     const l = adv.levels;
     if (Array.isArray(l) && l.length) return l.map(Number);
-  } catch { /* data-only advancement */ }
+  } catch (err) { log.debug("advancement levels (data-only advancement)", err); }
   const ch = adv.configuration?.choices;
   if (ch && typeof ch === "object" && !Array.isArray(ch) && !(ch instanceof Set)) {
     const ks = Object.keys(ch).map(Number).filter(Number.isFinite);
@@ -417,7 +420,7 @@ function labelsOf(choices) {
       out[k] = v?.label ?? v;
       if (v?.children) Object.assign(out, labelsOf(v.children));
     }
-  } catch { /* labels are a nicety */ }
+  } catch (err) { log.debug("choice labels (a nicety)", err); }
   return out;
 }
 
@@ -981,7 +984,7 @@ export async function buildCharacter(w, resolved, { prov = null } = {}) {
     report.summary = summarise(actor);
     return { actor, report };
   } catch (err) {
-    try { await actor.delete(); } catch { /* best effort */ }
+    try { await actor.delete(); } catch (e2) { log.debug("deleting the half-built character (best effort)", e2); }
     throw err;
   }
 }

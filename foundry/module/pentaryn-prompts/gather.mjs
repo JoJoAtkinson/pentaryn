@@ -8,6 +8,9 @@ import { promptText } from "./markers.mjs";
 import { renderCrops } from "./crops.mjs";
 import { cropsDecision } from "./build-core.mjs";
 import { setting, manifests, manifestFor, storeManifest } from "./settings.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 
 /** Scenes in navigation order, then name — the order s# follows. */
@@ -134,8 +137,8 @@ export const CROP_DIR = "pentaryn-prompts-crops";
 async function cropsToFiles(call, images) {
   const FP = foundry.applications?.apps?.FilePicker?.implementation ?? globalThis.FilePicker;
   const dir = `${CROP_DIR}/${call}`;
-  try { await FP.createDirectory("data", CROP_DIR); } catch { /* exists */ }
-  try { await FP.createDirectory("data", dir); } catch { /* exists */ }
+  try { await FP.createDirectory("data", CROP_DIR); } catch (err) { log.debug(`crop dir ${CROP_DIR} (exists)`, err); }
+  try { await FP.createDirectory("data", dir); } catch (err) { log.debug(`crop dir ${dir} (exists)`, err); }
   const out = [];
   for (const c of images) {
     if (!c?.png) { out.push(c); continue; }
@@ -209,7 +212,7 @@ export async function show(args = {}) {
   if (canvas?.scene?.id !== scene.id) await scene.view();
   const { x, y } = docCentre(doc, scene.dimensions.size);
   await canvas.animatePan({ x, y, scale: Math.max(canvas.stage?.scale?.x ?? 1, 0.8), duration: 400 });
-  try { canvas.ping({ x, y }); } catch { /* pings are a nicety */ }
+  try { canvas.ping({ x, y }); } catch (err) { log.debug("show: ping (a nicety)", err); }
   return { ok: true, sceneId: scene.id, x: Math.round(x), y: Math.round(y) };
 }
 
