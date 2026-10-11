@@ -1363,3 +1363,15 @@ def test_make_checks_pinned(monkeypatch):
     assert esc.checks_for(["foundry/module/pentaryn-walls/wall-engine.mjs",
                            "foundry/module/pentaryn-ties/look.mjs"]) == [
         "make foundry-adjustments-check", "make foundry-ties-check"]
+
+
+def test_exposure_skips_blueprint_tooling(tmp_path):
+    """W5: the blueprint scorer/vendor/generator are not code a release can break."""
+    bp = tmp_path / "scripts/foundry/blueprint"
+    bp.mkdir(parents=True)
+    (bp / "conformance.py").write_text('X = "wall-height"\n')
+    other = tmp_path / "scripts/foundry/ops"
+    other.mkdir(parents=True)
+    (other / "x.py").write_text('Y = "wall-height"\n')
+    reg = adj_mod.Registry()
+    assert reg.exposure("wall-height", root=tmp_path) == ["scripts/foundry/ops/x.py"]

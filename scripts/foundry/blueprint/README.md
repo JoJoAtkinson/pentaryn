@@ -14,5 +14,6 @@ scorer. **Not this file:** the playbook → `context/foundry/addon-blueprint.md`
 Package names live in `packages.json`, not in the `.py` files: `scripts/foundry/**/*.py` is in the
 Saturday updater's exposure grep, and a literal here would make the scanner look exposed.
 
-Tests: `./.venv/bin/python -m pytest -q scripts/foundry/blueprint/tests` (not yet in `pyproject`
-`testpaths`; see the pending wiring, W5 in `context/plans/addon-blueprint-2026-10/README.md` §7).
+Tests: `./.venv/bin/python -m pytest -q scripts/foundry/blueprint/tests` (also in `pyproject`
+`testpaths`, so a bare `pytest` / `make test` runs them). This folder is outside the updater's
+exposure grep (`EXPOSURE_SKIP_PARTS` in `scripts/foundry/update/adjustments.py`).

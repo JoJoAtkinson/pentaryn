@@ -55,7 +55,7 @@ select = ["E", "F", "I"]
 markers = [
     "integration: marks tests as integration tests (uses real API tokens, costs money)",
 ]
-testpaths = ["scripts/tests"]
+testpaths = ["scripts/tests", "scripts/foundry/blueprint/tests"]
 python_files = ["test_*.py"]
 # Put the repo root on sys.path so `from scripts.… import …` resolves without
 # an editable install or a manually exported PYTHONPATH.
