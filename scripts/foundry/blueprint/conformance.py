@@ -1014,14 +1014,23 @@ def css_selectors(text: str) -> list[str]:
     return sels
 
 
-@rule("C37", "fail", "every CSS selector under .pentaryn-<short> or .<cssPrefix>")
+def own_css(m):
+    """The module's own stylesheets. `lib/*.css` are vendored kit files (D7): shared CSS with one
+    canonical copy in foundry/lib, proven byte-identical by vendor.py (C14), so their selectors and
+    `!important`s are the kit's, not the module's, and C37/C37w do not score them."""
+    for css in sorted(m.dir.rglob("*.css")):
+        rel = css.relative_to(m.dir).parts
+        if "node_modules" in css.parts or (len(rel) == 2 and rel[0] == "lib"):
+            continue
+        yield css
+
+
+@rule("C37", "fail", "every CSS selector under .pentaryn-<short> or .<cssPrefix> (lib/*.css kit files exempt)")
 def c37(m):
     prefix = m.flags.get("cssPrefix")
     allowed = [f".pentaryn-{m.short}"] + ([f".{prefix}"] if prefix else [])
     detail = []
-    for css in sorted(m.dir.rglob("*.css")):
-        if "node_modules" in css.parts:
-            continue
+    for css in own_css(m):
         for sel in css_selectors(css.read_text(encoding="utf-8", errors="replace")):
             if sel.startswith(("from", "to")) or re.fullmatch(r"\d+%", sel) or sel.startswith(":root"):
                 continue
@@ -1033,7 +1042,7 @@ def c37(m):
 @rule("C37w", "warn", "!important count")
 def c37w(m):
     n = sum(re.sub(r"/\*.*?\*/", "", css.read_text(encoding="utf-8", errors="replace"), flags=re.S).count("!important")
-            for css in m.dir.rglob("*.css") if "node_modules" not in css.parts)
+            for css in own_css(m))
     return ok() if not n else ("warn", [f"{n} !important (removing existing ones is [declared])"])
 
 

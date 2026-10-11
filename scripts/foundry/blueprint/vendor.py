@@ -21,6 +21,11 @@ A module names its kit in `lib/kit.lock.json` — `{"version", "tier", "files"}`
 bytes of such a file name a third-party package, and the Saturday updater's exposure grep would
 start counting the module as exposed to it.
 
+A kit file is `<name>.mjs` unless its kit.json row says `"ext": "css"` (a shared stylesheet, D7):
+it is vendored to `lib/<name>.css` the same way, and a module loads it by listing `lib/<name>.css`
+in `module.json` `styles` (a manifest edit, so it rides a restart batch). `check` fails a
+`styles` entry naming a `lib/*.css` the lock does not list.
+
 Read-only except for the module's `lib/`, `test/kit/` and `lib/kit.lock.json`.
 """
 
@@ -36,6 +41,8 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 LIB_ROOT = REPO_ROOT / "foundry" / "lib"
 MODULE_ROOT = REPO_ROOT / "foundry" / "module"
 KIT_HEADER = "// pentaryn kit "
+CSS_KIT_HEADER = "/* pentaryn kit "
+KIT_EXTS = ("mjs", "css")
 
 
 class VendorError(Exception):
@@ -60,6 +67,23 @@ def closure(names: list[str], kit: dict) -> list[str]:
         want.add(n)
         stack.extend(files[n].get("deps", []))
     return [n for n in files if n in want]
+
+
+def kit_file(name: str, kit: dict) -> str:
+    """The file name of a kit entry: `<name>.mjs`, or `<name>.<ext>` when kit.json gives `ext`."""
+    ext = (kit["files"].get(name) or {}).get("ext", "mjs")
+    if ext not in KIT_EXTS:
+        raise VendorError(f"kit file {name!r}: ext {ext!r} is not one of {', '.join(KIT_EXTS)}")
+    return f"{name}.{ext}"
+
+
+def _lib_files(lib_dir: Path) -> list[Path]:
+    return sorted(f for ext in KIT_EXTS for f in lib_dir.glob(f"*.{ext}")) if lib_dir.is_dir() else []
+
+
+def _is_kit_copy(path: Path) -> bool:
+    head = path.read_text(encoding="utf-8", errors="replace")[:32]
+    return head.startswith(KIT_HEADER) or head.startswith(CSS_KIT_HEADER)
 
 
 def sha(path: Path) -> str:
@@ -131,13 +155,16 @@ def sync(module_dir: Path, *, tier: str | None = None, extra: list[str] | None =
     written: list[str] = []
     lib_dir = module_dir / "lib"
     lib_dir.mkdir(exist_ok=True)
+    keep = set()
     for n in names:
-        dst = lib_dir / f"{n}.mjs"
-        dst.write_bytes((lib_root / f"{n}.mjs").read_bytes())
+        fname = kit_file(n, kit)
+        keep.add(fname)
+        dst = lib_dir / fname
+        dst.write_bytes((lib_root / fname).read_bytes())
         written.append(str(dst.relative_to(module_dir)))
     # a kit file the lock no longer lists is removed; anything else in lib/ is left for check() to report
-    for stale in lib_dir.glob("*.mjs"):
-        if stale.stem not in names and stale.read_text(encoding="utf-8").startswith(KIT_HEADER):
+    for stale in _lib_files(lib_dir):
+        if stale.name not in keep and _is_kit_copy(stale):
             stale.unlink()
 
     kit_dir = module_dir / "test" / "kit"
@@ -168,6 +195,21 @@ def _lib_imports(module_dir: Path) -> set[str]:
     return names
 
 
+def _lib_styles(module_dir: Path) -> set[str]:
+    """Kit stylesheet stems the manifest loads as `lib/<name>.css`."""
+    import re
+    try:
+        manifest = json.loads((module_dir / "module.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return set()
+    out: set[str] = set()
+    for s in manifest.get("styles") or []:
+        m = re.fullmatch(r"(?:\./)?lib/([\w-]+)\.css", str(s))
+        if m:
+            out.add(m.group(1))
+    return out
+
+
 def check(module_dir: Path, *, lib_root: Path = LIB_ROOT) -> list[str]:
     """Problems that mean the vendored copies are not the canonical kit. Empty = healthy."""
     kit = load_kit(lib_root)
@@ -187,18 +229,26 @@ def check(module_dir: Path, *, lib_root: Path = LIB_ROOT) -> list[str]:
     for n in need:
         if n not in files:
             problems.append(f"{name}: lock is missing {n} (a dependency of the locked files)")
+    locked_names = set()
     for n in files:
         if n not in kit["files"]:
+            locked_names.add(f"{n}.mjs")       # unknown to kit.json: the closure above reported it
             continue
-        copy, canon = module_dir / "lib" / f"{n}.mjs", lib_root / f"{n}.mjs"
+        try:
+            fname = kit_file(n, kit)
+        except VendorError as exc:
+            problems.append(f"{name}: {exc}")
+            continue
+        locked_names.add(fname)
+        copy, canon = module_dir / "lib" / fname, lib_root / fname
         if not copy.exists():
-            problems.append(f"{name}: lib/{n}.mjs is locked but missing")
+            problems.append(f"{name}: lib/{fname} is locked but missing")
         elif canon.exists() and sha(copy) != sha(canon):
-            problems.append(f"{name}: lib/{n}.mjs differs from foundry/lib/{n}.mjs — never edit a copy; "
+            problems.append(f"{name}: lib/{fname} differs from foundry/lib/{fname} — never edit a copy; "
                             f"edit the canonical file and re-vendor")
     lib_dir = module_dir / "lib"
-    for f in sorted(lib_dir.glob("*.mjs")) if lib_dir.is_dir() else []:
-        if f.stem not in files:
+    for f in _lib_files(lib_dir):
+        if f.name not in locked_names:
             problems.append(f"{name}: lib/{f.name} is not in kit.lock.json")
     for f in kit["testKit"]:
         copy = module_dir / "test" / "kit" / f
@@ -208,6 +258,8 @@ def check(module_dir: Path, *, lib_root: Path = LIB_ROOT) -> list[str]:
             problems.append(f"{name}: test/kit/{f} differs from foundry/lib/test-kit/{f}")
     for n in sorted(_lib_imports(module_dir) - set(files)):
         problems.append(f"{name}: code imports ./lib/{n}.mjs, which kit.lock.json does not list")
+    for n in sorted(_lib_styles(module_dir) - set(files)):
+        problems.append(f"{name}: module.json styles lists lib/{n}.css, which kit.lock.json does not list")
     return problems
 
 

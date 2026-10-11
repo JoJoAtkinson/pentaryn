@@ -19,7 +19,8 @@ node foundry/lib/test/run.mjs
 left untouched. Adopting is per module (`vendor.py sync <short> --tier full`); adding one file to a
 module that has a lock is `vendor.py sync <short> --kit <file>` (e.g. `--kit election`).
 
-Every file starts with the header `// pentaryn kit <version> · vendored from foundry/lib/<file>.mjs — …`.
+Every file starts with the header `// pentaryn kit <version> · vendored from foundry/lib/<file>.mjs — …`
+(`/* pentaryn kit <version> · vendored from foundry/lib/<file>.css — … */` for a stylesheet).
 Bump `kit.json` `version`, `errors.mjs` `KIT_VERSION` and every header together.
 
 | File | Exports | Notes |
@@ -37,12 +38,14 @@ Bump `kit.json` `version`, `errors.mjs` `KIT_VERSION` and every header together.
 | `patch-libwrapper.mjs` | `libWrapperRoute` | `packages: [lib-wrapper]` — vendored only where used |
 | `flags.mjs` | `readFlag`, `flagPath` | delete with `{[flagPath(s,k)]: _del}` at the call site |
 | `perf.mjs` | `memo`, `coalesce`, `perFrame` | debounce/throttle: use `foundry.utils` |
+| `argon-tooltip.css` | Argon's compact `.ech-tooltip.pentaryn-tt` / `.pentaryn-tt-list` tooltip rules | `ext: css`, `packages: [enhancedcombathud]`; verbatim from transform.css (D7). Vendored to `lib/argon-tooltip.css`, loaded by listing it in `module.json` `styles`; C37/C37w do not score `lib/*.css`. No module vendors it yet |
 | `test-kit/foundry-stub.mjs` | `installFoundry`, `StubCollection`, `makeDoc`, `makeToken`, `makeScene`, `makeUser` | imports Foundry's own `common/` from the installed app; `Hooks` catches a throwing listener like Foundry's `Hooks.#call` (warn, continue; `F.hookErrors`); `fire("ready")` sets `game.ready` |
 | `test-kit/harness.mjs` | `pinJSON`, `characterise`, `normaliseDescribe`, `checkJSON`, `sourceScan`, `importGraph`, `reachable`, `maxDepth`, `readJSON`, `manifestOf`, `forkQueries`, `forkSource`, `contractDrift` | goldens in `test/golden/`; a missing golden fails; `forkQueries` reads `$FOUNDRY_MCP_FORK` and returns `{ skip }` when the fork is absent |
 
 `kit.json` lists each file's dependencies (vendoring closes over them), the two tiers
 (`small`, `full`), and `packages` for files whose bytes name a third-party package.
 `argon-kit` is listed as **deferred**: its signatures are fixed, its source is not written yet.
+A row with `"ext": "css"` is a stylesheet (`<name>.css`); every other row is `<name>.mjs`.
 
 `test/fixtures/hook-order.mjs` is the cross-module registration-order fixture: it shows why moving
 a module's hook registration from module scope to `setup` is a behaviour change.

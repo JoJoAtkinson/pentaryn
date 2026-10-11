@@ -353,3 +353,20 @@ def test_c30_accepts_relayed(tmp_path):
                        'CONFIG.queries["pentaryn-relay.x"] = d => d;\n'})
     r = detail(conformance.score_dir(d), "C30")
     assert len(r) == 1 and "r.mjs:2" in r[0]
+
+
+def test_d7_c37_exempts_vendored_lib_css_only(tmp_path):
+    css = (Path(conformance.__file__).resolve().parents[3] / "foundry/lib/argon-tooltip.css").read_text()
+    d = _tiny(tmp_path, files={"lib/argon-tooltip.css": css, "styles/one.css": ".pentaryn-one .x { color: red; }\n"})
+    report = conformance.score_dir(d)
+    assert status(report, "C37") == "pass"
+    assert "C37w" not in report["warnings"]            # the kit file's two !important are the kit's
+    # the module's own stylesheets are still scored, and a nested lib/ folder is not the kit
+    write(d, {"styles/two.css": ".ech-tooltip .y { color: red !important; }\n",
+              "styles/lib/three.css": ".global { color: blue; }\n"})
+    report = conformance.score_dir(d)
+    assert status(report, "C37") == "fail"
+    assert "C37w" in report["warnings"]
+    detail = next(r for r in report["results"] if r["id"] == "C37")["detail"]
+    assert any("styles/two.css" in x for x in detail) and any("styles/lib/three.css" in x for x in detail)
+    assert not any(x.startswith("lib/") for x in detail)

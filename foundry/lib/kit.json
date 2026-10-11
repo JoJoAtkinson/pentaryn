@@ -14,7 +14,8 @@
     "patch-libwrapper": { "deps": ["patch"], "packages": ["lib-wrapper"] },
     "flags":    { "deps": [] },
     "perf":     { "deps": [] },
-    "argon-kit": { "deps": [], "packages": ["enhancedcombathud"], "status": "deferred" }
+    "argon-kit": { "deps": [], "packages": ["enhancedcombathud"], "status": "deferred" },
+    "argon-tooltip": { "deps": [], "ext": "css", "packages": ["enhancedcombathud"] }
   },
   "tiers": {
     "small": ["errors", "log", "hooks", "publish"],
