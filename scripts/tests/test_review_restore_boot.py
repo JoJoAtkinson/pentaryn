@@ -202,8 +202,6 @@ def test_R2_a_corrupt_bundle_is_refused_before_anything_local_is_touched(two_hos
 
 # ── R3: a symlinked module folder the manifest names fails the restore part-way ──────
 
-@pytest.mark.xfail(strict=True, reason="R3: bundles.extract refuses a symlinked destination only "
-                   "after apply_snapshot cleared and replaced the world")
 def test_R3_a_symlinked_module_the_snapshot_names_is_refused_before_the_world_is_touched(
         two_hosts, capsys, tmp_path):
     """§3.3 skips a symlinked module folder (so it is never in a manifest and never deleted).

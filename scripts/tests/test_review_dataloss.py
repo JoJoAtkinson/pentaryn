@@ -251,9 +251,6 @@ def _mac_snapshot(two_hosts):
     return _newest(two_hosts.cloud, "-mac.tar.gz")
 
 
-@pytest.mark.xfail(strict=True, reason="DL6a: apply_snapshot's pre-check does not cover a "
-                   "symlinked destination; bundles.extract raises only after Data/worlds and "
-                   "Config were cleared and replaced — a part-way restore, state not recorded")
 def test_dl6a_a_symlinked_dev_module_is_refused_before_the_world_is_touched(two_hosts, tmp_path):
     s1 = _mac_snapshot(two_hosts)
     boss = two_hosts.data["boss"]
@@ -271,9 +268,6 @@ def test_dl6a_a_symlinked_dev_module_is_refused_before_the_world_is_touched(two_
     assert (dev / "module.json").exists()               # the checkout itself never touched
 
 
-@pytest.mark.xfail(strict=True, reason="DL6b: a manifest-less folder is skipped by the inventory "
-                   "(so no safety copy or bundle holds it) yet bundles.extract replaces it when the "
-                   "manifest names that id — its files are gone with no copy anywhere")
 def test_dl6b_a_manifest_less_folder_is_never_replaced_without_a_copy(two_hosts):
     s1 = _mac_snapshot(two_hosts)
     boss = two_hosts.data["boss"]
@@ -283,6 +277,12 @@ def test_dl6b_a_manifest_less_folder_is_never_replaced_without_a_copy(two_hosts)
     with two_hosts.use("boss"):
         cloud.restore(s1, yes=True)
     if (boss / "Data/modules/tools/notes.md").exists():
+        return
+    # The fix moves such a folder aside, whole, to FOUNDRY_DATA/pentaryn-replaced/<stamp>/
+    # (outside Data/ and Config/) and names it — a local copy, never deleted.
+    kept = list((boss / cloud.REPLACED_DIRNAME).glob("*/Data/modules/tools/notes.md"))
+    if kept:
+        assert kept[0].read_text() == "half-built module; not in git yet\n"
         return
     held = []
     for p in (two_hosts.cloud / "bundles").iterdir():

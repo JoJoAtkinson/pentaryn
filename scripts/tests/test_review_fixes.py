@@ -323,3 +323,59 @@ def test_a_bundle_holding_another_folder_is_refused_before_the_world_is_touched(
     err = capsys.readouterr().err
     assert "nothing local was touched" in err and tools in err, err
     assert (boss / "Data/worlds/w/journal.txt").read_text() == "boss's own session"
+
+
+# ── DL6: a destination the inventory skips is refused (link) or kept (folder) ─
+
+def _mac_s1(two_hosts):
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    return _names(two_hosts.cloud)[0]
+
+
+def test_a_symlinked_destination_is_refused_before_any_download_or_safety_copy(
+        two_hosts, monkeypatch, tmp_path, capsys):
+    s1 = _mac_s1(two_hosts)
+    boss = two_hosts.data["boss"]
+    dev = make_module(tmp_path / "checkout", "tools", version="9.9-dev")
+    (boss / "Data/modules/tools").symlink_to(dev, target_is_directory=True)
+    _edit(boss, "boss's own")
+    downloads: list[str] = []
+    real = storage.FolderStorage.download
+    monkeypatch.setattr(storage.FolderStorage, "download",
+                        lambda self, rel, dest: (downloads.append(rel), real(self, rel, dest))[1])
+    before = _names(two_hosts.cloud)
+    capsys.readouterr()
+    with two_hosts.use("boss"), pytest.raises(SystemExit):
+        cloud.restore(s1, yes=True)
+    err = capsys.readouterr().err
+    assert "is a symlink" in err and "nothing local was touched" in err, err
+    assert str(dev) in err                                   # names where it points
+    assert downloads == [] and _names(two_hosts.cloud) == before
+    assert (boss / "Data/modules/tools").is_symlink()
+
+
+@pytest.mark.parametrize("shape", ["folder", "file"])
+def test_an_unbundled_destination_is_moved_aside_whole_and_named(two_hosts, capsys, shape):
+    s1 = _mac_s1(two_hosts)
+    boss = two_hosts.data["boss"]
+    dest = boss / "Data/modules/tools"
+    if shape == "folder":
+        dest.mkdir(parents=True)
+        (dest / "notes.md").write_text("only copy\n")
+    else:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text("a stray file named like the module\n")
+    _edit(boss, "boss's own")
+    capsys.readouterr()
+    with two_hosts.use("boss"):
+        cloud.restore(s1, yes=True)
+    out = capsys.readouterr().out
+    assert "moved aside" in out and "Data/modules/tools →" in out, out
+    [kept] = list((boss / cloud.REPLACED_DIRNAME).glob("*/Data/modules/tools"))
+    if shape == "folder":
+        assert (kept / "notes.md").read_text() == "only copy\n"
+    else:
+        assert kept.read_text().startswith("a stray file")
+    assert (dest / "module.json").is_file()                  # the snapshot's tools is in

@@ -1463,6 +1463,8 @@ def fetch_snapshot(st: Storage, snap: Snapshot, *, systems: bool = True) -> Fetc
         if gone:
             raise RestoreError(f"cannot restore {snap.name} completely — missing from the "
                                f"cloud: {', '.join(gone)} — nothing local was touched")
+        _refuse_links(_destinations(f.needed, systems)[0], snap.name,
+                      "nothing local was touched")
 
     def check_disk(world: int) -> None:
         bundle_bytes = sum(have[n].size for n in f.needed.values())
@@ -1581,6 +1583,63 @@ def _bundle_summary(plural: str, unchanged: int, installed: list[str], size: int
     return out
 
 
+# Where a restore puts a folder it must replace but no snapshot or bundle holds (a module
+# folder without module.json): beside the boot state, outside Data/ and Config/, so it is
+# never snapshotted, bundled, inventoried or swept. Nothing deletes it; Joe does.
+REPLACED_DIRNAME = "pentaryn-replaced"
+
+
+def _destinations(needed: dict[str, str], systems: bool = True
+                  ) -> tuple[list[str], list[str]]:
+    """(links, unbundled) among the folders a restore would replace: a needed id whose
+    folder here is a symlink (a dev checkout linked in — the inventory skips it, so no
+    snapshot or bundle holds what it points at), or a folder (or file) the inventory
+    skips (no manifest file). Both are outside every cloud copy; neither may be deleted."""
+    root = data_root()
+    links, unbundled = [], []
+    for key in sorted(needed):
+        kind, id = key.split("/", 1)
+        if kind == "system" and not systems:
+            continue
+        dest = root / bundles.ROOTS[kind] / id
+        if dest.is_symlink():
+            links.append(key)
+        elif dest.exists() and not (dest.is_dir()
+                                    and (dest / bundles.MANIFEST_FILE[kind]).is_file()):
+            unbundled.append(key)
+    return links, unbundled
+
+
+def _refuse_links(links: list[str], label: str, done: str) -> None:
+    if not links:
+        return
+    root = data_root()
+    rels = [f"{bundles.ROOTS[k.split('/', 1)[0]]}/{k.split('/', 1)[1]}" for k in links]
+    where = ", ".join(f"{rel} → {(root / rel).resolve()}" for rel in rels)
+    raise RestoreError(f"{label} names {', '.join(links)}, but here {where} is a symlink — a "
+                       f"restore never replaces a link (no cloud copy holds what it points at). "
+                       f"Remove the link and rerun, or boot FROM=local — {done}")
+
+
+def _move_aside(keys: list[str]) -> list[str]:
+    """Move each folder to REPLACED_DIRNAME/<UTC stamp>/<its relpath>; return the lines."""
+    if not keys:
+        return []
+    root = data_root()
+    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d-%H%M%S")
+    base = root / REPLACED_DIRNAME / stamp
+    out = []
+    for key in keys:
+        kind, id = key.split("/", 1)
+        rel = f"{bundles.ROOTS[kind]}/{id}"
+        (base / rel).parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(root / rel), str(base / rel))
+        out.append(f"{rel} → {REPLACED_DIRNAME}/{stamp}/{rel}")
+    log(f"moved aside (not a bundle — no {'/'.join(sorted(set(bundles.MANIFEST_FILE.values())))}"
+        f" — so no snapshot holds it): " + "; ".join(out))
+    return out
+
+
 def apply_snapshot(f: Fetched, *, systems: bool = True) -> None:
     """Make this machine the snapshot. Full: clear worlds/Config/modules and extract (as
     before bundles). Bundled: clear worlds/Config, extract the world tar, put each needed
@@ -1614,6 +1673,8 @@ def apply_snapshot(f: Fetched, *, systems: bool = True) -> None:
             if unfetched:
                 raise RestoreError(f"bundles not fetched: {', '.join(unfetched)} — nothing "
                                    "was touched")
+            links, unbundled = _destinations(f.needed, systems)
+            _refuse_links(links, f.snap.name if f.snap else f.tar.name, "nothing was touched")
         had_world = tree_has_world()
         kept = {rel: (root / rel).read_bytes() for rel in KEEP_LOCAL_CONFIG
                 if (root / rel).is_file()}
@@ -1632,6 +1693,7 @@ def apply_snapshot(f: Fetched, *, systems: bool = True) -> None:
     if not bundled:
         return
 
+    _move_aside(unbundled)
     installed, removed, left = [], [], []
     for key, name in sorted(f.needed.items()):
         if not ours(key):
