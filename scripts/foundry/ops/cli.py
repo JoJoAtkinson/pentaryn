@@ -111,7 +111,20 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+# The blueprint wrappers hand everything after the command to their script unchanged.
+# argparse's REMAINDER rejects a first token that starts with `-` (`--module`, `--json`),
+# so these are dispatched before parsing; the wrapped script owns its own `--help`.
+_WRAPPERS = {
+    "module-new": lambda rest: modules.module_new(rest),
+    "module-vendor": lambda rest: modules.module_vendor(rest),
+    "module-conformance": lambda rest: modules.module_conformance(rest),
+}
+
+
 def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] in _WRAPPERS:
+        return _WRAPPERS[argv[0]](argv[1:])
     parser = build_parser()
     args = parser.parse_args(argv)
     c = args.command

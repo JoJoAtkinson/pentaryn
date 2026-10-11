@@ -260,6 +260,23 @@ def test_blueprint_wrappers_pass_arguments_through(monkeypatch, cmd, fn):
     assert seen == [["check", "names", "--json"]]
 
 
+@pytest.mark.parametrize("cmd, fn, argv", [
+    ("module-conformance", "conformance", ["--module", "names", "--markdown"]),
+    ("module-conformance", "conformance", ["--json"]),
+    ("module-vendor", "vendor", ["--help"]),
+    ("module-new", "new_module", ["--help", "--out", "/tmp/x"]),
+])
+def test_blueprint_wrappers_accept_a_leading_option(monkeypatch, cmd, fn, argv):
+    # argparse.REMAINDER as the only positional rejects a first token starting with `-`;
+    # `make foundry-conformance M=<m>` / `MD=1` send exactly those forms.
+    import importlib
+    mod = importlib.import_module(f"scripts.foundry.blueprint.{fn}")
+    seen = []
+    monkeypatch.setattr(mod, "main", lambda a: seen.append(a) or 0)
+    assert cli.main([cmd, *argv]) == 0
+    assert seen == [argv]
+
+
 def test_module_new_installs_into_foundry_module_unless_out_is_given(monkeypatch):
     from scripts.foundry.blueprint import new_module
     seen = []
