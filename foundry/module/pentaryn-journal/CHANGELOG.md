@@ -18,6 +18,9 @@
   makes one journal, not two: the tabs claim it first (items-journal-40).
 - New reads for an LLM caller: `inspect(userRef)`, `entriesOf(userRef)`, `statusFor(doc, {as})`,
   `lastReason()` (items-journal-35).
+- **[declared] D-J6:** `inspect` also takes an Actor or Token — the player whose assigned character it is,
+  `null` when it is nobody's — so the kit's root `game.pentaryn.inspect(actor)` no longer carries
+  `journal: {error: "BAD_ARGS: expected User, got Actor"}`.
 - An add that writes nothing leaves one `add skipped: <reason>` console line; the activateNote catch
   logs at debug; the bar escapes its strings with `core.escapeHTML` (items-journal-36, -32).
 

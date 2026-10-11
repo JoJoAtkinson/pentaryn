@@ -55,7 +55,9 @@ Published at `ready` on `game.modules.get("pentaryn-journal").api` and `game.pen
     `{folder, users: [{user, userId, isGM, journalId, pages, duplicates}], atRoot}`.
   - `core` holds the pure helpers published before the migration (`sanitize`, `planSave`, `status`, …).
 - Reads for any user (a user ref is a User, an id or an exact name; useful from an eval, which runs as the GM):
-  - `inspect(userRef)` → `{user, journal, duplicates, entries}`.
+  - `inspect(userRef)` → `{user, journal, duplicates, entries}`. An Actor or Token (what the root
+    `game.pentaryn.inspect(actor)` passes) means the player whose assigned character it is; `null` when it
+    is nobody's.
   - `entriesOf(userRef)` → `[{pageId, name, key, place, savedAt, updatedAt, hash}]` (`key` is the source uuid).
   - `statusFor(doc, {as: userRef})` → `status()` for that user, without the bar's visibility rule.
   - `lastReason()` → why this client's last `add()`/`status()` was `null`:

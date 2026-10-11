@@ -19,6 +19,19 @@ const gmOpts = () => ({ gmButton: setting("gmButton") });
 /** Turn an entry, a page or an item into a target, applying the same rules as the bar. */
 const targetOf = doc => targetForDoc(doc, gmOpts());
 
+/**
+ * inspect's ref. The kit's root `game.pentaryn.inspect(ref)` resolves the ref as an Actor and passes
+ * that to every namespace, so an Actor (or a Token, or a placeable carrying one) means the player whose
+ * assigned character it is — null when it is nobody's. Anything else resolves as a user ref.
+ */
+function inspectedUser(ref) {
+  const doc = ref?.documentName ? ref : ref?.document?.documentName ? ref.document : null;
+  if (doc?.documentName !== "Actor" && doc?.documentName !== "Token") return resolveRef(ref, "user");
+  const actor = doc.documentName === "Token" ? doc.actor : doc;
+  const ids = new Set([actor?.id, doc.actorId, actor?.token?.actorId].filter(Boolean));
+  return game.users.find(u => !u.isGM && ids.has(u.character?.id)) ?? null;
+}
+
 function impl(ctx) {
   const x = ctx.exposed;
   return {
@@ -47,7 +60,9 @@ function impl(ctx) {
     ensure: user => x.ensureFor(user),
     ensureAll: () => x.ensureAll(),
     report: () => x.report(),
-    inspect(user) {
+    inspect(ref) {
+      const user = inspectedUser(ref);
+      if (!user) return null;
       const all = x.personalsOf(user.id);
       return toPlain({
         user: refOf(user),

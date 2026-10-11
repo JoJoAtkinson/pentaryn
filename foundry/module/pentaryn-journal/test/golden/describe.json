@@ -163,15 +163,17 @@
         {
           "name": "ref",
           "kind": "user",
-          "type": "User|id|exact name",
-          "doc": "never a substring"
+          "type": "User|id|exact name|Actor|Token",
+          "resolve": false,
+          "doc": "never a substring; an Actor or Token (what the root game.pentaryn.inspect passes) means the player whose assigned character it is"
         }
       ],
-      "returns": "{ user, journal, duplicates, entries: [{ pageId, name, key, place, savedAt, updatedAt, hash }] }",
+      "returns": "{ user, journal, duplicates, entries: [{ pageId, name, key, place, savedAt, updatedAt, hash }] } | null",
       "gm": false,
       "writes": false,
       "query": false,
       "sideEffects": [],
+      "nullWhen": "the ref is an Actor or Token that is no player's assigned character",
       "throws": [
         "NOT_FOUND",
         "AMBIGUOUS"
