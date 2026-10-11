@@ -376,22 +376,37 @@ def _same_listing(prior: dict, e: Entry) -> bool:
             and abs(float(prior["mtime"]) - e.mtime) < 2.0)
 
 
-def unpack_assets(dry_run: bool = False) -> int:
+def _lifecycle_warning(what: str, exc: BaseException | str, after: str) -> None:
+    detail = f": {exc}" if str(exc) and not isinstance(exc, SystemExit) else ""
+    print(f"  ⚠ {what}{detail} — {after}", file=sys.stderr)
+
+
+def unpack_assets(dry_run: bool = False, if_reachable: bool = False) -> int:
     """New or changed zips only. A zip already unpacked whose (size, mtime) match the
     manifest is skipped without a download — over rclone, hashing every zip on every
-    start would mean downloading every zip on every start."""
-    st = ensure_cloud()
+    start would mean downloading every zip on every start.
+
+    `if_reachable` is for `make vtt-up`: an unreachable cloud (or a pack that will not
+    download) is a warning and exit 0, so a cloud outage never stops a session starting.
+    A badly named or edited pack still fails — that is a fix in the cloud folder."""
+    try:
+        st = ensure_cloud()
+        zips = [e for e in st.ls(ASSETS_IN) if e.name.endswith(".zip")]
+    except (StorageError, SystemExit) as exc:
+        if not if_reachable or (isinstance(exc, SystemExit) and exc.code in (0, None)):
+            if isinstance(exc, StorageError):
+                die(f"cannot list {ASSETS_IN}/: {exc}")
+            raise
+        _lifecycle_warning("assets not checked: the cloud is unreachable", exc,
+                           "starting with the packs already on disk")
+        return 0
     root = data_root()
     manifest = load_manifest()
-    try:
-        zips = [e for e in st.ls(ASSETS_IN) if e.name.endswith(".zip")]
-    except StorageError as exc:
-        die(f"cannot list {ASSETS_IN}/: {exc}")
     if not zips:
         log(f"no packs in {st.root}/{ASSETS_IN}")
         return 0
 
-    problems, extracted = [], 0
+    problems, unreachable, extracted = [], [], 0
     for e in zips:
         m = ZIP_NAME.match(e.name)
         if not m:
@@ -420,7 +435,8 @@ def unpack_assets(dry_run: bool = False) -> int:
         try:
             zp, cleanup = _local_copy(st, rel)
         except StorageError as exc:
-            problems.append(f"{e.name}: download failed: {exc}")
+            (unreachable if if_reachable else problems).append(
+                f"{e.name}: download failed: {exc}")
             continue
         try:
             digest = sha256_file(zp)
@@ -450,6 +466,8 @@ def unpack_assets(dry_run: bool = False) -> int:
 
     if not dry_run:
         save_manifest(manifest)
+    for u in unreachable:
+        _lifecycle_warning(u, "", "not unpacked; the next start tries again")
     if problems:
         print("  ✗ some packs were not unpacked:", file=sys.stderr)
         for p in problems:
@@ -546,13 +564,30 @@ def adopt_legacy_marker(st: Storage, state: bootstate.BootState) -> bootstate.Bo
 
 def backup(reason: str = "manual", if_stopped: bool = False) -> int:
     """`if_stopped` is for lifecycle hooks: skip quietly rather than fail the target.
-    `make vtt-up` on an already-running server is normal, and must not abort there."""
+    `make vtt-up` on an already-running server is normal, and must not abort there —
+    and neither must a cloud that is down: the pre-launch snapshot is then a warning
+    (naming any tar left on disk), exit 0, and `make vtt-down` tries again."""
     if server_running():
         if if_stopped:
             log("Foundry already running — skipping the pre-launch snapshot")
             return 0
         die("Foundry is running — stop it first (a live LevelDB cannot be copied consistently)")
-    _backup(ensure_cloud(), reason)
+    if not if_stopped:
+        _backup(ensure_cloud(), reason)
+        return 0
+    try:
+        _backup(ensure_cloud(), reason)
+    except (StorageError, SystemExit) as exc:
+        if isinstance(exc, SystemExit) and exc.code in (0, None):
+            raise
+        _lifecycle_warning(f"the {reason} snapshot was not taken", exc,
+                           "starting anyway; the shutdown backup (make vtt-down) tries again")
+        try:
+            left = sorted(tmp_dir().glob("world-*.tar.gz"), key=lambda p: p.stat().st_mtime)
+        except OSError:
+            left = []
+        if left:
+            print(f"    left on disk: {left[-1]}", file=sys.stderr)
     return 0
 
 
@@ -946,6 +981,8 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     a = sub.add_parser("assets", help="unpack new packs from OneDrive (down)")
     a.add_argument("--dry-run", action="store_true")
+    a.add_argument("--if-reachable", action="store_true",
+                   help="warn and exit 0 instead of failing when the cloud is unreachable")
     b = sub.add_parser("backup", help="snapshot world+config+modules to OneDrive (up)")
     b.add_argument("--reason", default="manual")
     b.add_argument("--if-stopped", action="store_true",
@@ -960,7 +997,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     try:
         if args.cmd == "assets":
-            return unpack_assets(args.dry_run)
+            return unpack_assets(args.dry_run, args.if_reachable)
         if args.cmd == "backup":
             return backup(args.reason, args.if_stopped)
         if args.cmd == "restore":

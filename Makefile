@@ -89,7 +89,7 @@ vtt-lock-check:
 # foundry-boot comes BEFORE the pre-launch backup: when the cloud's newest is taken, the
 # restore has already archived the local world, and the backup then digest-skips rather
 # than uploading 3 GB that was just replaced. On the alt host tunnel-up is a loud no-op.
-vtt-up: vtt-lock-check foundry-boot foundry-backup-safe foundry-assets foundry-up tunnel-up
+vtt-up: vtt-lock-check foundry-boot foundry-backup-safe foundry-assets-safe foundry-up tunnel-up
 	@echo ""
 	@if [ "$$(cd $(ROOT) && $(PY) -m scripts.foundry.host role 2>/dev/null)" = primary ] || [ "$$PENTARYN_ROLE_OVERRIDE" = primary ]; then \
 	  echo "  ▸ players:  https://$(TUNNEL_HOST)"; \
@@ -183,17 +183,23 @@ foundry-verify:     ; @$(OPS) verify
 # One direction each way so the two can never fight over a file: assets flow DOWN,
 # the world flows UP. Restore is never silent: foundry-boot offers the newest snapshot at
 # a terminal; see scripts/foundry/cloud.py and context/foundry/ops.md §3.
-.PHONY: foundry-assets foundry-backup foundry-backup-safe foundry-restore foundry-cloud
+.PHONY: foundry-assets foundry-assets-safe foundry-backup foundry-backup-safe foundry-restore foundry-cloud
 .PHONY: foundry-prune-untagged
 
 foundry-assets:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud assets
 
+# Lifecycle variant: a cloud that is down is a warning, not a stop — `make vtt-up` never
+# blocks on the cloud (ops.md §3). A badly named or edited pack still fails.
+foundry-assets-safe:
+	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud assets --if-reachable
+
 foundry-backup:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud backup --reason $(or $(REASON),manual)
 
 # Lifecycle variant: skips quietly when the server is already up, so `make vtt-up`
-# on a running server does not abort before starting the tunnel.
+# on a running server does not abort before starting the tunnel; a cloud that is down
+# is a warning, so it does not stop the start either.
 foundry-backup-safe:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud backup --reason prelaunch --if-stopped
 

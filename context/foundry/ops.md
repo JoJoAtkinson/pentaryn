@@ -163,7 +163,7 @@ pack (`pentaryn-seafoot-maps.scenes` is unlocked in both worlds).
 ## 2. Lifecycle — and why the order is the order
 
 ```
-make vtt-up      foundry-boot → foundry-backup-safe → foundry-assets → foundry-up → tunnel-up
+make vtt-up      foundry-boot → foundry-backup-safe → foundry-assets-safe → foundry-up → tunnel-up
 make vtt-down    tunnel-down → foundry-down → foundry-backup REASON=shutdown
 make vtt         status only (alias: vtt-status)
 ```
@@ -173,8 +173,8 @@ The order is not arbitrary. Each step needs the previous one's state:
 | # | Step | Why here |
 | - | ---- | -------- |
 | 0 | `foundry-boot` | **The boot choice** (§3): when the cloud's newest snapshot — from either machine — is newer than what this world is based on, say so and offer it (Enter = take it). First, so a restore happens while nothing is running, and so the backup after it digest-skips instead of uploading 3 GB that was just replaced. No terminal → never restores, one notice line. `FROM=latest\|local\|<name>` decides without asking |
-| 1 | `foundry-backup-safe` | A LevelDB world copies consistently **only while stopped**. Snapshotting on *start* as well as stop is what catches a crash or force-quit that skipped the shutdown hook. `-safe` = `--if-stopped`: skips quietly if the server is already up, so `make vtt-up` on a live server doesn't abort before starting the tunnel |
-| 2 | `foundry-assets` | New pack folders are on disk before anyone asks for them. A soft constraint — Foundry serves `Data/` per-request, so a later unpack would still be served — but unpacking while the server is down is free and cannot race |
+| 1 | `foundry-backup-safe` | A LevelDB world copies consistently **only while stopped**. Snapshotting on *start* as well as stop is what catches a crash or force-quit that skipped the shutdown hook. `-safe` = `--if-stopped`: skips quietly if the server is already up, so `make vtt-up` on a live server doesn't abort before starting the tunnel; a cloud that is down (or a failed upload) is a warning naming any tar left on disk, exit 0 — `vtt-down` tries again |
+| 2 | `foundry-assets-safe` | New pack folders are on disk before anyone asks for them. A soft constraint — Foundry serves `Data/` per-request, so a later unpack would still be served — but unpacking while the server is down is free and cannot race. `-safe` = `--if-reachable`: a cloud that is down is a warning, exit 0; a badly named or edited pack still stops the start |
 | 3 | `foundry-up` | `host.start()` (`open -a` on the Mac), then polls `localhost:30000` for 40 s. The origin must answer before anything points at it |
 | 4 | `tunnel-up` | **Last, because this is the step that makes `Data/` public** (§6). Primary host only — on the alt it prints why and exits 0, so Foundry is up with no tunnel. Refuses early if `~/.cloudflared/cert.pem` is missing or the named tunnel doesn't exist → `make tunnel-setup` |
 
@@ -347,7 +347,8 @@ world is *based on*:
   local and prints one line: `▸ boot: cloud snapshot … is newer than this world …; booting LOCAL.
   To use it: make foundry-up FROM=latest   (or: make foundry-restore SNAP=…)`.
 - **Cloud unreachable** (no rclone, no network, a 60 s listing timeout): boots local with a warning
-  and exits 0. Only a bad `FROM=<name>` or a failed chosen restore stops the start.
+  and exits 0, and so do the pre-launch backup and the asset step after it — `make vtt-up` never
+  blocks on the cloud. Only a bad `FROM=<name>` or a failed chosen restore stops the start.
 
 "Based on" is `FOUNDRY_DATA/pentaryn-boot.json` (beside `Config/`, outside every snapshot): which
 snapshot this world came from, its listing mtime, and the tree digest. It is written by this

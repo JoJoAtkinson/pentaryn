@@ -429,6 +429,55 @@ def test_failed_upload_leaves_the_temp_tar_and_names_it(two_hosts, monkeypatch, 
     assert bootstate.load().based_on is None  # nothing recorded for a failed upload
 
 
+def _cloud_down(fake):
+    for verb in ("lsjson", "mkdir", "cat", "rcat", "copyto", "moveto", "deletefile"):
+        fake.fail_always[verb] = (1, "Failed to create file system: network is unreachable")
+
+
+def test_prelaunch_backup_with_the_cloud_down_warns_and_exits_0(two_hosts, monkeypatch, capsys):
+    """`make vtt-up` must reach foundry-up when the cloud is down (ops.md §3)."""
+    _cloud_down(_rclone_cloud(two_hosts, monkeypatch))
+    with two_hosts.use("mac"):
+        assert cloud.main(["backup", "--reason", "prelaunch", "--if-stopped"]) == 0
+        with pytest.raises(SystemExit):           # the plain backup still fails loudly
+            cloud.main(["backup", "--reason", "manual"])
+    assert "⚠ the prelaunch snapshot was not taken" in capsys.readouterr().err
+
+
+def test_prelaunch_backup_upload_failure_warns_and_names_the_tar(two_hosts, monkeypatch, capsys):
+    fake = _rclone_cloud(two_hosts, monkeypatch)
+    fake.fail_always["copyto"] = (1, "Failed to copy: connection reset")
+    with two_hosts.use("mac"):
+        assert cloud.backup("prelaunch", if_stopped=True) == 0
+    err = capsys.readouterr().err
+    [left] = list((two_hosts.data["mac"] / ".pentaryn-tmp").glob("world-*-mac.tar.gz"))
+    assert "⚠ the prelaunch snapshot was not taken" in err and f"left on disk: {left}" in err
+    assert bootstate.load().based_on is None
+
+
+def test_assets_if_reachable_with_the_cloud_down_warns_and_exits_0(two_hosts, monkeypatch,
+                                                                    capsys, tmp_path):
+    monkeypatch.setattr(cloud, "MANIFEST", tmp_path / "manifest.json")
+    _cloud_down(_rclone_cloud(two_hosts, monkeypatch))
+    with two_hosts.use("mac"):
+        assert cloud.main(["assets", "--if-reachable"]) == 0
+        with pytest.raises(SystemExit):
+            cloud.main(["assets"])
+    assert "⚠ assets not checked: the cloud is unreachable" in capsys.readouterr().err
+
+
+def test_assets_if_reachable_download_failure_is_a_warning(two_hosts, monkeypatch, capsys,
+                                                           tmp_path):
+    monkeypatch.setattr(cloud, "MANIFEST", tmp_path / "manifest.json")
+    fake = _rclone_cloud(two_hosts, monkeypatch)
+    _zip(two_hosts.cloud / "assets/tokens-01.zip", {"a.png": b"png"})
+    fake.fail_always["copyto"] = (1, "Failed to copy: connection reset")
+    with two_hosts.use("mac"):
+        assert cloud.unpack_assets(if_reachable=True) == 0
+        assert cloud.unpack_assets() == 1
+    assert "tokens-01.zip: download failed" in capsys.readouterr().err
+
+
 def test_disk_space_check_dies_with_the_numbers(two_hosts, monkeypatch, capsys):
     _put(two_hosts.cloud, f"world-{_stamp(9)}-fvtt14.369-mac.tar.gz", age_days=9,
          data=b"x" * 5000)

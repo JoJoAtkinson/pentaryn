@@ -112,6 +112,9 @@ def test_vtt_up_boots_before_the_prelaunch_backup():
                                     "ops up", "ops tunnel-up")]
     assert order == sorted(order)
     assert out.count("scripts.foundry.boot choose") == 1      # once, not again for foundry-up
+    # never blocks on the cloud: both cloud steps are their lifecycle variants
+    assert "cloud backup --reason prelaunch --if-stopped" in out
+    assert "cloud assets --if-reachable" in out
 
 
 def test_foundry_up_runs_the_boot_step_and_marks_it_done():
