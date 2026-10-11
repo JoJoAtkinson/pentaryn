@@ -7,7 +7,8 @@
 import { MODULE } from "../ties-api.mjs";
 import { applyStudy } from "./apply.mjs";
 import { applyInspect } from "./cascade.mjs";
-import { BUBBLE, CHANNEL, INSPECT, isApplyingGM, STUDY } from "./shared.mjs";
+import { BUBBLE, CHANNEL, INSPECT, STUDY } from "./shared.mjs";
+import { isActiveGM } from "../lib/election.mjs";
 import { showBubble } from "./tempo.mjs";
 
 /* -------------------------------------------- */
@@ -18,13 +19,13 @@ export function registerStudy() {
   game.socket.on(CHANNEL, async (payload, senderId) => {
     /*
      * The bubble is the one action every client acts on, not just the arbiter GM — it is a thing
-     * the table sees, so gating it on `isApplyingGM` would show it to nobody but one browser.
+     * the table sees, so gating it on `isActiveGM` would show it to nobody but one browser.
      * It carries no secret: tempo, never outcome.
      */
     if (payload?.action === BUBBLE) return showBubble(payload);
 
     if (payload?.action !== STUDY && payload?.action !== INSPECT) return;
-    if (!isApplyingGM()) return;
+    if (!isActiveGM()) return;
     try {
       if (payload.action === INSPECT) await applyInspect(payload, senderId);
       else await applyStudy(payload, senderId);

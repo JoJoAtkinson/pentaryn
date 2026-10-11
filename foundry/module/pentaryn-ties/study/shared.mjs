@@ -26,9 +26,6 @@ export const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
 export const esc = s =>
   String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-/** Is this client the one GM that should act on relayed work? `relay.mjs`'s rule, verbatim. */
-export const isApplyingGM = () => game.user?.isGM === true && game.users?.activeGM?.id === game.user.id;
-
 export const flagOf = (doc, key) => {
   try {
     return doc?.getFlag(MODULE, key);

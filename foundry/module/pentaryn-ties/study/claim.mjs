@@ -16,7 +16,7 @@ import { flagOf } from "./shared.mjs";
  *
  * Measured on this machine while building this, not imagined: `lsof` on port 30000 showed two
  * established connections, the Foundry desktop app and a browser, **both signed in as
- * Gamemaster**. `game.users` lists one active user for the pair, so `isApplyingGM()` is `true`
+ * Gamemaster**. `game.users` lists one active user for the pair, so `isActiveGM()` is `true`
  * on both clients and every socket request is handled twice. `relay.mjs` has always had this
  * exposure and survives it because its write is fill-if-blank and idempotent. A conduit that
  * *rolls dice* does not survive it: two clients would roll two different totals, write two

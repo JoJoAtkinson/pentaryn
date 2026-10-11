@@ -55,12 +55,11 @@
 
 import { MODULE, read, write, clampStance, clampStrength, mayWrite, canReach } from "./ties-api.mjs";
 import { seedReverse } from "./ties-core.mjs";
+import { isActiveGM } from "./lib/election.mjs";
 
 const CHANNEL = `module.${MODULE}`;
 const MIRROR = "mirror-reverse";
 
-/** Is this client the one GM that should act on relayed writes? */
-const isApplyingGM = () => game.user?.isGM === true && game.users?.activeGM?.id === game.user.id;
 
 /**
  * Ask a GM to run the reverse write for a tie the sender has just saved on their own side.
@@ -148,7 +147,7 @@ async function applyMirror(payload, senderId) {
 export function registerRelay() {
   game.socket.on(CHANNEL, async (payload, senderId) => {
     if (payload?.action !== MIRROR) return;
-    if (!isApplyingGM()) return;
+    if (!isActiveGM()) return; // the one GM that acts on relayed writes
     try {
       await applyMirror(payload, senderId);
     } catch (err) {

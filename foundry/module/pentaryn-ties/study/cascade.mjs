@@ -78,7 +78,7 @@ export async function inspect(character, subject) {
   /*
    * ⚠ The stub is posted HERE, by the client that made the gesture — not by the GM handler.
    *
-   * Found by playtesting: two identical stubs at the same timestamp. `isApplyingGM()` tests
+   * Found by playtesting: two identical stubs at the same timestamp. `isActiveGM()` tests
    * `game.users.activeGM.id === game.user.id`, and `activeGM` is a **USER, not a session** (the
    * hazard phase 3 documented), so every GM client signed in on that account ran the handler and
    * every one of them posted. The claim protocol arbitrates the *rolling*, but stub-first

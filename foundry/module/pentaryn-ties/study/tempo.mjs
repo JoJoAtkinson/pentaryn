@@ -114,7 +114,7 @@ function broadcastBubble(tokenId, sceneId, text) {
 /**
  * Count this look and say the line if it crosses a threshold.
  *
- * ⚠ Runs on the **gesturing** client, beside the stub, for the same reason: `isApplyingGM()` is
+ * ⚠ Runs on the **gesturing** client, beside the stub, for the same reason: `isActiveGM()` is
  * true on every GM client signed in on the account, so running it in the handler both duplicated
  * the bubble and **double-counted the run** — thresholds would have fired at half the looks they
  * describe. The counter belongs to the person doing the looking.
@@ -134,7 +134,7 @@ export async function announceTempo(character) {
    * looking at your sheet.
    *
    * Posted from the **gesturing** client, exactly once — the same rule the stub follows, and for
-   * the same reason: `isApplyingGM()` is true on every GM client on the account, so posting it in
+   * the same reason: `isActiveGM()` is true on every GM client on the account, so posting it in
    * the handler would duplicate it once per open GM session.
    *
    * `EMOTE` style so it renders as a description rather than as something the character said.
