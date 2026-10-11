@@ -15,12 +15,13 @@
 
 import * as core from "./creatures-core.mjs";
 import { onSettingChange, registerSettings, setting } from "./settings.mjs";
-import { isProp, summarize } from "./tokens-adapter.mjs";
+import { summarize } from "./tokens-adapter.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
 import { makeLog } from "./lib/log.mjs";
 import * as light from "./light.mjs";
+import * as ownerSees from "./owner-sees.mjs";
 
-const { MODULE, isPlayerCreature, ownerShouldSee, stripEntries, shouldShowStrip, stripSignature, stripDock } = core;
+const { MODULE, isPlayerCreature, stripEntries, shouldShowStrip, stripSignature, stripDock } = core;
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);
@@ -37,64 +38,6 @@ const ctx = {
 
 light.install(reg, ctx);
 const { syncScene, syncAll } = ctx.exposed;
-
-/* -------------------------------------------- */
-/*  2. Owners always see their own tokens       */
-/* -------------------------------------------- */
-
-let ownerSeesOn = true;
-
-/** Called only when core said "not visible". */
-function ownerOverride(token) {
-  if (!ownerSeesOn || game.user.isGM) return false;
-  try {
-    const doc = token.document;
-    if (!doc?.isOwner || isProp(doc)) return false;   // every player owns a spell-area handle
-    return ownerShouldSee({
-      enabled: true,
-      isGM: false,
-      isOwner: true,
-      hidden: doc.hidden === true,
-      configPreview: token._preview?._previewType === "config",
-      filteredOut: token.isFilteredOut === true,
-      culled: typeof token._testCulled === "function" ? token._testCulled() === true : false
-    });
-  } catch {
-    return false;
-  }
-}
-
-let patchedWith = null;
-
-function patchVisibility() {
-  const path = "foundry.canvas.placeables.Token.prototype.isVisible";
-  if (game.modules.get("lib-wrapper")?.active && globalThis.libWrapper) {
-    try {
-      globalThis.libWrapper.register(MODULE, path, function (wrapped, ...args) {
-        return wrapped(...args) || ownerOverride(this);
-      }, "WRAPPER");
-      return (patchedWith = "libWrapper");
-    } catch (err) {
-      console.warn(`${MODULE} | libWrapper registration failed, patching directly`, err);
-    }
-  }
-  const proto = foundry.canvas.placeables.Token.prototype;
-  const desc = Object.getOwnPropertyDescriptor(proto, "isVisible");
-  if (!desc?.get) {
-    console.warn(`${MODULE} | Token#isVisible not found; owners-see-their-own is off`);
-    return (patchedWith = null);
-  }
-  Object.defineProperty(proto, "isVisible", {
-    ...desc,
-    get() { return desc.get.call(this) || ownerOverride(this); }
-  });
-  return (patchedWith = "direct");
-}
-
-function refreshTokenVisibility() {
-  if (!canvas?.ready) return;
-  for (const t of canvas.tokens.placeables) t.renderFlags.set({ refreshVisibility: true });
-}
 
 /* -------------------------------------------- */
 /*  3. The "Your creatures" strip               */
@@ -243,16 +186,11 @@ Hooks.on("controlToken", () => markControlled());
 /* -------------------------------------------- */
 
 // Setting reactions (the rows live in settings.mjs).
-onSettingChange("ownerSees", (v) => { ownerSeesOn = v !== false; refreshTokenVisibility(); });
 onSettingChange("showStrip", () => { lastSig = null; scheduleRender(); });
 
 Hooks.once("init", () => registerSettings());
 
-// Before the canvas first draws, so the first frame already uses the override.
-Hooks.once("setup", () => {
-  ownerSeesOn = setting("ownerSees") !== false;
-  patchVisibility();
-});
+ownerSees.install(reg, ctx);
 
 Hooks.once("ready", () => {
   ctx.exposed.syncAllQuietly();
@@ -268,8 +206,8 @@ Hooks.once("ready", () => setTimeout(() => {
     syncScene,
     syncAll,
     isCreature: (tokenDoc) => isPlayerCreature(summarize(tokenDoc)),
-    ownerSees: (token) => ownerOverride(token),
-    patchedWith: () => patchedWith,
+    ownerSees: ctx.exposed.ownerSees,
+    patchedWith: ctx.exposed.patchedWith,
     core
   };
   const current = game.pentaryn;
