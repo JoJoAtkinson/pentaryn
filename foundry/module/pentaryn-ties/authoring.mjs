@@ -32,9 +32,7 @@ import { MODULE } from "./ties-api.mjs";
 import { LORE_FLAG, readLore, KIND_OF_FLAG, STUDY_TIERS_FLAG } from "./known-core.mjs";
 import { loreEditorHTML, bindLoreEditor } from "./lore.mjs";
 import { beliefs, deliver, reset, kindActorOf, setKindOf } from "./study.mjs";
-
-const esc = s =>
-  String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+import { esc } from "./core/html.mjs";
 
 const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
 const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);

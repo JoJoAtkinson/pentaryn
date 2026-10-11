@@ -23,5 +23,4 @@ export const SITUATIONAL_MAX = 100;
 
 export const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
 export const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
-export const esc = s =>
-  String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+export { esc } from "../core/html.mjs";

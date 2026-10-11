@@ -28,9 +28,7 @@ import { NOTES_MAX, read, write, clampStance, clampStrength, mayWrite, baseActor
 export { baseActorOf };
 import { pips, stanceSelect } from "./editor.mjs";
 import { resolveMirror } from "./ties-core.mjs";
-
-const esc = s =>
-  String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+import { esc } from "./core/html.mjs";
 
 const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
 const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);

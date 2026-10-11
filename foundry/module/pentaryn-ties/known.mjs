@@ -47,6 +47,7 @@ import {
 } from "./known-core.mjs";
 import { studyStateFor, requestStudy, kindDialog, loreStateFor, requestLore, kindActorOf, grantKind as releaseKind } from "./study.mjs";
 import { attributeIdsOf, registry as registryOf } from "./attributes.mjs";
+import { esc } from "./core/html.mjs";
 
 /**
  * The tab id, exported so the entry point and the "open this entry" path cannot drift apart:
@@ -54,9 +55,6 @@ import { attributeIdsOf, registry as registryOf } from "./attributes.mjs";
  * copies of it is how a canvas key quietly starts landing on the Ties tab instead.
  */
 export const KNOWN_TAB_ID = "known";
-
-const esc = s =>
-  String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
 const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);

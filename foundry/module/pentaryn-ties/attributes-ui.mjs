@@ -43,9 +43,7 @@ import { loreEditorHTML, bindLoreEditor } from "./lore.mjs";
 // facts are handed over by the GM via "Mark as learned", never rolled for from the player's side.
 import { kindActorOf, attrLoreStateFor, releaseHeldAttribute } from "./study.mjs";
 import { grantsForEntry, GRANTED_FLAG, HELP_SCALE, CARRIED_SCALE, helpFor, rollableLore, LORE_FLAG, attrFactKey } from "./known-core.mjs";
-
-const esc = s =>
-  String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+import { esc } from "./core/html.mjs";
 
 const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
 const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);

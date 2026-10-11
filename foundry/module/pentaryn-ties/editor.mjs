@@ -32,9 +32,7 @@ import {
   stanceLabel
 } from "./ties-api.mjs";
 import { authoringHTML, bindAuthoring } from "./authoring.mjs";
-
-const esc = s =>
-  String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+import { esc } from "./core/html.mjs";
 
 const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
 const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);

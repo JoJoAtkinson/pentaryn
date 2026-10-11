@@ -28,6 +28,7 @@
  */
 
 import { MODULE, NOTES_MAX, clampNotes } from "./ties-api.mjs";
+import { esc } from "./core/html.mjs";
 
 export const WORN_FLAG = "worn";
 const BY_MAX = 200;
@@ -37,8 +38,6 @@ const ACCENT = 0x9b59b6;
 const DISC = 0x141311;
 
 const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
-const esc = s =>
-  String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 /** Token placeable or TokenDocument in, TokenDocument out. */
 const docOf = token => token?.document ?? token ?? null;

@@ -58,3 +58,18 @@ test("S5 canSee: no other file defines its own copy", async () => {
   const hits = sourceScan(new URL("..", import.meta.url), /isVisible \?\? \w+\.visible/).filter(h => h.file !== "ties-adapter.mjs");
   assert.deepEqual(hits, []);
 });
+
+test("S5 esc: core/html.mjs equals the copy each file carried at the checkpoint (byte for byte)", async () => {
+  const { esc } = await import("../core/html.mjs");
+  // the verbatim line from authoring, attributes-ui, editor, lore, known, tie-dialog, worn and study
+  const legacy = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  assert.equal(esc(`<a href="x">'&"</a>`), "&lt;a href=&quot;x&quot;&gt;&#39;&amp;&quot;&lt;/a&gt;");
+  for (const v of [`<a href="x">'&"</a>`, null, undefined, 0, "plain", "&amp;", ["a", "<b>"], { toString: () => "<o>" }]) {
+    assert.equal(esc(v), legacy(v), String(v));
+  }
+});
+
+test("S5 esc: no file outside core/ defines the &#39; escaper again", async () => {
+  const { sourceScan } = await import("./kit/harness.mjs");
+  assert.deepEqual(sourceScan(new URL("..", import.meta.url), /"&#39;"/).filter(h => !h.file.startsWith("core/")), []);
+});
