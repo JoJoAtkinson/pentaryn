@@ -5,7 +5,8 @@
 how this module was migrated → `context/plans/addon-blueprint-2026-10/migrate-pentaryn-names.md`
 
 Renaming an actor renames its token labels to match: the prototype token and every placed token of
-that actor, on every scene. Exposes `game.pentaryn.names`.
+that actor, on every scene — and, on a GM client, its combatants in every encounter. Exposes
+`game.pentaryn.names`.
 
 ## What the player sees
 
@@ -15,6 +16,9 @@ possible. This keeps that, with one rule:
 - A label that **was the old actor name**, or **the part before its first comma**
   (`Glubbek` for `Glubbek, Kuo-toa Net-Mender`), follows the rename in the same form.
 - Any other label is a **deliberate nickname** and is never touched.
+- The combat tracker follows too: a combatant of that actor whose name was the old name (or its
+  short form) gets the new one in the same form; a custom combatant name is left alone. Only when a
+  GM renames — Foundry does not let a player change a combatant's name.
 
 Runs on the client that made the rename (a player renaming their own PC updates only tokens they
 can edit). A toast reports how many labels changed: `Token labels updated to "Rob" (3).`
@@ -30,7 +34,7 @@ object. Ask it what it offers: `game.pentaryn.names.describe()` (offline: `test/
 
 | Call | Returns | Notes |
 |---|---|---|
-| `sync(actorRef, oldName, newName)` | number of labels changed (prototype + placed tokens this user can edit) | writes. `actorRef`: an Actor, a token or placeable, a UUID, an id or a whole name — never a substring; a token or a token's synthetic actor means its base (world) actor. An ambiguous name returns `{ok: false, code: "AMBIGUOUS", reason}`; a ref that matches nothing rejects with a `TypeError` |
+| `sync(actorRef, oldName, newName)` | number of labels changed (prototype + placed tokens this user can edit) | writes. On a GM client it also relabels the actor's combatants by the same rule (not counted, not toasted). `actorRef`: an Actor, a token or placeable, a UUID, an id or a whole name — never a substring; a token or a token's synthetic actor means its base (world) actor. An ambiguous name returns `{ok: false, code: "AMBIGUOUS", reason}`; a ref that matches nothing rejects with a `TypeError` |
 | `relabel(label, oldName, newName)` | the new label, or `null` for a nickname | pure preview, safe to call |
 | `shortName(name)` | the part before the first comma, trimmed | pure |
 
@@ -45,7 +49,8 @@ Kit members: `describe()`, `version`, `contract`, `settings()` (always `{}`), `t
 ## Data written
 
 The prototype token name (`prototypeToken.name`, written with `{pentarynNames: true}` so it does not
-re-enter) and placed token names (`Scene#updateEmbeddedDocuments("Token", …)`). No flags.
+re-enter), placed token names (`Scene#updateEmbeddedDocuments("Token", …)`) and, on a GM client,
+combatant names (`Combat#updateEmbeddedDocuments("Combatant", …)`, one batch per combat). No flags.
 
 ## Flags other modules read
 
@@ -65,7 +70,10 @@ n/a — patches nothing.
 
 Every client remembers the old name in `preUpdateActor`; only the client that made the rename
 (`userId === game.user.id`) writes, and it skips tokens it cannot edit
-(`canUserModify(game.user, "update")`). A failed write is logged as
+(`canUserModify(game.user, "update")`). Combatants are written only when that client is a GM
+(`game.user.isGM`, Assistants included): a player's rename relabels its tokens but leaves the tracker.
+A GM rename runs in every tab of that GM (the MCP bridge tab and a browser tab both pass the
+initiator gate); both send the same names, so the second write changes nothing. A failed write is logged as
 `pentaryn-names | relabel after rename failed` with `{actor, from, to}` and the error; no toast.
 
 ## Extending
@@ -82,6 +90,11 @@ Every client remembers the old name in `preUpdateActor`; only the client that ma
   token of it whose label matches — two `Goblin` tokens both become `Goblin Boss`. This is intended
   (N-L1, Joe 2026-10-11): a base-actor rename is a rename of the creature, so its copies follow; give
   one a nickname first to keep it apart.
+- A combatant whose name Foundry derived from its token (empty source name) is written the new
+  name explicitly: Foundry prepares that name once and a token rename does not re-prepare it, so
+  without the write the tracker keeps the old label until reload (PT3-9). From then on the
+  combatant stores its name — a later rename of the token alone (Token config, not an actor
+  rename) does not reach it.
 - Quirks pinned as-is: an old name that is only a comma tail (`",x"`) has short form `""`, which an
   empty label matches; a padded old name (`" Bob "`) has a trimmed short form that differs from it,
   so `"Bob"` follows it.
@@ -99,7 +112,7 @@ Every client remembers the old name in `preUpdateActor`; only the client that ma
 | `names.mjs` | entry (esmodules[0]): wiring, publish |
 | `names-core.mjs` | pure constants and rules: `shortName`, `relabel`, `planTokenRelabels` |
 | `api-manifest.mjs` | pure data: the three legacy API rows |
-| `rename.mjs` | the feature: the two actor hooks and `sync()` |
+| `rename.mjs` | the feature: the two actor hooks and `sync()` (tokens, then GM-only combatants) |
 | `lang/en.json` | the toast text |
 | `lib/` | vendored kit (`lib/kit.lock.json`) |
 | `test/` | node:test suites, goldens, fixtures (`legacy-names.mjs` is the verbatim oracle), vendored test kit |
