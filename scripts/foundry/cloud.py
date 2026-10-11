@@ -1228,12 +1228,12 @@ class Fetched:
     cleanup: list[Path] = field(default_factory=list)   # temp files/dirs to remove
 
 
-def _bundle_plan(manifest: dict, *, systems: bool = True
+def _bundle_plan(manifest: dict, *, systems: bool = True, warn=None
                  ) -> tuple[dict[str, str], list[str], list[str]]:
     """(needed, extras, unchanged) of `manifest` against this machine's inventory. The
     bundle cache is read, not written: planning a restore changes nothing on disk. With
     `systems=False` a system is never needed (the caller leaves Data/systems alone)."""
-    inv = bundles.local_inventory(save=False)
+    inv = bundles.local_inventory(save=False, warn=warn)
     want = bundles.manifest_keys(manifest)
     differ = {k: n for k, n in want.items() if inv.get(k) is None or inv[k].name != n}
     needed = {k: n for k, n in differ.items() if systems or not k.startswith("system/")}
@@ -1370,7 +1370,7 @@ def restore_cost(st: Storage, snap: Snapshot) -> RestoreCost | None:
         m = read_manifest(st, snap)
         if m is None:
             return None
-        needed, _extras, _unchanged = _bundle_plan(m)
+        needed, _extras, _unchanged = _bundle_plan(m, warn=lambda _m: None)
         have = bundles.listing(st)
         size = sum(have[n].size for n in needed.values() if n in have)
         return RestoreCost(snap.size, len(needed), size, len(bundles.manifest_keys(m)))
@@ -1766,10 +1766,12 @@ def bundles_gc_cmd(yes: bool = False) -> int:
         e = have.get(n)
         print(f"      {n}  {_mb(e.size) if e else '?':>9}  "
               f"{(now - e.mtime) / 86400 if e else 0:.1f} days old")
-    verb = "swept" if yes else "would sweep"
-    log(f"{verb} {len(doomed)} bundle(s) ({_mb(total)})"
-        + ("" if yes or not doomed else
-           " — rerun with --yes (make foundry-bundles-gc YES=1) to delete them"))
+    if not doomed:      # gc logs the count and bytes itself when there is something
+        log(f"{'swept' if yes else 'would sweep'} 0 bundle(s) ({_mb(0)}) — every bundle in "
+            f"the cloud is referenced or younger than {GC_GRACE_DAYS} days")
+    elif not yes:
+        log(f"dry run ({_mb(total)}): rerun with --yes (make foundry-bundles-gc YES=1) to "
+            "delete them")
     return 0
 
 
