@@ -27,6 +27,7 @@ import { NOTES_MAX, read, write, clampStance, clampStrength, mayWrite, baseActor
 
 export { baseActorOf };
 import { pips, stanceSelect } from "./editor.mjs";
+import { resolveMirror } from "./ties-core.mjs";
 
 const esc = s =>
   String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -655,38 +656,8 @@ export class TieDialog extends ApplicationV2 {
        * The box was rendered when the dialog opened. If the other side has been edited
        * since, by another client or from that actor's own sheet, a blank box would still
        * look linked and would overwrite prose this user never saw. So re-read at save time
-       * and re-test against what MY side said BEFORE this save: still blank or still equal
-       * means still linked; anything else has diverged behind our back and is left alone.
+       * and re-test against what MY side said BEFORE this save (`resolveMirror`, ties-core).
        */
-      const linked = (theirs, prevMine) => {
-        const v = String(theirs ?? "").trim();
-        return !v || v === String(prevMine ?? "").trim();
-      };
-      /*
-       * `seeded` is what the render put in the box. A box still holding it was never
-       * touched — so we must write back what the OTHER SIDE says NOW, not the text we
-       * rendered, or a diverged side edited elsewhere while this window sat open would be
-       * silently rolled back to whatever it said when the dialog opened.
-       */
-      const resolve = (box, seeded, mineNow, revNow, prevMine) => {
-        const typed = String(box ?? "");
-        const wasSeeded = !!String(seeded ?? "").trim();
-        const untouched = typed === String(seeded ?? "");
-        // typed something new: diverge, or set a side that had none
-        if (typed.trim() && !untouched) return { value: typed, followed: false };
-        // left the box exactly as rendered: their text stands, whatever it says NOW
-        if (untouched && wasSeeded) return { value: revNow, followed: false };
-        /*
-         * EMPTIED a box that had their diverged text in it. This is the re-link gesture the
-         * README documents and the reason the override button was dropped — and it used to
-         * fall through every branch to "leave it alone", so clearing the box did nothing at
-         * all and the only way back was retyping the forward text by hand.
-         */
-        if (!typed.trim() && wasSeeded) return { value: mineNow, followed: true };
-        if (linked(revNow, prevMine)) return { value: mineNow, followed: true };
-        return { value: revNow, followed: false }; // diverged behind our back; leave it alone
-      };
-
       if (!rev) {
         theirs.push({
           id: source.id,
@@ -700,8 +671,8 @@ export class TieDialog extends ApplicationV2 {
         await write(target, theirs);
         mirrored = "seeded";
       } else {
-        const w = resolve(draft.reverseWord, draft.seededWord, word, rev.word, prevForward.word);
-        const n = resolve(draft.reverseNotes, draft.seededNotes, notes, rev.notes, prevForward.notes);
+        const w = resolveMirror(draft.reverseWord, draft.seededWord, word, rev.word, prevForward.word);
+        const n = resolveMirror(draft.reverseNotes, draft.seededNotes, notes, rev.notes, prevForward.notes);
         const changed = rev.word !== w.value || rev.notes !== n.value;
         if (changed) {
           rev.word = w.value;

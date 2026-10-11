@@ -53,16 +53,14 @@
  * stands alone — the next Save from anyone on that pair completes it.
  */
 
-import { MODULE, read, write, clampStance, clampStrength, clampNotes, mayWrite, canReach } from "./ties-api.mjs";
+import { MODULE, read, write, clampStance, clampStrength, mayWrite, canReach } from "./ties-api.mjs";
+import { seedReverse } from "./ties-core.mjs";
 
 const CHANNEL = `module.${MODULE}`;
 const MIRROR = "mirror-reverse";
 
 /** Is this client the one GM that should act on relayed writes? */
 const isApplyingGM = () => game.user?.isGM === true && game.users?.activeGM?.id === game.user.id;
-
-/** Only a field with nothing in it is ours to fill. */
-const blank = v => !String(v ?? "").trim();
 
 /**
  * Ask a GM to run the reverse write for a tie the sender has just saved on their own side.
@@ -139,10 +137,9 @@ async function applyMirror(payload, senderId) {
     return;
   }
 
-  // fill the gaps only; anything already written on their side is theirs
-  const word = blank(rev.word) ? mine.word : rev.word;
-  const notes = blank(rev.notes) ? clampNotes(mine.notes) : rev.notes;
-  if (rev.word === word && rev.notes === notes) return;
+  // fill the gaps only; anything already written on their side is theirs (`seedReverse`, ties-core)
+  const { word, notes, changed } = seedReverse(rev, mine);
+  if (!changed) return;
   rev.word = word;
   rev.notes = notes;
   await write(target, theirs);
