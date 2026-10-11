@@ -437,6 +437,21 @@ check("141 body swap: a new actor, dnd5e's swap flags, wrapped values; not a mov
 if (failures.length) {
   console.log(`✗ pentaryn-transform core: ${failures.length} failed, ${pass} passed`);
   console.log(failures.join("\n"));
-  process.exit(1);
+} else {
+  console.log(`✓ pentaryn-transform core: ${pass} passed`);
 }
-console.log(`✓ pentaryn-transform core: ${pass} passed`);
+
+// The node:test files (test/*.test.mjs, Foundry stubbed through test/kit/), one process per file —
+// what the blueprint's fixed run.mjs body does; guide step 1 replaces this whole file with it.
+const { readdirSync } = await import("node:fs");
+const { spawnSync } = await import("node:child_process");
+const { fileURLToPath } = await import("node:url");
+const testFiles = readdirSync(new URL(".", import.meta.url)).filter(f => f.endsWith(".test.mjs")).sort().map(f => `test/${f}`);
+let glueStatus = 0;
+if (testFiles.length) {
+  glueStatus = spawnSync(process.execPath, ["--test", "--test-reporter=dot", ...testFiles],
+    { stdio: "inherit", cwd: fileURLToPath(new URL("..", import.meta.url)) }).status ?? 1;
+  console.log(glueStatus === 0 ? `✓ pentaryn-transform node:test (${testFiles.length} file${testFiles.length === 1 ? "" : "s"}) passed`
+    : `✗ pentaryn-transform node:test failed (exit ${glueStatus})`);
+}
+if (failures.length || glueStatus !== 0) process.exit(1);
