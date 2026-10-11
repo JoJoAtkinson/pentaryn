@@ -4,11 +4,19 @@
  * plain data. Glue files import from here; nothing here imports glue.
  *
  * Barrel: the engine and the backend registry are re-exported from here, so glue and tests import
- * one path.
+ * one path. They are imported and then exported by name (not `export … from`) so the import-graph
+ * tools see both files, and so this list is the core's whole surface.
  */
 
-export * from "./core/engine.mjs";
-export { register, get, list, available, canonical, compare } from "./core/backends.mjs";
+import {
+  snapResolution, resolveConfig, FLAG_SCOPE, SOLID, lintOnly, analyze, runEngine, wallCategory
+} from "./core/engine.mjs";
+import { register, get, list, available, canonical, compare } from "./core/backends.mjs";
+
+export {
+  snapResolution, resolveConfig, FLAG_SCOPE, SOLID, lintOnly, analyze, runEngine, wallCategory,
+  register, get, list, available, canonical, compare,
+};
 
 export const MODULE = "pentaryn-walls";
 export const SHORT = "walls";
