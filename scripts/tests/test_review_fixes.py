@@ -235,6 +235,163 @@ def test_rclone_touch_never_creates(two_hosts, monkeypatch):
     assert not (two_hosts.cloud / "bundles" / "module@gone@1@0123456789abcdef.tar.gz").exists()
 
 
+# ── DL1: every "what is in the cloud now" listing is fresh over rclone ───────
+#
+# Each test fills one process's RcloneStorage cache first (as the boot prompt, the boot
+# choice or an earlier step of the same command would), then the other host changes the
+# cloud, then the site under test runs in that same process. test_dl1 (test_review_dataloss)
+# pins the verify; these pin the GC mark, the GC sweep, the restore's plan and the backup's
+# first two listings — any `fresh=True` dropped there fails one of them.
+
+def _process(two_hosts, monkeypatch):
+    """`switch()` → a new RcloneStorage (a new process: an empty cache) over the fake
+    cloud, which `storage.get()` returns until the next switch."""
+    from cloud_fakes import FakeRclone
+    from scripts.foundry.storage import RcloneStorage
+    current: list = [None]
+    monkeypatch.setattr(storage, "get", lambda: current[0])
+
+    def switch():
+        current[0] = RcloneStorage(f"fake:{two_hosts.cloud.name}", bin="rclone",
+                                   runner=FakeRclone(two_hosts.cloud.parent),
+                                   interactive=False)
+        return current[0]
+    switch()
+    return switch
+
+
+def _cache_everything(st):
+    from scripts.foundry import bundles
+    cloud.snapshots(st, cloud.WORLD_BACKUPS)
+    cloud.snapshots(st, cloud.MAJOR_RELEASES)
+    bundles.listing(st)
+
+
+def _orphan_boss_only(two_hosts, switch):
+    """boss backs up with a boss-only module, then that snapshot is gone (coalesced long
+    ago): its bundle is old and referenced by nothing. The mac backs up its own. Returns
+    the orphan bundle's name; every bundle is 30 days old."""
+    c = two_hosts.cloud
+    boss = _install(two_hosts.data["boss"])
+    make_module(boss / "Data/modules", "boss-only", version="0.1")
+    switch()
+    with two_hosts.use("boss"):
+        cloud.backup("shutdown")
+    [sb] = _names(c)
+    (c / "world-backups" / sb).unlink()
+    (c / "world-backups" / f"{sb}{cloud.PARENT_SUFFIX}").unlink()
+    [only] = [n for n in _bundle_names(c) if n.startswith("module@boss-only@")]
+    _install(two_hosts.data["mac"])
+    switch()
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    for p in (c / "bundles").iterdir():
+        t = time.time() - 30 * DAY
+        os.utime(p, (t, t))
+    return only
+
+
+def test_dl1_gc_mark_sees_a_snapshot_the_other_host_wrote_after_the_cache_was_filled(
+        two_hosts, monkeypatch):
+    switch = _process(two_hosts, monkeypatch)
+    only = _orphan_boss_only(two_hosts, switch)
+    # Only the mark can save the bundle: no reused-bundle touch, so its mtime stays old.
+    monkeypatch.setattr(cloud, "_refresh_reused", lambda *a, **k: None)
+    mac_st = switch()
+    _cache_everything(mac_st)                           # the mac process listed earlier
+    _edit(two_hosts.data["boss"], "boss comes back")
+    switch()
+    with two_hosts.use("boss"):
+        cloud.backup("shutdown")                        # reuses boss-only; its sidecar names it
+    new_boss = [n for n in _names(two_hosts.cloud) if n.endswith("-boss.tar.gz")][-1]
+    side = json.loads((two_hosts.cloud / "world-backups" /
+                       f"{new_boss}{cloud.PARENT_SUFFIX}").read_text())
+    assert only in side["modules"].values()
+    with two_hosts.use("mac"):
+        cloud._gc_after_backup(mac_st)                  # the mac process, its cache stale
+    assert only in _bundle_names(two_hosts.cloud), (
+        "GC marked from a cached world-backups/ listing and swept a referenced bundle")
+
+
+def test_dl1_gc_sweep_spares_a_bundle_touched_after_the_cache_was_filled(two_hosts,
+                                                                         monkeypatch):
+    switch = _process(two_hosts, monkeypatch)
+    only = _orphan_boss_only(two_hosts, switch)
+    mac_st = switch()
+    _cache_everything(mac_st)                           # bundles/ cached with the old mtime
+    # boss's backup, in flight, reuses boss-only: _refresh_reused touched it; its sidecar
+    # has not landed yet, so no mark can see it — only the sweep's fresh mtime can.
+    os.utime(two_hosts.cloud / "bundles" / only, None)
+    with two_hosts.use("mac"):
+        cloud._gc_after_backup(mac_st)
+    assert only in _bundle_names(two_hosts.cloud), (
+        "the sweep read a cached bundles/ listing and deleted a bundle touched since")
+
+
+def test_dl1_a_restores_plan_sees_a_bundle_swept_after_the_prompt_listed_bundles(
+        two_hosts, monkeypatch):
+    switch = _process(two_hosts, monkeypatch)
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    [s1] = _names(two_hosts.cloud)
+    [tools] = [n for n in _bundle_names(two_hosts.cloud) if n.startswith("module@tools@")]
+    boss_st = switch()
+    with two_hosts.use("boss"):
+        snap = cloud.find_snapshot(boss_st, s1)
+        cost = cloud.restore_cost(boss_st, snap)        # the boot prompt lists bundles/
+        assert cost is not None and cost.n_bundles == 2
+        (two_hosts.cloud / "bundles" / tools).unlink()  # the other host's GC, meanwhile
+        boss_st.runner.calls.clear()
+        with pytest.raises(cloud.RestoreError, match="missing from the cloud") as err:
+            cloud.fetch_snapshot(boss_st, snap)
+    assert tools in str(err.value) and "nothing local was touched" in str(err.value)
+    copied = [a for a in boss_st.runner.calls if a[1] == "copyto"]
+    assert copied == [], f"downloaded before the plan refused: {copied}"
+
+
+def test_dl1_a_boot_backup_after_the_prompt_sees_a_bundle_swept_meanwhile(two_hosts,
+                                                                          monkeypatch, capsys):
+    switch = _process(two_hosts, monkeypatch)
+    mac = _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    [s1] = _names(two_hosts.cloud)
+    [tools] = [n for n in _bundle_names(two_hosts.cloud) if n.startswith("module@tools@")]
+    st = switch()                                       # the boot process
+    with two_hosts.use("mac"):
+        cloud.restore_cost(st, cloud.find_snapshot(st, s1))   # the prompt lists bundles/
+        (two_hosts.cloud / "bundles" / tools).unlink()  # swept meanwhile (by hand, or GC)
+        _edit(mac, "a session")
+        capsys.readouterr()
+        assert cloud.backup("pre-launch", if_stopped=True) == 0
+    out = capsys.readouterr().out
+    # The first listing must see it gone: staged and uploaded as new, not reused and then
+    # caught by the verify.
+    assert "with 1 new bundle(s)" in out, out
+    assert "vanished from the cloud during this backup" not in out, out
+    assert tools in _bundle_names(two_hosts.cloud)
+
+
+def test_dl1_a_boot_backup_sees_its_based_on_deleted_after_the_boot_choice_listed_it(
+        two_hosts, monkeypatch, capsys):
+    switch = _process(two_hosts, monkeypatch)
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    [s1] = _names(two_hosts.cloud)
+    st = switch()                                       # the boot process
+    with two_hosts.use("mac"):
+        cloud.snapshots(st, cloud.WORLD_BACKUPS)        # the boot choice lists world-backups/
+        (two_hosts.cloud / "world-backups" / s1).unlink()   # pruned on the other host
+        (two_hosts.cloud / "world-backups" / f"{s1}{cloud.PARENT_SUFFIX}").unlink()
+        capsys.readouterr()
+        assert cloud.backup("pre-launch", if_stopped=True) == 0   # the tree is unchanged
+    out = capsys.readouterr().out
+    assert "no longer in the cloud — uploading this state again" in out, out
+    assert len(_names(two_hosts.cloud)) == 1, "this tree has no cloud copy"
+
+
 # ── DL5/R1: extras a world-less restore left go up with the next backup ──────
 
 def test_the_backup_after_a_worldless_restore_that_left_extras_uploads_them(two_hosts):
