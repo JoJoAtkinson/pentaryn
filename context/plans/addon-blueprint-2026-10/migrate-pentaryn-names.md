@@ -329,6 +329,8 @@ function, rename a test actor and see the toast.
   (60 lines, no state, no settings) and opt into kit `api` for the legacy rows; the alternative is
   `--tier full`, which adds `settings.mjs`, `api.mjs`, `hooks/api/i18n` tests and `lang` checks for
   a module with no settings. Either way the scorer's `[full]` rules are not needed for correctness.
+  **Decided 2026-10-11 (Joe, D3): stay small, plus the opt-in `api` kit file** — `vendor.py sync names
+  --tier small --kit api` (step 1) as written. No guide step changes.
 - Risk: none beyond the declared items; every move is verbatim and pinned by the oracle table.
 
 ## 7. Effort

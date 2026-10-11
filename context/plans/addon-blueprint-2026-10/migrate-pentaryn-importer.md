@@ -371,6 +371,9 @@ Absorbs `items-journal-6` (README parts c, d), and the README side of `-5`. Clea
    is written under it) and list `flags.pentaryn.*` in the manifest's `flags.writes`, documented as a
    contract scope that is **never** migrated (moving it would change every `contentHash`/slug lookup
    and force a full re-import). The alternative — `flagScope: "pentaryn"` — fails C07 forever.
+   **Decided 2026-10-11 (Joe, D5): `flags.pentaryn.*` is the generator's contract scope.** The importer
+   declares `flagScope: "pentaryn-importer"` in the Wave 7 batch and documents `flags.pentaryn.*` as a
+   contract scope that is never migrated (README *Data written*; CONTRACT.md §9.2). No data moves.
 2. Console prefix change D-I2 (recommended: accept; console-only).
 
 ## 7. WAIT
