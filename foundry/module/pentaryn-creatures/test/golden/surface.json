@@ -36,6 +36,7 @@
   "patchedWith": "patchedWith",
   "render": "render",
   "settings": "settings",
+  "status": "status",
   "syncAll": "syncAll",
   "syncScene": "syncScene",
   "trace": "trace",

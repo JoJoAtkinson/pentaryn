@@ -65,6 +65,20 @@ test("described settings are exactly the SETTINGS table; settings() snapshots th
   assert.deepEqual(api.settings(), { lightRadius: 5, ownerSees: true, floatOverHud: true, showStrip: true });
 });
 
+test("status() (transform-creatures-31): wrap, the four settings, writer, lit tokens, version", async () => {
+  assert.deepEqual(api.status(), {
+    patchedWith: "direct", ownerSees: true, lightRadius: 5, showStrip: true, floatOverHud: true,
+    writer: true, lit: 4, version: manifestOf(new URL("..", import.meta.url)).version,
+  });
+  await F.game.settings.set(MODULE, "floatOverHud", false);
+  assert.equal(api.status().floatOverHud, false);
+  await F.game.settings.set(MODULE, "floatOverHud", true);
+  F.become({ userId: "plyrUser00000001" });
+  assert.equal(api.status().writer, false, "a player client does not write");
+  F.become({ userId: "gmUser0000000001" });
+  assert.equal(api.status().writer, true);
+});
+
 test("the legacy calls answer through the built API", async () => {
   assert.equal(api.patchedWith(), "direct");
   assert.equal(api.isCreature(W.tok("tImp")), true);

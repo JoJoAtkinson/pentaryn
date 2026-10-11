@@ -80,6 +80,15 @@ export const MANIFEST = Object.freeze({
       doc: "How Token#isVisible was wrapped on this client: libWrapper, directly on the prototype, or null when "
         + "the getter was not found (owners-see-their-own is off).",
     },
+    {
+      path: "status",
+      params: [],
+      returns: "{ patchedWith, ownerSees, lightRadius, showStrip, floatOverHud, writer, lit, version }",
+      gm: false, writes: false, since: "0.1.1",
+      doc: "One read of this client's state: how Token#isVisible is wrapped (patchedWith), the four settings as "
+        + "this client reads them (showStrip is per client), whether this client writes the lights (writer: the "
+        + "active GM), and how many tokens on every scene carry our light flag (lit).",
+    },
   ],
   flags: {
     writes: ["flags.pentaryn-creatures.light"],
