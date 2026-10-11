@@ -9,7 +9,7 @@
  * one updateEmbeddedDocuments per scene.
  */
 
-import { LIGHT_KEYS, isPlayerCreature, lightUpdate, makeCoalescer } from "./creatures-core.mjs";
+import { isPlayerCreature, lightUpdate, makeCoalescer, shouldQueueLight } from "./creatures-core.mjs";
 import { setting } from "./settings.mjs";
 import { summarize } from "./tokens-adapter.mjs";
 import { isActiveGM } from "./lib/election.mjs";
@@ -57,7 +57,8 @@ export async function syncScene(scene, ids = null) {
     const u = lightUpdate(t, { qualifies: isPlayerCreature(summarize(t)), radius });
     if (u) updates.push({ _id: t.id, ...u });
   }
-  if (updates.length) await scene.updateEmbeddedDocuments("Token", updates);
+  // the option marks the write as ours, so our own updateToken hook does not queue it again
+  if (updates.length) await scene.updateEmbeddedDocuments("Token", updates, { pentarynCreatures: true });
   return updates.length;
 }
 
@@ -80,8 +81,8 @@ export function syncAllQuietly() {
 export function install(reg, ctx) {
   log = ctx.log;
   reg.on("createToken", (doc) => queue(doc.parent, doc.id), { guard: false, label: "createToken: queue light" });
-  reg.on("updateToken", (doc, changes) => {
-    if (LIGHT_KEYS.some(k => k in (changes ?? {}))) queue(doc.parent, doc.id);
+  reg.on("updateToken", (doc, changes, options) => {
+    if (shouldQueueLight(changes, options)) queue(doc.parent, doc.id);
   }, { guard: false, label: "updateToken: queue light" });
   reg.on("updateActor", (actor, changes) => {
     if (!isActiveGM() || !changes || !("ownership" in changes || "type" in changes)) return;

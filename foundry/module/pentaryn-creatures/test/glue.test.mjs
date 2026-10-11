@@ -12,7 +12,8 @@
 //
 // KNOWN rows (pinned as they are; each has its target as a todo test at the end):
 //   transform-creatures-26  FIXED [declared]: the queue flushes 200 ms after the first change, never pushed back
-//   transform-creatures-27  our own light write re-queues a second, no-op pass; no options argument
+//   transform-creatures-27  FIXED [declared]: our light writes carry {pentarynCreatures: true} (argc 3) and
+//                           the updateToken hook skips them — no second, no-op pass
 //   transform-creatures-31  FIXED [declared]: syncScene(scene, ["id"]) and a bare id narrow the pass
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
@@ -128,15 +129,15 @@ test("setup: lib-wrapper active without its global → Token#isVisible replaced 
   assert.deepEqual(F.calls, [], "setup only reads ownerSees");
 });
 
-test("ready (active GM): one write per scene, summons only, no options argument (KNOWN -27); published at ready", async () => {
+test("ready (active GM): one write per scene, summons only, with our options argument (-27); published at ready", async () => {
   W.reads.length = 0;
   F.fire("ready");
   assert.equal(typeof api(), "object", "[declared] C-D2: published synchronously at ready");
   assert.equal(F.game.modules.get(MODULE).api, api(), "[declared] C-D2: module.api is the same API");
   await drain();
   assert.deepEqual(writes(), [
-    { scene: ALPHA, type: "Token", updates: [lit("tImp"), lit("tEye"), lit("tHid")], argc: 2 },
-    { scene: BETA, type: "Token", updates: [lit("tImpB")], argc: 2 },
+    { scene: ALPHA, type: "Token", updates: [lit("tImp"), lit("tEye"), lit("tHid")], argc: 3 },
+    { scene: BETA, type: "Token", updates: [lit("tImpB")], argc: 3 },
   ]);
   assert.equal(W.passes(), 3, "syncAll: one pass per scene (Gamma has no tokens)");
   assert.deepEqual(W.tok("tImp").light, { bright: 5, dim: 5 });
@@ -144,15 +145,23 @@ test("ready (active GM): one write per scene, summons only, no options argument 
   assert.deepEqual(W.tok("tTorch").light, { bright: 20, dim: 40 }, "own torch left alone");
 });
 
-test("KNOWN transform-creatures-27: our own write re-queues itself and a second pass writes nothing", async () => {
+test("transform-creatures-27 [declared]: our own write carries {pentarynCreatures: true} and is not re-queued", async () => {
   W.reads.length = 0;
-  await tick(199);
-  assert.equal(W.passes(), 0);
-  await tick(1);
-  assert.equal(W.passes(), 2, "Alpha and Beta re-checked");
-  assert.deepEqual(writes(), [], "the second pass is a no-op");
+  await tick(200);
+  assert.equal(W.passes(), 0, "no echo pass at 200 (was: Alpha and Beta re-checked for nothing)");
   await tick(1000);
-  assert.equal(W.passes(), 2, "and it does not loop");
+  assert.equal(W.passes(), 0);
+  const seen = [];
+  const id = F.Hooks.on("updateToken", (_doc, _changes, options) => seen.push(options?.pentarynCreatures === true));
+  reset("tImp");
+  F.fire("createToken", W.tok("tImp"), {}, GM);
+  await tick(200);
+  assert.deepEqual(writes().map(w => w.argc), [3]);
+  assert.deepEqual(seen, [true], "the update hook sees our option");
+  W.reads.length = 0;
+  await tick(1000);
+  assert.equal(W.passes(), 0, "and nothing re-queues it");
+  F.Hooks.off("updateToken", id);
 });
 
 test("GM client: the strip never mounts", async () => {
@@ -230,14 +239,14 @@ test("createToken queues that token on its scene; flush writes only the queued i
   reset("tImp", "tEye", "tImpB");
   F.fire("createToken", W.tok("tEye"), {}, GM);
   await tick(200);
-  assert.deepEqual(writes(), [{ scene: ALPHA, type: "Token", updates: [lit("tEye")], argc: 2 }]);
+  assert.deepEqual(writes(), [{ scene: ALPHA, type: "Token", updates: [lit("tEye")], argc: 3 }]);
   await tick(200);   // -27's echo pass
   F.fire("createToken", W.tok("tImpB"), {}, GM);
   F.fire("createToken", W.tok("tImp"), {}, GM);
   await tick(200);
   assert.deepEqual(writes(), [
-    { scene: BETA, type: "Token", updates: [lit("tImpB")], argc: 2 },
-    { scene: ALPHA, type: "Token", updates: [lit("tImp")], argc: 2 },
+    { scene: BETA, type: "Token", updates: [lit("tImpB")], argc: 3 },
+    { scene: ALPHA, type: "Token", updates: [lit("tImp")], argc: 3 },
   ], "scenes in queue order");
   await tick(200);
 });
@@ -251,8 +260,8 @@ test("updateActor: ownership or type → every token of that actor, on every sce
   F.fire("updateActor", imp, { ownership: { [PLAYER]: 3 } }, {}, GM);
   await tick(200);
   assert.deepEqual(writes(), [
-    { scene: ALPHA, type: "Token", updates: [lit("tImp"), lit("tHid")], argc: 2 },
-    { scene: BETA, type: "Token", updates: [lit("tImpB")], argc: 2 },
+    { scene: ALPHA, type: "Token", updates: [lit("tImp"), lit("tHid")], argc: 3 },
+    { scene: BETA, type: "Token", updates: [lit("tImpB")], argc: 3 },
   ], "tEye (another actor) is not touched");
   await tick(200);
   reset("tImp");
@@ -266,7 +275,7 @@ test("updateActor on a synthetic (unlinked) actor queues its own token only", as
   const synthetic = { id: "synth", isToken: true, token: W.tok("tEye") };
   F.fire("updateActor", synthetic, { ownership: {} }, {}, GM);
   await tick(200);
-  assert.deepEqual(writes(), [{ scene: ALPHA, type: "Token", updates: [lit("tEye")], argc: 2 }]);
+  assert.deepEqual(writes(), [{ scene: ALPHA, type: "Token", updates: [lit("tEye")], argc: 3 }]);
   await tick(200);
 });
 
@@ -287,16 +296,16 @@ test("lightRadius onChange (active GM): syncAll moves our lights, 0 darkens and 
   await F.game.settings.set(MODULE, "lightRadius", 0.5);
   await drain();
   assert.deepEqual(writes(), [
-    { scene: ALPHA, type: "Token", updates: [lit("tImp", 0.5), lit("tEye", 0.5), lit("tHid", 0.5)], argc: 2 },
-    { scene: BETA, type: "Token", updates: [lit("tImpB", 0.5)], argc: 2 },
+    { scene: ALPHA, type: "Token", updates: [lit("tImp", 0.5), lit("tEye", 0.5), lit("tHid", 0.5)], argc: 3 },
+    { scene: BETA, type: "Token", updates: [lit("tImpB", 0.5)], argc: 3 },
   ]);
   await tick(200);
   const off = id => ({ _id: id, "light.bright": 0, "light.dim": 0, [FK]: null });
   await F.game.settings.set(MODULE, "lightRadius", "x");
   await drain();
   assert.deepEqual(writes(), [
-    { scene: ALPHA, type: "Token", updates: [off("tImp"), off("tEye"), off("tHid")], argc: 2 },
-    { scene: BETA, type: "Token", updates: [off("tImpB")], argc: 2 },
+    { scene: ALPHA, type: "Token", updates: [off("tImp"), off("tEye"), off("tHid")], argc: 3 },
+    { scene: BETA, type: "Token", updates: [off("tImpB")], argc: 3 },
   ]);
   assert.equal(W.tok("tImp").flags[MODULE].light, null);
   await tick(200);
@@ -311,7 +320,7 @@ test("a token whose light was set to 0 by hand is flagged false and never relit"
   eye.light = { bright: 0, dim: 0 };
   F.fire("updateToken", eye, { light: { bright: 0 } }, {}, GM);
   await tick(200);
-  assert.deepEqual(writes(), [{ scene: ALPHA, type: "Token", updates: [{ _id: "tEye", [FK]: false }], argc: 2 }]);
+  assert.deepEqual(writes(), [{ scene: ALPHA, type: "Token", updates: [{ _id: "tEye", [FK]: false }], argc: 3 }]);
   await tick(200);
   assert.equal(await api().syncScene(W.scene(ALPHA)), 0);
   assert.equal(eye.flags[MODULE].light, false);
@@ -377,7 +386,7 @@ test("a setting read that throws falls back to the default: lightRadius → 5", 
   reset("tImp");
   W.failRead.add("lightRadius");
   assert.equal(await api().syncScene(W.scene(ALPHA), new Set(["tImp"])), 1);
-  assert.deepEqual(writes(), [{ scene: ALPHA, type: "Token", updates: [lit("tImp", 5)], argc: 2 }]);
+  assert.deepEqual(writes(), [{ scene: ALPHA, type: "Token", updates: [lit("tImp", 5)], argc: 3 }]);
   W.failRead.delete("lightRadius");
   await tick(200);
   writes();
@@ -390,4 +399,3 @@ test("controlToken with no strip on the page does nothing", () => {
 });
 
 /* ── the targets of the KNOWN rows (guide §4 and step 7) ─────────────────── */
-test.todo("transform-creatures-27: our own light write carries {pentarynCreatures: true}, so the echo pass does not happen");
