@@ -1,11 +1,15 @@
 {
   "contract": "string",
   "describe": "function",
+  "get": "get",
+  "ingest": "function",
   "inspect": "inspect",
-  "note": "note",
-  "recent": "recent",
+  "list": "list",
+  "open": "function",
+  "resolve": "resolve",
   "selftest": "selftest",
   "settings": "settings",
+  "submit": "function",
   "trace": "trace",
   "uninstall": "uninstall",
   "version": "string"

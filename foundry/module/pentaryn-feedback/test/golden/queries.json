@@ -1,20 +1,68 @@
 {
   "inspect": {
-    "actor": {
-      "documentName": "Actor",
-      "id": "aldric0000000001",
-      "uuid": "Actor.aldric0000000001",
-      "name": "Aldric Vane"
+    "user": {
+      "documentName": "User",
+      "id": "player0000000001",
+      "uuid": "User.player0000000001",
+      "name": "Caven's player"
     },
-    "note": null,
-    "lastSeen": null,
-    "hp": {
-      "value": 9,
-      "max": 20,
-      "bloodied": true
-    }
+    "pending": [],
+    "actions": null,
+    "errors": null
   },
   "inspectMissing": {
-    "threw": "NOT_FOUND: actor Nobody"
+    "threw": "NOT_FOUND: user Nobody"
+  },
+  "list": {
+    "reports": [
+      {
+        "id": "aaaaaa0000000001",
+        "t": 1791748797000,
+        "category": "bug",
+        "status": "open",
+        "user": "Caven's player",
+        "world": "test-world",
+        "text60": "Loot all did nothing"
+      }
+    ],
+    "count": 1
+  },
+  "listAll": {
+    "reports": [
+      {
+        "id": "aaaaaa0000000001",
+        "t": 1791748797000,
+        "category": "bug",
+        "status": "open",
+        "user": "Caven's player",
+        "world": "test-world",
+        "text60": "Loot all did nothing"
+      },
+      {
+        "id": "aaaaab0000000002",
+        "t": 1791748798000,
+        "category": "feature",
+        "status": "triaged",
+        "user": "Caven's player",
+        "world": "test-world",
+        "text60": "A map tab for the party"
+      }
+    ],
+    "count": 3
+  },
+  "getPrefix": "bbbbbb0000000003",
+  "getAmbiguous": {
+    "threw": "AMBIGUOUS: report aaaaa matches 2"
+  },
+  "resolveRefused": {
+    "ok": false,
+    "code": "REFUSED",
+    "reason": "resolved → triaged needs force"
+  },
+  "ingestFromPlayer": {
+    "ok": true,
+    "filed": [],
+    "refused": [],
+    "done": []
   }
 }

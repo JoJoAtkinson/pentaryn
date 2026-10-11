@@ -1001,3 +1001,36 @@ adjustments:
     native_when: core sets a cursor per scene tool, or exposes a public placement-in-progress flag and a cursor refresh
     retire_class: guarded
     check: make foundry-cursors-check
+
+  - id: feedback-console-error
+    packages: [core]
+    modules: [pentaryn-feedback]
+    files: [foundry/module/pentaryn-feedback/recorder.mjs]
+    markers: ["__pentarynFeedback_error", "feedback-console-error"]
+    what: wraps console.error through wrapMethod (marker __pentarynFeedback_error) to copy each line into the bug-report error ring; the original always runs with the same arguments
+    why: Foundry keeps no client error history and routes only hooked-function throws to its "error" hook; console.error is where module and core failures surface
+    native_when: core keeps a client-side error log or fires a hook for every console error
+    retire_class: safe
+    check: make foundry-feedback-check
+
+  - id: feedback-console-warn
+    packages: [core]
+    modules: [pentaryn-feedback]
+    files: [foundry/module/pentaryn-feedback/recorder.mjs]
+    markers: ["__pentarynFeedback_warn", "feedback-console-warn"]
+    what: wraps console.warn through wrapMethod (marker __pentarynFeedback_warn) to copy each line into the bug-report error ring; the original always runs with the same arguments
+    why: deprecation and "hooked function" warnings are often the only trace of a defect; core keeps no history of them
+    native_when: core keeps a client-side warning log or fires a hook for every console warning
+    retire_class: safe
+    check: make foundry-feedback-check
+
+  - id: feedback-notifications-notify
+    packages: [core]
+    modules: [pentaryn-feedback]
+    files: [foundry/module/pentaryn-feedback/recorder.mjs]
+    markers: ["__pentarynFeedbackNotify", "feedback-notifications-notify"]
+    what: wraps foundry.applications.ui.Notifications.prototype.notify through wrapMethod (marker __pentarynFeedbackNotify) to record each toast the user saw (level + text, redacted) in the bug-report action ring; the original always runs and its return value passes through
+    why: core fires no hook when a notification is shown, and "it said X then nothing happened" is the most common report
+    native_when: core fires a hook for every notification shown
+    retire_class: safe
+    check: make foundry-feedback-check
