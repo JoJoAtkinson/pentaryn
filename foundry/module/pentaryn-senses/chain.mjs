@@ -45,6 +45,28 @@ export function links(scene = canvas?.scene) {
   }
 }
 
+/**
+ * The pairs of a scene for the hot refreshToken check (finding -19), cached per scene id and
+ * dropped by every hook that can change them: token create/delete, a chain flag update, canvas
+ * ready/teardown. paint() and the API's links() always read fresh.
+ */
+const pairsCache = new Map();
+
+function cachedPairs(scene) {
+  const id = scene?.id;
+  if (!id) return links(scene);
+  let pairs = pairsCache.get(id);
+  if (!pairs) pairsCache.set(id, pairs = links(scene));
+  return pairs;
+}
+
+/** Forget a scene's pairs (the scene a changed token is on), or every scene's when unknown. */
+function forgetPairs(doc) {
+  const id = doc?.parent?.id;
+  if (id) pairsCache.delete(id);
+  else pairsCache.clear();
+}
+
 export async function link(chained, anchor) {
   if (!isAnyGM()) return false;
   const c = docOf(chained), a = docOf(anchor);
@@ -243,6 +265,7 @@ function on(name, fn) {
 
 export function uninstall() {
   for (const id of state.hooks.splice(0)) state.reg?.off(id);
+  pairsCache.clear();
   if (state.queued) cancelAnimationFrame(state.queued);
   state.queued = 0;
   dropLayer();
@@ -258,16 +281,28 @@ export function install(reg, ctx) {
 
   on("canvasTearDown", () => {
     state.layer = null; // Foundry destroys canvas.primary's children under us
+    pairsCache.clear();
   });
-  on("canvasReady", () => schedule());
+  on("canvasReady", () => {
+    pairsCache.clear();
+    schedule();
+  });
   on("refreshToken", () => {
-    if (state.layer || links().length) schedule();
+    if (state.layer || cachedPairs(canvas?.scene).length) schedule();   // hot: pairsCache
   });
   on("destroyToken", () => schedule()); // a drag preview ending
-  on("createToken", () => schedule());
-  on("deleteToken", () => schedule());
-  on("updateToken", (_doc, changes) => {
-    if (foundry.utils.getProperty(changes ?? {}, `flags.${MODULE}`) !== undefined || "hidden" in (changes ?? {}) || "elevation" in (changes ?? {})) schedule();
+  on("createToken", (doc) => {
+    forgetPairs(doc);
+    schedule();
+  });
+  on("deleteToken", (doc) => {
+    forgetPairs(doc);
+    schedule();
+  });
+  on("updateToken", (doc, changes) => {
+    const chainChanged = foundry.utils.getProperty(changes ?? {}, `flags.${MODULE}`) !== undefined;
+    if (chainChanged) forgetPairs(doc);
+    if (chainChanged || "hidden" in (changes ?? {}) || "elevation" in (changes ?? {})) schedule();
   });
   on("renderTokenHUD", (app, element) => injectHUD(app, element));
 
