@@ -1,0 +1,278 @@
+{
+  "result": {
+    "dryRun": false,
+    "call": null,
+    "text": [
+      "replace (by marker) — real run: 2 ok, 0 failed",
+      "s1/ra → Token \"Gate guard\" [<id1>] @200,800 1x1; markerDeleted=true",
+      "s1/rc → Token \"Big Guard\" [<id2>] @400,800 2x2, Actor \"Big Guard\" [<id3>]; markerDeleted=true",
+      "  s1/rc patched: name Big Guard; size lg; hp 30; ac 15; cr 1/4; speed 25; disposition hostile",
+      "remaining: s1=2"
+    ],
+    "results": [
+      {
+        "index": 0,
+        "id": null,
+        "label": "s1/ra",
+        "sceneId": "s1",
+        "markerId": "ra",
+        "kind": "actor",
+        "ok": true,
+        "created": [
+          "Token \"Gate guard\" [<id1>] @200,800 1x1"
+        ],
+        "ids": [
+          "<id1>"
+        ],
+        "markerDeleted": true,
+        "sheet": null,
+        "patched": [],
+        "defaults": [],
+        "warnings": [],
+        "notes": [],
+        "discarded": []
+      },
+      {
+        "index": 1,
+        "id": null,
+        "label": "s1/rc",
+        "sceneId": "s1",
+        "markerId": "rc",
+        "kind": "actor",
+        "ok": true,
+        "created": [
+          "Token \"Big Guard\" [<id2>] @400,800 2x2",
+          "Actor \"Big Guard\" [<id3>]"
+        ],
+        "ids": [
+          "<id2>",
+          "<id3>"
+        ],
+        "markerDeleted": true,
+        "sheet": null,
+        "patched": [
+          "name Big Guard",
+          "size lg",
+          "hp 30",
+          "ac 15",
+          "cr 1/4",
+          "speed 25",
+          "disposition hostile"
+        ],
+        "defaults": [],
+        "warnings": [],
+        "notes": [],
+        "discarded": []
+      }
+    ],
+    "remaining": {
+      "s1": 2
+    },
+    "encounters": []
+  },
+  "calls": [
+    {
+      "op": "getTokenDocument",
+      "actorId": "actorGuard000001",
+      "pos": {
+        "x": 200,
+        "y": 800
+      },
+      "parent": "s1"
+    },
+    {
+      "op": "Actor.create",
+      "data": {
+        "documentName": "Actor",
+        "id": "actorGuard000001",
+        "name": "Guard",
+        "system": {
+          "details": {
+            "cr": 0.125,
+            "biography": {
+              "value": "<p>A bored town guard.</p>"
+            },
+            "type": {
+              "value": "humanoid"
+            }
+          },
+          "attributes": {
+            "ac": {
+              "value": 16
+            },
+            "hp": {
+              "value": 11,
+              "max": 11
+            }
+          },
+          "traits": {
+            "size": "med"
+          }
+        },
+        "flags": {},
+        "ownership": {
+          "default": 0
+        },
+        "type": "npc",
+        "img": "tokens/guard.webp",
+        "prototypeToken": {
+          "name": "Guard",
+          "width": 1,
+          "height": 1,
+          "disposition": 1,
+          "texture": {
+            "src": "tokens/guard.webp"
+          }
+        }
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.<id3>",
+      "changes": {
+        "flags.pentaryn-prompts.provenance": {
+          "prompt": "a big guard",
+          "size": "large",
+          "footprint": "2x2",
+          "sceneId": "s1",
+          "markerId": "rc",
+          "call": null,
+          "pid": null,
+          "at": 1760000000000,
+          "kind": "actor",
+          "note": ""
+        }
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.<id3>",
+      "changes": {
+        "name": "Big Guard",
+        "prototypeToken.name": "Big Guard",
+        "system.traits.size": "lg",
+        "prototypeToken.width": 2,
+        "prototypeToken.height": 2,
+        "system.attributes.hp.max": 30,
+        "system.attributes.hp.value": 30,
+        "system.attributes.hp.formula": "4d10+8",
+        "system.attributes.ac.calc": "flat",
+        "system.attributes.ac.flat": 15,
+        "system.details.cr": null,
+        "system.attributes.movement.walk": 25,
+        "prototypeToken.disposition": -1
+      }
+    },
+    {
+      "op": "getTokenDocument",
+      "actorId": "<id3>",
+      "pos": {
+        "x": 400,
+        "y": 800
+      },
+      "parent": "s1"
+    },
+    {
+      "op": "createEmbeddedDocuments",
+      "scene": "s1",
+      "type": "Token",
+      "data": [
+        {
+          "name": "Gate guard",
+          "actorId": "actorGuard000001",
+          "x": 200,
+          "y": 800,
+          "width": 1,
+          "height": 1,
+          "texture": {
+            "src": "g.webp"
+          },
+          "disposition": 0,
+          "actorLink": false,
+          "flags": {
+            "pentaryn-prompts": {
+              "provenance": {
+                "prompt": "the guard",
+                "size": "mid",
+                "footprint": "1x1",
+                "sceneId": "s1",
+                "markerId": "ra",
+                "call": null,
+                "pid": null,
+                "at": 1760000000000,
+                "kind": "actor",
+                "note": ""
+              }
+            }
+          },
+          "hidden": true,
+          "level": "L2",
+          "ring": {
+            "enabled": true,
+            "colors": {
+              "ring": "#86c98a"
+            },
+            "subject": {
+              "texture": "g.webp",
+              "scale": 1
+            }
+          },
+          "elevation": 5
+        },
+        {
+          "name": "Big Guard",
+          "actorId": "<id3>",
+          "x": 400,
+          "y": 800,
+          "width": 2,
+          "height": 2,
+          "texture": {
+            "src": "tokens/guard.webp"
+          },
+          "disposition": -1,
+          "actorLink": false,
+          "flags": {
+            "pentaryn-prompts": {
+              "provenance": {
+                "prompt": "a big guard",
+                "size": "large",
+                "footprint": "2x2",
+                "sceneId": "s1",
+                "markerId": "rc",
+                "call": null,
+                "pid": null,
+                "at": 1760000000000,
+                "kind": "actor",
+                "note": ""
+              }
+            }
+          },
+          "hidden": false,
+          "ring": {
+            "enabled": true,
+            "colors": {
+              "ring": "#d8433a"
+            },
+            "subject": {
+              "texture": "tokens/guard.webp",
+              "scale": 1
+            }
+          },
+          "elevation": 0
+        }
+      ],
+      "options": {}
+    },
+    {
+      "op": "deleteEmbeddedDocuments",
+      "scene": "s1",
+      "type": "Token",
+      "ids": [
+        "ra",
+        "rc"
+      ]
+    }
+  ]
+}

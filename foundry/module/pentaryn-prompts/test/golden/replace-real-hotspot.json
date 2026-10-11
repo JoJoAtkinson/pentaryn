@@ -1,0 +1,273 @@
+{
+  "result": {
+    "dryRun": false,
+    "call": null,
+    "text": [
+      "replace (by marker) — real run: 1 ok, 0 failed",
+      "s1/rh → Token \"Loose flagstone\" [<id1>] @225,425 0.5x0.5, AmbientLight \"Light\" [<id2>] @250,450, Actor \"Loose flagstone\" [<id3>]; markerDeleted=true",
+      "  s1/rh DEFAULTED (check): Ring of Warmth: attunement set to required (its text requires attunement)",
+      "remaining: s1=2"
+    ],
+    "results": [
+      {
+        "index": 0,
+        "id": null,
+        "label": "s1/rh",
+        "sceneId": "s1",
+        "markerId": "rh",
+        "kind": "hotspot",
+        "ok": true,
+        "created": [
+          "Token \"Loose flagstone\" [<id1>] @225,425 0.5x0.5",
+          "AmbientLight \"Light\" [<id2>] @250,450",
+          "Actor \"Loose flagstone\" [<id3>]"
+        ],
+        "ids": [
+          "<id1>",
+          "<id2>",
+          "<id3>"
+        ],
+        "markerDeleted": true,
+        "sheet": null,
+        "patched": [],
+        "defaults": [
+          "Ring of Warmth: attunement set to required (its text requires attunement)"
+        ],
+        "warnings": [],
+        "notes": [],
+        "discarded": []
+      }
+    ],
+    "remaining": {
+      "s1": 2
+    },
+    "encounters": []
+  },
+  "calls": [
+    {
+      "op": "actor.clone",
+      "from": "actorHotspotTpl1",
+      "data": {
+        "name": "Loose flagstone",
+        "folder": "folderHotspots01"
+      },
+      "opts": {
+        "save": true
+      }
+    },
+    {
+      "op": "actor.createEmbeddedDocuments",
+      "actor": "<id3>",
+      "type": "Item",
+      "data": [
+        {
+          "name": "Gem",
+          "type": "loot",
+          "system": {
+            "quantity": 2,
+            "price": {
+              "value": 50
+            }
+          },
+          "flags": {
+            "pentaryn-prompts": {
+              "provenance": {
+                "prompt": "a loose flagstone",
+                "size": "small",
+                "footprint": "1x1",
+                "sceneId": "s1",
+                "markerId": "rh",
+                "call": null,
+                "pid": null,
+                "at": 1760000000000,
+                "kind": "hotspot",
+                "note": ""
+              }
+            }
+          }
+        },
+        {
+          "name": "Warm ring",
+          "type": "equipment",
+          "system": {
+            "description": {
+              "value": "<p>Requires attunement.</p>"
+            },
+            "attunement": "required"
+          },
+          "flags": {
+            "pentaryn-prompts": {
+              "provenance": {
+                "prompt": "a loose flagstone",
+                "size": "small",
+                "footprint": "1x1",
+                "sceneId": "s1",
+                "markerId": "rh",
+                "call": null,
+                "pid": null,
+                "at": 1760000000000,
+                "kind": "hotspot",
+                "note": ""
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.<id3>",
+      "changes": {
+        "img": "assets/tokens/custom/props/icon-eye.webp",
+        "flags.item-piles.data": {
+          "enabled": true,
+          "type": "container",
+          "closed": true,
+          "closedImage": "assets/tokens/custom/props/icon-eye.webp",
+          "openedImage": "assets/tokens/custom/props/icon-eye.webp",
+          "lockedImage": "assets/tokens/custom/props/icon-eye.webp",
+          "emptyImage": "assets/tokens/custom/props/icon-eye.webp",
+          "description": "<p>Under it…</p>",
+          "locked": true,
+          "deleteWhenEmpty": false
+        },
+        "prototypeToken.name": "Loose flagstone",
+        "prototypeToken.width": 0.5,
+        "prototypeToken.height": 0.5,
+        "prototypeToken.texture.src": "assets/tokens/custom/props/icon-eye.webp",
+        "prototypeToken.flags.item-piles.data": {
+          "enabled": true,
+          "type": "container",
+          "closed": true,
+          "closedImage": "assets/tokens/custom/props/icon-eye.webp",
+          "openedImage": "assets/tokens/custom/props/icon-eye.webp",
+          "lockedImage": "assets/tokens/custom/props/icon-eye.webp",
+          "emptyImage": "assets/tokens/custom/props/icon-eye.webp",
+          "description": "<p>Under it…</p>",
+          "locked": true,
+          "deleteWhenEmpty": false
+        },
+        "prototypeToken.flags.dnd5e.lockSize": true,
+        "flags.pentaryn-prompts.provenance": {
+          "prompt": "a loose flagstone",
+          "size": "small",
+          "footprint": "1x1",
+          "sceneId": "s1",
+          "markerId": "rh",
+          "call": null,
+          "pid": null,
+          "at": 1760000000000,
+          "kind": "hotspot",
+          "note": ""
+        }
+      }
+    },
+    {
+      "op": "getTokenDocument",
+      "actorId": "<id3>",
+      "pos": {
+        "x": 225,
+        "y": 425
+      },
+      "parent": "s1"
+    },
+    {
+      "op": "createEmbeddedDocuments",
+      "scene": "s1",
+      "type": "Token",
+      "data": [
+        {
+          "name": "Loose flagstone",
+          "actorId": "<id3>",
+          "x": 225,
+          "y": 425,
+          "width": 0.5,
+          "height": 0.5,
+          "texture": {
+            "src": "assets/tokens/custom/props/icon-eye.webp"
+          },
+          "disposition": -1,
+          "actorLink": false,
+          "flags": {
+            "item-piles": {
+              "data": {
+                "enabled": true,
+                "type": "container",
+                "closed": true,
+                "closedImage": "assets/tokens/custom/props/icon-eye.webp",
+                "openedImage": "assets/tokens/custom/props/icon-eye.webp",
+                "lockedImage": "assets/tokens/custom/props/icon-eye.webp",
+                "emptyImage": "assets/tokens/custom/props/icon-eye.webp",
+                "description": "<p>Under it…</p>",
+                "locked": true,
+                "deleteWhenEmpty": false
+              }
+            },
+            "dnd5e": {
+              "lockSize": true
+            },
+            "pentaryn-prompts": {
+              "provenance": {
+                "prompt": "a loose flagstone",
+                "size": "small",
+                "footprint": "1x1",
+                "sceneId": "s1",
+                "markerId": "rh",
+                "call": null,
+                "pid": null,
+                "at": 1760000000000,
+                "kind": "hotspot",
+                "note": ""
+              }
+            }
+          },
+          "hidden": false,
+          "elevation": 0
+        }
+      ],
+      "options": {}
+    },
+    {
+      "op": "createEmbeddedDocuments",
+      "scene": "s1",
+      "type": "AmbientLight",
+      "data": [
+        {
+          "x": 250,
+          "y": 450,
+          "config": {
+            "dim": 5
+          },
+          "hidden": false,
+          "elevation": 0,
+          "flags": {
+            "pentaryn-prompts": {
+              "provenance": {
+                "prompt": "a loose flagstone",
+                "size": "small",
+                "footprint": "1x1",
+                "sceneId": "s1",
+                "markerId": "rh",
+                "call": null,
+                "pid": null,
+                "at": 1760000000000,
+                "kind": "hotspot",
+                "note": ""
+              }
+            }
+          }
+        }
+      ],
+      "options": {}
+    },
+    {
+      "op": "deleteEmbeddedDocuments",
+      "scene": "s1",
+      "type": "Token",
+      "ids": [
+        "rh"
+      ]
+    }
+  ]
+}

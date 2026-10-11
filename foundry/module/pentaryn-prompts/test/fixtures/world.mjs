@@ -223,6 +223,7 @@ export function sceneApi(F, scene) {
           delete data._id;
           const id = stubId(type.slice(0, 3));
           const doc = type === "Token" ? token({ ...data, id }, scene) : makeDoc(type, { ...data, id }, { parent: scene });
+          if (!("name" in data) && type !== "Token") delete doc.name;   // lights, tiles and notes have no name
           if (type === "Token") {
             if (F.Hooks.call("preCreateToken", doc, data, options, F.game.user.id) === false) continue;
           }
@@ -306,13 +307,15 @@ export async function installWorld(opts = {}) {
 
   /* actors */
   class Actor {
+    // a created document gets a new id (the stub's toObject() carries `id`, Foundry's carries `_id`)
     static async createDocuments(rows) {
       F.calls.push({ op: "Actor.createDocuments", data: F.plain(rows) });
-      return rows.map(r => addActor({ ...r }));
+      return rows.map(({ id, _id, ...r }) => addActor(r));
     }
     static async create(data) {
       F.calls.push({ op: "Actor.create", data: F.plain(data) });
-      return addActor({ ...data });
+      const { id, _id, ...rest } = data;
+      return addActor(rest);
     }
   }
   Actor.implementation = Actor;
