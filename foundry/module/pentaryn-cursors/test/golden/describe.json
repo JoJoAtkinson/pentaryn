@@ -1,0 +1,110 @@
+{
+  "module": "pentaryn-cursors",
+  "namespace": "cursors",
+  "contract": "pentaryn-cursors/api@1",
+  "flagScope": "pentaryn-cursors",
+  "methods": [
+    {
+      "path": "refresh",
+      "params": [],
+      "returns": "string|null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "doc": "Recompute the map cursor for the active control, tool and spell-area placement, and apply it to #board (this browser only). Returns the cursor key, or null for the system arrow."
+    },
+    {
+      "path": "current",
+      "params": [],
+      "returns": "string|null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "doc": "The cursor key on #board now, or null (system arrow, setting off, or no canvas)."
+    },
+    {
+      "path": "keyFor",
+      "params": [
+        {
+          "name": "state",
+          "type": "{ control?, tool?, templatesActive? }",
+          "optional": true,
+          "doc": "templatesActive: a spell-area placement is following the mouse"
+        }
+      ],
+      "returns": "string|null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "doc": "Pure: the cursor key for a control/tool state, ignoring the setting."
+    },
+    {
+      "path": "status",
+      "params": [],
+      "returns": "{ enabled, key, control, tool, placementActive, boardCursor, dataset, imageSet, expected }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "doc": "Read-only diagnosis of a wrong cursor in one call: the setting, the active control/tool, whether a placement is live, #board's style.cursor and data-pentaryn-cursor, image-set support, and the key expected (key is null while the setting is off). Writes nothing."
+    }
+  ],
+  "queries": [],
+  "settings": [
+    {
+      "key": "enabled",
+      "scope": "client",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Per browser: show the active scene tool on the map's mouse pointer. Off → Foundry's own cursors, and a blanked #board cursor is no longer repaired. Read live, so no reload."
+    }
+  ],
+  "events": [],
+  "hooks": [
+    {
+      "name": "getSceneControlButtons",
+      "label": "getSceneControlButtons: wrap onChange"
+    },
+    {
+      "name": "renderSceneControls",
+      "label": "renderSceneControls: refresh"
+    },
+    {
+      "name": "activateCanvasLayer",
+      "label": "activateCanvasLayer: refresh"
+    },
+    {
+      "name": "canvasReady",
+      "label": "canvasReady: attach"
+    },
+    {
+      "name": "canvasTearDown",
+      "label": "canvasTearDown: clear"
+    },
+    {
+      "name": "ready",
+      "label": "ready: attach"
+    }
+  ],
+  "patches": [],
+  "flags": {
+    "writes": [],
+    "reads": []
+  },
+  "errors": [
+    "NOT_GM",
+    "NO_GM",
+    "NOT_READY",
+    "NOT_FOUND",
+    "AMBIGUOUS",
+    "BAD_ARGS",
+    "REFUSED",
+    "CONFLICT",
+    "UNSUPPORTED",
+    "TIMEOUT",
+    "INTERNAL"
+  ]
+}

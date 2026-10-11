@@ -5,20 +5,30 @@
  * Files, in load order:
  *   cursors-core.mjs     PURE constants, KEYS, keyFor, cursorValues, probeInternals, statusOf
  *   settings.mjs         SETTINGS table (the one client row), setting()
+ *   api-manifest.mjs     PURE API rows (describe() reads them)
+ *   api.mjs              implementations, buildApiFor(ctx)
  *   board.mjs            the feature: install(reg, ctx) / uninstall() — all canvas glue
  *   lib/*.mjs            vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
  * Lifecycle: init → settings · load → board installs synchronously (migration rule: the hook
- * order of today) · ready → publish; the board attaches a tick later.
+ * order of today) · ready → build the API (a drift throw stops here with one clear line), publish
+ * synchronously; the board attaches a tick later.
+ *
+ * Hot patch RE-RUNS THE WIRING ONLY: `game.pentaryn.cursors.uninstall()`, then
+ * `await import(".../cursors.mjs?v=2")`. Its static imports resolve to the instances already
+ * loaded, so it re-registers the same handlers and republishes the same code. Any edit to
+ * board, core, api or settings needs a reload.
  *
  * Hook order is pinned (test/golden/hooks.json): `once init` first, then the board's hooks, then
  * `once ready` last — so init is registered before install() and ready after it.
  */
 
-import { HOOKS, KEYS, MODULE, VERSION, keyFor } from "./cursors-core.mjs";
+import { HOOKS, MODULE, NS, VERSION } from "./cursors-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { emitter, hookRegistry } from "./lib/hooks.mjs";
+import { publishNamespace } from "./lib/publish.mjs";
 import { registerSettings, setting } from "./settings.mjs";
+import { buildApiFor } from "./api.mjs";
 import * as board from "./board.mjs";
 
 /** Features in load order. */
@@ -59,12 +69,13 @@ function onInit() {
 }
 
 function onReady() {
-  setTimeout(() => {
-    const api = { refresh: () => ctx.exposed.refresh(), current: () => ctx.exposed.current(), keys: KEYS, keyFor };
-    const existing = game.pentaryn;
-    if (existing && !Object.isExtensible(existing)) game.pentaryn = { ...existing, cursors: api };
-    else { game.pentaryn ??= {}; game.pentaryn.cursors = api; }
-  }, 0);
+  try {
+    ctx.api = buildApiFor(ctx);
+  } catch (err) {
+    log.error("API manifest drift — not published", err);
+    return;
+  }
+  publishNamespace(NS, ctx.api, { moduleId: MODULE });
 }
 
 if (globalThis.game?.ready) {

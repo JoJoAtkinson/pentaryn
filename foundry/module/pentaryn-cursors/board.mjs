@@ -133,6 +133,20 @@ function attach() {
   refresh();
 }
 
+/** What api.status() reports (statusOf in core shapes it). Reads only: no style write. */
+function snapshot() {
+  const el = boardEl();
+  return {
+    enabled: enabled(),
+    control: ui.controls?.control?.name ?? null,
+    tool: ui.controls?.tool?.name ?? null,
+    placementActive: !!canvas?.ready && previewActive(),
+    boardCursor: el?.style?.cursor ?? null,
+    dataset: el?.dataset?.pentarynCursor ?? null,
+    imageSet: useImageSet(),
+  };
+}
+
 /** The setting's onChange: refresh, then repair a blanked cursor. */
 export function onEnabledChange() {
   refresh();
@@ -141,7 +155,7 @@ export function onEnabledChange() {
 
 export function install(reg, ctx) {
   log = ctx.log;
-  ctx.expose({ refresh, current: () => current });
+  ctx.expose({ refresh, current: () => current, snapshot });
 
   // Raw handlers (guard: false): a throw stays Foundry's `Error thrown in hooked function` report.
   reg.on("getSceneControlButtons", (controls) => {
