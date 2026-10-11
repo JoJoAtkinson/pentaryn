@@ -297,10 +297,13 @@ export const tooltipAnchorMissing = ({ element, tooltip }) => !element || !toolt
  * event — and nothing is rethrown; the returned promise resolves undefined once `fn` settles.
  * @param {string} label
  * @param {Function} fn
- * @param {(line: string, err: *) => void} [log]
+ * @param {(line: string, err: *) => void} [log]  defaults to console.error
  */
-export function safe(label, fn, log = (...a) => console.error(...a)) {
-  const report = err => { log(`${MODULE} | ${label} failed`, err); };
+export function safe(label, fn, log = null) {
+  const report = err => {
+    if (log) log(`${MODULE} | ${label} failed`, err);
+    else console.error(`${MODULE} | ${label} failed`, err);
+  };
   return (...args) => {
     try {
       return Promise.resolve(fn(...args)).then(() => undefined, report);
