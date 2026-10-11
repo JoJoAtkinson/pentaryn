@@ -2,7 +2,7 @@
   "id": "pentaryn-names",
   "title": "Pentaryn Token Name Sync",
   "description": "Renaming an actor renames its token labels to match: the prototype token and every placed token of that actor, on every scene. A token whose label was the actor's full name, or the part before the first comma ('Glubbek' for 'Glubbek, Kuo-toa Net-Mender'), follows the rename in the same form. A label that is anything else is a deliberate nickname and is left alone. Exposes game.pentaryn.names.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "compatibility": {
     "minimum": "14",
     "verified": "14"
