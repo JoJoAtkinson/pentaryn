@@ -13,12 +13,16 @@ import json
 import os
 from pathlib import Path
 
+from scripts.foundry import host as _host
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 # ── The Foundry application ──
-FOUNDRY_APP = "Foundry Virtual Tabletop"
-FOUNDRY_URL = "http://localhost:30000"
-FOUNDRY_BOOT_TIMEOUT = 40  # seconds to wait for the port after `open -a`
+# Where it lives and how it starts are host.py's (Mac: /Applications, `open -a`;
+# BOSS: FOUNDRY_APP_ROOT and PENTARYN_START_CMD). This name is only for messages.
+FOUNDRY_APP = _host.MAC_APP_NAME
+FOUNDRY_URL = f"http://localhost:{_host.foundry_port()}"
+FOUNDRY_BOOT_TIMEOUT = 40  # seconds to wait for the port after host.start()
 
 # ── Cloudflare tunnel ──
 TUNNEL_NAME = "ardenhaven"
@@ -38,9 +42,12 @@ CF_CONFIG = REPO_ROOT / "foundry/cloudflared/config.yml"
 UPDATE_LOCK = REPO_ROOT / ".state/vtt-update.lock"
 
 # ── Foundry's user-data directory ──
-FOUNDRY_DATA = Path(os.path.expanduser("~/Library/Application Support/FoundryVTT/Data"))
-FOUNDRY_MODULES = FOUNDRY_DATA / "modules"
-WORLDS_DIR = FOUNDRY_DATA / "worlds"
+# Foundry's Data/ folder — NOT the data root. host.FOUNDRY_DATA (and cloud.py) mean the
+# root that holds Config/ Data/ Logs/; this used to be called FOUNDRY_DATA too, and the
+# two meanings sat one directory apart. Renamed so they cannot be confused.
+FOUNDRY_DATA_DIR = _host.foundry_data() / "Data"
+FOUNDRY_MODULES = FOUNDRY_DATA_DIR / "modules"
+WORLDS_DIR = FOUNDRY_DATA_DIR / "worlds"
 
 # ── Which world the actor pipeline targets ──
 # This was hardcoded to "ardenhaven" in the Makefile while the live world was

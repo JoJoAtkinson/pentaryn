@@ -38,7 +38,7 @@ def module(monkeypatch, tmp_path):
         (src / rel).parent.mkdir(parents=True, exist_ok=True)
         (src / rel).write_text(text, encoding="utf-8")
     data = tmp_path / "FoundryVTT" / "Data"
-    monkeypatch.setattr(cfg, "FOUNDRY_DATA", data)
+    monkeypatch.setattr(cfg, "FOUNDRY_DATA_DIR", data)
     monkeypatch.setattr(cfg, "FOUNDRY_MODULES", data / "modules")
     monkeypatch.setattr(cfg, "MODULE_SRC_ROOT", src.parent)
     monkeypatch.setitem(cfg.MODULES, "zz", cfg.ModuleSpec("pentaryn-zz", check="parse"))
@@ -108,7 +108,7 @@ def test_the_staging_folder_is_outside_data_modules(module):
     modules.install(module.src, module.dst)
     staging = modules.staging_dir(module.dst)
     assert staging.is_dir() and list(staging.iterdir()) == []
-    assert cfg.FOUNDRY_MODULES not in staging.parents and cfg.FOUNDRY_DATA not in staging.parents
+    assert cfg.FOUNDRY_MODULES not in staging.parents and cfg.FOUNDRY_DATA_DIR not in staging.parents
     assert [p.name for p in cfg.FOUNDRY_MODULES.iterdir()] == ["pentaryn-zz"], "nothing else lands where Foundry scans"
 
 
@@ -188,7 +188,7 @@ def importer(monkeypatch, tmp_path):
     data = tmp_path / "FoundryVTT" / "Data"
     world = data / "worlds" / "zz-world"
     world.mkdir(parents=True)
-    monkeypatch.setattr(cfg, "FOUNDRY_DATA", data)
+    monkeypatch.setattr(cfg, "FOUNDRY_DATA_DIR", data)
     monkeypatch.setattr(cfg, "FOUNDRY_MODULES", data / "modules")
     monkeypatch.setattr(cfg, "MODULE_SRC_ROOT", src.parent)
     monkeypatch.setattr(cfg, "WORLD_NAME", "zz-world")
@@ -214,7 +214,7 @@ def test_stage_into_a_missing_world_touches_nothing(importer, monkeypatch):
     pipeline, spec = importer
     spec.dst.mkdir(parents=True)
     (spec.dst / "old.mjs").write_text("old")
-    monkeypatch.setattr(cfg, "WORLD_DIR", cfg.FOUNDRY_DATA / "worlds" / "nope")
+    monkeypatch.setattr(cfg, "WORLD_DIR", cfg.FOUNDRY_DATA_DIR / "worlds" / "nope")
     assert pipeline.stage() == 1
     assert _tree(spec.dst) == ["old.mjs"]
 

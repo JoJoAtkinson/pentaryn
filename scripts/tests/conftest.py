@@ -118,7 +118,10 @@ def fake_cloud(monkeypatch, tmp_path_factory):
     for sub in storage.SUBFOLDERS:
         (base / sub).mkdir()
     for key in _HOST_ENV_KEYS:
-        monkeypatch.delenv(key, raising=False)
+        # setenv first so monkeypatch records the original and restores it — code under
+        # test (service.up) sets some of these in os.environ directly.
+        monkeypatch.setenv(key, "")
+        monkeypatch.delenv(key)
     monkeypatch.setenv("PENTARYN_ENV_FILE", str(base / "no-such-env-file"))
     monkeypatch.setenv("PENTARYN_CLOUD", str(base))
     monkeypatch.setenv("PENTARYN_HOST", "testhost")

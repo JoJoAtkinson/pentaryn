@@ -16,6 +16,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from scripts.foundry import host
+
 from . import config as cfg
 from .out import say as _say  # re-exported: modules.py and pipeline.py import it from here
 
@@ -105,16 +107,33 @@ def lock_check() -> int:
 
 # ── the Foundry application ───────────────────────────────────────────────────
 
+def _boot_choice() -> int:
+    """The §6 boot choice, once per start.
+
+    `make foundry-up` / `vtt-up` run it as their own `foundry-boot` step and set
+    PENTARYN_BOOT_DONE so it is not asked twice; `make login` (and anything else that
+    calls up()) gets it here. The updater sets PENTARYN_BOOT_DONE=skip: a restore in the
+    middle of an update would invalidate its own rollback point."""
+    if os.environ.get("PENTARYN_BOOT_DONE"):
+        return OK
+    from scripts.foundry import boot
+    rc = boot.choose()
+    os.environ["PENTARYN_BOOT_DONE"] = "1"
+    return rc
+
+
 def up() -> int:
     if foundry_is_up():
         _say("▸ foundry already up")
         return OK
+    if _boot_choice() != OK:
+        _say("✗ the boot step failed — Foundry was not started")
+        return FAIL
     _say("▸ starting Foundry...")
     try:
-        subprocess.run(["open", "-a", cfg.FOUNDRY_APP], check=True,
-                       capture_output=True, text=True)
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        _say(f"✗ can't launch '{cfg.FOUNDRY_APP}' — is it in /Applications?")
+        host.start()  # Mac: open -a · BOSS: PENTARYN_START_CMD (host.py)
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+        _say(f"✗ can't launch Foundry ({host.foundry_app_root()}) — is it installed?")
         return FAIL
 
     for _ in range(cfg.FOUNDRY_BOOT_TIMEOUT):
@@ -139,18 +158,12 @@ def _warn_stale_bridge() -> None:
 
 
 def down() -> int:
-    running = subprocess.run(["pgrep", "-f", cfg.FOUNDRY_APP],
-                             capture_output=True).returncode == 0
-    if not running:
+    if host.pid() is None:
         _say("▸ foundry already down")
         return OK
     # Ask politely first — a graceful quit lets Foundry close its LevelDB cleanly.
-    quit_ok = subprocess.run(
-        ["osascript", "-e", f'quit app "{cfg.FOUNDRY_APP}"'],
-        capture_output=True,
-    ).returncode == 0
-    if not quit_ok:
-        subprocess.run(["pkill", "-f", cfg.FOUNDRY_APP], capture_output=True)
+    if not host.request_stop():
+        host.force_stop()
     _say("✓ foundry stopped")
     return OK
 

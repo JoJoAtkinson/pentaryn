@@ -495,9 +495,13 @@ def test_kit_is_derived_from_the_lock(monkeypatch, tmp_path):
     assert "kit" not in vars(spec), "the kit list is never stored on the spec (D8)"
 
 
-@pytest.mark.skipif(sys.platform != "darwin", reason="the table is a Mac")
-def test_foundry_data_is_under_application_support():
-    assert "Application Support/FoundryVTT/Data" in str(cfg.FOUNDRY_DATA)
+def test_foundry_data_is_under_application_support_on_a_mac(monkeypatch):
+    from scripts.foundry import host
+    monkeypatch.delenv("FOUNDRY_DATA", raising=False)
+    monkeypatch.setattr(host.platform, "system", lambda: "Darwin")
+    assert str(host.FOUNDRY_DATA).endswith("Library/Application Support/FoundryVTT")
+    if sys.platform == "darwin":
+        assert str(cfg.FOUNDRY_DATA_DIR).endswith("Application Support/FoundryVTT/Data")
 
 
 # ── vtt-login: the parts that can be tested without a live server ─────────────

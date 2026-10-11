@@ -59,7 +59,7 @@ import tempfile
 import time
 import zipfile
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from scripts.foundry import bootstate, host
@@ -580,8 +580,14 @@ def _backup(st: Storage, reason: str, *, safety: bool = False) -> Snapshot | Non
     promote_major_release(st, existing)
 
     core = core_version()
-    stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d-%H%M%S")
-    name = f"world-{stamp}-fvtt{core}-{me}{'.safety' if safety else ''}.tar.gz"
+    taken = {s.name for s in existing}
+    when = datetime.now(timezone.utc)
+    while True:  # a name is an identity (based_on, keep-local): never reuse one
+        stamp = when.strftime("%Y-%m-%d-%H%M%S")
+        name = f"world-{stamp}-fvtt{core}-{me}{'.safety' if safety else ''}.tar.gz"
+        if name not in taken:
+            break
+        when += timedelta(seconds=1)
 
     # Coalescing: note the snapshot this one may replace, but write the new one FIRST and
     # only then delete the old. A safety copy never coalesces in either direction.
