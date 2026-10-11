@@ -28,7 +28,8 @@ test("foundry.utils is Foundry's own common/ code", () => {
 
 test("hook registration manifest (golden/hooks.json)", () => {
   pinJSON("hooks", hooksAtLoad, import.meta.url);
-  assert.deepEqual(hooksAtLoad, [{ kind: "once", name: "ready" }]);
+  // [declared] step 9 (DL2): init registers the GM-guarded queries, before ready
+  assert.deepEqual(hooksAtLoad, [{ kind: "once", name: "init" }, { kind: "once", name: "ready" }]);
 });
 
 test("ready logs exactly one console.log line", () => {

@@ -11,6 +11,7 @@
  *   lib/*.mjs              vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
  * Lifecycle: the feature installs synchronously at load (a migrating module, use-doc §5.2) ·
+ * init → the GM-guarded CONFIG.queries (NOT_READY until ready publishes) ·
  * ready → build the API first (a drift throw stops there with one clear line), then publish.
  */
 
@@ -18,6 +19,8 @@ import { MODULE, NS } from "./lookup-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
 import { publishNamespace } from "./lib/publish.mjs";
+import { registerQueries } from "./lib/queries.mjs";
+import { MANIFEST } from "./api-manifest.mjs";
 import { buildApiFor } from "./api.mjs";
 import * as books from "./books.mjs";
 
@@ -41,6 +44,11 @@ function uninstall() {
   reg.offAll();
 }
 
+/** Every client registers the queries (a sender needs the name too); only a GM client answers. */
+function onInit() {
+  registerQueries(MANIFEST, () => ctx.api, { log });
+}
+
 /**
  * `game.pentaryn` is a plain object every module assigns into (the importer merges into it), so
  * publishNamespace assigns `rules` into it; a frozen root throws here and Foundry reports it.
@@ -57,4 +65,5 @@ function onReady() {
 }
 
 install();
+Hooks.once("init", onInit);
 Hooks.once("ready", onReady);
