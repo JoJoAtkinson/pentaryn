@@ -97,7 +97,7 @@ The snapshot score was the same 45.2 % (19/42) with the same failing set; only t
 | **C35** no two-branch i18n wrapper, ≥ 90 % definite | **fail** | `T()` wrapper ×5 (hud:28, riders:23, sequence:21, strip:12, turnflow:26); 38 % (68/178) | S4 |
 | C36 hard-coded English (warn) | warn | combat-core:491, 495, 497 | S12 (manual review) |
 | C37 CSS prefix | pass | | — |
-| C37w `!important` (warn) | warn | 2 (`combat.css:46`, `:187`) | `:46` goes with the dead rule (S10); `:187` stays (removing it is declared B5) |
+| C37w `!important` (warn) | warn | 2 (`combat.css:46`, `:202`) | `:46` goes with the dead rule (S10); `:202` stays (removing it is declared B5) |
 | C38 cssPrefix unique | n/a | no cssPrefix yet | S15 (`pc-`) |
 | C39 run.mjs + node-test | pass | | — |
 | **C40** tier test files | **fail** | no core/glue/hooks/api/i18n `.test.mjs` | S1, S7 |
@@ -663,7 +663,7 @@ metadata only, not a data migration:** the code has always written `flags.pentar
 | D-c3 | escaped rider dice/key in chat-card HTML | §4 combat-riders-33 | Sneak Attack auto note and offer button look identical |
 | D-c4 | picker-cue listeners present only while the setting is on | §4 combat-riders-35 | Argon target picker label sits at the pointer with the setting on |
 | B3 (not here) | collapsing `combat.mjs` + `hud.mjs` into one entry, and moving install to `setup` | Wave 8, needs `hook-order.mjs` | — |
-| B5 (not here) | removing the remaining `!important` (`combat.css:187`) | own decision | — |
+| B5 (not here) | removing the remaining `!important` (`combat.css:202`) | own decision | — |
 | (fix) | Multiattack + Action Surge plan | §4 | an NPC with Multiattack that surges gets its second set of swings |
 | D-c5 | combat reads pentaryn-aoe's refund decision instead of re-deriving it (combat-riders-36) | §4 | a cancelled Fireball with `refundCancelledArea` off now spends the Action pip; with it on, nothing changes |
 
@@ -712,5 +712,5 @@ Attack tooltip subtitle ("2 of 2 swings left this turn, + Nick: Scimitar") was c
 `hud.mjs` `TT` now adds a combat-own class `pentaryn-combat-tt` beside the shared `pentaryn-tt`, and
 `styles/combat.css` has `.ech-tooltip.pentaryn-combat-tt .ech-tooltip-subtitle` (wraps to the tooltip
 width, centred on the header/body seam, no `!important`, C37-clean), placed after the S10 dead rule
-so S10's line range still holds; fixtures 378-382 pin it. S3/S4 keep `TT` as is (it may become a
+so S10's line range still holds (the B5 `!important` moved from `:187` to `:202`; refs above updated); fixtures 378-383 pin it. S3/S4 keep `TT` as is (it may become a
 core constant); it is not part of the `.pentaryn-tt` block transform-creatures-14 step 2 copies.
