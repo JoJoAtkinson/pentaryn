@@ -63,18 +63,22 @@ export function buildEpoch(seedKey, epochStart) {
   return segs;
 }
 
+/** How many sources keep their current epoch cached (least recently used goes first). */
+export const EPOCH_CACHE = 64;
+
+// seedKey → { start, segs }: one epoch per source (finding -22a). Many lights at once (more than the
+// old 16-entry cache held) used to rebuild an epoch per light per frame.
 const epochs = new Map();
 
 /** The wave's level, 0..1, for one light at server time tMs. */
 export function waveLevel(seedKey, tMs) {
   const start = Math.floor(tMs / LIMITS.epoch) * LIMITS.epoch;
-  const key = `${seedKey}:${start}`;
-  let segs = epochs.get(key);
-  if (!segs) {
-    segs = buildEpoch(seedKey, start);
-    epochs.set(key, segs);
-    if (epochs.size > 16) epochs.delete(epochs.keys().next().value);
-  }
+  let entry = epochs.get(seedKey);
+  if (entry) epochs.delete(seedKey);                      // re-inserted below: most recent last
+  if (!entry || entry.start !== start) entry = { start, segs: buildEpoch(seedKey, start) };
+  epochs.set(seedKey, entry);
+  if (epochs.size > EPOCH_CACHE) epochs.delete(epochs.keys().next().value);
+  const segs = entry.segs;
   const s = segs.find(g => tMs < g.t1) ?? segs.at(-1);
   const p = Math.min(Math.max((tMs - s.t0) / (s.t1 - s.t0), 0), 1);
   return s.from + (s.to - s.from) * (0.5 - 0.5 * Math.cos(Math.PI * p));
@@ -82,3 +86,14 @@ export function waveLevel(seedKey, tMs) {
 
 /** Brightness for a level. */
 export const brightnessFor = (level) => LIMITS.minBright + (LIMITS.maxBright - LIMITS.minBright) * level;
+
+/**
+ * Should the animation re-initialize the light at `radius` now (finding -22b)? Always on the first
+ * frame after a fresh ceiling (`applied` null); otherwise only for a change of 3 px or more, at most
+ * every 50 ms of the light's own clock (server time × speed / 5, so faster at a higher speed).
+ * @param {{ applied: number|null, at: number }} st
+ */
+export function shouldReinit(st, radius, now) {
+  if (st.applied === null) return true;
+  return Math.abs(radius - st.applied) >= 3 && (now - st.at) >= 50;
+}

@@ -170,8 +170,8 @@ test("bright follows the wave back up (KNOWN: it ratchets down)", { todo: "KNOWN
 // Added after the checkpoint (guide step 1.5, finding -22a): many lights at once. 40 keys × 5 times
 // in one epoch, interleaved, each level equal to a fresh single-key computation; and the number of
 // epoch builds that costs. KNOWN (-22a): the shared 16-entry cache thrashes, so every lookup
-// rebuilds — 200 builds. The -22 fix (a per-source cache) flips this row to ≤ 40.
-test("waveLevel interleaved over 40 keys: values exact; epoch builds counted (KNOWN -22a: 200)", () => {
+// rebuilds — 200 builds. The -22 fix (a per-source cache) flipped this row to ≤ 40.
+test("waveLevel interleaved over 40 keys: values exact; epoch builds counted (-22a: at most one per key)", () => {
   const { buildEpoch, epochBuilds } = glow;
   const levelFrom = (segs, t) => {
     const s = segs.find(g => t < g.t1) ?? segs.at(-1);
@@ -185,5 +185,15 @@ test("waveLevel interleaved over 40 keys: values exact; epoch builds counted (KN
   for (const t of times) for (const k of keys) got.push([k, t, waveLevel(k, t)]);
   const builds = epochBuilds() - before;
   for (const [k, t, level] of got) assert.equal(level, levelFrom(buildEpoch(k, 480_000), t), `${k}@${t}`);
-  assert.equal(builds, 200, "KNOWN (-22a): a rebuild per lookup");
+  assert.ok(builds <= 40, `${builds} builds (was 200 before -22a)`);
+});
+
+// Finding -22b: the re-init throttle as a pure function (the recipe's four rows).
+test("shouldReinit: first frame yes; under 3 px no; under 50 ms no; else yes", () => {
+  const { shouldReinit } = glow;
+  assert.equal(shouldReinit({ applied: null, at: 0 }, 10, 0), true);
+  assert.equal(shouldReinit({ applied: 100, at: 0 }, 102, 1000), false);
+  assert.equal(shouldReinit({ applied: 100, at: 1000 }, 110, 1049), false);
+  assert.equal(shouldReinit({ applied: 100, at: 1000 }, 110, 1050), true);
+  assert.equal(shouldReinit({ applied: 100, at: 1000 }, 97, 1050), true);
 });

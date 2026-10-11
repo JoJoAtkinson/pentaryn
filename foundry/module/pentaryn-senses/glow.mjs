@@ -17,11 +17,11 @@
 // Every client computes the same wave from the server clock, so all players see the same swell.
 
 import {
-  LIMITS, rng, hashString, epochBuilds, buildEpoch, waveLevel, brightnessFor,
+  LIMITS, rng, hashString, epochBuilds, buildEpoch, waveLevel, brightnessFor, shouldReinit,
 } from "./senses-core.mjs";
 
 // The maths lives in core/glow.mjs; re-exported so this file's import surface is unchanged.
-export { LIMITS, rng, hashString, epochBuilds, buildEpoch, waveLevel, brightnessFor };
+export { LIMITS, rng, hashString, epochBuilds, buildEpoch, waveLevel, brightnessFor, shouldReinit };
 
 const KEY = "pentaryn-brokenglow";
 
@@ -47,8 +47,7 @@ function animateBrokenGlow(dt, { speed = 5, intensity = 5, reverse = false } = {
   const floor = ext + LIMITS.minFeet * canvas.dimensions.distancePixels;
   if (st.ceiling <= floor) return;
   const radius = Math.round(floor + (st.ceiling - floor) * level);
-  const stale = st.applied === null;
-  if (!stale && (Math.abs(radius - st.applied) < 3 || (now - st.at) < 50)) return;
+  if (!shouldReinit(st, radius, now)) return;
   st.applied = radius;
   st.at = now;
   this.initialize({ dim: radius, bright: Math.min(this.data.bright ?? 0, radius) });

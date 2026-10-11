@@ -16,7 +16,7 @@ import {
   itemLightUpdate, collectSources, litByIn, lightEntries, tokensByActor,
 } from "./core/light.mjs";
 import { SIGHT_RESET, SIGHT_RESET_DONE, RESET_SIGHT, needsSightReset, systemReady, planSightReset } from "./core/migrate.mjs";
-import { LIMITS, rng, hashString, epochBuilds, buildEpoch, waveLevel, brightnessFor } from "./core/glow.mjs";
+import { LIMITS, EPOCH_CACHE, rng, hashString, epochBuilds, buildEpoch, waveLevel, brightnessFor, shouldReinit } from "./core/glow.mjs";
 import { inspectShape, lightStatus } from "./core/inspect.mjs";
 
 export {
@@ -27,7 +27,7 @@ export {
   planSpellLight, spellLightUpdate, restoredLight, sourcesUnder, isPHBLightActorSource, torchActivityData,
   itemLightUpdate, collectSources, litByIn, lightEntries, tokensByActor, inspectShape, lightStatus,
   SIGHT_RESET, SIGHT_RESET_DONE, RESET_SIGHT, needsSightReset, systemReady, planSightReset,
-  LIMITS, rng, hashString, epochBuilds, buildEpoch, waveLevel, brightnessFor,
+  LIMITS, EPOCH_CACHE, rng, hashString, epochBuilds, buildEpoch, waveLevel, brightnessFor, shouldReinit,
 };
 
 export const SHORT = "senses";
