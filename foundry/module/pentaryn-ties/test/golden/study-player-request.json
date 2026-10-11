@@ -1,0 +1,70 @@
+[
+  {
+    "label": "player: not the owner",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "player: no GM online",
+    "out": false,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Nobody is running the game right now — a check like this needs somebody to roll it against."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "player: in combat, declines the warning",
+    "out": false,
+    "calls": [
+      {
+        "op": "DialogV2.confirm",
+        "title": "Study, mid-fight",
+        "content": "<p>Studying something in the middle of a fight costs ZZ Caven their action this turn. Roll it?</p>"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "player: in combat, goes ahead (bad mode, string bonus)",
+    "out": true,
+    "calls": [
+      {
+        "op": "DialogV2.confirm",
+        "title": "Study, mid-fight",
+        "content": "<p>Studying something in the middle of a fight costs ZZ Caven their action this turn. Roll it?</p>"
+      },
+      {
+        "op": "DialogV2.prompt",
+        "title": "Study: Debts"
+      },
+      {
+        "op": "socket.emit",
+        "args": [
+          "module.pentaryn-ties",
+          {
+            "action": "study",
+            "characterId": "zzPc000000000001",
+            "subjectId": "zzNpc00000000001",
+            "ns": "lore",
+            "factId": "l1",
+            "attrId": null,
+            "mode": "normal",
+            "situational": 8
+          }
+        ]
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "player: playerAccess off",
+    "out": false,
+    "calls": [],
+    "console": []
+  }
+]

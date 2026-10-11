@@ -1,0 +1,451 @@
+[
+  {
+    "label": "requestAttrLore guild/g1, rolls 20",
+    "out": true,
+    "calls": [
+      {
+        "op": "DialogV2.prompt",
+        "title": "Study: Oath"
+      },
+      {
+        "op": "settings.set",
+        "id": "pentaryn-ties.attributeBeliefs",
+        "value": {
+          "attr:guild:g1:zzPc000000000001": {
+            "text": "",
+            "tier": null,
+            "total": null,
+            "when": 1790000000000,
+            "delivered": null,
+            "claim": "rid0000000000002",
+            "sources": null
+          }
+        }
+      },
+      {
+        "op": "rollSkill",
+        "actor": "zzPc000000000001",
+        "config": {
+          "skill": "rel",
+          "target": 13,
+          "advantage": false,
+          "disadvantage": false,
+          "rolls": []
+        },
+        "dialog": {
+          "configure": false
+        },
+        "message": {
+          "rollMode": "mapped:blindroll",
+          "data": {
+            "flavor": "Study: The Guild — Oath (Religion)",
+            "flags": {
+              "dice-so-nice": {
+                "skip": true
+              }
+            }
+          }
+        },
+        "total": 20
+      },
+      {
+        "op": "settings.set",
+        "id": "pentaryn-ties.attributeBeliefs",
+        "value": {
+          "attr:guild:g1:zzPc000000000001": {
+            "text": "<p>They swear on salt.</p>",
+            "tier": null,
+            "total": 20,
+            "when": 1790000000000,
+            "delivered": 1790000000000,
+            "claim": null,
+            "sources": {
+              "adv": 0,
+              "dis": 0,
+              "shared": [],
+              "declared": "normal",
+              "rule": "raw",
+              "resolved": "normal"
+            },
+            "pass": true
+          }
+        }
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000001",
+        "changes": {
+          "flags.pentaryn-ties.studied": {
+            "kind": {
+              "zzKind0000000001": {
+                "when": 1790000000000
+              }
+            },
+            "lore": {
+              "lore:zzNpc00000000001:l1": {
+                "when": 1790000000000
+              },
+              "lore:zzNpc00000000001:l4": {
+                "when": 1790000000000
+              },
+              "lore:zzNpc00000000001:l3": {
+                "when": 1790000000000
+              },
+              "attr:guild:g1": {
+                "when": 1790000000000
+              }
+            }
+          },
+          "flags.pentaryn-ties.known": [
+            {
+              "id": "zzKind0000000001",
+              "name": "ZZ Ghoul",
+              "category": "beasts",
+              "notes": "",
+              "imposter": null,
+              "hidden": false,
+              "when": 1790000000000
+            },
+            {
+              "id": "zzNpc00000000001",
+              "name": "ZZ Brakka",
+              "category": "sentient",
+              "notes": "",
+              "imposter": null,
+              "hidden": false,
+              "when": 1790000000000
+            }
+          ],
+          "flags.pentaryn-ties.granted": {
+            "kind:zzKind0000000001": {
+              "text": "— Studied (Religion) —\nGrey hunters of the barrow.\nImmune: Poison, Grief. Vulnerable: Fire. Untroubled by: Charmed.",
+              "when": 1790000000000,
+              "icon": "icons/zz/zzKind0000000001.webp",
+              "source": "ZZ Ghoul"
+            },
+            "lore:zzNpc00000000001:l1": {
+              "text": "<p>Shifty eyes.</p>",
+              "when": 1790000000000,
+              "icon": "icons/zz/zzNpc00000000001.webp",
+              "source": "Debts"
+            },
+            "lore:zzNpc00000000001:l3": {
+              "text": "<p>He sold the map.</p>",
+              "when": 1790000000000,
+              "icon": "icons/zz/zzNpc00000000001.webp",
+              "source": "Held secret"
+            },
+            "attr:guild:g1": {
+              "text": "<p>They swear on salt.</p>",
+              "when": 1790000000000,
+              "icon": "icons/sundries/flags/banner-standard-green.webp",
+              "source": "The Guild — Oath"
+            }
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "content": "<p class=\"pt-study-stub\">ZZ Caven studies ZZ Brakka.</p>",
+          "speaker": {
+            "alias": "ZZ Caven",
+            "actor": "zzPc000000000001"
+          }
+        }
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "ZZ Caven now knows what a The Guild — Oath is."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "requestAttrLore guild/g1 again (spent)",
+    "out": false,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "You have already looked into that."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "requestAttrLore unknown row",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "studyAs guild/g2 (hold) as PC2, rolls 15",
+    "out": true,
+    "calls": [
+      {
+        "op": "settings.set",
+        "id": "pentaryn-ties.attributeBeliefs",
+        "value": {
+          "attr:guild:g1:zzPc000000000001": {
+            "text": "<p>They swear on salt.</p>",
+            "tier": null,
+            "total": 20,
+            "when": 1790000000000,
+            "delivered": 1790000000000,
+            "claim": null,
+            "sources": {
+              "adv": 0,
+              "dis": 0,
+              "shared": [],
+              "declared": "normal",
+              "rule": "raw",
+              "resolved": "normal"
+            },
+            "pass": true
+          },
+          "attr:guild:g2:zzPc000000000002": {
+            "text": "",
+            "tier": null,
+            "total": null,
+            "when": 1790000000000,
+            "delivered": null,
+            "claim": "rid0000000000002",
+            "sources": null
+          }
+        }
+      },
+      {
+        "op": "rollSkill",
+        "actor": "zzPc000000000002",
+        "config": {
+          "skill": "rel",
+          "target": 10,
+          "advantage": false,
+          "disadvantage": false,
+          "rolls": []
+        },
+        "dialog": {
+          "configure": false
+        },
+        "message": {
+          "rollMode": "mapped:blindroll",
+          "data": {
+            "flavor": "Study: The Guild — Held oath (Religion)",
+            "flags": {
+              "dice-so-nice": {
+                "skip": true
+              }
+            }
+          }
+        },
+        "total": 15
+      },
+      {
+        "op": "settings.set",
+        "id": "pentaryn-ties.attributeBeliefs",
+        "value": {
+          "attr:guild:g1:zzPc000000000001": {
+            "text": "<p>They swear on salt.</p>",
+            "tier": null,
+            "total": 20,
+            "when": 1790000000000,
+            "delivered": 1790000000000,
+            "claim": null,
+            "sources": {
+              "adv": 0,
+              "dis": 0,
+              "shared": [],
+              "declared": "normal",
+              "rule": "raw",
+              "resolved": "normal"
+            },
+            "pass": true
+          },
+          "attr:guild:g2:zzPc000000000002": {
+            "text": "<p>Second oath.</p>",
+            "tier": null,
+            "total": 15,
+            "when": 1790000000000,
+            "delivered": null,
+            "claim": null,
+            "sources": {
+              "adv": 0,
+              "dis": 0,
+              "shared": [],
+              "declared": "normal",
+              "rule": "raw",
+              "resolved": "normal"
+            },
+            "pass": true
+          }
+        }
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000002",
+        "changes": {
+          "flags.pentaryn-ties.studied": {
+            "kind": {},
+            "lore": {
+              "attr:guild:g2": {
+                "when": 1790000000000
+              }
+            }
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "content": "<p class=\"pt-study-stub\">ZZ Wren studies ZZ Brakka.</p>",
+          "speaker": {
+            "alias": "ZZ Wren",
+            "actor": "zzPc000000000002"
+          }
+        }
+      },
+      {
+        "op": "DialogV2.confirm",
+        "title": "A check came in",
+        "content": "<p>ZZ Wren studied ZZ Brakka.</p><p class=\"pt-study-hold-meta\">Tier null on a total of 15. Deliver now, or leave it pending and hand it over when the scene arrives.</p><div class=\"pt-study-hold-text\">&lt;p&gt;Second oath.&lt;/p&gt;</div>"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "pending()",
+    "out": [
+      {
+        "ns": "attr",
+        "character": "ZZ Wren",
+        "characterId": "zzPc000000000002",
+        "subject": "The Guild",
+        "subjectId": null,
+        "attrId": "guild",
+        "beliefKey": "attr:guild:g2",
+        "fact": "Held oath",
+        "factId": "g2",
+        "tier": null,
+        "total": 15,
+        "when": "<localeDate>",
+        "text": "<p>Second oath.</p>"
+      }
+    ],
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "deliver guild/g2",
+    "out": true,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000002",
+        "changes": {
+          "flags.pentaryn-ties.studied": {
+            "kind": {},
+            "lore": {
+              "attr:guild:g2": {
+                "when": 1790000000000
+              }
+            }
+          },
+          "flags.pentaryn-ties.known": [
+            {
+              "id": "zzNpc00000000001",
+              "name": "ZZ Brakka",
+              "category": "sentient",
+              "notes": "",
+              "imposter": null,
+              "hidden": false,
+              "when": 1790000000000
+            }
+          ],
+          "flags.pentaryn-ties.granted": {
+            "attr:guild:g2": {
+              "text": "<p>Second oath.</p>",
+              "when": 1790000000000,
+              "icon": "icons/sundries/flags/banner-standard-green.webp",
+              "source": "The Guild — Held oath"
+            }
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "settings.set",
+        "id": "pentaryn-ties.attributeBeliefs",
+        "value": {
+          "attr:guild:g1:zzPc000000000001": {
+            "text": "<p>They swear on salt.</p>",
+            "tier": null,
+            "total": 20,
+            "when": 1790000000000,
+            "delivered": 1790000000000,
+            "claim": null,
+            "sources": {
+              "adv": 0,
+              "dis": 0,
+              "shared": [],
+              "declared": "normal",
+              "rule": "raw",
+              "resolved": "normal"
+            },
+            "pass": true
+          },
+          "attr:guild:g2:zzPc000000000002": {
+            "text": "<p>Second oath.</p>",
+            "tier": null,
+            "total": 15,
+            "when": 1790000000000,
+            "delivered": 1790000000000,
+            "claim": null,
+            "sources": {
+              "adv": 0,
+              "dis": 0,
+              "shared": [],
+              "declared": "normal",
+              "rule": "raw",
+              "resolved": "normal"
+            },
+            "pass": true
+          }
+        }
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "ZZ Wren now knows what a The Guild — Held oath is."
+      }
+    ],
+    "console": []
+  }
+]

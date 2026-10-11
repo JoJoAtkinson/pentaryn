@@ -48,7 +48,7 @@ function itemsOf(list = []) {
   return new StubCollection(
     list.map(i => {
       const acts = i.activities ?? [];
-      const doc = makeDoc("Item", { ...i, system: { ...(i.system ?? {}), activities: Object.assign(new Set(acts), { size: acts.length }) } });
+      const doc = makeDoc("Item", { ...i, system: { ...(i.system ?? {}), activities: new Set(acts) } });
       delete doc.activities;
       return doc;
     })
@@ -56,15 +56,15 @@ function itemsOf(list = []) {
 }
 
 /**
- * An Actor document: `makeDoc` + the Actor prototype, `isOwner` (data, default true), `items`, a
+ * An Actor document: `makeDoc` + the Actor prototype, `isOwner` (Foundry's rule — GM, or OWNER for the
+ * current user — unless the data pins a boolean), `items`, a
  * scripted `rollSkill`, a recording `sheet`, and `_source` mirroring `system`.
  */
 export function makeActor(F, data) {
-  const { items = [], isOwner = true, ...rest } = data;
+  const { items = [], isOwner = null, ...rest } = data;
   const doc = makeDoc("Actor", { type: "npc", img: `icons/zz/${data.id}.webp`, ...rest });
   Object.setPrototypeOf(doc, Actor.prototype);
   const hidden = {
-    isOwner,
     items: itemsOf(items),
     rollSkill: rollSkillFor(F, doc),
     getRollData: () => ({}),
@@ -79,6 +79,13 @@ export function makeActor(F, data) {
     },
   };
   for (const [k, v] of Object.entries(hidden)) Object.defineProperty(doc, k, { value: v, writable: true, enumerable: false, configurable: true });
+  // Foundry's own rule unless the data pins it: a GM owns everything, a player what they hold OWNER on
+  Object.defineProperty(doc, "isOwner", {
+    get: () => (typeof isOwner === "boolean" ? isOwner : F.game.user?.isGM === true || doc.testUserPermission(F.game.user, "OWNER")),
+    set: v => Object.defineProperty(doc, "isOwner", { value: v, writable: true, configurable: true, enumerable: false }),
+    enumerable: false,
+    configurable: true,
+  });
   return doc;
 }
 
@@ -284,9 +291,10 @@ export async function bootWorld({
   return F;
 }
 
-/** `toLocaleString()` output differs by machine locale and zone: fold it to a marker for goldens. */
+/**
+ * `toLocaleString()` output differs by machine locale and zone: a string `when` / `delivered` (the
+ * GM-facing pending() and beliefs() rows) folds to "<localeDate>" for goldens.
+ */
 export function stableDates(v) {
-  return JSON.parse(
-    JSON.stringify(v ?? null, (k, x) => (typeof x === "string" && /^\d{1,2}\/\d{1,2}\/\d{4},/.test(x) ? "<localeDate>" : x))
-  );
+  return JSON.parse(JSON.stringify(v ?? null, (k, x) => ((k === "when" || k === "delivered") && typeof x === "string" ? "<localeDate>" : x)));
 }

@@ -1,0 +1,150 @@
+{
+  "kind": [
+    {
+      "ns": "kind",
+      "factId": "kind",
+      "fact": "ZZ Ghoul",
+      "character": "ZZ Caven",
+      "characterId": "zzPc000000000001",
+      "tier": 20,
+      "total": 22,
+      "when": "<localeDate>",
+      "delivered": "<localeDate>",
+      "pending": false,
+      "pass": true,
+      "text": "— Studied (Religion) —\nGrey hunters of the barrow.\nImmune: Poison, Grief. Vulnerable: Fire. Untroubled by: Charmed."
+    }
+  ],
+  "npc": [
+    {
+      "ns": "kind",
+      "factId": "kind",
+      "fact": "ZZ Ghoul",
+      "character": "ZZ Caven",
+      "characterId": "zzPc000000000001",
+      "tier": 20,
+      "total": 22,
+      "when": "<localeDate>",
+      "delivered": "<localeDate>",
+      "pending": false,
+      "pass": true,
+      "text": "— Studied (Religion) —\nGrey hunters of the barrow.\nImmune: Poison, Grief. Vulnerable: Fire. Untroubled by: Charmed."
+    },
+    {
+      "ns": "lore",
+      "factId": "l1",
+      "fact": "Debts",
+      "character": "ZZ Caven",
+      "characterId": "zzPc000000000001",
+      "tier": 0,
+      "total": 5,
+      "when": "<localeDate>",
+      "delivered": "<localeDate>",
+      "pending": false,
+      "pass": false,
+      "text": "<p>Shifty eyes.</p>"
+    },
+    {
+      "ns": "lore",
+      "factId": "l4",
+      "fact": "Quiet fail",
+      "character": "ZZ Caven",
+      "characterId": "zzPc000000000001",
+      "tier": 0,
+      "total": 3,
+      "when": "<localeDate>",
+      "delivered": "<localeDate>",
+      "pending": false,
+      "pass": false,
+      "text": ""
+    },
+    {
+      "ns": "lore",
+      "factId": "l3",
+      "fact": "Held secret",
+      "character": "ZZ Caven",
+      "characterId": "zzPc000000000001",
+      "tier": 0,
+      "total": 18,
+      "when": "<localeDate>",
+      "delivered": "<localeDate>",
+      "pending": false,
+      "pass": true,
+      "text": "<p>He sold the map.</p>"
+    }
+  ],
+  "player": [],
+  "studied": {
+    "kind": {
+      "zzKind0000000001": {
+        "when": 1790000000000
+      }
+    },
+    "lore": {
+      "lore:zzNpc00000000001:l1": {
+        "when": 1790000000000
+      },
+      "lore:zzNpc00000000001:l4": {
+        "when": 1790000000000
+      },
+      "lore:zzNpc00000000001:l3": {
+        "when": 1790000000000
+      },
+      "attr:guild:g1": {
+        "when": 1790000000000
+      }
+    }
+  },
+  "beliefsOf": {
+    "zzPc000000000001": {
+      "lore:zzNpc00000000001:l1": {
+        "text": "<p>Shifty eyes.</p>",
+        "tier": 0,
+        "total": 5,
+        "when": 1790000000000,
+        "delivered": 1790000000000,
+        "sources": {
+          "adv": 0,
+          "dis": 1,
+          "shared": [],
+          "declared": "disadvantage",
+          "rule": "raw",
+          "resolved": "disadvantage"
+        },
+        "pass": false
+      },
+      "lore:zzNpc00000000001:l4": {
+        "text": "",
+        "tier": 0,
+        "total": 3,
+        "when": 1790000000000,
+        "delivered": 1790000000000,
+        "sources": {
+          "adv": 0,
+          "dis": 0,
+          "shared": [],
+          "declared": "normal",
+          "rule": "raw",
+          "resolved": "normal"
+        },
+        "pass": false
+      },
+      "lore:zzNpc00000000001:l3": {
+        "text": "<p>He sold the map.</p>",
+        "tier": 0,
+        "total": 18,
+        "when": 1790000000000,
+        "delivered": 1790000000000,
+        "sources": {
+          "adv": 0,
+          "dis": 0,
+          "shared": [],
+          "declared": "normal",
+          "rule": "raw",
+          "resolved": "normal"
+        },
+        "pass": true
+      }
+    }
+  }
+}

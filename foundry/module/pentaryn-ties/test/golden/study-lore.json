@@ -1,0 +1,616 @@
+[
+  {
+    "label": "requestLore l1, rolls 5 vs 12 (miss text delivered)",
+    "out": true,
+    "calls": [
+      {
+        "op": "DialogV2.prompt",
+        "title": "Study: Debts"
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzNpc00000000001",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000001.lore:zzNpc00000000001:l1": {
+            "claim": "rid0000000000002",
+            "when": 1790000000000
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "rollSkill",
+        "actor": "zzPc000000000001",
+        "config": {
+          "skill": "ins",
+          "target": 12,
+          "advantage": false,
+          "disadvantage": true,
+          "rolls": [
+            {
+              "parts": [
+                "@situational"
+              ],
+              "data": {
+                "situational": -100
+              }
+            }
+          ]
+        },
+        "dialog": {
+          "configure": false
+        },
+        "message": {
+          "rollMode": "mapped:blindroll",
+          "data": {
+            "flavor": "Study: Debts (Insight)",
+            "flags": {
+              "dice-so-nice": {
+                "skip": true
+              }
+            }
+          }
+        },
+        "total": 5
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzNpc00000000001",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000001.lore:zzNpc00000000001:l1": {
+            "text": "<p>Shifty eyes.</p>",
+            "tier": null,
+            "total": 5,
+            "when": 1790000000000,
+            "delivered": 1790000000000,
+            "claim": null,
+            "sources": {
+              "adv": 0,
+              "dis": 1,
+              "shared": [],
+              "declared": "disadvantage",
+              "rule": "raw",
+              "resolved": "disadvantage"
+            },
+            "pass": false
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000001",
+        "changes": {
+          "flags.pentaryn-ties.studied": {
+            "kind": {
+              "zzKind0000000001": {
+                "when": 1790000000000
+              }
+            },
+            "lore": {
+              "lore:zzNpc00000000001:l1": {
+                "when": 1790000000000
+              }
+            }
+          },
+          "flags.pentaryn-ties.known": [
+            {
+              "id": "zzKind0000000001",
+              "name": "ZZ Ghoul",
+              "category": "beasts",
+              "notes": "",
+              "imposter": null,
+              "hidden": false,
+              "when": 1790000000000
+            },
+            {
+              "id": "zzNpc00000000001",
+              "name": "ZZ Brakka",
+              "category": "sentient",
+              "notes": "",
+              "imposter": null,
+              "hidden": false,
+              "when": 1790000000000
+            }
+          ],
+          "flags.pentaryn-ties.granted": {
+            "kind:zzKind0000000001": {
+              "text": "— Studied (Religion) —\nGrey hunters of the barrow.\nImmune: Poison, Grief. Vulnerable: Fire. Untroubled by: Charmed.",
+              "when": 1790000000000,
+              "icon": "icons/zz/zzKind0000000001.webp",
+              "source": "ZZ Ghoul"
+            },
+            "lore:zzNpc00000000001:l1": {
+              "text": "<p>Shifty eyes.</p>",
+              "when": 1790000000000,
+              "icon": "icons/zz/zzNpc00000000001.webp",
+              "source": "Debts"
+            }
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "content": "<p class=\"pt-study-stub\">ZZ Caven studies ZZ Brakka.</p>",
+          "speaker": {
+            "alias": "ZZ Caven",
+            "actor": "zzPc000000000001"
+          }
+        }
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "ZZ Caven studied Debts and missed."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "requestLore l1 again (spent)",
+    "out": false,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "You have already looked into that."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "requestLore draft row (not offered)",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "studyAs l4, rolls 3 vs 30 (no miss text: silent)",
+    "out": true,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzNpc00000000001",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000001.lore:zzNpc00000000001:l4": {
+            "claim": "rid0000000000002",
+            "when": 1790000000000
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "rollSkill",
+        "actor": "zzPc000000000001",
+        "config": {
+          "skill": "inv",
+          "target": 30,
+          "advantage": false,
+          "disadvantage": false,
+          "rolls": []
+        },
+        "dialog": {
+          "configure": false
+        },
+        "message": {
+          "rollMode": "mapped:blindroll",
+          "data": {
+            "flavor": "Study: Quiet fail (Investigation)",
+            "flags": {
+              "dice-so-nice": {
+                "skip": true
+              }
+            }
+          }
+        },
+        "total": 3
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzNpc00000000001",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000001.lore:zzNpc00000000001:l4": {
+            "text": "",
+            "tier": null,
+            "total": 3,
+            "when": 1790000000000,
+            "delivered": 1790000000000,
+            "claim": null,
+            "sources": {
+              "adv": 0,
+              "dis": 0,
+              "shared": [],
+              "declared": "normal",
+              "rule": "raw",
+              "resolved": "normal"
+            },
+            "pass": false
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000001",
+        "changes": {
+          "flags.pentaryn-ties.studied": {
+            "kind": {
+              "zzKind0000000001": {
+                "when": 1790000000000
+              }
+            },
+            "lore": {
+              "lore:zzNpc00000000001:l1": {
+                "when": 1790000000000
+              },
+              "lore:zzNpc00000000001:l4": {
+                "when": 1790000000000
+              }
+            }
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "content": "<p class=\"pt-study-stub\">ZZ Caven studies ZZ Brakka.</p>",
+          "speaker": {
+            "alias": "ZZ Caven",
+            "actor": "zzPc000000000001"
+          }
+        }
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "ZZ Caven studied Quiet fail and missed."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "studyAs l3 (hold), rolls 18: held, prompt answered Later",
+    "out": true,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzNpc00000000001",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000001.lore:zzNpc00000000001:l3": {
+            "claim": "rid0000000000002",
+            "when": 1790000000000
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "rollSkill",
+        "actor": "zzPc000000000001",
+        "config": {
+          "skill": "inv",
+          "target": 10,
+          "advantage": false,
+          "disadvantage": false,
+          "rolls": []
+        },
+        "dialog": {
+          "configure": false
+        },
+        "message": {
+          "rollMode": "mapped:blindroll",
+          "data": {
+            "flavor": "Study: Held secret (Investigation)",
+            "flags": {
+              "dice-so-nice": {
+                "skip": true
+              }
+            }
+          }
+        },
+        "total": 18
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzNpc00000000001",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000001.lore:zzNpc00000000001:l3": {
+            "text": "<p>He sold the map.</p>",
+            "tier": null,
+            "total": 18,
+            "when": 1790000000000,
+            "delivered": null,
+            "claim": null,
+            "sources": {
+              "adv": 0,
+              "dis": 0,
+              "shared": [],
+              "declared": "normal",
+              "rule": "raw",
+              "resolved": "normal"
+            },
+            "pass": true
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000001",
+        "changes": {
+          "flags.pentaryn-ties.studied": {
+            "kind": {
+              "zzKind0000000001": {
+                "when": 1790000000000
+              }
+            },
+            "lore": {
+              "lore:zzNpc00000000001:l1": {
+                "when": 1790000000000
+              },
+              "lore:zzNpc00000000001:l4": {
+                "when": 1790000000000
+              },
+              "lore:zzNpc00000000001:l3": {
+                "when": 1790000000000
+              }
+            }
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "content": "<p class=\"pt-study-stub\">ZZ Caven studies ZZ Brakka.</p>",
+          "speaker": {
+            "alias": "ZZ Caven",
+            "actor": "zzPc000000000001"
+          }
+        }
+      },
+      {
+        "op": "DialogV2.confirm",
+        "title": "A check came in",
+        "content": "<p>ZZ Caven studied ZZ Brakka.</p><p class=\"pt-study-hold-meta\">Held secret — DC 10, rolled 18</p><div class=\"pt-study-hold-text\">&lt;p&gt;He sold the map.&lt;/p&gt;</div>"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "pending()",
+    "out": [
+      {
+        "ns": "lore",
+        "character": "ZZ Caven",
+        "characterId": "zzPc000000000001",
+        "subject": "ZZ Brakka",
+        "subjectId": "zzNpc00000000001",
+        "beliefKey": "lore:zzNpc00000000001:l3",
+        "fact": "Held secret",
+        "factId": "l3",
+        "tier": 0,
+        "total": 18,
+        "when": "<localeDate>",
+        "text": "<p>He sold the map.</p>"
+      }
+    ],
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "deliver l3",
+    "out": true,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000001",
+        "changes": {
+          "flags.pentaryn-ties.studied": {
+            "kind": {
+              "zzKind0000000001": {
+                "when": 1790000000000
+              }
+            },
+            "lore": {
+              "lore:zzNpc00000000001:l1": {
+                "when": 1790000000000
+              },
+              "lore:zzNpc00000000001:l4": {
+                "when": 1790000000000
+              },
+              "lore:zzNpc00000000001:l3": {
+                "when": 1790000000000
+              }
+            }
+          },
+          "flags.pentaryn-ties.known": [
+            {
+              "id": "zzKind0000000001",
+              "name": "ZZ Ghoul",
+              "category": "beasts",
+              "notes": "",
+              "imposter": null,
+              "hidden": false,
+              "when": 1790000000000
+            },
+            {
+              "id": "zzNpc00000000001",
+              "name": "ZZ Brakka",
+              "category": "sentient",
+              "notes": "",
+              "imposter": null,
+              "hidden": false,
+              "when": 1790000000000
+            }
+          ],
+          "flags.pentaryn-ties.granted": {
+            "kind:zzKind0000000001": {
+              "text": "— Studied (Religion) —\nGrey hunters of the barrow.\nImmune: Poison, Grief. Vulnerable: Fire. Untroubled by: Charmed.",
+              "when": 1790000000000,
+              "icon": "icons/zz/zzKind0000000001.webp",
+              "source": "ZZ Ghoul"
+            },
+            "lore:zzNpc00000000001:l1": {
+              "text": "<p>Shifty eyes.</p>",
+              "when": 1790000000000,
+              "icon": "icons/zz/zzNpc00000000001.webp",
+              "source": "Debts"
+            },
+            "lore:zzNpc00000000001:l3": {
+              "text": "<p>He sold the map.</p>",
+              "when": 1790000000000,
+              "icon": "icons/zz/zzNpc00000000001.webp",
+              "source": "Held secret"
+            }
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzNpc00000000001",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000001.lore:zzNpc00000000001:l3": {
+            "text": "<p>He sold the map.</p>",
+            "tier": 0,
+            "total": 18,
+            "when": 1790000000000,
+            "delivered": 1790000000000,
+            "claim": null,
+            "sources": {
+              "adv": 0,
+              "dis": 0,
+              "shared": [],
+              "declared": "normal",
+              "rule": "raw",
+              "resolved": "normal"
+            },
+            "pass": true
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "ZZ Caven now knows what a Held secret is."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "deliver l3 again (already delivered)",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "deliver a row never rolled (PC2)",
+    "out": false,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Nothing is pending for ZZ Wren on Held secret."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "player: deliver",
+    "out": false,
+    "calls": [],
+    "console": []
+  }
+]

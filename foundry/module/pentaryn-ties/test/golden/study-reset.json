@@ -1,0 +1,185 @@
+[
+  {
+    "label": "reset kind",
+    "out": true,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzKind0000000001",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.-=zzPc000000000001": null
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000001",
+        "changes": {
+          "flags.pentaryn-ties.studied.kind.-=zzKind0000000001": null
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "ZZ Caven may study ZZ Ghoul again."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "reset lore l1",
+    "out": true,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzNpc00000000001",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000001.-=lore:zzNpc00000000001:l1": null
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000001",
+        "changes": {
+          "flags.pentaryn-ties.studied.lore.-=lore:zzNpc00000000001:l1": null
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "ZZ Caven may study Debts again."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "reset attr guild/g1",
+    "out": true,
+    "calls": [
+      {
+        "op": "settings.set",
+        "id": "pentaryn-ties.attributeBeliefs",
+        "value": {
+          "attr:guild:g2:zzPc000000000002": {
+            "text": "<p>Second oath.</p>",
+            "tier": null,
+            "total": 15,
+            "when": 1790000000000,
+            "delivered": 1790000000000,
+            "claim": null,
+            "sources": {
+              "adv": 0,
+              "dis": 0,
+              "shared": [],
+              "declared": "normal",
+              "rule": "raw",
+              "resolved": "normal"
+            },
+            "pass": true
+          }
+        }
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000001",
+        "changes": {
+          "flags.pentaryn-ties.studied.lore.-=attr:guild:g1": null
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "ZZ Caven may study The Guild — Oath again."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "reset a fact that does not resolve",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "player: reset",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "state after",
+    "out": {
+      "studied": {
+        "kind": {},
+        "lore": {
+          "lore:zzNpc00000000001:l4": {
+            "when": 1790000000000
+          },
+          "lore:zzNpc00000000001:l3": {
+            "when": 1790000000000
+          }
+        }
+      },
+      "lore": [
+        [
+          "l1",
+          true
+        ],
+        [
+          "l3",
+          false
+        ],
+        [
+          "l4",
+          false
+        ]
+      ]
+    },
+    "calls": [],
+    "console": []
+  }
+]
