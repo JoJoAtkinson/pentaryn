@@ -41,7 +41,9 @@ function animateBrokenGlow(dt, { speed = 5, intensity = 5, reverse = false } = {
   // Size. Foundry re-initializes the source from the document (the ceiling) whenever the token
   // refreshes; anything that isn't our last applied radius is a fresh ceiling.
   let st = state.get(this);
-  if (!st || this.data.dim !== st.applied) st = { ceiling: this.data.dim, applied: null, at: 0 };
+  // The fresh ceiling's bright radius is kept too: initialize() merges into this.data, so reading
+  // this.data.bright later would give back our own last (smaller) value and only ever shrink.
+  if (!st || this.data.dim !== st.applied) st = { ceiling: this.data.dim, bright: this.data.bright ?? 0, applied: null, at: 0 };
   state.set(this, st);
   const ext = this.data.externalRadius ?? 0;
   const floor = ext + LIMITS.minFeet * canvas.dimensions.distancePixels;
@@ -50,7 +52,7 @@ function animateBrokenGlow(dt, { speed = 5, intensity = 5, reverse = false } = {
   if (!shouldReinit(st, radius, now)) return;
   st.applied = radius;
   st.at = now;
-  this.initialize({ dim: radius, bright: Math.min(this.data.bright ?? 0, radius) });
+  this.initialize({ dim: radius, bright: Math.min(st.bright, radius) });
   canvas.perception.update({ refreshLighting: true, refreshVision: true });
 }
 

@@ -155,7 +155,9 @@ test("the animation: brightness every frame; radius between the token's edge and
 // radius until a token refresh re-initializes the source from the document. The golden above pins
 // today's ratchet (t=9000: dim 114, bright 101). The fix reads the document's bright (the ceiling's
 // partner) instead of the last applied value; flipping this todo is a [declared] visual change.
-test("bright follows the wave back up (KNOWN: it ratchets down)", { todo: "KNOWN: glow bright radius ratchets down between token refreshes" }, () => {
+// [declared S-14, glow bright ratchet] flipped from the todo "bright follows the wave back up (KNOWN: it
+// ratchets down)": the animation keeps the ceiling's bright radius and caps it by the current radius.
+test("bright follows the wave back up", () => {
   const anim = F.CONFIG.Canvas.lightAnimations["pentaryn-brokenglow"].animation;
   F.canvas.dimensions = { distancePixels: 20 };
   F.canvas.perception = { update() {} };

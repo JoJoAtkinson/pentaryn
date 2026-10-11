@@ -47,7 +47,7 @@
       "pulse": 0.386586279,
       "samePulse": true,
       "dim": 114,
-      "bright": 101
+      "bright": 114
     }
   ],
   "log": [
@@ -146,7 +146,7 @@
       "op": "initialize",
       "d": {
         "dim": 114,
-        "bright": 101
+        "bright": 114
       }
     }
   ],
