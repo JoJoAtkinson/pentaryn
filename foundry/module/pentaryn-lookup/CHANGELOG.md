@@ -12,6 +12,8 @@
   near-instant. `uninstall()` clears the cache.
 - `onList` / `spellList` answer "no such list" instead of throwing when dnd5e's registry moves.
 - `page(<uuid>)` of a non-page document (a JournalEntry) adds a `warning`.
+- `names("constructor")` (any `Object.prototype` word) is an unknown kind and answers everything,
+  not a junk one-key object.
 - Failed reads are traced at debug level (`CONFIG.debug["pentaryn-lookup"] = true`).
 - The node test suite runs on `node:test` (`node test/run.mjs`).
 

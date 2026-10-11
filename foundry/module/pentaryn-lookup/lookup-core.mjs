@@ -548,6 +548,7 @@ export function groupNames({ classes = [], origins = [], feats = [] } = {}, kind
   sort(out.classes); sort(out.species); sort(out.backgrounds);
   for (const k of Object.keys(out.subclasses)) sort(out.subclasses[k]);
   for (const k of Object.keys(out.feats)) sort(out.feats[k]);
-  const part = kind ? NAME_PARTS[String(kind).toLowerCase()] : null;
+  const word = kind ? String(kind).toLowerCase() : null;
+  const part = word && Object.hasOwn(NAME_PARTS, word) ? NAME_PARTS[word] : null;
   return part ? { [part]: out[part] } : out;
 }
