@@ -62,7 +62,7 @@ test("ready: the active GM files a queue left by a player who filed with no GM o
   assert.ok(mem.files.has(path), "the waiting report was filed at ready");
   const filed = mem.files.get(path);
   assert.deepEqual(filed.user, { id: IDS.player2, name: "Mira's player", role: 1, isGM: false, character: null });
-  assert.equal(typeof filed.receivedAt, "number");
+  assert.equal(filed.receivedAt, null, "no per-tab time: two GM tabs write the same bytes");
   assert.deepEqual(queueOf(player2), {}, "the flag key is deleted once filed");
   const audit = consoleLines.filter(([lvl, line]) => lvl === "info" && line.startsWith(`${MODULE} | filed`));
   assert.equal(audit.length, 1, "one audit line per cross-user write");
@@ -458,6 +458,23 @@ test("a malformed queue entry is refused and dropped (it would block the queue f
   assert.deepEqual(queueOf(player), {});
   assert.equal(mem.files.has(`pentaryn-feedback/${WORLD}/badbadbadbadbad1.json`), false);
   assert.ok(consoleLines.slice(lines).some(([lvl, l]) => lvl === "warn" && l.startsWith(`${MODULE} | refused report badbadbadbadbad1`)));
+});
+
+test("the folder is always this world's: a report claiming another world is filed here, its world id corrected", async () => {
+  const report = { ...queuedReport("otherworld000001", { t: Date.now(), text: "wrong world" }), world: { id: "someone-elses", title: "Theirs" } };
+  await player.update({ [`flags.${MODULE}.queue.${report.id}`]: report });
+  await settle(10);
+  assert.equal(mem.files.has(`pentaryn-feedback/someone-elses/${report.id}.json`), false);
+  const filed = mem.files.get(`pentaryn-feedback/${WORLD}/${report.id}.json`);
+  assert.equal(filed.world.id, WORLD);
+  assert.equal(filed.world.title, "Theirs", "the rest of the claim is kept as data");
+});
+
+test("two GM tabs: the tab that finds the entry already gone from the queue still answers done", async () => {
+  // the other tab filed it and cleared the flag first; its file is not visible to this tab's store yet
+  const id = "othertabfiled001";
+  const r = await api.ingest({ userId: IDS.player, ids: [id] });
+  assert.deepEqual(r, { ok: true, filed: [], refused: [], done: [id] });
 });
 
 test("ingest on a client that is not the active GM is refused", async () => {

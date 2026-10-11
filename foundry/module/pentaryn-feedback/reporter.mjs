@@ -13,7 +13,8 @@
  *      Joe already set) and deletes the filed keys from the flag in one update.
  * With no GM online the report waits on the flag; the active GM files every user's queue at ready,
  * when a user connects, and when a queue flag changes. Two GM tabs both file: the write is
- * keyed by the report id the reporter minted, and identical, so the second is harmless.
+ * keyed by the report id the reporter minted, and byte-identical (no per-tab receivedAt), so the
+ * second is harmless; a tab that finds the entry already gone from the queue answers "done".
  */
 
 import {
@@ -173,10 +174,14 @@ export function install(reg, ctx) {
         log.warn(`refused report ${id} from ${user.name}: ${v.reason ?? "id mismatch"}`);
         continue;
       }
-      const safe = normaliseReport(report, { user: who, receivedAt: Date.now() });
+      // receivedAt stays null: two GM tabs (the bridge and a browser) both file, and must write the
+      // same bytes; the file's mtime is when it was filed. The folder is always THIS world's — the
+      // payload's world id is the client's claim, kept only as data.
+      const safe = normaliseReport(report, { user: who });
+      safe.world = { ...(safe.world ?? {}), id: g.game.world.id };
       let path;
       try {
-        path = reportPath(safe.world?.id ?? g.game.world.id, safe.id);
+        path = reportPath(g.game.world.id, safe.id);
         // look first: a resend after a timeout must not reset a status already set
         if (!(await store().exists(path))) await store().put(path, safe);
       } catch (err) {
@@ -200,8 +205,14 @@ export function install(reg, ctx) {
 
   /**
    * The relay handler (api `ingest`): the active GM files `userId`'s queue. `ids` are the reports
-   * the sender is waiting for; `done` lists those now on disk — filed by this run, or by the
-   * updateUser run that got there first.
+   * the sender is waiting for; `done` lists those filed — by this run, by another run that got
+   * there first (on disk), or by the other GM tab (gone from the queue, and not refused here).
+   *
+   * No sender check: the kit's registerQueries does not pass core's `{ user }` context through to
+   * the API method, and none is needed — the queue is the User document's own flag, which the
+   * server lets only that user or a GM write, and the filed `user` comes from that document. A
+   * stranger's request can only make the GM file what that user already queued (which updateUser
+   * does anyway).
    */
   async function ingest({ userId, ids = [] } = {}) {
     if (!isActiveGM()) return fail("NOT_GM", "only the active GM files reports");
@@ -211,8 +222,11 @@ export function install(reg, ctx) {
       const { filed, refused } = await ingestUser(user);
       const done = [];
       const asked = (Array.isArray(ids) ? ids : []).filter(id => typeof id === "string" && /^[A-Za-z0-9]{16}$/.test(id));
+      const waiting = queueOf(user);
+      const refusedIds = new Set(refused.map(r => r.id));
       for (const id of asked.slice(0, LIMITS.queueMax)) {
-        if (filed.includes(id) || await store().exists(reportPath(g.game.world.id, id))) done.push(id);
+        const gone = !(id in waiting) && !refusedIds.has(id);
+        if (filed.includes(id) || gone || await store().exists(reportPath(g.game.world.id, id))) done.push(id);
       }
       return ok({ filed, refused, done });
     } catch (err) {

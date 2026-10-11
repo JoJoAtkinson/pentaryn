@@ -114,7 +114,7 @@ test("the file written is the normalised report: pretty JSON via the store, Data
   const file = mem.files.get(path);
   assert.equal(file.schemaVersion, 1);
   assert.equal(file.id, r.id);
-  assert.equal(file.receivedAt, T0);
+  assert.equal(file.receivedAt, null, "no per-tab time: two GM tabs write the same bytes");
   assert.equal(file.iso, new Date(T0).toISOString());
 });
 
