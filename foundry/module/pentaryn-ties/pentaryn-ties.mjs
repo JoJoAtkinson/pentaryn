@@ -46,8 +46,8 @@ import { openPreview } from "./preview.mjs";
 import { openLook } from "./look.mjs";
 import { AttributeReview, openReview } from "./review-ui.mjs";
 import * as ItemMarks from "./item-marks.mjs";
+import { MODULE } from "./ties-core.mjs";
 
-const MODULE = API.MODULE;
 const TAB = "ties";
 
 /* -------------------------------------------- */

@@ -6,7 +6,8 @@
 // All three fields are optional; the default is an orange flame with no tooltip. The mark is
 // drawn into every item row on the sheet (spells, features, inventory), on every render.
 
-const MODULE_ID = "pentaryn-ties";
+import { MODULE } from "./ties-core.mjs";
+
 const CLASS = "pt-item-mark";
 
 export function decorate(app, element) {
@@ -14,7 +15,7 @@ export function decorate(app, element) {
   const root = element instanceof HTMLElement ? element : element?.[0];
   if (!actor?.items || !root) return;
   for (const row of root.querySelectorAll("[data-item-id]")) {
-    const mark = actor.items.get(row.dataset.itemId)?.getFlag(MODULE_ID, "mark");
+    const mark = actor.items.get(row.dataset.itemId)?.getFlag(MODULE, "mark");
     const title = row.querySelector(".name .title");
     if (!mark || !title || title.querySelector(`.${CLASS}`)) continue;
     const i = document.createElement("i");
@@ -27,6 +28,6 @@ export function decorate(app, element) {
 
 export function register() {
   Hooks.on("renderBaseActorSheet", (app, element) => {
-    try { decorate(app, element); } catch (err) { console.warn(`${MODULE_ID} | item marks`, err); }
+    try { decorate(app, element); } catch (err) { console.warn(`${MODULE} | item marks`, err); }
   });
 }
