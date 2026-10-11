@@ -347,7 +347,7 @@ MODULES = {
             "appear in the 'Prompt Markers' folder at GM ready.",
             "  game.pentaryn.prompts.status()",
             "  await game.pentaryn.prompts.gather({scenes: 'current'})",
-            "Marker art: ./.venv/bin/python scripts/foundry/prompt-marker-art.py",
+            "Marker art: ./.venv/bin/python scripts/foundry/prompt_marker_art.py",
         ),
     ),
     "combat": ModuleSpec(

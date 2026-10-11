@@ -8,13 +8,14 @@ the test skips on a machine without that font rather than failing on a different
 from __future__ import annotations
 
 import hashlib
-import runpy
 from pathlib import Path
 
 import pytest
 
-ART = runpy.run_path(str(Path(__file__).resolve().parents[1] / "foundry/prompt-marker-art.py"),
-                     run_name="prompt_marker_art")
+from scripts.foundry import prompt_marker_art
+from scripts.foundry.ops import config as cfg
+
+ART = vars(prompt_marker_art)
 
 HASHES = {
     "tiny": "6500399b214d227e72c507566d8f1f7e754d3e1c7c411c0b519a6eff8193652c",
@@ -32,3 +33,9 @@ HASHES = {
 def test_render_is_byte_identical(key):
     assert set(ART["SIZES"]) == set(HASHES)
     assert hashlib.sha256(ART["render"](key).tobytes()).hexdigest() == HASHES[key]
+
+
+def test_prompts_after_sync_names_the_importable_path():
+    text = "\n".join(cfg.MODULES["prompts"].after_sync)
+    assert "scripts/foundry/prompt_marker_art.py" in text
+    assert "prompt-marker-art" not in text
