@@ -74,14 +74,15 @@ function onInit() {
   registerSettings();
 }
 
-/** Assign `game.pentaryn[key]`, rebuilding a frozen root (the hand-written guard step 7 retires). */
+/**
+ * Assign `game.pentaryn[key]`. The root is a plain object every module assigns into: the importer
+ * merges into it and nothing freezes it since its keystone (items-journal-1), so the old
+ * frozen-root rebuild is gone (kit 1.0.2, J10). A frozen root now throws here and the ready hook
+ * stops (Foundry logs it).
+ */
 function publishInto(key, api) {
-  const current = game.pentaryn;
-  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, [key]: api };
-  else {
-    game.pentaryn ??= {};
-    game.pentaryn[key] = api;
-  }
+  game.pentaryn ??= {};
+  game.pentaryn[key] = api;
 }
 
 function onReady() {
