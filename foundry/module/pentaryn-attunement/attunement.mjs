@@ -79,9 +79,11 @@
  */
 
 import {
-  AWAY, AWAY_FLAG, BOND, MODULE, SLOTS, awayOf, bondChanges, computeSlots, homeSlots, patchProficiencyMap,
-  planStash, t, tooltipAnchorMissing, trimSlots, wouldExceed
+  AWAY, AWAY_FLAG, BOND, MODULE, SLOTS, awayOf, bondChanges, computeSlots, homeSlots, t, wouldExceed
 } from "./attunement-core.mjs";
+import {
+  applyProficiencies, guardItemTooltipPosition, isPileActor, releaseAway, stash, writeSlots
+} from "./actor-adapter.mjs";
 
 /* -------------------------------------------- */
 /*  Away bonds                                  */
@@ -108,40 +110,6 @@ import {
  */
 
 /**
- * Move items off an actor into a container actor, tagged with the owner's name
- * and bonded so they come home attuned. Used for confiscation.
- *
- * @param {Actor} owner
- * @param {Actor} container       Usually an item-piles container actor.
- * @param {string[]} itemIds      Items to move. Container contents are flattened.
- * @param {object} [opts]
- * @param {string} [opts.tag]     Defaults to the owner's short name.
- * @param {boolean} [opts.currency]  Also move the owner's coin, as a tagged purse.
- */
-async function stash(owner, container, itemIds, { tag, currency = false } = {}) {
-  const ids = new Set(itemIds);
-  const { creates, away, slots } = planStash(owner, itemIds, {
-    tag, currency, randomID: foundry.utils.randomID, setProperty: foundry.utils.setProperty
-  });
-  await container.createEmbeddedDocuments("Item", creates);
-  await owner.deleteEmbeddedDocuments("Item", [...ids].filter(id => owner.items.has(id)));
-  const update = { [`flags.${MODULE}.${AWAY_FLAG}`]: away, [`flags.${MODULE}.${SLOTS}`]: slots };
-  if (currency) for (const k of Object.keys(owner.system.currency ?? {})) update[`system.currency.${k}`] = 0;
-  await owner.update(update);
-  return creates.length;
-}
-
-/**
- * The owner ends attunement to an item they are not carrying.
- * @param {Actor} actor
- * @param {string} key
- */
-async function releaseAway(actor, key) {
-  const away = awayOf(actor).filter(a => a.key !== key);
-  return actor.setFlag(MODULE, AWAY_FLAG, away);
-}
-
-/**
  * An item is being created on an actor. If it carries a bond, put it back the
  * way it was. Runs on whichever client creates the document — for an item-piles
  * Take that is the GM's — which is why this mutates source rather than writing.
@@ -153,7 +121,7 @@ function restoreBond(item, data, options) {
   const actor = item.parent;
   if (!(actor instanceof Actor)) return;
   // Into another container (box to box): leave it tagged.
-  if (game.itempiles?.API?.isValidItemPile?.(actor)) return;
+  if (isPileActor(actor)) return;
 
   item.updateSource(bondChanges(bond, { actorId: actor.id, awayKeys: awayOf(actor).map(a => a.key), fallbackName: item.name }));
   if (options) options[MODULE] = { bond };
@@ -171,7 +139,7 @@ async function onCreateItemBond(item, options, userId) {
   // not carry preCreate's options mutations through to this hook.
   const bond = item.getFlag(MODULE, BOND);
   if (!bond) return;
-  if (game.itempiles?.API?.isValidItemPile?.(actor)) return;
+  if (isPileActor(actor)) return;
 
   if (bond.currency) {
     const update = {};
@@ -194,16 +162,6 @@ async function onCreateItemBond(item, options, userId) {
     [`flags.${MODULE}.${SLOTS}`]: slots
   });
   ui.notifications.info(t("BackInHand", { name: item.name, actor: actor.name }));
-}
-
-/**
- * Persist a slot arrangement. Trailing holes are trimmed so the flag does not
- * grow every time something is unattuned.
- * @param {Actor} actor
- * @param {(string|null)[]} slots
- */
-async function writeSlots(actor, slots) {
-  return actor.setFlag(MODULE, SLOTS, trimSlots(slots));
 }
 
 /* -------------------------------------------- */
@@ -634,8 +592,7 @@ function report(target) {
 /* -------------------------------------------- */
 
 Hooks.once("init", () => {
-  const added = patchProficiencyMap(CONFIG.DND5E.armorProficienciesMap);
-  if (added.length) console.log(`${MODULE} | proficiency applies to all: ${added.join(", ")}`);
+  applyProficiencies();
 });
 
 // Published one tick after ready (publishing synchronously is a declared step of
@@ -649,26 +606,6 @@ Hooks.once("ready", () => setTimeout(() => {
   game.pentaryn.attunement = api;
   console.log(`${MODULE} | ready`);
 }, 0));
-
-/**
- * dnd5e 6.0.6 `Tooltips5e#_positionItemTooltip` runs a frame after an item tooltip's content
- * loads and calls `game.tooltip._setAnchor`, which reads `game.tooltip.element`. When the row
- * under the pointer was re-rendered away in between (a sheet refresh after a take, an attune,
- * a light), core has already deactivated the tooltip and that element is null, so every such
- * hover logged "Cannot read properties of null (reading 'getBoundingClientRect')" (Area 8 run).
- * With no anchor there is nothing to position: skip. Registered as `dnd5e-item-tooltip-anchor`.
- */
-function guardItemTooltipPosition() {
-  const proto = game.dnd5e?.tooltips ? Object.getPrototypeOf(game.dnd5e.tooltips) : null;
-  const original = proto?._positionItemTooltip;
-  if (typeof original !== "function" || original.pentarynGuarded) return;
-  const guarded = function (...args) {
-    if (tooltipAnchorMissing({ element: game.tooltip?.element, tooltip: this.tooltip })) return;
-    return original.apply(this, args);
-  };
-  guarded.pentarynGuarded = true;
-  proto._positionItemTooltip = guarded;
-}
 
 // One hook for both sheets. `renderBaseActorSheet` fires for every subclass,
 // because Foundry walks the inheritance chain dispatching render<ClassName>.
