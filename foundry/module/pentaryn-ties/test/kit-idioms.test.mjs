@@ -73,3 +73,33 @@ test("S5 esc: no file outside core/ defines the &#39; escaper again", async () =
   const { sourceScan } = await import("./kit/harness.mjs");
   assert.deepEqual(sourceScan(new URL("..", import.meta.url), /"&#39;"/).filter(h => !h.file.startsWith("core/")), []);
 });
+
+test("S5 / C24: no empty or comment-only catch in the module's own code", async () => {
+  const { sourceFiles } = await import("./kit/harness.mjs");
+  const { readFileSync } = await import("node:fs");
+  const root = new URL("..", import.meta.url);
+  const hits = [];
+  for (const rel of sourceFiles(root)) {
+    const src = readFileSync(new URL(rel, root), "utf8");
+    for (const m of src.matchAll(/catch(?:\s*\([^)]*\))?\s*\{(\s*(?:\/\*[\s\S]*?\*\/|\/\/[^\n]*)?\s*)\}/g)) hits.push(`${rel}: ${m[0].slice(0, 40)}`);
+  }
+  assert.deepEqual(hits, []);
+});
+
+test("S5 log.swallow: a failing read returns the site's own fallback and logs only at debug", async () => {
+  const { makeLog } = await import("../lib/log.mjs");
+  const lines = [];
+  const log = makeLog("pentaryn-ties", { console: { debug: (...a) => lines.push(a[0]), warn() {}, error() {}, info() {} } });
+  const boom = () => { throw new Error("unborn"); };
+  assert.deepEqual(log.swallow("x", boom, {}), {});
+  assert.equal(log.swallow("x", boom, "raw"), "raw");
+  assert.equal(lines.length, 0, "debug off: silent");
+  CONFIG.debug ??= {};
+  CONFIG.debug["pentaryn-ties"] = true;
+  try {
+    assert.equal(log.swallow("preview: advantageStacking unreadable", boom, "raw"), "raw");
+    assert.deepEqual(lines, ["pentaryn-ties | preview: advantageStacking unreadable"]);
+  } finally {
+    delete CONFIG.debug["pentaryn-ties"];
+  }
+});

@@ -479,11 +479,8 @@ export class AttributeReview extends ApplicationV2 {
       if (search) {
         search.focus({ preventScroll: true });
         const pos = caret ?? search.value.length;
-        try {
-          search.setSelectionRange(pos, pos);
-        } catch {
-          /* type=search may refuse a range in some engines */
-        }
+        // type=search may refuse a range in some engines
+        log.swallow("review: caret not restored", () => search.setSelectionRange(pos, pos), undefined);
       }
     }
   }

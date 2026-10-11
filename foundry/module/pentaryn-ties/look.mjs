@@ -156,8 +156,7 @@ export class LookWindow extends ApplicationV2 {
   shownGroups() {
     const { base, kind, registry, carried, facts } = subjectFacts(this.subject);
     const granted = readGranted(this.character.getFlag(MODULE, GRANTED_FLAG));
-    let beliefs = {};
-    try { beliefs = base?.getFlag(MODULE, BELIEFS_FLAG) ?? {}; } catch { /* unborn */ }
+    const beliefs = log.swallow("look: beliefs unreadable", () => base?.getFlag(MODULE, BELIEFS_FLAG) ?? {}, {});
     const visible = new Set(visibleAttributesFor({ carried, registry, beliefs, characterId: this.character.id, isGM: false }));
 
     const groups = new Map(); // group → cards, insertion order = factOrder order
@@ -276,8 +275,7 @@ export class LookWindow extends ApplicationV2 {
         if (flags) this.queueLive();
         return;
       }
-      let kindId = null;
-      try { kindId = kindActorOf(this.base)?.id ?? null; } catch { /* unborn */ }
+      const kindId = log.swallow("look: kind pointer unreadable", () => kindActorOf(this.base)?.id ?? null, null);
       if (actor.id === this.base.id || (kindId && actor.id === kindId)) {
         if (flags || keys.some(k => k === "name" || k === "img")) this.queueLive();
       }

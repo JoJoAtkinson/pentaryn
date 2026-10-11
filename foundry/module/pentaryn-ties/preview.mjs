@@ -203,10 +203,8 @@ export class InspectPreview extends ApplicationV2 {
     const know = pc ? foundry.utils.deepClone(knowledge()) : {};
     const beliefs = {};
     const rollerCarries = pc ? attributeIdsOf(pc, kindActorOf) : [];
-    let holdDef = false;
-    try { holdDef = game.settings.get(MODULE, "holdDefault") === true; } catch { /* unborn */ }
-    let rule = "raw";
-    try { rule = game.settings.get(MODULE, "advantageStacking") === "net" ? "net" : "raw"; } catch { /* unborn */ }
+    const holdDef = log.swallow("preview: holdDefault unreadable", () => game.settings.get(MODULE, "holdDefault") === true, false);
+    const rule = log.swallow("preview: advantageStacking unreadable", () => (game.settings.get(MODULE, "advantageStacking") === "net" ? "net" : "raw"), "raw");
 
     const conceal = id => concealFor(readFlag(subject, MODULE, CONCEAL_FLAG), id);
     const reach = new Map(); // attr id → chance of having identified it
@@ -721,8 +719,7 @@ export class InspectPreview extends ApplicationV2 {
     const onActor = (actor, changes = {}) => {
       const subjectId = this.subject?.id;
       if (!subjectId || !actor) return;
-      let kindId = null;
-      try { kindId = kindActorOf(game.actors.get(subjectId) ?? this.subject)?.id ?? null; } catch { /* unborn */ }
+      const kindId = log.swallow("preview: kind pointer unreadable", () => kindActorOf(game.actors.get(subjectId) ?? this.subject)?.id ?? null, null);
       if (actor.id === subjectId || (kindId && actor.id === kindId)) {
         const keys = Object.keys(foundry.utils.flattenObject(changes ?? {}));
         return this.queueLive(!keys.every(k => LEDGER_ONLY.test(k)));
