@@ -436,7 +436,8 @@ export function install(reg, ctx) {
   // Light activity at once, from the GM (usability Area 6 re-run, W11: it had no flame button
   // until setupLight() was run again).
   on("createItem", (item) => {
-    if (!isActiveGM()) return;
+    // a compendium torch is left as it is (-38): it gets the activity when it lands in the world
+    if (!isActiveGM() || item?.pack) return;
     ensureTorchActivity(item).catch(e => warn("torch on create", e));
   });
 

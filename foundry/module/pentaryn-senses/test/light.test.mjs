@@ -405,7 +405,8 @@ test("createItem (k, -38): a new Torch gets the Light activity once, from the ac
   rows.throwingUpdate = await effects(() => F.fire("createItem", bad));
   rows.console = out;
   pinJSON("light-torch-create", rows, import.meta.url);
-  assert.equal(rows.packTorch.calls.filter(c => c.op === "update").length, 1, "KNOWN -38: pack torches are written");
+  // [declared S-11, finding -38] flipped from "KNOWN -38: pack torches are written" (1 update)
+  assert.equal(rows.packTorch.calls.filter(c => c.op === "update").length, 0, "a compendium torch is left alone");
 });
 
 test("GM hooks: deleteItem / createToken / deleteToken (with and without a teleport replacement) / deleteActor", async () => {
