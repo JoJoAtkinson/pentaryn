@@ -183,3 +183,13 @@ test("PT3-3: Talo's hand-made revert item keeps working and no Return is synthes
   assert.equal(back.length, 1, "exactly one Return");
   assert.equal(back[0].item?.id, "returnNormal001", "it is the item's own button");
 });
+
+/* ── PT3-4 ───────────────────────────────────────────────────────────────── */
+
+test("PT3-4: a carried Starry Form never shows on the Bonus bar in a beast form", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const { wolf } = world();
+  const panel = bonusPanel(wolf, ["starryForm00001"]);
+  F.fire("renderActionPanelArgonComponent", panel, panel.element, wolf);
+  assert.equal(panel._buttons.filter(b => b.item?.id === "starryForm00001").length, 0);
+});

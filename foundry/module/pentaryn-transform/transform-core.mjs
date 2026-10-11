@@ -55,6 +55,11 @@ const consumptionTargets = a => a?.consumption?.targets ?? [];
 
 /* ── shaping the form ────────────────────────────────────────────────────── */
 
+/** The Circle of the Stars "Starry Form" feature: by identifier, else by name (starry.mjs starryItem). */
+export function isStarryFormData(item) {
+  return item?.system?.identifier === "starry-form" || item?.name === "Starry Form";
+}
+
 /**
  * Why an item of the host should not come along into the Wild Shape form, or null to keep it.
  *
@@ -68,7 +73,7 @@ const consumptionTargets = a => a?.consumption?.targets ?? [];
  *
  * @param {object} item
  * @param {{ wildShapeIds: Set<string>|string[], keepWildShape?: boolean }} ctx
- * @returns {"wildshape"|"spends-wildshape"|"spends-slots"|"species"|"no-spellcasting"|null}
+ * @returns {"wildshape"|"spends-wildshape"|"starry-form"|"spends-slots"|"species"|"no-spellcasting"|null}
  */
 export function stripReason(item, { wildShapeIds = [], keepWildShape = false } = {}) {
   if (item?.type !== "feat") return null;
@@ -81,6 +86,10 @@ export function stripReason(item, { wildShapeIds = [], keepWildShape = false } =
       if (t?.type === "itemUses" && t.target && ws.has(t.target)) return "spends-wildshape";
     }
   }
+  // Starry Form is taken "rather than shape-shifting" (PHB): never in a beast form, whatever its
+  // "Consume Wild Shape" target says (PT3-4 — a target that is not this druid's Wild Shape id let
+  // it through, a raw HUD button whose consume could not find its item).
+  if (isStarryFormData(item)) return "starry-form";
   for (const a of acts) {
     if (consumptionTargets(a).some(t => t?.type === "spellSlots")) return "spends-slots";
   }

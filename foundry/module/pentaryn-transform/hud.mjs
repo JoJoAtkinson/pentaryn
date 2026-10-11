@@ -503,7 +503,8 @@ function composeBonusBar(panel, actor) {
   const revertItems = actor.items.filter(isRevertItem);
   if (!hasWildShape && !revertItems.length) return;
   const ownWs = actor.items.find(i => activitiesOf(i).some(isWildShapeActivity));
-  const starry = shifted ? null : starryItem(actor);
+  // Shifted, planBonusBar drops a carried Starry Form's button instead of replacing it (PT3-4).
+  const starry = starryItem(actor);
 
   const plan = planBonusBar(panel._buttons.map(b => describe(b, C)), {
     wildShapeId: ownWs?.id ?? null,

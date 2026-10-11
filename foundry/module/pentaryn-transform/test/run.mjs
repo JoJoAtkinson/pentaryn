@@ -444,6 +444,20 @@ check("151 shifted with Talo's revert item → that item, no synthesized duplica
 check("152 normal form never synthesizes a Return",
   planBonusBar([{ kind: "weaponSet" }], { revertIds: [], shifted: false, hasWildShape: true }).some(p => p.revert), false);
 
+// PT3-4: Starry Form never goes into a beast form, even when its "Consume Wild Shape" target is not
+// the druid's Wild Shape id (a compendium id, a stale id): the PHB takes it "rather than shape-shifting".
+const starryOddTarget = feat("starryOddTgt001", "Starry Form", "class", {
+  ...act("so1", "utility", "bonus", [{ type: "itemUses", target: "compendiumWSid01" }]),
+  ...act("so2", "attack", "bonus")
+}, { system: { identifier: "starry-form" } });
+check("153 Starry Form stripped by identity when its target is not this druid's Wild Shape", stripReason(starryOddTarget, ctx), "starry-form");
+check("154 Starry Form stripped by name without an identifier",
+  stripReason(feat("starryNoIdent01", "Starry Form", "class", act("sn1", "utility", "bonus")), ctx), "starry-form");
+check("155 keepInForm still wins over Starry Form", stripReason(feat("starryKept00001", "Starry Form", "class",
+  act("sk1", "utility", "bonus"), { flags: { [MODULE_ID]: { keepInForm: true } }, system: { identifier: "starry-form" } }), ctx), null);
+check("156 a beast feature named like it is not stripped (not the host's)",
+  stripForForm([starryOddTarget], { wildShapeIds: [WS], hostItemIds: [] }).stripped, []);
+
 /* ── report ───────────────────────────────────────────────────────────────── */
 
 if (failures.length) {
