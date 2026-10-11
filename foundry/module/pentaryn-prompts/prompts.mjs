@@ -13,9 +13,14 @@ import { PromptDialog } from "./dialog.mjs";
 import * as Typeahead from "./typeahead.mjs";
 import { sceneModel, seesCount } from "./model.mjs";
 import { gather, crops, list, show } from "./gather.mjs";
+import { wrapMethod } from "./lib/patch.mjs";
+import { libWrapperRoute } from "./lib/patch-libwrapper.mjs";
+import { makeLog } from "./lib/log.mjs";
 import { registerSettings, registerKeybindings, keybindingRows, setting, settingStrict, manifests } from "./settings.mjs";
 import { replace, replaceMany, SPEC_DIR } from "./replace.mjs";
 
+
+const log = makeLog(MODULE);
 
 /* ── keybindings (rows in settings.mjs) ──────────────────────────────────── */
 
@@ -112,38 +117,34 @@ function onCreateToken(doc, options, userId) {
 
 /* ── reopening: double-click, HUD ───────────────────────────────────────── */
 
-let clickPatchedWith = null;
+let clickPatch = null;
 
+/**
+ * The configured Token class (dnd5e's Token5e today), so a subclass override cannot step around us.
+ * libWrapper first (MIXED), a direct wrap when it is absent or refuses; the marker makes a hot
+ * re-import a no-op instead of a second wrap (adjustments row prompts-token-dblclick).
+ */
 function patchDoubleClick() {
-  // the configured class (dnd5e's Token5e today), so a subclass override cannot step around us
-  const path = "CONFIG.Token.objectClass.prototype._onClickLeft2";
+  const proto = (CONFIG.Token.objectClass ?? foundry.canvas.placeables.Token).prototype;
+  const viaLW = !!(game.modules.get("lib-wrapper")?.active && globalThis.libWrapper);
+  if (!viaLW && typeof proto._onClickLeft2 !== "function") {
+    log.warn("Token#_onClickLeft2 not found; double-click will open the sheet");
+    return (clickPatch = null);
+  }
   const intercept = token => {
     if (!game.user?.isGM || !isPromptToken(token.document)) return false;
     PromptDialog.open(token.document);
     return true;
   };
-  if (game.modules.get("lib-wrapper")?.active && globalThis.libWrapper) {
-    try {
-      globalThis.libWrapper.register(MODULE, path, function (wrapped, event) {
-        if (intercept(this)) return;
-        return wrapped(event);
-      }, "MIXED");
-      return (clickPatchedWith = "libWrapper");
-    } catch (err) {
-      console.warn(`${MODULE} | libWrapper registration failed, wrapping by hand`, err);
-    }
-  }
-  const proto = (CONFIG.Token.objectClass ?? foundry.canvas.placeables.Token).prototype;
-  const original = proto._onClickLeft2;
-  if (typeof original !== "function") {
-    console.warn(`${MODULE} | Token#_onClickLeft2 not found; double-click will open the sheet`);
-    return (clickPatchedWith = null);
-  }
-  proto._onClickLeft2 = function (event) {
+  clickPatch = wrapMethod(MODULE, {
+    target: proto, name: "_onClickLeft2", label: "Token#_onClickLeft2",
+    path: "CONFIG.Token.objectClass.prototype._onClickLeft2", type: "MIXED",
+    marker: "__pentarynPromptsClick", adjustments: "prompts-token-dblclick"
+  }, function (wrapped, event) {
     if (intercept(this)) return;
-    return original.call(this, event);
-  };
-  return (clickPatchedWith = "direct");
+    return wrapped(event);
+  }, { via: libWrapperRoute({ log }), log });
+  return clickPatch;
 }
 
 function onRenderTokenHUD(app, element) {
@@ -305,7 +306,7 @@ Hooks.once("ready", async () => {
         // the world's party for encounter budgets; blank = none, and a gather says so (never guess one)
         party: setting("party", "none set") || "none set",
         specDir: `${SPEC_DIR}/ (under the Foundry Data dir; replaceMany({specFile: "${SPEC_DIR}/<name>.json"}))`,
-        doubleClick: clickPatchedWith, markers: SIZE_KEYS.map(k => [k, markerActor(k)?.id ?? null])
+        doubleClick: clickPatch?.via ?? null, markers: SIZE_KEYS.map(k => [k, markerActor(k)?.id ?? null])
       }),
       version: VERSION
     };
