@@ -42,6 +42,7 @@ Where this one and `foundry-vtt.md` overlap — the actors import pipeline and i
 | Boot BOSS (the alt) from the Mac's latest world | `make vtt-up` on BOSS → Enter at the boot question (§3). `FROM=latest` without asking, `FROM=local` to keep BOSS's own |
 | Keep the local world when the cloud is newer | `k` at the boot question (remembered until something newer appears), or `make vtt-up FROM=local` |
 | See what's in the cloud store | `make foundry-cloud` |
+| See which modules are in the cloud, and their fingerprints | `make foundry-bundles` · `make foundry-bundles-gc` lists what the sweep would delete (`YES=1` deletes) |
 | Install or update a module | Setup screen (resolves dependencies) **or** unzip the release into `Data/modules/<id>/` and restart — §5. Never from inside a running world |
 | Push a local module to Foundry | `make foundry-<short>-sync` (e.g. `make foundry-walls-sync`) · the importer only through `make foundry-sync WORLD=<world>` (it also stages `actors.json` — `make foundry-clean` after). The copy is built in `FoundryVTT/.pentaryn-sync/` and swapped in whole, so a failed copy leaves the old install serving. Which build is live: `Data/modules/<id>/.pentaryn-sync.json` (module, version, digest, git, dirty, synced_at — a dotfile, not served); every install also appends a line to `foundry/logs/ops-YYYY-MM.jsonl` |
 | Import actors | [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) Stages 1–2, then `make foundry-import` (🔴 read §1's red box first — it stages into the wrong world today) |
@@ -172,7 +173,7 @@ The order is not arbitrary. Each step needs the previous one's state:
 
 | # | Step | Why here |
 | - | ---- | -------- |
-| 0 | `foundry-boot` | **The boot choice** (§3): when the cloud's newest snapshot — from either machine — is newer than what this world is based on, say so and offer it (Enter = take it). First, so a restore happens while nothing is running, and so the backup after it digest-skips instead of uploading 3 GB that was just replaced. No terminal → never restores, one notice line. `FROM=latest\|local\|<name>` decides without asking |
+| 0 | `foundry-boot` | **The boot choice** (§3): when the cloud's newest snapshot — from either machine — is newer than what this world is based on, say so and offer it (Enter = take it). First, so a restore happens while nothing is running, and so the backup after it digest-skips instead of uploading the world that was just replaced. No terminal → never restores, one notice line. `FROM=latest\|local\|<name>` decides without asking |
 | 1 | `foundry-backup-safe` | A LevelDB world copies consistently **only while stopped**. Snapshotting on *start* as well as stop is what catches a crash or force-quit that skipped the shutdown hook. `-safe` = `--if-stopped`: skips quietly if the server is already up, so `make vtt-up` on a live server doesn't abort before starting the tunnel; a cloud that is down (or a failed upload) is a warning naming any tar left on disk, exit 0 — `vtt-down` tries again |
 | 2 | `foundry-assets-safe` | New pack folders are on disk before anyone asks for them. A soft constraint — Foundry serves `Data/` per-request, so a later unpack would still be served — but unpacking while the server is down is free and cannot race. `-safe` = `--if-reachable`: a cloud that is down is a warning, exit 0; a badly named or edited pack still stops the start |
 | 3 | `foundry-up` | `host.start()` (`open -a` on the Mac), then polls `localhost:30000` for 40 s. The origin must answer before anything points at it |
@@ -286,8 +287,10 @@ for the Foundry client. Security review: §6.
 > Source: [`scripts/foundry/cloud.py`](../../scripts/foundry/cloud.py) (policy — read its module
 > docstring), [`storage.py`](../../scripts/foundry/storage.py) (rclone or folder),
 > [`host.py`](../../scripts/foundry/host.py) (which machine, which role),
-> [`boot.py`](../../scripts/foundry/boot.py) (the boot choice). Design history:
-> [`../plans/rclone-two-hosts-2026-10.md`](../plans/rclone-two-hosts-2026-10.md).
+> [`boot.py`](../../scripts/foundry/boot.py) (the boot choice),
+> [`bundles.py`](../../scripts/foundry/bundles.py) (module and system bundles). Design history:
+> [`../plans/rclone-two-hosts-2026-10.md`](../plans/rclone-two-hosts-2026-10.md),
+> [`../plans/module-bundles-2026-10.md`](../plans/module-bundles-2026-10.md).
 
 **One direction each way, and the two never touch the same files.** That single rule is the whole
 design; everything below follows from it.
@@ -306,19 +309,31 @@ OneDrive/DnD/foundry/
                       world-<UTC stamp>-fvtt<ver>-<host>.tar.gz          (2026-10-11 on)
                       world-<stamp>[-fvtt<ver>].tar.gz                   untagged, older — nobody's
                       world-…-<host>.safety.tar.gz                       what a restore replaced
+                      <name>.parent                                      lineage + bundle manifest (tiny)
                       *.partial                                          an upload in progress, never a snapshot
   major-release/    automatic, never pruned — the last snapshot each host took on a Foundry generation it left
-  system-backup/    automatic, shared      ← one tar per system version, last 3 kept
+  bundles/          automatic, shared      ← module@<id>@<version>@<fp>.tar.gz, system@…; one per
+                                             content fingerprint; deleted only when no retained
+                                             snapshot references it and it is older than 7 days
+  system-backup/    legacy — no longer written (systems are bundles); delete by hand
 ```
+
+A world snapshot holds `Data/worlds` + `Config` only (~45 MB). Every folder under `Data/modules`
+and `Data/systems` travels as a **bundle**, uploaded once per content fingerprint and shared by
+both machines; the snapshot's sidecar (and its tar's first member, `pentaryn-snapshot.json`) lists
+the bundle each module and system was at. Snapshots from before bundles (untagged, and the first
+`-mac` one) are **full** — worlds + Config + modules in one tar — and restore as they always did.
 
 | Target | Direction | What it does |
 | ------ | --------- | ------------ |
 | `make foundry-boot` | ⬇ maybe | **The boot choice** (below). Part of `vtt-up` and `foundry-up`; `FROM=latest\|local\|<name>` decides without asking |
 | `make foundry-assets` | ⬇ down | Unpacks any new `<kind>-<nn>.zip` into `Data/assets/<kind>/<kind>-<nn>/`. Tracked in `foundry/assets-manifest.json` (sha256, bytes, mtime); a zip whose size and mtime match is skipped **without a download** |
-| `make foundry-backup` | ⬆ up | Tars `Data/worlds` + `Config` + `Data/modules` (**~2.5–3.2 GB** — `Data/modules` is ~2.7 GB of premium map art) in `FOUNDRY_DATA/.pentaryn-tmp/`, uploads it as `<name>.partial`, renames, size-checks. Keeps **10 per host** (plus that host's last 3 restore `.safety` copies, counted apart); a snapshot within 5 days of this host's newest **replaces** it; skips when the local tree digest is unchanged |
+| `make foundry-backup` | ⬆ up | Tars `Data/worlds` + `Config` (**~45 MB**) in `FOUNDRY_DATA/.pentaryn-tmp/`, with the bundle manifest as its first member and in the `.parent` sidecar. Uploads any module/system bundle the cloud lacks **first** (fingerprint = a content hash that ignores LevelDB housekeeping, so a launch changes nothing), then the sidecar, then the world tar (as `<name>.partial`, renamed, size-checked), then checks every bundle it names is still there. Keeps **10 per host** (plus that host's last 3 restore `.safety` copies, counted apart); a snapshot within 5 days of this host's newest **replaces** it; skips when the world tree and the manifest are unchanged (re-uploading any bundle deleted by hand). A backup that uploaded ends with the bundle sweep |
 | `make foundry-backup-safe` | ⬆ up | Same, `--if-stopped` — the lifecycle variant |
-| `make foundry-restore` | manual | No `SNAP` → lists every host's snapshots (name, host, UTC time, version, size). `SNAP=<name>` (any host's, or `major-release/`) → download, **archive current state first**, clear, extract; demands you type `restore` |
-| `make foundry-cloud` | — | Status: storage (rclone/folder + root), host and role, what this world is based on, newest per host, untagged count |
+| `make foundry-restore` | manual | No `SNAP` → lists every host's snapshots (name, host, UTC time, version, size, `bundled`/`full`). `SNAP=<name>` (any host's, or `major-release/`) → download the world tar and **only the bundles this machine lacks**, **archive current state first**, replace worlds + Config, swap only the changed modules, remove modules the snapshot does not have (they are in the safety copy; with no local world they are left and listed); demands you type `restore`. A full snapshot clears and extracts worlds, Config and modules, as before |
+| `make foundry-cloud` | — | Status: storage (rclone/folder + root), host and role, what this world is based on, newest per host, untagged count, bundles (in the cloud, unreferenced, local ones not yet uploaded) |
+| `make foundry-bundles` | — | Every local module and system with its version, fingerprint, size and whether its bundle is in the cloud; then the cloud bundles no snapshot references |
+| `make foundry-bundles-gc` | manual | The sweep every uploading backup runs, by hand: lists the bundles no retained snapshot references that are older than 7 days. A dry run; `YES=1` deletes them |
 | `make foundry-prune-untagged` | manual | Lists the untagged (pre-2026-10-11) snapshots and deletes them **only** on a typed `delete`. Nothing else ever deletes them |
 
 Kinds are fixed: `tokens · maps · tiles · portraits · audio`. Anything else is refused by name.
@@ -332,16 +347,21 @@ world is *based on*:
 ```
   ▸ cloud has a newer world snapshot than this machine's world:
 
-      cloud    world-2026-10-11-030412-fvtt14.369-mac.tar.gz   mac   2026-10-11 03:04 UTC   14.369   3.1 GB
+      cloud    world-2026-10-11-030412-fvtt14.369-mac.tar.gz   mac   2026-10-11 03:04 UTC   14.369   45.2 MB
+      + 3 bundles (1.2 GB) to fetch
       local    based on world-2026-10-09-221500-fvtt14.369-boss.tar.gz   boss   2026-10-09 22:15 UTC
   …
   boot from [latest] or keep local?  (Enter = latest, l/latest, k/local, or a number)  >
 ```
 
-- **Enter** downloads the newest (~3 GB), archives the local world first (as a `.safety` snapshot,
-  unless it is unchanged since a snapshot still in the cloud, or one the restored snapshot's
-  lineage contains), clears, extracts. The machine's own `Config/options.json`
-  (its `dataPath`), `admin.txt` and `license.json` are **kept** across every restore.
+- **Enter** downloads the newest (~45 MB plus the bundles this machine lacks — the first boot on a
+  new machine fetches all of them, ~3.5 GB), archives the local world first (as a `.safety`
+  snapshot, unless it is unchanged since a snapshot still in the cloud, or one the restored
+  snapshot's lineage contains), replaces worlds + Config and swaps in the changed modules. The
+  bundle line reads `+ all N bundles (x) to fetch` on a new machine and `(every bundle is already
+  on this machine)` when only the world moves; a full (legacy) snapshot shows none. The machine's
+  own `Config/options.json` (its `dataPath`), `admin.txt` and `license.json` are **kept** across
+  every restore.
 - **`k`** boots the local world and remembers the answer until a snapshot newer than the one you
   declined appears — by its listing mtime, so if the declined one is later coalesced or pruned
   away, an older snapshot left behind does not ask again.
@@ -385,11 +405,21 @@ Restore `.safety` copies and `major-release/` are never offered as "newer".
 - **Each host prunes, coalesces and promotes only its own snapshots.** The other machine's
   snapshot from yesterday is never replaced by this one. Untagged snapshots belong to nobody.
 - **The digest is local.** Neither host skips a backup because the other uploaded identical bytes;
-  after a restore, this host's next backup digest-skips instead of re-uploading 3 GB.
+  after a restore, this host's next backup digest-skips instead of re-uploading the world.
 - **A `.partial` is never a snapshot.** Uploads land as `<name>.partial` and are renamed when
   complete; one older than 24 h is swept as a crash leftover (younger ones may be the other
   machine mid-upload). A failed upload leaves the tar in `FOUNDRY_DATA/.pentaryn-tmp/` and prints
-  the `rclone copyto` that finishes it. The temp dir needs ~2× a snapshot free; backup checks.
+  the `rclone copyto` that finishes it. The temp dir needs ~2× (the world tar + the bundles it
+  stages or fetches) free; backup and restore check, and name both numbers.
+- **A bundle is deleted only by the mark-and-sweep**, never by name, never younger than 7 days.
+  The mark is every sidecar in `world-backups/` and `major-release/` (safety copies included); a
+  sidecar it cannot read stops the sweep. The uploader re-lists after a snapshot lands and
+  re-uploads anything swept under it.
+- **A full (legacy) snapshot restores exactly as before.** The sidecar says which kind a snapshot
+  is and the tar's first member confirms it; when they disagree the restore refuses before
+  touching anything. A restore whose bundles are not all in the cloud refuses the same way.
+- **Both machines must run the bundle-aware code** before either takes a bundled snapshot: older
+  code would clear `Data/modules` and extract a tar that has none.
 - **Packs are append-only.** Never edit a published zip; add `<kind>-<nn+1>.zip`. A zip whose hash
   changed after extraction is **refused with a message**, not silently re-applied.
 - **One folder per pack**, so cross-pack collisions are structurally impossible.
@@ -447,7 +477,7 @@ is done, the Mac switches to rclone on its own (`make foundry-cloud` shows which
    - type of connection: **OneDrive Personal or Business** · pick the one drive it lists
    - "Drive OK?" **`y`** · keep this remote: **`y`** · `q` to quit
 3. Check it reaches the folder: `rclone lsd onedrive:DnD/foundry` should list `assets`,
-   `major-release`, `system-backup`, `world-backups`.
+   `bundles`, `major-release`, `system-backup`, `world-backups`.
 4. `make foundry-cloud` → the first line reads `cloud rclone onedrive:DnD/foundry`.
 
 rclone stores its token in its own config (`rclone config file` says where). **Never** copy that
@@ -894,7 +924,7 @@ has three levels. Anything that walks scenes should read `levels[]`, not `backgr
 | **Closing Chrome kills the GM bridge** | `eval-js` and the other `foundry` tools go dead. Reopen Chrome, then `make vtt-login WORLD=<id>` |
 | **A player test writes real knowledge** | An inspect from a test login rolls on the GM client and writes `beliefs`/`granted` flags plus chat cards. Snapshot first; `unsetFlag` and delete the messages after |
 | **`~/Library/CloudStorage` reads can hang 30 s** | The OneDrive File Provider daemon, not the path. Never read assets through it at runtime. rclone (§3) avoids the daemon entirely |
-| **A 3 GB snapshot needs ~6 GB free locally** | The tar is built in `FOUNDRY_DATA/.pentaryn-tmp/` before upload; a restore downloads there first. Backup checks and refuses with the numbers |
+| **The first bundled backup, or a new machine's first boot, needs ~7 GB free locally** | Every bundle (~3.5 GB) is staged or downloaded in `FOUNDRY_DATA/.pentaryn-tmp/` once; after that it is ~45 MB + the modules that changed. Backup and restore check and refuse with the numbers |
 
 ---
 
