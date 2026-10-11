@@ -9,7 +9,7 @@
  *      canvas layers are rebuilt on every scene change, so an instance patch would fall off the
  *      first time the GM changed scene. Adjustments row `pings-core-ping-handle`.
  *   2. core's `userActivity` socket event — pings from clients on scenes the GM is *not* looking
- *      at. Adjustments row `core-user-activity-socket`.
+ *      at. Adjustments row `core-pings-user-activity-socket`.
  *
  * The two overlap, so a record repeating the last one (user, scene, rounded point) inside
  * DEDUPE_MS is dropped. Records go to an in-memory buffer; a burst costs one world-setting write,
