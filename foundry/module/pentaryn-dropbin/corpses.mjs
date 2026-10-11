@@ -143,7 +143,7 @@ function queue(actor) {
   pending.set(key, setTimeout(() => { pending.delete(key); sync(actor); }, 150));
 }
 
-Hooks.on("updateActor", (actor, changes) => {
+function onActorHp(actor, changes) {
   if (!foundry.utils.hasProperty(changes, "system.attributes.hp")) return;
   // Healing a corpse above 0 HP is a revival: the Dead mark we put on it must go too, or the
   // "dead status counts as dead" rule keeps it lootable forever (found at the table: 65 HP and
@@ -155,12 +155,11 @@ Hooks.on("updateActor", (actor, changes) => {
     }
   }
   queue(actor);
-});
-for (const h of ["createActiveEffect", "deleteActiveEffect", "updateActiveEffect"]) {
-  Hooks.on(h, effect => {
-    if (effect.flags?.[MODULE]?.lootable) return; // our own eye marker; not a life-or-death change
-    if (effect.parent instanceof Actor) queue(effect.parent);
-  });
+}
+
+function onEffect(effect) {
+  if (effect.flags?.[MODULE]?.lootable) return; // our own eye marker; not a life-or-death change
+  if (effect.parent instanceof Actor) queue(effect.parent);
 }
 
 /* -------------------------------------------- */
@@ -242,15 +241,6 @@ function paintEyesOf(actor) {
   for (const doc of tokensOf(actor)) if (doc.parent === canvas.scene) paintEye(doc.object);
 }
 
-Hooks.on("drawToken", paintEye);
-Hooks.on("refreshToken", paintEye);
-Hooks.on("canvasReady", paintAllEyes);
-Hooks.on("updateToken", doc => { if (doc.parent === canvas?.scene) paintEye(doc.object); });
-// Taking items out of a corpse changes its synthetic actor's items/currency, not the token.
-Hooks.on("updateActor", paintEyesOf);
-for (const h of ["createItem", "updateItem", "deleteItem"]) {
-  Hooks.on(h, item => { if (item.parent instanceof Actor) paintEyesOf(item.parent); });
-}
 
 /**
  * Migration, active GM, once per load: corpses made before the eye was drawn carry a "Lootable"
@@ -283,7 +273,6 @@ async function migrateLegacyEyes() {
   if (eyes || deads) console.log(`${MODULE} | corpses: removed ${eyes} old Lootable effect(s), Dead made the overlay on ${deads}`);
 }
 
-Hooks.once("ready", () => { migrateLegacyEyes(); });
 
 /**
  * GM escape hatches on a corpse's token HUD. Once a token is a pile, Item Piles takes over the
@@ -299,7 +288,7 @@ async function revive(tokenDoc) {
   await sync(a);
 }
 
-Hooks.on("renderTokenHUD", (app, element) => {
+function addHudButtons(app, element) {
   if (!game.user.isGM) return;
   const tokenDoc = app.object?.document;
   if (!tokenDoc || !ourCorpse(tokenDoc)) return;
@@ -317,6 +306,34 @@ Hooks.on("renderTokenHUD", (app, element) => {
   };
   mk("pd-corpse-revive", "fa-heart-pulse", "Revive (1 HP): no longer lootable", async () => { await revive(tokenDoc); app.close(); });
   mk("pd-corpse-sheet", "fa-user", "Open character sheet (GM)", () => tokenDoc.actor?.sheet.render(true, { focus: true, bypassItemPiles: true }));
-});
+}
+
+/* -------------------------------------------- */
+/*  Lifecycle                                   */
+/* -------------------------------------------- */
+
+/** Registration order (golden/hooks.json): conversion, eye painting, migration, the GM HUD. */
+export function install(reg, ctx) {
+  const on = (name, fn, label) => reg.on(name, fn, { guard: false, label });
+  on("updateActor", onActorHp, "corpse: hp");
+  for (const h of ["createActiveEffect", "deleteActiveEffect", "updateActiveEffect"]) on(h, onEffect, `corpse: ${h}`);
+  on("drawToken", paintEye, "eye: draw");
+  on("refreshToken", paintEye, "eye: refresh");               // hot: paints only our corpses, no world walk
+  on("canvasReady", paintAllEyes, "eye: canvas");
+  on("updateToken", doc => { if (doc.parent === canvas?.scene) paintEye(doc.object); }, "eye: token");
+  // Taking items out of a corpse changes its synthetic actor's items/currency, not the token.
+  on("updateActor", paintEyesOf, "eye: actor");
+  for (const h of ["createItem", "updateItem", "deleteItem"]) {
+    on(h, item => { if (item.parent instanceof Actor) paintEyesOf(item.parent); }, `eye: ${h}`);
+  }
+  ctx.onReady(() => { migrateLegacyEyes(); }, "corpse eye migration");
+  on("renderTokenHUD", addHudButtons, "corpse HUD");
+}
+
+/** Cancel the pending debounced syncs. */
+export function uninstall() {
+  for (const t of pending.values()) clearTimeout(t);
+  pending.clear();
+}
 
 export const corpses = { sync, toCorpse, fromCorpse, isDead, revive, paintEye, paintAllEyes, migrateLegacyEyes };

@@ -16,7 +16,7 @@
  *
  * Lives in dropbin because dropbin already owns our Item Piles dependency. Registered in
  * foundry/adjustments.yml as `itempiles-rarity-i18n`. Retire it (delete this file and its
- * import) once an itempilesdnd5e release reads DND5E.ITEM.Rarity.* itself.
+ * entry in dropbin.mjs) once an itempilesdnd5e release reads DND5E.ITEM.Rarity.* itself.
  *
  * `fillMissingKeys` is pure (no Foundry globals) so `node test/run.mjs` can prove it.
  */
@@ -77,10 +77,13 @@ export function fillMissingKeys(translations, fallback = {}) {
   return added;
 }
 
-/** Wire the shim. Called once from dropbin.mjs at load (i18nInit fires after init). */
-export function installI18nShim() {
-  Hooks.once("i18nInit", () => {
+/** Wire the shim at load (i18nInit fires after init). */
+export function install(reg) {
+  reg.once("i18nInit", () => {
     const added = fillMissingKeys(game.i18n.translations, game.i18n._fallback);
     if (added.length) console.log(`${MODULE} | Item Piles i18n shim added ${added.join(", ")}`);
-  });
+  }, { guard: false, label: "i18n shim" });
 }
+
+/** Nothing to undo: keys added to the translations stay until the next load. */
+export function uninstall() {}

@@ -67,7 +67,7 @@ function paint(app, btn, footer) {
   btn.dataset.tooltip = s.reason ? t(s.reason) : game.i18n.format("PENTARYN_DROPBIN.lootAll.tip", { name: s.recipient?.name ?? "" });
 }
 
-function install(app) {
+function addButton(app) {
   try {
     if (!app?.actor || !itemPilesApi()) return false;
     const footer = footerOf(app);
@@ -130,17 +130,30 @@ function scheduleRefresh() {
 
 /** The Svelte footer may mount a frame after the render hook; retry briefly. */
 function installSoon(app, tries = 20) {
-  if (install(app) || tries <= 0) return;
+  if (addButton(app) || tries <= 0) return;
   setTimeout(() => installSoon(app, tries - 1), 100);
 }
 
 const isInventoryApp = app => app?.constructor?.name === "ItemPileInventoryApp"
   || app?.options?.classes?.includes?.("item-pile-inventory");
 
-Hooks.on("renderItemPileInventoryApp", app => installSoon(app));
-// Belt and braces: Item Piles' own hook fires as the window is built, before it is in the DOM.
-Hooks.on("item-piles-openInterface", app => { if (isInventoryApp(app)) setTimeout(() => installSoon(app), 0); });
+/** The legacy API object; `loot.install(app)` adds the button to one open window. */
+export const loot = { install: addButton, refreshAll, recipientFor };
 
-for (const h of ["updateActor", "createItem", "updateItem", "deleteItem", "updateToken"]) Hooks.on(h, scheduleRefresh);
+/** Registration order (golden/hooks.json): the two window hooks, then the refresh triggers. */
+export function install(reg) {
+  reg.on("renderItemPileInventoryApp", app => installSoon(app), { guard: false, label: "loot: render" });
+  // Belt and braces: Item Piles' own hook fires as the window is built, before it is in the DOM.
+  reg.on("item-piles-openInterface", app => { if (isInventoryApp(app)) setTimeout(() => installSoon(app), 0); },
+    { guard: false, label: "loot: open" });
+  for (const h of ["updateActor", "createItem", "updateItem", "deleteItem", "updateToken"]) {
+    reg.on(h, scheduleRefresh, { guard: false, label: `loot: ${h}` });
+  }
+}
 
-export const loot = { install, refreshAll, recipientFor };
+/** Forget tracked buttons and a queued refresh. */
+export function uninstall() {
+  live.clear();
+  clearTimeout(queued);
+  queued = 0;
+}
