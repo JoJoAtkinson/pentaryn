@@ -5,11 +5,11 @@
  * core's lightUpdate; this file decides when to run it and writes the result.
  *
  * Who writes: the active GM's client only (isActiveGM, no fallback: lights wait until a GM
- * connects). Every change is queued per scene and flushed 200 ms later in one
- * updateEmbeddedDocuments per scene.
+ * connects). Every change is queued per scene and flushed at most 200 ms after the first one, in
+ * one updateEmbeddedDocuments per scene.
  */
 
-import { LIGHT_KEYS, isPlayerCreature, lightUpdate } from "./creatures-core.mjs";
+import { LIGHT_KEYS, isPlayerCreature, lightUpdate, makeCoalescer } from "./creatures-core.mjs";
 import { setting } from "./settings.mjs";
 import { summarize } from "./tokens-adapter.mjs";
 import { isActiveGM } from "./lib/election.mjs";
@@ -18,15 +18,24 @@ import { isActiveGM } from "./lib/election.mjs";
 let log = null;
 
 const queued = new Map();   // sceneId -> Set<tokenId> | "all"
-let flushTimer = null;
+/**
+ * One flush at most 200 ms after the first queued change, never pushed back by later ones: other
+ * modules write token flags constantly in combat, and a debounce let that traffic postpone a
+ * summon's light indefinitely (transform-creatures-26). Everything queued in the window flushes
+ * together. The timers are read at call time (tests mock them).
+ */
+const flusher = makeCoalescer(200, () => flush(), {
+  setTimeout: (fn, ms) => setTimeout(fn, ms),
+  clearTimeout: id => clearTimeout(id),
+  mode: "window",
+});
 
 function queue(scene, tokenId = null) {
   if (!scene || !isActiveGM()) return;
   const cur = queued.get(scene.id);
   if (tokenId === null || cur === "all") queued.set(scene.id, "all");
   else (cur ?? queued.set(scene.id, new Set()).get(scene.id)).add(tokenId);
-  clearTimeout(flushTimer);
-  flushTimer = setTimeout(flush, 200);
+  flusher.arm();
 }
 
 async function flush() {
@@ -93,6 +102,5 @@ export function install(reg, ctx) {
 /** Drop the queue and its timer (the hooks are the registry's to remove). */
 export function uninstall() {
   queued.clear();
-  clearTimeout(flushTimer);
-  flushTimer = null;
+  flusher.cancel();
 }

@@ -11,7 +11,7 @@
 // (game.pentaryn root shapes).
 //
 // KNOWN rows (pinned as they are; each has its target as a todo test at the end):
-//   transform-creatures-26  the queue is a debounce: steady traffic pushes the flush back
+//   transform-creatures-26  FIXED [declared]: the queue flushes 200 ms after the first change, never pushed back
 //   transform-creatures-27  our own light write re-queues a second, no-op pass; no options argument
 //   transform-creatures-31  FIXED [declared]: syncScene(scene, ["id"]) and a bare id narrow the pass
 import { mock, test } from "node:test";
@@ -191,19 +191,25 @@ test("oracle: isCreature and list() agree with the verbatim legacy summarize (fi
   assert.deepEqual(api().list(rook, null), [], "no scene");
 });
 
-test("KNOWN transform-creatures-26: a debounce — queues at 0/50/100/150/190 flush once, at 390", async () => {
+test("transform-creatures-26 [declared]: a fixed window — queues at 0/50/100/150/190 flush once, at 200; a queue at 250 flushes at 450", async () => {
   W.reads.length = 0;
   const imp = W.tok("tImp");
   for (const step of [0, 50, 50, 50, 40]) {
     await tick(step);
     F.fire("updateToken", imp, { flags: {} }, {}, GM);
   }
-  await tick(199);
-  assert.equal(W.passes(), 0, "nothing at 389");
+  await tick(9);
+  assert.equal(W.passes(), 0, "nothing at 199");
   await tick(1);
-  assert.equal(W.passes(), 1, "one pass at 390, for Alpha only");
+  assert.equal(W.passes(), 1, "one pass at 200 (was 390), for Alpha only; the queue at 190 rode along");
+  await tick(50);
+  F.fire("updateToken", imp, { flags: {} }, {}, GM);
+  await tick(199);
+  assert.equal(W.passes(), 1, "nothing at 449");
+  await tick(1);
+  assert.equal(W.passes(), 2, "the second window flushes at 450");
   await tick(1000);
-  assert.equal(W.passes(), 1);
+  assert.equal(W.passes(), 2);
 });
 
 test("updateToken queues only on light, actorId, actorLink, delta, flags", async () => {
@@ -384,5 +390,4 @@ test("controlToken with no strip on the page does nothing", () => {
 });
 
 /* ── the targets of the KNOWN rows (guide §4 and step 7) ─────────────────── */
-test.todo("transform-creatures-26: the light queue is armed once and never pushed back — 0/50/100/150/190 → one pass at 200");
 test.todo("transform-creatures-27: our own light write carries {pentarynCreatures: true}, so the echo pass does not happen");
