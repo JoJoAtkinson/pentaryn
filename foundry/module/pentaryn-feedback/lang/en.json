@@ -1,0 +1,58 @@
+{
+  "PENTARYN_FEEDBACK": {
+    "Setting": {
+      "historySize": {
+        "Name": "Feedback: actions kept per player",
+        "Hint": "How many recent actions (clicks, windows, rolls, token selection) each client keeps to attach to its next bug report. 20 to 1000; applies at once."
+      },
+      "captureConsole": {
+        "Name": "Feedback: attach console errors",
+        "Hint": "Also record console errors and warnings into each report's error list. Needs a reload."
+      }
+    },
+    "Control": {
+      "Title": "Report a bug or idea"
+    },
+    "Dialog": {
+      "Title": "Report a bug or idea",
+      "Intro": "Tell us what happened. Your last few minutes of actions and the game state are attached so it can be reproduced.",
+      "Legend": "What kind of report is it?",
+      "Placeholder": "What were you trying to do, what happened, and what did you expect?",
+      "Submit": "Send report",
+      "Cancel": "Cancel",
+      "Attach": {
+        "Title": "What gets attached",
+        "User": "Your name and role ({name})",
+        "Scene": "The scene you are viewing: {name}",
+        "NoScene": "No scene is being viewed",
+        "Actions": "{n} recent actions",
+        "Errors": "{n} recent errors",
+        "Chat": "{n} of your own chat messages (roll names and totals only)",
+        "Windows": "{n} open windows",
+        "Modules": "{n} module versions",
+        "Never": "Never attached: other players' chat, whisper text, setting values, or anything typed into a form."
+      }
+    },
+    "Category": {
+      "bug": {
+        "Label": "Bug",
+        "Help": "It is just broken. If you don't know which to pick, Bug is a good default."
+      },
+      "defect": {
+        "Label": "Defect",
+        "Help": "It works, just not the way you expect, so it comes across as a bug. If you don't know, pick Bug."
+      },
+      "feature": {
+        "Label": "Feature",
+        "Help": "100% new: it does not exist yet, like a new tab or a new subsystem."
+      }
+    },
+    "Notify": {
+      "Saved": "Thanks — report {id} saved.",
+      "Queued": "No GM is online; your report {id} will be sent when one connects.",
+      "Filed": "{user} filed a {category} report ({id}).",
+      "Failed": "Could not save the report: {reason}",
+      "Dropped": "Your unsent queue was full: the {n} oldest unsent report(s) were dropped."
+    }
+  }
+}

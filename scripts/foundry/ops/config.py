@@ -380,6 +380,13 @@ MODULES = {
             "  game.pentaryn.pings.recent(5)",
         ),
     ),
+    "feedback": ModuleSpec(
+        "pentaryn-feedback",
+        # node-test: feedback-core.mjs (report schema, redaction, status rules) is pure; the glue
+        # suite drives the recorder, the queue/relay delivery and the dialog markup in node.
+        # after_sync comes from module.json flags.pentaryn.afterSync.
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
+    ),
     # The actor pipeline stages this one, not module-sync, so it is not in the CLI's
     # module list — but the static gates are free and it is real code, so it gets them.
     # node-test: test/run.mjs (the blueprint's fixed body) runs the characterisation suites

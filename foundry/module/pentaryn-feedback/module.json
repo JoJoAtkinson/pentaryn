@@ -1,0 +1,60 @@
+{
+  "id": "pentaryn-feedback",
+  "title": "Pentaryn Feedback",
+  "description": "A bug button in the left toolbar: players file a bug, defect or feature request with their recent actions and the live game context attached; the GM stores it as a file the repo's MCP tools read one at a time.",
+  "version": "0.1.0",
+  "compatibility": {
+    "minimum": "14",
+    "verified": "14.369"
+  },
+  "authors": [
+    {
+      "name": "Joseph Atkinson"
+    }
+  ],
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "6.0",
+          "verified": "6.0.6"
+        }
+      }
+    ],
+    "recommends": []
+  },
+  "esmodules": [
+    "feedback.mjs"
+  ],
+  "styles": [
+    "styles/feedback.css"
+  ],
+  "languages": [
+    {
+      "lang": "en",
+      "name": "English",
+      "path": "lang/en.json"
+    }
+  ],
+  "socket": false,
+  "flags": {
+    "pentaryn": {
+      "tier": "full",
+      "namespace": "feedback",
+      "flagScope": "pentaryn-feedback",
+      "cssPrefix": "pfb-",
+      "generation": 14,
+      "afterSync": [
+        "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Feedback', then reload.",
+        "  game.pentaryn.feedback.selftest()          // with a scene open, every check ok",
+        "File one as the GM: the bug button in the token tools (or /bug in chat), Bug selected, hover each category.",
+        "File one as a player in a second browser, then:",
+        "  ls ~/Library/Application\\ Support/FoundryVTT/Data/pentaryn-feedback/<world>/",
+        "  feedback_next   (dnd-scripts MCP, from Claude Code)",
+        "Offline path: GM logs out, a player files one (toast says queued), GM logs back in: the file appears."
+      ]
+    }
+  }
+}

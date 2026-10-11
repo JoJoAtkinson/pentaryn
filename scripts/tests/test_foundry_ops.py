@@ -476,11 +476,18 @@ def test_after_sync_falls_back_to_the_tuple(monkeypatch, tmp_path, manifest):
 
 
 @pytest.mark.repo
-def test_real_after_sync_unchanged_while_no_manifest_carries_it():
-    """No in-house module.json has afterSync yet (Wave 7 moves them), so every spec
-    prints exactly its config tuple."""
+def test_real_after_sync_has_exactly_one_source():
+    """What prints after a sync is module.json flags.pentaryn.afterSync when the module carries
+    it, else the config tuple. A module carrying both (mid-move to module.json) must say the same
+    thing in both; a generated module (pentaryn-feedback) carries only module.json."""
     for name, spec in cfg.MODULES.items():
-        assert spec.after_sync == spec._after_sync, name
+        manifest = cfg._read_json(spec.src / "module.json") or {}
+        lines = ((manifest.get("flags") or {}).get("pentaryn") or {}).get("afterSync")
+        if lines:
+            assert spec.after_sync == tuple(lines), name
+            assert spec._after_sync in ((), tuple(lines)), f"{name}: module.json and the config tuple disagree"
+        else:
+            assert spec.after_sync == spec._after_sync, name
 
 
 def test_kit_is_derived_from_the_lock(monkeypatch, tmp_path):

@@ -1,0 +1,16 @@
+{
+  "contract": "string",
+  "describe": "function",
+  "get": "get",
+  "ingest": "function",
+  "inspect": "inspect",
+  "list": "list",
+  "open": "function",
+  "resolve": "resolve",
+  "selftest": "selftest",
+  "settings": "settings",
+  "submit": "function",
+  "trace": "trace",
+  "uninstall": "uninstall",
+  "version": "string"
+}

@@ -1,0 +1,8 @@
+{
+  "name": "feedback",
+  "order": 90,
+  "title": "PENTARYN_FEEDBACK.Control.Title",
+  "icon": "fa-solid fa-bug",
+  "button": true,
+  "onChange": "function"
+}

@@ -1,0 +1,406 @@
+{
+  "module": "pentaryn-feedback",
+  "namespace": "feedback",
+  "contract": "pentaryn-feedback/api@1",
+  "flagScope": "pentaryn-feedback",
+  "methods": [
+    {
+      "path": "inspect",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "user",
+          "type": "User|id|exact name",
+          "doc": "never a substring"
+        },
+        {
+          "name": "opts",
+          "type": "{ as? }",
+          "optional": true
+        }
+      ],
+      "returns": "{ user, pending, actions, errors }",
+      "gm": false,
+      "writes": false,
+      "query": true,
+      "sideEffects": [],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS",
+        "BAD_ARGS"
+      ],
+      "doc": "Read-only state for one user, plain JSON, depth ≤ 4: pending = report ids waiting on that user's queue (the GM or that user only); actions/errors = this client's recorder rings, only when ref is the calling user."
+    },
+    {
+      "path": "selftest",
+      "params": [],
+      "returns": "{ ok, checks: [{ label, ok, detail }] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "doc": "Live smoke checks after a sync: published, bug button present, recorder installed, console wrap matches the setting."
+    },
+    {
+      "path": "open",
+      "params": [
+        {
+          "name": "opts",
+          "type": "{ category?: 'bug'|'defect'|'feature', text? }",
+          "optional": true
+        }
+      ],
+      "returns": "{ ok: true, open: true }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "doc": "Open the report dialog on this client, optionally pre-filled (what the bug button and /bug do)."
+    },
+    {
+      "path": "submit",
+      "params": [
+        {
+          "name": "draft",
+          "type": "{ category?, text }"
+        },
+        {
+          "name": "opts",
+          "type": "{ dryRun? }",
+          "optional": true
+        }
+      ],
+      "returns": "{ ok: true, id, status: 'filed'|'queued' } | { ok: false, code, reason }",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-feedback.queue"
+      ],
+      "doc": "File a report from this client without the dialog: queues it on the caller's own User flag, then asks the active GM to write it to disk. status 'queued' = no GM answered; it is filed when one connects."
+    },
+    {
+      "path": "ingest",
+      "params": [
+        {
+          "name": "opts",
+          "type": "{ userId, ids? }"
+        }
+      ],
+      "returns": "{ ok: true, filed, refused, done } | { ok: false, code, reason }",
+      "gm": false,
+      "writes": true,
+      "query": true,
+      "relay": true,
+      "sideEffects": [
+        "flags.pentaryn-feedback.queue",
+        "Data/pentaryn-feedback/<worldId>/<id>.json"
+      ],
+      "doc": "Active GM only (any sender may ask): write every report waiting on that user's queue to its file and delete it from the flag. Idempotent — a report already on disk is never overwritten."
+    },
+    {
+      "path": "list",
+      "params": [
+        {
+          "name": "opts",
+          "type": "{ status?: 'open'|'triaged'|'resolved'|'wontfix'|'all', limit? }",
+          "optional": true
+        }
+      ],
+      "returns": "{ reports: [{ id, t, category, status, user, world, text60 }], count }",
+      "gm": true,
+      "writes": false,
+      "query": true,
+      "sideEffects": [],
+      "throws": [
+        "NOT_GM",
+        "BAD_ARGS"
+      ],
+      "doc": "This world's filed reports, oldest first (default status 'open', limit 50). Reads the files through the server."
+    },
+    {
+      "path": "get",
+      "params": [
+        {
+          "name": "opts",
+          "type": "{ id }",
+          "doc": "the full id or a unique prefix"
+        }
+      ],
+      "returns": "the report JSON (schema v1)",
+      "gm": true,
+      "writes": false,
+      "query": true,
+      "sideEffects": [],
+      "throws": [
+        "NOT_GM",
+        "NOT_FOUND",
+        "AMBIGUOUS",
+        "BAD_ARGS"
+      ],
+      "doc": "One filed report from this world, by id or unique prefix."
+    },
+    {
+      "path": "resolve",
+      "params": [
+        {
+          "name": "opts",
+          "type": "{ id, status, note?, force?, dryRun? }"
+        }
+      ],
+      "returns": "{ ok: true, id, status, history } | { ok: false, code, reason }",
+      "gm": true,
+      "writes": true,
+      "query": true,
+      "sideEffects": [
+        "Data/pentaryn-feedback/<worldId>/<id>.json"
+      ],
+      "doc": "Move a report open → triaged → resolved | wontfix and append { t, status, note, by } to its history. Reopening (→ open) or resolved → triaged needs force. The usual path is the repo's feedback_resolve MCP tool."
+    }
+  ],
+  "queries": [
+    "pentaryn-feedback.inspect",
+    "pentaryn-feedback.ingest",
+    "pentaryn-feedback.list",
+    "pentaryn-feedback.get",
+    "pentaryn-feedback.resolve"
+  ],
+  "settings": [
+    {
+      "key": "historySize",
+      "scope": "world",
+      "type": "Number",
+      "default": 200,
+      "doc": "Recent actions each client keeps for its next report. Read on every push (live, no reload); clamped 20..1000."
+    },
+    {
+      "key": "captureConsole",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Record console.error / console.warn lines into the report's error list. The wrap installs at setup, so a change needs a reload."
+    }
+  ],
+  "events": [
+    {
+      "key": "filed",
+      "name": "pentaryn-feedback.filed",
+      "legacyName": null,
+      "pre": false,
+      "args": "(report)"
+    },
+    {
+      "key": "queued",
+      "name": "pentaryn-feedback.queued",
+      "legacyName": null,
+      "pre": false,
+      "args": "(report)"
+    }
+  ],
+  "hooks": [
+    {
+      "name": "canvasReady",
+      "label": "canvasReady: record scene"
+    },
+    {
+      "name": "renderSceneControls",
+      "label": "renderSceneControls: record tool"
+    },
+    {
+      "name": "changeSidebarTab",
+      "label": "changeSidebarTab: record tab"
+    },
+    {
+      "name": "controlToken",
+      "label": "controlToken: record"
+    },
+    {
+      "name": "targetToken",
+      "label": "targetToken: record own"
+    },
+    {
+      "name": "renderApplicationV2",
+      "label": "renderApplicationV2: record window"
+    },
+    {
+      "name": "closeApplicationV2",
+      "label": "closeApplicationV2: record window"
+    },
+    {
+      "name": "renderApplication",
+      "label": "renderApplication: record legacy window"
+    },
+    {
+      "name": "closeApplication",
+      "label": "closeApplication: record legacy window"
+    },
+    {
+      "name": "createActor",
+      "label": "createActor: record own"
+    },
+    {
+      "name": "updateActor",
+      "label": "updateActor: record own"
+    },
+    {
+      "name": "deleteActor",
+      "label": "deleteActor: record own"
+    },
+    {
+      "name": "createItem",
+      "label": "createItem: record own"
+    },
+    {
+      "name": "updateItem",
+      "label": "updateItem: record own"
+    },
+    {
+      "name": "deleteItem",
+      "label": "deleteItem: record own"
+    },
+    {
+      "name": "createToken",
+      "label": "createToken: record own"
+    },
+    {
+      "name": "updateToken",
+      "label": "updateToken: record own"
+    },
+    {
+      "name": "deleteToken",
+      "label": "deleteToken: record own"
+    },
+    {
+      "name": "createCombat",
+      "label": "createCombat: record own"
+    },
+    {
+      "name": "updateCombat",
+      "label": "updateCombat: record own"
+    },
+    {
+      "name": "deleteCombat",
+      "label": "deleteCombat: record own"
+    },
+    {
+      "name": "createCombatant",
+      "label": "createCombatant: record own"
+    },
+    {
+      "name": "updateCombatant",
+      "label": "updateCombatant: record own"
+    },
+    {
+      "name": "deleteCombatant",
+      "label": "deleteCombatant: record own"
+    },
+    {
+      "name": "createActiveEffect",
+      "label": "createActiveEffect: record own"
+    },
+    {
+      "name": "updateActiveEffect",
+      "label": "updateActiveEffect: record own"
+    },
+    {
+      "name": "deleteActiveEffect",
+      "label": "deleteActiveEffect: record own"
+    },
+    {
+      "name": "createScene",
+      "label": "createScene: record own"
+    },
+    {
+      "name": "updateScene",
+      "label": "updateScene: record own"
+    },
+    {
+      "name": "deleteScene",
+      "label": "deleteScene: record own"
+    },
+    {
+      "name": "createJournalEntry",
+      "label": "createJournalEntry: record own"
+    },
+    {
+      "name": "updateJournalEntry",
+      "label": "updateJournalEntry: record own"
+    },
+    {
+      "name": "deleteJournalEntry",
+      "label": "deleteJournalEntry: record own"
+    },
+    {
+      "name": "createChatMessage",
+      "label": "createChatMessage: record own"
+    },
+    {
+      "name": "dnd5e.postUseActivity",
+      "label": "dnd5e.postUseActivity: record use"
+    },
+    {
+      "name": "updateCombat",
+      "label": "updateCombat: record turn"
+    },
+    {
+      "name": "error",
+      "label": "error: record"
+    },
+    {
+      "name": "getSceneControlButtons",
+      "label": "getSceneControlButtons: bug button"
+    },
+    {
+      "name": "chatMessage",
+      "label": "chatMessage: /bug"
+    },
+    {
+      "name": "userConnected",
+      "label": "userConnected: file waiting reports"
+    },
+    {
+      "name": "updateUser",
+      "label": "updateUser: file a new report"
+    },
+    {
+      "name": "ready",
+      "label": "ready: file waiting reports"
+    }
+  ],
+  "patches": [
+    {
+      "label": "console.error",
+      "marker": "__pentarynFeedback_error",
+      "adjustments": "feedback-console-error"
+    },
+    {
+      "label": "console.warn",
+      "marker": "__pentarynFeedback_warn",
+      "adjustments": "feedback-console-warn"
+    },
+    {
+      "label": "Notifications#notify",
+      "marker": "__pentarynFeedbackNotify",
+      "adjustments": "feedback-notifications-notify"
+    }
+  ],
+  "flags": {
+    "writes": [
+      "flags.pentaryn-feedback.queue"
+    ],
+    "reads": []
+  },
+  "errors": [
+    "NOT_GM",
+    "NO_GM",
+    "NOT_READY",
+    "NOT_FOUND",
+    "AMBIGUOUS",
+    "BAD_ARGS",
+    "REFUSED",
+    "CONFLICT",
+    "UNSUPPORTED",
+    "TIMEOUT",
+    "INTERNAL"
+  ]
+}
