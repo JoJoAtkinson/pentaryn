@@ -70,7 +70,7 @@ flags rows the guides named with the module prefix although they are not patches
 | portals | `core-teleport-replacements-follow` | new | `party.mjs` | `replacements` | ok | portals ADJ |
 | portals | `core-region-config-portal-card` | new | `cards.mjs` | `region-appearance` | ok | portals ADJ |
 | portals | `itempiles-portals-pile-pc` | new | `scene-adapter.mjs` | `isValidItemPile` | ok | portals ADJ |
-| portals | `core-portals-relative-uuid` (existing) | files move | `portals-core.mjs`, `scene-adapter.mjs` | unchanged | ok | portals S3 |
+| portals | `core-portals-relative-uuid` (existing) | files move | `portals-core.mjs`, `scene-adapter.mjs`, `cards.mjs` | unchanged | ok | portals S3 |
 | portals | `portals-teleport-default-and-spread` (**renamed `core-teleport-default-and-spread`**, D2 `df661e0`) (existing since `17275c9`, adjustments.yml:884-893) | rename (not a patch) + markers + files move | `cards.mjs`, `party.mjs`, `portals-core.mjs` | `data-action="yes"`, `:scope > p`, `spreadArrival` (was `preferTeleport`, `spreadArrival`) | **fails live** — rename to `core-teleport-default-and-spread` | portals ADJ (re-anchor 2026-10-11; -31 extension) |
 | senses | `core-light-animation-shader` | new | `glow.mjs` | `TorchIlluminationShader`, `lightAnimations` | ok | senses step 12 |
 | senses | `core-token-preview-private` | new | `chain.mjs` | `_preview` | ok | senses step 12 |

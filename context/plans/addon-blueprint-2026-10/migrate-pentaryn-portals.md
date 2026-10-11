@@ -305,8 +305,9 @@ assertions on new files, written before the old file is split.
   closes the menu, and the bound `#board` listeners stay (as today: `dataset.ppBound`). `party`
   clears nothing (a WeakMap). `cards` has nothing.
 - Update `seams.mjs` to re-export from the new files.
-- ADJ: `core-portals-relative-uuid.files` → `portals-core.mjs`, `scene-adapter.mjs`, which is where
-  the `relative: behavior` marker now lives.
+- ADJ: `core-portals-relative-uuid.files` → `portals-core.mjs`, `scene-adapter.mjs`, `cards.mjs`.
+  The `relative: behavior` marker now lives in `scene-adapter.mjs`, and `decorate` in `cards.mjs`
+  also resolves destinations with `fromUuidSync(u, { relative: behavior })`.
 
 ### S4 — Logging, no empty catch
 
@@ -452,7 +453,7 @@ every `portals-*` row, and portals has no patches. See the question for Joe in �
 | `core-teleport-replacements-follow` | `replacements` | `party.mjs` | -31 |
 | `core-region-config-portal-card` | `region-appearance` | `cards.mjs` | -31 |
 | `itempiles-portals-pile-pc` | `isValidItemPile` | `scene-adapter.mjs` | C47 |
-| `core-portals-relative-uuid` (existing) | unchanged | `portals-core.mjs`, `scene-adapter.mjs` | S3 |
+| `core-portals-relative-uuid` (existing) | unchanged | `portals-core.mjs`, `scene-adapter.mjs`, `cards.mjs` | S3 |
 | `portals-teleport-default-and-spread` (**renamed `core-teleport-default-and-spread`**, D2 `df661e0`) (existing, adjustments.yml:884-893, added by the re-run) → **rename** `core-teleport-default-and-spread` | `data-action="yes"`, `:scope > p`, `spreadArrival` (was `preferTeleport`, `spreadArrival` — own names that never go stale) | `cards.mjs`, `party.mjs`, `portals-core.mjs` | C32 (fails live), -31 extension |
 
 All rows: `modules: [pentaryn-portals]`, `check: make foundry-portals-check`. Add a
@@ -568,7 +569,8 @@ The structural steps absorb -25, -26, -29 (W7), -31 (ADJ), -33, the C24 part of 
 ### For the integrator (shared files)
 
 - **`foundry/adjustments.yml`** (and `adjustments-batch.md`'s portals rows): `core-portals-relative-uuid`
-  files → `portals-core.mjs`, `scene-adapter.mjs`. `core-teleport-default-and-spread` files →
+  files → `portals-core.mjs`, `scene-adapter.mjs`, `cards.mjs` (`decorate` resolves destinations
+  with `relative: behavior` too). `core-teleport-default-and-spread` files →
   `cards.mjs`, `party.mjs` (**not** `portals-core.mjs`, which holds none of its markers), markers →
   `data-action="yes"`, `:scope > p`, `spreadArrival`. New rows as the batch lists, with these
   files: `core-teleport-dialog-cards` → `cards.mjs`, `portals-core.mjs` (markers `dialog-`,
