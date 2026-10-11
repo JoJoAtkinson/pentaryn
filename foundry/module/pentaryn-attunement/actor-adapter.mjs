@@ -78,6 +78,9 @@ export async function stash(owner, container, itemIds, { tag, currency = false, 
   const update = { [`flags.${MODULE}.${AWAY_FLAG}`]: away, [`flags.${MODULE}.${SLOTS}`]: slots };
   if (currency) for (const k of Object.keys(owner.system.currency ?? {})) update[`system.currency.${k}`] = 0;
   await owner.update(update);
+  // Audit line for a write across two actors (kit convention: info), read back after an eval-js run.
+  console.info(`${MODULE} | stash: ${creates.length} moved to ${container.name}`,
+    { owner: owner.id, container: container.id, names: creates.map(c => c.name) });
   if (!detail) return creates.length;
   return {
     count: creates.length,

@@ -26,6 +26,8 @@ Declared changes:
 - A bonded item's bond is cleared with `_del` instead of the deprecated `-=bond` key.
 - Console only: hook handler errors are logged as `pentaryn-attunement | <label>`, and strip
   listener failures as `pentaryn-attunement | <release|unattune|drop> failed` (items-journal-11).
+- Console only: a successful `stash()` logs one info line, `pentaryn-attunement | stash: <n> moved to
+  <container>`, with the owner and container ids and the copies' names (items-journal-10).
 - Kit 1.0.2 (J10): the frozen-root guard at `ready` is gone.
 
 ## 0.2.1 — 2026-10-11 (usability re-run, U-8-5)

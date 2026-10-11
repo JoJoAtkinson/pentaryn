@@ -83,3 +83,37 @@ test("items-journal-10: a container that accepts nothing: err.created is empty, 
   assert.deepEqual(err.created, []);
   assert.equal(err.message, "pentaryn-attunement | stash: container accepted 0/2; originals NOT deleted");
 });
+
+// [declared] items-journal-10 remainder (console only): a successful stash leaves one audit line —
+// how many copies, which container, and the copies' names — so a confiscation run through eval-js
+// can be read back from the console. The writes are unchanged (the test above, golden/stash.json).
+test("items-journal-10: a successful stash logs one prefixed info line with the count and names", async () => {
+  const box = makeActor(F, { id: "actorBoxS0000005", name: "Box Five" });
+  const who = owner("actorSafe0000005");
+  const infos = [];
+  const keep = console.info;
+  console.info = (...a) => infos.push(a);
+  try {
+    assert.equal(await stash(who, box, ["c", "t"]), 2);
+  } finally {
+    console.info = keep;
+  }
+  assert.deepEqual(infos, [["pentaryn-attunement | stash: 2 moved to Box Five",
+    { owner: "actorSafe0000005", container: "actorBoxS0000005", names: ["Cloak (Talo)", "Torch (Talo)"] }]]);
+});
+
+test("items-journal-10: a refused stash logs no info line", async () => {
+  const box = makeActor(F, { id: "actorBoxS0000006", name: "Box Six" });
+  box.createEmbeddedDocuments = async () => [];
+  const who = owner("actorSafe0000006");
+  const infos = [];
+  const keep = { info: console.info, error: console.error };
+  console.info = (...a) => infos.push(a);
+  console.error = () => {};
+  try {
+    await assert.rejects(stash(who, box, ["c", "t"]));
+  } finally {
+    Object.assign(console, keep);
+  }
+  assert.deepEqual(infos, []);
+});
