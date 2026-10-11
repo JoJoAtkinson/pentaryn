@@ -52,7 +52,8 @@ def _src(tmp_path: Path, name="snap.tar.gz", size=4096) -> Path:
 
 # ── the shared contract ─────────────────────────────────────────────────────
 
-def test_mkdirs_creates_the_four_subfolders(st, cloud_dir):
+def test_mkdirs_creates_the_five_subfolders(st, cloud_dir):
+    assert len(storage.SUBFOLDERS) == 5 and "bundles" in storage.SUBFOLDERS
     assert sorted(p.name for p in cloud_dir.iterdir()) == sorted(storage.SUBFOLDERS)
 
 
@@ -145,6 +146,13 @@ def test_rclone_upload_is_copyto_partial_then_moveto(rc, fake, tmp_path):
     copy, move = fake.calls[0], fake.calls[1]
     assert copy[2:4] == [str(src), "fake:root/world-backups/w.tar.gz.partial"]
     assert move[2:4] == ["fake:root/world-backups/w.tar.gz.partial", "fake:root/world-backups/w.tar.gz"]
+
+
+def test_rclone_mkdirs_is_one_mkdir_per_subfolder(rc, fake):
+    rc.mkdirs()
+    assert fake.calls == [["rclone", "mkdir", f"fake:root/{sub}", *storage.COMMON_FLAGS]
+                          for sub in storage.SUBFOLDERS]
+    assert len(fake.calls) == 5
 
 
 def test_rclone_failing_copyto_leaves_only_partial_and_raises(rc, fake, tmp_path):
@@ -277,6 +285,24 @@ def test_rclone_transfers_show_progress_on_a_tty(cloud_dir, fake, tmp_path):
     rc = RcloneStorage("fake:root", bin="rclone", runner=fake, interactive=True)
     rc.upload(_src(tmp_path), "world-backups/w.tar.gz")
     assert "--progress" in fake.calls[0]
+
+
+# ── cloud.ensure_cloud sweeps stale partials in bundles/ too (module bundles §6) ──
+
+def test_ensure_cloud_sweeps_stale_bundle_partials_only(fake_cloud):
+    from scripts.foundry import cloud
+    bdir = fake_cloud / "bundles"
+    bdir.mkdir(exist_ok=True)
+    old = bdir / "module@a@1@0123456789abcdef.tar.gz.partial"
+    young = bdir / "module@b@1@0123456789abcdef.tar.gz.partial"
+    done = bdir / "module@c@1@0123456789abcdef.tar.gz"
+    for p in (old, young, done):
+        p.write_text("x")
+    for p, age in ((old, 25 * 3600), (young, 2 * 3600), (done, 30 * 86400)):
+        t = time.time() - age
+        os.utime(p, (t, t))
+    cloud.ensure_cloud()
+    assert not old.exists() and young.exists() and done.exists()
 
 
 # ── PENTARYN_CLOUD selection (§1.8) ─────────────────────────────────────────
