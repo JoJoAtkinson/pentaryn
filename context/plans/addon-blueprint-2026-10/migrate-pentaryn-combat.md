@@ -706,3 +706,11 @@ the prototype as well.
 | `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
 | Adjustments rows appended to `adjustments-batch.md` | yes / no |
 | Still failing, and why | ______ |
+
+Fixed outside the migration, on `fix/playtest-2026-10-11` (module 0.2.5): **PT1-6** — the Full
+Attack tooltip subtitle ("2 of 2 swings left this turn, + Nick: Scimitar") was cut at both edges.
+`hud.mjs` `TT` now adds a combat-own class `pentaryn-combat-tt` beside the shared `pentaryn-tt`, and
+`styles/combat.css` has `.ech-tooltip.pentaryn-combat-tt .ech-tooltip-subtitle` (wraps to the tooltip
+width, centred on the header/body seam, no `!important`, C37-clean), placed after the S10 dead rule
+so S10's line range still holds; fixtures 378-382 pin it. S3/S4 keep `TT` as is (it may become a
+core constant); it is not part of the `.pentaryn-tt` block transform-creatures-14 step 2 copies.
