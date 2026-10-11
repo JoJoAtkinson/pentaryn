@@ -1,213 +1,92 @@
 /**
- * Wall autocomplete — Foundry glue.
+ * Wall autocomplete (pentaryn-walls) — ENTRY: esmodules[0]. Wiring only, no logic.
  *
- * Everything geometric lives in core/engine.mjs, which knows nothing about Foundry. This
- * file does three things and nothing else: read the scene, hand the coordinates to the
- * engine, commit the result in two batches.
+ * Deterministic completion of hand-drawn walls: rough in the windows, doors and hint stubs, and
+ * the engine infers the rest or refuses and says why. Design: context/plans/foundry-wall-autocomplete.md.
  *
- *   game.pentaryn.walls.preview()   report what it would do, write nothing
- *   game.pentaryn.walls.run()       do it
- *   game.pentaryn.walls.undo()      remove everything this module generated
+ * Files, in load order:
+ *   walls-core.mjs       PURE barrel: constants, HOOKS, report/undo text, the busy lock; re-exports
+ *     core/engine.mjs      the engine — pure geometry, no Foundry APIs, no I/O
+ *     core/backends.mjs    the backend registry ("js" registered here) and canonical()/compare()
+ *   backend-wasm.mjs     adapter: loads wall-engine.wasm (fetch or node:fs) and registers "wasm"
+ *   settings.mjs         SETTINGS (backend) and KEYBINDINGS (Alt+W, Alt+Z, Alt+Shift+W)
+ *   actions.mjs          feature: preview / run / undo / makeMacro and the keybinding guard
+ *   api-manifest.mjs     PURE API rows (describe() reads them)
+ *   api.mjs              the rows bound to the actions; buildApiFor(ctx)
+ *   lib/*.mjs            vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
- * See context/plans/foundry-wall-autocomplete.md.
+ * Lifecycle: the feature installs synchronously in this body (it registers no hooks) · init →
+ * settings and keybindings (Foundry refuses keybindings after setup) · ready → GM only, after the
+ * wasm load settles: build the API (a drift throw stops there), publish, one console line.
  */
 
-import {
-  MODULE, runEngine, FLAG_SCOPE, get as getBackend, available, readyLine, reportHtml, undoHtml, exclusive
-} from "./walls-core.mjs";
-import {ready as wasmReady} from "./backend-wasm.mjs";  // registers "wasm"; loads async
-import {registerSettings, setting} from "./settings.mjs";
+import { HOOKS, MODULE, NS, VERSION, available, readyLine } from "./walls-core.mjs";
+import { ready as wasmReady } from "./backend-wasm.mjs";  // registers "wasm"; loads async
+import { registerSettings, setting } from "./settings.mjs";
+import { buildApiFor } from "./api.mjs";
+import { makeLog } from "./lib/log.mjs";
+import { emitter, hookRegistry } from "./lib/hooks.mjs";
+import { publishNamespace } from "./lib/publish.mjs";
+import { isAnyGM } from "./lib/election.mjs";
+import * as actions from "./actions.mjs";
 
-function targetScene(sceneId) {
-  const scene = sceneId ? game.scenes.get(sceneId) : canvas?.scene;
-  if (!scene) throw new Error("pentaryn-walls: no scene — open one, or pass a sceneId.");
-  return scene;
-}
+/** Features in load order. */
+const FEATURES = [actions];
 
-/** Read the wall documents as plain data. `ds` is deliberately not consulted anywhere. */
-function readWalls(scene) {
-  return scene.walls.map(w => {
-    const o = w.toObject();
-    return {_id: w.id, c: o.c, door: o.door, sight: o.sight, move: o.move, light: o.light,
-            sound: o.sound, dir: o.dir, levels: o.levels ?? [], flags: o.flags ?? {}};
-  });
-}
+const log = makeLog(MODULE);
+const reg = hookRegistry(MODULE, log);
 
-/**
- * Pick the engine. "auto" prefers the compiled backend and silently falls back to JS when it
- * is absent — a missing or unloadable .wasm must degrade to slower, never to broken.
- */
-function pickBackend(requested) {
-  const want = requested ?? setting("backend");
-  if (want !== "auto") {
-    const b = getBackend(want);
-    if (b?.available()) return b;
-    ui.notifications.warn(`Wall autocomplete: backend "${want}" unavailable, using JavaScript.`);
-  } else {
-    const wasm = getBackend("wasm");
-    if (wasm?.available()) return wasm;
-  }
-  return getBackend("js");
-}
+const ctx = {
+  log,
+  reg,
+  setting,
+  emit: emitter(MODULE, HOOKS, { log, version: VERSION }),
+  api: null,
+  contributions: [],
+  exposed: {},
+  expose(accessors) {
+    Object.assign(ctx.exposed, accessors);
+  },
+  uninstall,
+};
 
-function evaluate(scene, opts = {}) {
-  const walls = readWalls(scene);
-  const backend = pickBackend(opts.backend);
-  const t0 = performance.now();
-  const result = backend.run(walls, {
-    gridSize: scene.grid.size,
-    runId: new Date().toISOString(),
-    ...opts
-  });
-  return {walls, result, backend: backend.name, ms: performance.now() - t0};
-}
-
-/* -------------------------------------------- */
-/*  Reporting                                   */
-/* -------------------------------------------- */
-
-function report(scene, result, {committed, backend, ms}) {
-  const {refusals} = result;
-  ChatMessage.create({
-    content: reportHtml(scene.name, result, {committed, backend, ms}),
-    whisper: ChatMessage.getWhisperRecipients("GM").map(u => u.id)
-  });
-
-  console.group(`${MODULE} — ${scene.name}`);
-  console.table(result.log.map(l => ({pass: l.iter, rule: l.rule, walls: JSON.stringify(l.walls)})));
-  if (refusals.length) console.table(refusals.map(x => ({at: `${x.at[0]},${x.at[1]}`, wall: x.wall, why: x.why})));
-  console.groupEnd();
-
-  // Transient markers only — a Drawing or Note would persist and turn a report into state.
-  for (const x of refusals) {
-    try { canvas.ping({x: x.at[0], y: x.at[1]}); } catch { /* pings are a nicety */ }
+function install() {
+  for (const feature of FEATURES) {
+    const contribution = feature.install(reg, ctx);
+    if (contribution) ctx.contributions.push(contribution);
   }
 }
 
-/* -------------------------------------------- */
-/*  API                                         */
-/* -------------------------------------------- */
-
-async function preview({sceneId, ...opts} = {}) {
-  const scene = targetScene(sceneId);
-  const {result, backend, ms} = evaluate(scene, opts);
-  report(scene, result, {committed: false, backend, ms});
-  return result;
+/** Remove every hook and feature state. */
+function uninstall() {
+  for (const feature of [...FEATURES].reverse()) feature.uninstall();
+  reg.offAll();
 }
-
-async function run({sceneId, ...opts} = {}) {
-  const scene = targetScene(sceneId);
-  const {result, backend, ms} = evaluate(scene, opts);
-
-  // Two batches, after the loop has already reached its fixed point in memory. A thrown
-  // assertion or a tripped iteration cap therefore costs nothing.
-  if (result.updates.length) await scene.updateEmbeddedDocuments("Wall", result.updates);
-  if (result.creates.length) await scene.createEmbeddedDocuments("Wall", result.creates);
-
-  report(scene, result, {committed: true, backend, ms});
-  return result;
-}
-
-/**
- * Undo a run: delete the walls it created and restore the length of any wall it trimmed or
- * welded. **One run at a time, most recent first** — every mutation is stamped with the
- * run's timestamp, so repeated undos peel back run by run rather than wiping the lot. Pass
- * `{all: true}` to remove everything this module has ever done to the scene.
- *
- * This is what makes "just run it and look" a safe workflow: the run is the unit of undo.
- */
-async function undo({sceneId, all = false} = {}) {
-  const scene = targetScene(sceneId);
-
-  const stamped = scene.walls.filter(w => w.getFlag(FLAG_SCOPE, "run"));
-  if (!stamped.length) {
-    ui.notifications.info("Wall autocomplete: nothing of mine on this scene to undo.");
-    return {deleted: 0, restored: 0, run: null};
-  }
-  const latest = stamped.map(w => w.getFlag(FLAG_SCOPE, "run")).sort().at(-1);
-  const targets = all ? stamped : stamped.filter(w => w.getFlag(FLAG_SCOPE, "run") === latest);
-
-  const generated = [], restores = [];
-  for (const wall of targets) {
-    // `generated` means the engine created it; a `priorC` without it means the engine only
-    // shortened a wall the user drew, which must be restored rather than deleted.
-    if (wall.getFlag(FLAG_SCOPE, "generated")) generated.push(wall.id);
-    else {
-      const prior = wall.getFlag(FLAG_SCOPE, "priorC");
-      if (prior) restores.push({_id: wall.id, c: prior, [`flags.-=${FLAG_SCOPE}`]: null});
-    }
-  }
-  if (restores.length) await scene.updateEmbeddedDocuments("Wall", restores);
-  if (generated.length) await scene.deleteEmbeddedDocuments("Wall", generated);
-
-  const remaining = new Set(stamped.map(w => w.getFlag(FLAG_SCOPE, "run"))).size - 1;
-  ChatMessage.create({
-    content: undoHtml({generated: generated.length, restored: restores.length, all, latest, remaining}),
-    whisper: ChatMessage.getWhisperRecipients("GM").map(u => u.id)
-  });
-  ui.notifications.info(`Undid ${generated.length} created, ${restores.length} restored.`);
-  return {deleted: generated.length, restored: restores.length, run: all ? "all" : latest};
-}
-
-/**
- * Create a hotbar macro for one of the three actions, so it can also be clicked or bound
- * from the macro bar. Returns the Macro document.
- */
-async function makeMacro(action = "preview", slot) {
-  if (!["preview", "run", "undo"].includes(action)) throw new Error(`unknown action "${action}"`);
-  const name = `Walls: ${action}`;
-  const command = `await game.pentaryn.walls.${action}();`;
-  const existing = game.macros.find(m => m.name === name);
-  const macro = existing ?? await Macro.create({
-    name, type: "script", scope: "global", command,
-    img: "icons/environment/settlement/wall-tower.webp"
-  });
-  if (macro.command !== command) await macro.update({command});
-  await game.user.assignHotbarMacro(macro, slot);
-  ui.notifications.info(`Macro "${name}" ready on the hotbar.`);
-  return macro;
-}
-
-/* -------------------------------------------- */
-/*  Registration                                */
-/* -------------------------------------------- */
 
 // Keybindings MUST be registered during `init` — ClientKeybindings#register throws
 // afterwards (client/helpers/interaction/client-keybindings.mjs:156).
-Hooks.once("init", () => {
-  // One run at a time. On a large scene a run takes a moment, and a held or double-tapped
-  // key would otherwise start a second pass over geometry the first is still committing.
-  const lock = {busy: false};
-  const onBusy = () => ui.notifications.warn("Wall autocomplete is already running.");
-  const guard = fn => {
-    const once = exclusive(fn, {onBusy, lock});
-    return () => {
-      once()?.catch(err => {
-        console.error(`${MODULE} |`, err);
-        ui.notifications.error(`Wall autocomplete: ${err.message}`, {permanent: true});
-      });
-      return true;
-    };
-  };
-  const actions = {run, undo, preview};
-  registerSettings({onKey: action => guard(actions[action])});
-});
-
-/**
- * Publish the API under `game.pentaryn.walls`. The root is a plain object every module
- * assigns into: the importer merges into it and nothing freezes it since its keystone
- * (items-journal-1), so the old frozen-root guard is gone (kit 1.0.2, J10). A frozen root
- * now throws here and the ready hook stops before its log line.
- */
-function publishAPI() {
-  const api = {preview, run, undo, makeMacro, runEngine, backends: available};
-  game.pentaryn ??= {};
-  game.pentaryn.walls = api;
+function onInit() {
+  registerSettings({ log, onKey: action => ctx.exposed.keybindingGuard(ctx.exposed[action]) });
 }
 
-Hooks.once("ready", async () => {
-  if (!game.user.isGM) return;
-  await wasmReady;          // settled by now in practice; awaited so the log line is accurate
-  publishAPI();
+/**
+ * GM only, after the wasm load settles (it has by now in practice; awaited so the log line is
+ * accurate). `game.pentaryn` is assigned into, never rebuilt (kit 1.0.2, J10): a frozen root
+ * throws in publishNamespace and the hook stops before its log line.
+ */
+async function onReady() {
+  if (!isAnyGM()) return;
+  await wasmReady;
+  try {
+    ctx.api = buildApiFor(ctx);
+  } catch (err) {
+    log.error("API manifest drift — not published", err);
+    return;
+  }
+  publishNamespace(NS, ctx.api, { moduleId: MODULE, when: "ready:gm:wasm" });
   console.log(`${MODULE} | ${readyLine(available().map(b => b.name))}`);
-});
+}
+
+install();
+Hooks.once("init", onInit);
+Hooks.once("ready", onReady);

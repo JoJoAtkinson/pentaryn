@@ -1,0 +1,195 @@
+/**
+ * Wall autocomplete — the actions feature: preview, run, undo, makeMacro and the keybinding guard.
+ *
+ * FEATURE. Reads the scene, hands plain wall data to the engine (walls-core.mjs), commits the
+ * result in two batches and reports it (GM-whispered chat card, console tables, a ping per
+ * refusal). It registers no hooks: the module's only hooks are the entry's init and ready.
+ * `install()` exposes the actions on `ctx.exposed`; api.mjs and the keybindings call them there.
+ */
+
+import {MODULE, FLAG_SCOPE, get as getBackend, reportHtml, undoHtml, exclusive} from "./walls-core.mjs";
+import {setting} from "./settings.mjs";
+
+function targetScene(sceneId) {
+  const scene = sceneId ? game.scenes.get(sceneId) : canvas?.scene;
+  if (!scene) throw new Error("pentaryn-walls: no scene — open one, or pass a sceneId.");
+  return scene;
+}
+
+/** Read the wall documents as plain data. `ds` is deliberately not consulted anywhere. */
+function readWalls(scene) {
+  return scene.walls.map(w => {
+    const o = w.toObject();
+    return {_id: w.id, c: o.c, door: o.door, sight: o.sight, move: o.move, light: o.light,
+            sound: o.sound, dir: o.dir, levels: o.levels ?? [], flags: o.flags ?? {}};
+  });
+}
+
+/**
+ * Pick the engine. "auto" prefers the compiled backend and silently falls back to JS when it
+ * is absent — a missing or unloadable .wasm must degrade to slower, never to broken.
+ */
+function pickBackend(requested) {
+  const want = requested ?? setting("backend");
+  if (want !== "auto") {
+    const b = getBackend(want);
+    if (b?.available()) return b;
+    ui.notifications.warn(`Wall autocomplete: backend "${want}" unavailable, using JavaScript.`);
+  } else {
+    const wasm = getBackend("wasm");
+    if (wasm?.available()) return wasm;
+  }
+  return getBackend("js");
+}
+
+function evaluate(scene, opts = {}) {
+  const walls = readWalls(scene);
+  const backend = pickBackend(opts.backend);
+  const t0 = performance.now();
+  const result = backend.run(walls, {
+    gridSize: scene.grid.size,
+    runId: new Date().toISOString(),
+    ...opts
+  });
+  return {walls, result, backend: backend.name, ms: performance.now() - t0};
+}
+
+/* -------------------------------------------- */
+/*  Reporting                                   */
+/* -------------------------------------------- */
+
+function report(scene, result, {committed, backend, ms}) {
+  const {refusals} = result;
+  ChatMessage.create({
+    content: reportHtml(scene.name, result, {committed, backend, ms}),
+    whisper: ChatMessage.getWhisperRecipients("GM").map(u => u.id)
+  });
+
+  console.group(`${MODULE} — ${scene.name}`);
+  console.table(result.log.map(l => ({pass: l.iter, rule: l.rule, walls: JSON.stringify(l.walls)})));
+  if (refusals.length) console.table(refusals.map(x => ({at: `${x.at[0]},${x.at[1]}`, wall: x.wall, why: x.why})));
+  console.groupEnd();
+
+  // Transient markers only — a Drawing or Note would persist and turn a report into state.
+  for (const x of refusals) {
+    try { canvas.ping({x: x.at[0], y: x.at[1]}); } catch { /* pings are a nicety */ }
+  }
+}
+
+/* -------------------------------------------- */
+/*  API                                         */
+/* -------------------------------------------- */
+
+async function preview({sceneId, ...opts} = {}) {
+  const scene = targetScene(sceneId);
+  const {result, backend, ms} = evaluate(scene, opts);
+  report(scene, result, {committed: false, backend, ms});
+  return result;
+}
+
+async function run({sceneId, ...opts} = {}) {
+  const scene = targetScene(sceneId);
+  const {result, backend, ms} = evaluate(scene, opts);
+
+  // Two batches, after the loop has already reached its fixed point in memory. A thrown
+  // assertion or a tripped iteration cap therefore costs nothing.
+  if (result.updates.length) await scene.updateEmbeddedDocuments("Wall", result.updates);
+  if (result.creates.length) await scene.createEmbeddedDocuments("Wall", result.creates);
+
+  report(scene, result, {committed: true, backend, ms});
+  return result;
+}
+
+/**
+ * Undo a run: delete the walls it created and restore the length of any wall it trimmed or
+ * welded. **One run at a time, most recent first** — every mutation is stamped with the
+ * run's timestamp, so repeated undos peel back run by run rather than wiping the lot. Pass
+ * `{all: true}` to remove everything this module has ever done to the scene.
+ *
+ * This is what makes "just run it and look" a safe workflow: the run is the unit of undo.
+ */
+async function undo({sceneId, all = false} = {}) {
+  const scene = targetScene(sceneId);
+
+  const stamped = scene.walls.filter(w => w.getFlag(FLAG_SCOPE, "run"));
+  if (!stamped.length) {
+    ui.notifications.info("Wall autocomplete: nothing of mine on this scene to undo.");
+    return {deleted: 0, restored: 0, run: null};
+  }
+  const latest = stamped.map(w => w.getFlag(FLAG_SCOPE, "run")).sort().at(-1);
+  const targets = all ? stamped : stamped.filter(w => w.getFlag(FLAG_SCOPE, "run") === latest);
+
+  const generated = [], restores = [];
+  for (const wall of targets) {
+    // `generated` means the engine created it; a `priorC` without it means the engine only
+    // shortened a wall the user drew, which must be restored rather than deleted.
+    if (wall.getFlag(FLAG_SCOPE, "generated")) generated.push(wall.id);
+    else {
+      const prior = wall.getFlag(FLAG_SCOPE, "priorC");
+      if (prior) restores.push({_id: wall.id, c: prior, [`flags.-=${FLAG_SCOPE}`]: null});
+    }
+  }
+  if (restores.length) await scene.updateEmbeddedDocuments("Wall", restores);
+  if (generated.length) await scene.deleteEmbeddedDocuments("Wall", generated);
+
+  const remaining = new Set(stamped.map(w => w.getFlag(FLAG_SCOPE, "run"))).size - 1;
+  ChatMessage.create({
+    content: undoHtml({generated: generated.length, restored: restores.length, all, latest, remaining}),
+    whisper: ChatMessage.getWhisperRecipients("GM").map(u => u.id)
+  });
+  ui.notifications.info(`Undid ${generated.length} created, ${restores.length} restored.`);
+  return {deleted: generated.length, restored: restores.length, run: all ? "all" : latest};
+}
+
+/**
+ * Create a hotbar macro for one of the three actions, so it can also be clicked or bound
+ * from the macro bar. Returns the Macro document.
+ */
+async function makeMacro(action = "preview", slot) {
+  if (!["preview", "run", "undo"].includes(action)) throw new Error(`unknown action "${action}"`);
+  const name = `Walls: ${action}`;
+  const command = `await game.pentaryn.walls.${action}();`;
+  const existing = game.macros.find(m => m.name === name);
+  const macro = existing ?? await Macro.create({
+    name, type: "script", scope: "global", command,
+    img: "icons/environment/settlement/wall-tower.webp"
+  });
+  if (macro.command !== command) await macro.update({command});
+  await game.user.assignHotbarMacro(macro, slot);
+  ui.notifications.info(`Macro "${name}" ready on the hotbar.`);
+  return macro;
+}
+
+/* -------------------------------------------- */
+/*  Keybindings                                 */
+/* -------------------------------------------- */
+
+// One run at a time. On a large scene a run takes a moment, and a held or double-tapped
+// key would otherwise start a second pass over geometry the first is still committing.
+const lock = {busy: false};
+const onBusy = () => ui.notifications.warn("Wall autocomplete is already running.");
+
+/** A keybinding's `onDown` for `fn`: exclusive across the three keys; a failure logs and toasts. */
+function keybindingGuard(fn) {
+  const once = exclusive(fn, {onBusy, lock});
+  return () => {
+    once()?.catch(err => {
+      console.error(`${MODULE} |`, err);
+      ui.notifications.error(`Wall autocomplete: ${err.message}`, {permanent: true});
+    });
+    return true;
+  };
+}
+
+/* -------------------------------------------- */
+/*  Feature lifecycle                           */
+/* -------------------------------------------- */
+
+export function install(reg, ctx) {
+  ctx.expose({preview, run, undo, makeMacro, keybindingGuard});
+}
+
+/** Release the busy flag (a hot patch re-wires; an in-flight run settles on its own). */
+export function uninstall() {
+  lock.busy = false;
+}
