@@ -10,7 +10,7 @@
  * `isFilteredOut`, `_testCulled`) — adjustments row `creatures-libwrapper`.
  */
 
-import { MODULE, ownerShouldSee } from "./creatures-core.mjs";
+import { MODULE, ownerShouldSee, safely } from "./creatures-core.mjs";
 import { setting } from "./settings.mjs";
 import { isProp } from "./tokens-adapter.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
@@ -20,10 +20,14 @@ let log = null;
 let ownerSeesOn = true;
 let patchedWith = null;
 
-/** Called only when core said "not visible". */
+/**
+ * Called only when core said "not visible", inside a getter core runs for every unseen token on
+ * every visibility refresh: it never throws. A failure (a private field renamed by a core update)
+ * answers false and warns once per session (transform-creatures-29).
+ */
 export function ownerOverride(token) {
   if (!ownerSeesOn || game.user.isGM) return false;
-  try {
+  return safely(() => {
     const doc = token.document;
     if (!doc?.isOwner || isProp(doc)) return false;   // every player owns a spell-area handle
     return ownerShouldSee({
@@ -35,9 +39,7 @@ export function ownerOverride(token) {
       filteredOut: token.isFilteredOut === true,
       culled: typeof token._testCulled === "function" ? token._testCulled() === true : false
     });
-  } catch {
-    return false;
-  }
+  }, err => log.warnOnce("owner-sees", "owner override failed", err));
 }
 
 /** The wrap's handle (kit wrapMethod): `via` is "libWrapper" | "direct" | null. */

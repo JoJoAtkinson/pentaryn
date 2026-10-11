@@ -5,7 +5,7 @@
 //
 // KNOWN rows (pinned as they are; each has its target as a todo test at the end):
 //   transform-creatures-25  updateToken {x} on the viewed scene schedules a render that rebuilds nothing
-//   transform-creatures-29  ownerOverride swallows a throw from a private field silently (→ false)
+//   transform-creatures-29  FIXED [declared]: an override failure still answers false, and warns once
 //   transform-creatures-31  api.ownerSees(TokenDocument) is false; only a placeable works
 //   transform-creatures-40  with no Argon on the page the poll still runs, two queries a tick
 import { mock, test } from "node:test";
@@ -65,13 +65,14 @@ test("owners see their own: the override table (core said no)", () => {
   assert.deepEqual(W.lines(), []);
 });
 
-test("KNOWN transform-creatures-29: a throw inside the override is swallowed — false, no console line", () => {
+test("transform-creatures-29 [declared]: a throw inside the override answers false and warns once per session", () => {
   const p = W.placeable(W.tok("tImp"), { _testCulled: () => { throw new Error("private API moved"); } });
   assert.equal(p.isVisible, false);
   const q = W.placeable(W.tok("tImp"));
   Object.defineProperty(q, "isFilteredOut", { get() { throw new Error("gone"); } });
   assert.equal(q.isVisible, false);
-  assert.deepEqual(W.lines(), []);
+  assert.equal(p.isVisible, false);
+  assert.deepEqual(W.lines(), [["warn", `${MODULE} | owner override failed`, "Error: private API moved"]]);
 });
 
 test("ownerSees onChange: off stops the override and refreshes every placeable; on restores it", async () => {
@@ -399,6 +400,5 @@ test("throwing setting reads fall back to the defaults: showStrip and floatOverH
 
 /* ── the targets of the KNOWN rows (guide §4, steps 5 and 7) ─────────────── */
 test.todo("transform-creatures-25: updateToken re-renders the strip only when stripMayChange(changes) — {x:5} schedules nothing");
-test.todo("transform-creatures-29: an override failure warns once (log.warnOnce \"owner override failed\") and still returns false");
 test.todo("transform-creatures-31: api.ownerSees(TokenDocument) gives the same answer as for its placeable (step 7)");
 test.todo("transform-creatures-40: no interval is armed without Argon on the page or with floatOverHud off; styles written only on change");
