@@ -46,6 +46,10 @@ def notify(kind: str, subtitle: str, message: str, *, title: str = "Ardenhaven V
     and you decide the interruption is worth it.
     """
     spec = CLASSES.get(kind, CLASSES["done"])
+    from scripts.foundry import host
+    if not host.is_mac():  # no Notification Center off the Mac: the run log has it
+        print(f"  [{kind}] {title}: {subtitle} — {message.strip()}")
+        return
     use_modal = spec["modal"] if modal is None else modal
     use_sound = sound if sound is not None else spec["sound"]
 

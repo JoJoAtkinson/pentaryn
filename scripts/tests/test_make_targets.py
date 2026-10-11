@@ -94,3 +94,54 @@ def test_check_all_includes_tests_and_modules():
     for expect in ("check_context.py", "check_lore_links.py", "pytest -q",
                    "foundry/lib/test/run.mjs", "module-check --all"):
         assert expect in out, expect
+
+
+# ── two hosts, one cloud (rclone-two-hosts-2026-10 §7) ───────────────────────
+
+def _dry_args(*argv):
+    proc = subprocess.run(["make", "-n", *argv], cwd=cfg.REPO_ROOT, capture_output=True,
+                          text=True, timeout=30)
+    assert proc.returncode == 0, proc.stderr
+    return proc.stdout
+
+
+def test_vtt_up_boots_before_the_prelaunch_backup():
+    out = _dry("vtt-up")
+    order = [out.index(s) for s in ("ops lock-check", "scripts.foundry.boot choose",
+                                    "cloud backup --reason prelaunch", "cloud assets",
+                                    "ops up", "ops tunnel-up")]
+    assert order == sorted(order)
+    assert out.count("scripts.foundry.boot choose") == 1      # once, not again for foundry-up
+
+
+def test_foundry_up_runs_the_boot_step_and_marks_it_done():
+    out = _dry("foundry-up")
+    assert out.index("scripts.foundry.boot choose") < out.index("PENTARYN_BOOT_DONE=1")
+    assert "--from" not in out
+
+
+def test_from_is_passed_to_the_boot_step():
+    assert "boot choose --from latest" in _dry_args("foundry-up", "FROM=latest")
+    assert "boot choose --from local" in _dry_args("vtt-up", "FROM=local")
+    name = "world-2026-10-11-030412-fvtt14.369-mac.tar.gz"
+    assert f"boot choose --from {name}" in _dry_args("foundry-boot", f"FROM={name}")
+
+
+def test_foundry_boot_alone_is_runnable():
+    assert "scripts.foundry.boot choose" in _dry("foundry-boot")
+
+
+@pytest.mark.parametrize("target, expect", [
+    ("foundry-prune-untagged", "scripts.foundry.cloud prune-untagged"),
+    ("foundry-cloud", "scripts.foundry.cloud status"),
+    ("foundry-restore", "scripts.foundry.cloud restore"),
+    ("vtt-update-install", 'host require-primary "the auto-updater"'),
+    ("foundry-admin-key", "host.clipboard"),
+])
+def test_two_host_targets(target, expect):
+    assert expect in _dry(target)
+
+
+def test_clipboard_targets_never_name_pbcopy_directly():
+    for target in ("foundry-key", "foundry-admin-key"):
+        assert "pbcopy" not in _dry(target)
