@@ -73,12 +73,12 @@ test("ready (active GM): publish, then resetSight → syncAll → sweep, in that
 // and IS game.pentaryn.chain.
 test("ready: the published keys (game.pentaryn.senses and game.pentaryn.chain; the full surface is api.test)", () => {
   assert.deepEqual(Object.keys(game.pentaryn.senses), [
-    "syncLight", "carriedLight", "resetSight", "light", "setupLight", "syncAll", "chain",
+    "syncLight", "carriedLight", "resetSight", "light", "setupLight", "syncAll", "chain", "inspect",   // + inspect (-25, additive)
     "version", "contract", "settings", "trace", "uninstall", "describe",
   ]);
   assert.deepEqual(Object.keys(game.pentaryn.chain), ["link", "break", "links", "repaint"]);
   assert.deepEqual(Object.keys(game.pentaryn.senses.light), [
-    "cast", "end", "pick", "toggle", "hood", "profileFor", "sweep", "setup", "onMe", "prompt", "reconcile", "SPELL_LIGHT", "PHB_LIGHT_ACTOR",
+    "cast", "end", "pick", "toggle", "hood", "profileFor", "sweep", "setup", "onMe", "prompt", "reconcile", "status", "SPELL_LIGHT", "PHB_LIGHT_ACTOR",
   ]);
   assert.equal(game.pentaryn.senses.setupLight, game.pentaryn.senses.light.setup);
   assert.equal(Object.isFrozen(game.pentaryn.senses), true);

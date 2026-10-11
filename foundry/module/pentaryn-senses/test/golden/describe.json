@@ -254,6 +254,27 @@
       "doc": "Active GM: bring the world in line with one Light item's flag now (queued behind any running reconcile)."
     },
     {
+      "path": "light.status",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "item",
+          "doc": "a Light cantrip item (document, uuid, or a world item's id or name)"
+        }
+      ],
+      "returns": "{ cast: { scene, token } | { scene, x, y } | null, litBy: { kind, scene, id }[] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS",
+        "BAD_ARGS"
+      ],
+      "doc": "Where a Light cantrip is cast (its item flag) and what it lights now (tokens and AmbientLights on every scene). Read-only."
+    },
+    {
       "path": "setupLight",
       "params": [],
       "returns": "Promise<number> torches changed",
@@ -348,6 +369,34 @@
       "sideEffects": [],
       "legacy": true,
       "doc": "Redraw the chains on this client next frame."
+    },
+    {
+      "path": "inspect",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "token",
+          "resolve": false,
+          "doc": "a token (id, uuid, exact name, document, placeable), else an actor"
+        },
+        {
+          "name": "opts",
+          "optional": true,
+          "type": "{ sceneId?, base?, as? }",
+          "doc": "scene scope; base: the world actor; as: answer as that user"
+        }
+      ],
+      "returns": "{ token: { id, light, itemLight, itemLightPrior, spellLight } | null, actor: { id, carried, carriers, hooded, lightingItem } | null, chain: { anchor, chainedHere } | null, lightSpells: { item, cast, litBy: uuid[] }[] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS",
+        "BAD_ARGS"
+      ],
+      "doc": "Why a token is lit the way it is: its light and the flag that owns it (carried / spell / hand-set), the actor's carried light and every item giving one, its chain, and each Light cantrip's target. Read-only, plain JSON. As a player without OBSERVER on the actor, actor and lightSpells are omitted."
     }
   ],
   "queries": [],

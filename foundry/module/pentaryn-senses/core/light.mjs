@@ -129,16 +129,20 @@ export function strongest(lights) {
   return best;
 }
 
-/** Each item that gives light now, with the light it gives: [{ id, light }]. */
-function lightEntries(items) {
+/**
+ * Each item that gives light now, with the light it gives: [{ id, name, kind, hooded, light }].
+ * `kind` is "shard" for a fixed `light` flag (always on), "lit" for a lit torch, lamp or lantern.
+ */
+export function lightEntries(items) {
   const out = [];
   for (const item of items ?? []) {
     if (!item || (item.system?.quantity ?? 1) <= 0) continue;
     const f = flagsOf(item);
-    if (isObj(f.light)) out.push({ id: item.id ?? null, light: f.light });
+    const who = { id: item.id ?? null, name: item.name ?? null };
+    if (isObj(f.light)) out.push({ ...who, kind: "shard", hooded: false, light: f.light });
     else if (f.lit === true) {
       const l = lightFor(profileFor(item), { hooded: f.hooded === true });
-      if (l) out.push({ id: item.id ?? null, light: l });
+      if (l) out.push({ ...who, kind: "lit", hooded: f.hooded === true, light: l });
     }
   }
   return out;

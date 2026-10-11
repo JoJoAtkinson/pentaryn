@@ -38,7 +38,7 @@ test("ready as a player: the API is published and nothing is written", async () 
   assert.deepEqual(r.calls, []);
   // [declared S-1, S-2]: kit members added, chain.uninstall gone, senses.chain alias (glue.test pins the rest)
   assert.deepEqual(Object.keys(game.pentaryn.senses), [
-    "syncLight", "carriedLight", "resetSight", "light", "setupLight", "syncAll", "chain",
+    "syncLight", "carriedLight", "resetSight", "light", "setupLight", "syncAll", "chain", "inspect",   // + inspect (-25, additive)
     "version", "contract", "settings", "trace", "uninstall", "describe",
   ]);
   assert.deepEqual(Object.keys(game.pentaryn.chain), ["link", "break", "links", "repaint"]);
