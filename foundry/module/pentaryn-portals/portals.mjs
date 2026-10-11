@@ -964,3 +964,12 @@ Hooks.once("ready", () => setTimeout(() => {
   if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, portals: api };
   else { game.pentaryn ??= {}; game.pentaryn.portals = api; }
 }, 0));
+
+// Test seam (characterisation checkpoint): tests import this through test/fixtures/seams.mjs only,
+// so the split into feature files edits that shim, not the tests. Not part of the API.
+export const _internals = { cardFor, cardHTML, behaviorOf, decorate, plainQuestion, preferTeleport, injectConfig, snapshot,
+  drawBadges, badges, refreshBadgeSight, samplePoints, moveRegion, recordOf, partyRecords, landingPlaces, carryTo,
+  confirmParty, teleportParty, spreadArrival, bringFollowers, cameThroughPortal, linkRegions, destinationsOf,
+  teleportBehaviors, toAbsolute, folderNames, lookAt, setEditing, badgeAt, showTip, hideTip, openMenu, closeMenu, bindBoard,
+  PortalCard, SETTINGS, setting, seen, editing,
+  state: () => ({ badgeLayer, drawRun, tip, menu, drag }) };
