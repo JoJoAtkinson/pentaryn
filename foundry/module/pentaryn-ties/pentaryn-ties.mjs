@@ -115,21 +115,29 @@ function onInit() {
 }
 
 /**
- * Build the API from the manifest (a drift throws here, inside the "publish api" step) and publish it
- * through the kit: `game.modules.get("pentaryn-ties").api` is canonical, `game.pentaryn.ties` the
- * alias, then `pentaryn-ties.ready` and `pentaryn.ready` fire (B11 [declared]). `when: "ready"` is
- * true: this runs synchronously inside the ready handler before its first await. A frozen
- * `game.pentaryn` (nothing freezes it since the importer's keystone) throws here, as it did.
+ * ready, synchronously: build the API from the manifest and publish it through the kit —
+ * `game.modules.get("pentaryn-ties").api` is canonical, `game.pentaryn.ties` the alias, then
+ * `pentaryn-ties.ready` and `pentaryn.ready` fire (B11 [declared]). A manifest drift, or a frozen
+ * `game.pentaryn` (nothing freezes it since the importer's keystone), throws here; it is reported as
+ * the first of the ready steps, so the console reads as it always did. Then the GM's one-time steps.
  */
-function publishAPI() {
-  ctx.api = buildApiFor(ctx);
-  publishNamespace(NS, ctx.api, { moduleId: MODULE });
+function onReady() {
+  let publishError = null;
+  try {
+    ctx.api = buildApiFor(ctx);
+    publishNamespace(NS, ctx.api, { moduleId: MODULE });
+  } catch (err) {
+    publishError = err;
+  }
+  void readySteps(publishError);
 }
 
 /** Each step is independent — one failure must not silently skip the others. */
-async function onReady() {
+async function readySteps(publishError) {
   for (const [label, step] of [
-    ["publish api", async () => publishAPI()],
+    ["publish api", async () => {
+      if (publishError) throw publishError;
+    }],
     ["migrate legacy flags", async () => game.user.isGM && migrateLegacy()],
     ["repair dead attribute icons", async () => game.user.isGM && repairIcons()],
     ["create macro", async () => game.user.isGM && ensureMacro()],
@@ -164,7 +172,15 @@ function uninstall() {
   reg.offAll();
 }
 
-// unguarded, as Hooks.once always registered them: a throw here keeps Foundry's own error line
-reg.once("init", onInit, { guard: false, label: "init" });
-reg.once("ready", onReady, { guard: false, label: "ready steps" });
-for (const feature of FEATURES) contribute(feature.install(reg, ctx));
+if (globalThis.game?.ready) {
+  // a hot re-import after the world is ready (after `game.pentaryn.ties.uninstall()`): the lifecycle
+  // hooks have fired already, so run the phases now, in order. Settings and keys already registered
+  // are skipped by the kit; a changed file still needs a reload. Same order as a cold boot.
+  for (const feature of FEATURES) contribute(feature.install(reg, ctx));
+  onInit();
+  onReady();
+} else {
+  Hooks.once("init", onInit);
+  Hooks.once("ready", onReady);
+  for (const feature of FEATURES) contribute(feature.install(reg, ctx));
+}

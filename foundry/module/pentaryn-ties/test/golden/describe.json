@@ -1984,14 +1984,6 @@
   "events": [],
   "hooks": [
     {
-      "name": "init",
-      "label": "init"
-    },
-    {
-      "name": "ready",
-      "label": "ready steps"
-    },
-    {
       "name": "ready",
       "label": "conduit: sockets"
     },
