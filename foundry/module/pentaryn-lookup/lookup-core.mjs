@@ -14,6 +14,42 @@
  * those throw. A fixture suite is the only thing that notices.
  */
 
+// ── identity ─────────────────────────────────────────────────────────────────
+export const MODULE = "pentaryn-lookup";
+export const SHORT = "lookup";
+export const NS = "rules";                            // game.pentaryn.rules (reserved for this module)
+export const VERSION = "0.3.0";                       // === module.json version (core-seams.test pins it)
+export const CONTRACT = "pentaryn-lookup/api@1";      // bump the major on a published-shape change
+/** Events this module emits: none. */
+export const HOOKS = Object.freeze({});
+
+// ── which packs count as what ────────────────────────────────────────────────
+// 2014 SRD is excluded from every default: this table runs D&D 2024, and quoting
+// 2014 text at it is the quietest way to be wrong. When it IS asked for, its hits
+// carry `edition: "2014"` so a mixed result cannot masquerade as current.
+export const BOOKSETS = {
+  rules: ["dnd-players-handbook.content", "dnd-dungeon-masters-guide.content", "dnd5e.content24"],
+  monsters: ["dnd-monster-manual.content"],
+  all: ["dnd-players-handbook.content", "dnd-dungeon-masters-guide.content",
+        "dnd5e.content24", "dnd-monster-manual.content"],
+  "2014": ["dnd5e.rules"],
+};
+export const EDITIONS = { "dnd5e.rules": "2014" };
+export const MONSTER_PACKS = ["dnd-monster-manual.actors", "dnd5e.actors24",
+                              "dnd-players-handbook.actors", "dnd-dungeon-masters-guide.actors"];
+
+/** `opts.books` → pack ids: an array as given, a BOOKSETS name, else the rules set. */
+export function resolveBookIds(books) {
+  if (!books) return BOOKSETS.rules;
+  if (Array.isArray(books)) return books;
+  return BOOKSETS[String(books)] ?? BOOKSETS.rules;
+}
+
+export function missingPackError(missing) {
+  return { error: `compendium pack(s) not found: ${missing.join(", ")} — ` +
+                  `is the module enabled in Manage Modules?` };
+}
+
 // ── limits ───────────────────────────────────────────────────────────────────
 // Tuned against the transport: eval-js truncates large returns, and the reader pays
 // tokens per hit. Five hits at ~240 chars is ≈2 KB — legible and cheap. `total` is
@@ -289,4 +325,90 @@ export function monsterDigest(raw) {
                   `Verify with a raw eval-js read before trusting this digest.`;
   }
   return out;
+}
+
+/** Enriched roll text leaves spaces before punctuation ("+4 , reach 5 ft ."): close them up. */
+export const tidy = t => t.replace(/\s+([,.;:!?)])/g, "$1").replace(/\(\s+/g, "(");
+
+// ── monsters(): the query grammar, filter, order and page ────────────────────
+// TWIN: pentaryn-prompts keeps its own copies — SIZE_WORDS (patch.mjs; geometry-core once prompts
+// migrates) and crNumber (replace.mjs). Modules never import each other (prompts-lookup-9), so a
+// change to either side is made on both, deliberately.
+export const SIZE_KEYS = { tiny: "tiny", small: "sm", sm: "sm", medium: "med", med: "med", large: "lg", lg: "lg",
+                           huge: "huge", gargantuan: "grg", grg: "grg" };
+
+/** "1/4" → 0.25, "3" → 3; empty, null and non-numbers → null. */
+export function crNum(v) {
+  if (v === null || v === undefined || v === "") return null;
+  const m = /^\s*(\d+)\s*\/\s*(\d+)\s*$/.exec(String(v));
+  const n = m ? Number(m[1]) / Number(m[2]) : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * `monsters(q)`'s options → `{ size, type, lo, hi, name, limit, packIds }`. `cr` is a value ("1/4", 3)
+ * or a range ("1/2-2"); `minCr`/`maxCr` override either end; `limit` defaults to 40, max 200.
+ */
+export function monsterQuery(q = {}) {
+  const size = q.size ? SIZE_KEYS[String(q.size).toLowerCase()] ?? String(q.size).toLowerCase() : null;
+  const type = q.type ? String(q.type).toLowerCase() : null;
+  let lo = null, hi = null;
+  if (q.cr !== undefined && q.cr !== null && q.cr !== "") {
+    const m = /^\s*([\d/.]+)\s*-\s*([\d/.]+)\s*$/.exec(String(q.cr));
+    if (m) { lo = crNum(m[1]); hi = crNum(m[2]); } else { lo = hi = crNum(q.cr); }
+  }
+  if (q.minCr !== undefined) lo = crNum(q.minCr);
+  if (q.maxCr !== undefined) hi = crNum(q.maxCr);
+  const name = q.name ? String(q.name).toLowerCase() : null;
+  const limit = Math.max(1, Math.min(Number(q.limit) || 40, 200));
+  const packIds = q.packs ?? ["dnd-monster-manual.actors", "dnd5e.actors24"];
+  return { size, type, lo, hi, name, limit, packIds };
+}
+
+/** One compendium index entry against a parsed query: NPCs only; size, type, CR range, name substring. */
+export function matchMonster(e, { size, type, lo, hi, name }) {
+  if (e.type !== "npc") return false;
+  const cr = e.system?.details?.cr, sz = e.system?.traits?.size, ty = e.system?.details?.type?.value;
+  if (size && sz !== size) return false;
+  if (type && String(ty ?? "").toLowerCase() !== type) return false;
+  if (lo !== null && !(cr >= lo)) return false;
+  if (hi !== null && !(cr <= hi)) return false;
+  if (name && !e.name.toLowerCase().includes(name)) return false;
+  return true;
+}
+
+/** A matched index entry → the published row. */
+export function monsterRow(e, packId) {
+  const ty = e.system?.details?.type?.value, sub = e.system?.details?.type?.subtype;
+  return { name: e.name, cr: e.system?.details?.cr, size: e.system?.traits?.size, type: sub ? `${ty} (${sub})` : ty,
+           uuid: e.uuid ?? actorUuid(packId, e._id), pack: packId };
+}
+
+/**
+ * Lowest CR first, then name — in place. A row with no CR makes the first term NaN (falsy), so it
+ * falls through to the name order: kept as shipped, do not "fix" it.
+ */
+export function sortMonsters(rows) {
+  rows.sort((a, b) => (a.cr - b.cr) || a.name.localeCompare(b.name));
+  return rows;
+}
+
+export function pageMonsters(rows, limit) {
+  return { count: rows.length, shown: Math.min(rows.length, limit), monsters: rows.slice(0, limit),
+           ...(rows.length > limit ? { hint: `narrow it (size, type, cr) or raise limit; ${rows.length - limit} more` } : {}) };
+}
+
+// ── spell lists (dnd5e's registry, injected) ─────────────────────────────────
+/**
+ * The registry's list for `type:identifier` (identifier lower-cased), or null. A throw inside the
+ * registry is also null; `onError(err)` lets the caller trace it (core stays pure).
+ */
+export function listFor(registry, type, identifier, onError = null) {
+  try { return registry.spellLists.forType(type, String(identifier).toLowerCase()) ?? null; }
+  catch (err) { onError?.(err); return null; }
+}
+
+/** Every list the registry knows, as `type:identifier` values. */
+export function knownLists(registry) {
+  return registry.spellLists.options?.map(o => o.value) ?? [];
 }

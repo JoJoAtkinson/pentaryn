@@ -3,7 +3,9 @@
 // extracted core functions are then asserted equal to it, so a pure move cannot drift.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import * as core from "../lookup-core.mjs";
 import * as oracle from "./fixtures/legacy-monsters.mjs";
+import { manifestOf } from "./kit/harness.mjs";
 
 const CR_INPUTS = ["1/4", 0.25, "3", 3, "", null, undefined, "x", " 1 / 2 ", "1/8"];
 const CR_WANT = [0.25, 0.25, 3, 3, null, null, null, null, 0.5, 0.125];
@@ -56,3 +58,78 @@ test("oracle: sortMonsters keeps the NaN fall-through, pageMonsters hints the re
   assert.match(page.hint, /5 more/);
 });
 
+
+// ── step 3: the extracted core equals the oracle ─────────────────────────────
+
+test("core.crNum and SIZE_KEYS equal the oracle", () => {
+  assert.deepEqual(CR_INPUTS.map(core.crNum), CR_INPUTS.map(oracle.crNum));
+  assert.deepEqual(core.SIZE_KEYS, oracle.SIZE_KEYS);
+});
+
+test("core.monsterQuery equals the oracle over the query table", () => {
+  for (const q of QUERIES) assert.deepEqual(core.monsterQuery(q), oracle.monsterQuery(q), JSON.stringify(q));
+  assert.deepEqual(core.monsterQuery(), oracle.monsterQuery());
+});
+
+test("core.matchMonster equals the oracle over entries × queries", () => {
+  const queries = [...QUERIES, { type: "FEY" }, { size: "med" }, { name: "boss" }, { cr: "5-8", size: "large", type: "construct" }];
+  for (const e of ENTRIES) {
+    for (const q of queries) {
+      const parsed = oracle.monsterQuery(q);
+      assert.equal(core.matchMonster(e, parsed), oracle.matchMonster(e, parsed), `${e.name} ${JSON.stringify(q)}`);
+    }
+  }
+});
+
+test("core.sortMonsters and pageMonsters equal the oracle (NaN CR order kept)", () => {
+  assert.deepEqual(core.sortMonsters(SORT_INPUT()), oracle.sortMonsters(SORT_INPUT()));
+  for (const [n, limit] of [[45, 40], [40, 40], [0, 40], [3, 1]]) {
+    assert.deepEqual(core.pageMonsters(rows(n), limit), oracle.pageMonsters(rows(n), limit), `${n}/${limit}`);
+  }
+});
+
+test("core.monsterRow builds today's row; a missing index uuid falls back to the actor uuid", () => {
+  const e = { _id: "x1", name: "Goblin", system: { details: { cr: 0.25, type: { value: "humanoid", subtype: "goblinoid" } }, traits: { size: "sm" } } };
+  assert.deepEqual(core.monsterRow(e, "p.a"),
+    { name: "Goblin", cr: 0.25, size: "sm", type: "humanoid (goblinoid)", uuid: "Compendium.p.a.Actor.x1", pack: "p.a" });
+  assert.equal(core.monsterRow({ ...e, uuid: "U" }, "p.a").uuid, "U");
+  assert.equal(core.monsterRow({ ...e, system: { details: { type: { value: "fey" } } } }, "p.a").type, "fey");
+});
+
+test("VERSION === module.json version; ids agree", () => {
+  const manifest = manifestOf(new URL("..", import.meta.url));
+  assert.equal(core.VERSION, manifest.version);
+  assert.equal(core.MODULE, manifest.id);
+  assert.equal(core.NS, "rules");
+  assert.equal(core.CONTRACT, `${core.MODULE}/api@1`);
+  assert.deepEqual(core.HOOKS, {});
+  assert.ok(Object.isFrozen(core.HOOKS));
+});
+
+test("listFor: registry injected, identifier lower-cased, a throw is null (and reported)", () => {
+  const reg = { spellLists: { forType: (t, i) => (t === "class" && i === "wizard" ? "L" : null) } };
+  assert.equal(core.listFor(reg, "class", "Wizard"), "L");
+  assert.equal(core.listFor(reg, "class", "nope"), null);
+  assert.equal(core.listFor({}, "class", "x"), null);
+  const seen = [];
+  assert.equal(core.listFor(undefined, "class", "x", err => seen.push(err.name)), null);
+  assert.deepEqual(seen, ["TypeError"]);
+});
+
+test("knownLists: every option value", () => {
+  assert.deepEqual(core.knownLists({ spellLists: { options: [{ value: "class:wizard" }, { value: "class:cleric" }] } }),
+    ["class:wizard", "class:cleric"]);
+});
+
+test("resolveBookIds and missingPackError keep today's answers", () => {
+  assert.equal(core.resolveBookIds(), core.BOOKSETS.rules);
+  assert.equal(core.resolveBookIds("2014"), core.BOOKSETS["2014"]);
+  assert.equal(core.resolveBookIds("bogus"), core.BOOKSETS.rules);
+  assert.deepEqual(core.resolveBookIds(["a.b"]), ["a.b"]);
+  assert.deepEqual(core.missingPackError(["a.b", "c.d"]),
+    { error: "compendium pack(s) not found: a.b, c.d — is the module enabled in Manage Modules?" });
+});
+
+test("tidy closes the spaces enriched roll text leaves", () => {
+  assert.equal(core.tidy("+4 , reach 5 ft . Two ( 2 ) attacks"), "+4, reach 5 ft. Two (2) attacks");
+});

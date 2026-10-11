@@ -11,33 +11,14 @@
 
 import {
   LIMITS, searchBooks, findPage, renderPage, monsterDigest, toPlainText, embeddedTableUuids, renderTable,
+  BOOKSETS, EDITIONS, MONSTER_PACKS, resolveBookIds, missingPackError, tidy,
+  monsterQuery, matchMonster, monsterRow, sortMonsters, pageMonsters, listFor as listForIn, knownLists,
 } from "./lookup-core.mjs";
-
-// ── which packs count as what ────────────────────────────────────────────────
-// 2014 SRD is excluded from every default: this table runs D&D 2024, and quoting
-// 2014 text at it is the quietest way to be wrong. When it IS asked for, its hits
-// carry `edition: "2014"` so a mixed result cannot masquerade as current.
-const BOOKSETS = {
-  rules: ["dnd-players-handbook.content", "dnd-dungeon-masters-guide.content", "dnd5e.content24"],
-  monsters: ["dnd-monster-manual.content"],
-  all: ["dnd-players-handbook.content", "dnd-dungeon-masters-guide.content",
-        "dnd5e.content24", "dnd-monster-manual.content"],
-  "2014": ["dnd5e.rules"],
-};
-const EDITIONS = { "dnd5e.rules": "2014" };
-const MONSTER_PACKS = ["dnd-monster-manual.actors", "dnd5e.actors24",
-                       "dnd-players-handbook.actors", "dnd-dungeon-masters-guide.actors"];
 
 // Stripped page text, memoized by page uuid. The book packs are read-only and LevelDB
 // locks them while Foundry runs, so invalidation is "never". ~3 MB ceiling across every
 // pack; it makes the second search of a session near-instant.
 const textCache = new Map();
-
-function resolveBookIds(books) {
-  if (!books) return BOOKSETS.rules;
-  if (Array.isArray(books)) return books;
-  return BOOKSETS[String(books)] ?? BOOKSETS.rules;
-}
 
 /**
  * `game.packs` -> the plain shape lookup-core wants.
@@ -75,11 +56,6 @@ async function loadBooks(ids) {
     books.push({ id, label: pack.metadata.label, edition: EDITIONS[id], docs });
   }
   return { books, missing };
-}
-
-function missingPackError(missing) {
-  return { error: `compendium pack(s) not found: ${missing.join(", ")} — ` +
-                  `is the module enabled in Manage Modules?` };
 }
 
 // ── the API ──────────────────────────────────────────────────────────────────
@@ -150,10 +126,7 @@ async function findSpell(ref) {
   return null;
 }
 
-function listFor(type, identifier) {
-  try { return dnd5e.registry.spellLists.forType(type, String(identifier).toLowerCase()) ?? null; }
-  catch { return null; }
-}
+const listFor = (type, identifier) => listForIn(dnd5e.registry, type, identifier);
 
 /**
  * Is a spell on a class's list (or a subclass's: `{type: "subclass"}`)?
@@ -163,7 +136,7 @@ async function onList(spell, cls, { type = "class" } = {}) {
   const doc = await findSpell(spell);
   if (!doc) return { notFound: true, spell, hint: "spell names are the book's English names" };
   const list = listFor(type, cls);
-  const known = dnd5e.registry.spellLists.options?.map(o => o.value) ?? [];
+  const known = knownLists(dnd5e.registry);
   if (!list) return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, list: `${type}:${cls}`, onList: null,
     hint: `no such list; known: ${known.join(", ")}` };
   return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, list: `${type}:${cls}`, onList: list.has(doc) };
@@ -172,7 +145,7 @@ async function onList(spell, cls, { type = "class" } = {}) {
 /** The names on a class list, optionally one spell level: `spellList("cleric", {level: 3})`. */
 async function spellList(cls, { type = "class", level = null } = {}) {
   const list = listFor(type, cls);
-  if (!list) return { error: `no ${type} list "${cls}"`, known: dnd5e.registry.spellLists.options?.map(o => o.value) ?? [] };
+  if (!list) return { error: `no ${type} list "${cls}"`, known: knownLists(dnd5e.registry) };
   // the registry holds a uuid per contributing pack (PHB and the 2024 SRD both list Aid):
   // read levels from each pack's index, keep one entry per name, the owned book first
   const byPack = new Map();
@@ -246,19 +219,6 @@ async function monster(name, opts = {}) {
            hint: "try a broader name — matching is exact-then-substring" };
 }
 
-/** Enriched roll text leaves spaces before punctuation ("+4 , reach 5 ft ."): close them up. */
-const tidy = t => t.replace(/\s+([,.;:!?)])/g, "$1").replace(/\(\s+/g, "(");
-
-const SIZE_KEYS = { tiny: "tiny", small: "sm", sm: "sm", medium: "med", med: "med", large: "lg", lg: "lg",
-                    huge: "huge", gargantuan: "grg", grg: "grg" };
-
-function crNum(v) {
-  if (v === null || v === undefined || v === "") return null;
-  const m = /^\s*(\d+)\s*\/\s*(\d+)\s*$/.exec(String(v));
-  const n = m ? Number(m[1]) / Number(m[2]) : Number(v);
-  return Number.isFinite(n) ? n : null;
-}
-
 /**
  * Monsters by size, type and CR, from the Monster Manual first, then the 2024 SRD (one entry per
  * name). `monsters({size: "large", type: "construct", cr: "5-8"})`; `cr` is a value ("1/4", 3) or a
@@ -266,40 +226,20 @@ function crNum(v) {
  * type, uuid, pack}]}`, lowest CR first. Picks candidates without guessing from memory.
  */
 async function monsters(q = {}) {
-  const size = q.size ? SIZE_KEYS[String(q.size).toLowerCase()] ?? String(q.size).toLowerCase() : null;
-  const type = q.type ? String(q.type).toLowerCase() : null;
-  let lo = null, hi = null;
-  if (q.cr !== undefined && q.cr !== null && q.cr !== "") {
-    const m = /^\s*([\d/.]+)\s*-\s*([\d/.]+)\s*$/.exec(String(q.cr));
-    if (m) { lo = crNum(m[1]); hi = crNum(m[2]); } else { lo = hi = crNum(q.cr); }
-  }
-  if (q.minCr !== undefined) lo = crNum(q.minCr);
-  if (q.maxCr !== undefined) hi = crNum(q.maxCr);
-  const name = q.name ? String(q.name).toLowerCase() : null;
-  const limit = Math.max(1, Math.min(Number(q.limit) || 40, 200));
-  const packIds = q.packs ?? ["dnd-monster-manual.actors", "dnd5e.actors24"];
+  const query = monsterQuery(q);
   const seen = new Set(), out = [];
-  for (const id of packIds) {
+  for (const id of query.packIds) {
     const pack = game.packs.get(id);
     if (!pack) continue;
     const idx = await pack.getIndex({ fields: ["type", "system.details.cr", "system.traits.size", "system.details.type.value", "system.details.type.subtype"] });
     for (const e of idx) {
-      if (e.type !== "npc") continue;
-      const cr = e.system?.details?.cr, sz = e.system?.traits?.size, ty = e.system?.details?.type?.value;
-      if (size && sz !== size) continue;
-      if (type && String(ty ?? "").toLowerCase() !== type) continue;
-      if (lo !== null && !(cr >= lo)) continue;
-      if (hi !== null && !(cr <= hi)) continue;
-      if (name && !e.name.toLowerCase().includes(name)) continue;
+      if (!matchMonster(e, query)) continue;
       if (seen.has(e.name)) continue;
       seen.add(e.name);
-      const sub = e.system?.details?.type?.subtype;
-      out.push({ name: e.name, cr, size: sz, type: sub ? `${ty} (${sub})` : ty, uuid: e.uuid ?? `Compendium.${id}.Actor.${e._id}`, pack: id });
+      out.push(monsterRow(e, id));
     }
   }
-  out.sort((a, b) => (a.cr - b.cr) || a.name.localeCompare(b.name));
-  return { count: out.length, shown: Math.min(out.length, limit), monsters: out.slice(0, limit),
-           ...(out.length > limit ? { hint: `narrow it (size, type, cr) or raise limit; ${out.length - limit} more` } : {}) };
+  return pageMonsters(sortMonsters(out), query.limit);
 }
 
 /**
