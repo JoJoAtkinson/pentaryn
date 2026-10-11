@@ -817,10 +817,11 @@ The final review found one high defect and one minor issue.
 
 ## 15. Go-live checklist (for Joe, after the merge)
 
-Verified on the branch before this list was written: whole suite 1080 passed / 2 skipped /
-4 xfailed, `make check-context` clean (3 old warnings, none from this change),
-`foundry-lib-check`, `foundry-modules-check`, `vtt-update-host-check` and `make -n vtt-up`
-all fine. Nothing in the build ran against the real OneDrive, a real rclone remote, Foundry
+Verified on main after the merge (2026-10-11, with wave 2 and pentaryn-feedback already in):
+whole suite 1173 passed / 2 skipped / 3 xfailed, `make check-context` clean (4 old warnings,
+none from this change), `foundry-lib-check`, `foundry-modules-check`, the vendor check,
+`vtt-update-host-check` and `make -n vtt-up` / `make -n foundry-boot` all fine, and
+conformance unchanged from before the merge. Nothing in the build ran against the real OneDrive, a real rclone remote, Foundry
 or BOSS, so every step below is the first real run. Do them in order and stop at the first
 surprise. Foundry stays **down** until step 4.
 
