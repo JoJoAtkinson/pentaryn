@@ -228,15 +228,17 @@ def _entry(files, fp: str, version: str) -> dict:
 
 # ── the inventory (§3.3) ─────────────────────────────────────────────────────
 
-def local_inventory(*, cache: bool = True, warn: Callable[[str], None] | None = None
-                    ) -> dict[str, Local]:
+def local_inventory(*, cache: bool = True, warn: Callable[[str], None] | None = None,
+                    save: bool = True) -> dict[str, Local]:
     """Every module and system on this machine that is a bundle, keyed "<kind>/<id>".
 
     A bundle is a direct, real (not symlinked) subfolder of the kind's root whose name has
     no '@' and which holds the kind's manifest file. Anything else is skipped with one
     warning line, and never deleted by a restore. Loose files (Foundry's README.txt), junk
     and AppleDouble names are ignored silently. With `cache`, a folder whose stat
-    signature matches the cache reuses its fingerprint without reading a byte."""
+    signature matches the cache reuses its fingerprint without reading a byte. With
+    `save=False` the cache is read but never written (a restore's planning step, which
+    must change nothing on disk before every download has succeeded)."""
     say = warn or log
     data = host.foundry_data()
     cache_path = data / CACHE_FILENAME
@@ -293,7 +295,7 @@ def local_inventory(*, cache: bool = True, warn: Callable[[str], None] | None = 
             new[key] = _entry(files, fp, version)
             inv[key] = Local(kind, name, version, fp, path, new[key]["files"],
                              new[key]["bytes"])
-    if cache and new != old:
+    if cache and save and new != old:
         _save_cache(cache_path, new)
     return inv
 

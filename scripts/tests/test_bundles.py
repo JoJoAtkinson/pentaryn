@@ -552,3 +552,19 @@ def test_extract_into_missing_root(fake_data, tmp_path, mod):
     assert tar.name.startswith("system@alpha@")
     bundles.extract(tar, "system", "alpha", fake_data)
     assert (fake_data / "Data/systems/alpha/module.json").exists()
+
+
+def test_inventory_with_save_false_reads_the_cache_but_never_writes_it(fake_data):
+    from bundle_fakes import make_module
+    make_module(fake_data / "Data/modules", "alpha")
+    cache = fake_data / bundles.CACHE_FILENAME
+    first = bundles.local_inventory(save=False)
+    assert not cache.exists()
+    bundles.local_inventory()
+    assert cache.exists()
+    before = cache.read_bytes()
+    make_module(fake_data / "Data/modules", "beta")
+    again = bundles.local_inventory(save=False)
+    assert cache.read_bytes() == before                   # beta hashed, not recorded
+    assert again["module/alpha"].name == first["module/alpha"].name
+    assert "module/beta" in again
