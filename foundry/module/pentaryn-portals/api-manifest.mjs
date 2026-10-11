@@ -9,6 +9,8 @@
 import { CONTRACT, MODULE, NS, VERSION } from "./portals-core.mjs";
 
 const REGION = { name: "region", type: "RegionDocument", doc: "a destination region document" };
+const REF = { name: "ref", kind: "region", type: "Region|uuid|id|exact name", doc: "never a substring; opts.sceneId scopes an id or a name" };
+const DESTINATION = "{ uuid, scene: { id, uuid, name }, name, card: { uuid, title, img, description }, revealed, choice, behavior }";
 
 export const MANIFEST = Object.freeze({
   module: MODULE,
@@ -55,6 +57,41 @@ export const MANIFEST = Object.freeze({
       gm: true, writes: false, legacy: true,
       doc: "Pan the calling GM's own view to the region (switching scene if needed). Nobody moves; nothing broadcasts.",
     },
+    {
+      path: "inspect",
+      params: [{ ...REF, resolve: false, doc: "a region; an Actor or Token answers null (portals keeps nothing on actors)" },
+        { name: "opts", type: "{ sceneId?, as? }", optional: true }],
+      returns: "{ region, hidden, card, revealed, destinations: [destination] | null } | null",
+      gm: false, writes: false,
+      throws: ["NOT_FOUND", "AMBIGUOUS", "BAD_ARGS"],
+      doc: "Read-only portal state of one region, plain JSON: its own card (what players see arriving here) and where it "
+        + "leads. opts.as = a user ref answers as that user: a player gets no destinations for a sealed or unrevealed passage.",
+    },
+    {
+      path: "destinations",
+      params: [REF, { name: "opts", type: "{ sceneId? }", optional: true }],
+      returns: `[${DESTINATION}]`,
+      gm: false, writes: false,
+      throws: ["NOT_FOUND", "AMBIGUOUS", "BAD_ARGS"],
+      doc: "Where a teleport region leads: one entry per destination of each enabled Teleport Token behavior, with its card.",
+    },
+    {
+      path: "link",
+      params: [REF, { name: "opts", type: "{ to: region ref, twoWay = false, dryRun = false, sceneId? }" }],
+      returns: "{ ok: true, from, to, twoWay } | { ok: false, code, reason }",
+      gm: true, writes: true,
+      sideEffects: ["RegionBehavior: system.destinations (update), or a new Teleport Token behavior"],
+      doc: "Make the region lead to opts.to, exactly as the Portal card's Add a destination does: added to its first "
+        + "enabled teleport behavior, or a new one (asks first, revealed, fade 1500 ms). twoWay also links back. Already linked is a no-op.",
+    },
+    {
+      path: "unlink",
+      params: [REF, { name: "opts", type: "{ to: region ref, dryRun = false, sceneId? }" }],
+      returns: "{ ok: true, from, to, removed } | { ok: false, code, reason }",
+      gm: true, writes: true,
+      sideEffects: ["RegionBehavior: system.destinations (update)"],
+      doc: "The region no longer leads to opts.to: the entry is dropped from every enabled teleport behavior. removed = behaviors changed.",
+    },
   ],
   flags: {
     writes: ["flags.pentaryn-portals.title", "flags.pentaryn-portals.img", "flags.pentaryn-portals.description"],
@@ -79,6 +116,13 @@ export const BADGE_ROWS = Object.freeze([
     returns: "Promise<void>",
     gm: false, writes: false, legacy: true,
     doc: "Redraw the travel badges on this client's canvas.",
+  },
+  {
+    path: "badges",
+    params: [],
+    returns: "[{ region: { documentName, id, uuid, name }, revealed, visible, cards: [card] }]",
+    gm: false, writes: false,
+    doc: "The travel badges drawn on this client's canvas now, and whether each is visible to this user.",
   },
 ]);
 

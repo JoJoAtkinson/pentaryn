@@ -296,10 +296,20 @@ export async function linkRegions(from, to) {
   }]);
 }
 
-/** `from` no longer leads to `dest`: drop the entry (relative or absolute) from every teleport behavior. */
+/** The enabled teleport behaviors of `from` that lead to `dest` (a relative or absolute entry). */
+export function behaviorsLeadingTo(from, dest) {
+  return teleportBehaviors(from).filter(b => hasDestination(b.system.destinations, dest.uuid, toAbsolute(b)));
+}
+
+/**
+ * `from` no longer leads to `dest`: drop the entry (relative or absolute) from every teleport
+ * behavior. → how many behaviors changed.
+ */
 export async function unlinkRegion(from, dest) {
+  let changed = 0;
   for (const b of teleportBehaviors(from)) {
     const next = withoutDestination(b.system.destinations, dest.uuid, toAbsolute(b));
-    if (next.length !== b.system.destinations.size) await b.update({ "system.destinations": next });
+    if (next.length !== b.system.destinations.size) { await b.update({ "system.destinations": next }); changed++; }
   }
+  return changed;
 }

@@ -24,8 +24,9 @@ test("publish [declared D-P1]: at ready itself, frozen, on module.api and game.p
   assert.ok(publishedAtReady, "published synchronously at ready (no setTimeout)");
   assert.equal(game.pentaryn.portals, publishedAtReady);
   assert.equal(game.modules.get(MODULE).api, game.pentaryn.portals);
-  assert.deepEqual(Object.keys(game.pentaryn.portals).sort(), ["cardFor", "contract", "describe", "lookAt", "open", "redraw", "settings",
-    "snapshot", "spreadArrival", "teleportParty", "trace", "uninstall", "version"]);
+  const keys = Object.keys(game.pentaryn.portals);   // the exact list is api.test's golden/surface.json
+  for (const k of ["cardFor", "contract", "describe", "lookAt", "open", "redraw", "settings", "snapshot", "spreadArrival", "teleportParty",
+    "trace", "uninstall", "version"]) assert.ok(keys.includes(k), k);
   assert.equal(Object.isFrozen(game.pentaryn.portals), true);
 });
 

@@ -21,6 +21,8 @@ import { cardHTML, esc, samplePoints as samplePointsAt } from "./portals-core.mj
 import { cardFor, destinationsOf, lookAt, moveRegionDocs, teleportParty } from "./scene-adapter.mjs";
 import { PortalCard, configureCardApp } from "./card-app.mjs";
 import { BADGE_ROWS } from "./api-manifest.mjs";
+import { toPlain } from "./lib/api.mjs";
+import { refOf } from "./lib/resolve.mjs";
 
 let badgeLayer = null;
 /**
@@ -266,7 +268,12 @@ const REGION_HOOKS = ["createRegion", "updateRegion", "deleteRegion", "createReg
 function onCanvasTearDown() { hideTip(); closeMenu(); drawRun++; badges.length = 0; badgeLayer = null; }
 
 /** The API rows this feature contributes (api-manifest BADGE_ROWS). */
-export const contribution = () => ({ rows: BADGE_ROWS, impl: { open: PortalCard.open, redraw: drawBadges } });
+export const contribution = () => ({ rows: BADGE_ROWS, impl: { open: PortalCard.open, redraw: drawBadges, badges: listBadges } });
+
+/** The API's badges(): plain JSON of what is drawn on this client now. */
+function listBadges() {
+  return toPlain(badges.map(b => ({ region: refOf(b.region), revealed: !!b.revealed, visible: !!b.sprite.visible, cards: b.cards })));
+}
 
 /** Test seam: the module-private state. */
 export const _state = () => ({ badgeLayer, drawRun, tip, menu, drag });
