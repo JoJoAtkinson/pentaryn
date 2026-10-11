@@ -20,6 +20,7 @@ import { isActiveGMOrLoneGM } from "./lib/election.mjs";
 const DEBOUNCE_MS = 250;
 
 const pending = new Map();
+let log = null;
 
 /** The light the actor's carried items give, or null: a shard always, a torch while lit. */
 function carriedLight(actor) {
@@ -86,7 +87,11 @@ async function syncAll() {
 function schedule(actor) {
   if (!actor || actor.documentName !== "Actor" || !isActiveGMOrLoneGM()) return;
   clearTimeout(pending.get(actor.id));
-  pending.set(actor.id, setTimeout(() => { pending.delete(actor.id); syncLight(actor); }, DEBOUNCE_MS));
+  pending.set(actor.id, setTimeout(() => {
+    pending.delete(actor.id);
+    // a failed write is logged with the module and the actor, never left as an unhandled rejection (-15)
+    syncLight(actor).catch(e => log?.warn(`carried light ${actor.name} (${actor.id})`, e));
+  }, DEBOUNCE_MS));
 }
 
 const actorOf = (doc) => {
@@ -97,6 +102,7 @@ const actorOf = (doc) => {
 
 /** The carried-light hooks, in today's order. Raw handlers (guard: false), as they always were. */
 export function install(reg, ctx) {
+  log = ctx.log;
   const raw = { guard: false };
   reg.on("updateActor", (actor) => schedule(actor), { ...raw, label: "carried updateActor" });
   for (const verb of ["create", "update", "delete"]) {
