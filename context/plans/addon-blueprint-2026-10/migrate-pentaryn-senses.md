@@ -9,6 +9,8 @@ tags: [foundry, modules, blueprint, plan, migration, senses]
 
 > **WAIT lifted 2026-10-11** (D9: live usability work finished; `wait.json` is empty). The WAIT wording below is history; the re-anchor step still applies.
 
+> **Wave 3 re-anchor and checkpoint (2026-10-11).** `git diff 4e64f47..a5a1a906 -- foundry/module/pentaryn-senses` is empty, so every 4e64f47 anchor below is still a HEAD anchor (0 resolved, 0 obsolete). The scorer has grown since: the base scores **51.1 % (23/45)**; after the checkpoint **55.6 %** (C20 and C43 now pass). Characterisation checkpoint: **`5e76c4a1`** (see Result).
+
 > **Re-anchored to 4e64f47 on 2026-10-11.** The usability re-run (17275c9) is now committed. In this module it touched only `light.mjs`, `light-core.mjs`, `lang/en.json`, `styles/light.css`, `test/light.mjs`, `module.json` (0.4.1) and `README.md`. The working tree equals HEAD. Line numbers below are **4e64f47 lines** where marked, and frozen-snapshot lines otherwise. `senses.mjs`, `chain.mjs`, `chain-core.mjs`, `glow.mjs` and `migrate.mjs` are unchanged, so their snapshot lines are also HEAD lines. Re-anchor results: 0 steps resolved, 0 obsolete. New audit finding **senses-walls-cursors-38** (createItem torch hook) goes into glue case (k) and §4. Score 43.9 % (18/41), unchanged from the 2026-10-10 live run.
 
 **Read this when:** you are about to bring `pentaryn-senses` (carried lights, the Light cantrip, the
@@ -604,8 +606,62 @@ and **-34** (step 7).
 |---|---|
 | Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module senses --markdown` |
 | Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
+| Commits (Joe-approved) | characterisation: `5e76c4a1` · refactor: ______ · standalone: ______ |
 | Declared changes handed to the live-test workflow | ______ (session L__) |
 | `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
 | Adjustments rows appended to `adjustments-batch.md` | yes / no |
 | Still failing, and why | ______ |
+
+### Checkpoint `5e76c4a1` (wave 3, 2026-10-11)
+
+Base `a5a1a906` (wave-3-base). Only `test/**` changed. `node test/run.mjs`: 105 node:test cases, 104
+pass, 1 todo (the three old suites run inside them: chain-core 31, light-core 100, migrate 25 checks).
+Coverage over the module's own files (`node --test --experimental-test-coverage`, `test/` excluded):
+**91.40 / 90.79 / 95.83** before, over the 3 pure files only (`senses.mjs`, `chain.mjs`, `glow.mjs`,
+`light.mjs` were never loaded) → **98.96 / 91.46 / 98.64** over all 7. Left uncovered: the
+self-install `catch` branches (`chain.mjs:277,303,311`, `light.mjs:737,838,846`), three pure `catch`
+branches in `light-core.mjs`, `migrate.mjs:40`.
+
+How it differs from step 1 as written:
+- **Imports.** The tests import today's files (`../chain-core.mjs`, `../light-core.mjs`,
+  `../migrate.mjs`, `../glow.mjs`, `../senses.mjs`). The `senses-core.mjs` barrel, glow's extra
+  exports (`rng`, `hashString`, `buildEpoch`) and `vendor.py sync` (`lib/`, `kit.lock.json`) are not
+  test files, so they open the refactor (step 1.1–1.2 → do them first, then switch the imports — an
+  import-path-only change). `test/kit/` is a byte-identical copy of `foundry/lib/test-kit` 1.0.2,
+  which is what `vendor.py sync` writes. Waiting on the barrel: the C41 `VERSION` pin; on glow's
+  export: the `buildEpoch` call count (-22a `// KNOWN:` row).
+- **Files.** `core.test` (purity + the old chain block), `light-core.test` and `migrate.test` (the old
+  suites, renamed as-is), `glow.test`, `carried.test` (-11/-12 against the oracles), `util.test`,
+  `hooks.test` (a; `hooks.json`), `api.test` (`surface.json`), `chain.test` (g), `light.test` (h, i,
+  k, l and every GM hook), and one boot per `ready` scenario: `glue.test` (b, c, i, j, setupLight),
+  `glue-second-gm` (d), `glue-lone-gm`, `glue-player`, `glue-frozen` + `glue-frozen-late` (e, both
+  orders), `glue-hot` (the dev path S-4 retires), `glue-ready-errors`. Oracles:
+  `fixtures/legacy-light-update.mjs`, `legacy-sync-plan.mjs`, `legacy-util.mjs` (esc, unset, the
+  chain `-=` literal, the three predicates, the publish guard — one file instead of four).
+- **glow.test** calls `register()` directly; registration timing is pinned through the entry.
+
+Todo pins (KNOWN, `{ todo }`):
+- `glow.test` "bright follows the wave back up" — new, no audit id. `animateBrokenGlow` writes
+  `bright: Math.min(this.data.bright, radius)` and `BaseEffectSource#initialize` merges into
+  `this.data`, so the bright radius only shrinks until a token refresh re-initializes the source
+  (`glow-animation.json`, t=9000: dim 114, bright 101). The fix reads the document's bright; it is a
+  [declared] visual change.
+
+Pinned as today, flipped later by their declared commits: -38 (`light-torch-create.json`
+`packTorch` row), -26 (`chain.test` link refusals: a Token uuid and an off-scene id give `false`),
+-10 chain half (`chain-break.json`, `-=`), S-1/S-2/S-3 (`surface.json`, `hooks.json`,
+`hooks-uninstall.json`, the `glue.test` keys test). **-15 is not pinned**: an unhandled rejection
+fails the node:test file, so `glue-ready-errors` lets the scene recover before the debounced
+re-sync; -15's own commit adds the warn row.
+
+Observations for the standalone pass (not todo, not changed):
+- `syncLight` on an unlinked token's synthetic actor (any item hook on its items, e.g. setupLight
+  giving the Goblin's torch its activity) writes `prototypeToken.*` on the synthetic actor
+  (`setup-light.json`). Live, an ActorDelta has no prototype, so that is a wasted write per sync —
+  fold into -11.
+- `onMe` returns the notification object on a refusal, not `false` (`light-onme.json`) — C31 legacy shape.
+- A chain toward a **hidden anchor** is drawn for players (`chain.test`); only the chained end is
+  checked. Recorded for Joe in `wave-3-report.md`.
+- Stub gap: the kit stub fires `update<Type>` hooks on an empty diff; Foundry does not. So `end()` on
+  a Light whose `lightCast` is already `null` (left so by a failed reconcile, `light-sweep.json`)
+  shows a reconcile here but, live, writes nothing and triggers none. Check live with -14.
