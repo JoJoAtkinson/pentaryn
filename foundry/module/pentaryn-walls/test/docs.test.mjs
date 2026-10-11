@@ -16,3 +16,22 @@ test("every test/… path the README names exists", () => {
   assert.ok(paths.length >= 3);
   for (const p of paths) assert.ok(existsSync(new URL(p, ROOT)), p);
 });
+
+// senses-walls-cursors-8 recipe (scoped to walls): every repo doc path the module's sources and docs
+// cite resolves. module.json's `description` still says playbooks/… until the Wave 7 restart batch
+// edits it, so that file is a todo, not a pass.
+const REPO = new URL("../../../", ROOT);
+const CITED = /\b(?:context|playbooks)\/[\w./-]+\.md\b/g;
+const SOURCES = ["README.md", "CHANGELOG.md", "pentaryn-walls.mjs", "actions.mjs", "api.mjs",
+  "api-manifest.mjs", "backend-wasm.mjs", "migrations.mjs", "settings.mjs", "walls-core.mjs",
+  "core/engine.mjs", "core/backends.mjs", "core/migrate.mjs", "test/fixtures/corpus.mjs"];
+const unresolved = file => [...new Set(readFileSync(new URL(file, ROOT), "utf8").match(CITED) ?? [])]
+  .filter(p => !existsSync(new URL(p, REPO)));
+
+test("every context/… or playbooks/… path cited by the module resolves", () => {
+  for (const f of SOURCES) assert.deepEqual(unresolved(f), [], f);
+});
+
+test("module.json cites a doc that exists", { todo: "Wave 7 restart batch edits the description" }, () => {
+  assert.deepEqual(unresolved("module.json"), []);
+});
