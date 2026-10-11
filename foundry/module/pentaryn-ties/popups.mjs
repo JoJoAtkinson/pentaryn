@@ -24,6 +24,7 @@
 
 import { MODULE, read, stanceOf, stanceLabel } from "./ties-api.mjs";
 import { readWorn } from "./worn.mjs";
+import { canSee } from "./ties-adapter.mjs";
 
 const LAYER_ID = "pentaryn-ties-cards";
 export const PIN_SETTING = "pinnedCards";
@@ -359,14 +360,9 @@ export function restorePinned() {
      * wire was already safe (paintWires resolves through the filtered lookup); this was the
      * one hole left. Without a token the card falls back to `tie.img`, which is the actor
      * portrait they could already reach.
-     *
-     * Inlined rather than imported: overlay.mjs imports this module, so canSee() cannot come
-     * the other way without a cycle. Canonical version and its `isVisible` vs `visible`
-     * reasoning live there.
      */
-    const seen = p => game.user?.isGM === true || (p.isVisible ?? p.visible) === true;
     const token = canvas?.ready
-      ? canvas.tokens.placeables.find(p => p.actor?.id === tie.id && seen(p)) ?? null
+      ? canvas.tokens.placeables.find(p => p.actor?.id === tie.id && canSee(p)) ?? null
       : null;
     const k = key(actor.id, tie.id);
     if (cards.has(k)) continue;

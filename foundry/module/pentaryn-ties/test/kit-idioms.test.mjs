@@ -34,3 +34,27 @@ test("S5 flags: no file outside lib/ calls getFlag on its own scope through a tr
   const hits = sourceScan(new URL("..", import.meta.url), /const (flagOf|rawFlag) = \(doc, key\) => \{|try \{ return doc\?\.getFlag/);
   assert.deepEqual(hits, []);
 });
+
+test("S5 canSee: one rule (ties-adapter) — GM sees all; a player needs isVisible; visible is only a fallback", async () => {
+  const { canSee } = await import("../ties-adapter.mjs");
+  const gm = game.user;
+  assert.equal(canSee({ isVisible: false }), true, "GM");
+  assert.equal(canSee(null), false, "null, GM");
+  game.user = { id: "zzPlayer", isGM: false };
+  try {
+    assert.equal(canSee({ isVisible: false }), false);
+    assert.equal(canSee({ isVisible: true }), true);
+    assert.equal(canSee({ visible: true }), true, "visible without isVisible");
+    assert.equal(canSee({ isVisible: false, visible: true }), false, "isVisible wins over the PIXI flag");
+    assert.equal(canSee(null), false);
+    assert.equal(canSee({}), false);
+  } finally {
+    game.user = gm;
+  }
+});
+
+test("S5 canSee: no other file defines its own copy", async () => {
+  const { sourceScan } = await import("./kit/harness.mjs");
+  const hits = sourceScan(new URL("..", import.meta.url), /isVisible \?\? \w+\.visible/).filter(h => h.file !== "ties-adapter.mjs");
+  assert.deepEqual(hits, []);
+});

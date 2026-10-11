@@ -44,6 +44,7 @@
 
 import { MODULE, read } from "./ties-api.mjs";
 import * as Cards from "./popups.mjs";
+import { canSee } from "./ties-adapter.mjs";
 
 /**
  * `actorId` is whose web was last raised, `mode` is which key raised it ("all" | "one"),
@@ -90,20 +91,10 @@ function permitted(actor) {
   return actor.isOwner === true;
 }
 
-/**
- * Rule 2. `Token#isVisible` is Foundry's own answer to "can THIS client see that token",
- * folding together walls, light, detection modes and the GM-hidden flag — per client,
- * computed by Foundry, not re-derived here. A GM sees everything by definition.
- *
- * It is `isVisible`, NOT `visible`. On v14 `Token#visible` is the inherited PIXI
- * DisplayObject flag and is `true` for every placeable on the scene, walled off and
- * GM-hidden alike — using it would have leaked exactly what this rule exists to hide.
+/*
+ * Rule 2 — can this client see the token — is `canSee` in ties-adapter.mjs: `Token#isVisible`, never
+ * `visible` (on v14 the PIXI flag is true for every placeable, walled off and GM-hidden alike).
  */
-function canSee(token) {
-  if (!token) return false;
-  if (game.user.isGM) return true;
-  return (token.isVisible ?? token.visible) === true;
-}
 
 /**
  * Token geometry, v14-safe.

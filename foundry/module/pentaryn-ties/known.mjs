@@ -28,6 +28,7 @@
 
 import { MODULE, baseActorOf, mayWrite } from "./ties-api.mjs";
 import { readFlag } from "./lib/flags.mjs";
+import { canSee } from "./ties-adapter.mjs";
 import {
   KNOWN_FLAG,
   KNOWN_CATEGORIES_FLAG,
@@ -245,8 +246,6 @@ function knownKey() {
  * GM-hidden alike — so filing on `visible` would turn this key into a hidden-token detector:
  * sweep the cursor through the dark and see which squares answer.
  */
-const canSee = token => !!token && (game.user?.isGM === true || (token.isVisible ?? token.visible) === true);
-
 /** The canvas-side half of `pickNotebook` — the `baseActorOf` walk, then the pure rule. */
 export function notebookActor() {
   const describe = actor =>
