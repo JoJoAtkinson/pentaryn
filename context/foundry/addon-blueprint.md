@@ -758,7 +758,9 @@ migrated module (one with `lib/kit.lock.json`; an unmigrated one skips both, it 
 Conformance is **advisory until Stage 5**: it reports failing rules but keeps the check green
 (`CONFORMANCE_FAILS` in `scripts/foundry/ops/modules.py`), and a WAIT module is reported, never
 failed. `make foundry-modules-check` runs every module and keeps going (`JSON=1` for `--json`).
-Kit: `make foundry-lib-check`. Scores: `make foundry-conformance [M=<short>] [MD=1]`. Python:
+Kit: `make foundry-lib-check`. Scores: `make foundry-conformance [M=<short>] [MD=1]` — it calls
+`conformance.py` directly, which exits 1 while any scored module fails a fail-class rule, so make
+reports an error until Stage 5 is done; read the scores, not the exit code. Python:
 `make test` (pytest, blueprint tests included). Everything: `make check-all`.
 
 After a migration changes a module's published API, run `make foundry-module-index` and commit
