@@ -281,23 +281,32 @@ export async function openDialog(token) {
 /*  Hooks                                       */
 /* -------------------------------------------- */
 
-export function registerHooks() {
-  Hooks.on("renderTokenHUD", (app, element) => {
+/**
+ * FEATURE install — called by the entry during `init`, where these hooks have always registered.
+ * The HUD handler keeps its own try/catch (its warning text is pinned); the badge handlers stay
+ * unguarded, as they always were (declared B9 changes that).
+ */
+export function install(reg) {
+  reg.on("renderTokenHUD", (app, element) => {
     try {
       injectHUD(app, element);
     } catch (err) {
       log.warn(`worn HUD injection skipped`, err);
     }
-  });
+  }, { label: "worn: HUD" });
 
   // Foundry destroys canvas.interface under us — drop the handle, same as the wires.
-  Hooks.on("canvasTearDown", () => (state.badges = null));
+  reg.on("canvasTearDown", () => (state.badges = null), { guard: false, label: "worn: canvasTearDown" });
 
-  Hooks.on("canvasReady", () => drawBadges());
-  Hooks.on("refreshToken", () => drawBadges()); // badges ride their tokens
-  Hooks.on("deleteToken", () => drawBadges());
-  Hooks.on("updateToken", (_doc, changes) => {
+  reg.on("canvasReady", () => drawBadges(), { guard: false, label: "worn: canvasReady" });
+  // hot: state.badges — drawBadges only schedules one frame; badges ride their tokens
+  reg.on("refreshToken", () => drawBadges(), { guard: false, label: "worn: refreshToken" });
+  reg.on("deleteToken", () => drawBadges(), { guard: false, label: "worn: deleteToken" });
+  reg.on("updateToken", (_doc, changes) => {
     // only a flag write can change what is marked; movement is refreshToken's job
     if (foundry.utils.getProperty(changes ?? {}, `flags.${MODULE}`) !== undefined) drawBadges();
-  });
+  }, { guard: false, label: "worn: updateToken" });
 }
+
+/** The entry's reg.offAll() removes the hooks; worn keeps no other state worth dropping. */
+export function uninstall() {}

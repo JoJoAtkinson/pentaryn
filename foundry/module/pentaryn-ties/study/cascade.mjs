@@ -36,7 +36,8 @@ import {
   stackingRule,
   studySkillFor
 } from "./resolve.mjs";
-import { CHANNEL, esc, f, INSPECT, log, t } from "./shared.mjs";
+import { esc, f, INSPECT, log, t } from "./shared.mjs";
+import { send } from "../socket-adapter.mjs";
 import { announceTempo } from "./tempo.mjs";
 import { readFlag } from "../lib/flags.mjs";
 
@@ -100,7 +101,7 @@ export async function inspect(character, subject) {
 
   const payload = { action: INSPECT, characterId: character.id, subjectId: subject.id };
   if (game.user?.isGM) return applyInspect(payload, game.user.id, { postStubCard: false });
-  game.socket.emit(CHANNEL, payload);
+  send(payload);
   return true;
 }
 

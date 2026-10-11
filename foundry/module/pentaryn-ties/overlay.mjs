@@ -23,7 +23,7 @@
  *           still points at a person.
  *
  * Wires are a pure function of the live card set: `drawWires()` throws the whole layer
- * away and rebuilds it from `Cards.live()` on every pan, every scene load, and every
+ * away and rebuilds it from `live()` on every pan, every scene load, and every
  * change to what is on screen. A card can therefore never be up without its wire — which
  * it could be, back when the two were tracked separately and a card outlived the layer
  * that drew its line.
@@ -43,7 +43,7 @@
  */
 
 import { MODULE, read } from "./ties-api.mjs";
-import * as Cards from "./popups.mjs";
+import { anyTransient, closeTransient, live as liveCards, reflow, setOnChange, show } from "./popups.mjs";
 import { canSee } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
@@ -192,7 +192,7 @@ export function drawWires() {
  */
 function paintWires() {
   if (!canvas?.ready) return;
-  const live = Cards.live();
+  const live = liveCards();
   if (!live.length) return dropWires();
 
   const g = wireLayer();
@@ -249,7 +249,7 @@ export function clear() {
   state.actorId = null;
   state.mode = null;
   state.tieId = null;
-  Cards.closeTransient(); // fires onChange -> drawWires()
+  closeTransient(); // fires onChange -> drawWires()
 }
 
 /**
@@ -257,7 +257,7 @@ export function clear() {
  * Answers about TRANSIENT cards only and ignores `mode`, so it is true after either key.
  */
 export function isShowing(actorId) {
-  if (!Cards.anyTransient()) return false;
+  if (!anyTransient()) return false;
   return !actorId || state.actorId === actorId;
 }
 
@@ -291,13 +291,13 @@ function visibleGroups(actor) {
  * does. Falling back would turn "what is she to me" into "what is she to her" without
  * saying so, and you would read somebody else's answer to your own question.
  *
- * ⚠ WHETHER THE WEB IS UP is asked of `Cards.anyTransient()`, never of a remembered flag.
+ * ⚠ WHETHER THE WEB IS UP is asked of `anyTransient()`, never of a remembered flag.
  * Dragging a card PINS it, and a pinned card is not transient — so after a drag there is
  * nothing left to sweep. An earlier version kept a separate `state.active` boolean that
  * still said "showing", so the next key press took the toggle-off branch and did nothing
  * at all: press 7, drag the card, press 8, get silence.
  *
- * A pinned card is never duplicated either: `Cards.show()` keys on `sourceId:tieId` and
+ * A pinned card is never duplicated either: `show()` keys on `sourceId:tieId` and
  * skips a key already on screen. Pin a card from 7, then press 8, and you get the REST of
  * the web with the one you parked left exactly where you put it.
  */
@@ -308,7 +308,7 @@ export function showAll() {
 
   const token = targetToken();
   const actor = token?.actor ?? null;
-  const showing = Cards.anyTransient();
+  const showing = anyTransient();
   const sameActor = !!actor && state.actorId === actor.id;
 
   if (!actor) {
@@ -353,17 +353,17 @@ export function showAll() {
   }
 
   /**
-   * One card per PERSON, said here rather than leaned on downstream. `Cards.show()` dedups
+   * One card per PERSON, said here rather than leaned on downstream. `show()` dedups
    * on `sourceId:tieId` and would collapse a per-token list anyway, but that dedup is a
    * safety net, not the contract — and counting the pre-dedup list is exactly what made the
    * GM's "shown" number below disagree with the number of cards on screen.
    */
   const entries = groups.map(({ tie, tokens }) => ({ tie, token: tokens[0] }));
-  if (showing) Cards.closeTransient();
+  if (showing) closeTransient();
 
   // safe unconditionally: `actor` already passed permitted(), so these notes are the
   // viewer's own — see the note in popups.mjs on where GM secrets belong instead
-  const shown = Cards.show(actor, entries, { showNotes: true }); // fires onChange -> drawWires()
+  const shown = show(actor, entries, { showNotes: true }); // fires onChange -> drawWires()
 
   state.actorId = actor.id;
   state.mode = "all";
@@ -452,12 +452,12 @@ export function showOne() {
   }
 
   // pressing it again on the same person is how you close it
-  const showing = Cards.anyTransient();
+  const showing = anyTransient();
   const same = state.mode === "one" && state.actorId === src.actor.id && state.tieId === tie.id;
   if (showing && same) return clear();
 
-  if (showing) Cards.closeTransient();
-  const shown = Cards.show(src.actor, [{ tie, token: target }], { showNotes: true });
+  if (showing) closeTransient();
+  const shown = show(src.actor, [{ tie, token: target }], { showNotes: true });
 
   state.actorId = src.actor.id;
   state.mode = "one";
@@ -480,30 +480,42 @@ export const toggle = showAll;
 /*  Hooks                                       */
 /* -------------------------------------------- */
 
-export function registerHooks() {
+/**
+ * FEATURE install — called by the entry during `init`, where these hooks have always registered
+ * (golden/hooks-after-init.json pins their order). Unguarded on purpose: a throw in one keeps
+ * Foundry's own "Error thrown in hooked function" path, as it always did (declared B9 changes that).
+ */
+export function install(reg) {
   // every change to the card set redraws the wires; nothing else may touch them
-  Cards.setOnChange(drawWires);
+  setOnChange(drawWires);
 
-  Hooks.on("canvasTearDown", () => {
+  reg.on("canvasTearDown", () => {
     // Foundry destroys canvas.interface under us — drop the handle rather than the cards.
     state.wires = null;
     state.actorId = null;
     state.mode = null;
     state.tieId = null;
     // transient cards belong to a scene; pinned ones are a memo and travel with you
-    Cards.closeTransient();
-  });
+    closeTransient();
+  }, { guard: false, label: "overlay: canvasTearDown" });
 
   // a pinned card that travelled here from another scene needs its leash drawn again
-  Hooks.on("canvasReady", () => drawWires());
+  reg.on("canvasReady", () => drawWires(), { guard: false, label: "overlay: canvasReady" });
 
   // transient cards ride the canvas, and every wire is anchored to it
-  Hooks.on("canvasPan", () => {
-    Cards.reflow();
+  reg.on("canvasPan", () => {
+    reflow();
     drawWires();
-  });
+  }, { guard: false, label: "overlay: canvasPan" });
 
   // a tie who walks out of sight (or into it) while cards are up
-  Hooks.on("refreshToken", () => drawWires());
-  Hooks.on("sightRefresh", () => drawWires());
+  // hot: state.wires — drawWires only schedules one frame; the paint reads the live card set
+  reg.on("refreshToken", () => drawWires(), { guard: false, label: "overlay: refreshToken" });
+  // hot: state.wires
+  reg.on("sightRefresh", () => drawWires(), { guard: false, label: "overlay: sightRefresh" });
+}
+
+/** The entry's reg.offAll() removes the hooks; this drops the card-set subscription. */
+export function uninstall() {
+  setOnChange(null);
 }

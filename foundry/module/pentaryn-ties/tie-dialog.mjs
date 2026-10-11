@@ -728,3 +728,25 @@ export class TieDialog extends ApplicationV2 {
     this.#resolveFromClick(clicked);
   }
 }
+
+/**
+ * Open the tie dialog for a token — the 6 key, the Token HUD button, the double-click menu and
+ * `game.pentaryn.ties.addTie` all come through here.
+ *
+ * The dialog works out which end of the link the token fills — normally the **to** half, falling
+ * back to the **from** half when removing it would leave you no one to write on (a player pressing
+ * this on their own token). That rule lives in the dialog because it is driven by who you have
+ * access to, which is the same thing that decides everything else about the window.
+ */
+export async function openTieDialogFor(token) {
+  const actor = token ? baseActorOf(token) : null;
+  if (!actor) {
+    ui.notifications.warn(game.i18n.localize("PENTARYN_TIES.notify.noTarget"));
+    return null;
+  }
+  // nothing to write with, and for a player that includes the case where the GM turned the
+  // whole feature off — so check the pens, not the token
+  if (!mayWrite()) return null;
+  if (!game.user?.isGM && !sourceCandidates().length) return null;
+  return TieDialog.open({ clicked: actor, clickedToken: token });
+}

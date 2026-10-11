@@ -29,8 +29,11 @@ export function decorate(app, element) {
   }
 }
 
-export function register() {
-  Hooks.on("renderBaseActorSheet", (app, element) => {
+/** FEATURE install — called by the entry during `init`; the handler keeps its own try/catch. */
+export function install(reg) {
+  reg.on("renderBaseActorSheet", (app, element) => {
     try { decorate(app, element); } catch (err) { log.warn(`item marks`, err); }
-  });
+  }, { label: "item marks" });
 }
+
+export function uninstall() {}

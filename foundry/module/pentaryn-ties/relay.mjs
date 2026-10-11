@@ -55,12 +55,11 @@
 
 import { MODULE, read, write, clampStance, clampStrength, mayWrite, canReach } from "./ties-api.mjs";
 import { seedReverse } from "./ties-core.mjs";
-import { isActiveGM } from "./lib/election.mjs";
+import { listen, send } from "./socket-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
 
-const CHANNEL = `module.${MODULE}`;
 const MIRROR = "mirror-reverse";
 
 /**
@@ -78,7 +77,7 @@ export function requestMirror({ source, target }) {
   if (!game.users?.activeGM) return skip("no active GM"); // nobody home — their own side still saved
   // ids only: everything else is re-derived by the GM from documents it can see itself
   // no sender id: the server stamps the authenticated one on for us
-  game.socket.emit(CHANNEL, { action: MIRROR, sourceId: source.id, targetId: target.id });
+  send({ action: MIRROR, sourceId: source.id, targetId: target.id });
   return true;
 }
 
@@ -151,14 +150,7 @@ async function applyMirror(payload, senderId) {
   await write(target, theirs);
 }
 
+/** The relay's one action, on the module socket; only the active GM applies it. */
 export function registerRelay() {
-  game.socket.on(CHANNEL, async (payload, senderId) => {
-    if (payload?.action !== MIRROR) return;
-    if (!isActiveGM()) return; // the one GM that acts on relayed writes
-    try {
-      await applyMirror(payload, senderId);
-    } catch (err) {
-      log.error(`relayed mirror write failed`, err);
-    }
-  });
+  listen({ [MIRROR]: { run: applyMirror } }, { failed: err => log.error(`relayed mirror write failed`, err) });
 }

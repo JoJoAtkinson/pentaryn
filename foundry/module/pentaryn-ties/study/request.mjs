@@ -10,7 +10,8 @@ import { MODULE, mayWrite } from "../ties-api.mjs";
 import { attrFactKey, LORE_FLAG, loreFactKey, loreOfferable, rollableLore } from "../known-core.mjs";
 import { applyStudy } from "./apply.mjs";
 import { kindActorOf, studiedOf, studyStateFor } from "./resolve.mjs";
-import { CHANNEL, esc, f, log, SITUATIONAL_MAX, SITUATIONAL_MIN, STUDY, t } from "./shared.mjs";
+import { esc, f, log, SITUATIONAL_MAX, SITUATIONAL_MIN, STUDY, t } from "./shared.mjs";
+import { send } from "../socket-adapter.mjs";
 import { readFlag } from "../lib/flags.mjs";
 
 /* -------------------------------------------- */
@@ -222,7 +223,7 @@ async function requestFact(character, subject, spec, label) {
   if (game.user?.isGM) return applyStudy(payload, game.user.id);
 
   // No sender id on the wire: the server stamps the authenticated one on for us.
-  game.socket.emit(CHANNEL, payload);
+  send(payload);
   return true;
 }
 

@@ -1,76 +1,97 @@
 /**
- * Pentaryn NPC Ties — entry point.
+ * Pentaryn NPC Ties (pentaryn-ties) — ENTRY: esmodules[0]. Wiring only.
  *
- *   game.pentaryn.ties.show()          toggle every card for the hovered token (key 8)
- *   game.pentaryn.ties.showOne()       selected -> hovered, that one card (key 7)
- *   game.pentaryn.ties.edit(actor)     open the standalone editor
- *   game.pentaryn.ties.read(actor)     sanitised ties (never throws)
- *   game.pentaryn.ties.set(a, b, {...}) create/update an edge and its mirror
- *   game.pentaryn.ties.setNotes(a, bId, text)  the long version, sheet-only
- *   game.pentaryn.ties.known.read(actor)       the Known list (never throws)
- *   game.pentaryn.ties.known.add(actor, who)   file someone; null if already filed
- *   game.pentaryn.ties.known.file(token)       hover + file + open their page (key 5)
- *   game.pentaryn.ties.known.hide(actor, id, true|false)  tuck away / put back
- *   game.pentaryn.ties.known.purge(actor, id)   destroys a row; nothing in the UI does
- *   game.pentaryn.ties.study.lore(pc, npc)     that NPC's rows, as the PC's sheet sees them
- *   game.pentaryn.ties.study.askLore(pc, npc, loreId)  roll one of them
- *   game.pentaryn.ties.study.fact({ns, subjectId, factId})  the conduit's resolve seam
- *   game.pentaryn.ties.attributes.of(actor)    what this one belongs to (derived + authored)
- *   game.pentaryn.ties.attributes.create(title)  a registry entry; refuses an id or name collision
- *   game.pentaryn.ties.attributes.link(actor, id) / .unlink(actor, id)
- *   game.pentaryn.ties.study.examine(pc, subject)   the one gesture that starts a check (was study.inspect)
- *   game.pentaryn.ties.study.look(subject, pc?)     the player's read-only page on them (no roll)
- *   game.pentaryn.ties.attributes.known(pc)         what they have worked out of the world
- *   game.pentaryn.ties.attributes.tell(pc, id, {withParents})  disclosure, the only non-roll route
- *   game.pentaryn.ties.attributes.openReview()      the GM's review panel (also the tag button, token tools)
- *   game.pentaryn.ties.attributes.selected()        what the GM ticked in it → [{id,title,category,parent,reviewState}]
- *   game.pentaryn.ties.attributes.unreviewed()      entries awaiting the GM's sign-off
+ * Files, in load order (the README "Files" table has the roles):
+ *   ties-core.mjs, core/*.mjs (known-core.mjs barrel)   PURE rules
+ *   settings.mjs           SETTINGS / KEYBINDINGS tables, setting(), mayWrite
+ *   ties-adapter.mjs, socket-adapter.mjs   ADAPTERS: canvas reads, the module socket
+ *   conduit.mjs            FEATURE: socket listeners at ready, the tempo-clearing hooks
+ *   token-hud.mjs          FEATURE: Token HUD buttons, the Attribute Review control
+ *   look-menu.mjs          FEATURE: the player's double-click look menu
+ *   sheet.mjs              FEATURE: the three sheet tabs and the header button
+ *   overlay.mjs, worn.mjs, item-marks.mjs   FEATURES installed during init
+ *   lib/*.mjs              vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
- * The keys are real Foundry keybindings, not hotbar macros — they show up in
- * Configure Controls and can be rebound if 5 through 9 are already spoken for. A macro
- * is also created once, on first ready, for anyone who prefers dragging it to a bar.
+ * Lifecycle: the entry body registers init and ready, then installs conduit, token-hud, look-menu
+ * and sheet SYNCHRONOUSLY, in that order — every listener keeps its place (golden/hooks.json).
+ * init → settings and keys, then overlay, worn, item-marks · ready → publish, then the GM's
+ * one-time steps. The keys' bodies are handed to settings.mjs with onKeys().
+ *
+ * The API is `game.pentaryn.ties` — `game.pentaryn.ties.describe()` lists it once the kit API lands
+ * (S8); until then the published object below is the reference.
  */
 
-import * as API from "./ties-api.mjs";
-import * as Overlay from "./overlay.mjs";
-import * as Cards from "./popups.mjs";
-import * as Worn from "./worn.mjs";
-import * as Describe from "./describe.mjs";
-import { TiesEditor, buildHTML, bind, forgetActor } from "./editor.mjs";
-import * as Known from "./known.mjs";
-import * as Attributes from "./attributes.mjs";
-import * as AttributesUI from "./attributes-ui.mjs";
-import { registerRelay } from "./relay.mjs";
-import * as Study from "./study.mjs";
-import { openPreview } from "./preview.mjs";
-import { openLook } from "./look.mjs";
-import { AttributeReview, openReview } from "./review-ui.mjs";
-import * as ItemMarks from "./item-marks.mjs";
 import { MODULE } from "./ties-core.mjs";
 import { registerSettings, onKeys, setting, mayWrite } from "./settings.mjs";
+import { inspectorFor } from "./ties-adapter.mjs";
+import { closeAll, restorePinned } from "./popups.mjs";
+import { toggle as toggleDescription, close as closeDescription } from "./describe.mjs";
+import { TiesEditor } from "./editor.mjs";
+import { openTieDialogFor } from "./tie-dialog.mjs";
+import { openPreview } from "./preview.mjs";
+import { openLook } from "./look.mjs";
+import { openReview } from "./review-ui.mjs";
+import { inbound, migrateLegacy, read, removeTie, setNotes, setTie, STANCES } from "./ties-api.mjs";
+import {
+  addKnown, categoriesFor, fileHovered, hideKnown, notebookActor, openAddPicker, openKnownEntry,
+  readKnown, removeKnown, setKnownField
+} from "./known.mjs";
+import {
+  attributeIdsOf, attributesOf, brokenAncestry, clearSelection, createAttribute, deleteAttribute,
+  derivedFor, describeRef, deselectAttributes, ensureAttribute, grantKnowledge, knowledge,
+  knownWorld, linkAttribute, registry, repairAncestry, repairIcons, resolveAttribute,
+  reviewAttribute, searchAttributes, selectAttributes, selectedAttributes, staleCarriers,
+  unlinkAttribute, unreviewAttribute, unreviewedAttributes, updateAttribute
+} from "./attributes.mjs";
+import {
+  attrOffersFor, clearScoping, beliefs, deliver, deliverHeldIdentifications, factStatus, forgetFact, grantKind,
+  inspect, inspectAs, kindActorOf, kindDialog, legacyMissCards, loreStateFor, pending,
+  releaseHeldAttribute, requestAttrLore, requestLore, requestStudy, reset, resetIdentification,
+  resetInspection, resolveFact, scopingState, setKindOf, setStudyHold, setStudyOffset,
+  setStudyTiers, shareFact, studiedOf, studyAs, studyStateFor, studyTiersOf
+} from "./study.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { hookRegistry } from "./lib/hooks.mjs";
+import * as conduit from "./conduit.mjs";
+import * as tokenHud from "./token-hud.mjs";
+import * as lookMenu from "./look-menu.mjs";
+import * as sheet from "./sheet.mjs";
+import * as overlay from "./overlay.mjs";
+import * as worn from "./worn.mjs";
+import * as itemMarks from "./item-marks.mjs";
+
+/** Features installed from the entry body, in this order (their hooks follow init and ready). */
+const FEATURES = [conduit, tokenHud, lookMenu, sheet];
+/** Features whose hooks have always registered during init. */
+const AT_INIT = [overlay, worn, itemMarks];
 
 const log = makeLog(MODULE);
-
-const TAB = "ties";
-
-/* -------------------------------------------- */
-/*  Registration                                */
-/* -------------------------------------------- */
+const reg = hookRegistry(MODULE, log);
+const ctx = {
+  log,
+  reg,
+  setting,
+  api: null,
+  exposed: {},
+  expose(accessors) {
+    Object.assign(ctx.exposed, accessors);
+  },
+  uninstall
+};
 
 /*
  * The keys' bodies. The rows (ids, default keys, labels) are KEYBINDINGS in settings.mjs; settings
  * may not import a feature, so the bodies are handed over here and each row's onDown calls its body.
  */
 onKeys({
-  showWeb: () => Overlay.showAll(),
+  showWeb: () => overlay.showAll(),
   addTie: () => {
     if (!mayWrite()) return;
     openTieDialogFor(canvas?.tokens?.hover ?? null);
   },
   fileKnown: () => {
     if (!mayWrite()) return;
-    Known.fileHovered(canvas?.tokens?.hover ?? null);
+    fileHovered(canvas?.tokens?.hover ?? null);
   },
   /*
    * Inspect the hovered token — phase 8's gesture, on the key beside the one that files them.
@@ -85,19 +106,21 @@ onKeys({
     if (who && subject && subject.id !== who.id) {
       // the Look window first, before the dice — same moment, same frame, whatever follows
       if (!game.user?.isGM) openLook(who, subject);
-      Study.inspect(who, subject);
+      inspect(who, subject);
     }
   },
-  showOneTie: () => Overlay.showOne(),
-  showDescription: () => Describe.toggle()
+  showOneTie: () => overlay.showOne(),
+  showDescription: () => toggleDescription()
 });
 
-Hooks.once("init", () => {
+/*
+ * init: the settings and keys, then the three features whose hooks have always registered DURING
+ * init (golden/hooks-after-init.json pins them after the load-time ones).
+ */
+function onInit() {
   registerSettings({ log });
-  Overlay.registerHooks();
-  Worn.registerHooks();
-  ItemMarks.register();
-});
+  for (const feature of AT_INIT) feature.install(reg, ctx);
+}
 
 /**
  * Publish the API under `game.pentaryn.ties`. The root is a plain object every module assigns
@@ -120,50 +143,50 @@ function publishAPI() {
       return fn.apply(this, args);
     };
   const api = {
-    show: Overlay.showAll,
-    showAll: Overlay.showAll,
-    showOne: Overlay.showOne,
-    cards: Overlay.showAll, // 0.3.0 name, kept so existing macros don't break
-    clear: Overlay.clear,
-    closeAllCards: Cards.closeAll,
+    show: overlay.showAll,
+    showAll: overlay.showAll,
+    showOne: overlay.showOne,
+    cards: overlay.showAll, // 0.3.0 name, kept so existing macros don't break
+    clear: overlay.clear,
+    closeAllCards: closeAll,
     edit: actor => TiesEditor.open(actor),
     addTie: token => openTieDialogFor(token ?? canvas?.tokens?.hover ?? canvas?.tokens?.controlled?.[0] ?? null),
-    read: API.read,
+    read: read,
     // who points AT this actor — GM only, gated inside the function itself
-    inbound: API.inbound,
-    set: API.setTie,
-    setTie: API.setTie,
-    setNotes: API.setNotes,
-    remove: API.removeTie,
-    migrate: API.migrateLegacy,
-    STANCES: API.STANCES,
+    inbound: inbound,
+    set: setTie,
+    setTie: setTie,
+    setNotes: setNotes,
+    remove: removeTie,
+    migrate: migrateLegacy,
+    STANCES: STANCES,
     // the worn mark — per-token, GM-only. Console path for anyone who prefers a macro
     // to the HUD button: game.pentaryn.ties.wornDialog(canvas.tokens.controlled[0])
-    worn: Worn.readWorn,
-    setWorn: Worn.setWorn,
-    clearWorn: Worn.clearWorn,
-    wornDialog: Worn.openDialog,
+    worn: worn.readWorn,
+    setWorn: worn.setWorn,
+    clearWorn: worn.clearWorn,
+    wornDialog: worn.openDialog,
     // the description card — GM only, key 9. Was the `Quick View` macro.
-    describe: Describe.toggle,
-    closeDescription: Describe.close,
+    describe: toggleDescription,
+    closeDescription: closeDescription,
     /*
      * The Known list — the notebook tab. A sub-object rather than six more top-level names:
      * it is a second feature sharing this module's plumbing, and `ties.known.read` says so
      * where `ties.readKnown` would just be another entry in a long list.
      */
     known: {
-      read: Known.readKnown,
-      add: Known.addKnown,
-      set: Known.setKnownField,
-      hide: Known.hideKnown,
-      purge: Known.removeKnown, // destroys; the UI never does this
-      remove: Known.removeKnown,
-      categories: Known.categoriesFor,
-      picker: Known.openAddPicker,
+      read: readKnown,
+      add: addKnown,
+      set: setKnownField,
+      hide: hideKnown,
+      purge: removeKnown, // destroys; the UI never does this
+      remove: removeKnown,
+      categories: categoriesFor,
+      picker: openAddPicker,
       // the canvas key's own path, for a macro or a console: file whoever is hovered
-      file: token => Known.fileHovered(token ?? canvas?.tokens?.hover ?? null),
-      open: Known.openKnownEntry,
-      notebook: Known.notebookActor
+      file: token => fileHovered(token ?? canvas?.tokens?.hover ?? null),
+      open: openKnownEntry,
+      notebook: notebookActor
     },
     /*
      * The study conduit. Its authoring half is console-only in phase 3 by the plan's own
@@ -187,88 +210,88 @@ function publishAPI() {
      *   study.audit.legacyMissCards()        cards a failure granted before 2026-10 (read-only)
      */
     study: {
-      state: Study.studyStateFor,
-      request: Study.requestStudy,
-      as: Study.studyAs,
-      kind: Study.kindDialog,
-      kindOf: Study.setKindOf,
-      kindActor: Study.kindActorOf,
-      tiers: Study.setStudyTiers,
-      difficulty: Study.setStudyOffset,
-      readTiers: Study.studyTiersOf,
-      hold: Study.setStudyHold,
-      beliefs: Study.beliefs,
-      pending: Study.pending,
-      deliver: Study.deliver,
-      reset: Study.reset,
-      studied: Study.studiedOf,
+      state: studyStateFor,
+      request: requestStudy,
+      as: studyAs,
+      kind: kindDialog,
+      kindOf: setKindOf,
+      kindActor: kindActorOf,
+      tiers: setStudyTiers,
+      difficulty: setStudyOffset,
+      readTiers: studyTiersOf,
+      hold: setStudyHold,
+      beliefs: beliefs,
+      pending: pending,
+      deliver: deliver,
+      reset: reset,
+      studied: studiedOf,
       // phase 4 — the individual axis
-      fact: Study.resolveFact,
-      lore: Study.loreStateFor,
-      askLore: Study.requestLore,
+      fact: resolveFact,
+      lore: loreStateFor,
+      askLore: requestLore,
       // phase 6 — the attribute layer
-      askAttr: Study.requestAttrLore,
-      attrOffers: Study.attrOffersFor,
+      askAttr: requestAttrLore,
+      attrOffers: attrOffersFor,
       // phase 8 — inspection and the cascade
-      examine: Study.inspect,
-      inspect: renamed(Study.inspect, "study.inspect", "study.examine"), // D1 alias, until S8
+      examine: inspect,
+      inspect: renamed(inspect, "study.inspect", "study.examine"), // D1 alias, until S8
       look: (subject, character = game.user?.character) => openLook(character, subject),
-      scoping: Study.scopingState,
-      clearScoping: Study.clearScoping,
-      inspectAs: Study.inspectAs,
-      deliverHeld: Study.deliverHeldIdentifications,
-      releaseHeld: Study.releaseHeldAttribute,
-      resetIdent: Study.resetIdentification,
-      release: Study.grantKind,
-      resetInspection: Study.resetInspection,
+      scoping: scopingState,
+      clearScoping: clearScoping,
+      inspectAs: inspectAs,
+      deliverHeld: deliverHeldIdentifications,
+      releaseHeld: releaseHeldAttribute,
+      resetIdent: resetIdentification,
+      release: grantKind,
+      resetInspection: resetInspection,
       // GM inspect window — player view (with who-knows tags and Share) and simulated rolls
       preview: openPreview,
       // GM: tell characters one fact as if they had passed it; forget undoes a share (only)
-      share: Study.shareFact,
-      forget: Study.forgetFact,
-      whoKnows: Study.factStatus,
+      share: shareFact,
+      forget: forgetFact,
+      whoKnows: factStatus,
       // console-only: cards a FAILURE granted before 2026-10 (failures now hand over nothing)
-      audit: { legacyMissCards: Study.legacyMissCards }
+      audit: { legacyMissCards: legacyMissCards }
     },
     /*
      * Every call that names an attribute takes an id OR a name (id wins; a miss is refused, never
      * created). Reads return data; writes return `{ ok, reason?, … }` and never throw — test `.ok`.
      */
     attributes: {
-      list: Attributes.registry,
-      of: Attributes.attributesOf,
-      ids: Attributes.attributeIdsOf,
-      derived: Attributes.derivedFor,
-      resolve: Attributes.resolveAttribute,
-      lookup: Attributes.describeRef,
-      describe: renamed(Attributes.describeRef, "attributes.describe", "attributes.lookup"), // D1 alias, until S8
-      ensure: Attributes.ensureAttribute,
-      create: Attributes.createAttribute,
-      update: Attributes.updateAttribute,
-      remove: Attributes.deleteAttribute,
-      link: Attributes.linkAttribute,
-      unlink: Attributes.unlinkAttribute,
-      search: Attributes.searchAttributes,
+      list: registry,
+      of: attributesOf,
+      ids: attributeIdsOf,
+      derived: derivedFor,
+      resolve: resolveAttribute,
+      lookup: describeRef,
+      describe: renamed(describeRef, "attributes.describe", "attributes.lookup"), // D1 alias, until S8
+      ensure: ensureAttribute,
+      create: createAttribute,
+      update: updateAttribute,
+      remove: deleteAttribute,
+      link: linkAttribute,
+      unlink: unlinkAttribute,
+      search: searchAttributes,
       // phase 8 — world knowledge and validation
-      knows: Attributes.knowledge,
-      known: Attributes.knownWorld,
-      tell: Attributes.grantKnowledge,
-      broken: Attributes.brokenAncestry,
-      repair: Attributes.repairAncestry,
-      stale: Attributes.staleCarriers,
+      knows: knowledge,
+      known: knownWorld,
+      tell: grantKnowledge,
+      broken: brokenAncestry,
+      repair: repairAncestry,
+      stale: staleCarriers,
       /*
        * The review panel (context/foundry/attribute-review.md). `update`/`create` above UN-review an
        * entry and record what they touched; sign-off is the GM's — `review()` exists for when he
        * asks, and the panel's own save (`reviewedUpdate`, `reviewedLoreUpdate`) is deliberately not published.
        */
       openReview,
-      selected: Attributes.selectedAttributes,
-      select: Attributes.selectAttributes,
-      deselect: Attributes.deselectAttributes,
-      clearSelection: Attributes.clearSelection,
-      review: Attributes.reviewAttribute,
-      unreview: Attributes.unreviewAttribute,
-      unreviewed: Attributes.unreviewedAttributes
+      selected: selectedAttributes,
+      select: selectAttributes,
+      deselect: deselectAttributes,
+      clearSelection: clearSelection,
+      review: reviewAttribute,
+      unreview: unreviewAttribute,
+      unreviewed: unreviewedAttributes
     }
   };
   game.pentaryn ??= {};
@@ -276,13 +299,13 @@ function publishAPI() {
 }
 
 /** Each step is independent — one failure must not silently skip the others. */
-Hooks.once("ready", async () => {
+async function onReady() {
   for (const [label, step] of [
     ["publish api", async () => publishAPI()],
-    ["migrate legacy flags", async () => game.user.isGM && API.migrateLegacy()],
-    ["repair dead attribute icons", async () => game.user.isGM && Attributes.repairIcons()],
+    ["migrate legacy flags", async () => game.user.isGM && migrateLegacy()],
+    ["repair dead attribute icons", async () => game.user.isGM && repairIcons()],
     ["create macro", async () => game.user.isGM && ensureMacro()],
-    ["restore pinned cards", async () => Cards.restorePinned()]
+    ["restore pinned cards", async () => restorePinned()]
   ]) {
     try {
       await step();
@@ -290,28 +313,7 @@ Hooks.once("ready", async () => {
       log.error(`ready step failed: ${label}`, err);
     }
   }
-});
-
-/**
- * The two GM-side socket handlers. Harmless to register on a player client — both check
- * `activeGM` before doing anything, and both are separate `game.socket.on` registrations on
- * one channel, each ignoring the other's action.
- *
- * Registered in their own try/catch each: a study conduit that fails to register must not cost
- * the reverse-side relay that has been shipping since 0.9.0.
- */
-Hooks.once("ready", () => {
-  for (const [label, register] of [
-    ["reverse-side relay", registerRelay],
-    ["study conduit", Study.registerStudy]
-  ]) {
-    try {
-      register();
-    } catch (err) {
-      log.warn(`${label} not registered`, err);
-    }
-  }
-});
+}
 
 /** A draggable macro, created once, for people who'd rather use a hotbar slot. */
 async function ensureMacro() {
@@ -328,499 +330,13 @@ async function ensureMacro() {
   await game.settings.set(MODULE, "macroCreated", true);
 }
 
-/* -------------------------------------------- */
-/*  Sheet integration                           */
-/* -------------------------------------------- */
-
-/**
- * dnd5e 5.x actor sheets are ApplicationV2 with nav.tabs[data-group=primary] and a
- * div.tab-body of section.tab[data-tab]. We append one of each and let the sheet's own
- * changeTab() drive activation. Everything here is best-effort: if the markup moves,
- * we bail silently and the header button still opens the editor.
- */
-/**
- * The GM gets the tab on every sheet; a player gets it on a character they own, and can
- * edit it — it's their character's address book. The point is "who do I know", answerable
- * without a scene open or a token selected.
- */
-function mayView(actor) {
-  if (!(actor instanceof Actor)) return false;
-  if (game.user?.isGM) return true;
-  return setting("playerAccess") === true && actor.isOwner === true;
+/** Remove every hook, listener and subscription this module added (then re-import the entry to re-wire). */
+function uninstall() {
+  for (const feature of [...AT_INIT, ...FEATURES].reverse()) feature.uninstall();
+  reg.offAll();
 }
 
-/**
- * Every tab this module hosts on the actor sheet, in nav order.
- *
- * The injector below used to hardcode one id and one paint closure. It was described as
- * "already generic" and it was not: adding a second tab meant a second copy of the
- * nav-rebuilt-separately guard and of the `changeTab` workaround, which is the trickiest DOM
- * code in the module and the wrong thing to have two of. A spec is the whole difference.
- *
- * `shows(actor)` is the per-tab gate on top of `mayView`. Ties belong on anything with a
- * sheet — an NPC's own address book is the GM's prep. **Known belongs to characters only**:
- * it is a player's notebook about the world, and an NPC does not keep one (design decision
- * 1). Nothing else varies per tab, and if a third tab ever needs more than this, add the
- * field here rather than a branch in the loop.
- */
-const SHEET_TABS = [
-  {
-    id: TAB,
-    icon: "fa-solid fa-people-arrows",
-    tooltip: "PENTARYN_TIES.title",
-    shows: () => true,
-    build: actor => buildHTML(actor),
-    bind: (root, actor, repaint) => bind(root, actor, repaint)
-  },
-  {
-    id: Known.KNOWN_TAB_ID,
-    icon: "fa-solid fa-book-skull",
-    tooltip: "PENTARYN_TIES.known.title",
-    shows: actor => actor?.type === "character",
-    build: actor => Known.buildKnownHTML(actor),
-    bind: (root, actor, repaint) => Known.bindKnown(root, actor, repaint)
-  },
-  {
-    id: AttributesUI.ATTR_TAB_ID,
-    icon: "fa-solid fa-tags",
-    tooltip: "PENTARYN_TIES.attributes.title",
-    /*
-     * Every actor has attributes — derivation gives even a bare NPC its `type:` and `size:` —
-     * so the test is not "does it carry any" but "is there anything worth a tab". For a GM
-     * that is always (it is where they author and link); for a player it is when their own
-     * character carries something, which is also always. The tab is therefore unconditional,
-     * and the setting that turns all three tabs off is the honest kill switch.
-     */
-    shows: () => true,
-    build: actor => AttributesUI.buildAttributesHTML(actor),
-    bind: (root, actor, repaint) => AttributesUI.bindAttributes(root, actor, repaint)
-  }
-];
-
-function injectTab(app, element) {
-  if (!setting("sheetTab")) return;
-  const actor = app?.document;
-  if (!mayView(actor)) return;
-
-  const root = element instanceof HTMLElement ? element : element?.[0];
-  if (!root) return;
-
-  const nav = root.querySelector('nav.tabs[data-group="primary"]') ?? root.querySelector("nav.tabs");
-  const body = root.querySelector("div.tab-body") ?? root.querySelector(".sheet-body");
-  if (!nav || !body) return; // markup moved — fall back to the header button
-
-  for (const spec of SHEET_TABS) {
-    if (!spec.shows(actor)) continue;
-    // One failing tab must not take the others with it: a Known tab that throws would
-    // otherwise cost the GM the Ties tab it was injected beside.
-    try {
-      injectOneTab(app, root, nav, body, actor, spec);
-    } catch (err) {
-      log.warn(`${spec.id} tab injection skipped`, err);
-    }
-  }
-}
-
-function injectOneTab(app, root, nav, body, actor, spec) {
-  /**
-   * Check for the link and the section SEPARATELY. dnd5e re-renders parts independently, so a
-   * re-render can rebuild the nav while leaving the tab-body intact. A single "does [data-tab=ties]
-   * exist anywhere" guard then sees the surviving section, skips, and the nav link is gone for good.
-   */
-  let link = nav.querySelector(`[data-tab="${spec.id}"]`);
-  let section = body.querySelector(`:scope > [data-tab="${spec.id}"]`);
-  const freshSection = !section;
-
-  if (!link) {
-    link = document.createElement("a");
-    link.className = "item control";
-    link.dataset.tab = spec.id;
-    link.dataset.group = "primary";
-    link.dataset.tooltip = game.i18n.localize(spec.tooltip);
-    link.innerHTML = `<i class="${spec.icon}"></i>`;
-    nav.appendChild(link);
-  }
-  if (!section) {
-    section = document.createElement("section");
-    section.className = "tab";
-    section.dataset.tab = spec.id;
-    section.dataset.group = "primary";
-    body.appendChild(section);
-  }
-  if (!freshSection && link.dataset.ptBound === "1") return; // both already live and wired
-
-  /*
-   * No mode to pass any more: a row is read-at-a-glance until you click it, and the detail
-   * it opens is editable for whoever owns the actor. The sheet's own Play/Edit slider is
-   * irrelevant to us now — which also means a sheet re-render cannot land us in the wrong
-   * one.
-   */
-  const paint = () => {
-    section.innerHTML = spec.build(actor);
-    spec.bind(section.firstElementChild, actor, paint);
-  };
-  paint();
-
-  /**
-   * Activate our tab by hand rather than through `app.changeTab()`.
-   *
-   * changeTab() RETURNS EARLY when `tabGroups[group]` already equals the tab and `force` is unset.
-   * That bites exactly when it matters: the GM is on the Ties tab, something re-renders the sheet,
-   * dnd5e rebuilds the DOM and activates nothing (it does not know "ties"), and the early return
-   * means our re-activation silently does nothing — leaving a BLANK sheet body.
-   *
-   * The deactivate sweep is deliberately over-broad — every `[data-tab]` in the nav and both
-   * body shapes — which is also what makes a SECOND injected tab safe: switching to Known
-   * clears Ties by the same line that clears Features, with no list of our own tabs to keep
-   * in step.
-   */
-  const activate = () => {
-    root
-      .querySelectorAll('nav.tabs [data-tab], .tab-body > [data-tab], .sheet-body > [data-tab]')
-      .forEach(el => el.classList.remove("active"));
-    link.classList.add("active");
-    section.classList.add("active");
-    if (app.tabGroups) app.tabGroups.primary = spec.id;
-    // dnd5e mirrors the active tab onto the root element as `tab-<name>`
-    root.classList.forEach(c => {
-      if (c.startsWith("tab-")) root.classList.remove(c);
-    });
-    root.classList.add(`tab-${spec.id}`);
-  };
-
-  link.addEventListener("click", ev => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    activate();
-  });
-  link.dataset.ptBound = "1";
-
-  // restore ourselves after a re-render that happened while this tab was open
-  if (app.tabGroups?.primary === spec.id) activate();
-}
-
-/**
- * Open the tie dialog for a token.
- *
- * The dialog works out which end of the link the token fills — normally the **to** half,
- * falling back to the **from** half when removing it would leave you no one to write on
- * (a player pressing this on their own token). That rule lives in the dialog because it is
- * driven by who you have access to, which is the same thing that decides everything else
- * about the window.
- */
-export async function openTieDialogFor(token) {
-  const { TieDialog, baseActorOf, sourceCandidates } = await import("./tie-dialog.mjs");
-  const actor = token ? baseActorOf(token) : null;
-  if (!actor) {
-    ui.notifications.warn(game.i18n.localize("PENTARYN_TIES.notify.noTarget"));
-    return null;
-  }
-  // nothing to write with, and for a player that includes the case where the GM turned the
-  // whole feature off — so check the pens, not the token
-  if (!mayWrite()) return null;
-  if (!game.user?.isGM && !sourceCandidates().length) return null;
-  return TieDialog.open({ clicked: actor, clickedToken: token });
-}
-
-/**
- * The Token HUD button — the discoverable half of the pair.
- *
- * The HUD only opens for a token you own or as GM (core's `_canHUD`), so this needs no
- * permission check of its own: if the button is on screen, you were allowed to open it.
- */
-function injectTieHUD(app, element) {
-  const token = app?.object ?? null;
-  // the HUD opens for owners and GMs, but the setting can still have this feature switched
-  // off for players — in which case the button must not be there to press
-  if (!mayWrite()) return;
-  const root = element instanceof HTMLElement ? element : element?.[0];
-  const col = root?.querySelector(".col.left") ?? root?.querySelector(".left");
-  if (!col || col.querySelector(".pt-tie-btn")) return;
-  if (!token) return;
-
-  const label = game.i18n.localize("PENTARYN_TIES.hud.tie");
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "control-icon pt-tie-btn";
-  btn.dataset.tooltip = label;
-  btn.setAttribute("aria-label", label);
-  btn.innerHTML = '<i class="fa-solid fa-people-arrows"></i>';
-  btn.addEventListener("click", ev => {
-    ev.preventDefault();
-    ev.stopPropagation();
-    openTieDialogFor(token);
-  });
-  col.appendChild(btn);
-
-  /*
-   * The GM's inspect window: what would an inspection (and every study after it) hand a player,
-   * who already knows each fact, and a Share to tell them. Drawn for the GM only, and the window
-   * itself refuses to open for anyone else — see preview.mjs. Only its Share/Forget clicks write.
-   */
-  if (game.user?.isGM && !col.querySelector(".pt-preview-btn")) {
-    const pv = document.createElement("button");
-    pv.type = "button";
-    pv.className = "control-icon pt-preview-btn";
-    pv.dataset.tooltip = "Inspect (GM only): player view and simulated rolls";
-    pv.setAttribute("aria-label", "Inspect preview");
-    pv.innerHTML = '<i class="fa-solid fa-flask"></i>';
-    pv.addEventListener("click", ev => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      openPreview(token.actor ?? game.actors.get(token.document.actorId));
-    });
-    col.appendChild(pv);
-  }
-
-  /*
-   * Phase 8's inspect control — the route phase 6 never had, and the ONLY thing in this module
-   * that starts an identification roll (Joe: *"no examine, no auto detection"*).
-   *
-   * ⚠ **Uniform for every target.** Same icon, same tooltip, same enabled state whatever the
-   * creature carries. A control that looked different next to someone with secrets would answer
-   * the question before the dice did — the same reason the stub card is uniform.
-   */
-  const who = inspectorFor();
-  if (who && token.document?.actorId !== who.id) {
-    const look = game.i18n.localize("PENTARYN_TIES.known.inspect.button");
-    const eye = document.createElement("button");
-    eye.type = "button";
-    eye.className = "control-icon pt-inspect-btn";
-    eye.dataset.tooltip = game.i18n.format("PENTARYN_TIES.known.inspect.tip", { name: token.name });
-    eye.setAttribute("aria-label", look);
-    eye.innerHTML = '<i class="fa-solid fa-eye"></i>';
-    eye.addEventListener("click", async ev => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      eye.disabled = true; // one gesture, one cascade — a double-click must not queue two
-      const subject = token.actor ?? game.actors.get(token.document.actorId);
-      if (!game.user?.isGM) openLook(who, subject); // the player's page opens before the dice
-      await Study.inspect(who, subject);
-    });
-    col.appendChild(eye);
-  }
-}
-
-/**
- * Whose eyes are we looking through?
- *
- * A player inspects as their own character — they have exactly one, which is the case the ties
- * dialog already established as "easily resolved". A GM inspects as the **selected** token's
- * actor, so they can throw the check for whichever PC is asking without leaving the canvas.
- */
-function inspectorFor() {
-  if (game.user?.isGM) {
-    const selected = canvas?.tokens?.controlled?.[0];
-    const actor = selected?.actor ?? null;
-    return actor?.type === "character" ? actor : null;
-  }
-  return game.user?.character ?? null;
-}
-
-/*
- * **Anything that means time has passed ends the run of looking.**
- *
- * The call-out describes someone *rapidly* working a room — Joe's rule. It is about tempo, so it
- * must only ever count looks that happened in one continuous stretch of standing there. Movement
- * already breaks the run (15 ft, in `scopeTell`); these are the other three events that plainly
- * mean time moved on, and every one of them is something the table *knows* happened:
- *
- *  · **a new scene** — you are not still working the same room in a different building
- *  · **combat starting** — the fiction jumps to structured time, and the per-round rule takes over
- *    governing inspection anyway
- *  · **combat ending** — however long that fight was, it was not "a moment"
- *
- * Cheap to be generous here: a false reset costs one un-said line, while a missed reset has
- * somebody read as paranoid for looks they took an hour ago in another building.
- */
-const endLookingRun = why => {
-  try {
-    Study.clearScoping();
-  } catch (err) {
-    log.warn(`could not clear inspection tempo (${why})`, err);
-  }
-};
-
-Hooks.on("canvasReady", () => endLookingRun("scene change"));
-Hooks.on("combatStart", () => endLookingRun("combat started"));
-Hooks.on("deleteCombat", () => endLookingRun("combat ended"));
-/*
- * `combatStart` is not fired by every path that begins a fight (a GM nudging the round forward by
- * hand does not raise it), so watch the round counter too — 0 → 1 is a start whoever caused it.
- */
-Hooks.on("updateCombat", (combat, changes) => {
-  if (changes?.round === 1 || (typeof changes?.round === "number" && changes.round > 0 && !combat.previous?.round)) {
-    endLookingRun("first round");
-  }
-});
-
-/*
- * The Attribute Review button — left toolbar, token tools, beside Argon's combat-hub swords.
- * v14 shape: groups and tools are objects keyed by name; a one-shot button is `button: true` with
- * `onChange` (core's own `tiles.browse` is built the same way). GM only: not added for players.
- */
-Hooks.on("getSceneControlButtons", controls => {
-  try {
-    if (!game.user?.isGM || !controls?.tokens?.tools) return;
-    controls.tokens.tools.ptAttrReview = {
-      name: "ptAttrReview",
-      title: "PENTARYN_TIES.review.control",
-      icon: "fa-solid fa-tags",
-      button: true,
-      order: 60,
-      visible: game.user.isGM,
-      onChange: () => AttributeReview.open()
-    };
-  } catch (err) {
-    log.warn(`review control skipped`, err);
-  }
-});
-
-Hooks.on("renderTokenHUD", (app, element) => {
-  try {
-    injectTieHUD(app, element);
-  } catch (err) {
-    log.warn(`tie HUD injection skipped`, err);
-  }
-});
-
-/*
- * The player's door to Inspect: double-click a creature you can see.
- *
- * A player can't open the Token HUD on a token they don't own (core `_canHUD`), and core never
- * calls a non-owner's double-click handler without LIMITED, so the hover key (4) was the only way
- * in. Joe double-clicked Marrith as Caven, expected a menu, and got nothing (2026-10-07).
- *
- * The listener sits on the canvas element and reads the hovered token, so it fires whatever the
- * token's permission, and only for a token this client can actually see (hover already requires
- * that). The menu is identical for every target, for the same reason the HUD eye is (see above).
- * Item piles (corpses, chests) keep their own double-click and get no menu.
- */
-let lookMenu = null;
-
-function closeLookMenu() {
-  lookMenu?.remove();
-  lookMenu = null;
-}
-
-function openLookMenu(token, ev) {
-  closeLookMenu();
-  const who = inspectorFor();
-  const subject = token.actor ?? game.actors.get(token.document.actorId);
-  if (!who || !subject || subject.id === who.id) return;
-
-  /*
-   * Two items, the same two for every target. "Take a closer look" opens the player's Look window
-   * FIRST and then inspects — the window's opening never waits on, or depends on, what the dice
-   * do. "What I know about them" opens the same window with no inspect at all: no stub card, no
-   * roll, no tempo tell — reading your own notebook is not looking someone over.
-   */
-  const menu = document.createElement("nav");
-  menu.className = "pt-look-menu";
-  const item = (icon, label, tip, act) => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.innerHTML = `<i class="fa-solid ${icon}"></i> ${label}`;
-    b.dataset.tooltip = tip;
-    b.addEventListener("click", async e => {
-      e.preventDefault();
-      e.stopPropagation();
-      closeLookMenu(); // one gesture, one cascade
-      await act();
-    });
-    menu.appendChild(b);
-  };
-  item("fa-eye", game.i18n.localize("PENTARYN_TIES.known.inspect.button"),
-    game.i18n.format("PENTARYN_TIES.known.inspect.tip", { name: token.name }), async () => {
-      openLook(who, subject);
-      await Study.inspect(who, subject);
-    });
-  item("fa-book-open-reader", game.i18n.localize("PENTARYN_TIES.known.look.menu"),
-    game.i18n.format("PENTARYN_TIES.known.look.menuTip", { name: token.name }), async () => {
-      openLook(who, subject);
-    });
-  /*
-   * The two writing keys (6 and 5) on the menu too (usability run 2026-10, U-7-1): Joe's rule is
-   * that no player action may be reachable only through a key nobody told them about. Both take
-   * the clicked token directly, so they do exactly what hovering it and pressing the key does,
-   * refusals included. Same items for every target, like the two above.
-   */
-  item("fa-people-arrows", game.i18n.localize("PENTARYN_TIES.keybind.add"),
-    game.i18n.format("PENTARYN_TIES.known.look.menuTieTip", { name: token.name }), async () => {
-      await openTieDialogFor(token);
-    });
-  item("fa-feather-pointed", game.i18n.localize("PENTARYN_TIES.known.look.menuNotebook"),
-    game.i18n.format("PENTARYN_TIES.known.look.menuNotebookTip", { name: token.name }), async () => {
-      await Known.fileHovered(token);
-    });
-  document.body.appendChild(menu);
-  const { innerWidth: w, innerHeight: h } = window;
-  const r = menu.getBoundingClientRect();
-  menu.style.left = `${Math.min(ev.clientX + 10, w - r.width - 8)}px`;
-  menu.style.top = `${Math.min(ev.clientY + 10, h - r.height - 8)}px`;
-  lookMenu = menu;
-}
-
-Hooks.on("canvasReady", () => {
-  const view = canvas.app?.view;
-  if (!view || view.dataset.ptLook) return;
-  view.dataset.ptLook = "1";
-  view.addEventListener("dblclick", ev => {
-    if (game.user?.isGM || !mayWrite()) return; // the GM has the HUD
-    // The token under the click itself, not Foundry's hover state: hover can be held by
-    // something else (a pin, a pile) or simply not have caught up, and then the double-click
-    // did nothing at all. Topmost first, and only creatures this client can see.
-    const pt = canvas.canvasCoordinatesFromClient({ x: ev.clientX, y: ev.clientY });
-    const under = canvas.tokens.placeables
-      .filter(t => t.isVisible && t.bounds.contains(pt.x, pt.y))
-      .sort((a, b) => (b.document.sort ?? 0) - (a.document.sort ?? 0) || b.zIndex - a.zIndex);
-    const token = under.find(t => !t.isOwner && !t.document.getFlag("item-piles", "data")?.enabled) ?? null;
-    if (!token || under[0]?.isOwner) return; // your own token on top: core opens your sheet
-    openLookMenu(token, ev);
-  });
-});
-document.addEventListener("pointerdown", ev => {
-  if (lookMenu && !lookMenu.contains(ev.target)) closeLookMenu();
-}, true);
-document.addEventListener("keydown", ev => { if (ev.key === "Escape") closeLookMenu(); });
-Hooks.on("canvasPan", () => closeLookMenu());
-Hooks.on("canvasTearDown", () => closeLookMenu());
-
-/** Header button — the robust host, independent of the sheet's tab markup. */
-function injectHeaderButton(app, element) {
-  const actor = app?.document;
-  if (!mayView(actor)) return;
-  const root = element instanceof HTMLElement ? element : element?.[0];
-  const header = root?.querySelector(".window-header");
-  if (!header || header.querySelector(".pentaryn-ties-btn")) return;
-
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "header-control icon fa-solid fa-people-arrows pentaryn-ties-btn";
-  btn.dataset.tooltip = game.i18n.localize("PENTARYN_TIES.title");
-  btn.setAttribute("aria-label", game.i18n.localize("PENTARYN_TIES.title"));
-  btn.addEventListener("click", () => TiesEditor.open(actor));
-  // sit just left of the close button rather than after it
-  const close = header.querySelector("button.header-control.fa-xmark, button.header-control .fa-xmark")?.closest("button");
-  if (close) header.insertBefore(btn, close);
-  else header.appendChild(btn);
-}
-
-// The editor keeps which note panels are open in a module-level Map keyed by actor id.
-// Nothing else references a deleted actor's entry, so drop it rather than hold it for the
-// rest of the session.
-Hooks.on("deleteActor", actor => {
-  forgetActor(actor.id);
-  Known.forgetKnownActor(actor.id);
-});
-
-for (const hook of ["renderNPCActorSheet", "renderCharacterActorSheet", "renderActorSheetV2", "renderActorSheet"]) {
-  Hooks.on(hook, (app, element) => {
-    try {
-      injectHeaderButton(app, element);
-      injectTab(app, element);
-    } catch (err) {
-      log.warn(`sheet injection skipped`, err);
-    }
-  });
-}
+// unguarded, as Hooks.once always registered them: a throw here keeps Foundry's own error line
+reg.once("init", onInit, { guard: false, label: "init" });
+reg.once("ready", onReady, { guard: false, label: "ready steps" });
+for (const feature of FEATURES) feature.install(reg, ctx);

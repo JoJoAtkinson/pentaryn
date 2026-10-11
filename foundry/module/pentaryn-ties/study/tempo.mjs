@@ -5,7 +5,8 @@
  */
 
 import { MODULE } from "../ties-api.mjs";
-import { BUBBLE, CHANNEL, esc, f, log } from "./shared.mjs";
+import { BUBBLE, esc, f, log } from "./shared.mjs";
+import { send } from "../socket-adapter.mjs";
 
 /* -------------------------------------------- */
 /*  The tempo tell — scoping a crowd shows      */
@@ -107,7 +108,7 @@ function scopeTell(character, token) {
  */
 function broadcastBubble(tokenId, sceneId, text) {
   const payload = { action: BUBBLE, tokenId, sceneId, text };
-  game.socket.emit(CHANNEL, payload);
+  send(payload);
   showBubble(payload);
 }
 
