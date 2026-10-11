@@ -382,10 +382,14 @@ Step 1 ~0.5 day (good existing fixtures help), steps 2–7 ~1 day, step 8 ~0.25 
 
 | | |
 |---|---|
-| Live score after the migration | not migrated yet — **67.4 % (29/43)** today (wave start in [`wave-1-baseline.md`](wave-1-baseline.md)), `conformance.py --module attunement --markdown`, 2026-10-11 |
-| Date | 2026-10-11 (wave 1: checkpoint only (wave 1 Stage 0 lane); the refactor is workflow 2) |
-| Commits (Joe-approved) | characterisation: `cbe8214` (kit), `88f935e` (checkpoint) · refactor: none yet · other: `885f342` (README, items-journal-17), `4f7b5a8` (`== null` comment) |
-| Declared changes handed to the live-test workflow | none |
-| `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) |
-| Adjustments rows appended to `adjustments-batch.md` | no (step not reached) |
-| Still failing, and why | C04 C07 C09 C11 C18 C26 C27 C28 C29 C37 C40 C41 C44 C45 — the guide's steps 2+ have not run. Frozen tests: the checkpoint's assertions and goldens are untouched since the checkpoint (see wave-1-report §Frozen tests). |
+| Live score after the migration | **90.9 % (40/44)** in the worktree (`conformance.py --module attunement`, 2026-10-11): fail C04, C07, C09, C32; warn C02, C06w. With the integrator's adjustments edits below (checked with `--snapshot`): **93.2 %**, fail C04, C07, C09 only |
+| Date | 2026-10-11 (workflow 2, branch `migrate/wave-2`) |
+| Commits | step 2 `b1ff1cde` (core; -8, -9, -10, -12, -14 step 1) · 2b `676a98de` (legacy suite → `slots.test`, re-export gone) · 3 `5f3bf2d5` (adapter; -39 c, `wrapMethod`, kit `patch` vendored) · strip characterisation `59185ac9` · 4 `963acfac` (strip/sheet/bonds, `reg` with `guard: false`) · 4 [declared] `07920a8f` (kit guard; -11 hook half) · -11 listener half [declared] `0d0c2199` (+ C25 fix `7db966e4`) · -13 `03f417f0` · -39 b [declared] `e1adc21c` · 5 [declared] `d7a8ae2f` (D-A1; -16, -12 `countMismatch` → `inspect().counts`) · `api.test` + goldens `a230bf69` · 6 [declared] `a3941fb6` (D-A3) · -10 KNOWN pin `a7963405`, fix [declared] `7e18a834` (D-A4) · `_del` [declared] `b54556d1` · 7 `10459870` (-17, README/CHANGELOG) |
+| Not applied | step 8 (`_loc`, needs step 9 live) and step 9 (Wave 7 `module.json`); `-14` step 2 rides on them. `-16`'s "console.log of count and names" on a successful stash: skipped to keep the success path byte-identical |
+| Deviations | `stash` lives in `actor-adapter.mjs` and is a manifest row, not a `bonds` contribution: the frozen ready pin orders the legacy keys `report, computeSlots, stash, releaseAway, away`, and contributions publish last. `computeSlots`/`away` take `{name: "actor", resolve: false}` and resolve strings themselves, so any object (not only a Document) still passes through. The tooltip row is named `attunement-item-tooltip-anchor` (a `wrapMethod` row takes the module prefix, D2). `safe()` calls `fn` synchronously (the audit's `Promise.resolve().then(fn)` would move `onDrop`'s `preventDefault` out of the event) |
+| Declared changes handed to the live-test workflow | D-A1 `d7a8ae2f`, D-A3 `a3941fb6`, D-A4 `7e18a834` (node only), `_del` `b54556d1`, -39 b `e1adc21c` (failure path), console-only `07920a8f`, `0d0c2199` |
+| `module.json` edits for `wave7-restart-batch.md` | step 9 as written (returned to the integrator) |
+| Adjustments rows | `itempiles-attunement-repair` files → `actor-adapter.mjs`; `dnd5e-armor-proficiencies` files → `attunement-core.mjs`, `actor-adapter.mjs`; `dnd5e-item-tooltip-anchor` → id `attunement-item-tooltip-anchor`, files → `actor-adapter.mjs` (returned to the integrator; C32 and `foundry-adjustments-check` are red until they land) |
+| Still failing, and why | C04, C07, C09 (Wave 7 `module.json`); C32 until the adjustments edits land |
+| Frozen tests | `git diff 88f935e..HEAD -- test/` touches only: `fixtures/impls.mjs` (core appended, as its comment plans), `glue.test` (the entry import → core for `computeSlots`; the D-A1 pin; the `_del` pin), and `legacy-slots.mjs` (converted, step 2b). Suite: 113 tests green |
+| Open for Joe | W2-A1 (wave-2 report): the coin-purse `createItem` pays from every tab of the initiating user |
