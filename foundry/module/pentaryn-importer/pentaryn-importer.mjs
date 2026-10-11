@@ -4,22 +4,27 @@
  * The design note (silent failure modes, the `flags.pentaryn` scope, API citations) heads
  * importer-core.mjs.
  *
- * ENTRY (esmodules[0]): wiring only. Files:
+ * ENTRY (esmodules[0]): wiring only. Files, in load order:
  *   importer-core.mjs      PURE constants, error classes, lint, payload shaping, version-gate rules
- *   documents-adapter.mjs  Foundry glue: fetch, gate/lint refusals, readback assertions, writes, summary
+ *   documents-adapter.mjs  Foundry glue: fetch, gate/lint refusals, readback assertions, writes,
+ *                          the console summary, and the module's one logger
  *   api.mjs                importActors, the orchestrator
- *   pentaryn-importer.mjs  this file: the ready publish
+ *   lib/*.mjs              vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
+ *
+ * No features, no settings, no UI: the one hook is `ready`, which publishes. There is no hot-patch
+ * branch — a re-import registers a fresh once:ready and publishes on the next ready, as it always did.
  */
 
 import { CONTRACT_ID, MODULE, lintFormulas, normalise, valuesMatch } from "./importer-core.mjs";
 import { fetchJsonWithTimeout, log } from "./documents-adapter.mjs";
 import { importActors } from "./api.mjs";
+import { hookRegistry } from "./lib/hooks.mjs";
 
-/* -------------------------------------------------------------------------------------------- */
-/*  Registration                                                                                  */
-/* -------------------------------------------------------------------------------------------- */
+const reg = hookRegistry(MODULE, log);
 
-Hooks.once("ready", () => {
+const ctx = { log, reg, api: null };
+
+function onReady() {
   game.pentaryn = Object.freeze({
     /** @type {typeof importActors} */
     import: importActors,
@@ -28,5 +33,7 @@ Hooks.once("ready", () => {
     /** Exposed for tests and for hand-checking a file without importing it. */
     _internals: Object.freeze({ fetchJsonWithTimeout, lintFormulas, valuesMatch, normalise })
   });
-  log.info(`ready — game.pentaryn.import() available (${CONTRACT_ID})`);
-});
+  ctx.log.info(`ready — game.pentaryn.import() available (${CONTRACT_ID})`);
+}
+
+reg.once("ready", onReady, { label: "ready: publish" });
