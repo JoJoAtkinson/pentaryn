@@ -217,7 +217,6 @@ def test_discovery_unchanged_on_repo():
 
 
 @pytest.mark.repo
-@pytest.mark.xfail(strict=True, reason="KNOWN python-tooling-27: every script is ast.parse'd")
 def test_discovery_parses_only_files_that_mention_mcp(monkeypatch):
     calls = []
     real = server.ast.parse
@@ -243,7 +242,6 @@ def _startup_stderr(monkeypatch, capsys, repo: Path) -> str:
     return capsys.readouterr().err
 
 
-@pytest.mark.xfail(strict=True, reason="KNOWN python-tooling-27: every benign skip is listed")
 def test_startup_lists_real_failures_and_counts_the_rest(tmp_path, monkeypatch, capsys):
     repo = _make_repo(tmp_path)
     (repo / "scripts" / "helper.py").write_text(_NO_TOOL_MODULE, encoding="utf-8")

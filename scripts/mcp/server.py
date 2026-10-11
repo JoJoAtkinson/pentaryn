@@ -325,11 +325,14 @@ def _load_script_module(path: Path) -> Any:
     return module
 
 
-def _has_top_level_assignment(source: str, name: str) -> bool:
+def _has_top_level_assignment(source: str, name: str, *, tree: ast.Module | None = None) -> bool:
     """True if `name` is assigned at module top-level. Avoids false positives
-    from comments, docstrings, or string literals that merely mention the name."""
+    from comments, docstrings, or string literals that merely mention the name.
+    `tree` is the already-parsed source, when the caller has one."""
+    if name not in source:
+        return False
     try:
-        module = ast.parse(source)
+        module = tree if tree is not None else ast.parse(source)
     except SyntaxError:
         return False
     for node in module.body:
@@ -343,12 +346,14 @@ def _has_top_level_assignment(source: str, name: str) -> bool:
     return False
 
 
-def _read_top_level_string_list(source: str, name: str) -> list[str]:
+def _read_top_level_string_list(source: str, name: str, *, tree: ast.Module | None = None) -> list[str]:
     """If `name` is assigned at module top-level to a literal list of strings,
     return that list. Otherwise return []. Used by the group filter to peek at
     MCP_GROUPS without importing the module (which would defeat the speedup)."""
+    if name not in source:
+        return []
     try:
-        module = ast.parse(source)
+        module = tree if tree is not None else ast.parse(source)
     except SyntaxError:
         return []
     for node in module.body:
@@ -364,11 +369,12 @@ def _read_top_level_string_list(source: str, name: str) -> list[str]:
     return []
 
 
-def _extract_mcp_tool_literal(source: str, *, path: Path) -> dict[str, Any] | None:
+def _extract_mcp_tool_literal(source: str, *, path: Path,
+                              tree: ast.Module | None = None) -> dict[str, Any] | None:
     if "MCP_TOOL" not in source:
         return None
     try:
-        module = ast.parse(source, filename=str(path))
+        module = tree if tree is not None else ast.parse(source, filename=str(path))
     except SyntaxError as exc:
         raise ValueError(f"syntax error: {exc.msg} (line {exc.lineno})") from exc
 
@@ -495,6 +501,11 @@ def _tools_from_mcp_tool(*, path: Path, mcp_tool: dict[str, Any]) -> list[ToolRu
     return runners
 
 
+# The skip reason for a script that simply declares no tool (a helper, a test). Counted
+# at startup, never listed: it was ~100 lines of noise around the one line that mattered.
+_NO_TOOL = "no MCP_TOOL"
+
+
 def discover_tools(*, repo_root: Path) -> DiscoveryResult:
     # TODO: cache discovery output keyed on (path, mtime) to skip AST re-parse
     # for unchanged files on server restart.
@@ -532,8 +543,18 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
             skipped.append((path, f"unreadable: {exc}"))
             continue
 
+        # python-tooling-27: a script that never says "MCP_" declares no tool, so it is
+        # not parsed at all (most of scripts/ is helpers and tests); one that does is
+        # parsed once, and that tree serves every check below.
+        tree: ast.Module | None = None
+        if "MCP_" in source:
+            try:
+                tree = ast.parse(source, filename=str(path))
+            except SyntaxError:
+                tree = None   # _extract_mcp_tool_literal reports it, as before
+
         if group_filter:
-            module_groups = _read_top_level_string_list(source, "MCP_GROUPS")
+            module_groups = _read_top_level_string_list(source, "MCP_GROUPS", tree=tree)
             if group_filter not in module_groups:
                 skipped.append((path, f"group filter excludes (DND_MCP_TOOLS_GROUP={group_filter!r}, module groups={module_groups})"))
                 continue
@@ -547,7 +568,7 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
         # AST-based check (not substring) so a comment or string mentioning
         # `MCP_HANDLERS` doesn't trigger a module import.
         handlers: Optional[dict[str, Any]] = None
-        if _has_top_level_assignment(source, "MCP_HANDLERS"):
+        if tree is not None and _has_top_level_assignment(source, "MCP_HANDLERS", tree=tree):
             try:
                 module = _load_script_module(path)
             except Exception as exc:
@@ -571,12 +592,12 @@ def discover_tools(*, repo_root: Path) -> DiscoveryResult:
             handlers = handlers_attr if isinstance(handlers_attr, dict) else None
         else:
             try:
-                literal = _extract_mcp_tool_literal(source, path=path)
+                literal = _extract_mcp_tool_literal(source, path=path, tree=tree)
             except Exception as exc:
                 skipped.append((path, str(exc)))
                 continue
             if literal is None:
-                skipped.append((path, "no MCP_TOOL"))
+                skipped.append((path, _NO_TOOL))
                 continue
 
         try:
@@ -631,21 +652,28 @@ def _print_list_tools(result: DiscoveryResult) -> int:
     return 0
 
 
+def _report_skipped(discovery: DiscoveryResult) -> None:
+    """Startup stderr (python-tooling-27). A running client only sees discovery.tools via
+    tools/list; a real skip (import failure, invalid MCP_TOOL, duplicate name, missing
+    handler, …) is otherwise invisible, so each one is listed and lands in the MCP host's
+    server log. Scripts that declare no tool are one count line."""
+    failures = [(p, why) for p, why in discovery.skipped if why != _NO_TOOL]
+    benign = len(discovery.skipped) - len(failures)
+    if failures:
+        sys.stderr.write(f"[mcp-server] {len(failures)} script(s) skipped at discovery:\n")
+        for path, reason in failures:
+            sys.stderr.write(f"  - {path.name}: {reason}\n")
+    if benign:
+        sys.stderr.write(f"[mcp-server] {benign} script(s) without an MCP_TOOL (helpers, tests)\n")
+    sys.stderr.flush()
+
+
 def main() -> int:
     if "--list-tools" in sys.argv[1:]:
         return _print_list_tools(discover_tools(repo_root=REPO_ROOT))
 
     discovery = discover_tools(repo_root=REPO_ROOT)
-    if discovery.skipped:
-        # A running client only sees discovery.tools via tools/list; the skip
-        # set (import failure, duplicate name, missing handler, …) is otherwise
-        # invisible. Emit it to stderr so it lands in the MCP host's server log.
-        sys.stderr.write(
-            f"[mcp-server] {len(discovery.skipped)} script(s) skipped at discovery:\n"
-        )
-        for path, reason in discovery.skipped:
-            sys.stderr.write(f"  - {path.name}: {reason}\n")
-        sys.stderr.flush()
+    _report_skipped(discovery)
     runners = discovery.tools
     tools = tuple(r.tool for r in runners)
     runner_by_name = {r.tool.name: r for r in runners}
