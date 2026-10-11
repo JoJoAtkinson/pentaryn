@@ -61,6 +61,9 @@ What is unclear: the adapter now holds real logic (monsters filtering, names gro
 > landed in wave 1).
 > -2: API half `abb4ae75` [declared DL1/DL2]; rules-lookup.md 'What comes back' table pending
 > integrator (shared-file item 3); mcp-fork-20 pending module-index regeneration.
+> -6 follow-up (its Proposed's "separate follow-up" and the pack-id tables under How to extend):
+> oracle `3e2d44c4`, spellList dedupe `a45cc10d`, names() grouping + `NAME_SOURCES` `de4b68ec`,
+> `MONSTER_LIST_PACKS` `22052ca3`, README `36a4fdfe`. No pack id is inline in `books.mjs` now.
 > The record is the guide's Result row (`../addon-blueprint-2026-10/migrate-pentaryn-lookup.md`).
 
 ## Findings index
