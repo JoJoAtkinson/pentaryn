@@ -195,12 +195,13 @@ export function openMenu(badge, ev) {
   menu.innerHTML = items.map((it, i) => `<a data-i="${i}"><i class="fa-solid ${it.icon}"></i> ${esc(it.label)}</a>`).join("");
   menu.style.left = `${ev.clientX}px`;
   menu.style.top = `${ev.clientY}px`;
-  menu.addEventListener("click", e => {
+  // Look at / Teleport party are async: a failure logs `pentaryn-portals | badge menu` (-27).
+  menu.addEventListener("click", guard("badge menu", e => {
     const a = e.target.closest("a[data-i]");
     if (!a) return;
     closeMenu();
-    items[Number(a.dataset.i)].run();
-  });
+    return items[Number(a.dataset.i)].run();
+  }));
   document.body.append(menu);
 }
 
