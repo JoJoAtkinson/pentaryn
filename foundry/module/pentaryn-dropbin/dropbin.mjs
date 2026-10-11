@@ -55,9 +55,9 @@ const ctx = {
   expose(accessors) {
     Object.assign(ctx.exposed, accessors);
   },
-  /** Run `fn` at `ready`, or now when the world is already ready (a hot re-import). */
+  /** Run `fn` at `ready`, or now when the world is already ready (a hot re-import); guarded either way. */
   onReady(fn, label) {
-    if (isReady()) return void fn();
+    if (isReady()) return void reg.guard(label, fn)();
     reg.once("ready", fn, { label });
   },
   publish,
