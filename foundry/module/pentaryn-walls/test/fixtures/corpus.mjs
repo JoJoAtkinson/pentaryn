@@ -580,5 +580,23 @@ export const FIXTURES = [
     ],
     opts: {gridSize: 100},
     expect: {lintCodes: ["N1", "N2", "N3", "N5"]}
+  },
+  // senses-walls-cursors-2: the engine partitions by levels; the wasm backend sends none and stamps
+  // creates with levels []. Both fixtures pass on js and fail on wasm today (corpus.test marks them todo).
+  {
+    name: "levels - different levels never interact",
+    why: "Two collinear stubs on different Levels must not be joined across levels.",
+    walls: [w(0, 0, 200, 0, {id: "lv1", levels: ["L1"]}), w(300, 0, 500, 0, {id: "lv2", levels: ["L2"]})],
+    opts: {gridSize: 100},
+    expect: {creates: 0},
+    knownWasm: "senses-walls-cursors-2"
+  },
+  {
+    name: "levels - same-level gap fills",
+    why: "The same gap on one level is filled, and the new wall carries that level.",
+    walls: [w(0, 0, 200, 0, {id: "lv3", levels: ["L1"]}), w(300, 0, 500, 0, {id: "lv4", levels: ["L1"]})],
+    opts: {gridSize: 100},
+    expect: {creates: 1, createLevels: ["L1"]},
+    knownWasm: "senses-walls-cursors-2"
   }
 ];

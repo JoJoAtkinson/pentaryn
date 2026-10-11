@@ -1,0 +1,129 @@
+[
+  {
+    "input": {},
+    "cfg": {
+      "gridSize": 100,
+      "step": 25,
+      "weldEps": 4,
+      "collEps": 2,
+      "pinEps": 1,
+      "gapMax": 6,
+      "cornerMax": 6,
+      "extMax": 20,
+      "glanceSin": 0.05,
+      "trim": true,
+      "iterCap": 1000,
+      "gapMaxPx": 600,
+      "cornerMaxPx": 600,
+      "extMaxPx": 2000
+    }
+  },
+  {
+    "input": {
+      "gridSize": 50
+    },
+    "cfg": {
+      "gridSize": 50,
+      "step": 25,
+      "weldEps": 4,
+      "collEps": 2,
+      "pinEps": 1,
+      "gapMax": 6,
+      "cornerMax": 6,
+      "extMax": 20,
+      "glanceSin": 0.05,
+      "trim": true,
+      "iterCap": 1000,
+      "gapMaxPx": 300,
+      "cornerMaxPx": 300,
+      "extMaxPx": 1000
+    }
+  },
+  {
+    "input": {
+      "gridSize": 64
+    },
+    "cfg": {
+      "gridSize": 64,
+      "step": 16,
+      "weldEps": 4,
+      "collEps": 2,
+      "pinEps": 1,
+      "gapMax": 6,
+      "cornerMax": 6,
+      "extMax": 20,
+      "glanceSin": 0.05,
+      "trim": true,
+      "iterCap": 1000,
+      "gapMaxPx": 384,
+      "cornerMaxPx": 384,
+      "extMaxPx": 1280
+    }
+  },
+  {
+    "input": {
+      "gridSize": 140
+    },
+    "cfg": {
+      "gridSize": 140,
+      "step": 17.5,
+      "weldEps": 4,
+      "collEps": 2,
+      "pinEps": 1,
+      "gapMax": 6,
+      "cornerMax": 6,
+      "extMax": 20,
+      "glanceSin": 0.05,
+      "trim": true,
+      "iterCap": 1000,
+      "gapMaxPx": 840,
+      "cornerMaxPx": 840,
+      "extMaxPx": 2800
+    }
+  },
+  {
+    "input": {
+      "gridSize": 100,
+      "gapMax": 2,
+      "trim": false
+    },
+    "cfg": {
+      "gridSize": 100,
+      "step": 25,
+      "weldEps": 4,
+      "collEps": 2,
+      "pinEps": 1,
+      "gapMax": 2,
+      "cornerMax": 6,
+      "extMax": 20,
+      "glanceSin": 0.05,
+      "trim": false,
+      "iterCap": 1000,
+      "gapMaxPx": 200,
+      "cornerMaxPx": 600,
+      "extMaxPx": 2000
+    }
+  },
+  {
+    "input": {
+      "gridSize": 100,
+      "weldEps": 9
+    },
+    "cfg": {
+      "gridSize": 100,
+      "step": 25,
+      "weldEps": 9,
+      "collEps": 2,
+      "pinEps": 1,
+      "gapMax": 6,
+      "cornerMax": 6,
+      "extMax": 20,
+      "glanceSin": 0.05,
+      "trim": true,
+      "iterCap": 1000,
+      "gapMaxPx": 600,
+      "cornerMaxPx": 600,
+      "extMaxPx": 2000
+    }
+  }
+]
