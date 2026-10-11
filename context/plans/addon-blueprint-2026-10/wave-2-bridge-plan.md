@@ -316,7 +316,7 @@ eval-js-only until their module migrates (the D14 `NOT_FOUND` names them).
 | | |
 |---|---|
 | Fork commits F0–F23 (sha each) | ______ |
-| Python commits P1–P9 (sha each) | ______ |
-| Pins flipped (`[declared]` list) | ______ |
-| Stopped steps (frozen test red twice) | ______ |
+| Python commits P1–P9 (sha each) | P1 `6931c7c7` + `586eeb1b` · P2 `09412de5` · P3 `df3a47ac` · P4 `e1062a2b` · P5 `6ecdaf43` + `ea0d3d2c` · P6 `cc2a9570` + `f1aeff07` · P7 `85727ca8` · P8 **not built** (W2-B1 unanswered) · P9 first half `b4b62e29` (what had landed: fork F0, F3–F6, F8–F10 + python P6/P7); second half (D14 table, `timedOut`, `applyRecharge`, coded `NOT_GM`, `migrate-mcp-fork.md` Result) after F23 |
+| Pins flipped (`[declared]` list) | python: -37 (malformed-ppid raise → skip; per-parent `ps` → one), -51 (`test_concurrent_rolls_all_return_with_distinct_numbers` strict xfail → plain), -44 (`test_concurrent_upserts_keep_every_row` xfail → plain), -48 (`NO_ANNOTATIONS` → ∅); -27's two perf/stderr pins (not declared: no behaviour a caller sees) |
+| Stopped steps (frozen test red twice) | python: none. Pre-existing red on the branch, not this lane: `test_update_escalation.py::test_the_real_registry_matches_the_code` (`itempiles-attunement-repair` — the attunement lane's uncommitted edits remove `isValidItemPile`) |
 | Deployed (date, by which live session) | ______ |
