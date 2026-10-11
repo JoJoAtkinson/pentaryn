@@ -5,4 +5,4 @@
  */
 import * as oracle from "./legacy-dropbin.mjs";
 
-export const IMPLS = [["oracle", oracle]];
+export const IMPLS = [["oracle", oracle], ["core", await import("../../dropbin-core.mjs")]];

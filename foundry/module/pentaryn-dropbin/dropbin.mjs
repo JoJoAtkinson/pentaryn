@@ -59,13 +59,13 @@
 import { corpses } from "./corpses.mjs";
 import { loot } from "./loot.mjs";
 import { installI18nShim } from "./i18n-shim.mjs";
+import {
+  MODULE, DIR, FILE, DEDUPE_MS, LOCK_SOUND, duplicateOfTail, makeEntry, normaliseDeltas, listLast, findEntry,
+  searchLog, shouldCaptureDelete, restoreTarget, lockedContainer, planLockSounds, planEyesNeedView,
+} from "./dropbin-core.mjs";
 
-const MODULE = "pentaryn-dropbin";
 const LOG = "log";
 const COUNTER = "counter";
-const DIR = "assets/drop-bin";
-const FILE = "drop-log.json";
-const DEDUPE_MS = 2000;
 
 let socket = null;
 
@@ -106,12 +106,8 @@ async function recordAsGM(entry) {
   if (!game.user.isGM) return null;
   const log = readLog();
 
-  const key = `${entry.reason}|${entry.itemName}|${entry.fromActorId}|${entry.quantity}`;
-  const tail = log[log.length - 1];
-  if (tail && `${tail.reason}|${tail.itemName}|${tail.fromActorId}|${tail.quantity}` === key
-      && entry.t - tail.t < DEDUPE_MS) {
-    return tail.n;
-  }
+  const tail = duplicateOfTail(log, entry, DEDUPE_MS);
+  if (tail) return tail.n;
 
   const n = (game.settings.get(MODULE, COUNTER) ?? 0) + 1;
   const row = { n, ...entry };
@@ -135,25 +131,8 @@ function submit(entry) {
 
 /* -------------------------------------------------------------- entry shape */
 
-function baseEntry(reason, actor, itemObj, quantity) {
-  return {
-    t: Date.now(),
-    iso: new Date().toISOString(),
-    reason,
-    userId: game.user.id,
-    userName: game.user.name,
-    fromActorId: actor?.id ?? null,
-    fromActorName: actor?.name ?? null,
-    fromActorUuid: actor?.uuid ?? null,
-    itemName: itemObj?.name ?? "(unnamed)",
-    itemType: itemObj?.type ?? null,
-    quantity: quantity ?? itemObj?.system?.quantity ?? 1,
-    sceneId: canvas?.scene?.id ?? null,
-    sceneName: canvas?.scene?.name ?? null,
-    x: null, y: null,
-    pileUuid: null,
-    item: itemObj ?? null
-  };
+function baseEntry(reason, actor, item, quantity) {
+  return makeEntry(reason, { actor, item, quantity, user: game.user, scene: canvas?.scene, now: Date.now() });
 }
 
 /* ------------------------------------------------------------------- capture */
@@ -166,8 +145,7 @@ function registerCapture() {
     Hooks.on(H.ITEM.DROP, (source, target, itemDeltas, position) => {
       try {
         const actor = source?.actor ?? source;
-        const deltas = Array.isArray(itemDeltas) ? itemDeltas : [itemDeltas].filter(Boolean);
-        for (const d of deltas) {
+        for (const d of normaliseDeltas(itemDeltas)) {
           const doc = d?.item ?? d;
           const obj = doc?.toObject ? doc.toObject() : foundry.utils.duplicate(doc ?? {});
           const e = baseEntry("drop", actor, obj, Math.abs(d?.quantity ?? obj?.system?.quantity ?? 1));
@@ -185,12 +163,10 @@ function registerCapture() {
   // 2. deleted straight off a character sheet — capture BEFORE it is unreachable
   Hooks.on("preDeleteItem", (item, options, userId) => {
     try {
-      if (userId !== game.user.id) return;               // one client records, not all
       const actor = item?.parent;
-      if (!actor || actor.documentName !== "Actor") return;
-      if (actor.type !== game.itempiles?.API?.ACTOR_CLASS_TYPE) return;   // characters only
-      if (game.itempiles?.API?.isValidItemPile?.(actor)) return;          // piles are not losses
-      if (options?.[MODULE]?.restoring) return;                          // don't log our own undo
+      const API = game.itempiles?.API;
+      if (!shouldCaptureDelete({ userId, selfId: game.user.id, actor, characterType: API?.ACTOR_CLASS_TYPE,
+        isPile: a => API?.isValidItemPile?.(a), options })) return;
       submit(baseEntry("delete", actor, item.toObject(), item.system?.quantity ?? 1));
     } catch (err) {
       console.warn(`${MODULE} | delete capture failed`, err);
@@ -205,22 +181,17 @@ function buildAPI() {
     corpses,
     loot,
     all: () => readLog(),
-    list: (n = 20) => readLog().slice(-n).reverse(),
-    get: (n) => readLog().find(e => e.n === Number(n)) ?? null,
-    search: (text) => {
-      const q = String(text).toLowerCase();
-      return readLog().filter(e => (e.itemName ?? "").toLowerCase().includes(q));
-    },
+    list: (n = 20) => listLast(readLog(), n),
+    get: (n) => findEntry(readLog(), n),
+    search: (text) => searchLog(readLog(), text),
 
     /** Recreate entry #n. Defaults to the actor it left; pass an Actor or id to redirect. */
     restore: async (n, target = null) => {
       if (!game.user.isGM) return ui.notifications.warn("Only the GM can restore from the drop bin.");
-      const entry = readLog().find(e => e.n === Number(n));
+      const entry = findEntry(readLog(), n);
       if (!entry) return ui.notifications.error(`Drop bin: no entry #${n}.`);
 
-      const actor = target instanceof Actor ? target
-        : (typeof target === "string" ? (game.actors.get(target) ?? game.actors.getName(target)) : null)
-        ?? game.actors.get(entry.fromActorId);
+      const actor = restoreTarget(target, entry, { isActor: x => x instanceof Actor, actors: game.actors });
       if (!actor) return ui.notifications.error(`Drop bin: cannot find an actor to restore #${n} onto.`);
 
       const obj = foundry.utils.duplicate(entry.item);
@@ -360,13 +331,10 @@ Hooks.once("ready", async () => {
  *
  * The GM is exempt — a locked pile must still open from behind the screen.
  */
-const LOCK_SOUND = "sounds/lock.wav";   // ships with Foundry core
-
 function lockedContainerData(target) {
   const actor = target?.actor ?? target;
-  const data = actor?.getFlag?.("item-piles", "data");
-  if (!data?.enabled || data.type !== "container" || !data.locked) return null;
-  return { actor, data };
+  const data = lockedContainer(actor?.getFlag?.("item-piles", "data"));
+  return data ? { actor, data } : null;
 }
 
 function announceLocked(actor, { playSound }) {
@@ -388,22 +356,15 @@ function announceLocked(actor, { playSound }) {
  */
 async function ensureLockSounds() {
   if (!game.user.isGM) return;
+  const plan = planLockSounds(game.actors, game.scenes, LOCK_SOUND, { flagsOf: d => d.getFlag("item-piles", "data") });
   let patched = 0;
-  for (const actor of game.actors) {
-    const data = actor.getFlag("item-piles", "data");
-    if (!data?.enabled || data.type !== "container" || data.lockedSound) continue;
-    await actor.update({ "flags.item-piles.data.lockedSound": LOCK_SOUND,
-                         "prototypeToken.flags.item-piles.data.lockedSound": LOCK_SOUND });
+  for (const { _id, ...changes } of plan.actorUpdates) {
+    await game.actors.get(_id).update(changes);
     patched++;
   }
-  for (const scene of game.scenes) {
-    const updates = [];
-    for (const tok of scene.tokens) {
-      const data = tok.getFlag("item-piles", "data");
-      if (!data?.enabled || data.type !== "container" || data.lockedSound) continue;
-      updates.push({ _id: tok.id, "flags.item-piles.data.lockedSound": LOCK_SOUND });
-    }
-    if (updates.length) { await scene.updateEmbeddedDocuments("Token", updates); patched += updates.length; }
+  for (const { sceneId, type, updates } of plan.embedded) {
+    await game.scenes.get(sceneId).updateEmbeddedDocuments(type, updates);
+    patched += updates.length;
   }
   if (patched) console.log(`${MODULE} | lock sound set on ${patched} container document(s)`);
 }
@@ -424,19 +385,14 @@ async function ensureLockSounds() {
  */
 async function ensureEyesNeedView() {
   if (!game.user.isGM) return;
-  const isPile = d => d?.flags?.["item-piles"]?.data?.enabled;
+  const plan = planEyesNeedView(game.actors, game.scenes);
   let piles = 0, notes = 0;
-  for (const actor of game.actors) {
-    if (isPile(actor) && actor.prototypeToken.sight.enabled) {
-      await actor.update({ "prototypeToken.sight.enabled": false }); piles++;
-    }
+  for (const { _id, ...changes } of plan.actorUpdates) {
+    await game.actors.get(_id).update(changes); piles++;
   }
-  for (const scene of game.scenes) {
-    const tok = scene.tokens.filter(t => isPile(t) && t.sight.enabled)
-      .map(t => ({ _id: t.id, "sight.enabled": false }));
-    if (tok.length) { await scene.updateEmbeddedDocuments("Token", tok); piles += tok.length; }
-    const pins = scene.notes.filter(n => n.global && n.entry).map(n => ({ _id: n.id, global: false }));
-    if (pins.length) { await scene.updateEmbeddedDocuments("Note", pins); notes += pins.length; }
+  for (const { sceneId, type, updates } of plan.embedded) {
+    await game.scenes.get(sceneId).updateEmbeddedDocuments(type, updates);
+    if (type === "Token") piles += updates.length; else notes += updates.length;
   }
   if (piles || notes) console.log(`${MODULE} | in-view rule: sight off on ${piles} pile document(s), ${notes} readable pin(s) no longer global`);
 }

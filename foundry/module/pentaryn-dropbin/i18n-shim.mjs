@@ -21,6 +21,8 @@
  * `fillMissingKeys` is pure (no Foundry globals) so `node test/run.mjs` can prove it.
  */
 
+import { MODULE } from "./loot-core.mjs";
+
 /** old flat key under DND5E  →  where dnd5e 6 / core keeps the word now */
 export const LEGACY_KEYS = Object.freeze({
   ItemRarityCommon: "DND5E.ITEM.Rarity.Common",
@@ -79,6 +81,6 @@ export function fillMissingKeys(translations, fallback = {}) {
 export function installI18nShim() {
   Hooks.once("i18nInit", () => {
     const added = fillMissingKeys(game.i18n.translations, game.i18n._fallback);
-    if (added.length) console.log(`pentaryn-dropbin | Item Piles i18n shim added ${added.join(", ")}`);
+    if (added.length) console.log(`${MODULE} | Item Piles i18n shim added ${added.join(", ")}`);
   });
 }
