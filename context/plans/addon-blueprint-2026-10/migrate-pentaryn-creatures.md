@@ -240,7 +240,7 @@ whole refactor (§3 step 1 lists the 17 rows).
   our flag says 5/5 → `{[FK]: null}`; senses restores the prior 5/5 unflagged → `lightUpdate(…, on)`
   → `null` and `lightUpdate(…, off)` → `null` (`// KNOWN:` the orphan); `{qualifies:true, radius:0}`
   → `null`.
-- `GOLDEN_UPDATE=1 node test/run.mjs`, then green. **Checkpoint:** Joe approves the `lib/`, `test/`
+- `GOLDEN_UPDATE=1 node test/run.mjs`, then green. **Checkpoint:** commit the `lib/`, `test/`
   diff (plus the `test/run.mjs` → `core-legacy.mjs` rename).
 
 ### Step 2 — pure seams in core (absorbs **transform-creatures-30**, the seam halves of -25/-26/-27/-29/-31; clears C41)

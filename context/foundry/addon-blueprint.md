@@ -502,7 +502,7 @@ from there. This section is the procedure inside one module.
    4. pin effects, not returns: `F.hooks`, `F.calls`, warn/error text, `surfaceOf`, publish under
       both load orders;
    5. **checkpoint**: the characterisation diff (`test/golden/*.json` + tests only) is reviewed and
-      committed only when Joe approves. Agents never commit on their own.
+      committed by the agent as its own commit (review happens at merge). Rollback is `git revert` of the module's commits, a last resort, then sync.
 4. **Vendor check**: `vendor.py check <m>` (the sync happened in 3.3; add files later with
    `vendor.py sync <m> --kit <file>`).
 5. **Entry wiring**: lifecycle as today; `install(reg, ctx)` called **synchronously** in the entry

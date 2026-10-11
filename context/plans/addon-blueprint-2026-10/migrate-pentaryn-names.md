@@ -194,7 +194,7 @@ Absorbs nothing yet; it is the oracle every later step runs against.
   - `api.sync(actorA, "Bob", "Rob")` returns the count; `api.sync("a", "Bob", "Rob")` throws a
     `TypeError` — `// KNOWN:` (-38).
 - `GOLDEN_UPDATE=1 node test/run.mjs` against the unchanged `names.mjs`, then `node test/run.mjs`
-  green. **Checkpoint:** the diff is `lib/`, `test/` only; Joe reviews and approves the commit.
+  green. **Checkpoint:** the diff is `lib/`, `test/` only; the agent commits it as the checkpoint.
 
 ### Step 2 — pure core (absorbs **transform-creatures-32**; clears C11, C12, C41)
 

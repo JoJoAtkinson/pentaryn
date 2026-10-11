@@ -212,8 +212,7 @@ widget (all listed in `styles`, which is a module.json change and therefore a re
 ## 3. Ordered steps
 
 Rules for every step: one commit each, with tests landing **before** code. The characterisation
-diff (`test/golden/*`, `test/*.test.mjs`) is reviewed and committed **only when Joe approves**.
-Agents never commit. A refactor commit must leave
+diff (`test/golden/*`, `test/*.test.mjs`) is committed by the agent as the checkpoint (review happens at merge). A refactor commit must leave
 `git diff --stat -- test/golden test/*.test.mjs` empty. Run `node test/run.mjs`,
 `vendor.py check pentaryn-ties` and `conformance.py --module ties` after every step.
 

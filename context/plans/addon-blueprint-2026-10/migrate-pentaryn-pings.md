@@ -187,7 +187,7 @@ Note the scorer reports C39 "no ModuleSpec" until step 9's wiring lands; that is
   - `last()`/`recent()`/`all()` read the **persisted** setting, not the buffer: right after a ping and
     before the 250 ms flush, `recent(1)` is still empty (`// KNOWN:` read lag, -39).
   - publish into a frozen root keeps foreign keys, both load orders.
-- `GOLDEN_UPDATE=1 node test/run.mjs`, then green. **Checkpoint:** Joe approves the `lib/` + `test/`
+- `GOLDEN_UPDATE=1 node test/run.mjs`, then green. **Checkpoint:** commit the `lib/` + `test/`
   diff.
 
 ### Step 2 — pure core (absorbs **transform-creatures-36**; clears C11, C41)

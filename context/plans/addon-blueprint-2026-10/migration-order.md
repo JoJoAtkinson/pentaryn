@@ -19,7 +19,7 @@ from `conformance.py --markdown` run live, never from this table.
 
 ## Rules for every step
 
-1. Characterisation lands first, in its own commit, reviewed and committed only when Joe approves;
+1. Characterisation lands first, in its own commit, committed by the agent (review happens at merge);
    the refactor commit never touches `test/golden/` or the characterisation tests.
 2. **WAIT** modules are not touched while the live-test/melee workflow is running on them (the live
    list is `scripts/foundry/blueprint/wait.json`, printed by the scorer; it also holds creatures,

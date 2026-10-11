@@ -215,7 +215,7 @@ Clears C14, C20, C40 (core, glue, hooks), C41, C43.
    - **`hooks.test.mjs`**: pin `F.hooks` to `golden/hooks.json`, 16 entries in this order:
      `once init, once setup, getSceneControlButtons, renderSceneControls, drawTokenLayer, canvasReady, refreshToken, updateActor, updateToken, createCombat, updateCombat, deleteCombat, createCombatant, updateCombatant, deleteCombatant, once ready`.
 5. `GOLDEN_UPDATE=1 node test/run.mjs` once, on unchanged code. **Checkpoint:** review the diff
-   (tests and goldens only). It is committed only when Joe approves.
+   (tests and goldens only). It is committed by the agent as the checkpoint.
 
 ### S2 — Patches through `wrapMethod`, adjustments rows
 

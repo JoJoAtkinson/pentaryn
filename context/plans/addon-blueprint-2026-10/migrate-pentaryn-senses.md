@@ -297,7 +297,7 @@ that module lifted (or their senses-only half done alone, as stated).
        `ui.ARGON.collapseAllPanels` once before it waits for the click.
    - **`test/api.test.mjs`** (step 1 part): `surfaceOf(game.pentaryn.senses)` and `surfaceOf(game.pentaryn.chain)` → `golden/surface.json` (today's surface, function names included).
 6. `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`, one file at a time, on **unchanged** runtime.
-   **Checkpoint:** Joe approves the characterisation commit.
+   **Checkpoint:** the characterisation commit lands (review happens at merge).
 
 ### Step 2 — one module id, shared util · absorbs: **-18**, **-10** (light half) · C12
 

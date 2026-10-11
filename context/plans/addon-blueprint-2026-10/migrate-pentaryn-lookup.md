@@ -170,7 +170,7 @@ Nothing goes in `graph-allow.json`.
 Each step is one commit-sized change, behaviour-neutral unless marked **[declared]**. "Char.
 test" means the characterisation test you write and pass against the **unchanged** code
 **before** the step. Goldens are written with `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`,
-one file at a time. Agents never commit: Joe approves each characterisation checkpoint.
+one file at a time. Agents commit each characterisation checkpoint (review happens at merge).
 
 ### Step 1 — vendor the kit, fixed `run.mjs`
 - `vendor.py sync lookup --tier full`. `vendor.py check lookup` must exit 0.
@@ -226,7 +226,7 @@ one file at a time. Agents never commit: Joe approves each characterisation chec
   Re-asserts the ten exports the legacy suite imports exist. Also add the HTML-converter table
   from prompts-lookup-28 (seven inputs, the measured `toPlainText` outputs given in the finding).
 - Absorbs: prompts-lookup-28 (lookup half). Lays the pins for -1, -2, -3, -4, -5, -6.
-- **Checkpoint:** `git diff --stat -- test/` is reviewed and committed only when Joe approves.
+- **Checkpoint:** `git diff --stat -- test/` is committed by the agent as the checkpoint.
 
 ### Step 3 — pure moves into `lookup-core.mjs`
 - Add `MODULE = "pentaryn-lookup"`, `SHORT = "lookup"`, `NS = "rules"`, `VERSION = "0.3.0"`,

@@ -230,7 +230,7 @@ Clears C14, C20, C40 (core/glue/hooks/i18n), C43.
 6. `test/hooks.test.mjs` → the load and post-ready sequences. Drop the template's lifecycle-only assertion.
 7. `test/i18n.test.mjs` → every literal `PENTARYN_DROPBIN.*` key exists; the template-built `lootAll.${k}`
    keys are proven by enumerating `lootAllState` reasons (`noCharacter`, `empty`) plus `label`, `tip`, `failed`.
-8. `GOLDEN_UPDATE=1 node test/run.mjs` on unchanged code; green; **checkpoint** (Joe commits).
+8. `GOLDEN_UPDATE=1 node test/run.mjs` on unchanged code; green; **checkpoint** (agent commits).
 
 ### Step 2 — Cores (behaviour-neutral)
 

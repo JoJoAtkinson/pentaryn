@@ -189,8 +189,8 @@ empty at review.
 6. **`test/i18n.test.mjs`**: both `Setting.enabled.*` keys resolve in `lang/en.json`. Pin the two
    rendered strings verbatim (they become the oracle for step 9).
 7. `GOLDEN_UPDATE=1 node --test test/glue.test.mjs` on **unchanged** code, then `node test/run.mjs`.
-   **Checkpoint:** Joe reviews the diff (tests, goldens, `lib/`, `test/kit/`, the additive core
-   constants) and approves it before any commit.
+   **Checkpoint:** commit the diff (tests, goldens, `lib/`, `test/kit/`, the additive core
+   constants) as the checkpoint (review happens at merge).
 
 ### Step 2 — pure helpers for the internals probe and status (additive) · absorbs: the pure halves of -30, -32
 

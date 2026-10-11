@@ -248,7 +248,7 @@ Each step is one commit-sized change. It is behaviour-neutral unless marked **[d
 "Char. test" means the characterisation test written and passing against the **unchanged** code
 **before** the step. Write goldens one file at a time with `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`.
 Never run `GOLDEN_UPDATE=1` on the legacy suite or `UPDATE_SNAPSHOTS=1` during a refactor step.
-Joe approves each characterisation checkpoint. Agents never commit.
+Agents commit each characterisation checkpoint (review happens at merge).
 
 ### Step 1 — vendor the kit, fixed `run.mjs`
 - `vendor.py sync prompts --tier full --kit patch,patch-libwrapper,perf`. Then `vendor.py check prompts` exits 0.
@@ -310,7 +310,7 @@ Then:
   version, and the `stripHtml` seven-input table from prompts-lookup-28 with its measured outputs.
 - Absorbs: prompts-lookup-28 (prompts half), and the char. half of -16, -19, -20 and -12 (module
   side). The fake harness of prompts-lookup-14 is replaced by the kit stub and `fixtures/world.mjs`.
-- **Checkpoint:** review the `test/` diff; Joe approves the commit.
+- **Checkpoint:** review the `test/` diff; commit it as the checkpoint.
 
 ### Step 3 — characterise the pieces later steps move
 All in `core.test.mjs` / `glue.test.mjs`, against unchanged code. To reach non-exported

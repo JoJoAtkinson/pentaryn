@@ -170,7 +170,7 @@ Clears C14, C20, C40 (core/glue/hooks/i18n), C43.
    - Setting `onChange`: changing `gmButton` schedules `refreshBars` (debounced; `t.mock.timers`).
 6. `test/hooks.test.mjs` → the sequence in §2. Drop the template's lifecycle-only assertion.
 7. `test/i18n.test.mjs` → every literal `PENTARYN_JOURNAL.*` key in the source exists in `lang/en.json`.
-8. `GOLDEN_UPDATE=1 node test/run.mjs` on unchanged code; green; **checkpoint** (Joe commits).
+8. `GOLDEN_UPDATE=1 node test/run.mjs` on unchanged code; green; **checkpoint** (agent commits).
 
 ### Step 2 — Core additions and `MODULE` (behaviour-neutral)
 

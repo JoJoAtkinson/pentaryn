@@ -210,7 +210,7 @@ config.py edit), C40 (core/glue/hooks/i18n).
 8. `test/i18n.test.mjs` (tier full requires it): assert the module has no `lang/` and no
    `PENTARYN_` literal (`sourceScan`) — the importer is console/toast-only by design (C36 note).
 9. `GOLDEN_UPDATE=1 node test/run.mjs` against **unchanged** code, then `node test/run.mjs` green.
-10. **Checkpoint:** the diff is `lib/`, `test/` only. Joe reviews and commits; agents never commit.
+10. **Checkpoint:** the diff is `lib/`, `test/` only. the agent commits it as the checkpoint; review happens at merge.
 11. Pending wiring (outside the module, listed in use-doc §12): `config.py:311`
     `check=(*_STATIC, "node-test")`. Until it lands, run `node test/run.mjs` by hand (C39 stays red in
     the scorer until then).

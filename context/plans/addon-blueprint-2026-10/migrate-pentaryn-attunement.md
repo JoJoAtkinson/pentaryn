@@ -216,7 +216,7 @@ Clears C14, C20, C40 (core/glue/hooks/i18n), C43.
    "only lifecycle hooks at module scope" assertion (wrong for migrating modules).
 7. `test/i18n.test.mjs` (tier full): every `t(` key literal in the source exists in `STRINGS`
    (and, from step 9, in `lang/en.json` with an identical value — the parity check of `items-journal-14`).
-8. `GOLDEN_UPDATE=1 node test/run.mjs` on unchanged code; green; **checkpoint** (Joe reviews and commits).
+8. `GOLDEN_UPDATE=1 node test/run.mjs` on unchanged code; green; **checkpoint** (agent commits).
 
 ### Step 2 — `attunement-core.mjs` (behaviour-neutral)
 

@@ -205,7 +205,8 @@ Batch declared changes per stage so the live-test workflow runs few sessions:
 ## 4. Per-wave procedure for an implementing workflow
 
 One module per run. The guide's numbered steps are the unit of work; this is the wrapper around
-each of them. Agents never commit, push, stash or check out; Joe approves every commit.
+each of them. Agents commit often (small, one logical step per commit, on the wave branch); Joe never commits, and review happens at merge. Agents do not push, stash or switch branches unless their task says so.
+Rollback = `git revert` of the module's commits, a last resort (fix forward by default), then sync.
 
 0. **Pre-flight.**
    - Module not in `scripts/foundry/blueprint/wait.json` (or Joe has just lifted it).
@@ -221,7 +222,7 @@ each of them. Agents never commit, push, stash or check out; Joe approves every 
      `behaviourTest` plus hostile inputs; mark known-wrong rows `// KNOWN:`; pin effects (hooks,
      calls, console text, `surfaceOf`), not just returns.
    - `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs` per file; then `node test/run.mjs` green.
-   - Stop. Joe reviews the diff (`test/` only) and commits it.
+   - Commit the diff (`test/` only) as the checkpoint; it is then frozen.
 2. **Refactor**, one guide step at a time, exactly as written. A step never edits `test/golden/`
    or a characterisation test. Declared changes are separate steps with their own test change,
    flagged in the commit message.
