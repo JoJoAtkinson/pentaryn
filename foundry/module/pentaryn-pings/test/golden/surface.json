@@ -1,0 +1,12 @@
+{
+  "all": "all",
+  "clear": "clear",
+  "contract": "string",
+  "describe": "function",
+  "last": "last",
+  "recent": "recent",
+  "settings": "settingsView",
+  "trace": "trace",
+  "uninstall": "uninstall",
+  "version": "string"
+}

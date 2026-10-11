@@ -25,6 +25,7 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from scripts.foundry.ops.digest import tree_digest
 from scripts.foundry.update.admin import (
     MANIFEST_NAME,
     MODULES_DIR,
@@ -37,6 +38,17 @@ REPO_MODULE_SRC = REPO_ROOT / "foundry" / "module"
 
 # Modules built in this repo. Their source of truth is `foundry/module/`, never upstream.
 LOCAL_PREFIX = "pentaryn-"
+
+
+def sync_hint(pkg_id: str) -> str:
+    """The make target that puts a repo module into Data/ (python-tooling-9).
+
+    `make foundry-<short>-sync` for every module except the importer, which ships with the actor
+    pipeline (`make foundry-sync`, which also stages actors.json — so it names the world)."""
+    if pkg_id == "pentaryn-importer":
+        return "make foundry-sync WORLD=<world> (then make foundry-clean)"
+    short = pkg_id.removeprefix(LOCAL_PREFIX)
+    return f"make foundry-{short}-sync"
 
 
 @dataclass
@@ -138,9 +150,11 @@ def scan(types: tuple[str, ...] = ("system", "module")) -> list[Package]:
 def local_drift(packages: list[Package]) -> list[dict]:
     """Compare the installed ``pentaryn-*`` modules against this repo's copies.
 
-    `make foundry-sync` copies rather than symlinks (deliberately — D8), so the two
-    can and do diverge. A stale module in ``Data/`` looks exactly like a working one
-    until something silently uses the old code, so it is worth a line in the report.
+    Module sync copies rather than symlinks (deliberately — D8), so the two can and do
+    diverge. A stale module in ``Data/`` looks exactly like a working one until something
+    silently uses the old code, so it is worth a line in the report. A different version is
+    one entry; the SAME version with different files is one too, marked ``content_drift``
+    (the digest is module-sync's own, which ignores its sync stamp).
     """
     drift = []
     for pkg in packages:
@@ -157,7 +171,16 @@ def local_drift(packages: list[Package]) -> list[dict]:
             continue
         if repo_version != pkg.version:
             drift.append({"id": pkg.id, "installed": pkg.version, "repo": repo_version,
-                          "note": "Data/ copy differs from the repo — run make foundry-sync"})
+                          "note": f"Data/ copy differs from the repo — run {sync_hint(pkg.id)}"})
+            continue
+        try:
+            same = tree_digest(src.parent) == tree_digest(pkg.path)
+        except OSError:
+            continue
+        if not same:
+            drift.append({"id": pkg.id, "installed": pkg.version, "repo": repo_version,
+                          "note": f"same version, different files in Data/ — run {sync_hint(pkg.id)}",
+                          "content_drift": True})
     return drift
 
 

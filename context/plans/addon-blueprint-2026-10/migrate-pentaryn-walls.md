@@ -75,7 +75,7 @@ module enabled temporarily on a copy of a scene.
 | C34 / C35 lang | n/a | no lang file | 10 |
 | C36 hard-coded English | warn | 8 literals: `:45, 148, 209, 220, 224, 231, 240, 248` | 10 (finding -36) |
 | C37 / C37w / C38 CSS | pass / pass / n/a | | 10 (`pw-` declared) |
-| C39 run.mjs + ModuleSpec | pass | `config.py:129` | — |
+| C39 run.mjs + ModuleSpec | pass | `config.py:192` | — |
 | C40 tier tests | **fail** | no `core/glue/hooks/api/i18n.test` | 1, 7 |
 | C41 VERSION pinned | **fail** | | 1 |
 | C42 synthetic fixtures | n/a | (`test/fixtures.mjs` is synthetic) | 1 (moves under `test/fixtures/`) |
@@ -257,7 +257,7 @@ never touches `test/golden/` or the characterisation tests.
   `context/plans/foundry-wall-autocomplete.md`. Remove the "44" from the code comment at
   `test/run.mjs:19` (that file is now the runner).
 - **The wasm path does not change.** `backend-wasm.mjs` stays at the root, so
-  `new URL("./wall-engine.wasm", import.meta.url)` and `modules.py:337` (`dest = src / "wall-engine.wasm"`)
+  `new URL("./wall-engine.wasm", import.meta.url)` and `modules.py:648` (`dest = src / "wall-engine.wasm"`)
   both still hold.
 
 Tests before: `engine-golden` (every hash), `corpus` (both backends), `core` (the -4 table). The
@@ -359,7 +359,7 @@ In the **single** Wave 7 batch:
 
 1. `module.json`: `"languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }]`;
    `"compatibility": { "minimum": "14", "verified": "14.369" }`; `description` fix (-8);
-   `"flags": { "pentaryn": { "tier": "full", "namespace": "walls", "flagScope": "pentaryn-walls", "cssPrefix": "pw-", "generation": 14, "afterSync": [the two lines from config.py:133–134] } }`.
+   `"flags": { "pentaryn": { "tier": "full", "namespace": "walls", "flagScope": "pentaryn-walls", "cssPrefix": "pw-", "generation": 14, "afterSync": [the two lines from config.py:196–197] } }`.
    `pw-` is unused across modules.
 2. `lang/en.json` (-36), nested, strings verbatim:
    `PENTARYN_WALLS.settings.backend.{name,hint}`, `…settings.backend.choices.{auto,wasm,js}`,
@@ -400,7 +400,7 @@ Live smoke after the sync, in a scratch world with the module enabled:
 | **-5** | performance: `obstacles()` inline loops (`core/engine.mjs:467`), `coll2` hoist, one Set per vertex | after step 3, gated by `engine-golden` hashes and `bench.mjs` |
 | **-6** | maintainability: `toSegs`/`reindex` (`:884`, `:889`, `:914`) | after step 3, gated by `engine-golden` + `corpus` on wasm |
 | **-9** | hardening (busy guard on API) | 8b, **declared** |
-| **-28** | tooling: `ship_ignore` in `scripts/foundry/ops/modules.py:306` so `wasm/` and `test/` stop shipping | the python-tooling batch, not this module |
+| **-28** | tooling: `ship_ignore` in `scripts/foundry/ops/modules.py:561` (`install()`'s `copytree`) so `wasm/` and `test/` stop shipping | the python-tooling batch, not this module |
 | **-33** | additive API `analyze()` | 8e |
 | **-37** | console diagnostic | 8d |
 | C10 on `core/engine.mjs` (1080 > 600) | the warning stays. A topic split (`core/engine/{geometry,model,lint,rules,apply,diagnose}.mjs`) is optional later, gated by `engine-golden`. Not needed to conform. | later |
@@ -438,10 +438,10 @@ walls half of **-10** (8a).
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module walls --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | not migrated yet — **71.4 % (30/42)** today (wave start in [`wave-1-baseline.md`](wave-1-baseline.md)), `conformance.py --module walls --markdown`, 2026-10-11 |
+| Date | 2026-10-11 (wave 1: checkpoint only (wave 1 Stage 0 lane); the refactor is workflow 2) |
+| Commits (Joe-approved) | characterisation: `61f4a32` (kit), `a8c5c28` (checkpoint) · refactor: none yet · other: `30963c4` (README, senses-walls-cursors-8), `c1a80a5` (manual corpus CLI throws instead of `process.exit`, C43; harness only), `4f7b5a8` (plan path comment) |
+| Declared changes handed to the live-test workflow | none (KNOWN pins open: -2 wasm levels as 2 todos, -1 `undo()`) |
+| `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) |
+| Adjustments rows appended to `adjustments-batch.md` | no (step not reached) |
+| Still failing, and why | C07 C11 C12 C21 C22 C24 C27 C28 C40 C41 C44 C45 — the guide's steps 2+ have not run. Frozen tests: the checkpoint's assertions and goldens are untouched since the checkpoint (see wave-1-report §Frozen tests). |

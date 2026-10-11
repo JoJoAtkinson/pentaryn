@@ -1,0 +1,482 @@
+[
+  {
+    "input": {
+      "isGM": false,
+      "setting": false,
+      "isPersonal": false,
+      "isEyeReadable": false,
+      "visiblePages": 0
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": false,
+      "isPersonal": false,
+      "isEyeReadable": false,
+      "visiblePages": 1
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": false,
+      "isPersonal": false,
+      "isEyeReadable": false,
+      "visiblePages": 2
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": false,
+      "isPersonal": false,
+      "isEyeReadable": true,
+      "visiblePages": 0
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": false,
+      "isPersonal": false,
+      "isEyeReadable": true,
+      "visiblePages": 1
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": false,
+      "isPersonal": false,
+      "isEyeReadable": true,
+      "visiblePages": 2
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": false,
+      "isPersonal": true,
+      "isEyeReadable": false,
+      "visiblePages": 0
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": false,
+      "isPersonal": true,
+      "isEyeReadable": false,
+      "visiblePages": 1
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": false,
+      "isPersonal": true,
+      "isEyeReadable": false,
+      "visiblePages": 2
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": false,
+      "isPersonal": true,
+      "isEyeReadable": true,
+      "visiblePages": 0
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": false,
+      "isPersonal": true,
+      "isEyeReadable": true,
+      "visiblePages": 1
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": false,
+      "isPersonal": true,
+      "isEyeReadable": true,
+      "visiblePages": 2
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": true,
+      "isPersonal": false,
+      "isEyeReadable": false,
+      "visiblePages": 0
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": true,
+      "isPersonal": false,
+      "isEyeReadable": false,
+      "visiblePages": 1
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": true,
+      "isPersonal": false,
+      "isEyeReadable": false,
+      "visiblePages": 2
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": true,
+      "isPersonal": false,
+      "isEyeReadable": true,
+      "visiblePages": 0
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": true,
+      "isPersonal": false,
+      "isEyeReadable": true,
+      "visiblePages": 1
+    },
+    "out": true
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": true,
+      "isPersonal": false,
+      "isEyeReadable": true,
+      "visiblePages": 2
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": true,
+      "isPersonal": true,
+      "isEyeReadable": false,
+      "visiblePages": 0
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": true,
+      "isPersonal": true,
+      "isEyeReadable": false,
+      "visiblePages": 1
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": true,
+      "isPersonal": true,
+      "isEyeReadable": false,
+      "visiblePages": 2
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": true,
+      "isPersonal": true,
+      "isEyeReadable": true,
+      "visiblePages": 0
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": true,
+      "isPersonal": true,
+      "isEyeReadable": true,
+      "visiblePages": 1
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": false,
+      "setting": true,
+      "isPersonal": true,
+      "isEyeReadable": true,
+      "visiblePages": 2
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": false,
+      "isPersonal": false,
+      "isEyeReadable": false,
+      "visiblePages": 0
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": false,
+      "isPersonal": false,
+      "isEyeReadable": false,
+      "visiblePages": 1
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": false,
+      "isPersonal": false,
+      "isEyeReadable": false,
+      "visiblePages": 2
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": false,
+      "isPersonal": false,
+      "isEyeReadable": true,
+      "visiblePages": 0
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": false,
+      "isPersonal": false,
+      "isEyeReadable": true,
+      "visiblePages": 1
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": false,
+      "isPersonal": false,
+      "isEyeReadable": true,
+      "visiblePages": 2
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": false,
+      "isPersonal": true,
+      "isEyeReadable": false,
+      "visiblePages": 0
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": false,
+      "isPersonal": true,
+      "isEyeReadable": false,
+      "visiblePages": 1
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": false,
+      "isPersonal": true,
+      "isEyeReadable": false,
+      "visiblePages": 2
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": false,
+      "isPersonal": true,
+      "isEyeReadable": true,
+      "visiblePages": 0
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": false,
+      "isPersonal": true,
+      "isEyeReadable": true,
+      "visiblePages": 1
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": false,
+      "isPersonal": true,
+      "isEyeReadable": true,
+      "visiblePages": 2
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": true,
+      "isPersonal": false,
+      "isEyeReadable": false,
+      "visiblePages": 0
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": true,
+      "isPersonal": false,
+      "isEyeReadable": false,
+      "visiblePages": 1
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": true,
+      "isPersonal": false,
+      "isEyeReadable": false,
+      "visiblePages": 2
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": true,
+      "isPersonal": false,
+      "isEyeReadable": true,
+      "visiblePages": 0
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": true,
+      "isPersonal": false,
+      "isEyeReadable": true,
+      "visiblePages": 1
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": true,
+      "isPersonal": false,
+      "isEyeReadable": true,
+      "visiblePages": 2
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": true,
+      "isPersonal": true,
+      "isEyeReadable": false,
+      "visiblePages": 0
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": true,
+      "isPersonal": true,
+      "isEyeReadable": false,
+      "visiblePages": 1
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": true,
+      "isPersonal": true,
+      "isEyeReadable": false,
+      "visiblePages": 2
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": true,
+      "isPersonal": true,
+      "isEyeReadable": true,
+      "visiblePages": 0
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": true,
+      "isPersonal": true,
+      "isEyeReadable": true,
+      "visiblePages": 1
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isGM": true,
+      "setting": true,
+      "isPersonal": true,
+      "isEyeReadable": true,
+      "visiblePages": 2
+    },
+    "out": false
+  }
+]

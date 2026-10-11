@@ -216,7 +216,7 @@ Clears C14, C20, C40 (core/glue/hooks/i18n), C43.
    "only lifecycle hooks at module scope" assertion (wrong for migrating modules).
 7. `test/i18n.test.mjs` (tier full): every `t(` key literal in the source exists in `STRINGS`
    (and, from step 9, in `lang/en.json` with an identical value — the parity check of `items-journal-14`).
-8. `GOLDEN_UPDATE=1 node test/run.mjs` on unchanged code; green; **checkpoint** (Joe reviews and commits).
+8. `GOLDEN_UPDATE=1 node test/run.mjs` on unchanged code; green; **checkpoint** (agent commits).
 
 ### Step 2 — `attunement-core.mjs` (behaviour-neutral)
 
@@ -382,10 +382,10 @@ Step 1 ~0.5 day (good existing fixtures help), steps 2–7 ~1 day, step 8 ~0.25 
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module attunement --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | not migrated yet — **67.4 % (29/43)** today (wave start in [`wave-1-baseline.md`](wave-1-baseline.md)), `conformance.py --module attunement --markdown`, 2026-10-11 |
+| Date | 2026-10-11 (wave 1: checkpoint only (wave 1 Stage 0 lane); the refactor is workflow 2) |
+| Commits (Joe-approved) | characterisation: `cbe8214` (kit), `88f935e` (checkpoint) · refactor: none yet · other: `885f342` (README, items-journal-17), `4f7b5a8` (`== null` comment) |
+| Declared changes handed to the live-test workflow | none |
+| `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) |
+| Adjustments rows appended to `adjustments-batch.md` | no (step not reached) |
+| Still failing, and why | C04 C07 C09 C11 C18 C26 C27 C28 C29 C37 C40 C41 C44 C45 — the guide's steps 2+ have not run. Frozen tests: the checkpoint's assertions and goldens are untouched since the checkpoint (see wave-1-report §Frozen tests). |

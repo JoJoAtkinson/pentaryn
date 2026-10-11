@@ -1,0 +1,14 @@
+[
+  {
+    "kind": "on",
+    "name": "preUpdateActor"
+  },
+  {
+    "kind": "on",
+    "name": "updateActor"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  }
+]

@@ -1,7 +1,7 @@
 ---
 title: "Prompt markers — turning Joe's typed map notes into built things"
 created: 2026-10-10
-last_modified: 2026-10-10
+last_modified: 2026-10-11
 status: active
 tags: [context, foundry, markers, mcp, prompt-markers, playbook]
 ---
@@ -120,7 +120,9 @@ Each `<built>` prints `type` (a creature's type; a character's `Paladin 5, Oath 
 pm-759c`), the builder's one-line **`Why:`** (the provenance `note`), a hotspot's `Items:` (name,
 rarity, `unidentified, shows as "…"`, attunement) or a creature's notable `Carries:` (loot, keys,
 potions, anything magic), a `Light:` placed with it (`dim 10 ft, #9fd3ff, pulse`), and up to 400
-characters of its description cut at a sentence. A stock monster this system built without a new
+characters of its description cut at a sentence; a description cut short ends
+`… (cut, full text: get-character <id>)` — if a neighbour matters to the design, read its full
+sheet. A stock monster this system built without a new
 biography prints no Description (the book's lore is not the builder's); its prompt and `Why:` say what it
 is. That is enough to design a neighbour without opening its sheet.
 

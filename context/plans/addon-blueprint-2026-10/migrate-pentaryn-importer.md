@@ -1,7 +1,7 @@
 ---
 title: Migrating pentaryn-importer to the addon blueprint
-status: plan
-last_modified: 2026-10-10
+status: done (offline) — live test pending
+last_modified: 2026-10-11
 tags: [foundry, modules, blueprint, plan, migration, importer]
 ---
 
@@ -210,7 +210,7 @@ config.py edit), C40 (core/glue/hooks/i18n).
 8. `test/i18n.test.mjs` (tier full requires it): assert the module has no `lang/` and no
    `PENTARYN_` literal (`sourceScan`) — the importer is console/toast-only by design (C36 note).
 9. `GOLDEN_UPDATE=1 node test/run.mjs` against **unchanged** code, then `node test/run.mjs` green.
-10. **Checkpoint:** the diff is `lib/`, `test/` only. Joe reviews and commits; agents never commit.
+10. **Checkpoint:** the diff is `lib/`, `test/` only. the agent commits it as the checkpoint; review happens at merge.
 11. Pending wiring (outside the module, listed in use-doc §12): `config.py:311`
     `check=(*_STATIC, "node-test")`. Until it lands, run `node test/run.mjs` by hand (C39 stays red in
     the scorer until then).
@@ -371,6 +371,9 @@ Absorbs `items-journal-6` (README parts c, d), and the README side of `-5`. Clea
    is written under it) and list `flags.pentaryn.*` in the manifest's `flags.writes`, documented as a
    contract scope that is **never** migrated (moving it would change every `contentHash`/slug lookup
    and force a full re-import). The alternative — `flagScope: "pentaryn"` — fails C07 forever.
+   **Decided 2026-10-11 (Joe, D5): `flags.pentaryn.*` is the generator's contract scope.** The importer
+   declares `flagScope: "pentaryn-importer"` in the Wave 7 batch and documents `flags.pentaryn.*` as a
+   contract scope that is never migrated (README *Data written*; CONTRACT.md §9.2). No data moves.
 2. Console prefix change D-I2 (recommended: accept; console-only).
 
 ## 7. WAIT
@@ -391,14 +394,67 @@ Gaps to raise with the blueprint owner (not fixed here — no edits to existing 
 - The template `hooks.test.mjs` asserts "only lifecycle hooks at module scope"; migrating modules
   (synchronous install, use-doc §6) cannot meet it. Migration guides drop that assertion.
 
+## 9. Deploy and rollback
+
+The importer is **not** deployed by `module-sync` (`ops module-sync` refuses it: a second copy would
+land where Foundry loads modules from). It ships with the actor pipeline, `ops stage`
+(`make foundry-sync`), whose default world is `space-journey` — **always pass `WORLD=pentaryn`**
+(or the world under test). `stage` also rebuilds `foundry/build/actors.json` and **stages it into
+`Data/worlds/<world>/`, which is public over the tunnel**, so every stage is followed by
+`make foundry-clean`. Only the lifecycle commands allowed to agents are used
+(`make foundry-down`, `foundry-up`, `foundry-backup`, `login`); never `vtt-up`.
+
+**Deploy (code only — no `module.json` change until the Wave 7 batch, so a reload is enough):**
+
+1. A world snapshot if a real import may follow: `make foundry-backup` **refuses while Foundry is up**, so
+   take it before `make foundry-up` (or `make foundry-down` → backup → `make foundry-up`). The deploy and
+   a dry run write no world data.
+2. `make foundry-sync WORLD=pentaryn` — expect `▸ target world: pentaryn`, `✓ module → …/Data/modules/pentaryn-importer`,
+   `✓ actors.json staged`. Then `git status --short foundry/build/actors.json`: a diff there is
+   generator drift, not this migration — stop and report it.
+3. If no dry run is wanted now: `make foundry-clean WORLD=pentaryn` **immediately** (deletes the
+   staged JSON; with the tunnel up it also proves a public 404).
+4. Reload the one GM tab (`localhost:30000/game`, it hosts the MCP bridge). New files
+   (`importer-core.mjs`, `documents-adapter.mjs`, `api-manifest.mjs`, `api.mjs`, `lib/`) load
+   through the unchanged `esmodules` entry; no restart.
+5. Smoke through `eval-js` (GM):
+   `({ frozen: Object.isFrozen(game.pentaryn), keys: Object.keys(game.pentaryn), ok: game.pentaryn.importer.selftest().ok, v: game.pentaryn.importer.describe().version, same: game.pentaryn.importer.import === game.pentaryn.import })`
+   → `frozen: false`; `keys` has every enabled module's namespace (combat, transform and aoe
+   included) **and** `import, moduleId, contract, _internals, importer`; `ok: true`; `v: "1.1.0"`; `same: true`.
+6. Dry run (D-I1, D-I3), only while the JSON is staged (step 2 without step 3):
+   `await game.pentaryn.import({ dryRun: true })` → `ok: true`; then two calls without awaiting →
+   the second rejects `PentarynAbort` ("An import is already running…"); then
+   **`make foundry-clean WORLD=pentaryn`**. `make foundry-import` is not usable by an agent: with no
+   terminal it skips the prompt and deletes the JSON before the import can run.
+7. Console glance (D-I2): the importer's lines read `pentaryn-importer | …`; toasts unchanged.
+8. Player view: one player tab on `zz<n>.localhost` (`make login`), `Object.keys(game.pentaryn)` lists
+   the namespaces; close the tab after.
+
+**Rollback** (fix forward first; this is the last resort). The deploy writes no world data and
+migrates nothing, so rolling back is redeploying the old code:
+
+1. `git revert --no-edit <commits>` newest first — the importer's are listed in the Result table
+   below (`566895f` … `b757a8a`; the checkpoint `cb81c20`/`051737b` and `5730eea` can stay: tests
+   and the gate only). Reverting `754aa94` also restores the `dnd5e-importer-gate` row's `files`.
+   Then run `make foundry-module-index` and commit the one-row `context/foundry/README.md` change:
+   reverting `412d23b` puts the importer row back to "not migrated", but `lib/kit.lock.json` stays
+   (from the kept `051737b`), so the generator says "full tier" and `make check-context` is red
+   ("the Module APIs table is stale") until the index is regenerated.
+2. `make foundry-sync WORLD=pentaryn`, then `make foundry-clean WORLD=pentaryn`, then reload the GM tab.
+3. Check: `game.pentaryn.importer` is gone and `game.pentaryn.import` works; the root is the
+   importer's frozen object again, or a guard's unfrozen copy of it once a later module republished
+   (the old behaviour). Other modules need no change either way: their guard copies handle both a
+   frozen and an open root.
+
 ## Result (fill when done)
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module importer --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | **97.6 %** (41 / 42 fail-class rules) — `conformance.py --module importer --markdown`, 2026-10-11 (63.9 % at wave start) |
+| Date | 2026-10-11 |
+| Commits | characterisation: `051737b`, `cb81c20` (checkpoint), `5730eea` (gate) · refactor: `b757a8a` (2), `f55d256` (3), `754aa94` (4a + adjustments row), `bd83c80` (4b **[declared]** D-I2), `e34372a` (5), `d3658a6` (6), `c0c3f97` (7 **[declared]** keystone D-I1), `28f3726` (C50: `Hooks.once`), `412d23b` (module index), `e612a79` (8) · standalone: `60bef2a` (`items-journal-4` **[declared]** D-I3), `566895f` (`items-journal-7`), `b1d0fc8` (its micro-benchmark: `index.test` read count + `test/bench.mjs`) · review fixes: `75562a1` (`describe()` names the D-I3 refusal), `bb4c6e2` (CHANGELOG names `items-journal-7`) |
+| Declared changes handed to the live-test workflow | D-I1, D-I2, D-I3 (and the additive D-I4) — §5, deploy steps §9. **Deployed 2026-10-11** (`make foundry-sync WORLD=pentaryn`, `make foundry-clean`, restart): `selftest().ok`, `describe().version` 1.1.0, root not frozen, `game.pentaryn.importer.import === game.pentaryn.import`, concurrent `import()` refused with `PentarynAbort`; live golden identical to before apart from the declared root/`module.api` changes. Coverage of module code 99.6 / 94.7 / 95.8, lcov records merged per file (98.8 / 93.5 / 90.2 unmerged; was 0); 92 node:test, all pass |
+| `module.json` edits appended to `wave7-restart-batch.md` | already listed (importer row); the glue test reads the real `module.json` flags, so the batch needs no test edit |
+| Adjustments rows appended to `adjustments-batch.md` | the `dnd5e-importer-gate` files move landed with 4a (marked there) |
+| Still failing, and why | **C07** only — `flags.pentaryn` tier/namespace/flagScope/cssPrefix wait for the Wave 7 restart batch. Warnings: C02 (minimum 13, Wave 7), C10 (`api.mjs` 361/300, `documents-adapter.mjs` 537/500 — the readback assertions and the orchestrator moved verbatim), C36 (assertion-message English, accepted §1), C59 (per-actor awaited writes, by design: each actor is asserted before the next) |
+| Departures from this guide | step 4b also prefixes the in-group summary lines (C25 counts them) and keeps `console.log` level through a sink; step 5's `reg.once` became `Hooks.once` (`28f3726`) because C50 reads only that form; step 6 adds no `inspect` (no new features), and `selftest` checks module.api, the root's `import`, the gate flags and (from step 7) `game.pentaryn.importer`; step 7 merges the legacy keys **before** `publishNamespace`, so a `pentaryn.ready` listener already sees `import`; the step-2/3 tests went into new files (`version-gate.test`, `sites.test`) so the frozen `core.test` text never changed; C18 is n/a in the scorer now (the §8 gap is closed) |

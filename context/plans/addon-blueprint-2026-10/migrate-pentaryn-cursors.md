@@ -189,8 +189,50 @@ empty at review.
 6. **`test/i18n.test.mjs`**: both `Setting.enabled.*` keys resolve in `lang/en.json`. Pin the two
    rendered strings verbatim (they become the oracle for step 9).
 7. `GOLDEN_UPDATE=1 node --test test/glue.test.mjs` on **unchanged** code, then `node test/run.mjs`.
-   **Checkpoint:** Joe reviews the diff (tests, goldens, `lib/`, `test/kit/`, the additive core
-   constants) and approves it before any commit.
+   **Checkpoint:** commit the diff (tests, goldens, `lib/`, `test/kit/`, the additive core
+   constants) as the checkpoint (review happens at merge).
+
+#### Step 1 record (2026-10-11, wave 1)
+
+Step 0: `wait.json` null; `git diff ee505c2..HEAD` empty for the module (no drift); live score 57.8 %
+(26/45, scored as full). Baseline: `node test/run.mjs` 84 passed, nothing red, nothing fixed.
+
+What the checkpoint holds, and where it departs from the recipe above (each departure keeps a later
+step from having to touch a frozen test):
+
+| Item | As built |
+|---|---|
+| Vendor | `vendor.py sync cursors --tier small --kit settings,api` → errors, log, hooks, publish, resolve, settings, api; `kit.lock.json` `"tier": "small"`. Its own commit before the checkpoint. |
+| `core.test.mjs` | Every old check through `checkJSON`, plus `VERSION`/identity constants and the live golden's `keyForTable`. **"source exists" accepts `assets/src/<src>` or `scripts/foundry/cursors/src/<src>`**, so step 7's move stays green without editing the test; step 7 still adds its own `--check-sources` pytest. |
+| `i18n.test.mjs` | Compares **flattened** keys, so today's flat file and step 9's nested file both pass; both strings pinned verbatim. It does not import `settings.mjs` (does not exist yet) and does not assert one nested root (C34 fails today; step 9). |
+| `glue.test.mjs` | Cases (a)–(h) and (j), plus: tool → key through `renderSceneControls` / `activateCanvasLayer`, `apply()`'s two-part short-circuit (same key **and** dataset), the spell-area preview listeners (aoe and back, GM region drag is not aoe), `canvas.ready` false, no board element, the `canvas.app.view` fallback, canvasReady's tick-later resync, a new preview container per draw. Legacy API keys are a **floor** (`in`), never an exact list; `module.api` is not pinned (SF2) — both so step 6 (C-1) passes unchanged. |
+| `golden/hooks.json` | `hookSequence(F.hooks)` — **consecutive identical rows collapse.** Step 5 as written registers two `once ready` listeners (board's attach, then the entry's publish) where today there is one; collapsed, the golden is the same seven rows before and after. A third `once ready` placed anywhere but next to the other would still show. |
+| `publish.test.mjs` (new) | Case (i): absent / extensible `{x:1}` / frozen `{x:1}`, each a fresh stub plus a `?order=N` copy of the entry, checked after ready **plus a tick**. |
+| `live.test.mjs` (new) | SF8 fidelity: `CSS.supports` true, the five tool switches driven through the wrapped tool `onChange` (as `ui.controls.activate` does live) read back exactly `.state/live-goldens/before/cursors.json` `tools` (copied to `test/fixtures/live-before.json`); the image-set probe runs once with the live probe string. |
+| `imageset.test.mjs` (new) | Coverage gap: a throwing `CSS.supports` → plain `url()` values, probed once. |
+| Fixtures | `test/fixtures/board.mjs`: #board (`CANVAS`, `style.cursor` `var(--cursor-default)`), `events.setCursor` recording `currentCursor` at the call, preview container, recording `MutationObserver`. |
+| Mutation spot-check | Eight one-line mutations of `cursors.mjs` (drop the `currentCursor = null`, resync now instead of a tick later, wrap toggle/button tools, drop the `WRAPPED` check, drop `childRemoved`, change a warn text, `scope: "world"`, drop the `enabled()` gate in resync) each turned the suite red. |
+
+Quirks pinned as-is (documented behaviour, not bugs; no audit id, no KNOWN row):
+- a `setCursor` that throws inside resync leaves `events.currentCursor` null (`resync failed` warned);
+- with the setting off, a blanked `#board` cursor is not repaired (resync is gated on `enabled()`);
+- `refresh()` with no board element returns null and clears `current()` but leaves the old board's vars;
+- a throw inside the five `Hooks.on` handlers is Foundry's (`Error thrown in hooked function`), never
+  `pentaryn-cursors | …` — the reason step 5 registers with `guard: false`.
+
+**Known-bug todos: none.** Findings -30, -31, -32 and -35 are hardening, structure, an additive API and
+docs; none is a defect in today's behaviour, and this guide has no `KNOWN:` row.
+
+Coverage (gap finder only; `node --test --experimental-test-coverage` over the inner `test/**/*.test.mjs`):
+
+| File | Before (line / branch / funcs) | After |
+|---|---|---|
+| `cursors-core.mjs` | 100 / 96.77 / 100 | 100 / 100 / 100 |
+| `cursors.mjs` | not loaded by any test (0) | 100 / 97.65 / 100 (glue + imageset) |
+
+The two branches left are `cursors.mjs:151` (extensible vs frozen root), which `publish.test.mjs`
+covers. Node 26 merges coverage of the `?order=N` copies badly, so a whole-suite run prints a lower,
+order-dependent figure for `cursors.mjs`; measure per file.
 
 ### Step 2 — pure helpers for the internals probe and status (additive) · absorbs: the pure halves of -30, -32
 
@@ -245,7 +287,9 @@ matches the other guides.
 in the old order, and the entry's `once init` and `once ready` go around them. Today `once init` is
 first, so in the entry body call `Hooks.once("init", onInit)` **before** `install()`. Today the
 publish runs inside `once ready`, which is last, so register `Hooks.once("ready", onReady)` **after**
-`install()`. `golden/hooks.json` must not change. If it does, the step is wrong.
+`install()`. `golden/hooks.json` must not change. If it does, the step is wrong. (The golden collapses
+consecutive identical rows — Step 1 record — so board's `once ready` directly followed by the
+entry's `once ready` pins as the one `once ready` of today. Keep them adjacent and last.)
 
 Tests before: all of glue (a)–(j) and `golden/hooks.json`.
 
@@ -312,6 +356,7 @@ location first (paths parameterised). The step changes no runtime file.
   - Credits can stay as a trailing section.
 - New `CHANGELOG.md` (0.2.0, plus 0.3.0 for this migration).
 - Give cursors its own routing row in `context/foundry/README.md`; it is currently bundled at `:67`.
+  **Landed** in `720486e` (standalone pass, cursors half of -27): do not add it again.
 
 Tests before: none at runtime. C44 is the gate.
 
@@ -386,14 +431,52 @@ post-sync smoke check. No WAIT steps here, apart from the aoe half of step 10.
 | Step 10 row, step 12 gates + live smoke | 0.5 h |
 | **Total** | **about 1 day (S)** |
 
+## Wave 1 refactor record (2026-10-11)
+
+Steps 2, 3, 5, 6, the -30 runtime half, 8 (in-module half) and 9 landed on `migrate/wave-1`. The
+frozen checkpoint files (`golden/hooks.json`, `core/glue/publish/live/imageset/i18n.test.mjs`,
+`fixtures/`, `run.mjs`) are byte-identical to `d49967e`; every refactor step ran the whole suite green.
+
+| Commit | Step | Findings | Rules |
+|---|---|---|---|
+| `4fad56d` | 2 — `probeInternals`, `statusOf` in core | -30, -32 (pure halves) | — |
+| `f7a86f9` | 3 — `settings.mjs` | — | C21, C22, C51 |
+| `dcf9bb0` | 5 — `board.mjs` feature, entry wiring only | **-31** | C10, C18 |
+| `ae51bca` | 6 — **[declared C-1]** kit API, synchronous publish, `status()` | -32 | C26, C50 |
+| `738f4c4` | **[declared C-2]** one-time internals warning after `canvasReady` | -30 (runtime half) | — |
+| `1724678` | 9 — nested `lang/en.json` | — | C34 |
+| `88e8f11` | 8 (in-module half) — README fixed order, CHANGELOG | -35 (README: alternates are credited, not dead) | C44, C45 |
+| `a843e0c` | test only — hot patch re-wire (coverage gap of the entry's `game.ready` branch) | — | — |
+
+Departures from the step text, each so a frozen file stays untouched:
+
+- **Step 2's tables** live in a new `test/status.test.mjs`, not `core.test.mjs` (frozen).
+- **`status()`** landed inside step 6's declared commit (the guide allows "a row in step 6"), so
+  `golden/surface.json` and `golden/describe.json` were pinned once, with it. New test files:
+  `api.test.mjs` (C-1 timing, surface, describe, status, uninstall), `internals.test.mjs` (C-2),
+  `hotpatch.test.mjs`.
+- **Hot patch:** `board.install()` attaches a tick later at once when `game.ready` is already true
+  (a `once ready` would never fire); the entry runs `onInit → install → onReady` in that branch.
+- Board hooks carry labels (`describe().hooks`); all are `guard: false` as step 5 says.
+
+**Not done here — outside this module's folder** (the wave-1 agent owned only the module and this
+guide; handed back as an exact edit list): step 7 (`tools/build.mjs` and `assets/src/` →
+`scripts/foundry/cursors/`, `--check-sources` + pytest, -35 alt-* half and the cursors half of
+-28), step 8's `DESIGN.md` → `context/plans/cursors-design.md` and the own routing row in
+`context/foundry/README.md` (-35 DESIGN half, cursors half of -27; the routing row has since landed
+in `720486e`), step 10's row (since landed in `4825fae`; the aoe widening row in
+`adjustments-batch.md` already names `board.mjs`), and
+step 11 (already in `wave7-restart-batch.md`). The README still points at `DESIGN.md`, `tools/` and
+`assets/src/` in the module until those moves land, then its four references change with them.
+
 ## Result (fill when done)
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module cursors --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | **91.3 %** (42 / 46 fail-class rules, small tier) — `conformance.py --module cursors --markdown`, 2026-10-11 after the integration (53.7 % as full at wave start, 72.1 % (31/43) as small at the checkpoint `d49967e`; 56.4 % was the pre-wave estimate as small) |
+| Date | 2026-10-11 (in-module part; deployed and live-checked the same day) |
+| Commits (Joe-approved) | characterisation: b0ae88a (vendor), d49967e (checkpoint) · refactor: 4fad56d, f7a86f9, dcf9bb0 (senses-walls-cursors-31), 1724678, 88e8f11, 1a72a80, 4f4df57 · declared: ae51bca (C-1, -32), 738f4c4 (C-2, -30 runtime) · tests: a843e0c · shared files: 170f003 (`module.json`), 4825fae (`core-board-cursor-vars`), 54c1ce0 · standalone: 720486e (-27 cursors routing row), 827ebce (-30 registry README), 9d4ca38 (guide) |
+| Declared changes handed to the live-test workflow | C-1, C-2 deployed 2026-10-11; boot probe and live golden pass (surface + `module.api` only; all five tool switches identical). C-2's silence is console-only and was not observable (boot console not captured) |
+| `module.json` edits appended to `wave7-restart-batch.md` | landed directly in 170f003 |
+| Adjustments rows appended to `adjustments-batch.md` | landed in 4825fae; the aoe widening row (aoe-movement-portals-39) waits for aoe in Stage 4 |
+| Still failing, and why | C05, C24, C25 (`tools/build.mjs`) and C13 (`DESIGN.md`, `assets/src/CREDITS.md`): steps 7 and 8 move files out of the module, outside the wave-1 agent's scope (senses-walls-cursors-35, wave-1-report "Not applied"). Tests: 55 node:test, all pass; module-code coverage 99.5 / 94.6 / 98.1, lcov records merged per file (94.5 / 90.2 / 93.2 unmerged) |

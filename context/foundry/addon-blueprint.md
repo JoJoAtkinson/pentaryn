@@ -141,9 +141,10 @@ prefix declared in `flags.pentaryn.cssPrefix` and unique (`pp-` is prompts'). Re
 7. **Patches**: `wrapMethod` + an adjustments row (§5.6).
 8. **Goldens**: `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`, read the diff, keep it.
 9. **Docs**: README sections in the fixed order (§7), CHANGELOG line, routing rows.
-10. **Wire it** (the generator prints these, with the real `after_sync` tuple taken from
-    `module.json` `flags.pentaryn.afterSync`; they are manual until §10 lands): ModuleSpec in
-    `scripts/foundry/ops/config.py`, Makefile `-check`/`-sync` lines, routing rows. Then
+10. **Wire it** (the generator prints these): a ModuleSpec in `scripts/foundry/ops/config.py` (its
+    kit list comes from `lib/kit.lock.json` and `after_sync` from `module.json`
+    `flags.pentaryn.afterSync`, never stored there), routing rows, then `make foundry-module-index`.
+    The Makefile's `foundry-%-check`/`-sync` pattern rules need no line per module. Then
     `conformance.py --module <short>` scores the repo-wiring rules too (C39 ModuleSpec, C46 route).
 11. **Sync**: `make foundry-<short>-sync`, **restart** Foundry (first install), enable, reload, then
     `game.pentaryn.<ns>.describe()` and (full tier) `game.pentaryn.<ns>.selftest()`.
@@ -383,19 +384,17 @@ Hot hooks (`refreshToken`, `drawToken`, `sightRefresh`, `canvasPan`, `hoverToken
 `updateWorldTime`, Argon action-panel render, `pointermove`) read from a cache or `memo`, never
 iterate `game.actors`/`game.scenes`/`canvas.tokens.placeables`, and carry a `// hot: <cache>`
 comment (C49). World-wide reactions run on one client (`isActiveGM()`, `claimDocument` for two GM
-sessions), with batched writes and `coalesce`/`foundry.utils.debounce` for rebuilds.
+sessions), with batched writes and `coalesce`/`foundry.utils.debounce` for rebuilds. Who runs what, and why, is §5.9.
 
 ### 5.6 Patches and `foundry/adjustments.yml`
 
 A row for every wrap, private-member read, third-party flag/API use, core socket event, and CSS
-aimed at another package's DOM. `id` = `<short>-…` for a row that `wrapMethod({adjustments})`
-names (a patch). A row that is **not** a patch — a workaround, a private read, a third-party
-flag — keeps the registry's package prefix (`core-…`, `dnd5e-…`, `itempiles-…`). That second half
-is **pending Joe's decision D2** ([migration README §6](../plans/addon-blueprint-2026-10/README.md));
-until R1 lands, C32 fails a `<short>-…` row with no patch, so use the package prefix for non-patch
-rows now. Rows wait in [`adjustments-batch.md`](../plans/addon-blueprint-2026-10/adjustments-batch.md); `files` = the call-site file (never `lib/`);
-`markers` = literals present in that file; `check: make foundry-<short>-check` (walls:
-`make foundry-walls-test`). `wrapMethod({adjustments: "<row id>"})` mirrors the id into
+aimed at another package's DOM. `id` = `<short>-…` exactly for a row that
+`wrapMethod({adjustments})` names (a patch). A row that is not a patch (a workaround, a private
+read, a third-party flag, CSS on another package's DOM) takes its package's prefix: `core-…`,
+`dnd5e-…`, `argon-…`, `itempiles-…`. C32 enforces both halves: an unwrapped `<short>-` row fails,
+and so does a `wrapMethod` naming a row without the module prefix (decided D2, 2026-10-11). Rows wait in [`adjustments-batch.md`](../plans/addon-blueprint-2026-10/adjustments-batch.md); `files` = the call-site file (never `lib/`);
+`markers` = literals present in that file; `check: make foundry-<short>-check`. `wrapMethod({adjustments: "<row id>"})` mirrors the id into
 `describe().patches`; conformance C32 cross-checks rows and patches. Rows are appended in one batch
 while the file is idle. Never edit Argon's files; CSS only for DOM the module creates.
 
@@ -405,6 +404,11 @@ Full-key literals through `_loc` (the i18n gate proves every literal); nested `l
 migrating modules keep their label shape (`Setting.k.Name`, `settings.k.name`, ties' flat keys).
 Selectors under `.pentaryn-<short>` or `.<cssPrefix>`; no `!important` in new rules (removing an
 existing one is declared); core CSS variables and `.theme-dark/.theme-light`.
+
+Shared CSS lives in the kit as a `kit.json` row with `"ext": "css"`. It is vendored to
+`lib/<name>.css`, loaded by listing it in `module.json` `styles`, and proven byte-identical by C14
+(`vendor.py` also fails a `styles` entry naming an unlocked `lib/*.css`). C37 and C37w do not score
+`lib/*.css`. First kit stylesheet: `argon-tooltip.css` (D7); no module adopts it in wave 1.
 
 ### 5.8 Flags
 
@@ -422,6 +426,304 @@ existing one is declared); core CSS variables and `.theme-dark/.theme-light`.
 - A foreign flag is a contract: **a test on both sides** — the owner pins the shape it writes
   (`api.test` / `glue.test`), the reader pins what it reads from a fixture with that shape. A change
   on either side is a declared change (§9).
+
+### 5.9 Async, blocking and concurrency
+
+**Read this when** a handler awaits, writes a document or setting, answers a query, or runs on a
+hot hook. Checked in the installed v14.369 and dnd5e 6.0.6 sources: `client/`, `common/` and `dist/`
+are under `/Applications/Foundry Virtual Tabletop.app/Contents/Resources/app/` (`dist/` is minified,
+so it is cited by a quoted fragment); `lib/` is `foundry/lib/`.
+
+The model: one copy of your code runs in **every connected tab**. A tab is single-threaded, but every
+`await` yields, and another client's write can land while you wait. Foundry never awaits a hook
+listener. The active GM is a **user, not a tab** — and in this setup two tabs on the GM account
+(the MCP bridge tab plus a GM browser tab) are the normal case.
+
+#### 5.9.1 Rules
+
+**Hooks**
+
+- MUST: a listener on a vetoable hook (`pre<Doc>`, `<pkg>.pre*`) is synchronous and vetoes with a
+  literal `return false`. `Hooks.call` stops only at a listener returning `=== false`
+  (`client/helpers/hooks.mjs:138-149`); an `async` listener returns a Promise, so **it can never
+  veto** (C53).
+- dnd5e: most `dnd5e.pre*` hooks use `Hooks.call` (`preActivityConsumption`, `preApplyDamage`,
+  `preApplyEnchantment`, `preAdvancementManager*`), but at least six use `Hooks.callAll`, where
+  `return false` does nothing: `dnd5e.preConfigureInitiative`, `preCreateCombatMessage`,
+  `preCreateTimePassedMessage`, `preCreateUsageMessage`, `preRollClassHitPoints`,
+  `preRollNPCHitPoints`. Check `call` vs `callAll` in `dnd5e.mjs` before relying on a veto. A
+  listener that mutates the config of either kind is still synchronous.
+- MUST: register through `reg.on`/`reg.once` (§5.2). Its `guard` passes through like core: a sync
+  throw is logged and becomes `undefined` (no veto, as core does, `hooks.mjs:158-167`); a rejected
+  Promise is logged with the module and label via `.then(undefined, report)` (`lib/hooks.mjs:27-36`).
+  Without it a rejection surfaces only as an unattributed "Uncaught (in promise)" — core has no
+  `unhandledrejection` handler and never routes it to `Hooks.onError`.
+- MUST NOT: rely on anything after `Hooks.call`/`callAll` having waited for your listener.
+- MUST NOT: gate a `pre<Doc>` listener on `isActiveGM()`/`activeGM`. `pre*` runs **only on the
+  client that started the change**, before the request is sent
+  (`client/data/client-backend.mjs:104,239,405`); a GM-gated `preUpdate*` silently skips every
+  player-initiated change (C54).
+
+**Document writes**
+
+- MUST: a world-wide reaction (once per change, whoever made it) listens on
+  `create<Doc>`/`update<Doc>`/`delete<Doc>` — `callAll` on **every** client
+  (`client-backend.mjs:164,337,466` locally, `:595-604,626-635` from the broadcast) — and runs on
+  one client: `isActiveGM()` picks one *user*; add `claimDocument`/`claimMessage`
+  (`lib/election.mjs`, §5.5) to pick one *tab*. An `isAnyGM()`/`.isGM` gate alone runs on every GM
+  tab (C61).
+- `await doc.update()` means "my tab has applied it", not "everyone has": the server answers the
+  initiator first and broadcasts afterwards (`dist/server/sockets.mjs` `s(n),i&&this.broadcast.emit(e,n)`).
+- A no-op update is dropped client-side — no request, no `update*` hook, no setting `onChange`
+  (`client-backend.mjs:262`). Never use an empty update as a signal.
+- MUST: batch. One `Document.updateDocuments`/`createDocuments`/`deleteDocuments`,
+  `parent.updateEmbeddedDocuments`, or `foundry.documents.modifyBatch`
+  (`client/documents/_module.mjs:96`) per group of writes, never one `await doc.update()` per loop
+  iteration (C59). One batch is one round trip; hooks still fire per document.
+- There is no client-side timeout on a document round trip (`client/helpers/socket-interface.mjs`
+  `dispatch`). Keep write paths short; never hold UI behind one without a visible state.
+
+**World settings and `serialStore`**
+
+- `game.settings.set` on a **world or user** setting is a `Setting` document write
+  (`client/helpers/client-settings.mjs:249-254,291-300`) and throws before `ready` (`:292`); MUST NOT
+  call it on one from `init`/`setup`. A client-scoped set has no `ready` check (`:255-330`).
+- A world setting's `onChange` runs on **every client** (`client/documents/setting.mjs:39-51`); a
+  client-scoped one locally only (`client-settings.mjs:327`). An `onChange` that writes is a fan-out
+  bug unless role-gated.
+- `serialStore(MODULE, key)` (`lib/settings.mjs:158`) serialises read-modify-write **for one store
+  instance in one tab** (`foundry.utils.Semaphore(1)`). It does not protect against two tabs, two
+  `serialStore` instances on one key, or a direct `game.settings.set` on that key. The write sends
+  the whole value, so two clients writing at once lose one update; the server's own `Semaphore(1)`
+  orders DB writes, it does not merge them.
+  - MUST: exactly one `serialStore` per key, at module scope (C58).
+  - MUST: a key more than one client may write uses `anyGM: false` — the active GM *user*
+    (`activeGM.isSelf`, `lib/settings.mjs:161`); **two tabs on that account still race**. Other
+    clients reach it through a `relay: true` query.
+  - MUST: a relayed store write is idempotent or keyed by a request id — the relay arrives in every
+    GM tab (below), so a bare `counter + 1` counts twice. A claim picks the writer but the losing
+    tab answers first (§5.9.2), so use one only when the sender needs no result.
+  - SHOULD: `await store.flush()` in tests and before `uninstall`.
+
+**Queries (`CONFIG.queries`, `User#query`)**
+
+- Queries are declared in the API manifest (`query: true` / `relay: true`); the kit's
+  `registerQueries` wires `CONFIG.queries`. MUST NOT assign `CONFIG.queries` by hand (C56). The name
+  must be registered on the **sender's** client too (`client/documents/user.mjs:289`):
+  `registerQueries` runs on every client — keep it that way, or player `queryGM` breaks.
+- `QUERY_USER` defaults to `PLAYER` (`common/constants.mjs:1423-1428`): **any player can query the
+  GM**. `guarded` (`lib/queries.mjs:23-31`) rejects a non-GM `ctx.user` with `NOT_GM` and requires a
+  GM receiver; a missing `ctx.user` passes (the bridge path; `queryGM`'s local call passes
+  `game.user`); `isGM` includes Assistant GMs. `relayed` (`:38-44`) does not check the sender at
+  all — its receiver check is `activeGM.isSelf` — so the handler checks ownership via `ctx.user`.
+- The server sends a query to **every socket of the recipient user** and keeps the **first answer,
+  success or rejection** (`dist/components/activity.mjs` `n.sockets.forEach(e=>e.emit("userQuery",…))`).
+  With the bridge tab and a GM browser tab open, the handler runs in both (both are
+  `activeGM.isSelf`), and a fast rejection from one tab (e.g. `NOT_READY` before it published) beats
+  a slower success from the other. MUST: a query handler that writes is idempotent **across
+  concurrent tabs** — look-before-create is not enough, both tabs look before either creates. Make
+  the write itself idempotent (a deterministic `_id`, §5.9.2) or request-keyed. A claim alone does
+  not do it: the losing tab answers before the winner has written, so the sender gets the loser's
+  answer (§5.9.2).
+- Without `timeout` the server releases a query only when the **sender** disconnects
+  (`e.once("disconnect",u)` on the sender's socket); a recipient tab closing mid-query hangs it
+  forever. MUST: every `.query(…)`/`User.queryMany(…)` passes `{ timeout }` (C55; `queryMany` is
+  static `(users, name, data, options)`, `user.mjs:335`). `queryGM` defaults to 10000 ms and runs
+  the handler locally on the GM's own client (`lib/queries.mjs:89-98`); a raw `User#query` to
+  yourself still goes through the server (`user.mjs:305-321`).
+- Errors cross the socket as `e.message` only (`client/documents/collections/users.mjs:233-234`);
+  that is why `codedError` puts the code in the message prefix (§5.4).
+
+**Module sockets**
+
+- `game.socket` on `module.<id>` needs `"socket": true` (the server registers the channel only then,
+  `dist/packages/package.mjs` `registerCustomSocket`), and the channel is exactly
+  `module.<module.json id>` (C08).
+- `emit` without `recipients` goes to every **other** socket, never the sender; with
+  `recipients: [userIds]` it reaches every socket of each user, including your own other tabs. The
+  ack fires on **server receipt**, not on handling. Listener signature: `(payload, senderUserId)`.
+- SHOULD: prefer a query whenever you need an answer or need the GM to act. Core socket events
+  (`userActivity` …) need an adjustments row (§5.6).
+
+**Who is the active GM**
+
+`game.users.activeGM` = the highest role among active GMs, then the lowest user id
+(`users.mjs:70-96`); it changes on connect/disconnect. `isSelf` is `game.userId === this.id`
+(`user.mjs:78-80`), so every tab on that account is `activeGM.isSelf`. `isActiveGM()` elects a user;
+`claimDocument` elects a tab. `isGM` includes Assistants. Keep the predicate a call site uses today —
+`isActiveGM`, `isAnyGM`, `isActiveGMOrLoneGM`, `pickRunner` are deliberately different truth tables
+(`lib/election.mjs` header).
+
+**ApplicationV2**
+
+- `render()` and `close()` are async and queue on a per-instance `Semaphore(1)`
+  (`client/applications/api/application.mjs:233,500-503,991-992`); a first render without `force`
+  returns without rendering (`:520-521`). MUST `await app.render({ force: true })` before touching
+  `app.element`.
+- `render<Class>` hooks fire once per class in the inheritance chain (`:1726-1733`), not awaited, so
+  a `renderApplicationV2` listener runs for every app: the cheap discriminating check goes first.
+- Repeated render calls queue, they do not merge. SHOULD debounce bursts:
+  `foundry.utils.debounce(() => app.render(), 50)`.
+
+**Hot hooks and long loops**
+
+- `refresh<Doc>` fires per object per ticker frame with pending flags
+  (`client/canvas/placeables/placeable-object.mjs:424-441`); `draw*`, `hover*`, `sightRefresh`,
+  `canvasPan`, `updateWorldTime` are all `callAll` on every client. MUST: their handlers are
+  synchronous, read from a cache/`memo` (§5.5, C49) and never start an async job per call —
+  `void (async () => …)()` is still one (C60). Defer with `perFrame` (latest args, once per frame),
+  `foundry.utils.debounce` (trailing, `.cancel()`, callback errors **not** caught,
+  `common/utils/helpers.mjs:101-114`) or `coalesce` when several triggers want the same rebuild
+  (`lib/perf.mjs`).
+- A loop over hundreds of documents with no `await` freezes canvas and socket. Batch first; where
+  you must yield, do it every N items with `await new Promise(r => g.setTimeout(r, 0))` using the
+  injected `g`, so tests drive it with `t.mock.timers`. Core has no `sleep`.
+
+**Python MCP server (`scripts/mcp/server.py`)** — one stdio process per Claude session;
+`tools/call` runs on a `ThreadPoolExecutor` (`DND_MCP_MAX_WORKERS`, default 8; in-flight cap
+max(4 × workers, 32), `server.py:22-29,50,55-56`); in-process handlers share module state across
+threads. MUST: a file an MCP tool reads, changes and writes back is modified under
+`fcntl.flock(LOCK_EX)` on a sidecar `<file>.lock` — threads **and** processes; a `threading.Lock`
+alone does not cover two sessions. python-tooling-44 (`combat_actions_db.upsert/upsert_many/delete`
+lose a row under overlap while both report `ok: true`) is the declared fix. Shared `asyncio`
+primitives never cross per-call event loops (python-tooling-51).
+
+#### 5.9.2 Patterns
+
+One-*user* reaction (both GM tabs run it — add the claim below when that matters):
+```js
+reg.on("updateActor", (actor, changes) => {
+  if (!isActiveGM() || !foundry.utils.hasProperty(changes, "system.attributes.hp")) return;
+  void react(actor);                       // async work leaves the listener; listener stays sync
+}, { label: "hp watch" });
+```
+
+One-*tab* reaction (bridge tab + browser):
+```js
+reg.on("createChatMessage", (msg) => {
+  if (!isActiveGM()) return;
+  void (async () => {
+    if (!(await claimMessage(msg, "resolve", { scope: MODULE }))) return;
+    await resolve(msg);
+  })();
+}, { label: "resolve" });
+```
+
+Veto, synchronous, literal false:
+```js
+reg.on("preUpdateToken", (token, changes) => {
+  if (changes.x !== undefined && locked(token)) return false;
+}, { label: "lock" });
+```
+
+Player → GM write through a relay query (manifest row `{ path: "ensure", relay: true }`). The
+create is idempotent by a deterministic `_id`, with no claim, so every GM tab can answer and every
+answer is right:
+```js
+const r = await queryGM(`${MODULE}.ensure`, { actorId });       // any client; timeout defaults to 10000
+// r.journalId is set; the create's broadcast brings the document to the sender's game.journal
+async function ensure({ actorId }, { user }) {                  // wrapped by relayed; runs in EVERY GM tab
+  const actor = game.actors.get(actorId);
+  if (!actor?.testUserPermission(user, "OWNER")) return fail("REFUSED", actorId);
+  const _id = actorId;              // deterministic: one journal per actor, reusing the actor's id
+  if (!game.journal.has(_id)) {     // both tabs may get here; both send the same create
+    await JournalEntry.create({ _id, name: `${actor.name}'s journal` /* data from inputs only */ }, { keepId: true });
+  }
+  return ok({ journalId: _id });    // each tab answers after its own create resolved: the journal exists
+}
+```
+A world-document create with `keepId` and an `_id` that already exists **replaces** that document
+(probed on v14.369: two concurrent creates both resolve and one document remains, holding the later
+data). So the data must be built from the request alone — both tabs must send the same thing — and
+the look-first check keeps a later call from overwriting the user's edits. A deleted journal is
+recreated by the next call.
+
+Why not a claim here: the losing tab's `claimDocument` resolves after its settle delay while the
+winner still has its create round trip ahead, so the loser answers first and the sender gets the
+loser's answer. A claim also suits only a one-time job. **A `claimDocument` key is single-use per
+document**: the flag `flags.<scope>.claims.<key>` is never cleared, so once it is set, every later
+claim on that document with that key stands down in every tab, including after a reload, when the
+tabs have new socket ids. Claim with a fixed key only on a document that is itself the one-time event
+(a new chat message, a new combat), never for a repeatable request on a long-lived document such as
+an actor.
+
+Shared value, one store (the relay must still be idempotent or request-keyed — two GM tabs race):
+```js
+const ledger = serialStore(MODULE, ["counter", "log"], { anyGM: false });   // module scope, once
+await ledger.write(({ counter, log }) =>                                    // keyed by request id:
+  log.some(e => e.req === entry.req) ? { counter, log } : { counter: counter + 1, log: [...log, entry] });
+```
+
+Batched writes:
+```js
+const updates = tokens.map(t => ({ _id: t.id, hidden: true }));
+await canvas.scene.updateEmbeddedDocuments("Token", updates);   // one round trip
+```
+
+Hot hook, deferred:
+```js
+const refresh = perFrame(() => rebuildOverlay(cache), { g });   // hot: cache
+reg.on("refreshToken", (token) => { if (cache.has(token.id)) refresh(); }, { label: "overlay" });
+```
+
+Burst coalescing: `const rebuild = coalesce(async () => { … })` — a call during a run gets that
+run's promise.
+
+#### 5.9.3 Anti-patterns
+
+```js
+Hooks.on("preUpdateActor", async (a, c) => { if (await check(a)) return false; }); // never vetoes
+Hooks.on("preUpdateActor", (a) => { if (!isActiveGM()) return; /* … */ });        // skips player edits
+for (const t of tokens) await t.update({ hidden: true });                          // N round trips
+await gm.query("pentaryn-x.ensure", data);                                         // no timeout: can hang
+CONFIG.queries["pentaryn-x.ensure"] = handler;                                     // bypasses the manifest
+const a = serialStore(MODULE, "ledger"); /* elsewhere */ const b = serialStore(MODULE, "ledger");
+Hooks.on("refreshToken", async (t) => { await paint(t); });                        // per-frame async job
+Hooks.on("updateWorldTime", () => game.settings.set(MODULE, "stamp", Date.now())); // every client writes
+game.settings.set(MODULE, "worldX", 1) /* world-scoped, in Hooks.once("init") */   // throws before ready
+```
+
+#### 5.9.4 Review checklist (every migration review)
+
+- [ ] Every `pre*` listener is sync; vetoes are `return false` (and the hook is a `call`, not a
+      `callAll`); none is gated on the active GM.
+- [ ] Every `create*/update*/delete*` listener that writes has `isActiveGM()`, the initiator gate
+      (`userId !== game.user.id`) or the module's pinned predicate and, where two tabs on one account
+      matter, a claim. Both gates pick one user: the initiator gate passes in every tab of the user
+      who made the change, so a GM-made change runs in the MCP bridge tab and a GM browser tab.
+- [ ] No `await <doc>.update/create/delete/setFlag(` inside a loop where a batch call exists.
+- [ ] One `serialStore` per key, at module scope; multi-client keys use `anyGM: false` + relay, and
+      the relayed write is idempotent or request-keyed.
+- [ ] No world/user `game.settings.set` reachable before `ready`.
+- [ ] Every `.query(`/`queryMany(` passes `timeout`; `CONFIG.queries` is touched only by the kit.
+- [ ] Query handlers that write are idempotent across concurrent tabs (a deterministic `_id` or a
+      request key). A claimed handler cannot return what the winning tab creates, and a
+      `claimDocument` key is single-use per document.
+- [ ] `relayed` handlers check `ctx.user` ownership; `guarded` handlers do not assume a full GM
+      (Assistants pass) or a present `ctx.user` (the bridge has none).
+- [ ] Module socket channel equals `module.<id>` and the manifest says `socket: true`; no reliance on
+      receiving your own emit.
+- [ ] Hot-hook handlers are sync, cached, and defer via `perFrame`/`debounce`/`coalesce`.
+- [ ] `app.element` is read only after an awaited `render({ force: true })`.
+- [ ] Yields in long loops use injected `g.setTimeout`; tests use `t.mock.timers`.
+- [ ] Python: file read-modify-write paths hold `flock` on `<file>.lock`.
+
+C53–C61 in §11 automate what a scan can see; C54, C59 and C61 also land on the manual list.
+
+#### 5.9.5 Open findings (not changed by this section)
+
+- Queries run in every tab of the recipient account, so `relayed`/`guarded` handlers that write run
+  twice with the bridge and a GM browser tab open. Affected today: riders' Battle Medic relay
+  (`foundry/module/pentaryn-riders/riders.mjs:417`) and journal `ensure`
+  (`foundry/module/pentaryn-journal/journal.mjs:146`); their idempotency is unverified. Tracked as
+  combat-riders-41 and items-journal-40 (Joe, 2026-10-11): each is fixed, claim first, as a
+  `[declared]` commit when its module migrates.
+- Both existing `.query(` callers pass `timeout: 8000`; C55 keeps that true.
+- `guarded`'s NOT_GM check admits Assistant GMs (`isGM`). Documented, not changed.
+- Python: once python-tooling-44 lands, a pytest in `scripts/tests` reads the AST of
+  `scripts/combat_actions_db.py` and asserts `upsert`, `upsert_many`, `delete` each hold a
+  `with _locked(` block around both `read_all()` and `_atomic_write(`; the audit's 16-thread barrier
+  test stays `xfail(strict=False)` until then.
 
 ## 6. Tests
 
@@ -451,9 +753,19 @@ listener. `F.fire("ready")` sets `game.ready = true` first, as Foundry does.
 `GOLDEN_UPDATE=1 node --test test/api.test.mjs` rewrites only that file's pins. Never run
 `GOLDEN_UPDATE=1 node test/run.mjs` on a module mid-refactor. A missing golden fails.
 
-Gates: `make foundry-<short>-check` (parse, imports, i18n, node-test) plus, until wired,
-`vendor.py check <short>` and `conformance.py --module <short>`. Kit: `node foundry/lib/test/run.mjs`.
-Scripts: `./.venv/bin/python -m pytest -q scripts/foundry/blueprint/tests`.
+Gates: `make foundry-<short>-check` runs the module's ModuleSpec gates — parse, imports, i18n,
+node-test (`node test/run.mjs` from the module folder), then `vendor` and `conformance` for a
+migrated module (one with `lib/kit.lock.json`; an unmigrated one skips both, it does not fail).
+Conformance is **advisory until Stage 5**: it reports failing rules but keeps the check green
+(`CONFORMANCE_FAILS` in `scripts/foundry/ops/modules.py`), and a WAIT module is reported, never
+failed. `make foundry-modules-check` runs every module and keeps going (`JSON=1` for `--json`).
+Kit: `make foundry-lib-check`. Scores: `make foundry-conformance [M=<short>] [MD=1]` — it calls
+`conformance.py` directly, which exits 1 while any scored module fails a fail-class rule, so make
+reports an error until Stage 5 is done; read the scores, not the exit code. Python:
+`make test` (pytest, blueprint tests included). Everything: `make check-all`.
+
+After a migration changes a module's published API, run `make foundry-module-index` and commit
+`context/foundry/README.md` — `check-context` fails while the Module APIs table is stale.
 
 Live smoke after a sync: `describe().version === module.json` version, every described path is a
 function, and (full tier) `inspect(knownActor)` depth ≤ 4 and `selftest().ok`.
@@ -502,7 +814,7 @@ from there. This section is the procedure inside one module.
    4. pin effects, not returns: `F.hooks`, `F.calls`, warn/error text, `surfaceOf`, publish under
       both load orders;
    5. **checkpoint**: the characterisation diff (`test/golden/*.json` + tests only) is reviewed and
-      committed only when Joe approves. Agents never commit on their own.
+      committed by the agent as its own commit (review happens at merge). Rollback is `git revert` of the module's commits, a last resort, then sync.
 4. **Vendor check**: `vendor.py check <m>` (the sync happened in 3.3; add files later with
    `vendor.py sync <m> --kit <file>`).
 5. **Entry wiring**: lifecycle as today; `install(reg, ctx)` called **synchronously** in the entry
@@ -527,7 +839,10 @@ A change that a player or GM could notice, or that changes a failure path, is **
 - hand it to the live-test workflow with the steps to observe old vs new. Not merged until that
   run reports it.
 
-Known ones: ties `describe` → `describeCard`; combat events renamed with legacy double-fire;
+Known ones: ties `describe` → `describeCard`; ties `attributes.describe` → `attributes.lookup`
+and `study.inspect` → `study.examine` (D1; the old names are aliases that log a compatibility
+warning until ties S8); prompts' gather cut suffix `… (cut, full text: get-character <id>)`
+with one `gatherChars` default of 400 (D6); combat events renamed with legacy double-fire;
 hook registration moved to `setup`; `requiresReload` replacing hand-written prompts; removing
 existing `!important`; the walls flag-scope data migration (aoe, senses, cursors, attunement,
 dropbin, journal, ties: manifest-only); missing goldens now fail; `toPlain` on
@@ -557,7 +872,7 @@ both Warnings and Manual.
 |---|---|---|
 | C01 | fail | `module.json` id == folder name |
 | C02 | warn | `compatibility.minimum == "14"` |
-| C03 | fail | dnd5e in `relationships.systems` iff the sources touch dnd5e |
+| C03 | fail | dnd5e in `relationships.systems` iff the sources touch dnd5e (including the Token5e movement option `ignoreTokens`, packages.json `codePatterns`, D4) |
 | C04 | fail | `languages` iff any i18n key literal or call |
 | C05 | fail | every non-test, non-lib `.mjs` reachable from `esmodules` |
 | C06 / C06w | fail / warn | `styles` paths exist / live under `styles/` |
@@ -586,12 +901,12 @@ both Warnings and Manual.
 | C29 | fail [full] | `inspect` when the module writes its own flags |
 | C30 | fail | queries only through `guarded` / `relayed` / `registerQueries` |
 | C31 | manual | writes return ok/fail; reads throw coded |
-| C32 | fail | prototype patches only via `wrapMethod`/`defineAccessor`; rows ↔ patches |
+| C32 | fail | prototype patches only via `wrapMethod`/`defineAccessor`; rows ↔ patches; a `<short>-` row is a patch and a patch row is `<short>-` (D2) |
 | C33 | manual | private internals covered by rows |
 | C34 | fail | `lang/en.json` nested under one `PENTARYN_<SHORT>` root |
 | C35 | fail | no two-branch i18n wrapper; definite key coverage ≥ 90 % |
 | C36 | warn+manual | hard-coded UI English |
-| C37 / C37w | fail / warn | CSS scoped / `!important` count |
+| C37 / C37w | fail / warn | CSS scoped / `!important` count (vendored kit `lib/*.css` not scored, D7; a nested `styles/lib/` still is) |
 | C38 | fail | `cssPrefix` unique |
 | C39 | fail | `test/run.mjs`; the ModuleSpec runs node-test (n/a outside `foundry/module/` when `test/run.mjs` exists) |
 | C40 | fail | the tier's test files exist |
@@ -607,10 +922,22 @@ both Warnings and Manual.
 | C50 | fail | `publishNamespace` `when` matches where it is called (`ready:<role>` allowed behind a role gate in the sync ready body) |
 | C51 | fail | `SETTINGS`/`KEYBINDINGS` rows carry literal keys present in lang |
 | C52 | fail | a `legacyName` always has `until` |
+| C53 | fail | no `async` listener on a vetoable hook (`pre*`, `<pkg>.pre*`), inline or a named `async` function in the same file (§5.9) |
+| C54 | warn+manual | a `pre(Create\|Update\|Delete)<Doc>` listener gated on the active GM (runs on the initiator only) |
+| C55 | fail | every `User#query` / `User.queryMany` passes `timeout` (`queryGM` exempt; unknown receivers → manual) |
+| C56 | fail | no hand-written `CONFIG.queries` assignment (`[…] =`, `.x =`, `??=`, `Object.assign`); reads pass |
+| C57 | fail | a `game.socket` `module.*` channel is exactly `module.<module.json id>` (C08 owns `socket: true`) |
+| C58 | fail | one `serialStore` per key across the module |
+| C59 | warn+manual | `await <doc>.update/create/delete/setFlag/unsetFlag(` inside a loop body (batch it) |
+| C60 | warn | no `async` listener or `await` in a hot-hook handler unless it defers via `perFrame`/`debounce`/`coalesce` |
+| C61 | warn+manual | a writing `create*/update*/delete*` listener has an active-GM gate, the initiator gate (`userId !== game.user.id`) or a claim (an any-GM gate alone → manual). The active-GM and initiator gates pick one *user*, not one tab: every tab of that user passes, so where two tabs on one account matter the review checks for a claim (§5.9.4); the write and the gate are looked for in the listener and the functions it calls by name, in its file or the module files it imports |
 
-## 12. Pending wiring
+## 12. Wiring status
 
-The blueprint shipped as new files only; the gates, Makefile targets, routing rows and the fork
-tools are not wired yet. The one list, with status, is
-[`../plans/addon-blueprint-2026-10/README.md`](../plans/addon-blueprint-2026-10/README.md) §7
-(W1–W9). Until those land, run `vendor.py check` and `conformance.py --module` by hand (§6).
+Wired in wave 1 (README §7): `make foundry-<m>-check` with the vendor and conformance gates (W2,
+W3), `module-new` / `module-vendor` / `module-conformance` / `module-check --all --json` in ops
+(W1), the Makefile targets in §6 (W4), the updater's exposure skip and pytest paths (W5), the
+routing rows and the generated Module APIs table (W6, W7) and the plans index row (W8). What stays
+open: conformance is advisory until Stage 5 (§6), and names and pings run `node-test` only once they
+have a `test/run.mjs`. The list with status is
+[`../plans/addon-blueprint-2026-10/README.md`](../plans/addon-blueprint-2026-10/README.md) §7.

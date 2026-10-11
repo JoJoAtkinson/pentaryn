@@ -1,0 +1,416 @@
+[
+  {
+    "input": [
+      "ashfallcompany"
+    ],
+    "out": {
+      "id": "ashfallcompany",
+      "title": "Ashfall Company",
+      "category": "Faction",
+      "icon": "icons/zz/ashfall.webp",
+      "whenKnown": "advantage",
+      "whenCarried": "auto",
+      "secret": true,
+      "parent": null,
+      "dc": 14,
+      "skill": "his",
+      "reveal": "<p>Mercenaries who burn their contracts.</p>",
+      "miss": "<p>A soot-black sigil.</p>",
+      "hold": null,
+      "lore": [
+        {
+          "id": "l1",
+          "label": "Origins",
+          "dc": 12,
+          "skill": "his",
+          "text": "<p>Founded after the fire.</p>",
+          "miss": "",
+          "hold": true
+        }
+      ],
+      "source": {
+        "blob": "abcdef1",
+        "path": "world/factions/ashfall.md"
+      },
+      "bonuses": [],
+      "createdAt": 1700000000000,
+      "modifiedAt": 1700000100000,
+      "reviewedAt": 1700000200000,
+      "touched": [
+        "title"
+      ],
+      "reviewedSnapshot": {
+        "title": "Ashfall Company",
+        "dc": 14,
+        "lore": []
+      },
+      "derived": false,
+      "authored": true,
+      "loreCount": 1
+    }
+  },
+  {
+    "input": [
+      "Ashfall Company"
+    ],
+    "out": {
+      "id": "ashfallcompany",
+      "title": "Ashfall Company",
+      "category": "Faction",
+      "icon": "icons/zz/ashfall.webp",
+      "whenKnown": "advantage",
+      "whenCarried": "auto",
+      "secret": true,
+      "parent": null,
+      "dc": 14,
+      "skill": "his",
+      "reveal": "<p>Mercenaries who burn their contracts.</p>",
+      "miss": "<p>A soot-black sigil.</p>",
+      "hold": null,
+      "lore": [
+        {
+          "id": "l1",
+          "label": "Origins",
+          "dc": 12,
+          "skill": "his",
+          "text": "<p>Founded after the fire.</p>",
+          "miss": "",
+          "hold": true
+        }
+      ],
+      "source": {
+        "blob": "abcdef1",
+        "path": "world/factions/ashfall.md"
+      },
+      "bonuses": [],
+      "createdAt": 1700000000000,
+      "modifiedAt": 1700000100000,
+      "reviewedAt": 1700000200000,
+      "touched": [
+        "title"
+      ],
+      "reviewedSnapshot": {
+        "title": "Ashfall Company",
+        "dc": 14,
+        "lore": []
+      },
+      "derived": false,
+      "authored": true,
+      "loreCount": 1
+    }
+  },
+  {
+    "input": [
+      "  ashfall company  "
+    ],
+    "out": {
+      "id": "ashfallcompany",
+      "title": "Ashfall Company",
+      "category": "Faction",
+      "icon": "icons/zz/ashfall.webp",
+      "whenKnown": "advantage",
+      "whenCarried": "auto",
+      "secret": true,
+      "parent": null,
+      "dc": 14,
+      "skill": "his",
+      "reveal": "<p>Mercenaries who burn their contracts.</p>",
+      "miss": "<p>A soot-black sigil.</p>",
+      "hold": null,
+      "lore": [
+        {
+          "id": "l1",
+          "label": "Origins",
+          "dc": 12,
+          "skill": "his",
+          "text": "<p>Founded after the fire.</p>",
+          "miss": "",
+          "hold": true
+        }
+      ],
+      "source": {
+        "blob": "abcdef1",
+        "path": "world/factions/ashfall.md"
+      },
+      "bonuses": [],
+      "createdAt": 1700000000000,
+      "modifiedAt": 1700000100000,
+      "reviewedAt": 1700000200000,
+      "touched": [
+        "title"
+      ],
+      "reviewedSnapshot": {
+        "title": "Ashfall Company",
+        "dc": 14,
+        "lore": []
+      },
+      "derived": false,
+      "authored": true,
+      "loreCount": 1
+    }
+  },
+  {
+    "input": [
+      {
+        "id": "ashfallcompany"
+      }
+    ],
+    "out": {
+      "id": "ashfallcompany",
+      "title": "Ashfall Company",
+      "category": "Faction",
+      "icon": "icons/zz/ashfall.webp",
+      "whenKnown": "advantage",
+      "whenCarried": "auto",
+      "secret": true,
+      "parent": null,
+      "dc": 14,
+      "skill": "his",
+      "reveal": "<p>Mercenaries who burn their contracts.</p>",
+      "miss": "<p>A soot-black sigil.</p>",
+      "hold": null,
+      "lore": [
+        {
+          "id": "l1",
+          "label": "Origins",
+          "dc": 12,
+          "skill": "his",
+          "text": "<p>Founded after the fire.</p>",
+          "miss": "",
+          "hold": true
+        }
+      ],
+      "source": {
+        "blob": "abcdef1",
+        "path": "world/factions/ashfall.md"
+      },
+      "bonuses": [],
+      "createdAt": 1700000000000,
+      "modifiedAt": 1700000100000,
+      "reviewedAt": 1700000200000,
+      "touched": [
+        "title"
+      ],
+      "reviewedSnapshot": {
+        "title": "Ashfall Company",
+        "dc": 14,
+        "lore": []
+      },
+      "derived": false,
+      "authored": true,
+      "loreCount": 1
+    }
+  },
+  {
+    "input": [
+      "greywatch"
+    ],
+    "out": {
+      "id": "greywatch",
+      "title": "Greywatch",
+      "category": "Order",
+      "icon": "icons/sundries/flags/banner-standard-purple.webp",
+      "whenKnown": "enables",
+      "whenCarried": "inherit",
+      "secret": true,
+      "parent": "ashfallcompany",
+      "dc": 15,
+      "skill": "his",
+      "reveal": "",
+      "miss": "",
+      "hold": null,
+      "lore": [],
+      "source": null,
+      "bonuses": [],
+      "createdAt": null,
+      "modifiedAt": null,
+      "reviewedAt": null,
+      "touched": [],
+      "reviewedSnapshot": null,
+      "derived": false,
+      "authored": true,
+      "loreCount": 0
+    }
+  },
+  {
+    "input": [
+      "size:med"
+    ],
+    "out": {
+      "id": "size:med",
+      "title": "Medium folk",
+      "category": "Size",
+      "icon": "icons/sundries/flags/banner-standard-brown.webp",
+      "whenKnown": "enables",
+      "whenCarried": "inherit",
+      "secret": false,
+      "parent": null,
+      "dc": 15,
+      "skill": "his",
+      "reveal": "",
+      "miss": "",
+      "hold": null,
+      "lore": [],
+      "source": null,
+      "bonuses": [],
+      "createdAt": null,
+      "modifiedAt": null,
+      "reviewedAt": null,
+      "touched": [],
+      "reviewedSnapshot": null,
+      "derived": true,
+      "authored": true,
+      "loreCount": 0
+    }
+  },
+  {
+    "input": [
+      "type:humanoid"
+    ],
+    "out": {
+      "id": "type:humanoid",
+      "title": "Humanoid",
+      "category": "Creature type",
+      "icon": "icons/creatures/abilities/paw-print-pair-purple.webp",
+      "source": null,
+      "lore": [],
+      "bonuses": [],
+      "derived": true,
+      "authored": false,
+      "loreCount": 0
+    }
+  },
+  {
+    "input": [
+      "size:huge"
+    ],
+    "out": {
+      "id": "size:huge",
+      "title": "Huge",
+      "category": "Size",
+      "icon": "icons/tools/scribal/lens-blue.webp",
+      "source": null,
+      "lore": [],
+      "bonuses": [],
+      "derived": true,
+      "authored": false,
+      "loreCount": 0
+    }
+  },
+  {
+    "input": [
+      "type:Fey Things"
+    ],
+    "out": {
+      "id": "type:feythings",
+      "title": "Feythings",
+      "category": "Creature type",
+      "icon": "icons/creatures/abilities/paw-print-pair-purple.webp",
+      "source": null,
+      "lore": [],
+      "bonuses": [],
+      "derived": true,
+      "authored": false,
+      "loreCount": 0
+    }
+  },
+  {
+    "input": [
+      "species:Wood Elf"
+    ],
+    "out": {
+      "id": "species:woodelf",
+      "title": "Woodelf",
+      "category": "Species",
+      "icon": "icons/environment/people/group.webp",
+      "source": null,
+      "lore": [],
+      "bonuses": [],
+      "derived": true,
+      "authored": false,
+      "loreCount": 0
+    }
+  },
+  {
+    "input": [
+      "kind:zzKindActor00001"
+    ],
+    "out": {
+      "id": "kind:zzKindActor00001",
+      "title": "ZZ Kind Template",
+      "category": "Kind",
+      "icon": "icons/creatures/abilities/paw-print-orange.webp",
+      "source": null,
+      "lore": [],
+      "bonuses": [],
+      "derived": true,
+      "authored": false,
+      "loreCount": 0
+    }
+  },
+  {
+    "input": [
+      "kind:zzNoSuchActor001"
+    ],
+    "out": {
+      "id": "kind:zzNoSuchActor001",
+      "title": "zzNoSuchActor001",
+      "category": "Kind",
+      "icon": "icons/creatures/abilities/paw-print-orange.webp",
+      "source": null,
+      "lore": [],
+      "bonuses": [],
+      "derived": true,
+      "authored": false,
+      "loreCount": 0
+    }
+  },
+  {
+    "input": [
+      "Twin"
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      "nope"
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      ""
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      "   "
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      null
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      null
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      42
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      "ashfallcompany:extra"
+    ],
+    "out": null
+  }
+]

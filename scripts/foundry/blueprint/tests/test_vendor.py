@@ -157,3 +157,55 @@ def test_sync_records_the_tier_in_the_lock_and_keeps_it(tmp_path):
     vendor.sync(e)                                   # no --tier: the manifest's tier is recorded
     assert json.loads((e / "lib/kit.lock.json").read_text())["tier"] == "full"
     assert vendor.check(d) == [] and vendor.check(e) == []
+
+
+def _argon_module(tmp_path, name="pentaryn-argon", styles=None):
+    d = make_module(tmp_path, name, relationships={"recommends": [{"id": "enhancedcombathud", "type": "module", "reason": "x"}]})
+    if styles is not None:
+        data = json.loads((d / "module.json").read_text())
+        data["styles"] = styles
+        (d / "module.json").write_text(json.dumps(data))
+    return d
+
+
+def test_css_kit_file_is_vendored_byte_identical_and_checked(tmp_path):
+    kit = vendor.load_kit()
+    assert kit["files"]["argon-tooltip"]["ext"] == "css"
+    assert vendor.kit_file("argon-tooltip", kit) == "argon-tooltip.css"
+    assert vendor.kit_file("errors", kit) == "errors.mjs"
+    d = _argon_module(tmp_path, styles=["lib/argon-tooltip.css"])
+    written = vendor.sync(d, extra=["argon-tooltip"])
+    assert "lib/argon-tooltip.css" in written
+    assert (d / "lib/argon-tooltip.css").read_bytes() == (vendor.LIB_ROOT / "argon-tooltip.css").read_bytes()
+    assert "argon-tooltip" in json.loads((d / "lib/kit.lock.json").read_text())["files"]
+    assert vendor.check(d) == []
+    p = d / "lib/argon-tooltip.css"
+    p.write_bytes(p.read_bytes() + b" ")
+    assert any("lib/argon-tooltip.css differs" in x for x in vendor.check(d))
+
+
+def test_css_kit_file_needs_the_package_relationship(tmp_path):
+    d = make_module(tmp_path)
+    with pytest.raises(vendor.VendorError, match="relationships"):
+        vendor.sync(d, extra=["argon-tooltip"])
+
+
+def test_css_kit_file_is_dropped_on_resync_and_strays_are_reported(tmp_path):
+    d = _argon_module(tmp_path)
+    vendor.sync(d, extra=["argon-tooltip"])
+    vendor.sync(d, tier="small")                       # an explicit tier replaces the lock
+    assert not (d / "lib/argon-tooltip.css").exists()
+    (d / "lib/mine.css").write_text(".x {}\n")
+    assert any("lib/mine.css is not in kit.lock.json" in x for x in vendor.check(d))
+
+
+def test_styles_naming_an_unlocked_kit_css_fails(tmp_path):
+    d = _argon_module(tmp_path, styles=["styles/own.css", "lib/argon-tooltip.css"])
+    vendor.sync(d)
+    assert any("styles lists lib/argon-tooltip.css" in x for x in vendor.check(d))
+
+
+def test_bad_ext_is_refused(tmp_path):
+    kit = {"files": {"x": {"deps": [], "ext": "scss"}}}
+    with pytest.raises(vendor.VendorError, match="ext"):
+        vendor.kit_file("x", kit)

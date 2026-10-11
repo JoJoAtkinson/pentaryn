@@ -1,10 +1,18 @@
-// Pentaryn Tool Cursors — pure rules. No Foundry globals: node test/run.mjs and tools/build.mjs import this.
+// Pentaryn Tool Cursors — pure rules. No Foundry globals: test/*.test.mjs and tools/build.mjs import this.
 //
 // keyFor() maps the active scene control + tool (and whether a spell-area placement is following the
 // mouse) to a cursor key, or null for the plain system arrow. KEYS is the cursor set from DESIGN.md: the
 // build script rasterises from it and writes cursors.css; the module and README read it.
 
 export const MODULE = "pentaryn-cursors";
+export const SHORT = "cursors";
+export const NS = "cursors";
+export const VERSION = "0.2.0";
+export const CONTRACT = "pentaryn-cursors/api@1";
+export const I18N = "PENTARYN_CURSORS";
+export const CSS = "pcur-";
+/** Hooks this module emits: none. */
+export const HOOKS = Object.freeze({});
 
 /** Drawing tools that place a shape. Drawings `select` is not one of them. */
 export const DRAW_TOOLS = Object.freeze(["rect", "ellipse", "polygon", "freehand", "text"]);
@@ -91,4 +99,34 @@ export function cursorValues(key, base, imageSet = false) {
   };
   const normal = img(""), lit = img("-pointer");
   return { "--cursor-default": normal, "--cursor-default-down": normal, "--cursor-pointer": lit, "--cursor-pointer-down": lit };
+}
+
+/**
+ * The core internals board.mjs relies on (adjustments row core-board-cursor-vars), by name, that
+ * are missing. `in`, not a truthiness test: `_placementContext` is null while no placement runs.
+ * @param {{events?: object|null, regions?: object|null}} where  canvas.app.renderer.events, canvas.regions
+ * @returns {string[]}  [] when all are present
+ */
+export function probeInternals({ events, regions } = {}) {
+  const has = (obj, name) => !!obj && typeof obj === "object" && name in obj;
+  const missing = [];
+  if (!has(events, "setCursor")) missing.push("setCursor");
+  if (!has(regions, "_placementContext")) missing.push("_placementContext");
+  return missing;
+}
+
+/**
+ * One read-only diagnosis of the map cursor (api.status()). `expected` is what keyFor gives for
+ * this control/tool/placement whatever the setting says; `key` is what should be on the board
+ * (null while the setting is off).
+ * @param {{enabled: boolean, control?: string|null, tool?: string|null, placementActive: boolean,
+ *   boardCursor?: string|null, dataset?: string|null, imageSet: boolean}} state
+ */
+export function statusOf({ enabled, control = null, tool = null, placementActive: placing = false,
+  boardCursor = null, dataset = null, imageSet = false } = {}) {
+  const expected = keyFor({ control, tool, templatesActive: placing });
+  return {
+    enabled: !!enabled, key: enabled ? expected : null, control, tool, placementActive: !!placing,
+    boardCursor, dataset, imageSet: !!imageSet, expected,
+  };
 }

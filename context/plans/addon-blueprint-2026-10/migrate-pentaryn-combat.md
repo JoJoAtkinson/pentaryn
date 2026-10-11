@@ -240,7 +240,7 @@ Run the procedure at the top. Re-score live. **Done once on 2026-10-11 against 2
 §2.1 carry those ranges); repeat only the diff against 28ccc87 if HEAD has moved on this module.
 **Absorbs:** none.
 
-### S1 — Vendor, test layout, characterisation (checkpoint commit, Joe approves)
+### S1 — Vendor, test layout, characterisation (checkpoint commit)
 - `vendor.py sync pentaryn-combat --tier full --kit election,patch,perf` (no `patch-libwrapper`,
   no `argon-kit`: deferred, D7).
 - Move `test/run.mjs` → `test/core-fixtures.mjs` without changing its content. Write the fixed
@@ -290,7 +290,7 @@ Run the procedure at the top. Re-score live. **Done once on 2026-10-11 against 2
     The snapshot claim that FollowUp and Kind both cover all eight kinds was wrong: derive each
     family from the values the code passes before pinning. A source scan shows every `followUps`
     kind has a `runFollowUp` branch.
-- **Checkpoint:** stop. The diff is `lib/`, `test/` and `golden/` only. Joe reviews and commits.
+- **Checkpoint:** stop. The diff is `lib/`, `test/` and `golden/` only. The agent commits it as the checkpoint.
 - **Absorbs:** C14, C20, C40 (partly), C43; the test halves of combat-riders-6, -7, -14, -20, -28, -31.
 
 ### S2 — Core constants

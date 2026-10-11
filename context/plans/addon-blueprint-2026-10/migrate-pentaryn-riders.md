@@ -186,7 +186,7 @@ The live score is in §1, `cast-flow.mjs` is classified as one feature file (§2
 row carries HEAD line ranges. Re-run the diff at the top only if the tree moves before S1.
 **Absorbs:** none.
 
-### S1 — Vendor, test layout, characterisation (checkpoint commit; Joe approves)
+### S1 — Vendor, test layout, characterisation (checkpoint commit)
 - `vendor.py sync pentaryn-riders --tier full --kit patch`. Do not add `election`: the
   concentration predicate is local, and the relay's `activeGM.isSelf` check stays as written.
 - Rename `test/run.mjs` → `test/core-fixtures.mjs` and drop its last two `await import(...)`
@@ -266,7 +266,7 @@ row carries HEAD line ranges. Re-run the diff at the top only if the tree moves 
       `battleMedic.{flavor,needTarget,noHitDice,noGM,failed,done,doneShort}`, `hd.{spend,restore}`;
     - 6 built by cast-flow's `T(k)`: `arcaneRecovery.{title,intro,recover,cancel,total,done}`;
     - 3 built by the concentration template: `concentration.{failed,failedEnded,success}`.
-- **Checkpoint:** the diff contains only `lib/`, `test/` and `golden/`. Joe reviews and commits.
+- **Checkpoint:** the diff contains only `lib/`, `test/` and `golden/`. The agent commits it as the checkpoint.
 - **Absorbs:** C14, C20, C40 (partly), C43; the test halves of combat-riders-25, -26, -27, -31, -32, -39, -40.
 
 ### S2 — One `MODULE`, core constants

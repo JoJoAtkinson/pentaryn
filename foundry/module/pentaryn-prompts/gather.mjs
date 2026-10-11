@@ -2,7 +2,7 @@
  * pentaryn-prompts — the one-call context export (plan §5), the manifest ring, list and show.
  */
 
-import { MODULE, VERSION, buildView, renderGather, codedError, idCompare, sceneRefs, CURRENT_SCENE } from "./geometry-core.mjs";
+import { MODULE, VERSION, GATHER_CHARS, buildView, renderGather, codedError, idCompare, sceneRefs, CURRENT_SCENE } from "./geometry-core.mjs";
 import { sceneModel, promptTokens, resolveItemEmbeds } from "./model.mjs";
 import { promptText } from "./markers.mjs";
 import { renderCrops } from "./crops.mjs";
@@ -85,7 +85,7 @@ async function storeManifest(manifest) {
  */
 export async function gather(opts = {}) {
   const {
-    scenes = "all", crops = setting("cropsDefault", "auto"), chars = setting("gatherChars", 160),
+    scenes = "all", crops = setting("cropsDefault", "auto"), chars = setting("gatherChars", GATHER_CHARS),
     unseenWithinFt = setting("unseenWithinFt", 60), builtWithoutProvenance = true, maxPrompts = 60, from = null,
     party: partyArg = null, cropsAs = "files"
   } = opts ?? {};

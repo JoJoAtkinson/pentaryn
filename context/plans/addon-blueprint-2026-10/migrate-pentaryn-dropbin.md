@@ -230,7 +230,7 @@ Clears C14, C20, C40 (core/glue/hooks/i18n), C43.
 6. `test/hooks.test.mjs` → the load and post-ready sequences. Drop the template's lifecycle-only assertion.
 7. `test/i18n.test.mjs` → every literal `PENTARYN_DROPBIN.*` key exists; the template-built `lootAll.${k}`
    keys are proven by enumerating `lootAllState` reasons (`noCharacter`, `empty`) plus `label`, `tip`, `failed`.
-8. `GOLDEN_UPDATE=1 node test/run.mjs` on unchanged code; green; **checkpoint** (Joe commits).
+8. `GOLDEN_UPDATE=1 node test/run.mjs` on unchanged code; green; **checkpoint** (agent commits).
 
 ### Step 2 — Cores (behaviour-neutral)
 
@@ -410,10 +410,10 @@ steps 9–11 ~0.5 day. **~3 days.**
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module dropbin --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | not migrated yet — **60.9 % (28/46)** today (wave start in [`wave-1-baseline.md`](wave-1-baseline.md)), `conformance.py --module dropbin --markdown`, 2026-10-11 |
+| Date | 2026-10-11 (wave 1: checkpoint only (wave 1 Stage 0 lane); the refactor is workflow 2) |
+| Commits (Joe-approved) | characterisation: `6c33e7a` (kit), `4b53345` (checkpoint) · refactor: none yet · other: none |
+| Declared changes handed to the live-test workflow | none |
+| `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) |
+| Adjustments rows appended to `adjustments-batch.md` | no (step not reached) |
+| Still failing, and why | C07 C09 C12 C17 C18 C21 C22 C24 C26 C27 C28 C29 C35 C40 C41 C44 C45 C47 — the guide's steps 2+ have not run. Frozen tests: the checkpoint's assertions and goldens are untouched since the checkpoint (see wave-1-report §Frozen tests). |

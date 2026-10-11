@@ -182,15 +182,109 @@ def test_every_subcommand_routes(monkeypatch):
         monkeypatch.setattr(cli.service, fn, lambda *a, **k: 0)
     for fn in ("build_actors", "stage", "run_import", "clean", "clean_only", "verify"):
         monkeypatch.setattr(cli.pipeline, fn, lambda *a, **k: 0)
-    for fn in ("check", "sync", "walls_wasm", "walls_bench"):
+    for fn in ("check", "sync", "walls_wasm", "walls_bench",
+               "module_new", "module_vendor", "module_conformance"):
         monkeypatch.setattr(cli.modules, fn, lambda *a, **k: 0)
     monkeypatch.setattr(cli.login_mod, "login", lambda *a, **k: 0)
+    monkeypatch.setattr(cli.index, "main", lambda *a, **k: 0)
 
     for name in names:
         argv = [name]
         if name in ("module-check", "module-sync"):
             argv.append("ties")
         assert cli.main(argv) == 0, f"{name} did not route"
+
+
+# ── module-check --all / --json (python-tooling-8, -41); blueprint wrappers (W1) ──
+
+def test_module_check_all_runs_every_module(monkeypatch):
+    seen: list[str] = []
+    monkeypatch.setattr(modules, "check", lambda n: seen.append(n) or (1 if n == "ties" else 0))
+    assert cli.main(["module-check", "--all"]) == 1
+    assert seen == sorted(cfg.MODULES)
+
+
+@pytest.mark.parametrize("argv", [["module-check"], ["module-check", "ties", "--all"]])
+def test_module_check_needs_exactly_one_target(argv):
+    with pytest.raises(SystemExit) as exc:
+        cli.main(argv)
+    assert exc.value.code == 2
+
+
+def test_module_check_json_reports_the_broken_gate(monkeypatch, tmp_path, capsys):
+    src = tmp_path / "pentaryn-ties"
+    src.mkdir()
+    (src / "module.json").write_text('{"id": "pentaryn-ties", "esmodules": ["main.mjs"]}')
+    (src / "main.mjs").write_text('import { alpha } from "./lib.mjs";\n')
+    (src / "lib.mjs").write_text("export const beta = 1;\n")
+    spec = cfg.ModuleSpec("pentaryn-ties", check=("imports",))
+    monkeypatch.setattr(type(spec), "src", property(lambda self: src))
+    monkeypatch.setitem(cfg.MODULES, "ties", spec)
+    assert cli.main(["module-check", "ties", "--json"]) == 1
+    import json
+    data = json.loads(capsys.readouterr().out)
+    gate = data["gates"][0]
+    assert data["ok"] is False and gate["gate"] == "imports" and gate["ok"] is False
+    assert "alpha" in gate["problems"][0]
+
+
+def test_status_json_has_the_three_answers(monkeypatch, capsys):
+    import json
+    monkeypatch.setattr(service, "foundry_is_up", lambda *a: True)
+    monkeypatch.setattr(service, "_tunnel_pid", lambda: 4242)
+    monkeypatch.setattr(service, "_probe", lambda *a: (302, "https://x/setup"))
+    assert cli.main(["status", "--json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert set(data) == {"foundry", "tunnel", "public"}
+    assert data["tunnel"]["pid"] == 4242 and data["public"]["state"] == "no-world"
+
+
+def test_bridge_status_json_fails_only_on_an_orphan_holder(monkeypatch):
+    from scripts.foundry.ops import bridge
+    live = bridge.Proc(pid=1, ppid=0, started="t", command="c", kind="backend", ports=(1,))
+    orphan = bridge.Proc(pid=2, ppid=0, started="t", command="c", kind="backend", ports=(1,),
+                         orphan=True)
+    assert bridge.status_report([live])["ok"] is True
+    assert bridge.status_report([orphan])["ok"] is False
+    assert bridge.status_report([])["holder"] is None
+
+
+@pytest.mark.parametrize("cmd, fn", [("module-vendor", "vendor"),
+                                     ("module-conformance", "conformance")])
+def test_blueprint_wrappers_pass_arguments_through(monkeypatch, cmd, fn):
+    import importlib
+    mod = importlib.import_module(f"scripts.foundry.blueprint.{fn}")
+    seen = []
+    monkeypatch.setattr(mod, "main", lambda argv: seen.append(argv) or 7)
+    assert cli.main([cmd, "check", "names", "--json"]) == 7
+    assert seen == [["check", "names", "--json"]]
+
+
+@pytest.mark.parametrize("cmd, fn, argv", [
+    ("module-conformance", "conformance", ["--module", "names", "--markdown"]),
+    ("module-conformance", "conformance", ["--json"]),
+    ("module-vendor", "vendor", ["--help"]),
+    ("module-new", "new_module", ["--help", "--out", "/tmp/x"]),
+])
+def test_blueprint_wrappers_accept_a_leading_option(monkeypatch, cmd, fn, argv):
+    # argparse.REMAINDER as the only positional rejects a first token starting with `-`;
+    # `make foundry-conformance M=<m>` / `MD=1` send exactly those forms.
+    import importlib
+    mod = importlib.import_module(f"scripts.foundry.blueprint.{fn}")
+    seen = []
+    monkeypatch.setattr(mod, "main", lambda a: seen.append(a) or 0)
+    assert cli.main([cmd, *argv]) == 0
+    assert seen == [argv]
+
+
+def test_module_new_installs_into_foundry_module_unless_out_is_given(monkeypatch):
+    from scripts.foundry.blueprint import new_module
+    seen = []
+    monkeypatch.setattr(new_module, "main", lambda argv: seen.append(argv) or 0)
+    cli.main(["module-new", "demo", "--title", "Pentaryn Demo", "--tier", "small"])
+    cli.main(["module-new", "demo", "--title", "T", "--out", "/tmp/x"])
+    assert seen[0] == ["demo", "--title", "Pentaryn Demo", "--tier", "small", "--install"]
+    assert "--install" not in seen[1]
 
 
 def test_unknown_subcommand_exits_nonzero():
@@ -313,6 +407,7 @@ def test_import_instructions_survive_their_own_js_braces():
 
 # ── config sanity ─────────────────────────────────────────────────────────────
 
+@pytest.mark.repo
 def test_repo_root_points_at_the_repo():
     assert (cfg.REPO_ROOT / "Makefile").exists()
     assert (cfg.REPO_ROOT / "scripts/foundry/ops/cli.py").exists()
@@ -324,9 +419,80 @@ def test_actors_url_matches_the_staged_world_path():
     assert cfg.ACTORS_STAGED.name == "actors.json"
 
 
+@pytest.mark.repo
 def test_declared_modules_exist_on_disk():
     for name, spec in cfg.MODULES.items():
         assert spec.src.is_dir(), f"{name}: no module at {spec.src}"
+
+
+# ── registry: complete, kit and after_sync derived (python-tooling-3, W2) ────────
+
+@pytest.mark.repo
+def test_every_module_dir_is_registered():
+    """Registry ⊇ disk (pings, the one folder without a ModuleSpec, was registered 2026-10-11)."""
+    registered = {spec.name for spec in cfg.MODULES.values()}
+    assert set(cfg.module_dirs()) - registered == set()
+
+
+@pytest.mark.repo
+def test_pings_passes_its_gates():
+    assert modules.check("pings") == 0
+
+
+def test_module_dirs_lists_only_folders_with_a_manifest(tmp_path):
+    for name in ("pentaryn-b", "pentaryn-a"):
+        (tmp_path / name).mkdir()
+        (tmp_path / name / "module.json").write_text("{}")
+    (tmp_path / "stray").mkdir()
+    assert cfg.module_dirs(tmp_path) == ["pentaryn-a", "pentaryn-b"]
+    assert cfg.module_dirs(tmp_path / "missing") == []
+
+
+def _spec_at(monkeypatch, src, **kw):
+    spec = cfg.ModuleSpec("pentaryn-demo", check="parse", **kw)
+    monkeypatch.setattr(cfg, "MODULE_SRC_ROOT", src.parent)
+    return spec
+
+
+def test_after_sync_prefers_module_json(monkeypatch, tmp_path):
+    src = tmp_path / "pentaryn-demo"
+    src.mkdir()
+    (src / "module.json").write_text(
+        '{"flags": {"pentaryn": {"afterSync": ["Reload → then check", "line two"]}}}',
+        encoding="utf-8")
+    spec = _spec_at(monkeypatch, src, after_sync=("from config",))
+    assert spec.after_sync == ("Reload → then check", "line two")
+
+
+@pytest.mark.parametrize("manifest", [None, "{}", '{"flags": {"pentaryn": {"afterSync": []}}}',
+                                      "{ not json"])
+def test_after_sync_falls_back_to_the_tuple(monkeypatch, tmp_path, manifest):
+    src = tmp_path / "pentaryn-demo"
+    src.mkdir()
+    if manifest is not None:
+        (src / "module.json").write_text(manifest)
+    spec = _spec_at(monkeypatch, src, after_sync=("from config",))
+    assert spec.after_sync == ("from config",)
+
+
+@pytest.mark.repo
+def test_real_after_sync_unchanged_while_no_manifest_carries_it():
+    """No in-house module.json has afterSync yet (Wave 7 moves them), so every spec
+    prints exactly its config tuple."""
+    for name, spec in cfg.MODULES.items():
+        assert spec.after_sync == spec._after_sync, name
+
+
+def test_kit_is_derived_from_the_lock(monkeypatch, tmp_path):
+    src = tmp_path / "pentaryn-demo"
+    (src / "lib").mkdir(parents=True)
+    spec = _spec_at(monkeypatch, src)
+    assert spec.kit is None and spec.kit_lock is None          # unmigrated
+    (src / "lib/kit.lock.json").write_text(
+        '{"version": "1.0.1", "tier": "small", "files": ["errors", "log"]}')
+    assert spec.kit == ("errors", "log")
+    assert spec.kit_lock["tier"] == "small"
+    assert "kit" not in vars(spec), "the kit list is never stored on the spec (D8)"
 
 
 @pytest.mark.skipif(sys.platform != "darwin", reason="the table is a Mac")
@@ -417,64 +583,42 @@ def test_pick_world_menu_defaults_to_the_running_world(monkeypatch):
     assert "running" in seen["options"][seen["default_index"]][0]
 
 
-class _FakeStatus:
-    def __init__(self, active, world, users=0):
-        self.active, self.world, self.users = active, world, users
+# FoundryAdmin stand-in: the shared `fake_admin` fixture in conftest.py.
 
 
-class _FakeAdmin:
-    def __init__(self, status):
-        self._status = status
-        self.launched = []
-        self.deactivated = False
-
-    def status(self):
-        return self._status
-
-    def deactivate_world(self):
-        self.deactivated = True
-        return True
-
-    def launch_world(self, world):
-        self.launched.append(world)
-
-    def wait_for_world(self, world, timeout=0):
-        pass
-
-
-def test_ensure_world_does_nothing_when_the_right_world_is_already_up():
-    fa = _FakeAdmin(_FakeStatus(True, "space-journey"))
+def test_ensure_world_does_nothing_when_the_right_world_is_already_up(fake_admin):
+    fa = fake_admin(True, "space-journey")
     login._ensure_world(fa, "space-journey", prompt=False)
     assert not fa.deactivated and not fa.launched
 
 
-def test_ensure_world_refuses_to_drop_connected_players_unattended():
+def test_ensure_world_refuses_to_drop_connected_players_unattended(fake_admin):
     """Switching worlds disconnects everyone. Without a terminal to confirm at, that
     must be an error rather than something that just happens."""
-    fa = _FakeAdmin(_FakeStatus(True, "ardenhaven", users=3))
+    fa = fake_admin(True, "ardenhaven", users=3)
     with pytest.raises(RuntimeError, match="3 user"):
         login._ensure_world(fa, "space-journey", prompt=False)
     assert not fa.deactivated
 
 
-def test_ensure_world_switches_when_confirmed(monkeypatch):
+def test_ensure_world_switches_when_confirmed(monkeypatch, fake_admin):
     monkeypatch.setattr(login, "_choose", lambda *a, **k: True)
     monkeypatch.setattr(login.time, "sleep", lambda *_: None)
-    fa = _FakeAdmin(_FakeStatus(True, "ardenhaven", users=2))
+    fa = fake_admin(True, "ardenhaven", users=2)
     login._ensure_world(fa, "space-journey", prompt=True)
     assert fa.deactivated and fa.launched == ["space-journey"]
 
 
-def test_ensure_world_leaves_the_live_world_alone_when_declined(monkeypatch):
+def test_ensure_world_leaves_the_live_world_alone_when_declined(monkeypatch, fake_admin):
     monkeypatch.setattr(login, "_choose", lambda *a, **k: False)
-    fa = _FakeAdmin(_FakeStatus(True, "ardenhaven", users=2))
+    fa = fake_admin(True, "ardenhaven", users=2)
     with pytest.raises(RuntimeError, match="staying in"):
         login._ensure_world(fa, "space-journey", prompt=True)
     assert not fa.deactivated and not fa.launched
 
 
-def test_ensure_world_launches_when_nothing_is_running():
-    fa = _FakeAdmin(_FakeStatus(False, None))
+def test_ensure_world_launches_when_nothing_is_running(fake_admin):
+    fa = fake_admin(False, None)
     login._ensure_world(fa, "space-journey", prompt=False)
     assert not fa.deactivated and fa.launched == ["space-journey"]
 
@@ -701,3 +845,71 @@ def test_handoff_on_a_localhost_label_sets_the_cookie_for_that_name(monkeypatch)
         assert exc.headers["Set-Cookie"].startswith("session=fake-session;")
     th.join(5)
     assert result.get("ok") is True
+
+
+# ── pipeline.stage(): the importer install, characterised (python-tooling-53) ──
+
+@pytest.fixture
+def staged_paths(monkeypatch, tmp_path):
+    """Every path stage() touches, under tmp_path. Never Foundry's real Data/."""
+    src = tmp_path / "repo/foundry/module/pentaryn-importer"
+    (src / "sub").mkdir(parents=True)
+    (src / "module.json").write_text('{"id": "pentaryn-importer"}')
+    (src / "sub/a.mjs").write_text("export const a = 1;\n")
+    actors = tmp_path / "repo/foundry/build/actors.json"
+    actors.parent.mkdir(parents=True)
+    actors.write_text('{"actors": []}')
+    world = tmp_path / "Data/worlds/zz-world"
+    world.mkdir(parents=True)
+    spec = cfg.ModuleSpec("pentaryn-importer", check="parse")
+    monkeypatch.setattr(cfg, "MODULE_SRC_ROOT", src.parent)
+    monkeypatch.setattr(cfg, "FOUNDRY_MODULES", tmp_path / "Data/modules")
+    monkeypatch.setitem(cfg.MODULES, "importer", spec)
+    monkeypatch.setattr(cfg, "ACTORS_JSON", actors)
+    monkeypatch.setattr(cfg, "ACTORS_STAGED", world / "actors.json")
+    monkeypatch.setattr(cfg, "WORLD_DIR", world)
+    monkeypatch.setattr(cfg, "WORLD_NAME", "zz-world")
+    monkeypatch.setattr(pipeline, "build_actors", lambda: 0)
+    return spec, world
+
+
+def test_stage_installs_the_importer_and_stages_actors(staged_paths, capsys):
+    import filecmp
+    spec, world = staged_paths
+    spec.dst.mkdir(parents=True)
+    (spec.dst / "stale.mjs").write_text("old")            # replaced, not merged
+    assert pipeline.stage() == 0
+    # the sync stamp is the one file the copy adds (python-tooling-10); everything else is the repo's
+    cmp = filecmp.dircmp(spec.src, spec.dst, ignore=[modules.SYNC_STAMP])
+    assert not (cmp.left_only or cmp.right_only or cmp.diff_files)
+    assert not filecmp.dircmp(spec.src / "sub", spec.dst / "sub").diff_files
+    assert (world / "actors.json").read_text() == '{"actors": []}'
+    assert "target world: zz-world" in capsys.readouterr().out
+
+
+def test_stage_refuses_a_missing_world_and_leaves_dst_alone(staged_paths, monkeypatch, tmp_path):
+    spec, _ = staged_paths
+    monkeypatch.setattr(cfg, "WORLD_DIR", tmp_path / "Data/worlds/typo")
+    spec.dst.mkdir(parents=True)
+    (spec.dst / "keep.mjs").write_text("live")
+    assert pipeline.stage() == 1
+    assert (spec.dst / "keep.mjs").read_text() == "live"
+
+
+@pytest.mark.repo
+def test_ties_suite_is_gated():
+    """python-tooling-7: `make foundry-ties-check` runs ties' own suite."""
+    spec = cfg.MODULES["ties"]
+    assert "node-test" in spec.check
+    assert (spec.src / "test/run.mjs").is_file()
+
+
+@pytest.mark.repo
+def test_the_fork_has_a_use_doc_and_routes_to_it():
+    """mcp-fork-19: a use-doc for the MCP fork exists, opens with its bail-out line, and both
+    routing tables point at it."""
+    doc = cfg.REPO_ROOT / "context/foundry/mcp-fork.md"
+    head = doc.read_text(encoding="utf-8").splitlines()[:15]
+    assert any("**Read this when:**" in line for line in head)
+    for index in ("CLAUDE.md", "context/foundry/README.md"):
+        assert "mcp-fork.md" in (cfg.REPO_ROOT / index).read_text(encoding="utf-8"), index

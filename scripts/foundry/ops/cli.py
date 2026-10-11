@@ -17,9 +17,10 @@ one of them is the thing that's wrong.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 
-from . import bridge, config as cfg, login as login_mod, modules, pipeline, service
+from . import bridge, config as cfg, index, login as login_mod, modules, pipeline, service
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -47,13 +48,16 @@ def build_parser() -> argparse.ArgumentParser:
                          "(e.g. zz1.localhost); any name but the GM's gives a player tab its own "
                          "session beside the GM's localhost tab (default: the host in FOUNDRY_URL)")
     add("down", "Quit Foundry gracefully.")
-    add("status", "Foundry, tunnel, and what players actually get.")
+    st = add("status", "Foundry, tunnel, and what players actually get.")
+    st.add_argument("--json", action="store_true",
+                    help="print {foundry, tunnel, public} as JSON instead of prose")
     add("lock-check", "Fail if an auto-update run holds the lock.")
     add("tunnel-up", "Start the Cloudflare tunnel.")
     add("tunnel-down", "Stop the Cloudflare tunnel.")
     add("tunnel-setup", "One-time: authenticate, create the tunnel, route DNS.")
-    add("bridge-status", "MCP bridge processes: which are live sessions, which are orphans, "
-                         "and who holds the websocket ports.")
+    bs = add("bridge-status", "MCP bridge processes: which are live sessions, which are orphans, "
+                              "and who holds the websocket ports.")
+    bs.add_argument("--json", action="store_true", help="print the scan as JSON (same exit code)")
     bc = add("bridge-clean", "Kill orphaned MCP bridge processes. Never touches a server "
                              "whose parent is a live Claude session.")
     bc.add_argument("--dry-run", action="store_true", help="list what would be killed")
@@ -75,9 +79,31 @@ def build_parser() -> argparse.ArgumentParser:
     mcheck = add("module-check", "Prove a module's sources before it can reach Foundry.")
     # `importer` is checkable but not syncable: the actor pipeline stages it, and a
     # `module-sync importer` would put a second copy where Foundry loads modules from.
-    mcheck.add_argument("module", choices=sorted(cfg.MODULES))
+    mcheck.add_argument("module", nargs="?", choices=sorted(cfg.MODULES))
+    mcheck.add_argument("--all", action="store_true",
+                        help="every registered module; keeps going past a failure")
+    mcheck.add_argument("--json", action="store_true",
+                        help="print {module, ok, gates} (a list with --all) instead of prose; "
+                             "same exit code")
     msync = add("module-sync", "Check, then copy a module into Foundry's Data/modules.")
     msync.add_argument("module", choices=names)
+    # ── blueprint (scripts/foundry/blueprint/; playbook context/foundry/addon-blueprint.md) ──
+    # Thin wrappers: everything after the command is passed to the script unchanged.
+    rest = "arguments passed through unchanged"
+    mnew = add("module-new", "Generate a module from the blueprint template: "
+                             "<short> --title 'Pentaryn …' [--tier full|small] [--kit a,b] … "
+                             "(new_module.py; writes under foundry/module/)")
+    mnew.add_argument("args", nargs=argparse.REMAINDER, help=rest)
+    mven = add("module-vendor", "Vendor the shared kit or prove the copies: "
+                                "sync|check <module…|--all> [--tier] [--kit] [--json] (vendor.py)")
+    mven.add_argument("args", nargs=argparse.REMAINDER, help=rest)
+    mcon = add("module-conformance", "Score modules against the blueprint: "
+                                     "[--module m…] [--json|--markdown] (conformance.py)")
+    mcon.add_argument("args", nargs=argparse.REMAINDER, help=rest)
+
+    midx = add("module-index", "Regenerate the Module APIs table in context/foundry/README.md.")
+    midx.add_argument("--check", action="store_true", help="exit 1 when the table is stale; write nothing")
+
     add("walls-wasm", "Build the compiled (WASM) wall engine.")
     bench = add("walls-bench", "Scaling curve for the wall engine.")
     bench.add_argument("grid", nargs="?", help="grid size to extend the sweep to")
@@ -85,8 +111,22 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
+# The blueprint wrappers hand everything after the command to their script unchanged.
+# argparse's REMAINDER rejects a first token that starts with `-` (`--module`, `--json`),
+# so these are dispatched before parsing; the wrapped script owns its own `--help`.
+_WRAPPERS = {
+    "module-new": lambda rest: modules.module_new(rest),
+    "module-vendor": lambda rest: modules.module_vendor(rest),
+    "module-conformance": lambda rest: modules.module_conformance(rest),
+}
+
+
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if argv and argv[0] in _WRAPPERS:
+        return _WRAPPERS[argv[0]](argv[1:])
+    parser = build_parser()
+    args = parser.parse_args(argv)
     c = args.command
 
     if c == "up":            return service.up()
@@ -96,13 +136,13 @@ def main(argv: list[str] | None = None) -> int:
                                  prompt=False if args.no_prompt else None,
                                  host=args.host)
     if c == "down":          return service.down()
-    if c == "status":        return service.status()
+    if c == "status":        return service.status(as_json=args.json)
     if c == "lock-check":    return service.lock_check()
     if c == "tunnel-up":     return service.tunnel_up()
     if c == "tunnel-down":   return service.tunnel_down()
     if c == "tunnel-setup":  return service.tunnel_setup()
     if c == "tunnel-logs":   return service.tunnel_logs(args.lines)
-    if c == "bridge-status": return bridge.status()
+    if c == "bridge-status": return bridge.status(as_json=args.json)
     if c == "bridge-clean":  return bridge.clean(dry_run=args.dry_run)
 
     if c == "actors":        return pipeline.build_actors()
@@ -112,8 +152,21 @@ def main(argv: list[str] | None = None) -> int:
     if c == "clean-only":    return pipeline.clean_only()
     if c == "verify":        return pipeline.verify()
 
-    if c == "module-check":  return modules.check(args.module)
+    if c == "module-check":
+        if args.all == bool(args.module):
+            parser.error("module-check: name one module or pass --all")
+        if args.all:
+            return modules.check_all(as_json=args.json)
+        if args.json:
+            report = modules.check_report(args.module)
+            print(json.dumps(report, indent=2, ensure_ascii=False))
+            return 0 if report["ok"] else 1
+        return modules.check(args.module)
     if c == "module-sync":   return modules.sync(args.module)
+    if c == "module-new":    return modules.module_new(args.args)
+    if c == "module-vendor": return modules.module_vendor(args.args)
+    if c == "module-conformance": return modules.module_conformance(args.args)
+    if c == "module-index":  return index.main(check=args.check)
     if c == "walls-wasm":    return modules.walls_wasm()
     if c == "walls-bench":   return modules.walls_bench(args.grid)
 

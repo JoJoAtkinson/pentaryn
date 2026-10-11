@@ -3,11 +3,23 @@
   "title": "Pentaryn Tool Cursors",
   "description": "The mouse pointer on the map shows which scene tool is active, so a player can tell at a glance whether they are about to select, target, measure, place a spell area, drop a pin or draw. Select stays the plain arrow on every layer; Target is a red crosshair, Ruler a gold ruler, a spell-area preview cyan converging chevrons, Notes → Journal a pink pin, any drawing tool a green pencil. Over something clickable the glyph lights up (white with a coloured edge). Only the map's cursor changes; windows, sidebar and HUD keep Foundry's. Purely per-client (one client setting to turn it off). Exposes game.pentaryn.cursors.",
   "version": "0.2.0",
-  "compatibility": { "minimum": "13", "verified": "14" },
+  "compatibility": { "minimum": "14", "verified": "14.369" },
   "authors": [{ "name": "Joseph Atkinson" }],
   "esmodules": ["cursors.mjs"],
   "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
   "socket": false,
   "protected": false,
-  "flags": { "pentaryn": { "flagScope": "cursors", "generation": 14 } }
+  "flags": {
+    "pentaryn": {
+      "tier": "small",
+      "namespace": "cursors",
+      "flagScope": "pentaryn-cursors",
+      "cssPrefix": "pcur-",
+      "generation": 14,
+      "afterSync": [
+        "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Tool Cursors', then reload.",
+        "Each canvas tool gets its own cursor; check with  game.pentaryn.cursors.current()"
+      ]
+    }
+  }
 }

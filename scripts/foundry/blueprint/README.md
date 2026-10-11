@@ -7,12 +7,13 @@ scorer. **Not this file:** the playbook → `context/foundry/addon-blueprint.md`
 |---|---|---|
 | `new_module.py <short> --title …` | renders `foundry/blueprint/template/`, vendors the kit, writes goldens, runs the suite; `--check` adds the ops gates, `vendor check` and conformance (scored as not installed: C39 ModuleSpec and C46 route are printed as pending follow-ups, never failures). Flags: `--tier`, `--kit a,b`, `--namespace`, `--css-prefix`, `--no-dnd5e`, `--description`, `--out`, `--install`, `--docs`, `--check`, `--force` (re-render template files; keeps the lock and every golden), `--no-run` | the new module folder (refuses `foundry/module/` without `--install`); with `--docs`, two context stubs |
 | `vendor.py sync\|check <module…\|--all> [--tier] [--kit a,b]` | copies `foundry/lib` into a module's `lib/` and `test/kit/`; proves identity by sha256. `--all` = modules that already have a lock; the rest are skipped, never written or failed. The lock records `tier` (from `--tier`, kept on a re-sync), which the scorer uses until `module.json` has `flags.pentaryn.tier` | `lib/`, `test/kit/`, `lib/kit.lock.json` — never `module.json` |
-| `conformance.py [--snapshot DIR] [--module m] [--json\|--markdown]` | scores modules on rules C01–C52; prints WAIT modules; exit 1 when any fail-class rule fails, 2 for an unknown module. Tier = `flags.pentaryn.tier`, else the lock's `tier`, else full | nothing |
+| `conformance.py [--snapshot DIR] [--module m] [--json\|--markdown]` | scores modules on rules C01–C61; prints WAIT modules; exit 1 when any fail-class rule fails, 2 for an unknown module (so `make foundry-conformance` over all modules reports a make error until every module passes — that is a score report, not the advisory gate; see the playbook §6). Tier = `flags.pentaryn.tier`, else the lock's `tier`, else full | nothing |
 | `packages.json` | third-party package names and code tokens the scripts match (aliases ⊇ `foundry/adjustments.yml` `aliases`; the registry's are merged in at run time too) | — |
 | `wait.json` | modules the fix phase must not edit yet, with the reason; edit it when a workflow starts or stops on a module | — |
 
 Package names live in `packages.json`, not in the `.py` files: `scripts/foundry/**/*.py` is in the
 Saturday updater's exposure grep, and a literal here would make the scanner look exposed.
 
-Tests: `./.venv/bin/python -m pytest -q scripts/foundry/blueprint/tests` (not yet in `pyproject`
-`testpaths`; see the pending wiring, W5 in `context/plans/addon-blueprint-2026-10/README.md` §7).
+Tests: `./.venv/bin/python -m pytest -q scripts/foundry/blueprint/tests` (also in `pyproject`
+`testpaths`, so a bare `pytest` / `make test` runs them). This folder is outside the updater's
+exposure grep (`EXPOSURE_SKIP_PARTS` in `scripts/foundry/update/adjustments.py`).

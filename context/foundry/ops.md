@@ -19,9 +19,10 @@ status: active
 | You want to… | Playbook |
 | ------------ | -------- |
 | Start/stop the server, the tunnel, sync assets, restore a world, install a module, check what's exposed | **this one** |
+| Whitelist a player's Gmail (**two lists: Google test users + Cloudflare policy**), the Google login in front of the tunnel | [`cloudflare-access.md`](cloudflare-access.md) |
 | Build world *content* — actor generation from `actions.jsonl`, the importer module, the write paths that fail silently, Gates 0–4 | [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) |
 | Complete hand-drawn walls | [`foundry-wall-autocomplete.md`](../plans/foundry-wall-autocomplete.md) |
-| Extend the MCP bridge's tool surface | [`foundry-mcp-fork.md`](../plans/foundry-mcp-fork.md) — design only |
+| Extend the MCP bridge's tool surface | [`mcp-fork.md`](mcp-fork.md) · design history: [`foundry-mcp-fork.md`](../plans/foundry-mcp-fork.md) |
 
 Where this one and `foundry-vtt.md` overlap — the actors import pipeline and its Gate 2 — this playbook covers the
 *operational* half (what deletes the staged file, what proves it's gone) and links out for the rest.
@@ -40,7 +41,7 @@ Where this one and `foundry-vtt.md` overlap — the actors import pipeline and i
 | Roll back a broken world | `make foundry-restore` to list, `make foundry-restore SNAP=<name>` to do it. Never automatic — see §3 |
 | See what's in the cloud store | `make foundry-cloud` |
 | Install or update a module | Setup screen (resolves dependencies) **or** unzip the release into `Data/modules/<id>/` and restart — §5. Never from inside a running world |
-| Push a local module to Foundry | `make foundry-sync` (importer) · `make foundry-walls-sync` (walls) · `make foundry-ties-sync` (ties) |
+| Push a local module to Foundry | `make foundry-<short>-sync` (e.g. `make foundry-walls-sync`) · the importer only through `make foundry-sync WORLD=<world>` (it also stages `actors.json` — `make foundry-clean` after). The copy is built in `FoundryVTT/.pentaryn-sync/` and swapped in whole, so a failed copy leaves the old install serving. Which build is live: `Data/modules/<id>/.pentaryn-sync.json` (module, version, digest, git, dirty, synced_at — a dotfile, not served); every install also appends a line to `foundry/logs/ops-YYYY-MM.jsonl` |
 | Import actors | [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) Stages 1–2, then `make foundry-import` (🔴 read §1's red box first — it stages into the wrong world today) |
 | Prove nothing's exposed | `make foundry-verify` |
 | Check the license key resolves | `make foundry-check` — prints length and format, never the value |
@@ -774,7 +775,7 @@ has three levels. Anything that walks scenes should read `levels[]`, not `backgr
 - [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) — the content pipeline: decisions D1–D10, actor generation, importer module, Gates 0–4
 - [`foundry-wall-autocomplete.md`](../plans/foundry-wall-autocomplete.md) · [`pentaryn-walls` README](../../foundry/module/pentaryn-walls/README.md)
 - [`foundry-npc-ties.md`](../plans/foundry-npc-ties.md) · [`pentaryn-ties` README](../../foundry/module/pentaryn-ties/README.md)
-- [`foundry-mcp-fork.md`](../plans/foundry-mcp-fork.md) — bridge fork design (not implemented)
+- [`foundry-mcp-fork.md`](../plans/foundry-mcp-fork.md) — bridge fork design (history); operating the fork: [`mcp-fork.md`](mcp-fork.md)
 - [`scripts/foundry/README.md`](../../scripts/foundry/README.md) — license key, make-target table
 - [`foundry/CONTRACT.md`](../../foundry/CONTRACT.md) — the `actors.json` generator ⇄ importer contract (§12 for who deletes the staged file)
 - [`scripts/foundry/cloud.py`](../../scripts/foundry/cloud.py) — the OneDrive implementation; its docstring is the rationale

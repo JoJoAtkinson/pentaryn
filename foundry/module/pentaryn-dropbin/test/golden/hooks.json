@@ -1,0 +1,118 @@
+[
+  {
+    "kind": "on",
+    "name": "updateActor"
+  },
+  {
+    "kind": "on",
+    "name": "createActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "deleteActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "updateActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "drawToken"
+  },
+  {
+    "kind": "on",
+    "name": "refreshToken"
+  },
+  {
+    "kind": "on",
+    "name": "canvasReady"
+  },
+  {
+    "kind": "on",
+    "name": "updateToken"
+  },
+  {
+    "kind": "on",
+    "name": "updateActor"
+  },
+  {
+    "kind": "on",
+    "name": "createItem"
+  },
+  {
+    "kind": "on",
+    "name": "updateItem"
+  },
+  {
+    "kind": "on",
+    "name": "deleteItem"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  },
+  {
+    "kind": "on",
+    "name": "renderTokenHUD"
+  },
+  {
+    "kind": "on",
+    "name": "renderItemPileInventoryApp"
+  },
+  {
+    "kind": "on",
+    "name": "item-piles-openInterface"
+  },
+  {
+    "kind": "on",
+    "name": "updateActor"
+  },
+  {
+    "kind": "on",
+    "name": "createItem"
+  },
+  {
+    "kind": "on",
+    "name": "updateItem"
+  },
+  {
+    "kind": "on",
+    "name": "deleteItem"
+  },
+  {
+    "kind": "on",
+    "name": "updateToken"
+  },
+  {
+    "kind": "once",
+    "name": "i18nInit"
+  },
+  {
+    "kind": "once",
+    "name": "init"
+  },
+  {
+    "kind": "once",
+    "name": "socketlib.ready"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  },
+  {
+    "kind": "on",
+    "name": "renderActorDirectory"
+  },
+  {
+    "kind": "on",
+    "name": "renderJournalDirectory"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  }
+]

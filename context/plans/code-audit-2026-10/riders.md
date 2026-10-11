@@ -31,6 +31,7 @@ tags: [plans, audit, foundry]
 | combat-riders-16 | re-anchored — adjustments.yml:145-154 (unchanged position); riders half still open (none of its five rows exists; the re-run added ten other riders rows at adjustments.yml:719-861) and **extended**: concentration.mjs now reads dnd5e 6 save-message shapes |
 | combat-riders-39 | **new** — five hand-installed patches in cast-flow.mjs and argon-tidy.mjs, none in a patch record (conformance C32 sees none of them) |
 | combat-riders-40 | **new** — three comment-only catches in the re-run code (conformance C24 now fails) |
+| combat-riders-41 | **new** (2026-10-11, wave-1 J8) — the Battle Medic relay writes once per GM tab: two tabs on the GM account heal twice and spend two Hit Dice |
 
 Resolved by the re-run: none. Obsolete: none.
 
@@ -108,6 +109,7 @@ There is no decision table telling a builder which module owns which kind of rid
 | combat-riders-16 | Documentation / skills | medium | S | adjustments.yml gaps: combat's chat-message-type reads; riders' tray, roll-config, sheet DOM and query rows |
 | combat-riders-39 | Hardening | medium | S | Route the re-run's five hand patches (SummonActivity ×2, Argon item button ×2, TextEditor.enrichHTML) through wrapMethod/defineAccessor with a patch record |
 | combat-riders-40 | Logging / auditability gains | low | S | Three comment-only catches in the re-run code: log them at debug |
+| combat-riders-41 | Hardening | medium | S | Battle Medic relay runs in every GM tab: claim first so one tab heals and spends the Hit Die |
 
 ## Performance gains
 
@@ -260,6 +262,41 @@ Pin these before the move. After the move, also assert that `describe().patches.
 **Risk.** Install timing must stay at `ready` (#1, #2, #5) and at first render (#3, #4); the pins cover it. A `wrapMethod` on a static (`enrichHTML`) must keep `this` as `TE`; the test calls it through `TE.enrichHTML(...)`.
 
 **Related:** combat-riders-8 (combat's wrapMethod), combat-riders-25, combat-riders-16
+
+### combat-riders-41 — Battle Medic relay runs in every GM tab: claim first so one tab heals and spends the Hit Die
+
+*Added 2026-10-11 from the wave-1 report's J8 (blueprint §5.9.5). Joe's decision: a new audit id, fixed (claim first) when riders migrates, as a `[declared]` commit after its structural refactor. Not changed now. Sibling: items-journal-40 (journal `ensure`).*
+
+**Category:** Hardening · **Impact:** medium · **Effort:** S
+
+**Where:** `foundry/module/pentaryn-riders/riders.mjs:640–649` (the handler); the caller is `runBattleMedic`, `riders.mjs:417`
+
+**Anchor:** `  CONFIG.queries[QUERY] = async (data, { user } = {}) => {`
+
+**Current.**
+
+The server sends a query to every socket of the recipient user and keeps the first answer (blueprint §5.9.1, Queries). The handler's gate is `game.user.isGM && game.users.activeGM?.isSelf`, which is true in **every** tab of the active GM's account. With the MCP bridge tab and a GM browser tab both open (the normal state at Joe's table), a player's Battle Medic relay runs `applyBattleMedic` twice: `spendHitDie` takes two Hit Dice and `applyDamage(-amount)` heals twice. The player's toast shows the first tab's numbers only. Unverified live; the code path has no idempotency guard (no request id, no claim).
+
+**Proposed.**
+
+When riders migrates (its relay moves to the kit's `relayed` query through the API manifest, C56):
+1. The healer's client adds a request id to the payload (`requestId: foundry.utils.randomID()`).
+2. The handler claims that id first (`lib/election.mjs`, one tab wins per id) and only the winner calls `applyBattleMedic`. The winner records its result on the target in the same update batch as the heal (`flags.pentaryn-riders.relay.<requestId>`, pruned to the last few).
+3. Per §5.9.2 the losing tab answers first, so it must not answer with nothing: it waits (bounded, under the 8 s query timeout) for the recorded result to arrive by broadcast and returns it.
+
+The heal, the Hit Die spent and the return shape for a single tab are unchanged. This is a behaviour change with two tabs (one heal instead of two), so it lands as a `[declared]` commit.
+
+**Behaviour test recipe (write first, must pass before and after).**
+
+In the riders glue harness, register the handler in two fake GM "tabs" (two module loads sharing one fake actor store, both `activeGM.isSelf`). Fire one relay payload into both concurrently:
+- Before the fix (pinned as `KNOWN combat-riders-41`): the target loses 2 Hit Dice and gains two heals.
+- After the fix (the pin flips in the `[declared]` commit): the target loses 1 Hit Die and gains one heal, and both handlers resolve to the same `{ faces, healed, hp, … }`.
+
+A single-tab relay's return value and thrown refusal messages are identical before and after.
+
+**Risk.** Medium: a wrong claim key could drop a legitimate second heal. Key the claim on the request id, never on the target or the healer.
+
+**Related:** combat-riders-27 (audit line on the relay), combat-riders-25, items-journal-40, transform-creatures-37 (the same two-GM-tab shape in pings)
 
 ## Logging / auditability gains
 

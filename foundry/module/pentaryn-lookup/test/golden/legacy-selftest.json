@@ -1,0 +1,28 @@
+[
+  {
+    "input": [],
+    "out": {
+      "ok": false,
+      "passed": 14,
+      "failed": 2,
+      "labels": [
+        "pack present: dnd-players-handbook.content",
+        "pack present: dnd-dungeon-masters-guide.content",
+        "pack present: dnd5e.content24",
+        "search finds 'half cover'",
+        "a hit names a Cover page",
+        "hits carry a pasteable uuid",
+        "snippets are enricher-free",
+        "page('Study') resolves",
+        "monster('Goblin') has numeric cr/ac/hp",
+        "core indexDocument still drops nested page fields (documents the workaround)",
+        "onList('Fireball', 'wizard') is true",
+        "onList('Fireball', 'cleric') is false",
+        "page('Artifacts') carries its embedded roll tables",
+        "monsters({large construct, CR 5-8}) finds the Shield Guardian",
+        "names() lists PHB classes, subclasses, species, feats",
+        "monster(…, {text}) resolves enrichers"
+      ]
+    }
+  }
+]

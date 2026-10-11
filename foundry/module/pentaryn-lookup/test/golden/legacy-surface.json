@@ -1,0 +1,13 @@
+{
+  "LIMITS": "object",
+  "monster": "function",
+  "monsters": "function",
+  "names": "function",
+  "onList": "function",
+  "packs": "function",
+  "page": "function",
+  "search": "function",
+  "selftest": "function",
+  "spellList": "function",
+  "toPlainText": "function"
+}

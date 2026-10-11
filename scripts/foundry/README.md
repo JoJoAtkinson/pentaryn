@@ -53,6 +53,12 @@ answered, never the value.
 | `make foundry-clean-only` | Delete the staged `actors.json` from `Data/`. No verification |
 | `make foundry-clean` | `foundry-clean-only`, then `foundry-verify` |
 | `make foundry-verify` | Gate 2 — probe the site root, then assert `actors.json` 404s over the public tunnel. Skips (exit 0) only when the root itself is unreachable |
+| `make foundry-<m>-check` / `-sync` | One module through every gate (parse, imports, i18n, its suite, vendored kit, conformance — the last two skip an unmigrated module; conformance is advisory until the migration's Stage 5), then copy it into `Data/modules`. Pattern rules: a ModuleSpec in `ops/config.py` is all a module needs. `foundry-walls-test` is walls' old name |
+| `make foundry-modules-check` | Every registered module, keeps going past a failure; `JSON=1` for `module-check --all --json` |
+| `make foundry-module-new M=<short> TITLE="Pentaryn <Title>"` | Generate a module from the blueprint (`ops module-new` → `blueprint/new_module.py`; `TIER=small`, `ARGS=…`) |
+| `make foundry-conformance [M=<short>] [MD=1]` · `foundry-lib-check` · `foundry-lib-vendor [M=]` | Blueprint scorer, the shared kit's suite, re-vendor the kit (playbook: `context/foundry/addon-blueprint.md`) |
+| `make foundry-module-index` | Regenerate the Module APIs table in `context/foundry/README.md` (`make check-context` fails when it is stale) |
+| `make test` | The Python suites (`pytest -q`; `-m 'not repo'` skips the tests that read live repo state) |
 
 Players connect to **<https://vtt.atjoseph.com>**. `cloudflared` runs from a
 pidfile in `.run/` (gitignored); the tunnel is only up while you're running.

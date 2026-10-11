@@ -7,6 +7,7 @@ and you get exactly that piece.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
@@ -16,6 +17,7 @@ import urllib.request
 from pathlib import Path
 
 from . import config as cfg
+from .out import say as _say  # re-exported: modules.py and pipeline.py import it from here
 
 OK, FAIL = 0, 1
 
@@ -31,10 +33,6 @@ CF_CERT = Path.home() / ".cloudflared/cert.pem"
 # player's browser sees.
 BROWSER_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
               "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36")
-
-
-def _say(msg: str) -> None:
-    print(f"  {msg}")
 
 
 def _http_code(url: str, timeout: float) -> int:
@@ -253,15 +251,10 @@ def tunnel_setup() -> int:
 
 # ── status ────────────────────────────────────────────────────────────────────
 
-def status() -> int:
-    """Three answers: the app, the tunnel process, and what players actually get."""
-    print(f"  {'foundry:':<10} "
-          + (f"UP   ({cfg.FOUNDRY_URL})" if foundry_is_up(3.0) else "down"))
-
+def status_report() -> dict:
+    """The three answers as data: `{foundry, tunnel, public}` (python-tooling-41)."""
+    up = foundry_is_up(3.0)
     pid = _tunnel_pid()
-    print(f"  {'tunnel:':<10} "
-          + (f"UP   (pid {pid}, https://{cfg.TUNNEL_HOST})" if pid else "down"))
-
     # The one that matters — and the one that used to lie. "HTTP 403" was printed
     # both when the tunnel was down and when it was perfectly healthy but no world
     # was launched: Foundry redirects the root to /setup, and /setup is 403'd at the
@@ -269,14 +262,36 @@ def status() -> int:
     # redirect target is read, so the line says which one it is.
     code, location = _probe(f"https://{cfg.TUNNEL_HOST}/", 8.0)
     if code == 0:
+        state = "unreachable"
         verdict = "not reachable — tunnel or DNS is down"
     elif code == 302 and "/setup" in location:
+        state = "no-world"
         verdict = ("tunnel OK, but NO WORLD IS LAUNCHED — players get a 403.\n"
                    f"  {'':<10} Launch one in the Foundry window (/setup is blocked "
                    "through the tunnel by design).")
     elif code in (200, 302):
+        state = "reachable"
         verdict = f"reachable (HTTP {code}) — players can connect"
     else:
+        state = "unexpected"
         verdict = f"unexpected HTTP {code}{f' → {location}' if location else ''}"
-    print(f"  {'public:':<10} {verdict}")
+    return {
+        "foundry": {"up": up, "url": cfg.FOUNDRY_URL},
+        "tunnel": {"up": bool(pid), "pid": pid, "host": cfg.TUNNEL_HOST},
+        "public": {"state": state, "code": code, "location": location, "verdict": verdict},
+    }
+
+
+def status(as_json: bool = False) -> int:
+    """Three answers: the app, the tunnel process, and what players actually get."""
+    r = status_report()
+    if as_json:
+        print(json.dumps(r, indent=2, ensure_ascii=False))
+        return OK
+    print(f"  {'foundry:':<10} "
+          + (f"UP   ({cfg.FOUNDRY_URL})" if r["foundry"]["up"] else "down"))
+    pid = r["tunnel"]["pid"]
+    print(f"  {'tunnel:':<10} "
+          + (f"UP   (pid {pid}, https://{cfg.TUNNEL_HOST})" if pid else "down"))
+    print(f"  {'public:':<10} {r['public']['verdict']}")
     return OK

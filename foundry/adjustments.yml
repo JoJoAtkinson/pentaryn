@@ -156,7 +156,7 @@ adjustments:
   - id: dnd5e-importer-gate
     packages: [dnd5e]
     modules: [pentaryn-importer, scripts/foundry]
-    files: [foundry/module/pentaryn-importer/pentaryn-importer.mjs, scripts/foundry/build_actors.py]
+    files: [foundry/module/pentaryn-importer/importer-core.mjs, foundry/module/pentaryn-importer/documents-adapter.mjs, scripts/foundry/build_actors.py]
     markers: ["targetSystemVersion", "TARGET_SYSTEM_VERSION"]
     what: the importer refuses JSON built for another dnd5e minor (TARGET_SYSTEM_VERSION "6.0"); build_actors.py hard-codes the dnd5e 6.0 enums but still emits the legacy movement.walk / init.bonus / ac.calc "flat" shapes, which dnd5e migrates on create and update until 7.0
     why: CONTRACT.md §1 — actor JSON is built against one system's data model
@@ -627,7 +627,7 @@ adjustments:
     retire_class: safe
     check: make foundry-aoe-check
 
-  - id: aoe-core-region-delete-update-race
+  - id: core-region-delete-handle-race
     packages: [core]
     modules: [pentaryn-aoe]
     files: [foundry/module/pentaryn-aoe/areas.mjs, foundry/module/pentaryn-aoe/core.mjs]
@@ -672,7 +672,7 @@ adjustments:
     retire_class: safe
     check: make foundry-combat-check
 
-  - id: aoe-careful-spell-protected-rows
+  - id: dnd5e-careful-spell-protected-rows
     packages: [dnd5e]
     modules: [pentaryn-aoe]
     files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/core.mjs, foundry/module/pentaryn-aoe/tray.mjs]
@@ -683,7 +683,7 @@ adjustments:
     retire_class: guarded
     check: make foundry-aoe-check
 
-  - id: aoe-supersede-same-usage
+  - id: dnd5e-supersede-same-usage
     packages: [dnd5e]
     modules: [pentaryn-aoe]
     files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/core.mjs]
@@ -694,7 +694,7 @@ adjustments:
     retire_class: safe
     check: make foundry-aoe-check
 
-  - id: aoe-player-status-line
+  - id: core-private-roll-rows-hidden
     packages: [dnd5e, core]
     modules: [pentaryn-aoe]
     files: [foundry/module/pentaryn-aoe/tray.mjs, foundry/module/pentaryn-aoe/resolve.mjs]
@@ -760,7 +760,7 @@ adjustments:
     retire_class: safe
     check: make foundry-riders-check
 
-  - id: aoe-untargeted-touch-self
+  - id: dnd5e-untargeted-touch-self
     packages: [dnd5e]
     modules: [pentaryn-aoe]
     files: [foundry/module/pentaryn-aoe/core.mjs, foundry/module/pentaryn-aoe/effects.mjs]
@@ -771,7 +771,7 @@ adjustments:
     retire_class: safe
     check: make foundry-aoe-check
 
-  - id: aoe-same-spell-no-stack
+  - id: dnd5e-same-spell-no-stack
     packages: [dnd5e]
     modules: [pentaryn-aoe]
     files: [foundry/module/pentaryn-aoe/core.mjs, foundry/module/pentaryn-aoe/effects.mjs]
@@ -859,7 +859,7 @@ adjustments:
     retire_class: guarded
     check: make foundry-riders-check
 
-  - id: senses-light-pick-collapse-hud
+  - id: argon-light-pick-collapse-panels
     packages: [enhancedcombathud]
     modules: [pentaryn-senses]
     files: [foundry/module/pentaryn-senses/light.mjs]
@@ -881,7 +881,7 @@ adjustments:
     retire_class: safe
     check: make foundry-creatures-check
 
-  - id: portals-teleport-default-and-spread
+  - id: core-teleport-default-and-spread
     packages: [core]
     modules: [pentaryn-portals]
     files: [foundry/module/pentaryn-portals/portals.mjs, foundry/module/pentaryn-portals/portals-core.mjs]
@@ -968,3 +968,36 @@ adjustments:
     native_when: dnd5e's usage dialog submits on Enter
     retire_class: safe
     check: make foundry-combat-check
+
+  - id: pings-core-ping-handle
+    packages: [core]
+    modules: [pentaryn-pings]
+    files: [foundry/module/pentaryn-pings/capture.mjs]
+    markers: ["handlePing", "__pentarynPatched"]
+    what: wraps ControlsLayer.prototype.handlePing through wrapMethod (marker __pentarynPatched) to record every ping drawn on this GM client; the original still runs with the same arguments
+    why: Foundry keeps no ping history; handlePing is the only place a locally drawn ping is visible, and it is patched on the prototype because canvas layers are rebuilt on every scene change
+    native_when: core keeps a ping history or fires a ping hook
+    retire_class: guarded
+    check: make foundry-pings-check
+
+  - id: core-pings-user-activity-socket
+    packages: [core]
+    modules: [pentaryn-pings]
+    files: [foundry/module/pentaryn-pings/capture.mjs]
+    markers: ["userActivity"]
+    what: listens on core's private userActivity socket event and records data.ping from other clients
+    why: pings on scenes the GM is not viewing never reach ControlsLayer#handlePing
+    native_when: core exposes a public ping hook or event carrying user, scene and position
+    retire_class: guarded
+    check: make foundry-pings-check
+
+  - id: core-board-cursor-vars
+    packages: [core]
+    modules: [pentaryn-cursors]
+    files: [foundry/module/pentaryn-cursors/board.mjs]
+    markers: ["currentCursor", "_placementContext", "setCursor"]
+    what: sets the --cursor-* variables inline on #board for the active tool, re-applies a blanked board cursor by clearing renderer.events.currentCursor and calling setCursor, and reads canvas.regions._placementContext to tell when a spell-area preview is live
+    why: core has no per-tool cursor and no public flag for a region placement in progress; setCursor writes only when its mode changes, so a blanked cursor stays blank unless currentCursor is reset
+    native_when: core sets a cursor per scene tool, or exposes a public placement-in-progress flag and a cursor refresh
+    retire_class: guarded
+    check: make foundry-cursors-check

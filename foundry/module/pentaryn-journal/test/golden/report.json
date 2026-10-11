@@ -1,0 +1,38 @@
+{
+  "folder": "<folder>",
+  "users": [
+    {
+      "user": "Gamemaster",
+      "userId": "gmUser0000000001",
+      "isGM": true,
+      "journalId": null,
+      "pages": 0,
+      "duplicates": []
+    },
+    {
+      "user": "Co-GM",
+      "userId": "gmUser0000000002",
+      "isGM": true,
+      "journalId": null,
+      "pages": 0,
+      "duplicates": []
+    },
+    {
+      "user": "Pat",
+      "userId": "player0000000001",
+      "isGM": false,
+      "journalId": "<journal1>",
+      "pages": 0,
+      "duplicates": []
+    },
+    {
+      "user": "Quinn",
+      "userId": "player0000000002",
+      "isGM": false,
+      "journalId": "<journal2>",
+      "pages": 0,
+      "duplicates": []
+    }
+  ],
+  "atRoot": []
+}

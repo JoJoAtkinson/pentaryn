@@ -113,7 +113,7 @@ under Manual (the review list).
 - **C27** fail: no api-manifest.mjs; buildApi not used
 - **C28** fail: no test/golden/describe.json; no test/golden/surface.json
 - **C29** fail: writes flags but publishes no inspect(ref)
-- **C32** fail: row aoe-argon-handle-bind has no wrapMethod patch naming it; row aoe-core-region-delete-update-race has no wrapMethod patch naming it
+- **C32** fail: row aoe-argon-handle-bind has no wrapMethod patch naming it; row aoe-core-region-delete-update-race (**renamed `core-region-delete-handle-race`**, D2 `df661e0`) has no wrapMethod patch naming it
 - **C34** fail: top-level keys ['PENTARYN_AOE.RemoveAllTemplates', 'PENTARYN_AOE.NoArea', 'PENTARYN_AOE.CannotRemove', 'PENTARYN_AOE.Effects.Unapplied']…; want ['PENTARYN_AOE']
 - **C35** fail: definite coverage 13% (7/54)
 - **C40** fail: missing test/core.test.mjs, test/glue.test.mjs, test/hooks.test.mjs, test/api.test.mjs, test/i18n.test.mjs

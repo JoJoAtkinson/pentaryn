@@ -1,0 +1,39 @@
+{
+  "pages": [
+    {
+      "name": "Gate Inscription",
+      "type": "text",
+      "title": {
+        "show": true,
+        "level": 1
+      },
+      "sort": 100000,
+      "flags": {
+        "pentaryn-journal": {
+          "source": {
+            "kind": "page",
+            "key": "JournalEntry.readable00000002.JournalEntryPage.page000000000001",
+            "entryId": "readable00000002",
+            "entryName": "Gate Inscription",
+            "pageName": "Page 1",
+            "place": "The Old Gate",
+            "noteText": null,
+            "savedAt": 1791720000300,
+            "worldTime": 86400,
+            "hash": "96d21daa"
+          }
+        }
+      },
+      "text": {
+        "format": 1,
+        "content": "<div class=\"pj-provenance\"><p><i class=\"fa-solid fa-book-bookmark\"></i> Found in <strong>The Old Gate</strong> · Oct 11, 2026 · @UUID[JournalEntry.readable00000002.JournalEntryPage.page000000000001]{the original}</p></div><hr class=\"pj-rule\"><p>Speak, friend.</p>"
+      }
+    }
+  ],
+  "toasts": [
+    [
+      "info",
+      "Added to your journal — Gate Inscription"
+    ]
+  ]
+}

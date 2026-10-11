@@ -1,0 +1,15 @@
+{
+  "opts": {
+    "scenes": "all",
+    "unseenWithinFt": 60,
+    "chars": 400,
+    "party": null
+  },
+  "counts": {
+    "scenes": 0,
+    "prompts": 0,
+    "built": 0,
+    "encounters": 0,
+    "alone": 0
+  }
+}

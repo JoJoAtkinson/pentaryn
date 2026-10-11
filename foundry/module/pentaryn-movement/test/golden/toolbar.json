@@ -1,0 +1,138 @@
+{
+  "playerReady": {
+    "pentarynGhost": {
+      "name": "pentarynGhost",
+      "order": 4.5,
+      "title": "PENTARYN_MOVEMENT.tool.ready",
+      "icon": "fa-solid fa-ghost",
+      "toggle": true,
+      "active": false,
+      "toolclip": {
+        "heading": "PENTARYN_MOVEMENT.tool.ready",
+        "items": [
+          {
+            "paragraph": "PENTARYN_MOVEMENT.tool.clip.what",
+            "built": true
+          },
+          {
+            "paragraph": "PENTARYN_MOVEMENT.tool.clip.ready",
+            "built": true
+          },
+          {
+            "paragraph": "PENTARYN_MOVEMENT.tool.clip.vision",
+            "built": true
+          }
+        ]
+      }
+    }
+  },
+  "playerOn": {
+    "pentarynGhost": {
+      "name": "pentarynGhost",
+      "order": 4.5,
+      "title": "PENTARYN_MOVEMENT.tool.on",
+      "icon": "fa-solid fa-ghost",
+      "toggle": true,
+      "active": true,
+      "toolclip": {
+        "heading": "PENTARYN_MOVEMENT.tool.on",
+        "items": [
+          {
+            "paragraph": "PENTARYN_MOVEMENT.tool.clip.what",
+            "built": true
+          },
+          {
+            "paragraph": "PENTARYN_MOVEMENT.tool.clip.on",
+            "built": true
+          },
+          {
+            "paragraph": "PENTARYN_MOVEMENT.tool.clip.vision",
+            "built": true
+          }
+        ]
+      }
+    }
+  },
+  "playerCombat": {
+    "pentarynGhost": {
+      "name": "pentarynGhost",
+      "order": 4.5,
+      "title": "PENTARYN_MOVEMENT.tool.combat",
+      "icon": "fa-solid fa-ghost",
+      "toggle": true,
+      "active": false,
+      "toolclip": {
+        "heading": "PENTARYN_MOVEMENT.tool.combat",
+        "items": [
+          {
+            "paragraph": "PENTARYN_MOVEMENT.tool.clip.what",
+            "built": true
+          },
+          {
+            "paragraph": "PENTARYN_MOVEMENT.tool.clip.combat",
+            "built": true
+          },
+          {
+            "paragraph": "PENTARYN_MOVEMENT.tool.clip.vision",
+            "built": true
+          }
+        ]
+      }
+    }
+  },
+  "playerOff": {},
+  "gmOff": {
+    "pentarynGhostPolicy": {
+      "name": "pentarynGhostPolicy",
+      "order": 4.6,
+      "title": "PENTARYN_MOVEMENT.gm.off",
+      "icon": "fa-solid fa-road-barrier",
+      "toggle": true,
+      "active": false,
+      "toolclip": {
+        "heading": "PENTARYN_MOVEMENT.gm.off",
+        "items": [
+          {
+            "paragraph": "PENTARYN_MOVEMENT.gm.clip.what",
+            "built": true
+          },
+          {
+            "paragraph": "PENTARYN_MOVEMENT.gm.clip.modes",
+            "built": true
+          },
+          {
+            "paragraph": "PENTARYN_MOVEMENT.gm.clip.combat",
+            "built": true
+          }
+        ]
+      }
+    }
+  },
+  "gmAlways": {
+    "pentarynGhostPolicy": {
+      "name": "pentarynGhostPolicy",
+      "order": 4.6,
+      "title": "PENTARYN_MOVEMENT.gm.always",
+      "icon": "fa-solid fa-person-walking-dashed-line-arrow-right",
+      "toggle": true,
+      "active": true,
+      "toolclip": {
+        "heading": "PENTARYN_MOVEMENT.gm.always",
+        "items": [
+          {
+            "paragraph": "PENTARYN_MOVEMENT.gm.clip.what",
+            "built": true
+          },
+          {
+            "paragraph": "PENTARYN_MOVEMENT.gm.clip.modes",
+            "built": true
+          },
+          {
+            "paragraph": "PENTARYN_MOVEMENT.gm.clip.combat",
+            "built": true
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,7 +1,7 @@
 ---
 title: Migration guide — pentaryn-pings to the addon blueprint
 status: plan
-last_modified: 2026-10-10
+last_modified: 2026-10-11
 tags: [foundry, modules, blueprint, plan, migration, pings]
 ---
 
@@ -187,7 +187,7 @@ Note the scorer reports C39 "no ModuleSpec" until step 9's wiring lands; that is
   - `last()`/`recent()`/`all()` read the **persisted** setting, not the buffer: right after a ping and
     before the 250 ms flush, `recent(1)` is still empty (`// KNOWN:` read lag, -39).
   - publish into a frozen root keeps foreign keys, both load orders.
-- `GOLDEN_UPDATE=1 node test/run.mjs`, then green. **Checkpoint:** Joe approves the `lib/` + `test/`
+- `GOLDEN_UPDATE=1 node test/run.mjs`, then green. **Checkpoint:** commit the `lib/` + `test/`
   diff.
 
 ### Step 2 — pure core (absorbs **transform-creatures-36**; clears C11, C41)
@@ -359,14 +359,117 @@ Live smoke after sync: as GM, ping the canvas, wait 1 s, `game.pentaryn.pings.la
 | 9-10 wiring / restart batch | batched |
 | **Total** | **S/M, ≈ 1 day** plus one checkpoint, one adjustments-batch item, one restart item |
 
+## Step 1 record (2026-10-11, wave 1)
+
+- Step 0: not on WAIT; `git diff ee505c2 -- foundry/module/pentaryn-pings` empty; live score before
+  65.9 % (27/41, scored as full: no lock yet).
+- Kit commit **8c0c461** (`vendor.py sync pings --tier small --kit settings,api,patch,election`, fixed
+  `test/run.mjs`, `LEGACY = []`); checkpoint **d85e653** — `test/` only; `pings.mjs` untouched.
+  Score after: **75.0 % (30/40) as small**; still failing C07, C11, C21, C22, C32, C39 (the ModuleSpec
+  has no `node-test`, step 9), C40 (i18n.test, step 10), C41, C44, C45 — each cleared by the step named in §1.
+- Suite: `node test/run.mjs` — 38 tests in 7 files (core 12, glue 18, glue-player 2, glue-root 2,
+  glue-nopatch 1, glue-layers 1, glue-layers-config 1): 37 pass, 1 todo (the -39 target, below).
+  Coverage of `pings.mjs` (line / branch / funcs): **0 / 0 / 0 before** (no tests) →
+  **100 / 98.57 / 100 after**, measured with
+  `node --test --experimental-test-coverage --test-coverage-exclude='test/**' --test-coverage-exclude='lib/**' --test-skip-pattern='second module instance' "test/**/*.test.mjs"`.
+  The one open branch (`:170`, the `__pentarynPatched` early return) is covered by the skipped
+  re-import test; with it included the tool reports 47.7 / 33.3 / 18.8, because the
+  `pings.mjs?second-instance` import counts as a second copy of the file whose functions mostly never run.
+  A mutation pass over 18 hand mutants of `pings.mjs` left one survivor, and it is equivalent:
+  `snapped` computed from the image offset gives the same value, because the offset is always a whole
+  number of grid squares.
+- Goldens: `hooks.json` ([once init, once ready]), `legacy-surface.json` (asserted as a subset),
+  `record.json` (the live golden's `lastAfter` and leading key list, reproduced on the stub).
+- Deviations from the plan text:
+  - core.test runs every table over `test/fixtures/impls.mjs`, which adapts the verbatim oracle to the
+    step-2 core signatures (`isDuplicate(last, rec, now, windowMs)`, `capLimit`, `appendCapped`,
+    `imageOffset({width, height, padding, gridSize})`, `decorate(rec, {offset, gridSize}, now)`,
+    `recentOf`). Step 2 appends `["core", core]` there; the frozen test text never changes.
+  - SF3 replaces the plan's fixed row "`recent(1)` is still empty before the flush". The read lag
+    depends on state, so it is pinned twice: no lag before the first flush (the buffer *is* the cached
+    setting array) and lag after one (the flush stores a copy). `fixtures/world.mjs` wraps
+    `settings.set` to store a structured copy and always seeds the log. Because the no-lag case
+    depends on it, core.test also pins that `appendCapped` pushes in place under the cap and returns
+    a fresh slice when it trims. Step 2 must keep that.
+  - To keep the -39 flip to one named pin, every decorate assertion except one checks the leading
+    12 keys only. The exception is "pin transform-creatures-39: decorate has no numeric age"
+    (core.test). Step 6 deletes that pin and drops the `todo` flag from the "transform-creatures-39
+    target" test beside it.
+  - Extra glue processes beyond the plan: ControlsLayer lookup order (foundry → globalThis → CONFIG),
+    no-handlePing warn, GM gate inside `record` and the flush, a non-array stored log, a cap
+    ceiling of 900 → 500, and padding that rounds up (a 2100×1100 scene with no grid field).
+- Quirks pinned as-is (transform-creatures-36): `recent(0)` returns everything, `recent(-1)` drops the
+  oldest record, `snapped` uses square-grid maths on a hex scene, and a fractional `max` below 1 never
+  trims. Pinned as KNOWN (transform-creatures-39): read lag after a flush, and no namespace on player
+  clients. A ping is recorded even when core will not draw it (SF4).
+- Constraints the frozen glue tests put on steps 3-5: `settings.register` options must stay
+  byte-for-byte (no extra keys from `defineSettings`), the player client must have no listeners left
+  after ready, and the re-import test relies on the marker early return staying at the call site
+  (step 4).
+
+## Refactor record (2026-10-11, wave 1)
+
+Rebuilt in place on `migrate/wave-1`, same folder, same module id, under the shipped `module.json`
+(untouched). The template was generated into scratch (`new_module.py pings --tier small --kit
+settings,api,patch,election --css-prefix ppg- --no-dnd5e`) and its README, CHANGELOG and
+`test/graph-allow.json` adopted; `lib/` was already vendored (8c0c461). No `styles/` (no CSS).
+
+| Commit | Step | Findings absorbed | Clears |
+|---|---|---|---|
+| 0a01ef7 | 2 — `pings-core.mjs` (six rules + constants); `fixtures/impls.mjs` gains `["core", core]`; `core-meta.test` (bare import, `VERSION` pin, seeded 2000-case sweep vs the oracle) | **transform-creatures-36** | C11, C41 |
+| 16550cf | 3 — `settings.mjs` (`SETTINGS`, `registerSettings`, `readLog`, `writeLog`, `maxSetting`, `settingsView`) | -35 (settings half) | C21, C22 |
+| ac75dd8 | 4 — `capture.mjs`; `handlePing` through `wrapMethod` (`adjustments: "pings-core-ping-handle"`); `test/patch.test` pins the kit record | -35 (patch half) | C32 once the rows land |
+| 284dcce | 5 **[declared]** P-D1, P-D2 — feature `install/uninstall/start`, kit entry, `api-manifest.mjs`, `buildApi` + `publishNamespace(…, {when: "ready:gm"})`; `test/publish.test` + `golden/surface.json` | -35 (entry/API), -39 (GM-only publish kept and stated) | C18, C10 |
+| f9a94bf | 6 **[declared]** P-D3 — `ageMs` after `age`; the named pin flipped | **transform-creatures-39** | — |
+| 2b4061b | 8 — README (§7 order), CHANGELOG | -35 (README), the README half of -39 | C44, C45 |
+
+Suite after: `node test/run.mjs` — **59 tests, 59 pass, 0 todo** (10 files). Frozen
+characterisation tests and goldens unchanged except the one sanctioned flip in step 6
+(`git diff d85e653 -- test/golden test/glue*.test.mjs` shows only the new `golden/surface.json`;
+`core.test.mjs` differs only by the two `if (label …)` guards). Coverage (same command as step 1): `pings-core.mjs` 100 / 95.7 /
+100, `capture.mjs` 100 / 95.2 / 100, `settings.mjs` and `api-manifest.mjs` 100; `pings.mjs` reads
+82 / 75 / 38 only because `publish.test` loads a second copy (`?v=2`), the step-1 artefact.
+
+Score: **88.4 % (38/43) as small** (75.0 % at the checkpoint). Still failing, each waiting on a
+shared-file owner: C07, C51 (Wave 7 batch: `flags.pentaryn`, `lang/en.json` + `languages`), C32
+(adjustments rows `pings-core-ping-handle`, `core-pings-user-activity-socket`), C39 (ModuleSpec
+`node-test`, step 9), C40 (`test/i18n.test.mjs`, step 10 — it would assert lang keys that do not
+exist yet). Warnings C02, C36 clear in the Wave 7 batch.
+
+Departures from the plan text:
+
+- **Step 3 — the `log` row is `store: true` now** and registered by hand with today's exact option
+  object. `defineSettings` would add `hint: undefined` to a non-store row (the frozen pin lists the
+  keys) and drop `name` from a store row; `max` goes through `defineSettings` byte-identically.
+  Step 10 drops the `log` name and registers both rows through `defineSettings`.
+- **Step 5 — `when: "ready:gm"`**, not the default: R5 C50 accepts a role-gated `ready:<role>` in
+  the sync ready body (P2 resolved).
+- **Step 5 — hot re-import.** The entry follows the template: a re-import after ready runs init and
+  ready at once. Because a re-import shares `capture.mjs`, `start()` adds the `userActivity`
+  listener only once and the `__pentarynPatched` early return stays at the call site. Declared in
+  P-D2.
+- **Step 5 — `uninstall()` uses the kit's `unwrapAll()`, not the wrap handle.** The handle's
+  `unwrap()` restores the method but leaves the kit's patch record, so a later `wrapMethod` with
+  the same marker returns the stale handle and does **not** re-wrap (a hot re-import after
+  `uninstall()` would lose local pings). `unwrapAll()` clears this module's records (each module's
+  `lib/` is its own copy, and pings has one patch). Kit follow-up for the kit owner: make
+  `handle.unwrap()` drop its record.
+- **Step 6 — the flip.** The oracle stays in `IMPLS`, so "decorate has no numeric age" now runs for
+  the oracle only and the target runs for core only (no todo).
+- **SF3 seen again:** an unflushed ping before the first flush is already in the cached setting array
+  (never written), so after `uninstall()` + re-import it reappears in the store — pinned in
+  `publish.test`, consistent with the step-1 read-lag pins.
+- Order nuance (unobservable): `capLimit(maxSetting())` is read just before the push instead of just
+  after; `max` is registered at init, before either capture path exists.
+
 ## Result (fill when done)
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module pings --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | **95.5 %** (42 / 44 fail-class rules, small tier) — `conformance.py --module pings --markdown`, 2026-10-11 after the integration (62.2 % as full at wave start, 75.0 % as small at the checkpoint) |
+| Date | 2026-10-11 (deployed and live-checked the same day) |
+| Commits (Joe-approved) | characterisation: 8c0c461 (kit), d85e653 (checkpoint) · refactor: 0a01ef7, 16550cf, ac75dd8, 2b4061b, 40bca21 · declared: 284dcce (P-D1, P-D2), f9a94bf (P-D3, transform-creatures-39) · shared files: 170f003 (`module.json`), 8435447 **[declared]** (ModuleSpec node-test), 4825fae (adjustments rows `pings-core-ping-handle`, `core-pings-user-activity-socket`), 54c1ce0 · standalone: none (all three audit findings were absorbed) |
+| Declared changes handed to the live-test workflow | P-D1..P-D3 deployed 2026-10-11; boot probe and live golden pass (surface + `ageMs` only). `uninstall()` + re-import was not exercised live (J17) |
+| `module.json` edits appended to `wave7-restart-batch.md` | landed directly in 170f003 except the `languages` entry (J13) |
+| Adjustments rows appended to `adjustments-batch.md` | landed in 4825fae |
+| Still failing, and why | C40, C51: step 10 (lang file) needs one edit to a frozen `settings.register` pin, which the freeze forbids — wave-1-report J13. Tests: 59 node:test, all pass; module-code coverage 100 / 95.3 / 97.3, lcov records merged per file (93.8 / 94.7 / 71.4 unmerged; was 0) |

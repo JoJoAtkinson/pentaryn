@@ -1,0 +1,120 @@
+{
+  "fresh": {
+    "keys": [
+      "import",
+      "moduleId",
+      "contract",
+      "_internals",
+      "importer"
+    ],
+    "frozen": false,
+    "internalsFrozen": true,
+    "internals": [
+      "fetchJsonWithTimeout",
+      "lintFormulas",
+      "valuesMatch",
+      "normalise"
+    ],
+    "contract": "pentaryn/actors.json@1",
+    "moduleId": "pentaryn-importer",
+    "namespaces": [
+      "importer"
+    ]
+  },
+  "aoeBefore": {
+    "keys": [
+      "aoe",
+      "import",
+      "moduleId",
+      "contract",
+      "_internals",
+      "importer"
+    ],
+    "frozen": false,
+    "importIsFunction": true
+  },
+  "attunementAfter": {
+    "keys": [
+      "import",
+      "moduleId",
+      "contract",
+      "_internals",
+      "importer",
+      "attunement"
+    ],
+    "frozen": false,
+    "importIsFunction": true
+  },
+  "attunementBefore": {
+    "keys": [
+      "attunement",
+      "import",
+      "moduleId",
+      "contract",
+      "_internals",
+      "importer"
+    ],
+    "frozen": false,
+    "importIsFunction": true
+  },
+  "kitAfter": {
+    "atReady": {
+      "keys": [
+        "import",
+        "moduleId",
+        "contract",
+        "_internals",
+        "importer",
+        "zz"
+      ],
+      "frozen": false,
+      "importIsFunction": true
+    },
+    "afterTick": {
+      "keys": [
+        "import",
+        "moduleId",
+        "contract",
+        "_internals",
+        "importer",
+        "zz"
+      ],
+      "frozen": false,
+      "importIsFunction": true
+    },
+    "namespaces": [
+      "importer",
+      "zz"
+    ]
+  },
+  "kitBefore": {
+    "atReady": {
+      "keys": [
+        "zz",
+        "import",
+        "moduleId",
+        "contract",
+        "_internals",
+        "importer"
+      ],
+      "frozen": false,
+      "importIsFunction": true
+    },
+    "afterTick": {
+      "keys": [
+        "zz",
+        "import",
+        "moduleId",
+        "contract",
+        "_internals",
+        "importer"
+      ],
+      "frozen": false,
+      "importIsFunction": true
+    },
+    "namespaces": [
+      "zz",
+      "importer"
+    ]
+  }
+}

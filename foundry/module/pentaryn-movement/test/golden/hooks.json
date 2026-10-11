@@ -1,0 +1,66 @@
+[
+  {
+    "kind": "once",
+    "name": "init"
+  },
+  {
+    "kind": "once",
+    "name": "setup"
+  },
+  {
+    "kind": "on",
+    "name": "getSceneControlButtons"
+  },
+  {
+    "kind": "on",
+    "name": "renderSceneControls"
+  },
+  {
+    "kind": "on",
+    "name": "drawTokenLayer"
+  },
+  {
+    "kind": "on",
+    "name": "canvasReady"
+  },
+  {
+    "kind": "on",
+    "name": "refreshToken"
+  },
+  {
+    "kind": "on",
+    "name": "updateActor"
+  },
+  {
+    "kind": "on",
+    "name": "updateToken"
+  },
+  {
+    "kind": "on",
+    "name": "createCombat"
+  },
+  {
+    "kind": "on",
+    "name": "updateCombat"
+  },
+  {
+    "kind": "on",
+    "name": "deleteCombat"
+  },
+  {
+    "kind": "on",
+    "name": "createCombatant"
+  },
+  {
+    "kind": "on",
+    "name": "updateCombatant"
+  },
+  {
+    "kind": "on",
+    "name": "deleteCombatant"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  }
+]

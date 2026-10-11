@@ -1,0 +1,32 @@
+{
+  "n": 1,
+  "t": 1791720000000,
+  "iso": "2026-10-11T12:00:00.000Z",
+  "reason": "drop",
+  "userId": "gmUser0000000001",
+  "userName": "Gamemaster",
+  "fromActorId": "actorAnn00000001",
+  "fromActorName": "Ann",
+  "fromActorUuid": "Actor.actorAnn00000001",
+  "itemName": "Sword",
+  "itemType": "weapon",
+  "quantity": 2,
+  "sceneId": "sceneOne00000001",
+  "sceneName": "Crypt",
+  "x": 1,
+  "y": 2,
+  "pileUuid": "Actor.actorChest000001",
+  "item": {
+    "documentName": "Item",
+    "id": "itemSword0000001",
+    "name": "Sword",
+    "system": {
+      "quantity": 1
+    },
+    "flags": {},
+    "ownership": {
+      "default": 0
+    },
+    "type": "weapon"
+  }
+}

@@ -1,0 +1,385 @@
+{
+  "ready": [
+    [
+      "log",
+      "pentaryn-importer | ready — game.pentaryn.import() available (pentaryn/actors.json@1)"
+    ]
+  ],
+  "dryRunEmpty": [
+    [
+      "log",
+      "pentaryn-importer | fetching /worlds/w/actors.json (cache: no-cache, timeout 15000 ms)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | version gate passed — contract pentaryn/actors.json@1, dnd5e 6.0.6, Foundry generation 14"
+    ],
+    [
+      "log",
+      "pentaryn-importer | @ref lint clean across 0 actor(s)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | manifest ok — generator build_actors.py@1.0.0, built 2026-10-10T00:00:00Z from abc1234, 0 actor(s), 0 skipped row(s)"
+    ],
+    [
+      "group",
+      "pentaryn-importer | DRY RUN — 0 created · 0 updated · 0 skipped · 0 failed"
+    ],
+    [
+      "log",
+      "pentaryn-importer | source        /worlds/w/actors.json"
+    ],
+    [
+      "log",
+      "pentaryn-importer | generator     build_actors.py@1.0.0"
+    ],
+    [
+      "log",
+      "pentaryn-importer | built         2026-10-10T00:00:00Z  (abc1234)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | actors        0 selected of 0 in file"
+    ],
+    [
+      "log",
+      "pentaryn-importer | assertions    0 checked, all passed"
+    ],
+    [
+      "groupEnd"
+    ]
+  ],
+  "runEmpty": [
+    [
+      "log",
+      "pentaryn-importer | fetching /worlds/w/actors.json (cache: no-cache, timeout 15000 ms)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | version gate passed — contract pentaryn/actors.json@1, dnd5e 6.0.6, Foundry generation 14"
+    ],
+    [
+      "log",
+      "pentaryn-importer | @ref lint clean across 0 actor(s)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | manifest ok — generator build_actors.py@1.0.0, built 2026-10-10T00:00:00Z from abc1234, 0 actor(s), 0 skipped row(s)"
+    ],
+    [
+      "group",
+      "pentaryn-importer | import — 0 created · 0 updated · 0 skipped · 0 failed"
+    ],
+    [
+      "log",
+      "pentaryn-importer | source        /worlds/w/actors.json"
+    ],
+    [
+      "log",
+      "pentaryn-importer | generator     build_actors.py@1.0.0"
+    ],
+    [
+      "log",
+      "pentaryn-importer | built         2026-10-10T00:00:00Z  (abc1234)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | actors        0 selected of 0 in file"
+    ],
+    [
+      "log",
+      "pentaryn-importer | assertions    0 checked, all passed"
+    ],
+    [
+      "groupEnd"
+    ],
+    [
+      "warn",
+      "pentaryn-importer | DELETE THIS NOW: Data/worlds/w/actors.json is public while the tunnel is up."
+    ]
+  ],
+  "dryRunActors": {
+    "plain": [
+      [
+        "log",
+        "pentaryn-importer | fetching /worlds/w/actors.json (cache: no-cache, timeout 15000 ms)"
+      ],
+      [
+        "log",
+        "pentaryn-importer | version gate passed — contract pentaryn/actors.json@1, dnd5e 6.0.6, Foundry generation 14"
+      ],
+      [
+        "log",
+        "pentaryn-importer | @ref lint clean across 4 actor(s)"
+      ],
+      [
+        "log",
+        "pentaryn-importer | manifest ok — generator build_actors.py@1.0.0, built 2026-10-10T00:00:00Z from abc1234, 4 actor(s), 1 skipped row(s)"
+      ],
+      [
+        "log",
+        "pentaryn-importer | dry-run would update a (1 item(s))"
+      ],
+      [
+        "log",
+        "pentaryn-importer | dry-run would create b (0 item(s))"
+      ],
+      [
+        "log",
+        "pentaryn-importer | skip   c — contentHash unchanged (sha256:c-same…)"
+      ],
+      [
+        "log",
+        "pentaryn-importer | dry-run would create d (0 item(s))"
+      ],
+      [
+        "group",
+        "pentaryn-importer | DRY RUN — 2 created · 1 updated · 1 skipped · 0 failed"
+      ],
+      [
+        "log",
+        "pentaryn-importer | source        /worlds/w/actors.json"
+      ],
+      [
+        "log",
+        "pentaryn-importer | generator     build_actors.py@1.0.0"
+      ],
+      [
+        "log",
+        "pentaryn-importer | built         2026-10-10T00:00:00Z  (abc1234)"
+      ],
+      [
+        "log",
+        "pentaryn-importer | actors        4 selected of 4 in file"
+      ],
+      [
+        "log",
+        "pentaryn-importer | assertions    0 checked, all passed"
+      ],
+      [
+        "log",
+        "pentaryn-importer | created      ",
+        "b, d"
+      ],
+      [
+        "log",
+        "pentaryn-importer | updated      ",
+        "a"
+      ],
+      [
+        "log",
+        "pentaryn-importer | skipped      ",
+        "c",
+        "(contentHash unchanged)"
+      ],
+      [
+        "groupEnd"
+      ]
+    ],
+    "only": [
+      [
+        "log",
+        "pentaryn-importer | fetching /worlds/w/actors.json (cache: no-cache, timeout 15000 ms)"
+      ],
+      [
+        "log",
+        "pentaryn-importer | version gate passed — contract pentaryn/actors.json@1, dnd5e 6.0.6, Foundry generation 14"
+      ],
+      [
+        "log",
+        "pentaryn-importer | @ref lint clean across 4 actor(s)"
+      ],
+      [
+        "log",
+        "pentaryn-importer | manifest ok — generator build_actors.py@1.0.0, built 2026-10-10T00:00:00Z from abc1234, 4 actor(s), 1 skipped row(s)"
+      ],
+      [
+        "log",
+        "pentaryn-importer | dry-run would create b (0 item(s))"
+      ],
+      [
+        "log",
+        "pentaryn-importer | skip   c — contentHash unchanged (sha256:c-same…)"
+      ],
+      [
+        "group",
+        "pentaryn-importer | DRY RUN — 1 created · 0 updated · 1 skipped · 0 failed"
+      ],
+      [
+        "log",
+        "pentaryn-importer | source        /worlds/w/actors.json"
+      ],
+      [
+        "log",
+        "pentaryn-importer | generator     build_actors.py@1.0.0"
+      ],
+      [
+        "log",
+        "pentaryn-importer | built         2026-10-10T00:00:00Z  (abc1234)"
+      ],
+      [
+        "log",
+        "pentaryn-importer | actors        2 selected of 4 in file"
+      ],
+      [
+        "log",
+        "pentaryn-importer | assertions    0 checked, all passed"
+      ],
+      [
+        "log",
+        "pentaryn-importer | created      ",
+        "b"
+      ],
+      [
+        "log",
+        "pentaryn-importer | skipped      ",
+        "c",
+        "(contentHash unchanged)"
+      ],
+      [
+        "groupEnd"
+      ]
+    ],
+    "force": [
+      [
+        "log",
+        "pentaryn-importer | fetching /worlds/w/actors.json (cache: no-cache, timeout 15000 ms)"
+      ],
+      [
+        "log",
+        "pentaryn-importer | version gate passed — contract pentaryn/actors.json@1, dnd5e 6.0.6, Foundry generation 14"
+      ],
+      [
+        "log",
+        "pentaryn-importer | @ref lint clean across 4 actor(s)"
+      ],
+      [
+        "log",
+        "pentaryn-importer | manifest ok — generator build_actors.py@1.0.0, built 2026-10-10T00:00:00Z from abc1234, 4 actor(s), 1 skipped row(s)"
+      ],
+      [
+        "log",
+        "pentaryn-importer | dry-run would update a (1 item(s))"
+      ],
+      [
+        "log",
+        "pentaryn-importer | dry-run would create b (0 item(s))"
+      ],
+      [
+        "log",
+        "pentaryn-importer | dry-run would update c (0 item(s))"
+      ],
+      [
+        "log",
+        "pentaryn-importer | dry-run would create d (0 item(s))"
+      ],
+      [
+        "group",
+        "pentaryn-importer | DRY RUN — 2 created · 2 updated · 0 skipped · 0 failed"
+      ],
+      [
+        "log",
+        "pentaryn-importer | source        /worlds/w/actors.json"
+      ],
+      [
+        "log",
+        "pentaryn-importer | generator     build_actors.py@1.0.0"
+      ],
+      [
+        "log",
+        "pentaryn-importer | built         2026-10-10T00:00:00Z  (abc1234)"
+      ],
+      [
+        "log",
+        "pentaryn-importer | actors        4 selected of 4 in file"
+      ],
+      [
+        "log",
+        "pentaryn-importer | assertions    0 checked, all passed"
+      ],
+      [
+        "log",
+        "pentaryn-importer | created      ",
+        "b, d"
+      ],
+      [
+        "log",
+        "pentaryn-importer | updated      ",
+        "a, c"
+      ],
+      [
+        "groupEnd"
+      ]
+    ]
+  },
+  "customPath": [
+    [
+      "log",
+      "pentaryn-importer | fetching /worlds/other/export.json (cache: no-cache, timeout 50 ms)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | version gate passed — contract pentaryn/actors.json@1, dnd5e 6.0.6, Foundry generation 14"
+    ],
+    [
+      "log",
+      "pentaryn-importer | @ref lint clean across 0 actor(s)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | manifest ok — generator build_actors.py@1.0.0, built 2026-10-10T00:00:00Z from abc1234, 0 actor(s), 0 skipped row(s)"
+    ],
+    [
+      "group",
+      "pentaryn-importer | DRY RUN — 0 created · 0 updated · 0 skipped · 0 failed"
+    ],
+    [
+      "log",
+      "pentaryn-importer | source        /worlds/other/export.json"
+    ],
+    [
+      "log",
+      "pentaryn-importer | generator     build_actors.py@1.0.0"
+    ],
+    [
+      "log",
+      "pentaryn-importer | built         2026-10-10T00:00:00Z  (abc1234)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | actors        0 selected of 0 in file"
+    ],
+    [
+      "log",
+      "pentaryn-importer | assertions    0 checked, all passed"
+    ],
+    [
+      "groupEnd"
+    ]
+  ],
+  "gateMinor": [
+    [
+      "log",
+      "pentaryn-importer | fetching /worlds/w/actors.json (cache: no-cache, timeout 15000 ms)"
+    ],
+    [
+      "error",
+      "pentaryn-importer | VERSION GATE FAILED — nothing was imported.\n  • targetSystemVersion is \"5.3\" but the installed dnd5e is 6.0.6 (major.minor 6.0). dnd5e minor releases move the activity schema; refusing.\n  • targetSystemVersion is \"5.3\" but module.json expects \"6.0\"."
+    ]
+  ],
+  "lint": [
+    [
+      "log",
+      "pentaryn-importer | fetching /worlds/w/actors.json (cache: no-cache, timeout 15000 ms)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | version gate passed — contract pentaryn/actors.json@1, dnd5e 6.0.6, Foundry generation 14"
+    ],
+    [
+      "error",
+      "pentaryn-importer | @ref LINT FAILED — 1 formula field(s) contain something other than digits, dice and arithmetic. dnd5e would accept these at validation and roll them as ZERO. Nothing was imported.\n  • a → system.attributes.hp.formula = \"@x\""
+    ]
+  ]
+}

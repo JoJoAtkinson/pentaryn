@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "once",
+    "name": "init"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  },
+  {
+    "kind": "on",
+    "name": "renderBaseActorSheet"
+  },
+  {
+    "kind": "on",
+    "name": "preUpdateItem"
+  },
+  {
+    "kind": "on",
+    "name": "preCreateItem"
+  },
+  {
+    "kind": "on",
+    "name": "createItem"
+  }
+]

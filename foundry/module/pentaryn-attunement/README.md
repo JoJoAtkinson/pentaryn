@@ -104,8 +104,8 @@ rod, wand, trinket and wondrous item in the world. It was never saying you can't
 it; it was reporting that you lack the proficiency named `undefined`.
 
 At `init` this adds `wondrous`, `ring`, `rod`, `wand` and `trinket` to that map as
-`true` ("everyone is proficient"), using `??=` so a future dnd5e definition wins and
-this becomes a no-op.
+`true` ("everyone is proficient"), only where the entry is unset (`== null`), so a future
+dnd5e definition wins and this becomes a no-op.
 
 **`vehicle` is deliberately left out** — vehicle proficiency is a real concept in some
 settings and quietly granting it to everyone is a trap.
@@ -147,11 +147,13 @@ neither column of any UI that filters prepared data.
 node test/run.mjs        # or: make foundry-attunement-sync, which runs them first
 ```
 
-31 fixtures. Most cover `computeSlots` — stale flags, deleted items, duplicate ids,
+The legacy fixtures (`test/legacy-slots.mjs`) mostly cover `computeSlots` — stale flags, deleted items, duplicate ids,
 corrupt flag types, over-cap, non-default `max`; it runs inside a render hook, so it
 must never throw, and the suite covers malformed actors for that reason. The rest pin
 the proficiency-map correction: that armour categories stay untouched, that `vehicle`
 is never claimed, and that an existing dnd5e definition always wins.
+The `node:test` files (`test/*.test.mjs`) pin the rest: the pure decisions against verbatim
+oracles, the item hooks, `stash`/`report`, the tooltip guard and the hook manifest.
 
 ## dnd5e 6
 

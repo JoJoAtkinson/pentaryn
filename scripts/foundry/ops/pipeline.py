@@ -14,6 +14,7 @@ import subprocess
 import sys
 
 from . import config as cfg
+from .modules import install
 from .service import _http_code, _say
 
 OK, FAIL = 0, 1
@@ -48,9 +49,7 @@ def stage() -> int:
         return rc
     _say(f"▸ target world: {cfg.WORLD_NAME}")
 
-    cfg.FOUNDRY_MODULES.mkdir(parents=True, exist_ok=True)
-    shutil.rmtree(spec.dst, ignore_errors=True)
-    shutil.copytree(spec.src, spec.dst)
+    install(spec.src, spec.dst, cmd="stage")   # the same atomic install + stamp as module-sync (-53)
     _say(f"✓ module → {spec.dst}")
 
     shutil.copy2(cfg.ACTORS_JSON, cfg.ACTORS_STAGED)

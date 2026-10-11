@@ -134,6 +134,13 @@ _VALID_TRIGGER_SCOPES = {"self", "global"}
 _VALID_WATCH_SCOPES = {"self", "ally", "any"}
 _VALID_SLOT_REFRESH = {"long_rest", "short_rest", "encounter", "round", "turn"}
 
+# The validator's vocabulary, public so scripts/foundry/build_actors.py (the consumer of
+# actions.jsonl) can be compared against it: scripts/tests/test_actions_contract.py
+# (python-tooling-45). Read-only views of the sets above.
+ACTION_TYPES = frozenset(_VALID_TYPES)
+SLOT_REFRESH = frozenset(_VALID_SLOT_REFRESH)
+DICE_RE = _DICE_SPEC_RE
+
 
 def _validate_apply_condition_on_hit(cfg: Any) -> list[str]:
     """Structured rider: `apply_condition_on_hit: {condition, save_dc, save_ability,

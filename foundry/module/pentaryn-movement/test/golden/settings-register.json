@@ -1,0 +1,50 @@
+[
+  {
+    "key": "ghostPolicy",
+    "scope": "world",
+    "config": true,
+    "type": "String",
+    "default": "exploration",
+    "choices": {
+      "off": "PENTARYN_MOVEMENT.settings.policy.off",
+      "exploration": "PENTARYN_MOVEMENT.settings.policy.exploration",
+      "always": "PENTARYN_MOVEMENT.settings.policy.always"
+    },
+    "name": "PENTARYN_MOVEMENT.settings.policy.name",
+    "hint": "PENTARYN_MOVEMENT.settings.policy.hint",
+    "onChange": true
+  },
+  {
+    "key": "ghostPolicyLast",
+    "scope": "world",
+    "config": false,
+    "type": "String",
+    "default": "exploration",
+    "choices": null,
+    "name": null,
+    "hint": null,
+    "onChange": false
+  },
+  {
+    "key": "ghost",
+    "scope": "client",
+    "config": false,
+    "type": "Boolean",
+    "default": false,
+    "choices": null,
+    "name": null,
+    "hint": null,
+    "onChange": true
+  },
+  {
+    "key": "ownedOnTop",
+    "scope": "client",
+    "config": true,
+    "type": "Boolean",
+    "default": true,
+    "choices": null,
+    "name": "PENTARYN_MOVEMENT.settings.ownedOnTop.name",
+    "hint": "PENTARYN_MOVEMENT.settings.ownedOnTop.hint",
+    "onChange": true
+  }
+]

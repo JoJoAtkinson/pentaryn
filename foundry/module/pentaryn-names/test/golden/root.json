@@ -1,0 +1,50 @@
+{
+  "root-frozen-before-load": {
+    "keys": [
+      "import",
+      "names"
+    ],
+    "frozen": false,
+    "extensible": true,
+    "sameRoot": false,
+    "importKept": true,
+    "namesHasLegacy": true,
+    "otherKept": null
+  },
+  "root-frozen-after-load": {
+    "keys": [
+      "import",
+      "names"
+    ],
+    "frozen": false,
+    "extensible": true,
+    "sameRoot": false,
+    "importKept": true,
+    "namesHasLegacy": true,
+    "otherKept": null
+  },
+  "root-frozen-by-earlier-ready": {
+    "keys": [
+      "import",
+      "names"
+    ],
+    "frozen": false,
+    "extensible": true,
+    "sameRoot": false,
+    "importKept": true,
+    "namesHasLegacy": true,
+    "otherKept": null
+  },
+  "root-extensible": {
+    "keys": [
+      "lookupStub",
+      "names"
+    ],
+    "frozen": false,
+    "extensible": true,
+    "sameRoot": true,
+    "importKept": false,
+    "namesHasLegacy": true,
+    "otherKept": true
+  }
+}

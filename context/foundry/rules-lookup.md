@@ -75,7 +75,7 @@ and `page()` returns nothing useful for them; the lists live in dnd5e's registry
 `{type: "subclass"}` for a subclass list.
 
 One line instead of twenty, and the five silent traps below are handled in one tested
-file (41 fixtures, `node test/run.mjs`). See
+file (`node test/run.mjs`). See
 [`../../foundry/module/pentaryn-lookup/README.md`](../../foundry/module/pentaryn-lookup/README.md).
 Defaults: PHB + DMG + 2024 SRD; Monster Manual text and 2014 SRD are opt-in via
 `{books: "monsters" | "all" | "2014"}`, and 2014 hits are stamped `edition: "2014"`.

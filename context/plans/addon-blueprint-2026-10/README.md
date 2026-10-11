@@ -125,6 +125,12 @@ splits); the blueprint migrates *one module at a time*. They merge like this:
    -53), -10 (sync stamp), -33 (`out.py`), -9. python-tooling-4/-35 (scaffold + modules playbook)
    are **already met** by `scripts/foundry/blueprint/new_module.py`, `foundry/blueprint/template/`
    and `context/foundry/addon-blueprint.md`; close them by pointer, do not build a second scaffold.
+
+**Landed 2026-10-11 on `migrate/wave-1` (offline; the importer's declared changes wait for the
+live-test workflow):** the importer guide steps 2–8 plus `items-journal-4` and `-7`
+([guide Result](migrate-pentaryn-importer.md#result-fill-when-done), 97.6 %, only C07 left for
+Wave 7); python-tooling-33 `60bde34`, -5 step a `8c287ad` (+ `71a4414`), -53 `70588b1`, -10
+`b902e30`, -9 `e7b5b17`.
 3. The kit itself (`foundry/lib/`) already exists as new files; Wave 1's "create `foundry/lib/`"
    is done. What remains is wiring it into the gates (§7).
 
@@ -205,7 +211,8 @@ Batch declared changes per stage so the live-test workflow runs few sessions:
 ## 4. Per-wave procedure for an implementing workflow
 
 One module per run. The guide's numbered steps are the unit of work; this is the wrapper around
-each of them. Agents never commit, push, stash or check out; Joe approves every commit.
+each of them. Agents commit often (small, one logical step per commit, on the wave branch); Joe never commits, and review happens at merge. Agents do not push, stash or switch branches unless their task says so.
+Rollback = `git revert` of the module's commits, a last resort (fix forward by default), then sync.
 
 0. **Pre-flight.**
    - Module not in `scripts/foundry/blueprint/wait.json` (or Joe has just lifted it).
@@ -221,7 +228,7 @@ each of them. Agents never commit, push, stash or check out; Joe approves every 
      `behaviourTest` plus hostile inputs; mark known-wrong rows `// KNOWN:`; pin effects (hooks,
      calls, console text, `surfaceOf`), not just returns.
    - `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs` per file; then `node test/run.mjs` green.
-   - Stop. Joe reviews the diff (`test/` only) and commits it.
+   - Commit the diff (`test/` only) as the checkpoint; it is then frozen.
 2. **Refactor**, one guide step at a time, exactly as written. A step never edits `test/golden/`
    or a characterisation test. Declared changes are separate steps with their own test change,
    flagged in the commit message.
@@ -254,7 +261,7 @@ gap-fill pass (2026-10-10).
 | Id | Change | File | Needed by | Status |
 |---|---|---|---|---|
 | K1 | `wrapMethod` getter route (`kind: "getter"`) — `Token#isVisible` is a getter | `patch.mjs` | creatures step 5 | **landed** kit 1.0.1, `patch.test` |
-| K2 | `buildApi` refuses reserved names at the **top level only** (D1 option A) | `api.mjs:31-37` | ties S8 | blocked: **D1** (with R4's `RESERVED_ANY_DEPTH` flip) |
+| K2 | `buildApi` refuses reserved names at the **top level only** (D1 option A) | `api.mjs:32-38` | ties S8 | D1 decided (rename + aliases); top-level `describe` stays reserved until ties' B1 — open |
 | K3 | `guarded(fn, { sender: "any" })` and pass core's `{user}` ctx as 2nd arg | `queries.mjs` | riders S6 | **landed** kit 1.0.1, `queries.test` |
 | K4 | `relayed(fn, { activeGM: true })` player-relay helper; manifest row `relay: true` | `queries.mjs` | journal C30 | **landed** kit 1.0.1 (C30 accepts `relayed(`) |
 | K5 | `buildApi` freezes a **copy**, never the module's own tables or an ES module namespace (which throws) | `api.mjs` | ties (G7), journal, creatures, combat, riders | **landed** kit 1.0.1, `api.test` |
@@ -263,13 +270,13 @@ gap-fill pass (2026-10-10).
 | K8 | manifest row `queryName` (query name ≠ row path) | `api.mjs` / `queries.mjs` | prompts `replace` | **landed** kit 1.0.1; prompts drops its hand-registered exception |
 | K9 | blueprint gaps G1/G3/G4/G5: a role for Foundry-aware non-UI logic, hidden client settings vs C51, a shared non-feature log instance, per-row world-actor default in `resolveRef` | use-doc + kit | ties | open (design work with ties) |
 | K10 | template `hooks.test` "only lifecycle hooks at module scope" needs a migration mode; features may share state via `ctx` (aoe tray/resolve); adapter→adapter import exception (prompts) | template, use-doc | aoe, prompts, dropbin | `ctx` line **landed** (use-doc §4.1); migration mode and adapter exception open |
-| R1 | C32 contradicts use-doc §5.6 (module-prefixed rows that are not patches fail) | `conformance.py` or use-doc §5.6 | senses, aoe, portals, cursors | blocked: **D2** (use-doc §5.6 says "package prefix for non-patch rows now") |
+| R1 | C32 contradicts use-doc §5.6 (module-prefixed rows that are not patches fail) | `conformance.py` or use-doc §5.6 | senses, aoe, portals, cursors | **landed** with D2 (`df661e0`): C32 fails an unwrapped `<short>-` row and a `wrapMethod` naming a non-`<short>-` row |
 | R2 | C26 misses `setTimeout(publish, 0)` | `conformance.py` | aoe, dropbin | **landed** |
 | R3 | C07 says "data migration" for every flagScope mismatch; only walls needs one | `conformance.py` | all | **landed** (DATA vs manifest-only) |
 | R4 | C48 checks top-level names only, the kit checks every depth | `conformance.py` | ties | **landed** (any depth; flips with K2) |
 | R5 | C50 cannot record a GM-only publish inside `ready` | `conformance.py` | pings | **landed** (`ready:<role>` behind a role gate) |
 | R6 | C33 misses private internals (`Token#_preview`, `_placementContext`, Svelte `$$.ctx`, shader internals) | `conformance.py`, `packages.json` | senses, cursors, movement, dropbin | **landed** (`privateInternalPatterns`) |
-| R7 | C03 misses real dnd5e use (journal, movement) | `packages.json` | journal, movement | journal half **landed**; movement's `ignoreTokens` blocked: **D4** |
+| R7 | C03 misses real dnd5e use (journal, movement) | `packages.json` | journal, movement | **landed** (journal; movement's `ignoreTokens` with D4, `4a5c13c`) |
 | R8 | C29 misses computed `flags.${MODULE}` writes | `conformance.py` | dropbin | **landed** (actor/token statements only) |
 | R9 | C18 counts an entry's `import * as` of a `-core.mjs` as a feature, and cannot pass with no features (importer) | `conformance.py` | importer | **landed** (n/a for lifecycle-only modules) |
 
@@ -279,23 +286,25 @@ their module id (manifest-only). The design record and the use-doc now say so.
 
 ## 6. Decisions for Joe
 
-| Id | Decision | Recommendation | Blocks |
-|---|---|---|---|
-| D1 | ties nested reserved names (`attributes.describe`, `study.inspect`) | option A: K2, kit 1.0.1, reload only | ties S8 |
-| D2 | adjustments-row naming for non-patch rows | keep the package prefix (`core-…`, `dnd5e-…`, `itempiles-…`) and fix R1 | senses, aoe, portals, cursors rows |
-| D3 | names `sync` writes but names is small tier | keep small + opt-in `api` kit file | names |
-| D4 | movement's dnd5e dependency (`ignoreTokens`) | keep it; add `ignoreTokens` to `packages.json` | movement C03 |
-| D5 | importer `flagScope` (writes the generator's `flags.pentaryn.*` by contract) | declare it as the generator scope, exempt from migration | importer C07 |
-| D6 | prompts `gatherChars` fallback 160 vs 400 | already in the audit's deferred list; prompts keeps its own helper until decided | none |
-| D7 | riders' Argon `#tooltip` selectors and the shared `.pentaryn-tt` CSS | decide in Wave 8.6 with argon-kit | riders/transform C37 |
-| D8 | Starry expiry on unlinked tokens (tc-22) | live-test question, not a code fix | none |
-| D9 | when to lift each `wait.json` entry | creatures/portals/senses on confirmation; the rest when the live test is done | Stage 4 |
+| Id | Decision | Recommendation | Blocks | Status (2026-10-11) |
+|---|---|---|---|---|
+| D1 | ties nested reserved names (`attributes.describe`, `study.inspect`) | option A: K2, kit 1.0.1, reload only | ties S8 | **decided**: rename to `attributes.lookup` / `study.examine`, old names alias with `logCompatibilityWarning` until ties S8 — **landed** `1411687` |
+| D2 | adjustments-row naming for non-patch rows | keep the package prefix (`core-…`, `dnd5e-…`, `itempiles-…`) and fix R1 | senses, aoe, portals, cursors rows | **decided**: package prefix for non-patch rows — **landed** `df661e0` (eight rows renamed, C32 enforces both halves) |
+| D3 | names `sync` writes but names is small tier | keep small + opt-in `api` kit file | names | **decided**: small tier + `api` kit file — recorded `2164005` |
+| D4 | movement's dnd5e dependency (`ignoreTokens`) | keep it; add `ignoreTokens` to `packages.json` | movement C03 | **decided**: keep; `ignoreTokens` in packages.json `codePatterns` — **landed** `4a5c13c` |
+| D5 | importer `flagScope` (writes the generator's `flags.pentaryn.*` by contract) | declare it as the generator scope, exempt from migration | importer C07 | **decided**: `flags.pentaryn.*` is the generator contract scope — recorded `2164005` |
+| D6 | prompts `gatherChars` fallback 160 vs 400 | already in the audit's deferred list; prompts keeps its own helper until decided | none | **decided**: one `gatherChars` default 400 + cut suffix — **landed** `868103f` |
+| D7 | riders' Argon `#tooltip` selectors and the shared `.pentaryn-tt` CSS | decide in Wave 8.6 with argon-kit | riders/transform C37 | **decided**: CSS-vendoring tooling only this wave — **landed** `d959b66`; no module adopts it |
+| D8 | Starry expiry on unlinked tokens (tc-22) | live-test question, not a code fix | none | later |
+| D9 | when to lift each `wait.json` entry | creatures/portals/senses on confirmation; the rest when the live test is done | Stage 4 | done |
 
-## 7. Pending wiring (suggestions — NOT applied)
+## 7. Pending wiring (W1–W8 applied in wave 1; W9 applied earlier)
 
-Each touches a file outside the blueprint's write-allow list, or one another workflow may be
-editing. **W6–W8 (routing) are the first manual action**: until they land, nothing sends a fresh
-agent to the playbook. Apply the rest when idle.
+**Status 2026-10-11 (wave 1, Lane A):** W1 `c8fd327`; W2 `8c4d6d9`, `667456c`; W3 `9a83ba1`; W4
+`beda8e0`, `566273b`; W5 `35d439b`, `21c6d0f`, `2ec084f`; W7 Module APIs table `1ea9f37`, `56e75f1`;
+W6–W8 routing rows were already present. Conformance stays advisory until Stage 5
+(`CONFORMANCE_FAILS`); names and pings get `node-test` once they have a `test/run.mjs`. The table
+below is the original suggestion list, kept as history.
 
 | Id | File | Suggested edit |
 |---|---|---|

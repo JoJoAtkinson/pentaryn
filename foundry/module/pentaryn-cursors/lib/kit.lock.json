@@ -1,0 +1,13 @@
+{
+  "version": "1.0.1",
+  "tier": "small",
+  "files": [
+    "errors",
+    "log",
+    "hooks",
+    "publish",
+    "resolve",
+    "settings",
+    "api"
+  ]
+}

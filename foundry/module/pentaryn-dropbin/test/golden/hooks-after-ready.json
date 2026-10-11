@@ -1,0 +1,26 @@
+[
+  {
+    "kind": "on",
+    "name": "item-piles-dropItem"
+  },
+  {
+    "kind": "on",
+    "name": "preDeleteItem"
+  },
+  {
+    "kind": "on",
+    "name": "item-piles-preRenderInterface"
+  },
+  {
+    "kind": "on",
+    "name": "item-piles-preRenderActorSheet"
+  },
+  {
+    "kind": "on",
+    "name": "item-piles-preRattleItemPile"
+  },
+  {
+    "kind": "on",
+    "name": "preCreateItem"
+  }
+]

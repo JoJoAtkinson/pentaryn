@@ -1,7 +1,7 @@
 ---
 title: "Attributes and knowledge — building the world through the people in it"
 status: active
-last_modified: 2026-10-08
+last_modified: 2026-10-11
 tags: [context, foundry, attributes, knowledge, study, npc-ties]
 ---
 
@@ -197,8 +197,12 @@ has no name to look up — name it by id (`"species:elf"`).
 
 ```js
 A.resolve("Ashfall Company");  // "ashfallcompany" — or null. Cheap; check before acting.
-A.describe("Ashfall Company"); // the display record, or null if it names nothing
+A.lookup("Ashfall Company");   // the display record, or null if it names nothing
 ```
+
+`A.lookup` was `A.describe` before 2026-10-11 (decision D1: `describe` and `inspect` are names the
+kit API reserves). The old name still answers, with a console compatibility warning, until the
+ties API moves to the kit; write `lookup`. Likewise `S.inspect` is now `S.examine`.
 
 ### What every write returns
 
@@ -434,7 +438,7 @@ them over ("Mark as learned", or `S.share` with `ns: "attr"`), and the DC is the
 whether a character would plausibly know it:
 
 ```js
-const entry = A.describe("ashfallcompany");
+const entry = A.lookup("ashfallcompany");
 await A.update("ashfallcompany", {
   lore: [
     ...entry.lore,
@@ -590,7 +594,7 @@ learn others by inspecting. Worked example: the three 3200 A.F. PCs in
    ```js
    const granted = foundry.utils.deepClone(pc.getFlag("pentaryn-ties", "granted") ?? {});
    let t = Date.now();
-   const entry = A.describe(attrId);
+   const entry = A.lookup(attrId);
    for (const row of entry.lore) granted[`attr:${attrId}:${row.id}`] =
      { text: row.text, when: t++, icon: entry.icon, source: `${entry.title} — ${row.label}` };
    await pc.update({ "flags.pentaryn-ties.granted": granted });

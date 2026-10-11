@@ -9,6 +9,7 @@ got wrong.
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -70,6 +71,29 @@ def known_worlds() -> list[str]:
 # ── In-house modules ──
 MODULE_SRC_ROOT = REPO_ROOT / "foundry/module"
 
+# Where module installs are recorded, one JSONL file per month (python-tooling-10). Machine-local
+# history like the other files in foundry/logs/; agents never commit it.
+OPS_LOG_DIR = REPO_ROOT / "foundry/logs"
+
+
+def module_dirs(root: Path | None = None) -> list[str]:
+    """Every module folder on disk (a directory holding a module.json), sorted.
+
+    The registry below is hand-kept; this is what proves it complete — a test asserts
+    every name here has a ModuleSpec (python-tooling-3)."""
+    root = root or MODULE_SRC_ROOT
+    if not root.is_dir():
+        return []
+    return sorted(p.name for p in root.iterdir() if (p / "module.json").is_file())
+
+
+def _read_json(path: Path) -> dict | None:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
 
 class ModuleSpec:
     """One in-house module: where it lives, and how to prove it before syncing.
@@ -79,16 +103,24 @@ class ModuleSpec:
     three modules that had a suite — which is how a module whose files all parsed and
     whose suite all passed could still fail to load in the browser. A check that runs
     instead of another check is not a gate.
+
+    Two things are DERIVED from the module's own files, never stored here:
+
+    * `kit` — the vendored kit files, from `lib/kit.lock.json` (blueprint D8: the lock is
+      the only kit list). None means the module has not adopted the kit (unmigrated).
+    * `after_sync` — `module.json` `flags.pentaryn.afterSync` when the module carries
+      it (the generator writes it), else the tuple given here. One source per module:
+      the tuples move into module.json in the Wave 7 restart batch, never by editing both.
     """
 
     #: every gate a spec may name — see `modules._CHECKS`
-    CHECKS = ("parse", "imports", "i18n", "node-test")
+    CHECKS = ("parse", "imports", "i18n", "node-test", "vendor", "conformance")
 
     def __init__(self, name: str, *, check: str | tuple[str, ...],
                  after_sync: tuple[str, ...] = ()):
         self.name = name
         self.check = (check,) if isinstance(check, str) else tuple(check)
-        self.after_sync = after_sync  # lines printed after a successful copy
+        self._after_sync = tuple(after_sync)
         unknown = [c for c in self.check if c not in (*self.CHECKS, "none")]
         if unknown:
             raise ValueError(f"{name}: unknown check(s) {unknown}")
@@ -101,6 +133,28 @@ class ModuleSpec:
     def dst(self) -> Path:
         return FOUNDRY_MODULES / self.name
 
+    @property
+    def after_sync(self) -> tuple[str, ...]:
+        """Lines printed after a successful copy (module.json first, then the tuple)."""
+        manifest = _read_json(self.src / "module.json") or {}
+        lines = (((manifest.get("flags") or {}).get("pentaryn") or {}).get("afterSync"))
+        if isinstance(lines, list) and lines:
+            return tuple(str(x) for x in lines)
+        return self._after_sync
+
+    @property
+    def kit_lock(self) -> dict | None:
+        """`lib/kit.lock.json` — `{version, tier, files}` — or None when unmigrated."""
+        return _read_json(self.src / "lib" / "kit.lock.json")
+
+    @property
+    def kit(self) -> tuple[str, ...] | None:
+        """The kit files this module vendors, from its lock; None = not migrated."""
+        lock = self.kit_lock
+        if lock is None:
+            return None
+        return tuple(lock.get("files") or ())
+
 
 # Every module gets the full static battery. The three gates answer different
 # questions and none of them subsumes another:
@@ -111,10 +165,19 @@ class ModuleSpec:
 # was deleted, every file still parsed, and the module silently never registered.
 _STATIC = ("parse", "imports", "i18n")
 
+# The blueprint gates (W3), last because they ask a different question — not "can it
+# load" but "does it still match the kit and the blueprint". Both skip a module with no
+# lib/kit.lock.json (not migrated); conformance is advisory until migration Stage 5.
+#   vendor       every vendored kit file byte-identical to foundry/lib
+#   conformance  the scorer's fail-class rules (scripts/foundry/blueprint/conformance.py)
+_BLUEPRINT = ("vendor", "conformance")
+
 MODULES = {
     "ties": ModuleSpec(
         "pentaryn-ties",
-        check=_STATIC,
+        # node-test: test/run.mjs (the blueprint's fixed body) runs the converted suites and
+        # the legacy known/look/reach ones (python-tooling-7).
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "Already enabled? A browser RELOAD (F5) is enough — .mjs and .css are",
             "served fresh. But module.json is read once at STARTUP, so the version",
@@ -128,7 +191,7 @@ MODULES = {
     ),
     "walls": ModuleSpec(
         "pentaryn-walls",
-        check=(*_STATIC, "node-test"),
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "Enable 'Pentaryn Wall Autocomplete' in Manage Modules, reload, then:",
             "  await game.pentaryn.walls.preview()",
@@ -139,7 +202,7 @@ MODULES = {
         # node-test on top of the static gates: the slot reconciliation has edge cases
         # (stale flags, deleted items, over-cap) that are tedious to stage in a browser
         # and must never throw — computeSlots runs inside a render hook.
-        check=(*_STATIC, "node-test"),
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "Enable 'Pentaryn Attunement Slots' in Manage Modules, then reload.",
             "The strip renders in the character sheet sidebar, under the stats card.",
@@ -151,8 +214,8 @@ MODULES = {
     "lookup": ModuleSpec(
         "pentaryn-lookup",
         # node-test: the whole point of the module is that its text handling is proved
-        # rather than retyped. lookup-core.mjs is pure, so the 41 fixtures run in node.
-        check=(*_STATIC, "node-test"),
+        # rather than retyped. lookup-core.mjs is pure, so its fixtures run in node (`node test/run.mjs`).
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "Enable 'Pentaryn Rules Lookup' in Manage Modules, then reload.",
             "Confirm against the live world:",
@@ -166,7 +229,7 @@ MODULES = {
         "pentaryn-transform",
         # node-test: transform-core.mjs decides what is stripped from a Wild Shape form, what
         # is carried back on revert, and how the Argon Bonus/Action bars are recomposed.
-        check=(*_STATIC, "node-test"),
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "0.2 adds hud.mjs and styles/transform.css to module.json — restart Foundry",
             "(make vtt-down && make vtt-up); a browser reload alone will not load them.",
@@ -178,7 +241,8 @@ MODULES = {
     ),
     "names": ModuleSpec(
         "pentaryn-names",
-        check=_STATIC,
+        # node-test: test/run.mjs runs the characterisation suites (names guide; C39).
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "First install: restart Foundry (module.json is read at startup), then reload.",
             "Rename an actor: token labels that were its name (or the part before the",
@@ -188,7 +252,7 @@ MODULES = {
     "senses": ModuleSpec(
         "pentaryn-senses",
         # node-test: chain-core.mjs (the token chain's flag reading and line geometry) is pure.
-        check=(*_STATIC, "node-test"),
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "First install: restart Foundry (module.json is read at startup), then reload.",
             "Already enabled? A browser RELOAD (F5) picks up new .mjs files and assets.",
@@ -200,7 +264,7 @@ MODULES = {
     "portals": ModuleSpec(
         "pentaryn-portals",
         # node-test: portals-core.mjs decides who a party teleport carries and who follows a PC.
-        check=(*_STATIC, "node-test"),
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "First install: restart Foundry (module.json is read at startup), then reload.",
             "Teleport confirmations now show destination cards; author them in Region config → Portal card.",
@@ -210,7 +274,7 @@ MODULES = {
         "pentaryn-journal",
         # node-test: sanitize() is what keeps GM secrets out of a player-owned copy; it is proved
         # on synthetic fixtures before anything reaches Data/.
-        check=(*_STATIC, "node-test"),
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Player Journal', then reload.",
             "Players get an 'Add to my journal' bar on every eye readable.",
@@ -222,7 +286,7 @@ MODULES = {
         "pentaryn-aoe",
         # node-test: core.mjs decides who is caught in an area, what a save is worth and which
         # waiting row a save answers — proved on fixtures before anything reaches Data/.
-        check=(*_STATIC, "node-test"),
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "First install: restart Foundry (module.json is read at startup), then reload.",
             "core.moduleConfiguration['pentaryn-aoe'] can be pre-set so it loads enabled.",
@@ -233,7 +297,7 @@ MODULES = {
     "dropbin": ModuleSpec(
         "pentaryn-dropbin",
         # node-test: loot-core.mjs decides when the Loot all button shows and greys out.
-        check=(*_STATIC, "node-test"),
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "Already enabled? A browser RELOAD (F5) picks up .mjs changes; module.json needs a restart.",
             "Item Piles loot windows get a 'Loot all' button; corpses show Dead as the overlay plus a drawn eye.",
@@ -243,7 +307,7 @@ MODULES = {
     "cursors": ModuleSpec(
         "pentaryn-cursors",
         # node-test: cursors-core.mjs picks the cursor for the active control/tool.
-        check=(*_STATIC, "node-test"),
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Tool Cursors', then reload.",
             "Each canvas tool gets its own cursor; check with  game.pentaryn.cursors.current()",
@@ -252,7 +316,7 @@ MODULES = {
     "movement": ModuleSpec(
         "pentaryn-movement",
         # node-test: movement-core.mjs (owned-on-top sort, ghost policy) is pure.
-        check=(*_STATIC, "node-test"),
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Movement', then reload.",
             "Players get a Ghost toggle in the token tools; the GM sets the policy in settings.",
@@ -262,7 +326,7 @@ MODULES = {
     "creatures": ModuleSpec(
         "pentaryn-creatures",
         # node-test: creatures-core.mjs (who gets light, strip order) is pure.
-        check=(*_STATIC, "node-test"),
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Creatures', then reload.",
             "Player-owned NPC tokens get a small light; players with 2+ tokens get a 'Your creatures' strip.",
@@ -272,7 +336,7 @@ MODULES = {
     "riders": ModuleSpec(
         "pentaryn-riders",
         # node-test: riders-core.mjs (the RULES table and roll-term edits) is pure.
-        check=(*_STATIC, "node-test"),
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Feature Riders', then reload.",
             "Audit feat riders per actor:  game.pentaryn.riders.report()",
@@ -283,21 +347,21 @@ MODULES = {
         # node-test: geometry-core.mjs (bands, bearings, nearest-square distance, the pure sight
         # test, grouping, ids, the gather text, door lines, XP budgets) and build-core.mjs (PC
         # ability budgets, choice matching) are pure and carry the whole contract.
-        check=(*_STATIC, "node-test"),
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "First install: restart Foundry (module.json is read at startup), enable",
             "'Pentaryn Prompt Markers', then reload the ONE GM tab. The six 'Prompt ·' actors",
             "appear in the 'Prompt Markers' folder at GM ready.",
             "  game.pentaryn.prompts.status()",
             "  await game.pentaryn.prompts.gather({scenes: 'current'})",
-            "Marker art: ./.venv/bin/python scripts/foundry/prompt-marker-art.py",
+            "Marker art: ./.venv/bin/python scripts/foundry/prompt_marker_art.py",
         ),
     ),
     "combat": ModuleSpec(
         "pentaryn-combat",
         # node-test: combat-core.mjs (attack counts, the Full Attack state machine, the turn flag,
         # follow-up and Sneak Attack eligibility, Multiattack parsing, weapon-set seeds) is pure.
-        check=(*_STATIC, "node-test"),
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "First install: restart Foundry (module.json is read at startup), enable",
             "'Pentaryn Combat', then reload the ONE GM tab and any player tabs.",
@@ -306,7 +370,19 @@ MODULES = {
             "  game.pentaryn.combat.report()         // riders per PC and the turn flags",
         ),
     ),
+    "pings": ModuleSpec(
+        "pentaryn-pings",
+        # node-test: test/run.mjs runs the characterisation suites (pings guide step 9; C39).
+        check=(*_STATIC, "node-test", *_BLUEPRINT),
+        after_sync=(
+            "First install: restart Foundry (module.json is read at startup), enable",
+            "'Pentaryn Ping Log', then reload the GM tab (GM clients are the only writers).",
+            "  game.pentaryn.pings.recent(5)",
+        ),
+    ),
     # The actor pipeline stages this one, not module-sync, so it is not in the CLI's
     # module list — but the static gates are free and it is real code, so it gets them.
-    "importer": ModuleSpec("pentaryn-importer", check=_STATIC),
+    # node-test: test/run.mjs (the blueprint's fixed body) runs the characterisation suites
+    # (importer guide step 1.11, items-journal-2; C39).
+    "importer": ModuleSpec("pentaryn-importer", check=(*_STATIC, "node-test", *_BLUEPRINT)),
 }

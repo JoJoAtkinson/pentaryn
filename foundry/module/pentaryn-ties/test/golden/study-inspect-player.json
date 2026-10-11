@@ -1,0 +1,28 @@
+[
+  {
+    "label": "playerAccess off",
+    "out": false,
+    "calls": []
+  },
+  {
+    "label": "not the owner",
+    "out": false,
+    "calls": []
+  },
+  {
+    "label": "no subject",
+    "out": false,
+    "calls": []
+  },
+  {
+    "label": "no GM connected",
+    "out": false,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Nobody is running the game right now — a check like this needs somebody to roll it against."
+      }
+    ]
+  }
+]

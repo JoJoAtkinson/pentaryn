@@ -8,7 +8,8 @@ status: draft
 # Foundry MCP Bridge — Fork Design
 
 **Read this when:** you need to know why the Foundry MCP bridge was forked and how its tool surface was chosen. **History, not instructions** — the fork now lives at `~/Documents/GitHub/foundry-vtt-mcp`.
-**Not this file:** operating Foundry → [`../foundry/README.md`](../foundry/README.md)
+**Not this file:** operating Foundry → [`../foundry/README.md`](../foundry/README.md); using or changing the fork → [`../foundry/mcp-fork.md`](../foundry/mcp-fork.md)
+**Status (2026-10-11):** implemented; the use-doc is [`../foundry/mcp-fork.md`](../foundry/mcp-fork.md).
 
 > The tool surface, repo placement and guardrails for forking `adambdooley/foundry-vtt-mcp`
 > so Ardenhaven can be driven conversationally instead of clicked.

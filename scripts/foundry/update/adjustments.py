@@ -45,8 +45,10 @@ REGISTRY_PATH = REPO_ROOT / "foundry" / "adjustments.yml"
 # break" in the sense that matters at 04:00, and they would flood the grep.
 EXPOSURE_GLOBS = ("foundry/module/*/**/*.mjs", "foundry/module/*/**/*.js",
                   "scripts/foundry/**/*.py", "automation/smoke/*.mjs")
+# The blueprint tooling (scorer, vendor, generator) reads package names from its own
+# packages.json and never runs against a package's code, so it is not exposure either.
 EXPOSURE_SKIP_PARTS = ("/test/", "/tests/", "/node_modules/", "/lang/", "__pycache__",
-                       "/scripts/foundry/update/")
+                       "/scripts/foundry/update/", "/scripts/foundry/blueprint/")
 NO_EXPOSURE = {"core", "dnd5e"}
 
 RETIRE_CLASSES = ("safe", "guarded", "never")

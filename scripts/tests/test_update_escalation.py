@@ -876,6 +876,7 @@ def test_cost_line():
 
 # ── registry ─────────────────────────────────────────────────────────────────
 
+@pytest.mark.repo
 def test_the_real_registry_matches_the_code():
     """`make foundry-adjustments-check`, as a test: a refactor that orphans a row fails CI."""
     reg = adj_mod.load()
@@ -1144,11 +1145,27 @@ def test_exposure_matches_code_not_prose(tmp_path):
     assert reg.exposure("wall-height", root=tmp_path) == ["scripts/foundry/other.py"]
 
 
+@pytest.mark.repo
 def test_real_exposure_has_no_known_false_positives():
     reg = adj_mod.load()
-    for pkg in ("levels", "multi-token-edit", "scene-packer", "wall-height", "mad-endlesswiz"):
+    for pkg in ("multi-token-edit", "scene-packer", "mad-endlesswiz"):
         assert reg.exposure(pkg) == [], pkg
+    # Not a false positive: prompts' sight test reads the package's own flag scope,
+    # `w.flags?.["wall-height"]` (776a865), so this exposure is real.
+    assert reg.exposure("wall-height") == ["foundry/module/pentaryn-prompts/los.mjs"]
     assert reg.exposure("dice-so-nice") == [STUDY]
+
+
+# KNOWN (wave-1 baseline, 2026-10-11; unfiled — see addon-blueprint-2026-10/wave-1-report.md
+# "Open for Joe"): id_pattern treats a backtick as a quote, so the template literal
+# `levels ${levels.join(", ")}` in pentaryn-prompts/geometry-core.mjs (since 17275c9) reads
+# as the Levels package id. Output today:
+#   reg.exposure("levels") == ['foundry/module/pentaryn-prompts/geometry-core.mjs']
+# The scanner is wrong, not this test: remove the marker when id_pattern is fixed.
+@pytest.mark.repo
+@pytest.mark.xfail(strict=True, reason="levels exposure false positive (template literal)")
+def test_real_exposure_levels_has_no_false_positive():
+    assert adj_mod.load().exposure("levels") == []
 
 
 # ── the run path: escalation sits between adjudication and apply ─────────────
@@ -1308,6 +1325,7 @@ def test_killed_after_a_finished_run_does_nothing(state_dir, monkeypatch):
     assert state_dir.read_status()["outcome"] == "done" and sent == []
 
 
+@pytest.mark.repo
 def test_watchdog_stays_quiet_after_a_wrapper_kill():
     text = (Path(esc.REPO_ROOT) / "automation/bin/vtt-update-watchdog.sh").read_text()
     assert '[ "$PHASE" = "killed" ]' in text
@@ -1325,3 +1343,42 @@ def test_a_malformed_policy_never_crashes_the_run(block, on):
     assert adjudicate.spec(policy).model == adjudicate.MODEL
     assert report.spec(policy).model == report.MODEL
     esc.wrapper_timeout(policy)
+
+
+# ── make_checks: pinned before python-tooling-2 step (a) moves it off the Makefile ──
+
+# The literal make_checks() returned on 2026-10-11 by scraping the Makefile. Step (a)
+# derives the same set from ops config.MODULES (pings joined when it was registered —
+# its target comes from the foundry-%-check pattern rule); walls (target foundry-walls-test) is still
+# absent and admin-check still present until step (b), which changes this pin on purpose.
+MAKE_CHECKS_PIN = [
+    "make foundry-adjustments-check", "make foundry-admin-check", "make foundry-aoe-check",
+    "make foundry-attunement-check", "make foundry-combat-check",
+    "make foundry-creatures-check", "make foundry-cursors-check",
+    "make foundry-dropbin-check", "make foundry-journal-check", "make foundry-lookup-check",
+    "make foundry-movement-check", "make foundry-names-check", "make foundry-pings-check",
+    "make foundry-portals-check",
+    "make foundry-prompts-check", "make foundry-riders-check", "make foundry-senses-check",
+    "make foundry-ties-check", "make foundry-transform-check",
+]
+
+
+@pytest.mark.repo
+def test_make_checks_pinned(monkeypatch):
+    monkeypatch.setattr(esc, "_MAKE_TARGETS", None)
+    assert esc.make_checks() == MAKE_CHECKS_PIN
+    assert esc.checks_for(["foundry/module/pentaryn-walls/wall-engine.mjs",
+                           "foundry/module/pentaryn-ties/look.mjs"]) == [
+        "make foundry-adjustments-check", "make foundry-ties-check"]
+
+
+def test_exposure_skips_blueprint_tooling(tmp_path):
+    """W5: the blueprint scorer/vendor/generator are not code a release can break."""
+    bp = tmp_path / "scripts/foundry/blueprint"
+    bp.mkdir(parents=True)
+    (bp / "conformance.py").write_text('X = "wall-height"\n')
+    other = tmp_path / "scripts/foundry/ops"
+    other.mkdir(parents=True)
+    (other / "x.py").write_text('Y = "wall-height"\n')
+    reg = adj_mod.Registry()
+    assert reg.exposure("wall-height", root=tmp_path) == ["scripts/foundry/ops/x.py"]

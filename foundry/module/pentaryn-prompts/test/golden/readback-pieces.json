@@ -1,0 +1,290 @@
+[
+  {
+    "input": [
+      "sheetLine",
+      {
+        "class": "Paladin 5",
+        "subclass": "Oath of Devotion",
+        "species": "Human",
+        "background": "Soldier",
+        "abilities": {
+          "str": 17,
+          "dex": 10,
+          "con": 14,
+          "int": 8,
+          "wis": 12,
+          "cha": 14
+        },
+        "hp": 44,
+        "ac": 18,
+        "prof": 3,
+        "spellDC": 13,
+        "spellAbility": "cha",
+        "saves": [
+          "wis",
+          "cha"
+        ],
+        "skills": [
+          "ath",
+          "ins",
+          "per",
+          "prc"
+        ],
+        "speed": 30,
+        "darkvision": 60,
+        "size": "med",
+        "languages": [
+          "common",
+          "elvish"
+        ],
+        "feats": [
+          "Tough"
+        ],
+        "spellCounts": {
+          "cantrips": 0,
+          "maxCantrips": null,
+          "prepared": 3,
+          "maxPrepared": 6,
+          "always": 4,
+          "spellbook": 2
+        }
+      }
+    ],
+    "out": "Paladin 5 (Oath of Devotion), Human, Soldier; str 17 dex 10 con 14 int 8 wis 12 cha 14; HP 44 AC 18 PB +3 spell DC 13 (cha); saves wis,cha; skills ath,ins,per,prc; speed 30, darkvision 60; size med; languages common, elvish; feats Tough. spells: 0 cantrips/?, 3 prepared/6, 4 always, 2 more in the spellbook"
+  },
+  {
+    "input": [
+      "sheetLine",
+      {
+        "class": "Paladin 5",
+        "subclass": "",
+        "species": "Human",
+        "background": "Soldier",
+        "abilities": {
+          "str": 17,
+          "dex": 10,
+          "con": 14,
+          "int": 8,
+          "wis": 12,
+          "cha": 14
+        },
+        "hp": 44,
+        "ac": 18,
+        "prof": 3,
+        "spellDC": 13,
+        "spellAbility": null,
+        "saves": [
+          "wis",
+          "cha"
+        ],
+        "skills": [
+          "ath",
+          "ins",
+          "per",
+          "prc"
+        ],
+        "speed": 30,
+        "darkvision": 0,
+        "size": "med",
+        "languages": [],
+        "feats": [],
+        "spellCounts": null
+      }
+    ],
+    "out": "Paladin 5, Human, Soldier; str 17 dex 10 con 14 int 8 wis 12 cha 14; HP 44 AC 18 PB +3; saves wis,cha; skills ath,ins,per,prc; speed 30; size med."
+  },
+  {
+    "input": [
+      "sheetLine",
+      null
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      "encounterLine",
+      {
+        "id": "E1",
+        "xp": 325,
+        "creatures": 5,
+        "unbuilt": 1,
+        "budget": {
+          "size": 4,
+          "level": 3,
+          "low": 600,
+          "moderate": 900,
+          "high": 1600
+        },
+        "difficulty": "under low"
+      }
+    ],
+    "out": "E1: 325 XP from 5 creature(s), 1 prompt(s) not built in this call vs party 4 x L3: low 600 | moderate 900 | high 1600 → under low"
+  },
+  {
+    "input": [
+      "encounterLine",
+      {
+        "id": "E2",
+        "xp": 50,
+        "creatures": 1,
+        "estimate": true
+      }
+    ],
+    "out": "E2 (estimate, CR XP of the plan): 50 XP from 1 creature(s) (no party: pass party:\"4x5\" to gather or replace for a difficulty)"
+  },
+  {
+    "input": [
+      "encounterLine",
+      {
+        "id": "E3",
+        "creatures": 0,
+        "unbuilt": 2
+      }
+    ],
+    "out": "E3: no hostile creature, 2 prompt(s) not built in this call — no difficulty to judge"
+  },
+  {
+    "input": [
+      "encounterLine",
+      null
+    ],
+    "out": "undefined: no hostile creature — no difficulty to judge"
+  },
+  {
+    "input": [
+      "remainingLine",
+      {
+        "a": 1
+      },
+      []
+    ],
+    "out": "remaining: a=1"
+  },
+  {
+    "input": [
+      "remainingLine",
+      {},
+      [
+        {
+          "ok": false
+        }
+      ]
+    ],
+    "out": "remaining: unknown (no replacement reached a scene; gather again)"
+  },
+  {
+    "input": [
+      "remainingLine",
+      {},
+      []
+    ],
+    "out": "remaining: none"
+  },
+  {
+    "input": [
+      "remainingLine",
+      null,
+      []
+    ],
+    "out": null
+  },
+  {
+    "input": [
+      "needsDryRun",
+      {
+        "requested": 6
+      }
+    ],
+    "out": true
+  },
+  {
+    "input": [
+      "needsDryRun",
+      {
+        "requested": 5
+      }
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      "needsDryRun",
+      {
+        "requested": 6,
+        "seen": true
+      }
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      "needsDryRun",
+      {
+        "requested": 6,
+        "skip": true
+      }
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      "goneMessage",
+      {
+        "pid": "p1",
+        "sceneName": "Warren",
+        "replacedBy": "Token \"Yark\" [t1]"
+      }
+    ],
+    "out": "p1 was already replaced on Warren (now Token \"Yark\" [t1]); gather again for what is left"
+  },
+  {
+    "input": [
+      "goneMessage",
+      {
+        "markerId": "m2",
+        "sceneName": "W",
+        "resizedTo": "m3"
+      }
+    ],
+    "out": "m2 was resized on W (now marker m3); gather again"
+  },
+  {
+    "input": [
+      "goneMessage",
+      {}
+    ],
+    "out": "? no longer on ? (deleted, or replaced outside this module); gather again"
+  },
+  {
+    "input": [
+      "createdText",
+      {
+        "type": "Token",
+        "id": "t",
+        "name": "Y",
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "out": "Token \"Y\" [t] @0,0"
+  },
+  {
+    "input": [
+      "createdText",
+      {
+        "type": "Actor",
+        "id": "a",
+        "name": "Y",
+        "missing": true
+      }
+    ],
+    "out": "Actor \"Y\" [a] (MISSING after create)"
+  },
+  {
+    "input": [
+      "createdText",
+      null
+    ],
+    "out": "?"
+  }
+]

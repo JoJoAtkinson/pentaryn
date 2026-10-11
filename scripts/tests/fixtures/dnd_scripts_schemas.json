@@ -1,0 +1,2328 @@
+{
+ "age_convert": {
+  "additionalProperties": false,
+  "properties": {
+   "value": {
+    "description": "Year like '4150', relative year like '-50', or age label like 'ᛏ200'/'ᛏ-50'",
+    "type": "string"
+   }
+  },
+  "required": [
+   "value"
+  ],
+  "type": "object"
+ },
+ "age_to_year": {
+  "additionalProperties": false,
+  "properties": {
+   "label": {
+    "description": "Age label like 'ᛏ200'",
+    "type": "string"
+   }
+  },
+  "required": [
+   "label"
+  ],
+  "type": "object"
+ },
+ "build_timeline_key": {
+  "additionalProperties": false,
+  "properties": {
+   "output": {
+    "description": "Optional output SVG path (default: <repo>/timeline-key.svg).",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "build_timeline_svg": {
+  "additionalProperties": false,
+  "properties": {},
+  "type": "object"
+ },
+ "check_lore_links": {
+  "properties": {
+   "zone": {
+    "description": "Optional path prefix to limit the check, e.g. 'world/factions/elderholt'.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "combat_action_upsert": {
+  "additionalProperties": false,
+  "properties": {
+   "action": {
+    "description": "Action name (snake_case).",
+    "type": "string"
+   },
+   "npc": {
+    "description": "NPC slug.",
+    "type": "string"
+   },
+   "spec": {
+    "description": "Action specification — see template for schema.",
+    "type": "object"
+   }
+  },
+  "required": [
+   "npc",
+   "action",
+   "spec"
+  ],
+  "type": "object"
+ },
+ "combat_actions_list": {
+  "additionalProperties": false,
+  "properties": {
+   "npc": {
+    "description": "Filter by single NPC slug.",
+    "type": "string"
+   },
+   "npcs": {
+    "description": "Filter by a list of NPC slugs.",
+    "items": {
+     "type": "string"
+    },
+    "type": "array"
+   }
+  },
+  "required": [],
+  "type": "object"
+ },
+ "find_lore": {
+  "additionalProperties": false,
+  "properties": {
+   "case_sensitive": {
+    "default": false,
+    "type": "boolean"
+   },
+   "context_chars": {
+    "default": 200,
+    "description": "Snippet window size.",
+    "minimum": 0,
+    "type": "integer"
+   },
+   "limit": {
+    "default": 25,
+    "description": "Max hits to return.",
+    "minimum": 1,
+    "type": "integer"
+   },
+   "paths": {
+    "description": "Optional subpaths to restrict (comma-separated).",
+    "type": "string"
+   },
+   "query": {
+    "description": "Substring to search for.",
+    "type": "string"
+   }
+  },
+  "required": [
+   "query"
+  ],
+  "type": "object"
+ },
+ "fix_md_links": {
+  "additionalProperties": false,
+  "properties": {
+   "check_related_links": {
+    "description": "Warn if `## Related Links` is not near the end of file (default: false).",
+    "type": "boolean"
+   },
+   "write": {
+    "description": "Write changes to disk (default: false).",
+    "type": "boolean"
+   }
+  },
+  "type": "object"
+ },
+ "get_background": {
+  "additionalProperties": false,
+  "properties": {
+   "key": {
+    "description": "Background key.",
+    "type": "string"
+   }
+  },
+  "required": [
+   "key"
+  ],
+  "type": "object"
+ },
+ "get_class_info": {
+  "additionalProperties": false,
+  "properties": {
+   "key": {
+    "description": "Class key.",
+    "type": "string"
+   }
+  },
+  "required": [
+   "key"
+  ],
+  "type": "object"
+ },
+ "get_creatureset": {
+  "additionalProperties": false,
+  "properties": {
+   "key": {
+    "description": "Creature-set key.",
+    "type": "string"
+   }
+  },
+  "required": [
+   "key"
+  ],
+  "type": "object"
+ },
+ "get_environment": {
+  "additionalProperties": false,
+  "properties": {
+   "key": {
+    "description": "Environment key.",
+    "type": "string"
+   }
+  },
+  "required": [
+   "key"
+  ],
+  "type": "object"
+ },
+ "get_faction_overview": {
+  "additionalProperties": false,
+  "properties": {
+   "slug": {
+    "description": "Faction slug (kebab-case).",
+    "type": "string"
+   }
+  },
+  "required": [
+   "slug"
+  ],
+  "type": "object"
+ },
+ "get_feat": {
+  "additionalProperties": false,
+  "properties": {
+   "key": {
+    "description": "Feat key.",
+    "type": "string"
+   }
+  },
+  "required": [
+   "key"
+  ],
+  "type": "object"
+ },
+ "get_item": {
+  "additionalProperties": false,
+  "properties": {
+   "key": {
+    "description": "Item key.",
+    "type": "string"
+   }
+  },
+  "required": [
+   "key"
+  ],
+  "type": "object"
+ },
+ "get_itemset": {
+  "additionalProperties": false,
+  "properties": {
+   "key": {
+    "description": "Item-set key.",
+    "type": "string"
+   }
+  },
+  "required": [
+   "key"
+  ],
+  "type": "object"
+ },
+ "get_magic_item": {
+  "additionalProperties": false,
+  "properties": {
+   "key": {
+    "description": "Magic item key.",
+    "type": "string"
+   }
+  },
+  "required": [
+   "key"
+  ],
+  "type": "object"
+ },
+ "get_monster_details": {
+  "additionalProperties": false,
+  "properties": {
+   "key": {
+    "description": "Creature key (v2).",
+    "type": "string"
+   }
+  },
+  "required": [
+   "key"
+  ],
+  "type": "object"
+ },
+ "get_npc": {
+  "additionalProperties": false,
+  "properties": {
+   "name": {
+    "description": "Character name (full or partial).",
+    "type": "string"
+   }
+  },
+  "required": [
+   "name"
+  ],
+  "type": "object"
+ },
+ "get_rule_section": {
+  "additionalProperties": false,
+  "properties": {
+   "key": {
+    "description": "Rule section key.",
+    "type": "string"
+   }
+  },
+  "required": [
+   "key"
+  ],
+  "type": "object"
+ },
+ "get_ruleset": {
+  "additionalProperties": false,
+  "properties": {
+   "key": {
+    "description": "Ruleset key.",
+    "type": "string"
+   }
+  },
+  "required": [
+   "key"
+  ],
+  "type": "object"
+ },
+ "get_species": {
+  "additionalProperties": false,
+  "properties": {
+   "key": {
+    "description": "Species key.",
+    "type": "string"
+   }
+  },
+  "required": [
+   "key"
+  ],
+  "type": "object"
+ },
+ "get_spell_details": {
+  "additionalProperties": false,
+  "properties": {
+   "key": {
+    "description": "Spell key (v2).",
+    "type": "string"
+   }
+  },
+  "required": [
+   "key"
+  ],
+  "type": "object"
+ },
+ "get_spell_list": {
+  "additionalProperties": false,
+  "properties": {
+   "class_slug": {
+    "description": "Class slug (e.g., 'bard', 'cleric', 'druid', 'paladin', 'ranger', 'sorcerer', 'warlock', 'wizard').",
+    "type": "string"
+   }
+  },
+  "required": [
+   "class_slug"
+  ],
+  "type": "object"
+ },
+ "last_session_summary": {
+  "additionalProperties": false,
+  "properties": {
+   "session": {
+    "description": "Specific session number; omit for latest.",
+    "type": "integer"
+   }
+  },
+  "type": "object"
+ },
+ "list_abilities": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Ability name.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "list_alignments": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Alignment name.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "list_conditions": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 25,
+    "description": "Max results (default 25).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Filter by condition name (substring unless match='exact').",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "list_creaturetypes": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Creature-type name.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "list_damagetypes": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Damage-type name.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "list_documents": {
+  "additionalProperties": false,
+  "properties": {
+   "gamesystem": {
+    "description": "Filter to a gamesystem key (e.g. '5e-2024').",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "name": {
+    "description": "Document name.",
+    "type": "string"
+   },
+   "publisher": {
+    "description": "Filter to a publisher key.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "list_gamesystems": {
+  "additionalProperties": false,
+  "properties": {
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "name": {
+    "description": "Gamesystem name.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "list_itemcategories": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Category name.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "list_itemrarities": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Rarity name.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "list_languages": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "is_exotic": {
+    "description": "True for exotic languages (Abyssal, Celestial, Deep Speech, etc.).",
+    "type": "boolean"
+   },
+   "is_secret": {
+    "description": "True for secret languages (Druidic, Thieves' Cant).",
+    "type": "boolean"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Language name.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "list_licenses": {
+  "additionalProperties": false,
+  "properties": {
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "name": {
+    "description": "License name.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "list_publishers": {
+  "additionalProperties": false,
+  "properties": {
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "name": {
+    "description": "Publisher name.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "list_sizes": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Size name.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "list_skills": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Skill name.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "list_spellschools": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "School name.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "list_weaponproperties": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Property name.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   },
+   "type": {
+    "description": "Weapon-property grouping (e.g. 'melee', 'ranged').",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "roll_dice": {
+  "additionalProperties": false,
+  "properties": {
+   "bonuses": {
+    "description": "Optional per-die bonuses, one integer per die. Length must equal num_dice. Example: bonuses=[3, 5] for two attacks at +3 and +5. Omit for no per-die bonuses.",
+    "items": {
+     "type": "integer"
+    },
+    "type": "array"
+   },
+   "description": {
+    "description": "Optional human-readable context for this roll, e.g. 'Multiattack on Brann (AC 18)' or 'Glacial Roar damage'. When provided alongside log_path, the roll is appended as a timestamped Markdown bullet to the log file, freeing the LLM from having to Write a log entry separately. Use this on every action roll to build an automatic session log. Skip for administrative rolls (recharge dice, passive stealth).",
+    "type": "string"
+   },
+   "dice_size": {
+    "description": "Number of sides on each die (d4, d6, d8, d10, d12, d20, d100).",
+    "enum": [
+     4,
+     6,
+     8,
+     10,
+     12,
+     20,
+     100
+    ],
+    "type": "integer"
+   },
+   "log_path": {
+    "description": "Optional path to a Markdown log file inside the repo. When provided alongside description, the roll is appended as `- \\`<timestamp>\\` — **<description>** — <narrative>` (the narrative already contains ` = <total>`). The file's parent directory is created if missing; a `# Combat log` header is added on first write. Logging is best-effort — failures never break the roll.",
+    "type": "string"
+   },
+   "modifier": {
+    "default": 0,
+    "description": "Flat bonus or penalty added to the final total only (default 0, range: -1000 to +1000).",
+    "maximum": 1000,
+    "minimum": -1000,
+    "type": "integer"
+   },
+   "num_dice": {
+    "description": "Number of dice to roll (1-100).",
+    "maximum": 100,
+    "minimum": 1,
+    "type": "integer"
+   }
+  },
+  "required": [
+   "num_dice",
+   "dice_size"
+  ],
+  "type": "object"
+ },
+ "search_armor": {
+  "additionalProperties": false,
+  "properties": {
+   "ac_add_dexmod": {
+    "description": "True for armor that adds Dex modifier (light/medium); False for heavy.",
+    "type": "boolean"
+   },
+   "ac_base_max": {
+    "description": "Base AC maximum (inclusive).",
+    "type": "integer"
+   },
+   "ac_base_min": {
+    "description": "Base AC minimum (inclusive).",
+    "type": "integer"
+   },
+   "ac_cap_dexmod": {
+    "description": "Exact Dex-modifier cap (e.g. 2 for medium armor).",
+    "type": "integer"
+   },
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "grants_stealth_disadvantage": {
+    "description": "True for armor that imposes stealth disadvantage.",
+    "type": "boolean"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Armor name.",
+    "type": "string"
+   },
+   "ordering": {
+    "description": "Sort by field name; prefix with '-' for descending. Examples: 'name', '-challenge_rating', 'level'.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   },
+   "strength_required_max": {
+    "description": "Strength score requirement maximum.",
+    "type": "integer"
+   },
+   "strength_required_min": {
+    "description": "Strength score requirement minimum.",
+    "type": "integer"
+   }
+  },
+  "type": "object"
+ },
+ "search_backgrounds": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Background name.",
+    "type": "string"
+   },
+   "ordering": {
+    "description": "Sort by field name; prefix with '-' for descending. Examples: 'name', '-challenge_rating', 'level'.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "search_classes": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "is_subclass": {
+    "description": "True for subclasses only; False for parent classes only.",
+    "type": "boolean"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Class name.",
+    "type": "string"
+   },
+   "ordering": {
+    "description": "Sort by field name; prefix with '-' for descending. Examples: 'name', '-challenge_rating', 'level'.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   },
+   "subclass_of": {
+    "description": "Parent class key (e.g. 'srd-2024_fighter') — returns its subclasses.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "search_creaturesets": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Creature-set name.",
+    "type": "string"
+   },
+   "ordering": {
+    "description": "Sort by field name; prefix with '-' for descending. Examples: 'name', '-challenge_rating', 'level'.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "search_environments": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Environment name (partial unless match='exact').",
+    "type": "string"
+   },
+   "ordering": {
+    "description": "Sort by field name; prefix with '-' for descending. Examples: 'name', '-challenge_rating', 'level'.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "search_feats": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Feat name.",
+    "type": "string"
+   },
+   "ordering": {
+    "description": "Sort by field name; prefix with '-' for descending. Examples: 'name', '-challenge_rating', 'level'.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "search_items": {
+  "additionalProperties": false,
+  "properties": {
+   "categories": {
+    "description": "Comma list of category keys (e.g. 'weapon,armor'). Filters via category__in.",
+    "type": "string"
+   },
+   "category": {
+    "description": "Single category key (e.g., 'weapon', 'armor', 'adventuring-gear'). Use list_itemcategories to discover.",
+    "type": "string"
+   },
+   "cost_max": {
+    "description": "Cost maximum in gp.",
+    "type": "number"
+   },
+   "cost_min": {
+    "description": "Cost minimum in gp.",
+    "type": "number"
+   },
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "desc_contains": {
+    "description": "Case-insensitive substring search in item description text.",
+    "type": "string"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "is_armor": {
+    "description": "Filter to entries flagged as armor.",
+    "type": "boolean"
+   },
+   "is_finesse": {
+    "description": "Finesse weapons only.",
+    "type": "boolean"
+   },
+   "is_light": {
+    "description": "Light weapons only.",
+    "type": "boolean"
+   },
+   "is_thrown": {
+    "description": "Thrown weapons only.",
+    "type": "boolean"
+   },
+   "is_two_handed": {
+    "description": "Two-handed weapons only.",
+    "type": "boolean"
+   },
+   "is_versatile": {
+    "description": "Versatile weapons only.",
+    "type": "boolean"
+   },
+   "is_weapon": {
+    "description": "Filter to entries flagged as weapons.",
+    "type": "boolean"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Item name.",
+    "type": "string"
+   },
+   "ordering": {
+    "description": "Sort by field name; prefix with '-' for descending. Examples: 'name', '-challenge_rating', 'level'.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   },
+   "weight_max": {
+    "description": "Weight maximum in lbs.",
+    "type": "number"
+   },
+   "weight_min": {
+    "description": "Weight minimum in lbs.",
+    "type": "number"
+   }
+  },
+  "type": "object"
+ },
+ "search_itemsets": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Item-set name.",
+    "type": "string"
+   },
+   "ordering": {
+    "description": "Sort by field name; prefix with '-' for descending. Examples: 'name', '-challenge_rating', 'level'.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "search_magic_items": {
+  "additionalProperties": false,
+  "properties": {
+   "cost_max": {
+    "description": "Cost maximum in gp (inclusive).",
+    "type": "number"
+   },
+   "cost_min": {
+    "description": "Cost minimum in gp (inclusive).",
+    "type": "number"
+   },
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "desc_contains": {
+    "description": "Case-insensitive substring search in item description text.",
+    "type": "string"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "is_armor": {
+    "description": "Filter to entries flagged as armor.",
+    "type": "boolean"
+   },
+   "is_finesse": {
+    "description": "Finesse weapons only.",
+    "type": "boolean"
+   },
+   "is_light": {
+    "description": "Light weapons only.",
+    "type": "boolean"
+   },
+   "is_thrown": {
+    "description": "Thrown weapons only.",
+    "type": "boolean"
+   },
+   "is_two_handed": {
+    "description": "Two-handed weapons only.",
+    "type": "boolean"
+   },
+   "is_versatile": {
+    "description": "Versatile weapons only.",
+    "type": "boolean"
+   },
+   "is_weapon": {
+    "description": "Filter to entries flagged as weapons.",
+    "type": "boolean"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Item name.",
+    "type": "string"
+   },
+   "ordering": {
+    "description": "Sort by field name; prefix with '-' for descending. Examples: 'name', '-challenge_rating', 'level'.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "rarities": {
+    "description": "Comma list of rarities (e.g. 'rare,very-rare,legendary'). Filters via rarity__in.",
+    "type": "string"
+   },
+   "rarity": {
+    "description": "Single rarity key: common, uncommon, rare, very-rare, legendary, artifact. Use list_itemrarities.",
+    "type": "string"
+   },
+   "requires_attunement": {
+    "description": "True for attunement-required items only; False to exclude attunement items.",
+    "type": "boolean"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   },
+   "weight_max": {
+    "description": "Weight maximum in lbs (inclusive).",
+    "type": "number"
+   },
+   "weight_min": {
+    "description": "Weight minimum in lbs (inclusive).",
+    "type": "number"
+   }
+  },
+  "type": "object"
+ },
+ "search_monsters": {
+  "additionalProperties": false,
+  "properties": {
+   "ac_max": {
+    "description": "Armor Class maximum (inclusive).",
+    "type": "integer"
+   },
+   "ac_min": {
+    "description": "Armor Class minimum (inclusive).",
+    "type": "integer"
+   },
+   "charisma_max": {
+    "description": "Charisma score maximum (inclusive).",
+    "type": "integer"
+   },
+   "charisma_min": {
+    "description": "Charisma score minimum (inclusive).",
+    "type": "integer"
+   },
+   "constitution_max": {
+    "description": "Constitution score maximum (inclusive).",
+    "type": "integer"
+   },
+   "constitution_min": {
+    "description": "Constitution score minimum (inclusive).",
+    "type": "integer"
+   },
+   "cr": {
+    "description": "Exact challenge rating (e.g., '1', '1/2', '5'). Use cr_min/cr_max for ranges.",
+    "type": "string"
+   },
+   "cr_max": {
+    "description": "CR maximum (inclusive).",
+    "type": "number"
+   },
+   "cr_min": {
+    "description": "CR minimum (inclusive). Pair with cr_max for ranged encounter prep.",
+    "type": "number"
+   },
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "dexterity_max": {
+    "description": "Dexterity score maximum (inclusive).",
+    "type": "integer"
+   },
+   "dexterity_min": {
+    "description": "Dexterity score minimum (inclusive).",
+    "type": "integer"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "has_saves": {
+    "description": "Comma list of saves the creature must have proficiency in (e.g. 'dexterity,wisdom'). Maps to saving_throw_X__isnull=false.",
+    "type": "string"
+   },
+   "has_skills": {
+    "description": "Comma list of skills the creature must have a bonus in (e.g. 'stealth,perception'). Maps to skill_bonus_X__isnull=false.",
+    "type": "string"
+   },
+   "intelligence_max": {
+    "description": "Intelligence score maximum (inclusive).",
+    "type": "integer"
+   },
+   "intelligence_min": {
+    "description": "Intelligence score minimum (inclusive).",
+    "type": "integer"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Creature name (partial unless match='exact').",
+    "type": "string"
+   },
+   "ordering": {
+    "description": "Sort by field name; prefix with '-' for descending. Examples: 'name', '-challenge_rating', 'level'.",
+    "type": "string"
+   },
+   "passive_perception_max": {
+    "description": "Passive Perception maximum.",
+    "type": "integer"
+   },
+   "passive_perception_min": {
+    "description": "Passive Perception minimum.",
+    "type": "integer"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "size": {
+    "description": "Size key: 'tiny','small','medium','large','huge','gargantuan'. Use list_sizes.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   },
+   "strength_max": {
+    "description": "Strength score maximum (inclusive).",
+    "type": "integer"
+   },
+   "strength_min": {
+    "description": "Strength score minimum (inclusive).",
+    "type": "integer"
+   },
+   "type": {
+    "description": "Creature type key (e.g., 'beast', 'dragon', 'undead'). Use list_creaturetypes to discover keys.",
+    "type": "string"
+   },
+   "wisdom_max": {
+    "description": "Wisdom score maximum (inclusive).",
+    "type": "integer"
+   },
+   "wisdom_min": {
+    "description": "Wisdom score minimum (inclusive).",
+    "type": "integer"
+   }
+  },
+  "type": "object"
+ },
+ "search_npcs": {
+  "additionalProperties": false,
+  "properties": {
+   "affiliation": {
+    "description": "Affiliation in Notes (e.g., 'Black Ledger').",
+    "type": "string"
+   },
+   "limit": {
+    "default": 25,
+    "description": "Max results (default 25).",
+    "minimum": 1,
+    "type": "integer"
+   },
+   "name": {
+    "description": "Character name (substring).",
+    "type": "string"
+   },
+   "origin": {
+    "description": "Origin/faction (substring of Origin column).",
+    "type": "string"
+   },
+   "race": {
+    "description": "Race (e.g., 'Human', 'Elf', 'Derro').",
+    "type": "string"
+   },
+   "type": {
+    "description": "Player character or non-player character.",
+    "enum": [
+     "PC",
+     "NPC"
+    ],
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "search_rules": {
+  "additionalProperties": false,
+  "properties": {
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 5,
+    "description": "Max results (default 5).",
+    "type": "integer"
+   },
+   "query": {
+    "description": "Free-text query (e.g. 'opportunity attack', 'cover', 'grapple').",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   },
+   "vector": {
+    "description": "True enables semantic / embedding search (great for paraphrased queries). False or unset uses keyword search.",
+    "type": "boolean"
+   }
+  },
+  "required": [
+   "query"
+  ],
+  "type": "object"
+ },
+ "search_rulesets": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Ruleset (chapter) name.",
+    "type": "string"
+   },
+   "ordering": {
+    "description": "Sort by field name; prefix with '-' for descending. Examples: 'name', '-challenge_rating', 'level'.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "search_species": {
+  "additionalProperties": false,
+  "properties": {
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "is_subspecies": {
+    "description": "True for subspecies only; False for parent species only.",
+    "type": "boolean"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Species name.",
+    "type": "string"
+   },
+   "ordering": {
+    "description": "Sort by field name; prefix with '-' for descending. Examples: 'name', '-challenge_rating', 'level'.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   },
+   "subspecies_of": {
+    "description": "Parent species key (e.g. 'srd-2024_elf') — returns its subspecies.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "search_spells": {
+  "additionalProperties": false,
+  "properties": {
+   "casting_time": {
+    "description": "Casting time key: 'action', 'bonusaction', 'reaction', '1minute', '10minutes', '1hour', '8hours', '12hours', '24hours', '1week'.",
+    "type": "string"
+   },
+   "classes": {
+    "description": "Comma list of FULL class keys WITH source prefix (e.g. 'srd-2024_wizard,srd-2024_sorcerer'). Bare 'wizard' will NOT match — Open5e requires the source-prefixed key. Use search_classes to discover keys. Multiple values are OR'd.",
+    "type": "string"
+   },
+   "concentration": {
+    "description": "True for concentration spells, False to exclude them.",
+    "type": "boolean"
+   },
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "level": {
+    "description": "Exact spell level (0=cantrip, 1-9). Use level_min/level_max for ranges.",
+    "type": "integer"
+   },
+   "level_max": {
+    "description": "Spell level maximum (inclusive).",
+    "type": "integer"
+   },
+   "level_min": {
+    "description": "Spell level minimum (inclusive). E.g. level_min=1, level_max=3 for low-tier.",
+    "type": "integer"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "material": {
+    "description": "Filter by Material component requirement.",
+    "type": "boolean"
+   },
+   "material_consumed": {
+    "description": "Filter by spells that consume their material component.",
+    "type": "boolean"
+   },
+   "name": {
+    "description": "Spell name.",
+    "type": "string"
+   },
+   "ordering": {
+    "description": "Sort by field name; prefix with '-' for descending. Examples: 'name', '-challenge_rating', 'level'.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "range_max": {
+    "description": "Range maximum in feet (inclusive).",
+    "type": "integer"
+   },
+   "range_min": {
+    "description": "Range minimum in feet (inclusive).",
+    "type": "integer"
+   },
+   "school": {
+    "description": "School key (evocation, abjuration, conjuration, divination, enchantment, illusion, necromancy, transmutation). Use list_spellschools to discover.",
+    "type": "string"
+   },
+   "somatic": {
+    "description": "Filter by Somatic component requirement.",
+    "type": "boolean"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   },
+   "verbal": {
+    "description": "Filter by Verbal component requirement.",
+    "type": "boolean"
+   }
+  },
+  "type": "object"
+ },
+ "search_srd": {
+  "additionalProperties": false,
+  "properties": {
+   "document_pk": {
+    "description": "Restrict to a single document key (e.g. 'srd-2024').",
+    "type": "string"
+   },
+   "fuzzy": {
+    "description": "Allow per-word fuzzy matches in name fields only.",
+    "type": "boolean"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "object_model": {
+    "description": "Restrict to one type: 'creature', 'spell', 'magicitem', 'item', 'rule', 'background', 'species', 'feat', 'condition', 'class'.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Free-text search across all D&D resources.",
+    "type": "string"
+   },
+   "strict": {
+    "description": "Return only explicitly-requested object types.",
+    "type": "boolean"
+   },
+   "vector": {
+    "description": "Enable semantic / embedding search against name+description. Best for queries like 'creatures that breathe fire' that lack exact keywords.",
+    "type": "boolean"
+   }
+  },
+  "required": [
+   "query"
+  ],
+  "type": "object"
+ },
+ "search_weapons": {
+  "additionalProperties": false,
+  "properties": {
+   "damage_dice": {
+    "description": "Comma list of damage-dice strings (e.g. '1d8,1d10'). Filters via damage_dice__in.",
+    "type": "string"
+   },
+   "dedupe": {
+    "default": true,
+    "description": "When true (default), collapse same-name entries across sources, keeping the highest-priority one. Dropped keys are surfaced in the response's `dropped_variants` field so they remain reachable via the matching get_* tool. Pass false to see every variant (rarely needed; this tool is not designed for edition comparison).",
+    "type": "boolean"
+   },
+   "exclude": {
+    "description": "Comma-separated list of top-level fields to exclude from the response.",
+    "type": "string"
+   },
+   "fields": {
+    "description": "Comma-separated list of top-level fields to include in the response (server-side trim — useful for compact lookups). Example: 'key,name,challenge_rating,hit_points,armor_class'.",
+    "type": "string"
+   },
+   "is_finesse": {
+    "description": "Finesse weapons only.",
+    "type": "boolean"
+   },
+   "is_light": {
+    "description": "Light weapons only.",
+    "type": "boolean"
+   },
+   "is_thrown": {
+    "description": "Thrown weapons only.",
+    "type": "boolean"
+   },
+   "is_two_handed": {
+    "description": "Two-handed weapons only.",
+    "type": "boolean"
+   },
+   "is_versatile": {
+    "description": "Versatile weapons only.",
+    "type": "boolean"
+   },
+   "keys": {
+    "description": "Batch-fetch by exact record keys: a comma list (e.g. 'srd-2024_goblin,srd-2024_kobold'). Uses /v2/<endpoint>/?key__in=... — one HTTP round-trip instead of N. Combine with `fields` to keep the response compact.",
+    "type": "string"
+   },
+   "limit": {
+    "default": 10,
+    "description": "Max results (default varies by tool).",
+    "type": "integer"
+   },
+   "match": {
+    "default": "partial",
+    "description": "Name match mode: 'partial' (default, case-insensitive substring) or 'exact'.",
+    "enum": [
+     "partial",
+     "exact"
+    ],
+    "type": "string"
+   },
+   "name": {
+    "description": "Weapon name.",
+    "type": "string"
+   },
+   "ordering": {
+    "description": "Sort by field name; prefix with '-' for descending. Examples: 'name', '-challenge_rating', 'level'.",
+    "type": "string"
+   },
+   "query": {
+    "description": "Alias for `name` — case-insensitive substring match on the name field. Provided because the free-text search_rules/search_srd tools use `query`; prefer `name` directly. Ignored if `name` is also given.",
+    "type": "string"
+   },
+   "source": {
+    "description": "Filter by source document key. Comma-separated values both filter AND set priority order — earlier sources are listed first in results. Default behavior (no source passed): NO hard filter — searches every source, then ranks results into three tiers (srd-2024 first, srd-2014 last, everything else in between). Pass an empty string ('') to disable BOTH filter and priority sort (raw API order). Common keys: 'srd-2024', 'srd-2014', 'tob' (Tome of Beasts), 'a5e-ag' (Level Up Adventurer's Guide), 'a5e-mm' (Monstrous Menagerie), 'open5e'. Use list_documents to discover every available key.",
+    "type": "string"
+   }
+  },
+  "type": "object"
+ },
+ "year_to_age": {
+  "additionalProperties": false,
+  "properties": {
+   "year": {
+    "description": "A.F. year to convert",
+    "type": "integer"
+   }
+  },
+  "required": [
+   "year"
+  ],
+  "type": "object"
+ }
+}

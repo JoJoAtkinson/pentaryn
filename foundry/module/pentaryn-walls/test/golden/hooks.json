@@ -1,0 +1,10 @@
+[
+  {
+    "kind": "once",
+    "name": "init"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  }
+]

@@ -1,0 +1,353 @@
+{
+  "result": {
+    "ok": false,
+    "path": "worlds/w/actors.json",
+    "url": "/worlds/w/actors.json",
+    "dryRun": false,
+    "manifest": {
+      "generator": "build_actors.py",
+      "generatorVersion": "1.0.0",
+      "generatedAt": "2026-10-10T00:00:00Z",
+      "sourceRevision": "abc1234",
+      "skippedRows": 0
+    },
+    "counts": {
+      "total": 6,
+      "selected": 6,
+      "created": 2,
+      "updated": 2,
+      "skipped": 1,
+      "failed": 1,
+      "assertions": 7
+    },
+    "created": [
+      "bravo",
+      "dup"
+    ],
+    "updated": [
+      "alpha",
+      "dup"
+    ],
+    "skipped": [
+      "charlie"
+    ],
+    "failed": [
+      {
+        "slug": "echo",
+        "error": "Actor validation errors: echo"
+      }
+    ],
+    "deleteJson": {
+      "required": false,
+      "path": "worlds/w/actors.json",
+      "url": "/worlds/w/actors.json",
+      "note": "Foundry has no client-side file-delete API, so this module cannot remove the file. `make foundry-import` deletes it for you (and `make foundry-clean` does it on its own). Until then it is world-readable over the tunnel."
+    }
+  },
+  "writes": [
+    {
+      "op": "prototypeToken.update",
+      "uuid": "Actor.actor00000000001",
+      "changes": {
+        "name": "ALPHA",
+        "width": 1
+      }
+    },
+    {
+      "op": "update.options",
+      "uuid": "Actor.actor00000000001",
+      "options": {
+        "render": false
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.actor00000000001",
+      "changes": {
+        "name": "ALPHA",
+        "type": "npc",
+        "system": {
+          "attributes": {
+            "hp": {
+              "max": 9,
+              "formula": "2d8"
+            }
+          }
+        },
+        "flags": {
+          "pentaryn": {
+            "slug": "alpha",
+            "sources": [
+              "MM"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "op": "deleteEmbeddedDocuments",
+      "uuid": "Actor.actor00000000001",
+      "type": "Item",
+      "names": [
+        "Old Bite"
+      ],
+      "options": {
+        "render": false
+      }
+    },
+    {
+      "op": "createEmbeddedDocuments",
+      "uuid": "Actor.actor00000000001",
+      "type": "Item",
+      "names": [
+        "Bite",
+        "Breath"
+      ],
+      "options": {
+        "render": false,
+        "keepId": false
+      }
+    },
+    {
+      "op": "reset",
+      "uuid": "Actor.actor00000000001"
+    },
+    {
+      "op": "update.options",
+      "uuid": "Actor.actor00000000001",
+      "options": {
+        "render": false
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.actor00000000001",
+      "changes": {
+        "flags": {
+          "pentaryn": {
+            "contentHash": "sha256:alpha-new"
+          }
+        }
+      }
+    },
+    {
+      "op": "Actor.create",
+      "data": {
+        "name": "BRAVO",
+        "type": "npc",
+        "system": {
+          "attributes": {
+            "hp": {
+              "value": 9,
+              "max": 9,
+              "formula": "2d8"
+            }
+          }
+        },
+        "prototypeToken": {
+          "name": "BRAVO",
+          "width": 1
+        },
+        "flags": {
+          "pentaryn": {
+            "slug": "bravo",
+            "sources": [
+              "MM"
+            ]
+          }
+        }
+      },
+      "options": {
+        "renderSheet": false
+      }
+    },
+    {
+      "op": "createEmbeddedDocuments",
+      "uuid": "Actor.actor00000000007",
+      "type": "Item",
+      "names": [
+        "Bite"
+      ],
+      "options": {
+        "render": false,
+        "keepId": false
+      }
+    },
+    {
+      "op": "reset",
+      "uuid": "Actor.actor00000000007"
+    },
+    {
+      "op": "update.options",
+      "uuid": "Actor.actor00000000007",
+      "options": {
+        "render": false
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.actor00000000007",
+      "changes": {
+        "flags": {
+          "pentaryn": {
+            "contentHash": "sha256:bravo-new"
+          }
+        }
+      }
+    },
+    {
+      "op": "Actor.create",
+      "data": {
+        "name": "ECHO",
+        "type": "npc",
+        "system": {
+          "attributes": {
+            "hp": {
+              "value": 9,
+              "max": 9,
+              "formula": "2d8"
+            }
+          }
+        },
+        "prototypeToken": {
+          "name": "ECHO",
+          "width": 1
+        },
+        "flags": {
+          "pentaryn": {
+            "slug": "echo",
+            "sources": [
+              "MM"
+            ]
+          }
+        }
+      },
+      "options": {
+        "renderSheet": false
+      }
+    },
+    {
+      "op": "Actor.create",
+      "data": {
+        "name": "DUP",
+        "type": "npc",
+        "system": {
+          "attributes": {
+            "hp": {
+              "value": 9,
+              "max": 9,
+              "formula": "2d8"
+            }
+          }
+        },
+        "prototypeToken": {
+          "name": "DUP",
+          "width": 1
+        },
+        "flags": {
+          "pentaryn": {
+            "slug": "dup"
+          }
+        }
+      },
+      "options": {
+        "renderSheet": false
+      }
+    },
+    {
+      "op": "reset",
+      "uuid": "Actor.actor00000000009"
+    },
+    {
+      "op": "update.options",
+      "uuid": "Actor.actor00000000009",
+      "options": {
+        "render": false
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.actor00000000009",
+      "changes": {
+        "flags": {
+          "pentaryn": {
+            "contentHash": "sha256:dup-1"
+          }
+        }
+      }
+    },
+    {
+      "op": "prototypeToken.update",
+      "uuid": "Actor.actor00000000009",
+      "changes": {
+        "name": "DUP",
+        "width": 1
+      }
+    },
+    {
+      "op": "update.options",
+      "uuid": "Actor.actor00000000009",
+      "options": {
+        "render": false
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.actor00000000009",
+      "changes": {
+        "name": "DUP",
+        "type": "npc",
+        "system": {
+          "attributes": {
+            "hp": {
+              "max": 9,
+              "formula": "2d8"
+            }
+          }
+        },
+        "flags": {
+          "pentaryn": {
+            "slug": "dup"
+          }
+        }
+      }
+    },
+    {
+      "op": "reset",
+      "uuid": "Actor.actor00000000009"
+    },
+    {
+      "op": "update.options",
+      "uuid": "Actor.actor00000000009",
+      "options": {
+        "render": false
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Actor.actor00000000009",
+      "changes": {
+        "flags": {
+          "pentaryn": {
+            "contentHash": "sha256:dup-2"
+          }
+        }
+      }
+    }
+  ],
+  "toasts": [
+    [
+      "warn",
+      "[pentaryn-importer] 1 actor(s) failed — see the console for the per-slug report.",
+      {
+        "permanent": true
+      }
+    ]
+  ]
+}

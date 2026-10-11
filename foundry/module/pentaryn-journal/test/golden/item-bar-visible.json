@@ -1,0 +1,1026 @@
+[
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "canInspectItems": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": true
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": true
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": true
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": true
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": true
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "canInspectItems": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": true
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": true
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": true
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": true
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": true
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": true
+  },
+  {
+    "input": {
+      "hasSource": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": true
+  }
+]

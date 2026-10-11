@@ -1,0 +1,348 @@
+{
+  "full": [
+    [
+      "log",
+      "pentaryn-importer | fetching /worlds/w/actors.json (cache: no-cache, timeout 15000 ms)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | version gate passed — contract pentaryn/actors.json@1, dnd5e 6.0.6, Foundry generation 14"
+    ],
+    [
+      "log",
+      "pentaryn-importer | @ref lint clean across 6 actor(s)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | manifest ok — generator build_actors.py@1.0.0, built 2026-10-10T00:00:00Z from abc1234, 6 actor(s), 0 skipped row(s)"
+    ],
+    [
+      "warn",
+      "pentaryn-importer | alpha: left 1 hand-added Item(s) in place (Hand Axe). Pass unmanagedItems:\"delete\" to remove them."
+    ],
+    [
+      "warn",
+      "pentaryn-importer | alpha → breath: ignoring non-scalar expectation \"uses\" (unsupported shape)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | update alpha — 2 item(s) written, 1 replaced"
+    ],
+    [
+      "log",
+      "pentaryn-importer | create bravo — 1 item(s) written, 0 replaced"
+    ],
+    [
+      "log",
+      "pentaryn-importer | skip   charlie — contentHash unchanged (sha256:charlie-new…)"
+    ],
+    [
+      "error",
+      "pentaryn-importer | FAILED echo:",
+      "Error: Actor validation errors: echo"
+    ],
+    [
+      "log",
+      "pentaryn-importer | create dup — 0 item(s) written, 0 replaced"
+    ],
+    [
+      "log",
+      "pentaryn-importer | update dup — 0 item(s) written, 0 replaced"
+    ],
+    [
+      "group",
+      "pentaryn-importer | import — 2 created · 2 updated · 1 skipped · 1 failed"
+    ],
+    [
+      "log",
+      "pentaryn-importer | source        /worlds/w/actors.json"
+    ],
+    [
+      "log",
+      "pentaryn-importer | generator     build_actors.py@1.0.0"
+    ],
+    [
+      "log",
+      "pentaryn-importer | built         2026-10-10T00:00:00Z  (abc1234)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | actors        6 selected of 6 in file"
+    ],
+    [
+      "log",
+      "pentaryn-importer | assertions    7 checked, all passed"
+    ],
+    [
+      "log",
+      "pentaryn-importer | created      ",
+      "bravo, dup"
+    ],
+    [
+      "log",
+      "pentaryn-importer | updated      ",
+      "alpha, dup"
+    ],
+    [
+      "log",
+      "pentaryn-importer | skipped      ",
+      "charlie",
+      "(contentHash unchanged)"
+    ],
+    [
+      "warn",
+      "pentaryn-importer | failed       ",
+      1
+    ],
+    [
+      "table",
+      [
+        {
+          "slug": "echo",
+          "error": "Actor validation errors: echo"
+        }
+      ]
+    ],
+    [
+      "groupEnd"
+    ]
+  ],
+  "deleteForce": [
+    [
+      "log",
+      "pentaryn-importer | fetching /worlds/w/actors.json (cache: no-cache, timeout 15000 ms)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | version gate passed — contract pentaryn/actors.json@1, dnd5e 6.0.6, Foundry generation 14"
+    ],
+    [
+      "log",
+      "pentaryn-importer | @ref lint clean across 2 actor(s)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | manifest ok — generator build_actors.py@1.0.0, built 2026-10-10T00:00:00Z from abc1234, 2 actor(s), 0 skipped row(s)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | update alpha — 1 item(s) written, 3 replaced"
+    ],
+    [
+      "log",
+      "pentaryn-importer | update charlie — 0 item(s) written, 0 replaced"
+    ],
+    [
+      "group",
+      "pentaryn-importer | import — 0 created · 2 updated · 0 skipped · 0 failed"
+    ],
+    [
+      "log",
+      "pentaryn-importer | source        /worlds/w/actors.json"
+    ],
+    [
+      "log",
+      "pentaryn-importer | generator     build_actors.py@1.0.0"
+    ],
+    [
+      "log",
+      "pentaryn-importer | built         2026-10-10T00:00:00Z  (abc1234)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | actors        2 selected of 2 in file"
+    ],
+    [
+      "log",
+      "pentaryn-importer | assertions    0 checked, all passed"
+    ],
+    [
+      "log",
+      "pentaryn-importer | updated      ",
+      "alpha, charlie"
+    ],
+    [
+      "groupEnd"
+    ],
+    [
+      "warn",
+      "pentaryn-importer | DELETE THIS NOW: Data/worlds/w/actors.json is public while the tunnel is up."
+    ]
+  ],
+  "site :625 assertValue (actor path)": [
+    [
+      "log",
+      "pentaryn-importer | fetching /worlds/w/actors.json (cache: no-cache, timeout 15000 ms)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | version gate passed — contract pentaryn/actors.json@1, dnd5e 6.0.6, Foundry generation 14"
+    ],
+    [
+      "log",
+      "pentaryn-importer | @ref lint clean across 2 actor(s)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | manifest ok — generator build_actors.py@1.0.0, built 2026-10-10T00:00:00Z from abc1234, 2 actor(s), 0 skipped row(s)"
+    ],
+    [
+      "error",
+      "pentaryn-importer | READBACK ASSERTION FAILED — aborting the whole run.\n  where:    actor \"s625\"\n  path:     system.attributes.hp.max\n  expected: 10\n  actual:   9\n  hint:     Resolved with foundry.utils.getProperty against the prepared Actor."
+    ]
+  ],
+  "site :668 prototype token strip": [
+    [
+      "log",
+      "pentaryn-importer | fetching /worlds/w/actors.json (cache: no-cache, timeout 15000 ms)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | version gate passed — contract pentaryn/actors.json@1, dnd5e 6.0.6, Foundry generation 14"
+    ],
+    [
+      "log",
+      "pentaryn-importer | @ref lint clean across 2 actor(s)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | manifest ok — generator build_actors.py@1.0.0, built 2026-10-10T00:00:00Z from abc1234, 2 actor(s), 0 skipped row(s)"
+    ],
+    [
+      "error",
+      "pentaryn-importer | READBACK ASSERTION FAILED — aborting the whole run.\n  where:    actor \"s668\"\n  path:     prototypeToken.vaule\n  expected: 3\n  actual:   undefined\n  hint:     The key is absent from the saved document — Foundry STRIPPED it. Check the spelling against PrototypeToken's accepted key set (CONTRACT.md §3.3)."
+    ]
+  ],
+  "site :701 activity ids regenerated": [
+    [
+      "log",
+      "pentaryn-importer | fetching /worlds/w/actors.json (cache: no-cache, timeout 15000 ms)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | version gate passed — contract pentaryn/actors.json@1, dnd5e 6.0.6, Foundry generation 14"
+    ],
+    [
+      "log",
+      "pentaryn-importer | @ref lint clean across 2 actor(s)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | manifest ok — generator build_actors.py@1.0.0, built 2026-10-10T00:00:00Z from abc1234, 2 actor(s), 0 skipped row(s)"
+    ],
+    [
+      "error",
+      "pentaryn-importer | READBACK ASSERTION FAILED — aborting the whole run.\n  where:    actor \"s701\" → item \"bite\"\n  path:     system.activities\n  expected: [\"biteAttack000001\"]\n  actual:   [\"regen00000000014\"]\n  hint:     Foundry regenerated the activity ids instead of honouring the supplied `_id`s (CONTRACT.md U7). Every `expected` activity lookup is now unresolvable; §8.2 rule 3 must switch to resolving activities by name."
+    ]
+  ],
+  "site :746 expected item missing": [
+    [
+      "log",
+      "pentaryn-importer | fetching /worlds/w/actors.json (cache: no-cache, timeout 15000 ms)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | version gate passed — contract pentaryn/actors.json@1, dnd5e 6.0.6, Foundry generation 14"
+    ],
+    [
+      "log",
+      "pentaryn-importer | @ref lint clean across 2 actor(s)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | manifest ok — generator build_actors.py@1.0.0, built 2026-10-10T00:00:00Z from abc1234, 2 actor(s), 0 skipped row(s)"
+    ],
+    [
+      "error",
+      "pentaryn-importer | READBACK ASSERTION FAILED — aborting the whole run.\n  where:    actor \"s746\" → item \"claw\"\n  path:     flags.pentaryn.action\n  expected: \"claw\"\n  actual:   [\"bite\"]\n  hint:     No embedded Item on the Actor carries this action flag."
+    ]
+  ],
+  "site :794 expected activity missing": [
+    [
+      "log",
+      "pentaryn-importer | fetching /worlds/w/actors.json (cache: no-cache, timeout 15000 ms)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | version gate passed — contract pentaryn/actors.json@1, dnd5e 6.0.6, Foundry generation 14"
+    ],
+    [
+      "log",
+      "pentaryn-importer | @ref lint clean across 2 actor(s)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | manifest ok — generator build_actors.py@1.0.0, built 2026-10-10T00:00:00Z from abc1234, 2 actor(s), 0 skipped row(s)"
+    ],
+    [
+      "error",
+      "pentaryn-importer | READBACK ASSERTION FAILED — aborting the whole run.\n  where:    actor \"s794\" → item \"bite\" → activity nope\n  path:     system.activities\n  expected: \"nope\"\n  actual:   [\"biteAttack000001\"]\n  hint:     Activity id not present on the saved Item — see CONTRACT.md U7."
+    ]
+  ],
+  "site :894 Item silently dropped": [
+    [
+      "log",
+      "pentaryn-importer | fetching /worlds/w/actors.json (cache: no-cache, timeout 15000 ms)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | version gate passed — contract pentaryn/actors.json@1, dnd5e 6.0.6, Foundry generation 14"
+    ],
+    [
+      "log",
+      "pentaryn-importer | @ref lint clean across 2 actor(s)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | manifest ok — generator build_actors.py@1.0.0, built 2026-10-10T00:00:00Z from abc1234, 2 actor(s), 0 skipped row(s)"
+    ],
+    [
+      "error",
+      "pentaryn-importer | READBACK ASSERTION FAILED — aborting the whole run.\n  where:    actor \"s894\"\n  path:     actor.items (createEmbeddedDocuments)\n  expected: \"2 Item(s): Bite, Breath\"\n  actual:   \"1 Item(s): Bite\"\n  hint:     Foundry DROPPED 1 Item(s) without raising. Missing: Breath. Check the dropped Item's `type` and `system` against CONTRACT.md §3."
+    ]
+  ],
+  "site :1110 payload Item without an action": [
+    [
+      "log",
+      "pentaryn-importer | fetching /worlds/w/actors.json (cache: no-cache, timeout 15000 ms)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | version gate passed — contract pentaryn/actors.json@1, dnd5e 6.0.6, Foundry generation 14"
+    ],
+    [
+      "log",
+      "pentaryn-importer | @ref lint clean across 2 actor(s)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | manifest ok — generator build_actors.py@1.0.0, built 2026-10-10T00:00:00Z from abc1234, 2 actor(s), 0 skipped row(s)"
+    ],
+    [
+      "error",
+      "pentaryn-importer | READBACK ASSERTION FAILED — aborting the whole run.\n  where:    actor \"s1110a\" → item \"(no flags.pentaryn.action in payload)\"\n  path:     flags.pentaryn.action\n  expected: undefined\n  actual:   [null]\n  hint:     The PAYLOAD item carries no `flags.pentaryn.action`. The generator must emit one on every Item — it is the upsert key for the embedded-Item replace (CONTRACT.md §4.2)."
+    ]
+  ],
+  "site :1110 action flag stripped": [
+    [
+      "log",
+      "pentaryn-importer | fetching /worlds/w/actors.json (cache: no-cache, timeout 15000 ms)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | version gate passed — contract pentaryn/actors.json@1, dnd5e 6.0.6, Foundry generation 14"
+    ],
+    [
+      "log",
+      "pentaryn-importer | @ref lint clean across 2 actor(s)"
+    ],
+    [
+      "log",
+      "pentaryn-importer | manifest ok — generator build_actors.py@1.0.0, built 2026-10-10T00:00:00Z from abc1234, 2 actor(s), 0 skipped row(s)"
+    ],
+    [
+      "error",
+      "pentaryn-importer | READBACK ASSERTION FAILED — aborting the whole run.\n  where:    actor \"s1110b\" → item \"bite\"\n  path:     flags.pentaryn.action\n  expected: \"bite\"\n  actual:   [null]\n  hint:     Payload item has no matching embedded Item — it was dropped, or Foundry STRIPPED `flags.pentaryn.action`. Either way the Item is unaddressable: the next run cannot recognise it as managed and will leave it behind as hand-added."
+    ]
+  ]
+}

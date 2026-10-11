@@ -36,7 +36,7 @@ pentaryn-combat's API.
 
 | Gap-fill (2026-10-10) | |
 |---|---|
-| Prerequisites | R7 C03 dnd5e use — journal half **landed**; movement's `ignoreTokens` **blocked on D4** |
+| Prerequisites | R7 C03 dnd5e use — journal half **landed**; movement half **landed** with D4 (2026-10-11): `\bignoreTokens\b` in `packages.json` `dnd5e.codePatterns`; C03 passes live |
 | Scores | §1 was scored before scorer fixes R2–R9 ([design record](../addon-blueprint-2026-10.md) §7.5). **After R-fixes: re-score** — `conformance.py --module movement --markdown`. No status changed on the snapshot; C33 now lists private internals (R6) |
 | Shared-file batches | `module.json` edits → [`wave7-restart-batch.md`](wave7-restart-batch.md); adjustments rows → [`adjustments-batch.md`](adjustments-batch.md) (append in the Record step) |
 
@@ -215,7 +215,7 @@ Clears C14, C20, C40 (core, glue, hooks), C41, C43.
    - **`hooks.test.mjs`**: pin `F.hooks` to `golden/hooks.json`, 16 entries in this order:
      `once init, once setup, getSceneControlButtons, renderSceneControls, drawTokenLayer, canvasReady, refreshToken, updateActor, updateToken, createCombat, updateCombat, deleteCombat, createCombatant, updateCombatant, deleteCombatant, once ready`.
 5. `GOLDEN_UPDATE=1 node test/run.mjs` once, on unchanged code. **Checkpoint:** review the diff
-   (tests and goldens only). It is committed only when Joe approves.
+   (tests and goldens only). It is committed by the agent as the checkpoint.
 
 ### S2 — Patches through `wrapMethod`, adjustments rows
 
@@ -458,6 +458,11 @@ name, so the scorer cannot see it. Two options:
 - **Alternative:** drop the dnd5e relationship in the Wave 7 batch. Nothing breaks at runtime, but
   the manifest stops saying what the ghost relies on.
 
+**Decided 2026-10-11 (Joe, D4): keep the relationship.** Landed in wave 1 as a `packages.json` data edit,
+no module change. It went into `dnd5e.codePatterns` (`\bignoreTokens\b`), not `stringExact`: the name is a
+property key in code (movement-core.mjs:75), not a string literal. `conformance.py --module movement`: C03
+passes (61.0 % → 63.4 %); test `test_r7_d4_c03_counts_dnd5e_ignore_tokens`.
+
 ## 7. Effort
 
 | Step | Effort |
@@ -477,10 +482,10 @@ name, so the scorer cannot see it. Two options:
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module movement --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | not migrated yet — **66.7 % (30/45)** today (wave start in [`wave-1-baseline.md`](wave-1-baseline.md)), `conformance.py --module movement --markdown`, 2026-10-11 |
+| Date | 2026-10-11 (wave 1: checkpoint only (wave 1 Stage 0 lane); the refactor is workflow 2) |
+| Commits (Joe-approved) | characterisation: `7615de6` (kit), `3a5192d` (checkpoint) · refactor: none yet · other: `49b8554` (README, aoe-movement-portals-37), `4f7b5a8` (comment line refs), `4a5c13c` (D4 scorer) |
+| Declared changes handed to the live-test workflow | none |
+| `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) |
+| Adjustments rows appended to `adjustments-batch.md` | no (step not reached) |
+| Still failing, and why | C07 C12 C18 C21 C22 C24 C26 C27 C28 C35 C37 C40 C41 C44 C45 — the guide's steps 2+ have not run. Frozen tests: the checkpoint's assertions and goldens are untouched since the checkpoint (see wave-1-report §Frozen tests). |

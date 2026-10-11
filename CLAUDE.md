@@ -31,9 +31,11 @@ Open the entry point, then only what it points to. Every context file opens with
 |---|---|
 | Anything in Foundry — scenes, actors, tokens, server, tunnel, updater, assets | [`context/foundry/README.md`](context/foundry/README.md) |
 | Building a new Foundry module, or migrating one to the blueprint (kit, tiers, conformance) | [`context/foundry/addon-blueprint.md`](context/foundry/addon-blueprint.md) |
+| The MCP bridge itself — adding a `mcp__foundry__*` tool, the fork repo, build/restart, its logs | [`context/foundry/mcp-fork.md`](context/foundry/mcp-fork.md) |
 | The current one-shot — scene state, cast, IDs, what's still unbuilt | [`context/space-journey.md`](context/space-journey.md) |
 | The Ardenford campaign — world state, the map-candidate `Suggestions` folders | [`context/ardenford.md`](context/ardenford.md) |
 | The Pentaryn world (main build) — modules, splash, marker/crowd actors, what's still unbuilt | [`context/pentaryn.md`](context/pentaryn.md) |
+| Letting a friend into vtt.atjoseph.com — Gmail whitelist is **two lists** (Google test users + Cloudflare policy) | [`context/foundry/cloudflare-access.md`](context/foundry/cloudflare-access.md) |
 | World & lore authoring — where files go, naming, frontmatter, combat NPCs | [`context/world/README.md`](context/world/README.md) |
 | Building a scene out from typed prompt markers (`Prompt · <size>` tokens) | [`context/foundry/prompt-markers.md`](context/foundry/prompt-markers.md) |
 | Timeline events and the history SVGs | [`context/world/timelines.md`](context/world/timelines.md) |

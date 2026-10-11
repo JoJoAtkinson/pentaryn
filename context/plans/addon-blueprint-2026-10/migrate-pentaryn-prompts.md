@@ -248,7 +248,7 @@ Each step is one commit-sized change. It is behaviour-neutral unless marked **[d
 "Char. test" means the characterisation test written and passing against the **unchanged** code
 **before** the step. Write goldens one file at a time with `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`.
 Never run `GOLDEN_UPDATE=1` on the legacy suite or `UPDATE_SNAPSHOTS=1` during a refactor step.
-Joe approves each characterisation checkpoint. Agents never commit.
+Agents commit each characterisation checkpoint (review happens at merge).
 
 ### Step 1 — vendor the kit, fixed `run.mjs`
 - `vendor.py sync prompts --tier full --kit patch,patch-libwrapper,perf`. Then `vendor.py check prompts` exits 0.
@@ -310,7 +310,7 @@ Then:
   version, and the `stripHtml` seven-input table from prompts-lookup-28 with its measured outputs.
 - Absorbs: prompts-lookup-28 (prompts half), and the char. half of -16, -19, -20 and -12 (module
   side). The fake harness of prompts-lookup-14 is replaced by the kit stub and `fixtures/world.mjs`.
-- **Checkpoint:** review the `test/` diff; Joe approves the commit.
+- **Checkpoint:** review the `test/` diff; commit it as the checkpoint.
 
 ### Step 3 — characterise the pieces later steps move
 All in `core.test.mjs` / `glue.test.mjs`, against unchanged code. To reach non-exported
@@ -399,9 +399,10 @@ functions, add `export` to them. That edit changes no behaviour and goes in this
   `onDown` passed in. Register through `defineKeybindings`.
 - `setting(key, fallback)` keeps today's **local** semantics:
   `try { return game.settings.get(MODULE, key) ?? fallback } catch { return fallback }`. The kit's
-  `settingReader` would return the row default instead, and that differs for `gather.mjs:83`, which
-  passes 160 where the default is 400 (prompts-lookup-16). `gather` keeps passing 160 explicitly,
-  with `// TODO(Joe): 160 vs registered 400`. The `catch` carries a `log.debug`, so C24 passes.
+  `settingReader` would return the row default instead. `gather.mjs:83` used to pass 160 where the
+  default is 400 (prompts-lookup-16); D6 (decided 2026-10-11, landed in wave 1) made it pass the shared
+  `GATHER_CHARS` (400, `geometry-core.mjs`), the same constant the `gatherChars` row registers, so the
+  local and kit semantics now agree for it. The `catch` carries a `log.debug`, so C24 passes.
 - `coreSetting(key, fallback)` serves `model.mjs:290`. `manifests()`, `manifestFor(call)` and
   `storeManifest(m)` move here from `gather.mjs:59-73`, bodies verbatim.
 - `prompts.mjs:82` uses `setting("defaultSize")` with no fallback, exactly as today: a throw still
@@ -765,10 +766,10 @@ commits, with the reason in the commit message.
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module prompts --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | not migrated yet — **56.5 % (26/46)** today (wave start in [`wave-1-baseline.md`](wave-1-baseline.md)), `conformance.py --module prompts --markdown`, 2026-10-11 |
+| Date | 2026-10-11 (wave 1: checkpoint only (wave 1 Stage 0 lane); the refactor is workflow 2) |
+| Commits (Joe-approved) | characterisation: `013b95d` (kit), `6cc5c50` (checkpoint) · refactor: none yet · other: `868103f` **[declared]** D6 (one `gatherChars` default 400, cut mark `… (cut, full text: get-character-entity <id>)`; flips the checkpoint's gather goldens by that suffix only), `0c01ef1` (art script path doc) |
+| Declared changes handed to the live-test workflow | D6 — deployed and live-golden-checked in Stage 0 (only the suffix differs); open: J4 (which MCP tool the suffix should name) |
+| `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) |
+| Adjustments rows appended to `adjustments-batch.md` | no (step not reached) |
+| Still failing, and why | C07 C15 C16 C18 C20 C21 C22 C24 C26 C27 C28 C29 C32 C35 C40 C44 C45 C47 C48 C56 — the guide's steps 2+ have not run. Frozen tests: the checkpoint's assertions and goldens are untouched since the checkpoint (see wave-1-report §Frozen tests). |

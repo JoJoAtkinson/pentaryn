@@ -70,7 +70,7 @@ after the 2026-10 code audit. **Not this file:** the general procedure →
 | C29 inspect | n/a | n/a | the scorer reads `flagScope "senses"`; the module **does** write `flags.pentaryn-senses.{itemLight,itemLightPrior,spellLight,chain}` on tokens | becomes applicable at 13 → met by 11 (finding -25) |
 | C30 | pass | pass | | — |
 | C31 | manual | manual | `link`/`break` return booleans/counts; `toggle`/`hood` booleans (`hood` now also posts a chat line); `reconcile` undefined | 7 (documented `legacy:true`) |
-| C32 | pass | **fail** | row `senses-light-pick-collapse-hud` has no `wrapMethod` naming it | 12 (row rename or scorer fix) |
+| C32 | pass | **fail** | row `senses-light-pick-collapse-hud` (**renamed `argon-light-pick-collapse-panels`**, D2 `df661e0`) has no `wrapMethod` naming it | 12 (row rename or scorer fix) |
 | C33 private internals | n/a (scorer miss) | n/a | manually: `Token#_preview` (`chain.mjs:130`), `PrimaryCanvasGroup.SORT_LAYERS` (`:105`), shader chunks (`glow.mjs:131–159`), `usageConfig.create.summons` / `placeSummons` DOM (`light.mjs:706`, `:560`; snapshot `:685`, `:545`), `options.replacements` (`:775`, snapshot `:746`), `ui.ARGON` (`:190`) | 12 (finding -29) |
 | C34 nested lang | **fail** | **fail** | flat `PENTARYN_SENSES.Light.*` keys | 8 |
 | C35 i18n | **fail** | **fail** | `light.mjs:39` two-branch `L()` wrapper (29 call sites at 4e64f47, up from 28) | 8 (finding -24) |
@@ -205,7 +205,7 @@ that module lifted (or their senses-only half done alone, as stated).
   import still `:12`). `lang/en.json` has 3 new flat keys (27 in all). `styles/light.css` has a hit-box
   and a `.outshone` rule (`!important` now `:44`). `test/light.mjs` has 5 new checks, so `node test/run.mjs`
   gives 31 + 100 + 25 = **156** (was 151). `module.json` is now `0.4.1`. README +6. The adjustments row
-  `senses-light-pick-collapse-hud` is at `foundry/adjustments.yml:862`.
+  `senses-light-pick-collapse-hud` (**renamed `argon-light-pick-collapse-panels`**, D2 `df661e0`) is at `foundry/adjustments.yml:862`.
 - `conformance.py --module senses --markdown`. Run `node test/run.mjs` from the module folder; it must
   be green.
 - Re-read the four cross-module contracts on the live tree:
@@ -297,7 +297,7 @@ that module lifted (or their senses-only half done alone, as stated).
        `ui.ARGON.collapseAllPanels` once before it waits for the click.
    - **`test/api.test.mjs`** (step 1 part): `surfaceOf(game.pentaryn.senses)` and `surfaceOf(game.pentaryn.chain)` → `golden/surface.json` (today's surface, function names included).
 6. `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`, one file at a time, on **unchanged** runtime.
-   **Checkpoint:** Joe approves the characterisation commit.
+   **Checkpoint:** the characterisation commit lands (review happens at merge).
 
 ### Step 2 — one module id, shared util · absorbs: **-18**, **-10** (light half) · C12
 
@@ -520,7 +520,7 @@ Append while `foundry/adjustments.yml` is idle, all in one batch:
 
 Every row uses `check: make foundry-senses-check`.
 
-**C32 on the row `senses-light-pick-collapse-hud` (`foundry/adjustments.yml:862`, committed in 17275c9):** conformance C32 (conformance.py:779–783)
+**C32 on the row `senses-light-pick-collapse-hud` (**renamed `argon-light-pick-collapse-panels`**, D2 `df661e0`) (`foundry/adjustments.yml:862`, committed in 17275c9):** conformance C32 (conformance.py:779–783)
 fails every `<short>-*` row that no `wrapMethod({adjustments})` names, but this row records an API
 call, not a patch. Two options:
 - (a, preferred) fix C32 to apply only to rows for prototype or hand wraps, together with use-doc §5.6's

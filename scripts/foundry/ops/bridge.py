@@ -22,6 +22,7 @@ days.
 
 from __future__ import annotations
 
+import json
 import os
 import signal
 import subprocess
@@ -159,8 +160,33 @@ def judge(procs: list[Proc]) -> list[Proc]:
     return procs
 
 
-def status() -> int:
+def status_report(procs: list[Proc] | None = None) -> dict:
+    """Bridge processes as data (python-tooling-41): `ok` is False only when an orphan
+    holds the ports — the state in which every bridge tool times out silently."""
+    procs = scan() if procs is None else procs
+    holder = next((p for p in procs if p.ports), None)
+
+    def row(p: Proc) -> dict:
+        return {"pid": p.pid, "ppid": p.ppid, "kind": p.kind, "started": p.started,
+                "ports": list(p.ports), "orphan": p.orphan, "reason": p.reason,
+                "parent_alive": p.parent_alive, "parent_comm": p.parent_comm}
+
+    return {
+        "ok": not (holder is not None and holder.orphan),
+        "servers": sum(p.kind == "server" for p in procs),
+        "backends": sum(p.kind == "backend" for p in procs),
+        "holder": None if holder is None else {"pid": holder.pid, "orphan": holder.orphan},
+        "orphans": [p.pid for p in procs if p.orphan],
+        "procs": [row(p) for p in sorted(procs, key=lambda x: (x.kind, x.pid))],
+    }
+
+
+def status(as_json: bool = False) -> int:
     procs = scan()
+    if as_json:
+        r = status_report(procs)
+        print(json.dumps(r, indent=2))
+        return OK if r["ok"] else FAIL
     if not procs:
         _say("▸ no Foundry MCP bridge processes running")
         return OK

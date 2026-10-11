@@ -1,0 +1,198 @@
+[
+  {
+    "input": [
+      {
+        "flags": {
+          "pentaryn": {
+            "slug": "x"
+          }
+        },
+        "prototypeToken": null
+      }
+    ],
+    "out": {
+      "data": {
+        "flags": {
+          "pentaryn": {
+            "slug": "x"
+          }
+        },
+        "prototypeToken": null
+      },
+      "items": [],
+      "expected": null,
+      "slug": "x"
+    }
+  },
+  {
+    "input": [
+      {
+        "flags": {
+          "pentaryn": {
+            "slug": "x"
+          }
+        },
+        "items": "not an array"
+      }
+    ],
+    "out": {
+      "data": {
+        "flags": {
+          "pentaryn": {
+            "slug": "x"
+          }
+        }
+      },
+      "items": [],
+      "expected": null,
+      "slug": "x"
+    }
+  },
+  {
+    "input": [
+      {
+        "flags": {
+          "pentaryn": {
+            "slug": "x"
+          }
+        },
+        "items": [
+          {
+            "name": "I",
+            "folder": "f",
+            "_stats": {},
+            "ownership": {},
+            "flags": {
+              "pentaryn": {
+                "action": "a"
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "out": {
+      "data": {
+        "flags": {
+          "pentaryn": {
+            "slug": "x"
+          }
+        }
+      },
+      "items": [
+        {
+          "name": "I",
+          "flags": {
+            "pentaryn": {
+              "action": "a"
+            }
+          }
+        }
+      ],
+      "expected": null,
+      "slug": "x"
+    }
+  },
+  {
+    "input": [
+      {
+        "flags": {
+          "pentaryn": {
+            "slug": "x"
+          }
+        },
+        "items": [
+          null
+        ]
+      }
+    ],
+    "threw": "Cannot convert undefined or null to object"
+  },
+  {
+    "input": [
+      {
+        "flags": {
+          "pentaryn": {
+            "slug": "x"
+          }
+        },
+        "folder": "f",
+        "_stats": {
+          "a": 1
+        },
+        "ownership": {
+          "default": 3
+        },
+        "expected": null,
+        "system": {
+          "attributes": {
+            "hp": {
+              "value": 4
+            }
+          }
+        }
+      }
+    ],
+    "out": {
+      "data": {
+        "flags": {
+          "pentaryn": {
+            "slug": "x"
+          }
+        },
+        "system": {
+          "attributes": {
+            "hp": {
+              "value": 4
+            }
+          }
+        }
+      },
+      "items": [],
+      "expected": null,
+      "slug": "x"
+    }
+  },
+  {
+    "input": [
+      {
+        "flags": {
+          "pentaryn": {
+            "slug": "x"
+          }
+        },
+        "prototypeToken": {
+          "texture": null,
+          "name": "T"
+        }
+      }
+    ],
+    "out": {
+      "data": {
+        "flags": {
+          "pentaryn": {
+            "slug": "x"
+          }
+        },
+        "prototypeToken": {
+          "name": "T"
+        }
+      },
+      "items": [],
+      "expected": null,
+      "slug": "x"
+    }
+  },
+  {
+    "input": [
+      "a string entry"
+    ],
+    "threw": "Cannot use 'in' operator to search for 'flags.pentaryn.slug' in a string entry"
+  },
+  {
+    "input": [
+      null
+    ],
+    "threw": "Cannot read properties of null (reading 'expected')"
+  }
+]

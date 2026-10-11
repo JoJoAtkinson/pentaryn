@@ -1,60 +1,60 @@
-// Pentaryn Token Name Sync — an actor rename carries through to its token labels.
-//
-// A label follows the rename only if it was derived from the old name: the full name, or the
-// part before the first comma. Anything else is a nickname the GM chose and is left alone.
+/**
+ * Pentaryn Token Name Sync (pentaryn-names) — ENTRY: esmodules[0]. Wiring only, no logic.
+ *
+ * Renaming an actor renames its token labels; a label that is a nickname is left alone
+ * (README "What the player sees").
+ *
+ * Files, in load order:
+ *   names-core.mjs     PURE constants, HOOKS ({}), the relabel rules and the token planner
+ *   api-manifest.mjs   PURE data: the three legacy API rows
+ *   rename.mjs         the feature: preUpdateActor / updateActor, and sync()
+ *   lib/*.mjs          vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
+ *
+ * Lifecycle: module body → features install (migrating module: synchronously, so the hooks are
+ * registered in today's order) · ready → build the API (a manifest drift throws here) and
+ * publish it on module.api and game.pentaryn.names.
+ */
 
-/** "Glubbek, Kuo-toa Net-Mender" -> "Glubbek". */
-function shortName(name) {
-  return String(name ?? "").split(",")[0].trim();
+import { MODULE, NS, relabel, shortName } from "./names-core.mjs";
+import { MANIFEST } from "./api-manifest.mjs";
+import { buildApi } from "./lib/api.mjs";
+import { makeLog } from "./lib/log.mjs";
+import { hookRegistry } from "./lib/hooks.mjs";
+import { publishNamespace, publishedOf } from "./lib/publish.mjs";
+import * as rename from "./rename.mjs";
+
+/** Features in load order. */
+const FEATURES = [rename];
+
+const log = makeLog(MODULE);
+const reg = hookRegistry(MODULE, log);
+
+const ctx = { log, reg, uninstall };
+
+function install() {
+  for (const feature of FEATURES) feature.install(reg, ctx);
 }
 
-/** The new label for a token, or null when the token's label is a nickname. */
-function relabel(label, oldName, newName) {
-  if (label === oldName) return newName;
-  if (label === shortName(oldName) && shortName(oldName) !== oldName) return shortName(newName);
-  return null;
+/** Remove every hook and feature state. */
+function uninstall() {
+  for (const feature of [...FEATURES].reverse()) feature.uninstall();
+  reg.offAll();
 }
 
-async function sync(actor, oldName, newName) {
-  let count = 0;
-  const proto = relabel(actor.prototypeToken.name, oldName, newName);
-  if (proto !== null && proto !== actor.prototypeToken.name) {
-    await actor.update({ "prototypeToken.name": proto }, { pentarynNames: true });
-    count++;
-  }
-  for (const scene of game.scenes) {
-    const updates = [];
-    for (const t of scene.tokens) {
-      if (t.actorId !== actor.id || !t.canUserModify(game.user, "update")) continue;
-      const label = relabel(t.name, oldName, newName);
-      if (label !== null && label !== t.name) updates.push({ _id: t.id, name: label });
-    }
-    if (updates.length) {
-      await scene.updateEmbeddedDocuments("Token", updates);
-      count += updates.length;
-    }
-  }
-  if (count) ui.notifications.info(game.i18n.format("PENTARYN_NAMES.Synced", { name: newName, count }));
-  return count;
+function onReady() {
+  // The arrow keeps the published function's name "sync" (golden/surface.json).
+  const api = buildApi(MANIFEST, { sync: (ref, oldName, newName) => rename.syncRef(ref, oldName, newName), relabel, shortName }, {
+    members: { uninstall, trace: () => log.traces() },
+    extras: () => ({
+      hooks: reg.ids().map(h => ({ name: h.name, label: h.label })),
+      events: {},
+      published: publishedOf(NS),
+    }),
+  });
+  // publishNamespace rebuilds a frozen game.pentaryn (pentaryn-importer) rather than assigning into it.
+  publishNamespace(NS, api, { moduleId: MODULE });
 }
 
-// Capture the old name before it is overwritten; act only on the client that made the change.
-Hooks.on("preUpdateActor", (actor, changes, options) => {
-  if ("name" in changes && changes.name !== actor.name) options.pentarynOldName = actor.name;
-});
-
-Hooks.on("updateActor", (actor, changes, options, userId) => {
-  if (userId !== game.user.id || options.pentarynNames || !options.pentarynOldName) return;
-  sync(actor, options.pentarynOldName, actor.name);
-});
-
-// pentaryn-importer creates and FREEZES game.pentaryn, so rebuild it rather than assign into it.
-Hooks.once("ready", () => {
-  const api = { sync, relabel, shortName };
-  const current = game.pentaryn;
-  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, names: api };
-  else {
-    game.pentaryn ??= {};
-    game.pentaryn.names = api;
-  }
-});
+install();
+if (globalThis.game?.ready) onReady();
+else Hooks.once("ready", onReady);

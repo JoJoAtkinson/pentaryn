@@ -1,0 +1,32 @@
+[
+  {
+    "key": "gmButton",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": false,
+    "name": "PENTARYN_JOURNAL.settings.gmButton.name",
+    "hint": "PENTARYN_JOURNAL.settings.gmButton.hint",
+    "onChange": true
+  },
+  {
+    "key": "singlePageReadables",
+    "scope": "world",
+    "config": true,
+    "type": "Boolean",
+    "default": true,
+    "name": "PENTARYN_JOURNAL.settings.singlePage.name",
+    "hint": "PENTARYN_JOURNAL.settings.singlePage.hint",
+    "onChange": true
+  },
+  {
+    "key": "folderName",
+    "scope": "world",
+    "config": false,
+    "type": "String",
+    "default": "Player Journals",
+    "name": null,
+    "hint": null,
+    "onChange": false
+  }
+]
