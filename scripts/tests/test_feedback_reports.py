@@ -366,3 +366,36 @@ def test_render_safe_falls_back_to_a_notice(monkeypatch):
     out = fr._render_safe({"id": "Abcdef0000000001", "category": "bug", "status": "open"})
     assert out.startswith("# Feedback Abcdef · bug · open")
     assert 'feedback_get(id="Abcdef0000000001", raw=true)' in out
+
+
+# ── the JS-written report renders (golden pinned by the module's core.test.mjs) ──
+
+JS_GOLDEN = REPO_ROOT / "foundry/module/pentaryn-feedback/test/golden/report.json"
+
+
+def test_the_report_the_module_writes_renders(tmp_path, monkeypatch):
+    report = json.loads(JS_GOLDEN.read_text(encoding="utf-8"))
+    (tmp_path / "pentaryn").mkdir()
+    (tmp_path / "pentaryn" / f"{report['id']}.json").write_text(json.dumps(report), encoding="utf-8")
+    monkeypatch.setenv("PENTARYN_FEEDBACK_DIR", str(tmp_path))
+    assert "G0lden" in fr.feedback_list()
+    out = fr.feedback_next()
+    lines = out.splitlines()
+    assert lines[0] == "# Feedback G0lden · defect · open"
+    assert lines[1].startswith("Caven's player (player, playing Caven) · world pentaryn · scene Underdark Gate (viewed = active) · ")
+    assert lines[2] == "combat: round 3, turn 2 — Caven · controlled: Caven (hp 12/27) · targeted: —"
+    i = lines.index("## Report (player-written)")
+    assert lines[i + 1] == "````text" and lines[i + 4] == "````", "the text's own ``` cannot close the fence"
+    assert '- windows: ItemPileInventoryApp "Corpse of Skeleton", ? (unreadable: title broke)' in out
+    assert "- truncated: the 2 oldest actions/errors were dropped to fit the 256 KB cap" in out
+    assert "- capture failed (section: error): modules: modules broke" in out
+    assert "- chat (own, last 10): -04:10 Longsword — Attack (17)" in out
+    timeline = lines[lines.index("## Timeline (oldest → newest; time before the report)") + 1:lines.index("## History") - 1]
+    assert timeline == [
+        '-02:00  click lootAll "Loot all" in ItemPileInventoryApp',
+        "-01:30  page reloaded (the history before this line came from the previous page)",
+        "-01:00  doc update Actor Caven [items]",
+        "-00:05  notify error: Nothing to loot",
+        "-00:03  error hooks @Hooks.#call TypeError: transferEverything",
+        "-00:00  report filed",
+    ]

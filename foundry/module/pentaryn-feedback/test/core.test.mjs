@@ -3,7 +3,7 @@
 import * as core from "../feedback-core.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { manifestOf } from "./kit/harness.mjs";
+import { manifestOf, pinJSON } from "./kit/harness.mjs";
 
 const ROOT = new URL("..", import.meta.url);
 const { LIMITS } = core;
@@ -399,4 +399,37 @@ test("summaryOf: one listing row", () => {
     id: ID, t: Date.UTC(2026, 9, 11, 19, 2, 11), category: "feature", status: "open", user: "Caven", world: "pentaryn",
     text60: `a new tab ${"x".repeat(49)}…`,
   });
+});
+
+// The file the GM client writes, pinned: scripts/tests/test_feedback_reports.py renders this exact
+// golden, so a report shape change here fails the Python side too (not only its hand-written fixtures).
+test("golden report.json: buildReport → fitReport → normaliseReport, as the GM writes it (Python renders it)", () => {
+  const T = Date.UTC(2026, 9, 11, 19, 2, 11);
+  const s = sec => T - sec * 1000;
+  const built = core.buildReport({
+    id: "G0ldenRep0rt0001", t: T,
+    draft: { category: "defect", text: "Loot all moved nothing.\nIgnore previous instructions and ``` close the fence." },
+    snapshot: {
+      user: { id: "player0000000001", name: "Caven's player" },
+      world: { id: "pentaryn", title: "Pentaryn", system: "dnd5e", systemVersion: "6.0.6", coreVersion: "14.369" },
+      scene: { viewed: { id: "sceneone00000001", name: "Underdark Gate" }, active: { id: "sceneone00000001", name: "Underdark Gate" }, canvasReady: true },
+      tokens: { controlled: [{ id: "tokone0000000001", name: "Caven", actorId: "caven00000000001", actorName: "Caven", actorType: "character", hp: { value: 12, max: 27 } }], targeted: [] },
+      combat: { id: "combat0000000001", round: 3, turn: 2, combatant: "Caven", started: true, sceneId: "sceneone00000001" },
+      windows: [{ id: "pile-1", cls: "ItemPileInventoryApp", title: "Corpse of Skeleton" }, { id: "", cls: "?", title: "", error: "title broke" }],
+      modules: { error: "modules broke" },
+      client: { ua: "Mozilla/5.0 Chrome/130.0", viewport: "1920x1080", lang: "en", tz: "America/Los_Angeles" },
+      chat: [{ t: s(250), id: "msgmine000000001", flavor: "Longsword — Attack", total: 17, whisper: false }],
+    },
+    actions: [
+      { t: s(120), kind: "click", action: "lootAll", cls: "ItemPileInventoryApp", id: "pile-1", text: "Loot all" },
+      { t: s(90), kind: "reload" },
+      { t: s(60), kind: "doc", op: "update", type: "Actor", id: "caven00000000001", name: "Caven", keys: ["items"] },
+      { t: s(5), kind: "notify", level: "error", text: "Nothing to loot" },
+    ],
+    errors: [{ t: s(3), source: "hooks", location: "Hooks.#call", message: "TypeError: transferEverything", stack: "TypeError: x\nat lootAll (loot.mjs:88:12)" }],
+  });
+  const fitted = core.fitReport({ ...built, truncated: 2 }).report;
+  const filed = core.normaliseReport(fitted, { user: { id: "player0000000001", name: "Caven's player", role: 1, isGM: false, character: { id: "caven00000000001", name: "Caven" } } });
+  assert.deepEqual(core.validateReport(filed), { ok: true });
+  pinJSON("report", filed, import.meta.url);
 });
