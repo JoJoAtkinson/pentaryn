@@ -1,0 +1,74 @@
+{
+  "lines": [
+    [
+      "log",
+      "pentaryn-attunement | Report Me — 2/3"
+    ],
+    [
+      "table",
+      [
+        {
+          "item": "Ring",
+          "slot": 2,
+          "attuned": true,
+          "equipped": true,
+          "suppressed": false,
+          "dataIssue": ""
+        },
+        {
+          "item": "Rod",
+          "slot": 1,
+          "attuned": true,
+          "equipped": null,
+          "suppressed": false,
+          "dataIssue": ""
+        },
+        {
+          "item": "Cloak",
+          "slot": "—",
+          "attuned": false,
+          "equipped": null,
+          "suppressed": false,
+          "dataIssue": "attuned in source, cleared in prep (missing Magical property?)"
+        }
+      ]
+    ]
+  ],
+  "out": {
+    "actor": "Report Me",
+    "value": 2,
+    "max": 3,
+    "over": false,
+    "slots": [
+      "r2",
+      "r1",
+      null
+    ],
+    "rows": [
+      {
+        "item": "Ring",
+        "slot": 2,
+        "attuned": true,
+        "equipped": true,
+        "suppressed": false,
+        "dataIssue": ""
+      },
+      {
+        "item": "Rod",
+        "slot": 1,
+        "attuned": true,
+        "equipped": null,
+        "suppressed": false,
+        "dataIssue": ""
+      },
+      {
+        "item": "Cloak",
+        "slot": "—",
+        "attuned": false,
+        "equipped": null,
+        "suppressed": false,
+        "dataIssue": "attuned in source, cleared in prep (missing Magical property?)"
+      }
+    ]
+  }
+}

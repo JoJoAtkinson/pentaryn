@@ -1,0 +1,88 @@
+{
+  "creates": [
+    {
+      "name": "Cloak (Talo)",
+      "type": "equipment",
+      "img": "i",
+      "system": {
+        "attuned": false,
+        "equipped": false,
+        "attunement": "required"
+      },
+      "flags": {
+        "pentaryn-attunement": {
+          "bond": {
+            "actor": "actorOwnr0000001",
+            "key": "r1",
+            "name": "Cloak",
+            "equipped": true,
+            "attuned": true,
+            "attunement": "required"
+          }
+        }
+      }
+    },
+    {
+      "name": "Torch (Talo)",
+      "type": "loot",
+      "img": "i",
+      "system": {
+        "quantity": 5
+      },
+      "flags": {
+        "pentaryn-attunement": {
+          "bond": {
+            "actor": "actorOwnr0000001",
+            "key": "r2",
+            "name": "Torch",
+            "equipped": false,
+            "attuned": false,
+            "attunement": ""
+          }
+        }
+      }
+    },
+    {
+      "name": "Coin Purse (Talo)",
+      "type": "loot",
+      "img": "icons/containers/bags/coinpouch-simple-leather-tan.webp",
+      "system": {
+        "quantity": 1,
+        "type": {
+          "value": "treasure"
+        },
+        "description": {
+          "value": "<p>5 gp.</p>"
+        }
+      },
+      "flags": {
+        "pentaryn-attunement": {
+          "bond": {
+            "actor": "actorOwnr0000001",
+            "key": "r4",
+            "name": "Coin Purse",
+            "currency": {
+              "gp": 5
+            }
+          }
+        }
+      }
+    }
+  ],
+  "ownerUpdate": {
+    "flags.pentaryn-attunement.away": [
+      {
+        "key": "r1",
+        "name": "Cloak",
+        "img": "i"
+      }
+    ],
+    "flags.pentaryn-attunement.slots": [
+      "away:r1",
+      null,
+      null
+    ],
+    "system.currency.gp": 0,
+    "system.currency.sp": 0
+  }
+}
