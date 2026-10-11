@@ -9,9 +9,7 @@ import { boot, console$, MODULE, P1, GM } from "./fixtures/world.mjs";
 import { places, teleportDialog } from "./fixtures/places.mjs";
 
 const { F, S, W } = await boot();
-const publishedBeforeTick = game.pentaryn;
-const importer = Object.freeze({ importer: Object.freeze({ run() {} }) });
-game.pentaryn = importer;                   // pentaryn-importer froze game.pentaryn in its own ready
+const publishedAtReady = game.pentaryn?.portals;   // D-P1: boot() fired ready; nothing ticked yet
 await W.tick();
 const P = places(W);
 
@@ -22,17 +20,18 @@ test("foundry.utils is Foundry's own common/ code", () => {
   if (process.env.PENTARYN_TEST_SHIMS !== "1") assert.equal(F.utilsSource, "foundry");
 });
 
-test("publish: nothing at ready itself; one tick later a rebuilt game.pentaryn carries portals beside the frozen importer", () => {
-  assert.equal(publishedBeforeTick, undefined);
-  assert.notEqual(game.pentaryn, importer);
-  assert.equal(game.pentaryn.importer, importer.importer);
-  assert.deepEqual(Object.keys(game.pentaryn.portals), ["snapshot", "cardFor", "teleportParty", "lookAt", "open", "redraw", "spreadArrival"]);
-  assert.equal(Object.isFrozen(game.pentaryn.portals), false);
-  assert.equal(game.modules.get(MODULE).api, undefined, "module.api is not set today");
+test("publish [declared D-P1]: at ready itself, frozen, on module.api and game.pentaryn.portals, with the kit members", () => {
+  assert.ok(publishedAtReady, "published synchronously at ready (no setTimeout)");
+  assert.equal(game.pentaryn.portals, publishedAtReady);
+  assert.equal(game.modules.get(MODULE).api, game.pentaryn.portals);
+  assert.deepEqual(Object.keys(game.pentaryn.portals).sort(), ["cardFor", "contract", "describe", "lookAt", "open", "redraw", "settings",
+    "snapshot", "spreadArrival", "teleportParty", "trace", "uninstall", "version"]);
+  assert.equal(Object.isFrozen(game.pentaryn.portals), true);
 });
 
-test("surface equals golden/surface-legacy.json", () => {
-  pinJSON("surface-legacy", surfaceOf(game.pentaryn.portals), import.meta.url);
+test("the legacy surface is kept: its seven members equal golden/surface-legacy.json", () => {
+  const legacy = ["snapshot", "cardFor", "teleportParty", "lookAt", "open", "redraw", "spreadArrival"];
+  pinJSON("surface-legacy", Object.fromEntries(Object.entries(surfaceOf(game.pentaryn.portals)).filter(([k]) => legacy.includes(k))), import.meta.url);
 });
 
 test("settings: three world Boolean rows registered at init, plain English (golden/settings-register.json)", () => {

@@ -2,10 +2,11 @@
 // published and when (D-P1); the -32 additions.
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { normaliseDescribe, pinJSON } from "./kit/harness.mjs";
 import { boot } from "./fixtures/world.mjs";
 import { MODULE, VERSION, CONTRACT } from "../portals-core.mjs";
 import { MANIFEST, BADGE_ROWS, PARTY_ROWS } from "../api-manifest.mjs";
-import { buildApi } from "../lib/api.mjs";
+import { buildApi, maxDepth, surfaceOf } from "../lib/api.mjs";
 import { makeLog } from "../lib/log.mjs";
 import { hookRegistry } from "../lib/hooks.mjs";
 
@@ -53,4 +54,29 @@ test("describe(): flags written and read, the three settings, no events, no patc
   assert.ok(d.flags.reads.includes("flags.pentaryn-aoe.handleActor"));
   assert.deepEqual(d.settings.map(s => s.key), ["teleportDefault", "spreadArrivals", "confirmPartyTeleport"]);
   assert.deepEqual([d.events, d.patches, d.flagScope], [[], [], MODULE]);
+});
+
+/* ── the published API (D-P1) ─────────────────────────────────────────── */
+
+const published = () => game.modules.get(MODULE).api;
+
+test("describe() of the published API equals golden/describe.json (version, kit, published excluded)", () => {
+  pinJSON("describe", normaliseDescribe(published().describe()), import.meta.url);
+});
+
+test("surface equals golden/surface.json", () => {
+  pinJSON("surface", surfaceOf(published()), import.meta.url);
+});
+
+test("describe() lists the hook registrations by label, and is plain JSON", () => {
+  const d = published().describe();
+  assert.deepEqual([...new Set(d.hooks.map(h => h.label))], ["summons follow", "badges redraw", "badges draw", "badges sight", "badges teardown",
+    "teleport dialog cards", "region config card"]);
+  assert.equal(d.hooks.length, 12);
+  assert.deepEqual(JSON.parse(JSON.stringify(d)), d);
+  assert.ok(maxDepth(d) <= 6);
+});
+
+test("trace() is the kit ring (empty with debug off)", () => {
+  assert.deepEqual(published().trace(), []);
 });

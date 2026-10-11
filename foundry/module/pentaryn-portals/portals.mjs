@@ -18,15 +18,21 @@
  *
  * Lifecycle: module body → the features install, synchronously, party → badges → cards (every hook
  * is registered at evaluation, as before the split; golden/hooks.json) · init → settings ·
- * ready → publish game.pentaryn.portals.
+ * ready → build the API first (a manifest drift stops there with one error line), then publish it
+ * on module.api and game.pentaryn.portals at once, with the pentaryn-portals.ready and
+ * pentaryn.ready events.
+ *
+ * Hot patch RE-RUNS THE WIRING ONLY: `game.pentaryn.portals.uninstall()`, then
+ * `await import("/modules/pentaryn-portals/portals.mjs?v=2")`. Any edit to another file needs a reload.
  */
 
-import { MODULE } from "./portals-core.mjs";
+import { MODULE, NS } from "./portals-core.mjs";
 import { registerSettings, setting } from "./settings.mjs";
-import { configureSceneAdapter, cardFor, lookAt, snapshot, teleportParty } from "./scene-adapter.mjs";
-import { PortalCard } from "./card-app.mjs";
+import { configureSceneAdapter } from "./scene-adapter.mjs";
+import { buildApiFor } from "./api.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
+import { publishNamespace } from "./lib/publish.mjs";
 import * as party from "./party.mjs";
 import * as badges from "./badges.mjs";
 import * as cards from "./cards.mjs";
@@ -44,18 +50,31 @@ function uninstall() {
   reg.offAll();
 }
 
-Hooks.once("init", registerSettings);
+function onInit() {
+  registerSettings();
+}
+
+function onReady() {
+  try {
+    ctx.api = buildApiFor(ctx);
+  } catch (err) {
+    log.error("API manifest drift — not published", err);
+    return;
+  }
+  publishNamespace(NS, ctx.api, { moduleId: MODULE });
+}
+
 configureSceneAdapter({ setting, log });
 for (const feature of FEATURES) {
   const contribution = feature.install(reg, ctx);
   if (contribution) ctx.contributions.push(contribution);
 }
 
-// pentaryn-importer replaces game.pentaryn with a frozen object in its own ready hook; defer a
-// tick and rebuild rather than assign (same as pentaryn-dropbin / -attunement).
-Hooks.once("ready", () => setTimeout(() => {
-  const api = { snapshot, cardFor, teleportParty, lookAt, open: PortalCard.open, redraw: badges.drawBadges, spreadArrival: party.spreadArrival };
-  const current = game.pentaryn;
-  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, portals: api };
-  else { game.pentaryn ??= {}; game.pentaryn.portals = api; }
-}, 0));
+if (globalThis.game?.ready) {
+  // a hot re-import after the world is ready: run the phases now (settings already registered are skipped)
+  onInit();
+  onReady();
+} else {
+  Hooks.once("init", onInit);
+  Hooks.once("ready", onReady);
+}
