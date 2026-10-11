@@ -436,6 +436,10 @@ migrates nothing, so rolling back is redeploying the old code:
 1. `git revert --no-edit <commits>` newest first — the importer's are listed in the Result table
    below (`566895f` … `b757a8a`; the checkpoint `cb81c20`/`051737b` and `5730eea` can stay: tests
    and the gate only). Reverting `754aa94` also restores the `dnd5e-importer-gate` row's `files`.
+   Then run `make foundry-module-index` and commit the one-row `context/foundry/README.md` change:
+   reverting `412d23b` puts the importer row back to "not migrated", but `lib/kit.lock.json` stays
+   (from the kept `051737b`), so the generator says "full tier" and `make check-context` is red
+   ("the Module APIs table is stale") until the index is regenerated.
 2. `make foundry-sync WORLD=pentaryn`, then `make foundry-clean WORLD=pentaryn`, then reload the GM tab.
 3. Check: `game.pentaryn.importer` is gone and `game.pentaryn.import` works; the root is the
    importer's frozen object again, or a guard's unfrozen copy of it once a later module republished

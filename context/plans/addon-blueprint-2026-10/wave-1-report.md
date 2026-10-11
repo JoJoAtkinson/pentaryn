@@ -37,6 +37,13 @@ Scores before and after Stage 0: [`wave-1-baseline.md`](wave-1-baseline.md).
   Lanes commit with `git commit -- <paths>` (or read `git diff --cached --stat` first) so another
   lane's staged entries are never swept in.
 
+- **`make check-context` red from `051737b` to `28f3726`** (module index stale until `412d23b`).
+  The importer checkpoint `051737b` vendored the kit (`lib/kit.lock.json`), so the index generator
+  calls the module "full tier" while `context/foundry/README.md` still said "not migrated";
+  `check_context.py` fails with "the Module APIs table is stale" in that range. Module tests are
+  unaffected. `412d23b` regenerated the row; HEAD is green. The importer guide's §9 rollback now
+  regenerates the index after the reverts for the same reason.
+
 ## Behaviour changes committed without [declared]
 
 History is not rewritten; these are declared here instead. Later gate-behaviour commits carry
