@@ -413,3 +413,20 @@ export function skipReason({ journal, sources, plan } = {}) {
   if (plan?.tooLarge) return "too-large";
   return null;
 }
+
+/* -------------------------------------------- */
+/*  A user's saved entries, as plain rows (items-journal-35) */
+/* -------------------------------------------- */
+
+/**
+ * One plain row per page of a personal journal, in the journal's order. A page the player wrote
+ * themselves (no source flag) has null source fields.
+ * @returns {{pageId, name, key, place, savedAt, updatedAt, hash}[]}
+ */
+export function entryRows(pages) {
+  return [...(pages ?? [])].map(p => {
+    const s = sourceOf(p);
+    return { pageId: idOf(p) ?? null, name: p?.name ?? null, key: s?.key ?? null, place: s?.place ?? null,
+      savedAt: s?.savedAt ?? null, updatedAt: s?.updatedAt ?? null, hash: s?.hash ?? null };
+  });
+}

@@ -22,6 +22,9 @@
   "describe": "function",
   "ensure": "ensure",
   "ensureAll": "ensureAll",
+  "entriesOf": "entriesOf",
+  "inspect": "inspect",
+  "lastReason": "lastReason",
   "open": "open",
   "personal": "personal",
   "report": "report",
@@ -29,6 +32,7 @@
   "settings": "settings",
   "shouldShowBar": "shouldShowBar",
   "status": "status",
+  "statusFor": "statusFor",
   "trace": "trace",
   "uninstall": "uninstall",
   "version": "string"

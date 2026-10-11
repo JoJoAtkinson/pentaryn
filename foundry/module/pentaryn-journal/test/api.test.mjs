@@ -54,9 +54,10 @@ test("journal.core is exactly the 18 legacy names, a frozen copy; core.MOD is th
   assert.equal("barVisible" in api.core, false, "new core rules are not added to the published surface");
 });
 
-test("every row is legacy except selftest; ensure/ensureAll are GM write rows; report is ungated", () => {
+test("the pre-migration rows are legacy; selftest and the items-journal-35 reads are not; ensure/ensureAll are GM write rows; report is ungated", () => {
   const rows = Object.fromEntries(api.describe().methods.map(m => [m.path, m]));
-  for (const [path, m] of Object.entries(rows)) assert.equal(!!m.legacy, path !== "selftest", path);
+  const fresh = ["selftest", "inspect", "entriesOf", "statusFor", "lastReason"];
+  for (const [path, m] of Object.entries(rows)) assert.equal(!!m.legacy, !fresh.includes(path), path);
   assert.deepEqual([rows.ensure.gm, rows.ensure.writes, rows.ensureAll.gm, rows.ensureAll.writes], [true, true, true, true]);
   assert.equal(rows.report.gm, false);
   assert.deepEqual(api.describe().flags.reads, ["flags.item-piles.data"]);

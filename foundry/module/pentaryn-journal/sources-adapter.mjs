@@ -120,8 +120,8 @@ export function targetFor(app, { gmButton = false } = {}) {
   return null;
 }
 
-export function descriptorsFor(target) {
-  const user = game.user;
+/** What can be saved from a target, as `user` sees it (default: this client's user). */
+export function descriptorsFor(target, user = game.user) {
   if (target.kind === "item") return [itemDescriptor(target.src)];
   if (target.kind === "image") return [pageDescriptor(target.page, target.entry)];
   return target.entry.pages.contents
@@ -151,6 +151,24 @@ export function targetOf(doc, { gmButton = false } = {}) {
  * touched (they are the list), nor is the GM's view (it is where pages get edited). Behind the
  * `singlePageReadables` setting so a multi-page eye can come back later.
  */
+/**
+ * The target a document stands for, with NO visibility rule (targetOf applies the bar's rules):
+ * for reading another user's status (api statusFor). null for anything that is not a journal, a
+ * page or an item behind a pile.
+ */
+export function rawTargetOf(doc) {
+  if (!doc) return null;
+  if (doc.documentName === "JournalEntry") return { kind: "entry", entry: doc };
+  if (doc.documentName === "JournalEntryPage") {
+    return doc.type === "image" ? { kind: "image", entry: doc.parent, page: doc } : { kind: "entry", entry: doc.parent };
+  }
+  if (doc.documentName === "Item") {
+    const src = itemSource(doc);
+    return src ? { kind: "item", src } : null;
+  }
+  return null;
+}
+
 export function isEyeReadable(entry) {
   return game.scenes.some(s => s.notes.some(n => n.entryId === entry.id));
 }

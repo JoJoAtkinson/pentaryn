@@ -2,9 +2,10 @@
  * Pentaryn Player Journal — the API manifest. PURE DATA: node imports it without a Foundry stub,
  * describe() reports it, and buildApi() refuses to load when it and api.mjs drift apart.
  *
- * Every row is the legacy surface, unchanged in signature (`legacy: true`): the methods take a
- * Document of several kinds or a User, so no first param is resolved as a `ref`. Methods run as the
- * CALLING user: add/status answer for game.user, and return null for a GM unless `gmButton` is on.
+ * The legacy rows keep their signature (`legacy: true`): they take a Document of several kinds or a
+ * User, so no first param is resolved as a `ref`, and they run as the CALLING user — add/status
+ * answer for game.user, and return null for a GM unless `gmButton` is on. The reads added for an
+ * LLM caller (items-journal-35: inspect, entriesOf, statusFor, lastReason) take a user ref instead.
  *
  * `core.<name>` are the pure helpers, published as `unlisted` constants and functions (a frozen copy).
  */
@@ -92,6 +93,42 @@ export const MANIFEST = Object.freeze({
       returns: "{ folder, users: [{ user, userId, isGM, journalId, pages, duplicates }], atRoot }",
       gm: false, writes: false, legacy: true,
       doc: "Ungated (ids, names and counts only): every user's journal id, page count and duplicates; journals at the root.",
+    },
+    {
+      path: "inspect",
+      params: [{ name: "ref", kind: "user", type: "User|id|exact name", doc: "never a substring" }],
+      returns: "{ user, journal, duplicates, entries: [{ pageId, name, key, place, savedAt, updatedAt, hash }] }",
+      gm: false, writes: false,
+      throws: ["NOT_FOUND", "AMBIGUOUS"],
+      since: "0.1.0",
+      doc: "Read-only, plain JSON: that user's personal journal (or null), duplicate journal ids, and one row per page.",
+    },
+    {
+      path: "entriesOf",
+      params: [{ name: "ref", kind: "user", type: "User|id|exact name", doc: "never a substring" }],
+      returns: "[{ pageId, name, key, place, savedAt, updatedAt, hash }]",
+      gm: false, writes: false,
+      throws: ["NOT_FOUND", "AMBIGUOUS"],
+      since: "0.1.0",
+      doc: "One row per page of that user's journal ([] without one). key is the source uuid; null on a page they wrote.",
+    },
+    {
+      path: "statusFor",
+      params: [DOC, { name: "opts", type: "{ as? }", optional: true, doc: "as: a user ref (default the caller)" }],
+      returns: '"none" | "partial" | "saved" | "changed" | null',
+      gm: false, writes: false,
+      throws: ["NOT_FOUND", "AMBIGUOUS"],
+      nullWhen: "not a journal, a page, or an item in a pile",
+      since: "0.1.0",
+      doc: "status() for any user and without the bar's visibility rule: what they would have saved against their journal.",
+    },
+    {
+      path: "lastReason",
+      params: [],
+      returns: '"no-target" | "no-journal" | "nothing-visible" | "too-large" | null',
+      gm: false, writes: false,
+      since: "0.1.0",
+      doc: "Why this client's last add() or status() returned null (null after a non-null result).",
     },
     {
       path: "selftest",

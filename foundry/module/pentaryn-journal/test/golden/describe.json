@@ -158,6 +158,90 @@
       "doc": "Ungated (ids, names and counts only): every user's journal id, page count and duplicates; journals at the root."
     },
     {
+      "path": "inspect",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "user",
+          "type": "User|id|exact name",
+          "doc": "never a substring"
+        }
+      ],
+      "returns": "{ user, journal, duplicates, entries: [{ pageId, name, key, place, savedAt, updatedAt, hash }] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS"
+      ],
+      "since": "0.1.0",
+      "doc": "Read-only, plain JSON: that user's personal journal (or null), duplicate journal ids, and one row per page."
+    },
+    {
+      "path": "entriesOf",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "user",
+          "type": "User|id|exact name",
+          "doc": "never a substring"
+        }
+      ],
+      "returns": "[{ pageId, name, key, place, savedAt, updatedAt, hash }]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS"
+      ],
+      "since": "0.1.0",
+      "doc": "One row per page of that user's journal ([] without one). key is the source uuid; null on a page they wrote."
+    },
+    {
+      "path": "statusFor",
+      "params": [
+        {
+          "name": "doc",
+          "type": "JournalEntry|JournalEntryPage|Item",
+          "resolve": false,
+          "doc": "the readable, one of its pages, or a pile item"
+        },
+        {
+          "name": "opts",
+          "type": "{ as? }",
+          "optional": true,
+          "doc": "as: a user ref (default the caller)"
+        }
+      ],
+      "returns": "\"none\" | \"partial\" | \"saved\" | \"changed\" | null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "nullWhen": "not a journal, a page, or an item in a pile",
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS"
+      ],
+      "since": "0.1.0",
+      "doc": "status() for any user and without the bar's visibility rule: what they would have saved against their journal."
+    },
+    {
+      "path": "lastReason",
+      "params": [],
+      "returns": "\"no-target\" | \"no-journal\" | \"nothing-visible\" | \"too-large\" | null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.1.0",
+      "doc": "Why this client's last add() or status() returned null (null after a non-null result)."
+    },
+    {
       "path": "selftest",
       "params": [],
       "returns": "{ ok, checks: [{ label, ok, detail }] }",

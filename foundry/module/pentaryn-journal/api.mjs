@@ -7,9 +7,13 @@
 import * as core from "./journal-core.mjs";
 import { CORE_NAMES, MANIFEST } from "./api-manifest.mjs";
 import { SETTINGS, setting, settingsSnapshot } from "./settings.mjs";
-import { shouldShowBar as barFor, targetOf as targetForDoc } from "./sources-adapter.mjs";
-import { buildApi } from "./lib/api.mjs";
+import { shouldShowBar as barFor, descriptorsFor, rawTargetOf, targetOf as targetForDoc } from "./sources-adapter.mjs";
+import { buildApi, toPlain } from "./lib/api.mjs";
 import { publishedOf } from "./lib/publish.mjs";
+import { refOf, resolveRef } from "./lib/resolve.mjs";
+
+/** Why this client's last add()/status() returned null (items-journal-35); null after a result. */
+let lastReason = null;
 
 const gmOpts = () => ({ gmButton: setting("gmButton") });
 /** Turn an entry, a page or an item into a target, applying the same rules as the bar. */
@@ -21,12 +25,15 @@ function impl(ctx) {
     personal: (user = game.user) => x.personal(user),
     async add(doc) {
       const target = targetOf(doc);
-      if (!target) return null;
-      return x.save(target);
+      if (!target) { lastReason = "no-target"; return null; }
+      const out = await x.save(target);
+      lastReason = out ? null : x.lastSkip();
+      return out;
     },
     status(doc) {
       const target = targetOf(doc);
-      if (!target) return null;
+      if (!target) { lastReason = "no-target"; return null; }
+      lastReason = null;
       const { st, sources } = x.savedStatus(target);
       if (!sources.length && doc?.uuid && core.findSaved(x.personal()?.pages.contents, doc.uuid)) return "saved";
       return st;
@@ -40,6 +47,26 @@ function impl(ctx) {
     ensure: user => x.ensureFor(user),
     ensureAll: () => x.ensureAll(),
     report: () => x.report(),
+    inspect(user) {
+      const all = x.personalsOf(user.id);
+      return toPlain({
+        user: refOf(user),
+        journal: all[0] ? refOf(all[0]) : null,
+        duplicates: all.slice(1).map(j => j.id),
+        entries: core.entryRows(all[0]?.pages.contents),
+      });
+    },
+    entriesOf: user => toPlain(core.entryRows(x.personal(user)?.pages.contents), { maxDepth: 3 }),
+    statusFor(doc, { as } = {}) {
+      const user = as === undefined || as === null ? game.user : resolveRef(as, "user");
+      const target = rawTargetOf(doc);
+      if (!target) return null;
+      const pages = x.personal(user)?.pages.contents ?? [];
+      const sources = descriptorsFor(target, user);
+      if (!sources.length && doc?.uuid && core.findSaved(pages, doc.uuid)) return "saved";
+      return core.status(pages, sources);
+    },
+    lastReason: () => lastReason,
     selftest: () => selftest(ctx),
   };
 }
