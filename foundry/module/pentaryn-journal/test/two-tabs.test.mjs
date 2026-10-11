@@ -89,9 +89,12 @@ test("two GM tabs answer one player's ensure (items-journal-40)", async () => {
   await settle();
   const [ra, rb] = await results;
   const journals = game.journal.filter(j => j.flags?.[MOD]?.userId === P1);
-  // KNOWN items-journal-40: both tabs looked before either create landed, so each created one.
-  assert.equal(created, 2, "KNOWN items-journal-40: two creates");
-  assert.equal(journals.length, 2, "KNOWN items-journal-40: two personal journals");
+  // items-journal-40 fixed [declared]: the first tab to stamp its claim creates; the other waits for it.
+  assert.equal(created, 1, "one create");
+  assert.equal(journals.length, 1, "one personal journal");
   assert.equal(ra.status, "fulfilled");
   assert.equal(rb.status, "fulfilled");
+  assert.deepEqual(ra.value, { entryId: journals[0].id });
+  assert.deepEqual(rb.value, { entryId: journals[0].id }, "the losing tab answers with the winner's journal");
+  for (const copy of [sender.A, sender.B]) assert.deepEqual(copy.flags?.[MOD]?.claims?.ensure ?? {}, {}, "both stamps removed");
 });

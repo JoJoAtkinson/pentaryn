@@ -497,3 +497,19 @@ export function makePinnedCache(getScenes) {
     get built() { return ids !== null; },
   };
 }
+
+/* -------------------------------------------- */
+/*  One GM tab answers the relay (items-journal-40) */
+/* -------------------------------------------- */
+
+/**
+ * Whether this tab won the claim, read right after its own stamp came back: `claims` is
+ * `{ <socketId>: stampedAt }` as this tab sees it then. The server applies the stamps in one order
+ * and a tab receives every earlier stamp before its own reply, so exactly one tab — the first to
+ * stamp — sees no other fresh stamp. A stamp older than `staleMs` (a tab that died mid-claim) is
+ * ignored.
+ */
+export function claimWinner(claims, me, now, staleMs = 60_000) {
+  if (!claims || typeof claims !== "object" || !(me in claims)) return false;
+  return Object.entries(claims).every(([id, at]) => id === me || !(now - Number(at) < staleMs));
+}

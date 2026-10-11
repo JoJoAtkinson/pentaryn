@@ -17,8 +17,9 @@
  * Other features and api.mjs reach this file through `ctx.exposed` (install below).
  */
 
-import { MODULE, QUERY, flagsOf, isPersonal, validateEnsure } from "./journal-core.mjs";
+import { MODULE, QUERY, claimWinner, flagsOf, isPersonal, validateEnsure } from "./journal-core.mjs";
 import { setting } from "./settings.mjs";
+import { flagPath, readFlag } from "./lib/flags.mjs";
 import { relayed } from "./lib/queries.mjs";
 
 const OWN = () => CONST.DOCUMENT_OWNERSHIP_LEVELS;
@@ -137,6 +138,51 @@ async function ensurePersonalJournal() {
   return inflight;
 }
 
+/* -------------------------------------------- */
+/*  The relay: one GM tab creates (items-journal-40) */
+/* -------------------------------------------- */
+
+/** Where the tabs stamp their claim: `flags.pentaryn-journal.claims.ensure.<socketId>` on the SENDER's User. */
+const CLAIM = "claims.ensure";
+/** A stamp older than this is a tab that died mid-claim; it no longer blocks anyone. */
+const CLAIM_STALE_MS = 60_000;
+/** How long the losing tab waits for the winner's journal: under the player's 8 s query timeout. */
+const LOSER_WAIT_MS = 7_000;
+const POLL_MS = 50;
+
+/**
+ * The query reaches every tab of the active GM's account (the MCP bridge tab and a GM browser tab
+ * are both activeGM.isSelf), and both would look before either create lands. So, when there is a
+ * journal to make, each tab stamps its socket id on the sender's User; the first stamp in the
+ * server's order wins (core.claimWinner) and runs ensureFor. The loser does not answer early — the
+ * server keeps the first answer — it waits for the winner's journal to arrive and answers with that.
+ * Each tab removes its own stamp when it is done. With one tab this is one extra User update.
+ */
+async function relayEnsure(user) {
+  const me = game.socket?.id ?? null;
+  if (!me || !user?.id || user.isGM || personal(user)) return ensureFor(user);   // nothing to race for
+  const mine = flagPath(MODULE, `${CLAIM}.${me}`);
+  await user.update({ [mine]: Date.now() });
+  try {
+    if (claimWinner(readFlag(user, MODULE, CLAIM), me, Date.now(), CLAIM_STALE_MS)) return await ensureFor(user);
+    ctx?.log.debug("ensure (relay): another GM tab claimed it — waiting for its journal", { user: user.id });
+    return await waitForPersonal(user);
+  } finally {
+    await user.update({ [mine]: _del }).catch(err => ctx?.log.warn("ensure (relay): claim not released", err));
+  }
+}
+
+async function waitForPersonal(user) {
+  for (let waited = 0; waited < LOSER_WAIT_MS; waited += POLL_MS) {
+    const found = personal(user);
+    if (found) return found;
+    await new Promise(r => setTimeout(r, POLL_MS));
+  }
+  const found = personal(user);
+  if (found) return found;
+  throw new Error("another GM tab claimed this journal and did not finish");
+}
+
 /**
  * The player relay, registered at init on every client (the sender's client needs the name too),
  * through the kit's `relayed`: any sender, and only the active GM's client runs it — any other
@@ -148,7 +194,7 @@ async function ensurePersonalJournal() {
  */
 export function registerRelay() {
   CONFIG.queries[QUERY] = relayed(async (_data, { user } = {}) => {
-    const j = await ensureFor(user);
+    const j = await relayEnsure(user);
     ctx?.log.info("ensure (relay)", { uuid: j.uuid, ids: [j.id], by: game.user.id, for: user?.id ?? null });
     return { entryId: j.id };
   });
