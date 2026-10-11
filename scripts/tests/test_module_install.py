@@ -122,6 +122,55 @@ def test_leftovers_of_a_crashed_run_are_cleared(module):
     assert _installed(module.dst) == _tree(module.src)
 
 
+def _crashed_mid_swap(module) -> Path:
+    """The state a run killed between `rename(dst, old)` and `rename(new, dst)` leaves behind:
+    Data/modules/<id> missing, the previous good install sitting in the staging `<id>.old`."""
+    old = modules.staging_dir(module.dst) / "pentaryn-zz.old"
+    old.mkdir(parents=True)
+    (old / "zz.mjs").write_text("the old, working build")
+    module.dst.parent.mkdir(parents=True, exist_ok=True)
+    assert not module.dst.exists()
+    return old
+
+
+def test_a_crash_mid_swap_is_repaired_when_the_next_copy_fails(module, monkeypatch):
+    """The previous install is put back before the leftovers are cleared, so a failing copy on the
+    next run cannot delete the only good copy."""
+    old = _crashed_mid_swap(module)
+
+    def no_copy(src, dst, *a, **k):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(modules.shutil, "copytree", no_copy)
+    with pytest.raises(OSError):
+        modules.install(module.src, module.dst)
+    assert (module.dst / "zz.mjs").read_text() == "the old, working build"
+    assert not old.exists()
+
+
+def test_a_crash_mid_swap_is_repaired_and_the_next_run_installs(module):
+    _crashed_mid_swap(module)
+    modules.install(module.src, module.dst)
+    assert _installed(module.dst) == _tree(module.src)
+    assert list(modules.staging_dir(module.dst).iterdir()) == []
+
+
+def test_an_interrupt_after_setting_the_old_install_aside_puts_it_back(module, monkeypatch):
+    module.dst.mkdir(parents=True)
+    (module.dst / "zz.mjs").write_text("old")
+    real = modules.os.rename
+
+    def rename(a, b):
+        if Path(a).name.endswith(".new"):
+            raise KeyboardInterrupt
+        return real(a, b)
+
+    monkeypatch.setattr(modules.os, "rename", rename)
+    with pytest.raises(KeyboardInterrupt):
+        modules.install(module.src, module.dst)
+    assert (module.dst / "zz.mjs").read_text() == "old"
+
+
 # ── pipeline.stage installs the importer through the same helper (python-tooling-53) ──────────
 
 @pytest.fixture

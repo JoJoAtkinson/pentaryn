@@ -539,9 +539,11 @@ def install(src: Path, dst: Path, *, cmd: str = "module-sync") -> dict:
     `dst` is `<Data>/modules/<id>`. The copy is built in `<Data>/../.pentaryn-sync/<id>.new` (derived
     from `dst`, so a test's tmp tree never reaches the real FoundryVTT folder); only a complete copy is
     swapped in: the old `dst` is renamed aside to `<name>.old`, the new one renamed into place, the
-    old one removed. A copy that fails leaves `dst` exactly as it was; a swap that fails puts the old
-    one back. Leftovers of a crashed run are cleared at the start of the next. The installed tree is
-    the one `rmtree` + `copytree` produced, plus the stamp.
+    old one removed. A copy that fails leaves `dst` exactly as it was; a swap that fails (or is
+    interrupted) puts the old one back. A run killed between the two renames (SIGKILL, power loss)
+    leaves `dst` missing with the good install in `<name>.old`: the next run renames it back before
+    anything else, then clears the leftovers, so a failing copy there still leaves it serving. The
+    installed tree is the one `rmtree` + `copytree` produced, plus the stamp.
 
     The stamp (`SYNC_STAMP`: module, version, digest, git, dirty, synced_at) is written into the copy
     before the swap; after it, one line goes to `foundry/logs/ops-YYYY-MM.jsonl` with `cmd`
@@ -550,6 +552,9 @@ def install(src: Path, dst: Path, *, cmd: str = "module-sync") -> dict:
     staging = staging_dir(dst)
     staging.mkdir(parents=True, exist_ok=True)
     new, old = staging / f"{dst.name}.new", staging / f"{dst.name}.old"
+    if not dst.exists() and old.is_dir():
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        os.rename(old, dst)  # a run died mid-swap: the previous good install was set aside
     for leftover in (new, old):
         shutil.rmtree(leftover, ignore_errors=True)
     try:
@@ -560,13 +565,13 @@ def install(src: Path, dst: Path, *, cmd: str = "module-sync") -> dict:
         shutil.rmtree(new, ignore_errors=True)
         raise
     dst.parent.mkdir(parents=True, exist_ok=True)
-    had_old = dst.exists()
-    if had_old:
-        os.rename(dst, old)
     try:
+        if dst.exists():
+            os.rename(dst, old)
         os.rename(new, dst)
     except BaseException:
-        if had_old:
+        # `old` was cleared above, so it exists only if this run set `dst` aside
+        if not dst.exists() and old.is_dir():
             os.rename(old, dst)
         raise
     shutil.rmtree(old, ignore_errors=True)
