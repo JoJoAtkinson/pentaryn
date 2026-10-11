@@ -1,4 +1,4 @@
-// pentaryn kit 1.0.1 · vendored from foundry/lib/test-kit/foundry-stub.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.0.2 · vendored from foundry/lib/test-kit/foundry-stub.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * A Foundry stand-in for node tests. Enough of `game`, `Hooks`, `CONFIG`, `ui`, `canvas` and the
  * document API to load a module's entry, fire its lifecycle hooks and record what it did.

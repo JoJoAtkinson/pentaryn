@@ -54,3 +54,8 @@ a module's hook registration from module scope to `setup` is a behaviour change.
 K3 `guarded` ctx + `sender: "any"`, K4 `relayed`, K5 unlisted copies, K6 multi-key `serialStore`,
 K7 guard level, K8 `queryName`, and the fork contract helpers. No module had a lock yet, so nothing
 was re-vendored. K2 (top-level-only reserved names) waits for Joe's decision D1.
+1.0.2 (wave 2 opening bump, 2026-10-11; wave-1 report J6, J10, J16) — the test stub defines
+`globalThis.logger` and records it on `F.logged` (J6); a `wrapMethod`/`defineAccessor` handle's
+`unwrap()` drops the kit's record, so the same marker can wrap again (J16, declared); `publish.mjs`
+loses the COMPAT frozen-root guard and `realiasTick` — a frozen `game.pentaryn` now throws (J10,
+declared). Re-vendored into every module with a lock.
