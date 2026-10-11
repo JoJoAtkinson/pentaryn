@@ -807,6 +807,12 @@ A second review found one new defect, caused by the fix for #5, and two minor is
 | 11 | `foundry-down` on Linux with the port live, no pid and no `PENTARYN_STOP_CMD` printed "stopped" without doing anything | It prints that Foundry is running but cannot be stopped from here, and fails (`host.can_request_stop()`) |
 | 12 | The pre-restore safety copy re-uploaded an unchanged ~3 GB tree when the snapshot being restored already contained its `based_on` | `_backup(protect=<Snapshot>)` skips the safety copy when `descends(target, based_on)` is True |
 
+The final review found one high defect and one minor issue.
+
+| # | Found | Fixed |
+| --- | --- | --- |
+| 13 | When the lineage list was cut at `LINEAGE_CAP`, the edge moved to the `based_on` snapshot's own mtime. After enough generations a diverged line read as "newer" and Enter = latest. In the reproduction, the Mac's Saturday session was replaced by BOSS's "addon test 2". With no safety copy, the Mac's next backup then coalesced Saturday away. The alt side failed the same way. Minor: a sidecar without `origin_before` could put `Infinity` (not valid strict JSON) into the state file and later sidecars | Sidecars carry `ancestor_mtimes` and `BootState` carries `lineage_mtimes`. At the cut, the edge is the newest dropped ancestor's mtime. If that mtime is unknown, the oldest kept known mtime is used instead, and failing that the based-on mtime. It is never read from a name. `LINEAGE_CAP` is now 2000. Coalescing replaces only a snapshot the new tree contains (its based-on or lineage). With no record, nothing is coalesced. An unbounded edge is written as `null`, and a sidecar reads it back as unbounded. The boot state stores it as None, meaning the based-on snapshot's own mtime. Tests set `LINEAGE_CAP` to 3 and cover the primary, the alt, a straight line past the cap, and coalescing |
+
 ---
 
 ## 15. Go-live checklist (for Joe, after the merge)
