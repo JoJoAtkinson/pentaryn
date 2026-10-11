@@ -101,6 +101,14 @@ on the stale Module APIs table (walls, attunement, journal, lookup, movement row
   ([declared], same commit)**, re-pinning `golden/engine.json`, `golden/backend-drift.json` and
   `golden/describe.json` and the `api.test.mjs` flags case in that commit
   (guide §Result step 10 item 3).
+- `wave7-restart-batch.md` "Appended by Record steps", the existing walls row (2026-10-11,
+  senses-walls-cursors-8, wave 1 integration; line 64 at `a63d043d`) — **replace it**, do not add
+  a second row, so the batch has one instruction for the `description` edit (the Batch 1 walls
+  row's "`description` fix (-8)" means this row). New row, verbatim:
+
+  ```
+  | 2026-10-11 | walls | `description`: `See playbooks/foundry-wall-autocomplete.md` → `See context/foundry/walls.md` (the use-doc, guide step 9; supersedes the wave-1 target `context/plans/foundry-wall-autocomplete.md`); `verified byte-identical against the same 44 fixtures` → `produces identical geometry, verified against the same fixture corpus` (the setting hint's wording, `test/fixtures/lang-en.wave7.json`) | senses-walls-cursors-8 (wave 1 integration; amended by walls wave 2) |
+  ```
 
 ## journal — guide steps 2–8, code phase (2026-10-11)
 
