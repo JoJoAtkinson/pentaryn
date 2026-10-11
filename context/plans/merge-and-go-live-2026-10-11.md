@@ -96,3 +96,45 @@ Non-regression findings (open):
   W2-B2 (read log lines in `mcp-<YYYY-MM>.jsonl`) is live as planned and awaits confirmation.
 - Not checked live: feedback offline queue (needs every GM client gone), tool filter
   `FOUNDRY_MCP_TOOL_FILTER` (needs a backend restart), tool-list poll/schema hash, F3 month change.
+
+## 7. Optional fixes (fix/optional-2026-10-11)
+
+Code-only fixes for the §3 findings and two §6 items, approved by Joe. **Not deployed**: they go
+live with wave 3's live phase. Branch `fix/optional-2026-10-11` in both repos (pentaryn from
+`a5a1a906`, fork from `59ffcf2`).
+
+| # | Item | Commit | Version |
+|---|---|---|---|
+| 1 | `toggle-token-condition` without `active` toggles (fork `guardBridgeQueries` fills it from the token's effects; no upstream file touched) | fork `81381c4` | fork unreleased (CHANGELOG "Unreleased") |
+| 2 | `pentaryn-write` log `ids` from the documents a result returns (`uuid` / `_id` / Foundry-shaped `id`, depth ≤ 4, ≤ 50) | fork `a325c67` | 〃 |
+| 3 | eval-js argument rejection: action-log line gets `phase: "args"` and the one-line error | fork `6da5c3d` | 〃 |
+| 4 | Importer aborts carry kit codes (`NOT_FOUND` for a missing file, `NOT_GM`, `BAD_ARGS`, `CONFLICT`, `TIMEOUT`, else `REFUSED`); messages and frozen goldens unchanged | `824ff367` | importer 1.1.0 → **1.1.1** |
+| 5 | `feedback.inspect` accepts an Actor/Token (non-GM owners + assigned character) → `{actor, users, pending, reports, …}`; async, adds `reports` | `0e10f33e` | feedback 0.1.1 → **0.1.2** |
+| 6 | Pings live golden saves and restores the ping log (hot patch: `uninstall`, write, re-import) | `90d54e99` | — (script + `scripts/tests/test_live_golden_pings.py`) |
+| 7 | W2-B2: code and docs agree — read lines go to `mcp-<YYYY-MM>.jsonl` (the `actions` stream); the log section of `mcp-fork.md` now says so | `b8ac054d`, fork `9569396` | — |
+
+Gates: fork server vitest 281/281, module 49/49, module typecheck clean, server typecheck clean
+with `@foundry-mcp/shared` mapped to source (the worktree has no `shared/dist`; no dist was
+built), `fork-footprint.sh` ✓. Pentaryn: importer 93, feedback 118, pings 67 node tests pass;
+`vendor.py check --all` ✓; conformance importer 97.6 % (C07, unchanged), feedback 100 %; pytest
+1202 passed / 2 skipped / 3 xfailed; `make check-context` only the 4 old warnings.
+
+Deploy (fold into wave 3's live phase):
+1. Fork: merge into `pentaryn`, `npm run build:server`, `kill -9` the stale backend;
+   `npm run build:foundry`, copy into `Data/modules/foundry-mcp-bridge`, reload the GM tab.
+2. Pentaryn: merge into `main`, sync `pentaryn-importer` and `pentaryn-feedback`. Both
+   `module.json` versions changed → **Foundry restart**, then reload.
+3. Live checks:
+   - `toggle-token-condition {tokenId, conditionId: "prone"}` with no `active` on a ZZ token: on,
+     then again: off; each call's `isActive` matches the token.
+   - A `pentaryn-write` that creates something without its own `ids` (e.g. `dropbin.restoreResult`
+     on a ZZ actor): its `mcp-<month>.jsonl` line has the item's and actor's uuids.
+   - `eval-js` with `timeoutMs: 500`: the `mcp-` line has `phase: "args"` and a one-line `error`.
+   - `pentaryn-write {ns: "importer", path: "import", dryRun: true}` with no actors.json →
+     `code: "NOT_FOUND"`; `describe().version` 1.1.1.
+   - `pentaryn-read {ns: "*", path: "inspect", ref: "Talo"}` → `feedback` is
+     `{actor, users: [Talo's player], pending, reports}`, not BAD_ARGS; an NPC → empty lists;
+     feedback `describe().version` 0.1.2, `selftest().ok`.
+   - Pings golden before/after: `cleanup.pingLogRestored: true`, `pingScratchLeft: 0`, and
+     `game.pentaryn.pings.all()` unchanged across the run.
+   - W2-B2 still needs Joe's confirmation (wave-2-report "Open for Joe").
