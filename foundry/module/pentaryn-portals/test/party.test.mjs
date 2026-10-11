@@ -438,7 +438,7 @@ test("gaps: a follower with no PC to stand by reads 'follower'; a destination wi
   W.confirm = true;
   const n = F.calls.length;
   await S.confirmParty([{ id: "x", name: "Stray", type: "npc", linked: false, owners: ["p9"], summoner: null }], "Here");
-  assert.match(W.callsSince(n, ["DialogV2.confirm"])[0].content, /<li>Stray <span class="pp-follows">follower<\/span><\/li>/);
+  assert.match(W.callsSince(n, ["DialogV2.confirm"])[0].content, /<li>Stray <span class="ppt-follows">follower<\/span><\/li>/);
   const H = hall();
   H.pit.navName = "";
   const { deleted, replacements } = await walkThrough(H);

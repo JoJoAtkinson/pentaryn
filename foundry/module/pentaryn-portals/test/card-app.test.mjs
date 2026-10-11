@@ -18,14 +18,14 @@ test("edit mode: passage head, a card per destination, the add-destination list 
   assert.equal(app.title, "Portal card — Fork");
   assert.equal(S.editing.has(P.fork.uuid), true);
   const frame = app.element;
-  pinJSON("card-edit", { content: frame.querySelector(".window-content").innerHTML, toggle: frame.querySelector(".pp-toggle").outerHTML }, import.meta.url);
+  pinJSON("card-edit", { content: frame.querySelector(".window-content").innerHTML, toggle: frame.querySelector(".ppt-toggle").outerHTML }, import.meta.url);
   await app.close();
   assert.equal(S.editing.has(P.fork.uuid), false);
 });
 
 test("DEFAULT_OPTIONS (classes, window, position)", () => {
   assert.deepEqual(S.PortalCard.DEFAULT_OPTIONS, {
-    classes: ["pentaryn-portal-card", "pentaryn-portal-dialog"],
+    classes: ["ppt-app", "ppt-dialog"],
     window: { title: "Portal card", icon: "fa-solid fa-door-open", resizable: true },
     position: { width: 600, height: "auto" },
   });
@@ -53,14 +53,14 @@ test("PortalCard.open as a player → null, nothing rendered", () => {
 
 test("the header toggle flips edit mode, marks the region for dragging, re-renders", async () => {
   const app = await S.PortalCard.open(P.passage);
-  const box = app.element.querySelector(".pp-toggle input");
+  const box = app.element.querySelector(".ppt-toggle input");
   box.checked = true;
   const n = F.calls.length;
   await box.fire("change", { target: box });
   await W.flush();
   assert.equal(app.edit, true);
   assert.equal(S.editing.has(P.passage.uuid), true);
-  assert.ok(app.element.querySelector(".pp-passage"));
+  assert.ok(app.element.querySelector(".ppt-passage"));
   assert.deepEqual(writes(n).map(c => c.op), ["app.render"]);
   await app.close();
 });
@@ -92,7 +92,7 @@ test("edit controls on a card: title, description, pick (FilePicker + callback),
   W.images["maps/pit.webp"] = { naturalWidth: 4000, naturalHeight: 2000 };
   const app = await S.PortalCard.open(P.fork, { edit: true });
   const c = app.element.querySelector(".window-content");
-  const card = c.querySelector(`.pp-editcard[data-uuid="${P.pitGate.uuid}"]`);
+  const card = c.querySelector(`.ppt-editcard[data-uuid="${P.pitGate.uuid}"]`);
   let n = F.calls.length;
   const title = card.querySelector('[data-f="title"]');
   title.value = "Sand Pit";
@@ -104,7 +104,7 @@ test("edit controls on a card: title, description, pick (FilePicker + callback),
 
   n = F.calls.length;
   await card.querySelector('[data-act="pick"]').click();
-  await card.querySelector(".pp-thumb").click();
+  await card.querySelector(".ppt-thumb").click();
   assert.deepEqual(W.callsSince(n, ["FilePicker", "FilePicker.render"]), [
     { op: "FilePicker", type: "image", current: "cards/pit.webp?v=abc" }, { op: "FilePicker.render", force: true },
     { op: "FilePicker", type: "image", current: "cards/pit.webp?v=abc" }, { op: "FilePicker.render", force: true },
@@ -114,7 +114,7 @@ test("edit controls on a card: title, description, pick (FilePicker + callback),
   await card.querySelector('[data-act="snap"]').click();
   await W.flush();
   const snapped = `assets/tokens/custom/portals/${P.pit.id}-${P.pitGate.id}.webp?v=${(1700000000000).toString(36)}`;
-  assert.equal(card.querySelector(".pp-thumb").src, snapped);
+  assert.equal(card.querySelector(".ppt-thumb").src, snapped);
   assert.deepEqual(W.callsSince(n, ["update"]).map(x => x.changes), [{ "flags.pentaryn-portals.img": snapped }]);
 
   n = F.calls.length;
@@ -134,7 +134,7 @@ test("edit controls on a card: title, description, pick (FilePicker + callback),
 
 test("the FilePicker callback writes the chosen image and refreshes the thumbnail", async () => {
   const app = await S.PortalCard.open(P.passage, { edit: true });
-  const card = app.element.querySelector(".pp-editcard");
+  const card = app.element.querySelector(".ppt-editcard");
   let picker = null;
   const real = foundry.applications.apps.FilePicker.implementation;
   foundry.applications.apps.FilePicker.implementation = class extends real { constructor(o) { super(o); picker = this; } };
@@ -143,7 +143,7 @@ test("the FilePicker callback writes the chosen image and refreshes the thumbnai
   const n = F.calls.length;
   await picker.opts.callback("cards/new.webp");
   assert.deepEqual(W.callsSince(n, ["update"]).map(x => x.changes), [{ "flags.pentaryn-portals.img": "cards/new.webp" }]);
-  assert.equal(card.querySelector(".pp-thumb").src, "cards/new.webp");
+  assert.equal(card.querySelector(".ppt-thumb").src, "cards/new.webp");
   await app.close();
 });
 
@@ -152,7 +152,7 @@ test("unlink: removes the destination (relative or absolute entry) from every be
   const app = await S.PortalCard.open(Q.fork, { edit: true });
   const c = app.element.querySelector(".window-content");
   let n = F.calls.length;
-  await c.querySelector(`.pp-editcard[data-uuid="${Q.cell.uuid}"] [data-act="unlink"]`).click();
+  await c.querySelector(`.ppt-editcard[data-uuid="${Q.cell.uuid}"] [data-act="unlink"]`).click();
   assert.deepEqual(W.callsSince(n, ["update"]).map(x => [x.uuid, x.changes]), [[Q.bFork.uuid, { "system.destinations": [Q.pitGate.uuid] }]]);
   assert.equal(W.callsSince(n, ["app.render"]).length, 1);
   await app.close();
@@ -219,6 +219,6 @@ test("destinationsOf / teleportBehaviors / toAbsolute", () => {
 test("gaps: edit mode with no destinations says so", async () => {
   const Q = places(W, "E");
   const app = await S.PortalCard.open(Q.cell, { edit: true });
-  assert.match(app.element.querySelector(".window-content").innerHTML, /<div class="pp-cards"><p class="hint">No destinations yet.<\/p><\/div>/);
+  assert.match(app.element.querySelector(".window-content").innerHTML, /<div class="ppt-cards"><p class="hint">No destinations yet.<\/p><\/div>/);
   await app.close();
 });

@@ -24,13 +24,13 @@ export function decorate(app, element) {
   if (!sys.revealed && !game.user.isGM) return; // keep an unrevealed destination secret
   const root = element instanceof HTMLElement ? element : element?.[0];
   const content = root?.querySelector(".dialog-content");
-  if (!content || content.querySelector(".pp-cards")) return;
+  if (!content || content.querySelector(".ppt-cards")) return;
 
   const dests = [...(sys.destinations ?? [])].map(u => fromUuidSync(u, { relative: behavior })).filter(Boolean).map(cardFor);
   if (!dests.length) return;
 
   const wrap = document.createElement("div");
-  wrap.className = "pp-cards";
+  wrap.className = "ppt-cards";
   const select = content.querySelector('select[name="destination"]');
   if (select) {
     // Several exits: radio cards submit the same field name the core callback reads.
@@ -42,7 +42,7 @@ export function decorate(app, element) {
     content.append(wrap);
     plainQuestion(app, behavior, content, dests[0]);
   }
-  root.classList.add("pentaryn-portal-dialog");
+  root.classList.add("ppt-dialog");
   app.setPosition?.({ width: Math.max(app.position?.width ?? 0, 460), height: "auto" });
 }
 
@@ -83,11 +83,11 @@ export function injectConfig(app, element) {
   const region = app.document;
   const root = element instanceof HTMLElement ? element : element?.[0];
   const tab = root?.querySelector("section.tab.region-appearance, section.tab[data-tab='appearance']");
-  if (!tab || tab.querySelector(".pp-config")) return;
+  if (!tab || tab.querySelector(".ppt-config")) return;
   const f = region.flags?.[MODULE] ?? {};
   const card = cardFor(region);
   const fs = document.createElement("fieldset");
-  fs.className = "pp-config";
+  fs.className = "ppt-config";
   fs.innerHTML = `
     <legend>Portal card</legend>
     <p class="hint">Shown to a player choosing to travel <em>here</em> from a linked teleport region.</p>
@@ -95,17 +95,17 @@ export function injectConfig(app, element) {
       <div class="form-fields"><input type="text" name="flags.${MODULE}.title" value="${esc(f.title ?? "")}" placeholder="${esc(card.title)}"></div></div>
     <div class="form-group"><label>Image</label>
       <div class="form-fields"><input type="text" name="flags.${MODULE}.img" value="${esc(f.img ?? "")}" placeholder="scene thumbnail">
-      <button type="button" class="pp-snap" data-tooltip="Crop the map art around this region and use it"><i class="fa-solid fa-camera"></i></button></div></div>
+      <button type="button" class="ppt-snap" data-tooltip="Crop the map art around this region and use it"><i class="fa-solid fa-camera"></i></button></div></div>
     <div class="form-group stacked"><label>Description</label>
       <textarea name="flags.${MODULE}.description" rows="4" placeholder="What players read before they choose.">${esc(f.description ?? "")}</textarea></div>
-    <div class="pp-preview">${cardHTML(card)}</div>`;
+    <div class="ppt-preview">${cardHTML(card)}</div>`;
   tab.append(fs);
-  fs.querySelector(".pp-snap").addEventListener("click", async ev => {
+  fs.querySelector(".ppt-snap").addEventListener("click", async ev => {
     ev.preventDefault();
     const path = await snapshot(region);
     if (path) {
       fs.querySelector(`input[name="flags.${MODULE}.img"]`).value = region.flags?.[MODULE]?.img ?? path;
-      fs.querySelector(".pp-preview").innerHTML = cardHTML(cardFor(region));
+      fs.querySelector(".ppt-preview").innerHTML = cardHTML(cardFor(region));
     }
   });
   app.setPosition?.({ height: "auto" });

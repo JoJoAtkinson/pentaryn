@@ -17,7 +17,7 @@ export const NS = "portals";
 export const VERSION = "0.4.4";                        // === module.json version (core.test pins it)
 export const CONTRACT = "pentaryn-portals/api@1";     // bump the major on a published-shape change
 export const I18N = "PENTARYN_PORTALS";
-export const CSS = "ppt-";                             // the declared prefix (S7 renames the pp- classes)
+export const CSS = "ppt-";                             // every class this module puts in the DOM starts ppt- (S7)
 export const FLAG_SCOPE = MODULE;
 /** Events this module emits: none. */
 export const HOOKS = Object.freeze({});
@@ -256,11 +256,11 @@ export function cardData({ flags, sceneNavName, sceneName, sceneThumb, regionNam
 /** One card as HTML: a plain card, or a radio choice that submits the core dialog's `destination`. */
 export function cardHTML(c, { radio = false, checked = false } = {}) {
   // Plain text with line breaks: the GM writes it in a textarea, players only read it.
-  const desc = c.description ? `<p class="pp-desc">${esc(c.description).replace(/\n/g, "<br>")}</p>` : "";
-  const body = `<img class="pp-thumb" src="${esc(c.img)}" alt="">
-    <div class="pp-text"><h4>${esc(c.title)}</h4>${desc}</div>`;
-  if (!radio) return `<div class="pp-card">${body}</div>`;
-  return `<label class="pp-card pp-choice"><input type="radio" name="destination" value="${esc(c.uuid)}" ${checked ? "checked" : ""}>${body}</label>`;
+  const desc = c.description ? `<p class="ppt-desc">${esc(c.description).replace(/\n/g, "<br>")}</p>` : "";
+  const body = `<img class="ppt-thumb" src="${esc(c.img)}" alt="">
+    <div class="ppt-text"><h4>${esc(c.title)}</h4>${desc}</div>`;
+  if (!radio) return `<div class="ppt-card">${body}</div>`;
+  return `<label class="ppt-card ppt-choice"><input type="radio" name="destination" value="${esc(c.uuid)}" ${checked ? "checked" : ""}>${body}</label>`;
 }
 
 /**

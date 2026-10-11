@@ -18,7 +18,7 @@ export function configureCardApp({ setEditing } = {}) {
 
 export class PortalCard extends foundry.applications.api.ApplicationV2 {
   static DEFAULT_OPTIONS = {
-    classes: ["pentaryn-portal-card", "pentaryn-portal-dialog"],
+    classes: ["ppt-app", "ppt-dialog"],
     window: { title: "Portal card", icon: "fa-solid fa-door-open", resizable: true },
     position: { width: 600, height: "auto" }
   };
@@ -49,15 +49,15 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
     if (!this.edit) {
       const note = revealedAll ? "" : `<p class="hint"><i class="fa-solid fa-eye-slash"></i> This passage is <strong>unrevealed</strong>: players see no cards, only "a way onward".</p>`;
       const sealed = this.region.hidden ? `<p class="hint"><i class="fa-solid fa-lock"></i> <strong>Sealed:</strong> players can't see or use it.</p>` : "";
-      return `<p class="hint">What a player sees on hover and in the travel prompt.</p>${sealed}${note}<div class="pp-cards">${dests.map(d => cardHTML(cardFor(d))).join("")}</div>`;
+      return `<p class="hint">What a player sees on hover and in the travel prompt.</p>${sealed}${note}<div class="ppt-cards">${dests.map(d => cardHTML(cardFor(d))).join("")}</div>`;
     }
 
-    const sw = (key, on, label, hint) => `<label class="pp-switch" data-tooltip="${esc(hint)}">
-      <input type="checkbox" data-set="${key}" ${on ? "checked" : ""}><span class="pp-slider"></span><span>${esc(label)}</span></label>`;
+    const sw = (key, on, label, hint) => `<label class="ppt-switch" data-tooltip="${esc(hint)}">
+      <input type="checkbox" data-set="${key}" ${on ? "checked" : ""}><span class="ppt-slider"></span><span>${esc(label)}</span></label>`;
     const choice = behaviors.every(b => b.system.choice);
-    const head = `<section class="pp-passage">
-      <input class="pp-name" type="text" data-set="name" value="${esc(this.region.name)}" data-tooltip="Passage name (GM only)">
-      <div class="pp-switches">
+    const head = `<section class="ppt-passage">
+      <input class="ppt-name" type="text" data-set="name" value="${esc(this.region.name)}" data-tooltip="Passage name (GM only)">
+      <div class="ppt-switches">
         ${sw("open", !this.region.hidden, "Open", "Off = sealed: players can't see the badge or use it")}
         ${sw("revealed", revealedAll, "Show where it leads", "Off = players see '?' and 'a way onward'")}
         ${sw("choice", choice, "Ask before moving", "Off = stepping on it moves them at once")}
@@ -68,19 +68,19 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
     const cards = dests.map(d => {
       const f = d.flags?.[MODULE] ?? {};
       const c = cardFor(d);
-      return `<article class="pp-card pp-editcard" data-uuid="${esc(d.uuid)}">
-        <figure class="pp-imgedit">
-          <img class="pp-thumb" src="${esc(c.img)}" alt="">
-          <div class="pp-imgtools">
+      return `<article class="ppt-card ppt-editcard" data-uuid="${esc(d.uuid)}">
+        <figure class="ppt-imgedit">
+          <img class="ppt-thumb" src="${esc(c.img)}" alt="">
+          <div class="ppt-imgtools">
             <button type="button" data-act="pick" data-tooltip="Choose an image"><i class="fa-solid fa-folder-open"></i></button>
             <button type="button" data-act="snap" data-tooltip="Snap it from the map around that spot"><i class="fa-solid fa-camera"></i></button>
             ${f.img ? `<button type="button" data-act="clearimg" data-tooltip="Back to the scene thumbnail"><i class="fa-solid fa-rotate-left"></i></button>` : ""}
           </div>
         </figure>
-        <div class="pp-text">
-          <input class="pp-title" type="text" data-f="title" value="${esc(f.title ?? "")}" placeholder="${esc(c.title)}">
-          <textarea class="pp-descedit" data-f="description" rows="5" placeholder="What players read before they choose…">${esc(f.description ?? "")}</textarea>
-          <div class="pp-meta"><i class="fa-solid fa-location-dot"></i> ${esc(d.parent.name)} · ${esc(d.name)}
+        <div class="ppt-text">
+          <input class="ppt-title" type="text" data-f="title" value="${esc(f.title ?? "")}" placeholder="${esc(c.title)}">
+          <textarea class="ppt-descedit" data-f="description" rows="5" placeholder="What players read before they choose…">${esc(f.description ?? "")}</textarea>
+          <div class="ppt-meta"><i class="fa-solid fa-location-dot"></i> ${esc(d.parent.name)} · ${esc(d.name)}
             <a data-act="look" data-tooltip="Look there (only you)"><i class="fa-solid fa-binoculars"></i></a>
             <a data-act="unlink" data-tooltip="Remove this destination"><i class="fa-solid fa-link-slash"></i></a></div>
         </div>
@@ -92,12 +92,12 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
     const opts = game.scenes.contents.flatMap(sc => sc.regions.contents
       .filter(r => !taken.has(r.uuid) && !r.behaviors.some(b => b.type !== "teleportToken"))
       .map(r => `<option value="${esc(r.uuid)}">${esc(sc.name)} — ${esc(r.name)}</option>`)).join("");
-    const add = `<section class="pp-add">
+    const add = `<section class="ppt-add">
       <select data-act="addsel"><option value="">Add a destination…</option>${opts}</select>
-      <label class="pp-switch" data-tooltip="Also make that spot lead back here"><input type="checkbox" data-act="twoway" checked><span class="pp-slider"></span><span>Two-way</span></label>
+      <label class="ppt-switch" data-tooltip="Also make that spot lead back here"><input type="checkbox" data-act="twoway" checked><span class="ppt-slider"></span><span>Two-way</span></label>
     </section>`;
 
-    return head + `<div class="pp-cards">${cards || `<p class="hint">No destinations yet.</p>`}</div>` + add;
+    return head + `<div class="ppt-cards">${cards || `<p class="hint">No destinations yet.</p>`}</div>` + add;
   }
 
   _replaceHTML(result, content) {
@@ -115,23 +115,23 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
       });
     }
 
-    for (const card of content.querySelectorAll(".pp-editcard")) {
+    for (const card of content.querySelectorAll(".ppt-editcard")) {
       const dest = fromUuidSync(card.dataset.uuid);
       const setImg = async path => {
         await dest.update({ [`flags.${MODULE}.img`]: path });
-        card.querySelector(".pp-thumb").src = cardFor(dest).img;
+        card.querySelector(".ppt-thumb").src = cardFor(dest).img;
       };
       for (const input of card.querySelectorAll("[data-f]")) {
         input.addEventListener("change", () => dest.update({ [`flags.${MODULE}.${input.dataset.f}`]: input.value }));
       }
       card.querySelector('[data-act="snap"]').addEventListener("click", async () => {
         await snapshot(dest);
-        card.querySelector(".pp-thumb").src = cardFor(dest).img;
+        card.querySelector(".ppt-thumb").src = cardFor(dest).img;
       });
       const pick = () => new foundry.applications.apps.FilePicker.implementation({
         type: "image", current: dest.flags?.[MODULE]?.img ?? "", callback: setImg }).render(true);
       card.querySelector('[data-act="pick"]').addEventListener("click", pick);
-      card.querySelector(".pp-thumb").addEventListener("click", pick);
+      card.querySelector(".ppt-thumb").addEventListener("click", pick);
       card.querySelector('[data-act="clearimg"]')?.addEventListener("click", async () => { await dest.update({ [`flags.${MODULE}.-=img`]: null }); this.render(); });
       card.querySelector('[data-act="look"]').addEventListener("click", () => lookAt(dest));
       card.querySelector('[data-act="unlink"]').addEventListener("click", async () => {
@@ -156,9 +156,9 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
     const frame = await super._renderFrame(options);
     const header = frame.querySelector(".window-header");
     const toggle = document.createElement("label");
-    toggle.className = "pp-toggle";
+    toggle.className = "ppt-toggle";
     toggle.dataset.tooltip = "Toggle edit mode";
-    toggle.innerHTML = `<input type="checkbox" ${this.edit ? "checked" : ""}><span class="pp-slider"></span>`;
+    toggle.innerHTML = `<input type="checkbox" ${this.edit ? "checked" : ""}><span class="ppt-slider"></span>`;
     toggle.querySelector("input").addEventListener("change", ev => {
       this.edit = ev.target.checked;
       deps.setEditing(this.region, this.edit); // edit on: drag the badge on the map to move this travel spot

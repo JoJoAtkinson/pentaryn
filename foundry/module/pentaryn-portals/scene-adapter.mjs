@@ -242,11 +242,11 @@ export async function confirmParty(party, title) {
     return false;
   }
   const rows = partyPreview(party).map(r => `<li>${esc(r.name)}${r.follower
-    ? ` <span class="pp-follows">${r.leaderName ? `lands beside ${esc(r.leaderName)}` : "follower"}</span>` : ""}</li>`).join("");
+    ? ` <span class="ppt-follows">${r.leaderName ? `lands beside ${esc(r.leaderName)}` : "follower"}</span>` : ""}</li>`).join("");
   return foundry.applications.api.DialogV2.confirm({
     window: { title: "Teleport party", icon: "fa-solid fa-person-walking-arrow-right" },
     content: `<p>Move ${party.length === 1 ? "this token" : `these ${party.length} tokens`} to <strong>${esc(title)}</strong>?</p>
-      <ul class="pp-party">${rows}</ul>`,
+      <ul class="ppt-party">${rows}</ul>`,
     yes: { label: "Teleport", icon: "fa-solid fa-check", default: true },
     no: { label: "Cancel" },
     rejectClose: false

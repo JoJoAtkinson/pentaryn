@@ -105,13 +105,13 @@ test("decorate: one revealed destination → one card appended, the question nam
   const { app, root } = teleportDialog(W, P.bPassage, P.caven.id);
   const n = F.calls.length;
   S.decorate(app, root);
-  assert.equal(root.querySelectorAll(".pp-cards").length, 1);
-  assert.ok(root.classList.contains("pentaryn-portal-dialog"));
+  assert.equal(root.querySelectorAll(".ppt-cards").length, 1);
+  assert.ok(root.classList.contains("ppt-dialog"));
   assert.equal(root.querySelector(".dialog-content > p").textContent, "Teleport Caven to The Fighting Pit?");
   assert.deepEqual(W.callsSince(n, ["setPosition"]).map(c => c.p), [{ width: 460, height: "auto" }]);
   pinJSON("decorate-single", root.outerHTML, import.meta.url);
   S.decorate(app, root);
-  assert.equal(root.querySelectorAll(".pp-cards").length, 1, "a second render adds nothing");
+  assert.equal(root.querySelectorAll(".ppt-cards").length, 1, "a second render adds nothing");
 });
 
 test("decorate: width keeps a wider dialog; a jQuery-style [element] works too", () => {
@@ -142,7 +142,7 @@ test("decorate: an unrevealed destination stays untouched for a player; the GM g
   assert.equal(root.outerHTML, before);
   F.become({ userId: GM });
   S.decorate(app, root);
-  assert.equal(root.querySelectorAll(".pp-card").length, 1);
+  assert.equal(root.querySelectorAll(".ppt-card").length, 1);
 });
 
 test("decorate: not a teleport dialog, no .dialog-content, or no resolvable destination → untouched", () => {
@@ -219,7 +219,7 @@ test("preferTeleport: setting off, a non-teleport dialog, or a disabled Teleport
 test("renderDialogV2: decorate and focus both run; each failure warns its own text and the next still runs", () => {
   const { app, root } = teleportDialog(W, P.bPassage, P.caven.id);
   F.fire("renderDialogV2", app, root);
-  assert.ok(root.querySelector(".pp-cards"));
+  assert.ok(root.querySelector(".ppt-cards"));
   assert.ok(root.querySelector('button[data-action="yes"]').hasAttribute("autofocus"));
   W.raf.length = 0;
   const broken = W.doc.createElement("div");
@@ -246,7 +246,7 @@ test("injectConfig as GM: the Portal card fieldset (golden), once; the data-tab 
   assert.deepEqual(W.callsSince(n, ["setPosition"]).map(c => c.p), [{ height: "auto" }]);
   pinJSON("config-fieldset", root.querySelector("fieldset").outerHTML, import.meta.url);
   S.injectConfig(app, root);
-  assert.equal(root.querySelectorAll(".pp-config").length, 1);
+  assert.equal(root.querySelectorAll(".ppt-config").length, 1);
   const alt = configApp(P.stair, `<section class="tab" data-tab="appearance"></section>`);
   S.injectConfig(alt.app, alt.root);
   assert.equal(alt.root.querySelector('input[name="flags.pentaryn-portals.title"]').getAttribute("placeholder"), "Fighting Pit");
@@ -268,10 +268,10 @@ test("injectConfig: the camera button snapshots and refreshes the image field an
   W.images["maps/pit.webp"] = { naturalWidth: 4000, naturalHeight: 2000 };
   const { app, root } = configApp(P.stair);
   S.injectConfig(app, root);
-  await root.querySelector(".pp-snap").click();
+  await root.querySelector(".ppt-snap").click();
   const path = `assets/tokens/custom/portals/${P.pit.id}-${P.stair.id}.webp`;
   assert.equal(root.querySelector('input[name="flags.pentaryn-portals.img"]').value, `${path}?v=${(1700000000000).toString(36)}`);
-  assert.equal(root.querySelector(".pp-preview img").getAttribute("src"), `${path}?v=${(1700000000000).toString(36)}`);
+  assert.equal(root.querySelector(".ppt-preview img").getAttribute("src"), `${path}?v=${(1700000000000).toString(36)}`);
 });
 
 test("renderRegionConfig: a failure warns 'config injection skipped'", () => {
@@ -344,7 +344,7 @@ test("gaps: [element] forms for preferTeleport and injectConfig; a snapshot that
   const { app, root } = configApp(P.cell);
   S.injectConfig(app, [root]);
   const img = root.querySelector('input[name="flags.pentaryn-portals.img"]');
-  await root.querySelector(".pp-snap").click();
+  await root.querySelector(".ppt-snap").click();
   assert.equal(img.value, "", "no background: nothing filled in");
 });
 

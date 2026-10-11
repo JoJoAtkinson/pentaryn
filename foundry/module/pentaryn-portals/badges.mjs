@@ -151,15 +151,15 @@ export function badgeAt(clientX, clientY) {
 export function showTip(badge, ev) {
   if (!tip) {
     tip = document.createElement("div");
-    tip.className = "pp-hover pentaryn-portal-dialog";
+    tip.className = "ppt-hover ppt-dialog";
     document.body.append(tip);
   }
   const key = badge.region.uuid;
   if (tip.dataset.key !== key) {
     tip.dataset.key = key;
     tip.innerHTML = badge.revealed
-      ? `<div class="pp-cards">${badge.cards.map(c => cardHTML(c)).join("")}</div>`
-      : `<div class="pp-card"><div class="pp-text"><h4>A way onward</h4><p class="pp-desc">You can't tell where it leads.</p></div></div>`;
+      ? `<div class="ppt-cards">${badge.cards.map(c => cardHTML(c)).join("")}</div>`
+      : `<div class="ppt-card"><div class="ppt-text"><h4>A way onward</h4><p class="ppt-desc">You can't tell where it leads.</p></div></div>`;
   }
   tip.style.left = `${ev.clientX + 18}px`;
   tip.style.top = `${ev.clientY + 18}px`;
@@ -173,7 +173,7 @@ export function openMenu(badge, ev) {
   closeMenu();
   hideTip();
   menu = document.createElement("nav");
-  menu.className = "pp-menu";
+  menu.className = "ppt-menu";
   const items = [];
   for (const c of badge.cards) {
     items.push({ icon: "fa-binoculars", label: `Look at ${c.title}`, run: () => lookAt(fromUuidSync(c.uuid)) });

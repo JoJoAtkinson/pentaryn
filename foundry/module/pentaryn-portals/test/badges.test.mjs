@@ -185,7 +185,7 @@ test("hover card: cards when revealed, 'A way onward' when not; follows the poin
   S.showTip(S.badges[1], { clientX: 10, clientY: 20 });
   const tip = S.state().tip;
   assert.equal(tip.parentNode, W.doc.body);
-  assert.deepEqual([tip.className, tip.style.left, tip.style.top, tip.style.display, tip.dataset.key], ["pp-hover pentaryn-portal-dialog", "28px", "38px", "block", P.fork.uuid]);
+  assert.deepEqual([tip.className, tip.style.left, tip.style.top, tip.style.display, tip.dataset.key], ["ppt-hover ppt-dialog", "28px", "38px", "block", P.fork.uuid]);
   const revealed = tip.innerHTML;
   S.badges[2].revealed = false;
   S.showTip(S.badges[2], { clientX: 0, clientY: 0 });
