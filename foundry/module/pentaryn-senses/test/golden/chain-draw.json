@@ -1,0 +1,42 @@
+{
+  "textures": [
+    "modules/pentaryn-senses/assets/chain-link.webp"
+  ],
+  "layer": {
+    "sortLayer": 699,
+    "elevation": 0,
+    "eventMode": "none",
+    "sort": 0,
+    "sortDirty": true
+  },
+  "sprites": [
+    {
+      "w": 424.26406871192853,
+      "h": 28,
+      "x": 252.8,
+      "y": 254.48,
+      "rot": 0.785398,
+      "scale": 0.2916666666666667,
+      "anchor": [
+        0,
+        0.5
+      ],
+      "tint": 0,
+      "alpha": 0.45
+    },
+    {
+      "w": 424.26406871192853,
+      "h": 28,
+      "x": 250,
+      "y": 250,
+      "rot": 0.785398,
+      "scale": 0.2916666666666667,
+      "anchor": [
+        0,
+        0.5
+      ],
+      "tint": 16777215,
+      "alpha": 1
+    }
+  ]
+}

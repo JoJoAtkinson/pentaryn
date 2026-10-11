@@ -1,0 +1,49 @@
+{
+  "moved": {
+    "value": true,
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Item",
+        "uuid": "Actor.actHero000000001.Item.itmLight00000001",
+        "changes": {
+          "flags.pentaryn-senses.lightCast.x": 450,
+          "flags.pentaryn-senses.lightCast.y": 450
+        }
+      }
+    ]
+  },
+  "notXY": {
+    "value": true,
+    "calls": []
+  },
+  "sameSpot": {
+    "value": true,
+    "calls": []
+  },
+  "movedWithTwin": {
+    "value": true,
+    "calls": []
+  },
+  "deletedWithTwin": {
+    "value": true,
+    "calls": []
+  },
+  "deletedWanted": {
+    "value": true,
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Item",
+        "uuid": "Actor.actHero000000001.Item.itmLight00000001",
+        "changes": {
+          "flags.pentaryn-senses.lightCast": null
+        }
+      }
+    ]
+  },
+  "notSpellLight": {
+    "value": true,
+    "calls": []
+  }
+}

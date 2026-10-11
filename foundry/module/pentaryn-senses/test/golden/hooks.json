@@ -1,0 +1,142 @@
+[
+  {
+    "kind": "once",
+    "name": "init"
+  },
+  {
+    "kind": "on",
+    "name": "canvasTearDown"
+  },
+  {
+    "kind": "on",
+    "name": "canvasReady"
+  },
+  {
+    "kind": "on",
+    "name": "refreshToken"
+  },
+  {
+    "kind": "on",
+    "name": "destroyToken"
+  },
+  {
+    "kind": "on",
+    "name": "createToken"
+  },
+  {
+    "kind": "on",
+    "name": "deleteToken"
+  },
+  {
+    "kind": "on",
+    "name": "updateToken"
+  },
+  {
+    "kind": "on",
+    "name": "renderTokenHUD"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.preUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.postUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.renderChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "renderBaseActorSheet"
+  },
+  {
+    "kind": "on",
+    "name": "renderTokenHUD"
+  },
+  {
+    "kind": "on",
+    "name": "canvasTearDown"
+  },
+  {
+    "kind": "on",
+    "name": "createItem"
+  },
+  {
+    "kind": "on",
+    "name": "updateItem"
+  },
+  {
+    "kind": "on",
+    "name": "deleteItem"
+  },
+  {
+    "kind": "on",
+    "name": "createToken"
+  },
+  {
+    "kind": "on",
+    "name": "deleteToken"
+  },
+  {
+    "kind": "on",
+    "name": "deleteActor"
+  },
+  {
+    "kind": "on",
+    "name": "deleteAmbientLight"
+  },
+  {
+    "kind": "on",
+    "name": "updateAmbientLight"
+  },
+  {
+    "kind": "on",
+    "name": "deleteScene"
+  },
+  {
+    "kind": "on",
+    "name": "updateActor"
+  },
+  {
+    "kind": "on",
+    "name": "createItem"
+  },
+  {
+    "kind": "on",
+    "name": "createActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "updateItem"
+  },
+  {
+    "kind": "on",
+    "name": "updateActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "deleteItem"
+  },
+  {
+    "kind": "on",
+    "name": "deleteActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "createToken"
+  },
+  {
+    "kind": "once",
+    "name": "init"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  }
+]

@@ -1,0 +1,123 @@
+{
+  "picking": {
+    "view": true,
+    "body": true,
+    "listeners": [
+      1,
+      1
+    ]
+  },
+  "token": {
+    "scene": "scnCellar0000001",
+    "token": "tokStake00000001"
+  },
+  "swallowed": {
+    "stopped": 1,
+    "prevented": 1,
+    "pointerupOnce": 1
+  },
+  "pointerupAfter": 0,
+  "cleaned": {
+    "view": false,
+    "body": false,
+    "listeners": [
+      0,
+      0
+    ]
+  },
+  "square": {
+    "scene": "scnCellar0000001",
+    "x": 550,
+    "y": 550
+  },
+  "rightClick": null,
+  "contextmenuOnce": 1,
+  "swallowExpired": [
+    0,
+    0
+  ],
+  "escape": null,
+  "timeout": null,
+  "secondCancelsFirst": null,
+  "tearDownCancels": null,
+  "aoeHandle": {
+    "scene": "scnCellar0000001",
+    "x": 350,
+    "y": 150
+  },
+  "argon": 8,
+  "calls": [
+    {
+      "op": "notify",
+      "level": "info",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    },
+    {
+      "op": "notify.remove",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    },
+    {
+      "op": "notify",
+      "level": "info",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    },
+    {
+      "op": "notify.remove",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    },
+    {
+      "op": "notify",
+      "level": "info",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    },
+    {
+      "op": "notify.remove",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    },
+    {
+      "op": "notify",
+      "level": "info",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    },
+    {
+      "op": "notify.remove",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    },
+    {
+      "op": "notify",
+      "level": "info",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    },
+    {
+      "op": "notify.remove",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    },
+    {
+      "op": "notify",
+      "level": "info",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    },
+    {
+      "op": "notify.remove",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    },
+    {
+      "op": "notify",
+      "level": "info",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    },
+    {
+      "op": "notify.remove",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    },
+    {
+      "op": "notify",
+      "level": "info",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    },
+    {
+      "op": "notify.remove",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    }
+  ]
+}

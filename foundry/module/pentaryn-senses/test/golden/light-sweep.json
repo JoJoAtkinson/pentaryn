@@ -1,0 +1,145 @@
+{
+  "swept": {
+    "value": {
+      "sources": 1,
+      "removed": 0
+    },
+    "calls": [
+      {
+        "op": "updateEmbedded",
+        "scene": "scnRoad000000002",
+        "type": "Token",
+        "updates": [
+          {
+            "_id": "tokHero000000002",
+            "light": {
+              "dim": 5,
+              "bright": 0
+            },
+            "flags.pentaryn-senses.spellLight": "<_del>"
+          }
+        ]
+      },
+      {
+        "op": "deleteEmbedded",
+        "scene": "scnRoad000000002",
+        "type": "AmbientLight",
+        "ids": [
+          "lgtOrphan0000001"
+        ]
+      }
+    ]
+  },
+  "failed": {
+    "value": "<undefined>",
+    "calls": [
+      {
+        "op": "updateEmbedded",
+        "scene": "scnCellar0000001",
+        "type": "Token",
+        "updates": [
+          {
+            "_id": "tokHero000000001",
+            "light": {
+              "dim": 0,
+              "bright": 0,
+              "angle": 360,
+              "color": null,
+              "alpha": 0.5,
+              "luminosity": 0.5,
+              "negative": false,
+              "darkness": {
+                "min": 0,
+                "max": 1
+              },
+              "animation": {
+                "type": null,
+                "speed": 5,
+                "intensity": 5,
+                "reverse": false
+              }
+            },
+            "flags.pentaryn-senses.spellLight": "<_del>"
+          }
+        ]
+      },
+      {
+        "op": "updateEmbedded",
+        "scene": "scnCellar0000001",
+        "type": "Token",
+        "updates": [
+          {
+            "_id": "tokHero000000001",
+            "light": {
+              "dim": 0,
+              "bright": 0,
+              "angle": 360,
+              "color": null,
+              "alpha": 0.5,
+              "luminosity": 0.5,
+              "negative": false,
+              "darkness": {
+                "min": 0,
+                "max": 1
+              },
+              "animation": {
+                "type": null,
+                "speed": 5,
+                "intensity": 5,
+                "reverse": false
+              }
+            },
+            "flags.pentaryn-senses.spellLight": "<_del>"
+          }
+        ]
+      }
+    ]
+  },
+  "fixed": {
+    "value": "<undefined>",
+    "calls": [
+      {
+        "op": "updateEmbedded",
+        "scene": "scnCellar0000001",
+        "type": "Token",
+        "updates": [
+          {
+            "_id": "tokHero000000001",
+            "light": {
+              "dim": 0,
+              "bright": 0,
+              "angle": 360,
+              "color": null,
+              "alpha": 0.5,
+              "luminosity": 0.5,
+              "negative": false,
+              "darkness": {
+                "min": 0,
+                "max": 1
+              },
+              "animation": {
+                "type": null,
+                "speed": 5,
+                "intensity": 5,
+                "reverse": false
+              }
+            },
+            "flags.pentaryn-senses.spellLight": "<_del>"
+          }
+        ]
+      }
+    ]
+  },
+  "console": [
+    [
+      "warn",
+      "pentaryn-senses | light reconcile Actor.actHero000000001.Item.itmLight00000001",
+      "Error: db down"
+    ],
+    [
+      "warn",
+      "pentaryn-senses | light reconcile Actor.actHero000000001.Item.itmLight00000001",
+      "Error: db down"
+    ]
+  ]
+}

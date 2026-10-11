@@ -1,0 +1,164 @@
+{
+  "ownToken": {
+    "value": true,
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Item",
+        "uuid": "Actor.actHero000000001.Item.itmLight00000001",
+        "changes": {
+          "flags.pentaryn-senses.lightCast": {
+            "scene": "scnCellar0000001",
+            "token": "tokHero000000001",
+            "x": null,
+            "y": null,
+            "at": 1760000007200
+          }
+        }
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "Light: Marrith glows."
+      }
+    ]
+  },
+  "nameNone": {
+    "value": true,
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Item",
+        "uuid": "Actor.actHero000000001.Item.itmLight00000001",
+        "changes": {
+          "flags.pentaryn-senses.lightCast": {
+            "scene": "scnCellar0000001",
+            "token": "tokGob0000000001",
+            "x": null,
+            "y": null,
+            "at": 1760000009600
+          }
+        }
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "Light: the creature glows."
+      }
+    ]
+  },
+  "nameHover": {
+    "value": true,
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Item",
+        "uuid": "Actor.actHero000000001.Item.itmLight00000001",
+        "changes": {
+          "flags.pentaryn-senses.lightCast": {
+            "scene": "scnCellar0000001",
+            "token": "tokGob0000000001",
+            "x": null,
+            "y": null,
+            "at": 1760000012000
+          }
+        }
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "Light: Goblin glows."
+      }
+    ]
+  },
+  "nameOwnerHover": {
+    "value": true,
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Item",
+        "uuid": "Actor.actHero000000001.Item.itmLight00000001",
+        "changes": {
+          "flags.pentaryn-senses.lightCast": {
+            "scene": "scnCellar0000001",
+            "token": "tokGob0000000001",
+            "x": null,
+            "y": null,
+            "at": 1760000014400
+          }
+        }
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "Light: the creature glows."
+      }
+    ]
+  },
+  "tokenElsewhere": {
+    "value": true,
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Item",
+        "uuid": "Actor.actHero000000001.Item.itmLight00000001",
+        "changes": {
+          "flags.pentaryn-senses.lightCast": {
+            "scene": "scnRoad000000002",
+            "token": "tokMissing000001",
+            "x": null,
+            "y": null,
+            "at": 1760000016800
+          }
+        }
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "Light: the creature glows."
+      }
+    ]
+  },
+  "square": {
+    "value": true,
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Item",
+        "uuid": "Actor.actHero000000001.Item.itmLight00000001",
+        "changes": {
+          "flags.pentaryn-senses.lightCast": {
+            "scene": "scnCellar0000001",
+            "token": null,
+            "x": 10,
+            "y": 20,
+            "at": 1760000019200
+          }
+        }
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "Light: the square glows."
+      }
+    ]
+  },
+  "end": {
+    "value": true,
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Item",
+        "uuid": "Actor.actHero000000001.Item.itmLight00000001",
+        "changes": {
+          "flags.pentaryn-senses.lightCast": null
+        }
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "The light goes out."
+      }
+    ]
+  }
+}

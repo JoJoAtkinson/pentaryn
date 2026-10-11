@@ -1,0 +1,36 @@
+/**
+ * Characterisation (senses checkpoint, wave 3), console text (i) for the entry's ready chain as the
+ * active GM: a failing sight reset warns 'pentaryn-senses | sight reset' and the chain goes on; a
+ * failing carried-light sync warns 'pentaryn-senses | ready sweep' and the Light sweep is skipped.
+ * Frozen once committed.
+ */
+import { test, mock } from "node:test";
+import assert from "node:assert/strict";
+import { boot, flush, settle, since, captureConsole, standardWorld, ID, MODULE, NOW } from "./fixtures/world.mjs";
+
+mock.timers.enable({ apis: ["setTimeout", "Date"], now: NOW });
+const world = standardWorld({ heroProto: { sight: { enabled: true, visionMode: "darkvision", range: 60 } } });
+world.actors[0].items.get(ID.torch).flags[MODULE] = { lit: true };
+world.actors[0].items.get(ID.light).flags[MODULE] = { lightCast: { scene: ID.s1, token: ID.tStake } };
+world.scenes[0].throwOnUpdate = "scene down";
+const F = await boot({ world, ready: false });
+
+test("ready: reset fails → warned, sync still runs; sync fails → warned, sweep skipped", async t => {
+  const out = captureConsole(t);
+  globalThis.Actor.implementation.updateDocuments = async () => { throw new Error("actors down"); };
+  const mark = F.calls.length;
+  F.fire("ready");
+  await flush();
+  const calls = since(mark);
+  // KNOWN (-15): left failing, the debounced re-sync the prototype write scheduled would reject
+  // unhandled 250 ms later; the scene recovers first so this file pins only the ready chain.
+  world.scenes[0].throwOnUpdate = null;
+  await settle(mock);
+  assert.deepEqual(out.map(l => l.slice(0, 3)), [
+    ["warn", `${MODULE} | sight reset`, "Error: actors down"],
+    ["warn", `${MODULE} | ready sweep`, "Error: scene down"],
+  ]);
+  assert.equal(calls.some(c => c.op === "update" && c.documentName === "Actor"), true, "the carried sync ran (prototype first)");
+  assert.equal(calls.some(c => c.op === "update" && c.documentName === "Token"), false, "no Light reconcile: the sweep never ran");
+  assert.equal(calls.some(c => c.op === "settings.set"), false, "the reset did not mark itself done");
+});

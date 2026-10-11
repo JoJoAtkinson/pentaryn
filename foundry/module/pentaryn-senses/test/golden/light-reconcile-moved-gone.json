@@ -1,0 +1,42 @@
+{
+  "moved": {
+    "value": "<undefined>",
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Item",
+        "uuid": "Actor.actHero000000001.Item.itmLight00000001",
+        "changes": {
+          "flags.pentaryn-senses.lightCast.scene": "scnCellar0000001"
+        }
+      }
+    ]
+  },
+  "gone": {
+    "value": "<undefined>",
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Item",
+        "uuid": "Actor.actHero000000001.Item.itmLight00000001",
+        "changes": {
+          "flags.pentaryn-senses.lightCast": null
+        }
+      },
+      {
+        "op": "ChatMessage.create",
+        "data": {
+          "speaker": {
+            "actor": "actHero000000001",
+            "alias": "Marrith"
+          },
+          "content": "<p>The creature your Light was on is gone; the light has ended.</p>",
+          "whisper": [
+            "gmUser0000000001",
+            "plyUser000000001"
+          ]
+        }
+      }
+    ]
+  }
+}

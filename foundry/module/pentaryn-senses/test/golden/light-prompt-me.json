@@ -1,0 +1,99 @@
+{
+  "dialogs": [
+    {
+      "window": {
+        "title": "Light",
+        "icon": "fa-solid fa-lightbulb"
+      },
+      "content": "<p>Where does the light go?</p>",
+      "buttons": [
+        {
+          "action": "me",
+          "label": "On me",
+          "icon": "fa-solid fa-user",
+          "default": true
+        },
+        {
+          "action": "pick",
+          "label": "Pick a target",
+          "icon": "fa-solid fa-crosshairs"
+        },
+        {
+          "action": "cancel",
+          "label": "Not now",
+          "icon": "fa-solid fa-xmark"
+        }
+      ],
+      "rejectClose": false
+    }
+  ],
+  "calls": [
+    {
+      "op": "update",
+      "documentName": "Item",
+      "uuid": "Actor.actHero000000001.Item.itmLight00000001",
+      "changes": {
+        "flags.pentaryn-senses.lightCast": {
+          "scene": "scnCellar0000001",
+          "token": "tokHero000000001",
+          "x": null,
+          "y": null,
+          "at": 1760000004800
+        }
+      }
+    },
+    {
+      "op": "notify",
+      "level": "info",
+      "message": "Light: Marrith glows."
+    },
+    {
+      "op": "update",
+      "documentName": "Token",
+      "uuid": "Scene.scnCellar0000001.Token.tokHero000000001",
+      "changes": {
+        "light": {
+          "bright": 20,
+          "dim": 40,
+          "angle": 360,
+          "color": "#ffe9b8",
+          "alpha": 0.35,
+          "luminosity": 0.5,
+          "negative": false,
+          "darkness": {
+            "min": 0,
+            "max": 1
+          },
+          "animation": {
+            "type": null,
+            "speed": 5,
+            "intensity": 5,
+            "reverse": false
+          }
+        },
+        "flags.pentaryn-senses.spellLight": {
+          "source": "Actor.actHero000000001.Item.itmLight00000001",
+          "prior": {
+            "dim": 60,
+            "bright": 30,
+            "angle": 360,
+            "color": "#ffc266",
+            "alpha": 0.35,
+            "luminosity": 0.5,
+            "negative": false,
+            "darkness": {
+              "min": 0,
+              "max": 1
+            },
+            "animation": {
+              "type": "torch",
+              "speed": 1,
+              "intensity": 1,
+              "reverse": false
+            }
+          }
+        }
+      }
+    }
+  ]
+}

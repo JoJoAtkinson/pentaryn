@@ -1,0 +1,84 @@
+{
+  "used": true,
+  "picked": [
+    {
+      "op": "notify",
+      "level": "info",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    },
+    {
+      "op": "notify.remove",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    },
+    {
+      "op": "update",
+      "documentName": "Item",
+      "uuid": "Actor.actHero000000001.Item.itmLight00000001",
+      "changes": {
+        "flags.pentaryn-senses.lightCast": {
+          "scene": "scnCellar0000001",
+          "token": null,
+          "x": 1250,
+          "y": 550,
+          "at": 1760000116000
+        }
+      }
+    },
+    {
+      "op": "notify",
+      "level": "info",
+      "message": "Light: the square glows."
+    },
+    {
+      "op": "createEmbedded",
+      "scene": "scnCellar0000001",
+      "type": "AmbientLight",
+      "data": [
+        {
+          "x": 1250,
+          "y": 550,
+          "elevation": 0,
+          "walls": true,
+          "vision": false,
+          "config": {
+            "bright": 20,
+            "dim": 40,
+            "angle": 360,
+            "color": "#ffe9b8",
+            "alpha": 0.35,
+            "luminosity": 0.5,
+            "negative": false,
+            "darkness": {
+              "min": 0,
+              "max": 1
+            },
+            "animation": {
+              "type": null,
+              "speed": 5,
+              "intensity": 5,
+              "reverse": false
+            }
+          },
+          "flags": {
+            "pentaryn-senses": {
+              "spellLight": {
+                "source": "Actor.actHero000000001.Item.itmLight00000001"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "cancelled": [
+    {
+      "op": "notify",
+      "level": "info",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    },
+    {
+      "op": "notify.remove",
+      "message": "Click a token or a square to light it. Right-click or Esc cancels."
+    }
+  ]
+}

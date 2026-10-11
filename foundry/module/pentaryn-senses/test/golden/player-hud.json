@@ -1,0 +1,24 @@
+{
+  "mine": [
+    "End light"
+  ],
+  "click": {
+    "value": "<undefined>",
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Item",
+        "uuid": "Actor.actHero000000001.Item.itmLight00000001",
+        "changes": {
+          "flags.pentaryn-senses.lightCast": null
+        }
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "The light goes out."
+      }
+    ]
+  },
+  "theirs": 0
+}

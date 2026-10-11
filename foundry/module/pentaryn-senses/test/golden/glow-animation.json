@@ -1,0 +1,223 @@
+{
+  "frames": [
+    {
+      "serverTime": 1000,
+      "pulse": 0.577454233,
+      "samePulse": true,
+      "dim": 232,
+      "bright": 200
+    },
+    {
+      "serverTime": 1010,
+      "pulse": 0.575109861,
+      "samePulse": true,
+      "dim": 232,
+      "bright": 200
+    },
+    {
+      "serverTime": 1060,
+      "pulse": 0.562406613,
+      "samePulse": true,
+      "dim": 222,
+      "bright": 200
+    },
+    {
+      "serverTime": 1500,
+      "pulse": 0.412028589,
+      "samePulse": true,
+      "dim": 129,
+      "bright": 129
+    },
+    {
+      "serverTime": 2600,
+      "pulse": 0.365860469,
+      "samePulse": true,
+      "dim": 101,
+      "bright": 101
+    },
+    {
+      "serverTime": 2610,
+      "pulse": 0.367396397,
+      "samePulse": true,
+      "dim": 101,
+      "bright": 101
+    },
+    {
+      "serverTime": 9000,
+      "pulse": 0.386586279,
+      "samePulse": true,
+      "dim": 114,
+      "bright": 101
+    }
+  ],
+  "log": [
+    {
+      "op": "animateTime",
+      "dt": 16,
+      "opts": {
+        "speed": 5,
+        "intensity": 5,
+        "reverse": false
+      }
+    },
+    {
+      "op": "initialize",
+      "d": {
+        "dim": 232,
+        "bright": 200
+      }
+    },
+    {
+      "op": "animateTime",
+      "dt": 16,
+      "opts": {
+        "speed": 5,
+        "intensity": 5,
+        "reverse": false
+      }
+    },
+    {
+      "op": "animateTime",
+      "dt": 16,
+      "opts": {
+        "speed": 5,
+        "intensity": 5,
+        "reverse": false
+      }
+    },
+    {
+      "op": "initialize",
+      "d": {
+        "dim": 222,
+        "bright": 200
+      }
+    },
+    {
+      "op": "animateTime",
+      "dt": 16,
+      "opts": {
+        "speed": 5,
+        "intensity": 5,
+        "reverse": false
+      }
+    },
+    {
+      "op": "initialize",
+      "d": {
+        "dim": 129,
+        "bright": 129
+      }
+    },
+    {
+      "op": "animateTime",
+      "dt": 16,
+      "opts": {
+        "speed": 5,
+        "intensity": 5,
+        "reverse": false
+      }
+    },
+    {
+      "op": "initialize",
+      "d": {
+        "dim": 101,
+        "bright": 101
+      }
+    },
+    {
+      "op": "animateTime",
+      "dt": 16,
+      "opts": {
+        "speed": 5,
+        "intensity": 5,
+        "reverse": false
+      }
+    },
+    {
+      "op": "animateTime",
+      "dt": 16,
+      "opts": {
+        "speed": 5,
+        "intensity": 5,
+        "reverse": false
+      }
+    },
+    {
+      "op": "initialize",
+      "d": {
+        "dim": 114,
+        "bright": 101
+      }
+    }
+  ],
+  "perception": [
+    {
+      "refreshLighting": true,
+      "refreshVision": true
+    },
+    {
+      "refreshLighting": true,
+      "refreshVision": true
+    },
+    {
+      "refreshLighting": true,
+      "refreshVision": true
+    },
+    {
+      "refreshLighting": true,
+      "refreshVision": true
+    },
+    {
+      "refreshLighting": true,
+      "refreshVision": true
+    },
+    {
+      "refreshLighting": true,
+      "refreshVision": true
+    },
+    {
+      "refreshLighting": true,
+      "refreshVision": true
+    }
+  ],
+  "speed10": {
+    "pulse": 0.368263571,
+    "log": [
+      {
+        "op": "animateTime",
+        "dt": 16,
+        "opts": {
+          "speed": 10,
+          "intensity": 2,
+          "reverse": true
+        }
+      },
+      {
+        "op": "initialize",
+        "d": {
+          "dim": 90,
+          "bright": 90
+        }
+      }
+    ],
+    "expect": 0.66460035
+  },
+  "fallbackKey": {
+    "pulse": 0.376140759,
+    "expect": 0.418199494
+  },
+  "insideFloor": {
+    "log": [
+      {
+        "op": "animateTime",
+        "dt": 16,
+        "opts": {
+          "speed": 5,
+          "intensity": 5,
+          "reverse": false
+        }
+      }
+    ],
+    "dim": 40
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "n1": 2,
+  "n2": 0,
+  "calls": [
+    {
+      "op": "update",
+      "documentName": "Item",
+      "uuid": "Actor.actHero000000001.Item.itmTorch00000001",
+      "changes": {
+        "system.activities.psLightToggle000": {
+          "_id": "psLightToggle000",
+          "type": "utility",
+          "name": "Light",
+          "img": "icons/sundries/lights/torch-brown-lit.webp",
+          "activation": {
+            "type": "action",
+            "value": 1,
+            "condition": "",
+            "override": false
+          },
+          "consumption": {
+            "scaling": {
+              "allowed": false,
+              "max": ""
+            },
+            "spellSlot": false,
+            "targets": []
+          },
+          "duration": {
+            "units": "inst",
+            "concentration": false,
+            "override": false
+          },
+          "range": {
+            "units": "self",
+            "override": false
+          },
+          "target": {
+            "prompt": false,
+            "override": false
+          },
+          "flags": {
+            "pentaryn-senses": {
+              "lightToggle": true
+            }
+          },
+          "sort": 0
+        }
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Item",
+      "uuid": "Scene.scnCellar0000001.Token.tokGob0000000001.Actor.actGoblin0000001.Item.itmGobTorch00001",
+      "changes": {
+        "system.activities.psLightToggle000": {
+          "_id": "psLightToggle000",
+          "type": "utility",
+          "name": "Light",
+          "img": "icons/sundries/lights/torch-brown-lit.webp",
+          "activation": {
+            "type": "action",
+            "value": 1,
+            "condition": "",
+            "override": false
+          },
+          "consumption": {
+            "scaling": {
+              "allowed": false,
+              "max": ""
+            },
+            "spellSlot": false,
+            "targets": []
+          },
+          "duration": {
+            "units": "inst",
+            "concentration": false,
+            "override": false
+          },
+          "range": {
+            "units": "self",
+            "override": false
+          },
+          "target": {
+            "prompt": false,
+            "override": false
+          },
+          "flags": {
+            "pentaryn-senses": {
+              "lightToggle": true
+            }
+          },
+          "sort": 0
+        }
+      }
+    },
+    {
+      "op": "update",
+      "documentName": "Actor",
+      "uuid": "Scene.scnCellar0000001.Token.tokGob0000000001.Actor.actGoblin0000001",
+      "changes": {
+        "prototypeToken.light": {
+          "bright": 20,
+          "dim": 40,
+          "angle": 360,
+          "color": "#ff9a3c",
+          "alpha": 0.4,
+          "luminosity": 0.5,
+          "negative": false,
+          "darkness": {
+            "min": 0,
+            "max": 1
+          },
+          "animation": {
+            "type": "torch",
+            "speed": 2,
+            "intensity": 2,
+            "reverse": false
+          }
+        },
+        "prototypeToken.flags.pentaryn-senses.itemLight": true
+      }
+    }
+  ],
+  "console": [
+    [
+      "info",
+      "pentaryn-senses | setupLight: 2 torch item(s) given a Light activity"
+    ],
+    [
+      "info",
+      "pentaryn-senses | setupLight: 0 torch item(s) given a Light activity"
+    ]
+  ]
+}

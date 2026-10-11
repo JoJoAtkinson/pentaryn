@@ -1,0 +1,303 @@
+[
+  {
+    "name": "spellLight owns the token",
+    "write": null
+  },
+  {
+    "name": "equal light and itemLight true → nothing",
+    "write": null
+  },
+  {
+    "name": "equal light but itemLight false → write, and the equal light is kept as the prior",
+    "write": {
+      "light": {
+        "bright": 20,
+        "dim": 40,
+        "angle": 360,
+        "color": "#ff9a3c",
+        "alpha": 0.4,
+        "luminosity": 0.5,
+        "negative": false,
+        "darkness": {
+          "min": 0,
+          "max": 1
+        },
+        "animation": {
+          "type": "torch",
+          "speed": 2,
+          "intensity": 2,
+          "reverse": false
+        }
+      },
+      "flags.pentaryn-senses.itemLight": true,
+      "flags.pentaryn-senses.itemLightPrior": {
+        "bright": 20,
+        "dim": 40,
+        "angle": 360,
+        "color": "#ff9a3c",
+        "alpha": 0.4,
+        "luminosity": 0.5,
+        "negative": false,
+        "darkness": {
+          "min": 0,
+          "max": 1
+        },
+        "animation": {
+          "type": "torch",
+          "speed": 2,
+          "intensity": 2,
+          "reverse": false
+        }
+      }
+    }
+  },
+  {
+    "name": "itemLight false over a hand-set 5/10 → prior kept",
+    "write": {
+      "light": {
+        "bright": 20,
+        "dim": 40,
+        "angle": 360,
+        "color": "#ff9a3c",
+        "alpha": 0.4,
+        "luminosity": 0.5,
+        "negative": false,
+        "darkness": {
+          "min": 0,
+          "max": 1
+        },
+        "animation": {
+          "type": "torch",
+          "speed": 2,
+          "intensity": 2,
+          "reverse": false
+        }
+      },
+      "flags.pentaryn-senses.itemLight": true,
+      "flags.pentaryn-senses.itemLightPrior": {
+        "bright": 5,
+        "dim": 10,
+        "color": "#00ff00"
+      }
+    }
+  },
+  {
+    "name": "itemLight false over 0/0 → no prior",
+    "write": {
+      "light": {
+        "bright": 20,
+        "dim": 40,
+        "angle": 360,
+        "color": "#ff9a3c",
+        "alpha": 0.4,
+        "luminosity": 0.5,
+        "negative": false,
+        "darkness": {
+          "min": 0,
+          "max": 1
+        },
+        "animation": {
+          "type": "torch",
+          "speed": 2,
+          "intensity": 2,
+          "reverse": false
+        }
+      },
+      "flags.pentaryn-senses.itemLight": true
+    }
+  },
+  {
+    "name": "dim only > 0 → prior",
+    "write": {
+      "light": {
+        "bright": 20,
+        "dim": 40,
+        "angle": 360,
+        "color": "#ff9a3c",
+        "alpha": 0.4,
+        "luminosity": 0.5,
+        "negative": false,
+        "darkness": {
+          "min": 0,
+          "max": 1
+        },
+        "animation": {
+          "type": "torch",
+          "speed": 2,
+          "intensity": 2,
+          "reverse": false
+        }
+      },
+      "flags.pentaryn-senses.itemLight": true,
+      "flags.pentaryn-senses.itemLightPrior": {
+        "bright": 0,
+        "dim": 3
+      }
+    }
+  },
+  {
+    "name": "string radii count",
+    "write": {
+      "light": {
+        "bright": 20,
+        "dim": 40,
+        "angle": 360,
+        "color": "#ff9a3c",
+        "alpha": 0.4,
+        "luminosity": 0.5,
+        "negative": false,
+        "darkness": {
+          "min": 0,
+          "max": 1
+        },
+        "animation": {
+          "type": "torch",
+          "speed": 2,
+          "intensity": 2,
+          "reverse": false
+        }
+      },
+      "flags.pentaryn-senses.itemLight": true,
+      "flags.pentaryn-senses.itemLightPrior": {
+        "bright": "2",
+        "dim": "0"
+      }
+    }
+  },
+  {
+    "name": "no carried light, itemLight true, prior → prior back, prior deleted",
+    "write": {
+      "light": {
+        "bright": 5,
+        "dim": 10
+      },
+      "flags.pentaryn-senses.itemLight": false,
+      "flags.pentaryn-senses.itemLightPrior": "<_del>"
+    }
+  },
+  {
+    "name": "no carried light, itemLight true, no prior → DARK",
+    "write": {
+      "light": {
+        "dim": 0,
+        "bright": 0,
+        "color": null,
+        "alpha": 0.5,
+        "luminosity": 0.5,
+        "animation": {
+          "type": null,
+          "speed": 5,
+          "intensity": 5,
+          "reverse": false
+        }
+      },
+      "flags.pentaryn-senses.itemLight": false
+    }
+  },
+  {
+    "name": "no carried light, itemLight false → nothing",
+    "write": null
+  },
+  {
+    "name": "no carried light, itemLight 'true' (string) → nothing",
+    "write": null
+  },
+  {
+    "name": "light as a LightData (toObject)",
+    "write": {
+      "light": {
+        "bright": 20,
+        "dim": 40,
+        "angle": 360,
+        "color": "#ff9a3c",
+        "alpha": 0.4,
+        "luminosity": 0.5,
+        "negative": false,
+        "darkness": {
+          "min": 0,
+          "max": 1
+        },
+        "animation": {
+          "type": "torch",
+          "speed": 2,
+          "intensity": 2,
+          "reverse": false
+        }
+      },
+      "flags.pentaryn-senses.itemLight": true,
+      "flags.pentaryn-senses.itemLightPrior": {
+        "bright": 7,
+        "dim": 14
+      }
+    }
+  },
+  {
+    "name": "no flags at all",
+    "write": {
+      "light": {
+        "bright": 20,
+        "dim": 40,
+        "angle": 360,
+        "color": "#ff9a3c",
+        "alpha": 0.4,
+        "luminosity": 0.5,
+        "negative": false,
+        "darkness": {
+          "min": 0,
+          "max": 1
+        },
+        "animation": {
+          "type": "torch",
+          "speed": 2,
+          "intensity": 2,
+          "reverse": false
+        }
+      },
+      "flags.pentaryn-senses.itemLight": true,
+      "flags.pentaryn-senses.itemLightPrior": {
+        "bright": 1,
+        "dim": 2
+      }
+    }
+  },
+  {
+    "name": "a quantity-0 torch gives nothing",
+    "write": null
+  },
+  {
+    "name": "a shard's fixed light flag",
+    "write": {
+      "light": {
+        "bright": 0,
+        "dim": 15,
+        "color": "#8844ff"
+      },
+      "flags.pentaryn-senses.itemLight": true
+    }
+  },
+  {
+    "name": "the brightest of two wins",
+    "write": {
+      "light": {
+        "bright": 15,
+        "dim": 45,
+        "angle": 360,
+        "color": "#ffc266",
+        "alpha": 0.35,
+        "luminosity": 0.5,
+        "negative": false,
+        "darkness": {
+          "min": 0,
+          "max": 1
+        },
+        "animation": {
+          "type": "torch",
+          "speed": 1,
+          "intensity": 1,
+          "reverse": false
+        }
+      },
+      "flags.pentaryn-senses.itemLight": true
+    }
+  }
+]

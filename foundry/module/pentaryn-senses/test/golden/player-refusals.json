@@ -1,0 +1,45 @@
+{
+  "cast": {
+    "value": false,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Only Stake's owner can do that."
+      }
+    ]
+  },
+  "end": {
+    "value": false,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Only Stake's owner can do that."
+      }
+    ]
+  },
+  "toggle": {
+    "value": false,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Only Stake's owner can do that."
+      }
+    ]
+  },
+  "hood": {
+    "value": false,
+    "calls": []
+  },
+  "prompt": {
+    "value": "<undefined>",
+    "calls": []
+  },
+  "postUse": {
+    "value": true,
+    "calls": []
+  },
+  "dialogs": 0
+}

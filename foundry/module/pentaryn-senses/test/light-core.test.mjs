@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Fixtures for light-core.mjs — run by test/run.mjs (or `node test/light.mjs` alone). No Foundry.
+ * Fixtures for light-core.mjs — run by test/run.mjs (or `node test/light-core.test.mjs` alone). No Foundry.
  * The import itself is a check: light-core.mjs must load with `game`, `canvas` and `foundry` undefined.
  */
 

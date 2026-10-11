@@ -1,0 +1,39 @@
+[
+  {
+    "op": "updateEmbedded",
+    "scene": "scnCellar0000001",
+    "type": "Token",
+    "updates": [
+      {
+        "_id": "tokGob0000000001",
+        "flags.pentaryn-senses.-=chain": null
+      },
+      {
+        "_id": "tokHulk000000001",
+        "flags.pentaryn-senses.-=chain": null
+      }
+    ]
+  },
+  {
+    "op": "updateEmbedded",
+    "scene": "scnCellar0000001",
+    "type": "Token",
+    "updates": [
+      {
+        "_id": "tokGob0000000001",
+        "flags.pentaryn-senses.-=chain": null
+      }
+    ]
+  },
+  {
+    "op": "updateEmbedded",
+    "scene": "scnCellar0000001",
+    "type": "Token",
+    "updates": [
+      {
+        "_id": "tokHero000000001",
+        "flags.pentaryn-senses.-=chain": null
+      }
+    ]
+  }
+]

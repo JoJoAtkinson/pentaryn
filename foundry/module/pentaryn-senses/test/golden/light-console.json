@@ -1,0 +1,47 @@
+[
+  [
+    "warn",
+    "pentaryn-senses | light toggle",
+    "Error: toggle down"
+  ],
+  [
+    "warn",
+    "pentaryn-senses | light row button",
+    "Error: toggle down"
+  ],
+  [
+    "warn",
+    "pentaryn-senses | light prompt",
+    "Error: dialog down"
+  ],
+  [
+    "warn",
+    "pentaryn-senses | light card end",
+    "Error: item down"
+  ],
+  [
+    "warn",
+    "pentaryn-senses | light hud click",
+    "Error: item down"
+  ],
+  [
+    "warn",
+    "pentaryn-senses | light hand-moved square",
+    "Error: item down"
+  ],
+  [
+    "warn",
+    "pentaryn-senses | light hand-deleted square",
+    "Error: item down"
+  ],
+  [
+    "warn",
+    "pentaryn-senses | light retarget",
+    "Error: item down"
+  ],
+  [
+    "warn",
+    "pentaryn-senses | light sweep",
+    "Error: scenes down"
+  ]
+]

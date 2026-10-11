@@ -1,0 +1,28 @@
+{
+  "value": "<undefined>",
+  "calls": [
+    {
+      "op": "update",
+      "documentName": "Item",
+      "uuid": "Actor.actHero000000001.Item.itmLight00000001",
+      "changes": {
+        "flags.pentaryn-senses.lightCast": null
+      }
+    },
+    {
+      "op": "updateEmbedded",
+      "scene": "scnRoad000000002",
+      "type": "Token",
+      "updates": [
+        {
+          "_id": "tokGob0000000002",
+          "light": {
+            "dim": 0,
+            "bright": 0
+          },
+          "flags.pentaryn-senses.spellLight": "<_del>"
+        }
+      ]
+    }
+  ]
+}
