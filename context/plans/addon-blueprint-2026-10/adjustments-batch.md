@@ -36,7 +36,7 @@ flags rows the guides named with the module prefix although they are not patches
 
 | Module | Row id | Kind | Files | Markers | C32 | Source |
 |---|---|---|---|---|---|---|
-| importer | `dnd5e-importer-gate` (existing) | files move | `importer-core.mjs`, `documents-adapter.mjs` (+ keep `scripts/foundry/build_actors.py`) | `targetSystemVersion` | ok | importer step 4 (same change set as 4a) |
+| importer | `dnd5e-importer-gate` (existing) | files move | `importer-core.mjs`, `documents-adapter.mjs` (+ keep `scripts/foundry/build_actors.py`) | `targetSystemVersion` | ok | importer step 4 (same change set as 4a) — **landed** with 4a on `migrate/wave-1` |
 | pings | `pings-core-ping-handle` | new, **patch** | `capture.mjs` | `handlePing`, `__pentarynPatched` | ok (wrapMethod names it) | pings step 4 |
 | pings | `pings-core-user-activity-socket` | new, not a patch | `capture.mjs` | `userActivity` | **fails** — interim id `core-pings-user-activity-socket` | pings step 4 |
 | cursors | `core-board-cursor-vars` | new, not a patch | `board.mjs` | `currentCursor`, `_placementContext`, `setCursor` | ok | cursors step 10 (aoe's file added when aoe leaves WAIT) |

@@ -156,7 +156,7 @@ adjustments:
   - id: dnd5e-importer-gate
     packages: [dnd5e]
     modules: [pentaryn-importer, scripts/foundry]
-    files: [foundry/module/pentaryn-importer/pentaryn-importer.mjs, scripts/foundry/build_actors.py]
+    files: [foundry/module/pentaryn-importer/importer-core.mjs, foundry/module/pentaryn-importer/documents-adapter.mjs, scripts/foundry/build_actors.py]
     markers: ["targetSystemVersion", "TARGET_SYSTEM_VERSION"]
     what: the importer refuses JSON built for another dnd5e minor (TARGET_SYSTEM_VERSION "6.0"); build_actors.py hard-codes the dnd5e 6.0 enums but still emits the legacy movement.walk / init.bonus / ac.calc "flat" shapes, which dnd5e migrates on create and update until 7.0
     why: CONTRACT.md §1 — actor JSON is built against one system's data model
