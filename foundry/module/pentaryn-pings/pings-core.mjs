@@ -12,7 +12,7 @@
 export const MODULE = "pentaryn-pings";
 export const SHORT = "pings";
 export const NS = "pings";
-export const VERSION = "0.1.0";                       // === module.json version (core-meta.test pins it)
+export const VERSION = "0.1.1";                       // === module.json version (core-meta.test pins it)
 export const CONTRACT = "pentaryn-pings/api@1";       // bump the major on a published-shape change
 export const I18N = "PENTARYN_PINGS";
 export const CSS = "ppg-";

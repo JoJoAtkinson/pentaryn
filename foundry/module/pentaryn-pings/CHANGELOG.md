@@ -1,5 +1,16 @@
 # Changelog — Pentaryn Ping Log (`pentaryn-pings`)
 
+## 0.1.1 — 2026-10-11 (fix/playtest-2026-10-11; also ships the wave-1 rebuild below)
+
+- Fix PT3-2: a player's ping on a scene the GM is not viewing is recorded again. The
+  `userActivity` listener read `data.ping.x/y` and `data.sceneId`; core v14 sends
+  `{cursor: {x, y}, ping: {scene, pull, style, zoom}}`, so the socket path recorded nothing.
+  It now records `data.cursor` on `data.ping.scene` (falling back to the viewed scene). A ping
+  on the viewed scene is still one record: core draws it through the wrapped `handlePing`
+  first and the dedupe drops the socket copy.
+- [declared] The test suite's socket pins use core's payload shape; the pre-fix shape
+  `{sceneId, ping: {x, y}}` is now ignored.
+
 ## Unreleased — 2026-10-11 (addon blueprint, wave 1)
 
 - Rebuilt on the blueprint (tier small, kit `settings, api, patch, election`): pure core

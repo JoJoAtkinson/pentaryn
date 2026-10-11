@@ -9,7 +9,8 @@
  *      canvas layers are rebuilt on every scene change, so an instance patch would fall off the
  *      first time the GM changed scene. Adjustments row `pings-core-ping-handle`.
  *   2. core's `userActivity` socket event — pings from clients on scenes the GM is *not* looking
- *      at. Adjustments row `core-pings-user-activity-socket`.
+ *      at; the point is `data.cursor`, the scene `data.ping.scene`. Adjustments row
+ *      `core-pings-user-activity-socket`.
  *
  * The two overlap, so a record repeating the last one (user, scene, rounded point) inside
  * DEDUPE_MS is dropped. Records go to an in-memory buffer; a burst costs one world-setting write,
@@ -132,12 +133,14 @@ export function start() {
   buffer = readLog({ log });
   patchControlsLayer();
 
-  // pings from clients on scenes this GM is not currently viewing
+  // pings from clients on scenes this GM is not currently viewing. Core v14's payload is
+  // {cursor: {x, y}, ping: {scene, pull, style, zoom}} (Canvas#ping); on the viewed scene core's
+  // own listener has already drawn it through handlePing, and the dedupe drops this copy.
   if (listener) return;
   listener = (userId, data) => {
     try {
       if (!data?.ping) return;
-      record(userId, data.sceneId ?? canvas?.scene?.id, data.ping.x, data.ping.y);
+      record(userId, data.ping.scene ?? canvas?.scene?.id, data.cursor?.x, data.cursor?.y);
     } catch (err) {
       log.warn("socket ping capture failed", err);
     }
