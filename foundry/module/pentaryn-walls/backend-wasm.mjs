@@ -65,11 +65,16 @@ function marshal(walls) {
   return buf;
 }
 
+/**
+ * The compiled engine has no notion of Levels: marshal() sends none and creates come back with
+ * levels []. The JS engine partitions by level, so a scene that uses Levels runs there
+ * (senses-walls-cursors-2); level-less scenes, the common case, stay on the fast path. The
+ * registry row's `accepts` lets the glue pick js up front and report the backend that ran.
+ */
+const usesLevels = walls => walls.some(w => (w.levels ?? []).length);
+
 export function runWasm(walls, opts = {}) {
-  // The compiled engine has no notion of Levels: marshal() sends none and creates come back with
-  // levels []. The JS engine partitions by level, so a scene that uses Levels runs there
-  // (senses-walls-cursors-2); level-less scenes, the common case, stay on the fast path.
-  if (walls.some(w => (w.levels ?? []).length)) return runEngine(walls, opts);
+  if (usesLevels(walls)) return runEngine(walls, opts);   // a direct caller; the glue never gets here
   if (!mod) throw new Error(`wasm backend not loaded${loadError ? `: ${loadError.message}` : ""}`);
   const cfg = resolveConfig(opts);
   const input = marshal(walls);
@@ -142,5 +147,6 @@ export const ready = load();
 register({
   name: "wasm",
   run: runWasm,
-  available: () => mod !== null
+  available: () => mod !== null,
+  accepts: walls => !usesLevels(walls)
 });

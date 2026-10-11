@@ -6,8 +6,9 @@
  * produces byte-identical mutations for the same input; `compare()` is what decides that,
  * and `test/run.mjs --backend=<name>` runs all fixtures against it.
  *
- * A backend is `{name, run(walls, opts) -> result, available() -> bool}` where `result` has
- * the same shape `runEngine` returns.
+ * A backend is `{name, run(walls, opts) -> result, available() -> bool, accepts?(walls) -> bool}`
+ * where `result` has the same shape `runEngine` returns. `accepts` is optional: a backend that
+ * returns false for some walls (wasm on a Levels scene) is passed over for js by the glue.
  */
 
 import {runEngine, stampOf, wallCategory} from "./engine.mjs";

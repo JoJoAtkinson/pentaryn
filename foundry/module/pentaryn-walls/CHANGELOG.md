@@ -13,6 +13,7 @@
   refused). The chat cards are awaited; a failed card is logged, never thrown.
 - **[declared] The compiled engine hands Levels scenes to the JavaScript engine**
   (`senses-walls-cursors-2`): no more joins across Levels, and created walls keep their level.
+  The chat card and `analyze().backend` then say `js`, the engine that ran.
 - **[declared] The ready line says why wasm is missing** (`senses-walls-cursors-37`):
   `(wasm unavailable: …)`. The bench prints `(wasm unavailable: load failed)` (`-7`).
 - **[declared] The API is kit-built**: frozen, `describe()`/`version`/`contract`/`settings()`/

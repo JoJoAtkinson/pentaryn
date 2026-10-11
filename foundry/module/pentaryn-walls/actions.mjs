@@ -44,7 +44,10 @@ function pickBackend(requested) {
 
 function evaluate(scene, opts = {}) {
   const walls = readWalls(scene);
-  const backend = pickBackend(opts.backend);
+  let backend = pickBackend(opts.backend);
+  // A backend that cannot take these walls (wasm on a Levels scene) would hand them to the js
+  // engine itself; pick js here so the card and analyze() name the backend that ran.
+  if (backend.accepts && !backend.accepts(walls)) backend = getBackend("js");
   const t0 = performance.now();
   const result = backend.run(walls, {
     gridSize: scene.grid.size,

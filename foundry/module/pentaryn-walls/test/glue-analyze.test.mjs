@@ -44,3 +44,24 @@ test("analyze() takes sceneId and a backend override, and is not blocked by the 
     await running;
   });
 });
+
+test("analyze() on a Levels scene names js, the backend that ran, even when wasm is picked (senses-walls-cursors-2 follow-up)", async () => {
+  const levelled = makeScene(F, { id: "sceneLevels0001", name: "Tower", walls: houseWalls().map(w => ({ ...w, levels: ["L1"] })) });
+  const plain = levelled.walls.map(w => {
+    const o = w.toObject();
+    return { _id: w.id, c: o.c, door: o.door, sight: o.sight, move: o.move, light: o.light, sound: o.sound, dir: o.dir, levels: o.levels ?? [], flags: o.flags ?? {} };
+  });
+  assert.ok(plain.every(w => w.levels.length), "the fixture carries its levels through toObject()");
+  const ref = runEngine(plain, { gridSize: 100, runId: "lv" });
+  for (const backend of ["wasm", "auto"]) {
+    await game.settings.set("pentaryn-walls", "backend", backend);
+    const out = await withConsole(F, () => game.pentaryn.walls.analyze({ sceneId: levelled.id, runId: "lv" }));
+    assert.equal(out.backend, "js", backend);
+    for (const k of ["creates", "updates", "refusals", "log"]) assert.deepEqual(out[k], ref[k], `${backend} ${k}`);
+  }
+  const lvl = await withConsole(F, () => game.pentaryn.walls.analyze({ sceneId: levelled.id, backend: "wasm", runId: "lv" }));
+  assert.equal(lvl.backend, "js", "an explicit backend override is passed over too");
+  const flat = await withConsole(F, () => game.pentaryn.walls.analyze({ sceneId: scene.id, backend: "wasm", runId: "lv" }));
+  assert.equal(flat.backend, "wasm", "a level-less scene stays on wasm");
+  await game.settings.set("pentaryn-walls", "backend", "auto");
+});
