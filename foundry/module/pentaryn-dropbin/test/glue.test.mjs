@@ -81,7 +81,7 @@ test("init: the two hidden world settings", () => {
   ]);
 });
 
-test("ready: post-ready registrations in order (golden/hooks-after-ready.json); GM backfills (golden/backfills.json); publish after a tick", async () => {
+test("ready: post-ready registrations in order (golden/hooks-after-ready.json); GM backfills (golden/backfills.json); publish at ready (D2)", async () => {
   // the oracle planners over the same world, before ready's backfills change it
   const lock = await oracle.planLockSounds([ann, chest, chestQuiet, eyePile], [scene]);
   const eyes = await oracle.planEyesNeedView([ann, chest, chestQuiet, eyePile], [scene]);
@@ -102,13 +102,15 @@ test("ready: post-ready registrations in order (golden/hooks-after-ready.json); 
   const fromPlan = plan => [...plan.actorUpdates.map(({ _id, ...changes }) => ({ actor: `Actor.${_id}`, changes })),
     ...plan.embedded.map(e => ({ scene: e.sceneId, type: e.type, data: e.updates }))];
   assert.deepEqual(writes, [...fromPlan(lock), ...fromPlan(eyes)]);
-  assert.equal(game.pentaryn?.dropbin, undefined, "not before the tick");
+  // [declared] D-D1 (D2): published at ready on module.api, not a tick later; the ready line comes with it
+  assert.equal(game.pentaryn?.dropbin, game.modules.get(MOD).api, "published at ready");
   const tickLines = await withConsole(async () => {
     mock.timers.tick(0);
     await flush();
   });
   pinJSON("ready-console", { lines, tickLines }, import.meta.url);
-  assert.deepEqual(tickLines, [["log", "pentaryn-dropbin | ready — 0 entries on the ledger"]]);
+  assert.deepEqual(tickLines, []);
+  assert.deepEqual(lines[0], ["log", "pentaryn-dropbin | ready — 0 entries on the ledger"]);
 });
 
 test("published API: the legacy keys (a floor); corpses and loot keys pinned", () => {

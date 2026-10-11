@@ -1,0 +1,510 @@
+{
+  "module": "pentaryn-dropbin",
+  "namespace": "dropbin",
+  "contract": "pentaryn-dropbin/api@1",
+  "flagScope": "pentaryn-dropbin",
+  "methods": [
+    {
+      "path": "corpses.sync",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "resolve": false
+        }
+      ],
+      "returns": "Promise<void>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Item Piles pile flags",
+        "flags.pentaryn-dropbin.corpse",
+        "flags.pentaryn-dropbin.sight",
+        "flags.pentaryn-dropbin.ownership",
+        "delta.ownership",
+        "sight.enabled",
+        "ActiveEffect (Dead)"
+      ],
+      "legacy": true,
+      "doc": "Active GM: turn each eligible token of the actor into a corpse pile (dead) or back (alive). No-op elsewhere or without Item Piles."
+    },
+    {
+      "path": "corpses.toCorpse",
+      "params": [
+        {
+          "name": "tokenDoc",
+          "type": "TokenDocument",
+          "resolve": false
+        }
+      ],
+      "returns": "Promise<void>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Item Piles pile flags",
+        "flags.pentaryn-dropbin.corpse",
+        "flags.pentaryn-dropbin.sight",
+        "flags.pentaryn-dropbin.ownership",
+        "delta.ownership",
+        "sight.enabled",
+        "ActiveEffect (Dead)"
+      ],
+      "legacy": true,
+      "doc": "Make this token a lootable corpse pile now (players get OBSERVER on its delta; sight off; Dead as the overlay)."
+    },
+    {
+      "path": "corpses.fromCorpse",
+      "params": [
+        {
+          "name": "tokenDoc",
+          "type": "TokenDocument",
+          "resolve": false
+        }
+      ],
+      "returns": "Promise<void>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Item Piles pile flags",
+        "flags.pentaryn-dropbin.*",
+        "delta.ownership",
+        "sight.enabled"
+      ],
+      "legacy": true,
+      "doc": "Turn a corpse we made back into a creature: revert the pile, give back its sight and pre-death delta ownership."
+    },
+    {
+      "path": "corpses.isDead",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor",
+          "resolve": false
+        }
+      ],
+      "returns": "boolean",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Dead by the corpse rule: hp 0 or below with hp.max > 0, or the dead status."
+    },
+    {
+      "path": "corpses.revive",
+      "params": [
+        {
+          "name": "tokenDoc",
+          "type": "TokenDocument",
+          "resolve": false
+        }
+      ],
+      "returns": "Promise<void>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "ActiveEffect (Dead)",
+        "system.attributes.hp.value"
+      ],
+      "legacy": true,
+      "doc": "The HUD's Revive: clear Dead, raise hp to 1, then sync (the pile reverts)."
+    },
+    {
+      "path": "corpses.paintEye",
+      "params": [
+        {
+          "name": "token",
+          "type": "Token",
+          "resolve": false,
+          "doc": "the canvas placeable"
+        }
+      ],
+      "returns": "void",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Draw or hide the lootable eye on one token (this client only; no document)."
+    },
+    {
+      "path": "corpses.paintAllEyes",
+      "params": [],
+      "returns": "void",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "paintEye on every token of the viewed scene."
+    },
+    {
+      "path": "corpses.migrateLegacyEyes",
+      "params": [],
+      "returns": "Promise<void>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "ActiveEffect (Lootable, removed)",
+        "flags.core.overlay"
+      ],
+      "legacy": true,
+      "doc": "Active GM: remove the pre-overlay 'Lootable' effects and make Dead the overlay. Runs once at ready."
+    },
+    {
+      "path": "loot.install",
+      "params": [
+        {
+          "name": "app",
+          "type": "ItemPileInventoryApp",
+          "resolve": false,
+          "doc": "an open Item Piles loot window"
+        }
+      ],
+      "returns": "boolean",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Add (or repaint) the Loot all button in one open loot window; false when it cannot."
+    },
+    {
+      "path": "loot.refreshAll",
+      "params": [],
+      "returns": "void",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Repaint every tracked Loot all button."
+    },
+    {
+      "path": "loot.recipientFor",
+      "params": [
+        {
+          "name": "app",
+          "type": "ItemPileInventoryApp",
+          "resolve": false,
+          "doc": "an open Item Piles loot window"
+        }
+      ],
+      "returns": "Actor | null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Who Loot all would loot into: the window's recipient, else the user's character, else their first owned character (players)."
+    },
+    {
+      "path": "all",
+      "params": [],
+      "returns": "Entry[]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The whole ledger, oldest first. Each entry carries the item's complete source (large)."
+    },
+    {
+      "path": "list",
+      "params": [
+        {
+          "name": "n",
+          "type": "number",
+          "optional": true,
+          "doc": "default 20"
+        }
+      ],
+      "returns": "Entry[]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The last n entries, newest first."
+    },
+    {
+      "path": "get",
+      "params": [
+        {
+          "name": "n",
+          "type": "number|string",
+          "doc": "the ledger number"
+        }
+      ],
+      "returns": "Entry | null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "nullWhen": "no entry has that number",
+      "legacy": true,
+      "doc": "One entry by its ledger number."
+    },
+    {
+      "path": "search",
+      "params": [
+        {
+          "name": "text",
+          "type": "string"
+        }
+      ],
+      "returns": "Entry[]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Entries whose item name contains text, case-insensitive (oldest first)."
+    },
+    {
+      "path": "restore",
+      "params": [
+        {
+          "name": "n",
+          "type": "number|string",
+          "doc": "the ledger number"
+        },
+        {
+          "name": "target",
+          "type": "Actor|id|exact name",
+          "optional": true,
+          "resolve": false,
+          "doc": "default: the actor it left"
+        }
+      ],
+      "returns": "Promise<Item | Notification>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Item (created on the target actor)"
+      ],
+      "legacy": true,
+      "doc": "GM: recreate entry #n on the actor it left (or target) and toast. A refusal returns the warn/error Notification it showed."
+    },
+    {
+      "path": "export",
+      "params": [],
+      "returns": "Promise<boolean>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "assets/drop-bin/drop-log.json"
+      ],
+      "legacy": true,
+      "doc": "GM: write the JSON mirror now and toast; false for a player or on failure."
+    },
+    {
+      "path": "clear",
+      "params": [],
+      "returns": "Promise<boolean>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "setting pentaryn-dropbin.log",
+        "assets/drop-bin/drop-log.json"
+      ],
+      "legacy": true,
+      "doc": "GM: after a confirm dialog, empty the ledger and the mirror. The counter is kept: numbers are never reused."
+    }
+  ],
+  "queries": [],
+  "settings": [
+    {
+      "key": "log",
+      "scope": "world",
+      "type": "Array",
+      "default": [],
+      "store": true,
+      "doc": "The ledger: every entry, oldest first, each with the item's complete source object."
+    },
+    {
+      "key": "counter",
+      "scope": "world",
+      "type": "Number",
+      "default": 0,
+      "store": true,
+      "doc": "The last ledger number handed out. clear() keeps it, so numbers are never reused."
+    }
+  ],
+  "events": [],
+  "hooks": [
+    {
+      "name": "updateActor",
+      "label": "corpse: hp"
+    },
+    {
+      "name": "createActiveEffect",
+      "label": "corpse: createActiveEffect"
+    },
+    {
+      "name": "deleteActiveEffect",
+      "label": "corpse: deleteActiveEffect"
+    },
+    {
+      "name": "updateActiveEffect",
+      "label": "corpse: updateActiveEffect"
+    },
+    {
+      "name": "drawToken",
+      "label": "eye: draw"
+    },
+    {
+      "name": "refreshToken",
+      "label": "eye: refresh"
+    },
+    {
+      "name": "canvasReady",
+      "label": "eye: canvas"
+    },
+    {
+      "name": "updateToken",
+      "label": "eye: token"
+    },
+    {
+      "name": "updateActor",
+      "label": "eye: actor"
+    },
+    {
+      "name": "createItem",
+      "label": "eye: createItem"
+    },
+    {
+      "name": "updateItem",
+      "label": "eye: updateItem"
+    },
+    {
+      "name": "deleteItem",
+      "label": "eye: deleteItem"
+    },
+    {
+      "name": "ready",
+      "label": "corpse eye migration"
+    },
+    {
+      "name": "renderTokenHUD",
+      "label": "corpse HUD"
+    },
+    {
+      "name": "renderItemPileInventoryApp",
+      "label": "loot: render"
+    },
+    {
+      "name": "item-piles-openInterface",
+      "label": "loot: open"
+    },
+    {
+      "name": "updateActor",
+      "label": "loot: updateActor"
+    },
+    {
+      "name": "createItem",
+      "label": "loot: createItem"
+    },
+    {
+      "name": "updateItem",
+      "label": "loot: updateItem"
+    },
+    {
+      "name": "deleteItem",
+      "label": "loot: deleteItem"
+    },
+    {
+      "name": "updateToken",
+      "label": "loot: updateToken"
+    },
+    {
+      "name": "i18nInit",
+      "label": "i18n shim"
+    },
+    {
+      "name": "init",
+      "label": "init"
+    },
+    {
+      "name": "socketlib.ready",
+      "label": "socketlib.ready"
+    },
+    {
+      "name": "ready",
+      "label": "ledger ready"
+    },
+    {
+      "name": "ready",
+      "label": "attunement repair"
+    },
+    {
+      "name": "renderActorDirectory",
+      "label": "actor directory"
+    },
+    {
+      "name": "renderJournalDirectory",
+      "label": "journal directory"
+    },
+    {
+      "name": "ready",
+      "label": "locks"
+    },
+    {
+      "name": "item-piles-dropItem",
+      "label": "drop capture"
+    },
+    {
+      "name": "preDeleteItem",
+      "label": "delete capture"
+    },
+    {
+      "name": "item-piles-preRenderInterface",
+      "label": "lock: interface"
+    },
+    {
+      "name": "item-piles-preRenderActorSheet",
+      "label": "lock: actor sheet"
+    },
+    {
+      "name": "item-piles-preRattleItemPile",
+      "label": "lock: rattle"
+    },
+    {
+      "name": "preCreateItem",
+      "label": "attunement repair"
+    }
+  ],
+  "patches": [],
+  "flags": {
+    "writes": [
+      "flags.pentaryn-dropbin.corpse",
+      "flags.pentaryn-dropbin.sight",
+      "flags.pentaryn-dropbin.ownership",
+      "flags.item-piles.data.lockedSound"
+    ],
+    "reads": [
+      "flags.item-piles.data"
+    ]
+  },
+  "errors": [
+    "NOT_GM",
+    "NO_GM",
+    "NOT_READY",
+    "NOT_FOUND",
+    "AMBIGUOUS",
+    "BAD_ARGS",
+    "REFUSED",
+    "CONFLICT",
+    "UNSUPPORTED",
+    "TIMEOUT",
+    "INTERNAL"
+  ]
+}

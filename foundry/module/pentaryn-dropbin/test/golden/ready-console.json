@@ -2,6 +2,10 @@
   "lines": [
     [
       "log",
+      "pentaryn-dropbin | ready — 0 entries on the ledger"
+    ],
+    [
+      "log",
       "pentaryn-dropbin | attunement repair armed — 0 items indexed"
     ],
     [
@@ -13,10 +17,5 @@
       "pentaryn-dropbin | in-view rule: sight off on 2 pile document(s), 1 readable pin(s) no longer global"
     ]
   ],
-  "tickLines": [
-    [
-      "log",
-      "pentaryn-dropbin | ready — 0 entries on the ledger"
-    ]
-  ]
+  "tickLines": []
 }

@@ -141,7 +141,8 @@ const isInventoryApp = app => app?.constructor?.name === "ItemPileInventoryApp"
 export const loot = { install: addButton, refreshAll, recipientFor };
 
 /** Registration order (golden/hooks.json): the two window hooks, then the refresh triggers. */
-export function install(reg) {
+export function install(reg, ctx) {
+  ctx.expose({ loot });
   reg.on("renderItemPileInventoryApp", app => installSoon(app), { label: "loot: render" });
   // Belt and braces: Item Piles' own hook fires as the window is built, before it is in the DOM.
   reg.on("item-piles-openInterface", app => { if (isInventoryApp(app)) setTimeout(() => installSoon(app), 0); },

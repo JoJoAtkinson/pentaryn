@@ -19,17 +19,20 @@
  *
  * Lifecycle: module body → corpses, loot and the shim install; `init` → settings; then the ledger
  * and the Item Piles patches install — synchronously, in this order, so every listener keeps its
- * place against other modules (golden/hooks.json). ready → the ledger arms its capture hooks and
- * publishes game.pentaryn.dropbin; the patches arm theirs.
+ * place against other modules (golden/hooks.json). ready → the ledger arms its capture hooks, then
+ * the API is built and published at once on module.api and game.pentaryn.dropbin (D2); the patches
+ * arm theirs.
  *
  * Hot patch RE-RUNS THE WIRING ONLY: `game.pentaryn.dropbin.uninstall()`, then
  * `await import("/modules/pentaryn-dropbin/dropbin.mjs?v=2")`. Any edit to another file needs a reload.
  */
 
-import { MODULE } from "./dropbin-core.mjs";
+import { MODULE, NS } from "./dropbin-core.mjs";
 import { registerSettings, readLog } from "./settings.mjs";
+import { buildApiFor } from "./api.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { publishNamespace } from "./lib/publish.mjs";
 import * as corpses from "./corpses.mjs";
 import * as loot from "./loot.mjs";
 import * as shim from "./i18n-shim.mjs";
@@ -62,17 +65,18 @@ const ctx = {
 };
 
 /**
- * Publish the API, one tick after ready (publishing synchronously is a declared step of the
- * migration). Nothing freezes game.pentaryn since the importer's keystone (items-journal-1).
+ * Called from the ledger's ready, after its capture hooks: build the API (a manifest drift stops
+ * here with one error line), publish it on module.api and game.pentaryn.dropbin, then the GM's
+ * ready line.
  */
 function publish() {
-  setTimeout(publishAPI, 0);
-}
-
-function publishAPI() {
-  const api = { corpses: corpses.corpses, loot: loot.loot, ...ctx.exposed.ledger };
-  game.pentaryn ??= {};
-  game.pentaryn.dropbin = api;
+  try {
+    ctx.api = buildApiFor(ctx);
+  } catch (err) {
+    log.error("API manifest drift — not published", err);
+    return;
+  }
+  publishNamespace(NS, ctx.api, { moduleId: MODULE });
   if (game.user.isGM) console.log(`${MODULE} | ready — ${readLog().length} entries on the ledger`);
 }
 
