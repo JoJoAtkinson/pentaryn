@@ -126,6 +126,7 @@ Code phase only; nothing live was touched. Conformance **57.8 % → 85.4 % (41/4
 | C30 relay via `relayed` [declared] D-J4 | `5b79802c` |
 | -40: KNOWN pin · claim-first fix [declared] D-J5 · manifest flag · stamp-failure fallback | `d8bfe157` · `f97e9f74` · `792f57fb` · `79155a74` |
 | hardening tests (player side of the relay) · step 8 docs · plans | `a3731712` · `b615d9d8` · `7d17df5d` |
+| review fixes: `inspect` takes an Actor/Token [declared] D-J6 · claim leftover wording + pin · step-9 README handoff · §5.9.4 record (W2-J4) | `5df878a6` · `d2181a79` · `2b908397` · `8b8c905f` |
 
 **Frozen tests:** only `glue.test.mjs` changed, at two named pins: publish timing (`dbd56638`, D-J1) and the
 relay refusal message (`5b79802c`, D-J4). No golden changed. New step goldens: `describe.json`, `surface.json`.
