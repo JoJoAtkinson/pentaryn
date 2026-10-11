@@ -4,14 +4,17 @@
  * per-client override of Token#isVisible that only ever adds tokens the user owns, never GM-hidden
  * ones; core's ownerShouldSee decides.
  *
- * The wrap: libWrapper (WRAPPER on the dotted path) when lib-wrapper is active, else the getter is
- * replaced on the prototype. It reads three private core fields (`_preview._previewType`,
+ * The wrap goes through the kit's wrapMethod: libWrapper (WRAPPER on the dotted path) when
+ * lib-wrapper is active, else the getter is replaced on the prototype (a registration failure
+ * falls through to that). It reads three private core fields (`_preview._previewType`,
  * `isFilteredOut`, `_testCulled`) — adjustments row `creatures-libwrapper`.
  */
 
 import { MODULE, ownerShouldSee } from "./creatures-core.mjs";
 import { setting } from "./settings.mjs";
 import { isProp } from "./tokens-adapter.mjs";
+import { wrapMethod } from "./lib/patch.mjs";
+import { libWrapperRoute } from "./lib/patch-libwrapper.mjs";
 
 let log = null;
 let ownerSeesOn = true;
@@ -37,29 +40,23 @@ export function ownerOverride(token) {
   }
 }
 
+/** The wrap's handle (kit wrapMethod): `via` is "libWrapper" | "direct" | null. */
+let handle = null;
+
 function patchVisibility() {
-  const path = "foundry.canvas.placeables.Token.prototype.isVisible";
-  if (game.modules.get("lib-wrapper")?.active && globalThis.libWrapper) {
-    try {
-      globalThis.libWrapper.register(MODULE, path, function (wrapped, ...args) {
-        return wrapped(...args) || ownerOverride(this);
-      }, "WRAPPER");
-      return (patchedWith = "libWrapper");
-    } catch (err) {
-      log.warn("libWrapper registration failed, patching directly", err);
-    }
-  }
   const proto = foundry.canvas.placeables.Token.prototype;
-  const desc = Object.getOwnPropertyDescriptor(proto, "isVisible");
-  if (!desc?.get) {
+  if (!Object.getOwnPropertyDescriptor(proto, "isVisible")?.get) {
     log.warn("Token#isVisible not found; owners-see-their-own is off");
     return (patchedWith = null);
   }
-  Object.defineProperty(proto, "isVisible", {
-    ...desc,
-    get() { return desc.get.call(this) || ownerOverride(this); }
-  });
-  return (patchedWith = "direct");
+  handle = wrapMethod(MODULE, {
+    target: proto, kind: "getter", name: "isVisible", label: "Token#isVisible",
+    path: "foundry.canvas.placeables.Token.prototype.isVisible", type: "WRAPPER",
+    marker: "__pentarynCreaturesVisible", adjustments: "creatures-libwrapper",
+  }, function (wrapped, ...args) {
+    return wrapped(...args) || ownerOverride(this);
+  }, { via: libWrapperRoute({ log }), log });
+  return (patchedWith = handle.via);
 }
 
 function refreshTokenVisibility() {
@@ -80,7 +77,9 @@ export function install(reg, ctx) {
   ctx.expose({ ownerSees: (token) => ownerOverride(token), patchedWith: () => patchedWith });
 }
 
-/** Turn the override off for this client (the getter patch stays until a reload). */
+/** Undo the wrap (hot patch: then re-import the entry to wrap again). */
 export function uninstall() {
-  ownerSeesOn = false;
+  handle?.unwrap();
+  handle = null;
+  patchedWith = null;
 }

@@ -1,5 +1,6 @@
 // Patch path (c), guide step 1: libWrapper.register throws → a console warning, then the direct
-// path. The text moves in guide step 5 ([declared], C-D1: "…, wrapping by hand").
+// path. [declared] C-D1 (guide step 5): the text is the kit route's "…, wrapping by hand" (was
+// "…, patching directly") since the wrap goes through wrapMethod + libWrapperRoute.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { manifestOf } from "./kit/harness.mjs";
@@ -15,7 +16,7 @@ test("a failed registration warns with the error and falls back to the direct ge
   F.fire("init");
   F.fire("setup");
   assert.equal(W.wrapped.length, 1, "tried once");
-  assert.deepEqual(W.lines(), [["warn", `${MODULE} | libWrapper registration failed, patching directly`, "Error: libWrapper says no"]]);
+  assert.deepEqual(W.lines(), [["warn", `${MODULE} | libWrapper registration failed, wrapping by hand`, "Error: libWrapper says no"]]);
   assert.notEqual(Object.getOwnPropertyDescriptor(W.TokenClass.prototype, "isVisible").get, W.coreGetter);
   assert.equal(W.p("tImp").isVisible, true);
   assert.equal(W.p("tGob").isVisible, false);
