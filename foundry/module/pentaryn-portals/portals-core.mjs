@@ -49,6 +49,19 @@ export function isScenery({ name = "", folders = [] } = {}) {
   return folders.some(f => /^(Crowd\b|Markers\b|Temp Markers\b)/i.test(String(f ?? "")));
 }
 
+/**
+ * Is this token one of pentaryn-aoe's area handles? Its token carries `flags.pentaryn-aoe.handle`,
+ * or its actor carries `flags.pentaryn-aoe.handleActor` (the shared handle actor).
+ *
+ * A COPY of pentaryn-aoe's `isHandleTarget` (pentaryn-aoe/core.mjs) — module isolation forces one,
+ * so this is the one explicit, tested copy in portals (finding -43; pentaryn-creatures has the same
+ * signature). aoe's `doc.token` branch is left out: a TokenDocument has no `.token`.
+ * @param {object} [tokenFlags]  the TokenDocument's flags  @param {object} [actorFlags]  its actor's
+ */
+export function isAoeHandle(tokenFlags, actorFlags) {
+  return !!(tokenFlags?.["pentaryn-aoe"]?.handle || actorFlags?.["pentaryn-aoe"]?.handleActor);
+}
+
 /** A player character: a linked `character` token that is not an item pile. */
 export const isPC = t => t.type === "character" && t.linked && !t.pile;
 

@@ -8,7 +8,7 @@
  */
 
 import { MODULE, SNAP_DIR, esc, cardData, dialogIdParts, cropWindow, translateShapes, blockingWallCoords, tokenBox,
-  occupiedBy, summonerActorId, playerOwners, isScenery, partySelection, ringSpots, wallBlocker, assignSpots,
+  occupiedBy, isAoeHandle, summonerActorId, playerOwners, isScenery, partySelection, ringSpots, wallBlocker, assignSpots,
   partyPreview, hasDestination, withoutDestination } from "./portals-core.mjs";
 
 const deps = { setting: () => undefined, log: null };
@@ -197,7 +197,7 @@ export function recordOf(t, { gmIds = gmUserIds() } = {}) {
     summoner: summonerActorId(a?.getFlag?.("dnd5e", "summon.origin")),
     polymorphed: !!a?.getFlag?.("dnd5e", "isPolymorphed"),
     // pentaryn-aoe's area handle: owned by everyone, its area stays put (usability Area 8, L11).
-    handle: !!(t.flags?.["pentaryn-aoe"]?.handle || a?.flags?.["pentaryn-aoe"]?.handleActor),
+    handle: isAoeHandle(t.flags, a?.flags),
     doc: t
   };
 }
