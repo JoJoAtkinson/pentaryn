@@ -335,9 +335,14 @@ def test_declared_modules_exist_on_disk():
 
 @pytest.mark.repo
 def test_every_module_dir_is_registered():
-    """Registry ⊇ disk. pings was the one folder with no ModuleSpec on 2026-10-11."""
+    """Registry ⊇ disk (pings, the one folder without a ModuleSpec, was registered 2026-10-11)."""
     registered = {spec.name for spec in cfg.MODULES.values()}
-    assert set(cfg.module_dirs()) - registered == {"pentaryn-pings"}
+    assert set(cfg.module_dirs()) - registered == set()
+
+
+@pytest.mark.repo
+def test_pings_passes_its_gates():
+    assert modules.check("pings") == 0
 
 
 def test_module_dirs_lists_only_folders_with_a_manifest(tmp_path):

@@ -356,6 +356,17 @@ MODULES = {
             "  game.pentaryn.combat.report()         // riders per PC and the turn flags",
         ),
     ),
+    "pings": ModuleSpec(
+        "pentaryn-pings",
+        # Static gates only until its migration adds test/run.mjs (pings guide step 9 then
+        # adds node-test; C39).
+        check=_STATIC,
+        after_sync=(
+            "First install: restart Foundry (module.json is read at startup), enable",
+            "'Pentaryn Ping Log', then reload the GM tab (GM clients are the only writers).",
+            "  game.pentaryn.pings.recent(5)",
+        ),
+    ),
     # The actor pipeline stages this one, not module-sync, so it is not in the CLI's
     # module list — but the static gates are free and it is real code, so it gets them.
     "importer": ModuleSpec("pentaryn-importer", check=_STATIC),
