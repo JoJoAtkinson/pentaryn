@@ -1,0 +1,24 @@
+{
+  "version": "1.0.1",
+  "files": {
+    "errors":   { "deps": [] },
+    "log":      { "deps": [] },
+    "hooks":    { "deps": ["errors"] },
+    "publish":  { "deps": ["resolve"] },
+    "resolve":  { "deps": ["errors"] },
+    "settings": { "deps": ["errors"] },
+    "api":      { "deps": ["errors", "resolve"] },
+    "queries":  { "deps": ["errors", "api", "resolve"] },
+    "election": { "deps": [] },
+    "patch":    { "deps": [] },
+    "patch-libwrapper": { "deps": ["patch"], "packages": ["lib-wrapper"] },
+    "flags":    { "deps": [] },
+    "perf":     { "deps": [] },
+    "argon-kit": { "deps": [], "packages": ["enhancedcombathud"], "status": "deferred" }
+  },
+  "tiers": {
+    "small": ["errors", "log", "hooks", "publish"],
+    "full":  ["errors", "log", "hooks", "publish", "resolve", "settings", "api", "queries", "flags"]
+  },
+  "testKit": ["foundry-stub.mjs", "harness.mjs"]
+}

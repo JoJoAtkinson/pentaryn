@@ -1,0 +1,29 @@
+{
+  "id": "pentaryn-__SHORT__",
+  "title": "__Title__",
+  "description": "__DESC__",
+  "version": "0.1.0",
+  "compatibility": { "minimum": "14", "verified": "__VERIFIED__" },
+  "authors": [{ "name": "Joseph Atkinson" }],
+  "relationships": {
+    "systems": [{ "id": "dnd5e", "type": "system", "compatibility": { "minimum": "6.0", "verified": "6.0.6" } }],
+    "recommends": []
+  },
+  "esmodules": ["__SHORT__.mjs"],
+  "styles": ["styles/__SHORT__.css"],
+  "languages": [{ "lang": "en", "name": "English", "path": "lang/en.json" }],
+  "socket": false,
+  "flags": {
+    "pentaryn": {
+      "tier": "__TIER__",
+      "namespace": "__NS__",
+      "flagScope": "pentaryn-__SHORT__",
+      "cssPrefix": "__CSS__",
+      "generation": 14,
+      "afterSync": [
+        "First install: restart Foundry (module.json is read at startup), enable '__Title__', then reload.",
+        "  game.pentaryn.__NS__.describe()"
+      ]
+    }
+  }
+}

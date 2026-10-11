@@ -1,0 +1,5 @@
+{
+  "doc": "Modules the fix phase must NOT edit right now (blueprint use-doc \u00a78 step 1). conformance.py prints them as WAIT. Edit this file when a workflow starts or stops working on a module; when a module leaves the list, re-anchor every finding against the live tree first (git diff <snapshot-sha>..HEAD -- foundry/module/<m>, then conformance.py --module <m>). The 2026-10 starting list is migration-order.md's WAIT column plus the modules the live-test workflow was editing on 2026-10-10.",
+  "modules": {},
+  "history": "2026-10-11: all entries lifted (decision D9: live usability work finished and committed, 4e64f47/28ccc87). Lifted: combat, riders, transform, aoe, creatures, portals, senses. Re-anchor each guide before editing."
+}

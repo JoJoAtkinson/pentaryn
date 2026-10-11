@@ -1,0 +1,10 @@
+/*
+ * __Title__ — every selector sits under .pentaryn-__SHORT__ or the module's prefix (.__CSS__…),
+ * so nothing here can restyle another package's DOM. Use core's CSS variables and
+ * .theme-dark / .theme-light rather than fixed colours. No !important in new rules.
+ */
+
+.pentaryn-__SHORT__ .__CSS__note {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}

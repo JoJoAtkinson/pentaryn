@@ -1,0 +1,16 @@
+{
+  "PENTARYN___SHORT_UPPER__": {
+    "Setting": {
+      "enabled": {
+        "Name": "Enable __Title__",
+        "Hint": "Track and announce GM note changes on actors."
+      }
+    },
+    "Keybind": {
+      "toggleEnabled": {
+        "Name": "Toggle __Title__",
+        "Hint": "Turn note tracking on or off for the world (GM only)."
+      }
+    }
+  }
+}

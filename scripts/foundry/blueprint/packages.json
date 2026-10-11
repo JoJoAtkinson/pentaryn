@@ -1,0 +1,97 @@
+{
+  "doc": "Third-party package names the blueprint scripts match against. Kept out of the .py files on purpose: scripts/foundry/**/*.py is in the updater's exposure grep (scripts/foundry/update/adjustments.py EXPOSURE_GLOBS), and a package literal in a scanner would mark the scanner itself as exposed. JSON is not grepped. The alias lists must stay a superset of foundry/adjustments.yml `aliases` (tests/test_conformance.py pins it); at run time the scorer also merges the registry's aliases in, so the updater's exposure grep and the scorer count the same references. privateInternalPatterns are regexes C33 lists for manual review (R6: Token#_preview, the region layer's _placementContext, Svelte $$.ctx, shader internals, core private movement members). dnd5e.stringPatterns are regexes over string literals (R7: renderItemSheet5e-style hook names); movement's ignoreTokens is NOT listed — it waits for Joe's decision D4.",
+  "packages": {
+    "lib-wrapper": {
+      "aliases": [
+        "libWrapper"
+      ],
+      "register": [
+        "libWrapper.register"
+      ]
+    },
+    "item-piles": {
+      "aliases": [
+        "game.itempiles",
+        "itempiles"
+      ]
+    },
+    "socketlib": {
+      "aliases": [
+        "socketlib."
+      ]
+    },
+    "enhancedcombathud": {
+      "aliases": [
+        "ui.ARGON",
+        "CONFIG.ARGON",
+        "ArgonComponent"
+      ]
+    },
+    "enhancedcombathud-dnd5e": {
+      "aliases": [
+        "CONFIG.ARGON",
+        "ArgonComponent"
+      ]
+    },
+    "dice-so-nice": {
+      "aliases": [
+        "dice3d"
+      ]
+    }
+  },
+  "privateInternals": [
+    "ui.ARGON._",
+    "panel._buttons",
+    "CONFIG.ARGON"
+  ],
+  "privateInternalPatterns": [
+    "\\._preview\\b",
+    "\\._placementContext\\b",
+    "\\$\\$\\.ctx\\b",
+    "\\.currentCursor\\b",
+    "\\bSORT_LAYERS\\b",
+    "\\b_create(?:Fragment|Vertex)Shader\\b",
+    "\\b(?:SHADER_HEADER|FRAGMENT_BEGIN|FRAGMENT_END)\\b",
+    "\\._(?:getDragConstrainOptions|prepareKeyboardMovementUpdates|lastSortedIndex)\\b"
+  ],
+  "dnd5e": {
+    "codePatterns": [
+      "CONFIG\\.DND5E",
+      "\\bActor5e\\b",
+      "system\\??\\.attributes\\b",
+      "(?<![\\w$\"'])dnd5e\\??\\.(?:dice|documents|applications|dataModels|utils|config)\\b",
+      "flags\\??\\.dnd5e\\b",
+      "\\b(?:Token5e|Item5e|ChatMessage5e)\\b",
+      "\\bItemSheet5e\\b",
+      "system\\??\\.(?:identified|unidentified)\\b"
+    ],
+    "stringPrefixes": [
+      "dnd5e."
+    ],
+    "stringExact": [
+      "dnd5e"
+    ],
+    "stringPatterns": [
+      "^render\\w*5e$"
+    ]
+  },
+  "hotHooks": [
+    "refreshToken",
+    "drawToken",
+    "sightRefresh",
+    "canvasPan",
+    "hoverToken",
+    "updateWorldTime",
+    "renderActionPanelArgonComponent",
+    "pointermove"
+  ],
+  "readinessTokens": [
+    "ready",
+    "Ready",
+    "ARGON",
+    ".rendered"
+  ],
+  "socketRegistrars": [
+    "socketlib.registerModule("
+  ]
+}
