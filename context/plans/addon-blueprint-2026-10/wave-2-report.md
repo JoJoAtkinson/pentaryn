@@ -274,6 +274,58 @@ per module): `scripts/foundry/live-goldens/` is shared, so it is listed for the 
 5. Blueprint scorer (tooling lane): C50 should also follow `reg.once("ready", …)` handlers and a
    publish reached from one (guide §8).
 
+## Integration — shared files (2026-10-11)
+
+One writer in the worktree; code phase only (no sync, no restart, no live tool, no merge). Each
+lane's shared-file list applied, one commit per logical step:
+
+| Commit | What |
+|---|---|
+| `cd414590` | `foundry/adjustments.yml`: movement's three patch rows (C32); attunement's two file moves and `dnd5e-item-tooltip-anchor` → **`attunement-item-tooltip-anchor`** (the id its `wrapMethod` names); `itempiles-journal-preview-copy`; dropbin's `itempiles-corpses` + `piles.mjs` and five new rows (`socketlib-dropbin-relay`, `itempiles-dropbin-{nan-attunement,container-locks,directory-hiding,svelte-store}`). `adjustments-batch.md` Batch A rows marked landed |
+| `e4978110` | `make foundry-module-index` (six rows gain their API cells; mcp-fork-20); README `search()` shape line (`hits`, not `results`); walls routing row → `walls.md` |
+| `01fa7cda` | `rules-lookup.md` "What comes back" table (prompts-lookup-2 doc half) |
+| `fa9cc7a2` | lookup audit status and guide Result: the two halves landed; 133 tests with `e0e2dd40` |
+| `b6f6bcdb` | `wave7-restart-batch.md`: common rule (the afterSync commit deletes the config.py tuple; a `version` bump moves the core `VERSION`); movement `minimum: "14"` + three-line afterSync; walls code column (migration wiring, the frozen `core.test.mjs:14` FLAG_SCOPE flip and its re-pins) and the wave-1 `description` row **replaced**, not duplicated; journal `git mv` + README Files table; dropbin reasons and VERSION pin. **No `module.json` was edited** — every row waits for the one restart |
+| `4335d01b` | `walls.md`: a Levels scene's card says `js` (`3ea5249b`) |
+| `852b9047` | `config.py` movement ModuleSpec comment (the `after_sync` tuple is untouched until Wave 7) |
+| `edc7489a` | new `test_module_checks.py` net: every `context/`/`playbooks/` path a module cites exists (senses-walls-cursors-8 recipe, repo-wide); walls' `module.json` is a strict xfail until Wave 7. Fails on a planted bad cite |
+| `5e4866d4` | `packages.json` `privateInternalPatterns` gains `_positionItemTooltip` (items-journal-39 c): attunement's C33 is now listed for manual review |
+
+**Known red ranges closed here:** `check-context` red from walls `d06f77ab` (first wave-2 describe
+golden) to `e4978110`; `foundry-adjustments-check` (and `test_update_escalation.py::
+test_the_real_registry_matches_the_code`) red from attunement `5f3bf2d5` to `cd414590`.
+
+**Gates at the integration head:** every `foundry/module/pentaryn-*/test/run.mjs` exits 0 — lookup
+133, movement 167 (+ 89 legacy), walls 200 + 1 todo (the Wave 7 `module.json` cite), attunement 119
+(+ 35 fixtures), journal 94 (+ legacy core), dropbin 118 (+ legacy), names 50, pings 67, cursors 55,
+importer 92, prompts 24, ties 16; the unmigrated seven exit 0. `pytest -q` 913 passed, 2 skipped, 3
+xfailed. `make foundry-modules-check` all 19 green. `foundry-lib-check` 82/82. `check-context` OK (4
+pre-existing warnings). `foundry-adjustments-check` 96 rows OK.
+
+**Conformance (advisory)** — wave-2 baseline → lane end → after integration:
+
+| Module | Baseline | Lane end | Integrated | Still failing (why) |
+|---|---|---|---|---|
+| lookup | 75.6 % | 97.7 % | **97.7 %** | C07 (Wave 7) |
+| movement | 66.7 % | 93.6 % | **95.7 %** | C07, C37 (Wave 7 `cssPrefix`) |
+| walls | 71.4 % | 95.6 % | **95.6 %** | C07 (Wave 7 data migration), C51 (W2-WALLS-1) |
+| attunement | 67.4 % | 90.9 % | **93.2 %** | C04, C07, C09 (Wave 7 + step 8) |
+| journal | 57.8 % | 85.4 % | **87.5 %** | C03, C07, C09, C37 (Wave 7), C51 (W2-J1), C56 (kit gap, W2-J2) |
+| dropbin | 60.9 % | 91.7 % | **93.8 %** | C07, C09 (Wave 7), C50 (scorer gap) |
+
+**Not applied (follow-ups, no Joe decision needed):**
+- Scorer gaps (`conformance.py`, tooling): C05/C16 do not follow `export … from` barrels (walls
+  item 5: `Module.imports` should add `jsscan.exports_of(...)[1]`); C50 does not follow a publish
+  reached from a `reg.once("ready", …)` handler (dropbin). Both move other modules' scores, so they
+  want their own tooling step with a before/after table.
+- Kit 1.0.3: `registerQueries` drops the query context (journal handoff item 4); a kit bump and a
+  re-vendor of every kit module, then W2-J2.
+- Live goldens (`scripts/foundry/live-goldens/`) for lookup, movement, walls, attunement, journal and
+  dropbin do not exist; each "before" run must be taken on the deployed build before the L-session
+  syncs. Not written here: an untested live script is worse than none.
+- lookup, noticed by its lanes: `names("constructor")` returns a junk one-key object (an
+  `Object.hasOwn` guard, [declared]); `NAME_SOURCES` is frozen one level deep (harmless today).
+
 ## Open for Joe
 
 | # | Item | From | What is needed |

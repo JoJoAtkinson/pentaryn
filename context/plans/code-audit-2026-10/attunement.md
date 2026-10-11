@@ -44,7 +44,8 @@ Applied on `migrate/wave-2` with the blueprint migration (detail: the migration 
 Standalone pass (wave 2): -10 success audit line [declared] `7cf1a4f1` (shortfall naming `73180dfd`; rollback is W2-A2) ·
 -17 optional README/API parity check `6402b3fb` · -12 `report()` `countMismatch`: not added — `golden/report.json` freezes
 report()'s return; the diagnostic lives in `inspect().counts.mismatch` · -39 `_positionItemTooltip` in `privateInternalPatterns`:
-returned to the integrator (shared `packages.json`) · -14 step 2 rides on the Wave 7 `module.json` batch.
+landed by the integrator in `scripts/foundry/blueprint/packages.json` (C33 now lists it for manual review); the
+adjustments rows moved and the tooltip row renamed `attunement-item-tooltip-anchor` (`cd414590`) · -14 step 2 rides on the Wave 7 `module.json` batch.
 
 ## Findings index
 
