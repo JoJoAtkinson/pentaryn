@@ -7,6 +7,7 @@ import { sceneModel, promptTokens, resolveItemEmbeds } from "./scene-adapter.mjs
 import { promptText } from "./markers-adapter.mjs";
 import { renderCrops } from "./crops-adapter.mjs";
 import { cropsDecision } from "./core/text.mjs";
+import { pageScenes } from "./core/paging.mjs";
 import { setting, manifests, manifestFor, storeManifest } from "./settings.mjs";
 import { CROP_DIR } from "./prompts-core.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -31,11 +32,11 @@ export function resolveScene(ref) {
     ?? game.scenes.find(x => (x.navName ?? "").toLowerCase() === s.toLowerCase()) ?? null;
 }
 
-function pickScenes(scenes, from) {
+function pickScenes(scenes, from, countOf) {
   let list;
   const refs = sceneRefs(scenes);
   if (refs === "all") {
-    list = scenesInNavOrder().filter(s => promptTokens(s).length > 0);
+    list = scenesInNavOrder().filter(s => countOf(s) > 0);
   } else {
     const seen = new Set();
     list = [];
@@ -79,17 +80,18 @@ export async function gather(opts = {}) {
   const party = partyArg ?? worldParty;
   const partySource = partyArg ? "call" : worldParty ? "setting" : null;
   const t0 = performance.now();
-  const list = pickScenes(scenes, from);
+  // each scene's prompt count once (prompts-lookup-23): the "all" filter and the paging share it
+  const counted = new Map();
+  const countOf = s => {
+    if (!counted.has(s.id)) counted.set(s.id, promptTokens(s).length);
+    return counted.get(s.id);
+  };
+  const list = pickScenes(scenes, from, countOf);
 
   // Page by prompt count: always at least one scene, never past maxPrompts after the first.
-  const models = [];
-  let total = 0, next = null;
-  for (let i = 0; i < list.length; i++) {
-    const n = promptTokens(list[i]).length;
-    if (models.length && total + n > maxPrompts) { next = list[i].id; break; }
-    models.push(sceneModel(list[i], { builtWithoutProvenance }));
-    total += n;
-  }
+  const page = pageScenes(list.map(countOf), maxPrompts);
+  const models = list.slice(0, page.take).map(s => sceneModel(s, { builtWithoutProvenance }));
+  const next = page.next === null ? null : list[page.next].id;
   // a compendium monster's biography is often only `@Embed[<page>]`: print the page's words instead
   await Promise.all(models.map(m => resolveItemEmbeds(m.items)));
 

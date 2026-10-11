@@ -199,6 +199,12 @@ export function sceneItems(scene, { builtWithoutProvenance = true } = {}) {
     elevation: Number(doc.elevation) || 0
   });
 
+  // one folder-chain walk per actor, not per token (a camp of twenty goblins shares one actor)
+  const scaffold = new Map();
+  const scaffoldOf = tok => {
+    if (!scaffold.has(tok.actorId)) scaffold.set(tok.actorId, isScaffold(tok));
+    return scaffold.get(tok.actorId);
+  };
   for (const tok of scene.tokens) {
     const size = markerSizeOf(tok, game.actors);
     if (size) {
@@ -207,7 +213,7 @@ export function sceneItems(scene, { builtWithoutProvenance = true } = {}) {
         img: tok.texture?.src ?? "", hidden: tok.hidden });
       continue;
     }
-    if (isScaffold(tok)) continue;
+    if (scaffoldOf(tok)) continue;
     const prov = provenanceOf(tok);
     if (!prov && !builtWithoutProvenance) continue;
     const actor = tok.actor ?? (tok.actorId ? game.actors.get(tok.actorId) : null);
@@ -242,13 +248,21 @@ export function sceneItems(scene, { builtWithoutProvenance = true } = {}) {
       name, type: "", img: note.texture?.src || EYE, hidden: false, prov, description, rank: 0 });
   }
 
+  // a light's host: the first built item (token, hotspot, note) of the same replacement — marker id
+  // and call (null and "" differ), first wins, as items.find did; lights are never hosts
+  const hostKey = (markerId, call) => `${markerId}\u0000${call === undefined || call === null ? "\u0001" : call}`;
+  const hostByMarker = new Map();
+  for (const it of items) {
+    if (it.isPrompt || it.prov?.markerId === undefined) continue;
+    const k = hostKey(it.prov.markerId, it.prov.call);
+    if (!hostByMarker.has(k)) hostByMarker.set(k, it);
+  }
   for (const light of scene.lights ?? []) {
     const prov = provenanceOf(light);
     if (!prov) continue;
     const text = lightText(light.config?.toObject?.() ?? light.config) || "default";
     // a hotspot's or note's own light (same replacement): a line on it, not a t# of its own
-    const host = prov.markerId ? items.find(it => !it.isPrompt && it.kind !== "light" && it.prov?.markerId === prov.markerId
-      && (it.prov?.call ?? null) === (prov.call ?? null)) : null;
+    const host = prov.markerId ? hostByMarker.get(hostKey(prov.markerId, prov.call)) ?? null : null;
     if (host) { host.light = text; continue; }
     items.push({ ...base(light, pointGeometry(light.x, light.y, light.elevation, g)), isPrompt: false, kind: "light",
       name: "Light", type: "", img: "", hidden: light.hidden, prov, description: "", rank: 0, light: text });

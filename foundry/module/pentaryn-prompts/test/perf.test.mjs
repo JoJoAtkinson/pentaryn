@@ -46,3 +46,43 @@ test("prompts-lookup-7: seenCount never runs the door/wall classification; panel
   for (const it of items) panelRels(items, rel, it.key, 60);
   assert.ok(classified > 0);
 });
+
+/* ── prompts-lookup-23 ──────────────────────────────────────────────────── */
+
+test("prompts-lookup-23: pageScenes — at least one scene, never past maxPrompts after the first", async () => {
+  const { pageScenes } = await import("../core/paging.mjs");
+  assert.deepEqual(pageScenes([40, 30, 5], 60), { take: 1, next: 1 });
+  assert.deepEqual(pageScenes([70], 60), { take: 1, next: null });
+  assert.deepEqual(pageScenes([20, 30, 10, 1], 60), { take: 3, next: 3 });
+  assert.deepEqual(pageScenes([], 60), { take: 0, next: null });
+  assert.deepEqual(pageScenes([1, 1], 1), { take: 1, next: 1 });
+});
+
+test("prompts-lookup-23: a light's host by marker and call (first wins, null and \"\" differ); scaffold per actor", async () => {
+  const { installWorld, addScene, MODULE } = await import("./fixtures/world.mjs");
+  const F = await installWorld();
+  const M = await import("../scene-adapter.mjs");
+  const prov = (markerId, call) => ({ markerId, call, kind: "hotspot", prompt: "x", sceneId: "sH" });
+  const pile = { "item-piles": { data: { enabled: true } } };
+  F.addActor({ id: "actorTempPin0001", name: "Pin", type: "npc", folder: { name: "Temp Markers", folder: null } });
+  const s = addScene(F, {
+    id: "sH", name: "Hosts", tokens: [
+      { id: "h1", name: "Chest A", x: 0, y: 0, flags: { [MODULE]: { provenance: prov("m1", "pm-a") }, ...pile } },
+      { id: "h2", name: "Chest B", x: 200, y: 0, flags: { [MODULE]: { provenance: prov("m2", null) }, ...pile } },
+      { id: "h3", name: "Chest C", x: 400, y: 0, flags: { [MODULE]: { provenance: prov("m1", "pm-a") }, ...pile } },
+      { id: "h4", name: "Chest D", x: 600, y: 0, flags: { [MODULE]: { provenance: prov("m3", "") }, ...pile } },
+      ...["pin1", "pin2", "pin3"].map((id, i) => ({ id, name: "Pin", actorId: "actorTempPin0001", x: 800 + i * 100, y: 0 })),
+    ],
+    lights: [
+      { id: "l1", x: 50, y: 50, config: { dim: 10 }, flags: { [MODULE]: { provenance: prov("m1", "pm-a") } } },
+      { id: "l2", x: 250, y: 50, config: { dim: 5 }, flags: { [MODULE]: { provenance: prov("m2", "pm-b") } } },
+      { id: "l3", x: 450, y: 50, config: { bright: 5 }, flags: { [MODULE]: { provenance: prov(null, null) } } },
+      { id: "l4", x: 650, y: 50, config: { dim: 20 }, flags: { [MODULE]: { provenance: prov("m3", null) } } },
+    ],
+  });
+  const rows = M.sceneItems(s).map(i => [i.key, i.kind, i.light ?? null]);
+  assert.deepEqual(rows, [
+    ["Token.h1", "hotspot", "dim 10 ft"], ["Token.h2", "hotspot", null], ["Token.h3", "hotspot", null], ["Token.h4", "hotspot", null],
+    ["AmbientLight.l2", "light", "dim 5 ft"], ["AmbientLight.l3", "light", "bright 5 ft"], ["AmbientLight.l4", "light", "dim 20 ft"],
+  ]);
+});
