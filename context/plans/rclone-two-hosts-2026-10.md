@@ -745,7 +745,7 @@ size lever, separate decision), making BOSS primary, cloudflared on BOSS.
 
 ## 14. Build record (2026-10-11) — what differs from the design above
 
-Built on `feature/rclone-hosts` in commits `c58c01d4`..HEAD; tests:
+Built on `feature/rclone-hosts` in commits `02973a92`..HEAD; tests:
 `scripts/tests/test_cloud_storage.py`, `test_host.py`, `test_cloud_snapshots.py`,
 `test_boot_choice.py`, `test_role_gates.py`, `test_make_targets.py` (extended).
 
