@@ -9,7 +9,9 @@ import os
 import subprocess
 import sys
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Callable, Optional
@@ -156,14 +158,71 @@ def _write_message(payload: dict[str, Any]) -> None:
         sys.stdout.buffer.flush()
 
 
+# ── per-call action log (python-tooling-29) ──────────────────────────────────
+# Same switch as the fork's action log: PENTARYN_MCP_LOG_DIR. Unset → nothing is written.
+# One line per tools/call in <dir>/dnd-scripts-<YYYY-MM>.jsonl (the month is taken per
+# call, so a long-lived server rolls over by itself). There is no `client` field: this
+# server is stdio, one process per Claude session, and never learns who called it.
+_LOG_ENV = "PENTARYN_MCP_LOG_DIR"
+_LOG_ARG_MAX = 2048          # characters per argument value, after JSON encoding
+_log_lock = threading.Lock()
+
+
+def _log_args(arguments: dict[str, Any]) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    for key, value in arguments.items():
+        try:
+            text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
+        except (TypeError, ValueError):
+            text = repr(value)
+        if len(text) > _LOG_ARG_MAX:
+            out[key] = text[:_LOG_ARG_MAX] + f"…[truncated {len(text) - _LOG_ARG_MAX} chars]"
+        else:
+            out[key] = value
+    return out
+
+
+def _log_call(runner: "ToolRunner", arguments: dict[str, Any], *, ok: bool, ms: int,
+              error: str | None) -> None:
+    """Append one action-log line. Never raises: logging must not fail a call."""
+    log_dir = os.environ.get(_LOG_ENV, "").strip()
+    if not log_dir:
+        return
+    try:
+        now = datetime.now(timezone.utc)
+        line = {
+            "ts": now.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+            "server": "dnd-scripts",
+            "tool": runner.tool.name,
+            "mode": "inprocess" if runner.handler is not None else "subprocess",
+            "args": _log_args(arguments),
+            "ok": ok,
+            "ms": ms,
+            "error": error,
+        }
+        text = json.dumps(line, ensure_ascii=False, default=str) + "\n"
+        path = Path(log_dir) / f"dnd-scripts-{now:%Y-%m}.jsonl"
+        with _log_lock, open(path, "a", encoding="utf-8") as fh:
+            fh.write(text)
+    except Exception as exc:
+        try:
+            sys.stderr.write(f"[mcp-server] action log not written: {exc!r}\n")
+        except Exception:
+            pass
+
+
 def _run_call_worker(msg_id: Any, runner: "ToolRunner", arguments: dict[str, Any]) -> None:
     """Execute one tools/call in a worker thread. Catches every exception so a
     failing handler can never crash the server — converts to a JSON-RPC error.
     Notifications (msg_id is None) are silently completed with no response.
     Always releases the inflight semaphore in `finally` so admission control
-    can't leak slots even if the handler explodes."""
+    can't leak slots even if the handler explodes. Each call is logged
+    (`_log_call`) after its response is written."""
+    started = time.perf_counter()
+    ok, error = False, None
     try:
         out = runner.run(arguments=arguments)
+        ok = True
         if msg_id is not None:
             _write_message({
                 "jsonrpc": "2.0",
@@ -171,6 +230,8 @@ def _run_call_worker(msg_id: Any, runner: "ToolRunner", arguments: dict[str, Any
                 "result": {"content": [{"type": "text", "text": out}]},
             })
     except Exception as exc:
+        if not ok:              # the tool failed (not the response write after it)
+            error = str(exc)
         # Surface the full traceback to stderr (the MCP client sees only the
         # short error message via JSON-RPC, but mid-fight debugging benefits
         # from the real stack — Claude Code's MCP logs capture stderr).
@@ -187,7 +248,11 @@ def _run_call_worker(msg_id: Any, runner: "ToolRunner", arguments: dict[str, Any
                 "error": {"code": -32000, "message": str(exc)},
             })
     finally:
-        _inflight_slots.release()
+        try:
+            _log_call(runner, arguments, ok=ok,
+                      ms=round((time.perf_counter() - started) * 1000), error=error)
+        finally:
+            _inflight_slots.release()
 
 
 @dataclass(frozen=True)

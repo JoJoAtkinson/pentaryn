@@ -43,3 +43,13 @@ stderr is appended to its result under `[warnings from <script>]`, not dropped.
 
 Every tool declares MCP `annotations` (`readOnlyHint`, `destructiveHint`, `idempotentHint`,
 `openWorldHint`, plus a `title`); `test_dnd_scripts_contracts.py` fails if one is missing.
+
+## Action log
+
+When `PENTARYN_MCP_LOG_DIR` is set (the same switch as the Foundry fork's log), every
+`tools/call` appends one line to `<dir>/dnd-scripts-<YYYY-MM>.jsonl`:
+`{ts, server: "dnd-scripts", tool, mode: "inprocess"|"subprocess", args, ok, ms, error}`.
+Argument values longer than 2 KB (after JSON encoding) are truncated with a marker. There is
+no `client` field — a stdio server never learns who called it. Unset, nothing is written; a
+log write that fails goes to stderr and never fails the call. `make foundry-eval-report`
+reads these files beside the fork's.
