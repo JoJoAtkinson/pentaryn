@@ -27,7 +27,7 @@ export async function sync(actor, oldName, newName) {
       count += updates.length;
     }
   }
-  if (count) ui.notifications.info(game.i18n.format("PENTARYN_NAMES.Synced", { name: newName, count }));
+  if (count) ui.notifications.info(_loc("PENTARYN_NAMES.Synced", { name: newName, count }));
   return count;
 }
 

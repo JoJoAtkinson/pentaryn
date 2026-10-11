@@ -1,3 +1,5 @@
 {
-  "PENTARYN_NAMES.Synced": "Token labels updated to \"{name}\" ({count})."
+  "PENTARYN_NAMES": {
+    "Synced": "Token labels updated to \"{name}\" ({count})."
+  }
 }
