@@ -3,6 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
+import { sourceFiles } from "./kit/harness.mjs";
 
 const ROOT = new URL("..", import.meta.url);
 const README = readFileSync(new URL("README.md", ROOT), "utf8");
@@ -22,13 +23,15 @@ test("every test/… path the README names exists", () => {
 // edits it, so that file is a todo, not a pass.
 const REPO = new URL("../../../", ROOT);
 const CITED = /\b(?:context|playbooks)\/[\w./-]+\.md\b/g;
-const SOURCES = ["README.md", "CHANGELOG.md", "pentaryn-walls.mjs", "actions.mjs", "api.mjs",
-  "api-manifest.mjs", "backend-wasm.mjs", "migrations.mjs", "settings.mjs", "walls-core.mjs",
-  "core/engine.mjs", "core/backends.mjs", "core/migrate.mjs", "test/fixtures/corpus.mjs"];
+// Every .mjs the module owns (its tests too; not the vendored kit), found by walking, so a new file is
+// covered without editing this list, plus the docs and the Rust source the audit names.
+const SOURCES = ["README.md", "CHANGELOG.md", "wasm/src/lib.rs",
+  ...sourceFiles(ROOT, { exclude: ["lib/", "test/kit/"] })];
 const unresolved = file => [...new Set(readFileSync(new URL(file, ROOT), "utf8").match(CITED) ?? [])]
   .filter(p => !existsSync(new URL(p, REPO)));
 
 test("every context/… or playbooks/… path cited by the module resolves", () => {
+  for (const f of ["pentaryn-walls.mjs", "core/engine.mjs", "test/fixtures/corpus.mjs"]) assert.ok(SOURCES.includes(f), f);
   for (const f of SOURCES) assert.deepEqual(unresolved(f), [], f);
 });
 
