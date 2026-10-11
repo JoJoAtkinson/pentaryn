@@ -27,7 +27,7 @@
  * `await import("/modules/pentaryn-dropbin/dropbin.mjs?v=2")`. Any edit to another file needs a reload.
  */
 
-import { MODULE, NS } from "./dropbin-core.mjs";
+import { MODULE, NS, ledgerKB } from "./dropbin-core.mjs";
 import { registerSettings, readLog } from "./settings.mjs";
 import { buildApiFor } from "./api.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
@@ -77,7 +77,10 @@ function publish() {
     return;
   }
   publishNamespace(NS, ctx.api, { moduleId: MODULE });
-  if (game.user.isGM) console.log(`${MODULE} | ready — ${readLog().length} entries on the ledger`);
+  if (game.user.isGM) {
+    const log = readLog();
+    console.log(`${MODULE} | ready — ${log.length} entries on the ledger (~${ledgerKB(log)} KB)`);
+  }
 }
 
 function onInit() {

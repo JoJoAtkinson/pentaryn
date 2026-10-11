@@ -112,7 +112,8 @@ test("ready: post-ready registrations in order (golden/hooks-after-ready.json); 
   });
   pinJSON("ready-console", { lines, tickLines }, import.meta.url);
   assert.deepEqual(tickLines, []);
-  assert.deepEqual(lines[0], ["log", "pentaryn-dropbin | ready — 0 entries on the ledger"]);
+  // [declared] items-journal-19: the ready line adds the ledger's approximate size
+  assert.deepEqual(lines[0], ["log", "pentaryn-dropbin | ready — 0 entries on the ledger (~0 KB)"]);
 });
 
 test("published API: the legacy keys (a floor); corpses and loot keys pinned", () => {
@@ -143,22 +144,27 @@ test("socketlib.ready registers the module and the record handler", () => {
   assert.deepEqual(since(from).map(c => [c.op, c.id ?? c.name]), [["socketlib.registerModule", MOD], ["socketlib.register", "record"]]);
 });
 
-test("drop capture as the GM: counter, log, mirror upload, console line; the same drop within 2 s writes nothing", async () => {
+test("drop capture as the GM: counter, log, console line, the mirror upload after the debounce; the same drop within 2 s writes nothing", async () => {
   const from = mark();
   const lines = await withConsole(async () => {
     Hooks.callAll("item-piles-dropItem", { actor: ann }, chest, [{ item: sword(), quantity: -2 }], { x: 1, y: 2 });
     await flush();
   });
-  const ops = since(from).filter(c => ["settings.set", "upload"].includes(c.op));
-  assert.deepEqual(ops.map(c => c.op === "upload" ? ["upload", c.source, c.dir, c.name, c.opts] : [c.op, c.id]), [
-    ["settings.set", `${MOD}.counter`], ["settings.set", `${MOD}.log`], ["upload", "data", "assets/drop-bin", "drop-log.json", { notify: false }],
-  ]);
+  const ops = () => since(from).filter(c => ["settings.set", "upload"].includes(c.op))
+    .map(c => c.op === "upload" ? ["upload", c.source, c.dir, c.name, c.opts] : [c.op, c.id]);
+  // [declared] items-journal-19: the mirror upload is trailing-debounced (2 s), not awaited per entry
+  assert.deepEqual(ops(), [["settings.set", `${MOD}.counter`], ["settings.set", `${MOD}.log`]]);
   assert.deepEqual(lines, [["log", "pentaryn-dropbin | #1 drop: Sword from Ann"]]);
   pinJSON("ledger-entry", game.pentaryn.dropbin.get(1), import.meta.url);
   const again = mark();
   Hooks.callAll("item-piles-dropItem", { actor: ann }, chest, [{ item: sword(), quantity: -2 }], { x: 1, y: 2 });
   await flush();
   assert.deepEqual(since(again).filter(c => ["settings.set", "upload"].includes(c.op)), []);
+  mock.timers.tick(2000);
+  await flush();
+  assert.deepEqual(ops(), [
+    ["settings.set", `${MOD}.counter`], ["settings.set", `${MOD}.log`], ["upload", "data", "assets/drop-bin", "drop-log.json", { notify: false }],
+  ]);
 });
 
 test("drop capture as a player with socketlib: one executeAsGM('record', entry)", async () => {

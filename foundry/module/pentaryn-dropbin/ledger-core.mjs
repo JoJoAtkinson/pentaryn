@@ -14,6 +14,11 @@ export const DIR = "assets/drop-bin";
 export const FILE = "drop-log.json";
 /** Two entries with the same key this close together are one event seen on two clients. */
 export const DEDUPE_MS = 2000;
+/** The JSON mirror is written this long after the last entry of a burst (export() writes at once). */
+export const MIRROR_DEBOUNCE_MS = 2000;
+
+/** The ready line's size hint: the ledger as JSON, in whole KB (at least 1 when not empty). */
+export const ledgerKB = log => (log.length ? Math.max(1, Math.round(JSON.stringify(log).length / 1024)) : 0);
 
 /** The four fields that identify one loss: reason, item name, the actor it left, the quantity. */
 export const dedupeKey = e => `${e.reason}|${e.itemName}|${e.fromActorId}|${e.quantity}`;

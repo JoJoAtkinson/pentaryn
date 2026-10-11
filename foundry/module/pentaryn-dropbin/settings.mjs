@@ -46,7 +46,7 @@ export function readLog() {
 }
 
 /**
- * One queue for both keys (items-journal-18): every append reads the counter and the log, decides,
+ * One queue for both keys (items-journal-18): every write reads the counter and the log, decides,
  * and writes inside one task, so two appends on this client never read the same counter. Created
  * on first use (foundry.utils.Semaphore), once per page.
  */
@@ -54,15 +54,43 @@ let ledgerQueue = null;
 const queue = () => (ledgerQueue ??= new foundry.utils.Semaphore(1));
 
 /**
- * Append `entry` to the ledger, serialised. Resolves `{ n, log, duplicate }`: on a duplicate of
- * the tail (same key within `dedupeMs`) nothing is written and `n` is the tail's. A failed write
- * rejects this caller only; later appends still run.
+ * Appends waiting for the next write (items-journal-19). The first append starts a task at once;
+ * every append that arrives while a write is in flight joins the next batch, and a batch is one
+ * counter write and one log write however many entries it holds.
+ */
+let batch = null;
+
+async function drain() {
+  const items = batch;
+  batch = null;                        // later arrivals start the next batch, queued behind this one
+  try {
+    let log = readLog(), counter = setting("counter") ?? 0;
+    const results = items.map(it => {
+      const r = appendEntry(log, counter, it.entry, it.dedupeMs);
+      ({ log, counter } = r);
+      return r;
+    });
+    if (results.some(r => !r.duplicate)) await writeLedger({ n: counter, log });
+    items.forEach((it, i) => it.resolve({ n: results[i].n, duplicate: results[i].duplicate, log }));
+  } catch (err) {
+    for (const it of items) it.reject(err);
+  }
+}
+
+/**
+ * Append `entry` to the ledger, serialised and coalesced. Resolves `{ n, log, duplicate }`: on a
+ * duplicate of the tail (same key within `dedupeMs`) nothing is written for it and `n` is the
+ * tail's. A failed write rejects the callers in that batch only; later appends still run.
  */
 export function appendLedger(entry, dedupeMs = DEDUPE_MS) {
-  return queue().add(async () => {
-    const r = appendEntry(readLog(), setting("counter") ?? 0, entry, dedupeMs);
-    if (!r.duplicate) await writeLedger({ n: r.n, log: r.log });
-    return r;
+  return new Promise((resolve, reject) => {
+    const item = { entry, dedupeMs, resolve, reject };
+    if (batch) {
+      batch.push(item);
+      return;
+    }
+    batch = [item];
+    queue().add(drain);
   });
 }
 

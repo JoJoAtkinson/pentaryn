@@ -20,7 +20,7 @@
  */
 
 import {
-  MODULE, DIR, FILE, DEDUPE_MS, makeEntry, normaliseDeltas, listLast, findEntry, searchLog,
+  MODULE, DIR, FILE, DEDUPE_MS, MIRROR_DEBOUNCE_MS, makeEntry, normaliseDeltas, listLast, findEntry, searchLog,
   briefOf, shouldCaptureDelete, restoreTarget,
 } from "./dropbin-core.mjs";
 import { readLog, appendLedger, clearLog } from "./settings.mjs";
@@ -45,14 +45,34 @@ async function writeMirror(log) {
 }
 
 /**
+ * The mirror, trailing-debounced (items-journal-19): a burst of drops uploads the whole ledger
+ * once, MIRROR_DEBOUNCE_MS after the last entry, reading the ledger when it fires. export() and
+ * clear() write at once and cancel a pending one.
+ */
+let mirrorTimer = null;
+let mirrorPending = false;
+function mirrorSoon() {
+  mirrorTimer ??= foundry.utils.debounce(() => {
+    mirrorPending = false;
+    writeMirror(readLog());
+  }, MIRROR_DEBOUNCE_MS);
+  mirrorPending = true;
+  mirrorTimer();
+}
+function cancelMirror() {
+  mirrorTimer?.cancel?.();
+  mirrorPending = false;
+}
+
+/**
  * Append one entry. GM-only — everything else routes here through socketlib.
  * De-dupes, because Item Piles hooks can fire on more than one client.
  */
 async function recordAsGM(entry) {
   if (!game.user.isGM) return null;
-  const { n, log, duplicate } = await appendLedger(entry, DEDUPE_MS);
+  const { n, duplicate } = await appendLedger(entry, DEDUPE_MS);
   if (duplicate) return n;
-  await writeMirror(log);
+  mirrorSoon();
 
   console.log(`${MODULE} | #${n} ${entry.reason}: ${entry.itemName} from ${entry.fromActorName}`);
   return n;
@@ -163,6 +183,7 @@ async function restore(n, target = null) {
 
 async function exportMirror() {
   if (!game.user.isGM) return false;
+  cancelMirror();
   const ok = await writeMirror(readLog());
   ui.notifications.info(ok ? _loc("PENTARYN_DROPBIN.export.ok", { path: `${DIR}/${FILE}` })
     : _loc("PENTARYN_DROPBIN.export.failed"));
@@ -176,6 +197,7 @@ async function clear() {
     content: _loc("PENTARYN_DROPBIN.clear.body", { count: readLog().length })
   }).catch(() => false);
   if (!confirmed) return false;
+  cancelMirror();
   await clearLog();
   await writeMirror([]);
   return true;
@@ -204,6 +226,11 @@ export function install(reg, ctx) {
   }, "ledger ready");
 }
 
+/** Forget the relay; a mirror still pending is written now rather than dropped. */
 export function uninstall() {
   resetSocket();
+  if (mirrorPending) {
+    cancelMirror();
+    void writeMirror(readLog());
+  }
 }
