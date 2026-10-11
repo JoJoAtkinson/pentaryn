@@ -42,7 +42,9 @@ export const DEFAULTS = Object.freeze({
   // usability Area 5 re-run
   spellPips: true,         // a spell or feature used from the HUD spends its Action / Reaction pip; pips survive a HUD re-bind
   quickenedSpell: true,    // Quickened Spell makes the next 1-Action spell this turn spend the Bonus pip, not the Action
-  helperTokenControl: true // your token is selected again when an area handle or a summon you held is deleted
+  helperTokenControl: true, // your token is selected again when an area handle or a summon you held is deleted
+  // usability Area 3 re-run (2026-10-11)
+  enterUses: true          // Enter in a usage window's number box (Lay on Hands' points) uses the ability
 });
 
 export function registerSettings() {

@@ -8,14 +8,14 @@
  * RollResolver per swing. `configure:false` (quick mode) skips the dialog, never the resolver.
  *
  * Closing a swing's dialog PAUSES the sequence (the strip offers Resume / Retarget / another weapon /
- * Stop). Esc while paused stops it. Swings not rolled stay on the Action pips, so a player can stop
+ * Stop). Esc while paused stops it. Stop with a swing's dialog open closes it unrolled. Swings not rolled stay on the Action pips, so a player can stop
  * and click a weapon or a cantrip by hand.
  */
 
 import * as core from "./combat-core.mjs";
 import { attackActivityOf, weaponsOf, weaponShape, updateTurn, focusLeft, flurryActivity, unarmedStrike, turnOf } from "./shapes.mjs";
 import * as strip from "./strip.mjs";
-import { quickMode } from "./settings.mjs";
+import { quickMode, setting } from "./settings.mjs";
 
 const MOD = core.MOD;
 const T = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
@@ -184,6 +184,45 @@ function render() {
 }
 
 /**
+ * Stop (or an abort) with this swing's roll window still open closes it unrolled (usability A11:
+ * "the sequence ends, no stray dialog"; U-10-11). Only the attack window of the swing in flight —
+ * never a damage window or a manual-dice Roll Resolution already being filled in.
+ */
+function closeSwingWindow() {
+  const uuid = tag?.activityUuid;
+  if (!uuid) return 0;
+  let n = 0;
+  for (const app of [...(foundry.applications.instances?.values?.() ?? [])]) {
+    if (!app?.element?.classList?.contains("roll-configuration")) continue;
+    let subject = null;
+    try { subject = app.config?.subject ?? null; } catch { subject = null; }
+    if (subject?.uuid !== uuid) continue;
+    app.close().catch?.(() => null);
+    n++;
+  }
+  return n;
+}
+
+/**
+ * A usage card this sequence posted that ended with nothing rolled under it and nothing consumed
+ * (Esc on the Nick swing, then Stop: the Dagger card stayed — usability Area 2 re-run). The
+ * tidyCancelledAttacks hook keeps such a card while the sequence may still use it; this is the end.
+ */
+function tidyOrigins(ids) {
+  if (!setting("tidyCancelledAttacks")) return;
+  for (const id of ids) {
+    const msg = id ? game.messages.get(id) : null;
+    if (!msg || msg.type !== "usage") continue;
+    const rolled = game.messages.contents.some(m => m.id !== msg.id && ((m.system?.origin?.id ?? m.system?.origin) === msg.id));
+    const orphan = core.orphanUsage({
+      mine: msg.author?.id === game.user.id, ageMs: Date.now() - (msg.timestamp ?? 0), rolled,
+      consumed: core.deltasConsumed(msg.system?.deltas), sequence: false
+    });
+    if (orphan) msg.delete().catch(err => console.warn(`${MOD} | tidy usage card`, err));
+  }
+}
+
+/**
  * Run a list of swings for an actor.
  * @param {Actor} actor
  * @param {{weaponId, mode, kind}[]} swings
@@ -212,12 +251,13 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
     swappable,
     paid,
     abort: false,
-    lastAdv: null
+    lastAdv: null,
+    created: new Set()      // usage cards this sequence posted (Flurry's own card is passed in, not ours)
   };
   const dispatch = (action) => { current.state = core.sequenceReducer(current.state, action); render(); };
   strip.show(stripContext(), {
     onAdv: (value) => dispatch({ type: "adv", value }),
-    onStop: () => { dispatch({ type: "stop" }); strip.choose({ type: "stop" }); },
+    onStop: () => { dispatch({ type: "stop" }); closeSwingWindow(); strip.choose({ type: "stop" }); },
     onQuick: async (on) => { await game.user.setFlag(MOD, "quick", !!on); render(); }
   });
 
@@ -262,6 +302,7 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
         if (!results) { dispatch({ type: "cancel" }); continue; }
         origin = results.message?.id ?? null;
         current.origins.set(item.id, origin);
+        if (origin) current.created.add(origin);
         Hooks.callAll("pentarynCombat.usage", activity, swing.kind);
       }
 
@@ -309,7 +350,10 @@ export async function runSwings(actor, swings, { event = null, title = null, ori
     if (first?.kind === "main" && actor.isOwner && actor.items.get(first.weaponId)) {
       actor.setFlag(MOD, "last.weapon", first.weaponId).catch(() => null);
     }
+    const created = [...(current?.created ?? [])];
     current = null;
+    // After dnd5e has posted any last attack (and the tidy hook's own 250 ms look).
+    if (created.length) setTimeout(() => { try { tidyOrigins(created); } catch (err) { console.warn(`${MOD} | tidy usage card`, err); } }, 400);
     strip.hide();
     // The bars re-check their follow-ups (Off-hand, Hew, Nick…) once the last swing's flag lands.
     Hooks.callAll("pentarynCombat.sequenceEnd", actor);
@@ -321,6 +365,7 @@ export function abortFor(actor) {
   if (!current) return;
   if (!actor || current.actor === actor || current.actor?.uuid === actor?.uuid) {
     current.abort = true;
+    closeSwingWindow();
     strip.choose({ type: "stop" });
   }
 }

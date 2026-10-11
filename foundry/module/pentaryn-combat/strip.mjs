@@ -104,11 +104,10 @@ function onClick(ev) {
     else handlers.onAdv?.(b.dataset.value);
   } else if (what === "stop") {
     for (const fn of cancelFns.splice(0)) fn();
+    // A swing's roll window still open closes unrolled (sequence.mjs onStop; U-10-11, which replaced
+    // U-10-4's "focus goes back to the open window" — there is no window left to roll).
     handlers.onStop?.();
     choose({ type: "stop" });
-    // Area 10 (U-2-10): Stop with a swing's window still open left the focus on Stop, so the
-    // strip's "Enter = Normal" did nothing. The open window's default button takes it back.
-    requestAnimationFrame(() => focusRollWindow({ force: true }));
   } else if (what === "resume") choose({ type: "resume" });
   else if (what === "retarget") choose({ type: "retarget" });
   else if (what === "swap") choose({ type: "swap", weaponId: b.dataset.id });

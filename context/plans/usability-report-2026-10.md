@@ -2,7 +2,7 @@
 title: "Usability report — October 2026 run"
 created: 2026-10-10
 last_modified: 2026-10-11
-status: re-run complete (one area at a time); two bugs owed (Re-run §R.4 1–2)
+status: re-run follow-up done; open: Lay on Hands apply for players, Divine Smite clicks (Follow-up §F.3)
 tags: [plan, foundry, dnd5e, argon, usability, playtest, report]
 ---
 
@@ -13,6 +13,68 @@ what still costs clicks, what got fixed, and what to look at at the next session
 **Not this file:** the cases themselves → [`usability-test-plan-2026-10.md`](usability-test-plan-2026-10.md) ·
 each applied change, with its revert and retest steps → [`usability-changes-2026-10.md`](usability-changes-2026-10.md) ·
 how Full Attack and the riders were built → [`melee-streamlining.md`](melee-streamlining.md) (§15.4 has the 24 build-review fixes).
+
+## Re-run follow-up (2026-10-11)
+
+Two stages after the one-at-a-time re-run: **Area 3** (riders and follow-ups, second re-run) and
+**Area 2 A11 + Area 10** (retest of U-10-10..12). This section takes precedence over the re-run below.
+
+### F.1 Verdict per test
+
+| Test | Verdict | Notes |
+|---|---|---|
+| B1 Steady Aim + Rapier + Sneak | pass | 5 clicks (budget 5); hint text correct; Bonus pip spent |
+| B2 hint tracks ally position | pass | synthetic pointerenter, not a real hover |
+| B3 nat 20 then Sneak, manual dice | pass | one 6d6 resolver with doubled dice |
+| B4 Auto Sneak + real Undo click | pass | Undo resets riders; the old card's total is not edited (U-3-18 marks it) |
+| B5 Sneak on own turn then OA | pass | 4 clicks (+1 to select the Rogue token) |
+| B6 ranged Sneak, shortbow | pass | 4 clicks |
+| B7 Nick shortsword + dagger | pass | Sneak on both cards, one use |
+| C1 Full Attack then Flurry; cancel | pass | Flurry part 3 clicks (budget 3); cancel pauses with a Resume bar |
+| C2 Martial Arts strike / C3 Flurry at 0 Focus | pass | 2 clicks / greyed with tooltip |
+| D1 Rage, Reckless, greataxe, Frenzy | friction | 8 clicks vs 6; Reckless effect lingered (fixed, U-3-16); stale Frenzy button (fixed, U-3-17) |
+| E1 GWM + Hew / E2 Pole Strike | pass | Hew 2 clicks; Pole Strike appears after the attack, 2 clicks |
+| F1 Longsword then Divine Smite | friction | 8 clicks vs 5 (activity chooser, slot picker, damage dialog); open design gap |
+| F2 Lay on Hands on an ally | **fail** | pool and pip spent, target HP never changes for a player (GM-only apply); 7 clicks vs 3; open (P-3-h) |
+| P(B1,C1) own dice | pass | each die asked once, in order |
+| N1 out-of-combat New turn | pass | |
+| HUD follows at combat start | pass | |
+| A11 Stop after one swing, cantrip | pass | 6 clicks, matches U-2-10 / U-10-11 |
+| Area 10 HUD follow at combat start | pass | no click; "Argon off" variant not tried |
+| Area 10 Nick then Off-hand (TWF clone) | pass | a Dual Wielder is offered the second extra attack (U-10-12); the task wording "no non-Light off-hand after Nick" was wrong |
+| A5 Shortsword x2 + Nick dagger | pass | 4 clicks (budget 4) |
+| A7 Off-hand longsword | pass | 2 clicks after the Attack action (budget 2); both swings missed, damage unverified |
+| B0 / C0 baselines | blocked | not re-run; first-run numbers stand |
+
+The Area 3 final pass was a smoke check only (login on a `zz<n>` host, scratch combat, one Rapier swing,
+no product errors); the full results above are the tester's pass, not re-run live a second time.
+
+### F.2 Fixes (ledger: `usability-changes-2026-10.md`)
+
+- U-3-16 Reckless Attack's effect ends at the Barbarian's next turn start.
+- U-3-17 A rider button leaves the card when the turn moves on (stale Frenzy / Pole Strike buttons).
+- U-3-18 Auto Sneak Attack's Undo marks its damage card.
+- U-3-19 Last turn's open drawer does not come back at the next turn.
+- U-3-20 Enter in a usage window's number box uses the ability.
+- U-3-21 Rage's self-effect read through `getEffect()` (dnd5e 6.0 deprecation warning).
+- U-10-10 The HUD follows the first combatant at combat start, also when Argon was off.
+- U-10-11 Stop closes an open swing window; a stopped run's empty usage cards go.
+- U-10-12 An Off-hand that is Dual Wielder's says so.
+
+### F.3 Still open
+
+- **F2 Lay on Hands is not applied for a player** (P-3-h). The "one Enter" claim there is false: Enter only commits the amount.
+- **F1 Divine Smite costs 8 clicks** (budget 5); critical hits need the dialog's Critical Hit button.
+- Auto Sneak Undo does not edit the already-rolled card total (it marks it, U-3-18).
+- Harness: a hidden tab suppresses pop-ups and Dice So Nice holds chat cards; the giant d20 never clears (P-3-i).
+- Test gaps: non-Dual-Wielder off-hand after Nick in a player tab, the off-hand Longsword's damage, A5 Stop-after-swing-2, the Nick button returning next turn, U-10-10 with Argon off, B0/C0 baselines, the Hew / Pole Strike pulse, E2 tooltip text.
+- Task wording to fix in the plan: "no non-Light off-hand after Nick" holds only without Dual Wielder.
+
+### F.4 Cleanup
+
+All ZZ fixtures deleted (ZZ Arena scene, ZZ usability folder, 9 ZZ actors, ZZ Tester user, its journal, 23 ZZ chat messages).
+Real PCs (Caven, Marrith, Talo) compared field by field against `.state/core-rollback/rerun-followup-pcs-before.json`: no differences.
+Drow Prison active and paused, 0 combats.
 
 ## Re-run (2026-10-10/11, one area at a time)
 

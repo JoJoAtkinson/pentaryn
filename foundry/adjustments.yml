@@ -390,7 +390,7 @@ adjustments:
     modules: [pentaryn-combat]
     files: [foundry/module/pentaryn-combat/turnflow.mjs]
     markers: ["ui.ARGON.bind", "token.control({ releaseOthers: true })"]
-    what: binds Argon to the one token left controlled after a group release, and controls a player's own combatant's token at its turn start when Argon is on (setting hudFollows); a player's targets are released when their turn ends (setting clearTargetsAfterTurn)
+    what: binds Argon to the one token left controlled after a group release, and controls a player's own combatant's token at its turn start when Argon is on, and at combat start looks again once Argon's own start bind is done even if Argon was off when the turn began (setting hudFollows); a player's targets are released when their turn ends (setting clearTargetsAfterTurn)
     why: clicking one token of a selected group never fires controlToken(true) for it, so Argon stayed on another token; Argon does not follow the turn
     native_when: Argon follows the active combatant / the remaining controlled token
     retire_class: guarded
@@ -944,5 +944,27 @@ adjustments:
     what: Argon's MovementHud.updateMovement is called 50 ms after an Active Effect on the HUD's actor is created, updated or deleted, after a Speed edit, and on every turn change
     why: Argon redraws the movement readout only on token movement-history updates, so a Dash effect (and its end) left the readout at the old maximum (Area 10, U-10-3)
     native_when: Argon's movement HUD re-renders on actor or effect updates
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-argon-drawer-turn-close
+    packages: [enhancedcombathud]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow.mjs]
+    markers: ["closeDrawersOf", "_hudState"]
+    what: at a combat turn boundary the drawers open on the HUD of the creature whose turn ended or began are collapsed and their saved `visible` in Argon's private `_hudState` map is set false; a restored-open drawer is placed once its button is laid out (up to ~10 frames) (setting drawerNearButton)
+    why: Argon restores each drawer from its per-actor panel state on every render, so a Bonus-bar Cast Spell drawer opened on one turn reopened at the next turn start, unplaced, over the Action bar's Cast Spell button (Area 3 re-run, F1)
+    native_when: Argon closes drawers on a turn change, or exposes a public way to reset panel state
+    retire_class: safe
+    check: make foundry-combat-check
+
+  - id: combat-dnd5e-usage-enter-uses
+    packages: [dnd5e]
+    modules: [pentaryn-combat]
+    files: [foundry/module/pentaryn-combat/turnflow.mjs]
+    markers: ["enterUses", "activity-usage"]
+    what: Enter in a number/text box of a dnd5e ActivityUsageDialog dispatches the box's change, waits for the window's re-render (or 400 ms) and clicks its `[data-action="use"]` button (setting enterUses)
+    why: the usage dialog's Use button is type="button" and the form re-renders on change, so Enter only committed Lay on Hands' points and a second click was needed (Area 3 re-run, F2)
+    native_when: dnd5e's usage dialog submits on Enter
     retire_class: safe
     check: make foundry-combat-check

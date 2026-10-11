@@ -23,6 +23,8 @@
  *   damageAtZero                                 a Death Saving Throw failure for damage taken at 0 HP
  *   portraitExtras / orphanUsage                 conditions on the HUD portrait; a cancelled attack's empty card
  *   pipFor / spentPips / reactionSpent           which pip a spell or feature spends; Quickened Spell
+ *   hudFollowPlan / offhandVia / deltasConsumed  HUD follow at combat start; which rule an Off-hand is; a used card
+ *   riderRolled                                  what an auto rider's dice came to on its damage card (Undo)
  */
 
 export const MOD = "pentaryn-combat";
@@ -834,14 +836,19 @@ export function dashChanges(movement = {}) {
 
 /**
  * Effect ids to remove at one of an actor's turn boundaries. Dodge (status "dodging", however it was
- * applied) lasts until the start of your next turn; our Dash and Disengage effects carry
- * `until: "turnEnd"` (the current turn only).
- * @param {{id: string, statuses?: string[], until?: string|null}[]} effects
+ * applied) and Reckless Attack last until the start of your next turn; our Dash and Disengage effects
+ * carry `until: "turnEnd"` (the current turn only). Each kind is swept only while its setting is on.
+ * @param {{id: string, statuses?: string[], until?: string|null, reckless?: boolean}[]} effects
  * @param {"turnStart"|"turnEnd"} event
+ * @param {{specialActions?: boolean, reckless?: boolean}} [on]  settings specialActions / recklessToggle
  */
-export function expiringAt(effects = [], event) {
-  return (effects ?? []).filter(e => e && (
-    (event === "turnStart" && (e.statuses ?? []).includes("dodging")) || (!!e.until && e.until === event)
+export function expiringAt(effects = [], event, { specialActions = true, reckless = true } = {}) {
+  return (effects ?? []).filter(e => e && (e.reckless ? reckless : specialActions) && (
+    (event === "turnStart" && (e.statuses ?? []).includes("dodging"))
+    // Reckless Attack lasts "until the start of your next turn" (PHB 2024). Its effect was left on
+    // the actor at 0 rounds (Area 3 re-run, D1): any Reckless effect on the actor goes at turn start.
+    || (event === "turnStart" && !!e.reckless)
+    || (!!e.until && e.until === event)
   )).map(e => e.id);
 }
 
@@ -1165,4 +1172,69 @@ export function clampToView({ left = 0, top = 0, width = 0, height = 0, viewW = 
   const t = Math.max(margin, Math.min(t0, viewH - h - margin));
   const L = Math.round(l), Tp = Math.round(t);
   return (L === Math.round(l0) && Tp === Math.round(t0)) ? null : { left: L, top: Tp };
+}
+
+/* ── usability re-run, Area 10 follow-up (2026-10-11) ─────────────────────── */
+
+/**
+ * What the HUD does when one of your creatures' turns begins (U-1-9, U-10-2, U-10-10). `now`: show
+ * it at once, only while Argon is on. `recheck`: look again (ms) once Argon's own start-of-combat
+ * bind is done — at combat start ALSO while Argon is still off: after a deleted combat Argon is off
+ * when this hook fires, and its own updateCombat handler (which runs after it) switches it on and
+ * binds `controlled[0] ?? _token`, the old token. Each recheck still needs Argon on by then.
+ * @returns {{now: boolean, recheck: number[]}}
+ */
+export function hudFollowPlan({ enabled = false, owner = false, onScene = false, argonOn = false, combatStart = false } = {}) {
+  if (!enabled || !owner || !onScene) return { now: false, recheck: [] };
+  return { now: !!argonOn, recheck: combatStart ? [300, 1200] : [] };
+}
+
+/**
+ * Which rule an Off-hand follow-up comes from (PHB 2024). The Light property gives ONE extra attack,
+ * with a different Light weapon; Nick moves that one into the Attack action. Dual Wielder's Enhanced
+ * Dual Wielding is a SECOND, separate Bonus-action attack with any Melee weapon that lacks Two-Handed
+ * (a Longsword qualifies). So an Off-hand button is Dual Wielder's when its weapon is not Light, or
+ * when the Light attack is spent by Nick or offered as Nick beside it (Area 10 re-run: "Off-hand:
+ * Longsword after Nick" read as a rules bug because the tooltip named only the Light property).
+ * @param {object} p
+ * @param {object|null} p.weapon     the Off-hand weapon's shape
+ * @param {object|null} [p.turn]     readTurn() result
+ * @param {object[]} [p.offered]     the followUps() list it came from
+ * @returns {"light"|"dual-wielder"}
+ */
+export function offhandVia({ weapon = null, turn = null, offered = [] } = {}) {
+  if (!weapon?.light) return "dual-wielder";
+  if (turn?.nick || (offered ?? []).some(f => f?.kind === "nick")) return "dual-wielder";
+  return "light";
+}
+
+/** A usage card's `system.deltas` show something consumed (a use, a slot, ammunition, an item). */
+export function deltasConsumed(deltas) {
+  if (!deltas || typeof deltas !== "object") return false;
+  if ((deltas.actor ?? []).length) return true;
+  return Object.values(deltas.item ?? {}).some(list => (list ?? []).length);
+}
+
+/**
+ * What an auto rider's dice rolled on the damage card it was added to (Area 3 re-run, B4: after Undo
+ * the card still read "1d8 + 3 + 3d6 = 22" with nothing to say how much of it was the rider). The
+ * rider's dice are the last part of the weapon's damage formula, so the match is the LAST die with
+ * the rider's faces and its count, or twice its count (a Critical Hit doubles the dice).
+ * @param {string} dice  the rider's dice as added ("3d6")
+ * @param {{number: number, faces: number, total: number}[]} terms  the damage roll's dice, in order
+ * @returns {{formula: string, total: number}|null}
+ */
+export function riderRolled(dice, terms = []) {
+  const m = /^\s*(\d+)d(\d+)\s*$/i.exec(String(dice ?? ""));
+  if (!m) return null;
+  const n = Number(m[1]);
+  const faces = Number(m[2]);
+  const list = Array.isArray(terms) ? terms : [];
+  for (let i = list.length - 1; i >= 0; i--) {
+    const t = list[i];
+    if (Number(t?.faces) !== faces || ![n, 2 * n].includes(Number(t?.number))) continue;
+    const total = Number(t.total);
+    return Number.isFinite(total) ? { formula: `${t.number}d${faces}`, total } : null;
+  }
+  return null;
 }

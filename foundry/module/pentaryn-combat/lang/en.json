@@ -31,6 +31,7 @@
     },
     "FollowUpText": {
       "offhand": "The Light property's extra attack, as a Bonus Action. Your ability modifier isn't added to its damage unless it is negative (or you have Two-Weapon Fighting).",
+      "offhand-dual-wielder": "Dual Wielder: a second extra attack as a Bonus Action, separate from the Light property's one (Nick), with any one-handed melee weapon other than the Light weapon you attacked with. Your ability modifier isn't added to its damage unless it is negative (or you have Two-Weapon Fighting).",
       "nick": "Nick: the Light extra attack made as part of the Attack action, so it costs no Bonus Action. Once per turn.",
       "flurry": "Spend 1 Focus Point and make {n} Unarmed Strikes as a Bonus Action. Each strike opens its own attack roll.",
       "martial-arts": "One Unarmed Strike as a Bonus Action.",
@@ -57,7 +58,7 @@
       "Quick": "Quick",
       "QuickHint": "After the first swing, roll the rest without the dialog (same Normal / Advantage / Disadvantage). Manual dice still ask for each roll.",
       "Stop": "Stop",
-      "StopHint": "End the Full Attack here. With a roll window open, that roll still counts if you roll it, and no further window opens. Swings not taken stay available.",
+      "StopHint": "End the Full Attack here. An open roll window closes without rolling. Swings not taken stay available.",
       "SwapHint": "Use {weapon} for the remaining swings",
       "PickTarget": "Target a creature for the next swing (Stop cancels).",
       "AlreadyRunning": "A Full Attack is already running — finish or stop it first.",
@@ -115,10 +116,12 @@
       "Used": "{name} was already used this turn.",
       "Undo": "Undo",
       "UndoHint": "It missed: give back this turn's use (the GM just doesn't apply this damage).",
-      "Undone": "{name} is available again this turn.",
+      "Undone": "{name} is available again this turn. The damage card shows it struck through.",
       "Stale": "That attack was on an earlier turn — use the button on this turn's attack card.",
       "AskGM": "(none seen — ask your GM)",
-      "RecklessWhere": "(turn it on from the Special bar)"
+      "RecklessWhere": "(turn it on from the Special bar)",
+      "UndoneCard": "undone: {formula} rolled {n}, so this card deals {total}",
+      "UndoneCardPlain": "undone: leave its dice off this card"
     },
     "Setting": {
       "fullAttack": {
@@ -236,6 +239,10 @@
       "helperTokenControl": {
         "Name": "Your token comes back when a helper token goes",
         "Hint": "When an area handle you dragged, or a summon you had selected (Flaming Sphere), is deleted and nothing else is selected, your caster's token is selected again, so the HUD stays up. Off: nothing is selected and the HUD closes."
+      },
+      "enterUses": {
+        "Name": "Enter in a usage window uses the ability",
+        "Hint": "In a usage window's number box (Lay on Hands' points, a scaling amount), Enter takes the number and presses Use Ability. Off: Enter only takes the number; click Use Ability."
       }
     },
     "Reckless": {

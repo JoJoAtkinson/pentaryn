@@ -629,6 +629,80 @@ check("355 clampToView: a window below the bottom edge moves up; one that fits s
    core.clampToView({ left: 0, top: 0, width: 400, height: 300, viewW: 0, viewH: 0 })],
   [{ left: 1192, top: 692 }, null, { left: 8, top: 8 }, null]);
 
+/* ── Area 10 re-run follow-up: HUD follow at combat start, Off-hand source, Stop tidy ─ */
+
+check("356 combat start with Argon still off (a deleted combat before): no follow now, but look again",
+  core.hudFollowPlan({ enabled: true, owner: true, onScene: true, argonOn: false, combatStart: true }), { now: false, recheck: [300, 1200] });
+check("357 combat start with Argon on: follow now and look again",
+  core.hudFollowPlan({ enabled: true, owner: true, onScene: true, argonOn: true, combatStart: true }), { now: true, recheck: [300, 1200] });
+check("358 a later turn: follow now only while Argon is on, never a recheck",
+  [core.hudFollowPlan({ enabled: true, owner: true, onScene: true, argonOn: true, combatStart: false }),
+   core.hudFollowPlan({ enabled: true, owner: true, onScene: true, argonOn: false, combatStart: false })],
+  [{ now: true, recheck: [] }, { now: false, recheck: [] }]);
+check("359 setting off, not your creature, or its token on another scene: nothing",
+  [core.hudFollowPlan({ enabled: false, owner: true, onScene: true, argonOn: true, combatStart: true }),
+   core.hudFollowPlan({ enabled: true, owner: false, onScene: true, argonOn: true, combatStart: true }),
+   core.hudFollowPlan({ enabled: true, owner: true, onScene: false, argonOn: true, combatStart: true }),
+   core.hudFollowPlan()],
+  [{ now: false, recheck: [] }, { now: false, recheck: [] }, { now: false, recheck: [] }, { now: false, recheck: [] }]);
+{
+  // TWF Fighter retest shape: Shortsword x2 + Nick Dagger, Longsword equipped, Dual Wielder.
+  const nickDone = recordSwing(after("shortsword", "shortsword"), { kind: "nick", weaponId: "dagger" });
+  const list = followUps({ turn: nickDone, weapons: a5, enhancedDualWielding: true });
+  check("360 after Nick with Dual Wielder the Longsword Off-hand stays (PHB: a second, separate extra attack)", list,
+    [{ kind: "offhand", weaponId: "longsword" }]);
+  check("361 …and it is Dual Wielder's attack, not the Light property's", core.offhandVia({ weapon: longsword, turn: nickDone, offered: list }), "dual-wielder");
+  const before = after("shortsword");
+  const beside = followUps({ turn: before, weapons: [shortsword, dagger], enhancedDualWielding: true });
+  check("362 a Light Off-hand offered beside Nick is Dual Wielder's too (Nick takes the Light one)",
+    core.offhandVia({ weapon: dagger, turn: before, offered: beside }), "dual-wielder");
+  const hatchet = W("hatchet", { light: true });
+  const plain = followUps({ turn: before, weapons: [shortsword, hatchet] });
+  check("363 no Nick anywhere, a Light partner: the Light property's attack", [plain, core.offhandVia({ weapon: hatchet, turn: before, offered: plain })],
+    [[{ kind: "offhand", weaponId: "hatchet" }], "light"]);
+  check("364 a non-Light Off-hand weapon is always Dual Wielder's; no weapon reads as Dual Wielder", [
+    core.offhandVia({ weapon: longsword, turn: before, offered: [] }), core.offhandVia({})], ["dual-wielder", "dual-wielder"]);
+  check("365 no Dual Wielder after Nick: no Off-hand at all (one Light extra attack per turn)",
+    followUps({ turn: nickDone, weapons: a5, enhancedDualWielding: false }), []);
+}
+check("366 deltasConsumed: an actor or item delta counts; empty or missing deltas don't",
+  [core.deltasConsumed({ actor: [{ keyPath: "x" }] }), core.deltasConsumed({ item: { a: [{ keyPath: "y" }] } }),
+   core.deltasConsumed({ actor: [], item: { a: [] } }), core.deltasConsumed(null), core.deltasConsumed("x")],
+  [true, true, false, false, false]);
+check("367 a stopped sequence's card with nothing rolled and nothing consumed is an orphan; a rolled one is kept",
+  [orphanUsage({ mine: true, ageMs: 1000, rolled: false, consumed: core.deltasConsumed({ actor: [], item: {} }), sequence: false }),
+   orphanUsage({ mine: true, ageMs: 1000, rolled: true, consumed: false, sequence: false })], [true, false]);
+{
+  // A11: Stop is dispatched while swing 2's window is open; the closed window's cancel changes nothing.
+  let s = sequenceReducer(null, { type: "start", swings: planSequence({ weaponId: "longsword", count: 2 }) });
+  s = sequenceReducer(s, { type: "rolled" });
+  s = sequenceReducer(s, { type: "stop" });
+  const closed = sequenceReducer(s, { type: "cancel" });
+  check("368 Stop then the closed window: stopped after 1 rolled, swing 2 not rolled", [closed.status, closed.rolled, closed.swings.map(x => x.result ?? null)],
+    ["stopped", 1, ["rolled", null]]);
+  check("369 …and one main swing stays on the pips", swingsLeft(2, recordSwing(freshTurn("c:1:a"), { kind: "main", weaponId: "longsword" }), { inCombat: true }), 1);
+}
+
+{
+  // Area 3 re-run (D1): the Reckless effect stayed on the Barbarian at 0 rounds into the next turn.
+  const fx2 = [{ id: "r", reckless: true }, { id: "d", statuses: ["dodging"] }, { id: "dash", until: "turnEnd" }, { id: "r2", reckless: true, until: "turnStart" }];
+  check("370 turn start ends Reckless (with or without our `until` flag) and Dodge", expiringAt(fx2, "turnStart"), ["r", "d", "r2"]);
+  check("371 turn end leaves Reckless on", expiringAt(fx2, "turnEnd"), ["dash"]);
+  check("372 recklessToggle off: Reckless is left alone, Dodge still ends",
+    expiringAt(fx2, "turnStart", { specialActions: true, reckless: false }), ["d"]);
+  check("373 specialActions off: only Reckless ends", expiringAt(fx2, "turnStart", { specialActions: false, reckless: true }), ["r", "r2"]);
+}
+{
+  // Area 3 re-run (B4): what an Undone auto Sneak Attack came to on its card.
+  const d = (number, faces, total) => ({ number, faces, total });
+  check("374 riderRolled: the last die of the rider's size and count (Rapier 1d8 + 3d6)", core.riderRolled("3d6", [d(1, 8, 5), d(3, 6, 11)]), { formula: "3d6", total: 11 });
+  check("375 …a Shortsword's own d6 is not mistaken for it", core.riderRolled("3d6", [d(1, 6, 4), d(3, 6, 9)]), { formula: "3d6", total: 9 });
+  check("376 …a Critical Hit doubles the rider's dice", core.riderRolled("3d6", [d(2, 8, 9), d(6, 6, 21)]), { formula: "6d6", total: 21 });
+  check("377 …no match, odd dice or nothing: null",
+    [core.riderRolled("3d6", [d(1, 8, 5)]), core.riderRolled("@scale", [d(3, 6, 9)]), core.riderRolled("3d6"), core.riderRolled(null, null)],
+    [null, null, null, null]);
+}
+
 /* ── report ───────────────────────────────────────────────────────────────── */
 
 if (failures.length) {

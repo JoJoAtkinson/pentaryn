@@ -15,6 +15,7 @@
 //   hudFollows            the HUD follows the one token left selected, and your combatant's turn
 //   clearTargetsAfterTurn your targets are released when your turn ends
 //   helperTokenControl    your token is selected again when a handle or summon you held is deleted
+//   enterUses             Enter in a usage window's number box (Lay on Hands' points) uses the ability
 
 import * as core from "./combat-core.mjs";
 import { setting } from "./settings.mjs";
@@ -176,8 +177,12 @@ Hooks.on("renderActionPanelArgonComponent", (panel) => {
 /* ── turn boundaries: Dodge / Dash / Disengage end; targets; the HUD follows ── */
 
 async function sweep(actor, event) {
-  if (!actor?.effects || !setting("specialActions")) return;
-  const ids = core.expiringAt(actor.effects.map(e => ({ id: e.id, statuses: [...(e.statuses ?? [])], until: e.getFlag?.(MOD, "until") ?? null })), event);
+  const on = { specialActions: setting("specialActions"), reckless: setting("recklessToggle") };
+  if (!actor?.effects || (!on.specialActions && !on.reckless)) return;
+  const ids = core.expiringAt(actor.effects.map(e => ({
+    id: e.id, statuses: [...(e.statuses ?? [])], until: e.getFlag?.(MOD, "until") ?? null,
+    reckless: !!e.getFlag?.(MOD, "reckless") || core.isRecklessEffect(e)
+  })), event, on);
   if (ids.length) await actor.deleteEmbeddedDocuments("ActiveEffect", ids);
 }
 
@@ -204,22 +209,24 @@ Hooks.on("combatTurnChange", (combat, previous, current) => {
     // The Reaction comes back at the start of your turn (combat.mjs records it; hud.mjs relights the pip).
     if (next?.actor?.getFlag?.(MOD, "reaction")) next.actor.setFlag(MOD, "reaction", null).catch(() => null);
   }
+  closeDrawersOf([prior?.actor, next?.actor]);
   if (game.user.isGM) return;
   // Your turn ended: last turn's target is stale (it used to send the next swing at a creature 15 ft away).
   if (setting("clearTargetsAfterTurn") && prior?.actor?.isOwner) releaseTargets();
   // Your creature's turn began: the HUD shows it (a player with a companion, or several tokens).
-  if (setting("hudFollows") && next?.actor?.isOwner && argonOn()) {
-    const token = next.token?.object;
-    if (token && token.scene === canvas.scene) {
-      followTo(token);
-      // Combat start (Area 10): Argon's own updateCombat handler runs after this hook and binds
-      // `controlled[0] ?? _token`, and a failed control left the HUD on the old token or closed it.
-      // Look again once Argon is done; only while this combatant's turn is still the current one.
-      if (!ended) setTimeout(() => {
-        if (combat.combatant?.id === next.id && argonOn() && ui.ARGON?._token !== token && !token.destroyed) followTo(token);
-      }, 300);
-    }
-  }
+  const token = next?.token?.object ?? null;
+  const plan = core.hudFollowPlan({
+    enabled: setting("hudFollows"), owner: !!next?.actor?.isOwner, onScene: !!token && token.scene === canvas.scene,
+    argonOn: argonOn(), combatStart: !ended
+  });
+  if (plan.now) followTo(token);
+  // Combat start (Area 10): Argon's own updateCombat handler runs after this hook and binds
+  // `controlled[0] ?? _token`. After a deleted combat Argon is still off here, so the look-again
+  // must not depend on Argon being on now (U-10-10); it needs Argon on by then, and this
+  // combatant's turn still the current one.
+  for (const ms of plan.recheck) setTimeout(() => {
+    if (combat.combatant?.id === next.id && argonOn() && ui.ARGON?._token !== token && !token.destroyed) followTo(token);
+  }, ms);
 });
 
 /**
@@ -346,11 +353,41 @@ document.addEventListener("keydown", (ev) => {
   dialog.close();
 }, true);
 
-function consumedAny(deltas) {
-  if (!deltas) return false;
-  if ((deltas.actor ?? []).length) return true;
-  return Object.values(deltas.item ?? {}).some(list => (list ?? []).length);
+/* ── Enter in a usage window's box uses the ability (setting enterUses) ─── */
+// Area 3 re-run (F2): Lay on Hands' "how many points" box took a click on Use Ability after typing,
+// or Enter then the click. dnd5e's usage window has no submit button (Use is type="button") and
+// re-renders on every change, so Enter only committed the number. Now Enter commits it, waits for
+// the window to re-render with it, and presses Use. Text and number boxes only; a select keeps Enter.
+
+const ENTER_TYPES = new Set(["number", "text", "range"]);
+
+function pressUse(app) {
+  let done = false;
+  const press = () => {
+    if (done) return;
+    done = true;
+    Hooks.off("renderActivityUsageDialog", hook);
+    if (!app?.rendered) return;
+    app.element?.querySelector?.('[data-action="use"]:not([disabled])')?.click();
+  };
+  const hook = (rendered) => { if (rendered === app) requestAnimationFrame(press); };
+  Hooks.on("renderActivityUsageDialog", hook);
+  setTimeout(press, 400);   // a value that did not change re-renders nothing
 }
+
+document.addEventListener("keydown", (ev) => {
+  if (ev.key !== "Enter" || ev.isComposing || ev.shiftKey || ev.altKey || ev.ctrlKey || ev.metaKey) return;
+  const input = ev.target;
+  if (!(input instanceof HTMLInputElement) || !ENTER_TYPES.has(input.type)) return;
+  const host = input.closest(".application.activity-usage");
+  if (!host || !setting("enterUses")) return;
+  const app = foundry.applications.instances.get(host.id);
+  if (!app) return;
+  ev.preventDefault();
+  ev.stopPropagation();
+  input.dispatchEvent(new Event("change", { bubbles: true }));
+  pressUse(app);
+}, true);
 
 Hooks.on("closeAttackRollConfigurationDialog", (app) => {
   try {
@@ -365,7 +402,7 @@ Hooks.on("closeAttackRollConfigurationDialog", (app) => {
       const rolled = game.messages.contents.some(m => m.id !== msg.id && ((m.system?.origin?.id ?? m.system?.origin) === msg.id));
       const keep = !core.orphanUsage({
         mine: msg.author?.id === game.user.id, ageMs: Date.now() - (msg.timestamp ?? 0), rolled,
-        consumed: consumedAny(msg.system?.deltas), sequence: !!running()
+        consumed: core.deltasConsumed(msg.system?.deltas), sequence: !!running()
       });
       if (!keep) msg.delete().catch(err => console.warn(`${MOD} | tidy usage card`, err));
     }, 250);
@@ -582,7 +619,9 @@ async function applySelfEffect(activity, results) {
   if (!actor?.isOwner || !message?.id || activity.target?.affects?.type !== "self") return;
   const profiles = activity.applicableEffects ?? [];
   if (profiles.length !== 1) return;
-  const effect = profiles[0]?.effect;
+  // dnd5e 6: a profile's `effect` getter is deprecated ("Activity effects should now be accessed
+  // using getEffect()", logged on every Rage); getEffect() may return a Promise.
+  const effect = await (typeof profiles[0]?.getEffect === "function" ? profiles[0].getEffect() : profiles[0]?.effect);
   if (!effect) return;
   // Already on from this source (the player clicked Apply first, or a second use): leave it.
   const live = actor.effects.find(e => (e._stats?.duplicateSource === effect.uuid || e._stats?.compendiumSource === effect.uuid) && !e.disabled);
@@ -695,17 +734,57 @@ Hooks.on("renderButtonPanelButtonArgonComponent", (button) => {
     // Area 10: a bar re-render (Pole Strike appearing) builds a new drawer that Argon reopens from
     // its saved state inside its own render, before this wrapper exists, so it opened at the HUD's
     // far left, detached from its button. Place it once the bar has laid out.
-    if (panel.element?.classList?.contains("show")) requestAnimationFrame(() => { try { placeDrawer(button, panel); } catch { /* Argon's place */ } });
+    if (panel.element?.classList?.contains("show")) placeWhenLaidOut(button, panel);
   } catch { /* never break Argon's render */ }
 });
+
+/**
+ * Place an open drawer once its button is on the page. A whole-HUD render (a new turn) attaches the
+ * bars after the buttons render, so one frame was not always enough and a restored drawer stayed at
+ * Argon's far left, over the Action bar's Cast Spell (Area 3 re-run, F1). Up to ~10 frames.
+ */
+function placeWhenLaidOut(button, panel, tries = 10) {
+  requestAnimationFrame(() => {
+    try {
+      if (!panel?.element?.classList?.contains("show")) return;
+      const btn = button?.element;
+      if (btn?.isConnected && btn.getBoundingClientRect().width > 0) placeDrawer(button, panel);
+      else if (tries > 1) placeWhenLaidOut(button, panel, tries - 1);
+    } catch { /* Argon's place */ }
+  });
+}
 
 /** Re-place the open drawers of a bar whose buttons moved (hud.mjs calls it after recomposing). */
 export function placeOpenDrawers(actionPanel) {
   for (const b of actionPanel?._buttons ?? []) {
     const p = b?.panel;
     if (!p?.element?.classList?.contains?.("show")) continue;
-    requestAnimationFrame(() => { try { placeDrawer(b, p); } catch { /* Argon's place */ } });
+    placeWhenLaidOut(b, p);
   }
+}
+
+/**
+ * A turn boundary closes the drawers (Cast Spell, Use Feature…) left open on the HUD of the creature
+ * whose turn ended or began, and forgets that they were open: Argon restores a drawer from its saved
+ * panel state on every render, so the Paladin's Bonus-bar Cast Spell drawer from F1 was open again at
+ * the start of the next turn (Area 3 re-run). Setting drawerNearButton.
+ */
+function closeDrawersOf(actors) {
+  try {
+    if (!setting("drawerNearButton")) return;
+    const hud = ui.ARGON;
+    const states = hud?._hudState;
+    let shown = false;
+    for (const actor of actors) {
+      if (!actor) continue;
+      const state = states?.get?.(actor);
+      if (state && typeof state === "object") {
+        for (const v of Object.values(state)) if (v && typeof v === "object" && "visible" in v) v.visible = false;
+      }
+      if (hud?._actor === actor) shown = true;
+    }
+    if (shown) hud.collapseAllPanels?.();
+  } catch { /* never break a turn change */ }
 }
 
 /* ── Argon's pips: one updateActionUse call always settles them ──────────── */

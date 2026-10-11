@@ -230,5 +230,11 @@ body.pentaryn-combat-picker-cue .ech-target-picker::after {
   pointer-events: auto;
 }
 .chat-message .pentaryn-combat-auto button[data-undo]:hover { background: rgba(159, 146, 117, 0.2); }
+/* Area 3 re-run (B4): an Undone auto rider is struck through, with what the card deals without it. */
+.chat-message p.supplement.pentaryn-combat-auto.pentaryn-combat-undone {
+  color: var(--color-text-secondary, #7a7971);
+  border-left-color: currentColor;
+}
+.chat-message .pentaryn-combat-undone-text { font-weight: 400; font-style: italic; }
 
 .extended-combat-hud .pentaryn-combat-disabled { opacity: 0.4; filter: grayscale(1); }

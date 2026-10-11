@@ -3691,3 +3691,390 @@ foundry/module/pentaryn-combat/test/run.mjs` 298 pass (fixtures 349–355 new),
 removed by the new sweep (U-10-7). The Area 10 fixtures (above) are still in the world for the retest.
 Drow Prison is active and paused, 0 combats, one GM client (reloaded on the new code). No player tab
 was opened. The tunnel and the updater were not touched.
+
+## Area 10 re-run follow-up — fixer pass (2026-10-11)
+
+The re-run left two Area 10 bugs (report R.4, 1–2) and the Area 2 Stop faults (R.4, 3–4). This pass
+fixed the HUD at combat start, made Stop close an open roll window (and take its run's empty usage
+cards with it), and found that the "Off-hand: Longsword after Nick" offer is correct under the 2024
+PHB, so only its tooltip changed. Synced `pentaryn-combat` 0.2.3 and reloaded the GM tab:
+`game.pentaryn.combat.core` has `hudFollowPlan`, `offhandVia` and `deltasConsumed`, and
+`Strip.StopHint` reads the new text. **Retesters: reload player tabs** (pentaryn-combat changed).
+`game.modules` lists the old version until a world relaunch. Tests: `node
+foundry/module/pentaryn-combat/test/run.mjs` 312 pass (fixtures 356–369 new),
+`make foundry-combat-check` and `make foundry-adjustments-check` pass (the `combat-argon-hud-follows`
+row's `what` names the combat-start recheck).
+
+**Rules check (PHB 2024, read from the owned book in Foundry).** *Light:* "you can make one extra
+attack as a Bonus Action later on the same turn. That extra attack must be made with a different Light
+weapon." *Nick:* "When you make the extra attack of the Light property, you can make it as part of the
+Attack action instead of as a Bonus Action. You can make this extra attack only once per turn."
+*Dual Wielder, Enhanced Dual Wielding:* "you can make one extra attack as a Bonus Action later on the
+same turn with a different weapon, which must be a Melee weapon that lacks the Two-Handed property."
+*Two-Weapon Fighting:* adds the ability modifier to "an extra attack as a result of using a weapon that
+has the Light property". So Dual Wielder is a second extra attack, separate from the Light one that
+Nick moved into the Attack action. A Longsword (Versatile, not Two-Handed) qualifies. The ZZ Fighter 5
+TWF clone has Dual Wielder (plan §2 row; the Longsword can only be offered with
+`flags.dnd5e.enhancedDualWielding` set). After Shortsword ×2 plus the Nick Dagger, "Off-hand:
+Longsword" is a legal Bonus-action attack, as fixture 292 (U-2-4) already said.
+
+**Why the retest saw the Longsword although the tester unequipped it:** the TWF setup unequipped the
+Longsword (eval at 04:51:40Z), but Argon's weapon set 1 for that actor holds the Longsword, and
+`enhancedcombathud-dnd5e`'s `_onSetChange` (switchEquip) runs on every weapon-set render and re-equips
+the active set's items. To test "Off-hand: Dagger beside Nick", the Longsword must leave the Argon
+weapon set too, not only be unequipped (retest of U-10-12).
+
+### U-10-10 (bug fix) — The HUD follows the first combatant at combat start, also when Argon was off
+
+- **What / why:** report R.4 bug 1 (U-10-2 did not fix it). After a combat is deleted, Argon's
+  `_onDeleteCombat` switches it off (`openCombatStart`). At the next Begin Combat our
+  `combatTurnChange` hook runs before Argon's `updateCombat` handler, so `argonOn()` was still false
+  and the hook skipped both the immediate follow and the 300 ms look-again. Argon then switched on and
+  bound `controlled[0] ?? _token`, the old token. The look-again is now scheduled at combat start
+  whatever Argon's state, at 300 ms and 1.2 s (a hidden player tab throttles timers to 1 s). Each
+  look-again still needs Argon on by then, this combatant's turn still current, and the HUD on
+  another token. A player who keeps the HUD off (no `openCombatStart`) is left alone. New pure
+  `hudFollowPlan`.
+- **Files:** `foundry/module/pentaryn-combat/combat-core.mjs` (`hudFollowPlan`), `turnflow.mjs`
+  (`combatTurnChange` hook), `test/run.mjs` (fixtures 356–359), `README.md` (`hudFollows` row),
+  `module.json` 0.2.2 → 0.2.3; `foundry/adjustments.yml` (`combat-argon-hud-follows` `what`).
+- **Revert:** in the `combatTurnChange` hook put back the U-10-2 block
+  (`if (setting("hudFollows") && next?.actor?.isOwner && argonOn()) { const token = …; if (token &&
+  token.scene === canvas.scene) { followTo(token); if (!ended) setTimeout(() => { … }, 300); } }`);
+  delete `hudFollowPlan` and fixtures 356–359; revert the README row and the registry `what`.
+  `make foundry-combat-sync`, reload clients.
+- **Retest:** on `zz<n>.localhost`, as ZZ Tester: delete any combat, select ZZ Fighter 5, create a
+  combat whose first combatant is ZZ Rogue 5 and press Begin Combat. Within about 1 s the player's
+  HUD shows the Rogue, with no click. Repeat with the TWF clone first: the HUD stays up and shows it.
+  With Argon switched off by the player (and `openCombatStart` off) the HUD stays off.
+- **Verified here:** node fixtures only. The hook returns early for a GM, so the GM tab cannot show
+  it; this needs the player-tab retest above.
+
+### U-10-11 (bug fix) — Stop closes an open swing window; a stopped run's empty usage cards go
+
+- **What / why:** report R.4 bug 4 and plan A11 ("the sequence ends, no stray dialog"). Stop with a
+  swing's roll window open left the window up (U-2-10 / U-10-4 made Enter roll it). Stop (and an
+  abort: Wild Shape, the turn moving on) now closes that swing's attack window unrolled. Only the
+  window whose roll subject is the swing in flight closes; a damage window or a manual-dice Roll
+  Resolution being filled in stays. The run ends at once, swings not rolled stay on the pips, and
+  Stop's tooltip says so. The same bug item's "a cancelled Nick swing leaves a stray usage card" is
+  fixed too: the `tidyCancelledAttacks` hook keeps a card while a run may still use it (Esc pauses),
+  so Esc on the Nick swing then Stop left the Dagger card. When a run ends, every usage card it
+  posted with nothing rolled under it and nothing consumed is deleted, under the same setting.
+  `consumedAny` moved to the core as `deltasConsumed` (shared by both).
+  **This replaces part (2) of U-10-4** ("Stop … press Enter: swing 2 rolls Normal"). That retest no
+  longer applies.
+- **Files:** `foundry/module/pentaryn-combat/sequence.mjs` (`closeSwingWindow`, `tidyOrigins`,
+  `current.created`, `onStop`, `abortFor`, the `finally` block, `setting` import), `strip.mjs` (the
+  Stop click no longer refocuses the window), `turnflow.mjs` (`core.deltasConsumed` replaces
+  `consumedAny`), `combat-core.mjs` (`deltasConsumed`), `lang/en.json` (`Strip.StopHint`),
+  `test/run.mjs` (fixtures 366–369), `README.md` (strip row, `tidyCancelledAttacks` and
+  `dockRollDialogs` rows), `context/foundry/melee.md`.
+- **Revert:** in `sequence.mjs` delete `closeSwingWindow`, `tidyOrigins`, the `created` set and its
+  `add`, the two `closeSwingWindow()` calls and the `created`/`setTimeout(tidyOrigins…)` lines in
+  `finally`. In `strip.mjs` put back `requestAnimationFrame(() => focusRollWindow({ force: true }));`
+  after `choose({ type: "stop" })`. In `turnflow.mjs` restore the local `consumedAny`. Restore
+  `Strip.StopHint` to "End the Full Attack here. With a roll window open, that roll still counts if
+  you roll it, and no further window opens. Swings not taken stay available." Delete `deltasConsumed`
+  and fixtures 366–369, and revert the doc lines. Sync, reload clients.
+- **Retest (A11):** ZZ Fighter 5 with a temporary Fire Bolt, on its turn: Full Attack, Enter (swing
+  1), and with swing 2's window open click **Stop**. The window closes at once, the strip goes, the
+  Action pips show 1 swing left (`game.pentaryn.combat.plan(actor).left` = 1) and the flag reads
+  `swings: 1`. Cast Fire Bolt: left = 0. Then a fresh turn with the Shortsword + Dagger Nick plan:
+  Enter, Enter, Esc on the Nick swing (pause), Stop. No Dagger usage card is left in chat.
+- **Verified here (GM tab, scratch actors and a scene-less scratch combat, all deleted):** swing 1
+  rolled, swing 2's window "Attack Roll · Longsword, swing 2 of 2" open, Stop: 0 windows left, run
+  `{rolled: 1, status: "stopped"}`, flag `swings: 1`, left 1; Fire Bolt then `otherActions: 1`, left
+  0. Next round: Full Attack, swing 1's window closed (pause), the new usage card kept while paused,
+  Stop: `{rolled: 0, status: "stopped"}`, card deleted, left 2.
+- **A11 "swing record lost after Stop": root cause not found.** The Area 2 transcript shows that in
+  the failing tries the turn flag was **never written** (raw `flags.pentaryn-combat` held only
+  `last.weapon`, on the GM and on the player tab), not reset. It is not the Stop path: a read made
+  right after swing 1 and before Stop showed `swings: 1` and kept it. In the failing tries a GM eval
+  had added Fire Bolt to the actor and unset the flag shortly before. One try had also rewound the
+  tracker. The GM tab does not reproduce it, with a cantrip on the actor, an unset flag and a
+  rewound turn (two scripted runs, swing recorded each time). The most likely cause is the player's
+  client classifying the swing as not its own turn ("reaction", so nothing changes and nothing is
+  written), but this is not proved. `updateTurn` logs a failed write with `console.warn`, and the
+  tester captured only errors. **Retester:** capture `console.warn` too, and on a failure read
+  `game.pentaryn.combat.turn(actor)` and `combatContext` on the player tab.
+
+### U-10-12 — An Off-hand that is Dual Wielder's says so
+
+- **What / why:** report R.4 bug 2. Not a rules bug: see the rules check above. The tooltip said only
+  "The Light property's extra attack", so "Off-hand: Longsword" after Nick read as a non-Light weapon
+  making the Light attack. Each Off-hand offer now carries `via` (new pure `offhandVia`). It is
+  `"dual-wielder"` when its weapon is not Light, or when the Light attack is spent by Nick or offered
+  as Nick beside it, and the tooltip then reads "Dual Wielder: a second extra attack as a Bonus
+  Action, separate from the Light property's one (Nick) …". The label, the offers and the rolls are
+  unchanged.
+- **Files:** `foundry/module/pentaryn-combat/combat-core.mjs` (`offhandVia`), `hud.mjs`
+  (`followUpsNow` sets `via`; `FollowUpButton.getTooltipData`), `lang/en.json`
+  (`FollowUpText.offhand-dual-wielder`), `test/run.mjs` (fixtures 360–365), `README.md` (Bonus bar
+  row), `context/foundry/melee.md`.
+- **Revert:** delete the `via` loop in `followUpsNow`, give `getTooltipData` back the plain
+  `FollowUpText.<kind>` key (drop the `offhand-dual-wielder` choice), delete `offhandVia`, the lang key
+  and fixtures 360–365, and revert the two doc lines. Sync, reload clients.
+- **Retest:** ZZ Fighter 5 TWF (Dual Wielder) with Shortsword, Dagger and Longsword equipped: Full
+  Attack with the Shortsword (2 swings + Nick Dagger). The Bonus bar offers **Off-hand: Longsword**,
+  and its tooltip names Dual Wielder. It rolls `1d8 + 3` (TWF), Bonus pip spent. For **Off-hand:
+  Dagger** beside Nick: take the Longsword out of Argon's weapon set 1 (drag it off, or set set 1 =
+  Shortsword + Dagger) **and** unequip it. Otherwise Argon re-equips it on render. Then the Bonus bar
+  offers Off-hand: Dagger. Without Dual Wielder nothing is offered after Nick (fixture 365).
+- **Verified here:** on a scratch Dual Wielder with the PHB Longsword, Shortsword and Dagger
+  (mastery in all three): the plan is Shortsword, Shortsword, Dagger (Nick). Before Nick the offers are
+  `nick: Dagger` + `offhand: Longsword via dual-wielder`; after Nick `offhand: Longsword via
+  dual-wielder`; without the Dual Wielder flag nothing is offered after Nick.
+
+**State left by this pass:** no fixtures created or changed. The scratch actors "ZZ Scratch A11",
+"ZZ Scratch U-10-10" (and their B partners) and their scene-less combats and chat cards were deleted.
+No real PC or real scene was touched; Marrith still carries her old `reaction` key (cosmetic, R.4 9).
+Drow Prison is active and paused, 0 combats, one GM client (reloaded on 0.2.3, in the background). No
+player tab was opened. The tunnel and the updater were not touched, and the world was not relaunched.
+
+## Area 3 re-run (rogue, monk, barbarian, paladin) — fixer pass (2026-10-11)
+
+The Area 3 retest passed B1–B7, C1–C3, E1, E2, N1, the own-dice case and the Area 10 confirmations,
+with D1 and F1 over budget (friction) and F2 failed. This pass fixed four bugs from its list (Reckless
+left on, stale rider buttons, the stale Cast Spell drawer, the Undo card) and the one console warning
+that was ours (Rage's `getEffect` deprecation), and made Enter in Lay on Hands' points box use it. F2's
+"healing never applied" is this world's dnd5e setting, not code (notes below; P-3-k). Synced
+`pentaryn-combat` 0.2.4 and reloaded the GM tab. **Retesters: reload player tabs** (pentaryn-combat
+changed; the new `enterUses` setting is registered at load). `game.modules` lists 0.2.3 until a world
+relaunch; nothing in module.json besides the version changed, so no relaunch was needed. Tests:
+`node foundry/module/pentaryn-combat/test/run.mjs` 320 pass (fixtures 370–377 new),
+`make foundry-combat-check` and `make foundry-adjustments-check` pass (84 rows, 2 new).
+
+### U-3-16 (bug fix) — Reckless Attack's effect goes at the start of the Barbarian's next turn
+
+- **What / why:** retest D1 and bug 3. The Reckless effect from the Special-bar toggle was still on
+  the Barbarian at its next turn start ("0 Rounds"). Nothing removed it: core does not delete expired
+  effects, and the turn-start sweep only knew Dodge and our `until` effects. PHB 2024: Advantage
+  "until the start of your next turn". The active GM's turn-start sweep now removes every Reckless
+  effect on the actor (ours, or the stock one applied from the sheet, matched by name), under
+  `recklessToggle`. Dodge / Dash / Disengage stay under `specialActions`, so either setting can be off
+  alone (before, `specialActions` off stopped the whole sweep).
+- **Files:** `foundry/module/pentaryn-combat/combat-core.mjs` (`expiringAt` takes `reckless` per
+  effect and the `{specialActions, reckless}` settings), `turnflow.mjs` (`sweep`), `test/run.mjs`
+  (fixtures 370–373), `README.md` (`recklessToggle` row), `context/foundry/melee.md` (known limits).
+- **Revert:** give `expiringAt` back its two-argument body (dodging at turnStart, or `until ===
+  event`); in `sweep` restore `if (!actor?.effects || !setting("specialActions")) return;` and the
+  three-field map; delete fixtures 370–373; revert the doc lines. `make foundry-combat-sync`, reload.
+- **Retest:** ZZ Barbarian 5 in combat with a goblin: turn on Reckless Attack (Special bar). It stays
+  through the goblin's turn; at the Barbarian's next turn start the Reckless effect is gone from the
+  portrait and the actor's effects, and the toggle reads Off.
+- **Verified here (GM tab, scene-less scratch combat, deleted):** Reckless on (flagged) during the
+  Barbarian's turn, still on during the goblin's, 0 Reckless effects at the Barbarian's round-2 start.
+
+### U-3-17 (bug fix) — A rider button leaves the card when the turn moves on
+
+- **What / why:** bug 2 (E1): a "Frenzy 2d6" button stayed on the Barbarian's attack cards through
+  later turns. A card shows its button only while its turn key is the current one, but it was
+  re-rendered only when that actor's turn flag changed, so it kept the old button until the actor
+  acted again. A combat turn change, and a deleted combat, now re-render every card on the client that
+  still shows a rider button or an Undo. Clicking an old button was already refused ("That attack was
+  on an earlier turn"). Bug 2's "Pole Strike stays" was a HUD button, and the report gives no case of
+  it staying on a later turn; not changed.
+- **Files:** `foundry/module/pentaryn-combat/riders.mjs` (`rerenderShowing`, two hooks in
+  `installRiders`), `README.md` (`riderOffers` row).
+- **Revert:** delete `rerenderShowing` and the `combatTurnChange` / `deleteCombat` lines in
+  `installRiders`. Sync, reload.
+- **Retest:** ZZ Rogue 5 (Ask mode) hits with Advantage: "+ Sneak Attack 3d6" on the card. End the
+  turn without using it: the button leaves that card at once. Same for the Barbarian's Frenzy.
+- **Verified here:** scratch combat, Rogue attack with Advantage in Ask mode: the card had the button;
+  after `nextTurn` it had none.
+
+### U-3-18 — Auto Sneak Attack's Undo marks its damage card
+
+- **What / why:** bug 6 (B4; P-10-e asked for it). After Undo the card still read "1d8 + 3 + 3d6 = 22".
+  Undo now writes `flags.pentaryn-combat.undone` on the damage card (its author or the GM can), and
+  the note re-renders struck through with what the card deals without the rider: "~~+ Sneak Attack
+  3d6~~ undone: 3d6 rolled 12, so this card deals 11". On a crit it names the doubled dice. The card
+  is not re-rolled and the tray's number is not changed: the GM applies the smaller total (the rest of
+  P-10-e stays open).
+- **Files:** `foundry/module/pentaryn-combat/combat-core.mjs` (`riderRolled`), `riders.mjs`
+  (`renderAutoNote`: undone branch and the flag write in the Undo handler), `lang/en.json`
+  (`Rider.UndoneCard`, `Rider.UndoneCardPlain`, `Rider.Undone` text), `styles/combat.css`
+  (`.pentaryn-combat-undone`), `test/run.mjs` (fixtures 374–377), `README.md` (`riderOffers` row,
+  Data written row), `context/foundry/melee.md`.
+- **Revert:** delete the `undone` branch in `renderAutoNote` and the `message.setFlag(MOD, "undone",
+  …)` block in its click handler; delete `riderRolled`, its fixtures, the two lang keys and the CSS
+  block; set `Rider.Undone` back to "{name} is available again this turn."; revert the doc rows.
+  Sync, reload.
+- **Retest (B4):** Rogue on Auto, a hit: the damage card shows "+ Sneak Attack 3d6 · Undo". Click
+  Undo: the note turns grey, struck through, and names the rider's roll and the card's total without
+  it. The next eligible swing auto-applies again.
+- **Verified here:** scratch combat on the GM tab, Rogue on Auto, Rapier with Advantage: card
+  `1d8 + 3 + 3d6` = 23 (3d6 = 12), a real click on Undo: flag `undone: ["sneak-attack"]`, turn riders
+  `{}`, note "+ Sneak Attack 3d6 undone: 3d6 rolled 12, so this card deals 11".
+
+### U-3-19 (bug fix) — Last turn's open drawer does not come back at the next turn
+
+- **What / why:** bug 4 (F1): the Paladin's next turn started with the Bonus-bar Cast Spell drawer open,
+  over the Action bar's Cast Spell. Argon saves each drawer's open state per actor (`_hudState`) and
+  reopens it on every render; U-10-1 places a reopened drawer on the next frame, but on a whole-HUD
+  render at a turn start the button was not laid out yet, so the drawer stayed at Argon's far left. Now
+  (1) a turn boundary collapses the drawers on the HUD of the creature whose turn ended or began and
+  sets their saved state to closed (spell-level folds are kept), and (2) a reopened drawer is placed
+  once its button is on the page (up to ~10 frames). Under `drawerNearButton`.
+- **Files:** `foundry/module/pentaryn-combat/turnflow.mjs` (`closeDrawersOf`, its call in the
+  `combatTurnChange` hook, `placeWhenLaidOut` used by the render hook and `placeOpenDrawers`),
+  `README.md` (`drawerNearButton` row); `foundry/adjustments.yml` (new row
+  `combat-argon-drawer-turn-close`; delete it on revert).
+- **Revert:** delete `closeDrawersOf` and its call; replace both `placeWhenLaidOut(…)` calls with
+  `requestAnimationFrame(() => { try { placeDrawer(b, p); } catch {} })` (the button/panel names of
+  each site) and delete `placeWhenLaidOut`. Revert the README row, delete the registry row. Sync,
+  reload.
+- **Retest (F1):** ZZ Paladin 5: open the Bonus-bar Cast Spell drawer, cast Divine Smite (or close
+  nothing), end the turn. At the Paladin's next turn no drawer is open. Open the Bonus Cast Spell
+  drawer again: it sits above its own button.
+- **Verified here:** in the scratch combat, the Barbarian's Argon state `{"spell-1": {visible: true,
+  subPanels: [true]}}` read `visible: false` (folds kept) right after its turn ended. The on-screen
+  part needs the player tab (the GM tab is hidden and shows no HUD).
+
+### U-3-20 — Enter in a usage window's number box uses the ability
+
+- **What / why:** F2 and the P-3-h correction: Enter in Lay on Hands' points box only committed the
+  number (dnd5e's Use Ability is `type="button"` and the window re-renders on every change), so
+  P-3-h's "Enter submits in one" was wrong. Now Enter in a number or text box of a usage window commits
+  the number, waits for the re-render (or 400 ms) and presses Use Ability. A select keeps Enter. New
+  setting `enterUses` (default on).
+- **Files:** `foundry/module/pentaryn-combat/turnflow.mjs` (`pressUse`, the keydown listener, header
+  line), `settings.mjs` (`enterUses`), `lang/en.json` (`Setting.enterUses`), `README.md` (new row),
+  `context/foundry/melee.md`; `foundry/adjustments.yml` (new row `combat-dnd5e-usage-enter-uses`;
+  delete on revert); `module.json` 0.2.3 → 0.2.4.
+- **Revert:** delete the "Enter in a usage window's box" block in `turnflow.mjs` and its header line,
+  the `enterUses` default and its lang entry, the README row and the registry row. Sync, reload.
+- **Retest (F2):** ZZ Paladin 5 targets the Fighter, Lay on Hands, Heal, type 10 in the points box and
+  press Enter: the window closes and the Healing roll follows (no Use Ability click). Pool 25 → 15.
+- **Verified here:** on the GM tab, `ActivityUsageDialog.create` for the Heal activity (window only,
+  nothing used): typed 7, Enter → the window resolved used with `scaling: 6` (= 7 points); pool still 25.
+
+### U-3-21 (console) — Rage's self-effect read through `getEffect()`
+
+- **What / why:** the player-tab warning "Activity effects should now be accessed using the
+  `getEffect()` method" right after Rage was ours: `applySelfEffect` read the profile's deprecated
+  `effect` getter (dnd5e 6.0, removed in 6.2). It now awaits `getEffect()` (it may be async), falling
+  back to `effect` only if `getEffect` is missing.
+- **Files:** `foundry/module/pentaryn-combat/turnflow.mjs` (`applySelfEffect`), `README.md`
+  (`selfEffects` row).
+- **Revert:** `const effect = profiles[0]?.effect;`. Sync, reload.
+- **Retest (D1):** Rage on the player tab with `console.warn` captured: no "getEffect" warning; the
+  Rage effect applies by itself (6 changes) as before.
+- **Verified here:** Rage's one profile resolves through `getEffect()` to "Rage" (6 changes) with no
+  warning; nothing used.
+
+### Bug and console notes that need no code
+
+- **F2 healing "never applied" — this world's setting.** The world has dnd5e's *Allow Players to Apply
+  Damage* (`dnd5e.allowPlayerDamageTray`) **off**, so a player's damage and healing cards have no apply
+  tray; the GM applies both from the card (pentaryn-aoe's design: "nothing is applied until the GM
+  presses Apply"). ZZ Tester owns ZZ Fighter 5, so with the setting on the player could apply the heal
+  themselves. Joe's call: P-3-k.
+- **Stale Cast Spell drawer "seen once"** is U-3-19; **Hew/Pole Strike pulse** and **E2 tooltip text**
+  were not observed (hidden tab), nothing to change.
+- **The Rage card still shows Apply after the auto-apply:** dnd5e's effect tray always lists the
+  effect; pressing it again updates the same Rage effect (dnd5e finds the copy made from that source),
+  no second Rage. Not changed.
+- **D1 8 clicks vs 6:** Rage's usage confirm (2) and Reckless (1) are separate on purpose; P-3-g/P-3-h
+  style one-button flows are Joe's call. **F1 8 clicks vs 5:** P-3-g stands.
+- **Console:** "Cannot set properties of undefined (setting 'last')" came from the tester's own
+  animated token update (U-3 notes). The "global Tour/Token namespaced" and
+  `DatabaseUpdateOperation#teleport` warnings are core/tester evals. A GM-tab "renderChatMessage hook
+  is deprecated" warning seen during this pass comes from Item Piles (`item-piles.js`), not ours.
+- **Harness (hidden tab, Dice So Nice holding cards, the stuck d20):** P-3-i stands.
+
+### Proposals (Area 3 re-run fixer pass) — for Joe to decide
+
+- **P-3-k — Players apply their own healing (F2).** Options: (a) turn on dnd5e's *Allow Players to
+  Apply Damage*: a player's damage and healing cards get dnd5e's tray, and a player can only apply to
+  tokens they own (their own PC, a party member they co-own), so monsters stay GM-applied; native,
+  no code. (b) Keep it off and auto-apply a heal activity's healing to a single target the healer's
+  user owns (pentaryn-riders' Battle Medic already does this for its own flow). (a) is the
+  prefer-native choice. P-3-h's other options (bind the HUD button to Heal, pre-fill the target's
+  missing HP) remain open; with U-3-20 F2 is LoH, target, Heal, points + Enter, Healing roll.
+- **P-3-l — Undo re-rolls or rewrites the card (rest of P-10-e).** U-3-18 names the smaller total;
+  writing it into the card's roll would make the GM's tray apply it by itself, at the cost of editing
+  a rolled message.
+
+**State left by this pass:** no fixtures created or changed. Scene-less scratch combats "ZZ Scratch
+U-3re" and "ZZ Scratch U-3re B4" and their 4 chat cards were deleted; the GM user's Sneak Attack mode
+was set back to Ask; the Barbarian's injected Argon panel state was removed. No real PC or real scene
+was touched. Drow Prison is active and paused, 0 combats, one GM client (reloaded on 0.2.4, in the
+background). No player tab was opened. The tunnel and the updater were not touched, and the world
+was not relaunched.
+
+## Area 3 second re-run (U-3-16..21 retest) — fixer pass (2026-10-11)
+
+The retest passed: B4 (Auto Sneak + a real Undo click, U-3-18), the Ask-mode Sneak button leaving the
+card at the turn change (U-3-17), D1 (Reckless gone at the Barbarian's round-2 start, U-3-16; Frenzy
+one-of-two; no `getEffect` warning after Rage, U-3-21), E2 Pole Strike gating, the U-3-19 drawer
+(not reopened at the next turn, sits above its own button) and the Area 10 confirmations. F1 and F2
+are friction only. No player-tab console errors; the page-load warnings are scene-packer's and core's.
+**No code changed in this pass**, so nothing was synced and no tab needs a reload. `game.modules`
+still lists pentaryn-combat 0.2.3 (the synced files are 0.2.4; only the version differs in
+module.json, so no relaunch).
+
+### Bug and console notes that need no code (or need Joe)
+
+- **F2 healing not applied for a player** — unchanged: the world's *Allow Players to Apply Damage* is
+  off. P-3-k is still Joe's call. U-3-20 works (one Enter in the points box uses the ability).
+- **Channel Divinity right under Lay on Hands (mis-click)** — correct content, not a bug: the 2024
+  Paladin's Channel Divinity has Divine Sense as its Bonus-action use, so dnd5e lists it with Lay on
+  Hands, Divine Smite and Shield of Faith, and Argon stacks feature buttons two to a column. The
+  mis-click was a coordinate click at the stack's midpoint (harness; P-3-i). Not changed: reordering
+  Argon's buttons would be a patch on its layout for a tester-only issue.
+- **F1 Divine Smite 8 clicks vs 5** — unchanged; P-3-g stands.
+- **Harness (hidden tab swallows Enter, chat sidebar, `dsn-hide`, stale screenshots)** — P-3-i stands.
+
+**State left by this pass:** one read-only eval on the GM tab (world state and ZZ Paladin 5's Bonus
+features). Drow Prison active and paused, 0 combats, one GM client. No player tab opened, nothing
+created, no real PC or scene touched; tunnel and updater untouched, world not relaunched.
+
+## Area 2 A11 + Area 10 retest (U-10-10..12) — fixer pass (2026-10-11)
+
+The retest passed: A11 (Stop after swing 1, then Fire Bolt; 6 clicks as U-2-10 / U-10-11 expect, no
+stray window or empty usage card), the HUD following the first combatant at combat start with no
+click (U-10-10), A5 (Shortsword twice + Nick Dagger, 4 clicks), A7 (Off-hand: Longsword after the
+Attack action, Bonus pip spent, Action pip untouched) and the TWF clone's Nick then Off-hand offer
+with the Dual Wielder tooltip (U-10-12). No product console errors on either tab; the player tab's
+warnings were dnd5e's `checkBonus` and core's `renderChatMessage` deprecations, none from
+pentaryn-combat. **No code changed in this pass**, so nothing was synced and no tab needs a reload.
+`node test/run.mjs` still passes (320 fixtures).
+
+### Bug and console notes that need no code
+
+- **"No non-Light off-hand after Nick" in the task wording** — the wording was wrong, not the module.
+  A Dual Wielder gets the second extra attack (2024 PHB feat), which is what U-10-12 ledgered and the
+  tester saw. Without Dual Wielder nothing is offered after Nick: fixture 365 covers it, and the
+  U-10-12 pass checked it live on a scratch actor. Every ZZ Fighter fixture has Dual Wielder, so a
+  player-tab run without it needs a scratch build; not worth a fixture change.
+- **"Stale" Argon weapon set ids on ZZ Fighter 5** — not stale. A read on the GM tab shows
+  `BgfeV9aE1TiNOKEW` and `xa0PG0l1mKidmSWL` are the Fighter's own Shortsword and Dagger; set 1 held
+  them because the U-10-12 retest steps say to set set 1 = Shortsword + Dagger for the A5 / Off-hand:
+  Dagger case. The tester's re-point to Longsword + Shield matches the equipped gear now, which is the
+  right resting state.
+- **Not exercised:** the off-hand Longsword's damage (both A7 swings missed), A5's Stop-after-swing-2
+  undo variant, the Nick button's return next turn, and the "Argon off" variant of U-10-10. They stay
+  on the retest list.
+
+**State left by this pass:** one read-only eval on the GM tab. World `pentaryn`, Drow Prison active
+and paused, 0 combats, one active user (Gamemaster), pentaryn-combat 0.2.3 loaded. ZZ Fighter 5 is
+Longsword + Shield + Chain Mail equipped, Argon set 1 = Longsword + Shield. No player tab opened,
+nothing created, no real PC or scene touched; tunnel and updater untouched, world not relaunched.
+
+### Retest verification (2026-10-11)
+
+The retest of this pass was accepted with no product bugs and no product console errors, so **no
+code changed** and no tab needs a reload. A GM-tab read showed world `pentaryn`, Drow Prison active
+and paused, 0 combats, only Gamemaster active, pentaryn-combat 0.2.3, and the GM tab
+`document.visibilityState = "hidden"`. An example.com tab is in front of it, so the "GM tab still
+foreground" cleanup item is already resolved. `node test/run.mjs`: 320 fixtures pass. The Argon
+set-1 "discrepancy" is the one explained above: the tester re-pointed set 1 to Longsword + Shield, and
+the ids it replaced were the Fighter's own Shortsword and Dagger, not stale ones. Test gaps carried
+forward: the non-Dual-Wielder off-hand after Nick in a player tab, the off-hand Longsword damage
+roll, A5 Stop-after-swing-2, the Nick button returning next turn, and U-10-10 with Argon off.
+
+### Follow-up cleanup (2026-10-11)
+
+No code changed in this step. All ZZ fixtures were deleted (scene, folder, 9 actors, ZZ Tester user and journal, 23 chat messages). Caven, Marrith and Talo match `.state/core-rollback/rerun-followup-pcs-before.json` on HP, slots, Hit Dice, exhaustion, death saves, currency, ownership, effects, item quantity/equipped/attuned/uses, and pentaryn flags. Revert: none needed; retest: rebuild fixtures with the prompt-markers `character` helper per the plan section 2.

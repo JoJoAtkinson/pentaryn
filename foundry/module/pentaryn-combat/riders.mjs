@@ -321,9 +321,21 @@ function renderAutoNote(message, html) {
   note.className = "supplement pentaryn-combat-auto";
   const actor = message.getAssociatedActor?.() ?? game.actors.get(message.speaker?.actor);
   const turn = actor ? turnOf(actor) : null;
+  const undone = message.getFlag?.(MOD, "undone") ?? [];
   const parts = auto.map(a => {
     const live = turn?.riders?.[a.key] === `auto:${a.attack}`;
     const name = T(`PENTARYN_COMBAT.Rider.Name.${a.key}`);
+    // Area 3 re-run (B4): after Undo the card still read "1d8 + 3 + 3d6 = 22". The rider is struck
+    // through and the card says how much of its total that was, for the GM to leave off.
+    if (undone.includes(a.key)) {
+      const rolled = core.riderRolled(a.dice, message.rolls?.[0]?.dice?.map(d => ({ number: d.number, faces: d.faces, total: d.total })) ?? []);
+      const total = (message.rolls ?? []).reduce((sum, r) => sum + (Number(r?.total) || 0), 0);
+      const text = rolled && message.rolls?.length
+        ? T("PENTARYN_COMBAT.Rider.UndoneCard", { formula: rolled.formula, n: rolled.total, total: total - rolled.total })
+        : T("PENTARYN_COMBAT.Rider.UndoneCardPlain");
+      note.classList.add("pentaryn-combat-undone");
+      return `<s>+ ${name} ${a.dice}</s> <span class="pentaryn-combat-undone-text">${text}</span>`;
+    }
     const undo = live && (actor?.isOwner || game.user.isGM)
       ? ` <button type="button" class="pentaryn-combat-undo" data-undo="${a.key}" data-tooltip="${T("PENTARYN_COMBAT.Rider.UndoHint")}"><i class="fa-solid fa-rotate-left"></i> ${T("PENTARYN_COMBAT.Rider.Undo")}</button>` : "";
     return `+ ${name} ${a.dice}${undo}`;
@@ -344,6 +356,11 @@ function renderAutoNote(message, html) {
     }
     autoApplied.delete(`${actor.uuid}|${key}|${combatContext(actor).key}`);
     await updateTurn(actor, t => (t.riders?.[key] === `auto:${entry.attack}` ? core.setRider(t, key, null) : t));
+    // Mark the card (its author or the GM can write it): the note re-renders struck through.
+    if (message.isOwner) {
+      const was = message.getFlag(MOD, "undone") ?? [];
+      if (!was.includes(key)) await message.setFlag(MOD, "undone", [...was, key]).catch(err => console.warn(`${MOD} | undo mark`, err));
+    }
     ui.notifications.info(T("PENTARYN_COMBAT.Rider.Undone", { name: T(`PENTARYN_COMBAT.Rider.Name.${a.dataset.undo}`) }));
   });
   const content = html.querySelector(".message-content") ?? html;
@@ -411,6 +428,26 @@ function rerenderCards(actor) {
   }, 50);
 }
 
+/**
+ * The turn moved on (or the combat ended): every card on this client that still shows a rider button
+ * or an Undo is re-rendered, so an earlier turn's offer goes. Before, a card was only re-rendered
+ * when its actor's turn flag changed, so a Frenzy button stayed on the Barbarian's cards through
+ * other creatures' turns (Area 3 re-run, E1).
+ */
+function rerenderShowing() {
+  setTimeout(() => {
+    const ids = new Set();
+    for (const el of document.querySelectorAll(".pentaryn-combat-riders, .pentaryn-combat-auto [data-undo]")) {
+      const id = el.closest("[data-message-id]")?.dataset.messageId;
+      if (id) ids.add(id);
+    }
+    for (const id of ids) {
+      const m = game.messages.get(id);
+      if (m) try { ui.chat?.updateMessage?.(m); } catch { /* popped out */ }
+    }
+  }, 50);
+}
+
 /* ── GM audit ────────────────────────────────────────────────────────────── */
 
 export function report(actorOrName) {
@@ -449,6 +486,8 @@ export function installRiders() {
     try { renderAutoNote(message, html); } catch (err) { console.warn(`${MOD} | rider note skipped`, err); }
     try { renderSwingDamage(message, html); } catch (err) { console.warn(`${MOD} | swing damage button skipped`, err); }
   });
+  Hooks.on("combatTurnChange", () => rerenderShowing());
+  Hooks.on("deleteCombat", () => rerenderShowing());
   Hooks.on("updateActor", (actor, changes) => {
     if (foundry.utils.hasProperty(changes, `flags.${MOD}.turn`) || foundry.utils.hasProperty(changes, `flags.${MOD}.-=turn`)) rerenderCards(actor);
   });

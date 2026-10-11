@@ -411,7 +411,7 @@ function argonClasses() {
       }
       return {
         title: T(`PENTARYN_COMBAT.FollowUp.${k}`, { weapon: this.hudActor.items.get(this.followUp.weaponId)?.name ?? "" }),
-        description: `<p>${T(`PENTARYN_COMBAT.FollowUpText.${k}`, { n: this.followUp.count ?? 1 })}</p>`,
+        description: `<p>${T(`PENTARYN_COMBAT.FollowUpText.${k === "offhand" && this.followUp.via === "dual-wielder" ? "offhand-dual-wielder" : k}`, { n: this.followUp.count ?? 1 })}</p>`,
         details: [{ label: T("PENTARYN_COMBAT.Hud.Cost"), value: T(this.followUp.free ? "PENTARYN_COMBAT.Hud.Free" : "PENTARYN_COMBAT.Hud.BonusAction") }],
         classes: TT
       };
@@ -565,6 +565,10 @@ function followUpsNow(actor, bonusPanel) {
     bonusFree, focus, unarmedId: unarmed?.id ?? null, isOwnTurn: ctx.isOwnTurn,
     poleStrikeId: pam && attackActivityOf(pam) ? pam.id : null
   });
+  // Which rule each Off-hand is (Light property or Dual Wielder), for its tooltip (U-10-12).
+  for (const f of list) {
+    if (f.kind === "offhand") f.via = core.offhandVia({ weapon: weapons.find(w => w.id === f.weaponId) ?? null, turn, offered: list });
+  }
   // Usability (area 3, C3): Flurry with no Focus left stays on the bar, greyed with its reason, instead of
   // vanishing — a player who sees Martial Arts but no Flurry wonders whether the feature broke.
   if (ctx.isOwnTurn && unarmed && features.has("monks-focus") && (focus ?? 0) < 1 && bonusFree && !turn.bonusUsed
