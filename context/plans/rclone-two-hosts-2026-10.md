@@ -781,3 +781,20 @@ Built on `feature/rclone-hosts` in commits `02973a92`..HEAD; tests:
 - The boss-remote skill (§11 item 1) is BOSS's Claude's to update; nothing on BOSS was touched.
 - Nothing here was run against the real OneDrive or a real rclone remote; `rclone config` on
   the Mac is Joe's step (`ops.md` §3).
+
+### Review fixes (2026-10-11, before merge)
+
+A review of the branch found five defects and four minor issues. Each fix is its own commit
+with tests, so this list is what changed relative to the build record above.
+
+| # | Found | Fixed |
+| --- | --- | --- |
+| 1 | `host.env.example` set `PENTARYN_HOST=mac` and `PENTARYN_PRIMARY_HOST=mac`. Copied onto BOSS, BOSS became a second `mac`: the primary, and the pruner of the Mac's snapshots | Both lines commented out. An explicit `PENTARYN_HOST=mac` off macOS raises `HostError` |
+| 2 | Restoring this host's oldest snapshot at the keep limit: the safety backup's pruning deleted it, so `based_on` pointed at nothing and the "no change" skip never uploaded that state again | `_backup(protect=<name>)` excludes it from coalescing and pruning. The skip holds only while `based_on` is still listed (`world-backups/` or `major-release/`); otherwise the state is uploaded again |
+| 3 | A cloud outage stopped `make vtt-up` at `foundry-backup-safe` / `foundry-assets` | `backup --if-stopped` and the new `foundry-assets-safe` (`assets --if-reachable`) warn and exit 0. The plain targets and the updater still fail loudly |
+| 4 | With no state file, every cloud snapshot counted as newer, so on its first boot after the merge the Mac was offered a rollback to its last untagged snapshot | With no record, a snapshot is newer only if it is later than the newest local file. Otherwise the prompt says "cannot tell which is newer" and Enter keeps local. Only the primary retires `.last-digest` |
+| 5 | The no-terminal notice was buried by the next backup. A diverged alt snapshot was offered as the Enter default | `<name>.parent` lineage sidecars (parent and ancestors, written before the upload's rename). A newer snapshot that lacks `based_on` is "diverged", and Enter keeps local. The notice persists `pending_newer` until it is answered at a terminal |
+| 6 | `foundry-down` said "already down" when `pgrep` missed a `PENTARYN_START_CMD` server | Also checks the port |
+| 7 | The Linux app-root default was `resources/app`, but the Node.js build (v12 on) has the app at the top level | Probes `~/foundryvtt`, then `~/foundryvtt/resources/app`. §11's example is corrected. Not yet checked against BOSS's real install |
+| 8 | "Keep local" was matched by name only | Also matched by the declined snapshot's mtime (`keep_local_mtime`) |
+| 9 | `.safety` copies counted toward the 10 per host | They are counted separately, with a cap of 3 per host (`KEEP_SAFETY_COPIES`) |
