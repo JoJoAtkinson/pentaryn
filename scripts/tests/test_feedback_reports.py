@@ -399,3 +399,15 @@ def test_the_report_the_module_writes_renders(tmp_path, monkeypatch):
         "-00:03  error hooks @Hooks.#call TypeError: transferEverything",
         "-00:00  report filed",
     ]
+
+
+@pytest.mark.parametrize("odd", ["h", 42, {"t": 1, "status": "open"}, ["junk", 3]])
+def test_resolve_survives_a_history_that_is_not_a_list_of_entries(store, odd):
+    good = json.loads((store / "pentaryn" / f"{OPEN}.json").read_text())
+    _write(store, "pentaryn", f"{OPEN}.json", {**good, "history": odd})
+    out = fr.feedback_resolve(OPEN, "triaged", note="odd history")
+    assert "triaged by claude-code: odd history" in out
+    hist = _on_disk(store, "pentaryn", OPEN)["history"]
+    assert isinstance(hist, list)
+    assert hist[:-1] == (odd if isinstance(odd, list) else [odd]), "the original value is kept, not dropped"
+    assert (hist[-1]["status"], hist[-1]["note"]) == ("triaged", "odd history")

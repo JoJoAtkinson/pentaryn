@@ -160,9 +160,12 @@ def apply_status(report: dict[str, Any], status: str, note: str = "", by: str = 
     ok, reason = next_status(report.get("status"), status, force)
     if not ok:
         raise ValueError(reason)
-    history = list(report.get("history") or [])
+    raw = report.get("history")
+    # A hand-edited or forged file can hold anything here: a list is copied as-is, any other value is
+    # kept as the first entry rather than dropped, and only a dict entry counts as "the last entry".
+    history = list(raw) if isinstance(raw, list) else ([] if raw is None else [raw])
     text = (note or "").strip()[:4000]
-    last = history[-1] if history else None
+    last = history[-1] if history and isinstance(history[-1], dict) else None
     if not (last and last.get("status") == status and (last.get("note") or "") == text):
         history.append({"t": int(time.time() * 1000) if t is None else t, "status": status, "note": text, "by": by[:120]})
     return {**report, "status": status, "history": history}
@@ -486,7 +489,7 @@ def feedback_get(id: str, raw: bool = False) -> str:
 def feedback_resolve(id: str, status: str, note: str = "", force: bool = False) -> str:
     _check_status(status, allow_all=False)
     updated = resolve_report(id, status, note=note, force=force)
-    hist = updated.get("history") or []
+    hist = _rows(updated.get("history"))
     lines = [f"# Feedback {updated['id'][:6]} · {updated.get('category')} · {updated.get('status')}",
              f"id {updated['id']} · {_who(updated.get('user'))}", "", "## History"]
     lines += [f"- {_when(h.get('t'), None)} {h.get('status')} by {h.get('by')}" + (f": {h['note']}" if h.get("note") else "")
