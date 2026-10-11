@@ -314,7 +314,10 @@
           "documentName": "User",
           "uuid": "User.gmUser0000000001",
           "changes": {
-            "flags.pentaryn-ties.attrSelected": []
+            "flags.pentaryn-ties.attrSelected": [
+              "guild",
+              "city"
+            ]
           }
         }
       ],

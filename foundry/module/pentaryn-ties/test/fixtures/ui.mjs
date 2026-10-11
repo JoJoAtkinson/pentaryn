@@ -15,8 +15,14 @@ const flush = async (n = 4) => {
   for (let i = 0; i < n; i++) await new Promise(r => setImmediate(r));
 };
 
-/** A node's identity across re-renders: tag, classes, data-*, name — not its position. */
-const sigOf = n => JSON.stringify([n.tagName, n.className || "", n.dataset, n.name ?? null]);
+/**
+ * A node's identity across re-renders — not its position: tag, data-* and name when it has data-*
+ * (its classes may carry state, e.g. a pip's `fill`), else tag, classes and name.
+ */
+const sigOf = n => {
+  const data = Object.keys(n.dataset).length ? n.dataset : null;
+  return JSON.stringify([n.tagName, data ? "" : n.className || "", data, n.name ?? null]);
+};
 
 /** Every node under root that holds a listener: `{ sig, nth, tag, className, dataset, events }`. */
 export function listenersIn(root) {

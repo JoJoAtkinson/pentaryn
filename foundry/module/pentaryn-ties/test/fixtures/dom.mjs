@@ -14,12 +14,25 @@
 const SIMPLE = /^([a-z][\w-]*|\*)?((?:\.[\w-]+|\[[\w-]+(?:="[^"]*")?\])*)$/i;
 
 function parseCompound(src) {
-  const m = SIMPLE.exec(src);
+  // pseudo-classes understood: :not(<simple compound>) and :focus (document.activeElement)
+  const nots = [];
+  let focus = false;
+  const bare = src
+    .replace(/:not\(([^()]*)\)/g, (m, inner) => {
+      nots.push(parseCompound(inner.trim()));
+      return "";
+    })
+    .replace(/:focus\b/g, () => {
+      focus = true;
+      return "";
+    });
+  if (nots.includes(null)) return null;
+  const m = SIMPLE.exec(bare);
   if (!m) return null;
   const [, tag, rest] = m;
   const classes = [...rest.matchAll(/\.([\w-]+)/g)].map(x => x[1]);
   const attrs = [...rest.matchAll(/\[([\w-]+)(?:="([^"]*)")?\]/g)].map(x => ({ name: x[1], value: x[2] }));
-  return { tag: tag && tag !== "*" ? tag.toUpperCase() : null, classes, attrs };
+  return { tag: tag && tag !== "*" ? tag.toUpperCase() : null, classes, attrs, nots, focus };
 }
 
 /** "a b > c" → [{compound, comb}] right-to-left friendly list. */
@@ -308,14 +321,17 @@ export class FakeElement {
   focus() {}
   /** Does this element satisfy one compound? */
   matchesCompound(c) {
+    if (c.focus && globalThis.document?.activeElement !== this) return false;
+    if (c.nots?.some(n => this.matchesCompound(n))) return false;
     if (c.tag && this.tagName !== c.tag) return false;
     for (const cls of c.classes) if (!this.classList.contains(cls)) return false;
     for (const a of c.attrs) {
       let v;
       if (a.name.startsWith("data-")) v = this.dataset[camel(a.name)];
       else if (a.name === "class") v = this.className;
+      else if (["hidden", "disabled", "checked", "selected"].includes(a.name)) v = this[a.name] ? "" : undefined;
       else v = this.attrs[a.name] ?? this[a.name];
-      if (v === undefined || v === null) return false;
+      if (v === undefined || v === null || v === false) return false;
       if (a.value !== undefined && String(v) !== a.value) return false;
     }
     return true;
