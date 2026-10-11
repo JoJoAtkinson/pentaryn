@@ -41,8 +41,9 @@ export const MANIFEST = Object.freeze({
         + "A thrown PentarynAbort means nothing was written (version gate, @ref lint, malformed entry, "
         + "fetch, non-GM, a bad option, an import already running on this tab); a thrown "
         + "PentarynAssertionError means a readback failed and the batch is partial (actors before it "
-        + "were written). Per-actor write failures do not throw: they come back as "
-        + "{ ok: false, failed: [{ slug, error }] }.",
+        + "were written). A PentarynAbort carries a kit code: NOT_FOUND (no file at path), NOT_GM, "
+        + "BAD_ARGS, CONFLICT (already running), TIMEOUT, else REFUSED. Per-actor write failures do "
+        + "not throw: they come back as { ok: false, failed: [{ slug, error }] }.",
     },
     {
       path: "selftest",

@@ -49,11 +49,12 @@ function shout(message) {
  * Shout, then throw: the one shape of every refusal and readback failure (items-journal-3).
  * @param {typeof PentarynAbort|typeof PentarynAssertionError} ErrorClass
  * @param {string} message
+ * @param {string} [code]  a PentarynAbort's kit code (default REFUSED)
  * @returns {never}
  */
-function refuse(ErrorClass, message) {
+function refuse(ErrorClass, message, code) {
   shout(message);
-  throw new ErrorClass(message);
+  throw code === undefined ? new ErrorClass(message) : new ErrorClass(message, code);
 }
 
 /**
@@ -93,7 +94,7 @@ async function fetchJsonWithTimeout(path, { timeout = DEFAULT_TIMEOUT_MS, ...ini
     response = await fetch(url, { cache: "no-cache", ...init, signal: controller.signal });
   } catch (cause) {
     if (cause?.name === "AbortError") {
-      throw new PentarynAbort(`Timed out after ${timeout} ms fetching ${url}`);
+      throw new PentarynAbort(`Timed out after ${timeout} ms fetching ${url}`, "TIMEOUT");
     }
     throw new PentarynAbort(`Network error fetching ${url}: ${cause?.message ?? cause}`);
   } finally {
@@ -103,7 +104,8 @@ async function fetchJsonWithTimeout(path, { timeout = DEFAULT_TIMEOUT_MS, ...ini
   if (!response.ok) {
     throw new PentarynAbort(
       `HTTP ${response.status} ${response.statusText} for ${url}. `
-      + "Is the file under Data/? Run `make foundry-sync` first."
+      + "Is the file under Data/? Run `make foundry-sync` first.",
+      response.status === 404 ? "NOT_FOUND" : "REFUSED"
     );
   }
 
@@ -113,9 +115,11 @@ async function fetchJsonWithTimeout(path, { timeout = DEFAULT_TIMEOUT_MS, ...ini
   try {
     return JSON.parse(text);
   } catch (cause) {
+    // a miss that fell through to Foundry's HTML routes: the file is not there
     throw new PentarynAbort(
       `${url} did not contain JSON (${cause.message}). First 120 characters: `
-      + `${JSON.stringify(text.slice(0, 120))}`
+      + `${JSON.stringify(text.slice(0, 120))}`,
+      "NOT_FOUND"
     );
   }
 }
