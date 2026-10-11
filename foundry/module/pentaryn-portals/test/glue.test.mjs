@@ -332,8 +332,8 @@ test("snapshot: no bounds → the first shape's x/y + half its size; an image th
   assert.deepEqual(blob.ctx[0], ["drawImage", "Image", 200, 150, 800, 500, 0, 0, 480, 300]);
   P.pit.regions.delete(loose.id);
   delete W.images["maps/pit.webp"];
-  // KNOWN: (-27) the raw load error escapes; the finding wants `portal snapshot: cannot load <src>`.
-  await assert.rejects(S.snapshot(P.pitGate));
+  // [declared] -27: the rejection names the file (it was the raw load error)
+  await assert.rejects(S.snapshot(P.pitGate), { message: "portal snapshot: cannot load maps/pit.webp" });
 });
 
 test("gaps: [element] forms for preferTeleport and injectConfig; a snapshot that returns null leaves the fields", async () => {

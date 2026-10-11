@@ -86,7 +86,7 @@ export async function snapshot(regionOrUuid, { squaresWide = 8, squaresHigh = 5 
     const i = new Image();
     i.crossOrigin = "anonymous";
     i.onload = () => resolve(i);
-    i.onerror = reject;
+    i.onerror = cause => reject(new Error(`portal snapshot: cannot load ${src}`, { cause }));
     i.src = src;
   });
   const { x, y, w, h, outW, outH, mx, my, markR } = cropWindow({
