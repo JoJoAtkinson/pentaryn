@@ -901,7 +901,7 @@ both Warnings and Manual.
 | C58 | fail | one `serialStore` per key across the module |
 | C59 | warn+manual | `await <doc>.update/create/delete/setFlag/unsetFlag(` inside a loop body (batch it) |
 | C60 | warn | no `async` listener or `await` in a hot-hook handler unless it defers via `perFrame`/`debounce`/`coalesce` |
-| C61 | warn+manual | a writing `create*/update*/delete*` listener has an active-GM gate, the initiator gate (`userId !== game.user.id`) or a claim (an any-GM gate alone → manual) |
+| C61 | warn+manual | a writing `create*/update*/delete*` listener has an active-GM gate, the initiator gate (`userId !== game.user.id`) or a claim (an any-GM gate alone → manual); the write and the gate are looked for in the listener and the functions it calls by name, in its file or the module files it imports |
 
 ## 12. Wiring status
 

@@ -572,6 +572,12 @@ C61_CASES = [
      'function gate() { return game.users.activeGM?.isSelf; }', "pass"),                  # gate in a helper
     ('reg.on("deleteActor", (a) => { seen.delete(a.id); });', "pass"),                     # a Map, not a doc
     ('reg.on("updateActor", (a) => { seen.set(a.id, 1); });', "pass"),
+    ('reg.on("updateActor", (a) => { void react(a); });\n'
+     'async function react(a) { await a.update({ x: 1 }); }', "warn"),                    # write in a helper
+    ('reg.on("updateActor", (a) => { if (!isActiveGM()) return; void react(a); });\n'
+     'async function react(a) { await a.update({ x: 1 }); }', "pass"),
+    ('reg.on("updateActor", (a) => { void note(a); });\n'
+     'function note(a) { seen.set(a.id, 1); }', "pass"),                                  # helper writes nothing
 ]
 
 
@@ -583,3 +589,14 @@ def test_c61_world_wide_document_reaction_runs_on_one_client(tmp_path, code, wan
 def test_c61_any_gm_gate_names_why(tmp_path):
     r = res(one(tmp_path, 'reg.on("updateCombat", (c) => { if (!game.user.isGM) return; c.update({}); });'), "C61")
     assert "any-GM gate only" in r["detail"][0]
+
+
+def test_c61_gate_and_write_in_an_imported_module_file(tmp_path):
+    gate = ('import { isRunner } from "./b.mjs";\n'
+            'reg.on("deleteActiveEffect", (e) => { if (!isRunner(e.parent)) return; e.parent.update({}); });')
+    b = 'export function isRunner(a) { return pickRunner({ activeGMId: null, ownerIds: [] }) === game.user.id; }\n'
+    assert res(one(tmp_path / "g", gate, extra={"b.mjs": b}), "C61")["status"] == "pass"
+    write_ = ('import { react } from "./b.mjs";\n'
+              'reg.on("updateActor", (a) => { void react(a); });')
+    b = 'export async function react(a) { await a.update({ x: 1 }); }\n'
+    assert res(one(tmp_path / "w", write_, extra={"b.mjs": b}), "C61")["status"] == "warn"

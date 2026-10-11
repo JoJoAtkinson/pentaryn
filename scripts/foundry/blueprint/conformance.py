@@ -1495,17 +1495,30 @@ def listeners(m: Module) -> list[Listener]:
     return out
 
 
-def _with_called(code: str, body: str) -> str:
-    """`body` plus the bodies of same-file functions it calls by name (one level)."""
+def _with_called(code: str, body: str, more: tuple[str, ...] = ()) -> str:
+    """`body` plus the bodies of functions it calls by name (one level), looked up in `code` (the
+    listener's file) and then in `more` (the module files it imports)."""
     extra = []
     for name in set(re.findall(r"(?<![\w$.])([A-Za-z_$][\w$]*)\s*\(", body)):
-        dm = re.search(rf"(?<![\w$.])(?:async\s+)?function\s*{re.escape(name)}\s*\(", code)
-        if dm:
-            close = match_paren(code, dm.end() - 1)
-            q = close + 1 + len(re.match(r"\s*", code[close + 1:]).group(0))
-            if code[q:q + 1] == "{":
-                extra.append(code[q:match_paren(code, q) + 1])
+        for src in (code, *more):
+            dm = re.search(rf"(?<![\w$.])(?:async\s+)?function\s*{re.escape(name)}\s*\(", src)
+            if not dm:
+                continue
+            close = match_paren(src, dm.end() - 1)
+            q = close + 1 + len(re.match(r"\s*", src[close + 1:]).group(0))
+            if src[q:q + 1] == "{":
+                extra.append(src[q:match_paren(src, q) + 1])
+            break
     return "\n".join([body, *extra])
+
+
+def _imported_code(m: Module, rel: str) -> tuple[str, ...]:
+    """The code of the module's own files that `rel` imports (lib/ and outside files excluded)."""
+    seen = []
+    for target, _ in m.imports(rel):
+        if target in m.files and target != rel and target not in seen:
+            seen.append(target)
+    return tuple(m.code(t) for t in seen)
 
 
 @rule("C53", "fail", "no async listener on a vetoable hook (pre*, <pkg>.pre*): it can never veto")
@@ -1700,9 +1713,14 @@ def c60(m):
 def c61(m):
     found = []
     for ls in listeners(m):
-        if not DOC_EVENT.match(ls.name) or not ls.body or not DOC_WRITE.search(ls.body):
+        if not DOC_EVENT.match(ls.name) or not ls.body:
             continue
-        scope = _with_called(m.code(ls.rel), ls.body)
+        # the write and the gate are both looked for in the body plus the functions it calls (same
+        # file, then the module files it imports), so `void react(actor)` with the write in react()
+        # is checked like an inline write, and an imported `isRunner()` wrapping pickRunner is a gate
+        scope = _with_called(m.code(ls.rel), ls.body, _imported_code(m, ls.rel))
+        if not DOC_WRITE.search(scope):
+            continue
         if ACTIVE_GATE.search(scope) or CLAIM.search(scope):
             continue
         why = "any-GM gate only (runs in every GM tab)" if ROLE_GATE.search(scope) else "no gate"
