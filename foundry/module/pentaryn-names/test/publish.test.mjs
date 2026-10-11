@@ -51,7 +51,19 @@ test("game.pentaryn root helpers see names", () => {
   assert.deepEqual(Object.keys(game.pentaryn.describe().namespaces), [NS]);
 });
 
-test("uninstall() removes both actor hooks", () => {
+test("trace() is empty while CONFIG.debug is off", () => {
+  assert.deepEqual(api.trace(), []);
+});
+
+test("uninstall() removes both actor hooks; a hot re-import after ready re-wires and republishes", async () => {
   api.uninstall();
   assert.deepEqual(F.listeners(), {});
+  assert.equal(game.ready, true, "the stub marks the world ready once ready fired");
+  await import("../names.mjs?v=2");
+  assert.deepEqual(F.listeners(), { preUpdateActor: 1, updateActor: 1 });
+  const again = game.pentaryn.names;
+  assert.notEqual(again, api, "a new API object");
+  assert.equal(game.modules.get(MODULE).api, again);
+  assert.deepEqual(again.describe().methods.map(m => m.path), ["sync", "relabel", "shortName"]);
+  again.uninstall();
 });
