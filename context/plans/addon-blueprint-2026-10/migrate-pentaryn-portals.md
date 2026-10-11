@@ -533,3 +533,49 @@ The structural steps absorb -25, -26, -29 (W7), -31 (ADJ), -33, the C24 part of 
 | `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
 | Adjustments rows appended to `adjustments-batch.md` | yes / no |
 | Still failing, and why | ______ |
+
+### Checkpoint (wave 3, 2026-10-11)
+
+**checkpoint: 0ca63b97** (`test(portals): characterisation checkpoint`). The tests and goldens
+under `test/` are frozen from here: during S2–S8 only `test/fixtures/seams.mjs` may change (it
+re-exports the internals from the new files).
+
+- **Re-anchor.** `git diff 4e64f47..wave-3-base -- foundry/module/pentaryn-portals` is empty, so
+  every HEAD `4e64f47` line number in this guide still holds for `portals.mjs` lines 1–966. The
+  only code edit since is the test seam that `a73d7ad1` appends after line 966
+  (`export const _internals = {…}`, with a `state()` getter for `badgeLayer`, `drawRun`, `tip`,
+  `menu` and `drag`). At `wave-3-base` the score is **58.1 % (25/43)**, not the 51.3 % in §1:
+  - C32 passes since D2 renamed the row to `core-teleport-default-and-spread`;
+  - the rule set grew to 43 fail-class rules;
+  - C59 is a new warning (`portals.mjs:842, 847, 851, 871`: per-behaviour `update` in a loop).
+- **S1 commits.** The steps are split across four commits:
+  - `2b412b0a` vendors kit 1.0.2 (full tier);
+  - `49b2484d` moves `run.mjs` to `test/legacy-core.mjs`, kept in `LEGACY`, and gives `run.mjs` the fixed body;
+  - `a73d7ad1` adds the seam;
+  - `0ca63b97` is the checkpoint.
+  After the checkpoint the score is **67.4 % (29/43)**: C14, C20, C41 and C43 now pass.
+- **Coverage** (`node --test --experimental-test-coverage`, line / branch / funcs):
+
+  | File | Before | After |
+  |---|---|---|
+  | `portals.mjs` | not loaded by any test | **100 / 98.02 / 100** |
+  | `portals-core.mjs` | 100 / 92.19 / 100 | **100 / 96.95 / 100** |
+
+  The branches still uncovered are defensive `?.` / `??` fallbacks. The bubble `pointermove`
+  `if (drag) return` cannot be reached: the capture listener stops the event first.
+- **Test files.** 113 node:test tests, plus the 52 legacy checks:
+  - `core`, `glue`, `hooks`, `badges`, `party`, `card-app`, `publish`;
+  - 18 goldens, including `hooks.json` (grouped by hook name, 14 registrations),
+    `surface-legacy.json` and `settings-register.json`. S5 and S6 need the last two.
+- **Todo and KNOWN pins** (each flips in its own [declared] commit):
+  - todo: `VERSION === module.json` (core.test). It passes once S2 adds `VERSION`/`MODULE` to core.
+  - KNOWN (-32): `cardFor(null)` throws a TypeError. D-P5 flips it.
+  - KNOWN (-43): an occupant flagged only through `handleActor` still crowds `spreadArrival`. D-P6 flips it. `recordOf` treats it as a handle, and the tests pin that as intended.
+  - KNOWN (-28): `bringFollowers` rejects on "already exists". D-P4 flips it.
+  - KNOWN (-27): when the image fails to load, `snapshot` rejects with the raw error.
+- **Pins a later step changes on purpose:**
+  - S7 re-pins the `pp-` HTML goldens: `cards-html`, `decorate-*`, `config-fieldset`, `hover`, `menu`, `card-edit`, `card-preview`, `confirm-party`.
+  - The hygiene commit re-pins the clear-image payload `{"flags.pentaryn-portals.-=img": null}`.
+  - D-P3 (debounce) changes the hooks test "each region hook draws once, immediately".
+  - D-P1 changes the publish test ("nothing at ready itself; one tick later") and `surface-legacy.json`.
+- **Not pinned:** whether the C24 silent catches log anything. S4 adds `warnOnce`/`debug` with its own new tests. S1 pins only that drawing still succeeds and nothing throws.
