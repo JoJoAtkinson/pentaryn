@@ -9,7 +9,7 @@
  * redraw it live in creature-strip.mjs.
  */
 
-import { shouldShowStrip, stripDock, stripEntries, stripSignature } from "./creatures-core.mjs";
+import { dockKey, shouldPollDock, shouldShowStrip, stripDock, stripEntries, stripSignature } from "./creatures-core.mjs";
 import { setting } from "./settings.mjs";
 import { summarize } from "./tokens-adapter.mjs";
 
@@ -71,17 +71,45 @@ export function render() {
 /* The strip floats above the Combat HUD while the HUD is up (usability Area 6 re-run, W8): docked
    above the hotbar it sat behind Argon's action bars, so clicks went to the bar instead. */
 let dockTimer = null;
-function placeStrip() {
-  const el = stripEl();
-  if (!el) { clearInterval(dockTimer); dockTimer = null; return; }
-  const bar = document.querySelector(".extended-combat-hud .action-hud") ?? document.querySelector(".extended-combat-hud");
-  const r = bar && bar.offsetParent !== null ? bar.getBoundingClientRect() : null;
-  const dock = setting("floatOverHud") ? stripDock(r, window.innerHeight) : null;
+/** The element and dock (core dockKey) last written, so an unchanged tick writes nothing. */
+let dockedEl = null;
+let lastDock = null;
+
+/** Argon's Combat HUD module is enabled in this world (its id never changes within a session). */
+const argonActive = () => game.modules.get("enhancedcombathud")?.active === true;
+
+function stopDockPoll() {
+  clearInterval(dockTimer);
+  dockTimer = null;
+}
+
+function applyDock(el, dock) {
+  const key = dockKey(dock);
+  if (el === dockedEl && key === lastDock) return;
+  dockedEl = el;
+  lastDock = key;
   el.classList.toggle("pcr-floating", !!dock);
   el.style.bottom = dock ? `${dock.bottom}px` : "";
   el.style.left = dock ? `${dock.left}px` : "";
-  // Argon opens, closes and re-renders without a hook we can rely on: look again twice a second
-  // while the strip exists (one rect read).
+}
+
+/**
+ * Float the strip over Argon's action bar, or dock it. Argon opens, closes and re-renders without a
+ * hook we can rely on, so while the strip exists, floatOverHud is on and Argon is enabled, look
+ * again twice a second (one rect read); otherwise no poll at all (transform-creatures-40).
+ */
+export function placeStrip() {
+  const el = stripEl();
+  if (!el) { stopDockPoll(); return; }
+  const floatOverHud = !!setting("floatOverHud");
+  if (!shouldPollDock({ stripPresent: true, floatOverHud, argonActive: argonActive() })) {
+    stopDockPoll();
+    applyDock(el, null);
+    return;
+  }
+  const bar = document.querySelector(".extended-combat-hud .action-hud") ?? document.querySelector(".extended-combat-hud");
+  const r = bar && bar.offsetParent !== null ? bar.getBoundingClientRect() : null;
+  applyDock(el, stripDock(r, window.innerHeight));
   dockTimer ??= setInterval(placeStrip, 500);
 }
 
@@ -144,7 +172,8 @@ function onDoubleClick(event) {
 /** Take the strip off the page and stop the dock poll. */
 export function remove() {
   stripEl()?.remove();
-  clearInterval(dockTimer);
-  dockTimer = null;
+  stopDockPoll();
+  dockedEl = null;
+  lastDock = null;
   lastSig = null;
 }

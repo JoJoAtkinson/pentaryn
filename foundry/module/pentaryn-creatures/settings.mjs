@@ -41,6 +41,7 @@ export const SETTINGS = Object.freeze([
     key: "floatOverHud", scope: "world", config: true, type: Boolean, default: true,
     name: "PENTARYN_CREATURES.settings.floatOverHud.name",
     hint: "PENTARYN_CREATURES.settings.floatOverHud.hint",
+    onChange: value => handlers.floatOverHud?.(value),
     doc: "The strip floats just above Argon's Combat HUD while it is open, instead of behind it.",
   },
   {

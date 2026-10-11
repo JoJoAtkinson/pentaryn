@@ -4,7 +4,7 @@
  */
 
 import { stripMayChange } from "./creatures-core.mjs";
-import { forget, list, markControlled, remove, render } from "./strip.mjs";
+import { forget, list, markControlled, placeStrip, remove, render } from "./strip.mjs";
 
 let log = null;
 let renderTimer = null;
@@ -39,6 +39,8 @@ export function install(reg, ctx) {
   }, { guard: false, label: "updateUser: redraw strip" });
   reg.on("controlToken", () => markControlled(), { guard: false, label: "controlToken: mark strip" });
   ctx.onSettingChange("showStrip", () => { forget(); scheduleRender(); });
+  // a world setting: every client re-places its own strip (starts or stops its dock poll); no writes
+  ctx.onSettingChange("floatOverHud", () => placeStrip());
   ctx.expose({ list, render: () => { forget(); render(); }, scheduleRender });
 }
 

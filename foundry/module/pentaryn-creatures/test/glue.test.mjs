@@ -94,8 +94,10 @@ test("init registers lightRadius, ownerSees, floatOverHud, showStrip — option 
   assert.deepEqual(os, { ...label("ownerSees"), scope: "world", config: true, type: Boolean, default: true });
 
   const floatOverHud = opts("floatOverHud");
-  assert.deepEqual(Object.keys(floatOverHud), ["name", "hint", "scope", "config", "type", "default"], "no onChange");
-  assert.deepEqual(floatOverHud, { ...label("floatOverHud"), scope: "world", config: true, type: Boolean, default: true });
+  // [declared] C-D8 (transform-creatures-40): floatOverHud gained an onChange (re-place the strip)
+  assert.deepEqual(Object.keys(floatOverHud), ["name", "hint", "scope", "config", "type", "default", "onChange"]);
+  const { onChange: _d, ...fo } = floatOverHud;
+  assert.deepEqual(fo, { ...label("floatOverHud"), scope: "world", config: true, type: Boolean, default: true });
 
   const showStrip = opts("showStrip");
   assert.deepEqual(Object.keys(showStrip), ["name", "hint", "scope", "config", "type", "default", "onChange"]);

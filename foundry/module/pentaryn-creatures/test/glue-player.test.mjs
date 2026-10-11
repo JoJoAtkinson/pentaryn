@@ -7,7 +7,8 @@
 //   transform-creatures-25  FIXED [declared]: updateToken re-renders only when a field the strip reads changed
 //   transform-creatures-29  FIXED [declared]: an override failure still answers false, and warns once
 //   transform-creatures-31  FIXED [declared]: api.ownerSees(TokenDocument) answers for its placeable
-//   transform-creatures-40  with no Argon on the page the poll still runs, two queries a tick
+//   transform-creatures-40  FIXED [declared]: the poll runs only with Argon enabled and floatOverHud on
+//                           (this world enables Argon; the off cases are glue-dock.test.mjs)
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { manifestOf, pinJSON } from "./kit/harness.mjs";
@@ -19,6 +20,8 @@ const manifest = manifestOf(new URL("..", import.meta.url));
 const W = await setupWorld({ player: true, libWrapper: "global-only" });
 const { F, D } = W;
 registerSelf(F, manifest);
+// [declared] C-D8 (transform-creatures-40): the dock poll needs Argon's module enabled
+F.game.modules.set("enhancedcombathud", { id: "enhancedcombathud", active: true });
 
 await import("../creatures.mjs");
 
@@ -168,7 +171,7 @@ test("double-click opens the actor's sheet with force; no sheet → nothing", ()
   assert.equal(el.dispatch("dblclick").defaultPrevented, false);
 });
 
-test("KNOWN transform-creatures-40: no Argon → the 500 ms poll still runs, querying both selectors each tick, armed once", async () => {
+test("Argon enabled, its HUD not open → the 500 ms poll runs (to notice it opening), both selectors each tick, armed once", async () => {
   // the strip mounted at t=60 armed the interval: ticks land at 560, 1060, …
   D.queries.length = 0;
   await tick(500);
@@ -210,21 +213,24 @@ test("dock: Argon's action bar up → float 8 px above it, left-aligned; hidden 
   D.window.innerHeight = 900;
 });
 
-test("floatOverHud false (no onChange): docked from the next tick, still polling; true floats again", async () => {
+test("transform-creatures-40 [declared]: floatOverHud false docks at once and stops the poll; true floats again at once", async () => {
   const el = W.strip();
   D.clearArgon();
   D.argon(ARGON, BAR);
   await tick(500);
   assert.equal(el.classList.contains("pcr-floating"), true);
   await F.game.settings.set(MODULE, "floatOverHud", false);
-  assert.equal(el.classList.contains("pcr-floating"), true, "nothing reacts to the change itself");
+  assert.equal(el.classList.contains("pcr-floating"), false, "the change itself docks it (was: on the next tick)");
+  assert.deepEqual([el.style.bottom, el.style.left], ["", ""]);
   D.queries.length = 0;
-  await tick(500);
-  assert.equal(el.classList.contains("pcr-floating"), false);
-  assert.deepEqual(D.queries, [ARGON], "the bar is still read with the setting off");
+  D.byId.length = 0;
+  await tick(1500);
+  assert.deepEqual([D.queries, D.byId], [[], []], "no poll with the setting off (was: the bar still read)");
   await F.game.settings.set(MODULE, "floatOverHud", true);
+  assert.equal(el.classList.contains("pcr-floating"), true, "floats again at once");
+  assert.deepEqual(D.queries, [ARGON]);
   await tick(500);
-  assert.equal(el.classList.contains("pcr-floating"), true);
+  assert.deepEqual(D.queries, [ARGON, ARGON], "the poll is back");
   D.clearArgon();
   await tick(500);
 });
@@ -409,4 +415,3 @@ test("throwing setting reads fall back to the defaults: showStrip and floatOverH
 });
 
 /* ── the targets of the KNOWN rows (guide §4, steps 5 and 7) ─────────────── */
-test.todo("transform-creatures-40: no interval is armed without Argon on the page or with floatOverHud off; styles written only on change");
