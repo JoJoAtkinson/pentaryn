@@ -31,6 +31,7 @@ Open the entry point, then only what it points to. Every context file opens with
 |---|---|
 | Anything in Foundry — scenes, actors, tokens, server, tunnel, updater, assets | [`context/foundry/README.md`](context/foundry/README.md) |
 | Building a new Foundry module, or migrating one to the blueprint (kit, tiers, conformance) | [`context/foundry/addon-blueprint.md`](context/foundry/addon-blueprint.md) |
+| The MCP bridge itself — adding a `mcp__foundry__*` tool, the fork repo, build/restart, its logs | [`context/foundry/mcp-fork.md`](context/foundry/mcp-fork.md) |
 | The current one-shot — scene state, cast, IDs, what's still unbuilt | [`context/space-journey.md`](context/space-journey.md) |
 | The Ardenford campaign — world state, the map-candidate `Suggestions` folders | [`context/ardenford.md`](context/ardenford.md) |
 | The Pentaryn world (main build) — modules, splash, marker/crowd actors, what's still unbuilt | [`context/pentaryn.md`](context/pentaryn.md) |

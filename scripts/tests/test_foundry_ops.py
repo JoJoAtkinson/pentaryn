@@ -884,3 +884,14 @@ def test_ties_suite_is_gated():
     spec = cfg.MODULES["ties"]
     assert "node-test" in spec.check
     assert (spec.src / "test/run.mjs").is_file()
+
+
+@pytest.mark.repo
+def test_the_fork_has_a_use_doc_and_routes_to_it():
+    """mcp-fork-19: a use-doc for the MCP fork exists, opens with its bail-out line, and both
+    routing tables point at it."""
+    doc = cfg.REPO_ROOT / "context/foundry/mcp-fork.md"
+    head = doc.read_text(encoding="utf-8").splitlines()[:15]
+    assert any("**Read this when:**" in line for line in head)
+    for index in ("CLAUDE.md", "context/foundry/README.md"):
+        assert "mcp-fork.md" in (cfg.REPO_ROOT / index).read_text(encoding="utf-8"), index

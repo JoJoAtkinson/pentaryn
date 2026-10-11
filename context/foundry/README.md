@@ -99,6 +99,7 @@ The table is generated from each `module.json`, the module's code and its
 | Reviewing attributes, "the selected attributes", what Claude changed | [`attribute-review.md`](attribute-review.md) |
 | New in-house module, or bringing an existing one up to the blueprint — kit, tiers, conformance, the migration order | [`addon-blueprint.md`](addon-blueprint.md) · order and per-module guides: [`../plans/addon-blueprint-2026-10/README.md`](../plans/addon-blueprint-2026-10/README.md) |
 | Day-to-day server ops — start/stop, tunnel, OneDrive sync, module install | [`ops.md`](ops.md) |
+| Adding or changing an MCP bridge tool (`mcp__foundry__*`), the fork repo, its build, logs and upstream footprint | [`mcp-fork.md`](mcp-fork.md) |
 | "Put X here" / "replace the red one" — anything naming a spot on a map | [`markers.md`](markers.md) |
 | "Process the prompt markers" / "replace the prompts" — `Prompt · <size>` tokens with typed text | [`prompt-markers.md`](prompt-markers.md) |
 | "The party goes upstairs" — Region + teleport scene links | [`scene-links.md`](scene-links.md) |
