@@ -118,11 +118,11 @@ Each line cites finding ids; full detail (current, proposed, anchor, test recipe
 
 ### pentaryn-riders
 
-8 findings, 0 high impact (6 + 2 added at the `28ccc87` re-anchor) → [`code-audit-2026-10/riders.md`](code-audit-2026-10/riders.md)
+9 findings, 0 high impact (6 + 2 added at the `28ccc87` re-anchor + combat-riders-41 from wave-1 J8) → [`code-audit-2026-10/riders.md`](code-audit-2026-10/riders.md)
 
 - **Performance gains:** Concentration cleanup: skip non-concentration effects before scanning every scene's tokens (combat-riders-23)
 - **Maintainability gains:** pentaryn-riders: settings table, one MOD, and split the 662-line entry by concern (combat-riders-25); Extract the untested pure kernels of riders.mjs (Hit Dice pools, Battle Medic gate, report rows) into riders-core (combat-riders-26)
-- **Hardening:** Route the re-run's five hand patches (SummonActivity ×2, Argon item button ×2, TextEditor.enrichHTML) through wrapMethod/defineAccessor with a patch record (combat-riders-39)
+- **Hardening:** Route the re-run's five hand patches (SummonActivity ×2, Argon item button ×2, TextEditor.enrichHTML) through wrapMethod/defineAccessor with a patch record (combat-riders-39); Battle Medic relay runs in every GM tab: claim first so one tab heals and spends the Hit Die (combat-riders-41, new 2026-10-11, wave-1 J8)
 - **Logging / auditability gains:** Audit line for the Battle Medic GM relay and for refused queries (combat-riders-27); Three comment-only catches in the re-run code: log them at debug (combat-riders-40)
 - **LLM interface:** riders.inspect(ref) returning plain rows; describe()/settings(); reuse report's row builder (combat-riders-32)
 - **Documentation / skills:** adjustments.yml gaps: combat's chat-message-type reads; riders' tray, roll-config, sheet DOM and query rows (combat-riders-16)
@@ -285,15 +285,16 @@ Each line cites finding ids; full detail (current, proposed, anchor, test recipe
 
 ### pentaryn-journal
 
-7 findings, 0 high impact → [`code-audit-2026-10/journal.md`](code-audit-2026-10/journal.md)
+8 findings, 0 high impact (+items-journal-40 from wave-1 J8, 2026-10-11) → [`code-audit-2026-10/journal.md`](code-audit-2026-10/journal.md)
 
 - **Performance gains:** Every world item update re-sanitizes and re-hashes every open readable (items-journal-33); isEyeReadable scans every scene's notes on every journal-sheet render (items-journal-38)
 - **Maintainability gains:** Privacy and visibility rules live in untested glue: move them into journal-core with fixtures (items-journal-34)
 - **Defragmentation:** Two HTML escapers inside one module; use core.escapeHTML for the bar only (items-journal-32)
+- **Hardening:** `ensure` relay runs in every GM tab: claim first so one tab creates the player's journal (items-journal-40, new 2026-10-11, wave-1 J8)
 - **Logging / auditability gains:** Bare catch in activateNote; 'warn' is a toast; save refusals leave no console trace (items-journal-36)
 - **LLM interface:** An LLM (running as GM) gets null from add() and status(); no per-user read; four indistinguishable null reasons (items-journal-35)
 - **Documentation / skills:** Journal has no routing row; README says report() is GM-only but code has no gate; folderName and system relationship undocumented (items-journal-37)
-- **Checked, nothing found:** Hardening, Extendability (see `journal.md`)
+- **Checked, nothing found:** Extendability (see `journal.md`)
 
 ### Python tooling (Makefile, ops, updater, content, MCP server, dnd-scripts tools, tests)
 
@@ -329,7 +330,7 @@ Each line cites finding ids; full detail (current, proposed, anchor, test recipe
 | prompts | 3 | 5 | 5 | 2 | 3 | 1 | 1 | 1 | 21 | 0 |
 | lookup | 1 | 1 | 0 | 1 | 2 | 0 | 2 | 1 | 8 | 3 |
 | combat | 4 | 4 | 7 | 2 | 6 | 2 | 3 | 2 | 30 | 5 |
-| riders | 1 | 2 | 0 | 2 | 1 | 0 | 1 | 1 | 8 | 0 |
+| riders | 1 | 2 | 0 | 2 | 2 | 0 | 1 | 1 | 9 | 0 |
 | transform | 4 | 4 | 3 | 1 | 7 | 1 | 1 | 3 | 24 | 1 |
 | creatures | 3 | 0 | 1 | 1 | 2 | 0 | 1 | 0 | 8 | 0 |
 | names | 0 | 1 | 0 | 1 | 0 | 0 | 1 | 0 | 3 | 0 |
@@ -343,10 +344,10 @@ Each line cites finding ids; full detail (current, proposed, anchor, test recipe
 | importer | 1 | 1 | 1 | 0 | 1 | 1 | 1 | 1 | 7 | 2 |
 | attunement | 1 | 4 | 0 | 1 | 2 | 0 | 1 | 1 | 10 | 1 |
 | dropbin | 4 | 3 | 1 | 1 | 2 | 0 | 1 | 1 | 13 | 1 |
-| journal | 2 | 1 | 1 | 1 | 0 | 0 | 1 | 1 | 7 | 0 |
+| journal | 2 | 1 | 1 | 1 | 1 | 0 | 1 | 1 | 8 | 0 |
 | python-tooling | 3 | 9 | 11 | 5 | 15 | 3 | 3 | 3 | 52 | 4 |
 | mcp-fork | 1 | 2 | 2 | 6 | 7 | 4 | 2 | 2 | 26 | 4 |
-| **Total** | **49** | **56** | **52** | **33** | **67** | **20** | **34** | **27** | **338** | **35** |
+| **Total** | **49** | **56** | **52** | **33** | **69** | **20** | **34** | **27** | **340** | **35** |
 
 A `0` means the category was checked and nothing was found; each addon file's *Categories checked with no finding* section says what was looked at. Column key: Perf = Performance gains, Maint = Maintainability gains, Defrag = Defragmentation, Log = Logging / auditability gains, Harden = Hardening, Extend = Extendability, LLM = LLM interface, Docs = Documentation / skills.
 

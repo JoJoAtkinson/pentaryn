@@ -1,7 +1,7 @@
 ---
 title: "Code audit 2026-10 — pentaryn-journal"
 status: active
-last_modified: 2026-10-10
+last_modified: 2026-10-11
 tags: [plans, audit, foundry]
 ---
 
@@ -40,6 +40,7 @@ New pure rules go in journal-core.mjs with fixtures in test/run.mjs, and the REA
 | items-journal-38 | Performance gains | low | S | isEyeReadable scans every scene's notes on every journal-sheet render |
 | items-journal-34 | Maintainability gains | medium | S | Privacy and visibility rules live in untested glue: move them into journal-core with fixtures |
 | items-journal-32 | Defragmentation | low | S | Two HTML escapers inside one module; use core.escapeHTML for the bar only |
+| items-journal-40 | Hardening | low | S | `ensure` relay runs in every GM tab: claim first so one tab creates the player's journal |
 | items-journal-36 | Logging / auditability gains | low | S | Bare catch in activateNote; 'warn' is a toast; save refusals leave no console trace |
 | items-journal-35 | LLM interface | medium | S | An LLM (running as GM) gets null from add() and status(); no per-user read; four indistinguishable null reasons |
 | items-journal-37 | Documentation / skills | low | S | Journal has no routing row; README says report() is GM-only but code has no gate; folderName and system relationship undocumented |
@@ -140,6 +141,43 @@ test/run.mjs: pin core.escapeHTML(`<a href="x">'&"</a>`) === '&lt;a href=&quot;x
 
 **Risk.** Rendered text is identical; only the entity spelling in the bar's innerHTML changes. Nothing in repo string-matches '&#x27;'.
 
+## Hardening
+
+### items-journal-40 — `ensure` relay runs in every GM tab: claim first so one tab creates the player's journal
+
+*Added 2026-10-11 from the wave-1 report's J8 (blueprint §5.9.5). Joe's decision: a new audit id, fixed (claim first) when journal migrates, as a `[declared]` commit after its structural refactor. Not changed now. Sibling: combat-riders-41 (riders' Battle Medic relay).*
+
+**Category:** Hardening · **Impact:** low · **Effort:** S
+
+**Where:** `foundry/module/pentaryn-journal/journal.mjs:547–551` (the handler) and `ensureFor`, `journal.mjs:90–101`; the caller is `ensurePersonalJournal`, `journal.mjs:146`
+
+**Anchor:** `  CONFIG.queries[QUERY] = async (_data, { user } = {}) => {`
+
+**Current.**
+
+The server sends a query to every socket of the recipient user (blueprint §5.9.1, Queries). The handler's gate, `game.user.isGM && game.users.activeGM?.isSelf`, is true in every tab of the active GM's account. `ensureFor` de-duplicates with `gmInflight`, but that map is per tab, and its look-before-create (`personal(user) ?? createPersonal(…)`) runs in both tabs before either tab's create has been broadcast. With the bridge tab and a GM browser tab open, a player without journal-create permission who opens their journal for the first time can get **two** personal journals. `report()` already lists the extra one under `duplicates`. Unverified live.
+
+**Proposed.**
+
+When journal migrates (its relay moves to the kit's `relayed` query through the API manifest, C56):
+1. The handler claims the sender's user id first (`lib/election.mjs`). Only the winning tab runs `ensureFor`.
+2. Per §5.9.2 the losing tab answers first, so it waits (bounded, under the 8 s query timeout) until `personal(user)` exists and answers `{ entryId }` from it.
+3. Alternative noted by §5.9.2, if the claim proves awkward: create with a deterministic `_id` derived from the user id (`keepId: true`), and treat the second tab's duplicate-id refusal as success.
+
+For one tab the reply shape (`{ entryId }`), the folder and the ownership are unchanged. This is a behaviour change with two tabs (one journal instead of two), so it lands as a `[declared]` commit.
+
+**Behaviour test recipe (write first, must pass before and after).**
+
+In the journal glue harness, register the handler in two fake GM "tabs" that share one fake `game.journal`, and delay the create broadcast. Fire one `ensure` from a player into both:
+- Before the fix (pinned as `KNOWN items-journal-40`): two personal journals for that user.
+- After the fix (the pin flips): one journal, and both handlers resolve to the same `entryId`.
+
+The ready-time `ensureAll` and the `createUser` path are unchanged. They run on the active GM, and the same two-tab question for them is out of scope here.
+
+**Risk.** Low: a lost claim with no winner (the winning tab closes mid-create) leaves the player with the existing "failed" toast and a retry on the next open.
+
+**Related:** combat-riders-41, items-journal-37
+
 ## Logging / auditability gains
 
 ### items-journal-36 — Bare catch in activateNote; 'warn' is a toast; save refusals leave no console trace
@@ -216,7 +254,7 @@ Docs and metadata. Add a scripts/tests check that each foundry/module/*/README.m
 
 ## Categories checked with no finding
 
-- **Hardening:** checked:
+- **Hardening:** checked (first pass; items-journal-40 was added on 2026-10-11 for the two-GM-tab case):
   - The relay (`journal.mjs:547–551`) answers only as the active GM, ignores the payload, and acts only for the sender (`user`).
   - The ready backfill and the `createUser` hook run on the active GM only, each with a `.catch` (554–563).
   - Player-side requests time out at 8 s with a toast (145–152).

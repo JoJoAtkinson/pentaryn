@@ -715,8 +715,9 @@ C53–C61 in §11 automate what a scan can see; C54, C59 and C61 also land on th
 - Queries run in every tab of the recipient account, so `relayed`/`guarded` handlers that write run
   twice with the bridge and a GM browser tab open. Affected today: riders' Battle Medic relay
   (`foundry/module/pentaryn-riders/riders.mjs:417`) and journal `ensure`
-  (`foundry/module/pentaryn-journal/journal.mjs:146`); their idempotency is unverified. A fix is a
-  behaviour change — Joe's decision or a new audit id first.
+  (`foundry/module/pentaryn-journal/journal.mjs:146`); their idempotency is unverified. Tracked as
+  combat-riders-41 and items-journal-40 (Joe, 2026-10-11): each is fixed, claim first, as a
+  `[declared]` commit when its module migrates.
 - Both existing `.query(` callers pass `timeout: 8000`; C55 keeps that true.
 - `guarded`'s NOT_GM check admits Assistant GMs (`isGM`). Documented, not changed.
 - Python: once python-tooling-44 lands, a pytest in `scripts/tests` reads the AST of
