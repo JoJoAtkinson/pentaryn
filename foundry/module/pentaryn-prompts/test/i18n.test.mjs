@@ -63,6 +63,6 @@ test("C51: every SETTINGS and keybinding row carries literal name/hint keys pres
   assert.equal(labelled.length, 12);
   for (const row of labelled) {
     for (const k of [row.name, row.hint]) assert.ok(keys.has(k), `${row.key}: ${k}`);
-    for (const v of Object.values(row.choices ?? {})) if (v.startsWith("PENTARYN_PROMPTS.")) assert.ok(keys.has(v), v);
+    for (const v of Object.values(row.choices ?? {})) if (/^PENTARYN_PROMPTS\./.test(v)) assert.ok(keys.has(v), v);
   }
 });

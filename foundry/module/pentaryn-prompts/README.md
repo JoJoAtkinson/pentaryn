@@ -170,6 +170,9 @@ None emitted (`renderPromptDialog` is core's ApplicationV2 hook). The hooks it l
 | `prompts-token-dblclick` | patch: `Token#_onClickLeft2` through libWrapper (`MIXED`), else wrapped directly; marker `__pentarynPromptsClick` | `patches.mjs` |
 | `itempiles-prompts-hotspot` | not a patch: hotspots clone the Item Piles template and write `flags.item-piles.data` | `replace.mjs`, `scene-adapter.mjs` |
 
+`dialog.mjs` overrides `_onRender`, `_onPosition` and `_updatePosition` on its own ApplicationV2
+subclass (the box): no row, nothing of core's is changed.
+
 ## Two sessions / who writes
 
 Everything is GM-only. `ensureMarkers` runs on the active GM. The queries are GM-guarded; the fork
