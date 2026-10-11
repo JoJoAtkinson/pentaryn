@@ -15,7 +15,18 @@ import { readFileSync } from "node:fs";
 import { installFoundry, makeDoc, makeToken, StubCollection } from "../kit/foundry-stub.mjs";
 import { installDom, FakeElement } from "./dom.mjs";
 
-export const LANG = JSON.parse(readFileSync(new URL("../../lang/en.json", import.meta.url), "utf8"));
+/**
+ * lang/en.json as flat dotted keys, whether the file is flat or nested under PENTARYN_TIES (guide S10
+ * nests it; Foundry flattens either shape the same way). Format only — the keys and strings are the file's.
+ */
+const flatten = (node, prefix = "", out = {}) => {
+  for (const [k, v] of Object.entries(node ?? {})) {
+    if (v && typeof v === "object") flatten(v, prefix ? `${prefix}.${k}` : k, out);
+    else out[prefix ? `${prefix}.${k}` : k] = v;
+  }
+  return out;
+};
+export const LANG = flatten(JSON.parse(readFileSync(new URL("../../lang/en.json", import.meta.url), "utf8")));
 export const NOW = 1_790_000_000_000;
 
 export const DND5E = {
