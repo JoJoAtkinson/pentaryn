@@ -54,9 +54,15 @@ one of them **cannot get in**.
    Platform → Audience** → *Test users* → **+ Add users** → type the Gmail, Enter → **Save**.
    Cap: 100 users, counted over the app's lifetime. **Save often needs a second click** — the
    first only takes focus off the email box and the panel stays open. Check the email shows in
-   the *Test users* table and the "N users (N test…)" count went up before moving on.
+   the *Test users* table and the "N users (N test…)" count went up before moving on. If the
+   second click pops **"Ineligible accounts not added"** naming the same email but the count
+   still went up, it's harmless — the first click saved it and the second re-submitted a
+   duplicate. Trust the table, not the popup.
 2. **Cloudflare** — Cloudflare One → **Access controls → Policies** → `vtt-players` → *Include:
    Emails* → add the Gmail → **Save**. (Or: Applications → `vtt` → Edit → click the policy.)
+   Once the chips fill a row, the empty email box wraps to a new line below them — click
+   *that*, or the typing goes nowhere. Enter lowercase; confirm the chip appears before saving,
+   then re-open the policy and check *Policy details → Include Emails* lists it.
 
 Remove a player: delete the email from **both** lists. Their existing session cookie can live
 up to a month — to cut them off now, Cloudflare One → **Team & Resources → Users** → the user →
