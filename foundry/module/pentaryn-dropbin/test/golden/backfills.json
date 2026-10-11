@@ -1,0 +1,45 @@
+[
+  {
+    "actor": "Actor.actorChest000001",
+    "changes": {
+      "flags.item-piles.data.lockedSound": "sounds/lock.wav",
+      "prototypeToken.flags.item-piles.data.lockedSound": "sounds/lock.wav"
+    }
+  },
+  {
+    "scene": "sceneOne00000001",
+    "type": "Token",
+    "data": [
+      {
+        "_id": "tokChest00000001",
+        "flags.item-piles.data.lockedSound": "sounds/lock.wav"
+      }
+    ]
+  },
+  {
+    "actor": "Actor.actorEye00000001",
+    "changes": {
+      "prototypeToken.sight.enabled": false
+    }
+  },
+  {
+    "scene": "sceneOne00000001",
+    "type": "Token",
+    "data": [
+      {
+        "_id": "tokChest00000001",
+        "sight.enabled": false
+      }
+    ]
+  },
+  {
+    "scene": "sceneOne00000001",
+    "type": "Note",
+    "data": [
+      {
+        "_id": "noteGlobal000001",
+        "global": false
+      }
+    ]
+  }
+]
