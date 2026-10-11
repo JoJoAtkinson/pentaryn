@@ -1,7 +1,7 @@
 ---
 title: Migration guide — pentaryn-names to the addon blueprint
 status: plan
-last_modified: 2026-10-10
+last_modified: 2026-10-11
 tags: [foundry, modules, blueprint, plan, migration, names]
 ---
 
@@ -378,14 +378,63 @@ function, rename a test actor and see the toast.
   order-free. `Scene#updateEmbeddedDocuments` and `TokenDocument#canUserModify` are added by
   `fixtures/world.mjs` (the kit stub has neither).
 
+## Steps 2-8 record (2026-10-11, wave 1)
+
+Template generated into the scratchpad with `new_module.py names --tier small --kit api --no-dnd5e
+--css-prefix pnm-` and compared: its `lib/` is byte-identical to the vendored kit (f1ecd11), so only
+the shapes were taken (entry header and wiring, core constants, README/CHANGELOG, empty
+`test/graph-allow.json`); the template's example feature, styles, example tests and `module.json`
+were not (module.json stays as shipped — Wave 7). The old `names.mjs` body was removed in the step
+that moved each part; `names.mjs` stays the entry (D11).
+
+| Step | Commit | Absorbs / clears | Pins moved |
+|---|---|---|---|
+| 2 core | 4ad0a4e | **transform-creatures-32**; C11, C12, C41 | none — core added to `fixtures/impls.mjs`; new `test/core-meta.test.mjs` (bare import, VERSION/MODULE vs module.json, core = oracle row by row) |
+| 3 feature + entry | d1e27bf | C18 (C17 stays pass) | none — `hooks.json` unchanged |
+| 7 i18n | ddbcca6 | C34 | none — toast text byte-identical. Optional N-D4 (`log.notify`) **not taken** |
+| 4 [declared] | 5202be0 | **transform-creatures-33** (N-D1) | KNOWN -33 probe: rejections `[]`, one warn `pentaryn-names \| relabel after rename failed` `{actor, from, to}` + error |
+| 5 [declared] | 7983909 | N-D2; C50 scored | "module.api is undefined" → `module.api === game.pentaryn.names`, both ready hooks fired. First pins: `golden/surface.json`, `test/publish.test.mjs` (describe rows/hooks, frozen, root helpers) |
+| 6 [declared] | af129d1 | **transform-creatures-38** (N-D3) | KNOWN -38: id and uuid → 3 (this world's count), unique exact name resolves, ambiguous `"Bob"` → `fail("AMBIGUOUS")`, `"Bo"`/`"ZZ Glubbek"`/`null` still reject `TypeError` |
+| 8 docs | 005f89a | C44, C45; -38's README API block | none |
+| — | 2cc5d48 | coverage: `trace()`, hot re-import after ready | none |
+
+Step order: 2, 3, 7 (structural) before 4, 5, 6 (declared), so every known-bug fix lands after the
+structural refactor. Frozen check: `git diff f1ecd11 -- test/golden test/core.test.mjs` is empty;
+`glue.test.mjs` changed only in the three named pins (and their header lines).
+
+- Suite: `node test/run.mjs` — 44 tests (core 17, core-meta 3, glue 19, publish 5), all pass.
+  `vendor.py check names` ✓. Coverage (excluding lib/, test/): names-core, rename, api-manifest
+  100 / 100 / 100; names.mjs 98 / 86 / 83 (the `?v=2` re-import instance is counted separately).
+- Score after: **95.3 %** — fails only C07 (Wave 7 `module.json`) and C39 (ModuleSpec `node-test`);
+  warn C02 (Wave 7); manual C31, C42. Expected 100 % of fail-class rules after those two land.
+- i18n gate (`make foundry-names-check`) not run in the parallel step (no make); C35 passes on the scorer.
+- Behaviour notes for review: the `reg.on` guard now logs a synchronous throw in either handler as
+  `pentaryn-names | <label>` instead of letting Foundry's Hooks report it (pass-through otherwise).
+  `sync(tokenOrPlaceable, …)` resolves to that token's own (synthetic) actor (`base` is not set,
+  because the kit reads it from the second argument, which is `oldName` here) — documented in README
+  Pitfalls; the placed-token relabel is the same since a synthetic actor carries the base id.
+
+Shared-file edits for their owners (not applied here):
+
+1. `foundry/module/pentaryn-names/module.json` (Wave 7 batch, step 9): `flags.pentaryn` =
+   `{ "tier": "small", "namespace": "names", "flagScope": "pentaryn-names", "cssPrefix": "pnm-",
+   "generation": 14, "afterSync": [<the three after_sync lines of config.py:245-249>] }` and
+   `compatibility.minimum: "14"`. Then (names-owned) add the NS/CSS/FLAG_SCOPE vs `flags.pentaryn`
+   assertions to `test/core-meta.test.mjs`.
+2. `scripts/foundry/ops/config.py:244` — `check=(*_STATIC, *_BLUEPRINT, "node-test")` (C39).
+3. `context/foundry/README.md` Route by task: row "Token labels didn't follow an actor rename —
+   `pentaryn-names`" → `../../foundry/module/pentaryn-names/README.md` (names part of -20); Module APIs
+   table row `names`: status "small tier" instead of "not migrated".
+4. adjustments.yml / Makefile: none.
+
 ## Result (fill when done)
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module names --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: f1ecd11 · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | 95.3 % (41 / 43 fail-class rules) — `conformance.py --module names --markdown`; C07, C39 wait on the shared-file edits above |
+| Date | 2026-10-11 |
+| Commits (Joe-approved) | characterisation: f1ecd11 · refactor: 4ad0a4e, d1e27bf, ddbcca6, 005f89a, 2cc5d48 · declared: 5202be0 (N-D1), 7983909 (N-D2), af129d1 (N-D3) |
+| Declared changes handed to the live-test workflow | N-D1, N-D2, N-D3 (§5); N-D4 not taken; N-L1 still open |
+| `module.json` edits appended to `wave7-restart-batch.md` | no — returned to the orchestrator (owner) |
+| Adjustments rows appended to `adjustments-batch.md` | n/a — none |
+| Still failing, and why | C07 (Wave 7 `module.json`), C39 (ModuleSpec `node-test`) — both shared files |
