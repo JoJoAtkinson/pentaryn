@@ -1,0 +1,1538 @@
+[
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": false,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": true
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": true
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": true
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": true
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": true
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": true
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": false,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": false,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": false,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": false,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": false,
+      "owner": true
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": false
+    },
+    "out": false
+  },
+  {
+    "input": {
+      "isJournalEntry": true,
+      "isPersonal": true,
+      "inPack": true,
+      "isGM": true,
+      "gmButton": true,
+      "observer": true,
+      "owner": true
+    },
+    "out": false
+  }
+]

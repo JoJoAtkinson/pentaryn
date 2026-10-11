@@ -1,0 +1,62 @@
+[
+  {
+    "kind": "once",
+    "name": "init"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  },
+  {
+    "kind": "on",
+    "name": "createUser"
+  },
+  {
+    "kind": "on",
+    "name": "activateNote"
+  },
+  {
+    "kind": "on",
+    "name": "renderJournalEntrySheet"
+  },
+  {
+    "kind": "on",
+    "name": "renderImagePopout"
+  },
+  {
+    "kind": "on",
+    "name": "renderItemSheet5e"
+  },
+  {
+    "kind": "on",
+    "name": "closeJournalEntrySheet"
+  },
+  {
+    "kind": "on",
+    "name": "createJournalEntryPage"
+  },
+  {
+    "kind": "on",
+    "name": "updateJournalEntryPage"
+  },
+  {
+    "kind": "on",
+    "name": "deleteJournalEntryPage"
+  },
+  {
+    "kind": "on",
+    "name": "createJournalEntry"
+  },
+  {
+    "kind": "on",
+    "name": "deleteJournalEntry"
+  },
+  {
+    "kind": "on",
+    "name": "updateItem"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  }
+]
