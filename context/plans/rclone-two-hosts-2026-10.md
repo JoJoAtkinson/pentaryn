@@ -806,3 +806,110 @@ A second review found one new defect, caused by the fix for #5, and two minor is
 | 10 | A snapshot taken with no `based_on` record wrote `"ancestors": []`, which read as "known, no ancestors". After a legacy snapshot L that BOSS took and a Mac with no record, every later Mac snapshot reached BOSS as "diverged", with Enter = local | That sidecar writes `"ancestors": null`. Every chain carries `origin_before`, the listing mtime of its unknown root: no record, a legacy snapshot, an adopted marker, or the part cut at `LINEAGE_CAP`. `BootState.lineage_origin_before` keeps it. `descends()` is None, never False, for a `based_on` at or before that edge |
 | 11 | `foundry-down` on Linux with the port live, no pid and no `PENTARYN_STOP_CMD` printed "stopped" without doing anything | It prints that Foundry is running but cannot be stopped from here, and fails (`host.can_request_stop()`) |
 | 12 | The pre-restore safety copy re-uploaded an unchanged ~3 GB tree when the snapshot being restored already contained its `based_on` | `_backup(protect=<Snapshot>)` skips the safety copy when `descends(target, based_on)` is True |
+
+---
+
+## 15. Go-live checklist (for Joe, after the merge)
+
+Verified on the branch before this list was written: whole suite 1080 passed / 2 skipped /
+4 xfailed, `make check-context` clean (3 old warnings, none from this change),
+`foundry-lib-check`, `foundry-modules-check`, `vtt-update-host-check` and `make -n vtt-up`
+all fine. Nothing in the build ran against the real OneDrive, a real rclone remote, Foundry
+or BOSS, so every step below is the first real run. Do them in order and stop at the first
+surprise. Foundry stays **down** until step 4.
+
+**1. Mac: create the `onedrive:` remote**
+
+`rclone config`, then: `n` (new remote), name **`onedrive`** (exactly), storage **Microsoft
+OneDrive**, `client_id` and `client_secret` blank, region **`global`**, advanced config
+**`n`**, web-browser auth **`y`** (sign in with the account that owns `DnD`), connection type
+**OneDrive Personal or Business** and pick the drive listed, "Drive OK?" **`y`**, keep remote
+**`y`**, `q`. Then confirm it sees the existing backups:
+
+```
+rclone lsd onedrive:DnD/foundry     # expect: assets  major-release  system-backup  world-backups
+rclone lsf onedrive:DnD/foundry/world-backups | head    # expect the existing .tar.gz files
+```
+
+If the first command errors with auth, `rclone config reconnect onedrive:`. Never paste or
+commit the rclone config file.
+
+**2. Mac: the env file**
+
+```
+mkdir -p ~/.config/pentaryn
+cat > ~/.config/pentaryn/env <<'ENV'
+PENTARYN_HOST=mac
+PENTARYN_ROLE=primary
+PENTARYN_CLOUD=onedrive:DnD/foundry
+ENV
+```
+
+(`PENTARYN_ROLE` is documented in the design as derived from `PENTARYN_PRIMARY_HOST`, which
+defaults to `mac`, so `PENTARYN_HOST=mac` is what makes the Mac primary; the extra line is
+harmless. Do not put secrets or the rclone config path in this file.) Check:
+`./.venv/bin/python -m scripts.foundry.host show` must print `host mac`, `role primary`, the
+Mac `data`/`app` paths, and a Foundry version that is not "unknown".
+
+**3. Dry run, reads only**
+
+```
+make foundry-cloud
+./.venv/bin/python -m scripts.foundry.boot choose --json
+```
+
+`foundry-cloud` should start `cloud rclone onedrive:DnD/foundry` and list host, role, what
+this world is based on, newest per host and the untagged count (all the existing snapshots
+show as untagged). `boot choose --json` prints the decision without acting and without
+prompting. Expect `local` (the legacy `.last-digest` marker adopts the Mac's world quietly;
+you should not be asked about a rollback). If it says `restore`, stop and read `why`.
+
+**4. First tagged backup (Foundry stopped)**
+
+```
+make vtt-down            # if it is up; then confirm nothing listens on :30000
+make foundry-backup REASON=first-tagged
+make foundry-cloud
+```
+
+Check: a new `world-…-mac.tar.gz` appears in `world-backups/` (`rclone lsf onedrive:DnD/foundry/world-backups`),
+size about 2.5 to 3.2 GB, no leftover `.partial`; `foundry-cloud` now shows `mac:` with it and
+`based on` = that name; the old untagged snapshots are untouched (`make foundry-prune-untagged`
+is optional and asks before deleting). A second `make foundry-backup` right after should
+skip as unchanged. Then `make vtt-up` as usual: the boot step should be quiet on the Mac.
+
+**5. Hand-off message to paste to BOSS's Claude**
+
+```
+Joe merged the rclone two-hosts change in the pentaryn repo (branch feature/rclone-hosts,
+design: context/plans/rclone-two-hosts-2026-10.md §11, use-doc: context/foundry/ops.md §3).
+Please, on BOSS only, and tell me what you changed:
+
+1. Update the boss-remote skill: the rclone `onedrive` remote IS configured and the cloud
+   code is now ported to rclone. On this machine `vtt-*`, `foundry-up/down` and `login` run
+   on Linux through scripts/foundry/host.py; only `vtt-update-install` and the pbcopy path of
+   `foundry-key` stay Mac-only (clip.exe under WSL).
+2. Pull main in the pentaryn checkout on BOSS. Create ~/.config/pentaryn/env (or ~/.boss-env):
+     PENTARYN_HOST=boss
+     PENTARYN_PRIMARY_HOST=mac
+     PENTARYN_CLOUD=onedrive:DnD/foundry
+     PENTARYN_RCLONE=<path from `which rclone`>
+     FOUNDRY_DATA=/home/joe/.local/share/FoundryVTT
+     FOUNDRY_APP_ROOT=<folder holding package.json + main.js; leave unset to probe>
+     FOUNDRY_PORT=30000
+     PENTARYN_START_CMD=<starts Foundry and returns promptly, leaving it listening>
+     PENTARYN_STOP_CMD=<stops it>
+   PENTARYN_HOST must be exactly boss. Never put the rclone token or config path in it.
+3. Foundry Linux build: unpack the Node.js build under ~/foundryvtt; the licence key comes
+   from Infisical through the same helper the Mac uses (scripts/foundry/README.md).
+4. Pick a supervisor that survives WSL idling (Scheduled Task running `wsl -d Ubuntu -u joe`,
+   a systemd --user unit, or a keep-alive) and point START/STOP_CMD at it.
+5. Check, do NOT boot yet: `python -m scripts.foundry.host show` must print host boss, role
+   alt (primary host: mac), the Linux data/app paths and a real Foundry version.
+   `make foundry-cloud` must print `cloud rclone onedrive:DnD/foundry` and list the Mac's
+   snapshots under `mac:`. Report both outputs to Joe.
+6. The first boot is Joe's: `ssh -t boss 'cd <repo> && make vtt-up'` at a terminal offers
+   the Mac's newest snapshot (about 3 GB); Enter restores it. Without -t it boots local and
+   prints a one-line notice. The tunnel and the Saturday updater refuse on BOSS by role;
+   that is intended.
+```
