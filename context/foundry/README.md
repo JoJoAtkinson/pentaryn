@@ -83,7 +83,7 @@ The table is generated from each `module.json`, the module's code and its
 | `riders` | `pentaryn-riders` | 0.2.0 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-riders/README.md) |
 | `chain`, `senses` | `pentaryn-senses` | 0.4.1 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-senses/README.md) |
 | `ties` | `pentaryn-ties` | 0.19.4 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-ties/README.md) |
-| `transform` | `pentaryn-transform` | 0.3.2 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-transform/README.md) |
+| `transform` | `pentaryn-transform` | 0.3.3 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-transform/README.md) |
 | `walls` | `pentaryn-walls` | 0.2.0 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-walls/README.md) |
 
 <!-- module-index:end -->
