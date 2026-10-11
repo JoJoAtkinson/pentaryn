@@ -29,6 +29,7 @@ import os
 import shutil
 import subprocess
 import sys
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from . import config as cfg, jsscan
@@ -54,19 +55,53 @@ def _node_available() -> bool:
     return shutil.which("node") is not None
 
 
-def _check_parse(spec: cfg.ModuleSpec) -> int:
+# ── gate results ──────────────────────────────────────────────────────────────
+
+@dataclass
+class GateResult:
+    """What one gate found — the data behind the prose (python-tooling-41).
+
+    Every gate builds one of these; `_emit` prints it as the ✓/✗/▸ lines the gates have
+    always printed, and `--json` serialises it instead. `ok` is the gate's verdict;
+    `skipped` marks a gate that had nothing to prove (no node, no lock, …) and passed.
+    `problems` are why it failed; `notes` are what it wants a reader to know anyway."""
+
+    gate: str
+    ok: bool
+    summary: str
+    problems: list[str] = field(default_factory=list)
+    notes: list[str] = field(default_factory=list)
+    counts: dict = field(default_factory=dict)
+    skipped: bool = False
+
+    def as_dict(self) -> dict:
+        return asdict(self)
+
+
+def _emit(res: GateResult) -> int:
+    """Print a gate's result the way the gates always have; return its exit code."""
+    mark = "▸" if res.skipped else ("✓" if res.ok else "✗")
+    _say(f"{mark} {res.summary}")
+    for p in res.problems:
+        print(f"    {p}")
+    for n in res.notes:
+        print(f"    ▸ {n}")
+    return OK if res.ok else FAIL
+
+
+def _gate_parse(spec: cfg.ModuleSpec) -> GateResult:
     """`node --check` every .mjs, and JSON.parse every .json the module declares."""
     if not _node_available():
-        _say("▸ node not installed — skipping the syntax check")
-        return OK
+        return GateResult("parse", True, "node not installed — skipping the syntax check",
+                          skipped=True)
 
-    for f in _sources(spec):
+    files = _sources(spec)
+    for f in files:
         proc = subprocess.run(["node", "--check", str(f)],
                               capture_output=True, text=True)
         if proc.returncode != 0:
-            _say(f"✗ syntax error in {f}")
-            print(proc.stderr)
-            return FAIL
+            return GateResult("parse", False, f"syntax error in {f}",
+                              problems=[proc.stderr.rstrip("\n")])
 
     for rel in ("module.json", "lang/en.json"):
         path = spec.src / rel
@@ -75,14 +110,16 @@ def _check_parse(spec: cfg.ModuleSpec) -> int:
         try:
             json.loads(path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as exc:
-            _say(f"✗ malformed JSON in {rel}: {exc}")
-            return FAIL
+            return GateResult("parse", False, f"malformed JSON in {rel}: {exc}")
 
-    _say(f"✓ {spec.name} sources parse")
-    return OK
+    return GateResult("parse", True, f"{spec.name} sources parse", counts={"files": len(files)})
 
 
-def _check_imports(spec: cfg.ModuleSpec) -> int:
+def _check_parse(spec: cfg.ModuleSpec) -> int:
+    return _emit(_gate_parse(spec))
+
+
+def _gate_imports(spec: cfg.ModuleSpec) -> GateResult:
     """Every named import must be exported by the file it claims to come from.
 
     This is the gap `node --check` leaves. It parses one file at a time, so on
@@ -97,8 +134,8 @@ def _check_imports(spec: cfg.ModuleSpec) -> int:
     """
     files = _sources(spec)
     if not files:
-        _say(f"▸ {spec.name}: no .mjs sources to cross-check")
-        return OK
+        return GateResult("imports", True, f"{spec.name}: no .mjs sources to cross-check",
+                          skipped=True)
 
     scanned = {f: jsscan.scan(f) for f in files}
     exports: dict[Path, set[str]] = {}
@@ -173,20 +210,23 @@ def _check_imports(spec: cfg.ModuleSpec) -> int:
             if not (spec.src / rel).exists():
                 problems.append(f"module.json declares {rel} — no such file")
 
+    counts = {"files": len(files), "edges": n_edges, "named": n_named}
     if problems:
-        _say(f"✗ {spec.name}: {len(problems)} broken import(s)")
-        for p in problems:
-            print(f"    {p}")
-        return FAIL
+        # notes are dropped on failure, as they always were: the broken imports are the news
+        return GateResult("imports", False, f"{spec.name}: {len(problems)} broken import(s)",
+                          problems=problems, counts=counts)
 
-    _say(f"✓ {spec.name} imports resolve ({len(files)} files, "
-         f"{n_edges} local edge{'' if n_edges == 1 else 's'}, {n_named} named)")
-    for n in notes:
-        print(f"    ▸ {n}")
-    return OK
+    return GateResult("imports", True,
+                      f"{spec.name} imports resolve ({len(files)} files, "
+                      f"{n_edges} local edge{'' if n_edges == 1 else 's'}, {n_named} named)",
+                      notes=notes, counts=counts)
 
 
-def _check_i18n(spec: cfg.ModuleSpec) -> int:
+def _check_imports(spec: cfg.ModuleSpec) -> int:
+    return _emit(_gate_imports(spec))
+
+
+def _gate_i18n(spec: cfg.ModuleSpec) -> GateResult:
     """Every i18n key the code asks for must exist in the module's lang file.
 
     Foundry does not fail on a missing key — `localize` hands back the key itself, so
@@ -202,13 +242,13 @@ def _check_i18n(spec: cfg.ModuleSpec) -> int:
     """
     langs = sorted((spec.src / "lang").glob("*.json")) if (spec.src / "lang").is_dir() else []
     if not langs:
-        return OK                # no lang file, nothing claimed, nothing to prove
+        # no lang file, nothing claimed, nothing to prove — and nothing printed
+        return GateResult("i18n", True, "", skipped=True, counts={"silent": True})
 
     en = next((p for p in langs if p.stem == "en"), langs[0])
     known = jsscan.load_lang(en)
     if not known:
-        _say(f"✗ {spec.name}: {_rel(spec, en)} defines no keys")
-        return FAIL
+        return GateResult("i18n", False, f"{spec.name}: {_rel(spec, en)} defines no keys")
     namespaces = {k.split(".", 1)[0] for k in known}
 
     definite: list[jsscan.Ref] = []
@@ -233,10 +273,11 @@ def _check_i18n(spec: cfg.ModuleSpec) -> int:
 
     missing = [r for r in definite if r.key not in known]
     if missing:
-        _say(f"✗ {spec.name}: {len(missing)} i18n key(s) not in {_rel(spec, en)}")
-        for r in sorted(missing, key=lambda r: (r.path.name, r.line)):
-            print(f"    {_rel(spec, r.path)}:{r.line}  {r.key}")
-        return FAIL
+        return GateResult(
+            "i18n", False,
+            f"{spec.name}: {len(missing)} i18n key(s) not in {_rel(spec, en)}",
+            problems=[f"{_rel(spec, r.path)}:{r.line}  {r.key}"
+                      for r in sorted(missing, key=lambda r: (r.path.name, r.line))])
 
     used = {r.key for r in definite}
     unused = [k for k in known if k not in used]
@@ -244,31 +285,124 @@ def _check_i18n(spec: cfg.ModuleSpec) -> int:
             if k not in soft and not any(k.startswith(p) for p in prefixes)]
     unverifiable = len(unused) - len(dead)
 
-    _say(f"✓ {spec.name} i18n: {len(used)}/{len(known)} keys referenced directly, "
-         f"{unverifiable} reachable only dynamically, {len(dead)} unreferenced")
+    notes: list[str] = []
     if dead:
         # A warning, not a failure. An unreferenced key costs nothing at runtime, and
         # a half-landed feature is a perfectly good reason for one to exist today.
-        print(f"    ▸ no reference found for: {', '.join(sorted(dead))}")
+        notes.append(f"no reference found for: {', '.join(sorted(dead))}")
     if opaque:
-        print(f"    ▸ {len(opaque)} call site(s) pass the key as a variable — "
-              f"those keys cannot be proved either way")
-    return OK
+        notes.append(f"{len(opaque)} call site(s) pass the key as a variable — "
+                     f"those keys cannot be proved either way")
+    return GateResult(
+        "i18n", True,
+        f"{spec.name} i18n: {len(used)}/{len(known)} keys referenced directly, "
+        f"{unverifiable} reachable only dynamically, {len(dead)} unreferenced",
+        notes=notes,
+        counts={"keys": len(known), "direct": len(used), "dynamic": unverifiable,
+                "unreferenced": len(dead), "opaque": len(opaque)})
+
+
+def _check_i18n(spec: cfg.ModuleSpec) -> int:
+    res = _gate_i18n(spec)
+    if res.counts.get("silent"):
+        return OK
+    return _emit(res)
+
+
+def _gate_node_test(spec: cfg.ModuleSpec, *, capture: bool = False) -> GateResult:
+    """Run the module's own test suite. Pure geometry — Foundry can stay stopped.
+
+    Streams the suite to the terminal, or — `capture=True`, for `--json` — keeps its
+    output off stdout and puts the tail of it in `problems` when it fails."""
+    runner = spec.src / "test/run.mjs"
+    if not runner.exists():
+        return GateResult("node-test", False, f"no test runner at {runner}")
+    if not _node_available():
+        return GateResult("node-test", False, "node is not installed — cannot run the suite")
+    if capture:
+        proc = subprocess.run(["node", str(runner)], capture_output=True, text=True)
+        tail = (proc.stdout + proc.stderr).rstrip("\n").splitlines()[-40:]
+        rc = proc.returncode
+    else:
+        # The suite writes straight to the real stdout while our own `print` is buffered
+        # when the output is a pipe; without this the ✓ lines land after the suite's.
+        sys.stdout.flush()
+        rc = subprocess.run(["node", str(runner)]).returncode
+        tail = []
+    ok = rc == 0
+    return GateResult("node-test", ok,
+                      f"{spec.name} suite {'passed' if ok else f'failed (exit {rc})'}",
+                      problems=[] if ok else tail, counts={"returncode": rc})
 
 
 def _check_node_test(spec: cfg.ModuleSpec) -> int:
-    """Run the module's own test suite. Pure geometry — Foundry can stay stopped."""
-    # The suite writes straight to the real stdout while our own `print` is buffered
-    # when the output is a pipe; without this the ✓ lines land after the suite's.
-    sys.stdout.flush()
-    runner = spec.src / "test/run.mjs"
-    if not runner.exists():
-        _say(f"✗ no test runner at {runner}")
-        return FAIL
-    if not _node_available():
-        _say("✗ node is not installed — cannot run the suite")
-        return FAIL
-    return subprocess.run(["node", str(runner)]).returncode
+    res = _gate_node_test(spec)
+    if res.counts.get("returncode") is not None:
+        return res.counts["returncode"]    # the suite has already spoken for itself
+    return _emit(res)
+
+
+# ── blueprint gates (W3): vendored kit identity, conformance ─────────────────
+# Both skip a module that has not adopted the kit (no lib/kit.lock.json): migrating is a
+# per-module step, and an unmigrated module is not failing anything it agreed to.
+
+#: Stage 5 of the migration (addon-blueprint-2026-10/README.md §3) turns conformance
+#: from advisory to failing for every module. Until then it reports and never fails, so
+#: a module mid-migration keeps a green `make foundry-<m>-check` while its score climbs.
+CONFORMANCE_FAILS = False
+
+
+def _gate_vendor(spec: cfg.ModuleSpec) -> GateResult:
+    """`vendor.py check <module>`: each vendored kit file byte-identical to foundry/lib."""
+    from scripts.foundry.blueprint import vendor
+    if spec.kit is None:
+        return GateResult("vendor", True, f"{spec.name}: no lib/kit.lock.json — not migrated, "
+                                          "vendor gate skipped", skipped=True)
+    problems = vendor.check(spec.src)
+    if problems:
+        return GateResult("vendor", False, f"{spec.name}: vendored kit differs from foundry/lib",
+                          problems=problems)
+    return GateResult("vendor", True, f"{spec.name}: vendored kit identical to foundry/lib "
+                                      f"({len(spec.kit)} file{'' if len(spec.kit) == 1 else 's'})",
+                      counts={"files": len(spec.kit)})
+
+
+def _gate_conformance(spec: cfg.ModuleSpec) -> GateResult:
+    """The blueprint scorer, fail-class rules only (warn/manual rules never move a gate).
+
+    Advisory until Stage 5 (`CONFORMANCE_FAILS`); a WAIT module is reported, never failed."""
+    from scripts.foundry.blueprint import conformance
+    if spec.kit is None:
+        return GateResult("conformance", True, f"{spec.name}: not migrated — conformance "
+                                               "gate skipped", skipped=True)
+    report = conformance.score_dir(spec.src)
+    failing = list(report["failing"])
+    counts = {"score": report["score"], "passed": report["passed"],
+              "failClassRules": report["failClassRules"], "failing": failing}
+    head = (f"{spec.name} conformance {report['score']} % "
+            f"({report['passed']}/{report['failClassRules']} fail-class rules)")
+    if not failing:
+        return GateResult("conformance", True, head, counts=counts)
+    detail = {r["id"]: "; ".join(r["detail"])[:200] for r in report["results"]
+              if r["id"] in failing}
+    problems = [f"{rid} {detail.get(rid, '')}".rstrip() for rid in failing]
+    if report.get("wait"):
+        return GateResult("conformance", True, f"{head} — WAIT ({report['wait']}), reported only",
+                          notes=problems, counts=counts)
+    if not CONFORMANCE_FAILS:
+        return GateResult("conformance", True, f"{head} — advisory until Stage 5, failing: "
+                                               f"{', '.join(failing)}",
+                          notes=problems, counts=counts)
+    return GateResult("conformance", False, f"{head} — failing {', '.join(failing)}",
+                      problems=problems, counts=counts)
+
+
+def _check_vendor(spec: cfg.ModuleSpec) -> int:
+    return _emit(_gate_vendor(spec))
+
+
+def _check_conformance(spec: cfg.ModuleSpec) -> int:
+    return _emit(_gate_conformance(spec))
 
 
 _CHECKS = {
@@ -276,6 +410,17 @@ _CHECKS = {
     "imports": _check_imports,
     "i18n": _check_i18n,
     "node-test": _check_node_test,
+    "vendor": _check_vendor,
+    "conformance": _check_conformance,
+}
+
+_GATES = {
+    "parse": _gate_parse,
+    "imports": _gate_imports,
+    "i18n": _gate_i18n,
+    "node-test": lambda spec: _gate_node_test(spec, capture=True),
+    "vendor": _gate_vendor,
+    "conformance": _gate_conformance,
 }
 
 
@@ -289,6 +434,47 @@ def check(name: str) -> int:
     for gate in spec.check:
         if (checker := _CHECKS.get(gate)) and (rc := checker(spec)) != OK:
             return rc
+    return OK
+
+
+def check_report(name: str) -> dict:
+    """`check`, as data and silently: `{module, ok, gates: [GateResult…]}` (--json).
+
+    Same gates, same order, same stop-at-first-failure; nothing is printed."""
+    spec = cfg.MODULES[name]
+    gates: list[dict] = []
+    ok = True
+    for gate in spec.check:
+        if (fn := _GATES.get(gate)) is None:
+            continue
+        res = fn(spec)
+        gates.append(res.as_dict())
+        if not res.ok:
+            ok = False
+            break
+    return {"module": name, "id": spec.name, "ok": ok, "gates": gates}
+
+
+def check_all(*, as_json: bool = False) -> int:
+    """Every registered module, in name order. Keeps going past a failure; 1 if any failed.
+
+    Prose: each module's gates under a header, then a one-line summary. JSON: a list of
+    `check_report` dicts, one per module, and nothing else on stdout."""
+    names = sorted(cfg.MODULES)
+    if as_json:
+        reports = [check_report(n) for n in names]
+        print(json.dumps(reports, indent=2, ensure_ascii=False))
+        return OK if all(r["ok"] for r in reports) else FAIL
+    failed: list[str] = []
+    for n in names:
+        print(f"── {n}")
+        if check(n) != OK:
+            failed.append(n)
+    sys.stdout.flush()
+    if failed:
+        _say(f"✗ {len(failed)}/{len(names)} module(s) failed: {', '.join(failed)}")
+        return FAIL
+    _say(f"✓ all {len(names)} modules pass their gates")
     return OK
 
 
