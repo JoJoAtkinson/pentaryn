@@ -2,7 +2,7 @@
 // checkpoint (wave 3, base a5a1a906), returning what it would write instead of writing it.
 // Never imported by runtime. Plan step 3 / finding -11 (planSyncLight, the tokensByActor index)
 // must produce the same plan; carried.test.mjs proves this oracle equals the live writes.
-import { carriedLightOf } from "../../light-core.mjs";
+import { carriedLightOf } from "../../senses-core.mjs";
 import { lightUpdate } from "./legacy-light-update.mjs";
 
 const carriedLight = actor => carriedLightOf(actor?.items ?? []);

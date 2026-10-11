@@ -4,7 +4,7 @@
  * The import itself is a check: light-core.mjs must load with `game`, `canvas` and `foundry` undefined.
  */
 
-const core = await import("../light-core.mjs");
+const core = await import("../senses-core.mjs");
 const {
   MODULE, DARK, SPELL_LIGHT, LIGHT_PROFILES, slug, profileKey, profileFor, lightFor, strongest,
   carriedLightOf, lightingItemId, isLit, isHooded, isLightSpellData, isLightToggle, readSpellCast, castFlag,

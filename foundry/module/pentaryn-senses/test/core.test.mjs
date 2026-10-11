@@ -4,9 +4,9 @@
 // Characterisation (senses checkpoint, wave 3). The chain-core block is the old test/run.mjs body
 // (31 checks), converted with its `check()` semantics kept (harness.checkJSON). Frozen once committed:
 // during the refactor only the import paths may change (to ../senses-core.mjs).
-import * as chainCore from "../chain-core.mjs";
-import * as lightCore from "../light-core.mjs";
-import * as migrate from "../migrate.mjs";
+import * as chainCore from "../senses-core.mjs";
+import * as lightCore from "../senses-core.mjs";
+import * as migrate from "../senses-core.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { checkJSON, manifestOf } from "./kit/harness.mjs";
@@ -110,4 +110,13 @@ test("chain-core hostile rows: duplicate ids, a chained anchor, a non-string id"
   assert.deepEqual(chainPairs([{ id: 5, flags: { [MODULE]: { chain: { anchor: "s" } } } }, tok("s")]), []);
   // a mutual chain is two pairs
   assert.deepEqual(linksTouching(chainPairs([tok("a", "b"), tok("b", "a")]), "a").length, 2);
+});
+
+// Added after the checkpoint (guide step 1.2, C41): the barrel's VERSION is module.json's version.
+test("VERSION === module.json version; the barrel's names", () => {
+  const core = chainCore;   // the barrel (all three namespaces above are ../senses-core.mjs)
+  assert.equal(core.VERSION, manifestOf(ROOT).version);
+  assert.deepEqual([core.SHORT, core.NS, core.I18N, core.CSS, core.CONTRACT], ["senses", "senses", "PENTARYN_SENSES", "ps-", "pentaryn-senses/api@1"]);
+  assert.deepEqual(core.HOOKS, {});
+  assert.equal(Object.isFrozen(core.HOOKS), true);
 });

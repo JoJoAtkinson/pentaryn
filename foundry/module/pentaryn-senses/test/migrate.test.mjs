@@ -5,7 +5,7 @@
  */
 
 const { MODULE, SIGHT_RESET, SIGHT_RESET_DONE, RESET_SIGHT, needsSightReset, systemReady, planSightReset } =
-  await import("../migrate.mjs");
+  await import("../senses-core.mjs");
 
 let pass = 0;
 const failures = [];

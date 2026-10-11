@@ -29,7 +29,7 @@ export const LIMITS = Object.freeze({
 });
 
 /** mulberry32: a small seeded generator, identical on every client. */
-function rng(seed) {
+export function rng(seed) {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6D2B79F5) >>> 0;
@@ -40,7 +40,7 @@ function rng(seed) {
   };
 }
 
-function hashString(s) {
+export function hashString(s) {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
   return h >>> 0;
@@ -52,11 +52,16 @@ const nextPeak = (r) => 0.18 + 0.82 * r() ** 2;
 const nextTrough = (r, peak) => peak * 0.5 * r();
 const nextHalf = (r) => LIMITS.minHalf + (LIMITS.maxHalf - LIMITS.minHalf) * r();
 
+let builds = 0;
+/** How many epochs have been built since load (a test counter; finding -22a). */
+export const epochBuilds = () => builds;
+
 /**
  * Build the segments of one epoch. Each segment is half a wave (peak to trough or trough to peak)
  * eased with a cosine. Every epoch starts and ends at the same rest level, so epochs join smoothly.
  */
-function buildEpoch(seedKey, epochStart) {
+export function buildEpoch(seedKey, epochStart) {
+  builds++;
   const r = rng(hashString(`${seedKey}:${epochStart}`));
   const end = epochStart + LIMITS.epoch;
   const rest = 0.12;

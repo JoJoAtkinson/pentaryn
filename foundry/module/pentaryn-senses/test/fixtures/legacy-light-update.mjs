@@ -2,7 +2,7 @@
 // characterisation checkpoint (wave 3, base a5a1a906). Never imported by runtime. Plan step 3
 // (finding -12) moves this into core as itemLightUpdate(doc, light, {flatten, clone, del});
 // carried.test.mjs proves the live path equals this oracle, row for row.
-import { DARK } from "../../light-core.mjs";
+import { DARK } from "../../senses-core.mjs";
 
 const SCOPE = "pentaryn-senses";
 

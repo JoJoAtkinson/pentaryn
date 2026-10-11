@@ -166,3 +166,24 @@ test("bright follows the wave back up (KNOWN: it ratchets down)", { todo: "KNOWN
   }
   assert.equal(src.data.bright, Math.min(200, src.data.dim));
 });
+
+// Added after the checkpoint (guide step 1.5, finding -22a): many lights at once. 40 keys × 5 times
+// in one epoch, interleaved, each level equal to a fresh single-key computation; and the number of
+// epoch builds that costs. KNOWN (-22a): the shared 16-entry cache thrashes, so every lookup
+// rebuilds — 200 builds. The -22 fix (a per-source cache) flips this row to ≤ 40.
+test("waveLevel interleaved over 40 keys: values exact; epoch builds counted (KNOWN -22a: 200)", () => {
+  const { buildEpoch, epochBuilds } = glow;
+  const levelFrom = (segs, t) => {
+    const s = segs.find(g => t < g.t1) ?? segs.at(-1);
+    const p = Math.min(Math.max((t - s.t0) / (s.t1 - s.t0), 0), 1);
+    return s.from + (s.to - s.from) * (0.5 - 0.5 * Math.cos(Math.PI * p));
+  };
+  const keys = Array.from({ length: 40 }, (_, i) => `src${i}`);
+  const times = [480_100, 480_350, 481_000, 530_000, 599_999];
+  const got = [];
+  const before = epochBuilds();
+  for (const t of times) for (const k of keys) got.push([k, t, waveLevel(k, t)]);
+  const builds = epochBuilds() - before;
+  for (const [k, t, level] of got) assert.equal(level, levelFrom(buildEpoch(k, 480_000), t), `${k}@${t}`);
+  assert.equal(builds, 200, "KNOWN (-22a): a rebuild per lookup");
+});
