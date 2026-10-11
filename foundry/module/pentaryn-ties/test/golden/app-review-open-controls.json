@@ -1,0 +1,3048 @@
+{
+  "inventory": [
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pentaryn-ties pt-review",
+      "events": [
+        "focusout"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "className": "pt-review-search",
+      "events": [
+        "input"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "className": "pt-review-sort",
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "resort",
+        "tooltip": "Rows stay where they are while you work; this re-applies the sort"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip pt-review-tab pt-chip-on pt-review-tab-warn",
+      "dataset": {
+        "tab": "world"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip pt-review-tab pt-review-tab-warn",
+      "dataset": {
+        "tab": "personal"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip pt-chip-on",
+      "dataset": {
+        "filter": "all"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip ",
+      "dataset": {
+        "filter": "needs"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip ",
+      "dataset": {
+        "filter": "selected"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "select-visible"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "select-none"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "copy-selected"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-review-summary",
+      "dataset": {
+        "act": "toggle"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "title"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "category"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "field": "skill"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "dc"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "reveal"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "miss"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "copy-id"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "copy-summary"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "DIV",
+      "className": "pt-review-summary",
+      "dataset": {
+        "act": "toggle"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "title"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "category"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "SELECT",
+      "dataset": {
+        "field": "skill"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "dc"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "reveal"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "miss"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "copy-id"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "copy-summary"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 2,
+      "tag": "DIV",
+      "className": "pt-review-summary",
+      "dataset": {
+        "act": "toggle"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 2,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "title"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 2,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "category"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 2,
+      "tag": "SELECT",
+      "dataset": {
+        "field": "skill"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 2,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "dc"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 2,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "reveal"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 2,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "miss"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "loreField": "label"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "loreField": "skill"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "loreField": "dc"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "loreField": "text"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "loreField": "miss"
+      },
+      "events": [
+        "change"
+      ]
+    },
+    {
+      "nth": 2,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "copy-id"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 2,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "copy-summary"
+      },
+      "events": [
+        "click"
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pentaryn-ties pt-review",
+      "type": "focusout",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pentaryn-ties pt-review",
+        "parent": "window-content"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "className": "pt-review-search",
+      "type": "input",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-review-search",
+        "parent": "pt-review-bar",
+        "value": "zz typed"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "className": "pt-review-sort",
+      "type": "change",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "AttributeReview",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-sort",
+        "parent": "pt-review-bar",
+        "value": "title"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "resort",
+        "tooltip": "Rows stay where they are while you work; this re-applies the sort"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "AttributeReview",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-review-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip pt-review-tab pt-chip-on pt-review-tab-warn",
+      "dataset": {
+        "tab": "world"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-chip pt-review-tab pt-chip-on pt-review-tab-warn",
+        "parent": "pt-review-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip pt-review-tab pt-review-tab-warn",
+      "dataset": {
+        "tab": "personal"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-chip pt-review-tab pt-review-tab-warn pt-chip-on",
+        "parent": "pt-review-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip pt-chip-on",
+      "dataset": {
+        "filter": "all"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-chip pt-chip-on",
+        "parent": "pt-review-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip ",
+      "dataset": {
+        "filter": "needs"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-chip pt-chip-on",
+        "parent": "pt-review-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-chip ",
+      "dataset": {
+        "filter": "selected"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-chip pt-chip-on",
+        "parent": "pt-review-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "select-visible"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "User",
+          "uuid": "User.gmUser0000000001",
+          "changes": {
+            "flags.pentaryn-ties.attrSelected": []
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-review-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "select-none"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "User",
+          "uuid": "User.gmUser0000000001",
+          "changes": {
+            "flags.pentaryn-ties.attrSelected": []
+          }
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-review-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "copy-selected"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-review-bar"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-review-summary",
+      "dataset": {
+        "act": "toggle"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "AttributeReview",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-summary",
+        "parent": "pt-review-row"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "title"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "City",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 12,
+              "skill": "his",
+              "reveal": "<p>From Vel.</p>",
+              "miss": "<p>An accent.</p>",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 2,
+              "reviewedAt": 3,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "dc": 12
+              }
+            },
+            {
+              "id": "guild",
+              "title": "zz typed title",
+              "category": "Guild",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 15,
+              "skill": "inv",
+              "reveal": "<p>Guild hands.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "dc"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "personal",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": null,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "zz typed title"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "category"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "City",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 12,
+              "skill": "his",
+              "reveal": "<p>From Vel.</p>",
+              "miss": "<p>An accent.</p>",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 2,
+              "reviewedAt": 3,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "dc": 12
+              }
+            },
+            {
+              "id": "guild",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 15,
+              "skill": "inv",
+              "reveal": "<p>Guild hands.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "dc"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "personal",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": null,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "zz typed category"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "field": "skill"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "City",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 12,
+              "skill": "his",
+              "reveal": "<p>From Vel.</p>",
+              "miss": "<p>An accent.</p>",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 2,
+              "reviewedAt": 3,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "dc": 12
+              }
+            },
+            {
+              "id": "guild",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Guild hands.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "dc"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "personal",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": null,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "his"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "dc"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "City",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 12,
+              "skill": "his",
+              "reveal": "<p>From Vel.</p>",
+              "miss": "<p>An accent.</p>",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 2,
+              "reviewedAt": 3,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "dc": 12
+              }
+            },
+            {
+              "id": "guild",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "his",
+              "reveal": "<p>Guild hands.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "dc"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "personal",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": null,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "7"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "reveal"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "City",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 12,
+              "skill": "his",
+              "reveal": "<p>From Vel.</p>",
+              "miss": "<p>An accent.</p>",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 2,
+              "reviewedAt": 3,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "dc": 12
+              }
+            },
+            {
+              "id": "guild",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "his",
+              "reveal": "zz typed reveal",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "dc"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "personal",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": null,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "zz typed reveal"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "miss"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "City",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 12,
+              "skill": "his",
+              "reveal": "<p>From Vel.</p>",
+              "miss": "<p>An accent.</p>",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 2,
+              "reviewedAt": 3,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "dc": 12
+              }
+            },
+            {
+              "id": "guild",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "his",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "dc"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "personal",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": null,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "zz typed miss"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "copy-id"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "clipboard",
+          "text": "guild"
+        },
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "Copied to clipboard."
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-review-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "copy-summary"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "clipboard",
+          "text": "zz typed title — id: guild — category: zz typed category\nparent: Vel (city)\nchildren: none\ncarriers (1): ZZ Brakka\nfacts: none\nreview: unreviewed (touched: dc)"
+        },
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "Copied to clipboard."
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-review-actions"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "DIV",
+      "className": "pt-review-summary",
+      "dataset": {
+        "act": "toggle"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "AttributeReview",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-summary",
+        "parent": "pt-review-row"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "title"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "notify",
+          "level": "warn",
+          "message": "“zz typed title” (guild) already has that name. Attribute names are unique, ignoring case and accents. Title not changed."
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "Caven's diary"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "category"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "City",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 12,
+              "skill": "his",
+              "reveal": "<p>From Vel.</p>",
+              "miss": "<p>An accent.</p>",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 2,
+              "reviewedAt": 3,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "dc": 12
+              }
+            },
+            {
+              "id": "guild",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "his",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "dc"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "zz typed category"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "SELECT",
+      "dataset": {
+        "field": "skill"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "City",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 12,
+              "skill": "his",
+              "reveal": "<p>From Vel.</p>",
+              "miss": "<p>An accent.</p>",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 2,
+              "reviewedAt": 3,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "dc": 12
+              }
+            },
+            {
+              "id": "guild",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "dc"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "arc"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "dc"
+      },
+      "type": "change",
+      "calls": [],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "7"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "reveal"
+      },
+      "type": "change",
+      "calls": [],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "zz typed reveal"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "miss"
+      },
+      "type": "change",
+      "calls": [],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "zz typed miss"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "copy-id"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "clipboard",
+          "text": "guild"
+        },
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "Copied to clipboard."
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-review-actions"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "copy-summary"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "clipboard",
+          "text": "zz typed title — id: guild — category: zz typed category\nparent: Vel (city)\nchildren: none\ncarriers (1): ZZ Brakka\nfacts: none\nreview: unreviewed (touched: dc)"
+        },
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "Copied to clipboard."
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-review-actions"
+      }
+    },
+    {
+      "nth": 2,
+      "tag": "DIV",
+      "className": "pt-review-summary",
+      "dataset": {
+        "act": "toggle"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "AttributeReview",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-review-summary",
+        "parent": "pt-review-row"
+      }
+    },
+    {
+      "nth": 2,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "title"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "notify",
+          "level": "warn",
+          "message": "“zz typed title” (guild) already has that name. Attribute names are unique, ignoring case and accents. Title not changed."
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "Vel"
+      }
+    },
+    {
+      "nth": 2,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "category"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 12,
+              "skill": "his",
+              "reveal": "<p>From Vel.</p>",
+              "miss": "<p>An accent.</p>",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": null,
+                "dc": 12,
+                "skill": "his",
+                "reveal": "<p>From Vel.</p>",
+                "miss": "<p>An accent.</p>",
+                "hold": null,
+                "lore": [
+                  {
+                    "id": "c1",
+                    "label": "Walls",
+                    "dc": 11,
+                    "skill": "his",
+                    "text": "<p>Three rings.</p>",
+                    "miss": "",
+                    "hold": null
+                  }
+                ]
+              }
+            },
+            {
+              "id": "guild",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "dc"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "zz typed category"
+      }
+    },
+    {
+      "nth": 2,
+      "tag": "SELECT",
+      "dataset": {
+        "field": "skill"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 12,
+              "skill": "arc",
+              "reveal": "<p>From Vel.</p>",
+              "miss": "<p>An accent.</p>",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": null,
+                "dc": 12,
+                "skill": "arc",
+                "reveal": "<p>From Vel.</p>",
+                "miss": "<p>An accent.</p>",
+                "hold": null,
+                "lore": [
+                  {
+                    "id": "c1",
+                    "label": "Walls",
+                    "dc": 11,
+                    "skill": "his",
+                    "text": "<p>Three rings.</p>",
+                    "miss": "",
+                    "hold": null
+                  }
+                ]
+              }
+            },
+            {
+              "id": "guild",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "dc"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "arc"
+      }
+    },
+    {
+      "nth": 2,
+      "tag": "INPUT",
+      "dataset": {
+        "field": "dc"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "<p>From Vel.</p>",
+              "miss": "<p>An accent.</p>",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": null,
+                "dc": 7,
+                "skill": "arc",
+                "reveal": "<p>From Vel.</p>",
+                "miss": "<p>An accent.</p>",
+                "hold": null,
+                "lore": [
+                  {
+                    "id": "c1",
+                    "label": "Walls",
+                    "dc": 11,
+                    "skill": "his",
+                    "text": "<p>Three rings.</p>",
+                    "miss": "",
+                    "hold": null
+                  }
+                ]
+              }
+            },
+            {
+              "id": "guild",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "dc"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "7"
+      }
+    },
+    {
+      "nth": 2,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "reveal"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "<p>An accent.</p>",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": null,
+                "dc": 7,
+                "skill": "arc",
+                "reveal": "zz typed reveal",
+                "miss": "<p>An accent.</p>",
+                "hold": null,
+                "lore": [
+                  {
+                    "id": "c1",
+                    "label": "Walls",
+                    "dc": 11,
+                    "skill": "his",
+                    "text": "<p>Three rings.</p>",
+                    "miss": "",
+                    "hold": null
+                  }
+                ]
+              }
+            },
+            {
+              "id": "guild",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "dc"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "zz typed reveal"
+      }
+    },
+    {
+      "nth": 2,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "field": "miss"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "Walls",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": null,
+                "dc": 7,
+                "skill": "arc",
+                "reveal": "zz typed reveal",
+                "miss": "zz typed miss",
+                "hold": null,
+                "lore": [
+                  {
+                    "id": "c1",
+                    "label": "Walls",
+                    "dc": 11,
+                    "skill": "his",
+                    "text": "<p>Three rings.</p>",
+                    "miss": "",
+                    "hold": null
+                  }
+                ]
+              }
+            },
+            {
+              "id": "guild",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "dc"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "zz typed miss"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "loreField": "label"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "zz typed",
+                  "dc": 11,
+                  "skill": "his",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": null,
+                "dc": 7,
+                "skill": "arc",
+                "reveal": "zz typed reveal",
+                "miss": "zz typed miss",
+                "hold": null,
+                "lore": [
+                  {
+                    "id": "c1",
+                    "label": "zz typed",
+                    "dc": 11,
+                    "skill": "his",
+                    "text": "<p>Three rings.</p>",
+                    "miss": "",
+                    "hold": null
+                  }
+                ]
+              }
+            },
+            {
+              "id": "guild",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "dc"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "zz typed"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "SELECT",
+      "dataset": {
+        "loreField": "skill"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "zz typed",
+                  "dc": 11,
+                  "skill": "arc",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": null,
+                "dc": 7,
+                "skill": "arc",
+                "reveal": "zz typed reveal",
+                "miss": "zz typed miss",
+                "hold": null,
+                "lore": [
+                  {
+                    "id": "c1",
+                    "label": "zz typed",
+                    "dc": 11,
+                    "skill": "arc",
+                    "text": "<p>Three rings.</p>",
+                    "miss": "",
+                    "hold": null
+                  }
+                ]
+              }
+            },
+            {
+              "id": "guild",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "dc"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "arc"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "INPUT",
+      "dataset": {
+        "loreField": "dc"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "zz typed",
+                  "dc": 7,
+                  "skill": "arc",
+                  "text": "<p>Three rings.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": null,
+                "dc": 7,
+                "skill": "arc",
+                "reveal": "zz typed reveal",
+                "miss": "zz typed miss",
+                "hold": null,
+                "lore": [
+                  {
+                    "id": "c1",
+                    "label": "zz typed",
+                    "dc": 7,
+                    "skill": "arc",
+                    "text": "<p>Three rings.</p>",
+                    "miss": "",
+                    "hold": null
+                  }
+                ]
+              }
+            },
+            {
+              "id": "guild",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "dc"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "7"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "loreField": "text"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "zz typed",
+                  "dc": 7,
+                  "skill": "arc",
+                  "text": "zz typed",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": null,
+                "dc": 7,
+                "skill": "arc",
+                "reveal": "zz typed reveal",
+                "miss": "zz typed miss",
+                "hold": null,
+                "lore": [
+                  {
+                    "id": "c1",
+                    "label": "zz typed",
+                    "dc": 7,
+                    "skill": "arc",
+                    "text": "zz typed",
+                    "miss": "",
+                    "hold": null
+                  }
+                ]
+              }
+            },
+            {
+              "id": "guild",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "dc"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "zz typed"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "TEXTAREA",
+      "dataset": {
+        "loreField": "miss"
+      },
+      "type": "change",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "c1",
+                  "label": "zz typed",
+                  "dc": 7,
+                  "skill": "arc",
+                  "text": "zz typed",
+                  "miss": "zz typed",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": 1790000000000,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Vel",
+                "category": "zz typed category",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": null,
+                "dc": 7,
+                "skill": "arc",
+                "reveal": "zz typed reveal",
+                "miss": "zz typed miss",
+                "hold": null,
+                "lore": [
+                  {
+                    "id": "c1",
+                    "label": "zz typed",
+                    "dc": 7,
+                    "skill": "arc",
+                    "text": "zz typed",
+                    "miss": "zz typed",
+                    "hold": null
+                  }
+                ]
+              }
+            },
+            {
+              "id": "guild",
+              "title": "zz typed title",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 7,
+              "skill": "arc",
+              "reveal": "zz typed reveal",
+              "miss": "zz typed miss",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "dc"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "diary",
+              "title": "Caven's diary",
+              "category": "zz typed category",
+              "icon": "icons/sundries/flags/banner-standard-brown.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "<p>Kept a diary.</p>",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pt-review-field",
+        "value": "zz typed"
+      }
+    },
+    {
+      "nth": 2,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "copy-id"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "clipboard",
+          "text": "city"
+        },
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "Copied to clipboard."
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-review-actions"
+      }
+    },
+    {
+      "nth": 2,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "act": "copy-summary"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "clipboard",
+          "text": "Vel — id: city — category: zz typed category\nparent: root\nchildren: zz typed title (guild)\ncarriers (1): ZZ Brakka\nfacts: zz typed [c1]\nreview: reviewed"
+        },
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "Copied to clipboard."
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-review-actions"
+      }
+    }
+  ]
+}

@@ -1,0 +1,717 @@
+{
+  "inventory": [
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "active",
+      "dataset": {
+        "mode": "player"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "dataset": {
+        "mode": "simulate"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pv-sw pv-sw-on",
+      "dataset": {
+        "pc": "zzPc000000000001",
+        "tooltip": "ZZ — rolled 15 vs DC 12 (passed) · a real roll can't be un-learned"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pv-share-all",
+      "dataset": {
+        "action": "share-all",
+        "tooltip": "Tell every character whose switch is off. Held rolls are left for your Deliver."
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pv-sw pv-sw-off",
+      "dataset": {
+        "pc": "zzPc000000000001",
+        "tooltip": "ZZ — doesn't know · click to tell them"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pv-share-all",
+      "dataset": {
+        "action": "share-all",
+        "tooltip": "Tell every character whose switch is off. Held rolls are left for your Deliver."
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pv-sw pv-sw-off",
+      "dataset": {
+        "pc": "zzPc000000000001",
+        "tooltip": "ZZ — doesn't know · click to tell them"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 2,
+      "tag": "BUTTON",
+      "className": "pv-share-all",
+      "dataset": {
+        "action": "share-all",
+        "tooltip": "Tell every character whose switch is off. Held rolls are left for your Deliver."
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 2,
+      "tag": "BUTTON",
+      "className": "pv-sw pv-sw-off",
+      "dataset": {
+        "pc": "zzPc000000000001",
+        "tooltip": "ZZ — doesn't know · click to tell them"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 3,
+      "tag": "BUTTON",
+      "className": "pv-share-all",
+      "dataset": {
+        "action": "share-all",
+        "tooltip": "Tell every character whose switch is off. Held rolls are left for your Deliver."
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 3,
+      "tag": "BUTTON",
+      "className": "pv-sw pv-sw-off",
+      "dataset": {
+        "pc": "zzPc000000000001",
+        "tooltip": "ZZ — doesn't know · click to tell them"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 4,
+      "tag": "BUTTON",
+      "className": "pv-share-all",
+      "dataset": {
+        "action": "share-all",
+        "tooltip": "Tell every character whose switch is off. Held rolls are left for your Deliver."
+      },
+      "events": [
+        "click"
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "active",
+      "dataset": {
+        "mode": "player"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "active",
+        "parent": "pv-mode"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "dataset": {
+        "mode": "simulate"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "InspectPreview",
+          "opts": null
+        }
+      ],
+      "console": [],
+      "after": {
+        "parent": "pv-mode"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pv-sw pv-sw-on",
+      "dataset": {
+        "pc": "zzPc000000000001",
+        "tooltip": "ZZ — rolled 15 vs DC 12 (passed) · a real roll can't be un-learned"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "ZZ rolled this — a real roll can't be un-learned. Reset it from their Known tab if you must."
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pv-sw pv-sw-on",
+        "parent": "pv-switches"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pv-share-all",
+      "dataset": {
+        "action": "share-all",
+        "tooltip": "Tell every character whose switch is off. Held rolls are left for your Deliver."
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "Every character already knows this, or is waiting on your Deliver."
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pv-share-all",
+        "parent": "pv-switches"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pv-sw pv-sw-off",
+      "dataset": {
+        "pc": "zzPc000000000001",
+        "tooltip": "ZZ — doesn't know · click to tell them"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributeKnowledge",
+          "value": {
+            "zzPc000000000001": {
+              "guild": {
+                "when": 1790000000000,
+                "failed": false,
+                "via": "shared",
+                "pending": false
+              }
+            }
+          }
+        },
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.beliefs.zzPc000000000001.attr:guild:#id": {
+              "text": "<p>Guild hands.</p>",
+              "tier": null,
+              "total": null,
+              "when": 1790000000000,
+              "delivered": 1790000000000,
+              "claim": null,
+              "sources": null,
+              "from": "gm"
+            }
+          }
+        },
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.known": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "category": "sentient",
+                "notes": "",
+                "imposter": null,
+                "hidden": false,
+                "when": 1790000000000
+              }
+            ],
+            "flags.pentaryn-ties.granted": {
+              "attr:city:#id": {
+                "text": "From Vel.",
+                "when": 1700000000000,
+                "icon": null,
+                "source": "Vel"
+              },
+              "attr:guild:#id": {
+                "text": "<p>Guild hands.</p>",
+                "when": 1790000000000,
+                "icon": "icons/sundries/flags/banner-standard-green.webp",
+                "source": "Salt Guild"
+              }
+            }
+          }
+        },
+        {
+          "op": "ChatMessage.create",
+          "data": {
+            "content": "<p class=\"pt-study-stub\">ZZ Caven has learned something about ZZ Brakka. It is in their notebook.</p>",
+            "whisper": [
+              "zzPlayerUser0001"
+            ],
+            "speaker": {
+              "alias": "Gamemaster"
+            }
+          }
+        },
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "ZZ Caven now know(s): Salt Guild"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pv-sw pv-sw-on",
+        "parent": "pv-switches"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pv-share-all",
+      "dataset": {
+        "action": "share-all",
+        "tooltip": "Tell every character whose switch is off. Held rolls are left for your Deliver."
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "Every character already knows this, or is waiting on your Deliver."
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pv-share-all",
+        "parent": "pv-switches"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "BUTTON",
+      "className": "pv-sw pv-sw-off",
+      "dataset": {
+        "pc": "zzPc000000000001",
+        "tooltip": "ZZ — doesn't know · click to tell them"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.beliefs.zzPc000000000001.lore:zzNpc00000000001:l1": {
+              "text": "zz typed text",
+              "tier": null,
+              "total": null,
+              "when": 1790000000000,
+              "delivered": 1790000000000,
+              "claim": null,
+              "sources": null,
+              "pass": null,
+              "from": "gm"
+            }
+          }
+        },
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.studied": {
+              "kind": {},
+              "lore": {
+                "lore:zzNpc00000000001:l1": {
+                  "when": 1790000000000
+                }
+              }
+            },
+            "flags.pentaryn-ties.known": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "category": "sentient",
+                "notes": "",
+                "imposter": null,
+                "hidden": false,
+                "when": 1790000000000
+              }
+            ],
+            "flags.pentaryn-ties.granted": {
+              "attr:city:#id": {
+                "text": "From Vel.",
+                "when": 1700000000000,
+                "icon": null,
+                "source": "Vel"
+              },
+              "attr:guild:#id": {
+                "text": "<p>Guild hands.</p>",
+                "when": 1790000000000,
+                "icon": "icons/sundries/flags/banner-standard-green.webp",
+                "source": "Salt Guild"
+              },
+              "lore:zzNpc00000000001:l1": {
+                "text": "zz typed text",
+                "when": 1790000000000,
+                "icon": "icons/zz/zzNpc00000000001.webp",
+                "source": "zz typed label"
+              }
+            }
+          }
+        },
+        {
+          "op": "ChatMessage.create",
+          "data": {
+            "content": "<p class=\"pt-study-stub\">ZZ Caven has learned something about ZZ Brakka. It is in their notebook.</p>",
+            "whisper": [
+              "zzPlayerUser0001"
+            ],
+            "speaker": {
+              "alias": "Gamemaster"
+            }
+          }
+        },
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "ZZ Caven now know(s): zz typed label"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pv-sw pv-sw-on",
+        "parent": "pv-switches"
+      }
+    },
+    {
+      "nth": 2,
+      "tag": "BUTTON",
+      "className": "pv-share-all",
+      "dataset": {
+        "action": "share-all",
+        "tooltip": "Tell every character whose switch is off. Held rolls are left for your Deliver."
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributeBeliefs",
+          "value": {
+            "attr:city:c1:zzPc000000000001": {
+              "text": "<p>Three rings.</p>",
+              "tier": null,
+              "total": null,
+              "when": 1790000000000,
+              "delivered": 1790000000000,
+              "claim": null,
+              "sources": null,
+              "from": "gm"
+            }
+          }
+        },
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.studied": {
+              "kind": {},
+              "lore": {
+                "lore:zzNpc00000000001:l1": {
+                  "when": 1790000000000
+                },
+                "attr:city:c1": {
+                  "when": 1790000000000
+                }
+              }
+            },
+            "flags.pentaryn-ties.known": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "category": "sentient",
+                "notes": "",
+                "imposter": null,
+                "hidden": false,
+                "when": 1790000000000
+              }
+            ],
+            "flags.pentaryn-ties.granted": {
+              "attr:city:#id": {
+                "text": "From Vel.",
+                "when": 1700000000000,
+                "icon": null,
+                "source": "Vel"
+              },
+              "attr:guild:#id": {
+                "text": "<p>Guild hands.</p>",
+                "when": 1790000000000,
+                "icon": "icons/sundries/flags/banner-standard-green.webp",
+                "source": "Salt Guild"
+              },
+              "lore:zzNpc00000000001:l1": {
+                "text": "zz typed text",
+                "when": 1790000000000,
+                "icon": "icons/zz/zzNpc00000000001.webp",
+                "source": "zz typed label"
+              },
+              "attr:city:c1": {
+                "text": "<p>Three rings.</p>",
+                "when": 1790000000000,
+                "icon": "icons/environment/settlement/city-night.webp",
+                "source": "Vel — Walls"
+              }
+            }
+          }
+        },
+        {
+          "op": "ChatMessage.create",
+          "data": {
+            "content": "<p class=\"pt-study-stub\">ZZ Caven has learned something about ZZ Brakka. It is in their notebook.</p>",
+            "whisper": [
+              "zzPlayerUser0001"
+            ],
+            "speaker": {
+              "alias": "Gamemaster"
+            }
+          }
+        },
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "ZZ Caven now know(s): Vel — Walls"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pv-share-all",
+        "parent": "pv-switches"
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "className": "pv-sw pv-sw-off",
+      "dataset": {
+        "pc": "zzPc000000000001",
+        "tooltip": "ZZ — doesn't know · click to tell them"
+      },
+      "nth": 2,
+      "type": "click",
+      "missing": true
+    },
+    {
+      "nth": 3,
+      "tag": "BUTTON",
+      "className": "pv-share-all",
+      "dataset": {
+        "action": "share-all",
+        "tooltip": "Tell every character whose switch is off. Held rolls are left for your Deliver."
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "Every character already knows this, or is waiting on your Deliver."
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pv-share-all",
+        "parent": "pv-switches"
+      }
+    },
+    {
+      "tag": "BUTTON",
+      "className": "pv-sw pv-sw-off",
+      "dataset": {
+        "pc": "zzPc000000000001",
+        "tooltip": "ZZ — doesn't know · click to tell them"
+      },
+      "nth": 3,
+      "type": "click",
+      "missing": true
+    },
+    {
+      "nth": 4,
+      "tag": "BUTTON",
+      "className": "pv-share-all",
+      "dataset": {
+        "action": "share-all",
+        "tooltip": "Tell every character whose switch is off. Held rolls are left for your Deliver."
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzKind0000000001",
+          "changes": {
+            "flags.pentaryn-ties.beliefs.zzPc000000000001.kind": {
+              "text": "— Studied (Religion) —\nGrey hunters.\nNothing about it strikes you as proof against anything.",
+              "tier": 25,
+              "total": null,
+              "when": 1790000000000,
+              "delivered": 1790000000000,
+              "claim": null,
+              "sources": null,
+              "pass": null,
+              "from": "gm"
+            }
+          }
+        },
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.studied": {
+              "kind": {
+                "zzKind0000000001": {
+                  "when": 1790000000000
+                }
+              },
+              "lore": {
+                "lore:zzNpc00000000001:l1": {
+                  "when": 1790000000000
+                },
+                "attr:city:c1": {
+                  "when": 1790000000000
+                }
+              }
+            },
+            "flags.pentaryn-ties.known": [
+              {
+                "id": "zzNpc00000000001",
+                "name": "ZZ Brakka",
+                "category": "sentient",
+                "notes": "",
+                "imposter": null,
+                "hidden": false,
+                "when": 1790000000000
+              },
+              {
+                "id": "zzKind0000000001",
+                "name": "ZZ Ghoul",
+                "category": "beasts",
+                "notes": "",
+                "imposter": null,
+                "hidden": false,
+                "when": 1790000000000
+              }
+            ],
+            "flags.pentaryn-ties.granted": {
+              "attr:city:#id": {
+                "text": "From Vel.",
+                "when": 1700000000000,
+                "icon": null,
+                "source": "Vel"
+              },
+              "attr:guild:#id": {
+                "text": "<p>Guild hands.</p>",
+                "when": 1790000000000,
+                "icon": "icons/sundries/flags/banner-standard-green.webp",
+                "source": "Salt Guild"
+              },
+              "lore:zzNpc00000000001:l1": {
+                "text": "zz typed text",
+                "when": 1790000000000,
+                "icon": "icons/zz/zzNpc00000000001.webp",
+                "source": "zz typed label"
+              },
+              "attr:city:c1": {
+                "text": "<p>Three rings.</p>",
+                "when": 1790000000000,
+                "icon": "icons/environment/settlement/city-night.webp",
+                "source": "Vel — Walls"
+              },
+              "kind:zzKind0000000001": {
+                "text": "— Studied (Religion) —\nGrey hunters.\nNothing about it strikes you as proof against anything.",
+                "when": 1790000000000,
+                "icon": "icons/zz/zzKind0000000001.webp",
+                "source": "ZZ Ghoul"
+              }
+            }
+          }
+        },
+        {
+          "op": "ChatMessage.create",
+          "data": {
+            "content": "<p class=\"pt-study-stub\">ZZ Caven has learned something about ZZ Brakka. It is in their notebook.</p>",
+            "whisper": [
+              "zzPlayerUser0001"
+            ],
+            "speaker": {
+              "alias": "Gamemaster"
+            }
+          }
+        },
+        {
+          "op": "notify",
+          "level": "info",
+          "message": "ZZ Caven now know(s): ZZ Ghoul"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pv-share-all",
+        "parent": "pv-switches"
+      }
+    }
+  ]
+}

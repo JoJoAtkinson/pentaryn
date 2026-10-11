@@ -178,6 +178,13 @@ export async function bootWorld({
     return run.length;
   };
 
+  // the clipboard: recorded (node has no clipboard)
+  Object.defineProperty(globalThis, "navigator", {
+    value: { clipboard: { writeText: async text => void F.calls.push({ op: "clipboard", text }) } },
+    configurable: true,
+    writable: true,
+  });
+
   globalThis.Actor = Actor;
   F.Actor = Actor;
   globalThis.Macro = { create: async data => F.calls.push({ op: "Macro.create", data: F.plain(data) }) };

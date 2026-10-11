@@ -1,0 +1,20 @@
+{
+  "preview": null,
+  "review": null,
+  "previewNoSubject": {
+    "id": "0000000000000018",
+    "message": "Hover or select a token to preview."
+  },
+  "calls": [
+    {
+      "op": "notify",
+      "level": "warn",
+      "message": "Attribute review is GM only."
+    },
+    {
+      "op": "notify",
+      "level": "warn",
+      "message": "Hover or select a token to preview."
+    }
+  ]
+}
