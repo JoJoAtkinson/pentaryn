@@ -26,3 +26,18 @@ test("any iterable of actors (a Foundry Collection yields values) and a custom s
   assert.deepEqual([...indexBySlug(values).keys()], ["a", "c"]);
   assert.equal(indexBySlug([{ id: "1", s: "q" }], a => a.s).get("q").id, "1");
 });
+
+// Micro-benchmark, deterministic half (items-journal-7): count slug reads instead of timing them, so
+// the test never flakes. The old lookup read up to every world actor per entry; the index reads each
+// actor once per run, and picks the same actor for every entry. Wall-clock curve: node test/bench.mjs.
+test("one slug read per world actor per run, not one per actor per entry; same picks as the scan", () => {
+  const world = Array.from({ length: 200 }, (_, i) => actor(`w${i}`, i % 3 ? `s${i % 50}` : undefined));
+  const entries = Array.from({ length: 40 }, (_, j) => (j % 4 ? `s${j}` : `new${j}`));
+  let scanReads = 0, indexReads = 0;
+  const slugOf = count => a => (count(), a.flags.pentaryn?.slug);
+  const scanned = entries.map(s => world.find(a => slugOf(() => scanReads++)(a) === s));
+  const index = indexBySlug(world, slugOf(() => indexReads++));
+  assert.equal(indexReads, world.length);
+  assert.ok(scanReads > 10 * indexReads, `scan read ${scanReads} slugs, the index ${indexReads}`);
+  assert.deepEqual(entries.map(s => index.get(s)), scanned);
+});

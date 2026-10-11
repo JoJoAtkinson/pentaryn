@@ -176,7 +176,8 @@ From this folder: `node test/run.mjs` (also `make foundry-importer-check`). `cor
 table against the verbatim oracle (`test/fixtures/legacy-importer.mjs`) and the core;
 `glue.test` and `write.test` load the entry under the kit's Foundry stub and pin toasts, console
 lines, results and Document writes; `hooks`, `api`, `i18n`, `version-gate` and `sites` cover the
-rest. One golden at a time: `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`, then read the diff.
+rest; `index` pins the slug index. One golden at a time: `GOLDEN_UPDATE=1 node --test test/<file>.test.mjs`,
+then read the diff. `node test/bench.mjs` prints the slug-lookup timing curve (index vs the old per-entry scan).
 
 ## Sync
 
