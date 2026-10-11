@@ -15,6 +15,7 @@ const SCENE_OPTS = {
   doc: "sceneId defaults to the viewed scene; backend overrides the setting; the rest are engine tolerances",
 };
 const ENGINE_RESULT = "{ creates, updates, refusals, lints, log, report }";
+const BUSY = " One at a time: while preview/run/undo is running, another call warns and returns null.";
 
 export const MANIFEST = Object.freeze({
   module: MODULE,
@@ -26,32 +27,32 @@ export const MANIFEST = Object.freeze({
     {
       path: "preview",
       params: [SCENE_OPTS],
-      returns: ENGINE_RESULT,
+      returns: `${ENGINE_RESULT} | null`,
       gm: true, writes: true,
       sideEffects: ["ChatMessage (GM whisper)", "canvas.ping", "console.table"],
       throws: ["Error"],
       doc: "Run the engine on a scene and report what it would build, writing no walls. Not a pure read: "
-        + "it posts a GM-whispered chat card, pings each refusal and prints console tables.",
+        + "it posts a GM-whispered chat card, pings each refusal and prints console tables." + BUSY,
     },
     {
       path: "run",
       params: [SCENE_OPTS],
-      returns: ENGINE_RESULT,
+      returns: `${ENGINE_RESULT} | null`,
       gm: true, writes: true,
       sideEffects: ["Wall update batch", "Wall create batch", "ChatMessage (GM whisper)",
         "flags.wall-autocomplete.{generated,run,rule,priorC}"],
       throws: ["Error"],
       doc: "Complete the scene's walls: one update batch (trims/welds), one create batch, then the chat card. "
-        + "Every write is stamped with the run id so undo() can peel it back.",
+        + "Every write is stamped with the run id so undo() can peel it back." + BUSY,
     },
     {
       path: "undo",
       params: [{ name: "opts", optional: true, type: "{ sceneId?, all? }", doc: "all: undo every run, not just the latest" }],
-      returns: "{ deleted, restored, run }",
+      returns: "{ deleted, restored, run } | null",
       gm: true, writes: true, legacy: true,
       sideEffects: ["Wall delete batch", "Wall update batch", "ChatMessage (GM whisper)"],
       throws: ["Error"],
-      doc: "Undo the latest run on a scene (or all of them): delete the walls it created and restore those it trimmed.",
+      doc: "Undo the latest run on a scene (or all of them): delete the walls it created and restore those it trimmed." + BUSY,
     },
     {
       path: "makeMacro",

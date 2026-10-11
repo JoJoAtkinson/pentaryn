@@ -58,12 +58,21 @@ function evaluate(scene, opts = {}) {
 /*  Reporting                                   */
 /* -------------------------------------------- */
 
-function report(scene, result, {committed, backend, ms}) {
+/** Post a GM-whispered card. Awaited by the caller; a failure is logged, never thrown. */
+function postCard(content) {
+  const failed = err => console.error(`${MODULE} |`, err);
+  try {
+    return Promise.resolve(ChatMessage.create({content, whisper: ChatMessage.getWhisperRecipients("GM").map(u => u.id)}))
+      .catch(failed);
+  } catch (err) {
+    failed(err);
+    return Promise.resolve();
+  }
+}
+
+async function report(scene, result, {committed, backend, ms}) {
   const {refusals} = result;
-  ChatMessage.create({
-    content: reportHtml(scene.name, result, {committed, backend, ms}),
-    whisper: ChatMessage.getWhisperRecipients("GM").map(u => u.id)
-  });
+  const posted = postCard(reportHtml(scene.name, result, {committed, backend, ms}));
 
   console.group(`${MODULE} — ${scene.name}`);
   console.table(result.log.map(l => ({pass: l.iter, rule: l.rule, walls: JSON.stringify(l.walls)})));
@@ -74,6 +83,7 @@ function report(scene, result, {committed, backend, ms}) {
   for (const x of refusals) {
     try { canvas.ping({x: x.at[0], y: x.at[1]}); } catch (err) { log?.debug("ping", err); }   // a nicety
   }
+  await posted;
 }
 
 /* -------------------------------------------- */
@@ -83,7 +93,7 @@ function report(scene, result, {committed, backend, ms}) {
 async function preview({sceneId, ...opts} = {}) {
   const scene = targetScene(sceneId);
   const {result, backend, ms} = evaluate(scene, opts);
-  report(scene, result, {committed: false, backend, ms});
+  await report(scene, result, {committed: false, backend, ms});
   return result;
 }
 
@@ -96,7 +106,7 @@ async function run({sceneId, ...opts} = {}) {
   if (result.updates.length) await scene.updateEmbeddedDocuments("Wall", result.updates);
   if (result.creates.length) await scene.createEmbeddedDocuments("Wall", result.creates);
 
-  report(scene, result, {committed: true, backend, ms});
+  await report(scene, result, {committed: true, backend, ms});
   return result;
 }
 
@@ -123,10 +133,7 @@ async function undo({sceneId, all = false} = {}) {
   if (restores.length) await scene.updateEmbeddedDocuments("Wall", restores);
   if (generated.length) await scene.deleteEmbeddedDocuments("Wall", generated);
 
-  ChatMessage.create({
-    content: undoHtml({generated: generated.length, restored: restores.length, all, latest, remaining}),
-    whisper: ChatMessage.getWhisperRecipients("GM").map(u => u.id)
-  });
+  await postCard(undoHtml({generated: generated.length, restored: restores.length, all, latest, remaining}));
   ui.notifications.info(`Undid ${generated.length} created, ${restores.length} restored.`);
   return {deleted: generated.length, restored: restores.length, run: all ? "all" : latest};
 }
@@ -159,11 +166,20 @@ async function makeMacro(action = "preview", slot) {
 const lock = {busy: false};
 const onBusy = () => ui.notifications.warn("Wall autocomplete is already running.");
 
-/** A keybinding's `onDown` for `fn`: exclusive across the three keys; a failure logs and toasts. */
+/**
+ * preview/run/undo as published: exclusive across all three and every caller — keybinding, API,
+ * macro (senses-walls-cursors-9). While one is running, another call warns and returns null.
+ */
+const exclusiveActions = {
+  preview: exclusive(preview, {onBusy, lock}),
+  run: exclusive(run, {onBusy, lock}),
+  undo: exclusive(undo, {onBusy, lock}),
+};
+
+/** A keybinding's `onDown` for an exclusive action: a failure logs and toasts; always handled. */
 function keybindingGuard(fn) {
-  const once = exclusive(fn, {onBusy, lock});
   return () => {
-    once()?.catch(err => {
+    fn()?.catch(err => {
       console.error(`${MODULE} |`, err);
       ui.notifications.error(`Wall autocomplete: ${err.message}`, {permanent: true});
     });
@@ -180,7 +196,7 @@ let log = null;
 
 export function install(reg, ctx) {
   log = ctx.log;
-  ctx.expose({preview, run, undo, makeMacro, keybindingGuard});
+  ctx.expose({...exclusiveActions, makeMacro, keybindingGuard});
 }
 
 /** Release the busy flag (a hot patch re-wires; an in-flight run settles on its own). */
