@@ -1,29 +1,18 @@
 /**
- * Light cantrip and lit items. Design and evidence: context/plans/senses-light-cantrip.md (plan C4).
+ * Pentaryn Senses — FEATURE: the Light cantrip and lit items. What the player sees: README; the
+ * design and its evidence: context/plans/senses-light-cantrip.md (plan C4).
  *
- * The cantrip. The PHB Light spell is left as shipped; this recognises it at use time, stops its
- * floor-token summon, and asks "Where does the light go?" → On me · Pick a target · Not now.
- * The answer is written by the caster onto their own Light item:
+ *   Light item    flags.pentaryn-senses.lightCast = { scene, token } | { scene, x, y } | null  (the caster writes)
+ *   Token, square flags.pentaryn-senses.spellLight = { source, prior }  (the active GM reconciles; one light per Light)
+ *   Torch, lamp…  flags.pentaryn-senses.lit / .hooded  (the owner toggles; carried.mjs lights the carrier)
  *
- *   item.flags["pentaryn-senses"].lightCast = { scene, token } | { scene, x, y } | null
- *
- * and the active GM reconciles: the token takes SPELL_LIGHT (its old light kept in
- * flags.pentaryn-senses.spellLight.prior), or an AmbientLight sits on the square. One light per
- * Light item, so casting again moves it. The same three buttons replace Summon on the spell card,
- * and End light sits on the Token HUD for the caster and the GM.
- *
- * Lit items. Torches, lamps, lanterns and candles carry flags.pentaryn-senses.lit, toggled by the
- * item's own "Light" activity (consumes nothing) or the flame button on the inventory row. The
- * carried-light path (carried.mjs) gives the carrier the glow.
- *
- * Every hook body is guarded: a bug logs `pentaryn-senses | light …` and never breaks a sheet,
- * a chat card or the HUD. A feature: the entry calls install(reg, ctx).
+ * Hooks are guarded at warn ('pentaryn-senses | light <hook>'): a bug never breaks a sheet, a card or the HUD.
  */
 
 import {
   MODULE, FLAGS, SPELL_LIGHT, profileFor, profileKey, isLit, isHooded, isLightSpellData, isLightToggle,
   readSpellCast, readSpellLight, castFlag, planSpellLight, spellLightUpdate, restoredLight,
-  sourcesUnder, isPHBLightActorSource, torchActivityData, TORCH_ACTIVITY_ID, summarise,
+  sourcesUnder, isPHBLightActorSource, torchActivityData, TORCH_ACTIVITY_ID, summarise, handSquareEdit,
   esc, unsetPath
 } from "./senses-core.mjs";
 import { coreRollMode } from "./settings.mjs";
@@ -481,36 +470,23 @@ export function install(reg, ctx) {
     if (!isActiveGM()) return;
     for (const s of sourcesUnder(sourcesNow(), actor.uuid)) queue(s);
   });
-  // The GM deleted a Light square by hand: that ends the light. Without this the item still wants
-  // the square and the next sweep (GM reload, scene deleted) puts it back. Our own deletions in
-  // reconcile() never match the wanted square, or leave a duplicate of it standing.
+  // A Light square deleted or dragged by the GM's hand ends or moves the light (core handSquareEdit).
+  const handEdit = (kind, light) => {
+    const sl = readSpellLight(light);
+    if (!sl) return null;
+    const item = itemFrom(sl.source);
+    const edit = handSquareEdit(kind, { want: readSpellCast(item), source: sl.source, light, sceneId: light.parent?.id, lights: light.parent?.lights });
+    return edit && { item, edit };
+  };
   on("deleteAmbientLight", (light) => {
     if (!isActiveGM()) return;
-    const sl = readSpellLight(light);
-    if (!sl) return;
-    const item = itemFrom(sl.source);
-    const want = readSpellCast(item);
-    const scene = light.parent;
-    if (!want || want.token || want.scene !== scene?.id
-      || want.x !== Math.round(light.x) || want.y !== Math.round(light.y)) return;
-    const twin = scene.lights.some(l => l.id !== light.id && readSpellLight(l)?.source === sl.source
-      && Math.round(l.x) === want.x && Math.round(l.y) === want.y);
-    if (!twin) item.update({ [CAST]: null }).catch(e => warn("hand-deleted square", e));
+    const h = handEdit("delete", light);
+    if (h) h.item.update({ [CAST]: null }).catch(e => warn("hand-deleted square", e));
   });
-  // The GM dragged a Light square: the light now lives there. reconcile() never moves an
-  // AmbientLight (it creates and deletes), so any x/y change is a hand move.
   on("updateAmbientLight", (light, changes) => {
     if (!isActiveGM() || !(("x" in (changes ?? {})) || ("y" in (changes ?? {})))) return;
-    const sl = readSpellLight(light);
-    if (!sl) return;
-    const item = itemFrom(sl.source);
-    const want = readSpellCast(item);
-    if (!want || want.token || want.scene !== light.parent?.id) return;
-    const x = Math.round(light.x), y = Math.round(light.y);
-    if (want.x === x && want.y === y) return;
-    const twin = light.parent.lights.some(l => l.id !== light.id && readSpellLight(l)?.source === sl.source
-      && Math.round(l.x) === want.x && Math.round(l.y) === want.y);
-    if (!twin) item.update({ [`${CAST}.x`]: x, [`${CAST}.y`]: y }).catch(e => warn("hand-moved square", e));
+    const h = handEdit("move", light);
+    if (h) h.item.update({ [`${CAST}.x`]: h.edit.x, [`${CAST}.y`]: h.edit.y }).catch(e => warn("hand-moved square", e));
   });
   on("deleteScene", () => {
     if (!isActiveGM()) return;

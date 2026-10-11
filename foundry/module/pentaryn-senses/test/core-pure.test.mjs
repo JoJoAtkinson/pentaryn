@@ -107,3 +107,19 @@ test("resolveTokenRef with fromUuid (-26): a Token uuid on any scene; another do
   assert.equal(core.resolveTokenRef("boom.x", { viewed, fromUuid }), null);
   assert.equal(core.resolveTokenRef("t1", { viewed, fromUuid }).id, "t1", "a plain id is still the viewed scene's");
 });
+
+test("handSquareEdit: a hand-deleted wanted square ends the light; a dragged one moves it; twins and other targets are left", () => {
+  const sl = (id, x, y, source = "L") => ({ id, x, y, flags: { "pentaryn-senses": { spellLight: { source } } } });
+  const want = { scene: "s", x: 250, y: 250 };
+  const sq = sl("a", 250.4, 249.6);
+  assert.deepEqual(core.handSquareEdit("delete", { want, source: "L", light: sq, sceneId: "s", lights: [] }), { clear: true });
+  assert.equal(core.handSquareEdit("delete", { want, source: "L", light: sq, sceneId: "s", lights: [sl("b", 250, 250)] }), null, "a twin remains");
+  assert.equal(core.handSquareEdit("delete", { want, source: "L", light: sq, sceneId: "s", lights: [sl("b", 250, 250, "M")] })?.clear, true, "another Light's square is no twin");
+  assert.equal(core.handSquareEdit("delete", { want, source: "L", light: sl("a", 50, 50), sceneId: "s", lights: [] }), null, "not the wanted square");
+  assert.equal(core.handSquareEdit("delete", { want, source: "L", light: sq, sceneId: "other", lights: [] }), null, "another scene");
+  assert.equal(core.handSquareEdit("delete", { want: { scene: "s", token: "t" }, source: "L", light: sq, sceneId: "s", lights: [] }), null, "cast on a token");
+  assert.equal(core.handSquareEdit("delete", { want: null, source: "L", light: sq, sceneId: "s", lights: [] }), null);
+  assert.deepEqual(core.handSquareEdit("move", { want, source: "L", light: sl("a", 349.6, 150), sceneId: "s", lights: [] }), { x: 350, y: 150 });
+  assert.equal(core.handSquareEdit("move", { want, source: "L", light: sq, sceneId: "s", lights: [] }), null, "still at the wanted spot");
+  assert.equal(core.handSquareEdit("move", { want, source: "L", light: sl("a", 350, 150), sceneId: "s", lights: [sl("b", 250, 250)] }), null, "a twin holds the spot");
+});

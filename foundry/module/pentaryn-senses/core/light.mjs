@@ -399,3 +399,23 @@ export function summarise(plan, extras = {}) {
     cleared: extras.cleared ?? false,
   };
 }
+
+/**
+ * A GM's hand edit of a Light square (an AmbientLight lit by `source`), against the Light's wanted
+ * target `want` (readSpellCast). → what the cast flag becomes, or null to leave it:
+ *   "delete": the wanted square was deleted and no twin of it is left → { clear: true } (the light
+ *             ends; without this the next sweep would put it back);
+ *   "move":   the wanted square was dragged → { x, y } (the light now lives there; reconcile never
+ *             moves a square, it creates and deletes, so any x/y change is a hand move).
+ * A twin is another square of the same source still at the wanted spot.
+ */
+export function handSquareEdit(kind, { want, source, light, sceneId, lights }) {
+  if (!want || want.token || want.scene !== sceneId) return null;
+  const x = Math.round(light.x), y = Math.round(light.y);
+  const atWanted = want.x === x && want.y === y;
+  if (kind === "delete" ? !atWanted : atWanted) return null;
+  const twin = [...(lights ?? [])].some(l => l.id !== light.id && readSpellLight(l)?.source === source
+    && Math.round(l.x) === want.x && Math.round(l.y) === want.y);
+  if (twin) return null;
+  return kind === "delete" ? { clear: true } : { x, y };
+}
