@@ -100,3 +100,33 @@ export function cursorValues(key, base, imageSet = false) {
   const normal = img(""), lit = img("-pointer");
   return { "--cursor-default": normal, "--cursor-default-down": normal, "--cursor-pointer": lit, "--cursor-pointer-down": lit };
 }
+
+/**
+ * The core internals board.mjs relies on (adjustments row core-board-cursor-vars), by name, that
+ * are missing. `in`, not a truthiness test: `_placementContext` is null while no placement runs.
+ * @param {{events?: object|null, regions?: object|null}} where  canvas.app.renderer.events, canvas.regions
+ * @returns {string[]}  [] when all are present
+ */
+export function probeInternals({ events, regions } = {}) {
+  const has = (obj, name) => !!obj && typeof obj === "object" && name in obj;
+  const missing = [];
+  if (!has(events, "setCursor")) missing.push("setCursor");
+  if (!has(regions, "_placementContext")) missing.push("_placementContext");
+  return missing;
+}
+
+/**
+ * One read-only diagnosis of the map cursor (api.status()). `expected` is what keyFor gives for
+ * this control/tool/placement whatever the setting says; `key` is what should be on the board
+ * (null while the setting is off).
+ * @param {{enabled: boolean, control?: string|null, tool?: string|null, placementActive: boolean,
+ *   boardCursor?: string|null, dataset?: string|null, imageSet: boolean}} state
+ */
+export function statusOf({ enabled, control = null, tool = null, placementActive: placing = false,
+  boardCursor = null, dataset = null, imageSet = false } = {}) {
+  const expected = keyFor({ control, tool, templatesActive: placing });
+  return {
+    enabled: !!enabled, key: enabled ? expected : null, control, tool, placementActive: !!placing,
+    boardCursor, dataset, imageSet: !!imageSet, expected,
+  };
+}
