@@ -1,0 +1,106 @@
+/**
+ * core/rules.mjs — the pure rules added after the S4 split. Each is proven against the verbatim
+ * "before" code it replaced (test/fixtures/legacy-*.mjs) or against the guide's fixture table.
+ * No Foundry.
+ */
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { rolledMiss } from "../core/rules.mjs";
+import { shareStatus } from "../known-core.mjs";
+import { rowMissed, makePassOfRow, flatMissed, MEMBER_FACT } from "./fixtures/legacy-miss.mjs";
+import { readJSON } from "./kit/harness.mjs";
+
+/* ── ties-13: one flat-roll miss predicate ────────────────────────────────── */
+
+// the guide's 12-row matrix plus hostile totals (NaN, ±Infinity, strings) and DCs
+const RECS = [
+  { total: 9, text: "x", delivered: 1 },
+  { total: 14, text: "x", delivered: 1 },
+  { total: 18, text: "x", delivered: 1 },
+  { pass: true, total: 3, text: "x", delivered: 1 },
+  { pass: false, total: 20, text: "x", delivered: 1 },
+  { from: "gm", prior: { pass: false, total: 2 }, total: null, text: "told", delivered: 1 },
+  { total: null, text: "told", delivered: 1 },
+  { total: null, text: "", delivered: null },
+  null,
+  undefined,
+  { total: 13.5, text: "x", delivered: 1 },
+  { total: 18, text: "x", delivered: null },
+  { total: NaN, text: "x" },
+  { total: Infinity, text: "x" },
+  { total: -Infinity, text: "x" },
+  { total: "9", text: "x" },
+  { pass: "false", total: 9, text: "x" },
+  { from: "", total: 9, text: "x" },
+];
+const DCS = [14, "high", null, undefined, 0, NaN, 13.5];
+
+test("ties-13: rolledMiss equals the legacy flatMissed on every row × dc", () => {
+  for (const rec of RECS) for (const dc of DCS) {
+    assert.equal(rolledMiss(rec, dc), flatMissed(rec, dc), JSON.stringify({ rec, dc }));
+  }
+});
+
+test("ties-13: rowMissed (study.mjs) — non-kind rows are rolledMiss; kind rows keep their own rule", async () => {
+  const now = row => (fact, rec) => {
+    if (!rec || rec.from) return false;
+    if (fact.ns === "kind") return rec.total !== null && rec.total !== undefined && !(Number(rec.tier) >= 15);
+    return rolledMiss(rec, fact.dc);
+  };
+  const adapter = now();
+  for (const rec of RECS) for (const dc of DCS) for (const ns of ["lore", "attr", "kind"]) {
+    const r = rec && ns === "kind" ? { ...rec, tier: 15 } : rec;
+    assert.equal(adapter({ ns, dc }, r), rowMissed({ ns, dc }, r), JSON.stringify({ ns, rec, dc }));
+  }
+});
+
+test("ties-13: beliefs()' lore verdict — not a rolledMiss (and not NaN) where the legacy compared >= dc", () => {
+  const legacy = makePassOfRow({ rows: [{ id: "f1", dc: 14 }, { id: "f2", dc: "x" }] });
+  const rows = [{ id: "f1", dc: 14 }, { id: "f2", dc: "x" }];
+  const now = (parsed, rec) => {
+    if (rec.from) return true;
+    if (parsed.ns === "kind") return Number(rec.tier) >= 15;
+    if (typeof rec.pass === "boolean") return rec.pass;
+    if (typeof rec.total !== "number") return rec.delivered || String(rec.text ?? "").trim() ? true : null;
+    if (parsed.ns === "lore") {
+      const dc = rows.find(r => r.id === parsed.fact)?.dc;
+      // a pass is "not a miss" — except a NaN total, which the >= comparison never passed
+      return typeof dc === "number" ? !Number.isNaN(rec.total) && !rolledMiss(rec, dc) : null;
+    }
+    return null;
+  };
+  for (const rec of RECS.filter(Boolean)) for (const fact of ["f1", "f2", "nope"]) {
+    assert.equal(now({ ns: "lore", fact }, rec), legacy({ ns: "lore", fact }, rec), JSON.stringify({ fact, rec }));
+  }
+});
+
+test("ties-13: shareStatus is unchanged on the pinned S2 matrix (oracle-miss-matrix.json)", () => {
+  const golden = readJSON(new URL("./golden/oracle-miss-matrix.json", import.meta.url));
+  assert.equal(golden.length, 12);
+  const rows = [
+    { total: 9, text: "x", delivered: 1 }, { total: 14, text: "x", delivered: 1 }, { total: 18, text: "x", delivered: 1 },
+    { pass: true, total: 3, text: "x", delivered: 1 }, { pass: false, total: 20, text: "x", delivered: 1 },
+    { from: "gm", prior: { pass: false, total: 2 }, total: null, text: "told", delivered: 1 },
+    { total: null, text: "told", delivered: 1 }, { total: null, text: "", delivered: null },
+    { total: 9, text: "x", delivered: 1, dcOverride: "high" }, null,
+    { total: 13.5, text: "x", delivered: 1 }, { total: 18, text: "x", delivered: null },
+  ];
+  rows.forEach((rec, i) => {
+    const dc = rec?.dcOverride ?? 14;
+    const r = rec ? { ...rec } : null;
+    if (r) delete r.dcOverride;
+    const got = { lore: shareStatus({ belief: r, dc }), ident: shareStatus({ belief: r, ident: true }), kind: shareStatus({ belief: r ? { ...r, tier: 10 } : r, kind: true }) };
+    assert.deepEqual(got, golden[i].shareStatus, golden[i].label);
+  });
+});
+
+test("ties-13: shareStatus on non-finite totals grades nothing (a non-finite total is no total)", () => {
+  for (const total of [NaN, Infinity, -Infinity]) {
+    assert.equal(shareStatus({ belief: { total, text: "x", delivered: 1 }, dc: 14 }), "told", String(total));
+  }
+});
+
+test("MEMBER_FACT is still #id (the oracle and core agree)", async () => {
+  const { MEMBER_FACT: core } = await import("../known-core.mjs");
+  assert.equal(core, MEMBER_FACT);
+});

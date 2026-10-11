@@ -8,6 +8,7 @@
 import { identificationLadder, readRegistry } from "./attributes.mjs";
 import { attrFactKey, identifiedKey } from "./ledgers.mjs";
 import { loreFactKey, rollableLore } from "./lore.mjs";
+import { rolledMiss } from "./rules.mjs";
 
 /* ── the GM's "who knows" tags — the inspect window's player view ─────────── */
 
@@ -51,9 +52,9 @@ export function shareStatus({
        * from before that field derives it from its total against the row's DC. A share (`from`)
        * is never a failure, whatever it replaced.
        */
-      const rolledMiss = !kind && !ident && !belief.from && (belief.pass === false
-        || (typeof belief.pass !== "boolean" && total !== null && typeof dc === "number" && Math.round(total) < dc));
-      const empty = kind ? !(Number(belief.tier) >= 15) : !text || rolledMiss;
+      // `total` is finite-or-null here, so a non-finite stored total grades nothing (as it always did)
+      const missed = !kind && !ident && rolledMiss({ ...belief, total }, dc);
+      const empty = kind ? !(Number(belief.tier) >= 15) : !text || missed;
       if (empty) return "failed";
       if (!delivered) return "held";
       if (total === null) return ident && !belief.from ? "passed" : "told";

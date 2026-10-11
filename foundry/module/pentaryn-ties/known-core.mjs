@@ -11,6 +11,10 @@
  *   core/prose.mjs       enricher guard, flattening, `composeReveal`
  *   core/facts.mjs       `shareStatus`, fact keys and order
  *
+ * Not re-exported here, on purpose: core/shared.mjs (private clamps) and core/rules.mjs (rules added
+ * after the split — import it by path). This barrel's export list is pinned
+ * (test/golden/known-core-exports.json) so a macro importing it never loses a name.
+ *
  * This path is kept because it is documented: `context/foundry/attributes.md` and console macros
  * `import("/modules/pentaryn-ties/known-core.mjs")`, and test/known.mjs imports it bare.
  *

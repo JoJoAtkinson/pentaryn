@@ -47,6 +47,7 @@
 
 import { attributeLore, describeAttribute, attributeIdsOf, knowledge, setKnowledge, clearKnowledge } from "./attributes.mjs";
 import { MODULE, mayWrite, canReach } from "./ties-api.mjs";
+import { rolledMiss } from "./core/rules.mjs";
 import {
   KNOWN_FLAG,
   GRANTED_FLAG,
@@ -1346,8 +1347,7 @@ async function deliverFact(fact, character) {
 function rowMissed(fact, rec) {
   if (!rec || rec.from) return false;
   if (fact.ns === "kind") return rec.total !== null && rec.total !== undefined && !(Number(rec.tier) >= 15);
-  if (typeof rec.pass === "boolean") return rec.pass === false;
-  return typeof rec.total === "number" && typeof fact.dc === "number" && Math.round(rec.total) < fact.dc;
+  return rolledMiss(rec, fact.dc);
 }
 
 /**
@@ -1597,7 +1597,8 @@ export function beliefs(actor) {
     if (typeof rec.total !== "number") return rec.delivered || String(rec.text ?? "").trim() ? true : null;
     if (parsed.ns === "lore") {
       const dc = rows.find(r => r.id === parsed.fact)?.dc;
-      return typeof dc === "number" ? Math.round(rec.total) >= dc : null;
+      // a pass is "not a miss" — except a NaN total, which the >= comparison never passed
+      return typeof dc === "number" ? !Number.isNaN(rec.total) && !rolledMiss(rec, dc) : null;
     }
     if (parsed.ns === "attr" && parsed.fact === MEMBER_FACT) {
       if (String(rec.text ?? "").trim()) return true;
@@ -2793,9 +2794,6 @@ export function legacyMissCards() {
   } catch {
     attrLedger = {};
   }
-  const flatMissed = (rec, dc) =>
-    !!rec && !rec.from && (rec.pass === false
-      || (typeof rec.pass !== "boolean" && typeof rec.total === "number" && typeof dc === "number" && Math.round(rec.total) < dc));
   const out = [];
   for (const pc of game.actors?.contents ?? []) {
     if (pc.type !== "character") continue;
@@ -2809,11 +2807,11 @@ export function legacyMissCards() {
         if (!actor) continue;
         subject = actor.name;
         const dc = readLore(flagOf(actor, LORE_FLAG)).find(r => r.id === parsed.fact)?.dc;
-        missed = flatMissed(beliefsOf(actor)[pc.id]?.[factKey], dc);
+        missed = rolledMiss(beliefsOf(actor)[pc.id]?.[factKey], dc);
       } else if (parsed.ns === "attr" && parsed.fact !== MEMBER_FACT) {
         subject = describeAttribute(parsed.subject)?.title ?? parsed.subject;
         const dc = readLore(attributeLore(parsed.subject)).find(r => r.id === parsed.fact)?.dc;
-        missed = flatMissed(attrLedger[`${factKey}:${pc.id}`], dc);
+        missed = rolledMiss(attrLedger[`${factKey}:${pc.id}`], dc);
       } else if (parsed.ns === "kind") {
         const kind = game.actors.get(parsed.subject);
         if (!kind) continue;
