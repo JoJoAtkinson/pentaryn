@@ -48,9 +48,9 @@
         },
         {
           "name": "ids",
-          "type": "Set<string>",
+          "type": "string[] | Set<string> | string | TokenDocument[]",
           "optional": true,
-          "doc": "only these token ids; default every token"
+          "doc": "only these tokens (ids or documents; [] means none); default every token"
         }
       ],
       "returns": "Promise<number>",
@@ -62,7 +62,7 @@
         "flags.pentaryn-creatures.light"
       ],
       "legacy": true,
-      "doc": "Bring one scene's creature lights in line now; resolves to how many tokens were written. Active GM client only (0 elsewhere). ids must be a Set today."
+      "doc": "Bring one scene's creature lights in line now; resolves to how many tokens were written. Active GM client only (0 elsewhere)."
     },
     {
       "path": "syncAll",

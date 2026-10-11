@@ -13,7 +13,7 @@
 // KNOWN rows (pinned as they are; each has its target as a todo test at the end):
 //   transform-creatures-26  the queue is a debounce: steady traffic pushes the flush back
 //   transform-creatures-27  our own light write re-queues a second, no-op pass; no options argument
-//   transform-creatures-31  syncScene(scene, ["id"]) throws `ids.has is not a function`
+//   transform-creatures-31  FIXED [declared]: syncScene(scene, ["id"]) and a bare id narrow the pass
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { manifestOf, pinJSON } from "./kit/harness.mjs";
@@ -327,12 +327,15 @@ test("failure texts: a failed queued write names the scene; a failed setting-dri
   writes();
 });
 
-test("api.syncScene / syncAll return counts; a Set of ids narrows; KNOWN transform-creatures-31: an array throws", async () => {
+test("api.syncScene / syncAll return counts; a Set of ids narrows; transform-creatures-31 [declared]: an array or one id narrows too", async () => {
   reset("tImp", "tEye");
   assert.equal(await api().syncScene(W.scene(ALPHA), new Set(["tImp"])), 1);
   assert.equal(await api().syncScene(W.scene(ALPHA)), 1, "tEye was left for the full pass");
   assert.equal(await api().syncScene(W.scene(ALPHA)), 0);
-  await assert.rejects(api().syncScene(W.scene(ALPHA), ["tImp"]), { name: "TypeError", message: "ids.has is not a function" });
+  reset("tImp", "tEye");
+  assert.equal(await api().syncScene(W.scene(ALPHA), ["tImp"]), 1, "an array narrows (was: ids.has is not a function)");
+  assert.equal(await api().syncScene(W.scene(ALPHA), []), 0, "an empty list is no token, not every token");
+  assert.equal(await api().syncScene(W.scene(ALPHA), "tEye"), 1, "a bare id narrows");
   assert.equal(await api().syncAll(), 0);
   await tick(200);
   writes();
@@ -383,4 +386,3 @@ test("controlToken with no strip on the page does nothing", () => {
 /* ── the targets of the KNOWN rows (guide §4 and step 7) ─────────────────── */
 test.todo("transform-creatures-26: the light queue is armed once and never pushed back — 0/50/100/150/190 → one pass at 200");
 test.todo("transform-creatures-27: our own light write carries {pentarynCreatures: true}, so the echo pass does not happen");
-test.todo("transform-creatures-31: syncScene(scene, [\"id\"]) and a bare id narrow the pass instead of throwing (step 7, API boundary)");
