@@ -323,6 +323,18 @@ export async function revert(actor, { quiet = false, reason = "manual" } = {}) {
   }
 }
 
+/**
+ * "Return to <druid>" (Bonus Action): the revert item's use and the HUD's own Return button (a
+ * druid with no revert item, PT3-3) both end the form here.
+ */
+export function returnToNormal(actor) {
+  markBonusUsed(actor);
+  return revert(actor).catch(err => {
+    console.warn(`${MODULE_ID} | revert failed`, err);
+    return null;
+  });
+}
+
 /* ── shift ───────────────────────────────────────────────────────────────── */
 
 // The transform runs inside dnd5e.postUseActivity, which dnd5e does not await. `inflight` hands the
@@ -561,9 +573,7 @@ Hooks.on("dnd5e.preUseActivity", (activity, usageConfig, dialogConfig, messageCo
 
 Hooks.on("dnd5e.postUseActivity", (activity, usageConfig, results) => {
   if (isRevertItem(activity?.item)) {
-    const actor = activity.actor;
-    markBonusUsed(actor);
-    revert(actor).catch(err => console.warn(`${MODULE_ID} | revert failed`, err));
+    returnToNormal(activity.actor);
     return;
   }
   if (!isWildShapeActivity(activity) || activity.actor?.isPolymorphed) return;

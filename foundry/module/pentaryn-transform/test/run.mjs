@@ -432,6 +432,18 @@ check("141 body swap: a new actor, dnd5e's swap flags, wrapped values; not a mov
   isBodySwap(null)
 ], [true, false, false, true, true, true, false, false]);
 
+/* ── play-test fixes (fix/playtest-2026-10-11) ────────────────────────────── */
+
+// PT3-3: a druid with no hand-made revert item still gets "Return to <name>" while shifted.
+check("150 shifted, no revert item → a synthesized Return, highlighted, before Change Form",
+  planBonusBar([{ kind: "weaponSet" }, { kind: "other" }], { revertIds: [], shifted: true, revertId: null, hasWildShape: true }),
+  [{ keep: 0 }, { revert: true, highlight: true }, { wildshape: true }, { keep: 1 }]);
+check("151 shifted with Talo's revert item → that item, no synthesized duplicate",
+  planBonusBar([{ kind: "weaponSet" }, { kind: "item", id: RV }], { revertIds: [RV], shifted: true, revertId: RV, hasWildShape: true })
+    .filter(p => p.revert || p.item === RV).length, 1);
+check("152 normal form never synthesizes a Return",
+  planBonusBar([{ kind: "weaponSet" }], { revertIds: [], shifted: false, hasWildShape: true }).some(p => p.revert), false);
+
 /* ── report ───────────────────────────────────────────────────────────────── */
 
 if (failures.length) {

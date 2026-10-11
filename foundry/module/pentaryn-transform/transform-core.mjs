@@ -385,10 +385,11 @@ export function formSummary(f) {
  * @param {{ wildShapeId: string|null, revertIds: string[], shifted: boolean, revertId: string|null,
  *           hasWildShape: boolean, starryId?: string|null }} ctx
  *        wildShapeId: the Wild Shape item on THIS actor (null when shifted, it is stripped);
- *        revertId: the revert item to show while shifted; hasWildShape: whether the
+ *        revertId: the revert item to show while shifted (none: a synthesized Return,
+ *        `{ revert: true }`, takes its place); hasWildShape: whether the
  *        original can Wild Shape at all; starryId: the Starry Form item, replaced by the module's
  *        own Starry Form button right after Wild Shape (normal form only)
- * @returns {({ keep: number } | { item: string, highlight?: boolean } | { wildshape: true } | { starry: true })[]}
+ * @returns {({ keep: number } | { item: string, highlight?: boolean } | { revert: true, highlight: true } | { wildshape: true } | { starry: true })[]}
  *          keep = index into `slots`; item = a fresh full-size button for that item id
  */
 export function planBonusBar(slots, { wildShapeId = null, revertIds = [], shifted = false, revertId = null, hasWildShape = false, starryId = null } = {}) {
@@ -429,7 +430,8 @@ export function planBonusBar(slots, { wildShapeId = null, revertIds = [], shifte
     return out;
   }
   const front = [];
-  if (revertId) front.push({ item: revertId, highlight: true });
+  // No hand-made revert item on this form: a Return button of the module's own (PT3-3).
+  front.push(revertId ? { item: revertId, highlight: true } : { revert: true, highlight: true });
   if (hasWildShape) front.push({ wildshape: true });
   const ws = slots.findIndex(s => s.kind === "weaponSet");
   const at = ws < 0 ? 0 : out.findIndex(o => o.keep === ws) + 1;

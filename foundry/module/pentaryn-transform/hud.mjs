@@ -12,9 +12,9 @@
 
 import {
   MODULE_ID, EFFECT_ID, activitiesOf, isWildShapeActivity, usesLeft, durationSeconds, formatDuration,
-  formSummary, planBonusBar, planWithout, frontRowItems, coveredPanel, hpText, CONSTELLATIONS, STARRY_SECONDS
+  formSummary, planBonusBar, planWithout, frontRowItems, coveredPanel, hpText, returnLabel, CONSTELLATIONS, STARRY_SECONDS
 } from "./transform-core.mjs";
-import { shift, forms, wildShapeActivity, original, isRevertItem, bonusUsedNow } from "./transform.mjs";
+import { shift, forms, wildShapeActivity, original, isRevertItem, bonusUsedNow, returnToNormal } from "./transform.mjs";
 import {
   STARRY_EFFECT_ID, starryItem, wildShapeItemOf, hasTwinkling, activeStarry, constellationOf, starrySecondsLeft,
   constellationLabel, constellationImg, constellationText, constellationActivity, assumeStarry, endStarry
@@ -220,6 +220,35 @@ function argonClasses() {
 
     async _onRightClick(event) {
       (this.form.actor ?? fromUuidSync(this.form.uuid))?.sheet?.render(true);
+    }
+  }
+
+  /**
+   * "Return to Talo" for a form with no revert item (PT3-3): the item's label and portrait, and the
+   * item's revert path (returnToNormal). A pseudo-item keeps ItemButton's label/icon/visible working.
+   */
+  class ReturnButton extends ItemButton {
+    constructor({ hudActor }) {
+      const host = game.actors.get(hudActor?.getFlag?.("dnd5e", "originalActor")) ?? null;
+      super({
+        item: { id: "pentarynReturn00", name: returnLabel(host?.name ?? hudActor?.name ?? "?"), img: host?.img || hudActor?.img },
+        inActionPanel: true
+      });
+      this.hudActor = hudActor;
+    }
+
+    get hasTooltip() { return true; }
+
+    async getTooltipData() {
+      return { title: this.label, subtitle: T("PENTARYN_TRANSFORM.Hud.BonusAction"), description: "", classes: TT };
+    }
+
+    async _onLeftClick(event) {
+      dropTooltip();
+      cancelTargetPicker();
+      ui.ARGON?.collapseAllPanels?.();
+      await returnToNormal(this.hudActor);
+      dropStaleTooltip();
     }
   }
 
@@ -432,7 +461,7 @@ function argonClasses() {
     }
   }
 
-  built = { WildShapeButton, FormTile, StarryFormButton, ItemButton, SplitButton: A.MAIN.BUTTONS.SplitButton };
+  built = { WildShapeButton, FormTile, StarryFormButton, ReturnButton, ItemButton, SplitButton: A.MAIN.BUTTONS.SplitButton };
   return built;
 }
 
@@ -491,6 +520,7 @@ function composeBonusBar(panel, actor) {
     let b;
     if (p.wildshape) b = new C.WildShapeButton({ hudActor: actor });
     else if (p.starry) b = new C.StarryFormButton({ hudActor: actor });
+    else if (p.revert) b = new C.ReturnButton({ hudActor: actor });
     else b = new ItemBtn({ item: actor.items.get(p.item), inActionPanel: true });
     if (p.highlight) b.element.classList.add("pentaryn-return");
     fresh.push(b);

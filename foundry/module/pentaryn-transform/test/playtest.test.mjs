@@ -154,3 +154,32 @@ F.fire("init");
 test("the stub runs Foundry's own common/ (set PENTARYN_TEST_SHIMS=1 to accept shims)", () => {
   if (process.env.PENTARYN_TEST_SHIMS !== "1") assert.equal(F.utilsSource, "foundry", "Foundry's common/ did not load");
 });
+
+const returnButtons = panel => panel._buttons.filter(b => b.element.classList.contains("pentaryn-return"));
+
+/* ── PT3-3 ───────────────────────────────────────────────────────────────── */
+
+test("PT3-3: a druid with no revert item gets 'Return to Talo' on the Bonus bar, and it reverts", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const { wolf } = world();
+  const panel = bonusPanel(wolf);
+  F.fire("renderActionPanelArgonComponent", panel, panel.element, wolf);
+  const back = returnButtons(panel);
+  assert.equal(back.length, 1, "one Return button");
+  assert.equal(back[0].label, "Return to Talo");
+  assert.equal(back[0].icon, "talo.webp");
+  await back[0]._onLeftClick({ preventDefault() {}, stopPropagation() {} });
+  assert.deepEqual(reverts, [wolf.id], "the same revert path: dnd5e's revertOriginalForm, once");
+  assert.equal(chat.length, 1, "one return line");
+  assert.match(chat[0].content, /Talo<\/strong> returns to normal form/);
+});
+
+test("PT3-3: Talo's hand-made revert item keeps working and no Return is synthesized beside it", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const { wolf } = world({ revertItem: true });
+  const panel = bonusPanel(wolf, ["returnNormal001"]);
+  F.fire("renderActionPanelArgonComponent", panel, panel.element, wolf);
+  const back = returnButtons(panel);
+  assert.equal(back.length, 1, "exactly one Return");
+  assert.equal(back[0].item?.id, "returnNormal001", "it is the item's own button");
+});
