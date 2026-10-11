@@ -60,9 +60,8 @@ const queue = () => (ledgerQueue ??= new foundry.utils.Semaphore(1));
  */
 let batch = null;
 
-async function drain() {
-  const items = batch;
-  batch = null;                        // later arrivals start the next batch, queued behind this one
+async function drain(items) {
+  if (batch === items) batch = null;   // later arrivals start the next batch, queued behind this one
   try {
     let log = readLog(), counter = setting("counter") ?? 0;
     const results = items.map(it => {
@@ -89,8 +88,8 @@ export function appendLedger(entry, dedupeMs = DEDUPE_MS) {
       batch.push(item);
       return;
     }
-    batch = [item];
-    queue().add(drain);
+    const mine = (batch = [item]);
+    queue().add(() => drain(mine));
   });
 }
 
@@ -102,8 +101,10 @@ export async function writeLedger({ n, log }) {
 
 /**
  * Empty the log; the counter is kept. Queued behind any append in flight, so an append that read
- * the old log cannot write it back over the clear.
+ * the old log cannot write it back over the clear. The waiting batch is sealed first: an append
+ * asked for after the clear starts a new batch behind it instead of joining one the clear wipes.
  */
 export function clearLog() {
+  batch = null;
   return queue().add(() => game.settings.set(MODULE, "log", []));
 }

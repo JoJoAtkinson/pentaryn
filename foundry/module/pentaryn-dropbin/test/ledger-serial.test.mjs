@@ -79,3 +79,15 @@ test("clearLog waits for an append in flight, so the append cannot write the old
   assert.deepEqual(readLog(), [], "the clear lands last");
   assert.equal(setting("counter"), 2, "the counter is kept");
 });
+
+test("an append submitted after clearLog lands after the clear, even while a batch is waiting", async () => {
+  await reset();
+  const first = appendLedger(entry("a"));               // its write is in flight
+  const waiting = appendLedger(entry("b"));             // waits in the next batch
+  const cleared = clearLog();
+  const late = appendLedger(entry("c"));                // asked for after the clear: must not be wiped by it
+  const out = await settle(Promise.all([first, waiting, cleared, late]));
+  assert.deepEqual([out[0].n, out[1].n, out[3].n], [1, 2, 3]);
+  assert.deepEqual(readLog().map(e => e.itemName), ["c"], "the clear removes a and b, not c");
+  assert.equal(setting("counter"), 3);
+});
