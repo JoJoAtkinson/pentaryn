@@ -29,9 +29,13 @@ module. Baseline: [`wave-3-baseline.md`](wave-3-baseline.md).
   `isValidItemPile(actor)` with no flag fallback; aoe's resolve.mjs passes the token and falls back
   to flags. Kept as is and commented (finding -36: aoe tolerates a false positive, portals must not
   leave a pile-PC behind). Decide: unify the two, or keep them different on purpose.
-- **portals — two API returns the audit proposed are not built.** `spreadArrival` still returns the
+- **portals — three API shapes the audit proposed are not built.** `spreadArrival` still returns the
   token document (audit: `{ moved, to }`) and `teleportParty` has no `{ from }` scene option
-  (audit -32); both are declared shape changes not in the guide's list. Decide whether to add them.
+  (audit -32); both are declared shape changes not in the guide's list. And the existing entries
+  do not accept refs through `regionOf` (audit -32): guide S6 keeps today's document params on the
+  legacy rows, and `regionOf` is unpublished, so `cardFor`, `lookAt`, `teleportParty` and `open`
+  take documents only (`teleportParty('Scene.X.Region.Y')` throws on `.parent` / `.bounds`); the
+  new rows resolve refs through the kit's `resolveRef`. Decide whether to add them.
 - **portals — batching the Portal card's per-behaviour writes (C59 warning).** The switch and
   unlink loops `await` one `update` per teleport behaviour; batching them through the region's
   `updateEmbeddedDocuments` is one round trip but changes the frozen per-behaviour `update` pins,

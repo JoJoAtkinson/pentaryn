@@ -41,7 +41,7 @@ tags: [plans, audit, foundry]
 | aoe-movement-portals-28 | **[declared] D-P4** | `0fe9e4b8` |
 | aoe-movement-portals-29 | open — Wave 7 (needs `languages` in `module.json`) | — |
 | aoe-movement-portals-31 | open — the ADJ batch (rows and file lists handed to the integrator) | — |
-| aoe-movement-portals-32 | `describe()` `bf362fd4` + `d132395c`; additions (`inspect`, `destinations`, `link`, `unlink`, `badges`) `fe8938fe`; **[declared] D-P5** `59a1e99b`, `413fed02`. Not done: `spreadArrival → { moved, to }`, `teleportParty(ref, { from })` | |
+| aoe-movement-portals-32 | `describe()` `bf362fd4` + `d132395c`; additions (`inspect`, `destinations`, `link`, `unlink`, `badges`) `fe8938fe`; **[declared] D-P5** `59a1e99b`, `413fed02`. Not done: `spreadArrival → { moved, to }`, `teleportParty(ref, { from })`; existing rows accept refs (`regionOf`): not done — guide S6 keeps today's document params (legacy rows), so `cardFor`, `lookAt`, `teleportParty` and `open` still take documents only and `regionOf` is unpublished | |
 | aoe-movement-portals-33 | README in §7 order, CHANGELOG | `186cdfb1` |
 | aoe-movement-portals-36 | `recordOf(t, { gmIds })` | `477e39e2` |
 | aoe-movement-portals-38 | JSDoc `b87d8c15`; the markers.md table handed to the integrator | |
