@@ -5,4 +5,4 @@
  */
 import * as oracle from "./legacy-attunement.mjs";
 
-export const IMPLS = [["oracle", oracle]];
+export const IMPLS = [["oracle", oracle], ["core", await import("../../attunement-core.mjs")]];
