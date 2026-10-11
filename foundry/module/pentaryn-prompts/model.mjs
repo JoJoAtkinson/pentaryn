@@ -7,7 +7,7 @@
 
 import {
   MODULE, SIZE_BY_KEY, DND_SIZE_WIDTH, HEX_RULE, makeRel, testPoints, dedupeSquares, occupiedSquares, atFeet, stripHtml,
-  panelSplit, isSeen, crXp, wallSegment, lightText
+  panelSplit, isSeen, crXp, wallSegment, lightText, ownTextUuid
 } from "./geometry-core.mjs";
 import { markerSizeOfToken, promptText, FOLDER_NAME } from "./markers.mjs";
 import { makeSight, heightWarning } from "./los.mjs";
@@ -197,13 +197,16 @@ export function sceneItems(scene, { builtWithoutProvenance = true } = {}) {
     // a stock monster this system built and patched without a biography still carries the book's
     // lore (an @Embed of its Monster Manual page): the prompt and the Why line say what it is (§14)
     if (prov && !pile && isStockLore(description)) description = "";
+    // an unlinked token's own (delta) biography: get-character <base id> would print the base's text
+    const ownText = pile ? null : ownTextUuid({ actorLink: tok.actorLink, description, uuid: tok.uuid,
+      baseDescription: (tok.actorId ? game.actors.get(tok.actorId) : null)?.system?.details?.biography?.value ?? "" });
     const dsize = actor?.system?.traits?.size;
     const { classes, species } = classesOf(actor);
     items.push({ ...base(tok, tokenGeometry(tok, g)), isPrompt: false, kind, actorId: actor?.id ?? tok.actorId ?? null, name: tok.name || actor?.name || "?",
       type: pile ? "" : creatureType(actor), img: tokenImg(tok), hidden: tok.hidden, prov,
       description, rank: DND_RANK[dsize] ?? 2, sizeW: DND_SIZE_WIDTH[dsize] ?? null, xp: actorXp(actor, tok),
       disposition: pile ? null : (DISPOSITION_WORD[tok.disposition] ?? null), stats: pile ? null : statsOf(actor),
-      classes, species, items: itemsOf(actor, !!pile) });
+      classes, species, items: itemsOf(actor, !!pile), ...(ownText ? { ownTextUuid: ownText } : {}) });
   }
 
   for (const note of scene.notes ?? []) {

@@ -12,7 +12,7 @@
 export const MODULE = "pentaryn-prompts";
 
 /** The code's own version: `status().version` prints it (game.modules can lag until a rescan). Kept equal to module.json by the suite. */
-export const VERSION = "0.4.4";
+export const VERSION = "0.4.5";
 
 /** The gather description length: the setting's registered default, gather's fallback and renderGather's default (D6). */
 export const GATHER_CHARS = 400;
@@ -612,13 +612,27 @@ export function previewSentences(text, n) {
  * A built thing's description for the gather: `previewSentences`, and when that shortened it, the
  * cut mark is replaced by where the full text is (D6):
  * `… (cut, full text: get-character <id>)`. `id` is the actor's id (the document's for a note).
+ * A token with its own text (`tokenUuid`, see ownTextUuid) points at the token instead: get-character
+ * on the base actor's id would print the base actor's text, not the one that was cut.
  */
-export function builtDescription(text, n, id) {
+export function builtDescription(text, n, id, { tokenUuid = null } = {}) {
   const full = previewSentences(text, 0);
   const shown = previewSentences(text, n);
   if (shown === full) return shown;
   const body = shown.replace(/\s*(\[\.\.\.\]|\.\.\.)$/, "");
+  if (tokenUuid) {
+    return `${body} … (cut, this token's own text: eval-js fromUuidSync("${tokenUuid}").actor.system.details.biography.value)`;
+  }
   return `${body} … (cut, full text: get-character ${id})`;
+}
+
+/**
+ * The token's uuid when its description is its own: an unlinked token whose (delta) text is not
+ * empty and differs from its base actor's. Otherwise null (the base actor's id finds the text).
+ */
+export function ownTextUuid({ actorLink, description, baseDescription, uuid }) {
+  if (actorLink || !uuid || !description) return null;
+  return description === (baseDescription ?? "") ? null : uuid;
 }
 
 /**
@@ -859,7 +873,7 @@ function renderBuilt(t, chars, sharedWith, described = null) {
     if (first) out.push(`Description: same as ${first.id} "${attr(first.name)}"`);
     else {
       if (key) described?.set(key, { id: t.id, name: t.name });
-      out.push(`Description: ${builtDescription(t.description, chars, t.actorId ?? t.docId ?? t.id)}`);
+      out.push(`Description: ${builtDescription(t.description, chars, t.actorId ?? t.docId ?? t.id, { tokenUuid: t.ownTextUuid })}`);
     }
   }
   out.push("</built>");
@@ -1295,6 +1309,8 @@ export function buildView(scenes, { unseenWithinFt = 60, linkFt = 30, formationF
         stats: it.stats ?? null, classes: it.classes ?? null, species: it.species ?? null, items: it.items ?? null,
         disposition: CREATURE_KINDS.includes(it.kind) ? (it.disposition ?? null) : null, xp: Number(it.xp) || 0,
         light: it.light ?? null };
+      // only when set: view.built's shape is pinned by goldens, and most tokens have no text of their own
+      if (it.ownTextUuid) view.built[tid].ownTextUuid = it.ownTextUuid;
       manifest.built[tid] = { sceneId: sc.key, docName: it.docName, id: it.id, xp: Number(it.xp) || 0 };
     }
 
