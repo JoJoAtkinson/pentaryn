@@ -10,7 +10,7 @@
 import { CONTRACT, MODULE, NS, VERSION } from "./senses-core.mjs";
 
 const ITEM = { name: "item", type: "Item", doc: "the Item (a clone from a use hook is resolved to the live one)" };
-const TOKEN = (name, doc) => ({ name, type: "Token | TokenDocument | string", doc });
+const TOKEN = (name, doc) => ({ name, type: "Token | TokenDocument | Token uuid | id on the viewed scene", doc });
 
 export const MANIFEST = Object.freeze({
   module: MODULE,
@@ -169,7 +169,7 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "chain.link",
-      params: [TOKEN("chained", "the chained token (id on the viewed scene, document or placeable)"), TOKEN("anchor", "on the same scene")],
+      params: [TOKEN("chained", "the chained token"), TOKEN("anchor", "on the same scene as the chained token")],
       returns: "Promise<boolean>",
       gm: true, writes: true, legacy: true,
       sideEffects: ["Token update (flags.pentaryn-senses.chain = { anchor })"],
@@ -185,7 +185,7 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "chain.links",
-      params: [{ name: "scene", optional: true, type: "Scene", doc: "default: the viewed scene" }],
+      params: [{ name: "scene", optional: true, type: "Scene | scene id", doc: "default: the viewed scene" }],
       returns: "{ chained, anchor }[]",
       gm: false, writes: false, legacy: true,
       doc: "Every drawable chain on a scene, by token id.",

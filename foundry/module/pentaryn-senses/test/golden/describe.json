@@ -313,13 +313,13 @@
       "params": [
         {
           "name": "chained",
-          "type": "Token | TokenDocument | string",
-          "doc": "the chained token (id on the viewed scene, document or placeable)"
+          "type": "Token | TokenDocument | Token uuid | id on the viewed scene",
+          "doc": "the chained token"
         },
         {
           "name": "anchor",
-          "type": "Token | TokenDocument | string",
-          "doc": "on the same scene"
+          "type": "Token | TokenDocument | Token uuid | id on the viewed scene",
+          "doc": "on the same scene as the chained token"
         }
       ],
       "returns": "Promise<boolean>",
@@ -337,7 +337,7 @@
       "params": [
         {
           "name": "token",
-          "type": "Token | TokenDocument | string",
+          "type": "Token | TokenDocument | Token uuid | id on the viewed scene",
           "doc": "either end"
         }
       ],
@@ -357,7 +357,7 @@
         {
           "name": "scene",
           "optional": true,
-          "type": "Scene",
+          "type": "Scene | scene id",
           "doc": "default: the viewed scene"
         }
       ],
