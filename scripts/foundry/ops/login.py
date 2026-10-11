@@ -50,6 +50,7 @@ import urllib.parse
 import requests
 
 from . import config as cfg, service
+from .out import say
 from ..admin_password import AdminPasswordUnavailable, foundry_admin_password
 from ..update.admin import FoundryAdmin, FoundryError
 
@@ -70,7 +71,7 @@ ROLE_LABEL = {4: "Gamemaster", 3: "Assistant", 2: "Player", 1: "Trusted"}
 def _say(msg: str) -> None:
     # flushed: with NO_OPEN the handoff URL is the line someone is waiting to read, and a run in
     # the background (stdout to a file) otherwise holds it in the buffer until the 90 s are up
-    print(f"  {msg}", flush=True)
+    say(msg, flush=True)
 
 
 # ── Picking things ───────────────────────────────────────────────────────────

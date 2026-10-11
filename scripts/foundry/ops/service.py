@@ -17,6 +17,7 @@ import urllib.request
 from pathlib import Path
 
 from . import config as cfg
+from .out import say as _say  # re-exported: modules.py and pipeline.py import it from here
 
 OK, FAIL = 0, 1
 
@@ -32,10 +33,6 @@ CF_CERT = Path.home() / ".cloudflared/cert.pem"
 # player's browser sees.
 BROWSER_UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
               "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36")
-
-
-def _say(msg: str) -> None:
-    print(f"  {msg}")
 
 
 def _http_code(url: str, timeout: float) -> int:
