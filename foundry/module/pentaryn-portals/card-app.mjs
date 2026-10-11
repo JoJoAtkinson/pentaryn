@@ -124,33 +124,7 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
       }));
     }
 
-    for (const card of content.querySelectorAll(".ppt-editcard")) {
-      const dest = fromUuidSync(card.dataset.uuid);
-      const setImg = guard("card image pick", async path => {
-        await dest.update({ [`flags.${MODULE}.img`]: path });
-        card.querySelector(".ppt-thumb").src = cardFor(dest).img;
-      });
-      for (const input of card.querySelectorAll("[data-f]")) {
-        input.addEventListener("change", guard("card field", () => dest.update({ [`flags.${MODULE}.${input.dataset.f}`]: input.value })));
-      }
-      card.querySelector('[data-act="snap"]').addEventListener("click", guard("card snapshot", async () => {
-        await snapshot(dest);
-        card.querySelector(".ppt-thumb").src = cardFor(dest).img;
-      }));
-      const pick = () => new foundry.applications.apps.FilePicker.implementation({
-        type: "image", current: dest.flags?.[MODULE]?.img ?? "", callback: setImg }).render(true);
-      card.querySelector('[data-act="pick"]').addEventListener("click", pick);
-      card.querySelector(".ppt-thumb").addEventListener("click", pick);
-      card.querySelector('[data-act="clearimg"]')?.addEventListener("click", guard("card clear image", async () => {
-        await dest.update({ [flagPath(MODULE, "img")]: _del });
-        this.render();
-      }));
-      card.querySelector('[data-act="look"]').addEventListener("click", guard("card look", () => lookAt(dest)));
-      card.querySelector('[data-act="unlink"]').addEventListener("click", guard("card unlink", async () => {
-        await unlinkRegion(region, dest);
-        this.render();
-      }));
-    }
+    for (const card of content.querySelectorAll(".ppt-editcard")) this._wireCard(card);
 
     content.querySelector('[data-act="addsel"]')?.addEventListener("change", guard("card add destination", async ev => {
       const uuid = ev.target.value;
@@ -159,6 +133,37 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
       const twoWay = content.querySelector('[data-act="twoway"]')?.checked;
       await linkRegions(region, dest);
       if (twoWay) await linkRegions(dest, region);
+      this.render();
+    }));
+  }
+
+  /** One destination card's edit controls; every async listener goes through the guard. */
+  _wireCard(card) {
+    const region = this.region;
+    const guard = deps.guard;
+    const dest = fromUuidSync(card.dataset.uuid);
+    const setImg = guard("card image pick", async path => {
+      await dest.update({ [`flags.${MODULE}.img`]: path });
+      card.querySelector(".ppt-thumb").src = cardFor(dest).img;
+    });
+    for (const input of card.querySelectorAll("[data-f]")) {
+      input.addEventListener("change", guard("card field", () => dest.update({ [`flags.${MODULE}.${input.dataset.f}`]: input.value })));
+    }
+    card.querySelector('[data-act="snap"]').addEventListener("click", guard("card snapshot", async () => {
+      await snapshot(dest);
+      card.querySelector(".ppt-thumb").src = cardFor(dest).img;
+    }));
+    const pick = () => new foundry.applications.apps.FilePicker.implementation({
+      type: "image", current: dest.flags?.[MODULE]?.img ?? "", callback: setImg }).render(true);
+    card.querySelector('[data-act="pick"]').addEventListener("click", pick);
+    card.querySelector(".ppt-thumb").addEventListener("click", pick);
+    card.querySelector('[data-act="clearimg"]')?.addEventListener("click", guard("card clear image", async () => {
+      await dest.update({ [flagPath(MODULE, "img")]: _del });
+      this.render();
+    }));
+    card.querySelector('[data-act="look"]').addEventListener("click", guard("card look", () => lookAt(dest)));
+    card.querySelector('[data-act="unlink"]').addEventListener("click", guard("card unlink", async () => {
+      await unlinkRegion(region, dest);
       this.render();
     }));
   }
