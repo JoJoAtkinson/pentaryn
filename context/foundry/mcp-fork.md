@@ -75,8 +75,8 @@ reads `game.pentaryn[ns].describe()` on every call and routes on the row.
 
 | Tool | Args | Runs | Action-log line (`mcp-<YYYY-MM>.jsonl`) |
 |---|---|---|---|
-| `pentaryn-read` | `{ns, path, ref?, opts?, timeoutMs?}`; `{ns: "*", path: "describe" \| "inspect"}` for the root | rows that declare `writes: false`, plus the kit's `describe` / `inspect` / `selftest` | compact: `{ts, tool, ns, path, ref, ok, code?, ms, client?}` — no args, no result (W2-B2 open: same file as the writes) |
-| `pentaryn-write` | the same, plus `dryRun?` | rows with `writes: true` only | a write line with the args, `ok`, `code`, `summary` (`<ns>.<path> [ref] [(dry run)] — ok\|<code>`) and `ids` |
+| `pentaryn-read` | `{ns, path, ref?, opts?, timeoutMs?}`; `{ns: "*", path: "describe" \| "inspect"}` for the root | rows that declare `writes: false`, plus the kit's `describe` / `inspect` / `selftest` | compact: `{ts, tool, ns, path, ref, ok, code?, ms, client?}` — no args, no result; same file as the writes (W2-B2: code and this doc agree, 2026-10-11 — the `actions` stream; awaiting Joe's confirm) |
+| `pentaryn-write` | the same, plus `dryRun?` | rows with `writes: true` only | a write line with the args, `ok`, `code`, `summary` (`<ns>.<path> [ref] [(dry run)] — ok\|<code>`) and `ids` — the module's own `ids`, else the documents its result returns (`uuid`, else `_id`, else a Foundry-shaped `id`; depth ≤ 4, ≤ 50; optfix build); `[]` for a dry run or a refusal |
 
 - **Arguments map onto the row's `params`:** a param named `ref` takes `ref`; `opts` / `options`
   takes `opts`; any other param takes `opts[<its name>]` (`rules.search(query, opts)` →
@@ -100,6 +100,11 @@ reads `game.pentaryn[ns].describe()` on every call and routes on the row.
 |---|---|---|
 | `foundry-mcp-bridge.fork.eval` | `eval-js`, the D14 tools | runs the script; on a timeout the result carries `timedOut: true` and a note that the script may still be running — re-read state before retrying |
 | `foundry-mcp-bridge.fork.applyRecharge` | `dnd5e-add-feature`'s `recharge` (2–6) | gives the feature Recharge n–6 (`src/fork/recharge.ts`); resolves the actor exactly, and an `itemId` never falls back to a name. The outcome rides on the add-feature action-log line |
+
+The wrapper that adds the sender check to upstream's `foundry-mcp-bridge.*` handlers
+(`guardBridgeQueries`) also fills in `toggle-token-condition`'s `active` when it is omitted: the
+opposite of whether the token's actor has the condition now (`src/fork/toggle-condition.ts`,
+optfix build). Upstream's schema always said "omitted = toggle"; its handler refused it.
 
 ## Build, restart, verify
 
@@ -133,12 +138,17 @@ The month in every file name is taken when the line is written, so a long-lived 
 by itself.
 
 - `mcp-<YYYY-MM>.jsonl` — one line per **write** call: `{ts, tool, action?, args (truncated at
-  2 KB per value), ok, phase?, code?, summary?, ids?, error?, ms, client?}`. From the wave-2
+  2 KB per value), ok, phase?, code?, summary?, ids?, error?, ms, client?}`, plus one compact line
+  per `pentaryn-read` call (`{ts, tool: "pentaryn-read", ns, path, ref, ok, code?, ms, client?}` —
+  no `args`, which is how to tell it from a write line; W2-B2). From the wave-2
   build that covers the upstream write tools too (`create-*`, `update-*`, `delete-*`, `manage-*`,
   `dnd5e-*`, `move-token`, `toggle-token-condition`, `use-item`, the ownership tools, … — the list
   is `src/fork/upstream-writes.ts`), and `ok` is `false` when a handler reports failure as a value
   (`{ok: false}`), not only when it throws. `eval-js`'s line carries `{purpose, scriptChars,
-  timeoutMs}` as `args`; the script itself is only in the eval log.
+  timeoutMs}` as `args`; the script itself is only in the eval log. A call `eval-js` rejects for
+  its own arguments has `phase: "args"` and a one-line `error` (`script: …; timeoutMs: …`) here
+  too, as in the eval log (optfix build; before it the line had no phase and the multi-line
+  validation text).
 - `eval-<YYYY-MM>.jsonl` (wave-2 build; `eval.jsonl` keeps everything before it and is left in
   place) — one line per `eval-js` call: `{ts, purpose, script (never truncated), ok, phase, error?,
   timedOut?, ms, client?}`. Phases: `complete`, `runtime`, `compile` (from Foundry); `transport` — the call
