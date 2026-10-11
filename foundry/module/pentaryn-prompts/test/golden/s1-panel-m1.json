@@ -1,0 +1,24 @@
+{
+  "shown": [
+    [
+      "Token.tokOrdinary00001",
+      15,
+      "SE",
+      "LOS"
+    ]
+  ],
+  "more": [
+    [
+      "Token.m2",
+      20,
+      "LOS"
+    ]
+  ],
+  "unseen": [],
+  "total": 2,
+  "mapFt": [
+    100,
+    50
+  ],
+  "warn": []
+}

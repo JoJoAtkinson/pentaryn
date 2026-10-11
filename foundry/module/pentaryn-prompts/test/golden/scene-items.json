@@ -1,0 +1,997 @@
+[
+  {
+    "rect": {
+      "x": 100,
+      "y": 100,
+      "w": 100,
+      "h": 100
+    },
+    "centre": {
+      "x": 150,
+      "y": 150,
+      "elevation": 0
+    },
+    "origin": {
+      "x": 150,
+      "y": 150,
+      "elevation": 0
+    },
+    "points": [
+      {
+        "x": 150,
+        "y": 150,
+        "elevation": 0
+      },
+      {
+        "x": 125,
+        "y": 125,
+        "elevation": 0
+      },
+      {
+        "x": 175,
+        "y": 125,
+        "elevation": 0
+      },
+      {
+        "x": 125,
+        "y": 175,
+        "elevation": 0
+      },
+      {
+        "x": 175,
+        "y": 175,
+        "elevation": 0
+      }
+    ],
+    "squares": [
+      {
+        "i": 1,
+        "j": 1
+      }
+    ],
+    "coreSquares": false,
+    "id": "p1",
+    "key": "Token.p1",
+    "docName": "Token",
+    "level": null,
+    "atFt": [
+      8,
+      8
+    ],
+    "regions": [],
+    "elevation": 0,
+    "isPrompt": true,
+    "size": "mid",
+    "rank": 2,
+    "text": "a crate",
+    "updatedAt": 5,
+    "name": "Prompt · mid",
+    "img": "",
+    "hidden": true
+  },
+  {
+    "rect": {
+      "x": 300,
+      "y": 100,
+      "w": 100,
+      "h": 100
+    },
+    "centre": {
+      "x": 350,
+      "y": 150,
+      "elevation": 0
+    },
+    "origin": {
+      "x": 350,
+      "y": 150,
+      "elevation": 0
+    },
+    "points": [
+      {
+        "x": 350,
+        "y": 150,
+        "elevation": 0
+      },
+      {
+        "x": 325,
+        "y": 125,
+        "elevation": 0
+      },
+      {
+        "x": 375,
+        "y": 125,
+        "elevation": 0
+      },
+      {
+        "x": 325,
+        "y": 175,
+        "elevation": 0
+      },
+      {
+        "x": 375,
+        "y": 175,
+        "elevation": 0
+      }
+    ],
+    "squares": [
+      {
+        "i": 1,
+        "j": 3
+      }
+    ],
+    "coreSquares": false,
+    "id": "odd",
+    "key": "Token.odd",
+    "docName": "Token",
+    "level": null,
+    "atFt": [
+      18,
+      8
+    ],
+    "regions": [],
+    "elevation": 0,
+    "isPrompt": false,
+    "kind": "npc",
+    "actorId": "actorUnderPM0001",
+    "name": "Odd one",
+    "type": "beast",
+    "img": "",
+    "hidden": false,
+    "prov": null,
+    "description": "",
+    "rank": 1,
+    "sizeW": 1,
+    "xp": 0,
+    "disposition": "hostile",
+    "stats": null,
+    "classes": null,
+    "species": null,
+    "items": null
+  },
+  {
+    "rect": {
+      "x": 500,
+      "y": 100,
+      "w": 100,
+      "h": 100
+    },
+    "centre": {
+      "x": 550,
+      "y": 150,
+      "elevation": 0
+    },
+    "origin": {
+      "x": 550,
+      "y": 150,
+      "elevation": 0
+    },
+    "points": [
+      {
+        "x": 550,
+        "y": 150,
+        "elevation": 0
+      },
+      {
+        "x": 525,
+        "y": 125,
+        "elevation": 0
+      },
+      {
+        "x": 575,
+        "y": 125,
+        "elevation": 0
+      },
+      {
+        "x": 525,
+        "y": 175,
+        "elevation": 0
+      },
+      {
+        "x": 575,
+        "y": 175,
+        "elevation": 0
+      }
+    ],
+    "squares": [
+      {
+        "i": 1,
+        "j": 5
+      }
+    ],
+    "coreSquares": false,
+    "id": "pile",
+    "key": "Token.pile",
+    "docName": "Token",
+    "level": null,
+    "atFt": [
+      28,
+      8
+    ],
+    "regions": [],
+    "elevation": 0,
+    "isPrompt": false,
+    "kind": "hotspot",
+    "actorId": "actorPile0000001",
+    "name": "Chest",
+    "type": "",
+    "img": "",
+    "hidden": false,
+    "prov": {
+      "prompt": "built from mPile",
+      "size": "mid",
+      "sceneId": "s2",
+      "markerId": "mPile",
+      "call": "pm-0001",
+      "pid": "p1",
+      "at": 1,
+      "kind": "npc",
+      "note": ""
+    },
+    "description": "<p>An iron chest.</p>",
+    "rank": 2,
+    "sizeW": null,
+    "xp": 0,
+    "disposition": null,
+    "stats": null,
+    "classes": null,
+    "species": null,
+    "items": [
+      {
+        "name": "Gold",
+        "type": "loot",
+        "rarity": "",
+        "identified": true,
+        "unidentifiedName": "",
+        "attunement": "",
+        "attuned": false,
+        "quantity": 30,
+        "price": "1 gp"
+      },
+      {
+        "name": "Sword",
+        "type": "weapon",
+        "rarity": "",
+        "identified": true,
+        "unidentifiedName": "",
+        "attunement": "",
+        "attuned": false,
+        "quantity": 1,
+        "price": ""
+      }
+    ],
+    "light": "dim 10 ft, #ff0"
+  },
+  {
+    "rect": {
+      "x": 700,
+      "y": 100,
+      "w": 100,
+      "h": 100
+    },
+    "centre": {
+      "x": 750,
+      "y": 150,
+      "elevation": 0
+    },
+    "origin": {
+      "x": 750,
+      "y": 150,
+      "elevation": 0
+    },
+    "points": [
+      {
+        "x": 750,
+        "y": 150,
+        "elevation": 0
+      },
+      {
+        "x": 725,
+        "y": 125,
+        "elevation": 0
+      },
+      {
+        "x": 775,
+        "y": 125,
+        "elevation": 0
+      },
+      {
+        "x": 725,
+        "y": 175,
+        "elevation": 0
+      },
+      {
+        "x": 775,
+        "y": 175,
+        "elevation": 0
+      }
+    ],
+    "squares": [
+      {
+        "i": 1,
+        "j": 7
+      }
+    ],
+    "coreSquares": false,
+    "id": "hero",
+    "key": "Token.hero",
+    "docName": "Token",
+    "level": null,
+    "atFt": [
+      38,
+      8
+    ],
+    "regions": [],
+    "elevation": 0,
+    "isPrompt": false,
+    "kind": "character",
+    "actorId": "actorHero0000001",
+    "name": "Hero",
+    "type": "",
+    "img": "",
+    "hidden": false,
+    "prov": null,
+    "description": "A hero.",
+    "rank": 2,
+    "sizeW": 1,
+    "xp": 0,
+    "disposition": "friendly",
+    "stats": {
+      "ac": 15,
+      "hp": 20,
+      "hpMax": 24
+    },
+    "classes": [
+      {
+        "name": "Wizard",
+        "levels": 3,
+        "subclass": "Evoker"
+      }
+    ],
+    "species": "Elf",
+    "items": [
+      {
+        "name": "Potion of Healing",
+        "type": "consumable",
+        "rarity": "common",
+        "identified": true,
+        "unidentifiedName": "",
+        "attunement": "",
+        "attuned": false,
+        "quantity": 1,
+        "price": ""
+      }
+    ]
+  },
+  {
+    "rect": {
+      "x": 100,
+      "y": 300,
+      "w": 100,
+      "h": 100
+    },
+    "centre": {
+      "x": 150,
+      "y": 350,
+      "elevation": 0
+    },
+    "origin": {
+      "x": 150,
+      "y": 350,
+      "elevation": 0
+    },
+    "points": [
+      {
+        "x": 150,
+        "y": 350,
+        "elevation": 0
+      },
+      {
+        "x": 125,
+        "y": 325,
+        "elevation": 0
+      },
+      {
+        "x": 175,
+        "y": 325,
+        "elevation": 0
+      },
+      {
+        "x": 125,
+        "y": 375,
+        "elevation": 0
+      },
+      {
+        "x": 175,
+        "y": 375,
+        "elevation": 0
+      }
+    ],
+    "squares": [
+      {
+        "i": 3,
+        "j": 1
+      }
+    ],
+    "coreSquares": false,
+    "id": "orc1",
+    "key": "Token.orc1",
+    "docName": "Token",
+    "level": null,
+    "atFt": [
+      8,
+      18
+    ],
+    "regions": [],
+    "elevation": 0,
+    "isPrompt": false,
+    "kind": "npc",
+    "actorId": "actorOrc00000001",
+    "name": "Orc",
+    "type": "humanoid (orc)",
+    "img": "",
+    "hidden": false,
+    "prov": null,
+    "description": "<p>Orc one's own text.</p>",
+    "rank": 3,
+    "sizeW": 2,
+    "xp": 100,
+    "disposition": "hostile",
+    "stats": {
+      "cr": 0.5,
+      "ac": 13,
+      "hp": 15,
+      "hpMax": 15
+    },
+    "classes": null,
+    "species": null,
+    "items": [
+      {
+        "name": "Greataxe",
+        "type": "weapon",
+        "rarity": "uncommon",
+        "identified": true,
+        "unidentifiedName": "",
+        "attunement": "",
+        "attuned": false,
+        "quantity": 1,
+        "price": ""
+      },
+      {
+        "name": "Ring of Protection",
+        "type": "equipment",
+        "rarity": "rare",
+        "identified": false,
+        "unidentifiedName": "Plain ring",
+        "attunement": "required",
+        "attuned": false,
+        "quantity": 1,
+        "price": ""
+      }
+    ],
+    "ownTextUuid": "Scene.s2.Token.orc1"
+  },
+  {
+    "rect": {
+      "x": 300,
+      "y": 300,
+      "w": 100,
+      "h": 100
+    },
+    "centre": {
+      "x": 350,
+      "y": 350,
+      "elevation": 0
+    },
+    "origin": {
+      "x": 350,
+      "y": 350,
+      "elevation": 0
+    },
+    "points": [
+      {
+        "x": 350,
+        "y": 350,
+        "elevation": 0
+      },
+      {
+        "x": 325,
+        "y": 325,
+        "elevation": 0
+      },
+      {
+        "x": 375,
+        "y": 325,
+        "elevation": 0
+      },
+      {
+        "x": 325,
+        "y": 375,
+        "elevation": 0
+      },
+      {
+        "x": 375,
+        "y": 375,
+        "elevation": 0
+      }
+    ],
+    "squares": [
+      {
+        "i": 3,
+        "j": 3
+      }
+    ],
+    "coreSquares": false,
+    "id": "orc2",
+    "key": "Token.orc2",
+    "docName": "Token",
+    "level": null,
+    "atFt": [
+      18,
+      18
+    ],
+    "regions": [],
+    "elevation": 0,
+    "isPrompt": false,
+    "kind": "npc",
+    "actorId": "actorOrc00000001",
+    "name": "Orc",
+    "type": "humanoid (orc)",
+    "img": "",
+    "hidden": false,
+    "prov": null,
+    "description": "<p>Base orc text.</p>",
+    "rank": 3,
+    "sizeW": 2,
+    "xp": 0,
+    "disposition": "neutral",
+    "stats": {
+      "cr": 0.5,
+      "ac": 13,
+      "hp": 15,
+      "hpMax": 15
+    },
+    "classes": null,
+    "species": null,
+    "items": [
+      {
+        "name": "Greataxe",
+        "type": "weapon",
+        "rarity": "uncommon",
+        "identified": true,
+        "unidentifiedName": "",
+        "attunement": "",
+        "attuned": false,
+        "quantity": 1,
+        "price": ""
+      },
+      {
+        "name": "Ring of Protection",
+        "type": "equipment",
+        "rarity": "rare",
+        "identified": false,
+        "unidentifiedName": "Plain ring",
+        "attunement": "required",
+        "attuned": false,
+        "quantity": 1,
+        "price": ""
+      }
+    ]
+  },
+  {
+    "rect": {
+      "x": 500,
+      "y": 300,
+      "w": 100,
+      "h": 100
+    },
+    "centre": {
+      "x": 550,
+      "y": 350,
+      "elevation": 0
+    },
+    "origin": {
+      "x": 550,
+      "y": 350,
+      "elevation": 0
+    },
+    "points": [
+      {
+        "x": 550,
+        "y": 350,
+        "elevation": 0
+      },
+      {
+        "x": 525,
+        "y": 325,
+        "elevation": 0
+      },
+      {
+        "x": 575,
+        "y": 325,
+        "elevation": 0
+      },
+      {
+        "x": 525,
+        "y": 375,
+        "elevation": 0
+      },
+      {
+        "x": 575,
+        "y": 375,
+        "elevation": 0
+      }
+    ],
+    "squares": [
+      {
+        "i": 3,
+        "j": 5
+      }
+    ],
+    "coreSquares": false,
+    "id": "ogre",
+    "key": "Token.ogre",
+    "docName": "Token",
+    "level": null,
+    "atFt": [
+      28,
+      18
+    ],
+    "regions": [],
+    "elevation": 0,
+    "isPrompt": false,
+    "kind": "npc",
+    "actorId": "actorStock000001",
+    "name": "Ogre",
+    "type": "big lug",
+    "img": "",
+    "hidden": false,
+    "prov": {
+      "prompt": "built from mOgre",
+      "size": "mid",
+      "sceneId": "s2",
+      "markerId": "mOgre",
+      "call": "pm-0001",
+      "pid": "p1",
+      "at": 1,
+      "kind": "npc",
+      "note": ""
+    },
+    "description": "",
+    "rank": 2,
+    "sizeW": null,
+    "xp": 450,
+    "disposition": "hostile",
+    "stats": null,
+    "classes": null,
+    "species": null,
+    "items": null
+  },
+  {
+    "rect": {
+      "x": 700,
+      "y": 300,
+      "w": 100,
+      "h": 100
+    },
+    "centre": {
+      "x": 750,
+      "y": 350,
+      "elevation": 0
+    },
+    "origin": {
+      "x": 750,
+      "y": 350,
+      "elevation": 0
+    },
+    "points": [
+      {
+        "x": 750,
+        "y": 350,
+        "elevation": 0
+      },
+      {
+        "x": 725,
+        "y": 325,
+        "elevation": 0
+      },
+      {
+        "x": 775,
+        "y": 325,
+        "elevation": 0
+      },
+      {
+        "x": 725,
+        "y": 375,
+        "elevation": 0
+      },
+      {
+        "x": 775,
+        "y": 375,
+        "elevation": 0
+      }
+    ],
+    "squares": [
+      {
+        "i": 3,
+        "j": 7
+      }
+    ],
+    "coreSquares": false,
+    "id": "ghost",
+    "key": "Token.ghost",
+    "docName": "Token",
+    "level": null,
+    "atFt": [
+      38,
+      18
+    ],
+    "regions": [],
+    "elevation": 0,
+    "isPrompt": false,
+    "kind": "creature",
+    "actorId": null,
+    "name": "?",
+    "type": "",
+    "img": "",
+    "hidden": false,
+    "prov": null,
+    "description": "",
+    "rank": 2,
+    "sizeW": null,
+    "xp": 0,
+    "disposition": "hostile",
+    "stats": null,
+    "classes": null,
+    "species": null,
+    "items": null
+  },
+  {
+    "rect": {
+      "x": 125,
+      "y": 525,
+      "w": 50,
+      "h": 50
+    },
+    "centre": {
+      "x": 150,
+      "y": 550,
+      "elevation": 0
+    },
+    "origin": {
+      "x": 150,
+      "y": 550,
+      "elevation": 0
+    },
+    "points": [
+      {
+        "x": 150,
+        "y": 550,
+        "elevation": 0
+      }
+    ],
+    "squares": [
+      {
+        "i": 5,
+        "j": 1
+      }
+    ],
+    "id": "noteProv00000001",
+    "key": "Note.noteProv00000001",
+    "docName": "Note",
+    "level": null,
+    "atFt": [
+      8,
+      28
+    ],
+    "regions": [],
+    "elevation": 0,
+    "isPrompt": false,
+    "kind": "note",
+    "name": "Letter p1",
+    "type": "",
+    "img": "assets/tokens/custom/props/icon-eye.webp",
+    "hidden": false,
+    "prov": {
+      "prompt": "built from mNote",
+      "size": "mid",
+      "sceneId": "s2",
+      "markerId": "mNote",
+      "call": "pm-0001",
+      "pid": "p1",
+      "at": 1,
+      "kind": "note",
+      "note": ""
+    },
+    "description": "<p>Dear friend</p>",
+    "rank": 0
+  },
+  {
+    "rect": {
+      "x": 325,
+      "y": 525,
+      "w": 50,
+      "h": 50
+    },
+    "centre": {
+      "x": 350,
+      "y": 550,
+      "elevation": 0
+    },
+    "origin": {
+      "x": 350,
+      "y": 550,
+      "elevation": 0
+    },
+    "points": [
+      {
+        "x": 350,
+        "y": 550,
+        "elevation": 0
+      }
+    ],
+    "squares": [
+      {
+        "i": 5,
+        "j": 3
+      }
+    ],
+    "id": "noteBare00000001",
+    "key": "Note.noteBare00000001",
+    "docName": "Note",
+    "level": null,
+    "atFt": [
+      18,
+      28
+    ],
+    "regions": [],
+    "elevation": 0,
+    "isPrompt": false,
+    "kind": "note",
+    "name": "A sign",
+    "type": "",
+    "img": "assets/tokens/custom/props/icon-eye.webp",
+    "hidden": false,
+    "prov": null,
+    "description": "",
+    "rank": 0
+  },
+  {
+    "rect": {
+      "x": 875,
+      "y": 875,
+      "w": 50,
+      "h": 50
+    },
+    "centre": {
+      "x": 900,
+      "y": 900,
+      "elevation": 0
+    },
+    "origin": {
+      "x": 900,
+      "y": 900,
+      "elevation": 0
+    },
+    "points": [
+      {
+        "x": 900,
+        "y": 900,
+        "elevation": 0
+      }
+    ],
+    "squares": [
+      {
+        "i": 9,
+        "j": 9
+      }
+    ],
+    "id": "lightOwn00000001",
+    "key": "AmbientLight.lightOwn00000001",
+    "docName": "AmbientLight",
+    "level": null,
+    "atFt": [
+      45,
+      45
+    ],
+    "regions": [],
+    "elevation": 0,
+    "isPrompt": false,
+    "kind": "light",
+    "name": "Light",
+    "type": "",
+    "img": "",
+    "hidden": true,
+    "prov": {
+      "prompt": "built from mPile",
+      "size": "mid",
+      "sceneId": "s2",
+      "markerId": "mPile",
+      "call": "pm-0002",
+      "pid": "p1",
+      "at": 1,
+      "kind": "npc",
+      "note": ""
+    },
+    "description": "",
+    "rank": 0,
+    "light": "bright 5 ft"
+  },
+  {
+    "rect": {
+      "x": 1000,
+      "y": 0,
+      "w": 200,
+      "h": 100
+    },
+    "centre": {
+      "x": 1100,
+      "y": 50,
+      "elevation": 0
+    },
+    "origin": {
+      "x": 1100,
+      "y": 50,
+      "elevation": 0
+    },
+    "points": [
+      {
+        "x": 1100,
+        "y": 50
+      },
+      {
+        "x": 1025,
+        "y": 25
+      },
+      {
+        "x": 1175,
+        "y": 25
+      },
+      {
+        "x": 1025,
+        "y": 75
+      },
+      {
+        "x": 1175,
+        "y": 75
+      }
+    ],
+    "squares": [
+      {
+        "i": 0,
+        "j": 10
+      },
+      {
+        "i": 0,
+        "j": 11
+      }
+    ],
+    "id": "tileProv00000001",
+    "key": "Tile.tileProv00000001",
+    "docName": "Tile",
+    "level": null,
+    "atFt": [
+      55,
+      3
+    ],
+    "regions": [],
+    "elevation": 0,
+    "isPrompt": false,
+    "kind": "tile",
+    "name": "rug.webp",
+    "type": "",
+    "img": "maps/rug.webp",
+    "prov": {
+      "prompt": "built from mTile",
+      "size": "mid",
+      "sceneId": "s2",
+      "markerId": "mTile",
+      "call": "pm-0001",
+      "pid": "p1",
+      "at": 1,
+      "kind": "npc",
+      "note": ""
+    },
+    "description": "",
+    "rank": 0
+  }
+]

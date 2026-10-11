@@ -412,3 +412,28 @@ export async function captureConsole(fn) {
     Object.assign(console, saved);
   }
 }
+
+/**
+ * Add a scene to an installed world: `{id, name, tokens, walls, notes, lights, tiles, regions, ...}`.
+ * Tokens become `token()` documents; notes, lights and tiles plain stub documents. Grid 100 px =
+ * 5 ft unless `dimensions` / `grid` say otherwise. → the scene, with the embedded-document API.
+ */
+export function addScene(F, { id, name, tokens = [], walls = [], notes = [], lights = [], tiles = [], regions = [], ...rest }) {
+  const scene = makeScene({ id, name, navigation: false, dimensions: { ...DIMS }, grid: { distance: 5, size: 100, isHexagonal: false, isGridless: false },
+    tokens: tokens.map(t => (t.documentName ? t : token(t))), regions, ...rest });
+  for (const t of scene.tokens) t.parent = scene;
+  Object.defineProperty(scene, "walls", { value: walls, enumerable: false, writable: true });
+  for (const [key, list, type] of [["notes", notes, "Note"], ["lights", lights, "AmbientLight"], ["tiles", tiles, "Tile"]]) {
+    const coll = new StubCollection();
+    for (const d of list) {
+      const doc = d.documentName ? d : makeDoc(type, d, { parent: scene });
+      if (!d.documentName && !("name" in d)) delete doc.name;
+      doc.collection = coll;
+      coll.set(doc.id, doc);
+    }
+    Object.defineProperty(scene, key, { value: coll, enumerable: false, writable: true });
+  }
+  scene.collection = F.game.scenes;
+  F.game.scenes.set(scene.id, scene);
+  return sceneApi(F, scene);
+}
