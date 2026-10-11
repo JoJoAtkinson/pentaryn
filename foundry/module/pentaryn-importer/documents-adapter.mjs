@@ -13,16 +13,27 @@ import {
   CONTRACT_ID, DEFAULT_TIMEOUT_MS, FLAG_SCOPE, MODULE, PentarynAbort, PentarynAssertionError,
   assertionMessage, isPlainObject, lintFormulas, valuesMatch, versionProblems, walkLeaves
 } from "./importer-core.mjs";
+import { makeLog } from "./lib/log.mjs";
 
 /* -------------------------------------------------------------------------------------------- */
 /*  Logging                                                                                       */
 /* -------------------------------------------------------------------------------------------- */
 
+/**
+ * The toast prefix. Toasts keep `[pentaryn-importer] …` byte-identical; console lines go through the
+ * kit logger as `pentaryn-importer | …` ([declared] D-I2, console only).
+ */
 const TAG = `[${MODULE}]`;
 
-const log = (...args) => console.log(TAG, ...args);
-const warn = (...args) => console.warn(TAG, ...args);
-const err = (...args) => console.error(TAG, ...args);
+/**
+ * The kit logger writes `log.info` through `console.info`; the importer has always logged its
+ * progress at `console.log` level, so its sink maps info → log. Looked up on every call (never
+ * cached), so a console that is swapped later is still the one written to.
+ */
+const sink = new Proxy(globalThis.console, { get: (c, key) => (key === "info" ? c.log : c[key]) });
+
+/** The module's one logger: `log.info` / `log.warn` / `log.error`, each line `pentaryn-importer | …`. */
+const log = makeLog(MODULE, { console: sink });
 
 /**
  * A refusal the GM cannot miss: permanent toast plus a console error.
@@ -30,7 +41,7 @@ const err = (...args) => console.error(TAG, ...args);
  * @param {string} message
  */
 function shout(message) {
-  err(message);
+  log.error(message);
   ui.notifications?.error(`${TAG} ${message}`, { permanent: true, console: false });
 }
 
@@ -157,7 +168,7 @@ function assertVersionGate(manifest) {
     refuse(PentarynAbort, message);
   }
 
-  log(
+  log.info(
     `version gate passed — contract ${CONTRACT_ID}, ${game.system.id} ${game.system.version}, `
     + `Foundry generation ${game.release.generation}`
   );
@@ -170,7 +181,7 @@ function assertVersionGate(manifest) {
 function assertNoBadFormulas(actors) {
   const hits = lintFormulas(actors);
   if (!hits.length) {
-    log(`@ref lint clean across ${actors.length} actor(s)`);
+    log.info(`@ref lint clean across ${actors.length} actor(s)`);
     return;
   }
   const message = [
@@ -329,7 +340,7 @@ function runExpectedAssertions(actor, expected, slug) {
     for (const [key, value] of Object.entries(spec)) {
       if (["action", "itemType", "itemLabels", "activities"].includes(key)) continue;
       if (isPlainObject(value) || Array.isArray(value)) {
-        warn(`${slug} → ${action}: ignoring non-scalar expectation "${key}" (unsupported shape)`);
+        log.warn(`${slug} → ${action}: ignoring non-scalar expectation "${key}" (unsupported shape)`);
         continue;
       }
       assertValue({ slug, action, path: key, expected: value, actual: foundry.utils.getProperty(item, key) });
@@ -481,26 +492,26 @@ async function stampContentHash(actor, hash) {
 }
 
 /**
- * One clear block in the console. Deliberately `console.log`, not a UI — the playbook's Stage 2
+ * One clear block in the console. Deliberately the console, not a UI — the playbook's Stage 2
  * brief is "no UI".
  * @param {object} report
  */
 function reportSummary({ counts, created, updated, skipped, failed, dryRun, url, manifest }) {
-  const title = `${TAG} ${dryRun ? "DRY RUN" : "import"} — `
+  const title = `${MODULE} | ${dryRun ? "DRY RUN" : "import"} — `
     + `${counts.created} created · ${counts.updated} updated · ${counts.skipped} skipped · `
     + `${counts.failed} failed`;
 
   console.group(title);
-  console.log(`source        ${url}`);
-  console.log(`generator     ${manifest.generator}@${manifest.generatorVersion}`);
-  console.log(`built         ${manifest.generatedAt}  (${manifest.sourceRevision})`);
-  console.log(`actors        ${counts.selected} selected of ${counts.total} in file`);
-  console.log(`assertions    ${counts.assertions} checked, all passed`);
-  if (created.length) console.log("created      ", created.join(", "));
-  if (updated.length) console.log("updated      ", updated.join(", "));
-  if (skipped.length) console.log("skipped      ", skipped.join(", "), "(contentHash unchanged)");
+  log.info(`source        ${url}`);
+  log.info(`generator     ${manifest.generator}@${manifest.generatorVersion}`);
+  log.info(`built         ${manifest.generatedAt}  (${manifest.sourceRevision})`);
+  log.info(`actors        ${counts.selected} selected of ${counts.total} in file`);
+  log.info(`assertions    ${counts.assertions} checked, all passed`);
+  if (created.length) log.info("created      ", created.join(", "));
+  if (updated.length) log.info("updated      ", updated.join(", "));
+  if (skipped.length) log.info("skipped      ", skipped.join(", "), "(contentHash unchanged)");
   if (failed.length) {
-    console.warn("failed       ", failed.length);
+    log.warn("failed       ", failed.length);
     console.table(failed);
   }
   console.groupEnd();
@@ -518,7 +529,7 @@ function reportSummary({ counts, created, updated, skipped, failed, dryRun, url,
 }
 
 export {
-  TAG, log, warn, err, shout, refuse, failAssertion, fetchJsonWithTimeout, moduleExpectations,
+  TAG, log, shout, refuse, failAssertion, fetchJsonWithTimeout, moduleExpectations,
   assertVersionGate, assertNoBadFormulas, assertValue, assertPrototypeToken, assertActivityIdsSurvived,
   runExpectedAssertions, findActorBySlug, storedHash, isManagedItem, replaceItems, stampContentHash,
   reportSummary

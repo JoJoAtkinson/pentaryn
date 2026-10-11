@@ -9,9 +9,9 @@ import {
   toCreatePayload, toUpdatePayload
 } from "./importer-core.mjs";
 import {
-  TAG, assertActivityIdsSurvived, assertNoBadFormulas, assertPrototypeToken, assertVersionGate, err,
+  TAG, assertActivityIdsSurvived, assertNoBadFormulas, assertPrototypeToken, assertVersionGate,
   failAssertion, fetchJsonWithTimeout, findActorBySlug, log, refuse, replaceItems, reportSummary,
-  runExpectedAssertions, shout, stampContentHash, storedHash, warn
+  runExpectedAssertions, shout, stampContentHash, storedHash
 } from "./documents-adapter.mjs";
 
 /* -------------------------------------------------------------------------------------------- */
@@ -79,7 +79,7 @@ export async function importActors(options = {}) {
   }
 
   const url = foundry.utils.getRoute(path);
-  log(`fetching ${url} (cache: no-cache, timeout ${timeout} ms)`);
+  log.info(`fetching ${url} (cache: no-cache, timeout ${timeout} ms)`);
 
   // 2 ────────────────────────────────────────────────────────────────────────────────────────────
   const manifest = await fetchJsonWithTimeout(path, { cache: "no-cache", timeout });
@@ -90,7 +90,7 @@ export async function importActors(options = {}) {
   // 4 ────────────────────────────────────────────────────────────────────────────────────────────
   assertNoBadFormulas(manifest.actors);
 
-  log(
+  log.info(
     `manifest ok — generator ${manifest.generator}@${manifest.generatorVersion}, `
     + `built ${manifest.generatedAt} from ${manifest.sourceRevision}, `
     + `${manifest.actors.length} actor(s), ${manifest.skipped?.length ?? 0} skipped row(s)`
@@ -133,13 +133,13 @@ export async function importActors(options = {}) {
       // would present as "every actor always differs" and silently destroy idempotence.
       if (existing && !force && incomingHash && (storedHash(existing) === incomingHash)) {
         skipped.push(slug);
-        log(`skip   ${slug} — contentHash unchanged (${incomingHash.slice(0, 20)}…)`);
+        log.info(`skip   ${slug} — contentHash unchanged (${incomingHash.slice(0, 20)}…)`);
         continue;
       }
 
       if (dryRun) {
         (existing ? updated : created).push(slug);
-        log(`dry-run ${existing ? "would update" : "would create"} ${slug} (${items.length} item(s))`);
+        log.info(`dry-run ${existing ? "would update" : "would create"} ${slug} (${items.length} item(s))`);
         continue;
       }
 
@@ -156,7 +156,7 @@ export async function importActors(options = {}) {
 
       const itemResult = await replaceItems(actor, items, unmanagedItems, slug);
       if (itemResult.unmanaged.length) {
-        warn(
+        log.warn(
           `${slug}: left ${itemResult.unmanaged.length} hand-added Item(s) in place `
           + `(${itemResult.unmanaged.join(", ")}). Pass unmanagedItems:"delete" to remove them.`
         );
@@ -204,7 +204,7 @@ export async function importActors(options = {}) {
       // Only now is the actor allowed to be marked current.
       await stampContentHash(actor, incomingHash);
 
-      log(
+      log.info(
         `${existing ? "update" : "create"} ${slug} — ${itemResult.created} item(s) written, `
         + `${itemResult.deleted} replaced`
       );
@@ -213,7 +213,7 @@ export async function importActors(options = {}) {
       if (cause instanceof PentarynAssertionError) throw cause;
       if (cause instanceof PentarynAbort) throw cause;
       failed.push({ slug, error: cause?.message ?? String(cause) });
-      err(`FAILED ${slug}:`, cause);
+      log.error(`FAILED ${slug}:`, cause);
     }
   }
 
@@ -248,7 +248,7 @@ export async function importActors(options = {}) {
       + "Until then it is world-readable over the tunnel."
   };
   if (deleteJson.required) {
-    warn(`DELETE THIS NOW: Data/${path} is public while the tunnel is up.`);
+    log.warn(`DELETE THIS NOW: Data/${path} is public while the tunnel is up.`);
     ui.notifications?.warn(`${TAG} Import done. Delete Data/${path} — it is served publicly.`, { permanent: true });
   }
 

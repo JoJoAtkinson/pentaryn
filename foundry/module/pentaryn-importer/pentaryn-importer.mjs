@@ -28,5 +28,5 @@ Hooks.once("ready", () => {
     /** Exposed for tests and for hand-checking a file without importing it. */
     _internals: Object.freeze({ fetchJsonWithTimeout, lintFormulas, valuesMatch, normalise })
   });
-  log(`ready — game.pentaryn.import() available (${CONTRACT_ID})`);
+  log.info(`ready — game.pentaryn.import() available (${CONTRACT_ID})`);
 });
