@@ -81,10 +81,11 @@ const manifest = {
 const realFetch = globalThis.fetch;
 const scratch = [];
 try {
-  scratch.push(...await Actor.createDocuments([
+  // One at a time: a batch create comes back in no fixed order on Foundry 14 (as 3e170743).
+  for (const data of [
     { name: "ZZ Golden Changed", type: "npc", flags: { pentaryn: { slug: "zz-golden-changed", contentHash: "sha256:changed-v1" } } },
     { name: "ZZ Golden Same", type: "npc", flags: { pentaryn: { slug: "zz-golden-same", contentHash: "sha256:same" } } }
-  ]));
+  ]) scratch.push(await Actor.create(data));
   scratch.forEach((a, i) => tag(a.id, `zzActor${i + 1}`));
   out.golden.scratchFlagsStored = scratch.map(a => foundry.utils.getProperty(a, "flags.pentaryn.slug") ?? null);
   globalThis.fetch = async (input, init) => {

@@ -83,7 +83,8 @@ try {
     lastImmediateIsScratch: lastImmediate?.sceneId === scene.id,
     settingGetReturnsSameArray: game.settings.get(MOD, "log") === game.settings.get(MOD, "log"),
     settingArrayReplacedByFlush: game.settings.get(MOD, "log") !== logBefore,
-    lastAfter,
+    // ageMs is wall-clock (how long the hidden tab held the flush back): compare its type only
+    lastAfter: lastAfter && { ...lastAfter, ageMs: typeof lastAfter.ageMs },
     scratchRecordsInLog: game.settings.get(MOD, "log").filter(r => r.sceneId === scene.id).length,
     foundryDims: { sceneX: d.sceneX, sceneY: d.sceneY, size: d.size, width: d.width, height: d.height, sceneWidth: d.sceneWidth, sceneHeight: d.sceneHeight },
     imageMatchesFoundry: lastAfter ? (lastAfter.image.x === 1050 - d.sceneX && lastAfter.image.y === 850 - d.sceneY) : null
