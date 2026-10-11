@@ -16,12 +16,13 @@
 
 import { MODULE, codedError } from "./geometry-core.mjs";
 import {
-  ABILITIES, validateAbilities, checkIncrease, defaultIncrease, matchTraitKeys, lookupChoice, sameName,
+  ABILITIES, validateAbilities, checkIncrease, defaultIncrease, matchTraitKeys, lookupChoice,
   checkChoiceKeys, nearestNames, defaultLanguagePicks, areLanguageKeys, fixAttunement, problemsText,
   startingEquipmentPlan, focusMissing
 } from "./build-core.mjs";
 import { PC_SIZE_WORDS } from "./core/size.mjs";
 import { findItem, notFound, suggest } from "./packs-adapter.mjs";
+import { poolIndex, poolTail } from "./core/pool.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 export const CHARACTER_FOLDER = "Foundry MCP Characters";
@@ -152,14 +153,11 @@ async function collectAdvancements(docs, level, choices) {
         const pool = (cfg.pool ?? []).map(p => p.uuid).filter(Boolean);
         if (pool.length) {
           const names = await Promise.all(pool.map(poolName));
-          const tail = n => String(n).split(/:\s*/).pop();
           for (const w of words) {
-            const i = pool.indexOf(w) >= 0 ? pool.indexOf(w)
-              : names.findIndex(n => sameName(n, w)) >= 0 ? names.findIndex(n => sameName(n, w))
-                : names.findIndex(n => sameName(tail(n), w));
+            const i = poolIndex(w, pool, names);
             if (i < 0) {
-              const near = nearestNames(w, names.map(tail), 3);
-              problems.push(`${where}: "${w}" is not one of its options${near.length ? ` (nearest: ${near.join(", ")})` : ""}; options: ${names.map(tail).join(", ")}`);
+              const near = nearestNames(w, names.map(poolTail), 3);
+              problems.push(`${where}: "${w}" is not one of its options${near.length ? ` (nearest: ${near.join(", ")})` : ""}; options: ${names.map(poolTail).join(", ")}`);
               continue;
             }
             await visit(await docAt(pool[i]), null, depth + 1);
@@ -477,13 +475,9 @@ async function uuidsFor(words, pool) {
   const out = [];
   const names = await namesFor(pool);
   for (const w of words) {
-    const s = String(w);
-    const i = pool.indexOf(s);
-    if (i >= 0) { out.push(pool[i]); continue; }
     // "Protector" finds "Divine Order: Protector"
-    const tail = n => String(n).split(/:\s*/).pop();
-    const j = names.findIndex(n => sameName(n, s)) >= 0 ? names.findIndex(n => sameName(n, s)) : names.findIndex(n => sameName(tail(n), s));
-    if (j >= 0) out.push(pool[j]);
+    const i = poolIndex(String(w), pool, names);
+    if (i >= 0) out.push(pool[i]);
   }
   return out;
 }

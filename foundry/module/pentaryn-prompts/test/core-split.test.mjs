@@ -58,3 +58,19 @@ test("cropsDecision and specFileUrl live in core/text.mjs; build-core re-exports
   assert.equal(build.cropsDecision, text.cropsDecision);
   assert.equal(build.specFileUrl, text.specFileUrl);
 });
+
+test("prompts-lookup-10: poolIndex keeps the pasted three-step order over the finding's table", async () => {
+  const { poolIndex } = await import("../core/pool.mjs");
+  const { sameName } = await import("../build-core.mjs");
+  const pool = ["Compendium.a.Item.1", "Compendium.a.Item.2"];
+  const names = ["Divine Order: Protector", "Divine Order: Thaumaturge"];
+  const tail = n => String(n).split(/:\s*/).pop();
+  const pasted = w => (pool.indexOf(w) >= 0 ? pool.indexOf(w)
+    : names.findIndex(n => sameName(n, w)) >= 0 ? names.findIndex(n => sameName(n, w))
+      : names.findIndex(n => sameName(tail(n), w)));
+  const table = [["Compendium.a.Item.2", 1], ["Protector", 0], ["thaumaturge", 1], ["Divine Order: Protector", 0], ["Order Divine: Protector", 0], ["Nope", -1]];
+  for (const [w, want] of table) {
+    assert.equal(poolIndex(w, pool, names), want, w);
+    assert.equal(poolIndex(w, pool, names), pasted(w), `${w} (oracle)`);
+  }
+});
