@@ -13,6 +13,7 @@
 
 import { AWAY, AWAY_FLAG, BOND, MODULE, SLOTS, awayOf, bondChanges, computeSlots, homeSlots, t, wouldExceed } from "./attunement-core.mjs";
 import { isPileActor } from "./actor-adapter.mjs";
+import { flagPath } from "./lib/flags.mjs";
 
 /* -------------------------------------------- */
 /*  Away bonds                                  */
@@ -82,7 +83,7 @@ async function onCreateItemBond(item, options, userId) {
   if (actor.id !== bond.actor) return;
   // Home for good: the bond has done its job. Anywhere else it stays, so the
   // item still knows its way back if it is handed over later.
-  await item.update({ [`flags.${MODULE}.-=${BOND}`]: null });
+  await item.update({ [flagPath(MODULE, BOND)]: _del });
   const entry = awayOf(actor).find(a => a.key === bond.key);
   if (!entry) return;
   const slots = homeSlots(computeSlots(actor).slots, AWAY + bond.key, item.id);

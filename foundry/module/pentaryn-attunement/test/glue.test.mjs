@@ -153,7 +153,7 @@ test("createItem (own user, bond, home): bond cleared, away/slots written, BackI
   await flush();
   const seq = since(from).filter(c => ["update", "notify"].includes(c.op)).map(c => (c.op === "notify" ? ["notify", c.message] : ["update", c.documentName, c.changes]));
   assert.deepEqual(seq, [
-    ["update", "Item", { "flags.pentaryn-attunement.-=bond": null }],
+    ["update", "Item", { "flags.pentaryn-attunement.bond": "<_del>" }],   // [declared] v14 hygiene: _del, not -=
     ["update", "Actor", { "flags.pentaryn-attunement.away": [], "flags.pentaryn-attunement.slots": ["itemStaff0000001", "itemCloak0000001"] }],
     ["notify", "Staff is back with Talo Home — attunement restored."],
   ]);
