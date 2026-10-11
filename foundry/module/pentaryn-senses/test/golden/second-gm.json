@@ -24,7 +24,7 @@
         "updates": [
           {
             "_id": "tokGob0000000001",
-            "flags.pentaryn-senses.-=chain": null
+            "flags.pentaryn-senses.chain": "<_del>"
           }
         ]
       }

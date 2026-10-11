@@ -19,7 +19,9 @@
  * token rendering. A feature: the entry calls install(reg, ctx); the entry's ready publishes the API.
  */
 
-import { MODULE, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainThickness, resolveTokenRef, linkSpriteSpecs } from "./senses-core.mjs";
+import {
+  MODULE, FLAGS, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainThickness, resolveTokenRef, linkSpriteSpecs, unsetPath,
+} from "./senses-core.mjs";
 import { isAnyGM } from "./lib/election.mjs";
 
 const TEX = `modules/${MODULE}/assets/chain-link.webp`;
@@ -89,7 +91,7 @@ export async function breakChain(token) {
   const ids = new Set(linksTouching(chainPairs(scene.tokens.contents), doc.id).map(p => p.chained));
   // a dangling flag on this token (anchor already deleted) goes too
   if (readChain(doc)) ids.add(doc.id);
-  const updates = [...ids].map(_id => ({ _id, [`flags.${MODULE}.-=${CHAIN_FLAG}`]: null }));
+  const updates = [...ids].map(_id => ({ _id, ...unsetPath(FLAGS.chain) }));   // _del on v14, "-=" before
   if (updates.length) await scene.updateEmbeddedDocuments("Token", updates);
   return updates.length;
 }

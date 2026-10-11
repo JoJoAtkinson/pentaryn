@@ -67,7 +67,8 @@ test("link(): by id, by document, by placeable; the flag lands on the chained to
   ]);
 });
 
-test("break(): every chain touching the token, as the chained end or the anchor, in one batch (-=, not _del)", async () => {
+// [declared S-5, finding -10 chain half] flipped from "(-=, not _del)": the flag is deleted with `_del` (v14).
+test("break(): every chain touching the token, as the chained end or the anchor, in one batch (_del)", async () => {
   const mark = F.calls.length;
   const rows = {
     none: await C().break(null),

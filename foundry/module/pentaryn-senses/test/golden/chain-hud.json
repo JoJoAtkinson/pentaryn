@@ -32,7 +32,7 @@
         "updates": [
           {
             "_id": "tokHulk000000001",
-            "flags.pentaryn-senses.-=chain": null
+            "flags.pentaryn-senses.chain": "<_del>"
           }
         ]
       },

@@ -6,11 +6,11 @@
     "updates": [
       {
         "_id": "tokGob0000000001",
-        "flags.pentaryn-senses.-=chain": null
+        "flags.pentaryn-senses.chain": "<_del>"
       },
       {
         "_id": "tokHulk000000001",
-        "flags.pentaryn-senses.-=chain": null
+        "flags.pentaryn-senses.chain": "<_del>"
       }
     ]
   },
@@ -21,7 +21,7 @@
     "updates": [
       {
         "_id": "tokGob0000000001",
-        "flags.pentaryn-senses.-=chain": null
+        "flags.pentaryn-senses.chain": "<_del>"
       }
     ]
   },
@@ -32,7 +32,7 @@
     "updates": [
       {
         "_id": "tokHero000000001",
-        "flags.pentaryn-senses.-=chain": null
+        "flags.pentaryn-senses.chain": "<_del>"
       }
     ]
   }
