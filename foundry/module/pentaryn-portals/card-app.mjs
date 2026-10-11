@@ -10,11 +10,16 @@ import { MODULE, cardHTML, esc } from "./portals-core.mjs";
 import { cardFor, destinationsOf, linkRegions, lookAt, snapshot, teleportBehaviors, unlinkRegion } from "./scene-adapter.mjs";
 import { flagPath } from "./lib/flags.mjs";
 
-const deps = { setEditing: () => {} };
+const deps = { setEditing: () => {}, guard: (label, fn) => fn };
 
-/** Called by badges.install: edit mode on a card marks its region's badge as draggable. */
-export function configureCardApp({ setEditing } = {}) {
+/**
+ * Called by badges.install: `setEditing` (edit mode on a card marks its region's badge as
+ * draggable) and the hook registry's pass-through `guard`, so a failed write in a listener logs
+ * `pentaryn-portals | <label>` instead of an unattributed "Uncaught (in promise)".
+ */
+export function configureCardApp({ setEditing, guard } = {}) {
   if (setEditing) deps.setEditing = setEditing;
+  if (guard) deps.guard = guard;
 }
 
 export class PortalCard extends foundry.applications.api.ApplicationV2 {
@@ -106,42 +111,46 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
     if (!this.edit) return;
     const region = this.region;
     const behaviors = () => teleportBehaviors(region);
+    const guard = deps.guard;
 
     for (const input of content.querySelectorAll("[data-set]")) {
-      input.addEventListener("change", async () => {
+      input.addEventListener("change", guard("card switch", async () => {
         const k = input.dataset.set;
         if (k === "name") return region.update({ name: input.value });
         if (k === "open") return region.update({ hidden: !input.checked });
         for (const b of behaviors()) await b.update({ [`system.${k}`]: input.checked });
-      });
+      }));
     }
 
     for (const card of content.querySelectorAll(".ppt-editcard")) {
       const dest = fromUuidSync(card.dataset.uuid);
-      const setImg = async path => {
+      const setImg = guard("card image pick", async path => {
         await dest.update({ [`flags.${MODULE}.img`]: path });
         card.querySelector(".ppt-thumb").src = cardFor(dest).img;
-      };
+      });
       for (const input of card.querySelectorAll("[data-f]")) {
-        input.addEventListener("change", () => dest.update({ [`flags.${MODULE}.${input.dataset.f}`]: input.value }));
+        input.addEventListener("change", guard("card field", () => dest.update({ [`flags.${MODULE}.${input.dataset.f}`]: input.value })));
       }
-      card.querySelector('[data-act="snap"]').addEventListener("click", async () => {
+      card.querySelector('[data-act="snap"]').addEventListener("click", guard("card snapshot", async () => {
         await snapshot(dest);
         card.querySelector(".ppt-thumb").src = cardFor(dest).img;
-      });
+      }));
       const pick = () => new foundry.applications.apps.FilePicker.implementation({
         type: "image", current: dest.flags?.[MODULE]?.img ?? "", callback: setImg }).render(true);
       card.querySelector('[data-act="pick"]').addEventListener("click", pick);
       card.querySelector(".ppt-thumb").addEventListener("click", pick);
-      card.querySelector('[data-act="clearimg"]')?.addEventListener("click", async () => { await dest.update({ [flagPath(MODULE, "img")]: _del }); this.render(); });
-      card.querySelector('[data-act="look"]').addEventListener("click", () => lookAt(dest));
-      card.querySelector('[data-act="unlink"]').addEventListener("click", async () => {
+      card.querySelector('[data-act="clearimg"]')?.addEventListener("click", guard("card clear image", async () => {
+        await dest.update({ [flagPath(MODULE, "img")]: _del });
+        this.render();
+      }));
+      card.querySelector('[data-act="look"]').addEventListener("click", guard("card look", () => lookAt(dest)));
+      card.querySelector('[data-act="unlink"]').addEventListener("click", guard("card unlink", async () => {
         await unlinkRegion(region, dest);
         this.render();
-      });
+      }));
     }
 
-    content.querySelector('[data-act="addsel"]')?.addEventListener("change", async ev => {
+    content.querySelector('[data-act="addsel"]')?.addEventListener("change", guard("card add destination", async ev => {
       const uuid = ev.target.value;
       if (!uuid) return;
       const dest = fromUuidSync(uuid);
@@ -149,7 +158,7 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
       await linkRegions(region, dest);
       if (twoWay) await linkRegions(dest, region);
       this.render();
-    });
+    }));
   }
 
   /** The dnd5e-style edit toggle, top-left of the window header. */

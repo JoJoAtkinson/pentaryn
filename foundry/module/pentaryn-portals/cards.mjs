@@ -100,19 +100,21 @@ export function injectConfig(app, element) {
       <textarea name="flags.${MODULE}.description" rows="4" placeholder="What players read before they choose.">${esc(f.description ?? "")}</textarea></div>
     <div class="ppt-preview">${cardHTML(card)}</div>`;
   tab.append(fs);
-  fs.querySelector(".ppt-snap").addEventListener("click", async ev => {
+  fs.querySelector(".ppt-snap").addEventListener("click", guard("config snapshot", async ev => {
     ev.preventDefault();
     const path = await snapshot(region);
     if (path) {
       fs.querySelector(`input[name="flags.${MODULE}.img"]`).value = region.flags?.[MODULE]?.img ?? path;
       fs.querySelector(".ppt-preview").innerHTML = cardHTML(cardFor(region));
     }
-  });
+  }));
   app.setPosition?.({ height: "auto" });
 }
 
 /** The module's log, from install(). */
 let log = null;
+/** The hook registry's pass-through guard, from install(): a failed listener logs with its label. */
+let guard = (label, fn) => fn;
 
 function onRenderDialog(app, element) {
   try { decorate(app, element); } catch (err) { log.warn("dialog decoration skipped", err); }
@@ -125,6 +127,7 @@ function onRenderRegionConfig(app, element) {
 
 export function install(reg, ctx) {
   log = ctx.log;
+  guard = reg.guard;
   reg.on("renderDialogV2", onRenderDialog, { guard: false, label: "teleport dialog cards" });
   reg.on("renderRegionConfig", onRenderRegionConfig, { guard: false, label: "region config card" });
 }

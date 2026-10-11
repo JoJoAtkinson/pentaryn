@@ -42,6 +42,8 @@ let menu = null;
 let drag = null;
 /** The module's log, from install(). */
 let log = null;
+/** The hook registry's pass-through guard, from install(). */
+let guard = (label, fn) => fn;
 
 export function setEditing(region, on) {
   if (on) editing.add(region.uuid); else editing.delete(region.uuid);
@@ -233,13 +235,13 @@ export function bindBoard() {
     const p = canvas.canvasCoordinatesFromClient({ x: ev.clientX, y: ev.clientY });
     drag.badge.sprite.position.set(drag.bx + p.x - drag.start.x, drag.by + p.y - drag.start.y);
   }, true);
-  board.addEventListener("pointerup", async ev => {
+  board.addEventListener("pointerup", guard("badge drag release", async ev => {
     if (!drag) return;
     ev.stopImmediatePropagation();
     const d = drag; drag = null;
     const p = canvas.canvasCoordinatesFromClient({ x: ev.clientX, y: ev.clientY });
     await moveRegion(d.badge.region, p.x - d.start.x, p.y - d.start.y);
-  }, true);
+  }), true);
   board.addEventListener("pointerleave", hideTip);
   board.addEventListener("contextmenu", ev => {
     if (!game.user.isGM) return;
@@ -280,7 +282,8 @@ export const _state = () => ({ badgeLayer, drawRun, tip, menu, drag });
 
 export function install(reg, ctx) {
   log = ctx.log;
-  configureCardApp({ setEditing });
+  guard = reg.guard;
+  configureCardApp({ setEditing, guard: reg.guard });
   for (const h of REGION_HOOKS) reg.on(h, () => { if (canvas?.ready) drawBadges(); }, { guard: false, label: "badges redraw" });
   reg.on("canvasReady", () => { bindBoard(); drawBadges(); }, { guard: false, label: "badges draw" });
   // hot: badges — refreshBadgeSight walks only the badge list, never the scene

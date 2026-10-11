@@ -102,7 +102,10 @@ export async function snapshot(regionOrUuid, { squaresWide = 8, squaresHigh = 5 
   const blob = await new Promise(r => c.toBlob(r, "image/webp", 0.88));
   const name = `${scene.id}-${region.id}.webp`;
   const FP = foundry.applications.apps.FilePicker.implementation;
-  await FP.createDirectory("data", SNAP_DIR).catch(() => {});
+  // An existing folder is the normal case; anything else (a permission failure) is worth a line.
+  await FP.createDirectory("data", SNAP_DIR).catch(err => {
+    if (!/EEXIST|exists/i.test(err?.message ?? "")) deps.log?.warn("create dir", err);
+  });
   const res = await FP.upload("data", SNAP_DIR, new File([blob], name, { type: "image/webp" }), {}, { notify: false });
   const path = res?.path ?? `${SNAP_DIR}/${name}`;
   // Cache-bust so a re-snapshot shows immediately.

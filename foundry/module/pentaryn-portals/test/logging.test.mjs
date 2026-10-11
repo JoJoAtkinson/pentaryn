@@ -61,3 +61,36 @@ test("a badge layer that fails to destroy logs at debug only", async t => {
   assert.deepEqual(since(n), []);
   assert.deepEqual(debug.mock.calls.map(c => c.arguments[0]), ["pentaryn-portals | badge layer destroy"]);
 });
+
+/* ── finding -27, the rest: guarded UI listeners, the snapshot folder ─── */
+
+test("a Portal card write that fails logs 'pentaryn-portals | card switch' at error (not an unattributed rejection)", async () => {
+  const { places } = await import("./fixtures/places.mjs");
+  const P = places(W, "G");
+  const app = await S.PortalCard.open(P.fork, { edit: true });
+  const el = app.element.querySelector('[data-set="name"]');
+  P.fork.update = async () => { throw new Error("server said no"); };
+  el.value = "North";
+  const n = console$.length;
+  const out = el.listeners.find(l => l.type === "change").fn();
+  await assert.rejects(out, /server said no/, "pass-through: the listener's own promise still rejects");
+  await W.flush();
+  assert.deepEqual(since(n), [["error", "pentaryn-portals | card switch"]]);
+  await app.close();
+});
+
+test("the snapshot folder: an existing one is silent; any other createDirectory failure warns 'create dir' and the upload goes on", async t => {
+  const { places } = await import("./fixtures/places.mjs");
+  const P = places(W, "C");
+  t.mock.method(Date, "now", () => 1700000000000);
+  W.images["maps/pit.webp"] = { naturalWidth: 4000, naturalHeight: 2000 };
+  const FP = foundry.applications.apps.FilePicker.implementation;
+  const create = t.mock.method(FP, "createDirectory", async () => { throw new Error("EACCES: permission denied"); });
+  const n = console$.length;
+  assert.equal(typeof (await S.snapshot(P.pitGate)), "string");
+  assert.deepEqual(since(n), [["warn", "pentaryn-portals | create dir"]]);
+  create.mock.mockImplementation(async () => { throw new Error("EEXIST: directory exists"); });
+  const m = console$.length;
+  await S.snapshot(P.pitGate);
+  assert.deepEqual(since(m), []);
+});
