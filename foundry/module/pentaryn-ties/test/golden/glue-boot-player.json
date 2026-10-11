@@ -70,6 +70,14 @@
     "id": "pentaryn-ties.sheetTab"
   },
   {
+    "op": "Hooks.callAll",
+    "name": "pentaryn-ties.ready"
+  },
+  {
+    "op": "Hooks.callAll",
+    "name": "pentaryn.ready"
+  },
+  {
     "op": "socket.on",
     "channel": "module.pentaryn-ties"
   },
