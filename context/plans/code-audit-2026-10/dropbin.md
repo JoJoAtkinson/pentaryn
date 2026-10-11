@@ -43,7 +43,7 @@ Today a new Item Piles patch would be appended to the bottom of dropbin.mjs, bec
 | items-journal-22 | applied (guide steps 2–5): five concerns → `ledger.mjs`, `itempiles.mjs` + adapters; entry wires only; hook order golden unchanged | `1e4214c2`…`4ef64cd7`, guard `146aefce` [declared] |
 | items-journal-23 | applied [declared]: `pileFlags`/`isPileFlagged` everywhere | `4d96d3a8`, `6273d1e7` |
 | items-journal-24 | applied: one notes walk per render (lazy) | `eff44a40` |
-| items-journal-25 | applied [declared]: active GM only, `Actor.implementation.updateDocuments` | `bae36010` |
+| items-journal-25 | applied [declared]: active GM user only (every tab on that account — `isSelf` is per user; see wave-2 report W2-D1), `Actor.implementation.updateDocuments` | `bae36010` |
 | items-journal-26 | applied: `MODULE` once (step 2), strings in `lang/en.json` (step 7) | `1e4214c2`, `a1b0ff01` |
 | items-journal-27 | **kept**, documented (the audit's listed alternative): deleting moves two frozen pins for no observable change; a source test proves nothing reads the tag | `4fa0b17a` |
 | items-journal-28 | applied (additive): `list(n,{brief})`, `restoreResult`, `inspect`, `selftest`, `describe()` via the kit (D-D1); README line on `clear()` | `500f33a0`, `0ac333a2`, `85f4353f` |

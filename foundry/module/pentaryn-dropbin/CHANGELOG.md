@@ -21,7 +21,8 @@ Declared changes:
   revived corpse's Dead toggle failure warns — items-journal-21.
 - Item Piles' pile data is read as plain flags; with Item Piles inactive the sidebar filter, the
   lock hooks and the GM backfills no longer throw — items-journal-23.
-- The ready backfills run on the active GM only, actors written in one batch — items-journal-25.
+- The ready backfills run on the active GM user only (every tab on that account; a second GM user
+  no longer backfills), actors written in one batch — items-journal-25.
 - The corpse eye redraws its disc only when its size changes; players' clients queue no corpse
   sync timers — items-journal-30.
 - Ledger writes during a burst are coalesced; the JSON mirror is written ~2 s after the burst

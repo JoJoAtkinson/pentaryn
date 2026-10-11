@@ -124,7 +124,11 @@ function announceLocked(actor, { playSound }) {
   } catch (err) { log?.debug("announceLocked: no canvas (off-screen); the notification is enough", err); }
 }
 
-/** The ready backfills run on the active GM only (corpses.mjs's runner), not on every GM tab. */
+/**
+ * The ready backfills run on the active GM user (corpses.mjs's runner): every tab on that account
+ * runs them (`isSelf` is per user, not per tab), a second GM user does not. The writes are
+ * idempotent; a one-tab gate would be a separate [declared] change (wave-2 report, W2-D1).
+ */
 const isGMRunner = () => game.users?.activeGM?.isSelf === true;
 
 /**

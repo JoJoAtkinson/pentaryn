@@ -372,7 +372,7 @@ run the updater tests in the live tree.
 | `items-journal-21` | **declared** failure path | `submit` catches a rejected `executeAsGM` → `console.warn('pentaryn-dropbin \| ledger entry not recorded (no GM?)', {reason,item,actor}, err)`, resolves `null`; corpses.mjs:134 `.catch(err => console.warn(\`${MODULE} \| revive: could not clear Dead on ${t.name}\`, err))`. Tests per the finding (`makeSubmit` cases) |
 | `items-journal-23` | **declared** hardening | switch :376, :402, :411, :470 (and :436) from `getFlag('item-piles', …)` to `pileFlags` — no throw when Item Piles is inactive; identical when active |
 | `items-journal-24` | performance | `renderJournalDirectory` builds `pinnedEntryIds(game.scenes)` once per render |
-| `items-journal-25` | **declared** | backfills gated on `game.users.activeGM?.isSelf` (corpses' idiom) and batched with `Actor.implementation.updateDocuments`; log lines and counts identical. A non-active GM tab no longer backfills |
+| `items-journal-25` | **declared** | backfills gated on `game.users.activeGM?.isSelf` (corpses' idiom) and batched with `Actor.implementation.updateDocuments`; log lines and counts identical. The backfills run on the active GM user (every tab on that account; the writes are idempotent); a second GM user no longer backfills. A one-tab gate is not part of this change (wave-2 report, W2-D1) |
 | `items-journal-27` | **declared** (trivial) | delete the dead `restoring` guard (:193) and option (:228); a `sourceScan` test that `restoring` appears nowhere else |
 | `items-journal-30` | performance + **declared** (minor) | cache the drawn eye size (`needsRedraw`); `queue()` returns early when not the GM runner. The step-1 `clear()` count row flips 2 → 1 |
 
@@ -382,7 +382,7 @@ run the updater tests in the live tree.
 |---|---|---|
 | D-D1 | API published at `ready` (not a tick later), frozen, `module.api` (step 6) | `game.pentaryn.dropbin.list(5)`; `describe().version === "0.2.1"`; `restore(n)` on a test item |
 | D-D2 | Serialised ledger (step 8) | as a player, drop three different items onto the canvas in quick succession (one Item Piles drop of several items): three ledger entries numbered consecutively, no repeat |
-| D-D3 | (standalone) `-19`, `-21`, `-23`, `-25`, `-27`, `-30` | `-19`: `assets/drop-bin/drop-log.json` updates ~2 s after a drop; `-21`: drop as a player with no GM online → console warning, no "Uncaught (in promise)"; `-25`: two GM tabs, only the active one logs the backfill; `-30`: corpse eye still shows/hides while looting and moving |
+| D-D3 | (standalone) `-19`, `-21`, `-23`, `-25`, `-27`, `-30` | `-19`: `assets/drop-bin/drop-log.json` updates ~2 s after a drop; `-21`: drop as a player with no GM online → console warning, no "Uncaught (in promise)"; `-25`: each tab on the active GM account logs the backfill once, a second GM user logs nothing; `-30`: corpse eye still shows/hides while looting and moving |
 | — | Strings (step 7) | open a locked chest as a player (toast + floating "Locked"), restore/export/clear as GM, corpse HUD tooltips: identical text |
 
 ## 6. WAIT

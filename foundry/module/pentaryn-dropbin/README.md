@@ -131,7 +131,8 @@ and the four patches above get their own rows (`adjustments-batch.md`, dropbin s
   row, and the tail dedupe (same item, actor, quantity within 2 s) catches the sequential case.
 - **Corpses:** conversion, revival and the legacy migration run where `activeGM.isSelf` — every
   tab of the active GM account (see the wave-2 report, W2-D1).
-- **Ready backfills** (lock sounds, in-view rule): the active GM; the writes are idempotent.
+- **Ready backfills** (lock sounds, in-view rule): the active GM user — every tab on that account
+  (W2-D1); the writes are idempotent.
 - **Locks, directory filters, the eye, Loot all:** each client, for itself.
 
 ## Extending
