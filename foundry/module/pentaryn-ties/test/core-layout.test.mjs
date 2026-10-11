@@ -2,7 +2,7 @@
  * The pure layer's shape (guide S4, ties-36; S4b, ties-35): core/*.mjs import only core/*.mjs, the core
  * import graph has no cycle (a cycle is how a module-scope initialiser such as
  * `LORE_TEXT_MAX = TIER_TEXT_MAX` hits the temporal dead zone), and every core file imports bare in a
- * process with no Foundry global. known-core.mjs is a barrel and nothing else.
+ * process with no Foundry global. known-core.mjs and study.mjs are barrels and nothing else.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -38,6 +38,12 @@ test("the core import graph is acyclic", () => {
 test("known-core.mjs is a barrel of core/ re-exports and nothing else", () => {
   const src = readFileSync(new URL("../known-core.mjs", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").trim();
   for (const line of src.split("\n")) assert.match(line, /^export \* from "\.\/core\/[a-z]+\.mjs";$/);
+});
+
+test("study.mjs is a barrel of study/ re-exports and nothing else", () => {
+  const src = readFileSync(new URL("../study.mjs", import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "").trim();
+  assert.match(src, /^(export \{[^}]*\} from "\.\/study\/[a-z]+\.mjs";\s*)+$/);
+  assert.ok(Object.keys(graph).filter(f => f.startsWith("study/")).length >= 10);
 });
 
 test("each core file imports bare, with no Foundry global, in a fresh process", () => {
