@@ -29,6 +29,19 @@ Scores before and after Stage 0: [`wave-1-baseline.md`](wave-1-baseline.md).
   the lookup checkpoint `a532b3e` fixed it, so `node test/run.mjs` fails with module-not-found in that
   range. History is not rewritten. Reverting `35d439b` alone breaks lookup unless `a532b3e`'s import
   line is reverted with it. Skip that range when bisecting pentaryn-lookup. HEAD is green.
+  How it happened: the rename sat in the shared index and `git commit` took everything staged.
+  Lanes commit with `git commit -- <paths>` (or read `git diff --cached --stat` first) so another
+  lane's staged entries are never swept in.
+
+## Behaviour changes committed without [declared]
+
+History is not rewritten; these are declared here instead. Later gate-behaviour commits carry
+[declared] in the subject (the imports-gate query fix `def324f` does).
+
+- **`94d2f94`** "fix(foundry): node-test gate runs node test/run.mjs from the module folder
+  (python-tooling-7)": the node-test gate's cwd moved from the repo root to the module folder.
+  Pass/fail is unchanged for every suite at the time, but a suite that resolves files against
+  the cwd now sees the module folder.
 
 ## Not applied (left for their owners)
 
