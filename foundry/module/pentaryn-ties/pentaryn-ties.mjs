@@ -153,7 +153,8 @@ function publishAPI() {
     clearWorn: worn.clearWorn,
     wornDialog: worn.openDialog,
     // the description card — GM only, key 9. Was the `Quick View` macro.
-    describe: toggleDescription,
+    // `describeCard`, not `describe`: the kit reserves describe() for the API manifest (B1)
+    describeCard: toggleDescription,
     closeDescription: closeDescription,
     /*
      * The Known list — the notebook tab. A sub-object rather than six more top-level names:

@@ -93,7 +93,7 @@ test("B6 / ties-32 (before): describe-card art is not escaped; an item mark's ic
       content = opts.content;
     }
   };
-  await T().describe();
+  await T().describeCard(); // B1 [declared]: the card moved from describe to describeCard
   await T().closeDescription();
   foundry.applications.api.DialogV2 = DialogV2;
   canvas.tokens.hover = null;

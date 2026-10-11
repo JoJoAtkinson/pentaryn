@@ -164,6 +164,6 @@ test("study.look and describe through the API as a player", async () => {
   const mark = F.calls.length;
   const look = T().study.look(game.actors.get(NPC));
   const lookSelf = T().study.look(game.actors.get(PC));
-  const describe = await T().describe();
+  const describe = await T().describeCard(); // B1 [declared]: was T().describe()
   pinJSON("glue-api-player-windows", { look: look?.constructor?.name ?? null, lookSelf, describe, calls: F.calls.slice(mark) }, import.meta.url);
 });

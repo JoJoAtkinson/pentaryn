@@ -164,20 +164,21 @@ test("worn: read / set / clear on a token, the dialog's three answers, the badge
   pinJSON("canvas-worn", rows, import.meta.url);
 });
 
+// B1 [declared]: the card is T().describeCard() (was T().describe()); the rows are unchanged
 test("key 9 (describe): open, same face closes, another face swaps, nothing hovered warns; the window's own key closes it", async () => {
   const rows = [];
   canvas.tokens.hover = tok("zzTokPc000000001");
-  rows.push(await step("hover PC, press 9", async () => (await T().describe())?.id ?? null));
-  rows.push(await step("press 9 again (same face: close)", async () => (await T().describe())?.id ?? null));
-  rows.push(await step("press 9 (open)", async () => (await T().describe())?.id ?? null));
+  rows.push(await step("hover PC, press 9", async () => (await T().describeCard())?.id ?? null));
+  rows.push(await step("press 9 again (same face: close)", async () => (await T().describeCard())?.id ?? null));
+  rows.push(await step("press 9 (open)", async () => (await T().describeCard())?.id ?? null));
   canvas.tokens.hover = tok("zzTokNpc00000001");
-  rows.push(await step("hover NPC (public bio only), press 9 (swap)", async () => (await T().describe())?.id ?? null));
+  rows.push(await step("hover NPC (public bio only), press 9 (swap)", async () => (await T().describeCard())?.id ?? null));
   canvas.tokens.hover = null;
-  rows.push(await step("hover nothing, press 9 (closes)", async () => (await T().describe())?.id ?? null));
-  rows.push(await step("hover nothing, press 9 (warns)", async () => (await T().describe())?.id ?? null));
+  rows.push(await step("hover nothing, press 9 (closes)", async () => (await T().describeCard())?.id ?? null));
+  rows.push(await step("hover nothing, press 9 (warns)", async () => (await T().describeCard())?.id ?? null));
   canvas.tokens.hover = tok("zzTokNpc00000001");
   rows.push(await step("open, then closeDescription", async () => {
-    await T().describe();
+    await T().describeCard();
     await T().closeDescription();
   }));
   canvas.tokens.hover = null;
