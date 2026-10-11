@@ -13,10 +13,14 @@
 // still aliases the array game.settings.get returns (before the first flush and below the cap),
 // false after (wave-1-baseline.md SF3). Compare it across runs only with the ring in the same state.
 //
-// ⚠ Side effect that cannot be undone from outside the module: the scratch pings (1 + N timing
-// pings) stay in the world's ping ring (setting pentaryn-pings.log, capped at `max`), labelled with
-// the deleted ZZ scene's name. The module keeps a private buffer, so restoring the setting would be
-// overwritten by the next flush; only clear() empties both, and that would drop real history.
+// No trace (2026-10-11): the scratch pings (1 + N timing pings) used to stay in the world's ping
+// ring (setting pentaryn-pings.log, capped at `max`), pushing real pings out, and the module's
+// private buffer wrote them back on its next flush. The log is now saved before the first ping and
+// restored at the end through the module's documented hot patch: `uninstall()` (drops the buffer
+// and any pending flush), the saved log written back, the entry re-imported (ready re-reads the
+// store into a fresh buffer — the state right after a reload, so `lastImmediateIsScratch` no longer
+// depends on earlier runs). cleanup.pingLogRestored / pingScratchLeft report it; diff.mjs fails
+// on false / > 0. A player's ping in the few milliseconds between uninstall and re-import is lost.
 
 const N = 5;
 const median = xs => { const s = [...xs].sort((a, b) => a - b); const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
@@ -54,6 +58,21 @@ const out = { module: "pings", golden: {}, timings: {}, cleanup: {} };
 const API = game.pentaryn.pings;
 const MOD = "pentaryn-pings";
 let scene = null;
+// before the first ping; a deep copy, because the settings cache array is what a flush replaces
+const savedLog = foundry.utils.deepClone(game.settings.get(MOD, "log") ?? []);
+/** Put the saved log back, in the store and in the module's buffer (hot patch). → true when exact. */
+async function restorePingLog() {
+  try {
+    game.pentaryn.pings?.uninstall?.();
+    await game.settings.set(MOD, "log", savedLog);
+    await import(`${foundry.utils.getRoute(`modules/${MOD}/pings.mjs`)}?golden=${Date.now()}`);
+    const now = game.settings.get(MOD, "log");
+    return JSON.stringify(now) === JSON.stringify(savedLog) && game.pentaryn.pings?.all?.().length === savedLog.length;
+  } catch (e) {
+    out.cleanup.pingLogError = String(e?.message ?? e);
+    return false;
+  }
+}
 try {
   const layer = canvas.controls;
   out.golden.patch = {
@@ -102,6 +121,8 @@ try {
 } finally {
   if (scene && game.scenes.get(scene.id)) await scene.delete();
   out.cleanup = { zzScenesLeft: game.scenes.filter(s => s.name.startsWith("ZZ ")).length };
+  out.cleanup.pingLogRestored = await restorePingLog();
+  out.cleanup.pingScratchLeft = scene ? game.settings.get(MOD, "log").filter(r => r.sceneId === scene.id).length : 0;
 }
 out.golden = norm(out.golden);
 // a string, not the object: the eval bridge truncates nested results at a fixed depth
