@@ -131,9 +131,11 @@ export const MANIFEST = Object.freeze({
     {
       path: "light.reconcile",
       params: [{ name: "source", type: "string", doc: "a Light item uuid" }],
-      returns: "Promise<void>",
+      returns: "Promise<{ source, desired, restored, removed, lit, created, released, cleared } | null | undefined>",
       gm: true, writes: true, legacy: true,
-      doc: "Active GM: bring the world in line with one Light item's flag now (queued behind any running reconcile).",
+      doc: "Active GM: bring the world in line with one Light item's flag now (queued behind any running reconcile). "
+        + "Resolves to what it did (restored / removed counts, the token lit, a square created, another Light released, "
+        + "this cast cleared); null off the active GM; undefined when it failed (warned).",
     },
     {
       path: "light.status",
@@ -142,6 +144,13 @@ export const MANIFEST = Object.freeze({
       gm: false, writes: false,
       throws: ["NOT_FOUND", "AMBIGUOUS", "BAD_ARGS"],
       doc: "Where a Light cantrip is cast (its item flag) and what it lights now (tokens and AmbientLights on every scene). Read-only.",
+    },
+    {
+      path: "light.recent",
+      params: [],
+      returns: "{ source, desired, restored, removed, lit, created, released, cleared }[]",
+      gm: false, writes: false,
+      doc: "The last 20 Light reconcile summaries on this client (the active GM's is the one that writes), oldest first.",
     },
     {
       path: "setupLight",

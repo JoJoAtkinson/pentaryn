@@ -23,7 +23,7 @@
 import {
   MODULE, FLAGS, SPELL_LIGHT, profileFor, profileKey, isLit, isHooded, isLightSpellData, isLightToggle,
   readSpellCast, readSpellLight, castFlag, planSpellLight, spellLightUpdate, restoredLight,
-  sourcesUnder, isPHBLightActorSource, torchActivityData, TORCH_ACTIVITY_ID,
+  sourcesUnder, isPHBLightActorSource, torchActivityData, TORCH_ACTIVITY_ID, summarise,
   esc, unsetPath
 } from "./senses-core.mjs";
 import { coreRollMode } from "./settings.mjs";
@@ -34,7 +34,9 @@ import { bindActions, cancelPick, decorateCard, decorateSheet, injectHUD, pick, 
 const { lightCast: CAST, lit: LIT, hooded: HOODED, spellLight: SPELL } = FLAGS;
 const DEBOUNCE_MS = 250;
 
-const state = { hooks: [], timers: new Map(), chain: Promise.resolve(), reg: null, ctx: null };
+const RECENT = 20;
+
+const state = { hooks: [], timers: new Map(), chain: Promise.resolve(), reg: null, ctx: null, recent: [] };
 
 const warn = (label, err) => console.warn(`${MODULE} | light ${label}`, err);
 
@@ -204,14 +206,16 @@ async function tellOwners(item, key) {
 
 /** Bring the world in line with one Light item's flag (or clean up after a vanished item). */
 async function reconcile(source) {
-  if (!isActiveGM() || !source) return;
+  if (!isActiveGM() || !source) return null;
   const item = itemFrom(source);
   let desired = item ? readSpellCast(item) : null;
+  const done = { source, restored: 0, removed: 0, lit: null, created: false, released: null, cleared: false };
 
   if (desired?.token) {
     const tok = findToken(desired.token, desired.scene);
     if (!tok) {
       desired = null;
+      done.cleared = true;
       await item.update({ [CAST]: null });
       await tellOwners(item, "PENTARYN_SENSES.Light.Gone");
     } else if (tok.parent.id !== desired.scene) {
@@ -220,6 +224,7 @@ async function reconcile(source) {
     }
   } else if (desired && !game.scenes.get(desired.scene)) {
     desired = null;
+    done.cleared = true;
     await item.update({ [CAST]: null });
   }
 
@@ -238,6 +243,7 @@ async function reconcile(source) {
   for (const [sid, updates] of byScene) {
     const scene = game.scenes.get(sid);
     await scene.updateEmbeddedDocuments("Token", updates);
+    done.restored += updates.length;
     for (const u of updates) { const a = scene.tokens.get(u._id)?.actor; if (a) touchedActors.add(a); }
   }
   const removeByScene = new Map();
@@ -249,6 +255,7 @@ async function reconcile(source) {
     const scene = game.scenes.get(sid);
     const live = ids.filter(id => scene?.lights.has(id));
     if (live.length) await scene.deleteEmbeddedDocuments("AmbientLight", live);
+    done.removed += live.length;
   }
 
   // The light that is wanted.
@@ -257,20 +264,27 @@ async function reconcile(source) {
     if (tok) {
       const other = readSpellLight(tok)?.source;
       await tok.update(spellLightUpdate(tok, source, tok.light?.toObject?.() ?? tok.light));
+      done.lit = tok.id;
       // Two casters, one token: newest wins; the first caster's Light lets go.
       if (other && other !== source) {
         const prev = itemFrom(other);
-        if (readSpellCast(prev)?.token === tok.id) await prev.update({ [CAST]: null });
+        if (readSpellCast(prev)?.token === tok.id) {
+          await prev.update({ [CAST]: null });
+          done.released = other;
+        }
       }
     }
   }
   if (plan.create) {
     const scene = game.scenes.get(plan.create.scene);
-    if (scene) await scene.createEmbeddedDocuments("AmbientLight", [{
-      x: plan.create.x, y: plan.create.y, elevation: 0, walls: true, vision: false,
-      config: foundry.utils.deepClone(SPELL_LIGHT),
-      flags: { [MODULE]: { spellLight: { source } } }
-    }]);
+    if (scene) {
+      await scene.createEmbeddedDocuments("AmbientLight", [{
+        x: plan.create.x, y: plan.create.y, elevation: 0, walls: true, vision: false,
+        config: foundry.utils.deepClone(SPELL_LIGHT),
+        flags: { [MODULE]: { spellLight: { source } } }
+      }]);
+      done.created = true;
+    }
   }
 
   // A restored token may carry a lit torch: let the carried-light path re-apply it.
@@ -280,6 +294,16 @@ async function reconcile(source) {
     const base = game.actors.get(id);
     if (base) await syncLight(base);
   }
+  const summary = summarise(plan, { ...done, desired });
+  state.recent.push(summary);
+  if (state.recent.length > RECENT) state.recent.splice(0, state.recent.length - RECENT);
+  state.ctx?.log.debug("reconcile", summary);
+  return summary;
+}
+
+/** The last 20 reconcile summaries on this client, oldest first (copies). */
+function recent() {
+  return state.recent.map(s => ({ ...s }));
 }
 
 /**
@@ -392,7 +416,7 @@ export function uninstall() {
 }
 
 /** What api.mjs publishes as `light.*` (each function under its own name; reconcile is `run`). */
-const exposed = { cast, end, pick, toggle, hood, profileFor, sweep, setup, onMe, prompt, reconcile: run };
+const exposed = { cast, end, pick, toggle, hood, profileFor, sweep, setup, onMe, prompt, reconcile: run, recent };
 
 /** FEATURE: called synchronously by the entry, at import. The hooks keep today's order. */
 export function install(reg, ctx) {

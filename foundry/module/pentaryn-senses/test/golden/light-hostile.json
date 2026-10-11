@@ -1,6 +1,15 @@
 {
   "restoreV13": {
-    "value": "<undefined>",
+    "value": {
+      "source": "Actor.actHero000000001.Item.itmLight00000001",
+      "desired": null,
+      "restored": 1,
+      "removed": 0,
+      "lit": null,
+      "created": false,
+      "released": null,
+      "cleared": false
+    },
     "calls": [
       {
         "op": "updateEmbedded",
@@ -35,11 +44,29 @@
     ]
   },
   "throwingUuid": {
-    "value": "<undefined>",
+    "value": {
+      "source": "Actor.Boom.Item.Boom",
+      "desired": null,
+      "restored": 0,
+      "removed": 0,
+      "lit": null,
+      "created": false,
+      "released": null,
+      "cleared": false
+    },
     "calls": []
   },
   "whisperFails": {
-    "value": "<undefined>",
+    "value": {
+      "source": "Actor.actHero000000001.Item.itmLight00000001",
+      "desired": null,
+      "restored": 0,
+      "removed": 0,
+      "lit": null,
+      "created": false,
+      "released": null,
+      "cleared": true
+    },
     "calls": [
       {
         "op": "update",

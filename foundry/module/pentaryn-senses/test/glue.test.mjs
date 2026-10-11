@@ -78,7 +78,7 @@ test("ready: the published keys (game.pentaryn.senses and game.pentaryn.chain; t
   ]);
   assert.deepEqual(Object.keys(game.pentaryn.chain), ["link", "break", "links", "repaint"]);
   assert.deepEqual(Object.keys(game.pentaryn.senses.light), [
-    "cast", "end", "pick", "toggle", "hood", "profileFor", "sweep", "setup", "onMe", "prompt", "reconcile", "status", "SPELL_LIGHT", "PHB_LIGHT_ACTOR",
+    "cast", "end", "pick", "toggle", "hood", "profileFor", "sweep", "setup", "onMe", "prompt", "reconcile", "status", "recent", "SPELL_LIGHT", "PHB_LIGHT_ACTOR",
   ]);
   assert.equal(game.pentaryn.senses.setupLight, game.pentaryn.senses.light.setup);
   assert.equal(Object.isFrozen(game.pentaryn.senses), true);

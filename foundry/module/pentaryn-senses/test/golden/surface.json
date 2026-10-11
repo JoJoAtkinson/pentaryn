@@ -15,6 +15,7 @@
     "light.prompt": "prompt",
     "light.reconcile": "run",
     "light.status": "status",
+    "light.recent": "recent",
     "light.SPELL_LIGHT.bright": "number",
     "light.SPELL_LIGHT.dim": "number",
     "light.SPELL_LIGHT.angle": "number",

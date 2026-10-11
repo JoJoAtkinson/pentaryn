@@ -1,5 +1,14 @@
 {
-  "value": "<undefined>",
+  "value": {
+    "source": "Actor.actHero000000001.Item.itmLight00000001",
+    "desired": null,
+    "restored": 1,
+    "removed": 0,
+    "lit": null,
+    "created": false,
+    "released": null,
+    "cleared": true
+  },
   "calls": [
     {
       "op": "update",

@@ -378,3 +378,24 @@ export function tokensByActor(scenes) {
   }
   return index;
 }
+
+/**
+ * What one Light reconcile did (finding -14), from its plan and what was actually written:
+ *   { source, desired, restored, removed, lit, created, released, cleared }
+ * restored / removed count the tokens given back their light and the squares deleted; lit is the
+ * token id now lit (null for none); created whether a square was placed; released the other Light
+ * whose cast let go of this token (two casters); cleared whether this Light's own cast was cleared
+ * (its token or scene is gone). `extras` overrides what the plan alone would say.
+ */
+export function summarise(plan, extras = {}) {
+  return {
+    source: extras.source ?? null,
+    desired: extras.desired ?? null,
+    restored: extras.restored ?? plan?.restore?.length ?? 0,
+    removed: extras.removed ?? plan?.remove?.length ?? 0,
+    lit: extras.lit !== undefined ? extras.lit : plan?.light?.token ?? null,
+    created: extras.created ?? !!plan?.create,
+    released: extras.released ?? null,
+    cleared: extras.cleared ?? false,
+  };
+}

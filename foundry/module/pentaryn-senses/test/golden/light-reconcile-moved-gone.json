@@ -1,6 +1,18 @@
 {
   "moved": {
-    "value": "<undefined>",
+    "value": {
+      "source": "Actor.actHero000000001.Item.itmLight00000001",
+      "desired": {
+        "scene": "scnCellar0000001",
+        "token": "tokGob0000000002"
+      },
+      "restored": 0,
+      "removed": 0,
+      "lit": null,
+      "created": false,
+      "released": null,
+      "cleared": false
+    },
     "calls": [
       {
         "op": "update",
@@ -13,7 +25,16 @@
     ]
   },
   "gone": {
-    "value": "<undefined>",
+    "value": {
+      "source": "Actor.actHero000000001.Item.itmLight00000001",
+      "desired": null,
+      "restored": 0,
+      "removed": 0,
+      "lit": null,
+      "created": false,
+      "released": null,
+      "cleared": true
+    },
     "calls": [
       {
         "op": "update",
