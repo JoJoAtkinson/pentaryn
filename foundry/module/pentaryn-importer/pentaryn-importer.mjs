@@ -35,6 +35,26 @@ function shout(message) {
   ui.notifications?.error(`${TAG} ${message}`, { permanent: true, console: false });
 }
 
+/**
+ * Shout, then throw: the one shape of every refusal and readback failure (items-journal-3).
+ * @param {typeof PentarynAbort|typeof PentarynAssertionError} ErrorClass
+ * @param {string} message
+ * @returns {never}
+ */
+function refuse(ErrorClass, message) {
+  shout(message);
+  throw new ErrorClass(message);
+}
+
+/**
+ * A readback assertion failure (§8.3): the standard message, shouted, as a PentarynAssertionError.
+ * @param {object} ctx  `assertionMessage` fields
+ * @returns {never}
+ */
+function failAssertion(ctx) {
+  refuse(PentarynAssertionError, assertionMessage(ctx));
+}
+
 /* -------------------------------------------------------------------------------------------- */
 /*  Fetch                                                                                         */
 /* -------------------------------------------------------------------------------------------- */
@@ -135,8 +155,7 @@ function assertVersionGate(manifest) {
       "VERSION GATE FAILED — nothing was imported.",
       ...problems.map(p => `  • ${p}`)
     ].join("\n");
-    shout(message);
-    throw new PentarynAbort(message);
+    refuse(PentarynAbort, message);
   }
 
   log(
@@ -161,8 +180,7 @@ function assertNoBadFormulas(actors) {
     + "Nothing was imported.",
     ...hits.map(h => `  • ${h.slug} → ${h.path} = ${JSON.stringify(h.value)}`)
   ].join("\n");
-  shout(message);
-  throw new PentarynAbort(message);
+  refuse(PentarynAbort, message);
 }
 
 /**
@@ -170,9 +188,7 @@ function assertNoBadFormulas(actors) {
  */
 function assertValue(ctx) {
   if (valuesMatch(ctx.expected, ctx.actual)) return;
-  const message = assertionMessage(ctx);
-  shout(message);
-  throw new PentarynAssertionError(message);
+  failAssertion(ctx);
 }
 
 /**
@@ -204,7 +220,7 @@ function assertPrototypeToken(actor, requested, slug) {
       ? (JSON.stringify(expected) === JSON.stringify(actual))
       : valuesMatch(expected, actual);
     if (ok) return;
-    const message = assertionMessage({
+    failAssertion({
       slug,
       path: `prototypeToken.${path}`,
       expected,
@@ -214,8 +230,6 @@ function assertPrototypeToken(actor, requested, slug) {
           + "against PrototypeToken's accepted key set (CONTRACT.md §3.3)."
         : "Foundry accepted the key but stored a different value — check the field's type."
     });
-    shout(message);
-    throw new PentarynAssertionError(message);
   });
 }
 
@@ -237,7 +251,7 @@ function assertActivityIdsSurvived(item, requestedItemData, slug) {
   const live = new Set(item.system.activities.map(a => a._id));
   const missing = requested.filter(id => !live.has(id));
   if (!missing.length) return;
-  const message = assertionMessage({
+  failAssertion({
     slug,
     action: foundry.utils.getProperty(requestedItemData, `flags.${FLAG_SCOPE}.action`),
     path: "system.activities",
@@ -247,8 +261,6 @@ function assertActivityIdsSurvived(item, requestedItemData, slug) {
       + "(CONTRACT.md U7). Every `expected` activity lookup is now unresolvable; §8.2 rule 3 must "
       + "switch to resolving activities by name."
   });
-  shout(message);
-  throw new PentarynAssertionError(message);
 }
 
 /**
@@ -284,7 +296,7 @@ function runExpectedAssertions(actor, expected, slug) {
     const action = spec.action;
     const item = actor.items.find(i => foundry.utils.getProperty(i, `flags.${FLAG_SCOPE}.action`) === action);
     if (!item) {
-      const message = assertionMessage({
+      failAssertion({
         slug,
         action,
         path: `flags.${FLAG_SCOPE}.action`,
@@ -292,8 +304,6 @@ function runExpectedAssertions(actor, expected, slug) {
         actual: actor.items.map(i => foundry.utils.getProperty(i, `flags.${FLAG_SCOPE}.action`)),
         hint: "No embedded Item on the Actor carries this action flag."
       });
-      shout(message);
-      throw new PentarynAssertionError(message);
     }
 
     if ("itemType" in spec) {
@@ -331,7 +341,7 @@ function runExpectedAssertions(actor, expected, slug) {
     for (const activitySpec of spec.activities ?? []) {
       const activity = item.system.activities.get(activitySpec.id);   // §8.2 rule 3
       if (!activity) {
-        const message = assertionMessage({
+        failAssertion({
           slug,
           action,
           activityId: activitySpec.id,
@@ -340,8 +350,6 @@ function runExpectedAssertions(actor, expected, slug) {
           actual: item.system.activities.map(a => a._id),
           hint: "Activity id not present on the saved Item — see CONTRACT.md U7."
         });
-        shout(message);
-        throw new PentarynAssertionError(message);
       }
       for (const [path, value] of Object.entries(activitySpec)) {
         if (path === "id") continue;                     // the lookup key, not an assertion
@@ -431,7 +439,7 @@ async function replaceItems(actor, itemsData, unmanagedItems, slug) {
   if (created.length !== itemsData.length) {
     const requestedNames = itemsData.map(i => i.name);
     const createdNames = new Set(created.map(i => i.name));
-    const message = assertionMessage({
+    failAssertion({
       slug,
       path: "actor.items (createEmbeddedDocuments)",
       expected: `${itemsData.length} Item(s): ${requestedNames.join(", ")}`,
@@ -440,8 +448,6 @@ async function replaceItems(actor, itemsData, unmanagedItems, slug) {
         + "Missing: " + (requestedNames.filter(n => !createdNames.has(n)).join(", ") || "(duplicate names — compare by index)")
         + ". Check the dropped Item's `type` and `system` against CONTRACT.md §3."
     });
-    shout(message);
-    throw new PentarynAssertionError(message);
   }
 
   return {
@@ -533,8 +539,7 @@ async function importActors(options = {}) {
 
   if (!game.user?.isGM) {
     const message = "Refusing to import: only a GM can create or update world Actors.";
-    shout(message);
-    throw new PentarynAbort(message);
+    refuse(PentarynAbort, message);
   }
   if (!["keep", "delete"].includes(unmanagedItems)) {
     throw new PentarynAbort(`unmanagedItems must be "keep" or "delete", got ${JSON.stringify(unmanagedItems)}`);
@@ -643,7 +648,7 @@ async function importActors(options = {}) {
           ? undefined
           : actor.items.find(i => foundry.utils.getProperty(i, `flags.${FLAG_SCOPE}.action`) === action);
         if (!liveItem) {
-          const message = assertionMessage({
+          failAssertion({
             slug,
             action: action ?? "(no flags.pentaryn.action in payload)",
             path: `flags.${FLAG_SCOPE}.action`,
@@ -656,8 +661,6 @@ async function importActors(options = {}) {
                 + "`flags.pentaryn.action`. Either way the Item is unaddressable: the next run cannot "
                 + "recognise it as managed and will leave it behind as hand-added."
           });
-          shout(message);
-          throw new PentarynAssertionError(message);
         }
         assertActivityIdsSurvived(liveItem, itemData, slug);
       }

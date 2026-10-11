@@ -185,8 +185,10 @@ const FORMULA_PATTERNS = FORMULA_GLOBS.map(glob => new RegExp(`^${
  * `expected` is the §8 assertion block and is not a Foundry field; the rest are either assigned
  * by Foundry (`_id`) or hand-curated GM work we must never clobber (§3).
  */
-const STRIPPED_ACTOR_KEYS = ["expected", "_id", "img", "folder", "_stats", "ownership"];
-const STRIPPED_ITEM_KEYS = ["expected", "_id", "img", "folder", "_stats", "ownership"];
+const STRIPPED_KEYS = ["expected", "_id", "img", "folder", "_stats", "ownership"];
+/** The two old names (one list since items-journal-3): actor entries and their Items strip the same keys. */
+const STRIPPED_ACTOR_KEYS = STRIPPED_KEYS;
+const STRIPPED_ITEM_KEYS = STRIPPED_KEYS;
 
 /* -------------------------------------------------------------------------------------------- */
 /*  Errors                                                                                        */
@@ -540,7 +542,7 @@ function assertionMessage({ slug, action, activityId, path, expected, actual, hi
 
 export {
   FLAG_SCOPE, CONTRACT_ID, DEFAULT_TIMEOUT_MS, FORMULA_OK, FORMULA_GLOBS, FORMULA_PATTERNS,
-  STRIPPED_ACTOR_KEYS, STRIPPED_ITEM_KEYS, PentarynError, PentarynAbort, PentarynAssertionError,
+  STRIPPED_KEYS, STRIPPED_ACTOR_KEYS, STRIPPED_ITEM_KEYS, PentarynError, PentarynAbort, PentarynAssertionError,
   isPlainObject, normalise, cloneJson, walkStrings, walkLeaves, getPath, versionProblems, lintFormulas,
   preparePayload, toUpdatePayload, toCreatePayload, valuesMatch, assertionMessage,
 };
