@@ -165,10 +165,6 @@ def test_dl2_gc_on_one_host_never_sweeps_a_bundle_the_other_hosts_new_snapshot_r
 
 # ── DL3/DL4: a manifest GC cannot see is treated as "references nothing" ──────
 
-@pytest.mark.xfail(strict=True, reason="DL3: promote_major_release copies the tar, then the "
-                   "sidecar under `except StorageError: pass`; a failed sidecar copy leaves the "
-                   "never-pruned generation without a manifest, GC sweeps its bundles, and the "
-                   "preserved snapshot no longer restores")
 def test_dl3_a_failed_sidecar_copy_at_promotion_makes_the_preserved_generation_unrestorable(
         two_hosts, monkeypatch):
     c = two_hosts.cloud
@@ -203,9 +199,6 @@ def test_dl3_a_failed_sidecar_copy_at_promotion_makes_the_preserved_generation_u
         cloud.discard_fetched(f)
 
 
-@pytest.mark.xfail(strict=True, reason="DL4: _read_sidecar reads an empty or non-JSON sidecar as "
-                   "'absent' and referenced_bundles skips it, so GC sweeps that snapshot's "
-                   "bundles instead of aborting (§3.7: 'cannot tell' must never shrink the mark)")
 def test_dl4_a_torn_sidecar_aborts_gc_instead_of_sweeping_its_bundles(two_hosts):
     c = two_hosts.cloud
     boss = _install(two_hosts.data["boss"])

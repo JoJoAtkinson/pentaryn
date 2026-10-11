@@ -71,6 +71,7 @@ class Storage(Protocol):
     def partials(self, sub: str) -> list[Entry]: ...
     def exists(self, rel: str) -> bool: ...
     def read_text(self, rel: str) -> str | None: ...
+    def read_head(self, rel: str, n: int) -> bytes | None: ...
     def write_text(self, rel: str, text: str) -> None: ...
     def download(self, rel: str, dest: Path) -> Path: ...
     def upload(self, src: Path, rel: str) -> None: ...
@@ -153,6 +154,15 @@ class FolderStorage:
     def read_text(self, rel: str) -> str | None:
         try:
             return self._p(rel).read_text(encoding="utf-8")
+        except FileNotFoundError:
+            return None
+        except OSError as exc:
+            raise StorageError(f"cannot read {rel}: {exc}", verb="cat") from exc
+
+    def read_head(self, rel: str, n: int) -> bytes | None:
+        try:
+            with self._p(rel).open("rb") as fh:
+                return fh.read(n)
         except FileNotFoundError:
             return None
         except OSError as exc:
@@ -314,10 +324,11 @@ class RcloneStorage:
         return ("--stats", "30s", "--stats-one-line", "--log-level", "NOTICE")
 
     def _run(self, verb: str, *args: str, timeout: float | None, input: str | None = None,
-             capture: bool = True, what: str = "") -> subprocess.CompletedProcess:
+             capture: bool = True, what: str = "", text: bool = True
+             ) -> subprocess.CompletedProcess:
         argv = [self.bin, verb, *args, *COMMON_FLAGS]
         assert "--config" not in argv, "never pass --config: rclone finds its own"
-        kwargs: dict = {"text": True, "timeout": timeout}
+        kwargs: dict = {"text": text, "timeout": timeout}
         if input is not None:
             kwargs["input"] = input
         if capture:
@@ -335,7 +346,10 @@ class RcloneStorage:
         return proc
 
     def _fail(self, verb: str, what: str, proc) -> StorageError:
-        err = scrub(getattr(proc, "stderr", "") or "")
+        err = getattr(proc, "stderr", "") or ""
+        if isinstance(err, bytes):
+            err = err.decode("utf-8", "replace")
+        err = scrub(err)
         tail = f": {err.splitlines()[-1]}" if err else ""
         return StorageError(f"rclone {verb} {what} failed (exit {proc.returncode}){tail}",
                             verb=verb, code=proc.returncode)
@@ -344,7 +358,10 @@ class RcloneStorage:
     def _not_found(proc) -> bool:
         if proc.returncode in NOT_FOUND_CODES:
             return True
-        err = (getattr(proc, "stderr", "") or "").lower()
+        err = getattr(proc, "stderr", "") or ""
+        if isinstance(err, bytes):
+            err = err.decode("utf-8", "replace")
+        err = err.lower()
         return proc.returncode != 0 and any(t in err for t in _NOT_FOUND_TEXT)
 
     def _invalidate(self, rel: str) -> None:
@@ -404,6 +421,18 @@ class RcloneStorage:
                 return None
             raise self._fail("cat", rel, proc)
         return proc.stdout
+
+    def read_head(self, rel: str, n: int) -> bytes | None:
+        """The first `n` bytes of a cloud file (``rclone cat --count``), or None when it is
+        not there. Binary: a snapshot's gzip head, for its first tar member."""
+        proc = self._run("cat", "--count", str(int(n)), self._r(_check_rel(rel)),
+                         timeout=self.timeouts["cat"], what=rel, text=False)
+        if proc.returncode != 0:
+            if self._not_found(proc):
+                return None
+            raise self._fail("cat", rel, proc)
+        out = proc.stdout or b""
+        return out.encode("utf-8", "surrogateescape") if isinstance(out, str) else out
 
     def write_text(self, rel: str, text: str) -> None:
         proc = self._run("rcat", self._r(_check_rel(rel)), input=text,

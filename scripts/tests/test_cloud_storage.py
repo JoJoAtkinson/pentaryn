@@ -391,3 +391,21 @@ def test_refresh_tolerates_a_storage_without_the_method():
         def ls(self, sub):
             return []
     storage.refresh(Bare(), "bundles")                      # no AttributeError
+
+
+# ── read_head: the first bytes of a cloud file (review DL4) ─────────────────
+
+def test_read_head_returns_the_first_bytes_or_none(st, tmp_path):
+    src = _src(tmp_path, size=8192)
+    st.upload(src, "world-backups/a.tar.gz")
+    assert st.read_head("world-backups/a.tar.gz", 100) == src.read_bytes()[:100]
+    assert st.read_head("world-backups/a.tar.gz", 10**6) == src.read_bytes()
+    assert st.read_head("world-backups/gone.tar.gz", 100) is None
+
+
+def test_rclone_read_head_is_one_binary_cat_with_a_count(rc, fake, tmp_path):
+    rc.upload(_src(tmp_path), "world-backups/a.tar.gz")
+    fake.calls.clear()
+    rc.read_head("world-backups/a.tar.gz", 4096)
+    [argv] = fake.calls
+    assert argv[1] == "cat" and argv[argv.index("--count") + 1] == "4096"

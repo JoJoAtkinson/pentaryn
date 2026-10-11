@@ -1717,10 +1717,41 @@ def test_referenced_bundles_counts_safety_and_major_release_ignores_full_era(two
     full = _bundled_sidecar({"x": _bundle("module", "x")}, host="mac")
     del full["bundled"]                                      # the full era: lineage only
     _hand_snapshot(c, f"world-{_stamp(3)}-fvtt14.369-mac.tar.gz", sidecar=full)
-    _hand_snapshot(c, f"world-{_stamp(4)}-fvtt14.369-boss.tar.gz")        # no sidecar
+    # No sidecar (review DL4): the tar's first member decides. A full-era tar names
+    # nothing; a bundled tar's marker names its bundles.
+    _legacy_tar(c / "world-backups" / f"world-{_stamp(4)}-fvtt14.369-boss.tar.gz",
+                {"Data/worlds/w/world.json": b'{"id": "w"}'})
+    m = _bundle("module", "m")
+    _marked_tar(c / "world-backups" / f"world-{_stamp(5)}-fvtt14.369-boss.tar.gz", {"m": m})
     _hand_snapshot(c, "world-2026-08-01-120000.tar.gz",                     # untagged
                    sidecar=_bundled_sidecar({"u": _bundle("module", "u")}))
-    assert cloud.referenced_bundles(cloud.store()) == {a, b, s, sysb}
+    assert cloud.referenced_bundles(cloud.store()) == {a, b, s, sysb, m}
+
+
+def _marked_tar(path, modules):
+    """A bundled snapshot tar (its marker first) with no sidecar."""
+    import io
+    data = json.dumps({"bundled": 1, "modules": modules, "systems": {}, "host": "boss",
+                       "core": "14.369"}).encode()
+    with tarfile.open(path, "w:gz") as tar:
+        info = tarfile.TarInfo(cloud.SNAPSHOT_MARKER)
+        info.size = len(data)
+        tar.addfile(info, io.BytesIO(data))
+        info = tarfile.TarInfo("Data/worlds/w/world.json")
+        info.size = 2
+        tar.addfile(info, io.BytesIO(b"{}"))
+    _age(path, 1)
+
+
+@pytest.mark.parametrize("sidecar", [None, "", '{"parent": null, "ancestors": ['])
+def test_referenced_bundles_raises_when_neither_the_sidecar_nor_the_tar_head_can_tell(
+        two_hosts, sidecar):
+    """Review DL4: a lost, empty or torn sidecar over a tar whose head is not a readable
+    snapshot is "cannot tell" — GC must not run, not count it as naming nothing."""
+    c = two_hosts.cloud
+    _hand_snapshot(c, f"world-{_stamp(1)}-fvtt14.369-boss.tar.gz", sidecar=sidecar)
+    with pytest.raises(storage.StorageError, match="missing or unreadable"):
+        cloud.referenced_bundles(cloud.store())
 
 
 def test_referenced_bundles_raises_on_an_unreadable_or_malformed_sidecar(two_hosts,

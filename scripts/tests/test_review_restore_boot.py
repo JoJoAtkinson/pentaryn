@@ -292,9 +292,6 @@ def test_R5_the_prompt_says_when_a_bundle_the_offer_needs_is_missing(two_hosts, 
 
 # ── R6: a promotion whose sidecar copy fails leaves a preserved generation GC can strip ──
 
-@pytest.mark.xfail(strict=True, reason="R6: promote_major_release swallows a failed sidecar copy; "
-                   "the preserved bundled snapshot then reads as full, references nothing, and GC "
-                   "sweeps the bundles only it needs")
 def test_R6_a_preserved_generation_stays_restorable_when_its_sidecar_copy_failed(
         two_hosts, monkeypatch, capsys):
     """`promote_major_release` copies the tar, then the sidecar inside `except StorageError:

@@ -109,3 +109,44 @@ def test_the_next_backup_copies_a_missing_preserved_sidecar_while_its_source_is_
         cloud.backup("shutdown")
     assert json.loads(side.read_text())["bundled"] == 1
     assert "copied the missing sidecar" in capsys.readouterr().out
+
+
+# ── DL4: a lost or torn sidecar is marked from the tar's marker ──────────────
+
+def _rclone(two_hosts, monkeypatch):
+    from cloud_fakes import FakeRclone
+    from scripts.foundry.storage import RcloneStorage
+    fake = FakeRclone(two_hosts.cloud.parent)
+    rc = RcloneStorage(f"fake:{two_hosts.cloud.name}", bin="rclone", runner=fake,
+                       interactive=False)
+    monkeypatch.setattr(storage, "get", lambda: rc)
+    return fake
+
+
+@pytest.mark.parametrize("damage", ["torn", "lost"])
+def test_gc_over_rclone_marks_a_snapshot_whose_sidecar_is_lost_from_its_tar_head(
+        two_hosts, monkeypatch, damage):
+    c = two_hosts.cloud
+    fake = _rclone(two_hosts, monkeypatch)
+    boss = _install(two_hosts.data["boss"])
+    make_module(boss / "Data/modules", "boss-only", version="0.1")
+    with two_hosts.use("boss"):
+        cloud.backup("shutdown")
+    [sb] = _names(c)
+    [only] = [n for n in _bundle_names(c) if n.startswith("module@boss-only@")]
+    side = c / "world-backups" / f"{sb}{cloud.PARENT_SUFFIX}"
+    if damage == "torn":
+        side.write_text(side.read_text()[:40])
+    else:
+        side.unlink()
+    for p in (c / "bundles").iterdir():
+        t = time.time() - 30 * DAY
+        os.utime(p, (t, t))
+    fake.calls.clear()
+    with two_hosts.use("mac"):
+        refs = cloud.referenced_bundles(cloud.store())
+        assert only in refs
+        cloud.bundles_gc_cmd(yes=True)
+    assert only in _bundle_names(c)
+    heads = [a for a in fake.calls if a[1] == "cat" and "--count" in a]
+    assert heads and all(a[-len(storage.COMMON_FLAGS) - 1].endswith(sb) for a in heads)

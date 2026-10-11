@@ -1062,22 +1062,87 @@ def _verify_bundles(st: Storage, name: str, manifest: dict, staged: dict[str, Pa
 
 def referenced_bundles(st: Storage) -> set[str]:
     """GC's mark phase (§3.7): every bundle any tagged snapshot's manifest names — regular
-    and .safety, every host, in world-backups/ and major-release/. A tagged snapshot with
-    no sidecar, or a full-era one, names nothing; untagged ones predate sidecars. A
-    sidecar that cannot be read, or says bundled but cannot be parsed, raises
-    StorageError: the caller must not sweep on a partial mark."""
+    and .safety, every host, in world-backups/ and major-release/. Untagged snapshots
+    predate sidecars and name nothing; a full-era sidecar names nothing.
+
+    "Cannot tell" never shrinks the mark. A tagged snapshot whose sidecar is missing,
+    empty or torn (not JSON) is marked from its tar's first member instead (the
+    authoritative SNAPSHOT_MARKER, read from the first bytes of the tar): a promotion
+    whose sidecar copy failed, a sidecar cut short. A sidecar or tar head that cannot be
+    read, a sidecar that says bundled but is malformed, or a tar head that cannot be
+    parsed raises StorageError: the caller must not sweep on a partial mark."""
+    return _mark(st)[0]
+
+
+def _mark(st: Storage, skip: frozenset[str] = frozenset()
+          ) -> tuple[set[str], set[str]]:
+    """(referenced bundle names, the snapshots read) over fresh listings; snapshots named
+    in `skip` (by `rel`) were read by an earlier pass and are not read again."""
     out: set[str] = set()
+    seen: set[str] = set()
     for folder in (WORLD_BACKUPS, MAJOR_RELEASES):
         for s in snapshots(st, folder, fresh=True):
-            if s.host is None:
+            if s.host is None or s.rel in skip:
                 continue
+            seen.add(s.rel)
             kind, m = _read_sidecar(st, s)
             if kind == "bad":
                 raise StorageError(f"the sidecar of {s.rel} says bundled but its manifest is "
                                    "malformed", verb="cat")
+            if kind == "absent":
+                m = _manifest_from_tar_head(st, s)
             if m is not None:
                 out |= bundles.manifest_names(m)
-    return out
+    return out, seen
+
+
+# How much of a snapshot tar GC reads when its sidecar is lost: the marker is the first
+# member (a few KB of JSON), so the first 256 KiB of the gzip always hold it.
+MARKER_HEAD_BYTES = 256 * 1024
+
+
+def _marker_from_head(head: bytes) -> tuple[bool, dict | None]:
+    """(marker present, its manifest) from the first bytes of a snapshot tar. Raises
+    ValueError when those bytes cannot answer (not gzip, cut inside the first member, a
+    marker that is not a valid manifest)."""
+    try:
+        raw = zlib.decompressobj(16 + zlib.MAX_WBITS).decompress(head, 16 * 1024 * 1024)
+    except zlib.error as exc:
+        raise ValueError(f"not a gzip stream: {exc}") from exc
+    try:
+        with tarfile.open(fileobj=io.BytesIO(raw), mode="r:") as tar:
+            first = tar.next()
+            if first is None:
+                raise ValueError("no first member")
+            if first.name != SNAPSHOT_MARKER:
+                return False, None
+            fh = tar.extractfile(first) if first.isfile() else None
+            body = fh.read() if fh else b""
+            if len(body) != first.size:
+                raise ValueError(f"{SNAPSHOT_MARKER} is cut short")
+    except tarfile.TarError as exc:
+        raise ValueError(f"not a readable tar head: {exc}") from exc
+    try:
+        parsed = _parse_manifest(json.loads(body))
+    except ValueError:
+        parsed = None
+    if parsed is None:
+        raise ValueError(f"its {SNAPSHOT_MARKER} is not a valid manifest")
+    return True, parsed
+
+
+def _manifest_from_tar_head(st: Storage, s: Snapshot) -> dict | None:
+    """The manifest `s`'s tar marker names (None: a full tar, or the tar is gone since
+    the listing — it then needs nothing). Raises StorageError when it cannot tell."""
+    head = st.read_head(s.rel, MARKER_HEAD_BYTES)
+    if head is None:
+        return None
+    try:
+        _marked, m = _marker_from_head(head)
+    except ValueError as exc:
+        raise StorageError(f"the sidecar of {s.rel} is missing or unreadable, and so is its "
+                           f"tar's {SNAPSHOT_MARKER} ({exc})", verb="cat") from exc
+    return m
 
 
 def _gc_after_backup(st: Storage) -> None:
