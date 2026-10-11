@@ -6,7 +6,9 @@ import * as core from "./fixtures/engine.mjs";
 
 const ROOT = new URL("..", import.meta.url);
 
-test("senses-walls-cursors-7: the WASM_STATUS placeholder is gone (module sources and tests)", () => {
-  assert.deepEqual(sourceScan(ROOT, /WASM_STATUS/, { exclude: ["lib/", "test/kit/"] }), []);
-  assert.equal("WASM_STATUS" in core, false);
+const STALE = ["WASM", "STATUS"].join("_");
+
+test("senses-walls-cursors-7: the stale wasm placeholder export is gone (module sources and tests)", () => {
+  assert.deepEqual(sourceScan(ROOT, new RegExp(STALE), { exclude: ["lib/", "test/kit/"] }), []);
+  assert.equal(STALE in core, false);
 });
