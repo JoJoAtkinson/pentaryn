@@ -28,9 +28,11 @@ export const MANIFEST = Object.freeze({
       doc: "Relabel the prototype token and every placed token of the actor this user can edit, where the "
         + "label was the old name or its part before the first comma. Returns the number of labels changed. "
         + "ref: an Actor, a token or placeable, a UUID, a 16-character id or a whole name (exact, then "
-        + "case-insensitive; never a substring). An ambiguous name returns fail(\"AMBIGUOUS\"); a ref that "
-        + "matches nothing rejects with a TypeError (legacy). A rename through actor.update already "
-        + "relabels on the renaming client — call this only to repair.",
+        + "case-insensitive; never a substring); a token or a token's synthetic actor means its base actor. "
+        + "An ambiguous name returns fail(\"AMBIGUOUS\"); a ref that matches nothing rejects with a "
+        + "TypeError (legacy). A rename through actor.update already relabels on the renaming client, "
+        + "without waiting: a sync called before those writes finish repeats them (same values, a second "
+        + "toast). Call this only to repair labels that missed a rename, after the first relabel finished.",
     },
     {
       path: "relabel",

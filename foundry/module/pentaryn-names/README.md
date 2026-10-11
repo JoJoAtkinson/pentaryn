@@ -30,13 +30,15 @@ object. Ask it what it offers: `game.pentaryn.names.describe()` (offline: `test/
 
 | Call | Returns | Notes |
 |---|---|---|
-| `sync(actorRef, oldName, newName)` | number of labels changed (prototype + placed tokens this user can edit) | writes. `actorRef`: an Actor, a token, a UUID, an id or a whole name — never a substring. An ambiguous name returns `{ok: false, code: "AMBIGUOUS", reason}`; a ref that matches nothing rejects with a `TypeError` |
+| `sync(actorRef, oldName, newName)` | number of labels changed (prototype + placed tokens this user can edit) | writes. `actorRef`: an Actor, a token or placeable, a UUID, an id or a whole name — never a substring; a token or a token's synthetic actor means its base (world) actor. An ambiguous name returns `{ok: false, code: "AMBIGUOUS", reason}`; a ref that matches nothing rejects with a `TypeError` |
 | `relabel(label, oldName, newName)` | the new label, or `null` for a nickname | pure preview, safe to call |
 | `shortName(name)` | the part before the first comma, trimmed | pure |
 
 Renaming through `actor.update({name})` already relabels on the renaming client — an eval-js call on
-the GM bridge is that client — so a follow-up `sync()` finds nothing and returns `0`. Call `sync`
-only to repair labels that missed a rename.
+the GM bridge is that client — but without waiting: `await actor.update({name})` resolves while the
+prototype and scene writes are still in flight. A `sync()` called before they finish sees the old
+labels and repeats them (same values, a non-zero count and a second toast). Call `sync` only to
+repair labels that missed a rename, after the first relabel has finished.
 
 Kit members: `describe()`, `version`, `contract`, `settings()` (always `{}`), `trace()`, `uninstall()`.
 
@@ -81,7 +83,9 @@ Every client remembers the old name in `preUpdateActor`; only the client that ma
 - Quirks pinned as-is: an old name that is only a comma tail (`",x"`) has short form `""`, which an
   empty label matches; a padded old name (`" Bob "`) has a trimmed short form that differs from it,
   so `"Bob"` follows it.
-- `sync` given a token or placeable resolves to that token's own (synthetic) actor, not the base actor.
+- `sync` given a token, placeable, token id/uuid or a token's synthetic actor works on the **base**
+  actor: a synthetic actor's update goes to its ActorDelta, which has no prototype token, so the
+  prototype relabel would be lost. Its placed-token pass covers every token of that base actor.
 - `lib/` and `test/kit/` are vendored copies: edit `foundry/lib/`, then `vendor.py sync names`.
 - `module.json` is read at Foundry startup: any change to it needs a restart, not a reload.
 - Never run `GOLDEN_UPDATE=1 node test/run.mjs` mid-refactor — a refactor must not move a golden.
