@@ -17,8 +17,8 @@ import {
   MODULE, SIZE_KEYS, SIZE_BY_KEY, normalisePrompt, nameplate, preview, stripHtml, distanceLine, dialogPosition,
   footprintLabel, behindDoor
 } from "./geometry-core.mjs";
-import { markerSizeOfToken, promptText, markerActor, art, EMPTY_TINT, FULL_TINT } from "./markers.mjs";
-import { panelFor, resolveItemEmbeds } from "./model.mjs";
+import { markerSizeOfToken, promptText, markerActor, art, EMPTY_TINT, FULL_TINT } from "./markers-adapter.mjs";
+import { panelFor, resolveItemEmbeds } from "./scene-adapter.mjs";
 import * as Typeahead from "./typeahead.mjs";
 import { setting } from "./settings.mjs";
 

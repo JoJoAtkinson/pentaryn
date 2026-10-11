@@ -19,7 +19,7 @@ await captureConsole(() => import("../prompts.mjs"));
 F.fire("init");   // registers the settings gather's manifest ring is written to
 const R = await import("../replace.mjs");
 const { gather } = await import("../gather.mjs");
-const { SIZE_WORDS } = await import("../patch.mjs");
+const { SIZE_WORDS } = await import("../actor-patch-adapter.mjs");
 
 /** Generated ids (16 digits) → <id1>, <id2>… by first appearance; `at` timestamps are mocked. */
 function ids(v) {

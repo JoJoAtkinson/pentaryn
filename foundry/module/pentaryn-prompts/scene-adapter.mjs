@@ -9,8 +9,8 @@ import {
   MODULE, SIZE_BY_KEY, DND_SIZE_WIDTH, HEX_RULE, makeRel, testPoints, dedupeSquares, occupiedSquares, atFeet, stripHtml,
   panelSplit, isSeen, crXp, wallSegment, lightText, ownTextUuid
 } from "./geometry-core.mjs";
-import { markerSizeOfToken, promptText, FOLDER_NAME } from "./markers.mjs";
-import { makeSight, heightWarning } from "./los.mjs";
+import { markerSizeOfToken, promptText, FOLDER_NAME } from "./markers-adapter.mjs";
+import { makeSight, heightWarning } from "./sight-adapter.mjs";
 import { isStockLore } from "./build-core.mjs";
 import { settingReader } from "./lib/settings.mjs";
 import { makeLog } from "./lib/log.mjs";

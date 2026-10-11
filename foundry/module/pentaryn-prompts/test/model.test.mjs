@@ -13,8 +13,8 @@ import { installWorld, addScene, captureConsole, MODULE } from "./fixtures/world
 import { makeDoc, StubCollection } from "./kit/foundry-stub.mjs";
 
 const F = await installWorld();
-const M = await import("../model.mjs");
-const L = await import("../los.mjs");
+const M = await import("../scene-adapter.mjs");
+const L = await import("../sight-adapter.mjs");
 
 const prov = (markerId, call = "pm-0001", extra = {}) => ({ prompt: `built from ${markerId}`, size: "mid", sceneId: "s2", markerId, call, pid: "p1", at: 1, kind: "npc", note: "", ...extra });
 

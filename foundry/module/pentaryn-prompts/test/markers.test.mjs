@@ -9,7 +9,7 @@ import { pinJSON } from "./kit/harness.mjs";
 import { installWorld, captureConsole, MODULE } from "./fixtures/world.mjs";
 
 const F = await installWorld();
-const M = await import("../markers.mjs");
+const M = await import("../markers-adapter.mjs");
 
 test("constants, art paths and names", () => {
   assert.deepEqual([M.FOLDER_NAME, M.EMPTY_TINT, M.FULL_TINT], ["Prompt Markers", "#ff6b6b", "#ffffff"]);

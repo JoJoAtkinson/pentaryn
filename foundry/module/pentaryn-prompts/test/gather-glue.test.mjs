@@ -16,7 +16,7 @@ const F = await installWorld();
 await captureConsole(() => import("../prompts.mjs"));
 F.fire("init");
 const G = await import("../gather.mjs");
-const { renderCrops } = await import("../crops.mjs");
+const { renderCrops } = await import("../crops-adapter.mjs");
 
 /* ── a recording canvas, image loading and the file picker ─────────────── */
 

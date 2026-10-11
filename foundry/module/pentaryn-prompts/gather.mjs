@@ -3,9 +3,9 @@
  */
 
 import { MODULE, VERSION, GATHER_CHARS, buildView, renderGather, codedError, idCompare, sceneRefs, CURRENT_SCENE } from "./geometry-core.mjs";
-import { sceneModel, promptTokens, resolveItemEmbeds } from "./model.mjs";
-import { promptText } from "./markers.mjs";
-import { renderCrops } from "./crops.mjs";
+import { sceneModel, promptTokens, resolveItemEmbeds } from "./scene-adapter.mjs";
+import { promptText } from "./markers-adapter.mjs";
+import { renderCrops } from "./crops-adapter.mjs";
 import { cropsDecision } from "./core/text.mjs";
 import { setting, manifests, manifestFor, storeManifest } from "./settings.mjs";
 import { CROP_DIR } from "./prompts-core.mjs";

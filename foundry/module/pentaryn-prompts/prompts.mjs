@@ -8,10 +8,10 @@
  */
 
 import { MODULE, VERSION, SIZE_KEYS, SIZE_BY_KEY, footprintLabel, codedError } from "./geometry-core.mjs";
-import { ensureMarkers, onPreCreateToken, isPromptToken, markerSizeOfToken, markerSizeOfActor, markerActor, promptText } from "./markers.mjs";
+import { ensureMarkers, onPreCreateToken, isPromptToken, markerSizeOfToken, markerSizeOfActor, markerActor, promptText } from "./markers-adapter.mjs";
 import { PromptDialog } from "./dialog.mjs";
 import * as Typeahead from "./typeahead.mjs";
-import { sceneModel, seesCount } from "./model.mjs";
+import { sceneModel, seesCount } from "./scene-adapter.mjs";
 import { gather, crops, list, show } from "./gather.mjs";
 import { DROP_WINDOW_MS, matchesDrop } from "./core/drop.mjs";
 import { wrapMethod } from "./lib/patch.mjs";

@@ -52,7 +52,7 @@ addItemPack(F, EQ, [
 ]);
 addItemPack(F, "dnd-players-handbook.feats", [{ _id: "ftAlert000000001", name: "Alert", type: "feat", system: {} }]);
 globalThis.dnd5e = { registry: { spellLists: { forType: () => null } } };
-const C = await import("../character.mjs");
+const C = await import("../character-adapter.mjs");
 const R = await import("../replace.mjs");
 
 const ARRAY = { str: 8, dex: 14, con: 13, int: 10, wis: 15, cha: 12 };

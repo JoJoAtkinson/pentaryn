@@ -39,7 +39,7 @@ test("prompts-lookup-9: one size-word table and one CR parser in core/size.mjs",
   assert.equal(PC_SIZE_WORDS.small, "sm");
   assert.deepEqual(["1/4", 0.25, "3", 3, "", null, undefined, "x", " 1 / 2 ", "1/8"].map(parseCr),
     [0.25, 0.25, 3, 3, null, null, null, null, 0.5, 0.125]);
-  const patch = await import("../patch.mjs");
+  const patch = await import("../actor-patch-adapter.mjs");
   assert.equal(patch.SIZE_WORDS, SIZE_WORDS);
 });
 

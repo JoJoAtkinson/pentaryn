@@ -13,7 +13,7 @@ const F = await installWorld();
 addItemPack(F, "dnd5e.spells", [{ _id: "spFireBolt000001", name: "Fire Bolt", type: "spell" }, { _id: "spShield00000001", name: "Shield", type: "spell" }]);
 F.game.packs.set("world.actors", { metadata: { type: "Actor" }, getIndex: async () => [] });
 F.CONFIG.DND5E = { languages: { standard: { label: "Standard", selectable: false, children: { common: "Common", giant: "Giant" } } } };
-const N = await import("../npc.mjs");
+const N = await import("../npc-adapter.mjs");
 
 const NPC = { name: "Ogre", creatureType: "giant", size: "large", cr: "2", hpAverage: 59, hpFormula: "7d10+21", acMode: "flat", acValue: 11,
   abilities: { str: 19, dex: 8, con: 16, int: 5, wis: 7, cha: 7 }, languages: ["Common", "Giant", "Ogrish"], languagesCustom: "grunts" };

@@ -36,7 +36,7 @@ addItemPack(F, "dnd-players-handbook.spells", [
 addItemPack(F, "dnd-players-handbook.equipment", [{ _id: "eqBook0000000001", name: "Book", type: "loot" }]);
 addItemPack(F, "dnd-players-handbook.feats", [{ _id: "ftTough000000001", name: "Tough", type: "equipment" }]);
 globalThis.dnd5e = { registry: { spellLists: { forType: (type, id) => (id === "wizard" ? { has: s => s.name !== "Cure Wounds" } : null) } } };
-const C = await import("../character.mjs");
+const C = await import("../character-adapter.mjs");
 
 test("prompts-lookup-10: the pool match order (a pasted copy of character.mjs:214-216) over the finding's table", () => {
   const pool = ["Compendium.a.Item.1", "Compendium.a.Item.2"];

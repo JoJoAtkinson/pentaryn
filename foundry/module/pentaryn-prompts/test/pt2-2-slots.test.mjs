@@ -126,7 +126,7 @@ const SORCERER_SLOTS = [
 
 test("PT2-2: the dry run's preview fills every spell slot and the sheet line reads them back", async () => {
   await withFoundry(async () => {
-    const { previewCharacter } = await import("../character.mjs");
+    const { previewCharacter } = await import("../character-adapter.mjs");
     const report = await previewCharacter({ name: "ZZ Sorcerer 5" }, resolvedFor("sorcerer", "Sorcerer"));
     assert.deepEqual(report.summary.slots, SORCERER_SLOTS);
     assert.match(sheetLine(report.summary), /slots 1st 4\/4, 2nd 3\/3, 3rd 2\/2$/);
@@ -135,7 +135,7 @@ test("PT2-2: the dry run's preview fills every spell slot and the sheet line rea
 
 test("PT2-2: the real build commits full leveled slots, in the same write as full HP", async () => {
   await withFoundry(async () => {
-    const { buildCharacter } = await import("../character.mjs");
+    const { buildCharacter } = await import("../character-adapter.mjs");
     const { actor, report } = await buildCharacter({ name: "ZZ Sorcerer 5" }, resolvedFor("sorcerer", "Sorcerer"));
     const src = actor._source.system.spells ?? {};
     assert.deepEqual([src.spell1?.value, src.spell2?.value, src.spell3?.value], [4, 3, 2]);
@@ -149,7 +149,7 @@ test("PT2-2: the real build commits full leveled slots, in the same write as ful
 
 test("PT2-2: pact slots are filled too (warlock), dry run and real run", async () => {
   await withFoundry(async () => {
-    const { previewCharacter, buildCharacter } = await import("../character.mjs");
+    const { previewCharacter, buildCharacter } = await import("../character-adapter.mjs");
     const pact = [{ key: "pact", level: 3, type: "pact", value: 2, max: 2 }];
     const pre = await previewCharacter({ name: "ZZ Warlock 5" }, resolvedFor("warlock", "Warlock"));
     assert.deepEqual(pre.summary.slots, pact);

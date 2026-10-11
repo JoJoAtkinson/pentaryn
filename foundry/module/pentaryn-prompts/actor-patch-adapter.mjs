@@ -28,7 +28,7 @@
 import { DND_SIZE_WIDTH, codedError } from "./geometry-core.mjs";
 import { PATCH_KEYS } from "./prompts-core.mjs";
 import { SIZE_WORDS } from "./core/size.mjs";
-import { findItem, notFound } from "./character.mjs";
+import { findItem, notFound } from "./character-adapter.mjs";
 import { flattenLanguages, languageKeys, fixAttunement } from "./build-core.mjs";
 
 const LANG_PATH = "system.traits.languages.value";

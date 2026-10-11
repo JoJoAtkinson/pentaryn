@@ -8,7 +8,7 @@ import assert from "node:assert/strict";
 import { installWorld, captureConsole, addScene, MODULE } from "./fixtures/world.mjs";
 
 const F = await installWorld();
-const M = await import("../model.mjs");
+const M = await import("../scene-adapter.mjs");
 const G = await import("../gather.mjs");
 
 function debugLines(fn) {

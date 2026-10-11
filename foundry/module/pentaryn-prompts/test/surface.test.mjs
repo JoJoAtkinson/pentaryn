@@ -11,6 +11,9 @@ import { installWorld } from "./fixtures/world.mjs";
 
 const CORES = ["geometry-core", "build-core", "npc-core", "readback-core"];
 const GLUE = ["markers", "model", "los", "crops", "gather", "replace", "patch", "character", "npc", "typeahead", "dialog", "prompts"];
+/** Import paths only: the golden keeps each file's old name; guide step 10 renamed the adapters. */
+const PATH = { markers: "markers-adapter", model: "scene-adapter", los: "sight-adapter", crops: "crops-adapter",
+  patch: "actor-patch-adapter", character: "character-adapter", npc: "npc-adapter" };
 
 test("core exports (geometry-core 83, build-core 33, npc-core 14, readback-core 10) load with no Foundry", async () => {
   const out = {};
@@ -24,7 +27,7 @@ test("glue exports by name and type (prompts.mjs exports nothing)", async () => 
   await installWorld();
   const out = {};
   for (const f of GLUE) {
-    const m = await import(`../${f}.mjs`);
+    const m = await import(`../${PATH[f] ?? f}.mjs`);
     out[f] = Object.keys(m).sort().map(k => [k, typeof m[k]]);
   }
   pinJSON("glue-exports", out, import.meta.url);

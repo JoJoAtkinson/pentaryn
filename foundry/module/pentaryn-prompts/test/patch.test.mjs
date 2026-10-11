@@ -22,7 +22,7 @@ F.CONFIG.DND5E = {
   languages: { standard: { label: "Standard", selectable: false, children: { common: "Common", dwarvish: "Dwarvish", goblin: "Goblin" } },
     exotic: { label: "Exotic", children: { primordial: { label: "Primordial", children: { terran: "Terran" } } } } }
 };
-const P = await import("../patch.mjs");
+const P = await import("../actor-patch-adapter.mjs");
 
 test("parseCreatureType, patchSize, SIZE_WORDS, RING_COLOURS, ringData", () => {
   assert.deepEqual(["humanoid (goblinoid)", " Construct ", "x (", "", null, "two words"].map(P.parseCreatureType),

@@ -21,12 +21,12 @@ import {
   MODULE, DND_SIZE_WIDTH, placementFor, needsLockSize, footprintSquares, codedError, errorCode, textHash,
   xpBudget, difficulty, crXp, lightText as lightWords
 } from "./geometry-core.mjs";
-import { markerSizeOfToken, promptText } from "./markers.mjs";
+import { markerSizeOfToken, promptText } from "./markers-adapter.mjs";
 import { manifestFor } from "./settings.mjs";
-import { promptTokens, actorXp, provenanceOf } from "./model.mjs";
-import { checkPatch, applyPatch, patchSize, ringData } from "./patch.mjs";
-import { resolveCharacter, buildCharacter, previewCharacter, findItem, notFound } from "./character.mjs";
-import { checkNpc, createNpc } from "./npc.mjs";
+import { promptTokens, actorXp, provenanceOf } from "./scene-adapter.mjs";
+import { checkPatch, applyPatch, patchSize, ringData } from "./actor-patch-adapter.mjs";
+import { resolveCharacter, buildCharacter, previewCharacter, findItem, notFound } from "./character-adapter.mjs";
+import { checkNpc, createNpc } from "./npc-adapter.mjs";
 import { fixAttunement } from "./build-core.mjs";
 import { specFileUrl } from "./core/text.mjs";
 import { renderReplace, planRow, resultRow, sheetLine, createdText, needsDryRun, goneMessage } from "./readback-core.mjs";
