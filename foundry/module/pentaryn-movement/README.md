@@ -40,11 +40,11 @@ tool works by passing constrain options into the move:
 
 | Option | Where it is honoured |
 |---|---|
-| `ignoreWalls`, `ignoreCost` | core `Token#constrainMovementPath` (`client/canvas/placeables/token.mjs:2943`) |
+| `ignoreWalls`, `ignoreCost` | core `Token#constrainMovementPath` (verified on core 14.369 / dnd5e 6.0.6) |
 | `ignoreTokens` | dnd5e `Token5e#constrainMovementPath` (creature blocking, `movementAutomation: full`) |
 
-Core only offers those flags to the GM, in `Token#_getDragConstrainOptions` (`token.mjs:4923`, which
-dnd5e overrides the same way). This module wraps that method and `TokenLayer#_prepareKeyboardMovementUpdates`,
+Core only offers those flags to the GM, in `Token#_getDragConstrainOptions` (verified on core 14.369 /
+dnd5e 6.0.6; dnd5e overrides it the same way). This module wraps that method and `TokenLayer#_prepareKeyboardMovementUpdates`,
 and adds the three flags when ghost is in effect for that token: a player, owner of the token, with
 the button on, and allowed by the GM policy.
 
@@ -55,7 +55,7 @@ Verify live: ghost on, a player drags through a wall and a creature; ghost off, 
 
 **No GM relay is needed.** Neither core nor the server refuses a player's unconstrained move. The
 constraint runs on the mover's own client (`TokenDocument#preUpdateMovement` passes the mover's
-`constrainOptions` straight into `constrainMovementPath`, `client/documents/token.mjs:1723/1813`).
+`constrainOptions` straight into `constrainMovementPath`; verified on core 14.369 / dnd5e 6.0.6).
 The server's `Token#_preUpdate` only checks that the destination matches the update and the origin
 matches the current position. It never looks at walls. *Verify live as a player.*
 
@@ -86,7 +86,8 @@ matches the current position. It never looks at walls. *Verify live as a player.
   core methods were wrapped (`patched.drag`, `patched.keyboard`).
 - `ghostFor(token)`: is ghost in effect for that placeable on this client.
 - `combatActive(sceneId?)`: does a combat stop ghosting there.
-- `setGhost(true|false)`: same as the player's button.
+- `setGhost(true|false)`: same as the player's button. Player clients only: on a GM client (and so
+  from the MCP bridge) it sets the GM's own client setting, which changes nothing for players.
 - `setPolicy("off"|"exploration"|"always")`: GM only.
 - `pinsUnderTokens(scene?)`: the D5 placement check.
 - `core`: the pure module.
