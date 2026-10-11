@@ -49,7 +49,7 @@ def stage() -> int:
         return rc
     _say(f"▸ target world: {cfg.WORLD_NAME}")
 
-    install(spec.src, spec.dst)          # the same atomic install as module-sync (python-tooling-53)
+    install(spec.src, spec.dst, cmd="stage")   # the same atomic install + stamp as module-sync (-53)
     _say(f"✓ module → {spec.dst}")
 
     shutil.copy2(cfg.ACTORS_JSON, cfg.ACTORS_STAGED)

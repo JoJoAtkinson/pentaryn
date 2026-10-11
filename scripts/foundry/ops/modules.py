@@ -24,6 +24,7 @@ None of them can tell you the module WORKS. They tell you it can load.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import shutil
@@ -33,6 +34,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from . import config as cfg, jsscan
+from .out import append_jsonl, event, now_iso
 from .service import _say
 
 OK, FAIL = 0, 1
@@ -490,12 +492,70 @@ def check_all(*, as_json: bool = False) -> int:
 STAGING_DIRNAME = ".pentaryn-sync"
 
 
+#: written into every installed copy: what was installed, from which commit, when (python-tooling-10).
+#: A dotfile, so express.static does not serve it; excluded from `tree_digest`.
+SYNC_STAMP = ".pentaryn-sync.json"
+
+
+def tree_digest(root: Path, *, ignore: tuple[str, ...] = (SYNC_STAMP,)) -> str:
+    """sha256 over every file's module-relative path and bytes, in path order.
+
+    `ignore` names top-level files left out — the sync stamp, so a repo folder and the copy
+    installed from it digest the same. The updater's drift report uses the same function."""
+    h = hashlib.sha256()
+    files = [p for p in root.rglob("*") if p.is_file()]
+    for p in sorted(files, key=lambda q: q.relative_to(root).as_posix()):
+        rel = p.relative_to(root).as_posix()
+        if rel in ignore:
+            continue
+        h.update(rel.encode("utf-8") + b"\0")
+        h.update(p.read_bytes())
+        h.update(b"\0")
+    return f"sha256:{h.hexdigest()}"
+
+
+def _git_state(src: Path) -> tuple[str | None, bool | None]:
+    """(short HEAD, whether `src` has uncommitted changes) — (None, None) outside a git checkout."""
+    try:
+        rev = subprocess.run(["git", "-C", str(cfg.REPO_ROOT), "rev-parse", "--short", "HEAD"],
+                             capture_output=True, text=True, timeout=10)
+        dirty = subprocess.run(["git", "-C", str(cfg.REPO_ROOT), "status", "--porcelain", "--", str(src)],
+                               capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None, None
+    if rev.returncode != 0 or dirty.returncode != 0:
+        return None, None
+    return rev.stdout.strip() or None, bool(dirty.stdout.strip())
+
+
+def _stamp(src: Path, copy: Path) -> dict:
+    manifest = {}
+    try:
+        manifest = json.loads((copy / "module.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        pass
+    git, dirty = _git_state(src)
+    return {"module": manifest.get("id") or src.name, "version": manifest.get("version"),
+            "digest": tree_digest(copy), "git": git, "dirty": dirty, "synced_at": now_iso()}
+
+
+def _ops_log(cmd: str, record: dict, dst: Path) -> None:
+    """One line in foundry/logs/ops-YYYY-MM.jsonl; a log that cannot be written never fails a sync."""
+    line = {"ts": record["synced_at"], "cmd": cmd,
+            **{k: v for k, v in record.items() if k != "synced_at"}, "dst": str(dst)}
+    try:
+        append_jsonl(cfg.OPS_LOG_DIR / f"ops-{record['synced_at'][:7]}.jsonl", line)
+    except OSError as err:
+        _say(f"▸ ops log not written ({err})")
+    event(cmd, **{k: v for k, v in line.items() if k != "ts"})
+
+
 def staging_dir(dst: Path) -> Path:
     """`<Data>/../.pentaryn-sync` for `dst` = `<Data>/modules/<id>`."""
     return dst.parent.parent.parent / STAGING_DIRNAME
 
 
-def install(src: Path, dst: Path) -> None:
+def install(src: Path, dst: Path, *, cmd: str = "module-sync") -> dict:
     """Copy `src` to `dst` so that `dst` is never left missing or half-written (python-tooling-5a).
 
     `dst` is `<Data>/modules/<id>`. The copy is built in `<Data>/../.pentaryn-sync/<id>.new` (derived
@@ -503,7 +563,11 @@ def install(src: Path, dst: Path) -> None:
     swapped in: the old `dst` is renamed aside to `<name>.old`, the new one renamed into place, the
     old one removed. A copy that fails leaves `dst` exactly as it was; a swap that fails puts the old
     one back. Leftovers of a crashed run are cleared at the start of the next. The installed tree is
-    identical to the one `rmtree` + `copytree` produced.
+    the one `rmtree` + `copytree` produced, plus the stamp.
+
+    The stamp (`SYNC_STAMP`: module, version, digest, git, dirty, synced_at) is written into the copy
+    before the swap; after it, one line goes to `foundry/logs/ops-YYYY-MM.jsonl` with `cmd`
+    (`module-sync`, or `stage` from the actor pipeline). Returns the stamp.
     """
     staging = staging_dir(dst)
     staging.mkdir(parents=True, exist_ok=True)
@@ -512,6 +576,8 @@ def install(src: Path, dst: Path) -> None:
         shutil.rmtree(leftover, ignore_errors=True)
     try:
         shutil.copytree(src, new)
+        record = _stamp(src, new)
+        (new / SYNC_STAMP).write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     except BaseException:
         shutil.rmtree(new, ignore_errors=True)
         raise
@@ -526,6 +592,8 @@ def install(src: Path, dst: Path) -> None:
             os.rename(old, dst)
         raise
     shutil.rmtree(old, ignore_errors=True)
+    _ops_log(cmd, record, dst)
+    return record
 
 
 def sync(name: str) -> int:

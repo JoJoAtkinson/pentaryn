@@ -879,7 +879,8 @@ def test_stage_installs_the_importer_and_stages_actors(staged_paths, capsys):
     spec.dst.mkdir(parents=True)
     (spec.dst / "stale.mjs").write_text("old")            # replaced, not merged
     assert pipeline.stage() == 0
-    cmp = filecmp.dircmp(spec.src, spec.dst)
+    # the sync stamp is the one file the copy adds (python-tooling-10); everything else is the repo's
+    cmp = filecmp.dircmp(spec.src, spec.dst, ignore=[modules.SYNC_STAMP])
     assert not (cmp.left_only or cmp.right_only or cmp.diff_files)
     assert not filecmp.dircmp(spec.src / "sub", spec.dst / "sub").diff_files
     assert (world / "actors.json").read_text() == '{"actors": []}'

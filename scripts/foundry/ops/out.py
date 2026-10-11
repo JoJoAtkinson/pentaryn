@@ -39,7 +39,7 @@ def now_iso() -> str:
 
 
 def append_jsonl(path: Path, record: dict) -> None:
-    """Append one JSON line, creating the parent folder. Never raises past a disk error."""
+    """Append one JSON line, creating the parent folder. A disk error raises OSError."""
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(record, ensure_ascii=False, sort_keys=False) + "\n")

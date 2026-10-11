@@ -71,6 +71,10 @@ def known_worlds() -> list[str]:
 # ── In-house modules ──
 MODULE_SRC_ROOT = REPO_ROOT / "foundry/module"
 
+# Where module installs are recorded, one JSONL file per month (python-tooling-10). Machine-local
+# history like the other files in foundry/logs/; agents never commit it.
+OPS_LOG_DIR = REPO_ROOT / "foundry/logs"
+
 
 def module_dirs(root: Path | None = None) -> list[str]:
     """Every module folder on disk (a directory holding a module.json), sorted.
