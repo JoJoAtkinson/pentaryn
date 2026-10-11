@@ -34,8 +34,7 @@
 
 import * as core from "./journal-core.mjs";
 
-const MOD = core.MOD;
-const QUERY = "pentaryn-journal.ensure";
+const { MODULE, QUERY } = core;
 const OWN = () => CONST.DOCUMENT_OWNERSHIP_LEVELS;
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 const warn = msg => ui.notifications.warn(msg);
@@ -44,11 +43,10 @@ const warn = msg => ui.notifications.warn(msg);
 /*  Personal journals                           */
 /* -------------------------------------------- */
 
-// Plain flag reads, not getFlag: getFlag throws for a scope whose module is not active, and these
-// run inside render hooks and sidebar filters where a throw would cost the whole window.
-const flagsOf = doc => doc?.flags?.[MOD] ?? {};
-const isPersonal = entry => entry?.documentName === "JournalEntry" && flagsOf(entry).kind === "personal";
-const isMine = entry => isPersonal(entry) && flagsOf(entry).userId === game.user.id;
+// Plain flag reads, not getFlag (core.flagsOf): getFlag throws for a scope whose module is not
+// active, and these run inside render hooks and sidebar filters where a throw would cost the window.
+const { flagsOf, isPersonal } = core;
+const isMine = entry => core.isMine(entry, game.user.id);
 
 /** Every personal journal of a user, oldest first. The first one is THE journal. */
 function personalsOf(userId) {
@@ -59,7 +57,7 @@ function personalsOf(userId) {
 function personal(user = game.user) { return personalsOf(user?.id)[0] ?? null; }
 
 function folderName() {
-  return game.settings.get(MOD, "folderName") || game.i18n.localize("PENTARYN_JOURNAL.folder");
+  return game.settings.get(MODULE, "folderName") || game.i18n.localize("PENTARYN_JOURNAL.folder");
 }
 function findFolder() {
   const name = folderName();
@@ -81,7 +79,7 @@ function createPersonal(user, folderId) {
     name: game.i18n.format("PENTARYN_JOURNAL.journalName", { name: user.character?.name ?? user.name }),
     folder: folderId ?? null,
     ownership: { default: OWN().NONE, [user.id]: OWN().OWNER },
-    flags: { [MOD]: { kind: "personal", userId: user.id } }
+    flags: { [MODULE]: { kind: "personal", userId: user.id } }
   });
 }
 
@@ -106,7 +104,7 @@ async function ensureAll() {
   if (!game.user.isGM) return null;
   const players = game.users.filter(u => !u.isGM);
   for (const u of players) {
-    try { await ensureFor(u); } catch (err) { console.warn(`${MOD} | ensure failed for ${u.name}`, err); }
+    try { await ensureFor(u); } catch (err) { console.warn(`${MODULE} | ensure failed for ${u.name}`, err); }
   }
   const stray = game.journal.filter(j => isPersonal(j) && !j.folder);
   if (stray.length) {
@@ -145,7 +143,7 @@ async function ensurePersonalJournal() {
     try {
       await gm.query(QUERY, {}, { timeout: 8000 });
     } catch (err) {
-      console.warn(`${MOD} | ensure query failed`, err);
+      console.warn(`${MODULE} | ensure query failed`, err);
       warn(/timed? ?out/i.test(err?.message ?? "")
         ? game.i18n.localize("PENTARYN_JOURNAL.notify.timeout")
         : game.i18n.localize("PENTARYN_JOURNAL.notify.failed"));
@@ -162,11 +160,21 @@ async function ensurePersonalJournal() {
 /*  What can be saved from a window             */
 /* -------------------------------------------- */
 
-/** Who gets the bar on a journal. Real ownership only, so "Show to players" does not count. */
+/**
+ * Who gets the bar on a journal (core.barVisible). The facts are getters so each is read only when
+ * the rule reaches it, in the rule's order: the permission calls and the setting read happen exactly
+ * where they did when this was one inline expression.
+ */
 function shouldShowBar(entry, user = game.user) {
-  if (!entry || entry.documentName !== "JournalEntry" || isPersonal(entry) || entry.pack) return false;
-  if (user.isGM) return !!game.settings.get(MOD, "gmButton");
-  return entry.testUserPermission(user, "OBSERVER") && !entry.testUserPermission(user, "OWNER");
+  return core.barVisible({
+    get isJournalEntry() { return !!entry && entry.documentName === "JournalEntry"; },
+    get isPersonal() { return isPersonal(entry); },
+    get inPack() { return !!entry.pack; },
+    get isGM() { return user.isGM; },
+    get gmButton() { return game.settings.get(MODULE, "gmButton"); },
+    get observer() { return entry.testUserPermission(user, "OBSERVER"); },
+    get owner() { return entry.testUserPermission(user, "OWNER"); },
+  });
 }
 
 const pileData = actor => actor?.flags?.["item-piles"]?.data;
@@ -194,11 +202,16 @@ function itemSource(shown) {
   return null;
 }
 
+/** Who gets the bar on a pile item (core.itemBarVisible); lazy facts as in shouldShowBar. */
 function shouldShowItemBar(src, user = game.user) {
-  if (!src) return false;
-  if (pileData(src.pile)?.canInspectItems === false) return false;
-  if (user.isGM) return !!game.settings.get(MOD, "gmButton");
-  return src.pile.testUserPermission(user, "OBSERVER") && !src.pile.testUserPermission(user, "OWNER");
+  return core.itemBarVisible({
+    get hasSource() { return !!src; },
+    get canInspectItems() { return pileData(src.pile)?.canInspectItems; },
+    get isGM() { return user.isGM; },
+    get gmButton() { return game.settings.get(MODULE, "gmButton"); },
+    get observer() { return src.pile.testUserPermission(user, "OBSERVER"); },
+    get owner() { return src.pile.testUserPermission(user, "OWNER"); },
+  });
 }
 
 /** A relative uuid made absolute against the document it was written on. */
@@ -276,8 +289,8 @@ function provenanceFor(target) {
     note = canvas.scene.notes.find(n => n.entryId === entry.id) ?? null;
     scene = note ? canvas.scene : null;
   }
-  // Never scene.name: it is GM-authored and players are not shown it.
-  const place = scene?.navName?.trim() || entry.folder?.name || null;
+  // Never scene.name: it is GM-authored and players are not shown it (core.placeFrom takes no scene name).
+  const place = core.placeFrom({ navName: scene?.navName, folderName: entry.folder?.name });
   return { place, noteText: note?.text?.trim() || null };
 }
 
@@ -391,7 +404,7 @@ function fillBar(app, bar, target) {
   const { st, saved } = savedStatus(target);
   const add = `<button type="button" class="pj-add" data-pj="add"><i class="fa-solid fa-book-medical"></i> <span>${esc(game.i18n.localize("PENTARYN_JOURNAL.add"))}</span></button>`;
   if (st === "saved") {
-    const when = saved?.flags?.[MOD]?.source?.updatedAt ?? saved?.flags?.[MOD]?.source?.savedAt;
+    const when = saved?.flags?.[MODULE]?.source?.updatedAt ?? saved?.flags?.[MODULE]?.source?.savedAt;
     bar.innerHTML = `<button type="button" class="pj-open" data-pj="open"><i class="fa-solid fa-book-open"></i> <span>${esc(game.i18n.localize("PENTARYN_JOURNAL.saved"))} · ${esc(game.i18n.localize("PENTARYN_JOURNAL.open"))}</span></button>`
       + (when ? `<span class="pj-hint">${esc(game.i18n.format("PENTARYN_JOURNAL.hint.saved", { when: sinceText(when) }))}</span>` : "");
   } else if (st === "changed") {
@@ -421,7 +434,7 @@ async function onBarClick(app, ev) {
     // The copy is in the journal now; the window it came from has done its job.
     if (result && app !== personalSheet()) await app.close();
   } catch (err) {
-    console.error(`${MOD} | add failed`, err);
+    console.error(`${MODULE} | add failed`, err);
     warn(game.i18n.localize("PENTARYN_JOURNAL.notify.failed"));
   } finally {
     busy.delete(app);
@@ -457,7 +470,7 @@ function decorate(app) {
 function refreshBarsNow() {
   for (const app of foundry.applications.instances.values()) {
     if (!app.rendered) continue;
-    try { decorate(app); } catch (err) { console.warn(`${MOD} | bar refresh skipped`, err); }
+    try { decorate(app); } catch (err) { console.warn(`${MODULE} | bar refresh skipped`, err); }
   }
 }
 const refreshBars = foundry.utils.debounce(refreshBarsNow, 100);
@@ -517,8 +530,13 @@ function applySinglePage(app) {
   const root = app?.element;
   if (!(root instanceof HTMLElement)) return;
   const entry = app.document;
-  const on = !game.user.isGM && game.settings.get(MOD, "singlePageReadables") && !isPersonal(entry)
-    && isEyeReadable(entry) && entry.pages.filter(p => p.testUserPermission(game.user, "LIMITED")).length === 1;
+  const on = core.singlePage({
+    get isGM() { return game.user.isGM; },
+    get setting() { return game.settings.get(MODULE, "singlePageReadables"); },
+    get isPersonal() { return isPersonal(entry); },
+    get isEyeReadable() { return isEyeReadable(entry); },
+    get visiblePages() { return entry.pages.filter(p => p.testUserPermission(game.user, "LIMITED")).length; },
+  });
   root.classList.toggle("pj-single", on);
 }
 
@@ -527,19 +545,19 @@ function applySinglePage(app) {
 /* -------------------------------------------- */
 
 Hooks.once("init", () => {
-  game.settings.register(MOD, "gmButton", {
+  game.settings.register(MODULE, "gmButton", {
     name: "PENTARYN_JOURNAL.settings.gmButton.name",
     hint: "PENTARYN_JOURNAL.settings.gmButton.hint",
     scope: "world", config: true, type: Boolean, default: false,
     onChange: () => refreshBars()
   });
-  game.settings.register(MOD, "singlePageReadables", {
+  game.settings.register(MODULE, "singlePageReadables", {
     name: "PENTARYN_JOURNAL.settings.singlePage.name",
     hint: "PENTARYN_JOURNAL.settings.singlePage.hint",
     scope: "world", config: true, type: Boolean, default: true,
     onChange: () => { for (const a of foundry.applications.instances.values()) if (a.rendered && a.document?.documentName === "JournalEntry") applySinglePage(a); }
   });
-  game.settings.register(MOD, "folderName", {
+  game.settings.register(MODULE, "folderName", {
     scope: "world", config: false, type: String, default: "Player Journals"
   });
 
@@ -553,13 +571,13 @@ Hooks.once("init", () => {
 
 Hooks.once("ready", () => {
   if (game.user.isGM && game.users.activeGM?.isSelf) {
-    ensureAll().catch(err => console.warn(`${MOD} | ensureAll failed`, err));
+    ensureAll().catch(err => console.warn(`${MODULE} | ensureAll failed`, err));
   }
 });
 
 Hooks.on("createUser", user => {
   if (!game.user.isGM || !game.users.activeGM?.isSelf || user.isGM) return;
-  ensureFor(user).catch(err => console.warn(`${MOD} | ensure failed for ${user.name}`, err));
+  ensureFor(user).catch(err => console.warn(`${MODULE} | ensure failed for ${user.name}`, err));
 });
 
 // Remember which pin opened what, for the provenance line. Never cancels the open.
@@ -572,15 +590,15 @@ Hooks.on("activateNote", (note, options) => {
 });
 
 Hooks.on("renderJournalEntrySheet", (app, element, context, options) => {
-  try { decorate(app); } catch (err) { console.warn(`${MOD} | bar skipped`, err); }
-  try { applyHighlight(app, element, options); } catch (err) { console.warn(`${MOD} | highlight skipped`, err); }
-  try { applySinglePage(app); } catch (err) { console.warn(`${MOD} | single-page skipped`, err); }
+  try { decorate(app); } catch (err) { console.warn(`${MODULE} | bar skipped`, err); }
+  try { applyHighlight(app, element, options); } catch (err) { console.warn(`${MODULE} | highlight skipped`, err); }
+  try { applySinglePage(app); } catch (err) { console.warn(`${MODULE} | single-page skipped`, err); }
 });
 Hooks.on("renderImagePopout", app => {
-  try { decorate(app); } catch (err) { console.warn(`${MOD} | bar skipped`, err); }
+  try { decorate(app); } catch (err) { console.warn(`${MODULE} | bar skipped`, err); }
 });
 Hooks.on("renderItemSheet5e", app => {
-  try { decorate(app); } catch (err) { console.warn(`${MOD} | bar skipped`, err); }
+  try { decorate(app); } catch (err) { console.warn(`${MODULE} | bar skipped`, err); }
 });
 Hooks.on("closeJournalEntrySheet", app => { pending.delete(app.document?.id); });
 

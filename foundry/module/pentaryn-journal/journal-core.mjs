@@ -24,7 +24,19 @@
  *   synthetic; real campaign text is only ever checked in a live eval.
  */
 
-export const MOD = "pentaryn-journal";
+export const MODULE = "pentaryn-journal";
+/** The legacy name: the published `core.MOD` and the legacy suite read it. An alias, not a second definition. */
+export { MODULE as MOD };
+export const SHORT = "journal";
+export const NS = "journal";
+export const VERSION = "0.1.0";                          // === module.json version (a test pins it)
+export const CONTRACT = "pentaryn-journal/api@1";
+export const I18N = "PENTARYN_JOURNAL";
+export const CSS = "pj-";
+/** Events this module emits: none. */
+export const HOOKS = Object.freeze({});
+/** The player relay: the active GM creates the sender's own journal (the payload is never read). */
+export const QUERY = "pentaryn-journal.ensure";
 
 /** Refuse to copy a body larger than this (characters ≈ bytes for prose). */
 export const MAX_BODY = 500_000;
@@ -235,7 +247,7 @@ export function hashOf(src) {
   return fnv1a(src?.type === "image" ? `${src.src ?? ""}\n${src.caption ?? ""}` : (src?.body ?? ""));
 }
 
-const sourceOf = p => p?.flags?.[MOD]?.source ?? null;
+const sourceOf = p => p?.flags?.[MODULE]?.source ?? null;
 const idOf = p => p?.id ?? p?._id;
 
 /** The first saved page whose source key matches. */
@@ -280,7 +292,7 @@ export function planSave(savedPages, sources, ctx = {}) {
     });
 
     if (saved) {
-      const upd = { _id: idOf(saved), flags: { [MOD]: { source: { ...old, hash, updatedAt: now } } } };
+      const upd = { _id: idOf(saved), flags: { [MODULE]: { source: { ...old, hash, updatedAt: now } } } };
       if (s.type === "image") Object.assign(upd, { src: s.src ?? "", image: { caption: s.caption ?? "" } });
       else upd.text = { content };
       plan.update.push(upd);
@@ -288,7 +300,7 @@ export function planSave(savedPages, sources, ctx = {}) {
     }
     sort += SORT_DENSITY;
     const data = { name: s.name || "?", type: s.type === "image" ? "image" : "text",
-      title: { show: true, level: 1 }, sort, flags: { [MOD]: { source } } };
+      title: { show: true, level: 1 }, sort, flags: { [MODULE]: { source } } };
     if (s.type === "image") Object.assign(data, { src: s.src ?? "", image: { caption: s.caption ?? "" } });
     else data.text = { format: 1, content };
     plan.create.push(data);
@@ -324,3 +336,59 @@ export function validateEnsure(user, existingId) {
   if (existingId) return { ok: true, entryId: existingId };
   return { ok: true, create: true };
 }
+
+/* -------------------------------------------- */
+/*  Who is shown what (items-journal-34)         */
+/* -------------------------------------------- */
+// The decisions the glue used to make inline, as functions of the booleans it gathers. The glue keeps
+// its permission calls verbatim and passes them in; test/core.test.mjs proves each one equal to the
+// old expression over every input (fixtures/legacy-journal.mjs is the oracle).
+
+/**
+ * This module's flags on a document. A plain read, not getFlag: getFlag throws for a scope whose
+ * module is not active, and these run inside render hooks and sidebar filters.
+ */
+export const flagsOf = doc => doc?.flags?.[MODULE] ?? {};
+
+/** A personal journal: a JournalEntry flagged `{kind: "personal"}`. */
+export const isPersonal = entry => entry?.documentName === "JournalEntry" && flagsOf(entry).kind === "personal";
+
+/** A personal journal that belongs to `userId`. */
+export const isMine = (entry, userId) => isPersonal(entry) && flagsOf(entry).userId === userId;
+
+/**
+ * The provenance place: the scene's navigation name, else the readable's folder, else null.
+ * There is deliberately no scene-name parameter: `scene.name` is GM-authored and players are not
+ * shown it, so it can never reach a player's copy.
+ */
+export const placeFrom = ({ navName, folderName } = {}) => navName?.trim() || folderName || null;
+
+/**
+ * Who gets the bar on a journal. Real ownership only ("Show to players" does not count): a player
+ * who observes but does not own it; a GM only with the `gmButton` setting. Never a personal journal
+ * or a compendium entry. Fields are read in this order and only as far as needed.
+ */
+export function barVisible({ isJournalEntry, isPersonal, inPack, isGM, gmButton, observer, owner }) {
+  if (!isJournalEntry || isPersonal || inPack) return false;
+  if (isGM) return !!gmButton;
+  return observer && !owner;
+}
+
+/**
+ * Who gets the bar on an item shown from a pile: as `barVisible`, against the pile actor, and never
+ * when the pile forbids inspecting items (`canInspectItems === false`, even for a GM).
+ */
+export function itemBarVisible({ hasSource, canInspectItems, isGM, gmButton, observer, owner }) {
+  if (!hasSource) return false;
+  if (canInspectItems === false) return false;
+  if (isGM) return !!gmButton;
+  return observer && !owner;
+}
+
+/**
+ * Whether an eye readable opens as a single page: players only, behind the setting, never a
+ * personal journal, only for a journal some scene Note pins, and only when exactly one page is
+ * visible to the player.
+ */
+export const singlePage = ({ isGM, setting, isPersonal, isEyeReadable, visiblePages }) =>
+  !isGM && setting && !isPersonal && isEyeReadable && visiblePages === 1;
