@@ -90,4 +90,10 @@ export function register() {
   };
 }
 
-Hooks.once("init", register);
+/** FEATURE: the animation is added at init (a raw handler, as it always was). */
+export function install(reg) {
+  reg.once("init", register, { guard: false, label: "glow register" });
+}
+
+/** Nothing to undo: the CONFIG row stays until reload (a light using it would lose its animation). */
+export function uninstall() {}

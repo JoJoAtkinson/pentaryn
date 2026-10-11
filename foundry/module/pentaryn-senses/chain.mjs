@@ -21,12 +21,13 @@
  */
 
 import { MODULE, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainGeometry, chainThickness, resolveTokenRef } from "./senses-core.mjs";
+import { isAnyGM } from "./lib/election.mjs";
 
 const TEX = `modules/${MODULE}/assets/chain-link.webp`;
 const TILE_H = 96; // px height of the source tile
 const SORT_LAYER_FALLBACK = 699; // just under PrimaryCanvasGroup.SORT_LAYERS.TOKENS (700)
 
-const state = { layer: null, tex: null, loading: null, queued: 0, hooks: [] };
+const state = { layer: null, tex: null, loading: null, queued: 0, hooks: [], reg: null };
 
 const warn = (label, err) => console.warn(`${MODULE} | chain ${label}`, err);
 
@@ -46,7 +47,7 @@ export function links(scene = canvas?.scene) {
 }
 
 export async function link(chained, anchor) {
-  if (!game.user?.isGM) return false;
+  if (!isAnyGM()) return false;
   const c = docOf(chained), a = docOf(anchor);
   if (!c?.update || !a?.id || c.id === a.id || c.parent !== a.parent) return false;
   await c.update({ [`flags.${MODULE}.${CHAIN_FLAG}`]: { anchor: a.id } });
@@ -55,7 +56,7 @@ export async function link(chained, anchor) {
 
 /** Remove every chain touching this token (as the chained one or as the anchor). */
 export async function breakChain(token) {
-  if (!game.user?.isGM) return 0;
+  if (!isAnyGM()) return 0;
   const doc = docOf(token);
   const scene = doc?.parent;
   if (!doc?.id || !scene?.tokens) return 0;
@@ -165,7 +166,7 @@ export function paint(pairs) {
   if (!canvas?.ready || !canvas.scene) return;
   const scene = canvas.scene;
   pairs ??= links(scene);
-  const isGM = !!game.user?.isGM;
+  const isGM = isAnyGM();
   const shown = pairs.filter(p => isGM || !scene.tokens.get(p.chained)?.hidden);
   if (!shown.length) return dropLayer();
 
@@ -207,7 +208,7 @@ function hudButton(col, cls, icon, tip, onClick) {
 }
 
 function injectHUD(app, element) {
-  if (!game.user?.isGM) return;
+  if (!isAnyGM()) return;
   const doc = app?.object?.document ?? app?.document ?? null;
   if (!doc?.id || !doc.parent) return;
   const root = element instanceof HTMLElement ? element : element?.[0];
@@ -236,19 +237,13 @@ function injectHUD(app, element) {
 /*  Hooks                                       */
 /* -------------------------------------------- */
 
+/** reg.on with the body guarded: a throw logs `pentaryn-senses | chain <name>` at warn and is swallowed. */
 function on(name, fn) {
-  const id = Hooks.on(name, (...args) => {
-    try {
-      fn(...args);
-    } catch (e) {
-      warn(name, e);
-    }
-  });
-  state.hooks.push([name, id]);
+  state.hooks.push(state.reg.on(name, fn, { guard: "warn", label: `chain ${name}` }));
 }
 
 export function uninstall() {
-  for (const [name, id] of state.hooks.splice(0)) Hooks.off(name, id);
+  for (const id of state.hooks.splice(0)) state.reg?.off(id);
   if (state.queued) cancelAnimationFrame(state.queued);
   state.queued = 0;
   dropLayer();
@@ -266,13 +261,16 @@ function publish() {
   }
 }
 
-function install() {
+/** FEATURE: called synchronously by the entry, at import. */
+export function install(reg, ctx) {
   try {
     globalThis.__pentarynChain?.uninstall?.();
   } catch (e) {
     warn("previous uninstall", e);
   }
   globalThis.__pentarynChain = api;
+  state.reg = reg;
+  ctx.expose({ chainApi: api });
 
   on("canvasTearDown", () => {
     state.layer = null; // Foundry destroys canvas.primary's children under us
@@ -292,17 +290,11 @@ function install() {
   if (game.ready) {
     publish();
     schedule();
-  } else Hooks.once("ready", () => {
+  } else reg.once("ready", () => {
     try {
       publish();
     } catch (e) {
       warn("publish", e);
     }
-  });
-}
-
-try {
-  install();
-} catch (e) {
-  warn("install", e);
+  }, { guard: false, label: "chain publish" });
 }

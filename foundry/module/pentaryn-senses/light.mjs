@@ -27,6 +27,7 @@ import {
   collectSources, litByIn, esc, unsetPath
 } from "./senses-core.mjs";
 import { coreRollMode } from "./settings.mjs";
+import { isActiveGM, isAnyGM } from "./lib/election.mjs";
 
 const CAST = `flags.${MODULE}.lightCast`;
 const LIT = `flags.${MODULE}.lit`;
@@ -35,11 +36,10 @@ const SPELL = `flags.${MODULE}.spellLight`;
 const DEBOUNCE_MS = 250;
 const PICK_TIMEOUT_MS = 60_000;
 
-const state = { hooks: [], timers: new Map(), chain: Promise.resolve(), picking: null };
+const state = { hooks: [], timers: new Map(), chain: Promise.resolve(), picking: null, reg: null, ctx: null };
 
 const warn = (label, err) => console.warn(`${MODULE} | light ${label}`, err);
 const L = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
-const isGM = () => !!game.users?.activeGM?.isSelf;
 
 /** The live item behind an activity (dnd5e hands hooks a clone of the item). */
 function realItem(item) {
@@ -86,7 +86,7 @@ export async function cast(item, target) {
 
 /** Would this user see the token's name on the map? GM and owners always; others only on HOVER / ALWAYS. */
 function canSeeName(tok) {
-  if (game.user?.isGM || tok.isOwner) return true;
+  if (isAnyGM() || tok.isOwner) return true;
   const M = CONST.TOKEN_DISPLAY_MODES;
   return tok.displayName === M.HOVER || tok.displayName === M.ALWAYS;
 }
@@ -291,7 +291,7 @@ export async function hood(item) {
  * toggles it. Lamps, lanterns and candles already have one. → number of torches changed.
  */
 export async function setup() {
-  if (!game.user?.isGM) {
+  if (!isAnyGM()) {
     ui.notifications.warn("pentaryn-senses: setupLight is GM-only.");
     return 0;
   }
@@ -368,7 +368,7 @@ async function tellOwners(item, key) {
 
 /** Bring the world in line with one Light item's flag (or clean up after a vanished item). */
 async function reconcile(source) {
-  if (!isGM() || !source) return;
+  if (!isActiveGM() || !source) return;
   const item = itemFrom(source);
   let desired = item ? readSpellCast(item) : null;
 
@@ -438,7 +438,7 @@ async function reconcile(source) {
   }
 
   // A restored token may carry a lit torch: let the carried-light path re-apply it.
-  const syncLight = game.pentaryn?.senses?.syncLight;
+  const syncLight = state.ctx?.exposed?.syncLight;
   // Always the base actor: syncLight walks its tokens and reads each unlinked one's own items.
   if (syncLight) for (const id of new Set([...touchedActors].map(a => a.id))) {
     const base = game.actors.get(id);
@@ -448,7 +448,7 @@ async function reconcile(source) {
 
 /** Queue a reconcile. Bursts coalesce per source; runs are serial so two never interleave. */
 function queue(source) {
-  if (!source || !isGM()) return;
+  if (!source || !isActiveGM()) return;
   clearTimeout(state.timers.get(source));
   state.timers.set(source, setTimeout(() => {
     state.timers.delete(source);
@@ -467,7 +467,7 @@ function run(source) {
  * floor-token summons. Idempotent. → {sources, removed}.
  */
 export async function sweep() {
-  if (!isGM()) return { sources: 0, removed: 0 };
+  if (!isActiveGM()) return { sources: 0, removed: 0 };
   const sources = allSources();
   for (const item of allItems()) if (readSpellCast(item)) sources.add(item.uuid);
   for (const s of sources) run(s);
@@ -639,7 +639,7 @@ function injectHUD(app, element) {
   const sl = readSpellLight(doc);
   if (!sl) return;
   const item = itemFrom(sl.source);
-  if (!game.user?.isGM && !item?.isOwner) return;
+  if (!isAnyGM() && !item?.isOwner) return;
   const root = element instanceof HTMLElement ? element : element?.[0];
   const col = root?.querySelector(".col.right") ?? root?.querySelector(".right");
   if (!col || col.querySelector(".ps-light-end")) return;
@@ -655,7 +655,7 @@ function injectHUD(app, element) {
     ev.stopPropagation();
     (async () => {
       if (item?.isOwner) await end(item);
-      else if (game.user.isGM) run(sl.source); // the item is gone: put the orphan out
+      else if (isAnyGM()) run(sl.source); // the item is gone: put the orphan out
       app.render?.();
     })().catch(e => warn("hud click", e));
   });
@@ -666,17 +666,10 @@ function injectHUD(app, element) {
 /*  Hooks                                       */
 /* -------------------------------------------- */
 
-/** Hooks.on with the body wrapped. The wrapped function's return value is passed through
- *  (dnd5e.preUseActivity reads `false`). */
+/** reg.on with the body guarded: a throw logs `pentaryn-senses | light <name>` at warn and becomes
+ *  `undefined`; any other return value is passed through (dnd5e.preUseActivity reads `false`). */
 function on(name, fn) {
-  const id = Hooks.on(name, (...args) => {
-    try {
-      return fn(...args);
-    } catch (e) {
-      warn(name, e);
-    }
-  });
-  state.hooks.push([name, id]);
+  state.hooks.push(state.reg.on(name, fn, { guard: "warn", label: `light ${name}` }));
 }
 
 function onUse(activity, usageConfig) {
@@ -699,7 +692,7 @@ function onUsed(activity) {
 }
 
 export function uninstall() {
-  for (const [name, id] of state.hooks.splice(0)) Hooks.off(name, id);
+  for (const id of state.hooks.splice(0)) state.reg?.off(id);
   for (const t of state.timers.values()) clearTimeout(t);
   state.timers.clear();
   state.picking?.cancel();
@@ -710,13 +703,17 @@ export const api = {
   prompt, reconcile: run, uninstall, SPELL_LIGHT, PHB_LIGHT_ACTOR
 };
 
-function install() {
+/** FEATURE: called synchronously by the entry, at import. The hooks keep today's order. */
+export function install(reg, ctx) {
   try {
     globalThis.__pentarynLight?.uninstall?.();
   } catch (e) {
     warn("previous uninstall", e);
   }
   globalThis.__pentarynLight = api;
+  state.reg = reg;
+  state.ctx = ctx;
+  ctx.expose({ lightApi: api });
 
   on("dnd5e.preUseActivity", onUse);
   on("dnd5e.postUseActivity", onUsed);
@@ -729,26 +726,26 @@ function install() {
   // Light activity at once, from the GM (usability Area 6 re-run, W11: it had no flame button
   // until setupLight() was run again).
   on("createItem", (item) => {
-    if (!isGM()) return;
+    if (!isActiveGM()) return;
     ensureTorchActivity(item).catch(e => warn("torch on create", e));
   });
 
   // GM side: the item flag is the desired state; tokens and ambient lights follow it.
   on("updateItem", (item, changes) => {
-    if (!isGM()) return;
+    if (!isActiveGM()) return;
     if (foundry.utils.hasProperty(changes ?? {}, CAST)) queue(item.uuid);
   });
   on("deleteItem", (item) => {
-    if (!isGM()) return;
+    if (!isActiveGM()) return;
     if (readSpellCast(item) || anyLitBy(item.uuid)) queue(item.uuid);
   });
   on("createToken", (token) => {
-    if (!isGM()) return;
+    if (!isActiveGM()) return;
     const sl = readSpellLight(token);
     if (sl) queue(sl.source); // a copy is put back; a portal arrival corrects the flag's scene
   });
   on("deleteToken", (token, options) => {
-    if (!isGM()) return;
+    if (!isActiveGM()) return;
     const sl = readSpellLight(token);
     if (sl) {
       // Core teleport that had to change the token's id says so in `replacements`.
@@ -769,14 +766,14 @@ function install() {
     for (const s of sourcesUnder(allSources(), token.uuid)) queue(s);
   });
   on("deleteActor", (actor) => {
-    if (!isGM()) return;
+    if (!isActiveGM()) return;
     for (const s of sourcesUnder(allSources(), actor.uuid)) queue(s);
   });
   // The GM deleted a Light square by hand: that ends the light. Without this the item still wants
   // the square and the next sweep (GM reload, scene deleted) puts it back. Our own deletions in
   // reconcile() never match the wanted square, or leave a duplicate of it standing.
   on("deleteAmbientLight", (light) => {
-    if (!isGM()) return;
+    if (!isActiveGM()) return;
     const sl = readSpellLight(light);
     if (!sl) return;
     const item = itemFrom(sl.source);
@@ -791,7 +788,7 @@ function install() {
   // The GM dragged a Light square: the light now lives there. reconcile() never moves an
   // AmbientLight (it creates and deletes), so any x/y change is a hand move.
   on("updateAmbientLight", (light, changes) => {
-    if (!isGM() || !(("x" in (changes ?? {})) || ("y" in (changes ?? {})))) return;
+    if (!isActiveGM() || !(("x" in (changes ?? {})) || ("y" in (changes ?? {})))) return;
     const sl = readSpellLight(light);
     if (!sl) return;
     const item = itemFrom(sl.source);
@@ -804,7 +801,7 @@ function install() {
     if (!twin) item.update({ [`${CAST}.x`]: x, [`${CAST}.y`]: y }).catch(e => warn("hand-moved square", e));
   });
   on("deleteScene", () => {
-    if (!isGM()) return;
+    if (!isActiveGM()) return;
     clearTimeout(state.timers.get("__sweep"));
     state.timers.set("__sweep", setTimeout(() => { state.timers.delete("__sweep"); sweep().catch(e => warn("sweep", e)); }, 500));
   });
@@ -820,8 +817,3 @@ function install() {
   }
 }
 
-try {
-  install();
-} catch (e) {
-  warn("install", e);
-}

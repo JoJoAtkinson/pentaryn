@@ -1,112 +1,98 @@
-// Pentaryn Senses — lights carried by items, the Light cantrip, the broken glow, token chains.
-//
-// Token vision from the sheet's senses is dnd5e's own since 6.0 (setting senseVisionSync,
-// TokenDocument5e#_applySenseVision). Our darkvision sync is retired; migrate.mjs resets the sight
-// it left stored on tokens once per world so the native sync can take over. Only the active GM
-// writes, so a change seen by four clients is applied once.
-
-// The broken glowstone light animation rides along; imported so adding it needed no module.json change.
-import "./glow.mjs";
-// The token chain (a drawn chain between two tokens, Token HUD to break it) rides along the same way.
-import "./chain.mjs";
-// The Light cantrip and lit torches/lamps/lanterns (LIGHT-DESIGN.md). Its GM sweep runs after ours.
-import { api as lightApi } from "./light.mjs";
-import { MODULE, carriedLightOf, itemLightUpdate } from "./senses-core.mjs";
-// The one-shot reset of the darkvision sight our retired sync stored (dnd5e 6 senseVisionSync).
-import { resetSight } from "./migrate.mjs";
-import { registerSettings } from "./settings.mjs";
-
-const pending = new Map();
-
-function isWriter() {
-  return game.users.activeGM?.isSelf ?? game.user.isGM;
-}
-
-// ---- Lights carried by items ---------------------------------------------------------------------
-// An item with flags.pentaryn-senses.light (token light data) lights whoever carries it. The token
-// takes that light while the item is on the actor, and goes dark again when it leaves (dropped,
-// traded, taken). Tokens lit this way carry flags.pentaryn-senses.itemLight, so a light set by hand
-// (Marrith's rune glow) is never touched. A torch, lamp or lantern counts while it is lit
-// (flags.pentaryn-senses.lit); the brightest carried light wins. A token lit by the Light cantrip
-// (flags.pentaryn-senses.spellLight) is left to light.mjs until the spell ends.
-
-/** The light the actor's carried items give, or null: a shard always, a torch while lit. */
-function carriedLight(actor) {
-  return carriedLightOf(actor?.items ?? []);
-}
-
 /**
- * The update that brings a token (or the prototype) in line with its carried light, or null
- * (core/light.mjs itemLightUpdate). The prior is cleared with `_del`, else a null value.
+ * Pentaryn Senses (pentaryn-senses) — ENTRY: esmodules[0]. Wiring only, no logic.
+ *
+ * Lights carried by items, the Light cantrip, the broken glow, token chains, and the one-shot reset
+ * of the darkvision sight our retired 0.3 sync stored (token vision from the sheet's senses is
+ * dnd5e's own since 6.0: setting senseVisionSync, TokenDocument5e#_applySenseVision).
+ *
+ * Files, in load order:
+ *   senses-core.mjs   PURE barrel: MODULE, SHORT, NS, VERSION, CONTRACT, I18N, CSS, HOOKS, FLAGS; re-exports
+ *     core/ids.mjs      the module id and every flag path
+ *     core/util.mjs     esc, unsetPath
+ *     core/chain.mjs    chain flag reading, pairs, geometry
+ *     core/light.mjs    light profiles, the carried-light rule, the Light cantrip's plan
+ *     core/migrate.mjs  the darkvision reset plan
+ *     core/glow.mjs     the broken glow's wave maths
+ *   settings.mjs      SETTINGS (the sightReset store row) and the setting readers
+ *   glow.mjs          feature: the "Broken glow (wandering)" light animation, added at init
+ *   chain.mjs         feature: token chains (drawing, Token HUD, link/break)
+ *   light.mjs         feature: the Light cantrip and lit torches, lamps and lanterns
+ *   carried.mjs       feature: lights carried by items
+ *   migrate.mjs       feature: the one-shot darkvision sight reset
+ *   lib/*.mjs         vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
+ *
+ * Lifecycle: every feature installs synchronously in this body, so this module's hooks keep their
+ * place against other modules' (the dnd5e.preUseActivity veto order) · init → settings · ready →
+ * publish, then, on the writer's client only, the reset → the carried-light sync → the Light sweep.
  */
-function lightUpdate(doc, light) {
-  return itemLightUpdate(doc, light, { flatten: foundry.utils.flattenObject, clone: foundry.utils.deepClone, del: globalThis._del ?? null });
-}
 
-async function syncLight(actor) {
-  if (!actor || actor.pack) return 0;
-  let count = 0;
-  const light = carriedLight(actor);
-  const proto = lightUpdate(actor.prototypeToken, light);
-  if (proto) {
-    const u = {};
-    for (const [k, v] of Object.entries(proto)) u[`prototypeToken.${k}`] = v;
-    await actor.update(u);
-    count++;
-  }
-  for (const scene of game.scenes) {
-    const updates = [];
-    for (const t of scene.tokens) {
-      if (t.actorId !== actor.id) continue;
-      const u = lightUpdate(t, t.actorLink ? light : carriedLight(t.actor ?? actor));
-      if (u) updates.push({ _id: t.id, ...u });
-    }
-    if (updates.length) {
-      await scene.updateEmbeddedDocuments("Token", updates);
-      count += updates.length;
-    }
-  }
-  return count;
-}
+import { MODULE, HOOKS, VERSION } from "./senses-core.mjs";
+import { registerSettings, setting } from "./settings.mjs";
+import { makeLog } from "./lib/log.mjs";
+import { emitter, hookRegistry } from "./lib/hooks.mjs";
+import { isActiveGM, isActiveGMOrLoneGM } from "./lib/election.mjs";
+import * as glow from "./glow.mjs";
+import * as chain from "./chain.mjs";
+import * as light from "./light.mjs";
+import * as carried from "./carried.mjs";
+import * as migrate from "./migrate.mjs";
 
-/** Coalesce bursts (equipping an item fires several hooks) into one sync per actor. */
-function schedule(actor) {
-  if (!actor || actor.documentName !== "Actor" || !isWriter()) return;
-  clearTimeout(pending.get(actor.id));
-  pending.set(actor.id, setTimeout(() => { pending.delete(actor.id); syncLight(actor); }, 250));
-}
+/** Features in load order (the hook registration order is pinned by test/golden/hooks.json). */
+const FEATURES = [glow, chain, light, carried, migrate];
 
-const actorOf = (doc) => {
-  let p = doc?.parent;
-  while (p && p.documentName !== "Actor") p = p.parent;
-  return p;
+const log = makeLog(MODULE);
+const reg = hookRegistry(MODULE, log);
+
+const ctx = {
+  log,
+  reg,
+  setting,
+  emit: emitter(MODULE, HOOKS, { log, version: VERSION }),
+  api: null,
+  contributions: [],
+  exposed: {},
+  expose(accessors) {
+    Object.assign(ctx.exposed, accessors);
+  },
+  uninstall,
 };
 
-Hooks.on("updateActor", (actor) => schedule(actor));
-for (const verb of ["create", "update", "delete"]) {
-  Hooks.on(`${verb}Item`, (item) => schedule(actorOf(item)));
-  Hooks.on(`${verb}ActiveEffect`, (effect) => schedule(actorOf(effect)));
+function install() {
+  for (const feature of FEATURES) {
+    const contribution = feature.install(reg, ctx);
+    if (contribution) ctx.contributions.push(contribution);
+  }
 }
-// A token placed from a stale prototype, or before this module existed.
-Hooks.on("createToken", (token) => { if (token.actor) schedule(token.actor); });
 
-Hooks.once("init", () => registerSettings());
+/** Remove every hook and feature state. */
+function uninstall() {
+  for (const feature of [...FEATURES].reverse()) feature.uninstall();
+  reg.offAll();
+}
 
-Hooks.once("ready", () => {
-  const api = { syncLight, carriedLight, resetSight, light: lightApi, setupLight: lightApi.setup, syncAll: async () => {
-    let n = 0;
-    for (const a of game.actors) n += await syncLight(a);
-    return n;
-  } };
+function onInit() {
+  registerSettings();
+}
+
+function onReady() {
+  const ex = ctx.exposed;
+  const api = {
+    syncLight: ex.syncLight, carriedLight: ex.carriedLight, resetSight: ex.resetSight,
+    light: ex.lightApi, setupLight: ex.lightApi.setup, syncAll: ex.syncAll,
+  };
   const current = game.pentaryn;
   if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, senses: api };
   else {
     game.pentaryn ??= {};
     game.pentaryn.senses = api;
   }
-  if (isWriter()) resetSight()
-    .catch(e => console.warn(`${MODULE} | sight reset`, e))
-    .then(() => api.syncAll())
-    .then(() => (game.users.activeGM?.isSelf ? lightApi.sweep() : null))
-    .catch(e => console.warn(`${MODULE} | ready sweep`, e));
-});
+  if (isActiveGMOrLoneGM()) ex.resetSight()
+    .catch(e => log.warn("sight reset", e))
+    .then(() => ex.syncAll())
+    .then(() => (isActiveGM() ? ex.lightApi.sweep() : null))
+    .catch(e => log.warn("ready sweep", e));
+}
+
+install();
+Hooks.once("init", () => onInit());
+Hooks.once("ready", () => onReady());

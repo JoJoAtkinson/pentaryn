@@ -48,3 +48,13 @@ test("hooks: chain.uninstall() removes chain's 8 listeners, light.uninstall() li
     createActiveEffect: 1, updateActiveEffect: 1, deleteActiveEffect: 1,
   });
 });
+
+// Added at guide step 5 (C18): every feature exports install/uninstall and none self-installs —
+// the 35 registrations above all come from the entry's install(), labelled per feature.
+test("features: install and uninstall exported; registrations labelled by feature", async () => {
+  for (const f of ["glow", "chain", "light", "carried", "migrate"]) {
+    const m = await import(`../${f}.mjs`);
+    assert.equal(typeof m.install, "function", `${f}.install`);
+    assert.equal(typeof m.uninstall, "function", `${f}.uninstall`);
+  }
+});

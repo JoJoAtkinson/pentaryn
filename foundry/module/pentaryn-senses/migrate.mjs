@@ -34,3 +34,10 @@ export async function resetSight({ force = false } = {}) {
   console.info(`${MODULE} | sight reset: ${result.prototypes} prototype(s), ${tokens} token(s) back to basic / 0`);
   return result;
 }
+
+/** FEATURE: no hooks; the entry's ready runs the reset through `ctx.exposed.resetSight`. */
+export function install(reg, ctx) {
+  ctx.expose({ resetSight });
+}
+
+export function uninstall() {}
