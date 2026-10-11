@@ -144,6 +144,9 @@ def _gate_imports(spec: cfg.ModuleSpec) -> GateResult:
         exports[path], stars[path] = jsscan.exports_of(src)
 
     def resolve(origin: Path, spec_str: str) -> Path | None:
+        # A query or fragment names the same file to the resolver — tests import
+        # `../x.mjs?second` to defeat the module cache — so drop it before the lookup.
+        spec_str = spec_str.split("?", 1)[0].split("#", 1)[0]
         target = (origin.parent / spec_str).resolve()
         try:
             target.relative_to(spec.src.resolve())

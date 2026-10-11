@@ -68,6 +68,22 @@ def test_prose_and_data_agree(tmp_path, capsys):
     assert f"✗ {res.summary}" in out and all(p.splitlines()[0] in out for p in res.problems)
 
 
+def test_imports_gate_ignores_a_query_or_fragment_on_the_specifier(tmp_path):
+    # Frozen suites import `../x.mjs?second` to defeat the module cache; the file is
+    # the same one, so the gate resolves it and still checks the named exports.
+    ok = _module(tmp_path / "ok", {
+        "main.mjs": 'const { beta } = await import("./lib2.mjs?second");\n'
+                    'import { beta as b2 } from "./lib2.mjs#frag";\n',
+        "lib2.mjs": "export const beta = 1;\n"})
+    res = modules._gate_imports(TmpSpec(ok, check=("imports",)))
+    assert res.ok is True, res.problems
+    bad = _module(tmp_path / "bad", {
+        "main.mjs": 'import { alpha } from "./lib2.mjs?order=b";\n',
+        "lib2.mjs": "export const beta = 1;\n"})
+    res = modules._gate_imports(TmpSpec(bad, check=("imports",)))
+    assert res.ok is False and "alpha" in res.problems[0] and "no such file" not in res.problems[0]
+
+
 def test_node_test_capture_keeps_stdout_clean(tmp_path, capsys):
     if not modules._node_available():
         pytest.skip("node not installed")
