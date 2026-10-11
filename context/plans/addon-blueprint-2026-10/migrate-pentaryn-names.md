@@ -438,3 +438,42 @@ Shared-file edits for their owners (not applied here):
 | `module.json` edits appended to `wave7-restart-batch.md` | no — returned to the orchestrator (owner) |
 | Adjustments rows appended to `adjustments-batch.md` | n/a — none |
 | Still failing, and why | C07 (Wave 7 `module.json`), C39 (ModuleSpec `node-test`) — both shared files |
+
+### Rollback drill (2026-10-11)
+
+Proved that the "revert a module's commits, then sync" recipe works for `names`. The real branch was
+not touched: the drill ran on a throwaway branch, which was deleted.
+
+```
+git checkout -b drill/names-rollback                     # from migrate/wave-1
+# names-only commits since the checkpoint f1ecd11, newest first (10 plain reverts, no conflicts)
+for c in f5819eb ccf90c4 2cc5d48 005f89a af129d1 7983909 5202be0 ddbcca6 d1e27bf 4ad0a4e; do
+  git revert --no-edit $c; done
+# shared-file edits: revert only the names part
+git revert --no-edit --no-commit 170f003                 # module.json of names, pings, cursors
+git restore --staged --worktree foundry/module/pentaryn-{cursors,pings}/module.json
+git commit -m "Revert names part of 170f003 ..."
+# 8435447 (config.py, names + pings ModuleSpecs): hand-reverted the names hunk only
+#   check=(*_STATIC, "node-test", *_BLUEPRINT)  ->  check=(*_STATIC, *_BLUEPRINT)
+make foundry-names-sync                                  # pre-migration code, 78.6 % as small = the step 1 score
+# GM tab reload via eval-js (setTimeout location.reload), then boot probe and live golden
+git checkout migrate/wave-1 && git branch -D drill/names-rollback
+make foundry-names-sync                                  # 100.0 % (44/44)
+# GM tab reload, boot probe again
+```
+
+| Check | Rolled back | Restored |
+|---|---|---|
+| `foundry/module/pentaryn-names` after the reverts | equals `f1ecd11` (diff empty); `node test/run.mjs` 28/28 (the frozen KNOWN pins hold) | `node test/run.mjs` 45/45 |
+| Boot probe | `Object.keys(game.pentaryn.names)` = `sync, relabel, shortName`; `module.api` undefined; root not frozen | keys add `version, contract, settings, trace, uninstall, describe`; frozen; `module.api` object; `describe().methods` = sync, relabel, shortName |
+| Live golden (`scripts/foundry/live-goldens/names.js`) | deterministic part identical to `test/fixtures/live-before.json` (surface, rename, noop, nickname, helpers, toast text and counts); ZZ leftovers 0 | not re-run (boot probe only, as the task asked) |
+| Conformance | 78.6 % (33/42) | 100.0 % (44/44) |
+
+Notes for the next rollback:
+- Do not `git revert` 170f003 or 8435447 whole: they carry pings and cursors rows. Revert with
+  `--no-commit` and restore the other modules' paths, or edit the names hunk by hand.
+- `foundry/logs/**` was dirty throughout and never staged.
+- After `make foundry-names-sync` the GM tab has to be reloaded; the bridge needs a few seconds to
+  reconnect, so the first `eval-js` after the reload can answer "not connected". Retry.
+- No Foundry restart was needed: the reverted `module.json` differs only in `flags.pentaryn` and
+  `compatibility.minimum`, neither of which changes what loads.
