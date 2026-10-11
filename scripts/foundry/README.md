@@ -43,9 +43,9 @@ answered, never the value.
 | `make foundry-boot` | Just the boot choice: newest cloud snapshot (any host) or the local world — see [`ops.md`](../../context/foundry/ops.md) §3 |
 | `make foundry-restore` | List every host's snapshots; `SNAP=<name>` restores one (archives local first) |
 | `make foundry-prune-untagged` | List the untagged pre-2026-10-11 snapshots and delete them on a typed confirmation |
-| `make foundry-cloud` | Storage (rclone/folder), host, role, based-on, newest snapshot per host |
+| `make foundry-cloud` | This host's background upload (in progress / pending / last), storage (rclone/folder), host, role, based-on, newest snapshot per host |
 | `make login` | Pick a campaign and a user from an arrow-key menu, land in the world logged in — no dropdown, no password. Alias: `make vtt-login`. Needs the admin password configured; see [`ops.md`](../../context/foundry/ops.md) §2 |
-| `make vtt-down` | Stop both |
+| `make vtt-down` | Stop both, build the shutdown snapshot, upload it in the background (`make foundry-cloud` shows it; `WAIT=1` waits for the upload) |
 | `make vtt` | Status of Foundry, tunnel, and public reachability |
 | `make tunnel-setup` | **One-time** — cloudflared login, create tunnel, route DNS |
 | `make tunnel-logs` | Tail the tunnel log |
