@@ -248,12 +248,13 @@ export function uninstall() {
   dropLayer();
 }
 
-const api = { link, break: breakChain, links, repaint: schedule, uninstall };
+/** What api.mjs publishes as `chain.*` (and the `game.pentaryn.chain` alias). */
+const exposed = { link, break: breakChain, links, repaint: schedule };
 
 /** FEATURE: called synchronously by the entry, at import. */
 export function install(reg, ctx) {
   state.reg = reg;
-  ctx.expose({ chainApi: api });
+  ctx.expose({ chain: exposed });
 
   on("canvasTearDown", () => {
     state.layer = null; // Foundry destroys canvas.primary's children under us

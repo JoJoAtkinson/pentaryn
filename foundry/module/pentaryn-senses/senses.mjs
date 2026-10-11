@@ -14,6 +14,8 @@
  *     core/migrate.mjs  the darkvision reset plan
  *     core/glow.mjs     the broken glow's wave maths
  *   settings.mjs      SETTINGS (the sightReset store row) and the setting readers
+ *   api-manifest.mjs  PURE API rows (describe() reads them)
+ *   api.mjs           the rows bound to what the features exposed; buildApiFor(ctx)
  *   glow.mjs          feature: the "Broken glow (wandering)" light animation, added at init
  *   chain.mjs         feature: token chains (drawing, Token HUD, link/break)
  *   light.mjs         feature: the Light cantrip and lit torches, lamps and lanterns
@@ -23,13 +25,20 @@
  *
  * Lifecycle: every feature installs synchronously in this body, so this module's hooks keep their
  * place against other modules' (the dnd5e.preUseActivity veto order) · init → settings · ready →
- * publish, then, on the writer's client only, the reset → the carried-light sync → the Light sweep.
+ * build the API, publish senses and the chain alias, then, on the writer's client only, the reset →
+ * the carried-light sync → the Light sweep.
+ *
+ * Hot patch: `game.pentaryn.senses.uninstall()`, then `await import("/modules/pentaryn-senses/senses.mjs?v=2")`.
+ * Only this entry's URL changes, so the re-run registers the SAME handlers again and republishes the
+ * same code as a new API object; any edit to another file needs a reload.
  */
 
-import { MODULE, HOOKS, VERSION } from "./senses-core.mjs";
+import { MODULE, NS, HOOKS, VERSION } from "./senses-core.mjs";
 import { registerSettings, setting } from "./settings.mjs";
+import { buildApiFor } from "./api.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { emitter, hookRegistry } from "./lib/hooks.mjs";
+import { publishNamespace } from "./lib/publish.mjs";
 import { isActiveGM, isActiveGMOrLoneGM } from "./lib/election.mjs";
 import * as glow from "./glow.mjs";
 import * as chain from "./chain.mjs";
@@ -75,32 +84,25 @@ function onInit() {
 }
 
 /**
- * Assign `game.pentaryn[key]`. The root is a plain object every module assigns into: the importer
- * merges into it and nothing freezes it since its keystone (items-journal-1), so the old
- * frozen-root rebuild is gone (kit 1.0.2, J10). A frozen root now throws here and the ready hook
- * stops (Foundry logs it).
+ * Build the API first (a drift throw stops here with one clear line), publish it as
+ * game.pentaryn.senses and module.api, then the chain alias (game.pentaryn.chain, the same frozen
+ * object as senses.chain), then — on the writer's client only — the reset → the carried-light sync
+ * → the Light sweep. A frozen game.pentaryn throws in publishNamespace (kit 1.0.2, J10).
  */
-function publishInto(key, api) {
-  game.pentaryn ??= {};
-  game.pentaryn[key] = api;
-}
-
 function onReady() {
-  const ex = ctx.exposed;
-  const api = {
-    syncLight: ex.syncLight, carriedLight: ex.carriedLight, resetSight: ex.resetSight,
-    light: ex.lightApi, setupLight: ex.lightApi.setup, syncAll: ex.syncAll,
-  };
-  publishInto("senses", api);
   try {
-    publishInto("chain", ex.chainApi);
-  } catch (e) {
-    log.warn("chain publish", e);
+    ctx.api = buildApiFor(ctx);
+  } catch (err) {
+    log.error("API manifest drift — not published", err);
+    return;
   }
+  publishNamespace(NS, ctx.api, { moduleId: MODULE });
+  publishNamespace("chain", ctx.api.chain, { moduleId: MODULE, alias: true });
+  const ex = ctx.exposed;
   if (isActiveGMOrLoneGM()) ex.resetSight()
     .catch(e => log.warn("sight reset", e))
     .then(() => ex.syncAll())
-    .then(() => (isActiveGM() ? ex.lightApi.sweep() : null))
+    .then(() => (isActiveGM() ? ex.light.sweep() : null))
     .catch(e => log.warn("ready sweep", e));
 }
 
@@ -111,6 +113,6 @@ if (globalThis.game?.ready) {
   onInit();
   onReady();
 } else {
-  Hooks.once("init", () => onInit());
-  Hooks.once("ready", () => onReady());
+  Hooks.once("init", onInit);
+  Hooks.once("ready", onReady);
 }

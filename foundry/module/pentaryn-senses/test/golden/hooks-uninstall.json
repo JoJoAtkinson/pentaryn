@@ -24,35 +24,5 @@
     "updateActiveEffect": 1,
     "deleteActiveEffect": 1
   },
-  "afterChain": {
-    "canvasTearDown": 1,
-    "createToken": 2,
-    "deleteToken": 1,
-    "renderTokenHUD": 1,
-    "dnd5e.preUseActivity": 1,
-    "dnd5e.postUseActivity": 1,
-    "dnd5e.renderChatMessage": 1,
-    "renderBaseActorSheet": 1,
-    "createItem": 2,
-    "updateItem": 2,
-    "deleteItem": 2,
-    "deleteActor": 1,
-    "deleteAmbientLight": 1,
-    "updateAmbientLight": 1,
-    "deleteScene": 1,
-    "updateActor": 1,
-    "createActiveEffect": 1,
-    "updateActiveEffect": 1,
-    "deleteActiveEffect": 1
-  },
-  "afterLight": {
-    "createToken": 1,
-    "createItem": 1,
-    "updateItem": 1,
-    "deleteItem": 1,
-    "updateActor": 1,
-    "createActiveEffect": 1,
-    "updateActiveEffect": 1,
-    "deleteActiveEffect": 1
-  }
+  "after": {}
 }

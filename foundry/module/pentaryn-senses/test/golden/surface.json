@@ -14,7 +14,6 @@
     "light.onMe": "onMe",
     "light.prompt": "prompt",
     "light.reconcile": "run",
-    "light.uninstall": "uninstall",
     "light.SPELL_LIGHT.bright": "number",
     "light.SPELL_LIGHT.dim": "number",
     "light.SPELL_LIGHT.angle": "number",
@@ -30,13 +29,22 @@
     "light.SPELL_LIGHT.animation.reverse": "boolean",
     "light.PHB_LIGHT_ACTOR": "string",
     "setupLight": "setup",
-    "syncAll": "syncAll"
+    "syncAll": "syncAll",
+    "chain.link": "link",
+    "chain.break": "breakChain",
+    "chain.links": "links",
+    "chain.repaint": "schedule",
+    "version": "string",
+    "contract": "string",
+    "settings": "settings",
+    "trace": "trace",
+    "uninstall": "uninstall",
+    "describe": ""
   },
   "chain": {
     "link": "link",
     "break": "breakChain",
     "links": "links",
-    "repaint": "schedule",
-    "uninstall": "uninstall"
+    "repaint": "schedule"
   }
 }

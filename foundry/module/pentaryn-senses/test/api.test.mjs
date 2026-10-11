@@ -25,3 +25,38 @@ test("surface: the light API is the same object under senses.light; constants ar
   assert.equal(L.profileFor({ name: "Torch" }).dim, 40);
   assert.equal(L.profileFor({ name: "Light", type: "spell" }), null);
 });
+
+// Added at guide step 7 (C27, C28): the kit-built API — describe() golden, rows ↔ implementations,
+// the alias, module.api, and the kit members.
+import { normaliseDescribe } from "./kit/harness.mjs";
+import { MANIFEST } from "../api-manifest.mjs";
+
+test("describe(): the manifest as JSON (golden); flags and settings as declared", () => {
+  const d = game.pentaryn.senses.describe();
+  pinJSON("describe", normaliseDescribe(d), import.meta.url);
+  assert.equal(d.flagScope, "pentaryn-senses");
+  assert.deepEqual(d.settings.map(s => [s.key, s.store === true]), [["sightReset", true]]);
+  assert.equal(d.hooks.length, 32, "glow 1 + chain 8 + light 15 + carried 8 (the entry's own init/ready are not reg records)");
+  assert.deepEqual(d.events, []);
+});
+
+test("rows ↔ implementations: every row path is a published function, nothing published without a row", () => {
+  const S = game.pentaryn.senses;
+  const at = path => path.split(".").reduce((o, k) => o?.[k], S);
+  for (const row of MANIFEST.rows) assert.equal(typeof at(row.path), "function", row.path);
+  const KIT = ["version", "contract", "settings", "trace", "uninstall", "describe"];
+  const paths = Object.keys(surfaceOf(S)).filter(p => !KIT.includes(p) && !p.startsWith("light.SPELL_LIGHT") && p !== "light.PHB_LIGHT_ACTOR");
+  assert.deepEqual(paths.sort(), MANIFEST.rows.map(r => r.path).sort());
+  assert.equal(S.version, "0.4.1");
+  assert.equal(S.contract, "pentaryn-senses/api@1");
+  assert.deepEqual(S.settings(), { sightReset: { store: true, size: null } });
+  assert.deepEqual(S.trace(), []);
+});
+
+test("publish: module.api is canonical; game.pentaryn.chain is senses.chain; the published record", () => {
+  assert.equal(game.modules.get("pentaryn-senses").api, game.pentaryn.senses);
+  assert.equal(game.pentaryn.chain, game.pentaryn.senses.chain);
+  assert.deepEqual(Object.keys(game.pentaryn.published()).sort(), ["chain", "senses"]);
+  assert.equal(game.pentaryn.published().chain.alias, true);
+  assert.deepEqual(game.pentaryn.namespaces(), ["senses"], "the alias is not a namespace of its own");
+});

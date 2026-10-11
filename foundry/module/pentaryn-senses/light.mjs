@@ -23,7 +23,7 @@
 import {
   MODULE, FLAGS, SPELL_LIGHT, profileFor, profileKey, isLit, isHooded, isLightSpellData, isLightToggle,
   readSpellCast, readSpellLight, castFlag, planSpellLight, spellLightUpdate, restoredLight,
-  sourcesUnder, isPHBLightActorSource, torchActivityData, TORCH_ACTIVITY_ID, PHB_LIGHT_ACTOR,
+  sourcesUnder, isPHBLightActorSource, torchActivityData, TORCH_ACTIVITY_ID,
   esc, unsetPath
 } from "./senses-core.mjs";
 import { coreRollMode } from "./settings.mjs";
@@ -377,16 +377,14 @@ export function uninstall() {
   cancelPick();
 }
 
-export const api = {
-  cast, end, pick, toggle, hood, profileFor, sweep, setup, onMe,
-  prompt, reconcile: run, uninstall, SPELL_LIGHT, PHB_LIGHT_ACTOR
-};
+/** What api.mjs publishes as `light.*` (each function under its own name; reconcile is `run`). */
+const exposed = { cast, end, pick, toggle, hood, profileFor, sweep, setup, onMe, prompt, reconcile: run };
 
 /** FEATURE: called synchronously by the entry, at import. The hooks keep today's order. */
 export function install(reg, ctx) {
   state.reg = reg;
   state.ctx = ctx;
-  ctx.expose({ lightApi: api });
+  ctx.expose({ light: exposed });
   bindActions({ cast, end, onMe, pickAndCast, toggle, hood, run });
 
   on("dnd5e.preUseActivity", onUse);

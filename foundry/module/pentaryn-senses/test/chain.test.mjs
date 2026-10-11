@@ -287,11 +287,13 @@ test("drawing: a paint that throws warns 'chain paint'; a layer that will not de
   ]);
 });
 
-test("chain.uninstall(): cancels a queued repaint and drops the layer", () => {
+// [declared S-1] flipped from chain.uninstall() (a reserved name, C48, gone from the API): the kit
+// member senses.uninstall() does the same for chain (and every other feature).
+test("senses.uninstall(): cancels a queued repaint and drops the layer", () => {
   F.frames.flush();
   C().repaint();
   assert.equal(F.frames.pending(), 1);
-  C().uninstall();
+  game.pentaryn.senses.uninstall();
   assert.equal(F.frames.pending(), 0);
   assert.equal(F.canvas.primary.children.length, 0);
   F.fire("canvasReady");

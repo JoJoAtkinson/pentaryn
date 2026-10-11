@@ -1,0 +1,525 @@
+{
+  "module": "pentaryn-senses",
+  "namespace": "senses",
+  "contract": "pentaryn-senses/api@1",
+  "flagScope": "pentaryn-senses",
+  "methods": [
+    {
+      "path": "syncLight",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        }
+      ],
+      "returns": "Promise<number> documents written",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Actor update (prototypeToken.light, flags.pentaryn-senses.{itemLight,itemLightPrior})",
+        "Token update batch per scene (light, flags.pentaryn-senses.{itemLight,itemLightPrior})"
+      ],
+      "legacy": true,
+      "doc": "Bring the actor's prototype and every token of it in line with the light its carried items give (a shard always, a torch, lamp or lantern while lit). A token lit by the Light cantrip is left alone. The carried-light hooks call it on the active GM's client; any caller writes."
+    },
+    {
+      "path": "carriedLight",
+      "params": [
+        {
+          "name": "actor",
+          "type": "Actor"
+        }
+      ],
+      "returns": "token light data | null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The light the actor's carried items give now (the strongest), or null."
+    },
+    {
+      "path": "resetSight",
+      "params": [
+        {
+          "name": "opts",
+          "optional": true,
+          "type": "{ force?: boolean }",
+          "doc": "force: run again although sightReset is 1"
+        }
+      ],
+      "returns": "Promise<{ prototypes, tokens } | null>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Actor batch (prototypeToken.sight)",
+        "Token batch per scene (sight)",
+        "setting pentaryn-senses.sightReset"
+      ],
+      "nullWhen": "not the active GM, not dnd5e 6+, dnd5e senseVisionSync off, or already done without force",
+      "legacy": true,
+      "doc": "The one-shot reset of the darkvision sight the retired 0.3 sync stored on tokens and prototypes (basic / range 0), so dnd5e's senseVisionSync derives vision from the sheet. Runs at ready on its own."
+    },
+    {
+      "path": "light.cast",
+      "params": [
+        {
+          "name": "item",
+          "type": "Item",
+          "doc": "the Item (a clone from a use hook is resolved to the live one)"
+        },
+        {
+          "name": "target",
+          "type": "{ token } | { x, y } (+ scene?)",
+          "doc": "scene defaults to the viewed scene"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Item update (flags.pentaryn-senses.lightCast)"
+      ],
+      "legacy": true,
+      "doc": "Point a Light cantrip at a token or a square. The owner writes the item flag; the active GM then lights the token (its old light kept) or places an AmbientLight. Casting again moves the light."
+    },
+    {
+      "path": "light.end",
+      "params": [
+        {
+          "name": "item",
+          "type": "Item",
+          "doc": "the Item (a clone from a use hook is resolved to the live one)"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Item update (flags.pentaryn-senses.lightCast = null)"
+      ],
+      "legacy": true,
+      "doc": "Put a Light cantrip out (owner or GM); the active GM restores the token or removes the square."
+    },
+    {
+      "path": "light.pick",
+      "params": [],
+      "returns": "Promise<{ scene, token } | { scene, x, y } | null>",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Wait for a click on a token or a square of the viewed scene. Right-click, Esc, 60 s or a scene change → null. Closes Argon's open panels first."
+    },
+    {
+      "path": "light.toggle",
+      "params": [
+        {
+          "name": "item",
+          "type": "Item",
+          "doc": "the Item (a clone from a use hook is resolved to the live one)"
+        }
+      ],
+      "returns": "Promise<boolean> lit now",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Item update (flags.pentaryn-senses.{lit,hooded})",
+        "ChatMessage"
+      ],
+      "legacy": true,
+      "doc": "Light or douse a torch, lamp, lantern or candle (owner only); one chat line; nothing consumed."
+    },
+    {
+      "path": "light.hood",
+      "params": [
+        {
+          "name": "item",
+          "type": "Item",
+          "doc": "the Item (a clone from a use hook is resolved to the live one)"
+        }
+      ],
+      "returns": "Promise<boolean> hooded now",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Item update (flags.pentaryn-senses.hooded)",
+        "ChatMessage"
+      ],
+      "legacy": true,
+      "doc": "Lower or raise a hooded lantern's hood (bright 0 / dim 5 while lowered); one chat line."
+    },
+    {
+      "path": "light.profileFor",
+      "params": [
+        {
+          "name": "item",
+          "type": "Item",
+          "doc": "the Item (a clone from a use hook is resolved to the live one)"
+        }
+      ],
+      "returns": "light profile | null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The light an item gives when lit: its flags.pentaryn-senses.lightItem override, else the profile by identifier or name (torch, candle, lamp, lantern-hooded, lantern-bullseye)."
+    },
+    {
+      "path": "light.sweep",
+      "params": [],
+      "returns": "Promise<{ sources, removed }>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Token, AmbientLight and Item writes of every reconcile",
+        "Token delete (old PHB Light summons)"
+      ],
+      "legacy": true,
+      "doc": "Active GM: reconcile every Light cantrip and every spell light in the world, then remove the old PHB floor-token summons. Runs at ready on its own. Idempotent."
+    },
+    {
+      "path": "light.setup",
+      "params": [],
+      "returns": "Promise<number> torches changed",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Item update (system.activities.psLightToggle000)"
+      ],
+      "legacy": true,
+      "doc": "Give every Torch the GM can reach a 'Light' activity that toggles it. Idempotent. Also published as setupLight."
+    },
+    {
+      "path": "light.onMe",
+      "params": [
+        {
+          "name": "item",
+          "type": "Item",
+          "doc": "the Item (a clone from a use hook is resolved to the live one)"
+        }
+      ],
+      "returns": "Promise<boolean> | notification",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Item update (flags.pentaryn-senses.lightCast)"
+      ],
+      "legacy": true,
+      "doc": "Cast the Light on the caster's own token on the viewed scene (a controlled one first)."
+    },
+    {
+      "path": "light.prompt",
+      "params": [
+        {
+          "name": "item",
+          "type": "Item",
+          "doc": "the Item (a clone from a use hook is resolved to the live one)"
+        }
+      ],
+      "returns": "Promise<boolean | undefined>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "The 'Where does the light go?' dialog: On me · Pick a target · Not now."
+    },
+    {
+      "path": "light.reconcile",
+      "params": [
+        {
+          "name": "source",
+          "type": "string",
+          "doc": "a Light item uuid"
+        }
+      ],
+      "returns": "Promise<void>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Active GM: bring the world in line with one Light item's flag now (queued behind any running reconcile)."
+    },
+    {
+      "path": "setupLight",
+      "params": [],
+      "returns": "Promise<number> torches changed",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Item update (system.activities.psLightToggle000)"
+      ],
+      "legacy": true,
+      "doc": "The same function as light.setup."
+    },
+    {
+      "path": "syncAll",
+      "params": [],
+      "returns": "Promise<number> documents written",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "syncLight for every world actor, one after another. Runs at ready on the writer's client."
+    },
+    {
+      "path": "chain.link",
+      "params": [
+        {
+          "name": "chained",
+          "type": "Token | TokenDocument | string",
+          "doc": "the chained token (id on the viewed scene, document or placeable)"
+        },
+        {
+          "name": "anchor",
+          "type": "Token | TokenDocument | string",
+          "doc": "on the same scene"
+        }
+      ],
+      "returns": "Promise<boolean>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Token update (flags.pentaryn-senses.chain = { anchor })"
+      ],
+      "legacy": true,
+      "doc": "Chain a token to an anchor token on the same scene: a drawn chain, no movement limit. GM only. Also game.pentaryn.chain.link."
+    },
+    {
+      "path": "chain.break",
+      "params": [
+        {
+          "name": "token",
+          "type": "Token | TokenDocument | string",
+          "doc": "either end"
+        }
+      ],
+      "returns": "Promise<number> chains removed",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Token update batch (flags.pentaryn-senses.chain deleted)"
+      ],
+      "legacy": true,
+      "doc": "Remove every chain touching this token, as the chained end or the anchor. GM only."
+    },
+    {
+      "path": "chain.links",
+      "params": [
+        {
+          "name": "scene",
+          "optional": true,
+          "type": "Scene",
+          "doc": "default: the viewed scene"
+        }
+      ],
+      "returns": "{ chained, anchor }[]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Every drawable chain on a scene, by token id."
+    },
+    {
+      "path": "chain.repaint",
+      "params": [],
+      "returns": "void",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Redraw the chains on this client next frame."
+    }
+  ],
+  "queries": [],
+  "settings": [
+    {
+      "key": "sightReset",
+      "scope": "world",
+      "type": "Number",
+      "default": 0,
+      "store": true,
+      "doc": "one-shot marker: 1 once the retired 0.3 darkvision sight was reset (dnd5e-sense-vision-reset)"
+    }
+  ],
+  "events": [],
+  "hooks": [
+    {
+      "name": "init",
+      "label": "glow register"
+    },
+    {
+      "name": "canvasTearDown",
+      "label": "chain canvasTearDown"
+    },
+    {
+      "name": "canvasReady",
+      "label": "chain canvasReady"
+    },
+    {
+      "name": "refreshToken",
+      "label": "chain refreshToken"
+    },
+    {
+      "name": "destroyToken",
+      "label": "chain destroyToken"
+    },
+    {
+      "name": "createToken",
+      "label": "chain createToken"
+    },
+    {
+      "name": "deleteToken",
+      "label": "chain deleteToken"
+    },
+    {
+      "name": "updateToken",
+      "label": "chain updateToken"
+    },
+    {
+      "name": "renderTokenHUD",
+      "label": "chain renderTokenHUD"
+    },
+    {
+      "name": "dnd5e.preUseActivity",
+      "label": "light dnd5e.preUseActivity"
+    },
+    {
+      "name": "dnd5e.postUseActivity",
+      "label": "light dnd5e.postUseActivity"
+    },
+    {
+      "name": "dnd5e.renderChatMessage",
+      "label": "light dnd5e.renderChatMessage"
+    },
+    {
+      "name": "renderBaseActorSheet",
+      "label": "light renderBaseActorSheet"
+    },
+    {
+      "name": "renderTokenHUD",
+      "label": "light renderTokenHUD"
+    },
+    {
+      "name": "canvasTearDown",
+      "label": "light canvasTearDown"
+    },
+    {
+      "name": "createItem",
+      "label": "light createItem"
+    },
+    {
+      "name": "updateItem",
+      "label": "light updateItem"
+    },
+    {
+      "name": "deleteItem",
+      "label": "light deleteItem"
+    },
+    {
+      "name": "createToken",
+      "label": "light createToken"
+    },
+    {
+      "name": "deleteToken",
+      "label": "light deleteToken"
+    },
+    {
+      "name": "deleteActor",
+      "label": "light deleteActor"
+    },
+    {
+      "name": "deleteAmbientLight",
+      "label": "light deleteAmbientLight"
+    },
+    {
+      "name": "updateAmbientLight",
+      "label": "light updateAmbientLight"
+    },
+    {
+      "name": "deleteScene",
+      "label": "light deleteScene"
+    },
+    {
+      "name": "updateActor",
+      "label": "carried updateActor"
+    },
+    {
+      "name": "createItem",
+      "label": "carried createItem"
+    },
+    {
+      "name": "createActiveEffect",
+      "label": "carried createActiveEffect"
+    },
+    {
+      "name": "updateItem",
+      "label": "carried updateItem"
+    },
+    {
+      "name": "updateActiveEffect",
+      "label": "carried updateActiveEffect"
+    },
+    {
+      "name": "deleteItem",
+      "label": "carried deleteItem"
+    },
+    {
+      "name": "deleteActiveEffect",
+      "label": "carried deleteActiveEffect"
+    },
+    {
+      "name": "createToken",
+      "label": "carried createToken"
+    }
+  ],
+  "patches": [],
+  "flags": {
+    "writes": [
+      "flags.pentaryn-senses.itemLight",
+      "flags.pentaryn-senses.itemLightPrior",
+      "flags.pentaryn-senses.spellLight",
+      "flags.pentaryn-senses.lightCast",
+      "flags.pentaryn-senses.lit",
+      "flags.pentaryn-senses.hooded",
+      "flags.pentaryn-senses.chain"
+    ],
+    "reads": [
+      "flags.pentaryn-senses.light",
+      "flags.pentaryn-senses.lightItem",
+      "flags.pentaryn-senses.lightToggle"
+    ]
+  },
+  "errors": [
+    "NOT_GM",
+    "NO_GM",
+    "NOT_READY",
+    "NOT_FOUND",
+    "AMBIGUOUS",
+    "BAD_ARGS",
+    "REFUSED",
+    "CONFLICT",
+    "UNSUPPORTED",
+    "TIMEOUT",
+    "INTERNAL"
+  ]
+}

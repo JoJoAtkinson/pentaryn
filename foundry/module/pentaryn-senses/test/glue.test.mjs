@@ -65,17 +65,24 @@ test("ready (active GM): publish, then resetSight → syncAll → sweep, in that
   assert.ok(spell < tidy, "reconcile before the old summons go");
 });
 
+// [declared S-1, S-2, -26 alias] flipped from the checkpoint's keys: the API is kit-built (frozen, with
+// version/contract/settings/trace/uninstall/describe and module.api); `chain.uninstall` and
+// `light.uninstall` are gone (reserved, C48: senses.uninstall() replaces them); `senses.chain` exists
+// and IS game.pentaryn.chain.
 test("ready: the published keys (game.pentaryn.senses and game.pentaryn.chain; the full surface is api.test)", () => {
-  assert.deepEqual(Object.keys(game.pentaryn.senses), ["syncLight", "carriedLight", "resetSight", "light", "setupLight", "syncAll"]);
-  assert.deepEqual(Object.keys(game.pentaryn.chain), ["link", "break", "links", "repaint", "uninstall"]);
+  assert.deepEqual(Object.keys(game.pentaryn.senses), [
+    "syncLight", "carriedLight", "resetSight", "light", "setupLight", "syncAll", "chain",
+    "version", "contract", "settings", "trace", "uninstall", "describe",
+  ]);
+  assert.deepEqual(Object.keys(game.pentaryn.chain), ["link", "break", "links", "repaint"]);
   assert.deepEqual(Object.keys(game.pentaryn.senses.light), [
-    "cast", "end", "pick", "toggle", "hood", "profileFor", "sweep", "setup", "onMe", "prompt", "reconcile", "uninstall", "SPELL_LIGHT", "PHB_LIGHT_ACTOR",
+    "cast", "end", "pick", "toggle", "hood", "profileFor", "sweep", "setup", "onMe", "prompt", "reconcile", "SPELL_LIGHT", "PHB_LIGHT_ACTOR",
   ]);
   assert.equal(game.pentaryn.senses.setupLight, game.pentaryn.senses.light.setup);
-  assert.equal(Object.isFrozen(game.pentaryn.senses), false);
-  assert.equal(Object.isFrozen(game.pentaryn.chain), false);
-  assert.equal(game.pentaryn.senses.chain, undefined, "no senses.chain alias today (-26 adds one)");
-  assert.equal(game.modules.get(MODULE).api, undefined, "module.api is not set today");
+  assert.equal(Object.isFrozen(game.pentaryn.senses), true);
+  assert.equal(Object.isFrozen(game.pentaryn.chain), true);
+  assert.equal(game.pentaryn.senses.chain, game.pentaryn.chain, "the alias is the same object");
+  assert.equal(game.modules.get(MODULE).api, game.pentaryn.senses, "module.api is canonical");
 });
 
 test("resetSight: once per world; force runs it again; it refuses off the active GM's terms", async t => {

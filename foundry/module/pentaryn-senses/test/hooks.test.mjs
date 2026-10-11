@@ -36,18 +36,17 @@ test("hooks: init and ready are once-hooks and leave nothing behind", async () =
   assert.equal(F.hooks.length, 34, "nothing registers after import ([declared S-3]: 35 → 34)");
 });
 
-test("hooks: chain.uninstall() removes chain's 8 listeners, light.uninstall() light's 15; carried and glow have none", () => {
+// [declared S-1] flipped from "chain.uninstall() removes chain's 8 listeners, light.uninstall() light's 15;
+// carried and glow have none": those two members are reserved names (C48) and left the API. The kit
+// member game.pentaryn.senses.uninstall() uninstalls every feature and every listener the module added.
+test("hooks: senses.uninstall() removes every listener the module registered", () => {
   const before = F.listeners();
-  game.pentaryn.chain.uninstall();
-  const afterChain = F.listeners();
-  game.pentaryn.senses.light.uninstall();
-  const afterLight = F.listeners();
-  pinJSON("hooks-uninstall", { before, afterChain, afterLight }, import.meta.url);
-  // what remains is the carried-light path (senses.mjs), which has no uninstall
-  assert.deepEqual(afterLight, {
-    createToken: 1, createItem: 1, updateItem: 1, deleteItem: 1, updateActor: 1,
-    createActiveEffect: 1, updateActiveEffect: 1, deleteActiveEffect: 1,
-  });
+  assert.equal(game.pentaryn.chain.uninstall, undefined);
+  assert.equal(game.pentaryn.senses.light.uninstall, undefined);
+  game.pentaryn.senses.uninstall();
+  const after = F.listeners();
+  pinJSON("hooks-uninstall", { before, after }, import.meta.url);
+  assert.deepEqual(after, {});
 });
 
 // Added at guide step 5 (C18): every feature exports install/uninstall and none self-installs —
