@@ -614,7 +614,7 @@ and **-34** (step 7).
 
 ### Checkpoint `5e76c4a1` (wave 3, 2026-10-11)
 
-Base `a5a1a906` (wave-3-base). Only `test/**` changed. `node test/run.mjs`: 105 node:test cases, 104
+Base `a5a1a906` (wave-3-base). Only `test/**` changed. `node test/run.mjs`: 104 node:test cases, 103
 pass, 1 todo (the three old suites run inside them: chain-core 31, light-core 100, migrate 25 checks).
 Coverage over the module's own files (`node --test --experimental-test-coverage`, `test/` excluded):
 **91.40 / 90.79 / 95.83** before, over the 3 pure files only (`senses.mjs`, `chain.mjs`, `glow.mjs`,
