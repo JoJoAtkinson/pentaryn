@@ -496,6 +496,32 @@ def sync(name: str) -> int:
     return OK
 
 
+# ── blueprint tools (W1): thin wrappers, arguments passed through ─────────────
+
+def module_new(argv: list[str]) -> int:
+    """`scripts/foundry/blueprint/new_module.py`, aimed at foundry/module/.
+
+    The generator refuses to write under foundry/module/ without `--install`; this is the
+    repo's own entry point, so it adds `--install` unless the caller chose an `--out`."""
+    from scripts.foundry.blueprint import new_module
+    argv = list(argv)
+    if "--out" not in argv and "--install" not in argv:
+        argv.append("--install")
+    return new_module.main(argv)
+
+
+def module_vendor(argv: list[str]) -> int:
+    """`scripts/foundry/blueprint/vendor.py sync|check …`."""
+    from scripts.foundry.blueprint import vendor
+    return vendor.main(list(argv))
+
+
+def module_conformance(argv: list[str]) -> int:
+    """`scripts/foundry/blueprint/conformance.py …` (exit 1 when a fail-class rule fails)."""
+    from scripts.foundry.blueprint import conformance
+    return conformance.main(list(argv))
+
+
 # ── walls-only extras ─────────────────────────────────────────────────────────
 
 def walls_wasm() -> int:

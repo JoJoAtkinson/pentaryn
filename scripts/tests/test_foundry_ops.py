@@ -182,7 +182,8 @@ def test_every_subcommand_routes(monkeypatch):
         monkeypatch.setattr(cli.service, fn, lambda *a, **k: 0)
     for fn in ("build_actors", "stage", "run_import", "clean", "clean_only", "verify"):
         monkeypatch.setattr(cli.pipeline, fn, lambda *a, **k: 0)
-    for fn in ("check", "sync", "walls_wasm", "walls_bench"):
+    for fn in ("check", "sync", "walls_wasm", "walls_bench",
+               "module_new", "module_vendor", "module_conformance"):
         monkeypatch.setattr(cli.modules, fn, lambda *a, **k: 0)
     monkeypatch.setattr(cli.login_mod, "login", lambda *a, **k: 0)
 
@@ -191,6 +192,81 @@ def test_every_subcommand_routes(monkeypatch):
         if name in ("module-check", "module-sync"):
             argv.append("ties")
         assert cli.main(argv) == 0, f"{name} did not route"
+
+
+# ── module-check --all / --json (python-tooling-8, -41); blueprint wrappers (W1) ──
+
+def test_module_check_all_runs_every_module(monkeypatch):
+    seen: list[str] = []
+    monkeypatch.setattr(modules, "check", lambda n: seen.append(n) or (1 if n == "ties" else 0))
+    assert cli.main(["module-check", "--all"]) == 1
+    assert seen == sorted(cfg.MODULES)
+
+
+@pytest.mark.parametrize("argv", [["module-check"], ["module-check", "ties", "--all"]])
+def test_module_check_needs_exactly_one_target(argv):
+    with pytest.raises(SystemExit) as exc:
+        cli.main(argv)
+    assert exc.value.code == 2
+
+
+def test_module_check_json_reports_the_broken_gate(monkeypatch, tmp_path, capsys):
+    src = tmp_path / "pentaryn-ties"
+    src.mkdir()
+    (src / "module.json").write_text('{"id": "pentaryn-ties", "esmodules": ["main.mjs"]}')
+    (src / "main.mjs").write_text('import { alpha } from "./lib.mjs";\n')
+    (src / "lib.mjs").write_text("export const beta = 1;\n")
+    spec = cfg.ModuleSpec("pentaryn-ties", check=("imports",))
+    monkeypatch.setattr(type(spec), "src", property(lambda self: src))
+    monkeypatch.setitem(cfg.MODULES, "ties", spec)
+    assert cli.main(["module-check", "ties", "--json"]) == 1
+    import json
+    data = json.loads(capsys.readouterr().out)
+    gate = data["gates"][0]
+    assert data["ok"] is False and gate["gate"] == "imports" and gate["ok"] is False
+    assert "alpha" in gate["problems"][0]
+
+
+def test_status_json_has_the_three_answers(monkeypatch, capsys):
+    import json
+    monkeypatch.setattr(service, "foundry_is_up", lambda *a: True)
+    monkeypatch.setattr(service, "_tunnel_pid", lambda: 4242)
+    monkeypatch.setattr(service, "_probe", lambda *a: (302, "https://x/setup"))
+    assert cli.main(["status", "--json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert set(data) == {"foundry", "tunnel", "public"}
+    assert data["tunnel"]["pid"] == 4242 and data["public"]["state"] == "no-world"
+
+
+def test_bridge_status_json_fails_only_on_an_orphan_holder(monkeypatch):
+    from scripts.foundry.ops import bridge
+    live = bridge.Proc(pid=1, ppid=0, started="t", command="c", kind="backend", ports=(1,))
+    orphan = bridge.Proc(pid=2, ppid=0, started="t", command="c", kind="backend", ports=(1,),
+                         orphan=True)
+    assert bridge.status_report([live])["ok"] is True
+    assert bridge.status_report([orphan])["ok"] is False
+    assert bridge.status_report([])["holder"] is None
+
+
+@pytest.mark.parametrize("cmd, fn", [("module-vendor", "vendor"),
+                                     ("module-conformance", "conformance")])
+def test_blueprint_wrappers_pass_arguments_through(monkeypatch, cmd, fn):
+    import importlib
+    mod = importlib.import_module(f"scripts.foundry.blueprint.{fn}")
+    seen = []
+    monkeypatch.setattr(mod, "main", lambda argv: seen.append(argv) or 7)
+    assert cli.main([cmd, "check", "names", "--json"]) == 7
+    assert seen == [["check", "names", "--json"]]
+
+
+def test_module_new_installs_into_foundry_module_unless_out_is_given(monkeypatch):
+    from scripts.foundry.blueprint import new_module
+    seen = []
+    monkeypatch.setattr(new_module, "main", lambda argv: seen.append(argv) or 0)
+    cli.main(["module-new", "demo", "--title", "Pentaryn Demo", "--tier", "small"])
+    cli.main(["module-new", "demo", "--title", "T", "--out", "/tmp/x"])
+    assert seen[0] == ["demo", "--title", "Pentaryn Demo", "--tier", "small", "--install"]
+    assert "--install" not in seen[1]
 
 
 def test_unknown_subcommand_exits_nonzero():
