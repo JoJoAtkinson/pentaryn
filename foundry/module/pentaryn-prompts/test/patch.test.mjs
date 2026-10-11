@@ -129,15 +129,9 @@ test("applyPatch: a changed type without languages clears the inherited ones; se
   await assert.rejects(P.applyPatch(stubActor(), { disposition: "angry" }), { code: "BAD_SPEC", message: "BAD_SPEC: patch.disposition: hostile|neutral|friendly|secret" });
 });
 
-test("KNOWN: applyPatch writes a fractional CR string as Number(\"1/2\") = NaN (the dry run reads it as 0.5)", async () => {
+test("[declared] applyPatch writes a fractional CR string as the number the dry run reads (was Number(\"1/2\") = NaN)", async () => {
   const a = stubActor();
   const r = await P.applyPatch(a, { cr: "1/2" });
   assert.deepEqual(r.changed, ["cr 1/2"]);
-  assert.ok(Number.isNaN(a.system.details.cr));
-});
-
-test("TODO: applyPatch stores a fractional CR as a number", { todo: "new finding (wave 3 checkpoint): patch.cr \"1/2\" is written as NaN; replace's real-run XP then counts 0 for that creature" }, async () => {
-  const a = stubActor();
-  await P.applyPatch(a, { cr: "1/2" });
   assert.equal(a.system.details.cr, 0.5);
 });

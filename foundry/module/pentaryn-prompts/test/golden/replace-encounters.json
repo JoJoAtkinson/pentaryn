@@ -2,8 +2,8 @@
   "dry": [
     {
       "id": "E2",
-      "xp": 300,
-      "creatures": 2,
+      "xp": 350,
+      "creatures": 3,
       "unbuilt": 0,
       "budget": {
         "size": 4,
@@ -21,14 +21,14 @@
     "p3 actor: at 200,1400 (same), footprint 1x1; creates Actor (copy of \"Guard\"); patch: cr, disposition; Token \"Guard\"",
     "p4 actor: at 400,1400 (same), footprint 1x1; creates Actor (copy of \"Guard\"); patch: cr; Token \"Guard\"",
     "remaining: s1=4",
-    "E2 (estimate, CR XP of the plan): 300 XP from 2 creature(s) vs party 4 x L3: low 600 | moderate 900 | high 1600 → under low",
+    "E2 (estimate, CR XP of the plan): 350 XP from 3 creature(s) vs party 4 x L3: low 600 | moderate 900 | high 1600 → under low",
     "Nothing was written. Repeat the identical call without dryRun to apply."
   ],
   "real": [
     {
       "id": "E2",
-      "xp": 200,
-      "creatures": 1,
+      "xp": 350,
+      "creatures": 3,
       "unbuilt": 0,
       "budget": {
         "size": 4,
@@ -47,6 +47,6 @@
     "p4 → Token \"Guard\" [<id3>] @400,1400 1x1, Actor \"Guard\" [<id4>]; markerDeleted=true",
     "  p4 patched: cr 1/2",
     "remaining: s1=2",
-    "E2: 200 XP from 1 creature(s) vs party 4 x L3: low 600 | moderate 900 | high 1600 → under low"
+    "E2: 350 XP from 3 creature(s) vs party 4 x L3: low 600 | moderate 900 | high 1600 → under low"
   ]
 }

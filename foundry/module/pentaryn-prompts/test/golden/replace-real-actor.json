@@ -160,7 +160,7 @@
         "system.attributes.hp.formula": "4d10+8",
         "system.attributes.ac.calc": "flat",
         "system.attributes.ac.flat": 15,
-        "system.details.cr": null,
+        "system.details.cr": 0.25,
         "system.attributes.movement.walk": 25,
         "prototypeToken.disposition": -1
       }

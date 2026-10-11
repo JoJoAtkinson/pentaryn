@@ -27,7 +27,7 @@
 
 import { DND_SIZE_WIDTH, codedError } from "./geometry-core.mjs";
 import { PATCH_KEYS } from "./prompts-core.mjs";
-import { SIZE_WORDS } from "./core/size.mjs";
+import { SIZE_WORDS, parseCr } from "./core/size.mjs";
 import { findItem, notFound } from "./packs-adapter.mjs";
 import { flattenLanguages, languageKeys, fixAttunement } from "./build-core.mjs";
 
@@ -180,7 +180,8 @@ export async function applyPatch(actor, patch) {
     Object.assign(u, { "system.attributes.ac.calc": "flat", "system.attributes.ac.flat": Number(patch.ac) });
     changed.push(`ac ${patch.ac}`);
   }
-  if (patch.cr !== undefined) { u["system.details.cr"] = Number(patch.cr); changed.push(`cr ${patch.cr}`); }
+  // "1/2" is 0.5, as the dry run's XP estimate reads it (parseCr); anything unparsable stays Number()'s
+  if (patch.cr !== undefined) { u["system.details.cr"] = parseCr(patch.cr) ?? Number(patch.cr); changed.push(`cr ${patch.cr}`); }
   if (patch.speed !== undefined) { u["system.attributes.movement.walk"] = Number(patch.speed); changed.push(`speed ${patch.speed}`); }
   if (patch.disposition) {
     const D = CONST.TOKEN_DISPOSITIONS;
