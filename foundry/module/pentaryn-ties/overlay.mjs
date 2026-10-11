@@ -43,7 +43,7 @@
  */
 
 import { MODULE } from "./ties-core.mjs";
-import { anyTransient, closeTransient, live as liveCards, reflow, setOnChange, show } from "./popups.mjs";
+import { anyTransient, closeAll, closeTransient, live as liveCards, reflow, setOnChange, show } from "./popups.mjs";
 import { canSee, read } from "./ties-adapter.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { setting } from "./settings.mjs";
@@ -482,6 +482,7 @@ export const toggle = showAll;
 
 /**
  * FEATURE install — called by the entry during `init`, where these hooks have always registered
+ * (and it contributes the card paths: show, showAll, showOne, cards, clear, closeAllCards)
  * (golden/hooks-after-init.json pins their order). Unguarded on purpose: a throw in one keeps
  * Foundry's own "Error thrown in hooked function" path, as it always did (declared B9 changes that).
  */
@@ -513,6 +514,9 @@ export function install(reg) {
   reg.on("refreshToken", () => drawWires(), { guard: false, label: "overlay: refreshToken" });
   // hot: state.wires
   reg.on("sightRefresh", () => drawWires(), { guard: false, label: "overlay: sightRefresh" });
+
+  // the cards' API paths (rows in api-manifest.mjs)
+  return { impl: { show: showAll, showAll, showOne, cards: showAll, clear, closeAllCards: closeAll } };
 }
 
 /** The entry's reg.offAll() removes the hooks; this drops the card-set subscription. */

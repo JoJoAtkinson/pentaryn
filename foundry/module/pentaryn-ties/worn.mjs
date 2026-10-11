@@ -306,6 +306,9 @@ export function install(reg) {
     // only a flag write can change what is marked; movement is refreshToken's job
     if (foundry.utils.getProperty(changes ?? {}, `flags.${MODULE}`) !== undefined) drawBadges();
   }, { guard: false, label: "worn: updateToken" });
+
+  // the worn-mark API paths (rows in api-manifest.mjs) — GM only, per token
+  return { impl: { worn: readWorn, setWorn, clearWorn, wornDialog: openDialog } };
 }
 
 /** The entry's reg.offAll() removes the hooks; worn keeps no other state worth dropping. */

@@ -21,34 +21,17 @@
  * (S8); until then the published object below is the reference.
  */
 
-import { MODULE, STANCES } from "./ties-core.mjs";
+import { MODULE } from "./ties-core.mjs";
 import { registerSettings, onKeys, setting, mayWrite } from "./settings.mjs";
-import { inspectorFor, inbound, migrateLegacy, read, removeTie, setNotes, setTie } from "./ties-adapter.mjs";
-import { closeAll, restorePinned } from "./popups.mjs";
+import { inspectorFor, migrateLegacy } from "./ties-adapter.mjs";
+import { restorePinned } from "./popups.mjs";
 import { toggle as toggleDescription, close as closeDescription } from "./describe.mjs";
-import { TiesEditor } from "./editor.mjs";
 import { openTieDialogFor } from "./tie-dialog.mjs";
-import { openPreview } from "./preview.mjs";
 import { openLook } from "./look.mjs";
-import { openReview } from "./review-ui.mjs";
-import {
-  addKnown, categoriesFor, fileHovered, hideKnown, notebookActor, openAddPicker, openKnownEntry,
-  readKnown, removeKnown, setKnownField
-} from "./known.mjs";
-import {
-  attributeIdsOf, attributesOf, brokenAncestry, clearSelection, createAttribute, deleteAttribute,
-  derivedFor, describeRef, deselectAttributes, ensureAttribute, grantKnowledge, knowledge,
-  knownWorld, linkAttribute, registry, repairAncestry, repairIcons, resolveAttribute,
-  reviewAttribute, searchAttributes, selectAttributes, selectedAttributes, staleCarriers,
-  unlinkAttribute, unreviewAttribute, unreviewedAttributes, updateAttribute
-} from "./attributes.mjs";
-import {
-  attrOffersFor, clearScoping, beliefs, deliver, deliverHeldIdentifications, factStatus, forgetFact, grantKind,
-  inspect, inspectAs, kindActorOf, kindDialog, legacyMissCards, loreStateFor, pending,
-  releaseHeldAttribute, requestAttrLore, requestLore, requestStudy, reset, resetIdentification,
-  resetInspection, resolveFact, scopingState, setKindOf, setStudyHold, setStudyOffset,
-  setStudyTiers, shareFact, studiedOf, studyAs, studyStateFor, studyTiersOf
-} from "./study.mjs";
+import { fileHovered } from "./known.mjs";
+import { repairIcons } from "./attributes.mjs";
+import { inspect } from "./study.mjs";
+import { buildApiFor } from "./api.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
 import * as conduit from "./conduit.mjs";
@@ -71,12 +54,21 @@ const ctx = {
   reg,
   setting,
   api: null,
+  contributions: [],
   exposed: {},
   expose(accessors) {
     Object.assign(ctx.exposed, accessors);
   },
   uninstall
 };
+
+/** A feature's `{ rows?, impl }` — the API paths it owns because they open a window or touch the canvas. */
+function contribute(contribution) {
+  if (contribution) ctx.contributions.push(contribution);
+}
+
+// the key-9 card belongs to no feature: the entry wires its key, so the entry contributes its paths
+contribute({ impl: { describeCard: toggleDescription, closeDescription } });
 
 /*
  * The keys' bodies. The rows (ids, default keys, labels) are KEYBINDINGS in settings.mjs; settings
@@ -118,168 +110,19 @@ onKeys({
  */
 function onInit() {
   registerSettings({ log });
-  for (const feature of AT_INIT) feature.install(reg, ctx);
+  for (const feature of AT_INIT) contribute(feature.install(reg, ctx));
 }
 
 /**
- * Publish the API under `game.pentaryn.ties`. The root is a plain object every module assigns
- * into: the importer merges into it and nothing freezes it since its keystone (items-journal-1),
- * so the old frozen-root guard is gone (kit 1.0.2, J10). A frozen root now throws here.
+ * Build the API from the manifest (a drift throws here, inside the "publish api" step) and publish it
+ * under `game.pentaryn.ties`. The root is a plain object every module assigns into: the importer
+ * merges into it and nothing freezes it since its keystone (items-journal-1), so the old frozen-root
+ * guard is gone (kit 1.0.2, J10). A frozen root now throws here.
  */
 function publishAPI() {
-  const api = {
-    show: overlay.showAll,
-    showAll: overlay.showAll,
-    showOne: overlay.showOne,
-    cards: overlay.showAll, // 0.3.0 name, kept so existing macros don't break
-    clear: overlay.clear,
-    closeAllCards: closeAll,
-    edit: actor => TiesEditor.open(actor),
-    addTie: token => openTieDialogFor(token ?? canvas?.tokens?.hover ?? canvas?.tokens?.controlled?.[0] ?? null),
-    read: read,
-    // who points AT this actor — GM only, gated inside the function itself
-    inbound: inbound,
-    set: setTie,
-    setTie: setTie,
-    setNotes: setNotes,
-    remove: removeTie,
-    migrate: migrateLegacy,
-    STANCES: STANCES,
-    // the worn mark — per-token, GM-only. Console path for anyone who prefers a macro
-    // to the HUD button: game.pentaryn.ties.wornDialog(canvas.tokens.controlled[0])
-    worn: worn.readWorn,
-    setWorn: worn.setWorn,
-    clearWorn: worn.clearWorn,
-    wornDialog: worn.openDialog,
-    // the description card — GM only, key 9. Was the `Quick View` macro.
-    // `describeCard`, not `describe`: the kit reserves describe() for the API manifest (B1)
-    describeCard: toggleDescription,
-    closeDescription: closeDescription,
-    /*
-     * The Known list — the notebook tab. A sub-object rather than six more top-level names:
-     * it is a second feature sharing this module's plumbing, and `ties.known.read` says so
-     * where `ties.readKnown` would just be another entry in a long list.
-     */
-    known: {
-      read: readKnown,
-      add: addKnown,
-      set: setKnownField,
-      hide: hideKnown,
-      purge: removeKnown, // destroys; the UI never does this
-      remove: removeKnown,
-      categories: categoriesFor,
-      picker: openAddPicker,
-      // the canvas key's own path, for a macro or a console: file whoever is hovered
-      file: token => fileHovered(token ?? canvas?.tokens?.hover ?? null),
-      open: openKnownEntry,
-      notebook: notebookActor
-    },
-    /*
-     * The study conduit. Its authoring half is console-only in phase 3 by the plan's own
-     * correction — the GM section that will host tier messages, the kind pointer and the
-     * belief ledger is phase 4's, and shipping a second authoring surface now would mean
-     * building it twice.
-     *
-     *   study.tiers(actor, [{min: 25, text: "…"}, {min: 0, text: "…"}])   author the ladder
-     *   study.kind(actor)                    the pointer picker; kindOf(actor, id) to skip it
-     *   study.hold(actor, true|false|null)   per-kind approval gate; null inherits the setting
-     *   study.beliefs(actor)                 what each character was told, and whether it landed
-     *   study.pending()                      every undelivered reveal in the world
-     *   study.deliver(character, kind)       release one
-     *   study.reset(character, kind)         un-spend it — the honest do-over
-     *   study.as(character, subject, {mode, situational})   throw the check by hand
-     *   study.preview(actor)                 the GM inspect window: player view + simulated rolls
-     *   study.look(subject, pc?)             the player's read-only Look window (null for a GM)
-     *   study.share(spec, [pc…], {from, notify})   tell them one fact as if passed (chain-aware)
-     *   study.forget(spec, pc)               undo a share, and only a share
-     *   study.whoKnows(spec, pc)             passed | told | held | failed | locked | none
-     *   study.audit.legacyMissCards()        cards a failure granted before 2026-10 (read-only)
-     */
-    study: {
-      state: studyStateFor,
-      request: requestStudy,
-      as: studyAs,
-      kind: kindDialog,
-      kindOf: setKindOf,
-      kindActor: kindActorOf,
-      tiers: setStudyTiers,
-      difficulty: setStudyOffset,
-      readTiers: studyTiersOf,
-      hold: setStudyHold,
-      beliefs: beliefs,
-      pending: pending,
-      deliver: deliver,
-      reset: reset,
-      studied: studiedOf,
-      // phase 4 — the individual axis
-      fact: resolveFact,
-      lore: loreStateFor,
-      askLore: requestLore,
-      // phase 6 — the attribute layer
-      askAttr: requestAttrLore,
-      attrOffers: attrOffersFor,
-      // phase 8 — inspection and the cascade
-      examine: inspect,
-      look: (subject, character = game.user?.character) => openLook(character, subject),
-      scoping: scopingState,
-      clearScoping: clearScoping,
-      inspectAs: inspectAs,
-      deliverHeld: deliverHeldIdentifications,
-      releaseHeld: releaseHeldAttribute,
-      resetIdent: resetIdentification,
-      release: grantKind,
-      resetInspection: resetInspection,
-      // GM inspect window — player view (with who-knows tags and Share) and simulated rolls
-      preview: openPreview,
-      // GM: tell characters one fact as if they had passed it; forget undoes a share (only)
-      share: shareFact,
-      forget: forgetFact,
-      whoKnows: factStatus,
-      // console-only: cards a FAILURE granted before 2026-10 (failures now hand over nothing)
-      audit: { legacyMissCards: legacyMissCards }
-    },
-    /*
-     * Every call that names an attribute takes an id OR a name (id wins; a miss is refused, never
-     * created). Reads return data; writes return `{ ok, reason?, … }` and never throw — test `.ok`.
-     */
-    attributes: {
-      list: registry,
-      of: attributesOf,
-      ids: attributeIdsOf,
-      derived: derivedFor,
-      resolve: resolveAttribute,
-      lookup: describeRef,
-      ensure: ensureAttribute,
-      create: createAttribute,
-      update: updateAttribute,
-      remove: deleteAttribute,
-      link: linkAttribute,
-      unlink: unlinkAttribute,
-      search: searchAttributes,
-      // phase 8 — world knowledge and validation
-      knows: knowledge,
-      known: knownWorld,
-      tell: grantKnowledge,
-      broken: brokenAncestry,
-      repair: repairAncestry,
-      stale: staleCarriers,
-      /*
-       * The review panel (context/foundry/attribute-review.md). `update`/`create` above UN-review an
-       * entry and record what they touched; sign-off is the GM's — `review()` exists for when he
-       * asks, and the panel's own save (`reviewedUpdate`, `reviewedLoreUpdate`) is deliberately not published.
-       */
-      openReview,
-      selected: selectedAttributes,
-      select: selectAttributes,
-      deselect: deselectAttributes,
-      clearSelection: clearSelection,
-      review: reviewAttribute,
-      unreview: unreviewAttribute,
-      unreviewed: unreviewedAttributes
-    }
-  };
+  ctx.api = buildApiFor(ctx);
   game.pentaryn ??= {};
-  game.pentaryn.ties = api;
+  game.pentaryn.ties = ctx.api;
 }
 
 /** Each step is independent — one failure must not silently skip the others. */
@@ -323,4 +166,4 @@ function uninstall() {
 // unguarded, as Hooks.once always registered them: a throw here keeps Foundry's own error line
 reg.once("init", onInit, { guard: false, label: "init" });
 reg.once("ready", onReady, { guard: false, label: "ready steps" });
-for (const feature of FEATURES) feature.install(reg, ctx);
+for (const feature of FEATURES) contribute(feature.install(reg, ctx));

@@ -6,7 +6,7 @@
 import { MODULE } from "./ties-core.mjs";
 import { setting } from "./settings.mjs";
 import { TiesEditor, buildHTML, bind, forgetActor } from "./editor.mjs";
-import { KNOWN_TAB_ID, buildKnownHTML, bindKnown, forgetKnownActor } from "./known.mjs";
+import { KNOWN_TAB_ID, buildKnownHTML, bindKnown, forgetKnownActor, openAddPicker, fileHovered, openKnownEntry } from "./known.mjs";
 import { ATTR_TAB_ID, buildAttributesHTML, bindAttributes } from "./attributes-ui.mjs";
 import { makeLog } from "./lib/log.mjs";
 
@@ -228,7 +228,18 @@ export function install(reg) {
       }
     }, { label: `sheet: ${hook}` });
   }
+
+  // the sheet's API paths (rows in api-manifest.mjs)
+  return { impl: { edit, "known.picker": openAddPicker, "known.file": file, "known.open": openKnownEntry } };
 }
+
+/** Open the standalone ties editor (the header button's window). */
+function edit(actor) {
+  return TiesEditor.open(actor);
+}
+
+/** The canvas key's own path, for a macro or a console: file whoever is hovered (key 5). */
+const file = token => fileHovered(token ?? canvas?.tokens?.hover ?? null);
 
 /** The entry's reg.offAll() removes the hooks; nothing else to drop. */
 export function uninstall() {}

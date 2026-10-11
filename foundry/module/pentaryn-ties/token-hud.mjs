@@ -11,7 +11,7 @@ import { inspectorFor } from "./ties-adapter.mjs";
 import { openTieDialogFor } from "./tie-dialog.mjs";
 import { openPreview } from "./preview.mjs";
 import { openLook } from "./look.mjs";
-import { AttributeReview } from "./review-ui.mjs";
+import { AttributeReview, openReview } from "./review-ui.mjs";
 import { inspect } from "./study.mjs";
 import { makeLog } from "./lib/log.mjs";
 
@@ -131,7 +131,16 @@ export function install(reg) {
       log.warn(`tie HUD injection skipped`, err);
     }
   }, { label: "tie HUD" });
+
+  // the windows these buttons open, as API paths (rows in api-manifest.mjs)
+  return { impl: { addTie, "study.look": look, "study.preview": openPreview, "attributes.openReview": openReview } };
 }
+
+/** Open the tie dialog for a token: the given one, else the hovered, else the first controlled. */
+const addTie = token => openTieDialogFor(token ?? canvas?.tokens?.hover ?? canvas?.tokens?.controlled?.[0] ?? null);
+
+/** The player's read-only Look window on someone (no roll); null for a GM. */
+const look = (subject, character = game.user?.character) => openLook(character, subject);
 
 /** The entry's reg.offAll() removes both hooks; nothing else to drop. */
 export function uninstall() {}
