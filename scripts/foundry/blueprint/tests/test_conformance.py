@@ -370,3 +370,35 @@ def test_d7_c37_exempts_vendored_lib_css_only(tmp_path):
     detail = next(r for r in report["results"] if r["id"] == "C37")["detail"]
     assert any("styles/two.css" in x for x in detail) and any("styles/lib/three.css" in x for x in detail)
     assert not any(x.startswith("lib/") for x in detail)
+
+
+def test_r1_c32_patch_rows_take_the_module_prefix_non_patch_rows_the_package_prefix(tmp_path):
+    """D2: `<short>-…` ⇔ a row wrapMethod names; a non-patch row keeps its package's prefix."""
+    d = tmp_path / "mods" / "pentaryn-rone"
+    reg = tmp_path / "reg" / "adjustments.yml"
+    # markers are code identifiers (a marker only inside a string or comment counts as comment-only)
+    ident = lambda rid: rid.replace("-", "_")
+    row = lambda rid, pkg="core": (f"  - id: {rid}\n    packages: [{pkg}]\n    modules: [pentaryn-rone]\n"
+                                    f"    files: [foundry/module/pentaryn-rone/r.mjs]\n    markers: [\"{ident(rid)}\"]\n"
+                                    f"    what: x\n")
+    code = ('import { wrapMethod } from "./lib/patch.mjs";\n'
+            'export function rone_wrap() { wrapMethod("pentaryn-rone", { adjustments: "rone-wrap" }); }\n'
+            'export function core_workaround() {}\n')
+    write(d, {"module.json": json.dumps({"id": "pentaryn-rone", "esmodules": ["r.mjs"]}), "r.mjs": code})
+    write(reg.parent, {"adjustments.yml": "adjustments:\n" + row("rone-wrap") + row("core-workaround")})
+    c32 = lambda: next(r for r in conformance.score_dir(d, registry_path=reg)["results"] if r["id"] == "C32")
+    assert c32()["status"] == "pass", c32()["detail"]
+
+    # a module-prefixed row nobody wraps: fails, and the message says what to do
+    write(reg.parent, {"adjustments.yml": "adjustments:\n" + row("rone-wrap") + row("rone-workaround")})
+    write(d, {"r.mjs": code.replace("core_workaround", "rone_workaround")})
+    r = c32()
+    assert r["status"] == "fail"
+    assert any("row rone-workaround has no wrapMethod patch naming it" in x and "D2" in x for x in r["detail"])
+
+    # a patch that names a package-prefixed row: fails the other half of the convention
+    write(reg.parent, {"adjustments.yml": "adjustments:\n" + row("core-wrap")})
+    write(d, {"r.mjs": code.replace("rone-wrap", "core-wrap").replace("rone_wrap", "core_wrap")})
+    r = c32()
+    assert r["status"] == "fail"
+    assert any("wrapMethod names row 'core-wrap'" in x and "rone-" in x for x in r["detail"])

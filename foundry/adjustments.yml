@@ -627,7 +627,7 @@ adjustments:
     retire_class: safe
     check: make foundry-aoe-check
 
-  - id: aoe-core-region-delete-update-race
+  - id: core-region-delete-handle-race
     packages: [core]
     modules: [pentaryn-aoe]
     files: [foundry/module/pentaryn-aoe/areas.mjs, foundry/module/pentaryn-aoe/core.mjs]
@@ -672,7 +672,7 @@ adjustments:
     retire_class: safe
     check: make foundry-combat-check
 
-  - id: aoe-careful-spell-protected-rows
+  - id: dnd5e-careful-spell-protected-rows
     packages: [dnd5e]
     modules: [pentaryn-aoe]
     files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/core.mjs, foundry/module/pentaryn-aoe/tray.mjs]
@@ -683,7 +683,7 @@ adjustments:
     retire_class: guarded
     check: make foundry-aoe-check
 
-  - id: aoe-supersede-same-usage
+  - id: dnd5e-supersede-same-usage
     packages: [dnd5e]
     modules: [pentaryn-aoe]
     files: [foundry/module/pentaryn-aoe/resolve.mjs, foundry/module/pentaryn-aoe/core.mjs]
@@ -694,7 +694,7 @@ adjustments:
     retire_class: safe
     check: make foundry-aoe-check
 
-  - id: aoe-player-status-line
+  - id: core-private-roll-rows-hidden
     packages: [dnd5e, core]
     modules: [pentaryn-aoe]
     files: [foundry/module/pentaryn-aoe/tray.mjs, foundry/module/pentaryn-aoe/resolve.mjs]
@@ -760,7 +760,7 @@ adjustments:
     retire_class: safe
     check: make foundry-riders-check
 
-  - id: aoe-untargeted-touch-self
+  - id: dnd5e-untargeted-touch-self
     packages: [dnd5e]
     modules: [pentaryn-aoe]
     files: [foundry/module/pentaryn-aoe/core.mjs, foundry/module/pentaryn-aoe/effects.mjs]
@@ -771,7 +771,7 @@ adjustments:
     retire_class: safe
     check: make foundry-aoe-check
 
-  - id: aoe-same-spell-no-stack
+  - id: dnd5e-same-spell-no-stack
     packages: [dnd5e]
     modules: [pentaryn-aoe]
     files: [foundry/module/pentaryn-aoe/core.mjs, foundry/module/pentaryn-aoe/effects.mjs]
@@ -859,7 +859,7 @@ adjustments:
     retire_class: guarded
     check: make foundry-riders-check
 
-  - id: senses-light-pick-collapse-hud
+  - id: argon-light-pick-collapse-panels
     packages: [enhancedcombathud]
     modules: [pentaryn-senses]
     files: [foundry/module/pentaryn-senses/light.mjs]
@@ -881,7 +881,7 @@ adjustments:
     retire_class: safe
     check: make foundry-creatures-check
 
-  - id: portals-teleport-default-and-spread
+  - id: core-teleport-default-and-spread
     packages: [core]
     modules: [pentaryn-portals]
     files: [foundry/module/pentaryn-portals/portals.mjs, foundry/module/pentaryn-portals/portals-core.mjs]

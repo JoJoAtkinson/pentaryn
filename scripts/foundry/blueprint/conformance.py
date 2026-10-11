@@ -891,6 +891,10 @@ def c32(m):
         ids = m.registry.ids()
         for n in sorted(named - ids):
             detail.append(f"wrapMethod names adjustments row {n!r}, which does not exist")
+        # D2 / R1 (use-doc §5.6): `<short>-…` ids are exactly the rows a wrapMethod patch names;
+        # a non-patch row (workaround, private read, third-party flag) takes its package's prefix
+        for n in sorted(n for n in named & ids if not n.startswith(f"{m.short}-")):
+            detail.append(f"wrapMethod names row {n!r}: a patch row's id starts {m.short}- (D2)")
         rows = [r for r in m.registry.rows if m.id in r.modules]
         if rows:
             sub = adj.Registry(rows=[_remap(r, m) for r in rows])
@@ -900,7 +904,8 @@ def c32(m):
                 comment_only = not any(mk in all_code(m) for mk in r.markers) and any(
                     mk in t for mk in r.markers for t in m.raw.values())
                 if not comment_only:
-                    detail.append(f"row {r.id} has no wrapMethod patch naming it")
+                    detail.append(f"row {r.id} has no wrapMethod patch naming it — a non-patch row takes "
+                                  f"its package's prefix (core-, dnd5e-, argon-, …; D2)")
     return ok() if not detail else bad(detail[:14] + ([f"… {len(detail) - 14} more"] if len(detail) > 14 else []))
 
 
