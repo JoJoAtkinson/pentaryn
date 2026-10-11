@@ -12,10 +12,12 @@ import {
   snapResolution, resolveConfig, FLAG_SCOPE, READ_SCOPES, stampOf, SOLID, lintOnly, analyze, runEngine, wallCategory
 } from "./core/engine.mjs";
 import { register, get, list, available, canonical, compare } from "./core/backends.mjs";
+import { MODULE_SCOPE, LEGACY_SCOPE, MIGRATION_VERSION, planScopeMigration } from "./core/migrate.mjs";
 
 export {
   snapResolution, resolveConfig, FLAG_SCOPE, READ_SCOPES, stampOf, SOLID, lintOnly, analyze, runEngine, wallCategory,
   register, get, list, available, canonical, compare,
+  MODULE_SCOPE, LEGACY_SCOPE, MIGRATION_VERSION, planScopeMigration,
 };
 
 export const MODULE = "pentaryn-walls";

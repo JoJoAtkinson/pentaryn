@@ -10,7 +10,8 @@
  *     core/backends.mjs    the backend registry ("js" registered here) and canonical()/compare()
  *   backend-wasm.mjs     adapter: loads wall-engine.wasm (fetch or node:fs) and registers "wasm"
  *   settings.mjs         SETTINGS (backend) and KEYBINDINGS (Alt+W, Alt+Z, Alt+Shift+W)
- *   actions.mjs          feature: preview / run / undo / makeMacro and the keybinding guard
+ *   actions.mjs          feature: preview / run / undo / analyze / makeMacro and the keybinding guard
+ *   migrations.mjs       feature, dormant: the Wave 7 flag-scope migration (core/migrate.mjs plans it)
  *   api-manifest.mjs     PURE API rows (describe() reads them)
  *   api.mjs              the rows bound to the actions; buildApiFor(ctx)
  *   lib/*.mjs            vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
@@ -29,9 +30,10 @@ import { emitter, hookRegistry } from "./lib/hooks.mjs";
 import { publishNamespace } from "./lib/publish.mjs";
 import { isAnyGM } from "./lib/election.mjs";
 import * as actions from "./actions.mjs";
+import * as migrations from "./migrations.mjs";
 
-/** Features in load order. */
-const FEATURES = [actions];
+/** Features in load order. `migrations` is dormant: nothing calls it until the Wave 7 batch. */
+const FEATURES = [actions, migrations];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);

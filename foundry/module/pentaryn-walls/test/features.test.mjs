@@ -26,11 +26,13 @@ test("only lifecycle hooks at module scope: once init, once ready", () => {
   assert.deepEqual(atLoad, [{ kind: "once", name: "init" }, { kind: "once", name: "ready" }]);
 });
 
-test("the feature list is actions.mjs, and it exports install and uninstall", async () => {
-  assert.deepEqual(featureFiles(), ["actions.mjs"]);
-  const mod = await import(new URL("actions.mjs", ROOT));
-  assert.equal(typeof mod.install, "function");
-  assert.equal(typeof mod.uninstall, "function");
+test("the feature list is actions.mjs then migrations.mjs, and each exports install and uninstall", async () => {
+  assert.deepEqual(featureFiles(), ["actions.mjs", "migrations.mjs"]);
+  for (const f of featureFiles()) {
+    const mod = await import(new URL(f, ROOT));
+    assert.equal(typeof mod.install, "function", f);
+    assert.equal(typeof mod.uninstall, "function", f);
+  }
 });
 
 test("no feature hooks: describe().hooks is empty; uninstall() leaves no listener", () => {
