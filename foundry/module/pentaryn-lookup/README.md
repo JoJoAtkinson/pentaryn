@@ -110,7 +110,9 @@ answer the same read, so the first answer is right.
 ## Extending
 
 1. A pure function in `lookup-core.mjs`, with a case in `test/core.test.mjs`.
-2. Any Foundry read it needs → a function in `packs-adapter.mjs` (plain data out).
+2. Any Foundry read it needs → a function in `packs-adapter.mjs` (plain data out). A pack id
+   it reads goes in one of core's tables (`BOOKSETS`, `MONSTER_PACKS`, `MONSTER_LIST_PACKS`,
+   `SPELL_PACKS`, `NAME_SOURCES`), never inline in `books.mjs`.
 3. A thin method in `books.mjs`, added to `install()`'s `impl`.
 4. A row in `api-manifest.mjs`: `returns`, `doc`, `legacy: true` only if the answer is an
    `{error}`/`{notFound}` object, and `query: true` + an `args` mapper if the bridge should call it.
@@ -139,7 +141,7 @@ answer the same read, so the first answer is right.
 | File | Role |
 |---|---|
 | `pentaryn-lookup.mjs` | entry (esmodules[0]): wiring, `init` queries, `ready` publish |
-| `lookup-core.mjs` | pure: identity, pack tables, HTML → text, search, page, monster rules |
+| `lookup-core.mjs` | pure: identity, every pack-id table, HTML → text, search, page, monster rules, spell-list dedupe, `names()` grouping |
 | `packs-adapter.mjs` | every Foundry read: packs, `fromUuid`, `dnd5e.registry`, `enrichHTML` |
 | `books.mjs` | the feature: the eight lookups |
 | `api-manifest.mjs` | API rows (pure data) |

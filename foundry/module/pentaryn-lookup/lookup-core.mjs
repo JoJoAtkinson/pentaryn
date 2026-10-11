@@ -2,8 +2,8 @@
  * Pure lookup logic — no Foundry, no `game`, no DOM. Everything that can be silently
  * wrong lives here, so it can be tested with `node test/run.mjs`.
  *
- * The adapter (pentaryn-lookup.mjs) turns `game.packs` into the plain shape below and
- * calls these. Nothing here knows that Foundry exists.
+ * The adapter (packs-adapter.mjs) turns `game.packs` into the plain shape below, and the
+ * feature (books.mjs) calls these. Nothing here knows that Foundry exists.
  *
  *   book = {id, label, edition?, docs: [{id, name, pages: [{id, name, html, text?}]}]}
  *
