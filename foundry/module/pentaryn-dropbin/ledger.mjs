@@ -21,7 +21,7 @@
 
 import {
   MODULE, DIR, FILE, DEDUPE_MS, duplicateOfTail, makeEntry, normaliseDeltas, listLast, findEntry, searchLog,
-  shouldCaptureDelete, restoreTarget,
+  briefOf, shouldCaptureDelete, restoreTarget,
 } from "./dropbin-core.mjs";
 import { setting, readLog, writeLedger, clearLog } from "./settings.mjs";
 import { dropHook, actorClassType, isValidItemPile } from "./piles.mjs";
@@ -119,24 +119,45 @@ function registerCapture(reg) {
 /* ----------------------------------------------------------------------- API */
 
 const all = () => readLog();
-const list = (n = 20) => listLast(readLog(), n);
+/** The last n entries, newest first; `{brief: true}` drops the item sources (items-journal-28). */
+function list(n = 20, { brief = false } = {}) {
+  const out = listLast(readLog(), n);
+  return brief ? out.map(briefOf) : out;
+}
 const get = n => findEntry(readLog(), n);
 const search = text => searchLog(readLog(), text);
 
-/** Recreate entry #n. Defaults to the actor it left; pass an Actor or id to redirect. */
-async function restore(n, target = null) {
-  if (!game.user.isGM) return ui.notifications.warn("Only the GM can restore from the drop bin.");
+/**
+ * Recreate entry #n with no toast (items-journal-28): `{ok: true, item, actor}`, or
+ * `{ok: false, reason: "not-gm" | "no-entry" | "no-actor"}`. Defaults to the actor it left.
+ */
+async function restoreResult(n, target = null) {
+  if (!game.user.isGM) return { ok: false, reason: "not-gm" };
   const entry = findEntry(readLog(), n);
-  if (!entry) return ui.notifications.error(`Drop bin: no entry #${n}.`);
+  if (!entry) return { ok: false, reason: "no-entry" };
 
   const actor = restoreTarget(target, entry, { isActor: x => x instanceof Actor, actors: game.actors });
-  if (!actor) return ui.notifications.error(`Drop bin: cannot find an actor to restore #${n} onto.`);
+  if (!actor) return { ok: false, reason: "no-actor" };
 
   const obj = foundry.utils.duplicate(entry.item);
   delete obj._id;
   const [made] = await actor.createEmbeddedDocuments("Item", [obj], { [MODULE]: { restoring: true } });
-  ui.notifications.info(`Restored ${made.name} to ${actor.name} (drop bin #${n}).`);
-  return made;
+  return { ok: true, item: made, actor };
+}
+
+/**
+ * The legacy restore: restoreResult plus today's toasts. A refusal returns the Notification it
+ * showed; success returns the created Item.
+ */
+async function restore(n, target = null) {
+  const r = await restoreResult(n, target);
+  if (r.ok) {
+    ui.notifications.info(`Restored ${r.item.name} to ${r.actor.name} (drop bin #${n}).`);
+    return r.item;
+  }
+  if (r.reason === "not-gm") return ui.notifications.warn("Only the GM can restore from the drop bin.");
+  if (r.reason === "no-entry") return ui.notifications.error(`Drop bin: no entry #${n}.`);
+  return ui.notifications.error(`Drop bin: cannot find an actor to restore #${n} onto.`);
 }
 
 async function exportMirror() {
@@ -165,7 +186,7 @@ async function clear() {
  * (one ready handler, as before the migration).
  */
 export function install(reg, ctx) {
-  ctx.expose({ ledger: { all, list, get, search, restore, export: exportMirror, clear } });
+  ctx.expose({ ledger: { all, list, get, search, restore, restoreResult, export: exportMirror, clear } });
   if (globalThis.game?.ready && globalThis.socketlib) {
     // a hot re-import after ready: socketlib.ready has fired already (socketlib hands back the
     // module's existing socket)

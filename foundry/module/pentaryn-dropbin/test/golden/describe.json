@@ -222,15 +222,21 @@
           "type": "number",
           "optional": true,
           "doc": "default 20"
+        },
+        {
+          "name": "opts",
+          "type": "{ brief? }",
+          "optional": true,
+          "doc": "brief: true → {n, iso, reason, itemName, itemType, quantity, fromActorName, sceneName, pileUuid}, no item source"
         }
       ],
-      "returns": "Entry[]",
+      "returns": "Entry[] | Brief[]",
       "gm": false,
       "writes": false,
       "query": false,
       "sideEffects": [],
       "legacy": true,
-      "doc": "The last n entries, newest first."
+      "doc": "The last n entries, newest first. Pass {brief: true} for a compact listing (full entries carry the item source)."
     },
     {
       "path": "get",
@@ -318,6 +324,67 @@
       ],
       "legacy": true,
       "doc": "GM: after a confirm dialog, empty the ledger and the mirror. The counter is kept: numbers are never reused."
+    },
+    {
+      "path": "restoreResult",
+      "params": [
+        {
+          "name": "n",
+          "type": "number|string",
+          "doc": "the ledger number"
+        },
+        {
+          "name": "target",
+          "type": "Actor|id|exact name",
+          "optional": true,
+          "resolve": false,
+          "doc": "default: the actor it left"
+        }
+      ],
+      "returns": "{ ok: true, item, actor } | { ok: false, reason: \"not-gm\" | \"no-entry\" | \"no-actor\" }",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "Item (created on the target actor)"
+      ],
+      "since": "0.2.2",
+      "doc": "restore() without toasts: the created Item, or why not. Use this from scripts and the bridge."
+    },
+    {
+      "path": "inspect",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "token",
+          "type": "Token|TokenDocument|Actor|uuid|id|exact name",
+          "resolve": false,
+          "doc": "a token (by uuid, id or exact name; never a substring), or an Actor (its tokens on every scene, or opts.sceneId)"
+        }
+      ],
+      "returns": "{ token, actor, dead, corpse, noLoot, pile, saved } | { actor, dead, noLoot, pile, corpses: [...] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS",
+        "BAD_ARGS"
+      ],
+      "since": "0.2.2",
+      "doc": "Read-only, plain JSON: whether this token (or this actor's tokens) is a corpse we made, its saved sight and pre-death ownership, noLoot, and Item Piles' flag data."
+    },
+    {
+      "path": "selftest",
+      "params": [],
+      "returns": "{ ok, checks: [{ label, ok, detail }] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.2.2",
+      "doc": "Live smoke checks after a sync."
     }
   ],
   "queries": [],

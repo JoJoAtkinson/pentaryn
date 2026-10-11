@@ -71,6 +71,12 @@ export const listLast = (log, n = 20) => log.slice(-n).reverse();
 /** Entry number `n` (a number or a numeric string), or null. */
 export const findEntry = (log, n) => log.find(e => e.n === Number(n)) ?? null;
 
+/** The compact row `list(n, {brief: true})` returns: no item source (key order pinned). */
+export const briefOf = e => ({
+  n: e.n, iso: e.iso, reason: e.reason, itemName: e.itemName, itemType: e.itemType, quantity: e.quantity,
+  fromActorName: e.fromActorName, sceneName: e.sceneName, pileUuid: e.pileUuid,
+});
+
 /** Entries whose item name contains `text`, case-insensitive. `String(text)`: undefined searches "undefined". */
 export const searchLog = (log, text) => {
   const q = String(text).toLowerCase();

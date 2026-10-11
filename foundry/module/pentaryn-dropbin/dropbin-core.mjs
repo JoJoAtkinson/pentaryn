@@ -13,14 +13,14 @@
 import { MODULE, LOOTABLE_TYPES, lootAllState, showEye, eyePlacement } from "./loot-core.mjs";
 import {
   DIR, FILE, DEDUPE_MS, dedupeKey, duplicateOfTail, appendEntry, makeEntry, normaliseDeltas, listLast, findEntry,
-  searchLog, shouldCaptureDelete, restoreTarget,
+  briefOf, searchLog, shouldCaptureDelete, restoreTarget,
 } from "./ledger-core.mjs";
 
 // Imported, then exported by name (not `export … from`), so the import-graph tools see both files.
 export {
   MODULE, LOOTABLE_TYPES, lootAllState, showEye, eyePlacement,
   DIR, FILE, DEDUPE_MS, dedupeKey, duplicateOfTail, appendEntry, makeEntry, normaliseDeltas, listLast, findEntry,
-  searchLog, shouldCaptureDelete, restoreTarget,
+  briefOf, searchLog, shouldCaptureDelete, restoreTarget,
 };
 
 export const SHORT = "dropbin";

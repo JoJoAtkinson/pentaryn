@@ -52,9 +52,11 @@ export const MANIFEST = Object.freeze({
       doc: "The whole ledger, oldest first. Each entry carries the item's complete source (large).",
     },
     {
-      path: "list", params: [{ name: "n", type: "number", optional: true, doc: "default 20" }],
-      returns: "Entry[]", gm: false, writes: false, legacy: true,
-      doc: "The last n entries, newest first.",
+      path: "list",
+      params: [{ name: "n", type: "number", optional: true, doc: "default 20" },
+        { name: "opts", type: "{ brief? }", optional: true, doc: "brief: true → {n, iso, reason, itemName, itemType, quantity, fromActorName, sceneName, pileUuid}, no item source" }],
+      returns: "Entry[] | Brief[]", gm: false, writes: false, legacy: true,
+      doc: "The last n entries, newest first. Pass {brief: true} for a compact listing (full entries carry the item source).",
     },
     {
       path: "get", params: [N], returns: "Entry | null", gm: false, writes: false, legacy: true,
@@ -81,6 +83,27 @@ export const MANIFEST = Object.freeze({
       path: "clear", params: [], returns: "Promise<boolean>", gm: true, writes: true, legacy: true,
       sideEffects: ["setting pentaryn-dropbin.log", "assets/drop-bin/drop-log.json"],
       doc: "GM: after a confirm dialog, empty the ledger and the mirror. The counter is kept: numbers are never reused.",
+    },
+    {
+      path: "restoreResult",
+      params: [N, { name: "target", type: "Actor|id|exact name", optional: true, resolve: false, doc: "default: the actor it left" }],
+      returns: '{ ok: true, item, actor } | { ok: false, reason: "not-gm" | "no-entry" | "no-actor" }',
+      gm: true, writes: true, since: "0.2.2",
+      sideEffects: ["Item (created on the target actor)"],
+      doc: "restore() without toasts: the created Item, or why not. Use this from scripts and the bridge.",
+    },
+    {
+      path: "inspect",
+      params: [{ name: "ref", kind: "token", type: "Token|TokenDocument|Actor|uuid|id|exact name", resolve: false,
+        doc: "a token (by uuid, id or exact name; never a substring), or an Actor (its tokens on every scene, or opts.sceneId)" }],
+      returns: "{ token, actor, dead, corpse, noLoot, pile, saved } | { actor, dead, noLoot, pile, corpses: [...] }",
+      gm: false, writes: false, since: "0.2.2",
+      throws: ["NOT_FOUND", "AMBIGUOUS", "BAD_ARGS"],
+      doc: "Read-only, plain JSON: whether this token (or this actor's tokens) is a corpse we made, its saved sight and pre-death ownership, noLoot, and Item Piles' flag data.",
+    },
+    {
+      path: "selftest", params: [], returns: "{ ok, checks: [{ label, ok, detail }] }", gm: false, writes: false, since: "0.2.2",
+      doc: "Live smoke checks after a sync.",
     },
   ],
   flags: {
