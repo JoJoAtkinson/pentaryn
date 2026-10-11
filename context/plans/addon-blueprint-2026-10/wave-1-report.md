@@ -20,6 +20,16 @@ Scores before and after Stage 0: [`wave-1-baseline.md`](wave-1-baseline.md).
 | J8 | Queries reach every tab of the recipient user, so a writing `relayed`/`guarded` handler runs twice with the MCP bridge tab and a GM browser tab open (playbook §5.9.5). Affected: riders' Battle Medic relay (`riders.mjs:417`), journal `ensure` (`journal.mjs:146`); idempotency unverified. | Lane R | a new audit id, or a decision to make them claim first ([declared]) |
 | J9 | `guarded`'s NOT_GM check admits Assistant GMs (`isGM`). Documented in §5.9, not changed. | Lane R | none unless Assistants should be refused |
 
+## Known red commits (bisect and revert notes)
+
+- **pentaryn-lookup suite red from `35d439b` to `97809fc`** (8 commits: `35d439b`, `21c6d0f`,
+  `8d18cad`, `9e955e0`, `2ec084f`, `8ad6a23`, `1411687`, `97809fc`). Lane C's staged rename
+  `test/fixtures.mjs` → `test/fixtures/books.mjs` was swept into another lane's commit `35d439b`
+  ("test(update): pin make_checks()…"); `test/legacy-core.mjs` kept importing `./fixtures.mjs` until
+  the lookup checkpoint `a532b3e` fixed it, so `node test/run.mjs` fails with module-not-found in that
+  range. History is not rewritten. Reverting `35d439b` alone breaks lookup unless `a532b3e`'s import
+  line is reverted with it. Skip that range when bisecting pentaryn-lookup. HEAD is green.
+
 ## Not applied (left for their owners)
 
 - `scripts/foundry/live-goldens/ties.js` still calls `attributes.describe` (works, logs the D1
