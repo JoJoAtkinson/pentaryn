@@ -223,6 +223,8 @@ built members (`+ built t4 "Skrag", t5 "Grek"`) and their XP. `<built>` carries 
 `Items:` (the item's real name, rarity, `unidentified, shows as "…"`, attunement — read from the item
 source, since dnd5e's derived data of an unidentified item hides both) or a creature's notable `Carries:`, the
 provenance `note` as `Why:`, and the description cut at a sentence (`previewSentences`, `gatherChars` 400).
+A description is printed once per actor: further unlinked tokens of that actor with the same text say
+`Description: same as t4 "Goblin"` (0.4.4, play test PT2-5); a token whose text differs prints its own.
 
 Not modelled: wall heights / Levels elevations (the gather prints a `WARN` line). Hex grids count
 hexes (cube distance over core's occupied offsets); notes, lights and tiles occupy the hex under their
