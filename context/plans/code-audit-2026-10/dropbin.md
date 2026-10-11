@@ -32,6 +32,24 @@ Today an LLM calls game.pentaryn.dropbin.{list, all, get, search, restore, expor
 
 Today a new Item Piles patch would be appended to the bottom of dropbin.mjs, because 'it is already enabled' (header lines 41–45). That is how the file grew to five concerns. Proposed split (items-journal-22): ledger.mjs plus ledger-core.mjs, itempiles/attunement-repair.mjs, itempiles/locks.mjs, itempiles/visibility.mjs, with dropbin.mjs reduced to imports. Each Item Piles patch should also get its own adjustments.yml row (items-journal-29). Unclear today: whether Item Piles fixes for attunement live here or in pentaryn-attunement.
 
+## Status (wave 2, 2026-10-11 — dropbin lane, code phase; not yet live-tested)
+
+| Id | Status | Commit(s) |
+|---|---|---|
+| items-journal-18 | fixed [declared] D-D2: one queue for counter + log (`appendLedger`); `clear()` queued too | `a3b44685`, `b2320f94` |
+| items-journal-19 | applied [declared]: coalesced writes, 2 s debounced mirror, ready size | `314f49c3` |
+| items-journal-20 | applied (guide step 2): `ledger-core.mjs` | `1e4214c2` |
+| items-journal-21 | applied [declared]: `submit` and the revive toggle warn, never reject unhandled | `9f43f573` |
+| items-journal-22 | applied (guide steps 2–5): five concerns → `ledger.mjs`, `itempiles.mjs` + adapters; entry wires only; hook order golden unchanged | `1e4214c2`…`4ef64cd7`, guard `146aefce` [declared] |
+| items-journal-23 | applied [declared]: `pileFlags`/`isPileFlagged` everywhere | `4d96d3a8`, `6273d1e7` |
+| items-journal-24 | applied: one notes walk per render (lazy) | `eff44a40` |
+| items-journal-25 | applied [declared]: active GM only, `Actor.implementation.updateDocuments` | `bae36010` |
+| items-journal-26 | applied: `MODULE` once (step 2), strings in `lang/en.json` (step 7) | `1e4214c2`, `a1b0ff01` |
+| items-journal-27 | **kept**, documented (the audit's listed alternative): deleting moves two frozen pins for no observable change; a source test proves nothing reads the tag | `4fa0b17a` |
+| items-journal-28 | applied (additive): `list(n,{brief})`, `restoreResult`, `inspect`, `selftest`, `describe()` via the kit (D-D1); README line on `clear()` | `500f33a0`, `0ac333a2`, `85f4353f` |
+| items-journal-29 | README part applied (`85f4353f`); the `adjustments.yml` rows are the integrator's (shared file; ids per `adjustments-batch.md`) | — |
+| items-journal-30 | applied [declared]: `needsRedraw` cache, `queue()` gated on the active GM (KNOWN pin 2 → 1) | `c62da821` |
+
 ## Findings index
 
 | Id | Category | Impact | Effort | Title |
