@@ -83,8 +83,9 @@ test("ready on the active GM: ensureAll makes the missing player journal; report
   });
   const made = since(from, "JournalEntry.create").map(c => c.data.name);
   assert.deepEqual(made, ["Quinn's Journal"], "players only, one each; the GMs get none");
-  const report = game.pentaryn?.journal?.report ? game.pentaryn.journal.report() : null;
-  assert.equal(report, null, "the API is not published before the tick");
+  // D-J1 [declared] (guide step 6, D2): published at ready by the kit, not one tick later; frozen; module.api canonical.
+  assert.equal(game.modules.get(MOD).api, game.pentaryn.journal, "published at ready, on module.api");
+  assert.equal(Object.isFrozen(game.pentaryn.journal), true);
   mock.timers.tick(0);
   await flush();
   const r = game.pentaryn.journal.report();

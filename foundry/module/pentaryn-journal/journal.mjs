@@ -15,17 +15,19 @@
  *
  * Lifecycle: init → settings, the relay query (every client: the sender needs the name too) ·
  * module body → features install, synchronously, so listeners keep their order against other
- * modules · ready → the active GM's ensureAll (personal.mjs), then the API is published.
+ * modules · ready → the active GM's ensureAll starts (personal.mjs), then the API is built and
+ * published at once on module.api and game.pentaryn.journal (D2).
  *
  * Hot patch RE-RUNS THE WIRING ONLY: `game.pentaryn.journal.uninstall()`, then
  * `await import("/modules/pentaryn-journal/journal.mjs?v=2")`. Any edit to another file needs a reload.
  */
 
-import { MODULE } from "./journal-core.mjs";
+import { MODULE, NS } from "./journal-core.mjs";
 import { registerSettings, setting } from "./settings.mjs";
-import { legacyApi } from "./api.mjs";
+import { buildApiFor } from "./api.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
 import { makeLog } from "./lib/log.mjs";
+import { publishNamespace } from "./lib/publish.mjs";
 import * as personal from "./personal.mjs";
 import * as bar from "./bar.mjs";
 
@@ -63,12 +65,13 @@ function onInit() {
 }
 
 function onReady() {
-  // Published one tick after ready (publishing synchronously is a declared step of the migration).
-  setTimeout(() => {
-    ctx.api = legacyApi(ctx);
-    game.pentaryn ??= {};
-    game.pentaryn.journal = ctx.api;
-  }, 0);
+  try {
+    ctx.api = buildApiFor(ctx);
+  } catch (err) {
+    log.error("API manifest drift — not published", err);
+    return;
+  }
+  publishNamespace(NS, ctx.api, { moduleId: MODULE });
 }
 
 if (globalThis.game?.ready) {
