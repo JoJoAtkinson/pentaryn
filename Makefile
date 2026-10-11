@@ -4,6 +4,8 @@ PY := $(shell if [ -x ./.venv/bin/python ]; then echo ./.venv/bin/python; elif [
 # rationale live in scripts/foundry/ops/config.py; the pipeline prints the target on
 # every run and refuses if the directory isn't there.
 OPS := cd $(ROOT) && $(if $(WORLD),PENTARYN_FOUNDRY_WORLD=$(WORLD) ,)$(PY) -m scripts.foundry.ops
+# Short names for `make help`, from the module folders (a test proves each is registered).
+MODULE_NAMES = $(sort $(patsubst pentaryn-%,%,$(notdir $(patsubst %/module.json,%,$(wildcard $(ROOT)/foundry/module/*/module.json)))))
 
 # This file is a list of the commands worth remembering. The logic behind them lives
 # in Python — `scripts/foundry/ops/` for the server and pipeline, `scripts/foundry/
@@ -28,9 +30,15 @@ help:
 	@echo ""
 	@echo "  Content"
 	@echo "    make foundry-import    build actors -> stage -> import -> delete -> verify"
-	@echo "    make foundry-ties-sync install the NPC Ties module"
-	@echo "    make foundry-walls-sync install the Wall Autocomplete module"
-	@echo "    make foundry-attunement-sync install the Attunement Slots module"
+	@echo "    make foundry-<m>-check prove one module (parse, imports, i18n, tests, kit, conformance)"
+	@echo "    make foundry-<m>-sync  check, then install it into Foundry's Data/modules"
+	@echo "      <m>: $(MODULE_NAMES)"
+	@echo "    make foundry-modules-check  every module, keeps going (JSON=1 for --json)"
+	@echo ""
+	@echo "  Building modules (context/foundry/addon-blueprint.md)"
+	@echo "    make foundry-module-new M=<short> TITLE=\"Pentaryn <Title>\" [TIER=small]"
+	@echo "    make foundry-conformance [M=<short>] [MD=1]   score against the blueprint"
+	@echo "    make foundry-lib-check  the shared kit's tests; foundry-lib-vendor re-vendors it"
 	@echo ""
 	@echo "  Housekeeping"
 	@echo "    make foundry-backup    snapshot the world to OneDrive"
@@ -38,12 +46,14 @@ help:
 	@echo "    make vtt-update-dry    what a Saturday run WOULD change"
 	@echo "    make check-context     CLAUDE.md + context/ integrity"
 	@echo "    make check-lore        wikilinks + frontmatter across the lore trees"
+	@echo "    make test              the Python suites (pytest)"
+	@echo "    make check-all         all of the above checks + kit + every module"
 	@echo ""
 	@echo "  Everything else: make -pRrq | grep '^[a-z]' | sort, or read this file."
 	@echo ""
 
 # ─── Instruction surface ────────────────────────────────────────────────
-.PHONY: check-context check-lore check-all
+.PHONY: check-context check-lore check-all test
 check-context:
 	@cd $(ROOT) && $(PY) scripts/check_context.py
 
@@ -52,7 +62,12 @@ check-context:
 check-lore:
 	@cd $(ROOT) && $(PY) scripts/check_lore_links.py
 
-check-all: check-context check-lore
+# Everything provable offline: docs, lore, the Python suites, the kit, every module.
+check-all: check-context check-lore test foundry-lib-check foundry-modules-check
+
+# The Python suites (pyproject testpaths: scripts/tests + scripts/foundry/blueprint/tests).
+test:
+	@cd $(ROOT) && $(PY) -m pytest -q
 
 # ─── Table lifecycle ────────────────────────────────────────────────────
 TUNNEL_HOST := vtt.atjoseph.com
@@ -172,57 +187,33 @@ foundry-cloud:
 # The check step is not optional politeness: a parse error in an esmodule fails
 # silently at load and the module simply never registers. Nothing reaches Data/
 # unproved. Copy, never symlink — a stale copy must be a visible failure.
-.PHONY: foundry-lookup-check foundry-lookup-sync
-.PHONY: foundry-ties-check foundry-ties-sync
-.PHONY: foundry-walls-test foundry-walls-sync foundry-walls-wasm foundry-walls-bench
-.PHONY: foundry-attunement-check foundry-attunement-sync
-.PHONY: foundry-transform-check foundry-transform-sync
-.PHONY: foundry-names-check foundry-names-sync
-.PHONY: foundry-senses-check foundry-senses-sync foundry-portals-check foundry-portals-sync
-.PHONY: foundry-journal-check foundry-journal-sync
-.PHONY: foundry-aoe-check foundry-aoe-sync
-.PHONY: foundry-dropbin-check foundry-dropbin-sync foundry-cursors-check foundry-cursors-sync
-.PHONY: foundry-movement-check foundry-movement-sync foundry-creatures-check foundry-creatures-sync
-.PHONY: foundry-riders-check foundry-riders-sync
-.PHONY: foundry-prompts-check foundry-prompts-sync
-.PHONY: foundry-combat-check foundry-combat-sync
+#
+# Pattern rules, not a line per module: a ModuleSpec in scripts/foundry/ops/config.py
+# is all a new module needs to get foundry-<m>-check and foundry-<m>-sync (ops rejects
+# an unregistered name). Pattern targets cannot be .PHONY, and need not be.
+foundry-%-check: ; @$(OPS) module-check $*
+foundry-%-sync:  ; @$(OPS) module-sync $*
 
-foundry-lookup-check: ; @$(OPS) module-check lookup
-foundry-lookup-sync:  ; @$(OPS) module-sync lookup
-foundry-ties-check:  ; @$(OPS) module-check ties
-foundry-ties-sync:   ; @$(OPS) module-sync ties
-foundry-attunement-check: ; @$(OPS) module-check attunement
-foundry-attunement-sync:  ; @$(OPS) module-sync attunement
-foundry-transform-check: ; @$(OPS) module-check transform
-foundry-transform-sync:  ; @$(OPS) module-sync transform
-foundry-names-check: ; @$(OPS) module-check names
-foundry-names-sync:  ; @$(OPS) module-sync names
-foundry-senses-check: ; @$(OPS) module-check senses
-foundry-senses-sync:  ; @$(OPS) module-sync senses
-foundry-portals-check: ; @$(OPS) module-check portals
-foundry-portals-sync:  ; @$(OPS) module-sync portals
-foundry-journal-check: ; @$(OPS) module-check journal
-foundry-journal-sync:  ; @$(OPS) module-sync journal
-foundry-aoe-check: ; @$(OPS) module-check aoe
-foundry-aoe-sync:  ; @$(OPS) module-sync aoe
-foundry-dropbin-check: ; @$(OPS) module-check dropbin
-foundry-dropbin-sync:  ; @$(OPS) module-sync dropbin
-foundry-cursors-check: ; @$(OPS) module-check cursors
-foundry-cursors-sync:  ; @$(OPS) module-sync cursors
-foundry-movement-check: ; @$(OPS) module-check movement
-foundry-movement-sync:  ; @$(OPS) module-sync movement
-foundry-creatures-check: ; @$(OPS) module-check creatures
-foundry-creatures-sync:  ; @$(OPS) module-sync creatures
-foundry-riders-check: ; @$(OPS) module-check riders
-foundry-riders-sync:  ; @$(OPS) module-sync riders
-foundry-prompts-check: ; @$(OPS) module-check prompts
-foundry-prompts-sync:  ; @$(OPS) module-sync prompts
-foundry-combat-check: ; @$(OPS) module-check combat
-foundry-combat-sync:  ; @$(OPS) module-sync combat
-foundry-walls-test:  ; @$(OPS) module-check walls
-foundry-walls-sync:  ; @$(OPS) module-sync walls
+.PHONY: foundry-modules-check foundry-walls-test foundry-walls-wasm foundry-walls-bench
+# Every registered module through every gate; keeps going past a failure. JSON=1 for --json.
+foundry-modules-check: ; @$(OPS) module-check --all $(if $(JSON),--json,)
+foundry-walls-test:  foundry-walls-check   # the old name of walls' check
 foundry-walls-wasm:  ; @$(OPS) walls-wasm
 foundry-walls-bench: ; @$(OPS) walls-bench $(N)
+
+# ─── Addon blueprint: the shared kit, the generator, the scorer ──────────
+# Playbook: context/foundry/addon-blueprint.md. M=<short> picks one module.
+.PHONY: foundry-lib-check foundry-lib-vendor foundry-module-new foundry-conformance
+# The kit's own suite (foundry/lib).
+foundry-lib-check:  ; @cd $(ROOT) && node foundry/lib/test/run.mjs
+# Re-vendor the kit into every migrated module (those with lib/kit.lock.json), or M=<short>.
+foundry-lib-vendor: ; @$(OPS) module-vendor sync $(if $(M),$(M),--all)
+# make foundry-module-new M=<short> TITLE="Pentaryn <Title>" [TIER=small] [ARGS="--kit perf"]
+foundry-module-new:
+	@$(if $(M),,$(error M=<short> is required))$(if $(TITLE),,$(error TITLE="Pentaryn <Title>" is required))
+	@$(OPS) module-new $(M) --title "$(TITLE)" --tier $(if $(TIER),$(TIER),full) $(ARGS)
+# Score against rules C01–C52: every module, or M=<short>; MD=1 for the markdown table.
+foundry-conformance: ; @$(OPS) module-conformance $(if $(M),--module $(M),) $(if $(MD),--markdown,)
 
 # ─── Auto-update (Saturdays 04:06, watchdog 06:12) ──────────────────────
 # Design and one-time setup: automation/README.md
