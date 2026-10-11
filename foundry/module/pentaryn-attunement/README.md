@@ -1,24 +1,23 @@
 ---
 title: "Pentaryn Attunement Slots"
 status: active
-last_modified: 2026-10-10
+last_modified: 2026-10-11
 tags: [foundry, module, dnd5e, attunement]
 ---
 
-# Pentaryn Attunement Slots
+# Pentaryn Attunement Slots (`pentaryn-attunement`)
 
-**Read this when:** attunement is on screen and behaving oddly, or you want to know
-what the slot strip in the character sheet sidebar is doing.
-**Not this file:** why it was placed there rather than on the inventory tab →
-[`../../../context/plans/foundry-attunement.md`](../../../context/plans/foundry-attunement.md)
+**Read this when:** attunement is on screen and behaving oddly, you want to know what the slot
+strip in the character sheet sidebar is doing, or you are calling or changing `pentaryn-attunement`.
+**Not this file:** why the strip sits in the sidebar → [`../../../context/plans/foundry-attunement.md`](../../../context/plans/foundry-attunement.md) ·
+how every addon is built → `context/foundry/addon-blueprint.md` · how this module was migrated →
+`context/plans/addon-blueprint-2026-10/migrate-pentaryn-attunement.md`
 
----
+Attunement as slots in the **character sheet sidebar**, under the stats card, plus a warning — never
+a block — on every path that can push an actor past `system.attributes.attunement.max`. Exposes
+`game.pentaryn.attunement`.
 
-## What it does
-
-Renders attunement as slots in the **character sheet sidebar**, directly under the
-stats card, and warns — never blocks — on every path that can push an actor past
-`system.attributes.attunement.max`.
+## What the player sees
 
 ```
 ☀ ATTUNED                    3/3
@@ -27,158 +26,156 @@ stats card, and warns — never blocks — on every path that can push an actor 
 
 | Gesture | Effect |
 | ------- | ------ |
-| Drag an item from the inventory onto an **empty** slot | Attunes it there |
+| Drag an inventory item onto an **empty** slot | Attunes it there |
 | Drop onto a **filled** slot | Unattunes the occupant, attunes the newcomer in its place |
 | Right-click a slot, or click its ✕ | Unattunes — the slot stays put, neighbours don't move |
 | Left-click a slot | Opens the item sheet |
 | Hover a slot | dnd5e's own rich item card |
 
-Attuning from the sidebar is drag-only on purpose. A click-to-attune affordance
-would need a list of *candidates* in the sidebar, and that list is what made every
-other layout too tall — the candidates are already in the inventory, one drag away.
-
-## Reading the display
-
 | Look | Means |
 | ---- | ----- |
 | Dashed empty circle | Free slot |
 | Full-colour icon | Attuned and working |
-| **Greyed icon + 🚫 badge** | Attuned but its effects are **suppressed** — usually unequipped. It is burning a slot and granting nothing |
+| **Greyed icon + 🚫 badge** | Attuned but its effects are **suppressed** (usually unequipped): it burns a slot and grants nothing |
+| **Faded, dashed, red broken-chain badge** | Attuned but **not carried** (an away bond, below) |
 | **Maroon ring + red count** | Past `attunement.max`. The system allows this; nothing else tells you |
 
-The suppressed state is the one worth watching. dnd5e suppresses an item's effects
-when it is unequipped *or* unattuned, so an attuned-but-unequipped Staff of Healing
-looks attuned everywhere else in the UI while doing nothing at all.
+Attuning from the sidebar is drag-only on purpose: the candidates are already in the inventory.
 
-## Attuned but not carried ("away" bonds)
+**Away bonds.** An attuned item that leaves the character keeps its slot — by the rules attunement
+ends only when you end it (or after 24 hours more than 100 ft away). Hovering it reads *"Still
+attuned, but not on Talo. Its power is dormant until it is back in hand."* and deliberately does not
+say where it is. When it is created on any non-pile actor again (an Item Piles Take, a drop, a
+script) its `(Talo)` tag goes; if that actor is the owner and the away entry still exists it also
+arrives **attuned and equipped** in its own slot, with a toast. A bonded `Coin Purse` pays its coin
+to whoever takes it and deletes itself. The ✕ or a right-click on an away slot asks, then ends the
+attunement.
 
-An attuned item that leaves the character keeps its slot. The rules say attunement only ends when you end it (or after 24 hours more than 100 ft away). The sheet shows it as **faded, greyscale, dashed, with a red broken-chain badge**. Hovering shows the item's name and *"Still attuned, but not on Talo. Its power is dormant until it is back in hand."* It deliberately does not say where the item is.
+**Collapsed sidebar, NPCs.** The strip goes with the sidebar (as AC and HP do). The fallback is the
+system's `☀ value / max` counter in the inventory row, which turns **red when over cap**; that is
+all NPC sheets get.
 
-```js
-// Move items into a container (an item-piles chest), tagged "(Talo)", attuned ones bonded
-await game.pentaryn.attunement.stash(actor, chestActor, itemIds, { currency: true });
-```
+**Warnings.** Attuning past the cap, or an item arriving already attuned onto an actor at the cap,
+shows a warning toast. Nothing is ever vetoed: a vetoed Foundry update resolves without applying
+and without throwing, so an MCP script would carry on believing it succeeded. The cap is
+unenforceable anyway — expire the effect that raised `attunement.max` and no item hook fires.
 
-- Each moved item carries `flags["pentaryn-attunement"].bond` holding its real name, equipped state and attunement. The actor carries `flags["pentaryn-attunement"].away`.
-- When a bonded item is created on any non-pile actor (item-piles Take, a drop, a script), `preCreateItem` strips the `(Name)` tag.
-- If that actor is the owner and the away entry still exists, the item also arrives **attuned and equipped**, the away slot becomes the item's slot, and a toast says so.
-- A bonded `Coin Purse` adds its coin to whoever takes it, then deletes itself.
-- The ✕ or a right-click on an away slot asks first, then ends the attunement.
-- `stash()` uses the item's *source* name. Enchanted items such as the War Mage wand build their displayed name from an effect (`{} of the War Mage, +1`). Tagging the prepared name would double that suffix.
+## Settings
 
-## When the sidebar is collapsed
+n/a — no settings.
 
-The strip goes with it — the same gesture already hides AC, HP, hit dice and death
-saves. The fallback is the system's own `☀ value / max` counter in the inventory
-filter row, which this module turns **red when over cap**. That decoration is also
-the whole of what NPC sheets get; their sidebar is a different structure and does
-not take the strip.
+## API — game.pentaryn.attunement
 
-## Warnings, and why nothing is ever blocked
+Also `game.modules.get("pentaryn-attunement").api`, published at `ready` (frozen). `describe()`,
+`version`, `contract`, `settings()`, `trace()`, `uninstall()` come from the kit.
 
-Two hooks watch every write:
+| Method | Args | Returns | Writes? | GM? |
+|---|---|---|---|---|
+| `report(target?, { quiet? })` | Actor, id or name; defaults to the controlled token | `{ actor, value, max, over, slots, rows }`, or `undefined` (+ a warn) when no actor; prints a table unless `quiet` | no | no |
+| `computeSlots(actor)` | Actor, or id / uuid / exact name | `{ slots, max, value, over }`; `null` for a name that matches nothing | no | no |
+| `away(actor)` | as above | `[{ key, name, img }]` | no | no |
+| `stash(owner, container, itemIds, { tag?, currency?, detail? })` | Actors and item ids | the number of items created; with `detail`, `{ count, created, away }`. Rejects, deleting nothing, if the container accepted fewer copies than asked | yes | no |
+| `releaseAway(actor, key)` | Actor, away key | `setFlag`'s promise | yes | no |
+| `inspect(ref, { sceneId?, base? })` | any actor ref (throws `NOT_FOUND` / `AMBIGUOUS`) | `{ actor, slots, max, value, over, away, bonds, counts }`, plain JSON; `counts` = dnd5e's value, away, the strip's value and `mismatch` | no | no |
+| `selftest()` | — | `{ ok, checks }` | no | no |
 
-* `preUpdateItem` — the sun toggle, the context menu, this module's drops, macros,
-  and MCP calls all land here.
-* `preCreateItem` — an item arriving *already attuned* from item-piles, an import,
-  or a compendium drop. (The system only strips `attuned` on **sheet** drops.)
+`report("Ballad Quinn")`'s `dataIssue` column catches the silent case: dnd5e clears attunement on
+equipment without the **Magical** property, so an item can be `attuned: true` in the database and
+inert in play. Nothing in `inspect` is GM-only.
 
-Neither ever returns `false`. A vetoed Foundry update resolves without applying and
-without throwing, so an MCP script would carry on believing it succeeded — and this
-world is scripted through the bridge. A wrong number on a sheet is recoverable;
-a script that silently did nothing is not.
+## Data written
 
-The cap cannot be enforced anyway: delete the feature or expire the effect that
-raised `attunement.max` and the actor is over cap having fired no item hook at all.
-That is why the display renders over-cap states properly instead of trusting that
-every write was caught.
+| Where | Shape | Written by |
+|---|---|---|
+| actor `flags.pentaryn-attunement.slots` | `(itemId \| "away:<key>" \| null)[]`, trailing holes trimmed | a drop onto a slot; `stash`; an item coming home |
+| actor `flags.pentaryn-attunement.away` | `[{ key, name, img }]` | `stash`; `releaseAway`; an item coming home |
+| item `flags.pentaryn-attunement.bond` | `{ actor, key, name, equipped, attuned, attunement, currency? }` | `stash` (on the copies); cleared (`_del`) when the item is home |
 
-## The "Not Proficient" cloak
+The slot flag is only ever a **hint**: `computeSlots()` reconciles it on every render (gone,
+unattuned or duplicated ids become holes; attuned items without a slot drop into the first hole),
+so deleting it is always safe. Nothing is written during render.
 
-Also fixed here, because the categories it breaks *are* the attunement categories.
+## Flags other modules read
 
-dnd5e's `armorProficienciesMap` covers only `natural`, `clothing`, `light`, `medium`,
-`heavy` and `shield`. A cloak is `wondrous`, so the lookup misses, the multiplier falls
-to `0`, and the tooltip and chat card both report **Not Proficient** — on every ring,
-rod, wand, trinket and wondrous item in the world. It was never saying you can't wear
-it; it was reporting that you lack the proficiency named `undefined`.
+None today. pentaryn-dropbin repairs attunement on its own; it does not read these flags.
 
-At `init` this adds `wondrous`, `ring`, `rod`, `wand` and `trinket` to that map as
-`true` ("everyone is proficient"), only where the entry is unset (`== null`), so a future
-dnd5e definition wins and this becomes a no-op.
+## Events
 
-**`vehicle` is deliberately left out** — vehicle proficiency is a real concept in some
-settings and quietly granting it to everyone is a trap.
+n/a — emits none.
 
-Nothing here enumerates feats, and nothing needs to. Every proficiency source — class,
-species, background, feat, Active Effect — is already aggregated by the system into
-`actor.system.traits.armorProf.value` and recomputed on every data prep, so gaining a
-feat updates the pills on its own. The only thing missing was *which categories the
-question applies to*, which is all this supplies. Real armour is untouched: a bard with
-light-armour proficiency still reads "Not Proficient" on plate.
+## Patches and adjustments
 
-## Slot order is stored, and is only ever a hint
+| Row (`foundry/adjustments.yml`) | What |
+|---|---|
+| `dnd5e-armor-proficiencies` | At `init`, adds `wondrous`, `ring`, `rod`, `wand`, `trinket` to `CONFIG.DND5E.armorProficienciesMap` as `true`, only when unset (`== null`), so the tooltip and chat card stop saying **Not Proficient** on every magic item. A later dnd5e definition wins. `vehicle` is deliberately left out. Proficiency sources (feats, effects) are already aggregated by dnd5e; this only supplies which categories the question applies to |
+| `itempiles-attunement-repair` | A bonded item created on an Item Piles pile keeps its tag (box to box); `isPileActor` |
+| `attunement-item-tooltip-anchor` | 0.2.1 (U-8-5): dnd5e 6.0.6 positions an item tooltip a frame after it loads; when the hovered row re-rendered away in between, `Tooltips5e#_positionItemTooltip` threw *reading 'getBoundingClientRect'*. Wrapped at `ready` (kit `wrapMethod`, marker `pentarynGuarded`) to skip when there is no anchor. A failing install only warns `tooltip guard skipped`; the API still publishes. Retire when dnd5e checks `game.tooltip.element` itself |
 
-`flags["pentaryn-attunement"].slots` holds an array of item ids. There is no slot
-concept in dnd5e — `system.attuned` is a bare boolean — so without this the icons
-would re-sort whenever their neighbours changed, which is poison for a surface whose
-job is answering "did that just change?".
+dnd5e 6 (verified 6.0.6): the data model, the sheet DOM (`.sidebar > .card`, the inventory
+`.attunement` counter, `.loading[data-uuid]` tooltips) are unchanged; the suppressed-slot label
+reads `DND5E.EFFECT.Suppressed.Hint`.
 
-`computeSlots()` reconciles the flag against reality on every render: entries whose
-item is gone, unattuned, or duplicated become holes; attuned items missing from the
-array drop into the first hole. **Deleting the flag is always safe** — worst case
-you get the order you'd have had without it. Nothing is written during render.
+## Two sessions / who writes
 
-## Checking an actor
+- The pre-hooks (`preUpdateItem`, `preCreateItem`) run only on the client that makes the change;
+  the bond restore mutates the item's source there (for an Item Piles Take, the GM's).
+- `createItem` (slot hand-back, coin purse) runs only where `userId === game.user.id` — once per
+  user, but in **every tab** of that user (the MCP bridge tab and a GM browser tab both, for a
+  GM-made change). The slot hand-back writes the same values from either tab; the **coin purse adds
+  `actor.currency + purse` from each tab**, so a GM Take with two GM tabs open can pay twice. Not
+  fixed (no claim yet): recorded in the wave-2 report, Open for Joe.
+- Sheet drops and `stash` write from the client that calls them.
 
-```js
-game.pentaryn.attunement.report("Ballad Quinn")
-```
+## Extending
 
-Prints a table of every attunable item: slot, attuned, equipped, suppressed, and a
-`dataIssue` column that catches the silent one — `prepareFinalEquippableData()`
-clears attunement on equipment lacking the **Magical** property, so an item can read
-`attuned: true` in the database and be completely inert in play, showing up in
-neither column of any UI that filters prepared data.
+Pure rules go in `attunement-core.mjs` with a fixture table in `test/core.test.mjs` (oracle +
+core). Document writes and third-party reads go in `actor-adapter.mjs`; DOM in `strip.mjs`; hooks in
+a feature (`sheet.mjs`, `bonds.mjs`) registered through `reg.on(name, fn, { label })`. A new API
+method is a row in `api-manifest.mjs` plus an impl in `api.mjs`, then
+`GOLDEN_UPDATE=1 node --test test/api.test.mjs` and a read of the golden diff.
+
+## Pitfalls
+
+- **Hook order with dropbin.** Attunement's `preCreateItem` registers at load (the features install
+  synchronously in the entry); dropbin's attunement repair registers inside an async `ready`, so
+  `restoreBond` runs first. Moving attunement's install to `setup` would break that order.
+- `stash()` tags with the item's **source** name: an enchanted item's displayed name comes from an
+  effect (`{} of the War Mage, +1`), and the prepared name would double the suffix on the way home.
+- Two counts exist: the warning uses dnd5e's `attunement.value` (+ away), the strip counts items
+  whose prepared `attuned` is true (+ away). They can differ; `inspect().counts.mismatch` says so.
+- Strings are inline (`STRINGS` / `t()` in the core): merging into `game.i18n.translations` at init
+  did not survive to render in v14. A `lang/en.json` is a later, declared step.
+
+## Files
+
+| File | Role |
+|---|---|
+| `attunement.mjs` | entry: init, ready (guard, build, publish), installs `sheet` then `bonds` |
+| `attunement-core.mjs` | pure: constants, `computeSlots`, `homeSlots`, `planStash`, `bondChanges`, `wouldExceed`, `patchProficiencyMap`, `safe`, strings |
+| `actor-adapter.mjs` | `stash`, `releaseAway`, `writeSlots`, `isPileActor`, the two dnd5e adjustments |
+| `strip.mjs` | UI: the strip, the counter's over-cap class |
+| `sheet.mjs`, `bonds.mjs` | features: the render hook and slot gestures; the item hooks |
+| `api-manifest.mjs`, `api.mjs` | the published API |
+| `attunement.css` | every rule under `.pentaryn-attunement` / `.pentaryn-attunement-*` |
+| `lib/` | vendored kit 1.0.2 (full + `patch`) — never edited here |
 
 ## Tests
 
 ```
-node test/run.mjs        # or: make foundry-attunement-sync, which runs them first
+node test/run.mjs        # from this folder
 ```
 
-The legacy fixtures (`test/legacy-slots.mjs`) mostly cover `computeSlots` — stale flags, deleted items, duplicate ids,
-corrupt flag types, over-cap, non-default `max`; it runs inside a render hook, so it
-must never throw, and the suite covers malformed actors for that reason. The rest pin
-the proficiency-map correction: that armour categories stay untouched, that `vehicle`
-is never claimed, and that an existing dnd5e definition always wins.
-The `node:test` files (`test/*.test.mjs`) pin the rest: the pure decisions against verbatim
-oracles, the item hooks, `stash`/`report`, the tooltip guard and the hook manifest.
+`core.test` runs each pure rule against a verbatim oracle of the pre-migration code and the core;
+`slots.test` holds the slot fixtures (stale flags, deleted items, duplicates, corrupt flag types,
+over cap, non-default `max`, away entries, coming home) and the proficiency-map patch; `glue.test`,
+`hooks.test`, `api.test`, `strip.test` (a minimal DOM), `listeners`, `hook-errors`, `perf`,
+`stash-safety` and `guard-failure` pin the wiring. Goldens in `test/golden/`.
 
-## dnd5e 6
-
-0.2.0 targets dnd5e 6.0 (verified 6.0.6). The data model this module reads
-(`system.attributes.attunement`, `system.attunement` / `system.attuned`), the sheet
-DOM it hooks (`.sidebar > .card`, the inventory `.attunement` counter, the
-`.loading[data-uuid]` tooltip contract) and `CONFIG.DND5E.armorProficienciesMap`
-(still the six armour categories) are unchanged. The one change: the suppressed-slot
-aria-label reads `DND5E.EFFECT.Suppressed.Hint`, because 6.0 removed
-`DND5E.EffectUnavailableInfo`.
-
-**Item tooltip guard (0.2.1, U-8-5).** dnd5e 6.0.6 positions an item tooltip a frame
-after its content loads (`Tooltips5e#_positionItemTooltip` → `game.tooltip._setAnchor`).
-If the hovered row was re-rendered away in that frame (a take, an attune, a light),
-core has already dropped the anchor and every such hover logged *Cannot read properties
-of null (reading 'getBoundingClientRect')*. On `ready` the module wraps that method to
-skip when there is no anchor. Adjustment row `dnd5e-item-tooltip-anchor`; retire it when
-dnd5e checks `game.tooltip.element` itself.
-
-## Install
+## Sync
 
 ```
 make foundry-attunement-sync
 ```
 
-New module, or a change to `module.json`: `make vtt-down && make vtt-up` first —
-`module.json` is read once at startup. For `.mjs`/`.css` edits a browser reload (F5)
-is enough. Then enable **Pentaryn Attunement Slots** in Manage Modules.
+A `.mjs`/`.css` change needs a browser reload; a `module.json` change a Foundry restart. Then
+`game.pentaryn.attunement.describe().version` is `module.json`'s and `selftest().ok` is true.
