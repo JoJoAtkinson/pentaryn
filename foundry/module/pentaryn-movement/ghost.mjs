@@ -15,7 +15,7 @@
 
 import * as core from "./movement-core.mjs";
 import {
-  CSS, GHOST_ALPHA, GM_CLIP_KEYS, GM_ICONS, GM_KEYS, GM_TOOL, MODULE, NOTIFY_BACK, NOTIFY_BLOCKED, NOTIFY_CLEARED,
+  CSS, GHOST_ALPHA, GM_CLIP_KEYS, GM_ICONS, GM_KEYS, GM_TOOL, MODULE, NOTIFY_BLOCKED, NOTIFY_CLEARED,
   TOOL, TOOL_CLIP_KEYS, TOOL_KEYS, VERSION
 } from "./movement-core.mjs";
 import { SETTINGS, setting } from "./settings.mjs";
@@ -309,9 +309,12 @@ async function refresh() {
       return;
     }
     if (wish()) clearedBy = null;
-    else if (!game.user.isGM && core.ghostBack({ cleared: clearedBy, policy: policy(), combatActive: combatActive(), wish: wish() })) {
-      ui.notifications.info(NOTIFY_BACK[clearedBy], { localize: true });
-      clearedBy = null;
+    else if (!game.user.isGM) {
+      const key = core.ghostBackKey({ cleared: clearedBy, policy: policy(), combatActive: combatActive(), wish: wish() });
+      if (key) {
+        ui.notifications.info(key, { localize: true });
+        clearedBy = null;
+      }
     }
     // Combat updates fire every turn; only a real change of state redraws anything.
     if (!rerenderControls()) return;

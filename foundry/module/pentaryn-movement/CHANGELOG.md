@@ -15,6 +15,8 @@ manifest); the kit is vendored. What a player or GM can notice:
   (never shown).
 - **[declared]** errors in the `refreshToken` and `renderSceneControls` hooks are warned once per
   session instead of swallowed silently (console only).
+- **[declared] D-M4** — the "ghost movement is available again" toast after the GM allows ghost
+  during a fight reads "The GM allows ghost movement again" instead of "The fight is over" (F-M2).
 - Performance: the per-token paths (drag, arrow keys, token refresh, the layer sort) read the
   settings and the combats once per change instead of once per token (F-M1).
 

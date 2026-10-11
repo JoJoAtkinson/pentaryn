@@ -267,6 +267,17 @@ export function statusFrom({ policy, combat, wish, isGM, ownedOnTop, patched } =
   };
 }
 
+/**
+ * The "ghost is allowed again" toast for this client, or null (finding -42). Like ghostBack, but
+ * it names why ghost is allowed NOW: cleared by a fight that is still running means the GM changed
+ * the policy, so the toast is the GM one (`off`), not "the fight is over".
+ */
+export function ghostBackKey({ cleared, policy, combatActive, wish } = {}) {
+  if (!ghostBack({ cleared, policy, combatActive, wish })) return null;
+  if (cleared === "combat" && combatActive) return NOTIFY_BACK.off;
+  return NOTIFY_BACK[cleared] ?? null;
+}
+
 /* -------------------------------------------- */
 /*  Owned on top                                */
 /* -------------------------------------------- */

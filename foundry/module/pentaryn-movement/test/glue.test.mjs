@@ -314,9 +314,9 @@ test("ghost-back: turning the wish back on before the fight ends suppresses the 
   await reset();
 });
 
-// KNOWN: aoe-movement-portals-42 — cleared by combat, then the GM picks "Always allowed" mid-fight: the
-// toast reads "The fight is over" (notify.back.combat). Flipped to notify.back.off by the F-M2 [declared] fix.
-test("KNOWN aoe-movement-portals-42: GM allows ghost mid-fight → today's toast is notify.back.combat", async () => {
+// aoe-movement-portals-42 (fixed, F-M2 [declared]) — cleared by combat, then the GM picks "Always allowed"
+// mid-fight: the toast was "The fight is over" (notify.back.combat); it now names the GM (notify.back.off).
+test("aoe-movement-portals-42: GM allows ghost mid-fight → the toast is notify.back.off", async () => {
   await reset();
   await set("ghost", true);
   game.combats.contents = [combat()];
@@ -324,7 +324,7 @@ test("KNOWN aoe-movement-portals-42: GM allows ghost mid-fight → today's toast
   await settle();
   const from = mark();
   await set("ghostPolicy", "always");
-  assert.deepEqual(toasts(from), [["info", "PENTARYN_MOVEMENT.notify.back.combat", { localize: true }]]);
+  assert.deepEqual(toasts(from), [["info", "PENTARYN_MOVEMENT.notify.back.off", { localize: true }]]);
   await reset();
 });
 
