@@ -1,0 +1,10 @@
+/*
+ * Pentaryn Feedback — every selector sits under .pentaryn-feedback or the module's prefix (.pf-…),
+ * so nothing here can restyle another package's DOM. Use core's CSS variables and
+ * .theme-dark / .theme-light rather than fixed colours. No !important in new rules.
+ */
+
+.pentaryn-feedback .pf-note {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}

@@ -1,0 +1,16 @@
+{
+  "PENTARYN_FEEDBACK": {
+    "Setting": {
+      "enabled": {
+        "Name": "Enable Pentaryn Feedback",
+        "Hint": "Track and announce GM note changes on actors."
+      }
+    },
+    "Keybind": {
+      "toggleEnabled": {
+        "Name": "Toggle Pentaryn Feedback",
+        "Hint": "Turn note tracking on or off for the world (GM only)."
+      }
+    }
+  }
+}

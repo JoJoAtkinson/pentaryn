@@ -1,0 +1,129 @@
+{
+  "module": "pentaryn-feedback",
+  "namespace": "feedback",
+  "contract": "pentaryn-feedback/api@1",
+  "flagScope": "pentaryn-feedback",
+  "methods": [
+    {
+      "path": "inspect",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|uuid|id|exact name",
+          "doc": "never a substring"
+        },
+        {
+          "name": "opts",
+          "type": "{ sceneId?, as? }",
+          "optional": true
+        }
+      ],
+      "returns": "{ actor, note, lastSeen, hp? }",
+      "gm": false,
+      "writes": false,
+      "query": true,
+      "sideEffects": [],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS",
+        "BAD_ARGS"
+      ],
+      "doc": "Read-only state for one actor, plain JSON, depth ≤ 4. opts.sceneId scopes a token ref; opts.as = a user ref answers with that user's view (note and lastSeen GM-only)."
+    },
+    {
+      "path": "selftest",
+      "params": [],
+      "returns": "{ ok, checks: [{ label, ok, detail }] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "doc": "Live smoke checks after a sync."
+    },
+    {
+      "path": "note",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|uuid|id|exact name",
+          "doc": "never a substring"
+        },
+        {
+          "name": "opts",
+          "type": "{ text, dryRun? }"
+        }
+      ],
+      "returns": "{ ok: true, actor, note } | { ok: false, code, reason }",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "flags.pentaryn-feedback.note"
+      ],
+      "doc": "Set (or, with empty text, clear) the actor's GM note. Never throws for a refusal: an unknown or ambiguous ref, or a player caller, returns { ok: false, code, reason }."
+    },
+    {
+      "path": "recent",
+      "params": [],
+      "returns": "{ id, note, at }[]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "doc": "Actors whose note changed this session, newest first."
+    }
+  ],
+  "queries": [
+    "pentaryn-feedback.inspect"
+  ],
+  "settings": [
+    {
+      "key": "enabled",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Master switch for the example feature: when off, note changes are not tracked or announced."
+    }
+  ],
+  "events": [
+    {
+      "key": "noteChanged",
+      "name": "pentaryn-feedback.noteChanged",
+      "legacyName": null,
+      "pre": false,
+      "args": "(actor, note)"
+    }
+  ],
+  "hooks": [
+    {
+      "name": "updateActor",
+      "label": "updateActor: note"
+    },
+    {
+      "name": "deleteActor",
+      "label": "deleteActor: prune"
+    }
+  ],
+  "patches": [],
+  "flags": {
+    "writes": [
+      "flags.pentaryn-feedback.note"
+    ],
+    "reads": []
+  },
+  "errors": [
+    "NOT_GM",
+    "NO_GM",
+    "NOT_READY",
+    "NOT_FOUND",
+    "AMBIGUOUS",
+    "BAD_ARGS",
+    "REFUSED",
+    "CONFLICT",
+    "UNSUPPORTED",
+    "TIMEOUT",
+    "INTERNAL"
+  ]
+}

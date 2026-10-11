@@ -1,0 +1,12 @@
+{
+  "contract": "string",
+  "describe": "function",
+  "inspect": "inspect",
+  "note": "note",
+  "recent": "recent",
+  "selftest": "selftest",
+  "settings": "settings",
+  "trace": "trace",
+  "uninstall": "uninstall",
+  "version": "string"
+}

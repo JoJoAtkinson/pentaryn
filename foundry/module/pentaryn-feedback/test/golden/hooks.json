@@ -1,0 +1,22 @@
+[
+  {
+    "kind": "once",
+    "name": "init"
+  },
+  {
+    "kind": "once",
+    "name": "setup"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  },
+  {
+    "kind": "on",
+    "name": "updateActor"
+  },
+  {
+    "kind": "on",
+    "name": "deleteActor"
+  }
+]
