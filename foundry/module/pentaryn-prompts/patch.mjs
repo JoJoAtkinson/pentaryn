@@ -26,6 +26,7 @@
  */
 
 import { DND_SIZE_WIDTH, codedError } from "./geometry-core.mjs";
+import { PATCH_KEYS } from "./prompts-core.mjs";
 import { findItem, notFound } from "./character.mjs";
 import { flattenLanguages, languageKeys, fixAttunement } from "./build-core.mjs";
 
@@ -63,8 +64,7 @@ export function patchSize(patch) {
 export async function checkPatch(patch) {
   if (!patch) return { notes: [], defaults: [] };
   if (typeof patch !== "object") throw codedError("BAD_SPEC", "patch must be an object");
-  const known = ["name", "size", "img", "biography", "hp", "ac", "cr", "speed", "disposition", "removeItems", "addItems",
-    "traits", "recharge", "itemUpdates", "set", "creatureType", "languages"];
+  const known = PATCH_KEYS;
   const extra = Object.keys(patch).filter(k => !known.includes(k));
   if (extra.length) throw codedError("BAD_SPEC", `patch: unknown key(s) ${extra.join(", ")} (known: ${known.join(", ")})`);
   patchSize(patch);

@@ -8,6 +8,7 @@ import { promptText } from "./markers.mjs";
 import { renderCrops } from "./crops.mjs";
 import { cropsDecision } from "./build-core.mjs";
 import { setting, manifests, manifestFor, storeManifest } from "./settings.mjs";
+import { CROP_DIR } from "./prompts-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
@@ -126,8 +127,7 @@ function sceneHasArt(scene) {
   } catch { return true; }
 }
 
-/** Where crop files go under the Foundry Data directory (see the playbook for the absolute path). */
-export const CROP_DIR = "pentaryn-prompts-crops";
+export { CROP_DIR };
 
 /**
  * Upload crops to `Data/pentaryn-prompts-crops/<call>/E1.webp` and return paths instead of base64.

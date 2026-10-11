@@ -13,6 +13,7 @@ import { PromptDialog } from "./dialog.mjs";
 import * as Typeahead from "./typeahead.mjs";
 import { sceneModel, seesCount } from "./model.mjs";
 import { gather, crops, list, show } from "./gather.mjs";
+import { DROP_WINDOW_MS, matchesDrop } from "./core/drop.mjs";
 import { wrapMethod } from "./lib/patch.mjs";
 import { libWrapperRoute } from "./lib/patch-libwrapper.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -70,7 +71,6 @@ async function placeAtCursor(sizeKey, { ticket = null } = {}) {
 
 /** Drops of marker actors whose token has not been created yet, oldest first. */
 const pendingDrops = [];
-const DROP_WINDOW_MS = 3000;
 
 function onDropCanvasData(_canvas, data, event) {
   try {
@@ -91,25 +91,11 @@ function onDropCanvasData(_canvas, data, event) {
   } catch (err) { log.debug("dropCanvasData (never blocks a drop)", err); }
 }
 
-/**
- * Is this created token the one that drop made? Same actor, same scene, within the window, and its
- * centre near the drop point (the drop centres the token on the cursor, then snaps). A paste or a
- * duplicate of a marker of the same actor inside the window lands elsewhere and is not "fresh".
- */
-function matchesDrop(doc, d) {
-  if (!d || d.actorId !== doc.actorId || Date.now() - d.t > DROP_WINDOW_MS) return false;
-  if (d.sceneId && d.sceneId !== doc.parent?.id) return false;
-  if (!Number.isFinite(d.x) || !Number.isFinite(d.y)) return true;
-  const g = doc.parent?.dimensions?.size ?? 100;
-  const cx = doc.x + doc.width * g / 2, cy = doc.y + doc.height * g / 2;
-  const tol = g * Math.max(1, doc.width);
-  return Math.abs(cx - d.x) <= tol && Math.abs(cy - d.y) <= tol;
-}
-
 function onCreateToken(doc, options, userId) {
   if (userId !== game.user?.id || !game.user.isGM || options?.pentarynPrompts) return;
   if (!isPromptToken(doc)) return;
-  const i = pendingDrops.findIndex(d => matchesDrop(doc, d));
+  const now = Date.now();
+  const i = pendingDrops.findIndex(d => matchesDrop(doc, d, now));
   if (i < 0) return;
   const [d] = pendingDrops.splice(i, 1);
   PromptDialog.open(doc, { fresh: true, clientX: d.clientX, clientY: d.clientY, ticket: d.ticket });

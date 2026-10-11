@@ -8,7 +8,8 @@
  * keys for array choices.
  */
 
-import { MODULE, GATHER_CHARS, SIZE_KEYS } from "./geometry-core.mjs";
+import { GATHER_CHARS, SIZE_KEYS } from "./geometry-core.mjs";
+import { MODULE, I18N } from "./prompts-core.mjs";
 import { defineKeybindings, defineSettings, settingsSnapshot as snapshot } from "./lib/settings.mjs";
 import { makeLog } from "./lib/log.mjs";
 
@@ -78,7 +79,7 @@ export const SETTINGS = Object.freeze([
 
 /** Called from the entry's `init` handler, before the keybindings. */
 export function registerSettings() {
-  defineSettings(MODULE, SETTINGS, { i18nRoot: "PENTARYN_PROMPTS", labels: { section: "settings", name: "name", hint: "hint" } });
+  defineSettings(MODULE, SETTINGS, { i18nRoot: I18N, labels: { section: "settings", name: "name", hint: "hint" } });
 }
 
 /**
@@ -102,7 +103,7 @@ export function keybindingRows({ place, edit }) {
 
 /** Keybindings register during `init` only (Foundry refuses them after setup). */
 export function registerKeybindings(rows, { log = null } = {}) {
-  defineKeybindings(MODULE, rows, { i18nRoot: "PENTARYN_PROMPTS", log });
+  defineKeybindings(MODULE, rows, { i18nRoot: I18N, log });
 }
 
 /**

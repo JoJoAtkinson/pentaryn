@@ -29,11 +29,12 @@ import { resolveCharacter, buildCharacter, previewCharacter, findItem, notFound 
 import { checkNpc, createNpc } from "./npc.mjs";
 import { fixAttunement, specFileUrl } from "./build-core.mjs";
 import { renderReplace, planRow, resultRow, sheetLine, createdText, needsDryRun, goneMessage } from "./readback-core.mjs";
+import { KINDS, SPEC_DIR } from "./prompts-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 
 const log = makeLog(MODULE);
 
-export const KINDS = Object.freeze(["actor", "npc", "character", "hotspot", "note", "light", "tile", "none"]);
+export { KINDS, SPEC_DIR };
 export const EYE = "assets/tokens/custom/props/icon-eye.webp";
 export const HOTSPOT_TEMPLATE = "Hotspot · Look (template)";
 export const CREATURE_FOLDER = "Foundry MCP Creatures";
@@ -702,9 +703,6 @@ export async function replaceMany(input, opts = {}) {
   return { dryRun: false, call: callOut, text: renderReplace({ dryRun: false, call: callOut, rows: results, remaining, encounters }),
     results, remaining, encounters };
 }
-
-/** Where spec files go under the Foundry Data directory (the eval-js path; the MCP tool reads any local file). */
-export const SPEC_DIR = "pentaryn-prompts-specs";
 
 /**
  * `{specFile, …}` → the args with the file's `replacements` (and its `call` / `party` unless the

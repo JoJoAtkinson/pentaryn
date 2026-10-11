@@ -9,10 +9,8 @@
  * (i = row, j = column, as Foundry's GridOffset2D).
  */
 
-export const MODULE = "pentaryn-prompts";
-
-/** The code's own version: `status().version` prints it (game.modules can lag until a rescan). Kept equal to module.json by the suite. */
-export const VERSION = "0.4.5";
+// MODULE and VERSION live in prompts-core.mjs; re-exported for every importer of this core
+export { MODULE, VERSION } from "./prompts-core.mjs";
 
 /** The gather description length: the setting's registered default, gather's fallback and renderGather's default (D6). */
 export const GATHER_CHARS = 400;
