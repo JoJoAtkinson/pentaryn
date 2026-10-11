@@ -689,7 +689,3 @@ Hooks.on("renderBaseActorSheet", (app, element) => {
 Hooks.on("preUpdateItem", onPreUpdateItem);
 Hooks.on("preCreateItem", onPreCreateItem);
 Hooks.on("createItem", onCreateItemBond);
-
-// Re-exported for test/legacy-slots.mjs until it imports the core (guide step 2b). Foundry ignores
-// exports on an esmodule entry point.
-export { computeSlots, homeSlots, patchProficiencyMap };

@@ -10,7 +10,8 @@ import * as oracle from "./fixtures/legacy-attunement.mjs";
 mock.timers.enable({ apis: ["setTimeout"] });
 
 const F = await attunementWorld();
-const entry = await import("../attunement.mjs");
+await import("../attunement.mjs");
+const entry = await import("../attunement-core.mjs");   // computeSlots: the entry no longer re-exports it (step 2b)
 
 const mark = () => F.calls.length;
 const since = (from, op) => F.calls.slice(from).filter(c => !op || c.op === op);

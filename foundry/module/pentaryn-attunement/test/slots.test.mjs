@@ -1,6 +1,6 @@
-#!/usr/bin/env node
 /**
- * Fixtures for the two pure functions. No dependencies — `node test/run.mjs`.
+ * The slot fixtures (guide step 2b): test/legacy-slots.mjs converted to node:test, importing the
+ * core. The same 35 checks with the same expectations; only the runner changed.
  *
  * `computeSlots` is the only part of this module with non-obvious behaviour, and
  * it is the part a browser test would exercise least reliably: the interesting
@@ -9,14 +9,11 @@
  *
  * It is also the part that must never throw. It runs inside a render hook, so an
  * exception there takes the character sheet's sidebar with it.
- *
- * Foundry globals are stubbed only as far as importing the module requires: the
- * entry point registers hooks at load time and touches nothing else.
  */
 
-globalThis.Hooks = { on() {}, once() {} };
-
-const { computeSlots, homeSlots, patchProficiencyMap } = await import("../attunement.mjs");
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { computeSlots, homeSlots, patchProficiencyMap } from "../attunement-core.mjs";
 
 /**
  * Minimal stand-in for an Actor. `items` only needs `filter`, and each item only
@@ -32,14 +29,12 @@ function actor({ attuned = [], all = null, slots, max = 3 } = {}) {
   };
 }
 
-let pass = 0;
-const failures = [];
+let count = 0;
 
+/** One fixture: a node test comparing JSON (key and slot order are part of the contract). */
 function check(name, got, want) {
-  const g = JSON.stringify(got);
-  const w = JSON.stringify(want);
-  if (g === w) { pass++; return; }
-  failures.push(`  ${name}\n    expected ${w}\n    got      ${g}`);
+  count++;
+  test(name, () => assert.equal(JSON.stringify(got), JSON.stringify(want)));
 }
 
 /** Convenience: assert only the slot array. */
@@ -214,11 +209,4 @@ check("marker already gone (released meanwhile): slots untouched",
 check("the old duplicate shape reconciles to one occurrence",
   slotsOf(actor({ attuned: ["s", "c", "p"], slots: ["s", "c", "p", "s"] })), ["s", "c", "p"]);
 
-/* ── Report ───────────────────────────────────────────────────────────────── */
-
-if (failures.length) {
-  console.error(`\n✗ ${failures.length} failed, ${pass} passed\n`);
-  console.error(failures.join("\n\n"));
-  process.exit(1);
-}
-console.log(`✓ ${pass} fixtures passed`);
+test("all 35 legacy fixtures ran", () => assert.equal(count, 35));
