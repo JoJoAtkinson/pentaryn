@@ -193,6 +193,86 @@ phase only (nothing built or deployed; the fork changes ship with the next bridg
   `quant_numbers.bin.lock` and re-read the file when another process changed it; a two-process
   test pins it (red before the fix).
 
+## dropbin — guide steps 2–9 and the standalone findings, code phase (2026-10-11)
+
+Code phase only; nothing synced, no live tool used. Guide Result row:
+[`migrate-pentaryn-dropbin.md`](migrate-pentaryn-dropbin.md) §Result; audit status:
+[`../code-audit-2026-10/dropbin.md`](../code-audit-2026-10/dropbin.md) §Status.
+
+**PT3-1:** `fix/playtest-2026-10-11` was finished (`fa449fd3`), so it is merged (`931203a5`; one
+conflict, names' CHANGELOG, both entries kept) and dropbin's refactor carries `corpses.mjs`'s
+PT3-1 code and its `test/corpses.test.mjs` unchanged (green throughout). Nothing to drop at merge.
+
+| Step / finding | Commit |
+|---|---|
+| 2 cores (-20, MODULE half of -26) · 3 settings · 4 adapters · 5 features + entry (-22) | `1e4214c2` · `27829537` · `8eb60589` · `4ef64cd7` |
+| kit guard on every handler [declared] | `146aefce` |
+| 6 manifest API, publish at ready [declared] D-D1 · -28 additive (brief, restoreResult, inspect, selftest) | `500f33a0` · `0ac333a2` |
+| 7 i18n (-26 strings) | `a1b0ff01` |
+| 8 -18 [declared] D-D2 · -21 [declared] · -23 [declared] · -24 · -25 [declared] · -30 [declared] · -19 [declared] · -27 kept | `a3b44685` · `9f43f573` · `4d96d3a8` (+`6273d1e7`) · `eff44a40` · `bae36010` · `c62da821` · `314f49c3` · `4fa0b17a` |
+| 9 README, CHANGELOG · §5.9 review: clear through the queue [declared], hot-path guard · coverage gaps · plans | `85f4353f` · `b2320f94`, `34e74e6c` · `f7bebf9e` · `cda968d9` |
+
+**Results at `f7bebf9e`:** `node test/run.mjs` 114 pass, 0 fail + legacy 40 checks (checkpoint: 38 +
+40). `vendor.py check dropbin` green; static gates (parse, imports, i18n 17/17, node-test, vendor,
+conformance) green. Conformance **60.9 % → 91.7 % (44/48)**; failing C07, C09 (Wave 7 `module.json`),
+C47 (adjustments rows, integrator), C50 (scorer gap: it reads only `Hooks.once("ready", …)`, not a
+publish from a `reg.once` ready handler). Performance counters: 5 drops in one tick 2 counter + 2 log
+writes (was 5 + 5), one mirror upload per burst; Journal sidebar 40 rows × 5 scenes 5 note walks
+(was 160); corpse eye disc cleared once per size (was every refreshToken).
+
+**Frozen tests touched** (checkpoint `4b53345`): `glue.test.mjs` only, at named pins, each in its
+[declared] commit — publish timing (D-D1), -18 KNOWN, -25 backfill shape, -30 KNOWN, -19 upload
+timing and ready line; goldens `ready-console.json` and `backfills.json` re-pinned there. The
+`impls.mjs` fixture gained the core (step 2, as its comment said) and `world.mjs` gained
+`Actor.implementation.updateDocuments` (-25). No frozen test went red twice.
+
+**Live checks for the gated live phase (L3)** — after a reload (no `module.json` change yet):
+`game.pentaryn.dropbin.describe().version === "0.2.2"`, `selftest().ok`; `list(5, {brief: true})`;
+console at ready: `ready — N entries on the ledger (~K KB)` (GM). D-D2/-19: as a player drop three
+items in one Item Piles drop → three consecutive numbers, `assets/drop-bin/drop-log.json` updates
+~2 s later; `restoreResult(n)` on a test item, then `restore(n)` toasts as before. -21: as a player
+with no GM online, drop an item → one `ledger entry not recorded (no GM?)` warning, no
+"Uncaught (in promise)". -25: with the bridge tab and a GM browser tab, only the active GM logs
+`lock sound set …` (when there is work). -30: a corpse's eye still shows/hides while looting and
+while the token moves. Locks: a player opens a locked chest from canvas, sidebar and Ctrl-click →
+toast + floating *Locked*. PT3-1: kill and revive an unlinked NPC from the HUD → players lose its
+sheet. Hot patch: `game.pentaryn.dropbin.uninstall()` then
+`await import("/modules/pentaryn-dropbin/dropbin.mjs?v=2")` → `selftest().ok` (socketlib relay
+re-registered). No live golden "before" script exists for dropbin (the wave-1 report asked for one
+per module): `scripts/foundry/live-goldens/` is shared, so it is listed for the integrator.
+
+**Integrator handoff — dropbin, shared files** (exact edits; the dropbin lane does not touch them):
+
+1. `foundry/adjustments.yml`: `itempiles-corpses` `files` →
+   `[foundry/module/pentaryn-dropbin/corpses.mjs, foundry/module/pentaryn-dropbin/dropbin.mjs, foundry/module/pentaryn-dropbin/loot.mjs, foundry/module/pentaryn-dropbin/piles.mjs]`
+   (marker `itempiles` stays); `itempiles-rarity-i18n` `files` →
+   `[foundry/module/pentaryn-dropbin/i18n-shim.mjs, foundry/module/pentaryn-dropbin/dropbin.mjs]` unchanged
+   (the entry installs the shim as a feature now; the marker `ItemRarity` is in both). New rows (guide step 10 with the D2 package prefixes from
+   `adjustments-batch.md`; `modules: [pentaryn-dropbin]`, `check: make foundry-dropbin-check`):
+   `socketlib-dropbin-relay` (packages `[socketlib]`, files `[…/socketlib-adapter.mjs]`, markers
+   `["registerModule", "executeAsGM"]`); `itempiles-dropbin-nan-attunement` (packages `[item-piles, dnd5e]`,
+   files `[…/itempiles.mjs]`, markers `["ATTUNEMENT_PACKS", "repairAttunement"]`, `native_when: "Item
+   Piles addItems preserves system.attunement"`, `retire_class: guarded`);
+   `itempiles-dropbin-container-locks` (files `[…/itempiles.mjs]`, markers
+   `["item-piles-preRenderInterface", "item-piles-preRenderActorSheet"]`);
+   `itempiles-dropbin-directory-hiding` (files `[…/itempiles.mjs]`, marker `renderActorDirectory`);
+   `itempiles-dropbin-svelte-store` (files `[…/piles.mjs]`, marker `appShell`, `retire_class: never`,
+   manual check "open a pile, Change recipient, Loot all goes to the new recipient"). Clears C47.
+2. `wave7-restart-batch.md` Batch 1 dropbin row (unchanged): `flags.pentaryn` =
+   `{flagScope: "pentaryn-dropbin", generation: 14, tier: "full", namespace: "dropbin", cssPrefix: "pd-"}`;
+   `relationships.recommends` item-piles (drop capture, corpse piles, Loot all, container locks) and
+   itempilesdnd5e (the rarity i18n shim); `requires: socketlib` stays; `compatibility.minimum: "14"`.
+   Clears C07, C09, C02. If the batch also bumps `version`, change `VERSION` in
+   `foundry/module/pentaryn-dropbin/dropbin-core.mjs` in the same commit (`test/core-barrel.test.mjs`
+   pins them equal).
+3. `context/foundry/README.md` Module APIs table: regenerate (`python -m scripts.foundry.ops module-index`);
+   the dropbin row gains its API cell from the new `describe.json` (check-context is red until then,
+   as for walls, attunement, journal, lookup and movement).
+4. `scripts/foundry/live-goldens/dropbin.js` (new, optional): the "before"/"after" live golden the
+   wave-1 report asks for — `describe()` normalised, `list(3, {brief: true})`, `selftest()`.
+5. Blueprint scorer (tooling lane): C50 should also follow `reg.once("ready", …)` handlers and a
+   publish reached from one (guide §8).
+
 ## Open for Joe
 
 | # | Item | From | What is needed |
@@ -212,3 +292,5 @@ phase only (nothing built or deployed; the fork changes ship with the next bridg
 | W2-J4 | journal §5.9.4 hits outside items-journal-40 (review; the audit scoped them out, `code-audit-2026-10/journal.md` -40 last paragraph): (a) the `createUser` listener and the ready `ensureAll` (`personal.mjs` `install`) create a JournalEntry, and maybe the `Player Journals` Folder, behind only `game.user.isGM && game.users.activeGM?.isSelf` — true in **every tab** of the GM account — while `gmInflight`/`folderInflight` are per tab. With the MCP bridge tab and a GM browser tab open, a new User gets **two** personal journals (and two folders when the folder is missing); the same when both tabs reach `ready` together after a restart while a player has no journal. Duplicates stay visible in `report().users[].duplicates`; `personal()` uses the oldest, so nothing breaks, but the player owns a stray journal. (b) `ensureAll` awaits one `ensureFor` create per player in a loop (the C59 pattern; C59's scan misses it because the `await` is on `ensureFor`). Not fixed in this wave: every remedy moves a **frozen glue pin** — `glue.test.mjs` pins `createUser` creating at once and `ensureAll` as one `JournalEntry.create` per player. Remedies: createUser → `claimDocument(user, "journal")` (fits: a new User is a one-time event, so the single-use key is right; the 750 ms settle delays the create); ready → deterministic `_id`s (journal `_id` = the user's id, a fixed folder `_id`, `keepId`, look first; §5.9.2) — this also covers createUser; (b) → one `JournalEntry.createDocuments` for every missing player (folder first), keeping `gmInflight` for the per-user path. | journal lane (review) | fix as [declared] commits (one per remedy, each flipping its named glue pin), or keep the audit's out-of-scope decision (default: accept and document; duplicates are reported, not lost) |
 | W2-B3 | Kit row field `dryRun: true` (in the `ApiRow` typedef and `describe()`), so a row says it takes a dry run. pentaryn-write already honours `row.dryRun === true`; until the kit emits it, the template accepts a dry run only on a row whose param type or doc names `dryRun` (importer.import today), and refuses it elsewhere (`6f598fb`). | kit lane (bridge review) | yes → kit bump adds the field and importer's row sets it; no → keep the param-text rule |
 | W2-B4 | `names.sync(ref, oldName, newName)` resolves a string ref itself (its row doc says so), but its `ref` param is `resolve: false` with no `type`, so pentaryn-write now refuses it as "needs a live Document — eval-js only" (`a6fb891`). A row needs a manifest signal that it resolves strings itself: either a kit field (e.g. a param `resolve: "self"`), or now, with no kit change, a `type` naming the string forms on that param (`"Actor\|Token\|uuid\|id\|exact name"`, as attunement's ACTOR param has), which the template already honours. The second edits names' `describe` golden. | kit lane / names (bridge review) | pick one; until then names.sync goes through eval-js |
+| W2-D1 | dropbin corpses, §5.9.4 (not in the audit): corpse conversion (`sync` → `toCorpse`/`fromCorpse`), the hp hook's Dead toggle on revival and the ready `migrateLegacyEyes` run where `game.users.activeGM.isSelf` — **every tab** of the active GM account. With the MCP bridge tab and a GM browser tab open, a kill runs `turnTokensIntoItemPiles` and the corpse update in both tabs (each debounced 150 ms per tab); Item Piles' second conversion and the second `revertTokensFromItemPiles` race the first. Expected outcome is the same corpse (both write the same flags; the PT3-1 re-pile guard keeps the saved pre-death map), but it is unverified live. A fix needs a per-tab election (a `claimDocument`-style claim on the token per death, or the kit `election` with a socket-id tie-break). | dropbin lane | accept and watch in L3 (default: look for doubled "corpse sync failed" warnings or two chat cards), or ask for a claim as a [declared] fix |
+| W2-D2 | dropbin ledger, §5.9.4: socketlib's `executeAsGM` reaches every tab of the responsible GM user, so a player's relayed entry is recorded by both tabs. Both compute the same row (same `t` from the sender, same `n` from the same synced counter) and the tail dedupe catches the sequential case, so the ledger ends the same; the mirror is uploaded twice. Only a different entry recorded in one tab at the same instant could interleave and lose a row (each tab writes its whole log). Request-keying (a sender `req` id in each entry, dedupe on it) would close it but adds a field to every stored entry (a stored-shape change). | dropbin lane | accept (default), or ask for request-keyed entries as a [declared] change |
