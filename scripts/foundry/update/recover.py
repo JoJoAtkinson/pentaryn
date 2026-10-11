@@ -205,7 +205,7 @@ def _restore_world_tar(snapshot: "cloud.Snapshot | Path | None", rec: Recovery) 
         rec.steps.append(f"restored worlds/Config/modules from {snapshot.name}")
         return
     st = cloud.store()
-    fetched = cloud.fetch_snapshot(st, snapshot)
+    fetched = cloud.fetch_snapshot(st, snapshot, systems=False)
     try:
         cloud.apply_snapshot(fetched, systems=False)
     finally:

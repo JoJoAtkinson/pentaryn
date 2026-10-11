@@ -60,6 +60,7 @@ import tarfile
 import tempfile
 import time
 import zipfile
+import zlib
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -1105,14 +1106,17 @@ class Fetched:
     cleanup: list[Path] = field(default_factory=list)   # temp files/dirs to remove
 
 
-def _bundle_plan(manifest: dict) -> tuple[dict[str, str], list[str], list[str]]:
+def _bundle_plan(manifest: dict, *, systems: bool = True
+                 ) -> tuple[dict[str, str], list[str], list[str]]:
     """(needed, extras, unchanged) of `manifest` against this machine's inventory. The
-    bundle cache is read, not written: planning a restore changes nothing on disk."""
+    bundle cache is read, not written: planning a restore changes nothing on disk. With
+    `systems=False` a system is never needed (the caller leaves Data/systems alone)."""
     inv = bundles.local_inventory(save=False)
     want = bundles.manifest_keys(manifest)
-    needed = {k: n for k, n in want.items() if inv.get(k) is None or inv[k].name != n}
+    differ = {k: n for k, n in want.items() if inv.get(k) is None or inv[k].name != n}
+    needed = {k: n for k, n in differ.items() if systems or not k.startswith("system/")}
     extras = sorted(k for k in inv if k not in want)
-    unchanged = sorted(k for k in want if k not in needed)
+    unchanged = sorted(k for k in want if k not in differ)
     return needed, extras, unchanged
 
 
@@ -1128,14 +1132,15 @@ def discard_fetched(f: Fetched) -> None:
             pass
 
 
-def fetch_snapshot(st: Storage, snap: Snapshot) -> Fetched:
+def fetch_snapshot(st: Storage, snap: Snapshot, *, systems: bool = True) -> Fetched:
     """Download `snap` and every bundle this machine lacks for it, and verify them; touch
     nothing local. Raises RestoreError (temp files removed) when the cloud lacks a bundle,
     a download fails or arrives short, or the sidecar and the tar's marker disagree.
 
     The tar's first member (SNAPSHOT_MARKER) is authoritative. A sidecar that is present
     must agree with it both ways; a sidecar that is missing (lost, or the tar renamed by
-    hand) is not a disagreement — the marker then names the bundles."""
+    hand) is not a disagreement — the marker then names the bundles. With
+    `systems=False` (the updater) no system bundle is needed or downloaded."""
     try:
         side, side_manifest = _read_sidecar(st, snap)
     except StorageError as exc:
@@ -1149,7 +1154,7 @@ def fetch_snapshot(st: Storage, snap: Snapshot) -> Fetched:
     def plan(manifest: dict) -> None:
         nonlocal have
         f.manifest = manifest
-        f.needed, f.extras, f.unchanged = _bundle_plan(manifest)
+        f.needed, f.extras, f.unchanged = _bundle_plan(manifest, systems=systems)
         try:
             have = bundles.listing(st)
         except StorageError as exc:
@@ -1176,7 +1181,7 @@ def fetch_snapshot(st: Storage, snap: Snapshot) -> Fetched:
                                f"cloud says {snap.size} B — nothing local was touched")
         try:
             marked, in_tar = _read_marker(local_tar)
-        except (tarfile.TarError, OSError, EOFError) as exc:
+        except (tarfile.TarError, OSError, EOFError, zlib.error) as exc:
             raise RestoreError(f"{snap.name} is not a readable snapshot — nothing local was "
                                f"touched: {exc}") from exc
         why = None
@@ -1316,8 +1321,8 @@ def extract_snapshot(tar_path: Path, *, systems: bool = True) -> None:
     if not marked:
         apply_snapshot(Fetched(None, tar_path, None, {}, {}, [], []), systems=systems)
         return
-    needed, extras, unchanged = _bundle_plan(manifest)
-    lacking = [n for k, n in needed.items() if systems or not k.startswith("system/")]
+    needed, extras, unchanged = _bundle_plan(manifest, systems=systems)
+    lacking = list(needed.values())
     if lacking:
         raise RestoreError(f"{tar_path.name} needs bundles this machine does not have: "
                            f"{', '.join(lacking)} — restore it from the cloud "

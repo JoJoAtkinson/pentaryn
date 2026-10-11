@@ -1432,9 +1432,16 @@ def test_two_hosts_scenario_moves_only_the_bundles_that_changed(two_hosts, monke
 # ── the updater on a bundled snapshot ───────────────────────────────────────
 
 def test_updater_world_restore_of_a_bundled_snapshot_restores_modules_not_the_system(
-        two_hosts):
+        two_hosts, monkeypatch):
     from scripts.foundry.update import recover
     mac = _install(two_hosts.data["mac"])
+    fetched: list[str] = []
+    real = storage.FolderStorage.download
+
+    def spy(self, rel, dest):
+        fetched.append(rel)
+        return real(self, rel, dest)
+    monkeypatch.setattr(storage.FolderStorage, "download", spy)
     (mac / "Data/worlds/w/journal.txt").write_text("pre-update")
     with two_hosts.use("mac"):
         cloud.backup("auto-update")
@@ -1451,3 +1458,23 @@ def test_updater_world_restore_of_a_bundled_snapshot_restores_modules_not_the_sy
     assert rec.steps == [f"restored worlds/Config/modules from {snap.name}"]
     assert (st.based_on, st.by) == (snap.name, "updater-rollback")
     assert _tmp_files(mac) == []
+    got = [r.split("/", 1)[1] for r in fetched if r.startswith("bundles/")]
+    assert len(got) == 1 and got[0].startswith("module@tools@")   # never the system
+
+
+def test_updater_world_restore_does_not_need_the_system_bundle(two_hosts):
+    from scripts.foundry.update import recover
+    mac = _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("auto-update")
+        snap = recover.newest_world_snapshot()
+    for p in (two_hosts.cloud / "bundles").glob("system@*"):
+        p.unlink()                                  # swept, or never uploaded
+    with two_hosts.use("mac"):
+        _system(mac, "5.13", body="the new system\n")
+        _edit(mac, "migrated")
+        rec = recover.Recovery(kind="system", target="dnd5e")
+        recover._restore_world_tar(snap, rec)
+    assert not (mac / "Data/worlds/w/journal.txt").exists()      # the snapshot's world
+    assert (mac / "Data/systems/dnd5e/dnd5e.mjs").read_text() == "the new system\n"
+    assert rec.steps == [f"restored worlds/Config/modules from {snap.name}"]
