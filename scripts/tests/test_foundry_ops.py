@@ -504,6 +504,35 @@ def test_foundry_data_is_under_application_support_on_a_mac(monkeypatch):
         assert str(cfg.FOUNDRY_DATA_DIR).endswith("Application Support/FoundryVTT/Data")
 
 
+# ── foundry-down: pid OR port ─────────────────────────────────────────────────
+
+@pytest.fixture
+def stops(monkeypatch):
+    from scripts.foundry import host
+    calls = []
+    monkeypatch.setattr(host, "request_stop", lambda: calls.append("stop") or True)
+    monkeypatch.setattr(host, "force_stop", lambda: calls.append("force"))
+    return host, calls
+
+
+def test_down_stops_a_server_whose_pid_cannot_be_found_but_whose_port_answers(
+        monkeypatch, stops, capsys):
+    """BOSS with a PENTARYN_START_CMD that pgrep's pattern does not match."""
+    host, calls = stops
+    monkeypatch.setattr(host, "pid", lambda: None)
+    monkeypatch.setattr(host, "is_running", lambda port=None: True)
+    assert service.down() == 0
+    assert calls == ["stop"] and "already down" not in capsys.readouterr().out
+
+
+def test_down_with_neither_pid_nor_port_is_already_down(monkeypatch, stops, capsys):
+    host, calls = stops
+    monkeypatch.setattr(host, "pid", lambda: None)
+    monkeypatch.setattr(host, "is_running", lambda port=None: False)
+    assert service.down() == 0
+    assert calls == [] and "already down" in capsys.readouterr().out
+
+
 # ── vtt-login: the parts that can be tested without a live server ─────────────
 #
 # The wire protocol is proved by running it (see context/foundry/ops.md §2). What is

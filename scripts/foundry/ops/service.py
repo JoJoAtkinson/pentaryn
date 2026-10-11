@@ -158,7 +158,9 @@ def _warn_stale_bridge() -> None:
 
 
 def down() -> int:
-    if host.pid() is None:
+    # Both probes: on BOSS a PENTARYN_START_CMD whose command line does not match
+    # `main.js --dataPath=<root>` has no pid we can find, but its port still answers.
+    if host.pid() is None and not host.is_running():
         _say("▸ foundry already down")
         return OK
     # Ask politely first — a graceful quit lets Foundry close its LevelDB cleanly.
