@@ -28,25 +28,26 @@ test("module.api is canonical, game.pentaryn.<ns> the alias, both ready hooks fi
   assert.equal(publishedOf("x", { g }).when, "ready");
 });
 
-test("a frozen root (pentaryn-importer) is rebuilt, and a displaced alias is restored one tick later", () => {
+test("J10: no frozen-root guard and no re-alias tick — an extensible root is assigned into, a frozen one throws", () => {
   const g = env();
-  g.game.pentaryn = Object.freeze({ importer: { run() {} } });
+  const root = { importer: { run() {} } };
+  g.game.pentaryn = root;
   const x = api("x");
   publishNamespace("x", x, { moduleId: "pentaryn-x", g, when: "ready:gm:wasm" });
-  assert.ok(Object.isExtensible(g.game.pentaryn));
+  assert.equal(g.game.pentaryn, root, "the same root object, never a rebuilt copy");
   assert.equal(typeof g.game.pentaryn.importer.run, "function");
   assert.equal(g.game.pentaryn.x, x);
-  // the importer loads later and freezes a root without us
-  g.game.pentaryn = Object.freeze({ importer: {} });
-  for (const t of g.timers.splice(0)) t();
-  assert.equal(g.game.pentaryn.x, x);
   assert.equal(g.game.pentaryn.published().x.when, "ready:gm:wasm");
+  assert.deepEqual(g.timers, [], "nothing is scheduled");
+  g.game.pentaryn = Object.freeze({ importer: {} });
+  assert.throws(() => publishNamespace("y", api("y"), { moduleId: "pentaryn-y", g }), TypeError);
+  assert.deepEqual(g.timers, []);
 });
 
 test("alias publishes a second name only: no module.api, no hooks", () => {
   const g = env();
   const chain = api("chain");
-  publishNamespace("chain", chain, { moduleId: "pentaryn-y", g, alias: true, realiasTick: false });
+  publishNamespace("chain", chain, { moduleId: "pentaryn-y", g, alias: true });
   assert.equal(g.game.modules.get("pentaryn-y").api, undefined);
   assert.equal(g.game.pentaryn.chain, chain);
   assert.deepEqual(g.calls, []);
@@ -54,8 +55,8 @@ test("alias publishes a second name only: no module.api, no hooks", () => {
 
 test("root helpers count only kit-built namespaces and never sink on one failure", async () => {
   const g = env();
-  publishNamespace("x", api("x", { inspect: actor => ({ name: actor.name }) }), { moduleId: "pentaryn-x", g, realiasTick: false });
-  publishNamespace("y", api("y", { inspect: () => { throw Object.assign(new Error("NOT_FOUND: nope"), { code: "NOT_FOUND" }); } }), { moduleId: "pentaryn-y", g, realiasTick: false });
+  publishNamespace("x", api("x", { inspect: actor => ({ name: actor.name }) }), { moduleId: "pentaryn-x", g });
+  publishNamespace("y", api("y", { inspect: () => { throw Object.assign(new Error("NOT_FOUND: nope"), { code: "NOT_FOUND" }); } }), { moduleId: "pentaryn-y", g });
   g.game.pentaryn.legacy = { describe: () => ({}) };            // has describe, no contract → not counted
   const root = g.game.pentaryn;
   assert.deepEqual(root.namespaces(), ["x", "y"]);
