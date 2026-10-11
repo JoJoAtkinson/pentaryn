@@ -5,7 +5,7 @@
  * The adapter (pentaryn-lookup.mjs) turns `game.packs` into the plain shape below and
  * calls these. Nothing here knows that Foundry exists.
  *
- *   book = {id, label, edition?, docs: [{id, name, pages: [{id, name, html}]}]}
+ *   book = {id, label, edition?, docs: [{id, name, pages: [{id, name, html, text?}]}]}
  *
  * Why the split: every one of the five known traps in this workflow fails *silently* —
  * `getIndex({fields})` returning empty objects, `EmbeddedCollection` having no
@@ -166,7 +166,7 @@ export function searchBooks(books, query, opts = {}) {
   for (const book of books ?? []) {
     for (const doc of book.docs ?? []) {
       for (const page of doc.pages ?? []) {
-        const text = toPlainText(page.html);
+        const text = page.text ?? toPlainText(page.html);
         if (!text) continue;
         re.lastIndex = 0;
         const found = text.match(re);
@@ -229,14 +229,19 @@ export function capPayload(result, maxBytes = LIMITS.payloadBytes) {
 
 // ── plain books (the adapter feeds Foundry documents through these) ──────────
 /**
- * A compendium's journal entries → the plain book every search reads. `docs` and each `pages` are
- * iterated with for…of (a live `doc.pages` is an EmbeddedCollection: `.size`, never `.length`).
+ * A compendium's journal entries → the plain book every search reads, each page's plain `text`
+ * stripped once here (searchBooks and renderPage use it; a page without `text` is stripped per
+ * call, as fixtures are). `docs` and each `pages` are iterated with for…of (a live `doc.pages` is
+ * an EmbeddedCollection: `.size`, never `.length`).
  */
 export function toBook(id, label, edition, docs) {
   const out = [];
   for (const doc of docs ?? []) {
     const pages = [];
-    for (const page of doc.pages ?? []) pages.push({ id: page.id, name: page.name, html: page.text?.content ?? "" });
+    for (const page of doc.pages ?? []) {
+      const html = page.text?.content ?? "";
+      pages.push({ id: page.id, name: page.name, html, text: toPlainText(html) });
+    }
     out.push({ id: doc.id, name: doc.name, pages });
   }
   return { id, label, edition, docs: out };
@@ -285,7 +290,7 @@ export function renderPage(found, opts = {}) {
   const uuid = pageUuid(book.id, doc.id, page.id);
   if (opts.raw) return { journal: doc.name, page: page.name, uuid, raw: page.html ?? "" };
 
-  const full = toPlainText(page.html);
+  const full = page.text ?? toPlainText(page.html);
   const max = clamp(opts.maxChars, LIMITS.pageChars, 40000);
   const offset = Math.max(0, Number(opts.offset) || 0);
   const slice = full.slice(offset, offset + max);

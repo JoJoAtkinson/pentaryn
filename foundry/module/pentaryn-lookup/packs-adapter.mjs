@@ -10,10 +10,28 @@
 
 import { EDITIONS, SPELL_PACKS, tidy, toBook, toPlainText } from "./lookup-core.mjs";
 
-// Stripped page text, memoized by page uuid. The book packs are read-only and LevelDB
-// locks them while Foundry runs, so invalidation is "never". ~3 MB ceiling across every
-// pack; it makes the second search of a session near-instant.
-const textCache = new Map();
+/**
+ * The plain books, one load per pack per session: pack id → Promise<book> (the promise, so two
+ * calls on a cold cache share one getDocuments()). The book packs are read-only and LevelDB locks
+ * them while Foundry runs, so nothing invalidates an entry but clearBookCache() (books.uninstall).
+ * A missing pack is never cached (checked on every call); a failed load is dropped, so the next
+ * call retries. Memory: the books' HTML plus their plain text.
+ */
+const bookCache = new Map();
+
+export function clearBookCache() {
+  bookCache.clear();
+}
+
+function cachedBook(id, pack) {
+  let p = bookCache.get(id);
+  if (!p) {
+    p = pack.getDocuments().then(docs => toBook(id, pack.metadata.label, EDITIONS[id], docs));
+    bookCache.set(id, p);
+    p.catch(() => { if (bookCache.get(id) === p) bookCache.delete(id); });
+  }
+  return p;
+}
 
 /**
  * `game.packs` -> the plain shape lookup-core wants.
@@ -36,15 +54,7 @@ export async function loadBooks(ids) {
   for (const id of ids) {
     const pack = game.packs.get(id);
     if (!pack) { missing.push(id); continue; }
-    const book = toBook(id, pack.metadata.label, EDITIONS[id], await pack.getDocuments());
-    for (const doc of book.docs) {
-      for (const page of doc.pages) {
-        const uuid = `${id}:${doc.id}:${page.id}`;
-        if (textCache.has(uuid)) page.html = textCache.get(uuid);
-        else { textCache.set(uuid, page.html); }
-      }
-    }
-    books.push(book);
+    books.push(await cachedBook(id, pack));
   }
   return { books, missing };
 }

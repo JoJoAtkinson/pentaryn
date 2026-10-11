@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { installFoundry } from "./kit/foundry-stub.mjs";
 import { characterise } from "./kit/harness.mjs";
 import { enrichStub, installLookupWorld } from "./fixtures/packs.mjs";
+import { BOOKSETS } from "../lookup-core.mjs";
 
 const F = await installFoundry({ modules: ["pentaryn-lookup"] });
 const world = installLookupWorld(F);
@@ -120,14 +121,17 @@ test("monster(…, {text}) hands enrichHTML the item's roll data, relativeTo and
   assert.equal(world.enrichCalls[0].relativeTo.name, "Redirect Attack");
 });
 
-// KNOWN: prompts-lookup-1 — no book cache: every search re-reads each present rules pack. Flipped by
-// guide step 12 [declared] DL5 (two searches → one getDocuments() per present pack).
-test("KNOWN prompts-lookup-1: search calls getDocuments() on every call (no book cache today)", async () => {
-  const phb = world.packs.get("dnd-players-handbook.content");
-  const before = phb.calls.getDocuments;
-  await rules.search("cover");
-  await rules.search("cover");
-  assert.equal(phb.calls.getDocuments - before, 2);
+// prompts-lookup-1, flipped by guide step 12 [declared] DL5 (was KNOWN: "search calls getDocuments()
+// on every call (no book cache today)"): books are cached per session, one getDocuments() per present
+// pack; uninstall() clears the cache.
+test("prompts-lookup-1 [declared DL5]: after uninstall() clears the cache, two searches read each present rules pack once", async () => {
+  rules.uninstall();
+  const present = BOOKSETS.rules.filter(id => world.packs.has(id));
+  const before = present.map(id => world.packs.get(id).calls.getDocuments);
+  const first = await rules.search("cover");
+  const second = await rules.search("cover");
+  assert.deepEqual(second, first);
+  assert.deepEqual(present.map((id, i) => world.packs.get(id).calls.getDocuments - before[i]), present.map(() => 1));
 });
 
 // KNOWN: prompts-lookup-4 — onList reads dnd5e.registry.spellLists.options unguarded; with the

@@ -156,8 +156,23 @@ test("foundFromDoc: the 2014 pack's edition comes from EDITIONS", () => {
   assert.equal(out.edition, "2014");
 });
 
-test("toBook: today's plain-book shape, pages iterated with for…of (a Set has no .length)", () => {
+// [declared] DL5 (step 12): each page also carries its stripped `text`, computed once per load.
+test("toBook: the plain-book shape with each page's text, pages iterated with for…of (a Set has no .length)", () => {
   assert.deepEqual(
     core.toBook("p", "L", undefined, [{ id: "d", name: "D", pages: new Set([{ id: "g", name: "G", text: { content: "<p>a</p>" } }, { id: "h", name: "H", text: null }]) }]),
-    { id: "p", label: "L", edition: undefined, docs: [{ id: "d", name: "D", pages: [{ id: "g", name: "G", html: "<p>a</p>" }, { id: "h", name: "H", html: "" }] }] });
+    { id: "p", label: "L", edition: undefined, docs: [{ id: "d", name: "D", pages: [{ id: "g", name: "G", html: "<p>a</p>", text: "a" }, { id: "h", name: "H", html: "", text: "" }] }] });
+});
+
+// ── DL5: a page's precomputed text answers exactly as stripping it per call did ──
+
+test("searchBooks and renderPage: books with precomputed text equal the same books without", async () => {
+  const { BOOKS } = await import("./fixtures/books.mjs");
+  const BOOKS_T = BOOKS.map(b => ({ ...b, docs: b.docs.map(d => ({ ...d, pages: d.pages.map(p => ({ ...p, text: core.toPlainText(p.html) })) })) }));
+  for (const q of ["cover", "half cover", "Study", "attack", "nothing-here", "a.b"]) {
+    for (const o of [{}, { limit: 20 }, { snippet: 600 }, { regex: true }]) {
+      assert.deepEqual(core.searchBooks(BOOKS_T, q, o), core.searchBooks(BOOKS, q, o), `${q} ${JSON.stringify(o)}`);
+    }
+  }
+  assert.deepEqual(core.renderPage(core.findPage(BOOKS_T, "Study"), { maxChars: 50, offset: 10 }),
+    core.renderPage(core.findPage(BOOKS, "Study"), { maxChars: 50, offset: 10 }));
 });

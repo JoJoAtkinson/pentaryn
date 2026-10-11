@@ -8,6 +8,8 @@
   `contract`, `settings()`, `trace()`, `uninstall()`, `game.modules.get("pentaryn-lookup").api`,
   and the `pentaryn-lookup.ready` / `pentaryn.ready` hooks.
 - GM-guarded queries `pentaryn-lookup.{search,page,monster,monsters,names,onList,spellList,packs}`.
+- Book packs are loaded once per session, with each page's plain text; the second search is
+  near-instant. `uninstall()` clears the cache.
 - Failed reads are traced at debug level (`CONFIG.debug["pentaryn-lookup"] = true`).
 - The node test suite runs on `node:test` (`node test/run.mjs`).
 

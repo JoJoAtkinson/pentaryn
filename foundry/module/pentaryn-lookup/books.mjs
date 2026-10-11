@@ -14,7 +14,7 @@ import {
   searchBooks, sortMonsters, embeddedTableUuids,
 } from "./lookup-core.mjs";
 import {
-  featureTexts, findSpell, loadBooks, packSummary, readDocument, readIndex, readPageDoc, readTable, spellRegistry,
+  clearBookCache, featureTexts, findSpell, loadBooks, packSummary, readDocument, readIndex, readPageDoc, readTable, spellRegistry,
   worldInfo,
 } from "./packs-adapter.mjs";
 
@@ -26,8 +26,10 @@ export function install(reg, ctx) {
   return { rows: [], impl: { search, page, monster, monsters, names, packs, onList, spellList } };
 }
 
-/** Nothing to clear yet: the feature holds no state but the log. */
-export function uninstall() {}
+/** Drop the session's book cache (a hot patch, or a pack changed under a running world). */
+export function uninstall() {
+  clearBookCache();
+}
 
 // ── the API ──────────────────────────────────────────────────────────────────
 
