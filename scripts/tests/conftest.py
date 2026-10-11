@@ -1,6 +1,6 @@
 """Shared fixtures for scripts/tests (python-tooling-34).
 
-Three things live here, and only these:
+Four things live here, and only these:
 
 * ``fake_admin`` — a factory for a stand-in ``FoundryAdmin``. Test files used to define
   their own (``_FakeAdmin`` in test_foundry_ops, ``FakeFA`` in test_update_crash, an
@@ -13,6 +13,9 @@ Three things live here, and only these:
 * ``_isolate_ops_log`` (autouse) — every module install appends to
   ``foundry/logs/ops-YYYY-MM.jsonl`` (python-tooling-10). No test may write there, so the log
   folder is a tmp folder for every test, and ``$PENTARYN_OPS_LOG`` is unset.
+* ``fake_cloud`` / ``fake_data`` (autouse) — the cloud is a temp folder and Foundry's data
+  root a tiny temp tree, and the host is the primary ``testhost``; see the section at the
+  bottom (rclone-two-hosts-2026-10 §10).
 """
 
 from __future__ import annotations
@@ -71,3 +74,53 @@ def _isolate_ops_log(monkeypatch, tmp_path_factory):
 
     monkeypatch.setattr(cfg, "OPS_LOG_DIR", tmp_path_factory.mktemp("ops-log"))
     monkeypatch.delenv("PENTARYN_OPS_LOG", raising=False)
+
+
+# ── two hosts, one cloud (context/plans/rclone-two-hosts-2026-10.md §10) ──────
+#
+# Every test runs with a temp folder as the cloud and a temp Foundry data root, as the
+# primary host `testhost`, with the real ~/.config/pentaryn/env out of reach. Nothing in
+# the suite can reach OneDrive, rclone, or Foundry's real data, even by accident.
+
+_HOST_ENV_KEYS = ("PENTARYN_HOST", "PENTARYN_PRIMARY_HOST", "PENTARYN_ROLE_OVERRIDE",
+                  "FOUNDRY_DATA", "FOUNDRY_PORT", "PENTARYN_CLOUD", "PENTARYN_RCLONE",
+                  "PENTARYN_KEEP_SNAPSHOTS", "PENTARYN_START_CMD", "PENTARYN_STOP_CMD",
+                  "PENTARYN_BOOT_STATE", "PENTARYN_BOOT_DONE", "PENTARYN_NONINTERACTIVE",
+                  "FROM")
+
+
+def make_data_root(root):
+    """A tiny Foundry data root: one world, one module, a Config with a dataPath."""
+    import json as _json
+    (root / "Data/worlds/w").mkdir(parents=True, exist_ok=True)
+    (root / "Data/worlds/w/world.json").write_text('{"id": "w"}\n')
+    (root / "Data/modules/m").mkdir(parents=True, exist_ok=True)
+    (root / "Data/modules/m/module.json").write_text('{"id": "m"}\n')
+    (root / "Config").mkdir(parents=True, exist_ok=True)
+    (root / "Config/options.json").write_text(
+        _json.dumps({"dataPath": str(root), "port": 30000}) + "\n")
+    return root
+
+
+@pytest.fixture(autouse=True)
+def fake_cloud(monkeypatch, tmp_path_factory):
+    """`PENTARYN_CLOUD` → a temp folder with the four subfolders; host env isolated."""
+    base = tmp_path_factory.mktemp("cloud")
+    for sub in ("assets", "world-backups", "system-backup", "major-release"):
+        (base / sub).mkdir()
+    for key in _HOST_ENV_KEYS:
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("PENTARYN_ENV_FILE", str(base / "no-such-env-file"))
+    monkeypatch.setenv("PENTARYN_CLOUD", str(base))
+    monkeypatch.setenv("PENTARYN_HOST", "testhost")
+    monkeypatch.setenv("PENTARYN_PRIMARY_HOST", "testhost")
+    yield base
+
+
+@pytest.fixture(autouse=True)
+def fake_data(monkeypatch, tmp_path_factory, fake_cloud):
+    """`FOUNDRY_DATA` → a tiny temp data root; the based-on state file lives under it."""
+    root = make_data_root(tmp_path_factory.mktemp("foundry-data"))
+    monkeypatch.setenv("FOUNDRY_DATA", str(root))
+    monkeypatch.setenv("PENTARYN_BOOT_STATE", str(root / "pentaryn-boot.json"))
+    return root
