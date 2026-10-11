@@ -216,9 +216,9 @@ function injectHUD(app, element) {
 
   const touching = linksTouching(chainPairs(doc.parent.tokens.contents), doc.id);
   if (touching.length || readChain(doc)) {
-    hudButton(col, "ps-chain-btn", "fa-solid fa-link-slash", "Break chain", async () => {
+    hudButton(col, "ps-chain-btn", "fa-solid fa-link-slash", _loc("PENTARYN_SENSES.Chain.Break"), async () => {
       const n = await breakChain(doc);
-      if (n) ui.notifications.info(`The chain on ${doc.name} breaks.`);
+      if (n) ui.notifications.info(_loc("PENTARYN_SENSES.Chain.Breaks", { name: doc.name }));
       app.render?.();
     });
     return;
@@ -226,8 +226,8 @@ function injectHUD(app, element) {
   const targets = [...(game.user.targets ?? [])].filter(t => t?.document?.id !== doc.id && t?.document?.parent === doc.parent);
   if (targets.length !== 1) return;
   const anchor = targets[0].document;
-  hudButton(col, "ps-chain-btn", "fa-solid fa-link", `Chain to ${anchor.name}`, async () => {
-    if (await link(doc, anchor)) ui.notifications.info(`${doc.name} is chained to ${anchor.name}.`);
+  hudButton(col, "ps-chain-btn", "fa-solid fa-link", _loc("PENTARYN_SENSES.Chain.LinkTo", { anchor: anchor.name }), async () => {
+    if (await link(doc, anchor)) ui.notifications.info(_loc("PENTARYN_SENSES.Chain.Linked", { name: doc.name, anchor: anchor.name }));
     app.render?.();
   });
 }

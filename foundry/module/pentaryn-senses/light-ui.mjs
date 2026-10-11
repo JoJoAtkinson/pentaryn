@@ -23,7 +23,6 @@ export function bindActions(a) {
 }
 
 const warn = (label, err) => console.warn(`${MODULE} | light ${label}`, err);
-const L = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
 
 /** The "Where does the light go?" prompt, right after the cast. */
 export async function prompt(item) {
@@ -31,12 +30,12 @@ export async function prompt(item) {
   if (!item?.isOwner) return;
   const DialogV2 = foundry.applications.api.DialogV2;
   const choice = await DialogV2.wait({
-    window: { title: L("PENTARYN_SENSES.Light.Title"), icon: "fa-solid fa-lightbulb" },
-    content: `<p>${esc(L("PENTARYN_SENSES.Light.Where"))}</p>`,
+    window: { title: _loc("PENTARYN_SENSES.Light.Title"), icon: "fa-solid fa-lightbulb" },
+    content: `<p>${esc(_loc("PENTARYN_SENSES.Light.Where"))}</p>`,
     buttons: [
-      { action: "me", label: L("PENTARYN_SENSES.Light.OnMe"), icon: "fa-solid fa-user", default: true },
-      { action: "pick", label: L("PENTARYN_SENSES.Light.Pick"), icon: "fa-solid fa-crosshairs" },
-      { action: "cancel", label: L("PENTARYN_SENSES.Light.NotNow"), icon: "fa-solid fa-xmark" }
+      { action: "me", label: _loc("PENTARYN_SENSES.Light.OnMe"), icon: "fa-solid fa-user", default: true },
+      { action: "pick", label: _loc("PENTARYN_SENSES.Light.Pick"), icon: "fa-solid fa-crosshairs" },
+      { action: "cancel", label: _loc("PENTARYN_SENSES.Light.NotNow"), icon: "fa-solid fa-xmark" }
     ],
     rejectClose: false
   });
@@ -69,7 +68,7 @@ function hitAt(p) {
  */
 export function pick() {
   if (!canvas?.ready || !canvas.scene) {
-    ui.notifications.warn(L("PENTARYN_SENSES.Light.NoScene"));
+    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NoScene"));
     return Promise.resolve(null);
   }
   local.picking?.cancel();
@@ -128,7 +127,7 @@ export function pick() {
     window.addEventListener("keydown", onKey, true);
     view?.classList.add("ps-picking");
     document.body.classList.add("ps-picking");
-    const note = ui.notifications.info(L("PENTARYN_SENSES.Light.PickHint"), { permanent: true });
+    const note = ui.notifications.info(_loc("PENTARYN_SENSES.Light.PickHint"), { permanent: true });
     const timer = setTimeout(() => finish(null), PICK_TIMEOUT_MS);
   });
 }
@@ -182,7 +181,7 @@ export function decorateCard(message, html) {
     section.className = "icon-row";
     const lead = document.createElement("i");
     lead.className = "fa-solid fa-fw fa-circle-play";
-    lead.setAttribute("aria-label", L("DND5E.CHATMESSAGE.Row.Actions"));
+    lead.setAttribute("aria-label", _loc("DND5E.CHATMESSAGE.Row.Actions"));
     list = document.createElement("ul");
     list.className = "unlist";
     section.append(lead, list);
@@ -190,9 +189,9 @@ export function decorateCard(message, html) {
   }
   if (list.querySelector("[data-ps-light]")) return;
   const row = [
-    cardButton("fa-solid fa-user", L("PENTARYN_SENSES.Light.OnMe"), "me"),
-    cardButton("fa-solid fa-crosshairs", L("PENTARYN_SENSES.Light.Pick"), "pick"),
-    cardButton("fa-solid fa-lightbulb-slash", L("PENTARYN_SENSES.Light.End"), "end")
+    cardButton("fa-solid fa-user", _loc("PENTARYN_SENSES.Light.OnMe"), "me"),
+    cardButton("fa-solid fa-crosshairs", _loc("PENTARYN_SENSES.Light.Pick"), "pick"),
+    cardButton("fa-solid fa-lightbulb-slash", _loc("PENTARYN_SENSES.Light.End"), "end")
   ];
   for (const li of row) {
     const b = li.firstElementChild;
@@ -248,14 +247,14 @@ export function decorateSheet(app, element) {
     const cell = document.createElement("div");
     cell.className = "ps-light-controls";
     const winner = lit && lighting && lighting !== item.id ? actor.items.get(lighting) : null;
-    const tip = winner ? L("PENTARYN_SENSES.Light.Outshone", { item: esc(winner.name) })
-      : L(lit ? "PENTARYN_SENSES.Light.Douse" : "PENTARYN_SENSES.Light.LightIt");
+    const tip = winner ? _loc("PENTARYN_SENSES.Light.Outshone", { item: esc(winner.name) })
+      : _loc(lit ? "PENTARYN_SENSES.Light.Douse" : "PENTARYN_SENSES.Light.LightIt");
     cell.append(rowButton(`ps-light-toggle${lit ? " lit" : ""}${winner ? " outshone" : ""}`, "fa-solid fa-fire",
       tip, locked, () => actions.toggle(item)));
     if (lit && profileFor(item)?.hooded) {
       const hooded = isHooded(item);
       cell.append(rowButton(`ps-light-hood${hooded ? " hooded" : ""}`, hooded ? "fa-solid fa-eye" : "fa-solid fa-eye-slash",
-        L(hooded ? "PENTARYN_SENSES.Light.HoodRaise" : "PENTARYN_SENSES.Light.HoodLower"), locked, () => actions.hood(item)));
+        _loc(hooded ? "PENTARYN_SENSES.Light.HoodRaise" : "PENTARYN_SENSES.Light.HoodLower"), locked, () => actions.hood(item)));
     }
     name.after(cell);
   }
@@ -274,7 +273,7 @@ export function injectHUD(app, element) {
   const root = element instanceof HTMLElement ? element : element?.[0];
   const col = root?.querySelector(".col.right") ?? root?.querySelector(".right");
   if (!col || col.querySelector(".ps-light-end")) return;
-  const tip = L("PENTARYN_SENSES.Light.End");
+  const tip = _loc("PENTARYN_SENSES.Light.End");
   const btn = document.createElement("button");
   btn.type = "button";
   btn.className = "control-icon ps-light-end";

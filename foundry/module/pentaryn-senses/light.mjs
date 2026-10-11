@@ -37,7 +37,6 @@ const DEBOUNCE_MS = 250;
 const state = { hooks: [], timers: new Map(), chain: Promise.resolve(), reg: null, ctx: null };
 
 const warn = (label, err) => console.warn(`${MODULE} | light ${label}`, err);
-const L = (key, data) => (data ? game.i18n.format(key, data) : game.i18n.localize(key));
 
 /* -------------------------------------------- */
 /*  Casting (any client that owns the item)     */
@@ -51,19 +50,19 @@ export async function cast(item, target) {
   item = realItem(item);
   if (!item || !target) return false;
   if (!item.isOwner) {
-    ui.notifications.warn(L("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
+    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
     return false;
   }
   const flag = castFlag(target.scene ?? canvas?.scene?.id, target, Date.now());
   if (!flag) return false;
   await item.update({ [CAST]: flag });
-  if (!game.users.activeGM) ui.notifications.warn(L("PENTARYN_SENSES.Light.NoGM"));
+  if (!game.users.activeGM) ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NoGM"));
   else if (flag.token) {
     const tok = game.scenes.get(flag.scene)?.tokens.get(flag.token);
     // Never name a token whose nameplate this user can't see (crowd extras run displayName NONE).
-    if (tok && canSeeName(tok)) ui.notifications.info(L("PENTARYN_SENSES.Light.OnToken", { name: tok.name }));
-    else ui.notifications.info(L("PENTARYN_SENSES.Light.OnCreature"));
-  } else ui.notifications.info(L("PENTARYN_SENSES.Light.OnSquare"));
+    if (tok && canSeeName(tok)) ui.notifications.info(_loc("PENTARYN_SENSES.Light.OnToken", { name: tok.name }));
+    else ui.notifications.info(_loc("PENTARYN_SENSES.Light.OnCreature"));
+  } else ui.notifications.info(_loc("PENTARYN_SENSES.Light.OnSquare"));
   return true;
 }
 
@@ -79,23 +78,23 @@ export async function end(item) {
   item = realItem(item);
   if (!item) return false;
   if (!item.isOwner) {
-    ui.notifications.warn(L("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
+    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
     return false;
   }
   if (!readSpellCast(item) && !anyLitBy(item.uuid)) {
-    ui.notifications.info(L("PENTARYN_SENSES.Light.NoneLit"));
+    ui.notifications.info(_loc("PENTARYN_SENSES.Light.NoneLit"));
     return false;
   }
   await item.update({ [CAST]: null });
-  ui.notifications.info(L("PENTARYN_SENSES.Light.Ended"));
+  ui.notifications.info(_loc("PENTARYN_SENSES.Light.Ended"));
   return true;
 }
 
 export async function onMe(item) {
   item = realItem(item);
-  if (!canvas?.scene) return ui.notifications.warn(L("PENTARYN_SENSES.Light.NoScene"));
+  if (!canvas?.scene) return ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NoScene"));
   const tok = casterToken(item?.actor);
-  if (!tok) return ui.notifications.warn(L("PENTARYN_SENSES.Light.NoToken"));
+  if (!tok) return ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NoToken"));
   return cast(item, { scene: tok.parent.id, token: tok.id });
 }
 
@@ -114,7 +113,7 @@ export async function toggle(item) {
   item = realItem(item);
   if (!item || !profileFor(item)) return false;
   if (!item.isOwner) {
-    ui.notifications.warn(L("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
+    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.NotOwner", { name: item.actor?.name ?? item.name }));
     return false;
   }
   const lit = !isLit(item);
@@ -126,7 +125,7 @@ export async function toggle(item) {
 /** One chat line about a carried light, "{actor} lights the {item}." */
 async function announce(item, key) {
   const actor = item.actor;
-  const text = L(key, { actor: esc(actor?.name ?? ""), item: esc(item.name) });
+  const text = _loc(key, { actor: esc(actor?.name ?? ""), item: esc(item.name) });
   try {
     // The chat mode the user picked applies, as on dnd5e's own cards: a GM on "GM only" lighting a
     // hidden NPC's lantern must not announce it to the table.
@@ -156,7 +155,7 @@ export async function hood(item) {
  */
 export async function setup() {
   if (!isAnyGM()) {
-    ui.notifications.warn("pentaryn-senses: setupLight is GM-only.");
+    ui.notifications.warn(_loc("PENTARYN_SENSES.Light.SetupGMOnly"));
     return 0;
   }
   let n = 0;
@@ -174,7 +173,7 @@ async function ensureTorchActivity(item) {
     || [...item.system.activities.values()].some(a => a?.flags?.[MODULE]?.lightToggle === true);
   if (has) return false;
   try {
-    const data = torchActivityData(L("PENTARYN_SENSES.Light.ActivityName"));
+    const data = torchActivityData(_loc("PENTARYN_SENSES.Light.ActivityName"));
     const sort = item.system.activities.size
       ? Math.max(...[...item.system.activities.values()].map(a => a.sort ?? 0)) + CONST.SORT_INTEGER_DENSITY
       : 0;
@@ -195,7 +194,7 @@ async function tellOwners(item, key) {
     const whisper = game.users.filter(u => item.testUserPermission(u, "OWNER")).map(u => u.id);
     await ChatMessage.create({
       speaker: ChatMessage.getSpeaker({ actor: item.actor }),
-      content: `<p>${esc(L(key))}</p>`,
+      content: `<p>${esc(_loc(key))}</p>`,
       whisper
     });
   } catch (e) {
