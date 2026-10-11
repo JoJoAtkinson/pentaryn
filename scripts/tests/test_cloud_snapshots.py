@@ -292,13 +292,19 @@ def _sidecar(cloud_dir, name, sub="world-backups"):
     return json.loads((cloud_dir / sub / f"{name}{cloud.PARENT_SUFFIX}").read_text())
 
 
+def _lineage(cloud_dir, name, sub="world-backups"):
+    """The sidecar's lineage keys — without the bundle manifest it also carries."""
+    return {k: v for k, v in _sidecar(cloud_dir, name, sub).items()
+            if k not in ("bundled", "modules", "systems")}
+
+
 def test_backup_writes_a_parent_sidecar_and_restore_inherits_its_lineage(two_hosts):
     c = two_hosts.cloud
     with two_hosts.use("mac"):
         cloud.backup("shutdown")
         [m0] = _names(c)
         # No based-on record: the lineage is unknown, not "no ancestors".
-        assert _sidecar(c, m0) == {"parent": None, "ancestors": None,
+        assert _lineage(c, m0) == {"parent": None, "ancestors": None,
                                    "ancestor_mtimes": None, "origin_before": None,
                                    "host": "mac"}
         m0_mtime = cloud.find_snapshot(cloud.store(), m0).mtime
@@ -320,7 +326,7 @@ def test_backup_writes_a_parent_sidecar_and_restore_inherits_its_lineage(two_hos
         _edit(two_hosts.data["boss"], "boss")
         cloud.backup("shutdown")
         b1 = bootstate.load().based_on
-    assert _sidecar(c, b1) == {"parent": m1, "ancestors": [m1, m0],
+    assert _lineage(c, b1) == {"parent": m1, "ancestors": [m1, m0],
                                "ancestor_mtimes": [m1_mtime, m0_mtime],
                                "origin_before": m0_mtime, "host": "boss"}
     snap = cloud.find_snapshot(cloud.store(), b1)
@@ -1120,7 +1126,7 @@ def test_bundled_restore_downloads_only_what_this_machine_lacks(two_hosts, monke
     assert (st.based_on, st.based_on_host, st.digest) == (snap, "mac", cloud_digest(two_hosts))
     out = capsys.readouterr().out
     assert re.search(rf"restored {re.escape(snap)}: world [\d.]+ [MG]B; modules: 1 installed "
-                     r"\([\d.]+ [MG]B\), 2 unchanged, 0 removed; systems: unchanged", out), out
+                     r"\([\d.]+ [MG]B\), 2 unchanged, 0 removed; systems: all 1 unchanged", out), out
     assert not (boss / "Data/modules" / cloud.SNAPSHOT_MARKER).exists()
     assert not (boss / cloud.SNAPSHOT_MARKER).exists()
     assert _tmp_files(boss) == []
@@ -1319,13 +1325,14 @@ def test_restore_refuses_a_bundled_sidecar_over_a_tar_without_the_marker(two_hos
     _refused(two_hosts, snap, boss, capsys, "sidecar and snapshot disagree")
 
 
-@pytest.mark.parametrize("how", ["deleted", "full-era", "different"])
+@pytest.mark.parametrize("how", ["full-era", "different", "malformed"])
 def test_restore_refuses_a_marked_tar_whose_sidecar_disagrees(two_hosts, capsys, how):
     snap, boss = _refusal_setup(two_hosts)
     side = two_hosts.cloud / "world-backups" / f"{snap}.parent"
     data = json.loads(side.read_text())
-    if how == "deleted":
-        side.unlink()
+    if how == "malformed":
+        data["modules"]["tools"] = "not-a-bundle.tar.gz"
+        side.write_text(json.dumps(data))
     elif how == "full-era":
         for k in ("bundled", "modules", "systems"):
             data.pop(k)
@@ -1334,6 +1341,25 @@ def test_restore_refuses_a_marked_tar_whose_sidecar_disagrees(two_hosts, capsys,
         data["modules"].pop("tools")
         side.write_text(json.dumps(data))
     _refused(two_hosts, snap, boss, capsys, "sidecar and snapshot disagree")
+
+
+def test_a_lost_sidecar_is_not_a_refusal_the_marker_names_the_bundles(two_hosts, capsys):
+    snap, boss = _refusal_setup(two_hosts)
+    (two_hosts.cloud / "world-backups" / f"{snap}.parent").unlink()
+    with two_hosts.use("boss"):
+        assert cloud.restore(snap, yes=True) == 0
+    assert "has no sidecar" in capsys.readouterr().out
+    assert (boss / "Data/modules/maps/module.json").exists()
+    assert (boss / "Data/systems/dnd5e/system.json").exists()
+    assert _tmp_files(boss) == []
+
+
+def test_a_lost_sidecar_with_a_missing_bundle_still_refuses(two_hosts, capsys):
+    snap, boss = _refusal_setup(two_hosts)
+    (two_hosts.cloud / "world-backups" / f"{snap}.parent").unlink()
+    [tools] = [n for n in _bundle_names(two_hosts.cloud) if n.startswith("module@tools@")]
+    (two_hosts.cloud / "bundles" / tools).unlink()
+    _refused(two_hosts, snap, boss, capsys, "missing from the cloud", tools)
 
 
 # ── the two-hosts scenario (§8), counting transfers ─────────────────────────

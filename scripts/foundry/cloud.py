@@ -50,6 +50,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import math
 import re
@@ -59,7 +60,7 @@ import tarfile
 import tempfile
 import time
 import zipfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -72,7 +73,8 @@ from scripts.foundry.storage import JUNK_NAMES, Entry, Storage, StorageError
 # Cloud subfolders, relative to the cloud root (storage.py resolves the root).
 ASSETS_IN = "assets"              # you put zips here
 WORLD_BACKUPS = "world-backups"   # automatic, rolling, per host
-SYSTEM_BACKUP = "system-backup"   # automatic, one copy per version, shared
+SYSTEM_BACKUP = "system-backup"   # legacy: no longer written (systems are bundles);
+                                  # still swept for stale .partial uploads
 # Never pruned. One snapshot per host per Foundry GENERATION: the last state captured
 # while that host was still on it.
 MAJOR_RELEASES = "major-release"
@@ -90,8 +92,8 @@ KEEP_SAFETY_COPIES = 3
 # A snapshot taken while this host's newest one is younger than this REPLACES it.
 COALESCE_WINDOW_DAYS = 5
 
-# How many versions of each system's mirror to retain. More than one, because a system
-# rollback needs the version you were on *before* the update.
+# Legacy: system mirrors are retired (systems are bundles, module-bundles-2026-10 §1 #5);
+# only README_TEXT still quotes this until its rewrite.
 KEEP_SYSTEM_MIRRORS = 3
 
 # A crash between upload and rename leaves a `.partial`; younger ones may be the other
@@ -123,8 +125,18 @@ KINDS = {
     "audio": "Data/assets/audio",
 }
 
-# What a rolling snapshot contains, relative to FOUNDRY_DATA. Systems are excluded.
+# What a FULL (legacy, before module bundles) snapshot contains, relative to FOUNDRY_DATA.
+# A full restore still clears all three; the boot clock (local_tree_mtime) still reads them.
 SNAPSHOT_PATHS = ["Data/worlds", "Config", "Data/modules"]
+
+# What a BUNDLED snapshot contains: the world and Config only. Every folder under
+# Data/modules and Data/systems is a content-addressed bundle in the cloud's bundles/
+# (scripts/foundry/bundles.py), named by the snapshot's manifest.
+WORLD_PATHS = ["Data/worlds", "Config"]
+
+# The first member of a bundled snapshot's tar: {"bundled": 1, "modules", "systems",
+# "host", "core"}. Authoritative; the `.parent` sidecar carries a copy. Never extracted.
+SNAPSHOT_MARKER = "pentaryn-snapshot.json"
 
 # This machine's own files under Config/, kept across every restore: options.json holds
 # this machine's absolute dataPath (a Mac path planted on BOSS would break Foundry),
@@ -665,11 +677,11 @@ def _extract_pack(zp: Path, zname: str, pack: str, dest: Path, problems: list) -
 
 # ── World: local → OneDrive, rolling, one-way ────────────────────────────────
 
-def snapshot_digest() -> str:
-    """Content hash (path, size, int mtime) of everything a snapshot covers."""
+def _tree_digest(paths: list[str]) -> str:
+    """Content hash (path, size, int mtime) of every file under `paths`."""
     root = data_root()
     h = hashlib.sha256()
-    for rel in SNAPSHOT_PATHS:
+    for rel in paths:
         base = root / rel
         if not base.exists():
             continue
@@ -679,6 +691,27 @@ def snapshot_digest() -> str:
                 h.update(str(p.stat().st_size).encode())
                 h.update(str(int(p.stat().st_mtime)).encode())
     return h.hexdigest()
+
+
+def world_tree_digest() -> str:
+    """The world snapshot's own files (WORLD_PATHS), by path, size and int mtime."""
+    return _tree_digest(WORLD_PATHS)
+
+
+def legacy_snapshot_digest() -> str:
+    """The pre-bundles formula over SNAPSHOT_PATHS — what `.last-digest` markers hold."""
+    return _tree_digest(SNAPSHOT_PATHS)
+
+
+def snapshot_digest(manifest: dict | None = None) -> str:
+    """What a bundled snapshot of this tree would hold: the world tree plus the manifest
+    (each module/system's bundle name). A Foundry launch changes neither for an untouched
+    module — the fingerprint ignores LevelDB housekeeping — so the digest-skip holds."""
+    if manifest is None:
+        manifest = bundles.manifest(bundles.local_inventory())
+    m = {"modules": manifest.get("modules") or {}, "systems": manifest.get("systems") or {}}
+    return hashlib.sha256((world_tree_digest() + "\n" + json.dumps(m, sort_keys=True))
+                          .encode()).hexdigest()
 
 
 def local_tree_mtime() -> float | None:
@@ -728,9 +761,14 @@ def adopt_legacy_marker(st: Storage, state: bootstate.BootState) -> bootstate.Bo
     except StorageError:
         return state
     base = newest(legacy)
-    if base is None or marker != snapshot_digest():
+    if base is None:
         return state
-    state.record_snapshot(base.name, None, base.mtime, marker, by="adopt-legacy-marker",
+    # The marker holds the old formula (legacy_snapshot_digest). What is recorded is this
+    # tree's digest in the current formula, so the next backup sees "unchanged" and skips.
+    current = snapshot_digest(bundles.manifest(bundles.local_inventory(warn=lambda _m: None)))
+    if marker not in (legacy_snapshot_digest(), current):
+        return state
+    state.record_snapshot(base.name, None, base.mtime, current, by="adopt-legacy-marker",
                           lineage=[])
     log(f"recorded this world as based on {base.name} (the legacy digest marker matches)")
     return state
@@ -783,11 +821,17 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
     (neither coalescing nor pruning may remove the state the based-on record is about to
     point at), and an unchanged tree it already contains needs no safety copy."""
     state = adopt_legacy_marker(st, bootstate.load())
-    digest = snapshot_digest()
+    inv = bundles.local_inventory()
+    manifest = bundles.manifest(inv)
+    digest = snapshot_digest(manifest)
     try:
         existing = snapshots(st, WORLD_BACKUPS)
     except StorageError as exc:
         die(f"cannot list {WORLD_BACKUPS}/: {exc}")
+    try:
+        have = bundles.listing(st)
+    except StorageError as exc:
+        die(f"cannot list {bundles.BUNDLES}/: {exc}")
     if state.digest == digest:
         # Unchanged since the last upload or restore — but "skip" is only safe while that
         # snapshot still exists. Coalescing, pruning or prune-untagged (on either machine)
@@ -838,26 +882,37 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
             die(f"only {_mb(free)} free on {tmp.parent} — a snapshot is ~{_mb(last.size)} and "
                 "is built locally before upload; free at least twice that")
 
-    with tarfile.open(tmp, "w:gz") as tar:
-        for rel in SNAPSHOT_PATHS:
-            src = data_root() / rel
-            if src.exists():
-                tar.add(src, arcname=rel)
+    # Stage every bundle the cloud lacks, then the world tar (the marker first).
+    missing = [loc for loc in inv.values() if loc.name not in have]
+    staged = {loc.name: bundles.build(loc, tmp_dir() / bundles.STAGING) for loc in missing}
+    _build_world_tar(tmp, {"bundled": 1, "modules": manifest["modules"],
+                           "systems": manifest["systems"], "host": me, "core": core})
     size = tmp.stat().st_size
     ancestors, ancestor_mtimes, origin = next_lineage(state)
-    log(f"uploading {name} ({_mb(size)}, {reason}) to {st.root}...")
+    log(f"uploading {name} ({_mb(size)}, {reason}) to {st.root}"
+        + (f" with {len(staged)} new bundle(s) "
+           f"({_mb(sum(p.stat().st_size for p in staged.values()))})" if staged else "")
+        + "...")
     try:
-        # The sidecar first: by the time the snapshot's name appears, its lineage exists.
+        # Bundles, then the sidecar, then the snapshot: by the time the snapshot's name
+        # appears, its lineage and every bundle its manifest names exist.
+        bundles.upload_missing(st, staged, have)
         st.write_text(parent_rel(WORLD_BACKUPS, name), json.dumps(
             {"parent": state.based_on, "ancestors": ancestors,
              "ancestor_mtimes": ancestor_mtimes, "origin_before": _finite(origin),
-             "host": me}, allow_nan=False) + "\n")
+             "host": me, "bundled": 1, "modules": manifest["modules"],
+             "systems": manifest["systems"]}, allow_nan=False) + "\n")
         st.upload(tmp, f"{WORLD_BACKUPS}/{name}")
     except StorageError as exc:
+        bundle_lines = "".join(f"\n    a bundle is still on disk: {p}"
+                               for p in staged.values() if p.exists())
         die(f"upload failed: {exc}\n"
-            f"    the snapshot is still on disk: {tmp}\n"
-            f"    finish it by hand: rclone copyto \"{tmp}\" {st.root}/{WORLD_BACKUPS}/{name}")
+            f"    the snapshot is still on disk: {tmp}{bundle_lines}\n"
+            f"    rerun the backup (bundles already uploaded are not sent again), or finish "
+            f"it by hand: rclone copyto \"{tmp}\" {st.root}/{WORLD_BACKUPS}/{name}")
     tmp.unlink(missing_ok=True)
+    for p in staged.values():
+        p.unlink(missing_ok=True)
 
     entry = next((e for e in st.ls(WORLD_BACKUPS) if e.name == name), None)
     snap = parse_snapshot(entry or Entry(name, size, time.time()), WORLD_BACKUPS)
@@ -890,9 +945,25 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
     log(f"{min(len(regular), keep)} of {keep} snapshots kept for {me}"
         + (f", and {min(len(safeties), KEEP_SAFETY_COPIES)} of {KEEP_SAFETY_COPIES} "
            "restore safety copies" if safeties else ""))
-
-    mirror_systems(st)
     return snap
+
+
+def _build_world_tar(tmp: Path, marker: dict) -> None:
+    """The world snapshot: SNAPSHOT_MARKER first (a restore reads only that member to
+    tell bundled from full), then each WORLD_PATHS entry that exists."""
+    data = (json.dumps(marker, sort_keys=True, indent=1) + "\n").encode()
+    try:
+        with tarfile.open(tmp, "w:gz") as tar:
+            info = tarfile.TarInfo(SNAPSHOT_MARKER)
+            info.size, info.mtime, info.mode = len(data), int(time.time()), 0o644
+            tar.addfile(info, io.BytesIO(data))
+            for rel in WORLD_PATHS:
+                src = data_root() / rel
+                if src.exists():
+                    tar.add(src, arcname=rel)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
 
 
 def _coalesce_target(existing: list[Snapshot], me: str, protect: str | None = None,
@@ -947,72 +1018,312 @@ def promote_major_release(st: Storage, existing: list[Snapshot] | None = None) -
     return source
 
 
-def _version_key(v: str) -> tuple:
-    return tuple(int(p) if p.isdigit() else -1 for p in re.split(r"[.\-]", v))
-
-
-def mirror_systems(st: Storage) -> None:
-    """One copy per system version, shared by both hosts — `exists` is the dedupe."""
-    systems = data_root() / "Data/systems"
-    if not systems.is_dir():
-        return
-    listing = [e.name for e in st.ls(SYSTEM_BACKUP)]
-    for sysdir in sorted(p for p in systems.iterdir() if p.is_dir()):
-        manifest = sysdir / "system.json"
-        if not manifest.exists():
-            continue
-        try:
-            version = json.loads(manifest.read_text(encoding="utf-8")).get("version", "unknown")
-        except Exception:
-            version = "unknown"
-        name = f"{sysdir.name}-{version}.tar.gz"
-        if name in listing:
-            continue
-        tmp = tmp_dir() / name
-        with tarfile.open(tmp, "w:gz") as tar:
-            tar.add(sysdir, arcname=sysdir.name)
-        try:
-            st.upload(tmp, f"{SYSTEM_BACKUP}/{name}")
-        finally:
-            size = tmp.stat().st_size if tmp.exists() else 0
-            tmp.unlink(missing_ok=True)
-        log(f"system mirror → {name} ({_mb(size)})")
-        listing.append(name)
-        # Keep the last few versions, by version — the rollback needs the one before.
-        pat = re.compile(rf"^{re.escape(sysdir.name)}-(\d[^/]*)\.tar\.gz$")
-        versions = sorted((m.group(1), n) for n in listing if (m := pat.match(n)))
-        versions.sort(key=lambda vn: _version_key(vn[0]))
-        for _, stale in versions[:-KEEP_SYSTEM_MIRRORS]:
-            st.delete(f"{SYSTEM_BACKUP}/{stale}")
-            listing.remove(stale)
-            log(f"pruned system mirror {stale}")
-
-
 # ── Restore ──────────────────────────────────────────────────────────────────
 
-def extract_snapshot(tar_path: Path) -> None:
-    """Replace worlds/Config/modules from a local snapshot tar, keeping this machine's
-    own KEEP_LOCAL_CONFIG files.
+class RestoreError(RuntimeError):
+    """A restore refused before anything local was touched (fetch_snapshot), or a local
+    tar that cannot be applied here (extract_snapshot). The message says why."""
+
+
+# Downloads for a restore land here (a fixed folder, cleared before and after each fetch,
+# so a crash leftover never mixes with a new fetch); never the backup's staging folder.
+FETCH_DIRNAME = "fetch"
+
+
+def _parse_manifest(data) -> dict | None:
+    """{"modules": {id: name}, "systems": {id: name}} from a sidecar's or a marker's JSON
+    object; None unless it says "bundled" and every entry is a bundle name of its kind
+    and id."""
+    if not isinstance(data, dict) or not data.get("bundled"):
+        return None
+    out: dict[str, dict[str, str]] = {}
+    for kind, plural in (("module", "modules"), ("system", "systems")):
+        section = data.get(plural) or {}
+        if not isinstance(section, dict):
+            return None
+        for id, name in section.items():
+            ref = bundles.parse_bundle(name) if isinstance(name, str) else None
+            if ref is None or ref.kind != kind or ref.id != id:
+                return None
+        out[plural] = dict(sorted(section.items()))
+    return out
+
+
+def _read_sidecar(st: Storage, snap: Snapshot) -> tuple[str, dict | None]:
+    """What `snap`'s sidecar says about bundles: ("absent", None) — no sidecar, or not
+    JSON (lost); ("full", None) — a sidecar without "bundled" (lineage only, the full
+    era); ("bundled", manifest); ("bad", None) — says bundled, entries malformed. A
+    sidecar that cannot be READ raises StorageError."""
+    raw = st.read_text(parent_rel(snap.folder, snap.name))
+    if not raw:
+        return "absent", None
+    try:
+        data = json.loads(raw)
+    except ValueError:
+        return "absent", None
+    if not isinstance(data, dict) or not data.get("bundled"):
+        return "full", None
+    m = _parse_manifest(data)
+    return ("bundled", m) if m is not None else ("bad", None)
+
+
+def read_manifest(st: Storage, snap: Snapshot) -> dict | None:
+    """The bundle manifest `snap`'s sidecar records; None for a full snapshot (no sidecar,
+    an unparsable one, or one without "bundled"). A sidecar that cannot be READ raises
+    StorageError — "unreadable" is never taken to mean "full"."""
+    return _read_sidecar(st, snap)[1]
+
+
+def _read_marker(tar_path: Path) -> tuple[bool, dict | None]:
+    """(marker present, its manifest) from the tar's FIRST member only. A marker that is
+    present but not a valid bundled manifest raises RestoreError."""
+    with tarfile.open(tar_path, "r:gz") as tar:
+        first = tar.next()
+        if first is None or first.name != SNAPSHOT_MARKER:
+            return False, None
+        fh = tar.extractfile(first) if first.isfile() else None
+        try:
+            parsed = _parse_manifest(json.loads(fh.read())) if fh else None
+        except ValueError:
+            parsed = None
+    if parsed is None:
+        raise RestoreError(f"{tar_path.name}: its {SNAPSHOT_MARKER} is not a valid manifest")
+    return True, parsed
+
+
+@dataclass
+class Fetched:
+    """Everything a restore needs, on local disk and verified. `manifest` None → a full
+    (legacy) snapshot, and the three plans below are empty."""
+    snap: Snapshot | None              # None for a local tar path (the updater)
+    tar: Path
+    manifest: dict | None
+    bundle_tars: dict[str, Path]       # bundle name → downloaded tar, for every `needed`
+    needed: dict[str, str]             # "<kind>/<id>" → bundle name to install
+    extras: list[str]                  # "<kind>/<id>" here, absent from the manifest
+    unchanged: list[str]               # "<kind>/<id>" here at the manifest's bundle
+    cleanup: list[Path] = field(default_factory=list)   # temp files/dirs to remove
+
+
+def _bundle_plan(manifest: dict) -> tuple[dict[str, str], list[str], list[str]]:
+    """(needed, extras, unchanged) of `manifest` against this machine's inventory. The
+    bundle cache is read, not written: planning a restore changes nothing on disk."""
+    inv = bundles.local_inventory(save=False)
+    want = bundles.manifest_keys(manifest)
+    needed = {k: n for k, n in want.items() if inv.get(k) is None or inv[k].name != n}
+    extras = sorted(k for k in inv if k not in want)
+    unchanged = sorted(k for k in want if k not in needed)
+    return needed, extras, unchanged
+
+
+def discard_fetched(f: Fetched) -> None:
+    """Remove a fetch's temp files (the downloaded world tar, the bundle downloads)."""
+    for p in f.cleanup:
+        try:
+            if p.is_dir() and not p.is_symlink():
+                shutil.rmtree(p, ignore_errors=True)
+            else:
+                p.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def fetch_snapshot(st: Storage, snap: Snapshot) -> Fetched:
+    """Download `snap` and every bundle this machine lacks for it, and verify them; touch
+    nothing local. Raises RestoreError (temp files removed) when the cloud lacks a bundle,
+    a download fails or arrives short, or the sidecar and the tar's marker disagree.
+
+    The tar's first member (SNAPSHOT_MARKER) is authoritative. A sidecar that is present
+    must agree with it both ways; a sidecar that is missing (lost, or the tar renamed by
+    hand) is not a disagreement — the marker then names the bundles."""
+    try:
+        side, side_manifest = _read_sidecar(st, snap)
+    except StorageError as exc:
+        raise RestoreError(f"cannot read the sidecar of {snap.name} — nothing local was "
+                           f"touched: {exc}") from exc
+    local_tar = tmp_dir() / snap.name
+    fetch_dir = tmp_dir() / FETCH_DIRNAME
+    f = Fetched(snap, local_tar, None, {}, {}, [], [], cleanup=[local_tar, fetch_dir])
+    have: dict[str, Entry] = {}
+
+    def plan(manifest: dict) -> None:
+        nonlocal have
+        f.manifest = manifest
+        f.needed, f.extras, f.unchanged = _bundle_plan(manifest)
+        try:
+            have = bundles.listing(st)
+        except StorageError as exc:
+            raise RestoreError(f"cannot list {bundles.BUNDLES}/ — nothing local was "
+                               f"touched: {exc}") from exc
+        gone = [f"{n} ({k})" for k, n in f.needed.items() if n not in have]
+        if gone:
+            raise RestoreError(f"cannot restore {snap.name} completely — missing from the "
+                               f"cloud: {', '.join(gone)} — nothing local was touched")
+
+    try:
+        if side == "bundled":
+            plan(side_manifest)            # before the download: a missing bundle costs 0 B
+        shutil.rmtree(fetch_dir, ignore_errors=True)
+        log(f"downloading {snap.name} ({_mb(snap.size)}, {snap.host_label})...")
+        try:
+            st.download(snap.rel, local_tar)
+        except StorageError as exc:
+            raise RestoreError(f"download of {snap.name} failed — nothing local was touched: "
+                               f"{exc}\n    to boot the local world instead: "
+                               "make foundry-up FROM=local") from exc
+        if local_tar.stat().st_size != snap.size:
+            raise RestoreError(f"download of {snap.name} is {local_tar.stat().st_size} B, the "
+                               f"cloud says {snap.size} B — nothing local was touched")
+        try:
+            marked, in_tar = _read_marker(local_tar)
+        except (tarfile.TarError, OSError, EOFError) as exc:
+            raise RestoreError(f"{snap.name} is not a readable snapshot — nothing local was "
+                               f"touched: {exc}") from exc
+        why = None
+        if side == "bad":
+            why = "the sidecar says bundled but its manifest is malformed"
+        elif side == "full" and marked:
+            why = "the snapshot is bundled, its sidecar is not"
+        elif side == "bundled" and not marked:
+            why = "the sidecar says bundled, the snapshot has no marker"
+        elif side == "bundled" and in_tar != side_manifest:
+            why = "the sidecar names other bundles than the snapshot"
+        if why:
+            raise RestoreError(f"sidecar and snapshot disagree for {snap.name} ({why}) — "
+                               "nothing local was touched")
+        if side == "absent" and marked:
+            log(f"{snap.name} has no sidecar — its own {SNAPSHOT_MARKER} names its bundles")
+            plan(in_tar)
+        if f.needed:
+            total = sum(have[n].size for n in f.needed.values())
+            log(f"downloading {len(f.needed)} bundle(s) ({_mb(total)})...")
+            try:
+                f.bundle_tars = bundles.fetch(st, f.needed.values(), fetch_dir, have)
+            except StorageError as exc:
+                raise RestoreError(f"fetching the bundles of {snap.name} failed — nothing "
+                                   f"local was touched: {exc}") from exc
+    except BaseException:
+        discard_fetched(f)
+        raise
+    return f
+
+
+def _bundle_summary(plural: str, unchanged: int, installed: list[str], size: int,
+                    removed: list[str], left: list[str]) -> str:
+    if not (installed or removed or left):
+        return f"{plural}: all {unchanged} unchanged" if unchanged else f"{plural}: none"
+    out = (f"{plural}: {len(installed)} installed ({_mb(size)}), {unchanged} unchanged, "
+           f"{len(removed)} removed")
+    if left:
+        out += f", {len(left)} left ({', '.join(k.split('/', 1)[1] for k in left)})"
+    return out
+
+
+def apply_snapshot(f: Fetched, *, systems: bool = True) -> None:
+    """Make this machine the snapshot. Full: clear worlds/Config/modules and extract (as
+    before bundles). Bundled: clear worlds/Config, extract the world tar, put each needed
+    bundle in place, leave unchanged modules untouched, remove the extras — unless there
+    was no local world (nothing in the cloud references them then): those are left and
+    listed. Both keep this machine's KEEP_LOCAL_CONFIG files and fix a foreign dataPath.
+    With `systems=False` (the updater, which restores the system from its own aside copy)
+    Data/systems is left alone. A RestoreError means nothing was touched.
 
     Each target is cleared before extracting: `extractall` overlays, so restoring an older
     snapshot over a newer tree would keep every file the newer version added — a
     mixed-version install that runs, the worst kind of failed restore."""
     root = data_root()
-    kept = {rel: (root / rel).read_bytes() for rel in KEEP_LOCAL_CONFIG
-            if (root / rel).is_file()}
-    for rel in SNAPSHOT_PATHS:
-        target = root / rel
-        if target.exists():
-            shutil.rmtree(target)
-            log(f"cleared {rel}")
-    with tarfile.open(tar_path, "r:gz") as tar:
-        tar.extractall(root, filter="data")
+    bundled = f.manifest is not None
+
+    def ours(key: str) -> bool:
+        return systems or not key.startswith("system/")
+
+    with tarfile.open(f.tar, "r:gz") as tar:
+        members = None
+        if bundled:
+            # Before anything is cleared: a bundled world tar holds only WORLD_PATHS, and
+            # every bundle to install is on this disk.
+            members = [m for m in tar.getmembers() if m.name != SNAPSHOT_MARKER]
+            stray = [m.name for m in members if not any(
+                m.name == r or m.name.startswith(r + "/") for r in WORLD_PATHS)]
+            if stray:
+                raise RestoreError(f"{f.tar.name} is bundled but holds {stray[0]!r} outside "
+                                   f"{' and '.join(WORLD_PATHS)} — nothing was touched")
+            unfetched = [n for k, n in f.needed.items() if ours(k) and n not in f.bundle_tars]
+            if unfetched:
+                raise RestoreError(f"bundles not fetched: {', '.join(unfetched)} — nothing "
+                                   "was touched")
+        had_world = tree_has_world()
+        kept = {rel: (root / rel).read_bytes() for rel in KEEP_LOCAL_CONFIG
+                if (root / rel).is_file()}
+        for rel in (WORLD_PATHS if bundled else SNAPSHOT_PATHS):
+            target = root / rel
+            if target.exists():
+                shutil.rmtree(target)
+                log(f"cleared {rel}")
+        tar.extractall(root, members=members, filter="data")
     for rel, data in kept.items():
         (root / rel).parent.mkdir(parents=True, exist_ok=True)
         (root / rel).write_bytes(data)
     if kept:
         log(f"kept this machine's {', '.join(Path(r).name for r in kept)}")
     _fix_foreign_data_path(root, kept)
+    if not bundled:
+        return
+
+    installed, removed, left = [], [], []
+    for key, name in sorted(f.needed.items()):
+        if not ours(key):
+            continue
+        kind, id = key.split("/", 1)
+        bundles.extract(f.bundle_tars[name], kind, id, root)
+        installed.append(key)
+    for key in f.extras:
+        if not ours(key):
+            continue
+        if not had_world:
+            left.append(key)
+            continue
+        kind, id = key.split("/", 1)
+        path = root / bundles.ROOTS[kind] / id
+        if path.is_dir() and not path.is_symlink():
+            shutil.rmtree(path)
+        removed.append(key)
+    if left:
+        log("left in place (no local world, so no cloud copy references them): "
+            + ", ".join(left))
+    parts = []
+    for kind, plural in (("module", "modules"), ("system", "systems")):
+        if kind == "system" and not systems:
+            parts.append(f"{plural}: not touched")
+            continue
+        mine = [k for k in installed if k.startswith(kind + "/")]
+        mine_size = sum(f.bundle_tars[f.needed[k]].stat().st_size for k in mine)
+        parts.append(_bundle_summary(
+            plural, sum(1 for k in f.unchanged if k.startswith(kind + "/")), mine, mine_size,
+            [k for k in removed if k.startswith(kind + "/")],
+            [k for k in left if k.startswith(kind + "/")]))
+    label = f.snap.name if f.snap else f.tar.name
+    log(f"restored {label}: world {_mb(f.tar.stat().st_size)}; {'; '.join(parts)}")
+
+
+def extract_snapshot(tar_path: Path, *, systems: bool = True) -> None:
+    """Restore from a LOCAL snapshot tar (the updater's entry point). A full tar is
+    applied as before bundles. A bundled tar is applied only when every bundle it names
+    is already here at its fingerprint — there is nothing to download them from — else
+    RestoreError (a RuntimeError) names the missing ones before anything is touched."""
+    tar_path = Path(tar_path)
+    marked, manifest = _read_marker(tar_path)
+    if not marked:
+        apply_snapshot(Fetched(None, tar_path, None, {}, {}, [], []), systems=systems)
+        return
+    needed, extras, unchanged = _bundle_plan(manifest)
+    lacking = [n for k, n in needed.items() if systems or not k.startswith("system/")]
+    if lacking:
+        raise RestoreError(f"{tar_path.name} needs bundles this machine does not have: "
+                           f"{', '.join(lacking)} — restore it from the cloud "
+                           "(make foundry-restore SNAP=…); nothing was touched")
+    apply_snapshot(Fetched(None, tar_path, manifest, {}, needed, extras, unchanged),
+                   systems=systems)
 
 
 def _fix_foreign_data_path(root: Path, kept: dict) -> None:
@@ -1033,23 +1344,18 @@ def _fix_foreign_data_path(root: Path, kept: dict) -> None:
 
 
 def restore_snapshot(st: Storage, snap: Snapshot, reason: str = "manual") -> None:
-    """resolve → download → safety backup → clear → extract. Nothing local is touched
-    until the chosen bytes are on this disk, and the safety backup protects `snap` from
-    its own pruning, so the based-on record never names a snapshot this restore deleted."""
+    """fetch (world tar + the bundles this machine lacks, verified) → safety backup →
+    apply. Nothing local is touched until every byte is on this disk, and the safety
+    backup protects `snap` from its own pruning, so the based-on record never names a
+    snapshot this restore deleted; its manifest references every local module before a
+    restore removes any."""
     if server_running():
         die("Foundry is running — stop it first")
-    local_tar = tmp_dir() / snap.name
-    log(f"downloading {snap.name} ({_mb(snap.size)}, {snap.host_label})...")
     try:
-        st.download(snap.rel, local_tar)
-    except StorageError as exc:
-        local_tar.unlink(missing_ok=True)
-        die(f"download of {snap.name} failed — nothing local was touched: {exc}\n"
-            "    to boot the local world instead: make foundry-up FROM=local")
+        f = fetch_snapshot(st, snap)
+    except RestoreError as exc:
+        die(str(exc))
     try:
-        if local_tar.stat().st_size != snap.size:
-            die(f"download of {snap.name} is {local_tar.stat().st_size} B, the cloud says "
-                f"{snap.size} B — nothing local was touched")
         safety = _backup(st, f"pre-restore safety copy ({reason})", safety=True,
                          protect=snap)
         before = safety.name if safety else bootstate.load().based_on
@@ -1064,7 +1370,9 @@ def restore_snapshot(st: Storage, snap: Snapshot, reason: str = "manual") -> Non
                 back = (f"the previous state ({before}) is contained in {snap.name}: "
                         f"make foundry-restore SNAP={snap.name}")
         try:
-            extract_snapshot(local_tar)
+            apply_snapshot(f)
+        except RestoreError as exc:
+            die(f"restore of {snap.name} refused: {exc}\n    {back}")
         except Exception as exc:  # noqa: BLE001
             die(f"extract of {snap.name} failed part-way: {exc}\n    {back}")
         anc = read_lineage(st, snap)
@@ -1080,18 +1388,7 @@ def restore_snapshot(st: Storage, snap: Snapshot, reason: str = "manual") -> Non
                                          clear_pending=True)
         log(f"restored {snap.name}" + (f" (the state it replaced: {before})" if before else ""))
     finally:
-        local_tar.unlink(missing_ok=True)
-
-    # Snapshots cover worlds/Config/modules but NOT Data/systems, mirrored separately.
-    try:
-        mirrors = [e.name for e in st.ls(SYSTEM_BACKUP)]
-    except StorageError:
-        mirrors = []
-    if mirrors:
-        log("note: systems are NOT part of this snapshot. If you are rolling back a")
-        log("      system update, also restore its code from system-backup/:")
-        for m in mirrors[-KEEP_SYSTEM_MIRRORS:]:
-            log(f"        {m}")
+        discard_fetched(f)
 
 
 def _print_listing(snaps: list[Snapshot]) -> None:
