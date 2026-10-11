@@ -10,7 +10,7 @@
  * It is safe to import when the module has not been built — `available()` just stays false.
  */
 
-import {register, resolveConfig, analyze, lintOnly, FLAG_SCOPE} from "./walls-core.mjs";
+import {register, resolveConfig, analyze, lintOnly, runEngine, FLAG_SCOPE} from "./walls-core.mjs";
 
 let mod = null;
 let loadError = null;
@@ -56,6 +56,10 @@ function marshal(walls) {
 }
 
 export function runWasm(walls, opts = {}) {
+  // The compiled engine has no notion of Levels: marshal() sends none and creates come back with
+  // levels []. The JS engine partitions by level, so a scene that uses Levels runs there
+  // (senses-walls-cursors-2); level-less scenes, the common case, stay on the fast path.
+  if (walls.some(w => (w.levels ?? []).length)) return runEngine(walls, opts);
   if (!mod) throw new Error(`wasm backend not loaded${loadError ? `: ${loadError.message}` : ""}`);
   const cfg = resolveConfig(opts);
   const input = marshal(walls);
