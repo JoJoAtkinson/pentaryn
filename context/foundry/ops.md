@@ -401,7 +401,14 @@ Restore `.safety` copies and `major-release/` are never offered as "newer".
 
 - **Restore downloads first.** Nothing local is touched until the chosen bytes are on this disk; a
   failed download changes nothing. Then the safety backup, then clear, then extract — so neither
-  coalescing nor pruning can delete the snapshot being restored.
+  coalescing nor pruning can delete the snapshot being restored. Every download (the world tar
+  and each bundle) is read end to end first, so a corrupt one of the right size refuses with
+  "nothing local was touched".
+- **A restore never deletes what no copy holds.** A module folder the snapshot would replace that
+  is a **symlink** (a dev checkout linked in) refuses the restore before any download — remove
+  the link or boot `FROM=local`. One with **no `module.json`** is moved, whole, to
+  `FOUNDRY_DATA/pentaryn-replaced/<UTC stamp>/` and named in the output; nothing deletes that
+  folder — look in it and delete it by hand.
 - **Each host prunes, coalesces and promotes only its own snapshots.** The other machine's
   snapshot from yesterday is never replaced by this one. Untagged snapshots belong to nobody.
 - **The digest is local.** Neither host skips a backup because the other uploaded identical bytes;
@@ -413,8 +420,12 @@ Restore `.safety` copies and `major-release/` are never offered as "newer".
   stages or fetches) free; backup and restore check, and name both numbers.
 - **A bundle is deleted only by the mark-and-sweep**, never by name, never younger than 7 days.
   The mark is every sidecar in `world-backups/` and `major-release/` (safety copies included); a
-  sidecar it cannot read stops the sweep. The uploader re-lists after a snapshot lands and
-  re-uploads anything swept under it.
+  snapshot whose sidecar is missing or torn is marked from its tar's own first member, and one
+  that cannot be read either way stops the sweep. Right before deleting, GC looks again for
+  snapshots that landed while it was marking. A backup refreshes the cloud date of any old
+  bundle it reuses (so the other host's GC sees it as new), checks the bundles before writing
+  its sidecar and again after its snapshot lands, and re-uploads anything swept under it. Every
+  check of what the cloud holds lists it fresh (rclone otherwise reuses a listing per process).
 - **A full (legacy) snapshot restores exactly as before.** The sidecar says which kind a snapshot
   is and the tar's first member confirms it; when they disagree the restore refuses before
   touching anything. A restore whose bundles are not all in the cloud refuses the same way.
