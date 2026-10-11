@@ -37,13 +37,13 @@ tags: [plans, audit, foundry]
 | aoe-movement-portals-24 | change 2 (debounce) landed, **[declared] D-P3** | `0f06790a` |
 | aoe-movement-portals-25 | split into entry, core, adapter, three features, the card window, settings | `f6bbd2dc` |
 | aoe-movement-portals-26 | core helpers (`dialogIdParts`, `translateShapes`, `cropWindow`, `blockingWallCoords`, `tokenBox`, `occupiedBy`, `samplePoints`, `cardData`) against a verbatim oracle | `a5a52410`, `ff66ad35` |
-| aoe-movement-portals-27 | C24 part `38c366fd`; guarded UI listeners + EEXIST-only folder `6d2785e4`; snapshot message **[declared]** `6b892145` | |
+| aoe-movement-portals-27 | C24 part `38c366fd`; guarded UI listeners + EEXIST-only folder `6d2785e4`; snapshot message **[declared]** `6b892145`; unawaited badge draws `09ec04f9`, GM badge menu guarded `7f50014c` | |
 | aoe-movement-portals-28 | **[declared] D-P4** | `0fe9e4b8` |
 | aoe-movement-portals-29 | open — Wave 7 (needs `languages` in `module.json`) | — |
 | aoe-movement-portals-31 | open — the ADJ batch (rows and file lists handed to the integrator) | — |
 | aoe-movement-portals-32 | `describe()` `bf362fd4` + `d132395c`; additions (`inspect`, `destinations`, `link`, `unlink`, `badges`) `fe8938fe`; **[declared] D-P5** `59a1e99b`, `413fed02`. Not done: `spreadArrival → { moved, to }`, `teleportParty(ref, { from })`; existing rows accept refs (`regionOf`): not done — guide S6 keeps today's document params (legacy rows), so `cardFor`, `lookAt`, `teleportParty` and `open` still take documents only and `regionOf` is unpublished | |
-| aoe-movement-portals-33 | README in §7 order, CHANGELOG | `186cdfb1` |
-| aoe-movement-portals-36 | `recordOf(t, { gmIds })` | `477e39e2` |
+| aoe-movement-portals-33 | README in §7 order, CHANGELOG; the README/API guard as a module test (`test/readme.test.mjs`) | `186cdfb1`, `14f86c48` |
+| aoe-movement-portals-36 | `recordOf(t, { gmIds })`; README note on the pile probe (unifying: open for Joe) | `477e39e2`, `24cc1b58` |
 | aoe-movement-portals-38 | JSDoc `b87d8c15`; the markers.md table handed to the integrator | |
 | aoe-movement-portals-43 | `isAoeHandle` `ae936c07`; **[declared] D-P6** `8a060d21` | |
 

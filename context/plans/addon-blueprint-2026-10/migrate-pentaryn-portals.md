@@ -529,11 +529,11 @@ The structural steps absorb -25, -26, -29 (W7), -31 (ADJ), -33, the C24 part of 
 |---|---|
 | Live score after the migration | **87.0 % (40 / 46 fail-class rules)** — `conformance.py --module portals` at `4d6f0c4b` (checkpoint 67.4 %, wave-3-base 58.1 %) |
 | Date | 2026-10-11 (code phase; nothing synced) |
-| Commits | characterisation: `2b412b0a` `49b2484d` `a73d7ad1` `0ca63b97` · S2 oracle `a5a52410` · refactor: S2 `ff66ad35` (+ todo flip `b870dc71`), S3 `f6bbd2dc`, S4 `38c366fd`, S5 `66cb60ae`, S6 `bf362fd4`, D-P1 `d132395c`, S7 `2e15ab61`, S8 `186cdfb1` · standalone: -32 additions `fe8938fe`, hygiene `a3ade332`, -36 `477e39e2`, -27 `6d2785e4` + `6b892145`, D-P3 `0f06790a`, D-P4 `0fe9e4b8`, D-P5 `59a1e99b` + `413fed02`, -43 `ae936c07` + D-P6 `8a060d21`, -38 `b87d8c15`, gate fix `4d6f0c4b` |
-| Declared changes handed to the live-test workflow | D-P1, S7, D-P3, D-P4, D-P5, D-P6, -27 snapshot message (session: not yet run) |
+| Commits | characterisation: `2b412b0a` `49b2484d` `a73d7ad1` `0ca63b97` · S2 oracle `a5a52410` · refactor: S2 `ff66ad35` (+ todo flip `b870dc71`), S3 `f6bbd2dc`, S4 `38c366fd`, S5 `66cb60ae`, S6 `bf362fd4`, D-P1 `d132395c`, S7 `2e15ab61`, S8 `186cdfb1` · standalone: -32 additions `fe8938fe`, hygiene `a3ade332`, -36 `477e39e2`, -27 `6d2785e4` + `6b892145`, D-P3 `0f06790a`, D-P4 `0fe9e4b8`, D-P5 `59a1e99b` + `413fed02`, -43 `ae936c07` + D-P6 `8a060d21`, -38 `b87d8c15`, gate fix `4d6f0c4b` · standalone pass 2 (2026-10-11): -27 rest `09ec04f9` (unawaited draws) + `7f50014c` (badge menu), -33 guard `14f86c48`, -36 README note `24cc1b58`, **[declared] C59** `be2573e3` (switches) + `5c34cda8` (unlink), C59 scan `05b79e3e`, CHANGELOG `aa43f188` |
+| Declared changes handed to the live-test workflow | D-P1, S7, D-P3, D-P4, D-P5, D-P6, -27 snapshot message, C59 batches (session: not yet run) |
 | `module.json` edits appended to `wave7-restart-batch.md` | no — returned to the integrator (shared file); the existing portals row needs four additions (below) |
 | Adjustments rows appended to `adjustments-batch.md` | no — returned to the integrator (shared file); two corrections to the existing rows (below) |
-| Still failing, and why | C07, C09, C37, C51 → W7 (`module.json` flags/recommends/cssPrefix, `lang/`); C32, C47 → the ADJ batch (rows still name `portals.mjs`; no item-piles row). Warn: C06w (W7 styles move), C36 (W7 i18n), C59 (per-behaviour `update` loops in the card window's switch and unlink: batching changes the frozen per-behaviour `update` pins — a later declared perf step) |
+| Still failing, and why | C07, C09, C37, C51 → W7 (`module.json` flags/recommends/cssPrefix, `lang/`); C32, C47 → the ADJ batch (rows still name `portals.mjs`; no item-piles row). Warn: C06w (W7 styles move), C36 (W7 i18n). C59 passes since `05b79e3e` (the two loops batch, [declared] `be2573e3`, `5c34cda8`) |
 
 ### Wave 3 migration notes (2026-10-11)
 
@@ -566,6 +566,29 @@ The structural steps absorb -25, -26, -29 (W7), -31 (ADJ), -33, the C24 part of 
   lands (the two existing rows list `portals.mjs`); the module-check imports gate red from
   `ae936c07` through `186cdfb1` (4 commits: `ae936c07`, `8a060d21`, `b87d8c15`, `186cdfb1`;
   `test/aoe-handle.test.mjs` imported `../../pentaryn-aoe/core.mjs`); fixed `4d6f0c4b`.
+
+### Standalone pass 2 (2026-10-11)
+
+Every §4 row and every audit finding was already applied or handed on (above); this pass took what
+was left in the finding texts and the §5.9 checklist. 191 node:test + 52 legacy, green twice;
+conformance 87.0 % with no C59 warn; `vendor.py check portals` identical.
+
+- **-27 (rest)**: the draws nobody awaits (`canvasReady`, `setEditing`) share the debounced redraw's
+  catch (`badge redraw failed`), and the GM badge menu's click goes through the pass-through guard
+  (`badge menu`). Tests `redraw-errors.test.mjs`, `menu-errors.test.mjs`. Console only.
+- **-33**: the audit's `test_module_docs.py` guard, done module-local as `test/readme.test.mjs`
+  (every manifest row, own and contributed, is a row in the README's API table).
+- **-36**: the README Pitfalls note on the Item Piles probe (the code comment was already there).
+- **C59 [declared]**: the card window's switches and `unlinkRegion` write through one
+  `region.updateEmbeddedDocuments("RegionBehavior", …)`. Pins flipped: card-app "edit controls …
+  switches", card-app "unlink: …", api-additions "unlink(ref, { to }) …". The world fixture's
+  regions gain `updateEmbeddedDocuments` (one `updateEmbedded` record; each behaviour applies and
+  fires its own hook). Live check: toggle *Show where it leads* on a passage and remove a
+  destination in the card window; the badge redraws once and the dialog follows the new setting.
+  `05b79e3e` moves the per-card wiring into `_wireCard` so the scan stops reading listener closures
+  as a loop of writes (no change).
+- Not done here: -29 (W7), -31 and the -38 markers.md table (integrator), the -32 shapes and the -36
+  unification (Open for Joe in the wave-3 report).
 
 ### For the integrator (shared files)
 

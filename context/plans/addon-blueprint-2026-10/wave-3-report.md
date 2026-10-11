@@ -40,6 +40,10 @@ module. Baseline: [`wave-3-baseline.md`](wave-3-baseline.md).
   unlink loops `await` one `update` per teleport behaviour; batching them through the region's
   `updateEmbeddedDocuments` is one round trip but changes the frozen per-behaviour `update` pins,
   so it would be its own declared perf step. Usually one behaviour per region, so low value.
+  **Landed after all (standalone pass 2, 2026-10-11): no decision needed — §5.9.1 makes batching a
+  MUST and Joe's rule puts perf in the same wave.** [declared] `be2573e3` (switches), `5c34cda8`
+  (unlink), each flipping its named pins; `05b79e3e` clears the scan's false positive. Live check
+  in the portals guide's Result.
 
 ## Known red commits and ranges (bisecting)
 
