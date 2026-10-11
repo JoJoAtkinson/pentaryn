@@ -161,6 +161,261 @@ function stamp(data, e, prov) {
   return data;
 }
 
+/** `actor` and `npc`: a world, compendium or bridge-built actor, an optional patch, its token on the footprint. */
+async function planActor({ e, plan, spec, w, marker, g, mrect }) {
+  let actor = null, source = null;
+  if (w.actorId) {
+    actor = game.actors.get(w.actorId);
+    if (!actor) throw codedError("BAD_SPEC", `no world actor ${w.actorId}`);
+  } else if (w.uuid) {
+    source = await fromUuid(w.uuid);
+    if (!(source instanceof Actor)) throw codedError("BAD_SPEC", `${w.uuid} is not an actor`);
+    if (!source.pack) { actor = source; source = null; }
+  } else if (w.kind === "actor") {
+    throw codedError("BAD_SPEC", "actor needs actorId or uuid");
+  } else if (!w.npc) {
+    throw codedError("BAD_SPEC", "npc needs npc (the dnd5e-create-npc arguments) and optional features, or an actorId");
+  }
+  // a new npc: every argument checked now, so the dry run fails where the real run would
+  const npcSpec = w.kind === "npc" && !actor ? await checkNpc(w) : null;
+  if (npcSpec) plan.warnings = [...npcSpec.warnings];
+  const willImport = !!source && w.copy !== false;
+  if (source && !willImport) throw codedError("BAD_SPEC", "a compendium actor must be imported (copy: true)");
+  const willCopy = !!actor && w.copy === true;
+  const ref = actor ?? source;
+  const stampActor = w.kind === "npc" || w.stampActor === true || provenanceKind(w) === "npc";
+  if (w.patch && !(willImport || willCopy || stampActor)) {
+    throw codedError("BAD_SPEC", "patch changes the actor: use a compendium uuid, or copy: true for a world actor");
+  }
+  const { notes: patchNotes, defaults: patchDefaults } = await checkPatch(w.patch);
+  if (patchDefaults.length) plan.defaults = [...(plan.defaults ?? []), ...patchDefaults];
+  const psize = patchSize(w.patch);
+  const dndSize = psize ?? ref?.system?.traits?.size ?? SIZE_WORDS[String(w.npc?.size ?? "").toLowerCase()] ?? "med";
+  const tw = psize ? DND_SIZE_WIDTH[psize] : (ref?.prototypeToken?.width ?? DND_SIZE_WIDTH[dndSize] ?? 1);
+  const th = psize ? tw : (ref?.prototypeToken?.height ?? tw);
+  const ring = ringData(spec.ring, null);
+  const pos = placementFor(mrect, {
+    type: "token", w: tw, h: th,
+    snap: (x, y) => marker.getSnappedPosition({ x, y, width: tw, height: th })
+  }, g);
+  const lockSize = needsLockSize(tw, dndSize) || tw !== th;
+  const hidden = spec.hidden ?? false;
+  Object.assign(plan, { x: pos.x, y: pos.y, placement: pos.mode, lockSize, hidden, footprint: footprintSquares(tw, th) });
+  plan.xp = estimateXp({ spec, w, ref, npc: npcSpec?.npc });
+  plan.creates = [
+    willImport ? `Actor (import "${source.name}" into ${CREATURE_FOLDER})`
+      : willCopy ? `Actor (copy of "${actor.name}")`
+        : npcSpec ? `Actor (NPC "${npcSpec.npc.name}", ${npcSpec.npc.creatureType} CR ${npcSpec.npc.cr}, into ${CREATURE_FOLDER}` +
+          `${npcSpec.features.length ? `; features: ${npcSpec.features.map(f => f.label).join(", ")}` : ""})` : null,
+    w.patch ? `patch: ${Object.keys(w.patch).join(", ")}${patchNotes.length ? ` (${patchNotes.join(", ")})` : ""}` : null,
+    `Token "${spec.name ?? w.patch?.name ?? ref?.prototypeToken?.name ?? ref?.name ?? w.npc?.name ?? "?"}"${ring ? `, ring ${spec.ring}` : ""}`
+  ].filter(Boolean);
+  plan.exec = async (prov, own) => {
+    let a = actor, createdActor = false;
+    let patch = w.patch;
+    if (npcSpec) {
+      const made = await createNpc(npcSpec, own);
+      a = made.actor;
+      e.report = { warnings: made.warnings, notes: made.notes };
+      // recharge on the features just added, by name (the shape dnd5e-add-feature's recharge wrote)
+      if (Object.keys(npcSpec.recharge).length) patch = { ...(w.patch ?? {}), recharge: { ...npcSpec.recharge, ...(w.patch?.recharge ?? {}) } };
+    } else if (willImport) {
+      const folder = await ensureFolder(CREATURE_FOLDER, "Actor");
+      const data = game.actors.fromCompendium(source);
+      data.folder = folder.id;
+      a = await Actor.implementation.create(data);
+      createdActor = true;
+    } else if (willCopy) {
+      const data = actor.toObject();
+      delete data._id;
+      a = await Actor.implementation.create(data);
+      createdActor = true;
+    }
+    if (createdActor) own({ type: "Actor", id: a.id, name: a.name });
+    if (createdActor || stampActor) await a.update({ [`flags.${MODULE}.provenance`]: prov });
+    if (patch) {
+      const r = await applyPatch(a, patch);
+      e.report = { ...(e.report ?? {}), patched: r.changed, warnings: [...(e.report?.warnings ?? []), ...r.warnings] };
+    }
+    if (plan.defaults?.length) e.report = { ...(e.report ?? {}), defaults: [...plan.defaults, ...(e.report?.defaults ?? [])] };
+    return { type: "Token", data: await tokenData(a, e, prov, { pos, hidden, lockSize }),
+      extra: (createdActor || stampActor || npcSpec) ? [{ type: "Actor", id: a.id, name: a.name }] : [] };
+  };
+}
+
+/** `character`: a level-N player character from the owned books, its token on the footprint. */
+async function planCharacter({ e, plan, spec, w, marker, g, mrect }) {
+  const resolved = await resolveCharacter(w);
+  const tw = DND_SIZE_WIDTH[resolved.size] ?? 1;
+  const pos = placementFor(mrect, {
+    type: "token", w: tw, h: tw, snap: (x, y) => marker.getSnappedPosition({ x, y, width: tw, height: tw })
+  }, g);
+  const hidden = spec.hidden ?? false;
+  const lockSize = needsLockSize(tw, resolved.size);
+  const ring = ringData(spec.ring ?? "pc", null);
+  const d = resolved.docs;
+  Object.assign(plan, { x: pos.x, y: pos.y, placement: pos.mode, lockSize, hidden, footprint: footprintSquares(tw),
+    warnings: [...resolved.warnings, ...(resolved.planWarnings ?? [])], defaults: resolved.defaults });
+  // the dry run builds it on an unsaved actor (§14): the real run's DEFAULTED / WARN lines and
+  // its sheet, before anything exists. A BAD_SPEC there is the real run's BAD_SPEC.
+  if (e.dryRun) {
+    try {
+      const pre = await previewCharacter(w, resolved);
+      Object.assign(plan, { warnings: pre.warnings, defaults: pre.defaults, sheet: sheetLine(pre.summary),
+        starting: pre.starting ?? [] });
+    } catch (err) {
+      if (errorCode(err) === "BAD_SPEC") throw err;
+      plan.warnings = [...plan.warnings, `preview incomplete (${err?.message ?? err}): the real run may print DEFAULTED/WARN lines this dry run did not`];
+    }
+  }
+  const sp = resolved.spells;
+  plan.creates = [
+    `Actor (character "${w.name}": ${d.species.name}, ${d.background.name}, ${d.cls.name} ${resolved.level}${d.subclass ? ` ${d.subclass.name}` : ""}; advancements run by dnd5e` +
+      `${w.choices ? `; choices checked: ${Object.keys(w.choices).length}` : ""})`,
+    sp.prepared.length || sp.book.length ? `spells on the ${d.cls.name} list: ${[...sp.prepared, ...sp.book].map(x => x.name).join(", ")}` : null,
+    resolved.gear.length ? `gear: ${resolved.gear.map(g => g.src?.name ?? g.data?.name).join(", ")}` : null,
+    plan.starting?.length ? `starting equipment: ${plan.starting.join(", ")}` : null,
+    `Token "${spec.name ?? w.name}"${ring?.enabled ? `, ring ${spec.ring ?? "pc"}` : ""}`
+  ].filter(Boolean);
+  plan.exec = async (prov, own) => {
+    const { actor, report } = await buildCharacter(w, resolved, { prov });
+    own({ type: "Actor", id: actor.id, name: actor.name });
+    e.report = report;
+    return { type: "Token", data: await tokenData(actor, e, prov, { pos, hidden, lockSize, ring: spec.ring ?? "pc" }),
+      extra: [{ type: "Actor", id: actor.id, name: actor.name }] };
+  };
+}
+
+/** `hotspot`: a clone of the Item Piles look template with its items, and an optional light. */
+async function planHotspot({ e, plan, spec, w, scene, marker, g, mrect }) {
+  const template = game.actors.find(a => a.name === HOTSPOT_TEMPLATE);
+  if (!template) throw codedError("BAD_SPEC", `no "${HOTSPOT_TEMPLATE}" actor in this world`);
+  if (!w.name) throw codedError("BAD_SPEC", "hotspot needs a name");
+  const size = Number(w.size) > 0 ? Number(w.size) : 0.5;
+  // Resolve every item now, so a bad uuid fails the dry run and never leaves a half-built clone.
+  // items: {uuid | name} from a compendium (PHB/SRD gear by name), or {data} built inline (a
+  // custom treasure) — never a world item, so nothing is left in the Items sidebar for cleanup to miss
+  const sources = [];
+  const defaults = [];
+  for (const it of w.items ?? []) {
+    if (it?.data) {
+      if (!it.data.name || !it.data.type) throw codedError("BAD_SPEC", "hotspot item data needs name and type");
+      const note = fixAttunement(it.data);
+      if (note) defaults.push(note);
+      sources.push({ src: null, it });
+      continue;
+    }
+    const src = (it?.uuid || it?.name) ? await findItem(it.uuid ?? it.name, "item") : null;
+    if (!(src instanceof Item)) {
+      throw codedError("BAD_SPEC", `hotspot items: ${await notFound("item", it?.uuid ?? it?.name ?? "?", "item", "; or pass {data: {name, type, system}} for a custom item")}`);
+    }
+    sources.push({ src, it });
+  }
+  if (defaults.length) plan.defaults = defaults;
+  const pos = placementFor(mrect, { type: "token", w: size, h: size }, g);
+  const hidden = spec.hidden ?? false;
+  const light = w.light ? checkLightConfig(w.light, "hotspot.light") : null;
+  Object.assign(plan, { x: pos.x, y: pos.y, placement: pos.mode, lockSize: true, hidden, footprint: footprintSquares(size) });
+  plan.creates = [`Actor (hotspot "${w.name}" from the template)`,
+    sources.length ? `items: ${sources.map(x => `${x.it.rename ?? x.src?.name ?? x.it.data?.name}${x.it.quantity > 1 ? ` x${x.it.quantity}` : ""}`).join(", ")}` : "no items",
+    "Token", light ? `AmbientLight at its centre (${lightWords(light) || "default"})` : null].filter(Boolean);
+  plan.exec = async (prov, own) => {
+    const icon = w.icon ?? EYE;
+    if (plan.defaults?.length) e.report = { defaults: plan.defaults };
+    const items = sources.map(({ src, it }) => {
+      const o = src ? game.items.fromCompendium(src) : foundry.utils.deepClone(it.data);
+      delete o._id;
+      if (o.system && "quantity" in o.system) o.system.quantity = it.quantity ?? o.system.quantity ?? 1;
+      if (it.rename) o.name = it.rename;
+      if (it.system) o.system = foundry.utils.mergeObject(o.system ?? {}, it.system, { inplace: false });
+      foundry.utils.setProperty(o, `flags.${MODULE}.provenance`, prov);
+      return o;
+    });
+    const actor = await template.clone({ name: w.name, folder: template.folder?.id ?? null }, { save: true });
+    own({ type: "Actor", id: actor.id, name: actor.name });
+    if (items.length) await actor.createEmbeddedDocuments("Item", items);
+    const merged = foundry.utils.mergeObject(actor.getFlag("item-piles", "data") ?? {}, {
+      closedImage: icon, openedImage: icon, lockedImage: icon, emptyImage: icon,
+      description: w.description ?? "", closed: true, locked: !!w.locked, deleteWhenEmpty: false
+    }, { inplace: false });
+    await actor.update({
+      img: icon,
+      "flags.item-piles.data": merged,
+      "prototypeToken.name": spec.name ?? w.name,
+      "prototypeToken.width": size, "prototypeToken.height": size,
+      "prototypeToken.texture.src": icon,
+      "prototypeToken.flags.item-piles.data": merged,
+      "prototypeToken.flags.dnd5e.lockSize": true,
+      [`flags.${MODULE}.provenance`]: prov
+    });
+    const data = await tokenDataFrom(actor, scene, { at: pos,
+      extra: { width: size, height: size, hidden, name: spec.name ?? w.name, ...(marker.level ? { level: marker.level } : {}) } });
+    foundry.utils.setProperty(data, "texture.src", icon);
+    foundry.utils.setProperty(data, "flags.item-piles.data", merged);
+    foundry.utils.setProperty(data, "flags.dnd5e.lockSize", true);
+    const also = light ? [{ type: "AmbientLight", data: stamp({ x: Math.round(pos.x + size * g / 2), y: Math.round(pos.y + size * g / 2),
+      config: light, hidden: false }, e, prov) }] : [];
+    return { type: "Token", data: stamp(data, e, prov), extra: [{ type: "Actor", id: actor.id, name: actor.name }], also };
+  };
+}
+
+/** `note`: a journal entry and its map pin, and an optional light. */
+async function planNote({ e, plan, spec, w, g, mrect }) {
+  if (!w.name || typeof w.html !== "string") throw codedError("BAD_SPEC", "note needs name and html");
+  const pos = placementFor(mrect, { type: "centred" }, g);
+  const light = w.light ? checkLightConfig(w.light, "note.light") : null;
+  Object.assign(plan, { x: pos.x, y: pos.y, placement: pos.mode });
+  plan.creates = [`JournalEntry "${w.name}"`, "Note", light ? `AmbientLight at the pin (${lightWords(light) || "default"})` : null].filter(Boolean);
+  plan.exec = async (prov, own) => {
+    const je = await JournalEntry.implementation.create({
+      name: w.name, folder: w.folderId ?? null, ownership: ownershipOf(w.ownership),
+      pages: [{ name: w.name, type: "text", title: { show: false, level: 1 }, text: { format: 1, content: w.html } }],
+      flags: { [MODULE]: { provenance: prov } }
+    });
+    own({ type: "JournalEntry", id: je.id, name: je.name });
+    const data = {
+      entryId: je.id, pageId: je.pages.contents[0]?.id ?? null, x: pos.x, y: pos.y,
+      texture: { src: w.icon ?? EYE }, iconSize: w.iconSize ?? 64, text: spec.name ?? w.label ?? w.name,
+      fontSize: 24, textAnchor: CONST.TEXT_ANCHOR_POINTS?.BOTTOM ?? 1, global: false
+    };
+    const also = light ? [{ type: "AmbientLight", data: stamp({ x: pos.x, y: pos.y, config: light, hidden: false }, e, prov) }] : [];
+    return { type: "Note", data: stamp(data, e, prov), extra: [{ type: "JournalEntry", id: je.id, name: je.name }], also };
+  };
+}
+
+/** `light`: an AmbientLight at the footprint's centre. */
+async function planLight({ e, plan, spec, w, g, mrect }) {
+  const pos = placementFor(mrect, { type: "centred" }, g);
+  const hidden = w.hidden ?? spec.hidden ?? false;
+  const config = checkLightConfig(w.config ?? {}, "light.config");
+  Object.assign(plan, { x: pos.x, y: pos.y, placement: pos.mode, hidden });
+  plan.creates = [`AmbientLight (${lightWords(config) || "default"})`];
+  plan.exec = async prov => ({ type: "AmbientLight", data: stamp({ x: pos.x, y: pos.y, config, hidden }, e, prov), extra: [] });
+}
+
+/** `tile`: a tile centred on the footprint. */
+async function planTile({ e, plan, spec, w, marker, g, mrect }) {
+  if (!w.src) throw codedError("BAD_SPEC", "tile needs src");
+  const tw = (Number(w.width) || marker.width) * g, th = (Number(w.height) || marker.height) * g;
+  const cx = mrect.x + mrect.w / 2, cy = mrect.y + mrect.h / 2;
+  const x = Math.round(cx - tw / 2), y = Math.round(cy - th / 2);
+  const hidden = spec.hidden ?? false;
+  Object.assign(plan, { x, y, placement: "centred", hidden, footprint: footprintSquares(tw / g, th / g) });
+  plan.creates = ["Tile"];
+  plan.exec = async prov => ({ type: "Tile", data: stamp({ texture: { src: w.src }, x, y, width: tw, height: th, hidden }, e, prov), extra: [] });
+}
+
+/** `none`: nothing built; the marker is removed with the reason recorded. */
+async function planNone({ plan, w }) {
+  plan.creates = [];
+  plan.reason = w.reason ?? "";
+  plan.exec = null;
+}
+/** One planner per replacement kind, in KINDS order (prompts-lookup-13): adding a kind is a row here and a function above. */
+const PLANNERS = Object.freeze({
+  actor: planActor, npc: planActor, character: planCharacter, hotspot: planHotspot, note: planNote, light: planLight, tile: planTile, none: planNone,
+});
+
 async function planOne(e) {
   const { spec, scene, marker } = e;
   const w = spec.with;
@@ -172,259 +427,7 @@ async function planOne(e) {
     prompt: e.text, x: null, y: null, lockSize: null, hidden: null, creates: []
   };
 
-  switch (w.kind) {
-    case "actor":
-    case "npc": {
-      let actor = null, source = null;
-      if (w.actorId) {
-        actor = game.actors.get(w.actorId);
-        if (!actor) throw codedError("BAD_SPEC", `no world actor ${w.actorId}`);
-      } else if (w.uuid) {
-        source = await fromUuid(w.uuid);
-        if (!(source instanceof Actor)) throw codedError("BAD_SPEC", `${w.uuid} is not an actor`);
-        if (!source.pack) { actor = source; source = null; }
-      } else if (w.kind === "actor") {
-        throw codedError("BAD_SPEC", "actor needs actorId or uuid");
-      } else if (!w.npc) {
-        throw codedError("BAD_SPEC", "npc needs npc (the dnd5e-create-npc arguments) and optional features, or an actorId");
-      }
-      // a new npc: every argument checked now, so the dry run fails where the real run would
-      const npcSpec = w.kind === "npc" && !actor ? await checkNpc(w) : null;
-      if (npcSpec) plan.warnings = [...npcSpec.warnings];
-      const willImport = !!source && w.copy !== false;
-      if (source && !willImport) throw codedError("BAD_SPEC", "a compendium actor must be imported (copy: true)");
-      const willCopy = !!actor && w.copy === true;
-      const ref = actor ?? source;
-      const stampActor = w.kind === "npc" || w.stampActor === true || provenanceKind(w) === "npc";
-      if (w.patch && !(willImport || willCopy || stampActor)) {
-        throw codedError("BAD_SPEC", "patch changes the actor: use a compendium uuid, or copy: true for a world actor");
-      }
-      const { notes: patchNotes, defaults: patchDefaults } = await checkPatch(w.patch);
-      if (patchDefaults.length) plan.defaults = [...(plan.defaults ?? []), ...patchDefaults];
-      const psize = patchSize(w.patch);
-      const dndSize = psize ?? ref?.system?.traits?.size ?? SIZE_WORDS[String(w.npc?.size ?? "").toLowerCase()] ?? "med";
-      const tw = psize ? DND_SIZE_WIDTH[psize] : (ref?.prototypeToken?.width ?? DND_SIZE_WIDTH[dndSize] ?? 1);
-      const th = psize ? tw : (ref?.prototypeToken?.height ?? tw);
-      const ring = ringData(spec.ring, null);
-      const pos = placementFor(mrect, {
-        type: "token", w: tw, h: th,
-        snap: (x, y) => marker.getSnappedPosition({ x, y, width: tw, height: th })
-      }, g);
-      const lockSize = needsLockSize(tw, dndSize) || tw !== th;
-      const hidden = spec.hidden ?? false;
-      Object.assign(plan, { x: pos.x, y: pos.y, placement: pos.mode, lockSize, hidden, footprint: footprintSquares(tw, th) });
-      plan.xp = estimateXp({ spec, w, ref, npc: npcSpec?.npc });
-      plan.creates = [
-        willImport ? `Actor (import "${source.name}" into ${CREATURE_FOLDER})`
-          : willCopy ? `Actor (copy of "${actor.name}")`
-            : npcSpec ? `Actor (NPC "${npcSpec.npc.name}", ${npcSpec.npc.creatureType} CR ${npcSpec.npc.cr}, into ${CREATURE_FOLDER}` +
-              `${npcSpec.features.length ? `; features: ${npcSpec.features.map(f => f.label).join(", ")}` : ""})` : null,
-        w.patch ? `patch: ${Object.keys(w.patch).join(", ")}${patchNotes.length ? ` (${patchNotes.join(", ")})` : ""}` : null,
-        `Token "${spec.name ?? w.patch?.name ?? ref?.prototypeToken?.name ?? ref?.name ?? w.npc?.name ?? "?"}"${ring ? `, ring ${spec.ring}` : ""}`
-      ].filter(Boolean);
-      plan.exec = async (prov, own) => {
-        let a = actor, createdActor = false;
-        let patch = w.patch;
-        if (npcSpec) {
-          const made = await createNpc(npcSpec, own);
-          a = made.actor;
-          e.report = { warnings: made.warnings, notes: made.notes };
-          // recharge on the features just added, by name (the shape dnd5e-add-feature's recharge wrote)
-          if (Object.keys(npcSpec.recharge).length) patch = { ...(w.patch ?? {}), recharge: { ...npcSpec.recharge, ...(w.patch?.recharge ?? {}) } };
-        } else if (willImport) {
-          const folder = await ensureFolder(CREATURE_FOLDER, "Actor");
-          const data = game.actors.fromCompendium(source);
-          data.folder = folder.id;
-          a = await Actor.implementation.create(data);
-          createdActor = true;
-        } else if (willCopy) {
-          const data = actor.toObject();
-          delete data._id;
-          a = await Actor.implementation.create(data);
-          createdActor = true;
-        }
-        if (createdActor) own({ type: "Actor", id: a.id, name: a.name });
-        if (createdActor || stampActor) await a.update({ [`flags.${MODULE}.provenance`]: prov });
-        if (patch) {
-          const r = await applyPatch(a, patch);
-          e.report = { ...(e.report ?? {}), patched: r.changed, warnings: [...(e.report?.warnings ?? []), ...r.warnings] };
-        }
-        if (plan.defaults?.length) e.report = { ...(e.report ?? {}), defaults: [...plan.defaults, ...(e.report?.defaults ?? [])] };
-        return { type: "Token", data: await tokenData(a, e, prov, { pos, hidden, lockSize }),
-          extra: (createdActor || stampActor || npcSpec) ? [{ type: "Actor", id: a.id, name: a.name }] : [] };
-      };
-      break;
-    }
-
-    case "character": {
-      const resolved = await resolveCharacter(w);
-      const tw = DND_SIZE_WIDTH[resolved.size] ?? 1;
-      const pos = placementFor(mrect, {
-        type: "token", w: tw, h: tw, snap: (x, y) => marker.getSnappedPosition({ x, y, width: tw, height: tw })
-      }, g);
-      const hidden = spec.hidden ?? false;
-      const lockSize = needsLockSize(tw, resolved.size);
-      const ring = ringData(spec.ring ?? "pc", null);
-      const d = resolved.docs;
-      Object.assign(plan, { x: pos.x, y: pos.y, placement: pos.mode, lockSize, hidden, footprint: footprintSquares(tw),
-        warnings: [...resolved.warnings, ...(resolved.planWarnings ?? [])], defaults: resolved.defaults });
-      // the dry run builds it on an unsaved actor (§14): the real run's DEFAULTED / WARN lines and
-      // its sheet, before anything exists. A BAD_SPEC there is the real run's BAD_SPEC.
-      if (e.dryRun) {
-        try {
-          const pre = await previewCharacter(w, resolved);
-          Object.assign(plan, { warnings: pre.warnings, defaults: pre.defaults, sheet: sheetLine(pre.summary),
-            starting: pre.starting ?? [] });
-        } catch (err) {
-          if (errorCode(err) === "BAD_SPEC") throw err;
-          plan.warnings = [...plan.warnings, `preview incomplete (${err?.message ?? err}): the real run may print DEFAULTED/WARN lines this dry run did not`];
-        }
-      }
-      const sp = resolved.spells;
-      plan.creates = [
-        `Actor (character "${w.name}": ${d.species.name}, ${d.background.name}, ${d.cls.name} ${resolved.level}${d.subclass ? ` ${d.subclass.name}` : ""}; advancements run by dnd5e` +
-          `${w.choices ? `; choices checked: ${Object.keys(w.choices).length}` : ""})`,
-        sp.prepared.length || sp.book.length ? `spells on the ${d.cls.name} list: ${[...sp.prepared, ...sp.book].map(x => x.name).join(", ")}` : null,
-        resolved.gear.length ? `gear: ${resolved.gear.map(g => g.src?.name ?? g.data?.name).join(", ")}` : null,
-        plan.starting?.length ? `starting equipment: ${plan.starting.join(", ")}` : null,
-        `Token "${spec.name ?? w.name}"${ring?.enabled ? `, ring ${spec.ring ?? "pc"}` : ""}`
-      ].filter(Boolean);
-      plan.exec = async (prov, own) => {
-        const { actor, report } = await buildCharacter(w, resolved, { prov });
-        own({ type: "Actor", id: actor.id, name: actor.name });
-        e.report = report;
-        return { type: "Token", data: await tokenData(actor, e, prov, { pos, hidden, lockSize, ring: spec.ring ?? "pc" }),
-          extra: [{ type: "Actor", id: actor.id, name: actor.name }] };
-      };
-      break;
-    }
-
-    case "hotspot": {
-      const template = game.actors.find(a => a.name === HOTSPOT_TEMPLATE);
-      if (!template) throw codedError("BAD_SPEC", `no "${HOTSPOT_TEMPLATE}" actor in this world`);
-      if (!w.name) throw codedError("BAD_SPEC", "hotspot needs a name");
-      const size = Number(w.size) > 0 ? Number(w.size) : 0.5;
-      // Resolve every item now, so a bad uuid fails the dry run and never leaves a half-built clone.
-      // items: {uuid | name} from a compendium (PHB/SRD gear by name), or {data} built inline (a
-      // custom treasure) — never a world item, so nothing is left in the Items sidebar for cleanup to miss
-      const sources = [];
-      const defaults = [];
-      for (const it of w.items ?? []) {
-        if (it?.data) {
-          if (!it.data.name || !it.data.type) throw codedError("BAD_SPEC", "hotspot item data needs name and type");
-          const note = fixAttunement(it.data);
-          if (note) defaults.push(note);
-          sources.push({ src: null, it });
-          continue;
-        }
-        const src = (it?.uuid || it?.name) ? await findItem(it.uuid ?? it.name, "item") : null;
-        if (!(src instanceof Item)) {
-          throw codedError("BAD_SPEC", `hotspot items: ${await notFound("item", it?.uuid ?? it?.name ?? "?", "item", "; or pass {data: {name, type, system}} for a custom item")}`);
-        }
-        sources.push({ src, it });
-      }
-      if (defaults.length) plan.defaults = defaults;
-      const pos = placementFor(mrect, { type: "token", w: size, h: size }, g);
-      const hidden = spec.hidden ?? false;
-      const light = w.light ? checkLightConfig(w.light, "hotspot.light") : null;
-      Object.assign(plan, { x: pos.x, y: pos.y, placement: pos.mode, lockSize: true, hidden, footprint: footprintSquares(size) });
-      plan.creates = [`Actor (hotspot "${w.name}" from the template)`,
-        sources.length ? `items: ${sources.map(x => `${x.it.rename ?? x.src?.name ?? x.it.data?.name}${x.it.quantity > 1 ? ` x${x.it.quantity}` : ""}`).join(", ")}` : "no items",
-        "Token", light ? `AmbientLight at its centre (${lightWords(light) || "default"})` : null].filter(Boolean);
-      plan.exec = async (prov, own) => {
-        const icon = w.icon ?? EYE;
-        if (plan.defaults?.length) e.report = { defaults: plan.defaults };
-        const items = sources.map(({ src, it }) => {
-          const o = src ? game.items.fromCompendium(src) : foundry.utils.deepClone(it.data);
-          delete o._id;
-          if (o.system && "quantity" in o.system) o.system.quantity = it.quantity ?? o.system.quantity ?? 1;
-          if (it.rename) o.name = it.rename;
-          if (it.system) o.system = foundry.utils.mergeObject(o.system ?? {}, it.system, { inplace: false });
-          foundry.utils.setProperty(o, `flags.${MODULE}.provenance`, prov);
-          return o;
-        });
-        const actor = await template.clone({ name: w.name, folder: template.folder?.id ?? null }, { save: true });
-        own({ type: "Actor", id: actor.id, name: actor.name });
-        if (items.length) await actor.createEmbeddedDocuments("Item", items);
-        const merged = foundry.utils.mergeObject(actor.getFlag("item-piles", "data") ?? {}, {
-          closedImage: icon, openedImage: icon, lockedImage: icon, emptyImage: icon,
-          description: w.description ?? "", closed: true, locked: !!w.locked, deleteWhenEmpty: false
-        }, { inplace: false });
-        await actor.update({
-          img: icon,
-          "flags.item-piles.data": merged,
-          "prototypeToken.name": spec.name ?? w.name,
-          "prototypeToken.width": size, "prototypeToken.height": size,
-          "prototypeToken.texture.src": icon,
-          "prototypeToken.flags.item-piles.data": merged,
-          "prototypeToken.flags.dnd5e.lockSize": true,
-          [`flags.${MODULE}.provenance`]: prov
-        });
-        const data = await tokenDataFrom(actor, scene, { at: pos,
-          extra: { width: size, height: size, hidden, name: spec.name ?? w.name, ...(marker.level ? { level: marker.level } : {}) } });
-        foundry.utils.setProperty(data, "texture.src", icon);
-        foundry.utils.setProperty(data, "flags.item-piles.data", merged);
-        foundry.utils.setProperty(data, "flags.dnd5e.lockSize", true);
-        const also = light ? [{ type: "AmbientLight", data: stamp({ x: Math.round(pos.x + size * g / 2), y: Math.round(pos.y + size * g / 2),
-          config: light, hidden: false }, e, prov) }] : [];
-        return { type: "Token", data: stamp(data, e, prov), extra: [{ type: "Actor", id: actor.id, name: actor.name }], also };
-      };
-      break;
-    }
-
-    case "note": {
-      if (!w.name || typeof w.html !== "string") throw codedError("BAD_SPEC", "note needs name and html");
-      const pos = placementFor(mrect, { type: "centred" }, g);
-      const light = w.light ? checkLightConfig(w.light, "note.light") : null;
-      Object.assign(plan, { x: pos.x, y: pos.y, placement: pos.mode });
-      plan.creates = [`JournalEntry "${w.name}"`, "Note", light ? `AmbientLight at the pin (${lightWords(light) || "default"})` : null].filter(Boolean);
-      plan.exec = async (prov, own) => {
-        const je = await JournalEntry.implementation.create({
-          name: w.name, folder: w.folderId ?? null, ownership: ownershipOf(w.ownership),
-          pages: [{ name: w.name, type: "text", title: { show: false, level: 1 }, text: { format: 1, content: w.html } }],
-          flags: { [MODULE]: { provenance: prov } }
-        });
-        own({ type: "JournalEntry", id: je.id, name: je.name });
-        const data = {
-          entryId: je.id, pageId: je.pages.contents[0]?.id ?? null, x: pos.x, y: pos.y,
-          texture: { src: w.icon ?? EYE }, iconSize: w.iconSize ?? 64, text: spec.name ?? w.label ?? w.name,
-          fontSize: 24, textAnchor: CONST.TEXT_ANCHOR_POINTS?.BOTTOM ?? 1, global: false
-        };
-        const also = light ? [{ type: "AmbientLight", data: stamp({ x: pos.x, y: pos.y, config: light, hidden: false }, e, prov) }] : [];
-        return { type: "Note", data: stamp(data, e, prov), extra: [{ type: "JournalEntry", id: je.id, name: je.name }], also };
-      };
-      break;
-    }
-
-    case "light": {
-      const pos = placementFor(mrect, { type: "centred" }, g);
-      const hidden = w.hidden ?? spec.hidden ?? false;
-      const config = checkLightConfig(w.config ?? {}, "light.config");
-      Object.assign(plan, { x: pos.x, y: pos.y, placement: pos.mode, hidden });
-      plan.creates = [`AmbientLight (${lightWords(config) || "default"})`];
-      plan.exec = async prov => ({ type: "AmbientLight", data: stamp({ x: pos.x, y: pos.y, config, hidden }, e, prov), extra: [] });
-      break;
-    }
-
-    case "tile": {
-      if (!w.src) throw codedError("BAD_SPEC", "tile needs src");
-      const tw = (Number(w.width) || marker.width) * g, th = (Number(w.height) || marker.height) * g;
-      const cx = mrect.x + mrect.w / 2, cy = mrect.y + mrect.h / 2;
-      const x = Math.round(cx - tw / 2), y = Math.round(cy - th / 2);
-      const hidden = spec.hidden ?? false;
-      Object.assign(plan, { x, y, placement: "centred", hidden, footprint: footprintSquares(tw / g, th / g) });
-      plan.creates = ["Tile"];
-      plan.exec = async prov => ({ type: "Tile", data: stamp({ texture: { src: w.src }, x, y, width: tw, height: th, hidden }, e, prov), extra: [] });
-      break;
-    }
-
-    case "none": {
-      plan.creates = [];
-      plan.reason = w.reason ?? "";
-      plan.exec = null;
-      break;
-    }
-  }
+  await PLANNERS[w.kind]({ e, plan, spec, w, scene, marker, g, mrect });
   return plan;
 }
 
