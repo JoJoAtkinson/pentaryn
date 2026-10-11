@@ -43,6 +43,7 @@ from enum import IntEnum
 from pathlib import Path
 from typing import Callable
 
+from scripts.foundry.ops import config as ops_cfg
 from scripts.foundry.update import adjustments as adj_mod
 from scripts.foundry.update import llm
 
@@ -590,15 +591,18 @@ _MAKE_TARGETS: list[str] | None = None
 
 
 def make_checks(root: Path = REPO_ROOT) -> list[str]:
-    """Every ``make foundry-*-check`` target the Makefile defines."""
+    """Every ``make foundry-<m>-check`` target a fix may cite, from the module registry.
+
+    Derived from ``scripts.foundry.ops.config.MODULES`` (python-tooling-2 step a), not
+    scraped from the Makefile: the module set is defined once. Same set as the scrape it
+    replaced — walls stays out (its gate was ``foundry-walls-test``) and the secrets check
+    ``foundry-admin-check`` stays in until step (b), a declared change. ``root`` is kept
+    for callers; the registry is the repo's."""
     global _MAKE_TARGETS
     if _MAKE_TARGETS is None:
-        try:
-            text = (root / "Makefile").read_text(encoding="utf-8")
-        except OSError:
-            text = ""
-        _MAKE_TARGETS = sorted({f"make {m}" for m in
-                                re.findall(r"^(foundry-[a-z0-9-]+-check)\s*:", text, re.M)})
+        _MAKE_TARGETS = sorted(
+            {f"make foundry-{k}-check" for k in ops_cfg.MODULES if k not in {"walls", "importer"}}
+            | {"make foundry-adjustments-check", "make foundry-admin-check"})
     return _MAKE_TARGETS
 
 
