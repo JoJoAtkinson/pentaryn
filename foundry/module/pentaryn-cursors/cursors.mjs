@@ -6,13 +6,14 @@
 // tool in KEYS gets its coloured glyph. Purely per-client: no documents, no sockets, no GM relay.
 
 import { MODULE, KEYS, VARS, keyFor, isModalTool, cursorValues, placementActive } from "./cursors-core.mjs";
+import { registerSettings, setting } from "./settings.mjs";
 
 const WRAPPED = Symbol.for(`${MODULE}.wrapped`);
 let current = null;
 let imageSet = null;
 
 function enabled() {
-  try { return game.settings.get(MODULE, "enabled") !== false; } catch { return true; }
+  return setting("enabled") !== false;
 }
 
 /** image-set() in `cursor` is uneven across browsers; use it only where the engine accepts it. */
@@ -111,12 +112,7 @@ function wrapOnChange(obj) {
 }
 
 Hooks.once("init", () => {
-  game.settings.register(MODULE, "enabled", {
-    name: "PENTARYN_CURSORS.Setting.enabled.Name",
-    hint: "PENTARYN_CURSORS.Setting.enabled.Hint",
-    scope: "client", config: true, type: Boolean, default: true,
-    onChange: () => { refresh(); resync(); }
-  });
+  registerSettings({ onChange: () => { refresh(); resync(); } });
 });
 
 Hooks.on("getSceneControlButtons", (controls) => {
