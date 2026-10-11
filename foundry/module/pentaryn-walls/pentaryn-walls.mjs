@@ -16,6 +16,7 @@ import {
   MODULE, runEngine, FLAG_SCOPE, get as getBackend, available, readyLine, reportHtml, undoHtml, exclusive
 } from "./walls-core.mjs";
 import {ready as wasmReady} from "./backend-wasm.mjs";  // registers "wasm"; loads async
+import {registerSettings, setting} from "./settings.mjs";
 
 function targetScene(sceneId) {
   const scene = sceneId ? game.scenes.get(sceneId) : canvas?.scene;
@@ -37,7 +38,7 @@ function readWalls(scene) {
  * is absent — a missing or unloadable .wasm must degrade to slower, never to broken.
  */
 function pickBackend(requested) {
-  const want = requested ?? game.settings.get(MODULE, "backend");
+  const want = requested ?? setting("backend");
   if (want !== "auto") {
     const b = getBackend(want);
     if (b?.available()) return b;
@@ -174,15 +175,6 @@ async function makeMacro(action = "preview", slot) {
 // Keybindings MUST be registered during `init` — ClientKeybindings#register throws
 // afterwards (client/helpers/interaction/client-keybindings.mjs:156).
 Hooks.once("init", () => {
-  game.settings.register(MODULE, "backend", {
-    name: "Engine backend",
-    hint: "Automatic uses the compiled (WASM) engine when it loads, falling back to JavaScript. " +
-          "Both produce identical geometry — verified against the same 44 fixtures — so this " +
-          "only affects speed. Compiled is ~12x faster on large scenes.",
-    scope: "world", config: true, type: String, default: "auto",
-    choices: {auto: "Automatic (compiled when available)", wasm: "Compiled (WASM)", js: "JavaScript"}
-  });
-
   // One run at a time. On a large scene a run takes a moment, and a held or double-tapped
   // key would otherwise start a second pass over geometry the first is still committing.
   const lock = {busy: false};
@@ -197,31 +189,8 @@ Hooks.once("init", () => {
       return true;
     };
   };
-
-  game.keybindings.register(MODULE, "run", {
-    name: "Wall autocomplete: run",
-    hint: "Complete the walls on the current scene. Reversible — undo removes exactly this run.",
-    editable: [{key: "KeyW", modifiers: ["Alt"]}],
-    restricted: true,
-    onDown: guard(run)
-  });
-
-  // Bound now that undo is run-scoped and restores trimmed walls rather than deleting them.
-  game.keybindings.register(MODULE, "undo", {
-    name: "Wall autocomplete: undo last run",
-    hint: "Remove the walls the last run created and restore any it trimmed. Press again to peel back the run before it.",
-    editable: [{key: "KeyZ", modifiers: ["Alt"]}],
-    restricted: true,
-    onDown: guard(undo)
-  });
-
-  game.keybindings.register(MODULE, "preview", {
-    name: "Wall autocomplete: preview",
-    hint: "Report what would be built without writing anything.",
-    editable: [{key: "KeyW", modifiers: ["Alt", "Shift"]}],
-    restricted: true,
-    onDown: guard(preview)
-  });
+  const actions = {run, undo, preview};
+  registerSettings({onKey: action => guard(actions[action])});
 });
 
 /**
