@@ -563,8 +563,9 @@ The structural steps absorb -25, -26, -29 (W7), -31 (ADJ), -33, the C24 part of 
   100, cards 100 / 94.2 / 92.3, card-app 100 / 100 / 93.9, api 95 / 84.9 / 100, entry 87.5 / 71.4 /
   66.7 (the drift-refusal and hot-patch branches).
 - **Known red** for bisecting: C32 / `foundry-adjustments-check` from `f6bbd2dc` until the ADJ batch
-  lands (the two existing rows list `portals.mjs`); the module-check imports gate at `ae936c07`
-  only (fixed `4d6f0c4b`).
+  lands (the two existing rows list `portals.mjs`); the module-check imports gate red from
+  `ae936c07` through `186cdfb1` (4 commits: `ae936c07`, `8a060d21`, `b87d8c15`, `186cdfb1`;
+  `test/aoe-handle.test.mjs` imported `../../pentaryn-aoe/core.mjs`); fixed `4d6f0c4b`.
 
 ### For the integrator (shared files)
 

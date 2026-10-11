@@ -36,3 +36,10 @@ module. Baseline: [`wave-3-baseline.md`](wave-3-baseline.md).
   unlink loops `await` one `update` per teleport behaviour; batching them through the region's
   `updateEmbeddedDocuments` is one round trip but changes the frozen per-behaviour `update` pins,
   so it would be its own declared perf step. Usually one behaviour per region, so low value.
+
+## Known red commits and ranges (bisecting)
+
+| Where | Range | What |
+|---|---|---|
+| portals: C32 / `foundry-adjustments-check` | `f6bbd2dc` → the ADJ batch commit | the S3 split moved the markers out of `portals.mjs`, and the two existing `adjustments.yml` rows still list it; fixed when the integrator lands the portals rows |
+| portals: module-check imports gate | `ae936c07` → `186cdfb1` (`ae936c07`, `8a060d21`, `b87d8c15`, `186cdfb1`) | `test/aoe-handle.test.mjs` imported `../../pentaryn-aoe/core.mjs` across modules; fixed `4d6f0c4b` (a cited oracle copy); module tests stayed green |
