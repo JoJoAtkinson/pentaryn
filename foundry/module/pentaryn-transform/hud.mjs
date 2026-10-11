@@ -84,15 +84,27 @@ function onTokenBody(doc, changes) {
 Hooks.on("updateToken", onTokenBody);
 Hooks.on("deleteToken", (doc) => onTokenBody(doc, null));
 
-// Escape cancels the picker (it otherwise fell through to core's dismiss and opened the game menu).
-// Synchronous on purpose: an async onDown returns a Promise, which always counts as consumed.
+/** Close the module's own open pickers (Change Form / Wild Shape forms, constellations). */
+function closeOwnPickers() {
+  const open = document.querySelectorAll(".pentaryn-picker.show");
+  for (const el of open) el.classList.remove("show");   // what ButtonPanel#toggle(false) does; no saved state (id null)
+  return open.length > 0;
+}
+
+// Escape cancels the target picker, else closes an open Wild Shape / Starry Form picker (PT3-6);
+// either otherwise fell through to core's dismiss and opened the game menu. With nothing open it
+// returns false, so Escape still reaches core. Synchronous on purpose: an async onDown returns a
+// Promise, which always counts as consumed.
 Hooks.once("init", () => {
   try {
     game.keybindings.register(MODULE_ID, "cancelTargetPicker", {
       name: "PENTARYN_TRANSFORM.Keybinding.CancelPicker.Name",
       hint: "PENTARYN_TRANSFORM.Keybinding.CancelPicker.Hint",
       editable: [{ key: "Escape" }],
-      onDown: () => (pickerOpen() ? (cancelTargetPicker(), true) : false),
+      onDown: () => {
+        if (pickerOpen()) { cancelTargetPicker(); return true; }
+        return closeOwnPickers();
+      },
       precedence: CONST.KEYBINDING_PRECEDENCE.PRIORITY
     });
   } catch (err) {

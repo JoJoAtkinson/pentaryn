@@ -193,3 +193,17 @@ test("PT3-4: a carried Starry Form never shows on the Bonus bar in a beast form"
   F.fire("renderActionPanelArgonComponent", panel, panel.element, wolf);
   assert.equal(panel._buttons.filter(b => b.item?.id === "starryForm00001").length, 0);
 });
+
+/* ── PT3-6 ───────────────────────────────────────────────────────────────── */
+
+test("PT3-6: Escape closes an open Change Form picker instead of reaching the game menu", () => {
+  const action = F.game.keybindings.actions.get(`${MODULE}.cancelTargetPicker`);
+  assert.ok(action, "the Escape keybinding is registered");
+  assert.equal(action.onDown(), false, "nothing open: Escape falls through to core");
+  const picker = new El();
+  picker.classList.add("features-container", "pentaryn-picker", "show");
+  assert.equal(action.onDown(), true, "consumed");
+  assert.equal(picker.classList.contains("show"), false, "the picker is closed");
+  assert.equal(action.onDown(), false, "closed: the next Escape falls through again");
+  picker.remove();
+});
