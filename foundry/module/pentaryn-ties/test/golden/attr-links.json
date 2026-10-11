@@ -1,0 +1,476 @@
+{
+  "rows": [
+    {
+      "label": "link NPC Dock Ward (adds Vel, Old Realm)",
+      "out": {
+        "ok": true,
+        "id": "dockward",
+        "actorId": "zzNpc00000000001",
+        "added": [
+          "dockward",
+          "city",
+          "realm"
+        ],
+        "unsuppressed": []
+      },
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.attributes": [
+              "guild",
+              "ghost",
+              "dockward",
+              "city",
+              "realm"
+            ]
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "label": "link NPC Dock Ward again (nothing to add)",
+      "out": {
+        "ok": true,
+        "id": "dockward",
+        "actorId": "zzNpc00000000001",
+        "added": [],
+        "unsuppressed": []
+      },
+      "calls": [],
+      "console": []
+    },
+    {
+      "label": "link unknown",
+      "out": {
+        "ok": false,
+        "reason": "notFound"
+      },
+      "calls": [],
+      "console": []
+    },
+    {
+      "label": "link null actor",
+      "out": {
+        "ok": false,
+        "reason": "invalid"
+      },
+      "calls": [],
+      "console": []
+    },
+    {
+      "label": "unlink NPC Vel (takes guild, dockward)",
+      "out": {
+        "ok": true,
+        "id": "city",
+        "actorId": "zzNpc00000000001",
+        "removed": [
+          "guild",
+          "dockward",
+          "city"
+        ],
+        "suppressed": []
+      },
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.attributes": [
+              "ghost",
+              "realm"
+            ]
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "label": "unlink NPC the dangling ghost id",
+      "out": {
+        "ok": true,
+        "id": "ghost",
+        "actorId": "zzNpc00000000001",
+        "removed": [
+          "ghost"
+        ],
+        "suppressed": []
+      },
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.attributes": [
+              "realm"
+            ]
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "label": "unlink NPC type:undead (derived → suppressed)",
+      "out": {
+        "ok": true,
+        "id": "type:undead",
+        "actorId": "zzNpc00000000001",
+        "removed": [],
+        "suppressed": [
+          "type:undead"
+        ]
+      },
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.attributesOff": [
+              "type:undead"
+            ]
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "label": "link NPC type:undead (un-suppressed)",
+      "out": {
+        "ok": true,
+        "id": "type:undead",
+        "actorId": "zzNpc00000000001",
+        "added": [],
+        "unsuppressed": [
+          "type:undead"
+        ]
+      },
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzNpc00000000001",
+          "changes": {
+            "flags.pentaryn-ties.attributesOff": []
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "label": "unlink something not carried",
+      "out": {
+        "ok": true,
+        "id": "loner",
+        "actorId": "zzNpc00000000001",
+        "removed": [],
+        "suppressed": []
+      },
+      "calls": [],
+      "console": []
+    },
+    {
+      "label": "player: link",
+      "out": {
+        "ok": false,
+        "reason": "notGM"
+      },
+      "calls": [],
+      "console": []
+    },
+    {
+      "label": "broken(PC) after removing Vel from its flag",
+      "out": [
+        {
+          "id": "guild",
+          "missing": "city"
+        },
+        {
+          "id": "ghost2",
+          "missing": null,
+          "dangling": true
+        }
+      ],
+      "calls": [],
+      "console": []
+    },
+    {
+      "label": "repair(PC, guild)",
+      "out": {
+        "ok": true,
+        "id": "guild",
+        "actorId": "zzPc000000000001",
+        "added": [
+          "city"
+        ],
+        "unsuppressed": []
+      },
+      "calls": [
+        {
+          "op": "update",
+          "documentName": "Actor",
+          "uuid": "Actor.zzPc000000000001",
+          "changes": {
+            "flags.pentaryn-ties.attributes": [
+              "guild",
+              "realm",
+              "ghost2",
+              "city"
+            ]
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "label": "stale(guild) after re-parenting it to the realm",
+      "out": [
+        {
+          "actor": "zzPc000000000001",
+          "extra": [
+            "ghost2"
+          ],
+          "missing": []
+        }
+      ],
+      "calls": [
+        {
+          "op": "settings.set",
+          "id": "pentaryn-ties.attributes",
+          "value": [
+            {
+              "id": "realm",
+              "title": "Old Realm",
+              "category": "Realm",
+              "icon": "icons/sundries/flags/banner-standard-blue.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1,
+              "modifiedAt": 1,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": {
+                "title": "Old Realm"
+              }
+            },
+            {
+              "id": "city",
+              "title": "Vel",
+              "category": "City",
+              "icon": "icons/environment/settlement/city-gate.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "realm",
+              "dc": 15,
+              "skill": "his",
+              "reveal": "",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": null,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "guild",
+              "title": "Salt Guild",
+              "category": "Guild",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "realm",
+              "dc": 18,
+              "skill": "inv",
+              "reveal": "",
+              "miss": "",
+              "hold": null,
+              "lore": [
+                {
+                  "id": "g1",
+                  "label": "Salt oath",
+                  "dc": 12,
+                  "skill": "rel",
+                  "text": "<p>Salt.</p>",
+                  "miss": "",
+                  "hold": null
+                }
+              ],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": 1790000000000,
+              "touched": [
+                "parent"
+              ],
+              "reviewedSnapshot": {
+                "title": "Salt Guild",
+                "category": "Guild",
+                "whenKnown": "enables",
+                "whenCarried": "inherit",
+                "secret": true,
+                "parent": "city",
+                "dc": 18,
+                "skill": "inv",
+                "reveal": "",
+                "miss": "",
+                "hold": null,
+                "lore": [
+                  {
+                    "id": "g1",
+                    "label": "Salt oath",
+                    "dc": 12,
+                    "skill": "rel",
+                    "text": "<p>Salt.</p>",
+                    "miss": "",
+                    "hold": null
+                  }
+                ]
+              }
+            },
+            {
+              "id": "loner",
+              "title": "Loner",
+              "category": "smugglers' compact",
+              "icon": "icons/zz/custom.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": null,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "species:elf",
+              "title": "Elvenkind",
+              "category": "Species",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": false,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": null,
+              "modifiedAt": null,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "dockward",
+              "title": "Dock Ward",
+              "category": "Street",
+              "icon": "icons/environment/settlement/sign-wood.webp",
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": true,
+              "parent": "city",
+              "dc": 21,
+              "skill": "his",
+              "reveal": "",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1790000000000,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [
+                "dc",
+                "category",
+                "icon"
+              ],
+              "reviewedSnapshot": null
+            },
+            {
+              "id": "species:dwarf",
+              "title": "Dwarrow",
+              "category": "Species",
+              "icon": null,
+              "whenKnown": "enables",
+              "whenCarried": "inherit",
+              "secret": false,
+              "parent": null,
+              "dc": 15,
+              "skill": "his",
+              "reveal": "",
+              "miss": "",
+              "hold": null,
+              "lore": [],
+              "source": null,
+              "bonuses": [],
+              "createdAt": 1790000000000,
+              "modifiedAt": 1790000000000,
+              "reviewedAt": null,
+              "touched": [],
+              "reviewedSnapshot": null
+            }
+          ]
+        }
+      ],
+      "console": []
+    },
+    {
+      "label": "stale(nope)",
+      "out": [],
+      "calls": [],
+      "console": []
+    }
+  ],
+  "flags": {
+    "pc": {
+      "attributes": [
+        "guild",
+        "realm",
+        "ghost2",
+        "city"
+      ]
+    },
+    "npc": {
+      "attributes": [
+        "realm"
+      ],
+      "attributesOff": []
+    }
+  }
+}

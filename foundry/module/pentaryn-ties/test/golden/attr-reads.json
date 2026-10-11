@@ -1,0 +1,206 @@
+{
+  "list": [
+    "realm",
+    "city",
+    "guild",
+    "loner",
+    "species:elf"
+  ],
+  "resolve": [
+    [
+      "guild",
+      "guild"
+    ],
+    [
+      "Salt Guild",
+      "guild"
+    ],
+    [
+      " salt guild ",
+      "guild"
+    ],
+    [
+      "species:elf",
+      "species:elf"
+    ],
+    [
+      "Elvenkind",
+      "species:elf"
+    ],
+    [
+      "nope",
+      null
+    ],
+    [
+      "",
+      null
+    ],
+    [
+      null,
+      null
+    ]
+  ],
+  "resolveCarried": "ghost",
+  "derived": {
+    "pc": [
+      "type:humanoid",
+      "size:med"
+    ],
+    "npc": [
+      "type:undead",
+      "size:lg"
+    ],
+    "elf": [
+      "type:humanoid",
+      "size:med",
+      "species:woodelf",
+      "background:sage"
+    ],
+    "none": []
+  },
+  "ids": {
+    "pc": [
+      "type:humanoid",
+      "size:med",
+      "guild",
+      "city",
+      "realm"
+    ],
+    "npc": [
+      "type:undead",
+      "size:lg",
+      "guild",
+      "ghost"
+    ],
+    "elf": [
+      "type:humanoid",
+      "size:med",
+      "species:woodelf",
+      "background:sage"
+    ]
+  },
+  "ofGM": [
+    [
+      "guild",
+      "Salt Guild",
+      true,
+      false
+    ],
+    [
+      "ghost",
+      "Ghost",
+      false,
+      false
+    ],
+    [
+      "size:lg",
+      "Large",
+      false,
+      true
+    ],
+    [
+      "type:undead",
+      "Undead",
+      false,
+      true
+    ]
+  ],
+  "ofOwnViewer": [
+    "realm",
+    "guild",
+    "city",
+    "type:humanoid",
+    "size:med"
+  ],
+  "ofPlayerNoViewer": [
+    "ghost",
+    "size:lg",
+    "type:undead"
+  ],
+  "searchEmpty": [
+    "species:elf",
+    "loner",
+    "realm",
+    "guild",
+    "city",
+    "ghost",
+    "type:humanoid",
+    "size:lg",
+    "size:med",
+    "background:sage",
+    "type:undead",
+    "species:woodelf"
+  ],
+  "searchSa": {
+    "matches": [
+      "guild",
+      "background:sage"
+    ],
+    "wouldBe": "sa",
+    "canCreate": true,
+    "collidesWith": null
+  },
+  "searchTaken": {
+    "matches": [
+      "city"
+    ],
+    "wouldBe": "vel",
+    "canCreate": false,
+    "collidesWith": "city"
+  },
+  "icons": [
+    [
+      "city",
+      "icons/environment/settlement/city-night.webp"
+    ],
+    [
+      "Quarter",
+      "icons/environment/settlement/house-city.webp"
+    ],
+    [
+      "CLAN",
+      "icons/environment/settlement/house-farmland.webp"
+    ],
+    [
+      "smugglers' compact",
+      "icons/sundries/flags/banner-standard-brown.webp"
+    ],
+    [
+      "",
+      "icons/sundries/flags/banner-standard-brown.webp"
+    ],
+    [
+      null,
+      "icons/sundries/flags/banner-standard-brown.webp"
+    ]
+  ],
+  "hasAttributes": [
+    true,
+    false
+  ],
+  "attributeLore": [
+    {
+      "id": "g1",
+      "label": "Oath",
+      "dc": 12,
+      "skill": "rel",
+      "text": "<p>Salt.</p>",
+      "miss": "",
+      "hold": null
+    }
+  ],
+  "allIds": [
+    "realm",
+    "city",
+    "guild",
+    "loner",
+    "species:elf",
+    "type:humanoid",
+    "size:med",
+    "type:undead",
+    "size:lg",
+    "ghost",
+    "species:woodelf",
+    "background:sage"
+  ]
+}
