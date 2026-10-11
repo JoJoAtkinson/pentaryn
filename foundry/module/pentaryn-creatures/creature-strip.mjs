@@ -3,6 +3,7 @@
  * one render 60 ms later (a burst renders once); the drawing itself is strip.mjs.
  */
 
+import { stripMayChange } from "./creatures-core.mjs";
 import { forget, list, markControlled, remove, render } from "./strip.mjs";
 
 let log = null;
@@ -24,7 +25,11 @@ export function install(reg, ctx) {
   log = ctx.log;
   reg.on("canvasReady", () => { forget(); scheduleRender(); }, { guard: false, label: "canvasReady: redraw strip" });
   for (const h of ["createToken", "deleteToken", "updateToken"]) {
-    reg.on(h, (doc) => { if (doc.parent?.id === canvas?.scene?.id) scheduleRender(); }, { guard: false, label: `${h}: redraw strip` });
+    reg.on(h, (doc, changes) => {
+      // a move (x, y, elevation, rotation) cannot change the strip (transform-creatures-25)
+      if (h === "updateToken" && !stripMayChange(changes)) return;
+      if (doc.parent?.id === canvas?.scene?.id) scheduleRender();
+    }, { guard: false, label: `${h}: redraw strip` });
   }
   reg.on("updateActor", (_actor, changes) => {
     if (changes && ("ownership" in changes || "img" in changes || "name" in changes)) scheduleRender();

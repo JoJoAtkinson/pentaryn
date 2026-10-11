@@ -4,7 +4,7 @@
 // 500 ms poll. A player never writes light. Timers are mocked.
 //
 // KNOWN rows (pinned as they are; each has its target as a todo test at the end):
-//   transform-creatures-25  updateToken {x} on the viewed scene schedules a render that rebuilds nothing
+//   transform-creatures-25  FIXED [declared]: updateToken re-renders only when a field the strip reads changed
 //   transform-creatures-29  FIXED [declared]: an override failure still answers false, and warns once
 //   transform-creatures-31  FIXED [declared]: api.ownerSees(TokenDocument) answers for its placeable
 //   transform-creatures-40  with no Argon on the page the poll still runs, two queries a tick
@@ -229,11 +229,15 @@ test("floatOverHud false (no onChange): docked from the next tick, still polling
   await tick(500);
 });
 
-test("KNOWN transform-creatures-25: updateToken {x} on the viewed scene re-runs render (60 ms) and rebuilds nothing", async () => {
+test("transform-creatures-25 [declared]: updateToken {x} schedules nothing; a strip field re-renders (60 ms debounce)", async () => {
   const el = W.strip();
   const built = el.calls.replaceChildren;
   W.reads.length = 0;
   F.fire("updateToken", W.tok("tImp"), { x: 5 }, {}, GM);
+  F.fire("updateToken", W.tok("tImp"), { y: 5, elevation: 10, rotation: 90 }, {}, GM);
+  await tick(60);
+  assert.equal(renders(), 0, "a move does not render (was: one render that rebuilt nothing)");
+  F.fire("updateToken", W.tok("tImp"), { name: "Imp <i>&" }, {}, GM);
   await tick(59);
   assert.equal(renders(), 0);
   await tick(1);
@@ -243,7 +247,7 @@ test("KNOWN transform-creatures-25: updateToken {x} on the viewed scene re-runs 
   await tick(60);
   assert.equal(renders(), 1, "another scene's token: nothing");
   for (let i = 0; i < 4; i++) {
-    F.fire("updateToken", W.tok("tImp"), { x: i }, {}, GM);
+    F.fire("updateToken", W.tok("tImp"), { hidden: false, x: i }, {}, GM);
     await tick(20);
   }
   await tick(60);
@@ -405,5 +409,4 @@ test("throwing setting reads fall back to the defaults: showStrip and floatOverH
 });
 
 /* ── the targets of the KNOWN rows (guide §4, steps 5 and 7) ─────────────── */
-test.todo("transform-creatures-25: updateToken re-renders the strip only when stripMayChange(changes) — {x:5} schedules nothing");
 test.todo("transform-creatures-40: no interval is armed without Argon on the page or with floatOverHud off; styles written only on change");
