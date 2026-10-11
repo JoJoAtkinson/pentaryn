@@ -1,0 +1,72 @@
+[
+  {
+    "label": "mirror-reverse / applying true",
+    "out": null,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "study / applying true",
+    "out": null,
+    "calls": [],
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-ties | study refused: unknown sender zzNoSuchUser0001"
+      }
+    ]
+  },
+  {
+    "label": "inspect / applying true",
+    "out": null,
+    "calls": [],
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-ties | inspect refused: unknown actor"
+      }
+    ]
+  },
+  {
+    "label": "scope-bubble / applying true",
+    "out": null,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "unknown / applying true",
+    "out": null,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "mirror-reverse / applying false",
+    "out": null,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "study / applying false",
+    "out": null,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "inspect / applying false",
+    "out": null,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "scope-bubble / applying false",
+    "out": null,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "unknown / applying false",
+    "out": null,
+    "calls": [],
+    "console": []
+  }
+]

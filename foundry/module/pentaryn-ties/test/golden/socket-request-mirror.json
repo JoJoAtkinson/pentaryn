@@ -1,0 +1,44 @@
+[
+  {
+    "label": "no source",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "same actor",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "target owned (write it yourself)",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "target not owned, GM online",
+    "out": true,
+    "calls": [
+      {
+        "op": "socket.emit",
+        "args": [
+          "module.pentaryn-ties",
+          {
+            "action": "mirror-reverse",
+            "sourceId": "zzPc000000000001",
+            "targetId": "zzOwned000000001"
+          }
+        ]
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "no active GM",
+    "out": false,
+    "calls": [],
+    "console": []
+  }
+]

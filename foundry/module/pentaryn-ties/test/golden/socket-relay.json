@@ -1,0 +1,142 @@
+[
+  {
+    "label": "unknown sender",
+    "out": null,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "missing source",
+    "out": null,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "self pair",
+    "out": null,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "sender does not own the source",
+    "out": null,
+    "calls": [],
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-ties | relay refused: ZZ Player does not own ZZ Brakka"
+      }
+    ]
+  },
+  {
+    "label": "playerAccess off",
+    "out": null,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "target the GM cannot own",
+    "out": null,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "target out of reach (no token, no LIMITED)",
+    "out": null,
+    "calls": [],
+    "console": [
+      {
+        "level": "warn",
+        "text": "pentaryn-ties | relay refused: ZZ Player cannot reach ZZ Faraway"
+      }
+    ]
+  },
+  {
+    "label": "no reverse row yet: seeded in full",
+    "out": null,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzNpc00000000001",
+        "changes": {
+          "flags.pentaryn-ties.ties": [
+            {
+              "id": "zzPc000000000001",
+              "name": "ZZ Caven",
+              "word": "debtor",
+              "notes": "owes us",
+              "stance": -1,
+              "strength": 4
+            }
+          ]
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "reverse row written: nothing to fill",
+    "out": null,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "reverse word blank: only the word is filled",
+    "out": null,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzNpc00000000001",
+        "changes": {
+          "flags.pentaryn-ties.ties": [
+            {
+              "id": "zzPc000000000001",
+              "name": "ZZ Caven",
+              "word": "debtor",
+              "notes": "their own",
+              "stance": 2,
+              "strength": 1
+            }
+          ]
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "sender never saved their own side",
+    "out": null,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "the write throws",
+    "out": null,
+    "calls": [],
+    "console": [
+      {
+        "level": "error",
+        "text": "pentaryn-ties | relayed mirror write failed",
+        "err": "zz write refused"
+      }
+    ]
+  }
+]
