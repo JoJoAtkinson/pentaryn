@@ -60,14 +60,25 @@ export function chainThickness(gridSize) {
 }
 
 /**
- * A token reference → its TokenDocument, or null. Today's three branches (chain.mjs `docOf`):
- * a falsy ref → null; a string → that id on the VIEWED scene (`viewed.tokens.get`); anything else →
- * its `document` (a placeable) or itself (a document). `fromUuid` is accepted for finding -26 and
- * not used yet: a Token uuid is looked up as an id on the viewed scene, as today.
+ * A token reference → its TokenDocument, or null: a falsy ref → null; a Token uuid
+ * ("Scene.<id>.Token.<id>", any scene) → that token through `fromUuid` (finding -26; another
+ * document's uuid → null); any other string → that id on the VIEWED scene (`viewed.tokens.get`);
+ * anything else → its `document` (a placeable) or itself (a document).
  */
-export function resolveTokenRef(ref, { viewed = null } = {}) {
+export function resolveTokenRef(ref, { viewed = null, fromUuid = null } = {}) {
   if (!ref) return null;
-  if (typeof ref === "string") return viewed?.tokens?.get(ref) ?? null;
+  if (typeof ref === "string") {
+    if (ref.includes(".") && fromUuid) {
+      let doc = null;
+      try {
+        doc = fromUuid(ref);
+      } catch {
+        doc = null;   // a malformed uuid is not a token
+      }
+      return doc?.documentName === "Token" ? doc : null;
+    }
+    return viewed?.tokens?.get(ref) ?? null;
+  }
   return ref.document ?? ref;
 }
 

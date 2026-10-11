@@ -28,22 +28,32 @@ test("links(): pairs on the viewed scene, or a given scene; a broken scene warns
   assert.deepEqual(out, [["warn", `${MODULE} | chain links`, "Error: gone"]]);
 });
 
-test("link(): refusals return false and write nothing; ids resolve on the VIEWED scene only (-26 KNOWN)", async () => {
+// [declared S-8, finding -26] flipped from "(-26 KNOWN) … tokenUuid: false, nothing written": a Token
+// uuid now resolves through fromUuidSync, on any scene. A plain id still means the VIEWED scene.
+test("link(): refusals return false and write nothing; a Token uuid resolves (any scene); ids resolve on the VIEWED scene only", async () => {
   const mark = F.calls.length;
   const rows = {
     nullRefs: await C().link(null, ID.tStake),
     self: await C().link(ID.tGob, ID.tGob),
     unknownId: await C().link("tokNope000000001", ID.tStake),
     otherScene: await C().link(tok(ID.tGob2), tok(ID.tStake)),
-    // -26 (declared later): a Token uuid is not resolved today
-    tokenUuid: await C().link(`Scene.${ID.s1}.Token.${ID.tGob}`, ID.tStake),
     // an id of a token on a scene that is not viewed
     idOffScene: await C().link(ID.tGob2, ID.tHero2),
     anchorNoId: await C().link(tok(ID.tGob), {}),
     chainedNoUpdate: await C().link({ id: "x", parent: s1() }, tok(ID.tStake)),
+    actorUuid: await C().link(`Actor.${ID.goblin}`, ID.tStake),
   };
-  assert.deepEqual(rows, { nullRefs: false, self: false, unknownId: false, otherScene: false, tokenUuid: false, idOffScene: false, anchorNoId: false, chainedNoUpdate: false });
+  assert.deepEqual(rows, { nullRefs: false, self: false, unknownId: false, otherScene: false, idOffScene: false, anchorNoId: false, chainedNoUpdate: false, actorUuid: false });
   assert.deepEqual(since(mark), []);
+  // a Token uuid on the viewed scene, and two on another scene
+  assert.equal(await C().link(`Scene.${ID.s1}.Token.${ID.tGob}`, ID.tStake), true);
+  assert.equal(await C().link(`Scene.${ID.s2}.Token.${ID.tGob2}`, `Scene.${ID.s2}.Token.${ID.tHero2}`), true);
+  assert.deepEqual(since(mark).filter(c => c.op === "update").map(c => [c.uuid, c.changes]), [
+    [`Scene.${ID.s1}.Token.${ID.tGob}`, { [`flags.${MODULE}.chain`]: { anchor: ID.tStake } }],
+    [`Scene.${ID.s2}.Token.${ID.tGob2}`, { [`flags.${MODULE}.chain`]: { anchor: ID.tHero2 } }],
+  ]);
+  assert.deepEqual(C().links(ID.s2), [{ chained: ID.tGob2, anchor: ID.tHero2 }], "links(sceneId)");
+  assert.equal(await C().break(`Scene.${ID.s2}.Token.${ID.tGob2}`), 1);
 });
 
 test("link(): by id, by document, by placeable; the flag lands on the chained token", async () => {

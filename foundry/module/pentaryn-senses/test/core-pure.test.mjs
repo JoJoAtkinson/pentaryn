@@ -96,3 +96,14 @@ test("planSightReset reads a throwing _source as absent (C24: storedSight's catc
     { sceneId: "s", updates: [{ _id: "a", "sight.visionMode": "basic", "sight.range": 0 }, { _id: "c", "sight.visionMode": "basic", "sight.range": 0 }] },
   ]);
 });
+
+test("resolveTokenRef with fromUuid (-26): a Token uuid on any scene; another document's uuid or a bad one → null", () => {
+  const tokenDoc = { id: "t9", documentName: "Token" };
+  const docs = { "Scene.s2.Token.t9": tokenDoc, "Actor.a": { documentName: "Actor" } };
+  const fromUuid = u => { if (u === "boom.x") throw new Error("bad"); return docs[u] ?? null; };
+  const viewed = { tokens: new Map([["t1", { id: "t1" }]]) };
+  assert.equal(core.resolveTokenRef("Scene.s2.Token.t9", { viewed, fromUuid }), tokenDoc);
+  assert.equal(core.resolveTokenRef("Actor.a", { viewed, fromUuid }), null);
+  assert.equal(core.resolveTokenRef("boom.x", { viewed, fromUuid }), null);
+  assert.equal(core.resolveTokenRef("t1", { viewed, fromUuid }).id, "t1", "a plain id is still the viewed scene's");
+});

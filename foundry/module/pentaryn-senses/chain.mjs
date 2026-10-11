@@ -37,9 +37,11 @@ const warn = (label, err) => console.warn(`${MODULE} | chain ${label}`, err);
 /*  Data                                        */
 /* -------------------------------------------- */
 
-const docOf = t => resolveTokenRef(t, { viewed: canvas?.scene });
+const docOf = t => resolveTokenRef(t, { viewed: canvas?.scene, fromUuid: uuid => fromUuidSync(uuid, { strict: false }) });
 
+/** Every drawable chain on a scene (a Scene, or its id; default the viewed scene). */
 export function links(scene = canvas?.scene) {
+  if (typeof scene === "string") scene = game.scenes?.get(scene) ?? null;
   try {
     return chainPairs(scene?.tokens?.contents ?? []);
   } catch (e) {
