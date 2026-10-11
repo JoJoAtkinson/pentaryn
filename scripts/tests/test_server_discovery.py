@@ -258,3 +258,41 @@ def test_startup_skip_report_names_a_real_failure(tmp_path, monkeypatch, capsys)
     (repo / "scripts" / "broken.py").write_text(_BROKEN_TOOL, encoding="utf-8")
     err = _startup_stderr(monkeypatch, capsys, repo)
     assert "broken.py: invalid MCP_TOOL: broken: argv must be a list of strings" in err
+
+
+# ---------------------------------------------------------------------------
+# python-tooling-29: the per-call worker (payload pinned before the action log)
+# ---------------------------------------------------------------------------
+
+def _runner(handler, name="probe"):
+    return server.ToolRunner(
+        tool=server.Tool(name=name, description="", input_schema={}),
+        script_path=_SERVER_PATH, argv_template=(), bool_flags={}, value_flags={},
+        handler=handler)
+
+
+def _call(monkeypatch, runner, arguments, msg_id=7):
+    sent = []
+    monkeypatch.setattr(server, "_write_message", sent.append)
+    server._inflight_slots.acquire()
+    server._run_call_worker(msg_id, runner, arguments)
+    return sent
+
+
+def _boom(**kw):
+    raise ValueError("bad thing")
+
+
+def test_worker_payload_for_a_result(monkeypatch, tmp_path):
+    monkeypatch.delenv("PENTARYN_MCP_LOG_DIR", raising=False)
+    sent = _call(monkeypatch, _runner(lambda **k: "ok"), {"a": 1})
+    assert sent == [{"jsonrpc": "2.0", "id": 7,
+                     "result": {"content": [{"type": "text", "text": "ok"}]}}]
+
+
+def test_worker_payload_for_a_raising_handler(monkeypatch, capsys):
+    monkeypatch.delenv("PENTARYN_MCP_LOG_DIR", raising=False)
+    sent = _call(monkeypatch, _runner(_boom), {})
+    assert sent == [{"jsonrpc": "2.0", "id": 7,
+                     "error": {"code": -32000, "message": "bad thing"}}]
+    assert "tool 'probe' crashed" in capsys.readouterr().err
