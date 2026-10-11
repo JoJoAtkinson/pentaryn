@@ -6,7 +6,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { pinJSON } from "./kit/harness.mjs";
+import { pinJSON, readJSON } from "./kit/harness.mjs";
 import { installWorld, captureConsole, FakeElement, MODULE } from "./fixtures/world.mjs";
 
 const flush = () => new Promise(r => setImmediate(r));
@@ -63,19 +63,21 @@ test("setup: without lib-wrapper the configured Token class's _onClickLeft2 is w
   assert.deepEqual(F.calls.at(-1), { op: "Token#_onClickLeft2 (original)", token: "tokOrdinary00001", event: { type: "dbl" } });
 });
 
-test("ready: publishes game.pentaryn.prompts one tick later into a plain root; ensureMarkers repairs nothing", async t => {
+test("ready: publishes game.pentaryn.prompts synchronously (DP1) into a plain root, frozen (DP2); ensureMarkers repairs nothing", async t => {
   t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: NOW });
   F.game.pentaryn = { importer: { keep: 1 } };
   const { out } = await captureConsole(async () => { F.fire("ready"); await flush(); });
   assert.deepEqual(out, []);
-  assert.equal(F.game.pentaryn.prompts, undefined, "not published synchronously");
+  assert.notEqual(F.game.pentaryn.prompts, undefined, "published synchronously in ready (DP1)");
   t.mock.timers.tick(0);
   assert.deepEqual(F.game.pentaryn.importer, { keep: 1 });
   const api = F.game.pentaryn.prompts;
-  const surface = Object.keys(api).sort().map(k => [k, typeof api[k]]);
-  pinJSON("legacy-surface", { keys: surface, version: api.version }, import.meta.url);
+  // [declared] DP1: the legacy surface is a subset of the kit-built API, every key with its old typeof
+  const legacy = readJSON(new URL("golden/legacy-surface.json", import.meta.url));
+  for (const [k, type] of legacy.keys) assert.equal(typeof api[k], type, k);
+  assert.equal(api.version, legacy.version);
   assert.equal(api.version, "0.4.5");
-  assert.equal(Object.isFrozen(api), false);
+  assert.equal(Object.isFrozen(api), true, "[declared] DP2: the API object is frozen");
   // nothing created or repaired: the six actors already hold what ensureMarkers wants
   assert.equal(F.calls.filter(c => ["Actor.createDocuments", "Folder.create", "update"].includes(c.op)).length, 0);
 });
@@ -463,7 +465,7 @@ test("setup: a throwing libWrapper.register warns and wraps by hand; a missing m
   assert.deepEqual(b.out.map(o => [o.level, o.text]), [["warn", "pentaryn-prompts | Token#_onClickLeft2 not found; double-click will open the sheet"]]);
 });
 
-test("ready with no game.pentaryn: the root is created; with a frozen root the publish throws (J10 retired the guard copy)", async t => {
+test("ready with no game.pentaryn: the root is created; with a frozen root the publish fails with one error line (DP1)", async t => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const a = await freshEntry("no-root");
   delete a.W.game.pentaryn;
@@ -472,8 +474,10 @@ test("ready with no game.pentaryn: the root is created; with a frozen root the p
   assert.equal(typeof a.W.game.pentaryn.prompts.gather, "function");
   const b = await freshEntry("frozen-root");
   b.W.game.pentaryn = Object.freeze({ importer: {} });
-  await captureConsole(async () => { b.W.fire("ready"); await flush(); });
-  assert.throws(() => t.mock.timers.tick(0), TypeError);
+  const { out } = await captureConsole(async () => { b.W.fire("ready"); await flush(); });
+  // [declared] DP1: the synchronous publish throws inside ready, is logged, and the markers are still ensured
+  assert.deepEqual(out.map(o => [o.level, o.text.split(" Error(")[0]]), [["error", "pentaryn-prompts | publish failed"]]);
+  t.mock.timers.tick(0);
   assert.equal(b.W.game.pentaryn.prompts, undefined);
 });
 

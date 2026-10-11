@@ -20,20 +20,25 @@
  *
  * Lifecycle: `init` is registered FIRST (settings, keybindings, queries); the features install
  * synchronously in this body, so every listener keeps its place (golden/hooks.json); `setup` →
- * the double-click patch; `ready` → publish, then ensure the six marker actors.
+ * the double-click patch; `ready` → build the API, publish it (synchronously, `when: "ready"`), then
+ * ensure the six marker actors.
+ *
+ * Hot patch RE-RUNS THE WIRING ONLY: `game.pentaryn.prompts.uninstall()`, then
+ * `await import("/modules/pentaryn-prompts/prompts.mjs?v=2")` — and fire the phases by hand; any edit
+ * to another file needs a reload.
  */
 
-import { MODULE, VERSION, SIZE_KEYS, codedError } from "./geometry-core.mjs";
-import { SPEC_DIR } from "./prompts-core.mjs";
-import { ensureMarkers, markerActor } from "./markers-adapter.mjs";
-import { sceneModel } from "./scene-adapter.mjs";
+import { MODULE, NS } from "./prompts-core.mjs";
+import { ensureMarkers } from "./markers-adapter.mjs";
 import { gather, crops, list, show } from "./gather.mjs";
 import { replace, replaceMany } from "./replace.mjs";
-import { registerSettings, registerKeybindings, keybindingRows, setting, manifests } from "./settings.mjs";
+import { registerSettings, registerKeybindings, keybindingRows, setting } from "./settings.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
 import { registerQueries } from "./lib/queries.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
+import { buildApiFor } from "./api.mjs";
+import { publishNamespace } from "./lib/publish.mjs";
 import * as typeahead from "./typeahead.mjs";
 import * as markerGuard from "./marker-guard.mjs";
 import * as placement from "./placement.mjs";
@@ -62,6 +67,9 @@ const ctx = {
 };
 
 function install() {
+  // gather/crops/list/show and replace/replaceMany are the glue files' own functions (their rows are
+  // in the manifest); placement and patches contribute through ctx.expose
+  ctx.contributions.push({ rows: [], impl: { gather, crops, list, show, replace, replaceMany } });
   for (const feature of FEATURES) {
     const contribution = feature.install(reg, ctx);
     if (contribution) ctx.contributions.push(contribution);
@@ -83,42 +91,28 @@ function onInit() {
   registerQueries(MANIFEST, () => ctx.api, { log });
 }
 
-async function onReady() {
-  // Published one tick after ready (the publish timing is a declared step of the migration). The
-  // importer merges into game.pentaryn and nothing freezes it since its keystone (items-journal-1),
-  // so the old frozen-root guard is gone (kit 1.0.2, J10): the API is assigned into the plain root.
-  setTimeout(() => {
-    const api = {
-      gather, list, crops, show,
-      replace, replaceMany,
-      open: ctx.exposed.open,
-      place: ctx.exposed.place,
-      ensureMarkers,
-      model: sceneId => {
-        const scene = sceneId ? game.scenes.get(sceneId) : canvas?.scene;
-        if (!scene) throw codedError("SCENE_UNKNOWN", String(sceneId));
-        return sceneModel(scene);
-      },
-      manifests,
-      // `version` is the code that is running (geometry-core's VERSION); `listed` is what game.modules
-      // says, which can lag behind until the world rescans module.json
-      status: () => ({
-        version: VERSION, listed: game.modules.get(MODULE)?.version ?? null,
-        npcBridge: typeof CONFIG.queries?.["foundry-mcp-bridge.createNpcActor"] === "function",
-        // the world's party for encounter budgets; blank = none, and a gather says so (never guess one)
-        party: setting("party", "none set") || "none set",
-        specDir: `${SPEC_DIR}/ (under the Foundry Data dir; replaceMany({specFile: "${SPEC_DIR}/<name>.json"}))`,
-        doubleClick: ctx.exposed.doubleClick(), markers: SIZE_KEYS.map(k => [k, markerActor(k)?.id ?? null])
-      }),
-      version: VERSION
-    };
-    ctx.api = api;
-    game.pentaryn ??= {};
-    game.pentaryn.prompts = api;
-  }, 0);
-  try { await ensureMarkers(); } catch (err) { log.error("ensureMarkers failed", err); }
+/**
+ * Build the API (a manifest drift stops here with one error line), publish it at once on
+ * module.api and game.pentaryn.prompts (the kit fires pentaryn-prompts.ready and pentaryn.ready),
+ * then ensure the six marker actors — the publish never waits for them, and a publish that throws
+ * (a frozen root) still lets them be ensured.
+ */
+function onReady() {
+  try {
+    ctx.api = buildApiFor(ctx);
+  } catch (err) {
+    log.error("API manifest drift — not published", err);
+    return;
+  }
+  try {
+    publishNamespace(NS, ctx.api, { moduleId: MODULE });
+  } catch (err) {
+    log.error("publish failed", err);
+  }
+  return ensureMarkers().catch(err => { log.error("ensureMarkers failed", err); });
 }
 
-reg.once("init", onInit, { guard: false, label: "init: settings, keybindings, queries" });
+// the lifecycle hooks are the entry's own (as the template's): init first, then the features, then ready
+Hooks.once("init", onInit);
 install();
-reg.once("ready", onReady, { guard: false, label: "ready: publish, ensure markers" });
+Hooks.once("ready", onReady);
