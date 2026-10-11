@@ -107,3 +107,25 @@ test("oracle: names() groups, sorts and picks one part by kind", async () => {
   assert.deepEqual(await oracle.names(readNames({})),
     { classes: [], subclasses: {}, species: [], backgrounds: [], feats: {} });
 });
+
+test("core.groupNames equals the oracle for every kind, from the same three reads in the same order", async () => {
+  for (const index of [NAME_INDEX, {}]) {
+    for (const kind of KINDS) {
+      nameReads.length = 0;
+      const want = await oracle.names(readNames(index), kind);
+      const oracleReads = nameReads.splice(0);
+      const read = readNames(index);
+      const indexes = {};
+      for (const [key, { pack, fields }] of Object.entries(core.NAME_SOURCES)) indexes[key] = (await read(pack, [...fields])) ?? [];
+      assert.deepEqual(core.groupNames(indexes, kind), want, `kind ${kind}`);
+      assert.deepEqual(nameReads, oracleReads, "same packs and fields, same order");
+    }
+  }
+});
+
+test("core.groupNames: no indexes at all is the empty answer; NAME_PARTS names every part", () => {
+  assert.deepEqual(core.groupNames(), { classes: [], subclasses: {}, species: [], backgrounds: [], feats: {} });
+  assert.deepEqual([...new Set(Object.values(core.NAME_PARTS))].sort(),
+    ["backgrounds", "classes", "feats", "species", "subclasses"]);
+  assert.ok(Object.isFrozen(core.NAME_SOURCES) && Object.isFrozen(core.NAME_PARTS));
+});

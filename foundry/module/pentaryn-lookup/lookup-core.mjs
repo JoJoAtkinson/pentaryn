@@ -505,3 +505,46 @@ export function spellListRows(groups, indexes, level = null) {
   out.sort((a, b) => ((a.level ?? 0) - (b.level ?? 0)) || String(a.name).localeCompare(String(b.name)));
   return out;
 }
+
+// ── names(): the PHB's names for a character spec ────────────────────────────
+/** Where each group of names lives, and the index fields its grouping reads (getIndex({fields})). */
+export const NAME_SOURCES = Object.freeze({
+  classes: { pack: "dnd-players-handbook.classes", fields: ["type", "system.identifier", "system.classIdentifier"] },
+  origins: { pack: "dnd-players-handbook.origins", fields: ["type", "system.type.value"] },
+  feats: { pack: "dnd-players-handbook.feats", fields: ["type", "system.type.value", "system.type.subtype"] },
+});
+
+/** `names(kind)` words → the part of the answer they pick (case-insensitive). */
+export const NAME_PARTS = Object.freeze({
+  class: "classes", classes: "classes", subclass: "subclasses", subclasses: "subclasses",
+  species: "species", race: "species", background: "backgrounds", backgrounds: "backgrounds",
+  feat: "feats", feats: "feats",
+});
+
+/**
+ * The three NAME_SOURCES indexes (`{classes, origins, feats}`, each an iterable of entries; [] for a
+ * missing pack) → `{classes, subclasses: {<classIdentifier | "?">: […]}, species, backgrounds,
+ * feats: {<subtype | "other">: […]}}`, every list sorted. A `kind` NAME_PARTS knows answers that one
+ * part alone; any other kind answers everything.
+ */
+export function groupNames({ classes = [], origins = [], feats = [] } = {}, kind = null) {
+  const out = { classes: [], subclasses: {}, species: [], backgrounds: [], feats: {} };
+  for (const e of classes) {
+    if (e.type === "class") out.classes.push(e.name);
+    if (e.type === "subclass") (out.subclasses[e.system?.classIdentifier ?? "?"] ??= []).push(e.name);
+  }
+  for (const e of origins) {
+    if (e.type === "race") out.species.push(e.name);
+    if (e.type === "background") out.backgrounds.push(e.name);
+  }
+  for (const e of feats) {
+    if (e.type !== "feat") continue;
+    (out.feats[e.system?.type?.subtype || "other"] ??= []).push(e.name);
+  }
+  const sort = a => a.sort((x, y) => x.localeCompare(y));
+  sort(out.classes); sort(out.species); sort(out.backgrounds);
+  for (const k of Object.keys(out.subclasses)) sort(out.subclasses[k]);
+  for (const k of Object.keys(out.feats)) sort(out.feats[k]);
+  const part = kind ? NAME_PARTS[String(kind).toLowerCase()] : null;
+  return part ? { [part]: out[part] } : out;
+}

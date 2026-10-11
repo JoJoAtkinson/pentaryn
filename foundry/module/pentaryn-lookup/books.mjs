@@ -11,7 +11,7 @@
 import {
   BOOKSETS, EDITIONS, MONSTER_PACKS, findPage, foundFromDoc, nonPageWarning, knownLists, listFor as listForIn, matchMonster,
   missingPackError, monsterDigest, monsterQuery, monsterRow, pageMonsters, renderPage, renderTable, resolveBookIds,
-  searchBooks, sortMonsters, embeddedTableUuids, groupListUuids, spellListRows,
+  searchBooks, sortMonsters, embeddedTableUuids, groupListUuids, spellListRows, NAME_SOURCES, groupNames,
 } from "./lookup-core.mjs";
 import {
   clearBookCache, featureTexts, findSpell, loadBooks, packSummary, readDocument, readIndex, readPageDoc, readTable, spellRegistry,
@@ -172,29 +172,9 @@ async function monsters(q = {}) {
  * `names("subclass")` one part. Species are the PHB's own names (`Elf, High`, `Tiefling, Infernal`).
  */
 async function names(kind = null) {
-  const out = { classes: [], subclasses: {}, species: [], backgrounds: [], feats: {} };
-  const read = async (id, fields) => (await readIndex(id, fields)) ?? [];
-  for (const e of await read("dnd-players-handbook.classes", ["type", "system.identifier", "system.classIdentifier"])) {
-    if (e.type === "class") out.classes.push(e.name);
-    if (e.type === "subclass") (out.subclasses[e.system?.classIdentifier ?? "?"] ??= []).push(e.name);
-  }
-  for (const e of await read("dnd-players-handbook.origins", ["type", "system.type.value"])) {
-    if (e.type === "race") out.species.push(e.name);
-    if (e.type === "background") out.backgrounds.push(e.name);
-  }
-  for (const e of await read("dnd-players-handbook.feats", ["type", "system.type.value", "system.type.subtype"])) {
-    if (e.type !== "feat") continue;
-    (out.feats[e.system?.type?.subtype || "other"] ??= []).push(e.name);
-  }
-  const sort = a => a.sort((x, y) => x.localeCompare(y));
-  sort(out.classes); sort(out.species); sort(out.backgrounds);
-  for (const k of Object.keys(out.subclasses)) sort(out.subclasses[k]);
-  for (const k of Object.keys(out.feats)) sort(out.feats[k]);
-  const parts = { class: "classes", classes: "classes", subclass: "subclasses", subclasses: "subclasses",
-                  species: "species", race: "species", background: "backgrounds", backgrounds: "backgrounds",
-                  feat: "feats", feats: "feats" };
-  if (kind && parts[String(kind).toLowerCase()]) return { [parts[String(kind).toLowerCase()]]: out[parts[String(kind).toLowerCase()]] };
-  return out;
+  const indexes = {};
+  for (const [key, { pack, fields }] of Object.entries(NAME_SOURCES)) indexes[key] = (await readIndex(pack, [...fields])) ?? [];
+  return groupNames(indexes, kind);
 }
 
 /** What is actually installed. Answers the usual session-opening probe in one call. */
