@@ -19,7 +19,7 @@
   "setWorn": "setWorn",
   "clearWorn": "clearWorn",
   "wornDialog": "openDialog",
-  "describe": "toggle",
+  "describeCard": "toggle",
   "closeDescription": "close",
   "known.read": "readKnown",
   "known.add": "addKnown",
