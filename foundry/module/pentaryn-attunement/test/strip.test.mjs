@@ -56,7 +56,7 @@ test("a character over cap: the strip after the card (golden/strip.json); the co
   const { sidebar, strip, counter } = render(overCapCharacter());
   assert.ok(strip, "strip injected");
   assert.equal(sidebar.children.indexOf(strip), 1, "right after the card");
-  assert.equal(counter.className, "attunement pentaryn-over-cap");
+  assert.equal(counter.className, "attunement pentaryn-attunement-over-cap");
   pinJSON("strip", serialise(strip), import.meta.url);
 });
 
@@ -64,7 +64,7 @@ test("the away slot's tooltip HTML (escaped name, short actor name)", () => {
   const { strip } = render(overCapCharacter("actorStrp0000002"));
   const away = slotsOf(strip)[0];
   assert.equal(away.dataset.tooltip,
-    '<div class="pentaryn-away-tip"><strong>Staff &lt;of&gt; Woods</strong><p>Still attuned, but not on Talo. Its power is dormant until it is back in hand.</p></div>');
+    '<div class="pentaryn-attunement-away-tip"><strong>Staff &lt;of&gt; Woods</strong><p>Still attuned, but not on Talo. Its power is dormant until it is back in hand.</p></div>');
 });
 
 test("at cap, not over: no over-cap class on the counter or the strip, no note", () => {
@@ -90,7 +90,7 @@ test("an NPC: counter decorated, no strip; a vehicle (no attunement schema): unt
     items: [{ id: "itemNpcR00000001", name: "Ring", system: { attunement: "required", attuned: true } }] });
   const a = render(npc);
   assert.equal(a.strip, null);
-  assert.equal(a.counter.className, "attunement pentaryn-over-cap");
+  assert.equal(a.counter.className, "attunement pentaryn-attunement-over-cap");
   const cart = makeDoc("Actor", { id: "actorCart0000001", name: "Cart", type: "vehicle", system: {} });
   const b = render(cart);
   assert.equal(b.strip, null);
@@ -103,7 +103,7 @@ test("a limited sheet (no sidebar card): counter only", () => {
   delete dom.sidebar.queries[":scope > .card"];
   F.fire("renderBaseActorSheet", { actor, isEditable: true }, dom.root);
   assert.equal(dom.sidebar.children.length, 1);
-  assert.equal(dom.counter.className, "attunement pentaryn-over-cap");
+  assert.equal(dom.counter.className, "attunement pentaryn-attunement-over-cap");
 });
 
 test("not editable: no ✕ buttons, only click and contextmenu listeners", () => {

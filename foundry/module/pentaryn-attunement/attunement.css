@@ -151,12 +151,12 @@
 /* The fallback signal for anyone with the sidebar collapsed, and the only
    signal on an NPC sheet. */
 
-.dnd5e2.sheet.actor .attunement.pentaryn-over-cap {
+.dnd5e2.sheet.actor .attunement.pentaryn-attunement-over-cap {
   color: var(--dnd5e-color-maroon, #a91409);
   font-weight: bold;
 }
 
-.dnd5e2.sheet.actor .attunement.pentaryn-over-cap .value {
+.dnd5e2.sheet.actor .attunement.pentaryn-attunement-over-cap .value {
   text-shadow: 0 0 6px var(--dnd5e-color-maroon, #a91409);
 }
 
@@ -184,5 +184,5 @@
   pointer-events: none;
 }
 
-.pentaryn-away-tip { max-width: 220px; }
-.pentaryn-away-tip p { margin: 0.25rem 0 0; }
+.pentaryn-attunement-away-tip { max-width: 220px; }
+.pentaryn-attunement-away-tip p { margin: 0.25rem 0 0; }

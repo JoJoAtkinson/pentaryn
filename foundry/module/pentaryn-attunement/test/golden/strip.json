@@ -24,7 +24,7 @@
           "dataset": {
             "slot": "0",
             "awayKey": "k1",
-            "tooltip": "<div class=\"pentaryn-away-tip\"><strong>Staff &lt;of&gt; Woods</strong><p>Still attuned, but not on Talo. Its power is dormant until it is back in hand.</p></div>",
+            "tooltip": "<div class=\"pentaryn-attunement-away-tip\"><strong>Staff &lt;of&gt; Woods</strong><p>Still attuned, but not on Talo. Its power is dormant until it is back in hand.</p></div>",
             "tooltipDirection": "RIGHT"
           },
           "attrs": {

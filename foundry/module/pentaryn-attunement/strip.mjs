@@ -130,7 +130,7 @@ export function buildAwaySlot(actor, key, index, overflow, editable, li, awayByK
 
   const name = foundry.utils.escapeHTML(entry?.name ?? "");
   const body = t("AwayBody", { actor: foundry.utils.escapeHTML(actor.name.split(/[ ,]/)[0]) });
-  li.dataset.tooltip = `<div class="pentaryn-away-tip"><strong>${name}</strong><p>${body}</p></div>`;
+  li.dataset.tooltip = `<div class="pentaryn-attunement-away-tip"><strong>${name}</strong><p>${body}</p></div>`;
   li.dataset.tooltipDirection = "RIGHT";
   li.setAttribute("aria-label", `${entry?.name} — ${body}`);
   return li;
@@ -198,7 +198,7 @@ export function decorateCounter(actor, root, state) {
   const el = root.querySelector('[data-application-part="inventory"] .attunement');
   if (!el) return;
   const { over } = state ?? computeSlots(actor);
-  el.classList.toggle("pentaryn-over-cap", over);
+  el.classList.toggle("pentaryn-attunement-over-cap", over);
 }
 
 /**
