@@ -10,7 +10,7 @@
  * the same shape `runEngine` returns.
  */
 
-import {FLAG_SCOPE, runEngine, wallCategory} from "./engine.mjs";
+import {runEngine, stampOf, wallCategory} from "./engine.mjs";
 
 const REGISTRY = new Map();
 
@@ -59,7 +59,7 @@ export function canonical(result, {extended = false} = {}) {
   return {
     ...out,
     createLevels: result.creates.map(c => `${seg(c.c)}:${JSON.stringify([...(c.levels ?? [])].sort())}`).sort(),
-    updateRules: result.updates.map(u => `${u._id}:${u.flags?.[FLAG_SCOPE]?.rule ?? null}`).sort()
+    updateRules: result.updates.map(u => `${u._id}:${stampOf(u).rule ?? null}`).sort()
   };
 }
 

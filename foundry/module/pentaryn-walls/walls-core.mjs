@@ -9,12 +9,12 @@
  */
 
 import {
-  snapResolution, resolveConfig, FLAG_SCOPE, SOLID, lintOnly, analyze, runEngine, wallCategory
+  snapResolution, resolveConfig, FLAG_SCOPE, READ_SCOPES, stampOf, SOLID, lintOnly, analyze, runEngine, wallCategory
 } from "./core/engine.mjs";
 import { register, get, list, available, canonical, compare } from "./core/backends.mjs";
 
 export {
-  snapResolution, resolveConfig, FLAG_SCOPE, SOLID, lintOnly, analyze, runEngine, wallCategory,
+  snapResolution, resolveConfig, FLAG_SCOPE, READ_SCOPES, stampOf, SOLID, lintOnly, analyze, runEngine, wallCategory,
   register, get, list, available, canonical, compare,
 };
 
@@ -96,6 +96,7 @@ export function undoHtml({generated, restored, all, latest, remaining}) {
 /**
  * Which walls an undo touches. Reads the run stamps from PLAIN wall data (`toObject()`), never
  * `getFlag`, which throws for the non-package scope "wall-autocomplete" (senses-walls-cursors-1).
+ * Stamps are read under every READ_SCOPES scope (stampOf), so a migrated wall undoes the same.
  *
  * The latest run is the greatest `run` stamp by string order (ISO timestamps sort by time). A
  * stamped wall marked `generated` is deleted; one with only a `priorC` was a user wall the run
@@ -107,7 +108,7 @@ export function undoHtml({generated, restored, all, latest, remaining}) {
  *   restores carry only `_id` and `c`; the caller adds the flag deletion.
  */
 export function planUndo(walls, {all = false} = {}) {
-  const flag = (w, key) => w.flags?.[FLAG_SCOPE]?.[key];
+  const flag = (w, key) => stampOf(w)[key];
   const stamped = walls.filter(w => flag(w, "run"));
   if (!stamped.length) return {stamped: 0, latest: null, generated: [], restores: [], remaining: 0};
   const latest = stamped.map(w => flag(w, "run")).sort().at(-1);

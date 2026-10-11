@@ -7,7 +7,7 @@
  * `install()` exposes the actions on `ctx.exposed`; api.mjs and the keybindings call them there.
  */
 
-import {MODULE, FLAG_SCOPE, get as getBackend, planUndo, reportHtml, undoHtml, exclusive} from "./walls-core.mjs";
+import {MODULE, READ_SCOPES, get as getBackend, planUndo, reportHtml, undoHtml, exclusive} from "./walls-core.mjs";
 import {setting} from "./settings.mjs";
 
 function targetScene(sceneId) {
@@ -133,13 +133,19 @@ async function undo({sceneId, all = false} = {}) {
 
   // Plain data, never getFlag: "wall-autocomplete" is no package id, so Foundry 14's getFlag
   // throws for it (senses-walls-cursors-1). planUndo reads the flags from toObject().
-  const plan = planUndo(scene.walls.map(w => ({...w.toObject(), _id: w.id})), {all});
+  const walls = scene.walls.map(w => ({...w.toObject(), _id: w.id}));
+  const plan = planUndo(walls, {all});
   if (!plan.stamped) {
     ui.notifications.info("Wall autocomplete: nothing of mine on this scene to undo.");
     return {deleted: 0, restored: 0, run: null};
   }
   const {generated, latest, remaining} = plan;
-  const restores = plan.restores.map(r => ({...r, [`flags.${FLAG_SCOPE}`]: _del}));
+  // A restore deletes the stamp under every scope the wall carries one in.
+  const byId = new Map(walls.map(w => [w._id, w]));
+  const restores = plan.restores.map(r => ({
+    ...r,
+    ...Object.fromEntries(READ_SCOPES.filter(s => byId.get(r._id)?.flags?.[s]).map(s => [`flags.${s}`, _del]))
+  }));
   if (restores.length) await scene.updateEmbeddedDocuments("Wall", restores);
   if (generated.length) await scene.deleteEmbeddedDocuments("Wall", generated);
 

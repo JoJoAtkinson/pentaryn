@@ -15,7 +15,7 @@
  * It is safe to import when the module has not been built — `available()` just stays false.
  */
 
-import {register, resolveConfig, analyze, lintOnly, runEngine, FLAG_SCOPE} from "./walls-core.mjs";
+import {register, resolveConfig, analyze, lintOnly, runEngine, stampOf, FLAG_SCOPE} from "./walls-core.mjs";
 
 let mod = null;
 let loadError = null;
@@ -57,7 +57,7 @@ function marshal(walls) {
     buf[o + 4] = w.door ?? 0;
     buf[o + 5] = w.sight ?? 20;
     buf[o + 6] = w.dir ?? 0;
-    buf[o + 7] = (w.flags?.[FLAG_SCOPE]?.keepOpen === true) ? 1 : 0;
+    buf[o + 7] = (stampOf(w).keepOpen === true) ? 1 : 0;
     buf[o + 8] = w.light ?? 20;
     buf[o + 9] = w.sound ?? 20;
     buf[o + 10] = w.move ?? 20;

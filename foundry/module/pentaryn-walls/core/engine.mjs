@@ -62,7 +62,24 @@ export function resolveConfig({gridSize = 100, ...overrides} = {}) {
   return cfg;
 }
 
+/** The scope new stamps are written under: the pre-blueprint name (the Wave 7 batch moves it to the module id). */
 export const FLAG_SCOPE = "wall-autocomplete";
+
+/**
+ * Every scope a stamp is read from, newest first: the module id (where the Wave 7 flag-scope
+ * migration moves the data, core/migrate.mjs), then the legacy scope. Reading both keeps undo and
+ * `keepOpen` working on a wall whichever side of the migration it is on.
+ */
+export const READ_SCOPES = Object.freeze(["pentaryn-walls", "wall-autocomplete"]);
+
+/** A wall's stamp: its flags under every read scope, merged, the newer scope winning per key. Plain data only. */
+export function stampOf(w) {
+  const f = w?.flags;
+  if (!f) return {};
+  const [current, legacy] = READ_SCOPES.map(s => f[s]);
+  if (!current) return legacy ?? {};
+  return legacy ? {...legacy, ...current} : current;
+}
 
 /** The solid preset — every generated wall is this. APP/client/canvas/layers/walls.mjs:370 */
 export const SOLID = Object.freeze({light: 20, move: 20, sight: 20, sound: 20, door: 0, ds: 0, dir: 0});
@@ -164,7 +181,7 @@ function blocksOpen(a, b, c, d) {
 
 /** Wall document → internal segment. Generated walls get synthetic ids. */
 function toSeg(w, idx) {
-  const flags = w.flags?.[FLAG_SCOPE] ?? {};
+  const flags = stampOf(w);
   return {
     idx,
     id: w._id ?? w.id ?? `w${idx}`,
