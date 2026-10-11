@@ -23,6 +23,7 @@ import { buildApiFor, legacyRoot } from "./api.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
 import { publishNamespace } from "./lib/publish.mjs";
 
+/** Feature hooks would register here; the importer has none (its one hook is the lifecycle `ready`). */
 const reg = hookRegistry(MODULE, log);
 
 const ctx = { log, reg, api: null, uninstall: () => reg.offAll() };
@@ -46,4 +47,4 @@ function onReady() {
   ctx.log.info(`ready — game.pentaryn.import() available (${CONTRACT_ID})`);
 }
 
-reg.once("ready", onReady, { label: "ready: publish" });
+Hooks.once("ready", onReady);
