@@ -1,0 +1,328 @@
+[
+  {
+    "input": [
+      {
+        "index": 0,
+        "id": "p9",
+        "label": "p9",
+        "sceneId": "s1",
+        "markerId": "m1",
+        "kind": "character",
+        "ok": true,
+        "created": [
+          "Token \"Hale\" [tok1] @500,300 1x1",
+          "Actor \"Hale\" [act1]"
+        ],
+        "ids": [
+          "tok1",
+          "act1"
+        ],
+        "markerDeleted": true,
+        "sheet": "Paladin 5 (Oath of Devotion), Human, Soldier; str 17 dex 10 con 14 int 8 wis 12 cha 14; HP 44 AC 18 PB +3 spell DC 13 (cha); saves wis,cha; skills ath,ins,per,prc; speed 30, darkvision 60; size med; languages common, elvish; feats Tough. spells: 0 cantrips/?, 3 prepared/6, 4 always, 2 more in the spellbook",
+        "patched": [
+          "hp 44"
+        ],
+        "defaults": [
+          "Human: Skillful: picked perception"
+        ],
+        "warnings": [
+          "w1"
+        ],
+        "notes": [
+          "n1"
+        ],
+        "discarded": [],
+        "prompt": "a paladin"
+      }
+    ],
+    "out": {
+      "index": 0,
+      "id": "p9",
+      "label": "p9",
+      "sceneId": "s1",
+      "markerId": "m1",
+      "kind": "character",
+      "ok": true,
+      "created": [
+        "Token \"Hale\" [tok1] @500,300 1x1",
+        "Actor \"Hale\" [act1]"
+      ],
+      "ids": [
+        "tok1",
+        "act1"
+      ],
+      "markerDeleted": true,
+      "sheet": "Paladin 5 (Oath of Devotion), Human, Soldier; str 17 dex 10 con 14 int 8 wis 12 cha 14; HP 44 AC 18 PB +3 spell DC 13 (cha); saves wis,cha; skills ath,ins,per,prc; speed 30, darkvision 60; size med; languages common, elvish; feats Tough. spells: 0 cantrips/?, 3 prepared/6, 4 always, 2 more in the spellbook",
+      "patched": [
+        "hp 44"
+      ],
+      "defaults": [
+        "Human: Skillful: picked perception"
+      ],
+      "warnings": [
+        "w1"
+      ],
+      "notes": [
+        "n1"
+      ],
+      "discarded": [],
+      "prompt": "a paladin"
+    }
+  },
+  {
+    "input": [
+      {
+        "index": 1,
+        "id": "p3",
+        "label": "p3",
+        "sceneId": null,
+        "markerId": null,
+        "kind": "npc",
+        "ok": false,
+        "created": [],
+        "ids": [],
+        "markerDeleted": false,
+        "sheet": null,
+        "patched": [],
+        "defaults": [],
+        "warnings": [
+          "w"
+        ],
+        "notes": [
+          "feature Slam not added: x"
+        ],
+        "discarded": [
+          "deleted Actor \"Yark\" [a9]",
+          "could not delete Item \"Key\" [i1]: nope"
+        ],
+        "code": "CREATE_FAILED",
+        "error": "CREATE_FAILED: boom"
+      }
+    ],
+    "out": {
+      "index": 1,
+      "id": "p3",
+      "label": "p3",
+      "sceneId": null,
+      "markerId": null,
+      "kind": "npc",
+      "ok": false,
+      "created": [],
+      "ids": [],
+      "markerDeleted": false,
+      "sheet": null,
+      "patched": [],
+      "defaults": [],
+      "warnings": [
+        "w"
+      ],
+      "notes": [
+        "feature Slam not added: x"
+      ],
+      "discarded": [
+        "deleted Actor \"Yark\" [a9]",
+        "could not delete Item \"Key\" [i1]: nope"
+      ],
+      "code": "CREATE_FAILED",
+      "error": "CREATE_FAILED: boom"
+    }
+  },
+  {
+    "input": [
+      {
+        "index": 2,
+        "id": "p4",
+        "label": "p4",
+        "sceneId": null,
+        "markerId": null,
+        "kind": "light",
+        "ok": false,
+        "created": [],
+        "ids": [],
+        "markerDeleted": false,
+        "sheet": null,
+        "patched": [],
+        "defaults": [],
+        "warnings": [],
+        "notes": [],
+        "discarded": [],
+        "code": "MARKER_GONE",
+        "error": "p4 was resized on Warren (now marker m9); gather again"
+      }
+    ],
+    "out": {
+      "index": 2,
+      "id": "p4",
+      "label": "p4",
+      "sceneId": null,
+      "markerId": null,
+      "kind": "light",
+      "ok": false,
+      "created": [],
+      "ids": [],
+      "markerDeleted": false,
+      "sheet": null,
+      "patched": [],
+      "defaults": [],
+      "warnings": [],
+      "notes": [],
+      "discarded": [],
+      "code": "MARKER_GONE",
+      "error": "p4 was resized on Warren (now marker m9); gather again"
+    }
+  },
+  {
+    "input": [
+      {
+        "index": 3,
+        "id": "p5",
+        "label": "p5",
+        "sceneId": null,
+        "markerId": null,
+        "kind": "none",
+        "ok": true,
+        "created": [],
+        "ids": [],
+        "markerDeleted": true,
+        "sheet": null,
+        "patched": [],
+        "defaults": [],
+        "warnings": [],
+        "notes": [],
+        "discarded": [],
+        "reason": "flavour only"
+      }
+    ],
+    "out": {
+      "index": 3,
+      "id": "p5",
+      "label": "p5",
+      "sceneId": null,
+      "markerId": null,
+      "kind": "none",
+      "ok": true,
+      "created": [],
+      "ids": [],
+      "markerDeleted": true,
+      "sheet": null,
+      "patched": [],
+      "defaults": [],
+      "warnings": [],
+      "notes": [],
+      "discarded": [],
+      "reason": "flavour only"
+    }
+  },
+  {
+    "input": [
+      {
+        "index": 0,
+        "id": "p1",
+        "label": "p1",
+        "kind": "hotspot",
+        "ok": true,
+        "sceneId": "s1",
+        "markerId": "m1",
+        "at": "525,325",
+        "placement": "centred",
+        "footprint": "0.5x0.5",
+        "lockSize": true,
+        "hidden": true,
+        "creates": [
+          "Actor (hotspot)",
+          "{\"items\":[\"The Ember Crown\"]}"
+        ],
+        "warnings": [],
+        "defaults": [
+          "attunement set to required"
+        ],
+        "sheet": "Paladin 5"
+      }
+    ],
+    "out": {
+      "index": 0,
+      "id": "p1",
+      "label": "p1",
+      "kind": "hotspot",
+      "ok": true,
+      "sceneId": "s1",
+      "markerId": "m1",
+      "at": "525,325",
+      "placement": "centred",
+      "footprint": "0.5x0.5",
+      "lockSize": true,
+      "hidden": true,
+      "creates": [
+        "Actor (hotspot)",
+        "{\"items\":[\"The Ember Crown\"]}"
+      ],
+      "warnings": [],
+      "defaults": [
+        "attunement set to required"
+      ],
+      "sheet": "Paladin 5"
+    }
+  },
+  {
+    "input": [
+      {
+        "index": 1,
+        "id": "p2",
+        "label": "p2",
+        "kind": "none",
+        "ok": true,
+        "sceneId": null,
+        "markerId": null,
+        "at": null,
+        "placement": null,
+        "footprint": null,
+        "lockSize": false,
+        "hidden": false,
+        "creates": [],
+        "warnings": [],
+        "defaults": [],
+        "reason": ""
+      }
+    ],
+    "out": {
+      "index": 1,
+      "id": "p2",
+      "label": "p2",
+      "kind": "none",
+      "ok": true,
+      "sceneId": null,
+      "markerId": null,
+      "at": null,
+      "placement": null,
+      "footprint": null,
+      "lockSize": false,
+      "hidden": false,
+      "creates": [],
+      "warnings": [],
+      "defaults": [],
+      "reason": ""
+    }
+  },
+  {
+    "input": [
+      {
+        "index": 2,
+        "id": "p6",
+        "label": "p6",
+        "kind": "x",
+        "ok": false,
+        "code": "BAD_SPEC",
+        "error": "BAD_SPEC: with.kind"
+      }
+    ],
+    "out": {
+      "index": 2,
+      "id": "p6",
+      "label": "p6",
+      "kind": "x",
+      "ok": false,
+      "code": "BAD_SPEC",
+      "error": "BAD_SPEC: with.kind"
+    }
+  }
+]
