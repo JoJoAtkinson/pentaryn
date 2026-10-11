@@ -12,12 +12,14 @@
  * also deletes with `replacements`, and does not drag anything along.
  */
 
-import { MODULE, crowded, followersOf, tokenBox } from "./portals-core.mjs";
+import { crowded, followersOf, tokenBox } from "./portals-core.mjs";
 import { carryTo, destinationsOf, landingPlaces, recordOf } from "./scene-adapter.mjs";
 import { setting } from "./settings.mjs";
 
 /** Tokens deleted by one operation, gathered so a party walking through together is one pass. */
 const pendingOps = new WeakMap();
+/** The module's log, from install(). */
+let log = null;
 
 export function cameThroughPortal(token, destScene) {
   const scene = token.parent;
@@ -25,7 +27,7 @@ export function cameThroughPortal(token, destScene) {
   const p = { x: c.x, y: c.y, elevation: token.elevation ?? 0 };
   return scene.regions.some(r => {
     if (!destinationsOf(r).some(d => d.region.parent === destScene)) return false;
-    try { if (r.testPoint(p)) return true; } catch {}
+    try { if (r.testPoint(p)) return true; } catch (err) { log?.debug("region testPoint", err); }
     return !!r.bounds?.contains?.(p.x, p.y);
   });
 }
@@ -59,7 +61,7 @@ export async function bringFollowers(scene, deleted, replacements) {
     const r = recordOf(t);
     if (r.type !== "character" && !r.polymorphed) continue;       // only a PC brings company
     if (!cameThroughPortal(t, arrived.parent)) continue;
-    try { await spreadArrival(arrived); } catch (err) { console.warn(`${MODULE} | arrival spread skipped`, err); }
+    try { await spreadArrival(arrived); } catch (err) { log.warn("arrival spread skipped", err); }
     leaders.push({ record: r, arrived });
   }
   if (!leaders.length) return;
@@ -93,10 +95,11 @@ function onDeleteToken(token, options) {
   pendingOps.set(options, deleted);
   const scene = token.parent;
   setTimeout(() => bringFollowers(scene, deleted, replacements)
-    .catch(err => console.warn(`${MODULE} | summons did not follow`, err)), 0);
+    .catch(err => log.warn("summons did not follow", err)), 0);
 }
 
-export function install(reg) {
+export function install(reg, ctx) {
+  log = ctx.log;
   reg.on("deleteToken", onDeleteToken, { guard: false, label: "summons follow" });
 }
 

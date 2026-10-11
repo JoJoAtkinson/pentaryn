@@ -170,7 +170,7 @@ export function recordOf(t) {
   const a = t.actor;
   const gmIds = game.users.filter(u => u.isGM).map(u => u.id);
   let pile = false;
-  try { pile = !!(a && game.itempiles?.API?.isValidItemPile?.(a)); } catch {}
+  try { pile = !!(a && game.itempiles?.API?.isValidItemPile?.(a)); } catch (err) { deps.log?.debug("item piles check", err); }
   return {
     id: t.id,
     name: t.name,
@@ -250,7 +250,7 @@ export async function confirmParty(party, title) {
     yes: { label: "Teleport", icon: "fa-solid fa-check", default: true },
     no: { label: "Cancel" },
     rejectClose: false
-  }).catch(() => false);
+  }).catch(err => { deps.log?.warn("party confirm failed", err); return false; });
 }
 
 export async function teleportParty(destRegion, { confirm = true } = {}) {

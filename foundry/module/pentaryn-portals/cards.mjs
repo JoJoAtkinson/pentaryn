@@ -111,16 +111,20 @@ export function injectConfig(app, element) {
   app.setPosition?.({ height: "auto" });
 }
 
+/** The module's log, from install(). */
+let log = null;
+
 function onRenderDialog(app, element) {
-  try { decorate(app, element); } catch (err) { console.warn(`${MODULE} | dialog decoration skipped`, err); }
-  try { preferTeleport(app, element); } catch (err) { console.warn(`${MODULE} | dialog focus skipped`, err); }
+  try { decorate(app, element); } catch (err) { log.warn("dialog decoration skipped", err); }
+  try { preferTeleport(app, element); } catch (err) { log.warn("dialog focus skipped", err); }
 }
 
 function onRenderRegionConfig(app, element) {
-  try { injectConfig(app, element); } catch (err) { console.warn(`${MODULE} | config injection skipped`, err); }
+  try { injectConfig(app, element); } catch (err) { log.warn("config injection skipped", err); }
 }
 
-export function install(reg) {
+export function install(reg, ctx) {
+  log = ctx.log;
   reg.on("renderDialogV2", onRenderDialog, { guard: false, label: "teleport dialog cards" });
   reg.on("renderRegionConfig", onRenderRegionConfig, { guard: false, label: "region config card" });
 }

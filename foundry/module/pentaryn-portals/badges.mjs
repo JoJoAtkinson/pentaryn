@@ -37,6 +37,8 @@ export const editing = new Set();
 let tip = null;
 let menu = null;
 let drag = null;
+/** The module's log, from install(). */
+let log = null;
 
 export function setEditing(region, on) {
   if (on) editing.add(region.uuid); else editing.delete(region.uuid);
@@ -45,7 +47,7 @@ export function setEditing(region, on) {
 
 export async function drawBadges() {
   const run = ++drawRun;
-  try { badgeLayer?.destroy({ children: true }); } catch {}
+  try { badgeLayer?.destroy({ children: true }); } catch (err) { log?.debug("badge layer destroy", err); }
   badgeLayer = null;
   badges.length = 0;
   if (!canvas?.ready || !canvas.scene || !canvas.interface) return;
@@ -82,7 +84,9 @@ export async function drawBadges() {
           c.addChild(spr, mask);
           spr.mask = mask;
         }
-      } catch {}
+      } catch (err) {
+        log?.warnOnce(`card image ${first.img}`, `card image ${first.img}`, err);
+      }
     } else {
       const q = new PIXI.Text("?", { fontFamily: "Signika", fontSize: r * 1.1, fill: 0xd9c8ff });
       q.anchor.set(0.5);
@@ -107,7 +111,10 @@ export async function drawBadges() {
       mv.anchor.set(0.5); mv.position.set(-r * 0.72, -r * 0.72);
       c.addChild(sq, mv);
     }
-    if (stale()) { try { c.destroy({ children: true }); } catch {} return; }
+    if (stale()) {
+      try { c.destroy({ children: true }); } catch (err) { log?.debug("stale badge destroy", err); }
+      return;
+    }
     layer.addChild(c);
     badges.push({ region, x, y, r, revealed, bounds: b, sprite: c, cards: dests.map(d => cardFor(d.region)) });
   }
@@ -260,16 +267,18 @@ function onCanvasTearDown() { hideTip(); closeMenu(); drawRun++; badges.length =
 /** Test seam: the module-private state. */
 export const _state = () => ({ badgeLayer, drawRun, tip, menu, drag });
 
-export function install(reg) {
+export function install(reg, ctx) {
+  log = ctx.log;
   configureCardApp({ setEditing });
   for (const h of REGION_HOOKS) reg.on(h, () => { if (canvas?.ready) drawBadges(); }, { guard: false, label: "badges redraw" });
   reg.on("canvasReady", () => { bindBoard(); drawBadges(); }, { guard: false, label: "badges draw" });
+  // hot: badges — refreshBadgeSight walks only the badge list, never the scene
   reg.on("sightRefresh", () => { if (badges.length && !game.user.isGM) refreshBadgeSight(); }, { guard: false, label: "badges sight" });
   reg.on("canvasTearDown", onCanvasTearDown, { guard: false, label: "badges teardown" });
 }
 
 /** Destroy the layer, hide the tip, close the menu. The #board listeners stay (dataset.ppBound). */
 export function uninstall() {
-  try { badgeLayer?.destroy({ children: true }); } catch {}
+  try { badgeLayer?.destroy({ children: true }); } catch (err) { log?.debug("badge layer destroy", err); }
   onCanvasTearDown();
 }
