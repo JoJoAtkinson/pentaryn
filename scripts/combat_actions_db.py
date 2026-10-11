@@ -23,6 +23,8 @@ Stdlib only.
 
 from __future__ import annotations
 
+import contextlib
+import fcntl
 import json
 import os
 import re
@@ -30,7 +32,7 @@ import sys
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Iterator
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _DEFAULT_DB = _REPO_ROOT / "foundry" / "actions.jsonl"
@@ -62,6 +64,26 @@ def _iter_records() -> Iterable[dict]:
 def read_all() -> list[dict]:
     """Load every record from the DB."""
     return list(_iter_records())
+
+
+@contextlib.contextmanager
+def _locked() -> Iterator[None]:
+    """Hold an exclusive lock on `<db>.lock` for one read-modify-write (python-tooling-44).
+
+    The MCP server runs in-process tools on a thread pool and every Claude session runs
+    its own server, so two upserts can overlap; without this the second `replace` drops
+    the first one's row. `flock` covers threads and processes alike (each call opens its
+    own descriptor). Readers stay unlocked: `_atomic_write` swaps the file in with an
+    atomic `replace`, so a reader sees the old file or the new one, never half of one.
+    """
+    p = _db_path()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    with open(p.with_name(p.name + ".lock"), "a") as fh:
+        fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
 
 
 def _atomic_write(records: list[dict]) -> None:
@@ -369,16 +391,17 @@ def upsert(npc: str, action: str, spec: dict) -> dict:
     record = {"npc": npc, "action": action, **spec}
     record["updated_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
 
-    records = read_all()
-    found = False
-    for i, r in enumerate(records):
-        if r.get("npc") == npc and r.get("action") == action:
-            records[i] = record
-            found = True
-            break
-    if not found:
-        records.append(record)
-    _atomic_write(records)
+    with _locked():
+        records = read_all()
+        found = False
+        for i, r in enumerate(records):
+            if r.get("npc") == npc and r.get("action") == action:
+                records[i] = record
+                found = True
+                break
+        if not found:
+            records.append(record)
+        _atomic_write(records)
     return record
 
 
@@ -401,32 +424,35 @@ def upsert_many(entries: Iterable[tuple[str, str, dict]]) -> list[dict]:
     if errors:
         raise ValueError(f"upsert_many: {len(errors)} invalid entries:\n  - " + "\n  - ".join(errors))
 
-    records = read_all()
-    by_key: dict[tuple[str, str], int] = {
-        (r.get("npc", ""), r.get("action", "")): i for i, r in enumerate(records)
-    }
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
     persisted: list[dict] = []
-    for npc, action, spec in pending:
-        record = {"npc": npc, "action": action, **spec, "updated_at": now}
-        key = (npc, action)
-        if key in by_key:
-            records[by_key[key]] = record
-        else:
-            by_key[key] = len(records)
-            records.append(record)
-        persisted.append(record)
-    _atomic_write(records)
+    with _locked():
+        records = read_all()
+        by_key: dict[tuple[str, str], int] = {
+            (r.get("npc", ""), r.get("action", "")): i for i, r in enumerate(records)
+        }
+        for npc, action, spec in pending:
+            record = {"npc": npc, "action": action, **spec, "updated_at": now}
+            key = (npc, action)
+            if key in by_key:
+                records[by_key[key]] = record
+            else:
+                by_key[key] = len(records)
+                records.append(record)
+            persisted.append(record)
+        _atomic_write(records)
     return persisted
 
 
 def delete(npc: str, action: str) -> bool:
     """Remove the (npc, action) entry. Returns True if it existed."""
-    records = read_all()
-    new_records = [r for r in records if not (r.get("npc") == npc and r.get("action") == action)]
-    if len(new_records) == len(records):
-        return False
-    _atomic_write(new_records)
+    with _locked():
+        records = read_all()
+        new_records = [r for r in records
+                       if not (r.get("npc") == npc and r.get("action") == action)]
+        if len(new_records) == len(records):
+            return False
+        _atomic_write(new_records)
     return True
 
 
