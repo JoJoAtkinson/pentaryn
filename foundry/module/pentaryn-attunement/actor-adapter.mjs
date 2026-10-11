@@ -47,18 +47,28 @@ export async function releaseAway(actor, key) {
  * @param {object} [opts]
  * @param {string} [opts.tag]     Defaults to the owner's short name.
  * @param {boolean} [opts.currency]  Also move the owner's coin, as a tagged purse.
+ * @param {boolean} [opts.detail]    Resolve `{count, created, away}` instead of the count (additive,
+ *                                   items-journal-16): the created item ids in the container and the
+ *                                   keys of the away entries this call added.
+ * @returns {Promise<number|{count: number, created: string[], away: string[]}>}
  */
-export async function stash(owner, container, itemIds, { tag, currency = false } = {}) {
+export async function stash(owner, container, itemIds, { tag, currency = false, detail = false } = {}) {
   const ids = new Set(itemIds);
+  const awayBefore = awayOf(owner).length;
   const { creates, away, slots } = planStash(owner, itemIds, {
     tag, currency, randomID: foundry.utils.randomID, setProperty: foundry.utils.setProperty
   });
-  await container.createEmbeddedDocuments("Item", creates);
+  const made = await container.createEmbeddedDocuments("Item", creates);
   await owner.deleteEmbeddedDocuments("Item", [...ids].filter(id => owner.items.has(id)));
   const update = { [`flags.${MODULE}.${AWAY_FLAG}`]: away, [`flags.${MODULE}.${SLOTS}`]: slots };
   if (currency) for (const k of Object.keys(owner.system.currency ?? {})) update[`system.currency.${k}`] = 0;
   await owner.update(update);
-  return creates.length;
+  if (!detail) return creates.length;
+  return {
+    count: creates.length,
+    created: (made ?? []).map(d => d?.id ?? d?._id ?? null),
+    away: away.slice(awayBefore).map(a => a.key),
+  };
 }
 
 /**
@@ -99,6 +109,16 @@ export function guardItemTooltipPosition() {
     if (tooltipAnchorMissing({ element: game.tooltip?.element, tooltip: this.tooltip })) return;
     return wrapped(...args);
   });
+}
+
+/**
+ * Whether dnd5e's item-tooltip positioning carries the guard: true/false, or null when this dnd5e
+ * has no item tooltips to guard (selftest).
+ */
+export function tooltipGuarded() {
+  const proto = game.dnd5e?.tooltips ? Object.getPrototypeOf(game.dnd5e.tooltips) : null;
+  if (typeof proto?._positionItemTooltip !== "function") return null;
+  return proto._positionItemTooltip.pentarynGuarded === true;
 }
 
 /** Undo the tooltip guard (uninstall). */

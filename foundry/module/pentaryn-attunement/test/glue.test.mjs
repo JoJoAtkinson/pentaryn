@@ -51,7 +51,7 @@ test("ready + one tick: the five legacy keys (a floor), one log line, tooltip gu
   const original = proto._positionItemTooltip;
   const lines = await withConsole(async () => {
     F.fire("ready");
-    assert.equal(game.pentaryn?.attunement, undefined, "nothing before the tick");
+    assert.equal(typeof game.pentaryn?.attunement?.report, "function", "[declared] D-A1: published at ready, not a tick later");
     mock.timers.tick(0);
     await flush();
   });
