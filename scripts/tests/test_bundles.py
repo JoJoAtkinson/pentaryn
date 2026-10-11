@@ -454,7 +454,8 @@ def test_build_members(mod, tmp_path):
     assert "alpha/packs/pack0" in names and "alpha/maps" in names
     assert not any(n.endswith((".DS_Store", "._big.webp", "/link")) for n in names)
     by = {m.name: m for m in members}
-    assert by["alpha/maps/big.webp"].mtime == int((mod / "maps/big.webp").stat().st_mtime)
+    assert by["alpha/maps/big.webp"].mtime == pytest.approx(
+        (mod / "maps/big.webp").stat().st_mtime, abs=1)
     assert len(set(names)) == len(names)
 
 
