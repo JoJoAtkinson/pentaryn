@@ -25,7 +25,8 @@ export function buildApiFor(ctx) {
     syncScene: (scene, ids) => x.syncScene(scene, ids == null ? null : toIdSet(ids)),
     syncAll: () => x.syncAll(),
     isCreature: (tokenDoc) => isPlayerCreature(summarize(tokenDoc)),
-    ownerSees: (token) => x.ownerSees(token),
+    // a TokenDocument answers for its placeable on the viewed scene (a document off-canvas: false)
+    ownerSees: (token) => x.ownerSees(token?.object ?? token),
     patchedWith: () => x.patchedWith(),
     core,
   }, {

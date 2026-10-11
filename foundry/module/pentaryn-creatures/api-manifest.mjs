@@ -66,11 +66,11 @@ export const MANIFEST = Object.freeze({
     },
     {
       path: "ownerSees",
-      params: [{ name: "token", type: "Token placeable" }],
+      params: [{ name: "token", type: "Token placeable | TokenDocument", doc: "a document answers for its placeable" }],
       returns: "boolean",
       gm: false, writes: false, legacy: true,
       doc: "Would the owner override draw this token on this client when core says it is not visible? Always "
-        + "false on a GM client. Needs the placeable today (a TokenDocument answers false).",
+        + "false on a GM client, and for a document with no placeable on the viewed scene.",
     },
     {
       path: "patchedWith",

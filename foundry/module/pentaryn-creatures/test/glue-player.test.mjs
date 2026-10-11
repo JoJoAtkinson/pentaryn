@@ -6,7 +6,7 @@
 // KNOWN rows (pinned as they are; each has its target as a todo test at the end):
 //   transform-creatures-25  updateToken {x} on the viewed scene schedules a render that rebuilds nothing
 //   transform-creatures-29  FIXED [declared]: an override failure still answers false, and warns once
-//   transform-creatures-31  api.ownerSees(TokenDocument) is false; only a placeable works
+//   transform-creatures-31  FIXED [declared]: api.ownerSees(TokenDocument) answers for its placeable
 //   transform-creatures-40  with no Argon on the page the poll still runs, two queries a tick
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
@@ -361,10 +361,16 @@ test("api.list() is the viewed scene for this user; a player never writes light 
   assert.deepEqual(W.writes, []);
 });
 
-test("KNOWN transform-creatures-31: ownerSees needs the placeable; a TokenDocument answers false", () => {
+test("transform-creatures-31 [declared]: ownerSees(TokenDocument) answers for its placeable; off-canvas → false", () => {
+  // TokenDocument#object is the placeable on the viewed scene, null elsewhere (the stub has no link)
+  for (const id of ["tImp", "tGob"]) W.tok(id).object = W.p(id);
+  W.tok("tImpB", BETA).object = null;
   assert.equal(api().ownerSees(W.p("tImp")), true);
-  assert.equal(api().ownerSees(W.tok("tImp")), false);
+  assert.equal(api().ownerSees(W.tok("tImp")), true, "was false");
   assert.equal(api().ownerSees(W.p("tGob")), false);
+  assert.equal(api().ownerSees(W.tok("tGob")), false);
+  assert.equal(api().ownerSees(W.tok("tImpB", BETA)), false, "no placeable");
+  for (const id of ["tImp", "tGob"]) delete W.tok(id).object;
 });
 
 test("the Wild Shape form ranks as the PC (via flags.dnd5e.originalActor)", () => {
@@ -400,5 +406,4 @@ test("throwing setting reads fall back to the defaults: showStrip and floatOverH
 
 /* ── the targets of the KNOWN rows (guide §4, steps 5 and 7) ─────────────── */
 test.todo("transform-creatures-25: updateToken re-renders the strip only when stripMayChange(changes) — {x:5} schedules nothing");
-test.todo("transform-creatures-31: api.ownerSees(TokenDocument) gives the same answer as for its placeable (step 7)");
 test.todo("transform-creatures-40: no interval is armed without Argon on the page or with floatOverHud off; styles written only on change");
