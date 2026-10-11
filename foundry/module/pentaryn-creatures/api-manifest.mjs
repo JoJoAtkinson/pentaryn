@@ -89,6 +89,18 @@ export const MANIFEST = Object.freeze({
         + "this client reads them (showStrip is per client), whether this client writes the lights (writer: the "
         + "active GM), and how many tokens on every scene carry our light flag (lit).",
     },
+    {
+      path: "inspect",
+      params: [
+        { name: "ref", kind: "token", type: "Token | TokenDocument | uuid | id | exact name" },
+        { name: "opts", type: "{ sceneId?, as? }", optional: true, doc: "as: a user ref — whose strip `inStrip` answers for (default this client's user)" },
+      ],
+      returns: "{ token, actorType, qualifies, light: { bright, dim }, ourLight, switchedOff, ownerSees, inStrip }",
+      gm: false, writes: false, throws: ["NOT_FOUND", "AMBIGUOUS", "BAD_ARGS"], since: "0.1.1",
+      doc: "Read-only plain JSON for one token: does it qualify for the creature light, its current light, the "
+        + "light we set (ourLight, null when not ours), whether it was switched off by hand, whether this client's "
+        + "owner override would draw it, and whether that user's strip shows it (never for a GM).",
+    },
   ],
   flags: {
     writes: ["flags.pentaryn-creatures.light"],

@@ -2,7 +2,7 @@
 // contract, the patch record's adjustments row, and the settings view. The active GM's client.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
-import { manifestOf, normaliseDescribe, pinJSON } from "./kit/harness.mjs";
+import { manifestOf, maxDepth, normaliseDescribe, pinJSON } from "./kit/harness.mjs";
 import { MODULE, drain, registerSelf, setupWorld } from "./fixtures/world.mjs";
 import { MANIFEST } from "../api-manifest.mjs";
 import { SETTINGS } from "../settings.mjs";
@@ -77,6 +77,25 @@ test("status() (transform-creatures-31): wrap, the four settings, writer, lit to
   assert.equal(api.status().writer, false, "a player client does not write");
   F.become({ userId: "gmUser0000000001" });
   assert.equal(api.status().writer, true);
+});
+
+test("inspect(ref, { as }): plain JSON, depth ≤ 4; a document, a placeable or a uuid; a miss is coded", () => {
+  const imp = W.tok("tImp");
+  const out = api.inspect(imp);
+  assert.ok(maxDepth(out) <= 4);
+  assert.deepEqual(JSON.parse(JSON.stringify(out)), out);
+  assert.deepEqual(out, {
+    token: { documentName: "Token", id: "tImp", uuid: imp.uuid, name: "Imp <i>&" },
+    actorType: "npc", qualifies: true, light: { bright: 5, dim: 5 }, ourLight: { bright: 5, dim: 5 },
+    switchedOff: false, ownerSees: false, inStrip: false,
+  }, "the GM: the owner override never applies and a GM has no strip");
+  assert.equal(api.inspect(imp, { as: "plyrUser00000001" }).inStrip, true, "in Rook's strip");
+  assert.equal(api.inspect(W.p("tGob"), { as: "plyrUser00000001" }).inStrip, false);
+  assert.deepEqual(api.inspect(imp.uuid).token.id, "tImp");
+  const pc = api.inspect(W.tok("tPC"));
+  assert.deepEqual([pc.qualifies, pc.ourLight, pc.light], [false, null, { bright: 0, dim: 0 }]);
+  assert.throws(() => api.inspect("Nobody"), { code: "NOT_FOUND" });
+  assert.throws(() => api.inspect(imp, { as: "Nobody" }), { code: "NOT_FOUND" });
 });
 
 test("the legacy calls answer through the built API", async () => {

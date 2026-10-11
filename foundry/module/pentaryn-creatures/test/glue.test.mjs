@@ -179,8 +179,8 @@ test("legacy surface ⊇ golden/legacy-surface.json; core is the module namespac
   for (const k of legacyKeys) assert.ok(keys.includes(k), k);
   const LEGACY = ["list", "render", "syncScene", "syncAll", "isCreature", "ownerSees", "patchedWith", "core"];
   assert.deepEqual(keys.filter(k => LEGACY.includes(k)), LEGACY, "the legacy keys, in their old order");
-  // [declared] C-D2: the kit members follow; C-D3 (transform-creatures-31): status() is a new row
-  assert.deepEqual(keys.filter(k => !LEGACY.includes(k)), ["status", "version", "contract", "settings", "trace", "uninstall", "describe"]);
+  // [declared] C-D2: the kit members follow; C-D3 (transform-creatures-31): status() and inspect() are new rows
+  assert.deepEqual(keys.filter(k => !LEGACY.includes(k)), ["status", "inspect", "version", "contract", "settings", "trace", "uninstall", "describe"]);
   for (const k of LEGACY.filter(k => k !== "core")) assert.equal(typeof api()[k], "function", k);
   assert.equal(api().core.lightUpdate, core.lightUpdate);
   assert.equal(Object.isFrozen(api()), true, "[declared] C-D2: frozen");

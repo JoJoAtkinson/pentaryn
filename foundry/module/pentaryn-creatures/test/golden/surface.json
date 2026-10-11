@@ -30,6 +30,7 @@
   "core.stripSignature": "stripSignature",
   "core.switchedOff": "switchedOff",
   "describe": "function",
+  "inspect": "inspect",
   "isCreature": "isCreature",
   "list": "list",
   "ownerSees": "ownerSees",
