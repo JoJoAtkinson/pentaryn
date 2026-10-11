@@ -490,16 +490,22 @@ def check_all(*, as_json: bool = False) -> int:
 STAGING_DIRNAME = ".pentaryn-sync"
 
 
+def staging_dir(dst: Path) -> Path:
+    """`<Data>/../.pentaryn-sync` for `dst` = `<Data>/modules/<id>`."""
+    return dst.parent.parent.parent / STAGING_DIRNAME
+
+
 def install(src: Path, dst: Path) -> None:
     """Copy `src` to `dst` so that `dst` is never left missing or half-written (python-tooling-5a).
 
-    The copy is built in `<FOUNDRY_DATA>/../.pentaryn-sync/<name>.new`; only a complete copy is
+    `dst` is `<Data>/modules/<id>`. The copy is built in `<Data>/../.pentaryn-sync/<id>.new` (derived
+    from `dst`, so a test's tmp tree never reaches the real FoundryVTT folder); only a complete copy is
     swapped in: the old `dst` is renamed aside to `<name>.old`, the new one renamed into place, the
     old one removed. A copy that fails leaves `dst` exactly as it was; a swap that fails puts the old
     one back. Leftovers of a crashed run are cleared at the start of the next. The installed tree is
     identical to the one `rmtree` + `copytree` produced.
     """
-    staging = cfg.FOUNDRY_DATA.parent / STAGING_DIRNAME
+    staging = staging_dir(dst)
     staging.mkdir(parents=True, exist_ok=True)
     new, old = staging / f"{dst.name}.new", staging / f"{dst.name}.old"
     for leftover in (new, old):

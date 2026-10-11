@@ -72,7 +72,7 @@ def test_a_failed_copy_leaves_the_old_install_serving(module, monkeypatch):
         modules.install(module.src, module.dst)
     assert (module.dst / "zz.mjs").read_text() == "the old, working build"
     assert _tree(module.dst) == ["zz.mjs"]
-    staging = cfg.FOUNDRY_DATA.parent / modules.STAGING_DIRNAME
+    staging = modules.staging_dir(module.dst)
     assert list(staging.iterdir()) == [], "the half copy is cleaned up"
     monkeypatch.setattr(modules.shutil, "copytree", real)
     modules.install(module.src, module.dst)
@@ -100,14 +100,14 @@ def test_a_failed_swap_puts_the_old_install_back(module, monkeypatch):
 
 def test_the_staging_folder_is_outside_data_modules(module):
     modules.install(module.src, module.dst)
-    staging = cfg.FOUNDRY_DATA.parent / modules.STAGING_DIRNAME
+    staging = modules.staging_dir(module.dst)
     assert staging.is_dir() and list(staging.iterdir()) == []
     assert cfg.FOUNDRY_MODULES not in staging.parents and cfg.FOUNDRY_DATA not in staging.parents
     assert [p.name for p in cfg.FOUNDRY_MODULES.iterdir()] == ["pentaryn-zz"], "nothing else lands where Foundry scans"
 
 
 def test_leftovers_of_a_crashed_run_are_cleared(module):
-    staging = cfg.FOUNDRY_DATA.parent / modules.STAGING_DIRNAME
+    staging = modules.staging_dir(module.dst)
     (staging / "pentaryn-zz.new").mkdir(parents=True)
     (staging / "pentaryn-zz.new" / "junk").write_text("x")
     (staging / "pentaryn-zz.old").mkdir()
