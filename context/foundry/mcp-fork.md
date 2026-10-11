@@ -71,6 +71,8 @@ of the contract: LLM tooling matches on `NOT_GM`, not on the prose.
 cd /Users/joe/Documents/GitHub/foundry-vtt-mcp
 npm -w @foundry-mcp/server run typecheck
 npm -w @foundry-mcp/server test -- --run      # vitest, includes the timeout and dnd5e 6 suites
+npm -w @foundry-mcp/module run typecheck
+npm -w @foundry-mcp/module test -- --run      # vitest for the bridge module's src/fork (wave 2)
 npm run build:server                          # → packages/mcp-server/dist/
 scripts/fork-footprint.sh                     # upstream footprint vs FORK.md
 ```
@@ -89,15 +91,31 @@ scripts/fork-footprint.sh                     # upstream footprint vs FORK.md
 | Variable | Effect |
 |---|---|
 | `PENTARYN_MCP_LOG_DIR` | where the logs go (`.mcp.json` sets `foundry/logs`); unset = nothing is logged, silently |
-| `FOUNDRY_MCP_TOOL_FILTER` | comma-separated deny-globs; a matching tool (fork **or** upstream) is hidden and refused |
+| `FOUNDRY_MCP_TOOL_FILTER` | comma-separated deny-globs; a matching tool (fork **or** upstream) is hidden from `tools/list` **and** refused at call time (`Tool '<name>' is disabled by FOUNDRY_MCP_TOOL_FILTER`; before the wave-2 build a filtered upstream tool was only hidden) |
+
+The month in every file name is taken when the line is written, so a long-lived server rolls over
+by itself.
 
 - `mcp-<YYYY-MM>.jsonl` — one line per **write** call: `{ts, tool, action?, args (truncated at
-  2 KB per value), ok, summary?, ids?, error?, ms}`.
-- `eval.jsonl` — one line per `eval-js` call: `{ts, purpose, script (never truncated), ok, phase,
-  error?, ms}`; `phase: "transport"` means the call never reached Foundry.
+  2 KB per value), ok, phase?, code?, summary?, ids?, error?, ms, client?}`. From the wave-2
+  build that covers the upstream write tools too (`create-*`, `update-*`, `delete-*`, `manage-*`,
+  `dnd5e-*`, `move-token`, `toggle-token-condition`, `use-item`, the ownership tools, … — the list
+  is `src/fork/upstream-writes.ts`), and `ok` is `false` when a handler reports failure as a value
+  (`{ok: false}`), not only when it throws. `eval-js`'s line carries `{purpose, scriptChars,
+  timeoutMs}` as `args`; the script itself is only in the eval log.
+- `eval-<YYYY-MM>.jsonl` (wave-2 build; `eval.jsonl` keeps everything before it and is left in
+  place) — one line per `eval-js` call: `{ts, purpose, script (never truncated), ok, phase, error?,
+  ms, client?}`. Phases: `complete`, `runtime`, `compile` (from Foundry); `transport` — the call
+  never reached Foundry; `args` — `eval-js` rejected its own arguments and sent nothing.
+- `client: {pid, ppid}` — the MCP wrapper process that made the call (one per Claude session) and
+  its parent; a wrapper older than the wave-2 build sends none.
+- `dnd-scripts-<YYYY-MM>.jsonl` — the dnd-scripts server's own per-call log, when its entry in
+  `.vscode/mcp.json` sets `PENTARYN_MCP_LOG_DIR` ([`../../scripts/mcp/README.md`](../../scripts/mcp/README.md)).
 
-Both are campaign data for deciding which `eval-js` uses earn a typed tool — see
-[`README.md`](README.md) ("The action log is the promotion mechanism").
+All of it is campaign data for deciding which `eval-js` uses earn a typed tool — see
+[`README.md`](README.md) ("The action log is the promotion mechanism"). `make foundry-eval-report
+[SINCE=YYYY-MM-DD] [JSON=1]` reads every one of these files (globbing `eval*.jsonl`, so both eval
+names) and prints the review.
 
 ## Upstream
 

@@ -158,17 +158,25 @@ does not reconnect by itself (`autoReconnectEnabled` is off), so either reload i
 
 ## The action log is the promotion mechanism — keep it on
 
-Every fork tool call lands in `foundry/logs/mcp-<month>.jsonl`, and every `eval-js`
-call also lands in `foundry/logs/eval.jsonl` with its stated purpose. That log is how
-you decide which recurring `eval-js` uses have earned a typed tool — it is the design's
-own answer to "what should the tool surface be", and it is meant to be grepped from the
-repo rather than exposed as a tool.
+Every write tool call lands in `foundry/logs/mcp-<month>.jsonl` — the fork's tools and,
+from the wave-2 fork build, the upstream write tools too — and every `eval-js` call also
+lands in the eval log with its stated purpose: `eval.jsonl` up to the wave-2 build,
+`eval-<YYYY-MM>.jsonl` after it. That log is how you decide which recurring `eval-js` uses
+have earned a typed tool — it is the design's own answer to "what should the tool surface
+be". Field lists and phases: [`mcp-fork.md`](mcp-fork.md#environment-and-logs).
 
-Both are gated on **`PENTARYN_MCP_LOG_DIR`**, set in `.mcp.json`. If it is unset, the
+**The review is one command:** `make foundry-eval-report` (`SINCE=2026-10-01` narrows it,
+`JSON=1` for JSON). It reads both eval names, every `mcp-*.jsonl` and the dnd-scripts
+server's `dnd-scripts-<month>.jsonl`, and prints outcomes by phase, the `game.pentaryn.<ns>.<fn>`
+paths `eval-js` reaches (the promotion candidates), discovery calls, the top runtime
+errors and per-tool counts. Read-only.
+
+All of it is gated on **`PENTARYN_MCP_LOG_DIR`**, set in `.mcp.json` (and, for the
+dnd-scripts log, on that server's entry in `.vscode/mcp.json`). If it is unset, the
 server logs nothing and says nothing — it was unset from 2026-08-14 to 2026-08-22 and
 the gap is simply missing. A restart of the MCP server is needed after changing it.
 
-Sanity check: make one `eval-js` call, then `wc -l foundry/logs/eval.jsonl`.
+Sanity check: make one `eval-js` call, then `make foundry-eval-report SINCE=<today>`.
 
 **A `"phase": "transport"` line is a call that never reached Foundry** — module not
 connected, dead socket, timeout. Until 2026-08-23 those threw before the log write and
