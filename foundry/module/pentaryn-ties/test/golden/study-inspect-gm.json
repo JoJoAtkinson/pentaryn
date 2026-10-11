@@ -1,0 +1,54 @@
+[
+  {
+    "input": [
+      null,
+      {
+        "id": "zzNpc00000000001"
+      }
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      null,
+      {
+        "id": "zzNpc00000000001"
+      }
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      {
+        "id": "zzPc000000000002",
+        "isOwner": false
+      },
+      {
+        "id": "zzNpc00000000001"
+      }
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      {
+        "id": "zzPc000000000001",
+        "isOwner": true,
+        "inCombat": false
+      },
+      null
+    ],
+    "out": false
+  },
+  {
+    "input": [
+      {
+        "id": "zzPc000000000001",
+        "isOwner": true,
+        "inCombat": false
+      },
+      null
+    ],
+    "out": false
+  }
+]
