@@ -29,3 +29,14 @@ test("a throwing guard install: the API still publishes; one labelled warn", () 
   assert.equal(warns[0][0], "pentaryn-attunement | tooltip guard skipped");
   assert.equal(warns[0][1].message, "frozen");
 });
+
+// Same world, after the publish: selftest() reports the guard check as failed instead of throwing,
+// so the post-sync smoke check (`selftest().ok`) reads false rather than dying.
+test("a throwing tooltips getter: selftest() returns ok:false with the error, does not throw", () => {
+  let out;
+  assert.doesNotThrow(() => { out = game.pentaryn.attunement.selftest(); });
+  assert.equal(out.ok, false);
+  const guard = out.checks.find(c => c.label.startsWith("dnd5e item-tooltip guard installed"));
+  assert.equal(guard.ok, false);
+  assert.equal(guard.detail, "frozen");
+});

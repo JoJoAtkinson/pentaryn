@@ -85,14 +85,18 @@ function inspect(actor) {
 
 function selftest(ctx) {
   const map = globalThis.CONFIG?.DND5E?.armorProficienciesMap;
-  const guarded = tooltipGuarded();
+  // Reading game.dnd5e.tooltips can throw (the world items-journal-39 b publishes through): report
+  // the check as failed rather than let selftest() throw.
+  let guarded, guardErr = null;
+  try { guarded = tooltipGuarded(); } catch (err) { guarded = false; guardErr = err; }
   const checks = [
     { label: "published as module.api", ok: game.modules.get(MODULE)?.api === ctx.api },
     { label: `game.pentaryn.${NS} is this API`, ok: game.pentaryn?.[NS] === ctx.api },
     { label: "item hooks and the sheet hook registered", ok: ctx.reg.ids().length >= 4, detail: ctx.reg.ids().length },
     { label: "armorProficienciesMap covers the attunement categories",
       ok: ["wondrous", "ring", "rod", "wand", "trinket"].every(k => map?.[k] != null) },
-    { label: "dnd5e item-tooltip guard installed (null: no item tooltips)", ok: guarded !== false, detail: guarded },
+    { label: "dnd5e item-tooltip guard installed (null: no item tooltips)", ok: guarded !== false,
+      detail: guardErr ? guardErr.message : guarded },
   ];
   return { ok: checks.every(c => c.ok), checks: checks.map(c => ({ detail: null, ...c })) };
 }
