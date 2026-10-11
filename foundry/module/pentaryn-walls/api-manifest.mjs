@@ -7,7 +7,7 @@
  * the engine and registry functions themselves.
  */
 
-import { CONTRACT, MODULE, NS, VERSION } from "./walls-core.mjs";
+import { CONTRACT, MODULE, NS, READ_SCOPES, VERSION } from "./walls-core.mjs";
 
 const SCENE_OPTS = {
   name: "opts", optional: true,
@@ -16,6 +16,8 @@ const SCENE_OPTS = {
 };
 const ENGINE_RESULT = "{ creates, updates, refusals, lints, log, report }";
 const BUSY = " One at a time: while preview/run/undo is running, another call warns and returns null.";
+/** A stamp key under every scope stampOf() reads: the module id first, then the legacy scope. */
+const underEveryScope = key => READ_SCOPES.map(scope => `flags.${scope}.${key}`);
 
 export const MANIFEST = Object.freeze({
   module: MODULE,
@@ -50,9 +52,11 @@ export const MANIFEST = Object.freeze({
       params: [{ name: "opts", optional: true, type: "{ sceneId?, all? }", doc: "all: undo every run, not just the latest" }],
       returns: "{ deleted, restored, run } | null",
       gm: true, writes: true, legacy: true,
-      sideEffects: ["Wall delete batch", "Wall update batch", "ChatMessage (GM whisper)"],
+      sideEffects: ["Wall delete batch", "Wall update batch", "ChatMessage (GM whisper)",
+        "flags.pentaryn-walls and flags.wall-autocomplete deleted on restored walls"],
       throws: ["Error"],
-      doc: "Undo the latest run on a scene (or all of them): delete the walls it created and restore those it trimmed." + BUSY,
+      doc: "Undo the latest run on a scene (or all of them): delete the walls it created and restore those it trimmed. "
+        + "Stamps are read under both scopes; a restored wall loses its stamp under each scope it carries." + BUSY,
     },
     {
       path: "makeMacro",
@@ -97,7 +101,7 @@ export const MANIFEST = Object.freeze({
   flags: {
     writes: ["flags.wall-autocomplete.generated", "flags.wall-autocomplete.run",
       "flags.wall-autocomplete.rule", "flags.wall-autocomplete.priorC"],
-    reads: ["flags.wall-autocomplete.keepOpen"],
+    reads: ["keepOpen", "generated", "run", "priorC"].flatMap(underEveryScope),
   },
   unlisted: [],
 });

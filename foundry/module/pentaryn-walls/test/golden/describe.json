@@ -70,13 +70,14 @@
       "sideEffects": [
         "Wall delete batch",
         "Wall update batch",
-        "ChatMessage (GM whisper)"
+        "ChatMessage (GM whisper)",
+        "flags.pentaryn-walls and flags.wall-autocomplete deleted on restored walls"
       ],
       "throws": [
         "Error"
       ],
       "legacy": true,
-      "doc": "Undo the latest run on a scene (or all of them): delete the walls it created and restore those it trimmed. One at a time: while preview/run/undo is running, another call warns and returns null."
+      "doc": "Undo the latest run on a scene (or all of them): delete the walls it created and restore those it trimmed. Stamps are read under both scopes; a restored wall loses its stamp under each scope it carries. One at a time: while preview/run/undo is running, another call warns and returns null."
     },
     {
       "path": "makeMacro",
@@ -183,7 +184,14 @@
       "flags.wall-autocomplete.priorC"
     ],
     "reads": [
-      "flags.wall-autocomplete.keepOpen"
+      "flags.pentaryn-walls.keepOpen",
+      "flags.wall-autocomplete.keepOpen",
+      "flags.pentaryn-walls.generated",
+      "flags.wall-autocomplete.generated",
+      "flags.pentaryn-walls.run",
+      "flags.wall-autocomplete.run",
+      "flags.pentaryn-walls.priorC",
+      "flags.wall-autocomplete.priorC"
     ]
   },
   "errors": [

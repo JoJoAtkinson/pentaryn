@@ -67,13 +67,15 @@ then); reads already accept both scopes (`stampOf`, the module id winning):
 | `rule`, `kind`, `sources` | created walls (js engine) | which rule built it and from what |
 | `rule`, `priorC` | updated walls | the rule, and the coordinates undo restores |
 
-Undo restores with `{"flags.wall-autocomplete": _del}` (needs Foundry 14). Nothing in world
+Undo restores with `{"flags.<scope>": _del}` for each scope the wall carries a stamp in
+(`pentaryn-walls`, `wall-autocomplete`; needs Foundry 14). Nothing in world
 settings besides `backend`.
 
 ## Flags other modules read
 
-n/a — no other module reads them. Authors may set `flags.wall-autocomplete.keepOpen: true` on a
-wall to keep its ends from being closed (read by the engine and the wasm marshaller).
+n/a — no other module reads them. Authors may set `keepOpen: true` under either scope
+(`flags.pentaryn-walls` or `flags.wall-autocomplete`) on a wall to keep its ends from being
+closed (read by the engine and the wasm marshaller).
 
 ## Events
 

@@ -69,9 +69,15 @@ test("runEngine and backends are the pure engine and the registry", () => {
   assert.deepEqual(api.backends().map(b => b.name), ["js", "wasm"]);
 });
 
-test("the flags contract names the (pre-migration) scope it writes and reads", () => {
+test("the flags contract names the (pre-migration) scope it writes and both scopes it reads", () => {
   const d = api.describe();
   assert.equal(d.flagScope, "wall-autocomplete");
-  assert.deepEqual(d.flags.reads, ["flags.wall-autocomplete.keepOpen"]);
+  const both = k => [`flags.pentaryn-walls.${k}`, `flags.wall-autocomplete.${k}`];
+  assert.deepEqual(d.flags.reads, ["keepOpen", "generated", "run", "priorC"].flatMap(both));
   assert.ok(d.flags.writes.includes("flags.wall-autocomplete.run"));
+});
+
+test("undo() describes the stamp deletion under both scopes", () => {
+  const undo = api.describe().methods.find(m => m.path === "undo");
+  assert.ok(undo.sideEffects.some(e => e.includes("flags.pentaryn-walls") && e.includes("flags.wall-autocomplete") && e.includes("deleted")));
 });
