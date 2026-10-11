@@ -42,7 +42,7 @@ import { loreEditorHTML, bindLoreEditor } from "./lore.mjs";
 // `requestAttrLore` (the player-initiated roll) is deliberately no longer imported: attribute
 // facts are handed over by the GM via "Mark as learned", never rolled for from the player's side.
 import { kindActorOf, attrLoreStateFor, releaseHeldAttribute } from "./study.mjs";
-import { grantsForEntry, GRANTED_FLAG, HELP_SCALE, CARRIED_SCALE, helpFor, rollableLore, LORE_FLAG } from "./known-core.mjs";
+import { grantsForEntry, GRANTED_FLAG, HELP_SCALE, CARRIED_SCALE, helpFor, rollableLore, LORE_FLAG, attrFactKey } from "./known-core.mjs";
 
 const esc = s =>
   String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -720,7 +720,7 @@ export function bindAttributes(root, actor, rerender = () => {}) {
       const row = (entry?.lore ?? []).find(r => r.id === loreId);
       if (row) {
         const granted = foundry.utils.deepClone(viewer.getFlag(MODULE, GRANTED_FLAG) ?? {});
-        granted[`attr:${attrId}:${loreId}`] = {
+        granted[attrFactKey(attrId, loreId)] = {
           text: row.text,
           when: Date.now(),
           icon: entry.icon,

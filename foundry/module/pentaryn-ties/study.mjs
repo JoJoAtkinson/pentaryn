@@ -47,7 +47,7 @@
 
 import { attributeLore, describeAttribute, attributeIdsOf, knowledge, setKnowledge, clearKnowledge } from "./attributes.mjs";
 import { MODULE, mayWrite, canReach } from "./ties-api.mjs";
-import { rolledMiss } from "./core/rules.mjs";
+import { rolledMiss, isIdentKey, CONCEAL_FLAG, INSPECT_CLAIM_KEY } from "./core/rules.mjs";
 import {
   KNOWN_FLAG,
   GRANTED_FLAG,
@@ -1898,7 +1898,7 @@ async function runCascade(character, subject, release = []) {
        */
       delivered: parks ? null : now
     });
-    if (pass && !hold && text.trim()) grants[`attr:${attrId}:${MEMBER_FACT}`] = { text, when: now, icon: entry.icon, source: entry.title };
+    if (pass && !hold && text.trim()) grants[identifiedKey(attrId)] = { text, when: now, icon: entry.icon, source: entry.title };
     if (missText.trim()) grants[identMissKey(subject.id, attrId)] = { text: missText, when: now, icon: subject.img ?? null, source: subject.name };
 
     if (!pass) break; // a failed rung blocks everything beneath it
@@ -1960,7 +1960,7 @@ async function promptCascadeDeliver(character, subject) {
    */
   const mine = (flagOf(subject, BELIEFS_FLAG) ?? {})[character.id] ?? {};
   const waiting = Object.entries(mine)
-    .filter(([key, rec]) => key.endsWith(`:${MEMBER_FACT}`) && rec && !rec.delivered)
+    .filter(([key, rec]) => isIdentKey(key) && rec && !rec.delivered)
     .map(([key, rec]) => ({ attrId: parseFactKey(key)?.subject, rec }))
     .filter(x => x.attrId);
   if (!waiting.length) return;
@@ -2010,7 +2010,7 @@ async function promptCascadeDeliver(character, subject) {
  */
 export function heldCarriersFor(character, attrId) {
   if (!game.user?.isGM || !character || !attrId) return [];
-  const key = `attr:${attrId}:${MEMBER_FACT}`;
+  const key = identifiedKey(attrId);
   const out = [];
   for (const subject of game.actors?.contents ?? []) {
     const rec = beliefsOf(subject)[character.id]?.[key];
@@ -2050,7 +2050,7 @@ export async function deliverHeldIdentifications(character, subject) {
   let any = false;
 
   for (const [key, rec] of Object.entries(mine)) {
-    if (rec?.delivered || !key.endsWith(`:${MEMBER_FACT}`)) continue;
+    if (rec?.delivered || !isIdentKey(key)) continue;
     update[`flags.${MODULE}.${BELIEFS_FLAG}.${character.id}.${key}.delivered`] = now;
     const attrId = parseFactKey(key)?.subject;
     if (String(rec.text ?? "").trim()) {
@@ -2081,7 +2081,7 @@ export async function deliverHeldIdentifications(character, subject) {
 /** Concealment: raises the DC without ever appearing in the printed one. */
 const concealmentFor = (subject, attrId) => {
   try {
-    const raw = subject?.getFlag(MODULE, "conceal");
+    const raw = subject?.getFlag(MODULE, CONCEAL_FLAG);
     if (typeof raw === "number") return Math.max(0, Math.min(20, Math.round(raw)));
     return Math.max(0, Math.min(20, Math.round(Number(raw?.[attrId] ?? raw?.default ?? 0) || 0)));
   } catch {
@@ -2094,16 +2094,16 @@ const INSPECT_SESSION = foundry.utils.randomID();
 
 async function claimInspect(subject, characterId) {
   const mine = inspectSession();
-  await subject.update({ [`flags.${MODULE}.${BELIEFS_FLAG}.${characterId}.#inspect`]: { claim: mine } }, { render: false });
+  await subject.update({ [`flags.${MODULE}.${BELIEFS_FLAG}.${characterId}.${INSPECT_CLAIM_KEY}`]: { claim: mine } }, { render: false });
   await new Promise(r => setTimeout(r, 250));
   // return the TOKEN on success, so the caller can release exactly what it took
-  return flagOf(subject, BELIEFS_FLAG)?.[characterId]?.["#inspect"]?.claim === mine ? mine : null;
+  return flagOf(subject, BELIEFS_FLAG)?.[characterId]?.[INSPECT_CLAIM_KEY]?.claim === mine ? mine : null;
 }
 
 async function releaseInspect(subject, characterId, token = null) {
   const all = flagOf(subject, BELIEFS_FLAG) ?? {};
   const mine = token ?? inspectSession();
-  if (all?.[characterId]?.["#inspect"]?.claim !== mine) return;
+  if (all?.[characterId]?.[INSPECT_CLAIM_KEY]?.claim !== mine) return;
 
   /*
    * ⚠ Unset the whole flag when the last row goes, rather than leaving `beliefs: {}` behind.
@@ -2115,13 +2115,13 @@ async function releaseInspect(subject, characterId, token = null) {
    * litter in every world export and every diff, and it makes "has anyone studied this?" a
    * question you cannot answer by looking.
    */
-  const others = Object.keys(all[characterId] ?? {}).filter(k => k !== "#inspect");
+  const others = Object.keys(all[characterId] ?? {}).filter(k => k !== INSPECT_CLAIM_KEY);
   const rest = Object.keys(all).filter(k => k !== characterId);
   if (!others.length && !rest.length) {
     await subject.unsetFlag(MODULE, BELIEFS_FLAG);
     return;
   }
-  await subject.update(dropRow(`flags.${MODULE}.${BELIEFS_FLAG}`, characterId, "#inspect", all[characterId]), {
+  await subject.update(dropRow(`flags.${MODULE}.${BELIEFS_FLAG}`, characterId, INSPECT_CLAIM_KEY, all[characterId]), {
     render: false
   });
 }
@@ -2421,7 +2421,7 @@ export async function resetInspection(character, subject) {
   if (!game.user?.isGM || !character || !subject) return false;
   const mine = (flagOf(subject, BELIEFS_FLAG) ?? {})[character.id] ?? {};
   const attrIds = Object.keys(mine)
-    .map(k => (k.endsWith(`:${MEMBER_FACT}`) ? parseFactKey(k)?.subject : null))
+    .map(k => (isIdentKey(k) ? parseFactKey(k)?.subject : null))
     .filter(Boolean);
   for (const id of attrIds) await resetIdentification(character, subject, id);
   return attrIds.length;

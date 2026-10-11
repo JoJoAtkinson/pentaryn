@@ -72,6 +72,7 @@ import {
   planStep, identificationLadder, identifiedKey, holdResolved, combineAdvantage,
   ATTR_BELIEFS_SETTING, KNOWLEDGE_SETTING, REGISTRY_SETTING, touchesFlagScope, tablePCs, switchLabels
 } from "./known-core.mjs";
+import { CONCEAL_FLAG } from "./core/rules.mjs";
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -211,7 +212,7 @@ export class InspectPreview extends ApplicationV2 {
     try { rule = game.settings.get(MODULE, "advantageStacking") === "net" ? "net" : "raw"; } catch { /* unborn */ }
 
     const conceal = id => {
-      const raw = flagOf(subject, "conceal");
+      const raw = flagOf(subject, CONCEAL_FLAG);
       if (typeof raw === "number") return Math.max(0, Math.min(20, Math.round(raw)));
       return Math.max(0, Math.min(20, Math.round(Number(raw?.[id] ?? raw?.default ?? 0) || 0)));
     };

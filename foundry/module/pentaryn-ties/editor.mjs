@@ -18,6 +18,7 @@
  */
 
 import {
+  MODULE,
   STANCES,
   NOTES_MAX,
   read,
@@ -81,7 +82,7 @@ function setExpanded(actorId, tieId, open) {
  * look to find out what it had become.
  */
 function addTieKey() {
-  const bound = game.keybindings?.get?.("pentaryn-ties", "addTie")?.[0]?.key ?? "";
+  const bound = game.keybindings?.get?.(MODULE, "addTie")?.[0]?.key ?? "";
   return bound.replace(/^Digit/, "").replace(/^Key/, "") || "?";
 }
 

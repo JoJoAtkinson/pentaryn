@@ -10,6 +10,8 @@
  * Pure: no Foundry global; imports only core files.
  */
 
+import { MEMBER_FACT } from "./attributes.mjs";
+
 /**
  * Did this rolled, flat pass/fail row (lore, attribute lore) MISS?
  *
@@ -27,3 +29,21 @@ export function rolledMiss(rec, dc) {
   if (typeof rec.pass === "boolean") return rec.pass === false;
   return typeof rec.total === "number" && typeof dc === "number" && Math.round(rec.total) < dc;
 }
+
+/* ── the key and flag grammar (ties-14) ───────────────────────────────────── */
+
+/** The per-actor concealment flag (`flags.pentaryn-ties.conceal`): a number, or `{ default, <attrId> }`. */
+export const CONCEAL_FLAG = "conceal";
+
+/**
+ * The reserved row key an inspection stakes in the subject's `beliefs` ledger while it runs — a claim,
+ * never an answer (study `claimInspect` / `releaseInspect`).
+ */
+export const INSPECT_CLAIM_KEY = "#inspect";
+
+/**
+ * Is this a ledger / grant key for an identification (`attr:<attrId>:#id`, as `identifiedKey` builds
+ * it)? The same test the GM-side files spelled `key.endsWith(":#id")`. An identification MISS line
+ * (`lore:<subject>:#idmiss-<attr>`) is not one.
+ */
+export const isIdentKey = key => String(key ?? "").endsWith(`:${MEMBER_FACT}`);

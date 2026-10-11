@@ -29,7 +29,7 @@
  */
 
 import { MODULE } from "./ties-api.mjs";
-import { LORE_FLAG, readLore } from "./known-core.mjs";
+import { LORE_FLAG, readLore, KIND_OF_FLAG, STUDY_TIERS_FLAG } from "./known-core.mjs";
 import { loreEditorHTML, bindLoreEditor } from "./lore.mjs";
 import { beliefs, deliver, reset, kindActorOf, setKindOf } from "./study.mjs";
 
@@ -51,13 +51,13 @@ const gmBadge = () =>
  * second group so a first pointer can still be made.
  */
 function kindPicker(actor) {
-  const current = actor.getFlag(MODULE, "kindOf") ?? "";
+  const current = actor.getFlag(MODULE, KIND_OF_FLAG) ?? "";
   const all = (game.actors?.contents ?? []).filter(a => a.id !== actor.id && a.type === "npc");
   const evident = new Set();
   for (const a of game.actors?.contents ?? []) {
-    const p = a.getFlag(MODULE, "kindOf");
+    const p = a.getFlag(MODULE, KIND_OF_FLAG);
     if (p) evident.add(p);
-    if ((a.getFlag(MODULE, "studyTiers") ?? []).length) evident.add(a.id);
+    if ((a.getFlag(MODULE, STUDY_TIERS_FLAG) ?? []).length) evident.add(a.id);
   }
   const opt = a => `<option value="${esc(a.id)}"${a.id === current ? " selected" : ""}>${esc(a.name)}</option>`;
   const known = all.filter(a => evident.has(a.id));

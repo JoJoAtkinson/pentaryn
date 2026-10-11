@@ -40,7 +40,8 @@ import {
   STUDY_RUNGS,
   grantsForEntry,
   visibleAttributesFor,
-  isBlankProse
+  isBlankProse,
+  BELIEFS_FLAG
 } from "./known-core.mjs";
 import { studyStateFor, requestStudy, kindDialog, loreStateFor, requestLore, kindActorOf, grantKind as releaseKind } from "./study.mjs";
 import { attributeIdsOf, registry as registryOf } from "./attributes.mjs";
@@ -656,7 +657,7 @@ export function buildKnownHTML(actor) {
         ? visibleAttributesFor({
             carried: attributeIdsOf(subject, kindActorOf),
             registry: registryOf(),
-            beliefs: subject.getFlag(MODULE, "beliefs") ?? {},
+            beliefs: subject.getFlag(MODULE, BELIEFS_FLAG) ?? {},
             characterId: actor.id,
             isGM
           })

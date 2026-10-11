@@ -64,7 +64,8 @@ import {
   needsReview,
   readSelection,
   snapshotOf,
-  ATTR_REVIEW_FIELDS
+  ATTR_REVIEW_FIELDS,
+  BELIEFS_FLAG
 } from "./known-core.mjs";
 
 // re-exported so the entry point registers the settings by the same names this file reads
@@ -794,7 +795,7 @@ export function attributesOf(actor, kindResolver = null, { viewer = null } = {})
       : visibleAttributesFor({
           carried,
           registry: registry(),
-          beliefs: actor.getFlag?.(MODULE, "beliefs") ?? {},
+          beliefs: actor.getFlag?.(MODULE, BELIEFS_FLAG) ?? {},
           characterId: viewer?.id ?? "",
           isGM: false
         });

@@ -104,3 +104,30 @@ test("MEMBER_FACT is still #id (the oracle and core agree)", async () => {
   const { MEMBER_FACT: core } = await import("../known-core.mjs");
   assert.equal(core, MEMBER_FACT);
 });
+
+/* ── ties-14: the key and flag grammar ────────────────────────────────────── */
+
+test("ties-14: identifiedKey / isIdentKey / attrFactKey and the two reserved names", async () => {
+  const { identifiedKey, attrFactKey, identMissKey } = await import("../known-core.mjs");
+  const { isIdentKey, CONCEAL_FLAG, INSPECT_CLAIM_KEY } = await import("../core/rules.mjs");
+  assert.equal(identifiedKey("species:human"), "attr:species:human:#id");
+  assert.equal(isIdentKey("attr:species:human:#id"), true);
+  assert.equal(isIdentKey("attr:a:r1"), false);
+  assert.equal(isIdentKey("lore:x:#idmiss-a"), false);
+  assert.equal(isIdentKey(identMissKey("x", "a")), false);
+  assert.equal(isIdentKey(null), false);
+  assert.equal(attrFactKey("a", "b"), "attr:a:b");
+  assert.equal(CONCEAL_FLAG, "conceal");
+  assert.equal(INSPECT_CLAIM_KEY, "#inspect");
+  // every ledger key shape the GM-side files used to test with endsWith(":#id")
+  for (const k of ["attr:a:#id", "attr:a:b", "kind", "lore:x:y", "attr:a:#idx", "#id", ":#id"]) {
+    assert.equal(isIdentKey(k), k.endsWith(":#id"), k);
+  }
+});
+
+test("ties-14: no file outside core/ builds a fact key or tests the #id suffix by hand", async () => {
+  const { sourceScan } = await import("./kit/harness.mjs");
+  const hits = sourceScan(new URL("..", import.meta.url), /`attr:\$\{[^}]*\}:|:\$\{MEMBER_FACT\}|"#inspect"|"conceal"/)
+    .filter(h => !h.file.startsWith("core/"));
+  assert.deepEqual(hits, []);
+});
