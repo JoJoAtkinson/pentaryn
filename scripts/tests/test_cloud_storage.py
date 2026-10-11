@@ -363,3 +363,31 @@ def test_select_mac_folder_is_an_explicit_opt_out(tmp_path):
 
 def test_entry_is_plain_data():
     assert Entry("a", 1, 2.0) == Entry("a", 1, 2.0)
+
+
+# ── refresh: a listing of what the cloud holds NOW (review DL1) ─────────────
+
+def test_refresh_makes_the_next_ls_see_what_another_process_did(st, cloud_dir, tmp_path):
+    st.upload(_src(tmp_path), "bundles/a.tar.gz")
+    assert [e.name for e in st.ls("bundles")] == ["a.tar.gz"]
+    (cloud_dir / "bundles" / "a.tar.gz").unlink()           # the other host's GC
+    (cloud_dir / "bundles" / "b.tar.gz").write_bytes(b"b")  # the other host's upload
+    storage.refresh(st, "bundles")
+    assert [e.name for e in st.ls("bundles")] == ["b.tar.gz"]
+
+
+def test_rclone_refresh_drops_only_that_folders_listing(rc, fake):
+    rc.ls("bundles")
+    rc.ls("world-backups")
+    fake.calls.clear()
+    rc.refresh("bundles")
+    rc.ls("bundles")
+    rc.ls("world-backups")
+    assert fake.verbs() == ["lsjson"]                       # bundles/ only
+
+
+def test_refresh_tolerates_a_storage_without_the_method():
+    class Bare:
+        def ls(self, sub):
+            return []
+    storage.refresh(Bare(), "bundles")                      # no AttributeError

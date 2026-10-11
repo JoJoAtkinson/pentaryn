@@ -77,6 +77,19 @@ class Storage(Protocol):
     def copy(self, src_rel: str, dst_rel: str) -> None: ...
     def delete(self, rel: str) -> None: ...
     def mkdirs(self) -> None: ...
+    def refresh(self, sub: str) -> None: ...
+
+
+def refresh(st: "Storage", sub: str) -> None:
+    """Forget any listing of `sub` this process holds, so the next `ls` asks the cloud.
+
+    An `RcloneStorage` keeps each folder's listing for the life of the process and clears
+    it only after its own writes there; what the OTHER host did since is invisible until
+    then. Every check whose point is "what is in the cloud now" (the post-upload verify,
+    the GC mark and sweep, a restore's plan, a backup's first listing) refreshes first."""
+    fn = getattr(st, "refresh", None)
+    if fn is not None:
+        fn(sub)
 
 
 def _visible(name: str) -> bool:
@@ -201,6 +214,9 @@ class FolderStorage:
                 (self.path / sub).mkdir(parents=True, exist_ok=True)
         except OSError as exc:
             raise StorageError(f"cannot create {self.root}: {exc}", verb="mkdir") from exc
+
+    def refresh(self, sub: str) -> None:
+        """Nothing to forget: every `ls` reads the folder."""
 
 
 # ── RcloneStorage ────────────────────────────────────────────────────────────
@@ -333,8 +349,12 @@ class RcloneStorage:
 
     def _invalidate(self, rel: str) -> None:
         head, _ = _split(rel)
-        self._dir_cache.pop(head, None)
-        self._raw_cache.pop(head, None)
+        self.refresh(head)
+
+    def refresh(self, sub: str) -> None:
+        """Drop the cached listing of `sub`: the next `ls` runs `lsjson` again."""
+        self._dir_cache.pop(sub, None)
+        self._raw_cache.pop(sub, None)
 
     # -- listing ------------------------------------------------------------
 

@@ -92,9 +92,6 @@ def _retained_refs_exist(c) -> list[str]:
 
 # ── DL1: the post-upload verify is a no-op over rclone ───────────────────────
 
-@pytest.mark.xfail(strict=True, reason="DL1: RcloneStorage caches each folder's lsjson for the "
-                   "process; _verify_bundles re-reads bundles/ from that cache, so a bundle the "
-                   "other host's GC swept after the backup's first listing is never noticed")
 def test_dl1_verify_sees_a_bundle_swept_mid_backup_over_rclone(two_hosts, monkeypatch):
     c = two_hosts.cloud
     mac = _install(two_hosts.data["mac"])

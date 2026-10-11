@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Callable, Iterable, NamedTuple
 
 from scripts.foundry import host
-from scripts.foundry.storage import JUNK_NAMES, Entry, Storage, StorageError
+from scripts.foundry.storage import JUNK_NAMES, Entry, Storage, StorageError, refresh
 
 BUNDLES = "bundles"                       # the cloud subfolder (flat, shared by both hosts)
 ROOTS = {"module": "Data/modules", "system": "Data/systems"}
@@ -448,10 +448,14 @@ def _gb(n: int) -> str:
     return f"{n / 1e9:.2f} GB"
 
 
-def listing(st: Storage) -> dict[str, Entry]:
+def listing(st: Storage, *, fresh: bool = False) -> dict[str, Entry]:
     """Every visible entry in the cloud's ``bundles/``, keyed by name. All names — a stray
     file included; callers filter with :func:`parse_bundle`. ``.partial`` uploads in
-    progress are never listed (the storage layer hides them)."""
+    progress are never listed (the storage layer hides them). ``fresh`` drops any listing
+    this process cached first (:func:`storage.refresh`): a check of what the cloud holds
+    *now* — the other host may have swept or uploaded since — must pass it."""
+    if fresh:
+        refresh(st, BUNDLES)
     return {e.name: e for e in st.ls(BUNDLES)}
 
 
@@ -516,7 +520,7 @@ def gc(st: Storage, *, referenced: set[str], grace: float = GC_GRACE_SECONDS,
     nothing and returns what would go. ``referenced`` is the caller's mark phase —
     computing it must abort the run, not shrink, when a manifest cannot be read (§3.7)."""
     now = time.time() if now is None else now
-    have = listing(st)
+    have = listing(st, fresh=True)
     doomed = sorted(n for n, e in have.items()
                     if parse_bundle(n) is not None and n not in referenced
                     and now - e.mtime > grace)

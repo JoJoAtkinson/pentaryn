@@ -325,9 +325,13 @@ def parse_snapshot(entry: Entry, folder: str = WORLD_BACKUPS) -> Snapshot | None
                     safety=bool(m.group(4)))
 
 
-def snapshots(st: Storage | None = None, folder: str = WORLD_BACKUPS) -> list[Snapshot]:
-    """Every parseable snapshot in one folder, oldest first by (stamp, name)."""
+def snapshots(st: Storage | None = None, folder: str = WORLD_BACKUPS, *,
+              fresh: bool = False) -> list[Snapshot]:
+    """Every parseable snapshot in one folder, oldest first by (stamp, name). `fresh`
+    drops this process's cached listing first (storage.refresh)."""
     st = st or store()
+    if fresh:
+        storage_mod.refresh(st, folder)
     snaps = [s for e in st.ls(folder) if (s := parse_snapshot(e, folder))]
     return sorted(snaps)
 
@@ -852,12 +856,14 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
     inv = bundles.local_inventory()
     manifest = bundles.manifest(inv)
     digest = snapshot_digest(manifest)
+    # Fresh listings: in a boot process the prompt's restore_cost (or the boot choice)
+    # listed both folders earlier, possibly while Joe sat at the prompt.
     try:
-        existing = snapshots(st, WORLD_BACKUPS)
+        existing = snapshots(st, WORLD_BACKUPS, fresh=True)
     except StorageError as exc:
         die(f"cannot list {WORLD_BACKUPS}/: {exc}")
     try:
-        have = bundles.listing(st)
+        have = bundles.listing(st, fresh=True)
     except StorageError as exc:
         die(f"cannot list {bundles.BUNDLES}/: {exc}")
     if state.digest == digest:
@@ -1032,8 +1038,9 @@ def _verify_bundles(st: Storage, name: str, manifest: dict, staged: dict[str, Pa
     """§3.5 step 6: re-list bundles/; upload again every manifest name that vanished —
     from its staged tar, or rebuilt from the live folder when its fingerprint still
     matches. Raises _Incomplete naming the module when it does not; `rebuilt` collects
-    the tars built here, for the caller to delete."""
-    now = bundles.listing(st)
+    the tars built here, for the caller to delete. The listing is always fresh: over
+    rclone a cached one would never show what the other host swept meanwhile."""
+    now = bundles.listing(st, fresh=True)
     lost = sorted(n for n in bundles.manifest_names(manifest) if n not in now)
     live = None
     for n in lost:
@@ -1061,7 +1068,7 @@ def referenced_bundles(st: Storage) -> set[str]:
     StorageError: the caller must not sweep on a partial mark."""
     out: set[str] = set()
     for folder in (WORLD_BACKUPS, MAJOR_RELEASES):
-        for s in snapshots(st, folder):
+        for s in snapshots(st, folder, fresh=True):
             if s.host is None:
                 continue
             kind, m = _read_sidecar(st, s)
@@ -1299,7 +1306,7 @@ def fetch_snapshot(st: Storage, snap: Snapshot, *, systems: bool = True) -> Fetc
         f.manifest = manifest
         f.needed, f.extras, f.unchanged = _bundle_plan(manifest, systems=systems)
         try:
-            have = bundles.listing(st)
+            have = bundles.listing(st, fresh=True)
         except StorageError as exc:
             raise RestoreError(f"cannot list {bundles.BUNDLES}/ — nothing local was "
                                f"touched: {exc}") from exc
@@ -1774,7 +1781,7 @@ def bundles_gc_cmd(yes: bool = False) -> int:
     st = ensure_cloud()
     try:
         refs = referenced_bundles(st)
-        have = bundles.listing(st)
+        have = bundles.listing(st, fresh=True)
     except StorageError as exc:
         die(f"cannot read every snapshot's manifest — nothing was deleted: {exc}")
     try:
