@@ -175,3 +175,88 @@ def test_extract_mcp_tool_literal_none_without_tool(tmp_path):
         _NO_TOOL_MODULE, path=tmp_path / "plain.py"
     )
     assert literal is None
+
+
+# ---------------------------------------------------------------------------
+# python-tooling-27: discovery cost and the startup skip report
+# ---------------------------------------------------------------------------
+
+import json
+
+import pytest
+
+_REPO_ROOT = _SERVER_PATH.parents[2]
+_DISCOVERY_GOLDEN = Path(__file__).with_name("fixtures") / "dnd_scripts_discovery.json"
+_BENIGN = "no MCP_TOOL"
+
+
+def _scanned(repo: Path) -> list[Path]:
+    scripts = repo / "scripts"
+    return [p for p in scripts.rglob("*.py")
+            if "__pycache__" not in p.parts and not p.name.startswith("_")
+            and (scripts / "mcp") not in p.parents]
+
+
+@pytest.mark.repo
+def test_discovery_unchanged_on_repo():
+    """Characterisation: the registered tools (name, script, in-process?) and the real
+    failures equal the golden; every other skip is the benign 'no MCP_TOOL', for exactly
+    the files that do not declare one. A new tool updates the golden in its own commit."""
+    result = server.discover_tools(repo_root=_REPO_ROOT)
+    want = json.loads(_DISCOVERY_GOLDEN.read_text(encoding="utf-8"))
+    tools = sorted([r.tool.name, str(r.script_path.relative_to(_REPO_ROOT)),
+                    r.handler is not None] for r in result.tools)
+    assert tools == want["tools"]
+    failures = sorted([str(p.relative_to(_REPO_ROOT)), why]
+                      for p, why in result.skipped if why != _BENIGN)
+    assert failures == want["failures"]
+    benign = {p for p, why in result.skipped if why == _BENIGN}
+    declaring = {r.script_path for r in result.tools} | {p for p, why in result.skipped
+                                                          if why != _BENIGN}
+    assert benign == {p.resolve() for p in _scanned(_REPO_ROOT)} - declaring
+
+
+@pytest.mark.repo
+@pytest.mark.xfail(strict=True, reason="KNOWN python-tooling-27: every script is ast.parse'd")
+def test_discovery_parses_only_files_that_mention_mcp(monkeypatch):
+    calls = []
+    real = server.ast.parse
+
+    def counting(source, *a, **kw):
+        calls.append(1)
+        return real(source, *a, **kw)
+
+    monkeypatch.setattr(server.ast, "parse", counting)
+    server.discover_tools(repo_root=_REPO_ROOT)
+    mentioning = sum("MCP_" in p.read_text(encoding="utf-8") for p in _scanned(_REPO_ROOT))
+    assert len(calls) <= mentioning
+
+
+_BROKEN_TOOL = 'MCP_TOOL = {"name": "broken", "argv": "not-a-list"}\n'
+
+
+def _startup_stderr(monkeypatch, capsys, repo: Path) -> str:
+    monkeypatch.setattr(server, "REPO_ROOT", repo)
+    monkeypatch.setattr(server, "_read_message", lambda: None)   # stdin EOF: serve 0 calls
+    monkeypatch.setattr(sys, "argv", ["server.py"])
+    assert server.main() == 0
+    return capsys.readouterr().err
+
+
+@pytest.mark.xfail(strict=True, reason="KNOWN python-tooling-27: every benign skip is listed")
+def test_startup_lists_real_failures_and_counts_the_rest(tmp_path, monkeypatch, capsys):
+    repo = _make_repo(tmp_path)
+    (repo / "scripts" / "helper.py").write_text(_NO_TOOL_MODULE, encoding="utf-8")
+    (repo / "scripts" / "broken.py").write_text(_BROKEN_TOOL, encoding="utf-8")
+    err = _startup_stderr(monkeypatch, capsys, repo)
+    assert "broken.py" in err and "argv must be a list" in err
+    assert "helper.py" not in err
+    assert "1 script(s) without an MCP_TOOL" in err
+
+
+def test_startup_skip_report_names_a_real_failure(tmp_path, monkeypatch, capsys):
+    """Characterisation (holds before and after): a broken tool reaches stderr."""
+    repo = _make_repo(tmp_path)
+    (repo / "scripts" / "broken.py").write_text(_BROKEN_TOOL, encoding="utf-8")
+    err = _startup_stderr(monkeypatch, capsys, repo)
+    assert "broken.py: invalid MCP_TOOL: broken: argv must be a list of strings" in err
