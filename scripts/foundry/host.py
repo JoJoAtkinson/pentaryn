@@ -166,10 +166,20 @@ def host_name() -> str:
 
     The macOS default is `mac` — the default PENTARYN_PRIMARY_HOST — so the Mac with no
     env file is the primary exactly as before (tunnel and updater unchanged), and its
-    snapshots are tagged `-mac`."""
+    snapshots are tagged `-mac`.
+
+    An explicit `mac` off macOS is refused: it is what copying a filled-in example env
+    file onto BOSS would produce, and two machines tagged `mac` both claim the primary
+    role (tunnel, updater) and prune and coalesce each other's snapshots."""
     explicit = get("PENTARYN_HOST")
     if explicit:
-        return validate_host(explicit)
+        name = validate_host(explicit)
+        if name == DEFAULT_PRIMARY and not is_mac():
+            raise HostError(
+                f"PENTARYN_HOST={name} on a non-macOS machine: `{name}` is the Mac's tag. "
+                f"Set PENTARYN_HOST to this machine's own name (BOSS: boss) in "
+                f"{env_file()} or the environment")
+        return name
     if is_mac():
         return DEFAULT_PRIMARY
     fallback = sanitize(socket.gethostname().split(".")[0]) or "host"

@@ -89,6 +89,35 @@ def test_explicit_bad_host_is_refused(monkeypatch):
         host.host_name()
 
 
+def test_explicit_mac_off_macos_is_refused(monkeypatch):
+    """The example env file copied onto BOSS unedited must not make BOSS a second `mac`."""
+    monkeypatch.setattr(host.platform, "system", lambda: "Linux")
+    monkeypatch.setenv("PENTARYN_HOST", "mac")
+    with pytest.raises(HostError, match="the Mac's tag"):
+        host.host_name()
+    assert host.main(["role"]) == 2
+    monkeypatch.setenv("PENTARYN_HOST", "boss")
+    assert host.host_name() == "boss"
+    monkeypatch.setattr(host.platform, "system", lambda: "Darwin")
+    monkeypatch.setenv("PENTARYN_HOST", "mac")
+    assert host.host_name() == "mac"
+
+
+def test_example_file_sets_no_identity(tmp_path, monkeypatch):
+    """Copied verbatim to ~/.config/pentaryn/env, the example changes nothing: every
+    line is a comment, so each machine keeps its platform default."""
+    text = (Path(host.__file__).parent / "host.env.example").read_text()
+    assert host.parse_env(text) == {}
+    f = tmp_path / "env"
+    f.write_text(text)
+    monkeypatch.setenv("PENTARYN_ENV_FILE", str(f))
+    monkeypatch.delenv("PENTARYN_HOST")
+    monkeypatch.delenv("PENTARYN_PRIMARY_HOST")
+    monkeypatch.setattr(host.platform, "system", lambda: "Linux")
+    monkeypatch.setattr(host.socket, "gethostname", lambda: "BOSS")
+    assert (host.host_name(), host.role()) == ("boss", "alt")
+
+
 @pytest.mark.parametrize("ok", ["mac", "boss", "a-b-1", "x" * 32])
 def test_host_accepts(ok):
     assert host.validate_host(ok) == ok
@@ -97,6 +126,7 @@ def test_host_accepts(ok):
 # ── role ─────────────────────────────────────────────────────────────────────
 
 def test_role_derivation(monkeypatch):
+    monkeypatch.setattr(host, "system", lambda: "Darwin")
     monkeypatch.setenv("PENTARYN_HOST", "mac")
     monkeypatch.delenv("PENTARYN_PRIMARY_HOST")
     assert host.role() == "primary" and host.ROLE == "primary"
@@ -136,6 +166,7 @@ def test_role_override_is_not_read_from_the_file(monkeypatch, tmp_path):
 
 
 def test_require_primary_cli_exit_code(monkeypatch, capsys):
+    monkeypatch.setattr(host, "system", lambda: "Darwin")
     monkeypatch.setenv("PENTARYN_HOST", "boss")
     monkeypatch.setenv("PENTARYN_PRIMARY_HOST", "mac")
     assert host.main(["require-primary", "the", "updater"]) == 3

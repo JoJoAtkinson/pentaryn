@@ -46,6 +46,7 @@ def test_tunnel_up_on_the_alt_with_the_override_proceeds(alt, monkeypatch, capsy
 
 
 def test_tunnel_up_on_the_primary_is_not_gated(monkeypatch, capsys):
+    monkeypatch.setattr(service.host, "system", lambda: "Darwin")
     monkeypatch.setenv("PENTARYN_HOST", "mac")
     monkeypatch.setenv("PENTARYN_PRIMARY_HOST", "mac")
     monkeypatch.setattr(service, "_tunnel_pid", lambda: 7)

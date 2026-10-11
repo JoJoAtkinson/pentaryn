@@ -195,6 +195,8 @@ class TwoHosts:
 def two_hosts(monkeypatch, tmp_path_factory, fake_cloud):
     from scripts.foundry import host as host_mod
     monkeypatch.setattr(host_mod, "is_running", lambda port=None: False)
+    # `mac` is refused as PENTARYN_HOST off macOS; the suite must also pass on BOSS.
+    monkeypatch.setattr(host_mod, "system", lambda: "Darwin")
     return TwoHosts(monkeypatch, tmp_path_factory, fake_cloud)
 
 
