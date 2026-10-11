@@ -331,6 +331,71 @@ def test_declared_modules_exist_on_disk():
         assert spec.src.is_dir(), f"{name}: no module at {spec.src}"
 
 
+# ── registry: complete, kit and after_sync derived (python-tooling-3, W2) ────────
+
+@pytest.mark.repo
+def test_every_module_dir_is_registered():
+    """Registry ⊇ disk. pings was the one folder with no ModuleSpec on 2026-10-11."""
+    registered = {spec.name for spec in cfg.MODULES.values()}
+    assert set(cfg.module_dirs()) - registered == {"pentaryn-pings"}
+
+
+def test_module_dirs_lists_only_folders_with_a_manifest(tmp_path):
+    for name in ("pentaryn-b", "pentaryn-a"):
+        (tmp_path / name).mkdir()
+        (tmp_path / name / "module.json").write_text("{}")
+    (tmp_path / "stray").mkdir()
+    assert cfg.module_dirs(tmp_path) == ["pentaryn-a", "pentaryn-b"]
+    assert cfg.module_dirs(tmp_path / "missing") == []
+
+
+def _spec_at(monkeypatch, src, **kw):
+    spec = cfg.ModuleSpec("pentaryn-demo", check="parse", **kw)
+    monkeypatch.setattr(cfg, "MODULE_SRC_ROOT", src.parent)
+    return spec
+
+
+def test_after_sync_prefers_module_json(monkeypatch, tmp_path):
+    src = tmp_path / "pentaryn-demo"
+    src.mkdir()
+    (src / "module.json").write_text(
+        '{"flags": {"pentaryn": {"afterSync": ["Reload → then check", "line two"]}}}',
+        encoding="utf-8")
+    spec = _spec_at(monkeypatch, src, after_sync=("from config",))
+    assert spec.after_sync == ("Reload → then check", "line two")
+
+
+@pytest.mark.parametrize("manifest", [None, "{}", '{"flags": {"pentaryn": {"afterSync": []}}}',
+                                      "{ not json"])
+def test_after_sync_falls_back_to_the_tuple(monkeypatch, tmp_path, manifest):
+    src = tmp_path / "pentaryn-demo"
+    src.mkdir()
+    if manifest is not None:
+        (src / "module.json").write_text(manifest)
+    spec = _spec_at(monkeypatch, src, after_sync=("from config",))
+    assert spec.after_sync == ("from config",)
+
+
+@pytest.mark.repo
+def test_real_after_sync_unchanged_while_no_manifest_carries_it():
+    """No in-house module.json has afterSync yet (Wave 7 moves them), so every spec
+    prints exactly its config tuple."""
+    for name, spec in cfg.MODULES.items():
+        assert spec.after_sync == spec._after_sync, name
+
+
+def test_kit_is_derived_from_the_lock(monkeypatch, tmp_path):
+    src = tmp_path / "pentaryn-demo"
+    (src / "lib").mkdir(parents=True)
+    spec = _spec_at(monkeypatch, src)
+    assert spec.kit is None and spec.kit_lock is None          # unmigrated
+    (src / "lib/kit.lock.json").write_text(
+        '{"version": "1.0.1", "tier": "small", "files": ["errors", "log"]}')
+    assert spec.kit == ("errors", "log")
+    assert spec.kit_lock["tier"] == "small"
+    assert "kit" not in vars(spec), "the kit list is never stored on the spec (D8)"
+
+
 @pytest.mark.skipif(sys.platform != "darwin", reason="the table is a Mac")
 def test_foundry_data_is_under_application_support():
     assert "Application Support/FoundryVTT/Data" in str(cfg.FOUNDRY_DATA)

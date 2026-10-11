@@ -9,6 +9,7 @@ got wrong.
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -71,6 +72,25 @@ def known_worlds() -> list[str]:
 MODULE_SRC_ROOT = REPO_ROOT / "foundry/module"
 
 
+def module_dirs(root: Path | None = None) -> list[str]:
+    """Every module folder on disk (a directory holding a module.json), sorted.
+
+    The registry below is hand-kept; this is what proves it complete — a test asserts
+    every name here has a ModuleSpec (python-tooling-3)."""
+    root = root or MODULE_SRC_ROOT
+    if not root.is_dir():
+        return []
+    return sorted(p.name for p in root.iterdir() if (p / "module.json").is_file())
+
+
+def _read_json(path: Path) -> dict | None:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
 class ModuleSpec:
     """One in-house module: where it lives, and how to prove it before syncing.
 
@@ -79,6 +99,14 @@ class ModuleSpec:
     three modules that had a suite — which is how a module whose files all parsed and
     whose suite all passed could still fail to load in the browser. A check that runs
     instead of another check is not a gate.
+
+    Two things are DERIVED from the module's own files, never stored here:
+
+    * `kit` — the vendored kit files, from `lib/kit.lock.json` (blueprint D8: the lock is
+      the only kit list). None means the module has not adopted the kit (unmigrated).
+    * `after_sync` — `module.json` `flags.pentaryn.afterSync` when the module carries
+      it (the generator writes it), else the tuple given here. One source per module:
+      the tuples move into module.json in the Wave 7 restart batch, never by editing both.
     """
 
     #: every gate a spec may name — see `modules._CHECKS`
@@ -88,7 +116,7 @@ class ModuleSpec:
                  after_sync: tuple[str, ...] = ()):
         self.name = name
         self.check = (check,) if isinstance(check, str) else tuple(check)
-        self.after_sync = after_sync  # lines printed after a successful copy
+        self._after_sync = tuple(after_sync)
         unknown = [c for c in self.check if c not in (*self.CHECKS, "none")]
         if unknown:
             raise ValueError(f"{name}: unknown check(s) {unknown}")
@@ -100,6 +128,28 @@ class ModuleSpec:
     @property
     def dst(self) -> Path:
         return FOUNDRY_MODULES / self.name
+
+    @property
+    def after_sync(self) -> tuple[str, ...]:
+        """Lines printed after a successful copy (module.json first, then the tuple)."""
+        manifest = _read_json(self.src / "module.json") or {}
+        lines = (((manifest.get("flags") or {}).get("pentaryn") or {}).get("afterSync"))
+        if isinstance(lines, list) and lines:
+            return tuple(str(x) for x in lines)
+        return self._after_sync
+
+    @property
+    def kit_lock(self) -> dict | None:
+        """`lib/kit.lock.json` — `{version, tier, files}` — or None when unmigrated."""
+        return _read_json(self.src / "lib" / "kit.lock.json")
+
+    @property
+    def kit(self) -> tuple[str, ...] | None:
+        """The kit files this module vendors, from its lock; None = not migrated."""
+        lock = self.kit_lock
+        if lock is None:
+            return None
+        return tuple(lock.get("files") or ())
 
 
 # Every module gets the full static battery. The three gates answer different
