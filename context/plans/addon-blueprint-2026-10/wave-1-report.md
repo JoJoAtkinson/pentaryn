@@ -20,6 +20,10 @@ Scores before and after Stage 0: [`wave-1-baseline.md`](wave-1-baseline.md).
 | J8 | Queries reach every tab of the recipient user, so a writing `relayed`/`guarded` handler runs twice with the MCP bridge tab and a GM browser tab open (playbook §5.9.5). Affected: riders' Battle Medic relay (`riders.mjs:417`), journal `ensure` (`journal.mjs:146`); idempotency unverified. | Lane R | a new audit id, or a decision to make them claim first ([declared]) |
 | J9 | `guarded`'s NOT_GM check admits Assistant GMs (`isGM`). Documented in §5.9, not changed. | Lane R | none unless Assistants should be refused |
 
+| J10 | The keystone landed (`c0c3f97`): the importer no longer freezes `game.pentaryn`. The kit's frozen-root guard and `realiasTick` in `foundry/lib/publish.mjs` (COMPAT `until: items-journal-1`) and the other modules' guard copies are now dead weight, but removing them is a kit bump (`vendor.py sync --all`, every migrated module) and one commit per module. Not done here. | Stage 1 | when to retire the COMPAT block (with J6's kit bump?) |
+| J11 | The importer's declared changes (D-I1 merge, D-I2 console prefix, D-I3 re-entrancy refusal) are committed but **not deployed**; deploy and rollback steps are in the importer guide §9 (`make foundry-sync WORLD=pentaryn`, then `make foundry-clean`). | Stage 1 | the live-test run |
+| J12 | python-tooling-10's stamp carries `synced_at`, so every module sync changes `Data/modules` content and the next `make foundry-backup` takes a snapshot even if no code changed (its digest skip no longer fires after a sync). Harmless; `cloud.snapshot_digest` could ignore `.pentaryn-sync.json` if the extra snapshots matter. | Stage 1 | keep, or ignore the stamp in the snapshot digest |
+
 ## Known red commits (bisect and revert notes)
 
 - **pentaryn-lookup suite red from `35d439b` to `97809fc`** (8 commits: `35d439b`, `21c6d0f`,

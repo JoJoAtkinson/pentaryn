@@ -127,5 +127,5 @@ or line in `audit-findings.json`; their full text is only in
 |---|---|
 | Closed by pointer (date) | -4: ______ · -35 (use-doc half): ______ |
 | Merged with W items (which, date) | ______ |
-| Independent ids done | ______ |
+| Independent ids done | Stage 1 (2026-10-11, `migrate/wave-1`): -33 `60bde34` (`ops/out.py`); -5 step a `8c287ad` + `71a4414` (atomic `modules.install`, staging in `FoundryVTT/.pentaryn-sync/`, outside `Data/`); -53 `70588b1` (`pipeline.stage` uses it); -10 `b902e30` (`.pentaryn-sync.json` stamp + `foundry/logs/ops-YYYY-MM.jsonl`; tests isolate the log via a conftest autouse fixture); -9 `e7b5b17` (`sync_hint`, `content_drift`, shared `ops/digest.py`) |
 | Commits (Joe-approved) | ______ |

@@ -125,6 +125,12 @@ splits); the blueprint migrates *one module at a time*. They merge like this:
    -53), -10 (sync stamp), -33 (`out.py`), -9. python-tooling-4/-35 (scaffold + modules playbook)
    are **already met** by `scripts/foundry/blueprint/new_module.py`, `foundry/blueprint/template/`
    and `context/foundry/addon-blueprint.md`; close them by pointer, do not build a second scaffold.
+
+**Landed 2026-10-11 on `migrate/wave-1` (offline; the importer's declared changes wait for the
+live-test workflow):** the importer guide steps 2–8 plus `items-journal-4` and `-7`
+([guide Result](migrate-pentaryn-importer.md#result-fill-when-done), 97.6 %, only C07 left for
+Wave 7); python-tooling-33 `60bde34`, -5 step a `8c287ad` (+ `71a4414`), -53 `70588b1`, -10
+`b902e30`, -9 `e7b5b17`.
 3. The kit itself (`foundry/lib/`) already exists as new files; Wave 1's "create `foundry/lib/`"
    is done. What remains is wiring it into the gates (§7).
 

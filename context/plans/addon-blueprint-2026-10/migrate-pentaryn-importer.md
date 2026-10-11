@@ -406,7 +406,9 @@ land where Foundry loads modules from). It ships with the actor pipeline, `ops s
 
 **Deploy (code only — no `module.json` change until the Wave 7 batch, so a reload is enough):**
 
-1. `make foundry-backup` (world snapshot; the deploy writes no world data, this is for the dry run).
+1. A world snapshot if a real import may follow: `make foundry-backup` **refuses while Foundry is up**, so
+   take it before `make foundry-up` (or `make foundry-down` → backup → `make foundry-up`). The deploy and
+   a dry run write no world data.
 2. `make foundry-sync WORLD=pentaryn` — expect `▸ target world: pentaryn`, `✓ module → …/Data/modules/pentaryn-importer`,
    `✓ actors.json staged`. Then `git status --short foundry/build/actors.json`: a diff there is
    generator drift, not this migration — stop and report it.
