@@ -34,6 +34,9 @@
 
 import * as core from "./journal-core.mjs";
 import { registerSettings, setting, whenChanged } from "./settings.mjs";
+import {
+  descriptorsFor, isEyeReadable, shouldShowBar as barFor, targetFor as targetForApp, targetOf as targetForDoc,
+} from "./sources-adapter.mjs";
 
 const { MODULE, QUERY } = core;
 const OWN = () => CONST.DOCUMENT_OWNERSHIP_LEVELS;
@@ -161,116 +164,11 @@ async function ensurePersonalJournal() {
 /*  What can be saved from a window             */
 /* -------------------------------------------- */
 
-/**
- * Who gets the bar on a journal (core.barVisible). The facts are getters so each is read only when
- * the rule reaches it, in the rule's order: the permission calls and the setting read happen exactly
- * where they did when this was one inline expression.
- */
-function shouldShowBar(entry, user = game.user) {
-  return core.barVisible({
-    get isJournalEntry() { return !!entry && entry.documentName === "JournalEntry"; },
-    get isPersonal() { return isPersonal(entry); },
-    get inPack() { return !!entry.pack; },
-    get isGM() { return user.isGM; },
-    get gmButton() { return setting("gmButton"); },
-    get observer() { return entry.testUserPermission(user, "OBSERVER"); },
-    get owner() { return entry.testUserPermission(user, "OWNER"); },
-  });
-}
-
-const pileData = actor => actor?.flags?.["item-piles"]?.data;
-const isPile = actor => !!pileData(actor)?.enabled;
-
-/**
- * The real item behind an item sheet. Item Piles shows a non-owner an unsaved, unparented COPY of
- * the pile's item (renderReadOnlyItemPreview), so the source is found by id among the piles.
- */
-function itemSource(shown) {
-  if (!shown || shown.documentName !== "Item") return null;
-  if (isPile(shown.parent)) {
-    const tok = shown.parent.token ?? canvas?.tokens?.placeables.find(t => t.actor === shown.parent)?.document;
-    return { item: shown, pile: shown.parent, pileName: tok?.name ?? shown.parent.name };
-  }
-  if (shown.parent || shown.pack || game.items.has(shown.id)) return null;
-  for (const t of canvas?.tokens?.placeables ?? []) {
-    const it = isPile(t.actor) && t.actor.items.get(shown.id);
-    if (it) return { item: it, pile: t.actor, pileName: t.document.name ?? t.actor.name };
-  }
-  for (const a of game.actors) {
-    const it = isPile(a) && a.items.get(shown.id);
-    if (it) return { item: it, pile: a, pileName: a.prototypeToken?.name || a.name };
-  }
-  return null;
-}
-
-/** Who gets the bar on a pile item (core.itemBarVisible); lazy facts as in shouldShowBar. */
-function shouldShowItemBar(src, user = game.user) {
-  return core.itemBarVisible({
-    get hasSource() { return !!src; },
-    get canInspectItems() { return pileData(src.pile)?.canInspectItems; },
-    get isGM() { return user.isGM; },
-    get gmButton() { return setting("gmButton"); },
-    get observer() { return src.pile.testUserPermission(user, "OBSERVER"); },
-    get owner() { return src.pile.testUserPermission(user, "OWNER"); },
-  });
-}
-
-/** A relative uuid made absolute against the document it was written on. */
-const resolverFor = doc => u => foundry.utils.parseUuid(u, { relative: doc })?.uuid ?? null;
-const embeddedLabel = () => game.i18n.localize("PENTARYN_JOURNAL.provenance.embedded");
-
-function pageDescriptor(page, entry) {
-  const base = { kind: "page", key: page.uuid, name: core.pageName(page, entry), entryId: entry.id,
-    entryName: entry.name, pageName: page.name };
-  if (page.type === "image") return { ...base, type: "image", src: page.src ?? "", caption: page.image?.caption ?? "" };
-  if (page.type === "text") {
-    return { ...base, type: "text", body: core.sanitize(page.text?.content ?? "", { resolve: resolverFor(page), embeddedLabel: embeddedLabel() }) };
-  }
-  return { ...base, type: "text", body: "" };   // pdf, video, anything else: provenance and a link
-}
-
-function itemDescriptor(src) {
-  const it = src.item;
-  // Always the player's view: the unidentified text while unidentified, even for the GM.
-  const desc = it.system?.identified === false
-    ? (it.system?.unidentified?.description ?? "")
-    : (it.system?.description?.value ?? "");
-  const body = `<img class="pj-item-img" src="${esc(it.img)}" alt="">`
-    + core.sanitize(desc, { resolve: resolverFor(it), embeddedLabel: embeddedLabel() });
-  return { kind: "item", key: it.uuid, type: "text", name: it.name, body, entryId: null,
-    entryName: src.pileName, pageName: it.name };
-}
-
-/**
- * A target is what a window shows: a journal entry (all its observable pages), one image page,
- * or one pile item. `null` means no bar.
- */
-function targetFor(app) {
-  const JES = foundry.applications.sheets.journal.JournalEntrySheet;
-  if (app instanceof JES) {
-    return shouldShowBar(app.document) ? { kind: "entry", entry: app.document } : null;
-  }
-  if (app instanceof foundry.applications.apps.ImagePopout) {
-    const page = app.options?.uuid ? fromUuidSync(app.options.uuid) : null;
-    if (page?.documentName !== "JournalEntryPage" || page.type !== "image") return null;
-    return shouldShowBar(page.parent) ? { kind: "image", entry: page.parent, page } : null;
-  }
-  if (app.document?.documentName === "Item") {
-    const src = itemSource(app.document);
-    return shouldShowItemBar(src) ? { kind: "item", src } : null;
-  }
-  return null;
-}
-
-function descriptorsFor(target) {
-  const user = game.user;
-  if (target.kind === "item") return [itemDescriptor(target.src)];
-  if (target.kind === "image") return [pageDescriptor(target.page, target.entry)];
-  return target.entry.pages.contents
-    .filter(p => p.testUserPermission(user, "OBSERVER"))
-    .sort((a, b) => a.sort - b.sort)
-    .map(p => pageDescriptor(p, target.entry));
-}
+// sources-adapter.mjs; the gmButton setting is read here and passed in.
+const gmOpts = () => ({ gmButton: setting("gmButton") });
+const shouldShowBar = (entry, user = game.user) => barFor(entry, user, gmOpts());
+const targetFor = app => targetForApp(app, gmOpts());
+const targetOf = doc => targetForDoc(doc, gmOpts());
 
 /* -------------------------------------------- */
 /*  Provenance: only names the player already sees */
@@ -480,21 +378,6 @@ const refreshBars = foundry.utils.debounce(refreshBarsNow, 100);
 /*  API helpers                                 */
 /* -------------------------------------------- */
 
-/** Turn an entry, a page or an item into a target, applying the same rules as the bar. */
-function targetOf(doc) {
-  if (!doc) return null;
-  if (doc.documentName === "JournalEntry") return shouldShowBar(doc) ? { kind: "entry", entry: doc } : null;
-  if (doc.documentName === "JournalEntryPage") {
-    if (!shouldShowBar(doc.parent)) return null;
-    return doc.type === "image" ? { kind: "image", entry: doc.parent, page: doc } : { kind: "entry", entry: doc.parent };
-  }
-  if (doc.documentName === "Item") {
-    const src = itemSource(doc);
-    return shouldShowItemBar(src) ? { kind: "item", src } : null;
-  }
-  return null;
-}
-
 async function apiAdd(doc) {
   const target = targetOf(doc);
   if (!target) return null;
@@ -518,15 +401,6 @@ async function apiOpen(pageId) {
 /** The current user's own journal sheet, if that is the window in question. */
 const personalSheet = () => personal()?.sheet;
 
-/**
- * A readable behind an eye is one piece of information, not a book: when the entry has a single
- * page the player can see, its page list and page arrows are hidden. Personal journals are never
- * touched (they are the list), nor is the GM's view (it is where pages get edited). Behind the
- * `singlePageReadables` setting so a multi-page eye can come back later.
- */
-function isEyeReadable(entry) {
-  return game.scenes.some(s => s.notes.some(n => n.entryId === entry.id));
-}
 function applySinglePage(app) {
   const root = app?.element;
   if (!(root instanceof HTMLElement)) return;
