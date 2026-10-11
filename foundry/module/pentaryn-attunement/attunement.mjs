@@ -152,7 +152,12 @@ Hooks.once("init", () => {
 // since its keystone (items-journal-1), so the old frozen-root guard is gone
 // (kit 1.0.2, J10): the API is assigned into the plain root.
 Hooks.once("ready", () => setTimeout(() => {
-  guardItemTooltipPosition();
+  // A throw here (a dnd5e that froze the prototype, a throwing getter) must not stop the publish.
+  try {
+    guardItemTooltipPosition();
+  } catch (err) {
+    log.warn("tooltip guard skipped", err);
+  }
   const api = { report, computeSlots, stash, releaseAway, away: awayOf };
   game.pentaryn ??= {};
   game.pentaryn.attunement = api;
