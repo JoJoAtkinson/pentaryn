@@ -67,10 +67,9 @@ test("cardFor: flags trimmed; fallbacks title → navName → scene name → reg
   assert.deepEqual(S.cardFor(loose), { uuid: "Region.loose", title: "Loose", img: "icons/svg/door-exit.svg", description: "" });
 });
 
-test("cardFor(null) throws TypeError", () => {
-  // KNOWN: (-32) the API's cardFor(null) throws; D-P5 makes it return null.
-  assert.throws(() => S.cardFor(null), TypeError);
-  assert.throws(() => game.pentaryn.portals.cardFor(undefined), TypeError);
+test("cardFor(null) → null [declared D-P5] (it threw a TypeError)", () => {
+  assert.equal(S.cardFor(null), null);
+  assert.equal(game.pentaryn.portals.cardFor(undefined), null);
 });
 
 test("cardHTML: plain and radio output, escaped, byte for byte (golden/cards-html.json)", () => {

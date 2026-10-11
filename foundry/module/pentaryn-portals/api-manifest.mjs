@@ -33,10 +33,10 @@ export const MANIFEST = Object.freeze({
     {
       path: "cardFor",
       params: [REGION],
-      returns: "{ uuid, title, img, description }",
+      returns: "{ uuid, title, img, description } | null",
       gm: false, writes: false, legacy: true,
-      doc: "The card a player sees for this destination, with fallbacks (scene nav name, scene thumbnail). "
-        + "Throws a TypeError for a missing region.",
+      nullWhen: "no region is given",
+      doc: "The card a player sees for this destination, with fallbacks (scene nav name, scene thumbnail).",
     },
     {
       path: "teleportParty",

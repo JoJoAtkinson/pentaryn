@@ -37,13 +37,14 @@
           "doc": "a destination region document"
         }
       ],
-      "returns": "{ uuid, title, img, description }",
+      "returns": "{ uuid, title, img, description } | null",
       "gm": false,
       "writes": false,
       "query": false,
       "sideEffects": [],
+      "nullWhen": "no region is given",
       "legacy": true,
-      "doc": "The card a player sees for this destination, with fallbacks (scene nav name, scene thumbnail). Throws a TypeError for a missing region."
+      "doc": "The card a player sees for this destination, with fallbacks (scene nav name, scene thumbnail)."
     },
     {
       "path": "teleportParty",

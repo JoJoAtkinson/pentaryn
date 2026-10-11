@@ -23,9 +23,10 @@ export function configureSceneAdapter({ setting, log } = {}) {
 /*  Cards and destinations                      */
 /* -------------------------------------------- */
 
-/** Card data for one destination region, with fallbacks (core cardData). */
+/** Card data for one destination region, with fallbacks (core cardData); null for no region. */
 export function cardFor(region) {
-  const scene = region?.parent;
+  if (!region) return null;
+  const scene = region.parent;
   return cardData({
     flags: region?.flags?.[MODULE],
     uuid: region.uuid,
