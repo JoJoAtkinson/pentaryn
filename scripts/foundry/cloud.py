@@ -82,6 +82,10 @@ MANIFEST = REPO_ROOT / "foundry" / "assets-manifest.json"
 # Default per-host retention; PENTARYN_KEEP_SNAPSHOTS overrides (host.keep_snapshots()).
 KEEP_SNAPSHOTS = 10
 
+# Restore safety copies are kept apart from the rolling ten: this many per host, so
+# repeated "take the latest" boots on the alt never push regular snapshots out.
+KEEP_SAFETY_COPIES = 3
+
 # A snapshot taken while this host's newest one is younger than this REPLACES it.
 COALESCE_WINDOW_DAYS = 5
 
@@ -205,7 +209,8 @@ README_TEXT = (
     f"                taken within {COALESCE_WINDOW_DAYS} days of that machine's previous one\n"
     "                REPLACES it. Names without a machine are from before 2026-10-11;\n"
     "                nothing deletes those automatically.\n"
-    "                A name ending .safety.tar.gz is the state a restore replaced.\n"
+    "                A name ending .safety.tar.gz is the state a restore replaced;\n"
+    f"                each machine keeps its last {KEEP_SAFETY_COPIES} of those as well.\n"
     "                A name ending .tar.gz.parent is that snapshot's lineage (tiny).\n"
     "                A name ending .partial is an upload in progress (or a crash, swept\n"
     "                after a day) — never a snapshot.\n\n"
@@ -778,10 +783,14 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
             f"{COALESCE_WINDOW_DAYS}-day window)")
 
     mine = [s for s in own(snapshots(st, WORLD_BACKUPS), me) if s.name != protect]
-    for stale in mine[:-keep]:
+    regular = [s for s in mine if not s.safety]
+    safeties = [s for s in mine if s.safety]
+    for stale in regular[:-keep] + safeties[:-KEEP_SAFETY_COPIES]:
         _delete_snapshot(st, stale)
         log(f"pruned {stale.name}")
-    log(f"{min(len(mine), keep)} of {keep} snapshots kept for {me}")
+    log(f"{min(len(regular), keep)} of {keep} snapshots kept for {me}"
+        + (f", and {min(len(safeties), KEEP_SAFETY_COPIES)} of {KEEP_SAFETY_COPIES} "
+           "restore safety copies" if safeties else ""))
 
     mirror_systems(st)
     return snap

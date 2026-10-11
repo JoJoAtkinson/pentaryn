@@ -136,6 +136,21 @@ def test_each_host_prunes_only_its_own(two_hosts):
     assert gone == set(oldest)
 
 
+def test_safety_copies_have_their_own_cap_and_never_push_regulars_out(two_hosts):
+    c = two_hosts.cloud
+    regular = [_put(c, f"world-{_stamp(60 - i)}-fvtt14.369-mac.tar.gz", age_days=60 - i).name
+               for i in range(10)]
+    safety = [_put(c, f"world-{_stamp(9 - i)}-fvtt14.369-mac.safety.tar.gz",
+                   age_days=9 - i).name for i in range(5)]
+    with two_hosts.use("mac"):
+        cloud.backup("manual")
+    left = set(_names(c))
+    snaps = cloud.snapshots(cloud.store())
+    assert len([s for s in snaps if s.host == "mac" and not s.safety]) == 10
+    assert set(regular[1:]) <= left and regular[0] not in left   # only the 11th went
+    assert [n for n in safety if n in left] == safety[2:]          # the last 3 safeties
+
+
 def test_coalesce_replaces_only_this_hosts_newest_within_five_days(two_hosts):
     c = two_hosts.cloud
     mine = _put(c, f"world-{_stamp(1)}-fvtt14.369-mac.tar.gz", age_days=1).name

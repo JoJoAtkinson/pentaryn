@@ -315,7 +315,7 @@ OneDrive/DnD/foundry/
 | ------ | --------- | ------------ |
 | `make foundry-boot` | ⬇ maybe | **The boot choice** (below). Part of `vtt-up` and `foundry-up`; `FROM=latest\|local\|<name>` decides without asking |
 | `make foundry-assets` | ⬇ down | Unpacks any new `<kind>-<nn>.zip` into `Data/assets/<kind>/<kind>-<nn>/`. Tracked in `foundry/assets-manifest.json` (sha256, bytes, mtime); a zip whose size and mtime match is skipped **without a download** |
-| `make foundry-backup` | ⬆ up | Tars `Data/worlds` + `Config` + `Data/modules` (**~2.5–3.2 GB** — `Data/modules` is ~2.7 GB of premium map art) in `FOUNDRY_DATA/.pentaryn-tmp/`, uploads it as `<name>.partial`, renames, size-checks. Keeps **10 per host**; a snapshot within 5 days of this host's newest **replaces** it; skips when the local tree digest is unchanged |
+| `make foundry-backup` | ⬆ up | Tars `Data/worlds` + `Config` + `Data/modules` (**~2.5–3.2 GB** — `Data/modules` is ~2.7 GB of premium map art) in `FOUNDRY_DATA/.pentaryn-tmp/`, uploads it as `<name>.partial`, renames, size-checks. Keeps **10 per host** (plus that host's last 3 restore `.safety` copies, counted apart); a snapshot within 5 days of this host's newest **replaces** it; skips when the local tree digest is unchanged |
 | `make foundry-backup-safe` | ⬆ up | Same, `--if-stopped` — the lifecycle variant |
 | `make foundry-restore` | manual | No `SNAP` → lists every host's snapshots (name, host, UTC time, version, size). `SNAP=<name>` (any host's, or `major-release/`) → download, **archive current state first**, clear, extract; demands you type `restore` |
 | `make foundry-cloud` | — | Status: storage (rclone/folder + root), host and role, what this world is based on, newest per host, untagged count |
