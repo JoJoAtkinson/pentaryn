@@ -58,10 +58,19 @@ async function recordAsGM(entry) {
   return n;
 }
 
-/** Called from any client. Routes to a GM if this client is not one. */
+/**
+ * Called from any client. Routes to a GM if this client is not one. Never rejects (the capture
+ * hooks do not await it): a relay with no GM online, or a failed write, is one console warning
+ * naming the entry (items-journal-21), and resolves null.
+ */
 function submit(entry) {
-  if (game.user.isGM) return recordAsGM(entry);
-  if (hasSocket()) return executeAsGM("record", entry);
+  const lost = err => {
+    console.warn(`${MODULE} | ledger entry not recorded${game.user.isGM ? "" : " (no GM?)"}`,
+      { reason: entry.reason, item: entry.itemName, actor: entry.fromActorName }, err);
+    return null;
+  };
+  if (game.user.isGM) return recordAsGM(entry).catch(lost);
+  if (hasSocket()) return new Promise(resolve => resolve(executeAsGM("record", entry))).catch(lost);
   console.warn(`${MODULE} | no socketlib and not a GM — entry dropped`, entry);
   return null;
 }

@@ -151,7 +151,11 @@ function onActorHp(actor, changes) {
   const hp = foundry.utils.getProperty(changes, "system.attributes.hp.value");
   if (isGMRunner() && typeof hp === "number" && hp > 0) {
     for (const t of tokensOf(actor)) {
-      if (ourCorpse(t) && t.actor?.statuses?.has("dead")) t.actor.toggleStatusEffect("dead", { active: false });
+      if (ourCorpse(t) && t.actor?.statuses?.has("dead")) {
+        // not awaited (the hook stays synchronous); a failure is one warning, not an unhandled rejection
+        Promise.resolve(t.actor.toggleStatusEffect("dead", { active: false }))
+          .catch(err => console.warn(`${MODULE} | revive: could not clear Dead on ${t.name}`, err));
+      }
     }
   }
   queue(actor);
