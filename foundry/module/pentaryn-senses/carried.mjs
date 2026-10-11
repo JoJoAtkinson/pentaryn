@@ -14,7 +14,7 @@
  * sync per actor, 250 ms after the last.
  */
 
-import { carriedLightOf, itemLightUpdate } from "./senses-core.mjs";
+import { carriedLightOf, itemLightUpdate, tokensByActor } from "./senses-core.mjs";
 import { isActiveGMOrLoneGM } from "./lib/election.mjs";
 
 const DEBOUNCE_MS = 250;
@@ -31,8 +31,23 @@ function lightUpdate(doc, light) {
   return itemLightUpdate(doc, light, { flatten: foundry.utils.flattenObject, clone: foundry.utils.deepClone, del: globalThis._del ?? null });
 }
 
-/** Bring the actor's prototype and every token of it (on every scene) in line. → documents written. */
-async function syncLight(actor) {
+/** The actor's tokens, scene by scene: from `index` (tokensByActor) when given, else a scan. */
+function* scanTokens(actor) {
+  // lazily, scene by scene, as the loop it replaces did: a scene is read after the previous write
+  for (const scene of game.scenes) yield { scene, tokens: scene.tokens.filter(t => t.actorId === actor.id) };
+}
+
+function tokensOf(actor, index) {
+  if (!index) return scanTokens(actor);
+  // a token deleted since the index was built is skipped (syncAll awaits between actors)
+  return (index.get(actor.id) ?? []).map(({ scene, tokens }) => ({ scene, tokens: tokens.filter(t => scene.tokens.get(t.id) === t) }));
+}
+
+/**
+ * Bring the actor's prototype and every token of it (on every scene) in line. → documents written.
+ * `opts.index`: a tokensByActor(game.scenes) map, so a whole-world sync walks the scenes once.
+ */
+async function syncLight(actor, { index = null } = {}) {
   if (!actor || actor.pack) return 0;
   let count = 0;
   const light = carriedLight(actor);
@@ -43,10 +58,9 @@ async function syncLight(actor) {
     await actor.update(u);
     count++;
   }
-  for (const scene of game.scenes) {
+  for (const { scene, tokens } of tokensOf(actor, index)) {
     const updates = [];
-    for (const t of scene.tokens) {
-      if (t.actorId !== actor.id) continue;
+    for (const t of tokens) {
       const u = lightUpdate(t, t.actorLink ? light : carriedLight(t.actor ?? actor));
       if (u) updates.push({ _id: t.id, ...u });
     }
@@ -60,8 +74,9 @@ async function syncLight(actor) {
 
 /** Every world actor, one after another. → documents written. */
 async function syncAll() {
+  const index = tokensByActor(game.scenes);
   let n = 0;
-  for (const a of game.actors) n += await syncLight(a);
+  for (const a of game.actors) n += await syncLight(a, { index });
   return n;
 }
 

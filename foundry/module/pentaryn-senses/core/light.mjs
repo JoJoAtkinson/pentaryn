@@ -355,3 +355,26 @@ export function litByIn(scenes, source) {
   }
   return out;
 }
+
+/**
+ * Every scene's tokens grouped by actor id, built in one pass (finding -11): actorId →
+ * [{ scene, tokens }] in scene order, each `tokens` in the scene's own order. `syncAll` builds it
+ * once instead of walking every scene once per actor.
+ */
+export function tokensByActor(scenes) {
+  const index = new Map();
+  for (const scene of scenes ?? []) {
+    const here = new Map();
+    for (const t of scene.tokens ?? []) {
+      if (!t) continue;
+      let list = here.get(t.actorId);
+      if (!list) here.set(t.actorId, list = []);
+      list.push(t);
+    }
+    for (const [actorId, tokens] of here) {
+      if (!index.has(actorId)) index.set(actorId, []);
+      index.get(actorId).push({ scene, tokens });
+    }
+  }
+  return index;
+}

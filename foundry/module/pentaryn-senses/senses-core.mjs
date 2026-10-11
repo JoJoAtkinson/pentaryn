@@ -13,7 +13,7 @@ import {
   DARK, SPELL_LIGHT, LIGHT_PROFILES, PHB_LIGHT_ACTOR, TORCH_ACTIVITY_ID, slug, profileKey, profileFor, lightFor, strongest,
   carriedLightOf, lightingItemId, isLit, isHooded, isLightSpellData, isLightToggle, readSpellCast, castFlag, readSpellLight,
   planSpellLight, spellLightUpdate, restoredLight, sourcesUnder, isPHBLightActorSource, torchActivityData,
-  itemLightUpdate, collectSources, litByIn, lightEntries,
+  itemLightUpdate, collectSources, litByIn, lightEntries, tokensByActor,
 } from "./core/light.mjs";
 import { SIGHT_RESET, SIGHT_RESET_DONE, RESET_SIGHT, needsSightReset, systemReady, planSightReset } from "./core/migrate.mjs";
 import { LIMITS, rng, hashString, epochBuilds, buildEpoch, waveLevel, brightnessFor } from "./core/glow.mjs";
@@ -25,7 +25,7 @@ export {
   DARK, SPELL_LIGHT, LIGHT_PROFILES, PHB_LIGHT_ACTOR, TORCH_ACTIVITY_ID, slug, profileKey, profileFor, lightFor, strongest,
   carriedLightOf, lightingItemId, isLit, isHooded, isLightSpellData, isLightToggle, readSpellCast, castFlag, readSpellLight,
   planSpellLight, spellLightUpdate, restoredLight, sourcesUnder, isPHBLightActorSource, torchActivityData,
-  itemLightUpdate, collectSources, litByIn, lightEntries, inspectShape, lightStatus,
+  itemLightUpdate, collectSources, litByIn, lightEntries, tokensByActor, inspectShape, lightStatus,
   SIGHT_RESET, SIGHT_RESET_DONE, RESET_SIGHT, needsSightReset, systemReady, planSightReset,
   LIMITS, rng, hashString, epochBuilds, buildEpoch, waveLevel, brightnessFor,
 };
