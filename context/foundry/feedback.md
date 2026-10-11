@@ -74,7 +74,7 @@ CLI fallback (no MCP server): `./.venv/bin/python scripts/feedback_reports.py ne
 
 | Setting | Default | When to change it |
 |---|---|---|
-| Feedback: actions kept per player (`historySize`) | 200 | Raise (up to 1000) if reports cut off before the cause; applies at once. |
+| Feedback: actions kept per player (`historySize`) | 200 | Raise (up to 1000) if reports cut off before the cause; applies at once. A report over 256 KB drops its oldest actions (then errors) to fit, and the rendered report says how many (`truncated`). |
 | Feedback: attach console errors (`captureConsole`) | on | Turn off only if console noise swamps reports; needs a reload. |
 
 ## API quick calls

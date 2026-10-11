@@ -208,6 +208,35 @@ test("buildReport: every snapshot section in a shape validateReport accepts; fai
   assert.equal(n.truncated, 0);
 });
 
+test("fitReport: a 1000-action history over the byte cap drops the oldest actions, then errors, and says how many", () => {
+  const big = i => ({ t: i, kind: "click", action: "lootAll", cls: "ItemPileInventoryApp", id: `pile-${i}`, text: "x".repeat(LIMITS.clickText), pad: "y".repeat(200) });
+  const actions = Array.from({ length: LIMITS.actionsMax }, (_, i) => big(i));
+  const errors = Array.from({ length: LIMITS.errorsMax }, (_, i) => ({ t: i, source: "hooks", message: "m".repeat(LIMITS.message), stack: "s".repeat(800) }));
+  const r = sample({ actions, errors });
+  assert.ok(core.byteSize(r) > LIMITS.bytes, "the fixture is over the cap");
+  assert.match(core.validateReport(r).reason, /bytes; the cap/);
+  const { report, dropped, bytes } = core.fitReport(r);
+  assert.ok(bytes <= LIMITS.bytes && bytes === core.byteSize(report));
+  assert.deepEqual(core.validateReport(report), { ok: true });
+  assert.equal(report.truncated, dropped);
+  assert.ok(dropped > 0 && dropped < LIMITS.actionsMax);
+  assert.equal(report.actions.length, LIMITS.actionsMax - dropped);
+  assert.equal(report.actions.at(-1).t, LIMITS.actionsMax - 1, "the newest action is kept");
+  assert.equal(report.actions[0].t, dropped, "the oldest went first");
+  assert.equal(report.errors.length, LIMITS.errorsMax, "errors are kept while actions can go");
+
+  // with no actions to drop, the oldest errors go
+  const errOnly = sample({ actions: [], errors: Array.from({ length: 400 }, (_, i) => ({ t: i, message: "e".repeat(1000) })) });
+  const fit = core.fitReport(errOnly);
+  assert.ok(fit.bytes <= LIMITS.bytes);
+  assert.equal(fit.report.errors.at(-1).t, 399);
+
+  // under the cap: the same object back, nothing dropped
+  const small = sample();
+  assert.equal(core.fitReport(small).report, small);
+  assert.equal(core.fitReport(small).dropped, 0);
+});
+
 test("validateReport: a good report passes; each broken field is named", () => {
   assert.deepEqual(core.validateReport(sample()), { ok: true });
   const broken = [

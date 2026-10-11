@@ -17,7 +17,7 @@
  */
 
 import {
-  DEFAULT_CATEGORY, FLAG_SCOPE, LIMITS, MODULE, QUEUE_KEY, buildReport, categoryOf, draftFrom,
+  DEFAULT_CATEGORY, FLAG_SCOPE, LIMITS, MODULE, QUEUE_KEY, buildReport, categoryOf, draftFrom, fitReport,
   normaliseReport, parseBugCommand, queueTrim, reportPath, userFields, validateReport,
 } from "./feedback-core.mjs";
 import { ReportDialog } from "./dialog.mjs";
@@ -84,15 +84,26 @@ export function install(reg, ctx) {
    * `fail()`; never throws. Shows the player one toast either way.
    */
   async function submit(draft = {}, { dryRun = false } = {}) {
+    const refuse = (code, reason) => {
+      log.notify("error", _loc("PENTARYN_FEEDBACK.Notify.Failed", { reason }));
+      return fail(code, reason);
+    };
     const d = draftFrom(draft);
-    if (!d.text) return fail("BAD_ARGS", "the report text is empty");
+    if (!d.text) return refuse("BAD_ARGS", "the report text is empty");
     const user = g.game.user;
-    const report = buildReport({
-      id: g.foundry.utils.randomID(16), t: Date.now(), draft: d, snapshot: snapshot(),
-      actions: ctx.exposed.actions?.() ?? [], errors: ctx.exposed.errors?.() ?? [],
-    });
+    let report;
+    try {
+      // a big history is trimmed oldest-first to fit LIMITS.bytes, never refused outright
+      ({ report } = fitReport(buildReport({
+        id: g.foundry.utils.randomID(16), t: Date.now(), draft: d, snapshot: snapshot(),
+        actions: ctx.exposed.actions?.() ?? [], errors: ctx.exposed.errors?.() ?? [],
+      })));
+    } catch (err) {
+      log.error("build the report", err);
+      return refuse("INTERNAL", err?.message ?? String(err));
+    }
     const v = validateReport(report);
-    if (!v.ok) return fail("BAD_ARGS", v.reason);
+    if (!v.ok) return refuse("BAD_ARGS", v.reason);
     if (dryRun) return ok({ dryRun: true, id: report.id, report });
 
     // 1. queue on my own User document (adds the report, drops the oldest past the cap)

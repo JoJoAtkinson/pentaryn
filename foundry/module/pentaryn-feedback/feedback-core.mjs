@@ -302,6 +302,31 @@ export function byteSize(value) {
   }
 }
 
+/**
+ * Make a report fit under `max` serialised bytes by dropping the oldest actions first, then the
+ * oldest errors. Returns `{ report, dropped, bytes }`; `report.truncated` counts every entry dropped.
+ * `bytes > max` only when the report is still too big with both rings empty (validateReport says so).
+ */
+export function fitReport(report, max = LIMITS.bytes) {
+  let bytes = byteSize(report);
+  if (bytes <= max) return { report, dropped: 0, bytes };
+  const actions = Array.isArray(report.actions) ? report.actions : [];
+  const errors = Array.isArray(report.errors) ? report.errors : [];
+  const slack = 32;                               // the digits of `truncated`, and rounding
+  let size = bytes;
+  let a = 0;
+  let e = 0;
+  while (size + slack > max && a < actions.length) size -= byteSize(actions[a++]) + 1;
+  while (size + slack > max && e < errors.length) size -= byteSize(errors[e++]) + 1;
+  const dropped = a + e;
+  const out = {
+    ...report, actions: actions.slice(a), errors: errors.slice(e),
+    truncated: (Number.isInteger(report.truncated) ? report.truncated : 0) + dropped,
+  };
+  bytes = byteSize(out);
+  return { report: out, dropped, bytes };
+}
+
 /** Shape check before anything is written: `{ ok: true }` or `{ ok: false, reason }`. */
 export function validateReport(report) {
   if (!report || typeof report !== "object" || Array.isArray(report)) return { ok: false, reason: "not an object" };

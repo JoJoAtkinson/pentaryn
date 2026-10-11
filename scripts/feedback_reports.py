@@ -343,6 +343,8 @@ def render_markdown(report: dict[str, Any], now_ms: int | None = None, tz: dt.tz
     lines.append("- chat (own, last 10): " + (" · ".join(
         f"{_rel(c.get('t'), t)} {c.get('flavor') or c.get('id')}" + (f" ({c['total']})" if c.get("total") is not None else "")
         for c in chat) or "—"))
+    if isinstance(report.get("truncated"), int) and report["truncated"] > 0:
+        lines.append(f"- truncated: the {report['truncated']} oldest actions/errors were dropped to fit the 256 KB cap")
     broken = report.get("sectionErrors")
     if isinstance(broken, dict) and broken:
         lines.append("- capture failed (section: error): " + "; ".join(f"{k}: {_one_line(v, 120)}" for k, v in broken.items()))

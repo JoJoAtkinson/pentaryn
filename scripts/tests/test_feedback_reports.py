@@ -301,6 +301,8 @@ def test_render_shows_failed_capture_sections_and_unreadable_window_rows():
     report = json.loads((FIXTURES / "pentaryn" / f"{OPEN}.json").read_text())
     report["sectionErrors"] = {"windows": "instances broke"}
     report["windows"] = [{"id": "", "cls": "?", "title": "", "error": "title broke"}]
+    report["truncated"] = 37
     out = fr.render_markdown(report, now_ms=T_OPEN, tz=dt.timezone.utc)
+    assert "- truncated: the 37 oldest actions/errors were dropped to fit the 256 KB cap" in out
     assert "- capture failed (section: error): windows: instances broke" in out
     assert '- windows: ? (unreadable: title broke)' in out

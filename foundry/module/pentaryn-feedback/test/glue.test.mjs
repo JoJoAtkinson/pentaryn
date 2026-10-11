@@ -342,13 +342,32 @@ test("the report carries the snapshot: scene, controlled tokens with hp, own cha
   assert.equal(r.status, "filed");
 });
 
-test("submit refuses empty text without writing anything; dryRun builds without writing", async () => {
+test("submit refuses empty text without writing anything (and says so); dryRun builds without writing", async () => {
   const before = F.calls.length;
   assert.deepEqual(await api.submit({ category: "bug", text: "   " }), { ok: false, code: "BAD_ARGS", reason: "the report text is empty" });
+  assert.deepEqual(F.calls.slice(before).filter(c => c.op === "notify").map(c => [c.level, c.message]),
+    [["error", "Could not save the report: the report text is empty"]], "every failure tells the player");
   const dry = await api.submit({ text: "dry" }, { dryRun: true });
   assert.equal(dry.dryRun, true);
   assert.equal(dry.report.text, "dry");
   assert.equal(F.calls.slice(before).filter(c => c.op === "update" || c.op === "query").length, 0);
+});
+
+test("a failed queue write tells the player and leaves nothing half-done", async () => {
+  F.become({ userId: IDS.player });
+  const update = player.update;
+  player.update = async () => { throw new Error("socket closed"); };
+  const before = F.calls.length;
+  try {
+    const r = await api.submit({ text: "will not queue" });
+    assert.equal(r.ok, false);
+  } finally {
+    player.update = update;
+    F.become({ userId: IDS.gm });
+  }
+  const toasts = F.calls.slice(before).filter(c => c.op === "notify");
+  assert.deepEqual(toasts.map(c => [c.level, c.message]), [["error", "Could not save the report: socket closed"]]);
+  assert.equal(F.calls.slice(before).filter(c => c.op === "query").length, 0);
 });
 
 test("no GM online: the report waits on the player's own flag (cap 5, oldest dropped) and is filed when a GM connects", async () => {
