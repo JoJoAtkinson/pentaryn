@@ -91,6 +91,17 @@ markers), from the attunement lane's uncommitted work in this worktree. `check_c
 on the stale Module APIs table (walls, attunement, journal, lookup, movement rows): the integrator's
 `make foundry-module-index`.
 
+**Integrator handoff — walls, shared files** (exact edits; the walls lane does not touch these files):
+
+- `wave7-restart-batch.md` Batch 1, walls row, "Code in the same batch" column — replace with:
+  `lang/en.json` (-36), rows/toasts to full-key literals; **flag-scope data migration**
+  `wall-autocomplete` → `pentaryn-walls` (`migrations.mjs`, GM-only, idempotent; declared B6):
+  `core/engine.mjs` `FLAG_SCOPE = "pentaryn-walls"`, the manifest `flagScope` and `flags.writes`,
+  and **flip the frozen `test/core.test.mjs:14` FLAG_SCOPE pin to `"pentaryn-walls"`
+  ([declared], same commit)**, re-pinning `golden/engine.json`, `golden/backend-drift.json` and
+  `golden/describe.json` and the `api.test.mjs` flags case in that commit
+  (guide §Result step 10 item 3).
+
 ## journal — guide steps 2–8, code phase (2026-10-11)
 
 Code phase only; nothing live was touched. Conformance **57.8 % → 85.4 % (41/48)**. Tests: `node test/run.mjs`

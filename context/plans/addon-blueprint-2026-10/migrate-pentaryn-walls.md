@@ -469,7 +469,13 @@ walls half of **-10** (8a).
      setting("migrationVersion"), set: v => game.settings.set(MODULE, "migrationVersion", v) },
      log })` behind `isActiveGM()` after the publish (awaited, errors logged).
   3. `core/engine.mjs` `FLAG_SCOPE = "pentaryn-walls"` (new stamps), the manifest's `flagScope` and
-     `flags` paths, and the README data table; re-pin `describe.json`. engine-golden and
-     backend-drift read `flags["wall-autocomplete"]` literally in frozen tests, so their goldens
-     change in that declared commit too.
+     `flags.writes` paths (`flags.reads` already lists both scopes, `b24f6db5`), the `api.test.mjs`
+     flags case and the README data table; re-pin `describe.json`. In the **same [declared]
+     commit**, flip the frozen pin `test/core.test.mjs:14`
+     `assert.equal(engine.FLAG_SCOPE, "wall-autocomplete")` to `"pentaryn-walls"`. engine-golden
+     and backend-drift read `flags["wall-autocomplete"]` literally in frozen tests, so
+     `golden/engine.json` and `golden/backend-drift.json` change in that commit too. Checked on a
+     scratch copy at `b24f6db5`: the scope flip alone leaves exactly those three red (core.test
+     "the engine, registry and wasm adapter load with no Foundry globals", engine.json,
+     backend-drift.json; 196 pass, 3 fail).
 - Live check (step 11) is deferred: walls is off in Joe's world.
