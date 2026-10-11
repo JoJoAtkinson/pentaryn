@@ -27,22 +27,9 @@ export const available = () => list().filter(b => b.available());
 
 register({name: "js", run: runEngine});
 
-/* -------------------------------------------- */
-/*  WASM backend (not yet built)                */
-/* -------------------------------------------- */
-
-/**
- * Placeholder so the toggle exists before the implementation does. `available()` is false
- * until a compiled module is registered, and every consumer checks it — so a missing WASM
- * build degrades to "only js listed", never to a broken run.
- *
- * To fill this in, call `register({name: "wasm", run, available})` from the glue that
- * instantiates the compiled module. Nothing else in the codebase needs to change.
- */
-export const WASM_STATUS = Object.freeze({
-  built: false,
-  reason: "no compiled module yet — see README §Compiled backend"
-});
+// The compiled backend is registered by backend-wasm.mjs (the adapter that loads the .wasm).
+// Until its bytes load, or when they fail to, it reports itself unavailable and the glue's
+// pickBackend falls back to "js".
 
 /* -------------------------------------------- */
 /*  Comparison                                  */

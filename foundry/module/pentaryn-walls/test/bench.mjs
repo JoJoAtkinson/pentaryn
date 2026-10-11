@@ -19,7 +19,7 @@ const extra = process.argv.slice(2).map(Number).filter(Boolean);
 const sizes = [...new Set([3, 5, 8, 10, 14, ...extra])].sort((a, b) => a - b);
 
 const backends = available().map(b => b.name);
-console.log(`backends: ${backends.join(", ")}${backends.length === 1 ? "  (wasm not built)" : ""}\n`);
+console.log(`backends: ${backends.join(", ")}${backends.length === 1 ? "  (wasm unavailable: load failed)" : ""}\n`);
 
 const head = ["rooms", "walls in", "walls out", "passes", ...backends.map(b => `${b} (ms)`)];
 console.log(head.join("  ").padEnd(10));
