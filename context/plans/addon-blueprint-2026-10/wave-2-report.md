@@ -91,6 +91,40 @@ markers), from the attunement lane's uncommitted work in this worktree. `check_c
 on the stale Module APIs table (walls, attunement, journal, lookup, movement rows): the integrator's
 `make foundry-module-index`.
 
+## journal — guide steps 2–8, code phase (2026-10-11)
+
+Code phase only; nothing live was touched. Conformance **57.8 % → 85.4 % (41/48)**. Tests: `node test/run.mjs`
+→ 88 node:test cases + the legacy core suite (81 checks), all green; `vendor.py check journal` green;
+`module-check journal` static gates (parse, imports, i18n, node-test, vendor, conformance) green.
+
+| Step / finding | Commit |
+|---|---|
+| step 2 core MODULE, constants, visibility rules (-34) | `7dc5fce8`, follow-up `526d1aa8` (see red range below) |
+| step 3 settings.mjs · step 4 sources-adapter.mjs · step 5 features + entry (-36 part) | `f2df3db3` · `9bb8d560` · `93dc1a56` |
+| step 6 manifest API, publish at ready [declared] D-J1 · api.test + goldens | `dbd56638` · `946a6dd4` |
+| -32 · -36 · -35 (+ `inspect`) | `8bce2b4a` · `26e9df02` · `0fe84b85` |
+| -33 [declared] · -38 [declared] (D-J3) | `d595451e` · `cac07643` |
+| C30 relay via `relayed` [declared] D-J4 | `5b79802c` |
+| -40: KNOWN pin · claim-first fix [declared] D-J5 · manifest flag · stamp-failure fallback | `d8bfe157` · `f97e9f74` · `792f57fb` · `79155a74` |
+| hardening tests (player side of the relay) · step 8 docs · plans | `a3731712` · `b615d9d8` · `7d17df5d` |
+
+**Frozen tests:** only `glue.test.mjs` changed, at two named pins: publish timing (`dbd56638`, D-J1) and the
+relay refusal message (`5b79802c`, D-J4). No golden changed. New step goldens: `describe.json`, `surface.json`.
+
+**Known red range:** `7dc5fce8..526d1aa8` (journal, behaviour only, every suite green): the core rules
+destructured the facts the glue passes as getters, so `shouldShowItemBar(null)` threw on any non-pile item
+sheet render ("bar skipped" warn). Skip `7dc5fce8` when bisecting journal behaviour.
+
+**Still failing:** C03 C07 C09 C37 (+ C06w): Wave 7 `module.json` batch. C47: the adjustments row.
+C51: W2-J1. C56: kit gap below.
+
+**Kit gap (for the integrator; not changed here):** `registerQueries` (kit 1.0.2, `queries.mjs`) builds
+`handler = async (data = {}) => …` and drops the query context, so a `relay: true` row's implementation
+never sees `ctx.user`, the sender. Journal's relay must know the sender, so it stays a hand-written
+`CONFIG.queries[…] = relayed(…)` (C30 passes, C56 fails). A kit 1.0.3 fix: take `(data = {}, ctx = {})`
+and pass `ctx` on (e.g. `row.args(d, ctx)` for legacy rows, `fn(d, ctx)` otherwise), plus a kit test that a
+relay row's impl receives `ctx.user`. Then journal needs a published row for the relay (W2-J2).
+
 ## Open for Joe
 
 | # | Item | From | What is needed |
@@ -104,3 +138,6 @@ on the stale Module APIs table (walls, attunement, journal, lookup, movement row
 | W2-WALLS-3 | walls toasts stay raw `ui.notifications.*`, not `log.notify`: the frozen glue pins match the exact options (`{permanent: true}`), and `log.notify` adds `{console: false}` and a console line. | walls lane | accept, or allow the pin edits with W2-WALLS-1 |
 | W2-MOV-1 | movement finding -20's **optional** extra: `status().errors`, the labels a hot hook's `warnOnce` has swallowed (`refreshToken`, `renderSceneControls`), appended after `settings`. The finding's required half (warn once, no empty catch) is `d65ddd62`. It adds an API output key (`status.test.mjs` pins the exact key list) and the kit `log` exposes no seen-labels accessor, so it needs either a kit change or module-local tracking; the console line already says it. Skipped as a feature. | movement lane (standalone pass) | yes → one [declared] commit (module-local Set, one pin flip in `status.test.mjs`), or close: the console line is enough |
 | W2-A2 | attunement `stash()` shortfall (D-A4, items-journal-10 review follow-up, 73180dfd): the originals are kept and the call rejects, but the copies the container did accept stay there, bonded to the owner, so the item exists twice. The Error now names them (`err.created` and the message); nothing is rolled back. A rollback (`container.deleteEmbeddedDocuments(created)` before throwing) would restore all-or-nothing, but it deletes from a container (an Item Piles pile may react to emptying) and can itself fail. | attunement lane | keep naming only (default), or ask for the rollback as a [declared] commit |
+| W2-J1 | journal `folderName` has no settings label, so C51 fails. Adding `PENTARYN_JOURNAL.settings.folderName.{name,hint}` (the guide's step 3) moves one **frozen pin**: `golden/settings-register.json` (`name`/`hint` null → the keys), as pings needed in J13. The row is `config: false`, so nothing visible changes. | journal lane | allow that one pin edit (a [declared] commit), or leave `folderName` unlabelled (C51 stays failing) |
+| W2-J2 | journal C56 after the kit gap is fixed: `registerQueries` resolves a query row against the published API, so the relay needs a **published method** returning `{entryId}` (the frozen relay pin) — e.g. a row `ensureOwn` (`queryName: "ensure"`, `relay: true`, `query: true`; the query name the player sends is unchanged). That is a new API member. | journal lane | accept the new member once the kit forwards the sender, or keep the hand-wired `relayed` (C56 stays failing) |
+| W2-J3 | journal -40 is fixed claim first, but not with `lib/election.mjs`: `claimDocument`'s 750 ms settle timer would hang the frozen single-tab relay pin under mocked timers, and its claim key is single-use per document while the sender's User is long-lived. The fix stamps `flags.pentaryn-journal.claims.ensure.<socketId>` on the sender's User; the first stamp in server order wins (a tab gets every earlier stamp before its own reply), the loser waits up to 7 s for the winner's journal and answers with it, each tab removes its stamp. One extra User update per player's first relayed ensure. | journal lane | accept (default), or ask for the deterministic-`_id` alternative (§5.9.2; it needs a folder `_id` too and moves the frozen relay create-data pin) |
