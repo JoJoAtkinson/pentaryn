@@ -21,7 +21,7 @@ status: active
 | Start/stop the server, the tunnel, sync assets, restore a world, install a module, check what's exposed | **this one** |
 | Build world *content* — actor generation from `actions.jsonl`, the importer module, the write paths that fail silently, Gates 0–4 | [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) |
 | Complete hand-drawn walls | [`foundry-wall-autocomplete.md`](../plans/foundry-wall-autocomplete.md) |
-| Extend the MCP bridge's tool surface | [`foundry-mcp-fork.md`](../plans/foundry-mcp-fork.md) — design only |
+| Extend the MCP bridge's tool surface | [`mcp-fork.md`](mcp-fork.md) · design history: [`foundry-mcp-fork.md`](../plans/foundry-mcp-fork.md) |
 
 Where this one and `foundry-vtt.md` overlap — the actors import pipeline and its Gate 2 — this playbook covers the
 *operational* half (what deletes the staged file, what proves it's gone) and links out for the rest.
@@ -774,7 +774,7 @@ has three levels. Anything that walks scenes should read `levels[]`, not `backgr
 - [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) — the content pipeline: decisions D1–D10, actor generation, importer module, Gates 0–4
 - [`foundry-wall-autocomplete.md`](../plans/foundry-wall-autocomplete.md) · [`pentaryn-walls` README](../../foundry/module/pentaryn-walls/README.md)
 - [`foundry-npc-ties.md`](../plans/foundry-npc-ties.md) · [`pentaryn-ties` README](../../foundry/module/pentaryn-ties/README.md)
-- [`foundry-mcp-fork.md`](../plans/foundry-mcp-fork.md) — bridge fork design (not implemented)
+- [`foundry-mcp-fork.md`](../plans/foundry-mcp-fork.md) — bridge fork design (history); operating the fork: [`mcp-fork.md`](mcp-fork.md)
 - [`scripts/foundry/README.md`](../../scripts/foundry/README.md) — license key, make-target table
 - [`foundry/CONTRACT.md`](../../foundry/CONTRACT.md) — the `actors.json` generator ⇄ importer contract (§12 for who deletes the staged file)
 - [`scripts/foundry/cloud.py`](../../scripts/foundry/cloud.py) — the OneDrive implementation; its docstring is the rationale

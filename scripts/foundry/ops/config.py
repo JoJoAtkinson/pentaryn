@@ -210,7 +210,7 @@ MODULES = {
     "lookup": ModuleSpec(
         "pentaryn-lookup",
         # node-test: the whole point of the module is that its text handling is proved
-        # rather than retyped. lookup-core.mjs is pure, so the 41 fixtures run in node.
+        # rather than retyped. lookup-core.mjs is pure, so its fixtures run in node (`node test/run.mjs`).
         check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "Enable 'Pentaryn Rules Lookup' in Manage Modules, then reload.",
