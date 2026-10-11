@@ -40,7 +40,7 @@ Where this one and `foundry-vtt.md` overlap — the actors import pipeline and i
 | Roll back a broken world | `make foundry-restore` to list, `make foundry-restore SNAP=<name>` to do it. Never automatic — see §3 |
 | See what's in the cloud store | `make foundry-cloud` |
 | Install or update a module | Setup screen (resolves dependencies) **or** unzip the release into `Data/modules/<id>/` and restart — §5. Never from inside a running world |
-| Push a local module to Foundry | `make foundry-sync` (importer) · `make foundry-walls-sync` (walls) · `make foundry-ties-sync` (ties) |
+| Push a local module to Foundry | `make foundry-<short>-sync` (e.g. `make foundry-walls-sync`) · the importer only through `make foundry-sync WORLD=<world>` (it also stages `actors.json` — `make foundry-clean` after). The copy is built in `FoundryVTT/.pentaryn-sync/` and swapped in whole, so a failed copy leaves the old install serving |
 | Import actors | [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) Stages 1–2, then `make foundry-import` (🔴 read §1's red box first — it stages into the wrong world today) |
 | Prove nothing's exposed | `make foundry-verify` |
 | Check the license key resolves | `make foundry-check` — prints length and format, never the value |

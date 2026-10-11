@@ -484,6 +484,44 @@ def check_all(*, as_json: bool = False) -> int:
     return OK
 
 
+#: where an install is built before it is swapped into Data/modules — a sibling of Data/, so on the
+#: same volume (the swap is a rename) but outside the folder Foundry scans for module.json files and
+#: serves over HTTP
+STAGING_DIRNAME = ".pentaryn-sync"
+
+
+def install(src: Path, dst: Path) -> None:
+    """Copy `src` to `dst` so that `dst` is never left missing or half-written (python-tooling-5a).
+
+    The copy is built in `<FOUNDRY_DATA>/../.pentaryn-sync/<name>.new`; only a complete copy is
+    swapped in: the old `dst` is renamed aside to `<name>.old`, the new one renamed into place, the
+    old one removed. A copy that fails leaves `dst` exactly as it was; a swap that fails puts the old
+    one back. Leftovers of a crashed run are cleared at the start of the next. The installed tree is
+    identical to the one `rmtree` + `copytree` produced.
+    """
+    staging = cfg.FOUNDRY_DATA.parent / STAGING_DIRNAME
+    staging.mkdir(parents=True, exist_ok=True)
+    new, old = staging / f"{dst.name}.new", staging / f"{dst.name}.old"
+    for leftover in (new, old):
+        shutil.rmtree(leftover, ignore_errors=True)
+    try:
+        shutil.copytree(src, new)
+    except BaseException:
+        shutil.rmtree(new, ignore_errors=True)
+        raise
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    had_old = dst.exists()
+    if had_old:
+        os.rename(dst, old)
+    try:
+        os.rename(new, dst)
+    except BaseException:
+        if had_old:
+            os.rename(old, dst)
+        raise
+    shutil.rmtree(old, ignore_errors=True)
+
+
 def sync(name: str) -> int:
     """Prove the sources, then copy the module into Foundry's Data/modules."""
     spec = cfg.MODULES[name]
@@ -493,9 +531,7 @@ def sync(name: str) -> int:
         _say(f"✗ no module at {spec.src}")
         return FAIL
 
-    cfg.FOUNDRY_MODULES.mkdir(parents=True, exist_ok=True)
-    shutil.rmtree(spec.dst, ignore_errors=True)
-    shutil.copytree(spec.src, spec.dst)
+    install(spec.src, spec.dst)
     _say(f"✓ module → {spec.dst}")
     for line in spec.after_sync:
         print(f"    {line}")
