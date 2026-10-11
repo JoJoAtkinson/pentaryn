@@ -1,6 +1,7 @@
 /**
  * Characterisation (ties checkpoint, wave 1): `study.inspect` through the published path on a
- * PLAYER client — the kill-switch and the no-GM refusal. Frozen once committed.
+ * PLAYER client — the kill-switch and the no-GM refusal. Frozen once committed; D1 / B1b [declared]
+ * moved the calls to the new name, `study.examine` (same golden).
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -21,11 +22,11 @@ test("study.inspect as a player", async () => {
     rows.push({ label, out, calls: F.calls.slice(before) });
   };
   await game.settings.set("pentaryn-ties", "playerAccess", false);
-  await run("playerAccess off", () => T().study.inspect(pc, subject));
+  await run("playerAccess off", () => T().study.examine(pc, subject));
   await game.settings.set("pentaryn-ties", "playerAccess", true);
-  await run("not the owner", () => T().study.inspect({ ...pc, isOwner: false }, subject));
-  await run("no subject", () => T().study.inspect(pc, null));
-  await run("no GM connected", () => T().study.inspect(pc, subject));
+  await run("not the owner", () => T().study.examine({ ...pc, isOwner: false }, subject));
+  await run("no subject", () => T().study.examine(pc, null));
+  await run("no GM connected", () => T().study.examine(pc, subject));
   pinJSON("study-inspect-player", rows, import.meta.url);
   assert.equal(rows.at(-1).out, false);
 });

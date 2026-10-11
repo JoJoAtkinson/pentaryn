@@ -1,7 +1,7 @@
 /**
- * Decision D1 [declared]: `attributes.lookup` and `study.examine` are the new names; the old
- * `attributes.describe` / `study.inspect` stay as aliases that log a compatibility warning until
- * the kit API (ties S8). The new names must answer exactly what the frozen characterisation pinned
+ * Decision D1 [declared]: `attributes.lookup` and `study.examine` are the new names. The old
+ * `attributes.describe` / `study.inspect` were aliases that logged a compatibility warning until the
+ * kit API (ties S8); B1b [declared] removed them there (the kit refuses reserved names at any depth). The new names must answer exactly what the frozen characterisation pinned
  * for the old ones (golden/attributes-describe.json, golden/study-inspect-gm.json).
  */
 import { test } from "node:test";
@@ -47,18 +47,9 @@ test("the new paths are the same functions the old names published", async () =>
   assert.equal(T().study.examine, Study.inspect);
 });
 
-test("the old names are aliases: same answer, one compatibility warning naming the new path", async () => {
+test("B1b [declared]: the old names are gone — the kit reserves describe and inspect at any depth", () => {
   F.logged.length = 0;
-  assert.deepEqual(T().attributes.describe("ashfallcompany"), T().attributes.lookup("ashfallcompany"));
-  assert.equal(await T().study.inspect(null, { id: "x" }), false);
-  const lines = compatLines();
-  assert.equal(lines.length, 2, lines.join("\n"));
-  assert.match(lines[0], /^pentaryn-ties \| game\.pentaryn\.ties\.attributes\.describe is renamed game\.pentaryn\.ties\.attributes\.lookup/);
-  assert.match(lines[1], /^pentaryn-ties \| game\.pentaryn\.ties\.study\.inspect is renamed game\.pentaryn\.ties\.study\.examine/);
-});
-
-test("the alias warns once per call site (Foundry's `once`), so a loop is one line", () => {
-  F.logged.length = 0;
-  for (let i = 0; i < 3; i++) T().attributes.describe("greywatch");
-  assert.equal(compatLines().length, 1);
+  assert.equal(T().attributes.describe, undefined);
+  assert.equal(T().study.inspect, undefined);
+  assert.deepEqual(compatLines(), []);
 });

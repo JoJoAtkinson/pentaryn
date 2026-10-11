@@ -128,20 +128,6 @@ function onInit() {
  * so the old frozen-root guard is gone (kit 1.0.2, J10). A frozen root now throws here.
  */
 function publishAPI() {
-  /*
-   * Decision D1 (2026-10-11): `attributes.describe` → `attributes.lookup` and `study.inspect` →
-   * `study.examine`. `describe` and `inspect` are names the kit API reserves for its own members
-   * (step S8 of the blueprint migration), so the old names cannot survive that step. Until then they
-   * stay as aliases that call the same function and log a compatibility warning (once per call site).
-   */
-  const renamed = (fn, from, to) =>
-    function renamedAlias(...args) {
-      foundry.utils.logCompatibilityWarning(
-        `${MODULE} | game.pentaryn.ties.${from} is renamed game.pentaryn.ties.${to}; the old name goes when the API moves to the kit`,
-        { once: true }
-      );
-      return fn.apply(this, args);
-    };
   const api = {
     show: overlay.showAll,
     showAll: overlay.showAll,
@@ -234,7 +220,6 @@ function publishAPI() {
       attrOffers: attrOffersFor,
       // phase 8 — inspection and the cascade
       examine: inspect,
-      inspect: renamed(inspect, "study.inspect", "study.examine"), // D1 alias, until S8
       look: (subject, character = game.user?.character) => openLook(character, subject),
       scoping: scopingState,
       clearScoping: clearScoping,
@@ -264,7 +249,6 @@ function publishAPI() {
       derived: derivedFor,
       resolve: resolveAttribute,
       lookup: describeRef,
-      describe: renamed(describeRef, "attributes.describe", "attributes.lookup"), // D1 alias, until S8
       ensure: ensureAttribute,
       create: createAttribute,
       update: updateAttribute,
