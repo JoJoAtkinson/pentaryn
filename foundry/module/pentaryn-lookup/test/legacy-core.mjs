@@ -14,7 +14,7 @@ import {
   toPlainText, searchBooks, findPage, renderPage, monsterDigest,
   pageUuid, actorUuid, snippetAround, capPayload, LIMITS, embeddedTableUuids, renderTable,
 } from "../lookup-core.mjs";
-import { BOOKS, PAGES, MONSTER_OK, MONSTER_MOVED } from "./fixtures.mjs";
+import { BOOKS, PAGES, MONSTER_OK, MONSTER_MOVED } from "./fixtures/books.mjs";
 
 const argv = process.argv.slice(2);
 const verbose = argv.includes("-v");

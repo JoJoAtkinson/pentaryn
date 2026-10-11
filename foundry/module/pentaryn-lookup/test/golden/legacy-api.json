@@ -1,0 +1,1015 @@
+[
+  {
+    "input": [
+      "search cover"
+    ],
+    "out": {
+      "query": "cover",
+      "books": [
+        "Player's Handbook",
+        "SRD 5.2 Rules"
+      ],
+      "total": 4,
+      "shown": 4,
+      "hits": [
+        {
+          "book": "Player's Handbook",
+          "journal": "Combat",
+          "page": "Repeated Cover",
+          "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docCombat.JournalEntryPage.pgRepeat",
+          "matches": 12,
+          "snippet": "cover is cover and cover means cover. cover is cover and cover means cover. cover is cover and cover means cover."
+        },
+        {
+          "book": "Player's Handbook",
+          "journal": "Combat",
+          "page": "Cover",
+          "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docCombat.JournalEntryPage.pgCover",
+          "matches": 1,
+          "snippet": "As explained in Combat later, a target behind Half Cover gains a bonus. Roll save dex 15 to avoid it. See for more."
+        },
+        {
+          "book": "Player's Handbook",
+          "journal": "Combat",
+          "page": "Cover Degrees",
+          "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docCombat.JournalEntryPage.pgCover2",
+          "matches": 1,
+          "snippet": "A target behind three-quarters cover is harder to hit."
+        },
+        {
+          "book": "SRD 5.2 Rules",
+          "journal": "SRD Combat",
+          "page": "Cover (SRD)",
+          "uuid": "Compendium.dnd5e.content24.JournalEntry.docSrd.JournalEntryPage.pgSrdCover",
+          "matches": 1,
+          "snippet": "Half cover gives +2 to AC."
+        }
+      ],
+      "warning": "skipped missing pack(s): dnd-dungeon-masters-guide.content"
+    }
+  },
+  {
+    "input": [
+      "search cover limit 20"
+    ],
+    "out": {
+      "query": "cover",
+      "books": [
+        "Player's Handbook",
+        "SRD 5.2 Rules"
+      ],
+      "total": 4,
+      "shown": 4,
+      "hits": [
+        {
+          "book": "Player's Handbook",
+          "journal": "Combat",
+          "page": "Repeated Cover",
+          "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docCombat.JournalEntryPage.pgRepeat",
+          "matches": 12,
+          "snippet": "cover is cover and cover means cover. cover is cover and cover means cover. cover is cover and cover means cover."
+        },
+        {
+          "book": "Player's Handbook",
+          "journal": "Combat",
+          "page": "Cover",
+          "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docCombat.JournalEntryPage.pgCover",
+          "matches": 1,
+          "snippet": "As explained in Combat later, a target behind Half Cover gains a bonus. Roll save dex 15 to avoid it. See for more."
+        },
+        {
+          "book": "Player's Handbook",
+          "journal": "Combat",
+          "page": "Cover Degrees",
+          "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docCombat.JournalEntryPage.pgCover2",
+          "matches": 1,
+          "snippet": "A target behind three-quarters cover is harder to hit."
+        },
+        {
+          "book": "SRD 5.2 Rules",
+          "journal": "SRD Combat",
+          "page": "Cover (SRD)",
+          "uuid": "Compendium.dnd5e.content24.JournalEntry.docSrd.JournalEntryPage.pgSrdCover",
+          "matches": 1,
+          "snippet": "Half cover gives +2 to AC."
+        }
+      ],
+      "warning": "skipped missing pack(s): dnd-dungeon-masters-guide.content"
+    }
+  },
+  {
+    "input": [
+      "search a.b regex"
+    ],
+    "out": {
+      "query": "a.b",
+      "books": [
+        "Player's Handbook",
+        "SRD 5.2 Rules"
+      ],
+      "total": 1,
+      "shown": 1,
+      "hits": [
+        {
+          "book": "Player's Handbook",
+          "journal": "Combat",
+          "page": "Cover",
+          "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docCombat.JournalEntryPage.pgCover",
+          "matches": 1,
+          "snippet": "As explained in Combat later, a target behind Half Cover gains a bonus. Roll save dex 15 to avoid it. See for more."
+        }
+      ],
+      "warning": "skipped missing pack(s): dnd-dungeon-masters-guide.content"
+    }
+  },
+  {
+    "input": [
+      "search nothing-here"
+    ],
+    "out": {
+      "query": "nothing-here",
+      "books": [
+        "Player's Handbook",
+        "SRD 5.2 Rules"
+      ],
+      "total": 0,
+      "shown": 0,
+      "hits": [],
+      "warning": "skipped missing pack(s): dnd-dungeon-masters-guide.content"
+    }
+  },
+  {
+    "input": [
+      "search cover books=monsters (all packs missing)"
+    ],
+    "out": {
+      "error": "compendium pack(s) not found: dnd-monster-manual.content — is the module enabled in Manage Modules?"
+    }
+  },
+  {
+    "input": [
+      "search cover books=2014 (missing)"
+    ],
+    "out": {
+      "error": "compendium pack(s) not found: dnd5e.rules — is the module enabled in Manage Modules?"
+    }
+  },
+  {
+    "input": [
+      "search cover books=[content24]"
+    ],
+    "out": {
+      "query": "cover",
+      "books": [
+        "SRD 5.2 Rules"
+      ],
+      "total": 1,
+      "shown": 1,
+      "hits": [
+        {
+          "book": "SRD 5.2 Rules",
+          "journal": "SRD Combat",
+          "page": "Cover (SRD)",
+          "uuid": "Compendium.dnd5e.content24.JournalEntry.docSrd.JournalEntryPage.pgSrdCover",
+          "matches": 1,
+          "snippet": "Half cover gives +2 to AC."
+        }
+      ]
+    }
+  },
+  {
+    "input": [
+      "page empty"
+    ],
+    "out": {
+      "error": "page(ref) needs a UUID or a page name"
+    }
+  },
+  {
+    "input": [
+      "page Study"
+    ],
+    "out": {
+      "book": "Player's Handbook",
+      "journal": "Appendix C: Rules Glossary",
+      "page": "Study",
+      "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docGloss.JournalEntryPage.pgStudy",
+      "text": "When you take the Study action you make an Intelligence check."
+    }
+  },
+  {
+    "input": [
+      "page Study maxChars 50 offset 10"
+    ],
+    "out": {
+      "book": "Player's Handbook",
+      "journal": "Appendix C: Rules Glossary",
+      "page": "Study",
+      "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docGloss.JournalEntryPage.pgStudy",
+      "text": "ake the Study action you make an Intelligence chec",
+      "truncated": true,
+      "totalChars": 62,
+      "nextOffset": 60
+    }
+  },
+  {
+    "input": [
+      "page nope"
+    ],
+    "out": {
+      "notFound": true,
+      "name": "No Such Page",
+      "closest": [
+        "No Text"
+      ],
+      "hint": "did you mean one of `closest`?"
+    }
+  },
+  {
+    "input": [
+      "page by page uuid"
+    ],
+    "out": {
+      "book": "Player's Handbook",
+      "journal": "Appendix C: Rules Glossary",
+      "page": "Study",
+      "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docGloss.JournalEntryPage.pgStudy",
+      "text": "When you take the Study action you make an Intelligence check."
+    }
+  },
+  {
+    "input": [
+      "page by JournalEntry uuid (no warning today)"
+    ],
+    "out": {
+      "book": "Player's Handbook",
+      "journal": "Appendix C: Rules Glossary",
+      "page": "Appendix C: Rules Glossary",
+      "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docGloss.JournalEntryPage.docGloss",
+      "text": ""
+    }
+  },
+  {
+    "input": [
+      "page Compendium.x.y (fromUuid null)"
+    ],
+    "out": {
+      "error": "no document at Compendium.x.y"
+    }
+  },
+  {
+    "input": [
+      "page Compendium.x.y (fromUuid rejects)"
+    ],
+    "out": {
+      "error": "no document at Compendium.x.y"
+    }
+  },
+  {
+    "input": [
+      "page Artifacts (embedded tables, one missing)"
+    ],
+    "out": {
+      "book": "Player's Handbook",
+      "journal": "Treasure",
+      "page": "Artifacts",
+      "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docTreasure.JournalEntryPage.pgArtifacts",
+      "text": "Artifact properties. @Embed[Compendium.dnd-players-handbook.tables.RollTable.tblMinor rollable] @Embed[Compendium.dnd-players-handbook.tables.RollTable.tblGone rollable]",
+      "tables": [
+        {
+          "name": "Minor Beneficial Properties",
+          "formula": "1d100",
+          "uuid": "Compendium.dnd-players-handbook.tables.RollTable.tblMinor",
+          "rows": [
+            "1-20 While attuned, you gain darkvision .",
+            "21"
+          ]
+        },
+        {
+          "uuid": "Compendium.dnd-players-handbook.tables.RollTable.tblGone",
+          "error": "not found"
+        }
+      ]
+    }
+  },
+  {
+    "input": [
+      "page Artifacts tables:false"
+    ],
+    "out": {
+      "book": "Player's Handbook",
+      "journal": "Treasure",
+      "page": "Artifacts",
+      "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docTreasure.JournalEntryPage.pgArtifacts",
+      "text": "Artifact properties. @Embed[Compendium.dnd-players-handbook.tables.RollTable.tblMinor rollable] @Embed[Compendium.dnd-players-handbook.tables.RollTable.tblGone rollable]"
+    }
+  },
+  {
+    "input": [
+      "page Artifacts raw"
+    ],
+    "out": {
+      "journal": "Treasure",
+      "page": "Artifacts",
+      "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docTreasure.JournalEntryPage.pgArtifacts",
+      "raw": "<p>Artifact properties.</p><p>@Embed[Compendium.dnd-players-handbook.tables.RollTable.tblMinor rollable]</p><p>@Embed[Compendium.dnd-players-handbook.tables.RollTable.tblGone rollable]</p>"
+    }
+  },
+  {
+    "input": [
+      "page No Text (text null)"
+    ],
+    "out": {
+      "book": "Player's Handbook",
+      "journal": "Treasure",
+      "page": "No Text",
+      "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docTreasure.JournalEntryPage.pgNoText",
+      "text": ""
+    }
+  },
+  {
+    "input": [
+      "monster empty"
+    ],
+    "out": {
+      "error": "monster(name) needs a name"
+    }
+  },
+  {
+    "input": [
+      "monster goblin"
+    ],
+    "out": {
+      "name": "Goblin",
+      "pack": "dnd-monster-manual.actors",
+      "uuid": "Compendium.dnd-monster-manual.actors.Actor.mmGoblin",
+      "cr": 0.25,
+      "ac": 15,
+      "hp": 7,
+      "size": "sm",
+      "type": "humanoid",
+      "features": [
+        {
+          "name": "Scimitar",
+          "type": "weapon"
+        }
+      ]
+    }
+  },
+  {
+    "input": [
+      "monster gob (substring fallback)"
+    ],
+    "out": {
+      "name": "Goblin",
+      "pack": "dnd-monster-manual.actors",
+      "uuid": "Compendium.dnd-monster-manual.actors.Actor.mmGoblin",
+      "cr": 0.25,
+      "ac": 15,
+      "hp": 7,
+      "size": "sm",
+      "type": "humanoid",
+      "features": [
+        {
+          "name": "Scimitar",
+          "type": "weapon"
+        }
+      ]
+    }
+  },
+  {
+    "input": [
+      "monster Goblin Boss text"
+    ],
+    "out": {
+      "name": "Goblin Boss",
+      "pack": "dnd-monster-manual.actors",
+      "uuid": "Compendium.dnd-monster-manual.actors.Actor.mmBoss",
+      "cr": 1,
+      "ac": 17,
+      "hp": 21,
+      "size": "sm",
+      "type": "humanoid",
+      "features": [
+        {
+          "name": "Redirect Attack",
+          "type": "feat",
+          "activation": "reaction",
+          "recharge": "5-6",
+          "text": "The Redirect Attack swaps places: +4, reach 5 ft."
+        },
+        {
+          "name": "Multiattack",
+          "type": "feat",
+          "activation": "action",
+          "recharge": null,
+          "text": "Two (2) attacks."
+        },
+        {
+          "name": "Plain",
+          "type": "loot",
+          "activation": null,
+          "recharge": null,
+          "text": ""
+        }
+      ],
+      "languages": [],
+      "speed": 30
+    }
+  },
+  {
+    "input": [
+      "monster Goblin Boss text, enrichHTML throws (raw text kept)"
+    ],
+    "out": {
+      "name": "Goblin Boss",
+      "pack": "dnd-monster-manual.actors",
+      "uuid": "Compendium.dnd-monster-manual.actors.Actor.mmBoss",
+      "cr": 1,
+      "ac": 17,
+      "hp": 21,
+      "size": "sm",
+      "type": "humanoid",
+      "features": [
+        {
+          "name": "Redirect Attack",
+          "type": "feat",
+          "activation": "reaction",
+          "recharge": "5-6",
+          "text": "The lookup @name swaps places: attack, reach 5 ft."
+        },
+        {
+          "name": "Multiattack",
+          "type": "feat",
+          "activation": "action",
+          "recharge": null,
+          "text": "Two (2) attacks."
+        },
+        {
+          "name": "Plain",
+          "type": "loot",
+          "activation": null,
+          "recharge": null,
+          "text": ""
+        }
+      ],
+      "languages": [],
+      "speed": 30
+    }
+  },
+  {
+    "input": [
+      "monster Goblin text"
+    ],
+    "out": {
+      "name": "Goblin",
+      "pack": "dnd-monster-manual.actors",
+      "uuid": "Compendium.dnd-monster-manual.actors.Actor.mmGoblin",
+      "cr": 0.25,
+      "ac": 15,
+      "hp": 7,
+      "size": "sm",
+      "type": "humanoid",
+      "features": [
+        {
+          "name": "Scimitar",
+          "type": "weapon",
+          "activation": null,
+          "recharge": null,
+          "text": "Melee: +4 to hit."
+        }
+      ],
+      "languages": [
+        "common",
+        "goblin"
+      ],
+      "speed": 30
+    }
+  },
+  {
+    "input": [
+      "monster zzz"
+    ],
+    "out": {
+      "notFound": true,
+      "name": "zzz",
+      "searched": [
+        "dnd-monster-manual.actors",
+        "dnd5e.actors24"
+      ],
+      "hint": "try a broader name — matching is exact-then-substring"
+    }
+  },
+  {
+    "input": [
+      "monsters {}"
+    ],
+    "out": {
+      "count": 5,
+      "shown": 5,
+      "monsters": [
+        {
+          "name": "Goblin",
+          "cr": 0.25,
+          "size": "sm",
+          "type": "humanoid (goblinoid)",
+          "uuid": "Compendium.dnd-monster-manual.actors.Actor.mmGoblin",
+          "pack": "dnd-monster-manual.actors"
+        },
+        {
+          "name": "Goblin Boss",
+          "cr": 1,
+          "size": "sm",
+          "type": "humanoid (goblinoid)",
+          "uuid": "Compendium.dnd-monster-manual.actors.Actor.mmBoss",
+          "pack": "dnd-monster-manual.actors"
+        },
+        {
+          "name": "Mystery",
+          "size": "med",
+          "uuid": "Compendium.dnd5e.actors24.Actor.srdNoCr",
+          "pack": "dnd5e.actors24"
+        },
+        {
+          "name": "Ogre",
+          "cr": 2,
+          "size": "lg",
+          "type": "giant",
+          "uuid": "Compendium.dnd5e.actors24.Actor.srdOgre",
+          "pack": "dnd5e.actors24"
+        },
+        {
+          "name": "Shield Guardian",
+          "cr": 7,
+          "size": "lg",
+          "type": "construct",
+          "uuid": "Compendium.dnd-monster-manual.actors.Actor.mmGuard",
+          "pack": "dnd-monster-manual.actors"
+        }
+      ]
+    }
+  },
+  {
+    "input": [
+      "monsters cr 1/2-2"
+    ],
+    "out": {
+      "count": 2,
+      "shown": 2,
+      "monsters": [
+        {
+          "name": "Goblin Boss",
+          "cr": 1,
+          "size": "sm",
+          "type": "humanoid (goblinoid)",
+          "uuid": "Compendium.dnd-monster-manual.actors.Actor.mmBoss",
+          "pack": "dnd-monster-manual.actors"
+        },
+        {
+          "name": "Ogre",
+          "cr": 2,
+          "size": "lg",
+          "type": "giant",
+          "uuid": "Compendium.dnd5e.actors24.Actor.srdOgre",
+          "pack": "dnd5e.actors24"
+        }
+      ]
+    }
+  },
+  {
+    "input": [
+      "monsters size Large type CONSTRUCT"
+    ],
+    "out": {
+      "count": 1,
+      "shown": 1,
+      "monsters": [
+        {
+          "name": "Shield Guardian",
+          "cr": 7,
+          "size": "lg",
+          "type": "construct",
+          "uuid": "Compendium.dnd-monster-manual.actors.Actor.mmGuard",
+          "pack": "dnd-monster-manual.actors"
+        }
+      ]
+    }
+  },
+  {
+    "input": [
+      "monsters limit 1"
+    ],
+    "out": {
+      "count": 5,
+      "shown": 1,
+      "monsters": [
+        {
+          "name": "Goblin",
+          "cr": 0.25,
+          "size": "sm",
+          "type": "humanoid (goblinoid)",
+          "uuid": "Compendium.dnd-monster-manual.actors.Actor.mmGoblin",
+          "pack": "dnd-monster-manual.actors"
+        }
+      ],
+      "hint": "narrow it (size, type, cr) or raise limit; 4 more"
+    }
+  },
+  {
+    "input": [
+      "monsters cr 1/4 minCr 1"
+    ],
+    "out": {
+      "count": 0,
+      "shown": 0,
+      "monsters": []
+    }
+  },
+  {
+    "input": [
+      "monsters maxCr 1 name gob"
+    ],
+    "out": {
+      "count": 2,
+      "shown": 2,
+      "monsters": [
+        {
+          "name": "Goblin",
+          "cr": 0.25,
+          "size": "sm",
+          "type": "humanoid (goblinoid)",
+          "uuid": "Compendium.dnd-monster-manual.actors.Actor.mmGoblin",
+          "pack": "dnd-monster-manual.actors"
+        },
+        {
+          "name": "Goblin Boss",
+          "cr": 1,
+          "size": "sm",
+          "type": "humanoid (goblinoid)",
+          "uuid": "Compendium.dnd-monster-manual.actors.Actor.mmBoss",
+          "pack": "dnd-monster-manual.actors"
+        }
+      ]
+    }
+  },
+  {
+    "input": [
+      "monsters cr 3"
+    ],
+    "out": {
+      "count": 0,
+      "shown": 0,
+      "monsters": []
+    }
+  },
+  {
+    "input": [
+      "monsters size weird"
+    ],
+    "out": {
+      "count": 0,
+      "shown": 0,
+      "monsters": []
+    }
+  },
+  {
+    "input": [
+      "monsters packs [srd]"
+    ],
+    "out": {
+      "count": 3,
+      "shown": 3,
+      "monsters": [
+        {
+          "name": "Goblin",
+          "cr": 0.25,
+          "size": "sm",
+          "type": "humanoid",
+          "uuid": "Compendium.dnd5e.actors24.Actor.srdGoblin",
+          "pack": "dnd5e.actors24"
+        },
+        {
+          "name": "Mystery",
+          "size": "med",
+          "uuid": "Compendium.dnd5e.actors24.Actor.srdNoCr",
+          "pack": "dnd5e.actors24"
+        },
+        {
+          "name": "Ogre",
+          "cr": 2,
+          "size": "lg",
+          "type": "giant",
+          "uuid": "Compendium.dnd5e.actors24.Actor.srdOgre",
+          "pack": "dnd5e.actors24"
+        }
+      ]
+    }
+  },
+  {
+    "input": [
+      "names()"
+    ],
+    "out": {
+      "classes": [
+        "Paladin",
+        "Wizard"
+      ],
+      "subclasses": {
+        "cleric": [
+          "Life Domain"
+        ],
+        "wizard": [
+          "Abjurer",
+          "Evoker"
+        ],
+        "?": [
+          "Orphan Path"
+        ]
+      },
+      "species": [
+        "Dwarf",
+        "Elf, High"
+      ],
+      "backgrounds": [
+        "Sage"
+      ],
+      "feats": {
+        "origin": [
+          "Alert"
+        ],
+        "fightingStyle": [
+          "Archery"
+        ],
+        "other": [
+          "Grappler"
+        ]
+      }
+    }
+  },
+  {
+    "input": [
+      "names subclass"
+    ],
+    "out": {
+      "subclasses": {
+        "cleric": [
+          "Life Domain"
+        ],
+        "wizard": [
+          "Abjurer",
+          "Evoker"
+        ],
+        "?": [
+          "Orphan Path"
+        ]
+      }
+    }
+  },
+  {
+    "input": [
+      "names Race"
+    ],
+    "out": {
+      "species": [
+        "Dwarf",
+        "Elf, High"
+      ]
+    }
+  },
+  {
+    "input": [
+      "names bogus"
+    ],
+    "out": {
+      "classes": [
+        "Paladin",
+        "Wizard"
+      ],
+      "subclasses": {
+        "cleric": [
+          "Life Domain"
+        ],
+        "wizard": [
+          "Abjurer",
+          "Evoker"
+        ],
+        "?": [
+          "Orphan Path"
+        ]
+      },
+      "species": [
+        "Dwarf",
+        "Elf, High"
+      ],
+      "backgrounds": [
+        "Sage"
+      ],
+      "feats": {
+        "origin": [
+          "Alert"
+        ],
+        "fightingStyle": [
+          "Archery"
+        ],
+        "other": [
+          "Grappler"
+        ]
+      }
+    }
+  },
+  {
+    "input": [
+      "onList Fireball wizard"
+    ],
+    "out": {
+      "spell": "Fireball",
+      "uuid": "Compendium.dnd-players-handbook.spells.Item.spFireball",
+      "level": 3,
+      "list": "class:wizard",
+      "onList": true
+    }
+  },
+  {
+    "input": [
+      "onList Fireball Wizard (case)"
+    ],
+    "out": {
+      "spell": "Fireball",
+      "uuid": "Compendium.dnd-players-handbook.spells.Item.spFireball",
+      "level": 3,
+      "list": "class:Wizard",
+      "onList": true
+    }
+  },
+  {
+    "input": [
+      "onList Fireball cleric"
+    ],
+    "out": {
+      "spell": "Fireball",
+      "uuid": "Compendium.dnd-players-handbook.spells.Item.spFireball",
+      "level": 3,
+      "list": "class:cleric",
+      "onList": false
+    }
+  },
+  {
+    "input": [
+      "onList Fireball nope"
+    ],
+    "out": {
+      "spell": "Fireball",
+      "uuid": "Compendium.dnd-players-handbook.spells.Item.spFireball",
+      "level": 3,
+      "list": "class:nope",
+      "onList": null,
+      "hint": "no such list; known: class:wizard, class:cleric"
+    }
+  },
+  {
+    "input": [
+      "onList Nope wizard"
+    ],
+    "out": {
+      "notFound": true,
+      "spell": "Nope",
+      "hint": "spell names are the book's English names"
+    }
+  },
+  {
+    "input": [
+      "onList by spell uuid"
+    ],
+    "out": {
+      "spell": "Fireball",
+      "uuid": "Compendium.dnd-players-handbook.spells.Item.spFireball",
+      "level": 3,
+      "list": "class:wizard",
+      "onList": true
+    }
+  },
+  {
+    "input": [
+      "spellList wizard"
+    ],
+    "out": {
+      "list": "class:wizard",
+      "count": 3,
+      "spells": [
+        {
+          "name": "Light",
+          "level": 0,
+          "uuid": "Compendium.dnd5e.spells24.Item.spLight24"
+        },
+        {
+          "name": "Aid",
+          "level": 2,
+          "uuid": "Compendium.dnd-players-handbook.spells.Item.spAid"
+        },
+        {
+          "name": "Fireball",
+          "level": 3,
+          "uuid": "Compendium.dnd-players-handbook.spells.Item.spFireball"
+        }
+      ]
+    }
+  },
+  {
+    "input": [
+      "spellList wizard level 3"
+    ],
+    "out": {
+      "list": "class:wizard",
+      "count": 1,
+      "spells": [
+        {
+          "name": "Fireball",
+          "level": 3,
+          "uuid": "Compendium.dnd-players-handbook.spells.Item.spFireball"
+        }
+      ]
+    }
+  },
+  {
+    "input": [
+      "spellList nope"
+    ],
+    "out": {
+      "error": "no class list \"nope\"",
+      "known": [
+        "class:wizard",
+        "class:cleric"
+      ]
+    }
+  },
+  {
+    "input": [
+      "packs()"
+    ],
+    "out": {
+      "world": "test-world",
+      "foundry": "14.369",
+      "system": "dnd5e 6.0.6",
+      "packs": [
+        {
+          "id": "dnd-players-handbook.content",
+          "present": true,
+          "label": "Player's Handbook",
+          "type": "JournalEntry",
+          "entries": 4,
+          "edition": "2024"
+        },
+        {
+          "id": "dnd-dungeon-masters-guide.content",
+          "present": false
+        },
+        {
+          "id": "dnd5e.content24",
+          "present": true,
+          "label": "SRD 5.2 Rules",
+          "type": "JournalEntry",
+          "entries": 1,
+          "edition": "2024"
+        },
+        {
+          "id": "dnd-monster-manual.content",
+          "present": false
+        },
+        {
+          "id": "dnd5e.rules",
+          "present": false
+        },
+        {
+          "id": "dnd-monster-manual.actors",
+          "present": true,
+          "label": "Monster Manual Actors",
+          "type": "Actor",
+          "entries": 4,
+          "edition": "2024"
+        },
+        {
+          "id": "dnd5e.actors24",
+          "present": true,
+          "label": "SRD 5.2 Actors",
+          "type": "Actor",
+          "entries": 3,
+          "edition": "2024"
+        },
+        {
+          "id": "dnd-players-handbook.actors",
+          "present": false
+        },
+        {
+          "id": "dnd-dungeon-masters-guide.actors",
+          "present": false
+        }
+      ]
+    }
+  },
+  {
+    "input": [
+      "toPlainText"
+    ],
+    "out": "a & b"
+  }
+]
