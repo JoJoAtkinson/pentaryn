@@ -1,142 +1,165 @@
 ---
 created: 2026-08-22
-last_modified: 2026-10-10
+last_modified: 2026-10-11
 tags: ["foundry", "vtt", "module", "rules", "compendium"]
 status: shipped — 0.3.0
 ---
 
-# `pentaryn-lookup`
+# Pentaryn Rules Lookup (`pentaryn-lookup`)
 
-The books you own, searchable from one call.
+**Read this when:** you are changing or calling `pentaryn-lookup` (`game.pentaryn.rules`). **Not
+this file:** how to look a rule up at the table → [`context/foundry/rules-lookup.md`](../../../context/foundry/rules-lookup.md) ·
+the migration record → `context/plans/addon-blueprint-2026-10/migrate-pentaryn-lookup.md` · how every
+addon is built → [`context/foundry/addon-blueprint.md`](../../../context/foundry/addon-blueprint.md)
+
+The books you own, searchable from one call. Read-only: it never writes a document, opens a
+dialog or touches the canvas.
 
 ```js
-await game.pentaryn.rules.search("half cover")
-await game.pentaryn.rules.page("Study")
-await game.pentaryn.rules.monster("Adult Black Dragon")
-await game.pentaryn.rules.packs()
+await game.pentaryn.rules.search("half cover")                 // an object — iterate .hits
+await game.pentaryn.rules.page("Study")                        // or a page uuid from search()
+await game.pentaryn.rules.monster("Goblin Boss", { text: true })
+await game.pentaryn.rules.monsters({ size: "large", type: "construct", cr: "5-8" })
+await game.pentaryn.rules.onList("Fireball", "cleric")
 await game.pentaryn.rules.selftest()
-await game.pentaryn.rules.onList("Fireball", "cleric")     // class spell lists (dnd5e's registry)
-await game.pentaryn.rules.spellList("wizard", {level: 3})
-await game.pentaryn.rules.monster("Goblin Boss", {text: true})              // + feature text, enrichers resolved
-await game.pentaryn.rules.monsters({size: "large", type: "construct", cr: "5-8"})
-await game.pentaryn.rules.names()                                          // PHB names for a character spec
 ```
 
-Read-only. It never writes a document, opens a dialog, or touches the canvas.
-
-## Why it exists
-
-`mcp__foundry__search-compendium` matches entity **names** only — searching it for
-"cover" across the rules journals returns zero results, because the pages live inside
-journals named `Combat` and `Appendix C: Rules Glossary`. The working route is
-`eval-js` against `page.text.content`, and that route has five traps that all fail
-**silently**:
+**Why it exists.** `mcp__foundry__search-compendium` matches entity *names* only, and the
+eval-js route over `page.text.content` has five traps that all fail **silently**:
 
 | Trap | What it does |
 |---|---|
-| `getIndex({fields:["pages.name"]})` | populated 2 of 47 PHB entries on v14.367; the rest came back `{}`. Still broken on v14.369, but intermittently: core `indexDocument` rewrites an entry with `getProperty(source, "pages.name")` (undefined through an array) every time a document enters the pack cache, so the same call returns 47/47 or 0/47 depending on who ran `getDocuments()` first. |
-| `EmbeddedCollection` has no `.length` | `pages.length` → `undefined` → `NaN` when summed → `null` in the result, no error |
-| enricher noise | 5,052 `@UUID[…]` across PHB/DMG/MM/SRD survive a naive tag-strip and eat ~80 chars of snippet each |
-| transport truncation | `eval-js` silently truncates a large return |
+| `getIndex({fields:["pages.name"]})` | right or wrong per call: core `indexDocument` rewrites an entry with `getProperty(source, "pages.name")` (undefined through an array) whenever a document enters the pack cache — 47/47 one call, 0/47 the next (v14.367 and v14.369) |
+| `EmbeddedCollection` has no `.length` | `pages.length` → `undefined` → `NaN` → `null`, no error |
+| enricher noise | 5,052 `@UUID[…]` across PHB/DMG/MM/SRD survive a naive tag-strip |
+| transport truncation | eval-js silently truncates a large return |
 | `globalThis.duplicate` | removed in v14 |
 
-Every one of those was hit for real while writing the recipes this module replaces.
-Retyping the script from memory each call reproduces them; a tested file does not.
+**Defaults.** PHB + DMG + 2024 SRD; Monster Manual text is opt-in (`books: "monsters"` or
+`"all"`). The 2014 SRD is searched only when asked (`books: "2014"`) and its hits carry
+`edition: "2014"`. Five hits, ~240-character snippets, an 8 KB payload ceiling; `total` reports
+every matching page. One hit per page, with `matches: n`. World journals are out of scope
+(`find_lore`, `search-journals`).
 
-## Architecture
+## What the player sees
 
-Two files, and the split is the whole point.
+n/a — a GM / LLM tool with no UI.
+
+## Settings
+
+n/a — no settings.
+
+## API — game.pentaryn.rules
+
+Canonical: `game.modules.get("pentaryn-lookup").api`; `game.pentaryn.rules` is the same frozen
+object. Ask it: `game.pentaryn.rules.describe()` (offline: `test/golden/describe.json`). Every
+lookup is a **legacy** row: a miss is an answer object (`{error}`, `{notFound, …, hint}`), never a
+throw. None is GM-only, none writes.
+
+| Method | Returns |
+|---|---|
+| `search(query, { books, limit, snippet, regex })` | `{ query, books, total, shown, hits: [{ book, journal, page, uuid, matches, snippet, edition? }], note?, truncated?, warning? }` \| `{ error }` |
+| `page(ref, { books, maxChars, offset, raw, tables })` | `{ book, journal, page, uuid, text, edition?, truncated?, totalChars?, nextOffset?, tables? }` \| `{ journal, page, uuid, raw }` \| `{ notFound, name, closest, hint }` \| `{ error }` |
+| `monster(name, { text })` | `{ name, pack, uuid, cr, ac, hp, size, type, features, warning? }` (+ `languages`, `speed`, feature `text` with `text: true`) \| `{ notFound, name, searched, hint }` \| `{ error }` |
+| `monsters({ size, type, cr, minCr, maxCr, name, limit, packs })` | `{ count, shown, monsters: [{ name, cr, size, type, uuid, pack }], hint? }` |
+| `names(kind)` | `{ classes, subclasses: { <class>: [] }, species, backgrounds, feats: { origin, general, … } }`, or one key |
+| `packs()` | `{ world, foundry, system, packs: [{ id, present, label?, type?, entries?, edition? }] }` |
+| `onList(spell, cls, { type })` | `{ spell, uuid, level, list, onList: true \| false \| null, hint? }` \| `{ notFound, spell, hint }` |
+| `spellList(cls, { type, level })` | `{ list, count, spells: [{ name, level, uuid }] }` \| `{ error, known }` |
+| `toPlainText(html)` | string |
+| `selftest()` | `{ ok, passed, failed, checks: [{ label, ok, detail }] }` |
+| `LIMITS` | the limits table, a frozen copy (data, not a method) |
+
+`page`'s `ref` is a page UUID or a page **name** (exact, then substring) — it is never run
+through the kit's actor resolver. `page()` appends embedded roll tables as `tables` (`{ tables:
+false }` skips them). Kit members: `describe()`, `version`, `contract`, `settings()`, `trace()`,
+`uninstall()`.
+
+**Queries (GM only):** `pentaryn-lookup.search`, `.page`, `.monster`, `.monsters`, `.names`,
+`.onList`, `.spellList`, `.packs`, registered at `init` on every client. Payloads are named
+fields: `{ query, books, limit }`, `{ ref, maxChars }`, `{ name, text }`, `{ cr, size }`,
+`{ kind }`, `{ spell, cls, type }`, `{ cls, type, level }`, `{}`. A player sender or a player
+client gets `NOT_GM`; before `ready` publishes, `NOT_READY`.
+
+## Data written
+
+None — no documents, no flags, no settings.
+
+## Flags other modules read
+
+n/a — writes no flags.
+
+## Events
+
+None emitted (beyond the kit's `pentaryn-lookup.ready` and `pentaryn.ready` on publish).
+Listens to: `init` (queries) and `ready` (publish), pinned in `test/golden/hooks.json`.
+
+## Patches and adjustments
+
+None — patches nothing and uses no third-party package. One read of core **source text**, not a
+patch: `selftest()` tests `CompendiumCollection#indexDocument.toString()` for the
+`getProperty(data, field)` projection that breaks journal indexes (the canary for the first
+trap above; `packs-adapter.mjs` `indexDocumentProbe`).
+
+## Two sessions / who writes
+
+Read-only, any client. A query runs in every GM tab that receives it (bridge and browser); both
+answer the same read, so the first answer is right.
+
+## Extending
+
+1. A pure function in `lookup-core.mjs`, with a case in `test/core.test.mjs`.
+2. Any Foundry read it needs → a function in `packs-adapter.mjs` (plain data out).
+3. A thin method in `books.mjs`, added to `install()`'s `impl`.
+4. A row in `api-manifest.mjs`: `returns`, `doc`, `legacy: true` only if the answer is an
+   `{error}`/`{notFound}` object, and `query: true` + an `args` mapper if the bridge should call it.
+   Then `GOLDEN_UPDATE=1 node --test test/api-kit.test.mjs` and review the `describe.json` diff.
+5. A `selftest()` check in `api.mjs` and a line in `context/foundry/rules-lookup.md`.
+
+## Pitfalls
+
+- `getIndex({ fields })` cannot be trusted for journal `pages.*` (first trap): book text comes
+  from `getDocuments()` (~150 ms for the whole PHB). Actor index fields are reliable.
+- `doc.pages` and `actor.items` are EmbeddedCollections: iterate, `.size`, never `.length`.
+- A param named `ref` is resolved as an actor by the kit unless its row says `resolve: false`;
+  `page` is the only one, and no other lookup param may be named `ref`.
+- The "Class Spell Lists" pages in the PHB are empty shells; the lists live only in
+  `dnd5e.registry.spellLists`.
+- `monsters()` sorts a row with no CR by name only (a NaN comparison) — kept as shipped.
+- `lib/` and `test/kit/` are vendored copies: edit `foundry/lib/`, then `vendor.py sync lookup`.
+
+## Files
 
 | File | Role |
 |---|---|
-| `lookup-core.mjs` | **Pure.** No Foundry, no `game`, no DOM. HTML stripping, enricher normalization, snippet centring, per-page dedupe, UUID assembly, payload capping, the monster digest. Everything that can be wrong. |
-| `pentaryn-lookup.mjs` | **The adapter** — thin glue (the API wrappers, spell lists, monsters, selftest and publish; the logic stays in core). `game.packs.get()` → `getDocuments()` → plain data → core. If a Foundry bump breaks this module, this is the only file to re-verify. |
+| `pentaryn-lookup.mjs` | entry (esmodules[0]): wiring, `init` queries, `ready` publish |
+| `lookup-core.mjs` | pure: identity, pack tables, HTML → text, search, page, monster rules |
+| `packs-adapter.mjs` | every Foundry read: packs, `fromUuid`, `dnd5e.registry`, `enrichHTML` |
+| `books.mjs` | the feature: the eight lookups |
+| `api-manifest.mjs` | API rows (pure data) |
+| `api.mjs` | `buildApiFor`, `selftest` |
+| `lib/` | vendored kit, tier full (`lib/kit.lock.json`) |
+| `test/` | node:test suites, goldens, synthetic fixtures (`test/fixtures/`), vendored test kit |
 
-`node test/run.mjs` — no dependencies; it prints its own pass count. Fixtures are synthetic HTML built
-to trip each trap, not real book text: the licensed content does not belong in this
-repo, and prose that happens to be authentic proves less than prose designed to break
-things.
+Verified Foundry and dnd5e paths (v14.369, dnd5e 6.0.6, 2026-10-10): `game.packs.get(id)`
+(`.metadata.label`, `.documentName`, `getDocuments()`, `getIndex()`), `page.text.content`,
+`fromUuid`, `actor.system.details.cr` / `attributes.ac.value` (`.flat` fallback) /
+`attributes.hp.max`, `dnd5e.registry.spellLists.forType()` / `.options`, `RollTable#results`,
+`TextEditor.implementation.enrichHTML(html, { rollData, relativeTo })`.
 
-## Foundry APIs this depends on
-
-Verified live on **v14.367 / dnd5e 5.3.3**, 2026-08-22, and re-verified on **v14.369**, 2026-10-10. Checked against the
-**dnd5e 6.0.6** source 2026-10-10 (0.1.1): the `dnd5e.rules`, `dnd5e.content24` and `dnd5e.actors24` pack ids and the
-prepared `details.cr` / `attributes.ac.value` / `attributes.hp.max` paths are unchanged. Treat as a dated snapshot.
-
-- `game.packs.get(id)` → `CompendiumCollection`; `.metadata.label`, `.documentName`
-- `pack.getDocuments()` — **authoritative**; ~150 ms for the whole PHB
-- `pack.getIndex()` → `Collection` (`.size`, `.find`)
-- `doc.pages`, `actor.items` → `EmbeddedCollection` — iterate, `.size`, never `.length`
-- `page.text.content` → HTML string
-- `fromUuid(uuid)` → document
-- `actor.system.details.cr`, `.attributes.ac.value` (`.flat` fallback), `.attributes.hp.max`
-- `dnd5e.registry.spellLists.forType(type, identifier)` → `{uuids, has(spellOrUuid)}`; `.options` lists the known lists (dnd5e 6.0.6)
-- `RollTable#results` → `{range, description, name}` (v14)
-- `pack.getIndex({fields: ["system.details.cr", "system.traits.size", "system.details.type.value"]})` — actor index
-  fields are reliable (504/504 MM entries filled, 2026-10-10; the unreliable case is journal `pages`)
-- `foundry.applications.ux.TextEditor.implementation.enrichHTML(html, {rollData, relativeTo})` resolves dnd5e's
-  `[[lookup]]`, `[[/attack]]`, `[[/damage]]` (0.3.0)
-
-## Defaults worth knowing
-
-- **Books:** PHB + DMG + 2024 SRD. Monster Manual *text* is opt-in (`books: "monsters"`
-  or `"all"`) — 1,236 pages of monster lore would swamp a rules query.
-- **2014 SRD is never searched unless asked for** (`books: "2014"`), and its hits carry
-  `edition: "2014"`. This table runs D&D 2024; quoting 2014 text at it is the quietest
-  way to be wrong.
-- **5 hits, ~240-char snippets, 8 KB payload ceiling.** `total` always reports every
-  matching page, so a capped answer is visibly capped. Raise with `limit` (max 20) and
-  `snippet` (max 600).
-- **One hit per page**, with `matches: n` — a page saying "cover" nine times must not
-  consume nine of five slots.
-- **World journals are out of scope.** Campaign notes are the repo's job (`find_lore`)
-  or `search-journals`. Mixing them into a *rules* search muddies the one thing this is
-  for.
-
-## Options
-
-```js
-search(query, {books, limit, snippet, regex})   // books: "rules"|"monsters"|"all"|"2014"|[ids]
-page(refOrName, {raw, maxChars, offset, books}) // ref may be a Compendium UUID from search()
-monster(name, {text})                           // exact-then-substring across 4 actor packs; text: true adds
-                                                //   features [{name, type, activation, recharge, text}] (TextEditor.enrichHTML
-                                                //   with the item's roll data, then plain text), languages, speed
-monsters({size, type, cr, minCr, maxCr, name, limit, packs}) // MM then 2024 SRD index, one per name, lowest CR first
-names(kind)                                     // {classes, subclasses: {cls: […]}, species, backgrounds, feats: {origin, general, …}}
-onList(spell, cls, {type})                      // spell name or uuid; type "class" (default) | "subclass"
-spellList(cls, {type, level})                   // one entry per spell name, PHB first
-```
-
-`page()` appends the page's embedded roll tables as `tables: [{name, formula, uuid, rows}]`
-(`@Embed[…RollTable…]` is otherwise dropped with the other enrichers); `{tables: false}` skips it.
-The "Class Spell Lists" pages in the PHB are empty shells — the lists are only in
-`dnd5e.registry.spellLists`, which `onList`/`spellList` read.
-
-## Install
+## Tests
 
 ```
-make foundry-lookup-sync
+node test/run.mjs                                  # from the module folder
+./.venv/bin/python scripts/foundry/blueprint/vendor.py check lookup
+./.venv/bin/python scripts/foundry/blueprint/conformance.py --module lookup
 ```
 
-Then enable **Pentaryn Rules Lookup** in Manage Modules and reload. Confirm with
-`await game.pentaryn.rules.selftest()`.
+Fixtures are synthetic HTML and stub packs built to trip each trap, never real book text.
 
-## selftest
+## Sync
 
-Asserts the assumptions above against the live world: the packs exist, `"half cover"`
-finds a Cover page, hits carry pasteable UUIDs, snippets are enricher-free,
-`page("Study")` resolves, `monster("Goblin")` returns numeric cr/ac/hp, `onList` is true for
-Fireball on the wizard list and false on the cleric's, `page("Artifacts")` carries its four roll
-tables — and that
-core's `CompendiumCollection#indexDocument` still projects index fields with
-`getProperty`, which drops nested page fields, so if Foundry ever fixes it you find out
-deliberately rather than by someone "optimizing" the adapter back into the bug.
-
-The canary checks the mechanism, not a live index. Until 2026-10-10 it counted filled
-entries from `getIndex({fields})`; on v14.369 that count flipped between 47/47 and 0/47
-with the bug intact, depending on whether a `getDocuments()` had run first, so the
-selftest read 9/10 on a healthy module.
-
-Run it after every sync, and after every Saturday auto-update — an update is exactly
-when a premium module restructures its journals or dnd5e moves a data path, and both
-are otherwise silent until someone asks a rules question mid-session.
+`make foundry-lookup-sync`, then reload and run `await game.pentaryn.rules.selftest()`. A
+`module.json` change needs a Foundry restart. Run the selftest after every Saturday auto-update
+too — that is when a premium module restructures its journals or dnd5e moves a data path.
+Check what is live with `game.pentaryn.rules.describe().version`.
