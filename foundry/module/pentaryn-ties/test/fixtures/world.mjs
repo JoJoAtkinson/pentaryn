@@ -169,6 +169,14 @@ export async function bootWorld({
   let rid = 0;
   F.foundry.utils.randomID = () => `rid${String(++rid).padStart(13, "0")}`;
   Date.now = () => NOW;
+  // dates the UI prints: one locale and zone whatever machine runs this (en-US, UTC)
+  const { toLocaleString, toLocaleDateString } = Date.prototype;
+  Date.prototype.toLocaleString = function (locale, opts) {
+    return toLocaleString.call(this, "en-US", { timeZone: "UTC", ...(opts ?? {}) });
+  };
+  Date.prototype.toLocaleDateString = function (locale, opts) {
+    return toLocaleDateString.call(this, "en-US", { timeZone: "UTC", ...(opts ?? {}) });
+  };
   if (timers) mock.timers.enable({ apis: ["setTimeout"] });
 
   // frames: queued, never run on their own — `F.flushFrames()` runs what is queued
