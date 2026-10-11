@@ -27,7 +27,7 @@ help:
 	@echo "                           FROM=latest|local|<snapshot> decides the boot choice"
 	@echo "                           (default: asks when the cloud is newer, at a terminal)"
 	@echo "    make login             pick a campaign + user, land in the world logged in"
-	@echo "    make vtt-down          tear both down, snapshot the world"
+	@echo "    make vtt-down          tear both down, snapshot the world (upload in background; WAIT=1 waits)"
 	@echo "    make vtt               status: app, tunnel, public reachability"
 	@echo ""
 	@echo "  Content"
@@ -97,8 +97,10 @@ vtt-up: vtt-lock-check foundry-boot foundry-backup-safe foundry-assets-safe foun
 	@echo "  ▸ local:    $(FOUNDRY_URL)"
 	@echo "  ▸ teardown: make vtt-down"
 
+# The shutdown snapshot's tar is built here (Foundry stopped); its upload runs in the
+# background and `make foundry-cloud` shows it. WAIT=1: upload before returning, as before.
 vtt-down: vtt-lock-check tunnel-down foundry-down
-	@$(MAKE) --no-print-directory foundry-backup REASON=shutdown
+	@$(MAKE) --no-print-directory foundry-backup REASON=shutdown $(if $(WAIT),,BACKGROUND=1)
 	@echo "  ▸ all down"
 
 # Start the app, launch the world, and land in it as GM — no dropdown, no password.
@@ -197,8 +199,9 @@ foundry-assets:
 foundry-assets-safe:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud assets --if-reachable
 
+# BACKGROUND=1 (what vtt-down passes): build the tar, upload it from a detached process.
 foundry-backup:
-	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud backup --reason $(or $(REASON),manual)
+	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud backup --reason $(or $(REASON),manual)$(if $(BACKGROUND), --background,)
 
 # Lifecycle variant: skips quietly when the server is already up, so `make vtt-up`
 # on a running server does not abort before starting the tunnel; a cloud that is down
