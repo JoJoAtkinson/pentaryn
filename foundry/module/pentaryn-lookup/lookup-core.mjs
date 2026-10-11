@@ -38,6 +38,9 @@ export const EDITIONS = { "dnd5e.rules": "2014" };
 export const MONSTER_PACKS = ["dnd-monster-manual.actors", "dnd5e.actors24",
                               "dnd-players-handbook.actors", "dnd-dungeon-masters-guide.actors"];
 
+/** Where monsters() lists from when no `packs` is given: the Monster Manual, then the 2024 SRD. */
+export const MONSTER_LIST_PACKS = Object.freeze(["dnd-monster-manual.actors", "dnd5e.actors24"]);
+
 /** Where onList() looks a spell up by name: the PHB first, then the 2024 SRD, then the 2014 SRD. */
 export const SPELL_PACKS = ["dnd-players-handbook.spells", "dnd5e.spells24", "dnd5e.spells"];
 
@@ -406,7 +409,7 @@ export function monsterQuery(q = {}) {
   if (q.maxCr !== undefined) hi = crNum(q.maxCr);
   const name = q.name ? String(q.name).toLowerCase() : null;
   const limit = Math.max(1, Math.min(Number(q.limit) || 40, 200));
-  const packIds = q.packs ?? ["dnd-monster-manual.actors", "dnd5e.actors24"];
+  const packIds = q.packs ?? [...MONSTER_LIST_PACKS];
   return { size, type, lo, hi, name, limit, packIds };
 }
 

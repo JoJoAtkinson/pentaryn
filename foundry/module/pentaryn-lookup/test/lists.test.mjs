@@ -129,3 +129,16 @@ test("core.groupNames: no indexes at all is the empty answer; NAME_PARTS names e
     ["backgrounds", "classes", "feats", "species", "subclasses"]);
   assert.ok(Object.isFrozen(core.NAME_SOURCES) && Object.isFrozen(core.NAME_PARTS));
 });
+
+// ── monsters(): the default pack table ───────────────────────────────────────
+
+test("monsterQuery's default packs come from MONSTER_LIST_PACKS, a fresh array each call", () => {
+  assert.deepEqual(core.MONSTER_LIST_PACKS, ["dnd-monster-manual.actors", "dnd5e.actors24"]);
+  assert.deepEqual(core.MONSTER_LIST_PACKS, core.MONSTER_PACKS.slice(0, 2), "the digest's first two packs, same order");
+  const a = core.monsterQuery({}), b = core.monsterQuery({});
+  assert.deepEqual(a.packIds, core.MONSTER_LIST_PACKS);
+  a.packIds.push("x");
+  assert.deepEqual(b.packIds, core.MONSTER_LIST_PACKS);
+  assert.deepEqual(core.monsterQuery({}).packIds, core.MONSTER_LIST_PACKS, "a caller's push never reaches the table");
+  assert.deepEqual(core.monsterQuery({ packs: ["a.b"] }).packIds, ["a.b"]);
+});
