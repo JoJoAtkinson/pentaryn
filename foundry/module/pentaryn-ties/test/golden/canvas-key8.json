@@ -1,0 +1,358 @@
+[
+  {
+    "label": "hover the PC, press 8",
+    "out": null,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "ZZ Caven: 2 shown · not on this scene — ZZ Away"
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards",
+      "children": [
+        {
+          "tag": "DIV",
+          "className": "pt-card",
+          "style": {
+            "left": "950px",
+            "top": "0px"
+          },
+          "listeners": [
+            "pointerdown",
+            "pointermove",
+            "pointerup",
+            "pointercancel"
+          ],
+          "children": [
+            {
+              "tag": "IMG",
+              "src": "icons/zz/zzFar00000000001.webp",
+              "className": "pt-card-art",
+              "listeners": [
+                "error"
+              ]
+            },
+            {
+              "tag": "DIV",
+              "className": "pt-card-body",
+              "children": [
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-word",
+                  "children": [
+                    {
+                      "tag": "SPAN",
+                      "className": "pt-dot",
+                      "style": {
+                        "color": "#2ecc40"
+                      },
+                      "textContent": "●"
+                    },
+                    {
+                      "tag": "SPAN",
+                      "textContent": "Devoted"
+                    }
+                  ]
+                },
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-name",
+                  "textContent": "ZZ Faraway"
+                }
+              ]
+            },
+            {
+              "tag": "BUTTON",
+              "title": "Close this card",
+              "className": "pt-card-close",
+              "type": "button",
+              "innerHTML": "<i class=\"fa-solid fa-xmark\"></i>",
+              "listeners": [
+                "click"
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "DIV",
+          "className": "pt-card",
+          "style": {
+            "left": "50px",
+            "top": "0px"
+          },
+          "listeners": [
+            "pointerdown",
+            "pointermove",
+            "pointerup",
+            "pointercancel"
+          ],
+          "children": [
+            {
+              "tag": "IMG",
+              "src": "icons/zz/zzNpc00000000001.webp",
+              "className": "pt-card-art",
+              "listeners": [
+                "error"
+              ]
+            },
+            {
+              "tag": "DIV",
+              "className": "pt-card-body",
+              "children": [
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-word",
+                  "children": [
+                    {
+                      "tag": "SPAN",
+                      "className": "pt-dot",
+                      "style": {
+                        "color": "#e1a53a"
+                      },
+                      "textContent": "●"
+                    },
+                    {
+                      "tag": "SPAN",
+                      "textContent": "debtor"
+                    }
+                  ]
+                },
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-name",
+                  "textContent": "ZZ Brakka"
+                },
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-notes",
+                  "textContent": "Owes forty crowns."
+                }
+              ]
+            },
+            {
+              "tag": "BUTTON",
+              "title": "Close this card",
+              "className": "pt-card-close",
+              "type": "button",
+              "innerHTML": "<i class=\"fa-solid fa-xmark\"></i>",
+              "listeners": [
+                "click"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "label": "press 8 again (toggle off)",
+    "out": null,
+    "calls": [],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "press 8 once more",
+    "out": null,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "ZZ Caven: 2 shown · not on this scene — ZZ Away"
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards",
+      "children": [
+        {
+          "tag": "DIV",
+          "className": "pt-card",
+          "style": {
+            "left": "950px",
+            "top": "0px"
+          },
+          "listeners": [
+            "pointerdown",
+            "pointermove",
+            "pointerup",
+            "pointercancel"
+          ],
+          "children": [
+            {
+              "tag": "IMG",
+              "src": "icons/zz/zzFar00000000001.webp",
+              "className": "pt-card-art",
+              "listeners": [
+                "error"
+              ]
+            },
+            {
+              "tag": "DIV",
+              "className": "pt-card-body",
+              "children": [
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-word",
+                  "children": [
+                    {
+                      "tag": "SPAN",
+                      "className": "pt-dot",
+                      "style": {
+                        "color": "#2ecc40"
+                      },
+                      "textContent": "●"
+                    },
+                    {
+                      "tag": "SPAN",
+                      "textContent": "Devoted"
+                    }
+                  ]
+                },
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-name",
+                  "textContent": "ZZ Faraway"
+                }
+              ]
+            },
+            {
+              "tag": "BUTTON",
+              "title": "Close this card",
+              "className": "pt-card-close",
+              "type": "button",
+              "innerHTML": "<i class=\"fa-solid fa-xmark\"></i>",
+              "listeners": [
+                "click"
+              ]
+            }
+          ]
+        },
+        {
+          "tag": "DIV",
+          "className": "pt-card",
+          "style": {
+            "left": "50px",
+            "top": "0px"
+          },
+          "listeners": [
+            "pointerdown",
+            "pointermove",
+            "pointerup",
+            "pointercancel"
+          ],
+          "children": [
+            {
+              "tag": "IMG",
+              "src": "icons/zz/zzNpc00000000001.webp",
+              "className": "pt-card-art",
+              "listeners": [
+                "error"
+              ]
+            },
+            {
+              "tag": "DIV",
+              "className": "pt-card-body",
+              "children": [
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-word",
+                  "children": [
+                    {
+                      "tag": "SPAN",
+                      "className": "pt-dot",
+                      "style": {
+                        "color": "#e1a53a"
+                      },
+                      "textContent": "●"
+                    },
+                    {
+                      "tag": "SPAN",
+                      "textContent": "debtor"
+                    }
+                  ]
+                },
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-name",
+                  "textContent": "ZZ Brakka"
+                },
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-notes",
+                  "textContent": "Owes forty crowns."
+                }
+              ]
+            },
+            {
+              "tag": "BUTTON",
+              "title": "Close this card",
+              "className": "pt-card-close",
+              "type": "button",
+              "innerHTML": "<i class=\"fa-solid fa-xmark\"></i>",
+              "listeners": [
+                "click"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "label": "hover someone with no ties",
+    "out": null,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "ZZ Stranger has no ties recorded."
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "hover nothing (sweeps what is up)",
+    "out": null,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Hover a token, or select one."
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "hover nothing, nothing up",
+    "out": null,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Hover a token, or select one."
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  }
+]

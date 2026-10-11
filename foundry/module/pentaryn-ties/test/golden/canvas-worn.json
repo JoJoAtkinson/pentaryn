@@ -1,0 +1,309 @@
+[
+  {
+    "label": "readWorn: nothing",
+    "out": null,
+    "calls": [],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "setWorn",
+    "out": true,
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Token",
+        "uuid": "Scene.zzScene000000001.Token.zzTokNpc00000001",
+        "changes": {
+          "flags.pentaryn-ties.worn": {
+            "by": "Ozmandius",
+            "note": "Wears Brakka tonight."
+          }
+        }
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "readWorn",
+    "out": {
+      "by": "Ozmandius",
+      "note": "Wears Brakka tonight."
+    },
+    "calls": [],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "setWorn with nothing clears",
+    "out": true,
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Token",
+        "uuid": "Scene.zzScene000000001.Token.zzTokNpc00000001",
+        "changes": {
+          "flags.pentaryn-ties.-=worn": null
+        }
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "wornDialog → set",
+    "out": {
+      "by": "Oz",
+      "note": ""
+    },
+    "calls": [
+      {
+        "op": "DialogV2.wait",
+        "title": "Worn — Token zzTokNpc00000001",
+        "buttons": [
+          "set",
+          "cancel"
+        ]
+      },
+      {
+        "op": "update",
+        "documentName": "Token",
+        "uuid": "Scene.zzScene000000001.Token.zzTokNpc00000001",
+        "changes": {
+          "flags.pentaryn-ties.worn": {
+            "by": "Oz",
+            "note": ""
+          }
+        }
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "Token zzTokNpc00000001 is marked worn by Oz — this scene's token only."
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "wornDialog → clear",
+    "out": "clear",
+    "calls": [
+      {
+        "op": "DialogV2.wait",
+        "title": "Worn — Token zzTokNpc00000001",
+        "buttons": [
+          "set",
+          "clear",
+          "cancel"
+        ]
+      },
+      {
+        "op": "update",
+        "documentName": "Token",
+        "uuid": "Scene.zzScene000000001.Token.zzTokNpc00000001",
+        "changes": {
+          "flags.pentaryn-ties.-=worn": null
+        }
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "Worn mark cleared from Token zzTokNpc00000001."
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "wornDialog → cancel",
+    "out": null,
+    "calls": [
+      {
+        "op": "DialogV2.wait",
+        "title": "Worn — Token zzTokNpc00000001",
+        "buttons": [
+          "set",
+          "cancel"
+        ]
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "updateToken with a flag change queues a badge paint; the frame paints it",
+    "out": 2,
+    "calls": [],
+    "pixi": 4,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "worn line on a GM card",
+    "out": null,
+    "calls": [],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards",
+      "children": [
+        {
+          "tag": "DIV",
+          "className": "pt-card",
+          "style": {
+            "left": "50px",
+            "top": "0px"
+          },
+          "listeners": [
+            "pointerdown",
+            "pointermove",
+            "pointerup",
+            "pointercancel"
+          ],
+          "children": [
+            {
+              "tag": "IMG",
+              "src": "icons/zz/zzNpc00000000001.webp",
+              "className": "pt-card-art",
+              "listeners": [
+                "error"
+              ]
+            },
+            {
+              "tag": "DIV",
+              "className": "pt-card-body",
+              "children": [
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-word",
+                  "children": [
+                    {
+                      "tag": "SPAN",
+                      "className": "pt-dot",
+                      "style": {
+                        "color": "#e1a53a"
+                      },
+                      "textContent": "●"
+                    },
+                    {
+                      "tag": "SPAN",
+                      "textContent": "debtor"
+                    }
+                  ]
+                },
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-name",
+                  "textContent": "ZZ Brakka"
+                },
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-notes",
+                  "textContent": "Owes forty crowns."
+                },
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-worn",
+                  "children": [
+                    {
+                      "tag": "DIV",
+                      "className": "pt-card-worn-by",
+                      "textContent": "Worn by Oz"
+                    },
+                    {
+                      "tag": "DIV",
+                      "className": "pt-card-worn-note",
+                      "textContent": "inside"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "tag": "BUTTON",
+              "title": "Close this card",
+              "className": "pt-card-close",
+              "type": "button",
+              "innerHTML": "<i class=\"fa-solid fa-xmark\"></i>",
+              "listeners": [
+                "click"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "label": "player: setWorn / clearWorn / wornDialog refused",
+    "out": [
+      false,
+      false,
+      null
+    ],
+    "calls": [],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "clearWorn",
+    "out": true,
+    "calls": [
+      {
+        "op": "update",
+        "documentName": "Token",
+        "uuid": "Scene.zzScene000000001.Token.zzTokNpc00000001",
+        "changes": {
+          "flags.pentaryn-ties.-=worn": null
+        }
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "readWorn junk",
+    "out": [
+      null,
+      null,
+      null
+    ],
+    "calls": [],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  }
+]

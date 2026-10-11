@@ -1,0 +1,33 @@
+[
+  {
+    "id": "Interface1",
+    "call": "new",
+    "args": []
+  },
+  {
+    "id": "Graphics2",
+    "call": "new",
+    "args": []
+  },
+  {
+    "id": "Graphics2",
+    "call": "toJSON",
+    "args": [
+      "0"
+    ]
+  },
+  {
+    "id": "Graphics2",
+    "call": "toJSON",
+    "args": [
+      "__proxy"
+    ]
+  },
+  {
+    "id": "Graphics2",
+    "call": "Symbol(Symbol.toPrimitive)",
+    "args": [
+      "string"
+    ]
+  }
+]

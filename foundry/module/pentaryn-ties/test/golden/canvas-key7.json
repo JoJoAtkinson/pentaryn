@@ -1,0 +1,156 @@
+[
+  {
+    "label": "nothing selected",
+    "out": null,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Select your own token first, then hover the person you're asking about."
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "PC selected, NPC hovered",
+    "out": null,
+    "calls": [],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards",
+      "children": [
+        {
+          "tag": "DIV",
+          "className": "pt-card",
+          "style": {
+            "left": "50px",
+            "top": "0px"
+          },
+          "listeners": [
+            "pointerdown",
+            "pointermove",
+            "pointerup",
+            "pointercancel"
+          ],
+          "children": [
+            {
+              "tag": "IMG",
+              "src": "icons/zz/zzNpc00000000001.webp",
+              "className": "pt-card-art",
+              "listeners": [
+                "error"
+              ]
+            },
+            {
+              "tag": "DIV",
+              "className": "pt-card-body",
+              "children": [
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-word",
+                  "children": [
+                    {
+                      "tag": "SPAN",
+                      "className": "pt-dot",
+                      "style": {
+                        "color": "#e1a53a"
+                      },
+                      "textContent": "●"
+                    },
+                    {
+                      "tag": "SPAN",
+                      "textContent": "debtor"
+                    }
+                  ]
+                },
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-name",
+                  "textContent": "ZZ Brakka"
+                },
+                {
+                  "tag": "DIV",
+                  "className": "pt-card-notes",
+                  "textContent": "Owes forty crowns."
+                }
+              ]
+            },
+            {
+              "tag": "BUTTON",
+              "title": "Close this card",
+              "className": "pt-card-close",
+              "type": "button",
+              "innerHTML": "<i class=\"fa-solid fa-xmark\"></i>",
+              "listeners": [
+                "click"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "label": "again (closes)",
+    "out": null,
+    "calls": [],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "hovering someone with no tie (GM: named)",
+    "out": null,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "ZZ Caven has no tie recorded to ZZ Stranger."
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "hovering yourself",
+    "out": null,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Hover the person you want the tie to."
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  },
+  {
+    "label": "hovering nothing",
+    "out": null,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "warn",
+        "message": "Hover the person you want the tie to."
+      }
+    ],
+    "pixi": 0,
+    "cards": {
+      "tag": "DIV",
+      "id": "pentaryn-ties-cards"
+    }
+  }
+]

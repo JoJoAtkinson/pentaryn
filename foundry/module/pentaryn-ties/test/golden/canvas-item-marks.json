@@ -1,0 +1,72 @@
+{
+  "tag": "OL",
+  "children": [
+    {
+      "tag": "LI",
+      "dataset": {
+        "itemId": "zzItemMark000001"
+      },
+      "children": [
+        {
+          "tag": "DIV",
+          "className": "name",
+          "children": [
+            {
+              "tag": "SPAN",
+              "className": "title",
+              "textContent": " ",
+              "children": [
+                {
+                  "tag": "I",
+                  "className": "pt-item-mark fa-solid fa-fire",
+                  "dataset": {
+                    "tooltip": "Burns hotter"
+                  },
+                  "style": {
+                    "color": "#ff7a1a"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tag": "LI",
+      "dataset": {
+        "itemId": "zzItemPlain00001"
+      },
+      "children": [
+        {
+          "tag": "DIV",
+          "className": "name",
+          "children": [
+            {
+              "tag": "SPAN",
+              "className": "title"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "tag": "LI",
+      "dataset": {
+        "itemId": "zzNoSuchItem0001"
+      },
+      "children": [
+        {
+          "tag": "DIV",
+          "className": "name",
+          "children": [
+            {
+              "tag": "SPAN",
+              "className": "title"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

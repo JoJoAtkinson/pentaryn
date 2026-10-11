@@ -99,6 +99,11 @@ export function makePlaceable(F, { id, actorId, x = 0, y = 0, isVisible = true, 
     isVisible,
     isOwner,
     zIndex: 0,
+    w: 100,
+    h: 100,
+    get center() {
+      return { x: document.x + 50, y: document.y + 50 };
+    },
     get actor() {
       return F.game.actors.get(actorId) ?? null;
     },
@@ -271,9 +276,49 @@ export async function bootWorld({
   const view = new FakeElement("canvas");
   const placeables = tokens.map(spec => makePlaceable(F, { ...spec, scene }));
   for (const p of placeables) scene.tokens.set(p.document.id, p.document);
+  // a PIXI that records: every Graphics/Text/Container call lands on F.pixi
+  F.pixi = [];
+  const rec = (kind, id) =>
+    new Proxy(
+      { kind, id, children: [], destroyed: false, position: { set: (x, y) => F.pixi.push({ id, call: "position.set", args: [x, y] }) }, anchor: { set: v => F.pixi.push({ id, call: "anchor.set", args: [v] }) } },
+      {
+        get(target, prop) {
+          if (prop in target) return target[prop];
+          if (prop === "then") return undefined;
+          return (...args) => {
+            F.pixi.push({ id, call: String(prop), args: F.plain(args) });
+            if (prop === "addChild") target.children.push(args[0]);
+            if (prop === "removeChildren") return target.children.splice(0);
+            if (prop === "destroy") target.destroyed = true;
+            return target.__proxy;
+          };
+        },
+        set(target, prop, value) {
+          target[prop] = value;
+          return true;
+        },
+      }
+    );
+  let pixiSeq = 0;
+  const make = kind => {
+    const p = rec(kind, `${kind}${++pixiSeq}`);
+    p.__proxy = p;
+    F.pixi.push({ id: p.id, call: "new", args: [] });
+    return p;
+  };
+  globalThis.PIXI = {
+    VERSION: "8.0.0",
+    Container: function Container() { return make("Container"); },
+    Graphics: function Graphics() { return make("Graphics"); },
+    Text: function Text(opts) { const t = make("Text"); F.pixi.push({ id: t.id, call: "text", args: F.plain([opts]) }); return t; },
+  };
+  const iface = make("Interface");
+
   Object.assign(globalThis.canvas, {
     ready: true,
     scene,
+    interface: iface,
+    stage: { toGlobal: ({ x, y }) => ({ x, y }), toLocal: ({ x, y }) => ({ x, y }) },
     app: { view },
     dimensions: { uiScale: 1 },
     canvasCoordinatesFromClient: ({ x, y }) => ({ x, y }),
