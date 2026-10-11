@@ -424,20 +424,14 @@ async function selftest() {
 
 // ── publish ──────────────────────────────────────────────────────────────────
 /**
- * pentaryn-importer creates and FREEZES `game.pentaryn` in its own ready hook, and
- * module ready-hooks fire in alphabetical order of module id — "pentaryn-lookup" sorts
- * after "pentaryn-importer", so a bare assignment throws in strict mode and takes the
- * rest of the hook down with it, leaving no API and no log line. Same guard the walls,
- * ties, pings and dropbin modules carry.
+ * `game.pentaryn` is a plain object every module assigns into: the importer merges into it and
+ * nothing freezes it since its keystone (items-journal-1), so the old frozen-root guard is gone
+ * (kit 1.0.2, J10). A frozen root now throws here and the ready hook stops before its log line.
  */
 function publishAPI() {
   const api = { search, page, monster, monsters, names, packs, selftest, onList, spellList, toPlainText, LIMITS };
-  const current = game.pentaryn;
-  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, rules: api };
-  else {
-    game.pentaryn ??= {};
-    game.pentaryn.rules = api;
-  }
+  game.pentaryn ??= {};
+  game.pentaryn.rules = api;
 }
 
 Hooks.once("ready", () => {
