@@ -27,7 +27,7 @@
  *     The delta's own map is remembered and put back on revival (null: the base actor's again).
  */
 
-import { MODULE, showEye, eyePlacement } from "./loot-core.mjs";
+import { MODULE, showEye, eyePlacement, needsRedraw } from "./dropbin-core.mjs";
 import { api as itemPilesApi, isValidItemPile, isItemPileEmpty, turnTokensIntoItemPiles, revertTokensFromItemPiles } from "./piles.mjs";
 
 const OBSERVER = CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER;
@@ -137,7 +137,8 @@ async function sync(actor) {
 // Debounce per actor: a damage roll can fire several updates in a row.
 const pending = new Map();
 function queue(actor) {
-  if (!actor) return;
+  // sync() runs on the active GM only; no other client needs the timer (items-journal-30)
+  if (!actor || !isGMRunner()) return;
   const key = actor.uuid;
   clearTimeout(pending.get(key));
   pending.set(key, setTimeout(() => { pending.delete(key); sync(actor); }, 150));
@@ -226,7 +227,12 @@ function paintEye(token) {
     const { width, height } = doc.getSize();
     const p = eyePlacement(width, height);
     const [disc, sprite] = eye.children;
-    disc.clear().beginFill(0x000000, 0.55).drawCircle(0, 0, p.size * 0.55).endFill();
+    // hot: refreshToken repaints every frame a token animates; the disc is redrawn only when its size
+    // changed (items-journal-30). Position, sprite size, zIndex and visibility are set every time.
+    if (needsRedraw(eye._pdSize, p.size)) {
+      disc.clear().beginFill(0x000000, 0.55).drawCircle(0, 0, p.size * 0.55).endFill();
+      eye._pdSize = p.size;
+    }
     sprite.width = sprite.height = p.size;
     eye.position.set(p.x, p.y);
     eye.zIndex = (token.effects?.zIndex ?? 0) + 1;

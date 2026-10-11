@@ -289,9 +289,9 @@ test("corpses: renderTokenHUD on our corpse as the GM adds two buttons with toda
   assert.equal(r2.children.length, 0, "players get nothing");
 });
 
-// KNOWN: items-journal-30 — the eye's disc is cleared and redrawn on every paint (every refreshToken),
-// even when its size has not changed. Flipped by the items-journal-30 fix (needsRedraw): 1.
-test("KNOWN items-journal-30: painting the corpse eye twice clears its disc twice", async () => {
+// items-journal-30 — the eye's disc was cleared and redrawn on every paint (every refreshToken), even when
+// its size had not changed (2). Flipped by the [declared] items-journal-30 fix (needsRedraw): 1.
+test("items-journal-30: painting the corpse eye twice clears its disc once", async () => {
   const doc = { name: "Dead Goblin", flags: { [MOD]: { corpse: true } }, isSecret: false, getSize: () => ({ width: 100, height: 100 }) };
   const token = { document: doc, destroyed: false, effects: { zIndex: 3 }, addChild(c) { c.parent = this; return c; } };
   F.piles.add(doc);
@@ -301,7 +301,7 @@ test("KNOWN items-journal-30: painting the corpse eye twice clears its disc twic
   game.pentaryn.dropbin.corpses.paintEye(token);
   const first = { x: token.pdLootEye.position.x, y: token.pdLootEye.position.y, z: token.pdLootEye.zIndex, w: token.pdLootEye.children[1].width, visible: token.pdLootEye.visible };
   game.pentaryn.dropbin.corpses.paintEye(token);
-  assert.equal(F.calls.clears, 2);
+  assert.equal(F.calls.clears, 1);
   assert.deepEqual({ x: token.pdLootEye.position.x, y: token.pdLootEye.position.y, z: token.pdLootEye.zIndex, w: token.pdLootEye.children[1].width, visible: token.pdLootEye.visible }, first);
   assert.deepEqual(first, { x: 80, y: 20, z: 4, w: 40, visible: true });
 });
