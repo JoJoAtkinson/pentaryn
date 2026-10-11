@@ -462,3 +462,46 @@ export function knownLists(registry, onError = null) {
   try { return registry.spellLists.options?.map(o => o.value) ?? []; }
   catch (err) { onError?.(err); return []; }
 }
+
+/** The owned book's spell packs sort before any other contributor (the 2024 SRD lists Aid too). */
+export const OWNED_SPELL_PREFIX = "dnd-players-handbook";
+
+/**
+ * A spell list's uuids → `[[packId, [[uuid, docId], …]], …]`, one group per contributing pack, the
+ * owned book's pack first (the rest keep the registry's order). A uuid that is not a
+ * `Compendium.<pack>.Item.<id>` is skipped.
+ */
+export function groupListUuids(uuids) {
+  const byPack = new Map();
+  for (const u of uuids) {
+    const m = /^Compendium\.([^.]+\.[^.]+)\.Item\.(.+)$/.exec(u);
+    if (!m) continue;
+    if (!byPack.has(m[1])) byPack.set(m[1], []);
+    byPack.get(m[1]).push([u, m[2]]);
+  }
+  const owned = id => (id.startsWith(OWNED_SPELL_PREFIX) ? 1 : 0);
+  return [...byPack.keys()].sort((a, b) => owned(b) - owned(a)).map(id => [id, byPack.get(id)]);
+}
+
+/**
+ * groupListUuids' groups plus each pack's index (`packId → index with .get(docId)`, or null when the
+ * pack is absent) → `[{name, level, uuid}]`: one row per name, the first pack's wins; `level` (when
+ * not null) keeps that spell level only; ordered by level, then name. A uuid the index lacks keeps
+ * the uuid as its name and a null level.
+ */
+export function spellListRows(groups, indexes, level = null) {
+  const seen = new Set(), out = [];
+  for (const [id, entries] of groups) {
+    const idx = indexes.get(id);
+    for (const [u, docId] of entries) {
+      const e = idx?.get(docId);
+      const name = e?.name ?? u, lvl = e?.system?.level ?? null;
+      if (seen.has(name)) continue;
+      if (level !== null && lvl !== Number(level)) continue;
+      seen.add(name);
+      out.push({ name, level: lvl, uuid: u });
+    }
+  }
+  out.sort((a, b) => ((a.level ?? 0) - (b.level ?? 0)) || String(a.name).localeCompare(String(b.name)));
+  return out;
+}

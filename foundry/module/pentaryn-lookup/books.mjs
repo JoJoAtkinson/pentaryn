@@ -11,7 +11,7 @@
 import {
   BOOKSETS, EDITIONS, MONSTER_PACKS, findPage, foundFromDoc, nonPageWarning, knownLists, listFor as listForIn, matchMonster,
   missingPackError, monsterDigest, monsterQuery, monsterRow, pageMonsters, renderPage, renderTable, resolveBookIds,
-  searchBooks, sortMonsters, embeddedTableUuids,
+  searchBooks, sortMonsters, embeddedTableUuids, groupListUuids, spellListRows,
 } from "./lookup-core.mjs";
 import {
   clearBookCache, featureTexts, findSpell, loadBooks, packSummary, readDocument, readIndex, readPageDoc, readTable, spellRegistry,
@@ -104,27 +104,10 @@ async function spellList(cls, { type = "class", level = null } = {}) {
   if (!list) return { error: `no ${type} list "${cls}"`, known: known() };
   // the registry holds a uuid per contributing pack (PHB and the 2024 SRD both list Aid):
   // read levels from each pack's index, keep one entry per name, the owned book first
-  const byPack = new Map();
-  for (const u of list.uuids) {
-    const m = /^Compendium\.([^.]+\.[^.]+)\.Item\.(.+)$/.exec(u);
-    if (!m) continue;
-    if (!byPack.has(m[1])) byPack.set(m[1], []);
-    byPack.get(m[1]).push([u, m[2]]);
-  }
-  const packs = [...byPack.keys()].sort((a, b) => (b.startsWith("dnd-players-handbook") ? 1 : 0) - (a.startsWith("dnd-players-handbook") ? 1 : 0));
-  const seen = new Set(), out = [];
-  for (const id of packs) {
-    const idx = await readIndex(id, ["system.level"]);
-    for (const [u, docId] of byPack.get(id)) {
-      const e = idx?.get(docId);
-      const name = e?.name ?? u, lvl = e?.system?.level ?? null;
-      if (seen.has(name)) continue;
-      if (level !== null && lvl !== Number(level)) continue;
-      seen.add(name);
-      out.push({ name, level: lvl, uuid: u });
-    }
-  }
-  out.sort((a, b) => ((a.level ?? 0) - (b.level ?? 0)) || String(a.name).localeCompare(String(b.name)));
+  const groups = groupListUuids(list.uuids);
+  const indexes = new Map();
+  for (const [id] of groups) indexes.set(id, await readIndex(id, ["system.level"]));
+  const out = spellListRows(groups, indexes, level);
   return { list: `${type}:${cls}`, count: out.length, spells: out };
 }
 

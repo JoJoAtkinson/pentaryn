@@ -43,6 +43,25 @@ test("oracle: spellList dedupe keeps the owned book first, one row per name, lev
   assert.deepEqual((await oracle.spellListSpells(UUIDS, readIndex, "3")).map(r => r.name), ["Fireball"]);
 });
 
+test("core.groupListUuids: one group per pack, owned first, the rest in registry order, non-item uuids dropped", () => {
+  const groups = core.groupListUuids(UUIDS);
+  assert.deepEqual(groups.map(([id]) => id), [PHB, SRD, OLD, HB]);
+  assert.deepEqual(groups[0][1], [[U(PHB, "f"), "f"], [U(PHB, "a"), "a"], [U(PHB, "missing"), "missing"], [U(PHB, "c"), "c"]]);
+  assert.deepEqual(core.groupListUuids(new Set()), []);
+});
+
+test("core.spellListRows equals the oracle at every level filter, reading each pack once with system.level", async () => {
+  for (const level of LEVELS) {
+    reads.length = 0;
+    const want = await oracle.spellListSpells(UUIDS, readIndex, level);
+    const groups = core.groupListUuids(new Set(UUIDS));
+    const indexes = new Map();
+    for (const [id] of groups) indexes.set(id, await readIndex(id, ["system.level"]));
+    assert.deepEqual(core.spellListRows(groups, indexes, level), want, `level ${level}`);
+    assert.deepEqual(reads.slice(reads.length / 2), reads.slice(0, reads.length / 2), "same reads, same order");
+  }
+});
+
 // ── names() ──────────────────────────────────────────────────────────────────
 
 const NAME_INDEX = {
