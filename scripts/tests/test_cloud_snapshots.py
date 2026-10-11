@@ -327,10 +327,68 @@ def test_restoring_own_oldest_of_ten_succeeds(two_hosts, monkeypatch):
         _put(two_hosts.cloud, f"world-{_stamp(40 - i)}-fvtt14.369-mac.tar.gz", age_days=40 - i)
     with two_hosts.use("mac"):
         _edit(mac, "current")
-        cloud.restore(oldest, yes=True)   # the safety copy pushes it out of the 10 …
-    assert oldest not in _names(two_hosts.cloud)
-    # … but the bytes were already local, so the restore still landed
+        cloud.restore(oldest, yes=True)   # the safety copy would push it out of the 10 …
+        assert bootstate.load().based_on == oldest
+    # … but the restore protects it, so the based-on record names a snapshot that exists
+    assert oldest in _names(two_hosts.cloud)
     assert (mac / "Data/worlds/w/journal.txt").read_text() == "the oldest"
+
+
+def test_restoring_the_oldest_at_the_keep_limit_keeps_it_and_the_rollback_point(
+        two_hosts, monkeypatch):
+    """keep=2: the safety backup's pruning used to delete the snapshot being restored,
+    leaving based_on pointing at nothing and the updater rolling back to another one."""
+    from scripts.foundry.update import recover
+    monkeypatch.setenv("PENTARYN_KEEP_SNAPSHOTS", "2")
+    mac = two_hosts.data["mac"]
+    c = two_hosts.cloud
+    old = _put(c, f"world-{_stamp(20)}-fvtt14.369-mac.tar.gz", age_days=20).name
+    newer = _put(c, f"world-{_stamp(10)}-fvtt14.369-mac.tar.gz", age_days=10).name
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")          # a third own → one pruned; keep the real tar
+    [real] = [n for n in _names(c) if n not in (old, newer)]
+    target = f"world-{_stamp(30)}-fvtt14.369-mac.tar.gz"
+    (c / "world-backups" / real).rename(c / "world-backups" / target)
+    os.utime(c / "world-backups" / target, (time.time() - 30 * DAY,) * 2)
+    with two_hosts.use("mac"):
+        _edit(mac, "current")
+        cloud.restore(target, yes=True)
+        assert bootstate.load().based_on == target
+        assert recover.newest_world_snapshot().name == target
+    assert target in _names(c)
+    assert any(n.endswith("-mac.safety.tar.gz") for n in _names(c))
+
+
+def test_unchanged_tree_reuploads_when_its_snapshot_is_gone(two_hosts, capsys):
+    """Coalescing, pruning or prune-untagged on the other machine can delete the snapshot
+    a world is based on; "no change" must not then mean "no cloud copy"."""
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+        [first] = _names(two_hosts.cloud)
+        (two_hosts.cloud / "world-backups" / first).unlink()
+        capsys.readouterr()
+        assert cloud.backup("prelaunch") == 0
+        st = bootstate.load()
+    assert "no longer in the cloud — uploading this state again" in capsys.readouterr().out
+    [again] = _names(two_hosts.cloud)
+    assert st.based_on == again
+
+
+def test_restore_over_a_world_whose_snapshot_is_gone_takes_a_safety_copy(two_hosts):
+    mac = two_hosts.data["mac"]
+    (mac / "Data/worlds/w/journal.txt").write_text("only copy")
+    with two_hosts.use("boss"):
+        cloud.backup("shutdown")
+        [boss_snap] = _names(two_hosts.cloud)
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+        mine = bootstate.load().based_on
+        (two_hosts.cloud / "world-backups" / mine).unlink()   # deleted elsewhere
+        cloud.restore(boss_snap, yes=True)
+    [safety] = [n for n in _names(two_hosts.cloud) if n.endswith("-mac.safety.tar.gz")]
+    with tarfile.open(two_hosts.cloud / "world-backups" / safety) as tar:
+        data = tar.extractfile("Data/worlds/w/journal.txt").read()
+    assert data == b"only copy"
 
 
 def test_restore_lists_every_host_with_columns(two_hosts, capsys):

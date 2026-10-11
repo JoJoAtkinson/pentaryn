@@ -556,23 +556,44 @@ def backup(reason: str = "manual", if_stopped: bool = False) -> int:
     return 0
 
 
-def _backup(st: Storage, reason: str, *, safety: bool = False) -> Snapshot | None:
-    """The snapshot uploaded, or None when skipped (unchanged, or nothing to archive)."""
+def _in_cloud(st: Storage, name: str, existing: list[Snapshot]) -> bool:
+    """Is `name` still a snapshot in the cloud — rolling, or preserved in major-release/?"""
+    if any(s.name == name for s in existing):
+        return True
+    try:
+        return any(s.name == name for s in snapshots(st, MAJOR_RELEASES))
+    except StorageError:
+        return False
+
+
+def _backup(st: Storage, reason: str, *, safety: bool = False,
+            protect: str | None = None) -> Snapshot | None:
+    """The snapshot uploaded, or None when skipped (unchanged, or nothing to archive).
+
+    `protect` names a snapshot this run must not delete — the one a restore is about to
+    extract — so neither coalescing nor pruning can remove the state the based-on record
+    is about to point at."""
     state = adopt_legacy_marker(st, bootstate.load())
     digest = snapshot_digest()
+    try:
+        existing = snapshots(st, WORLD_BACKUPS)
+    except StorageError as exc:
+        die(f"cannot list {WORLD_BACKUPS}/: {exc}")
     if state.digest == digest:
-        log("no change since the last snapshot — skipped")
-        return None
+        # Unchanged since the last upload or restore — but "skip" is only safe while that
+        # snapshot still exists. Coalescing, pruning or prune-untagged (on either machine)
+        # may have deleted it, and then this tree has no cloud copy at all.
+        if state.based_on and _in_cloud(st, state.based_on, existing):
+            log("no change since the last snapshot — skipped")
+            return None
+        log(f"no change since {state.based_on or 'the last snapshot'}, but it is no longer "
+            "in the cloud — uploading this state again")
     if not tree_has_world():
         log("no local world to snapshot — skipped")
         return None
 
     me = host.host_name()
     keep = host.keep_snapshots()
-    try:
-        existing = snapshots(st, WORLD_BACKUPS)
-    except StorageError as exc:
-        die(f"cannot list {WORLD_BACKUPS}/: {exc}")
 
     # Before writing anything: if the installed generation has moved on since this host's
     # last backup, its newest snapshot from the OLD generation is the last state that still
@@ -591,7 +612,7 @@ def _backup(st: Storage, reason: str, *, safety: bool = False) -> Snapshot | Non
 
     # Coalescing: note the snapshot this one may replace, but write the new one FIRST and
     # only then delete the old. A safety copy never coalesces in either direction.
-    superseded = None if safety else _coalesce_target(existing, me)
+    superseded = None if safety else _coalesce_target(existing, me, protect)
 
     tmp = tmp_dir() / name
     last = newest(own(existing, me)) or newest(existing)
@@ -632,7 +653,7 @@ def _backup(st: Storage, reason: str, *, safety: bool = False) -> Snapshot | Non
         log(f"replaced {superseded.name} ({age_days:.1f} days old, inside the "
             f"{COALESCE_WINDOW_DAYS}-day window)")
 
-    mine = own(snapshots(st, WORLD_BACKUPS), me)
+    mine = [s for s in own(snapshots(st, WORLD_BACKUPS), me) if s.name != protect]
     for stale in mine[:-keep]:
         st.delete(stale.rel)
         log(f"pruned {stale.name}")
@@ -642,12 +663,13 @@ def _backup(st: Storage, reason: str, *, safety: bool = False) -> Snapshot | Non
     return snap
 
 
-def _coalesce_target(existing: list[Snapshot], me: str) -> Snapshot | None:
+def _coalesce_target(existing: list[Snapshot], me: str,
+                     protect: str | None = None) -> Snapshot | None:
     """This host's newest regular snapshot, if young enough to be replaced. Never another
-    host's, never an untagged one, never a safety copy."""
+    host's, never an untagged one, never a safety copy, never `protect`."""
     mine = [s for s in own(existing, me) if not s.safety]
     last = newest(mine)
-    if last is None:
+    if last is None or last.name == protect:
         return None
     age_days = (time.time() - last.mtime) / 86400
     return last if age_days < COALESCE_WINDOW_DAYS else None
@@ -768,8 +790,8 @@ def _fix_foreign_data_path(root: Path, kept: dict) -> None:
 
 def restore_snapshot(st: Storage, snap: Snapshot, reason: str = "manual") -> None:
     """resolve → download → safety backup → clear → extract. Nothing local is touched
-    until the chosen bytes are on this disk, so neither coalescing nor pruning in the
-    safety backup can delete what is being restored."""
+    until the chosen bytes are on this disk, and the safety backup protects `snap` from
+    its own pruning, so the based-on record never names a snapshot this restore deleted."""
     if server_running():
         die("Foundry is running — stop it first")
     local_tar = tmp_dir() / snap.name
@@ -784,7 +806,8 @@ def restore_snapshot(st: Storage, snap: Snapshot, reason: str = "manual") -> Non
         if local_tar.stat().st_size != snap.size:
             die(f"download of {snap.name} is {local_tar.stat().st_size} B, the cloud says "
                 f"{snap.size} B — nothing local was touched")
-        safety = _backup(st, f"pre-restore safety copy ({reason})", safety=True)
+        safety = _backup(st, f"pre-restore safety copy ({reason})", safety=True,
+                         protect=snap.name)
         before = safety.name if safety else bootstate.load().based_on
         try:
             extract_snapshot(local_tar)
