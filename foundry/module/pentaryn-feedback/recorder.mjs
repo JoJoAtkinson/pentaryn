@@ -99,6 +99,18 @@ export function persistNow(g = globalThis) {
   }
 }
 
+/** Remove this tab's stored copy (uninstall). False when storage is absent or blocked. */
+function forgetStored(g = globalThis) {
+  const s = store.key ? storage(g) : null;
+  if (!s) return false;
+  try {
+    s.removeItem(store.key);
+    return true;
+  } catch (err) {
+    return false;                       // blocked storage: nothing was stored either
+  }
+}
+
 function persistSoon(g = globalThis) {
   if (!store.key || !live.on) return;
   store.dirty = true;
@@ -334,11 +346,7 @@ export function uninstall() {
   windowUndo?.();
   if (store.timer !== null) globalThis.clearTimeout?.(store.timer);
   store.timer = null;
-  try {
-    if (store.key) storage()?.removeItem(store.key);
-  } catch (err) {
-    // blocked storage: nothing was stored either
-  }
+  forgetStored();
   store.key = null;
   actions.length = 0;
   errors.length = 0;
