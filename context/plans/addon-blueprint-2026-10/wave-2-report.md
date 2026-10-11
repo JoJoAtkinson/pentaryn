@@ -359,6 +359,19 @@ both typechecks, `fork-footprint.sh` green.
 `setInterval(async …)` moved from `index.ts` into `tool-list-watch.ts:39`, whose body is already
 inside try/catch). Style only; lint is not a gate here and upstream files carry dozens.
 
+## Live-phase prep (2026-10-11, code phase — nothing run)
+
+The gated live phase is written down in [`wave-2-live-plan.md`](wave-2-live-plan.md): preconditions,
+backup and "before" goldens on the deployed code, the deploy (module syncs, fork build, bridge
+module, `kill -9` the broker, one restart), boot probes, "after" goldens with a diff, the
+`pentaryn-read`/`-write` smoke, the dropbin ownership-leak scan, per-module rollback and the fix
+loop. The live goldens the integration listed as missing now exist (`f9a5ec91`):
+`scripts/foundry/live-goldens/{lookup,movement,attunement,journal,dropbin,walls}.js`, each split into
+`golden.shared` (must match before/after) and `golden.declared` (the wave's declared changes), plus
+`diff.mjs` (`9a7534c4` lets it read the wave-1 goldens). Checked statically only (`node --check`,
+eslint `no-undef`); their first real run is the plan's step a. Two decisions for the session:
+W2-L1 (walls) and W2-L2 (the modules outside the six), below.
+
 ## Open for Joe
 
 | # | Item | From | What is needed |
@@ -380,3 +393,5 @@ inside try/catch). Style only; lint is not a gate here and upstream files carry 
 | W2-B4 | `names.sync(ref, oldName, newName)` resolves a string ref itself (its row doc says so), but its `ref` param is `resolve: false` with no `type`, so pentaryn-write now refuses it as "needs a live Document — eval-js only" (`a6fb891`). A row needs a manifest signal that it resolves strings itself: either a kit field (e.g. a param `resolve: "self"`), or now, with no kit change, a `type` naming the string forms on that param (`"Actor\|Token\|uuid\|id\|exact name"`, as attunement's ACTOR param has), which the template already honours. The second edits names' `describe` golden. | kit lane / names (bridge review) | pick one; until then names.sync goes through eval-js |
 | W2-D1 | dropbin corpses, §5.9.4 (not in the audit): corpse conversion (`sync` → `toCorpse`/`fromCorpse`), the hp hook's Dead toggle on revival, the ready `migrateLegacyEyes`, and the ready backfills (`ensureLockSounds`, `ensureEyesNeedView` — items-journal-25; idempotent, so both tabs send the same batches and both log) run where `game.users.activeGM.isSelf` — **every tab** of the active GM account. With the MCP bridge tab and a GM browser tab open, a kill runs `turnTokensIntoItemPiles` and the corpse update in both tabs (each debounced 150 ms per tab); Item Piles' second conversion and the second `revertTokensFromItemPiles` race the first. Expected outcome is the same corpse (both write the same flags; the PT3-1 re-pile guard keeps the saved pre-death map), but it is unverified live. A fix needs a per-tab election (a `claimDocument`-style claim on the token per death, or the kit `election` with a socket-id tie-break). | dropbin lane | accept and watch in L3 (default: look for doubled "corpse sync failed" warnings or two chat cards), or ask for a claim as a [declared] fix |
 | W2-D2 | dropbin ledger, §5.9.4: socketlib's `executeAsGM` reaches every tab of the responsible GM user, so a player's relayed entry is recorded by both tabs. Both compute the same row (same `t` from the sender, same `n` from the same synced counter) and the tail dedupe catches the sequential case, so the ledger ends the same; the mirror is uploaded twice. Only a different entry recorded in one tab at the same instant could interleave and lose a row (each tab writes its whole log). Request-keying (a sender `req` id in each entry, dedupe on it) would close it but adds a field to every stored entry (a stored-shape change). | dropbin lane | accept (default), or ask for request-keyed entries as a [declared] change |
+| W2-L1 | walls is switched off in Joe's world, so its "before" live golden (`scripts/foundry/live-goldens/walls.js`) cannot run on the deployed 0.2.0 code. Syncing walls now would leave no before/after comparison for its four declared fixes (undo, the run lock, Levels to js, the ready line). [`wave-2-live-plan.md`](wave-2-live-plan.md) §9. | live-phase prep | hold walls' sync until Joe re-enables walls, then before → sync → after (default), or sync it with the others now on the unit goldens alone |
+| W2-L2 | The wave-2 branch also changes modules outside the six: names, pings, cursors, importer, ties, prompts (kit 1.0.2 re-vendor, J10 guard retired; names/pings/prompts also carry the merged play-test fixes) and transform, combat (play-test fixes only, `931203a5`). They need the same restart. [`wave-2-live-plan.md`](wave-2-live-plan.md) §1. | live-phase prep | deploy them in the same live session, with the wave-1 goldens before/after and the play-test LIVE CHECKs for transform/combat (default), or deploy only the six wave-2 modules and leave the rest to the play-test deploy |
