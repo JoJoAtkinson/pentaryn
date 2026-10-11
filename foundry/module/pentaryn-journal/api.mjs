@@ -39,6 +39,7 @@ function impl(ctx) {
     async add(doc) {
       const target = targetOf(doc);
       if (!target) { lastReason = "no-target"; return null; }
+      lastReason = null;                    // an add that throws leaves no earlier call's reason behind
       const out = await x.save(target);
       lastReason = out ? null : x.lastSkip();
       return out;

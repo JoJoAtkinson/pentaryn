@@ -2,6 +2,7 @@
 // - items-journal-33 (3): the bar's "open" click looks up the user's journal once (it used to call
 //   personal() twice: once in savedStatus, once for openSaved). Counted through game.journal.filter,
 //   which is what personal() scans.
+// - items-journal-35: lastReason() never carries a previous call's reason past an add() that threw.
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 import { StubCollection, makeDoc } from "./kit/foundry-stub.mjs";
@@ -55,3 +56,22 @@ test("the bar's open click: one personal() lookup, and it opens the saved page",
   F.become({ userId: GM });
 });
 
+test("lastReason is cleared by an add() that throws, not left at the previous call's reason", async () => {
+  assert.equal(await api.add(readable), null, "the GM without gmButton");
+  assert.equal(api.lastReason(), "no-target");
+  F.become({ userId: P1 });
+  const journal = api.personal();
+  const keep = journal.createEmbeddedDocuments;
+  journal.createEmbeddedDocuments = async () => { throw new Error("server refused"); };
+  const other = makeDoc("JournalEntry", { id: "readable00000042", name: "Stone", ownership: { default: 2 } });
+  const p2 = makeDoc("JournalEntryPage", { id: "page000000000042", name: "S", type: "text", ownership: { default: 2 },
+    text: { content: "<p>y</p>" } }, { parent: other });
+  Object.defineProperty(other, "pages", { value: new StubCollection([p2]), enumerable: false });
+  try {
+    await assert.rejects(api.add(other), { message: "server refused" });
+  } finally {
+    journal.createEmbeddedDocuments = keep;
+    F.become({ userId: GM });
+  }
+  assert.equal(api.lastReason(), null, "no stale 'no-target' from the GM's earlier call");
+});
