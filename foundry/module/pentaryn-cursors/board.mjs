@@ -13,7 +13,7 @@
  * (previewActive), and the scene control/tool onChange wrap (wrapOnChange).
  */
 
-import { MODULE, VARS, cursorValues, isModalTool, keyFor, placementActive } from "./cursors-core.mjs";
+import { MODULE, VARS, cursorValues, isModalTool, keyFor, placementActive, probeInternals } from "./cursors-core.mjs";
 import { setting } from "./settings.mjs";
 
 const WRAPPED = Symbol.for(`${MODULE}.wrapped`);
@@ -147,6 +147,18 @@ function snapshot() {
   };
 }
 
+/**
+ * Warn once per page when a core internal this file relies on is gone (finding -30): without
+ * setCursor a blanked cursor is never repaired, without _placementContext the spell-area glyph
+ * never shows. Both fail silently otherwise.
+ */
+function checkInternals() {
+  const missing = probeInternals({ events: canvas?.app?.renderer?.events, regions: canvas?.regions });
+  if (missing.length) {
+    log.warnOnce("internals", `core internals missing: ${missing.join(", ")} — see adjustments row core-board-cursor-vars`);
+  }
+}
+
 /** The setting's onChange: refresh, then repair a blanked cursor. */
 export function onEnabledChange() {
   refresh();
@@ -174,6 +186,7 @@ export function install(reg, ctx) {
   // this one runs, so also resync a tick later.
   reg.on("canvasReady", () => {
     attach();
+    checkInternals();
     setTimeout(() => resync(), 0);
   }, { guard: false, label: "canvasReady: attach" });
   reg.on("canvasTearDown", () => {
