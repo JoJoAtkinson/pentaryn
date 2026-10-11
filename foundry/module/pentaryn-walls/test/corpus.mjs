@@ -20,12 +20,10 @@ const only = argv.find(a => !a.startsWith("-"));
 const backendName = (argv.find(a => a.startsWith("--backend=")) ?? "--backend=js").split("=")[1];
 const backend = getBackend(backendName);
 if (!backend) {
-  console.error(`unknown backend "${backendName}" — available: ${available().map(b => b.name).join(", ")}`);
-  process.exit(2);
+  throw new Error(`unknown backend "${backendName}" — available: ${available().map(b => b.name).join(", ")}`);
 }
 if (!backend.available()) {
-  console.error(`backend "${backendName}" is registered but not available (not built?)`);
-  process.exit(2);
+  throw new Error(`backend "${backendName}" is registered but not available (not built?)`);
 }
 const runEngine = backend.run;
 if (backendName !== "js") console.log(`running the corpus against backend: ${backendName}\n`);
@@ -50,4 +48,5 @@ for (const {fx, name, problems, res, skipped} of runCorpus(runEngine, {only})) {
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
-process.exit(fail ? 1 : 0);
+// A throw (not an exit call) marks failure: this is a manual CLI, not a self-running suite (C43).
+if (fail) throw new Error(`${fail} fixture(s) failed`);
