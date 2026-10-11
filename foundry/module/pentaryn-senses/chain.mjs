@@ -19,7 +19,7 @@
  * token rendering. A feature: the entry calls install(reg, ctx); the entry's ready publishes the API.
  */
 
-import { MODULE, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainGeometry, chainThickness, resolveTokenRef } from "./senses-core.mjs";
+import { MODULE, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainThickness, resolveTokenRef, linkSpriteSpecs } from "./senses-core.mjs";
 import { isAnyGM } from "./lib/election.mjs";
 
 const TEX = `modules/${MODULE}/assets/chain-link.webp`;
@@ -27,6 +27,9 @@ const TILE_H = 96; // px height of the source tile
 const SORT_LAYER_FALLBACK = 699; // just under PrimaryCanvasGroup.SORT_LAYERS.TOKENS (700)
 
 const state = { layer: null, tex: null, loading: null, queued: 0, hooks: [], reg: null };
+
+/** The sprites on the layer, per pair (finding -20): updated in place, rebuilt for a new layer or texture. */
+const drawn = { layer: null, tex: null, sprites: new Map() };
 
 const warn = (label, err) => console.warn(`${MODULE} | chain ${label}`, err);
 
@@ -131,6 +134,8 @@ function layer() {
 function dropLayer() {
   const c = state.layer;
   state.layer = null;
+  drawn.sprites.clear();
+  drawn.layer = null;
   try {
     if (c && !c.destroyed) c.destroy({ children: true });
   } catch (e) {
@@ -151,23 +156,30 @@ function liveCentre(doc) {
   return live.center;
 }
 
-function drawLink(container, tex, a, b, thickness) {
-  const g = chainGeometry(a, b);
-  if (g.length < 1) return;
-  const scale = thickness / TILE_H;
-  const make = () => {
-    const s = new PIXI.TilingSprite(tex, g.length, thickness);
-    s.tileScale.set(scale, scale);
-    s.anchor.set(0, 0.5);
-    s.position.set(g.x, g.y);
-    s.rotation = g.angle;
-    return s;
-  };
-  const shadow = make();
-  shadow.tint = 0x000000;
-  shadow.alpha = 0.45;
-  shadow.position.set(g.x + thickness * 0.1, g.y + thickness * 0.16);
-  container.addChild(shadow, make());
+/** Put a sprite where a linkSpriteSpecs half says. */
+function applySpec(s, spec) {
+  s.width = spec.width;
+  s.height = spec.height;
+  s.tileScale.set(spec.scale, spec.scale);
+  s.anchor.set(0, 0.5);
+  s.position.set(spec.x, spec.y);
+  s.rotation = spec.rotation;
+  if (spec.tint !== undefined) s.tint = spec.tint;
+  if (spec.alpha !== undefined) s.alpha = spec.alpha;
+}
+
+function makeSprite(tex, spec) {
+  const s = new PIXI.TilingSprite(tex, spec.width, spec.height);
+  applySpec(s, spec);
+  return s;
+}
+
+/** Destroy every sprite on the layer and forget them (a new layer, a new texture). */
+function resetSprites(container, tex) {
+  for (const child of container.removeChildren()) child.destroy();
+  drawn.sprites.clear();
+  drawn.layer = container;
+  drawn.tex = tex;
 }
 
 /** Coalesce to one repaint per frame — refreshToken fires per animation step per token. */
@@ -195,15 +207,34 @@ export function paint(pairs) {
   if (!tex) return; // repaints when it loads
   const c = layer();
   if (!c) return;
-  for (const child of c.removeChildren()) child.destroy();
+  if (drawn.layer !== c || drawn.tex !== tex) resetSprites(c, tex);
 
   const thickness = chainThickness(canvas.grid?.size ?? scene.grid?.size);
   let elevation = Infinity;
+  const kept = new Set();
   for (const p of shown) {
     const cd = scene.tokens.get(p.chained), ad = scene.tokens.get(p.anchor);
     if (!cd || !ad) continue;
     elevation = Math.min(elevation, cd.elevation || 0, ad.elevation || 0);
-    drawLink(c, tex, liveCentre(ad), liveCentre(cd), thickness);
+    const spec = linkSpriteSpecs(liveCentre(ad), liveCentre(cd), thickness, TILE_H);
+    if (!spec) continue;
+    const key = `${p.chained}>${p.anchor}`;
+    kept.add(key);
+    const had = drawn.sprites.get(key);
+    if (had) {
+      applySpec(had.shadow, spec.shadow);
+      applySpec(had.link, spec.link);
+    } else {
+      const pair = { shadow: makeSprite(tex, spec.shadow), link: makeSprite(tex, spec.link) };
+      c.addChild(pair.shadow, pair.link);
+      drawn.sprites.set(key, pair);
+    }
+  }
+  for (const [key, pair] of drawn.sprites) {
+    if (kept.has(key)) continue;
+    pair.shadow.destroy();
+    pair.link.destroy();
+    drawn.sprites.delete(key);
   }
   c.elevation = Number.isFinite(elevation) ? elevation : 0;
   canvas.primary.sortDirty = true;

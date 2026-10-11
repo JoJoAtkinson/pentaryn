@@ -70,3 +70,18 @@ export function resolveTokenRef(ref, { viewed = null } = {}) {
   if (typeof ref === "string") return viewed?.tokens?.get(ref) ?? null;
   return ref.document ?? ref;
 }
+
+/**
+ * The two tiled sprites that draw one link a → b (finding -20): the chain and its shadow, offset
+ * down-right and darkened. Null when the ends are less than a pixel apart (nothing is drawn).
+ * `tileH` is the source tile's height; the tile is scaled so it is `thickness` tall.
+ */
+export function linkSpriteSpecs(a, b, thickness, tileH) {
+  const g = chainGeometry(a, b);
+  if (g.length < 1) return null;
+  const base = { width: g.length, height: thickness, rotation: g.angle, scale: thickness / tileH };
+  return {
+    shadow: { ...base, x: g.x + thickness * 0.1, y: g.y + thickness * 0.16, tint: 0x000000, alpha: 0.45 },
+    link: { ...base, x: g.x, y: g.y },
+  };
+}
