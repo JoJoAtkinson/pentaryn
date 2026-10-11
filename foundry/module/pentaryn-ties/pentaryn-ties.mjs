@@ -18,7 +18,7 @@
  *   game.pentaryn.ties.attributes.of(actor)    what this one belongs to (derived + authored)
  *   game.pentaryn.ties.attributes.create(title)  a registry entry; refuses an id or name collision
  *   game.pentaryn.ties.attributes.link(actor, id) / .unlink(actor, id)
- *   game.pentaryn.ties.study.inspect(pc, subject)   the one gesture that starts a check
+ *   game.pentaryn.ties.study.examine(pc, subject)   the one gesture that starts a check (was study.inspect)
  *   game.pentaryn.ties.study.look(subject, pc?)     the player's read-only page on them (no roll)
  *   game.pentaryn.ties.attributes.known(pc)         what they have worked out of the world
  *   game.pentaryn.ties.attributes.tell(pc, id, {withParents})  disclosure, the only non-roll route
@@ -308,6 +308,20 @@ Hooks.once("init", () => {
  * takes the rest of the ready hook down with it. Rebuild the object instead.
  */
 function publishAPI() {
+  /*
+   * Decision D1 (2026-10-11): `attributes.describe` → `attributes.lookup` and `study.inspect` →
+   * `study.examine`. `describe` and `inspect` are names the kit API reserves for its own members
+   * (step S8 of the blueprint migration), so the old names cannot survive that step. Until then they
+   * stay as aliases that call the same function and log a compatibility warning (once per call site).
+   */
+  const renamed = (fn, from, to) =>
+    function renamedAlias(...args) {
+      foundry.utils.logCompatibilityWarning(
+        `${MODULE} | game.pentaryn.ties.${from} is renamed game.pentaryn.ties.${to}; the old name goes when the API moves to the kit`,
+        { once: true }
+      );
+      return fn.apply(this, args);
+    };
   const api = {
     show: Overlay.showAll,
     showAll: Overlay.showAll,
@@ -399,7 +413,8 @@ function publishAPI() {
       askAttr: Study.requestAttrLore,
       attrOffers: Study.attrOffersFor,
       // phase 8 — inspection and the cascade
-      inspect: Study.inspect,
+      examine: Study.inspect,
+      inspect: renamed(Study.inspect, "study.inspect", "study.examine"), // D1 alias, until S8
       look: (subject, character = game.user?.character) => openLook(character, subject),
       scoping: Study.scopingState,
       clearScoping: Study.clearScoping,
@@ -428,7 +443,8 @@ function publishAPI() {
       ids: Attributes.attributeIdsOf,
       derived: Attributes.derivedFor,
       resolve: Attributes.resolveAttribute,
-      describe: Attributes.describeRef,
+      lookup: Attributes.describeRef,
+      describe: renamed(Attributes.describeRef, "attributes.describe", "attributes.lookup"), // D1 alias, until S8
       ensure: Attributes.ensureAttribute,
       create: Attributes.createAttribute,
       update: Attributes.updateAttribute,
