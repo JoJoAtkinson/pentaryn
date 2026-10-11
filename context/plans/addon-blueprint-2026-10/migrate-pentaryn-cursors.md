@@ -430,14 +430,51 @@ post-sync smoke check. No WAIT steps here, apart from the aoe half of step 10.
 | Step 10 row, step 12 gates + live smoke | 0.5 h |
 | **Total** | **about 1 day (S)** |
 
+## Wave 1 refactor record (2026-10-11)
+
+Steps 2, 3, 5, 6, the -30 runtime half, 8 (in-module half) and 9 landed on `migrate/wave-1`. The
+frozen checkpoint files (`golden/hooks.json`, `core/glue/publish/live/imageset/i18n.test.mjs`,
+`fixtures/`, `run.mjs`) are byte-identical to `d49967e`; every refactor step ran the whole suite green.
+
+| Commit | Step | Findings | Rules |
+|---|---|---|---|
+| `4fad56d` | 2 — `probeInternals`, `statusOf` in core | -30, -32 (pure halves) | — |
+| `f7a86f9` | 3 — `settings.mjs` | — | C21, C22, C51 |
+| `dcf9bb0` | 5 — `board.mjs` feature, entry wiring only | **-31** | C10, C18 |
+| `ae51bca` | 6 — **[declared C-1]** kit API, synchronous publish, `status()` | -32 | C26, C50 |
+| `738f4c4` | **[declared C-2]** one-time internals warning after `canvasReady` | -30 (runtime half) | — |
+| `1724678` | 9 — nested `lang/en.json` | — | C34 |
+| `88e8f11` | 8 (in-module half) — README fixed order, CHANGELOG | -35 (README: alternates are credited, not dead) | C44, C45 |
+| `a843e0c` | test only — hot patch re-wire (coverage gap of the entry's `game.ready` branch) | — | — |
+
+Departures from the step text, each so a frozen file stays untouched:
+
+- **Step 2's tables** live in a new `test/status.test.mjs`, not `core.test.mjs` (frozen).
+- **`status()`** landed inside step 6's declared commit (the guide allows "a row in step 6"), so
+  `golden/surface.json` and `golden/describe.json` were pinned once, with it. New test files:
+  `api.test.mjs` (C-1 timing, surface, describe, status, uninstall), `internals.test.mjs` (C-2),
+  `hotpatch.test.mjs`.
+- **Hot patch:** `board.install()` attaches a tick later at once when `game.ready` is already true
+  (a `once ready` would never fire); the entry runs `onInit → install → onReady` in that branch.
+- Board hooks carry labels (`describe().hooks`); all are `guard: false` as step 5 says.
+
+**Not done here — outside this module's folder** (the wave-1 agent owned only the module and this
+guide; handed back as an exact edit list): step 7 (`tools/build.mjs` and `assets/src/` →
+`scripts/foundry/cursors/`, `--check-sources` + pytest, -35 alt-* half and the cursors half of
+-28), step 8's `DESIGN.md` → `context/plans/cursors-design.md` and the own routing row in
+`context/foundry/README.md` (-35 DESIGN half, cursors half of -27), step 10's row (already listed in
+`adjustments-batch.md`; the aoe widening row there must name `board.mjs`, not `cursors.mjs`), and
+step 11 (already in `wave7-restart-batch.md`). The README still points at `DESIGN.md`, `tools/` and
+`assets/src/` in the module until those moves land, then its four references change with them.
+
 ## Result (fill when done)
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module cursors --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: b0ae88a (vendor), d49967e (checkpoint) · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | 88.9 % (40 / 45 fail-class rules) — `conformance.py --module cursors --markdown`, 2026-10-11, wave 1 (before the out-of-module moves) |
+| Date | 2026-10-11 (wave 1, in-module part) |
+| Commits (Joe-approved) | characterisation: b0ae88a (vendor), d49967e (checkpoint) · refactor: 4fad56d, f7a86f9, dcf9bb0, 1724678, 88e8f11 · declared: ae51bca (C-1), 738f4c4 (C-2) · tests: a843e0c |
+| Declared changes handed to the live-test workflow | C-1, C-2 (not yet run) |
+| `module.json` edits appended to `wave7-restart-batch.md` | yes (row already present: cursors step 11) |
+| Adjustments rows appended to `adjustments-batch.md` | yes (row already present); the aoe widening row's `cursors.mjs` must become `board.mjs` |
+| Still failing, and why | C05, C24, C25 (`tools/build.mjs`) and C13 (`DESIGN.md`, `assets/src/CREDITS.md`) clear with the step 7/8 moves out of the module; C07 (and the C02 warning) in the Wave 7 `module.json` batch. Tests: 55 node:test, all pass. |
