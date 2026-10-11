@@ -27,6 +27,7 @@ import os
 import re
 import struct
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -108,12 +109,18 @@ _CACHE_FILE = _CACHE_DIR / "quant_numbers.bin"
 # When we pop a number, we know whether it came from quantum or random.org.
 _number_cache: list[int] = []
 _source_cache: list[str] = []  # parallel list: "quantumnumbers" or "random_org"
-_fetch_lock = asyncio.Lock()
 _last_fetch_time: float = 0.0
 
-# HTTP clients
+# One draw at a time (python-tooling-51). roll_dice runs every call under its own
+# asyncio.run, and the MCP server runs in-process tools on a thread pool, so concurrent
+# rolls live in different event loops on different threads. A thread lock taken around
+# the whole draw (fetch + pop) is the only primitive that spans them; an asyncio.Lock
+# binds to one loop and a waiter from another loop never wakes.
+_draw_lock = threading.Lock()
+
+# HTTP clients. The async client is created per fetch, inside the running loop
+# (python-tooling-51): a shared one outlived the loop it was bound to.
 _sync_session: requests.Session | None = None
-_async_client: httpx.AsyncClient | None = None
 
 
 def _get_sync_session() -> requests.Session:
@@ -122,14 +129,6 @@ def _get_sync_session() -> requests.Session:
     if _sync_session is None:
         _sync_session = requests.Session()
     return _sync_session
-
-
-async def _get_async_client() -> httpx.AsyncClient:
-    """Get or create a shared async HTTP client."""
-    global _async_client
-    if _async_client is None:
-        _async_client = httpx.AsyncClient(timeout=10.0)
-    return _async_client
 
 
 def _load_cache() -> None:
@@ -176,17 +175,17 @@ async def _fetch_from_quantumnumbers(count: int = 1024) -> list[int] | None:
         return None
 
     try:
-        client = await _get_async_client()
-        response = await client.get(
-            api_url,
-            params={
-                "type": "uint16",
-                "length": count,
-            },
-            headers={
-                "x-api-key": api_key,
-            },
-        )
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                api_url,
+                params={
+                    "type": "uint16",
+                    "length": count,
+                },
+                headers={
+                    "x-api-key": api_key,
+                },
+            )
         response.raise_for_status()
         data = response.json()
         _last_fetch_time = time.time()
@@ -228,43 +227,41 @@ def _fetch_from_random_org_sync(count: int) -> list[int]:
 
 
 async def _ensure_numbers(needed: int) -> bool:
-    """Ensure cache has at least `needed` numbers. Fetch if necessary."""
+    """Ensure cache has at least `needed` numbers. Fetch if necessary.
+
+    Called under `_draw_lock` (via roll_dice), so no second lock here.
+    """
     global _number_cache, _source_cache, _last_fetch_time
 
     if len(_number_cache) >= needed:
         return True
 
-    async with _fetch_lock:
-        # Double-check after acquiring lock
-        if len(_number_cache) >= needed:
-            return True
+    # Rate limit: 1 request per second
+    now = time.time()
+    wait_time = 1.0 - (now - _last_fetch_time)
+    if wait_time > 0:
+        await asyncio.sleep(wait_time)
 
-        # Rate limit: 1 request per second
-        now = time.time()
-        wait_time = 1.0 - (now - _last_fetch_time)
-        if wait_time > 0:
-            await asyncio.sleep(wait_time)
+    # Try quantumnumbers first (batch fetch to maximize quota)
+    new_numbers = await _fetch_from_quantumnumbers(1024)
+    if new_numbers:
+        _number_cache.extend(new_numbers)
+        _source_cache.extend(["quantumnumbers"] * len(new_numbers))
+        _write_cache()
+        return True
 
-        # Try quantumnumbers first (batch fetch to maximize quota)
-        new_numbers = await _fetch_from_quantumnumbers(1024)
-        if new_numbers:
-            _number_cache.extend(new_numbers)
-            _source_cache.extend(["quantumnumbers"] * len(new_numbers))
-            _write_cache()
-            return True
+    # Fallback: fetch enough from random.org for this request + buffer
+    fallback_count = max(needed, 100)
+    new_numbers = await asyncio.to_thread(
+        _fetch_from_random_org_sync, fallback_count
+    )
+    if new_numbers:
+        _number_cache.extend(new_numbers)
+        _source_cache.extend(["random_org"] * len(new_numbers))
+        _write_cache()
+        return True
 
-        # Fallback: fetch enough from random.org for this request + buffer
-        fallback_count = max(needed, 100)
-        new_numbers = await asyncio.to_thread(
-            _fetch_from_random_org_sync, fallback_count
-        )
-        if new_numbers:
-            _number_cache.extend(new_numbers)
-            _source_cache.extend(["random_org"] * len(new_numbers))
-            _write_cache()
-            return True
-
-        return False
+    return False
 
 
 async def _pop_numbers(count: int) -> tuple[list[int], str]:
@@ -476,9 +473,10 @@ def roll_dice(
         JSON string with: narrative, source, rolls, bonuses, rolls_with_bonuses,
         total_raw, total_with_bonuses, dice_code, dice_notation, logged.
     """
-    result = asyncio.run(
-        _roll_dice_async(num_dice, dice_size, bonuses, modifier, description, log_path)
-    )
+    with _draw_lock:
+        result = asyncio.run(
+            _roll_dice_async(num_dice, dice_size, bonuses, modifier, description, log_path)
+        )
     return json.dumps(result, indent=2, ensure_ascii=False)
 
 

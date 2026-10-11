@@ -262,9 +262,6 @@ print(json.dumps({"returned": returned[0], "errors": errors,
 """
 
 
-@pytest.mark.xfail(strict=True, reason="KNOWN python-tooling-51: the module-level asyncio.Lock "
-                                       "binds to one event loop; a roll waiting on it from the "
-                                       "next loop fails (hangs under threads)")
 def test_concurrent_rolls_all_return_with_distinct_numbers(tmp_path):
     import subprocess
     import sys
@@ -273,3 +270,73 @@ def test_concurrent_rolls_all_return_with_distinct_numbers(tmp_path):
                           capture_output=True, text=True, timeout=60)
     out = json.loads(proc.stdout.strip().splitlines()[-1])
     assert out == {"returned": 4, "errors": [], "seen": 16, "distinct": 16}, out
+
+
+# The production shape (python-tooling-51): 8 threads, each calling roll_dice — so each
+# roll runs under its own asyncio.run on its own thread, as the MCP server's in-process
+# pool does. Every fetch returns one roll's worth, so every roll must fetch. The fake
+# fetch yields with sleep(0); nothing waits on the wall clock. Before the fix a waiter on
+# the shared asyncio.Lock from another thread's loop never woke; the subprocess timeout
+# turns that hang into a failure instead of a stuck suite.
+_THREADED = r"""
+import asyncio, itertools, json, sys, threading
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from scripts import dnd_roller as d
+tmp = Path(sys.argv[2])
+d._CACHE_DIR, d._CACHE_FILE = tmp, tmp / "quant_numbers.bin"   # never the real cache
+d._number_cache.clear(); d._source_cache.clear(); d._last_fetch_time = 0.0
+batches = itertools.count(0, 4)
+
+async def fake_fetch(count=1024):
+    await asyncio.sleep(0)
+    first = next(batches)
+    return list(range(first, first + 4))
+
+def no_fallback(count):
+    raise RuntimeError("random.org must not be reached")
+
+d._fetch_from_quantumnumbers = fake_fetch
+d._fetch_from_random_org_sync = no_fallback
+seen, orig, errors, returned = [], d._pop_numbers, [], []
+
+async def spy(count):
+    nums, src = await orig(count)
+    seen.extend(nums)
+    return nums, src
+
+d._pop_numbers = spy
+start = threading.Barrier(8)
+
+def worker():
+    start.wait()
+    try:
+        returned.append(json.loads(d.roll_dice(4, 20))["rolls"])
+    except BaseException as e:
+        errors.append(type(e).__name__)
+
+threads = [threading.Thread(target=worker) for _ in range(8)]
+for t in threads: t.start()
+for t in threads: t.join()
+print(json.dumps({"returned": len(returned), "errors": errors,
+                  "seen": len(seen), "distinct": len(set(seen))}))
+"""
+
+
+def test_eight_threads_of_roll_dice_all_return_with_distinct_numbers(tmp_path):
+    import subprocess
+    import sys
+    repo = Path(dnd_roller.__file__).resolve().parents[1]
+    proc = subprocess.run([sys.executable, "-c", _THREADED, str(repo), str(tmp_path)],
+                          capture_output=True, text=True, timeout=20)
+    out = json.loads(proc.stdout.strip().splitlines()[-1])
+    assert out == {"returned": 8, "errors": [], "seen": 32, "distinct": 32}, out
+
+
+def test_no_loop_bound_object_outlives_its_call():
+    """python-tooling-51: no module-level asyncio.Lock or shared AsyncClient remains."""
+    import asyncio
+    import httpx
+    shared = [v for v in vars(dnd_roller).values()
+              if isinstance(v, (asyncio.Lock, httpx.AsyncClient))]
+    assert shared == []
