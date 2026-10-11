@@ -74,10 +74,10 @@ def test_alt_is_offered_the_primarys_latest_and_enter_takes_it(two_hosts, tty, c
 
 
 def test_after_the_alt_takes_the_latest_the_primary_boots_quietly(two_hosts, tty, capsys):
+    (two_hosts.data["boss"] / "Data/worlds/w/addon-scratch.txt").write_text("x")  # earlier
     _play(two_hosts, "mac", "saturday session")
     tty(True, [""])
     with two_hosts.use("boss"):
-        (two_hosts.data["boss"] / "Data/worlds/w/addon-scratch.txt").write_text("x")
         boot.choose()                             # archives boss's scratch as a .safety copy
     assert any(s.safety for s in cloud.snapshots(cloud.store()))
     asked = tty(True, ["k"])
@@ -301,11 +301,79 @@ def test_corrupt_state_file_asks_then_rewrites(two_hosts, tty, capsys):
     snap = _play(two_hosts, "mac", "x")
     with two_hosts.use("mac"):
         two_hosts.state_file("mac").write_text("{not json")
-        asked = tty(True, [""])
+        asked = tty(True, ["l"])
         assert boot.choose() == 0
     assert len(asked) == 1
     assert "unreadable" in capsys.readouterr().out
     assert _state(two_hosts, "mac")["based_on"] == snap
+
+
+def _touch_later(two_hosts, name, rel="Data/modules/m/module.json", ahead=3600):
+    """A local edit after the newest snapshot — e.g. `make foundry-module-install`."""
+    f = two_hosts.data[name] / rel
+    f.write_text(f.read_text() + " ")
+    t = time.time() + ahead
+    os.utime(f, (t, t))
+
+
+def test_no_record_and_local_files_newer_cannot_tell_and_enter_keeps_local(two_hosts, tty,
+                                                                           capsys):
+    """The Mac's first boot after the merge: no state file, the legacy marker no longer
+    matches (a module install since the last vtt-down). The newest snapshot is older than
+    its files, so it is not offered as newer and Enter must not roll the Mac back."""
+    legacy = f"world-{time.strftime('%Y-%m-%d-%H%M%S', time.gmtime(time.time() - 86400))}" \
+             "-fvtt14.369.tar.gz"
+    p = two_hosts.cloud / "world-backups" / legacy
+    p.write_bytes(b"x" * 64)
+    os.utime(p, (time.time() - 86400,) * 2)
+    _touch_later(two_hosts, "mac")
+    asked = tty(True, [""])
+    with two_hosts.use("mac"):
+        before = _tree_hash(two_hosts.data["mac"] / "Data")
+        assert boot.choose() == 0
+        assert _tree_hash(two_hosts.data["mac"] / "Data") == before
+    out = capsys.readouterr().out
+    assert len(asked) == 1 and "Enter = local" in asked[0]
+    assert "cannot tell which is newer" in out
+    assert _state(two_hosts, "mac")["keep_local_until_newer_than"] == legacy
+
+
+def test_no_record_and_cloud_newer_than_local_files_still_defaults_to_latest(two_hosts, tty):
+    _play(two_hosts, "mac", "saturday")
+    asked = tty(True, [""])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    assert "Enter = latest" in asked[0] and _journal(two_hosts, "boss") == "saturday"
+
+
+def test_no_record_cannot_tell_notice_without_a_terminal(two_hosts, tty, capsys):
+    _play(two_hosts, "mac", "x")
+    _touch_later(two_hosts, "boss", ahead=7 * 86400)
+    tty(False)
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    assert "may be newer than this world (cannot tell" in capsys.readouterr().out
+
+
+def test_alt_backing_up_first_leaves_the_legacy_marker_for_the_primary(two_hosts, tty, capsys):
+    legacy = f"world-{time.strftime('%Y-%m-%d-%H%M%S', time.gmtime(time.time() - 86400))}" \
+             "-fvtt14.369.tar.gz"
+    p = two_hosts.cloud / "world-backups" / legacy
+    p.write_bytes(b"x" * 64)
+    os.utime(p, (time.time() - 86400,) * 2)
+    marker = two_hosts.cloud / "world-backups/.last-digest"
+    with two_hosts.use("mac"):
+        marker.write_text(cloud.snapshot_digest() + "\n")
+    _play(two_hosts, "boss", "boss first")         # the alt's first backup
+    assert marker.exists()                         # the alt never retires it
+    with two_hosts.use("mac"):
+        tty(True, ["k"])
+        boot.choose()                              # adopts the marker, then sees boss's
+        assert _state(two_hosts, "mac")["based_on"] == legacy
+        assert cloud.backup("prelaunch") == 0      # unchanged → skipped …
+    assert marker.exists()
+    _play(two_hosts, "mac", "mac session")         # … the primary's real backup retires it
+    assert not marker.exists()
 
 
 def test_eof_at_the_prompt_boots_local_and_remembers_nothing(two_hosts, tty, capsys):

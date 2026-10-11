@@ -52,10 +52,14 @@ class Decision:
     why: str
     warning: str | None = None
     remember_keep_local: str | None = None   # the snapshot declined with "k"
+    # How the offered snapshot relates to this world. "newer": take it is the default.
+    # "unknown": no based-on record and the local files are newer than it — local is.
+    relation: str = "newer"
 
     def to_json(self) -> dict:
         s = self.snapshot
         return {"action": self.action, "why": self.why, "warning": self.warning,
+                "relation": self.relation,
                 "snapshot": None if s is None else {
                     "name": s.name, "host": s.host_label, "core": s.core, "size": s.size,
                     "mtime": s.mtime, "folder": s.folder}}
@@ -86,10 +90,15 @@ def _gb(n: int) -> str:
     return f"{n / 1e9:.1f} GB" if n >= 1e8 else f"{n / 1e6:.1f} MB"
 
 
-def notice_line(newest: Snapshot, state: bootstate.BootState) -> str:
+def notice_line(newest: Snapshot, state: bootstate.BootState, relation: str = "newer") -> str:
     based = state.based_on or "an unknown snapshot"
+    if relation == "unknown":
+        how = (f"may be newer than this world (cannot tell: no record of what it is based "
+               f"on, and its files changed after that snapshot)")
+    else:
+        how = f"is newer than this world (based on {based})"
     return (f"▸ boot: cloud snapshot {newest.name} ({newest.host_label}, {_utc(newest.mtime)}) "
-            f"is newer than this world (based on {based}); booting LOCAL. To use it: "
+            f"{how}; booting LOCAL. To use it: "
             f"make foundry-up FROM=latest   (or: make foundry-restore SNAP={newest.name})")
 
 
@@ -155,10 +164,15 @@ def decide(from_: str | None, interactive: bool, *, st=None, adopt: bool = True)
     if newest is None:
         return Decision("local", None, "cloud has no snapshots", warning=warning)
 
-    # 7. newer = a different snapshot with a later listing mtime than the based-on one
-    is_newer = (state.based_on is None or state.based_on_mtime is None
-                or (newest.name != state.based_on and newest.mtime > state.based_on_mtime))
-    if not is_newer:
+    # 7. newer = a different snapshot with a later listing mtime than the based-on one.
+    #    With no based-on record, the local files are the only clock: a snapshot older
+    #    than them cannot be called newer, so "cannot tell" and local is the default.
+    relation = "newer"
+    if state.based_on is None or state.based_on_mtime is None:
+        local_m = cloud.local_tree_mtime()
+        if local_m is not None and newest.mtime <= local_m:
+            relation = "unknown"
+    elif not (newest.name != state.based_on and newest.mtime > state.based_on_mtime):
         return Decision("local", None, "local world is based on the newest snapshot",
                         warning=warning)
 
@@ -171,18 +185,23 @@ def decide(from_: str | None, interactive: bool, *, st=None, adopt: bool = True)
     # 9.
     if not interactive:
         return Decision("local", newest, "newer snapshot, no terminal — notice only",
-                        warning=warning)
+                        warning=warning, relation=relation)
 
     # 10.
-    return _prompt(newest, rolling, state, warning)
+    return _prompt(newest, rolling, state, warning, relation)
 
 
 def _prompt(newest: Snapshot, rolling: list[Snapshot], state: bootstate.BootState,
-            warning: str | None) -> Decision:
+            warning: str | None, relation: str = "newer") -> Decision:
     others = [s for s in sorted(rolling, key=lambda s: (s.mtime, s.name), reverse=True)
               if s.name != newest.name][:MAX_OTHERS]
+    local_default = relation != "newer"
     print()
-    say("▸ cloud has a newer world snapshot than this machine's world:")
+    if relation == "unknown":
+        say("▸ cannot tell which is newer: this machine has no record of which snapshot its "
+            "world is based on, and its files changed after the newest cloud snapshot:")
+    else:
+        say("▸ cloud has a newer world snapshot than this machine's world:")
     print()
     say(f"    newest   {newest.name}   {newest.host_label}   {_utc(newest.mtime)}   "
         f"{newest.core or '?'}   {_gb(newest.size)}")
@@ -202,14 +221,19 @@ def _prompt(newest: Snapshot, rolling: list[Snapshot], state: bootstate.BootStat
             say(f"    {i}  {s.name}   {s.host_label}   {_utc(s.mtime)}")
     say("  (untagged and major-release snapshots: make foundry-restore)")
     print()
+    question = ("  boot from latest or keep [local]?  (Enter = local, l/latest, k/local, "
+                "or a number)  > " if local_default else
+                "  boot from [latest] or keep local?  (Enter = latest, l/latest, k/local, "
+                "or a number)  > ")
     for _ in range(3):
         try:
-            ans = input("  boot from [latest] or keep local?  "
-                        "(Enter = latest, l/latest, k/local, or a number)  > ").strip().lower()
+            ans = input(question).strip().lower()
         except (EOFError, KeyboardInterrupt):
             print()
             return Decision("local", None, "no answer — booting local", warning=warning)
-        if ans in ("", "l", "latest"):
+        if ans == "":
+            ans = "k" if local_default else "l"
+        if ans in ("l", "latest"):
             return Decision("restore", newest, "you chose the latest", warning=warning)
         if ans in ("k", "local", "keep"):
             return Decision("local", None, "you chose to keep the local world",
@@ -244,7 +268,7 @@ def choose(from_: str | None = None, interactive: bool | None = None) -> int:
 
     if d.action == "local":
         if d.snapshot is not None:          # the non-interactive notice (§6.4)
-            say(notice_line(d.snapshot, bootstate.load()))
+            say(notice_line(d.snapshot, bootstate.load(), d.relation))
         elif d.remember_keep_local:
             bootstate.load().remember_keep_local(d.remember_keep_local)
             say(f"▸ boot: keeping the local world (not asked again until a snapshot newer "

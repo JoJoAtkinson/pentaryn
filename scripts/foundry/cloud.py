@@ -531,6 +531,29 @@ def snapshot_digest() -> str:
     return h.hexdigest()
 
 
+def local_tree_mtime() -> float | None:
+    """The newest file mtime under SNAPSHOT_PATHS, or None when there is no local world.
+
+    The boot choice's fallback clock when this machine has no based-on record: a cloud
+    snapshot older than the local files cannot be called newer."""
+    if not tree_has_world():
+        return None
+    root = data_root()
+    newest_m = None
+    for rel in SNAPSHOT_PATHS:
+        base = root / rel
+        if not base.exists():
+            continue
+        for p in base.rglob("*"):
+            try:
+                if p.is_file():
+                    m = p.stat().st_mtime
+                    newest_m = m if newest_m is None or m > newest_m else newest_m
+            except OSError:
+                continue
+    return newest_m
+
+
 def tree_has_world() -> bool:
     """Is there anything worth a snapshot? A machine that has never run Foundry has none,
     and archiving an empty tree before its first restore would be noise."""
@@ -676,11 +699,15 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
     snap = parse_snapshot(entry or Entry(name, size, time.time()), WORLD_BACKUPS)
     state.record_snapshot(name, me, snap.mtime, digest, by="backup")
     log(f"snapshot → {name} ({_mb(size)}, {reason})")
-    # The shared digest marker is retired: the digest is local now (bootstate).
-    try:
-        st.delete(f"{WORLD_BACKUPS}/.last-digest")
-    except StorageError:
-        pass
+    # The shared digest marker is retired: the digest is local now (bootstate). Only the
+    # primary — the Mac, which wrote it — may delete it, and only once it has backed up
+    # (so its first boot has already had the chance to adopt it). The alt backing up
+    # first must not take that chance away.
+    if host.role() == "primary":
+        try:
+            st.delete(f"{WORLD_BACKUPS}/.last-digest")
+        except StorageError:
+            pass
 
     if superseded:
         age_days = (time.time() - superseded.mtime) / 86400

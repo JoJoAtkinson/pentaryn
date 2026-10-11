@@ -355,6 +355,11 @@ snapshot this world came from, its listing mtime, and the tree digest. It is wri
 machine's own backup, by every restore, and by a `k` answer — never by the no-terminal notice.
 "Newer" compares the **listing mtime**, never the name's stamp across machines. So the alt is asked
 about the primary's newest; the primary is asked only when the alt has actually uploaded since.
+With **no record** (first run, or the file is missing or unreadable) the only clock is the local
+files: the newest snapshot is offered as newer only if it is later than the newest file under
+`worlds/`, `Config/` and `modules/`. Otherwise the prompt says it **cannot tell which is newer** and
+Enter keeps local (`l` still takes it). The legacy `world-backups/.last-digest` marker is retired
+only by the primary's own backup, so the alt backing up first never stops the Mac adopting it.
 Restore `.safety` copies and `major-release/` are never offered as "newer".
 
 ### The rules that keep it safe
