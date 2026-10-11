@@ -43,9 +43,10 @@
 import {
   DEDUPE_MS, FLUSH_MS, MODULE, appendCapped, capLimit, decorate as decorateRecord, imageOffset, isDuplicate, recentOf,
 } from "./pings-core.mjs";
+import { maxSetting, readLog, registerSettings, writeLog } from "./settings.mjs";
+import { makeLog } from "./lib/log.mjs";
 
-const LOG = "log";
-const MAX = "max";
+const log = makeLog(MODULE);
 
 /** In-memory mirror, so a burst of pings costs one database write, not five. */
 let buffer = null;
@@ -53,18 +54,10 @@ let flushTimer = null;
 
 const nowMs = () => Date.now();
 
-function readSetting() {
-  try {
-    const v = game.settings.get(MODULE, LOG);
-    return Array.isArray(v) ? v : [];
-  } catch (err) {
-    console.warn(`${MODULE} | could not read the log`, err);
-    return [];
-  }
-}
+const readSetting = () => readLog({ log });
 
 function cap() {
-  return capLimit(game.settings.get(MODULE, MAX));
+  return capLimit(maxSetting());
 }
 
 function scheduleFlush() {
@@ -73,9 +66,9 @@ function scheduleFlush() {
     flushTimer = null;
     if (!game.user.isGM || !buffer) return;
     try {
-      await game.settings.set(MODULE, LOG, buffer);
+      await writeLog(buffer);
     } catch (err) {
-      console.warn(`${MODULE} | could not persist the log`, err);
+      log.warn("could not persist the log", err);
     }
   }, FLUSH_MS);
 }
@@ -156,21 +149,7 @@ function patchControlsLayer() {
 }
 
 Hooks.once("init", () => {
-  game.settings.register(MODULE, LOG, {
-    name: "Ping log",
-    scope: "world",
-    config: false,
-    type: Array,
-    default: []
-  });
-  game.settings.register(MODULE, MAX, {
-    name: "Pings to keep",
-    hint: "How many of the most recent pings to remember. Older ones fall off the end.",
-    scope: "world",
-    config: true,
-    type: Number,
-    default: 50
-  });
+  registerSettings();
 });
 
 Hooks.once("ready", () => {
@@ -195,7 +174,7 @@ Hooks.once("ready", () => {
     all: () => readSetting().map(decorate),
     clear: async () => {
       buffer = [];
-      await game.settings.set(MODULE, LOG, []);
+      await writeLog([]);
       return true;
     }
   };
