@@ -70,8 +70,9 @@ n/a — the module writes no flags.
 | Hook | Args | When |
 |---|---|---|
 | `pentaryn-pings.ready` | `(api)` | the API is published (GM clients) |
+| `pentaryn.ready` | `("pings", api, { when: "ready:gm" })` | the kit's shared publish hook (GM clients) |
 
-Emits nothing else (`HOOKS` is empty). Registers only `init` and `ready` (pinned in
+Emits no events of its own (`HOOKS` is empty). Registers only `init` and `ready` (pinned in
 `test/golden/hooks.json`). Listens on core's socket event `userActivity` and wraps
 `ControlsLayer#handlePing` (below).
 
@@ -136,7 +137,9 @@ node test/run.mjs                                  # from the module folder
 
 ## Sync
 
-`make foundry-pings-sync` once the ModuleSpec exists; then reload (`.mjs` changes). A `module.json`
+`make foundry-pings-sync` (the `pings` ModuleSpec is registered); then reload (`.mjs` changes).
+`make foundry-pings-check` runs the node suite only once the ModuleSpec's `check` gains `node-test`
+(C39); until then run `node foundry/module/pentaryn-pings/test/run.mjs` directly. A `module.json`
 change needs a Foundry restart. Live check on the GM client: ping the canvas, wait a second, then
 `game.pentaryn.pings.last()` has the point and `game.pentaryn.pings.describe().version` matches
 `module.json`.
