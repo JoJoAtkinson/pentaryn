@@ -33,10 +33,12 @@ const strip = v => Array.isArray(v) ? v.map(strip)
   : v;
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
+/** One macrotask through a MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). */
+const tick = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => { c.port1.close(); r(); }; c.port2.postMessage(0); });
 /** Live only: poll until pred() holds or ms passes. */
 const settle = async (pred, ms = 3000) => {
   const t0 = performance.now();
-  while (performance.now() - t0 < ms) { if (pred()) return true; await new Promise(r => setTimeout(r, 10)); }
+  while (performance.now() - t0 < ms) { if (pred()) return true; await tick(); }
   return !!pred();
 };
 

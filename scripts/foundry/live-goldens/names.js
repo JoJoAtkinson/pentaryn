@@ -31,10 +31,14 @@ const strip = v => Array.isArray(v) ? v.map(strip)
   : v;
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
+/** One macrotask through a MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). */
+const tick = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => { c.port1.close(); r(); }; c.port2.postMessage(0); });
+/** Wait ms of wall time, yielding with tick() (a hidden tab clamps setTimeout to 1 s or more). */
+const sleep = async ms => { const t0 = performance.now(); while (performance.now() - t0 < ms) await tick(); };
 /** Live only: poll until pred() holds or ms passes (names' sync is fire-and-forget from updateActor). */
 const settle = async (pred, ms = 3000) => {
   const t0 = performance.now();
-  while (performance.now() - t0 < ms) { if (pred()) return true; await new Promise(r => setTimeout(r, 10)); }
+  while (performance.now() - t0 < ms) { if (pred()) return true; await tick(); }
   return !!pred();
 };
 
@@ -72,14 +76,14 @@ try {
   toasts.length = 0;
   await actor.update({ name: NEW });
   await settle(() => toasts.length > 0 && scene.tokens.get(short.id)?.name !== "ZZ Glubbek");
-  await new Promise(r => setTimeout(r, 150)); // a second toast, if any, would arrive by now
+  await sleep(150); // a second toast, if any, would arrive by now
   out.golden.rename = { before, after: labels(), toastCount: toasts.length, toasts: [...toasts] };
 
   // no-op updates: an img-only change and a same-name write must not relabel or toast
   toasts.length = 0;
   await actor.update({ img: "icons/svg/mystery-man.svg" });
   await actor.update({ name: NEW });
-  await new Promise(r => setTimeout(r, 200));
+  await sleep(200);
   out.golden.noop = { after: labels(), toastCount: toasts.length };
 
   // a nickname survives: rename the short token to something else, rename the actor again
@@ -87,7 +91,7 @@ try {
   toasts.length = 0;
   await actor.update({ name: OLD });
   await settle(() => toasts.length > 0);
-  await new Promise(r => setTimeout(r, 150));
+  await sleep(150);
   out.golden.nickname = { after: labels(), toastCount: toasts.length, toasts: [...toasts] };
 
   // the pure helpers as published

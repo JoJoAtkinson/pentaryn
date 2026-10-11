@@ -30,14 +30,17 @@ const strip = v => Array.isArray(v) ? v.map(strip)
   : v;
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
+/** One macrotask through a MessageChannel: unlike setTimeout it is not throttled in a hidden tab (J20). */
+const tick = () => new Promise(r => { const c = new MessageChannel(); c.port1.onmessage = () => { c.port1.close(); r(); }; c.port2.postMessage(0); });
+/** Wait ms of wall time, yielding with tick() (a hidden tab clamps setTimeout to 1 s or more). */
+const sleep = async ms => { const t0 = performance.now(); while (performance.now() - t0 < ms) await tick(); };
 /** Live only: poll until pred() holds or ms passes. */
 const settle = async (pred, ms = 3000) => {
   const t0 = performance.now();
-  while (performance.now() - t0 < ms) { if (pred()) return true; await new Promise(r => setTimeout(r, 10)); }
+  while (performance.now() - t0 < ms) { if (pred()) return true; await tick(); }
   return !!pred();
 };
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
 const out = { module: "cursors", golden: {}, timings: {}, cleanup: {} };
 const API = game.pentaryn.cursors;
 const VARS = ["--cursor-default", "--cursor-default-down", "--cursor-pointer", "--cursor-pointer-down"];
