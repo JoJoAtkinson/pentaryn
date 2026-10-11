@@ -20,6 +20,7 @@
 import { cardHTML, esc, samplePoints as samplePointsAt } from "./portals-core.mjs";
 import { cardFor, destinationsOf, lookAt, moveRegionDocs, teleportParty } from "./scene-adapter.mjs";
 import { PortalCard, configureCardApp } from "./card-app.mjs";
+import { BADGE_ROWS } from "./api-manifest.mjs";
 
 let badgeLayer = null;
 /**
@@ -264,6 +265,9 @@ const REGION_HOOKS = ["createRegion", "updateRegion", "deleteRegion", "createReg
 
 function onCanvasTearDown() { hideTip(); closeMenu(); drawRun++; badges.length = 0; badgeLayer = null; }
 
+/** The API rows this feature contributes (api-manifest BADGE_ROWS). */
+export const contribution = () => ({ rows: BADGE_ROWS, impl: { open: PortalCard.open, redraw: drawBadges } });
+
 /** Test seam: the module-private state. */
 export const _state = () => ({ badgeLayer, drawRun, tip, menu, drag });
 
@@ -275,6 +279,7 @@ export function install(reg, ctx) {
   // hot: badges — refreshBadgeSight walks only the badge list, never the scene
   reg.on("sightRefresh", () => { if (badges.length && !game.user.isGM) refreshBadgeSight(); }, { guard: false, label: "badges sight" });
   reg.on("canvasTearDown", onCanvasTearDown, { guard: false, label: "badges teardown" });
+  return contribution();
 }
 
 /** Destroy the layer, hide the tip, close the menu. The #board listeners stay (dataset.ppBound). */

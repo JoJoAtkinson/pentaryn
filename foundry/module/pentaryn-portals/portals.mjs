@@ -36,11 +36,20 @@ const FEATURES = [party, badges, cards];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);
-const ctx = { log, reg, setting };
+const ctx = { log, reg, setting, api: null, contributions: [], uninstall };
+
+/** Remove every hook and feature state (hot patch: then re-import the entry to re-wire). */
+function uninstall() {
+  for (const feature of [...FEATURES].reverse()) feature.uninstall();
+  reg.offAll();
+}
 
 Hooks.once("init", registerSettings);
 configureSceneAdapter({ setting, log });
-for (const feature of FEATURES) feature.install(reg, ctx);
+for (const feature of FEATURES) {
+  const contribution = feature.install(reg, ctx);
+  if (contribution) ctx.contributions.push(contribution);
+}
 
 // pentaryn-importer replaces game.pentaryn with a frozen object in its own ready hook; defer a
 // tick and rebuild rather than assign (same as pentaryn-dropbin / -attunement).

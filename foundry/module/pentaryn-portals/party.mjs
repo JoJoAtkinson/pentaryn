@@ -15,6 +15,7 @@
 import { crowded, followersOf, tokenBox } from "./portals-core.mjs";
 import { carryTo, destinationsOf, landingPlaces, recordOf } from "./scene-adapter.mjs";
 import { setting } from "./settings.mjs";
+import { PARTY_ROWS } from "./api-manifest.mjs";
 
 /** Tokens deleted by one operation, gathered so a party walking through together is one pass. */
 const pendingOps = new WeakMap();
@@ -98,9 +99,13 @@ function onDeleteToken(token, options) {
     .catch(err => log.warn("summons did not follow", err)), 0);
 }
 
+/** The API rows this feature contributes (api-manifest PARTY_ROWS). */
+export const contribution = () => ({ rows: PARTY_ROWS, impl: { spreadArrival } });
+
 export function install(reg, ctx) {
   log = ctx.log;
   reg.on("deleteToken", onDeleteToken, { guard: false, label: "summons follow" });
+  return contribution();
 }
 
 /** Nothing to clear: pendingOps is a WeakMap keyed by core's options objects. */
