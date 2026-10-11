@@ -48,7 +48,7 @@ test("labels and order; exposed accessors; uninstall + offAll leaves nothing reg
     "on:updateItem — updateItem: refresh bars",
   ]);
   assert.deepEqual(Object.keys(ctx.exposed).sort(), [
-    "applySinglePage", "ensureAll", "ensureFor", "ensurePersonalJournal", "findFolder", "openSaved", "personal",
+    "applySinglePage", "ensureAll", "ensureFor", "ensurePersonalJournal", "findFolder", "lastSkip", "openSaved", "personal",
     "personalsOf", "refreshBars", "report", "save", "savedStatus",
   ]);
   bar.uninstall();

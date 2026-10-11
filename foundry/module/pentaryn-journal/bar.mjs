@@ -12,7 +12,9 @@
  * The personal journal is reached through `ctx.exposed` (personal.mjs), never an import.
  */
 
-import { MODULE, escapeHTML, findSaved, isMine, isPersonal, placeFrom, planSave, singlePage, status } from "./journal-core.mjs";
+import {
+  MODULE, escapeHTML, findSaved, isMine, isPersonal, placeFrom, planSave, singlePage, skipReason, status,
+} from "./journal-core.mjs";
 import { setting, whenChanged } from "./settings.mjs";
 import { descriptorsFor, isEyeReadable, targetFor as targetForApp } from "./sources-adapter.mjs";
 
@@ -65,19 +67,33 @@ function provenanceLabels() {
 /*  Saving and showing                          */
 /* -------------------------------------------- */
 
+/** Why the last save() on this client wrote nothing (core.skipReason), or null. */
+let lastSkip = null;
+
+/** One console breadcrumb per add that wrote nothing (the toasts, if any, are unchanged). */
+function skipped(facts, target) {
+  lastSkip = skipReason(facts);
+  ctx.log.info(`add skipped: ${lastSkip}`, { target: target?.kind ?? null, journal: facts.journal?.id ?? null });
+  return null;
+}
+
 /**
  * Copy a target into the current user's journal and open it on the result.
  * @returns {Promise<{journal, pageIds: string[], created: number, updated: number}|null>}
  */
 async function save(target, { near } = {}) {
+  lastSkip = null;
   const journal = await ctx.exposed.ensurePersonalJournal();
-  if (!journal) return null;
+  if (!journal) return skipped({ journal }, target);
   const sources = descriptorsFor(target);
-  if (!sources.length) return null;
+  if (!sources.length) return skipped({ journal, sources }, target);
   const plan = planSave(journal.pages.contents, sources, {
     ...provenanceFor(target), now: Date.now(), worldTime: game.time.worldTime, labels: provenanceLabels()
   });
-  if (plan.tooLarge) { toast(game.i18n.localize("PENTARYN_JOURNAL.notify.tooLarge")); return null; }
+  if (plan.tooLarge) {
+    toast(game.i18n.localize("PENTARYN_JOURNAL.notify.tooLarge"));
+    return skipped({ journal, sources, plan }, target);
+  }
   const created = plan.create.length ? await journal.createEmbeddedDocuments("JournalEntryPage", plan.create) : [];
   if (plan.update.length) await journal.updateEmbeddedDocuments("JournalEntryPage", plan.update);
   const pageId = created[0]?.id ?? plan.update[0]?._id ?? plan.existing[0];
@@ -300,7 +316,7 @@ export function install(reg, context) {
   }
   reg.on("updateItem", () => refreshBars(), { label: "updateItem: refresh bars" });
 
-  ctx.expose({ save, openSaved, savedStatus, refreshBars: () => refreshBars(), applySinglePage });
+  ctx.expose({ save, openSaved, savedStatus, refreshBars: () => refreshBars(), applySinglePage, lastSkip: () => lastSkip });
 }
 
 export function uninstall() {
@@ -309,4 +325,5 @@ export function uninstall() {
   refreshBars = () => {};
   pending.clear();
   lastNote = null;
+  lastSkip = null;
 }

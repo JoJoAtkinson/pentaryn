@@ -396,3 +396,20 @@ export function itemBarVisible(f) {
  */
 export const singlePage = f =>
   !f.isGM && f.setting && !f.isPersonal && f.isEyeReadable && f.visiblePages === 1;
+
+/* -------------------------------------------- */
+/*  Why an add did nothing (items-journal-36)    */
+/* -------------------------------------------- */
+
+/**
+ * The reason an add stops before writing, in the order the save checks them: no journal, nothing
+ * the user can see, a body over MAX_BODY. null = it goes ahead.
+ * @param {{journal?: object|null, sources?: object[], plan?: {tooLarge?: boolean}|null}} s
+ * @returns {"no-journal"|"nothing-visible"|"too-large"|null}
+ */
+export function skipReason({ journal, sources, plan } = {}) {
+  if (!journal) return "no-journal";
+  if (!sources?.length) return "nothing-visible";
+  if (plan?.tooLarge) return "too-large";
+  return null;
+}
