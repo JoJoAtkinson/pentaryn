@@ -12,37 +12,38 @@
  *   api.mjs                importActors, the orchestrator; buildApiFor (the kit-built API)
  *   lib/*.mjs              vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
- * No features, no settings, no UI: the one hook is `ready`, which publishes. There is no hot-patch
+ * No features, no settings, no UI: the one hook is `ready`, which publishes (module.api, the
+ * `game.pentaryn.importer` alias, and the legacy root keys merged into `game.pentaryn`). There is no hot-patch
  * branch — a re-import registers a fresh once:ready and publishes on the next ready, as it always did.
  */
 
-import { CONTRACT_ID, MODULE, lintFormulas, normalise, valuesMatch } from "./importer-core.mjs";
-import { fetchJsonWithTimeout, log } from "./documents-adapter.mjs";
-import { buildApiFor, importActors } from "./api.mjs";
+import { CONTRACT_ID, MODULE, NS } from "./importer-core.mjs";
+import { log } from "./documents-adapter.mjs";
+import { buildApiFor, legacyRoot } from "./api.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
+import { publishNamespace } from "./lib/publish.mjs";
 
 const reg = hookRegistry(MODULE, log);
 
 const ctx = { log, reg, api: null, uninstall: () => reg.offAll() };
 
+/**
+ * Build the API first (a drift throw stops here with one clear line), then MERGE the legacy root
+ * keys into `game.pentaryn` — never replace or freeze it ([declared] items-journal-1, D-I1) — and
+ * publish the namespace. The root keys land before `publishNamespace` fires `pentaryn.ready`, so a
+ * listener on it already sees `game.pentaryn.import`.
+ */
 function onReady() {
-  game.pentaryn = Object.freeze({
-    /** @type {typeof importActors} */
-    import: importActors,
-    moduleId: MODULE,
-    contract: CONTRACT_ID,
-    /** Exposed for tests and for hand-checking a file without importing it. */
-    _internals: Object.freeze({ fetchJsonWithTimeout, lintFormulas, valuesMatch, normalise })
-  });
-  ctx.log.info(`ready — game.pentaryn.import() available (${CONTRACT_ID})`);
   try {
     ctx.api = buildApiFor(ctx);
   } catch (err) {
     ctx.log.error("API manifest drift — not published", err);
     return;
   }
-  const mod = game.modules.get(MODULE);
-  if (mod) mod.api = ctx.api;
+  game.pentaryn ??= {};
+  Object.assign(game.pentaryn, legacyRoot());
+  publishNamespace(NS, ctx.api, { moduleId: MODULE });
+  ctx.log.info(`ready — game.pentaryn.import() available (${CONTRACT_ID})`);
 }
 
 reg.once("ready", onReady, { label: "ready: publish" });

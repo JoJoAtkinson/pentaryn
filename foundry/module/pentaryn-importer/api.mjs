@@ -287,6 +287,7 @@ function selftest(ctx) {
   const flags = game.modules.get(MODULE)?.flags?.[FLAG_SCOPE];
   const checks = [
     { label: "published as module.api", ok: game.modules.get(MODULE)?.api === ctx.api },
+    { label: "game.pentaryn.importer is this API", ok: game.pentaryn?.importer === ctx.api },
     { label: "game.pentaryn.import is importActors", ok: game.pentaryn?.import === importActors },
     {
       label: "module.json flags.pentaryn.contract is the contract this code speaks",
@@ -295,6 +296,18 @@ function selftest(ctx) {
     }
   ];
   return { ok: checks.every(c => c.ok), checks: checks.map(c => ({ detail: null, ...c })) };
+}
+
+/**
+ * The legacy root keys, MERGED into `game.pentaryn` at ready (items-journal-1): `import()` and
+ * `make foundry-import` keep working, and the root is never replaced or frozen, so every other
+ * module's namespace survives whichever order the modules load in. `_internals` stays frozen.
+ * `contract` here is the actors.json contract (the root key's old meaning); the namespace's own
+ * `contract` is the API contract.
+ * @returns {{import: typeof importActors, moduleId: string, contract: string, _internals: object}}
+ */
+export function legacyRoot() {
+  return { import: importActors, moduleId: MODULE, contract: CONTRACT_ID, _internals: INTERNALS };
 }
 
 /**

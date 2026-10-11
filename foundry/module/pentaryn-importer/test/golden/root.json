@@ -4,9 +4,10 @@
       "import",
       "moduleId",
       "contract",
-      "_internals"
+      "_internals",
+      "importer"
     ],
-    "frozen": true,
+    "frozen": false,
     "internalsFrozen": true,
     "internals": [
       "fetchJsonWithTimeout",
@@ -15,16 +16,21 @@
       "normalise"
     ],
     "contract": "pentaryn/actors.json@1",
-    "moduleId": "pentaryn-importer"
+    "moduleId": "pentaryn-importer",
+    "namespaces": [
+      "importer"
+    ]
   },
   "aoeBefore": {
     "keys": [
+      "aoe",
       "import",
       "moduleId",
       "contract",
-      "_internals"
+      "_internals",
+      "importer"
     ],
-    "frozen": true,
+    "frozen": false,
     "importIsFunction": true
   },
   "attunementAfter": {
@@ -33,6 +39,7 @@
       "moduleId",
       "contract",
       "_internals",
+      "importer",
       "attunement"
     ],
     "frozen": false,
@@ -40,12 +47,14 @@
   },
   "attunementBefore": {
     "keys": [
+      "attunement",
       "import",
       "moduleId",
       "contract",
-      "_internals"
+      "_internals",
+      "importer"
     ],
-    "frozen": true,
+    "frozen": false,
     "importIsFunction": true
   },
   "kitAfter": {
@@ -55,6 +64,7 @@
         "moduleId",
         "contract",
         "_internals",
+        "importer",
         "zz"
       ],
       "frozen": false,
@@ -66,39 +76,45 @@
         "moduleId",
         "contract",
         "_internals",
+        "importer",
         "zz"
       ],
       "frozen": false,
       "importIsFunction": true
     },
     "namespaces": [
+      "importer",
       "zz"
     ]
   },
   "kitBefore": {
     "atReady": {
       "keys": [
-        "import",
-        "moduleId",
-        "contract",
-        "_internals"
-      ],
-      "frozen": true,
-      "importIsFunction": true
-    },
-    "afterTick": {
-      "keys": [
+        "zz",
         "import",
         "moduleId",
         "contract",
         "_internals",
-        "zz"
+        "importer"
+      ],
+      "frozen": false,
+      "importIsFunction": true
+    },
+    "afterTick": {
+      "keys": [
+        "zz",
+        "import",
+        "moduleId",
+        "contract",
+        "_internals",
+        "importer"
       ],
       "frozen": false,
       "importIsFunction": true
     },
     "namespaces": [
-      "zz"
+      "zz",
+      "importer"
     ]
   }
 }

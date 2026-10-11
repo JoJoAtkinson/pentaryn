@@ -56,6 +56,13 @@ test("surface equals golden/surface.json", () => {
   pinJSON("surface", surfaceOf(api), import.meta.url);
 });
 
+test("game.pentaryn.importer is the API; the legacy root keys sit beside it in an unfrozen root", () => {
+  assert.equal(game.pentaryn.importer, api);
+  assert.equal(Object.isFrozen(game.pentaryn), false);
+  assert.deepEqual(game.pentaryn.namespaces(), ["importer"]);
+  assert.equal(game.pentaryn.contract, api.actorsContract, "the root's contract keeps its old meaning");
+});
+
 test("the same code the legacy root publishes: import, moduleId, _internals", () => {
   assert.equal(api.import, game.pentaryn.import);
   assert.equal(api.moduleId, game.pentaryn.moduleId);

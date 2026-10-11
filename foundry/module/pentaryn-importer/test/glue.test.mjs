@@ -6,9 +6,10 @@
 // Pins and the steps that may touch them:
 //   golden/console.json — every console line, keyed by case. Step 4b ([declared] console prefix,
 //                         D-I2) rewrites exactly this file and nothing else.
-//   golden/root.json    — the published root and both load orders. Step 7 ([declared] keystone,
-//                         items-journal-1) rewrites it (the fresh row and the KNOWN rows) together
-//                         with the "frozen legacy root" test and the KNOWN items-journal-1 tests.
+//   golden/root.json    — the published root and both load orders. Rewritten once, by step 7
+//                         ([declared] keystone, items-journal-1: the root is merged into, never
+//                         replaced or frozen), together with the root tests below that were
+//                         KNOWN items-journal-1 rows until then.
 //   the KNOWN items-journal-4 test — flipped by the standalone re-entrancy commit (D-I3).
 //   golden/dryrun.json, golden/results.json, golden/refusals.json (toast text included) — no step
 //   may change them.
@@ -144,18 +145,25 @@ test("ready: one console line", () => {
   pinKey("console", "ready", ready.lines);
 });
 
-test("ready: the frozen legacy root (golden/root.json → fresh)", () => {
-  assert.deepEqual(Object.keys(root), ["import", "moduleId", "contract", "_internals"]);
+// [declared] items-journal-1 (guide step 7, D-I1): the legacy keys are MERGED into game.pentaryn,
+// which is no longer replaced or frozen; the importer's own namespace sits beside them.
+test("ready: the legacy root keys merged into an unfrozen root, beside the importer namespace (golden/root.json → fresh)", () => {
+  assert.deepEqual(Object.keys(root), ["import", "moduleId", "contract", "_internals", "importer"]);
   assert.equal(root.contract, "pentaryn/actors.json@1");
   assert.equal(root.moduleId, MODULE);
   assert.equal(typeof root.import, "function");
-  assert.equal(Object.isFrozen(root), true);
+  assert.equal(root.importer.import, root.import);
+  assert.equal(root.importer, game.modules.get(MODULE).api);
+  assert.equal(Object.isFrozen(root), false);
   assert.equal(Object.isFrozen(root._internals), true);
   assert.deepEqual(Object.keys(root._internals), ["fetchJsonWithTimeout", "lintFormulas", "valuesMatch", "normalise"]);
-  assert.throws(() => { game.pentaryn.attunement = {}; }, TypeError, "an ES module (strict) cannot add to the frozen root");
+  assert.deepEqual(root.namespaces(), ["importer"]);
+  game.pentaryn.attunement = {};
+  assert.deepEqual(game.pentaryn.attunement, {}, "a later module assigns into the root directly");
+  delete game.pentaryn.attunement;
   pinKey("root", "fresh", {
     keys: Object.keys(root), frozen: Object.isFrozen(root), internalsFrozen: Object.isFrozen(root._internals),
-    internals: Object.keys(root._internals), contract: root.contract, moduleId: root.moduleId,
+    internals: Object.keys(root._internals), contract: root.contract, moduleId: root.moduleId, namespaces: root.namespaces(),
   });
 });
 
@@ -428,27 +436,28 @@ async function readyWith({ start, before, after }) {
   return lines;
 }
 
-// KNOWN: items-journal-1 — the importer's ready REPLACES game.pentaryn with a frozen object, so whatever
-// was published earlier is wiped. Flipped by guide step 7 ([declared] keystone, D-I1).
-test("KNOWN items-journal-1: a namespace published before ready ({aoe}) is gone afterwards", async () => {
+// Was KNOWN items-journal-1 (the importer's ready replaced game.pentaryn with a frozen object and wiped
+// it); flipped by guide step 7 ([declared] keystone, D-I1).
+test("a namespace published before ready ({aoe}) survives the importer's ready", async () => {
   await readyWith({ start: { aoe: { x: 1 } } });
-  assert.equal(game.pentaryn.aoe, undefined);
-  assert.equal(Object.isFrozen(game.pentaryn), true);
+  assert.deepEqual(game.pentaryn.aoe, { x: 1 });
+  assert.equal(typeof game.pentaryn.import, "function");
+  assert.equal(Object.isFrozen(game.pentaryn), false);
   pinKey("root", "aoeBefore", shape());
 });
 
-test("attunement's guard running after the importer rebuilds the root (spread branch): both present", async () => {
+test("attunement's guard running after the importer assigns into the root (else branch): both present", async () => {
   await readyWith({ start: undefined, after: attunementGuard });
   assert.equal(typeof game.pentaryn.attunement?.report, "function");
   assert.equal(typeof game.pentaryn.import, "function");
-  assert.equal(Object.isFrozen(game.pentaryn), false, "the guard's copy is a plain object");
+  assert.equal(Object.isFrozen(game.pentaryn), false);
   pinKey("root", "attunementAfter", shape());
 });
 
-// KNOWN: items-journal-1 — the same guard running BEFORE the importer's ready is wiped. Flipped by step 7.
-test("KNOWN items-journal-1: attunement's guard running before the importer loses attunement", async () => {
+// Was KNOWN items-journal-1 (the same guard running BEFORE the importer's ready was wiped); flipped by step 7.
+test("attunement's guard running before the importer: both present", async () => {
   await readyWith({ start: undefined, before: attunementGuard });
-  assert.equal(game.pentaryn.attunement, undefined);
+  assert.equal(typeof game.pentaryn.attunement?.report, "function");
   assert.equal(typeof game.pentaryn.import, "function");
   pinKey("root", "attunementBefore", shape());
 });
@@ -457,22 +466,22 @@ test("a kit module publishing AFTER the importer: its namespace and the importer
   await readyWith({ start: undefined, after: kitPublish });
   assert.equal(game.pentaryn.zz, zzApi);
   assert.equal(typeof game.pentaryn.import, "function");
-  assert.deepEqual(game.pentaryn.namespaces(), ["zz"]);
+  assert.deepEqual(game.pentaryn.namespaces(), ["importer", "zz"]);
   const atReady = shape();
   mock.timers.tick(0);
   pinKey("root", "kitAfter", { atReady, afterTick: shape(), namespaces: game.pentaryn.namespaces() });
 });
 
-// KNOWN: items-journal-1 — a kit module publishing BEFORE the importer is wiped at ready and comes back
-// only on the kit's realias tick (publish.mjs COMPAT, until: items-journal-1). Flipped by step 7.
-test("KNOWN items-journal-1: a kit module publishing BEFORE the importer is absent until the realias tick", async () => {
+// Was KNOWN items-journal-1 (a kit module publishing BEFORE the importer was wiped at ready and came
+// back only on the kit's realias tick); flipped by step 7: present at ready, no tick needed.
+test("a kit module publishing BEFORE the importer: present at ready, beside the importer's keys", async () => {
   await readyWith({ start: undefined, before: kitPublish });
-  assert.equal(game.pentaryn.zz, undefined, "wiped by the importer's frozen root");
-  assert.equal(Object.isFrozen(game.pentaryn), true);
+  assert.equal(game.pentaryn.zz, zzApi, "present at ready, not wiped");
+  assert.equal(Object.isFrozen(game.pentaryn), false);
+  assert.equal(typeof game.pentaryn.import, "function");
   const atReady = shape();
   mock.timers.tick(0);
-  assert.equal(game.pentaryn.zz, zzApi, "restored by realiasTick");
-  assert.equal(typeof game.pentaryn.import, "function");
+  assert.equal(game.pentaryn.zz, zzApi);
   pinKey("root", "kitBefore", { atReady, afterTick: shape(), namespaces: game.pentaryn.namespaces() });
 });
 
