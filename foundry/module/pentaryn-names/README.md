@@ -79,7 +79,9 @@ Every client remembers the old name in `preUpdateActor`; only the client that ma
 ## Pitfalls
 
 - Unlinked tokens carry the base actor's id, so renaming a base actor relabels **every** unlinked
-  token of it whose label matches — two `Goblin` tokens both become `Goblin Boss` (open question N-L1).
+  token of it whose label matches — two `Goblin` tokens both become `Goblin Boss`. This is intended
+  (N-L1, Joe 2026-10-11): a base-actor rename is a rename of the creature, so its copies follow; give
+  one a nickname first to keep it apart.
 - Quirks pinned as-is: an old name that is only a comma tail (`",x"`) has short form `""`, which an
   empty label matches; a padded old name (`" Bob "`) has a trimmed short form that differs from it,
   so `"Bob"` follows it.

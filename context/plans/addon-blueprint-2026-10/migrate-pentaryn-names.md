@@ -318,7 +318,7 @@ planner output so its answer becomes a deliberate change.
 | N-D2 | 5 | API frozen; gains `version/contract/describe/settings/trace/uninstall`; published on `module.api`; `pentaryn-names.ready` fires | `game.pentaryn.names.describe()`; `game.modules.get("pentaryn-names").api === game.pentaryn.names` | live smoke only |
 | N-D3 | 6 | `sync` accepts an id/uuid/exact name; ambiguous name on a write returns `fail` | `game.pentaryn.names.sync("<actorId>", "Old", "New")` | live smoke only |
 | N-D4 | 7 (opt.) | toast also logged to console | console only | no |
-| N-L1 | — | open question, not a change: renaming a base actor relabels every synthetic (unlinked) token that carries its `actorId` | two unlinked Goblins, rename the base actor | yes — decide whether that is wanted |
+| N-L1 | — | **intended (Joe, 2026-10-11, J14)**, not a change: renaming a base actor relabels every synthetic (unlinked) token that carries its `actorId` | two unlinked Goblins, rename the base actor | no — kept; the frozen tests' `KNOWN` label on this pin (core.test.mjs, fixtures/tables.mjs) now means intended behaviour, not a bug |
 
 Live smoke after sync: `describe().version === "0.1.0"`, every `describe().methods[].path` is a
 function, rename a test actor and see the toast.
@@ -434,7 +434,7 @@ Shared-file edits for their owners (not applied here):
 | Live score after the migration | **100.0 %** (44 / 44 fail-class rules, small tier) — `conformance.py --module names --markdown`, 2026-10-11 after the integration (was 64.1 % as full at wave start, 78.6 % as small at the checkpoint) |
 | Date | 2026-10-11 (deployed and live-checked the same day) |
 | Commits (Joe-approved) | characterisation: f1ecd11 · refactor: 4ad0a4e, d1e27bf, ddbcca6, 005f89a, 2cc5d48, f5819eb · declared: 5202be0 (N-D1, transform-creatures-33), 7983909 (N-D2), af129d1 (N-D3, transform-creatures-38), ccf90c4 (N-D3 review: token ref → base actor) · shared files: 170f003 (`module.json` flags + minimum 14), 8435447 **[declared]** (ModuleSpec node-test), 54c1ce0 (module index) · standalone: none left (the review found nothing to fix) |
-| Declared changes handed to the live-test workflow | N-D1..N-D3 deployed 2026-10-11 (sync + restart); live golden: only the N-D2 surface/`module.api` differ, rename/noop/nickname/toast identical. The actor-ref form of `sync` was not exercised live (open in wave-1-report J17). N-D4 not taken; N-L1 open (J14) |
+| Declared changes handed to the live-test workflow | N-D1..N-D3 deployed 2026-10-11 (sync + restart); live golden: only the N-D2 surface/`module.api` differ, rename/noop/nickname/toast identical. The actor-ref form of `sync` was not exercised live (open in wave-1-report J17). N-D4 not taken (J15); N-L1 kept as intended (J14, Joe 2026-10-11) |
 | `module.json` edits appended to `wave7-restart-batch.md` | landed directly in 170f003 (integration), live since the 12:01 restart |
 | Adjustments rows appended to `adjustments-batch.md` | n/a — none |
 | Still failing, and why | nothing. Tests: 45 node:test, all pass; coverage of module code 100 / 98.2 / 100 (line/branch/funcs, lib and test excluded, lcov records merged per file; 99.7 / 96.8 / 92.0 unmerged; was 0) |
