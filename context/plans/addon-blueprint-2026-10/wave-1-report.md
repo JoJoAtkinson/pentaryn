@@ -268,11 +268,13 @@ Every change under `test/` since a checkpoint is one of four things:
 | names | `f1ecd11` | `glue.test.mjs` | `5202be0`, `7983909`, `af129d1` (all [declared]) | KNOWN -33, `module.api` undefined, KNOWN -38 |
 | | | `fixtures/impls.mjs` | `4ad0a4e` | adds the core impl |
 | pings | `d85e653` | `core.test.mjs` | `f9a94bf` [declared] | KNOWN -39 (no numeric age) → `ageMs` |
+| | | `glue.test.mjs` | `37ff972` [declared] | J13: the `settings.register` option pin (log has no `name`; max's name/hint are `PENTARYN_PINGS.Setting.max.*` keys) |
 | | | `fixtures/impls.mjs` | `0a01ef7` | adds the core impl |
 | cursors | `d49967e` | none | — | new files only: api, internals, hotpatch and status tests, plus the surface and describe goldens |
 | ties | `9e955e0` | `golden/surface-legacy.json` | `1411687` [declared] | the 2 D1 rows (`attributes.lookup`, `study.examine` plus the aliases) |
 | | | `fixtures/boot.mjs` | `8ad6a23` | stubs Foundry's `logger` (fixture only, J6) |
 | prompts | `6cc5c50` | `gather.test.mjs`, 3 `golden/gather-*.json`, `snapshots/two-scenes.txt`, `legacy-run.mjs` | `868103f` [declared] | D6 cut suffix `[...]` → `… (cut, full text: …)`, and the 160 fallback → 400 |
+| | | `d6-gather.test.mjs`, 2 `golden/gather-*.json`, `snapshots/two-scenes.txt`, `legacy-run.mjs` | `fc64b23` [declared] | J4: the suffix names `get-character` instead of `get-character-entity` |
 | walls | `a8c5c28` | `corpus.mjs` | `c1a80a5` | the manual corpus CLI throws instead of calling `process.exit` (harness, not a gate; C43); `docs.test.mjs` is new (`30963c4`) |
 | lookup | `a532b3e` | none | — | `docs.test.mjs` is new (`034f048`) |
 | movement | `3a5192d` | none | — | `docs.test.mjs` is new (`49b8554`) |
@@ -289,7 +291,7 @@ Suites now (`node test/run.mjs`):
 |---|---|---|---|
 | importer | 92 | pass | none |
 | names | 45 | pass | none |
-| pings | 59 | pass | none |
+| pings | 64 | pass (59 before J13 `37ff972`) | none |
 | cursors | 55 | pass | 84 legacy checks |
 | lookup | 20 | pass, plus legacy 43 | |
 | movement | 121 | pass | |
@@ -317,7 +319,7 @@ Scripts: `scripts/foundry/live-goldens/<m>.js`. Outputs: `.state/live-goldens/{b
 | pings | after, after-standalone | Surface and `module.api` (P-D1); `ageMs` (P-D3). `lastImmediateIsScratch` and `settingArrayReplacedByFlush` flipped. | Declared, plus ring-state dependence (SF3), not code. A state-matched rerun at a full ring was inconclusive in a hidden tab (J20). |
 | cursors | after, after-standalone | Surface and `module.api` (C-1). | Declared only. All five tool switches and the CSS variable strings are identical. |
 | ties | after-stage0 | `attributes.lookup` and `study.examine` exist; the old names are aliases. | D1 only. Registry, link, resolve, ids and flags match. The saved file abridges the `of`/`describe` blocks (compared by eye). |
-| prompts | after-stage0 | The description cut ends `… (cut, full text: get-character-entity <actor>)` instead of `[...]`. | D6 only. Status, settings, counts, manifest hash `d90c44f8` and model match. |
+| prompts | after-stage0 | The description cut ends `… (cut, full text: get-character-entity <actor>)` instead of `[...]` (since J4, `fc64b23`: `get-character <actor>`). | D6 only. Status, settings, counts, manifest hash `d90c44f8` and model match. |
 
 The 8 checkpoint-only modules have no live golden yet. Workflow 2 writes one per module before
 its refactor.
@@ -331,7 +333,7 @@ C01–C52, and "Stage 0" uses C01–C61. After = `conformance.py --json` at this
 |---|---|---|---|---|
 | names | 64.1 % (full) | 78.6 % (small) | **100.0 % (44/44)** | — |
 | importer | 63.9 % | — | **97.6 % (41/42)** | C07 |
-| pings | 62.2 % (full) | 75.0 % (small) | **95.5 % (42/44)** | C40, C51 (J13) |
+| pings | 62.2 % (full) | 75.0 % (small) | **100.0 % (46/46)** after J13 `37ff972` (was 95.5 %, 42/44) | — |
 | cursors | 53.7 % (full) | 72.1 % (small) | **91.3 % (42/46)** | C05, C13, C24, C25 (steps 7–8, not applied) |
 | lookup | 64.9 % | | 75.6 % (31/41) | 10 rules |
 | walls | 60.5 % | | 71.4 % (30/42) | 12 |
@@ -451,7 +453,7 @@ Known bugs still pinned as-is, for workflow 2 to fix after each refactor:
 | transform-creatures-38 (`sync` ref) | absorbed, step 6 | `af129d1`, `ccf90c4` [declared]; docs `f5819eb` |
 | transform-creatures-34 (sibling tokens) | skipped | dropped by the audit ("confirm live, do not change"); live confirms today's behaviour; pinned as N-L1, J14 |
 | transform-creatures-36 (pings core) | absorbed, step 2 | `0a01ef7` |
-| transform-creatures-35 (pings scaffolding) | absorbed | `16550cf`, `ac75dd8`, `284dcce`, `2b4061b`, `40bca21`, `170f003`, `8435447`, `4825fae`; lang file not done (J13) |
+| transform-creatures-35 (pings scaffolding) | absorbed | `16550cf`, `ac75dd8`, `284dcce`, `2b4061b`, `40bca21`, `170f003`, `8435447`, `4825fae`; lang file `37ff972` (J13) |
 | transform-creatures-39 (GM-only namespace, string age) | absorbed, step 6 | `f9a94bf` [declared]; GM-only publish kept and documented in `284dcce` |
 | transform-creatures-37 (two GM sessions, last writer wins) | skipped | dropped by the audit (out of scope; both fixes change results); see Async |
 | transform-creatures-24 (`compatibility.minimum` 14) | absorbed, shared file | `170f003` |
@@ -494,7 +496,7 @@ Each id is in its commit subject.
   three reactions run twice:
   - importer: two tabs can overlap an import (documented).
   - pings: both tabs write the log and the last writer wins (transform-creatures-37, dropped).
-  - riders' relay and journal `ensure`: J8.
+  - riders' relay and journal `ensure`: J8, now combat-riders-41 and items-journal-40.
 - **Assistant GMs:** `guarded` admits them (J9).
 - **Tests:** none uses a real timer; all use `t.mock.timers`, as the reviews checked.
 
@@ -571,41 +573,45 @@ prompts and ties follow later.
 - **movement:** D4 has landed (`4a5c13c`).
 - **walls:** its flag-scope data migration is the only real one (Wave 7). Its KNOWN pins -1 and -2
   are the declared fixes.
-- **journal:** C56 and J8 (`ensure` runs on both GM tabs).
+- **journal:** C56 and items-journal-40 (J8: `ensure` runs on both GM tabs; fix claim first).
 - **dropbin:** goes after attunement, because they share Item Piles rows.
 - **lookup:** keeps the namespace `rules`; it is the first full-tier module with queries.
-- **Kit bump:** J6 plus J16, with J10 in Stage 5. It can go first in workflow 2 if Joe agrees,
-  because every vendored module re-syncs anyway.
+- **Kit bump (decided 2026-10-11):** the first step of workflow 2 is one kit bump carrying J6
+  (test stub `globalThis.logger`), J16 (`unwrap()` drops the record) and J10 (retire the COMPAT
+  frozen-root guard and `realiasTick`), then `vendor.py sync --all` and one commit per module.
 - **Live sessions:** L2 (lookup and movement) and L3 (walls, attunement, journal, dropbin) are the
   live-test sessions.
 
 ## Open for Joe
 
-| # | Item | From | What is needed |
-|---|---|---|---|
-| J1 | The updater's exposure scanner reads the template literal `` `levels ${…}` `` in prompts' `geometry-core.mjs` as the Levels package. Pinned as a strict expected failure (`11919da`); there is no audit id for it. | Lane A baseline | an audit id, or accept it as a known scanner false positive |
-| J2 | python-tooling-45: two more inputs the validator accepts but the build refuses — area `"20ft cone"` and a save without `on_save`. Pinned as known bugs under -45. | Lane A | part of the -45 narrowing decision already deferred |
-| J3 | Confirm the conformance gate stays **advisory until Stage 5** (`CONFORMANCE_FAILS = False` in `scripts/foundry/ops/modules.py`): `make foundry-<m>-check` reports failing rules but stays green. | Lane A | yes/no |
-| J4 | D6 tool name: the cut suffix says `get-character-entity <id>`, which needs a character **and** an entity and returns an item, not a biography. `get-character <id>` may be what was meant; for note documents neither applies. Implemented exactly as decided. | Lane B | keep or change the suffix (a [declared] change either way) |
-| J5 | `creatures-strip-over-argon` is a module-prefixed row that is not a patch, so it fails C32 under D2. The creatures guide suggests `argon-creatures-strip-float`. | Lane B | apply the rename when creatures migrates (no new decision unless the name differs) |
-| J6 | Kit gap: the kit's Foundry test stub has no `globalThis.logger`, which `logCompatibilityWarning` writes through. Ties stubs it locally (`8ad6a23`). Fixing `foundry/lib` changes the test kit's bytes, so every migrated module needs `vendor.py sync --all` in the same step. | Lane B | when to bump the kit (a merge-time step) |
-| J7 | The source comment beside `study.examine` quotes Joe's rule "no examine, no auto detection"; the new name now sits next to that quote. Harmless. | Lane B | reword the comment or leave it |
-| J8 | Queries reach every tab of the recipient user, so a writing `relayed`/`guarded` handler runs twice with the MCP bridge tab and a GM browser tab open (playbook §5.9.5). Affected: riders' Battle Medic relay (`riders.mjs:417`), journal `ensure` (`journal.mjs:146`); idempotency unverified. | Lane R | a new audit id, or a decision to make them claim first ([declared]) |
-| J9 | `guarded`'s NOT_GM check admits Assistant GMs (`isGM`). Documented in §5.9, not changed. | Lane R | none unless Assistants should be refused |
-| J10 | The keystone landed (`c0c3f97`): the importer no longer freezes `game.pentaryn`. The kit's frozen-root guard and `realiasTick` in `foundry/lib/publish.mjs` (COMPAT `until: items-journal-1`) and the other modules' guard copies are now dead weight, but removing them is a kit bump (`vendor.py sync --all`, every migrated module) and one commit per module. Not done here. | Stage 1 | when to retire the COMPAT block (with J6's kit bump?) |
-| J11 | The importer's declared changes (D-I1 merge, D-I2 console prefix, D-I3 re-entrancy refusal) are committed but **not deployed**; deploy and rollback steps are in the importer guide §9 (`make foundry-sync WORLD=pentaryn`, then `make foundry-clean`). | Stage 1 | the live-test run **Done 2026-10-11:** synced, restarted, smoke and live golden passed (D-I3 refusal seen live). |
-| J12 | python-tooling-10's stamp carries `synced_at`, so every module sync changes `Data/modules` content and the next `make foundry-backup` takes a snapshot even if no code changed (its digest skip no longer fires after a sync). Harmless; `cloud.snapshot_digest` could ignore `.pentaryn-sync.json` if the extra snapshots matter. | Stage 1 | keep, or ignore the stamp in the snapshot digest |
-| J13 | pings step 10 (i18n): `languages`, `lang/en.json`, the `max` row's `PENTARYN_PINGS.Setting.max.Name/Hint` keys and `test/i18n.test.mjs` need **one edit to a frozen pin** (the `settings.register` option pin in `glue.test.mjs`). The freeze rule forbids it, so pings stays at 95.5 % with C40 and C51 failing. The rest of the pings `module.json` row landed in the wave 1 integration. | Integrator (pings) | allow that one golden edit (a [declared] step-10 commit), or leave pings' settings unlocalised |
-| J14 | names N-L1: renaming a base actor relabels every unlinked token that uses it. Pinned as today's behaviour. | Integrator (names) | keep, or call it a bug (audit id) |
-| J15 | names N-D4: the optional console line for the rename toast (`log.notify`) was not taken. | Integrator (names) | none unless wanted |
-| J16 | Kit gap (`foundry/lib/patch.mjs`): a `wrapMethod` handle's `unwrap()` restores the method but keeps the kit's record, so a later `wrapMethod` with the same marker returns the stale handle and does not wrap. Pings' `uninstall()` uses `unwrapAll()` instead. | Integrator (pings) | fold into J6's kit bump |
-| J17 | names, pings and cursors are committed but **not deployed**: their `module.json` edits (`flags.pentaryn`, `compatibility`) need the restart batch, and the declared changes need a live smoke (names N-D1..N-D3 and the base-actor sync ref; pings P-D1..P-D3 — ping, then `last().ageMs`, `describe().version === "0.1.0"`, `uninstall()` + re-import; cursors C-1 `describe()`/`status()`, C-2 silent console). | Integrator | the live-test run (with J11) **Mostly done 2026-10-11:** synced and restarted with the `module.json` edits, boot probes and live goldens passed. Not exercised live: names' actor-ref `sync`, pings' `uninstall()` + re-import, cursors C-2's silent console (boot console not captured, J21). |
-| J18 | senses-walls-cursors-28, tooling half: a `ship_ignore` / sync exclusion of `tools/`, `test/`, `*.md` in `ModuleSpec` is listed in the master audit's "Deferred decisions for Joe" (python-tooling-5 step b; needs a manifest/`import.meta.url` guard first). Not applied in cursors' standalone pass. Cursors' own half needs no tooling: its guide's step 7 moves `tools/` and `assets/src/` out of the module. Standalone pass result: -32 `ae51bca`, -30 runtime `738f4c4` (registry `4825fae`, README `827ebce`), -27 cursors row `720486e`; the audit lists no performance finding. | cursors standalone findings | schedule the sync-exclusion decision, or leave it deferred |
-| J19 | The pings ring (max 50) now holds roughly 25+ `ZZ live-goldens pings` scratch records from the golden runs. The module's private buffer overwrites any restore, and `clear()` would drop the real ping history too. | live runs (pings) | clear it, or let real pings rotate them out |
-| J20 | The GM tab is kept hidden (a non-Foundry tab in front), so Chrome throttles its timers. The pings golden's state-matched rerun at a full ring was inconclusive (the scratch ping was not in the log after 400 ms; a 5-ping probe timed out). The names and cursors reruns needed a `MessageChannel` yield in place of `setTimeout` polling, which was not committed. | live runs | allow the GM tab to come forward briefly during live goldens, or commit the yield into `scripts/foundry/live-goldens/*.js` |
-| J21 | No boot probe could read the boot-time console: console tracking starts after page load, and the login tab is outside the readable tab group. "No red console errors" rests on the eval bridge, `trace()` and the server log. | every boot probe | accept, or add a reload-with-console-capture step to the live-test session |
-| J22 | importer: during a running import, a call with a bad option now gets "already running" in place of the bad-option message. This only happens with overlapping calls; left as is. | importer review | none unless the order matters |
-| J23 | Pushing the fork branch `migrate/wave-1` also publishes two local `pentaryn` commits that were never pushed (`36e3fa2` retire place-tokens, `59c781e` dnd5e 6 port and the prompt-markers tool), because the branch is built on them. `origin/pentaryn` itself was not pushed. | report | push `pentaryn` too, or note it for the fork merge |
+Joe took every recommendation on 2026-10-11; the last column records what was decided and the
+commit that applied it ("No code" rows are recorded by this table only).
+
+| # | Item | From | What is needed | Decided (Joe, 2026-10-11) |
+|---|---|---|---|---|
+| J1 | The updater's exposure scanner reads the template literal `` `levels ${…}` `` in prompts' `geometry-core.mjs` as the Levels package. Pinned as a strict expected failure (`11919da`); there is no audit id for it. | Lane A baseline | an audit id, or accept it as a known scanner false positive | Accept as a known scanner false positive; stays pinned as the strict expected failure `11919da`, no audit id. No code. |
+| J2 | python-tooling-45: two more inputs the validator accepts but the build refuses — area `"20ft cone"` and a save without `on_save`. Pinned as known bugs under -45. | Lane A | part of the -45 narrowing decision already deferred | Stays inside the deferred python-tooling-45 narrowing decision; the pins stay. No code. |
+| J3 | Confirm the conformance gate stays **advisory until Stage 5** (`CONFORMANCE_FAILS = False` in `scripts/foundry/ops/modules.py`): `make foundry-<m>-check` reports failing rules but stays green. | Lane A | yes/no | **Yes**: the conformance gate stays advisory until Stage 5 (`CONFORMANCE_FAILS = False`). No code. |
+| J4 | D6 tool name: the cut suffix says `get-character-entity <id>`, which needs a character **and** an entity and returns an item, not a biography. `get-character <id>` may be what was meant; for note documents neither applies. Implemented exactly as decided. | Lane B | keep or change the suffix (a [declared] change either way) | **Change** to `get-character <id>`: `fc64b23` [declared] (flips the D6 suffix string in `golden/gather-text.json`, `gather-html-description.json`, `snapshots/two-scenes.txt`, legacy-run's row, `d6-gather.test.mjs`; docs `prompt-markers.md`, `addon-blueprint.md`). `make foundry-prompts-check` and `-sync` green; live after the J13 restart: `builtDescription` ends `… (cut, full text: get-character a1)`. |
+| J5 | `creatures-strip-over-argon` is a module-prefixed row that is not a patch, so it fails C32 under D2. The creatures guide suggests `argon-creatures-strip-float`. | Lane B | apply the rename when creatures migrates (no new decision unless the name differs) | Apply `argon-creatures-strip-float` when creatures migrates. No code now. |
+| J6 | Kit gap: the kit's Foundry test stub has no `globalThis.logger`, which `logCompatibilityWarning` writes through. Ties stubs it locally (`8ad6a23`). Fixing `foundry/lib` changes the test kit's bytes, so every migrated module needs `vendor.py sync --all` in the same step. | Lane B | when to bump the kit (a merge-time step) | One kit bump at the **start of workflow 2** (with J10 and J16): add `globalThis.logger` to the test stub, then `vendor.py sync --all`. No code now. |
+| J7 | The source comment beside `study.examine` quotes Joe's rule "no examine, no auto detection"; the new name now sits next to that quote. Harmless. | Lane B | reword the comment or leave it | Leave the comment as is. No code. |
+| J8 | Queries reach every tab of the recipient user, so a writing `relayed`/`guarded` handler runs twice with the MCP bridge tab and a GM browser tab open (playbook §5.9.5). Affected: riders' Battle Medic relay (`riders.mjs:417`), journal `ensure` (`journal.mjs:146`); idempotency unverified. | Lane R | a new audit id, or a decision to make them claim first ([declared]) | New audit ids **combat-riders-41** (riders relay) and **items-journal-40** (journal `ensure`), each fixed claim first as a [declared] commit when its module migrates: `ae1534b9` (docs only; §5.9.5 names them). |
+| J9 | `guarded`'s NOT_GM check admits Assistant GMs (`isGM`). Documented in §5.9, not changed. | Lane R | none unless Assistants should be refused | None: Assistant GMs stay admitted by `guarded`. No code. |
+| J10 | The keystone landed (`c0c3f97`): the importer no longer freezes `game.pentaryn`. The kit's frozen-root guard and `realiasTick` in `foundry/lib/publish.mjs` (COMPAT `until: items-journal-1`) and the other modules' guard copies are now dead weight, but removing them is a kit bump (`vendor.py sync --all`, every migrated module) and one commit per module. Not done here. | Stage 1 | when to retire the COMPAT block (with J6's kit bump?) | Retire the COMPAT frozen-root guard and `realiasTick` in the workflow-2 kit bump (with J6, J16), one commit per module. No code now. |
+| J11 | The importer's declared changes (D-I1 merge, D-I2 console prefix, D-I3 re-entrancy refusal) are committed but **not deployed**; deploy and rollback steps are in the importer guide §9 (`make foundry-sync WORLD=pentaryn`, then `make foundry-clean`). | Stage 1 | the live-test run **Done 2026-10-11:** synced, restarted, smoke and live golden passed (D-I3 refusal seen live). | Done (deployed 2026-10-11, as recorded). No further action. |
+| J12 | python-tooling-10's stamp carries `synced_at`, so every module sync changes `Data/modules` content and the next `make foundry-backup` takes a snapshot even if no code changed (its digest skip no longer fires after a sync). Harmless; `cloud.snapshot_digest` could ignore `.pentaryn-sync.json` if the extra snapshots matter. | Stage 1 | keep, or ignore the stamp in the snapshot digest | Keep: the stamp's extra snapshots are harmless; no digest change. No code. |
+| J13 | pings step 10 (i18n): `languages`, `lang/en.json`, the `max` row's `PENTARYN_PINGS.Setting.max.Name/Hint` keys and `test/i18n.test.mjs` need **one edit to a frozen pin** (the `settings.register` option pin in `glue.test.mjs`). The freeze rule forbids it, so pings stays at 95.5 % with C40 and C51 failing. The rest of the pings `module.json` row landed in the wave 1 integration. | Integrator (pings) | allow that one golden edit (a [declared] step-10 commit), or leave pings' settings unlocalised | **Allowed**: `37ff972` [declared] (the one frozen-pin edit, glue.test.mjs's `settings.register` option pin; `languages`, `lang/en.json`, keyed `max` label, `test/i18n.test.mjs`). Tests 64/64; synced, `foundry-down`/`foundry-up`; boot probe green (module active, `describe().version` 0.1.0, settings screen shows "Pings to keep" and its hint, no raw key). Conformance **95.5 % → 100 % (46/46)**. |
+| J14 | names N-L1: renaming a base actor relabels every unlinked token that uses it. Pinned as today's behaviour. | Integrator (names) | keep, or call it a bug (audit id) | **Keep**: N-L1 is intended; recorded in the names README and guide: `83c80bb6`. |
+| J15 | names N-D4: the optional console line for the rename toast (`log.notify`) was not taken. | Integrator (names) | none unless wanted | Not taken (no console line for the toast). No code. |
+| J16 | Kit gap (`foundry/lib/patch.mjs`): a `wrapMethod` handle's `unwrap()` restores the method but keeps the kit's record, so a later `wrapMethod` with the same marker returns the stale handle and does not wrap. Pings' `uninstall()` uses `unwrapAll()` instead. | Integrator (pings) | fold into J6's kit bump | Folded into the workflow-2 kit bump (with J6, J10): `unwrap()` drops the kit's record. No code now. |
+| J17 | names, pings and cursors are committed but **not deployed**: their `module.json` edits (`flags.pentaryn`, `compatibility`) need the restart batch, and the declared changes need a live smoke (names N-D1..N-D3 and the base-actor sync ref; pings P-D1..P-D3 — ping, then `last().ageMs`, `describe().version === "0.1.0"`, `uninstall()` + re-import; cursors C-1 `describe()`/`status()`, C-2 silent console). | Integrator | the live-test run (with J11) **Mostly done 2026-10-11:** synced and restarted with the `module.json` edits, boot probes and live goldens passed. Not exercised live: names' actor-ref `sync`, pings' `uninstall()` + re-import, cursors C-2's silent console (boot console not captured, J21). | Done as recorded; the three un-exercised checks (names' actor-ref `sync`, pings' `uninstall()` + re-import, cursors C-2's silent console) go to the next live session. No code. |
+| J18 | senses-walls-cursors-28, tooling half: a `ship_ignore` / sync exclusion of `tools/`, `test/`, `*.md` in `ModuleSpec` is listed in the master audit's "Deferred decisions for Joe" (python-tooling-5 step b; needs a manifest/`import.meta.url` guard first). Not applied in cursors' standalone pass. Cursors' own half needs no tooling: its guide's step 7 moves `tools/` and `assets/src/` out of the module. Standalone pass result: -32 `ae51bca`, -30 runtime `738f4c4` (registry `4825fae`, README `827ebce`), -27 cursors row `720486e`; the audit lists no performance finding. | cursors standalone findings | schedule the sync-exclusion decision, or leave it deferred | Leave the sync-exclusion decision deferred (master audit). No code. |
+| J19 | The pings ring (max 50) now holds roughly 25+ `ZZ live-goldens pings` scratch records from the golden runs. The module's private buffer overwrites any restore, and `clear()` would drop the real ping history too. | live runs (pings) | clear it, or let real pings rotate them out | Leave the scratch records to rotate out of the 50-ring. No action. |
+| J20 | The GM tab is kept hidden (a non-Foundry tab in front), so Chrome throttles its timers. The pings golden's state-matched rerun at a full ring was inconclusive (the scratch ping was not in the log after 400 ms; a 5-ping probe timed out). The names and cursors reruns needed a `MessageChannel` yield in place of `setTimeout` polling, which was not committed. | live runs | allow the GM tab to come forward briefly during live goldens, or commit the yield into `scripts/foundry/live-goldens/*.js` | Commit the yield: `9d4b0a6` (`MessageChannel` tick in `scripts/foundry/live-goldens/*.js`; pings also settles until its flush lands). The GM tab stays hidden. |
+| J21 | No boot probe could read the boot-time console: console tracking starts after page load, and the login tab is outside the readable tab group. "No red console errors" rests on the eval bridge, `trace()` and the server log. | every boot probe | accept, or add a reload-with-console-capture step to the live-test session | Accept: boot probes rest on the eval bridge, `trace()` and the server log. No code. |
+| J22 | importer: during a running import, a call with a bad option now gets "already running" in place of the bad-option message. This only happens with overlapping calls; left as is. | importer review | none unless the order matters | Leave as is. No code. |
+| J23 | Pushing the fork branch `migrate/wave-1` also publishes two local `pentaryn` commits that were never pushed (`36e3fa2` retire place-tokens, `59c781e` dnd5e 6 port and the prompt-markers tool), because the branch is built on them. `origin/pentaryn` itself was not pushed. | report | push `pentaryn` too, or note it for the fork merge | **Pushed** `origin/pentaryn` (`05356bc..59c781e`, the two commits `36e3fa2`, `59c781e`). |
 
 ## Known red commits (bisect and revert notes)
 
