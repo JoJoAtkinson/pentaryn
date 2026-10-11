@@ -102,21 +102,28 @@ test("game.pentaryn under four load orders (golden/root.json; subprocess per ord
     assert.equal(r.status, 0, `${which}: ${r.stderr}`);
     const o = JSON.parse(r.stdout.trim().split("\n").at(-1));
     const noisy = o.lines.filter(([level]) => level === "warn" || level === "error");
-    assert.deepEqual(noisy, [], `${which}: no warn/error line`);
+    if (which === "root-extensible") assert.deepEqual(noisy, [], `${which}: no warn/error line`);
+    // [declared] kit 1.0.2 (J10): a frozen root is refused — the ready listener's publish throws and
+    // Foundry's Hooks reports it (one warn, one error), instead of the old silent rebuild
+    else assert.deepEqual(noisy, [
+      ["warn", "Foundry VTT | Error thrown in hooked function 'onReady' for hook 'ready'"],
+      ["error", "Error: Error thrown in hooked function 'onReady' for hook 'ready'. Cannot add property names, object is not extensible"],
+    ], `${which}: the refusal is reported`);
     const { keys, frozen, extensible, sameRoot, importKept, namesHasLegacy, otherKept } = o;
     return { keys, frozen, extensible, sameRoot, importKept, namesHasLegacy, otherKept };
   };
   const got = Object.fromEntries(["root-frozen-before-load", "root-frozen-after-load", "root-frozen-by-earlier-ready", "root-extensible"].map(c => [c, view(c)]));
   pinJSON("root", got, import.meta.url);
-  // importer-first (frozen root before names loads, or put there by an earlier ready listener) and
-  // names-first (frozen root set after names loads, before ready): the root is REBUILT, keeps import,
-  // and is left extensible
+  // [declared] kit 1.0.2 (J10, flipped from "the root is REBUILT, keeps import, left extensible"):
+  // nothing freezes game.pentaryn since the importer's keystone (c0c3f97), so the kit's frozen-root
+  // guard is gone. A frozen root, in any load order, is left exactly as it was and names is not
+  // published into it.
   for (const c of ["root-frozen-before-load", "root-frozen-after-load", "root-frozen-by-earlier-ready"]) {
-    assert.deepEqual(got[c].keys, ["import", "names"], c);
-    assert.equal(got[c].sameRoot, false, c);
-    assert.equal(got[c].extensible, true, c);
+    assert.deepEqual(got[c].keys, ["import"], c);
+    assert.equal(got[c].sameRoot, true, c);
+    assert.equal(got[c].frozen, true, c);
     assert.equal(got[c].importKept, true, c);
-    assert.equal(got[c].namesHasLegacy, true, c);
+    assert.equal(got[c].namesHasLegacy, false, c);
   }
   // an extensible root (live after importer's keystone, SF1) is assigned into, never replaced
   assert.equal(got["root-extensible"].sameRoot, true);

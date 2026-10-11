@@ -1,5 +1,11 @@
 # Changelog — Pentaryn Token Name Sync (`pentaryn-names`)
 
+## Unreleased — 2026-10-11 (kit 1.0.2)
+
+- [declared] Kit 1.0.2 (wave 2, J10): a frozen `game.pentaryn` is no longer rebuilt; the `ready`
+  publish throws into Foundry's hook error report and leaves the root as it was. Nothing freezes the
+  root since the importer's keystone, so a live world sees no difference.
+
 ## 0.1.0 — 2026-10-11 (migrated to the addon blueprint)
 
 Structure (no behaviour change): pure core `names-core.mjs`, the `rename.mjs` feature, the entry
