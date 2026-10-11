@@ -437,7 +437,7 @@ Shared-file edits for their owners (not applied here):
 | Declared changes handed to the live-test workflow | N-D1..N-D3 deployed 2026-10-11 (sync + restart); live golden: only the N-D2 surface/`module.api` differ, rename/noop/nickname/toast identical. The actor-ref form of `sync` was not exercised live (open in wave-1-report J17). N-D4 not taken; N-L1 open (J14) |
 | `module.json` edits appended to `wave7-restart-batch.md` | landed directly in 170f003 (integration), live since the 12:01 restart |
 | Adjustments rows appended to `adjustments-batch.md` | n/a — none |
-| Still failing, and why | nothing. Tests: 45 node:test, all pass; coverage of module code 99.7 / 96.8 / 92.0 (line/branch/funcs, lib and test excluded; was 0) |
+| Still failing, and why | nothing. Tests: 45 node:test, all pass; coverage of module code 100 / 98.2 / 100 (line/branch/funcs, lib and test excluded, lcov records merged per file; 99.7 / 96.8 / 92.0 unmerged; was 0) |
 
 ### Rollback drill (2026-10-11)
 

@@ -473,10 +473,10 @@ step 11 (already in `wave7-restart-batch.md`). The README still points at `DESIG
 
 | | |
 |---|---|
-| Live score after the migration | **91.3 %** (42 / 46 fail-class rules, small tier) — `conformance.py --module cursors --markdown`, 2026-10-11 after the integration (53.7 % as full at wave start, 56.4 % as small at the checkpoint) |
+| Live score after the migration | **91.3 %** (42 / 46 fail-class rules, small tier) — `conformance.py --module cursors --markdown`, 2026-10-11 after the integration (53.7 % as full at wave start, 72.1 % (31/43) as small at the checkpoint `d49967e`; 56.4 % was the pre-wave estimate as small) |
 | Date | 2026-10-11 (in-module part; deployed and live-checked the same day) |
 | Commits (Joe-approved) | characterisation: b0ae88a (vendor), d49967e (checkpoint) · refactor: 4fad56d, f7a86f9, dcf9bb0 (senses-walls-cursors-31), 1724678, 88e8f11, 1a72a80, 4f4df57 · declared: ae51bca (C-1, -32), 738f4c4 (C-2, -30 runtime) · tests: a843e0c · shared files: 170f003 (`module.json`), 4825fae (`core-board-cursor-vars`), 54c1ce0 · standalone: 720486e (-27 cursors routing row), 827ebce (-30 registry README), 9d4ca38 (guide) |
 | Declared changes handed to the live-test workflow | C-1, C-2 deployed 2026-10-11; boot probe and live golden pass (surface + `module.api` only; all five tool switches identical). C-2's silence is console-only and was not observable (boot console not captured) |
 | `module.json` edits appended to `wave7-restart-batch.md` | landed directly in 170f003 |
 | Adjustments rows appended to `adjustments-batch.md` | landed in 4825fae; the aoe widening row (aoe-movement-portals-39) waits for aoe in Stage 4 |
-| Still failing, and why | C05, C24, C25 (`tools/build.mjs`) and C13 (`DESIGN.md`, `assets/src/CREDITS.md`): steps 7 and 8 move files out of the module, outside the wave-1 agent's scope (senses-walls-cursors-35, wave-1-report "Not applied"). Tests: 55 node:test, all pass; module-code coverage 94.5 / 90.2 / 93.2 |
+| Still failing, and why | C05, C24, C25 (`tools/build.mjs`) and C13 (`DESIGN.md`, `assets/src/CREDITS.md`): steps 7 and 8 move files out of the module, outside the wave-1 agent's scope (senses-walls-cursors-35, wave-1-report "Not applied"). Tests: 55 node:test, all pass; module-code coverage 99.5 / 94.6 / 98.1, lcov records merged per file (94.5 / 90.2 / 93.2 unmerged) |

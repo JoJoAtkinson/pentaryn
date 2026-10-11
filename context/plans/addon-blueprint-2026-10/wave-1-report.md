@@ -32,7 +32,11 @@ sections hold the per-module detail.
   - importer, names and pings had no tests and now have 92, 45 and 59.
   - Every touched suite passes, and no frozen assertion was edited outside a named `[declared]`
     flip.
-  - The full verification passed: `pytest` 832 passed, all 18 make checks green, and two flake runs.
+  - Verification at this report: `pytest` 866 passed, 2 skipped, 4 xfailed (832 passed at the Stage 0
+    verification, `16f5af2`); `make foundry-modules-check` (all 19 modules pass their gates),
+    `check-context` and `foundry-lib-check` green; two flake runs. `make check-all` stops at
+    `check-lore` (47 broken links, 93 frontmatter warnings), identical at `wave-1-base`; `world/` is
+    untouched by the wave.
 - **Live:**
   - Every deploy passed its boot probe, and every live golden differs from "before" only by
     declared changes.
@@ -242,8 +246,9 @@ Fork (`/Users/joe/Documents/GitHub/foundry-vtt-mcp`, `pentaryn..migrate/wave-1`)
 
 - `071645f` docs(fork): FORK.md upstream footprint table and `scripts/fork-footprint.sh`
   (mcp-fork-11)
-- `6e8c607` fix(fork): the footprint script reads FORK.md rows whatever their padding
-- `6a52673` docs(fork): comments say what is there; CHANGELOG npc line (mcp-fork-23, -19)
+- `6e8c607` fix(fork): footprint script reads FORK.md rows whatever their padding
+- `6a52673` docs(fork): comments say what is there; CHANGELOG npc line corrected (mcp-fork-23,
+  mcp-fork-19)
 
 ## Frozen tests (`git diff <checkpoint>..HEAD --stat -- <module>/test/`)
 
@@ -268,7 +273,7 @@ Every change under `test/` since a checkpoint is one of four things:
 | ties | `9e955e0` | `golden/surface-legacy.json` | `1411687` [declared] | the 2 D1 rows (`attributes.lookup`, `study.examine` plus the aliases) |
 | | | `fixtures/boot.mjs` | `8ad6a23` | stubs Foundry's `logger` (fixture only, J6) |
 | prompts | `6cc5c50` | `gather.test.mjs`, 3 `golden/gather-*.json`, `snapshots/two-scenes.txt`, `legacy-run.mjs` | `868103f` [declared] | D6 cut suffix `[...]` → `… (cut, full text: …)`, and the 160 fallback → 400 |
-| walls | `a8c5c28` | `corpus.mjs` | `c1a80a5` | the manual corpus CLI throws instead of calling `process.exit` (harness, not a gate; C43) |
+| walls | `a8c5c28` | `corpus.mjs` | `c1a80a5` | the manual corpus CLI throws instead of calling `process.exit` (harness, not a gate; C43); `docs.test.mjs` is new (`30963c4`) |
 | lookup | `a532b3e` | none | — | `docs.test.mjs` is new (`034f048`) |
 | movement | `3a5192d` | none | — | `docs.test.mjs` is new (`49b8554`) |
 | attunement | `88f935e` | none | — | `docs.test.mjs` is new (`885f342`) |
@@ -301,12 +306,13 @@ Suites now (`node test/run.mjs`):
 
 ## Live goldens (before → after)
 
-Scripts: `scripts/foundry/live-goldens/<m>.js`. Outputs: `.state/live-goldens/{before,after-stage0,after,after-standalone}/`
-(git-ignored).
+Scripts: `scripts/foundry/live-goldens/<m>.js`. Outputs: `.state/live-goldens/{before,after-stage0,after-keystone,after,after-standalone}/`
+(git-ignored). `after-keystone` holds importer only; `after-stage0` holds `ties.json` and
+`prompts-diff.json` (a diff, not a full prompts golden).
 
 | Module | After-run | Differences from before | Verdict |
 |---|---|---|---|
-| importer | after-standalone | The root keys add `importer`. `module.api` is now an object. `cursors` publishes before `import`. A concurrent `import()` is refused. | Declared only (D-I1, D-I3). The 404 abort, dry-run counts, `only`/`force` and "wrote nothing" are identical. |
+| importer | after-keystone, after-standalone | The root keys add `importer`. `module.api` is now an object. `cursors` publishes before `import`. A concurrent `import()` is refused. | Declared only (D-I1, D-I3). The 404 abort, dry-run counts, `only`/`force` and "wrote nothing" are identical. |
 | names | after, after-standalone | The surface adds the kit members, and `module.api` is now an object. | N-D2 only. Rename, no-op, nickname, helpers and toast text are identical. |
 | pings | after, after-standalone | Surface and `module.api` (P-D1); `ageMs` (P-D3). `lastImmediateIsScratch` and `settingArrayReplacedByFlush` flipped. | Declared, plus ring-state dependence (SF3), not code. A state-matched rerun at a full ring was inconclusive in a hidden tab (J20). |
 | cursors | after, after-standalone | Surface and `module.api` (C-1). | Declared only. All five tool switches and the CSS variable strings are identical. |
@@ -326,7 +332,7 @@ C01–C52, and "Stage 0" uses C01–C61. After = `conformance.py --json` at this
 | names | 64.1 % (full) | 78.6 % (small) | **100.0 % (44/44)** | — |
 | importer | 63.9 % | — | **97.6 % (41/42)** | C07 |
 | pings | 62.2 % (full) | 75.0 % (small) | **95.5 % (42/44)** | C40, C51 (J13) |
-| cursors | 53.7 % (full) | 56.4 % (small) | **91.3 % (42/46)** | C05, C13, C24, C25 (steps 7–8, not applied) |
+| cursors | 53.7 % (full) | 72.1 % (small) | **91.3 % (42/46)** | C05, C13, C24, C25 (steps 7–8, not applied) |
 | lookup | 64.9 % | | 75.6 % (31/41) | 10 rules |
 | walls | 60.5 % | | 71.4 % (30/42) | 12 |
 | attunement | 56.4 % | | 67.4 % (29/43) | 14 |
@@ -344,31 +350,38 @@ still advisory (J3).
 
 Coverage is line / branch / funcs %. "After" counts module code only: `node --test
 --experimental-test-coverage` over `test/**/*.test.mjs` plus the run.mjs LEGACY files, with lcov
-restricted to the module folder minus `lib/` and `test/`. The baseline's whole-suite figures used a
-different scope, so compare the migrated modules only.
+restricted to the module folder minus `lib/` and `test/`. The tests re-import an entry module
+fresh (query string) several times, and lcov writes one record per load, so the records are
+merged per file (a line, branch or function counts as covered if any load hit it) before the
+totals are taken. The baseline's whole-suite figures used a different scope, so compare the
+migrated modules only.
 
 | Module | Before | After |
 |---|---|---|
-| importer | 0 (no tests) | **98.8 / 93.5 / 90.2** |
-| names | 0 | **99.7 / 96.8 / 92.0** |
-| pings | 0 | **93.8 / 94.7 / 71.4** |
-| cursors | 100 / 96.8 / 100 (core only; `cursors.mjs` unloaded) | **94.5 / 90.2 / 93.2** (all 10 files, including glue) |
+| importer | 0 (no tests) | **99.6 / 94.7 / 95.8** (5 files) |
+| names | 0 | **100 / 98.2 / 100** (4 files) |
+| pings | 0 | **100 / 95.3 / 97.3** (5 files) |
+| cursors | 100 / 96.8 / 100 (core only; `cursors.mjs` unloaded) | **99.5 / 94.6 / 98.1** (all 6 files, including glue) |
 
-- **pings:** the low function figure is the `uninstall`/hot-reload paths and the settings
-  `onChange` handlers.
+- **Unmerged figures:** summing the per-load records without merging gives lower numbers
+  (importer 98.8 / 93.5 / 90.2, names 99.7 / 96.8 / 92.0, pings 93.8 / 94.7 / 71.4, cursors
+  94.5 / 90.2 / 93.2 over "10 files") because a re-imported entry's lines and functions count once
+  per load. The merged figures above replace them.
+- **Never-hit functions (merged):** importer `api.mjs` `trace`/`uninstall` and the entry's
+  `uninstall`; pings one anonymous function in `pings.mjs`; cursors `api.mjs` `trace`; names none.
 - **Checkpoint-only modules:** these were measured the same way, but most of their suite still
   runs as self-running LEGACY scripts, which this method only partly sees. Treat the figures as a
   map for workflow 2's characterisation, not a before/after:
 
   | Module | Coverage |
   |---|---|
-  | lookup | 73.1 / 84.7 / 77.8 |
+  | lookup | 100 / 84.7 / 95.8 |
   | movement | 99.0 / 86.8 / 100 |
   | walls | 94.7 / 86.0 / 92.9 |
-  | attunement | 57.1 / 82.1 / 47.4 |
-  | journal | 77.7 / 75.2 / 73.0 |
+  | attunement | 69.7 / 81.9 / 70.6 |
+  | journal | 77.7 / 75.2 / 73.8 |
   | dropbin | 85.2 / 68.1 / 69.6 |
-  | prompts | 63.8 / 82.5 / 74.7 |
+  | prompts | 63.8 / 82.5 / 75.8 |
   | ties | 41.8 / 73.2 / 12.2 |
 
 ## Performance (median ms per call, GM tab)
@@ -614,10 +627,11 @@ prompts and ties follow later.
   unaffected. `412d23b` regenerated the row; HEAD is green. The importer guide's §9 rollback now
   regenerates the index after the reverts for the same reason.
 
-- **`make check-context` red from `f1ecd11` until the wave 1 integration's index regeneration.**
-  The names, pings and cursors checkpoints vendored the kit, so the index generator calls them
+- **`make check-context` red from `8c0c461` to `4825fae`** (41 commits). The pings, cursors and
+  names kit vendoring (`8c0c461`, `b0ae88a`, `f1ecd11`) makes the index generator call them
   "small tier" while `context/foundry/README.md` still said "not migrated". Module tests are
-  unaffected. The integration commit `docs(foundry): regenerate the module index …` fixed it.
+  unaffected. The integration commit `54c1ce0` (`docs(foundry): regenerate the module index …`)
+  fixed it; `be332cd` before the range is green.
 
 ## Behaviour changes committed without [declared]
 

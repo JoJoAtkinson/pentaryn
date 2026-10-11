@@ -472,4 +472,4 @@ Departures from the plan text:
 | Declared changes handed to the live-test workflow | P-D1..P-D3 deployed 2026-10-11; boot probe and live golden pass (surface + `ageMs` only). `uninstall()` + re-import was not exercised live (J17) |
 | `module.json` edits appended to `wave7-restart-batch.md` | landed directly in 170f003 except the `languages` entry (J13) |
 | Adjustments rows appended to `adjustments-batch.md` | landed in 4825fae |
-| Still failing, and why | C40, C51: step 10 (lang file) needs one edit to a frozen `settings.register` pin, which the freeze forbids — wave-1-report J13. Tests: 59 node:test, all pass; module-code coverage 93.8 / 94.7 / 71.4 (was 0) |
+| Still failing, and why | C40, C51: step 10 (lang file) needs one edit to a frozen `settings.register` pin, which the freeze forbids — wave-1-report J13. Tests: 59 node:test, all pass; module-code coverage 100 / 95.3 / 97.3, lcov records merged per file (93.8 / 94.7 / 71.4 unmerged; was 0) |
