@@ -340,9 +340,13 @@ export function validateEnsure(user, existingId) {
 /* -------------------------------------------- */
 /*  Who is shown what (items-journal-34)         */
 /* -------------------------------------------- */
-// The decisions the glue used to make inline, as functions of the booleans it gathers. The glue keeps
+// The decisions the glue used to make inline, as functions of the facts it gathers. The glue keeps
 // its permission calls verbatim and passes them in; test/core.test.mjs proves each one equal to the
 // old expression over every input (fixtures/legacy-journal.mjs is the oracle).
+//
+// ⚠ The rules read `f.<fact>` in order and only as far as they need (no destructuring): the glue
+//   passes getters, so a fact the old short-circuit never evaluated (a permission call on a null
+//   entry, the every-scene Note scan) is still never evaluated.
 
 /**
  * This module's flags on a document. A plain read, not getFlag: getFlag throws for a scope whose
@@ -368,21 +372,21 @@ export const placeFrom = ({ navName, folderName } = {}) => navName?.trim() || fo
  * who observes but does not own it; a GM only with the `gmButton` setting. Never a personal journal
  * or a compendium entry. Fields are read in this order and only as far as needed.
  */
-export function barVisible({ isJournalEntry, isPersonal, inPack, isGM, gmButton, observer, owner }) {
-  if (!isJournalEntry || isPersonal || inPack) return false;
-  if (isGM) return !!gmButton;
-  return observer && !owner;
+export function barVisible(f) {
+  if (!f.isJournalEntry || f.isPersonal || f.inPack) return false;
+  if (f.isGM) return !!f.gmButton;
+  return f.observer && !f.owner;
 }
 
 /**
  * Who gets the bar on an item shown from a pile: as `barVisible`, against the pile actor, and never
  * when the pile forbids inspecting items (`canInspectItems === false`, even for a GM).
  */
-export function itemBarVisible({ hasSource, canInspectItems, isGM, gmButton, observer, owner }) {
-  if (!hasSource) return false;
-  if (canInspectItems === false) return false;
-  if (isGM) return !!gmButton;
-  return observer && !owner;
+export function itemBarVisible(f) {
+  if (!f.hasSource) return false;
+  if (f.canInspectItems === false) return false;
+  if (f.isGM) return !!f.gmButton;
+  return f.observer && !f.owner;
 }
 
 /**
@@ -390,5 +394,5 @@ export function itemBarVisible({ hasSource, canInspectItems, isGM, gmButton, obs
  * personal journal, only for a journal some scene Note pins, and only when exactly one page is
  * visible to the player.
  */
-export const singlePage = ({ isGM, setting, isPersonal, isEyeReadable, visiblePages }) =>
-  !isGM && setting && !isPersonal && isEyeReadable && visiblePages === 1;
+export const singlePage = f =>
+  !f.isGM && f.setting && !f.isPersonal && f.isEyeReadable && f.visiblePages === 1;
