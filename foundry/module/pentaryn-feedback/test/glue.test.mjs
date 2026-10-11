@@ -130,6 +130,32 @@ test("api.open({ category, text }) pre-fills; an unknown category falls back to 
   await F.rendered.at(-1).close();
 });
 
+test("re-opening the dialog (second bug click, bare /bug) keeps what the player typed and picked; /bug <text> replaces only the text", async () => {
+  await api.open({ category: "feature", text: "a loot log tab" });
+  const app = F.rendered.at(-1);
+  app.draft = { ...app.draft, text: "a loot log tab, sorted by time" };   // what the input listener does as they type
+  const controls = { tokens: { tools: {} } };
+  F.fire("getSceneControlButtons", controls);
+  controls.tokens.tools.feedback.onChange({}, true);
+  await settle();
+  assert.equal(F.rendered.at(-1), app, "the same dialog");
+  assert.match(app.html, /<textarea[^>]*>a loot log tab, sorted by time<\/textarea>/);
+  assert.match(app.html, /value="feature" checked/);
+  F.fireCall("chatMessage", {}, "/bug", {});
+  await settle();
+  assert.match(app.html, />a loot log tab, sorted by time<\/textarea>/, "bare /bug keeps the text");
+  assert.match(app.html, /value="feature" checked/);
+  F.fireCall("chatMessage", {}, "/bug the map tab", {});
+  await settle();
+  assert.match(app.html, />the map tab<\/textarea>/);
+  assert.match(app.html, /value="feature" checked/, "the category stays");
+  await app.close();
+  await api.open();
+  assert.match(F.rendered.at(-1).html, /value="bug" checked/, "a fresh dialog starts at Bug");
+  assert.match(F.rendered.at(-1).html, /<textarea[^>]*><\/textarea>/);
+  await F.rendered.at(-1).close();
+});
+
 /* ── the recorder ────────────────────────────────────────────────────── */
 
 test("recorder: scene, tool (only on change), tab, control, own target", () => {

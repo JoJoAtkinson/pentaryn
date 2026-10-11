@@ -215,6 +215,18 @@ export function draftFrom({ category, text } = {}) {
   return { category: categoryOf(category).key, text: clip(String(text ?? "").trim(), LIMITS.text) };
 }
 
+/**
+ * Re-opening the dialog over a draft: only the fields the caller gave change. A missing category
+ * keeps the current one; a missing or blank text keeps what the player already typed.
+ */
+export function mergeDraft(current, next = {}) {
+  const out = draftFrom(current);
+  if (next?.category !== undefined && next?.category !== null) out.category = categoryOf(next.category).key;
+  const text = String(next?.text ?? "").trim();
+  if (text) out.text = clip(text, LIMITS.text);
+  return out;
+}
+
 /** `/bug`, `/bug <text>` → `{ text }`; anything else → null. Case-insensitive, `/bugs` is not it. */
 export function parseBugCommand(message) {
   const m = /^\s*\/bug(?:\s+([\s\S]*))?$/i.exec(String(message ?? ""));

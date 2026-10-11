@@ -10,7 +10,7 @@
  * have no hover) · the text box · "What gets attached" · Send / Cancel.
  */
 
-import { CATEGORIES, CSS, DIALOG_ID, LIMITS, categoryOf, draftFrom } from "./feedback-core.mjs";
+import { CATEGORIES, CSS, DIALOG_ID, LIMITS, categoryOf, draftFrom, mergeDraft } from "./feedback-core.mjs";
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -105,7 +105,7 @@ export class ReportDialog extends ApplicationV2 {
   static async open(opts) {
     const existing = ReportDialog.current;
     if (existing?.rendered) {
-      if (opts?.draft) existing.draft = draftFrom({ ...existing.draft, ...opts.draft });
+      if (opts?.draft) existing.draft = mergeDraft(existing.draft, opts.draft);
       if (opts?.summary) existing.summary = opts.summary;
       if (opts?.onSubmit) existing.onSubmit = opts.onSubmit;
       await existing.render({ force: true });

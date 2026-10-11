@@ -17,7 +17,7 @@
  */
 
 import {
-  DEFAULT_CATEGORY, FLAG_SCOPE, LIMITS, MODULE, QUEUE_KEY, buildReport, categoryOf, draftFrom, fitReport,
+  FLAG_SCOPE, LIMITS, MODULE, QUEUE_KEY, buildReport, categoryOf, draftFrom, fitReport,
   normaliseReport, parseBugCommand, queueTrim, reportPath, userFields, validateReport,
 } from "./feedback-core.mjs";
 import { ReportDialog } from "./dialog.mjs";
@@ -46,13 +46,19 @@ export function install(reg, ctx) {
 
   /* ── doors ─────────────────────────────────────────────────────────── */
 
-  /** Open the dialog, optionally pre-filled. */
-  async function open({ category = DEFAULT_CATEGORY, text = "" } = {}) {
+  /**
+   * Open the dialog, optionally pre-filled. Only the fields given are passed on, so re-opening an
+   * open dialog (a second click, `/bug` with no text) keeps what the player typed and picked.
+   */
+  async function open({ category, text } = {}) {
     const snap = snapshot();
     const summary = attachSummary(snap, {
       actions: ctx.exposed.actions?.().length ?? 0, errors: ctx.exposed.errors?.().length ?? 0,
     });
-    await ReportDialog.open({ draft: { category, text }, summary, onSubmit: draft => submit(draft) });
+    const draft = {};
+    if (category !== undefined && category !== null) draft.category = category;
+    if (typeof text === "string" && text.trim()) draft.text = text;
+    await ReportDialog.open({ draft, summary, onSubmit: d => submit(d) });
     return ok({ open: true });
   }
 

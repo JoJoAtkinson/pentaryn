@@ -272,6 +272,16 @@ test("ringsKey / ringsToStore / ringsFromStore: a round trip adds the reload mar
   assert.deepEqual(back.actions.at(-1), { t: 99, kind: "reload" });
 });
 
+test("mergeDraft: only the given fields change; blank text keeps the typed text", () => {
+  const cur = { category: "defect", text: "half typed" };
+  assert.deepEqual(core.mergeDraft(cur, {}), { category: "defect", text: "half typed" });
+  assert.deepEqual(core.mergeDraft(cur, { text: "  " }), { category: "defect", text: "half typed" });
+  assert.deepEqual(core.mergeDraft(cur, { text: "new" }), { category: "defect", text: "new" });
+  assert.deepEqual(core.mergeDraft(cur, { category: "feature" }), { category: "feature", text: "half typed" });
+  assert.deepEqual(core.mergeDraft(cur, { category: "junk" }), { category: "bug", text: "half typed" });
+  assert.deepEqual(core.mergeDraft(undefined, undefined), { category: "bug", text: "" });
+});
+
 test("validateReport: a good report passes; each broken field is named", () => {
   assert.deepEqual(core.validateReport(sample()), { ok: true });
   const broken = [
