@@ -80,6 +80,7 @@ async function withTables(out, found, opts) {
 
 const listFor = (type, identifier) => listForIn(spellRegistry(), type, identifier,
   err => log?.debug("spell-list registry read failed", { type, identifier }, err));
+const known = () => knownLists(spellRegistry(), err => log?.debug("spell-list options read failed", err));
 
 /**
  * Is a spell on a class's list (or a subclass's: `{type: "subclass"}`)?
@@ -89,16 +90,16 @@ async function onList(spell, cls, { type = "class" } = {}) {
   const doc = await findSpell(spell, log);
   if (!doc) return { notFound: true, spell, hint: "spell names are the book's English names" };
   const list = listFor(type, cls);
-  const known = knownLists(spellRegistry());
+  const lists = known();
   if (!list) return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, list: `${type}:${cls}`, onList: null,
-    hint: `no such list; known: ${known.join(", ")}` };
+    hint: `no such list; known: ${lists.join(", ")}` };
   return { spell: doc.name, uuid: doc.uuid, level: doc.system.level, list: `${type}:${cls}`, onList: list.has(doc) };
 }
 
 /** The names on a class list, optionally one spell level: `spellList("cleric", {level: 3})`. */
 async function spellList(cls, { type = "class", level = null } = {}) {
   const list = listFor(type, cls);
-  if (!list) return { error: `no ${type} list "${cls}"`, known: knownLists(spellRegistry()) };
+  if (!list) return { error: `no ${type} list "${cls}"`, known: known() };
   // the registry holds a uuid per contributing pack (PHB and the 2024 SRD both list Aid):
   // read levels from each pack's index, keep one entry per name, the owned book first
   const byPack = new Map();

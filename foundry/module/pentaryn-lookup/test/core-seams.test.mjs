@@ -176,3 +176,15 @@ test("searchBooks and renderPage: books with precomputed text equal the same boo
   assert.deepEqual(core.renderPage(core.findPage(BOOKS_T, "Study"), { maxChars: 50, offset: 10 }),
     core.renderPage(core.findPage(BOOKS, "Study"), { maxChars: 50, offset: 10 }));
 });
+
+// ── DL3: the registry guard (prompts-lookup-4) ──
+
+test("knownLists: a missing registry or spellLists is [], a throwing one is [] and reported", () => {
+  assert.deepEqual(core.knownLists(undefined), []);
+  assert.deepEqual(core.knownLists({}), []);
+  assert.deepEqual(core.knownLists({ spellLists: {} }), []);
+  const seen = [];
+  const throwing = { spellLists: { get options() { throw new Error("moved"); } } };
+  assert.deepEqual(core.knownLists(throwing, err => seen.push(err.message)), []);
+  assert.deepEqual(seen, ["moved"]);
+});

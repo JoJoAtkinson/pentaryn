@@ -117,3 +117,18 @@ test("a registry that throws inside forType: onList answers onList:null as befor
 test("world fixture is the shared one", () => {
   assert.ok(world.packs.get("dnd-players-handbook.content"));
 });
+
+test("DL3: spellList with the registry gone answers {error, known: []}, and traces both reads", async () => {
+  const saved = globalThis.dnd5e;
+  globalThis.dnd5e = { registry: undefined };
+  try {
+    const on = await capture(true, () => rules.spellList("wizard"));
+    assert.deepEqual(on.out, { error: 'no class list "wizard"', known: [] });
+    assert.deepEqual(on.lines.map(l => l[1]), [
+      "pentaryn-lookup | spell-list registry read failed",
+      "pentaryn-lookup | spell-list options read failed",
+    ]);
+  } finally {
+    globalThis.dnd5e = saved;
+  }
+});

@@ -444,7 +444,12 @@ export function listFor(registry, type, identifier, onError = null) {
   catch (err) { onError?.(err); return null; }
 }
 
-/** Every list the registry knows, as `type:identifier` values. */
-export function knownLists(registry) {
-  return registry.spellLists.options?.map(o => o.value) ?? [];
+/**
+ * Every list the registry knows, as `type:identifier` values; [] when the registry (or its
+ * `spellLists`) is missing or throws — the documented "no such list" answer, never a TypeError
+ * (prompts-lookup-4). `onError(err)` lets the caller trace it.
+ */
+export function knownLists(registry, onError = null) {
+  try { return registry.spellLists.options?.map(o => o.value) ?? []; }
+  catch (err) { onError?.(err); return []; }
 }

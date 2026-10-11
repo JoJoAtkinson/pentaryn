@@ -134,13 +134,16 @@ test("prompts-lookup-1 [declared DL5]: after uninstall() clears the cache, two s
   assert.deepEqual(present.map((id, i) => world.packs.get(id).calls.getDocuments - before[i]), present.map(() => 1));
 });
 
-// KNOWN: prompts-lookup-4 — onList reads dnd5e.registry.spellLists.options unguarded; with the
-// registry gone it throws instead of answering "no such list". Flipped by guide step 13 [declared] DL3.
-test("KNOWN prompts-lookup-4: onList with dnd5e.registry undefined rejects TypeError", async () => {
+// prompts-lookup-4, flipped by guide step 13 [declared] DL3 (was KNOWN: "onList with dnd5e.registry
+// undefined rejects TypeError"): the missing registry is the documented "no such list" answer.
+test("prompts-lookup-4 [declared DL3]: onList with dnd5e.registry undefined answers onList: null, known: none", async () => {
   const saved = globalThis.dnd5e;
   globalThis.dnd5e = { registry: undefined };
   try {
-    await assert.rejects(rules.onList("Fireball", "wizard"), TypeError);
+    assert.deepEqual(await rules.onList("Fireball", "wizard"), {
+      spell: "Fireball", uuid: "Compendium.dnd-players-handbook.spells.Item.spFireball", level: 3,
+      list: "class:wizard", onList: null, hint: "no such list; known: ",
+    });
   } finally {
     globalThis.dnd5e = saved;
   }
