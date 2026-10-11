@@ -1,5 +1,14 @@
 # Changelog — Pentaryn Drop Bin (`pentaryn-dropbin`)
 
+## 0.2.3 — 2026-10-11 (wave 2 live check, PT3-1 again)
+
+- A revived corpse clears its OBSERVER map with a `ForcedDeletion` (then writes a saved per-token
+  map on top), never a plain `null`. Foundry 14.369 can drop a delta write on the server after
+  broadcasting it, so the server may already hold `null` while every client shows the corpse's
+  `{default: OBSERVER}`; a plain `null` was then no change, nothing went out, and players kept the
+  revived NPC's sheet until they reloaded (about 4 trials in 7). The corpse flags go by
+  `ForcedDeletion` too (the `-=` keys are deprecated in 14).
+
 ## Unreleased — 2026-10-11 (migrated to the addon blueprint, wave 2)
 
 Structure (no behaviour change): the 520-line `dropbin.mjs` becomes a wiring-only entry; pure

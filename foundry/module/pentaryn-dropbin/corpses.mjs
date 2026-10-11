@@ -103,18 +103,22 @@ async function fromCorpse(tokenDoc) {
   const fresh = tokenDoc.parent?.tokens.get(tokenDoc.id) ?? tokenDoc;
   await removeLegacyEye(fresh.actor);
   const sight = fresh.flags?.[MODULE]?.sight ?? fresh.sight.enabled;
-  await fresh.update({ [`flags.${MODULE}.-=corpse`]: null, [`flags.${MODULE}.-=sight`]: null,
-    [`flags.${MODULE}.-=ownership`]: null, "sight.enabled": sight,
-    "delta.ownership": revivedOwnership(fresh.flags?.[MODULE]?.ownership) });
+  const saved = revivedOwnership(fresh.flags?.[MODULE]?.ownership);
+  const del = () => new foundry.data.operators.ForcedDeletion();
+  // The corpse map always goes by a ForcedDeletion, never a plain null: Foundry 14 can lose a delta
+  // write on the server after broadcasting it, so the server may already hold null while every client
+  // shows {default: OBSERVER}; a plain null is then no change, nothing goes out, players keep the sheet.
+  await fresh.update({ [`flags.${MODULE}.corpse`]: del(), [`flags.${MODULE}.sight`]: del(),
+    [`flags.${MODULE}.ownership`]: del(), "sight.enabled": sight, "delta.ownership": del() });
+  // A saved map goes on top of the now-empty one, so it differs from whatever the server held.
+  if (saved) await fresh.update({ "delta.ownership": saved });
 }
 
 /**
- * The delta ownership a revived body gets back (PT3-1). The update is recursive, so `{}` merged
- * into the corpse's `{default: OBSERVER}` changed nothing and every player kept the sheet. `null`
- * replaces the map (the delta inherits the base actor again: corpses made before the map was saved
- * get this too). A saved map is written whole with its `default`, which overwrites the corpse's
- * OBSERVER; its other keys are the only ones the corpse map has. No `{recursive: false}`: on a
- * token update that would replace all of `delta` and `flags`, not just the ownership.
+ * The delta ownership a revived body gets back (PT3-1): null (inherit the base actor again; also a
+ * corpse made before the map was saved) or the saved map written whole with its `default`. The
+ * update is recursive, so a `{}` merged into the corpse's `{default: OBSERVER}` changed nothing.
+ * No `{recursive: false}`: on a token update that would replace all of `delta` and `flags`.
  */
 function revivedOwnership(saved) {
   if (!saved || typeof saved !== "object") return null;
