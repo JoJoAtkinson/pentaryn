@@ -828,3 +828,51 @@ def test_handoff_on_a_localhost_label_sets_the_cookie_for_that_name(monkeypatch)
         assert exc.headers["Set-Cookie"].startswith("session=fake-session;")
     th.join(5)
     assert result.get("ok") is True
+
+
+# ── pipeline.stage(): the importer install, characterised (python-tooling-53) ──
+
+@pytest.fixture
+def staged_paths(monkeypatch, tmp_path):
+    """Every path stage() touches, under tmp_path. Never Foundry's real Data/."""
+    src = tmp_path / "repo/foundry/module/pentaryn-importer"
+    (src / "sub").mkdir(parents=True)
+    (src / "module.json").write_text('{"id": "pentaryn-importer"}')
+    (src / "sub/a.mjs").write_text("export const a = 1;\n")
+    actors = tmp_path / "repo/foundry/build/actors.json"
+    actors.parent.mkdir(parents=True)
+    actors.write_text('{"actors": []}')
+    world = tmp_path / "Data/worlds/zz-world"
+    world.mkdir(parents=True)
+    spec = cfg.ModuleSpec("pentaryn-importer", check="parse")
+    monkeypatch.setattr(cfg, "MODULE_SRC_ROOT", src.parent)
+    monkeypatch.setattr(cfg, "FOUNDRY_MODULES", tmp_path / "Data/modules")
+    monkeypatch.setitem(cfg.MODULES, "importer", spec)
+    monkeypatch.setattr(cfg, "ACTORS_JSON", actors)
+    monkeypatch.setattr(cfg, "ACTORS_STAGED", world / "actors.json")
+    monkeypatch.setattr(cfg, "WORLD_DIR", world)
+    monkeypatch.setattr(cfg, "WORLD_NAME", "zz-world")
+    monkeypatch.setattr(pipeline, "build_actors", lambda: 0)
+    return spec, world
+
+
+def test_stage_installs_the_importer_and_stages_actors(staged_paths, capsys):
+    import filecmp
+    spec, world = staged_paths
+    spec.dst.mkdir(parents=True)
+    (spec.dst / "stale.mjs").write_text("old")            # replaced, not merged
+    assert pipeline.stage() == 0
+    cmp = filecmp.dircmp(spec.src, spec.dst)
+    assert not (cmp.left_only or cmp.right_only or cmp.diff_files)
+    assert not filecmp.dircmp(spec.src / "sub", spec.dst / "sub").diff_files
+    assert (world / "actors.json").read_text() == '{"actors": []}'
+    assert "target world: zz-world" in capsys.readouterr().out
+
+
+def test_stage_refuses_a_missing_world_and_leaves_dst_alone(staged_paths, monkeypatch, tmp_path):
+    spec, _ = staged_paths
+    monkeypatch.setattr(cfg, "WORLD_DIR", tmp_path / "Data/worlds/typo")
+    spec.dst.mkdir(parents=True)
+    (spec.dst / "keep.mjs").write_text("live")
+    assert pipeline.stage() == 1
+    assert (spec.dst / "keep.mjs").read_text() == "live"
