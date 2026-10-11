@@ -271,7 +271,7 @@ Absorbs `items-journal-37` (a, b, c, e) and `mcp-fork-24`'s naming of the relay 
 - `flags.pentaryn = {flagScope:"pentaryn-journal", generation:14, tier:"full", namespace:"journal", cssPrefix:"pj-", afterSync:[…]}`.
 - `relationships: {systems:[{id:"dnd5e", type:"system", compatibility:{minimum:"6.0", verified:"6.0.6"}}], recommends:[{id:"item-piles", type:"module", reason:"the bar on items opened from eye piles"}]}`
   (`items-journal-37` d; C09). Foundry then warns if dnd5e is absent — the only setup where the module half-works anyway.
-- `styles: ["styles/journal.css"]` + move the file (C06w).
+- `styles: ["styles/journal.css"]` + move the file (C06w); in the same commit, the README Files table row `journal.css` → `styles/journal.css`.
 
 ---
 
@@ -334,7 +334,7 @@ Step 1 ~0.75 day (relay and ensure flows need careful stubs), steps 2–6 ~1 day
 | Commits (declared fixes after the refactor) | C30 relay through the kit's `relayed` `5b79802c` [declared] · -40 KNOWN pin `d8bfe157`, fix `f97e9f74` [declared] (+ manifest flag `792f57fb`, stamp-failure fallback `79155a74`) |
 | Declared changes handed to the live-test workflow | D-J1 (publish at ready, frozen, module.api) · D-J3 (-33 refresh gating, -38 pin cache) · D-J4 (relay refusal text `NOT_GM: …`) · D-J5 (one journal with two GM tabs) — see §5 and the wave-2 report |
 | Frozen tests | `git diff f830067 -- test/` touches one frozen file, `glue.test.mjs`, at two named pins: the publish-timing pin (`dbd56638`, D-J1) and the relay-refusal message (`5b79802c`, D-J4). Every golden is unchanged; everything else under `test/` is new |
-| `module.json` edits appended to `wave7-restart-batch.md` | no — returned to the integrator (shared file): step 9 as written |
+| `module.json` edits appended to `wave7-restart-batch.md` | no — returned to the integrator (shared file): step 9 as written, plus the module README's Files table (`journal.css` → `styles/journal.css`) in the same commit as the move (wave-2 report, journal handoff item 2) |
 | Adjustments rows appended to `adjustments-batch.md` | no — returned to the integrator; the row id is `itempiles-journal-preview-copy` (D2 prefix rule), not `journal-itempiles-preview-copy` |
 | Still failing, and why | C03, C07, C09, C37 (+ C06w warn): the Wave 7 `module.json` batch (step 9). C47: the adjustments row (step 7, batched). C51: `folderName` has no label — adding one moves the frozen `settings-register` pin (Open for Joe). C56: the relay is still assigned by hand (wrapped by `relayed`, so C30 passes): the kit's `registerQueries` drops the query context, so a manifest relay row cannot see the sender (kit gap, returned to the integrator) |
 

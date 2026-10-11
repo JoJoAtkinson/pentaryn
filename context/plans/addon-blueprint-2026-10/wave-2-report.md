@@ -144,6 +144,24 @@ never sees `ctx.user`, the sender. Journal's relay must know the sender, so it s
 and pass `ctx` on (e.g. `row.args(d, ctx)` for legacy rows, `fn(d, ctx)` otherwise), plus a kit test that a
 relay row's impl receives `ctx.user`. Then journal needs a published row for the relay (W2-J2).
 
+**Integrator handoff — journal, shared files** (exact edits; the journal lane does not touch these files):
+
+1. `adjustments-batch.md` journal row / `foundry/adjustments.yml` (guide step 7): the row id is
+   `itempiles-journal-preview-copy` (D2 prefix rule), not `journal-itempiles-preview-copy`; the other fields
+   as guide step 7 (modules `[pentaryn-journal]`, packages `[item-piles]`, files
+   `[foundry/module/pentaryn-journal/sources-adapter.mjs]`, markers `["pileData", "canInspectItems"]`). Clears C47.
+2. `wave7-restart-batch.md` Batch 1, journal row (guide step 9): `flags.pentaryn` (full · `journal` · `pj-`),
+   `relationships` (systems dnd5e min 6.0 verified 6.0.6; recommends item-piles + reason),
+   `styles: ["styles/journal.css"]` + `git mv foundry/module/pentaryn-journal/journal.css foundry/module/pentaryn-journal/styles/journal.css`
+   — **and, in the same commit as the move, the module README's Files table**: the row
+   `` | `journal.css`, `lang/en.json`, `lib/` (vendored kit) | | `` (README.md:134 at this commit; :132 before
+   D-J6) → `` | `styles/journal.css`, `lang/en.json`, `lib/` (vendored kit) | | ``. Replace the journal row's
+   "Code in the same batch" cell (`—`) with:
+   `` README.md Files table: `journal.css` → `styles/journal.css` (same commit as the move) ``.
+3. `context/foundry/README.md` Module APIs table: regenerate (`make foundry-module-index`); the journal row
+   still says "no describe golden yet", and D-J6 changed `describe()` (the `inspect` row).
+4. Kit 1.0.3: the `registerQueries` gap above (then W2-J2).
+
 ## Open for Joe
 
 | # | Item | From | What is needed |
