@@ -67,7 +67,7 @@ test("settings and keybindings: every name/hint/choice key is in the language fi
   }
   for (const k of game.keybindings.actions.values()) for (const x of [k.name, k.hint]) if (x) keys.push(x);
   assert.deepEqual(keys.filter(k => !(k in LANG)), []);
-  assert.equal(keys.length, 24); // 6 settings × name+hint, 2 choices, 6 keybindings × name+hint
+  assert.equal(keys.length, 24); // 5 settings × name+hint, 2 choices, 6 keybindings × name+hint
 });
 
 test("the language file: 473 flat keys, every value a string", () => {

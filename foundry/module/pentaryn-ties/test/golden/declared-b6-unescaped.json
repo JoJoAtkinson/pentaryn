@@ -1,0 +1,31 @@
+{
+  "art": "<img class=\"pt-describe-art\" src=\"icons/zz/a\"b.webp\" alt=\"\" />",
+  "mark": {
+    "tag": "LI",
+    "dataset": {
+      "itemId": "zzItemOdd0000001"
+    },
+    "children": [
+      {
+        "tag": "DIV",
+        "className": "name",
+        "children": [
+          {
+            "tag": "SPAN",
+            "className": "title",
+            "textContent": " ",
+            "children": [
+              {
+                "tag": "I",
+                "className": "pt-item-mark fa-solid x onclick=1",
+                "dataset": {
+                  "tooltip": "t"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

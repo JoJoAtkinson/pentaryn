@@ -1,0 +1,35 @@
+{
+  "threw": "foundry.dice.Roll._mapLegacyRollMode is not a function",
+  "raw": {
+    "claim": "rid0000000000002",
+    "when": 1790000000000
+  },
+  "read": {
+    "text": "",
+    "tier": null,
+    "total": null,
+    "when": 1790000000000,
+    "delivered": null,
+    "sources": null
+  },
+  "loreState": [
+    {
+      "id": "l1",
+      "label": "Debts",
+      "dc": 12,
+      "skill": "ins",
+      "skillLabel": "Insight",
+      "spent": false,
+      "available": true,
+      "gmOnline": true
+    }
+  ],
+  "again": false,
+  "againConsole": [
+    {
+      "level": "warn",
+      "text": "pentaryn-ties | study refused: ZZ Caven has already studied Debts"
+    }
+  ],
+  "againCalls": 0
+}
