@@ -1,0 +1,37 @@
+{
+  "PENTARYN_WALLS": {
+    "settings": {
+      "backend": {
+        "name": "Engine backend",
+        "hint": "Automatic uses the compiled (WASM) engine when it loads, falling back to JavaScript. Both produce identical geometry — verified against the same fixture corpus — so this only affects speed. Compiled is ~12x faster on large scenes.",
+        "choices": {
+          "auto": "Automatic (compiled when available)",
+          "wasm": "Compiled (WASM)",
+          "js": "JavaScript"
+        }
+      }
+    },
+    "keys": {
+      "run": {
+        "name": "Wall autocomplete: run",
+        "hint": "Complete the walls on the current scene. Reversible — undo removes exactly this run."
+      },
+      "undo": {
+        "name": "Wall autocomplete: undo last run",
+        "hint": "Remove the walls the last run created and restore any it trimmed. Press again to peel back the run before it."
+      },
+      "preview": {
+        "name": "Wall autocomplete: preview",
+        "hint": "Report what would be built without writing anything."
+      }
+    },
+    "notify": {
+      "backendUnavailable": "Wall autocomplete: backend \"{want}\" unavailable, using JavaScript.",
+      "nothingToUndo": "Wall autocomplete: nothing of mine on this scene to undo.",
+      "undone": "Undid {created} created, {restored} restored.",
+      "macroReady": "Macro \"{name}\" ready on the hotbar.",
+      "busy": "Wall autocomplete is already running.",
+      "failed": "Wall autocomplete: {message}"
+    }
+  }
+}

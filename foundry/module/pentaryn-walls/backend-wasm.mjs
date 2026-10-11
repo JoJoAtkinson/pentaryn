@@ -6,12 +6,16 @@
  * refusal positions are what `compare()` checks, and the diagnostic strings are cheap to
  * produce in JS if ever needed.
  *
+ * What it does not reproduce (senses-walls-cursors-3; `canonical(r, {extended: true})` shows the
+ * first two): the `rule` stamp on updates (always "X1" here), Levels (a scene with any levels runs
+ * on the JS engine instead, senses-walls-cursors-2), the `kind`/`rule`/`sources` flags on creates,
+ * and the mutation `log` (always []). None of these change the walls written.
+ *
  * Import for the side effect of registering:  `import "./backend-wasm.mjs";`
  * It is safe to import when the module has not been built — `available()` just stays false.
  */
 
-import {register} from "./backends.mjs";
-import {resolveConfig, analyze, lintOnly, SOLID, FLAG_SCOPE} from "./wall-engine.mjs";
+import {register, resolveConfig, analyze, lintOnly, runEngine, stampOf, FLAG_SCOPE} from "./walls-core.mjs";
 
 let mod = null;
 let loadError = null;
@@ -38,6 +42,11 @@ export async function load(url) {
   }
 }
 
+/** Why the .wasm did not load (its error message), or null when it loaded or is still loading. */
+export function loadErrorMessage() {
+  return loadError ? String(loadError.message ?? loadError) : null;
+}
+
 /** Flat i32 layout, mirroring `run()` in lib.rs. */
 function marshal(walls) {
   const buf = new Int32Array(1 + walls.length * 11);
@@ -48,7 +57,7 @@ function marshal(walls) {
     buf[o + 4] = w.door ?? 0;
     buf[o + 5] = w.sight ?? 20;
     buf[o + 6] = w.dir ?? 0;
-    buf[o + 7] = (w.flags?.[FLAG_SCOPE]?.keepOpen === true) ? 1 : 0;
+    buf[o + 7] = (stampOf(w).keepOpen === true) ? 1 : 0;
     buf[o + 8] = w.light ?? 20;
     buf[o + 9] = w.sound ?? 20;
     buf[o + 10] = w.move ?? 20;
@@ -56,7 +65,16 @@ function marshal(walls) {
   return buf;
 }
 
+/**
+ * The compiled engine has no notion of Levels: marshal() sends none and creates come back with
+ * levels []. The JS engine partitions by level, so a scene that uses Levels runs there
+ * (senses-walls-cursors-2); level-less scenes, the common case, stay on the fast path. The
+ * registry row's `accepts` lets the glue pick js up front and report the backend that ran.
+ */
+const usesLevels = walls => walls.some(w => (w.levels ?? []).length);
+
 export function runWasm(walls, opts = {}) {
+  if (usesLevels(walls)) return runEngine(walls, opts);   // a direct caller; the glue never gets here
   if (!mod) throw new Error(`wasm backend not loaded${loadError ? `: ${loadError.message}` : ""}`);
   const cfg = resolveConfig(opts);
   const input = marshal(walls);
@@ -129,5 +147,6 @@ export const ready = load();
 register({
   name: "wasm",
   run: runWasm,
-  available: () => mod !== null
+  available: () => mod !== null,
+  accepts: walls => !usesLevels(walls)
 });

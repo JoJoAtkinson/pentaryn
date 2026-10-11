@@ -2,7 +2,7 @@
   "id": "pentaryn-combat",
   "title": "Pentaryn Combat",
   "description": "Melee on the Argon Combat HUD with fewer clicks and nothing taken away. Full Attack runs every swing the Attack action gives (Extra Attack, Two/Three Extra Attacks, Nick, an NPC's or Wild Shape form's Multiattack), each through dnd5e's own roll dialog, with a pause bar to retarget, switch weapon or stop. The Action pips count swings (2 → 1 → 0), also for weapons clicked by hand. Off-hand, Nick, Flurry of Blows, Martial Arts and Hew appear as one-click follow-ups only when the character qualifies. Sneak Attack (and Frenzy, Colossus Slayer, Divine Strike) is offered on the attack card once per turn, with the crit carried and the damage type set; each player can switch it to Auto. Off-hand attacks spend the Bonus pip and no longer stick, Two-Weapon Fighting and Great Weapon Master damage is added, and empty weapon sets are filled once. Every change is a setting. Exposes game.pentaryn.combat.",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "compatibility": { "minimum": "14", "verified": "14" },
   "authors": [{ "name": "Joseph Atkinson" }],
   "esmodules": ["combat.mjs", "hud.mjs"],

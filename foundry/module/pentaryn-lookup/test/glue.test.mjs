@@ -28,7 +28,8 @@ test("foundry.utils is Foundry's own common/ code", () => {
 
 test("hook registration manifest (golden/hooks.json)", () => {
   pinJSON("hooks", hooksAtLoad, import.meta.url);
-  assert.deepEqual(hooksAtLoad, [{ kind: "once", name: "ready" }]);
+  // [declared] step 9 (DL2): init registers the GM-guarded queries, before ready
+  assert.deepEqual(hooksAtLoad, [{ kind: "once", name: "init" }, { kind: "once", name: "ready" }]);
 });
 
 test("ready logs exactly one console.log line", () => {
@@ -58,9 +59,13 @@ test("load order (a): game.pentaryn undefined before ready → created with rule
   assert.equal(typeof game.pentaryn.rules.search, "function");
 });
 
-test("load order (b): game.pentaryn frozen { importer } before ready → rules added, importer kept", async () => {
+// [declared] kit 1.0.2 (J10), flipped from "game.pentaryn frozen { importer } before ready → rules added,
+// importer kept": the importer merges into an extensible root since its keystone (c0c3f97), so the
+// frozen-root guard copy is gone. The root the importer leaves is assigned into, never rebuilt.
+test("load order (b): game.pentaryn { importer } (extensible) before ready → rules added to the same root, importer kept", async () => {
   const importer = {};
-  game.pentaryn = Object.freeze({ importer });
+  const root = { importer };
+  game.pentaryn = root;
   await import("../pentaryn-lookup.mjs?order=b");
   const saved = console.log;
   console.log = () => {};
@@ -69,8 +74,29 @@ test("load order (b): game.pentaryn frozen { importer } before ready → rules a
   } finally {
     console.log = saved;
   }
+  assert.equal(game.pentaryn, root);
   assert.equal(game.pentaryn.importer, importer);
   assert.equal(typeof game.pentaryn.rules.search, "function");
+});
+
+test("load order (c), J10: a frozen game.pentaryn is refused — ready throws, Hooks reports it, the root is untouched", async () => {
+  const root = Object.freeze({ importer: {} });
+  game.pentaryn = root;
+  await import("../pentaryn-lookup.mjs?order=c");
+  const saved = { log: console.log, warn: console.warn, error: console.error };
+  const lines = [];
+  for (const level of ["log", "warn", "error"]) console[level] = (...a) => lines.push([level, a[0] instanceof Error ? a[0].message : String(a[0])]);
+  const before = F.hookErrors.length;
+  try {
+    F.fire("ready");
+  } finally {
+    Object.assign(console, saved);
+  }
+  assert.equal(game.pentaryn, root);
+  assert.deepEqual(Object.keys(root), ["importer"]);
+  assert.equal(F.hookErrors.length - before, 1);
+  assert.match(F.hookErrors.at(-1).error.message, /object is not extensible/);
+  assert.deepEqual(lines.map(([level]) => level), ["warn", "error"], "no ready log line; Foundry's two report lines");
 });
 
 test("page(<uuid>) with a rejecting fromUuid: the {error} answer and zero console lines (debug unset)", async () => {

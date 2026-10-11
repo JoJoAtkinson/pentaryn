@@ -2,10 +2,10 @@
  * Pure lookup logic — no Foundry, no `game`, no DOM. Everything that can be silently
  * wrong lives here, so it can be tested with `node test/run.mjs`.
  *
- * The adapter (pentaryn-lookup.mjs) turns `game.packs` into the plain shape below and
- * calls these. Nothing here knows that Foundry exists.
+ * The adapter (packs-adapter.mjs) turns `game.packs` into the plain shape below, and the
+ * feature (books.mjs) calls these. Nothing here knows that Foundry exists.
  *
- *   book = {id, label, edition?, docs: [{id, name, pages: [{id, name, html}]}]}
+ *   book = {id, label, edition?, docs: [{id, name, pages: [{id, name, html, text?}]}]}
  *
  * Why the split: every one of the five known traps in this workflow fails *silently* —
  * `getIndex({fields})` returning empty objects, `EmbeddedCollection` having no
@@ -13,6 +13,48 @@
  * naive tag-strip, and an over-large return being truncated by the transport. None of
  * those throw. A fixture suite is the only thing that notices.
  */
+
+// ── identity ─────────────────────────────────────────────────────────────────
+export const MODULE = "pentaryn-lookup";
+export const SHORT = "lookup";
+export const NS = "rules";                            // game.pentaryn.rules (reserved for this module)
+export const VERSION = "0.3.0";                       // === module.json version (core-seams.test pins it)
+export const CONTRACT = "pentaryn-lookup/api@1";      // bump the major on a published-shape change
+/** Events this module emits: none. */
+export const HOOKS = Object.freeze({});
+
+// ── which packs count as what ────────────────────────────────────────────────
+// 2014 SRD is excluded from every default: this table runs D&D 2024, and quoting
+// 2014 text at it is the quietest way to be wrong. When it IS asked for, its hits
+// carry `edition: "2014"` so a mixed result cannot masquerade as current.
+export const BOOKSETS = {
+  rules: ["dnd-players-handbook.content", "dnd-dungeon-masters-guide.content", "dnd5e.content24"],
+  monsters: ["dnd-monster-manual.content"],
+  all: ["dnd-players-handbook.content", "dnd-dungeon-masters-guide.content",
+        "dnd5e.content24", "dnd-monster-manual.content"],
+  "2014": ["dnd5e.rules"],
+};
+export const EDITIONS = { "dnd5e.rules": "2014" };
+export const MONSTER_PACKS = ["dnd-monster-manual.actors", "dnd5e.actors24",
+                              "dnd-players-handbook.actors", "dnd-dungeon-masters-guide.actors"];
+
+/** Where monsters() lists from when no `packs` is given: the Monster Manual, then the 2024 SRD. */
+export const MONSTER_LIST_PACKS = Object.freeze(["dnd-monster-manual.actors", "dnd5e.actors24"]);
+
+/** Where onList() looks a spell up by name: the PHB first, then the 2024 SRD, then the 2014 SRD. */
+export const SPELL_PACKS = ["dnd-players-handbook.spells", "dnd5e.spells24", "dnd5e.spells"];
+
+/** `opts.books` → pack ids: an array as given, a BOOKSETS name, else the rules set. */
+export function resolveBookIds(books) {
+  if (!books) return BOOKSETS.rules;
+  if (Array.isArray(books)) return books;
+  return BOOKSETS[String(books)] ?? BOOKSETS.rules;
+}
+
+export function missingPackError(missing) {
+  return { error: `compendium pack(s) not found: ${missing.join(", ")} — ` +
+                  `is the module enabled in Manage Modules?` };
+}
 
 // ── limits ───────────────────────────────────────────────────────────────────
 // Tuned against the transport: eval-js truncates large returns, and the reader pays
@@ -127,7 +169,7 @@ export function searchBooks(books, query, opts = {}) {
   for (const book of books ?? []) {
     for (const doc of book.docs ?? []) {
       for (const page of doc.pages ?? []) {
-        const text = toPlainText(page.html);
+        const text = page.text ?? toPlainText(page.html);
         if (!text) continue;
         re.lastIndex = 0;
         const found = text.match(re);
@@ -188,6 +230,48 @@ export function capPayload(result, maxBytes = LIMITS.payloadBytes) {
   return out;
 }
 
+// ── plain books (the adapter feeds Foundry documents through these) ──────────
+/**
+ * A compendium's journal entries → the plain book every search reads, each page's plain `text`
+ * stripped once here (searchBooks and renderPage use it; a page without `text` is stripped per
+ * call, as fixtures are). `docs` and each `pages` are iterated with for…of (a live `doc.pages` is
+ * an EmbeddedCollection: `.size`, never `.length`).
+ */
+export function toBook(id, label, edition, docs) {
+  const out = [];
+  for (const doc of docs ?? []) {
+    const pages = [];
+    for (const page of doc.pages ?? []) {
+      const html = page.text?.content ?? "";
+      pages.push({ id: page.id, name: page.name, html, text: toPlainText(html) });
+    }
+    out.push({ id: doc.id, name: doc.name, pages });
+  }
+  return { id, label, edition, docs: out };
+}
+
+/**
+ * One document read by UUID → the `{ book, doc, page }` renderPage takes. `parent` is the page's
+ * journal entry; a document with no parent (a JournalEntry, Actor, Item UUID) stands as its own.
+ */
+export function foundFromDoc({ id, name, html, pack, parent, packLabel, edition = EDITIONS[pack] }) {
+  const p = parent ?? { id, name };
+  return {
+    book: { id: pack, label: packLabel ?? pack, edition },
+    doc: { id: p.id, name: p.name },
+    page: { id, name, html: html ?? "" },
+  };
+}
+
+/**
+ * page(<uuid>) of a document that is not a page (a JournalEntry, Actor, Item UUID) still renders —
+ * as an empty page — so the answer says why (prompts-lookup-5). null for a page.
+ */
+export function nonPageWarning(uuid, documentName) {
+  if (documentName === "JournalEntryPage") return null;
+  return `${uuid} is a ${documentName}, not a JournalEntryPage — pass a page UUID from search()`;
+}
+
 // ── one page ─────────────────────────────────────────────────────────────────
 /** Find a page by exact-then-loose name across books. Never returns undefined. */
 export function findPage(books, name) {
@@ -218,7 +302,7 @@ export function renderPage(found, opts = {}) {
   const uuid = pageUuid(book.id, doc.id, page.id);
   if (opts.raw) return { journal: doc.name, page: page.name, uuid, raw: page.html ?? "" };
 
-  const full = toPlainText(page.html);
+  const full = page.text ?? toPlainText(page.html);
   const max = clamp(opts.maxChars, LIMITS.pageChars, 40000);
   const offset = Math.max(0, Number(opts.offset) || 0);
   const slice = full.slice(offset, offset + max);
@@ -289,4 +373,182 @@ export function monsterDigest(raw) {
                   `Verify with a raw eval-js read before trusting this digest.`;
   }
   return out;
+}
+
+/** Enriched roll text leaves spaces before punctuation ("+4 , reach 5 ft ."): close them up. */
+export const tidy = t => t.replace(/\s+([,.;:!?)])/g, "$1").replace(/\(\s+/g, "(");
+
+// ── monsters(): the query grammar, filter, order and page ────────────────────
+// TWIN: pentaryn-prompts keeps its own copies — SIZE_WORDS (patch.mjs; geometry-core once prompts
+// migrates) and crNumber (replace.mjs). Modules never import each other (prompts-lookup-9), so a
+// change to either side is made on both, deliberately.
+export const SIZE_KEYS = { tiny: "tiny", small: "sm", sm: "sm", medium: "med", med: "med", large: "lg", lg: "lg",
+                           huge: "huge", gargantuan: "grg", grg: "grg" };
+
+/** "1/4" → 0.25, "3" → 3; empty, null and non-numbers → null. */
+export function crNum(v) {
+  if (v === null || v === undefined || v === "") return null;
+  const m = /^\s*(\d+)\s*\/\s*(\d+)\s*$/.exec(String(v));
+  const n = m ? Number(m[1]) / Number(m[2]) : Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * `monsters(q)`'s options → `{ size, type, lo, hi, name, limit, packIds }`. `cr` is a value ("1/4", 3)
+ * or a range ("1/2-2"); `minCr`/`maxCr` override either end; `limit` defaults to 40, max 200.
+ */
+export function monsterQuery(q = {}) {
+  const size = q.size ? SIZE_KEYS[String(q.size).toLowerCase()] ?? String(q.size).toLowerCase() : null;
+  const type = q.type ? String(q.type).toLowerCase() : null;
+  let lo = null, hi = null;
+  if (q.cr !== undefined && q.cr !== null && q.cr !== "") {
+    const m = /^\s*([\d/.]+)\s*-\s*([\d/.]+)\s*$/.exec(String(q.cr));
+    if (m) { lo = crNum(m[1]); hi = crNum(m[2]); } else { lo = hi = crNum(q.cr); }
+  }
+  if (q.minCr !== undefined) lo = crNum(q.minCr);
+  if (q.maxCr !== undefined) hi = crNum(q.maxCr);
+  const name = q.name ? String(q.name).toLowerCase() : null;
+  const limit = Math.max(1, Math.min(Number(q.limit) || 40, 200));
+  const packIds = q.packs ?? [...MONSTER_LIST_PACKS];
+  return { size, type, lo, hi, name, limit, packIds };
+}
+
+/** One compendium index entry against a parsed query: NPCs only; size, type, CR range, name substring. */
+export function matchMonster(e, { size, type, lo, hi, name }) {
+  if (e.type !== "npc") return false;
+  const cr = e.system?.details?.cr, sz = e.system?.traits?.size, ty = e.system?.details?.type?.value;
+  if (size && sz !== size) return false;
+  if (type && String(ty ?? "").toLowerCase() !== type) return false;
+  if (lo !== null && !(cr >= lo)) return false;
+  if (hi !== null && !(cr <= hi)) return false;
+  if (name && !e.name.toLowerCase().includes(name)) return false;
+  return true;
+}
+
+/** A matched index entry → the published row. */
+export function monsterRow(e, packId) {
+  const ty = e.system?.details?.type?.value, sub = e.system?.details?.type?.subtype;
+  return { name: e.name, cr: e.system?.details?.cr, size: e.system?.traits?.size, type: sub ? `${ty} (${sub})` : ty,
+           uuid: e.uuid ?? actorUuid(packId, e._id), pack: packId };
+}
+
+/**
+ * Lowest CR first, then name — in place. A row with no CR makes the first term NaN (falsy), so it
+ * falls through to the name order: kept as shipped, do not "fix" it.
+ */
+export function sortMonsters(rows) {
+  rows.sort((a, b) => (a.cr - b.cr) || a.name.localeCompare(b.name));
+  return rows;
+}
+
+export function pageMonsters(rows, limit) {
+  return { count: rows.length, shown: Math.min(rows.length, limit), monsters: rows.slice(0, limit),
+           ...(rows.length > limit ? { hint: `narrow it (size, type, cr) or raise limit; ${rows.length - limit} more` } : {}) };
+}
+
+// ── spell lists (dnd5e's registry, injected) ─────────────────────────────────
+/**
+ * The registry's list for `type:identifier` (identifier lower-cased), or null. A throw inside the
+ * registry is also null; `onError(err)` lets the caller trace it (core stays pure).
+ */
+export function listFor(registry, type, identifier, onError = null) {
+  try { return registry.spellLists.forType(type, String(identifier).toLowerCase()) ?? null; }
+  catch (err) { onError?.(err); return null; }
+}
+
+/**
+ * Every list the registry knows, as `type:identifier` values; [] when the registry (or its
+ * `spellLists`) is missing or throws — the documented "no such list" answer, never a TypeError
+ * (prompts-lookup-4). `onError(err)` lets the caller trace it.
+ */
+export function knownLists(registry, onError = null) {
+  try { return registry.spellLists.options?.map(o => o.value) ?? []; }
+  catch (err) { onError?.(err); return []; }
+}
+
+/** The owned book's spell packs sort before any other contributor (the 2024 SRD lists Aid too). */
+export const OWNED_SPELL_PREFIX = "dnd-players-handbook";
+
+/**
+ * A spell list's uuids → `[[packId, [[uuid, docId], …]], …]`, one group per contributing pack, the
+ * owned book's pack first (the rest keep the registry's order). A uuid that is not a
+ * `Compendium.<pack>.Item.<id>` is skipped.
+ */
+export function groupListUuids(uuids) {
+  const byPack = new Map();
+  for (const u of uuids) {
+    const m = /^Compendium\.([^.]+\.[^.]+)\.Item\.(.+)$/.exec(u);
+    if (!m) continue;
+    if (!byPack.has(m[1])) byPack.set(m[1], []);
+    byPack.get(m[1]).push([u, m[2]]);
+  }
+  const owned = id => (id.startsWith(OWNED_SPELL_PREFIX) ? 1 : 0);
+  return [...byPack.keys()].sort((a, b) => owned(b) - owned(a)).map(id => [id, byPack.get(id)]);
+}
+
+/**
+ * groupListUuids' groups plus each pack's index (`packId → index with .get(docId)`, or null when the
+ * pack is absent) → `[{name, level, uuid}]`: one row per name, the first pack's wins; `level` (when
+ * not null) keeps that spell level only; ordered by level, then name. A uuid the index lacks keeps
+ * the uuid as its name and a null level.
+ */
+export function spellListRows(groups, indexes, level = null) {
+  const seen = new Set(), out = [];
+  for (const [id, entries] of groups) {
+    const idx = indexes.get(id);
+    for (const [u, docId] of entries) {
+      const e = idx?.get(docId);
+      const name = e?.name ?? u, lvl = e?.system?.level ?? null;
+      if (seen.has(name)) continue;
+      if (level !== null && lvl !== Number(level)) continue;
+      seen.add(name);
+      out.push({ name, level: lvl, uuid: u });
+    }
+  }
+  out.sort((a, b) => ((a.level ?? 0) - (b.level ?? 0)) || String(a.name).localeCompare(String(b.name)));
+  return out;
+}
+
+// ── names(): the PHB's names for a character spec ────────────────────────────
+/** Where each group of names lives, and the index fields its grouping reads (getIndex({fields})). */
+export const NAME_SOURCES = Object.freeze({
+  classes: { pack: "dnd-players-handbook.classes", fields: ["type", "system.identifier", "system.classIdentifier"] },
+  origins: { pack: "dnd-players-handbook.origins", fields: ["type", "system.type.value"] },
+  feats: { pack: "dnd-players-handbook.feats", fields: ["type", "system.type.value", "system.type.subtype"] },
+});
+
+/** `names(kind)` words → the part of the answer they pick (case-insensitive). */
+export const NAME_PARTS = Object.freeze({
+  class: "classes", classes: "classes", subclass: "subclasses", subclasses: "subclasses",
+  species: "species", race: "species", background: "backgrounds", backgrounds: "backgrounds",
+  feat: "feats", feats: "feats",
+});
+
+/**
+ * The three NAME_SOURCES indexes (`{classes, origins, feats}`, each an iterable of entries; [] for a
+ * missing pack) → `{classes, subclasses: {<classIdentifier | "?">: […]}, species, backgrounds,
+ * feats: {<subtype | "other">: […]}}`, every list sorted. A `kind` NAME_PARTS knows answers that one
+ * part alone; any other kind answers everything.
+ */
+export function groupNames({ classes = [], origins = [], feats = [] } = {}, kind = null) {
+  const out = { classes: [], subclasses: {}, species: [], backgrounds: [], feats: {} };
+  for (const e of classes) {
+    if (e.type === "class") out.classes.push(e.name);
+    if (e.type === "subclass") (out.subclasses[e.system?.classIdentifier ?? "?"] ??= []).push(e.name);
+  }
+  for (const e of origins) {
+    if (e.type === "race") out.species.push(e.name);
+    if (e.type === "background") out.backgrounds.push(e.name);
+  }
+  for (const e of feats) {
+    if (e.type !== "feat") continue;
+    (out.feats[e.system?.type?.subtype || "other"] ??= []).push(e.name);
+  }
+  const sort = a => a.sort((x, y) => x.localeCompare(y));
+  sort(out.classes); sort(out.species); sort(out.backgrounds);
+  for (const k of Object.keys(out.subclasses)) sort(out.subclasses[k]);
+  for (const k of Object.keys(out.feats)) sort(out.feats[k]);
+  const word = kind ? String(kind).toLowerCase() : null;
+  const part = word && Object.hasOwn(NAME_PARTS, word) ? NAME_PARTS[word] : null;
+  return part ? { [part]: out[part] } : out;
 }

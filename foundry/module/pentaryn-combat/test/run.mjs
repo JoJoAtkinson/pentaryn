@@ -702,6 +702,29 @@ check("367 a stopped sequence's card with nothing rolled and nothing consumed is
     [core.riderRolled("3d6", [d(1, 8, 5)]), core.riderRolled("@scale", [d(3, 6, 9)]), core.riderRolled("3d6"), core.riderRolled(null, null)],
     [null, null, null, null]);
 }
+{
+  // PT1-6: Argon draws the tooltip subtitle as a one-line pill (absolute, centred, `text-wrap: nowrap`)
+  // inside a tooltip that clips its overflow, so "2 of 2 swings left this turn, + Nick: Scimitar" was
+  // cut at both edges. combat.css must let its own tooltips' subtitle wrap within the tooltip width,
+  // scoped to a class only combat's tooltips carry (transform's .pentaryn-tt tooltips are not ours; C37).
+  const { readFileSync } = await import("node:fs");
+  const read = f => readFileSync(new URL(`../${f}`, import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+  const css = read("styles/combat.css");
+  const rule = css.match(/\.ech-tooltip\.pentaryn-combat-tt\s+\.ech-tooltip-subtitle\s*\{([^}]*)\}/)?.[1] ?? "";
+  const decl = prop => rule.match(new RegExp(`(?:^|[;\\s])${prop}\\s*:\\s*([^;]+)`))?.[1]?.trim() ?? null;
+  ok("378 PT1-6 combat.css has a rule for its own tooltip's subtitle (.ech-tooltip.pentaryn-combat-tt .ech-tooltip-subtitle)", rule);
+  ok("379 …that lets it wrap (white-space: normal and text-wrap other than nowrap)",
+    decl("white-space") === "normal" && !/nowrap/.test(decl("text-wrap") ?? "nowrap"));
+  ok("380 …bounded by the tooltip's width, not its own text", /%/.test(decl("max-width") ?? ""));
+  ok("381 …without !important (it outranks Argon's rule by specificity)", rule && !/!important/.test(rule));
+  // An absolute box at left:50% shrinks to the half of the tooltip right of centre unless its width is
+  // set, so without max-content it would wrap at half width; and translate(-50%, …) keeps it centred.
+  ok("383 …sized to its text (width: max-content, not the half-width shrink-to-fit) and centred (translate(-50%, …))",
+    decl("width") === "max-content" && /^translate\(\s*-50%\s*,/.test(decl("transform") ?? ""));
+  const tt = read("hud.mjs").match(/const TT = \[([^\]]*)\]/)?.[1] ?? "";
+  ok("382 …and hud.mjs puts that class on its tooltips, beside the shared pentaryn-tt",
+    /"pentaryn-tt"/.test(tt) && /"pentaryn-combat-tt"/.test(tt));
+}
 
 /* ── report ───────────────────────────────────────────────────────────────── */
 

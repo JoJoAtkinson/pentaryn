@@ -24,6 +24,14 @@ MCP_TOOL = {
         },
         "additionalProperties": False,
     },
+    # write=true rewrites Markdown files in place — destructive, though re-running is a no-op.
+    "annotations": {
+        "title": "Fix Markdown Links",
+        "readOnlyHint": False,
+        "destructiveHint": True,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
     "argv": [],
     "bool_flags": {"write": "--write", "check_related_links": "--check-related-links"},
 }

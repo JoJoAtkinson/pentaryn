@@ -1,0 +1,15 @@
+{
+  "combatActive": "combatActive",
+  "contract": "string",
+  "describe": "function",
+  "ghostFor": "ghostFor",
+  "pinsUnderTokens": "pinsUnderTokens",
+  "selftest": "selftest",
+  "setGhost": "setGhost",
+  "setPolicy": "setPolicy",
+  "settings": "settings",
+  "status": "status",
+  "trace": "trace",
+  "uninstall": "uninstall",
+  "version": "string"
+}

@@ -46,6 +46,21 @@
   display: none !important;
 }
 
+/* PT1-6: our tooltips' subtitle wraps instead of losing both ends. Argon draws it as a one-line
+   pill (absolute, centred, nowrap) inside a tooltip that clips its overflow, so "2 of 2 swings
+   left this turn, + Nick: Scimitar" was cut at both edges. Now it wraps to the tooltip's width
+   and stays centred on the header/body seam; Argon's 2rem padding either side clears two lines. */
+.ech-tooltip.pentaryn-combat-tt .ech-tooltip-subtitle {
+  white-space: normal;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: calc(100% - 1rem);
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
 /* ── the swing strip and the weapon picker ── */
 .pentaryn-combat-strip {
   position: fixed;

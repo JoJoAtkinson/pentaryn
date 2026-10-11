@@ -372,7 +372,7 @@ run the updater tests in the live tree.
 | `items-journal-21` | **declared** failure path | `submit` catches a rejected `executeAsGM` → `console.warn('pentaryn-dropbin \| ledger entry not recorded (no GM?)', {reason,item,actor}, err)`, resolves `null`; corpses.mjs:134 `.catch(err => console.warn(\`${MODULE} \| revive: could not clear Dead on ${t.name}\`, err))`. Tests per the finding (`makeSubmit` cases) |
 | `items-journal-23` | **declared** hardening | switch :376, :402, :411, :470 (and :436) from `getFlag('item-piles', …)` to `pileFlags` — no throw when Item Piles is inactive; identical when active |
 | `items-journal-24` | performance | `renderJournalDirectory` builds `pinnedEntryIds(game.scenes)` once per render |
-| `items-journal-25` | **declared** | backfills gated on `game.users.activeGM?.isSelf` (corpses' idiom) and batched with `Actor.implementation.updateDocuments`; log lines and counts identical. A non-active GM tab no longer backfills |
+| `items-journal-25` | **declared** | backfills gated on `game.users.activeGM?.isSelf` (corpses' idiom) and batched with `Actor.implementation.updateDocuments`; log lines and counts identical. The backfills run on the active GM user (every tab on that account; the writes are idempotent); a second GM user no longer backfills. A one-tab gate is not part of this change (wave-2 report, W2-D1) |
 | `items-journal-27` | **declared** (trivial) | delete the dead `restoring` guard (:193) and option (:228); a `sourceScan` test that `restoring` appears nowhere else |
 | `items-journal-30` | performance + **declared** (minor) | cache the drawn eye size (`needsRedraw`); `queue()` returns early when not the GM runner. The step-1 `clear()` count row flips 2 → 1 |
 
@@ -382,7 +382,7 @@ run the updater tests in the live tree.
 |---|---|---|
 | D-D1 | API published at `ready` (not a tick later), frozen, `module.api` (step 6) | `game.pentaryn.dropbin.list(5)`; `describe().version === "0.2.1"`; `restore(n)` on a test item |
 | D-D2 | Serialised ledger (step 8) | as a player, drop three different items onto the canvas in quick succession (one Item Piles drop of several items): three ledger entries numbered consecutively, no repeat |
-| D-D3 | (standalone) `-19`, `-21`, `-23`, `-25`, `-27`, `-30` | `-19`: `assets/drop-bin/drop-log.json` updates ~2 s after a drop; `-21`: drop as a player with no GM online → console warning, no "Uncaught (in promise)"; `-25`: two GM tabs, only the active one logs the backfill; `-30`: corpse eye still shows/hides while looting and moving |
+| D-D3 | (standalone) `-19`, `-21`, `-23`, `-25`, `-27`, `-30` | `-19`: `assets/drop-bin/drop-log.json` updates ~2 s after a drop; `-21`: drop as a player with no GM online → console warning, no "Uncaught (in promise)"; `-25`: each tab on the active GM account logs the backfill once, a second GM user logs nothing; `-30`: corpse eye still shows/hides while looting and moving |
 | — | Strings (step 7) | open a locked chest as a player (toast + floating "Locked"), restore/export/clear as GM, corpse HUD tooltips: identical text |
 
 ## 6. WAIT
@@ -403,6 +403,12 @@ steps 9–11 ~0.5 day. **~3 days.**
 - **C29 says "writes no flags of its own"** although corpses.mjs writes `flags.pentaryn-dropbin.*` on tokens
   through computed keys (`[\`flags.${MODULE}.-=corpse\`]`, `flags: {[MODULE]: …}`); the scorer's flag-write
   detection does not resolve `${MODULE}`.
+- **C50 reads only `Hooks.once("ready", …)` bodies** (found wave 2): a publish from a `reg.once`
+  ready handler — the kit's own registry, here the ledger's ready via `ctx.publish` — scores as
+  "late without recording when", although it is synchronous at `ready`. dropbin keeps `when`
+  at its default `"ready"` (accurate); the scorer should also follow `reg.once("ready", …)`.
+- **C09 lists `api-manifest.mjs` and `api.mjs` as naming Item Piles** because the manifest documents
+  `flags.item-piles.data` (its `flags.reads`) — expected; C09 clears with step 11's `recommends`.
 - **`serialStore` is one key**; a counter + log pair needs one shared semaphore around both writes (step 8).
   A two-key form (`serialStore(MODULE, [COUNTER, LOG])`) would make this idiom reusable (pings' log has the same shape).
 
@@ -410,10 +416,14 @@ steps 9–11 ~0.5 day. **~3 days.**
 
 | | |
 |---|---|
-| Live score after the migration | not migrated yet — **60.9 % (28/46)** today (wave start in [`wave-1-baseline.md`](wave-1-baseline.md)), `conformance.py --module dropbin --markdown`, 2026-10-11 |
-| Date | 2026-10-11 (wave 1: checkpoint only (wave 1 Stage 0 lane); the refactor is workflow 2) |
-| Commits (Joe-approved) | characterisation: `6c33e7a` (kit), `4b53345` (checkpoint) · refactor: none yet · other: none |
-| Declared changes handed to the live-test workflow | none |
-| `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) |
-| Adjustments rows appended to `adjustments-batch.md` | no (step not reached) |
-| Still failing, and why | C07 C09 C12 C17 C18 C21 C22 C24 C26 C27 C28 C29 C35 C40 C41 C44 C45 C47 — the guide's steps 2+ have not run. Frozen tests: the checkpoint's assertions and goldens are untouched since the checkpoint (see wave-1-report §Frozen tests). |
+| Live score after the migration | not deployed — code phase **91.7 % (44/48)** at `f7bebf9e` (`conformance.py --module dropbin --markdown`, 2026-10-11; wave start 60.9 % (28/46)). Failing: **C07, C09** (step 11, Wave 7 `module.json`), **C47** (step 10 rows, integrator), **C50** (scorer gap, §8). Warn: C02 (Wave 7), C36 (a selftest label) |
+| Date | 2026-10-11 (wave 2, dropbin lane, code phase; nothing synced) |
+| Commits | merge of `fix/playtest-2026-10-11` (PT3-1 carried): `931203a5` · step 2 `1e4214c2` · 3 `27829537` · 4 `8eb60589` · 5 `4ef64cd7` + guard [declared] `146aefce` · 6 [declared] D-D1 `500f33a0` + -28 additive `0ac333a2` · 7 `a1b0ff01` · 8 [declared] D-D2 `a3b44685` · -21 [declared] `9f43f573` · -23 [declared] `4d96d3a8` (+ `6273d1e7`) · -24 `eff44a40` · -25 [declared] `bae36010` · -30 [declared] `c62da821` · -19 [declared] `314f49c3` · -27 kept `4fa0b17a` · 9 `85f4353f` · §5.9 review: clear through the queue [declared] `b2320f94`, hot-path guard `34e74e6c` · coverage gaps `f7bebf9e` |
+| Tests | `node test/run.mjs`: 114 node:test cases + legacy 40 checks, all green; `vendor.py check dropbin` green; static gates (parse, imports, i18n 17/17, node-test, vendor, conformance) green |
+| Frozen tests touched | `test/glue.test.mjs` only at named pins, each in its [declared] commit: publish at ready (D-D1, `500f33a0`, `golden/ready-console.json`), items-journal-18 KNOWN #2/#2 → #2/#3 (`a3b44685`), GM backfills batched (-25, `bae36010`, `golden/backfills.json`; fixture gains `Actor.implementation.updateDocuments`), items-journal-30 KNOWN clears 2 → 1 (`c62da821`), drop-capture upload after the debounce + ready line size (-19, `314f49c3`, `golden/ready-console.json`). `test/fixtures/impls.mjs` gains the core (step 2, as its comment prescribed). core.test, hooks.test, i18n.test, legacy-core, corpses.test (PT3-1) and the hooks goldens are untouched |
+| Declared changes handed to the live-test workflow | D-D1 (publish at ready), D-D2 (serialised ledger), guard reporting, -19, -21, -23, -25, -30, clear-through-queue — see §5 and the wave-2 report's live checks |
+| Deviations | -27 kept, not deleted (frozen pins; documented and source-tested) · toasts stay raw `ui.notifications` (restore's return value is the Notification) · no `context/foundry/dropbin.md` use-doc (the README routes) · ledger queue is a module Semaphore, not `serialStore` (a duplicate must write nothing; `serialStore` always writes) |
+| `module.json` edits appended to `wave7-restart-batch.md` | no — handed to the integrator (shared file); unchanged from Batch 1's dropbin row |
+| Adjustments rows appended to `adjustments-batch.md` | **landed `cd414590`** (wave 2 integration; C47 passes, 93.8 %): `socketlib-dropbin-relay`, `itempiles-dropbin-nan-attunement`, `itempiles-dropbin-container-locks`, `itempiles-dropbin-directory-hiding`, `itempiles-dropbin-svelte-store`; `itempiles-corpses` `files` += `piles.mjs` |
+| Still failing, and why | C07 C09 (Wave 7 `module.json`), C47 (rows above), C50 (scorer gap) |
+| Wave 2 close (code phase) | After integration **93.8 %** (C47 cleared by `cd414590`; fails C07, C09: Wave 7; C50: scorer gap). At `f8fb7377`: 118 node:test cases + 40 legacy green (adds `759694f7`, `dcc2a293`, `276c1040`, `db529317` after the lane's 114). Coverage, module files (lines / branches / funcs): 85.2 / 68.1 / 69.6 → 97.1 / 79.8 / 87.6. PT3-1 merged with the play-test branch, not re-done. Open for Joe: W2-D1, W2-D2. Live phase: [`wave-2-live-plan.md`](wave-2-live-plan.md). Record: [`wave-2-report.md`](wave-2-report.md) §Per module |

@@ -117,7 +117,7 @@ export function forms(actor) {
 }
 
 /** True for a form made by the Wild Shape preset. */
-function isWildShapeForm(actor) {
+export function isWildShapeForm(actor) {
   return !!actor?.isPolymorphed && actor.getFlag("dnd5e", "transformOptions")?.preset === "wildshape";
 }
 
@@ -321,6 +321,35 @@ export async function revert(actor, { quiet = false, reason = "manual" } = {}) {
   } finally {
     reverting.delete(key);
   }
+}
+
+// A revert this module did not start — the sheet's Restore Transformation, the sidebar's context
+// menu, a macro — still says so in chat, as the shift did (PT3-7). dnd5e fires this just before the
+// revert, on the reverting client only. revert() marks its form in `reverting` first and posts its
+// own line (or stays quiet for Change Form), so each revert gets one line at most.
+Hooks.on("dnd5e.revertOriginalForm", (actor) => {
+  try {
+    if (!isWildShapeForm(actor) || reverting.has(actor.uuid)) return;
+    const host = game.actors.get(actor.getFlag("dnd5e", "originalActor"))
+      ?? (actor.isToken ? game.actors.get(actor.token?.actorId) : null);
+    if (!host) return;                                    // dnd5e warns and does not revert
+    const name = (actor.isToken ? actor.token?.getFlag?.("dnd5e", "previousActorData")?.name : null) ?? host.name;
+    say(host, T(RETURN_LINES.manual, { name }));
+  } catch (err) {
+    console.warn(`${MODULE_ID} | chat line failed`, err);
+  }
+});
+
+/**
+ * "Return to <druid>" (Bonus Action): the revert item's use and the HUD's own Return button (a
+ * druid with no revert item, PT3-3) both end the form here.
+ */
+export function returnToNormal(actor) {
+  markBonusUsed(actor);
+  return revert(actor).catch(err => {
+    console.warn(`${MODULE_ID} | revert failed`, err);
+    return null;
+  });
 }
 
 /* ── shift ───────────────────────────────────────────────────────────────── */
@@ -561,9 +590,7 @@ Hooks.on("dnd5e.preUseActivity", (activity, usageConfig, dialogConfig, messageCo
 
 Hooks.on("dnd5e.postUseActivity", (activity, usageConfig, results) => {
   if (isRevertItem(activity?.item)) {
-    const actor = activity.actor;
-    markBonusUsed(actor);
-    revert(actor).catch(err => console.warn(`${MODULE_ID} | revert failed`, err));
+    returnToNormal(activity.actor);
     return;
   }
   if (!isWildShapeActivity(activity) || activity.actor?.isPolymorphed) return;

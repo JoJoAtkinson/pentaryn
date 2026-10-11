@@ -12,7 +12,7 @@
 export const MODULE = "pentaryn-names";
 export const SHORT = "names";
 export const NS = "names";
-export const VERSION = "0.1.0";                       // === module.json version (core-meta.test pins it)
+export const VERSION = "0.1.1";                       // === module.json version (core-meta.test pins it)
 export const CONTRACT = "pentaryn-names/api@1";       // bump the major on a published-shape change
 export const I18N = "PENTARYN_NAMES";
 export const CSS = "pnm-";
@@ -34,7 +34,8 @@ export function relabel(label, oldName, newName) {
 }
 
 /**
- * The token label writes one scene needs after a rename: `[{_id, name}]`, in token order. A token
+ * The token label writes one scene needs after a rename: `[{_id, name}]`, in token order. Also used
+ * for one combat's combatants, which carry the same `{id, actorId, name}` (PT3-9). A token
  * of another actor, or one `canEdit(token)` refuses, is skipped (canEdit is asked only for this
  * actor's tokens); a label that is a nickname, or already right, is not written.
  * @param {Iterable<{id: string, actorId: string, name: string}>} tokens

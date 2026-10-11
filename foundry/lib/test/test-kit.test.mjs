@@ -171,3 +171,15 @@ test("harness: forkQueries reads FOUNDRY_MCP_FORK, skips with a note when absent
   assert.match(forkSource("tools/p.ts", { env: { FOUNDRY_MCP_FORK: root } }).text, /QUERIES/);
   assert.ok(forkSource("tools/p.ts", { env: {} }).skip);
 });
+
+test("logger (J6): Foundry's console alias records on F.logged, so logCompatibilityWarning works", () => {
+  const before = F.logged.length;
+  assert.equal(F.logger, globalThis.logger);
+  foundry.utils.logCompatibilityWarning("pentaryn-x | old name", { since: 1, until: 2, once: false });
+  const added = F.logged.slice(before);
+  assert.equal(added.length, 1);
+  assert.equal(added[0].level, "warn");
+  assert.match(String(added[0].args[0]?.message ?? added[0].args[0]), /^pentaryn-x \| old name/);
+  globalThis.logger.info("plain", 1);
+  assert.deepEqual(F.logged.at(-1), { level: "info", args: ["plain", 1] });
+});

@@ -101,7 +101,7 @@ vtt-status:
 
 # ─── The pieces: application, tunnel ────────────────────────────────────
 .PHONY: foundry-up foundry-down tunnel-up tunnel-down tunnel-logs tunnel-setup
-.PHONY: foundry-bridge-status foundry-bridge-clean
+.PHONY: foundry-bridge-status foundry-bridge-clean foundry-eval-report
 
 foundry-up:      ; @$(OPS) up
 foundry-down:    ; @$(OPS) down
@@ -117,6 +117,9 @@ tunnel-setup:    ; @$(OPS) tunnel-setup
 # kills orphans only — never a server whose parent is a live Claude session.
 foundry-bridge-status: ; @$(OPS) bridge-status
 foundry-bridge-clean:  ; @$(OPS) bridge-clean $(if $(DRY),--dry-run,)
+# What the MCP action logs show (eval-js outcomes, game.pentaryn paths, per-tool counts).
+# Read-only. SINCE=2026-10-01 narrows it; JSON=1 for --json.
+foundry-eval-report:   ; @$(OPS) eval-report $(if $(SINCE),--since $(SINCE),) $(if $(JSON),--json,)
 
 # ─── Secrets ────────────────────────────────────────────────────────────
 # Both live in Infisical and are read at the point of use. The checks print length

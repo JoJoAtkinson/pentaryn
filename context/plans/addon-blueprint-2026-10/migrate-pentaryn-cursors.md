@@ -480,3 +480,4 @@ step 11 (already in `wave7-restart-batch.md`). The README still points at `DESIG
 | `module.json` edits appended to `wave7-restart-batch.md` | landed directly in 170f003 |
 | Adjustments rows appended to `adjustments-batch.md` | landed in 4825fae; the aoe widening row (aoe-movement-portals-39) waits for aoe in Stage 4 |
 | Still failing, and why | C05, C24, C25 (`tools/build.mjs`) and C13 (`DESIGN.md`, `assets/src/CREDITS.md`): steps 7 and 8 move files out of the module, outside the wave-1 agent's scope (senses-walls-cursors-35, wave-1-report "Not applied"). Tests: 55 node:test, all pass; module-code coverage 99.5 / 94.6 / 98.1, lcov records merged per file (94.5 / 90.2 / 93.2 unmerged) |
+| Wave 2 (kit 1.0.2, code phase) | re-vendored `2a55cef3` [declared]: the frozen-root pin flipped (J10; `publish.test.mjs`). 55 tests green at `f8fb7377`; conformance unchanged. Not yet synced: [`wave-2-live-plan.md`](wave-2-live-plan.md) (W2-L2) |

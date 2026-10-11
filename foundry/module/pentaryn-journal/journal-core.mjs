@@ -24,7 +24,19 @@
  *   synthetic; real campaign text is only ever checked in a live eval.
  */
 
-export const MOD = "pentaryn-journal";
+export const MODULE = "pentaryn-journal";
+/** The legacy name: the published `core.MOD` and the legacy suite read it. An alias, not a second definition. */
+export { MODULE as MOD };
+export const SHORT = "journal";
+export const NS = "journal";
+export const VERSION = "0.1.0";                          // === module.json version (a test pins it)
+export const CONTRACT = "pentaryn-journal/api@1";
+export const I18N = "PENTARYN_JOURNAL";
+export const CSS = "pj-";
+/** Events this module emits: none. */
+export const HOOKS = Object.freeze({});
+/** The player relay: the active GM creates the sender's own journal (the payload is never read). */
+export const QUERY = "pentaryn-journal.ensure";
 
 /** Refuse to copy a body larger than this (characters ≈ bytes for prose). */
 export const MAX_BODY = 500_000;
@@ -235,7 +247,7 @@ export function hashOf(src) {
   return fnv1a(src?.type === "image" ? `${src.src ?? ""}\n${src.caption ?? ""}` : (src?.body ?? ""));
 }
 
-const sourceOf = p => p?.flags?.[MOD]?.source ?? null;
+const sourceOf = p => p?.flags?.[MODULE]?.source ?? null;
 const idOf = p => p?.id ?? p?._id;
 
 /** The first saved page whose source key matches. */
@@ -280,7 +292,7 @@ export function planSave(savedPages, sources, ctx = {}) {
     });
 
     if (saved) {
-      const upd = { _id: idOf(saved), flags: { [MOD]: { source: { ...old, hash, updatedAt: now } } } };
+      const upd = { _id: idOf(saved), flags: { [MODULE]: { source: { ...old, hash, updatedAt: now } } } };
       if (s.type === "image") Object.assign(upd, { src: s.src ?? "", image: { caption: s.caption ?? "" } });
       else upd.text = { content };
       plan.update.push(upd);
@@ -288,7 +300,7 @@ export function planSave(savedPages, sources, ctx = {}) {
     }
     sort += SORT_DENSITY;
     const data = { name: s.name || "?", type: s.type === "image" ? "image" : "text",
-      title: { show: true, level: 1 }, sort, flags: { [MOD]: { source } } };
+      title: { show: true, level: 1 }, sort, flags: { [MODULE]: { source } } };
     if (s.type === "image") Object.assign(data, { src: s.src ?? "", image: { caption: s.caption ?? "" } });
     else data.text = { format: 1, content };
     plan.create.push(data);
@@ -323,4 +335,181 @@ export function validateEnsure(user, existingId) {
   if (user.isGM) return { ok: false, reason: "a GM does not get a journal through the relay" };
   if (existingId) return { ok: true, entryId: existingId };
   return { ok: true, create: true };
+}
+
+/* -------------------------------------------- */
+/*  Who is shown what (items-journal-34)         */
+/* -------------------------------------------- */
+// The decisions the glue used to make inline, as functions of the facts it gathers. The glue keeps
+// its permission calls verbatim and passes them in; test/core.test.mjs proves each one equal to the
+// old expression over every input (fixtures/legacy-journal.mjs is the oracle).
+//
+// ⚠ The rules read `f.<fact>` in order and only as far as they need (no destructuring): the glue
+//   passes getters, so a fact the old short-circuit never evaluated (a permission call on a null
+//   entry, the every-scene Note scan) is still never evaluated.
+
+/**
+ * This module's flags on a document. A plain read, not getFlag: getFlag throws for a scope whose
+ * module is not active, and these run inside render hooks and sidebar filters.
+ */
+export const flagsOf = doc => doc?.flags?.[MODULE] ?? {};
+
+/** A personal journal: a JournalEntry flagged `{kind: "personal"}`. */
+export const isPersonal = entry => entry?.documentName === "JournalEntry" && flagsOf(entry).kind === "personal";
+
+/** A personal journal that belongs to `userId`. */
+export const isMine = (entry, userId) => isPersonal(entry) && flagsOf(entry).userId === userId;
+
+/**
+ * The provenance place: the scene's navigation name, else the readable's folder, else null.
+ * There is deliberately no scene-name parameter: `scene.name` is GM-authored and players are not
+ * shown it, so it can never reach a player's copy.
+ */
+export const placeFrom = ({ navName, folderName } = {}) => navName?.trim() || folderName || null;
+
+/**
+ * Who gets the bar on a journal. Real ownership only ("Show to players" does not count): a player
+ * who observes but does not own it; a GM only with the `gmButton` setting. Never a personal journal
+ * or a compendium entry. Fields are read in this order and only as far as needed.
+ */
+export function barVisible(f) {
+  if (!f.isJournalEntry || f.isPersonal || f.inPack) return false;
+  if (f.isGM) return !!f.gmButton;
+  return f.observer && !f.owner;
+}
+
+/**
+ * Who gets the bar on an item shown from a pile: as `barVisible`, against the pile actor, and never
+ * when the pile forbids inspecting items (`canInspectItems === false`, even for a GM).
+ */
+export function itemBarVisible(f) {
+  if (!f.hasSource) return false;
+  if (f.canInspectItems === false) return false;
+  if (f.isGM) return !!f.gmButton;
+  return f.observer && !f.owner;
+}
+
+/**
+ * Whether an eye readable opens as a single page: players only, behind the setting, never a
+ * personal journal, only for a journal some scene Note pins, and only when exactly one page is
+ * visible to the player.
+ */
+export const singlePage = f =>
+  !f.isGM && f.setting && !f.isPersonal && f.isEyeReadable && f.visiblePages === 1;
+
+/* -------------------------------------------- */
+/*  Why an add did nothing (items-journal-36)    */
+/* -------------------------------------------- */
+
+/**
+ * The reason an add stops before writing, in the order the save checks them: no journal, nothing
+ * the user can see, a body over MAX_BODY. null = it goes ahead.
+ * @param {{journal?: object|null, sources?: object[], plan?: {tooLarge?: boolean}|null}} s
+ * @returns {"no-journal"|"nothing-visible"|"too-large"|null}
+ */
+export function skipReason({ journal, sources, plan } = {}) {
+  if (!journal) return "no-journal";
+  if (!sources?.length) return "nothing-visible";
+  if (plan?.tooLarge) return "too-large";
+  return null;
+}
+
+/* -------------------------------------------- */
+/*  A user's saved entries, as plain rows (items-journal-35) */
+/* -------------------------------------------- */
+
+/**
+ * One plain row per page of a personal journal, in the journal's order. A page the player wrote
+ * themselves (no source flag) has null source fields.
+ * @returns {{pageId, name, key, place, savedAt, updatedAt, hash}[]}
+ */
+export function entryRows(pages) {
+  return [...(pages ?? [])].map(p => {
+    const s = sourceOf(p);
+    return { pageId: idOf(p) ?? null, name: p?.name ?? null, key: s?.key ?? null, place: s?.place ?? null,
+      savedAt: s?.savedAt ?? null, updatedAt: s?.updatedAt ?? null, hash: s?.hash ?? null };
+  });
+}
+
+/* -------------------------------------------- */
+/*  Refresh cost (items-journal-33)             */
+/* -------------------------------------------- */
+
+/**
+ * A bounded memo: `memo(key, ...args)` returns the cached `fn(...args)` for `key`, else computes and
+ * keeps it; past `max` entries the least recently used goes. A null/undefined key is never cached.
+ * `memo.size` and `memo.misses` (calls that ran fn) are for tests and the console.
+ */
+export function makeMemo(fn, max = 64) {
+  const cache = new Map();
+  let misses = 0;
+  const memo = (key, ...args) => {
+    if (key === null || key === undefined) {
+      misses++;
+      return fn(...args);
+    }
+    if (cache.has(key)) {
+      const hit = cache.get(key);
+      cache.delete(key);
+      cache.set(key, hit);
+      return hit;
+    }
+    misses++;
+    const value = fn(...args);
+    cache.set(key, value);
+    if (cache.size > max) cache.delete(cache.keys().next().value);
+    return value;
+  };
+  Object.defineProperties(memo, {
+    size: { get: () => cache.size },
+    misses: { get: () => misses },
+    clear: { value: () => cache.clear() },
+  });
+  return memo;
+}
+
+/** An item update can change only an item bar: refresh when one is open. `kinds`: the open bars' target kinds. */
+export const needsItemRefresh = kinds => [...(kinds ?? [])].includes("item");
+
+/* -------------------------------------------- */
+/*  Which journals a scene pin opens (items-journal-38) */
+/* -------------------------------------------- */
+
+/**
+ * Every journal id some scene Note pins. A deliberate copy of pentaryn-dropbin's rule
+ * (items-journal-24); modules never import each other.
+ */
+export function pinnedEntryIds(scenes) {
+  const ids = new Set();
+  for (const sc of scenes ?? []) for (const n of sc?.notes ?? []) if (n?.entryId) ids.add(n.entryId);
+  return ids;
+}
+
+/**
+ * pinnedEntryIds(getScenes()), built on first use and kept until invalidate(). The caller
+ * invalidates whenever a Note or a Scene is created, updated or deleted.
+ */
+export function makePinnedCache(getScenes) {
+  let ids = null;
+  return {
+    has: id => (ids ??= pinnedEntryIds(getScenes())).has(id),
+    invalidate() { ids = null; },
+    get built() { return ids !== null; },
+  };
+}
+
+/* -------------------------------------------- */
+/*  One GM tab answers the relay (items-journal-40) */
+/* -------------------------------------------- */
+
+/**
+ * Whether this tab won the claim, read right after its own stamp came back: `claims` is
+ * `{ <socketId>: stampedAt }` as this tab sees it then. The server applies the stamps in one order
+ * and a tab receives every earlier stamp before its own reply, so exactly one tab — the first to
+ * stamp — sees no other fresh stamp. A stamp older than `staleMs` (a tab that died mid-claim) is
+ * ignored.
+ */
+export function claimWinner(claims, me, now, staleMs = 60_000) {
+  if (!claims || typeof claims !== "object" || !(me in claims)) return false;
+  return Object.entries(claims).every(([id, at]) => id === me || !(now - Number(at) < staleMs));
 }

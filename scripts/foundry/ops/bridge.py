@@ -64,10 +64,20 @@ def _alive(pid: int) -> bool:
     return True
 
 
-def _comm(pid: int) -> str:
-    out = subprocess.run(["ps", "-p", str(pid), "-o", "comm="],
-                         capture_output=True, text=True)
-    return out.stdout.strip().rsplit("/", 1)[-1]
+def _comms() -> dict[int, str]:
+    """pid -> executable basename, for every process, from one `ps` (python-tooling-37:
+    was one `ps -p` per bridge process)."""
+    out = subprocess.run(["ps", "-eo", "pid=,comm="], capture_output=True, text=True)
+    names: dict[int, str] = {}
+    for line in out.stdout.splitlines():
+        parts = line.strip().split(maxsplit=1)
+        if len(parts) < 2:
+            continue
+        try:
+            names[int(parts[0])] = parts[1].strip().rsplit("/", 1)[-1]
+        except ValueError:
+            continue
+    return names
 
 
 def _port_owners() -> dict[int, list[int]]:
@@ -92,6 +102,7 @@ def scan() -> list[Proc]:
     out = subprocess.run(
         ["ps", "-eo", "pid=,ppid=,lstart=,command="], capture_output=True, text=True)
     owners = _port_owners()
+    comms: dict[int, str] | None = None
 
     procs: list[Proc] = []
     for line in out.stdout.splitlines():
@@ -105,16 +116,22 @@ def scan() -> list[Proc]:
         except ValueError:
             continue
         rest = parts[1].split(maxsplit=1)
-        ppid = int(rest[0])
-        # lstart is a fixed 5-field date: "Thu Aug 20 09:47:41 2026"
-        tail = rest[1].split(maxsplit=5)
+        try:
+            ppid = int(rest[0])
+            # lstart is a fixed 5-field date: "Thu Aug 20 09:47:41 2026"
+            tail = rest[1].split(maxsplit=5)
+        except (ValueError, IndexError):
+            continue
         started, command = " ".join(tail[:5]), (tail[5] if len(tail) > 5 else "")
 
         kind = ("backend" if "backend.js" in command
                 else "server" if "index.js" in command else "other")
         p = Proc(pid=pid, ppid=ppid, started=started, command=command, kind=kind)
         p.parent_alive = _alive(ppid)
-        p.parent_comm = _comm(ppid) if p.parent_alive else ""
+        if p.parent_alive:
+            if comms is None:
+                comms = _comms()
+            p.parent_comm = comms.get(ppid, "")
         p.ports = tuple(sorted(owners.get(pid, ())))
         procs.append(p)
 

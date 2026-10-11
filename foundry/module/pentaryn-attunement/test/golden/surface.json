@@ -1,0 +1,15 @@
+{
+  "away": "away",
+  "computeSlots": "computeSlots",
+  "contract": "string",
+  "describe": "function",
+  "inspect": "inspect",
+  "releaseAway": "releaseAway",
+  "report": "report",
+  "selftest": "selftest",
+  "settings": "function",
+  "stash": "stash",
+  "trace": "trace",
+  "uninstall": "uninstall",
+  "version": "string"
+}

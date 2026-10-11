@@ -12,7 +12,10 @@ import { planTokenRelabels, relabel } from "./names-core.mjs";
 import { CODES, errorCode, toFail } from "./lib/errors.mjs";
 import { resolveRef } from "./lib/resolve.mjs";
 
-/** Relabel the prototype token and every placed token of `actor`. Returns how many labels changed. */
+/**
+ * Relabel the prototype token and every placed token of `actor`, then (GM only) its combatants.
+ * Returns how many TOKEN labels changed; combatant names are not counted or toasted.
+ */
 export async function sync(actor, oldName, newName) {
   let count = 0;
   const proto = relabel(actor.prototypeToken.name, oldName, newName);
@@ -29,8 +32,23 @@ export async function sync(actor, oldName, newName) {
       count += updates.length;
     }
   }
+  if (game.user.isGM) await relabelCombatants(actor, oldName, newName);
   if (count) ui.notifications.info(_loc("PENTARYN_NAMES.Synced", { name: newName, count }));
   return count;
+}
+
+/**
+ * PT3-9: the combatants of `actor`, in every encounter, whose name was the old name or its part
+ * before the first comma — the token rule. Foundry derives an empty combatant name from its token
+ * once, at prepare time, and a token rename does not re-prepare it, so the tracker kept the old
+ * label; writing the name fixes it on every client. GM only: a player may not update a combatant's
+ * name (common/documents/combatant.mjs:76-85). One batch write per combat.
+ */
+async function relabelCombatants(actor, oldName, newName) {
+  for (const combat of game.combats) {
+    const updates = planTokenRelabels([...combat.combatants], { actorId: actor.id, oldName, newName, canEdit: () => true });
+    if (updates.length) await combat.updateEmbeddedDocuments("Combatant", updates);
+  }
 }
 
 /**

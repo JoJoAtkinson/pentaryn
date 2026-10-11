@@ -24,10 +24,8 @@ export async function boot({ user, users = [], settings = {}, actors = [] } = {}
   };
   F.game.macros = { getName: () => null };
   globalThis.Macro = { create: async data => F.calls.push({ op: "Macro.create", data: F.plain(data) }) };
-  // Foundry's global `logger` (console-like): the real logCompatibilityWarning writes through it
-  // and the kit stub does not define it yet (kit gap, reported). Lines are kept on F.logged.
-  F.logged = [];
-  globalThis.logger = Object.fromEntries(["debug", "info", "log", "warn", "error"].map(level => [level, (...args) => F.logged.push({ level, args })]));
+  // Foundry's global `logger`, which the real logCompatibilityWarning writes through, comes from the
+  // kit stub (1.0.2, J6): every line lands on F.logged as { level, args }.
   globalThis.document = { addEventListener() {}, removeEventListener() {}, createElement: () => ({}), body: { appendChild() {} } };
   await import("../../pentaryn-ties.mjs");
   F.fire("init");

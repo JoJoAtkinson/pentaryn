@@ -81,7 +81,7 @@ test("init: the two hidden world settings", () => {
   ]);
 });
 
-test("ready: post-ready registrations in order (golden/hooks-after-ready.json); GM backfills (golden/backfills.json); publish after a tick", async () => {
+test("ready: post-ready registrations in order (golden/hooks-after-ready.json); GM backfills (golden/backfills.json); publish at ready (D2)", async () => {
   // the oracle planners over the same world, before ready's backfills change it
   const lock = await oracle.planLockSounds([ann, chest, chestQuiet, eyePile], [scene]);
   const eyes = await oracle.planEyesNeedView([ann, chest, chestQuiet, eyePile], [scene]);
@@ -95,20 +95,25 @@ test("ready: post-ready registrations in order (golden/hooks-after-ready.json); 
   pinJSON("hooks-after-ready", after, import.meta.url);
   assert.deepEqual(after.map(h => h.name), ["item-piles-dropItem", "preDeleteItem", "item-piles-preRenderInterface",
     "item-piles-preRenderActorSheet", "item-piles-preRattleItemPile", "preCreateItem"]);
-  const writes = since(from).filter(c => c.op === "update" || c.op === "updateEmbeddedDocuments")
-    .map(c => (c.op === "update" ? { actor: c.uuid, changes: c.changes } : { scene: c.on, type: c.type, data: c.data }));
+  // [declared] items-journal-25: the active GM writes each plan's actors in one Actor.updateDocuments batch
+  const writes = since(from).filter(c => ["update", "Actor.updateDocuments", "updateEmbeddedDocuments"].includes(c.op))
+    .map(c => (c.op === "update" ? { actor: c.uuid, changes: c.changes }
+      : c.op === "Actor.updateDocuments" ? { actors: c.data } : { scene: c.on, type: c.type, data: c.data }));
   pinJSON("backfills", writes, import.meta.url);
-  // the oracle planners reproduce today's loops' payloads
-  const fromPlan = plan => [...plan.actorUpdates.map(({ _id, ...changes }) => ({ actor: `Actor.${_id}`, changes })),
+  // the oracle planners reproduce the payloads, the actors batched
+  const fromPlan = plan => [...(plan.actorUpdates.length ? [{ actors: plan.actorUpdates }] : []),
     ...plan.embedded.map(e => ({ scene: e.sceneId, type: e.type, data: e.updates }))];
   assert.deepEqual(writes, [...fromPlan(lock), ...fromPlan(eyes)]);
-  assert.equal(game.pentaryn?.dropbin, undefined, "not before the tick");
+  // [declared] D-D1 (D2): published at ready on module.api, not a tick later; the ready line comes with it
+  assert.equal(game.pentaryn?.dropbin, game.modules.get(MOD).api, "published at ready");
   const tickLines = await withConsole(async () => {
     mock.timers.tick(0);
     await flush();
   });
   pinJSON("ready-console", { lines, tickLines }, import.meta.url);
-  assert.deepEqual(tickLines, [["log", "pentaryn-dropbin | ready — 0 entries on the ledger"]]);
+  assert.deepEqual(tickLines, []);
+  // [declared] items-journal-19: the ready line adds the ledger's approximate size
+  assert.deepEqual(lines[0], ["log", "pentaryn-dropbin | ready — 0 entries on the ledger (~0 KB)"]);
 });
 
 test("published API: the legacy keys (a floor); corpses and loot keys pinned", () => {
@@ -139,22 +144,27 @@ test("socketlib.ready registers the module and the record handler", () => {
   assert.deepEqual(since(from).map(c => [c.op, c.id ?? c.name]), [["socketlib.registerModule", MOD], ["socketlib.register", "record"]]);
 });
 
-test("drop capture as the GM: counter, log, mirror upload, console line; the same drop within 2 s writes nothing", async () => {
+test("drop capture as the GM: counter, log, console line, the mirror upload after the debounce; the same drop within 2 s writes nothing", async () => {
   const from = mark();
   const lines = await withConsole(async () => {
     Hooks.callAll("item-piles-dropItem", { actor: ann }, chest, [{ item: sword(), quantity: -2 }], { x: 1, y: 2 });
     await flush();
   });
-  const ops = since(from).filter(c => ["settings.set", "upload"].includes(c.op));
-  assert.deepEqual(ops.map(c => c.op === "upload" ? ["upload", c.source, c.dir, c.name, c.opts] : [c.op, c.id]), [
-    ["settings.set", `${MOD}.counter`], ["settings.set", `${MOD}.log`], ["upload", "data", "assets/drop-bin", "drop-log.json", { notify: false }],
-  ]);
+  const ops = () => since(from).filter(c => ["settings.set", "upload"].includes(c.op))
+    .map(c => c.op === "upload" ? ["upload", c.source, c.dir, c.name, c.opts] : [c.op, c.id]);
+  // [declared] items-journal-19: the mirror upload is trailing-debounced (2 s), not awaited per entry
+  assert.deepEqual(ops(), [["settings.set", `${MOD}.counter`], ["settings.set", `${MOD}.log`]]);
   assert.deepEqual(lines, [["log", "pentaryn-dropbin | #1 drop: Sword from Ann"]]);
   pinJSON("ledger-entry", game.pentaryn.dropbin.get(1), import.meta.url);
   const again = mark();
   Hooks.callAll("item-piles-dropItem", { actor: ann }, chest, [{ item: sword(), quantity: -2 }], { x: 1, y: 2 });
   await flush();
   assert.deepEqual(since(again).filter(c => ["settings.set", "upload"].includes(c.op)), []);
+  mock.timers.tick(2000);
+  await flush();
+  assert.deepEqual(ops(), [
+    ["settings.set", `${MOD}.counter`], ["settings.set", `${MOD}.log`], ["upload", "data", "assets/drop-bin", "drop-log.json", { notify: false }],
+  ]);
 });
 
 test("drop capture as a player with socketlib: one executeAsGM('record', entry)", async () => {
@@ -169,9 +179,9 @@ test("drop capture as a player with socketlib: one executeAsGM('record', entry)"
   assert.deepEqual([relays[0].data.reason, relays[0].data.quantity, relays[0].data.pileUuid, relays[0].data.userId], ["drop", 3, "Scene.x.Token.y", PLAYER]);
 });
 
-// KNOWN: items-journal-18 — two drops in one call race the read-modify-write: with a store that lands its
-// writes a tick later, both get #2. Flipped by guide step 8 [declared] (serialised appends).
-test("KNOWN items-journal-18: two concurrent drops of different items both get the same number", async () => {
+// items-journal-18 — two drops in one call raced the read-modify-write (both got #2). Flipped by guide step 8
+// [declared] (serialised appends): numbered consecutively in submission order.
+test("items-journal-18: two concurrent drops of different items are numbered #2 and #3", async () => {
   const realSet = game.settings.set.bind(game.settings);
   game.settings.set = (ns, key, value) => new Promise(r => setTimeout(() => r(realSet(ns, key, value)), 0));
   const lines = await withConsole(async () => {
@@ -182,7 +192,7 @@ test("KNOWN items-journal-18: two concurrent drops of different items both get t
     for (let i = 0; i < 20; i++) { mock.timers.tick(0); await flush(); }
   });
   game.settings.set = realSet;
-  assert.deepEqual(lines, [["log", "pentaryn-dropbin | #2 drop: Rope from Ann"], ["log", "pentaryn-dropbin | #2 drop: Lamp from Ann"]]);
+  assert.deepEqual(lines, [["log", "pentaryn-dropbin | #2 drop: Rope from Ann"], ["log", "pentaryn-dropbin | #3 drop: Lamp from Ann"]]);
 });
 
 test("preDeleteItem: a character's own delete is captured; a restore-flagged one is not (the flag is dead today)", async () => {
@@ -285,9 +295,9 @@ test("corpses: renderTokenHUD on our corpse as the GM adds two buttons with toda
   assert.equal(r2.children.length, 0, "players get nothing");
 });
 
-// KNOWN: items-journal-30 — the eye's disc is cleared and redrawn on every paint (every refreshToken),
-// even when its size has not changed. Flipped by the items-journal-30 fix (needsRedraw): 1.
-test("KNOWN items-journal-30: painting the corpse eye twice clears its disc twice", async () => {
+// items-journal-30 — the eye's disc was cleared and redrawn on every paint (every refreshToken), even when
+// its size had not changed (2). Flipped by the [declared] items-journal-30 fix (needsRedraw): 1.
+test("items-journal-30: painting the corpse eye twice clears its disc once", async () => {
   const doc = { name: "Dead Goblin", flags: { [MOD]: { corpse: true } }, isSecret: false, getSize: () => ({ width: 100, height: 100 }) };
   const token = { document: doc, destroyed: false, effects: { zIndex: 3 }, addChild(c) { c.parent = this; return c; } };
   F.piles.add(doc);
@@ -297,7 +307,7 @@ test("KNOWN items-journal-30: painting the corpse eye twice clears its disc twic
   game.pentaryn.dropbin.corpses.paintEye(token);
   const first = { x: token.pdLootEye.position.x, y: token.pdLootEye.position.y, z: token.pdLootEye.zIndex, w: token.pdLootEye.children[1].width, visible: token.pdLootEye.visible };
   game.pentaryn.dropbin.corpses.paintEye(token);
-  assert.equal(F.calls.clears, 2);
+  assert.equal(F.calls.clears, 1);
   assert.deepEqual({ x: token.pdLootEye.position.x, y: token.pdLootEye.position.y, z: token.pdLootEye.zIndex, w: token.pdLootEye.children[1].width, visible: token.pdLootEye.visible }, first);
   assert.deepEqual(first, { x: 80, y: 20, z: 4, w: 40, visible: true });
 });

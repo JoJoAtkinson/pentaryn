@@ -12,6 +12,8 @@
   releases the guard.
 - **[declared] Console lines read `pentaryn-importer | …`** (kit logger) instead of
   `[pentaryn-importer] …`. Toast text is unchanged.
+- Kit 1.0.2 vendored (wave 2): the kit's frozen-root guard and re-alias tick are retired now that
+  this module merges into `game.pentaryn` (J10); the importer's own behaviour is unchanged.
 - New: `game.modules.get("pentaryn-importer").api` = `game.pentaryn.importer` with `describe()` and
   `selftest()`; the `pentaryn-importer.ready` and `pentaryn.ready` hooks fire (`items-journal-5`).
 - Internals: split into `importer-core.mjs` (pure), `documents-adapter.mjs`, `api-manifest.mjs`,

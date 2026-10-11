@@ -1,4 +1,4 @@
-// pentaryn kit 1.0.1 · vendored from foundry/lib/settings.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.0.2 · vendored from foundry/lib/settings.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * Settings as one table. A module's `settings.mjs` exports `SETTINGS` (and `KEYBINDINGS`) rows and
  * is the only file outside `lib/` that calls `game.settings.register/get`.

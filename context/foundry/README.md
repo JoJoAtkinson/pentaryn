@@ -53,7 +53,7 @@ name will not tell you:
 - **The namespace is not always the module's short name** — `rules` is `pentaryn-lookup`, `chain`
   is `pentaryn-senses`.
 - **Reads return an object, not an array, and report trouble in it** —
-  `await game.pentaryn.rules.search("half cover")` is `{ results, … }` or `{ error }`.
+  `await game.pentaryn.rules.search("half cover")` is `{ query, books, total, shown, hits: [...], … }` or `{ error }` — iterate `.hits`.
 - **ties takes documents** — `game.pentaryn.ties.attributes.of(actor)` wants an `Actor`, not a
   name or id. Blueprint modules (a `describe` golden below) accept a ref instead: Actor, Token,
   uuid, id or exact name; `game.pentaryn.<ns>.describe()` lists every method with its params.
@@ -67,24 +67,24 @@ The table is generated from each `module.json`, the module's code and its
 | Namespace | Module | Version | Blueprint | API (describe golden) | Docs |
 |---|---|---|---|---|---|
 | `aoe` | `pentaryn-aoe` | 0.3.1 | not migrated | — (no describe golden yet) | [`aoe.md`](aoe.md) · [README](../../foundry/module/pentaryn-aoe/README.md) |
-| `attunement` | `pentaryn-attunement` | 0.2.1 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-attunement/README.md) |
-| `combat` | `pentaryn-combat` | 0.2.4 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-combat/README.md) |
+| `attunement` | `pentaryn-attunement` | 0.2.1 | full tier | `report`, `computeSlots`, `stash`, `releaseAway`, `away` | [README](../../foundry/module/pentaryn-attunement/README.md) |
+| `combat` | `pentaryn-combat` | 0.2.5 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-combat/README.md) |
 | `creatures` | `pentaryn-creatures` | 0.1.1 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-creatures/README.md) |
 | `cursors` | `pentaryn-cursors` | 0.2.0 | small tier | `refresh`, `current`, `keyFor`, `status` | [README](../../foundry/module/pentaryn-cursors/README.md) |
-| `dropbin` | `pentaryn-dropbin` | 0.2.1 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-dropbin/README.md) |
+| `dropbin` | `pentaryn-dropbin` | 0.2.2 | full tier | `corpses.sync`, `corpses.toCorpse`, `corpses.fromCorpse`, `corpses.isDead`, `corpses.revive`, `corpses.paintEye`, `corpses.paintAllEyes`, `corpses.migrateLegacyEyes` … (+11) | [README](../../foundry/module/pentaryn-dropbin/README.md) |
 | `importer` | `pentaryn-importer` | 1.1.0 | full tier | `import` | [`importer.md`](importer.md) · [README](../../foundry/module/pentaryn-importer/README.md) |
-| `journal` | `pentaryn-journal` | 0.1.0 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-journal/README.md) |
-| `rules` | `pentaryn-lookup` | 0.3.0 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-lookup/README.md) |
-| `movement` | `pentaryn-movement` | 0.1.2 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-movement/README.md) |
-| `names` | `pentaryn-names` | 0.1.0 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-names/README.md) |
-| `pings` | `pentaryn-pings` | 0.1.0 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-pings/README.md) |
+| `journal` | `pentaryn-journal` | 0.1.0 | full tier | `personal`, `add`, `status`, `open`, `shouldShowBar`, `ensure`, `ensureAll`, `report` … (+3) | [README](../../foundry/module/pentaryn-journal/README.md) |
+| `rules` | `pentaryn-lookup` | 0.3.0 | full tier | `search`, `page`, `monster`, `monsters`, `names`, `packs`, `onList`, `spellList` … (+1) | [README](../../foundry/module/pentaryn-lookup/README.md) |
+| `movement` | `pentaryn-movement` | 0.1.2 | full tier | `status`, `ghostFor`, `combatActive`, `setGhost`, `setPolicy`, `pinsUnderTokens` | [README](../../foundry/module/pentaryn-movement/README.md) |
+| `names` | `pentaryn-names` | 0.1.1 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-names/README.md) |
+| `pings` | `pentaryn-pings` | 0.1.1 | small tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-pings/README.md) |
 | `portals` | `pentaryn-portals` | 0.4.4 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-portals/README.md) |
-| `prompts` | `pentaryn-prompts` | 0.4.3 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-prompts/README.md) |
+| `prompts` | `pentaryn-prompts` | 0.4.4 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-prompts/README.md) |
 | `riders` | `pentaryn-riders` | 0.2.0 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-riders/README.md) |
 | `chain`, `senses` | `pentaryn-senses` | 0.4.1 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-senses/README.md) |
 | `ties` | `pentaryn-ties` | 0.19.4 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-ties/README.md) |
-| `transform` | `pentaryn-transform` | 0.3.2 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-transform/README.md) |
-| `walls` | `pentaryn-walls` | 0.2.0 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-walls/README.md) |
+| `transform` | `pentaryn-transform` | 0.3.3 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-transform/README.md) |
+| `walls` | `pentaryn-walls` | 0.2.0 | full tier | `preview`, `run`, `undo`, `makeMacro`, `analyze`, `runEngine`, `backends` | [`walls.md`](walls.md) · [README](../../foundry/module/pentaryn-walls/README.md) |
 
 <!-- module-index:end -->
 
@@ -109,7 +109,7 @@ The table is generated from each `module.json`, the module's code and its
 | Full Attack, swing pips, off-hand / Nick / Flurry, Sneak Attack offers on the HUD — `pentaryn-combat` | [`melee.md`](melee.md) |
 | One-click Sneak Attack, off-hand damage with no ability mod | [`attack-activities.md`](attack-activities.md) |
 | Spell circles you can't move/delete, "damage isn't rolled", monster saves off an area — `pentaryn-aoe` | [`aoe.md`](aoe.md) |
-| Completing hand-drawn walls | [`../../foundry/module/pentaryn-walls/README.md`](../../foundry/module/pentaryn-walls/README.md) |
+| Completing hand-drawn walls | [`walls.md`](walls.md) (API: [README](../../foundry/module/pentaryn-walls/README.md)) |
 | Attunement — the sidebar slots, over-cap warnings, "why is this item doing nothing" | [`../../foundry/module/pentaryn-attunement/README.md`](../../foundry/module/pentaryn-attunement/README.md) |
 | Player journal — "Add to my journal" on eye readables, a personal journal missing or duplicated | [`../../foundry/module/pentaryn-journal/README.md`](../../foundry/module/pentaryn-journal/README.md) |
 | "My cursor is wrong / stuck as an arrow" — map cursor per scene tool (target, ruler, spell area, journal pin, drawing); `game.pentaryn.cursors.status()` | [`../../foundry/module/pentaryn-cursors/README.md`](../../foundry/module/pentaryn-cursors/README.md) |
@@ -158,17 +158,25 @@ does not reconnect by itself (`autoReconnectEnabled` is off), so either reload i
 
 ## The action log is the promotion mechanism — keep it on
 
-Every fork tool call lands in `foundry/logs/mcp-<month>.jsonl`, and every `eval-js`
-call also lands in `foundry/logs/eval.jsonl` with its stated purpose. That log is how
-you decide which recurring `eval-js` uses have earned a typed tool — it is the design's
-own answer to "what should the tool surface be", and it is meant to be grepped from the
-repo rather than exposed as a tool.
+Every write tool call lands in `foundry/logs/mcp-<month>.jsonl` — the fork's tools and,
+from the wave-2 fork build, the upstream write tools too — and every `eval-js` call also
+lands in the eval log with its stated purpose: `eval.jsonl` up to the wave-2 build,
+`eval-<YYYY-MM>.jsonl` after it. That log is how you decide which recurring `eval-js` uses
+have earned a typed tool — it is the design's own answer to "what should the tool surface
+be". Field lists and phases: [`mcp-fork.md`](mcp-fork.md#environment-and-logs).
 
-Both are gated on **`PENTARYN_MCP_LOG_DIR`**, set in `.mcp.json`. If it is unset, the
+**The review is one command:** `make foundry-eval-report` (`SINCE=2026-10-01` narrows it,
+`JSON=1` for JSON). It reads both eval names, every `mcp-*.jsonl` and the dnd-scripts
+server's `dnd-scripts-<month>.jsonl`, and prints outcomes by phase, the `game.pentaryn.<ns>.<fn>`
+paths `eval-js` reaches (the promotion candidates), discovery calls, the top runtime
+errors and per-tool counts. Read-only.
+
+All of it is gated on **`PENTARYN_MCP_LOG_DIR`**, set in `.mcp.json` (and, for the
+dnd-scripts log, on that server's entry in `.vscode/mcp.json`). If it is unset, the
 server logs nothing and says nothing — it was unset from 2026-08-14 to 2026-08-22 and
 the gap is simply missing. A restart of the MCP server is needed after changing it.
 
-Sanity check: make one `eval-js` call, then `wc -l foundry/logs/eval.jsonl`.
+Sanity check: make one `eval-js` call, then `make foundry-eval-report SINCE=<today>`.
 
 **A `"phase": "transport"` line is a call that never reached Foundry** — module not
 connected, dead socket, timeout. Until 2026-08-23 those threw before the log write and

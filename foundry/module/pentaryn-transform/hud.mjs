@@ -12,9 +12,9 @@
 
 import {
   MODULE_ID, EFFECT_ID, activitiesOf, isWildShapeActivity, usesLeft, durationSeconds, formatDuration,
-  formSummary, planBonusBar, planWithout, frontRowItems, coveredPanel, hpText, CONSTELLATIONS, STARRY_SECONDS
+  formSummary, planBonusBar, planWithout, frontRowItems, coveredPanel, hpText, returnLabel, CONSTELLATIONS, STARRY_SECONDS
 } from "./transform-core.mjs";
-import { shift, forms, wildShapeActivity, original, isRevertItem, bonusUsedNow } from "./transform.mjs";
+import { shift, forms, wildShapeActivity, original, isRevertItem, bonusUsedNow, returnToNormal, isWildShapeForm } from "./transform.mjs";
 import {
   STARRY_EFFECT_ID, starryItem, wildShapeItemOf, hasTwinkling, activeStarry, constellationOf, starrySecondsLeft,
   constellationLabel, constellationImg, constellationText, constellationActivity, assumeStarry, endStarry
@@ -84,15 +84,27 @@ function onTokenBody(doc, changes) {
 Hooks.on("updateToken", onTokenBody);
 Hooks.on("deleteToken", (doc) => onTokenBody(doc, null));
 
-// Escape cancels the picker (it otherwise fell through to core's dismiss and opened the game menu).
-// Synchronous on purpose: an async onDown returns a Promise, which always counts as consumed.
+/** Close the module's own open pickers (Change Form / Wild Shape forms, constellations). */
+function closeOwnPickers() {
+  const open = document.querySelectorAll(".pentaryn-picker.show");
+  for (const el of open) el.classList.remove("show");   // what ButtonPanel#toggle(false) does; no saved state (id null)
+  return open.length > 0;
+}
+
+// Escape cancels the target picker, else closes an open Wild Shape / Starry Form picker (PT3-6);
+// either otherwise fell through to core's dismiss and opened the game menu. With nothing open it
+// returns false, so Escape still reaches core. Synchronous on purpose: an async onDown returns a
+// Promise, which always counts as consumed.
 Hooks.once("init", () => {
   try {
     game.keybindings.register(MODULE_ID, "cancelTargetPicker", {
       name: "PENTARYN_TRANSFORM.Keybinding.CancelPicker.Name",
       hint: "PENTARYN_TRANSFORM.Keybinding.CancelPicker.Hint",
       editable: [{ key: "Escape" }],
-      onDown: () => (pickerOpen() ? (cancelTargetPicker(), true) : false),
+      onDown: () => {
+        if (pickerOpen()) { cancelTargetPicker(); return true; }
+        return closeOwnPickers();
+      },
       precedence: CONST.KEYBINDING_PRECEDENCE.PRIORITY
     });
   } catch (err) {
@@ -220,6 +232,35 @@ function argonClasses() {
 
     async _onRightClick(event) {
       (this.form.actor ?? fromUuidSync(this.form.uuid))?.sheet?.render(true);
+    }
+  }
+
+  /**
+   * "Return to Talo" for a form with no revert item (PT3-3): the item's label and portrait, and the
+   * item's revert path (returnToNormal). A pseudo-item keeps ItemButton's label/icon/visible working.
+   */
+  class ReturnButton extends ItemButton {
+    constructor({ hudActor }) {
+      const host = game.actors.get(hudActor?.getFlag?.("dnd5e", "originalActor")) ?? null;
+      super({
+        item: { id: "pentarynReturn00", name: returnLabel(host?.name ?? hudActor?.name ?? "?"), img: host?.img || hudActor?.img },
+        inActionPanel: true
+      });
+      this.hudActor = hudActor;
+    }
+
+    get hasTooltip() { return true; }
+
+    async getTooltipData() {
+      return { title: this.label, subtitle: T("PENTARYN_TRANSFORM.Hud.BonusAction"), description: "", classes: TT };
+    }
+
+    async _onLeftClick(event) {
+      dropTooltip();
+      cancelTargetPicker();
+      ui.ARGON?.collapseAllPanels?.();
+      await returnToNormal(this.hudActor);
+      dropStaleTooltip();
     }
   }
 
@@ -432,7 +473,7 @@ function argonClasses() {
     }
   }
 
-  built = { WildShapeButton, FormTile, StarryFormButton, ItemButton, SplitButton: A.MAIN.BUTTONS.SplitButton };
+  built = { WildShapeButton, FormTile, StarryFormButton, ReturnButton, ItemButton, SplitButton: A.MAIN.BUTTONS.SplitButton };
   return built;
 }
 
@@ -474,13 +515,15 @@ function composeBonusBar(panel, actor) {
   const revertItems = actor.items.filter(isRevertItem);
   if (!hasWildShape && !revertItems.length) return;
   const ownWs = actor.items.find(i => activitiesOf(i).some(isWildShapeActivity));
-  const starry = shifted ? null : starryItem(actor);
+  // Shifted, planBonusBar drops a carried Starry Form's button instead of replacing it (PT3-4).
+  const starry = starryItem(actor);
 
   const plan = planBonusBar(panel._buttons.map(b => describe(b, C)), {
     wildShapeId: ownWs?.id ?? null,
     revertIds: revertItems.map(i => i.id),
     shifted,
     revertId: shifted ? (revertItems[0]?.id ?? null) : null,
+    ownReturn: isWildShapeForm(actor),          // a Polymorph spell is not ended as a Bonus Action
     hasWildShape,
     starryId: starry?.id ?? null
   });
@@ -491,6 +534,7 @@ function composeBonusBar(panel, actor) {
     let b;
     if (p.wildshape) b = new C.WildShapeButton({ hudActor: actor });
     else if (p.starry) b = new C.StarryFormButton({ hudActor: actor });
+    else if (p.revert) b = new C.ReturnButton({ hudActor: actor });
     else b = new ItemBtn({ item: actor.items.get(p.item), inActionPanel: true });
     if (p.highlight) b.element.classList.add("pentaryn-return");
     fresh.push(b);

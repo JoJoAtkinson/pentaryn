@@ -22,14 +22,17 @@ from __future__ import annotations
 MCP_GROUPS = ["combat", "all"]
 
 import asyncio
+import contextlib
+import fcntl
 import json
 import os
 import re
 import struct
 import sys
+import threading
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 import httpx
 import requests
@@ -108,12 +111,26 @@ _CACHE_FILE = _CACHE_DIR / "quant_numbers.bin"
 # When we pop a number, we know whether it came from quantum or random.org.
 _number_cache: list[int] = []
 _source_cache: list[str] = []  # parallel list: "quantumnumbers" or "random_org"
-_fetch_lock = asyncio.Lock()
 _last_fetch_time: float = 0.0
 
-# HTTP clients
+# One draw at a time (python-tooling-51). roll_dice runs every call under its own
+# asyncio.run, and the MCP server runs in-process tools on a thread pool, so concurrent
+# rolls live in different event loops on different threads. A thread lock taken around
+# the whole draw (fetch + pop) is the only primitive that spans them; an asyncio.Lock
+# binds to one loop and a waiter from another loop never wakes.
+_draw_lock = threading.Lock()
+
+# ...and one draw at a time across processes (dnd-roller-flock). Every Claude session runs
+# its own dnd-scripts server, each loading quant_numbers.bin at import; a thread lock does
+# not reach the others. A draw holds an flock on `quant_numbers.bin.lock` around
+# load → ensure → pop → write, and re-reads the file under it whenever another process has
+# changed it since this one last read or wrote it (`_disk_state`), so no number is drawn
+# twice and no process rewrites the pool from a stale copy.
+_disk_state: tuple[Path, tuple[int, int, int] | None] | None = None
+
+# HTTP clients. The async client is created per fetch, inside the running loop
+# (python-tooling-51): a shared one outlived the loop it was bound to.
 _sync_session: requests.Session | None = None
-_async_client: httpx.AsyncClient | None = None
 
 
 def _get_sync_session() -> requests.Session:
@@ -124,22 +141,26 @@ def _get_sync_session() -> requests.Session:
     return _sync_session
 
 
-async def _get_async_client() -> httpx.AsyncClient:
-    """Get or create a shared async HTTP client."""
-    global _async_client
-    if _async_client is None:
-        _async_client = httpx.AsyncClient(timeout=10.0)
-    return _async_client
+def _file_sig() -> tuple[int, int, int] | None:
+    """(inode, size, mtime_ns) of the cache file, None when there is none."""
+    try:
+        st = _CACHE_FILE.stat()
+    except FileNotFoundError:
+        return None
+    return (st.st_ino, st.st_size, st.st_mtime_ns)
 
 
 def _load_cache() -> None:
-    """Load cached numbers from disk into memory.
+    """Load cached numbers from disk into memory, replacing what memory held.
 
     The on-disk format is: 2 bytes uint16 number, 1 byte source tag (0=quantum, 1=random_org).
     Total 3 bytes per entry.
     """
-    global _number_cache, _source_cache
-    if _CACHE_FILE.exists():
+    global _disk_state
+    _number_cache.clear()
+    _source_cache.clear()
+    sig = _file_sig()
+    if sig is not None:
         with open(_CACHE_FILE, "rb") as f:
             data = f.read()
         if data and len(data) % 3 == 0:
@@ -149,20 +170,57 @@ def _load_cache() -> None:
                 tag = data[i * 3 + 2]
                 _number_cache.append(num)
                 _source_cache.append("quantumnumbers" if tag == 0 else "random_org")
+    _disk_state = (_CACHE_FILE, sig)
+
+
+def _sync_from_disk() -> None:
+    """Under `_cache_locked`: make memory match the file if another process changed it.
+
+    Unchanged since this process last read or wrote it → memory is current. Changed →
+    re-read. Gone, where this process had seen one → another process used the pool up.
+    No record for this path at all (the cache was re-pointed, as tests do) → a file that
+    exists is read; none means memory stands.
+    """
+    global _disk_state
+    sig = _file_sig()
+    if _disk_state == (_CACHE_FILE, sig):
+        return
+    if sig is not None:
+        _load_cache()
+    elif _disk_state is not None and _disk_state[0] == _CACHE_FILE:
+        _number_cache.clear()
+        _source_cache.clear()
+        _disk_state = (_CACHE_FILE, None)
+
+
+@contextlib.contextmanager
+def _cache_locked() -> Iterator[None]:
+    """Hold an exclusive flock on `<cache>.lock` for one draw (threads and processes alike)."""
+    _CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with open(_CACHE_FILE.with_name(_CACHE_FILE.name + ".lock"), "a") as fh:
+        fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(fh.fileno(), fcntl.LOCK_UN)
 
 
 def _write_cache() -> None:
-    """Persist remaining numbers + source tags to disk."""
-    _CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    """Persist remaining numbers + source tags to disk (atomically: write, then replace)."""
+    global _disk_state
+    _CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
     if _number_cache:
         buf = bytearray()
         for num, src in zip(_number_cache, _source_cache):
             buf.extend(struct.pack("H", num))
             buf.append(0 if src == "quantumnumbers" else 1)
-        with open(_CACHE_FILE, "wb") as f:
+        tmp = _CACHE_FILE.with_name(f"{_CACHE_FILE.name}.{os.getpid()}.tmp")
+        with open(tmp, "wb") as f:
             f.write(bytes(buf))
+        os.replace(tmp, _CACHE_FILE)
     else:
         _CACHE_FILE.unlink(missing_ok=True)
+    _disk_state = (_CACHE_FILE, _file_sig())
 
 
 async def _fetch_from_quantumnumbers(count: int = 1024) -> list[int] | None:
@@ -176,17 +234,17 @@ async def _fetch_from_quantumnumbers(count: int = 1024) -> list[int] | None:
         return None
 
     try:
-        client = await _get_async_client()
-        response = await client.get(
-            api_url,
-            params={
-                "type": "uint16",
-                "length": count,
-            },
-            headers={
-                "x-api-key": api_key,
-            },
-        )
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(
+                api_url,
+                params={
+                    "type": "uint16",
+                    "length": count,
+                },
+                headers={
+                    "x-api-key": api_key,
+                },
+            )
         response.raise_for_status()
         data = response.json()
         _last_fetch_time = time.time()
@@ -228,43 +286,41 @@ def _fetch_from_random_org_sync(count: int) -> list[int]:
 
 
 async def _ensure_numbers(needed: int) -> bool:
-    """Ensure cache has at least `needed` numbers. Fetch if necessary."""
+    """Ensure cache has at least `needed` numbers. Fetch if necessary.
+
+    Called under `_draw_lock` and `_cache_locked` (via roll_dice), so no second lock here.
+    """
     global _number_cache, _source_cache, _last_fetch_time
 
     if len(_number_cache) >= needed:
         return True
 
-    async with _fetch_lock:
-        # Double-check after acquiring lock
-        if len(_number_cache) >= needed:
-            return True
+    # Rate limit: 1 request per second
+    now = time.time()
+    wait_time = 1.0 - (now - _last_fetch_time)
+    if wait_time > 0:
+        await asyncio.sleep(wait_time)
 
-        # Rate limit: 1 request per second
-        now = time.time()
-        wait_time = 1.0 - (now - _last_fetch_time)
-        if wait_time > 0:
-            await asyncio.sleep(wait_time)
+    # Try quantumnumbers first (batch fetch to maximize quota)
+    new_numbers = await _fetch_from_quantumnumbers(1024)
+    if new_numbers:
+        _number_cache.extend(new_numbers)
+        _source_cache.extend(["quantumnumbers"] * len(new_numbers))
+        _write_cache()
+        return True
 
-        # Try quantumnumbers first (batch fetch to maximize quota)
-        new_numbers = await _fetch_from_quantumnumbers(1024)
-        if new_numbers:
-            _number_cache.extend(new_numbers)
-            _source_cache.extend(["quantumnumbers"] * len(new_numbers))
-            _write_cache()
-            return True
+    # Fallback: fetch enough from random.org for this request + buffer
+    fallback_count = max(needed, 100)
+    new_numbers = await asyncio.to_thread(
+        _fetch_from_random_org_sync, fallback_count
+    )
+    if new_numbers:
+        _number_cache.extend(new_numbers)
+        _source_cache.extend(["random_org"] * len(new_numbers))
+        _write_cache()
+        return True
 
-        # Fallback: fetch enough from random.org for this request + buffer
-        fallback_count = max(needed, 100)
-        new_numbers = await asyncio.to_thread(
-            _fetch_from_random_org_sync, fallback_count
-        )
-        if new_numbers:
-            _number_cache.extend(new_numbers)
-            _source_cache.extend(["random_org"] * len(new_numbers))
-            _write_cache()
-            return True
-
-        return False
+    return False
 
 
 async def _pop_numbers(count: int) -> tuple[list[int], str]:
@@ -476,9 +532,11 @@ def roll_dice(
         JSON string with: narrative, source, rolls, bonuses, rolls_with_bonuses,
         total_raw, total_with_bonuses, dice_code, dice_notation, logged.
     """
-    result = asyncio.run(
-        _roll_dice_async(num_dice, dice_size, bonuses, modifier, description, log_path)
-    )
+    with _draw_lock, _cache_locked():
+        _sync_from_disk()
+        result = asyncio.run(
+            _roll_dice_async(num_dice, dice_size, bonuses, modifier, description, log_path)
+        )
     return json.dumps(result, indent=2, ensure_ascii=False)
 
 

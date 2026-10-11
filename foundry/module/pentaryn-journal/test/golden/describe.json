@@ -1,0 +1,361 @@
+{
+  "module": "pentaryn-journal",
+  "namespace": "journal",
+  "contract": "pentaryn-journal/api@1",
+  "flagScope": "pentaryn-journal",
+  "methods": [
+    {
+      "path": "personal",
+      "params": [
+        {
+          "name": "user",
+          "type": "User",
+          "optional": true,
+          "resolve": false,
+          "doc": "default: the calling user"
+        }
+      ],
+      "returns": "JournalEntry | null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "nullWhen": "the user has no personal journal yet",
+      "legacy": true,
+      "doc": "The user's personal journal (the oldest one flagged {kind: 'personal', userId})."
+    },
+    {
+      "path": "add",
+      "params": [
+        {
+          "name": "doc",
+          "type": "JournalEntry|JournalEntryPage|Item",
+          "resolve": false,
+          "doc": "the readable, one of its pages, or a pile item"
+        }
+      ],
+      "returns": "Promise<{ journal, pageIds, created, updated } | null>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "JournalEntryPage (created/updated in the caller's journal)",
+        "flags.pentaryn-journal.source"
+      ],
+      "nullWhen": "no bar for that document for the caller, no journal, nothing visible, too large",
+      "legacy": true,
+      "doc": "What the Add button does, as the calling user: copy what they can see (secrets stripped) into their journal and open it."
+    },
+    {
+      "path": "status",
+      "params": [
+        {
+          "name": "doc",
+          "type": "JournalEntry|JournalEntryPage|Item",
+          "resolve": false,
+          "doc": "the readable, one of its pages, or a pile item"
+        }
+      ],
+      "returns": "\"none\" | \"partial\" | \"saved\" | \"changed\" | null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "nullWhen": "no bar for that document for the caller",
+      "legacy": true,
+      "doc": "Where the document stands against the calling user's journal."
+    },
+    {
+      "path": "open",
+      "params": [
+        {
+          "name": "pageId",
+          "type": "string",
+          "optional": true,
+          "doc": "default: the last page"
+        }
+      ],
+      "returns": "Promise<JournalEntrySheet | null>",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "nullWhen": "the caller has no journal",
+      "legacy": true,
+      "doc": "Open the calling user's journal on a page."
+    },
+    {
+      "path": "shouldShowBar",
+      "params": [
+        {
+          "name": "entry",
+          "type": "JournalEntry",
+          "resolve": false
+        },
+        {
+          "name": "user",
+          "type": "User",
+          "optional": true,
+          "resolve": false,
+          "doc": "default: the calling user"
+        }
+      ],
+      "returns": "boolean",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Whether that user gets the bar on that journal (observer and not owner; a GM only with gmButton)."
+    },
+    {
+      "path": "ensure",
+      "params": [
+        {
+          "name": "user",
+          "type": "User",
+          "resolve": false
+        }
+      ],
+      "returns": "Promise<JournalEntry>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "JournalEntry (the user's journal)",
+        "Folder (Player Journals)",
+        "flags.pentaryn-journal.kind",
+        "flags.pentaryn-journal.userId"
+      ],
+      "legacy": true,
+      "doc": "GM: find or create that player's journal. Rejects with a plain Error: 'GM only' on a player client, 'no such user', or 'a GM does not get a journal through the relay'."
+    },
+    {
+      "path": "ensureAll",
+      "params": [],
+      "returns": "Promise<report() | null>",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "JournalEntry (one per player)",
+        "Folder (Player Journals)",
+        "JournalEntry.folder (strays moved in)"
+      ],
+      "nullWhen": "called by a player",
+      "legacy": true,
+      "doc": "GM: a journal for every player, and journals at the root moved into the folder. Returns report()."
+    },
+    {
+      "path": "report",
+      "params": [],
+      "returns": "{ folder, users: [{ user, userId, isGM, journalId, pages, duplicates }], atRoot }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Ungated (ids, names and counts only): every user's journal id, page count and duplicates; journals at the root."
+    },
+    {
+      "path": "inspect",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "user",
+          "type": "User|id|exact name|Actor|Token",
+          "resolve": false,
+          "doc": "never a substring; an Actor or Token (what the root game.pentaryn.inspect passes) means the player whose assigned character it is"
+        }
+      ],
+      "returns": "{ user, journal, duplicates, entries: [{ pageId, name, key, place, savedAt, updatedAt, hash }] } | null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "nullWhen": "the ref is an Actor or Token that is no player's assigned character",
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS"
+      ],
+      "since": "0.1.0",
+      "doc": "Read-only, plain JSON: that user's personal journal (or null), duplicate journal ids, and one row per page."
+    },
+    {
+      "path": "entriesOf",
+      "params": [
+        {
+          "name": "ref",
+          "kind": "user",
+          "type": "User|id|exact name",
+          "doc": "never a substring"
+        }
+      ],
+      "returns": "[{ pageId, name, key, place, savedAt, updatedAt, hash }]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS"
+      ],
+      "since": "0.1.0",
+      "doc": "One row per page of that user's journal ([] without one). key is the source uuid; null on a page they wrote."
+    },
+    {
+      "path": "statusFor",
+      "params": [
+        {
+          "name": "doc",
+          "type": "JournalEntry|JournalEntryPage|Item",
+          "resolve": false,
+          "doc": "the readable, one of its pages, or a pile item"
+        },
+        {
+          "name": "opts",
+          "type": "{ as? }",
+          "optional": true,
+          "doc": "as: a user ref (default the caller)"
+        }
+      ],
+      "returns": "\"none\" | \"partial\" | \"saved\" | \"changed\" | null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "nullWhen": "not a journal, a page, or an item in a pile",
+      "throws": [
+        "NOT_FOUND",
+        "AMBIGUOUS"
+      ],
+      "since": "0.1.0",
+      "doc": "status() for any user and without the bar's visibility rule: what they would have saved against their journal."
+    },
+    {
+      "path": "lastReason",
+      "params": [],
+      "returns": "\"no-target\" | \"no-journal\" | \"nothing-visible\" | \"too-large\" | null",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "since": "0.1.0",
+      "doc": "Why this client's last add() or status() returned null (null after a non-null result)."
+    },
+    {
+      "path": "selftest",
+      "params": [],
+      "returns": "{ ok, checks: [{ label, ok, detail }] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "doc": "Live smoke checks after a sync."
+    }
+  ],
+  "queries": [],
+  "settings": [
+    {
+      "key": "gmButton",
+      "scope": "world",
+      "type": "Boolean",
+      "default": false,
+      "doc": "Show the Add bar to GMs too (for testing the player flow). Read live; a change refreshes every open bar."
+    },
+    {
+      "key": "singlePageReadables",
+      "scope": "world",
+      "type": "Boolean",
+      "default": true,
+      "doc": "A one-page eye readable opens without its page list for players. Read live; a change re-applies to open journals."
+    },
+    {
+      "key": "folderName",
+      "scope": "world",
+      "type": "String",
+      "default": "Player Journals",
+      "doc": "The folder personal journals live in (hidden; set from the console). Empty → the localised default. Read live."
+    }
+  ],
+  "events": [],
+  "hooks": [
+    {
+      "name": "ready",
+      "label": "ready: ensureAll (active GM)"
+    },
+    {
+      "name": "createUser",
+      "label": "createUser: ensure (active GM)"
+    },
+    {
+      "name": "activateNote",
+      "label": "activateNote: remember the pin"
+    },
+    {
+      "name": "renderJournalEntrySheet",
+      "label": "renderJournalEntrySheet: bar, glow, single page"
+    },
+    {
+      "name": "renderImagePopout",
+      "label": "renderImagePopout: bar"
+    },
+    {
+      "name": "renderItemSheet5e",
+      "label": "renderItemSheet5e: bar"
+    },
+    {
+      "name": "closeJournalEntrySheet",
+      "label": "closeJournalEntrySheet: end the glow"
+    },
+    {
+      "name": "createJournalEntryPage",
+      "label": "createJournalEntryPage: refresh bars"
+    },
+    {
+      "name": "updateJournalEntryPage",
+      "label": "updateJournalEntryPage: refresh bars"
+    },
+    {
+      "name": "deleteJournalEntryPage",
+      "label": "deleteJournalEntryPage: refresh bars"
+    },
+    {
+      "name": "createJournalEntry",
+      "label": "createJournalEntry: refresh bars (own journal)"
+    },
+    {
+      "name": "deleteJournalEntry",
+      "label": "deleteJournalEntry: refresh bars (own journal)"
+    },
+    {
+      "name": "updateItem",
+      "label": "updateItem: refresh item bars"
+    }
+  ],
+  "patches": [],
+  "flags": {
+    "writes": [
+      "flags.pentaryn-journal.kind",
+      "flags.pentaryn-journal.userId",
+      "flags.pentaryn-journal.source",
+      "flags.pentaryn-journal.claims.ensure"
+    ],
+    "reads": [
+      "flags.item-piles.data"
+    ]
+  },
+  "errors": [
+    "NOT_GM",
+    "NO_GM",
+    "NOT_READY",
+    "NOT_FOUND",
+    "AMBIGUOUS",
+    "BAD_ARGS",
+    "REFUSED",
+    "CONFLICT",
+    "UNSUPPORTED",
+    "TIMEOUT",
+    "INTERNAL"
+  ]
+}

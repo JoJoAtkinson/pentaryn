@@ -122,7 +122,8 @@ rarity, `unidentified, shows as "…"`, attunement) or a creature's notable `Car
 potions, anything magic), a `Light:` placed with it (`dim 10 ft, #9fd3ff, pulse`), and up to 400
 characters of its description cut at a sentence; a description cut short ends
 `… (cut, full text: get-character <id>)` — if a neighbour matters to the design, read its full
-sheet. A stock monster this system built without a new
+sheet. A description prints once per actor: further unlinked tokens of that actor with the same text
+say `Description: same as t4 "Goblin"` (a token whose own copy differs prints its own). A stock monster this system built without a new
 biography prints no Description (the book's lore is not the builder's); its prompt and `Why:` say what it
 is. That is enough to design a neighbour without opening its sheet.
 
@@ -284,7 +285,8 @@ ending in *Choice* answers to the bare title as well).
   allows) and level ASIs (exactly 2 points, max +2 each). Over budget is `BAD_SPEC`.
 - **The dry run builds the character on an unsaved actor** — dnd5e's own advancement steps, nothing
   written — so it prints the real run's `sheet:` (HP, AC with the gear, spell DC, skills, languages,
-  feats, spell counts) and **every** `DEFAULTED (check)` and `WARN` line the real run will: a High
+  feats, spell counts, spell slots — a new character starts with every slot full, `slots 1st 4/4,
+  2nd 3/3` / `slots pact 2/2 (3rd)`) and **every** `DEFAULTED (check)` and `WARN` line the real run will: a High
   Elf's *Detect Magic not added: already granted (race:elf-high, always prepared)*, *4 spells prepared
   of 9 — 5 slot(s) open*, a default Fighting Style, the background's tool and languages, the starting
   focus. Verified line for line against the real run (§14 of the plan). Fix those in the spec before
@@ -394,7 +396,8 @@ secret. `note` is one line on **why** this choice — it is stamped into provena
    replacement exists.
 3. **Readback** — one line per prompt: what was created (type, name, id, position) and
    `markerDeleted=true|false`; under it the `patched:` list, a character's `sheet:` (abilities,
-   HP, AC, PB, spell DC, saves, skills, speed, darkvision, size, languages, feats, spell counts vs limits),
+   HP, AC, PB, spell DC, saves, skills, speed, darkvision, size, languages, feats, spell counts vs limits,
+   spell slots — full on a new character),
    `DEFAULTED (check):` and `WARN:` lines; then `remaining: <sceneId>=<n>`; then one line per
    encounter built into (`remaining: unknown …` when no replacement got as far as its scene — a stale call, a bad spec — never read that as "all built"): `E1: 325 XP from 5 creature(s) vs party 4 x L3: low 600 | moderate 900 |
    high 1600 → under low` (hostile npcs only — the party and neutral/friendly NPCs do not count). A

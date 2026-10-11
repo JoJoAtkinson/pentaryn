@@ -1,0 +1,74 @@
+{
+  "search": {
+    "query": "cover",
+    "books": [
+      "Player's Handbook",
+      "SRD 5.2 Rules"
+    ],
+    "total": 4,
+    "shown": 4,
+    "hits": [
+      {
+        "book": "Player's Handbook",
+        "journal": "Combat",
+        "page": "Repeated Cover",
+        "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docCombat.JournalEntryPage.pgRepeat",
+        "matches": 12,
+        "snippet": "cover is cover and cover means cover. cover is cover and cover means cover. cover is cover and cover means cover."
+      },
+      {
+        "book": "Player's Handbook",
+        "journal": "Combat",
+        "page": "Cover",
+        "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docCombat.JournalEntryPage.pgCover",
+        "matches": 1,
+        "snippet": "As explained in Combat later, a target behind Half Cover gains a bonus. Roll save dex 15 to avoid it. See for more."
+      },
+      {
+        "book": "Player's Handbook",
+        "journal": "Combat",
+        "page": "Cover Degrees",
+        "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docCombat.JournalEntryPage.pgCover2",
+        "matches": 1,
+        "snippet": "A target behind three-quarters cover is harder to hit."
+      },
+      {
+        "book": "SRD 5.2 Rules",
+        "journal": "SRD Combat",
+        "page": "Cover (SRD)",
+        "uuid": "Compendium.dnd5e.content24.JournalEntry.docSrd.JournalEntryPage.pgSrdCover",
+        "matches": 1,
+        "snippet": "Half cover gives +2 to AC."
+      }
+    ],
+    "warning": "skipped missing pack(s): dnd-dungeon-masters-guide.content"
+  },
+  "page": {
+    "book": "Player's Handbook",
+    "journal": "Appendix C: Rules Glossary",
+    "page": "Study",
+    "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docGloss.JournalEntryPage.pgStudy",
+    "text": "When you take the Study action you make an Intelligence check."
+  },
+  "monsters": {
+    "count": 1,
+    "shown": 1,
+    "monsters": [
+      {
+        "name": "Shield Guardian",
+        "cr": 7,
+        "size": "lg",
+        "type": "construct",
+        "uuid": "Compendium.dnd-monster-manual.actors.Actor.mmGuard",
+        "pack": "dnd-monster-manual.actors"
+      }
+    ]
+  },
+  "onList": {
+    "spell": "Fireball",
+    "uuid": "Compendium.dnd-players-handbook.spells.Item.spFireball",
+    "level": 3,
+    "list": "class:wizard",
+    "onList": true
+  }
+}

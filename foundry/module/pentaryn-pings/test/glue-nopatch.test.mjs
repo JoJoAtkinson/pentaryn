@@ -21,7 +21,7 @@ test("no handlePing to patch: one warning, socket path and readers still work", 
     ["log", "pentaryn-pings | ready — 1 ping(s) on record"],
   ]);
   assert.deepEqual(W.socket.map(([e]) => e), ["userActivity"]);
-  W.emitSocket("userActivity", PLAYER, { sceneId: BETA, ping: { x: 600, y: 500 } });
+  W.emitSocket("userActivity", PLAYER, { cursor: { x: 600, y: 500 }, ping: { scene: BETA } });
   mock.timers.tick(250);
   await drain();
   const sets = F.calls.filter(c => c.op === "settings.set" && c.id === `${MODULE}.log`);

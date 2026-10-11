@@ -13,6 +13,9 @@ The version stays 0.2.0 until the Wave 7 `module.json` restart batch.
 - **[declared C-2]** one console warning per page when Foundry's `setCursor` or
   `canvas.regions._placementContext` is missing after `canvasReady`.
 - `lang/en.json` nested under `PENTARYN_CURSORS` (same strings).
+- [declared] Kit 1.0.2 (wave 2, J10): a frozen `game.pentaryn` is no longer rebuilt; the `ready`
+  publish throws into Foundry's hook error report and leaves the root as it was. Nothing freezes the
+  root since the importer's keystone, so a live world sees no difference.
 
 ## 0.2.0
 

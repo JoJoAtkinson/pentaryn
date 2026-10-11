@@ -175,3 +175,208 @@ def test_extract_mcp_tool_literal_none_without_tool(tmp_path):
         _NO_TOOL_MODULE, path=tmp_path / "plain.py"
     )
     assert literal is None
+
+
+# ---------------------------------------------------------------------------
+# python-tooling-27: discovery cost and the startup skip report
+# ---------------------------------------------------------------------------
+
+import json
+from datetime import datetime, timezone
+
+import pytest
+
+_REPO_ROOT = _SERVER_PATH.parents[2]
+_DISCOVERY_GOLDEN = Path(__file__).with_name("fixtures") / "dnd_scripts_discovery.json"
+_BENIGN = "no MCP_TOOL"
+
+
+def _scanned(repo: Path) -> list[Path]:
+    scripts = repo / "scripts"
+    return [p for p in scripts.rglob("*.py")
+            if "__pycache__" not in p.parts and not p.name.startswith("_")
+            and (scripts / "mcp") not in p.parents]
+
+
+@pytest.mark.repo
+def test_discovery_unchanged_on_repo():
+    """Characterisation: the registered tools (name, script, in-process?) and the real
+    failures equal the golden; every other skip is the benign 'no MCP_TOOL', for exactly
+    the files that do not declare one. A new tool updates the golden in its own commit."""
+    result = server.discover_tools(repo_root=_REPO_ROOT)
+    want = json.loads(_DISCOVERY_GOLDEN.read_text(encoding="utf-8"))
+    tools = sorted([r.tool.name, str(r.script_path.relative_to(_REPO_ROOT)),
+                    r.handler is not None] for r in result.tools)
+    assert tools == want["tools"]
+    failures = sorted([str(p.relative_to(_REPO_ROOT)), why]
+                      for p, why in result.skipped if why != _BENIGN)
+    assert failures == want["failures"]
+    benign = {p for p, why in result.skipped if why == _BENIGN}
+    declaring = {r.script_path for r in result.tools} | {p for p, why in result.skipped
+                                                          if why != _BENIGN}
+    assert benign == {p.resolve() for p in _scanned(_REPO_ROOT)} - declaring
+
+
+@pytest.mark.repo
+def test_discovery_parses_only_files_that_mention_mcp(monkeypatch):
+    calls = []
+    real = server.ast.parse
+
+    def counting(source, *a, **kw):
+        calls.append(1)
+        return real(source, *a, **kw)
+
+    monkeypatch.setattr(server.ast, "parse", counting)
+    server.discover_tools(repo_root=_REPO_ROOT)
+    mentioning = sum("MCP_" in p.read_text(encoding="utf-8") for p in _scanned(_REPO_ROOT))
+    assert len(calls) <= mentioning
+
+
+_BROKEN_TOOL = 'MCP_TOOL = {"name": "broken", "argv": "not-a-list"}\n'
+
+
+def _startup_stderr(monkeypatch, capsys, repo: Path) -> str:
+    monkeypatch.setattr(server, "REPO_ROOT", repo)
+    monkeypatch.setattr(server, "_read_message", lambda: None)   # stdin EOF: serve 0 calls
+    monkeypatch.setattr(sys, "argv", ["server.py"])
+    assert server.main() == 0
+    return capsys.readouterr().err
+
+
+def test_startup_lists_real_failures_and_counts_the_rest(tmp_path, monkeypatch, capsys):
+    repo = _make_repo(tmp_path)
+    (repo / "scripts" / "helper.py").write_text(_NO_TOOL_MODULE, encoding="utf-8")
+    (repo / "scripts" / "broken.py").write_text(_BROKEN_TOOL, encoding="utf-8")
+    err = _startup_stderr(monkeypatch, capsys, repo)
+    assert "broken.py" in err and "argv must be a list" in err
+    assert "helper.py" not in err
+    assert "1 script(s) without an MCP_TOOL" in err
+
+
+def test_startup_skip_report_names_a_real_failure(tmp_path, monkeypatch, capsys):
+    """Characterisation (holds before and after): a broken tool reaches stderr."""
+    repo = _make_repo(tmp_path)
+    (repo / "scripts" / "broken.py").write_text(_BROKEN_TOOL, encoding="utf-8")
+    err = _startup_stderr(monkeypatch, capsys, repo)
+    assert "broken.py: invalid MCP_TOOL: broken: argv must be a list of strings" in err
+
+
+# ---------------------------------------------------------------------------
+# python-tooling-29: the per-call worker (payload pinned before the action log)
+# ---------------------------------------------------------------------------
+
+def _runner(handler, name="probe"):
+    return server.ToolRunner(
+        tool=server.Tool(name=name, description="", input_schema={}),
+        script_path=_SERVER_PATH, argv_template=(), bool_flags={}, value_flags={},
+        handler=handler)
+
+
+def _call(monkeypatch, runner, arguments, msg_id=7):
+    sent = []
+    monkeypatch.setattr(server, "_write_message", sent.append)
+    server._inflight_slots.acquire()
+    server._run_call_worker(msg_id, runner, arguments)
+    return sent
+
+
+def _boom(**kw):
+    raise ValueError("bad thing")
+
+
+def test_worker_payload_for_a_result(monkeypatch, tmp_path):
+    monkeypatch.delenv("PENTARYN_MCP_LOG_DIR", raising=False)
+    sent = _call(monkeypatch, _runner(lambda **k: "ok"), {"a": 1})
+    assert sent == [{"jsonrpc": "2.0", "id": 7,
+                     "result": {"content": [{"type": "text", "text": "ok"}]}}]
+
+
+def test_worker_payload_for_a_raising_handler(monkeypatch, capsys):
+    monkeypatch.delenv("PENTARYN_MCP_LOG_DIR", raising=False)
+    sent = _call(monkeypatch, _runner(_boom), {})
+    assert sent == [{"jsonrpc": "2.0", "id": 7,
+                     "error": {"code": -32000, "message": "bad thing"}}]
+    assert "tool 'probe' crashed" in capsys.readouterr().err
+
+
+# ---------------------------------------------------------------------------
+# python-tooling-29: the dnd-scripts action log
+# ---------------------------------------------------------------------------
+
+_LOG_KEYS = {"ts", "server", "tool", "mode", "args", "ok", "ms", "error"}
+
+
+def _log_lines(log_dir: Path) -> list[dict]:
+    files = sorted(log_dir.glob("dnd-scripts-*.jsonl"))
+    return [json.loads(l) for f in files for l in f.read_text(encoding="utf-8").splitlines()]
+
+
+def test_log_env_unset_writes_nothing(monkeypatch, tmp_path):
+    monkeypatch.delenv("PENTARYN_MCP_LOG_DIR", raising=False)
+    monkeypatch.chdir(tmp_path)
+    _call(monkeypatch, _runner(lambda **k: "ok"), {"a": 1})
+    assert list(tmp_path.rglob("*.jsonl")) == []
+
+
+def test_log_one_line_per_call_with_exactly_the_keys(monkeypatch, tmp_path):
+    monkeypatch.setenv("PENTARYN_MCP_LOG_DIR", str(tmp_path))
+    sent = _call(monkeypatch, _runner(lambda **k: "ok"), {"a": 1, "b": "x"})
+    assert sent[0]["result"]["content"][0]["text"] == "ok"     # payload unchanged
+    month = datetime.now(timezone.utc).strftime("%Y-%m")
+    assert [p.name for p in tmp_path.iterdir()] == [f"dnd-scripts-{month}.jsonl"]
+    [line] = _log_lines(tmp_path)
+    assert set(line) == _LOG_KEYS
+    assert line["server"] == "dnd-scripts" and line["tool"] == "probe"
+    assert line["mode"] == "inprocess" and line["args"] == {"a": 1, "b": "x"}
+    assert line["ok"] is True and line["error"] is None and isinstance(line["ms"], int)
+    assert line["ts"].endswith("Z")
+
+
+def test_log_records_a_failure_and_the_error_is_unchanged(monkeypatch, tmp_path):
+    monkeypatch.setenv("PENTARYN_MCP_LOG_DIR", str(tmp_path))
+    sent = _call(monkeypatch, _runner(_boom), {})
+    assert sent == [{"jsonrpc": "2.0", "id": 7,
+                     "error": {"code": -32000, "message": "bad thing"}}]
+    [line] = _log_lines(tmp_path)
+    assert (line["ok"], line["error"]) == (False, "bad thing")
+
+
+def test_log_subprocess_mode_and_truncated_args(monkeypatch, tmp_path):
+    monkeypatch.setenv("PENTARYN_MCP_LOG_DIR", str(tmp_path))
+    r = server.ToolRunner(tool=server.Tool(name="sub", description="", input_schema={}),
+                          script_path=_SERVER_PATH, argv_template=(), bool_flags={},
+                          value_flags={})
+    monkeypatch.setattr(server.ToolRunner, "run", lambda self, *, arguments: "done")
+    _call(monkeypatch, r, {"big": "x" * 5000, "obj": {"k": "y" * 3000}, "n": 3})
+    [line] = _log_lines(tmp_path)
+    assert line["mode"] == "subprocess"
+    assert line["args"]["n"] == 3
+    assert line["args"]["big"].startswith("x" * 2048) and "truncated 2952" in line["args"]["big"]
+    assert len(line["args"]["obj"]) < 2100 and line["args"]["obj"].startswith('{"k": "yyy')
+
+
+def test_log_dir_that_is_a_file_does_not_break_the_call(monkeypatch, tmp_path, capsys):
+    not_a_dir = tmp_path / "file"
+    not_a_dir.write_text("", encoding="utf-8")
+    monkeypatch.setenv("PENTARYN_MCP_LOG_DIR", str(not_a_dir))
+    sent = _call(monkeypatch, _runner(lambda **k: "ok"), {})
+    assert sent[0]["result"]["content"][0]["text"] == "ok"
+    assert "action log not written" in capsys.readouterr().err
+
+
+def test_log_month_is_taken_per_call(monkeypatch, tmp_path):
+    monkeypatch.setenv("PENTARYN_MCP_LOG_DIR", str(tmp_path))
+
+    class _DT(datetime):
+        stamp = datetime(2026, 10, 31, 23, 59, 59, tzinfo=timezone.utc)
+
+        @classmethod
+        def now(cls, tz=None):
+            return cls.stamp
+
+    monkeypatch.setattr(server, "datetime", _DT)
+    _call(monkeypatch, _runner(lambda **k: "ok"), {})
+    _DT.stamp = datetime(2026, 11, 1, 0, 0, 1, tzinfo=timezone.utc)
+    _call(monkeypatch, _runner(lambda **k: "ok"), {})
+    assert sorted(p.name for p in tmp_path.iterdir()) == [
+        "dnd-scripts-2026-10.jsonl", "dnd-scripts-2026-11.jsonl"]

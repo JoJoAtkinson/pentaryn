@@ -92,3 +92,6 @@ automation/notifier/*.app/
 .obsidian/workspace.json
 .obsidian/workspace-mobile.json
 .obsidian/**/*cache*
+
+# combat_actions_db.py's writer lock (python-tooling-44): an empty sidecar flock'd per write.
+foundry/actions.jsonl.lock

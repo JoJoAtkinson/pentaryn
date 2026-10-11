@@ -1,4 +1,4 @@
-// pentaryn kit 1.0.1 · vendored from foundry/lib/patch.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.0.2 · vendored from foundry/lib/patch.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * The only way a module changes someone else's prototype. Every patch is recorded with its
  * adjustments row id (foundry/adjustments.yml), which `describe().patches` reports.
@@ -13,6 +13,29 @@
  */
 
 const records = [];
+
+/**
+ * Record a patch and return its handle. `unwrap()` undoes the patch once and drops the record, so
+ * `patches()` stops listing it and a later wrap with the same marker patches again (J16). An `undo`
+ * that returns `false` could not restore (another wrapper sits on top): the patch is still live,
+ * so the record stays and a later `unwrap()` may try again.
+ */
+function recordPatch(row, undo) {
+  let done = false;
+  const handle = {
+    via: row.via,
+    unwrap() {
+      if (done) return;
+      if (undo() === false) return;
+      done = true;
+      const i = records.indexOf(rec);
+      if (i >= 0) records.splice(i, 1);
+    },
+  };
+  const rec = { ...row, handle };
+  records.push(rec);
+  return handle;
+}
 
 function warn(log, g, moduleId, msg) {
   if (log) log.warn(msg);
@@ -29,18 +52,15 @@ function warn(log, g, moduleId, msg) {
  *   the getter against the prototype). `make`'s `wrapped()` then calls the original getter.
  * @param {(wrapped: Function, ...args) => *} make
  * @param {{ via?: { name: string, register: (spec, make) => (Function|null) } | null, g?: object, log?: object }} [opts]
- * @returns {{ via: string|null, unwrap: () => void }}
+ * @returns {{ via: string|null, unwrap: () => void }}   unwrap() undoes the patch and drops its
+ *   record (a second call is a no-op), so the same marker can be wrapped again afterwards.
  */
 export function wrapMethod(moduleId, spec, make, { via = null, g = globalThis, log = null } = {}) {
   const { target, label = spec.name, name, marker, adjustments = null } = spec;
   const existing = records.find(r => r.moduleId === moduleId && r.marker === marker && r.target === target);
   if (existing) return existing.handle;
 
-  const record = (how, unwrap) => {
-    const handle = { via: how, unwrap };
-    records.push({ moduleId, label, name, marker, via: how, adjustments, target, handle });
-    return handle;
-  };
+  const record = (how, unwrap) => recordPatch({ moduleId, label, name, marker, via: how, adjustments, target }, unwrap);
 
   if (via) {
     const unwrap = via.register({ ...spec, moduleId, label }, make);
@@ -62,7 +82,8 @@ export function wrapMethod(moduleId, spec, make, { via = null, g = globalThis, l
   replacement[marker] = true;
   target[name] = replacement;
   return record("direct", () => {
-    if (target[name] === replacement) target[name] = original;
+    if (target[name] !== replacement) return false;
+    target[name] = original;
   });
 }
 
@@ -84,7 +105,7 @@ function wrapGetter(moduleId, spec, make, { g, log, record }) {
   const ownBefore = Object.getOwnPropertyDescriptor(target, name);
   Object.defineProperty(target, name, { ...desc, configurable: true, get });
   return record("direct", () => {
-    if (Object.getOwnPropertyDescriptor(target, name)?.get !== get) return;
+    if (Object.getOwnPropertyDescriptor(target, name)?.get !== get) return false;
     if (ownBefore) Object.defineProperty(target, name, ownBefore);
     else delete target[name];
   });
@@ -103,15 +124,10 @@ export function defineAccessor(moduleId, target, name, descriptor, { marker, adj
   }
   const before = Object.getOwnPropertyDescriptor(target, name);
   Object.defineProperty(target, name, { configurable: true, ...descriptor });
-  const handle = {
-    via: "direct",
-    unwrap() {
-      if (before) Object.defineProperty(target, name, before);
-      else delete target[name];
-    },
-  };
-  records.push({ moduleId, label, name, marker, via: "direct", adjustments, target, handle });
-  return handle;
+  return recordPatch({ moduleId, label, name, marker, via: "direct", adjustments, target }, () => {
+    if (before) Object.defineProperty(target, name, before);
+    else delete target[name];
+  });
 }
 
 /** Plain copies of every patch this copy of the kit applied: `{ moduleId, label, name, marker, via, adjustments }`. */

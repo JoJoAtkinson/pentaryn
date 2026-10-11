@@ -322,14 +322,13 @@ caller. `as` is a user ref: a GM sees everything; for a player, GM-only state (t
 `note`, session state such as `lastSeen`) is omitted, and actor stats need `OBSERVER` on that actor.
 Each module's README "API" section lists which fields are GM-only.
 
-**`publishNamespace(ns, api, { moduleId, when, alias, realiasTick })`**:
+**`publishNamespace(ns, api, { moduleId, when, alias })`**:
 
 | Option | Default | Meaning |
 |---|---|---|
 | `moduleId` | — | sets `game.modules.get(id).api` and fires `<id>.ready` + `pentaryn.ready` |
 | `when` | `"ready"` | recorded, not enforced: `"ready:gm"` for a role-gated publish in the sync ready body, `"ready:gm:wasm"` for a late one (C50) |
 | `alias` | `false` | publish a second name only — no `module.api`, no ready hooks |
-| `realiasTick` | `true` | re-alias one tick later if the importer displaced the root (goes in Stage 5) |
 
 Alias example — senses publishes its chain helpers under their own name as well:
 

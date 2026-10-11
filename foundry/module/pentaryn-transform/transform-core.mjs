@@ -55,6 +55,11 @@ const consumptionTargets = a => a?.consumption?.targets ?? [];
 
 /* ── shaping the form ────────────────────────────────────────────────────── */
 
+/** The Circle of the Stars "Starry Form" feature: by identifier, else by name (starry.mjs starryItem). */
+export function isStarryFormData(item) {
+  return item?.system?.identifier === "starry-form" || item?.name === "Starry Form";
+}
+
 /**
  * Why an item of the host should not come along into the Wild Shape form, or null to keep it.
  *
@@ -68,7 +73,7 @@ const consumptionTargets = a => a?.consumption?.targets ?? [];
  *
  * @param {object} item
  * @param {{ wildShapeIds: Set<string>|string[], keepWildShape?: boolean }} ctx
- * @returns {"wildshape"|"spends-wildshape"|"spends-slots"|"species"|"no-spellcasting"|null}
+ * @returns {"wildshape"|"spends-wildshape"|"starry-form"|"spends-slots"|"species"|"no-spellcasting"|null}
  */
 export function stripReason(item, { wildShapeIds = [], keepWildShape = false } = {}) {
   if (item?.type !== "feat") return null;
@@ -81,6 +86,10 @@ export function stripReason(item, { wildShapeIds = [], keepWildShape = false } =
       if (t?.type === "itemUses" && t.target && ws.has(t.target)) return "spends-wildshape";
     }
   }
+  // Starry Form is taken "rather than shape-shifting" (PHB): never in a beast form, whatever its
+  // "Consume Wild Shape" target says (PT3-4 — a target that is not this druid's Wild Shape id let
+  // it through, a raw HUD button whose consume could not find its item).
+  if (isStarryFormData(item)) return "starry-form";
   for (const a of acts) {
     if (consumptionTargets(a).some(t => t?.type === "spellSlots")) return "spends-slots";
   }
@@ -383,15 +392,17 @@ export function formSummary(f) {
  * @param {{ kind: "weaponSet"|"item"|"split"|"other", id?: string, ids?: string[] }[]} slots
  *        Argon's buttons in order; `item`/`split` carry the item ids they show
  * @param {{ wildShapeId: string|null, revertIds: string[], shifted: boolean, revertId: string|null,
- *           hasWildShape: boolean, starryId?: string|null }} ctx
+ *           hasWildShape: boolean, starryId?: string|null, ownReturn?: boolean }} ctx
  *        wildShapeId: the Wild Shape item on THIS actor (null when shifted, it is stripped);
- *        revertId: the revert item to show while shifted; hasWildShape: whether the
+ *        revertId: the revert item to show while shifted (none: a synthesized Return,
+ *        `{ revert: true }`, takes its place when `ownReturn` — a Wild Shape form, not a
+ *        Polymorph spell); hasWildShape: whether the
  *        original can Wild Shape at all; starryId: the Starry Form item, replaced by the module's
  *        own Starry Form button right after Wild Shape (normal form only)
- * @returns {({ keep: number } | { item: string, highlight?: boolean } | { wildshape: true } | { starry: true })[]}
+ * @returns {({ keep: number } | { item: string, highlight?: boolean } | { revert: true, highlight: true } | { wildshape: true } | { starry: true })[]}
  *          keep = index into `slots`; item = a fresh full-size button for that item id
  */
-export function planBonusBar(slots, { wildShapeId = null, revertIds = [], shifted = false, revertId = null, hasWildShape = false, starryId = null } = {}) {
+export function planBonusBar(slots, { wildShapeId = null, revertIds = [], shifted = false, revertId = null, hasWildShape = false, starryId = null, ownReturn = true } = {}) {
   const reverts = new Set(revertIds);
   const ours = id => id === wildShapeId || reverts.has(id) || (!!starryId && id === starryId);
   const out = [];
@@ -429,7 +440,9 @@ export function planBonusBar(slots, { wildShapeId = null, revertIds = [], shifte
     return out;
   }
   const front = [];
+  // No hand-made revert item on this form: a Return button of the module's own (PT3-3).
   if (revertId) front.push({ item: revertId, highlight: true });
+  else if (ownReturn) front.push({ revert: true, highlight: true });
   if (hasWildShape) front.push({ wildshape: true });
   const ws = slots.findIndex(s => s.kind === "weaponSet");
   const at = ws < 0 ? 0 : out.findIndex(o => o.keep === ws) + 1;

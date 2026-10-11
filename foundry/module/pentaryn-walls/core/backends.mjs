@@ -6,11 +6,12 @@
  * produces byte-identical mutations for the same input; `compare()` is what decides that,
  * and `test/run.mjs --backend=<name>` runs all fixtures against it.
  *
- * A backend is `{name, run(walls, opts) -> result, available() -> bool}` where `result` has
- * the same shape `runEngine` returns.
+ * A backend is `{name, run(walls, opts) -> result, available() -> bool, accepts?(walls) -> bool}`
+ * where `result` has the same shape `runEngine` returns. `accepts` is optional: a backend that
+ * returns false for some walls (wasm on a Levels scene) is passed over for js by the glue.
  */
 
-import {runEngine} from "./wall-engine.mjs";
+import {runEngine, stampOf, wallCategory} from "./engine.mjs";
 
 const REGISTRY = new Map();
 
@@ -27,46 +28,39 @@ export const available = () => list().filter(b => b.available());
 
 register({name: "js", run: runEngine});
 
-/* -------------------------------------------- */
-/*  WASM backend (not yet built)                */
-/* -------------------------------------------- */
-
-/**
- * Placeholder so the toggle exists before the implementation does. `available()` is false
- * until a compiled module is registered, and every consumer checks it — so a missing WASM
- * build degrades to "only js listed", never to a broken run.
- *
- * To fill this in, call `register({name: "wasm", run, available})` from the glue that
- * instantiates the compiled module. Nothing else in the codebase needs to change.
- */
-export const WASM_STATUS = Object.freeze({
-  built: false,
-  reason: "no compiled module yet — see README §Compiled backend"
-});
+// The compiled backend is registered by backend-wasm.mjs (the adapter that loads the .wasm).
+// Until its bytes load, or when they fail to, it reports itself unavailable and the glue's
+// pickBackend falls back to "js".
 
 /* -------------------------------------------- */
 /*  Comparison                                  */
 /* -------------------------------------------- */
 
-/** Canonical, order-independent form of a result's mutations, for exact comparison. */
-export function canonical(result) {
+/**
+ * Canonical, order-independent form of a result's mutations, for exact comparison: coordinates,
+ * wall kind and refusal positions. `compare()` gates on exactly these three.
+ *
+ * `{extended: true}` adds two diagnostic fields compare() does NOT gate on (senses-walls-cursors-3):
+ * `createLevels` (each create's segment with its levels) and `updateRules` (each update's id with
+ * the rule stamped on it). The wasm backend stamps every update "X1" — it does not reproduce the
+ * rule, nor the kind/sources flags or the log (see backend-wasm.mjs) — so `updateRules` can differ
+ * between backends while the geometry agrees.
+ */
+export function canonical(result, {extended = false} = {}) {
   const seg = c => {
     const [a, b, x, y] = c;
     return (a < x || (a === x && b < y)) ? `${a},${b},${x},${y}` : `${x},${y},${a},${b}`;
   };
-  const kind = c => {
-    const {light = 20, sight = 20, sound = 20, move = 20} = c;
-    if (sight === 0 && light + sound + move === 0) return "blank";
-    if (sight === 0) return "invisible";
-    if (sight === 10) return "terrain";
-    if (sight === 30 || sight === 40) return "window";
-    if (move === 0) return "ethereal";
-    return "solid";
-  };
-  return {
-    creates: result.creates.map(c => `${seg(c.c)}:${kind(c)}`).sort(),
+  const out = {
+    creates: result.creates.map(c => `${seg(c.c)}:${wallCategory(c)}`).sort(),
     updates: result.updates.map(u => `${u._id}:${seg(u.c)}`).sort(),
     refusals: result.refusals.map(r => `${r.at[0]},${r.at[1]}`).sort()
+  };
+  if (!extended) return out;
+  return {
+    ...out,
+    createLevels: result.creates.map(c => `${seg(c.c)}:${JSON.stringify([...(c.levels ?? [])].sort())}`).sort(),
+    updateRules: result.updates.map(u => `${u._id}:${stampOf(u).rule ?? null}`).sort()
   };
 }
 

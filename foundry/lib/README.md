@@ -32,7 +32,7 @@ Bump `kit.json` `version`, `errors.mjs` `KIT_VERSION` and every header together.
 | `resolve.mjs` | `resolveRef`, `refOf`, `toIdSet`, `withRef` | exact match only, explicit scene scope |
 | `api.mjs` | `buildApi`, `describe`, `surfaceOf`, `maxDepth`, `toPlain` | drift and reserved names throw at load; a `ref` row resolves per call with that call's `opts.sceneId`/`opts.base`; a write row returns `fail()` on an unresolvable ref; an `unlisted` table is published as a frozen **copy** — the caller's objects are never frozen (1.0.1) |
 | `queries.mjs` | `guarded`, `relayed`, `registerQueries`, `queryNameOf`, `queryGM` | `CONFIG.queries` from `query: true` rows; `guarded(fn, { sender: "any" })` and `fn(data, ctx)`; `relayed` = any sender, active-GM receiver (`relay: true` rows); `row.queryName` when the query name ≠ the row path (1.0.1) |
-| `publish.mjs` | `publishNamespace`, `installRoot`, `apiOf`, `publishedOf` | `module.api` canonical; the frozen-root guard lives only here |
+| `publish.mjs` | `publishNamespace`, `installRoot`, `apiOf`, `publishedOf` | `module.api` canonical; assigns into the plain `game.pentaryn` (no frozen-root guard, no re-alias tick since 1.0.2) |
 | `election.mjs` | `isActiveGM`, `isAnyGM`, `isActiveGMOrLoneGM`, `pickRunner`, `claimDocument`, `claimMessage` | distinct truth tables — keep each call site's |
 | `patch.mjs` | `wrapMethod`, `defineAccessor`, `patches`, `unwrapAll` | names no third-party package; `kind: "getter"` wraps an accessor such as `Token#isVisible` (1.0.1) |
 | `patch-libwrapper.mjs` | `libWrapperRoute` | `packages: [lib-wrapper]` — vendored only where used |
@@ -54,3 +54,8 @@ a module's hook registration from module scope to `setup` is a behaviour change.
 K3 `guarded` ctx + `sender: "any"`, K4 `relayed`, K5 unlisted copies, K6 multi-key `serialStore`,
 K7 guard level, K8 `queryName`, and the fork contract helpers. No module had a lock yet, so nothing
 was re-vendored. K2 (top-level-only reserved names) waits for Joe's decision D1.
+1.0.2 (wave 2 opening bump, 2026-10-11; wave-1 report J6, J10, J16) — the test stub defines
+`globalThis.logger` and records it on `F.logged` (J6); a `wrapMethod`/`defineAccessor` handle's
+`unwrap()` drops the kit's record, so the same marker can wrap again (J16, declared); `publish.mjs`
+loses the COMPAT frozen-root guard and `realiasTick` — a frozen `game.pentaryn` now throws (J10,
+declared). Re-vendored into every module with a lock.

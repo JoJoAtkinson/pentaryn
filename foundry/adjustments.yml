@@ -112,7 +112,7 @@ adjustments:
   - id: itempiles-corpses
     packages: [item-piles, itempilesdnd5e]
     modules: [pentaryn-dropbin]
-    files: [foundry/module/pentaryn-dropbin/corpses.mjs, foundry/module/pentaryn-dropbin/dropbin.mjs, foundry/module/pentaryn-dropbin/loot.mjs]
+    files: [foundry/module/pentaryn-dropbin/corpses.mjs, foundry/module/pentaryn-dropbin/dropbin.mjs, foundry/module/pentaryn-dropbin/loot.mjs, foundry/module/pentaryn-dropbin/piles.mjs]
     markers: ["itempiles"]
     what: turns a 0-HP NPC into a pile, the corpse eye, Loot all
     why: Item Piles has no corpse / loot-all flow
@@ -123,7 +123,7 @@ adjustments:
   - id: itempiles-attunement-repair
     packages: [item-piles]
     modules: [pentaryn-attunement]
-    files: [foundry/module/pentaryn-attunement/attunement.mjs]
+    files: [foundry/module/pentaryn-attunement/actor-adapter.mjs]
     markers: ["isValidItemPile"]
     what: repairs attunement on items that arrive already attuned (an Item Piles Take, a sheet drop, an import); skips pile actors themselves
     why: dnd5e attunement is not re-checked when an item moves actors
@@ -134,7 +134,7 @@ adjustments:
   - id: dnd5e-armor-proficiencies
     packages: [dnd5e]
     modules: [pentaryn-attunement]
-    files: [foundry/module/pentaryn-attunement/attunement.mjs]
+    files: [foundry/module/pentaryn-attunement/attunement-core.mjs, foundry/module/pentaryn-attunement/actor-adapter.mjs]
     markers: ["armorProficienciesMap"]
     what: patches CONFIG.DND5E.armorProficienciesMap, which covers only natural/clothing/light/medium/heavy/shield
     why: armour types outside the map read as non-proficient
@@ -903,12 +903,12 @@ adjustments:
     retire_class: safe
     check: make foundry-combat-check
 
-  - id: dnd5e-item-tooltip-anchor
+  - id: attunement-item-tooltip-anchor
     packages: [dnd5e]
     modules: [pentaryn-attunement]
-    files: [foundry/module/pentaryn-attunement/attunement.mjs]
-    markers: ["_positionItemTooltip"]
-    what: Tooltips5e#_positionItemTooltip is wrapped on ready to return when game.tooltip.element is null (the hovered row was re-rendered away before the deferred positioning frame)
+    files: [foundry/module/pentaryn-attunement/actor-adapter.mjs]
+    markers: ["_positionItemTooltip", "pentarynGuarded"]
+    what: Tooltips5e#_positionItemTooltip is wrapped through wrapMethod (marker pentarynGuarded) on ready to return when game.tooltip.element is null (the hovered row was re-rendered away before the deferred positioning frame)
     why: dnd5e 6.0.6 calls game.tooltip._setAnchor a frame after the tooltip content loads; a sheet re-render in between (take, attune, light) leaves no anchor and logged "Cannot read properties of null (reading 'getBoundingClientRect')" on the player tab (Area 8 re-run)
     native_when: dnd5e checks game.tooltip.element (or the tooltip's active state) before positioning an item tooltip
     retire_class: safe
@@ -1001,3 +1001,103 @@ adjustments:
     native_when: core sets a cursor per scene tool, or exposes a public placement-in-progress flag and a cursor refresh
     retire_class: guarded
     check: make foundry-cursors-check
+
+
+  - id: movement-drag-constrain-ghost
+    packages: [core, dnd5e]
+    modules: [pentaryn-movement]
+    files: [foundry/module/pentaryn-movement/ghost.mjs]
+    markers: ["_getDragConstrainOptions", "__pentarynMovement"]
+    what: wraps Token#_getDragConstrainOptions (dnd5e Token5e overrides it the same way) to add ignoreWalls / ignoreCost / ignoreTokens to a player's drag constrain options while ghost is in effect for that token
+    why: core offers the unconstrained-movement constrain options only to the GM; players have no permission or option for it
+    native_when: core (or dnd5e) offers players an unconstrained-movement permission or a per-user constrain option
+    retire_class: guarded
+    check: make foundry-movement-check
+
+  - id: movement-keyboard-constrain-ghost
+    packages: [core, dnd5e]
+    modules: [pentaryn-movement]
+    files: [foundry/module/pentaryn-movement/ghost.mjs]
+    markers: ["_prepareKeyboardMovementUpdates", "__pentarynMovement"]
+    what: wraps TokenLayer#_prepareKeyboardMovementUpdates and adds the same three flags to result[1].movement[tokenId].constrainOptions (a private result shape) for ghosting tokens, so arrow keys ghost too
+    why: keyboard movement builds its own constrain options and never calls _getDragConstrainOptions
+    native_when: core offers players an unconstrained-movement permission, or keyboard movement reads the drag constrain options
+    retire_class: guarded
+    check: make foundry-movement-check
+
+  - id: movement-layer-sort-owned
+    packages: [core]
+    modules: [pentaryn-movement]
+    files: [foundry/module/pentaryn-movement/ghost.mjs]
+    markers: ["sortChildren", "_lastSortedIndex"]
+    what: replaces canvas.tokens.objects.sortChildren (an instance property, per canvas draw) with a copy of core's placeables sort (elevation, sort, zIndex, _lastSortedIndex) plus an owned rank between elevation and sort, so a player's own token takes the click
+    why: core has no hook or option for the token layer's interaction order; owned-on-top is client-only
+    native_when: core exposes a token sort hook or an owned-on-top option
+    retire_class: guarded
+    check: make foundry-movement-check
+
+  - id: itempiles-journal-preview-copy
+    packages: [item-piles]
+    modules: [pentaryn-journal]
+    files: [foundry/module/pentaryn-journal/sources-adapter.mjs]
+    markers: ["pileData", "canInspectItems"]
+    what: reads flags.item-piles.data (enabled, canInspectItems) to find the real pile item behind the unsaved, unparented copy Item Piles shows a non-owner (renderReadOnlyItemPreview), so the journal bar's Add saves the pile's item, not the copy
+    why: Item Piles gives a player only a read-only preview copy of a pile item, with no link back to its source
+    native_when: Item Piles' preview copy carries its source item's uuid (or the preview opens the real item read-only)
+    retire_class: guarded
+    check: make foundry-journal-check; live, as a player, open an item in an eye pile — the bar shows, and Add saves the pile's real item
+
+  - id: socketlib-dropbin-relay
+    packages: [socketlib]
+    modules: [pentaryn-dropbin]
+    files: [foundry/module/pentaryn-dropbin/socketlib-adapter.mjs]
+    markers: ["registerModule", "executeAsGM"]
+    what: registers the module with socketlib and relays a player's drop-ledger entry to a GM client with executeAsGM("record", entry)
+    why: world settings and file uploads are GM-only, so a player's client cannot write the ledger itself
+    native_when: never needed upstream — core CONFIG.queries can replace it (a module change, not a package release)
+    retire_class: guarded
+    check: make foundry-dropbin-check
+
+  - id: itempiles-dropbin-nan-attunement
+    packages: [item-piles, dnd5e]
+    modules: [pentaryn-dropbin]
+    files: [foundry/module/pentaryn-dropbin/itempiles.mjs]
+    markers: ["ATTUNEMENT_PACKS", "repairAttunement"]
+    what: a preCreateItem listener (armed at ready) replaces a null or "NaN" system.attunement with the value from the equipment compendium indexes, looked up by name
+    why: Item Piles' item transfer writes system.attunement as null or "NaN", which dnd5e rejects or shows wrong
+    native_when: Item Piles addItems preserves system.attunement
+    retire_class: guarded
+    check: make foundry-dropbin-check
+
+  - id: itempiles-dropbin-container-locks
+    packages: [item-piles]
+    modules: [pentaryn-dropbin]
+    files: [foundry/module/pentaryn-dropbin/itempiles.mjs]
+    markers: ["item-piles-preRenderInterface", "item-piles-preRenderActorSheet"]
+    what: refuses a locked container's interface and its raw actor sheet (the Ctrl-click bypass) for players, and says *Locked* on every path, including the canvas rattle
+    why: Item Piles honours `locked` only on a canvas double-click; the Actors sidebar, the API and the force-default-sheet keybind open a locked pile
+    native_when: Item Piles enforces `locked` in renderItemPileInterface and on the default-sheet bypass
+    retire_class: guarded
+    check: make foundry-dropbin-check
+
+  - id: itempiles-dropbin-directory-hiding
+    packages: [item-piles]
+    modules: [pentaryn-dropbin]
+    files: [foundry/module/pentaryn-dropbin/itempiles.mjs]
+    markers: ["renderActorDirectory"]
+    what: hides pile actors' rows from a player's Actors sidebar at render time (GM untouched)
+    why: pile actors must be OBSERVER for players or Item Piles cannot render them, which lists every chest and cache by name in the sidebar
+    native_when: Item Piles (or core) can hide a pile actor from the directory without lowering its ownership
+    retire_class: guarded
+    check: make foundry-dropbin-check
+
+  - id: itempiles-dropbin-svelte-store
+    packages: [item-piles]
+    modules: [pentaryn-dropbin]
+    files: [foundry/module/pentaryn-dropbin/piles.mjs]
+    markers: ["appShell"]
+    what: reads Item Piles' private Svelte state (app.svelte.appShell.$$.ctx) to follow the loot window's Change-recipient choice for Loot all; fails soft (null) when the shape changes
+    why: Item Piles exposes no public accessor for the interface's current recipient
+    native_when: Item Piles exposes the interface's recipient (or a Loot all action) through its API
+    retire_class: never
+    check: make foundry-dropbin-check; live, open a pile, Change recipient, Loot all goes to the new recipient

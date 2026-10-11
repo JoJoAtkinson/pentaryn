@@ -66,6 +66,23 @@ export async function setupWorld({ player = false, seed = [], layer = "foundry",
     for (const [e, fn] of W.socket) if (e === event) fn(...args);
   };
 
+  /*
+   * SF6  A remote ping as core v14 delivers it to this client. The sender's Canvas#ping broadcasts
+   *      `{cursor: origin, ping: {scene, pull, style, zoom}}` (client/canvas/board.mjs:1879-1884);
+   *      core's own userActivity listener, registered at game setup and so ahead of any module's,
+   *      draws it through ControlsLayer#handlePing(user, cursor, ping) only when this client views
+   *      that scene (client/documents/collections/users.mjs:163, 190-191). Then the module's
+   *      listener sees the same payload.
+   */
+  W.corePing = (userId, cursor, scene, extra = {}) => {
+    const data = { cursor, ping: { scene, pull: false, style: "pulse", zoom: 1, ...extra } };
+    const result = scene === F.canvas.scene?.id
+      ? new ControlsLayer().handlePing(F.game.users.get(userId), data.cursor, data.ping)
+      : undefined;
+    W.emitSocket("userActivity", userId, data);
+    return result;
+  };
+
   /* ControlsLayer stub (SF4) */
   class ControlsLayer {
     async handlePing(user, position, options) {

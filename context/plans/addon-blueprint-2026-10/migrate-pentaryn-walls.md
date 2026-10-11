@@ -1,7 +1,7 @@
 ---
 title: Migration guide — pentaryn-walls to the addon blueprint
 status: plan
-last_modified: 2026-10-10
+last_modified: 2026-10-11
 tags: [foundry, modules, blueprint, plan, migration, walls]
 ---
 
@@ -438,10 +438,47 @@ walls half of **-10** (8a).
 
 | | |
 |---|---|
-| Live score after the migration | not migrated yet — **71.4 % (30/42)** today (wave start in [`wave-1-baseline.md`](wave-1-baseline.md)), `conformance.py --module walls --markdown`, 2026-10-11 |
-| Date | 2026-10-11 (wave 1: checkpoint only (wave 1 Stage 0 lane); the refactor is workflow 2) |
-| Commits (Joe-approved) | characterisation: `61f4a32` (kit), `a8c5c28` (checkpoint) · refactor: none yet · other: `30963c4` (README, senses-walls-cursors-8), `c1a80a5` (manual corpus CLI throws instead of `process.exit`, C43; harness only), `4f7b5a8` (plan path comment) |
-| Declared changes handed to the live-test workflow | none (KNOWN pins open: -2 wasm levels as 2 todos, -1 `undo()`) |
-| `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) |
-| Adjustments rows appended to `adjustments-batch.md` | no (step not reached) |
-| Still failing, and why | C07 C11 C12 C21 C22 C24 C27 C28 C40 C41 C44 C45 — the guide's steps 2+ have not run. Frozen tests: the checkpoint's assertions and goldens are untouched since the checkpoint (see wave-1-report §Frozen tests). |
+| Live score after the migration | **95.6 % (43/45)** in the code phase, `conformance.py --module walls --markdown`, 2026-10-11 (wave start 71.4 % (30/42)). Not synced or live-tested: walls is switched off in Joe's world. |
+| Date | 2026-10-11 (wave 2, steps 2–10 code phase; step 11's live check deferred until Joe re-enables walls) |
+| Commits | characterisation: `61f4a32` (kit), `a8c5c28` (checkpoint), kit 1.0.2 `bf640386`, J10 `3d044626` · structure: step 2 `de35515f`; step 3 `3d0daef9` (-4), `9b37264b` (-7 [declared]; red on its own new test, fixed by `28dd5667`), `e2520d57` (-8 code half), `36e3abbd` (barrel by name, C05); step 4 `eeeeaf6a`; step 5 `d06f77ab` [declared] W-6; step 6 `5224038e`; step 7 `d3a07b62` · standalone: -6 `c77d1e21`, -5 `cb3ce91f`, -8 recipe test `d19cb73d` · declared fixes: 8a -1 `01de2ae2`, 8c -2 `ab859b4c`, 8b -9 `0ae5b96d`, 8d -37 `f06a6b90`; 8e -33 `08c498bb`; 8f -3 `1d2d196b` · review follow-ups: Levels scene reports js `3ea5249b` [declared], describe() both-scope reads `b24f6db5` · docs: step 9 `49f1f2eb`, `e6ffa3c7` · step 10 (code that may land before the batch): dual-scope read `90efd463`, dormant migration `048eca8d` |
+| Declared changes handed to the live-test workflow | W-1 (`01de2ae2`), W-2 (`0ae5b96d`), W-3 (`ab859b4c`; the card and `analyze()` say `js` on a Levels scene, `3ea5249b`), W-4 (`f06a6b90`, plus the bench wording `9b37264b`), W-6 (`d06f77ab`). W-5 and W-7 wait for the Wave 7 batch. |
+| `module.json` edits appended to `wave7-restart-batch.md` | returned to the integrator (shared file): [`wave-2-report.md`](wave-2-report.md) walls "Integrator handoff" — the Batch 1 walls row's code column, and a **replacement** for the wave-1 `description` ledger row (target `context/foundry/walls.md`, "fixture corpus" wording), so the batch holds one instruction per edit |
+| Adjustments rows appended to `adjustments-batch.md` | none needed (no patch, no third-party package) |
+| Still failing, and why | **C07** (`flags.pentaryn` and the flag-scope DATA migration: Wave 7 batch) and **C51** (literal English labels: the key switch needs `languages` and an edit to the frozen glue (a) register pin, wave-2-report W2-WALLS-1). Warnings: C02 (minimum 13, Wave 7), C10 (`core/engine.mjs` 1122 > 600, by design §4), C36 (the 8 literal-English strings, Wave 7). |
+| Wave 2 close (code phase) | Unchanged **95.6 %** after integration (fails C07, C51). At `f8fb7377`: 200 green + 1 todo (the Wave 7 `module.json` cite, `edc7489a`). Coverage, module files (lines / branches / funcs): 94.7 / 86.1 / 92.9 → 97.5 / 92.4 / 96.8. Sync and live check wait on W2-L1 ([`wave-2-live-plan.md`](wave-2-live-plan.md) §9). Record: [`wave-2-report.md`](wave-2-report.md) §Per module |
+| Live status (Joe, 2026-10-11, W2-L1) | Migrated in wave 2, never live-tested, off in the world. Walls stays switched off on purpose: do not sync it or live-check it. |
+
+**Departures from the steps above (all recorded in the commit messages).**
+
+- Step 1's `walls-core.mjs` barrel was replaced at the checkpoint by `test/fixtures/engine.mjs`;
+  step 2 created the barrel and repointed that fixture (import paths only).
+- The barrel imports then exports by name, not `export … from`: the scorer's import graph does
+  not follow re-exports (C05 read `core/*` as unreachable).
+- 8f: `canonical()` keeps its shape; the drift fields come from `canonical(r, {extended: true})`.
+  Adding them to the default shape would have edited two frozen tests (core.test's canonical pin
+  and engine-golden's js-vs-wasm agreement).
+- Step 7/10: the prepared lang file waits as `test/fixtures/lang-en.wave7.json`, not
+  `lang/en.json`: a lang file nothing references fails C35 (0 % coverage).
+- Step 10 split: what can land before the restart did (stamps read under both scopes; the
+  migration planner and runner, dormant — `migrations.mjs` is a feature whose install only
+  exposes the runner). What the batch must do, in one commit with `module.json`:
+  1. `git mv test/fixtures/lang-en.wave7.json lang/en.json`; `SETTINGS`/`KEYBINDINGS` names,
+     hints and choices become the `PENTARYN_WALLS.*` keys; the six toasts go through
+     `_loc("PENTARYN_WALLS.notify.…", data)`; flip the frozen glue (a) register pin and the
+     `i18n.test.mjs` KNOWN case (needs Joe's yes, W2-WALLS-1).
+  2. `settings.mjs`: a hidden `{ key: "migrationVersion", store: true, type: Number, default: 0 }`
+     row; the entry's `onReady` calls `ctx.exposed.migrateFlagScope({ version: { get: () =>
+     setting("migrationVersion"), set: v => game.settings.set(MODULE, "migrationVersion", v) },
+     log })` behind `isActiveGM()` after the publish (awaited, errors logged).
+  3. `core/engine.mjs` `FLAG_SCOPE = "pentaryn-walls"` (new stamps), the manifest's `flagScope` and
+     `flags.writes` paths (`flags.reads` already lists both scopes, `b24f6db5`), the `api.test.mjs`
+     flags case and the README data table; re-pin `describe.json`. In the **same [declared]
+     commit**, flip the frozen pin `test/core.test.mjs:14`
+     `assert.equal(engine.FLAG_SCOPE, "wall-autocomplete")` to `"pentaryn-walls"`. engine-golden
+     and backend-drift read `flags["wall-autocomplete"]` literally in frozen tests, so
+     `golden/engine.json` and `golden/backend-drift.json` change in that commit too. Checked on a
+     scratch copy at `b24f6db5`: the scope flip alone leaves exactly those three red (core.test
+     "the engine, registry and wasm adapter load with no Foundry globals", engine.json,
+     backend-drift.json; 196 pass, 3 fail).
+- Live check (step 11) is not run: walls is off in Joe's world on purpose (W2-L1, Joe
+  2026-10-11; never synced or live-tested).

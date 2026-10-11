@@ -10,7 +10,8 @@ import * as oracle from "./fixtures/legacy-attunement.mjs";
 mock.timers.enable({ apis: ["setTimeout"] });
 
 const F = await attunementWorld();
-const entry = await import("../attunement.mjs");
+await import("../attunement.mjs");
+const entry = await import("../attunement-core.mjs");   // computeSlots: the entry no longer re-exports it (step 2b)
 
 const mark = () => F.calls.length;
 const since = (from, op) => F.calls.slice(from).filter(c => !op || c.op === op);
@@ -50,7 +51,7 @@ test("ready + one tick: the five legacy keys (a floor), one log line, tooltip gu
   const original = proto._positionItemTooltip;
   const lines = await withConsole(async () => {
     F.fire("ready");
-    assert.equal(game.pentaryn?.attunement, undefined, "nothing before the tick");
+    assert.equal(typeof game.pentaryn?.attunement?.report, "function", "[declared] D-A1: published at ready, not a tick later");
     mock.timers.tick(0);
     await flush();
   });
@@ -152,7 +153,7 @@ test("createItem (own user, bond, home): bond cleared, away/slots written, BackI
   await flush();
   const seq = since(from).filter(c => ["update", "notify"].includes(c.op)).map(c => (c.op === "notify" ? ["notify", c.message] : ["update", c.documentName, c.changes]));
   assert.deepEqual(seq, [
-    ["update", "Item", { "flags.pentaryn-attunement.-=bond": null }],
+    ["update", "Item", { "flags.pentaryn-attunement.bond": "<_del>" }],   // [declared] v14 hygiene: _del, not -=
     ["update", "Actor", { "flags.pentaryn-attunement.away": [], "flags.pentaryn-attunement.slots": ["itemStaff0000001", "itemCloak0000001"] }],
     ["notify", "Staff is back with Talo Home — attunement restored."],
   ]);

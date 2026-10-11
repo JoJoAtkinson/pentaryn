@@ -34,6 +34,19 @@ Today an LLM calls game.pentaryn.attunement.{report, computeSlots, stash, releas
 
 Today a new rule (for example an attunement prerequisite check) would have to go into attunement.mjs's 'Enforcement' section, next to the DOM code. Once attunement-core.mjs exists (items-journal-8), pure rules go there with fixtures in test/run.mjs, and glue stays in attunement.mjs. Two things are unclear today. First, whether Item Piles behaviour belongs here or in dropbin: the repair is split, and the adjustments.yml row points at the wrong file. Second, which over-cap count is authoritative (att.value or the item filter).
 
+## Status (wave 2, 2026-10-11)
+
+Applied on `migrate/wave-2` with the blueprint migration (detail: the migration guide's Result):
+-8 `b1ff1cde`, `676a98de` · -9 `b1ff1cde` (`bondChanges`, `isPileActor` `5f3bf2d5`) · -10 extraction `b1ff1cde`, count check [declared] `7e18a834` ·
+-11 hooks [declared] `07920a8f`, listeners [declared] `0d0c2199` · -12 `b1ff1cde` (`wouldExceed`; the divergence stays a KNOWN pin; `countMismatch` is in
+`inspect().counts`, `d7a8ae2f`) · -13 `03f417f0` · -14 step 1 `b1ff1cde` (step 2 waits for Wave 7) · -16 `d7a8ae2f` · -17 `885f3423`, `10459870` ·
+-39 a `b1ff1cde`, b [declared] `e1adc21c`, c `5f3bf2d5` (C33 pattern: integrator).
+Standalone pass (wave 2): -10 success audit line [declared] `7cf1a4f1` (shortfall naming `73180dfd`; rollback is W2-A2) ·
+-17 optional README/API parity check `6402b3fb` · -12 `report()` `countMismatch`: not added — `golden/report.json` freezes
+report()'s return; the diagnostic lives in `inspect().counts.mismatch` · -39 `_positionItemTooltip` in `privateInternalPatterns`:
+landed by the integrator in `scripts/foundry/blueprint/packages.json` (C33 now lists it for manual review); the
+adjustments rows moved and the tooltip row renamed `attunement-item-tooltip-anchor` (`cd414590`) · -14 step 2 rides on the Wave 7 `module.json` batch.
+
 ## Findings index
 
 | Id | Category | Impact | Effort | Title |

@@ -53,6 +53,19 @@ A new lookup method today takes four steps:
 
 What is unclear: the adapter now holds real logic (monsters filtering, names grouping, spellList dedupe) that by the module's own rule belongs in the core. Pack-id tables (BOOKSETS, MONSTER_PACKS, the spell pack order in findSpell, the monsters default packs) are spread across the adapter. Finding prompts-lookup-6 moves these into a tested core.
 
+> **Status 2026-10-11 (workflow 2, branch `migrate/wave-2`):** applied; the two shared-file halves
+> landed in the wave-2 integration —
+> -6 `0e5d1f95`; -4 `0e5d1f95` + `91ee5c9d` [declared DL3]; -5 `9c1a1a68` + `10053c27` [declared DL4];
+> -1 `9c1a1a68` + `b98745c1` [declared DL5], locked-packs-only review fix `74922db2` [declared];
+> -34 `ef578313`; -3 `2afb4d4b` [declared DL2]; -26 `90d294e0` (README; the routing/config half
+> landed in wave 1).
+> -2: API half `abb4ae75` [declared DL1/DL2]; rules-lookup.md 'What comes back' table `01fa7cda`
+> (and the `context/foundry/README.md` `search()` shape line, `e4978110`); mcp-fork-20 module index `e4978110`.
+> -6 follow-up (its Proposed's "separate follow-up" and the pack-id tables under How to extend):
+> oracle `3e2d44c4`, spellList dedupe `a45cc10d`, names() grouping + `NAME_SOURCES` `de4b68ec`,
+> `MONSTER_LIST_PACKS` `22052ca3`, README `36a4fdfe`, the real-reads test `e0e2dd40`. No pack id is inline in `books.mjs` now.
+> The record is the guide's Result row (`../addon-blueprint-2026-10/migrate-pentaryn-lookup.md`).
+
 ## Findings index
 
 | Id | Category | Impact | Effort | Title |

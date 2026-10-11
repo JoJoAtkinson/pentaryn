@@ -1,13 +1,11 @@
-// pentaryn kit 1.0.1 · vendored from foundry/lib/publish.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.0.2 · vendored from foundry/lib/publish.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * Publish a module's API. `game.modules.get(id).api` is canonical; `game.pentaryn.<ns>` is an
  * alias kept for the console, macros and the MCP bridge.
  *
- * The frozen-root guard below is the one surviving copy of the block every module pasted:
- * pentaryn-importer replaces `game.pentaryn` with a frozen object, so a module that loads after it
- * must rebuild the root rather than assign into it, and one that loads before it is displaced.
- * `realiasTick` puts the alias back one tick later if it was displaced.
- * COMPAT until: items-journal-1 (the importer merges instead of freezing) — then both go.
+ * `game.pentaryn` is a plain, extensible object that every module assigns into. Nothing freezes or
+ * replaces it since the importer merges into it (items-journal-1, c0c3f97), so the old frozen-root
+ * guard and the one-tick re-alias are gone (kit 1.0.2, J10): a frozen root now throws a TypeError.
  */
 
 import { resolveRef } from "./resolve.mjs";
@@ -15,12 +13,8 @@ import { resolveRef } from "./resolve.mjs";
 const PUBLISHED = Symbol.for("pentaryn.kit.published");
 
 function aliasInto(g, ns, api) {
-  const current = g.game.pentaryn;
-  if (current && !Object.isExtensible(current)) g.game.pentaryn = { ...current, [ns]: api };
-  else {
-    g.game.pentaryn ??= {};
-    g.game.pentaryn[ns] = api;
-  }
+  g.game.pentaryn ??= {};
+  g.game.pentaryn[ns] = api;
 }
 
 function publishedMap(g) {
@@ -37,12 +31,12 @@ export function publishedOf(ns, { g = globalThis } = {}) {
 /**
  * @param {string} ns     the namespace under game.pentaryn
  * @param {object} api    a kit-built (frozen) API
- * @param {{ moduleId: string, g?: object, alias?: boolean, realiasTick?: boolean, when?: string }} opts
+ * @param {{ moduleId: string, g?: object, alias?: boolean, when?: string }} opts
  *   alias: publish under a second name only (no module.api, no ready hooks) — senses' `chain`.
  *   when: recorded, not enforced — "ready" (default), or e.g. "ready:gm:wasm" for a late,
  *   role-gated publish.
  */
-export function publishNamespace(ns, api, { moduleId, g = globalThis, alias = false, realiasTick = true, when = "ready" } = {}) {
+export function publishNamespace(ns, api, { moduleId, g = globalThis, alias = false, when = "ready" } = {}) {
   const mod = g.game?.modules?.get?.(moduleId);
   if (mod && !alias) mod.api = api;
   aliasInto(g, ns, api);
@@ -51,13 +45,6 @@ export function publishNamespace(ns, api, { moduleId, g = globalThis, alias = fa
   if (!alias) {
     g.Hooks?.callAll?.(`${moduleId}.ready`, api);
     g.Hooks?.callAll?.("pentaryn.ready", ns, api, { when });
-  }
-  if (realiasTick) {
-    g.setTimeout(() => {
-      if (g.game?.pentaryn?.[ns] === api) return;
-      aliasInto(g, ns, api);
-      installRoot(g.game.pentaryn, { g });
-    }, 0);
   }
   return api;
 }

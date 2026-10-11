@@ -473,3 +473,4 @@ Departures from the plan text:
 | `module.json` edits appended to `wave7-restart-batch.md` | landed directly in 170f003 except the `languages` entry (J13) |
 | Adjustments rows appended to `adjustments-batch.md` | landed in 4825fae |
 | Still failing, and why | C40, C51: step 10 (lang file) needs one edit to a frozen `settings.register` pin, which the freeze forbids — wave-1-report J13. Tests: 59 node:test, all pass; module-code coverage 100 / 95.3 / 97.3, lcov records merged per file (93.8 / 94.7 / 71.4 unmerged; was 0) |
+| Wave 2 (kit 1.0.2, code phase) | re-vendored `f805bb63` [declared]: the frozen-root pin flipped (J10; `glue-root.test.mjs`). 67 tests green at `f8fb7377` (with the merged PT3-2 fix); conformance unchanged. Not yet synced: [`wave-2-live-plan.md`](wave-2-live-plan.md) (W2-L2) |

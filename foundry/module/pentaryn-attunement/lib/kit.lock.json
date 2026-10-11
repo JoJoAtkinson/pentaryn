@@ -1,5 +1,5 @@
 {
-  "version": "1.0.1",
+  "version": "1.0.2",
   "tier": "full",
   "files": [
     "errors",
@@ -10,6 +10,7 @@
     "settings",
     "api",
     "queries",
+    "patch",
     "flags"
   ]
 }

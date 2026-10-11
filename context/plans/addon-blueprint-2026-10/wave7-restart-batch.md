@@ -22,7 +22,10 @@ listed in the last column and land in the same batch.
 
 Common to every row unless the row says otherwise: `flags.pentaryn.generation: 14`,
 `flags.pentaryn.afterSync` = the module's current `after_sync` tuple from
-`scripts/foundry/ops/config.py` (verbatim), and `flagScope` = the module id. **Only walls moves
+`scripts/foundry/ops/config.py` (verbatim) — **and the same commit deletes that tuple from the
+module's `ModuleSpec`** (config.py reads `module.json` first; one source per module, never both) —
+and `flagScope` = the module id. If a row's commit bumps `version`, the module's core `VERSION`
+constant changes in the same commit (movement's and dropbin's tests pin the two equal). **Only walls moves
 data** (C07 now says "DATA migration" for walls and "manifest-only" for the rest).
 
 ## Batch 1 — Stage 3 (non-WAIT modules)
@@ -33,12 +36,12 @@ data** (C07 now says "DATA migration" for walls and "manifest-only" for the rest
 | names | small · `names` · `pnm-` | `compatibility.minimum: "14"` | `NS/CSS/FLAG_SCOPE` pins in `core.test.mjs` (now `test/core-meta.test.mjs`, the names owner's follow-up) | names step 9 — **manifest landed** (wave 1 integration; restart pending) |
 | pings | small · `pings` · `ppg-` — **landed** with `minimum: "14"` (wave 1 integration; restart pending) | `languages: [{lang:"en", name:"English", path:"lang/en.json"}]` — **still open** (needs the frozen `max` register pin edit; see wave-1-report) | new `lang/en.json`; `max` row → `PENTARYN_PINGS.Setting.max.Name/Hint`; `log` row → `store: true`; `i18n.test.mjs`; the one golden edit (the `max` register pin) | pings step 10 |
 | cursors | small · `cursors` · `pcur-` | `compatibility: { minimum: "14", verified: "14.369" }` | — (step 9's nested lang is reload-only, earlier) | cursors step 11 — **landed** (wave 1 integration; restart pending) |
-| lookup | full · `rules` (≠ id) · `plk-` | `compatibility.minimum: "13" → "14"` | — | lookup W1 |
-| movement | full · `movement` · `pm-` | `styles: ["styles/movement.css"]` + move the file; `compatibility.verified: "14.369"` | — | movement §5 "Wave 7 items" |
-| walls | full · `walls` · `pw-` | `languages` (en); `compatibility: { minimum: "14", verified: "14.369" }`; `description` fix (-8) | `lang/en.json` (-36), rows/toasts to full-key literals; **flag-scope data migration** `wall-autocomplete` → `pentaryn-walls` (`migrations.mjs`, GM-only, idempotent; declared B6) | walls step 10 |
+| lookup | full · `rules` (≠ id) · `plk-` | `compatibility.minimum: "13" → "14"` (clears C07, C02) | — | lookup W1 (wave 2 lane: confirmed) |
+| movement | full · `movement` · `pm-` | `styles: ["styles/movement.css"]` + `git mv movement.css styles/movement.css`; `compatibility: { minimum: "14", verified: "14.369" }`. `afterSync` is the current tuple, all three lines (keeps "Players get a Ghost toggle…") | — (the `after_sync` tuple deletion per the common rule) | movement §5 "Wave 7 items" (wave 2 lane, `7b4fdc24`) |
+| walls | full · `walls` · `pw-` | `languages` (en); `compatibility: { minimum: "14", verified: "14.369" }`; `description` fix (-8) | `git mv test/fixtures/lang-en.wave7.json lang/en.json` (-36), rows/toasts to full-key literals (needs W2-WALLS-1, and W2-WALLS-3 for the toasts); **flag-scope data migration** `wall-autocomplete` → `pentaryn-walls` (`migrations.mjs`, GM-only, idempotent; declared B6): a hidden `migrationVersion` store row (Number, default 0) and `ctx.exposed.migrateFlagScope({version, log})` in `onReady` behind `isActiveGM()`; `core/engine.mjs` `FLAG_SCOPE = "pentaryn-walls"`, the manifest `flagScope` and `flags.writes`, and **flip the frozen `test/core.test.mjs:14` FLAG_SCOPE pin to `"pentaryn-walls"` ([declared], same commit)**, re-pinning `golden/engine.json`, `golden/backend-drift.json`, `golden/describe.json` and the `api.test.mjs` flags case in that commit | walls step 10 (guide §Result; wave-2 report walls handoff) |
 | attunement | full · `attunement` · `pentaryn-attunement-` | `relationships.recommends` item-piles + reason; `compatibility.minimum: "14"`; `styles: ["styles/attunement.css"]` + move; `languages` | `lang/en.json` (inert until step 8's `_loc`) | attunement step 9 |
-| journal | full · `journal` · `pj-` | `relationships.systems` dnd5e (min 6.0, verified 6.0.6) — clears the C03 failure R7 now reports; `recommends` item-piles + reason; `styles: ["styles/journal.css"]` + move | — | journal step 9 |
-| dropbin | full · `dropbin` · `pd-` | `recommends` item-piles, itempilesdnd5e (+ reasons); `requires: socketlib` stays; `minimum: "14"` | — | dropbin step 11 |
+| journal | full · `journal` · `pj-` | `relationships.systems` dnd5e (min 6.0, verified 6.0.6) — clears the C03 failure R7 now reports; `recommends` item-piles + reason; `styles: ["styles/journal.css"]` + `git mv foundry/module/pentaryn-journal/journal.css foundry/module/pentaryn-journal/styles/journal.css` | README.md Files table: `journal.css` → `styles/journal.css` (same commit as the move) | journal step 9 |
+| dropbin | full · `dropbin` · `pd-` | `recommends` item-piles (drop capture, corpse piles, Loot all, container locks), itempilesdnd5e (the rarity i18n shim); `requires: socketlib` stays; `minimum: "14"` (clears C07, C09, C02) | — (a `version` bump moves `VERSION` in `dropbin-core.mjs`; `test/core-barrel.test.mjs` pins them equal) | dropbin step 11 |
 | prompts | full · `prompts` · `pp-` (`flagScope`, `generation` already present) | — | — | prompts W1 |
 | ties | full · `ties` · `pt-` | `compatibility: { minimum: "14", verified: "14.369" }`; `recommends` item-piles, dice-so-nice (+ reasons) | — | ties S14 |
 
@@ -61,7 +64,7 @@ edit, source step). Keep one row per edit.
 
 | Date | Module | Edit | Source |
 |---|---|---|---|
-| 2026-10-11 | walls | `description`: `See playbooks/foundry-wall-autocomplete.md` → `See context/plans/foundry-wall-autocomplete.md`; drop "44 fixtures" (the hint text change is walls guide step 10) | senses-walls-cursors-8 (wave 1 integration) |
+| 2026-10-11 | walls | `description`: `See playbooks/foundry-wall-autocomplete.md` → `See context/foundry/walls.md` (the use-doc, guide step 9; supersedes the wave-1 target `context/plans/foundry-wall-autocomplete.md`); `verified byte-identical against the same 44 fixtures` → `produces identical geometry, verified against the same fixture corpus` (the setting hint's wording, `test/fixtures/lang-en.wave7.json`) | senses-walls-cursors-8 (wave 1 integration; amended by walls wave 2) |
 
 ## Batch checklist
 

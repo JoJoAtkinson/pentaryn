@@ -1,7 +1,7 @@
 ---
 title: "Code audit 2026-10 — pentaryn-walls"
 status: active
-last_modified: 2026-10-10
+last_modified: 2026-10-11
 tags: [plans, audit, foundry]
 ---
 
@@ -31,6 +31,27 @@ GM-only `game.pentaryn.walls.{preview,run,undo,makeMacro,runEngine,backends}` th
 **How to extend.**
 
 A new rule goes in wall-engine.mjs enumerate() plus PRIORITY, a fixture in test/fixtures.mjs, and the mirrored rule in wasm/src/lib.rs (or wasm delegates to JS for that case). A new backend is `register({name, run, available})` in its own backend-*.mjs. That is clear, but neither path is written down outside code comments, and the checks gate only `--backend=js`. Proposed: gate `--backend=wasm` in the node-test, and add a 'Adding a rule / a backend' section to the README.
+
+## Status (wave 2, 2026-10-11)
+
+Applied on branch `migrate/wave-2` (code phase; walls is off in Joe's world, so nothing is live
+yet). Detail: [`../addon-blueprint-2026-10/migrate-pentaryn-walls.md`](../addon-blueprint-2026-10/migrate-pentaryn-walls.md) §Result.
+
+| Id | Status | Commit |
+|---|---|---|
+| -1 | fixed [declared] — `planUndo` reads plain data; restores use `_del` | `01de2ae2` |
+| -2 | fixed [declared] — wasm delegates Levels scenes to js | `ab859b4c` |
+| -3 | done — `canonical(r, {extended: true})` (opt-in, so no frozen pin moves); wasm header lists what it does not reproduce | `1d2d196b` |
+| -4 | done — `wallCategory` is the one copy | `3d0daef9` |
+| -5 | done — inline obstacle scans, coll2 hoisted; allocation counter test | `cb3ce91f` |
+| -6 | done — `reindex`/`toSegs` | `c77d1e21` |
+| -7 | done [declared, bench text] | `9b37264b`, `28dd5667` |
+| -8 | code and README halves done; the setting hint and `module.json` description wait for the Wave 7 batch. Recipe test scoped to walls (`test/docs.test.mjs`: every cited doc path resolves; `module.json` is a todo until the batch) | `e2520d57`, `49f1f2eb`, `d19cb73d` (wave 1: `30963c4`, `4f7b5a8`) |
+| -9 | fixed [declared] — one lock for keys, macros and the API; cards awaited | `0ae5b96d` |
+| -28 | not here — the python-tooling batch (`ship_ignore`), deferred (J18) | — |
+| -33 | done — `analyze()` | `08c498bb` |
+| -36 | prepared and tested (`test/fixtures/lang-en.wave7.json`, `test/i18n.test.mjs`); the switch lands with `languages` in the Wave 7 batch | `d3a07b62` |
+| -37 | done [declared, console] | `f06a6b90` |
 
 ## Findings index
 

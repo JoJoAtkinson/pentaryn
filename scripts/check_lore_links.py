@@ -40,6 +40,13 @@ MCP_TOOL = {
         "standard (created/last_modified/status/tags, tags as a YAML array with no '#'). "
         "Read-only. Returns a report and a non-zero exit if anything fails."
     ),
+    "annotations": {
+        "title": "Check Lore Links",
+        "readOnlyHint": True,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
     "inputSchema": {
         "type": "object",
         "properties": {

@@ -10,6 +10,13 @@
 //   stub updateActor does fire, and names bails on the missing `pentarynOldName` — same outcome.
 // - Scene#updateEmbeddedDocuments and TokenDocument#canUserModify are added here (the kit stub has
 //   neither). canUserModify answers `!zzLocked` and records its arguments.
+// - game.combats is added here too (the kit stub has none): empty unless `equip(F, {combats})` names
+//   some. A stub Combatant's `name` stands for Foundry's PREPARED name: v14.369 derives an empty
+//   source name once, `this.name ||= token?.name || this.actor?.name` (client/documents/combatant.mjs:168),
+//   and a later token rename only re-sorts the tracker (Combat#debounceSetup), it does not re-prepare
+//   the combatant — so the tracker keeps the old label (PT3-9). Combat#updateEmbeddedDocuments
+//   records the write and applies the names.
+import { StubCollection, makeDoc } from "../kit/foundry-stub.mjs";
 import { readJSON } from "../kit/harness.mjs";
 
 export const MODULE = "pentaryn-names";
@@ -80,9 +87,13 @@ export function world({ user = {}, modules = [] } = {}) {
   };
 }
 
-/** Add the document methods names calls that the kit stub lacks. Returns the canUserModify log. */
-export function equip(F) {
+/**
+ * Add the document methods names calls that the kit stub lacks. Returns the canUserModify log.
+ * `combats`: `[{id, combatants: [{id, actorId, tokenId, sceneId, name}]}]` for game.combats.
+ */
+export function equip(F, { combats = [] } = {}) {
   const asked = [];
+  F.game.combats = new StubCollection(combats.map(c => makeCombat(F, c)));
   for (const scene of F.game.scenes) {
     Object.defineProperty(scene, "updateEmbeddedDocuments", {
       configurable: true,
@@ -110,6 +121,28 @@ export function equip(F) {
     }
   }
   return asked;
+}
+
+/** A stub Combat holding stub Combatants, with a recording Combat#updateEmbeddedDocuments. */
+function makeCombat(F, { combatants = [], ...data }) {
+  const combat = makeDoc("Combat", data);
+  const coll = new StubCollection(combatants.map(c => makeDoc("Combatant", c, { parent: combat })));
+  for (const c of coll) Object.defineProperty(c, "collection", { value: coll, writable: true, enumerable: false });
+  Object.defineProperty(combat, "combatants", { value: coll, enumerable: false });
+  Object.defineProperty(combat, "updateEmbeddedDocuments", {
+    configurable: true,
+    writable: true,
+    enumerable: false,
+    value: async (embeddedName, updates, options = {}) => {
+      F.calls.push({ op: "updateEmbeddedDocuments", uuid: combat.uuid, embeddedName, updates: F.plain(updates), options: F.plain(options) });
+      return updates.map(u => {
+        const doc = embeddedName === "Combatant" ? coll.get(u._id) : null;
+        if (doc) for (const [k, v] of Object.entries(u)) if (k !== "_id") doc[k] = v;
+        return doc;
+      });
+    },
+  });
+  return combat;
 }
 
 /** Put every label back to INITIAL and clear the effect log. */

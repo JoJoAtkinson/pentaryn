@@ -1,4 +1,4 @@
-// pentaryn kit 1.0.1 · vendored from foundry/lib/test-kit/foundry-stub.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.0.2 · vendored from foundry/lib/test-kit/foundry-stub.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * A Foundry stand-in for node tests. Enough of `game`, `Hooks`, `CONFIG`, `ui`, `canvas` and the
  * document API to load a module's entry, fire its lifecycle hooks and record what it did.
@@ -17,6 +17,10 @@
  * Fidelity points that matter: `game.settings.get` on an unregistered key throws Foundry's
  * message; `getFlag/setFlag` on an inactive scope throws Foundry's message; `Hooks.call` stops at
  * a `false`. Never construct real Foundry documents in a test — use `makeDoc`.
+ *
+ * `globalThis.logger` is Foundry's console alias (client/_module.mjs sets `logger = console`);
+ * `foundry.utils.logCompatibilityWarning` writes through it. Here it records instead of printing:
+ * every call lands on `F.logged` as `{ level, args }`.
  */
 
 import { readFileSync } from "node:fs";
@@ -116,7 +120,7 @@ function shimUtils() {
       };
     },
     randomID: (n = 16) => stubId("r").slice(-n),
-    logCompatibilityWarning: msg => console.warn(msg),
+    logCompatibilityWarning: msg => globalThis.logger.warn(msg),
     Semaphore,
   };
 }
@@ -329,7 +333,8 @@ function collectionOf(list, documentName) {
   return coll;
 }
 
-const GLOBALS = ["game", "foundry", "CONFIG", "CONST", "Hooks", "ui", "canvas", "fromUuidSync", "fromUuid", "_loc", "_del", "_replace"];
+const GLOBALS = ["game", "foundry", "CONFIG", "CONST", "Hooks", "ui", "canvas", "fromUuidSync", "fromUuid", "_loc", "_del", "_replace", "logger"];
+const LOGGER_LEVELS = ["debug", "info", "log", "warn", "error"];
 
 /**
  * Install the stub on globalThis. Await it: the real `common/` is imported dynamically.
@@ -347,6 +352,7 @@ export async function installFoundry({
     calls: [],
     hooks: [],
     hookErrors: [],
+    logged: [],
     utilsSource: common.source,
     foundryBuild: common.build,
     plain: v => {
@@ -594,8 +600,10 @@ export async function installFoundry({
   define("_loc", (key, data) => i18n.localize(key, data));
   define("_del", del);
   define("_replace", value => new ForcedReplacement(value));
+  // Foundry's `logger = console`; logCompatibilityWarning calls logger.warn / logger.error
+  define("logger", Object.fromEntries(LOGGER_LEVELS.map(level => [level, (...args) => void F.logged.push({ level, args })])));
 
-  Object.assign(F, { game, foundry: foundryNS, CONFIG, CONST: common.CONST, Hooks, ui: globalThis.ui, canvas: canvasStub, fromUuidSync });
+  Object.assign(F, { game, foundry: foundryNS, CONFIG, CONST: common.CONST, Hooks, ui: globalThis.ui, canvas: canvasStub, fromUuidSync, logger: globalThis.logger });
 
   /** Switch the client identity (two-session cases): another user, or the same user on another socket. */
   F.become = ({ userId, socketId: sid } = {}) => {

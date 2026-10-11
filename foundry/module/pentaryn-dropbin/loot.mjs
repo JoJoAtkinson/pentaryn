@@ -20,25 +20,19 @@
  */
 
 import { MODULE, lootAllState } from "./loot-core.mjs";
+import { api as itemPilesApi, isValidItemPile, isItemPileEmpty, getActorFlagData, transferEverything, storeOf } from "./piles.mjs";
 
 const BTN = "pd-loot-all";
-const t = k => game.i18n.localize(`PENTARYN_DROPBIN.lootAll.${k}`);
+/** lootAllState's reasons → their full lang keys (literal, so the i18n gate proves each). */
+const REASON_KEYS = Object.freeze({
+  noCharacter: "PENTARYN_DROPBIN.lootAll.noCharacter",
+  empty: "PENTARYN_DROPBIN.lootAll.empty",
+});
+const reasonText = reason => _loc(REASON_KEYS[reason]);
 const warn = (label, err) => console.warn(`${MODULE} | loot all ${label}`, err);
-const API = () => game.itempiles?.API;
-
-/** Item Piles' Svelte store for this window, if we can reach it: it tracks the Change button. */
-function storeOf(app) {
-  try {
-    const ctx = app?.svelte?.appShell?.$$?.ctx;
-    if (!Array.isArray(ctx)) return null;
-    return ctx.find(c => c && typeof c === "object" && typeof c.takeAll === "function" && "recipient" in c) ?? null;
-  } catch {
-    return null;
-  }
-}
 
 function usable(actor) {
-  return !!(actor && actor.isOwner && !API()?.isValidItemPile?.(actor));
+  return !!(actor && actor.isOwner && !isValidItemPile(actor));
 }
 
 function recipientFor(app) {
@@ -59,12 +53,11 @@ function footerOf(app) {
 
 function stateFor(app, footer) {
   const pile = app.actor;
-  const api = API();
-  if (!pile || !api) return { show: false };
-  const pileData = api.getActorFlagData?.(pile) ?? {};
+  if (!pile || !itemPilesApi()) return { show: false };
+  const pileData = getActorFlagData(pile) ?? {};
   const recipient = recipientFor(app);
   const nativeTakeAll = !!footer?.querySelector("button:not(.pd-loot-all) i.fa-fist-raised");
-  const state = lootAllState({ pileData, empty: !!api.isItemPileEmpty?.(pile), hasRecipient: !!recipient,
+  const state = lootAllState({ pileData, empty: isItemPileEmpty(pile), hasRecipient: !!recipient,
     isGM: game.user.isGM, nativeTakeAll });
   return { ...state, recipient };
 }
@@ -76,12 +69,12 @@ function paint(app, btn, footer) {
   const s = stateFor(app, footer);
   btn.hidden = !s.show;
   btn.disabled = !!s.disabled || btn.dataset.busy === "1";
-  btn.dataset.tooltip = s.reason ? t(s.reason) : game.i18n.format("PENTARYN_DROPBIN.lootAll.tip", { name: s.recipient?.name ?? "" });
+  btn.dataset.tooltip = s.reason ? reasonText(s.reason) : _loc("PENTARYN_DROPBIN.lootAll.tip", { name: s.recipient?.name ?? "" });
 }
 
-function install(app) {
+function addButton(app) {
   try {
-    if (!app?.actor || !API()) return false;
+    if (!app?.actor || !itemPilesApi()) return false;
     const footer = footerOf(app);
     if (!footer) return false;
     let btn = footer.querySelector(`.${BTN}`);
@@ -89,7 +82,7 @@ function install(app) {
       btn = document.createElement("button");
       btn.type = "button";
       btn.className = BTN;
-      btn.innerHTML = `<i class="fas fa-hand-holding"></i> ${t("label")}`;
+      btn.innerHTML = `<i class="fas fa-hand-holding"></i> ${_loc("PENTARYN_DROPBIN.lootAll.label")}`;
       btn.addEventListener("click", ev => { ev.preventDefault(); ev.stopPropagation(); lootAll(app, btn); });
       // Next to the Split buttons: before Close Lid (containers) or Leave, whichever comes first.
       const anchor = [...footer.querySelectorAll(":scope > button")]
@@ -109,7 +102,7 @@ async function lootAll(app, btn) {
   const { show, disabled, reason, recipient } = stateFor(app, footerOf(app));
   if (!show) return;
   if (disabled || !recipient) {
-    if (reason) ui.notifications.warn(t(reason));
+    if (reason) ui.notifications.warn(reasonText(reason));
     return;
   }
   btn.dataset.busy = "1";
@@ -117,10 +110,10 @@ async function lootAll(app, btn) {
   try {
     const store = storeOf(app);
     const opts = typeof store?.interactionId === "string" ? { interactionId: store.interactionId } : {};
-    await API().transferEverything(app.actor, recipient, opts);
+    await transferEverything(app.actor, recipient, opts);
   } catch (err) {
     warn("transfer", err);
-    ui.notifications.error(t("failed"));
+    ui.notifications.error(_loc("PENTARYN_DROPBIN.lootAll.failed"));
   } finally {
     delete btn.dataset.busy;
     if (btn.isConnected) paint(app, btn, footerOf(app));
@@ -142,17 +135,31 @@ function scheduleRefresh() {
 
 /** The Svelte footer may mount a frame after the render hook; retry briefly. */
 function installSoon(app, tries = 20) {
-  if (install(app) || tries <= 0) return;
+  if (addButton(app) || tries <= 0) return;
   setTimeout(() => installSoon(app, tries - 1), 100);
 }
 
 const isInventoryApp = app => app?.constructor?.name === "ItemPileInventoryApp"
   || app?.options?.classes?.includes?.("item-pile-inventory");
 
-Hooks.on("renderItemPileInventoryApp", app => installSoon(app));
-// Belt and braces: Item Piles' own hook fires as the window is built, before it is in the DOM.
-Hooks.on("item-piles-openInterface", app => { if (isInventoryApp(app)) setTimeout(() => installSoon(app), 0); });
+/** The legacy API object; `loot.install(app)` adds the button to one open window. */
+export const loot = { install: addButton, refreshAll, recipientFor };
 
-for (const h of ["updateActor", "createItem", "updateItem", "deleteItem", "updateToken"]) Hooks.on(h, scheduleRefresh);
+/** Registration order (golden/hooks.json): the two window hooks, then the refresh triggers. */
+export function install(reg, ctx) {
+  ctx.expose({ loot });
+  reg.on("renderItemPileInventoryApp", app => installSoon(app), { label: "loot: render" });
+  // Belt and braces: Item Piles' own hook fires as the window is built, before it is in the DOM.
+  reg.on("item-piles-openInterface", app => { if (isInventoryApp(app)) setTimeout(() => installSoon(app), 0); },
+    { label: "loot: open" });
+  for (const h of ["updateActor", "createItem", "updateItem", "deleteItem", "updateToken"]) {
+    reg.on(h, scheduleRefresh, { label: `loot: ${h}` });
+  }
+}
 
-export const loot = { install, refreshAll, recipientFor };
+/** Forget tracked buttons and a queued refresh. */
+export function uninstall() {
+  live.clear();
+  clearTimeout(queued);
+  queued = 0;
+}

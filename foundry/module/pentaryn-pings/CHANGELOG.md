@@ -1,5 +1,16 @@
 # Changelog — Pentaryn Ping Log (`pentaryn-pings`)
 
+## 0.1.1 — 2026-10-11 (fix/playtest-2026-10-11; also ships the wave-1 rebuild below)
+
+- Fix PT3-2: a player's ping on a scene the GM is not viewing is now recorded (it never was: the bug predates wave 1). The
+  `userActivity` listener read `data.ping.x/y` and `data.sceneId`; core v14 sends
+  `{cursor: {x, y}, ping: {scene, pull, style, zoom}}`, so the socket path recorded nothing.
+  It now records `data.cursor` on `data.ping.scene` (falling back to the viewed scene). A ping
+  on the viewed scene is still one record: core draws it through the wrapped `handlePing`
+  first and the dedupe drops the socket copy.
+- [declared] The test suite's socket pins use core's payload shape; the pre-fix shape
+  `{sceneId, ping: {x, y}}` is now ignored.
+
 ## Unreleased — 2026-10-11 (addon blueprint, wave 1)
 
 - Rebuilt on the blueprint (tier small, kit `settings, api, patch, election`): pure core
@@ -14,6 +25,9 @@
 - [declared] Settings localised (guide step 10, J13): `lang/en.json` and the module.json
   `languages` entry; the `max` row's label is `PENTARYN_PINGS.Setting.max.Name`/`.Hint` (same
   English on the settings screen); the hidden `log` store row is registered without a name.
+- [declared] Kit 1.0.2 (wave 2, J10): a frozen `game.pentaryn` is no longer rebuilt; the `ready`
+  publish throws into Foundry's hook error report and leaves the root as it was. Nothing freezes the
+  root since the importer's keystone, so a live world sees no difference.
 
 ## 0.1.0
 

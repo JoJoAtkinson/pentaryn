@@ -836,6 +836,28 @@ async function enchantMartialArts(actor, report, ghost) {
   return done;
 }
 
+/* ── spell slots (PT2-2) ────────────────────────────────────────────────── */
+
+/**
+ * The actor's spell slots that exist (derived `max` > 0), leveled and pact alike, in dnd5e's key
+ * order. → `[{key, level, type, value, max}]`.
+ */
+function slotRows(spells) {
+  return Object.entries(spells ?? {})
+    .filter(([, s]) => Number(s?.max) > 0)
+    .map(([key, s]) => ({ key, level: Number(s.level) || 0, type: s.type ?? null, value: Number(s.value) || 0, max: Number(s.max) }));
+}
+
+/**
+ * The update that fills every slot to its maximum, as dnd5e's own long rest does
+ * (`_getRestSpellRecovery`: `system.spells.<key>.value = max`). The advancements derive the maxima
+ * but leave the stored `value` at the schema's initial 0, so without it a new caster has 0/4
+ * (play test PT2-2). → `{}` when nothing is short.
+ */
+function fullSlotsUpdate(spells) {
+  return Object.fromEntries(slotRows(spells).filter(r => r.value !== r.max).map(r => [`system.spells.${r.key}.value`, r.max]));
+}
+
 /* ── build ─────────────────────────────────────────────────────────────── */
 
 /**
@@ -888,6 +910,11 @@ async function runBuild(actor, w, resolved, report, ghost) {
   report.enchanted = await enchantMartialArts(actor, report, ghost);
 
   actor.reset();
+  // the preview starts with full slots, as the real run does (buildCharacter, in its HP write)
+  if (ghost) {
+    const slots = fullSlotsUpdate(actor.system.spells);
+    if (Object.keys(slots).length) { actor.updateSource(slots); actor.reset(); }
+  }
   report.summary = summarise(actor);
   const counts = report.summary.spellCounts;
   if (counts && counts.prepared > counts.maxPrepared) report.warnings.push(`${counts.prepared} spells prepared, the class allows ${counts.maxPrepared}`);
@@ -948,9 +975,9 @@ export async function buildCharacter(w, resolved, { prov = null } = {}) {
   });
   try {
     await runBuild(actor, w, resolved, report, false);
-    // a fresh character starts at full HP
+    // a fresh character starts at full HP and full spell slots, in one write
     actor.reset();
-    await actor.update({ "system.attributes.hp.value": actor.system.attributes.hp.max });
+    await actor.update({ "system.attributes.hp.value": actor.system.attributes.hp.max, ...fullSlotsUpdate(actor.system.spells) });
     report.summary = summarise(actor);
     return { actor, report };
   } catch (err) {
@@ -959,7 +986,7 @@ export async function buildCharacter(w, resolved, { prov = null } = {}) {
   }
 }
 
-/** The numbers a reviewer checks: abilities, HP, AC, DC, proficiencies, speed, senses, spell counts. */
+/** The numbers a reviewer checks: abilities, HP, AC, DC, proficiencies, speed, senses, spell counts, slots. */
 export function summarise(actor) {
   const s = actor.system;
   const cls = actor.items.find(i => i.type === "class");
@@ -986,6 +1013,7 @@ export function summarise(actor) {
       spellbook: spells.filter(i => i.system.level > 0 && i.system.prepared === 0).length,
       maxPrepared: cls?.system.spellcasting?.preparation?.max ?? scale["max-prepared"]?.value ?? null,
       maxCantrips: scale["cantrips-known"]?.value ?? null
-    } : null
+    } : null,
+    slots: slotRows(s.spells)
   };
 }

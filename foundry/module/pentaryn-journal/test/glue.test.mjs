@@ -50,9 +50,10 @@ test("init: three settings registered exactly as today (golden/settings-register
 test("relay on a client that is not the active GM rejects 'not the active GM'", async () => {
   const relay = CONFIG.queries["pentaryn-journal.ensure"];
   F.become({ userId: GM2 });
-  await assert.rejects(relay({}, { user: game.users.get(P1) }), { message: "not the active GM" });
+  // [declared] (C30): the kit's relayed answers with the coded NOT_GM (was 'not the active GM').
+  await assert.rejects(relay({}, { user: game.users.get(P1) }), { message: "NOT_GM: this client is not the active GM", code: "NOT_GM" });
   F.become({ userId: P1 });
-  await assert.rejects(relay({}, { user: game.users.get(P1) }), { message: "not the active GM" });
+  await assert.rejects(relay({}, { user: game.users.get(P1) }), { message: "NOT_GM: this client is not the active GM", code: "NOT_GM" });
   F.become({ userId: GM });
 });
 
@@ -83,8 +84,9 @@ test("ready on the active GM: ensureAll makes the missing player journal; report
   });
   const made = since(from, "JournalEntry.create").map(c => c.data.name);
   assert.deepEqual(made, ["Quinn's Journal"], "players only, one each; the GMs get none");
-  const report = game.pentaryn?.journal?.report ? game.pentaryn.journal.report() : null;
-  assert.equal(report, null, "the API is not published before the tick");
+  // D-J1 [declared] (guide step 6, D2): published at ready by the kit, not one tick later; frozen; module.api canonical.
+  assert.equal(game.modules.get(MOD).api, game.pentaryn.journal, "published at ready, on module.api");
+  assert.equal(Object.isFrozen(game.pentaryn.journal), true);
   mock.timers.tick(0);
   await flush();
   const r = game.pentaryn.journal.report();

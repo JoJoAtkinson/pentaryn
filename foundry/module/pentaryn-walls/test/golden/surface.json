@@ -1,0 +1,15 @@
+{
+  "analyze": "analyze",
+  "backends": "available",
+  "contract": "string",
+  "describe": "function",
+  "makeMacro": "makeMacro",
+  "preview": "preview",
+  "run": "run",
+  "runEngine": "runEngine",
+  "settings": "settings",
+  "trace": "trace",
+  "undo": "undo",
+  "uninstall": "uninstall",
+  "version": "string"
+}

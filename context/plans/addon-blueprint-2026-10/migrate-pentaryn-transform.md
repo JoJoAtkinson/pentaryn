@@ -549,6 +549,25 @@ Live smoke after sync: shift Talo into a form and back from the HUD; Starry Form
 | 12 Wave 7 | batched |
 | **Total** | **L, ≈ 5-6 days** plus checkpoint, adjustments batch, restart item; §4 standalone fixes ≈ 1 day more; Wave 8 collapse and argon-kit separate |
 
+## Known bugs — fixed before migrating
+
+Fixed on `fix/playtest-2026-10-11` (wave-1 play test, `wave-1-playtest.md`), version **0.3.3** —
+re-anchor before step 1: the step-2 `VERSION` constant is `"0.3.3"`, and line numbers in §1–§3
+drift in `hud.mjs`, `transform.mjs` and `transform-core.mjs`.
+
+| Finding | Fix | Where it lands in the target layout |
+|---|---|---|
+| PT3-3 no "Return to <druid>" without a revert item | `planBonusBar` emits `{ revert: true, highlight: true }` when shifted with no `revertId` and `ownReturn` (`composeBonusBar` passes `isWildShapeForm(actor)`, so a Polymorph form gets none); `hud.mjs` `ReturnButton` (pseudo-item `ItemButton`) calls the new `transform.mjs` `returnToNormal(actor)`, which the revert item's `postUseActivity` also uses | plan → `core/hud.mjs`; `ReturnButton` → `hud-buttons.mjs`; `returnToNormal` → the wildshape adapter beside `revert` |
+| PT3-4 Starry Form carried into beast forms | core `isStarryFormData` + `stripReason` reason `"starry-form"` (after the Wild Shape-target rule, so Talo still reads `spends-wildshape`); `composeBonusBar` passes `starryId` while shifted | `core/wildshape.mjs` (strip), `hud-panels.mjs` |
+| PT3-6 Esc with the Change Form picker open opens the game menu | the existing `cancelTargetPicker` keybinding (same id) also closes `.pentaryn-picker.show`; hint text updated | step 4 keybinding; the literal-key list in step 7 keeps the same keys |
+| PT3-7 no chat line on the sheet's Restore Transformation | `Hooks.on("dnd5e.revertOriginalForm")` in `transform.mjs` posts the manual line for a Wild Shape form not in `reverting` | **new hook row** for the step-1 `golden/hooks.json` table (transform.mjs:330, registered between rows 1 and 2: `preUpdateToken` → **`dnd5e.revertOriginalForm`** → `dnd5e.preUseActivity`) → `wildshape.mjs` |
+
+Tests added: core legacy checks 150–157 in `test/run.mjs`, and `test/playtest.test.mjs` (node:test
+on `test/kit/foundry-stub.mjs`, byte-identical to `foundry/lib/test-kit/`). `test/run.mjs` now also
+runs `test/*.test.mjs`; step 1's fixed `run.mjs` body supersedes that tail, and its glue test
+should absorb `playtest.test.mjs`'s cases. New exports for step 2's barrel/export-list pin:
+`isStarryFormData` (core), `returnToNormal` and `isWildShapeForm` (transform.mjs).
+
 ## Result (fill when done)
 
 | | |

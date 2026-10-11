@@ -2,7 +2,7 @@
  * Fixture corpus for the wall-autocomplete engine.
  *
  * Every fixture is a set of wall documents plus an expectation. The traces from
- * playbooks/foundry-wall-autocomplete.md §6 are here verbatim, alongside the adversarial
+ * context/plans/foundry-wall-autocomplete.md §6 are here verbatim, alongside the adversarial
  * cases that must *refuse* rather than guess.
  *
  * Wall shorthand: w(x0,y0,x1,y1, extra) — solid unless `extra` says otherwise.
@@ -21,16 +21,8 @@ const door = (x0, y0, x1, y1, extra = {}) => w(x0, y0, x1, y1, {door: 1, ...extr
 const terrain = (x0, y0, x1, y1, e = {}) => w(x0, y0, x1, y1, {light: 10, sight: 10, sound: 10, ...e});
 const invisible = (x0, y0, x1, y1, e = {}) => w(x0, y0, x1, y1, {light: 0, sight: 0, sound: 0, ...e});
 const ethereal = (x0, y0, x1, y1, e = {}) => w(x0, y0, x1, y1, {move: 0, ...e});
-/** Foundry's category test, for asserting what kind a generated wall came out as. */
-export const kindOf = c => {
-  const {light = 20, sight = 20, sound = 20, move = 20} = c;
-  if (sight === 0 && light + sound + move === 0) return "blank";
-  if (sight === 0) return "invisible";
-  if (sight === 10) return "terrain";
-  if (sight === 30 || sight === 40) return "window";
-  if (move === 0) return "ethereal";
-  return "solid";
-};
+/** Foundry's category test, for asserting what kind a generated wall came out as: the engine's one copy. */
+export { wallCategory as kindOf } from "./engine.mjs";
 
 /* -------------------------------------------- */
 
@@ -581,22 +573,20 @@ export const FIXTURES = [
     opts: {gridSize: 100},
     expect: {lintCodes: ["N1", "N2", "N3", "N5"]}
   },
-  // senses-walls-cursors-2: the engine partitions by levels; the wasm backend sends none and stamps
-  // creates with levels []. Both fixtures pass on js and fail on wasm today (corpus.test marks them todo).
+  // senses-walls-cursors-2: the engine partitions by levels; the compiled engine knows none, so the
+  // wasm backend hands any scene with levels to the js engine. Both fixtures gate both backends.
   {
     name: "levels - different levels never interact",
     why: "Two collinear stubs on different Levels must not be joined across levels.",
     walls: [w(0, 0, 200, 0, {id: "lv1", levels: ["L1"]}), w(300, 0, 500, 0, {id: "lv2", levels: ["L2"]})],
     opts: {gridSize: 100},
-    expect: {creates: 0},
-    knownWasm: "senses-walls-cursors-2"
+    expect: {creates: 0}
   },
   {
     name: "levels - same-level gap fills",
     why: "The same gap on one level is filled, and the new wall carries that level.",
     walls: [w(0, 0, 200, 0, {id: "lv3", levels: ["L1"]}), w(300, 0, 500, 0, {id: "lv4", levels: ["L1"]})],
     opts: {gridSize: 100},
-    expect: {creates: 1, createLevels: ["L1"]},
-    knownWasm: "senses-walls-cursors-2"
+    expect: {creates: 1, createLevels: ["L1"]}
   }
 ];

@@ -271,7 +271,7 @@ Absorbs `items-journal-37` (a, b, c, e) and `mcp-fork-24`'s naming of the relay 
 - `flags.pentaryn = {flagScope:"pentaryn-journal", generation:14, tier:"full", namespace:"journal", cssPrefix:"pj-", afterSync:[…]}`.
 - `relationships: {systems:[{id:"dnd5e", type:"system", compatibility:{minimum:"6.0", verified:"6.0.6"}}], recommends:[{id:"item-piles", type:"module", reason:"the bar on items opened from eye piles"}]}`
   (`items-journal-37` d; C09). Foundry then warns if dnd5e is absent — the only setup where the module half-works anyway.
-- `styles: ["styles/journal.css"]` + move the file (C06w).
+- `styles: ["styles/journal.css"]` + move the file (C06w); in the same commit, the README Files table row `journal.css` → `styles/journal.css`.
 
 ---
 
@@ -292,6 +292,9 @@ Absorbs `items-journal-37` (a, b, c, e) and `mcp-fork-24`'s naming of the relay 
 | D-J1 | API published at `ready` (not a tick later), frozen, `module.api` canonical (step 6) | `game.pentaryn.journal.describe().version === "0.1.0"`; `game.pentaryn.journal.report()` as before; a player can Add from an eye readable |
 | D-J2 | `relationships` added (step 9) | after the restart, the module enables without a warning on the dnd5e world |
 | D-J3 | (standalone `-33`, `-38`) bar refresh gating and the pinned-note cache | edit a world item while a readable bar is open (bar does not flicker); edit an eye readable's page (bar flips to *Update my copy*); move/delete a scene Note pin and reopen its readable (single-page decision follows) |
+| D-J4 | the relay runs through the kit's `relayed` (`5b79802c`): a client that is not the active GM answers `NOT_GM: this client is not the active GM` | nothing on screen; a player with no journal (delete theirs) clicks Add with the GM online → journal made, copy saved |
+| D-J5 | -40 claim first (`f97e9f74`): with the MCP bridge tab and a GM browser tab both open, one player's relayed ensure makes one journal | delete a player's journal, keep both GM tabs open, player clicks Add → `report()` shows one journal, no `duplicates`; the sender's User's `flags.pentaryn-journal.claims.ensure` is empty (`{}`, no socket-id keys; the empty `claims.ensure` object itself stays — each tab deletes only its own leaf, since deleting the parent would race another tab's stamp; `test/claim-leftover.test.mjs`) |
+| D-J6 | `inspect` takes an Actor or Token too (review fix): the player whose assigned character it is, `null` when nobody's. The kit's root `game.pentaryn.inspect(ref)` resolves an Actor and passes it to every namespace, so before this journal answered `{error: "BAD_ARGS: expected User, got Actor"}` and the blueprint's live smoke `inspect(knownActor)` failed for journal | `game.pentaryn.inspect(<a player's character>).journal.user.id` is that player, no `error`; `game.pentaryn.inspect(<an NPC>).journal === null`; depth ≤ 4 |
 
 ## 6. WAIT
 
@@ -323,10 +326,38 @@ Step 1 ~0.75 day (relay and ensure flows need careful stubs), steps 2–6 ~1 day
 
 | | |
 |---|---|
-| Live score after the migration | not migrated yet — **57.8 % (26/45)** today (wave start in [`wave-1-baseline.md`](wave-1-baseline.md)), `conformance.py --module journal --markdown`, 2026-10-11 |
-| Date | 2026-10-11 (wave 1: checkpoint only (wave 1 Stage 0 lane); the refactor is workflow 2) |
-| Commits (Joe-approved) | characterisation: `050f06b` (kit), `f830067` (checkpoint) · refactor: none yet · other: `1b122e5` (README: `report()` ungated, items-journal-37) |
-| Declared changes handed to the live-test workflow | none |
-| `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) |
-| Adjustments rows appended to `adjustments-batch.md` | no (step not reached) |
-| Still failing, and why | C03 C07 C09 C12 C18 C21 C22 C24 C26 C27 C28 C30 C37 C40 C41 C44 C45 C47 C56 (hand-written `CONFIG.queries`) — the guide's steps 2+ have not run. Frozen tests: the checkpoint's assertions and goldens are untouched since the checkpoint (see wave-1-report §Frozen tests). |
+| Live score after the migration | **85.4 % (41/48)** in code, `conformance.py --module journal`, 2026-10-11 (wave start 57.8 %, 26/45). Not yet synced or live-tested (code phase only) |
+| Date | 2026-10-11 (workflow 2, journal lane; wave 1 froze the checkpoint) |
+| Commits (characterisation) | `050f06b` (kit), `f830067` (checkpoint), `1b122e5` (README report() ungated) |
+| Commits (refactor, steps 2–6, 8) | step 2 `7dc5fce8` + follow-up `526d1aa8` (core rules read their facts lazily: 7dc5fce8 destructured the getters, so `shouldShowItemBar(null)` threw — behaviour-only red range `7dc5fce8..526d1aa8`, every suite green) · step 3 `f2df3db3` · step 4 `9bb8d560` · step 5 `93dc1a56` · step 6 `dbd56638` [declared] + `946a6dd4` (api.test, describe/surface goldens) · step 8 `b615d9d8` |
+| Commits (standalone findings) | -32 `8bce2b4a` · -36 `26e9df02` (rest; the catch and the toast rename rode step 5) · -35 `0fe84b85` · -33 `d595451e` [declared] · -38 `cac07643` [declared] · hardening tests `a3731712` |
+| Commits (declared fixes after the refactor) | C30 relay through the kit's `relayed` `5b79802c` [declared] · -40 KNOWN pin `d8bfe157`, fix `f97e9f74` [declared] (+ manifest flag `792f57fb`, stamp-failure fallback `79155a74`) · review: `inspect` takes an Actor/Token `5df878a6` [declared] D-J6, claim leftover pinned `d2181a79` |
+| Declared changes handed to the live-test workflow | D-J1 (publish at ready, frozen, module.api) · D-J3 (-33 refresh gating, -38 pin cache) · D-J4 (relay refusal text `NOT_GM: …`) · D-J5 (one journal with two GM tabs) · D-J6 (`inspect` maps an Actor/Token to its player, `5df878a6`) — see §5 and the wave-2 report |
+| Frozen tests | `git diff f830067 -- test/` touches one frozen file, `glue.test.mjs`, at two named pins: the publish-timing pin (`dbd56638`, D-J1) and the relay-refusal message (`5b79802c`, D-J4). Every golden is unchanged; everything else under `test/` is new |
+| `module.json` edits appended to `wave7-restart-batch.md` | no — returned to the integrator (shared file): step 9 as written, plus the module README's Files table (`journal.css` → `styles/journal.css`) in the same commit as the move (wave-2 report, journal handoff item 2) |
+| Adjustments rows appended to `adjustments-batch.md` | `itempiles-journal-preview-copy` (D2 prefix rule) — **landed `cd414590`** (wave 2 integration; C47 passes, 87.5 %) |
+| §5.9.4 review hits | `createUser`/ready two-tab duplicate journal (and folder); `ensureAll`'s sequential create loop (C59 pattern) — not fixed, out of scope as in the audit (every remedy moves a frozen glue pin); Open for Joe W2-J4, see the deviation note below |
+| Still failing, and why | C03, C07, C09, C37 (+ C06w warn): the Wave 7 `module.json` batch (step 9). C47: the adjustments row (step 7, batched). C51: `folderName` has no label — adding one moves the frozen `settings-register` pin (Open for Joe). C56: the relay is still assigned by hand (wrapped by `relayed`, so C30 passes): the kit's `registerQueries` drops the query context, so a manifest relay row cannot see the sender (kit gap, returned to the integrator) |
+| Wave 2 close (code phase) | After integration **87.5 %** (C47 cleared by `cd414590`; fails C03, C07, C09, C37: Wave 7; C51: W2-J1; C56: W2-J2 / kit 1.0.3). At `f8fb7377`: 94 node:test cases + 81 legacy green. Coverage, module files (lines / branches / funcs): 77.7 / 75.2 / 73.0 → 95.3 / 82.2 / 88.5. Open for Joe: W2-J1–J4. Live phase: [`wave-2-live-plan.md`](wave-2-live-plan.md). Record: [`wave-2-report.md`](wave-2-report.md) §Per module |
+
+**Deviations from this guide, and why.**
+- Step 3: `folderName` kept unlabelled — the guide's lang keys would change the frozen register pin.
+- Step 6: the core rules are not destructured (laziness, see the step-2 follow-up).
+- -38: the five invalidation listeners register on the first single-page decision, not at load, so the
+  frozen load-time manifest (`golden/hooks.json`) is unchanged; `uninstall()` removes them.
+- -40: claim first, but not with `lib/election.mjs` `claimDocument`: its 750 ms settle timer would hang
+  the frozen single-tab relay pin under mocked timers, and its key is single-use per document (the
+  sender's User is long-lived and the request repeatable, §5.9.2). The fix uses a first-stamp claim on
+  the sender's User (`core.claimWinner`: a tab receives every earlier stamp before its own reply, so
+  only the first stamper sees no other fresh stamp), no timer on the winner's path; the loser waits
+  (bounded, 7 s) for the winner's journal and answers with it; each tab removes its stamp.
+
+**§5.9.4 review pass — hits not fixed in this wave (Open for Joe W2-J4).** The `createUser` listener and the
+ready `ensureAll` create behind `isGM && activeGM.isSelf`, which is true in every tab of the GM account, and
+`gmInflight`/`folderInflight` are per tab: with the MCP bridge tab and a GM browser tab open, a new User (or a
+player without a journal when both tabs reach `ready` together) gets two journals, and two `Player Journals`
+folders when the folder is missing. `ensureAll` also creates one player at a time in a loop (C59 pattern).
+items-journal-40 scoped both out; they stay out of scope here because every remedy (`claimDocument` on the new
+User, deterministic `_id`s, one `JournalEntry.createDocuments`) moves a frozen `glue.test.mjs` pin. Until Joe
+decides, the out-of-scope decision stands: a duplicate is reported in `report().users[].duplicates` and
+`personal()` keeps using the oldest journal.

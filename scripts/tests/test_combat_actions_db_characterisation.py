@@ -130,7 +130,6 @@ def test_twenty_serial_upserts(tmp_db, frozen_now):
     assert tmp_db.read_text(encoding="utf-8") == _render(recs)
 
 
-@pytest.mark.xfail(strict=False, reason="KNOWN python-tooling-44: unlocked read-modify-write")
 def test_concurrent_upserts_keep_every_row(tmp_db):
     for _ in range(20):
         tmp_db.unlink(missing_ok=True)
@@ -146,6 +145,28 @@ def test_concurrent_upserts_keep_every_row(tmp_db):
         for t in threads:
             t.join()
         assert len(cdb.read_all()) == 16
+
+
+def test_writers_lock_a_sidecar_beside_the_db(tmp_db, monkeypatch):
+    """python-tooling-44: every writer holds flock(LOCK_EX) on `<db>.lock` next to the DB
+    (here the tmp DB from DND_COMBAT_ACTIONS_DB), never next to the real one."""
+    import fcntl
+    held: list[tuple[str, int]] = []
+    real = fcntl.flock
+
+    def spy(fd, op):
+        held.append((os.fstat(fd).st_ino, op))
+        return real(fd, op)
+
+    monkeypatch.setattr(cdb.fcntl, "flock", spy)
+    cdb.upsert("n", "a", UTILITY)
+    cdb.upsert_many([("n", "b", UTILITY)])
+    cdb.delete("n", "a")
+    lock = tmp_db.with_name("actions.jsonl.lock")
+    assert lock.exists()
+    ino = lock.stat().st_ino
+    assert [op for i, op in held if i == ino] == [fcntl.LOCK_EX, fcntl.LOCK_UN] * 3
+    assert len(held) == 6, "every flock call is on the sidecar beside the tmp DB"
 
 
 # ── -46: upsert_many and the CLI, before any deletion ─────────────────────────

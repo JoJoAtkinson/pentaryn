@@ -1,4 +1,4 @@
-// pentaryn kit 1.0.1 · vendored from foundry/lib/errors.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.0.2 · vendored from foundry/lib/errors.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * Coded errors and the ok/fail result shapes every Pentaryn API speaks.
  *
@@ -9,7 +9,7 @@
  * Pure: no Foundry global is touched.
  */
 
-export const KIT_VERSION = "1.0.1";
+export const KIT_VERSION = "1.0.2";
 
 /** Every code a kit-built API may throw or return in a `fail()`. */
 export const CODES = Object.freeze([

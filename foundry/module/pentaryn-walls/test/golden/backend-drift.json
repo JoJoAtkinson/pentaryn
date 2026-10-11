@@ -803,47 +803,5 @@
         "run"
       ]
     }
-  },
-  "levels - different levels never interact": {
-    "createLevels": {
-      "js": [],
-      "wasm": [
-        "[]"
-      ]
-    },
-    "createFlagKeys": {
-      "js": [],
-      "wasm": [
-        "generated",
-        "run"
-      ]
-    }
-  },
-  "levels - same-level gap fills": {
-    "createLevels": {
-      "js": [
-        "[\"L1\"]"
-      ],
-      "wasm": [
-        "[]"
-      ]
-    },
-    "logLength": {
-      "js": 1,
-      "wasm": 0
-    },
-    "createFlagKeys": {
-      "js": [
-        "generated",
-        "kind",
-        "rule",
-        "run",
-        "sources"
-      ],
-      "wasm": [
-        "generated",
-        "run"
-      ]
-    }
   }
 }

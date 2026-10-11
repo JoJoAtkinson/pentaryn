@@ -24,9 +24,11 @@
  *     it, and an observed token with sight would let them see what the body "sees".
  *   - Players get OBSERVER on the token's own actor delta, never on the base actor, so no stat
  *     block in the sidebar is exposed. Item Piles cannot render a pile for a user without it.
+ *     The delta's own map is remembered and put back on revival (null: the base actor's again).
  */
 
-import { MODULE, showEye, eyePlacement } from "./loot-core.mjs";
+import { MODULE, showEye, eyePlacement, needsRedraw } from "./dropbin-core.mjs";
+import { api as itemPilesApi, isValidItemPile, isItemPileEmpty, turnTokensIntoItemPiles, revertTokensFromItemPiles } from "./piles.mjs";
 
 const OBSERVER = CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER;
 const EYE = "assets/tokens/custom/props/icon-eye.webp";
@@ -54,13 +56,17 @@ function eligible(tokenDoc) {
   return true;
 }
 
-const API = () => game.itempiles?.API;
-const isPile = t => !!API()?.isValidItemPile?.(t);
+const isPile = isValidItemPile;
 const ourCorpse = t => !!t.flags?.[MODULE]?.corpse;
 
 async function toCorpse(tokenDoc) {
   if (isPile(tokenDoc)) return;
-  await API().turnTokensIntoItemPiles([tokenDoc], {
+  // The delta's own ownership before death (usually null: inherit the base actor), for a revival.
+  // Already our corpse (Item Piles reverted the pile, the body is still dead): its delta is our
+  // OBSERVER map, so keep the map saved at the first death (none saved: a pre-fix corpse, null).
+  const ownership = ourCorpse(tokenDoc) ? (tokenDoc.flags[MODULE].ownership ?? null)
+    : foundry.utils.deepClone(tokenDoc.delta?.ownership ?? null);
+  await turnTokensIntoItemPiles([tokenDoc], {
     pileSettings: { type: "pile", distance: 1, deleteWhenEmpty: false, closed: false, locked: false,
       displayOne: false, showItemName: false, overrideSingleItemScale: false },
     tokenSettings: {}
@@ -69,7 +75,7 @@ async function toCorpse(tokenDoc) {
   // Players observe the body, and an observed token with sight is a vision source for a player
   // with nothing selected: a dead drow would keep lighting its room. Remember it for a revival.
   await fresh.update({ [`flags.${MODULE}.corpse`]: true, [`flags.${MODULE}.sight`]: !!fresh.sight.enabled,
-    "sight.enabled": false, "delta.ownership": { default: OBSERVER } });
+    [`flags.${MODULE}.ownership`]: ownership, "sight.enabled": false, "delta.ownership": { default: OBSERVER } });
   // Dead as core's full-body overlay. The "lootable" eye is not a document: every client draws
   // it on top of the token (paintEye below) while the body still holds something.
   await deadAsOverlay(fresh.actor);
@@ -93,16 +99,30 @@ async function removeLegacyEye(actor) {
 
 async function fromCorpse(tokenDoc) {
   if (!ourCorpse(tokenDoc)) return; // never revert a pile we didn't make
-  await API().revertTokensFromItemPiles([tokenDoc]);
+  await revertTokensFromItemPiles([tokenDoc]);
   const fresh = tokenDoc.parent?.tokens.get(tokenDoc.id) ?? tokenDoc;
   await removeLegacyEye(fresh.actor);
   const sight = fresh.flags?.[MODULE]?.sight ?? fresh.sight.enabled;
   await fresh.update({ [`flags.${MODULE}.-=corpse`]: null, [`flags.${MODULE}.-=sight`]: null,
-    "sight.enabled": sight, "delta.ownership": {} });
+    [`flags.${MODULE}.-=ownership`]: null, "sight.enabled": sight,
+    "delta.ownership": revivedOwnership(fresh.flags?.[MODULE]?.ownership) });
+}
+
+/**
+ * The delta ownership a revived body gets back (PT3-1). The update is recursive, so `{}` merged
+ * into the corpse's `{default: OBSERVER}` changed nothing and every player kept the sheet. `null`
+ * replaces the map (the delta inherits the base actor again: corpses made before the map was saved
+ * get this too). A saved map is written whole with its `default`, which overwrites the corpse's
+ * OBSERVER; its other keys are the only ones the corpse map has. No `{recursive: false}`: on a
+ * token update that would replace all of `delta` and `flags`, not just the ownership.
+ */
+function revivedOwnership(saved) {
+  if (!saved || typeof saved !== "object") return null;
+  return { ...saved, default: saved.default ?? CONST.DOCUMENT_OWNERSHIP_LEVELS.NONE };
 }
 
 async function sync(actor) {
-  if (!isGMRunner() || !API()) return;
+  if (!isGMRunner() || !itemPilesApi()) return;
   for (const t of tokensOf(actor)) {
     if (!eligible(t)) continue;
     try {
@@ -117,13 +137,14 @@ async function sync(actor) {
 // Debounce per actor: a damage roll can fire several updates in a row.
 const pending = new Map();
 function queue(actor) {
-  if (!actor) return;
+  // sync() runs on the active GM only; no other client needs the timer (items-journal-30)
+  if (!actor || !isGMRunner()) return;
   const key = actor.uuid;
   clearTimeout(pending.get(key));
   pending.set(key, setTimeout(() => { pending.delete(key); sync(actor); }, 150));
 }
 
-Hooks.on("updateActor", (actor, changes) => {
+function onActorHp(actor, changes) {
   if (!foundry.utils.hasProperty(changes, "system.attributes.hp")) return;
   // Healing a corpse above 0 HP is a revival: the Dead mark we put on it must go too, or the
   // "dead status counts as dead" rule keeps it lootable forever (found at the table: 65 HP and
@@ -131,16 +152,19 @@ Hooks.on("updateActor", (actor, changes) => {
   const hp = foundry.utils.getProperty(changes, "system.attributes.hp.value");
   if (isGMRunner() && typeof hp === "number" && hp > 0) {
     for (const t of tokensOf(actor)) {
-      if (ourCorpse(t) && t.actor?.statuses?.has("dead")) t.actor.toggleStatusEffect("dead", { active: false });
+      if (ourCorpse(t) && t.actor?.statuses?.has("dead")) {
+        // not awaited (the hook stays synchronous); a failure is one warning, not an unhandled rejection
+        Promise.resolve(t.actor.toggleStatusEffect("dead", { active: false }))
+          .catch(err => console.warn(`${MODULE} | revive: could not clear Dead on ${t.name}`, err));
+      }
     }
   }
   queue(actor);
-});
-for (const h of ["createActiveEffect", "deleteActiveEffect", "updateActiveEffect"]) {
-  Hooks.on(h, effect => {
-    if (effect.flags?.[MODULE]?.lootable) return; // our own eye marker; not a life-or-death change
-    if (effect.parent instanceof Actor) queue(effect.parent);
-  });
+}
+
+function onEffect(effect) {
+  if (effect.flags?.[MODULE]?.lootable) return; // our own eye marker; not a life-or-death change
+  if (effect.parent instanceof Actor) queue(effect.parent);
 }
 
 /* -------------------------------------------- */
@@ -175,10 +199,9 @@ function eyeTexture() {
 function wantsEye(doc) {
   try {
     if (!ourCorpse(doc) || doc.isSecret) return false;
-    const api = API();
-    if (!api) return false;
-    const pile = !!api.isValidItemPile?.(doc);
-    return showEye({ corpse: true, pile, empty: pile ? !!api.isItemPileEmpty?.(doc) : true });
+    if (!itemPilesApi()) return false;
+    const pile = isValidItemPile(doc);
+    return showEye({ corpse: true, pile, empty: pile ? isItemPileEmpty(doc) : true });
   } catch (err) {
     console.warn(`${MODULE} | eye check failed for ${doc?.name}`, err);
     return false;
@@ -204,7 +227,12 @@ function paintEye(token) {
     const { width, height } = doc.getSize();
     const p = eyePlacement(width, height);
     const [disc, sprite] = eye.children;
-    disc.clear().beginFill(0x000000, 0.55).drawCircle(0, 0, p.size * 0.55).endFill();
+    // hot: refreshToken repaints every frame a token animates; the disc is redrawn only when its size
+    // changed (items-journal-30). Position, sprite size, zIndex and visibility are set every time.
+    if (needsRedraw(eye._pdSize, p.size)) {
+      disc.clear().beginFill(0x000000, 0.55).drawCircle(0, 0, p.size * 0.55).endFill();
+      eye._pdSize = p.size;
+    }
     sprite.width = sprite.height = p.size;
     eye.position.set(p.x, p.y);
     eye.zIndex = (token.effects?.zIndex ?? 0) + 1;
@@ -223,15 +251,6 @@ function paintEyesOf(actor) {
   for (const doc of tokensOf(actor)) if (doc.parent === canvas.scene) paintEye(doc.object);
 }
 
-Hooks.on("drawToken", paintEye);
-Hooks.on("refreshToken", paintEye);
-Hooks.on("canvasReady", paintAllEyes);
-Hooks.on("updateToken", doc => { if (doc.parent === canvas?.scene) paintEye(doc.object); });
-// Taking items out of a corpse changes its synthetic actor's items/currency, not the token.
-Hooks.on("updateActor", paintEyesOf);
-for (const h of ["createItem", "updateItem", "deleteItem"]) {
-  Hooks.on(h, item => { if (item.parent instanceof Actor) paintEyesOf(item.parent); });
-}
 
 /**
  * Migration, active GM, once per load: corpses made before the eye was drawn carry a "Lootable"
@@ -264,7 +283,6 @@ async function migrateLegacyEyes() {
   if (eyes || deads) console.log(`${MODULE} | corpses: removed ${eyes} old Lootable effect(s), Dead made the overlay on ${deads}`);
 }
 
-Hooks.once("ready", () => { migrateLegacyEyes(); });
 
 /**
  * GM escape hatches on a corpse's token HUD. Once a token is a pile, Item Piles takes over the
@@ -280,7 +298,7 @@ async function revive(tokenDoc) {
   await sync(a);
 }
 
-Hooks.on("renderTokenHUD", (app, element) => {
+function addHudButtons(app, element) {
   if (!game.user.isGM) return;
   const tokenDoc = app.object?.document;
   if (!tokenDoc || !ourCorpse(tokenDoc)) return;
@@ -296,8 +314,37 @@ Hooks.on("renderTokenHUD", (app, element) => {
     b.addEventListener("click", ev => { ev.preventDefault(); ev.stopPropagation(); fn(); });
     col.prepend(b);
   };
-  mk("pd-corpse-revive", "fa-heart-pulse", "Revive (1 HP): no longer lootable", async () => { await revive(tokenDoc); app.close(); });
-  mk("pd-corpse-sheet", "fa-user", "Open character sheet (GM)", () => tokenDoc.actor?.sheet.render(true, { focus: true, bypassItemPiles: true }));
-});
+  mk("pd-corpse-revive", "fa-heart-pulse", _loc("PENTARYN_DROPBIN.corpse.revive"), async () => { await revive(tokenDoc); app.close(); });
+  mk("pd-corpse-sheet", "fa-user", _loc("PENTARYN_DROPBIN.corpse.sheet"), () => tokenDoc.actor?.sheet.render(true, { focus: true, bypassItemPiles: true }));
+}
+
+/* -------------------------------------------- */
+/*  Lifecycle                                   */
+/* -------------------------------------------- */
+
+/** Registration order (golden/hooks.json): conversion, eye painting, migration, the GM HUD. */
+export function install(reg, ctx) {
+  ctx.expose({ corpses });
+  const on = (name, fn, label) => reg.on(name, fn, { label });
+  on("updateActor", onActorHp, "corpse: hp");
+  for (const h of ["createActiveEffect", "deleteActiveEffect", "updateActiveEffect"]) on(h, onEffect, `corpse: ${h}`);
+  on("drawToken", paintEye, "eye: draw");
+  on("refreshToken", paintEye, "eye: refresh");               // hot: paints only our corpses, no world walk
+  on("canvasReady", paintAllEyes, "eye: canvas");
+  on("updateToken", doc => { if (doc.parent === canvas?.scene) paintEye(doc.object); }, "eye: token");
+  // Taking items out of a corpse changes its synthetic actor's items/currency, not the token.
+  on("updateActor", paintEyesOf, "eye: actor");
+  for (const h of ["createItem", "updateItem", "deleteItem"]) {
+    on(h, item => { if (item.parent instanceof Actor) paintEyesOf(item.parent); }, `eye: ${h}`);
+  }
+  ctx.onReady(() => migrateLegacyEyes(), "corpse eye migration");
+  on("renderTokenHUD", addHudButtons, "corpse HUD");
+}
+
+/** Cancel the pending debounced syncs. */
+export function uninstall() {
+  for (const t of pending.values()) clearTimeout(t);
+  pending.clear();
+}
 
 export const corpses = { sync, toCorpse, fromCorpse, isDead, revive, paintEye, paintAllEyes, migrateLegacyEyes };

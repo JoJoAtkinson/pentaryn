@@ -1,4 +1,4 @@
-// pentaryn kit 1.0.1 · vendored from foundry/lib/api.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.0.2 · vendored from foundry/lib/api.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * Build a module's published API from its manifest (pure data, `api-manifest.mjs`) and an
  * implementation map, and describe it.

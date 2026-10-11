@@ -686,7 +686,7 @@ function patchDoubleClick(ctx) {
   - Files, Tests (no fixture counts), Sync.
 - Move the `languageKeys` docblock (`build-core.mjs:259-264`) above `export function languageKeys`.
 - Write `CHANGELOG.md`.
-- Outside the module: the `typeahead.mjs` mention at `context/foundry/prompt-markers.md:445` →
+- Outside the module: the `typeahead.mjs` mention at `context/foundry/prompt-markers.md:450` →
   `typeahead-adapter.mjs`.
 - Absorbs: prompts-lookup-27, C44, C45.
 - Char. test: the prompts-lookup-27 doc guard (every `CODES` entry inside the "Errors are"
@@ -772,4 +772,6 @@ commits, with the reason in the commit message.
 | Declared changes handed to the live-test workflow | D6 — deployed and live-golden-checked in Stage 0 (only the suffix differs); open: J4 (which MCP tool the suffix should name) |
 | `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) |
 | Adjustments rows appended to `adjustments-batch.md` | no (step not reached) |
+| Play-test fixes (fix/playtest-2026-10-11, 0.4.4) | PT2-2 (a new character's spell slots, leveled and pact, start full; `summarise()` gains `slots`, `sheetLine` appends `slots …`) and PT2-5 (gather prints one `Description:` per actor; later tokens `same as t<n> "<name>"`) fixed on fix/playtest-2026-10-11. Tests: `test/pt2-2-slots.test.mjs`, `test/pt2-5-gather.test.mjs` (keep them through the refactor). No export surface changed (geometry-core 77, build-core 33 names still hold): the slot helpers `slotRows`/`fullSlotsUpdate` are private to `character.mjs` (→ `character-adapter.mjs`, step 10), the dedupe is inside `renderGather` (→ `core/gather-text.mjs`, step 9). No golden changed. |
 | Still failing, and why | C07 C15 C16 C18 C20 C21 C22 C24 C26 C27 C28 C29 C32 C35 C40 C44 C45 C47 C48 C56 — the guide's steps 2+ have not run. Frozen tests: the checkpoint's assertions and goldens are untouched since the checkpoint (see wave-1-report §Frozen tests). |
+| Wave 2 (kit 1.0.2, code phase; not migrated) | re-vendored `873dab7b`, frozen-root guard copy retired `47120a6d` [declared]. 24 node:test cases green at `f8fb7377`; conformance unchanged. Its `contract.test.mjs` passes against the fork's `migrate/wave-2`; mcp-fork-15 and prompts-lookup-11/-12 wait for this module's migration. Not yet synced: [`wave-2-live-plan.md`](wave-2-live-plan.md) (W2-L2) |

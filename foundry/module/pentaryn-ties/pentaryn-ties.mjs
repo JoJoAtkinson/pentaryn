@@ -302,10 +302,9 @@ Hooks.once("init", () => {
 });
 
 /**
- * Publish the API without assuming `game.pentaryn` is ours to extend.
- * pentaryn-importer creates and FREEZES that namespace, so a bare
- * `game.pentaryn.ties = …` throws in strict mode (esmodules always are) and
- * takes the rest of the ready hook down with it. Rebuild the object instead.
+ * Publish the API under `game.pentaryn.ties`. The root is a plain object every module assigns
+ * into: the importer merges into it and nothing freezes it since its keystone (items-journal-1),
+ * so the old frozen-root guard is gone (kit 1.0.2, J10). A frozen root now throws here.
  */
 function publishAPI() {
   /*
@@ -474,12 +473,8 @@ function publishAPI() {
       unreviewed: Attributes.unreviewedAttributes
     }
   };
-  const current = game.pentaryn;
-  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, ties: api };
-  else {
-    game.pentaryn ??= {};
-    game.pentaryn.ties = api;
-  }
+  game.pentaryn ??= {};
+  game.pentaryn.ties = api;
 }
 
 /** Each step is independent — one failure must not silently skip the others. */

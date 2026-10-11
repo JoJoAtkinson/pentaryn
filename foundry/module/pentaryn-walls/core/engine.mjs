@@ -62,7 +62,24 @@ export function resolveConfig({gridSize = 100, ...overrides} = {}) {
   return cfg;
 }
 
+/** The scope new stamps are written under: the pre-blueprint name (the Wave 7 batch moves it to the module id). */
 export const FLAG_SCOPE = "wall-autocomplete";
+
+/**
+ * Every scope a stamp is read from, newest first: the module id (where the Wave 7 flag-scope
+ * migration moves the data, core/migrate.mjs), then the legacy scope. Reading both keeps undo and
+ * `keepOpen` working on a wall whichever side of the migration it is on.
+ */
+export const READ_SCOPES = Object.freeze(["pentaryn-walls", "wall-autocomplete"]);
+
+/** A wall's stamp: its flags under every read scope, merged, the newer scope winning per key. Plain data only. */
+export function stampOf(w) {
+  const f = w?.flags;
+  if (!f) return {};
+  const [current, legacy] = READ_SCOPES.map(s => f[s]);
+  if (!current) return legacy ?? {};
+  return legacy ? {...legacy, ...current} : current;
+}
 
 /** The solid preset — every generated wall is this. APP/client/canvas/layers/walls.mjs:370 */
 export const SOLID = Object.freeze({light: 20, move: 20, sight: 20, sound: 20, door: 0, ds: 0, dir: 0});
@@ -164,7 +181,7 @@ function blocksOpen(a, b, c, d) {
 
 /** Wall document → internal segment. Generated walls get synthetic ids. */
 function toSeg(w, idx) {
-  const flags = w.flags?.[FLAG_SCOPE] ?? {};
+  const flags = stampOf(w);
   return {
     idx,
     id: w._id ?? w.id ?? `w${idx}`,
@@ -185,8 +202,23 @@ function toSeg(w, idx) {
 }
 
 /**
+ * A working copy of a segment list with `idx` equal to each segment's array position. The rules
+ * address segments as `segs[s.idx]`, so every list the engine works on must come through here.
+ * `c` is copied: the engine mutates coordinates in place and must never reach its input.
+ */
+function reindex(segs) {
+  return segs.map((s, i) => ({...s, c: [...s.c], idx: i}));
+}
+
+/** Wall documents → an indexed working segment list (one level group, or the whole set). */
+function toSegs(walls) {
+  return reindex(walls.map(toSeg));
+}
+
+/**
  * Foundry's own wall categories, mirroring `getWallCategory()`
- * (APP/client/documents/wall.mjs:76-89). Order of the tests matters.
+ * (APP/client/documents/wall.mjs:76-89). Order of the tests matters. Exported as `wallCategory`:
+ * the one copy of this rule (canonical() and the fixture corpus use it too).
  */
 function category(s) {
   const {light = 20, sight = 20, sound = 20, move = 20} = s;
@@ -463,13 +495,16 @@ function isOutward(v, q) {
   return dot(sub(q, v.p), outward(v)) > 0;
 }
 
-/** Every non-degenerate segment is an obstacle — including inert components. */
-function obstacles(segs, exclude = new Set()) {
-  return segs.filter(s => !isDegenerate(s) && !exclude.has(s.idx));
-}
+/*
+ * Obstacles. Every non-degenerate segment is an obstacle — including inert components. The scans
+ * below walk `segs` in place and skip degenerate and excluded segments inline instead of building
+ * a filtered copy per call (pathClear runs per F1 pair and F2 leg). They keep `segs` order, so the
+ * strict `<` tie-breaks pick the same segment as before (senses-walls-cursors-5).
+ */
 
 function pathClear(a, b, segs, exclude) {
-  for (const s of obstacles(segs, exclude)) {
+  for (const s of segs) {
+    if (isDegenerate(s) || exclude.has(s.idx)) continue;
     if (blocksOpen(a, b, segA(s), segB(s))) return false;
   }
   return true;
@@ -535,7 +570,9 @@ function enumerate(segs, verts, cfg) {
   // this rule can never fire twice on the same endpoint.
   for (const v of dang) {
     let best = null;
-    for (const s of obstacles(segs, new Set([v.ends[0].seg.idx]))) {
+    const own = v.ends[0].seg.idx;
+    for (const s of segs) {
+      if (s.idx === own || isDegenerate(s)) continue;
       const f = foot(v.p, segA(s), segB(s));
       if (!f || f.t <= 0 || f.t >= 1) continue;
       const d2 = dist2(v.p, f.point);
@@ -551,12 +588,12 @@ function enumerate(segs, verts, cfg) {
   }
 
   // F1 — collinear gap fill. The strongest evidence there is: two segments on one line.
+  const coll2 = cfg.collEps * cfg.collEps;
   for (let i = 0; i < dang.length; i++) {
     for (let j = i + 1; j < dang.length; j++) {
       const a = dang[i], b = dang[j];
       const A = a.ends[0].seg, B = b.ends[0].seg;
       if (A.idx === B.idx) continue;
-      const coll2 = cfg.collEps * cfg.collEps;
       const onA = distToLine2(segA(B), segA(A), segB(A)) <= coll2 && distToLine2(segB(B), segA(A), segB(A)) <= coll2;
       const onB = distToLine2(segA(A), segA(B), segB(B)) <= coll2 && distToLine2(segB(A), segA(B), segB(B)) <= coll2;
       if (!onA || !onB) continue;
@@ -670,9 +707,10 @@ function enumerate(segs, verts, cfg) {
  */
 function castRay(v, segs, cfg) {
   const d = outward(v);
-  const ex = new Set([v.ends[0].seg.idx]);
+  const own = v.ends[0].seg.idx;
   let best = null;
-  for (const s of obstacles(segs, ex)) {
+  for (const s of segs) {
+    if (s.idx === own || isDegenerate(s)) continue;
     const r = d, sVec = sub(segB(s), segA(s));
     const denom = cross(r, sVec);
     if (denom === 0) continue;                        // parallel — F1's job, not E1's
@@ -697,7 +735,8 @@ function castRay(v, segs, cfg) {
   const coll2 = band * band;
   const dLen2 = dot(d, d);
   const ahead = [v.p[0] + d[0], v.p[1] + d[1]];
-  for (const s of obstacles(segs, ex)) {
+  for (const s of segs) {
+    if (s.idx === own || isDegenerate(s)) continue;
     if (cross(d, sub(segB(s), segA(s))) !== 0) continue;
     if (distToLine2(segA(s), v.p, ahead) > coll2) continue;
     const t0 = dot(sub(segA(s), v.p), d) / dLen2, t1 = dot(sub(segB(s), v.p), d) / dLen2;
@@ -881,12 +920,12 @@ function diagnose(v, segs, verts, cfg, ambiguous) {
  */
 export function lintOnly(walls, opts = {}) {
   const cfg = resolveConfig(opts);
-  return lint(walls.map(toSeg).map((s, i) => ({...s, c: [...s.c], idx: i})), cfg);
+  return lint(toSegs(walls), cfg);
 }
 
 export function analyze(walls, opts = {}) {
   const cfg = resolveConfig(opts);
-  const segs = walls.map(toSeg).map((s, i) => ({...s, c: [...s.c], idx: i}));
+  const segs = toSegs(walls);
   const lints = lint(segs, cfg);
   const verts = buildGraph(segs, cfg);
   const amb = ambiguousAnchors(enumerate(segs, verts, cfg));
@@ -926,7 +965,7 @@ export function runEngine(walls, opts = {}) {
   let lints = [], iterations = 0, componentReport = [];
 
   for (const [levelKey, group] of byLevel) {
-    const segs = group.map((s, i) => ({...s, c: [...s.c], idx: i}));
+    const segs = reindex(group);
     lints = lints.concat(lint(segs, cfg));
 
     let verts = buildGraph(segs, cfg);
@@ -1078,3 +1117,5 @@ export function runEngine(walls, opts = {}) {
     }
   };
 }
+
+export { category as wallCategory };

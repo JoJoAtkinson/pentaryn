@@ -315,7 +315,7 @@ MODULES = {
     ),
     "movement": ModuleSpec(
         "pentaryn-movement",
-        # node-test: movement-core.mjs (owned-on-top sort, ghost policy) is pure.
+        # node-test: test/run.mjs runs every test/**/*.test.mjs (core, glue, api, patches …).
         check=(*_STATIC, "node-test", *_BLUEPRINT),
         after_sync=(
             "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Movement', then reload.",
