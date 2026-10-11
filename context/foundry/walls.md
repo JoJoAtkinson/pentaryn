@@ -100,7 +100,7 @@ with the outer's and bridge the two.
 - **Stay a few px clear of a tolerance boundary.** A gap of exactly `gapMax` flips on a 1px
   nudge. Every refusal names its number.
 - **Levels:** walls on different Levels never interact, and created walls keep their level (both
-  engines; the compiled one hands Levels scenes to the JavaScript engine).
+  engines; the compiled one hands Levels scenes to the JavaScript engine, and the card says `js`).
 - **Keep a wall open on purpose:** set `flags.wall-autocomplete.keepOpen: true` on it.
 
 ### Why it is safe on a hand-drawn scene
