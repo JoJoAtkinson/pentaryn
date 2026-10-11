@@ -84,7 +84,7 @@ export function imageOffset(scene) {
 
 /**
  * A stored record with its coordinates in every space a caller needs. `rec` keys come first, then
- * canvas, image, gridSquare, snapped, age.
+ * canvas, image, gridSquare, snapped, age (whole seconds, text) and ageMs (`now - rec.t`, a number).
  * @param {object|null|undefined} rec
  * @param {{offset?: {x: number, y: number}, gridSize?: number}} scene  imageOffset() and grid size
  * @param {number} now  ms
@@ -104,6 +104,7 @@ export function decorate(rec, { offset, gridSize } = {}, now) {
     /** Top-left of the grid square, i.e. what a snapped token's x/y would be. */
     snapped: { x: Math.floor(rec.x / g) * g, y: Math.floor(rec.y / g) * g },
     age: `${Math.round((now - rec.t) / 1000)}s ago`,
+    ageMs: now - rec.t,
   };
 }
 

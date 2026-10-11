@@ -131,14 +131,15 @@ for (const [label, M] of IMPLS) {
       ["0s ago", "0s ago", "1s ago", "1s ago", "2s ago", "61s ago", "-2s ago"]);
   });
 
-  test(`${label}: pin transform-creatures-39: decorate has no numeric age`, () => {
+  // flipped in guide step 6 ([declared] P-D3): the pin stays true of the verbatim oracle only
+  if (label === "oracle") test(`${label}: pin transform-creatures-39: decorate has no numeric age`, () => {
     const full = { t: 0, userId: "u", userName: "U", sceneId: "s", sceneName: "S", x: 1050, y: 850 };
     const out = M.decorate(full, { offset: { x: 1000, y: 800 }, gridSize: 100 }, 12000);
     same(Object.keys(out), RECORD_KEYS, "the key list ends at age");
     assert.equal("ageMs" in out, false);
   });
 
-  test(`${label}: transform-creatures-39 target — decorate adds ageMs after age (guide step 6)`, { todo: "transform-creatures-39, [declared] guide step 6" }, () => {
+  if (label !== "oracle") test(`${label}: transform-creatures-39 target — decorate adds ageMs after age (guide step 6)`, () => {
     const out = M.decorate({ t: 0, x: 1050, y: 850, userId: "u", sceneId: "s" }, { offset: { x: 1000, y: 800 }, gridSize: 100 }, 12000);
     same(Object.keys(out).slice(-2), ["age", "ageMs"]);
     assert.equal(out.ageMs, 12000);

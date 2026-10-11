@@ -66,6 +66,17 @@ test("settings(): max and the log's size, never its contents; trace() empty whil
   assert.deepEqual(api.trace(), []);
 });
 
+test("step 6 (P-D3, [declared]): every reader's records carry ageMs after age, a number of ms", () => {
+  mock.timers.tick(12_345);
+  const last = api.last();
+  assert.deepEqual(Object.keys(last).slice(-2), ["age", "ageMs"]);
+  assert.equal(last.ageMs, Date.now() - last.t);
+  assert.equal(last.age, `${Math.round(last.ageMs / 1000)}s ago`);
+  assert.deepEqual(api.recent().map(r => typeof r.ageMs), ["number"]);
+  assert.deepEqual(api.all().map(r => typeof r.ageMs), ["number"]);
+  assert.match(api.describe().methods.find(m => m.path === "last").returns, /age, ageMs \}/);
+});
+
 test("game.pentaryn root helpers see pings", () => {
   assert.deepEqual(F.game.pentaryn.namespaces(), [NS]);
   assert.deepEqual(Object.keys(F.game.pentaryn.describe().namespaces), [NS]);

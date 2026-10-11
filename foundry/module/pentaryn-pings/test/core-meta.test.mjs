@@ -53,7 +53,9 @@ test("seeded sweep: core equals the oracle on 2000 generated cases per function"
 
     const rec = { t: int(0, 1e6), userId: pick(["u", "v"]), sceneId: pick(["s", "t"]), x: int(-500, 8000), y: int(-500, 8000) };
     const now = rec.t + int(-3000, 120000);
-    same(core.decorate(rec, { offset, gridSize }, now), oracle.decorate(rec, { offset, gridSize }, now), `decorate #${i}`);
+    const { ageMs, ...rest } = core.decorate(rec, { offset, gridSize }, now);
+    same(rest, oracle.decorate(rec, { offset, gridSize }, now), `decorate #${i}`);
+    assert.equal(ageMs, now - rec.t, `decorate ageMs #${i} (step 6)`);
 
     const next = { userId: pick(["u", "v"]), sceneId: pick(["s", "t"]), x: rec.x + pick([0, 0, 1, -1]), y: rec.y + pick([0, 0, 1]) };
     const at = rec.t + int(-100, 800);

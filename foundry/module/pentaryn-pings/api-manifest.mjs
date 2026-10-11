@@ -10,7 +10,7 @@ import { CONTRACT, MODULE, NS, VERSION } from "./pings-core.mjs";
 
 /** The decorated record every reader returns (README "API"). */
 export const RECORD =
-  "{ t, userId, userName, sceneId, sceneName, x, y, canvas: {x, y}, image: {x, y}, gridSquare: {i, j}, snapped: {x, y}, age }";
+  "{ t, userId, userName, sceneId, sceneName, x, y, canvas: {x, y}, image: {x, y}, gridSquare: {i, j}, snapped: {x, y}, age, ageMs }";
 
 const READ = "Reads the stored log, which can trail the newest ping until the next write (≤ 250 ms after it). GM clients only.";
 
