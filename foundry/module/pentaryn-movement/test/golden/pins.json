@@ -1,0 +1,23 @@
+[
+  {
+    "noteId": "n1",
+    "label": "Under the hero",
+    "tokenId": "pc",
+    "tokenName": "Hero",
+    "playerOwned": true
+  },
+  {
+    "noteId": "n2",
+    "label": "Journal-named",
+    "tokenId": "npc",
+    "tokenName": "Ogre",
+    "playerOwned": false
+  },
+  {
+    "noteId": "n4",
+    "label": "",
+    "tokenId": "far",
+    "tokenName": "Edge",
+    "playerOwned": false
+  }
+]
