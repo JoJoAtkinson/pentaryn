@@ -9,7 +9,7 @@
  */
 
 import {
-  BOOKSETS, EDITIONS, MONSTER_PACKS, findPage, foundFromDoc, knownLists, listFor as listForIn, matchMonster,
+  BOOKSETS, EDITIONS, MONSTER_PACKS, findPage, foundFromDoc, nonPageWarning, knownLists, listFor as listForIn, matchMonster,
   missingPackError, monsterDigest, monsterQuery, monsterRow, pageMonsters, renderPage, renderTable, resolveBookIds,
   searchBooks, sortMonsters, embeddedTableUuids,
 } from "./lookup-core.mjs";
@@ -53,7 +53,9 @@ async function page(ref, opts = {}) {
     const read = await readPageDoc(raw, log);
     if (!read) return { error: `no document at ${raw}` };
     const found = foundFromDoc(read);
-    return withTables(renderPage(found, opts), found, opts);
+    const out = renderPage(found, opts);
+    const warning = nonPageWarning(raw, read.documentName);
+    return withTables(warning ? { ...out, warning } : out, found, opts);
   }
 
   const { books, missing } = await loadBooks(resolveBookIds(opts.books));

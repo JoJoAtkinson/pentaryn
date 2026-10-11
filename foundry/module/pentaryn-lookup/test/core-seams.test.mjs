@@ -188,3 +188,12 @@ test("knownLists: a missing registry or spellLists is [], a throwing one is [] a
   assert.deepEqual(core.knownLists(throwing, err => seen.push(err.message)), []);
   assert.deepEqual(seen, ["moved"]);
 });
+
+// ── DL4: a non-page UUID says so (prompts-lookup-5, warning half) ──
+
+test("nonPageWarning: none for a page; the documented text for any other kind", () => {
+  assert.equal(core.nonPageWarning("Compendium.p.c.JournalEntry.d.JournalEntryPage.g", "JournalEntryPage"), null);
+  assert.equal(core.nonPageWarning("Compendium.p.c.JournalEntry.d", "JournalEntry"),
+    "Compendium.p.c.JournalEntry.d is a JournalEntry, not a JournalEntryPage — pass a page UUID from search()");
+  assert.match(core.nonPageWarning("Compendium.p.a.Actor.x", "Actor"), /is a Actor, not a JournalEntryPage/);
+});

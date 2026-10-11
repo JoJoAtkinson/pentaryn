@@ -43,12 +43,13 @@ export const MANIFEST = Object.freeze({
         { name: "ref", resolve: false, type: "page UUID | page name", doc: "a hit's uuid from search(), or an exact-then-substring page name" },
         { name: "opts", type: `{ books?: ${BOOKS}, maxChars? (6000), offset?, raw?, tables? (true) }`, optional: true },
       ],
-      returns: "{ book, journal, page, uuid, text, edition?, truncated?, totalChars?, nextOffset?, "
+      returns: "{ book, journal, page, uuid, text, edition?, truncated?, totalChars?, nextOffset?, warning?, "
         + "tables?: [{ name, formula, uuid, rows } | { uuid, error }] } | { journal, page, uuid, raw } "
         + "| { notFound, name, closest, hint } | { error }",
       gm: false, writes: false, legacy: true, query: true,
       args: d => [d.ref, d],
-      doc: "One page as plain text, with its embedded roll tables. Page past maxChars with offset = nextOffset.",
+      doc: "One page as plain text, with its embedded roll tables. Page past maxChars with offset = nextOffset. "
+        + "A UUID that is not a page (a JournalEntry) answers empty text with a warning.",
     },
     {
       path: "monster",

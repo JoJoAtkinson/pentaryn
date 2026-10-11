@@ -260,6 +260,15 @@ export function foundFromDoc({ id, name, html, pack, parent, packLabel, edition 
   };
 }
 
+/**
+ * page(<uuid>) of a document that is not a page (a JournalEntry, Actor, Item UUID) still renders —
+ * as an empty page — so the answer says why (prompts-lookup-5). null for a page.
+ */
+export function nonPageWarning(uuid, documentName) {
+  if (documentName === "JournalEntryPage") return null;
+  return `${uuid} is a ${documentName}, not a JournalEntryPage — pass a page UUID from search()`;
+}
+
 // ── one page ─────────────────────────────────────────────────────────────────
 /** Find a page by exact-then-loose name across books. Never returns undefined. */
 export function findPage(books, name) {

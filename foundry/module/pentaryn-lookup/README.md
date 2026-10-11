@@ -59,7 +59,7 @@ throw. None is GM-only, none writes.
 | Method | Returns |
 |---|---|
 | `search(query, { books, limit, snippet, regex })` | `{ query, books, total, shown, hits: [{ book, journal, page, uuid, matches, snippet, edition? }], note?, truncated?, warning? }` \| `{ error }` |
-| `page(ref, { books, maxChars, offset, raw, tables })` | `{ book, journal, page, uuid, text, edition?, truncated?, totalChars?, nextOffset?, tables? }` \| `{ journal, page, uuid, raw }` \| `{ notFound, name, closest, hint }` \| `{ error }` |
+| `page(ref, { books, maxChars, offset, raw, tables })` | `{ book, journal, page, uuid, text, edition?, truncated?, totalChars?, nextOffset?, warning?, tables? }` \| `{ journal, page, uuid, raw }` \| `{ notFound, name, closest, hint }` \| `{ error }` |
 | `monster(name, { text })` | `{ name, pack, uuid, cr, ac, hp, size, type, features, warning? }` (+ `languages`, `speed`, feature `text` with `text: true`) \| `{ notFound, name, searched, hint }` \| `{ error }` |
 | `monsters({ size, type, cr, minCr, maxCr, name, limit, packs })` | `{ count, shown, monsters: [{ name, cr, size, type, uuid, pack }], hint? }` |
 | `names(kind)` | `{ classes, subclasses: { <class>: [] }, species, backgrounds, feats: { origin, general, … } }`, or one key |
@@ -71,7 +71,8 @@ throw. None is GM-only, none writes.
 | `LIMITS` | the limits table, a frozen copy (data, not a method) |
 
 `page`'s `ref` is a page UUID or a page **name** (exact, then substring) — it is never run
-through the kit's actor resolver. `page()` appends embedded roll tables as `tables` (`{ tables:
+through the kit's actor resolver. A UUID of something that is not a page (a JournalEntry) answers
+empty `text` plus a `warning` saying so. `page()` appends embedded roll tables as `tables` (`{ tables:
 false }` skips them). Kit members: `describe()`, `version`, `contract`, `settings()`, `trace()`,
 `uninstall()`.
 

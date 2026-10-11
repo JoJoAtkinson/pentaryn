@@ -10,6 +10,8 @@
 - GM-guarded queries `pentaryn-lookup.{search,page,monster,monsters,names,onList,spellList,packs}`.
 - Book packs are loaded once per session, with each page's plain text; the second search is
   near-instant. `uninstall()` clears the cache.
+- `onList` / `spellList` answer "no such list" instead of throwing when dnd5e's registry moves.
+- `page(<uuid>)` of a non-page document (a JournalEntry) adds a `warning`.
 - Failed reads are traced at debug level (`CONFIG.debug["pentaryn-lookup"] = true`).
 - The node test suite runs on `node:test` (`node test/run.mjs`).
 

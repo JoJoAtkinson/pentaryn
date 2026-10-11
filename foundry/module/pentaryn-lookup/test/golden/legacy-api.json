@@ -239,14 +239,15 @@
   },
   {
     "input": [
-      "page by JournalEntry uuid (no warning today)"
+      "page by JournalEntry uuid (warning since DL4)"
     ],
     "out": {
       "book": "Player's Handbook",
       "journal": "Appendix C: Rules Glossary",
       "page": "Appendix C: Rules Glossary",
       "uuid": "Compendium.dnd-players-handbook.content.JournalEntry.docGloss.JournalEntryPage.docGloss",
-      "text": ""
+      "text": "",
+      "warning": "Compendium.dnd-players-handbook.content.JournalEntry.docGloss is a JournalEntry, not a JournalEntryPage — pass a page UUID from search()"
     }
   },
   {

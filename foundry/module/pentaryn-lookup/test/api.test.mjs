@@ -48,7 +48,7 @@ const CASES = {
   "page Study maxChars 50 offset 10": () => rules.page("Study", { maxChars: 50, offset: 10 }),
   "page nope": () => rules.page("No Such Page"),
   "page by page uuid": () => rules.page(PAGE_UUID),
-  "page by JournalEntry uuid (no warning today)": () => rules.page(ENTRY_UUID),
+  "page by JournalEntry uuid (warning since DL4)": () => rules.page(ENTRY_UUID),
   "page Compendium.x.y (fromUuid null)": () => rules.page("Compendium.x.y"),
   "page Compendium.x.y (fromUuid rejects)": () => withSwap(() => {
     const saved = globalThis.fromUuid;
