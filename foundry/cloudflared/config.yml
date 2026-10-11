@@ -32,6 +32,16 @@ credentials-file: /Users/joe/.cloudflared/3f188349-3bfb-4674-bde1-b4eb61b872f0.j
 originRequest:
   connectTimeout: 30s
   noTLSVerify: false
+  # Cloudflare Access ("Protect with Access"): the Access app `vtt` makes everyone sign in
+  # with a whitelisted Google account at the edge; this makes cloudflared itself reject any
+  # request that arrives without a valid Access token for that app, so the gate can't be
+  # bypassed. audTag = the `vtt` app's AUD (shown as `kid=` in its login redirect).
+  # See context/foundry/cloudflare-access.md.
+  access:
+    required: true
+    teamName: broad-smoke-7112
+    audTag:
+      - 7e286c1d66b2f705c9f1d124e9a9f152c9bafb9b5215d5fc928959ade7909f57
 
 ingress:
   # ── Administration: localhost only, by construction ──
