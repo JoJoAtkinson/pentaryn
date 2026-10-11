@@ -8,8 +8,9 @@ never touch the same files.**
   start unpacks it into ``Data/assets/tokens/tokens-02/``. Extracted once, tracked
   by hash, never re-extracted, never overwritten. Local assets are never uploaded.
 - **The world flows UP.** Every server stop (and every start, before launch)
-  archives the world, Config and modules to OneDrive as a timestamped snapshot,
-  tagged with the machine that took it (``world-<UTC stamp>-fvtt<ver>-<host>.tar.gz``).
+  archives the world and Config to OneDrive as a timestamped snapshot, tagged with
+  the machine that took it (``world-<UTC stamp>-fvtt<ver>-<host>.tar.gz``). Modules
+  and systems travel beside it as content-addressed **bundles** (below).
 - **Restore is never silent.** At an interactive boot, when the newest snapshot in the
   cloud (from either machine) is newer than what this machine's world is based on, the
   boot step *tells you* and offers it as the default (``scripts/foundry/boot.py``).
@@ -30,9 +31,20 @@ snapshots, and resolves conflicts by writing *conflict copies* into the director
 inside a live database. A *stopped* database is copied wholesale, which is always
 consistent. A *running* one is never touched by the cloud at all.
 
-Sizes, re-measured 2026-10: the world is a few MB and Config 8 KB, but ``Data/modules`` is
-~2.7 GB of premium map art, so a snapshot is **~2.5–3.2 GB**. Retention is built around
-that size:
+Sizes, re-measured 2026-10-11: ``Data/worlds`` ~37 MB and ``Config`` ~6 MB, so a world
+snapshot is **~45 MB**. ``Data/modules`` (~3.45 GB, mostly premium map art that almost never
+changes) and ``Data/systems`` (~135 MB) are not in it. Each module and system folder is a
+**bundle** in ``bundles/``, named ``<kind>@<id>@<version>@<fingerprint>.tar.gz``
+(``scripts/foundry/bundles.py``). The fingerprint is a content hash that ignores LevelDB
+housekeeping, so a Foundry launch changes nothing and the same bytes on either machine get
+the same name. A bundle is uploaded only when the cloud lacks that name, so a backup costs
+~45 MB plus whatever modules really changed. Each world snapshot's ``.parent`` sidecar,
+and the tar's first member ``pentaryn-snapshot.json``, list the bundle each module and
+system was at (the manifest). A restore downloads the world tar and only the bundles this
+machine lacks. Snapshots from before bundles (untagged ones, and the first ``-mac``
+snapshot) are **full**: worlds + Config + modules in one tar. They restore exactly as
+before; the sidecar says which kind a snapshot is and the tar's first member confirms it.
+Design: ``context/plans/module-bundles-2026-10.md``. Retention:
 
 - **Ten** rolling snapshots per host (``PENTARYN_KEEP_SNAPSHOTS``).
 - A snapshot taken within **five days** of this host's newest one *replaces* it, so a
@@ -41,9 +53,14 @@ that size:
   ``major-release/`` and never pruned.
 - Uploads land as ``<name>.partial`` and are renamed when complete; a ``.partial`` is
   never a snapshot, and one older than a day is swept as a crash leftover.
+- A bundle is deleted only by a mark-and-sweep after an uploading backup (or
+  ``make foundry-bundles-gc YES=1``): when no retained snapshot, safety copy or
+  ``major-release/`` generation references it and it is older than seven days. The
+  uploader lists the cloud again once its snapshot has landed and re-uploads any
+  referenced bundle that was swept meanwhile.
 
-Systems (132 MB) are mirrored per version and shared by both hosts (the same version is
-the same bytes); the last ``KEEP_SYSTEM_MIRRORS`` versions are kept.
+``system-backup/`` (the per-version system mirrors) is legacy: nothing writes or prunes it
+any more, and Joe deletes it by hand.
 """
 
 from __future__ import annotations
@@ -92,10 +109,6 @@ KEEP_SAFETY_COPIES = 3
 
 # A snapshot taken while this host's newest one is younger than this REPLACES it.
 COALESCE_WINDOW_DAYS = 5
-
-# Legacy: system mirrors are retired (systems are bundles, module-bundles-2026-10 §1 #5);
-# only README_TEXT still quotes this until its rewrite.
-KEEP_SYSTEM_MIRRORS = 3
 
 # A crash between upload and rename leaves a `.partial`; younger ones may be the other
 # machine mid-upload, so only these are swept.
@@ -222,7 +235,7 @@ README_TEXT = (
     "                Never edit a zip once added; add the next number instead.\n"
     f"                Kinds: {', '.join(sorted(KINDS))}\n\n"
     "world-backups/  AUTOMATIC — do not edit.\n"
-    "                Snapshots of the campaign, Config and modules (~2.5-3.2 GB each),\n"
+    "                Snapshots of the campaign and Config (~45 MB each),\n"
     "                written on every server stop and start, named\n"
     "                world-<UTC stamp>-fvtt<version>-<machine>.tar.gz.\n"
     f"                Each machine keeps its own most recent {KEEP_SNAPSHOTS}, and a snapshot\n"
@@ -231,17 +244,25 @@ README_TEXT = (
     "                nothing deletes those automatically.\n"
     "                A name ending .safety.tar.gz is the state a restore replaced;\n"
     f"                each machine keeps its last {KEEP_SAFETY_COPIES} of those as well.\n"
-    "                A name ending .tar.gz.parent is that snapshot's lineage (tiny).\n"
+    "                A name ending .parent is that snapshot's lineage and bundle manifest\n"
+    "                (tiny): which bundle each module and system was at.\n"
+    "                Older snapshots (names without a machine, and the first -mac one)\n"
+    "                hold the modules too (~2.5-3.3 GB) and restore as before.\n"
     "                A name ending .partial is an upload in progress (or a crash, swept\n"
     "                after a day) — never a snapshot.\n\n"
     "major-release/  AUTOMATIC — never pruned.\n"
     "                When Foundry moves to a new generation (14 -> 15), the\n"
     "                last snapshot each machine took on the old one is preserved\n"
     "                here. Deleting one is you deciding you are never going back.\n\n"
-    "system-backup/  AUTOMATIC — do not edit.\n"
-    "                One copy per game-system version, shared by both machines.\n"
-    f"                The last {KEEP_SYSTEM_MIRRORS} versions are kept, because rolling a\n"
-    "                system update back needs the code you were on BEFORE it.\n\n"
+    "bundles/        AUTOMATIC — do not edit. Shared by both machines.\n"
+    "                One tar per module or game system per content fingerprint:\n"
+    "                module@<id>@<version>@<fingerprint>.tar.gz, system@... the same.\n"
+    "                A backup uploads only the bundles this folder lacks, so the\n"
+    "                map packs go up once; a restore downloads only the bundles the\n"
+    "                machine lacks. A bundle is deleted only when no kept snapshot\n"
+    f"                lists it and it is older than {GC_GRACE_DAYS} days.\n\n"
+    "system-backup/  LEGACY — no longer written (systems are bundles now).\n"
+    "                Safe to delete by hand.\n\n"
     "Restoring is never silent and never automatic without a terminal. At an\n"
     "interactive `make vtt-up`, when this folder has a newer snapshot than the\n"
     "machine's world, you are told and the default is the newest snapshot; the\n"
@@ -1782,7 +1803,7 @@ def main(argv: list[str] | None = None) -> int:
     a.add_argument("--dry-run", action="store_true")
     a.add_argument("--if-reachable", action="store_true",
                    help="warn and exit 0 instead of failing when the cloud is unreachable")
-    b = sub.add_parser("backup", help="snapshot world+config+modules to OneDrive (up)")
+    b = sub.add_parser("backup", help="snapshot world+Config (+ new bundles) to OneDrive (up)")
     b.add_argument("--reason", default="manual")
     b.add_argument("--if-stopped", action="store_true",
                    help="skip instead of failing when the server is up")
