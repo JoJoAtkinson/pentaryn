@@ -1,8 +1,8 @@
 //! Wall autocomplete — compiled backend.
 //!
-//! A port of `wall-engine.mjs`. The JS engine is the reference implementation; this exists
+//! A port of `core/engine.mjs`. The JS engine is the reference implementation; this exists
 //! only to be faster, and is correct exactly insofar as it produces byte-identical
-//! geometry. `backends.mjs::compare()` decides that mechanically.
+//! geometry. `core/backends.mjs::compare()` decides that mechanically.
 //!
 //! Two deliberate choices keep it bit-identical rather than merely close:
 //!

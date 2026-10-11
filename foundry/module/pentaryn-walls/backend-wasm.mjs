@@ -10,8 +10,7 @@
  * It is safe to import when the module has not been built — `available()` just stays false.
  */
 
-import {register} from "./backends.mjs";
-import {resolveConfig, analyze, lintOnly, SOLID, FLAG_SCOPE} from "./wall-engine.mjs";
+import {register, resolveConfig, analyze, lintOnly, FLAG_SCOPE} from "./walls-core.mjs";
 
 let mod = null;
 let loadError = null;

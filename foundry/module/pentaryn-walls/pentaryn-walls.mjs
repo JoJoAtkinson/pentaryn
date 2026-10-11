@@ -1,7 +1,7 @@
 /**
  * Wall autocomplete — Foundry glue.
  *
- * Everything geometric lives in wall-engine.mjs, which knows nothing about Foundry. This
+ * Everything geometric lives in core/engine.mjs, which knows nothing about Foundry. This
  * file does three things and nothing else: read the scene, hand the coordinates to the
  * engine, commit the result in two batches.
  *

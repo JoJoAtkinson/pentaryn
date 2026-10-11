@@ -186,7 +186,8 @@ function toSeg(w, idx) {
 
 /**
  * Foundry's own wall categories, mirroring `getWallCategory()`
- * (APP/client/documents/wall.mjs:76-89). Order of the tests matters.
+ * (APP/client/documents/wall.mjs:76-89). Order of the tests matters. Exported as `wallCategory`:
+ * the one copy of this rule (canonical() and the fixture corpus use it too).
  */
 function category(s) {
   const {light = 20, sight = 20, sound = 20, move = 20} = s;
@@ -1078,3 +1079,5 @@ export function runEngine(walls, opts = {}) {
     }
   };
 }
+
+export { category as wallCategory };

@@ -7,8 +7,8 @@
  * one path.
  */
 
-export * from "./wall-engine.mjs";
-export { register, get, list, available, canonical, compare } from "./backends.mjs";
+export * from "./core/engine.mjs";
+export { register, get, list, available, canonical, compare } from "./core/backends.mjs";
 
 export const MODULE = "pentaryn-walls";
 export const SHORT = "walls";

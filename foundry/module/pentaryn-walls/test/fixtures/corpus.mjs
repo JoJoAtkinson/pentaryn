@@ -21,16 +21,8 @@ const door = (x0, y0, x1, y1, extra = {}) => w(x0, y0, x1, y1, {door: 1, ...extr
 const terrain = (x0, y0, x1, y1, e = {}) => w(x0, y0, x1, y1, {light: 10, sight: 10, sound: 10, ...e});
 const invisible = (x0, y0, x1, y1, e = {}) => w(x0, y0, x1, y1, {light: 0, sight: 0, sound: 0, ...e});
 const ethereal = (x0, y0, x1, y1, e = {}) => w(x0, y0, x1, y1, {move: 0, ...e});
-/** Foundry's category test, for asserting what kind a generated wall came out as. */
-export const kindOf = c => {
-  const {light = 20, sight = 20, sound = 20, move = 20} = c;
-  if (sight === 0 && light + sound + move === 0) return "blank";
-  if (sight === 0) return "invisible";
-  if (sight === 10) return "terrain";
-  if (sight === 30 || sight === 40) return "window";
-  if (move === 0) return "ethereal";
-  return "solid";
-};
+/** Foundry's category test, for asserting what kind a generated wall came out as: the engine's one copy. */
+export { wallCategory as kindOf } from "./engine.mjs";
 
 /* -------------------------------------------- */
 
