@@ -9,6 +9,14 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
+# Pure conversions: they read world/history/config.toml and the age table, write nothing.
+_RO_LOCAL = {
+    "readOnlyHint": True,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
+}
+
 MCP_TOOL = {
     "tools": [
         {
@@ -27,6 +35,7 @@ MCP_TOOL = {
                 "required": ["year"],
                 "additionalProperties": False,
             },
+            "annotations": {"title": "Year → Age Label", **_RO_LOCAL},
             "argv": ["--direction", "year_to_age", "--value", "{year}"],
         },
         {
@@ -44,6 +53,7 @@ MCP_TOOL = {
                 "required": ["label"],
                 "additionalProperties": False,
             },
+            "annotations": {"title": "Age Label → Year", **_RO_LOCAL},
             "argv": ["--direction", "age_to_year", "--value", "{label}"],
         },
         {
@@ -67,6 +77,7 @@ MCP_TOOL = {
                 "required": ["value"],
                 "additionalProperties": False,
             },
+            "annotations": {"title": "Convert Year ⇄ Age Label", **_RO_LOCAL},
             "argv": ["--direction", "auto", "--value", "{value}"],
         },
     ]

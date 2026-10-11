@@ -23,6 +23,14 @@ MCP_TOOL = {
         },
         "additionalProperties": False,
     },
+    # Writes one generated SVG (timeline-key.svg by default); overwrites only that output.
+    "annotations": {
+        "title": "Build Timeline Key",
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
     "argv": [],
     "value_flags": {"output": "--output"},
 }

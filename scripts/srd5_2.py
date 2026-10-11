@@ -1587,7 +1587,8 @@ MCP_TOOLS = [
             "Name match is partial by default; pass match='exact' for an exact name. "
             "If you already know the key (e.g., 'srd-2024_goblin-warrior'), use get_monster_details. "
             "Examples: search_monsters(cr='1/4', type='humanoid'); "
-            "search_monsters(name='dragon', size='large', ordering='-challenge_rating')."
+            "search_monsters(name='dragon', size='large', ordering='-challenge_rating'). "
+            "For this campaign's 5.5e rules prefer the owned PHB/DMG/MM via game.pentaryn.rules (context/foundry/rules-lookup.md); use this tool for SRD-only or third-party content."
         ),
         "annotations": {"title": "Search Creatures (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_monsters"],
@@ -1635,7 +1636,8 @@ MCP_TOOLS = [
         "description": (
             "Get one creature by exact key (e.g., 'srd-2024_goblin-warrior', 'tob_abominable-beauty'). "
             "Use after search_monsters to fetch a single full record fast. "
-            "For fuzzy/partial-name lookup, use search_monsters."
+            "For fuzzy/partial-name lookup, use search_monsters. "
+            "For this campaign's 5.5e rules prefer the owned PHB/DMG/MM via game.pentaryn.rules (context/foundry/rules-lookup.md); use this tool for SRD-only or third-party content."
         ),
         "annotations": {"title": "Get Creature Details (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "get_monster_details", "{key}"],
@@ -1655,7 +1657,8 @@ MCP_TOOLS = [
             "(dropped keys surfaced in `dropped_variants`). NOT designed for edition comparison — "
             "for example, Fireball's damage formula differs between 2014 and 2024; default dedupe=true "
             "returns only the prefer-ranked one. For side-by-side, pass source='srd-2014,srd-2024' AND dedupe=false. "
-            "Examples: search_spells(level=3, school='evocation'); search_spells(name='shield', match='exact')."
+            "Examples: search_spells(level=3, school='evocation'); search_spells(name='shield', match='exact'). "
+            "For this campaign's 5.5e rules prefer the owned PHB/DMG/MM via game.pentaryn.rules (context/foundry/rules-lookup.md); use this tool for SRD-only or third-party content."
         ),
         "annotations": {"title": "Search Spells (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_spells"],
@@ -1703,7 +1706,8 @@ MCP_TOOLS = [
         "name": "get_spell_details",
         "description": (
             "Get one spell by exact key (e.g., 'srd-2024_fireball', 'a5e-ag_fireball'). "
-            "Use after search_spells when you have a key and want a fast single-record fetch."
+            "Use after search_spells when you have a key and want a fast single-record fetch. "
+            "For this campaign's 5.5e rules prefer the owned PHB/DMG/MM via game.pentaryn.rules (context/foundry/rules-lookup.md); use this tool for SRD-only or third-party content."
         ),
         "annotations": {"title": "Get Spell Details (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "get_spell_details", "{key}"],
@@ -1994,7 +1998,8 @@ MCP_TOOLS = [
             "list (e.g. 'srd-2024,srd-2014'): a single key scopes the relevance search step, "
             "a multi-key list runs that step unscoped and narrows the final results to those "
             "sources — so no listed source is silently dropped. If you already know the "
-            "section key, use get_rule_section instead."
+            "section key, use get_rule_section instead. "
+            "For this campaign's 5.5e rules prefer the owned PHB/DMG/MM via game.pentaryn.rules (context/foundry/rules-lookup.md); use this tool for SRD-only or third-party content."
         ),
         "annotations": {"title": "Search Rules (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_rules"],
@@ -2016,7 +2021,10 @@ MCP_TOOLS = [
     },
     {
         "name": "get_rule_section",
-        "description": "Get one rules section by exact key (e.g., 'srd-2024_d20-tests_ability-checks').",
+        "description": (
+            "Get one rules section by exact key (e.g., 'srd-2024_d20-tests_ability-checks'). "
+            "For this campaign's 5.5e rules prefer the owned PHB/DMG/MM via game.pentaryn.rules (context/foundry/rules-lookup.md); use this tool for SRD-only or third-party content."
+        ),
         "annotations": {"title": "Get Rule Section (SRD/v2)", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "get_rule_section", "{key}"],
         "input_schema": {
@@ -2174,7 +2182,8 @@ MCP_TOOLS = [
             "backgrounds, etc. all in one call. Best when you don't know which tool to use, "
             "or when checking whether a term exists in any category. "
             "Returns results with `object_model` indicating the type and `highlighted` snippets. "
-            "Chain into the type-specific get_* tool using the returned `object_pk` as the key."
+            "Chain into the type-specific get_* tool using the returned `object_pk` as the key. "
+            "For this campaign's 5.5e rules prefer the owned PHB/DMG/MM via game.pentaryn.rules (context/foundry/rules-lookup.md); use this tool for SRD-only or third-party content."
         ),
         "annotations": {"title": "Universal SRD Search", **_RO_OPEN_WORLD},
         "argv": ["--mcp-tool", "search_srd"],

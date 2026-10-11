@@ -18,6 +18,14 @@ MCP_TOOL = {
         "properties": {},
         "additionalProperties": False,
     },
+    # Regenerates build outputs from the TSVs: writes files, overwrites only its own outputs.
+    "annotations": {
+        "title": "Build Timeline SVGs",
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "idempotentHint": True,
+        "openWorldHint": False,
+    },
     "argv": [],
 }
 

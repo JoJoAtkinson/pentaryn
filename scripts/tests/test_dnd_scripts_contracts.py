@@ -40,14 +40,38 @@ def runners():
 
 # ── -48: annotations, schemas, error channels ────────────────────────────────
 
-# KNOWN python-tooling-48: these seven carry no `annotations`; the fix empties the set.
-NO_ANNOTATIONS = {"year_to_age", "age_to_year", "age_convert", "check_lore_links",
-                  "fix_md_links", "build_timeline_svg", "build_timeline_key"}
+# python-tooling-48 [declared]: every tool carries `annotations` (was seven without).
+NO_ANNOTATIONS: set[str] = set()
 
 
 @pytest.mark.repo
 def test_tools_without_annotations(runners):
     assert {n for n, r in runners.items() if not r.tool.annotations} == NO_ANNOTATIONS
+
+
+@pytest.mark.repo
+@pytest.mark.parametrize("name, read_only, destructive", [
+    ("year_to_age", True, False), ("age_to_year", True, False), ("age_convert", True, False),
+    ("check_lore_links", True, False), ("build_timeline_svg", False, False),
+    ("build_timeline_key", False, False), ("fix_md_links", False, True),
+])
+def test_annotation_hints_match_what_the_tool_does(runners, name, read_only, destructive):
+    a = runners[name].tool.annotations
+    assert (a["readOnlyHint"], a["destructiveHint"], a["openWorldHint"]) == \
+        (read_only, destructive, False)
+
+
+OWNED_BOOKS = "prefer the owned PHB/DMG/MM via game.pentaryn.rules (context/foundry/rules-lookup.md)"
+
+
+@pytest.mark.repo
+@pytest.mark.parametrize("name", ["search_rules", "get_rule_section", "search_spells",
+                                  "get_spell_details", "search_srd", "search_monsters",
+                                  "get_monster_details"])
+def test_srd_rule_tools_point_at_the_owned_books(runners, name):
+    """python-tooling-48 (c): the SRD tools that look like the default path say they are not."""
+    assert OWNED_BOOKS in runners[name].tool.description
+    assert (REPO_ROOT / "context/foundry/rules-lookup.md").exists()
 
 
 @pytest.mark.repo
