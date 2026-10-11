@@ -1,7 +1,20 @@
+---
+title: Light cantrip and lit items — design (pentaryn-senses, plan C4)
+created: 2026-10-09
+last_modified: 2026-10-11
+tags: ["plan", "foundry", "dnd5e", "pentaryn-senses", "light"]
+status: built (pentaryn-senses 0.3.0, 2026-10-09); history, not instructions
+---
+
 # Light cantrip and lit items — design (plan C4)
 
-**Read this when:** building or reviewing the Light feature in `pentaryn-senses`. Design only;
-nothing here is built. The plan and Joe's calls are in
+**Read this when:** you need to know why the Light feature of `pentaryn-senses` is shaped the way
+it is (the PHB data it works around, the decisions, the edge cases). History, not instructions:
+how to use or change the module is its README (`foundry/module/pentaryn-senses/README.md`). Moved
+here from the module folder (`LIGHT-DESIGN.md`) at the blueprint migration (wave 3, finding
+senses-walls-cursors-27); the file names below are the ones it was written against
+(`light.mjs` is now split into `light.mjs`, `light-ui.mjs`, `light-adapter.mjs` and `argon.mjs`;
+`light-core.mjs` is `core/light.mjs`). The plan and Joe's calls are in
 `context/plans/table-feedback-2026-10-08.md` § C4 (and A6 for the bug report).
 
 Evidence below was read from dnd5e 5.3.3 (`dnd5e.mjs`, compiled), the PHB module's packs

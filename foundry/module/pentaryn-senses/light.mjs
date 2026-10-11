@@ -1,5 +1,5 @@
 /**
- * Light cantrip and lit items. Design and evidence: LIGHT-DESIGN.md (plan C4).
+ * Light cantrip and lit items. Design and evidence: context/plans/senses-light-cantrip.md (plan C4).
  *
  * The cantrip. The PHB Light spell is left as shipped; this recognises it at use time, stops its
  * floor-token summon, and asks "Where does the light go?" → On me · Pick a target · Not now.

@@ -1,6 +1,6 @@
 /**
  * Pure helpers for the Light cantrip and lit items (light.mjs, senses.mjs). No Foundry globals,
- * so test/light-core.test.mjs proves them in node. Design: LIGHT-DESIGN.md.
+ * so test/light-core.test.mjs proves them in node. Design: context/plans/senses-light-cantrip.md.
  *
  *   Item (Light spell)   flags.pentaryn-senses.lightCast  = { scene, token } | { scene, x, y } | null
  *   Token / AmbientLight flags.pentaryn-senses.spellLight = { source: "<Light item uuid>", prior }
