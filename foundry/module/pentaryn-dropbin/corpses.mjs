@@ -337,7 +337,7 @@ export function install(reg, ctx) {
   for (const h of ["createItem", "updateItem", "deleteItem"]) {
     on(h, item => { if (item.parent instanceof Actor) paintEyesOf(item.parent); }, `eye: ${h}`);
   }
-  ctx.onReady(() => { migrateLegacyEyes(); }, "corpse eye migration");
+  ctx.onReady(() => migrateLegacyEyes(), "corpse eye migration");
   on("renderTokenHUD", addHudButtons, "corpse HUD");
 }
 
