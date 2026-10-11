@@ -363,6 +363,12 @@ def start() -> None:
                          stdout=fh, stderr=fh, stdin=subprocess.DEVNULL, start_new_session=True)
 
 
+def can_request_stop() -> bool:
+    """Is there any way to ask Foundry to stop? The hook, the Mac's quit, or a pid to signal.
+    Without one, a server whose port answers cannot be stopped from here."""
+    return bool(_hook("PENTARYN_STOP_CMD")) or is_mac() or pid() is not None
+
+
 def request_stop() -> bool:
     """Ask politely (a graceful quit closes LevelDB cleanly). True if the ask was delivered."""
     cmd = _hook("PENTARYN_STOP_CMD")

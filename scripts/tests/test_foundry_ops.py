@@ -519,10 +519,24 @@ def test_down_stops_a_server_whose_pid_cannot_be_found_but_whose_port_answers(
         monkeypatch, stops, capsys):
     """BOSS with a PENTARYN_START_CMD that pgrep's pattern does not match."""
     host, calls = stops
+    monkeypatch.setattr(host.platform, "system", lambda: "Linux")
+    monkeypatch.setenv("PENTARYN_STOP_CMD", "systemctl --user stop foundry")
     monkeypatch.setattr(host, "pid", lambda: None)
     monkeypatch.setattr(host, "is_running", lambda port=None: True)
     assert service.down() == 0
     assert calls == ["stop"] and "already down" not in capsys.readouterr().out
+
+
+def test_down_with_a_live_port_and_no_way_to_stop_it_fails(monkeypatch, stops, capsys):
+    """Linux, no pid found, no PENTARYN_STOP_CMD: nothing to signal — not "stopped"."""
+    host, calls = stops
+    monkeypatch.setattr(host, "pid", lambda: None)
+    monkeypatch.setattr(host, "is_running", lambda port=None: True)
+    monkeypatch.setattr(host.platform, "system", lambda: "Linux")
+    monkeypatch.delenv("PENTARYN_STOP_CMD", raising=False)
+    assert service.down() != 0
+    out = capsys.readouterr().out
+    assert calls == [] and "stopped" not in out and "PENTARYN_STOP_CMD is not set" in out
 
 
 def test_down_with_neither_pid_nor_port_is_already_down(monkeypatch, stops, capsys):

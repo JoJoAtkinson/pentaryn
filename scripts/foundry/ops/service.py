@@ -163,6 +163,13 @@ def down() -> int:
     if host.pid() is None and not host.is_running():
         _say("▸ foundry already down")
         return OK
+    if not host.can_request_stop():
+        # Port live, no process found, no hook: there is nothing to signal. Saying
+        # "stopped" here would be a false success (and a vtt-down backup would follow it).
+        _say(f"✗ foundry is answering on port {host.foundry_port()}, but this machine can't "
+             "stop it: no Foundry process found and PENTARYN_STOP_CMD is not set "
+             "(host.env). Stop it by hand, or set PENTARYN_STOP_CMD.")
+        return FAIL
     # Ask politely first — a graceful quit lets Foundry close its LevelDB cleanly.
     if not host.request_stop():
         host.force_stop()
