@@ -1,0 +1,14 @@
+{
+  "look": "LookWindow",
+  "lookSelf": null,
+  "describe": null,
+  "calls": [
+    {
+      "op": "app.render",
+      "app": "LookWindow",
+      "opts": {
+        "force": true
+      }
+    }
+  ]
+}

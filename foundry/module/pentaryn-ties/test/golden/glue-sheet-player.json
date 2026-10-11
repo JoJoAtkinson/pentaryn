@@ -1,0 +1,131 @@
+{
+  "own": {
+    "tag": "DIV",
+    "children": [
+      {
+        "tag": "HEADER",
+        "className": "window-header",
+        "children": [
+          {
+            "tag": "BUTTON",
+            "className": "header-control icon fa-solid fa-people-arrows pentaryn-ties-btn",
+            "dataset": {
+              "tooltip": "Ties"
+            },
+            "attrs": {
+              "aria-label": "Ties"
+            },
+            "type": "button",
+            "listeners": [
+              "click"
+            ]
+          }
+        ]
+      },
+      {
+        "tag": "NAV",
+        "className": "tabs",
+        "dataset": {
+          "group": "primary"
+        },
+        "children": [
+          {
+            "tag": "A",
+            "className": "item control",
+            "dataset": {
+              "tab": "ties",
+              "group": "primary",
+              "tooltip": "Ties",
+              "ptBound": "1"
+            },
+            "innerHTML": "<i class=\"fa-solid fa-people-arrows\"></i>",
+            "listeners": [
+              "click"
+            ]
+          },
+          {
+            "tag": "A",
+            "className": "item control",
+            "dataset": {
+              "tab": "known",
+              "group": "primary",
+              "tooltip": "Known",
+              "ptBound": "1"
+            },
+            "innerHTML": "<i class=\"fa-solid fa-book-skull\"></i>",
+            "listeners": [
+              "click"
+            ]
+          },
+          {
+            "tag": "A",
+            "className": "item control",
+            "dataset": {
+              "tab": "attributes",
+              "group": "primary",
+              "tooltip": "Attributes",
+              "ptBound": "1"
+            },
+            "innerHTML": "<i class=\"fa-solid fa-tags\"></i>",
+            "listeners": [
+              "click"
+            ]
+          }
+        ]
+      },
+      {
+        "tag": "DIV",
+        "className": "tab-body",
+        "children": [
+          {
+            "tag": "SECTION",
+            "className": "tab",
+            "dataset": {
+              "tab": "ties",
+              "group": "primary"
+            },
+            "innerHTML": "<div class=\"pentaryn-ties\" data-actor-id=\"zzPc000000000001\">\n    \n    <ul class=\"pt-list\"><li class=\"pt-empty\">No ties recorded.</li></ul>\n    \n    <div class=\"pt-add-bar\">\n        <button type=\"button\" class=\"pt-add-btn\" data-action=\"add\">\n          <i class=\"fa-solid fa-plus\"></i> Add\n        </button>\n        <span class=\"pt-add-hint\">or hover someone on the map and press 6</span>\n      </div>\n    \n    \n  </div>"
+          },
+          {
+            "tag": "SECTION",
+            "className": "tab",
+            "dataset": {
+              "tab": "known",
+              "group": "primary"
+            },
+            "innerHTML": "<div class=\"pentaryn-ties pentaryn-known\" data-actor-id=\"zzPc000000000001\">\n    <p class=\"pt-known-intro\">What this character knows about the people and creatures they have met — in their own words. Written here, kept here.</p>\n    <ul class=\"pt-list\"><li class=\"pt-row pt-open\" data-id=\"zzNpc00000000001\">\n    <div class=\"pt-summary\" role=\"button\" tabindex=\"0\" aria-expanded=\"true\"\n      data-action=\"toggle\" data-tooltip=\"Click to open and write on this entry\"\n      aria-label=\"ZZ Brakka — open and write on this entry\">\n    <img class=\"pt-portrait\" src=\"icons/zz/zzNpc00000000001.webp\" alt=\"\" loading=\"lazy\" />\n    <span class=\"pt-who\"><span class=\"pt-name\">ZZ Brakka</span><span class=\"pt-note-preview pt-note-none\"><em>Nothing written down about them yet.</em></span></span>\n    <span class=\"pt-known-when\" data-tooltip=\"First written down 9/21/2026, 10:13:20 AM\">Sep 21</span>\n    <span class=\"pt-hint\" aria-hidden=\"true\"><i class=\"fa-solid fa-pen\"></i></span>\n  </div>\n    <div class=\"pt-detail-wrap\"><div class=\"pt-detail\">\n    \n    <div class=\"pt-fields\">\n      <label class=\"pt-field\">\n        <span class=\"pt-field-label\">Filed under</span>\n        <select class=\"pt-known-category\" data-field=\"category\"><option value=\"sentient\" selected>Sentient</option><option value=\"beasts\">Beasts</option></select>\n      </label>\n    </div>\n    <label class=\"pt-field pt-field-notes\">\n      <span class=\"pt-field-label\">What you know</span>\n      <textarea class=\"pt-notes-text\" data-field=\"notes\" rows=\"6\" maxlength=\"8000\"\n                placeholder=\"Your own entry on ZZ Brakka — what they are, what they can do, what you would tell someone about to meet them.\"></textarea>\n    </label>\n    \n    \n    <div class=\"pt-detail-actions\">\n      <button type=\"button\" class=\"pt-textbtn\" data-action=\"open\" data-id=\"zzNpc00000000001\">\n        <i class=\"fa-solid fa-arrow-up-right-from-square\"></i> Open their sheet\n      </button>\n      <button type=\"button\" class=\"pt-textbtn\" data-action=\"hide\" data-id=\"zzNpc00000000001\">\n        <i class=\"fa-solid fa-eye-slash\"></i> Tuck this away\n      </button>\n    </div>\n  </div></div>\n  </li></ul>\n    <div class=\"pt-add-bar\">\n        <button type=\"button\" class=\"pt-add-btn\" data-action=\"known-add\">\n          <i class=\"fa-solid fa-plus\"></i> Add…\n        </button>\n        <span class=\"pt-add-hint\">anyone this character could have met — or hover them on the map and press 5</span>\n      </div>\n    \n  </div>"
+          },
+          {
+            "tag": "SECTION",
+            "className": "tab",
+            "dataset": {
+              "tab": "attributes",
+              "group": "primary"
+            },
+            "innerHTML": "<div class=\"pentaryn-ties pentaryn-attributes\" data-actor-id=\"zzPc000000000001\">\n    \n    <p class=\"pt-hint\">What this character belongs to, and what you have learned about each.</p>\n    <p class=\"pt-empty\">Nothing yet.</p>\n    \n    <div class=\"pt-world\" data-character=\"zzPc000000000001\">\n    <div class=\"pt-group-head\" role=\"heading\" aria-level=\"3\">\n      <span class=\"pt-group-title\">What you know of the world</span>\n    </div>\n    <p class=\"pt-hint\">Places, groups and conditions this character has worked out or been told about. Knowing a place makes its people easier to read.</p>\n    \n    <p class=\"pt-empty\">Nothing yet. Look people over and you will start to piece the world together.</p>\n    \n  </div>\n  </div>"
+          }
+        ]
+      }
+    ]
+  },
+  "npc": {
+    "tag": "DIV",
+    "children": [
+      {
+        "tag": "HEADER",
+        "className": "window-header"
+      },
+      {
+        "tag": "NAV",
+        "className": "tabs",
+        "dataset": {
+          "group": "primary"
+        }
+      },
+      {
+        "tag": "DIV",
+        "className": "tab-body"
+      }
+    ]
+  }
+}

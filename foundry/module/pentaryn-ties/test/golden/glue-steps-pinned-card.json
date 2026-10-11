@@ -1,0 +1,77 @@
+{
+  "layerId": "pentaryn-ties-cards",
+  "body": {
+    "tag": "BODY",
+    "children": [
+      {
+        "tag": "DIV",
+        "id": "pentaryn-ties-cards",
+        "children": [
+          {
+            "tag": "DIV",
+            "className": "pt-card pt-pinned",
+            "style": {
+              "left": "40px",
+              "top": "60px"
+            },
+            "listeners": [
+              "pointerdown",
+              "pointermove",
+              "pointerup",
+              "pointercancel"
+            ],
+            "children": [
+              {
+                "tag": "IMG",
+                "src": "icons/zz/zzPc000000000001.webp",
+                "className": "pt-card-art",
+                "listeners": [
+                  "error"
+                ]
+              },
+              {
+                "tag": "DIV",
+                "className": "pt-card-body",
+                "children": [
+                  {
+                    "tag": "DIV",
+                    "className": "pt-card-word",
+                    "children": [
+                      {
+                        "tag": "SPAN",
+                        "className": "pt-dot",
+                        "style": {
+                          "color": "#e1a53a"
+                        },
+                        "textContent": "●"
+                      },
+                      {
+                        "tag": "SPAN",
+                        "textContent": "debtor"
+                      }
+                    ]
+                  },
+                  {
+                    "tag": "DIV",
+                    "className": "pt-card-name",
+                    "textContent": "ZZ Caven"
+                  }
+                ]
+              },
+              {
+                "tag": "BUTTON",
+                "title": "Close this card",
+                "className": "pt-card-close",
+                "type": "button",
+                "innerHTML": "<i class=\"fa-solid fa-xmark\"></i>",
+                "listeners": [
+                  "click"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

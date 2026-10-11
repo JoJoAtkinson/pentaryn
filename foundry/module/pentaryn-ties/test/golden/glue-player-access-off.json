@@ -1,0 +1,31 @@
+{
+  "keys": [],
+  "hud": {
+    "tag": "DIV",
+    "children": [
+      {
+        "tag": "DIV",
+        "className": "col left"
+      }
+    ]
+  },
+  "sheet": {
+    "tag": "DIV",
+    "children": [
+      {
+        "tag": "HEADER",
+        "className": "window-header"
+      },
+      {
+        "tag": "NAV",
+        "className": "tabs"
+      },
+      {
+        "tag": "DIV",
+        "className": "tab-body"
+      }
+    ]
+  },
+  "dblclick": [],
+  "menus": 0
+}

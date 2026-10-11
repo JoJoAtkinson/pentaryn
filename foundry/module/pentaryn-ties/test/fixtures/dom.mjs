@@ -207,6 +207,7 @@ export class FakeElement {
 /** A tree of what was built, for golden pins (listeners as their event names). */
 export function serialise(el) {
   const out = { tag: el.tagName };
+  for (const k of ["id", "src", "alt", "title", "value", "name"]) if (el[k] !== undefined && el[k] !== "") out[k] = el[k];
   if (el.className) out.className = el.className;
   if (Object.keys(el.dataset).length) out.dataset = { ...el.dataset };
   if (Object.keys(el.attrs).length) out.attrs = { ...el.attrs };
@@ -244,7 +245,18 @@ export function installDom() {
       this.listeners.push({ type, fn, capture: capture === true });
     },
     removeEventListener() {},
-    getElementById: id => byId.get(id) ?? null,
+    getElementById: id => {
+      if (byId.has(id)) return byId.get(id);
+      const walk = n => {
+        for (const c of n.children) {
+          if (c.id === id) return c;
+          const hit = walk(c);
+          if (hit) return hit;
+        }
+        return null;
+      };
+      return walk(body);
+    },
     byId,
   };
   globalThis.HTMLElement = FakeElement;

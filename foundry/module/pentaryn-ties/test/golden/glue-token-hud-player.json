@@ -1,0 +1,30 @@
+{
+  "tag": "DIV",
+  "children": [
+    {
+      "tag": "DIV",
+      "className": "col left",
+      "children": [
+        {
+          "tag": "BUTTON",
+          "className": "control-icon pt-tie-btn",
+          "dataset": {
+            "tooltip": "Add or edit a tie with this token"
+          },
+          "attrs": {
+            "aria-label": "Add or edit a tie with this token"
+          },
+          "type": "button",
+          "innerHTML": "<i class=\"fa-solid fa-people-arrows\"></i>",
+          "listeners": [
+            "click"
+          ]
+        }
+      ]
+    },
+    {
+      "tag": "DIV",
+      "className": "col right"
+    }
+  ]
+}
