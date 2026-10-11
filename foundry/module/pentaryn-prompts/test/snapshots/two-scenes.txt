@@ -54,7 +54,7 @@ Goblin archer on the ledge above the entrance. First to see the party.
 Built from prompt (p2 of pm-0a0a, mid, 2026-10-09): "goblin shaman who secretly wants the boss dead; keeps a pouch of bone dice"
 Why: the boss's rival: built first so the pack has someone to betray him
 Carries: Pouch of bone dice (loot)
-Description: Hunched, ash-daubed, never meets the boss's eye. Casts with bone dice and lies about what they show. / Tactics: hangs back behind the boss and casts from cover. If the boss falls he surrenders at once and offers the shrine key's hiding place for his life. [...]
+Description: Hunched, ash-daubed, never meets the boss's eye. Casts with bone dice and lies about what they show. / Tactics: hangs back behind the boss and casts from cover. If the boss falls he surrenders at once and offers the shrine key's hiding place for his life. … (cut, full text: get-character-entity docshaman)
 </built>
 </encounter>
 

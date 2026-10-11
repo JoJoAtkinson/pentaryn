@@ -238,7 +238,7 @@ check("classifyBlocked: locked door counts as a door", classifyBlocked([A], [B],
   const text = renderGather(view);
   ok("built prints the provenance note", text.includes("Why: the boss's rival"));
   ok("built names the prompt's pid and call", text.includes("Built from prompt (p2 of pm-0a0a, mid,"));
-  ok("description keeps whole sentences past 160 chars", text.includes("If the boss falls he surrenders at once and offers the shrine key's hiding place for his life. [...]"));
+  ok("description keeps whole sentences past 160 chars", text.includes("If the boss falls he surrenders at once and offers the shrine key's hiding place for his life. … (cut, full text: get-character-entity docshaman)"));
   ok("description never cut mid-word", !/Description: [^\n]*\w\.\.\.$/m.test(text));
   ok("elevation printed when not 0", text.includes(`at="13,3 ft" elev="10 ft"`));
   ok("no elev attribute at 0", !text.includes(`elev="0 ft"`));

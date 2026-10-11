@@ -14,6 +14,9 @@ export const MODULE = "pentaryn-prompts";
 /** The code's own version: `status().version` prints it (game.modules can lag until a rescan). Kept equal to module.json by the suite. */
 export const VERSION = "0.4.3";
 
+/** The gather description length: the setting's registered default, gather's fallback and renderGather's default (D6). */
+export const GATHER_CHARS = 400;
+
 /** Built kinds that are creatures; the hostile ones make encounters and chain into packs (§13). */
 export const CREATURE_KINDS = Object.freeze(["npc", "character", "creature"]);
 
@@ -606,6 +609,19 @@ export function previewSentences(text, n) {
 }
 
 /**
+ * A built thing's description for the gather: `previewSentences`, and when that shortened it, the
+ * cut mark is replaced by where the full text is (D6):
+ * `… (cut, full text: get-character-entity <id>)`. `id` is the actor's id (the document's for a note).
+ */
+export function builtDescription(text, n, id) {
+  const full = previewSentences(text, 0);
+  const shown = previewSentences(text, n);
+  if (shown === full) return shown;
+  const body = shown.replace(/\s*(\[\.\.\.\]|\.\.\.)$/, "");
+  return `${body} … (cut, full text: get-character-entity ${id})`;
+}
+
+/**
  * The marker's nameplate: `✎ <first 40 chars>`, lines joined with " / ", `…` only when cut;
  * or `Prompt · mid — empty`.
  */
@@ -678,11 +694,11 @@ function ftPair(p) {
  *              relations: [{ from: "E2", to: "E1", ft, bearing, los: bool }],
  *              alone: [pids], contextOnly: [tids] }],
  *   prompts: { p1: { id, size, gridFt, atFt: [x, y], regions: [..], text, sees: [rel], unseen: [rel] } },
- *   built:   { t1: { id, kind, name, type, atFt, regions, hidden, prov: {size, at, prompt} | null, description } },
+ *   built:   { t1: { id, docId, actorId, kind, name, type, atFt, regions, hidden, prov: {size, at, prompt} | null, description } },
  *   todo: [pids], next: sceneId | null
  * }
  */
-export function renderGather(view, { chars = 400 } = {}) {
+export function renderGather(view, { chars = GATHER_CHARS } = {}) {
   const L = [];
   const unseenFt = view.unseenWithinFt ?? 60;
   const c = view.counts;
@@ -834,7 +850,7 @@ function renderBuilt(t, chars, sharedWith) {
   if (t.prov?.note) out.push(`Why: ${preview(t.prov.note, 240)}`);
   if (t.items?.length) out.push(`${t.kind === "hotspot" ? "Items" : "Carries"}: ${itemsText(t.items)}`);
   if (t.light) out.push(`Light: ${t.light}`);
-  if (t.description) out.push(`Description: ${previewSentences(t.description, chars)}`);
+  if (t.description) out.push(`Description: ${builtDescription(t.description, chars, t.actorId ?? t.docId ?? t.id)}`);
   out.push("</built>");
   return out;
 }
@@ -1262,7 +1278,7 @@ export function buildView(scenes, { unseenWithinFt = 60, linkFt = 30, formationF
     for (const k of p.built) {
       const it = p.byKey.get(k);
       const tid = ids.builtIds.get(k);
-      view.built[tid] = { id: tid, kind: it.kind, name: it.name, type: it.type, atFt: it.atFt,
+      view.built[tid] = { id: tid, docId: it.id ?? null, actorId: it.actorId ?? null, kind: it.kind, name: it.name, type: it.type, atFt: it.atFt,
         elevation: it.elevation ?? it.centre?.elevation ?? 0,
         regions: it.regions ?? [], hidden: !!it.hidden, prov: it.prov ?? null, description: stripHtml(it.description ?? ""),
         stats: it.stats ?? null, classes: it.classes ?? null, species: it.species ?? null, items: it.items ?? null,

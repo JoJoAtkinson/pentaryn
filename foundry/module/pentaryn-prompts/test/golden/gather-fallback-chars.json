@@ -2,7 +2,7 @@
   "opts": {
     "scenes": "all",
     "unseenWithinFt": 60,
-    "chars": 160,
+    "chars": 400,
     "party": null
   },
   "counts": {

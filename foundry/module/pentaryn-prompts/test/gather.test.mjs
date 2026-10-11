@@ -45,9 +45,9 @@ test("a built HTML description: stripped, paragraphs joined with ' / ', cut at a
   pinJSON("gather-html-description", rows, import.meta.url);
 });
 
-test("gather() falls back to chars 160 when the gatherChars setting cannot be read", async () => {
-  // KNOWN (prompts-lookup-16, live SF13): the registered default and renderGather's default are
-  // 400; gather.mjs's own fallback is 160. Reachable only when the setting read throws.
+test("gather() falls back to chars 400 when the gatherChars setting cannot be read", async () => {
+  // D6 [declared] flipped this pin (was 160, prompts-lookup-16 / live SF13): one default, GATHER_CHARS = 400,
+  // shared by the registered setting, gather.mjs's fallback and renderGather. Reachable only when the read throws.
   const { installFoundry } = await import("./kit/foundry-stub.mjs");
   const S = await installFoundry({ user: { id: "zzPlayerUser0001", name: "ZZ Player", isGM: false } });
   globalThis.performance ??= { now: () => 0 };
@@ -62,7 +62,7 @@ test("gather() falls back to chars 160 when the gatherChars setting cannot be re
       console.log = log;
     }
     pinJSON("gather-fallback-chars", { opts: res.manifest.opts, counts: res.counts }, import.meta.url);
-    assert.equal(res.manifest.opts.chars, 160);
+    assert.equal(res.manifest.opts.chars, 400);
   } finally {
     S.restore();
   }

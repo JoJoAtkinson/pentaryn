@@ -7,7 +7,7 @@
  * context/foundry/prompt-markers.md.
  */
 
-import { MODULE, VERSION, SIZE_KEYS, SIZE_BY_KEY, footprintLabel, codedError } from "./geometry-core.mjs";
+import { MODULE, VERSION, GATHER_CHARS, SIZE_KEYS, SIZE_BY_KEY, footprintLabel, codedError } from "./geometry-core.mjs";
 import { ensureMarkers, onPreCreateToken, isPromptToken, markerSizeOfToken, markerSizeOfActor, markerActor, promptText } from "./markers.mjs";
 import { PromptDialog } from "./dialog.mjs";
 import * as Typeahead from "./typeahead.mjs";
@@ -26,7 +26,7 @@ function registerSettings() {
   });
   num("panelRows", 12, { min: 3, max: 40, step: 1 });
   num("panelChars", 90, { min: 30, max: 300, step: 10 });
-  num("gatherChars", 400, { min: 60, max: 1200, step: 20 });
+  num("gatherChars", GATHER_CHARS, { min: 60, max: 1200, step: 20 });
   num("unseenWithinFt", 60, { min: 0, max: 300, step: 5 });
   num("cropMaxPerCall", 6, { min: 0, max: 12, step: 1 });
   num("cropLongSidePx", 768, { min: 256, max: 1568, step: 64 });

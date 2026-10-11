@@ -199,7 +199,7 @@ export function sceneItems(scene, { builtWithoutProvenance = true } = {}) {
     if (prov && !pile && isStockLore(description)) description = "";
     const dsize = actor?.system?.traits?.size;
     const { classes, species } = classesOf(actor);
-    items.push({ ...base(tok, tokenGeometry(tok, g)), isPrompt: false, kind, name: tok.name || actor?.name || "?",
+    items.push({ ...base(tok, tokenGeometry(tok, g)), isPrompt: false, kind, actorId: actor?.id ?? tok.actorId ?? null, name: tok.name || actor?.name || "?",
       type: pile ? "" : creatureType(actor), img: tokenImg(tok), hidden: tok.hidden, prov,
       description, rank: DND_RANK[dsize] ?? 2, sizeW: DND_SIZE_WIDTH[dsize] ?? null, xp: actorXp(actor, tok),
       disposition: pile ? null : (DISPOSITION_WORD[tok.disposition] ?? null), stats: pile ? null : statsOf(actor),

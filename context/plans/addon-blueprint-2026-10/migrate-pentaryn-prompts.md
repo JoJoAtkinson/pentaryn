@@ -399,9 +399,10 @@ functions, add `export` to them. That edit changes no behaviour and goes in this
   `onDown` passed in. Register through `defineKeybindings`.
 - `setting(key, fallback)` keeps today's **local** semantics:
   `try { return game.settings.get(MODULE, key) ?? fallback } catch { return fallback }`. The kit's
-  `settingReader` would return the row default instead, and that differs for `gather.mjs:83`, which
-  passes 160 where the default is 400 (prompts-lookup-16). `gather` keeps passing 160 explicitly,
-  with `// TODO(Joe): 160 vs registered 400`. The `catch` carries a `log.debug`, so C24 passes.
+  `settingReader` would return the row default instead. `gather.mjs:83` used to pass 160 where the
+  default is 400 (prompts-lookup-16); D6 (decided 2026-10-11, landed in wave 1) made it pass the shared
+  `GATHER_CHARS` (400, `geometry-core.mjs`), the same constant the `gatherChars` row registers, so the
+  local and kit semantics now agree for it. The `catch` carries a `log.debug`, so C24 passes.
 - `coreSetting(key, fallback)` serves `model.mjs:290`. `manifests()`, `manifestFor(call)` and
   `storeManifest(m)` move here from `gather.mjs:59-73`, bodies verbatim.
 - `prompts.mjs:82` uses `setting("defaultSize")` with no fallback, exactly as today: a throw still
