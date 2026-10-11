@@ -9,7 +9,9 @@
 // explained), every path under golden.declared that differs (expected: check it against the
 // declared change named in the script header), the timings side by side, and both cleanups.
 // Exit 0 when golden.shared is equal and both cleanups left nothing behind, 1 otherwise,
-// 2 on bad input. Only for the wave-1 style { golden: { shared, declared } } goldens.
+// 2 on bad input. A wave-1 golden (names, pings, cursors, importer, ties, prompts) has no
+// shared/declared split: its whole `golden` is compared as shared, and its declared changes
+// (wave-1-report.md "Live goldens") are read off the shared list by hand.
 import { readFileSync } from "node:fs";
 
 function load(path) {
@@ -53,6 +55,8 @@ function main([beforePath, afterPath]) {
   console.log(`env before: ${show(before.env)}`);
   console.log(`env after:  ${show(after.env)}`);
 
+  const split = g => ("shared" in g || "declared" in g) ? g : { shared: g, declared: {} };
+  before.golden = split(before.golden); after.golden = split(after.golden);
   const shared = diffPaths(before.golden.shared ?? {}, after.golden.shared ?? {});
   console.log(`\n## shared — ${shared.length ? `${shared.length} DIFFERENCE(S): regression until explained` : "identical"}`);
   for (const [p, a, b] of shared) console.log(`  ${p}\n    before ${show(a)}\n    after  ${show(b)}`);
