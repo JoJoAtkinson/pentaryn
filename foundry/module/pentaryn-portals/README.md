@@ -141,6 +141,10 @@ are queued in the adjustments batch (`context/plans/addon-blueprint-2026-10/adju
 - An unrevealed destination must never reach a player's screen: `decorate` returns early for
   players, the hover shows "A way onward", `inspect(…, { as })` drops destinations.
 - `teleportParty` without `{ confirm: false }` waits for a click in the calling tab.
+- The Item Piles probe differs from pentaryn-aoe's on purpose: `recordOf` asks
+  `isValidItemPile(actor)` with no flag fallback, while aoe's `resolve.mjs` passes the token and
+  falls back to its flags. aoe tolerates a false positive (it only skips creatures); portals must
+  never leave a pile-PC behind. Unifying them is a decision for Joe (finding -36).
 - Region hooks redraw the badges 50 ms after the last write (debounced); `redraw()` is immediate.
 
 ## Files
