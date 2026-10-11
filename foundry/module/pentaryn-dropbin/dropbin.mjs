@@ -264,24 +264,15 @@ Hooks.once("socketlib.ready", () => {
 });
 
 /**
- * Publish the API.
- *
- * Deliberately deferred by a tick. `pentaryn-importer` does
- * `game.pentaryn = Object.freeze({...})` in its own ready hook, replacing the
- * whole namespace — and module ready-hooks fire in alphabetical order of module
- * id, so "pentaryn-dropbin" runs *before* "pentaryn-importer" and would be wiped
- * by it. ("pings", "ties" and "walls" all sort after the importer, which is why
- * they never hit this.) A setTimeout(0) puts us after every ready handler in the
- * tick, so we see the frozen object and take the spread branch.
+ * Publish the API, one tick after ready (publishing synchronously is a declared
+ * step of the migration). The importer merges into game.pentaryn and nothing
+ * freezes it since its keystone (items-journal-1), so the old frozen-root guard
+ * is gone (kit 1.0.2, J10): the API is assigned into the plain root.
  */
 function publishAPI() {
   const api = buildAPI();
-  const current = game.pentaryn;
-  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, dropbin: api };
-  else {
-    game.pentaryn ??= {};
-    game.pentaryn.dropbin = api;
-  }
+  game.pentaryn ??= {};
+  game.pentaryn.dropbin = api;
   if (game.user.isGM) console.log(`${MODULE} | ready — ${readLog().length} entries on the ledger`);
 }
 
