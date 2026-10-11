@@ -62,20 +62,19 @@ export const needsRedraw = (prev, size) => prev !== size;
 /**
  * Lock sounds for every container (actors and placed tokens) that has none. The plan:
  * `{ actorUpdates: [{_id, ...changes}], embedded: [{sceneId, type, updates}] }`, in walk order.
- * `flagsOf` reads a document's Item Piles data (default: the plain read).
  */
-export function planLockSounds(actors, scenes, sound = LOCK_SOUND, { flagsOf = pileFlags } = {}) {
+export function planLockSounds(actors, scenes, sound = LOCK_SOUND) {
   const needs = data => data?.enabled && data.type === "container" && !data.lockedSound;
   const plan = { actorUpdates: [], embedded: [] };
   for (const actor of actors) {
-    if (!needs(flagsOf(actor))) continue;
+    if (!needs(pileFlags(actor))) continue;
     plan.actorUpdates.push({ _id: actor.id, "flags.item-piles.data.lockedSound": sound,
       "prototypeToken.flags.item-piles.data.lockedSound": sound });
   }
   for (const scene of scenes) {
     const updates = [];
     for (const tok of scene.tokens) {
-      if (needs(flagsOf(tok))) updates.push({ _id: tok.id, "flags.item-piles.data.lockedSound": sound });
+      if (needs(pileFlags(tok))) updates.push({ _id: tok.id, "flags.item-piles.data.lockedSound": sound });
     }
     if (updates.length) plan.embedded.push({ sceneId: scene.id, type: "Token", updates });
   }
