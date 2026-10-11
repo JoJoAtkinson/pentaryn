@@ -9,20 +9,27 @@
  *   movement-core.mjs    PURE constants, label key maps, the policy / sort / pin rules
  *   settings.mjs         SETTINGS table, setting(), onSettingChange()
  *   combat-adapter.mjs   combats and scenes → plain core inputs (reads only)
+ *   api-manifest.mjs     PURE API rows (describe() reads them)
+ *   api.mjs              implementations, selftest()
  *   ghost.mjs            the feature: install(reg, ctx) / uninstall()
  *   lib/*.mjs            vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
  * Lifecycle: the feature installs synchronously in this body (where its module-scope Hooks.on
  * calls always ran, so listener order is unchanged) · init → settings · setup → the feature wraps
- * the two core methods · ready → publish game.pentaryn.movement.
+ * the two core methods · ready → build the API first (a drift throw stops here with one clear
+ * line), then publish it as game.modules.get("pentaryn-movement").api and game.pentaryn.movement.
+ *
+ * Hot patch RE-RUNS THE WIRING ONLY: `game.pentaryn.movement.uninstall()`, then
+ * `await import("/modules/pentaryn-movement/movement.mjs?v=2")`. Any edit to another file needs a
+ * reload.
  */
 
-import * as core from "./movement-core.mjs";
-import { MODULE } from "./movement-core.mjs";
+import { MODULE, NS } from "./movement-core.mjs";
 import { makeLog } from "./lib/log.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
+import { publishNamespace } from "./lib/publish.mjs";
 import { onSettingChange, registerSettings, setting } from "./settings.mjs";
-import { pinInputs } from "./combat-adapter.mjs";
+import { buildApiFor } from "./api.mjs";
 import * as ghost from "./ghost.mjs";
 
 /** Features in load order. */
@@ -60,42 +67,18 @@ function uninstall() {
   reg.offAll();
 }
 
-/** GM/console: pins on a scene whose centre sits under a token. Player-owned tokens listed first. */
-function pinsUnderTokens(scene = canvas?.scene) {
-  if (!scene) return [];
-  const { notes, tokens } = pinInputs(scene);
-  return core.pinsUnderTokens(notes, tokens);
-}
-
 function onInit() {
   registerSettings();
 }
 
-// Published one tick after ready (publishing synchronously is a declared step of the migration). The
-// importer merges into game.pentaryn and nothing freezes it since its keystone (items-journal-1), so
-// the old frozen-root guard is gone (kit 1.0.2, J10): the API is assigned into the plain root.
 function onReady() {
-  setTimeout(() => {
-    const x = ctx.exposed;
-    const api = {
-      status: x.status,
-      ghostFor: x.ghostFor,
-      combatActive: x.combatActive,
-      /** Player: switch ghost on/off for yourself (same as the button). */
-      setGhost: x.setGhost,
-      /** GM: set the policy directly: "off" | "exploration" | "always". */
-      setPolicy: async value => {
-        if (!game.user.isGM) throw new Error("GM only");
-        const p = core.normalizePolicy(value);
-        if (p !== "off") await game.settings.set(MODULE, "ghostPolicyLast", p);
-        return game.settings.set(MODULE, "ghostPolicy", p);
-      },
-      pinsUnderTokens,
-      core
-    };
-    game.pentaryn ??= {};
-    game.pentaryn.movement = api;
-  }, 0);
+  try {
+    ctx.api = buildApiFor(ctx);
+  } catch (err) {
+    log.error("API manifest drift — not published", err);
+    return;
+  }
+  publishNamespace(NS, ctx.api, { moduleId: MODULE });
 }
 
 // Registration order is the module's historic one: init, then the feature's hooks (installed

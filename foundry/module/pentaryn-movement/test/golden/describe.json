@@ -1,0 +1,243 @@
+{
+  "module": "pentaryn-movement",
+  "namespace": "movement",
+  "contract": "pentaryn-movement/api@1",
+  "flagScope": "pentaryn-movement",
+  "methods": [
+    {
+      "path": "status",
+      "params": [],
+      "returns": "{ policy, combatOnScene, allowed, reason, wish, ghost, ownedOnTop, patched: { drag, keyboard } }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Why ghost is or isn't on for this client, on the scene it is viewing: the GM policy, whether a combat there stops ghosting, this client's button (wish) and whether the two core methods are wrapped."
+    },
+    {
+      "path": "ghostFor",
+      "params": [
+        {
+          "name": "token",
+          "type": "Token placeable"
+        }
+      ],
+      "returns": "boolean",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Is ghost movement in effect for that token on this client (a player, owner, button on, allowed)? Always false on a GM client."
+    },
+    {
+      "path": "combatActive",
+      "params": [
+        {
+          "name": "sceneId",
+          "type": "string",
+          "optional": true,
+          "doc": "default: the viewed scene"
+        }
+      ],
+      "returns": "boolean",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Does a combat stop ghosting on that scene (an active encounter there with a visible combatant, or started)? Hidden combatants do not count."
+    },
+    {
+      "path": "setGhost",
+      "params": [
+        {
+          "name": "on",
+          "type": "boolean"
+        }
+      ],
+      "returns": "Promise<void>",
+      "gm": false,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "setting pentaryn-movement.ghost (client)"
+      ],
+      "legacy": true,
+      "doc": "Switch ghost on or off for yourself, like the player's button. Player clients only: on a GM client (and so from the MCP bridge) it sets the GM's own client setting, which changes nothing for players."
+    },
+    {
+      "path": "setPolicy",
+      "params": [
+        {
+          "name": "value",
+          "type": "\"off\" | \"exploration\" | \"always\"",
+          "doc": "anything else means exploration"
+        }
+      ],
+      "returns": "Promise",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "setting pentaryn-movement.ghostPolicy (world)",
+        "setting pentaryn-movement.ghostPolicyLast (world)"
+      ],
+      "legacy": true,
+      "doc": "GM: set the player ghost policy. Rejects with Error('GM only') on a player client (legacy: a throw, not a refusal object). A mode other than off is also remembered for the GM toolbar button."
+    },
+    {
+      "path": "pinsUnderTokens",
+      "params": [
+        {
+          "name": "scene",
+          "type": "Scene",
+          "optional": true,
+          "doc": "default: the viewed scene"
+        }
+      ],
+      "returns": "{ noteId, label, tokenId, tokenName, playerOwned }[]",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "legacy": true,
+      "doc": "Map pins whose centre sits under a visible token (owned-on-top makes them unclickable for that player); player-owned tokens first. [] without a scene."
+    },
+    {
+      "path": "selftest",
+      "params": [],
+      "returns": "{ ok, checks: [{ label, ok, detail }] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "doc": "Live smoke checks after a sync: published, settings readable, both core methods wrapped, hooks registered."
+    }
+  ],
+  "queries": [],
+  "settings": [
+    {
+      "key": "ghostPolicy",
+      "scope": "world",
+      "type": "String",
+      "default": "exploration",
+      "doc": "GM policy for player ghost movement: off, exploration (off while a combat runs on the scene) or always."
+    },
+    {
+      "key": "ghostPolicyLast",
+      "scope": "world",
+      "type": "String",
+      "default": "exploration",
+      "doc": "The mode the GM toolbar button restores when it is switched back on (exploration or always)."
+    },
+    {
+      "key": "ghost",
+      "scope": "client",
+      "type": "Boolean",
+      "default": false,
+      "doc": "This player's ghost button (their wish); in effect only while the policy allows it. Client scope."
+    },
+    {
+      "key": "ownedOnTop",
+      "scope": "client",
+      "type": "Boolean",
+      "default": true,
+      "doc": "Draw this player's own tokens on top, on their screen only. Client scope."
+    }
+  ],
+  "events": [],
+  "hooks": [
+    {
+      "name": "setup",
+      "label": "setup: wrap drag and keyboard"
+    },
+    {
+      "name": "getSceneControlButtons",
+      "label": "getSceneControlButtons: ghost tools"
+    },
+    {
+      "name": "renderSceneControls",
+      "label": "renderSceneControls: combat badge"
+    },
+    {
+      "name": "drawTokenLayer",
+      "label": "drawTokenLayer: owned-on-top sort"
+    },
+    {
+      "name": "canvasReady",
+      "label": "canvasReady: sort and refresh"
+    },
+    {
+      "name": "refreshToken",
+      "label": "refreshToken: lift and fade"
+    },
+    {
+      "name": "updateActor",
+      "label": "updateActor: ownership re-sort"
+    },
+    {
+      "name": "updateToken",
+      "label": "updateToken: sort/elevation re-sort"
+    },
+    {
+      "name": "createCombat",
+      "label": "createCombat: refresh"
+    },
+    {
+      "name": "updateCombat",
+      "label": "updateCombat: refresh"
+    },
+    {
+      "name": "deleteCombat",
+      "label": "deleteCombat: refresh"
+    },
+    {
+      "name": "createCombatant",
+      "label": "createCombatant: refresh"
+    },
+    {
+      "name": "updateCombatant",
+      "label": "updateCombatant: refresh"
+    },
+    {
+      "name": "deleteCombatant",
+      "label": "deleteCombatant: refresh"
+    }
+  ],
+  "patches": [
+    {
+      "label": "Token#_getDragConstrainOptions",
+      "marker": "__pentarynMovement",
+      "adjustments": "movement-drag-constrain-ghost"
+    },
+    {
+      "label": "TokenLayer#_prepareKeyboardMovementUpdates",
+      "marker": "__pentarynMovement",
+      "adjustments": "movement-keyboard-constrain-ghost"
+    },
+    {
+      "label": "TokenLayer.objects#sortChildren",
+      "marker": "__pentarynMovement",
+      "adjustments": "movement-layer-sort-owned"
+    }
+  ],
+  "flags": {
+    "writes": [],
+    "reads": []
+  },
+  "errors": [
+    "NOT_GM",
+    "NO_GM",
+    "NOT_READY",
+    "NOT_FOUND",
+    "AMBIGUOUS",
+    "BAD_ARGS",
+    "REFUSED",
+    "CONFLICT",
+    "UNSUPPORTED",
+    "TIMEOUT",
+    "INTERNAL"
+  ]
+}
