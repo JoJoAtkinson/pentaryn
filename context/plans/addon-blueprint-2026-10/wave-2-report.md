@@ -51,6 +51,46 @@ bytes change) until that module's re-vendor commit; module tests stay green thro
 - walls has no module-level test of the frozen refusal: its ready hook is async, so the throw is an
   unhandled rejection that `node:test` would fail on; the kit test, lookup (c), names and cursors pin it.
 
+## walls — guide steps 2–10, code phase (2026-10-11)
+
+walls is off in Joe's world: unit tests and static gates only; nothing synced. Guide Result row:
+[`migrate-pentaryn-walls.md`](migrate-pentaryn-walls.md) §Result; audit status:
+[`../code-audit-2026-10/walls.md`](../code-audit-2026-10/walls.md) §Status.
+
+| Step / finding | Commit |
+|---|---|
+| 2 core barrel, MODULE | `de35515f` |
+| 3 `core/` move + -4 · -7 [declared] · -8 code half · barrel by name (C05) | `3d0daef9` · `9b37264b` (+ `28dd5667`) · `e2520d57` · `36e3abbd` |
+| 4 settings/keybinding tables | `eeeeaf6a` |
+| 5 actions feature, manifest, entry, kit publish [declared] W-6 | `d06f77ab` |
+| 6 empty catch · 7 i18n test + prepared lang | `5224038e` · `d3a07b62` |
+| -6 maintainability · -5 performance | `c77d1e21` · `cb3ce91f` |
+| 8a -1 [declared] W-1 · 8c -2 [declared] W-3 · 8b -9 [declared] W-2 · 8d -37 [declared] W-4 | `01de2ae2` · `ab859b4c` · `0ae5b96d` · `f06a6b90` |
+| 8e -33 `analyze()` · 8f -3 `canonical(r, {extended})` | `08c498bb` · `1d2d196b` |
+| 9 README, use-doc `context/foundry/walls.md`, CHANGELOG | `49f1f2eb`, `e6ffa3c7` |
+| 10 (pre-batch half) dual-scope read · dormant migration | `90efd463` · `048eca8d` |
+
+**Results at `e6ffa3c7`:** `node test/run.mjs` 197 pass, 0 fail, 0 todo (wave start 126 + 2 KNOWN
+todo; both pins flipped). All six check gates green (parse, imports, i18n, node-test, vendor,
+conformance — run through `modules.check("walls")`, no make). Kit suite 82/82. Conformance
+**71.4 % → 95.6 % (43/45)**; failing C07 and C51 (both Wave 7). Performance (-5, js engine,
+`runEngine(rooms(10))`): 3967 → 407 `Array#filter` calls, 4721 → 3121 Sets, median 141 → 121 ms.
+
+**Frozen tests touched** (checkpoint `a8c5c28`): `glue.test.mjs` case (g) flipped KNOWN -1 → works
+(`01de2ae2`); `golden/canonical.json` and `golden/backend-drift.json` re-pinned for the levels
+fixtures only, and the two `knownWasm` markers removed from `test/fixtures/corpus.mjs` (`ab859b4c`).
+Otherwise only import paths (`test/fixtures/engine.mjs` → the barrel) and the guide-prescribed
+fixture edits (`kindOf` re-export, a comment). No frozen test went red twice.
+
+**Known red commit:** `9b37264b` — its own new `test/backends.test.mjs` matched its own source
+(fixed forward by `28dd5667`); every other test is green there.
+
+**Not mine, seen in passing:** `pytest scripts/tests` has one failure,
+`test_update_escalation.py::test_the_real_registry_matches_the_code` (`itempiles-attunement-*`
+markers), from the attunement lane's uncommitted work in this worktree. `check_context.py` is red
+on the stale Module APIs table (walls, attunement, journal, lookup, movement rows): the integrator's
+`make foundry-module-index`.
+
 ## Open for Joe
 
 | # | Item | From | What is needed |
@@ -59,3 +99,6 @@ bytes change) until that module's re-vendor commit; module tests stay green thro
 | W2-B1 | python-tooling-28 adds two **new** dnd-scripts tools (`foundry_modules`, `foundry_action_log`). The wave rule is "no new features except the approved bridge tools", and the audit itself calls -28 a possible deferred feature. The bridge plan's P7 (`evallog.py` + `make foundry-eval-report`) answers the same questions from the shell. Plan: [`wave-2-bridge-plan.md`](wave-2-bridge-plan.md) §4 P8. | bridge lane plan | yes → P8 lands (read-only, additive); no → close -28 by pointer to P7 |
 | W2-B2 | D14 compact read lines (`{ts, tool:"pentaryn-read", ns, path, ref, ok, ms}`) go into `mcp-<YYYY-MM>.jsonl` beside the write lines, told apart by `tool` and the absence of `args`, rather than a third log file; the monthly review and `evallog.py` already read that file. Plan §3.5. | bridge lane plan | confirm, or ask for a separate `reads-<YYYY-MM>.jsonl` (one-line change in F21 and P7) |
 | W2-A1 | New concurrency finding in pentaryn-attunement (not in the audit): the `createItem` bond return is gated on the initiator (`userId === game.user.id`), which passes in **every tab** of that user (playbook §5.9.4). With the MCP bridge tab and a GM browser tab open, a GM-made Take of a bonded **coin purse** runs `actor.update(currency + purse)` in both tabs and can pay twice (and `item.delete()` twice); the slot hand-back writes the same values from either tab, so only its toast can double. Recorded in the attunement README (Two sessions); no pin. | attunement lane | fix now as a [declared] commit (vendor kit `election`, `claimMessage`-style claim on the purse item before paying; the purse deletes itself, so a single-use claim key fits), or accept and leave it documented |
+| W2-WALLS-1 | walls i18n switch (-36) and the setting-hint fix (-8): the `SETTINGS`/`KEYBINDINGS` labels become `PENTARYN_WALLS.*` keys only together with `module.json` `languages`, and that edits one **frozen pin** (glue (a), the `settings.register`/keybinding label values), as pings needed in J13. The keys and text are ready and tested (`test/fixtures/lang-en.wave7.json`). | walls lane | allow that one pin edit in the Wave 7 batch (a [declared] commit), or leave walls' labels in literal English (C51 stays failing) |
+| W2-WALLS-2 | walls cross-tab overlap (§5.9, new, not in the audit): the run lock (-9) is per tab. With the MCP bridge tab and a GM browser tab both open, a `run()` from the bridge while Alt+W runs in the browser could complete the same scene twice (duplicate walls; each run is still undoable on its own). Excluding across tabs needs a new mechanism (a scene-flag lease or claim). | walls lane | accept and document (default; walls is off), or ask for a lease as a [declared] fix |
+| W2-WALLS-3 | walls toasts stay raw `ui.notifications.*`, not `log.notify`: the frozen glue pins match the exact options (`{permanent: true}`), and `log.notify` adds `{console: false}` and a console line. | walls lane | accept, or allow the pin edits with W2-WALLS-1 |
