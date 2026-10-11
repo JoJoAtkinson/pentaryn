@@ -34,7 +34,7 @@ from pathlib import Path
 
 from scripts.foundry import admin_password as admin_pw
 from scripts.foundry import host
-from scripts.foundry.cloud import WORLD_BACKUPS
+from scripts.foundry.cloud import WORLD_BACKUPS, Snapshot
 from scripts.foundry.update import (
     adjudicate, admin as admin_mod, escalate, inventory, llm, notify, plan as plan_mod,
     recover, risk, smoke, state, upstream,
@@ -233,7 +233,7 @@ def _repair_from(entry: state.EntryState) -> None:
 
 # ── Phase 1: backups ─────────────────────────────────────────────────────────
 
-def back_up(system_id: str, system_version: str) -> tuple[Path, Path | None]:
+def back_up(system_id: str, system_version: str) -> tuple["Snapshot", Path | None]:
     """Stop the server, snapshot to OneDrive, stash the system, restart at setup.
 
     This is deliberately the *same* code path `make vtt-down` uses — it shells out to
