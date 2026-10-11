@@ -28,6 +28,7 @@ Scores before and after Stage 0: [`wave-1-baseline.md`](wave-1-baseline.md).
 | J15 | names N-D4: the optional console line for the rename toast (`log.notify`) was not taken. | Integrator (names) | none unless wanted |
 | J16 | Kit gap (`foundry/lib/patch.mjs`): a `wrapMethod` handle's `unwrap()` restores the method but keeps the kit's record, so a later `wrapMethod` with the same marker returns the stale handle and does not wrap. Pings' `uninstall()` uses `unwrapAll()` instead. | Integrator (pings) | fold into J6's kit bump |
 | J17 | names, pings and cursors are committed but **not deployed**: their `module.json` edits (`flags.pentaryn`, `compatibility`) need the restart batch, and the declared changes need a live smoke (names N-D1..N-D3 and the base-actor sync ref; pings P-D1..P-D3 — ping, then `last().ageMs`, `describe().version === "0.1.0"`, `uninstall()` + re-import; cursors C-1 `describe()`/`status()`, C-2 silent console). | Integrator | the live-test run (with J11) |
+| J18 | senses-walls-cursors-28, tooling half: a `ship_ignore` / sync exclusion of `tools/`, `test/`, `*.md` in `ModuleSpec` is listed in the master audit's "Deferred decisions for Joe" (python-tooling-5 step b; needs a manifest/`import.meta.url` guard first). Not applied in cursors' standalone pass. Cursors' own half needs no tooling: its guide's step 7 moves `tools/` and `assets/src/` out of the module. Standalone pass result: -32 `ae51bca`, -30 runtime `738f4c4` (registry `4825fae`, README `827ebce`), -27 cursors row `720486e`; the audit lists no performance finding. | cursors standalone findings | schedule the sync-exclusion decision, or leave it deferred |
 
 ## Known red commits (bisect and revert notes)
 
@@ -87,8 +88,8 @@ History is not rewritten; these are declared here instead. Later gate-behaviour 
   link is on line 5; `cursors-core.mjs` lines 1 and 4; the moved `build.mjs` header line 3 and
   its run path).
 - `context/foundry/README.md` Route-by-task rows for names ("Token labels didn't follow an actor
-  rename"), pings ("where did I ping / read back a ping") and cursors (its own row, split from the
-  table-feedback row) — transform-creatures-20 and senses-walls-cursors-27. The generated Module
+  rename") and pings ("where did I ping / read back a ping") — transform-creatures-20. (Cursors'
+  own row, senses-walls-cursors-27, landed in `720486e`.) The generated Module
   APIs table is already regenerated; names and pings show "no describe golden yet" until each pins
   `test/golden/describe.json`.
 - `context/foundry/markers.md` ping-log section: link `foundry/module/pentaryn-pings/README.md`;
