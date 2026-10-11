@@ -334,12 +334,17 @@ test("bringFollowers: two PCs to one scene → each PC's own, then the co-owned 
   ]);
 });
 
-test("bringFollowers: the follower already carried (another session got there first) → rejects", async () => {
+test("bringFollowers: the follower already carried (another session got there first) → resolves quietly [declared D-P4]", async () => {
   const H = hall();
   const { deleted, replacements } = await walkThrough(H);
   W.token(H.pit, { id: `tSkel${H.k}`, name: "Skeleton", actorId: "SKEL" });
-  // KNOWN: (-28) the keepId refusal escapes; D-P4 catches only "already exists" and logs debug.
-  await assert.rejects(S.bringFollowers(H.s, deleted, replacements), /already exists/);
+  // [declared] D-P4 (-28): the keepId refusal is the other tab winning — no delete, no toast, no warn
+  const c = console$.length;
+  const n = F.calls.length;
+  await S.bringFollowers(H.s, deleted, replacements);
+  assert.deepEqual(ops(n).map(x => x.op), ["createEmbedded"]);
+  assert.equal(H.s.tokens.has(`tSkel${H.k}`), true, "the loser deletes nothing");
+  assert.deepEqual(console$.slice(c), []);
 });
 
 test("bringFollowers: no carry for a same-scene move, a non-PC, a cut-and-paste (not in a portal region), or a missing replacement", async () => {
@@ -404,7 +409,8 @@ test("deleteToken hook: needs replacements and the active GM; one delete operati
   assert.equal(ops(n).filter(c => c.op === "notify").length, 3, "both PCs in one pass: own summons + the shared steed");
   const H2 = hall();
   const w2 = await walkThrough(H2);
-  W.token(H2.pit, { id: `tSkel${H2.k}`, name: "Skeleton", actorId: "SKEL" });
+  // D-P4: "already exists" is now the other tab winning; any other failure still warns
+  H2.pit.createEmbeddedDocuments = async () => { throw new Error("server unavailable"); };
   const c = console$.length;
   F.fire("deleteToken", w2.deleted[0], { replacements: w2.replacements });
   await W.tick(12);

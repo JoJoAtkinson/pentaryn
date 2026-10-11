@@ -94,3 +94,33 @@ test("the snapshot folder: an existing one is silent; any other createDirectory 
   await S.snapshot(P.pitGate);
   assert.deepEqual(since(m), []);
 });
+
+test("D-P4: the other session's carry logs one debug line; a different create failure still rejects", async t => {
+  const debug = t.mock.method(console, "debug", () => {});
+  CONFIG.debug[MODULE] = true;
+  try {
+    const own = { default: 0, player0000000001: 3 };
+    W.actor({ id: "DP4PC", name: "Ana's PC", type: "character", ownership: own });
+    W.actor({ id: "DP4SK", name: "Skel", ownership: own, flags: { dnd5e: { summon: { origin: "Actor.DP4PC.Item.x" } } } });
+    const mk = k => {
+      const dest = W.scene({ id: `DP4Dest${k}`, name: "Dest" });
+      const to = W.region(dest, { id: `DP4To${k}`, name: "To" });
+      const from = W.scene({ id: `DP4From${k}`, name: "From",
+        regions: [{ id: `DP4Gate${k}`, name: "Gate", bounds: { x: 0, y: 0, width: 100, height: 100 }, behaviors: [{ id: `DP4B${k}`, destinations: [to.uuid] }] }],
+        tokens: [{ id: `dp4pc${k}`, name: "PC", actorId: "DP4PC", actorLink: true, x: 0, y: 0 }, { id: `dp4sk${k}`, name: "Skel", actorId: "DP4SK", x: 100, y: 0 }] });
+      const pc = from.tokens.get(`dp4pc${k}`);
+      const arrived = W.token(dest, { id: `dp4new${k}`, name: "PC", actorId: "DP4PC", actorLink: true, x: 500, y: 500 });
+      from.tokens.delete(pc.id);
+      return { from, dest, pc, arrived };
+    };
+    const a = mk("a");
+    W.token(a.dest, { id: "dp4ska", name: "Skel", actorId: "DP4SK" });     // the other tab carried it
+    await S.bringFollowers(a.from, [a.pc], { [a.pc.id]: a.arrived.uuid });
+    assert.deepEqual(debug.mock.calls.map(c => c.arguments[0]), ["pentaryn-portals | followers already carried by another session"]);
+    const b = mk("b");
+    b.dest.createEmbeddedDocuments = async () => { throw new Error("Token validation failed"); };
+    await assert.rejects(S.bringFollowers(b.from, [b.pc], { [b.pc.id]: b.arrived.uuid }), /validation failed/);
+  } finally {
+    CONFIG.debug[MODULE] = false;
+  }
+});

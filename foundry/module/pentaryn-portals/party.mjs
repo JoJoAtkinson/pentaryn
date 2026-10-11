@@ -80,7 +80,16 @@ export async function bringFollowers(scene, deleted, replacements) {
     const dest = arrived.parent;
     const g = dest.grid.size;
     const cx = arrived.x + arrived.width * g / 2, cy = arrived.y + arrived.height * g / 2;
-    await carryTo(followers, dest, cx, cy);
+    try {
+      await carryTo(followers, dest, cx, cy);
+    } catch (err) {
+      // Two tabs on the GM account (the MCP bridge and a browser) both run this. carryTo creates
+      // with keepId, so the server takes one create and refuses the other: that refusal is the
+      // election (finding -28). Any other failure still rejects ("summons did not follow").
+      if (!/already exists/i.test(err?.message ?? "")) throw err;
+      log?.debug("followers already carried by another session", err);
+      continue;
+    }
     const names = followers.map(f => f.name).join(", ");
     ui.notifications.info(`${arrived.name} brought ${names} to ${dest.navName || dest.name}.`);
   }
