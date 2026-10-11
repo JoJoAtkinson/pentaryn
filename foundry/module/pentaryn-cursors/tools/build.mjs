@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 /**
  * Build the cursor set: assets/src/*.svg → assets/cursors/<key>[-pointer].svg + .png (1×) + @2x.png,
- * from KEYS in cursors-core.mjs. Run by hand; the outputs are committed. cursors.mjs reads the
- * hotspots from KEYS, so the build fails unless the measured hotspot equals KEYS exactly.
+ * from KEYS in cursors-core.mjs. Run by hand; the outputs are committed. board.mjs reads the
+ * hotspots from KEYS (through core's cursorValues), so the build fails unless the measured hotspot
+ * equals KEYS exactly.
  *
  * Needs @resvg/resvg-js (a dev tool, not a module dependency). It is looked up next to this script,
  * then in the current directory, so the simplest run is:
