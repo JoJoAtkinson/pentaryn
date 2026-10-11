@@ -22,8 +22,13 @@ notice:
 - **[declared] D-P6** — an arriving PC no longer steps off a square held only by an aoe handle
   flagged on its actor.
 - **[declared]** a snapshot whose image cannot load rejects `portal snapshot: cannot load <src>`.
+- **[declared] C59** — the card window's *Show where it leads* / *Ask before moving* switches and
+  *Remove this destination* write every teleport behaviour of the region in one batch
+  (`updateEmbeddedDocuments`) instead of one update each; hooks still fire per behaviour.
 - Console only: a broken card image warns once per path; failed card-window writes log with a
-  label; the other expected failures log at debug (`CONFIG.debug["pentaryn-portals"] = true`).
+  label; the other expected failures log at debug (`CONFIG.debug["pentaryn-portals"] = true`). A
+  failed badge draw on `canvasReady` or the edit toggle warns `badge redraw failed`, and a failed
+  GM badge-menu action (Look at, Teleport party) logs `badge menu`.
 - The card window's clear-image button deletes the flag with `_del` (the `-=img` key is deprecated).
 
 ## 0.4.4 — 2026-10-11
