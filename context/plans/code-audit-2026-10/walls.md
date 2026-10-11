@@ -46,7 +46,7 @@ yet). Detail: [`../addon-blueprint-2026-10/migrate-pentaryn-walls.md`](../addon-
 | -5 | done — inline obstacle scans, coll2 hoisted; allocation counter test | `cb3ce91f` |
 | -6 | done — `reindex`/`toSegs` | `c77d1e21` |
 | -7 | done [declared, bench text] | `9b37264b`, `28dd5667` |
-| -8 | code and README halves done; the setting hint and `module.json` description wait for the Wave 7 batch | `e2520d57`, `49f1f2eb` (wave 1: `30963c4`, `4f7b5a8`) |
+| -8 | code and README halves done; the setting hint and `module.json` description wait for the Wave 7 batch. Recipe test scoped to walls (`test/docs.test.mjs`: every cited doc path resolves; `module.json` is a todo until the batch) | `e2520d57`, `49f1f2eb`, `d19cb73d` (wave 1: `30963c4`, `4f7b5a8`) |
 | -9 | fixed [declared] — one lock for keys, macros and the API; cards awaited | `0ae5b96d` |
 | -28 | not here — the python-tooling batch (`ship_ignore`), deferred (J18) | — |
 | -33 | done — `analyze()` | `08c498bb` |
