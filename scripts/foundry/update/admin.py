@@ -56,19 +56,21 @@ from __future__ import annotations
 
 import json
 import re
-import subprocess
 import time
 from dataclasses import dataclass
 from pathlib import Path
 
 import requests
 
-from scripts.foundry.cloud import FOUNDRY_DATA
+from scripts.foundry import host
 
-BASE_URL = "http://127.0.0.1:30000"
-APP_NAME = "Foundry Virtual Tabletop"
-APP_DIR = Path("/Applications/Foundry Virtual Tabletop.app")
-APP_PAYLOAD = APP_DIR / "Contents/Resources/app"
+# Paths and the port come from host.py (Mac defaults are today's values; BOSS sets them
+# in ~/.config/pentaryn/env). Resolved once at import, as before.
+FOUNDRY_DATA = host.foundry_data()
+BASE_URL = f"http://127.0.0.1:{host.foundry_port()}"
+APP_NAME = host.MAC_APP_NAME
+# The app payload (package.json, main.js). On the Mac this is inside the .app bundle.
+APP_PAYLOAD = host.foundry_app_root()
 
 DATA = FOUNDRY_DATA / "Data"
 MODULES_DIR = DATA / "modules"
@@ -154,9 +156,7 @@ def port_open(timeout: float = 2.0) -> bool:
 
 
 def process_running() -> bool:
-    return subprocess.run(
-        ["pgrep", "-f", f"MacOS/{APP_NAME}"], capture_output=True, text=True
-    ).returncode == 0
+    return host.pid() is not None
 
 
 def quit_app(timeout: float = 120.0) -> None:
@@ -168,10 +168,7 @@ def quit_app(timeout: float = 120.0) -> None:
     """
     if not process_running() and not port_open():
         return
-    subprocess.run(
-        ["osascript", "-e", f'quit app "{APP_NAME}"'],
-        capture_output=True, text=True, timeout=30,
-    )
+    host.request_stop()  # Mac: osascript quit · Linux: PENTARYN_STOP_CMD or SIGTERM
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if not port_open(timeout=1.0) and not process_running():
@@ -179,7 +176,7 @@ def quit_app(timeout: float = 120.0) -> None:
             return
         time.sleep(1.0)
     # Escalate exactly once; a wedged Electron would otherwise block the whole run.
-    subprocess.run(["pkill", "-f", f"MacOS/{APP_NAME}"], capture_output=True)
+    host.force_stop()
     deadline = time.monotonic() + 30
     while time.monotonic() < deadline:
         if not port_open(timeout=1.0) and not process_running():
@@ -193,7 +190,7 @@ def start_app(timeout: float = 120.0) -> None:
     boots to the setup screen — which is the only state the package API answers in."""
     if port_open():
         return
-    subprocess.run(["open", "-a", str(APP_DIR)], check=True, capture_output=True)
+    host.start()  # Mac: open -a · Linux: PENTARYN_START_CMD or a detached node main.js
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if port_open(timeout=2.0):

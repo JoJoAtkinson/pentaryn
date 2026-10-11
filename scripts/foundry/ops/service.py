@@ -16,6 +16,8 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
+from scripts.foundry import host
+
 from . import config as cfg
 from .out import say as _say  # re-exported: modules.py and pipeline.py import it from here
 
@@ -105,16 +107,33 @@ def lock_check() -> int:
 
 # ── the Foundry application ───────────────────────────────────────────────────
 
+def _boot_choice() -> int:
+    """The §6 boot choice, once per start.
+
+    `make foundry-up` / `vtt-up` run it as their own `foundry-boot` step and set
+    PENTARYN_BOOT_DONE so it is not asked twice; `make login` (and anything else that
+    calls up()) gets it here. The updater sets PENTARYN_BOOT_DONE=skip: a restore in the
+    middle of an update would invalidate its own rollback point."""
+    if os.environ.get("PENTARYN_BOOT_DONE"):
+        return OK
+    from scripts.foundry import boot
+    rc = boot.choose()
+    os.environ["PENTARYN_BOOT_DONE"] = "1"
+    return rc
+
+
 def up() -> int:
     if foundry_is_up():
         _say("▸ foundry already up")
         return OK
+    if _boot_choice() != OK:
+        _say("✗ the boot step failed — Foundry was not started")
+        return FAIL
     _say("▸ starting Foundry...")
     try:
-        subprocess.run(["open", "-a", cfg.FOUNDRY_APP], check=True,
-                       capture_output=True, text=True)
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        _say(f"✗ can't launch '{cfg.FOUNDRY_APP}' — is it in /Applications?")
+        host.start()  # Mac: open -a · BOSS: PENTARYN_START_CMD (host.py)
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+        _say(f"✗ can't launch Foundry ({host.foundry_app_root()}) — is it installed?")
         return FAIL
 
     for _ in range(cfg.FOUNDRY_BOOT_TIMEOUT):
@@ -139,18 +158,21 @@ def _warn_stale_bridge() -> None:
 
 
 def down() -> int:
-    running = subprocess.run(["pgrep", "-f", cfg.FOUNDRY_APP],
-                             capture_output=True).returncode == 0
-    if not running:
+    # Both probes: on BOSS a PENTARYN_START_CMD whose command line does not match
+    # `main.js --dataPath=<root>` has no pid we can find, but its port still answers.
+    if host.pid() is None and not host.is_running():
         _say("▸ foundry already down")
         return OK
+    if not host.can_request_stop():
+        # Port live, no process found, no hook: there is nothing to signal. Saying
+        # "stopped" here would be a false success (and a vtt-down backup would follow it).
+        _say(f"✗ foundry is answering on port {host.foundry_port()}, but this machine can't "
+             "stop it: no Foundry process found and PENTARYN_STOP_CMD is not set "
+             "(host.env). Stop it by hand, or set PENTARYN_STOP_CMD.")
+        return FAIL
     # Ask politely first — a graceful quit lets Foundry close its LevelDB cleanly.
-    quit_ok = subprocess.run(
-        ["osascript", "-e", f'quit app "{cfg.FOUNDRY_APP}"'],
-        capture_output=True,
-    ).returncode == 0
-    if not quit_ok:
-        subprocess.run(["pkill", "-f", cfg.FOUNDRY_APP], capture_output=True)
+    if not host.request_stop():
+        host.force_stop()
     _say("✓ foundry stopped")
     return OK
 
@@ -171,6 +193,14 @@ def _tunnel_pid() -> int | None:
 
 
 def tunnel_up() -> int:
+    # The tunnel publishes this machine's Foundry as vtt.atjoseph.com; only the primary
+    # does that (design §8). On the alt this is a loud no-op, not a failure: "Foundry up,
+    # no tunnel" is exactly what the alt is for, so `vtt-up` still succeeds there.
+    try:
+        host.require_primary("the tunnel", "tunnel-up", log=_say)
+    except host.NotPrimary as exc:
+        _say(f"▸ tunnel NOT started — {exc}")
+        return OK
     cfg.RUN_DIR.mkdir(parents=True, exist_ok=True)
     if (pid := _tunnel_pid()) is not None:
         _say(f"▸ tunnel already up (pid {pid})")

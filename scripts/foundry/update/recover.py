@@ -40,8 +40,10 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from scripts.foundry.cloud import FOUNDRY_DATA, SNAPSHOT_PATHS, WORLD_BACKUPS
+from scripts.foundry import bootstate, cloud
+from scripts.foundry import host as host_mod
 from scripts.foundry.update import admin as admin_mod
+from scripts.foundry.update.admin import FOUNDRY_DATA
 from scripts.foundry.update.admin import APP_PAYLOAD, FoundryAdmin
 from scripts.foundry.update.state import CORE_ROLLBACK_DIR, SYSTEM_ASIDE_DIR
 
@@ -112,7 +114,7 @@ def _newest_backup(listing: dict, pkg_type: str, pkg_id: str,
 # ── System and core: the world's data has already been rewritten ─────────────
 
 def recover_system(fa: FoundryAdmin, system_id: str, previous_version: str,
-                   world_snapshot: Path) -> Recovery:
+                   world_snapshot: "cloud.Snapshot | Path | None") -> Recovery:
     """Roll a system back — code *and* every world it just migrated."""
     rec = Recovery(kind="system", target=system_id)
     admin_mod.quit_app()
@@ -139,7 +141,7 @@ def recover_system(fa: FoundryAdmin, system_id: str, previous_version: str,
     return rec
 
 
-def recover_core(previous_version: str, world_snapshot: Path,
+def recover_core(previous_version: str, world_snapshot: "cloud.Snapshot | Path | None",
                  bundle: Path | None = None) -> Recovery:
     """Roll the core back: the whole app payload, plus the world data it migrated."""
     rec = Recovery(kind="core", target="foundry")
@@ -182,23 +184,36 @@ def recover_core(previous_version: str, world_snapshot: Path,
     return rec
 
 
-def _restore_world_tar(snapshot: Path, rec: Recovery) -> None:
-    """Replace worlds/Config/modules from a OneDrive snapshot.
+def _restore_world_tar(snapshot: "cloud.Snapshot | Path | None", rec: Recovery) -> None:
+    """Replace worlds/Config/modules from a cloud snapshot (or a local tar path).
 
     ``cloud.py restore`` cannot be used here: it prompts on stdin (an EOFError under
-    launchd), refuses while the server answers, and extracts *over* the existing trees
-    without clearing them. This does the same job with those three things fixed, and
-    without its pre-restore ``backup()`` — which calls ``mirror_systems()`` and would
-    delete the older system tar that a system rollback is about to need.
+    launchd), refuses while the server answers, and runs a pre-restore ``backup()`` —
+    which calls ``mirror_systems()`` and would prune the older system tar a system
+    rollback may still need. This downloads to temp first (rclone or folder alike), then
+    clears and extracts via ``cloud.extract_snapshot``, which keeps this machine's own
+    ``Config/options.json``, ``admin.txt`` and ``license.json``.
     """
-    if not snapshot or not snapshot.exists():
-        raise RuntimeError(f"world snapshot missing: {snapshot}")
-    for rel in SNAPSHOT_PATHS:
-        target = FOUNDRY_DATA / rel
-        if target.exists():
-            shutil.rmtree(target)
-    with tarfile.open(snapshot, "r:gz") as tar:
-        tar.extractall(FOUNDRY_DATA, filter="data")
+    if snapshot is None:
+        raise RuntimeError("no world snapshot to restore from")
+    if isinstance(snapshot, Path):
+        if not snapshot.exists():
+            raise RuntimeError(f"world snapshot missing: {snapshot}")
+        cloud.extract_snapshot(snapshot)
+        rec.steps.append(f"restored worlds/Config/modules from {snapshot.name}")
+        return
+    st = cloud.store()
+    local = cloud.tmp_dir() / snapshot.name
+    try:
+        st.download(snapshot.rel, local)
+        cloud.extract_snapshot(local)
+    finally:
+        local.unlink(missing_ok=True)
+    anc = cloud.read_lineage(st, snapshot)
+    bootstate.load().record_snapshot(snapshot.name, snapshot.host, snapshot.mtime,
+                                     cloud.snapshot_digest(), by="updater-rollback",
+                                     lineage=list(anc.names) if anc else [],
+                                     origin_before=anc.origin_before if anc else None)
     rec.steps.append(f"restored worlds/Config/modules from {snapshot.name}")
 
 
@@ -228,16 +243,31 @@ def _restore_system_from_aside(system_id: str, version: str, rec: Recovery) -> N
 
 # ── Artefacts the recovery paths depend on ──────────────────────────────────
 
-def newest_world_snapshot() -> Path | None:
-    """The newest OneDrive world snapshot.
+def newest_world_snapshot(host: str | None = None) -> "cloud.Snapshot | None":
+    """This machine's rollback point: the snapshot its world is based on.
 
     Resolved by listing, never by parsing a backup run's output: ``cloud.py backup``
     skips silently when the content digest is unchanged — which is common, because
     Friday's ``make vtt-down`` already snapshotted the same bytes — so a run cannot
     assume the call it just made produced a file.
+
+    The based-on record (bootstate) names exactly the snapshot whose bytes the local tree
+    had after the last own backup or restore — after ``back_up`` that is the current
+    state, whichever host's name it carries. Failing that, this host's own newest: the
+    rollback point must be this machine's state, never the other machine's.
     """
-    snaps = sorted(WORLD_BACKUPS.glob("world-*.tar.gz"))
-    return snaps[-1] if snaps else None
+    me = host or host_mod.host_name()
+    try:
+        snaps = cloud.all_snapshots(cloud.store())
+    except Exception:  # noqa: BLE001 — no listing, no rollback point
+        return None
+    based_on = bootstate.load().based_on
+    if based_on:
+        for s in snaps:
+            if s.name == based_on:
+                return s
+    mine = [s for s in snaps if s.host == me and s.folder == cloud.WORLD_BACKUPS]
+    return cloud.newest(mine)
 
 
 def newest_core_bundle() -> Path | None:

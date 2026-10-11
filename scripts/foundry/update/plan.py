@@ -161,15 +161,11 @@ def _versions(admin: FoundryAdmin | None,
             return st.version or "", st.system_version or system, st.world
         except Exception:
             pass
-    # No server: the app bundle's package.json is the authority on the core version.
-    try:
-        pkg = json.loads((Path("/Applications/Foundry Virtual Tabletop.app"
-                               "/Contents/Resources/app/package.json")).read_text())
-        rel = pkg.get("release", {})
-        core = f"{rel.get('generation')}.{rel.get('build')}"
-    except (OSError, json.JSONDecodeError):
-        core = ""
-    return core, system, None
+    # No server: the app's package.json is the authority on the core version
+    # (host.FOUNDRY_APP_ROOT — the Mac bundle by default, FOUNDRY_APP_ROOT on BOSS).
+    from scripts.foundry import host
+    core = host.core_version()
+    return ("" if core == "unknown" else core), system, None
 
 
 def _apply_foundry_check(admin: FoundryAdmin, pkg: inventory.Package,

@@ -33,7 +33,8 @@ from datetime import datetime
 from pathlib import Path
 
 from scripts.foundry import admin_password as admin_pw
-from scripts.foundry.cloud import WORLD_BACKUPS
+from scripts.foundry import host
+from scripts.foundry.cloud import WORLD_BACKUPS, Snapshot
 from scripts.foundry.update import (
     adjudicate, admin as admin_mod, escalate, inventory, llm, notify, plan as plan_mod,
     recover, risk, smoke, state, upstream,
@@ -83,6 +84,12 @@ class RunResult:
 
 def gate(fa: FoundryAdmin, policy: dict, *, force: bool = False) -> state.EntryState:
     """Decide whether to run at all, and record what to put back afterwards."""
+    # The updater runs only on the primary host (design §8). `--force` does not override
+    # this — PENTARYN_ROLE_OVERRIDE=primary does, deliberately and loudly.
+    try:
+        host.require_primary("the auto-updater", "vtt-update-now")
+    except host.NotPrimary as exc:
+        raise Aborted(str(exc)) from exc
     if state.is_paused() and not force:
         raise Aborted("paused — remove .state/vtt-update.pause to resume")
 
@@ -226,7 +233,7 @@ def _repair_from(entry: state.EntryState) -> None:
 
 # ── Phase 1: backups ─────────────────────────────────────────────────────────
 
-def back_up(system_id: str, system_version: str) -> tuple[Path, Path | None]:
+def back_up(system_id: str, system_version: str) -> tuple["Snapshot", Path | None]:
     """Stop the server, snapshot to OneDrive, stash the system, restart at setup.
 
     This is deliberately the *same* code path `make vtt-down` uses — it shells out to
@@ -496,6 +503,9 @@ def run(*, dry: bool = False, force: bool = False, skip_llm: bool = False) -> Ru
     """
     run_id = time.strftime("%Y%m%d-%H%M%S")
     result = RunResult(run_id=run_id, started=time.strftime("%Y-%m-%dT%H:%M:%S%z"))
+    # Every Foundry start in this run restarts what was just backed up; none may run the
+    # boot choice — a restore mid-update would invalidate this run's own rollback point.
+    os.environ["PENTARYN_BOOT_DONE"] = "skip"
     try:
         lock = state.Lock().acquire()
     except state.Locked as exc:

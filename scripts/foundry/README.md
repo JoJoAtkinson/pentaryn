@@ -39,13 +39,17 @@ answered, never the value.
 
 | Target | Does |
 |---|---|
-| `make vtt-up` | Start Foundry **and** the Cloudflare tunnel |
+| `make vtt-up` | The boot choice, then Foundry **and** the Cloudflare tunnel (tunnel on the primary host only). `FROM=latest\|local\|<snapshot>` decides the boot choice without asking |
+| `make foundry-boot` | Just the boot choice: newest cloud snapshot (any host) or the local world — see [`ops.md`](../../context/foundry/ops.md) §3 |
+| `make foundry-restore` | List every host's snapshots; `SNAP=<name>` restores one (archives local first) |
+| `make foundry-prune-untagged` | List the untagged pre-2026-10-11 snapshots and delete them on a typed confirmation |
+| `make foundry-cloud` | Storage (rclone/folder), host, role, based-on, newest snapshot per host |
 | `make login` | Pick a campaign and a user from an arrow-key menu, land in the world logged in — no dropdown, no password. Alias: `make vtt-login`. Needs the admin password configured; see [`ops.md`](../../context/foundry/ops.md) §2 |
 | `make vtt-down` | Stop both |
 | `make vtt` | Status of Foundry, tunnel, and public reachability |
 | `make tunnel-setup` | **One-time** — cloudflared login, create tunnel, route DNS |
 | `make tunnel-logs` | Tail the tunnel log |
-| `make foundry-key` | Copy the license key to the clipboard (first-run activation only) |
+| `make foundry-key` | Copy the license key to the clipboard (first-run activation only; pbcopy, clip.exe on WSL, or xclip — never echoed) |
 | `make foundry-check` | Verify key retrieval; prints length/format, never the value |
 | `make foundry-actors` | Regenerate `foundry/build/actors.json` from `foundry/actions.jsonl` + `combat-runner` markdown |
 | `make foundry-sync` | `foundry-actors`, then **copy** (never symlink) the importer module + `actors.json` into the live Foundry `Data/` dir |
@@ -171,7 +175,8 @@ or the players keep seeing the old token on the map.
 
 ```bash
 ./.venv/bin/python scripts/foundry/ring_subject.py \
-  "$HOME/Library/Application Support/FoundryVTT/Data/assets/tokens/tokens-01/halflings/halfling-explorer.png"
+  "$FOUNDRY_DATA/Data/assets/tokens/tokens-01/halflings/halfling-explorer.png"
+# FOUNDRY_DATA = the data root: ~/Library/Application Support/FoundryVTT on the Mac
 # -> assets/tokens/custom/ring-subjects/halfling-explorer-28c04d.webp
 ```
 
@@ -215,3 +220,12 @@ for (const sc of game.scenes) {
 
 Read `_source`, not the derived doc, when auditing right after a write — derived token
 data goes stale and will report the change as missing when it landed.
+
+## This machine — `host.py` and `~/.config/pentaryn/env`
+
+Two machines run this tooling against one OneDrive folder: the primary (the Mac) and an alt
+(BOSS). [`host.py`](host.py) answers which one this is, its role, where Foundry's data and app
+live, and how to start and stop it; every value has a platform default, so the Mac needs no
+configuration. Overrides go in `~/.config/pentaryn/env` (the environment wins over the file);
+[`host.env.example`](host.env.example) lists every key. `python -m scripts.foundry.host show`
+prints what it resolved. Never put a secret in that file — rclone keeps its own config.

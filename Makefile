@@ -24,6 +24,8 @@ help:
 	@echo ""
 	@echo "  At the table"
 	@echo "    make vtt-up            Foundry + tunnel, players can connect"
+	@echo "                           FROM=latest|local|<snapshot> decides the boot choice"
+	@echo "                           (default: asks when the cloud is newer, at a terminal)"
 	@echo "    make login             pick a campaign + user, land in the world logged in"
 	@echo "    make vtt-down          tear both down, snapshot the world"
 	@echo "    make vtt               status: app, tunnel, public reachability"
@@ -41,8 +43,11 @@ help:
 	@echo "    make foundry-lib-check  the shared kit's tests; foundry-lib-vendor re-vendors it"
 	@echo ""
 	@echo "  Housekeeping"
-	@echo "    make foundry-backup    snapshot the world to OneDrive"
-	@echo "    make foundry-restore   list snapshots (SNAP=<id> to restore one)"
+	@echo "    make foundry-backup    snapshot the world to OneDrive (tagged with this host)"
+	@echo "    make foundry-restore   list snapshots, every host (SNAP=<id> to restore one)"
+	@echo "    make foundry-boot      just the boot choice: newest cloud snapshot or local (FROM=)"
+	@echo "    make foundry-cloud     what is where: storage, host, role, based-on, per host"
+	@echo "    make foundry-prune-untagged  list pre-2026-10-11 snapshots, delete on confirm"
 	@echo "    make vtt-update-dry    what a Saturday run WOULD change"
 	@echo "    make check-context     CLAUDE.md + context/ integrity"
 	@echo "    make check-lore        wikilinks + frontmatter across the lore trees"
@@ -72,15 +77,23 @@ test:
 # ─── Table lifecycle ────────────────────────────────────────────────────
 TUNNEL_HOST := vtt.atjoseph.com
 FOUNDRY_URL := http://localhost:30000
+# FROM=latest | local | <snapshot name> — the boot choice (scripts/foundry/boot.py).
+# Exported so `make login FROM=…` reaches service.up()'s own boot step too.
+export FROM
 
 .PHONY: vtt-up vtt-down vtt vtt-status vtt-lock-check vtt-login login
 
 vtt-lock-check:
 	@$(OPS) lock-check
 
-vtt-up: vtt-lock-check foundry-backup-safe foundry-assets foundry-up tunnel-up
+# foundry-boot comes BEFORE the pre-launch backup: when the cloud's newest is taken, the
+# restore has already archived the local world, and the backup then digest-skips rather
+# than uploading 3 GB that was just replaced. On the alt host tunnel-up is a loud no-op.
+vtt-up: vtt-lock-check foundry-boot foundry-backup-safe foundry-assets-safe foundry-up tunnel-up
 	@echo ""
-	@echo "  ▸ players:  https://$(TUNNEL_HOST)"
+	@if [ "$$(cd $(ROOT) && $(PY) -m scripts.foundry.host role 2>/dev/null)" = primary ] || [ "$$PENTARYN_ROLE_OVERRIDE" = primary ]; then \
+	  echo "  ▸ players:  https://$(TUNNEL_HOST)"; \
+	else echo "  ▸ players:  none — this is the alt host (no tunnel)"; fi
 	@echo "  ▸ local:    $(FOUNDRY_URL)"
 	@echo "  ▸ teardown: make vtt-down"
 
@@ -100,10 +113,15 @@ vtt-status:
 	@$(OPS) status
 
 # ─── The pieces: application, tunnel ────────────────────────────────────
-.PHONY: foundry-up foundry-down tunnel-up tunnel-down tunnel-logs tunnel-setup
+.PHONY: foundry-up foundry-down tunnel-up tunnel-down tunnel-logs tunnel-setup foundry-boot
 .PHONY: foundry-bridge-status foundry-bridge-clean foundry-eval-report
 
-foundry-up:      ; @$(OPS) up
+# The boot choice: newest cloud snapshot (any host) or the local world. Asks only at a
+# terminal and only when the cloud is newer than what this world is based on.
+foundry-boot:
+	@cd $(ROOT) && $(PY) -m scripts.foundry.boot choose $(if $(FROM),--from $(FROM),)
+# PENTARYN_BOOT_DONE: foundry-boot already ran, so service.up() does not ask again.
+foundry-up: foundry-boot ; @export PENTARYN_BOOT_DONE=1; $(OPS) up
 foundry-down:    ; @$(OPS) down
 tunnel-up:       ; @$(OPS) tunnel-up
 tunnel-down:     ; @$(OPS) tunnel-down
@@ -130,10 +148,11 @@ foundry-eval-report:   ; @$(OPS) eval-report $(if $(SINCE),--since $(SINCE),) $(
 foundry-check:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.license_key
 
+# host.clipboard: pbcopy (Mac), clip.exe (WSL), xclip — the value goes through a pipe, never argv.
 foundry-key:
 	@cd $(ROOT) && infisical run --silent -- \
-	  sh -c 'printf "%s" "$$FOUNDRY_VTT_LICENSE_KEY" | pbcopy' 2>/dev/null
-	@echo "  ✓ license key copied to clipboard — paste into Foundry, then run: pbcopy </dev/null"
+	  sh -c 'printf "%s" "$$FOUNDRY_VTT_LICENSE_KEY" | $(PY) -m scripts.foundry.host clipboard' 2>/dev/null
+	@echo "  ✓ license key copied to clipboard — paste into Foundry, then clear the clipboard"
 
 foundry-admin-push:
 	@$(ROOT)/automation/bin/foundry-admin-push.sh
@@ -146,8 +165,8 @@ foundry-admin-configure:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.update.cli admin-configure
 
 foundry-admin-key:
-	@cd $(ROOT) && $(PY) -c "from scripts.foundry.admin_password import foundry_admin_password; import subprocess; subprocess.run(['pbcopy'], input=foundry_admin_password(), text=True)"
-	@echo "  ✓ admin password copied to clipboard — paste it, then: pbcopy </dev/null"
+	@cd $(ROOT) && $(PY) -c "import sys; from scripts.foundry.admin_password import foundry_admin_password; from scripts.foundry import host; sys.exit(0 if host.clipboard(foundry_admin_password()) else 1)"
+	@echo "  ✓ admin password copied to clipboard — paste it, then clear the clipboard"
 
 # ─── Actor pipeline ─────────────────────────────────────────────────────
 # `foundry-import` is the one to use — it stages, waits while you run the import in
@@ -165,17 +184,25 @@ foundry-verify:     ; @$(OPS) verify
 
 # ─── Foundry ⇄ OneDrive ─────────────────────────────────────────────────
 # One direction each way so the two can never fight over a file: assets flow DOWN,
-# the world flows UP. Restore is deliberately manual — see scripts/foundry/cloud.py.
-.PHONY: foundry-assets foundry-backup foundry-backup-safe foundry-restore foundry-cloud
+# the world flows UP. Restore is never silent: foundry-boot offers the newest snapshot at
+# a terminal; see scripts/foundry/cloud.py and context/foundry/ops.md §3.
+.PHONY: foundry-assets foundry-assets-safe foundry-backup foundry-backup-safe foundry-restore foundry-cloud
+.PHONY: foundry-prune-untagged
 
 foundry-assets:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud assets
+
+# Lifecycle variant: a cloud that is down is a warning, not a stop — `make vtt-up` never
+# blocks on the cloud (ops.md §3). A badly named or edited pack still fails.
+foundry-assets-safe:
+	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud assets --if-reachable
 
 foundry-backup:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud backup --reason $(or $(REASON),manual)
 
 # Lifecycle variant: skips quietly when the server is already up, so `make vtt-up`
-# on a running server does not abort before starting the tunnel.
+# on a running server does not abort before starting the tunnel; a cloud that is down
+# is a warning, so it does not stop the start either.
 foundry-backup-safe:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud backup --reason prelaunch --if-stopped
 
@@ -185,6 +212,10 @@ foundry-restore:
 
 foundry-cloud:
 	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud status
+
+# Untagged (pre-2026-10-11) snapshots belong to no host, so nothing prunes them. Interactive.
+foundry-prune-untagged:
+	@cd $(ROOT) && $(PY) -m scripts.foundry.cloud prune-untagged
 
 # ─── In-house modules ───────────────────────────────────────────────────
 # The check step is not optional politeness: a parse error in an esmodule fails
@@ -239,7 +270,8 @@ vtt-update-now:
 	@cd $(ROOT) && ./automation/bin/vtt-update.sh --force
 	@echo "  ▸ log: .state/logs/vtt-update-$$(date +%F).log"
 
-vtt-update-install: vtt-notifier
+# launchd is macOS; the updater is the primary host's job (design §8).
+vtt-update-install: vtt-update-host-check vtt-notifier
 	@mkdir -p $(ROOT)/.state/logs
 	@cp $(ROOT)/automation/launchd/com.pentaryn.vtt-update.plist $(LAUNCH_AGENTS)/
 	@cp $(ROOT)/automation/launchd/com.pentaryn.vtt-update-watchdog.plist $(LAUNCH_AGENTS)/
@@ -249,6 +281,11 @@ vtt-update-install: vtt-notifier
 	@launchctl bootstrap gui/$$(id -u) $(LAUNCH_AGENTS)/com.pentaryn.vtt-update-watchdog.plist
 	@echo "  ✓ installed — Saturdays 04:06, watchdog 06:12"
 	@echo "  ▸ verify: launchctl list | grep pentaryn.vtt"
+
+.PHONY: vtt-update-host-check
+vtt-update-host-check:
+	@[ "$$(uname -s)" = Darwin ] || { echo "  ✗ the auto-updater schedule is a launchd job — macOS only"; exit 1; }
+	@cd $(ROOT) && $(PY) -m scripts.foundry.host require-primary "the auto-updater"
 
 vtt-update-uninstall:
 	@launchctl bootout gui/$$(id -u)/com.pentaryn.vtt-update 2>/dev/null || true

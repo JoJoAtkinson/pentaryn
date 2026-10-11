@@ -502,9 +502,56 @@ def test_kit_is_derived_from_the_lock(monkeypatch, tmp_path):
     assert "kit" not in vars(spec), "the kit list is never stored on the spec (D8)"
 
 
-@pytest.mark.skipif(sys.platform != "darwin", reason="the table is a Mac")
-def test_foundry_data_is_under_application_support():
-    assert "Application Support/FoundryVTT/Data" in str(cfg.FOUNDRY_DATA)
+def test_foundry_data_is_under_application_support_on_a_mac(monkeypatch):
+    from scripts.foundry import host
+    monkeypatch.delenv("FOUNDRY_DATA", raising=False)
+    monkeypatch.setattr(host.platform, "system", lambda: "Darwin")
+    assert str(host.FOUNDRY_DATA).endswith("Library/Application Support/FoundryVTT")
+    if sys.platform == "darwin":
+        assert str(cfg.FOUNDRY_DATA_DIR).endswith("Application Support/FoundryVTT/Data")
+
+
+# ── foundry-down: pid OR port ─────────────────────────────────────────────────
+
+@pytest.fixture
+def stops(monkeypatch):
+    from scripts.foundry import host
+    calls = []
+    monkeypatch.setattr(host, "request_stop", lambda: calls.append("stop") or True)
+    monkeypatch.setattr(host, "force_stop", lambda: calls.append("force"))
+    return host, calls
+
+
+def test_down_stops_a_server_whose_pid_cannot_be_found_but_whose_port_answers(
+        monkeypatch, stops, capsys):
+    """BOSS with a PENTARYN_START_CMD that pgrep's pattern does not match."""
+    host, calls = stops
+    monkeypatch.setattr(host.platform, "system", lambda: "Linux")
+    monkeypatch.setenv("PENTARYN_STOP_CMD", "systemctl --user stop foundry")
+    monkeypatch.setattr(host, "pid", lambda: None)
+    monkeypatch.setattr(host, "is_running", lambda port=None: True)
+    assert service.down() == 0
+    assert calls == ["stop"] and "already down" not in capsys.readouterr().out
+
+
+def test_down_with_a_live_port_and_no_way_to_stop_it_fails(monkeypatch, stops, capsys):
+    """Linux, no pid found, no PENTARYN_STOP_CMD: nothing to signal — not "stopped"."""
+    host, calls = stops
+    monkeypatch.setattr(host, "pid", lambda: None)
+    monkeypatch.setattr(host, "is_running", lambda port=None: True)
+    monkeypatch.setattr(host.platform, "system", lambda: "Linux")
+    monkeypatch.delenv("PENTARYN_STOP_CMD", raising=False)
+    assert service.down() != 0
+    out = capsys.readouterr().out
+    assert calls == [] and "stopped" not in out and "PENTARYN_STOP_CMD is not set" in out
+
+
+def test_down_with_neither_pid_nor_port_is_already_down(monkeypatch, stops, capsys):
+    host, calls = stops
+    monkeypatch.setattr(host, "pid", lambda: None)
+    monkeypatch.setattr(host, "is_running", lambda port=None: False)
+    assert service.down() == 0
+    assert calls == [] and "already down" in capsys.readouterr().out
 
 
 # ── vtt-login: the parts that can be tested without a live server ─────────────

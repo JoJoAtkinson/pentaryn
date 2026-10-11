@@ -104,6 +104,22 @@ if ! run_with_timeout "$STARTUP_TIMEOUT" "$PY" -c "pass" >/dev/null 2>&1; then
   exit 75
 fi
 
+# ── Primary host only (context/plans/rclone-two-hosts-2026-10.md §8) ──
+# Two machines share the cloud; only the primary (PENTARYN_PRIMARY_HOST, the Mac by
+# default) updates Foundry. On the alt — a stray plist, a `make vtt-update-now` there —
+# this is a logged no-op, not a failure. apply.gate() checks the same thing; this check
+# is here too so the alt never even takes the lock. PENTARYN_ROLE_OVERRIDE=primary
+# passes it, deliberately.
+run_with_timeout "$STARTUP_TIMEOUT" "$PY" -m scripts.foundry.host require-primary "the auto-updater" >> "$LOG" 2>&1
+GATE_RC=$?
+if [ "$GATE_RC" -eq 3 ]; then
+  echo "$(date -u +%FT%TZ) vtt-update finished rc=0 (not the primary host — nothing to do)" >> "$LOG"
+  exit 0
+elif [ "$GATE_RC" -ne 0 ]; then
+  echo "$(date -u +%FT%TZ) vtt-update finished rc=$GATE_RC (host configuration error — see above)" >> "$LOG"
+  exit "$GATE_RC"
+fi
+
 # With escalation enabled (foundry/update-policy.yml), the backstop is the 90 minutes a
 # run always had plus escalation.max_minutes (40) — 130 minutes, so a stuck 04:06 run is
 # killed at ~06:16. An explicit VTT_UPDATE_TIMEOUT wins; a policy that cannot be read

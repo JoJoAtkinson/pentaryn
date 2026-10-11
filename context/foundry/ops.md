@@ -1,13 +1,13 @@
 ---
 created: 2026-08-13
-last_modified: 2026-09-17
+last_modified: 2026-10-11
 tags: ["playbook", "foundry", "vtt", "ops", "onedrive", "secrets"]
 status: active
 ---
 
 # Foundry VTT — Operations
 
-**Read this when:** running Foundry day to day — starting or stopping the server and tunnel, OneDrive sync, the license key, installing a module, or checking what is exposed publicly.
+**Read this when:** running Foundry day to day — starting or stopping the server and tunnel, OneDrive sync and the boot choice between the Mac and BOSS, the license key, installing a module, or checking what is exposed publicly.
 **Not this file:** building content programmatically → [`../plans/foundry-content-pipeline.md`](../plans/foundry-content-pipeline.md) · the unattended updater → [`automated-updates.md`](automated-updates.md)
 
 > Running the thing. Starting and stopping the server and the tunnel, keeping OneDrive
@@ -38,22 +38,27 @@ Where this one and `foundry-vtt.md` overlap — the actors import pipeline and i
 | Know if anything's running | `make vtt` — Foundry, tunnel pid, and public reachability, three separate probes |
 | Add art (tokens/maps/tiles/portraits/audio) | Drop `<kind>-<nn>.zip` in `OneDrive/DnD/foundry/assets/`, then `make foundry-assets` (or just `make vtt-up`) |
 | Snapshot the world right now | `make vtt-down` first, then `make foundry-backup` — it **refuses** while the server is up |
-| Roll back a broken world | `make foundry-restore` to list, `make foundry-restore SNAP=<name>` to do it. Never automatic — see §3 |
+| Roll back a broken world | `make foundry-restore` to list, `make foundry-restore SNAP=<name>` to do it. Never silent — see §3 |
+| Boot BOSS (the alt) from the Mac's latest world | `make vtt-up` on BOSS → Enter at the boot question (§3). `FROM=latest` without asking, `FROM=local` to keep BOSS's own |
+| Keep the local world when the cloud is newer | `k` at the boot question (remembered until something newer appears), or `make vtt-up FROM=local` |
 | See what's in the cloud store | `make foundry-cloud` |
 | Install or update a module | Setup screen (resolves dependencies) **or** unzip the release into `Data/modules/<id>/` and restart — §5. Never from inside a running world |
 | Push a local module to Foundry | `make foundry-<short>-sync` (e.g. `make foundry-walls-sync`) · the importer only through `make foundry-sync WORLD=<world>` (it also stages `actors.json` — `make foundry-clean` after). The copy is built in `FoundryVTT/.pentaryn-sync/` and swapped in whole, so a failed copy leaves the old install serving. Which build is live: `Data/modules/<id>/.pentaryn-sync.json` (module, version, digest, git, dirty, synced_at — a dotfile, not served); every install also appends a line to `foundry/logs/ops-YYYY-MM.jsonl` |
 | Import actors | [`foundry-vtt.md`](../plans/foundry-content-pipeline.md) Stages 1–2, then `make foundry-import` (🔴 read §1's red box first — it stages into the wrong world today) |
 | Prove nothing's exposed | `make foundry-verify` |
 | Check the license key resolves | `make foundry-check` — prints length and format, never the value |
-| First-run activation only | `make foundry-key` → pastes to clipboard → `pbcopy </dev/null` after |
+| First-run activation only | `make foundry-key` → copies to the clipboard (pbcopy / clip.exe / xclip) → clear the clipboard after |
 | Debug a dead tunnel | `make tunnel-logs` |
 
 ---
 
 ## 1. Topology
 
-Foundry is a **desktop app on this Mac**. There is no server, no container, no cloud host.
-Players reach it through a Cloudflare tunnel that exists only while you're running.
+Foundry runs on the **primary host — the Mac today** — as a desktop app. There is no server, no
+container, no cloud host. Players reach it through a Cloudflare tunnel that exists only while
+you're running. An **alt host** (BOSS, Foundry in WSL) shares the world through the OneDrive
+snapshots (§3) for building and testing; it never runs the tunnel or the updater.
+`scripts/foundry/host.py` answers which machine this is and where its Foundry lives.
 
 ```
 players ──https──▶ vtt.atjoseph.com ──cloudflared (named tunnel "ardenhaven")──▶ localhost:30000
@@ -68,11 +73,11 @@ players ──https──▶ vtt.atjoseph.com ──cloudflared (named tunnel "a
 
 | | |
 | --- | --- |
-| App | `Foundry Virtual Tabletop` in `/Applications` — launched via `open -a` |
+| App | `Foundry Virtual Tabletop` in `/Applications` — launched via `open -a` (through `host.py`; BOSS uses `PENTARYN_START_CMD`) |
 | Local URL | <http://localhost:30000> |
 | Public URL | <https://vtt.atjoseph.com> |
 | Tunnel | `cloudflared`, named tunnel `ardenhaven`, pidfile `.run/cloudflared.pid`, log `.run/cloudflared.log` (both gitignored) |
-| Data root | `~/Library/Application Support/FoundryVTT/Data` |
+| Data root | `~/Library/Application Support/FoundryVTT` (`host.FOUNDRY_DATA`; `Data/` beneath it is `ops/config.py`'s `FOUNDRY_DATA_DIR`) |
 | Core | **v14.365** |
 | System | **dnd5e 5.3.3** |
 | Live world | **whichever one is launched** — four worlds now exist, so never infer it. `python -m scripts.foundry.ops status` names it, or ask the client for `game.world.id`. `space-journey` was the live world through 2026-09-17; `ardenford` was created that day (see *Creating a new world*, below); `pentaryn` was created 2026-10-04 and is live (see [`../pentaryn.md`](../pentaryn.md)) |
@@ -158,7 +163,7 @@ pack (`pentaryn-seafoot-maps.scenes` is unlocked in both worlds).
 ## 2. Lifecycle — and why the order is the order
 
 ```
-make vtt-up      foundry-backup-safe → foundry-assets → foundry-up → tunnel-up
+make vtt-up      foundry-boot → foundry-backup-safe → foundry-assets-safe → foundry-up → tunnel-up
 make vtt-down    tunnel-down → foundry-down → foundry-backup REASON=shutdown
 make vtt         status only (alias: vtt-status)
 ```
@@ -167,17 +172,19 @@ The order is not arbitrary. Each step needs the previous one's state:
 
 | # | Step | Why here |
 | - | ---- | -------- |
-| 1 | `foundry-backup-safe` | A LevelDB world copies consistently **only while stopped**. Snapshotting on *start* as well as stop is what catches a crash or force-quit that skipped the shutdown hook. `-safe` = `--if-stopped`: skips quietly if the server is already up, so `make vtt-up` on a live server doesn't abort before starting the tunnel |
-| 2 | `foundry-assets` | New pack folders are on disk before anyone asks for them. A soft constraint — Foundry serves `Data/` per-request, so a later unpack would still be served — but unpacking while the server is down is free and cannot race |
-| 3 | `foundry-up` | `open -a`, then polls `localhost:30000` for 40 s. The origin must answer before anything points at it |
-| 4 | `tunnel-up` | **Last, because this is the step that makes `Data/` public** (§6). Refuses early if `~/.cloudflared/cert.pem` is missing or the named tunnel doesn't exist → `make tunnel-setup` |
+| 0 | `foundry-boot` | **The boot choice** (§3): when the cloud's newest snapshot — from either machine — is newer than what this world is based on, say so and offer it (Enter = take it). First, so a restore happens while nothing is running, and so the backup after it digest-skips instead of uploading 3 GB that was just replaced. No terminal → never restores, one notice line. `FROM=latest\|local\|<name>` decides without asking |
+| 1 | `foundry-backup-safe` | A LevelDB world copies consistently **only while stopped**. Snapshotting on *start* as well as stop is what catches a crash or force-quit that skipped the shutdown hook. `-safe` = `--if-stopped`: skips quietly if the server is already up, so `make vtt-up` on a live server doesn't abort before starting the tunnel; a cloud that is down (or a failed upload) is a warning naming any tar left on disk, exit 0 — `vtt-down` tries again |
+| 2 | `foundry-assets-safe` | New pack folders are on disk before anyone asks for them. A soft constraint — Foundry serves `Data/` per-request, so a later unpack would still be served — but unpacking while the server is down is free and cannot race. `-safe` = `--if-reachable`: a cloud that is down is a warning, exit 0; a badly named or edited pack still stops the start |
+| 3 | `foundry-up` | `host.start()` (`open -a` on the Mac), then polls `localhost:30000` for 40 s. The origin must answer before anything points at it |
+| 4 | `tunnel-up` | **Last, because this is the step that makes `Data/` public** (§6). Primary host only — on the alt it prints why and exits 0, so Foundry is up with no tunnel. Refuses early if `~/.cloudflared/cert.pem` is missing or the named tunnel doesn't exist → `make tunnel-setup` |
 
 `vtt-down` reverses it exactly: close the public surface first, stop the app, *then* snapshot —
 because the snapshot is the step that requires "stopped".
 
 | Target | Does |
 | ------ | ---- |
-| `make foundry-up` / `foundry-down` | App only. `foundry-down` is `osascript quit`, falling back to `pkill` |
+| `make foundry-up` / `foundry-down` | App only (plus the boot choice before `foundry-up`). Via `host.py`: `foundry-down` is `osascript quit`, falling back to `pkill` on the Mac; `PENTARYN_STOP_CMD` on BOSS |
+| `make foundry-boot` | The boot choice alone — `FROM=` to decide it |
 | `make tunnel-up` / `tunnel-down` | Tunnel only. `tunnel-up` starts cloudflared detached, writes the pidfile, and checks it survived 3 s |
 | `make tunnel-logs` | Last 40 lines of the cloudflared log |
 | `make tunnel-setup` | **One-time**: `cloudflared tunnel login`, create the tunnel, route DNS. Idempotent |
@@ -194,7 +201,10 @@ that calls Python:
 | Actor pipeline (stage → import → clean → verify) | [`scripts/foundry/ops/pipeline.py`](../../scripts/foundry/ops/pipeline.py) |
 | Module check + install | [`scripts/foundry/ops/modules.py`](../../scripts/foundry/ops/modules.py) |
 | Paths, world name, module registry | [`scripts/foundry/ops/config.py`](../../scripts/foundry/ops/config.py) |
-| OneDrive sync | [`scripts/foundry/cloud.py`](../../scripts/foundry/cloud.py) |
+| OneDrive sync — policy | [`scripts/foundry/cloud.py`](../../scripts/foundry/cloud.py) |
+| OneDrive sync — rclone or folder | [`scripts/foundry/storage.py`](../../scripts/foundry/storage.py) |
+| Which machine, role, paths, start/stop | [`scripts/foundry/host.py`](../../scripts/foundry/host.py) |
+| The boot choice and its state file | [`scripts/foundry/boot.py`](../../scripts/foundry/boot.py), [`bootstate.py`](../../scripts/foundry/bootstate.py) |
 | The weekly updater | [`scripts/foundry/update/`](../../scripts/foundry/update/) |
 
 `python -m scripts.foundry.ops --help` lists the whole surface; `make help` lists the
@@ -271,62 +281,178 @@ for the Foundry client. Security review: §6.
 
 ---
 
-## 3. The OneDrive contract
+## 3. The OneDrive contract — two machines, one cloud
 
-> Source: [`scripts/foundry/cloud.py`](../../scripts/foundry/cloud.py) — read its module docstring.
+> Source: [`scripts/foundry/cloud.py`](../../scripts/foundry/cloud.py) (policy — read its module
+> docstring), [`storage.py`](../../scripts/foundry/storage.py) (rclone or folder),
+> [`host.py`](../../scripts/foundry/host.py) (which machine, which role),
+> [`boot.py`](../../scripts/foundry/boot.py) (the boot choice). Design history:
+> [`../plans/rclone-two-hosts-2026-10.md`](../plans/rclone-two-hosts-2026-10.md).
 
 **One direction each way, and the two never touch the same files.** That single rule is the whole
 design; everything below follows from it.
+
+Two machines share the cloud folder: the **primary** (the Mac — where you play, where the tunnel
+and the Saturday updater run) and an **alt** (BOSS, Foundry in WSL — for building addons and
+testing in parallel). Both reach `OneDrive/DnD/foundry` through **rclone** (an `onedrive:` remote),
+or, on a Mac with no remote, through the OneDrive app's folder. There is no lease or lock: each
+machine archives its own world, tagged with its name, and prunes only its own.
 
 ```
 OneDrive/DnD/foundry/
   README.txt        explains itself to whoever opens it in six months
   assets/           YOU put zips here      → flows DOWN into Data/assets/
-  world-backups/    automatic, rolling     ← flows UP on every stop and start
-  system-backup/    automatic, one copy    ← refreshed only on a version change
+  world-backups/    automatic, per host    ← flows UP on every stop and start
+                      world-<UTC stamp>-fvtt<ver>-<host>.tar.gz          (2026-10-11 on)
+                      world-<stamp>[-fvtt<ver>].tar.gz                   untagged, older — nobody's
+                      world-…-<host>.safety.tar.gz                       what a restore replaced
+                      *.partial                                          an upload in progress, never a snapshot
+  major-release/    automatic, never pruned — the last snapshot each host took on a Foundry generation it left
+  system-backup/    automatic, shared      ← one tar per system version, last 3 kept
 ```
 
 | Target | Direction | What it does |
 | ------ | --------- | ------------ |
-| `make foundry-assets` | ⬇ down | Unpacks any new `<kind>-<nn>.zip` into `Data/assets/<kind>/<kind>-<nn>/`. Hash-tracked in `foundry/assets-manifest.json`, extracted once, never overwritten |
-| `make foundry-backup` | ⬆ up | Tars `Data/worlds` + `Config` + `Data/modules` (~4 MB) to a timestamped snapshot. Keeps the last 100; skips when the content digest is unchanged |
+| `make foundry-boot` | ⬇ maybe | **The boot choice** (below). Part of `vtt-up` and `foundry-up`; `FROM=latest\|local\|<name>` decides without asking |
+| `make foundry-assets` | ⬇ down | Unpacks any new `<kind>-<nn>.zip` into `Data/assets/<kind>/<kind>-<nn>/`. Tracked in `foundry/assets-manifest.json` (sha256, bytes, mtime); a zip whose size and mtime match is skipped **without a download** |
+| `make foundry-backup` | ⬆ up | Tars `Data/worlds` + `Config` + `Data/modules` (**~2.5–3.2 GB** — `Data/modules` is ~2.7 GB of premium map art) in `FOUNDRY_DATA/.pentaryn-tmp/`, uploads it as `<name>.partial`, renames, size-checks. Keeps **10 per host** (plus that host's last 3 restore `.safety` copies, counted apart); a snapshot within 5 days of this host's newest **replaces** it; skips when the local tree digest is unchanged |
 | `make foundry-backup-safe` | ⬆ up | Same, `--if-stopped` — the lifecycle variant |
-| `make foundry-restore` | manual | No `SNAP` → lists snapshots. `SNAP=<name>` → restores, **archiving current state first**, and demands you type `restore` |
-| `make foundry-cloud` | — | Status: packs, snapshots, whether the server is up |
+| `make foundry-restore` | manual | No `SNAP` → lists every host's snapshots (name, host, UTC time, version, size). `SNAP=<name>` (any host's, or `major-release/`) → download, **archive current state first**, clear, extract; demands you type `restore` |
+| `make foundry-cloud` | — | Status: storage (rclone/folder + root), host and role, what this world is based on, newest per host, untagged count |
+| `make foundry-prune-untagged` | manual | Lists the untagged (pre-2026-10-11) snapshots and deletes them **only** on a typed `delete`. Nothing else ever deletes them |
 
 Kinds are fixed: `tokens · maps · tiles · portraits · audio`. Anything else is refused by name.
 
+### The boot choice — never silent, default latest
+
+`make vtt-up` (and `foundry-up`, and `make login`) first asks one question, **only when** the
+newest snapshot in `world-backups/` — from either machine — is newer than what this machine's
+world is *based on*:
+
+```
+  ▸ cloud has a newer world snapshot than this machine's world:
+
+      cloud    world-2026-10-11-030412-fvtt14.369-mac.tar.gz   mac   2026-10-11 03:04 UTC   14.369   3.1 GB
+      local    based on world-2026-10-09-221500-fvtt14.369-boss.tar.gz   boss   2026-10-09 22:15 UTC
+  …
+  boot from [latest] or keep local?  (Enter = latest, l/latest, k/local, or a number)  >
+```
+
+- **Enter** downloads the newest (~3 GB), archives the local world first (as a `.safety` snapshot,
+  unless it is unchanged since a snapshot still in the cloud, or one the restored snapshot's
+  lineage contains), clears, extracts. The machine's own `Config/options.json`
+  (its `dataPath`), `admin.txt` and `license.json` are **kept** across every restore.
+- **`k`** boots the local world and remembers the answer until a snapshot newer than the one you
+  declined appears — by its listing mtime, so if the declined one is later coalesced or pruned
+  away, an older snapshot left behind does not ask again.
+- **Diverged** — the newer snapshot's lineage does not contain what this world is based on (the
+  other machine started from an older world, or kept local and edited). It is still offered, but
+  the prompt says `diverged — does not contain <based-on>` and **Enter keeps local**; `l` (or
+  `FROM=latest`) takes it, archiving this world first. Each snapshot's lineage is a tiny
+  `world-backups/<name>.parent` sidecar written before the upload completes; a snapshot without
+  one (untagged, legacy) is treated as newer, as before. "Diverged" needs proof: a world backed
+  up with no based-on record (lost state file, first run) writes `"ancestors": null`, and every
+  chain carries `origin_before` — the mtime of its unknown root. A based-on snapshot at or before
+  that edge reads "cannot tell", which counts as newer (Enter = latest), never diverged.
+- **No terminal** (launchd, an agent, `ssh boss 'make …'` without `-t`): never restores. It boots
+  local and prints one line: `▸ boot: cloud snapshot … is newer than this world …; booting LOCAL.
+  To use it: make foundry-up FROM=latest   (or: make foundry-restore SNAP=…)`. The snapshot is
+  remembered as **pending** in the state file, so the backup that follows (which makes the local
+  world the newest) cannot bury it: every later boot repeats the notice, and the next boot at a
+  terminal asks, until it is answered or restored.
+- **Cloud unreachable** (no rclone, no network, a 60 s listing timeout): boots local with a warning
+  and exits 0, and so do the pre-launch backup and the asset step after it — `make vtt-up` never
+  blocks on the cloud. Only a bad `FROM=<name>` or a failed chosen restore stops the start.
+
+"Based on" is `FOUNDRY_DATA/pentaryn-boot.json` (beside `Config/`, outside every snapshot): which
+snapshot this world came from, its listing mtime, and the tree digest. It is written by this
+machine's own backup, by every restore, and by a `k` answer; the no-terminal notice records only
+the pending snapshot, never an answer.
+"Newer" compares the **listing mtime**, never the name's stamp across machines. So the alt is asked
+about the primary's newest; the primary is asked only when the alt has actually uploaded since.
+With **no record** (first run, or the file is missing or unreadable) the only clock is the local
+files: the newest snapshot is offered as newer only if it is later than the newest file under
+`worlds/`, `Config/` and `modules/`. Otherwise the prompt says it **cannot tell which is newer** and
+Enter keeps local (`l` still takes it). The legacy `world-backups/.last-digest` marker is retired
+only by the primary's own backup, so the alt backing up first never stops the Mac adopting it.
+Restore `.safety` copies and `major-release/` are never offered as "newer".
+
 ### The rules that keep it safe
 
+- **Restore downloads first.** Nothing local is touched until the chosen bytes are on this disk; a
+  failed download changes nothing. Then the safety backup, then clear, then extract — so neither
+  coalescing nor pruning can delete the snapshot being restored.
+- **Each host prunes, coalesces and promotes only its own snapshots.** The other machine's
+  snapshot from yesterday is never replaced by this one. Untagged snapshots belong to nobody.
+- **The digest is local.** Neither host skips a backup because the other uploaded identical bytes;
+  after a restore, this host's next backup digest-skips instead of re-uploading 3 GB.
+- **A `.partial` is never a snapshot.** Uploads land as `<name>.partial` and are renamed when
+  complete; one older than 24 h is swept as a crash leftover (younger ones may be the other
+  machine mid-upload). A failed upload leaves the tar in `FOUNDRY_DATA/.pentaryn-tmp/` and prints
+  the `rclone copyto` that finishes it. The temp dir needs ~2× a snapshot free; backup checks.
 - **Packs are append-only.** Never edit a published zip; add `<kind>-<nn+1>.zip`. A zip whose hash
   changed after extraction is **refused with a message**, not silently re-applied.
-- **One folder per pack**, so cross-pack collisions are structurally impossible and deleting a pack
-  is one `rm -rf`.
-- **Filenames kebab-case at extraction only** — before any Foundry document references them. Never
-  rename inside an extracted pack; fix it in the next zip.
-- **Backup and restore hard-refuse while Foundry is running.** *(`foundry-assets` does not check —
-  it only ever creates new pack folders nothing references yet, so there's nothing to race.)*
+- **One folder per pack**, so cross-pack collisions are structurally impossible.
+- **Filenames kebab-case at extraction only** — never rename inside an extracted pack.
+- **Backup and restore hard-refuse while Foundry is running.**
 - **Art never goes in git.** OneDrive holds the bytes; `foundry/assets-manifest.json` holds the
   inventory and is committed.
+- **Only the primary runs the tunnel and the updater.** On the alt `tunnel-up` prints why and
+  exits 0 (`vtt-up` still brings Foundry up); the updater aborts. `PENTARYN_ROLE_OVERRIDE=primary`
+  passes both, deliberately. Nothing else is gated.
 
-### 🔴 Restore is never automatic, and never will be
+### Why the world is copied, never synced
 
-Not an omission — a deliberate refusal, for two independent reasons:
-
-1. **Rolling backups make automatic restore *more* dangerous, not less.** With 100 snapshots on
-   hand, "an older snapshot silently overwrote a newer world" becomes a thing that can happen a
-   hundred different ways.
-2. **You cannot let a sync client near a live world.** `Data/worlds/<world>/data/` is a live
-   LevelDB. A sync daemon reads `.ldb` files mid-compaction and uploads inconsistent snapshots,
-   then resolves conflicts by writing *conflict copies* into the directory — junk inside a live
-   database. LevelDB's single-writer `LOCK` means neither side detects the other, **so nothing
-   ever errors**; the world simply fails to open, weeks later, with no event to blame.
+`Data/worlds/<world>/data/` is a live LevelDB. A sync daemon reads `.ldb` files mid-compaction and
+uploads inconsistent snapshots, then resolves conflicts by writing *conflict copies* into the
+directory — junk inside a live database. LevelDB's single-writer `LOCK` means neither side detects
+the other, **so nothing ever errors**; the world simply fails to open, weeks later. A *stopped*
+database copies consistently every time. That is the entire trick, and why a restore only ever
+happens before Foundry starts.
 
 Measured on this machine: a read through `~/Library/CloudStorage` **hung for 30 s** while the
-OneDrive daemon was busy, against **6 ms** direct. That is also why assets are unpacked to local
-disk rather than symlinked — the stall is the File Provider daemon, not the symlink.
+OneDrive daemon was busy, against **6 ms** direct. rclone talks to the OneDrive API instead and
+never touches the File Provider; assets are still unpacked to local disk, never read in place.
 
-A *stopped* database copies consistently every time. That is the entire trick.
+### Which machine, which role — `~/.config/pentaryn/env`
+
+Every value has a default; the real environment wins over the file. The full key list, with
+defaults, is [`scripts/foundry/host.env.example`](../../scripts/foundry/host.env.example).
+
+| Key | Mac default | Notes |
+| --- | --- | --- |
+| `PENTARYN_HOST` | `mac` | The tag in snapshot names. BOSS: `boss` |
+| `PENTARYN_PRIMARY_HOST` | `mac` | Must agree on both machines. Switching primary = edit it on both |
+| `PENTARYN_CLOUD` | rclone `onedrive:DnD/foundry` if that remote exists, else the OneDrive app folder | `mac-folder` forces the folder; a path → that folder |
+| `FOUNDRY_DATA` | `~/Library/Application Support/FoundryVTT` | The **root** (Config/ Data/ Logs/), not `Data/` |
+| `FOUNDRY_APP_ROOT` | `/Applications/Foundry Virtual Tabletop.app/Contents/Resources/app` | |
+| `PENTARYN_KEEP_SNAPSHOTS` | 10 | This host's retention |
+
+The Mac needs no file at all. `python -m scripts.foundry.host show` prints what it resolved.
+
+### Setting up rclone on the Mac (one time)
+
+Until this is done the Mac keeps using the OneDrive app's folder, exactly as before; the day it
+is done, the Mac switches to rclone on its own (`make foundry-cloud` shows which).
+
+1. `brew install rclone` (already present: `/opt/homebrew/bin/rclone`).
+2. `rclone config`, then:
+   - `n` — new remote · name: **`onedrive`** (the code looks for exactly this name)
+   - storage: **Microsoft OneDrive** (`onedrive`)
+   - `client_id` and `client_secret`: **leave blank** (Enter)
+   - region: **`global`** (Microsoft Cloud Global)
+   - edit advanced config: **`n`**
+   - use web browser to automatically authenticate: **`y`** — sign in with the Microsoft account
+     that owns the `DnD` folder, in the browser window it opens
+   - type of connection: **OneDrive Personal or Business** · pick the one drive it lists
+   - "Drive OK?" **`y`** · keep this remote: **`y`** · `q` to quit
+3. Check it reaches the folder: `rclone lsd onedrive:DnD/foundry` should list `assets`,
+   `major-release`, `system-backup`, `world-backups`.
+4. `make foundry-cloud` → the first line reads `cloud rclone onedrive:DnD/foundry`.
+
+rclone stores its token in its own config (`rclone config file` says where). **Never** copy that
+file into the repo, a log, the env file or a chat; nothing here reads it or passes `--config`.
+If a call fails with an auth error, `rclone config reconnect onedrive:` re-runs the browser login.
 
 ---
 
@@ -746,7 +872,8 @@ has three levels. Anything that walks scenes should read `levels[]`, not `backgr
 
 | Gotcha | Shape of the failure |
 | ------ | -------------------- |
-| **Syncing a live world silently corrupts it** | LevelDB single-writer `LOCK` means no side detects the other. Nothing errors. The world fails to open **weeks later**. This is why restore is manual and why only stopped databases are copied |
+| **Syncing a live world silently corrupts it** | LevelDB single-writer `LOCK` means no side detects the other. Nothing errors. The world fails to open **weeks later**. This is why only stopped databases are copied, and why a restore happens only at boot, before Foundry starts |
+| **BOSS and the Mac both played since the last sync** | Allowed — there is no lock. Each archived its own world; the next boot on either asks about the other's newer snapshot. Nothing is lost (a restore archives local first), but nothing merges either: pick one |
 | **`Data/` is public with no auth while the tunnel is up** | `.json` files are served. `make foundry-clean` is a required step, not tidying |
 | **`POST /auth` "rejects" a correct admin password while a world is up** | It never checked it. `auth.mjs` short-circuits on `!game.world`. Use `/setup`, which authenticates unconditionally — §2's login box |
 | **A scripted POST gets 400 "The request could not be processed." (14.369+)** | Core's same-origin guard: any POST without a matching `Origin`/`Sec-Fetch-Site` is refused before the route runs. `FoundryAdmin` sends `Origin: http://127.0.0.1:30000`; a hand-rolled `curl` must add `-H "Origin: http://127.0.0.1:30000"`. Before the fix it surfaced as "the configured password … differ" from `make vtt-login` |
@@ -766,7 +893,8 @@ has three levels. Anything that walks scenes should read `levels[]`, not `backgr
 | **A test player tab ignores clicks and hovers** | Chrome pauses rendering and the ticker in a hidden or unfocused tab, and the extension's CDP mouse events often never reach Foundry (`canvas.mousePosition` stays stale). Take a screenshot to wake the tab, or dispatch `PointerEvent`/`MouseEvent('dblclick')` on `canvas.app.view` at `canvas.clientCoordinatesFromCanvas(...)`. Log test players in via `127.0.0.1:30000` (`#join-game-form`) so their session doesn't collide with the GM's on `localhost` |
 | **Closing Chrome kills the GM bridge** | `eval-js` and the other `foundry` tools go dead. Reopen Chrome, then `make vtt-login WORLD=<id>` |
 | **A player test writes real knowledge** | An inspect from a test login rolls on the GM client and writes `beliefs`/`granted` flags plus chat cards. Snapshot first; `unsetFlag` and delete the messages after |
-| **`~/Library/CloudStorage` reads can hang 30 s** | The OneDrive File Provider daemon, not the path. Never read assets through it at runtime |
+| **`~/Library/CloudStorage` reads can hang 30 s** | The OneDrive File Provider daemon, not the path. Never read assets through it at runtime. rclone (§3) avoids the daemon entirely |
+| **A 3 GB snapshot needs ~6 GB free locally** | The tar is built in `FOUNDRY_DATA/.pentaryn-tmp/` before upload; a restore downloads there first. Backup checks and refuses with the numbers |
 
 ---
 
@@ -779,3 +907,4 @@ has three levels. Anything that walks scenes should read `levels[]`, not `backgr
 - [`scripts/foundry/README.md`](../../scripts/foundry/README.md) — license key, make-target table
 - [`foundry/CONTRACT.md`](../../foundry/CONTRACT.md) — the `actors.json` generator ⇄ importer contract (§12 for who deletes the staged file)
 - [`scripts/foundry/cloud.py`](../../scripts/foundry/cloud.py) — the OneDrive implementation; its docstring is the rationale
+- [`rclone-two-hosts-2026-10.md`](../plans/rclone-two-hosts-2026-10.md) — the two-host design (history) and the BOSS hand-off
