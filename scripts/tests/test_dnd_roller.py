@@ -198,3 +198,65 @@ def test_suite_never_touches_home_cache():
     json.loads(dnd_roller.roll_dice(num_dice=1, dice_size=20))
     assert _home_cache_state() == before
     assert dnd_roller._CACHE_FILE.parent != _HOME_CACHE.parent
+
+
+# ── python-tooling-51: concurrency (characterisation before the declared fix) ──
+
+def test_serial_rolls_consume_numbers_in_order_never_twice():
+    _seed_cache([14, 11, 17, 3])
+    first = json.loads(dnd_roller.roll_dice(num_dice=3, dice_size=20))
+    second = json.loads(dnd_roller.roll_dice(num_dice=1, dice_size=20))
+    assert first["rolls"] == [15, 12, 18]
+    assert second["rolls"] == [4]
+    assert dnd_roller._number_cache == []
+
+
+_CONCURRENT = r'''
+import asyncio, json, sys, threading
+from pathlib import Path
+sys.path.insert(0, sys.argv[1])
+from scripts import dnd_roller as d
+tmp = Path(sys.argv[2])
+d._CACHE_DIR, d._CACHE_FILE = tmp, tmp / "quant_numbers.bin"   # never the real cache
+d._number_cache.clear(); d._source_cache.clear(); d._last_fetch_time = 0.0
+
+async def fake_fetch(count=1024):
+    await asyncio.sleep(0.2)
+    return list(range(1024))
+
+def no_fallback(count):
+    raise RuntimeError("random.org must not be reached")
+
+d._fetch_from_quantumnumbers = fake_fetch
+d._fetch_from_random_org_sync = no_fallback
+seen, orig = [], d._pop_numbers
+
+async def spy(count):
+    nums, src = await orig(count)
+    seen.extend(nums)
+    return nums, src
+
+d._pop_numbers = spy
+done = []
+
+def roll():
+    d.roll_dice(num_dice=4, dice_size=20)
+    done.append(1)
+
+threads = [threading.Thread(target=roll, daemon=True) for _ in range(8)]
+for t in threads: t.start()
+for t in threads: t.join(timeout=5)   # a hung waiter shows as returned < 8
+print(json.dumps({"returned": len(done), "seen": len(seen), "distinct": len(set(seen))}))
+'''
+
+
+@pytest.mark.xfail(strict=False, reason="KNOWN python-tooling-51: a cross-loop asyncio.Lock can "
+                                        "hang a worker; the unlocked pop can reuse numbers")
+def test_concurrent_rolls_all_return_with_distinct_numbers(tmp_path):
+    import subprocess
+    import sys
+    repo = Path(dnd_roller.__file__).resolve().parents[1]
+    proc = subprocess.run([sys.executable, "-c", _CONCURRENT, str(repo), str(tmp_path)],
+                          capture_output=True, text=True, timeout=20)
+    out = json.loads(proc.stdout.strip().splitlines()[-1])
+    assert out == {"returned": 8, "seen": 32, "distinct": 32}, out
