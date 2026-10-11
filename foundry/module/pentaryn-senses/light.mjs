@@ -282,6 +282,21 @@ async function reconcile(source) {
   }
 }
 
+/**
+ * Every spell-light source in the world, computed once per burst of hooks (finding -13): a batch
+ * delete fires deleteToken per token in one task, and each would otherwise walk every scene. The
+ * memo is dropped at the next microtask. A source a just-deleted token carried may still be in it;
+ * queueing that source again only re-arms its debounce (reconcile is idempotent).
+ */
+let sourcesMemo = null;
+function sourcesNow() {
+  if (!sourcesMemo) {
+    sourcesMemo = allSources();
+    queueMicrotask(() => { sourcesMemo = null; });
+  }
+  return sourcesMemo;
+}
+
 /** Queue a reconcile. Bursts coalesce per source; runs are serial so two never interleave. */
 function queue(source) {
   if (!source || !isActiveGM()) return;
@@ -433,12 +448,13 @@ export function install(reg, ctx) {
       }
       queue(sl.source);
     }
-    // An unlinked caster deleted: its Light item went with it.
-    for (const s of sourcesUnder(allSources(), token.uuid)) queue(s);
+    // An unlinked caster deleted: its Light item went with it. (A linked token's items are its
+    // world actor's, never under the token's uuid: nothing to look for.)
+    if (!token.actorLink) for (const s of sourcesUnder(sourcesNow(), token.uuid)) queue(s);
   });
   on("deleteActor", (actor) => {
     if (!isActiveGM()) return;
-    for (const s of sourcesUnder(allSources(), actor.uuid)) queue(s);
+    for (const s of sourcesUnder(sourcesNow(), actor.uuid)) queue(s);
   });
   // The GM deleted a Light square by hand: that ends the light. Without this the item still wants
   // the square and the next sweep (GM reload, scene deleted) puts it back. Our own deletions in
