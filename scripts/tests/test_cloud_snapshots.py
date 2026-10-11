@@ -538,6 +538,29 @@ def test_restore_over_a_world_whose_snapshot_is_gone_takes_a_safety_copy(two_hos
     assert data == b"only copy"
 
 
+def test_restore_skips_the_safety_copy_when_the_target_contains_the_unchanged_world(
+        two_hosts, capsys):
+    """The Mac's world is unchanged since m0, m0 has left the cloud, and b1 (being
+    restored) descends from m0: a safety copy would re-upload ~3 GB that b1 already holds."""
+    c = two_hosts.cloud
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+        m0 = bootstate.load().based_on
+    with two_hosts.use("boss"):
+        cloud.restore(m0, yes=True)
+        _edit(two_hosts.data["boss"], "boss on top of m0")
+        cloud.backup("shutdown")
+        b1 = bootstate.load().based_on
+    (c / "world-backups" / m0).unlink()               # coalesced/pruned elsewhere
+    capsys.readouterr()
+    with two_hosts.use("mac"):
+        cloud.restore(b1, yes=True)
+        assert bootstate.load().based_on == b1
+    out = capsys.readouterr().out
+    assert f"which {b1} contains — no safety copy needed" in out
+    assert not any(n.endswith("-mac.safety.tar.gz") for n in _names(c))
+
+
 def test_restore_lists_every_host_with_columns(two_hosts, capsys):
     _put(two_hosts.cloud, f"world-{_stamp(2)}-fvtt14.369-boss.tar.gz", age_days=2)
     _put(two_hosts.cloud, f"world-{_stamp(1)}-fvtt14.369-mac.tar.gz", age_days=1)

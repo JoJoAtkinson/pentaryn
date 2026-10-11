@@ -339,7 +339,8 @@ world is *based on*:
 ```
 
 - **Enter** downloads the newest (~3 GB), archives the local world first (as a `.safety` snapshot,
-  if it changed since its last upload), clears, extracts. The machine's own `Config/options.json`
+  unless it is unchanged since a snapshot still in the cloud, or one the restored snapshot's
+  lineage contains), clears, extracts. The machine's own `Config/options.json`
   (its `dataPath`), `admin.txt` and `license.json` are **kept** across every restore.
 - **`k`** boots the local world and remembers the answer until a snapshot newer than the one you
   declined appears — by its listing mtime, so if the declined one is later coalesced or pruned

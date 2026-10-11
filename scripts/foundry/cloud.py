@@ -741,12 +741,12 @@ def _in_cloud(st: Storage, name: str, existing: list[Snapshot]) -> bool:
 
 
 def _backup(st: Storage, reason: str, *, safety: bool = False,
-            protect: str | None = None) -> Snapshot | None:
+            protect: Snapshot | None = None) -> Snapshot | None:
     """The snapshot uploaded, or None when skipped (unchanged, or nothing to archive).
 
-    `protect` names a snapshot this run must not delete — the one a restore is about to
-    extract — so neither coalescing nor pruning can remove the state the based-on record
-    is about to point at."""
+    `protect` is the snapshot a restore is about to extract: this run must not delete it
+    (neither coalescing nor pruning may remove the state the based-on record is about to
+    point at), and an unchanged tree it already contains needs no safety copy."""
     state = adopt_legacy_marker(st, bootstate.load())
     digest = snapshot_digest()
     try:
@@ -759,6 +759,11 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
         # may have deleted it, and then this tree has no cloud copy at all.
         if state.based_on and _in_cloud(st, state.based_on, existing):
             log("no change since the last snapshot — skipped")
+            return None
+        if (safety and protect is not None and state.based_on
+                and descends(st, protect, state.based_on, state.based_on_mtime) is True):
+            log(f"no change since {state.based_on}, which {protect.name} contains — "
+                "no safety copy needed")
             return None
         log(f"no change since {state.based_on or 'the last snapshot'}, but it is no longer "
             "in the cloud — uploading this state again")
@@ -786,7 +791,8 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
 
     # Coalescing: note the snapshot this one may replace, but write the new one FIRST and
     # only then delete the old. A safety copy never coalesces in either direction.
-    superseded = None if safety else _coalesce_target(existing, me, protect)
+    keep_name = protect.name if protect else None
+    superseded = None if safety else _coalesce_target(existing, me, keep_name)
 
     tmp = tmp_dir() / name
     last = newest(own(existing, me)) or newest(existing)
@@ -837,7 +843,7 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
         log(f"replaced {superseded.name} ({age_days:.1f} days old, inside the "
             f"{COALESCE_WINDOW_DAYS}-day window)")
 
-    mine = [s for s in own(snapshots(st, WORLD_BACKUPS), me) if s.name != protect]
+    mine = [s for s in own(snapshots(st, WORLD_BACKUPS), me) if s.name != keep_name]
     regular = [s for s in mine if not s.safety]
     safeties = [s for s in mine if s.safety]
     for stale in regular[:-keep] + safeties[:-KEEP_SAFETY_COPIES]:
@@ -1001,13 +1007,21 @@ def restore_snapshot(st: Storage, snap: Snapshot, reason: str = "manual") -> Non
             die(f"download of {snap.name} is {local_tar.stat().st_size} B, the cloud says "
                 f"{snap.size} B — nothing local was touched")
         safety = _backup(st, f"pre-restore safety copy ({reason})", safety=True,
-                         protect=snap.name)
+                         protect=snap)
         before = safety.name if safety else bootstate.load().based_on
+        back = (f"put the previous state back: make foundry-restore SNAP={before}"
+                if before else "there was no previous local world")
+        if before and not safety and before != snap.name:
+            try:
+                gone = not _in_cloud(st, before, snapshots(st, WORLD_BACKUPS))
+            except StorageError:
+                gone = False
+            if gone:  # no safety copy because `snap` already contains it
+                back = (f"the previous state ({before}) is contained in {snap.name}: "
+                        f"make foundry-restore SNAP={snap.name}")
         try:
             extract_snapshot(local_tar)
         except Exception as exc:  # noqa: BLE001
-            back = (f"put the previous state back: make foundry-restore SNAP={before}"
-                    if before else "there was no previous local world")
             die(f"extract of {snap.name} failed part-way: {exc}\n    {back}")
         anc = read_lineage(st, snap)
         bootstate.load().record_snapshot(snap.name, snap.host, snap.mtime, snapshot_digest(),
