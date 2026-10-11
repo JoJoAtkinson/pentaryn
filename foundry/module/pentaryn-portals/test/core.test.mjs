@@ -27,7 +27,7 @@ test("module.json: id and version as shipped (0.4.4)", () => {
   assert.equal(manifest.version, "0.4.4");
 });
 
-test("VERSION === module.json version", { todo: "core has no VERSION yet; S2 moves VERSION/MODULE into core (C41)" }, () => {
+test("VERSION === module.json version (C41; live since S2 moved VERSION/MODULE into core)", () => {
   assert.equal(core.VERSION, manifestOf(ROOT).version);
   assert.equal(core.MODULE, manifestOf(ROOT).id);
 });
