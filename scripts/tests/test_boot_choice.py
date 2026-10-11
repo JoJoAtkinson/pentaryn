@@ -97,8 +97,109 @@ def test_primary_is_asked_only_when_the_alt_was_really_used(two_hosts, tty):
     with two_hosts.use("mac"):
         assert boot.choose() == 0
     assert len(asked) == 1
+    assert "Enter = latest" in asked[0]           # boss's descends from the mac's: default
     assert _journal(two_hosts, "mac") == "saturday"                   # kept local
     assert _state(two_hosts, "mac")["keep_local_until_newer_than"] == boss_snap
+
+
+# ── diverged snapshots and the pending notice ───────────────────────────────
+
+def _alt_on_macs_latest(two_hosts, tty):
+    """boss boots at a terminal and takes the Mac's newest; returns that snapshot."""
+    m0 = _play(two_hosts, "mac", "session one")
+    tty(True, [""])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    assert _state(two_hosts, "boss")["based_on"] == m0
+    return m0
+
+
+def test_notice_survives_the_alts_own_backup_until_answered_at_a_terminal(two_hosts, tty,
+                                                                          capsys):
+    """An agent boots the alt (no terminal); the vtt-up backup after it uploads a newer
+    boss snapshot. The Mac's snapshot must still be raised — not buried by that upload."""
+    _alt_on_macs_latest(two_hosts, tty)
+    m1 = _play(two_hosts, "mac", "session two")
+    tty(False)
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0                       # notice, boots local
+    assert _state(two_hosts, "boss")["pending_newer"] == m1
+    b1 = _play(two_hosts, "boss", "agent's addon work")  # its backup: now the newest
+    assert _state(two_hosts, "boss")["pending_newer"] == m1
+    capsys.readouterr()
+    tty(False)
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0                       # still told
+    out = capsys.readouterr().out
+    assert f"cloud snapshot {m1}" in out and f"does not contain {b1}" in out
+    assert f"make foundry-up FROM={m1}" in out          # not FROM=latest: that is boss's own
+    asked = tty(True, [""])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0                       # at a terminal: asked, Enter = local
+    assert len(asked) == 1 and "Enter = local" in asked[0]
+    assert "diverged — does not contain" in capsys.readouterr().out
+    assert _journal(two_hosts, "boss") == "agent's addon work"
+    st = _state(two_hosts, "boss")
+    assert st["pending_newer"] is None and st["keep_local_until_newer_than"] == m1
+    asked = tty(True, [""])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0                       # answered: quiet now
+    assert asked == []
+
+
+def test_pending_snapshot_taken_with_l_at_the_next_terminal(two_hosts, tty):
+    _alt_on_macs_latest(two_hosts, tty)
+    m1 = _play(two_hosts, "mac", "session two")
+    tty(False)
+    with two_hosts.use("boss"):
+        boot.choose()
+    _play(two_hosts, "boss", "agent's addon work")
+    tty(True, ["l"])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    assert _journal(two_hosts, "boss") == "session two"
+    st = _state(two_hosts, "boss")
+    assert st["based_on"] == m1 and st["pending_newer"] is None
+
+
+@pytest.mark.parametrize("how", ["notice-then-backup", "k-then-edits"])
+def test_primary_is_not_offered_a_diverged_alt_snapshot_as_the_default(two_hosts, tty, capsys,
+                                                                       how):
+    """boss's newest lacks the Mac's newer session: Enter must keep the Mac's world."""
+    _alt_on_macs_latest(two_hosts, tty)
+    m1 = _play(two_hosts, "mac", "mac's newer session")
+    tty(how == "k-then-edits", ["k"])
+    with two_hosts.use("boss"):
+        boot.choose()
+    b1 = _play(two_hosts, "boss", "boss edits on the older world")
+    capsys.readouterr()
+    asked = tty(True, [""])
+    with two_hosts.use("mac"):
+        assert boot.choose() == 0
+    out = capsys.readouterr().out
+    assert len(asked) == 1 and "Enter = local" in asked[0]
+    assert f"diverged — does not contain {m1}" in out and b1 in out
+    assert _journal(two_hosts, "mac") == "mac's newer session"
+    tty(True, ["l"])
+    with two_hosts.use("mac"):
+        _state_before = _state(two_hosts, "mac")
+        assert _state_before["keep_local_until_newer_than"] == b1
+        assert boot.main(["choose", "--from", "latest"]) == 0   # explicit: still possible
+    assert _journal(two_hosts, "mac") == "boss edits on the older world"
+
+
+def test_diverged_without_a_terminal_says_so(two_hosts, tty, capsys):
+    _alt_on_macs_latest(two_hosts, tty)
+    m1 = _play(two_hosts, "mac", "mac's newer session")
+    tty(True, ["k"])
+    with two_hosts.use("boss"):
+        boot.choose()
+    _play(two_hosts, "boss", "boss edits")
+    capsys.readouterr()
+    tty(False)
+    with two_hosts.use("mac"):
+        assert boot.choose() == 0
+    assert f"is newer but diverged — does not contain {m1}" in capsys.readouterr().out
 
 
 # ── §6.2 row by row ─────────────────────────────────────────────────────────
@@ -149,17 +250,20 @@ NOTICE = re.compile(
     r"make foundry-up FROM=latest   \(or: make foundry-restore SNAP=(world-\S+-mac\.tar\.gz)\)")
 
 
-def test_non_interactive_boots_local_with_the_notice_and_remembers_nothing(two_hosts, tty, capsys):
+def test_non_interactive_boots_local_with_the_notice_and_remembers_it_as_pending(
+        two_hosts, tty, capsys):
     snap = _play(two_hosts, "mac", "x")
     asked = tty(False, [""])
     with two_hosts.use("boss"):
-        before = _tree_hash(two_hosts.data["boss"])
+        before = _tree_hash(two_hosts.data["boss"] / "Data")
         assert boot.choose() == 0
     assert asked == []
     m = NOTICE.search(capsys.readouterr().out)
     assert m and m.group(1) == snap == m.group(2)
-    assert _tree_hash(two_hosts.data["boss"]) == before        # no state file, no restore
-    assert not two_hosts.state_file("boss").exists()
+    assert _tree_hash(two_hosts.data["boss"] / "Data") == before   # no restore
+    st = _state(two_hosts, "boss")
+    assert st["pending_newer"] == snap and st["based_on"] is None
+    assert st["keep_local_until_newer_than"] is None                # not answered for Joe
 
 
 def test_noninteractive_env_wins_over_a_tty(two_hosts, tty, monkeypatch):

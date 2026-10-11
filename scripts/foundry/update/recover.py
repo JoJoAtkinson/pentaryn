@@ -210,7 +210,8 @@ def _restore_world_tar(snapshot: "cloud.Snapshot | Path | None", rec: Recovery) 
     finally:
         local.unlink(missing_ok=True)
     bootstate.load().record_snapshot(snapshot.name, snapshot.host, snapshot.mtime,
-                                     cloud.snapshot_digest(), by="updater-rollback")
+                                     cloud.snapshot_digest(), by="updater-rollback",
+                                     lineage=cloud.read_ancestry(st, snapshot) or [])
     rec.steps.append(f"restored worlds/Config/modules from {snapshot.name}")
 
 

@@ -24,7 +24,14 @@ DAY = 86400
 
 
 def _names(cloud_dir, sub="world-backups"):
-    return sorted(p.name for p in (cloud_dir / sub).iterdir())
+    """The files in a cloud subfolder, without the `.parent` lineage sidecars."""
+    return sorted(p.name for p in (cloud_dir / sub).iterdir()
+                  if not p.name.endswith(cloud.PARENT_SUFFIX))
+
+
+def _sidecars(cloud_dir, sub="world-backups"):
+    return sorted(p.name[:-len(cloud.PARENT_SUFFIX)] for p in (cloud_dir / sub).iterdir()
+                  if p.name.endswith(cloud.PARENT_SUFFIX))
 
 
 def _put(cloud_dir, name, *, age_days=0.0, sub="world-backups", data=b"x" * 64):
@@ -73,6 +80,7 @@ def test_parser_reads_all_three_shapes(name, host, core, safety):
     "world-2026-10-11-030412-fvtt14.369-mac.tar.gz.partial",
     "world-2026-10-11-030412-fvtt14.369-mac.tar",
     "README.txt", ".last-digest", "world-2026-10-11.tar.gz",
+    "world-2026-10-11-030412-fvtt14.369-mac.tar.gz.parent",
 ])
 def test_parser_rejects(name):
     assert parse_snapshot(Entry(name, 1, 1.0)) is None
@@ -235,6 +243,53 @@ def test_an_empty_tree_is_not_archived(two_hosts, capsys):
         cloud.backup("manual")
     assert "no local world" in capsys.readouterr().out
     assert _names(two_hosts.cloud) == []
+
+
+# ── lineage sidecars ────────────────────────────────────────────────────────
+
+def _sidecar(cloud_dir, name, sub="world-backups"):
+    return json.loads((cloud_dir / sub / f"{name}{cloud.PARENT_SUFFIX}").read_text())
+
+
+def test_backup_writes_a_parent_sidecar_and_restore_inherits_its_lineage(two_hosts):
+    c = two_hosts.cloud
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+        [m0] = _names(c)
+        assert _sidecar(c, m0) == {"parent": None, "ancestors": [], "host": "mac"}
+        _edit(two_hosts.data["mac"], "two")
+        cloud.backup("shutdown")                  # coalesces m0 away …
+        [m1] = _names(c)
+    assert _sidecar(c, m1)["ancestors"] == [m0]   # … but the lineage still names it
+    assert _sidecars(c) == [m1]                   # m0's sidecar went with it
+    with two_hosts.use("boss"):
+        cloud.restore(m1, yes=True)
+        st = bootstate.load()
+        assert (st.based_on, st.lineage) == (m1, [m0])
+        _edit(two_hosts.data["boss"], "boss")
+        cloud.backup("shutdown")
+        b1 = bootstate.load().based_on
+    assert _sidecar(c, b1) == {"parent": m1, "ancestors": [m1, m0], "host": "boss"}
+    snap = cloud.find_snapshot(cloud.store(), b1)
+    assert cloud.descends(cloud.store(), snap, m0) is True
+    assert cloud.descends(cloud.store(), snap, "world-other.tar.gz") is False
+
+
+def test_a_snapshot_without_a_sidecar_is_unknown_not_diverged(two_hosts):
+    legacy = _put(two_hosts.cloud, f"world-{_stamp(1)}-fvtt14.369.tar.gz", age_days=1).name
+    snap = cloud.find_snapshot(cloud.store(), legacy)
+    assert cloud.read_ancestry(cloud.store(), snap) is None
+    assert cloud.descends(cloud.store(), snap, "anything") is None
+
+
+def test_pruning_deletes_the_sidecar_too(two_hosts, monkeypatch):
+    monkeypatch.setenv("PENTARYN_KEEP_SNAPSHOTS", "1")
+    c = two_hosts.cloud
+    old = _put(c, f"world-{_stamp(9)}-fvtt14.369-mac.tar.gz", age_days=9).name
+    (c / "world-backups" / f"{old}.parent").write_text('{"ancestors": []}')
+    with two_hosts.use("mac"):
+        cloud.backup("manual")
+    assert old not in _names(c) and old not in _sidecars(c)
 
 
 # ── restore ─────────────────────────────────────────────────────────────────

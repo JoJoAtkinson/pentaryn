@@ -43,6 +43,13 @@ class BootState:
     based_on_mtime: float | None = None
     digest: str | None = None
     keep_local_until_newer_than: str | None = None
+    # The based-on snapshot's ancestors, newest first (from its `.parent` sidecar): what
+    # this world already contains, so a newer snapshot that lacks `based_on` is "diverged".
+    lineage: list[str] = field(default_factory=list)
+    # A newer snapshot the no-terminal notice told nobody about yet. Kept across this
+    # host's own backups and shown again until Joe answers at a terminal (or restores).
+    pending_newer: str | None = None
+    pending_newer_mtime: float | None = None
     written: str | None = None
     by: str | None = None
     # Set when the file existed but could not be read; never written back.
@@ -66,18 +73,39 @@ class BootState:
     # -- the events of the §5 table --------------------------------------------
 
     def record_snapshot(self, name: str, snap_host: str | None, mtime: float,
-                        digest: str, *, by: str, keep_local: str | None = None) -> None:
-        """Own backup uploaded `name`, or `name` was restored: the tree IS that snapshot."""
+                        digest: str, *, by: str, keep_local: str | None = None,
+                        lineage: list[str] | None = None,
+                        clear_pending: bool = False) -> None:
+        """Own backup uploaded `name`, or `name` was restored: the tree IS that snapshot.
+
+        A restore answers any pending notice (`clear_pending`); this host's own backup
+        does not — uploading the local world is not Joe seeing the newer one."""
         self.based_on = name
         self.based_on_host = snap_host
         self.based_on_mtime = mtime
         self.digest = digest
         self.keep_local_until_newer_than = keep_local
+        self.lineage = list(lineage or [])
+        if clear_pending:
+            self.pending_newer = self.pending_newer_mtime = None
         self.save(by)
 
     def remember_keep_local(self, declined: str) -> None:
         self.keep_local_until_newer_than = declined
+        self.pending_newer = self.pending_newer_mtime = None
         self.save("boot-keep-local")
+
+    def set_pending(self, name: str, mtime: float) -> None:
+        if (self.pending_newer, self.pending_newer_mtime) == (name, mtime):
+            return
+        self.pending_newer, self.pending_newer_mtime = name, mtime
+        self.save("boot-notice")
+
+    def clear_pending(self) -> None:
+        if self.pending_newer is None:
+            return
+        self.pending_newer = self.pending_newer_mtime = None
+        self.save("boot-pending-cleared")
 
 
 def load() -> BootState:
@@ -99,6 +127,9 @@ def load() -> BootState:
         st = BootState(**known)
         if st.based_on_mtime is not None:
             st.based_on_mtime = float(st.based_on_mtime)
+        if st.pending_newer_mtime is not None:
+            st.pending_newer_mtime = float(st.pending_newer_mtime)
+        st.lineage = [str(n) for n in (st.lineage or []) if n]
         return st
     except (ValueError, TypeError):
         return BootState(corrupt=True)

@@ -206,6 +206,7 @@ README_TEXT = (
     "                REPLACES it. Names without a machine are from before 2026-10-11;\n"
     "                nothing deletes those automatically.\n"
     "                A name ending .safety.tar.gz is the state a restore replaced.\n"
+    "                A name ending .tar.gz.parent is that snapshot's lineage (tiny).\n"
     "                A name ending .partial is an upload in progress (or a crash, swept\n"
     "                after a day) — never a snapshot.\n\n"
     "major-release/  AUTOMATIC — never pruned.\n"
@@ -311,6 +312,60 @@ def find_snapshot(st: Storage, name: str) -> Snapshot | None:
             if s.name == name:
                 return s
     return None
+
+
+# ── Lineage: `<snapshot>.parent` sidecars ────────────────────────────────────
+#
+# Each snapshot gets a tiny JSON sidecar, written before the upload's rename, naming the
+# snapshot its tree was based on and that one's ancestors (newest first, capped). One
+# read then answers "does this snapshot contain the one my world is based on?" — even
+# after coalescing and pruning have deleted the snapshots in between. A sidecar never
+# parses as a snapshot (it does not end in .tar.gz).
+
+PARENT_SUFFIX = ".parent"
+LINEAGE_CAP = 100
+
+
+def parent_rel(folder: str, name: str) -> str:
+    return f"{folder}/{name}{PARENT_SUFFIX}"
+
+
+def read_ancestry(st: Storage, snap: Snapshot) -> list[str] | None:
+    """`snap`'s ancestors, newest first; None when it has no sidecar (legacy, or
+    unreadable) — "unknown", never "diverged"."""
+    try:
+        raw = st.read_text(parent_rel(snap.folder, snap.name))
+    except StorageError:
+        return None
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+        anc = data.get("ancestors")
+        if not isinstance(anc, list):
+            return None
+        return [str(a) for a in anc if a]
+    except (ValueError, AttributeError):
+        return None
+
+
+def descends(st: Storage, snap: Snapshot, based_on: str | None) -> bool | None:
+    """Does `snap` contain the state `based_on` names? None when it cannot be told."""
+    if not based_on:
+        return None
+    if snap.name == based_on:
+        return True
+    anc = read_ancestry(st, snap)
+    return None if anc is None else based_on in anc
+
+
+def _delete_snapshot(st: Storage, snap: Snapshot) -> None:
+    """The snapshot, then its sidecar (best effort — an orphan sidecar is harmless)."""
+    st.delete(snap.rel)
+    try:
+        st.delete(parent_rel(snap.folder, snap.name))
+    except StorageError:
+        pass
 
 
 def snapshot_core_version(path: Path | str) -> str | None:
@@ -580,7 +635,8 @@ def adopt_legacy_marker(st: Storage, state: bootstate.BootState) -> bootstate.Bo
     base = newest(legacy)
     if base is None or marker != snapshot_digest():
         return state
-    state.record_snapshot(base.name, None, base.mtime, marker, by="adopt-legacy-marker")
+    state.record_snapshot(base.name, None, base.mtime, marker, by="adopt-legacy-marker",
+                          lineage=[])
     log(f"recorded this world as based on {base.name} (the legacy digest marker matches)")
     return state
 
@@ -686,8 +742,13 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
             if src.exists():
                 tar.add(src, arcname=rel)
     size = tmp.stat().st_size
+    ancestors = ([state.based_on] + [a for a in state.lineage if a != state.based_on]
+                 if state.based_on else [])[:LINEAGE_CAP]
     log(f"uploading {name} ({_mb(size)}, {reason}) to {st.root}...")
     try:
+        # The sidecar first: by the time the snapshot's name appears, its lineage exists.
+        st.write_text(parent_rel(WORLD_BACKUPS, name), json.dumps(
+            {"parent": state.based_on, "ancestors": ancestors, "host": me}) + "\n")
         st.upload(tmp, f"{WORLD_BACKUPS}/{name}")
     except StorageError as exc:
         die(f"upload failed: {exc}\n"
@@ -697,7 +758,8 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
 
     entry = next((e for e in st.ls(WORLD_BACKUPS) if e.name == name), None)
     snap = parse_snapshot(entry or Entry(name, size, time.time()), WORLD_BACKUPS)
-    state.record_snapshot(name, me, snap.mtime, digest, by="backup")
+    state.record_snapshot(name, me, snap.mtime, digest, by="backup", lineage=ancestors,
+                          keep_local=None)
     log(f"snapshot → {name} ({_mb(size)}, {reason})")
     # The shared digest marker is retired: the digest is local now (bootstate). Only the
     # primary — the Mac, which wrote it — may delete it, and only once it has backed up
@@ -711,13 +773,13 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
 
     if superseded:
         age_days = (time.time() - superseded.mtime) / 86400
-        st.delete(superseded.rel)
+        _delete_snapshot(st, superseded)
         log(f"replaced {superseded.name} ({age_days:.1f} days old, inside the "
             f"{COALESCE_WINDOW_DAYS}-day window)")
 
     mine = [s for s in own(snapshots(st, WORLD_BACKUPS), me) if s.name != protect]
     for stale in mine[:-keep]:
-        st.delete(stale.rel)
+        _delete_snapshot(st, stale)
         log(f"pruned {stale.name}")
     log(f"{min(len(mine), keep)} of {keep} snapshots kept for {me}")
 
@@ -760,6 +822,12 @@ def promote_major_release(st: Storage, existing: list[Snapshot] | None = None) -
     if any(s.host == me and generation(s.core) == previous for s in preserved):
         return None  # this host's copy of that generation is already preserved
     st.copy(source.rel, f"{MAJOR_RELEASES}/{source.name}")
+    try:
+        sidecar = st.read_text(parent_rel(WORLD_BACKUPS, source.name))
+        if sidecar:
+            st.write_text(parent_rel(MAJOR_RELEASES, source.name), sidecar)
+    except StorageError:
+        pass
     log(f"Foundry {previous} → {current}: preserved {source.name} in major-release/ "
         f"({_mb(source.size)}, never pruned)")
     return source
@@ -878,7 +946,9 @@ def restore_snapshot(st: Storage, snap: Snapshot, reason: str = "manual") -> Non
                     if before else "there was no previous local world")
             die(f"extract of {snap.name} failed part-way: {exc}\n    {back}")
         bootstate.load().record_snapshot(snap.name, snap.host, snap.mtime, snapshot_digest(),
-                                         by=f"restore:{reason}")
+                                         by=f"restore:{reason}",
+                                         lineage=read_ancestry(st, snap) or [],
+                                         clear_pending=True)
         log(f"restored {snap.name}" + (f" (the state it replaced: {before})" if before else ""))
     finally:
         local_tar.unlink(missing_ok=True)
@@ -967,7 +1037,7 @@ def prune_untagged(yes: bool = False) -> int:
             log("aborted")
             return 1
     for s in doomed:
-        st.delete(s.rel)
+        _delete_snapshot(st, s)
         log(f"deleted {s.name}")
     return 0
 
@@ -983,6 +1053,9 @@ def status() -> int:
     log(f"based on     {state.based_on or 'unknown'}"
         + (f"  (keeping local over {state.keep_local_until_newer_than})"
            if state.keep_local_until_newer_than else ""))
+    if state.pending_newer:
+        log(f"not yet seen {state.pending_newer} (a boot without a terminal noticed it; "
+            "the next boot at a terminal asks)")
     try:
         zips = [e for e in st.ls(ASSETS_IN) if e.name.endswith(".zip")]
         snaps = snapshots(st, WORLD_BACKUPS)

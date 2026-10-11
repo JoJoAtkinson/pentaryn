@@ -332,7 +332,7 @@ world is *based on*:
 ```
   ▸ cloud has a newer world snapshot than this machine's world:
 
-      newest   world-2026-10-11-030412-fvtt14.369-mac.tar.gz   mac   2026-10-11 03:04 UTC   14.369   3.1 GB
+      cloud    world-2026-10-11-030412-fvtt14.369-mac.tar.gz   mac   2026-10-11 03:04 UTC   14.369   3.1 GB
       local    based on world-2026-10-09-221500-fvtt14.369-boss.tar.gz   boss   2026-10-09 22:15 UTC
   …
   boot from [latest] or keep local?  (Enter = latest, l/latest, k/local, or a number)  >
@@ -343,16 +343,26 @@ world is *based on*:
   (its `dataPath`), `admin.txt` and `license.json` are **kept** across every restore.
 - **`k`** boots the local world and remembers the answer until a snapshot newer than the one you
   declined appears.
+- **Diverged** — the newer snapshot's lineage does not contain what this world is based on (the
+  other machine started from an older world, or kept local and edited). It is still offered, but
+  the prompt says `diverged — does not contain <based-on>` and **Enter keeps local**; `l` (or
+  `FROM=latest`) takes it, archiving this world first. Each snapshot's lineage is a tiny
+  `world-backups/<name>.parent` sidecar written before the upload completes; a snapshot without
+  one (untagged, legacy) is treated as newer, as before.
 - **No terminal** (launchd, an agent, `ssh boss 'make …'` without `-t`): never restores. It boots
   local and prints one line: `▸ boot: cloud snapshot … is newer than this world …; booting LOCAL.
-  To use it: make foundry-up FROM=latest   (or: make foundry-restore SNAP=…)`.
+  To use it: make foundry-up FROM=latest   (or: make foundry-restore SNAP=…)`. The snapshot is
+  remembered as **pending** in the state file, so the backup that follows (which makes the local
+  world the newest) cannot bury it: every later boot repeats the notice, and the next boot at a
+  terminal asks, until it is answered or restored.
 - **Cloud unreachable** (no rclone, no network, a 60 s listing timeout): boots local with a warning
   and exits 0, and so do the pre-launch backup and the asset step after it — `make vtt-up` never
   blocks on the cloud. Only a bad `FROM=<name>` or a failed chosen restore stops the start.
 
 "Based on" is `FOUNDRY_DATA/pentaryn-boot.json` (beside `Config/`, outside every snapshot): which
 snapshot this world came from, its listing mtime, and the tree digest. It is written by this
-machine's own backup, by every restore, and by a `k` answer — never by the no-terminal notice.
+machine's own backup, by every restore, and by a `k` answer; the no-terminal notice records only
+the pending snapshot, never an answer.
 "Newer" compares the **listing mtime**, never the name's stamp across machines. So the alt is asked
 about the primary's newest; the primary is asked only when the alt has actually uploaded since.
 With **no record** (first run, or the file is missing or unreadable) the only clock is the local
