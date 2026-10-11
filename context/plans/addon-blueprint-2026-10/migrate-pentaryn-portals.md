@@ -1,6 +1,6 @@
 ---
 title: Migrating pentaryn-portals to the addon blueprint
-status: plan
+status: done (offline) — live test pending
 last_modified: 2026-10-11
 tags: [foundry, modules, blueprint, migration, portals]
 ---
@@ -526,13 +526,67 @@ The structural steps absorb -25, -26, -29 (W7), -31 (ADJ), -33, the C24 part of 
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module portals --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | **87.0 % (40 / 46 fail-class rules)** — `conformance.py --module portals` at `4d6f0c4b` (checkpoint 67.4 %, wave-3-base 58.1 %) |
+| Date | 2026-10-11 (code phase; nothing synced) |
+| Commits | characterisation: `2b412b0a` `49b2484d` `a73d7ad1` `0ca63b97` · S2 oracle `a5a52410` · refactor: S2 `ff66ad35` (+ todo flip `b870dc71`), S3 `f6bbd2dc`, S4 `38c366fd`, S5 `66cb60ae`, S6 `bf362fd4`, D-P1 `d132395c`, S7 `2e15ab61`, S8 `186cdfb1` · standalone: -32 additions `fe8938fe`, hygiene `a3ade332`, -36 `477e39e2`, -27 `6d2785e4` + `6b892145`, D-P3 `0f06790a`, D-P4 `0fe9e4b8`, D-P5 `59a1e99b` + `413fed02`, -43 `ae936c07` + D-P6 `8a060d21`, -38 `b87d8c15`, gate fix `4d6f0c4b` |
+| Declared changes handed to the live-test workflow | D-P1, S7, D-P3, D-P4, D-P5, D-P6, -27 snapshot message (session: not yet run) |
+| `module.json` edits appended to `wave7-restart-batch.md` | no — returned to the integrator (shared file); the existing portals row needs four additions (below) |
+| Adjustments rows appended to `adjustments-batch.md` | no — returned to the integrator (shared file); two corrections to the existing rows (below) |
+| Still failing, and why | C07, C09, C37, C51 → W7 (`module.json` flags/recommends/cssPrefix, `lang/`); C32, C47 → the ADJ batch (rows still name `portals.mjs`; no item-piles row). Warn: C06w (W7 styles move), C36 (W7 i18n), C59 (per-behaviour `update` loops in the card window's switch and unlink: batching changes the frozen per-behaviour `update` pins — a later declared perf step) |
+
+### Wave 3 migration notes (2026-10-11)
+
+- **Layout** as §2, with three deviations. (1) The adapter may import only core and lib (C16), so
+  `confirmParty` reads the setting through `configureSceneAdapter({ setting, log })`, called by the
+  entry at evaluation, instead of importing `settings.mjs`. (2) `link`/`unlink` follow use-doc §5.1
+  (one positional ref): `link(ref, { to, twoWay, dryRun })`, `unlink(ref, { to, dryRun })`, not
+  `link(fromRef, toRef, …)`. (3) `regionOf` is not published: every new row resolves its `ref`
+  through the kit's `resolveRef(…, "region")`; the old rows keep their document signatures.
+- **inspect** (C29): read-only; a player view (`as`) drops destinations for a sealed or unrevealed
+  passage and the GM-only passage name; an Actor or Token ref answers `null`, so the root
+  `game.pentaryn.inspect(actor)` gets `null` from portals instead of an error.
+- **D-P5** landed as two commits (one pin each). `teleportParty` still returns `undefined` for a
+  player or a missing region. `spreadArrival` still returns the document (the audit's
+  `{ moved, to }` is not in this guide's list; open below).
+- **Frozen tests changed** (every change in a commit that names it): `seams.mjs` (S3, import
+  paths); `core.test` todo flip (`b870dc71`); D-P1 `glue.test` publish pin + frozen-importer setup,
+  `publish.test`, the surface pin now filters to the seven legacy members (golden unchanged); S7
+  selector renames + nine HTML goldens (rename only, checked line by line); hygiene clear-image
+  payload; -27 snapshot KNOWN; D-P3 hooks pin; D-P4 KNOWN plus the deleteToken failure case (now a
+  different error, so it still proves the warn); D-P5 two pins; D-P6 KNOWN. One undeclared touch:
+  `fe8938fe` loosened the D-P1 key-list pin (added in `d132395c`) to a subset, because the -32
+  additions grow the API and the exact list belongs to `api.test`'s `golden/surface.json`.
+- **Tests** at `4d6f0c4b`: 169 node:test + 52 legacy, all green (run twice); module-check gates
+  (parse, imports, i18n, node-test, vendor, conformance) green. Coverage (lines / branches / funcs):
+  core 100 / 97.4 / 100, adapter 100 / 98.7 / 97.8, badges 100 / 96.9 / 95.5, party 100 / 97.4 /
+  100, cards 100 / 94.2 / 92.3, card-app 100 / 100 / 93.9, api 95 / 84.9 / 100, entry 87.5 / 71.4 /
+  66.7 (the drift-refusal and hot-patch branches).
+- **Known red** for bisecting: C32 / `foundry-adjustments-check` from `f6bbd2dc` until the ADJ batch
+  lands (the two existing rows list `portals.mjs`); the module-check imports gate at `ae936c07`
+  only (fixed `4d6f0c4b`).
+
+### For the integrator (shared files)
+
+- **`foundry/adjustments.yml`** (and `adjustments-batch.md`'s portals rows): `core-portals-relative-uuid`
+  files → `portals-core.mjs`, `scene-adapter.mjs`. `core-teleport-default-and-spread` files →
+  `cards.mjs`, `party.mjs` (**not** `portals-core.mjs`, which holds none of its markers), markers →
+  `data-action="yes"`, `:scope > p`, `spreadArrival`. New rows as the batch lists, with these
+  files: `core-teleport-dialog-cards` → `cards.mjs`, `portals-core.mjs` (markers `dialog-`,
+  `select[name="destination"]`); `core-teleport-replacements-follow` → `party.mjs`;
+  `core-region-config-portal-card` → `cards.mjs`; `itempiles-portals-pile-pc` (packages
+  `[item-piles]`) → `scene-adapter.mjs`.
+- **`wave7-restart-batch.md`** portals row, add: `flagScope: "pentaryn-portals"` (manifest-only; the
+  code already writes there), `generation: 14`, `afterSync` = config.py's tuple (and delete it from
+  the ModuleSpec); `git mv portals.css styles/portals.css` with the `styles` entry; if `version`
+  bumps, `VERSION` in `portals-core.mjs` **and** the frozen `core.test` "version as shipped (0.4.4)"
+  pin move in the same commit; `test/i18n.test.mjs` is written to fail once `languages` exists —
+  the W7 commit replaces it with the lang-key pins.
+- **`context/foundry/README.md`**: run `python -m scripts.foundry.ops module-index` (the Module APIs
+  table is stale: portals now has a describe golden); extend the "Region + teleport scene links"
+  row with "destination cards, travel badges, party teleport (`pentaryn-portals`)" and the module
+  README link.
+- **`context/foundry/scene-links.md`** § Destination cards: the console table (README "API").
+- **`context/foundry/markers.md`**: the "Who checks for Markers and crowd" table (-38).
 
 ### Checkpoint (wave 3, 2026-10-11)
 

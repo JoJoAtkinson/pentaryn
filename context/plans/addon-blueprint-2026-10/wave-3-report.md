@@ -25,3 +25,14 @@ module. Baseline: [`wave-3-baseline.md`](wave-3-baseline.md).
   creatures flag with the prior light, or creatures treats an exact radius match as its own — a
   [declared] change on one side and a contract test on both), or keep it (rare; the GM sets the
   light to 0 by hand). Migration done offline; nothing blocks on this.
+- **portals — the Item Piles probe differs from pentaryn-aoe's.** `recordOf` asks
+  `isValidItemPile(actor)` with no flag fallback; aoe's resolve.mjs passes the token and falls back
+  to flags. Kept as is and commented (finding -36: aoe tolerates a false positive, portals must not
+  leave a pile-PC behind). Decide: unify the two, or keep them different on purpose.
+- **portals — two API returns the audit proposed are not built.** `spreadArrival` still returns the
+  token document (audit: `{ moved, to }`) and `teleportParty` has no `{ from }` scene option
+  (audit -32); both are declared shape changes not in the guide's list. Decide whether to add them.
+- **portals — batching the Portal card's per-behaviour writes (C59 warning).** The switch and
+  unlink loops `await` one `update` per teleport behaviour; batching them through the region's
+  `updateEmbeddedDocuments` is one round trip but changes the frozen per-behaviour `update` pins,
+  so it would be its own declared perf step. Usually one behaviour per region, so low value.
