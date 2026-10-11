@@ -102,11 +102,20 @@ def make_data_root(root):
     return root
 
 
+@pytest.fixture
+def fake_rclone(fake_cloud):
+    """A `FakeRclone` runner over the fake cloud folder (remote `fake:`); see cloud_fakes."""
+    from cloud_fakes import FakeRclone
+    return FakeRclone(fake_cloud)
+
+
 @pytest.fixture(autouse=True)
 def fake_cloud(monkeypatch, tmp_path_factory):
     """`PENTARYN_CLOUD` → a temp folder with the four subfolders; host env isolated."""
+    from scripts.foundry import storage
+
     base = tmp_path_factory.mktemp("cloud")
-    for sub in ("assets", "world-backups", "system-backup", "major-release"):
+    for sub in storage.SUBFOLDERS:
         (base / sub).mkdir()
     for key in _HOST_ENV_KEYS:
         monkeypatch.delenv(key, raising=False)
@@ -114,7 +123,9 @@ def fake_cloud(monkeypatch, tmp_path_factory):
     monkeypatch.setenv("PENTARYN_CLOUD", str(base))
     monkeypatch.setenv("PENTARYN_HOST", "testhost")
     monkeypatch.setenv("PENTARYN_PRIMARY_HOST", "testhost")
+    storage.reset()
     yield base
+    storage.reset()
 
 
 @pytest.fixture(autouse=True)
