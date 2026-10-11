@@ -114,3 +114,66 @@ def test_leftovers_of_a_crashed_run_are_cleared(module):
     modules.install(module.src, module.dst)
     assert list(staging.iterdir()) == []
     assert _tree(module.dst) == _tree(module.src)
+
+
+# ── pipeline.stage installs the importer through the same helper (python-tooling-53) ──────────
+
+@pytest.fixture
+def importer(monkeypatch, tmp_path):
+    from scripts.foundry.ops import pipeline
+
+    src = tmp_path / "repo" / "pentaryn-importer"
+    (src / "test").mkdir(parents=True)
+    (src / "module.json").write_text('{"id": "pentaryn-importer", "version": "1.1.0"}\n')
+    (src / "pentaryn-importer.mjs").write_text("// entry\n")
+    (src / "test" / "run.mjs").write_text("// suite\n")
+    actors = tmp_path / "repo" / "build" / "actors.json"
+    actors.parent.mkdir(parents=True)
+    actors.write_text('{"actors": []}\n')
+    data = tmp_path / "FoundryVTT" / "Data"
+    world = data / "worlds" / "zz-world"
+    world.mkdir(parents=True)
+    monkeypatch.setattr(cfg, "FOUNDRY_DATA", data)
+    monkeypatch.setattr(cfg, "FOUNDRY_MODULES", data / "modules")
+    monkeypatch.setattr(cfg, "MODULE_SRC_ROOT", src.parent)
+    monkeypatch.setattr(cfg, "WORLD_NAME", "zz-world")
+    monkeypatch.setattr(cfg, "WORLD_DIR", world)
+    monkeypatch.setattr(cfg, "ACTORS_JSON", actors)
+    monkeypatch.setattr(cfg, "ACTORS_STAGED", world / "actors.json")
+    monkeypatch.setattr(pipeline, "build_actors", lambda: 0)
+    return pipeline, cfg.MODULES["importer"]
+
+
+def test_stage_installs_the_importer_and_stages_the_json(importer, capsys):
+    pipeline, spec = importer
+    assert pipeline.stage() == 0
+    cmp = filecmp.dircmp(spec.src, spec.dst)
+    assert not (cmp.left_only or cmp.right_only or cmp.diff_files)
+    assert _tree(spec.dst) == _tree(spec.src)
+    assert cfg.ACTORS_STAGED.read_text() == cfg.ACTORS_JSON.read_text()
+    said = capsys.readouterr().out
+    assert "▸ target world: zz-world" in said and f"✓ module → {spec.dst}" in said
+
+
+def test_stage_into_a_missing_world_touches_nothing(importer, monkeypatch):
+    pipeline, spec = importer
+    spec.dst.mkdir(parents=True)
+    (spec.dst / "old.mjs").write_text("old")
+    monkeypatch.setattr(cfg, "WORLD_DIR", cfg.FOUNDRY_DATA / "worlds" / "nope")
+    assert pipeline.stage() == 1
+    assert _tree(spec.dst) == ["old.mjs"]
+
+
+def test_stage_uses_the_atomic_install(importer, monkeypatch):
+    pipeline, spec = importer
+    spec.dst.mkdir(parents=True)
+    (spec.dst / "pentaryn-importer.mjs").write_text("the old, working build")
+
+    def broken(src, dst, *a, **k):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(modules.shutil, "copytree", broken)
+    with pytest.raises(OSError):
+        pipeline.stage()
+    assert (spec.dst / "pentaryn-importer.mjs").read_text() == "the old, working build"
+    assert not cfg.ACTORS_STAGED.exists(), "nothing is staged when the module did not install"
