@@ -15,10 +15,13 @@ nothing was synced, built into a deployed path, restarted or run live, and nothi
 
 - **Branches.** pentaryn `migrate/wave-2` = `wave-2-base` (`7067ef24`) + 253 commits before
   this report's own. Fork `migrate/wave-2` = `pentaryn` + 43 commits; 3 of those are
-  wave 1's doc commits, because the branch starts from `migrate/wave-1` `6a52673`.
+  wave 1's (two docs, one footprint-script fix `6e8c607`), because the branch starts from
+  `migrate/wave-1` `6a52673`.
 - **No module stopped.** No frozen test went red twice on one step. Every frozen-test or golden
   change is in a `[declared]` commit that names its pin, or only moves import paths or files (the
-  integration review re-checked each one).
+  integration review re-checked each one), with one exception the review missed: walls
+  `c1a80a53` changed the manual CLI `test/corpus.mjs` (not run by `run.mjs`, not a gate):
+  `process.exit` → `throw` for C43, so an unknown backend now exits 1, not 2. Undeclared.
 - **Conformance** (advisory) rose for all six: lookup 75.6 → 97.7 %, movement 66.7 → 95.7 %,
   walls 71.4 → 95.6 %, attunement 67.4 → 93.2 %, journal 57.8 → 87.5 %, dropbin 60.9 → 93.8 %. What
   still fails is almost all the Wave 7 `module.json` restart batch (C03/C04/C07/C09/C37), plus
@@ -32,6 +35,13 @@ nothing was synced, built into a deployed path, restarted or run live, and nothi
   runner before), both typechecks, `fork-footprint.sh`.
 - **19 rows are open for Joe** (end of this file). None of them blocks the live phase. Two of them
   are needed *for* the live session: W2-L1 (walls) and W2-L2 (modules outside the six).
+- **Critic pass** (at `368393bf`, code phase): every hash in this file resolves on its branch; the
+  commit lists equal `git log`; the frozen-test diffs, both conformance columns (each scored by its
+  own tree's `conformance.py --json`), checkpoint/HEAD test counts, gates (kit, pytest, module-check
+  19/19, adjustments 96 rows, check-context, fork vitest 275/43 and typechecks) and the
+  finding → commit map re-run and match. Corrected: the fork's wave-1 commits, walls' frozen-file
+  list (`c1a80a53`, above), lookup's DL4 touch of `api.test.mjs`, journal's red range. Coverage
+  was not re-run.
 
 ### Known red commits and ranges (bisecting)
 
@@ -39,7 +49,7 @@ nothing was synced, built into a deployed path, restarted or run live, and nothi
 |---|---|---|
 | `vendor.py check` (advisory) | `c69104f3` → each module's re-vendor commit | the kit's bytes changed before each module's copy; module tests stayed green |
 | walls | `9b37264b` only | its own new `test/backends.test.mjs` matched its own source; fixed forward `28dd5667` |
-| journal (behaviour, suites green) | `7dc5fce8..526d1aa8` | `shouldShowItemBar(null)` threw on non-pile item sheets ("bar skipped" warn) |
+| journal (behaviour, suites green) | `7dc5fce8` → `526d1aa8` (journal commits `7dc5fce8`, `f2df3db3`) | `shouldShowBar(null)`/`shouldShowItemBar(null)` threw on non-pile item sheets ("bar skipped" warn); GMs ran the every-scene Note scan |
 | `check-context` | walls `d06f77ab` → `e4978110` | the generated Module APIs table was stale |
 | `foundry-adjustments-check`, `test_update_escalation` registry test | attunement `5f3bf2d5` → `cd414590` | `adjustments.yml` still pointed at moved markers |
 | pings | `466a3a4f`, `a18872c9` | the PT3-2 repro-first commits from `fix/playtest-2026-10-11`, green from `7a8701df` |
@@ -73,7 +83,8 @@ and its audit's **Status**; the lane sections below keep the detail for walls, j
 
 - **Frozen files touched:** `glue.test.mjs` + `golden/hooks.json` (DL2 `2afb4d4b`; J10 load orders
   (b)/(c) `e6b66580`); `api.test.mjs` KNOWN-1 (DL5 `b98745c1`) and KNOWN-4 (DL3 `91ee5c9d`);
-  `golden/legacy-api.json` JournalEntry-UUID row (DL4 `10053c27`); `fixtures/packs.mjs` gains
+  `golden/legacy-api.json` JournalEntry-UUID row and that case's label in `api.test.mjs` (DL4
+  `10053c27`); `fixtures/packs.mjs` gains
   `locked: true` (`74922db2`, no assertion changed); `legacy-core.mjs` → `core.test.mjs`
   (`f0f70ea8`, the guide's step 10, 43 cases byte-identical); `run.mjs` `LEGACY` emptied; kit copies.
 - **Findings → commits:** -6 `0e5d1f95` + follow-up `3e2d44c4` `a45cc10d` `de4b68ec` `22052ca3`
@@ -105,7 +116,10 @@ and its audit's **Status**; the lane sections below keep the detail for walls, j
 - **Frozen files touched:** `glue.test.mjs` (g) KNOWN -1 → works (`01de2ae2`), (b)+(d) extensible
   root (J10 `3d044626`); `golden/canonical.json` + `golden/backend-drift.json` re-pinned for the
   levels fixtures and the two `knownWasm` markers dropped from `fixtures/corpus.mjs` (`ab859b4c`);
-  import paths only in `corpus.mjs`, `bench.mjs`, `fixtures/engine.mjs`; kit copies.
+  import paths only in `fixtures/engine.mjs` (`de35515f`); `fixtures/corpus.mjs` `kindOf`
+  re-export (`3d0daef9`) and plan-path comment (`e2520d57`); `bench.mjs`'s wasm-missing line
+  ([declared] `9b37264b`); the manual CLI `corpus.mjs` (`c1a80a53`, undeclared, see the
+  Summary); kit copies.
 - **Findings → commits:** -1 `01de2ae2` · -2 `ab859b4c` (+ `3ea5249b`) · -3 `1d2d196b` · -4
   `3d0daef9` · -5 `cb3ce91f` · -6 `c77d1e21` · -7 `9b37264b`, `28dd5667` · -8 `e2520d57`, `49f1f2eb`,
   `d19cb73d`, repo-wide net `edc7489a` · -9 `0ae5b96d` · -33 `08c498bb` · -36 prepared `d3a07b62`
@@ -260,7 +274,7 @@ Order: **`fix/playtest-2026-10-11` → `feature/pentaryn-feedback` → `migrate/
 3. **`migrate/wave-2`**: merge as is. **Dropbin's play-test change (PT3-1) was merged, not re-done:**
    the refactor carries `corpses.mjs`'s PT3-1 code and `test/corpses.test.mjs` unchanged, green
    throughout. Nothing needs dropping at the merge. Note that dropbin is 0.2.2 on the branch.
-4. **Fork:** `migrate/wave-2` is based on `migrate/wave-1` `6a52673`, whose 3 doc commits are not on
+4. **Fork:** `migrate/wave-2` is based on `migrate/wave-1` `6a52673`, whose 3 commits (two docs, one footprint-script fix) are not on
    `pentaryn` (`59c781e`). Merging `migrate/wave-2` into `pentaryn` brings them along. The live fork
    checkout is on `migrate/wave-1`, which is why the live plan uses a detached checkout of
    `migrate/wave-2` rather than a merge.
@@ -369,7 +383,10 @@ conformance — run through `modules.check("walls")`, no make). Kit suite 82/82.
 (`01de2ae2`); `golden/canonical.json` and `golden/backend-drift.json` re-pinned for the levels
 fixtures only, and the two `knownWasm` markers removed from `test/fixtures/corpus.mjs` (`ab859b4c`).
 Otherwise only import paths (`test/fixtures/engine.mjs` → the barrel) and the guide-prescribed
-fixture edits (`kindOf` re-export, a comment). No frozen test went red twice.
+fixture edits (`kindOf` re-export, a comment). Correction (critic): also `test/bench.mjs`'s
+wasm-missing line in [declared] `9b37264b`, and `test/corpus.mjs` (the manual CLI) in
+`c1a80a53`, undeclared: `process.exit` → `throw` (C43), so an unknown backend exits 1, not 2. No
+frozen test went red twice.
 
 **Known red commit:** `9b37264b` — its own new `test/backends.test.mjs` matched its own source
 (fixed forward by `28dd5667`); every other test is green there.
@@ -420,9 +437,10 @@ Code phase only; nothing live was touched. Conformance **57.8 % → 85.4 % (41/4
 **Frozen tests:** only `glue.test.mjs` changed, at two named pins: publish timing (`dbd56638`, D-J1) and the
 relay refusal message (`5b79802c`, D-J4). No golden changed. New step goldens: `describe.json`, `surface.json`.
 
-**Known red range:** `7dc5fce8..526d1aa8` (journal, behaviour only, every suite green): the core rules
+**Known red range:** `7dc5fce8` → `526d1aa8` (journal, behaviour only, every suite green): the core rules
 destructured the facts the glue passes as getters, so `shouldShowItemBar(null)` threw on any non-pile item
-sheet render ("bar skipped" warn). Skip `7dc5fce8` when bisecting journal behaviour.
+sheet render ("bar skipped" warn). Skip `7dc5fce8` and `f2df3db3` (journal's step 3, still before the fix)
+when bisecting journal behaviour.
 
 **Still failing:** C03 C07 C09 C37 (+ C06w): Wave 7 `module.json` batch. C47: the adjustments row.
 C51: W2-J1. C56: kit gap below.
@@ -663,7 +681,7 @@ W2-L1 (walls) and W2-L2 (the modules outside the six), below.
 
 ## Commit lists
 
-`git log --oneline wave-2-base..f8fb7377` (pentaryn, 253 commits, newest first; this report's commits follow) and the fork's `git log --oneline pentaryn..213c6c3` (43 commits; the last three are wave 1's doc commits on `migrate/wave-1`). A subject carrying `[declared]` changes behaviour; those are listed first.
+`git log --oneline wave-2-base..f8fb7377` (pentaryn, 253 commits, newest first; this report's commits follow) and the fork's `git log --oneline pentaryn..213c6c3` (43 commits; the last three are wave 1's commits on `migrate/wave-1`: two docs, one footprint-script fix). A subject carrying `[declared]` changes behaviour; those are listed first.
 
 **[declared], pentaryn (68):**
 
