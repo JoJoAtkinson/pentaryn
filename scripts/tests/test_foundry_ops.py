@@ -20,6 +20,38 @@ from scripts.foundry.ops import config as cfg
 
 # ── verify(): only a positive 404 may pass ────────────────────────────────────
 
+@pytest.fixture(autouse=True)
+def _no_access_probe(monkeypatch):
+    """verify() first asks whether Cloudflare Access answers; never over the network here."""
+    monkeypatch.setattr(pipeline, "_access_gated", lambda url: False)
+
+
+def test_verify_behind_access_with_the_tunnel_down_passes(monkeypatch):
+    """Access's login page followed to a 200 used to read as STILL EXPOSED (2026-10-11)."""
+    monkeypatch.setattr(pipeline, "_access_gated", lambda url: True)
+    monkeypatch.setattr(service, "_tunnel_pid", lambda: None)
+    monkeypatch.setattr(pipeline, "_http_code", lambda url, t: 200)
+    assert pipeline.verify() == 0
+
+
+def test_verify_behind_access_with_the_tunnel_up_fails(monkeypatch):
+    """With the tunnel up a script cannot see past Access, so it is not proof."""
+    monkeypatch.setattr(pipeline, "_access_gated", lambda url: True)
+    monkeypatch.setattr(service, "_tunnel_pid", lambda: 4242)
+    monkeypatch.setattr(pipeline, "_http_code", lambda url, t: 404)
+    assert pipeline.verify() == 1
+
+
+def test_access_gated_reads_the_login_redirect(monkeypatch):
+    login = "https://team.cloudflareaccess.com/cdn-cgi/access/login/vtt.atjoseph.com?x=1"
+    monkeypatch.undo()
+    monkeypatch.setattr(pipeline, "_probe", lambda url, t: (302, login))
+    assert pipeline._access_gated(cfg.ACTORS_URL) is True
+    monkeypatch.setattr(pipeline, "_probe", lambda url, t: (302, "/join"))
+    assert pipeline._access_gated(cfg.ACTORS_URL) is False
+    monkeypatch.setattr(pipeline, "_probe", lambda url, t: (404, ""))
+    assert pipeline._access_gated(cfg.ACTORS_URL) is False
+
 @pytest.mark.parametrize(
     "root_code,actors_code,expected,why",
     [

@@ -15,7 +15,8 @@ import sys
 
 from . import config as cfg
 from .modules import install
-from .service import _http_code, _say
+from . import service
+from .service import _http_code, _probe, _say
 
 OK, FAIL = 0, 1
 
@@ -101,6 +102,20 @@ def verify() -> int:
     file is gone, and a player's browser sails past exactly the challenge a scripted
     request trips over.
     """
+    if _access_gated(cfg.ACTORS_URL):
+        # Cloudflare Access answers before the tunnel does: an anonymous request is sent
+        # to its login page, and urllib follows that redirect to a 200 — which read as
+        # "STILL EXPOSED" even with the tunnel down (2026-10-11 deploy).
+        if service._tunnel_pid() is None:
+            _say(f"▸ Cloudflare Access answers for {cfg.TUNNEL_HOST} and this host's tunnel "
+                 "is not running — nothing is served from here; the file is deleted on disk.")
+            return OK
+        _say("✗ the tunnel is up, but Cloudflare Access answers a scripted request with its "
+             "login page,")
+        _say("  so nothing here can see whether Foundry still serves the file. Check by hand "
+             f"in a logged-in browser: {cfg.ACTORS_URL} must be a 404.")
+        return FAIL
+
     root = _http_code(f"https://{cfg.TUNNEL_HOST}/", 8.0)
     if root not in (200, 302):
         _say(f"▸ tunnel not reachable (site root HTTP {root or '000'}) — "
@@ -123,6 +138,12 @@ def verify() -> int:
     _say("  a scripted request differently than a player's browser. Run: make foundry-clean,")
     _say(f"  then check by hand: {cfg.ACTORS_URL}")
     return FAIL
+
+
+def _access_gated(url: str) -> bool:
+    """True when Cloudflare Access, not Foundry, answers ``url`` (a redirect to its login)."""
+    code, location = _probe(url, 8.0)
+    return 300 <= code < 400 and ".cloudflareaccess.com/" in location
 
 
 # NOTE: plain str.replace, not str.format — the body is full of JS object literals
