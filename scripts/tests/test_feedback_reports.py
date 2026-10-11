@@ -295,3 +295,12 @@ def test_cli(store, capsys):
     assert "error: no report" in capsys.readouterr().err
     assert fr.main(["resolve", OPEN, "wontfix", "not reproducible"]) == 0
     assert _on_disk(store, "pentaryn", OPEN)["status"] == "wontfix"
+
+
+def test_render_shows_failed_capture_sections_and_unreadable_window_rows():
+    report = json.loads((FIXTURES / "pentaryn" / f"{OPEN}.json").read_text())
+    report["sectionErrors"] = {"windows": "instances broke"}
+    report["windows"] = [{"id": "", "cls": "?", "title": "", "error": "title broke"}]
+    out = fr.render_markdown(report, now_ms=T_OPEN, tz=dt.timezone.utc)
+    assert "- capture failed (section: error): windows: instances broke" in out
+    assert '- windows: ? (unreadable: title broke)' in out

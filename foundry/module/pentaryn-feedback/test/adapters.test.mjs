@@ -101,3 +101,37 @@ test("windowRow / attachSummary", () => {
   assert.deepEqual(attachSummary({ user: { name: "P" }, scene: { viewed: { name: "S" } }, chat: [1], windows: [1, 2], modules: [] }, { actions: 4, errors: 1 }),
     { user: "P", scene: "S", actions: 4, errors: 1, chat: 1, windows: 2, modules: 0 });
 });
+
+test("snapshot: one bad row (a window whose title getter throws, an unreadable chat message) is a row with an error, not a lost section", () => {
+  class BrokenSheet { get title() { throw new Error("title broke"); } }
+  const apps = new Map([["ok", Object.assign(new (class GoodSheet {})(), { id: "ok", title: "Fine" })], ["bad", Object.assign(new BrokenSheet(), { id: "bad" })]]);
+  const badMessage = { get author() { throw new Error("author broke"); } };
+  const g = {
+    ...globalThis,
+    foundry: { ...foundry, applications: { ...foundry.applications, instances: apps } },
+    game: { ...game, messages: { contents: [...game.messages.contents, badMessage] } },
+  };
+  const snap = snapshot({ g });
+  assert.ok(Array.isArray(snap.windows), "the section survives");
+  assert.deepEqual(snap.windows.find(w => w.id === "ok"), { id: "ok", cls: "GoodSheet", title: "Fine" });
+  assert.deepEqual(snap.windows.find(w => w.cls === "?"), { id: "", cls: "?", title: "", error: "title broke" });
+  assert.ok(Array.isArray(snap.chat), "an unreadable message is skipped, the section survives");
+});
+
+test("buildReport: a failed list section ({ error }) becomes [] with sectionErrors, and the report validates and files", async () => {
+  const { buildReport, normaliseReport, validateReport } = await import("../feedback-core.mjs");
+  const g = {
+    ...globalThis,
+    foundry: { ...foundry, applications: { ...foundry.applications, get instances() { throw new Error("instances broke"); } } },
+    game: { ...game, get modules() { throw new Error("modules broke"); } },
+  };
+  const snap = snapshot({ g });
+  assert.deepEqual(snap.windows, { error: "instances broke" });
+  const report = buildReport({ id: "k3Yx9Qp2LmN7aB4c", t: 1, draft: { text: "it broke" }, snapshot: snap });
+  assert.deepEqual(report.windows, []);
+  assert.deepEqual(report.modules, []);
+  assert.deepEqual(report.sectionErrors, { windows: "instances broke", modules: "modules broke" });
+  assert.deepEqual(validateReport(report), { ok: true });
+  const filed = normaliseReport(report, { user: { id: "u1", name: "P" } });
+  assert.deepEqual(filed.sectionErrors, { windows: "instances broke", modules: "modules broke" });
+});

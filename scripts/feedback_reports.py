@@ -332,7 +332,9 @@ def render_markdown(report: dict[str, Any], now_ms: int | None = None, tz: dt.tz
     lines += ["", "## Report", str(report.get("text") or "").strip() or "(empty)", "", "## Context"]
 
     wins = [w for w in report.get("windows") or [] if isinstance(w, dict)]
-    lines.append("- windows: " + (", ".join(f"{w.get('cls')} {_q(w.get('title'))}".strip() for w in wins) or "—"))
+    lines.append("- windows: " + (", ".join(
+        f"{w.get('cls')} {_q(w.get('title'))}".strip() + (f" (unreadable: {_one_line(w['error'], 80)})" if w.get("error") else "")
+        for w in wins) or "—"))
     client = report.get("client") or {}
     lines.append(f"- client: {client.get('viewport') or '?'} · {client.get('lang') or '?'} · {_ua(client.get('ua'))}"
                  + (f" · {client['tz']}" if isinstance(client.get("tz"), str) else ""))
@@ -341,6 +343,9 @@ def render_markdown(report: dict[str, Any], now_ms: int | None = None, tz: dt.tz
     lines.append("- chat (own, last 10): " + (" · ".join(
         f"{_rel(c.get('t'), t)} {c.get('flavor') or c.get('id')}" + (f" ({c['total']})" if c.get("total") is not None else "")
         for c in chat) or "—"))
+    broken = report.get("sectionErrors")
+    if isinstance(broken, dict) and broken:
+        lines.append("- capture failed (section: error): " + "; ".join(f"{k}: {_one_line(v, 120)}" for k, v in broken.items()))
     errors = [e for e in report.get("errors") or [] if isinstance(e, dict)]
     lines.append(f"- errors ({len(errors)}):" + ("" if errors else " —"))
     shown = errors[-_ERRORS_IN_FULL:]

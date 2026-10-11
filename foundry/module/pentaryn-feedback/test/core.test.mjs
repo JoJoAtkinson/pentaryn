@@ -193,6 +193,21 @@ test("buildReport: schema v1 with every key in file order", () => {
   assert.equal(sample({ draft: { category: "wat", text: "t" } }).category, "bug");
 });
 
+test("buildReport: every snapshot section in a shape validateReport accepts; failures under sectionErrors", () => {
+  const r = sample({ snapshot: { world: { error: "w broke" }, combat: { error: "c broke" }, chat: { error: "chat broke" }, windows: "junk", modules: null } });
+  assert.equal(r.world, null);
+  assert.equal(r.combat, null);
+  assert.deepEqual([r.chat, r.windows, r.modules], [[], [], []]);
+  assert.deepEqual(r.sectionErrors, { windows: "not a list (string)", chat: "chat broke", world: "w broke", combat: "c broke" });
+  assert.equal(r.truncated, 0);
+  assert.deepEqual(core.validateReport(r), { ok: true });
+  assert.deepEqual(sample().sectionErrors, {});
+  const n = core.normaliseReport({ ...r, sectionErrors: { chat: "x".repeat(900), evil: "y", world: 3 }, truncated: -4 }, { user: {} });
+  assert.deepEqual(Object.keys(n.sectionErrors), ["chat"]);
+  assert.equal(n.sectionErrors.chat.length, LIMITS.message);
+  assert.equal(n.truncated, 0);
+});
+
 test("validateReport: a good report passes; each broken field is named", () => {
   assert.deepEqual(core.validateReport(sample()), { ok: true });
   const broken = [

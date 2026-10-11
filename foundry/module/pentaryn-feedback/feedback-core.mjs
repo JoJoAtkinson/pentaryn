@@ -79,8 +79,12 @@ export const STATUSES = Object.freeze(["open", "triaged", "resolved", "wontfix"]
 export const REPORT_KEYS = Object.freeze([
   "schemaVersion", "id", "t", "iso", "receivedAt", "category", "text", "status", "history",
   "user", "world", "scene", "tokens", "combat", "windows", "modules", "client", "chat",
-  "errors", "actions", "module",
+  "errors", "actions", "truncated", "sectionErrors", "module",
 ]);
+
+/** Snapshot sections, by shape. A section that failed arrives as `{ error }` (snapshot-adapter). */
+export const LIST_SECTIONS = Object.freeze(["windows", "modules", "chat"]);
+export const OBJECT_SECTIONS = Object.freeze(["user", "world", "scene", "tokens", "combat", "client"]);
 
 /* ── text hygiene ─────────────────────────────────────────────────────────── */
 
@@ -223,12 +227,45 @@ export function userFields({ id, name, role, isGM, character } = {}) {
   };
 }
 
+/** A snapshot section that failed: `{ error: "…" }` and nothing else. */
+const failed = v => !!v && typeof v === "object" && !Array.isArray(v) && typeof v.error === "string"
+  && Object.keys(v).length === 1;
+
+/**
+ * The snapshot's sections in the shapes validateReport accepts: a list section is always a list
+ * (`[]` when it failed or is not a list) and an object section is an object or null. Each failure
+ * is kept as `sectionErrors[section] = message`, so a broken capture never blocks the report.
+ */
+export function sectionsOf(snapshot) {
+  const snap = snapshot && typeof snapshot === "object" ? snapshot : {};
+  const out = {};
+  const sectionErrors = {};
+  for (const k of LIST_SECTIONS) {
+    const v = snap[k];
+    if (Array.isArray(v)) out[k] = v;
+    else {
+      out[k] = [];
+      if (failed(v)) sectionErrors[k] = clip(v.error, LIMITS.message);
+      else if (v !== undefined && v !== null) sectionErrors[k] = `not a list (${typeof v})`;
+    }
+  }
+  for (const k of OBJECT_SECTIONS) {
+    const v = snap[k];
+    if (failed(v)) {
+      out[k] = null;
+      sectionErrors[k] = clip(v.error, LIMITS.message);
+    } else out[k] = v && typeof v === "object" && !Array.isArray(v) ? v : null;
+  }
+  return { ...out, sectionErrors };
+}
+
 /**
  * The report a client builds at submit. `snapshot` is snapshot-adapter's output; `actions` and
  * `errors` are the recorder's rings (newest last). Nothing here reads a global.
  */
 export function buildReport({ id, t, draft, snapshot = {}, actions = [], errors = [], moduleVersion = VERSION }) {
   const d = draftFrom(draft);
+  const s = sectionsOf(snapshot);
   return {
     schemaVersion: SCHEMA_VERSION,
     id, t, iso: new Date(t).toISOString(),
@@ -237,17 +274,19 @@ export function buildReport({ id, t, draft, snapshot = {}, actions = [], errors 
     text: d.text,
     status: "open",
     history: [],
-    user: snapshot.user ?? null,
-    world: snapshot.world ?? null,
-    scene: snapshot.scene ?? null,
-    tokens: snapshot.tokens ?? null,
-    combat: snapshot.combat ?? null,
-    windows: snapshot.windows ?? [],
-    modules: snapshot.modules ?? [],
-    client: snapshot.client ?? null,
-    chat: snapshot.chat ?? [],
-    errors: errors.slice(-LIMITS.errorsMax),
-    actions: actions.slice(-LIMITS.actionsMax),
+    user: s.user,
+    world: s.world,
+    scene: s.scene,
+    tokens: s.tokens,
+    combat: s.combat,
+    windows: s.windows,
+    modules: s.modules,
+    client: s.client,
+    chat: s.chat,
+    errors: (Array.isArray(errors) ? errors : []).slice(-LIMITS.errorsMax),
+    actions: (Array.isArray(actions) ? actions : []).slice(-LIMITS.actionsMax),
+    truncated: 0,
+    sectionErrors: s.sectionErrors,
     module: { id: MODULE, version: moduleVersion },
   };
 }
@@ -293,6 +332,16 @@ function cleanEntry(entry, cap = LIMITS.field) {
   return out;
 }
 
+/** `{ section: message }` for known section names only, each message re-capped. */
+function sectionErrorsOf(v) {
+  const out = {};
+  if (!v || typeof v !== "object" || Array.isArray(v)) return out;
+  for (const k of [...OBJECT_SECTIONS, ...LIST_SECTIONS]) {
+    if (typeof v[k] === "string") out[k] = clip(v[k], LIMITS.message);
+  }
+  return out;
+}
+
 const listOf = (v, max, cap) => (Array.isArray(v) ? v.slice(-max).map(e => cleanEntry(e, cap)).filter(Boolean) : []);
 
 /**
@@ -325,6 +374,8 @@ export function normaliseReport(report, { user, receivedAt }) {
     chat: listOf(r.chat, LIMITS.chatMax),
     errors: listOf(r.errors, LIMITS.errorsMax),
     actions: listOf(r.actions, LIMITS.actionsMax),
+    truncated: Number.isInteger(r.truncated) && r.truncated > 0 ? r.truncated : 0,
+    sectionErrors: sectionErrorsOf(r.sectionErrors),
     module: cleanEntry(r.module) ?? { id: MODULE, version: VERSION },
   };
   return out;

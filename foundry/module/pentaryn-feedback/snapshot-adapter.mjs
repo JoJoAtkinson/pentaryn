@@ -3,7 +3,9 @@
  *
  * The only file that reads canvas / ui / game state for a report (the recorder reads only what its
  * hooks hand it). `snapshot({ g })` never throws: every section runs in its own try and reports
- * `{ error }` on failure, so one broken section never blocks a report. Reads only — nothing here
+ * `{ error }` on failure, and every row of a list section (windows, modules, chat) runs in its own
+ * try too (a bad row becomes a row with an `error` field). buildReport moves a section's `{ error }`
+ * to `sectionErrors`, so one broken section never blocks a report. Reads only — nothing here
  * awaits or writes.
  *
  * Never attached: other users' chat, whisper text, chat content, setting values, form input values,
@@ -17,6 +19,15 @@ const section = fn => {
     return fn();
   } catch (err) {
     return { error: clip(messageOf(err), LIMITS.message) };
+  }
+};
+
+/** `fn(x)` for one row; a throw becomes `{ ...fallback, error }` so one bad row never loses the section. */
+const row = (fn, fallback = {}) => x => {
+  try {
+    return fn(x);
+  } catch (err) {
+    return { ...fallback, error: clip(messageOf(err), LIMITS.message) };
   }
 };
 
@@ -77,11 +88,14 @@ export function snapshot({ g = globalThis } = {}) {
     windows: section(() => {
       const v2 = [...(g.foundry?.applications?.instances?.values?.() ?? [])];
       const v1 = Object.values(g.ui?.windows ?? {});
-      return [...v2, ...v1].slice(0, LIMITS.windowsMax).map(windowRow);
+      return [...v2, ...v1].slice(0, LIMITS.windowsMax).map(row(windowRow, { id: "", cls: "?", title: "" }));
     }),
     modules: section(() => {
       const out = [];
-      for (const m of game.modules?.values?.() ?? []) if (m?.active) out.push({ id: m.id, version: m.version ?? null });
+      for (const m of game.modules?.values?.() ?? []) {
+        const r = row(x => (x?.active ? { id: clip(x.id), version: x.version ?? null } : null), { id: "?" })(m);
+        if (r) out.push(r);
+      }
       return out;
     }),
     client: section(() => ({
@@ -93,8 +107,14 @@ export function snapshot({ g = globalThis } = {}) {
     chat: section(() => {
       const me = game.user?.id;
       const mine = (game.messages?.contents ?? [...(game.messages?.values?.() ?? [])])
-        .filter(m => (m.author?.id ?? m.author ?? m.user?.id ?? m.user) === me);
-      return mine.slice(-LIMITS.chatMax).map(m => chatEntry(m));
+        .filter(m => {
+          try {
+            return (m.author?.id ?? m.author ?? m.user?.id ?? m.user) === me;
+          } catch (err) {
+            return false;                 // an unreadable message is not attached, never fatal
+          }
+        });
+      return mine.slice(-LIMITS.chatMax).map(row(m => chatEntry(m), { id: "" }));
     }),
   };
 }
