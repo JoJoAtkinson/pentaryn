@@ -1,0 +1,70 @@
+[
+  {
+    "kind": "on",
+    "name": "createToken"
+  },
+  {
+    "kind": "on",
+    "name": "updateToken"
+  },
+  {
+    "kind": "on",
+    "name": "updateActor"
+  },
+  {
+    "kind": "on",
+    "name": "createUser"
+  },
+  {
+    "kind": "on",
+    "name": "updateUser"
+  },
+  {
+    "kind": "on",
+    "name": "deleteUser"
+  },
+  {
+    "kind": "on",
+    "name": "canvasReady"
+  },
+  {
+    "kind": "on",
+    "name": "createToken"
+  },
+  {
+    "kind": "on",
+    "name": "deleteToken"
+  },
+  {
+    "kind": "on",
+    "name": "updateToken"
+  },
+  {
+    "kind": "on",
+    "name": "updateActor"
+  },
+  {
+    "kind": "on",
+    "name": "updateUser"
+  },
+  {
+    "kind": "on",
+    "name": "controlToken"
+  },
+  {
+    "kind": "once",
+    "name": "init"
+  },
+  {
+    "kind": "once",
+    "name": "setup"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
+  }
+]

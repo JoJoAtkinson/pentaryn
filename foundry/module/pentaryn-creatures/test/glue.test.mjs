@@ -1,0 +1,383 @@
+// Glue characterisation on the active GM's client (guide step 1). The unchanged entry is loaded as
+// Foundry would, init/setup/ready are fired, and its effects are pinned: the 17-row hook manifest,
+// the four settings.register option objects, the light writer (ready sync, the 200 ms debounced queue,
+// which changes queue, the GM gate, the failure texts), the deferred publish and the legacy API.
+// Timers are mocked; nothing waits on a real clock.
+//
+// Separate processes: glue-player.test.mjs (a player client: owner-sees, the strip, the dock),
+// glue-libwrapper*.test.mjs and glue-nogetter.test.mjs (the other patch paths), publish.test.mjs
+// (game.pentaryn root shapes).
+//
+// KNOWN rows (pinned as they are; each has its target as a todo test at the end):
+//   transform-creatures-26  the queue is a debounce: steady traffic pushes the flush back
+//   transform-creatures-27  our own light write re-queues a second, no-op pass; no options argument
+//   transform-creatures-31  syncScene(scene, ["id"]) throws `ids.has is not a function`
+import { mock, test } from "node:test";
+import assert from "node:assert/strict";
+import { manifestOf, pinJSON } from "./kit/harness.mjs";
+import { ALPHA, BETA, GAMMA, GM, LANG, MODULE, PLAYER, drain, registerSelf, setupWorld } from "./fixtures/world.mjs";
+import * as legacy from "./fixtures/legacy-creatures.mjs";
+import * as core from "../creatures-core.mjs";
+
+mock.timers.enable({ apis: ["setTimeout", "setInterval"] });
+
+const manifest = manifestOf(new URL("..", import.meta.url));
+// lib-wrapper is active but its global is missing: the direct path is taken
+const W = await setupWorld({ libWrapperModule: true });
+const { F } = W;
+registerSelf(F, manifest);
+
+await import("../creatures.mjs");
+
+const FK = `flags.${MODULE}.light`;
+const lit = (id, r = 5) => ({ _id: id, "light.bright": r, "light.dim": r, [FK]: { bright: r, dim: r } });
+const api = () => F.game.pentaryn.creatures;
+const writes = () => W.writes.splice(0);
+/** Advance the mocked clock and let the async light flush finish. */
+const tick = async ms => {
+  mock.timers.tick(ms);
+  await drain();
+};
+/** Put a token back to dark and unflagged, as if the light had never been written. */
+const reset = (...ids) => {
+  for (const id of ids) {
+    const t = W.tok(id);
+    t.light = { bright: 0, dim: 0 };
+    delete t.flags[MODULE];
+  }
+};
+
+const ROWS = [
+  "on:createToken", "on:updateToken", "on:updateActor", "on:createUser", "on:updateUser", "on:deleteUser",
+  "on:canvasReady", "on:createToken", "on:deleteToken", "on:updateToken", "on:updateActor", "on:updateUser",
+  "on:controlToken", "once:init", "once:setup", "once:ready", "once:ready",
+];
+
+test("registration manifest: 17 rows in source order (golden/hooks.json)", () => {
+  pinJSON("hooks", F.hooks, import.meta.url);
+  assert.deepEqual(F.hooks.map(h => `${h.kind}:${h.name}`), ROWS);
+});
+
+test("import alone: no settings, no writes, no patch, no namespace, no DOM", () => {
+  assert.deepEqual(F.calls, []);
+  assert.deepEqual(W.writes, []);
+  assert.equal(Object.getOwnPropertyDescriptor(W.TokenClass.prototype, "isVisible").get, W.coreGetter);
+  assert.equal(F.game.pentaryn, undefined);
+  assert.equal(W.strip(), null);
+  assert.deepEqual(W.lines(), []);
+});
+
+test("init registers lightRadius, ownerSees, floatOverHud, showStrip — option objects key by key", () => {
+  F.fire("init");
+  assert.deepEqual(F.calls, ["lightRadius", "ownerSees", "floatOverHud", "showStrip"].map(k => ({ op: "settings.register", id: `${MODULE}.${k}` })));
+  const opts = key => {
+    const { namespace, key: _k, ...rest } = F.game.settings.settings.get(`${MODULE}.${key}`);
+    assert.equal(namespace, MODULE);
+    return rest;
+  };
+  const label = key => ({ name: `PENTARYN_CREATURES.settings.${key}.name`, hint: `PENTARYN_CREATURES.settings.${key}.hint` });
+
+  const lightRadius = opts("lightRadius");
+  assert.deepEqual(Object.keys(lightRadius), ["name", "hint", "scope", "config", "type", "default", "range", "onChange"]);
+  assert.equal(lightRadius.type, Number);
+  assert.equal(typeof lightRadius.onChange, "function");
+  const { onChange: _a, ...lr } = lightRadius;
+  assert.deepEqual(lr, { ...label("lightRadius"), scope: "world", config: true, type: Number, default: 5, range: { min: 0, max: 30, step: 0.5 } });
+
+  const ownerSees = opts("ownerSees");
+  assert.deepEqual(Object.keys(ownerSees), ["name", "hint", "scope", "config", "type", "default", "onChange"]);
+  assert.equal(ownerSees.type, Boolean);
+  const { onChange: _b, ...os } = ownerSees;
+  assert.deepEqual(os, { ...label("ownerSees"), scope: "world", config: true, type: Boolean, default: true });
+
+  const floatOverHud = opts("floatOverHud");
+  assert.deepEqual(Object.keys(floatOverHud), ["name", "hint", "scope", "config", "type", "default"], "no onChange");
+  assert.deepEqual(floatOverHud, { ...label("floatOverHud"), scope: "world", config: true, type: Boolean, default: true });
+
+  const showStrip = opts("showStrip");
+  assert.deepEqual(Object.keys(showStrip), ["name", "hint", "scope", "config", "type", "default", "onChange"]);
+  const { onChange: _c, ...ss } = showStrip;
+  assert.deepEqual(ss, { ...label("showStrip"), scope: "client", config: true, type: Boolean, default: true });
+  assert.equal(F.game.pentaryn, undefined, "nothing published at init");
+});
+
+test("every registered name/hint and the strip's two keys resolve in lang/en.json", () => {
+  for (const [id, s] of F.game.settings.settings) {
+    if (!id.startsWith(`${MODULE}.`)) continue;
+    for (const k of [s.name, s.hint]) assert.ok(F.game.i18n.has(k), k);
+  }
+  for (const k of ["PENTARYN_CREATURES.label", "PENTARYN_CREATURES.hint"]) assert.ok(F.game.i18n.has(k), k);
+  assert.deepEqual(Object.keys(LANG.PENTARYN_CREATURES.settings).sort(), ["floatOverHud", "lightRadius", "ownerSees", "showStrip"]);
+});
+
+test("setup: lib-wrapper active without its global → Token#isVisible replaced directly; the GM is never overridden", () => {
+  F.calls.length = 0;
+  F.fire("setup");
+  const desc = Object.getOwnPropertyDescriptor(W.TokenClass.prototype, "isVisible");
+  assert.notEqual(desc.get, W.coreGetter);
+  assert.equal(desc.configurable, true);
+  assert.equal(desc.enumerable, false);
+  assert.equal(W.p("tImp").isVisible, false, "GM: core said no, the override says no");
+  W.p("tImp").coreVisible = true;
+  assert.equal(W.p("tImp").isVisible, true, "core's yes passes through");
+  W.p("tImp").coreVisible = false;
+  assert.deepEqual(W.wrapped, []);
+  assert.deepEqual(W.lines(), []);
+  assert.deepEqual(F.calls, [], "setup only reads ownerSees");
+});
+
+test("ready (active GM): one write per scene, summons only, no options argument (KNOWN -27); publish waits a tick", async () => {
+  W.reads.length = 0;
+  F.fire("ready");
+  assert.equal(F.game.pentaryn, undefined, "not published synchronously at ready");
+  await drain();
+  assert.deepEqual(writes(), [
+    { scene: ALPHA, type: "Token", updates: [lit("tImp"), lit("tEye"), lit("tHid")], argc: 2 },
+    { scene: BETA, type: "Token", updates: [lit("tImpB")], argc: 2 },
+  ]);
+  assert.equal(W.passes(), 3, "syncAll: one pass per scene (Gamma has no tokens)");
+  assert.deepEqual(W.tok("tImp").light, { bright: 5, dim: 5 });
+  assert.deepEqual(W.tok("tImp").flags[MODULE], { light: { bright: 5, dim: 5 } });
+  assert.deepEqual(W.tok("tTorch").light, { bright: 20, dim: 40 }, "own torch left alone");
+  await tick(0);
+  assert.equal(typeof api(), "object", "published one tick after ready");
+  assert.equal(F.game.modules.get(MODULE).api, undefined, "no module.api");
+});
+
+test("KNOWN transform-creatures-27: our own write re-queues itself and a second pass writes nothing", async () => {
+  W.reads.length = 0;
+  await tick(199);
+  assert.equal(W.passes(), 0);
+  await tick(1);
+  assert.equal(W.passes(), 2, "Alpha and Beta re-checked");
+  assert.deepEqual(writes(), [], "the second pass is a no-op");
+  await tick(1000);
+  assert.equal(W.passes(), 2, "and it does not loop");
+});
+
+test("GM client: the strip never mounts", async () => {
+  await tick(60);
+  assert.equal(W.strip(), null);
+  api().render();
+  assert.equal(W.strip(), null);
+});
+
+test("legacy surface ⊇ golden/legacy-surface.json; core is the module namespace", () => {
+  const legacyKeys = pinJSON("legacy-surface", ["core", "isCreature", "list", "ownerSees", "patchedWith", "render", "syncAll", "syncScene"], import.meta.url);
+  const keys = Object.keys(api());
+  for (const k of legacyKeys) assert.ok(keys.includes(k), k);
+  assert.deepEqual(keys, ["list", "render", "syncScene", "syncAll", "isCreature", "ownerSees", "patchedWith", "core"]);
+  for (const k of keys.filter(k => k !== "core")) assert.equal(typeof api()[k], "function", k);
+  assert.equal(api().core.lightUpdate, core.lightUpdate);
+  assert.equal(Object.isFrozen(api()), false);
+  assert.equal(api().patchedWith(), "direct");
+});
+
+test("oracle: isCreature and list() agree with the verbatim legacy summarize (fixtures/legacy-creatures.mjs)", () => {
+  const rook = F.game.users.get(PLAYER);
+  const all = [...F.game.scenes].flatMap(s => [...s.tokens]);
+  const got = Object.fromEntries(all.map(t => [t.id, api().isCreature(t)]));
+  const want = Object.fromEntries(all.map(t => [t.id, core.isPlayerCreature(legacy.summarize(t, F.game.user))]));
+  assert.deepEqual(got, want);
+  assert.deepEqual(Object.keys(got).filter(k => got[k]), ["tImp", "tEye", "tTorch", "tHid", "tImpB"]);
+  const alpha = W.scene(ALPHA);
+  const entries = core.stripEntries([...alpha.tokens].map(t => legacy.summarize(t, rook)), { characterId: "aPC" });
+  assert.deepEqual(api().list(rook, alpha), entries);
+  assert.deepEqual(entries.map(e => [e.id, e.rank]), [["tPC", 0], ["tEye", 2], ["tImp", 2], ["tTorch", 2]]);
+  assert.deepEqual(api().list(F.game.user, W.scene(GAMMA)), [], "GM owns nothing as a character; empty scene");
+  assert.deepEqual(api().list(rook, null), [], "no scene");
+});
+
+test("KNOWN transform-creatures-26: a debounce — queues at 0/50/100/150/190 flush once, at 390", async () => {
+  W.reads.length = 0;
+  const imp = W.tok("tImp");
+  for (const step of [0, 50, 50, 50, 40]) {
+    await tick(step);
+    F.fire("updateToken", imp, { flags: {} }, {}, GM);
+  }
+  await tick(199);
+  assert.equal(W.passes(), 0, "nothing at 389");
+  await tick(1);
+  assert.equal(W.passes(), 1, "one pass at 390, for Alpha only");
+  await tick(1000);
+  assert.equal(W.passes(), 1);
+});
+
+test("updateToken queues only on light, actorId, actorLink, delta, flags", async () => {
+  const imp = W.tok("tImp");
+  const table = [{ x: 1 }, { y: 2, elevation: 5 }, { name: "n" }, { hidden: true }, { light: {} }, { actorId: "aImp" }, { actorLink: true }, { delta: {} }, { flags: {} }, null, undefined];
+  const out = [];
+  for (const changes of table) {
+    W.reads.length = 0;
+    F.fire("updateToken", imp, changes, {}, GM);
+    await tick(200);
+    out.push(W.passes());
+  }
+  assert.deepEqual(out, [0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0]);
+  assert.deepEqual(writes(), []);
+});
+
+test("createToken queues that token on its scene; flush writes only the queued ids", async () => {
+  reset("tImp", "tEye", "tImpB");
+  F.fire("createToken", W.tok("tEye"), {}, GM);
+  await tick(200);
+  assert.deepEqual(writes(), [{ scene: ALPHA, type: "Token", updates: [lit("tEye")], argc: 2 }]);
+  await tick(200);   // -27's echo pass
+  F.fire("createToken", W.tok("tImpB"), {}, GM);
+  F.fire("createToken", W.tok("tImp"), {}, GM);
+  await tick(200);
+  assert.deepEqual(writes(), [
+    { scene: BETA, type: "Token", updates: [lit("tImpB")], argc: 2 },
+    { scene: ALPHA, type: "Token", updates: [lit("tImp")], argc: 2 },
+  ], "scenes in queue order");
+  await tick(200);
+});
+
+test("updateActor: ownership or type → every token of that actor, on every scene; other changes nothing", async () => {
+  const imp = F.game.actors.get("aImp");
+  reset("tImp", "tHid", "tImpB", "tEye");
+  for (const changes of [{ name: "x" }, { img: "y" }, null]) F.fire("updateActor", imp, changes, {}, GM);
+  await tick(200);
+  assert.deepEqual(writes(), []);
+  F.fire("updateActor", imp, { ownership: { [PLAYER]: 3 } }, {}, GM);
+  await tick(200);
+  assert.deepEqual(writes(), [
+    { scene: ALPHA, type: "Token", updates: [lit("tImp"), lit("tHid")], argc: 2 },
+    { scene: BETA, type: "Token", updates: [lit("tImpB")], argc: 2 },
+  ], "tEye (another actor) is not touched");
+  await tick(200);
+  reset("tImp");
+  F.fire("updateActor", imp, { type: "npc" }, {}, GM);
+  await tick(200);
+  assert.deepEqual(writes().map(w => w.updates.map(u => u._id)), [["tImp"]]);
+  await tick(200);
+});
+
+test("updateActor on a synthetic (unlinked) actor queues its own token only", async () => {
+  const synthetic = { id: "synth", isToken: true, token: W.tok("tEye") };
+  F.fire("updateActor", synthetic, { ownership: {} }, {}, GM);
+  await tick(200);
+  assert.deepEqual(writes(), [{ scene: ALPHA, type: "Token", updates: [lit("tEye")], argc: 2 }]);
+  await tick(200);
+});
+
+test("users: createUser, deleteUser and a role change re-check every scene; other user updates do not", async () => {
+  const user = F.game.users.get(PLAYER);
+  const out = [];
+  for (const [hook, changes] of [["updateUser", { name: "n" }], ["updateUser", null], ["updateUser", { role: 2 }], ["createUser", {}], ["deleteUser", {}]]) {
+    W.reads.length = 0;
+    F.fire(hook, user, changes, {}, GM);
+    await tick(200);
+    out.push([hook, W.passes()]);
+  }
+  assert.deepEqual(out, [["updateUser", 0], ["updateUser", 0], ["updateUser", 3], ["createUser", 3], ["deleteUser", 3]]);
+  assert.deepEqual(writes(), []);
+});
+
+test("lightRadius onChange (active GM): syncAll moves our lights, 0 darkens and unflags, junk reads as 0", async () => {
+  await F.game.settings.set(MODULE, "lightRadius", 0.5);
+  await drain();
+  assert.deepEqual(writes(), [
+    { scene: ALPHA, type: "Token", updates: [lit("tImp", 0.5), lit("tEye", 0.5), lit("tHid", 0.5)], argc: 2 },
+    { scene: BETA, type: "Token", updates: [lit("tImpB", 0.5)], argc: 2 },
+  ]);
+  await tick(200);
+  const off = id => ({ _id: id, "light.bright": 0, "light.dim": 0, [FK]: null });
+  await F.game.settings.set(MODULE, "lightRadius", "x");
+  await drain();
+  assert.deepEqual(writes(), [
+    { scene: ALPHA, type: "Token", updates: [off("tImp"), off("tEye"), off("tHid")], argc: 2 },
+    { scene: BETA, type: "Token", updates: [off("tImpB")], argc: 2 },
+  ]);
+  assert.equal(W.tok("tImp").flags[MODULE].light, null);
+  await tick(200);
+  await F.game.settings.set(MODULE, "lightRadius", 5);
+  await drain();
+  assert.equal(writes().flatMap(w => w.updates).length, 4, "relit");
+  await tick(200);
+});
+
+test("a token whose light was set to 0 by hand is flagged false and never relit", async () => {
+  const eye = W.tok("tEye");
+  eye.light = { bright: 0, dim: 0 };
+  F.fire("updateToken", eye, { light: { bright: 0 } }, {}, GM);
+  await tick(200);
+  assert.deepEqual(writes(), [{ scene: ALPHA, type: "Token", updates: [{ _id: "tEye", [FK]: false }], argc: 2 }]);
+  await tick(200);
+  assert.equal(await api().syncScene(W.scene(ALPHA)), 0);
+  assert.equal(eye.flags[MODULE].light, false);
+});
+
+test("failure texts: a failed queued write names the scene; a failed setting-driven sync does not", async () => {
+  reset("tImp");
+  W.failWrite.push(new Error("db down"));
+  F.fire("createToken", W.tok("tImp"), {}, GM);
+  await tick(200);
+  assert.deepEqual(W.lines(), [["warn", `${MODULE} | light sync failed on Alpha`, "Error: db down"]]);
+  writes();
+  W.failWrite.push(new Error("db down again"));
+  await F.game.settings.set(MODULE, "lightRadius", 5);
+  await drain();
+  assert.deepEqual(W.lines(), [["warn", `${MODULE} | light sync failed`, "Error: db down again"]]);
+  writes();
+  await tick(200);
+  writes();
+});
+
+test("api.syncScene / syncAll return counts; a Set of ids narrows; KNOWN transform-creatures-31: an array throws", async () => {
+  reset("tImp", "tEye");
+  assert.equal(await api().syncScene(W.scene(ALPHA), new Set(["tImp"])), 1);
+  assert.equal(await api().syncScene(W.scene(ALPHA)), 1, "tEye was left for the full pass");
+  assert.equal(await api().syncScene(W.scene(ALPHA)), 0);
+  await assert.rejects(api().syncScene(W.scene(ALPHA), ["tImp"]), { name: "TypeError", message: "ids.has is not a function" });
+  assert.equal(await api().syncAll(), 0);
+  await tick(200);
+  writes();
+});
+
+test("api.ownerSees on the GM is always false; isCreature reads the GM's view", () => {
+  assert.equal(api().ownerSees(W.p("tImp")), false);
+  assert.equal(api().ownerSees(W.tok("tImp")), false);
+  assert.equal(api().isCreature(W.tok("tImp")), true);
+  assert.equal(api().isCreature(W.tok("tPC")), false);
+  assert.deepEqual(W.lines(), []);
+});
+
+test("ownerSees onChange on the GM: refreshes every placeable when the canvas is ready, never when it is not", async () => {
+  W.flags = [];
+  F.canvas.ready = true;
+  await F.game.settings.set(MODULE, "ownerSees", false);
+  assert.equal(W.flags.length, F.canvas.tokens.placeables.length);
+  assert.deepEqual(W.flags[0], ["tPC", { refreshVisibility: true }]);
+  F.canvas.ready = false;
+  W.flags = [];
+  await F.game.settings.set(MODULE, "ownerSees", true);
+  assert.deepEqual(W.flags, []);
+  F.canvas.ready = true;
+});
+
+test("a setting read that throws falls back to the default: lightRadius → 5", async () => {
+  reset("tImp");
+  await F.game.settings.set(MODULE, "lightRadius", 2);
+  await drain();
+  writes();
+  await tick(200);
+  reset("tImp");
+  W.failRead.add("lightRadius");
+  assert.equal(await api().syncScene(W.scene(ALPHA), new Set(["tImp"])), 1);
+  assert.deepEqual(writes(), [{ scene: ALPHA, type: "Token", updates: [lit("tImp", 5)], argc: 2 }]);
+  W.failRead.delete("lightRadius");
+  await tick(200);
+  writes();
+});
+
+test("controlToken with no strip on the page does nothing", () => {
+  assert.equal(W.strip(), null);
+  F.fire("controlToken", W.p("tImp"), true);
+  assert.equal(W.strip(), null);
+});
+
+/* ── the targets of the KNOWN rows (guide §4 and step 7) ─────────────────── */
+test.todo("transform-creatures-26: the light queue is armed once and never pushed back — 0/50/100/150/190 → one pass at 200");
+test.todo("transform-creatures-27: our own light write carries {pentarynCreatures: true}, so the echo pass does not happen");
+test.todo("transform-creatures-31: syncScene(scene, [\"id\"]) and a bare id narrow the pass instead of throwing (step 7, API boundary)");
