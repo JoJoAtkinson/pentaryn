@@ -486,6 +486,45 @@ def test_no_record_cannot_tell_notice_without_a_terminal(two_hosts, tty, capsys)
     assert "may be newer than this world (cannot tell" in capsys.readouterr().out
 
 
+@pytest.mark.parametrize("mac_sessions", [1, 2])
+def test_mac_snapshots_taken_with_no_record_are_newer_not_diverged_on_the_alt(
+        two_hosts, tty, capsys, mac_sessions):
+    """Round-2 probe, the first week after the merge: a legacy untagged snapshot L; boss
+    takes L; the Mac has no record (a module install since the last vtt-down, so the
+    legacy marker does not match) and keeps local. Its sessions' snapshots must reach boss
+    as "newer", Enter = latest — not "diverged" for lacking an L they cannot name."""
+    _play(two_hosts, "mac", "legacy world")       # stands in for the old code's upload
+    wb = two_hosts.cloud / "world-backups"
+    [tagged] = [p for p in wb.iterdir() if p.name.endswith(".tar.gz")]
+    legacy = wb / (f"world-{time.strftime('%Y-%m-%d-%H%M%S', time.gmtime(time.time() - 86400))}"
+                   "-fvtt14.369.tar.gz")
+    tagged.rename(legacy)
+    (wb / f"{tagged.name}.parent").unlink()       # legacy: no sidecar
+    os.utime(legacy, (time.time() - 86400,) * 2)
+    two_hosts.state_file("mac").unlink()          # and no record
+
+    tty(True, ["l"])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0                 # boss takes L
+    assert _state(two_hosts, "boss")["based_on"] == legacy.name
+
+    _touch_later(two_hosts, "mac")                # the module install
+    tty(True, [""])
+    with two_hosts.use("mac"):
+        assert boot.choose() == 0                 # cannot tell: Enter keeps local
+    for i in range(mac_sessions):
+        last = _play(two_hosts, "mac", f"mac session {i + 1}")
+
+    capsys.readouterr()
+    asked = tty(True, [""])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    out = capsys.readouterr().out
+    assert len(asked) == 1 and "Enter = latest" in asked[0]
+    assert "diverged" not in out and last in out
+    assert _journal(two_hosts, "boss") == f"mac session {mac_sessions}"
+
+
 def test_alt_backing_up_first_leaves_the_legacy_marker_for_the_primary(two_hosts, tty, capsys):
     legacy = f"world-{time.strftime('%Y-%m-%d-%H%M%S', time.gmtime(time.time() - 86400))}" \
              "-fvtt14.369.tar.gz"

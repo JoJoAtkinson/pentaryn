@@ -349,7 +349,10 @@ world is *based on*:
   the prompt says `diverged — does not contain <based-on>` and **Enter keeps local**; `l` (or
   `FROM=latest`) takes it, archiving this world first. Each snapshot's lineage is a tiny
   `world-backups/<name>.parent` sidecar written before the upload completes; a snapshot without
-  one (untagged, legacy) is treated as newer, as before.
+  one (untagged, legacy) is treated as newer, as before. "Diverged" needs proof: a world backed
+  up with no based-on record (lost state file, first run) writes `"ancestors": null`, and every
+  chain carries `origin_before` — the mtime of its unknown root. A based-on snapshot at or before
+  that edge reads "cannot tell", which counts as newer (Enter = latest), never diverged.
 - **No terminal** (launchd, an agent, `ssh boss 'make …'` without `-t`): never restores. It boots
   local and prints one line: `▸ boot: cloud snapshot … is newer than this world …; booting LOCAL.
   To use it: make foundry-up FROM=latest   (or: make foundry-restore SNAP=…)`. The snapshot is

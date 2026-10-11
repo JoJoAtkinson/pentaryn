@@ -49,6 +49,10 @@ class BootState:
     # The based-on snapshot's ancestors, newest first (from its `.parent` sidecar): what
     # this world already contains, so a newer snapshot that lacks `based_on` is "diverged".
     lineage: list[str] = field(default_factory=list)
+    # Where that lineage stops being known: the listing mtime at or before which this
+    # world may hold snapshots `lineage` does not name. None = the based-on snapshot's
+    # own lineage is unknown (legacy, adopted marker, no sidecar) — see cloud.Ancestry.
+    lineage_origin_before: float | None = None
     # A newer snapshot the no-terminal notice told nobody about yet. Kept across this
     # host's own backups and shown again until Joe answers at a terminal (or restores).
     pending_newer: str | None = None
@@ -78,6 +82,7 @@ class BootState:
     def record_snapshot(self, name: str, snap_host: str | None, mtime: float,
                         digest: str, *, by: str, keep_local: str | None = None,
                         lineage: list[str] | None = None,
+                        origin_before: float | None = None,
                         clear_pending: bool = False) -> None:
         """Own backup uploaded `name`, or `name` was restored: the tree IS that snapshot.
 
@@ -90,6 +95,7 @@ class BootState:
         self.keep_local_until_newer_than = keep_local
         self.keep_local_mtime = None
         self.lineage = list(lineage or [])
+        self.lineage_origin_before = origin_before
         if clear_pending:
             self.pending_newer = self.pending_newer_mtime = None
         self.save(by)
@@ -134,6 +140,8 @@ def load() -> BootState:
             st.based_on_mtime = float(st.based_on_mtime)
         if st.keep_local_mtime is not None:
             st.keep_local_mtime = float(st.keep_local_mtime)
+        if st.lineage_origin_before is not None:
+            st.lineage_origin_before = float(st.lineage_origin_before)
         if st.pending_newer_mtime is not None:
             st.pending_newer_mtime = float(st.pending_newer_mtime)
         st.lineage = [str(n) for n in (st.lineage or []) if n]

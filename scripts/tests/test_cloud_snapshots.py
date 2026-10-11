@@ -271,23 +271,100 @@ def test_backup_writes_a_parent_sidecar_and_restore_inherits_its_lineage(two_hos
     with two_hosts.use("mac"):
         cloud.backup("shutdown")
         [m0] = _names(c)
-        assert _sidecar(c, m0) == {"parent": None, "ancestors": [], "host": "mac"}
+        # No based-on record: the lineage is unknown, not "no ancestors".
+        assert _sidecar(c, m0) == {"parent": None, "ancestors": None, "origin_before": None,
+                                   "host": "mac"}
+        m0_mtime = cloud.find_snapshot(cloud.store(), m0).mtime
         _edit(two_hosts.data["mac"], "two")
         cloud.backup("shutdown")                  # coalesces m0 away …
         [m1] = _names(c)
-    assert _sidecar(c, m1)["ancestors"] == [m0]   # … but the lineage still names it
+    # … but the lineage still names it; m0's own origin is unknown, so the chain's edge
+    # is m0's mtime: anything older may be in it.
+    assert _sidecar(c, m1)["ancestors"] == [m0]
+    assert _sidecar(c, m1)["origin_before"] == m0_mtime
     assert _sidecars(c) == [m1]                   # m0's sidecar went with it
     with two_hosts.use("boss"):
         cloud.restore(m1, yes=True)
         st = bootstate.load()
-        assert (st.based_on, st.lineage) == (m1, [m0])
+        assert (st.based_on, st.lineage, st.lineage_origin_before) == (m1, [m0], m0_mtime)
         _edit(two_hosts.data["boss"], "boss")
         cloud.backup("shutdown")
         b1 = bootstate.load().based_on
-    assert _sidecar(c, b1) == {"parent": m1, "ancestors": [m1, m0], "host": "boss"}
+    assert _sidecar(c, b1) == {"parent": m1, "ancestors": [m1, m0], "origin_before": m0_mtime,
+                               "host": "boss"}
     snap = cloud.find_snapshot(cloud.store(), b1)
     assert cloud.descends(cloud.store(), snap, m0) is True
-    assert cloud.descends(cloud.store(), snap, "world-other.tar.gz") is False
+    other = "world-other.tar.gz"
+    assert cloud.descends(cloud.store(), snap, other, m0_mtime + 60) is False  # newer: diverged
+    assert cloud.descends(cloud.store(), snap, other, m0_mtime - 60) is None   # older: unknown
+    assert cloud.descends(cloud.store(), snap, other) is None                  # no mtime: unknown
+
+
+def test_a_snapshot_taken_with_no_record_is_unknown_and_so_are_its_descendants(two_hosts):
+    """Round-2 finding: `"ancestors": []` read as "known, none", so every later check called
+    it diverged — and its children too, since their lists still lacked the old state."""
+    c = two_hosts.cloud
+    legacy_mtime = time.time() - DAY              # a state from before the unknown root
+    st = cloud.store()
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")                  # no record: unknown origin
+        m1 = bootstate.load().based_on
+        m1_mtime = cloud.find_snapshot(st, m1).mtime
+        assert cloud.descends(st, cloud.find_snapshot(st, m1), "world-L.tar.gz",
+                              legacy_mtime) is None
+        _edit(two_hosts.data["mac"], "two")
+        cloud.backup("shutdown")                  # its child: [m1], edge m1's mtime
+        m2 = bootstate.load().based_on
+    assert _sidecar(c, m2)["ancestors"] == [m1]
+    snap = cloud.find_snapshot(st, m2)
+    assert cloud.descends(st, snap, "world-L.tar.gz", legacy_mtime) is None
+    assert cloud.descends(st, snap, "world-B.tar.gz", m1_mtime + 60) is False
+
+
+def test_a_lost_state_file_makes_the_next_snapshot_unknown(two_hosts):
+    c = two_hosts.cloud
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+        two_hosts.state_file("mac").unlink()      # lost
+        _edit(two_hosts.data["mac"], "after the loss")
+        cloud.backup("shutdown")
+        m = bootstate.load().based_on
+    assert _sidecar(c, m)["ancestors"] is None
+    assert cloud.read_lineage(cloud.store(), cloud.find_snapshot(cloud.store(), m)) is None
+
+
+def test_based_on_a_legacy_snapshot_the_edge_is_its_mtime():
+    st = bootstate.BootState(based_on="world-L.tar.gz", based_on_mtime=1000.0, lineage=[])
+    assert cloud.next_lineage(st) == (["world-L.tar.gz"], 1000.0)
+
+
+def test_a_known_edge_is_inherited():
+    st = bootstate.BootState(based_on="b", based_on_mtime=5000.0, lineage=["a", "z"],
+                             lineage_origin_before=1000.0)
+    assert cloud.next_lineage(st) == (["b", "a", "z"], 1000.0)
+
+
+def test_no_record_has_no_lineage():
+    assert cloud.next_lineage(bootstate.BootState()) == (None, None)
+
+
+def test_cutting_at_the_cap_moves_the_edge_to_the_based_on_snapshot():
+    """The dropped ancestors are all older than the based-on snapshot, so its mtime is a
+    safe edge: they read as "cannot tell", newer states still as "diverged"."""
+    lineage = [f"a{i}" for i in range(cloud.LINEAGE_CAP + 5)]
+    st = bootstate.BootState(based_on="b", based_on_mtime=5000.0, lineage=lineage,
+                             lineage_origin_before=1000.0)
+    names, origin = cloud.next_lineage(st)
+    assert len(names) == cloud.LINEAGE_CAP and names[0] == "b" and origin == 5000.0
+
+
+def test_a_sidecar_without_an_edge_is_unknown_for_anything_it_does_not_name(two_hosts):
+    name = f"world-{_stamp(1)}-fvtt14.369-mac.tar.gz"
+    _put(two_hosts.cloud, name, age_days=1)
+    (two_hosts.cloud / "world-backups" / f"{name}.parent").write_text('{"ancestors": ["x"]}')
+    snap = cloud.find_snapshot(cloud.store(), name)
+    assert cloud.descends(cloud.store(), snap, "x", 1.0) is True
+    assert cloud.descends(cloud.store(), snap, "y", time.time()) is None
 
 
 def test_a_snapshot_without_a_sidecar_is_unknown_not_diverged(two_hosts):

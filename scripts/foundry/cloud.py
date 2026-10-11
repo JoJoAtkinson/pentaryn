@@ -326,6 +326,13 @@ def find_snapshot(st: Storage, name: str) -> Snapshot | None:
 # read then answers "does this snapshot contain the one my world is based on?" — even
 # after coalescing and pruning have deleted the snapshots in between. A sidecar never
 # parses as a snapshot (it does not end in .tar.gz).
+#
+# Every chain starts somewhere this code cannot see into: a tree with no based-on record
+# (a lost or corrupt state file, a first run), a legacy untagged snapshot, an adopted
+# marker. `origin_before` carries that edge: the listing mtime at or before which this
+# tree may hold snapshots its list does not name. A snapshot not in the list is
+# "diverged" only when it is newer than that; older, it is "cannot tell". A tree with no
+# record at all writes `"ancestors": null` — unknown, never "no ancestors".
 
 PARENT_SUFFIX = ".parent"
 LINEAGE_CAP = 100
@@ -335,9 +342,17 @@ def parent_rel(folder: str, name: str) -> str:
     return f"{folder}/{name}{PARENT_SUFFIX}"
 
 
-def read_ancestry(st: Storage, snap: Snapshot) -> list[str] | None:
-    """`snap`'s ancestors, newest first; None when it has no sidecar (legacy, or
-    unreadable) — "unknown", never "diverged"."""
+@dataclass(frozen=True)
+class Ancestry:
+    """What a snapshot's tree contains: `names` (newest first) for certain, and possibly
+    any snapshot whose listing mtime is at or before `origin_before`."""
+    names: tuple[str, ...]
+    origin_before: float
+
+
+def read_lineage(st: Storage, snap: Snapshot) -> Ancestry | None:
+    """`snap`'s ancestry; None when it has no sidecar (legacy, or unreadable) or its
+    sidecar says the lineage is unknown — "unknown", never "diverged"."""
     try:
         raw = st.read_text(parent_rel(snap.folder, snap.name))
     except StorageError:
@@ -349,19 +364,59 @@ def read_ancestry(st: Storage, snap: Snapshot) -> list[str] | None:
         anc = data.get("ancestors")
         if not isinstance(anc, list):
             return None
-        return [str(a) for a in anc if a]
-    except (ValueError, AttributeError):
+        origin = data.get("origin_before")
+        # A sidecar without the edge (an older format) cannot say where its chain began:
+        # treat every snapshot it does not name as "cannot tell".
+        origin = float(origin) if isinstance(origin, (int, float)) else float("inf")
+        return Ancestry(tuple(str(a) for a in anc if a), origin)
+    except (ValueError, TypeError, AttributeError):
         return None
 
 
-def descends(st: Storage, snap: Snapshot, based_on: str | None) -> bool | None:
-    """Does `snap` contain the state `based_on` names? None when it cannot be told."""
+def read_ancestry(st: Storage, snap: Snapshot) -> list[str] | None:
+    """`snap`'s ancestors' names, newest first; None when unknown."""
+    a = read_lineage(st, snap)
+    return None if a is None else list(a.names)
+
+
+def descends(st: Storage, snap: Snapshot, based_on: str | None,
+             based_on_mtime: float | None = None) -> bool | None:
+    """Does `snap` contain the state `based_on` names? True, False ("diverged"), or None
+    when it cannot be told: no sidecar, an unknown lineage, or `based_on` old enough to
+    sit before the chain's unknown root (or in the part cut at LINEAGE_CAP)."""
     if not based_on:
         return None
     if snap.name == based_on:
         return True
-    anc = read_ancestry(st, snap)
-    return None if anc is None else based_on in anc
+    anc = read_lineage(st, snap)
+    if anc is None:
+        return None
+    if based_on in anc.names:
+        return True
+    if based_on_mtime is None or based_on_mtime <= anc.origin_before:
+        return None
+    return False
+
+
+def next_lineage(state: bootstate.BootState) -> tuple[list[str] | None, float | None]:
+    """The (ancestors, origin_before) a snapshot of this tree carries.
+
+    No based-on record: (None, None) — unknown. Otherwise the based-on snapshot and its
+    ancestors, with the edge inherited from it; when its own lineage is unknown (legacy,
+    adopted marker, no sidecar) the edge is its own mtime — it may hold anything older.
+    Cutting at LINEAGE_CAP drops only ancestors older than the based-on snapshot, so its
+    mtime is a safe edge for them too."""
+    if not state.based_on:
+        return None, None
+    names = [state.based_on] + [a for a in state.lineage if a != state.based_on]
+    edge_self = state.based_on_mtime if state.based_on_mtime is not None else time.time()
+    origin = state.lineage_origin_before
+    if origin is None:
+        origin = edge_self
+    if len(names) > LINEAGE_CAP:
+        names = names[:LINEAGE_CAP]
+        origin = max(origin, edge_self)
+    return names, origin
 
 
 def _delete_snapshot(st: Storage, snap: Snapshot) -> None:
@@ -747,13 +802,13 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
             if src.exists():
                 tar.add(src, arcname=rel)
     size = tmp.stat().st_size
-    ancestors = ([state.based_on] + [a for a in state.lineage if a != state.based_on]
-                 if state.based_on else [])[:LINEAGE_CAP]
+    ancestors, origin = next_lineage(state)
     log(f"uploading {name} ({_mb(size)}, {reason}) to {st.root}...")
     try:
         # The sidecar first: by the time the snapshot's name appears, its lineage exists.
         st.write_text(parent_rel(WORLD_BACKUPS, name), json.dumps(
-            {"parent": state.based_on, "ancestors": ancestors, "host": me}) + "\n")
+            {"parent": state.based_on, "ancestors": ancestors, "origin_before": origin,
+             "host": me}) + "\n")
         st.upload(tmp, f"{WORLD_BACKUPS}/{name}")
     except StorageError as exc:
         die(f"upload failed: {exc}\n"
@@ -764,7 +819,7 @@ def _backup(st: Storage, reason: str, *, safety: bool = False,
     entry = next((e for e in st.ls(WORLD_BACKUPS) if e.name == name), None)
     snap = parse_snapshot(entry or Entry(name, size, time.time()), WORLD_BACKUPS)
     state.record_snapshot(name, me, snap.mtime, digest, by="backup", lineage=ancestors,
-                          keep_local=None)
+                          origin_before=origin, keep_local=None)
     log(f"snapshot → {name} ({_mb(size)}, {reason})")
     # The shared digest marker is retired: the digest is local now (bootstate). Only the
     # primary — the Mac, which wrote it — may delete it, and only once it has backed up
@@ -954,9 +1009,11 @@ def restore_snapshot(st: Storage, snap: Snapshot, reason: str = "manual") -> Non
             back = (f"put the previous state back: make foundry-restore SNAP={before}"
                     if before else "there was no previous local world")
             die(f"extract of {snap.name} failed part-way: {exc}\n    {back}")
+        anc = read_lineage(st, snap)
         bootstate.load().record_snapshot(snap.name, snap.host, snap.mtime, snapshot_digest(),
                                          by=f"restore:{reason}",
-                                         lineage=read_ancestry(st, snap) or [],
+                                         lineage=list(anc.names) if anc else [],
+                                         origin_before=anc.origin_before if anc else None,
                                          clear_pending=True)
         log(f"restored {snap.name}" + (f" (the state it replaced: {before})" if before else ""))
     finally:

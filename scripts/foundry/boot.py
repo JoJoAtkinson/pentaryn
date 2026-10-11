@@ -193,7 +193,7 @@ def decide(from_: str | None, interactive: bool, *, st=None, adopt: bool = True)
     elif (newest.name != state.based_on and newest.mtime > state.based_on_mtime
           and newest.name not in contains):
         offer = newest
-        if cloud.descends(st, newest, state.based_on) is False:
+        if cloud.descends(st, newest, state.based_on, state.based_on_mtime) is False:
             relation = "diverged"
 
     # 7b. a snapshot an earlier no-terminal boot noticed, which this host's own backup
@@ -202,7 +202,9 @@ def decide(from_: str | None, interactive: bool, *, st=None, adopt: bool = True)
         p = next((s for s in rolling if s.name == state.pending_newer), None)
         if p is not None and p.name not in contains:
             offer = p
-            relation = "newer" if cloud.descends(st, p, state.based_on) else "diverged"
+            relation = ("diverged" if cloud.descends(st, p, state.based_on,
+                                                     state.based_on_mtime) is False
+                        else "newer")
         else:
             clear = True
     if offer is None:
