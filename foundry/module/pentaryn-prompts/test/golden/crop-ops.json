@@ -53,7 +53,7 @@
   ],
   [
     "drawImage",
-    "bitmap(/data:x)",
+    "bitmap(data:x)",
     354.46,
     295.38,
     59.08,

@@ -67,3 +67,13 @@ test("prompts-lookup-24: tokenDataFrom — toObject minus _id, x/y (snapped on r
   assert.equal("mode" in plain, false);
   await assert.rejects(tokenDataFrom({}, scene, { at: { x: 0, y: 0 } }), { message: "a.getTokenDocument is not a function" });
 });
+
+test("prompts-lookup-15 (DP7): assetUrl — today's URLs without a route prefix; the prefix kept with one; data:/blob: as they are", async () => {
+  const { assetUrl } = await import("../core/text.mjs");
+  const plain = p => "/" + p, prefixed = p => "/foundry/" + p;
+  assert.deepEqual(["maps/a.webp", "/maps/a.webp", "https://x/y.png", "http://x/y.png"].map(s => assetUrl(s, plain)),
+    ["/maps/a.webp", "/maps/a.webp", "https://x/y.png", "http://x/y.png"]);
+  assert.equal(assetUrl("maps/a.webp", prefixed), "/foundry/maps/a.webp");
+  assert.equal(assetUrl("data:x", plain), "data:x");
+  assert.equal(assetUrl("blob:abc", plain), "blob:abc");
+});

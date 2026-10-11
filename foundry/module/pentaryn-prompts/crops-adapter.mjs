@@ -8,6 +8,10 @@
  */
 
 import { MODULE } from "./geometry-core.mjs";
+import { assetUrl } from "./core/text.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 const VIDEO = /\.(webm|mp4|m4v|ogv)(\?|$)/i;
 
@@ -16,10 +20,16 @@ async function bitmap(src, cache) {
   if (cache.has(src)) return cache.get(src);
   const p = (async () => {
     try {
-      const res = await fetch(src.startsWith("http") || src.startsWith("/") ? src : `/${src}`);
-      if (!res.ok) return null;
+      const res = await fetch(assetUrl(src, p => foundry.utils.getRoute(p)));
+      if (!res.ok) {
+        log.debug(`crop image ${src} not loaded (HTTP ${res.status})`);
+        return null;
+      }
       return await createImageBitmap(await res.blob());
-    } catch { return null; }
+    } catch (err) {
+      log.debug(`crop image ${src} not loaded`, err);
+      return null;
+    }
   })();
   cache.set(src, p);
   return p;
@@ -74,7 +84,7 @@ export async function renderCrops(manifest, encounterIds, { longSide = 768 } = {
     try {
       out.push(await renderOne(scene, eid, enc, manifest, sceneIdOf[scene.id], longSide, cache));
     } catch (err) {
-      console.warn(`${MODULE} | crop ${eid} failed`, err);
+      log.warn(`crop ${eid} failed`, err);
       out.push({ encounter: eid, scene: sceneIdOf[scene.id], error: String(err?.message ?? err) });
     }
   }

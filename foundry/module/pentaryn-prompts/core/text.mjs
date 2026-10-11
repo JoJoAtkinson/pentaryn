@@ -186,3 +186,14 @@ export function specFileUrl(path) {
   if (p.split("/").includes("..")) return null;
   return p;
 }
+
+const AS_IS = /^(https?:|data:|blob:|\/)/i;
+
+/**
+ * The URL an image source is fetched from: absolute http(s), data:, blob: and leading-slash
+ * sources as they are; a Data-relative path through `getRoute` (Foundry's, so a route prefix is
+ * kept — prompts-lookup-15). Without a prefix every Data-relative URL is what it was ("/" + path).
+ */
+export function assetUrl(src, getRoute) {
+  return AS_IS.test(src) ? src : getRoute(src);
+}

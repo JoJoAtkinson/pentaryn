@@ -159,14 +159,8 @@ test("crops as base64 (the query path): the drawing on the canvas and the image 
   pinJSON("crop-row", value.crops, import.meta.url);
   pinJSON("crop-ops", ops, import.meta.url);
   // prompts-lookup-15: relative paths get a leading slash, absolute and http(s) are kept, videos never fetched,
-  // each src fetched once; KNOWN: a data: URI is fetched as "/data:x"
-  assert.deepEqual(fetched, ["/bg/room.webp", "/maps/a.webp", "/maps/b.webp", "https://x/y.png", "/data:x", "/maps/missing.webp", "/icons/note.webp"]);
-});
-
-test("TODO prompts-lookup-15 (DP7): data: and blob: sources are fetched as they are", { todo: "DP7 [declared] flips the KNOWN /data:x row" }, async () => {
-  fetched.length = 0;
-  await captureConsole(() => G.gather({ scenes: ["s3"], crops: "on", cropsAs: "base64" }));
-  assert.ok(fetched.includes("data:x"));
+  // each src fetched once; [declared] DP7: a data: URI is fetched as it is (was "/data:x")
+  assert.deepEqual(fetched, ["/bg/room.webp", "/maps/a.webp", "/maps/b.webp", "https://x/y.png", "data:x", "/maps/missing.webp", "/icons/note.webp"]);
 });
 
 test("crops as files (the eval-js path): uploaded under pentaryn-prompts-crops/<call>/, png dropped, path and dataPath", async t => {
