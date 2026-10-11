@@ -375,7 +375,7 @@ Live smoke after sync: as GM, ping the canvas, wait 1 s, `game.pentaryn.pings.la
   The one open branch (`:170`, the `__pentarynPatched` early return) is covered by the skipped
   re-import test; with it included the tool reports 47.7 / 33.3 / 18.8, because the
   `pings.mjs?second-instance` import counts as a second copy of the file whose functions mostly never run.
-  A mutation pass over 20 hand mutants of `pings.mjs` left one survivor, and it is equivalent:
+  A mutation pass over 18 hand mutants of `pings.mjs` left one survivor, and it is equivalent:
   `snapped` computed from the image offset gives the same value, because the offset is always a whole
   number of grid squares.
 - Goldens: `hooks.json` ([once init, once ready]), `legacy-surface.json` (asserted as a subset),
