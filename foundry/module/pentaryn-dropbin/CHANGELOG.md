@@ -27,6 +27,8 @@ Declared changes:
   sync timers — items-journal-30.
 - Ledger writes during a burst are coalesced; the JSON mirror is written ~2 s after the burst
   (`export()` at once); the GM's ready line adds the ledger size — items-journal-19.
+- `clear()` empties the log in the same queue as appends: an append in flight cannot write the
+  old log back over the clear, and an append asked for after the clear lands after it (§5.9).
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
 - A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`
