@@ -86,3 +86,72 @@ test("K1 getter route: a route goes first; a missing getter warns and patches no
   unwrapAll();
   assert.deepEqual(seen, ["getter", "unreg"]);
 });
+
+test("J16: unwrap() drops the record, so the same marker wraps again; a second unwrap is a no-op", () => {
+  class Sheet { open() { return "sheet"; } }
+  const original = Sheet.prototype.open;
+  const spec = { target: Sheet.prototype, name: "open", marker: "__pentarynJ16", adjustments: "x-j16" };
+  const make = wrapped => `wrapped:${wrapped()}`;
+  const h1 = wrapMethod("pentaryn-x", spec, make, { g: {} });
+  assert.equal(new Sheet().open(), "wrapped:sheet");
+  h1.unwrap();
+  assert.equal(Sheet.prototype.open, original);
+  assert.deepEqual(patches(), []);
+  const h2 = wrapMethod("pentaryn-x", spec, make, { g: {} });
+  assert.notEqual(h2, h1, "a fresh handle, not the stale one");
+  assert.equal(new Sheet().open(), "wrapped:sheet", "wrapped again after unwrap()");
+  assert.equal(patches().length, 1);
+  h1.unwrap();                                       // the stale handle no longer touches anything
+  assert.equal(new Sheet().open(), "wrapped:sheet");
+  assert.equal(patches().length, 1);
+  h2.unwrap();
+  h2.unwrap();
+  assert.equal(Sheet.prototype.open, original);
+  assert.deepEqual(patches(), []);
+
+  const seen = [];
+  const route = { name: "router", register: () => () => seen.push("unreg") };
+  const target = { m() { return 1; } };
+  const hr = wrapMethod("pentaryn-x", { target, name: "m", marker: "__r16", adjustments: "x" }, w => w(), { via: route, g: {} });
+  hr.unwrap();
+  hr.unwrap();
+  assert.deepEqual(seen, ["unreg"], "a route unregisters once");
+  assert.notEqual(wrapMethod("pentaryn-x", { target, name: "m", marker: "__r16", adjustments: "x" }, w => w(), { via: route, g: {} }), hr);
+
+  const box = { size: 1 };
+  const ha = defineAccessor("pentaryn-x", box, "size", { get: () => 9 }, { marker: "__acc16", adjustments: "x" });
+  ha.unwrap();
+  assert.equal(box.size, 1);
+  defineAccessor("pentaryn-x", box, "size", { get: () => 7 }, { marker: "__acc16", adjustments: "x" });
+  assert.equal(box.size, 7, "defined again after unwrap()");
+
+  class Base { get v() { return 1; } }
+  class Leaf extends Base {}
+  const gspec = { target: Leaf.prototype, kind: "getter", name: "v", marker: "__g16", adjustments: "x" };
+  const hg = wrapMethod("pentaryn-x", gspec, w => w() + 1, { g: {} });
+  hg.unwrap();
+  assert.equal(new Leaf().v, 1);
+  wrapMethod("pentaryn-x", gspec, w => w() + 10, { g: {} });
+  assert.equal(new Leaf().v, 11, "the getter is wrapped again after unwrap()");
+  unwrapAll();
+  assert.equal(new Leaf().v, 1);
+  assert.equal(box.size, 1);
+  assert.deepEqual(patches(), []);
+});
+
+test("J16: when another wrapper sits on top, unwrap() cannot restore and the record stays", () => {
+  class Sheet { open() { return "sheet"; } }
+  const original = Sheet.prototype.open;
+  const spec = { target: Sheet.prototype, name: "open", marker: "__pentarynJ16b", adjustments: "x-j16b" };
+  const h = wrapMethod("pentaryn-x", spec, w => `ours:${w()}`, { g: {} });
+  const ours = Sheet.prototype.open;
+  Sheet.prototype.open = function () { return `theirs:${ours.call(this)}`; };   // a later, foreign wrap
+  h.unwrap();
+  assert.equal(new Sheet().open(), "theirs:ours:sheet", "nothing was torn out from under the foreign wrap");
+  assert.equal(patches().length, 1, "the patch is still live, so it is still reported");
+  assert.equal(wrapMethod("pentaryn-x", spec, w => w(), { g: {} }), h, "and not stacked a second time");
+  Sheet.prototype.open = ours;                       // the foreign wrap goes away
+  h.unwrap();
+  assert.equal(Sheet.prototype.open, original);
+  assert.deepEqual(patches(), []);
+});
