@@ -4,7 +4,7 @@
  * canvas double-click menu) and the Known tab (`known.mjs`). `node test/look.mjs`.
  *
  * `known.mjs`'s fixtures run with no Foundry at all. These two files need a sliver of it, so
- * the stubs below give them one: a `game` with actors, settings and i18n, and an
+ * the stubs in test/fixtures/stubs.mjs give them one: a `game` with actors, settings and i18n, and an
  * `ApplicationV2` to extend. Nothing here talks to a server.
  *
  * The world is a cut of the real one (pentaryn, 2026-10-07): Marrith rolled Caven's three tells,
@@ -14,52 +14,7 @@
  * prints "Starved" here and the case fails.
  */
 
-import { readFileSync } from "node:fs";
-
-/* ── just enough Foundry ──────────────────────────────────────────────────── */
-
-const LANG = JSON.parse(readFileSync(new URL("../lang/en.json", import.meta.url), "utf8"));
-const at = (o, path) => path.split(".").reduce((a, k) => (a == null ? a : a[k]), o);
-const localize = k => at(LANG, k) ?? LANG[k] ?? k;
-const esc = s =>
-  String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-
-class StubActor {
-  constructor(data) {
-    Object.assign(this, structuredClone(data));
-    this.items = [];
-  }
-  getFlag(ns, key) {
-    return at(this.flags?.[ns] ?? {}, key);
-  }
-  get isOwner() {
-    return (this.ownership?.[globalThis.game.user.id] ?? 0) >= 3;
-  }
-}
-
-let ACTORS = new Map();
-let REGISTRY = [];
-globalThis.game = {
-  user: { id: "kristine", isGM: false },
-  users: { activeGM: { id: "gm" }, get: () => null },
-  actors: { get: id => ACTORS.get(id), get contents() { return [...ACTORS.values()]; } },
-  settings: {
-    get: (ns, key) => {
-      if (key === "playerAccess") return true;
-      if (key === "attributes") return REGISTRY;
-      throw new Error(`unregistered ${ns}.${key}`);
-    }
-  },
-  i18n: { localize, format: (k, d) => String(localize(k)).replace(/\{(\w+)\}/g, (_, x) => d?.[x] ?? "") }
-};
-globalThis.foundry = {
-  applications: { api: { ApplicationV2: class {}, DialogV2: {} }, ux: { TextEditor: { implementation: {} } } },
-  utils: { escapeHTML: esc, deepClone: x => structuredClone(x), randomID: () => "r", flattenObject: o => o }
-};
-globalThis.Hooks = { on() {}, once() {}, off() {} };
-globalThis.CONFIG = { DND5E: { skills: {} } };
-globalThis.ui = { notifications: { info() {}, warn() {} } };
-globalThis.canvas = { tokens: { placeables: [] } };
+import { StubActor, W } from "./fixtures/stubs.mjs";
 
 const { LookWindow } = await import("../look.mjs");
 const { buildKnownHTML, grantCard } = await import("../known.mjs");
@@ -115,8 +70,8 @@ function world({ granted = {}, attributes = [] } = {}) {
       }
     }
   };
-  ACTORS = new Map([caven, marrith].map(d => [d.id, new StubActor(d)]));
-  return { caven: ACTORS.get(CAVEN), marrith: ACTORS.get(MARRITH) };
+  W.actors = new Map([caven, marrith].map(d => [d.id, new StubActor(d)]));
+  return { caven: W.actors.get(CAVEN), marrith: W.actors.get(MARRITH) };
 }
 
 const look = (character, subject) => new LookWindow(character, subject).buildHTML();
@@ -171,7 +126,7 @@ export function register({ t, eq, ok }) {
     const out = loreOutcome(row, total);
     return out.silent ? {} : { [STARVED]: { text: out.text, when: WHEN, icon: "caven.webp", source: row.label } };
   };
-  const STARVED_ROW = () => ACTORS.get(CAVEN).flags["pentaryn-ties"].lore[0];
+  const STARVED_ROW = () => W.actors.get(CAVEN).flags["pentaryn-ties"].lore[0];
   const STARVED_PASS = "Collarbones, wrists, cracked lips.";
   const STARVED_MISS = "Weeks at most. He was thin before.";
 
@@ -207,7 +162,7 @@ export function register({ t, eq, ok }) {
   });
 
   t("failed identification: a written failure line shows under the creature, never the attribute's title", () => {
-    REGISTRY = [{ id: "vrinn", title: "The Vrinn Circle", category: "faction", secret: true, dc: 15, skill: "ins",
+    W.registry = [{ id: "vrinn", title: "The Vrinn Circle", category: "faction", secret: true, dc: 15, skill: "ins",
       reveal: "The ring on his left hand is a Vrinn seal.", miss: "A pilgrim's ring, worn smooth." }];
     try {
       const missKey = identMissKey(CAVEN, "vrinn");
@@ -227,7 +182,7 @@ export function register({ t, eq, ok }) {
       ok(!html.includes("Vrinn") && !html.includes("pilgrim"), "empty → nothing");
       eq(count(html, 'class="pt-grant"'), 2);
     } finally {
-      REGISTRY = [];
+      W.registry = [];
     }
   });
 
