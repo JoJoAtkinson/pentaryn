@@ -47,12 +47,15 @@ import { publishedOf } from "./lib/publish.mjs";
  * @property {{required: boolean, path: string, url: string, note: string}} deleteJson
  */
 
+/** True while an `importActors` call is in flight on this client. */
+let running = false;
+
 /**
  * Import (upsert) the NPC Actors described by `actors.json`.
  *
  * Order of operations — every step is a gate for the next:
  *
- *   1. GM check
+ *   1. GM check; refuse a second call while one is running
  *   2. fetch with `{cache: "no-cache"}` and a hard timeout
  *   3. version gate (§1.1) — refuse the whole run on any mismatch
  *   4. `@ref` lint (§10)   — refuse the whole run on any hit
@@ -77,6 +80,23 @@ export async function importActors(options = {}) {
     const message = "Refusing to import: only a GM can create or update world Actors.";
     refuse(PentarynAbort, message);
   }
+  // Not re-entrant (items-journal-4): a second call while one is awaiting would read the same stored
+  // contentHash and replace the same managed Items. Refused, not queued; per tab (module scope).
+  if (running) throw new PentarynAbort("An import is already running; await it or reload.");
+  running = true;
+  try {
+    return await importOnce({ path, dryRun, only, force, timeout, unmanagedItems });
+  } finally {
+    running = false;
+  }
+}
+
+/**
+ * The run itself, behind `importActors`' GM check and re-entrancy guard.
+ * @param {Required<ImportOptions>} options  already defaulted
+ * @returns {Promise<ImportResult>}
+ */
+async function importOnce({ path, dryRun, only, force, timeout, unmanagedItems }) {
   if (!["keep", "delete"].includes(unmanagedItems)) {
     throw new PentarynAbort(`unmanagedItems must be "keep" or "delete", got ${JSON.stringify(unmanagedItems)}`);
   }

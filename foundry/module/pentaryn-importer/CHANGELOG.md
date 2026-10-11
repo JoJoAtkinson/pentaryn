@@ -7,6 +7,9 @@
 - **[declared] `game.pentaryn` is merged into, never replaced or frozen** (`items-journal-1`). Every
   module's namespace survives whichever order the modules load in; `import`, `moduleId`, `contract`
   and the frozen `_internals` stay on the root.
+- **[declared] A second `import()` while one is running rejects `PentarynAbort`** (`items-journal-4`):
+  "An import is already running; await it or reload." Sequential calls are unchanged; a failed run
+  releases the guard.
 - **[declared] Console lines read `pentaryn-importer | …`** (kit logger) instead of
   `[pentaryn-importer] …`. Toast text is unchanged.
 - New: `game.modules.get("pentaryn-importer").api` = `game.pentaryn.importer` with `describe()` and

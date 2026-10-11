@@ -10,7 +10,8 @@
 //                         ([declared] keystone, items-journal-1: the root is merged into, never
 //                         replaced or frozen), together with the root tests below that were
 //                         KNOWN items-journal-1 rows until then.
-//   the KNOWN items-journal-4 test — flipped by the standalone re-entrancy commit (D-I3).
+//   the items-journal-4 re-entrancy test — was a KNOWN row; flipped by the standalone re-entrancy
+//                         commit ([declared] D-I3).
 //   golden/dryrun.json, golden/results.json, golden/refusals.json (toast text included) — no step
 //   may change them.
 import { mock, test } from "node:test";
@@ -388,9 +389,10 @@ test("fetch timeout: the 15000 ms default, then a custom 50 ms → PentarynAbort
   pinKey("refusals", "timeoutCustom", refusal(custom));
 });
 
-// KNOWN: items-journal-4 — import() is not re-entrant: two overlapping calls both run to the end. Flipped
-// by the standalone re-entrancy commit after step 7 ([declared] D-I3: the second call rejects PentarynAbort).
-test("KNOWN items-journal-4: two overlapping dry runs both resolve ok:true", async () => {
+// Was KNOWN items-journal-4 (two overlapping calls both ran to the end); flipped by the standalone
+// re-entrancy commit ([declared] D-I3): the second call rejects PentarynAbort, the first is unaffected,
+// and the guard is released after a success and after a failure.
+test("re-entrancy: an overlapping second call rejects PentarynAbort; later calls run (items-journal-4)", async () => {
   respond = () => new Promise(resolve => setTimeout(() => resolve(response(valid([entry("b", "h")]))), 10));
   toasts.length = 0;
   const { value } = await withConsole(async () => {
@@ -400,10 +402,20 @@ test("KNOWN items-journal-4: two overlapping dry runs both resolve ok:true", asy
     mock.timers.tick(10);
     return Promise.allSettled([a, b]);
   });
-  assert.deepEqual(value.map(s => s.status), ["fulfilled", "fulfilled"]);
-  assert.deepEqual(value.map(s => s.value.ok), [true, true]);
-  assert.equal(JSON.stringify(value[0].value), JSON.stringify(value[1].value));
-  assert.deepEqual(toasts, []);
+  assert.deepEqual(value.map(s => s.status), ["fulfilled", "rejected"]);
+  assert.equal(value[0].value.ok, true);
+  assert.equal(value[1].reason.name, "PentarynAbort");
+  assert.equal(value[1].reason.message, "An import is already running; await it or reload.");
+  assert.deepEqual(toasts, [], "refused without a toast, like the other option refusals");
+  serve(valid());
+  const third = await outcome(() => imp({ dryRun: true }));
+  assert.equal(third.error, null, "a call after the first settled runs");
+  serve(valid([], { targetSystemVersion: "5.3" }));
+  const failing = await outcome(() => imp({ dryRun: true }));
+  assert.equal(failing.error.name, "PentarynAbort");
+  serve(valid());
+  const afterFailure = await outcome(() => imp({ dryRun: true }));
+  assert.equal(afterFailure.error, null, "a refused run releases the guard");
 });
 
 /* ── the shared root under both load orders (items-journal-1) ─────────────────────────────────── */

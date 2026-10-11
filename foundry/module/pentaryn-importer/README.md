@@ -68,7 +68,7 @@ undone should be re-run against the same file.
 
 | Signal | Meaning | Scope |
 |---|---|---|
-| throws `PentarynAbort` | version gate, `@ref` lint, missing or malformed file, non-GM, missing slug, bad option, fetch failure | whole run; **nothing was written** |
+| throws `PentarynAbort` | version gate, `@ref` lint, missing or malformed file, non-GM, missing slug, bad option, fetch failure, an import already running | whole run; **nothing was written** |
 | throws `PentarynAssertionError` | a readback mismatch (CONTRACT §8.3) | whole run; actors earlier in the batch **were** written |
 | `{ ok: false, failed: [...] }` | a `ValidationError` or similar from one Actor | that actor only |
 
@@ -77,8 +77,9 @@ as a permanent toast and a `console.error`.
 
 **For an LLM.** Always run `{ dryRun: true }` first and read `created`/`updated`/`skipped`. A thrown
 `PentarynAbort` means nothing was written: fix the cause and re-run. A thrown
-`PentarynAssertionError` means a partial batch: report it, do not retry blindly. Do not call
-`import()` again while one is running (it is not re-entrant yet, `items-journal-4`).
+`PentarynAssertionError` means a partial batch: report it, do not retry blindly. A second call
+while one is running rejects at once with `PentarynAbort` ("An import is already running"): await
+the first, then retry.
 
 ## Data written
 
@@ -125,8 +126,9 @@ code and `build_actors.py` target; markers `targetSystemVersion`, `TARGET_SYSTEM
 ## Two sessions / who writes
 
 Only the GM tab that calls `import()` writes; nothing runs by itself. A player calling it gets a
-`PentarynAbort`. Two overlapping calls are not refused yet (`items-journal-4`, a declared
-hardening still to come): await one before starting another.
+`PentarynAbort`. A second call on the same tab while one is running is refused with
+`PentarynAbort` (`items-journal-4`); the guard is per tab, so two GM tabs (the MCP bridge tab and a
+browser tab) can still overlap — run imports from one place.
 
 ## Extending
 
