@@ -336,6 +336,7 @@ Step 1 ~0.75 day (relay and ensure flows need careful stubs), steps 2–6 ~1 day
 | Frozen tests | `git diff f830067 -- test/` touches one frozen file, `glue.test.mjs`, at two named pins: the publish-timing pin (`dbd56638`, D-J1) and the relay-refusal message (`5b79802c`, D-J4). Every golden is unchanged; everything else under `test/` is new |
 | `module.json` edits appended to `wave7-restart-batch.md` | no — returned to the integrator (shared file): step 9 as written, plus the module README's Files table (`journal.css` → `styles/journal.css`) in the same commit as the move (wave-2 report, journal handoff item 2) |
 | Adjustments rows appended to `adjustments-batch.md` | no — returned to the integrator; the row id is `itempiles-journal-preview-copy` (D2 prefix rule), not `journal-itempiles-preview-copy` |
+| §5.9.4 review hits | `createUser`/ready two-tab duplicate journal (and folder); `ensureAll`'s sequential create loop (C59 pattern) — not fixed, out of scope as in the audit (every remedy moves a frozen glue pin); Open for Joe W2-J4, see the deviation note below |
 | Still failing, and why | C03, C07, C09, C37 (+ C06w warn): the Wave 7 `module.json` batch (step 9). C47: the adjustments row (step 7, batched). C51: `folderName` has no label — adding one moves the frozen `settings-register` pin (Open for Joe). C56: the relay is still assigned by hand (wrapped by `relayed`, so C30 passes): the kit's `registerQueries` drops the query context, so a manifest relay row cannot see the sender (kit gap, returned to the integrator) |
 
 **Deviations from this guide, and why.**
@@ -349,3 +350,13 @@ Step 1 ~0.75 day (relay and ensure flows need careful stubs), steps 2–6 ~1 day
   the sender's User (`core.claimWinner`: a tab receives every earlier stamp before its own reply, so
   only the first stamper sees no other fresh stamp), no timer on the winner's path; the loser waits
   (bounded, 7 s) for the winner's journal and answers with it; each tab removes its stamp.
+
+**§5.9.4 review pass — hits not fixed in this wave (Open for Joe W2-J4).** The `createUser` listener and the
+ready `ensureAll` create behind `isGM && activeGM.isSelf`, which is true in every tab of the GM account, and
+`gmInflight`/`folderInflight` are per tab: with the MCP bridge tab and a GM browser tab open, a new User (or a
+player without a journal when both tabs reach `ready` together) gets two journals, and two `Player Journals`
+folders when the folder is missing. `ensureAll` also creates one player at a time in a loop (C59 pattern).
+items-journal-40 scoped both out; they stay out of scope here because every remedy (`claimDocument` on the new
+User, deterministic `_id`s, one `JournalEntry.createDocuments`) moves a frozen `glue.test.mjs` pin. Until Joe
+decides, the out-of-scope decision stands: a duplicate is reported in `report().users[].duplicates` and
+`personal()` keeps using the oldest journal.

@@ -44,6 +44,7 @@ New pure rules go in journal-core.mjs with fixtures in test/run.mjs, and the REA
 | items-journal-37 | applied (docs); (d) `relationships` waits for the Wave 7 `module.json` batch | `1b122e5` (wave 1), `b615d9d8` |
 | items-journal-38 | applied [declared] D-J3 (listeners registered on first use) | `cac07643` |
 | items-journal-40 | fixed, claim first [declared] D-J5 (a first-stamp claim on the sender's User, not `claimDocument`; see the guide's Result) | KNOWN `d8bfe157`, fix `f97e9f74`, `792f57fb`, `79155a74` |
+| items-journal-40 (scope note) | the `createUser`/ready-`ensureAll` two-tab duplicate and `ensureAll`'s sequential create loop (C59 pattern), scoped out of -40 below, stay open: recorded in the wave-2 report, Open for Joe **W2-J4** (every remedy moves a frozen glue pin) | — |
 
 ## Findings index
 
