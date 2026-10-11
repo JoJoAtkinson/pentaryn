@@ -6,11 +6,12 @@
  */
 
 import { attributeIdsOf, attributeLore, describeAttribute } from "../attributes.mjs";
-import { mayWrite } from "../ties-api.mjs";
+import { MODULE, mayWrite } from "../ties-api.mjs";
 import { attrFactKey, LORE_FLAG, loreFactKey, loreOfferable, rollableLore } from "../known-core.mjs";
 import { applyStudy } from "./apply.mjs";
 import { kindActorOf, studiedOf, studyStateFor } from "./resolve.mjs";
-import { CHANNEL, esc, f, flagOf, SITUATIONAL_MAX, SITUATIONAL_MIN, STUDY, t } from "./shared.mjs";
+import { CHANNEL, esc, f, SITUATIONAL_MAX, SITUATIONAL_MIN, STUDY, t } from "./shared.mjs";
+import { readFlag } from "../lib/flags.mjs";
 
 /* -------------------------------------------- */
 /*  Player side                                 */
@@ -233,7 +234,7 @@ export function loreStateFor(character, subject) {
   if (!subject) return [];
   const spent = studiedOf(character).lore;
   // offerable, not merely rollable — see `attrLoreStateFor`
-  return rollableLore(flagOf(subject, LORE_FLAG)).filter(loreOfferable).map(row => {
+  return rollableLore(readFlag(subject, MODULE, LORE_FLAG)).filter(loreOfferable).map(row => {
     const key = loreFactKey(subject.id, row.id);
     return {
       id: row.id,

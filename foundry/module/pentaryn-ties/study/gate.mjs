@@ -25,7 +25,8 @@ import {
 import { applyPlayerWrites, putBelief, readBelief } from "./apply.mjs";
 import { concealmentFor } from "./cascade.mjs";
 import { beliefsOf, resolveFact, studiedOf, studyTiersOf } from "./resolve.mjs";
-import { esc, f, flagOf, t } from "./shared.mjs";
+import { esc, f, t } from "./shared.mjs";
+import { readFlag } from "../lib/flags.mjs";
 
 /* -------------------------------------------- */
 /*  The approval gate                           */
@@ -159,7 +160,7 @@ export function pending() {
           && rec.total < (describeAttribute(parsed.subject)?.dc ?? Infinity) + concealmentFor(ledger, parsed.subject)) continue;
         const label =
           parsed.ns === "lore"
-            ? readLore(flagOf(ledger, LORE_FLAG)).find(r => r.id === parsed.fact)?.label ?? parsed.fact
+            ? readLore(readFlag(ledger, MODULE, LORE_FLAG)).find(r => r.id === parsed.fact)?.label ?? parsed.fact
             : ledger.name;
         out.push({
           ns: parsed.ns,

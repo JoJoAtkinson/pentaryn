@@ -24,7 +24,8 @@ import {
 import { concealmentFor } from "./cascade.mjs";
 import { pending } from "./gate.mjs";
 import { beliefsOf, kindActorOf, studyHoldFor } from "./resolve.mjs";
-import { esc, f, flagOf, t } from "./shared.mjs";
+import { esc, f, t } from "./shared.mjs";
+import { readFlag } from "../lib/flags.mjs";
 
 /* -------------------------------------------- */
 /*  GM authoring — minimal, absorbed by phase 4 */
@@ -40,7 +41,7 @@ import { esc, f, flagOf, t } from "./shared.mjs";
  */
 export async function kindDialog(actor) {
   if (!game.user?.isGM || !actor) return false;
-  const current = flagOf(actor, KIND_OF_FLAG) ?? "";
+  const current = readFlag(actor, MODULE, KIND_OF_FLAG) ?? "";
   const options = (game.actors?.contents ?? [])
     .filter(a => a.id !== actor.id && a.type !== "character")
     .sort((a, b) => a.name.localeCompare(b.name))
@@ -122,7 +123,7 @@ export function beliefs(actor) {
   const out = [];
   // both ledgers this actor can hold: the kind rows it collects as somebody's kind, and the
   // lore rows it collects as itself. An NPC that is its own kind holds both on one document.
-  const rows = readLore(flagOf(actor, LORE_FLAG));
+  const rows = readLore(readFlag(actor, MODULE, LORE_FLAG));
   /*
    * The roll's verdict, for the "missed" tag: a failure hands the player nothing now (2026-10), so
    * an empty text box alone no longer says whether they missed or passed into an unauthored side.

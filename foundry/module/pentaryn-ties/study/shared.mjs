@@ -25,11 +25,3 @@ export const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
 export const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
 export const esc = s =>
   String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-
-export const flagOf = (doc, key) => {
-  try {
-    return doc?.getFlag(MODULE, key);
-  } catch {
-    return undefined;
-  }
-};

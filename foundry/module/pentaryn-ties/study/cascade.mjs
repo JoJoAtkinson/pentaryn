@@ -36,8 +36,9 @@ import {
   stackingRule,
   studySkillFor
 } from "./resolve.mjs";
-import { CHANNEL, esc, f, flagOf, INSPECT, t } from "./shared.mjs";
+import { CHANNEL, esc, f, INSPECT, t } from "./shared.mjs";
 import { announceTempo } from "./tempo.mjs";
+import { readFlag } from "../lib/flags.mjs";
 
 /* -------------------------------------------- */
 /*  Phase 8 — inspection and the cascade        */
@@ -225,7 +226,7 @@ async function runCascade(character, subject, release = []) {
       registry: reg(),
       carried: attributeIdsOf(subject, kindActorOf),
       knowledge: knowledge(),
-      beliefs: flagOf(subject, BELIEFS_FLAG) ?? {},
+      beliefs: readFlag(subject, MODULE, BELIEFS_FLAG) ?? {},
       characterId: character.id,
       rollerCarries: attributeIdsOf(character, kindActorOf)
     });
@@ -346,7 +347,7 @@ export async function writeIdentification(subject, characterId, attrId, rec) {
 async function commitGrants(character, grants) {
   const keys = Object.keys(grants);
   if (!keys.length) return;
-  const merged = readGranted(flagOf(character, GRANTED_FLAG));
+  const merged = readGranted(readFlag(character, MODULE, GRANTED_FLAG));
   for (const [k, v] of Object.entries(grants)) merged[k] = v;
   await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}`]: merged });
 }
@@ -360,7 +361,7 @@ async function promptCascadeDeliver(character, subject) {
    * anyone can make. A hold exists so the GM can choose the moment *and* the framing, and both
    * need the fact, the roll and the prose the player is about to be handed.
    */
-  const mine = (flagOf(subject, BELIEFS_FLAG) ?? {})[character.id] ?? {};
+  const mine = (readFlag(subject, MODULE, BELIEFS_FLAG) ?? {})[character.id] ?? {};
   const waiting = Object.entries(mine)
     .filter(([key, rec]) => isIdentKey(key) && rec && !rec.delivered)
     .map(([key, rec]) => ({ attrId: parseFactKey(key)?.subject, rec }))
@@ -442,11 +443,11 @@ export async function releaseHeldAttribute(character, attrId) {
  */
 export async function deliverHeldIdentifications(character, subject) {
   if (!game.user?.isGM) return false;
-  const all = flagOf(subject, BELIEFS_FLAG) ?? {};
+  const all = readFlag(subject, MODULE, BELIEFS_FLAG) ?? {};
   const mine = all[character.id] ?? {};
   const now = Date.now();
   const update = {};
-  const granted = readGranted(flagOf(character, GRANTED_FLAG));
+  const granted = readGranted(readFlag(character, MODULE, GRANTED_FLAG));
   const freed = [];
   const rows = knowledge()[character.id] ?? {};
   let any = false;
@@ -556,7 +557,7 @@ export async function grantKind(character, kindOrSubject, tier = 15, { from = nu
  */
 export async function resetIdentification(character, subject, attrId) {
   if (!game.user?.isGM || !character || !subject || !attrId) return false;
-  const all = flagOf(subject, BELIEFS_FLAG) ?? {};
+  const all = readFlag(subject, MODULE, BELIEFS_FLAG) ?? {};
   const key = identifiedKey(attrId);
   if (!all[character.id]?.[key]) return false;
 
@@ -566,7 +567,7 @@ export async function resetIdentification(character, subject, attrId) {
   else await subject.update(dropRow(`flags.${MODULE}.${BELIEFS_FLAG}`, character.id, key, all[character.id]), { render: false });
   // a do-over takes back the failure line that roll handed them, if it handed one (2026-10-08)
   const missKey = identMissKey(subject.id, attrId);
-  if (readGranted(flagOf(character, GRANTED_FLAG))[missKey])
+  if (readGranted(readFlag(character, MODULE, GRANTED_FLAG))[missKey])
     await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}.-=${missKey}`]: null });
 
   ui.notifications.info(
@@ -582,7 +583,7 @@ export async function resetIdentification(character, subject, attrId) {
  */
 export async function resetInspection(character, subject) {
   if (!game.user?.isGM || !character || !subject) return false;
-  const mine = (flagOf(subject, BELIEFS_FLAG) ?? {})[character.id] ?? {};
+  const mine = (readFlag(subject, MODULE, BELIEFS_FLAG) ?? {})[character.id] ?? {};
   const attrIds = Object.keys(mine)
     .map(k => (isIdentKey(k) ? parseFactKey(k)?.subject : null))
     .filter(Boolean);

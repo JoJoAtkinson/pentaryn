@@ -9,7 +9,8 @@ import { MODULE } from "../ties-api.mjs";
 import { INSPECT_CLAIM_KEY } from "../core/rules.mjs";
 import { BELIEFS_FLAG, KIND_KEY } from "../known-core.mjs";
 import { putBelief, readBelief } from "./apply.mjs";
-import { flagOf } from "./shared.mjs";
+import { readFlag } from "../lib/flags.mjs";
+
 
 /**
  * ⚠ **`activeGM` identifies a USER, not a session — and one GM can be logged in twice.**
@@ -92,7 +93,7 @@ async function claimRoll(ledger, characterId, now, key = KIND_KEY) {
       { [`flags.${MODULE}.${BELIEFS_FLAG}.${characterId}.${key}`]: { claim: mine, when: now } },
       { render: false }
     ),
-    readBack: () => flagOf(ledger, BELIEFS_FLAG)?.[characterId]?.[key]?.claim,
+    readBack: () => readFlag(ledger, MODULE, BELIEFS_FLAG)?.[characterId]?.[key]?.claim,
     token: mine
   });
 }
@@ -119,7 +120,7 @@ export function dropRow(base, ownerId, key, owned) {
 
 /** Un-stake it — only ever called by the client that won, and only when no roll happened. */
 async function releaseClaim(ledger, characterId, key = KIND_KEY) {
-  const all = flagOf(ledger, BELIEFS_FLAG) ?? {};
+  const all = readFlag(ledger, MODULE, BELIEFS_FLAG) ?? {};
   if (all?.[characterId]?.[key]?.claim !== session()) return;
   await ledger.update(dropRow(`flags.${MODULE}.${BELIEFS_FLAG}`, characterId, key, all[characterId]), {
     render: false
@@ -133,7 +134,7 @@ export async function claimInspect(subject, characterId) {
   const mine = inspectSession();
   const won = await stakeAndConfirm({
     write: () => subject.update({ [`flags.${MODULE}.${BELIEFS_FLAG}.${characterId}.${INSPECT_CLAIM_KEY}`]: { claim: mine } }, { render: false }),
-    readBack: () => flagOf(subject, BELIEFS_FLAG)?.[characterId]?.[INSPECT_CLAIM_KEY]?.claim,
+    readBack: () => readFlag(subject, MODULE, BELIEFS_FLAG)?.[characterId]?.[INSPECT_CLAIM_KEY]?.claim,
     token: mine
   });
   // return the TOKEN on success, so the caller can release exactly what it took
@@ -141,7 +142,7 @@ export async function claimInspect(subject, characterId) {
 }
 
 export async function releaseInspect(subject, characterId, token = null) {
-  const all = flagOf(subject, BELIEFS_FLAG) ?? {};
+  const all = readFlag(subject, MODULE, BELIEFS_FLAG) ?? {};
   const mine = token ?? inspectSession();
   if (all?.[characterId]?.[INSPECT_CLAIM_KEY]?.claim !== mine) return;
 

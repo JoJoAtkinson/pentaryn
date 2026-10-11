@@ -33,7 +33,8 @@ import {
   tierOf
 } from "../known-core.mjs";
 import { attackItems, composeStudyPayload } from "./compose.mjs";
-import { flagOf } from "./shared.mjs";
+import { readFlag } from "../lib/flags.mjs";
+
 
 /* -------------------------------------------- */
 /*  Resolution                                  */
@@ -42,7 +43,7 @@ import { flagOf } from "./shared.mjs";
 /** The kind actor behind any actor: the GM-set pointer, else itself (decision 4). */
 export function kindActorOf(actor) {
   if (!actor) return null;
-  const id = resolveKindId(actor.id, flagOf(actor, KIND_OF_FLAG), x => !!game.actors?.get(x));
+  const id = resolveKindId(actor.id, readFlag(actor, MODULE, KIND_OF_FLAG), x => !!game.actors?.get(x));
   return game.actors?.get(id) ?? actor;
 }
 
@@ -92,13 +93,13 @@ export function resolveFact(spec) {
        * The kind's own difficulty (Joe's one knob). A number shifts the whole ladder; `"auto"`
        * means common knowledge — inspecting is enough and no dice are thrown at all.
        */
-      offset: studyOffsetOf(flagOf(kind, STUDY_OFFSET_FLAG)),
-      dc: STUDY_BASE_DC + (typeof studyOffsetOf(flagOf(kind, STUDY_OFFSET_FLAG)) === "number"
-        ? studyOffsetOf(flagOf(kind, STUDY_OFFSET_FLAG)) : 0),
+      offset: studyOffsetOf(readFlag(kind, MODULE, STUDY_OFFSET_FLAG)),
+      dc: STUDY_BASE_DC + (typeof studyOffsetOf(readFlag(kind, MODULE, STUDY_OFFSET_FLAG)) === "number"
+        ? studyOffsetOf(readFlag(kind, MODULE, STUDY_OFFSET_FLAG)) : 0),
       hold: studyHoldFor(kind),
       /** Grade → prose. `null` means no roll happened and nothing may be spent. */
       grade: async total => {
-        const off = studyOffsetOf(flagOf(kind, STUDY_OFFSET_FLAG));
+        const off = studyOffsetOf(readFlag(kind, MODULE, STUDY_OFFSET_FLAG));
         /*
          * `"auto"` hands over the top rung without a roll. Not a DC of zero: a zero would still
          * spend the one attempt and could still be *failed* on a negative total, and nobody
@@ -123,7 +124,7 @@ export function resolveFact(spec) {
   if (ns === "lore") {
     // `rollableLore`, not `readLore`: a draft row is stored state, never a rollable fact. A
     // row deleted or blanked mid-gesture stops resolving here, and the caller refuses.
-    const row = rollableLore(flagOf(subject, LORE_FLAG)).find(r => r.id === spec?.factId);
+    const row = rollableLore(readFlag(subject, MODULE, LORE_FLAG)).find(r => r.id === spec?.factId);
     if (!row) return null;
     const label = CONFIG.DND5E?.skills?.[row.skill]?.label ?? row.skill;
     const factKey = loreFactKey(subject.id, row.id);
@@ -205,9 +206,9 @@ export function resolveFact(spec) {
   return null;
 }
 
-export const studiedOf = actor => readStudied(flagOf(actor, STUDIED_FLAG));
-export const beliefsOf = actor => readBeliefs(flagOf(actor, BELIEFS_FLAG));
-export const studyTiersOf = actor => readStudyTiers(flagOf(actor, STUDY_TIERS_FLAG));
+export const studiedOf = actor => readStudied(readFlag(actor, MODULE, STUDIED_FLAG));
+export const beliefsOf = actor => readBeliefs(readFlag(actor, MODULE, BELIEFS_FLAG));
+export const studyTiersOf = actor => readStudyTiers(readFlag(actor, MODULE, STUDY_TIERS_FLAG));
 
 /** The registry, read defensively — a setting can be unregistered when a hook fires early. */
 export function reg() {
@@ -239,7 +240,7 @@ export function holdDefault() {
   }
 }
 
-export const studyHoldFor = kind => holdResolved(flagOf(kind, STUDY_HOLD_FLAG), holdDefault());
+export const studyHoldFor = kind => holdResolved(readFlag(kind, MODULE, STUDY_HOLD_FLAG), holdDefault());
 
 /** Which skill this kind is studied with, and its localized name for the provenance header. */
 export function studySkillFor(kind) {

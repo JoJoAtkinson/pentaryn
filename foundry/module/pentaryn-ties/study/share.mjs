@@ -43,7 +43,8 @@ import { applyInspect, concealmentFor, grantKind, writeIdentification } from "./
 import { dropRow } from "./claim.mjs";
 import { factFrom, pending, reset, rowMissed } from "./gate.mjs";
 import { beliefsOf, kindActorOf, reg, resolveFact, studyStateFor, studyTiersOf } from "./resolve.mjs";
-import { esc, f, flagOf, INSPECT } from "./shared.mjs";
+import { esc, f, INSPECT } from "./shared.mjs";
+import { readFlag } from "../lib/flags.mjs";
 
 /* -------------------------------------------- */
 /*  The GM's Share — telling, not rolling       */
@@ -75,7 +76,7 @@ export function factStatus(spec, character) {
   if (!game.user?.isGM || !subject || !character) return none;
   const key = shareKeyOf(spec, subject);
   if (!key) return none;
-  const granted = !!readGranted(flagOf(character, GRANTED_FLAG))[key];
+  const granted = !!readGranted(readFlag(character, MODULE, GRANTED_FLAG))[key];
   let belief = null;
   let failedKnowledge = false;
   let dc = null;
@@ -93,7 +94,7 @@ export function factStatus(spec, character) {
     dc = rollableLore(attributeLore(spec.attrId)).find(r => r.id === spec.factId)?.dc ?? null;
   } else if (spec.ns === "lore") {
     belief = beliefsOf(subject)[character.id]?.[key] ?? null;
-    dc = rollableLore(flagOf(subject, LORE_FLAG)).find(r => r.id === spec.factId)?.dc ?? null;
+    dc = rollableLore(readFlag(subject, MODULE, LORE_FLAG)).find(r => r.id === spec.factId)?.dc ?? null;
   } else if (spec.ns === "kind") {
     belief = beliefsOf(kindActorOf(subject))[character.id]?.[KIND_KEY] ?? null;
   }
@@ -260,7 +261,7 @@ export async function shareFact(spec, recipients, { from = null, notify = true }
         from: fromId,
         prior: priorFor.get(pc.id) ?? null
       });
-      const granted = readGranted(flagOf(pc, GRANTED_FLAG));
+      const granted = readGranted(readFlag(pc, MODULE, GRANTED_FLAG));
       granted[identifiedKey(attrId)] = {
         text: text.slice(0, GRANTED_TEXT_MAX),
         when: now,
@@ -278,7 +279,7 @@ export async function shareFact(spec, recipients, { from = null, notify = true }
     // (`visibleAttributesFor`) — written all the same, but the GM is told where it will show
     const secret = spec.ns === "attr" && !!reg().find(e => e.id === spec.attrId)?.secret;
     for (const pc of pcs) {
-      if (secret && !identifiedState(flagOf(subject, BELIEFS_FLAG) ?? {}, pc.id, spec.attrId).carries) out.unseen.push(pc.id);
+      if (secret && !identifiedState(readFlag(subject, MODULE, BELIEFS_FLAG) ?? {}, pc.id, spec.attrId).carries) out.unseen.push(pc.id);
       await putBelief(fact, pc.id, {
         text,
         tier: null,
@@ -328,7 +329,7 @@ export async function forgetFact(spec, character) {
   if (st.status !== "told") return { ok: false, reason: "notTold" };
   const prior = st.belief?.prior ?? null;
   const dropGrant = async () => {
-    if (readGranted(flagOf(character, GRANTED_FLAG))[st.key])
+    if (readGranted(readFlag(character, MODULE, GRANTED_FLAG))[st.key])
       await character.update({ [`flags.${MODULE}.${GRANTED_FLAG}.-=${st.key}`]: null });
   };
 
@@ -337,12 +338,12 @@ export async function forgetFact(spec, character) {
     const key = identifiedKey(attrId);
     // quietly, not through `resetIdentification`: this is not a do-over, and a flag update would
     // MERGE the prior into the shared row (keeping its `from`) instead of replacing it
-    const all = flagOf(subject, BELIEFS_FLAG) ?? {};
+    const all = readFlag(subject, MODULE, BELIEFS_FLAG) ?? {};
     if (all[character.id]?.[key])
       await subject.update(dropRow(`flags.${MODULE}.${BELIEFS_FLAG}`, character.id, key, all[character.id]), { render: false });
     if (prior) await writeIdentification(subject, character.id, attrId, prior);
     const elsewhere = (game.actors?.contents ?? []).some(
-      a => a.id !== subject.id && identifiedState(flagOf(a, BELIEFS_FLAG) ?? {}, character.id, attrId).carries
+      a => a.id !== subject.id && identifiedState(readFlag(a, MODULE, BELIEFS_FLAG) ?? {}, character.id, attrId).carries
     );
     if (!elsewhere) {
       await clearKnowledge(character.id, attrId);
@@ -372,7 +373,7 @@ export async function forgetFact(spec, character) {
   const lie = spec.ns === "kind" && missed && !!authoredTier(studyTiersOf(fact.ledger), 0);
   const earned = !!prior.delivered && !!String(prior.text ?? "").trim() && (spec.ns !== "kind" || !missed || lie);
   if (earned) {
-    const granted = readGranted(flagOf(character, GRANTED_FLAG));
+    const granted = readGranted(readFlag(character, MODULE, GRANTED_FLAG));
     granted[st.key] = {
       text: String(prior.text ?? "").slice(0, GRANTED_TEXT_MAX),
       when: prior.when ?? Date.now(),
@@ -415,7 +416,7 @@ export function legacyMissCards() {
   const out = [];
   for (const pc of game.actors?.contents ?? []) {
     if (pc.type !== "character") continue;
-    for (const [factKey, card] of Object.entries(readGranted(flagOf(pc, GRANTED_FLAG)))) {
+    for (const [factKey, card] of Object.entries(readGranted(readFlag(pc, MODULE, GRANTED_FLAG)))) {
       const parsed = parseFactKey(factKey);
       if (!parsed) continue;
       let subject = null;
@@ -424,7 +425,7 @@ export function legacyMissCards() {
         const actor = game.actors.get(parsed.subject);
         if (!actor) continue;
         subject = actor.name;
-        const dc = readLore(flagOf(actor, LORE_FLAG)).find(r => r.id === parsed.fact)?.dc;
+        const dc = readLore(readFlag(actor, MODULE, LORE_FLAG)).find(r => r.id === parsed.fact)?.dc;
         missed = rolledMiss(beliefsOf(actor)[pc.id]?.[factKey], dc);
       } else if (parsed.ns === "attr" && parsed.fact !== MEMBER_FACT) {
         subject = describeAttribute(parsed.subject)?.title ?? parsed.subject;

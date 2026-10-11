@@ -27,6 +27,7 @@
  */
 
 import { MODULE, baseActorOf, mayWrite } from "./ties-api.mjs";
+import { readFlag } from "./lib/flags.mjs";
 import {
   KNOWN_FLAG,
   KNOWN_CATEGORIES_FLAG,
@@ -109,13 +110,8 @@ const resolveActor = id => {
   };
 };
 
-const rawFlag = (actor, key) => {
-  try {
-    return actor?.getFlag(MODULE, key);
-  } catch {
-    return undefined; // a flag that cannot be read is an empty list, never an exception
-  }
-};
+// a flag that cannot be read is an empty list, never an exception (readFlag never throws)
+const rawFlag = (actor, key) => readFlag(actor, MODULE, key);
 
 /** The categories this actor files into: the seeded pair, plus any the GM has added. */
 export function categoriesFor(actor) {

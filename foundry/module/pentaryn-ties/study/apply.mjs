@@ -23,7 +23,8 @@ import {
 import { claimFact, dropRow, releaseFact } from "./claim.mjs";
 import { promptDeliver } from "./gate.mjs";
 import { beliefsOf, resolveFact, stackingRule, studiedOf } from "./resolve.mjs";
-import { esc, f, flagOf, SITUATIONAL_MAX, SITUATIONAL_MIN } from "./shared.mjs";
+import { esc, f, SITUATIONAL_MAX, SITUATIONAL_MIN } from "./shared.mjs";
+import { readFlag } from "../lib/flags.mjs";
 
 /* -------------------------------------------- */
 /*  GM side                                     */
@@ -265,7 +266,7 @@ export function readBelief(fact, characterId) {
 export async function putBelief(fact, characterId, record) {
   if (fact.ns !== "attr") {
     if (record === null) {
-      const all = flagOf(fact.ledger, BELIEFS_FLAG) ?? {};
+      const all = readFlag(fact.ledger, MODULE, BELIEFS_FLAG) ?? {};
       if (!all[characterId]?.[fact.beliefKey]) return;
       await fact.ledger.update(
         dropRow(`flags.${MODULE}.${BELIEFS_FLAG}`, characterId, fact.beliefKey, all[characterId]),
@@ -373,7 +374,7 @@ export async function applyPlayerWrites(character, fact, graded, now) {
      * erasable by their next keystroke. Keyed by fact, so a reset + re-roll REPLACES under the
      * same key rather than appending a second copy.
      */
-    const granted = readGranted(flagOf(character, GRANTED_FLAG));
+    const granted = readGranted(readFlag(character, MODULE, GRANTED_FLAG));
     granted[fact.factKey] = {
       text: String(graded.text).slice(0, GRANTED_TEXT_MAX),
       when: now,
@@ -396,7 +397,7 @@ export async function applyPlayerWrites(character, fact, graded, now) {
  * with the GM's Share so the two cannot disagree about how an entry is born.
  */
 export function knownListWith(character, entryActor, now) {
-  const rawKnown = flagOf(character, KNOWN_FLAG);
+  const rawKnown = readFlag(character, MODULE, KNOWN_FLAG);
   const list = Array.isArray(rawKnown) ? [...rawKnown] : [];
   if (!list.find(e => e?.id === entryActor.id)) {
     const entry = makeKnownEntry({

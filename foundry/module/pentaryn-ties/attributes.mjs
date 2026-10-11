@@ -31,6 +31,7 @@
  */
 
 import { MODULE, baseActorOf } from "./ties-api.mjs";
+import { readFlag } from "./lib/flags.mjs";
 import {
   REGISTRY_SETTING,
   ATTRIBUTES_FLAG,
@@ -688,12 +689,8 @@ export function derivedFor(actor, kindResolver = null) {
 }
 
 const flagList = (actor, key) => {
-  try {
-    const raw = actor?.getFlag(MODULE, key);
-    return Array.isArray(raw) ? raw : [];
-  } catch {
-    return [];
-  }
+  const raw = readFlag(actor, MODULE, key);
+  return Array.isArray(raw) ? raw : [];
 };
 
 /** The effective id list for one actor: derived ∪ authored, minus suppressed. */

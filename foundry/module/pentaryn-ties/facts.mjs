@@ -19,10 +19,7 @@ import { MODULE } from "./ties-api.mjs";
 import { attributeIdsOf, registry } from "./attributes.mjs";
 import { kindActorOf } from "./study.mjs";
 import { factOrder, LORE_FLAG } from "./known-core.mjs";
-
-const flagOf = (doc, key) => {
-  try { return doc?.getFlag(MODULE, key); } catch { return undefined; }
-};
+import { readFlag } from "./lib/flags.mjs";
 
 /**
  * → `{ base, kind, registry, carried, facts }`.
@@ -44,7 +41,7 @@ export function subjectFacts(subject, { onBase = true } = {}) {
     registry: reg,
     carried,
     facts: base
-      ? factOrder({ subjectId: base.id, kindId: kind?.id ?? null, carried, registry: reg, lore: flagOf(base, LORE_FLAG) })
+      ? factOrder({ subjectId: base.id, kindId: kind?.id ?? null, carried, registry: reg, lore: readFlag(base, MODULE, LORE_FLAG) })
       : []
   };
 }

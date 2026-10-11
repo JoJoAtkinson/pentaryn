@@ -73,6 +73,7 @@ import {
   ATTR_BELIEFS_SETTING, KNOWLEDGE_SETTING, REGISTRY_SETTING, touchesFlagScope, tablePCs, switchLabels
 } from "./known-core.mjs";
 import { CONCEAL_FLAG, concealFor, firstName } from "./core/rules.mjs";
+import { readFlag } from "./lib/flags.mjs";
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -83,10 +84,6 @@ const pct = p => `${Math.round(Math.max(0, Math.min(1, p)) * 100)}%`;
 /** d20 + mod ≥ dc. Ability checks have no automatic success or failure on a 20 or a 1. */
 const chance = (mod, dc) => Math.max(0, Math.min(1, (21 - (dc - mod)) / 20));
 const skillLabel = s => CONFIG.DND5E?.skills?.[s]?.label ?? s;
-
-const flagOf = (doc, key) => {
-  try { return doc?.getFlag(MODULE, key); } catch { return undefined; }
-};
 
 const PROF = { none: 0, prof: 1, expert: 2 };
 
@@ -208,7 +205,7 @@ export class InspectPreview extends ApplicationV2 {
     let rule = "raw";
     try { rule = game.settings.get(MODULE, "advantageStacking") === "net" ? "net" : "raw"; } catch { /* unborn */ }
 
-    const conceal = id => concealFor(flagOf(subject, CONCEAL_FLAG), id);
+    const conceal = id => concealFor(readFlag(subject, MODULE, CONCEAL_FLAG), id);
     const reach = new Map(); // attr id → chance of having identified it
     const priorOf = id => {
       const ladder = identificationLadder(id, reg);
@@ -280,7 +277,7 @@ export class InspectPreview extends ApplicationV2 {
       attrLore.push({ entry: describeAttribute(id), locked: !open.has(id), rows: rows.map(row => this.rollLore(row)) });
     }
 
-    const ownLore = rollableLore(flagOf(subject, LORE_FLAG)).filter(loreOfferable).map(row => this.rollLore(row));
+    const ownLore = rollableLore(readFlag(subject, MODULE, LORE_FLAG)).filter(loreOfferable).map(row => this.rollLore(row));
 
     // kind study
     let kind = null;
@@ -289,7 +286,7 @@ export class InspectPreview extends ApplicationV2 {
     if (!k && state.kind) kind = { none: true, actor: state.kind };
     if (k) {
       const { skill, label } = studySkillFor(k);
-      const off = studyOffsetOf(flagOf(k, STUDY_OFFSET_FLAG));
+      const off = studyOffsetOf(readFlag(k, MODULE, STUDY_OFFSET_FLAG));
       if (off === "auto") {
         kind = { actor: k, skill, auto: true, spent: state.spent, text: await composeStudyPayload(k, 25, label) };
       } else {
@@ -438,7 +435,7 @@ export class InspectPreview extends ApplicationV2 {
     const { registry: reg, carried, facts } = subjectFacts(subject, { onBase: false });
     const regById = new Map(reg.map(e => [e.id, e]));
     const free = carried.filter(id => !regById.get(id)?.secret).map(id => describeAttribute(id));
-    const ownRows = new Map(rollableLore(flagOf(subject, LORE_FLAG)).map(row => [row.id, row]));
+    const ownRows = new Map(rollableLore(readFlag(subject, MODULE, LORE_FLAG)).map(row => [row.id, row]));
 
     const groups = [];
     const idCards = facts.filter(x => x.group === "ident").map(x => {
@@ -480,7 +477,7 @@ export class InspectPreview extends ApplicationV2 {
       const kindLabel = kind.id !== subject.id ? f("known.share.groupKindPage", { kind: kind.name }) : t("known.share.groupKind");
       groups.push([kindLabel, [this.factCard(
         { icon: kind.img, source: kind.name, text }, { ns: "kind", subjectId: subject.id }, pcs,
-        { note: studyOffsetOf(flagOf(kind, STUDY_OFFSET_FLAG)) === "auto" ? t("known.share.kindAuto") : null }
+        { note: studyOffsetOf(readFlag(kind, MODULE, STUDY_OFFSET_FLAG)) === "auto" ? t("known.share.kindAuto") : null }
       )]]);
     }
 
