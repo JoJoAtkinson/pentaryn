@@ -28,7 +28,7 @@ let patchedWith = null;
 export function ownerOverride(token) {
   if (!ownerSeesOn || game.user.isGM) return false;
   return safely(() => {
-    const doc = token.document;
+    const doc = token?.document;   // no token (api.ownerSees(null)) is a plain false, not a failure
     if (!doc?.isOwner || isProp(doc)) return false;   // every player owns a spell-area handle
     return ownerShouldSee({
       enabled: true,
