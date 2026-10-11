@@ -1,6 +1,6 @@
 ---
 title: "Two hosts, one cloud — rclone storage layer, host.py and the boot choice"
-status: designed 2026-10-11 — not built
+status: built 2026-10-11 on feature/rclone-hosts — see §14 for what differs from the design
 last_modified: 2026-10-11
 tags: [context, plans, foundry, cloud, rclone, hosts, backups]
 ---
@@ -10,7 +10,8 @@ tags: [context, plans, foundry, cloud, rclone, hosts, backups]
 **Read this when:** building or reviewing the change that lets the Mac and BOSS (Windows 11,
 Foundry in WSL) share the OneDrive `DnD/foundry` folder through rclone, tag snapshots by
 host, and ask Joe at boot whether to start from the newest cloud snapshot or the local
-world. This is the design; the use-doc will be `context/foundry/ops.md` §3 once built.
+world. This is the design (history); the use-doc is `context/foundry/ops.md` §3. What the
+build changed from this design, and why, is §14.
 Recon of the code as it stands today (line numbers, Mac-only sites, bugs) is folded into
 the sections below, so you do not need to re-map `cloud.py` first.
 
@@ -688,14 +689,27 @@ Nothing on BOSS is changed from the Mac.
    dies with the VM.
 5. **First boot on BOSS:** `make foundry-boot` (or `vtt-up`) will find no local state and
    offer the Mac's newest snapshot; Enter restores it (~3 GB download), archives nothing
-   (there is nothing local yet; `backup` on an empty tree is skipped), and writes
+   (there is nothing local yet; `backup` on a tree with no world is skipped), and writes
    `pentaryn-boot.json`. From then on BOSS's own backups are `…-boss.tar.gz` and prune
-   only themselves.
+   only themselves. The prompt needs a terminal: over SSH use `ssh -t boss 'cd … && make
+   vtt-up'`; without `-t` it boots local and prints the one-line notice (`FROM=latest` to
+   take the newest without a prompt). If Foundry has never run on BOSS, the restored
+   `Config/options.json` is the Mac's — `restore` rewrites its `dataPath` to BOSS's
+   `FOUNDRY_DATA` and says so; once BOSS has its own `options.json`, it is kept as is.
 6. **Tunnel / updater:** both refuse on BOSS by role; this is intended. `cloudflared` can
    stay unauthenticated. If Joe ever makes BOSS primary, he sets `PENTARYN_PRIMARY_HOST=boss`
    on both machines and authenticates `cloudflared` there — out of scope here.
 7. **Tests:** `PENTARYN_TEST_SHIMS=1 .venv/bin/pytest` as today; the new tests need no
-   rclone binary.
+   rclone binary (a fake runner, `scripts/tests/cloud_fakes.py`). Every test runs against a
+   temp cloud and a temp data root (conftest `fake_cloud` / `fake_data`, autouse).
+8. **Check it from BOSS before the first boot:** `python -m scripts.foundry.host show` must
+   print `host boss`, `role alt (primary host: mac)` and the Linux `data`/`app` paths;
+   `make foundry-cloud` must print `cloud rclone onedrive:DnD/foundry` and list the Mac's
+   snapshots under `snapshots mac:`. `PENTARYN_HOST` must be set explicitly on BOSS — off
+   macOS the fallback is the sanitised hostname, which may not be `boss`.
+9. **Off-Mac no-ops, by design:** `update/notify.py` prints instead of posting;
+   `vtt-update-install` refuses (launchd); `foundry-key`/`foundry-admin-key` copy through
+   `clip.exe` under WSL (or `xclip`) and never print the value.
 
 ---
 
@@ -726,3 +740,39 @@ Nothing on BOSS is changed from the Mac.
 
 Out of scope: a lease/lock (rejected), moving `Data/modules` out of the snapshot (the
 size lever, separate decision), making BOSS primary, cloudflared on BOSS.
+
+---
+
+## 14. Build record (2026-10-11) — what differs from the design above
+
+Built on `feature/rclone-hosts` in commits `c58c01d4`..HEAD; tests:
+`scripts/tests/test_cloud_storage.py`, `test_host.py`, `test_cloud_snapshots.py`,
+`test_boot_choice.py`, `test_role_gates.py`, `test_make_targets.py` (extended).
+
+| Design said | Built | Why |
+| --- | --- | --- |
+| `PENTARYN_HOST` defaults to the sanitised hostname everywhere | **`mac` on macOS**, the sanitised hostname elsewhere | Otherwise an unconfigured Mac (`joes-macbook-pro`) ≠ the default primary `mac`: it would become the alt and refuse its own tunnel and updater. Existing Mac behaviour must not change by default |
+| State file code lives in `boot.py` | `scripts/foundry/bootstate.py` | `cloud.py` writes it (backup, restore) and `boot.py` imports `cloud`; a separate module avoids the import cycle |
+| The restore's safety backup is an ordinary snapshot | Named `…-<host>.safety.tar.gz`; never coalesced (in either direction); never offered as "newest" by the boot choice; pruned by the per-host count | Without this, an alt that restored the Mac's latest over un-uploaded local work would upload its *discarded* state as the cloud's newest snapshot — and both machines' next boots would offer that junk as "newer". A coalescing safety copy could also replace, or be replaced by, the snapshot it was meant to protect |
+| Boot `newest` over `world-backups/` **and** `major-release/` | `world-backups/` only (minus safety copies); `FROM=<name>` and `foundry-restore SNAP=` still accept either folder | A promoted copy is an *old generation* by definition; if a copy ever got a fresh mtime it would be offered as the default. The prompt already sent major-release to `make foundry-restore` |
+| First run: no state → the Mac is asked once | If the legacy shared `world-backups/.last-digest` equals the local tree digest, the state file is created from it (`based_on` = newest untagged snapshot), quietly | The marker proves the Mac's world *is* that snapshot: no question on the Mac's first boot, and no 3 GB re-upload on its first backup. BOSS never matches it, so BOSS is asked |
+| `restore` keeps local `options.json` / `admin.txt` / `license.json` | Same, plus: when there is **no** local `options.json` (Foundry never ran here), the snapshot's foreign `dataPath` is rewritten to this machine's root | BOSS's first boot would otherwise inherit the Mac's absolute `dataPath` |
+| — | Snapshot names are never reused: a backup in the same UTC second as an existing name bumps the stamp by a second | A name is an identity (`based_on`, `keep_local_until_newer_than`); a same-second re-upload would overwrite in place and the coalescer then deleted it |
+| `host.clipboard` falls back to printing "copy this:" + the text | Never prints; no clipboard tool → non-zero exit | What goes through it is the licence key or the admin password |
+| `PENTARYN_ROLE_OVERRIDE` from env or file | Environment only | It is a per-run decision; a file setting would silently make the alt primary forever |
+| `recover.newest_world_snapshot(host=HOST)` | The **based-on** snapshot first, then this host's newest | After `back_up` the based-on record is exactly the current state — even when the backup digest-skipped onto a legacy untagged snapshot (the first Saturday after this merges), where an own-host filter alone would find nothing and abort the run |
+| System mirrors: "prune to the last 3 by version" | Write the new one, then keep the last 3 by version (numeric) | The old code kept 3 *then* added one (4), and sorted by name, so `5.9` outlived `5.10` |
+| Stall watchdog (optional v1) | Not built | As the design allowed; rclone's own retries cover flakiness. Add if a hang is ever seen |
+| `vtt-update.sh` role check | Built; exit 3 from `host require-primary` → log + exit 0, any other non-zero → exit with it | Tested statically (order and branches), not by running the wrapper — running it is the real updater |
+
+**Deferred / not done here:**
+
+- The assets manifest (`foundry/assets-manifest.json`, committed) now records each zip's
+  listing `mtime`, as designed. Two machines writing their own mtimes into one committed file
+  will churn it; if that becomes noise, move the `(bytes, mtime)` "seen" record into a local
+  file under `FOUNDRY_DATA` and keep only the sha256 in the committed manifest.
+- `build_scenes.py`, `travel_glyph.py`, `prep_map.py` still hard-code the Mac data path; they
+  are content tools run on the Mac and were outside this change.
+- The boss-remote skill (§11 item 1) is BOSS's Claude's to update; nothing on BOSS was touched.
+- Nothing here was run against the real OneDrive or a real rclone remote; `rclone config` on
+  the Mac is Joe's step (`ops.md` §3).

@@ -101,13 +101,14 @@ Both installed and loaded. `launchctl list | grep pentaryn.vtt`.
 | `scripts/foundry/update/adjustments.py` | Loads/checks `foundry/adjustments.yml`; the exposure grep. |
 | `scripts/foundry/update/apply.py` | Orchestration: gate, backup, apply, phase/status, restore service. |
 | `scripts/foundry/update/smoke.py` | Server checks + the puppeteer browser check, per world. |
-| `scripts/foundry/update/recover.py` | The failure-class recovery matrix + backup artefacts. |
+| `scripts/foundry/update/recover.py` | The failure-class recovery matrix + backup artefacts. The world rollback point is this host's based-on snapshot (else its own newest), downloaded to temp before extracting. |
 | `scripts/foundry/update/report.py` | Scrubbing, LLM prose, plain fallback, git commit/push. |
 | `scripts/foundry/update/state.py` | mkdir lock, run status file, entry state. |
-| `scripts/foundry/update/notify.py` | The three notification classes. |
+| `scripts/foundry/update/notify.py` | The three notification classes. Prints instead of posting off the Mac. |
 | `scripts/foundry/update/cli.py` | `scan` `run` `status` `notify` `admin-configure` `recover-service`. |
 | `scripts/foundry/admin_password.py` | The admin secret: env → Infisical → macOS keychain. |
-| `scripts/foundry/cloud.py` | **Pre-existing**, modified. OneDrive backup/restore, retention. |
+| `scripts/foundry/cloud.py` | **Pre-existing**, modified. OneDrive backup/restore, per-host retention. I/O through `storage.py` (rclone or folder). |
+| `scripts/foundry/host.py` | Which machine, its role (`primary`/`alt`), paths, start/stop. `apply.gate()` and `vtt-update.sh` refuse to run off the primary. |
 | `automation/bin/*.sh` | launchd entrypoints + `foundry-admin-push.sh`. |
 | `automation/launchd/*.plist` | The two jobs. |
 | `automation/notifier/` | `Ardenhaven VTT.app` source + build script. |
@@ -249,23 +250,27 @@ every package action 400 while `authenticate()` reported success.
 | Report is committed with an explicit pathspec, never `-A`, never a checkout | The worktree is routinely dirty with campaign work. |
 | A finished run shuts the server and tunnel down (`lifecycle.shutdown_when_done`) | Nobody plays at 04:00; leaving a public tunnel up all week is exposure for nothing. It skips the parting backup `vtt-down` takes — a second snapshot minutes after the run's own would land inside the 5-day coalescing window and REPLACE the week's only pre-update restore point. A *crashed* run still restores what it found instead, since it may have been started by hand mid-session. |
 | The updater shells out to `scripts.foundry.cloud backup`, the same call `make vtt-down` makes | One implementation of the retention rules. A creative session and the Saturday run produce snapshots under identical coalescing, rolling and promotion behaviour; only the `--reason` log label differs. A non-zero exit is a hard failure — otherwise the run would find an *older* snapshot and believe it had a fresh restore point. |
+| The updater runs **only on the primary host** (2026-10-11) | Two machines share the cloud (the Mac and BOSS — [`ops.md`](ops.md) §3). `apply.gate()` aborts off-primary even with `--force`, and `vtt-update.sh` checks first so a stray plist on the alt logs and exits 0. `PENTARYN_ROLE_OVERRIDE=primary` passes both, deliberately. The run sets `PENTARYN_BOOT_DONE=skip`, so its Foundry restarts never run the boot choice — a restore mid-update would invalidate its own rollback point. |
+| The rollback point is **this host's** state | `recover.newest_world_snapshot()` returns the snapshot the local world is based on (after `back_up` that is the current state, whatever host's name it carries), else this host's own newest — never the other machine's newer one. |
 
-### Backup retention (reworked 2026-08-21 at Joe's request)
+### Backup retention (reworked 2026-08-21; per host since 2026-10-11)
 
-A snapshot is **~2.5 GB** — `Data/modules` is 2.7 GB of premium map art, not the "2.5 MB"
+A snapshot is **~2.5–3.2 GB** — `Data/modules` is 2.7 GB of premium map art, not the "2.5 MB"
 `cloud.py` used to claim. So:
 
-* **10** rolling snapshots (was 100 — a 250 GB ceiling).
-* A snapshot taken **within `COALESCE_WINDOW_DAYS` (5)** of the newest **replaces** it, so a
-  dev session costs one snapshot rather than six. The new tar is written **before** the old
-  one is deleted — never leave a window with no restore point.
-* On a Foundry **generation** change, the last snapshot taken while on the old generation is
-  copied to `major-release/` and never pruned. Detected at backup time by comparing the
-  installed generation against the newest snapshot's, so it also catches an upgrade done by
-  hand through Foundry's setup screen.
-* Snapshots are named `world-<stamp>-fvtt<version>.tar.gz`; the version suffix is what makes
-  the generation rule work without a separate index. Older un-suffixed snapshots parse as
-  "unknown version" and are treated as *cannot tell*, never as a generation change.
+* **10** rolling snapshots **per host** (was 100 — a 250 GB ceiling). Each machine prunes only
+  its own; legacy untagged snapshots are never pruned automatically.
+* A snapshot taken **within `COALESCE_WINDOW_DAYS` (5)** of this host's newest **replaces** it,
+  so a dev session costs one snapshot rather than six. Never another host's. The new tar is
+  written **before** the old one is deleted — never leave a window with no restore point.
+* On a Foundry **generation** change, the last snapshot this host took on the old generation
+  is copied to `major-release/` and never pruned. Detected at backup time by comparing the
+  installed generation against this host's newest snapshot's, so it also catches an upgrade
+  done by hand through Foundry's setup screen.
+* Snapshots are named `world-<UTC stamp>-fvtt<version>-<host>.tar.gz`; the version suffix is
+  what makes the generation rule work without a separate index, the host suffix what scopes
+  every rule above. Older names (no host, or no version) parse as "untagged" and "unknown
+  version", treated as *nobody's* and *cannot tell*.
 * `KEEP_SYSTEM_MIRRORS = 3`: `mirror_systems()` used to delete every older system tar before
   writing the new one, which destroyed the only copy of the version a system rollback needs,
   at exactly the moment it was needed.

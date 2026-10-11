@@ -11,8 +11,11 @@ Keeps Foundry, its 27 modules and the `dnd5e` system on the latest stable, unatt
 backed by the OneDrive snapshots `make vtt-down` already writes. The bet is deliberate:
 **everything is backed up before anything is touched, so being on the edge is cheap.**
 
-Runs as a launchd LaunchAgent — survives reboots, needs no terminal open, and lands
-after the weekly token reset. **04:06**, because a full run (2.5 GB backup, core
+Runs as a launchd LaunchAgent on the **primary host** (the Mac) — survives reboots, needs
+no terminal open, and lands after the weekly token reset. On the alt host (BOSS) it refuses:
+`vtt-update.sh` checks `python -m scripts.foundry.host require-primary` first and exits 0
+with a log line, and `apply.gate()` aborts too (`PENTARYN_ROLE_OVERRIDE=primary` passes both;
+`make vtt-update-install` refuses off macOS). **04:06**, because a full run (~3 GB backup, core
 download and install, a browser smoke test per world) takes 20–40 minutes: starting at
 four means it is done, or visibly finishing, by the time anyone opens a laptop.
 
@@ -156,21 +159,25 @@ have been started by hand while the table was in use. Set
 
 ### Backups and what they cost
 
-A snapshot is ~2.5 GB, almost all of it premium map art in `Data/modules`, so retention
-is built around size rather than a count (`scripts/foundry/cloud.py`):
+A snapshot is ~2.5–3.2 GB, almost all of it premium map art in `Data/modules`, so retention
+is built around size rather than a count (`scripts/foundry/cloud.py`), **per host** — the
+Mac and BOSS share the folder and each manages only its own snapshots:
 
-* **10 rolling snapshots**, in `world-backups/`.
-* A snapshot taken **within 5 days** of the newest one *replaces* it. A day of editing
+* **10 rolling snapshots per host**, in `world-backups/`. Legacy untagged ones are never
+  pruned automatically (`make foundry-prune-untagged`).
+* A snapshot taken **within 5 days** of this host's newest one *replaces* it. A day of editing
   costs one snapshot, not six — otherwise an afternoon of `vtt-up`/`vtt-down` cycles
   would evict weeks of real history from a ten-deep window. The Saturday run always
   lands outside that window, so it always adds one.
-* When Foundry moves to a **new generation** (14 → 15), the last snapshot taken while
-  you were still on the old one is copied to `major-release/` and **never pruned**.
+* When Foundry moves to a **new generation** (14 → 15), the last snapshot this host took
+  while still on the old one is copied to `major-release/` and **never pruned**.
   Leaving a generation behind should be a decision you can unmake months later.
   `make foundry-restore` lists these alongside the rolling ones.
 
-Snapshots are named `world-<stamp>-fvtt<version>.tar.gz`, so each one says which Foundry
-wrote it — that is what makes the generation rule work without a separate index.
+Snapshots are named `world-<UTC stamp>-fvtt<version>-<host>.tar.gz`, so each one says which
+Foundry and which machine wrote it — that is what makes the generation rule and per-host
+retention work without a separate index. The run's rollback point is this host's own state
+(`recover.newest_world_snapshot()`), never the other machine's newer snapshot.
 
 Policy lives in [`foundry/update-policy.yml`](../foundry/update-policy.yml): the
 channel, what may auto-apply, pinned packages, retention, the smoke settings and the
