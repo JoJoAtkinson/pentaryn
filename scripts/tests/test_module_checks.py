@@ -22,6 +22,9 @@ checker on the day someone legitimately renames a key in pentaryn-ties.
 from __future__ import annotations
 
 import json
+import re
+
+import pytest
 
 from scripts.foundry.ops import config as cfg, jsscan, modules
 
@@ -263,3 +266,43 @@ def test_line_numbers_survive_templates_and_comments(tmp_path):
     # and the key inside the template is reported on ITS line, not the template's last
     uses = jsscan.key_uses(src, {"DEMO"}, {"DEMO.x"})
     assert [(r.key, r.line) for r in uses.definite] == [("DEMO.x", 5)]
+
+
+# ── doc paths the real modules cite (senses-walls-cursors-8 recipe, repo-wide) ─
+# Unlike the synthetic tests above, these read the real modules: a context/… or
+# playbooks/… path a module's source, README or module.json names must exist, or a
+# reader (human or LLM) following it lands nowhere. walls' own node test covers walls
+# in depth; this is the cross-module net.
+
+
+_CITED = re.compile(r"\b(?:context|playbooks)/[\w./-]+\.md\b")
+_SCANNED = {".mjs", ".js", ".json", ".md", ".css", ".rs", ".hbs", ".html"}
+_SKIPPED = ("lib/", "test/kit/", "node_modules/", "wasm/target/", "wasm/pkg/")
+# Cited paths a later batch fixes; each must still be broken (strict xfail below).
+_PENDING = {
+    # walls module.json `description` — the Wave 7 restart batch rewrites it.
+    ("foundry/module/pentaryn-walls/module.json", "playbooks/foundry-wall-autocomplete.md"),
+}
+
+
+def _unresolved_doc_paths() -> set[tuple[str, str]]:
+    root = cfg.REPO_ROOT
+    out = set()
+    for mod in sorted((root / "foundry" / "module").glob("pentaryn-*")):
+        for f in mod.rglob("*"):
+            rel = f.relative_to(mod).as_posix()
+            if not f.is_file() or f.suffix not in _SCANNED or rel.startswith(_SKIPPED):
+                continue
+            for cited in set(_CITED.findall(f.read_text(errors="ignore"))):
+                if not (root / cited).exists():
+                    out.add((f.relative_to(root).as_posix(), cited))
+    return out
+
+
+def test_every_doc_path_a_module_cites_exists():
+    assert _unresolved_doc_paths() - _PENDING == set()
+
+
+@pytest.mark.xfail(strict=True, reason="Wave 7 restart batch edits walls' module.json description")
+def test_the_pending_doc_paths_are_fixed():
+    assert not (_unresolved_doc_paths() & _PENDING)
