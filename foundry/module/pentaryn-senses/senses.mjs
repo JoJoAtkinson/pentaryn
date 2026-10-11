@@ -104,5 +104,12 @@ function onReady() {
 }
 
 install();
-Hooks.once("init", () => onInit());
-Hooks.once("ready", () => onReady());
+if (globalThis.game?.ready) {
+  // A hot re-import of this entry after the world is ready (after `uninstall()`): the lifecycle
+  // hooks have already fired, so run the phases now, in order. Rows already registered are skipped.
+  onInit();
+  onReady();
+} else {
+  Hooks.once("init", () => onInit());
+  Hooks.once("ready", () => onReady());
+}

@@ -1,13 +1,17 @@
 /**
- * Characterisation (senses checkpoint, wave 3): a HOT import into a running client (`game.ready`
- * already true) — the dev path the plan's step 5 retires ([declared, dev-only] S-4). Chain and light
- * uninstall the previous copy through their `globalThis.__pentaryn*` sentinels; chain publishes at
- * once and queues a repaint; light republishes onto the existing `game.pentaryn.senses`; senses' own
- * `once ready` never fires, so the rest of that namespace is the OLD object's. Frozen once committed.
+ * A HOT import of the entry into a running client (`game.ready` already true) — the dev path.
+ *
+ * [declared S-4, dev-only], flipped from the checkpoint's "hot import: previous copies uninstalled;
+ * chain published now; light republished into the old senses": chain and light no longer keep
+ * `globalThis.__pentaryn*` sentinels or republish themselves. Re-wiring goes through the entry:
+ * `game.pentaryn.senses.uninstall()`, then re-import the entry. Because the lifecycle hooks have
+ * already fired, the entry runs init and ready at once: the setting is registered, a NEW senses
+ * object is published (with the chain alias), and chain queues a repaint. The sentinels a previous
+ * copy left are ignored.
  */
 import { test, mock } from "node:test";
 import assert from "node:assert/strict";
-import { boot, NOW } from "./fixtures/world.mjs";
+import { boot, NOW, MODULE } from "./fixtures/world.mjs";
 
 mock.timers.enable({ apis: ["setTimeout", "Date"], now: NOW });
 const uninstalled = [];
@@ -22,14 +26,15 @@ const F = await boot({
   },
 });
 
-test("hot import: previous copies uninstalled; chain published now; light republished into the old senses", () => {
-  assert.deepEqual(uninstalled, ["chain", "light"]);
-  assert.deepEqual(Object.keys(game.pentaryn.chain), ["link", "break", "links", "repaint", "uninstall"]);
-  assert.equal(globalThis.__pentarynChain, game.pentaryn.chain);
-  assert.equal(game.pentaryn.senses, oldSenses, "senses keeps the old object");
-  assert.equal(game.pentaryn.senses.light, globalThis.__pentarynLight);
+test("hot import: the entry runs init and ready now; a new senses and the chain alias are published", () => {
+  assert.deepEqual(uninstalled, [], "the old sentinels are not called");
+  assert.notEqual(game.pentaryn.senses, oldSenses, "senses is republished, not patched");
+  assert.equal(game.pentaryn.senses.syncLight.name, "syncLight");
   assert.equal(game.pentaryn.senses.setupLight.name, "setup");
-  assert.equal(game.pentaryn.senses.syncLight.name, "oldSync", "the carried path is not republished");
+  assert.equal(typeof game.pentaryn.chain.link, "function");
+  assert.ok(F.game.settings.settings.has(`${MODULE}.sightReset`), "init ran: the setting is registered");
+  assert.equal(F.CONFIG.Canvas.lightAnimations["pentaryn-brokenglow"]?.label, "Broken glow (wandering)", "the glow is registered now");
   assert.equal(F.frames.pending(), 1, "chain queued a repaint");
-  assert.equal(F.listeners("ready"), 1, "only senses' own ready is waiting (chain did not add one)");
+  assert.equal(F.listeners("ready"), 0, "no lifecycle listener waits");
+  assert.equal(F.listeners("init"), 0);
 });

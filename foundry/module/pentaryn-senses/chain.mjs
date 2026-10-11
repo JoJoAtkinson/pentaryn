@@ -15,9 +15,8 @@
  *   game.pentaryn.chain.break(token)            removes every chain touching it
  *   game.pentaryn.chain.links()                 [{chained, anchor}] on the viewed scene
  *
- * Every hook body is wrapped: a bug here logs a warning and draws nothing. It never throws into
- * token rendering. Imported for its side effects by senses.mjs (no module.json change), and safe
- * to hot-import into a running client: a second load uninstalls the first.
+ * Every hook body is guarded: a bug here logs a warning and draws nothing. It never throws into
+ * token rendering. A feature: the entry calls install(reg, ctx); the entry's ready publishes the API.
  */
 
 import { MODULE, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainGeometry, chainThickness, resolveTokenRef } from "./senses-core.mjs";
@@ -251,24 +250,8 @@ export function uninstall() {
 
 const api = { link, break: breakChain, links, repaint: schedule, uninstall };
 
-function publish() {
-  const current = game.pentaryn;
-  // pentaryn-importer freezes game.pentaryn — rebuild the namespace rather than assign into it
-  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, chain: api };
-  else {
-    game.pentaryn ??= {};
-    game.pentaryn.chain = api;
-  }
-}
-
 /** FEATURE: called synchronously by the entry, at import. */
 export function install(reg, ctx) {
-  try {
-    globalThis.__pentarynChain?.uninstall?.();
-  } catch (e) {
-    warn("previous uninstall", e);
-  }
-  globalThis.__pentarynChain = api;
   state.reg = reg;
   ctx.expose({ chainApi: api });
 
@@ -287,10 +270,7 @@ export function install(reg, ctx) {
   });
   on("renderTokenHUD", (app, element) => injectHUD(app, element));
 
-  // The entry's ready publishes the chain API (after senses). A hot import into a ready world
-  // publishes here and repaints.
-  if (game.ready) {
-    publish();
-    schedule();
-  }
+  // The entry's ready publishes the chain API (after senses). Installed into a world that is
+  // already drawn (a hot re-import of the entry): draw the chains now.
+  if (game.ready) schedule();
 }

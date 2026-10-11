@@ -90,9 +90,10 @@ export function register() {
   };
 }
 
-/** FEATURE: the animation is added at init (a raw handler, as it always was). */
+/** FEATURE: the animation is added at init (a raw handler, as it always was), or at once on a hot re-import. */
 export function install(reg) {
-  reg.once("init", register, { guard: false, label: "glow register" });
+  if (globalThis.game?.ready) register();
+  else reg.once("init", register, { guard: false, label: "glow register" });
 }
 
 /** Nothing to undo: the CONFIG row stays until reload (a light using it would lose its animation). */

@@ -14,10 +14,10 @@
  *
  * Lit items. Torches, lamps, lanterns and candles carry flags.pentaryn-senses.lit, toggled by the
  * item's own "Light" activity (consumes nothing) or the flame button on the inventory row. The
- * existing carried-light path in senses.mjs gives the carrier the glow.
+ * carried-light path (carried.mjs) gives the carrier the glow.
  *
- * Every hook body is wrapped: a bug logs `pentaryn-senses | light …` and never breaks a sheet,
- * a chat card or the HUD. Safe to hot-import: a second load uninstalls the first.
+ * Every hook body is guarded: a bug logs `pentaryn-senses | light …` and never breaks a sheet,
+ * a chat card or the HUD. A feature: the entry calls install(reg, ctx).
  */
 
 import {
@@ -705,12 +705,6 @@ export const api = {
 
 /** FEATURE: called synchronously by the entry, at import. The hooks keep today's order. */
 export function install(reg, ctx) {
-  try {
-    globalThis.__pentarynLight?.uninstall?.();
-  } catch (e) {
-    warn("previous uninstall", e);
-  }
-  globalThis.__pentarynLight = api;
   state.reg = reg;
   state.ctx = ctx;
   ctx.expose({ lightApi: api });
@@ -805,15 +799,5 @@ export function install(reg, ctx) {
     clearTimeout(state.timers.get("__sweep"));
     state.timers.set("__sweep", setTimeout(() => { state.timers.delete("__sweep"); sweep().catch(e => warn("sweep", e)); }, 500));
   });
-
-  // Hot re-import into a running client: republish on the existing namespace.
-  if (game.ready && game.pentaryn?.senses) {
-    try {
-      game.pentaryn.senses.light = api;
-      game.pentaryn.senses.setupLight = setup;
-    } catch (e) {
-      warn("republish", e);
-    }
-  }
 }
 
