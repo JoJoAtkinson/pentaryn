@@ -174,7 +174,7 @@ function onRenderSheet(app, element) {
 }
 
 export function install(reg) {
-  reg.on("renderBaseActorSheet", onRenderSheet, { guard: false, label: "renderBaseActorSheet: strip" });
+  reg.on("renderBaseActorSheet", onRenderSheet, { label: "renderBaseActorSheet: strip" });
 }
 
 /** No session state. */

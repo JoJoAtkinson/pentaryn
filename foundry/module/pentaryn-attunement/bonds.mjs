@@ -128,9 +128,9 @@ function onPreCreateItem(item, data, options) {
 }
 
 export function install(reg) {
-  reg.on("preUpdateItem", onPreUpdateItem, { guard: false, label: "preUpdateItem: over-cap warn" });
-  reg.on("preCreateItem", onPreCreateItem, { guard: false, label: "preCreateItem: bond restore" });
-  reg.on("createItem", onCreateItemBond, { guard: false, label: "createItem: bond return" });
+  reg.on("preUpdateItem", onPreUpdateItem, { label: "preUpdateItem: over-cap warn" });
+  reg.on("preCreateItem", onPreCreateItem, { label: "preCreateItem: bond restore" });
+  reg.on("createItem", onCreateItemBond, { label: "createItem: bond return" });
 }
 
 /** No session state. */
