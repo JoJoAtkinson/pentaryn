@@ -24,6 +24,8 @@ import { defineAccessor, wrapMethod } from "./lib/patch.mjs";
 
 /** The ctx this feature was installed with (null when uninstalled). */
 let feature = null;
+/** The module's kit logger (ctx.log); every line keeps the `pentaryn-movement | ` prefix. */
+let log = null;
 
 /* -------------------------------------------- */
 /*  Reads                                       */
@@ -71,7 +73,7 @@ let keyboardHandle = null;
 function patchDrag() {
   const proto = CONFIG.Token?.objectClass?.prototype;
   if (typeof proto?._getDragConstrainOptions !== "function") {
-    console.warn(`${MODULE} | no Token#_getDragConstrainOptions; ghost drag disabled`);
+    log.warn("no Token#_getDragConstrainOptions; ghost drag disabled");
     return false;
   }
   dragHandle = wrapMethod(MODULE, {
@@ -80,7 +82,7 @@ function patchDrag() {
   }, function (wrapped, ...args) {
     const base = wrapped(...args);
     try { return ghostFor(this) ? core.constrainFor(base, true) : base; }
-    catch (err) { console.warn(`${MODULE} | drag constrain skipped`, err); return base; }
+    catch (err) { log.warn("drag constrain skipped", err); return base; }
   });
   return true;
 }
@@ -89,7 +91,7 @@ function patchDrag() {
 function patchKeyboard() {
   const proto = CONFIG.Canvas?.layers?.tokens?.layerClass?.prototype;
   if (typeof proto?._prepareKeyboardMovementUpdates !== "function") {
-    console.warn(`${MODULE} | no TokenLayer#_prepareKeyboardMovementUpdates; ghost arrow keys disabled`);
+    log.warn("no TokenLayer#_prepareKeyboardMovementUpdates; ghost arrow keys disabled");
     return false;
   }
   keyboardHandle = wrapMethod(MODULE, {
@@ -98,7 +100,7 @@ function patchKeyboard() {
   }, function (wrapped, objects, ...rest) {
     const result = wrapped(objects, ...rest);
     try { core.ghostKeyboardMovement(result, objects, ghostFor); }
-    catch (err) { console.warn(`${MODULE} | keyboard constrain skipped`, err); }
+    catch (err) { log.warn("keyboard constrain skipped", err); }
     return result;
   });
   return true;
@@ -225,7 +227,7 @@ export async function onPlayerToggle(active) {
     }
     await game.settings.set(MODULE, "ghost", !!active);
   } catch (err) {
-    console.warn(`${MODULE} | ghost toggle failed`, err);
+    log.warn("ghost toggle failed", err);
   }
 }
 
@@ -237,7 +239,7 @@ async function onGmFlip(active) {
     await game.settings.set(MODULE, "ghostPolicy", next.policy);
     ui.notifications.info(game.i18n.localize(GM_KEYS[next.policy]));
   } catch (err) {
-    console.warn(`${MODULE} | policy flip failed`, err);
+    log.warn("policy flip failed", err);
   }
 }
 
@@ -288,7 +290,7 @@ async function refresh() {
     canvas?.tokens?.recalculatePlannedMovementPaths?.();
     refreshTokens();
   } catch (err) {
-    console.warn(`${MODULE} | refresh failed`, err);
+    log.warn("refresh failed", err);
   }
 }
 const queueRefresh = foundry.utils.debounce(() => refresh(), 50);
@@ -307,6 +309,7 @@ const COMBAT_HOOKS = ["createCombat", "updateCombat", "deleteCombat", "createCom
  */
 export function install(reg, ctx) {
   feature = ctx;
+  log = ctx.log;
   ctx.onSettingChange("ghostPolicy", () => queueRefresh());
   ctx.onSettingChange("ghost", () => queueRefresh());
   ctx.onSettingChange("ownedOnTop", () => refreshTokens());
@@ -315,17 +318,19 @@ export function install(reg, ctx) {
   else reg.once("setup", patchAll, { guard: false, label: "setup: wrap drag and keyboard" });
 
   reg.on("getSceneControlButtons", controls => {
-    try { addTools(controls); } catch (err) { console.warn(`${MODULE} | toolbar skipped`, err); }
+    try { addTools(controls); } catch (err) { log.warn("toolbar skipped", err); }
   }, { guard: false, label: "getSceneControlButtons: ghost tools" });
 
   reg.on("renderSceneControls", (_app, element) => {
-    try { markBlocked(element); } catch {}
+    try { markBlocked(element); }
+    catch (err) { log.warnOnce("renderSceneControls", "renderSceneControls (further errors suppressed)", err); }
   }, { guard: false, label: "renderSceneControls: combat badge" });
 
   reg.on("drawTokenLayer", layer => installLayerSort(layer), { guard: false, label: "drawTokenLayer: owned-on-top sort" });
   reg.on("canvasReady", () => { installLayerSort(); queueRefresh(); }, { guard: false, label: "canvasReady: sort and refresh" });
   reg.on("refreshToken", (token, flags) => {
-    try { onRefreshToken(token, flags); } catch {}
+    try { onRefreshToken(token, flags); }
+    catch (err) { log.warnOnce("refreshToken", "refreshToken (further errors suppressed)", err); }
   }, { guard: false, label: "refreshToken: lift and fade" });
 
   // Ownership changes who is lifted.
