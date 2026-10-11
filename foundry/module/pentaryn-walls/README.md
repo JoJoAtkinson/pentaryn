@@ -56,8 +56,9 @@ and `backends` keep their legacy shapes (`legacy: true`).
 
 ## Data written
 
-Every wall a run touches is stamped under `flags.wall-autocomplete` (the pre-blueprint scope; the
-Wave 7 batch migrates it to `flags.pentaryn-walls`):
+Every wall a run touches is stamped under `flags.wall-autocomplete`, the pre-blueprint scope.
+The Wave 7 batch migrates the stamps to `flags.pentaryn-walls` (`migrations.mjs`, dormant until
+then); reads already accept both scopes (`stampOf`, the module id winning):
 
 | Key | On | Meaning |
 |---|---|---|
@@ -120,9 +121,11 @@ GM tabs each publish their own API; a run in one does not lock the other.
 | `walls-core.mjs` | pure barrel: constants, report/undo text, `planUndo`, `exclusive`; re-exports `core/` |
 | `core/engine.mjs` | the engine: pure geometry, no Foundry APIs, no I/O (over the core cap, by design) |
 | `core/backends.mjs` | backend registry (`js`), `canonical()`, `compare()` |
+| `core/migrate.mjs` | pure planner of the Wave 7 flag-scope migration |
 | `backend-wasm.mjs` | adapter: loads `wall-engine.wasm`, registers `wasm` |
 | `settings.mjs` | `SETTINGS`, `KEYBINDINGS` |
 | `actions.mjs` | feature: preview/run/undo/analyze/makeMacro, the run lock, the keybinding guard |
+| `migrations.mjs` | feature, dormant: the flag-scope migration runner (wired by the Wave 7 batch) |
 | `api-manifest.mjs`, `api.mjs` | API rows and their bindings |
 | `wasm/` | Rust source of the compiled engine (`make foundry-walls-wasm`) |
 | `lib/` | vendored kit — never edited here |
@@ -139,7 +142,8 @@ make foundry-walls-bench [N=20]                           # scaling curve, every
   available backend; `test/engine-golden.test.mjs` — js output hashes, `canonical()` per backend,
   backend drift.
 - `test/core.test.mjs`, `test/core-render.test.mjs`, `test/undo.test.mjs`,
-  `test/engine-shape.test.mjs`, `test/backends.test.mjs` — the pure core.
+  `test/engine-shape.test.mjs`, `test/backends.test.mjs`, `test/scopes.test.mjs`,
+  `test/migrate.test.mjs` — the pure core and the migration.
 - `test/glue.test.mjs` (and `glue-*.test.mjs`), `test/hooks.test.mjs`, `test/api.test.mjs`,
   `test/features.test.mjs`, `test/settings.test.mjs`, `test/i18n.test.mjs` — the Foundry side
   against the kit stub.

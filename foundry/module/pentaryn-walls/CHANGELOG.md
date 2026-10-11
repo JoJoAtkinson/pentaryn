@@ -18,6 +18,8 @@
 - **[declared] The API is kit-built**: frozen, `describe()`/`version`/`contract`/`settings()`/
   `trace()`/`uninstall()` beside the six legacy keys, also `game.modules.get("pentaryn-walls").api`;
   the publish fires `pentaryn-walls.ready` and `pentaryn.ready`.
+- Stamps are read under `flags.pentaryn-walls` as well as `flags.wall-autocomplete` (no data uses
+  the new scope yet); the Wave 7 flag-scope migration is written and tested but not wired.
 - New: `analyze()`, the engine's answer with no side effect (`senses-walls-cursors-33`);
   `canonical(r, {extended: true})` shows level and rule drift between backends (`-3`).
 - Internals: the engine and registry moved to `core/` behind `walls-core.mjs`; one wall-category
