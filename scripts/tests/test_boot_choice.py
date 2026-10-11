@@ -665,3 +665,112 @@ def test_service_up_does_not_start_after_a_failed_restore(two_hosts, tty, svc, m
     with two_hosts.use("boss"):
         assert service.up() == 1
     assert not started
+
+
+# ── lineage cut at LINEAGE_CAP (final review, HIGH) ─────────────────────────
+
+@pytest.fixture
+def small_cap(monkeypatch):
+    """LINEAGE_CAP = 3, and snapshot-name stamps a minute apart: many backups inside one
+    wall-clock second would otherwise reuse a coalesced snapshot's name (a real run takes
+    far longer than a second per backup)."""
+    from datetime import datetime as _dt, timedelta as _td
+    monkeypatch.setattr(cloud, "LINEAGE_CAP", 3)
+    base = _dt.now(cloud.timezone.utc)
+    step = [0]
+
+    class Clock(_dt):
+        @classmethod
+        def now(cls, tz=None):
+            step[0] += 1
+            return base + _td(minutes=step[0])
+    monkeypatch.setattr(cloud, "datetime", Clock)
+
+
+def _mac_saturday_vs_boss_addon_tests(two_hosts, tty):
+    """The reviewer's reproduction, with LINEAGE_CAP small: the Mac backs up five
+    sessions, boss takes the Mac's latest, the Mac plays Saturday, boss (no terminal)
+    then backs up two addon tests. Returns (saturday, addon test 2)."""
+    for i in range(5):
+        _play(two_hosts, "mac", f"mac session {i + 1}")
+    tty(True, [""])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    assert _journal(two_hosts, "boss") == "mac session 5"
+    saturday = _play(two_hosts, "mac", "saturday session")
+    tty(False)
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0                       # notice only
+    _play(two_hosts, "boss", "addon test 1")
+    b2 = _play(two_hosts, "boss", "addon test 2")
+    return saturday, b2
+
+
+def test_a_lineage_cut_at_the_cap_still_sees_divergence_on_the_primary(
+        two_hosts, tty, capsys, small_cap):
+    saturday, b2 = _mac_saturday_vs_boss_addon_tests(two_hosts, tty)
+    capsys.readouterr()
+    asked = tty(True, [""])
+    with two_hosts.use("mac"):
+        assert boot.choose() == 0
+    out = capsys.readouterr().out
+    assert len(asked) == 1 and "Enter = local" in asked[0]
+    assert f"diverged — does not contain {saturday}" in out and b2 in out
+    assert _journal(two_hosts, "mac") == "saturday session"
+
+
+def test_a_lineage_cut_at_the_cap_still_sees_divergence_on_the_alt(
+        two_hosts, tty, capsys, small_cap):
+    """Mirror image: boss works on the Mac's snapshot, then the Mac plays on (more
+    generations than the cap, so the fork point M0 is cut from the Mac's newest list).
+    The Mac's newest lacks boss's work: diverged on boss. (Four Mac generations with a
+    cap of 3: the edge is M0's mtime, older than boss's work. A fifth would cut M1,
+    newer than boss's work, and "cannot tell" would then be the honest answer.)"""
+    _alt_on_macs_latest(two_hosts, tty)
+    b1 = _play(two_hosts, "boss", "boss's own work")
+    for i in range(4):
+        last = _play(two_hosts, "mac", f"mac session {i + 2}")
+    capsys.readouterr()
+    asked = tty(True, [""])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    out = capsys.readouterr().out
+    assert len(asked) == 1 and "Enter = local" in asked[0]
+    assert f"diverged — does not contain {b1}" in out and last in out
+    assert _journal(two_hosts, "boss") == "boss's own work"
+
+
+def test_a_lineage_cut_at_the_cap_keeps_same_line_snapshots_newer(two_hosts, tty, small_cap):
+    """The fix must not turn a long straight line into "diverged": boss takes the Mac's
+    latest, the Mac plays on past the cap, boss is offered the newest with Enter = latest."""
+    _alt_on_macs_latest(two_hosts, tty)
+    for i in range(6):
+        last = _play(two_hosts, "mac", f"mac session {i + 2}")
+    asked = tty(True, [""])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    assert len(asked) == 1 and "Enter = latest" in asked[0]
+    assert _journal(two_hosts, "boss") == "mac session 7"
+    assert _state(two_hosts, "boss")["based_on"] == last
+
+
+def test_a_sidecar_never_holds_non_strict_json(two_hosts, tty, small_cap):
+    """An older sidecar without origin_before reads as unbounded; restoring it and
+    backing up again must not write `Infinity` anywhere."""
+    _play(two_hosts, "mac", "mac world")
+    m0 = _play(two_hosts, "mac", "mac world, later")          # a sidecar with ancestors
+    side = two_hosts.cloud / "world-backups" / f"{m0}.parent"
+    data = json.loads(side.read_text())
+    assert data["ancestors"]
+    data.pop("origin_before")
+    side.write_text(json.dumps(data) + "\n")
+    tty(True, [""])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    assert _state(two_hosts, "boss")["based_on"] == m0
+    _play(two_hosts, "boss", "boss work")
+    def strict(s):
+        return json.loads(s, parse_constant=lambda c: pytest.fail(f"non-strict JSON: {c}"))
+    strict(two_hosts.state_file("boss").read_text())
+    for p in (two_hosts.cloud / "world-backups").glob("*.parent"):
+        strict(p.read_text())

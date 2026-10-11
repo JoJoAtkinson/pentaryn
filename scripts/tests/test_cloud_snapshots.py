@@ -151,10 +151,19 @@ def test_safety_copies_have_their_own_cap_and_never_push_regulars_out(two_hosts)
     assert [n for n in safety if n in left] == safety[2:]          # the last 3 safeties
 
 
+def _based_on(two_hosts, who, name):
+    """`who`'s tree is based on `name` (its digest differs, so a backup uploads)."""
+    with two_hosts.use(who):
+        snap = cloud.find_snapshot(cloud.store(), name)
+        bootstate.BootState().record_snapshot(name, snap.host, snap.mtime, "older",
+                                              by="test")
+
+
 def test_coalesce_replaces_only_this_hosts_newest_within_five_days(two_hosts):
     c = two_hosts.cloud
     mine = _put(c, f"world-{_stamp(1)}-fvtt14.369-mac.tar.gz", age_days=1).name
     theirs = _put(c, f"world-{_stamp(0.5)}-fvtt14.369-boss.tar.gz", age_days=0.5).name
+    _based_on(two_hosts, "mac", mine)
     with two_hosts.use("mac"):
         cloud.backup("manual")
     names = _names(c)
@@ -272,7 +281,8 @@ def test_backup_writes_a_parent_sidecar_and_restore_inherits_its_lineage(two_hos
         cloud.backup("shutdown")
         [m0] = _names(c)
         # No based-on record: the lineage is unknown, not "no ancestors".
-        assert _sidecar(c, m0) == {"parent": None, "ancestors": None, "origin_before": None,
+        assert _sidecar(c, m0) == {"parent": None, "ancestors": None,
+                                   "ancestor_mtimes": None, "origin_before": None,
                                    "host": "mac"}
         m0_mtime = cloud.find_snapshot(cloud.store(), m0).mtime
         _edit(two_hosts.data["mac"], "two")
@@ -281,17 +291,21 @@ def test_backup_writes_a_parent_sidecar_and_restore_inherits_its_lineage(two_hos
     # … but the lineage still names it; m0's own origin is unknown, so the chain's edge
     # is m0's mtime: anything older may be in it.
     assert _sidecar(c, m1)["ancestors"] == [m0]
+    assert _sidecar(c, m1)["ancestor_mtimes"] == [m0_mtime]
     assert _sidecar(c, m1)["origin_before"] == m0_mtime
     assert _sidecars(c) == [m1]                   # m0's sidecar went with it
     with two_hosts.use("boss"):
         cloud.restore(m1, yes=True)
         st = bootstate.load()
         assert (st.based_on, st.lineage, st.lineage_origin_before) == (m1, [m0], m0_mtime)
+        assert st.lineage_mtimes == [m0_mtime]
+        m1_mtime = st.based_on_mtime
         _edit(two_hosts.data["boss"], "boss")
         cloud.backup("shutdown")
         b1 = bootstate.load().based_on
-    assert _sidecar(c, b1) == {"parent": m1, "ancestors": [m1, m0], "origin_before": m0_mtime,
-                               "host": "boss"}
+    assert _sidecar(c, b1) == {"parent": m1, "ancestors": [m1, m0],
+                               "ancestor_mtimes": [m1_mtime, m0_mtime],
+                               "origin_before": m0_mtime, "host": "boss"}
     snap = cloud.find_snapshot(cloud.store(), b1)
     assert cloud.descends(cloud.store(), snap, m0) is True
     other = "world-other.tar.gz"
@@ -335,27 +349,46 @@ def test_a_lost_state_file_makes_the_next_snapshot_unknown(two_hosts):
 
 def test_based_on_a_legacy_snapshot_the_edge_is_its_mtime():
     st = bootstate.BootState(based_on="world-L.tar.gz", based_on_mtime=1000.0, lineage=[])
-    assert cloud.next_lineage(st) == (["world-L.tar.gz"], 1000.0)
+    assert cloud.next_lineage(st) == (["world-L.tar.gz"], [1000.0], 1000.0)
 
 
 def test_a_known_edge_is_inherited():
     st = bootstate.BootState(based_on="b", based_on_mtime=5000.0, lineage=["a", "z"],
                              lineage_origin_before=1000.0)
-    assert cloud.next_lineage(st) == (["b", "a", "z"], 1000.0)
+    assert cloud.next_lineage(st) == (["b", "a", "z"], [5000.0, None, None], 1000.0)
 
 
 def test_no_record_has_no_lineage():
-    assert cloud.next_lineage(bootstate.BootState()) == (None, None)
+    assert cloud.next_lineage(bootstate.BootState()) == (None, None, None)
 
 
-def test_cutting_at_the_cap_moves_the_edge_to_the_based_on_snapshot():
-    """The dropped ancestors are all older than the based-on snapshot, so its mtime is a
-    safe edge: they read as "cannot tell", newer states still as "diverged"."""
-    lineage = [f"a{i}" for i in range(cloud.LINEAGE_CAP + 5)]
+def test_cutting_at_the_cap_moves_the_edge_to_the_newest_dropped_ancestor(monkeypatch):
+    """Final review (HIGH): the edge moves only as far as the dropped ancestors — not to
+    the based-on snapshot, which would make everything older than it "cannot tell"."""
+    monkeypatch.setattr(cloud, "LINEAGE_CAP", 3)
+    lineage = ["a3", "a2", "a1", "a0"]                       # newest first
+    mt = [4000.0, 3000.0, 2000.0, 1500.0]
     st = bootstate.BootState(based_on="b", based_on_mtime=5000.0, lineage=lineage,
+                             lineage_mtimes=mt, lineage_origin_before=1000.0)
+    names, mtimes, origin = cloud.next_lineage(st)
+    assert names == ["b", "a3", "a2"] and mtimes == [5000.0, 4000.0, 3000.0]
+    assert origin == 2000.0                                  # a1, the newest dropped
+
+
+def test_cutting_with_unknown_dropped_mtimes_falls_back_to_the_oldest_kept(monkeypatch):
+    monkeypatch.setattr(cloud, "LINEAGE_CAP", 3)
+    st = bootstate.BootState(based_on="b", based_on_mtime=5000.0,
+                             lineage=["a3", "a2", "a1", "a0"],
+                             lineage_mtimes=[4000.0, None, None, None],
                              lineage_origin_before=1000.0)
-    names, origin = cloud.next_lineage(st)
-    assert len(names) == cloud.LINEAGE_CAP and names[0] == "b" and origin == 5000.0
+    names, _, origin = cloud.next_lineage(st)
+    assert names == ["b", "a3", "a2"] and origin == 4000.0   # a3 bounds a1 from above
+    st.lineage_mtimes = []                                   # an older state file
+    assert cloud.next_lineage(st)[2] == 5000.0               # only the based-on bounds it
+
+
+def test_the_default_cap_is_generous():
+    assert cloud.LINEAGE_CAP >= 1000
 
 
 def test_a_sidecar_without_an_edge_is_unknown_for_anything_it_does_not_name(two_hosts):

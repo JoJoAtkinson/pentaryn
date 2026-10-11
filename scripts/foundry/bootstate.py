@@ -19,6 +19,7 @@ Kept apart from ``boot.py`` so ``cloud.py`` (which writes it on backup and resto
 from __future__ import annotations
 
 import json
+import math
 import os
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
@@ -49,6 +50,9 @@ class BootState:
     # The based-on snapshot's ancestors, newest first (from its `.parent` sidecar): what
     # this world already contains, so a newer snapshot that lacks `based_on` is "diverged".
     lineage: list[str] = field(default_factory=list)
+    # Each lineage entry's listing mtime, same order (None where unknown). The cut at
+    # cloud.LINEAGE_CAP needs the newest dropped ancestor's time for its edge.
+    lineage_mtimes: list[float | None] = field(default_factory=list)
     # Where that lineage stops being known: the listing mtime at or before which this
     # world may hold snapshots `lineage` does not name. None = the based-on snapshot's
     # own lineage is unknown (legacy, adopted marker, no sidecar) — see cloud.Ancestry.
@@ -82,6 +86,7 @@ class BootState:
     def record_snapshot(self, name: str, snap_host: str | None, mtime: float,
                         digest: str, *, by: str, keep_local: str | None = None,
                         lineage: list[str] | None = None,
+                        lineage_mtimes: list[float | None] | None = None,
                         origin_before: float | None = None,
                         clear_pending: bool = False) -> None:
         """Own backup uploaded `name`, or `name` was restored: the tree IS that snapshot.
@@ -95,7 +100,9 @@ class BootState:
         self.keep_local_until_newer_than = keep_local
         self.keep_local_mtime = None
         self.lineage = list(lineage or [])
-        self.lineage_origin_before = origin_before
+        lm = [_finite(m) for m in (lineage_mtimes or [])]
+        self.lineage_mtimes = lm if len(lm) == len(self.lineage) else [None] * len(self.lineage)
+        self.lineage_origin_before = _finite(origin_before)
         if clear_pending:
             self.pending_newer = self.pending_newer_mtime = None
         self.save(by)
@@ -119,6 +126,13 @@ class BootState:
         self.save("boot-pending-cleared")
 
 
+def _finite(x) -> float | None:
+    if isinstance(x, bool) or not isinstance(x, (int, float)):
+        return None
+    x = float(x)
+    return x if math.isfinite(x) else None
+
+
 def load() -> BootState:
     """The record, or an empty one. A corrupt file reads as empty with `corrupt=True`
     (the boot choice then asks, which is the safe direction) and is overwritten on the
@@ -140,11 +154,17 @@ def load() -> BootState:
             st.based_on_mtime = float(st.based_on_mtime)
         if st.keep_local_mtime is not None:
             st.keep_local_mtime = float(st.keep_local_mtime)
-        if st.lineage_origin_before is not None:
-            st.lineage_origin_before = float(st.lineage_origin_before)
+        # An older file may hold `Infinity` here (an unbounded edge): None reads as the
+        # based-on snapshot's own mtime, which is sound — and strict JSON on the next save.
+        st.lineage_origin_before = _finite(st.lineage_origin_before)
         if st.pending_newer_mtime is not None:
             st.pending_newer_mtime = float(st.pending_newer_mtime)
-        st.lineage = [str(n) for n in (st.lineage or []) if n]
+        raw = st.lineage if isinstance(st.lineage, list) else []
+        lm = st.lineage_mtimes if isinstance(st.lineage_mtimes, list) else []
+        lm = lm if len(lm) == len(raw) else [None] * len(raw)
+        pairs = [(str(n), _finite(m)) for n, m in zip(raw, lm) if n]
+        st.lineage = [n for n, _ in pairs]
+        st.lineage_mtimes = [m for _, m in pairs]
         return st
     except (ValueError, TypeError):
         return BootState(corrupt=True)
