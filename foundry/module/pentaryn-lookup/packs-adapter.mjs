@@ -139,3 +139,18 @@ export async function featureTexts(actor, log = null) {
   }
   return features;
 }
+
+/**
+ * selftest's probe of the bug loadBooks routes around: replay core `indexDocument`'s projection of
+ * `pages.name` on a literal, and read whether its SOURCE still projects through getProperty. A read
+ * of core source text, not a patch (README "Patches and adjustments"). Side-effect free.
+ */
+export function indexDocumentProbe() {
+  const CC = foundry.documents.collections.CompendiumCollection;
+  const projected = {};
+  foundry.utils.setProperty(projected, "pages.name",
+    foundry.utils.getProperty({ pages: [{ name: "x" }] }, "pages.name"));
+  const viaGetProperty = /getProperty\(\s*data\s*,\s*field\s*\)/
+    .test(CC?.prototype?.indexDocument?.toString?.() ?? "");
+  return { viaGetProperty, projected };
+}
