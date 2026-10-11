@@ -14,6 +14,9 @@
 - [declared] Settings localised (guide step 10, J13): `lang/en.json` and the module.json
   `languages` entry; the `max` row's label is `PENTARYN_PINGS.Setting.max.Name`/`.Hint` (same
   English on the settings screen); the hidden `log` store row is registered without a name.
+- [declared] Kit 1.0.2 (wave 2, J10): a frozen `game.pentaryn` is no longer rebuilt; the `ready`
+  publish throws into Foundry's hook error report and leaves the root as it was. Nothing freezes the
+  root since the importer's keystone, so a live world sees no difference.
 
 ## 0.1.0
 
