@@ -152,26 +152,27 @@ async function restoreResult(n, target = null) {
 async function restore(n, target = null) {
   const r = await restoreResult(n, target);
   if (r.ok) {
-    ui.notifications.info(`Restored ${r.item.name} to ${r.actor.name} (drop bin #${n}).`);
+    ui.notifications.info(_loc("PENTARYN_DROPBIN.restore.restored", { item: r.item.name, actor: r.actor.name, n }));
     return r.item;
   }
-  if (r.reason === "not-gm") return ui.notifications.warn("Only the GM can restore from the drop bin.");
-  if (r.reason === "no-entry") return ui.notifications.error(`Drop bin: no entry #${n}.`);
-  return ui.notifications.error(`Drop bin: cannot find an actor to restore #${n} onto.`);
+  if (r.reason === "not-gm") return ui.notifications.warn(_loc("PENTARYN_DROPBIN.restore.gmOnly"));
+  if (r.reason === "no-entry") return ui.notifications.error(_loc("PENTARYN_DROPBIN.restore.noEntry", { n }));
+  return ui.notifications.error(_loc("PENTARYN_DROPBIN.restore.noActor", { n }));
 }
 
 async function exportMirror() {
   if (!game.user.isGM) return false;
   const ok = await writeMirror(readLog());
-  ui.notifications.info(ok ? `Drop bin written to ${DIR}/${FILE}` : "Drop bin mirror failed — see console.");
+  ui.notifications.info(ok ? _loc("PENTARYN_DROPBIN.export.ok", { path: `${DIR}/${FILE}` })
+    : _loc("PENTARYN_DROPBIN.export.failed"));
   return ok;
 }
 
 async function clear() {
   if (!game.user.isGM) return false;
   const confirmed = await foundry.applications.api.DialogV2.confirm({
-    window: { title: "Clear the drop bin?" },
-    content: `<p>This wipes <strong>${readLog().length}</strong> ledger entries. The JSON mirror is overwritten too.</p>`
+    window: { title: _loc("PENTARYN_DROPBIN.clear.title") },
+    content: _loc("PENTARYN_DROPBIN.clear.body", { count: readLog().length })
   }).catch(() => false);
   if (!confirmed) return false;
   await clearLog();

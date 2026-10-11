@@ -6,6 +6,28 @@
       "noCharacter": "You need a character of your own to loot into. Ask the GM to assign one.",
       "empty": "Nothing left to take.",
       "failed": "Loot all failed. The GM's client must be connected; see the console."
+    },
+    "restore": {
+      "gmOnly": "Only the GM can restore from the drop bin.",
+      "noEntry": "Drop bin: no entry #{n}.",
+      "noActor": "Drop bin: cannot find an actor to restore #{n} onto.",
+      "restored": "Restored {item} to {actor} (drop bin #{n})."
+    },
+    "export": {
+      "ok": "Drop bin written to {path}",
+      "failed": "Drop bin mirror failed — see console."
+    },
+    "clear": {
+      "title": "Clear the drop bin?",
+      "body": "<p>This wipes <strong>{count}</strong> ledger entries. The JSON mirror is overwritten too.</p>"
+    },
+    "lock": {
+      "toast": "{name} is locked.",
+      "float": "Locked"
+    },
+    "corpse": {
+      "revive": "Revive (1 HP): no longer lootable",
+      "sheet": "Open character sheet (GM)"
     }
   }
 }

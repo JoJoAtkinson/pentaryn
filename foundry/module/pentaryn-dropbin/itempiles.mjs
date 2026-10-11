@@ -114,10 +114,10 @@ function announceLocked(actor, { playSound }) {
     try { foundry.audio.AudioHelper.play({ src: LOCK_SOUND, volume: 0.8 }, true); }
     catch (err) { console.warn(`${MODULE} | could not play the lock sound`, err); }
   }
-  ui.notifications.warn(`${actor?.name ?? "It"} is locked.`);
+  ui.notifications.warn(_loc("PENTARYN_DROPBIN.lock.toast", { name: actor?.name ?? "It" }));
   try {
     const tok = canvas.tokens?.placeables.find(t => t.actor?.id === actor?.id);
-    if (tok) canvas.interface.createScrollingText(tok.center, "Locked", {
+    if (tok) canvas.interface.createScrollingText(tok.center, _loc("PENTARYN_DROPBIN.lock.float"), {
       anchor: CONST.TEXT_ANCHOR_POINTS.TOP, fontSize: 28, fill: "#d8433a", stroke: 0x000000, strokeThickness: 4 });
   } catch (err) { log?.debug("announceLocked: no canvas (off-screen); the notification is enough", err); }
 }

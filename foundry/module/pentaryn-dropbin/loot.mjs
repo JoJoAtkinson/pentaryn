@@ -23,7 +23,12 @@ import { MODULE, lootAllState } from "./loot-core.mjs";
 import { api as itemPilesApi, isValidItemPile, isItemPileEmpty, getActorFlagData, transferEverything, storeOf } from "./piles.mjs";
 
 const BTN = "pd-loot-all";
-const t = k => game.i18n.localize(`PENTARYN_DROPBIN.lootAll.${k}`);
+/** lootAllState's reasons → their full lang keys (literal, so the i18n gate proves each). */
+const REASON_KEYS = Object.freeze({
+  noCharacter: "PENTARYN_DROPBIN.lootAll.noCharacter",
+  empty: "PENTARYN_DROPBIN.lootAll.empty",
+});
+const reasonText = reason => _loc(REASON_KEYS[reason]);
 const warn = (label, err) => console.warn(`${MODULE} | loot all ${label}`, err);
 
 function usable(actor) {
@@ -64,7 +69,7 @@ function paint(app, btn, footer) {
   const s = stateFor(app, footer);
   btn.hidden = !s.show;
   btn.disabled = !!s.disabled || btn.dataset.busy === "1";
-  btn.dataset.tooltip = s.reason ? t(s.reason) : game.i18n.format("PENTARYN_DROPBIN.lootAll.tip", { name: s.recipient?.name ?? "" });
+  btn.dataset.tooltip = s.reason ? reasonText(s.reason) : _loc("PENTARYN_DROPBIN.lootAll.tip", { name: s.recipient?.name ?? "" });
 }
 
 function addButton(app) {
@@ -77,7 +82,7 @@ function addButton(app) {
       btn = document.createElement("button");
       btn.type = "button";
       btn.className = BTN;
-      btn.innerHTML = `<i class="fas fa-hand-holding"></i> ${t("label")}`;
+      btn.innerHTML = `<i class="fas fa-hand-holding"></i> ${_loc("PENTARYN_DROPBIN.lootAll.label")}`;
       btn.addEventListener("click", ev => { ev.preventDefault(); ev.stopPropagation(); lootAll(app, btn); });
       // Next to the Split buttons: before Close Lid (containers) or Leave, whichever comes first.
       const anchor = [...footer.querySelectorAll(":scope > button")]
@@ -97,7 +102,7 @@ async function lootAll(app, btn) {
   const { show, disabled, reason, recipient } = stateFor(app, footerOf(app));
   if (!show) return;
   if (disabled || !recipient) {
-    if (reason) ui.notifications.warn(t(reason));
+    if (reason) ui.notifications.warn(reasonText(reason));
     return;
   }
   btn.dataset.busy = "1";
@@ -108,7 +113,7 @@ async function lootAll(app, btn) {
     await transferEverything(app.actor, recipient, opts);
   } catch (err) {
     warn("transfer", err);
-    ui.notifications.error(t("failed"));
+    ui.notifications.error(_loc("PENTARYN_DROPBIN.lootAll.failed"));
   } finally {
     delete btn.dataset.busy;
     if (btn.isConnected) paint(app, btn, footerOf(app));

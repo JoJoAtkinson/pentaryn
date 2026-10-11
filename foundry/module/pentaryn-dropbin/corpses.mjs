@@ -304,8 +304,8 @@ function addHudButtons(app, element) {
     b.addEventListener("click", ev => { ev.preventDefault(); ev.stopPropagation(); fn(); });
     col.prepend(b);
   };
-  mk("pd-corpse-revive", "fa-heart-pulse", "Revive (1 HP): no longer lootable", async () => { await revive(tokenDoc); app.close(); });
-  mk("pd-corpse-sheet", "fa-user", "Open character sheet (GM)", () => tokenDoc.actor?.sheet.render(true, { focus: true, bypassItemPiles: true }));
+  mk("pd-corpse-revive", "fa-heart-pulse", _loc("PENTARYN_DROPBIN.corpse.revive"), async () => { await revive(tokenDoc); app.close(); });
+  mk("pd-corpse-sheet", "fa-user", _loc("PENTARYN_DROPBIN.corpse.sheet"), () => tokenDoc.actor?.sheet.render(true, { focus: true, bypassItemPiles: true }));
 }
 
 /* -------------------------------------------- */
