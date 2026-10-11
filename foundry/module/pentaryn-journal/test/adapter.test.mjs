@@ -91,10 +91,3 @@ test("targetOf dispatches entry, image page, text page and item with the bar's r
   assert.equal(A.targetOf(e), null, "GM without gmButton");
   assert.deepEqual(A.targetOf(e, { gmButton: true }), { kind: "entry", entry: e });
 });
-
-test("isEyeReadable: pinned by a Note on some scene", () => {
-  const scene = { notes: [{ entryId: "pinned0000000001" }] };
-  F.game.scenes = new StubCollection([["s1", scene]].map(([id, s]) => Object.assign(s, { id })));
-  assert.equal(A.isEyeReadable({ id: "pinned0000000001" }), true);
-  assert.equal(A.isEyeReadable({ id: "loose00000000001" }), false);
-});

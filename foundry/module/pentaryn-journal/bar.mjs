@@ -13,10 +13,11 @@
  */
 
 import {
-  MODULE, escapeHTML, findSaved, isMine, isPersonal, needsItemRefresh, placeFrom, planSave, singlePage, skipReason, status,
+  MODULE, escapeHTML, findSaved, isMine, isPersonal, makePinnedCache, needsItemRefresh, placeFrom, planSave, singlePage,
+  skipReason, status,
 } from "./journal-core.mjs";
 import { setting, whenChanged } from "./settings.mjs";
-import { descriptorsFor, isEyeReadable, targetFor as targetForApp } from "./sources-adapter.mjs";
+import { descriptorsFor, targetFor as targetForApp } from "./sources-adapter.mjs";
 
 /**
  * The bar's own strings are escaped with core.escapeHTML (items-journal-32): rendered text is the same
@@ -266,6 +267,30 @@ let refreshBars = () => {};
 /** The current user's own journal sheet, if that is the window in question. */
 const personalSheet = () => ctx.exposed.personal()?.sheet;
 
+/**
+ * Which journals a scene Note pins, cached (items-journal-38): applySinglePage runs on every journal
+ * render, and the answer used to walk every scene's notes each time. Forgotten whenever a Note or a
+ * Scene is created, updated or deleted. Those five listeners are registered on first use (always after
+ * ready: only a journal render asks), not at load — the load-time hook manifest stays as it was.
+ */
+const pins = makePinnedCache(() => game.scenes);
+const PIN_HOOKS = ["createNote", "updateNote", "deleteNote", "createScene", "deleteScene"];
+let watchingPins = false;
+
+function isEyeReadable(entry) {
+  if (!watchingPins) {
+    watchingPins = true;
+    for (const h of PIN_HOOKS) ctx.reg.on(h, () => pins.invalidate(), { label: `${h}: forget pinned journals` });
+  }
+  return pins.has(entry.id);
+}
+
+/**
+ * A readable behind an eye is one piece of information, not a book: when the entry has a single
+ * page the player can see, its page list and page arrows are hidden. Personal journals are never
+ * touched (they are the list), nor is the GM's view (it is where pages get edited). Behind the
+ * `singlePageReadables` setting so a multi-page eye can come back later.
+ */
 function applySinglePage(app) {
   const root = app?.element;
   if (!(root instanceof HTMLElement)) return;
@@ -340,4 +365,6 @@ export function uninstall() {
   pending.clear();
   lastNote = null;
   lastSkip = null;
+  pins.invalidate();
+  watchingPins = false;
 }

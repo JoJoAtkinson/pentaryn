@@ -470,3 +470,30 @@ export function makeMemo(fn, max = 64) {
 
 /** An item update can change only an item bar: refresh when one is open. `kinds`: the open bars' target kinds. */
 export const needsItemRefresh = kinds => [...(kinds ?? [])].includes("item");
+
+/* -------------------------------------------- */
+/*  Which journals a scene pin opens (items-journal-38) */
+/* -------------------------------------------- */
+
+/**
+ * Every journal id some scene Note pins. A deliberate copy of pentaryn-dropbin's rule
+ * (items-journal-24); modules never import each other.
+ */
+export function pinnedEntryIds(scenes) {
+  const ids = new Set();
+  for (const sc of scenes ?? []) for (const n of sc?.notes ?? []) if (n?.entryId) ids.add(n.entryId);
+  return ids;
+}
+
+/**
+ * pinnedEntryIds(getScenes()), built on first use and kept until invalidate(). The caller
+ * invalidates whenever a Note or a Scene is created, updated or deleted.
+ */
+export function makePinnedCache(getScenes) {
+  let ids = null;
+  return {
+    has: id => (ids ??= pinnedEntryIds(getScenes())).has(id),
+    invalidate() { ids = null; },
+    get built() { return ids !== null; },
+  };
+}

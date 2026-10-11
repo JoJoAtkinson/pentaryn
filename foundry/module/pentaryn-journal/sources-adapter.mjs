@@ -156,12 +156,6 @@ export function targetOf(doc, { gmButton = false } = {}) {
 }
 
 /**
- * A readable behind an eye is one piece of information, not a book: when the entry has a single
- * page the player can see, its page list and page arrows are hidden. Personal journals are never
- * touched (they are the list), nor is the GM's view (it is where pages get edited). Behind the
- * `singlePageReadables` setting so a multi-page eye can come back later.
- */
-/**
  * The target a document stands for, with NO visibility rule (targetOf applies the bar's rules):
  * for reading another user's status (api statusFor). null for anything that is not a journal, a
  * page or an item behind a pile.
@@ -177,8 +171,4 @@ export function rawTargetOf(doc) {
     return src ? { kind: "item", src } : null;
   }
   return null;
-}
-
-export function isEyeReadable(entry) {
-  return game.scenes.some(s => s.notes.some(n => n.entryId === entry.id));
 }
