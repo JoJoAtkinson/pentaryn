@@ -344,13 +344,47 @@ function, rename a test actor and see the toast.
 | 9 Wave 7 | batched |
 | **Total** | **S, ≈ 4 h** plus one approval checkpoint |
 
+## Step 1 record (2026-10-11, wave 1)
+
+- Step 0: not on WAIT; `git diff ee505c2 -- foundry/module/pentaryn-names` empty; live score before
+  67.4 % (29/43, scored as full: no lock yet).
+- Checkpoint **f1ecd11** — `lib/` (kit 1.0.1, small + api) and `test/` only; `names.mjs` untouched.
+  Score after: **78.6 % (33/42) as small**; still failing C07, C11, C12, C18, C34, C39 (spec half),
+  C41, C44, C45 — each cleared by the step named in §1.
+- Suite: `node test/run.mjs` — 28 tests (core 9, glue 19), all pass. Coverage of `names.mjs`
+  (line / branch / funcs): **0 / 0 / 0 before** (no tests) → **100 / 100 / 100 after**
+  (`node --test --experimental-test-coverage --test-coverage-exclude='test/**' "test/**/*.test.mjs"`).
+  No gaps left in the module; the probe subprocesses cover the frozen-root branch.
+- Goldens: `hooks.json`, `legacy-surface.json` (asserted as a subset), `oracle.json` (every row of
+  `fixtures/tables.mjs`), `rename.json` (effect log + `canUserModify` calls), `root.json` (four load
+  orders: frozen root before load, after load, from an earlier `ready` listener; extensible root).
+- Deviations from the plan text, all additive: core.test runs every table over
+  `test/fixtures/impls.mjs` (step 2 appends `["core", …]` there, `plan: planTokenRelabels`, so the
+  frozen test text never changes — step 2's own purity/VERSION tests are new tests); the load orders
+  and the -33 unhandled rejection run in `test/fixtures/probe.mjs` subprocesses (node:test fails any
+  test that leaks a rejection; a fresh process gives a fresh entry instance). The probe replaces
+  `setTimeout`/`setInterval` with recorders, so the kit's one-tick re-alias (step 5) never runs there.
+- Pins that flip later, one [declared] commit each: KNOWN transform-creatures-33 (step 4: rejections
+  `[]`, one `pentaryn-names | relabel after rename failed` warn), "module.api is undefined" (step 5,
+  N-D2), KNOWN transform-creatures-38 (step 6: `sync(id|uuid|exact name)` resolves). Documented
+  quirks pinned as-is: N-L1 siblings, padded old names, `relabel("",",x","y")`, and
+  `relabel("42", 42, "x") → "x"` (shortName stringifies a number).
+- Stub fidelity: `fixtures/live-before.json` is the live golden's deterministic part, reproduced by
+  the "live parity" test. SF7 answered from the 14.369 source: `preUpdateActor` gets the cleaned,
+  undiffed changes (`client/data/client-backend.mjs:238-239`), and an empty diff is dropped before the
+  server (`:262`), so a same-name write is stopped by names' own `changes.name !== actor.name` guard
+  and `updateActor` never fires. The kit stub fires a document's hooks synchronously, so names'
+  nested prototype write reaches later listeners before the outer rename; the test that sees this is
+  order-free. `Scene#updateEmbeddedDocuments` and `TokenDocument#canUserModify` are added by
+  `fixtures/world.mjs` (the kit stub has neither).
+
 ## Result (fill when done)
 
 | | |
 |---|---|
 | Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module names --markdown` |
 | Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
+| Commits (Joe-approved) | characterisation: f1ecd11 · refactor: ______ · standalone: ______ |
 | Declared changes handed to the live-test workflow | ______ (session L__) |
 | `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
 | Adjustments rows appended to `adjustments-batch.md` | yes / no |
