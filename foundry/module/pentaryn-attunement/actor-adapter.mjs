@@ -59,6 +59,14 @@ export async function stash(owner, container, itemIds, { tag, currency = false, 
     tag, currency, randomID: foundry.utils.randomID, setProperty: foundry.utils.setProperty
   });
   const made = await container.createEmbeddedDocuments("Item", creates);
+  // Foundry drops a document that fails validation without throwing: never delete an original
+  // whose copy may not exist (items-journal-10).
+  const accepted = made?.length ?? 0;
+  if (accepted !== creates.length) {
+    console.error(`${MODULE} | stash: container accepted ${accepted}/${creates.length}; originals NOT deleted`,
+      { owner: owner.id, container: container.id });
+    throw new Error(`${MODULE} | stash: container accepted ${accepted}/${creates.length}; originals NOT deleted`);
+  }
   await owner.deleteEmbeddedDocuments("Item", [...ids].filter(id => owner.items.has(id)));
   const update = { [`flags.${MODULE}.${AWAY_FLAG}`]: away, [`flags.${MODULE}.${SLOTS}`]: slots };
   if (currency) for (const k of Object.keys(owner.system.currency ?? {})) update[`system.currency.${k}`] = 0;

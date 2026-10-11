@@ -16,16 +16,24 @@ function owner(id) {
     ] });
 }
 
-// KNOWN: items-journal-10 — the container accepted 1 of 2 copies, and both originals were still
-// deleted from the owner: the dropped item is gone with no copy anywhere.
-test("KNOWN items-journal-10: a container that drops a copy still gets the owner's originals deleted", async () => {
+// [declared] items-journal-10 (was KNOWN): a container that accepts fewer copies than asked leaves
+// the owner untouched — no delete, no owner update — logs one error and stash() rejects.
+test("items-journal-10: a container that drops a copy: originals kept, one error, stash rejects", async () => {
   const box = makeActor(F, { id: "actorBoxS0000001", name: "Box" });
   box.createEmbeddedDocuments = async (type, data) => data.slice(1);
   const who = owner("actorSafe0000001");
   const from = F.calls.length;
-  const out = await stash(who, box, ["c", "t"]);
-  assert.equal(out, 2);
-  assert.deepEqual(F.calls.slice(from).filter(c => c.op === "deleteEmbeddedDocuments").map(c => c.data), [["c", "t"]]);
+  const errors = [];
+  const keep = console.error;
+  console.error = (...a) => errors.push(a);
+  try {
+    await assert.rejects(stash(who, box, ["c", "t"]), /container accepted 1\/2; originals NOT deleted/);
+  } finally {
+    console.error = keep;
+  }
+  assert.deepEqual(F.calls.slice(from).filter(c => c.op === "deleteEmbeddedDocuments" || c.op === "update"), []);
+  assert.deepEqual(errors, [["pentaryn-attunement | stash: container accepted 1/2; originals NOT deleted",
+    { owner: "actorSafe0000001", container: "actorBoxS0000001" }]]);
 });
 
 test("every copy created: unchanged — delete, then the owner update; resolves the count", async () => {
