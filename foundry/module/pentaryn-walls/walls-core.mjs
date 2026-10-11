@@ -34,11 +34,14 @@ const plural = (n, one, many = `${one}s`) => (n === 1 ? one : many);
 /**
  * The ready console line, without the `<module> |` prefix.
  * @param {string[]} names  the available backends, in registry order
+ * @param {string|null} [wasmError]  why the compiled backend failed to load, if it did: appended so
+ *   a missing or broken .wasm is visible in "auto" mode, which otherwise falls back silently
  */
-export function readyLine(names) {
+export function readyLine(names, wasmError = null) {
   return `ready — backends: ${names.join(", ")}. ` +
     `Alt+W run, Alt+Z undo, Alt+Shift+W preview. ` +
-    `API: game.pentaryn.walls.preview() / .run() / .undo() / .makeMacro()`;
+    `API: game.pentaryn.walls.preview() / .run() / .undo() / .makeMacro()` +
+    (wasmError ? ` (wasm unavailable: ${wasmError})` : "");
 }
 
 /**

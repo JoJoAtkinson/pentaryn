@@ -21,7 +21,7 @@
  */
 
 import { HOOKS, MODULE, NS, VERSION, available, readyLine } from "./walls-core.mjs";
-import { ready as wasmReady } from "./backend-wasm.mjs";  // registers "wasm"; loads async
+import { loadErrorMessage, ready as wasmReady } from "./backend-wasm.mjs";  // registers "wasm"; loads async
 import { registerSettings, setting } from "./settings.mjs";
 import { buildApiFor } from "./api.mjs";
 import { makeLog } from "./lib/log.mjs";
@@ -84,7 +84,7 @@ async function onReady() {
     return;
   }
   publishNamespace(NS, ctx.api, { moduleId: MODULE, when: "ready:gm:wasm" });
-  console.log(`${MODULE} | ${readyLine(available().map(b => b.name))}`);
+  console.log(`${MODULE} | ${readyLine(available().map(b => b.name), loadErrorMessage())}`);
 }
 
 install();

@@ -37,6 +37,11 @@ export async function load(url) {
   }
 }
 
+/** Why the .wasm did not load (its error message), or null when it loaded or is still loading. */
+export function loadErrorMessage() {
+  return loadError ? String(loadError.message ?? loadError) : null;
+}
+
 /** Flat i32 layout, mirroring `run()` in lib.rs. */
 function marshal(walls) {
   const buf = new Int32Array(1 + walls.length * 11);
