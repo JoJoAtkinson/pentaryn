@@ -52,10 +52,36 @@ function identified(subject, character, attrId) {
   return identifiedState(readFlag(subject, MODULE, BELIEFS_FLAG) ?? {}, character?.id ?? "", attrId);
 }
 
+/**
+ * A legacy read's actor argument (B2, ties-4): an Actor passes through untouched; a token, id, uuid or
+ * exact name resolves to the WORLD actor (ties data is never on a token's synthetic actor). Anything
+ * that does not resolve — a miss, an ambiguous name, a plain object — is passed on unchanged, so the
+ * read answers exactly as it did before (`[]`, `null`, …), never a throw.
+ */
+function asActor(ref) {
+  if (ref?.documentName === "Actor") return ref;
+  try {
+    return resolveRef(ref, "actor", { base: true, required: false }) ?? ref;
+  } catch {
+    return ref; // AMBIGUOUS / BAD_ARGS: the legacy read decides, as it always did
+  }
+}
+
+/** The read itself, with its first `n` arguments through asActor; keeps the function's name. */
+function resolving(fn, n = 1) {
+  const { [fn.name]: wrapped } = {
+    [fn.name](...args) {
+      for (let i = 0; i < n; i++) args[i] = asActor(args[i]);
+      return fn(...args);
+    }
+  };
+  return wrapped;
+}
+
 /** Data and domain paths: the same functions the hand-built object published. */
 const IMPL = {
-  read,
-  inbound,
+  read: resolving(read),
+  inbound: resolving(inbound),
   set: setTie,
   setTie,
   setNotes,
@@ -63,7 +89,7 @@ const IMPL = {
   migrate: migrateLegacy,
   STANCES,
 
-  "known.read": readKnown,
+  "known.read": resolving(readKnown),
   "known.add": addKnown,
   "known.set": setKnownField,
   "known.hide": hideKnown,
@@ -72,7 +98,7 @@ const IMPL = {
   "known.categories": categoriesFor,
   "known.notebook": notebookActor,
 
-  "study.state": studyStateFor,
+  "study.state": resolving(studyStateFor, 2),
   "study.request": requestStudy,
   "study.as": studyAs,
   "study.kind": kindDialog,
@@ -82,13 +108,13 @@ const IMPL = {
   "study.difficulty": setStudyOffset,
   "study.readTiers": studyTiersOf,
   "study.hold": setStudyHold,
-  "study.beliefs": beliefs,
+  "study.beliefs": resolving(beliefs),
   "study.pending": pending,
   "study.deliver": deliver,
   "study.reset": reset,
   "study.studied": studiedOf,
   "study.fact": resolveFact,
-  "study.lore": loreStateFor,
+  "study.lore": resolving(loreStateFor, 2),
   "study.askLore": requestLore,
   "study.askAttr": requestAttrLore,
   "study.attrOffers": attrOffersFor,
@@ -107,8 +133,8 @@ const IMPL = {
   "study.audit.legacyMissCards": legacyMissCards,
 
   "attributes.list": registry,
-  "attributes.of": attributesOf,
-  "attributes.ids": attributeIdsOf,
+  "attributes.of": resolving(attributesOf),
+  "attributes.ids": resolving(attributeIdsOf),
   "attributes.derived": derivedFor,
   "attributes.resolve": resolveAttribute,
   "attributes.lookup": describeRef,
@@ -120,9 +146,9 @@ const IMPL = {
   "attributes.unlink": unlinkAttribute,
   "attributes.search": searchAttributes,
   "attributes.knows": knowledge,
-  "attributes.known": knownWorld,
+  "attributes.known": resolving(knownWorld),
   "attributes.tell": grantKnowledge,
-  "attributes.broken": brokenAncestry,
+  "attributes.broken": resolving(brokenAncestry),
   "attributes.repair": repairAncestry,
   "attributes.stale": staleCarriers,
   "attributes.selected": selectedAttributes,

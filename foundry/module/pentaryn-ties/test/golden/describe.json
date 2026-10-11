@@ -148,8 +148,11 @@
       "path": "read",
       "params": [
         {
-          "name": "actor",
-          "type": "Actor"
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
         }
       ],
       "returns": "[{ id, name, img, missing, word, notes, stance, strength }]",
@@ -165,8 +168,11 @@
       "path": "inbound",
       "params": [
         {
-          "name": "actor",
-          "type": "Actor"
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
         }
       ],
       "returns": "[{ id, name, img, word, notes, stance, strength, mutual }]",
@@ -409,8 +415,11 @@
       "path": "known.read",
       "params": [
         {
-          "name": "actor",
-          "type": "Actor"
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
         }
       ],
       "returns": "[{ id, name, category, notes, when, hidden?, imposter? }]",
@@ -639,13 +648,15 @@
       "path": "study.state",
       "params": [
         {
-          "name": "character",
-          "type": "Actor",
-          "doc": "a player character"
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
         },
         {
           "name": "subject",
-          "type": "Actor",
+          "type": "Actor|Token|id|uuid|exact name",
           "doc": "the creature or person studied"
         }
       ],
@@ -851,8 +862,11 @@
       "path": "study.beliefs",
       "params": [
         {
-          "name": "actor",
-          "type": "Actor"
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
         }
       ],
       "returns": "[{ character, key, text, tier, total, when, delivered, … }]",
@@ -981,13 +995,15 @@
       "path": "study.lore",
       "params": [
         {
-          "name": "character",
-          "type": "Actor",
-          "doc": "a player character"
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
         },
         {
           "name": "subject",
-          "type": "Actor",
+          "type": "Actor|Token|id|uuid|exact name",
           "doc": "the creature or person studied"
         }
       ],
@@ -1435,8 +1451,11 @@
       "path": "attributes.of",
       "params": [
         {
-          "name": "actor",
-          "type": "Actor"
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
         },
         {
           "name": "kindResolver",
@@ -1461,8 +1480,11 @@
       "path": "attributes.ids",
       "params": [
         {
-          "name": "actor",
-          "type": "Actor"
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
         },
         {
           "name": "kindResolver",
@@ -1710,9 +1732,11 @@
       "path": "attributes.known",
       "params": [
         {
-          "name": "character",
-          "type": "Actor",
-          "doc": "a player character"
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
         },
         {
           "name": "opts",
@@ -1761,8 +1785,11 @@
       "path": "attributes.broken",
       "params": [
         {
-          "name": "actor",
-          "type": "Actor"
+          "name": "ref",
+          "kind": "actor",
+          "type": "Actor|Token|id|uuid|exact name",
+          "resolve": false,
+          "doc": "a token reads its world actor"
         },
         {
           "name": "kindResolver",

@@ -48,3 +48,13 @@ test("ties-6: study.identified is identifiedState over the subject's ledger", ()
   assert.equal(want.carries, true);
   assert.deepEqual(T().study.identified(get(GOB), get(PC), "type:undead"), { settled: false, carries: false, held: false });
 });
+
+test("B2 / ties-4: the legacy reads resolve an id, a name or a token to the WORLD actor; a miss reads as before", () => {
+  const byId = T().attributes.ids(GOB);
+  assert.deepEqual(byId, T().attributes.ids(get(GOB)));
+  assert.deepEqual(T().study.state(PC, "ZZ Goblin"), T().study.state(get(PC), get(GOB)));
+  assert.deepEqual(T().read("nobody by that name"), []);
+  assert.deepEqual(T().known.read("ZZ Caven"), T().known.read(get(PC)));
+  assert.equal(T().read.name, "read");
+  assert.equal(T().attributes.ids.name, "attributeIdsOf");
+});

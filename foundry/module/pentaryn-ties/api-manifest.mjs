@@ -18,6 +18,13 @@ import { CONTRACT, MODULE, NS, VERSION } from "./ties-core.mjs";
 const p = (name, type, doc, extra = {}) => ({ name, type, ...(doc ? { doc } : {}), ...extra });
 const opt = (name, type, doc) => p(name, type, doc, { optional: true });
 const ACTOR = "Actor";
+/**
+ * The first argument of a legacy READ (B2, ties-4): an Actor, or a token, id, uuid or exact name that
+ * api.mjs resolves to the WORLD actor itself (`resolve: false` — the kit's bind would take `base` from
+ * the call's opts only, gap G5). Anything that does not resolve is passed on, so the read answers as
+ * it always did (never a throw).
+ */
+const READ_REF = { name: "ref", kind: "actor", type: "Actor|Token|id|uuid|exact name", resolve: false, doc: "a token reads its world actor" };
 const CHAR = p("character", ACTOR, "a player character");
 const SUBJ = p("subject", ACTOR, "the creature or person studied");
 const ATTR = p("attr", "string", "an attribute id or title (id wins; a miss is refused, never created)");
@@ -78,9 +85,9 @@ export const MANIFEST = Object.freeze({
     row("edit", [p("actor", ACTOR)], "Promise<Application>", "Open the standalone ties editor for an actor."),
     row("addTie", [opt("token", "Token", "default: hovered, then the first controlled token")], "Promise<TieDialog|null>",
       "Open the add-a-tie dialog for a token (key 6); null when refused."),
-    row("read", [p("actor", ACTOR)], "[{ id, name, img, missing, word, notes, stance, strength }]",
+    row("read", [READ_REF], "[{ id, name, img, missing, word, notes, stance, strength }]",
       "This actor's ties, sanitised and sorted. Never throws; [] on a miss.", { nullWhen: "never — [] on a miss" }),
-    row("inbound", [p("actor", ACTOR)], "[{ id, name, img, word, notes, stance, strength, mutual }]",
+    row("inbound", [READ_REF], "[{ id, name, img, word, notes, stance, strength, mutual }]",
       "Who points AT this actor. GM only (a player gets []).", { gm: true }),
     row("set", [p("actor", ACTOR), p("target", ACTOR), opt("tie", "{ word, notes?, stance, strength }"),
       opt("opts", "{ reciprocal = true, reverseWord, reverseStance, reverseNotes }")], "Promise<boolean>",
@@ -109,7 +116,7 @@ export const MANIFEST = Object.freeze({
     row("closeDescription", [], "Promise<void>", "Close the description card."),
 
     /* ── the Known notebook ── */
-    row("known.read", [p("actor", ACTOR)], "[{ id, name, category, notes, when, hidden?, imposter? }]", "The Known list. Never throws."),
+    row("known.read", [READ_REF], "[{ id, name, category, notes, when, hidden?, imposter? }]", "The Known list. Never throws."),
     row("known.add", [p("actor", ACTOR), p("target", "Actor|{ id, name }"), opt("opts", "{ now }")], "Promise<entry|null>",
       "File someone; null if already filed.", { writes: true, sideEffects: [`${F}.known`] }),
     row("known.set", [p("actor", ACTOR), p("id", "string"), p("field", "string"), p("value", "*")], "Promise<boolean>",
@@ -127,7 +134,7 @@ export const MANIFEST = Object.freeze({
     row("known.notebook", [], "Actor|null", "The notebook this client writes into (selected, assigned or owned character)."),
 
     /* ── the study conduit ── */
-    row("study.state", [CHAR, SUBJ], "{ kind, available, spent, content, … }", "The kind study's state as the sheet draws it."),
+    row("study.state", [READ_REF, { ...SUBJ, type: "Actor|Token|id|uuid|exact name" }], "{ kind, available, spent, content, … }", "The kind study's state as the sheet draws it."),
     row("study.request", [CHAR, SUBJ], "Promise<boolean>", "Player gesture: ask to study what this is (opens the study dialog)."),
     row("study.as", [CHAR, SUBJ, opt("opts", "{ mode, situational, loreId, attrId }")], "Promise<boolean>",
       "GM: throw a study check by hand (same handler, same writes as a player's request).",
@@ -143,7 +150,7 @@ export const MANIFEST = Object.freeze({
     row("study.readTiers", [p("actor", ACTOR)], "[{ min, text }]", "The authored study ladder."),
     row("study.hold", [p("actor", ACTOR), p("hold", "boolean|null")], "Promise<boolean>",
       "GM: per-kind approval gate; null inherits the holdDefault setting.", { gm: true, writes: true, sideEffects: [`${F}.studyHold`] }),
-    row("study.beliefs", [p("actor", ACTOR)], "[{ character, key, text, tier, total, when, delivered, … }]",
+    row("study.beliefs", [READ_REF], "[{ character, key, text, tier, total, when, delivered, … }]",
       "GM: what each character was told about this actor, and whether it landed (`when`/`delivered` are locale strings).", { gm: true }),
     row("study.pending", [], "[{ … }]", "GM: every undelivered reveal in the world.", { gm: true }),
     row("study.deliver", [CHAR, SUBJ, opt("loreId", "string"), opt("attrId", "string")], "Promise<boolean>", "GM: release one held reveal.",
@@ -152,7 +159,7 @@ export const MANIFEST = Object.freeze({
       "GM: un-spend a study — the honest do-over.", { gm: true, writes: true, sideEffects: [`${F}.beliefs`, `${F}.studied`] }),
     row("study.studied", [p("actor", ACTOR)], "{ kind, lore }", "The player-side `studied` hints (a UI hint, not the lock)."),
     row("study.fact", [SPEC], "object|null", "The conduit's resolve seam: one fact's skill, DC, ledger and text."),
-    row("study.lore", [CHAR, SUBJ], "[{ id, label, skill, dc, available, … }]", "That actor's lore rows as the character's sheet sees them."),
+    row("study.lore", [READ_REF, { ...SUBJ, type: "Actor|Token|id|uuid|exact name" }], "[{ id, label, skill, dc, available, … }]", "That actor's lore rows as the character's sheet sees them."),
     row("study.askLore", [CHAR, SUBJ, p("loreId", "string")], "Promise<boolean>", "Player gesture: roll one lore row."),
     row("study.askAttr", [CHAR, SUBJ, p("attrId", "string"), p("loreId", "string")], "Promise<boolean>", "Player gesture: roll one attribute-lore row."),
     row("study.attrOffers", [CHAR, SUBJ], "[{ attrId, rows }]", "The attribute lore this subject offers the character."),
@@ -185,9 +192,9 @@ export const MANIFEST = Object.freeze({
 
     /* ── the attribute layer ── */
     row("attributes.list", [], "[entry]", "The clamped attribute registry."),
-    row("attributes.of", [p("actor", ACTOR), opt("kindResolver", "Function"), opt("opts", "{ viewer }")], "[record]",
+    row("attributes.of", [READ_REF, opt("kindResolver", "Function"), opt("opts", "{ viewer }")], "[record]",
       "What this actor belongs to (derived + authored), without the kind pointer unless a resolver is passed."),
-    row("attributes.ids", [p("actor", ACTOR), opt("kindResolver", "Function")], "string[]", "Attribute ids this actor carries (derived ∪ authored − suppressed)."),
+    row("attributes.ids", [READ_REF, opt("kindResolver", "Function")], "string[]", "Attribute ids this actor carries (derived ∪ authored − suppressed)."),
     row("attributes.derived", [p("actor", ACTOR), opt("kindResolver", "Function")], "string[]", "The derived ids only (type:, size:, species:, background:, kind:)."),
     row("attributes.resolve", [ATTR, opt("opts", "{ actor }")], "{ ok, id?, reason? }", "Resolve an id or title to one entry."),
     row("attributes.lookup", [ATTR], "record|null", "One attribute's record (authored: 24 keys, derived: 10); null on a miss. Was `attributes.describe` (D1)."),
@@ -205,10 +212,10 @@ export const MANIFEST = Object.freeze({
       "GM: unlink (takes descendants; suppresses a derived link).", { gm: true, writes: true, sideEffects: [`${F}.attributes`, `${F}.attributesOff`] }),
     row("attributes.search", [p("query", "string"), opt("kindResolver", "Function")], "[record]", "Search entries by title."),
     row("attributes.knows", [], "{ [characterId]: { [attrId]: row } }", "The world-knowledge ledger."),
-    row("attributes.known", [CHAR, opt("opts", "{ forGM, kindResolver }")], "[record]", "What a character has worked out of the world."),
+    row("attributes.known", [READ_REF, opt("opts", "{ forGM, kindResolver }")], "[record]", "What a character has worked out of the world."),
     row("attributes.tell", [CHAR, ATTR, opt("opts", "{ withParents }")], "Promise<{ ok, reason? }>",
       "GM: disclosure, the only non-roll route into world knowledge.", { gm: true, writes: true, sideEffects: ["setting pentaryn-ties.attributeKnowledge"] }),
-    row("attributes.broken", [p("actor", ACTOR), opt("kindResolver", "Function")], "[{ id, missing }]", "Carried entries whose ancestry is broken."),
+    row("attributes.broken", [READ_REF, opt("kindResolver", "Function")], "[{ id, missing }]", "Carried entries whose ancestry is broken."),
     row("attributes.repair", [p("actor", ACTOR), ATTR], "Promise<{ ok, reason? }>", "GM: re-link to repair ancestry (= link).",
       { gm: true, writes: true, sideEffects: [`${F}.attributes`] }),
     row("attributes.stale", [ATTR], "[Actor]", "Actors carrying an entry by a stale link."),

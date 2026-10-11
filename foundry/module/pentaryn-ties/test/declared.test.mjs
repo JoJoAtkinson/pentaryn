@@ -36,7 +36,7 @@ const Attributes = await import("../attributes.mjs");
 const Known = await import("../known-core.mjs");
 const API = await import("../ties-api.mjs");
 
-test("B2 / ties-4 (before): read() of a string ref or a token answers [] — only the Actor itself resolves", () => {
+test("B2 / ties-4 [declared, flipped]: read() of an id, a name or a token resolves to the world actor (before: only the Actor itself, else [])", () => {
   const tokenDoc = canvas.tokens.get("zzTokPc000000001").document;
   pinJSON(
     "declared-b2-read-refs",
