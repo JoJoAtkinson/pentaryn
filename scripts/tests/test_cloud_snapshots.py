@@ -269,7 +269,8 @@ def test_legacy_shared_marker_is_retired(two_hosts):
 def test_legacy_marker_matching_the_tree_is_adopted(two_hosts, capsys):
     legacy = _put(two_hosts.cloud, f"world-{_stamp(2)}-fvtt14.369.tar.gz", age_days=2).name
     with two_hosts.use("mac"):
-        (two_hosts.cloud / "world-backups/.last-digest").write_text(cloud.snapshot_digest() + "\n")
+        (two_hosts.cloud / "world-backups/.last-digest").write_text(
+            cloud.legacy_snapshot_digest() + "\n")
         assert cloud.backup("prelaunch") == 0
         st = bootstate.load()
     assert "skipped" in capsys.readouterr().out
@@ -719,33 +720,13 @@ def test_backup_and_restore_through_rclone(two_hosts, monkeypatch):
     assert "copyto" in fake.verbs() and "moveto" in fake.verbs()
 
 
-# ── stale partials, system mirrors, untagged ────────────────────────────────
+# ── stale partials, untagged ───────────────────────────────────────────────
 
 def test_ensure_cloud_sweeps_stale_partials_only(two_hosts):
     old = _put(two_hosts.cloud, "world-x-mac.tar.gz.partial", age_days=2)
     young = _put(two_hosts.cloud, "world-y-boss.tar.gz.partial", age_days=0.1)
     cloud.ensure_cloud()
     assert not old.exists() and young.exists()
-
-
-def test_system_mirrors_are_shared_and_pruned_by_version(two_hosts):
-    def install(h, version):
-        d = two_hosts.data[h] / "Data/systems/dnd5e"
-        d.mkdir(parents=True, exist_ok=True)
-        (d / "system.json").write_text(json.dumps({"version": version}))
-
-    for i, v in enumerate(["5.9", "5.10", "5.11", "5.12"]):
-        install("mac", v)
-        with two_hosts.use("mac"):
-            _edit(two_hosts.data["mac"], v)
-            cloud.backup("manual")
-    assert _names(two_hosts.cloud, "system-backup") == [
-        "dnd5e-5.10.tar.gz", "dnd5e-5.11.tar.gz", "dnd5e-5.12.tar.gz"]  # by version, not name
-    install("boss", "5.12")
-    before = (two_hosts.cloud / "system-backup/dnd5e-5.12.tar.gz").stat().st_mtime_ns
-    with two_hosts.use("boss"):
-        cloud.backup("manual")
-    assert (two_hosts.cloud / "system-backup/dnd5e-5.12.tar.gz").stat().st_mtime_ns == before
 
 
 def test_untagged_are_never_pruned_and_go_only_by_hand(two_hosts, monkeypatch):
@@ -836,3 +817,611 @@ def test_updater_world_restore_downloads_and_keeps_config(two_hosts):
     assert (two_hosts.data["mac"] / "Data/worlds/w/journal.txt").read_text() == "pre-update"
     assert (two_hosts.data["mac"] / "Config/options.json").read_text() == opts
     assert rec.steps == [f"restored worlds/Config/modules from {snap.name}"]
+
+
+# ── module bundles: the world snapshot is worlds+Config, modules/systems are bundles ──
+# (context/plans/module-bundles-2026-10.md §3.2, §3.5, §3.6, §4, §8)
+
+from bundle_fakes import foundry_launch, make_module  # noqa: E402
+from scripts.foundry import bundles  # noqa: E402
+
+
+def _install(root, *, maps_extra: bytes = b"map art " * 512, system: str | None = "5.12"):
+    """Real module content: a map pack with two LevelDB packs, a small tool, a system.
+    Deterministic bytes, so two hosts installing it get the same fingerprints."""
+    mods = root / "Data/modules"
+    make_module(mods, "maps", version="2.0.0", packs=2, extra={"art/big.webp": maps_extra})
+    make_module(mods, "tools", version="1.1", packs=1)
+    if system:
+        _system(root, system)
+    return root
+
+
+def _system(root, version, body="export const dnd5e = 1;\n"):
+    d = root / "Data/systems/dnd5e"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "system.json").write_text(json.dumps({"id": "dnd5e", "version": version}))
+    (d / "dnd5e.mjs").write_text(body)
+    return d
+
+
+def _packs(root):
+    return sorted(p.parent for p in (root / "Data/modules").glob("*/packs/*/CURRENT"))
+
+
+def _bundle_names(cloud_dir):
+    return sorted(p.name for p in (cloud_dir / "bundles").iterdir())
+
+
+def _uploads(monkeypatch):
+    """Every rel FolderStorage.upload is asked for, in order."""
+    seen: list[str] = []
+    real = storage.FolderStorage.upload
+
+    def spy(self, src, rel):
+        seen.append(rel)
+        return real(self, src, rel)
+    monkeypatch.setattr(storage.FolderStorage, "upload", spy)
+    return seen
+
+
+def _bundle_uploads(seen):
+    return [r.split("/", 1)[1] for r in seen if r.startswith("bundles/")]
+
+
+def _rclone_moves(fake, sub, direction):
+    """Bundle/snapshot names copied up to (`up`) or down from (`down`) cloud subfolder `sub`."""
+    out = []
+    for c in fake.calls:
+        if c[1] != "copyto":
+            continue
+        src, dst = FakeRclone._positional(c[2:])[:2]
+        if direction == "down" and src.startswith("fake:") and f"/{sub}/" in src \
+                and not dst.startswith("fake:"):
+            out.append(src.rsplit("/", 1)[1])
+        if direction == "up" and dst.startswith("fake:") and f"/{sub}/" in dst \
+                and not src.startswith("fake:"):
+            out.append(dst.rsplit("/", 1)[1].removesuffix(".partial"))
+    return out
+
+
+def _tree_hash(root):
+    """Everything under a data root except the bundle cache and the temp dir."""
+    import hashlib
+    h = hashlib.sha256()
+    for p in sorted(root.rglob("*")):
+        rel = p.relative_to(root).as_posix()
+        if rel.startswith(cloud.TMP_DIRNAME) or rel == bundles.CACHE_FILENAME:
+            continue
+        st = p.lstat()
+        h.update(f"{rel}\0{p.is_dir()}\0{st.st_mtime_ns}\0".encode())
+        if p.is_file():
+            h.update(p.read_bytes())
+    return h.hexdigest()
+
+
+def _tmp_files(root):
+    tmp = root / cloud.TMP_DIRNAME
+    return sorted(p.relative_to(tmp).as_posix() for p in tmp.rglob("*") if p.is_file()) \
+        if tmp.exists() else []
+
+
+def _first_member(tar_path):
+    with tarfile.open(tar_path) as tar:
+        first = tar.next()
+        return first.name, json.loads(tar.extractfile(first).read())
+
+
+def _newest(cloud_dir, suffix="-mac.tar.gz"):
+    return [n for n in _names(cloud_dir) if n.endswith(suffix)][-1]
+
+
+def test_bundled_backup_uploads_a_world_tar_every_bundle_and_the_manifest(two_hosts,
+                                                                          monkeypatch):
+    mac = _install(two_hosts.data["mac"])
+    seen = _uploads(monkeypatch)
+    with two_hosts.use("mac"):
+        assert cloud.backup("shutdown") == 0
+        inv = bundles.local_inventory()
+    [name] = _names(two_hosts.cloud)
+    want = bundles.manifest(inv)
+    assert set(want["modules"]) == {"m", "maps", "tools"} and set(want["systems"]) == {"dnd5e"}
+    assert want["systems"]["dnd5e"].startswith("system@dnd5e@5.12@")
+    # every bundle once, before the world tar
+    assert sorted(_bundle_uploads(seen)) == _bundle_names(two_hosts.cloud) == sorted(
+        bundles.manifest_names(want))
+    assert seen[-1] == f"world-backups/{name}"
+    # the world tar: the marker first, then worlds + Config only
+    tar_path = two_hosts.cloud / "world-backups" / name
+    first, marker = _first_member(tar_path)
+    assert first == cloud.SNAPSHOT_MARKER
+    assert marker["bundled"] == 1 and marker["host"] == "mac" and marker["core"] == "14.369"
+    assert (marker["modules"], marker["systems"]) == (want["modules"], want["systems"])
+    with tarfile.open(tar_path) as tar:
+        names = tar.getnames()
+        assert tar.extractfile("Data/worlds/w/world.json").read() == b'{"id": "w"}\n'
+    assert "Config/options.json" in names
+    assert not any(n.startswith(("Data/modules", "Data/systems")) for n in names)
+    # the sidecar: lineage as before, plus the manifest
+    side = _sidecar(two_hosts.cloud, name)
+    assert side["bundled"] == 1 and side["host"] == "mac" and "ancestors" in side
+    assert (side["modules"], side["systems"]) == (want["modules"], want["systems"])
+    # nothing staged is left behind; no system mirror is written any more
+    assert _tmp_files(mac) == []
+    assert _names(two_hosts.cloud, "system-backup") == []
+
+
+def test_a_foundry_launch_uploads_no_bundle_and_a_changed_module_uploads_one(two_hosts,
+                                                                             monkeypatch):
+    mac = _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+        first = _bundle_names(two_hosts.cloud)
+        seen = _uploads(monkeypatch)
+        _edit(mac, "after a session")
+        for pack in _packs(mac):
+            foundry_launch(pack)
+        cloud.backup("shutdown")
+        assert _bundle_uploads(seen) == []                # world only
+        assert any(r.startswith("world-backups/") for r in seen)
+        seen.clear()
+        (mac / "Data/modules/tools/scripts/new.js").write_text("// a real change\n")
+        _edit(mac, "and another")
+        cloud.backup("shutdown")
+    [one] = _bundle_uploads(seen)
+    assert one.startswith("module@tools@1.1@") and one not in first
+    assert len(_bundle_names(two_hosts.cloud)) == len(first) + 1
+
+
+def test_the_digest_changes_only_with_the_world_or_the_manifest(two_hosts):
+    mac = _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        d0 = cloud.snapshot_digest()
+        for pack in _packs(mac):
+            foundry_launch(pack)
+        assert cloud.snapshot_digest() == d0              # housekeeping is not content
+        (mac / "Data/modules/maps/art/big.webp").write_bytes(b"repainted")
+        d1 = cloud.snapshot_digest()
+        assert d1 != d0                                   # the manifest moved
+        _edit(mac, "world")
+        d2 = cloud.snapshot_digest()
+        assert d2 not in (d0, d1)                         # the world moved
+        m = bundles.manifest(bundles.local_inventory())
+        assert cloud.snapshot_digest(m) == d2
+        assert cloud.snapshot_digest({"modules": {}, "systems": {}}) != d2
+        assert cloud.legacy_snapshot_digest() != d2
+
+
+def test_a_failed_world_upload_leaves_bundles_and_sidecar_but_no_snapshot(two_hosts,
+                                                                          monkeypatch):
+    _install(two_hosts.data["mac"])
+    real = storage.FolderStorage.upload
+
+    def flaky(self, src, rel):
+        if rel.startswith("world-backups/"):
+            raise storage.StorageError("upload of the world failed", verb="copyto")
+        return real(self, src, rel)
+    monkeypatch.setattr(storage.FolderStorage, "upload", flaky)
+    with two_hosts.use("mac"), pytest.raises(SystemExit):
+        cloud.backup("shutdown")
+    with two_hosts.use("mac"):
+        want = bundles.manifest_names(bundles.manifest(bundles.local_inventory()))
+    assert set(_bundle_names(two_hosts.cloud)) == want
+    assert len(_sidecars(two_hosts.cloud)) == 1
+    assert cloud.snapshots(cloud.store()) == []
+    with two_hosts.use("mac"):
+        assert bootstate.load().based_on is None
+
+
+def test_a_failed_bundle_upload_leaves_only_a_partial(two_hosts, monkeypatch, capsys):
+    _install(two_hosts.data["mac"])
+
+    def broken(self, src, rel):
+        if rel.startswith("bundles/"):
+            shutil.copy2(src, self._p(rel + ".partial"))
+            raise storage.StorageError("connection reset", verb="copyto")
+        raise AssertionError(f"uploaded {rel} after a failed bundle")
+    monkeypatch.setattr(storage.FolderStorage, "upload", broken)
+    with two_hosts.use("mac"), pytest.raises(SystemExit):
+        cloud.backup("shutdown")
+    left = _bundle_names(two_hosts.cloud)
+    assert len(left) == 1 and left[0].endswith(".partial")
+    assert list((two_hosts.cloud / "world-backups").iterdir()) == []
+    err = capsys.readouterr().err
+    assert "upload failed" in err and "world-" in err
+
+
+def test_promotion_copies_the_manifest(two_hosts):
+    c = two_hosts.cloud
+    _install(two_hosts.data["mac"])
+    two_hosts.set_core("mac", "13.351")
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    [old] = _names(c)
+    two_hosts.set_core("mac", "14.369")
+    with two_hosts.use("mac"):
+        _edit(two_hosts.data["mac"], "on 14")
+        cloud.backup("shutdown")
+    assert _names(c, "major-release") == [old]
+    preserved = _sidecar(c, old, "major-release")
+    assert preserved["bundled"] == 1 and "maps" in preserved["modules"]
+    snap = cloud.find_snapshot(cloud.store(), old)
+    assert snap.folder == "major-release"
+    assert cloud.read_manifest(cloud.store(), snap)["modules"] == preserved["modules"]
+
+
+# ── systems are bundles (replaces the system-backup/ mirrors) ────────────────
+
+def test_systems_are_bundles_shared_by_both_hosts(two_hosts, monkeypatch):
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    [sysb] = [n for n in _bundle_names(two_hosts.cloud) if n.startswith("system@")]
+    assert sysb.startswith("system@dnd5e@5.12@")
+    before = (two_hosts.cloud / "bundles" / sysb).stat().st_mtime_ns
+    _install(two_hosts.data["boss"])                      # the same bytes on the other host
+    seen = _uploads(monkeypatch)
+    with two_hosts.use("boss"):
+        _edit(two_hosts.data["boss"], "boss")
+        cloud.backup("shutdown")
+    assert _bundle_uploads(seen) == []                    # shared, not uploaded twice
+    assert (two_hosts.cloud / "bundles" / sysb).stat().st_mtime_ns == before
+    boss_snap = _newest(two_hosts.cloud, "-boss.tar.gz")
+    assert _sidecar(two_hosts.cloud, boss_snap)["systems"] == {"dnd5e": sysb}
+    assert _names(two_hosts.cloud, "system-backup") == []
+
+
+def test_a_system_is_restored_only_when_its_fingerprint_differs(two_hosts):
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    snap = _newest(two_hosts.cloud)
+    boss = _install(two_hosts.data["boss"], system=None)
+    _system(boss, "5.11", body="old code\n")
+    with two_hosts.use("boss"):
+        cloud.restore(snap, yes=True)
+    sysjson = json.loads((boss / "Data/systems/dnd5e/system.json").read_text())
+    assert sysjson["version"] == "5.12"
+    assert (boss / "Data/systems/dnd5e/dnd5e.mjs").read_text() == "export const dnd5e = 1;\n"
+    ino = (boss / "Data/systems/dnd5e/dnd5e.mjs").stat().st_ino
+    with two_hosts.use("boss"):
+        _edit(boss, "boss plays")
+        cloud.backup("shutdown")
+        cloud.restore(snap, yes=True)                     # same fingerprint now → untouched
+    assert (boss / "Data/systems/dnd5e/dnd5e.mjs").stat().st_ino == ino
+
+
+# ── bundled restore ──────────────────────────────────────────────────────────
+
+def test_bundled_restore_downloads_only_what_this_machine_lacks(two_hosts, monkeypatch,
+                                                               capsys):
+    fake = _rclone_cloud(two_hosts, monkeypatch)
+    _install(two_hosts.data["mac"])
+    (two_hosts.data["mac"] / "Data/modules/tools/scripts/main.js").write_text("// mac v2\n")
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+        mac_inv = bundles.local_inventory()
+    snap = [n for n in _names(two_hosts.cloud) if n.startswith("world-")][-1]
+    boss = _install(two_hosts.data["boss"])               # same maps + system, older tools
+    maps_file = boss / "Data/modules/maps/art/big.webp"
+    maps_stat = (maps_file.stat().st_ino, maps_file.stat().st_mtime_ns)
+    maps_dir_ino = (boss / "Data/modules/maps").stat().st_ino
+    fake.calls.clear()
+    capsys.readouterr()
+    with two_hosts.use("boss"):
+        assert cloud.restore(snap, yes=True) == 0
+        st = bootstate.load()
+        boss_inv = bundles.local_inventory()
+    assert _rclone_moves(fake, "bundles", "down") == [mac_inv["module/tools"].name]
+    assert (boss / "Data/modules/tools/scripts/main.js").read_text() == "// mac v2\n"
+    assert (maps_file.stat().st_ino, maps_file.stat().st_mtime_ns) == maps_stat
+    assert (boss / "Data/modules/maps").stat().st_ino == maps_dir_ino
+    assert {k: v.name for k, v in boss_inv.items()} == {k: v.name for k, v in mac_inv.items()}
+    assert (st.based_on, st.based_on_host, st.digest) == (snap, "mac", cloud_digest(two_hosts))
+    out = capsys.readouterr().out
+    assert re.search(rf"restored {re.escape(snap)}: world [\d.]+ [MG]B; modules: 1 installed "
+                     r"\([\d.]+ [MG]B\), 2 unchanged, 0 removed; systems: unchanged", out), out
+    assert not (boss / "Data/modules" / cloud.SNAPSHOT_MARKER).exists()
+    assert not (boss / cloud.SNAPSHOT_MARKER).exists()
+    assert _tmp_files(boss) == []
+
+
+def cloud_digest(two_hosts, who="boss"):
+    with two_hosts.use(who):
+        return cloud.snapshot_digest()
+
+
+def test_bundled_restore_removes_extras_after_the_safety_copy_references_them(two_hosts):
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    snap = _newest(two_hosts.cloud)
+    boss = _install(two_hosts.data["boss"])
+    make_module(boss / "Data/modules", "boss-only", version="0.1")
+    (boss / "Data/modules/.hidden-thing").mkdir()           # skipped → never deleted
+    (boss / "Data/modules/no-manifest").mkdir()
+    (boss / "Data/modules/README.txt").write_text("Foundry's\n")
+    with two_hosts.use("boss"):
+        _edit(boss, "boss work")
+        cloud.restore(snap, yes=True)
+    assert not (boss / "Data/modules/boss-only").exists()
+    assert (boss / "Data/modules/.hidden-thing").is_dir()
+    assert (boss / "Data/modules/no-manifest").is_dir()
+    assert (boss / "Data/modules/README.txt").read_text() == "Foundry's\n"
+    [safety] = [n for n in _names(two_hosts.cloud) if n.endswith("-boss.safety.tar.gz")]
+    ref = _sidecar(two_hosts.cloud, safety)["modules"]["boss-only"]
+    assert ref in _bundle_names(two_hosts.cloud)          # in the cloud before it went
+
+
+def test_bundled_restore_with_no_local_world_leaves_extras_and_lists_them(two_hosts, capsys):
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    snap = _newest(two_hosts.cloud)
+    boss = two_hosts.data["boss"]
+    shutil.rmtree(boss / "Data/worlds")
+    make_module(boss / "Data/modules", "boss-only", version="0.1")
+    capsys.readouterr()
+    with two_hosts.use("boss"):
+        cloud.restore(snap, yes=True)
+    assert (boss / "Data/modules/boss-only/module.json").exists()
+    assert (boss / "Data/modules/maps/module.json").exists()
+    out = capsys.readouterr().out
+    assert "boss-only" in out and "left" in out
+    assert not any(n.endswith(".safety.tar.gz") for n in _names(two_hosts.cloud))
+
+
+def test_apply_with_systems_false_leaves_systems_alone(two_hosts):
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    snap_name = _newest(two_hosts.cloud)
+    boss = _install(two_hosts.data["boss"], system=None)
+    _system(boss, "6.0", body="newer code\n")
+    (boss / "Data/systems/other").mkdir(parents=True)
+    (boss / "Data/systems/other/system.json").write_text('{"id": "other", "version": "1"}')
+    with two_hosts.use("boss"):
+        st = cloud.store()
+        f = cloud.fetch_snapshot(st, cloud.find_snapshot(st, snap_name))
+        assert "system/dnd5e" in f.needed and "system/other" in f.extras
+        try:
+            cloud.apply_snapshot(f, systems=False)
+        finally:
+            cloud.discard_fetched(f)
+    assert json.loads((boss / "Data/systems/dnd5e/system.json").read_text())["version"] == "6.0"
+    assert (boss / "Data/systems/other/system.json").exists()
+    assert _tmp_files(boss) == []
+
+
+# ── full (legacy) restore ────────────────────────────────────────────────────
+
+def _legacy_tar(path, root_files: dict[str, bytes]):
+    """A hand-made full snapshot: worlds + Config + modules, no marker."""
+    import io
+    with tarfile.open(path, "w:gz") as tar:
+        for rel, data in sorted(root_files.items()):
+            info = tarfile.TarInfo(rel)
+            info.size = len(data)
+            info.mtime = int(time.time()) - 3600
+            tar.addfile(info, io.BytesIO(data))
+    return path
+
+
+_LEGACY = {
+    "Data/worlds/w/world.json": b'{"id": "w"}\n',
+    "Data/worlds/w/journal.txt": b"from the full era",
+    "Config/options.json": b'{"dataPath": "/Users/someone/FoundryData"}\n',
+    "Data/modules/old-maps/module.json": b'{"id": "old-maps", "version": "1"}',
+    "Data/modules/old-maps/art.webp": b"old art",
+}
+
+
+@pytest.mark.parametrize("sidecar", [None, "full-era"])
+def test_a_full_snapshot_restores_exactly_as_before(two_hosts, sidecar):
+    name = (f"world-{_stamp(2)}-fvtt14.369.tar.gz" if sidecar is None
+            else f"world-{_stamp(2)}-fvtt14.369-mac.tar.gz")
+    p = _legacy_tar(two_hosts.cloud / "world-backups" / name, _LEGACY)
+    os.utime(p, (time.time() - 2 * DAY,) * 2)
+    if sidecar:
+        (two_hosts.cloud / "world-backups" / f"{name}.parent").write_text(json.dumps(
+            {"parent": None, "ancestors": [], "ancestor_mtimes": [], "origin_before": 1.0,
+             "host": "mac"}))
+    boss = _install(two_hosts.data["boss"])
+    with two_hosts.use("boss"):
+        snap = cloud.find_snapshot(cloud.store(), name)
+        assert cloud.read_manifest(cloud.store(), snap) is None
+        assert cloud.restore(name, yes=True) == 0
+        assert bootstate.load().based_on == name
+    assert (boss / "Data/worlds/w/journal.txt").read_text() == "from the full era"
+    assert sorted(p.name for p in (boss / "Data/modules").iterdir()) == ["old-maps"]
+    assert (boss / "Data/modules/old-maps/art.webp").read_bytes() == b"old art"
+    assert (boss / "Data/systems/dnd5e").is_dir()           # a full restore never touched systems
+    opts = json.loads((boss / "Config/options.json").read_text())
+    assert opts["dataPath"] == str(boss)                    # boss's own options.json kept
+
+
+def test_extract_snapshot_of_a_local_bundled_tar_needs_every_bundle_here(two_hosts):
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    tar = two_hosts.cloud / "world-backups" / _newest(two_hosts.cloud)
+    boss = two_hosts.data["boss"]                           # lacks maps, tools, dnd5e
+    before = _tree_hash(boss)
+    with two_hosts.use("boss"), pytest.raises(RuntimeError) as exc:
+        cloud.extract_snapshot(tar)
+    assert "module@maps@2.0.0@" in str(exc.value) and "module@tools@1.1@" in str(exc.value)
+    assert _tree_hash(boss) == before
+    _install(boss)
+    (boss / "Data/worlds/w/journal.txt").write_text("boss")
+    with two_hosts.use("boss"):
+        cloud.extract_snapshot(tar)
+    assert not (boss / "Data/worlds/w/journal.txt").exists()   # mac's world has none
+    assert not (boss / cloud.SNAPSHOT_MARKER).exists()
+
+
+# ── refusals: nothing local touched ──────────────────────────────────────────
+
+def _refusal_setup(two_hosts):
+    _install(two_hosts.data["mac"])
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+    snap = _newest(two_hosts.cloud)
+    boss = two_hosts.data["boss"]                          # needs maps, tools, dnd5e
+    (boss / "Data/worlds/w/journal.txt").write_text("boss's own")
+    make_module(boss / "Data/modules", "boss-only")
+    with two_hosts.use("boss"):
+        bundles.local_inventory()                          # the cache exists before
+    return snap, boss
+
+
+def _refused(two_hosts, snap, boss, capsys, *needles):
+    before = _tree_hash(boss)
+    capsys.readouterr()
+    with two_hosts.use("boss"), pytest.raises(SystemExit):
+        cloud.restore(snap, yes=True)
+    err = capsys.readouterr().err
+    for n in needles:
+        assert n in err, err
+    assert "nothing local was touched" in err
+    assert _tree_hash(boss) == before
+    assert _tmp_files(boss) == []
+    assert not any(n.endswith("-boss.safety.tar.gz") for n in _names(two_hosts.cloud))
+    with two_hosts.use("boss"):
+        assert bootstate.load().based_on is None
+
+
+def test_restore_refuses_when_a_needed_bundle_is_missing(two_hosts, capsys):
+    snap, boss = _refusal_setup(two_hosts)
+    [maps] = [n for n in _bundle_names(two_hosts.cloud) if n.startswith("module@maps@")]
+    (two_hosts.cloud / "bundles" / maps).unlink()
+    _refused(two_hosts, snap, boss, capsys, f"cannot restore {snap} completely", maps)
+
+
+def test_restore_refuses_when_a_bundle_arrives_with_the_wrong_size(two_hosts, monkeypatch,
+                                                                   capsys):
+    snap, boss = _refusal_setup(two_hosts)
+    real = storage.FolderStorage.download
+
+    def short(self, rel, dest):
+        out = real(self, rel, dest)
+        if rel.startswith("bundles/module@tools@"):
+            with open(out, "ab") as fh:
+                fh.write(b"!")
+        return out
+    monkeypatch.setattr(storage.FolderStorage, "download", short)
+    _refused(two_hosts, snap, boss, capsys, "module@tools@")
+
+
+def test_restore_refuses_a_bundled_sidecar_over_a_tar_without_the_marker(two_hosts, capsys):
+    snap, boss = _refusal_setup(two_hosts)
+    p = two_hosts.cloud / "world-backups" / snap
+    _legacy_tar(p, _LEGACY)                                # sidecar still says bundled
+    _refused(two_hosts, snap, boss, capsys, "sidecar and snapshot disagree")
+
+
+@pytest.mark.parametrize("how", ["deleted", "full-era", "different"])
+def test_restore_refuses_a_marked_tar_whose_sidecar_disagrees(two_hosts, capsys, how):
+    snap, boss = _refusal_setup(two_hosts)
+    side = two_hosts.cloud / "world-backups" / f"{snap}.parent"
+    data = json.loads(side.read_text())
+    if how == "deleted":
+        side.unlink()
+    elif how == "full-era":
+        for k in ("bundled", "modules", "systems"):
+            data.pop(k)
+        side.write_text(json.dumps(data))
+    else:
+        data["modules"].pop("tools")
+        side.write_text(json.dumps(data))
+    _refused(two_hosts, snap, boss, capsys, "sidecar and snapshot disagree")
+
+
+# ── the two-hosts scenario (§8), counting transfers ─────────────────────────
+
+def test_two_hosts_scenario_moves_only_the_bundles_that_changed(two_hosts, monkeypatch):
+    fake = _rclone_cloud(two_hosts, monkeypatch)
+    mac, boss = _install(two_hosts.data["mac"]), two_hosts.data["boss"]
+    with two_hosts.use("mac"):
+        cloud.backup("shutdown")
+        everything = sorted(v.name for v in bundles.local_inventory().values())
+    m1 = [n for n in _names(two_hosts.cloud) if n.startswith("world-")][-1]
+
+    def run(who, fn):
+        fake.calls.clear()
+        with two_hosts.use(who):
+            fn()
+        return (sorted(_rclone_moves(fake, "bundles", "down")),
+                sorted(_rclone_moves(fake, "bundles", "up")))
+
+    def newest_of(h):
+        return [n for n in _names(two_hosts.cloud)
+                if n.endswith(f"-{h}.tar.gz")][-1]
+
+    # 1. BOSS, never ran Foundry, takes the Mac's newest: every bundle comes down
+    for sub in ("Data/worlds", "Data/modules", "Config"):
+        shutil.rmtree(boss / sub)
+    down, up = run("boss", lambda: cloud.restore(m1, yes=True))
+    assert down == everything and up == []
+    assert (boss / "Data/systems/dnd5e/system.json").exists()
+    # 2. BOSS plays and backs up: the world, no bundle
+    def boss_session():
+        _edit(boss, "boss session")
+        cloud.backup("shutdown")
+    down, up = run("boss", boss_session)
+    assert (down, up) == ([], [])
+    b1 = newest_of("boss")
+    # 3. the Mac takes BOSS's: no bundle
+    down, up = run("mac", lambda: cloud.restore(b1, yes=True))
+    assert (down, up) == ([], [])
+    assert (mac / "Data/worlds/w/journal.txt").read_text() == "boss session"
+    # 4. BOSS installs X and backs up: one bundle up
+    def boss_installs():
+        make_module(boss / "Data/modules", "x-tool", version="0.9")
+        _edit(boss, "boss with x")
+        cloud.backup("shutdown")
+    down, up = run("boss", boss_installs)
+    assert down == [] and len(up) == 1 and up[0].startswith("module@x-tool@0.9@")
+    x = up[0]
+    b2 = newest_of("boss")
+    # 5. the Mac takes it: one bundle down
+    down, up = run("mac", lambda: cloud.restore(b2, yes=True))
+    assert (down, up) == ([x], [])
+    assert (mac / "Data/modules/x-tool/module.json").exists()
+    # 6. the Mac removes X and backs up; BOSS takes it: X goes on BOSS, stays in the cloud
+    def mac_removes():
+        shutil.rmtree(mac / "Data/modules/x-tool")
+        _edit(mac, "mac without x")
+        cloud.backup("shutdown")
+    down, up = run("mac", mac_removes)
+    assert (down, up) == ([], [])
+    m2 = newest_of("mac")
+    assert "x-tool" not in _sidecar(two_hosts.cloud, m2)["modules"]
+    down, up = run("boss", lambda: cloud.restore(m2, yes=True))
+    assert (down, up) == ([], [])
+    assert not (boss / "Data/modules/x-tool").exists()
+    assert x in _bundle_names(two_hosts.cloud)
+    assert (boss / "Data/worlds/w/journal.txt").read_text() == "mac without x"
+
+
+# ── the updater on a bundled snapshot ───────────────────────────────────────
+
+def test_updater_world_restore_of_a_bundled_snapshot_restores_modules_not_the_system(
+        two_hosts):
+    from scripts.foundry.update import recover
+    mac = _install(two_hosts.data["mac"])
+    (mac / "Data/worlds/w/journal.txt").write_text("pre-update")
+    with two_hosts.use("mac"):
+        cloud.backup("auto-update")
+        snap = recover.newest_world_snapshot()
+        _edit(mac, "migrated by a bad update")
+        (mac / "Data/modules/tools/scripts/main.js").write_text("// updated module\n")
+        _system(mac, "5.13", body="the new system\n")
+        rec = recover.Recovery(kind="system", target="dnd5e")
+        recover._restore_world_tar(snap, rec)
+        st = bootstate.load()
+    assert (mac / "Data/worlds/w/journal.txt").read_text() == "pre-update"
+    assert (mac / "Data/modules/tools/scripts/main.js").read_text() == "console.log('tools');\n"
+    assert (mac / "Data/systems/dnd5e/dnd5e.mjs").read_text() == "the new system\n"
+    assert rec.steps == [f"restored worlds/Config/modules from {snap.name}"]
+    assert (st.based_on, st.by) == (snap.name, "updater-rollback")
+    assert _tmp_files(mac) == []
