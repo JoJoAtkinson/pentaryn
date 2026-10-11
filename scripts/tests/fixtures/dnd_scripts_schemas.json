@@ -90,6 +90,105 @@
   "required": [],
   "type": "object"
  },
+ "feedback_get": {
+  "additionalProperties": false,
+  "properties": {
+   "id": {
+    "description": "Full 16-character id or a unique prefix.",
+    "type": "string"
+   },
+   "raw": {
+    "default": false,
+    "type": "boolean"
+   }
+  },
+  "required": [
+   "id"
+  ],
+  "type": "object"
+ },
+ "feedback_list": {
+  "additionalProperties": false,
+  "properties": {
+   "limit": {
+    "default": 50,
+    "maximum": 500,
+    "minimum": 1,
+    "type": "integer"
+   },
+   "status": {
+    "default": "open",
+    "description": "open (default), triaged, resolved, wontfix, or all.",
+    "enum": [
+     "open",
+     "triaged",
+     "resolved",
+     "wontfix",
+     "all"
+    ],
+    "type": "string"
+   },
+   "world": {
+    "description": "A Foundry world id (folder name). Omit for every world.",
+    "type": "string"
+   }
+  },
+  "required": [],
+  "type": "object"
+ },
+ "feedback_next": {
+  "additionalProperties": false,
+  "properties": {
+   "status": {
+    "default": "open",
+    "enum": [
+     "open",
+     "triaged",
+     "resolved",
+     "wontfix"
+    ],
+    "type": "string"
+   },
+   "world": {
+    "description": "A Foundry world id (folder name). Omit for every world.",
+    "type": "string"
+   }
+  },
+  "required": [],
+  "type": "object"
+ },
+ "feedback_resolve": {
+  "additionalProperties": false,
+  "properties": {
+   "force": {
+    "default": false,
+    "type": "boolean"
+   },
+   "id": {
+    "description": "Full id or a unique prefix.",
+    "type": "string"
+   },
+   "note": {
+    "default": "",
+    "description": "What was found or changed (commit, file, reason).",
+    "type": "string"
+   },
+   "status": {
+    "enum": [
+     "open",
+     "triaged",
+     "resolved",
+     "wontfix"
+    ],
+    "type": "string"
+   }
+  },
+  "required": [
+   "id",
+   "status"
+  ],
+  "type": "object"
+ },
  "find_lore": {
   "additionalProperties": false,
   "properties": {

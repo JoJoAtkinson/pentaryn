@@ -1,0 +1,1604 @@
+{
+ "schemaVersion": 1,
+ "id": "k3Yx9Qp2LmN7aB4c",
+ "t": 1791745331000,
+ "iso": "2026-10-11T19:02:11.000Z",
+ "receivedAt": 1791745331420,
+ "category": "bug",
+ "text": "Loot all did nothing on the second corpse",
+ "status": "open",
+ "history": [],
+ "user": {
+  "id": "player0000000001",
+  "name": "Caven's player",
+  "role": 1,
+  "isGM": false,
+  "character": {
+   "id": "caven00000000001",
+   "name": "Caven"
+  }
+ },
+ "world": {
+  "id": "pentaryn",
+  "title": "Pentaryn",
+  "system": "dnd5e",
+  "systemVersion": "6.0.6",
+  "coreVersion": "14.369"
+ },
+ "scene": {
+  "viewed": {
+   "id": "sceneone00000001",
+   "name": "Underdark Gate"
+  },
+  "active": {
+   "id": "sceneone00000001",
+   "name": "Underdark Gate"
+  },
+  "canvasReady": true
+ },
+ "tokens": {
+  "controlled": [
+   {
+    "id": "tokone0000000001",
+    "name": "Caven",
+    "actorId": "caven00000000001",
+    "actorName": "Caven",
+    "actorType": "character",
+    "hp": {
+     "value": 12,
+     "max": 27
+    }
+   }
+  ],
+  "targeted": []
+ },
+ "combat": {
+  "id": "combat0000000001",
+  "round": 3,
+  "turn": 2,
+  "combatant": "Caven",
+  "started": true,
+  "sceneId": "sceneone00000001"
+ },
+ "windows": [
+  {
+   "id": "ActorSheet5eCharacter-Actor-caven",
+   "cls": "ActorSheet5eCharacter",
+   "title": "Caven"
+  },
+  {
+   "id": "pile-1",
+   "cls": "ItemPileInventoryApp",
+   "title": "Corpse of Skeleton"
+  }
+ ],
+ "modules": [
+  {
+   "id": "item-piles",
+   "version": "3.2.0"
+  },
+  {
+   "id": "pentaryn-dropbin",
+   "version": "0.4.0"
+  },
+  {
+   "id": "pentaryn-feedback",
+   "version": "0.1.0"
+  }
+ ],
+ "client": {
+  "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+  "viewport": "1920x1080",
+  "lang": "en",
+  "tz": "America/Los_Angeles"
+ },
+ "chat": [
+  {
+   "t": 1791745079000,
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  }
+ ],
+ "errors": [
+  {
+   "t": 1791745328000,
+   "source": "hooks",
+   "message": "TypeError: Cannot read properties of undefined (reading 'transferEverything')",
+   "stack": "TypeError: Cannot read properties of undefined (reading 'transferEverything')\nat lootAll (http://localhost:30000/modules/pentaryn-dropbin/loot.mjs:88:12)\nat onClick (http://localhost:30000/modules/item-piles/app.mjs:10:3)",
+   "location": "Hooks.#call"
+  },
+  {
+   "t": 1791745328500,
+   "source": "console.warn",
+   "message": "deprecated: something"
+  }
+ ],
+ "actions": [
+  {
+   "t": 1791745211000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745211600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745212200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745212800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745213400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745214000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745214600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745215200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745215800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745216400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  },
+  {
+   "t": 1791745217000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745217600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745218200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745218800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745219400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745220000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745220600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745221200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745221800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745222400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  },
+  {
+   "t": 1791745223000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745223600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745224200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745224800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745225400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745226000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745226600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745227200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745227800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745228400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  },
+  {
+   "t": 1791745229000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745229600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745230200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745230800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745231400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745232000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745232600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745233200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745233800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745234400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  },
+  {
+   "t": 1791745235000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745235600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745236200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745236800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745237400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745238000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745238600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745239200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745239800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745240400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  },
+  {
+   "t": 1791745241000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745241600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745242200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745242800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745243400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745244000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745244600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745245200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745245800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745246400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  },
+  {
+   "t": 1791745247000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745247600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745248200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745248800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745249400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745250000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745250600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745251200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745251800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745252400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  },
+  {
+   "t": 1791745253000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745253600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745254200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745254800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745255400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745256000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745256600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745257200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745257800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745258400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  },
+  {
+   "t": 1791745259000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745259600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745260200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745260800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745261400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745262000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745262600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745263200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745263800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745264400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  },
+  {
+   "t": 1791745265000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745265600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745266200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745266800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745267400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745268000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745268600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745269200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745269800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745270400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  },
+  {
+   "t": 1791745271000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745271600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745272200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745272800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745273400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745274000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745274600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745275200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745275800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745276400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  },
+  {
+   "t": 1791745277000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745277600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745278200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745278800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745279400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745280000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745280600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745281200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745281800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745282400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  },
+  {
+   "t": 1791745283000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745283600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745284200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745284800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745285400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745286000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745286600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745287200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745287800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745288400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  },
+  {
+   "t": 1791745289000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745289600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745290200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745290800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745291400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745292000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745292600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745293200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745293800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745294400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  },
+  {
+   "t": 1791745295000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745295600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745296200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745296800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745297400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745298000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745298600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745299200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745299800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745300400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  },
+  {
+   "t": 1791745301000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745301600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745302200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745302800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745303400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745304000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745304600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745305200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745305800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745306400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  },
+  {
+   "t": 1791745307000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745307600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745308200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745308800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745309400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745310000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745310600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745311200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745311800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745312400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  },
+  {
+   "t": 1791745313000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745313600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745314200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745314800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745315400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745316000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745316600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745317200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745317800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745318400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  },
+  {
+   "t": 1791745319000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745319600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745320200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745320800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745321400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745322000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745322600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745323200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745323800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745324400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  },
+  {
+   "t": 1791745325000,
+   "kind": "tool",
+   "control": "tokens",
+   "tool": "select"
+  },
+  {
+   "t": 1791745325600,
+   "kind": "app",
+   "op": "render",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "title": "Corpse of Skeleton"
+  },
+  {
+   "t": 1791745326200,
+   "kind": "click",
+   "action": "lootAll",
+   "cls": "ItemPileInventoryApp",
+   "id": "pile-1",
+   "text": "Loot all"
+  },
+  {
+   "t": 1791745326800,
+   "kind": "doc",
+   "op": "update",
+   "type": "Actor",
+   "id": "caven00000000001",
+   "name": "Caven",
+   "keys": [
+    "items"
+   ]
+  },
+  {
+   "t": 1791745327400,
+   "kind": "chat",
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  },
+  {
+   "t": 1791745328000,
+   "kind": "use",
+   "item": "Longsword",
+   "activity": "Attack",
+   "actor": "Caven"
+  },
+  {
+   "t": 1791745328600,
+   "kind": "combat",
+   "round": 3,
+   "turn": 2,
+   "combatant": "Caven"
+  },
+  {
+   "t": 1791745329200,
+   "kind": "notify",
+   "level": "warning",
+   "text": "Nothing to loot"
+  },
+  {
+   "t": 1791745329800,
+   "kind": "control",
+   "token": "Caven",
+   "actor": "Caven",
+   "on": true
+  },
+  {
+   "t": 1791745330400,
+   "kind": "target",
+   "token": "Skeleton",
+   "on": true
+  }
+ ],
+ "module": {
+  "id": "pentaryn-feedback",
+  "version": "0.1.0"
+ }
+}

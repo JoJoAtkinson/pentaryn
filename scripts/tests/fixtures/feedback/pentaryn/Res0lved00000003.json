@@ -1,0 +1,117 @@
+{
+ "schemaVersion": 1,
+ "id": "Res0lved00000003",
+ "t": 1791572531000,
+ "iso": "2026-10-09T19:02:11.000Z",
+ "receivedAt": 1791572531420,
+ "category": "defect",
+ "text": "The ruler snaps to half squares",
+ "status": "resolved",
+ "history": [
+  {
+   "t": 1791645331000,
+   "status": "resolved",
+   "note": "fixed in pentaryn-cursors 0.3.1",
+   "by": "claude-code"
+  }
+ ],
+ "user": {
+  "id": "player0000000001",
+  "name": "Caven's player",
+  "role": 1,
+  "isGM": false,
+  "character": {
+   "id": "caven00000000001",
+   "name": "Caven"
+  }
+ },
+ "world": {
+  "id": "pentaryn",
+  "title": "Pentaryn",
+  "system": "dnd5e",
+  "systemVersion": "6.0.6",
+  "coreVersion": "14.369"
+ },
+ "scene": {
+  "viewed": {
+   "id": "sceneone00000001",
+   "name": "Underdark Gate"
+  },
+  "active": {
+   "id": "sceneone00000001",
+   "name": "Underdark Gate"
+  },
+  "canvasReady": true
+ },
+ "tokens": {
+  "controlled": [
+   {
+    "id": "tokone0000000001",
+    "name": "Caven",
+    "actorId": "caven00000000001",
+    "actorName": "Caven",
+    "actorType": "character",
+    "hp": {
+     "value": 12,
+     "max": 27
+    }
+   }
+  ],
+  "targeted": []
+ },
+ "combat": {
+  "id": "combat0000000001",
+  "round": 3,
+  "turn": 2,
+  "combatant": "Caven",
+  "started": true,
+  "sceneId": "sceneone00000001"
+ },
+ "windows": [
+  {
+   "id": "ActorSheet5eCharacter-Actor-caven",
+   "cls": "ActorSheet5eCharacter",
+   "title": "Caven"
+  },
+  {
+   "id": "pile-1",
+   "cls": "ItemPileInventoryApp",
+   "title": "Corpse of Skeleton"
+  }
+ ],
+ "modules": [
+  {
+   "id": "item-piles",
+   "version": "3.2.0"
+  },
+  {
+   "id": "pentaryn-dropbin",
+   "version": "0.4.0"
+  },
+  {
+   "id": "pentaryn-feedback",
+   "version": "0.1.0"
+  }
+ ],
+ "client": {
+  "ua": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
+  "viewport": "1920x1080",
+  "lang": "en",
+  "tz": "America/Los_Angeles"
+ },
+ "chat": [
+  {
+   "t": 1791745079000,
+   "id": "msg0000000000001",
+   "flavor": "Longsword — Attack",
+   "total": 17,
+   "whisper": false
+  }
+ ],
+ "errors": [],
+ "actions": [],
+ "module": {
+  "id": "pentaryn-feedback",
+  "version": "0.1.0"
+ }
+}
