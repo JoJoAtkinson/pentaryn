@@ -445,6 +445,11 @@ The structural steps absorb all of -17, -18, -20, -21, -22, -23 and -37.
 Wave 7 items (one restart, batched with every module):
 - `flags.pentaryn = { tier: "full", namespace: "movement", flagScope: "pentaryn-movement", cssPrefix: "pm-", generation: 14, afterSync: [...] }`.
   `flagScope` is only a declaration: movement writes no flags, so this needs no data migration.
+  `afterSync` is the movement `after_sync` tuple in `scripts/foundry/ops/config.py`, verbatim, all
+  three lines (the "First install…" line, "Players get a Ghost toggle in the token tools; the GM sets
+  the policy in settings.", and `  game.pentaryn.movement.status()`). The same commit deletes that
+  tuple from the `ModuleSpec`: `after_sync` has one source per module, and once `module.json` carries
+  `afterSync` the tuple is never read. Never edit the tuple in the meantime.
 - `styles: ["styles/movement.css"]` (move the file in the same batch).
 - `compatibility.verified: "14.369"`.
 
