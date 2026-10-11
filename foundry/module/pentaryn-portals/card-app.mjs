@@ -8,6 +8,7 @@
 
 import { MODULE, cardHTML, esc } from "./portals-core.mjs";
 import { cardFor, destinationsOf, linkRegions, lookAt, snapshot, teleportBehaviors, unlinkRegion } from "./scene-adapter.mjs";
+import { flagPath } from "./lib/flags.mjs";
 
 const deps = { setEditing: () => {} };
 
@@ -132,7 +133,7 @@ export class PortalCard extends foundry.applications.api.ApplicationV2 {
         type: "image", current: dest.flags?.[MODULE]?.img ?? "", callback: setImg }).render(true);
       card.querySelector('[data-act="pick"]').addEventListener("click", pick);
       card.querySelector(".ppt-thumb").addEventListener("click", pick);
-      card.querySelector('[data-act="clearimg"]')?.addEventListener("click", async () => { await dest.update({ [`flags.${MODULE}.-=img`]: null }); this.render(); });
+      card.querySelector('[data-act="clearimg"]')?.addEventListener("click", async () => { await dest.update({ [flagPath(MODULE, "img")]: _del }); this.render(); });
       card.querySelector('[data-act="look"]').addEventListener("click", () => lookAt(dest));
       card.querySelector('[data-act="unlink"]').addEventListener("click", async () => {
         await unlinkRegion(region, dest);

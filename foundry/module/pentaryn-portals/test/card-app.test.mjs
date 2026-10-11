@@ -119,8 +119,8 @@ test("edit controls on a card: title, description, pick (FilePicker + callback),
 
   n = F.calls.length;
   await card.querySelector('[data-act="clearimg"]').click();
-  // hygiene finding: the `-=img` deletion key (deprecated) — re-pinned when it moves to flagPath + _del
-  assert.deepEqual(W.callsSince(n, ["update"]).map(x => x.changes), [{ "flags.pentaryn-portals.-=img": null }]);
+  // hygiene: flagPath + _del (core's ForcedDeletion), no longer the deprecated `-=img` key
+  assert.deepEqual(W.callsSince(n, ["update"]).map(x => x.changes), [{ "flags.pentaryn-portals.img": "<_del>" }]);
   assert.equal(P.pitGate.flags[MODULE].img, undefined);
   assert.equal(W.callsSince(n, ["app.render"]).length, 1);
 
