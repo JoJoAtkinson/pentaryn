@@ -46,7 +46,7 @@ byte-identical to the live `foundry/module/pentaryn-ties` (checked with `diff -r
 | WAIT | **No.** Ties is not in `wait.json`. It imports, reads and emits nothing from combat, transform or aoe. One caveat on a shared adjustments row is in §6 |
 | Declared changes | 11 (§5). One of them (**B1b**) is a blueprint gap that needs a decision from Joe before S8 |
 | Effort | **XL**: about 93–110 h structural, plus 30–40 h for the standalone findings (§7) |
-| Prerequisites | K2 top-level reserved names — **blocked on D1**; K5 `buildApi` freezes a copy — **landed** (kit 1.0.1); K9 blueprint gaps G1/G3/G4/G5 — open; D1 (Joe) — open |
+| Prerequisites | K2 top-level reserved names — D1 decided (rename, aliases until S8); K5 `buildApi` freezes a copy — **landed** (kit 1.0.1); K9 blueprint gaps G1/G3/G4/G5 — open; D1 (Joe) — decided 2026-10-11 |
 | Scores | §1 was scored before scorer fixes R2–R9 ([design record](../addon-blueprint-2026-10.md) §7.5). **After R-fixes: re-score** — `conformance.py --module ties --markdown`. No status changed on the snapshot; C48 now also lists `study.inspect` and `attributes.describe` (R4), and C07 says manifest-only (R3) |
 | Shared-file batches | `module.json` edits → [`wave7-restart-batch.md`](wave7-restart-batch.md); adjustments rows → [`adjustments-batch.md`](adjustments-batch.md) (append in the Record step) |
 
@@ -221,7 +221,7 @@ diff (`test/golden/*`, `test/*.test.mjs`) is committed by the agent as the check
   `git log -- foundry/module/pentaryn-ties` and re-derive the line numbers below.
 - `./.venv/bin/python scripts/foundry/blueprint/conformance.py --module ties --markdown`. Confirm ties
   is not WAIT.
-- Decide **B1b** (§5) before S8 starts.
+- **B1b** decided (D1, 2026-10-11): rename with temporary aliases — landed in wave 1 (§5).
 - Findings: none. Effort 0.5 h.
 
 ### S1 — Test runner, vendored kit, shared stubs
@@ -455,7 +455,7 @@ Each bullet is its own commit, with the S2 oracle as proof.
   C17 (kept), C18. C10 drops the entry. Neutral (B9 deferred). Effort 12–14 h.
 
 ### S8 — `api-manifest.mjs`, `api.mjs`, `buildApi`
-- **Needs B1b decided.** `buildApi` throws on `describe`, `attributes.describe` and `study.inspect`.
+- B1b is decided (D1): delete the `attributes.describe` and `study.inspect` aliases here (the kit refuses them); `attributes.lookup`/`study.examine` are the rows. `buildApi` still throws on top-level `describe` until B1.
 - `api-manifest.mjs`: one row per existing path (§2.1, ~96). Rules:
   - Legacy shapes → `legacy: true`, with `returns` copied from today's comments (e.g. `read` "never
     throws, [] on miss"; `known.add` "null if already filed"; attribute writes `{ok, reason?, …}`).
@@ -623,7 +623,7 @@ until the live-test run reports on it.
 | # | Change | Step | How to see it at the table |
 |---|---|---|---|
 | **B1** (spec B1) | `ties.describe` → `ties.describeCard` (`describe-dialog.toggle`). `ties.describe()` now returns the manifest. The old card path gets a `logCompatibilityWarning` shim on `describeCard` only, because the old name cannot keep both meanings | S8 | key 9 still toggles the card; a macro calling `game.pentaryn.ties.describe()` gets JSON instead of the card |
-| **B1b** (new, **decision needed**) | `attributes.describe` (`describeRef`, documented 3× in attributes.md:200/437/593) and `study.inspect` (the inspect gesture) also hit kit `RESERVED`. The kit refuses reserved names **at any depth**, so `buildApi` throws. **Option A (recommended):** relax `reservedClash` in `foundry/lib/api.mjs` to the top level only. Nested paths cannot clobber a kit member, so both paths keep working; this is a kit bump to 1.0.1 and the re-vendor needs only a reload. **Option B:** rename them to `attributes.lookup` and `study.examine`, with no shim possible (the old names stay reserved), and update attributes.md | S8 | A: none. B: console macros using `A.describe(…)` break |
+| **B1b** (**decided 2026-10-11, D1 = option B with aliases; landed wave 1, `1411687`**) | `attributes.describe` (`describeRef`, documented 3× in attributes.md:200/437/593) and `study.inspect` (the inspect gesture) also hit kit `RESERVED`. The kit refuses reserved names **at any depth**, so `buildApi` throws. **Option A (recommended):** relax `reservedClash` in `foundry/lib/api.mjs` to the top level only. Nested paths cannot clobber a kit member, so both paths keep working; this is a kit bump to 1.0.1 and the re-vendor needs only a reload. **Option B:** rename them to `attributes.lookup` and `study.examine`, with no shim possible (the old names stay reserved), and update attributes.md | S8 | A: none. B: console macros using `A.describe(…)` break. **As landed:** `attributes.lookup` and `study.examine` published now; `attributes.describe`/`study.inspect` stay as aliases that call `logCompatibilityWarning` (once per call site) until S8, where the aliases are deleted (the kit refuses the names). S8 drops the two alias rows from the manifest; the `surface-legacy.json` exception list is exactly these two paths plus B1's top-level `describe` |
 | B2 | ties-4: string and token refs to the read rows now resolve, to the **base** actor | S8 | `game.pentaryn.ties.read("Caven Ashwell")` returns ties instead of `[]` |
 | B3 | ties-3/-5/-6/-8/-9/-10: new API paths and return keys (additive) | S8, S15 | none at the table; `describe()` lists them |
 | B4 | ties-29: a missing `Roll._mapLegacyRollMode` refuses the study cleanly, and a throw after `claimFact` releases the claim | S15 | only on a core that drops the private API. Force a throw in `rollSkill`; the fact is studyable again with no GM reset |
