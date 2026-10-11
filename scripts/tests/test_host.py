@@ -187,11 +187,30 @@ def test_mac_defaults(monkeypatch):
         "/Applications/Foundry Virtual Tabletop.app/Contents/Resources/app")
 
 
-def test_linux_defaults(monkeypatch):
+def test_linux_defaults(monkeypatch, tmp_path):
     monkeypatch.delenv("FOUNDRY_DATA")
+    monkeypatch.delenv("FOUNDRY_APP_ROOT", raising=False)
+    monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setattr(host.platform, "system", lambda: "Linux")
-    assert host.foundry_data() == Path.home() / ".local/share/FoundryVTT"
-    assert host.foundry_app_root() == Path.home() / "foundryvtt/resources/app"
+    assert host.foundry_data() == tmp_path / ".local/share/FoundryVTT"
+    assert host.foundry_app_root() == tmp_path / "foundryvtt"      # nothing unpacked yet
+
+
+@pytest.mark.parametrize("layout", ["foundryvtt", "foundryvtt/resources/app"])
+def test_linux_app_root_is_probed_so_the_version_is_known(monkeypatch, tmp_path, layout):
+    """The Node.js build (v12 on) has package.json at the top; the Electron build under
+    resources/app. Either way the version reads, so snapshot names, major-release
+    preservation and the version-mismatch line keep working."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("FOUNDRY_APP_ROOT", raising=False)
+    monkeypatch.setattr(host.platform, "system", lambda: "Linux")
+    app = tmp_path / layout
+    app.mkdir(parents=True)
+    (app / "main.js").write_text("")
+    (app / "package.json").write_text(json.dumps(
+        {"version": "14.369.0", "release": {"generation": 14, "build": 369}}))
+    assert host.foundry_app_root() == app
+    assert host.core_version() == "14.369"
 
 
 def test_foundry_data_pointing_at_data_is_refused(monkeypatch, fake_data):

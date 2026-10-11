@@ -226,7 +226,7 @@ the environment wins.
 | `PENTARYN_PRIMARY_HOST` | `mac` | `mac` | The one value that must agree on both machines. The Mac is primary by default; switching = change it on both |
 | `PENTARYN_ROLE_OVERRIDE` | unset | unset | `=primary` makes the tunnel and updater gates pass on this run, for when Joe deliberately runs from the alt. Logged loudly. Not persisted |
 | `FOUNDRY_DATA` | `~/Library/Application Support/FoundryVTT` | `~/.local/share/FoundryVTT` | The **root** (Config/ Data/ Logs/), same meaning as `cloud.FOUNDRY_DATA` today. `ops/config.py:41` is renamed `FOUNDRY_DATA_DIR = host.FOUNDRY_DATA / "Data"` to end the two-meanings clash |
-| `FOUNDRY_APP_ROOT` | `/Applications/Foundry Virtual Tabletop.app/Contents/Resources/app` | `~/foundryvtt` (where the Linux zip was unpacked; `resources/app` inside) | Already the override name used by `blueprint/new_module.py` and the node test kits |
+| `FOUNDRY_APP_ROOT` | `/Applications/Foundry Virtual Tabletop.app/Contents/Resources/app` | probed: `~/foundryvtt` (Node.js build, v12 on: `main.js` and `package.json` at the top), else `~/foundryvtt/resources/app` (Electron build) — the first holding `package.json` | Already the override name used by `blueprint/new_module.py` and the node test kits |
 | `FOUNDRY_PORT` | 30000 | 30000 | |
 | `PENTARYN_CLOUD` | see §1.8 | see §1.8 | |
 | `PENTARYN_RCLONE` | which/`/opt/homebrew/bin/rclone` | which/`/usr/local/bin/rclone` | |
@@ -669,7 +669,12 @@ Nothing on BOSS is changed from the Mac.
    PENTARYN_CLOUD=onedrive:DnD/foundry          # your remote name, if not "onedrive:"
    PENTARYN_RCLONE=/usr/local/bin/rclone
    FOUNDRY_DATA=/home/joe/.local/share/FoundryVTT
-   FOUNDRY_APP_ROOT=/home/joe/foundryvtt/resources/app   # wherever the Linux zip is unpacked
+   FOUNDRY_APP_ROOT=/home/joe/foundryvtt   # the folder holding package.json + main.js:
+                                            # the Node.js build's top level (v12 on), or
+                                            # resources/app inside the Electron build.
+                                            # Unset = probe both (host.py). Check with
+                                            # `python -m scripts.foundry.host show`: the
+                                            # version must not read "unknown".
    FOUNDRY_PORT=30000
    PENTARYN_START_CMD=...                         # see 4
    PENTARYN_STOP_CMD=...

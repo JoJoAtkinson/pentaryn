@@ -227,10 +227,20 @@ def _default_data() -> Path:
     return Path.home() / ".local/share/FoundryVTT"
 
 
+# Where an unpacked Linux download keeps the app payload (package.json, main.js), in
+# probe order: the Node.js build (v12 on) puts it at the top of the unpacked folder, the
+# Electron "Linux" build under resources/app. The first that holds package.json wins.
+LINUX_APP_CANDIDATES = ("foundryvtt", "foundryvtt/resources/app")
+
+
 def _default_app_root() -> Path:
     if is_mac():
         return MAC_APP_BUNDLE / "Contents/Resources/app"
-    return Path.home() / "foundryvtt/resources/app"
+    home = Path.home()
+    for rel in LINUX_APP_CANDIDATES:
+        if (home / rel / "package.json").is_file():
+            return home / rel
+    return home / LINUX_APP_CANDIDATES[0]
 
 
 def foundry_data() -> Path:
