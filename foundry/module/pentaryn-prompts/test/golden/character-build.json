@@ -1,0 +1,506 @@
+{
+  "preview": {
+    "applied": [
+      [
+        "Size",
+        0,
+        {
+          "size": "sm"
+        }
+      ],
+      [
+        "Elven Lineage Languages",
+        0,
+        {
+          "chosen": [
+            "languages:standard:common",
+            "languages:standard:elvish"
+          ]
+        }
+      ],
+      [
+        "Ability Score Increase",
+        0,
+        {
+          "type": "asi",
+          "assignments": {
+            "int": 2,
+            "dex": 1
+          }
+        }
+      ],
+      [
+        "Skills",
+        0,
+        {
+          "chosen": [
+            "skills:arc",
+            "skills:his"
+          ]
+        }
+      ],
+      [
+        "Origin Feat",
+        0,
+        {
+          "Compendium.x.Item.feat": "feat"
+        }
+      ],
+      [
+        "Hit Points",
+        1,
+        {
+          "1": "max"
+        }
+      ],
+      [
+        "Hit Points",
+        2,
+        {
+          "2": "avg"
+        }
+      ],
+      [
+        "Hit Points",
+        3,
+        {
+          "3": "max"
+        }
+      ],
+      [
+        "Cantrips Known",
+        1,
+        {}
+      ],
+      [
+        "Cantrips",
+        1,
+        {
+          "selected": [
+            "Compendium.p.Item.b"
+          ],
+          "ability": "int"
+        }
+      ],
+      [
+        "Arcane Recovery Pick",
+        2,
+        {
+          "selected": [
+            "Compendium.p.Item.a"
+          ]
+        }
+      ],
+      [
+        "Magic Initiate",
+        1,
+        {
+          "selected": [
+            "Compendium.dnd-players-handbook.spells.Item.spFireBolt000001",
+            "Compendium.dnd-players-handbook.spells.Item.spMagicMissile01"
+          ],
+          "ability": "wis"
+        }
+      ],
+      [
+        "Nothing at 1",
+        1,
+        {
+          "selected": []
+        }
+      ],
+      [
+        "Spellbook Grant",
+        1,
+        {
+          "ability": "int",
+          "selected": [
+            "u1"
+          ]
+        }
+      ],
+      [
+        "Chosen Grant",
+        2,
+        {
+          "selected": [
+            "Compendium.p.Item.b"
+          ]
+        }
+      ],
+      [
+        "Arcane Tradition",
+        3,
+        {
+          "uuid": "Compendium.dnd-players-handbook.classes.Item.scEvoker00000001"
+        }
+      ],
+      [
+        "Ability Score Improvement",
+        3,
+        {
+          "type": "asi",
+          "assignments": {
+            "int": 1,
+            "dex": 1
+          }
+        }
+      ],
+      [
+        "Answered",
+        3,
+        {
+          "picked": true
+        }
+      ],
+      [
+        "Automatic",
+        3,
+        {
+          "x": 1
+        }
+      ]
+    ],
+    "report": {
+      "defaults": [
+        "from resolve",
+        "Sage: Ability Score Increase: ability increase int +2, dex +1 (no choice given)",
+        "Wizard: Arcane Recovery Pick (level 2): picked Spell: Light (no choice given; pool: Spell: Light, Spell: Mage Hand)",
+        "Wizard: Spellbook Grant (level 1): spellcasting ability int (choices: int, wis)"
+      ],
+      "warnings": [
+        "resolve warning",
+        "Elf: Elven Lineage Languages: no such choice Klingon (choices: elvish, dwarvish, common, sylvan)",
+        "Wizard: Bonus Spell: NOT CHOSEN — pass choices[\"Wizard: Bonus Spell\"] = [\"<spell>\"] (level 1)",
+        "Wizard: Mystery (level 3): Custom needs a manual choice; skipped",
+        "choices not used by any advancement: Unused Key",
+        "no Arcane Focus — the Wizard casts through one: pass startingEquipment: \"A\", or items: [\"Crystal\"] (Crystal)"
+      ],
+      "spells": [
+        "Magic Missile"
+      ],
+      "spellbook": [
+        "Fire Bolt"
+      ],
+      "items": [
+        "Book"
+      ],
+      "enchanted": [],
+      "summary": {
+        "level": 0,
+        "class": null,
+        "subclass": null,
+        "species": null,
+        "background": null,
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 13,
+          "int": 15,
+          "wis": 12,
+          "cha": 10
+        },
+        "hp": 20,
+        "ac": 12,
+        "prof": 2,
+        "spellDC": 13,
+        "spellAbility": null,
+        "saves": [],
+        "skills": [
+          "arc",
+          "his*"
+        ],
+        "speed": 30,
+        "darkvision": 60,
+        "size": "sm",
+        "languages": [
+          "common"
+        ],
+        "feats": [],
+        "spellCounts": {
+          "cantrips": 0,
+          "prepared": 0,
+          "always": 0,
+          "spellbook": 0,
+          "maxPrepared": null,
+          "maxCantrips": null
+        },
+        "slots": []
+      }
+    }
+  },
+  "real": {
+    "applied": [
+      [
+        "Size",
+        0,
+        {
+          "size": "sm"
+        }
+      ],
+      [
+        "Elven Lineage Languages",
+        0,
+        {
+          "chosen": [
+            "languages:standard:common",
+            "languages:standard:elvish"
+          ]
+        }
+      ],
+      [
+        "Ability Score Increase",
+        0,
+        {
+          "type": "asi",
+          "assignments": {
+            "int": 2,
+            "dex": 1
+          }
+        }
+      ],
+      [
+        "Skills",
+        0,
+        {
+          "chosen": [
+            "skills:arc",
+            "skills:his"
+          ]
+        }
+      ],
+      [
+        "Origin Feat",
+        0,
+        {
+          "Compendium.x.Item.feat": "feat"
+        }
+      ],
+      [
+        "Hit Points",
+        1,
+        {
+          "1": "max"
+        }
+      ],
+      [
+        "Hit Points",
+        2,
+        {
+          "2": "avg"
+        }
+      ],
+      [
+        "Hit Points",
+        3,
+        {
+          "3": "max"
+        }
+      ],
+      [
+        "Cantrips Known",
+        1,
+        {}
+      ],
+      [
+        "Cantrips",
+        1,
+        {
+          "selected": [
+            "Compendium.p.Item.b"
+          ],
+          "ability": "int"
+        }
+      ],
+      [
+        "Arcane Recovery Pick",
+        2,
+        {
+          "selected": [
+            "Compendium.p.Item.a"
+          ]
+        }
+      ],
+      [
+        "Magic Initiate",
+        1,
+        {
+          "selected": [
+            "Compendium.dnd-players-handbook.spells.Item.spFireBolt000001",
+            "Compendium.dnd-players-handbook.spells.Item.spMagicMissile01"
+          ],
+          "ability": "wis"
+        }
+      ],
+      [
+        "Nothing at 1",
+        1,
+        {
+          "selected": []
+        }
+      ],
+      [
+        "Spellbook Grant",
+        1,
+        {
+          "ability": "int",
+          "selected": [
+            "u1"
+          ]
+        }
+      ],
+      [
+        "Chosen Grant",
+        2,
+        {
+          "selected": [
+            "Compendium.p.Item.b"
+          ]
+        }
+      ],
+      [
+        "Arcane Tradition",
+        3,
+        {
+          "uuid": "Compendium.dnd-players-handbook.classes.Item.scEvoker00000001"
+        }
+      ],
+      [
+        "Ability Score Improvement",
+        3,
+        {
+          "type": "asi",
+          "assignments": {
+            "int": 1,
+            "dex": 1
+          }
+        }
+      ],
+      [
+        "Answered",
+        3,
+        {
+          "picked": true
+        }
+      ],
+      [
+        "Automatic",
+        3,
+        {
+          "x": 1
+        }
+      ]
+    ],
+    "report": {
+      "defaults": [
+        "from resolve",
+        "Sage: Ability Score Increase: ability increase int +2, dex +1 (no choice given)",
+        "Wizard: Arcane Recovery Pick (level 2): picked Spell: Light (no choice given; pool: Spell: Light, Spell: Mage Hand)",
+        "Wizard: Spellbook Grant (level 1): spellcasting ability int (choices: int, wis)"
+      ],
+      "warnings": [
+        "resolve warning",
+        "Elf: Elven Lineage Languages: no such choice Klingon (choices: elvish, dwarvish, common, sylvan)",
+        "Wizard: Bonus Spell: NOT CHOSEN — pass choices[\"Wizard: Bonus Spell\"] = [\"<spell>\"] (level 1)",
+        "Wizard: Mystery (level 3): Custom needs a manual choice; skipped",
+        "choices not used by any advancement: Unused Key",
+        "no Arcane Focus — the Wizard casts through one: pass startingEquipment: \"A\", or items: [\"Crystal\"] (Crystal)",
+        "1 spells prepared, the class allows null"
+      ],
+      "spells": [
+        "Magic Missile"
+      ],
+      "spellbook": [
+        "Fire Bolt"
+      ],
+      "items": [
+        "Book"
+      ],
+      "enchanted": [],
+      "summary": {
+        "level": 3,
+        "class": "Wizard 3",
+        "subclass": null,
+        "species": null,
+        "background": null,
+        "abilities": {
+          "str": 8,
+          "dex": 14,
+          "con": 13,
+          "int": 15,
+          "wis": 12,
+          "cha": 10
+        },
+        "hp": 20,
+        "ac": 12,
+        "prof": 2,
+        "spellDC": 13,
+        "spellAbility": null,
+        "saves": [],
+        "skills": [
+          "arc",
+          "his*"
+        ],
+        "speed": 30,
+        "darkvision": 60,
+        "size": "sm",
+        "languages": [
+          "common"
+        ],
+        "feats": [],
+        "spellCounts": {
+          "cantrips": 1,
+          "prepared": 1,
+          "always": 0,
+          "spellbook": 0,
+          "maxPrepared": null,
+          "maxCantrips": null
+        },
+        "slots": []
+      }
+    },
+    "writes": [
+      {
+        "system.attributes.hp.value": 20
+      }
+    ],
+    "items": [
+      [
+        "Elf",
+        null,
+        null,
+        null
+      ],
+      [
+        "Sage",
+        null,
+        null,
+        null
+      ],
+      [
+        "Wizard",
+        "class",
+        null,
+        null
+      ],
+      [
+        "Magic Missile",
+        "spell",
+        1,
+        "class:wizard"
+      ],
+      [
+        "Fire Bolt",
+        "spell",
+        1,
+        "class:wizard"
+      ],
+      [
+        "Book",
+        "loot",
+        null,
+        null
+      ]
+    ]
+  }
+}
