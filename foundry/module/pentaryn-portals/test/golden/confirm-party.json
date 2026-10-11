@@ -1,0 +1,17 @@
+{
+  "op": "DialogV2.confirm",
+  "window": {
+    "title": "Teleport party",
+    "icon": "fa-solid fa-person-walking-arrow-right"
+  },
+  "content": "<p>Move these 5 tokens to <strong>The &lt;Pit&gt;</strong>?</p>\n      <ul class=\"pp-party\"><li>Caven</li><li>Marrith</li><li>Skeleton <span class=\"pp-follows\">lands beside Caven</span></li><li>Arcane Eye <span class=\"pp-follows\">lands beside Marrith</span></li><li>Steed <span class=\"pp-follows\">lands beside Caven</span></li></ul>",
+  "yes": {
+    "label": "Teleport",
+    "icon": "fa-solid fa-check",
+    "default": true
+  },
+  "no": {
+    "label": "Cancel"
+  },
+  "rejectClose": false
+}

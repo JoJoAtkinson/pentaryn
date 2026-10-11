@@ -1,0 +1,44 @@
+{
+  "canvasReady": [
+    "on"
+  ],
+  "canvasTearDown": [
+    "on"
+  ],
+  "createRegion": [
+    "on"
+  ],
+  "createRegionBehavior": [
+    "on"
+  ],
+  "deleteRegion": [
+    "on"
+  ],
+  "deleteRegionBehavior": [
+    "on"
+  ],
+  "deleteToken": [
+    "on"
+  ],
+  "init": [
+    "once"
+  ],
+  "ready": [
+    "once"
+  ],
+  "renderDialogV2": [
+    "on"
+  ],
+  "renderRegionConfig": [
+    "on"
+  ],
+  "sightRefresh": [
+    "on"
+  ],
+  "updateRegion": [
+    "on"
+  ],
+  "updateRegionBehavior": [
+    "on"
+  ]
+}

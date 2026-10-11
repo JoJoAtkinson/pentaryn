@@ -1,0 +1,31 @@
+[
+  {
+    "op": "createEmbedded",
+    "parent": "Scene.ScnPrisonL.Region.RegCellL",
+    "type": "RegionBehavior",
+    "data": [
+      {
+        "name": "Teleport",
+        "type": "teleportToken",
+        "system": {
+          "destinations": [
+            "Scene.ScnPrisonL.Region.RegForkL"
+          ],
+          "placement": "center",
+          "snap": true,
+          "choice": true,
+          "revealed": true,
+          "dialog": {
+            "revealed": null,
+            "unrevealed": null
+          },
+          "transition": {
+            "type": "fade",
+            "duration": 1500
+          }
+        }
+      }
+    ],
+    "options": {}
+  }
+]
