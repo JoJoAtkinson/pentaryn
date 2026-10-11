@@ -20,25 +20,14 @@
  */
 
 import { MODULE, lootAllState } from "./loot-core.mjs";
+import { api as itemPilesApi, isValidItemPile, isItemPileEmpty, getActorFlagData, transferEverything, storeOf } from "./piles.mjs";
 
 const BTN = "pd-loot-all";
 const t = k => game.i18n.localize(`PENTARYN_DROPBIN.lootAll.${k}`);
 const warn = (label, err) => console.warn(`${MODULE} | loot all ${label}`, err);
-const API = () => game.itempiles?.API;
-
-/** Item Piles' Svelte store for this window, if we can reach it: it tracks the Change button. */
-function storeOf(app) {
-  try {
-    const ctx = app?.svelte?.appShell?.$$?.ctx;
-    if (!Array.isArray(ctx)) return null;
-    return ctx.find(c => c && typeof c === "object" && typeof c.takeAll === "function" && "recipient" in c) ?? null;
-  } catch {
-    return null;
-  }
-}
 
 function usable(actor) {
-  return !!(actor && actor.isOwner && !API()?.isValidItemPile?.(actor));
+  return !!(actor && actor.isOwner && !isValidItemPile(actor));
 }
 
 function recipientFor(app) {
@@ -59,12 +48,11 @@ function footerOf(app) {
 
 function stateFor(app, footer) {
   const pile = app.actor;
-  const api = API();
-  if (!pile || !api) return { show: false };
-  const pileData = api.getActorFlagData?.(pile) ?? {};
+  if (!pile || !itemPilesApi()) return { show: false };
+  const pileData = getActorFlagData(pile) ?? {};
   const recipient = recipientFor(app);
   const nativeTakeAll = !!footer?.querySelector("button:not(.pd-loot-all) i.fa-fist-raised");
-  const state = lootAllState({ pileData, empty: !!api.isItemPileEmpty?.(pile), hasRecipient: !!recipient,
+  const state = lootAllState({ pileData, empty: isItemPileEmpty(pile), hasRecipient: !!recipient,
     isGM: game.user.isGM, nativeTakeAll });
   return { ...state, recipient };
 }
@@ -81,7 +69,7 @@ function paint(app, btn, footer) {
 
 function install(app) {
   try {
-    if (!app?.actor || !API()) return false;
+    if (!app?.actor || !itemPilesApi()) return false;
     const footer = footerOf(app);
     if (!footer) return false;
     let btn = footer.querySelector(`.${BTN}`);
@@ -117,7 +105,7 @@ async function lootAll(app, btn) {
   try {
     const store = storeOf(app);
     const opts = typeof store?.interactionId === "string" ? { interactionId: store.interactionId } : {};
-    await API().transferEverything(app.actor, recipient, opts);
+    await transferEverything(app.actor, recipient, opts);
   } catch (err) {
     warn("transfer", err);
     ui.notifications.error(t("failed"));

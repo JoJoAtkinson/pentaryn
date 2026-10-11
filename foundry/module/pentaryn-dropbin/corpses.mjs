@@ -28,6 +28,7 @@
  */
 
 import { MODULE, showEye, eyePlacement } from "./loot-core.mjs";
+import { api as itemPilesApi, isValidItemPile, isItemPileEmpty, turnTokensIntoItemPiles, revertTokensFromItemPiles } from "./piles.mjs";
 
 const OBSERVER = CONST.DOCUMENT_OWNERSHIP_LEVELS.OBSERVER;
 const EYE = "assets/tokens/custom/props/icon-eye.webp";
@@ -55,8 +56,7 @@ function eligible(tokenDoc) {
   return true;
 }
 
-const API = () => game.itempiles?.API;
-const isPile = t => !!API()?.isValidItemPile?.(t);
+const isPile = isValidItemPile;
 const ourCorpse = t => !!t.flags?.[MODULE]?.corpse;
 
 async function toCorpse(tokenDoc) {
@@ -66,7 +66,7 @@ async function toCorpse(tokenDoc) {
   // OBSERVER map, so keep the map saved at the first death (none saved: a pre-fix corpse, null).
   const ownership = ourCorpse(tokenDoc) ? (tokenDoc.flags[MODULE].ownership ?? null)
     : foundry.utils.deepClone(tokenDoc.delta?.ownership ?? null);
-  await API().turnTokensIntoItemPiles([tokenDoc], {
+  await turnTokensIntoItemPiles([tokenDoc], {
     pileSettings: { type: "pile", distance: 1, deleteWhenEmpty: false, closed: false, locked: false,
       displayOne: false, showItemName: false, overrideSingleItemScale: false },
     tokenSettings: {}
@@ -99,7 +99,7 @@ async function removeLegacyEye(actor) {
 
 async function fromCorpse(tokenDoc) {
   if (!ourCorpse(tokenDoc)) return; // never revert a pile we didn't make
-  await API().revertTokensFromItemPiles([tokenDoc]);
+  await revertTokensFromItemPiles([tokenDoc]);
   const fresh = tokenDoc.parent?.tokens.get(tokenDoc.id) ?? tokenDoc;
   await removeLegacyEye(fresh.actor);
   const sight = fresh.flags?.[MODULE]?.sight ?? fresh.sight.enabled;
@@ -122,7 +122,7 @@ function revivedOwnership(saved) {
 }
 
 async function sync(actor) {
-  if (!isGMRunner() || !API()) return;
+  if (!isGMRunner() || !itemPilesApi()) return;
   for (const t of tokensOf(actor)) {
     if (!eligible(t)) continue;
     try {
@@ -195,10 +195,9 @@ function eyeTexture() {
 function wantsEye(doc) {
   try {
     if (!ourCorpse(doc) || doc.isSecret) return false;
-    const api = API();
-    if (!api) return false;
-    const pile = !!api.isValidItemPile?.(doc);
-    return showEye({ corpse: true, pile, empty: pile ? !!api.isItemPileEmpty?.(doc) : true });
+    if (!itemPilesApi()) return false;
+    const pile = isValidItemPile(doc);
+    return showEye({ corpse: true, pile, empty: pile ? isItemPileEmpty(doc) : true });
   } catch (err) {
     console.warn(`${MODULE} | eye check failed for ${doc?.name}`, err);
     return false;

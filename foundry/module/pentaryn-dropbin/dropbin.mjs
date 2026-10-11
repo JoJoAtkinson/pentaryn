@@ -64,8 +64,8 @@ import {
   searchLog, shouldCaptureDelete, restoreTarget, lockedContainer, planLockSounds, planEyesNeedView,
 } from "./dropbin-core.mjs";
 import { registerSettings, setting, readLog, writeLedger, clearLog } from "./settings.mjs";
-
-let socket = null;
+import { dropHook, actorClassType, isValidItemPile } from "./piles.mjs";
+import { registerRecord, hasSocket, executeAsGM } from "./socketlib-adapter.mjs";
 
 installI18nShim();
 
@@ -111,7 +111,7 @@ async function recordAsGM(entry) {
 /** Called from any client. Routes to a GM if this client is not one. */
 function submit(entry) {
   if (game.user.isGM) return recordAsGM(entry);
-  if (socket) return socket.executeAsGM("record", entry);
+  if (hasSocket()) return executeAsGM("record", entry);
   console.warn(`${MODULE} | no socketlib and not a GM — entry dropped`, entry);
   return null;
 }
@@ -125,11 +125,11 @@ function baseEntry(reason, actor, item, quantity) {
 /* ------------------------------------------------------------------- capture */
 
 function registerCapture() {
-  const H = game.itempiles?.hooks;
+  const DROP = dropHook();
 
   // 1. dropped onto the canvas as an Item Pile
-  if (H?.ITEM?.DROP) {
-    Hooks.on(H.ITEM.DROP, (source, target, itemDeltas, position) => {
+  if (DROP) {
+    Hooks.on(DROP, (source, target, itemDeltas, position) => {
       try {
         const actor = source?.actor ?? source;
         for (const d of normaliseDeltas(itemDeltas)) {
@@ -151,9 +151,8 @@ function registerCapture() {
   Hooks.on("preDeleteItem", (item, options, userId) => {
     try {
       const actor = item?.parent;
-      const API = game.itempiles?.API;
-      if (!shouldCaptureDelete({ userId, selfId: game.user.id, actor, characterType: API?.ACTOR_CLASS_TYPE,
-        isPile: a => API?.isValidItemPile?.(a), options })) return;
+      if (!shouldCaptureDelete({ userId, selfId: game.user.id, actor, characterType: actorClassType(),
+        isPile: isValidItemPile, options })) return;
       submit(baseEntry("delete", actor, item.toObject(), item.system?.quantity ?? 1));
     } catch (err) {
       console.warn(`${MODULE} | delete capture failed`, err);
@@ -216,8 +215,7 @@ Hooks.once("init", () => {
 });
 
 Hooks.once("socketlib.ready", () => {
-  socket = socketlib.registerModule(MODULE);
-  socket.register("record", recordAsGM);
+  registerRecord(recordAsGM);
 });
 
 /**
