@@ -11,6 +11,7 @@
       "gmOnly": "Only the GM can restore from the drop bin.",
       "noEntry": "Drop bin: no entry #{n}.",
       "noActor": "Drop bin: cannot find an actor to restore #{n} onto.",
+      "notCreated": "Drop bin: #{n} was not restored; the item was not created (another module may have refused it).",
       "restored": "Restored {item} to {actor} (drop bin #{n})."
     },
     "export": {

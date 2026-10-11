@@ -101,3 +101,18 @@ test("inspect(uuid): an Actor UUID gives the actor shape, a Token UUID the token
   assert.deepEqual(api.inspect(tok.uuid), api.inspect("tokGob0000000001"));
   assert.throws(() => api.inspect(scene.uuid), /BAD_ARGS/);
 });
+
+test("restoreResult: a vetoed create ([] from createEmbeddedDocuments) is not-created; restore() toasts an error", async () => {
+  const keep = Object.getOwnPropertyDescriptor(ann, "createEmbeddedDocuments");
+  ann.createEmbeddedDocuments = async () => [];
+  try {
+    assert.deepEqual(await api.restoreResult(1), { ok: false, reason: "not-created" });
+    const from = F.calls.length;
+    const r = await api.restore(1);
+    assert.equal(r.message, "Drop bin: #1 was not restored; the item was not created (another module may have refused it).");
+    assert.deepEqual(F.calls.slice(from).filter(c => c.op === "notify").map(c => c.level), ["error"]);
+  } finally {
+    if (keep) Object.defineProperty(ann, "createEmbeddedDocuments", keep);
+    else delete ann.createEmbeddedDocuments;
+  }
+});

@@ -341,7 +341,7 @@
           "doc": "default: the actor it left"
         }
       ],
-      "returns": "{ ok: true, item, actor } | { ok: false, reason: \"not-gm\" | \"no-entry\" | \"no-actor\" }",
+      "returns": "{ ok: true, item, actor } | { ok: false, reason: \"not-gm\" | \"no-entry\" | \"no-actor\" | \"not-created\" }",
       "gm": true,
       "writes": true,
       "query": false,

@@ -29,6 +29,8 @@ Declared changes:
   (`export()` at once); the GM's ready line adds the ledger size — items-journal-19.
 
 Added: `list(n, { brief })`, `restoreResult`, `inspect`, `selftest` (items-journal-28).
+- A restore another module refuses (a `preCreateItem` veto) is `{ ok: false, reason: "not-created" }`
+  from `restoreResult` and an error toast from `restore()`, which threw a TypeError before.
 Performance: the Journal sidebar filter walks the scenes' notes once per render (items-journal-24).
 
 ## 0.2.2 — 2026-10-11 (play-test fix)

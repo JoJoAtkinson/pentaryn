@@ -68,7 +68,7 @@ published at `ready`. Ask it: `game.pentaryn.dropbin.describe()` (offline: `test
 | `list(n = 20, { brief })` | — | — | last n entries, newest first; `brief: true` → `{n, iso, reason, itemName, itemType, quantity, fromActorName, sceneName, pileUuid}` (no item source — use it from the bridge) |
 | `all()` / `get(n)` / `search(text)` | — | — | the whole ledger / one entry or null / entries whose item name contains text |
 | `restore(n, target?)` | yes | Item on the actor | the created Item, or the warn/error Notification it showed |
-| `restoreResult(n, target?)` | yes | Item on the actor | `{ ok: true, item, actor }` or `{ ok: false, reason: "not-gm" \| "no-entry" \| "no-actor" }`, no toasts |
+| `restoreResult(n, target?)` | yes | Item on the actor | `{ ok: true, item, actor }` or `{ ok: false, reason: "not-gm" \| "no-entry" \| "no-actor" \| "not-created" }`, no toasts |
 | `export()` | yes | the mirror | `true`, or `false` for a player or a failed upload |
 | `clear()` | yes | `log`, the mirror | `false` unless confirmed; **keeps the counter** |
 | `inspect(ref, { sceneId })` | — | — | a token's (or an actor's tokens') corpse state: `dead, corpse, noLoot, pile, saved {sight, ownership}` |

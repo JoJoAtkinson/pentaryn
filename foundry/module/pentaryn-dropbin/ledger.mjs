@@ -164,6 +164,8 @@ async function restoreResult(n, target = null) {
   delete obj._id;
   // {restoring: true} tags our own restore for other modules; nothing reads it today (items-journal-27)
   const [made] = await actor.createEmbeddedDocuments("Item", [obj], { [MODULE]: { restoring: true } });
+  // a preCreateItem listener that vetoes the item resolves the create to []
+  if (!made) return { ok: false, reason: "not-created" };
   return { ok: true, item: made, actor };
 }
 
@@ -179,6 +181,7 @@ async function restore(n, target = null) {
   }
   if (r.reason === "not-gm") return ui.notifications.warn(_loc("PENTARYN_DROPBIN.restore.gmOnly"));
   if (r.reason === "no-entry") return ui.notifications.error(_loc("PENTARYN_DROPBIN.restore.noEntry", { n }));
+  if (r.reason === "not-created") return ui.notifications.error(_loc("PENTARYN_DROPBIN.restore.notCreated", { n }));
   return ui.notifications.error(_loc("PENTARYN_DROPBIN.restore.noActor", { n }));
 }
 

@@ -88,7 +88,7 @@ export const MANIFEST = Object.freeze({
     {
       path: "restoreResult",
       params: [N, { name: "target", type: "Actor|id|exact name", optional: true, resolve: false, doc: "default: the actor it left" }],
-      returns: '{ ok: true, item, actor } | { ok: false, reason: "not-gm" | "no-entry" | "no-actor" }',
+      returns: '{ ok: true, item, actor } | { ok: false, reason: "not-gm" | "no-entry" | "no-actor" | "not-created" }',
       gm: true, writes: true, since: "0.2.2",
       sideEffects: ["Item (created on the target actor)"],
       doc: "restore() without toasts: the created Item, or why not. Use this from scripts and the bridge.",
