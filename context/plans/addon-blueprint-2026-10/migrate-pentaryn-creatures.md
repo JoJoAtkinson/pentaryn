@@ -1,6 +1,6 @@
 ---
 title: Migration guide — pentaryn-creatures to the addon blueprint
-status: plan
+status: done (offline) — live test pending
 last_modified: 2026-10-11
 tags: [foundry, modules, blueprint, plan, migration, creatures]
 ---
@@ -497,14 +497,50 @@ stays drawn; `game.pentaryn.creatures.status().patchedWith` is `"libWrapper"` or
   - -31 ownerSees(TokenDocument)
   - -40 no poll without Argon or with `floatOverHud` off
 
-## Result (fill when done)
+## Result (wave 3, 2026-10-11)
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module creatures --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: `6d36df2` (kit) + `6e4c7d7` (checkpoint) · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | **89.6 % (43/48)** at `cb77746` — `conformance.py --module creatures`. Against a snapshot with the integrator's adjustments rows: 93.8 % (45/48); plus the Wave 7 `module.json`: **100 % (48/48)** (both verified with `--snapshot`) |
+| Date | 2026-10-11 |
+| Commits | characterisation: `6d36df2` (kit) + `6e4c7d7` (checkpoint) · refactor: `fdab0bf` (step 2, -30) · `f3085ab` (3) · `b461208` (4) · `90ea129` (5, structural) · `9c57142` (5, wrapMethod, **[declared] C-D1** text) · `a019151` (6) · `ef2578d` (7, **[declared] C-D2**) · `349ee86` (8, **[declared] C-D4**) · `5489890` (9) · `84d52ee` (10, self-activating manifest pins) · `cb77746` (hot-patch test) · standalone, one pin each: `cdb694e` (-29, C-D1) · `008647a` (-31 syncScene, C-D3) · `54f2d1b` (-31 ownerSees, C-D3) · `a8d5ead` (-31 `status()`, C-D3) · `4b0ebf7` (-26, C-D5) · `2f844f6` (-25, C-D6) · `a6a0d54` (-27, C-D7) · `23fa387` (-40, C-D8) · `61216f3` (`inspect()`, C-D3; C29) |
+| Tests | `node test/run.mjs`: 101 pass, 2 skipped (the step-10 manifest pins, until Wave 7), 0 todo; legacy core suite 73/73. `vendor.py check creatures` ✓. `module-check creatures` (parse, imports, i18n, node-test, vendor, conformance) ✓ |
+| Declared changes handed to the live-test workflow | C-D1 … C-D8 (§5) plus `inspect()` (C-D3); not yet run |
+| `module.json` edits appended to `wave7-restart-batch.md` | no — the creatures row there already holds them; returned to the integrator with the exact `module.json` (`afterSync` = the ModuleSpec tuple verbatim, which the same commit deletes from `config.py`) and the `git mv creatures.css styles/creatures.css` |
+| Adjustments rows appended to `adjustments-batch.md` | no — returned to the integrator (rewrite `creatures-libwrapper`; rename `creatures-strip-over-argon` → `argon-creatures-strip-float` pointing at `strip.mjs`; add `itempiles-creatures-pile-flag`). Until they land, `test_the_real_registry_matches_the_code` reports the two creatures rows (their markers left `creatures.mjs`) |
+| Still failing, and why | C07, C09, C37 (+ C06w): Wave 7 `module.json`. C32, C47: the adjustments rows above |
+
+**Deviations from the guide.**
+
+- Steps 5 and 7's known-bug halves (-29 warn-once, -31) landed after the structural refactor with
+  the other standalone fixes, one [declared] commit per pin, as the wave-3 rule asks; step 5's
+  wrapMethod swap is its own [declared] commit (C-D1's text half).
+- `overrideFor` (a -29 seam) was not built: building the view object up front would read
+  `_testCulled()` and the other private fields for every unseen token, including ones the player
+  does not own, on a hot getter. `ownerOverride` keeps its lazy reads and uses core `safely`.
+- The missing-getter check runs before libWrapper is tried (it used to run after). Only different
+  with lib-wrapper active and no own `isVisible` getter on `Token.prototype`, which v14 never lacks.
+- `inspect(ref, { as })` was optional in step 7; C29 now requires it (the manifest declares the
+  token flag we write), so it landed as its own [declared] commit. No `selftest()` (not in this
+  guide); `status()` is the live smoke's one call.
+- `-40`'s floatOverHud test world: glue-player now enables `enhancedcombathud` (the dock only polls
+  with Argon enabled); the disabled cases live in the new `test/glue-dock.test.mjs`.
+- Light writes now pass `{ pentarynCreatures: true }` (-27), so every recorded write's `argc` pin
+  moved 2 → 3 in that commit.
+
+**Live check (gated live phase).** After the sync (reload; the Wave 7 batch needs a restart):
+
+1. `game.pentaryn.creatures.describe().version === "0.1.1"`, `Object.isFrozen(game.pentaryn.creatures)`,
+   `game.modules.get("pentaryn-creatures").api === game.pentaryn.creatures` (C-D2).
+2. `game.pentaryn.creatures.status()` → `patchedWith` `"libWrapper"` (lib-wrapper is enabled) and
+   `writer: true` in the GM tab; `lit` equals the count of summons/familiars with our flag.
+3. As a player with two owned tokens: the strip shows, looks the same docked (C-D4); an Invisible
+   owned token in the dark stays drawn.
+4. Open Argon's Combat HUD: the strip floats above the action bar and drops back when it closes
+   (U-6-12 retest); toggle `floatOverHud` off/on: docks/floats at once (C-D8).
+5. Drag a summon: the strip does not flicker or rebuild; rename or hide it: the strip updates (C-D6).
+6. Summon a creature during combat with flags churning: its light appears within ~200 ms (C-D5);
+   the console stays quiet, no second pass (C-D7).
+7. `game.pentaryn.creatures.syncScene(canvas.scene, [tokenId])` returns a count;
+   `ownerSees(token.document)` matches `ownerSees(token)`; `inspect(token)` is plain JSON (C-D3).
+8. C-L1 stays a decision (Open for Joe in the wave-3 report).
