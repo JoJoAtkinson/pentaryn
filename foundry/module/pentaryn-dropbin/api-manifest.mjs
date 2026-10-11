@@ -4,7 +4,8 @@
  *
  * Every row published before the migration keeps its signature (`legacy: true`): `restore`
  * returns the Notification its refusal toasted or the created Item; `export`/`clear` return
- * false for a player. No first param is named `ref`, so nothing is resolved per call.
+ * false for a player. Every param is `resolve: false`, so buildApi resolves nothing per call;
+ * `inspect(ref)` resolves its own ref (a Token or an Actor, by document, UUID, id or exact name).
  */
 
 import { CONTRACT, MODULE, NS, VERSION } from "./dropbin-core.mjs";

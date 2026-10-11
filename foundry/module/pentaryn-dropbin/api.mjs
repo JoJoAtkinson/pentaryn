@@ -37,9 +37,22 @@ function scenesFor(sceneId) {
   return [...game.scenes];
 }
 
+/** A string UUID naming a Token or an Actor (a synthetic token actor included), else null. */
+function tokenOrActorByUuid(ref) {
+  if (typeof ref !== "string" || !ref.includes(".")) return null;
+  let hit = null;
+  try {
+    hit = globalThis.fromUuidSync?.(ref) ?? null;
+  } catch {
+    hit = null;
+  }
+  return hit?.documentName === "Token" || hit?.documentName === "Actor" ? hit : null;
+}
+
 function inspect(ref, opts, isDead) {
   const { sceneId } = opts && typeof opts === "object" ? opts : {};
-  const doc = ref?.documentName ? ref : ref?.document?.documentName ? ref.document : null;
+  // a UUID picks its branch by documentName first: resolveRef(…, "token") throws BAD_ARGS on an Actor UUID
+  const doc = ref?.documentName ? ref : ref?.document?.documentName ? ref.document : tokenOrActorByUuid(ref);
   let token = doc?.documentName === "Token" ? doc : null;
   let actor = doc?.documentName === "Actor" ? doc : null;
   if (!token && !actor) {

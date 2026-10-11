@@ -92,3 +92,12 @@ test("selftest passes on a healthy load", () => {
   const out = api.selftest();
   assert.equal(out.ok, true, JSON.stringify(out.checks));
 });
+
+test("inspect(uuid): an Actor UUID gives the actor shape, a Token UUID the token shape; another type is BAD_ARGS", () => {
+  const out = api.inspect(gob.uuid);
+  assert.deepEqual([out.actor.id, out.dead, out.noLoot, out.corpses.map(c => c.token.id)], [gob.id, true, false, ["tokGob0000000001"]]);
+  assert.deepEqual(api.inspect(gob.uuid), api.inspect(gob));
+  const tok = scene.tokens.get("tokGob0000000001");
+  assert.deepEqual(api.inspect(tok.uuid), api.inspect("tokGob0000000001"));
+  assert.throws(() => api.inspect(scene.uuid), /BAD_ARGS/);
+});
