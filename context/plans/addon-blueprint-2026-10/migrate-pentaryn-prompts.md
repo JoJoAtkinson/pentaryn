@@ -686,7 +686,7 @@ function patchDoubleClick(ctx) {
   - Files, Tests (no fixture counts), Sync.
 - Move the `languageKeys` docblock (`build-core.mjs:259-264`) above `export function languageKeys`.
 - Write `CHANGELOG.md`.
-- Outside the module: the `typeahead.mjs` mention at `context/foundry/prompt-markers.md:445` →
+- Outside the module: the `typeahead.mjs` mention at `context/foundry/prompt-markers.md:450` →
   `typeahead-adapter.mjs`.
 - Absorbs: prompts-lookup-27, C44, C45.
 - Char. test: the prompts-lookup-27 doc guard (every `CODES` entry inside the "Errors are"
