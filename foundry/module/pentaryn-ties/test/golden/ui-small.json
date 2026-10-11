@@ -1,0 +1,42 @@
+{
+  "stanceSelect": [
+    "<select class=\"pt-stance\" data-field=\"stance\"><option value=\"2\">Devoted</option><option value=\"1\">Friendly</option><option value=\"0\">Neutral</option><option value=\"-1\" selected>Wary</option><option value=\"-2\">Hostile</option></select>",
+    "<select class=\"pt-stance\" data-field=\"reverseStance\"><option value=\"2\" selected>Devoted</option><option value=\"1\">Friendly</option><option value=\"0\">Neutral</option><option value=\"-1\">Wary</option><option value=\"-2\">Hostile</option></select>"
+  ],
+  "pips": [
+    "<span class=\"pt-pips\" role=\"group\" aria-label=\"Strength 3 of 5 — orders this list\" data-tooltip=\"Strength 3 of 5 — orders this list\"><button type=\"button\" class=\"pt-pip fill\" data-action=\"strength\" data-n=\"1\"\n          aria-label=\"Set strength to 1 of 5\" data-tooltip=\"Set strength to 1 of 5\"></button><button type=\"button\" class=\"pt-pip fill\" data-action=\"strength\" data-n=\"2\"\n          aria-label=\"Set strength to 2 of 5\" data-tooltip=\"Set strength to 2 of 5\"></button><button type=\"button\" class=\"pt-pip fill\" data-action=\"strength\" data-n=\"3\"\n          aria-label=\"Set strength to 3 of 5\" data-tooltip=\"Set strength to 3 of 5\"></button><button type=\"button\" class=\"pt-pip\" data-action=\"strength\" data-n=\"4\"\n          aria-label=\"Set strength to 4 of 5\" data-tooltip=\"Set strength to 4 of 5\"></button><button type=\"button\" class=\"pt-pip\" data-action=\"strength\" data-n=\"5\"\n          aria-label=\"Set strength to 5 of 5\" data-tooltip=\"Set strength to 5 of 5\"></button></span>",
+    "<span class=\"pt-pips\" role=\"group\" aria-label=\"Strength 1 of 5 — orders this list\" data-tooltip=\"Strength 1 of 5 — orders this list\"><span class=\"pt-pip fill\"></span><span class=\"pt-pip\"></span><span class=\"pt-pip\"></span><span class=\"pt-pip\"></span><span class=\"pt-pip\"></span></span>"
+  ],
+  "stanceChip": [
+    "<span class=\"pt-chip\" data-tooltip=\"Devoted\"><span class=\"pt-dot pt-devoted\"></span><span class=\"pt-chip-label\">Devoted</span></span>",
+    "<span class=\"pt-chip pt-chip-bare\" data-tooltip=\"Hostile\"><span class=\"pt-dot pt-hostile\"></span></span>"
+  ],
+  "artFor": [
+    "x.webp",
+    "icons/svg/mystery-man.svg"
+  ],
+  "grantCard": [
+    "<li class=\"pt-grant\">\n        \n        <div class=\"pt-grant-body\">\n          <span class=\"pt-grant-source\">Src</span>\n          <div class=\"pt-grant-text\">Said.</div>\n          \n        </div>\n      </li>",
+    "<li class=\"pt-grant\">\n        <img class=\"pt-grant-icon\" src=\"i.webp\" alt=\"\">\n        <div class=\"pt-grant-body\">\n          <span class=\"pt-grant-source\">S</span>\n          <p>T</p>\n          <b>x</b>\n        </div>\n      </li>"
+  ],
+  "grantedHead": "<div class=\"pt-granted-head\">\n      <i class=\"fa-solid fa-book-open-reader\"></i>\n      <span>What you have learned</span>\n    </div>",
+  "personalClues": "",
+  "categoryLabel": [
+    "Sentient",
+    "custom-thing",
+    "Critters",
+    ""
+  ],
+  "categoriesFor": [
+    {
+      "key": "sentient",
+      "label": null,
+      "seeded": true
+    },
+    {
+      "key": "beasts",
+      "label": null,
+      "seeded": true
+    }
+  ]
+}

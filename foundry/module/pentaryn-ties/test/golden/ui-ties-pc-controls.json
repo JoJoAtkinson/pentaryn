@@ -1,0 +1,307 @@
+{
+  "inventory": [
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary",
+      "dataset": {
+        "action": "toggle",
+        "tooltip": "Click to open and edit this tie"
+      },
+      "events": [
+        "click",
+        "keydown"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-detail-wrap",
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "open",
+        "id": "zzNpc00000000001"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "remove",
+        "id": "zzNpc00000000001"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "edit-theirs",
+        "id": "zzNpc00000000001"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "DIV",
+      "className": "pt-summary",
+      "dataset": {
+        "action": "toggle",
+        "tooltip": "Click to open and edit this tie"
+      },
+      "events": [
+        "click",
+        "keydown"
+      ]
+    },
+    {
+      "nth": 1,
+      "tag": "DIV",
+      "className": "pt-detail-wrap",
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "remove",
+        "id": "zzGone0000000001"
+      },
+      "events": [
+        "click"
+      ]
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "add"
+      },
+      "events": [
+        "click"
+      ]
+    }
+  ],
+  "rows": [
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary",
+      "dataset": {
+        "action": "toggle",
+        "tooltip": "Click to open and edit this tie"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary",
+        "parent": "pt-row pt-open"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-summary",
+      "dataset": {
+        "action": "toggle",
+        "tooltip": "Click to open and edit this tie"
+      },
+      "type": "keydown",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary",
+        "parent": "pt-row"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "DIV",
+      "className": "pt-detail-wrap",
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-detail-wrap",
+        "parent": "pt-row",
+        "hidden": true
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "open",
+        "id": "zzNpc00000000001"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "sheet.render",
+          "actor": "zzNpc00000000001",
+          "force": true,
+          "tab": "details"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "remove",
+        "id": "zzNpc00000000001"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "DialogV2.confirm",
+          "title": "Remove tie",
+          "content": "<p>Remove the tie between ZZ Caven and ZZ Brakka, in both directions?</p><p class=\"notification warning\">The notes written on this tie go with it.</p>"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-del",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn",
+      "dataset": {
+        "action": "edit-theirs",
+        "id": "zzNpc00000000001"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "TieDialog",
+          "opts": true
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "DIV",
+      "className": "pt-summary",
+      "dataset": {
+        "action": "toggle",
+        "tooltip": "Click to open and edit this tie"
+      },
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary",
+        "parent": "pt-row pt-missing-row pt-open"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "DIV",
+      "className": "pt-summary",
+      "dataset": {
+        "action": "toggle",
+        "tooltip": "Click to open and edit this tie"
+      },
+      "type": "keydown",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-summary",
+        "parent": "pt-row pt-missing-row"
+      }
+    },
+    {
+      "nth": 1,
+      "tag": "DIV",
+      "className": "pt-detail-wrap",
+      "type": "click",
+      "calls": [],
+      "console": [],
+      "after": {
+        "className": "pt-detail-wrap",
+        "parent": "pt-row pt-missing-row",
+        "hidden": true
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-textbtn pt-del",
+      "dataset": {
+        "action": "remove",
+        "id": "zzGone0000000001"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "DialogV2.confirm",
+          "title": "Remove tie",
+          "content": "<p>Remove the tie between ZZ Caven and (missing), in both directions?</p>"
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-textbtn pt-del",
+        "parent": "pt-detail-actions"
+      }
+    },
+    {
+      "nth": 0,
+      "tag": "BUTTON",
+      "className": "pt-add-btn",
+      "dataset": {
+        "action": "add"
+      },
+      "type": "click",
+      "calls": [
+        {
+          "op": "app.render",
+          "app": "TieDialog",
+          "opts": true
+        }
+      ],
+      "console": [],
+      "after": {
+        "className": "pt-add-btn",
+        "parent": "pt-add-bar"
+      }
+    }
+  ]
+}

@@ -2,8 +2,13 @@
  * Just enough DOM for the ties glue (no jsdom): elements with classes, dataset, attributes, children,
  * listeners, and a small selector engine — compounds of `tag`, `.class`, `[attr]`, `[attr="v"]`,
  * joined by descendant (` `) or child (`>`) combinators, comma lists, and a leading `:scope >`.
- * Anything else matches nothing. `innerHTML` is stored, never parsed; `firstElementChild` of an
- * element whose innerHTML was set is one placeholder element (`<parsed>`) whose queries find nothing.
+ * Anything else matches nothing.
+ *
+ * `innerHTML` is kept as the string it was set to (that is what `serialise` prints) AND parsed, lazily,
+ * into a second list of nodes that queries, `firstElementChild` and event bubbling walk — so a module's
+ * `bind(root)` finds its rows and buttons and a test can click them. The parser knows tags, quoted and
+ * bare attributes, void elements, comments and the five entities the module escapes; `value` / `checked`
+ * / `selected` come off the markup (a textarea's value is its text, a select's is its selected option).
  */
 
 const SIMPLE = /^([a-z][\w-]*|\*)?((?:\.[\w-]+|\[[\w-]+(?:="[^"]*")?\])*)$/i;
@@ -42,6 +47,60 @@ function parseComplex(sel) {
 
 const camel = name => name.replace(/^data-/, "").replace(/-([a-z])/g, (_, c) => c.toUpperCase());
 
+const VOID = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"]);
+const decode = s =>
+  String(s).replace(/&(amp|lt|gt|quot|#39|#x27|nbsp);/g, (m, e) => ({ amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'", "#x27": "'", nbsp: "\u00a0" })[e]);
+
+/** Markup → FakeElements (top level), each child's `parent` set, `owner` the element they hang from. */
+export function parseHTML(html, owner = null) {
+  const top = [];
+  const stack = [];
+  const re = /<!--[\s\S]*?-->|<\/([a-zA-Z][\w-]*)\s*>|<([a-zA-Z][\w-]*)((?:\s+[^\s=>\/]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?)*)\s*(\/?)>|([^<]+)/g;
+  const add = node => {
+    const parent = stack.at(-1) ?? null;
+    node.parent = parent ?? owner;
+    if (parent) parent._kids.push(node);
+    else top.push(node);
+  };
+  for (const m of String(html ?? "").matchAll(re)) {
+    const [, close, open, attrs, selfClose, text] = m;
+    if (text !== undefined) {
+      const t = decode(text);
+      for (const n of stack) n.textContent += t;
+      continue;
+    }
+    if (close) {
+      const i = stack.map(n => n.tagName).lastIndexOf(close.toUpperCase());
+      if (i >= 0) {
+        const closed = stack.splice(i);
+        for (const n of closed) n._finish();
+      }
+      continue;
+    }
+    if (!open) continue; // a comment
+    const el = new FakeElement(open);
+    el._fromMarkup = true;
+    for (const a of (attrs ?? "").matchAll(/([^\s=>\/]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g)) {
+      const name = a[1].toLowerCase();
+      const value = decode(a[2] ?? a[3] ?? a[4] ?? "");
+      const bare = a[2] === undefined && a[3] === undefined && a[4] === undefined;
+      if (name === "class") el.className = value;
+      else if (name === "id") el.id = value;
+      else if (name.startsWith("data-")) el.dataset[camel(name)] = value;
+      else if (["checked", "selected", "disabled", "hidden", "readonly", "multiple"].includes(name)) el[name === "readonly" ? "readOnly" : name] = true;
+      else if (name === "value") el.value = value;
+      else if (name === "type") el.type = value;
+      else if (name === "name") el.name = value;
+      else el.attrs[name] = bare ? "" : value;
+    }
+    add(el);
+    if (!VOID.has(open.toLowerCase()) && !selfClose) stack.push(el);
+    else el._finish();
+  }
+  for (const n of stack.splice(0)) n._finish();
+  return top;
+}
+
 export class FakeElement {
   constructor(tag = "div") {
     this.tagName = tag.toUpperCase();
@@ -52,7 +111,8 @@ export class FakeElement {
     this.children = [];
     this.parent = null;
     this._html = "";
-    this._placeholder = null;
+    this._kids = [];
+    this._parsedFor = null;
     this.textContent = "";
     this.listeners = {};
     this.disabled = false;
@@ -63,14 +123,71 @@ export class FakeElement {
   }
   set innerHTML(v) {
     this._html = String(v ?? "");
-    this._placeholder = null;
+    this._kids = [];
+    this._parsedFor = null;
+    if (this._fromMarkup) this.textContent = "";
+  }
+  /** Children from markup: parsed once per innerHTML value (markup-born elements carry them already). */
+  get parsedChildren() {
+    if (this._fromMarkup && this._parsedFor === null && !this._html) return this._kids;
+    if (this._parsedFor !== this._html) {
+      this._kids = this._html ? parseHTML(this._html, this) : [];
+      this._parsedFor = this._html;
+    }
+    return this._kids;
+  }
+  /** Every child node: appended ones, then the ones parsed from innerHTML. */
+  get nodes() {
+    return [...this.children, ...this.parsedChildren];
   }
   get firstElementChild() {
-    if (this.children.length) return this.children[0];
-    if (!this._html) return null;
-    this._placeholder ??= Object.assign(new FakeElement("parsed"), { parent: this });
-    return this._placeholder;
+    return this.nodes[0] ?? null;
   }
+  get parentElement() {
+    return this.parent;
+  }
+  /** A markup-born element is complete: its value defaults come off its content. */
+  _finish() {
+    this._parsedFor = null;
+    if (this.tagName === "INPUT" && this.value === undefined) this.value = "";
+    if (this.tagName === "TEXTAREA" && this.value === undefined) this.value = this.textContent;
+    if (this.tagName === "SELECT" && this.value === undefined) {
+      const opts = this.querySelectorAll("option");
+      const sel = opts.find(o => o.selected) ?? opts[0];
+      this.value = sel ? sel.value ?? sel.textContent : "";
+    }
+  }
+  get options() {
+    return this.querySelectorAll("option");
+  }
+  get selectedOptions() {
+    return this.querySelectorAll("option").filter(o => (o.value ?? o.textContent) === this.value);
+  }
+  insertAdjacentHTML(pos, html) {
+    const made = parseHTML(html, this);
+    if (pos === "afterbegin") this._kids.unshift(...made);
+    else this._kids.push(...made);
+  }
+  replaceChildren(...nodes) {
+    this.children = [];
+    this.innerHTML = "";
+    this.append(...nodes);
+  }
+  replaceWith(n) {
+    const p = this.parent;
+    if (!p) return;
+    for (const list of [p.children, p._kids]) {
+      const i = list.indexOf(this);
+      if (i >= 0) {
+        n.parent = p;
+        list.splice(i, 1, n);
+      }
+    }
+    this.parent = null;
+  }
+  select() {}
+  scrollIntoView() {}
+  setSelectionRange() {}
   get classList() {
     const el = this;
     const list = () => el.className.split(/\s+/).filter(Boolean);
@@ -90,10 +207,32 @@ export class FakeElement {
     };
   }
   setAttribute(k, v) {
-    this.attrs[k] = String(v);
+    if (k.startsWith("data-")) this.dataset[camel(k)] = String(v);
+    else if (k === "class") this.className = String(v);
+    else if (k === "id") this.id = String(v);
+    else if (["hidden", "disabled", "checked", "selected"].includes(k)) this[k] = true;
+    else this.attrs[k] = String(v);
   }
   getAttribute(k) {
+    if (k.startsWith("data-")) return this.dataset[camel(k)] ?? null;
+    if (k === "class") return this.className || null;
+    if (k === "id") return this.id ?? null;
+    if (["hidden", "disabled", "checked", "selected"].includes(k)) return this[k] ? "" : null;
     return this.attrs[k] ?? null;
+  }
+  hasAttribute(k) {
+    return this.getAttribute(k) !== null;
+  }
+  removeAttribute(k) {
+    if (k.startsWith("data-")) delete this.dataset[camel(k)];
+    else if (["hidden", "disabled", "checked", "selected"].includes(k)) this[k] = false;
+    else delete this.attrs[k];
+  }
+  toggleAttribute(k, force) {
+    const on = force === undefined ? !this.hasAttribute(k) : !!force;
+    if (on) this.setAttribute(k, "");
+    else this.removeAttribute(k);
+    return on;
   }
   appendChild(n) {
     n.parent?.children && n.remove();
@@ -119,7 +258,10 @@ export class FakeElement {
   }
   remove() {
     const p = this.parent;
-    if (p) p.children = p.children.filter(c => c !== this);
+    if (p) {
+      p.children = p.children.filter(c => c !== this);
+      p._kids = p._kids.filter(c => c !== this);
+    }
     this.parent = null;
   }
   contains(n) {
@@ -132,10 +274,25 @@ export class FakeElement {
   removeEventListener(type, fn) {
     this.listeners[type] = (this.listeners[type] ?? []).filter(f => f !== fn);
   }
+  /** Fire `type` at this element and bubble it up (stopPropagation stops the climb). */
   async dispatch(type, extra = {}) {
     const seen = [];
-    const ev = { type, target: this, preventDefault: () => seen.push("preventDefault"), stopPropagation: () => seen.push("stopPropagation"), ...extra };
-    for (const fn of [...(this.listeners[type] ?? [])]) await fn(ev);
+    let stopped = false;
+    const ev = {
+      type,
+      target: this,
+      currentTarget: this,
+      preventDefault: () => seen.push("preventDefault"),
+      stopPropagation: () => {
+        stopped = true;
+        seen.push("stopPropagation");
+      },
+      ...extra,
+    };
+    for (let el = this; el && !stopped; el = el.parent) {
+      ev.currentTarget = el;
+      for (const fn of [...(el.listeners[type] ?? [])]) await fn(ev);
+    }
     return seen;
   }
   getBoundingClientRect() {
@@ -191,7 +348,7 @@ export class FakeElement {
     const lists = sel.split(",").map(parseComplex).filter(Boolean);
     const out = [];
     const walk = n => {
-      for (const c of n.children) {
+      for (const c of n.nodes) {
         if (lists.some(parts => c.matchesComplex(parts, this))) out.push(c);
         walk(c);
       }
@@ -248,7 +405,7 @@ export function installDom() {
     getElementById: id => {
       if (byId.has(id)) return byId.get(id);
       const walk = n => {
-        for (const c of n.children) {
+        for (const c of n.nodes) {
           if (c.id === id) return c;
           const hit = walk(c);
           if (hit) return hit;
