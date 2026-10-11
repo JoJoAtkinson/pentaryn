@@ -15,7 +15,7 @@
  *   dialog.mjs, tip-ui.mjs UI: the prompt box, the hover tip
  *   gather.mjs, replace.mjs the gather / crops / list / show and replace calls
  *   features (FEATURES, in hook order): typeahead, marker-guard, placement, hud-button, tooltip,
- *                          panels, patches
+ *                          panels, patches; cache (LATE: installed at ready)
  *   lib/*.mjs              vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
  * Lifecycle: `init` is registered FIRST (settings, keybindings, queries); the features install
@@ -24,8 +24,8 @@
  * ensure the six marker actors.
  *
  * Hot patch RE-RUNS THE WIRING ONLY: `game.pentaryn.prompts.uninstall()`, then
- * `await import("/modules/pentaryn-prompts/prompts.mjs?v=2")` — and fire the phases by hand; any edit
- * to another file needs a reload.
+ * `await import("/modules/pentaryn-prompts/prompts.mjs?v=2")`: the world is ready, so the phases
+ * run at once and a new API object is published. Any edit to another file needs a reload.
  */
 
 import { MODULE, NS } from "./prompts-core.mjs";
@@ -116,7 +116,15 @@ function onReady() {
   return ensureMarkers().catch(err => { log.error("ensureMarkers failed", err); });
 }
 
-// the lifecycle hooks are the entry's own (as the template's): init first, then the features, then ready
-Hooks.once("init", onInit);
-install();
-Hooks.once("ready", onReady);
+if (globalThis.game?.ready) {
+  // a hot re-import after `uninstall()`: the lifecycle hooks have fired, so run the phases now
+  // (settings and keybindings already registered are skipped by the kit; patches wraps at once)
+  onInit();
+  install();
+  onReady();
+} else {
+  // the lifecycle hooks are the entry's own (as the template's): init first, then the features, then ready
+  Hooks.once("init", onInit);
+  install();
+  Hooks.once("ready", onReady);
+}

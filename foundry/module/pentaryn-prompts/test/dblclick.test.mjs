@@ -29,3 +29,25 @@ test("DP4: one wrap with its adjustments row; a second entry import's setup leav
   assert.equal(proto._onClickLeft2.call({ document: W.s1.tokens.get("tokOrdinary00001") }, { type: "dbl" }), "original");
   assert.equal(W.calls.slice(n0).filter(c => c.op === "Token#_onClickLeft2 (original)").length, 1);
 });
+
+test("hot patch: uninstall() unwraps and removes every hook; a re-import into the ready world re-wires and republishes", async () => {
+  const W = await installWorld();
+  await captureConsole(() => import("../prompts.mjs?hot-a"));
+  W.fire("init");
+  await captureConsole(() => W.fire("setup"));
+  await captureConsole(async () => { W.fire("ready"); await new Promise(r => setImmediate(r)); });
+  const first = W.game.pentaryn.prompts;
+  const proto = W.CONFIG.Token.objectClass.prototype;
+  assert.equal(proto._onClickLeft2.__pentarynPromptsClick, true);
+  first.uninstall();
+  assert.equal(proto._onClickLeft2.name, "original", "unwrapped");
+  assert.deepEqual(first.describe().hooks, []);
+  const { out } = await captureConsole(async () => { await import("../prompts.mjs?hot-b"); await new Promise(r => setImmediate(r)); });
+  assert.deepEqual(out, []);
+  const second = W.game.pentaryn.prompts;
+  assert.notEqual(second, first);
+  assert.equal(proto._onClickLeft2.__pentarynPromptsClick, true, "wrapped again at once");
+  assert.equal(second.status().doubleClick, "direct");
+  assert.ok(second.describe().hooks.length > 18);
+  assert.equal(typeof W.CONFIG.queries[`${MODULE}.gather`], "function");
+});

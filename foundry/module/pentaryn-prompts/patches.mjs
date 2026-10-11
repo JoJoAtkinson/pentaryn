@@ -41,7 +41,9 @@ function patchDoubleClick(ctx) {
 export function install(reg, ctx) {
   // "libWrapper" | "direct" | null — what status().doubleClick reports
   ctx.expose({ doubleClick: () => handle?.via ?? null });
-  reg.once("setup", () => patchDoubleClick(ctx), { guard: false, label: "setup: double-click opens the box" });
+  // a hot re-import (the world is ready, setup long past) wraps at once
+  if (globalThis.game?.ready) patchDoubleClick(ctx);
+  else reg.once("setup", () => patchDoubleClick(ctx), { guard: false, label: "setup: double-click opens the box" });
 }
 
 export function uninstall() {
