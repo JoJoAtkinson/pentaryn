@@ -50,7 +50,7 @@ tree as of 2026-10-10 20:15; for this module the snapshot equals `ee505c2`). The
 | core `leaderOf`, `assignSpots`, `partyPreview` (U-8-4), `crowded` (U-6-13) | `portals-core.mjs:65-136`, `:213-215` | pure; already in core, with 16 + 4 fixtures in the legacy suite |
 | `.pp-party`, `.pp-follows` | `portals.css:55-57` | S7 rename → `ppt-party`, `ppt-follows` |
 | `api.spreadArrival` | publish block `:962` | one more API row (party contribution) |
-| adjustments row `portals-teleport-default-and-spread` | `adjustments.yml:884-893` | fails C32 (module prefix, no `wrapMethod`) — ADJ renames it (§3 ADJ) |
+| adjustments row `portals-teleport-default-and-spread` (**renamed `core-teleport-default-and-spread`**, D2 `df661e0`) | `adjustments.yml:884-893` | fails C32 (module prefix, no `wrapMethod`) — ADJ renames it (§3 ADJ) |
 
 Before step 1:
 1. Run `git diff 4e64f47 -- foundry/module/pentaryn-portals` (anything it shows is drift after this
@@ -110,7 +110,7 @@ once). ADJ means the adjustments batch.
 | C29 | fail | n/a | the scorer sees no flag writes. **It misses some:** portals writes `flags.pentaryn-portals.{title,img,description}` on **regions** (`:168, :854, :858, :868` [:151, :773, :777, :787]). C29 counts actor and token writes only, so `inspect` is optional | optional `inspect(regionRef)` in the API additions (§4) |
 | C30 | fail | pass | — | — |
 | C31 | manual | manual | `snapshot` returns a path or null; `teleportParty` / `lookAt` return undefined | S6 records them as `legacy` rows, as they are |
-| C32 | fail | pass (snapshot) / **fail** (live) | no prototype patches; the re-run's row `portals-teleport-default-and-spread` has a `portals-` id and no `wrapMethod` names it (R1 / D2) | ADJ (rename to `core-teleport-default-and-spread`) |
+| C32 | fail | pass (snapshot) / **fail** (live) | no prototype patches; the re-run's row `portals-teleport-default-and-spread` (**renamed `core-teleport-default-and-spread`**, D2 `df661e0`) has a `portals-` id and no `wrapMethod` names it (R1 / D2) | ADJ (rename to `core-teleport-default-and-spread`) |
 | C33 | manual | n/a | core teleport-dialog internals (`dialog-<uuid>-<token>`, `.dialog-content`, `select[name="destination"]`, and since the re-run `button[data-action="yes"]`/`"no"` + `autofocus`, `:scope > p`) and `options.replacements` are not in the private-token list | ADJ rows (finding -31) |
 | C34 / C35 | fail | n/a | no lang file | become applicable in W7. They pass if the conversion uses full-key literals |
 | C36 | warn | **warn** | 12 literals live [8]: `:128, :393-398, :514, :600 …` [`:111, :365-370, :486, :674`]; finding -29 counts about 55 strings at `4e64f47` [about 40] | W7 i18n |
@@ -453,7 +453,7 @@ every `portals-*` row, and portals has no patches. See the question for Joe in �
 | `core-region-config-portal-card` | `region-appearance` | `cards.mjs` | -31 |
 | `itempiles-portals-pile-pc` | `isValidItemPile` | `scene-adapter.mjs` | C47 |
 | `core-portals-relative-uuid` (existing) | unchanged | `portals-core.mjs`, `scene-adapter.mjs` | S3 |
-| `portals-teleport-default-and-spread` (existing, adjustments.yml:884-893, added by the re-run) → **rename** `core-teleport-default-and-spread` | `data-action="yes"`, `:scope > p`, `spreadArrival` (was `preferTeleport`, `spreadArrival` — own names that never go stale) | `cards.mjs`, `party.mjs`, `portals-core.mjs` | C32 (fails live), -31 extension |
+| `portals-teleport-default-and-spread` (**renamed `core-teleport-default-and-spread`**, D2 `df661e0`) (existing, adjustments.yml:884-893, added by the re-run) → **rename** `core-teleport-default-and-spread` | `data-action="yes"`, `:scope > p`, `spreadArrival` (was `preferTeleport`, `spreadArrival` — own names that never go stale) | `cards.mjs`, `party.mjs`, `portals-core.mjs` | C32 (fails live), -31 extension |
 
 All rows: `modules: [pentaryn-portals]`, `check: make foundry-portals-check`. Add a
 `core-canvas-fog-visibility` row (markers `isPointExplored`, `testVisibility`) only if Joe wants
@@ -504,7 +504,7 @@ The structural steps absorb -25, -26, -29 (W7), -31 (ADJ), -33, the C24 part of 
    `core-region-placement-escape`). Two options:
    - **Recommended:** keep that convention and reserve `<short>-` for patch rows. This is a
      one-line clarification in the use-doc §5.6. (Since the re-run this is no longer theoretical:
-     `portals-teleport-default-and-spread` fails C32 on the live tree.)
+     `portals-teleport-default-and-spread` (**renamed `core-teleport-default-and-spread`**, D2 `df661e0`) fails C32 on the live tree.)
    - Alternatively, relax C32 to the rows whose markers match a patch.
 2. **Lifting WAIT** on portals: only Joe can confirm (wait.json).
 

@@ -102,7 +102,7 @@ once). ADJ means the adjustments batch.
 | C29 | fail | **fail** | writes flags (handle tokens, the handle actor, messages) with no `inspect` | S7 (`inspect(ref)`, finding -10) |
 | C30 | fail | pass | — | — |
 | C31 | manual | manual | the 20 methods have mixed shapes (finding -10) | S7 records them as `legacy` rows, as they are |
-| C32 | fail | **fail** | rows with no `wrapMethod` naming them: `aoe-argon-handle-bind` and `aoe-self-area-aim` (real patches); `aoe-core-region-delete-update-race` plus the re-run's `aoe-careful-spell-protected-rows`, `aoe-supersede-same-usage`, `aoe-player-status-line`, `aoe-same-spell-no-stack` (not patches) | S6 (`wrapMethod` names `aoe-argon-handle-bind` and, finding -44, `aoe-self-area-aim`) + ADJ / decision §6.1 for the five non-patch rows |
+| C32 | fail | **fail** | rows with no `wrapMethod` naming them: `aoe-argon-handle-bind` and `aoe-self-area-aim` (real patches); `aoe-core-region-delete-update-race` (**renamed `core-region-delete-handle-race`**, D2 `df661e0`) plus the re-run's `aoe-careful-spell-protected-rows` (**renamed `dnd5e-careful-spell-protected-rows`**, D2 `df661e0`), `aoe-supersede-same-usage` (**renamed `dnd5e-supersede-same-usage`**, D2 `df661e0`), `aoe-player-status-line` (**renamed `core-private-roll-rows-hidden`**, D2 `df661e0`), `aoe-same-spell-no-stack` (**renamed `dnd5e-same-spell-no-stack`**, D2 `df661e0`) (not patches) | S6 (`wrapMethod` names `aoe-argon-handle-bind` and, finding -44, `aoe-self-area-aim`) + ADJ / decision §6.1 for the five non-patch rows |
 | C33 | manual | manual | lists `._placementContext` in `core.mjs` and `escape.mjs` (covered by `core-region-placement-escape`) and 13 rows for this module; still misses `ui.ARGON.bind` and `RegionLayer.prototype.placeRegions` (covered by `aoe-argon-handle-bind`, `aoe-self-area-aim`) | ADJ (finding -39 widens the row) |
 | C34 | fail | **fail** | `lang/en.json` is flat dotted keys | S3 (nest it; Foundry `expandObject`s on load, `localization.mjs:368`, so this is runtime-identical and reload-only) |
 | C35 | fail | **fail** | definite coverage 9 % (7/74) at 28ccc87 (snapshot 13 %, 7/54): five copies of the `t()` prefix wrapper (`areas.mjs:31`, `resolve.mjs:30`, `tray.mjs:19`, `effects.mjs:30`, `refund.mjs:22`) plus the template keys at `settings.mjs:43-44` | S3 |
@@ -505,12 +505,12 @@ Absorbs **-11** and **-12**. Clears C44 and C45.
 | Row | Change | Absorbs |
 |---|---|---|
 | `aoe-argon-handle-bind` | `files` → `foundry/module/pentaryn-aoe/argon.mjs`, `core.mjs`; markers `guardArgonBind`, `isHandleTarget`, + `_aoeGuard` | C32 |
-| `aoe-core-region-delete-update-race` | **decision §6.1**. It is a workaround, not a wrap. Either rename it to `core-region-delete-handle-race`, the registry's convention for non-patch rows (like `core-region-placement-escape`), or have C32 skip rows without a patch marker. `files` → `areas.mjs`, `core.mjs` | C32 |
+| `aoe-core-region-delete-update-race` (**renamed `core-region-delete-handle-race`**, D2 `df661e0`) | **decision §6.1**. It is a workaround, not a wrap. Either rename it to `core-region-delete-handle-race`, the registry's convention for non-patch rows (like `core-region-placement-escape`), or have C32 skip rows without a patch marker. `files` → `areas.mjs`, `core.mjs` | C32 |
 | `core-region-placement-escape` | widen to `modules: [pentaryn-aoe, pentaryn-cursors]`, `files += foundry/module/pentaryn-cursors/cursors.mjs`; add a cross-reference comment at both predicates | -39 |
 | `itempiles-aoe-skip-piles` (new) | packages `[item-piles]`, files `scene-adapter.mjs`, markers `isValidItemPile`, `item-piles` | C47 |
 | `dnd5e-chat-message-types`, `dnd5e-legacy-roll-modes`, `dnd5e-token-size-lock` | `files` follow the moves: `messages-adapter.mjs`, `scene-adapter.mjs`, `settings.mjs` | keeps `make foundry-adjustments-check` green |
 | `aoe-self-area-aim` (existing since 17275c9, `adjustments.yml:785`) | a real patch: S6's `wrapMethod` names it (finding -44); add the marker `aimWrapped`; `files` unchanged (`aim.mjs`, `core.mjs`) | C32 |
-| `aoe-careful-spell-protected-rows`, `aoe-supersede-same-usage`, `aoe-player-status-line`, `aoe-untargeted-touch-self`, `aoe-same-spell-no-stack` (existing since 17275c9) | not patches (own tray logic / dnd5e behaviour workarounds): same **decision §6.1** as `aoe-core-region-delete-update-race` — rename to the upstream prefix (`dnd5e-careful-spell-protected-rows`, `dnd5e-supersede-same-usage`, `core-private-roll-rows-hidden`, `dnd5e-untargeted-touch-self`, `dnd5e-same-spell-no-stack`) or relax C32 (D2). `files` unchanged (the features keep their names) | C32 (the scorer flags four of the five today; `aoe-untargeted-touch-self` is listed under C33 only) |
+| `aoe-careful-spell-protected-rows` (**renamed `dnd5e-careful-spell-protected-rows`**, D2 `df661e0`), `aoe-supersede-same-usage` (**renamed `dnd5e-supersede-same-usage`**, D2 `df661e0`), `aoe-player-status-line` (**renamed `core-private-roll-rows-hidden`**, D2 `df661e0`), `aoe-untargeted-touch-self` (**renamed `dnd5e-untargeted-touch-self`**, D2 `df661e0`), `aoe-same-spell-no-stack` (**renamed `dnd5e-same-spell-no-stack`**, D2 `df661e0`) (existing since 17275c9) | not patches (own tray logic / dnd5e behaviour workarounds): same **decision §6.1** as `aoe-core-region-delete-update-race` (**renamed `core-region-delete-handle-race`**, D2 `df661e0`) — rename to the upstream prefix (`dnd5e-careful-spell-protected-rows`, `dnd5e-supersede-same-usage`, `core-private-roll-rows-hidden`, `dnd5e-untargeted-touch-self`, `dnd5e-same-spell-no-stack`) or relax C32 (D2). `files` unchanged (the features keep their names) | C32 (the scorer flags four of the five today; `aoe-untargeted-touch-self` is listed under C33 only) |
 | `dnd5e-cancelled-area-refund` (existing since 17275c9, shared with pentaryn-combat) | already upstream-prefixed; `files` unchanged | — |
 
 ### W7 — restart batch
@@ -562,7 +562,7 @@ Deferred (not part of this migration): D-A5, the Argon readiness `argonInit` hoo
 
 ## 6. Decisions for Joe
 
-1. **Non-patch adjustments rows vs C32.** `aoe-core-region-delete-update-race` describes a
+1. **Non-patch adjustments rows vs C32.** `aoe-core-region-delete-update-race` (**renamed `core-region-delete-handle-race`**, D2 `df661e0`) describes a
    workaround (poll before deleting), not a wrap, so no `wrapMethod` can name it. Two options:
    - **Recommended:** rename it to the registry's upstream-prefixed convention for non-patch rows
      (`core-…`) and clarify use-doc §5.6 so that `<short>-` means a patch row. Portals has the same
