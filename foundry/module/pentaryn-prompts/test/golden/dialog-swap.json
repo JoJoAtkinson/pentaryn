@@ -1,0 +1,45 @@
+{
+  "data": [
+    {
+      "name": "Prompt · large — empty",
+      "actorId": "markerActorlarge",
+      "x": 1150,
+      "y": 550,
+      "width": 2,
+      "height": 2,
+      "texture": {
+        "src": "modules/pentaryn-prompts/assets/marker-large.webp",
+        "scaleX": 1,
+        "scaleY": 1,
+        "tint": "#ff6b6b"
+      },
+      "disposition": -2,
+      "actorLink": false,
+      "flags": {
+        "dnd5e": {
+          "lockSize": true
+        },
+        "pentaryn-prompts": {
+          "marker": "large",
+          "prompt": "a cart",
+          "updatedAt": 1760000000000,
+          "swappedFrom": "<the old marker's id>"
+        }
+      },
+      "elevation": 10,
+      "level": "L1"
+    }
+  ],
+  "options": {
+    "pentarynPrompts": {
+      "swap": true
+    }
+  },
+  "render": [
+    {
+      "op": "app.render",
+      "force": true,
+      "title": "Prompt · large"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "context": {
+    "text": "a lantern",
+    "size": "mid",
+    "footprint": "Medium 5x5 ft",
+    "sizes": [
+      {
+        "key": "tiny",
+        "active": false,
+        "title": "Tiny 2.5x2.5 ft"
+      },
+      {
+        "key": "small",
+        "active": false,
+        "title": "Small 5x5 ft"
+      },
+      {
+        "key": "mid",
+        "active": true,
+        "title": "Medium 5x5 ft"
+      },
+      {
+        "key": "large",
+        "active": false,
+        "title": "Large 10x10 ft"
+      },
+      {
+        "key": "xl",
+        "active": false,
+        "title": "Huge 15x15 ft"
+      },
+      {
+        "key": "xxl",
+        "active": false,
+        "title": "Gargantuan 20x20 ft"
+      }
+    ],
+    "placeholder": "What goes here? A few words is enough. Enter for a new line.",
+    "hint": "Esc saves · ⌘⏎ saves · ⇧Esc puts the text back",
+    "deleteLabel": "Delete",
+    "panelLoading": "Looking around…"
+  },
+  "options": {
+    "force": true,
+    "position": {
+      "left": 184,
+      "top": 105,
+      "width": 620,
+      "height": 320
+    }
+  },
+  "title": "Prompt · mid"
+}
