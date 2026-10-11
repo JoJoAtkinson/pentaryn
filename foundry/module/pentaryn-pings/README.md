@@ -19,7 +19,7 @@ Nothing. Pings draw exactly as before; the module only records them, on GM clien
 
 | Key | Scope | Shown | Default | What |
 |---|---|---|---|---|
-| `max` | world | yes — "Pings to keep" | 50 | how many pings the store keeps; not a finite positive number → 50; at most 500. Read on every ping, so a change applies at once |
+| `max` | world | yes — "Pings to keep" (`PENTARYN_PINGS.Setting.max.Name`, `lang/en.json`) | 50 | how many pings the store keeps; not a finite positive number → 50; at most 500. Read on every ping, so a change applies at once |
 | `log` | world | no (store) | `[]` | the records, oldest first (below) |
 
 ## API — game.pentaryn.pings

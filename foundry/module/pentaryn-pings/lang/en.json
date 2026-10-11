@@ -1,0 +1,10 @@
+{
+  "PENTARYN_PINGS": {
+    "Setting": {
+      "max": {
+        "Name": "Pings to keep",
+        "Hint": "How many of the most recent pings to remember. Older ones fall off the end."
+      }
+    }
+  }
+}

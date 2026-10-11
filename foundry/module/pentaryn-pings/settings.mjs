@@ -1,13 +1,10 @@
 /**
  * Pentaryn Ping Log — settings: the SETTINGS table and the only `game.settings` calls outside lib/.
  *
- * Labels are literal English until the Wave 7 restart batch adds `lang/en.json` and the module.json
- * `languages` entry (guide step 10): a key would render raw on the settings screen before that.
+ * Labels are `PENTARYN_PINGS.Setting.<key>.Name/Hint` keys from `lang/en.json` (guide step 10, J13);
+ * the rendered English is the same as the literals they replaced.
  *
- * `log` is the ping store (hidden, world). It is registered by hand, with exactly the option object
- * it has always had (name, scope, config, type, default): the kit's defineSettings would add a
- * `hint` key to a non-store row and drop the `name` from a store row, and the glue test pins the
- * options key by key. Step 10 drops the name and registers it through defineSettings.
+ * `log` is the ping store: a `store: true` row (hidden, world, no label — the label was never shown).
  */
 
 import { I18N, MODULE } from "./pings-core.mjs";
@@ -17,31 +14,19 @@ import { defineSettings, settingsSnapshot } from "./lib/settings.mjs";
 export const SETTINGS = [
   {
     key: "log", store: true, scope: "world", config: false, type: Array, default: [],
-    name: "Ping log",
     doc: "The ping store: the newest `max` records { t, userId, userName, sceneId, sceneName, x, y }, oldest first. Written by GM clients only, at most once per 250 ms.",
   },
   {
     key: "max", scope: "world", config: true, type: Number, default: 50,
-    name: "Pings to keep",
-    hint: "How many of the most recent pings to remember. Older ones fall off the end.",
+    name: "PENTARYN_PINGS.Setting.max.Name",
+    hint: "PENTARYN_PINGS.Setting.max.Hint",
     doc: "How many pings the store keeps; not a finite positive number → 50; at most 500. Read on every ping, so a change applies at once.",
   },
 ];
 
-const LOG_ROW = SETTINGS[0];
-
 /** init, every client: log then max, as before. Rows already registered (a hot re-import) are skipped. */
 export function registerSettings() {
-  if (!game.settings.settings?.has?.(`${MODULE}.log`)) {
-    game.settings.register(MODULE, "log", {
-      name: LOG_ROW.name,
-      scope: LOG_ROW.scope,
-      config: LOG_ROW.config,
-      type: LOG_ROW.type,
-      default: LOG_ROW.default,
-    });
-  }
-  defineSettings(MODULE, SETTINGS.filter(r => r.key !== "log"), { i18nRoot: I18N });
+  defineSettings(MODULE, SETTINGS, { i18nRoot: I18N });
 }
 
 /**

@@ -67,15 +67,15 @@ test("init registers log then max, option objects key by key", () => {
     return rest;
   };
   const log = opts(`${MODULE}.log`);
-  assert.deepEqual(Object.keys(log), ["name", "scope", "config", "type", "default"]);
+  assert.deepEqual(Object.keys(log), ["scope", "config", "type", "default"]);
   assert.equal(log.type, Array);
-  assert.deepEqual(log, { name: "Ping log", scope: "world", config: false, type: Array, default: [] });
+  assert.deepEqual(log, { scope: "world", config: false, type: Array, default: [] });
   const max = opts(`${MODULE}.max`);
   assert.deepEqual(Object.keys(max), ["name", "hint", "scope", "config", "type", "default"]);
   assert.equal(max.type, Number);
   assert.deepEqual(max, {
-    name: "Pings to keep",
-    hint: "How many of the most recent pings to remember. Older ones fall off the end.",
+    name: "PENTARYN_PINGS.Setting.max.Name",
+    hint: "PENTARYN_PINGS.Setting.max.Hint",
     scope: "world",
     config: true,
     type: Number,

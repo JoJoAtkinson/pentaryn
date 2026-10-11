@@ -11,6 +11,9 @@
   `pentaryn-pings.ready` and `pentaryn.ready` fire on GM clients.
 - [declared] `uninstall()` unwraps `handlePing` and stops listening; a re-import after ready re-wires.
 - [declared] Decorated records gain `ageMs` (numeric age) after `age`.
+- [declared] Settings localised (guide step 10, J13): `lang/en.json` and the module.json
+  `languages` entry; the `max` row's label is `PENTARYN_PINGS.Setting.max.Name`/`.Hint` (same
+  English on the settings screen); the hidden `log` store row is registered without a name.
 
 ## 0.1.0
 
