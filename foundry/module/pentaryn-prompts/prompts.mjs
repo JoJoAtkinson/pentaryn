@@ -311,8 +311,9 @@ Hooks.once("setup", () => patchDoubleClick());
 Typeahead.setOrphanSink(text => PromptDialog.takeOrphan(text));
 
 Hooks.once("ready", async () => {
-  // pentaryn-importer replaces game.pentaryn with a frozen object in its own ready hook; defer a
-  // tick and rebuild rather than assign (same as the other pentaryn modules).
+  // Published one tick after ready (the publish timing is a declared step of the migration). The
+  // importer merges into game.pentaryn and nothing freezes it since its keystone (items-journal-1),
+  // so the old frozen-root guard is gone (kit 1.0.2, J10): the API is assigned into the plain root.
   setTimeout(() => {
     const api = {
       gather, list, crops, show,
@@ -343,9 +344,8 @@ Hooks.once("ready", async () => {
       }),
       version: VERSION
     };
-    const current = game.pentaryn;
-    if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, prompts: api };
-    else { game.pentaryn ??= {}; game.pentaryn.prompts = api; }
+    game.pentaryn ??= {};
+    game.pentaryn.prompts = api;
   }, 0);
   try { await ensureMarkers(); } catch (err) { console.error(`${MODULE} | ensureMarkers failed`, err); }
 });
