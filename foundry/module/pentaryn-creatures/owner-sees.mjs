@@ -73,7 +73,9 @@ function onSetup() {
 export function install(reg, ctx) {
   log = ctx.log;
   ctx.onSettingChange("ownerSees", (v) => { ownerSeesOn = v !== false; refreshTokenVisibility(); });
-  reg.once("setup", onSetup, { guard: false, label: "setup: wrap Token#isVisible" });
+  // A hot re-import after `ready` (ctx.late): setup has already fired, so wrap now.
+  if (ctx.late) onSetup();
+  else reg.once("setup", onSetup, { guard: false, label: "setup: wrap Token#isVisible" });
   ctx.expose({ ownerSees: (token) => ownerOverride(token), patchedWith: () => patchedWith });
 }
 

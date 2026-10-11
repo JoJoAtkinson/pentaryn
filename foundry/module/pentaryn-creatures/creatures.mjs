@@ -1,216 +1,109 @@
-// Pentaryn Creatures — a player can always find the creatures they control.
-//
-// 1. Creature light. Every token a player owns whose actor is a creature (`npc`: summons,
-//    familiars, skeletons, Arcane Eye, a steed) carries a small bright light, so it never vanishes
-//    in the dark. Never on a PC or its Wild Shape form. Written by the active GM's client only, and
-//    flagged (flags.pentaryn-creatures.light), so we only ever take away a light we put there.
-// 2. Owners see their own. A token you own stays drawn on your screen even when nothing you
-//    control can see it (an Invisible Arcane Eye in the dark). A per-client override of
-//    Token#isVisible that only ever adds tokens the user owns, never GM-hidden ones.
-// 3. "Your creatures" strip. Portraits of the tokens you own on this scene, above the hotbar.
-//    Click = select and pan to it; double-click = open its sheet. Computed from the scene every time
-//    it draws; nothing is stored, so a dismissed or killed summon simply stops being there.
-//
-// Exposes game.pentaryn.creatures.
+/**
+ * Pentaryn Creatures (pentaryn-creatures) — ENTRY: esmodules[0]. Wiring only, no logic.
+ *
+ * A player can always find the creatures they control: a small light on every creature token they
+ * own, their own tokens stay drawn on their screen, and a "Your creatures" strip above the hotbar.
+ * What each does at the table: README "What the player sees".
+ *
+ * Files, in load order:
+ *   creatures-core.mjs   PURE constants and rules: the light, owner-sees, strip order, dock, seams
+ *   settings.mjs         SETTINGS (lightRadius, ownerSees, floatOverHud, showStrip), setting()
+ *   tokens-adapter.mjs   TokenDocument → plain summary (reads aoe / Item Piles / dnd5e flags)
+ *   light.mjs            feature: the light queue and its writer (active GM only)
+ *   strip.mjs            UI: the strip's DOM, the Combat HUD dock
+ *   creature-strip.mjs   feature: when the strip redraws
+ *   owner-sees.mjs       feature: the Token#isVisible wrap
+ *   lib/*.mjs            vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
+ *
+ * Lifecycle: the light and strip features install synchronously in this body (where their
+ * module-scope Hooks.on calls always ran, so listener order is unchanged) · init → settings ·
+ * setup → owner-sees wraps Token#isVisible · ready → the active GM syncs every light, the strip
+ * draws, then the API is published as game.pentaryn.creatures.
+ *
+ * Hot patch RE-RUNS THE WIRING ONLY: `game.pentaryn.creatures.uninstall()`, then
+ * `await import("/modules/pentaryn-creatures/creatures.mjs?v=2")`. Any edit to another file needs
+ * a reload.
+ */
 
 import * as core from "./creatures-core.mjs";
+import { MODULE, isPlayerCreature } from "./creatures-core.mjs";
 import { onSettingChange, registerSettings, setting } from "./settings.mjs";
 import { summarize } from "./tokens-adapter.mjs";
 import { hookRegistry } from "./lib/hooks.mjs";
 import { makeLog } from "./lib/log.mjs";
 import * as light from "./light.mjs";
+import * as creatureStrip from "./creature-strip.mjs";
 import * as ownerSees from "./owner-sees.mjs";
 
-const { MODULE, isPlayerCreature, stripEntries, shouldShowStrip, stripSignature, stripDock } = core;
+/** Features, in install order (uninstall runs them in reverse). */
+const FEATURES = [light, creatureStrip, ownerSees];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);
+
 const ctx = {
   log,
   reg,
   setting,
   onSettingChange,
+  /** true on a hot re-import after `ready`: the lifecycle hooks have already fired. */
+  late: !!globalThis.game?.ready,
   exposed: {},
   expose(accessors) {
     Object.assign(ctx.exposed, accessors);
   },
+  uninstall,
 };
 
-light.install(reg, ctx);
-const { syncScene, syncAll } = ctx.exposed;
-
-/* -------------------------------------------- */
-/*  3. The "Your creatures" strip               */
-/* -------------------------------------------- */
-
-const STRIP_ID = "pentaryn-creatures";
-let lastSig = null;
-let renderTimer = null;
-
-/** The strip's entries for `user` on the viewed scene (or `scene`). */
-function list(user = game.user, scene = canvas?.scene) {
-  if (!scene) return [];
-  const characterId = user.character?.id ?? null;
-  return stripEntries([...scene.tokens].map(t => summarize(t, user)), { characterId });
+/** Remove every hook, the wrap, the strip and the light queue (hot patch: then re-import). */
+function uninstall() {
+  for (const feature of [...FEATURES].reverse()) feature.uninstall();
+  reg.offAll();
 }
 
-function stripEl() {
-  return document.getElementById(STRIP_ID);
+function onInit() {
+  registerSettings();
 }
 
-function mount() {
-  let el = stripEl();
-  if (el?.isConnected) return el;
-  el = document.createElement("nav");
-  el.id = STRIP_ID;
-  el.setAttribute("aria-label", _loc("PENTARYN_CREATURES.label"));
-  el.addEventListener("click", onClick);
-  el.addEventListener("dblclick", onDoubleClick);
-  const bottom = document.getElementById("ui-bottom");
-  const hotbar = document.getElementById("hotbar");
-  if (bottom && hotbar?.parentElement === bottom) bottom.insertBefore(el, hotbar);
-  else if (bottom) bottom.append(el);
-  else document.body.append(el);
-  return el;
-}
-
-function render() {
-  const enabled = !game.user.isGM && setting("showStrip");
-  const entries = enabled && canvas?.ready ? list() : [];
-  if (!shouldShowStrip(entries)) {
-    stripEl()?.remove();
-    lastSig = null;
-    return;
-  }
-  const sig = stripSignature(entries);
-  const el = mount();
-  if (sig !== lastSig || !el.childElementCount) {
-    lastSig = sig;
-    el.replaceChildren(...build(entries));
-  }
-  markControlled();
-  placeStrip();
-}
-
-/* The strip floats above the Combat HUD while the HUD is up (usability Area 6 re-run, W8): docked
-   above the hotbar it sat behind Argon's action bars, so clicks went to the bar instead. */
-let dockTimer = null;
-function placeStrip() {
-  const el = stripEl();
-  if (!el) { clearInterval(dockTimer); dockTimer = null; return; }
-  const bar = document.querySelector(".extended-combat-hud .action-hud") ?? document.querySelector(".extended-combat-hud");
-  const r = bar && bar.offsetParent !== null ? bar.getBoundingClientRect() : null;
-  const dock = setting("floatOverHud") ? stripDock(r, window.innerHeight) : null;
-  el.classList.toggle("pcr-floating", !!dock);
-  el.style.bottom = dock ? `${dock.bottom}px` : "";
-  el.style.left = dock ? `${dock.left}px` : "";
-  // Argon opens, closes and re-renders without a hook we can rely on: look again twice a second
-  // while the strip exists (one rect read).
-  dockTimer ??= setInterval(placeStrip, 500);
-}
-
-function build(entries) {
-  const label = document.createElement("span");
-  label.className = "pcr-label";
-  label.textContent = _loc("PENTARYN_CREATURES.label");
-  const out = [label];
-  const hint = _loc("PENTARYN_CREATURES.hint");
-  for (const e of entries) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = `pcr-token rank-${e.rank}`;
-    b.dataset.tokenId = e.id;
-    b.dataset.tooltipHtml = `<strong>${foundry.utils.escapeHTML(e.name)}</strong><br>${foundry.utils.escapeHTML(hint)}`;
-    b.setAttribute("aria-label", e.name);
-    const img = document.createElement("img");
-    img.src = e.img;
-    img.alt = "";
-    img.draggable = false;
-    b.append(img);
-    out.push(b);
-  }
-  return out;
-}
-
-function markControlled() {
-  const el = stripEl();
-  if (!el || !canvas?.ready) return;
-  for (const b of el.querySelectorAll(".pcr-token")) {
-    b.classList.toggle("controlled", !!canvas.tokens.get(b.dataset.tokenId)?.controlled);
-  }
-}
-
-function scheduleRender() {
-  clearTimeout(renderTimer);
-  renderTimer = setTimeout(() => {
-    try { render(); } catch (err) { console.warn(`${MODULE} | strip render failed`, err); }
-  }, 60);
-}
-
-function tokenFor(event) {
-  const id = event.target.closest?.(".pcr-token")?.dataset.tokenId;
-  return id ? canvas.tokens?.get(id) : null;
-}
-
-/** Click: select it (shift keeps the others) and pan to it. */
-function onClick(event) {
-  const token = tokenFor(event);
-  if (!token) return;
-  event.preventDefault();
-  if (!canvas.tokens.active) canvas.tokens.activate();
-  token.control({ releaseOthers: !event.shiftKey });
-  const { x, y } = token.center;
-  canvas.animatePan({ x, y });
-}
-
-/** Double-click: open its sheet. */
-function onDoubleClick(event) {
-  const token = tokenFor(event);
-  if (!token?.actor?.sheet) return;
-  event.preventDefault();
-  token.actor.sheet.render({ force: true });
-}
-
-Hooks.on("canvasReady", () => { lastSig = null; scheduleRender(); });
-for (const h of ["createToken", "deleteToken", "updateToken"]) {
-  Hooks.on(h, (doc) => { if (doc.parent?.id === canvas?.scene?.id) scheduleRender(); });
-}
-Hooks.on("updateActor", (_actor, changes) => {
-  if (changes && ("ownership" in changes || "img" in changes || "name" in changes)) scheduleRender();
-});
-Hooks.on("updateUser", (user, changes) => { if (user.isSelf && changes && "character" in changes) scheduleRender(); });
-Hooks.on("controlToken", () => markControlled());
-
-/* -------------------------------------------- */
-/*  Settings, patch, API                        */
-/* -------------------------------------------- */
-
-// Setting reactions (the rows live in settings.mjs).
-onSettingChange("showStrip", () => { lastSig = null; scheduleRender(); });
-
-Hooks.once("init", () => registerSettings());
-
-ownerSees.install(reg, ctx);
-
-Hooks.once("ready", () => {
+/** The active GM brings every light in line; every client draws its strip. */
+function onReadyStartup() {
   ctx.exposed.syncAllQuietly();
-  scheduleRender();
-});
+  ctx.exposed.scheduleRender();
+}
 
-// pentaryn-importer replaces game.pentaryn with a frozen object in its own ready hook; defer a
-// tick and rebuild rather than assign (same as pentaryn-journal / -portals).
-Hooks.once("ready", () => setTimeout(() => {
-  const api = {
-    list,
-    render: () => { lastSig = null; render(); },
-    syncScene,
-    syncAll,
-    isCreature: (tokenDoc) => isPlayerCreature(summarize(tokenDoc)),
-    ownerSees: ctx.exposed.ownerSees,
-    patchedWith: ctx.exposed.patchedWith,
-    core
-  };
-  const current = game.pentaryn;
-  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, creatures: api };
-  else { game.pentaryn ??= {}; game.pentaryn.creatures = api; }
-}, 0));
+function onReadyPublish() {
+  // pentaryn-importer replaces game.pentaryn with a frozen object in its own ready hook; defer a
+  // tick and rebuild rather than assign (same as pentaryn-journal / -portals).
+  setTimeout(() => {
+    const x = ctx.exposed;
+    const api = {
+      list: x.list,
+      render: x.render,
+      syncScene: x.syncScene,
+      syncAll: x.syncAll,
+      isCreature: (tokenDoc) => isPlayerCreature(summarize(tokenDoc)),
+      ownerSees: x.ownerSees,
+      patchedWith: x.patchedWith,
+      core
+    };
+    const current = game.pentaryn;
+    if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, creatures: api };
+    else { game.pentaryn ??= {}; game.pentaryn.creatures = api; }
+  }, 0);
+}
+
+// Registration order is the module's historic one (golden/hooks.json): the light's and the strip's
+// hooks, init, owner-sees' setup, then the two ready handlers.
+if (ctx.late) {
+  onInit();
+  for (const feature of FEATURES) feature.install(reg, ctx);
+  onReadyStartup();
+  onReadyPublish();
+} else {
+  light.install(reg, ctx);
+  creatureStrip.install(reg, ctx);
+  Hooks.once("init", onInit);
+  ownerSees.install(reg, ctx);
+  Hooks.once("ready", onReadyStartup);
+  Hooks.once("ready", onReadyPublish);
+}
