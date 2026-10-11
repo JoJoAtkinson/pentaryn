@@ -244,6 +244,33 @@ def test_keep_local_is_remembered_until_something_newer(two_hosts, tty, capsys):
     assert _state(two_hosts, "boss")["keep_local_until_newer_than"] == second
 
 
+def test_keep_local_holds_when_the_declined_snapshot_is_later_deleted(two_hosts, tty):
+    """Declined by mtime, not only by name: if the declined snapshot is coalesced or
+    pruned away and an older one becomes the newest, that older one is not news."""
+    _play(two_hosts, "boss", "boss world")
+    now = time.time()
+    names = []
+    for ahead in (60, 120):                       # two mac snapshots after boss's
+        stamp = time.strftime("%Y-%m-%d-%H%M%S", time.gmtime(now + ahead))
+        p = two_hosts.cloud / "world-backups" / f"world-{stamp}-fvtt14.369-mac.tar.gz"
+        p.write_bytes(b"x" * 64)
+        os.utime(p, (now + ahead,) * 2)
+        names.append(p.name)
+    older, declined = names
+    asked = tty(True, ["k"])
+    with two_hosts.use("boss"):
+        boot.choose()
+    assert len(asked) == 1
+    st = _state(two_hosts, "boss")
+    assert st["keep_local_until_newer_than"] == declined and st["keep_local_mtime"]
+    (two_hosts.cloud / "world-backups" / declined).unlink()   # coalesced away on the mac
+    asked = tty(True, ["k"])
+    with two_hosts.use("boss"):
+        assert boot.choose() == 0
+    assert asked == []                                         # `older` is not asked about
+    assert _journal(two_hosts, "boss") == "boss world"
+
+
 NOTICE = re.compile(
     r"▸ boot: cloud snapshot (world-\S+-mac\.tar\.gz) \(mac, \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC\) "
     r"is newer than this world \(based on an unknown snapshot\); booting LOCAL\. To use it: "

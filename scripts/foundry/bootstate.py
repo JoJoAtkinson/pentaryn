@@ -43,6 +43,9 @@ class BootState:
     based_on_mtime: float | None = None
     digest: str | None = None
     keep_local_until_newer_than: str | None = None
+    # The declined snapshot's listing mtime: nothing at or before it asks again, even if
+    # the declined one is later deleted (coalesced, pruned) and an older one is newest.
+    keep_local_mtime: float | None = None
     # The based-on snapshot's ancestors, newest first (from its `.parent` sidecar): what
     # this world already contains, so a newer snapshot that lacks `based_on` is "diverged".
     lineage: list[str] = field(default_factory=list)
@@ -85,13 +88,15 @@ class BootState:
         self.based_on_mtime = mtime
         self.digest = digest
         self.keep_local_until_newer_than = keep_local
+        self.keep_local_mtime = None
         self.lineage = list(lineage or [])
         if clear_pending:
             self.pending_newer = self.pending_newer_mtime = None
         self.save(by)
 
-    def remember_keep_local(self, declined: str) -> None:
+    def remember_keep_local(self, declined: str, mtime: float | None = None) -> None:
         self.keep_local_until_newer_than = declined
+        self.keep_local_mtime = mtime
         self.pending_newer = self.pending_newer_mtime = None
         self.save("boot-keep-local")
 
@@ -127,6 +132,8 @@ def load() -> BootState:
         st = BootState(**known)
         if st.based_on_mtime is not None:
             st.based_on_mtime = float(st.based_on_mtime)
+        if st.keep_local_mtime is not None:
+            st.keep_local_mtime = float(st.keep_local_mtime)
         if st.pending_newer_mtime is not None:
             st.pending_newer_mtime = float(st.pending_newer_mtime)
         st.lineage = [str(n) for n in (st.lineage or []) if n]

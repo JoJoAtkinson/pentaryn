@@ -342,7 +342,8 @@ world is *based on*:
   if it changed since its last upload), clears, extracts. The machine's own `Config/options.json`
   (its `dataPath`), `admin.txt` and `license.json` are **kept** across every restore.
 - **`k`** boots the local world and remembers the answer until a snapshot newer than the one you
-  declined appears.
+  declined appears — by its listing mtime, so if the declined one is later coalesced or pruned
+  away, an older snapshot left behind does not ask again.
 - **Diverged** — the newer snapshot's lineage does not contain what this world is based on (the
   other machine started from an older world, or kept local and edited). It is still offered, but
   the prompt says `diverged — does not contain <based-on>` and **Enter keeps local**; `l` (or

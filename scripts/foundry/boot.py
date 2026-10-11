@@ -55,6 +55,7 @@ class Decision:
     why: str
     warning: str | None = None
     remember_keep_local: str | None = None   # the snapshot declined with "k"
+    remember_keep_local_mtime: float | None = None
     # How the offered snapshot relates to this world. "newer": take it is the default.
     # "unknown": no based-on record and the local files are newer than it — local is.
     # "diverged": it does not contain what this world is based on — local is.
@@ -209,10 +210,14 @@ def decide(from_: str | None, interactive: bool, *, st=None, adopt: bool = True)
                         warning=warning, clear_pending=clear)
     is_newest = offer.name == newest.name
 
-    # 8.
-    if state.keep_local_until_newer_than == offer.name:
-        return Decision("local", None,
-                        f"you chose to keep the local world over {offer.name} earlier",
+    # 8. declined earlier: by name, and by mtime — the declined one may since have been
+    #    coalesced or pruned away, leaving an older snapshot newest; that is not news.
+    declined_at = state.keep_local_mtime
+    if state.keep_local_until_newer_than and (
+            state.keep_local_until_newer_than == offer.name
+            or (declined_at is not None and offer.mtime <= declined_at)):
+        return Decision("local", None, "you chose to keep the local world over "
+                        f"{state.keep_local_until_newer_than} earlier",
                         warning=warning, clear_pending=True)
 
     # 9.
@@ -278,7 +283,8 @@ def _prompt(newest: Snapshot, rolling: list[Snapshot], state: bootstate.BootStat
             return Decision("restore", newest, "you chose the offered snapshot", warning=warning)
         if ans in ("k", "local", "keep"):
             return Decision("local", None, "you chose to keep the local world",
-                            warning=warning, remember_keep_local=newest.name)
+                            warning=warning, remember_keep_local=newest.name,
+                            remember_keep_local_mtime=newest.mtime)
         if ans.isdigit():
             n = int(ans)
             if n == 1:
@@ -316,7 +322,8 @@ def choose(from_: str | None = None, interactive: bool | None = None) -> int:
             # newest by mtime) cannot bury it: shown again until answered at a terminal.
             state.set_pending(d.snapshot.name, d.snapshot.mtime)
         elif d.remember_keep_local:
-            bootstate.load().remember_keep_local(d.remember_keep_local)
+            bootstate.load().remember_keep_local(d.remember_keep_local,
+                                                 d.remember_keep_local_mtime)
             say(f"▸ boot: keeping the local world (not asked again until a snapshot newer "
                 f"than {d.remember_keep_local} appears)")
         else:
