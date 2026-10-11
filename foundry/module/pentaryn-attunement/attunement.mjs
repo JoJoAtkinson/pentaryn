@@ -803,7 +803,7 @@ function report(target) {
  * categories *are* the attunement categories — every magic item that wants a slot
  * is a ring, rod, wand, trinket or wondrous item.
  *
- * `??=` on purpose: if a later dnd5e defines any of these itself, its definition
+ * Only when unset (`== null`), on purpose: if a later dnd5e defines any of these itself, its definition
  * wins and this becomes a no-op. Nothing to un-patch, nothing to keep in sync.
  *
  * `vehicle` is deliberately left alone — vehicle proficiency is a real concept in

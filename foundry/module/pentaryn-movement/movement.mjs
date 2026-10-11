@@ -12,16 +12,16 @@
  * 2. Ghost movement for players. A ghost button in the token tools lets a player drag (or arrow-key)
  *    their own tokens through walls and creatures. It reuses core's own mechanism, the same
  *    constrain options the GM's Unconstrained Movement tool sets:
- *        {ignoreWalls, ignoreCost}   core  Token#constrainMovementPath (token.mjs:2943)
+ *        {ignoreWalls, ignoreCost}   core  Token#constrainMovementPath
  *        {ignoreTokens}              dnd5e Token5e#constrainMovementPath (creature blocking)
- *    Core only ever offers those to the GM, in Token#_getDragConstrainOptions (token.mjs:4923,
- *    dnd5e overrides it the same way). This module wraps that one method, plus the keyboard
+ *    Core only ever offers those to the GM, in Token#_getDragConstrainOptions (dnd5e
+ *    overrides it the same way; verified on core 14.369 / dnd5e 6.0.6). This module wraps that one method, plus the keyboard
  *    movement preparation, and adds the flags when ghost is in effect for that token. No collision
  *    code is reimplemented.
  *
  *    Why no GM relay: neither core nor the server refuses a player's unconstrained move. The
  *    constraint is applied on the mover's own client (TokenDocument#preUpdateMovement passes the
- *    mover's constrainOptions straight into constrainMovementPath, documents/token.mjs:1723/1813),
+ *    mover's constrainOptions straight into constrainMovementPath; verified on core 14.369),
  *    and the server's Token#_preUpdate only checks the destination matches the update and the
  *    origin matches the current position; it never consults walls. Verify live as a player.
  *

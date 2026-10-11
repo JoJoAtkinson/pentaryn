@@ -61,6 +61,7 @@ edit, source step). Keep one row per edit.
 
 | Date | Module | Edit | Source |
 |---|---|---|---|
+| 2026-10-11 | walls | `description`: `See playbooks/foundry-wall-autocomplete.md` → `See context/plans/foundry-wall-autocomplete.md`; drop "44 fixtures" (the hint text change is walls guide step 10) | senses-walls-cursors-8 (wave 1 integration) |
 
 ## Batch checklist
 

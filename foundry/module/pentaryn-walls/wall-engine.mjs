@@ -5,7 +5,7 @@
  * objects, returns the mutations that would complete them. The caller reads the scene and
  * commits; everything in between is a deterministic function of the input coordinates.
  *
- * See playbooks/foundry-wall-autocomplete.md for the design, the rule table and the traces
+ * See context/plans/foundry-wall-autocomplete.md for the design, the rule table and the traces
  * that the fixtures in test/ replay.
  */
 

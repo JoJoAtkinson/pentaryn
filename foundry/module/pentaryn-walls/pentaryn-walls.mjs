@@ -9,7 +9,7 @@
  *   game.pentaryn.walls.run()       do it
  *   game.pentaryn.walls.undo()      remove everything this module generated
  *
- * See playbooks/foundry-wall-autocomplete.md.
+ * See context/plans/foundry-wall-autocomplete.md.
  */
 
 import {runEngine, FLAG_SCOPE} from "./wall-engine.mjs";
