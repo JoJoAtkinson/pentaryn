@@ -70,6 +70,7 @@ def test_every_registered_module_has_a_check_target(module):
     ("foundry-conformance", "module-conformance"),
     ("foundry-module-index", "module-index"),
     ("test", "pytest -q"),
+    ("foundry-eval-report", "scripts.foundry.ops eval-report"),
 ])
 def test_new_targets(target, expect):
     assert expect in _dry(target)
@@ -85,6 +86,8 @@ def test_parameterised_targets():
     assert "module-check --all --json" in dry("foundry-modules-check", "JSON=1").stdout
     out = dry("foundry-module-new", "M=demo", "TITLE=Pentaryn Demo", "TIER=small").stdout
     assert 'module-new demo --title "Pentaryn Demo" --tier small' in out
+    assert "eval-report --since 2026-10-01 --json" in dry(
+        "foundry-eval-report", "SINCE=2026-10-01", "JSON=1").stdout
     refused = dry("foundry-module-new")
     assert refused.returncode != 0 and "M=<short> is required" in refused.stderr
 

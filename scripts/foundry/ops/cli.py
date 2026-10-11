@@ -18,9 +18,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
+from pathlib import Path
 
-from . import bridge, config as cfg, index, login as login_mod, modules, pipeline, service
+from . import (bridge, config as cfg, evallog, index, login as login_mod, modules, pipeline,
+               service)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -61,6 +64,13 @@ def build_parser() -> argparse.ArgumentParser:
     bc = add("bridge-clean", "Kill orphaned MCP bridge processes. Never touches a server "
                              "whose parent is a live Claude session.")
     bc.add_argument("--dry-run", action="store_true", help="list what would be killed")
+    er = add("eval-report", "What the MCP action logs show: eval-js outcomes, the "
+                            "game.pentaryn paths it reaches (promotion candidates), discovery "
+                            "calls, top errors, per-tool counts. Read-only.")
+    er.add_argument("--since", metavar="DATE", help="only lines at or after this ISO date/time")
+    er.add_argument("--json", action="store_true", help="print the report as JSON")
+    er.add_argument("--dir", metavar="PATH", type=Path,
+                    help="log folder (default: $PENTARYN_MCP_LOG_DIR, else foundry/logs)")
     logs = add("tunnel-logs", "Tail the tunnel log.")
     logs.add_argument("-n", "--lines", type=int, default=40)
 
@@ -121,6 +131,21 @@ _WRAPPERS = {
 }
 
 
+def eval_report(log_dir: Path | None, *, since: str | None, as_json: bool) -> int:
+    """mcp-fork-25: the monthly action-log review as one command (evallog.py)."""
+    log_dir = log_dir or Path(os.environ.get("PENTARYN_MCP_LOG_DIR") or cfg.OPS_LOG_DIR)
+    if not log_dir.is_dir():
+        service._say(f"✗ no log folder at {log_dir}")
+        return 1
+    r = evallog.report(log_dir, since=since)
+    if as_json:
+        print(json.dumps(evallog.to_json(r), indent=2, ensure_ascii=False))
+        return 0
+    for line in evallog.render(r):
+        service._say(line)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv and argv[0] in _WRAPPERS:
@@ -144,6 +169,7 @@ def main(argv: list[str] | None = None) -> int:
     if c == "tunnel-logs":   return service.tunnel_logs(args.lines)
     if c == "bridge-status": return bridge.status(as_json=args.json)
     if c == "bridge-clean":  return bridge.clean(dry_run=args.dry_run)
+    if c == "eval-report":   return eval_report(args.dir, since=args.since, as_json=args.json)
 
     if c == "actors":        return pipeline.build_actors()
     if c == "stage":         return pipeline.stage()
