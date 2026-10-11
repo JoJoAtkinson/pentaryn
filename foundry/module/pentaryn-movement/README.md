@@ -93,7 +93,7 @@ n/a — movement writes and reads no flags.
 
 ## Events
 
-n/a — emits none of its own besides the kit's `pentaryn-movement.ready` `(api)` at publish.
+Emits none of its own. The kit fires two hooks at publish: `pentaryn-movement.ready` `(api)` and `pentaryn.ready` `("movement", api, { when: "ready" })`.
 
 Listens to (pinned in `test/golden/hooks.json`, in this order): `init` (once), `setup` (once),
 `getSceneControlButtons`, `renderSceneControls`, `drawTokenLayer`, `canvasReady`, `refreshToken`,
