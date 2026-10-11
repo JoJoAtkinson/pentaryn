@@ -232,6 +232,8 @@ centre.
 
 ## Status and known limits (2026-10-10)
 
+0.4.4 (wave 1 play-test fixes, branch fix/playtest-2026-10-11: PT2-2 a new character's spell slots
+start full; PT2-5 gather prints one description per actor).
 0.4.3 (usability Area 10 fixer pass: a built Monk's weapons get the Martial Arts enchantment).
 0.4.2 (usability Area 9 fixer pass: `"current"` inside a `scenes` list, the door line above the
 panel's fold, the footer says ⇧Esc removes a new marker). 0.4.1 (usability run 2026-10: panel refresh, MARKER_GONE says why, honest `remaining`, the over-5

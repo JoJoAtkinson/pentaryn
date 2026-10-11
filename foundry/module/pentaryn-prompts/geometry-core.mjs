@@ -12,7 +12,7 @@
 export const MODULE = "pentaryn-prompts";
 
 /** The code's own version: `status().version` prints it (game.modules can lag until a rescan). Kept equal to module.json by the suite. */
-export const VERSION = "0.4.3";
+export const VERSION = "0.4.4";
 
 /** The gather description length: the setting's registered default, gather's fallback and renderGather's default (D6). */
 export const GATHER_CHARS = 400;
