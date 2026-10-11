@@ -134,14 +134,71 @@ export function stackHead(stack) {
     .map(l => redact(l, LIMITS.stackLine)).join("\n");
 }
 
-/** The message of anything that was thrown, logged or rejected. */
+/** The message of anything that was thrown, logged or rejected. Objects go through previewOf (cheap). */
 export function messageOf(x) {
   if (x === null || x === undefined) return String(x);
   if (typeof x === "string") return x;
   if (typeof x?.message === "string") return x.message;
+  if (typeof x === "object" || typeof x === "function") return previewOf(x);
+  return String(x);
+}
+
+const STOP = Symbol("preview full");
+
+/** `[Actor5e Caven]` for a class instance: its class name and, when it is a string, its name. */
+function instanceLabel(v) {
+  const cls = v.constructor?.name || "Object";
+  const name = typeof v.name === "string" && v.name ? ` ${clip(v.name, 40)}` : "";
+  return `[${cls}${name}]`;
+}
+
+/**
+ * A JSON-like preview of at most `n` characters ("…" marks a cut) that never serialises a whole
+ * object: plain objects and arrays are walked (depth ≤ 3, cycles → `{…}`) until the budget runs out,
+ * and a class instance (a Foundry document, an Application) is only its label — never its toJSON().
+ * The console wrap calls this for every argument of every console.error / console.warn.
+ */
+export function previewOf(x, n = LIMITS.message) {
+  let out = "";
+  const seen = new Set();
+  const put = s => {
+    out += s;
+    if (out.length > n) throw STOP;
+  };
+  const walk = (v, depth) => {
+    if (v === null || typeof v === "number" || typeof v === "boolean" || v === undefined) return put(String(v));
+    if (typeof v === "string") return put(JSON.stringify(v.length > n ? v.slice(0, n) : v));
+    if (typeof v === "bigint") return put(`${v}n`);
+    if (typeof v === "symbol") return put(`[${String(v)}]`);
+    if (typeof v === "function") return put(`[Function ${v.name || "anonymous"}]`);
+    if (typeof v.message === "string" && v instanceof Error) return put(JSON.stringify(v.message));
+    const proto = Object.getPrototypeOf(v);
+    if (!Array.isArray(v) && proto !== Object.prototype && proto !== null) return put(instanceLabel(v));
+    if (seen.has(v) || depth > 3) return put(Array.isArray(v) ? "[…]" : "{…}");
+    seen.add(v);
+    if (Array.isArray(v)) {
+      put("[");
+      for (let i = 0; i < v.length; i++) {
+        if (i) put(",");
+        walk(v[i], depth + 1);
+      }
+      return put("]");
+    }
+    put("{");
+    let first = true;
+    for (const k of Object.keys(v)) {
+      if (!first) put(",");
+      first = false;
+      put(`${JSON.stringify(k)}:`);
+      walk(v[k], depth + 1);
+    }
+    return put("}");
+  };
   try {
-    return typeof x === "object" ? JSON.stringify(x) : String(x);
+    walk(x, 0);
+    return out;
   } catch (err) {
+    if (err === STOP) return `${out.slice(0, Math.max(0, n - 1))}…`;
     return Object.prototype.toString.call(x);
   }
 }

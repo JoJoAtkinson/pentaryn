@@ -117,7 +117,29 @@ test("messageOf: errors, strings, objects, nullish", () => {
   assert.equal(core.messageOf(undefined), "undefined");
   const cyclic = {};
   cyclic.self = cyclic;
-  assert.equal(core.messageOf(cyclic), "[object Object]");
+  assert.equal(core.messageOf(cyclic), '{"self":{…}}');
+});
+
+test("previewOf: never serialises a class instance (no toJSON), stops at the budget, survives hostile getters", () => {
+  let serialised = 0;
+  class Actor5e {
+    constructor() { this.name = "Caven"; this.system = { big: "x".repeat(100000) }; }
+    toJSON() { serialised++; return { ...this }; }
+  }
+  const actor = new Actor5e();
+  assert.equal(core.previewOf(actor), "[Actor5e Caven]");
+  assert.equal(core.previewOf({ actor, n: 1 }), '{"actor":[Actor5e Caven],"n":1}');
+  assert.equal(core.messageOf(actor), "[Actor5e Caven]");
+  assert.equal(serialised, 0, "toJSON is never called");
+  const wide = Object.fromEntries(Array.from({ length: 5000 }, (_, i) => [`k${i}`, i]));
+  const p = core.previewOf(wide);
+  assert.equal(p.length, LIMITS.message);
+  assert.ok(p.endsWith("…"));
+  assert.equal(core.previewOf([1, "a", null, undefined, [2, [3, [4, [5]]]]]), '[1,"a",null,undefined,[2,[3,[4,[…]]]]]');
+  assert.equal(core.previewOf(() => 1), "[Function anonymous]");
+  assert.equal(core.previewOf({ e: new TypeError("bad") }), '{"e":"bad"}');
+  const hostile = { get x() { throw new Error("nope"); } };
+  assert.equal(core.previewOf(hostile), "[object Object]");
 });
 
 test("historyMax: clamps to 20..1000; junk is the default 200", () => {
