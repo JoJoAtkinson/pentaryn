@@ -43,6 +43,29 @@ export const MANIFEST = Object.freeze({
     reads: ["flags.item-piles.data", "flags.dnd5e.isPolymorphed"],
   },
   rows: [
+    /* ── the kit's two optional members ── */
+    {
+      path: "inspect",
+      params: [
+        { name: "ref", kind: "actor", type: "Actor|Token|uuid|id|exact name", doc: "never a substring; a token reads its world actor" },
+        { name: "opts", type: "{ as?, sceneId? }", optional: true, doc: "as: a user ref — answer with what that user may see" },
+      ],
+      returns: "{ actor, kind, ties, inbound, known, granted, knowledge, attributes, beliefs, studyTiers, lore, conceal }",
+      gm: false, writes: false,
+      throws: ["NOT_FOUND", "AMBIGUOUS", "BAD_ARGS"],
+      since: "0.20.0",
+      doc: "Everything ties knows about one actor, plain JSON, depth ≤ 4 (ties-3) — the first call to make. "
+        + "A GM sees all of it; for a player (or opts.as a player) the GM plane (inbound, beliefs, kind, studyTiers, lore, conceal) "
+        + "is null, and ties / known / granted / knowledge only for an actor they own.",
+    },
+    {
+      path: "selftest",
+      params: [],
+      returns: "{ ok, checks: [{ label, ok, detail }] }",
+      gm: false, writes: false, since: "0.20.0",
+      doc: "Live smoke checks after a sync.",
+    },
+
     /* ── the canvas cards (overlay feature) ── */
     row("show", [], "undefined", "Toggle every tie card for the hovered token (key 8)."),
     row("showAll", [], "undefined", "Same as show."),
