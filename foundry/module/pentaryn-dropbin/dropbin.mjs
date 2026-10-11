@@ -63,25 +63,13 @@ import {
   MODULE, DIR, FILE, DEDUPE_MS, LOCK_SOUND, duplicateOfTail, makeEntry, normaliseDeltas, listLast, findEntry,
   searchLog, shouldCaptureDelete, restoreTarget, lockedContainer, planLockSounds, planEyesNeedView,
 } from "./dropbin-core.mjs";
-
-const LOG = "log";
-const COUNTER = "counter";
+import { registerSettings, setting, readLog, writeLedger, clearLog } from "./settings.mjs";
 
 let socket = null;
 
 installI18nShim();
 
 /* ------------------------------------------------------------------ storage */
-
-function readLog() {
-  try {
-    const v = game.settings.get(MODULE, LOG);
-    return Array.isArray(v) ? v : [];
-  } catch (err) {
-    console.warn(`${MODULE} | could not read the ledger`, err);
-    return [];
-  }
-}
 
 /** Mirror to disk. Best-effort: a failed mirror must never lose the entry. */
 async function writeMirror(log) {
@@ -109,12 +97,11 @@ async function recordAsGM(entry) {
   const tail = duplicateOfTail(log, entry, DEDUPE_MS);
   if (tail) return tail.n;
 
-  const n = (game.settings.get(MODULE, COUNTER) ?? 0) + 1;
+  const n = (setting("counter") ?? 0) + 1;
   const row = { n, ...entry };
   log.push(row);
 
-  await game.settings.set(MODULE, COUNTER, n);
-  await game.settings.set(MODULE, LOG, log);
+  await writeLedger({ n, log });
   await writeMirror(log);
 
   console.log(`${MODULE} | #${n} ${entry.reason}: ${entry.itemName} from ${entry.fromActorName}`);
@@ -215,7 +202,7 @@ function buildAPI() {
         content: `<p>This wipes <strong>${readLog().length}</strong> ledger entries. The JSON mirror is overwritten too.</p>`
       }).catch(() => false);
       if (!confirmed) return false;
-      await game.settings.set(MODULE, LOG, []);
+      await clearLog();
       await writeMirror([]);
       return true;
     }
@@ -225,8 +212,7 @@ function buildAPI() {
 /* --------------------------------------------------------------- lifecycle */
 
 Hooks.once("init", () => {
-  game.settings.register(MODULE, LOG, { scope: "world", config: false, type: Array, default: [] });
-  game.settings.register(MODULE, COUNTER, { scope: "world", config: false, type: Number, default: 0 });
+  registerSettings();
 });
 
 Hooks.once("socketlib.ready", () => {
