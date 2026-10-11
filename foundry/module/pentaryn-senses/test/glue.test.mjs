@@ -36,7 +36,9 @@ test("stub runs Foundry's own common/", () => {
 
 test("init: the broken glow animation and the sightReset setting, exactly as today", () => {
   const row = F.CONFIG.Canvas.lightAnimations["pentaryn-brokenglow"];
-  assert.equal(row.label, "Broken glow (wandering)");
+  // [declared, i18n -24 glow] the label is now the key; core's light-animation selects localize it
+  assert.equal(row.label, "PENTARYN_SENSES.Glow.Label");
+  assert.equal(F.game.i18n.localize(row.label), "Broken glow (wandering)");
   const { namespace, key, ...config } = F.game.settings.settings.get(`${MODULE}.sightReset`);
   assert.deepEqual([namespace, key], [MODULE, "sightReset"]);
   assert.deepEqual(config, { scope: "world", config: false, type: Number, default: 0 });

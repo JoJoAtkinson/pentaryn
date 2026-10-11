@@ -33,7 +33,7 @@ test("hot import: the entry runs init and ready now; a new senses and the chain 
   assert.equal(game.pentaryn.senses.setupLight.name, "setup");
   assert.equal(typeof game.pentaryn.chain.link, "function");
   assert.ok(F.game.settings.settings.has(`${MODULE}.sightReset`), "init ran: the setting is registered");
-  assert.equal(F.CONFIG.Canvas.lightAnimations["pentaryn-brokenglow"]?.label, "Broken glow (wandering)", "the glow is registered now");
+  assert.equal(F.CONFIG.Canvas.lightAnimations["pentaryn-brokenglow"]?.label, "PENTARYN_SENSES.Glow.Label", "the glow is registered now");
   assert.equal(F.frames.pending(), 1, "chain queued a repaint");
   assert.equal(F.listeners("ready"), 0, "no lifecycle listener waits");
   assert.equal(F.listeners("init"), 0);

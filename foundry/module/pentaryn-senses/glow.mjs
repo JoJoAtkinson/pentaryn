@@ -83,7 +83,7 @@ export function register() {
   }
 
   CONFIG.Canvas.lightAnimations[KEY] = {
-    label: "Broken glow (wandering)",
+    label: "PENTARYN_SENSES.Glow.Label",   // core localizes animation labels where it shows them
     animation: animateBrokenGlow,
     illuminationShader: BrokenGlowIlluminationShader,
     colorationShader: shaders.TorchColorationShader

@@ -84,7 +84,7 @@ test("register() adds the animation; the illumination shader adds brightnessPuls
   glow.register();
   const row = F.CONFIG.Canvas.lightAnimations["pentaryn-brokenglow"];
   assert.deepEqual(Object.keys(F.CONFIG.Canvas.lightAnimations), ["pentaryn-brokenglow"]);
-  assert.equal(row.label, "Broken glow (wandering)");
+  assert.equal(row.label, "PENTARYN_SENSES.Glow.Label");   // [declared, i18n -24 glow]: was the English
   assert.equal(typeof row.animation, "function");
   assert.equal(row.animation.name, "animateBrokenGlow");
   assert.equal(row.colorationShader, TorchColorationShader);
