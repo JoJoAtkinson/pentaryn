@@ -1,0 +1,75 @@
+{
+  "module": "pentaryn-importer",
+  "namespace": "importer",
+  "contract": "pentaryn-importer/api@1",
+  "flagScope": "pentaryn-importer",
+  "methods": [
+    {
+      "path": "import",
+      "params": [
+        {
+          "name": "options",
+          "type": "ImportOptions",
+          "optional": true,
+          "resolve": false,
+          "doc": "{ path?, dryRun?, only?: slug[], force?, timeout? (ms, 15000), unmanagedItems?: \"keep\"|\"delete\" }"
+        }
+      ],
+      "returns": "ImportResult { ok, path, url, dryRun, manifest, counts, created, updated, skipped, failed, deleteJson }",
+      "gm": true,
+      "writes": true,
+      "query": false,
+      "sideEffects": [
+        "creates/updates world Actors",
+        "replaces managed Items",
+        "stamps flags.pentaryn.contentHash",
+        "permanent toasts"
+      ],
+      "throws": [
+        "PentarynAbort",
+        "PentarynAssertionError"
+      ],
+      "legacy": true,
+      "doc": "Upsert the generated NPCs from worlds/<world>/actors.json. Run { dryRun: true } first. A thrown PentarynAbort means nothing was written (version gate, @ref lint, malformed entry, fetch, non-GM); a thrown PentarynAssertionError means a readback failed and the batch is partial (actors before it were written). Per-actor write failures do not throw: they come back as { ok: false, failed: [{ slug, error }] }."
+    },
+    {
+      "path": "selftest",
+      "params": [],
+      "returns": "{ ok, checks: [{ label, ok, detail }] }",
+      "gm": false,
+      "writes": false,
+      "query": false,
+      "sideEffects": [],
+      "doc": "Live smoke checks after a sync: published, the module.json gate flags present, the legacy root."
+    }
+  ],
+  "queries": [],
+  "settings": [],
+  "events": [],
+  "hooks": [
+    {
+      "name": "ready",
+      "label": "ready: publish"
+    }
+  ],
+  "patches": [],
+  "flags": {
+    "writes": [
+      "flags.pentaryn.*"
+    ],
+    "reads": []
+  },
+  "errors": [
+    "NOT_GM",
+    "NO_GM",
+    "NOT_READY",
+    "NOT_FOUND",
+    "AMBIGUOUS",
+    "BAD_ARGS",
+    "REFUSED",
+    "CONFLICT",
+    "UNSUPPORTED",
+    "TIMEOUT",
+    "INTERNAL"
+  ]
+}

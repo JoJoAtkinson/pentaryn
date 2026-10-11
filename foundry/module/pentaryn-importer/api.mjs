@@ -1,18 +1,21 @@
 /**
- * pentaryn-importer — API: `importActors`, the orchestrator behind `game.pentaryn.import()`.
- * Every step is a gate for the next; the gates and writes themselves are in documents-adapter.mjs,
- * the pure rules in importer-core.mjs.
+ * pentaryn-importer — API: `importActors`, the orchestrator behind `game.pentaryn.import()`, and
+ * the kit-built API (`buildApiFor`). Every step of an import is a gate for the next; the gates and
+ * writes themselves are in documents-adapter.mjs, the pure rules in importer-core.mjs.
  */
 
 import {
-  DEFAULT_TIMEOUT_MS, FLAG_SCOPE, PentarynAbort, PentarynAssertionError, preparePayload,
-  toCreatePayload, toUpdatePayload
+  CONTRACT_ID, DEFAULT_TIMEOUT_MS, FLAG_SCOPE, HOOKS, MODULE, NS, PentarynAbort, PentarynAssertionError,
+  lintFormulas, normalise, preparePayload, toCreatePayload, toUpdatePayload, valuesMatch
 } from "./importer-core.mjs";
 import {
   TAG, assertActivityIdsSurvived, assertNoBadFormulas, assertPrototypeToken, assertVersionGate,
   failAssertion, fetchJsonWithTimeout, findActorBySlug, log, refuse, replaceItems, reportSummary,
   runExpectedAssertions, shout, stampContentHash, storedHash
 } from "./documents-adapter.mjs";
+import { MANIFEST } from "./api-manifest.mjs";
+import { buildApi } from "./lib/api.mjs";
+import { publishedOf } from "./lib/publish.mjs";
 
 /* -------------------------------------------------------------------------------------------- */
 /*  The importer                                                                                  */
@@ -271,4 +274,52 @@ export async function importActors(options = {}) {
     failed,
     deleteJson
   };
+}
+
+/* -------------------------------------------------------------------------------------------- */
+/*  The kit-built API                                                                             */
+/* -------------------------------------------------------------------------------------------- */
+
+/** The helpers the legacy root has always exposed as `_internals` (tests, hand-checking a file). */
+const INTERNALS = Object.freeze({ fetchJsonWithTimeout, lintFormulas, valuesMatch, normalise });
+
+function selftest(ctx) {
+  const flags = game.modules.get(MODULE)?.flags?.[FLAG_SCOPE];
+  const checks = [
+    { label: "published as module.api", ok: game.modules.get(MODULE)?.api === ctx.api },
+    { label: "game.pentaryn.import is importActors", ok: game.pentaryn?.import === importActors },
+    {
+      label: "module.json flags.pentaryn.contract is the contract this code speaks",
+      ok: flags?.contract === CONTRACT_ID,
+      detail: flags?.contract ?? null
+    }
+  ];
+  return { ok: checks.every(c => c.ok), checks: checks.map(c => ({ detail: null, ...c })) };
+}
+
+/**
+ * Build the frozen API. Throws (at ready, in node too) when the manifest and the implementations
+ * drift apart.
+ * @param {{log: object, reg: object, uninstall: Function, api: object|null}} ctx
+ */
+export function buildApiFor(ctx) {
+  return buildApi(MANIFEST, {
+    import: importActors,
+    selftest: () => selftest(ctx),
+    moduleId: MODULE,
+    actorsContract: CONTRACT_ID,
+    _internals: INTERNALS
+  }, {
+    members: {
+      trace: () => ctx.log.traces(),
+      uninstall: () => ctx.uninstall()
+    },
+    extras: () => ({
+      settings: [],
+      events: HOOKS,
+      hooks: ctx.reg.ids(),
+      patches: [],
+      published: publishedOf(NS)
+    })
+  });
 }

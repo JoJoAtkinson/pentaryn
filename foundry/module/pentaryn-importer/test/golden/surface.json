@@ -1,0 +1,16 @@
+{
+  "_internals.fetchJsonWithTimeout": "fetchJsonWithTimeout",
+  "_internals.lintFormulas": "lintFormulas",
+  "_internals.normalise": "normalise",
+  "_internals.valuesMatch": "valuesMatch",
+  "actorsContract": "string",
+  "contract": "string",
+  "describe": "function",
+  "import": "importActors",
+  "moduleId": "string",
+  "selftest": "selftest",
+  "settings": "function",
+  "trace": "trace",
+  "uninstall": "uninstall",
+  "version": "string"
+}
