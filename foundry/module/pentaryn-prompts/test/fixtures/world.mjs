@@ -210,9 +210,9 @@ export function sceneApi(F, scene) {
     fail: {},   // test switches: fail[type] = "batch" | "all" | "cancel"
   });
   Object.defineProperties(scene, {
-    getEmbeddedDocument: { enumerable: false, value: (type, id) => coll(type)?.get?.(id) ?? null },
+    getEmbeddedDocument: { enumerable: false, configurable: true, value: (type, id) => coll(type)?.get?.(id) ?? null },
     createEmbeddedDocuments: {
-      enumerable: false,
+      enumerable: false, configurable: true,
       async value(type, rows, options = {}) {
         F.calls.push({ op: "createEmbeddedDocuments", scene: scene.id, type, data: F.plain(rows), options: F.plain(options) });
         const mode = scene.fail[type];
@@ -237,7 +237,7 @@ export function sceneApi(F, scene) {
       },
     },
     deleteEmbeddedDocuments: {
-      enumerable: false,
+      enumerable: false, configurable: true,
       async value(type, ids, options = {}) {
         F.calls.push({ op: "deleteEmbeddedDocuments", scene: scene.id, type, ids: [...ids] });
         const out = [];
@@ -251,7 +251,7 @@ export function sceneApi(F, scene) {
         return out;
       },
     },
-    view: { enumerable: false, value: async () => { F.calls.push({ op: "scene.view", scene: scene.id }); F.canvas.scene = scene; return scene; } },
+    view: { enumerable: false, configurable: true, value: async () => { F.calls.push({ op: "scene.view", scene: scene.id }); F.canvas.scene = scene; return scene; } },
   });
   return scene;
 }

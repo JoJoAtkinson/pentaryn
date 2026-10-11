@@ -234,3 +234,16 @@ test("resolveEmbeds: an @Embed is replaced by the page's text (one level, cached
   assert.equal(await M.resolveItemEmbeds(items), items);
   assert.deepEqual(items.map(i => i.description), ["<p>Actor C</p>", "plain", 3]);
 });
+
+test("regions: an item lists the regions its centre is in; a region that cannot test the point is left out", () => {
+  const regions = [
+    { id: "regHall000000001", name: "Hall", testPoint: p => p.x < 500 },
+    { id: "regYard000000001", name: "Yard", testPoint: p => p.x >= 500 },
+    { id: "regBroken0000001", name: "Broken", testPoint() { throw new Error("no shapes"); } },
+    { id: "regNameless00001", name: "", testPoint: () => true }
+  ];
+  const s = addScene(F, { id: "sReg", name: "Reg", regions, tokens: [{ id: "rp", name: "P", actorId: "markerActormid00", x: 100, y: 100, flags: { [MODULE]: { marker: "mid", prompt: "x" } } }] });
+  assert.deepEqual(M.sceneItems(s)[0].regions, ["Hall", ""]);
+  assert.deepEqual(M.sceneMeta(s).regions, ["Hall", "Yard", "Broken"]);
+  F.game.scenes.delete("sReg");
+});

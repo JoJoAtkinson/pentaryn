@@ -172,7 +172,7 @@ function hotspotTemplate() {
   const tpl = F.addActor({ id: "actorHotspotTpl1", name: "Hotspot · Look (template)", type: "npc", folder: { id: "folderHotspots01" },
     flags: { "item-piles": { data: { enabled: true, type: "container", closed: false } } }, prototypeToken: { name: "Hotspot", width: 0.5, height: 0.5 } });
   Object.defineProperty(tpl, "clone", {
-    enumerable: false,
+    enumerable: false, configurable: true,
     value: async (data, opts) => {
       F.calls.push({ op: "actor.clone", from: tpl.id, data: F.plain(data), opts: F.plain(opts) });
       const a = F.addActor({ ...structuredClone({ name: tpl.name, type: tpl.type, flags: tpl.flags, prototypeToken: tpl.prototypeToken }), ...data });
@@ -354,4 +354,88 @@ test("specFile: outside the Data dir, unreadable, HTTP error, not JSON, no repla
   } finally {
     globalThis.fetch = saved;
   }
+});
+
+/* ── the remaining run paths ────────────────────────────────────────────── */
+
+test("a compendium actor is imported into 'Foundry MCP Creatures' (folder created once); copy: false refuses", async t => {
+  t.mock.timers.enable({ apis: ["Date"], now: NOW });
+  const source = Object.assign(Object.create(F.Actor.prototype), { documentName: "Actor", id: "packWolf00000001", name: "Wolf", type: "npc", pack: "dnd5e.monsters",
+    system: { traits: { size: "med" }, details: { cr: 0.25 } }, prototypeToken: { name: "Wolf", width: 1, height: 1, disposition: -1 } });
+  const world = Object.assign(Object.create(F.Actor.prototype), { documentName: "Actor", id: "actorGuard000001" });
+  const savedFromUuid = globalThis.fromUuid;
+  globalThis.fromUuid = async u => (u === "Compendium.dnd5e.monsters.Actor.wolf" ? source : u === "Actor.actorGuard000001" ? F.game.actors.get("actorGuard000001") : savedFromUuid(u));
+  F.game.actors.fromCompendium = doc => ({ name: doc.name, type: doc.type, system: structuredClone(doc.system), prototypeToken: structuredClone(doc.prototypeToken) });
+  try {
+    marker("w1", "mid", 1200, 1200, "a wolf");
+    marker("w2", "mid", 1400, 1200, "another wolf");
+    const refused = await run({ replacements: [{ sceneId: "s1", markerId: "w1", with: { kind: "actor", uuid: "Compendium.dnd5e.monsters.Actor.wolf", copy: false } }], dryRun: true });
+    assert.equal(refused.results[0].error, "BAD_SPEC: a compendium actor must be imported (copy: true)");
+    const viaUuid = await run({ replacements: [{ sceneId: "s1", markerId: "w1", with: { kind: "actor", uuid: "Actor.actorGuard000001" } }], dryRun: true });
+    assert.equal(viaUuid.results[0].ok, true, "a world actor by uuid is placed as it is");
+    const n0 = F.calls.length;
+    const r = await run({ replacements: [
+      { sceneId: "s1", markerId: "w1", with: { kind: "actor", uuid: "Compendium.dnd5e.monsters.Actor.wolf" } },
+      { sceneId: "s1", markerId: "w2", with: { kind: "actor", uuid: "Compendium.dnd5e.monsters.Actor.wolf", patch: { name: "Dire wolf" } } }] });
+    pinJSON("replace-import", ids({ text: r.text.split("\n"), calls: F.calls.slice(n0).filter(c => ["Folder.create", "Actor.create"].includes(c.op)) }), import.meta.url);
+    assert.equal(F.calls.slice(n0).filter(c => c.op === "Folder.create").length, 1);
+  } finally {
+    globalThis.fromUuid = savedFromUuid;
+    assert.ok(world);
+  }
+});
+
+test("an npc replacement end to end: the bridge's actor, its features, the recharge patch, the provenance (golden replace-npc)", async t => {
+  t.mock.timers.enable({ apis: ["Date"], now: NOW });
+  const q = (n, fn) => (F.CONFIG.queries[`foundry-mcp-bridge.${n}`] = fn);
+  q("createNpcActor", async args => ({ success: true, actor: { id: F.addActor({ name: args.name, type: "npc", prototypeToken: { name: args.name, width: 2, height: 2 } }).id } }));
+  q("addAttackToActor", async () => ({ success: true }));
+  marker("n1", "large", 1600, 1200, "an ogre");
+  const n0 = F.calls.length;
+  const r = await run({ replacements: [{ sceneId: "s1", markerId: "n1", with: { kind: "npc", npc: { name: "Ogre", creatureType: "giant", size: "large", cr: "2", hpAverage: 59,
+    hpFormula: "7d10+21", acMode: "default", abilities: { str: 19, dex: 8, con: 16, int: 5, wis: 7, cha: 7 } },
+    features: [{ featureType: "attack", featureName: "Rock", attackType: "ranged", rangeFt: 60, damageParts: [{ number: 2, denomination: 10, type: "bludgeoning" }], recharge: 5 }] } }] });
+  for (const k of ["createNpcActor", "addAttackToActor"]) delete F.CONFIG.queries[`foundry-mcp-bridge.${k}`];
+  const scrub = v => JSON.parse(JSON.stringify(ids(v)).replace(/Ogre \[pp-[A-Za-z0-9]{6}\]/g, "Ogre [pp-<rand>]"));
+  pinJSON("replace-npc", scrub({ text: r.text.split("\n"), updates: F.calls.slice(n0).filter(c => c.op === "update" && c.documentName === "Actor").map(c => c.changes) }), import.meta.url);
+});
+
+test("note ownership words and numbers; a hotspot whose token is refused: its light warns, its clone is discarded (a failing delete is reported)", async t => {
+  t.mock.timers.enable({ apis: ["Date"], now: NOW });
+  const own = [];
+  for (const [i, ownership] of [undefined, "none", "owner", 2, { default: "limited", u1: 3 }].entries()) {
+    marker(`o${i}`, "tiny", 100 + 100 * i, 2600, "a note");
+    await run({ replacements: [{ sceneId: "s1", markerId: `o${i}`, with: { kind: "note", name: `N${i}`, html: "", ownership } }] });
+    own.push(F.calls.filter(c => c.op === "JournalEntry.create").at(-1).data.ownership);
+  }
+  assert.deepEqual(own, [{ default: 2 }, { default: 0 }, { default: 3 }, { default: 2 }, { default: 1, u1: 3 }]);
+  // a light placed with a note: its failure is a WARN on the note's row
+  marker("lw", "tiny", 800, 2600, "a lamp post note");
+  F.s1.fail.AmbientLight = "cancel";
+  const lit = await run({ replacements: [{ sceneId: "s1", markerId: "lw", with: { kind: "note", name: "Post", html: "", light: { dim: 5 } } }] });
+  delete F.s1.fail.AmbientLight;
+  assert.deepEqual([lit.results[0].ok, lit.results[0].warnings], [true, ["AmbientLight not placed: creation was cancelled by a hook"]]);
+  // a hotspot whose token is refused: the clone is discarded; a clone whose delete throws is reported
+  const tpl = F.game.actors.find(a => a.name === "Hotspot · Look (template)");
+  const clone = tpl.clone;
+  Object.defineProperty(tpl, "clone", { configurable: true, value: async (...a) => { const c = await clone(...a); Object.defineProperty(c, "delete", { value: async () => { throw new Error("locked"); } }); return c; } });
+  marker("hf", "small", 1000, 2600, "a stash");
+  F.s1.fail.Token = "all";
+  const failed = await run({ replacements: [{ sceneId: "s1", markerId: "hf", with: { kind: "hotspot", name: "Stash" } }] });
+  delete F.s1.fail.Token;
+  assert.deepEqual(ids(failed.text.split("\n").slice(1, 3)), ["s1/hf hotspot: FAIL CREATE_FAILED: stub: Token create refused (markerDeleted=false)",
+    "  s1/hf cleanup: could not delete Actor \"Stash\" [<id1>]: locked"]);
+  F.s1.tokens.delete("hf");
+});
+
+test("a marker delete that fails after its replacement exists is warned, and the row says the marker stayed", async t => {
+  t.mock.timers.enable({ apis: ["Date"], now: NOW });
+  marker("md", "mid", 1800, 2600, "a stool");
+  const del = F.s1.deleteEmbeddedDocuments;
+  Object.defineProperty(F.s1, "deleteEmbeddedDocuments", { configurable: true, value: async () => { throw new Error("busy"); } });
+  const { value: r, out } = await captureConsole(() => R.replaceMany({ replacements: [{ sceneId: "s1", markerId: "md", with: { kind: "tile", src: "stool.webp" } }] }));
+  Object.defineProperty(F.s1, "deleteEmbeddedDocuments", { configurable: true, value: del });
+  assert.deepEqual(out.map(o => o.text), ["pentaryn-prompts | marker delete failed on ZZ Characterisation Error(busy)"]);
+  assert.deepEqual([r.results[0].ok, r.results[0].markerDeleted], [true, false]);
+  F.s1.tokens.delete("md");
 });

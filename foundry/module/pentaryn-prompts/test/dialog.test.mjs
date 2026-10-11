@@ -332,3 +332,34 @@ test("_updatePosition: a window whose element left the document keeps its positi
   app.element.removed = true;
   assert.deepEqual(app._updatePosition({ left: 2 }), { left: 2 });
 });
+
+test("reopening a marker whose box is still saving waits for that save and reads the saved text; if the save removed it, null", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout", "Date"], now: NOW });
+  const app = await PromptDialog.open(m1());
+  ta(app).value = "a lantern, swinging";
+  const closing = app.close();   // not awaited: the save is in flight
+  const again = await PromptDialog.open(m1());
+  await closing;
+  assert.notEqual(again, app);
+  assert.equal(ta(again).value, "a lantern, swinging");
+  ta(again).value = "a lantern";
+  await again.close();
+  // a fresh empty marker: its closing box deletes it, so the reopen gives up
+  const tok = await fresh("reopen");
+  const box = await PromptDialog.open(tok, { fresh: true });
+  const c2 = box.close();
+  assert.equal(await PromptDialog.open(tok), null);
+  await c2;
+  assert.equal(F.s1.tokens.get(tok.id), undefined);
+});
+
+test("_onPosition while closing (or before render) remembers nothing", async t => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const app = await PromptDialog.open(m1());
+  const c = app.close();
+  app._onPosition({ width: 900, height: 600 });
+  await c;
+  const next = await PromptDialog.open(m1());
+  assert.deepEqual([next.renders[0].options.position.width, next.renders[0].options.position.height], [620, 320]);
+  await next.close();
+});
