@@ -17,8 +17,8 @@ tags: [plans, audit, foundry]
 > **Status 2026-10-11 (workflow 2, `migrate/wave-2`, code phase; not yet live-tested).** Every finding
 > is applied: -17 `5482317b` (wraps through the kit with adjustments ids; the three `foundry/adjustments.yml`
 > rows are with the integrator) · -18 `5482317b` + `c4b77032` (`ghostKeyboardMovement` in core) · -19
-> `34a4ca5a` (adapter) + `a9f32f7e` (context cache; per-token paths only, see the guide's Result) · -20
-> `d65ddd62` (kit `warnOnce`, no `makeWarnOnce`) [declared, console only] · -21 `c4b77032` (`SETTINGS` table
+> `34a4ca5a` (adapter) + `a9f32f7e` (context cache; per-token paths only, see the guide's Result) + `8f2ede50` (`refresh()` reads once for wishToClear, ghostBackKey and the button key) · -20
+> `d65ddd62` (kit `warnOnce`, no `makeWarnOnce`) [declared, console only] (the optional `status().errors` is not done: wave-2 report W2-MOV-1) · -21 `c4b77032` (`SETTINGS` table
 > in `settings.mjs`, kit `settingReader`) · -22 checkpoint `3a5192d` (glue driven through hooks, no seam) +
 > `34a4ca5a` · -23 `c4b77032` (`statusFrom`) + `25c81ef9` (`describe()`) + `b3d69dbb` (`status({ sceneId })`,
 > settings key map) [declared] + `1b5ec2a5` (README) · -37 `49b8554` / `4f7b5a8` + `1b5ec2a5` · -42 `0b1910cc`
