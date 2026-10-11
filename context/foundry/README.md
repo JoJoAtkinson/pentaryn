@@ -72,6 +72,7 @@ The table is generated from each `module.json`, the module's code and its
 | `creatures` | `pentaryn-creatures` | 0.1.1 | not migrated | — (no describe golden yet) | [README](../../foundry/module/pentaryn-creatures/README.md) |
 | `cursors` | `pentaryn-cursors` | 0.2.0 | small tier | `refresh`, `current`, `keyFor`, `status` | [README](../../foundry/module/pentaryn-cursors/README.md) |
 | `dropbin` | `pentaryn-dropbin` | 0.2.1 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-dropbin/README.md) |
+| `feedback` | `pentaryn-feedback` | 0.1.0 | full tier | `open`, `submit`, `ingest`, `list`, `get`, `resolve` | [`feedback.md`](feedback.md) · [README](../../foundry/module/pentaryn-feedback/README.md) |
 | `importer` | `pentaryn-importer` | 1.1.0 | full tier | `import` | [`importer.md`](importer.md) · [README](../../foundry/module/pentaryn-importer/README.md) |
 | `journal` | `pentaryn-journal` | 0.1.0 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-journal/README.md) |
 | `rules` | `pentaryn-lookup` | 0.3.0 | full tier | — (no describe golden yet) | [README](../../foundry/module/pentaryn-lookup/README.md) |
@@ -114,6 +115,7 @@ The table is generated from each `module.json`, the module's code and its
 | Player journal — "Add to my journal" on eye readables, a personal journal missing or duplicated | [`../../foundry/module/pentaryn-journal/README.md`](../../foundry/module/pentaryn-journal/README.md) |
 | "My cursor is wrong / stuck as an arrow" — map cursor per scene tool (target, ruler, spell area, journal pin, drawing); `game.pentaryn.cursors.status()` | [`../../foundry/module/pentaryn-cursors/README.md`](../../foundry/module/pentaryn-cursors/README.md) |
 | Table-feedback modules — ghost movement, creature strip, rider rules (Elemental Adept, Battle Medic), Loot all, portals follow | [`../../foundry/module/pentaryn-movement/README.md`](../../foundry/module/pentaryn-movement/README.md), [`-creatures`](../../foundry/module/pentaryn-creatures/README.md), [`-riders`](../../foundry/module/pentaryn-riders/README.md), [`-dropbin`](../../foundry/module/pentaryn-dropbin/README.md), [`-portals`](../../foundry/module/pentaryn-portals/README.md), [`-senses`](../../foundry/module/pentaryn-senses/README.md) |
+| A player's bug / defect / feature report — the bug button, `/bug`, working the queue with `feedback_next` / `feedback_resolve` — `pentaryn-feedback` | [`feedback.md`](feedback.md) · internals: [`../../foundry/module/pentaryn-feedback/README.md`](../../foundry/module/pentaryn-feedback/README.md) |
 | Finding one battlemap out of ~1,750 | [`map-library.md`](map-library.md) |
 | The unattended Saturday updater — before touching it | [`automated-updates.md`](automated-updates.md) |
 | Running the updater as an operator — commands, setup, retention | [`../../automation/README.md`](../../automation/README.md) |

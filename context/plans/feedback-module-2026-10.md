@@ -1,6 +1,6 @@
 ---
 title: Pentaryn Feedback — design record (2026-10)
-status: designed
+status: built (not yet tested live)
 last_modified: 2026-10-11
 tags: [foundry, modules, feedback, bug-report, plan, mcp]
 ---
@@ -564,6 +564,29 @@ match §4.2 verbatim.
 - **Per-user opt-out of capture** — not needed at Joe's table; the README states what is captured.
 - **Group name** for `MCP_GROUPS` — `"foundry"` is new; nothing filters on it today, `"all"` is what
   matters.
+
+## 13. Build record (2026-10-11) — what changed from the design above
+
+Built on `feature/pentaryn-feedback` while Joe was play-testing; nothing was synced or tested live.
+Where the build differs from §§3–10, this section wins.
+
+| Design said | Built | Why |
+|---|---|---|
+| `submit` is a `relay: true` row; the payload goes to the GM, `normaliseReport` takes `user` from `ctx.user` | `submit` is a client-side API method. The reporter writes the report to its **own** User flag (`flags.pentaryn-feedback.queue.<id>`) and calls the relay row **`ingest({ userId, ids })`**; the active GM reads that user's queue, files it and deletes the keys | kit 1.0.1's `registerQueries` calls a row's implementation with the payload only — core's query context (the sender) never reaches it, so a relay impl cannot know who sent it. The User document's owner is server-authenticated (only that user or a GM can write it), so the queue's owner *is* the reporter. One path now covers online and offline; it is also less code |
+| Offline queue = a separate path: `queueTrim` on an array, player-side flush on `userConnected(gm)` | The queue is an object keyed by id (targeted `_del` per key, so a GM deletion never races a player's add); no player-side flush — the active GM files every user's queue at `ready`, on `userConnected`, and on `updateUser` (a new queue key; the safety net if the query overtakes the flag broadcast) | per-key writes cannot lose a concurrent add; the GM can read any user's flag, so nothing has to be pushed |
+| GM writes `<id>.json` built from the request | GM **looks first** and uploads only when the file is missing | a resend after a timeout (the report was filed but the answer was lost) must never reset a status Joe already set. Two GM tabs can both upload; the copies differ only in `receivedAt` |
+| `snapshot.mjs`, `files.mjs` | `snapshot-adapter.mjs`, `files-adapter.mjs` | conformance classifies adapters by file name (`ADAPTER_NAME`); `api.mjs` may import an adapter but not an unclassified ("glue") file (C16) |
+| no `updateToken` listener | `updateToken` is recorded like the other document types (own changes, keys only) | a committed token move is useful context and costs one id compare; the per-frame hooks (`refreshToken`, `pointermove`, …) are still not listened to |
+| `selftest` checks the report folder is reachable (GM) | not checked | `selftest()` stays synchronous; the disk path is an `afterSync` line |
+| Python `by` unspecified | `by = "claude-code"`; the GM API writes `gm:<name>` | |
+
+Kit gap worth a later kit change (not made here — it would touch every migrated module's `lib/`
+while another workflow is live): pass the query context to relay rows (`fn(data, ctx)`), so a
+relay can check `ctx.user` as `relayed`'s doc comment promises.
+
+Tests: node (`test/run.mjs`: core, glue, hooks, api, i18n, console, adapters) and pytest
+(`scripts/tests/test_feedback_reports.py`, fixtures written by the module's own core; one test
+compares the Python and JS status tables).
 
 ## Sources
 

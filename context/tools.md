@@ -59,6 +59,14 @@ longer phrase. It returns at most one snippet per file.
 `python scripts/combat_actions_db.py validate`. Actions are **executed in Foundry**, not
 here.
 
+## Player feedback reports
+
+`feedback_list`, `feedback_next`, `feedback_get`, `feedback_resolve` read the reports players file
+with the bug button in Foundry (`pentaryn-feedback`) straight from
+`Data/pentaryn-feedback/<world>/<id>.json` — Foundry need not be running. Work the queue one at a
+time: `feedback_next` → fix → `feedback_resolve(id, status, note)` → `feedback_next`. A 6-character
+id prefix is enough. The loop and the report format: [`foundry/feedback.md`](foundry/feedback.md).
+
 ## Campaign-time math
 
 `age_convert` auto-detects the direction and is the default for free-form input. Use

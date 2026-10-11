@@ -54,8 +54,9 @@ export function fileStore({ g = globalThis, fp = null, fetch: fetchFn = null, ro
     await ensureDir(dir);
     const File_ = g.File ?? globalThis.File;
     const file = new File_([JSON.stringify(value, null, 1)], name, { type: "application/json" });
+    // v14 FilePicker.upload: the response (with `path`) on success; false, undefined or {} on failure
     const res = await FP().upload("data", dir, file, {}, { notify: false });
-    if (res === false || res?.status === "error") throw codedError("INTERNAL", `upload of ${path} refused: ${res?.message ?? "no response"}`);
+    if (!res?.path) throw codedError("INTERNAL", `upload of ${path} refused: ${res?.message ?? "no path in the response"}`);
     return path;
   }
 

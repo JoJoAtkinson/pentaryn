@@ -164,6 +164,10 @@ test("recorder: windows — render throttled per id for 2 s, close recorded, noi
   mock.timers.tick(LIMITS.renderThrottleMs);
   F.fire("renderApplicationV2", sheet);
   F.fire("renderApplicationV2", Object.assign(new ChatLog(), { id: "chat" }));
+  class CombatTracker {}
+  class ActorDirectory {}
+  F.fire("renderApplicationV2", Object.assign(new CombatTracker(), { id: "combat" }));     // re-renders every turn
+  F.fire("renderApplicationV2", Object.assign(new ActorDirectory(), { id: "actors" }));   // re-renders on every change
   F.fire("renderApplicationV2", Object.assign(new ActorSheet5eCharacter(), { id: DIALOG_ID }));
   F.fire("closeApplicationV2", sheet);
   F.fire("renderApplicationV2", sheet);                 // re-opened right after close: recorded

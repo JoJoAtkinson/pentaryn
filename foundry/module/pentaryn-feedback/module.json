@@ -48,7 +48,12 @@
       "generation": 14,
       "afterSync": [
         "First install: restart Foundry (module.json is read at startup), enable 'Pentaryn Feedback', then reload.",
-        "  game.pentaryn.feedback.describe()"
+        "  game.pentaryn.feedback.selftest()          // with a scene open, every check ok",
+        "File one as the GM: the bug button in the token tools (or /bug in chat), Bug selected, hover each category.",
+        "File one as a player in a second browser, then:",
+        "  ls ~/Library/Application\\ Support/FoundryVTT/Data/pentaryn-feedback/<world>/",
+        "  feedback_next   (dnd-scripts MCP, from Claude Code)",
+        "Offline path: GM logs out, a player files one (toast says queued), GM logs back in: the file appears."
       ]
     }
   }

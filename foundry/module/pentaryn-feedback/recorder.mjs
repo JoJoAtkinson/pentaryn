@@ -28,7 +28,10 @@ const CONSOLE_PATCHES = Object.freeze([
 ]);
 
 /** Application classes whose render/close is noise (or is this module's own dialog). */
-const SKIP_APPS = new Set(["ChatLog", "SceneControls", "Hotbar", "Players", "Notifications", "ReportDialog", "SceneNavigation", "MainMenu", "Pause"]);
+const SKIP_APPS = new Set(["ChatLog", "SceneControls", "Hotbar", "Players", "Notifications", "ReportDialog", "SceneNavigation",
+  "MainMenu", "Pause", "Sidebar", "CombatTracker"]);
+/** Sidebar directories re-render on every document change; opening one is the `tab` entry. */
+const SKIP_APP_PATTERN = /Directory$/;
 /** Generic base classes AppV2 also fires render hooks for: listen once, on the base, and skip these names. */
 const BASE_APPS = new Set(["ApplicationV2", "Application", "HandlebarsApplication", "DocumentSheetV2", "ActorSheetV2", "ItemSheetV2"]);
 
@@ -99,7 +102,7 @@ export function install(reg, ctx) {
   /* ── windows ───────────────────────────────────────────────────────── */
   const appRow = (op, app) => {
     const cls = app?.constructor?.name ?? "";
-    if (!cls || SKIP_APPS.has(cls) || BASE_APPS.has(cls)) return null;
+    if (!cls || SKIP_APPS.has(cls) || BASE_APPS.has(cls) || SKIP_APP_PATTERN.test(cls)) return null;
     const id = app?.id ?? app?.appId ?? null;
     if (id === DIALOG_ID) return null;
     return { kind: "app", op, cls: clip(cls, 60), id: clip(id), title: redact(app?.title ?? "", LIMITS.title) };
