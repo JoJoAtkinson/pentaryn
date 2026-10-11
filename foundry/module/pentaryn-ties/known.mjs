@@ -48,6 +48,9 @@ import {
 import { studyStateFor, requestStudy, kindDialog, loreStateFor, requestLore, kindActorOf, grantKind as releaseKind } from "./study.mjs";
 import { attributeIdsOf, registry as registryOf } from "./attributes.mjs";
 import { esc } from "./core/html.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 /**
  * The tab id, exported so the entry point and the "open this entry" path cannot drift apart:
@@ -294,7 +297,7 @@ export async function fileHovered(token = canvas?.tokens?.hover ?? null) {
     await openKnownEntry(actor, entry.id);
     return entry;
   } catch (err) {
-    console.error(`${MODULE} | filing ${subject.id} on ${actor.id} failed`, err);
+    log.error(`filing ${subject.id} on ${actor.id} failed`, err);
     ui.notifications.error(t("known.notify.fileFailed"));
     return null;
   }

@@ -23,7 +23,7 @@ import {
 import { claimFact, dropRow, releaseFact } from "./claim.mjs";
 import { promptDeliver } from "./gate.mjs";
 import { beliefsOf, resolveFact, stackingRule, studiedOf } from "./resolve.mjs";
-import { esc, f, SITUATIONAL_MAX, SITUATIONAL_MIN } from "./shared.mjs";
+import { esc, f, log, SITUATIONAL_MAX, SITUATIONAL_MIN } from "./shared.mjs";
 import { readFlag } from "../lib/flags.mjs";
 
 /* -------------------------------------------- */
@@ -81,7 +81,7 @@ export async function applyStudy(payload, senderId) {
   const user = game.users?.get(senderId);
   const character = game.actors?.get(payload?.characterId);
   const refuse = why => {
-    console.warn(`${MODULE} | study refused: ${why}`);
+    log.warn(`study refused: ${why}`);
     return false;
   };
 

@@ -27,8 +27,11 @@ import { NOTES_MAX, read, write, clampStance, clampStrength, mayWrite, baseActor
 
 export { baseActorOf };
 import { pips, stanceSelect } from "./editor.mjs";
-import { resolveMirror } from "./ties-core.mjs";
+import { MODULE, resolveMirror } from "./ties-core.mjs";
 import { esc } from "./core/html.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
 const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
@@ -585,7 +588,7 @@ export class TieDialog extends ApplicationV2 {
       } catch (err) {
         // an actor deleted under the window, or permission yanked mid-edit: say so and
         // leave the dialog open with the text still in it rather than dying quietly
-        console.error("pentaryn-ties | saving a tie failed", err);
+        log.error("saving a tie failed", err);
         ui.notifications.error(t("dialog.saveFailed"));
         return;
       }

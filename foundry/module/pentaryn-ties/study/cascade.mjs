@@ -36,7 +36,7 @@ import {
   stackingRule,
   studySkillFor
 } from "./resolve.mjs";
-import { CHANNEL, esc, f, INSPECT, t } from "./shared.mjs";
+import { CHANNEL, esc, f, INSPECT, log, t } from "./shared.mjs";
 import { announceTempo } from "./tempo.mjs";
 import { readFlag } from "../lib/flags.mjs";
 
@@ -137,7 +137,7 @@ export async function applyInspect(payload, senderId, { postStubCard = false } =
   const character = game.actors?.get(payload?.characterId);
   const subject = game.actors?.get(payload?.subjectId);
   const refuse = why => {
-    console.warn(`${MODULE} | inspect refused: ${why}`);
+    log.warn(`inspect refused: ${why}`);
     return false;
   };
   if (!user || !character || !subject) return refuse("unknown actor");

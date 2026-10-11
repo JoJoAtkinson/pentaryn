@@ -33,6 +33,9 @@ import {
 } from "./ties-api.mjs";
 import { authoringHTML, bindAuthoring } from "./authoring.mjs";
 import { esc } from "./core/html.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 const t = k => game.i18n.localize(`PENTARYN_TIES.${k}`);
 const f = (k, data) => game.i18n.format(`PENTARYN_TIES.${k}`, data);
@@ -470,7 +473,7 @@ export function bind(root, actor, rerender = () => {}) {
         const { TieDialog } = await import("./tie-dialog.mjs");
         TieDialog.open({ source: author, target: actor, onSaved: rerender });
       } catch (err) {
-        console.error("pentaryn-ties | the tie dialog failed to open", err);
+        log.error("the tie dialog failed to open", err);
         ui.notifications.error(t("notify.dialogUnavailable"));
       }
     });
@@ -569,7 +572,7 @@ export function bind(root, actor, rerender = () => {}) {
       const { TieDialog } = await import("./tie-dialog.mjs");
       TieDialog.open({ source: actor, onSaved: rerender });
     } catch (err) {
-      console.error("pentaryn-ties | the tie dialog failed to open", err);
+      log.error("the tie dialog failed to open", err);
       ui.notifications.error(t("notify.dialogUnavailable"));
     }
   });

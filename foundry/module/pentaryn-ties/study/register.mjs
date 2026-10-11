@@ -7,7 +7,7 @@
 import { MODULE } from "../ties-api.mjs";
 import { applyStudy } from "./apply.mjs";
 import { applyInspect } from "./cascade.mjs";
-import { BUBBLE, CHANNEL, INSPECT, STUDY } from "./shared.mjs";
+import { BUBBLE, CHANNEL, INSPECT, log, STUDY } from "./shared.mjs";
 import { isActiveGM } from "../lib/election.mjs";
 import { showBubble } from "./tempo.mjs";
 
@@ -30,7 +30,7 @@ export function registerStudy() {
       if (payload.action === INSPECT) await applyInspect(payload, senderId);
       else await applyStudy(payload, senderId);
     } catch (err) {
-      console.error(`${MODULE} | conduit failed`, err);
+      log.error(`conduit failed`, err);
     }
   });
 }

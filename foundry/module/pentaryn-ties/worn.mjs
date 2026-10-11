@@ -29,6 +29,9 @@
 
 import { MODULE, NOTES_MAX, clampNotes } from "./ties-api.mjs";
 import { esc } from "./core/html.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 export const WORN_FLAG = "worn";
 const BY_MAX = 200;
@@ -115,7 +118,7 @@ function dropBadges() {
   try {
     if (!state.badges.destroyed) state.badges.destroy({ children: true });
   } catch (e) {
-    console.warn(`${MODULE} | badge teardown`, e);
+    log.warn(`badge teardown`, e);
   }
   state.badges = null;
 }
@@ -147,7 +150,7 @@ export function drawBadges() {
     try {
       paintBadges();
     } catch (e) {
-      console.warn(`${MODULE} | badge paint`, e);
+      log.warn(`badge paint`, e);
     }
   });
 }
@@ -283,7 +286,7 @@ export function registerHooks() {
     try {
       injectHUD(app, element);
     } catch (err) {
-      console.warn(`${MODULE} | worn HUD injection skipped`, err);
+      log.warn(`worn HUD injection skipped`, err);
     }
   });
 

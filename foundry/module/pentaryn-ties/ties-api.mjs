@@ -12,6 +12,9 @@
  */
 
 import { stanceOf, clampStance, clampStrength, clampNotes, clampWord, FLAG, LEGACY_SCOPE, MODULE } from "./ties-core.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 // The pure constants and clamps live in ties-core.mjs (S3); re-exported here so every importer and
 // console macro that reads them from ties-api.mjs keeps working.
@@ -317,8 +320,8 @@ export async function migrateLegacy() {
     } else {
       // Module data already exists. Copying would clobber it and unsetting would destroy the
       // legacy rows, so do NEITHER — leave both in place and say so loudly.
-      console.warn(
-        `${MODULE} | ${actor.name}: legacy flags.${LEGACY_SCOPE}.${FLAG} left in place — ` +
+      log.warn(
+        `${actor.name}: legacy flags.${LEGACY_SCOPE}.${FLAG} left in place — ` +
           `module data already present. Merge by hand, then unsetFlag("${LEGACY_SCOPE}","${FLAG}").`
       );
     }

@@ -68,6 +68,9 @@ import {
   ATTR_REVIEW_FIELDS,
   BELIEFS_FLAG
 } from "./known-core.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 // re-exported so the entry point registers the settings by the same names this file reads
 export { REGISTRY_SETTING, ATTR_BELIEFS_SETTING, KNOWLEDGE_SETTING } from "./known-core.mjs";
@@ -189,7 +192,7 @@ async function saveRegistry(list) {
     await game.settings.set(MODULE, REGISTRY_SETTING, readRegistry(list));
     return true;
   } catch (err) {
-    console.warn(`${MODULE} | attribute registry write failed`, err);
+    log.warn(`attribute registry write failed`, err);
     return false;
   }
 }
@@ -598,7 +601,7 @@ async function writeSelection(ids) {
     await game.user.setFlag(MODULE, SELECTION_FLAG, ids);
     return { ok: true, ids };
   } catch (err) {
-    console.warn(`${MODULE} | selection write failed`, err);
+    log.warn(`selection write failed`, err);
     return fail("writeFailed");
   }
 }
@@ -837,7 +840,7 @@ async function writeLinks(actor, { authored = null, off = null }) {
     await actor.update(data);
     return true;
   } catch (err) {
-    console.warn(`${MODULE} | attribute link write failed`, err);
+    log.warn(`attribute link write failed`, err);
     return false;
   }
 }
@@ -1095,7 +1098,7 @@ export async function grantKnowledge(character, ref, { withParents = false } = {
   try {
     await setKnowledge(ids.map(id => ({ characterId: character.id, attrId: id, via: "grant", when: now })));
   } catch (err) {
-    console.warn(`${MODULE} | knowledge grant failed`, err);
+    log.warn(`knowledge grant failed`, err);
     return fail("writeFailed");
   }
   return { ok: true, ids };

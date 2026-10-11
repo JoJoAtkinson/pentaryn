@@ -7,6 +7,9 @@
 // drawn into every item row on the sheet (spells, features, inventory), on every render.
 
 import { MODULE } from "./ties-core.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 const CLASS = "pt-item-mark";
 
@@ -28,6 +31,6 @@ export function decorate(app, element) {
 
 export function register() {
   Hooks.on("renderBaseActorSheet", (app, element) => {
-    try { decorate(app, element); } catch (err) { console.warn(`${MODULE} | item marks`, err); }
+    try { decorate(app, element); } catch (err) { log.warn(`item marks`, err); }
   });
 }

@@ -25,6 +25,9 @@
 import { MODULE, read, stanceOf, stanceLabel } from "./ties-api.mjs";
 import { readWorn } from "./worn.mjs";
 import { canSee } from "./ties-adapter.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 const LAYER_ID = "pentaryn-ties-cards";
 export const PIN_SETTING = "pinnedCards";
@@ -328,7 +331,7 @@ function savePinned() {
       });
     game.settings.set(MODULE, PIN_SETTING, keep);
   } catch (err) {
-    console.warn(`${MODULE} | could not save pinned cards`, err);
+    log.warn(`could not save pinned cards`, err);
   }
 }
 

@@ -15,7 +15,7 @@ import {
   traitsLine
 } from "../known-core.mjs";
 import { studyTiersOf } from "./resolve.mjs";
-import { ATTACK_LINES_MAX, f, t } from "./shared.mjs";
+import { ATTACK_LINES_MAX, f, log, t } from "./shared.mjs";
 
 /* -------------------------------------------- */
 /*  Deriving the truth off the sheet            */
@@ -30,7 +30,7 @@ const enrich = async (html, relativeTo) => {
       secrets: false
     });
   } catch (err) {
-    console.warn(`${MODULE} | enrichment failed for ${relativeTo?.name}`, err);
+    log.warn(`enrichment failed for ${relativeTo?.name}`, err);
     return "";
   }
 };

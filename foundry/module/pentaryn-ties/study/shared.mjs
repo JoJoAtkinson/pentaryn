@@ -8,6 +8,10 @@
  */
 
 import { MODULE } from "../ties-api.mjs";
+import { makeLog } from "../lib/log.mjs";
+
+/** The conduit's one logger: every line reads `pentaryn-ties | …`, as the console lines it replaced. */
+export const log = makeLog(MODULE);
 
 export const CHANNEL = `module.${MODULE}`;
 export const STUDY = "study";

@@ -47,6 +47,9 @@ import { openLook } from "./look.mjs";
 import { AttributeReview, openReview } from "./review-ui.mjs";
 import * as ItemMarks from "./item-marks.mjs";
 import { MODULE } from "./ties-core.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 const TAB = "ties";
 
@@ -489,7 +492,7 @@ Hooks.once("ready", async () => {
     try {
       await step();
     } catch (err) {
-      console.error(`${MODULE} | ready step failed: ${label}`, err);
+      log.error(`ready step failed: ${label}`, err);
     }
   }
 });
@@ -510,7 +513,7 @@ Hooks.once("ready", () => {
     try {
       register();
     } catch (err) {
-      console.warn(`${MODULE} | ${label} not registered`, err);
+      log.warn(`${label} not registered`, err);
     }
   }
 });
@@ -618,7 +621,7 @@ function injectTab(app, element) {
     try {
       injectOneTab(app, root, nav, body, actor, spec);
     } catch (err) {
-      console.warn(`${MODULE} | ${spec.id} tab injection skipped`, err);
+      log.warn(`${spec.id} tab injection skipped`, err);
     }
   }
 }
@@ -839,7 +842,7 @@ const endLookingRun = why => {
   try {
     Study.clearScoping();
   } catch (err) {
-    console.warn(`${MODULE} | could not clear inspection tempo (${why})`, err);
+    log.warn(`could not clear inspection tempo (${why})`, err);
   }
 };
 
@@ -874,7 +877,7 @@ Hooks.on("getSceneControlButtons", controls => {
       onChange: () => AttributeReview.open()
     };
   } catch (err) {
-    console.warn(`${MODULE} | review control skipped`, err);
+    log.warn(`review control skipped`, err);
   }
 });
 
@@ -882,7 +885,7 @@ Hooks.on("renderTokenHUD", (app, element) => {
   try {
     injectTieHUD(app, element);
   } catch (err) {
-    console.warn(`${MODULE} | tie HUD injection skipped`, err);
+    log.warn(`tie HUD injection skipped`, err);
   }
 });
 
@@ -1022,7 +1025,7 @@ for (const hook of ["renderNPCActorSheet", "renderCharacterActorSheet", "renderA
       injectHeaderButton(app, element);
       injectTab(app, element);
     } catch (err) {
-      console.warn(`${MODULE} | sheet injection skipped`, err);
+      log.warn(`sheet injection skipped`, err);
     }
   });
 }

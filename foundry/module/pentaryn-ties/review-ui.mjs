@@ -48,6 +48,9 @@ import {
 import { kindActorOf } from "./study.mjs";
 import { personalCluesHTML } from "./attributes-ui.mjs";
 import { reviewState, sortForReview, childrenOf, readLore, REVIEW_SORTS, REGISTRY_SETTING } from "./known-core.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -76,7 +79,7 @@ async function copyText(text) {
     else await navigator.clipboard.writeText(text);
     ui.notifications.info(t("review.copied"));
   } catch (err) {
-    console.warn(`${MODULE} | copy failed`, err);
+    log.warn(`copy failed`, err);
   }
 }
 
@@ -545,7 +548,7 @@ export class AttributeReview extends ApplicationV2 {
     this.selWriting++;
     this.selWrites = this.selWrites
       .then(() => selectAttributes(ids, { replace: true }))
-      .catch(err => console.warn(`${MODULE} | selection save failed`, err))
+      .catch(err => log.warn(`selection save failed`, err))
       .finally(() => {
         this.selWriting--;
       });

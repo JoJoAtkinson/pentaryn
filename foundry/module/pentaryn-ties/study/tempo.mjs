@@ -5,7 +5,7 @@
  */
 
 import { MODULE } from "../ties-api.mjs";
-import { BUBBLE, CHANNEL, esc, f } from "./shared.mjs";
+import { BUBBLE, CHANNEL, esc, f, log } from "./shared.mjs";
 
 /* -------------------------------------------- */
 /*  The tempo tell — scoping a crowd shows      */
@@ -203,6 +203,6 @@ export function showBubble({ tokenId, sceneId, text }) {
       setTimeout(() => el.remove(), 450);
     }, SCOPE_BUBBLE_MS);
   } catch (err) {
-    console.warn(`${MODULE} | bubble render failed`, err);
+    log.warn(`bubble render failed`, err);
   }
 }

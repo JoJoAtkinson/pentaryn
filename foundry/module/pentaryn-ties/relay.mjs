@@ -56,10 +56,12 @@
 import { MODULE, read, write, clampStance, clampStrength, mayWrite, canReach } from "./ties-api.mjs";
 import { seedReverse } from "./ties-core.mjs";
 import { isActiveGM } from "./lib/election.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 const CHANNEL = `module.${MODULE}`;
 const MIRROR = "mirror-reverse";
-
 
 /**
  * Ask a GM to run the reverse write for a tie the sender has just saved on their own side.
@@ -94,7 +96,7 @@ async function applyMirror(payload, senderId) {
 
   // the sender must actually own the side they claim to be writing from
   if (source.testUserPermission(user, "OWNER") !== true) {
-    console.warn(`${MODULE} | relay refused: ${user.name} does not own ${source.name}`);
+    log.warn(`relay refused: ${user.name} does not own ${source.name}`);
     return;
   }
   // and the GM's own kill-switch has to mean what its hint promises
@@ -112,7 +114,7 @@ async function applyMirror(payload, senderId) {
    * two live clients before it was changed. Both halves now share `canReach`.
    */
   if (!canReach(user, target)) {
-    console.warn(`${MODULE} | relay refused: ${user.name} cannot reach ${target.name}`);
+    log.warn(`relay refused: ${user.name} cannot reach ${target.name}`);
     return;
   }
 
@@ -151,7 +153,7 @@ export function registerRelay() {
     try {
       await applyMirror(payload, senderId);
     } catch (err) {
-      console.error(`${MODULE} | relayed mirror write failed`, err);
+      log.error(`relayed mirror write failed`, err);
     }
   });
 }

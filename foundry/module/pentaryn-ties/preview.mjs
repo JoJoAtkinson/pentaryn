@@ -74,6 +74,9 @@ import {
 } from "./known-core.mjs";
 import { CONCEAL_FLAG, concealFor, firstName } from "./core/rules.mjs";
 import { readFlag } from "./lib/flags.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -643,7 +646,7 @@ export class InspectPreview extends ApplicationV2 {
         if (!res.ok) ui.notifications.warn(t(`known.share.skip.${res.reason}`));
       } else this.reportShare(await shareFact(spec, [pc], { from: null, notify: true }), label);
     } catch (err) {
-      console.error(`${MODULE} | switch`, err);
+      log.error(`switch`, err);
       ui.notifications.error(String(err?.message ?? err));
     } finally {
       this.busy.delete(key);
@@ -666,7 +669,7 @@ export class InspectPreview extends ApplicationV2 {
     try {
       this.reportShare(await shareFact(spec, targets, { from: null, notify: true }), label);
     } catch (err) {
-      console.error(`${MODULE} | share all`, err);
+      log.error(`share all`, err);
       ui.notifications.error(String(err?.message ?? err));
     } finally {
       keys.forEach(k => this.busy.delete(k));

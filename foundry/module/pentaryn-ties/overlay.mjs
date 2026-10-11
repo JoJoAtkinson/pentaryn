@@ -45,6 +45,9 @@
 import { MODULE, read } from "./ties-api.mjs";
 import * as Cards from "./popups.mjs";
 import { canSee } from "./ties-adapter.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 /**
  * `actorId` is whose web was last raised, `mode` is which key raised it ("all" | "one"),
@@ -163,7 +166,7 @@ function dropWires() {
   try {
     if (!state.wires.destroyed) state.wires.destroy({ children: true });
   } catch (e) {
-    console.warn(`${MODULE} | wire teardown`, e);
+    log.warn(`wire teardown`, e);
   }
   state.wires = null;
 }
@@ -181,7 +184,7 @@ export function drawWires() {
     try {
       paintWires();
     } catch (e) {
-      console.warn(`${MODULE} | wire paint`, e);
+      log.warn(`wire paint`, e);
     }
   });
 }

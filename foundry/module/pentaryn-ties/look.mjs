@@ -71,6 +71,9 @@ import { subjectFacts } from "./facts.mjs";
 import {
   GRANTED_FLAG, BELIEFS_FLAG, REGISTRY_SETTING, readGranted, visibleAttributesFor, identMissKey, touchesFlagScope
 } from "./known-core.mjs";
+import { makeLog } from "./lib/log.mjs";
+
+const log = makeLog(MODULE);
 
 const { ApplicationV2 } = foundry.applications.api;
 
@@ -238,7 +241,7 @@ export class LookWindow extends ApplicationV2 {
   liveRender() {
     if (!this.rendered) return;
     let html;
-    try { html = this.buildHTML(); } catch (err) { return console.warn(`${MODULE} | look refresh`, err); }
+    try { html = this.buildHTML(); } catch (err) { return log.warn(`look refresh`, err); }
     if (html === this.lastHTML) return;
     this.render();
   }
@@ -325,7 +328,7 @@ export const openLook = (character, subject) => {
     return LookWindow.open(character, subject);
   } catch (err) {
     // a window that fails to open must never stop the inspect that follows it
-    console.error(`${MODULE} | look window`, err);
+    log.error(`look window`, err);
     return null;
   }
 };
