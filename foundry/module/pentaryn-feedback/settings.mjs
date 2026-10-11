@@ -3,37 +3,34 @@
  *
  * Every row carries LITERAL `name` and `hint` keys: the i18n gate sees a literal as a definite
  * reference, so a missing lang key fails the gate instead of showing a raw key in the menu.
+ *
+ * No store rows: reports are files under Data/, never world settings (blueprint §5.3), and the
+ * offline queue is a flag on the reporter's own User document.
  */
 
-import { I18N, MODULE } from "./feedback-core.mjs";
+import { I18N, LIMITS, MODULE } from "./feedback-core.mjs";
 import { defineKeybindings, defineSettings, settingReader, settingsSnapshot as snapshot } from "./lib/settings.mjs";
 
 /** @type {import("./lib/settings.mjs").SettingRow[]} */
 export const SETTINGS = Object.freeze([
   {
-    key: "enabled", scope: "world", config: true, type: Boolean, default: true,
-    name: "PENTARYN_FEEDBACK.Setting.enabled.Name",
-    hint: "PENTARYN_FEEDBACK.Setting.enabled.Hint",
-    doc: "Master switch for the example feature: when off, note changes are not tracked or announced.",
+    key: "historySize", scope: "world", config: true, type: Number, default: 200,
+    range: { min: LIMITS.actionsMin, max: LIMITS.actionsMax, step: 10 },
+    name: "PENTARYN_FEEDBACK.Setting.historySize.Name",
+    hint: "PENTARYN_FEEDBACK.Setting.historySize.Hint",
+    doc: "Recent actions each client keeps for its next report. Read on every push (live, no reload); clamped 20..1000.",
+  },
+  {
+    key: "captureConsole", scope: "world", config: true, type: Boolean, default: true,
+    requiresReload: true,
+    name: "PENTARYN_FEEDBACK.Setting.captureConsole.Name",
+    hint: "PENTARYN_FEEDBACK.Setting.captureConsole.Hint",
+    doc: "Record console.error / console.warn lines into the report's error list. The wrap installs at setup, so a change needs a reload.",
   },
 ]);
 
-// EXAMPLE: one keybinding row (GM-only, unbound by default). Replace or delete it with the example
-// feature; an empty table is `Object.freeze([])`. Keybindings register at `init` only — Foundry
-// throws after `setup` — so a hot patch never adds a new row: a new or changed row needs a reload.
-export const KEYBINDINGS = Object.freeze([
-  {
-    key: "toggleEnabled", editable: [], restricted: true,
-    name: "PENTARYN_FEEDBACK.Keybind.toggleEnabled.Name",
-    hint: "PENTARYN_FEEDBACK.Keybind.toggleEnabled.Hint",
-    onDown: () => {
-      game.settings.set(MODULE, "enabled", !setting("enabled"))
-        .catch(err => console.error(`${MODULE} | keybinding toggleEnabled`, err));
-      return true;
-    },
-    doc: "Flip the enabled switch (GM only; no default key — bind it in Configure Controls).",
-  },
-]);
+/** No keybindings: the toolbar button, `/bug` and the API are the doors. */
+export const KEYBINDINGS = Object.freeze([]);
 
 /** Called from the entry's `init` handler, and again by a hot patch (both kit calls skip what exists). */
 export function registerSettings({ log } = {}) {

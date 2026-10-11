@@ -1,21 +1,44 @@
-// Glue: install the Foundry stub, load the entry exactly as Foundry would, fire the lifecycle,
-// and pin EFFECTS (hooks registered, calls made, console text) — not return values.
-import { test } from "node:test";
+// Glue: install the Foundry stub (plus the client pieces in fixtures/world.mjs), load the entry
+// exactly as Foundry would, fire the lifecycle, and pin EFFECTS — ring entries, toolbar shape,
+// files written, flags changed, queries sent, console text. Time is mocked (Date only): the render
+// throttle and the error de-dup are driven by mock.timers.tick, never by real waiting.
+import { mock, test } from "node:test";
 import assert from "node:assert/strict";
-import { installFoundry } from "./kit/foundry-stub.mjs";
-import { IDS, world } from "./fixtures/actors.mjs";
-import { HOOKS, MODULE, NS } from "../feedback-core.mjs";
+import { pinJSON } from "./kit/harness.mjs";
+import { IDS, WORLD, installClient, memoryStore, queuedReport, settle } from "./fixtures/world.mjs";
+import { DIALOG_ID, LIMITS, MODULE, NS } from "../feedback-core.mjs";
 
-const F = await installFoundry(world(MODULE));
+const T0 = Date.UTC(2026, 9, 11, 19, 0, 0);
+mock.timers.enable({ apis: ["Date"], now: T0 });
+
+const waiting = queuedReport("waitingreport001", { text: "filed while no GM was on" });
+const F = await installClient({ queue2: { [waiting.id]: waiting } });
 const consoleLines = [];
-for (const level of ["warn", "error"]) console[level] = (...args) => consoleLines.push([level, String(args[0])]);
+const original = { error: console.error, warn: console.warn, info: console.info };
+console.error = (...args) => consoleLines.push(["error", args.map(String).join(" ")]);
+console.warn = (...args) => consoleLines.push(["warn", args.map(String).join(" ")]);
+console.info = (...args) => consoleLines.push(["info", args.map(String).join(" ")]);
+
+const { useStore } = await import("../files-adapter.mjs");
+const { actionsOf, errorsOf } = await import("../recorder.mjs");
+const { ReportDialog } = await import("../dialog.mjs");
+const mem = memoryStore();
+useStore(mem);
 
 await import("../feedback.mjs");
 F.fire("init");
 F.fire("setup");
 F.fire("ready");
-const hooksAtReady = F.hooks.slice();
+await settle();
 const api = game.modules.get(MODULE).api;
+const player = game.users.get(IDS.player);
+const player2 = game.users.get(IDS.player2);
+const queueOf = user => user.flags?.[MODULE]?.queue ?? {};
+const lastAction = () => actionsOf().at(-1);
+const clearRings = () => {
+  // the rings are module state; the recorder's uninstall/install is the only reset, so tests read deltas
+  return actionsOf().length;
+};
 
 test("foundry.utils is Foundry's own common/ code", () => {
   console.log(`# foundry ${F.foundryBuild ?? "unknown"} · utils from ${F.utilsSource}`);
@@ -34,88 +57,408 @@ test("published at ready: module.api is canonical, game.pentaryn alias, both rea
   assert.deepEqual(game.pentaryn.namespaces(), [NS]);
 });
 
-test("a note flag change emits noteChanged once, with the normalised note", async () => {
-  const seen = [];
-  const id = Hooks.on(HOOKS.noteChanged.name, (actor, note) => seen.push([actor.id, note]));
-  const actor = game.actors.get(IDS.aldric);
-  await actor.update({ [`flags.${MODULE}.note`]: "  keep   watch " });
-  await actor.update({ name: "Aldric V." });                 // not ours: nothing
-  Hooks.off(HOOKS.noteChanged.name, id);
-  assert.deepEqual(seen, [[IDS.aldric, "keep watch"]]);
+test("ready: the active GM files a queue left by a player who filed with no GM online", () => {
+  const path = `pentaryn-feedback/${WORLD}/${waiting.id}.json`;
+  assert.ok(mem.files.has(path), "the waiting report was filed at ready");
+  const filed = mem.files.get(path);
+  assert.deepEqual(filed.user, { id: IDS.player2, name: "Mira's player", role: 1, isGM: false, character: null });
+  assert.equal(typeof filed.receivedAt, "number");
+  assert.deepEqual(queueOf(player2), {}, "the flag key is deleted once filed");
+  const audit = consoleLines.filter(([lvl, line]) => lvl === "info" && line.startsWith(`${MODULE} | filed`));
+  assert.equal(audit.length, 1, "one audit line per cross-user write");
 });
 
-test("the enabled setting gates the feature", async () => {
-  const seen = [];
-  const id = Hooks.on(HOOKS.noteChanged.name, () => seen.push(1));
-  await game.settings.set(MODULE, "enabled", false);
-  await game.actors.get(IDS.aldric).update({ [`flags.${MODULE}.note`]: "quiet" });
-  await game.settings.set(MODULE, "enabled", true);
-  Hooks.off(HOOKS.noteChanged.name, id);
-  assert.deepEqual(seen, []);
+/* ── the toolbar ─────────────────────────────────────────────────────── */
+
+test("getSceneControlButtons adds a bug button to the token tools: every user, a button, order 90", () => {
+  const controls = { tokens: { name: "tokens", tools: { select: { name: "select", order: 1 } } }, walls: { tools: {} } };
+  F.fire("getSceneControlButtons", controls);
+  const tool = controls.tokens.tools.feedback;
+  pinJSON("toolbar", { ...tool, onChange: typeof tool.onChange }, import.meta.url);
+  assert.equal("visible" in tool, false, "no visible: players see it too");
+  assert.equal(tool.button, true);
+  assert.equal(tool.toggle, undefined);
+  assert.deepEqual(Object.keys(controls.walls.tools), [], "only the token group");
+  F.fire("getSceneControlButtons", {});             // no tokens group: tolerated
+  F.fire("getSceneControlButtons", undefined);
 });
 
-test("a throw inside our own handler is logged with the module prefix and never reaches Foundry", () => {
+test("the bug button opens the dialog, Bug selected, with the help text on each category", async () => {
+  const controls = { tokens: { tools: {} } };
+  F.fire("getSceneControlButtons", controls);
+  const before = F.rendered.length;
+  controls.tokens.tools.feedback.onChange({}, true);
+  await settle();
+  assert.equal(F.rendered.length, before + 1);
+  const app = F.rendered.at(-1);
+  assert.equal(app.id, DIALOG_ID);
+  assert.equal(ReportDialog.current, app);
+  const html = app.html;
+  assert.match(html, /value="bug" checked/);
+  assert.doesNotMatch(html, /value="defect" checked|value="feature" checked/);
+  assert.ok(html.indexOf('value="bug"') < html.indexOf('value="defect"') && html.indexOf('value="defect"') < html.indexOf('value="feature"'));
+  assert.match(html, /data-tooltip="It is just broken\. If you don&#x27;t know which to pick, Bug is a good default\."/);
+  assert.match(html, /data-tooltip="It works, just not the way you expect, so it comes across as a bug\. If you don&#x27;t know, pick Bug\."/);
+  assert.match(html, /data-tooltip="100% new: it does not exist yet, like a new tab or a new subsystem\."/);
+  assert.match(html, /data-action="submit" disabled/, "Send is disabled while the text is empty");
+  assert.match(html, /What gets attached/);
+  await app.close();
+  assert.equal(ReportDialog.current, null);
+});
+
+/* ── /bug ────────────────────────────────────────────────────────────── */
+
+test("/bug <text> opens the dialog pre-filled and is not posted; other chat passes", async () => {
+  const before = F.rendered.length;
+  assert.equal(F.fireCall("chatMessage", {}, "/bug Loot all did <nothing>", {}), false, "the line is swallowed");
+  await settle();
+  const app = F.rendered.at(-1);
+  assert.equal(F.rendered.length, before + 1);
+  assert.match(app.html, /<textarea[^>]*>Loot all did &lt;nothing&gt;<\/textarea>/);
+  assert.doesNotMatch(app.html, /data-action="submit" disabled/);
+  assert.equal(F.fireCall("chatMessage", {}, "/roll 1d20", {}), true);
+  assert.equal(F.fireCall("chatMessage", {}, "hello /bug", {}), true);
+  await app.close();
+});
+
+test("api.open({ category, text }) pre-fills; an unknown category falls back to Bug", async () => {
+  assert.deepEqual(await api.open({ category: "feature", text: "a map tab" }), { ok: true, open: true });
+  assert.match(F.rendered.at(-1).html, /value="feature" checked/);
+  assert.deepEqual(await api.open({ category: "nonsense" }), { ok: true, open: true });
+  assert.match(F.rendered.at(-1).html, /value="bug" checked/);
+  assert.equal(F.rendered.at(-1), F.rendered.at(-2), "one dialog at a time: the open one is re-rendered");
+  await F.rendered.at(-1).close();
+});
+
+/* ── the recorder ────────────────────────────────────────────────────── */
+
+test("recorder: scene, tool (only on change), tab, control, own target", () => {
+  const n = clearRings();
+  F.fire("canvasReady", { scene: { id: IDS.scene, name: "Underdark Gate" } });
+  F.fire("renderSceneControls", { control: { name: "tokens" }, tool: { name: "select" } });
+  F.fire("renderSceneControls", { control: { name: "tokens" }, tool: { name: "select" } });
+  F.fire("renderSceneControls", { control: { name: "tokens" }, tool: { name: "target" } });
+  F.fire("changeSidebarTab", { constructor: { tabName: "chat" } });
+  F.fire("controlToken", { name: "Caven", actor: { name: "Caven" } }, true);
+  F.fire("targetToken", game.user, { name: "Goblin" }, true);
+  F.fire("targetToken", player, { name: "Goblin" }, true);           // someone else's targeting
+  const got = actionsOf().slice(n).map(({ t, ...rest }) => rest);
+  assert.deepEqual(got, [
+    { kind: "scene", id: IDS.scene, name: "Underdark Gate" },
+    { kind: "tool", control: "tokens", tool: "select" },
+    { kind: "tool", control: "tokens", tool: "target" },
+    { kind: "tab", tab: "chat" },
+    { kind: "control", token: "Caven", actor: "Caven", on: true },
+    { kind: "target", token: "Goblin", on: true },
+  ]);
+  assert.ok(actionsOf().slice(n).every(a => a.t === Date.now()));
+});
+
+test("recorder: windows — render throttled per id for 2 s, close recorded, noise and our own dialog skipped", () => {
+  const n = clearRings();
+  class ActorSheet5eCharacter {}
+  class ChatLog {}
+  const sheet = Object.assign(new ActorSheet5eCharacter(), { id: "ActorSheet5eCharacter-Actor-x", title: "Caven" });
+  F.fire("renderApplicationV2", sheet);
+  F.fire("renderApplicationV2", sheet);                 // hp tick re-render: throttled
+  mock.timers.tick(LIMITS.renderThrottleMs);
+  F.fire("renderApplicationV2", sheet);
+  F.fire("renderApplicationV2", Object.assign(new ChatLog(), { id: "chat" }));
+  F.fire("renderApplicationV2", Object.assign(new ActorSheet5eCharacter(), { id: DIALOG_ID }));
+  F.fire("closeApplicationV2", sheet);
+  F.fire("renderApplicationV2", sheet);                 // re-opened right after close: recorded
+  F.fire("renderApplication", Object.assign(new (class LegacyApp {})(), { appId: 7, title: "Old window" }));
+  const got = actionsOf().slice(n).map(({ t, ...rest }) => rest);
+  assert.deepEqual(got, [
+    { kind: "app", op: "render", cls: "ActorSheet5eCharacter", id: "ActorSheet5eCharacter-Actor-x", title: "Caven" },
+    { kind: "app", op: "render", cls: "ActorSheet5eCharacter", id: "ActorSheet5eCharacter-Actor-x", title: "Caven" },
+    { kind: "app", op: "close", cls: "ActorSheet5eCharacter", id: "ActorSheet5eCharacter-Actor-x", title: "Caven" },
+    { kind: "app", op: "render", cls: "ActorSheet5eCharacter", id: "ActorSheet5eCharacter-Actor-x", title: "Caven" },
+    { kind: "app", op: "render", cls: "LegacyApp", id: "7", title: "Old window" },
+  ]);
+});
+
+test("recorder: the user's own document changes (keys only), never another user's", async () => {
+  const n = clearRings();
+  const caven = game.actors.get(IDS.caven);
+  await caven.update({ "system.attributes.hp.value": 9 });           // as the GM (this client)
+  F.fire("updateActor", caven, { name: "x" }, {}, IDS.player);       // someone else's change
+  F.fire("createItem", { id: "item000000000001", name: "Rope" }, {}, game.user.id);
+  F.fire("deleteToken", { id: IDS.token, name: "Caven" }, {}, game.user.id);
+  F.fire("deleteToken", { id: IDS.token, name: "Caven" }, {}, IDS.player);
+  const got = actionsOf().slice(n).map(({ t, ...rest }) => rest);
+  assert.deepEqual(got, [
+    { kind: "doc", op: "update", type: "Actor", id: IDS.caven, name: "Caven", keys: ["system.attributes"] },
+    { kind: "doc", op: "create", type: "Item", id: "item000000000001", name: "Rope" },
+    { kind: "doc", op: "delete", type: "Token", id: IDS.token, name: "Caven" },
+  ]);
+  assert.ok(!JSON.stringify(got).includes("9"), "values are never recorded");
+});
+
+test("recorder: own chat (flavor + total, whisper as a boolean, never content), activity use, combat turns", () => {
+  const n = clearRings();
+  F.fire("createChatMessage", { id: "m1", author: { id: game.user.id }, flavor: "Longsword — Attack", rolls: [{ total: 17 }], whisper: ["x"], content: "SECRET" }, {}, game.user.id);
+  F.fire("createChatMessage", { id: "m2", author: { id: IDS.player }, flavor: "theirs", content: "their text" }, {}, IDS.player);
+  assert.equal(F.fireCall("dnd5e.postUseActivity", { name: "Attack", item: { name: "Longsword" }, actor: { name: "Caven" } }, {}, {}), true,
+    "dnd5e calls this hook with Hooks.call: the recorder never vetoes");
+  F.fire("updateCombat", { round: 3, turn: 2, combatant: { name: "Caven" } }, { turn: 2 });
+  F.fire("updateCombat", { round: 3, turn: 2, combatant: { name: "Caven" } }, { flags: {} });
+  const got = actionsOf().slice(n).map(({ t, ...rest }) => rest);
+  assert.deepEqual(got, [
+    { kind: "chat", id: "m1", flavor: "Longsword — Attack", total: 17, whisper: true },
+    { kind: "use", item: "Longsword", activity: "Attack", actor: "Caven" },
+    { kind: "combat", round: 3, turn: 2, combatant: "Caven" },
+  ]);
+  assert.ok(!JSON.stringify(actionsOf()).includes("SECRET"));
+});
+
+test("recorder: notifications are recorded and still shown (wrapMethod on Notifications#notify)", () => {
+  const n = clearRings();
+  const shown = F.calls.length;
+  const out = ui.notifications.warn("The door is locked token=abcdefghijklmnop");
+  assert.deepEqual(out, { message: "The door is locked token=abcdefghijklmnop", type: "warning" }, "the original runs and returns");
+  assert.ok(F.calls.slice(shown).some(c => c.op === "notify"));
+  assert.deepEqual(actionsOf().slice(n).map(({ t, ...rest }) => rest), [{ kind: "notify", level: "warning", text: "The door is locked token=[redacted]" }]);
+});
+
+test("recorder: a body click on a [data-action] element (capture phase), never an input value; plain clicks ignored", () => {
+  assert.equal(F.bodyListeners.filter(l => l.name === "click" && l.capture === true).length, 1);
+  const n = clearRings();
+  class ItemPileInventoryApp {}
+  foundry.applications.instances.set("pile-1", new ItemPileInventoryApp());
+  const win = { id: "pile-1" };
+  const button = { dataset: { action: "lootAll" }, textContent: "  Loot\n all ", getAttribute: () => null, closest: sel => (sel === ".application, .app" ? win : null) };
+  const icon = { closest: sel => (sel === "[data-action]" ? button : null) };
+  F.click(icon);
+  F.click({ closest: () => null });                                      // no data-action: nothing
+  const input = { dataset: { action: "edit" }, value: "my password", textContent: "", getAttribute: k => (k === "aria-label" ? "Edit name" : null), closest: sel => (sel === "[data-action]" ? input : null) };
+  F.click(input);
+  const own = { dataset: { action: "submit" }, textContent: "Send", getAttribute: () => null, closest: sel => (sel === "[data-action]" ? own : { id: DIALOG_ID }) };
+  F.click(own);                                                          // our own dialog: skipped
+  const got = actionsOf().slice(n).map(({ t, ...rest }) => rest);
+  assert.deepEqual(got, [
+    { kind: "click", action: "lootAll", cls: "ItemPileInventoryApp", id: "pile-1", text: "Loot all" },
+    { kind: "click", action: "edit", cls: "", id: "", text: "Edit name" },
+  ]);
+  assert.ok(!JSON.stringify(got).includes("my password"));
+});
+
+test("recorder: historySize is read live on every push and clamped", async () => {
+  await game.settings.set(MODULE, "historySize", 20);
+  for (let i = 0; i < 30; i++) F.fire("changeSidebarTab", { id: `t${i}` });
+  assert.equal(actionsOf().length, 20);
+  assert.equal(lastAction().tab, "t29");
+  await game.settings.set(MODULE, "historySize", 3);               // below the floor → 20
+  F.fire("changeSidebarTab", { id: "after" });
+  assert.equal(actionsOf().length, 20);
+  await game.settings.set(MODULE, "historySize", 200);
+});
+
+test("errors: core's error hook, window error, unhandled rejection; console.error/warn recorded AND passed through", () => {
+  const before = errorsOf().length;
+  mock.timers.tick(5000);
+  F.fire("error", "Hooks.#call", new Error("hooked boom"), {});
+  F.windowEvent("error", { message: "Script error", error: new TypeError("cannot read x") });
+  F.windowEvent("unhandledrejection", { reason: new Error("lost promise") });
   consoleLines.length = 0;
-  const caught = F.hookErrors.length;
-  // a malformed document makes the feature's own updateActor handler throw (actor.id of null)
-  F.fire("updateActor", null, { flags: { [MODULE]: { note: "boom" } } });
-  assert.deepEqual(consoleLines, [["error", `${MODULE} | updateActor: note`]]);
-  assert.equal(F.hookErrors.length, caught, "the guard must catch it before Foundry's Hooks.#call does");
+  console.error("pentaryn-dropbin | loot failed", new Error("transferEverything"));
+  console.warn("deprecated thing");
+  assert.deepEqual(consoleLines, [
+    ["error", "pentaryn-dropbin | loot failed Error: transferEverything"],
+    ["warn", "deprecated thing"],
+  ], "the original console still prints");
+  const got = errorsOf().slice(before).map(({ t, stack, ...rest }) => ({ ...rest, stack: typeof stack }));
+  assert.deepEqual(got, [
+    { source: "hooks", location: "Hooks.#call", message: "hooked boom", stack: "string" },
+    { source: "window", message: "cannot read x", stack: "string" },
+    { source: "promise", message: "lost promise", stack: "string" },
+    { source: "console.error", message: "pentaryn-dropbin | loot failed transferEverything", stack: "string" },
+    { source: "console.warn", message: "deprecated thing", stack: "undefined" },
+  ]);
+  assert.equal(F.windowListeners("error"), 1);
+  assert.equal(F.windowListeners("unhandledrejection"), 1);
 });
 
-test("a throw in someone else's listener is Foundry's to report, not ours", async () => {
-  consoleLines.length = 0;
-  const id = Hooks.on(HOOKS.noteChanged.name, function downstream() { throw new Error("listener broke"); });
-  await game.actors.get(IDS.aldric).update({ [`flags.${MODULE}.note`]: "again" });
-  Hooks.off(HOOKS.noteChanged.name, id);
-  const msg = `Error thrown in hooked function 'downstream' for hook '${HOOKS.noteChanged.name}'`;
-  assert.deepEqual(consoleLines, [["warn", `Foundry VTT | ${msg}`], ["error", `Error: ${msg}. listener broke`]]);
+test("errors: the same message twice within 1 s (hook + console) is kept once; the ring caps at 50", () => {
+  mock.timers.tick(5000);
+  const before = errorsOf().length;
+  const err = new Error("twice");
+  console.error(err);
+  F.fire("error", "Hooks.#call", err, {});
+  assert.equal(errorsOf().length, before + 1);
+  mock.timers.tick(LIMITS.dupErrorMs + 1);
+  F.fire("error", "Hooks.#call", err, {});
+  assert.equal(errorsOf().length, before + 2);
+  for (let i = 0; i < 80; i++) F.fire("error", "x", new Error(`e${i}`), {});
+  assert.equal(errorsOf().length, LIMITS.errorsMax);
+  assert.equal(errorsOf().at(-1).message, "e79");
 });
 
-test("describe() has the use-doc §5.1a key set every namespace shares (small and full alike)", () => {
+/* ── submit, queue, filing ───────────────────────────────────────────── */
+
+test("a player's submit with the GM online: queued on their own flag, relayed, filed as THEM, flag cleared", async () => {
+  F.become({ userId: IDS.player });
+  const sent = F.calls.length;
+  const r = await api.submit({ category: "defect", text: "Loot all did nothing on the second corpse" });
+  F.become({ userId: IDS.gm });
+  assert.equal(r.ok, true);
+  assert.equal(r.status, "filed");
+  const path = `pentaryn-feedback/${WORLD}/${r.id}.json`;
+  const file = mem.files.get(path);
+  assert.ok(file, path);
+  assert.equal(file.category, "defect");
+  assert.equal(file.user.id, IDS.player);
+  assert.equal(file.user.name, "Caven's player");
+  assert.deepEqual(file.user.character, { id: IDS.caven, name: "Caven" });
+  assert.equal(file.status, "open");
+  assert.ok(file.actions.length > 0, "the action ring rides along");
+  assert.ok(file.errors.length > 0, "the error ring rides along");
+  assert.equal(file.world.id, WORLD);
+  assert.deepEqual(queueOf(player), {});
+  const q = F.calls.slice(sent).filter(c => c.op === "query");
+  assert.deepEqual(q.map(c => [c.name, c.timeout, c.data.userId]), [[`${MODULE}.ingest`, 10000, IDS.player]]);
+  const userWrites = F.calls.slice(sent).filter(c => c.op === "update" && c.documentName === "User");
+  assert.equal(userWrites.length, 2, "one write to queue, one batched write to clear");
+  const toasts = F.calls.slice(sent).filter(c => c.op === "notify").map(c => c.message);
+  assert.ok(toasts.some(m => m === `Thanks — report ${r.id.slice(0, 6)} saved.`), toasts.join(" | "));
+});
+
+test("the report carries the snapshot: scene, controlled tokens with hp, own chat only, active module versions", async () => {
+  canvas.tokens.controlled = [{ document: { id: IDS.token, name: "Caven" }, actor: game.actors.get(IDS.caven) }];
+  const r = await api.submit({ text: "snapshot check" });
+  canvas.tokens.controlled = [];
+  const file = mem.files.get(`pentaryn-feedback/${WORLD}/${r.id}.json`);
+  assert.equal(file.category, "bug", "no category → bug");
+  assert.deepEqual(file.scene.viewed, { id: IDS.scene, name: "Underdark Gate" });
+  assert.deepEqual(file.tokens.controlled[0], { id: IDS.token, name: "Caven", actorId: IDS.caven, actorName: "Caven", actorType: "character", hp: { value: 9, max: 27 } });
+  assert.deepEqual(file.chat.map(c => c.id), [IDS.msgMine], "the GM's own message only");
+  assert.ok(!JSON.stringify(file).includes("SECRET CONTENT"));
+  assert.ok(!JSON.stringify(file).includes("their whisper"));
+  assert.deepEqual(file.modules.map(m => m.id), [MODULE, "pentaryn-dropbin"]);
+  assert.equal(r.status, "filed");
+});
+
+test("submit refuses empty text without writing anything; dryRun builds without writing", async () => {
+  const before = F.calls.length;
+  assert.deepEqual(await api.submit({ category: "bug", text: "   " }), { ok: false, code: "BAD_ARGS", reason: "the report text is empty" });
+  const dry = await api.submit({ text: "dry" }, { dryRun: true });
+  assert.equal(dry.dryRun, true);
+  assert.equal(dry.report.text, "dry");
+  assert.equal(F.calls.slice(before).filter(c => c.op === "update" || c.op === "query").length, 0);
+});
+
+test("no GM online: the report waits on the player's own flag (cap 5, oldest dropped) and is filed when a GM connects", async () => {
+  F.gm.active = false;
+  F.become({ userId: IDS.player });
+  const ids = [];
+  for (let i = 0; i < 6; i++) {
+    mock.timers.tick(1000);
+    const r = await api.submit({ text: `offline ${i}` });
+    assert.equal(r.status, "queued");
+    ids.push(r.id);
+  }
+  assert.deepEqual(Object.keys(queueOf(player)).sort(), ids.slice(1).sort(), "the oldest is dropped past 5");
+  const toasts = F.calls.filter(c => c.op === "notify").map(c => c.message);
+  assert.ok(toasts.includes(`No GM is online; your report ${ids[0].slice(0, 6)} will be sent when one connects.`));
+  assert.ok(toasts.some(m => m.startsWith("Your unsent queue was full")));
+  // the GM logs in; the player connects (or is already on): the active GM files every waiting queue
+  F.become({ userId: IDS.gm });
+  F.gm.active = true;
+  F.fire("userConnected", player, true);
+  await settle(10);
+  assert.deepEqual(queueOf(player), {});
+  for (const id of ids.slice(1)) assert.ok(mem.files.has(`pentaryn-feedback/${WORLD}/${id}.json`), id);
+  assert.equal(mem.files.has(`pentaryn-feedback/${WORLD}/${ids[0]}.json`), false);
+});
+
+test("a GM timeout also leaves the report queued (never lost)", async () => {
+  F.holder.gmOffline = true;
+  F.become({ userId: IDS.player });
+  const r = await api.submit({ text: "socket hiccup" });
+  F.become({ userId: IDS.gm });
+  F.holder.gmOffline = false;
+  assert.equal(r.status, "queued");
+  assert.ok(queueOf(player)[r.id]);
+  await api.ingest({ userId: IDS.player });
+  assert.deepEqual(queueOf(player), {});
+});
+
+test("updateUser on the active GM files a queue entry written by a player (the socket-order safety net)", async () => {
+  const report = queuedReport("viaupdateuser001", { t: Date.now(), text: "via updateUser" });
+  await player.update({ [`flags.${MODULE}.queue.${report.id}`]: report });
+  await settle(10);
+  assert.ok(mem.files.has(`pentaryn-feedback/${WORLD}/${report.id}.json`));
+  assert.deepEqual(queueOf(player), {});
+});
+
+test("a resend of a report already on disk never overwrites it (a status Joe set survives)", async () => {
+  const path = `pentaryn-feedback/${WORLD}/viaupdateuser001.json`;
+  mem.files.get(path).status = "resolved";
+  const report = queuedReport("viaupdateuser001", { t: Date.now(), text: "resent" });
+  await player.update({ [`flags.${MODULE}.queue.${report.id}`]: report });
+  await settle(10);
+  assert.equal(mem.files.get(path).status, "resolved");
+  assert.equal(mem.files.get(path).text, "via updateUser");
+  assert.deepEqual(queueOf(player), {}, "still cleared from the flag");
+});
+
+test("a malformed queue entry is refused and dropped (it would block the queue forever)", async () => {
+  const lines = consoleLines.length;
+  await player.update({ [`flags.${MODULE}.queue.badbadbadbadbad1`]: { id: "badbadbadbadbad1", text: "no schema" } });
+  await settle(10);
+  assert.deepEqual(queueOf(player), {});
+  assert.equal(mem.files.has(`pentaryn-feedback/${WORLD}/badbadbadbadbad1.json`), false);
+  assert.ok(consoleLines.slice(lines).some(([lvl, l]) => lvl === "warn" && l.startsWith(`${MODULE} | refused report badbadbadbadbad1`)));
+});
+
+test("ingest on a client that is not the active GM is refused", async () => {
+  F.become({ userId: IDS.player });
+  assert.deepEqual(await api.ingest({ userId: IDS.player }), { ok: false, code: "NOT_GM", reason: "only the active GM files reports" });
+  F.become({ userId: IDS.gm });
+  assert.equal((await api.ingest({ userId: "nobody0000000001" })).code, "NOT_FOUND");
+});
+
+test("filed and queued events fire with the report", async () => {
+  const seen = [];
+  const a = Hooks.on(`${MODULE}.queued`, r => seen.push(["queued", r.id]));
+  const b = Hooks.on(`${MODULE}.filed`, r => seen.push(["filed", r.id]));
+  const r = await api.submit({ text: "events" });
+  Hooks.off(`${MODULE}.queued`, a);
+  Hooks.off(`${MODULE}.filed`, b);
+  assert.deepEqual(seen.map(([k]) => k).sort(), ["filed", "queued"]);
+  assert.ok(seen.every(([, id]) => id === r.id));
+});
+
+test("describe() has the use-doc §5.1a key set every namespace shares", () => {
   assert.deepEqual(Object.keys(api.describe()), [
     "module", "namespace", "version", "contract", "flagScope", "kit", "published",
     "methods", "queries", "settings", "events", "hooks", "patches", "flags", "errors",
   ]);
-  assert.deepEqual(Object.keys(game.pentaryn.describe().namespaces), [NS]);
-  assert.ok(Array.isArray(game.pentaryn.describe().namespaces[NS].methods));
-});
-
-
-test("the example keybinding registers at init and flips the enabled setting", async () => {
-  const id = `${MODULE}.toggleEnabled`;
-  assert.deepEqual(F.calls.filter(c => c.op === "keybindings.register").map(c => c.id), [id]);
-  assert.equal(game.keybindings.actions.get(id).onDown(), true);
-  await new Promise(r => setTimeout(r, 0));
-  assert.equal(game.settings.get(MODULE, "enabled"), false);
-  game.keybindings.actions.get(id).onDown();
-  await new Promise(r => setTimeout(r, 0));
-  assert.equal(game.settings.get(MODULE, "enabled"), true);
+  assert.deepEqual(api.describe().patches.map(p => p.adjustments).sort(),
+    ["feedback-console-error", "feedback-console-warn", "feedback-notifications-notify"]);
 });
 
 // Keep this test LAST: it replaces the published API.
-// A hot patch re-runs the WIRING only: the entry's static imports (features, api, settings, core,
-// lib/) are the instances already loaded, so this proves re-registration and republish of the same
-// code — never that edited feature code is picked up (that needs a reload).
-test("hot patch: uninstall(), re-import the entry, and the wiring runs again", async () => {
+// A hot patch re-runs the WIRING only: the entry's static imports are the instances already loaded.
+test("hot patch: uninstall() removes listeners and stops recording; re-import re-wires", async () => {
   const old = game.modules.get(MODULE).api;
   old.uninstall();
-  assert.equal(F.listeners("updateActor"), 0);
-  assert.equal(game.ready, true);
-  assert.ok(game.keybindings.bindings, "Foundry has built its keybindings: registering one now throws");
-  const binds = F.calls.filter(c => c.op === "keybindings.register").length;
+  assert.equal(F.listeners("getSceneControlButtons"), 0);
+  assert.equal(F.windowListeners("error"), 0);
+  assert.equal(F.bodyListeners.length, 0);
+  assert.equal(actionsOf().length, 0);
+  console.error("while uninstalled");
+  assert.equal(errorsOf().length, 0, "the console wrap stays but records nothing while uninstalled");
   consoleLines.length = 0;
   await import(`../feedback.mjs?hot=${Date.now()}`);
-  assert.deepEqual(consoleLines, [], "the re-run init must not throw (settings/keybindings already registered are skipped)");
-  assert.equal(F.calls.filter(c => c.op === "keybindings.register").length, binds);
+  assert.deepEqual(consoleLines.filter(([lvl]) => lvl !== "info"), [], "the re-run must not throw or warn");
   const fresh = game.modules.get(MODULE).api;
   assert.notEqual(fresh, old);
   assert.equal(game.pentaryn[NS], fresh);
-  assert.equal(F.listeners("updateActor"), 1);
-  assert.deepEqual(fresh.describe().hooks.map(h => h.label), ["updateActor: note", "deleteActor: prune"]);
-  const seen = [];
-  const id = Hooks.on(HOOKS.noteChanged.name, (actor, note) => seen.push(note));
-  await game.actors.get(IDS.aldric).update({ [`flags.${MODULE}.note`]: "patched" });
-  Hooks.off(HOOKS.noteChanged.name, id);
-  assert.deepEqual(seen, ["patched"]);
+  assert.equal(F.listeners("getSceneControlButtons"), 1);
+  F.fire("changeSidebarTab", { id: "back" });
+  assert.equal(lastAction().tab, "back");
+  console.error("recording again");
+  assert.equal(errorsOf().at(-1).message, "recording again");
+  Object.assign(console, original);
 });

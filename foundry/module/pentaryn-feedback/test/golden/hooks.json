@@ -13,10 +13,170 @@
   },
   {
     "kind": "on",
+    "name": "canvasReady"
+  },
+  {
+    "kind": "on",
+    "name": "renderSceneControls"
+  },
+  {
+    "kind": "on",
+    "name": "changeSidebarTab"
+  },
+  {
+    "kind": "on",
+    "name": "controlToken"
+  },
+  {
+    "kind": "on",
+    "name": "targetToken"
+  },
+  {
+    "kind": "on",
+    "name": "renderApplicationV2"
+  },
+  {
+    "kind": "on",
+    "name": "closeApplicationV2"
+  },
+  {
+    "kind": "on",
+    "name": "renderApplication"
+  },
+  {
+    "kind": "on",
+    "name": "closeApplication"
+  },
+  {
+    "kind": "on",
+    "name": "createActor"
+  },
+  {
+    "kind": "on",
     "name": "updateActor"
   },
   {
     "kind": "on",
     "name": "deleteActor"
+  },
+  {
+    "kind": "on",
+    "name": "createItem"
+  },
+  {
+    "kind": "on",
+    "name": "updateItem"
+  },
+  {
+    "kind": "on",
+    "name": "deleteItem"
+  },
+  {
+    "kind": "on",
+    "name": "createToken"
+  },
+  {
+    "kind": "on",
+    "name": "updateToken"
+  },
+  {
+    "kind": "on",
+    "name": "deleteToken"
+  },
+  {
+    "kind": "on",
+    "name": "createCombat"
+  },
+  {
+    "kind": "on",
+    "name": "updateCombat"
+  },
+  {
+    "kind": "on",
+    "name": "deleteCombat"
+  },
+  {
+    "kind": "on",
+    "name": "createCombatant"
+  },
+  {
+    "kind": "on",
+    "name": "updateCombatant"
+  },
+  {
+    "kind": "on",
+    "name": "deleteCombatant"
+  },
+  {
+    "kind": "on",
+    "name": "createActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "updateActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "deleteActiveEffect"
+  },
+  {
+    "kind": "on",
+    "name": "createScene"
+  },
+  {
+    "kind": "on",
+    "name": "updateScene"
+  },
+  {
+    "kind": "on",
+    "name": "deleteScene"
+  },
+  {
+    "kind": "on",
+    "name": "createJournalEntry"
+  },
+  {
+    "kind": "on",
+    "name": "updateJournalEntry"
+  },
+  {
+    "kind": "on",
+    "name": "deleteJournalEntry"
+  },
+  {
+    "kind": "on",
+    "name": "createChatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "dnd5e.postUseActivity"
+  },
+  {
+    "kind": "on",
+    "name": "updateCombat"
+  },
+  {
+    "kind": "on",
+    "name": "error"
+  },
+  {
+    "kind": "on",
+    "name": "getSceneControlButtons"
+  },
+  {
+    "kind": "on",
+    "name": "chatMessage"
+  },
+  {
+    "kind": "on",
+    "name": "userConnected"
+  },
+  {
+    "kind": "on",
+    "name": "updateUser"
+  },
+  {
+    "kind": "once",
+    "name": "ready"
   }
 ]

@@ -5,8 +5,12 @@
  *   feedback-core.mjs     PURE constants, HOOKS, rules
  *   settings.mjs           SETTINGS table, setting()
  *   api-manifest.mjs       PURE API rows (describe() reads them)
- *   api.mjs                implementations, inspect(), selftest()
- *   example-feature.mjs    a feature: install(reg, ctx) / uninstall()
+ *   api.mjs                implementations, inspect(), selftest(), the GM's list/get/resolve
+ *   recorder.mjs           FEATURE: the action and error rings (every client)
+ *   reporter.mjs           FEATURE: the bug button, /bug, submit, the queue, the GM's filing
+ *   dialog.mjs             WIDGET: the report dialog (ApplicationV2)
+ *   snapshot-adapter.mjs   ADAPTER: live game → plain context JSON
+ *   files-adapter.mjs      ADAPTER: the report files under Data/pentaryn-feedback/
  *   lib/*.mjs              vendored kit — never edited here (scripts/foundry/blueprint/vendor.py)
  *
  * Lifecycle: init → settings and CONFIG.queries · setup → features install · ready → build the
@@ -29,10 +33,11 @@ import { registerQueries } from "./lib/queries.mjs";
 import { registerSettings, setting } from "./settings.mjs";
 import { MANIFEST } from "./api-manifest.mjs";
 import { buildApiFor } from "./api.mjs";
-import * as exampleFeature from "./example-feature.mjs";
+import * as recorder from "./recorder.mjs";
+import * as reporter from "./reporter.mjs";
 
-/** Features in load order. */
-const FEATURES = [exampleFeature];
+/** Features in load order: the recorder first, so the reporter's doors see its rings. */
+const FEATURES = [recorder, reporter];
 
 const log = makeLog(MODULE);
 const reg = hookRegistry(MODULE, log);
@@ -83,8 +88,8 @@ function onReady() {
   // contributed rows register their queries now; the manifest's were registered at init
   registerQueries({ module: MODULE, rows: ctx.contributions.flatMap(c => c.rows ?? []) }, () => ctx.api, { log });
   publishNamespace(NS, ctx.api, { moduleId: MODULE });
-  // GM-only startup goes here, guarded by isActiveGM() from lib/election.mjs
-  // (vendor it first: vendor.py sync feedback --kit election).
+  // GM-only startup (filing every user's waiting reports) is the reporter's own `ready` listener,
+  // behind isActiveGM().
 }
 
 if (globalThis.game?.ready) {
