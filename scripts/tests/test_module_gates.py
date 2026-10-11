@@ -159,3 +159,13 @@ def test_check_all_json_is_one_document(monkeypatch, capsys):
     assert modules.check_all(as_json=True) == 1
     data = json.loads(capsys.readouterr().out)
     assert [r["module"] for r in data] == sorted(cfg.MODULES)
+
+
+def test_node_test_runs_from_the_module_folder(tmp_path):
+    if not modules._node_available():
+        pytest.skip("node not installed")
+    root = _module(tmp_path, {"main.mjs": "export {};\n",
+                              "test/run.mjs": 'import { existsSync } from "node:fs";\n'
+                                              'process.exit(existsSync("module.json") ? 0 : 5);\n'})
+    res = modules._gate_node_test(TmpSpec(root, check=("node-test",)), capture=True)
+    assert res.ok, res.problems

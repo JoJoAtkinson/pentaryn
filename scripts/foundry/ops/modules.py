@@ -319,15 +319,18 @@ def _gate_node_test(spec: cfg.ModuleSpec, *, capture: bool = False) -> GateResul
         return GateResult("node-test", False, f"no test runner at {runner}")
     if not _node_available():
         return GateResult("node-test", False, "node is not installed — cannot run the suite")
+    # `node test/run.mjs` from the module folder, exactly as a person runs it: a suite
+    # that resolves fixtures against the cwd must not pass or fail by where make ran.
+    cmd = ["node", "test/run.mjs"]
     if capture:
-        proc = subprocess.run(["node", str(runner)], capture_output=True, text=True)
+        proc = subprocess.run(cmd, cwd=spec.src, capture_output=True, text=True)
         tail = (proc.stdout + proc.stderr).rstrip("\n").splitlines()[-40:]
         rc = proc.returncode
     else:
         # The suite writes straight to the real stdout while our own `print` is buffered
         # when the output is a pipe; without this the ✓ lines land after the suite's.
         sys.stdout.flush()
-        rc = subprocess.run(["node", str(runner)]).returncode
+        rc = subprocess.run(cmd, cwd=spec.src).returncode
         tail = []
     ok = rc == 0
     return GateResult("node-test", ok,
