@@ -1,4 +1,4 @@
-// pentaryn kit 1.0.1 · vendored from foundry/lib/log.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
+// pentaryn kit 1.0.2 · vendored from foundry/lib/log.mjs — edit the canonical file, then run scripts/foundry/blueprint/vendor.py
 /**
  * One logger per module. Every line starts `<moduleId> | <event>`, byte-identical to the
  * hand-written `console.warn(\`${MODULE} | …\`)` lines it replaces, so a glue test can pin them.
