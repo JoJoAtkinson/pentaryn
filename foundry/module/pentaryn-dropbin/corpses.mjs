@@ -62,7 +62,10 @@ const ourCorpse = t => !!t.flags?.[MODULE]?.corpse;
 async function toCorpse(tokenDoc) {
   if (isPile(tokenDoc)) return;
   // The delta's own ownership before death (usually null: inherit the base actor), for a revival.
-  const ownership = foundry.utils.deepClone(tokenDoc.delta?.ownership ?? null);
+  // Already our corpse (Item Piles reverted the pile, the body is still dead): its delta is our
+  // OBSERVER map, so keep the map saved at the first death (none saved: a pre-fix corpse, null).
+  const ownership = ourCorpse(tokenDoc) ? (tokenDoc.flags[MODULE].ownership ?? null)
+    : foundry.utils.deepClone(tokenDoc.delta?.ownership ?? null);
   await API().turnTokensIntoItemPiles([tokenDoc], {
     pileSettings: { type: "pile", distance: 1, deleteWhenEmpty: false, closed: false, locked: false,
       displayOne: false, showItemName: false, overrideSingleItemScale: false },

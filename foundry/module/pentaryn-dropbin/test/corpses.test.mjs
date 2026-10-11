@@ -69,3 +69,15 @@ test("PT3-1: a corpse made before the fix (no saved ownership) reverts to the ba
   assert.equal(tok.sight.enabled, true);
   assert.deepEqual(tok.flags[MOD], {});
 });
+
+test("PT3-1: a corpse that stopped being a pile and is re-piled keeps the pre-death map, not its own OBSERVER", async () => {
+  // Item Piles' own Revert (or its pile toggle) leaves our corpse flag and the OBSERVER delta behind.
+  // The next hp/effect update on the still-dead body re-runs toCorpse: saving the delta then would
+  // save the corpse's {default: OBSERVER} as the "pre-death" map and a revival would leak it again.
+  const tok = goblin({ default: OBSERVER }, { [MOD]: { corpse: true, sight: true, ownership: null } });
+  await corpses.toCorpse(tok);
+  assert.equal(tok.flags[MOD].ownership, null, "the saved pre-death map survives a re-pile");
+  await corpses.fromCorpse(tok);
+  assert.equal(tok.delta.ownership, null);
+  assert.equal(playerLevel(tok), NONE);
+});
