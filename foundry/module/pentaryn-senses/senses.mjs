@@ -74,17 +74,27 @@ function onInit() {
   registerSettings();
 }
 
+/** Assign `game.pentaryn[key]`, rebuilding a frozen root (the hand-written guard step 7 retires). */
+function publishInto(key, api) {
+  const current = game.pentaryn;
+  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, [key]: api };
+  else {
+    game.pentaryn ??= {};
+    game.pentaryn[key] = api;
+  }
+}
+
 function onReady() {
   const ex = ctx.exposed;
   const api = {
     syncLight: ex.syncLight, carriedLight: ex.carriedLight, resetSight: ex.resetSight,
     light: ex.lightApi, setupLight: ex.lightApi.setup, syncAll: ex.syncAll,
   };
-  const current = game.pentaryn;
-  if (current && !Object.isExtensible(current)) game.pentaryn = { ...current, senses: api };
-  else {
-    game.pentaryn ??= {};
-    game.pentaryn.senses = api;
+  publishInto("senses", api);
+  try {
+    publishInto("chain", ex.chainApi);
+  } catch (e) {
+    log.warn("chain publish", e);
   }
   if (isActiveGMOrLoneGM()) ex.resetSight()
     .catch(e => log.warn("sight reset", e))

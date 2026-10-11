@@ -287,14 +287,10 @@ export function install(reg, ctx) {
   });
   on("renderTokenHUD", (app, element) => injectHUD(app, element));
 
+  // The entry's ready publishes the chain API (after senses). A hot import into a ready world
+  // publishes here and repaints.
   if (game.ready) {
     publish();
     schedule();
-  } else reg.once("ready", () => {
-    try {
-      publish();
-    } catch (e) {
-      warn("publish", e);
-    }
-  }, { guard: false, label: "chain publish" });
+  }
 }

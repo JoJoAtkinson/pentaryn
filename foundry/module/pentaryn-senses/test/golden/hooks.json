@@ -36,10 +36,6 @@
     "name": "renderTokenHUD"
   },
   {
-    "kind": "once",
-    "name": "ready"
-  },
-  {
     "kind": "on",
     "name": "dnd5e.preUseActivity"
   },
