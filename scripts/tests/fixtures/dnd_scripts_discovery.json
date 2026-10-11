@@ -36,6 +36,26 @@
    true
   ],
   [
+   "feedback_get",
+   "scripts/feedback_reports.py",
+   true
+  ],
+  [
+   "feedback_list",
+   "scripts/feedback_reports.py",
+   true
+  ],
+  [
+   "feedback_next",
+   "scripts/feedback_reports.py",
+   true
+  ],
+  [
+   "feedback_resolve",
+   "scripts/feedback_reports.py",
+   true
+  ],
+  [
    "find_lore",
    "scripts/lore.py",
    true
