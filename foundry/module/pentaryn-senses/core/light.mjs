@@ -1,15 +1,21 @@
 /**
  * Pure helpers for the Light cantrip and lit items (light.mjs, senses.mjs). No Foundry globals,
- * so test/light.mjs proves them in node. Design: LIGHT-DESIGN.md.
+ * so test/light-core.test.mjs proves them in node. Design: LIGHT-DESIGN.md.
  *
  *   Item (Light spell)   flags.pentaryn-senses.lightCast  = { scene, token } | { scene, x, y } | null
  *   Token / AmbientLight flags.pentaryn-senses.spellLight = { source: "<Light item uuid>", prior }
  *   Item (torch, lamp…)  flags.pentaryn-senses.lit / .hooded / .lightItem (profile override)
  *
  * Foundry's `dim` is the OUTER radius, so dim = bright + the rules' extra dim ring.
+ *
+ * Who owns a token's light (the contract pentaryn-creatures and pentaryn-transform rely on), in order:
+ *   1. spellLight — the Light cantrip holds it until the spell ends; nothing else writes over it;
+ *   2. itemLight  — a carried light (itemLightUpdate) holds it while the item is carried, keeping the
+ *                   hand-set light it covered in itemLightPrior and restoring it afterwards;
+ *   3. hand-set   — anything else (a GM's rune glow) is never touched.
  */
 
-import { MODULE } from "./core/ids.mjs";
+import { FLAGS, MODULE } from "./ids.mjs";
 export { MODULE };
 
 /** A light that gives nothing. Written when a carried or spell light ends with nothing before it. */
@@ -296,4 +302,52 @@ export function torchActivityData(name = "Light") {
     target: { prompt: false, override: false },
     flags: { [MODULE]: { lightToggle: true } }
   };
+}
+
+/**
+ * The update that brings a token (or a prototype) in line with its carried light, or null
+ * (senses.mjs `lightUpdate`, finding -12). A hand-set light that a carried light covers is kept in
+ * itemLightPrior and comes back when the carried light goes, not DARK. Foundry's helpers come in:
+ * `flatten` = foundry.utils.flattenObject, `clone` = foundry.utils.deepClone, and `del` is what
+ * clears the prior — `_del` on v14, else a null VALUE on the plain key (not "-=").
+ */
+export function itemLightUpdate(doc, light, { flatten, clone: copy, del = null }) {
+  if (doc.flags?.[MODULE]?.spellLight) return null; // the Light cantrip owns this token's light until it ends
+  const lit = doc.flags?.[MODULE]?.itemLight === true;
+  const PRIOR = FLAGS.itemLightPrior;
+  if (light) {
+    const own = doc.light?.toObject?.() ?? doc.light ?? {};
+    const current = flatten(own);
+    const want = flatten(light);
+    const same = Object.entries(want).every(([k, v]) => current[k] === v);
+    if (same && lit) return null;
+    const u = { light, [FLAGS.itemLight]: true };
+    if (!lit && ((Number(own.bright) || 0) > 0 || (Number(own.dim) || 0) > 0)) u[PRIOR] = copy(own);
+    return u;
+  }
+  if (!lit) return null;
+  const prior = doc.flags?.[MODULE]?.itemLightPrior;
+  const u = { light: copy(prior ?? DARK), [FLAGS.itemLight]: false };
+  if (prior !== undefined) u[PRIOR] = del;
+  return u;
+}
+
+/** Every spell-light source on these scenes ({tokens, lights}): a Set of Light item uuids. */
+export function collectSources(scenes) {
+  const out = new Set();
+  for (const s of scenes ?? []) {
+    for (const t of s.tokens) { const sl = readSpellLight(t); if (sl) out.add(sl.source); }
+    for (const l of s.lights) { const sl = readSpellLight(l); if (sl) out.add(sl.source); }
+  }
+  return out;
+}
+
+/** Every Token and AmbientLight on these scenes lit by `source`, tokens before lights per scene. */
+export function litByIn(scenes, source) {
+  const out = [];
+  for (const s of scenes ?? []) {
+    for (const t of s.tokens) if (readSpellLight(t)?.source === source) out.push({ kind: "token", scene: s.id, id: t.id, doc: t });
+    for (const l of s.lights) if (readSpellLight(l)?.source === source) out.push({ kind: "ambient", scene: s.id, id: l.id, x: l.x, y: l.y, doc: l });
+  }
+  return out;
 }

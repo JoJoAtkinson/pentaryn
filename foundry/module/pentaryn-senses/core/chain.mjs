@@ -1,13 +1,13 @@
 /**
- * Pure helpers for the token chain (chain.mjs). No Foundry globals, so test/run.mjs proves them
- * in node.
+ * Pure helpers for the token chain (chain.mjs). No Foundry globals, so test/core.test.mjs proves
+ * them in node.
  *
  *   token.flags["pentaryn-senses"].chain = { anchor: "<token id on the same scene>" }
  *
  * The flag lives on the CHAINED token. One chain per chained token; an anchor can hold several.
  */
 
-import { MODULE } from "./core/ids.mjs";
+import { MODULE } from "./ids.mjs";
 
 export { MODULE };
 export const CHAIN_FLAG = "chain";
@@ -57,4 +57,16 @@ export function chainGeometry(a, b) {
 export function chainThickness(gridSize) {
   const g = Number(gridSize) > 0 ? Number(gridSize) : 100;
   return Math.max(12, Math.round(g * 0.28));
+}
+
+/**
+ * A token reference → its TokenDocument, or null. Today's three branches (chain.mjs `docOf`):
+ * a falsy ref → null; a string → that id on the VIEWED scene (`viewed.tokens.get`); anything else →
+ * its `document` (a placeable) or itself (a document). `fromUuid` is accepted for finding -26 and
+ * not used yet: a Token uuid is looked up as an id on the viewed scene, as today.
+ */
+export function resolveTokenRef(ref, { viewed = null } = {}) {
+  if (!ref) return null;
+  if (typeof ref === "string") return viewed?.tokens?.get(ref) ?? null;
+  return ref.document ?? ref;
 }

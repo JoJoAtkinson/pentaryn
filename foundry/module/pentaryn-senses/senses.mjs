@@ -11,7 +11,7 @@ import "./glow.mjs";
 import "./chain.mjs";
 // The Light cantrip and lit torches/lamps/lanterns (LIGHT-DESIGN.md). Its GM sweep runs after ours.
 import { api as lightApi } from "./light.mjs";
-import { DARK, MODULE, carriedLightOf } from "./senses-core.mjs";
+import { MODULE, carriedLightOf, itemLightUpdate } from "./senses-core.mjs";
 // The one-shot reset of the darkvision sight our retired sync stored (dnd5e 6 senseVisionSync).
 import { registerSightReset, resetSight } from "./migrate.mjs";
 
@@ -35,29 +35,11 @@ function carriedLight(actor) {
 }
 
 /**
- * The update that brings a token (or the prototype) in line with its carried light, or null.
- * A hand-set light that a carried light covers (Marrith lights a torch over her rune glow) is kept
- * in flags.pentaryn-senses.itemLightPrior and comes back when the carried light goes, not DARK.
+ * The update that brings a token (or the prototype) in line with its carried light, or null
+ * (core/light.mjs itemLightUpdate). The prior is cleared with `_del`, else a null value.
  */
 function lightUpdate(doc, light) {
-  if (doc.flags?.[MODULE]?.spellLight) return null; // the Light cantrip owns this token's light until it ends
-  const lit = doc.flags?.[MODULE]?.itemLight === true;
-  const PRIOR = `flags.${MODULE}.itemLightPrior`;
-  if (light) {
-    const own = doc.light?.toObject?.() ?? doc.light ?? {};
-    const current = foundry.utils.flattenObject(own);
-    const want = foundry.utils.flattenObject(light);
-    const same = Object.entries(want).every(([k, v]) => current[k] === v);
-    if (same && lit) return null;
-    const u = { light, [`flags.${MODULE}.itemLight`]: true };
-    if (!lit && ((Number(own.bright) || 0) > 0 || (Number(own.dim) || 0) > 0)) u[PRIOR] = foundry.utils.deepClone(own);
-    return u;
-  }
-  if (!lit) return null;
-  const prior = doc.flags?.[MODULE]?.itemLightPrior;
-  const u = { light: foundry.utils.deepClone(prior ?? DARK), [`flags.${MODULE}.itemLight`]: false };
-  if (prior !== undefined) u[PRIOR] = globalThis._del ?? null;
-  return u;
+  return itemLightUpdate(doc, light, { flatten: foundry.utils.flattenObject, clone: foundry.utils.deepClone, del: globalThis._del ?? null });
 }
 
 async function syncLight(actor) {

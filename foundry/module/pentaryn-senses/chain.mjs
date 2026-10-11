@@ -20,7 +20,7 @@
  * to hot-import into a running client: a second load uninstalls the first.
  */
 
-import { MODULE, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainGeometry, chainThickness } from "./chain-core.mjs";
+import { MODULE, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainGeometry, chainThickness, resolveTokenRef } from "./senses-core.mjs";
 
 const TEX = `modules/${MODULE}/assets/chain-link.webp`;
 const TILE_H = 96; // px height of the source tile
@@ -34,11 +34,7 @@ const warn = (label, err) => console.warn(`${MODULE} | chain ${label}`, err);
 /*  Data                                        */
 /* -------------------------------------------- */
 
-const docOf = t => {
-  if (!t) return null;
-  if (typeof t === "string") return canvas?.scene?.tokens?.get(t) ?? null;
-  return t.document ?? t;
-};
+const docOf = t => resolveTokenRef(t, { viewed: canvas?.scene });
 
 export function links(scene = canvas?.scene) {
   try {

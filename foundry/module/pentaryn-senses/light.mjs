@@ -23,9 +23,9 @@
 import {
   MODULE, SPELL_LIGHT, profileFor, profileKey, isLit, isHooded, isLightSpellData, isLightToggle, lightingItemId,
   readSpellCast, readSpellLight, castFlag, planSpellLight, spellLightUpdate, restoredLight,
-  sourcesUnder, isPHBLightActorSource, torchActivityData, TORCH_ACTIVITY_ID, PHB_LIGHT_ACTOR
-} from "./light-core.mjs";
-import { esc, unsetPath } from "./core/util.mjs";
+  sourcesUnder, isPHBLightActorSource, torchActivityData, TORCH_ACTIVITY_ID, PHB_LIGHT_ACTOR,
+  collectSources, litByIn, esc, unsetPath
+} from "./senses-core.mjs";
 
 const CAST = `flags.${MODULE}.lightCast`;
 const LIT = `flags.${MODULE}.lit`;
@@ -337,24 +337,10 @@ function allItems({ worldItems = false } = {}) {
 }
 
 /** Every Token and AmbientLight on every scene lit by this source. */
-function litBy(source) {
-  const out = [];
-  for (const s of game.scenes ?? []) {
-    for (const t of s.tokens) if (readSpellLight(t)?.source === source) out.push({ kind: "token", scene: s.id, id: t.id, doc: t });
-    for (const l of s.lights) if (readSpellLight(l)?.source === source) out.push({ kind: "ambient", scene: s.id, id: l.id, x: l.x, y: l.y, doc: l });
-  }
-  return out;
-}
+const litBy = source => litByIn(game.scenes ?? [], source);
 const anyLitBy = source => litBy(source).length > 0;
 
-function allSources() {
-  const out = new Set();
-  for (const s of game.scenes ?? []) {
-    for (const t of s.tokens) { const sl = readSpellLight(t); if (sl) out.add(sl.source); }
-    for (const l of s.lights) { const sl = readSpellLight(l); if (sl) out.add(sl.source); }
-  }
-  return out;
-}
+const allSources = () => collectSources(game.scenes ?? []);
 
 function findToken(id, hint) {
   const first = game.scenes.get(hint)?.tokens.get(id);

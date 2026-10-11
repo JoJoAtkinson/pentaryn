@@ -8,21 +8,25 @@
 
 import { FLAGS } from "./core/ids.mjs";
 import { esc, unsetPath } from "./core/util.mjs";
-import { MODULE, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainGeometry, chainThickness } from "./chain-core.mjs";
+import { MODULE, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainGeometry, chainThickness, resolveTokenRef } from "./core/chain.mjs";
 import {
   DARK, SPELL_LIGHT, LIGHT_PROFILES, PHB_LIGHT_ACTOR, TORCH_ACTIVITY_ID, slug, profileKey, profileFor, lightFor, strongest,
   carriedLightOf, lightingItemId, isLit, isHooded, isLightSpellData, isLightToggle, readSpellCast, castFlag, readSpellLight,
   planSpellLight, spellLightUpdate, restoredLight, sourcesUnder, isPHBLightActorSource, torchActivityData,
-} from "./light-core.mjs";
-import { SIGHT_RESET, SIGHT_RESET_DONE, RESET_SIGHT, needsSightReset, systemReady, planSightReset } from "./migrate.mjs";
+  itemLightUpdate, collectSources, litByIn,
+} from "./core/light.mjs";
+import { SIGHT_RESET, SIGHT_RESET_DONE, RESET_SIGHT, needsSightReset, systemReady, planSightReset } from "./core/migrate.mjs";
+import { LIMITS, rng, hashString, epochBuilds, buildEpoch, waveLevel, brightnessFor } from "./core/glow.mjs";
 
 export {
   FLAGS, esc, unsetPath,
-  MODULE, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainGeometry, chainThickness,
+  MODULE, CHAIN_FLAG, readChain, chainPairs, linksTouching, chainGeometry, chainThickness, resolveTokenRef,
   DARK, SPELL_LIGHT, LIGHT_PROFILES, PHB_LIGHT_ACTOR, TORCH_ACTIVITY_ID, slug, profileKey, profileFor, lightFor, strongest,
   carriedLightOf, lightingItemId, isLit, isHooded, isLightSpellData, isLightToggle, readSpellCast, castFlag, readSpellLight,
   planSpellLight, spellLightUpdate, restoredLight, sourcesUnder, isPHBLightActorSource, torchActivityData,
+  itemLightUpdate, collectSources, litByIn,
   SIGHT_RESET, SIGHT_RESET_DONE, RESET_SIGHT, needsSightReset, systemReady, planSightReset,
+  LIMITS, rng, hashString, epochBuilds, buildEpoch, waveLevel, brightnessFor,
 };
 
 export const SHORT = "senses";
