@@ -13,7 +13,7 @@
  */
 
 import {
-  MODULE, escapeHTML, findSaved, isMine, isPersonal, placeFrom, planSave, singlePage, skipReason, status,
+  MODULE, escapeHTML, findSaved, isMine, isPersonal, needsItemRefresh, placeFrom, planSave, singlePage, skipReason, status,
 } from "./journal-core.mjs";
 import { setting, whenChanged } from "./settings.mjs";
 import { descriptorsFor, isEyeReadable, targetFor as targetForApp } from "./sources-adapter.mjs";
@@ -158,8 +158,8 @@ function applyHighlight(app, element, options) {
 
 const busy = new WeakSet();
 
-function savedStatus(target) {
-  const pages = ctx.exposed.personal()?.pages.contents ?? [];
+/** `pages`: the user's journal pages, when the caller already has them (one personal() per action). */
+function savedStatus(target, pages = ctx.exposed.personal()?.pages.contents ?? []) {
   const sources = descriptorsFor(target);
   const st = status(pages, sources);
   const first = sources.map(s => findSaved(pages, s.key)).find(Boolean) ?? null;
@@ -197,8 +197,9 @@ async function onBarClick(app, ev) {
   const target = targetFor(app);
   if (!target) return;
   if (btn.dataset.pj === "open") {
-    const { saved } = savedStatus(target);
-    return openSaved(ctx.exposed.personal(), saved?.id, { near: app });
+    const journal = ctx.exposed.personal();
+    const { saved } = savedStatus(target, journal?.pages.contents ?? []);
+    return openSaved(journal, saved?.id, { near: app });
   }
   if (busy.has(app)) return;
   busy.add(app);
@@ -226,10 +227,12 @@ function decorate(app) {
   let bar = root.querySelector(":scope > .pj-bar");
   const target = targetFor(app);
   if (!target) {
+    barKind.delete(app);
     bar?.remove();
     root.classList.remove("pentaryn-journal-readable");
     return;
   }
+  barKind.set(app, target.kind);
   if (!bar) {
     bar = document.createElement("footer");
     bar.className = "pj-bar";
@@ -239,6 +242,16 @@ function decorate(app) {
   }
   root.classList.add("pentaryn-journal-readable");
   fillBar(app, bar, target);
+}
+
+/** app → the kind of target its bar shows ("entry" | "image" | "item"), while it has one. */
+const barKind = new WeakMap();
+
+/** The target kinds of the bars on rendered windows now. */
+function openBarKinds() {
+  const kinds = [];
+  for (const app of foundry.applications.instances.values()) if (app.rendered && barKind.has(app)) kinds.push(barKind.get(app));
+  return kinds;
 }
 
 function refreshBarsNow() {
@@ -314,7 +327,8 @@ export function install(reg, context) {
   for (const h of ["createJournalEntry", "deleteJournalEntry"]) {
     reg.on(h, entry => { if (isMine(entry, game.user.id)) refreshBars(); }, { label: `${h}: refresh bars (own journal)` });
   }
-  reg.on("updateItem", () => refreshBars(), { label: "updateItem: refresh bars" });
+  // Only an item bar can change with an item (items-journal-33); entry and image bars never read items.
+  reg.on("updateItem", () => { if (needsItemRefresh(openBarKinds())) refreshBars(); }, { label: "updateItem: refresh item bars" });
 
   ctx.expose({ save, openSaved, savedStatus, refreshBars: () => refreshBars(), applySinglePage, lastSkip: () => lastSkip });
 }

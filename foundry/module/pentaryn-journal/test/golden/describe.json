@@ -328,7 +328,7 @@
     },
     {
       "name": "updateItem",
-      "label": "updateItem: refresh bars"
+      "label": "updateItem: refresh item bars"
     }
   ],
   "patches": [],

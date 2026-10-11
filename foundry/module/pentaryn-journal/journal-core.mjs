@@ -430,3 +430,43 @@ export function entryRows(pages) {
       savedAt: s?.savedAt ?? null, updatedAt: s?.updatedAt ?? null, hash: s?.hash ?? null };
   });
 }
+
+/* -------------------------------------------- */
+/*  Refresh cost (items-journal-33)             */
+/* -------------------------------------------- */
+
+/**
+ * A bounded memo: `memo(key, ...args)` returns the cached `fn(...args)` for `key`, else computes and
+ * keeps it; past `max` entries the least recently used goes. A null/undefined key is never cached.
+ * `memo.size` and `memo.misses` (calls that ran fn) are for tests and the console.
+ */
+export function makeMemo(fn, max = 64) {
+  const cache = new Map();
+  let misses = 0;
+  const memo = (key, ...args) => {
+    if (key === null || key === undefined) {
+      misses++;
+      return fn(...args);
+    }
+    if (cache.has(key)) {
+      const hit = cache.get(key);
+      cache.delete(key);
+      cache.set(key, hit);
+      return hit;
+    }
+    misses++;
+    const value = fn(...args);
+    cache.set(key, value);
+    if (cache.size > max) cache.delete(cache.keys().next().value);
+    return value;
+  };
+  Object.defineProperties(memo, {
+    size: { get: () => cache.size },
+    misses: { get: () => misses },
+    clear: { value: () => cache.clear() },
+  });
+  return memo;
+}
+
+/** An item update can change only an item bar: refresh when one is open. `kinds`: the open bars' target kinds. */
+export const needsItemRefresh = kinds => [...(kinds ?? [])].includes("item");

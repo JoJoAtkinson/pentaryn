@@ -20,6 +20,13 @@ import * as core from "./journal-core.mjs";
 const esc = s => foundry.utils.escapeHTML(String(s ?? ""));
 
 /**
+ * sanitize() per page, remembered (items-journal-33): every bar refresh re-describes every open
+ * readable, and sanitizing is the cost. Keyed by the page, its last modification and the embed label
+ * (a language switch); a page without a modification time is never cached. Bounded at 64 pages.
+ */
+export const sanitizeMemo = core.makeMemo(core.sanitize, 64);
+
+/**
  * Who gets the bar on a journal (core.barVisible). `gmButton` is the setting's value, passed in by
  * the caller (an adapter never reads settings). The other facts are getters, so each permission call
  * happens only when the rule reaches it, in the rule's order, exactly as the old inline expression.
@@ -82,7 +89,10 @@ export function pageDescriptor(page, entry) {
     entryName: entry.name, pageName: page.name };
   if (page.type === "image") return { ...base, type: "image", src: page.src ?? "", caption: page.image?.caption ?? "" };
   if (page.type === "text") {
-    return { ...base, type: "text", body: core.sanitize(page.text?.content ?? "", { resolve: resolverFor(page), embeddedLabel: embeddedLabel() }) };
+    const label = embeddedLabel();
+    const modified = page._stats?.modifiedTime;
+    const key = modified === undefined || modified === null ? null : `${page.uuid}|${modified}|${label}`;
+    return { ...base, type: "text", body: sanitizeMemo(key, page.text?.content ?? "", { resolve: resolverFor(page), embeddedLabel: label }) };
   }
   return { ...base, type: "text", body: "" };   // pdf, video, anything else: provenance and a link
 }

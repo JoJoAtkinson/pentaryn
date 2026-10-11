@@ -45,7 +45,7 @@ test("labels and order; exposed accessors; uninstall + offAll leaves nothing reg
     "on:deleteJournalEntryPage — deleteJournalEntryPage: refresh bars",
     "on:createJournalEntry — createJournalEntry: refresh bars (own journal)",
     "on:deleteJournalEntry — deleteJournalEntry: refresh bars (own journal)",
-    "on:updateItem — updateItem: refresh bars",
+    "on:updateItem — updateItem: refresh item bars",
   ]);
   assert.deepEqual(Object.keys(ctx.exposed).sort(), [
     "applySinglePage", "ensureAll", "ensureFor", "ensurePersonalJournal", "findFolder", "lastSkip", "openSaved", "personal",
