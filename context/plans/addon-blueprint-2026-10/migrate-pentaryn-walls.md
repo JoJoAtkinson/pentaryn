@@ -438,10 +438,10 @@ walls half of **-10** (8a).
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module walls --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | not migrated yet — **71.4 % (30/42)** today (wave start in [`wave-1-baseline.md`](wave-1-baseline.md)), `conformance.py --module walls --markdown`, 2026-10-11 |
+| Date | 2026-10-11 (wave 1: checkpoint only (wave 1 Stage 0 lane); the refactor is workflow 2) |
+| Commits (Joe-approved) | characterisation: `61f4a32` (kit), `a8c5c28` (checkpoint) · refactor: none yet · other: `30963c4` (README, senses-walls-cursors-8), `c1a80a5` (manual corpus CLI throws instead of `process.exit`, C43; harness only), `4f7b5a8` (plan path comment) |
+| Declared changes handed to the live-test workflow | none (KNOWN pins open: -2 wasm levels as 2 todos, -1 `undo()`) |
+| `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) |
+| Adjustments rows appended to `adjustments-batch.md` | no (step not reached) |
+| Still failing, and why | C07 C11 C12 C21 C22 C24 C27 C28 C40 C41 C44 C45 — the guide's steps 2+ have not run. Frozen tests: the checkpoint's assertions and goldens are untouched since the checkpoint (see wave-1-report §Frozen tests). |

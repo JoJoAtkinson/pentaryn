@@ -466,10 +466,10 @@ Departures from the plan text:
 
 | | |
 |---|---|
-| Live score after the migration | 88.4 % (38 / 43 fail-class rules) — `conformance.py --module pings --markdown` |
-| Date | 2026-10-11 |
-| Commits (Joe-approved) | characterisation: d85e653 (kit 8c0c461) · refactor: 0a01ef7, 16550cf, ac75dd8, 284dcce [declared], f9a94bf [declared], 2b4061b · standalone: none |
-| Declared changes handed to the live-test workflow | P-D1, P-D2, P-D3 (live smoke on the GM client: ping, wait 1 s, `last()` has the point and `ageMs`; `describe().version === "0.1.0"`; `uninstall()` then re-import re-wires) |
-| `module.json` edits appended to `wave7-restart-batch.md` | no — returned to the orchestrator for the batch owner |
-| Adjustments rows appended to `adjustments-batch.md` | already listed there (Batch A); the socket row's id is the interim `core-pings-user-activity-socket` |
-| Still failing, and why | C07, C51 (Wave 7), C32 (adjustments rows), C39 (ModuleSpec node-test), C40 (i18n.test in step 10) |
+| Live score after the migration | **95.5 %** (42 / 44 fail-class rules, small tier) — `conformance.py --module pings --markdown`, 2026-10-11 after the integration (62.2 % as full at wave start, 75.0 % as small at the checkpoint) |
+| Date | 2026-10-11 (deployed and live-checked the same day) |
+| Commits (Joe-approved) | characterisation: 8c0c461 (kit), d85e653 (checkpoint) · refactor: 0a01ef7, 16550cf, ac75dd8, 2b4061b, 40bca21 · declared: 284dcce (P-D1, P-D2), f9a94bf (P-D3, transform-creatures-39) · shared files: 170f003 (`module.json`), 8435447 **[declared]** (ModuleSpec node-test), 4825fae (adjustments rows `pings-core-ping-handle`, `core-pings-user-activity-socket`), 54c1ce0 · standalone: none (all three audit findings were absorbed) |
+| Declared changes handed to the live-test workflow | P-D1..P-D3 deployed 2026-10-11; boot probe and live golden pass (surface + `ageMs` only). `uninstall()` + re-import was not exercised live (J17) |
+| `module.json` edits appended to `wave7-restart-batch.md` | landed directly in 170f003 except the `languages` entry (J13) |
+| Adjustments rows appended to `adjustments-batch.md` | landed in 4825fae |
+| Still failing, and why | C40, C51: step 10 (lang file) needs one edit to a frozen `settings.register` pin, which the freeze forbids — wave-1-report J13. Tests: 59 node:test, all pass; module-code coverage 93.8 / 94.7 / 71.4 (was 0) |

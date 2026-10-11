@@ -450,10 +450,10 @@ migrates nothing, so rolling back is redeploying the old code:
 
 | | |
 |---|---|
-| Live score after the migration | **97.6 %** (41 / 42 fail-class rules) — `conformance.py --module importer --markdown`, 2026-10-11 (offline; not yet deployed) |
+| Live score after the migration | **97.6 %** (41 / 42 fail-class rules) — `conformance.py --module importer --markdown`, 2026-10-11 (63.9 % at wave start) |
 | Date | 2026-10-11 |
 | Commits | characterisation: `051737b`, `cb81c20` (checkpoint), `5730eea` (gate) · refactor: `b757a8a` (2), `f55d256` (3), `754aa94` (4a + adjustments row), `bd83c80` (4b **[declared]** D-I2), `e34372a` (5), `d3658a6` (6), `c0c3f97` (7 **[declared]** keystone D-I1), `28f3726` (C50: `Hooks.once`), `412d23b` (module index), `e612a79` (8) · standalone: `60bef2a` (`items-journal-4` **[declared]** D-I3), `566895f` (`items-journal-7`), `b1d0fc8` (its micro-benchmark: `index.test` read count + `test/bench.mjs`) · review fixes: `75562a1` (`describe()` names the D-I3 refusal), `bb4c6e2` (CHANGELOG names `items-journal-7`) |
-| Declared changes handed to the live-test workflow | D-I1, D-I2, D-I3 (and the additive D-I4) — §5, deploy steps §9 |
+| Declared changes handed to the live-test workflow | D-I1, D-I2, D-I3 (and the additive D-I4) — §5, deploy steps §9. **Deployed 2026-10-11** (`make foundry-sync WORLD=pentaryn`, `make foundry-clean`, restart): `selftest().ok`, `describe().version` 1.1.0, root not frozen, `game.pentaryn.importer.import === game.pentaryn.import`, concurrent `import()` refused with `PentarynAbort`; live golden identical to before apart from the declared root/`module.api` changes. Coverage of module code 98.8 / 93.5 / 90.2 (was 0); 92 node:test, all pass |
 | `module.json` edits appended to `wave7-restart-batch.md` | already listed (importer row); the glue test reads the real `module.json` flags, so the batch needs no test edit |
 | Adjustments rows appended to `adjustments-batch.md` | the `dnd5e-importer-gate` files move landed with 4a (marked there) |
 | Still failing, and why | **C07** only — `flags.pentaryn` tier/namespace/flagScope/cssPrefix wait for the Wave 7 restart batch. Warnings: C02 (minimum 13, Wave 7), C10 (`api.mjs` 361/300, `documents-adapter.mjs` 537/500 — the readback assertions and the orchestrator moved verbatim), C36 (assertion-message English, accepted §1), C59 (per-actor awaited writes, by design: each actor is asserted before the next) |

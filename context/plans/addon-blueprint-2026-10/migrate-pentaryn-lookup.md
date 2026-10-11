@@ -456,10 +456,10 @@ must be empty on every refactor commit (steps 3-6, 8, 10). Steps 7 and 9 add gol
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module lookup --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | not migrated yet — **75.6 % (31/41)** today (wave start in [`wave-1-baseline.md`](wave-1-baseline.md)), `conformance.py --module lookup --markdown`, 2026-10-11 |
+| Date | 2026-10-11 (wave 1: checkpoint only (wave 1 Stage 0 lane); the refactor is workflow 2) |
+| Commits (Joe-approved) | characterisation: `88bd90d` (kit), `a532b3e` (checkpoint) · refactor: none yet · other: `034f048` (README drift, prompts-lookup-26; docs test), `35d439b`/`a532b3e` (suite red range, see wave-1-report) |
+| Declared changes handed to the live-test workflow | none |
+| `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) |
+| Adjustments rows appended to `adjustments-batch.md` | no (step not reached) |
+| Still failing, and why | C07 C12 C24 C27 C28 C40 C41 C44 C45 C48 — the guide's steps 2+ have not run. Frozen tests: the checkpoint's assertions and goldens are untouched since the checkpoint (see wave-1-report §Frozen tests). |

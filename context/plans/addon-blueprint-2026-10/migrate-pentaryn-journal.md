@@ -323,10 +323,10 @@ Step 1 ~0.75 day (relay and ensure flows need careful stubs), steps 2–6 ~1 day
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module journal --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | not migrated yet — **57.8 % (26/45)** today (wave start in [`wave-1-baseline.md`](wave-1-baseline.md)), `conformance.py --module journal --markdown`, 2026-10-11 |
+| Date | 2026-10-11 (wave 1: checkpoint only (wave 1 Stage 0 lane); the refactor is workflow 2) |
+| Commits (Joe-approved) | characterisation: `050f06b` (kit), `f830067` (checkpoint) · refactor: none yet · other: `1b122e5` (README: `report()` ungated, items-journal-37) |
+| Declared changes handed to the live-test workflow | none |
+| `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) |
+| Adjustments rows appended to `adjustments-batch.md` | no (step not reached) |
+| Still failing, and why | C03 C07 C09 C12 C18 C21 C22 C24 C26 C27 C28 C30 C37 C40 C41 C44 C45 C47 C56 (hand-written `CONFIG.queries`) — the guide's steps 2+ have not run. Frozen tests: the checkpoint's assertions and goldens are untouched since the checkpoint (see wave-1-report §Frozen tests). |

@@ -482,10 +482,10 @@ passes (61.0 % → 63.4 %); test `test_r7_d4_c03_counts_dnd5e_ignore_tokens`.
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module movement --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | not migrated yet — **66.7 % (30/45)** today (wave start in [`wave-1-baseline.md`](wave-1-baseline.md)), `conformance.py --module movement --markdown`, 2026-10-11 |
+| Date | 2026-10-11 (wave 1: checkpoint only (wave 1 Stage 0 lane); the refactor is workflow 2) |
+| Commits (Joe-approved) | characterisation: `7615de6` (kit), `3a5192d` (checkpoint) · refactor: none yet · other: `49b8554` (README, aoe-movement-portals-37), `4f7b5a8` (comment line refs), `4a5c13c` (D4 scorer) |
+| Declared changes handed to the live-test workflow | none |
+| `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) |
+| Adjustments rows appended to `adjustments-batch.md` | no (step not reached) |
+| Still failing, and why | C07 C12 C18 C21 C22 C24 C26 C27 C28 C35 C37 C40 C41 C44 C45 — the guide's steps 2+ have not run. Frozen tests: the checkpoint's assertions and goldens are untouched since the checkpoint (see wave-1-report §Frozen tests). |

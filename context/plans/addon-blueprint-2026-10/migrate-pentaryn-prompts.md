@@ -766,10 +766,10 @@ commits, with the reason in the commit message.
 
 | | |
 |---|---|
-| Live score after the migration | ___ % (___ / ___ fail-class rules) — `conformance.py --module prompts --markdown` |
-| Date | ____-__-__ |
-| Commits (Joe-approved) | characterisation: ______ · refactor: ______ · standalone: ______ |
-| Declared changes handed to the live-test workflow | ______ (session L__) |
-| `module.json` edits appended to `wave7-restart-batch.md` | yes / no |
-| Adjustments rows appended to `adjustments-batch.md` | yes / no |
-| Still failing, and why | ______ |
+| Live score after the migration | not migrated yet — **56.5 % (26/46)** today (wave start in [`wave-1-baseline.md`](wave-1-baseline.md)), `conformance.py --module prompts --markdown`, 2026-10-11 |
+| Date | 2026-10-11 (wave 1: checkpoint only (wave 1 Stage 0 lane); the refactor is workflow 2) |
+| Commits (Joe-approved) | characterisation: `013b95d` (kit), `6cc5c50` (checkpoint) · refactor: none yet · other: `868103f` **[declared]** D6 (one `gatherChars` default 400, cut mark `… (cut, full text: get-character-entity <id>)`; flips the checkpoint's gather goldens by that suffix only), `0c01ef1` (art script path doc) |
+| Declared changes handed to the live-test workflow | D6 — deployed and live-golden-checked in Stage 0 (only the suffix differs); open: J4 (which MCP tool the suffix should name) |
+| `module.json` edits appended to `wave7-restart-batch.md` | no (step not reached) |
+| Adjustments rows appended to `adjustments-batch.md` | no (step not reached) |
+| Still failing, and why | C07 C15 C16 C18 C20 C21 C22 C24 C26 C27 C28 C29 C32 C35 C40 C44 C45 C47 C48 C56 — the guide's steps 2+ have not run. Frozen tests: the checkpoint's assertions and goldens are untouched since the checkpoint (see wave-1-report §Frozen tests). |

@@ -431,13 +431,13 @@ Shared-file edits for their owners (not applied here):
 
 | | |
 |---|---|
-| Live score after the migration | 95.3 % (41 / 43 fail-class rules) — `conformance.py --module names --markdown`; C07, C39 wait on the shared-file edits above |
-| Date | 2026-10-11 |
-| Commits (Joe-approved) | characterisation: f1ecd11 · refactor: 4ad0a4e, d1e27bf, ddbcca6, 005f89a, 2cc5d48 · declared: 5202be0 (N-D1), 7983909 (N-D2), af129d1 (N-D3) |
-| Declared changes handed to the live-test workflow | N-D1, N-D2, N-D3 (§5); N-D4 not taken; N-L1 still open |
-| `module.json` edits appended to `wave7-restart-batch.md` | no — returned to the orchestrator (owner) |
+| Live score after the migration | **100.0 %** (44 / 44 fail-class rules, small tier) — `conformance.py --module names --markdown`, 2026-10-11 after the integration (was 64.1 % as full at wave start, 78.6 % as small at the checkpoint) |
+| Date | 2026-10-11 (deployed and live-checked the same day) |
+| Commits (Joe-approved) | characterisation: f1ecd11 · refactor: 4ad0a4e, d1e27bf, ddbcca6, 005f89a, 2cc5d48, f5819eb · declared: 5202be0 (N-D1, transform-creatures-33), 7983909 (N-D2), af129d1 (N-D3, transform-creatures-38), ccf90c4 (N-D3 review: token ref → base actor) · shared files: 170f003 (`module.json` flags + minimum 14), 8435447 **[declared]** (ModuleSpec node-test), 54c1ce0 (module index) · standalone: none left (the review found nothing to fix) |
+| Declared changes handed to the live-test workflow | N-D1..N-D3 deployed 2026-10-11 (sync + restart); live golden: only the N-D2 surface/`module.api` differ, rename/noop/nickname/toast identical. The actor-ref form of `sync` was not exercised live (open in wave-1-report J17). N-D4 not taken; N-L1 open (J14) |
+| `module.json` edits appended to `wave7-restart-batch.md` | landed directly in 170f003 (integration), live since the 12:01 restart |
 | Adjustments rows appended to `adjustments-batch.md` | n/a — none |
-| Still failing, and why | C07 (Wave 7 `module.json`), C39 (ModuleSpec `node-test`) — both shared files |
+| Still failing, and why | nothing. Tests: 45 node:test, all pass; coverage of module code 99.7 / 96.8 / 92.0 (line/branch/funcs, lib and test excluded; was 0) |
 
 ### Rollback drill (2026-10-11)
 
