@@ -73,7 +73,9 @@ try {
   const mTok = (await mid.getTokenDocument({ x: d.sceneX + 500, y: d.sceneY + 500, flags: { [MOD]: { prompt: PROMPT } } })).toObject();
   const bTok = (await actor.getTokenDocument({ x: d.sceneX + 700, y: d.sceneY + 500 })).toObject();
   delete mTok._id; delete bTok._id;
-  const [marker, built] = await scene.createEmbeddedDocuments("Token", [mTok, bTok]);
+  // one create per token: a batch create comes back in no fixed order on Foundry 14
+  const [marker] = await scene.createEmbeddedDocuments("Token", [mTok]);
+  const [built] = await scene.createEmbeddedDocuments("Token", [bTok]);
   tag(marker.id, "marker"); tag(built.id, "built");
   out.golden.markerToken = { name: marker.name, hidden: marker.hidden, tint: String(marker.texture.tint?.css ?? marker.texture.tint), flags: marker.flags?.[MOD] ? Object.keys(marker.flags[MOD]).sort() : null, lockSize: marker.flags?.dnd5e?.lockSize ?? null };
   out.golden.dims = { sceneX: d.sceneX, sceneY: d.sceneY, size: d.size, padding: scene.padding };

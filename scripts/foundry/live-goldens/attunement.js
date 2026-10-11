@@ -100,13 +100,16 @@ try {
   tag(owner.id, "owner"); tag(chest.id, "chest"); tag(stranger.id, "stranger");
   const magic = (name, kind, extra = {}) => ({ name, type: "equipment", img: "icons/svg/item-bag.svg",
     system: { type: { value: kind }, attunement: "required", attuned: true, equipped: true, properties: ["mgc"], quantity: 1, ...extra } });
-  const made = await owner.createEmbeddedDocuments("Item", [
+  // one create per item: a batch create comes back (and lands in actor.items) in no fixed order on
+  // Foundry 14, which made the destructure below pick the wrong item on some runs
+  const made = [];
+  for (const data of [
     magic("ZZ Ring of Golden Test", "ring"),
     magic("ZZ Trinket of Golden Test", "trinket"),
     magic("ZZ Unattuned Charm", "trinket", { attuned: false, equipped: false }),
     { name: "ZZ Torch", type: "loot", system: { quantity: 2 } },
     { name: "ZZ Torch", type: "loot", system: { quantity: 3 } }
-  ]);
+  ]) made.push(...await owner.createEmbeddedDocuments("Item", [data]));
   const [ring, trinket, charm, torch1, torch2] = made;
   for (const [i, l] of [[ring, "ring"], [trinket, "trinket"], [charm, "charm"], [torch1, "torch1"], [torch2, "torch2"]]) tag(i.id, l);
   S.created = { items: itemsOf(owner), toasts: takeToasts() };

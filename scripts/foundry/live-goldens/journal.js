@@ -37,6 +37,8 @@ const strip = v => Array.isArray(v) ? v.map(strip)
   : (v && typeof v === "object") ? Object.fromEntries(Object.entries(v).filter(([k]) => !DROP.has(k)).map(([k, x]) => [k, strip(x)]))
   : v;
 const norm = v => { let s = JSON.stringify(strip(v) ?? null); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return JSON.parse(s); };
+/** A text with every tagged id replaced by its label, so a hash of it compares across runs. */
+const idsOut = text => { let s = String(text); for (const [id, l] of ids) s = s.split(id).join(`<${l}>`); return s; };
 const caught = e => ({ threw: true, name: e?.name ?? null, ctor: e?.constructor?.name ?? null, message: String(e?.message ?? e) });
 const probe = async fn => { try { return await fn(); } catch (e) { return caught(e); } };
 const keysOf = o => Object.keys(o ?? {}).sort();
@@ -74,7 +76,7 @@ let src = null, owned = null, gmJournal = null, createdGmJournal = false, create
 const pagesBefore = new Set();
 const openedBefore = new Set([...foundry.applications.instances.values()].filter(a => a.rendered).map(a => a.id));
 const pageRows = j => (j?.pages.contents ?? []).filter(p => !pagesBefore.has(p.id)).sort((a, b) => a.sort - b.sort).map(p => ({
-  name: p.name, type: p.type, bodyFnv: fnv(p.text?.content ?? ""), bodyLen: (p.text?.content ?? "").length,
+  name: p.name, type: p.type, bodyFnv: fnv(idsOut(p.text?.content ?? "")), bodyLen: (p.text?.content ?? "").length,
   source: p.flags?.[MOD]?.source ? keysOf(p.flags[MOD].source) : null, key: p.flags?.[MOD]?.source?.key ?? null
 }));
 const addOut = r => (r && typeof r === "object" && !r.threw) ? { journal: r.journal?.id ?? null, pageIds: r.pageIds, created: r.created, updated: r.updated } : r ?? null;
@@ -105,13 +107,13 @@ try {
   };
 
   // ── ZZ sources ───────────────────────────────────────────────────────────────
-  src = await JournalEntry.create({
-    name: "ZZ Golden Journal Source", ownership: { default: OWN.OBSERVER },
-    pages: [
-      { name: "ZZ Page One", type: "text", text: { content: "<p>Golden one.</p>" }, sort: 100 },
-      { name: "ZZ Page Two", type: "text", text: { content: `<p>Golden <strong>two</strong>.</p><section class="secret"><p>GM only</p></section>` }, sort: 200 }
-    ]
-  });
+  // pages one create at a time: a batch create lands in entry.pages in no fixed order on Foundry 14,
+  // and J.add walks that collection
+  src = await JournalEntry.create({ name: "ZZ Golden Journal Source", ownership: { default: OWN.OBSERVER } });
+  for (const page of [
+    { name: "ZZ Page One", type: "text", text: { content: "<p>Golden one.</p>" }, sort: 100 },
+    { name: "ZZ Page Two", type: "text", text: { content: `<p>Golden <strong>two</strong>.</p><section class="secret"><p>GM only</p></section>` }, sort: 200 }
+  ]) await src.createEmbeddedDocuments("JournalEntryPage", [page]);
   owned = await JournalEntry.create({ name: "ZZ Golden Journal Owned", ownership: { default: OWN.OWNER }, pages: [{ name: "ZZ Owned", type: "text", text: { content: "<p>mine</p>" } }] });
   tag(src.id, "src"); tag(owned.id, "owned");
   const [p1, p2] = src.pages.contents.sort((a, b) => a.sort - b.sort);
@@ -155,7 +157,9 @@ try {
   for (const id of upd?.pageIds ?? []) if (!ids.has(id)) tag(id, `saved:${gmJournal?.pages.get(id)?.name ?? id}`);
   await sleep(150);
   S.update = { result: addOut(upd), pages: pageRows(gmJournal), statusAfter: await probe(() => J.status(src)), toasts: takeToasts() };
-  S.ownedSrc = { add: addOut(await probe(() => J.add(owned))), status: await probe(() => J.status(owned)) };
+  const ownedAdd = await probe(() => J.add(owned));
+  for (const id of ownedAdd?.pageIds ?? []) if (!ids.has(id)) tag(id, `saved:${gmJournal?.pages.get(id)?.name ?? id}`);
+  S.ownedSrc = { add: addOut(ownedAdd), status: await probe(() => J.status(owned)) };
 
   // open(): the GM's journal on a page
   const firstSaved = (first?.pageIds ?? [])[0] ?? null;

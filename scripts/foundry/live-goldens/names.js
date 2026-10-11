@@ -61,10 +61,9 @@ try {
   tag(scene.id, "scene"); tag(actor.id, "actor");
   const base = (await actor.getTokenDocument({ x: 100, y: 100 })).toObject();
   delete base._id;
-  const [full, short] = await scene.createEmbeddedDocuments("Token", [
-    { ...base, x: 100, y: 100 },
-    { ...base, name: "ZZ Glubbek", x: 300, y: 100 }
-  ]);
+  // one create per token: a batch create comes back in no fixed order on Foundry 14
+  const [full] = await scene.createEmbeddedDocuments("Token", [{ ...base, x: 100, y: 100 }]);
+  const [short] = await scene.createEmbeddedDocuments("Token", [{ ...base, name: "ZZ Glubbek", x: 300, y: 100 }]);
   tag(full.id, "tokFull"); tag(short.id, "tokShort");
   const labels = () => ({
     actor: actor.name,
