@@ -121,3 +121,103 @@ def test_children_are_linked_for_reporting():
 def test_reparented_to_launchd_counts_as_orphaned(ppid):
     """When Claude Code exits, its child is reparented to launchd (pid 1)."""
     assert judge([server(100, ppid, parent_alive=False, parent_comm="")])[0].orphan is True
+
+
+# ── scan(): the ps/lsof parse (python-tooling-37) ────────────────────────────
+#
+# Canned `subprocess.run` answers, so scan() runs without touching the machine. The fake
+# answers both the per-pid `ps -p <pid> -o comm=` form and the one-shot
+# `ps -eo pid=,comm=` form from the same comm map, so the same pins hold whichever way
+# scan() asks for parent names.
+
+import subprocess as _subprocess
+from types import SimpleNamespace
+
+from scripts.foundry.ops import bridge as bridge_mod
+
+PS_ROWS = [
+    "  100    99 Sat Aug 22 12:00:00 2026     node /x/foundry-vtt-mcp/packages/mcp-server/dist/index.js",
+    "  101   100 Sat Aug 22 12:00:01 2026     node /x/foundry-vtt-mcp/packages/mcp-server/dist/backend.js",
+    "  200    98 Thu Aug 20 09:47:41 2026     node /x/foundry-vtt-mcp/packages/mcp-server/dist/index.js",
+    "  500     1 Thu Aug 20 09:00:00 2026     /usr/bin/unrelated --flag",
+]
+MALFORMED_ROW = "  300 notapid Thu Aug 20 09:47:41 2026 node /x/foundry-vtt-mcp/dist/index.js"
+COMM = {99: "/Applications/Claude.app/Contents/MacOS/claude", 100: "node",
+        101: "node", 1: "/sbin/launchd", 500: "/usr/bin/unrelated"}
+ALIVE = {99, 100, 101, 1, 500}
+LSOF = {31414: "COMMAND PID USER FD TYPE DEVICE SIZE/OFF NODE NAME\n"
+               "node 101 joe 20u IPv4 0x1 0t0 TCP 127.0.0.1:31414 (LISTEN)\n"}
+
+
+def _fake_run(ps_rows, calls):
+    def run(cmd, capture_output=True, text=True, **kw):
+        calls.append(list(cmd))
+        if cmd[0] == "lsof":
+            port = int(cmd[2].split(":", 1)[1])
+            return SimpleNamespace(stdout=LSOF.get(port, ""), returncode=0)
+        if cmd[:2] == ["ps", "-eo"] and cmd[2] == "pid=,ppid=,lstart=,command=":
+            return SimpleNamespace(stdout="\n".join(ps_rows) + "\n", returncode=0)
+        if cmd[:2] == ["ps", "-eo"] and cmd[2] == "pid=,comm=":
+            return SimpleNamespace(
+                stdout="".join(f"{pid:>5} {c}\n" for pid, c in COMM.items()), returncode=0)
+        if cmd[:2] == ["ps", "-p"]:
+            return SimpleNamespace(stdout=COMM.get(int(cmd[2]), "") + "\n", returncode=0)
+        raise AssertionError(f"unexpected subprocess call {cmd}")
+    return run
+
+
+@pytest.fixture
+def canned(monkeypatch):
+    calls: list[list[str]] = []
+
+    def kill(pid, sig):
+        if pid not in ALIVE:
+            raise ProcessLookupError(pid)
+
+    monkeypatch.setattr(bridge_mod.os, "kill", kill)
+
+    def use(rows):
+        monkeypatch.setattr(bridge_mod.subprocess, "run", _fake_run(rows, calls))
+        return calls
+    return use
+
+
+def _summary(procs):
+    return sorted((p.pid, p.ppid, p.kind, p.started, p.parent_alive, p.parent_comm,
+                   p.ports, p.orphan, p.reason) for p in procs)
+
+
+SCAN_PIN = [
+    (100, 99, "server", "Sat Aug 22 12:00:00 2026", True, "claude", (), False,
+     "live session (parent 99 claude)"),
+    (101, 100, "backend", "Sat Aug 22 12:00:01 2026", True, "node", (31414,), False,
+     "broker for a live session"),
+    (200, 98, "server", "Thu Aug 20 09:47:41 2026", False, "", (), True,
+     "parent 98 is gone — its session ended"),
+]
+
+
+def test_scan_classifies_canned_ps_output(canned):
+    """Characterisation: the parse and the verdicts on a canned process table."""
+    canned(PS_ROWS)
+    assert _summary(bridge_mod.scan()) == SCAN_PIN
+
+
+@pytest.mark.xfail(strict=True, raises=ValueError,
+                   reason="python-tooling-37 pin: today the unguarded int(ppid) raises")
+def test_scan_skips_a_malformed_ppid_row(canned):
+    """python-tooling-37 [declared]: a row whose ppid is not an int is skipped, not fatal."""
+    canned(PS_ROWS[:2] + [MALFORMED_ROW] + PS_ROWS[2:])
+    assert _summary(bridge_mod.scan()) == SCAN_PIN
+
+
+@pytest.mark.xfail(strict=True,
+                   reason="python-tooling-37 pin: today one `ps -p` per live parent")
+def test_scan_asks_ps_for_parent_names_once(canned):
+    """python-tooling-37: one `ps` for the table, one for every name, three `lsof` — the
+    count no longer grows with the number of bridge processes."""
+    calls = canned(PS_ROWS)
+    bridge_mod.scan()
+    assert [c[0] for c in calls].count("ps") == 2
+    assert [c[0] for c in calls].count("lsof") == len(bridge_mod.BRIDGE_PORTS)
+    assert len(calls) == 5
