@@ -178,6 +178,7 @@ def test_action_line_covers_every_recorder_kind():
         "click": ({"kind": "click", "action": "roll", "text": "", "cls": "", "id": "w1"}, "click roll in w1"),
         "doc": ({"kind": "doc", "op": "create", "type": "Item", "name": "Rope"}, "doc create Item Rope"),
         "chat": ({"kind": "chat", "id": "m", "flavor": "", "total": None, "whisper": True}, "chat m [whisper]"),
+        "reload": ({"kind": "reload", "t": 5}, "page reloaded (the history before this line came from the previous page)"),
         "unknown": ({"kind": "future", "x": 1}, 'future {"x": 1}'),
     }
     for kind, (entry, want) in cases.items():

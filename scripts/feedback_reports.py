@@ -251,6 +251,8 @@ def action_line(a: dict[str, Any]) -> str:
         return f"use {a.get('item')} — {a.get('activity')} ({a.get('actor')})"
     if k == "combat":
         return f"combat round {a.get('round')}, turn {a.get('turn')} — {a.get('combatant')}"
+    if k == "reload":
+        return "page reloaded (the history before this line came from the previous page)"
     if k == "notify":
         return f"notify {a.get('level')}: {_one_line(a.get('text'), 120)}"
     rest = {key: v for key, v in a.items() if key not in ("t", "kind")}

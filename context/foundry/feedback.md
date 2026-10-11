@@ -24,7 +24,8 @@ why it is built this way (and the market survey) → [`../plans/feedback-module-
    - **Defect** — it works, just not the way they expect, so it comes across as a bug.
    - **Feature** — 100% new: does not exist yet (a new tab, a new subsystem).
 3. They describe it and press **Send report**. Their last few minutes of actions and the game
-   state go with it; "What gets attached" in the dialog lists exactly what.
+   state go with it; "What gets attached" in the dialog lists exactly what. A reload (F5) before
+   reporting keeps the history in that browser tab; the timeline shows `page reloaded` where it happened.
 4. Toast: "Thanks — report abc123 saved." With no GM online: "…will be sent when one connects" —
    it waits on their user and is filed the next time a GM is on.
 

@@ -237,6 +237,19 @@ test("fitReport: a 1000-action history over the byte cap drops the oldest action
   assert.equal(core.fitReport(small).dropped, 0);
 });
 
+test("ringsKey / ringsToStore / ringsFromStore: a round trip adds the reload marker; junk is null", () => {
+  assert.equal(core.ringsKey("w", "u"), "pentaryn-feedback:rings:w:u");
+  const raw = core.ringsToStore({ actions: [{ t: 1, kind: "tab", tab: "chat" }, { kind: "no t" }, null, 3], errors: [{ t: 2, message: "x" }] });
+  assert.deepEqual(core.ringsFromStore(raw, { now: 9 }), {
+    actions: [{ t: 1, kind: "tab", tab: "chat" }, { t: 9, kind: "reload" }], errors: [{ t: 2, message: "x" }],
+  });
+  for (const junk of [null, "", "{", "[]", '{"v":2,"actions":[]}', 7]) assert.equal(core.ringsFromStore(junk, { now: 1 }), null, String(junk));
+  const many = core.ringsToStore({ actions: Array.from({ length: 30 }, (_, i) => ({ t: i, kind: "tab" })) });
+  const back = core.ringsFromStore(many, { now: 99, actionsMax: 20 });
+  assert.equal(back.actions.length, 20);
+  assert.deepEqual(back.actions.at(-1), { t: 99, kind: "reload" });
+});
+
 test("validateReport: a good report passes; each broken field is named", () => {
   assert.deepEqual(core.validateReport(sample()), { ok: true });
   const broken = [

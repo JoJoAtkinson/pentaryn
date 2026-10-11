@@ -98,7 +98,10 @@ wraps stay in place after `uninstall()` and record nothing until the next instal
 
 ## Two sessions / who writes
 
-- **Recording** is per client and in memory; nothing is shared or persisted until a report is built.
+- **Recording** is per client, in memory plus a copy in that tab's `sessionStorage` (keyed by world +
+  user, written at most once a second and on `pagehide`), so a reload keeps the history and the
+  timeline shows a `reload` entry. Window errors are caught from file load, before `setup`. Nothing
+  is shared until a report is built; `uninstall()` clears the stored copy.
 - **Filing** is one path, online or not: the reporter writes the report to its **own** User flag
   (the server lets only that user, or a GM, write it — so the queue's owner *is* the reporter),
   then `queryGM("pentaryn-feedback.ingest", { userId, ids }, { timeout: 10000 })`.

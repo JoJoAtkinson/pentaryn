@@ -63,6 +63,7 @@ export const LIMITS = Object.freeze({
   queueMax: 5,         // reports waiting on the User flag
   bytes: 262144,       // one report, serialised
   renderThrottleMs: 2000,
+  persistMs: 1000,     // the rings are copied to sessionStorage at most this often
   dupErrorMs: 1000,
 });
 
@@ -176,6 +177,40 @@ export function ringPush(ring, entry, max) {
   ring.push(entry);
   if (ring.length > max) ring.splice(0, ring.length - max);
   return ring;
+}
+
+/* ── surviving a reload (sessionStorage) ──────────────────────────────────── */
+
+/** The sessionStorage key holding one world + user's rings in this browser tab. */
+export function ringsKey(worldId, userId) {
+  return `${MODULE}:rings:${worldId ?? "?"}:${userId ?? "?"}`;
+}
+
+/** What is stored: `{ v: 1, actions, errors }` as JSON. */
+export function ringsToStore({ actions = [], errors = [] } = {}) {
+  return JSON.stringify({ v: 1, actions, errors });
+}
+
+const entryOk = e => !!e && typeof e === "object" && !Array.isArray(e) && Number.isFinite(e.t) && typeof e.kind !== "object";
+
+/**
+ * Parse what a previous page stored. Junk → null. Otherwise the rings (plain entries with a numeric
+ * `t` only, capped) with `{ t: now, kind: "reload" }` appended to the actions, so the timeline shows
+ * where the page was reloaded.
+ */
+export function ringsFromStore(raw, { now, actionsMax = LIMITS.actionsMax, errorsMax = LIMITS.errorsMax } = {}) {
+  if (typeof raw !== "string" || !raw) return null;
+  let data;
+  try {
+    data = JSON.parse(raw);
+  } catch (err) {
+    return null;
+  }
+  if (!data || data.v !== 1) return null;
+  const actions = (Array.isArray(data.actions) ? data.actions : []).filter(entryOk);
+  const errors = (Array.isArray(data.errors) ? data.errors : []).filter(entryOk);
+  actions.push({ t: now, kind: "reload" });
+  return { actions: actions.slice(-actionsMax), errors: errors.slice(-errorsMax) };
 }
 
 /** True when `entry` repeats an error already in the ring within `LIMITS.dupErrorMs` (same message). */
