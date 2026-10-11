@@ -2,15 +2,23 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
 from scripts import dnd_roller
 
+# The real on-disk cache of fetched quantum numbers. No test may write or delete it
+# (python-tooling-52): `_pop_numbers` ends in `_write_cache()`, which rewrites the file
+# with whatever is in memory — the seeded fake numbers here — or unlinks it.
+_HOME_CACHE = Path.home() / ".cache" / "dnd_roller" / "quant_numbers.bin"
+
 
 @pytest.fixture(autouse=True)
-def reset_cache():
-    """Reset module-level cache state before each test."""
+def reset_cache(monkeypatch, tmp_path):
+    """Reset module-level cache state before each test, and point the file cache at tmp."""
+    monkeypatch.setattr(dnd_roller, "_CACHE_DIR", tmp_path)
+    monkeypatch.setattr(dnd_roller, "_CACHE_FILE", tmp_path / "quant_numbers.bin")
     dnd_roller._number_cache.clear()
     dnd_roller._source_cache.clear()
     yield
@@ -173,3 +181,20 @@ def test_combat_action_upsert_non_dict_spec_returns_ok_false():
     assert result["ok"] is False
     assert "error" in result
 
+
+
+def _home_cache_state() -> tuple:
+    try:
+        st = _HOME_CACHE.stat()
+    except FileNotFoundError:
+        return (False, None, None)
+    return (True, st.st_mtime_ns, st.st_size)
+
+
+def test_suite_never_touches_home_cache():
+    """python-tooling-52: a seeded roll writes the tmp cache, never ~/.cache/dnd_roller."""
+    before = _home_cache_state()
+    _seed_cache([14, 11, 17, 3])
+    json.loads(dnd_roller.roll_dice(num_dice=1, dice_size=20))
+    assert _home_cache_state() == before
+    assert dnd_roller._CACHE_FILE.parent != _HOME_CACHE.parent
