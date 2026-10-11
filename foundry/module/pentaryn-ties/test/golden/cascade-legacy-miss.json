@@ -1,0 +1,16 @@
+[
+  {
+    "character": "ZZ Legacy Reader",
+    "characterId": "zzPc000000000003",
+    "subject": "ZZ Brakka",
+    "factKey": "lore:zzNpc00000000001:l1",
+    "text": "Shifty eyes."
+  },
+  {
+    "character": "ZZ Legacy Reader",
+    "characterId": "zzPc000000000003",
+    "subject": "ZZ Ghoul",
+    "factKey": "kind:zzKind0000000001",
+    "text": "Nothing about it means anything to you."
+  }
+]

@@ -1,0 +1,189 @@
+[
+  {
+    "label": "grantKind PC 20",
+    "out": true,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzKind0000000001",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000001.kind": {
+            "text": "— Studied (Religion) —\nGrey hunters.\nNothing about it strikes you as proof against anything.",
+            "tier": 20,
+            "total": null,
+            "when": 1790000000000,
+            "delivered": 1790000000000,
+            "claim": null,
+            "sources": null,
+            "pass": null
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000001",
+        "changes": {
+          "flags.pentaryn-ties.studied": {
+            "kind": {
+              "zzKind0000000001": {
+                "when": 1790000000000
+              }
+            },
+            "lore": {}
+          },
+          "flags.pentaryn-ties.known": [
+            {
+              "id": "zzKind0000000001",
+              "name": "ZZ Ghoul",
+              "category": "beasts",
+              "notes": "",
+              "imposter": null,
+              "hidden": false,
+              "when": 1790000000000
+            }
+          ],
+          "flags.pentaryn-ties.granted": {
+            "attr:kin:#id": {
+              "text": "<p>One of us.</p>",
+              "when": 1790000000000,
+              "icon": null,
+              "source": "Kin"
+            },
+            "attr:city:#id": {
+              "text": "<p>From Vel.</p>",
+              "when": 1790000000000,
+              "icon": null,
+              "source": "Vel"
+            },
+            "attr:guild:#id": {
+              "text": "<p>Guild hands.</p>",
+              "when": 1790000000000,
+              "icon": "icons/sundries/flags/banner-standard-green.webp",
+              "source": "Salt Guild"
+            },
+            "kind:zzKind0000000001": {
+              "text": "— Studied (Religion) —\nGrey hunters.\nNothing about it strikes you as proof against anything.",
+              "when": 1790000000000,
+              "icon": "icons/zz/zzKind0000000001.webp",
+              "source": "ZZ Ghoul"
+            }
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "ZZ Caven now knows a ZZ Ghoul to DC 20."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "grantKind PC 15 (already knows more)",
+    "out": false,
+    "calls": [
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "ZZ Caven already knows ZZ Ghoul at least that well."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "grantKind PC 15 quiet",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "grantKind PC 7 (not a rung)",
+    "out": false,
+    "calls": [],
+    "console": []
+  },
+  {
+    "label": "grantKind PC 0 (mark as failed) on a fresh PC2",
+    "out": true,
+    "calls": [
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzKind0000000001",
+        "changes": {
+          "flags.pentaryn-ties.beliefs.zzPc000000000002.kind": {
+            "text": "",
+            "tier": 0,
+            "total": null,
+            "when": 1790000000000,
+            "delivered": 1790000000000,
+            "claim": null,
+            "sources": null,
+            "pass": null
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "Hooks.call",
+        "name": "preUpdateActor"
+      },
+      {
+        "op": "update",
+        "documentName": "Actor",
+        "uuid": "Actor.zzPc000000000002",
+        "changes": {
+          "flags.pentaryn-ties.studied": {
+            "kind": {
+              "zzKind0000000001": {
+                "when": 1790000000000
+              }
+            },
+            "lore": {}
+          }
+        }
+      },
+      {
+        "op": "Hooks.callAll",
+        "name": "updateActor"
+      },
+      {
+        "op": "notify",
+        "level": "info",
+        "message": "ZZ Wren now knows a ZZ Ghoul to DC 0."
+      }
+    ],
+    "console": []
+  },
+  {
+    "label": "player: grantKind",
+    "out": false,
+    "calls": [],
+    "console": []
+  }
+]

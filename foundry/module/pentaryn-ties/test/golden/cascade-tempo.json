@@ -1,0 +1,80 @@
+{
+  "said": [
+    {
+      "look": 1,
+      "emitted": [],
+      "state": 1
+    },
+    {
+      "look": 2,
+      "emitted": [
+        "ZZ Caven gives a second stranger the once-over. People do notice being measured."
+      ],
+      "state": 2
+    },
+    {
+      "look": 3,
+      "emitted": [
+        "ZZ Caven is looking people up and down."
+      ],
+      "state": 3
+    },
+    {
+      "look": 4,
+      "emitted": [],
+      "state": 4
+    },
+    {
+      "look": 5,
+      "emitted": [
+        "Careful now, ZZ Caven."
+      ],
+      "state": 5
+    },
+    {
+      "look": 6,
+      "emitted": [
+        "ZZ Caven looks openly paranoid."
+      ],
+      "state": 6
+    },
+    {
+      "look": 7,
+      "emitted": [],
+      "state": 7
+    },
+    {
+      "look": "after moving 20 ft",
+      "state": {
+        "count": 1,
+        "anchor": {
+          "x": 400,
+          "y": 0
+        },
+        "sceneId": "zzScene000000001"
+      }
+    },
+    {
+      "look": "drifted 10 ft",
+      "state": {
+        "count": 2,
+        "anchor": {
+          "x": 400,
+          "y": 0
+        },
+        "sceneId": "zzScene000000001"
+      }
+    }
+  ],
+  "all": {
+    "zzPc000000000001": {
+      "count": 2,
+      "anchor": {
+        "x": 400,
+        "y": 0
+      },
+      "sceneId": "zzScene000000001"
+    }
+  },
+  "cleared": null
+}
